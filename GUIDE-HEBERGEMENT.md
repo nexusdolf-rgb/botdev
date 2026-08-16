@@ -14,13 +14,13 @@ La seule chose à faire : **héberger BotDev sur une machine qui reste allumée 
 
 | Option | Prix | 24h/24 | Carte bancaire ? | Difficulté | Avis |
 |---|---|---|---|---|---|
-| **Ton téléphone Android (Termux)** | 0 € | Oui, si branché | Non | ⭐⭐ | ✅ **Le plus simple sans PC** |
+| **GitHub + Glitch/Render (mobile, sans Termux)** | 0 € | Oui (avec UptimeRobot) | Non | ⭐⭐ | ✅ **Le plus simple sans PC ni Termux** |
+| **Ton téléphone Android (Termux)** | 0 € | Oui, si branché | Non | ⭐⭐ | Bien pour tester seul |
 | **Ton PC** | 0 € | Seulement s'il reste allumé | Non | ⭐ | Pour commencer et tester |
-| **Glitch + UptimeRobot** | 0 € | Oui (astuce anti-sommeil) | Non | ⭐⭐ | Ok mais un peu fragile |
 | **Oracle Cloud Always Free** | 0 € à vie | Oui | Oui (vérification, **jamais débité**) | ⭐⭐⭐ | ✅ **La vraie solution durable** |
 | **Google Cloud e2-micro** | 0 € à vie | Oui | Oui (vérification) | ⭐⭐⭐ | Bonne alternative |
 
-> 💡 **Mon conseil** : commence sur ton téléphone (Termux) ou ton PC (5 minutes, zéro risque), puis passe sur **Oracle Cloud** quand tu veux du 24h/24 définitif. La carte bancaire demandée par Oracle ne sert qu'à vérifier ton identité : l'offre *Always Free* est gratuite à vie, il n'y a **aucun débit**.
+> 💡 **Mon conseil** : commence avec **GitHub + Glitch** (tout se fait dans Chrome sur ton téléphone, sans Termux et sans carte bancaire), puis passe sur **Oracle Cloud** quand tu veux du 24h/24 définitif et fiable. La carte bancaire demandée par Oracle ne sert qu'à vérifier ton identité : l'offre *Always Free* est gratuite à vie, il n'y a **aucun débit**.
 
 ---
 
@@ -72,7 +72,58 @@ Pour une vraie app avec icône sur l'écran d'accueil : menu Chrome (⋮) → **
 
 > ⚠️ Honnêtement : un téléphone n'est pas un vrai serveur. Si Android tue Termux ou si le téléphone s'éteint, le bot se déconnecte. Pour du 24h/24 fiable (et des amis qui l'utilisent), passe à l'option Oracle ci-dessous — **elle aussi est faisable 100 % depuis Android** avec l'app **Termius**.
 
-## 🖥️ Option 1 — Ton PC (la plus simple, pour démarrer)
+---
+
+## 📲 Option 1 bis — GitHub + Glitch/Render, 100 % depuis le navigateur du téléphone (sans Termux, sans PC)
+
+C'est la méthode la plus simple si tu ne veux pas utiliser Termux. Tout se fait dans Chrome sur ton téléphone. **Rappel important : GitHub ne fait que stocker le code — il ne l'exécute pas** (GitHub Pages ne sert que des pages statiques, il ne peut pas faire tourner le bot). L'exécution se fait sur Glitch ou Render, qui récupèrent le code depuis GitHub.
+
+### Le schéma
+
+```
+Ton téléphone (Chrome)
+      │
+      ▼
+GitHub (stocke le code, gratuit)
+      │
+      ▼
+Glitch ou Render (exécute BotDev 24h/24, gratuit)
+      │
+      ▼
+UptimeRobot (ping toutes les 5 min pour empêcher la mise en veille, gratuit)
+```
+
+### Étape 1 — Mettre le code sur GitHub (2 options)
+
+**Option A (recommandée, 2 minutes)** : demande à ton assistant Arena de pousser le code à ta place :
+1. Crée un compte gratuit sur [github.com](https://github.com) (inscription possible sur mobile)
+2. Crée un dépôt : bouton **+** → **New repository** → nom `botdev` → Public → Create
+3. Crée un token temporaire : avatar → **Settings** → **Developer settings** → **Personal access tokens** → **Fine-grained tokens** → **Generate new token** → choisis uniquement ton dépôt `botdev` → permission **Contents : Read and write** → expiration 7 jours
+4. Colle le token + le nom du dépôt dans le chat → le code est poussé → **supprime le token** ensuite dans tes réglages GitHub
+
+**Option B (manuel)** : sur github.com, ouvre ton dépôt → **Add file → Upload files** → sélectionne les fichiers du dossier `botdev` de `BotDev.zip` (pas de dossier `node_modules` dedans, il n'existe pas dans le zip). Possible sur mobile mais plus long (13 fichiers).
+
+### Étape 2 — Déployer sur Glitch (le plus simple, sans carte bancaire)
+
+1. Compte gratuit sur [glitch.com](https://glitch.com)
+2. **New project → Import from GitHub** → colle l'adresse de ton dépôt (ex : `https://github.com/tonpseudo/botdev`)
+3. Glitch installe tout seul (il lit `package.json`) et affiche l'URL publique de ton app, type `https://botdev.glitch.me`
+4. ⚠️ Glitch endort les projets après ~5 min sans visite → crée un compte gratuit sur [uptimerobot.com](https://uptimerobot.com) → **New monitor** → type **HTTP(S)** → colle ton URL glitch.me → intervalle 5 minutes → le projet ne dort plus jamais
+
+➡️ Ouvre l'URL glitch.me dans Chrome → BotDev est en ligne ! Menu ⋮ → « Ajouter à l'écran d'accueil » pour en faire une app.
+
+### Étape 2 bis — Ou sur Render (même principe)
+
+1. Compte sur [render.com](https://render.com)
+2. **New → Web Service → Connect GitHub** → choisis le dépôt `botdev`
+3. Build command : `npm install` · Start command : `npm start` → **Create Web Service** (plan gratuit)
+4. ⚠️ Render endort les services gratuits après ~15 min sans visite → ajoute l'URL publique dans UptimeRobot (même manip qu'au-dessus)
+
+⚠️ À savoir : l'offre gratuite de Render est de plus en plus restreinte (elle peut changer). Glitch reste la valeur sûre. **Koyeb n'est plus une option** : sa formule gratuite a été fermée aux nouveaux utilisateurs début 2026.
+
+---
+
+## 🖥️ Option 2 — Ton PC (la plus simple, pour démarrer)
 
 1. Installe **Node.js LTS** (gratuit) : https://nodejs.org → bouton vert « LTS »
 2. Récupère le projet :
@@ -91,7 +142,7 @@ Pour une vraie app avec icône sur l'écran d'accueil : menu Chrome (⋮) → **
 
 ---
 
-## 🧩 Option 2 — Glitch (gratuit, sans carte bancaire)
+## 🧩 Option 3 — Glitch (gratuit, sans carte bancaire)
 
 [Glitch](https://glitch.com) héberge des apps Node.js gratuitement. Astuce pour le 24h/24 :
 
@@ -105,7 +156,7 @@ Pour une vraie app avec icône sur l'écran d'accueil : menu Chrome (⋮) → **
 
 ---
 
-## ☁️ Option 3 — Oracle Cloud Always Free (le vrai 24h/24 gratuit à vie) ⭐ RECOMMANDÉ
+## ☁️ Option 4 — Oracle Cloud Always Free (le vrai 24h/24 gratuit à vie) ⭐ RECOMMANDÉ
 
 > 📱 **Depuis Android uniquement** : installe **Termius** (gratuit sur le Play Store) — c'est un terminal SSH pour téléphone. Il peut générer la clé SSH (Settings → Keychain → Generate), te connecter au serveur et taper toutes les commandes ci-dessous. La console Oracle s'ouvre dans Chrome (active le « mode bureau » dans le menu ⋮ si l'affichage est bizarre).
 
