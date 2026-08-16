@@ -14,7 +14,7 @@ const {
   ChannelType,
 } = require('discord.js');
 const store = require('../db');
-const { sendTicketPanel, sendRoleMenu, findChannelInGuild, resolveRole, parseTypes } = require('./panels');
+const { sendTicketPanel, sendRoleMenu, findChannelInGuild, resolveRole, parseTypes, staffForTicket } = require('./panels');
 
 const DEFAULT_CFG = {
   name: '',
@@ -319,18 +319,23 @@ async function handlePanelCommand(botId, interaction) {
   const isAdmin = member.permissions.has(PermissionsBitField.Flags.Administrator);
 
   const sub = interaction.options.getSubcommand();
+  const group = (typeof interaction.options.getSubcommandGroup === 'function') ? interaction.options.getSubcommandGroup() : null;
   // Système de tickets :
-  //  - configuration : propriétaire du serveur uniquement
-  //  - gestion (close/add/remove) : propriétaire, admin OU staff (rôle support)
+  //  - configuration (dont les types) : propriétaire du serveur uniquement
+  //  - gestion (close/add/remove) : propriétaire, admin OU staff (rôle du type)
   if (interaction.commandName === 'ticket') {
-    if (['close', 'add', 'remove'].includes(sub)) {
-      if (!isOwner && !isAdmin && !ticketStaff(botId, interaction)) {
+    if (group === 'types' || sub === 'type') {
+      if (!isOwner) {
+        return interaction.reply({ content: '⛔ Seul le **propriétaire du serveur** peut configurer les types de tickets.', ephemeral: true });
+      }
+    } else if (['close', 'add', 'remove'].includes(sub)) {
+      if (!isOwner && !isAdmin && !ticketStaff(botId, interaction) && !staffForTicket(botId, interaction)) {
         return interaction.reply({ content: '🔒 Seul le **staff** (rôle support) ou les administrateurs peuvent gérer les tickets.', ephemeral: true });
       }
     } else if (!isOwner) {
       return interaction.reply({ content: '⛔ Seul le **propriétaire du serveur** peut configurer le système de tickets.', ephemeral: true });
     }
-    return handleTicket(botId, sub, interaction, guild);
+    return handleTicket(botId, sub, group, interaction, guild);
   }
   // Menus de rôles : propriétaire ou administrateurs
   if (!isOwner && !isAdmin) {
@@ -340,12 +345,52 @@ async function handlePanelCommand(botId, interaction) {
 }
 
 // ---------------------- /ticket ----------------------
-async function handleTicket(botId, sub, interaction, guild) {
+async function handleTicket(botId, sub, group, interaction, guild) {
   const cfg = getCfg(botId, guild.id);
   const save = async (fields) => {
     store.tickets.set(botId, guild.id, { ...cfg, ...fields });
     await interaction.reply({ content: '✅ Configuration enregistrée !', ephemeral: true });
   };
+
+  // ---- /ticket types (groupe) : ajouter / renommer / supprimer / lister ----
+  if (group === 'types' || sub === 'type') {
+    const types = parseTypes(cfg);
+    const action = group === 'types' ? sub : 'add';
+    if (action === 'add') {
+      const nom = (interaction.options.getString('nom') || '').trim();
+      if (!nom) return interaction.reply({ content: '❌ Donne un nom au type de ticket.', ephemeral: true });
+      const emoji = (interaction.options.getString('emoji') || '').trim();
+      const categorie = (interaction.options.getString('categorie') || '').trim();
+      const staffrole = (interaction.options.getString('staffrole') || '').trim();
+      const others = types.filter((t) => t.label.toLowerCase() !== nom.toLowerCase());
+      others.push({ label: nom.slice(0, 100), emoji: emoji.slice(0, 10), category: categorie.slice(0, 100), staff_role: staffrole.slice(0, 100) });
+      store.tickets.set(botId, guild.id, { ...cfg, types: JSON.stringify(others) });
+      return interaction.reply({
+        content: `✅ Type « ${emoji || '🎫'} **${nom}** » ajouté !${staffrole ? `\n🛡️ Staff de ce type : ${staffrole}` : ''}\n\nTypes actuels : ${others.map((t) => t.label).join(', ') || 'aucun'}\n\n📨 Re-envoie le panneau avec \`/ticket panel\` pour mettre à jour le menu déroulant.`,
+        ephemeral: true,
+      });
+    }
+    if (action === 'remove') {
+      const nom = (interaction.options.getString('nom') || '').trim();
+      if (!nom) return interaction.reply({ content: '❌ Donne le nom du type à supprimer.', ephemeral: true });
+      const others = types.filter((t) => t.label.toLowerCase() !== nom.toLowerCase());
+      if (others.length === types.length) {
+        return interaction.reply({ content: `❌ Type « ${nom} » introuvable. Utilise \`/ticket types list\`.`, ephemeral: true });
+      }
+      store.tickets.set(botId, guild.id, { ...cfg, types: JSON.stringify(others) });
+      return interaction.reply({ content: `✅ Type « ${nom} » supprimé.\nTypes restants : ${others.map((t) => t.label).join(', ') || 'aucun'}`, ephemeral: true });
+    }
+    // list
+    if (!types.length) {
+      return interaction.reply({ content: '🗂️ Aucun type pour l\'instant. Ajoute-en avec `/ticket types add`.', ephemeral: true });
+    }
+    const embed = new EmbedBuilder()
+      .setColor('#5865F2')
+      .setTitle('🗂️ Types de tickets')
+      .setDescription(types.map((t) => `${t.emoji || '🎫'} **${t.label}**${t.category ? ` → catégorie « ${t.category} »` : ''}${t.staff_role ? ` · staff : ${t.staff_role}` : ''}`).join('\n'))
+      .setFooter({ text: 'Ajoute : /ticket types add · Supprime : /ticket types remove · Le panneau (/ticket panel) affiche le menu déroulant.' });
+    return interaction.reply({ embeds: [embed], ephemeral: true });
+  }
 
   switch (sub) {
     case 'setup':

@@ -154,6 +154,18 @@ CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT DEFAULT ''
 );
+
+CREATE TABLE IF NOT EXISTS transcripts (
+  token TEXT PRIMARY KEY,
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  channel_name TEXT DEFAULT '',
+  opener_id TEXT DEFAULT '',
+  type_label TEXT DEFAULT '',
+  server_name TEXT DEFAULT '',
+  messages TEXT DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 `);
 
 // Migrations légères (les colonnes ajoutées après coup)
@@ -418,4 +430,20 @@ const settings = {
   set: (key, value) => db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, String(value)),
 };
 
-module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles };
+// ---------------------- Transcriptions de tickets ----------------------
+const transcripts = {
+  add: (t) => db.prepare('INSERT INTO transcripts (token, bot_id, guild_id, channel_name, opener_id, type_label, server_name, messages) VALUES (@token, @bot_id, @guild_id, @channel_name, @opener_id, @type_label, @server_name, @messages)')
+    .run({
+      token: String(t.token).slice(0, 64),
+      bot_id: t.bot_id,
+      guild_id: t.guild_id,
+      channel_name: String(t.channel_name || '').slice(0, 50),
+      opener_id: String(t.opener_id || '').slice(0, 30),
+      type_label: String(t.type_label || '').slice(0, 100),
+      server_name: String(t.server_name || '').slice(0, 100),
+      messages: String(t.messages || '').slice(0, 300000),
+    }),
+  get: (token) => db.prepare('SELECT * FROM transcripts WHERE token = ?').get(String(token)) || null,
+};
+
+module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts };

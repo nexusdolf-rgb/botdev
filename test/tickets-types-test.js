@@ -100,7 +100,7 @@ const { buildSlashPayloads } = require('../server/discord/premade');
     reply: async (p) => { staffReply = p; },
   };
   await panels.dispatchPanels(1, staffClose);
-  assert(staffReply.content.includes('Fermeture'), 'staff autorisé');
+  assert(staffReply.content.includes('fermé'), 'staff autorisé');
   console.log('5️⃣  Staff (rôle support) : fermeture AUTORISÉE ✅');
 
   // ---------- 6. /ticket close par un membre lambda → refusé ----------
@@ -127,12 +127,12 @@ const { buildSlashPayloads } = require('../server/discord/premade');
   assert(types.length === 3 && types[2].label === 'Recrutement' && types[2].emoji === '📢');
   console.log('7️⃣  /ticket type Recrutement 📢 → ajouté ✅ (', types.map((t) => t.label).join(', '), ')');
 
-  // ---------- 8. Payload : sous-commande type présente ----------
+  // ---------- 8. Payload : groupe types présent ----------
   const payloads = buildSlashPayloads(1);
   const ticket = payloads.find((p) => p.name === 'ticket');
-  const typeSub = ticket.options.find((o) => o.name === 'type');
-  assert(typeSub && typeSub.options.some((o) => o.name === 'nom' && o.required));
-  console.log('8️⃣  /ticket type (nom requis, emoji, catégorie) dans le payload ✅');
+  const group = ticket.options.find((o) => o.name === 'types');
+  assert(group && group.options.some((o) => o.name === 'add'));
+  console.log('8️⃣  Groupe /ticket types (add/remove/list) dans le payload ✅');
 
   // ---------- 9. Roundtrip API : PUT avec types ----------
   const http = require('http');

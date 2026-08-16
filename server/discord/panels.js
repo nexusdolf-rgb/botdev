@@ -9,6 +9,7 @@ const {
   ChannelType, PermissionFlagsBits, EmbedBuilder,
 } = require('discord.js');
 const store = require('../db');
+const crypto = require('crypto');
 
 // ---------------------- Résolution salon / rôle ----------------------
 async function findChannel(client, query) {
@@ -81,6 +82,8 @@ async function dispatchPanels(botId, interaction) {
     if (interaction.isButton()) {
       if (cid === `bd-ticket:${botId}`) { await handleTicketButton(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:close`) { await handleTicketClose(botId, interaction); return true; }
+      if (cid === `bd-tmenu:${botId}:reopen`) { await handleTicketReopen(botId, interaction); return true; }
+      if (cid === `bd-tmenu:${botId}:hold`) { await handleTicketHold(botId, interaction); return true; }
       return false;
     }
     if (interaction.isStringSelectMenu()) {
@@ -205,6 +208,7 @@ function isStaff(botId, interaction) {
 }
 
 // Crée le salon du ticket (éventuellement selon un type)
+// Topic : Ticket de {tag} | {openerId} | {typeLabel} → sert au staff, à la transcription et au MP
 async function openTicket(botId, interaction, type) {
   const guild = interaction.guild;
   const member = interaction.member;
@@ -222,7 +226,8 @@ async function openTicket(botId, interaction, type) {
     return interaction.reply({ content: `Tu as déjà un ticket ouvert : ${existing}`, ephemeral: true });
   }
 
-  const support = resolveRole(guild, cfg.support_role);
+  // Rôle staff : celui du type s'il existe, sinon le rôle global
+  const support = resolveRole(guild, (chosen && chosen.staff_role) || cfg.support_role);
   const catName = (chosen && chosen.category) ? chosen.category : (cfg.category || '');
   let parent = null;
   if (catName) {
@@ -247,17 +252,16 @@ async function openTicket(botId, interaction, type) {
       type: ChannelType.GuildText,
       parent: parent ? parent.id : null,
       permissionOverwrites: perms,
-      topic: `Ticket de ${member.user.tag}${chosen ? ` — type : ${chosen.label}` : ''}`,
+      topic: `Ticket de ${member.user.tag} | ${member.id} | ${chosen ? chosen.label : ''}`,
     });
   } catch (e) {
     return interaction.reply({ content: '⚠️ Je n\'ai pas pu créer le salon. Vérifie mes permissions (gérer les salons).', ephemeral: true });
   }
 
   const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`bd-tmenu:${botId}:close`)
-      .setLabel('🔒 Fermer le ticket')
-      .setStyle(ButtonStyle.Danger)
+    new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:close`).setLabel('🔒 Fermer').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:hold`).setLabel('⏸ En attente').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:reopen`).setLabel('🔓 Réouvrir').setStyle(ButtonStyle.Success),
   );
   const welcome = new EmbedBuilder()
     .setColor('#57F287')
@@ -268,7 +272,8 @@ async function openTicket(botId, interaction, type) {
       chosen ? `🗂️ **Type** : ${chosen.emoji || ''} ${chosen.label}` : null,
       'Explique ta demande en détail (tu peux joindre des captures d\'écran ou des fichiers). Notre équipe te répondra ici **au plus vite**.',
       '',
-      '🔒 Seul le **staff** peut fermer ce ticket.',
+      '🔒 Les boutons **Fermer / En attente / Réouvrir** sont réservés au **staff**.',
+      '📄 À la fermeture, tu recevras la **transcription** de ton ticket en message privé.',
     ].filter(Boolean).join('\n'));
   const site = store.settings.get('public_url');
   if (site) welcome.setFooter({ text: `BotDev · ${site}` });
@@ -292,13 +297,132 @@ async function handleTicketTypeSelect(botId, interaction) {
   await openTicket(botId, interaction, type);
 }
 
-async function handleTicketClose(botId, interaction) {
-  if (!isStaff(botId, interaction)) {
-    return interaction.reply({ content: '🔒 Seul le **staff** peut fermer ce ticket.', ephemeral: true });
+// ---------------------- Staff & état du ticket ----------------------
+// Lit « | openerId | typeLabel » depuis le topic du salon
+function parseTopic(topic) {
+  const t = String(topic || '');
+  const m = t.match(/\| (\d{15,21})(?: \| (.*))?$/);
+  return { openerId: m ? m[1] : null, typeLabel: m && m[2] ? m[2].trim() : null };
+}
+
+// Le membre peut-il gérer ce ticket ? (propriétaire, admin, rôle support global OU rôle du type)
+function staffForTicket(botId, interaction) {
+  const guild = interaction.guild;
+  const member = interaction.member;
+  if (!guild || !member) return false;
+  try {
+    if (guild.ownerId === interaction.user.id) return true;
+    if (member.permissions && typeof member.permissions.has === 'function'
+      && member.permissions.has(PermissionFlagsBits.ManageGuild)) return true;
+  } catch {}
+  const cfg = store.tickets.get(botId, guild.id) || {};
+  const { typeLabel } = parseTopic(interaction.channel ? interaction.channel.topic : '');
+  let supportName = cfg.support_role;
+  if (typeLabel) {
+    const type = parseTypes(cfg).find((t) => t.label === typeLabel);
+    if (type && type.staff_role) supportName = type.staff_role;
   }
+  if (supportName) {
+    const role = resolveRole(guild, supportName);
+    if (role && member.roles && member.roles.cache && member.roles.cache.has(role.id)) return true;
+  }
+  return false;
+}
+
+async function staffDeny(interaction) {
+  return interaction.reply({ content: '🔒 Seul le **staff** de ce type de ticket peut utiliser ce bouton.', ephemeral: true });
+}
+
+async function buildTranscript(botId, interaction) {
   const channel = interaction.channel;
-  await interaction.reply({ content: '🔒 Fermeture du ticket…', ephemeral: true }).catch(() => {});
-  setTimeout(() => { channel.delete().catch(() => {}); }, 3000);
+  const guild = interaction.guild;
+  const { openerId, typeLabel } = parseTopic(channel ? channel.topic : '');
+  let text = '';
+  try {
+    const fetched = await channel.messages.fetch({ limit: 100 });
+    const arr = [...fetched.values()].reverse();
+    text = arr.map((m) => {
+      const time = m.createdAt ? m.createdAt.toISOString().slice(11, 19) : '--:--:--';
+      const content = m.content || (m.attachments && m.attachments.size ? '[pièce jointe]' : (m.embeds && m.embeds.length ? '[embed]' : ''));
+      return `[${time}] ${m.author ? m.author.username : '?'}: ${content}`;
+    }).join('\n');
+  } catch {}
+  let token = '', url = '';
+  try {
+    token = crypto.randomBytes(8).toString('hex');
+    store.transcripts.add({
+      token, bot_id: botId, guild_id: guild.id, channel_name: channel.name,
+      opener_id: openerId || '', type_label: typeLabel || '', server_name: guild.name,
+      messages: text.slice(0, 300000),
+    });
+    const site = store.settings.get('public_url');
+    if (site) url = `${site}/transcript/${token}`;
+  } catch (e) { console.error('[BotDev] transcript:', e.message); }
+  return { text, url, openerId };
+}
+
+// 🔒 Fermer : transcription → MP au créateur → verrouillage (staff uniquement)
+async function handleTicketClose(botId, interaction) {
+  if (!staffForTicket(botId, interaction)) return staffDeny(interaction);
+  const channel = interaction.channel;
+  const guild = interaction.guild;
+  const { text, url, openerId } = await buildTranscript(botId, interaction);
+
+  // Message privé professionnel + transcription (lien + fichier)
+  if (openerId) {
+    try {
+      const u = await interaction.client.users.fetch(openerId);
+      const embed = new EmbedBuilder()
+        .setColor('#5865F2')
+        .setTitle('🎫 Ton ticket a été fermé')
+        .setDescription([
+          `Merci d\'avoir contacté l\'équipe de **${guild.name}** ! 👋`,
+          '',
+          'Ton ticket a été traité et fermé par notre équipe. Si tu as besoin de quoi que ce soit, n\'hésite pas à ouvrir un nouveau ticket.',
+          '',
+          url ? `📄 **Ta transcription** : [Clique ici](${url})` : '📄 **Ta transcription** : fichier joint ci-dessous.',
+        ].join('\n'))
+        .setFooter({ text: 'BotDev · tickets automatiques' });
+      await u.send({
+        embeds: [embed],
+        files: [{
+          attachment: Buffer.from(text || 'Transcription indisponible.', 'utf-8'),
+          name: `transcription-${channel.name}.txt`,
+        }],
+      });
+    } catch (e) { console.log('[BotDev] DM transcription impossible:', e.message); }
+  }
+
+  // Verrouillage : le créateur ne voit plus / n'écrit plus dans le salon
+  if (openerId) {
+    await channel.permissionOverwrites.edit(openerId, { ViewChannel: false, SendMessages: false }).catch(() => {});
+  }
+  await interaction.reply({
+    content: '🔒 Ticket fermé.' + (url ? ' 📄 Transcription envoyée en MP au créateur.' : ''),
+    ephemeral: true,
+  });
+}
+
+// 🔓 Réouvrir : restaurer l'accès du créateur (staff uniquement)
+async function handleTicketReopen(botId, interaction) {
+  if (!staffForTicket(botId, interaction)) return staffDeny(interaction);
+  const channel = interaction.channel;
+  const { openerId } = parseTopic(channel ? channel.topic : '');
+  if (openerId) {
+    await channel.permissionOverwrites.edit(openerId, { ViewChannel: true, SendMessages: true }).catch(() => {});
+  }
+  await interaction.reply({ content: '🔓 Ticket réouvert !', ephemeral: true });
+}
+
+// ⏸ En attente : le créateur peut voir mais plus écrire (staff uniquement)
+async function handleTicketHold(botId, interaction) {
+  if (!staffForTicket(botId, interaction)) return staffDeny(interaction);
+  const channel = interaction.channel;
+  const { openerId } = parseTopic(channel ? channel.topic : '');
+  if (openerId) {
+    await channel.permissionOverwrites.edit(openerId, { ViewChannel: true, SendMessages: false }).catch(() => {});
+  }
+  await interaction.reply({ content: '⏸ Ticket mis en attente (le créateur ne peut plus écrire).', ephemeral: true });
 }
 
 // ---------------------- Menus de rôles ----------------------
@@ -344,4 +468,4 @@ async function handleRoleMenu(botId, interaction, menuId) {
   });
 }
 
-module.exports = { dispatchPanels, sendTicketPanel, sendRoleMenu, findChannel, findChannelInGuild, resolveRole, parseTypes, isStaff, openTicket };
+module.exports = { dispatchPanels, sendTicketPanel, sendRoleMenu, findChannel, findChannelInGuild, resolveRole, parseTypes, isStaff, staffForTicket, openTicket };

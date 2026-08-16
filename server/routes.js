@@ -569,7 +569,7 @@ router.put('/bots/:id/tickets', requireAuth, (req, res) => {
   };
   if (types !== undefined) {
     payload.types = JSON.stringify((Array.isArray(types) ? types : [])
-      .map((t) => ({ label: String(t.label || '').slice(0, 100), emoji: String(t.emoji || '').slice(0, 10), category: String(t.category || '').slice(0, 100) }))
+      .map((t) => ({ label: String(t.label || '').slice(0, 100), emoji: String(t.emoji || '').slice(0, 10), category: String(t.category || '').slice(0, 100), staff_role: String(t.staff_role || '').slice(0, 100) }))
       .filter((t) => t.label)
       .slice(0, 25));
   } else {

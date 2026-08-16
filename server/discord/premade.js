@@ -132,12 +132,19 @@ function buildSlashPayloads(botId) {
     description: '🎫 Configurer et gérer le système de tickets',
     default_member_permissions: '8',
     options: [
-      { name: 'setup', description: 'Assistant pas à pas : nom → catégorie → salon → rôle staff', type: ApplicationCommandOptionType.Subcommand },
-      { name: 'type', description: 'Ajouter un type de ticket (menu déroulant du panneau)', type: ApplicationCommandOptionType.Subcommand, options: [
-        { name: 'nom', description: 'Nom du type (ex : Partenariat)', type: ApplicationCommandOptionType.String, required: true },
-        { name: 'emoji', description: 'Emoji affiché dans le menu', type: ApplicationCommandOptionType.String, required: false },
-        { name: 'categorie', description: 'Catégorie dédiée (optionnel)', type: ApplicationCommandOptionType.String, required: false },
+      { name: 'types', description: 'Gérer les types de tickets (ajouter, renommer, supprimer)', type: ApplicationCommandOptionType.SubcommandGroup, options: [
+        { name: 'add', description: 'Ajouter ou renommer un type de ticket', type: ApplicationCommandOptionType.Subcommand, options: [
+          { name: 'nom', description: 'Nom du type (ex : Candidature staff)', type: ApplicationCommandOptionType.String, required: true },
+          { name: 'emoji', description: 'Emoji affiché dans le menu', type: ApplicationCommandOptionType.String, required: false },
+          { name: 'categorie', description: 'Catégorie dédiée (optionnel)', type: ApplicationCommandOptionType.String, required: false },
+          { name: 'staffrole', description: 'Rôle staff de CE type (qui peut fermer ses tickets)', type: ApplicationCommandOptionType.String, required: false },
+        ]},
+        { name: 'remove', description: 'Supprimer un type de ticket', type: ApplicationCommandOptionType.Subcommand, options: [
+          { name: 'nom', description: 'Nom du type à supprimer', type: ApplicationCommandOptionType.String, required: true },
+        ]},
+        { name: 'list', description: 'Voir les types de tickets', type: ApplicationCommandOptionType.Subcommand },
       ]},
+      { name: 'setup', description: 'Assistant pas à pas : nom → catégorie → salon → rôle staff', type: ApplicationCommandOptionType.Subcommand },
       { name: 'channel', description: 'Définir le salon du panneau de tickets', type: ApplicationCommandOptionType.Subcommand, options: [
         { name: 'salon', description: 'Le salon où sera envoyé le panneau', type: ApplicationCommandOptionType.Channel, required: true },
       ]},
@@ -528,9 +535,7 @@ function argsMatch(str, regex) {
 // ============================================================
 const HELP_DETAILS = {
   ticket: ['🎫 Tickets', 'Le système de tickets complet : un bouton dans un salon, chaque clic crée un salon privé réservé au membre et au staff.',
-    '`/ticket setup` — **Assistant avec menus de sélection** : choisis le nom, la catégorie, le salon et le rôle staff dans des menus déroulants (rien à écrire), puis « Suivant » → « Terminer ». Le panneau est envoyé automatiquement !\n`/ticket type Partenariat` — Ajouter un **type de ticket** (menu déroulant sur le panneau)\n`/ticket panel` — Envoyer le panneau\n`/ticket channel #salon` — Changer le salon\n`/ticket role @Staff` — Changer le rôle staff\n`/ticket category Nom` — Changer la catégorie\n`/ticket button Texte` — Changer le texte du bouton\n`/ticket message Texte` — Changer le message\n`/ticket config` — Voir la configuration\n`/ticket close` — Fermer un ticket (staff)\n`/ticket add @membre` / `/ticket remove @membre` — Gérer l\'accès au ticket (staff)\n\n🔒 Configuration réservée au **propriétaire du serveur** · fermeture réservée au **staff**'],
-  roles: ['📋 Rôles', 'Les menus de rôles déroulants : les membres choisissent leurs rôles en cliquant.',
-    '`/roles list` — Voir les menus de ce serveur\n`/roles send 1` — Envoyer le menu n°1 (ou précise un salon)\n\nCrée tes menus dans le **dashboard BotDev** (onglet Panneaux)'],
+    '`/ticket types add Nom` — Ajouter/renommer un **type de ticket** (emoji, catégorie et rôle staff dédiés en options) — le panneau affiche un menu déroulant de types\n`/ticket types remove Nom` — Supprimer un type\n`/ticket types list` — Voir les types\n`/ticket setup` — **Assistant avec menus de sélection** : nom → catégorie → salon → rôle staff\n`/ticket panel` — Envoyer le panneau\n`/ticket channel #salon` — Changer le salon\n`/ticket role @Staff` — Changer le rôle staff\n`/ticket category Nom` — Changer la catégorie\n`/ticket button Texte` — Changer le texte du bouton\n`/ticket message Texte` — Changer le message\n`/ticket config` — Voir la configuration\n`/ticket close` — Fermer un ticket (staff)\n`/ticket add @membre` / `/ticket remove @membre` — Gérer l\'accès au ticket (staff)\n\n🔒 Configuration réservée au **propriétaire du serveur** · gestion réservée au **staff**\n📄 À la fermeture, le créateur reçoit la **transcription** en MP.\n\n🗂️ Exemples de types : Candidature staff, Ticket contre admin, Signaler un bug, Partenariat…'],
   ping: ['🔧 Utilitaire', 'Affiche la latence du bot.', '`/ping`', '`/ping` → 🏓 Pong ! Latence : 42 ms'],
   avatar: ['🔧 Utilitaire', 'Affiche l\'avatar d\'un membre.', '`/avatar @membre`', '`/avatar @Nexora`'],
   userinfo: ['🔧 Utilitaire', 'Informations sur un membre (ID, date de création, arrivée).', '`/userinfo @membre`', '`/userinfo`'],
