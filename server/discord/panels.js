@@ -89,6 +89,15 @@ async function dispatchPanels(botId, interaction) {
     }
     const cid = String(interaction.customId || '');
 
+    // Assistant interactif /botprofile setup (boutons + modales + sélecteur de couleurs)
+    if ((interaction.isButton() && cid.startsWith('bpw:'))
+      || (interaction.isStringSelectMenu() && cid.startsWith('bpw-sel:'))
+      || (interaction.isModalSubmit() && cid.startsWith('bpw-modal:'))) {
+      const { handleProfileWizardInteraction } = require('./profileWizard');
+      await handleProfileWizardInteraction(botId, interaction);
+      return true;
+    }
+
     // 📝 Raison demandée à l'ouverture d'un ticket + 🗑 raison de suppression (staff)
     if (interaction.isModalSubmit()) {
       if (cid.startsWith(`bd-treason:${botId}`)) { await submitReason(botId, interaction); return true; }

@@ -660,7 +660,7 @@ BotViews.renderServerConfig = async (content, bot, guildId) => {
       <div class="card-head-row">
         <div>
           <h3>🤖 Identité de ${App.escapeHtml(bot.name)} sur ce serveur</h3>
-          <div class="card-sub" style="margin-bottom:0">Nom, avatar, bannière, bio et couleur propres à ce serveur — le bot s'exprime avec cette identité dans ses messages ici (bienvenue, niveaux, tickets…).</div>
+          <div class="card-sub" style="margin-bottom:0">Nom, avatar, bannière, bio et couleur propres à ce serveur — le bot s'exprime avec cette identité dans ses messages ici (bienvenue, niveaux, tickets…). 💡 <b>Sur Discord, l'assistant interactif :</b> <code>/botprofile setup</code> (nom → bio → sélecteur de couleurs → avatar → bannière → Enregistrer).</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <span id="prof-preview" style="width:48px;height:48px;border-radius:14px;background:var(--panel2);display:flex;align-items:center;justify-content:center;overflow:hidden">

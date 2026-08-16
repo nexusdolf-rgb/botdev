@@ -29,6 +29,10 @@ async function handleProfileCommand(botId, interaction) {
     if (!isOwner(interaction)) {
       return interaction.reply({ content: '⛔ Seul le **propriétaire du serveur** peut personnaliser l\'identité du bot.', ephemeral: true });
     }
+    if (sub === 'setup') {
+      const { startProfileWizard } = require('./profileWizard');
+      return startProfileWizard(botId, interaction);
+    }
     const p = store.botProfiles.get(botId, guild.id) || {};
 
     if (sub === 'view') {
