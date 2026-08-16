@@ -21,8 +21,9 @@ La seule chose à faire : **héberger BotDev sur une machine qui reste allumée 
 | **Oracle Cloud Always Free** | 0 € à vie | Oui | Oui (vérification, **jamais débité**) | ⭐⭐⭐ | ✅ **La vraie solution durable** |
 | **Google Cloud e2-micro** | 0 € à vie | Oui | Oui (vérification) | ⭐⭐⭐ | Bonne alternative |
 
-> 💡 **Mon conseil** : commence avec **GitHub + Render** (tout se fait dans Chrome sur ton téléphone, sans Termux et sans carte bancaire), puis passe sur **Oracle Cloud** quand tu veux du 24h/24 définitif et fiable.
-> ⚠️ **Glitch a fermé son hébergement de projets en juillet 2025** : le site ne sert plus qu'un blog. Ne l'utilise pas. La carte bancaire demandée par Oracle ne sert qu'à vérifier ton identité : l'offre *Always Free* est gratuite à vie, il n'y a **aucun débit**.
+> 💡 **Mon conseil** : commence avec **GitHub + Render** (tout se fait dans Chrome sur ton téléphone, sans Termux et sans carte bancaire), puis passe sur **Oracle Cloud** quand tu veux du 24h/24 définitif et fiable. La carte bancaire demandée par Oracle ne sert qu'à vérifier ton identité : l'offre *Always Free* est gratuite à vie, il n'y a **aucun débit**.
+>
+> ⚠️ **Glitch a fermé son hébergement de projets en juillet 2025** : le site ne sert plus qu'un blog. Ne l'utilise pas.
 
 ---
 
