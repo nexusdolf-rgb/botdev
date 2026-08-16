@@ -614,6 +614,13 @@ router.get('/status/backup', requireAuth, (req, res) => {
   res.json({ enabled: backup.enabled(), repo: backup.repo(), branch: backup.branch() });
 });
 
+// Indicateur public (aucune donnée sensible : juste actif/inactif)
+// Sert à vérifier depuis l'extérieur que les variables d'environnement sont bien en place.
+router.get('/health/backup', (req, res) => {
+  const backup = require('./backup');
+  res.json({ enabled: backup.enabled() });
+});
+
 // ============================================================
 // Pages publiques (sans connexion) : le dashboard public de Nexora
 // Les stats sont lues EN DIRECT depuis le processus du bot :
