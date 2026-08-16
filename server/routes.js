@@ -419,4 +419,10 @@ router.post('/role-menus/:id/send', requireAuth, async (req, res) => {
   }
 });
 
+// ---------------------- Statut de la sauvegarde automatique ----------------------
+router.get('/status/backup', requireAuth, (req, res) => {
+  const backup = require('./backup');
+  res.json({ enabled: backup.enabled(), repo: backup.repo(), branch: backup.branch() });
+});
+
 module.exports = router;

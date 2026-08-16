@@ -31,6 +31,20 @@ npm install
 npm start          # démarre sur http://localhost:3000
 ```
 
+## 💾 Sauvegarde automatique (survit aux mises à jour)
+
+Sur Render (plan gratuit), le disque est effacé à chaque redéploiement. BotDev sauvegarde donc automatiquement sa base sur un dépôt GitHub **privé** et la restaure au démarrage → les mises à jour sont 100 % automatiques, personne n'a besoin de se reconnecter.
+
+Variables d'environnement à définir sur Render :
+
+| Variable | Valeur |
+|---|---|
+| `BOTDEV_GH_TOKEN` | Token GitHub fine-grained, permission **Contents : Read and write**, limité à un dépôt **privé** (ex : `botdev-data`) |
+| `BOTDEV_DATA_REPO` | `pseudo/botdev-data` |
+| `BOTDEV_DATA_BRANCH` | (optionnel) branche du dépôt |
+
+Fréquence : sauvegarde toutes les 10 min + sauvegarde finale à l'arrêt. Restauration automatique à chaque démarrage.
+
 ## 🌍 Mettre BotDev en ligne gratuitement
 
 BotDev est une application web : elle s'ouvre dans n'importe quel navigateur (Chrome, Firefox, Safari, mobile…). Pour la rendre accessible 24h/24 gratuitement — **y compris depuis un téléphone Android sans PC** (Termux) — suis le guide pas-à-pas :

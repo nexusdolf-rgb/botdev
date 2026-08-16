@@ -4,7 +4,7 @@
 const {
   ActionRowBuilder, ButtonBuilder, ButtonStyle,
   StringSelectMenuBuilder, StringSelectMenuOptionBuilder,
-  ChannelType, PermissionFlagsBits,
+  ChannelType, PermissionFlagsBits, EmbedBuilder,
 } = require('discord.js');
 const store = require('../db');
 
@@ -95,6 +95,48 @@ async function dispatchPanels(botId, interaction) {
 }
 
 // ---------------------- Tickets ----------------------
+const LEGACY_DEFAULT_MESSAGE = '🎫 Besoin d\'aide ? Clique sur le bouton pour ouvrir un ticket !';
+
+function isDefaultMessage(msg) {
+  const s = String(msg || '').trim();
+  if (!s) return true;
+  return s === LEGACY_DEFAULT_MESSAGE;
+}
+
+function defaultPanelDescription(buttonLabel) {
+  return [
+    'Bienvenue dans notre **centre d\'assistance** 👋',
+    '',
+    'Tu as une question, un problème ou une suggestion ? Ouvre un **ticket privé** et notre équipe te répondra aussi vite que possible.',
+    '',
+    '**Comment ça marche ?**',
+    `1️⃣  Clique sur **${buttonLabel}** ci-dessous`,
+    '2️⃣  Décris ta demande dans le salon privé qui s\'ouvre automatiquement',
+    '3️⃣  Notre équipe te répond — c\'est tout !',
+  ].join('\n');
+}
+
+function buildTicketPanelEmbed(cfg, client) {
+  const desc = isDefaultMessage(cfg.message)
+    ? defaultPanelDescription(cfg.button_label || '🎫 Ouvrir un ticket')
+    : String(cfg.message);
+  const embed = new EmbedBuilder()
+    .setColor('#5865F2')
+    .setTitle('🎫 Centre d\'assistance')
+    .setDescription(desc)
+    .addFields(
+      { name: '🕐 Réponse rapide', value: 'Ton ticket est créé **instantanément** dans un salon privé.', inline: true },
+      { name: '🔒 100 % privé', value: 'Seuls **toi et le staff** voient la conversation.', inline: true },
+      { name: '📩 Suivi facile', value: 'Ferme ton ticket en un clic quand tout est réglé.', inline: true },
+    );
+  if (client && client.user) {
+    try { embed.setThumbnail(client.user.displayAvatarURL({ dynamic: true })); } catch {}
+  }
+  const site = store.settings.get('public_url');
+  if (site) embed.setFooter({ text: `Propulsé par BotDev · ${site}` });
+  return embed;
+}
+
 async function sendTicketPanel(botId, guildId, client, channel) {
   const cfg = store.tickets.get(botId, guildId);
   if (!cfg) throw new Error('Configuration des tickets introuvable');
@@ -104,7 +146,7 @@ async function sendTicketPanel(botId, guildId, client, channel) {
       .setLabel(cfg.button_label || '🎫 Ouvrir un ticket')
       .setStyle(ButtonStyle.Primary)
   );
-  await channel.send({ content: cfg.message || null, components: [row] });
+  await channel.send({ embeds: [buildTicketPanelEmbed(cfg, client)], components: [row] });
 }
 
 async function handleTicketButton(botId, interaction) {
@@ -156,8 +198,21 @@ async function handleTicketButton(botId, interaction) {
       .setLabel('🔒 Fermer le ticket')
       .setStyle(ButtonStyle.Danger)
   );
+  const welcome = new EmbedBuilder()
+    .setColor('#57F287')
+    .setTitle('🎫 Ticket ouvert !')
+    .setDescription([
+      `Bienvenue ${member} 👋`,
+      '',
+      'Explique ta demande en détail (tu peux joindre des captures d\'écran ou des fichiers). Notre équipe te répondra ici **au plus vite**.',
+      '',
+      '🔒 Une fois la conversation terminée, utilise le bouton ci-dessous pour fermer ton ticket.',
+    ].join('\n'));
+  const site = store.settings.get('public_url');
+  if (site) welcome.setFooter({ text: `BotDev · ${site}` });
   await channel.send({
-    content: `${member}${support ? ' ' + support.toString() : ''}\nBienvenue dans ton ticket ! Explique ta demande, l'équipe te répondra ici.`,
+    content: `${member}${support ? ' · ' + support.toString() : ''}`,
+    embeds: [welcome],
     components: [row],
   }).catch(() => {});
 

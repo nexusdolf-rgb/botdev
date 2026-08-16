@@ -571,6 +571,22 @@ BotViews.renderSettings = async (content, bot) => {
       <button class="btn btn-danger" id="s-delete">🗑 Supprimer ce bot</button>
     </div>
   `);
+
+  // 💾 Carte d'état de la sauvegarde automatique
+  const backupCard = App.el(`
+    <div class="card">
+      <h3>💾 Sauvegarde automatique</h3>
+      <div class="card-sub" id="bk-status" style="margin-bottom:0">Vérification…</div>
+    </div>
+  `);
+  try {
+    const s = await App.api('/status/backup');
+    backupCard.querySelector('#bk-status').innerHTML = s.enabled
+      ? `✅ <b>Active</b> — comptes, bots et commandes sont sauvegardés automatiquement et restaurés à chaque mise à jour. Dépôt : <code>${App.escapeHtml(s.repo)}</code>${s.branch ? ' (branche ' + App.escapeHtml(s.branch) + ')' : ''}.`
+      : `⚠️ <b>Désactivée</b> — pour que tes données survivent aux mises à jour, ajoute les variables d'environnement <code>BOTDEV_GH_TOKEN</code> et <code>BOTDEV_DATA_REPO</code> dans les réglages du service sur Render.`;
+  } catch {}
+  el.insertBefore(backupCard, el.firstChild);
+
   el.querySelector('#s-save').onclick = async () => {
     try {
       const body = {
