@@ -11,6 +11,7 @@ Dashboard.api = App.api;
 // ---------------------- Shell ----------------------
 Dashboard.mount = async (shell, bot) => {
   Dashboard.state.bot = bot;
+  Dashboard.state.shell = shell;
   Dashboard.state.guildId = null;
   Dashboard.state.guildData = null;
   Dashboard.state.module = 'overview';
@@ -113,7 +114,7 @@ Dashboard.renderSide = (aside) => {
 
 Dashboard.setModule = (id) => {
   Dashboard.state.module = id;
-  const shell = document.querySelector('.bot-shell');
+  const shell = Dashboard.state.shell || document.querySelector('.bot-shell');
   const aside = shell ? shell.querySelector('.dash-side') : null;
   if (aside) Dashboard.renderSide(aside);
   Dashboard.renderContent(shell ? shell.querySelector('#dash-content') : null);
@@ -155,7 +156,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
 // ---------------------- Chargement serveur ----------------------
 Dashboard.selectGuild = async (guildId) => {
   Dashboard.state.guildId = guildId;
-  const shell = document.querySelector('.bot-shell');
+  const shell = Dashboard.state.shell || document.querySelector('.bot-shell');
   if (shell) {
     Dashboard.renderTopbar(shell.querySelector('.dash-topbar'), Dashboard.state.discordGuilds);
     Dashboard.renderSide(shell.querySelector('.dash-side'));

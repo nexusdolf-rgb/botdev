@@ -1,11 +1,9 @@
 // BotDev - Service Worker (mode app installable + chargement hors ligne)
-const CACHE = 'botdev-v23';
+// Stratégie : HTML/JS/CSS en réseau d'abord (toujours à jour),
+// images/icônes en cache d'abord. L'API passe toujours par le réseau.
+const CACHE = 'botdev-v24';
 const ASSETS = [
   '/',
-  '/css/style.css',
-  '/js/app.js',
-  '/js/editor.js',
-  '/js/views.js',
   '/manifest.webmanifest',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
@@ -28,24 +26,29 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (event.request.method !== 'GET') return;
-  // L'API passe toujours par le réseau
   if (url.pathname.startsWith('/api')) return;
 
-  // Navigation : réseau d'abord (pour avoir la dernière version), sinon cache
-  if (event.request.mode === 'navigate') {
+  const isDynamic = url.pathname === '/'
+    || url.pathname.endsWith('.js')
+    || url.pathname.endsWith('.css')
+    || url.pathname.endsWith('.html')
+    || url.pathname.endsWith('.webmanifest');
+
+  if (isDynamic) {
+    // Réseau d'abord : la nouvelle version arrive toujours, cache en secours
     event.respondWith(
       fetch(event.request)
         .then((resp) => {
           const copy = resp.clone();
-          caches.open(CACHE).then((cache) => cache.put('/', copy));
+          caches.open(CACHE).then((cache) => cache.put(event.request, copy));
           return resp;
         })
-        .catch(() => caches.match('/'))
+        .catch(() => caches.match(event.request).then((cached) => cached || caches.match('/')))
     );
     return;
   }
 
-  // Ressources statiques : cache d'abord
+  // Images/icônes : cache d'abord
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
