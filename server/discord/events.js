@@ -4,6 +4,8 @@
 const { EmbedBuilder } = require('discord.js');
 const store = require('../db');
 const { resolveVariables } = require('./engine');
+const identity = require('./identity');
+const logging = require('./logging');
 
 const EVENT_DEFS = {
   member_join: {
@@ -61,10 +63,15 @@ async function runJoinEvent(botId, member) {
       if (cfg.embed) {
         const embed = new EmbedBuilder().setColor(cfg.color || '#57F287').setDescription(text);
         if (cfg.image) embed.setImage(String(cfg.image).trim());
-        await channel.send({ embeds: [embed] }).catch(() => {});
+        await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { embeds: [embed] }).catch(() => {});
       } else {
-        await channel.send(text).catch(() => {});
+        await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { content: text }).catch(() => {});
       }
+      await logging.log(botId, member.guild, {
+        title: '👋 Nouveau membre',
+        description: `${member.user.tag} a rejoint le serveur (membre n°${member.guild.memberCount || 0})`,
+        color: '#57F287',
+      });
     }
   }
 
@@ -88,10 +95,15 @@ async function runLeaveEvent(botId, member) {
   if (cfg.embed) {
     const embed = new EmbedBuilder().setColor(cfg.color || '#ED4245').setDescription(text);
     if (cfg.image) embed.setImage(String(cfg.image).trim());
-    await channel.send({ embeds: [embed] }).catch(() => {});
+    await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { embeds: [embed] }).catch(() => {});
   } else {
-    await channel.send(text).catch(() => {});
+    await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { content: text }).catch(() => {});
   }
+  await logging.log(botId, member.guild, {
+    title: '👋 Membre parti',
+    description: `${member.user.tag} a quitté le serveur`,
+    color: '#ED4245',
+  });
 }
 
 function render(member, botRecord, template) {

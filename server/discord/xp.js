@@ -76,7 +76,10 @@ async function announce(botId, message, level, gs) {
   let channel = null;
   if (gs.xp_channel) channel = resolveChannel(message.guild, gs.xp_channel);
   channel = channel || message.channel;
-  if (channel && channel.send) await channel.send(text).catch(() => {});
+  if (channel && channel.send) {
+    const identity = require('./identity');
+    await identity.sendAsProfile(message.client, botId, message.guild, channel, { content: text }).catch(() => {});
+  }
 }
 
 async function applyRewards(botId, message, level) {

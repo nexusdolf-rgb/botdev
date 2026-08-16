@@ -8,6 +8,7 @@
 // ============================================================
 const { PermissionsBitField } = require('discord.js');
 const store = require('../db');
+const logging = require('./logging');
 
 const spamTracker = new Map(); // botId:guildId:userId -> [timestamps]
 
@@ -42,9 +43,28 @@ async function runAutomod(botId, message) {
     const mentions = (content.match(/<@!?\d+>/g) || []).length;
     if (mentions > Number(gs.am_mentions)) reason = 'trop de mentions';
   }
+  // Liste noire de mots
+  if (!reason) {
+    const words = store.blacklist.all(botId, message.guild.id);
+    if (words.length) {
+      const lower = content.toLowerCase();
+      const hit = words.find((w) => lower.includes(w));
+      if (hit) reason = `mot interdit (« ${hit} »)`;
+    }
+  }
 
   if (reason) {
     try { if (message.deletable) await message.delete(); } catch {}
+    await logging.log(botId, message.guild, {
+      title: '🛡️ Auto-modération',
+      description: `Message supprimé (${reason})`,
+      color: '#ED4245',
+      fields: [
+        { name: '👤 Auteur', value: `<@${message.author.id}>`, inline: true },
+        { name: '📨 Salon', value: message.channel ? `<#${message.channel.id}>` : '—', inline: true },
+        { name: '💬 Message', value: content.slice(0, 500) || '—' },
+      ],
+    });
     return { acted: true, reason };
   }
 
@@ -63,6 +83,11 @@ async function runAutomod(botId, message) {
           await message.member.timeout(5 * 60000, 'Spam détecté');
         }
       } catch {}
+      await logging.log(botId, message.guild, {
+        title: '🛡️ Anti-spam',
+        description: `<@${message.author.id}> a été mis en timeout (5 min)`,
+        color: '#ED4245',
+      });
       return { acted: true, reason: 'spam' };
     }
   }

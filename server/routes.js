@@ -57,9 +57,17 @@ router.post('/auth/logout', (req, res) => {
   res.json({ ok: true });
 });
 
+function isPlatformAdmin(user) {
+  if (!user) return false;
+  const env = (process.env.ADMIN_EMAILS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+  if (env.length) return env.includes(String(user.email || '').toLowerCase());
+  // Sans variable d'environnement : le premier utilisateur inscrit est admin
+  return user.id === 1;
+}
+
 router.get('/auth/me', requireAuth, (req, res) => {
   const user = store.users.findById(req.userId);
-  res.json({ user });
+  res.json({ user: { ...user, is_admin: isPlatformAdmin(user) } });
 });
 
 // ============================================================
@@ -229,6 +237,13 @@ router.get('/discord/guilds', requireAuth, async (req, res) => {
   });
   res.json({ guilds: list, discord: { username: user.discord_username, avatar: user.discord_avatar } });
 });
+
+// ---------------------- Admin plateforme ----------------------
+function requireAdmin(req, res, next) {
+  const user = store.users.findById(req.userId);
+  if (!user || !isPlatformAdmin(user)) return res.status(403).json({ error: 'Réservé à l\'administrateur de la plateforme.' });
+  next();
+}
 
 // ---------------------- Helpers bot ----------------------
 function getOwnBot(req, res) {
@@ -449,6 +464,7 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
     prefix: '', warn_limit: 0, warn_action: 'none',
     xp_enabled: 1, xp_min: 10, xp_max: 25, xp_cooldown: 60, xp_message: '', xp_channel: '',
     am_enabled: 0, am_links: 1, am_caps: 1, am_mentions: 5, am_spam: 5,
+    log_channel: '',
   };
   res.json({
     guild: { id: guildId, name: dGuild.name, icon: dGuild.iconURL({ size: 128 }) || '', members: dGuild.memberCount || 0 },
@@ -457,7 +473,55 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
     events: { defs: EVENT_DEFS, state: eventsState(bot.id, guildId) },
     role_menus: store.roleMenus.all(bot.id, guildId),
     xp_roles: store.xpRoles.all(bot.id, guildId),
+    profile: store.botProfiles.get(bot.id, guildId) || { name: '', avatar_url: '', banner_url: '', bio: '', color: '#5865F2' },
+    blacklist: store.blacklist.all(bot.id, guildId),
   });
+});
+
+// Identité du bot sur un serveur (nom, bio, couleur + images en base64)
+router.put('/bots/:id/guilds/:guildId/profile', requireAuth, async (req, res) => {
+  const bot = getOwnBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const assets = require('./assets');
+  const cur = store.botProfiles.get(bot.id, guildId) || {};
+  const fields = { ...cur };
+  const { name, bio, color, avatar_b64, banner_b64 } = req.body || {};
+  if (name !== undefined) fields.name = String(name).slice(0, 80);
+  if (bio !== undefined) fields.bio = String(bio).slice(0, 1900);
+  if (color !== undefined && /^#[0-9a-fA-F]{6}$/.test(String(color))) fields.color = String(color);
+  try {
+    if (typeof avatar_b64 === 'string' && avatar_b64.startsWith('data:')) {
+      const m = avatar_b64.match(/^data:([^;]+);base64,(.+)$/);
+      if (m) {
+        const buf = Buffer.from(m[2], 'base64');
+        if (buf.length > 3 * 1024 * 1024) return res.status(400).json({ error: 'Image trop lourde (3 Mo max).' });
+        fields.avatar_url = `/assets/${await assets.put(buf, m[1])}`;
+      }
+    }
+    if (typeof banner_b64 === 'string' && banner_b64.startsWith('data:')) {
+      const m = banner_b64.match(/^data:([^;]+);base64,(.+)$/);
+      if (m) {
+        const buf = Buffer.from(m[2], 'base64');
+        if (buf.length > 3 * 1024 * 1024) return res.status(400).json({ error: 'Image trop lourde (3 Mo max).' });
+        fields.banner_url = `/assets/${await assets.put(buf, m[1])}`;
+      }
+    }
+  } catch (e) {
+    return res.status(400).json({ error: e.message.slice(0, 150) });
+  }
+  store.botProfiles.set(bot.id, guildId, fields);
+  res.json({ ok: true, profile: store.botProfiles.get(bot.id, guildId) });
+});
+
+router.delete('/bots/:id/guilds/:guildId/profile', requireAuth, async (req, res) => {
+  const bot = getOwnBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  store.botProfiles.remove(bot.id, guildId);
+  res.json({ ok: true });
 });
 
 // Niveaux (XP) par serveur
@@ -490,7 +554,7 @@ router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) =>
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
-  const { enabled, links, caps, mentions, spam } = req.body || {};
+  const { enabled, links, caps, mentions, spam, blacklist } = req.body || {};
   store.guildSettings.set(bot.id, guildId, {
     am_enabled: enabled ? 1 : 0,
     am_links: (links === false || links === 0) ? 0 : 1,
@@ -498,6 +562,12 @@ router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) =>
     am_mentions: Math.max(parseInt(mentions, 10) || 0, 0),
     am_spam: Math.max(parseInt(spam, 10) || 0, 0),
   });
+  if (Array.isArray(blacklist)) {
+    const words = blacklist.map((w) => String(w).trim().toLowerCase()).filter((w) => w.length >= 2).slice(0, 100);
+    const existing = store.blacklist.all(bot.id, guildId);
+    for (const w of existing) if (!words.includes(w)) store.blacklist.remove(bot.id, guildId, w);
+    for (const w of words) store.blacklist.add(bot.id, guildId, w);
+  }
   res.json({ ok: true });
 });
 
@@ -506,11 +576,12 @@ router.put('/bots/:id/guilds/:guildId/settings', requireAuth, async (req, res) =
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
-  const { prefix, warn_limit, warn_action } = req.body || {};
+  const { prefix, warn_limit, warn_action, log_channel } = req.body || {};
   store.guildSettings.set(bot.id, guildId, {
     prefix: String(prefix || '').slice(0, 5),
     warn_limit: Math.max(0, parseInt(warn_limit, 10) || 0),
     warn_action: ['none', 'kick', 'ban'].includes(warn_action) ? warn_action : 'none',
+    ...(log_channel !== undefined ? { log_channel: String(log_channel).slice(0, 100) } : {}),
   });
   res.json({ ok: true });
 });
@@ -746,6 +817,55 @@ router.get('/public/bots/:id', (req, res) => {
       public_url: store.settings.get('public_url') || '',
     },
   });
+});
+
+// ============================================================
+// Panneau admin plateforme (le fondateur de BotDev)
+// ============================================================
+router.get('/admin/stats', requireAuth, requireAdmin, (req, res) => {
+  const users = store.db.prepare('SELECT COUNT(*) AS n FROM users').get().n;
+  const bots = store.db.prepare('SELECT COUNT(*) AS n FROM bots').get().n;
+  const online = store.db.prepare('SELECT COUNT(*) AS n FROM bots WHERE enabled = 1').get().n;
+  const live = botManager.platformStats();
+  res.json({ users, bots, online, ...live });
+});
+
+router.get('/admin/users', requireAuth, requireAdmin, (req, res) => {
+  const rows = store.db.prepare(`
+    SELECT u.id, u.email, u.discord_username, u.created_at,
+      (SELECT COUNT(*) FROM bots b WHERE b.user_id = u.id) AS bots_count
+    FROM users u ORDER BY u.created_at DESC LIMIT 200`).all();
+  res.json({ users: rows });
+});
+
+router.get('/admin/bots', requireAuth, requireAdmin, (req, res) => {
+  const rows = store.db.prepare(`
+    SELECT b.id, b.name, b.bot_username, b.enabled, u.email AS owner_email
+    FROM bots b LEFT JOIN users u ON u.id = b.user_id
+    ORDER BY b.created_at DESC LIMIT 200`).all();
+  const out = rows.map((b) => ({
+    ...b,
+    online: botManager.isOnline(b.id),
+    servers: (() => { const e = botManager.clients.get(b.id); return e && e.client.isReady() ? e.client.guilds.cache.size : 0; })(),
+  }));
+  res.json({ bots: out });
+});
+
+router.delete('/admin/users/:id', requireAuth, requireAdmin, async (req, res) => {
+  const targetId = Number(req.params.id);
+  if (targetId === req.userId) return res.status(400).json({ error: 'Tu ne peux pas supprimer ton propre compte.' });
+  const target = store.users.findById(targetId);
+  if (!target) return res.status(404).json({ error: 'Utilisateur introuvable.' });
+  const bots = store.bots.all(targetId);
+  for (const b of bots) {
+    await botManager.logoutBot(b.id);
+    store.commands.removeAll(b.id);
+    store.bots.remove(b.id);
+  }
+  store.db.prepare('DELETE FROM sessions WHERE user_id = ?').run(targetId);
+  store.db.prepare('DELETE FROM discord_tokens WHERE user_id = ?').run(targetId);
+  store.db.prepare('DELETE FROM users WHERE id = ?').run(targetId);
+  res.json({ ok: true });
 });
 
 module.exports = router;

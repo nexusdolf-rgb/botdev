@@ -155,6 +155,24 @@ CREATE TABLE IF NOT EXISTS settings (
   value TEXT DEFAULT ''
 );
 
+CREATE TABLE IF NOT EXISTS bot_profiles (
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  name TEXT DEFAULT '',
+  avatar_url TEXT DEFAULT '',
+  banner_url TEXT DEFAULT '',
+  bio TEXT DEFAULT '',
+  color TEXT DEFAULT '#5865F2',
+  PRIMARY KEY (bot_id, guild_id)
+);
+
+CREATE TABLE IF NOT EXISTS blacklist_words (
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  word TEXT NOT NULL,
+  PRIMARY KEY (bot_id, guild_id, word)
+);
+
 CREATE TABLE IF NOT EXISTS closed_tickets (
   channel_id TEXT PRIMARY KEY,
   bot_id INTEGER NOT NULL,
@@ -186,6 +204,9 @@ try { db.exec("ALTER TABLE users ADD COLUMN discord_username TEXT DEFAULT ''"); 
 try { db.exec("ALTER TABLE users ADD COLUMN discord_avatar TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN discord_guilds TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_discord ON users(discord_id) WHERE discord_id != ''"); } catch (e) {}
+
+// Colonne log_channel
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN log_channel TEXT DEFAULT ''"); } catch (e) {}
 
 // Colonnes XP & auto-mod sur guild_settings
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN xp_enabled INTEGER DEFAULT 1"); } catch (e) {}
@@ -322,12 +343,13 @@ const guildSettings = {
   set: (botId, guildId, fields) => {
     const cur = guildSettings.get(botId, guildId) || { prefix: '', warn_limit: 0, warn_action: 'none' };
     const next = { ...cur, ...fields };
-    db.prepare(`INSERT INTO guild_settings (bot_id, guild_id, prefix, warn_limit, warn_action, xp_enabled, xp_min, xp_max, xp_cooldown, xp_message, xp_channel, am_enabled, am_links, am_caps, am_mentions, am_spam)
-      VALUES (@bot_id, @guild_id, @prefix, @warn_limit, @warn_action, @xp_enabled, @xp_min, @xp_max, @xp_cooldown, @xp_message, @xp_channel, @am_enabled, @am_links, @am_caps, @am_mentions, @am_spam)
+    db.prepare(`INSERT INTO guild_settings (bot_id, guild_id, prefix, warn_limit, warn_action, xp_enabled, xp_min, xp_max, xp_cooldown, xp_message, xp_channel, am_enabled, am_links, am_caps, am_mentions, am_spam, log_channel)
+      VALUES (@bot_id, @guild_id, @prefix, @warn_limit, @warn_action, @xp_enabled, @xp_min, @xp_max, @xp_cooldown, @xp_message, @xp_channel, @am_enabled, @am_links, @am_caps, @am_mentions, @am_spam, @log_channel)
       ON CONFLICT(bot_id, guild_id) DO UPDATE SET prefix = excluded.prefix, warn_limit = excluded.warn_limit, warn_action = excluded.warn_action,
         xp_enabled = excluded.xp_enabled, xp_min = excluded.xp_min, xp_max = excluded.xp_max, xp_cooldown = excluded.xp_cooldown,
         xp_message = excluded.xp_message, xp_channel = excluded.xp_channel, am_enabled = excluded.am_enabled,
-        am_links = excluded.am_links, am_caps = excluded.am_caps, am_mentions = excluded.am_mentions, am_spam = excluded.am_spam`)
+        am_links = excluded.am_links, am_caps = excluded.am_caps, am_mentions = excluded.am_mentions, am_spam = excluded.am_spam,
+        log_channel = excluded.log_channel`)
       .run({
         bot_id: botId, guild_id: guildId,
         prefix: String(next.prefix || '').slice(0, 5),
@@ -344,6 +366,7 @@ const guildSettings = {
         am_caps: (next.am_caps === 0 || next.am_caps === false) ? 0 : 1,
         am_mentions: Math.max(parseInt(next.am_mentions, 10) || 0, 0),
         am_spam: Math.max(parseInt(next.am_spam, 10) || 0, 0),
+        log_channel: String(next.log_channel || '').slice(0, 100),
       });
   },
 };
@@ -437,6 +460,31 @@ const settings = {
   set: (key, value) => db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, String(value)),
 };
 
+// ---------------------- Identité du bot par serveur ----------------------
+const botProfiles = {
+  get: (botId, guildId) => db.prepare('SELECT * FROM bot_profiles WHERE bot_id = ? AND guild_id = ?').get(botId, guildId) || null,
+  set: (botId, guildId, fields) => db.prepare(`INSERT INTO bot_profiles (bot_id, guild_id, name, avatar_url, banner_url, bio, color)
+    VALUES (@bot_id, @guild_id, @name, @avatar_url, @banner_url, @bio, @color)
+    ON CONFLICT(bot_id, guild_id) DO UPDATE SET
+      name = excluded.name, avatar_url = excluded.avatar_url, banner_url = excluded.banner_url,
+      bio = excluded.bio, color = excluded.color`).run({
+        bot_id: botId, guild_id: guildId,
+        name: String(fields.name || '').slice(0, 80),
+        avatar_url: String(fields.avatar_url || '').slice(0, 500),
+        banner_url: String(fields.banner_url || '').slice(0, 500),
+        bio: String(fields.bio || '').slice(0, 1900),
+        color: /^#[0-9a-fA-F]{6}$/.test(String(fields.color || '')) ? fields.color : '#5865F2',
+      }),
+  remove: (botId, guildId) => db.prepare('DELETE FROM bot_profiles WHERE bot_id = ? AND guild_id = ?').run(botId, guildId),
+};
+
+// ---------------------- Liste noire de mots ----------------------
+const blacklist = {
+  all: (botId, guildId) => db.prepare('SELECT word FROM blacklist_words WHERE bot_id = ? AND guild_id = ? ORDER BY word').all(botId, guildId).map((r) => r.word),
+  add: (botId, guildId, word) => db.prepare('INSERT OR IGNORE INTO blacklist_words (bot_id, guild_id, word) VALUES (?, ?, ?)').run(botId, guildId, String(word).toLowerCase().slice(0, 50)),
+  remove: (botId, guildId, word) => db.prepare('DELETE FROM blacklist_words WHERE bot_id = ? AND guild_id = ? AND word = ?').run(botId, guildId, String(word).toLowerCase()),
+};
+
 // ---------------------- Registre des tickets fermés ----------------------
 // Source de vérité : un salon listé ici est fermé, même si le cache Discord
 // n'est pas encore à jour → la vérification « déjà ouvert » ne se trompe plus.
@@ -469,4 +517,4 @@ const transcripts = {
   get: (token) => db.prepare('SELECT * FROM transcripts WHERE token = ?').get(String(token)) || null,
 };
 
-module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets };
+module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist };

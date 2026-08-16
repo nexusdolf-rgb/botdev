@@ -14,6 +14,7 @@ const {
 } = require('discord.js');
 const store = require('../db');
 const crypto = require('crypto');
+const logging = require('./logging');
 
 const WIZARD_TTL = 10 * 60000;
 
@@ -79,6 +80,11 @@ async function dispatchPanels(botId, interaction) {
     if (interaction.isChatInputCommand() && ['ticket', 'roles'].includes(interaction.commandName)) {
       const { handlePanelCommand } = require('./panelCommands');
       await handlePanelCommand(botId, interaction);
+      return true;
+    }
+    if (interaction.isChatInputCommand() && ['botprofile', 'modlogs', 'blacklist'].includes(interaction.commandName)) {
+      const { handleProfileCommand } = require('./profileCommands');
+      await handleProfileCommand(botId, interaction);
       return true;
     }
     const cid = String(interaction.customId || '');
@@ -417,6 +423,16 @@ async function openTicket(botId, interaction, type, reason = '') {
     components: [row1, row2],
   }).catch(() => {});
 
+  await logging.log(botId, guild, {
+    title: '🎫 Ticket ouvert', color: '#5865F2',
+    fields: [
+      { name: '👤 Créateur', value: `<@${member.id}>`, inline: true },
+      { name: '📨 Salon', value: `<#${channel.id}>`, inline: true },
+      { name: '🗂️ Type', value: chosen ? `${chosen.emoji || ''} ${chosen.label}` : 'simple', inline: true },
+      { name: '📝 Raison', value: reason || '—' },
+    ],
+  });
+
   await interaction.reply({ content: `✅ Ton ticket a été créé : ${channel}`, ephemeral: true });
 }
 
@@ -545,6 +561,14 @@ async function handleTicketClose(botId, interaction) {
     await channel.permissionOverwrites.edit(t.openerId, { ViewChannel: false, SendMessages: false }).catch(() => {});
   }
   store.closedTickets.add(channel.id, botId, guild.id);
+  await logging.log(botId, guild, {
+    title: '🔒 Ticket fermé', color: '#ED4245',
+    fields: [
+      { name: '📨 Salon', value: `<#${channel.id}>`, inline: true },
+      { name: '🛡️ Par', value: `${interaction.user.tag}`, inline: true },
+      { name: '📄 Transcription', value: dmOk ? 'envoyée en MP ✅' : 'MP impossible ⚠️', inline: true },
+    ],
+  });
   await interaction.reply({
     content: '🔒 Ticket fermé.' + (dmOk
       ? ' 📄 Transcription envoyée en MP au créateur.'
@@ -601,6 +625,14 @@ async function submitDeleteReason(botId, interaction) {
     `🗑 Ticket supprimé par ${interaction.user.tag} — raison : ${reason}`,
   ]);
   const dmOk = await sendTranscriptDm(interaction, guild, channel.name, t);
+  await logging.log(botId, guild, {
+    title: '🗑 Ticket supprimé', color: '#ED4245',
+    fields: [
+      { name: '📨 Salon', value: `<#${channel.id}>`, inline: true },
+      { name: '🛡️ Par', value: `${interaction.user.tag}`, inline: true },
+      { name: '📝 Raison', value: reason },
+    ],
+  });
   await interaction.reply({
     content: '🗑 Ticket supprimé.' + (dmOk ? ' 📄 Transcription envoyée en MP.' : ' ⚠️ MP impossible pour le créateur.'),
     ephemeral: true,

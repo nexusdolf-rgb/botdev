@@ -12,6 +12,13 @@ async function main() {
   // 1) Restauration des données (sauvegarde GitHub) AVANT d'ouvrir la base
   await backup.restore();
 
+  // 1 bis) Rapatriement des images d'identité (avatars/bannières)
+  try {
+    const assets = require('./assets');
+    const n = await assets.syncFromRemote();
+    if (n) console.log(`[BotDev] 🖼️ ${n} image(s) d'identité restaurée(s)`);
+  } catch (e) { console.log('[BotDev] assets:', e.message); }
+
   // 2) Modules internes (chargés après la restauration)
   const store = require('./db');
   const routes = require('./routes');
@@ -53,6 +60,20 @@ async function main() {
   </div>
   <div style="background:#131320;border:1px solid #2a2a40;border-radius:14px;overflow:hidden">${lines}</div>
 </div></body></html>`);
+  });
+
+  // 🖼️ Images des identités de bot (avatars/bannières par serveur)
+  app.get('/assets/:key', async (req, res) => {
+    try {
+      const assets = require('./assets');
+      const got = await assets.get(req.params.key);
+      if (!got) return res.status(404).end();
+      res.setHeader('Content-Type', got.mime);
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.end(got.buffer);
+    } catch {
+      res.status(404).end();
+    }
   });
 
   // Fichiers statiques (dashboard)

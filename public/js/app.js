@@ -125,6 +125,12 @@ App.router.run = async () => {
     return;
   }
 
+  if (parts[0] === 'admin') {
+    if (!user.is_admin) { App.router.go('/dashboard'); return; }
+    App.renderAdminPage();
+    return;
+  }
+
   if (parts[0] === 'bots' && parts[1]) {
     App.state.botId = Number(parts[1]);
     App.state.tab = parts[2] || 'overview';
@@ -209,6 +215,7 @@ App.renderNavbar = () => {
     <div class="navbar">
       <div class="logo-row" style="cursor:pointer" id="nav-logo"><span class="logo">🤖</span> BotDev</div>
       <div class="navbar-right">
+        ${user.is_admin ? `<button class="btn btn-ghost btn-sm" id="nav-admin">👑 Admin</button>` : ''}
         <div class="user-pill">
           ${user.discord_avatar
             ? `<img class="user-avatar" style="border-radius:50%" src="https://cdn.discordapp.com/avatars/${App.escapeHtml(user.discord_id)}/${App.escapeHtml(user.discord_avatar)}.png" alt="" />`
@@ -221,6 +228,8 @@ App.renderNavbar = () => {
     </div>
   `);
   nav.querySelector('#nav-logo').onclick = () => App.router.go('/dashboard');
+  const adminBtn = nav.querySelector('#nav-admin');
+  if (adminBtn) adminBtn.onclick = () => App.router.go('/admin');
   nav.querySelector('#nav-logout').onclick = async () => {
     await App.api('/auth/logout', { method: 'POST' }).catch(() => {});
     location.hash = '#/login';

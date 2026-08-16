@@ -3,6 +3,7 @@
 // ============================================================
 const { EmbedBuilder, ApplicationCommandOptionType, PermissionsBitField } = require('discord.js');
 const { xpForLevel, levelFromXp } = require('./xp');
+const logging = require('./logging');
 const store = require('../db');
 
 const MODULES = {
@@ -172,6 +173,55 @@ function buildSlashPayloads(botId) {
       { name: 'remove', description: 'Retirer un membre de ce ticket', type: ApplicationCommandOptionType.Subcommand, options: [
         { name: 'membre', description: 'Le membre à retirer', type: ApplicationCommandOptionType.User, required: true },
       ]},
+    ],
+  });
+
+  payloads.push({
+    name: 'botprofile',
+    description: '🤖 Personnaliser l\'identité du bot sur CE serveur',
+    default_member_permissions: '8',
+    options: [
+      { name: 'view', description: 'Voir le profil actuel du bot sur ce serveur', type: ApplicationCommandOptionType.Subcommand },
+      { name: 'set', description: 'Définir le nom, la bio et la couleur', type: ApplicationCommandOptionType.Subcommand, options: [
+        { name: 'nom', description: 'Nom affiché par le bot sur ce serveur', type: ApplicationCommandOptionType.String, required: false },
+        { name: 'bio', description: 'Bio affichée sur le profil', type: ApplicationCommandOptionType.String, required: false },
+        { name: 'couleur', description: 'Couleur du profil (ex : #5865F2)', type: ApplicationCommandOptionType.String, required: false },
+      ]},
+      { name: 'avatar', description: 'Choisir un avatar depuis ta galerie', type: ApplicationCommandOptionType.Subcommand, options: [
+        { name: 'image', description: 'Image de ta galerie (3 Mo max)', type: ApplicationCommandOptionType.Attachment, required: true },
+      ]},
+      { name: 'banner', description: 'Choisir une bannière depuis ta galerie', type: ApplicationCommandOptionType.Subcommand, options: [
+        { name: 'image', description: 'Image de ta galerie (3 Mo max)', type: ApplicationCommandOptionType.Attachment, required: true },
+      ]},
+      { name: 'reset', description: 'Retirer l\'identité personnalisée de ce serveur', type: ApplicationCommandOptionType.Subcommand },
+    ],
+  });
+
+  payloads.push({
+    name: 'modlogs',
+    description: '📋 Journaux de modération (salon de logs)',
+    default_member_permissions: '8',
+    options: [
+      { name: 'set', description: 'Définir le salon des journaux', type: ApplicationCommandOptionType.Subcommand, options: [
+        { name: 'salon', description: 'Salon où seront envoyés les journaux', type: ApplicationCommandOptionType.Channel, required: true },
+      ]},
+      { name: 'off', description: 'Désactiver les journaux', type: ApplicationCommandOptionType.Subcommand },
+      { name: 'view', description: 'Voir le salon des journaux actuel', type: ApplicationCommandOptionType.Subcommand },
+    ],
+  });
+
+  payloads.push({
+    name: 'blacklist',
+    description: '🔇 Liste noire de mots interdits',
+    default_member_permissions: '8',
+    options: [
+      { name: 'add', description: 'Interdire un mot (suppression automatique)', type: ApplicationCommandOptionType.Subcommand, options: [
+        { name: 'mot', description: 'Le mot à interdire', type: ApplicationCommandOptionType.String, required: true },
+      ]},
+      { name: 'remove', description: 'Retirer un mot de la liste', type: ApplicationCommandOptionType.Subcommand, options: [
+        { name: 'mot', description: 'Le mot à retirer', type: ApplicationCommandOptionType.String, required: true },
+      ]},
+      { name: 'list', description: 'Voir les mots interdits', type: ApplicationCommandOptionType.Subcommand },
     ],
   });
 
@@ -420,6 +470,14 @@ async function execute(botId, entry, cmd, src) {
       if (!tMember || !tMember.kickable) return reply('⛔ Je ne peux pas expulser cet utilisateur.');
       const reason = isInt ? (src.interaction.options.getString('raison') || '') : '';
       await tMember.kick(reason || 'Aucune raison').catch(() => {});
+      await logging.log(botId, guild, {
+        title: '👢 Expulsion', color: '#ED4245',
+        fields: [
+          { name: '👤 Membre', value: `${target.tag || target.username}`, inline: true },
+          { name: '🛡️ Par', value: `${author.tag || author.username}`, inline: true },
+          { name: '📝 Raison', value: reason || 'Aucune', inline: true },
+        ],
+      });
       await reply(`✅ **${target.tag || target.username}** a été expulsé.`);
       break;
     }
@@ -430,6 +488,14 @@ async function execute(botId, entry, cmd, src) {
       if (!tMember || !tMember.bannable) return reply('⛔ Je ne peux pas bannir cet utilisateur.');
       const reason = isInt ? (src.interaction.options.getString('raison') || '') : '';
       await tMember.ban({ reason: reason || 'Aucune raison' }).catch(() => {});
+      await logging.log(botId, guild, {
+        title: '🔨 Bannissement', color: '#ED4245',
+        fields: [
+          { name: '👤 Membre', value: `${target.tag || target.username}`, inline: true },
+          { name: '🛡️ Par', value: `${author.tag || author.username}`, inline: true },
+          { name: '📝 Raison', value: reason || 'Aucune', inline: true },
+        ],
+      });
       await reply(`🔨 **${target.tag || target.username}** a été banni.`);
       break;
     }
@@ -437,6 +503,13 @@ async function execute(botId, entry, cmd, src) {
       const id = isInt ? src.interaction.options.getString('identifiant') : (src.args || '').trim();
       if (!/^\d{15,21}$/.test(id)) return reply('❓ Identifiant invalide.');
       await guild.bans.remove(id).catch(() => reply('❓ Utilisateur non banni ou introuvable.'));
+      await logging.log(botId, guild, {
+        title: '🔓 Débannissement', color: '#57F287',
+        fields: [
+          { name: '🆔 Utilisateur', value: id, inline: true },
+          { name: '🛡️ Par', value: `${author.tag || author.username}`, inline: true },
+        ],
+      });
       await reply(`✅ L\'utilisateur \`${id}\` a été débanni.`);
       break;
     }
@@ -447,6 +520,14 @@ async function execute(botId, entry, cmd, src) {
       const minutes = isInt ? (src.interaction.options.getInteger('minutes') || 5) : (parseInt(src.args, 10) || 5);
       if (!tMember || !tMember.moderatable) return reply('⛔ Je ne peux pas mettre cet utilisateur en timeout.');
       await tMember.timeout(Math.min(Math.max(minutes, 1), 40320) * 60000).catch(() => {});
+      await logging.log(botId, guild, {
+        title: '⏳ Timeout', color: '#ED4245',
+        fields: [
+          { name: '👤 Membre', value: `${target.tag || target.username}`, inline: true },
+          { name: '🛡️ Par', value: `${author.tag || author.username}`, inline: true },
+          { name: '⏱ Durée', value: `${minutes} minute(s)`, inline: true },
+        ],
+      });
       await reply(`⏳ **${target.tag || target.username}** est en timeout pour ${minutes} minute(s).`);
       break;
     }
@@ -468,6 +549,15 @@ async function execute(botId, entry, cmd, src) {
           } catch {}
         }
       }
+      await logging.log(botId, guild, {
+        title: '⚠️ Avertissement', color: '#FEE75C',
+        fields: [
+          { name: '👤 Membre', value: `${target.tag || target.username}`, inline: true },
+          { name: '🛡️ Par', value: `${author.tag || author.username}`, inline: true },
+          { name: '📝 Raison', value: reason || 'Aucune', inline: true },
+          { name: '🔢 Total', value: String(n), inline: true },
+        ],
+      });
       await reply(`⚠️ **${target.tag || target.username}** a été averti (raison : ${reason || 'aucune'}). Total : **${n}** avertissement(s).${extra}`);
       break;
     }
@@ -487,6 +577,14 @@ async function execute(botId, entry, cmd, src) {
       n = Math.min(Math.max(n || 0, 1), 100);
       const deleted = await channel.bulkDelete(n, true).catch(() => null);
       const count = deleted ? deleted.size : 0;
+      await logging.log(botId, guild, {
+        title: '🧹 Purge de messages', color: '#5865F2',
+        fields: [
+          { name: '📨 Salon', value: `<#${channel.id}>`, inline: true },
+          { name: '🔢 Messages', value: String(count), inline: true },
+          { name: '🛡️ Par', value: `${author.tag || author.username}`, inline: true },
+        ],
+      });
       await reply(`🧹 **${count}** message(s) supprimé(s).`);
       break;
     }
@@ -561,6 +659,12 @@ const HELP_DETAILS = {
   rank: ['📈 Niveaux', 'Ton niveau, ton XP et ton rang sur ce serveur. Gagne de l\'XP en discutant !', '`/rank @membre`', '`/rank` → 📈 Niveau 3 · ✨ 950/1600 XP · 🏆 #2'],
   levels: ['📈 Niveaux', 'Le classement des niveaux du serveur.', '`/levels`'],
   invite: ['🔧 Utilitaire', 'Le lien pour inviter le bot sur un autre serveur.', '`/invite`'],
+  botprofile: ['🤖 Identité du bot', 'Personnalise le bot sur CE serveur : nom, avatar, bannière (depuis ta galerie), bio et couleur. Le bot s\'exprime avec cette identité dans ses messages ici.',
+    '`/botprofile view` — voir le profil\n`/botprofile set nom|bio|couleur` — nom, bio, couleur\n`/botprofile avatar` — avatar depuis ta galerie\n`/botprofile banner` — bannière depuis ta galerie\n`/botprofile reset` — revenir à l\'identité globale\n\n🔒 Réservé au **propriétaire du serveur**'],
+  modlogs: ['📋 Journaux', 'Un salon où le bot trace tout : modération, tickets, auto-mod, arrivées et départs.',
+    '`/modlogs set #salon` — activer\n`/modlogs view` — voir\n`/modlogs off` — désactiver'],
+  blacklist: ['🔇 Liste noire', 'Des mots interdits : les messages qui les contiennent sont supprimés automatiquement.',
+    '`/blacklist add mot` · `/blacklist remove mot` · `/blacklist list`'],
 };
 
 function helpDescription() {
@@ -577,7 +681,7 @@ function buildHelpEmbed(botId, record, client, guild, requested) {
   if (requested) {
     const key = requested.toLowerCase().replace(/^\//, '');
     const detail = HELP_DETAILS[key];
-    const available = key === 'ticket' || key === 'roles' || enabled.includes(key);
+    const available = ['ticket', 'roles', 'botprofile', 'modlogs', 'blacklist'].includes(key) || enabled.includes(key);
     if (detail && available) {
       const embed = new EmbedBuilder()
         .setColor('#5865F2')
@@ -655,6 +759,11 @@ function buildHelpEmbed(botId, record, client, guild, requested) {
       value: '`/rank` — ton niveau · `/levels` — le classement\n*Gagne de l\'XP en discutant !*',
     });
   }
+
+  embed.addFields({
+    name: '🤖 Personnalisation du serveur (propriétaire / admins)',
+    value: '`/botprofile` — identité du bot sur ce serveur (nom, avatar, bannière, bio)\n`/modlogs` — salon des journaux · `/blacklist` — mots interdits',
+  });
 
   const custom = store.commands.all(botId).filter(c => c.enabled);
   if (custom.length) {

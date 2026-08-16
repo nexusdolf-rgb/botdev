@@ -593,7 +593,7 @@ BotViews.renderServerConfig = async (content, bot, guildId) => {
     content.querySelector('#back-list').onclick = () => App.router.go(`/bots/${bot.id}/servers`);
     return;
   }
-  const { guild, settings, tickets, events, role_menus, xp_roles } = data;
+  const { guild, settings, tickets, events, role_menus, xp_roles, profile, blacklist } = data;
   const evState = events.state || {};
   const ticketTypes = (tickets.types && Array.isArray(tickets.types)) ? tickets.types : [];
 
@@ -654,7 +654,151 @@ BotViews.renderServerConfig = async (content, bot, guildId) => {
   };
   wrap.appendChild(sCard);
 
-  // ---------- 2. Niveaux (XP) ----------
+  // ---------- 2. Identité du bot sur ce serveur ----------
+  const iCard = App.el(`
+    <div class="card">
+      <div class="card-head-row">
+        <div>
+          <h3>🤖 Identité de ${App.escapeHtml(bot.name)} sur ce serveur</h3>
+          <div class="card-sub" style="margin-bottom:0">Nom, avatar, bannière, bio et couleur propres à ce serveur — le bot s'exprime avec cette identité dans ses messages ici (bienvenue, niveaux, tickets…).</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="prof-preview" style="width:48px;height:48px;border-radius:14px;background:var(--panel2);display:flex;align-items:center;justify-content:center;overflow:hidden">
+            ${profile.avatar_url ? `<img src="${App.escapeHtml(profile.avatar_url)}" style="width:100%;height:100%;object-fit:cover" alt="" />` : '<span style="font-size:20px">🤖</span>'}
+          </span>
+        </div>
+      </div>
+      <div class="grid2" style="max-width:640px;margin-top:12px">
+        <div><label class="field-label">Nom affiché sur ce serveur (vide = nom global)</label><input class="input" id="p-name" maxlength="80" value="${App.escapeHtml(profile.name || '')}" placeholder="${App.escapeHtml(bot.name)}" /></div>
+        <div><label class="field-label">Couleur du profil</label><input class="input" id="p-color" type="color" value="${App.escapeHtml(profile.color || '#5865F2')}" style="height:38px;padding:3px" /></div>
+      </div>
+      <label class="field-label">Bio (affichée sur le profil)</label>
+      <textarea class="input" id="p-bio" rows="2" style="max-width:640px" placeholder="Le bot officiel de notre serveur !">${App.escapeHtml(profile.bio || '')}</textarea>
+      <div class="grid2" style="max-width:640px;margin-top:6px">
+        <div>
+          <label class="field-label">🖼️ Avatar (depuis ta galerie, 3 Mo max)</label>
+          <input type="file" id="p-avatar" accept="image/*" class="input" style="padding:7px" />
+        </div>
+        <div>
+          <label class="field-label">🎴 Bannière (depuis ta galerie, 3 Mo max)</label>
+          <input type="file" id="p-banner" accept="image/*" class="input" style="padding:7px" />
+        </div>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
+        <button class="btn btn-primary" id="p-save">💾 Enregistrer</button>
+        <button class="btn" id="p-view">👁 Voir le profil (aperçu)</button>
+        <button class="btn btn-danger" id="p-reset">♻️ Réinitialiser</button>
+      </div>
+    </div>
+  `);
+  const readFile = (input) => new Promise((resolve) => {
+    const f = input.files && input.files[0];
+    if (!f) return resolve(null);
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.readAsDataURL(f);
+  });
+  iCard.querySelector('#p-save').onclick = async () => {
+    try {
+      const body = {
+        name: iCard.querySelector('#p-name').value.trim(),
+        bio: iCard.querySelector('#p-bio').value,
+        color: iCard.querySelector('#p-color').value,
+      };
+      const av = await readFile(iCard.querySelector('#p-avatar'));
+      const bn = await readFile(iCard.querySelector('#p-banner'));
+      if (av) body.avatar_b64 = av;
+      if (bn) body.banner_b64 = bn;
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/profile`, { method: 'PUT', body });
+      toast('Identité enregistrée ! Le bot l\'utilise sur ce serveur.');
+      BotViews.renderServerConfig(content, bot, guildId);
+    } catch (e) { err(e); }
+  };
+  iCard.querySelector('#p-view').onclick = async () => {
+    // Aperçu : on reconstruit la carte localement
+    App.modal(`
+      <div class="modal-header"><h3>👁 Aperçu du profil</h3><button class="x-btn" data-close>×</button></div>
+      <div class="modal-body">
+        ${profile.banner_url ? `<img src="${App.escapeHtml(profile.banner_url)}" style="width:100%;border-radius:12px;margin-bottom:12px" alt="" />` : ''}
+        <div style="display:flex;gap:12px;align-items:center">
+          ${profile.avatar_url ? `<img src="${App.escapeHtml(profile.avatar_url)}" style="width:56px;height:56px;border-radius:16px" alt="" />` : '<div style="font-size:40px">🤖</div>'}
+          <div>
+            <b style="font-size:17px">${App.escapeHtml(profile.name || bot.name)}</b>
+            <div style="color:var(--text-dim);font-size:13px">${App.escapeHtml(profile.bio || 'Aucune bio')}</div>
+          </div>
+        </div>
+        <p style="color:var(--text-dim);font-size:12px;margin-top:14px">💡 C'est ainsi que le bot se présente sur ce serveur (profil affiché par <b>/botprofile view</b>, et messages envoyés avec ce nom/avatar).</p>
+      </div>
+      <div class="modal-footer"><button class="btn btn-primary" data-close>Fermer</button></div>
+    `);
+    document.querySelectorAll('[data-close]').forEach((b) => b.onclick = App.closeModal);
+  };
+  iCard.querySelector('#p-reset').onclick = async () => {
+    if (!(await App.confirm('Retirer l\'identité personnalisée de ce serveur ?'))) return;
+    try {
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/profile`, { method: 'DELETE' });
+      toast('Identité réinitialisée.');
+      BotViews.renderServerConfig(content, bot, guildId);
+    } catch (e) { err(e); }
+  };
+  wrap.appendChild(iCard);
+
+  // ---------- 3. Modération avancée : journaux + liste noire ----------
+  const blData = (blacklist || []).map((w) => ({ word: w }));
+  const mCard = App.el(`
+    <div class="card">
+      <h3>🔇 Modération avancée</h3>
+      <div class="card-sub">Journaux de modération + liste noire de mots (suppression automatique).</div>
+      <div class="grid2" style="max-width:640px">
+        <div>
+          <label class="field-label">Salon des journaux (ex : #logs)</label>
+          <input class="input" id="m-logs" value="${App.escapeHtml(settings.log_channel || '')}" placeholder="#logs" />
+        </div>
+      </div>
+      <div class="help-box" style="font-size:12px;max-width:640px;margin-top:8px">📋 Tracent automatiquement : kicks, bans, timeouts, avertissements, purges, tickets ouverts/fermés/supprimés, auto-modération, arrivées et départs.</div>
+      <label class="field-label">🔇 Mots interdits (messages supprimés automatiquement)</label>
+      <div id="m-blacklist"></div>
+      <button class="btn btn-sm btn-ghost" id="m-add-word" style="margin-top:8px">＋ Ajouter un mot</button>
+      <div style="margin-top:14px"><button class="btn btn-primary" id="m-save">💾 Enregistrer</button></div>
+    </div>
+  `);
+  const blEl = mCard.querySelector('#m-blacklist');
+  const renderBl = () => {
+    blEl.innerHTML = '';
+    if (!blData.length) {
+      blEl.appendChild(App.el(`<div style="color:var(--text-dim);font-size:12.5px">Ex : insulte, spam… Les messages contenant ces mots sont supprimés et journalisés.</div>`));
+    }
+    blData.forEach((w, i) => {
+      const row = App.el(`
+        <div class="row-item" style="margin-top:7px">
+          <input class="input" value="${App.escapeHtml(w.word)}" placeholder="mot interdit" />
+          <button class="btn btn-danger btn-icon btn-sm" data-del>🗑</button>
+        </div>
+      `);
+      row.querySelector('input').addEventListener('input', (e) => { w.word = e.target.value; });
+      row.querySelector('[data-del]').onclick = () => { blData.splice(i, 1); renderBl(); };
+      blEl.appendChild(row);
+    });
+  };
+  renderBl();
+  mCard.querySelector('#m-add-word').onclick = () => { blData.push({ word: '' }); renderBl(); };
+  mCard.querySelector('#m-save').onclick = async () => {
+    try {
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/automod`, {
+        method: 'PUT',
+        body: { blacklist: blData.map((w) => String(w.word).trim().toLowerCase()).filter(Boolean) },
+      });
+      const logChannel = mCard.querySelector('#m-logs').value.trim();
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/settings`, {
+        method: 'PUT',
+        body: { log_channel: logChannel },
+      });
+      toast('Modération avancée enregistrée !');
+    } catch (e) { err(e); }
+  };
+  wrap.appendChild(mCard);
+
+  // ---------- 3. Niveaux (XP) ----------
   const xCard = App.el(`
     <div class="card">
       <div class="card-head-row">
@@ -981,6 +1125,81 @@ BotViews.renderEconomy = async (content, bot) => {
   } catch (e) {
     content.innerHTML = `<div class="empty-state">${App.escapeHtml(e.message)}</div>`;
   }
+};
+
+// ---------------------- Panneau admin plateforme ----------------------
+App.renderAdminPage = async () => {
+  const root = document.getElementById('app');
+  root.innerHTML = '';
+  root.appendChild(App.renderNavbar());
+  const page = App.el(`<div class="page">
+    <h1>👑 Administration de la plateforme</h1>
+    <p class="sub">Vue d'ensemble de BotDev : utilisateurs, bots, serveurs.</p>
+    <div class="stats-grid" id="a-stats"><div class="spinner"></div></div>
+    <div class="card"><h3>👥 Utilisateurs</h3><div class="card-sub">Comptes inscrits sur la plateforme.</div><div id="a-users"><div class="spinner"></div></div></div>
+    <div class="card"><h3>🤖 Bots</h3><div class="card-sub">Tous les bots hébergés.</div><div id="a-bots"><div class="spinner"></div></div></div>
+  </div>`);
+  root.appendChild(page);
+
+  const load = async () => {
+    try {
+      const [stats, usersRes, botsRes] = await Promise.all([
+        App.api('/admin/stats'),
+        App.api('/admin/users'),
+        App.api('/admin/bots'),
+      ]);
+      page.querySelector('#a-stats').innerHTML = `
+        <div class="stat-card"><div class="val">${stats.users}</div><div class="lbl">Utilisateurs</div></div>
+        <div class="stat-card"><div class="val">${stats.bots}</div><div class="lbl">Bots (${stats.online} en ligne)</div></div>
+        <div class="stat-card"><div class="val">${App.fmtNumber(stats.servers)}</div><div class="lbl">Serveurs Discord</div></div>
+        <div class="stat-card"><div class="val">${App.fmtNumber(stats.members)}</div><div class="lbl">Membres touchés</div></div>`;
+
+      const usersEl = page.querySelector('#a-users');
+      if (!usersRes.users.length) usersEl.innerHTML = `<div class="empty-state">Aucun utilisateur.</div>`;
+      else {
+        usersEl.innerHTML = `<table class="leaderboard-table"><thead><tr><th>#</th><th>Email</th><th>Discord</th><th>Bots</th><th>Inscrit le</th><th></th></tr></thead><tbody></tbody></table>`;
+        const tb = usersEl.querySelector('tbody');
+        usersRes.users.forEach((u, i) => {
+          const tr = App.el(`<tr>
+            <td>${u.id}</td>
+            <td>${App.escapeHtml(u.email)}${u.id === 1 ? ' <span class="chip">👑 fondateur</span>' : ''}</td>
+            <td>${u.discord_username ? '@' + App.escapeHtml(u.discord_username) : '—'}</td>
+            <td>${u.bots_count}</td>
+            <td>${App.escapeHtml(String(u.created_at).slice(0, 10))}</td>
+            <td>${u.id !== 1 ? `<button class="btn btn-danger btn-sm" data-del="${u.id}">🗑</button>` : ''}</td>
+          </tr>`);
+          const del = tr.querySelector('[data-del]');
+          if (del) del.onclick = async () => {
+            if (!(await App.confirm(`Supprimer le compte « ${u.email} » et tous ses bots ?`))) return;
+            try {
+              await App.api(`/admin/users/${u.id}`, { method: 'DELETE' });
+              App.toast('Utilisateur supprimé.');
+              load();
+            } catch (e) { App.toast(e.message, 'error'); }
+          };
+          tb.appendChild(tr);
+        });
+      }
+
+      const botsEl = page.querySelector('#a-bots');
+      if (!botsRes.bots.length) botsEl.innerHTML = `<div class="empty-state">Aucun bot.</div>`;
+      else {
+        botsEl.innerHTML = `<table class="leaderboard-table"><thead><tr><th>Bot</th><th>Propriétaire</th><th>Statut</th><th>Serveurs</th></tr></thead><tbody></tbody></table>`;
+        const tb = botsEl.querySelector('tbody');
+        botsRes.bots.forEach((b) => {
+          tb.appendChild(App.el(`<tr>
+            <td><b>${App.escapeHtml(b.name)}</b>${b.bot_username ? ' <span style="color:var(--text-dim)">@' + App.escapeHtml(b.bot_username) + '</span>' : ''}</td>
+            <td>${App.escapeHtml(b.owner_email || '—')}</td>
+            <td><span class="dot ${b.online ? 'dot-online' : 'dot-offline'}"></span> ${b.online ? 'En ligne' : 'Hors ligne'}</td>
+            <td>${b.servers}</td>
+          </tr>`));
+        });
+      }
+    } catch (e) {
+      page.querySelector('#a-stats').innerHTML = `<div class="empty-state">${App.escapeHtml(e.message)}</div>`;
+    }
+  };
+  load();
 };
 
 // ---------------------- Réglages ----------------------
