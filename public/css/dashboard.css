@@ -140,12 +140,51 @@
 .dash-empty { text-align: center; padding: 40px 16px; color: var(--d-dim); }
 .dash-empty .big { font-size: 38px; margin-bottom: 8px; }
 
-/* ---------- Responsive ---------- */
+/* ---------- Responsive mobile ---------- */
 @media (max-width: 900px) {
   .dash-shell { flex-direction: column; }
-  .dash-side { width: 100%; height: auto; position: static; flex-direction: row; overflow-x: auto; border-right: none; border-bottom: 1px solid var(--d-border); }
+  .dash-main { padding: 14px 12px 96px; }
+
+  /* Sidebar = barre d'onglets horizontale défilante, collée en haut */
+  .dash-side {
+    width: 100%; height: auto; position: sticky; top: 56px; z-index: 50;
+    flex-direction: row; overflow-x: auto; overflow-y: hidden;
+    border-right: none; border-bottom: 1px solid var(--d-border);
+    background: rgba(20, 21, 31, .96); backdrop-filter: blur(8px);
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .dash-side::-webkit-scrollbar { display: none; }
   .dash-side-section, .dash-side-foot { display: none; }
-  .dash-side-item { border-left: none; border-bottom: 2px solid transparent; white-space: nowrap; padding: 10px 14px; }
-  .dash-side-item.active { border-bottom-color: var(--d-accent); background: transparent; }
-  .dash-main { padding: 16px 14px 80px; }
+  .dash-side-item {
+    flex: 0 0 auto; min-height: 46px; padding: 12px 16px;
+    border-left: none; border-bottom: 3px solid transparent; white-space: nowrap;
+    font-size: 13px;
+  }
+  .dash-side-item.active { border-bottom-color: var(--d-accent); background: rgba(88,101,242,.08); }
+
+  /* Topbar : le sélecteur prend toute la largeur, boutons en dessous */
+  .dash-topbar { flex-direction: column; align-items: stretch; gap: 10px; }
+  .dash-server-pick { max-width: 100%; }
+  .dash-topbar-actions { margin-left: 0; flex-wrap: wrap; }
+  .dash-topbar-actions .dash-btn { flex: 1; justify-content: center; min-height: 44px; }
+
+  /* Grille et cartes en une colonne */
+  .dash-grid { grid-template-columns: 1fr; }
+  .dash-stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .dash-card { padding: 16px 15px; }
+
+  /* En-tête de module plus compact */
+  .dash-module-header { gap: 10px; }
+  .dash-module-header .m-icon { width: 40px; height: 40px; font-size: 19px; }
+  .dash-module-header h1 { font-size: 17px; }
+
+  /* Boutons et champs : zones tactiles confortables */
+  .dash-btn { min-height: 42px; padding: 10px 16px; }
+  .dash-btn-sm { min-height: 36px; }
+  .dash-input, .dash-select, textarea.dash-input { font-size: 16px; padding: 11px 12px; }
+  .dash-label { font-size: 11.5px; }
+
+  /* Tableaux : défilement horizontal */
+  .dash-table { display: block; overflow-x: auto; white-space: nowrap; }
+  .dash-table th, .dash-table td { padding: 9px 10px; }
 }

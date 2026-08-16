@@ -255,6 +255,18 @@ function getOwnBot(req, res) {
   return bot;
 }
 
+// Hoxera est un bot UNIQUE et public : l'accès n'est plus lié à la
+// « propriété » du bot (legacy multi-utilisateurs), mais aux permissions
+// de l'utilisateur sur CHAQUE serveur (userCanManageGuild).
+function getAnyBot(req, res) {
+  const bot = store.bots.get(Number(req.params.id));
+  if (!bot) {
+    res.status(404).json({ error: 'Bot introuvable' });
+    return null;
+  }
+  return bot;
+}
+
 function botDetail(bot) {
   const entry = botManager.clients.get(bot.id);
   const online = botManager.isOnline(bot.id);
@@ -449,7 +461,7 @@ router.put('/bots/:id/modules/:key', requireAuth, async (req, res) => {
 // Configuration par serveur (façon DraftBot)
 // ============================================================
 router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
-  const bot = getOwnBot(req, res);
+  const bot = getAnyBot(req, res);
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) {
@@ -489,14 +501,14 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
 // ---------------------- Communauté (façon DraftBot) ----------------------
 // Boutique
 router.get('/bots/:id/guilds/:guildId/shop', requireAuth, async (req, res) => {
-  const bot = getOwnBot(req, res);
+  const bot = getAnyBot(req, res);
   if (!bot) return;
   if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   res.json({ items: store.shop.all(bot.id, req.params.guildId) });
 });
 
 router.put('/bots/:id/guilds/:guildId/shop', requireAuth, async (req, res) => {
-  const bot = getOwnBot(req, res);
+  const bot = getAnyBot(req, res);
   if (!bot) return;
   if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   const items = Array.isArray(req.body.items) ? req.body.items.filter((i) => i && i.name && i.role).slice(0, 50) : [];
@@ -506,14 +518,14 @@ router.put('/bots/:id/guilds/:guildId/shop', requireAuth, async (req, res) => {
 
 // Suggestions
 router.get('/bots/:id/guilds/:guildId/suggestions', requireAuth, async (req, res) => {
-  const bot = getOwnBot(req, res);
+  const bot = getAnyBot(req, res);
   if (!bot) return;
   if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   res.json({ suggestions: store.suggestions.all(bot.id, req.params.guildId) });
 });
 
 router.put('/bots/:id/guilds/:guildId/suggestions/:sid', requireAuth, async (req, res) => {
-  const bot = getOwnBot(req, res);
+  const bot = getAnyBot(req, res);
   if (!bot) return;
   if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   store.suggestions.setStatus(Number(req.params.sid), req.body.status);
@@ -522,14 +534,14 @@ router.put('/bots/:id/guilds/:guildId/suggestions/:sid', requireAuth, async (req
 
 // Sanctions prédéfinies
 router.get('/bots/:id/guilds/:guildId/sanctions', requireAuth, async (req, res) => {
-  const bot = getOwnBot(req, res);
+  const bot = getAnyBot(req, res);
   if (!bot) return;
   if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   res.json({ sanctions: store.sanctions.all(bot.id, req.params.guildId) });
 });
 
 router.put('/bots/:id/guilds/:guildId/sanctions', requireAuth, async (req, res) => {
-  const bot = getOwnBot(req, res);
+  const bot = getAnyBot(req, res);
   if (!bot) return;
   if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   const list = Array.isArray(req.body.sanctions) ? req.body.sanctions.filter((s) => s && s.name).slice(0, 25) : [];
@@ -541,14 +553,14 @@ router.put('/bots/:id/guilds/:guildId/sanctions', requireAuth, async (req, res) 
 
 // Giveaways
 router.get('/bots/:id/guilds/:guildId/giveaways', requireAuth, async (req, res) => {
-  const bot = getOwnBot(req, res);
+  const bot = getAnyBot(req, res);
   if (!bot) return;
   if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   res.json({ giveaways: store.giveaways.all(bot.id, req.params.guildId) });
 });
 
 router.post('/bots/:id/guilds/:guildId/giveaways/:gid/end', requireAuth, async (req, res) => {
-  const bot = getOwnBot(req, res);
+  const bot = getAnyBot(req, res);
   if (!bot) return;
   if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   const g = store.giveaways.get(Number(req.params.gid));
@@ -562,14 +574,14 @@ router.post('/bots/:id/guilds/:guildId/giveaways/:gid/end', requireAuth, async (
 
 // Rôles temporaires
 router.get('/bots/:id/guilds/:guildId/temproles', requireAuth, async (req, res) => {
-  const bot = getOwnBot(req, res);
+  const bot = getAnyBot(req, res);
   if (!bot) return;
   if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   res.json({ roles: store.tempRoles.all(bot.id, req.params.guildId) });
 });
 
 router.delete('/bots/:id/guilds/:guildId/temproles/:rid', requireAuth, async (req, res) => {
-  const bot = getOwnBot(req, res);
+  const bot = getAnyBot(req, res);
   if (!bot) return;
   if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   store.tempRoles.remove(Number(req.params.rid));
@@ -578,7 +590,7 @@ router.delete('/bots/:id/guilds/:guildId/temproles/:rid', requireAuth, async (re
 
 // Identité du bot sur un serveur (nom, bio, couleur + images en base64)
 router.put('/bots/:id/guilds/:guildId/profile', requireAuth, async (req, res) => {
-  const bot = getOwnBot(req, res);
+  const bot = getAnyBot(req, res);
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
@@ -614,7 +626,7 @@ router.put('/bots/:id/guilds/:guildId/profile', requireAuth, async (req, res) =>
 });
 
 router.delete('/bots/:id/guilds/:guildId/profile', requireAuth, async (req, res) => {
-  const bot = getOwnBot(req, res);
+  const bot = getAnyBot(req, res);
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
@@ -624,7 +636,7 @@ router.delete('/bots/:id/guilds/:guildId/profile', requireAuth, async (req, res)
 
 // Niveaux (XP) par serveur
 router.put('/bots/:id/guilds/:guildId/xp', requireAuth, async (req, res) => {
-  const bot = getOwnBot(req, res);
+  const bot = getAnyBot(req, res);
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
@@ -648,7 +660,7 @@ router.put('/bots/:id/guilds/:guildId/xp', requireAuth, async (req, res) => {
 
 // Auto-modération par serveur
 router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) => {
-  const bot = getOwnBot(req, res);
+  const bot = getAnyBot(req, res);
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
@@ -670,7 +682,7 @@ router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) =>
 });
 
 router.put('/bots/:id/guilds/:guildId/settings', requireAuth, async (req, res) => {
-  const bot = getOwnBot(req, res);
+  const bot = getAnyBot(req, res);
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
@@ -685,7 +697,7 @@ router.put('/bots/:id/guilds/:guildId/settings', requireAuth, async (req, res) =
 });
 
 router.put('/bots/:id/guilds/:guildId/events/:type', requireAuth, async (req, res) => {
-  const bot = getOwnBot(req, res);
+  const bot = getAnyBot(req, res);
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
@@ -695,11 +707,12 @@ router.put('/bots/:id/guilds/:guildId/events/:type', requireAuth, async (req, re
 });
 
 // ---------------------- Économie ----------------------
-router.get('/bots/:id/economy/leaderboard', requireAuth, (req, res) => {
-  const bot = getOwnBot(req, res);
+router.get('/bots/:id/economy/leaderboard', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
   if (!bot) return;
   const { guild_id } = req.query;
   if (!guild_id) return res.status(400).json({ error: 'guild_id requis' });
+  if (!(await userCanManageGuild(req, guild_id))) return res.status(403).json({ error: 'Permission refusée.' });
   const top = store.economy.top(bot.id, guild_id, 25);
   res.json({ top });
 });
@@ -707,11 +720,12 @@ router.get('/bots/:id/economy/leaderboard', requireAuth, (req, res) => {
 // ---------------------- Panneaux (tickets + menus de rôles) ----------------------
 const panels = require('./discord/panels');
 
-router.get('/bots/:id/panels', requireAuth, (req, res) => {
-  const bot = getOwnBot(req, res);
+router.get('/bots/:id/panels', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
   if (!bot) return;
   const { guild_id } = req.query;
   if (!guild_id) return res.status(400).json({ error: 'guild_id requis' });
+  if (!(await userCanManageGuild(req, guild_id))) return res.status(403).json({ error: 'Permission refusée.' });
   const cfg = store.tickets.get(bot.id, guild_id);
   res.json({
     tickets: cfg || {
@@ -722,11 +736,12 @@ router.get('/bots/:id/panels', requireAuth, (req, res) => {
   });
 });
 
-router.put('/bots/:id/tickets', requireAuth, (req, res) => {
-  const bot = getOwnBot(req, res);
+router.put('/bots/:id/tickets', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
   if (!bot) return;
   const { guild_id, name, channel, message, button_label, support_role, category, types } = req.body || {};
   if (!guild_id) return res.status(400).json({ error: 'guild_id requis' });
+  if (!(await userCanManageGuild(req, guild_id))) return res.status(403).json({ error: 'Permission refusée.' });
   const current = store.tickets.get(bot.id, guild_id) || {};
   const payload = {
     name: String(name !== undefined ? name : (current.name || '')).slice(0, 50),
@@ -759,10 +774,11 @@ router.put('/bots/:id/tickets', requireAuth, (req, res) => {
 });
 
 router.post('/bots/:id/tickets/send', requireAuth, async (req, res) => {
-  const bot = getOwnBot(req, res);
+  const bot = getAnyBot(req, res);
   if (!bot) return;
   const { guild_id } = req.body || {};
   if (!guild_id) return res.status(400).json({ error: 'guild_id requis' });
+  if (!(await userCanManageGuild(req, guild_id))) return res.status(403).json({ error: 'Permission refusée.' });
   if (!botManager.isOnline(bot.id)) return res.status(400).json({ error: 'Démarre le bot avant d\'envoyer un panneau.' });
   const cfg = store.tickets.get(bot.id, guild_id);
   if (!cfg || !cfg.channel) return res.status(400).json({ error: 'Configure d\'abord le salon du panneau.' });
@@ -779,11 +795,12 @@ router.post('/bots/:id/tickets/send', requireAuth, async (req, res) => {
   }
 });
 
-router.post('/bots/:id/role-menus', requireAuth, (req, res) => {
-  const bot = getOwnBot(req, res);
+router.post('/bots/:id/role-menus', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
   if (!bot) return;
   const { guild_id, name, content, placeholder, channel, options } = req.body || {};
   if (!guild_id) return res.status(400).json({ error: 'guild_id requis' });
+  if (!(await userCanManageGuild(req, guild_id))) return res.status(403).json({ error: 'Permission refusée.' });
   if (!Array.isArray(options) || !options.length) return res.status(400).json({ error: 'Ajoute au moins un rôle au menu.' });
   const id = store.roleMenus.create({
     bot_id: bot.id,
@@ -801,11 +818,12 @@ router.post('/bots/:id/role-menus', requireAuth, (req, res) => {
   res.json({ id });
 });
 
-router.put('/role-menus/:id', requireAuth, (req, res) => {
+router.put('/role-menus/:id', requireAuth, async (req, res) => {
   const menu = store.roleMenus.get(Number(req.params.id));
   if (!menu) return res.status(404).json({ error: 'Menu introuvable' });
   const bot = store.bots.get(menu.bot_id);
-  if (!bot || bot.user_id !== req.userId) return res.status(404).json({ error: 'Menu introuvable' });
+  if (!bot) return res.status(404).json({ error: 'Menu introuvable' });
+  if (!(await userCanManageGuild(req, menu.guild_id))) return res.status(403).json({ error: 'Permission refusée.' });
   const fields = {};
   const { name, content, placeholder, channel, options } = req.body || {};
   if (name !== undefined) fields.name = String(name).slice(0, 50);
@@ -824,11 +842,12 @@ router.put('/role-menus/:id', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-router.delete('/role-menus/:id', requireAuth, (req, res) => {
+router.delete('/role-menus/:id', requireAuth, async (req, res) => {
   const menu = store.roleMenus.get(Number(req.params.id));
   if (!menu) return res.status(404).json({ error: 'Menu introuvable' });
   const bot = store.bots.get(menu.bot_id);
-  if (!bot || bot.user_id !== req.userId) return res.status(404).json({ error: 'Menu introuvable' });
+  if (!bot) return res.status(404).json({ error: 'Menu introuvable' });
+  if (!(await userCanManageGuild(req, menu.guild_id))) return res.status(403).json({ error: 'Permission refusée.' });
   store.roleMenus.remove(menu.id);
   res.json({ ok: true });
 });
@@ -837,7 +856,8 @@ router.post('/role-menus/:id/send', requireAuth, async (req, res) => {
   const menu = store.roleMenus.get(Number(req.params.id));
   if (!menu) return res.status(404).json({ error: 'Menu introuvable' });
   const bot = store.bots.get(menu.bot_id);
-  if (!bot || bot.user_id !== req.userId) return res.status(404).json({ error: 'Menu introuvable' });
+  if (!bot) return res.status(404).json({ error: 'Menu introuvable' });
+  if (!(await userCanManageGuild(req, menu.guild_id))) return res.status(403).json({ error: 'Permission refusée.' });
   if (!botManager.isOnline(bot.id)) return res.status(400).json({ error: 'Démarre le bot avant d\'envoyer un menu.' });
   if (!menu.channel) return res.status(400).json({ error: 'Renseigne d\'abord le salon du menu.' });
   const entry = botManager.clients.get(bot.id);
