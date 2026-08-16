@@ -86,36 +86,36 @@ async function main() {
   });
 
   app.listen(PORT, '0.0.0.0', async () => {
-    console.log(`🚀 Noxera démarré sur http://0.0.0.0:${PORT}`);
-    await provisionNoxera();
+    console.log(`🚀 Hoxera démarré sur http://0.0.0.0:${PORT}`);
+    await provisionHoxera();
     startupBots();
   });
 
-  // ⚡ Noxera (bot unique) : créé automatiquement depuis les variables
+  // ⚡ Hoxera (bot unique) : créé automatiquement depuis les variables
   // d'environnement — plus besoin de « créer un bot » depuis le dashboard.
-  // Les deux noms de variables sont acceptés (NOXERA_TOKEN recommandé,
-  // NEXORA_TOKEN conservé pour la compatibilité avec l'existant).
-  async function provisionNoxera() {
-    const token = process.env.NOXERA_TOKEN || process.env.NEXORA_TOKEN;
+  // HOXERA_TOKEN est le nom recommandé ; les anciens noms restent acceptés
+  // (NOXERA_TOKEN, NEXORA_TOKEN) pour ne jamais casser l'existant.
+  async function provisionHoxera() {
+    const token = process.env.HOXERA_TOKEN || process.env.NOXERA_TOKEN || process.env.NEXORA_TOKEN;
     if (!token) {
-      console.log('[BotDev] ⚠️ NOXERA_TOKEN absent — Noxera n\'est pas branché (ajoute la variable sur Render).');
+      console.log('[BotDev] ⚠️ HOXERA_TOKEN absent — Hoxera n\'est pas branché (ajoute la variable sur Render).');
       return null;
     }
-    const clientId = process.env.NOXERA_CLIENT_ID || process.env.NEXORA_CLIENT_ID || process.env.DISCORD_CLIENT_ID || '';
+    const clientId = process.env.HOXERA_CLIENT_ID || process.env.NOXERA_CLIENT_ID || process.env.NEXORA_CLIENT_ID || process.env.DISCORD_CLIENT_ID || '';
     let bot = store.db.prepare('SELECT * FROM bots ORDER BY id LIMIT 1').get();
     if (bot) {
-      store.bots.update(bot.id, { name: 'Noxera', token, client_id: clientId || bot.client_id });
+      store.bots.update(bot.id, { name: 'Hoxera', token, client_id: clientId || bot.client_id });
       bot = store.bots.get(bot.id);
     } else {
-      const id = store.bots.create({ user_id: 1, name: 'Noxera', token, client_id: clientId, prefix: '!' });
+      const id = store.bots.create({ user_id: 1, name: 'Hoxera', token, client_id: clientId, prefix: '!' });
       bot = store.bots.get(id);
     }
-    console.log(`⚡ Noxera provisionné (id ${bot.id}, client_id ${clientId || '?'})`);
+    console.log(`⚡ Hoxera provisionné (id ${bot.id}, client_id ${clientId || '?'})`);
     try {
       await botManager.loginBot(bot.id);
-      console.log('⚡ Noxera connecté à Discord 🟢');
+      console.log('⚡ Hoxera connecté à Discord 🟢');
     } catch (e) {
-      console.log(`⚠️  Noxera provisionné mais connexion impossible : ${e.message}`);
+      console.log(`⚠️  Hoxera provisionné mais connexion impossible : ${e.message}`);
     }
     return bot;
   }

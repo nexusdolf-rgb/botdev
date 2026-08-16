@@ -1,7 +1,7 @@
 {
-  "name": "Noxera",
-  "short_name": "Noxera",
-  "description": "Noxera — le bot Discord de ton serveur : tickets, niveaux, boutique, giveaways",
+  "name": "Hoxera",
+  "short_name": "Hoxera",
+  "description": "Hoxera — le bot Discord de ton serveur : tickets, niveaux, boutique, giveaways",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

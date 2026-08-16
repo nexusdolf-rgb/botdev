@@ -21,7 +21,7 @@
 - **📚 Centre d'aide complet** : `/help` affiche toutes les catégories (tickets, rôles, modération, utilitaires, fun, économie, commandes personnalisées) et `/help commande` donne le détail + exemples (ex : `/help ticket`)
 - **🌍 Utilisable par tous, sans compte** : n'importe quel serveur qui ajoute le bot reçoit automatiquement toutes les commandes — aucun compte BotDev nécessaire pour les membres. La modération est réservée aux administrateurs.
 - **🔗 Connexion avec Discord (OAuth2)** : « Se connecter avec Discord » lie le compte Discord au dashboard. BotDev vérifie automatiquement les serveurs de l'utilisateur et ses permissions.
-- **⚙️ Dashboard par serveur façon DraftBot** : le propriétaire ou un admin d'un serveur Discord peut configurer Noxera sur SON serveur directement depuis le dashboard — sans rien taper sur Discord : préfixe du serveur, système de tickets complet, message de bienvenue/départ (embed, couleur, image), auto-rôle, menus de rôles, et auto-modération (action automatique après X avertissements).
+- **⚙️ Dashboard par serveur façon DraftBot** : le propriétaire ou un admin d'un serveur Discord peut configurer Hoxera sur SON serveur directement depuis le dashboard — sans rien taper sur Discord : préfixe du serveur, système de tickets complet, message de bienvenue/départ (embed, couleur, image), auto-rôle, menus de rôles, et auto-modération (action automatique après X avertissements).
 - **📈 Niveaux (XP)** : les membres gagnent de l'XP en discutant, montent en niveau avec annonce automatique, **rôles de récompense par niveau**, `/rank` (niveau, XP, progression, rang) et `/levels` (classement) — configurable par serveur dans le dashboard (XP par message, cooldown, message personnalisé, salon d'annonce)
 - **🛡️ Auto-modération par serveur** : suppression automatique des liens (invitations/URL), des messages en majuscules, limite de mentions, anti-spam avec timeout 5 min (les admins/modérateurs sont ignorés)
 - **🎫 Système de tickets complet (façon Ticket Tool)** :
@@ -50,7 +50,7 @@
 - **📋 Journaux de modération** (`/modlogs`) : un salon trace tout — kicks, bans, timeouts, avertissements, purges, tickets ouverts/fermés/supprimés, auto-modération, arrivées/départs.
 - **🔇 Liste noire de mots** (`/blacklist`) : les messages contenant un mot interdit sont supprimés automatiquement et journalisés.
 - **👑 Panneau admin plateforme** : page /admin (réservée au fondateur — premier compte, ou emails définis via ADMIN_EMAILS) : statistiques globales, liste des utilisateurs (avec suppression), liste des bots et leur statut.
-- **🌐 Dashboard public de Noxera** : chaque bot a sa **page publique** (`/bot/id`) avec ses statistiques **synchronisées en direct** (serveurs, membres, latence, uptime), la liste de ses commandes groupées par catégorie et son lien d'invitation — accessible à tous, sans compte. La page d'accueil affiche les stats de la plateforme en temps réel et l'annuaire des bots publics.
+- **🌐 Dashboard public de Hoxera** : chaque bot a sa **page publique** (`/bot/id`) avec ses statistiques **synchronisées en direct** (serveurs, membres, latence, uptime), la liste de ses commandes groupées par catégorie et son lien d'invitation — accessible à tous, sans compte. La page d'accueil affiche les stats de la plateforme en temps réel et l'annuaire des bots publics.
 - **📱 Mode application (PWA)** : icône, installation sur l'écran d'accueil, navigation par barre d'onglets sur mobile, chargement hors ligne
 - **Événements** : message de bienvenue (embed, couleur, image), message de départ, auto-rôle
 - **Économie** : solde en coins par serveur, classement consultable dans le dashboard
@@ -62,14 +62,14 @@ npm install
 npm start          # démarre sur http://localhost:3000
 ```
 
-## ⚡ Noxera — site public + dashboard (connexion 100 % Discord)
+## ⚡ Hoxera — site public + dashboard (connexion 100 % Discord)
 
-La plateforme est devenue un **site dédié à Noxera** :
+La plateforme est devenue un **site dédié à Hoxera** :
 
 - **Site public** (aucun compte requis) : accueil avec stats en direct, fonctionnalités, bouton d'invitation
 - **Connexion 100 % Discord** : les formulaires email/mot de passe sont supprimés — un seul bouton « 🎮 Se connecter avec Discord ». Une fois lié, les boutons disparaissent et le dashboard s'ouvre directement
-- **Dashboard pré-câblé à Noxera** : sidebar avec la liste des serveurs Discord de l'utilisateur + tous les modules (tickets, niveaux, boutique, giveaways, modération, journaux…) — seuls les propriétaires/administrateurs des serveurs où Noxera est présent peuvent configurer
-- **Provisionnement automatique** : Noxera est créé et connecté automatiquement au démarrage via les variables d'environnement (`NOXERA_TOKEN` recommandé — `NEXORA_TOKEN` reste accepté par compatibilité, et `NOXERA_CLIENT_ID`) — plus aucune « création de bot »
+- **Dashboard pré-câblé à Hoxera** : sidebar avec la liste des serveurs Discord de l'utilisateur + tous les modules (tickets, niveaux, boutique, giveaways, modération, journaux…) — seuls les propriétaires/administrateurs des serveurs où Hoxera est présent peuvent configurer
+- **Provisionnement automatique** : Hoxera est créé et connecté automatiquement au démarrage via les variables d'environnement (`HOXERA_TOKEN` recommandé — `NOXERA_TOKEN`/`NEXORA_TOKEN` restent acceptés par compatibilité, et `HOXERA_CLIENT_ID`) — plus aucune « création de bot »
 
 ## 🎨 Dashboard v2 (façon DraftBot) — reconstruction propre
 

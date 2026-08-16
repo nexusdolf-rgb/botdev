@@ -12,7 +12,7 @@ w.fetch = async (url, opts) => {
   const path = String(url).split('?')[0];
   const resp = (body, status = 200) => ({ ok: status < 400, status, json: async () => body });
   if (path.endsWith('/api/auth/me')) return resp({ user: { id: 1, email: 'a@b.fr', discord_id: 'D1', discord_username: 'a', is_admin: true } });
-  if (path.endsWith('/api/noxera')) return resp({ configured: true, bot: { id: 1, name: 'Noxera', prefix: '!', online: true, invite_url: 'https://x', status_text: '', avatar_url: '', bot_username: 'Noxera#1', guilds: [] } });
+  if (path.endsWith('/api/hoxera')) return resp({ configured: true, bot: { id: 1, name: 'Hoxera', prefix: '!', online: true, invite_url: 'https://x', status_text: '', avatar_url: '', bot_username: 'Hoxera#1', guilds: [] } });
   if (path.endsWith('/api/discord/guilds')) return resp({ guilds: [{ id: 'G1', name: 'Serveur Test', owner: true, canManage: true, hasBot: true, icon: '' }], discord: { username: 'a', avatar: '' } });
   if (path.endsWith('/guilds/G1')) return resp({
     guild: { id: 'G1', name: 'Serveur Test', members: 18 },
@@ -56,7 +56,7 @@ setTimeout(async () => {
     };
     console.log(JSON.stringify(results, null, 2));
     const ok = results.modules >= 15 && results.header.includes('Vue') && results.guildPick === 'G1' && results.botSection && !results.errorShown;
-    if (ok) { console.log('✅ DASHBOARD NOXERA RENDU PAR LE ROUTEUR — 100% fonctionnel'); process.exit(0); }
+    if (ok) { console.log('✅ DASHBOARD HOXERA RENDU PAR LE ROUTEUR — 100% fonctionnel'); process.exit(0); }
     process.exit(1);
   } catch (e) { console.error('❌', e.message); process.exit(1); }
 }, 3500);

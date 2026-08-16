@@ -24,7 +24,7 @@ const imgServer = http.createServer((req, res) => {
   await new Promise((r) => imgServer.listen(0, '127.0.0.1', r));
   const imgUrl = `http://127.0.0.1:${imgServer.address().port}/photo.png`;
 
-  store.bots.create({ user_id: 1, name: 'Noxera', token: 'T', client_id: '1', prefix: '!' });
+  store.bots.create({ user_id: 1, name: 'Hoxera', token: 'T', client_id: '1', prefix: '!' });
   const guild = { id: 'G1', name: 'Serveur', ownerId: 'OWNER1' };
   let lastReply = null, lastEdit = null, shownModal = null;
   let collectorHandler = null;
@@ -63,7 +63,7 @@ const imgServer = http.createServer((req, res) => {
   };
   await panels.dispatchPanels(1, cmdSetup);
   assert(shownModal && shownModal.data.title.includes('Nom'), 'modale nom');
-  await panels.dispatchPanels(1, wizard('bpw-modal:1:OWNER1', { isModalSubmit: () => true, fields: { getTextInputValue: () => 'Noxera VIP' } }));
+  await panels.dispatchPanels(1, wizard('bpw-modal:1:OWNER1', { isModalSubmit: () => true, fields: { getTextInputValue: () => 'Hoxera VIP' } }));
   assert(lastReply.embeds[0].data.title.includes('Étape 1/5'), 'étape 1');
 
   // nom → bio → couleur → avatar
@@ -89,7 +89,7 @@ const imgServer = http.createServer((req, res) => {
   await handleProfileCommand(1, profileCmd('banner', { url: imgUrl, contentType: 'image/png', size: PNG.length }));
   const p = store.botProfiles.get(1, 'G1');
   assert(p && p.avatar_url && p.banner_url, 'avatar + bannière en base');
-  assert(p.name === 'Noxera VIP' && p.bio === 'Bio VIP' && p.color === '#5865F2');
+  assert(p.name === 'Hoxera VIP' && p.bio === 'Bio VIP' && p.color === '#5865F2');
   console.log('3️⃣  /botprofile banner → assistant finalisé :', JSON.stringify({ name: p.name, bio: p.bio, avatar: p.avatar_url.slice(0, 20) + '…', banner: p.banner_url.slice(0, 20) + '…' }), '✅');
 
   // ---------- 4. Sans assistant → enregistrement direct ----------

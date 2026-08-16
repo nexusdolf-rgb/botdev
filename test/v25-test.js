@@ -128,7 +128,7 @@ const { buildSlashPayloads } = require('../server/discord/premade');
 
   const reg = await fetchJson('/auth/register', { method: 'POST', body: JSON.stringify({ email: 'admin@botdev.fr', password: 'BotDev2026!' }) });
   const ck = reg.cookie;
-  const botId = (await fetchJson('/bots', { method: 'POST', headers: { Cookie: ck }, body: JSON.stringify({ name: 'Noxera', token: 'T', client_id: '1', prefix: '!' }) })).json.id;
+  const botId = (await fetchJson('/bots', { method: 'POST', headers: { Cookie: ck }, body: JSON.stringify({ name: 'Hoxera', token: 'T', client_id: '1', prefix: '!' }) })).json.id;
   // lien Discord simulé
   const store2 = require('../server/db');
   store2.users.updateDiscord(1, { discord_id: 'D1', discord_username: 'admin', discord_avatar: '', discord_guilds: JSON.stringify([{ id: 'G1', name: 'Serveur', icon: '', owner: true, permissions: '0' }]) });

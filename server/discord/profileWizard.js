@@ -231,7 +231,7 @@ async function startProfileWizard(botId, interaction) {
     },
   };
   wizards.set(wKey(botId, interaction.guild.id, interaction.user.id), state);
-  return interaction.showModal(textModal(botId, interaction.user.id, '📛 Nom du bot', 'Nom sur ce serveur', 'Noxera du CHEAT', false, true, state.values.name));
+  return interaction.showModal(textModal(botId, interaction.user.id, '📛 Nom du bot', 'Nom sur ce serveur', 'Hoxera du CHEAT', false, true, state.values.name));
 }
 
 async function handleProfileWizardInteraction(botId, interaction) {

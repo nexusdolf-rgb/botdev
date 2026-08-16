@@ -1,5 +1,5 @@
 // ============================================================
-// BotDev - Pages publiques (dashboard public de Noxera)
+// BotDev - Pages publiques (dashboard public de Hoxera)
 // Stats synchronisées en direct depuis le processus du bot.
 // ============================================================
 
@@ -21,7 +21,7 @@ App.renderPublicNavbar = () => {
   const user = App.state.user;
   const nav = App.el(`
     <div class="navbar">
-      <div class="logo-row" style="cursor:pointer" id="pub-logo"><span class="logo">⚡</span> Noxera</div>
+      <div class="logo-row" style="cursor:pointer" id="pub-logo"><span class="logo">⚡</span> Hoxera</div>
       <div class="navbar-right" id="pub-nav-right">
         ${user && user.discord_id
           ? `<div class="user-pill">
@@ -62,12 +62,12 @@ App.renderPublicLanding = () => {
   const page = App.el(`
     <div id="public-landing">
       <div class="pub-hero">
-        <div class="pub-hero-badge">⚡ Noxera — synchronisé en direct avec Discord</div>
+        <div class="pub-hero-badge">⚡ Hoxera — synchronisé en direct avec Discord</div>
         <h1>Le bot qui anime<br/><span class="grad">ton serveur Discord</span></h1>
         <p class="pub-tagline">Tickets automatiques avec transcriptions, niveaux XP, boutique, giveaways, bienvenue et modération.
-        Ajoute Noxera à ton serveur, puis configure tout depuis le dashboard avec ton compte Discord.</p>
+        Ajoute Hoxera à ton serveur, puis configure tout depuis le dashboard avec ton compte Discord.</p>
         <div class="pub-hero-actions">
-          <button class="btn btn-primary" id="pub-invite-hero" style="padding:13px 22px;font-size:15px">➕ Ajouter Noxera à ton serveur</button>
+          <button class="btn btn-primary" id="pub-invite-hero" style="padding:13px 22px;font-size:15px">➕ Ajouter Hoxera à ton serveur</button>
           ${user && user.discord_id
             ? `<button class="btn" id="pub-dash-hero" style="padding:13px 22px;font-size:15px">📊 Ouvrir mon dashboard</button>`
             : `<button class="btn btn-discord" id="pub-connect-hero" style="padding:13px 22px;font-size:15px;width:auto">🎮 Se connecter avec Discord</button>`}
@@ -80,13 +80,13 @@ App.renderPublicLanding = () => {
       </div>
 
       <div class="pub-section">
-        <h2>🤖 Noxera en direct</h2>
+        <h2>🤖 Hoxera en direct</h2>
         <p class="pub-sub">Statistiques en temps réel, lues directement depuis Discord.</p>
         <div class="bots-grid" id="pub-bots"><div class="spinner"></div></div>
       </div>
 
       <div class="pub-section">
-        <h2>✨ Tout ce que Noxera sait faire</h2>
+        <h2>✨ Tout ce que Hoxera sait faire</h2>
         <div class="pub-features">
           <div class="pub-feature"><div class="f-ico">🎫</div><b>Tickets automatiques</b><p>Bouton → salon privé créé instantanément, avec rôle staff et fermeture en un clic.</p></div>
           <div class="pub-feature"><div class="f-ico">📋</div><b>Menus de rôles</b><p>Des menus déroulants où chaque membre choisit ses rôles tout seul.</p></div>
@@ -98,7 +98,7 @@ App.renderPublicLanding = () => {
       </div>
 
       <div class="pub-footer">
-        <b>⚡ Noxera</b> — ton serveur mérite un bot à la hauteur · <a href="https://discord.com/developers/docs" target="_blank" rel="noopener">Documentation Discord</a>
+        <b>⚡ Hoxera</b> — ton serveur mérite un bot à la hauteur · <a href="https://discord.com/developers/docs" target="_blank" rel="noopener">Documentation Discord</a>
       </div>
     </div>
   `);
@@ -252,7 +252,7 @@ App.renderPublicBot = async (id) => {
         <div style="margin-top:14px;color:var(--text-dim);font-size:12px">💡 Une fois le bot sur ton serveur, tape <b>/help</b> pour le guide complet, et <b>/ticket setup</b> pour installer les tickets.</div>
       </div>
 
-      <div class="pub-footer" style="text-align:left"><b>⚡ Noxera</b> — ajoute-le à ton serveur, puis configure-le avec ton compte Discord.</div>
+      <div class="pub-footer" style="text-align:left"><b>⚡ Hoxera</b> — ajoute-le à ton serveur, puis configure-le avec ton compte Discord.</div>
     `;
     shell.querySelector('#pub-back').onclick = () => App.router.go(App.state.user && App.state.user.discord_id ? '/dashboard' : '/');
     shell.querySelector('#pub-invite').onclick = () => { if (b.invite_url) App.openInvite(b.invite_url); };
