@@ -435,13 +435,60 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
   const dGuild = entry && entry.client.isReady() ? entry.client.guilds.cache.get(guildId) : null;
   if (!dGuild) return res.status(400).json({ error: 'Le bot n\'est pas sur ce serveur (ou il est hors ligne).' });
   const cfg = store.tickets.get(bot.id, guildId);
+  const DEFAULT_GS = {
+    prefix: '', warn_limit: 0, warn_action: 'none',
+    xp_enabled: 1, xp_min: 10, xp_max: 25, xp_cooldown: 60, xp_message: '', xp_channel: '',
+    am_enabled: 0, am_links: 1, am_caps: 1, am_mentions: 5, am_spam: 5,
+  };
   res.json({
     guild: { id: guildId, name: dGuild.name, icon: dGuild.iconURL({ size: 128 }) || '', members: dGuild.memberCount || 0 },
-    settings: store.guildSettings.get(bot.id, guildId) || { prefix: '', warn_limit: 0, warn_action: 'none' },
+    settings: { ...DEFAULT_GS, ...(store.guildSettings.get(bot.id, guildId) || {}) },
     tickets: cfg || { name: '', channel: '', message: '', button_label: '🎫 Ouvrir un ticket', support_role: '', category: 'Tickets' },
     events: { defs: EVENT_DEFS, state: eventsState(bot.id, guildId) },
     role_menus: store.roleMenus.all(bot.id, guildId),
+    xp_roles: store.xpRoles.all(bot.id, guildId),
   });
+});
+
+// Niveaux (XP) par serveur
+router.put('/bots/:id/guilds/:guildId/xp', requireAuth, async (req, res) => {
+  const bot = getOwnBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const { enabled, min, max, cooldown, message, channel, roles } = req.body || {};
+  store.guildSettings.set(bot.id, guildId, {
+    xp_enabled: (enabled === false || enabled === 0) ? 0 : 1,
+    xp_min: Math.min(Math.max(parseInt(min, 10) || 10, 1), 1000),
+    xp_max: Math.max(parseInt(max, 10) || 25, 1),
+    xp_cooldown: Math.max(parseInt(cooldown, 10) || 60, 0),
+    xp_message: String(message || '').slice(0, 500),
+    xp_channel: String(channel || '').slice(0, 100),
+  });
+  if (Array.isArray(roles)) {
+    store.xpRoles.replace(bot.id, guildId, roles
+      .slice(0, 25)
+      .map((r) => ({ level: Math.max(1, parseInt(r.level, 10) || 1), role: String(r.role || '').slice(0, 100) }))
+      .filter((r) => r.role));
+  }
+  res.json({ ok: true });
+});
+
+// Auto-modération par serveur
+router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) => {
+  const bot = getOwnBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const { enabled, links, caps, mentions, spam } = req.body || {};
+  store.guildSettings.set(bot.id, guildId, {
+    am_enabled: enabled ? 1 : 0,
+    am_links: (links === false || links === 0) ? 0 : 1,
+    am_caps: (caps === false || caps === 0) ? 0 : 1,
+    am_mentions: Math.max(parseInt(mentions, 10) || 0, 0),
+    am_spam: Math.max(parseInt(spam, 10) || 0, 0),
+  });
+  res.json({ ok: true });
 });
 
 router.put('/bots/:id/guilds/:guildId/settings', requireAuth, async (req, res) => {

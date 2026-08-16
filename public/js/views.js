@@ -593,7 +593,7 @@ BotViews.renderServerConfig = async (content, bot, guildId) => {
     content.querySelector('#back-list').onclick = () => App.router.go(`/bots/${bot.id}/servers`);
     return;
   }
-  const { guild, settings, tickets, events, role_menus } = data;
+  const { guild, settings, tickets, events, role_menus, xp_roles } = data;
   const evState = events.state || {};
 
   const el = BotViews.setContent(content, `
@@ -653,7 +653,110 @@ BotViews.renderServerConfig = async (content, bot, guildId) => {
   };
   wrap.appendChild(sCard);
 
-  // ---------- 2. Tickets ----------
+  // ---------- 2. Niveaux (XP) ----------
+  const xCard = App.el(`
+    <div class="card">
+      <div class="card-head-row">
+        <div>
+          <h3>📈 Niveaux (XP)</h3>
+          <div class="card-sub" style="margin-bottom:0">Les membres gagnent de l'XP en discutant et montent en niveau. Annonces + rôles de récompense.</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="xp-on" ${settings.xp_enabled ? 'checked' : ''} /><span class="slider"></span></label>
+      </div>
+      <div class="grid2" style="max-width:640px;margin-top:12px">
+        <div><label class="field-label">XP par message (min)</label><input class="input" id="xp-min" type="number" min="1" max="1000" value="${settings.xp_min ?? 10}" /></div>
+        <div><label class="field-label">XP par message (max)</label><input class="input" id="xp-max" type="number" min="1" value="${settings.xp_max ?? 25}" /></div>
+        <div><label class="field-label">Pause entre 2 gains (secondes)</label><input class="input" id="xp-cd" type="number" min="0" value="${settings.xp_cooldown ?? 60}" /></div>
+        <div><label class="field-label">Salon d'annonce (vide = salon du message)</label><input class="input" id="xp-channel" value="${App.escapeHtml(settings.xp_channel || '')}" placeholder="#niveaux" /></div>
+      </div>
+      <label class="field-label">Message de niveau (variables {user}, {level})</label>
+      <input class="input" id="xp-msg" style="max-width:640px" value="${App.escapeHtml(settings.xp_message || '')}" placeholder="{user} vient d'atteindre le niveau {level} ! 🎉" />
+      <label class="field-label">Rôles de récompense (niveau → rôle, nom exact du rôle)</label>
+      <div id="xp-roles"></div>
+      <button class="btn btn-sm btn-ghost" id="xp-add-role" style="margin-top:8px">＋ Ajouter une récompense</button>
+      <div style="margin-top:14px"><button class="btn btn-primary" id="xp-save">💾 Enregistrer</button></div>
+    </div>
+  `);
+  const xpRolesData = (xp_roles || []).map((r) => ({ level: r.level, role: r.role }));
+  const xpRolesEl = xCard.querySelector('#xp-roles');
+  const renderXpRoles = () => {
+    xpRolesEl.innerHTML = '';
+    if (!xpRolesData.length) {
+      xpRolesEl.appendChild(App.el(`<div style="color:var(--text-dim);font-size:12.5px">Ex : niveau 5 → rôle « Membre actif ».</div>`));
+    }
+    xpRolesData.forEach((r, i) => {
+      const row = App.el(`
+        <div class="row-item" style="margin-top:7px">
+          <input class="input" data-k="level" type="number" min="1" value="${r.level}" style="max-width:90px" />
+          <input class="input" data-k="role" value="${App.escapeHtml(r.role)}" placeholder="Nom exact du rôle" />
+          <button class="btn btn-danger btn-icon btn-sm" data-del>🗑</button>
+        </div>
+      `);
+      row.querySelectorAll('[data-k]').forEach((inp) => inp.addEventListener('input', () => {
+        r[inp.dataset.k] = inp.dataset.k === 'level' ? (parseInt(inp.value, 10) || 1) : inp.value;
+      }));
+      row.querySelector('[data-del]').onclick = () => { xpRolesData.splice(i, 1); renderXpRoles(); };
+      xpRolesEl.appendChild(row);
+    });
+  };
+  renderXpRoles();
+  xCard.querySelector('#xp-add-role').onclick = () => { xpRolesData.push({ level: 5, role: '' }); renderXpRoles(); };
+  xCard.querySelector('#xp-save').onclick = async () => {
+    try {
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/xp`, {
+        method: 'PUT',
+        body: {
+          enabled: xCard.querySelector('#xp-on').checked,
+          min: parseInt(xCard.querySelector('#xp-min').value, 10) || 10,
+          max: parseInt(xCard.querySelector('#xp-max').value, 10) || 25,
+          cooldown: parseInt(xCard.querySelector('#xp-cd').value, 10) || 60,
+          message: xCard.querySelector('#xp-msg').value,
+          channel: xCard.querySelector('#xp-channel').value.trim(),
+          roles: xpRolesData.filter((r) => String(r.role).trim()),
+        },
+      });
+      toast('Niveaux enregistrés !');
+    } catch (e) { err(e); }
+  };
+  wrap.appendChild(xCard);
+
+  // ---------- 3. Auto-modération ----------
+  const amCard = App.el(`
+    <div class="card">
+      <div class="card-head-row">
+        <div>
+          <h3>🛡️ Auto-modération</h3>
+          <div class="card-sub" style="margin-bottom:0">Le bot supprime automatiquement les messages interdits (les admins et modérateurs sont ignorés).</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="am-on" ${settings.am_enabled ? 'checked' : ''} /><span class="slider"></span></label>
+      </div>
+      <div class="grid2" style="max-width:640px;margin-top:12px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-dim);cursor:pointer"><input type="checkbox" id="am-links" ${settings.am_links ? 'checked' : ''} /> Supprimer les liens (invitations & URL)</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-dim);cursor:pointer"><input type="checkbox" id="am-caps" ${settings.am_caps ? 'checked' : ''} /> Supprimer les messages en MAJUSCULES</label>
+        <div><label class="field-label">Mentions max par message (0 = illimité)</label><input class="input" id="am-mentions" type="number" min="0" value="${settings.am_mentions ?? 5}" /></div>
+        <div><label class="field-label">Spam : messages max en 5 s (0 = désactivé)</label><input class="input" id="am-spam" type="number" min="0" value="${settings.am_spam ?? 5}" /></div>
+      </div>
+      <div style="margin-top:14px"><button class="btn btn-primary" id="am-save">💾 Enregistrer</button></div>
+    </div>
+  `);
+  amCard.querySelector('#am-save').onclick = async () => {
+    try {
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/automod`, {
+        method: 'PUT',
+        body: {
+          enabled: amCard.querySelector('#am-on').checked,
+          links: amCard.querySelector('#am-links').checked,
+          caps: amCard.querySelector('#am-caps').checked,
+          mentions: parseInt(amCard.querySelector('#am-mentions').value, 10) || 0,
+          spam: parseInt(amCard.querySelector('#am-spam').value, 10) || 0,
+        },
+      });
+      toast('Auto-modération enregistrée !');
+    } catch (e) { err(e); }
+  };
+  wrap.appendChild(amCard);
+
+  // ---------- 4. Tickets ----------
   const tCard = App.el(`
     <div class="card">
       <h3>🎫 Système de tickets</h3>

@@ -2,6 +2,7 @@
 // BotDev - Commandes pré-faites (modules activables en 1 clic)
 // ============================================================
 const { EmbedBuilder, ApplicationCommandOptionType, PermissionsBitField } = require('discord.js');
+const { xpForLevel, levelFromXp } = require('./xp');
 const store = require('../db');
 
 const MODULES = {
@@ -11,7 +12,7 @@ const MODULES = {
   },
   utility: {
     label: 'Utilitaires', emoji: '🔧', description: 'Ping, avatar, infos serveur et utilisateur…',
-    commands: ['ping', 'avatar', 'userinfo', 'serverinfo', 'botinfo', 'help'],
+    commands: ['ping', 'avatar', 'userinfo', 'serverinfo', 'botinfo', 'help', 'invite'],
   },
   fun: {
     label: 'Fun', emoji: '🎉', description: '8ball, meme, pile ou face, dés, say…',
@@ -20,6 +21,10 @@ const MODULES = {
   economy: {
     label: 'Économie', emoji: '💰', description: 'Coins, daily, classement…',
     commands: ['daily', 'balance', 'leaderboard'],
+  },
+  levels: {
+    label: 'Niveaux', emoji: '📈', description: 'XP en discutant, niveau, classement…',
+    commands: ['rank', 'levels'],
   },
 };
 
@@ -46,6 +51,9 @@ const CMD_DEFS = {
   daily: { label: 'daily', desc: 'Récupère tes coins quotidiens' },
   balance: { label: 'balance', desc: 'Affiche ton solde de coins' },
   leaderboard: { label: 'leaderboard', desc: 'Classement des coins' },
+  rank: { label: 'rank', desc: 'Ton niveau, ton XP et ton rang' },
+  levels: { label: 'levels', desc: 'Le classement des niveaux du serveur' },
+  invite: { label: 'invite', desc: 'Le lien pour inviter le bot' },
 };
 
 function enabledModules(botId) {
@@ -65,7 +73,7 @@ function buildSlashPayloads(botId) {
   for (const name of enabledCommandNames(botId)) {
     const def = CMD_DEFS[name];
     const options = [];
-    if (['avatar', 'userinfo', 'kick', 'ban', 'timeout', 'warn', 'warns', 'balance'].includes(name)) {
+    if (['avatar', 'userinfo', 'kick', 'ban', 'timeout', 'warn', 'warns', 'balance', 'rank'].includes(name)) {
       options.push({ name: 'utilisateur', description: 'L\'utilisateur ciblé', type: ApplicationCommandOptionType.User, required: ['kick', 'ban', 'timeout', 'warn'].includes(name) });
     }
     // IMPORTANT : Discord exige que les options requises soient placées avant les optionnelles
@@ -314,6 +322,45 @@ async function execute(botId, entry, cmd, src) {
       await replyEmbed(embed);
       break;
     }
+    case 'rank': {
+      const target = getUserArg() || author;
+      const row = store.xp.get(botId, guild.id, target.id) || { xp: 0, level: 0 };
+      const level = row.level || 0;
+      const cur = xpForLevel(level);
+      const next = xpForLevel(level + 1);
+      const pct = Math.max(0, Math.min(1, (row.xp - cur) / (next - cur)));
+      const bars = 10;
+      const bar = '▰'.repeat(Math.round(pct * bars)) + '▱'.repeat(bars - Math.round(pct * bars));
+      const pos = store.xp.rankOf(botId, guild.id, target.id);
+      const embed = new EmbedBuilder()
+        .setColor('#5865F2')
+        .setAuthor({ name: `Niveau de ${target.username}`, iconURL: target.displayAvatarURL({ dynamic: true }) })
+        .setThumbnail(target.displayAvatarURL({ dynamic: true }))
+        .addFields(
+          { name: '📈 Niveau', value: String(level), inline: true },
+          { name: '🏆 Rang', value: `#${pos}`, inline: true },
+          { name: '✨ XP', value: `${row.xp} / ${next}`, inline: true },
+          { name: 'Progression', value: `${bar} ${Math.round(pct * 100)}%` },
+        );
+      await replyEmbed(embed);
+      break;
+    }
+    case 'levels': {
+      const top = store.xp.top(botId, guild.id, 10);
+      if (!top.length) return reply('📈 Personne n\'a encore gagné d\'XP sur ce serveur. Discute pour monter de niveau !');
+      const medal = ['🥇', '🥈', '🥉'];
+      const embed = new EmbedBuilder()
+        .setColor('#5865F2')
+        .setTitle('📈 Classement des niveaux')
+        .setDescription(top.map((r, i) => `${medal[i] || `**${i + 1}.**`} <@${r.user_id}> — niveau **${r.level}** (${r.xp} XP)`).join('\n'));
+      await replyEmbed(embed);
+      break;
+    }
+    case 'invite': {
+      if (!record.client_id) return reply('❌ Application ID manquant.');
+      await reply(`🔗 **Invite-moi sur ton serveur !**\nhttps://discord.com/oauth2/authorize?client_id=${record.client_id}&permissions=8&scope=bot%20applications.commands`);
+      break;
+    }
     case '8ball': {
       const answers = ['Oui, absolument.', 'C\'est certain.', 'Sans aucun doute.', 'Oui, définitivement.', 'Tu peux compter dessus.', 'Essaie encore plus tard.', 'Ne compte pas dessus.', 'Ma réponse est non.', 'Mes sources disent non.', 'Très incertain.'];
       const q = isInt ? (src.interaction.options.getString('texte') || '') : (src.args || '');
@@ -500,6 +547,9 @@ const HELP_DETAILS = {
   daily: ['💰 Économie', 'Récupère 100 coins, une fois par jour.', '`/daily`', '`/daily` → 🎁 +100 coins !'],
   balance: ['💰 Économie', 'Affiche ton solde de coins.', '`/balance @membre`'],
   leaderboard: ['💰 Économie', 'Le classement des coins du serveur.', '`/leaderboard`'],
+  rank: ['📈 Niveaux', 'Ton niveau, ton XP et ton rang sur ce serveur. Gagne de l\'XP en discutant !', '`/rank @membre`', '`/rank` → 📈 Niveau 3 · ✨ 950/1600 XP · 🏆 #2'],
+  levels: ['📈 Niveaux', 'Le classement des niveaux du serveur.', '`/levels`'],
+  invite: ['🔧 Utilitaire', 'Le lien pour inviter le bot sur un autre serveur.', '`/invite`'],
 };
 
 function helpDescription() {
@@ -585,6 +635,13 @@ function buildHelpEmbed(botId, record, client, guild, requested) {
     embed.addFields({
       name: '💰 Économie',
       value: '`/daily` — 100 coins par jour · `/balance` — ton solde · `/leaderboard` — le classement',
+    });
+  }
+
+  if (enabled.includes('rank')) {
+    embed.addFields({
+      name: '📈 Niveaux (XP)',
+      value: '`/rank` — ton niveau · `/levels` — le classement\n*Gagne de l\'XP en discutant !*',
     });
   }
 

@@ -295,6 +295,12 @@ async function runMessageHandler(botId, entry, message) {
   if (!message || message.author.bot || !message.guild) return;
   const record = store.bots.get(botId);
   if (!record) return;
+  // 🛡️ Auto-modération puis 📈 XP (avant l'analyse des commandes)
+  const { runAutomod } = require('./automod');
+  const xpEngine = require('./xp');
+  const am = await runAutomod(botId, message).catch(() => ({ acted: false }));
+  if (am.acted) return;
+  await xpEngine.onMessage(botId, message).catch(() => {});
   // Préfixe par serveur (réglable depuis le dashboard), sinon préfixe du bot
   const prefix = effectivePrefix(botId, message.guild.id) || record.prefix || '!';
   const content = message.content || '';

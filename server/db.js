@@ -89,6 +89,24 @@ CREATE TABLE IF NOT EXISTS guild_settings (
   PRIMARY KEY (bot_id, guild_id)
 );
 
+CREATE TABLE IF NOT EXISTS xp (
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  xp INTEGER DEFAULT 0,
+  level INTEGER DEFAULT 0,
+  last_ts INTEGER DEFAULT 0,
+  PRIMARY KEY (bot_id, guild_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS xp_roles (
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  level INTEGER NOT NULL,
+  role TEXT NOT NULL,
+  PRIMARY KEY (bot_id, guild_id, level)
+);
+
 CREATE TABLE IF NOT EXISTS economy (
   bot_id INTEGER NOT NULL,
   guild_id TEXT NOT NULL,
@@ -147,6 +165,19 @@ try { db.exec("ALTER TABLE users ADD COLUMN discord_username TEXT DEFAULT ''"); 
 try { db.exec("ALTER TABLE users ADD COLUMN discord_avatar TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN discord_guilds TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_discord ON users(discord_id) WHERE discord_id != ''"); } catch (e) {}
+
+// Colonnes XP & auto-mod sur guild_settings
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN xp_enabled INTEGER DEFAULT 1"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN xp_min INTEGER DEFAULT 10"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN xp_max INTEGER DEFAULT 25"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN xp_cooldown INTEGER DEFAULT 60"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN xp_message TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN xp_channel TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_enabled INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_links INTEGER DEFAULT 1"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_caps INTEGER DEFAULT 1"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_mentions INTEGER DEFAULT 5"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_spam INTEGER DEFAULT 5"); } catch (e) {}
 
 // L'ancienne table events (globale) n'a pas de colonne guild_id : on la reconstruit
 const eventsCols = db.prepare("PRAGMA table_info(events)").all().map(c => c.name);
@@ -270,9 +301,49 @@ const guildSettings = {
   set: (botId, guildId, fields) => {
     const cur = guildSettings.get(botId, guildId) || { prefix: '', warn_limit: 0, warn_action: 'none' };
     const next = { ...cur, ...fields };
-    db.prepare(`INSERT INTO guild_settings (bot_id, guild_id, prefix, warn_limit, warn_action) VALUES (?, ?, ?, ?, ?)
-      ON CONFLICT(bot_id, guild_id) DO UPDATE SET prefix = excluded.prefix, warn_limit = excluded.warn_limit, warn_action = excluded.warn_action`)
-      .run(botId, guildId, next.prefix, next.warn_limit || 0, ['none', 'kick', 'ban'].includes(next.warn_action) ? next.warn_action : 'none');
+    db.prepare(`INSERT INTO guild_settings (bot_id, guild_id, prefix, warn_limit, warn_action, xp_enabled, xp_min, xp_max, xp_cooldown, xp_message, xp_channel, am_enabled, am_links, am_caps, am_mentions, am_spam)
+      VALUES (@bot_id, @guild_id, @prefix, @warn_limit, @warn_action, @xp_enabled, @xp_min, @xp_max, @xp_cooldown, @xp_message, @xp_channel, @am_enabled, @am_links, @am_caps, @am_mentions, @am_spam)
+      ON CONFLICT(bot_id, guild_id) DO UPDATE SET prefix = excluded.prefix, warn_limit = excluded.warn_limit, warn_action = excluded.warn_action,
+        xp_enabled = excluded.xp_enabled, xp_min = excluded.xp_min, xp_max = excluded.xp_max, xp_cooldown = excluded.xp_cooldown,
+        xp_message = excluded.xp_message, xp_channel = excluded.xp_channel, am_enabled = excluded.am_enabled,
+        am_links = excluded.am_links, am_caps = excluded.am_caps, am_mentions = excluded.am_mentions, am_spam = excluded.am_spam`)
+      .run({
+        bot_id: botId, guild_id: guildId,
+        prefix: String(next.prefix || '').slice(0, 5),
+        warn_limit: next.warn_limit || 0,
+        warn_action: ['none', 'kick', 'ban'].includes(next.warn_action) ? next.warn_action : 'none',
+        xp_enabled: (next.xp_enabled === undefined || next.xp_enabled === null) ? 1 : (next.xp_enabled ? 1 : 0),
+        xp_min: Math.min(Math.max(parseInt(next.xp_min, 10) || 10, 1), 1000),
+        xp_max: Math.max(parseInt(next.xp_max, 10) || 25, 1),
+        xp_cooldown: Math.max(parseInt(next.xp_cooldown, 10) || 60, 0),
+        xp_message: String(next.xp_message || '').slice(0, 500),
+        xp_channel: String(next.xp_channel || '').slice(0, 100),
+        am_enabled: next.am_enabled ? 1 : 0,
+        am_links: (next.am_links === 0 || next.am_links === false) ? 0 : 1,
+        am_caps: (next.am_caps === 0 || next.am_caps === false) ? 0 : 1,
+        am_mentions: Math.max(parseInt(next.am_mentions, 10) || 0, 0),
+        am_spam: Math.max(parseInt(next.am_spam, 10) || 0, 0),
+      });
+  },
+};
+
+// ---------------------- XP (niveaux) ----------------------
+const xp = {
+  get: (botId, guildId, userId) => db.prepare('SELECT * FROM xp WHERE bot_id = ? AND guild_id = ? AND user_id = ?').get(botId, guildId, userId) || null,
+  add: (botId, guildId, userId, amount, ts) => db.prepare(`INSERT INTO xp (bot_id, guild_id, user_id, xp, level, last_ts) VALUES (?, ?, ?, ?, 0, ?)
+    ON CONFLICT(bot_id, guild_id, user_id) DO UPDATE SET xp = xp + excluded.xp, last_ts = excluded.last_ts`).run(botId, guildId, userId, amount, ts),
+  setLevel: (botId, guildId, userId, level) => db.prepare('UPDATE xp SET level = ? WHERE bot_id = ? AND guild_id = ? AND user_id = ?').run(level, botId, guildId, userId),
+  top: (botId, guildId, limit = 10) => db.prepare('SELECT * FROM xp WHERE bot_id = ? AND guild_id = ? ORDER BY xp DESC LIMIT ?').all(botId, guildId, limit),
+  rankOf: (botId, guildId, userId) => db.prepare('SELECT COUNT(*) AS n FROM xp WHERE bot_id = ? AND guild_id = ? AND xp > (SELECT COALESCE((SELECT xp FROM xp WHERE bot_id = ? AND guild_id = ? AND user_id = ?), 0))').get(botId, guildId, botId, guildId, userId).n + 1,
+};
+
+// ---------------------- Rôles de récompense XP ----------------------
+const xpRoles = {
+  all: (botId, guildId) => db.prepare('SELECT * FROM xp_roles WHERE bot_id = ? AND guild_id = ? ORDER BY level ASC').all(botId, guildId),
+  replace: (botId, guildId, roles) => {
+    db.prepare('DELETE FROM xp_roles WHERE bot_id = ? AND guild_id = ?').run(botId, guildId);
+    const ins = db.prepare('INSERT INTO xp_roles (bot_id, guild_id, level, role) VALUES (?, ?, ?, ?)');
+    for (const r of roles) ins.run(botId, guildId, r.level, r.role);
   },
 };
 
@@ -341,4 +412,4 @@ const settings = {
   set: (key, value) => db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, String(value)),
 };
 
-module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings };
+module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles };
