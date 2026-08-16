@@ -97,7 +97,32 @@ Dashboard.BOT_MODULES = [
 
 Dashboard.renderSide = (aside) => {
   aside.innerHTML = '';
-  aside.appendChild(App.el(`<div class="dash-side-section">Serveur</div>`));
+
+  // 👉 Serveurs Discord (comme DraftBot : liste en haut de la sidebar)
+  const servers = (Dashboard.state.discordGuilds || []).slice(0, 25);
+  if (servers.length) {
+    aside.appendChild(App.el(`<div class="dash-side-section">Mes serveurs</div>`));
+    servers.forEach((g) => {
+      const selected = Dashboard.state.guildId === g.id;
+      const item = App.el(`
+        <button class="dash-side-item ${selected ? 'active' : ''}" title="${App.escapeHtml(g.name)}">
+          ${g.icon
+            ? `<img src="${App.escapeHtml(g.icon)}" style="width:20px;height:20px;border-radius:6px" alt="" />`
+            : '<span class="ico">🌍</span>'}
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${App.escapeHtml(g.name)}</span>
+          <span class="dot ${g.hasBot ? 'dot-online' : 'dot-offline'}" title="${g.hasBot ? 'Bot présent' : 'Bot absent'}"></span>
+        </button>`);
+      item.onclick = async () => {
+        if (g.hasBot && g.canManage) { await Dashboard.selectGuild(g.id); return; }
+        if (!g.hasBot) { App.openInvite(Dashboard.state.bot.invite_url); App.toast('Ajoute le bot sur ce serveur pour le configurer !'); return; }
+        App.toast('Lecture seule : il te faut la permission « Gérer le serveur ».', 'error');
+      };
+      aside.appendChild(item);
+    });
+    aside.appendChild(App.el(`<div style="height:1px;background:var(--d-border);margin:10px 14px"></div>`));
+  }
+
+  aside.appendChild(App.el(`<div class="dash-side-section">Serveur sélectionné</div>`));
   Dashboard.MODULES.forEach(([id, ico, label]) => {
     const b = App.el(`<button class="dash-side-item ${Dashboard.state.module === id ? 'active' : ''}" data-m="${id}"><span class="ico">${ico}</span>${label}</button>`);
     b.onclick = () => Dashboard.setModule(id);
@@ -114,10 +139,18 @@ Dashboard.renderSide = (aside) => {
 
 Dashboard.setModule = (id) => {
   Dashboard.state.module = id;
+  Dashboard.refresh();
+};
+
+// Re-rend le module courant (après une sauvegarde)
+Dashboard.refresh = () => {
   const shell = Dashboard.state.shell || document.querySelector('.bot-shell');
-  const aside = shell ? shell.querySelector('.dash-side') : null;
+  if (!shell) return;
+  const aside = shell.querySelector('.dash-side');
   if (aside) Dashboard.renderSide(aside);
-  Dashboard.renderContent(shell ? shell.querySelector('#dash-content') : null);
+  const topbar = shell.querySelector('.dash-topbar');
+  if (topbar && Dashboard.state.discordGuilds) Dashboard.renderTopbar(topbar, Dashboard.state.discordGuilds);
+  Dashboard.renderContent(shell.querySelector('#dash-content'));
 };
 
 // ---------------------- Barre du haut ----------------------

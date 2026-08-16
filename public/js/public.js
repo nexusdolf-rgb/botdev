@@ -24,8 +24,17 @@ App.renderPublicNavbar = () => {
       <div class="logo-row" style="cursor:pointer" id="pub-logo"><span class="logo">🤖</span> BotDev</div>
       <div class="navbar-right" id="pub-nav-right">
         ${user
-          ? `<div class="user-pill"><div class="user-avatar">${App.escapeHtml((user.email[0] || '?').toUpperCase())}</div><span>${App.escapeHtml(user.email)}</span></div>
-             <button class="btn btn-primary btn-sm" id="pub-dash">Mon dashboard</button>`
+          ? `<div class="user-pill">
+               ${user.discord_avatar
+                 ? `<img class="user-avatar" style="border-radius:50%" src="https://cdn.discordapp.com/avatars/${App.escapeHtml(user.discord_id)}/${App.escapeHtml(user.discord_avatar)}.png" alt="" />`
+                 : `<div class="user-avatar">${App.escapeHtml((user.email[0] || '?').toUpperCase())}</div>`}
+               <span>${App.escapeHtml(user.discord_username || user.email)}</span>
+               ${user.discord_id ? '<span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">🔗 Discord lié</span>' : ''}
+             </div>
+             ${user.discord_id
+               ? `<button class="btn btn-primary btn-sm" id="pub-dash">📊 Mon dashboard</button>`
+               : `<button class="btn btn-discord btn-sm" id="pub-link" style="width:auto">🎮 Lier mon Discord</button>
+                  <button class="btn btn-ghost btn-sm" id="pub-dash">Dashboard</button>`}`
           : `<button class="btn btn-ghost btn-sm" id="pub-login">Se connecter</button>
              <button class="btn btn-primary btn-sm" id="pub-register">Créer un compte</button>`}
       </div>
@@ -34,6 +43,11 @@ App.renderPublicNavbar = () => {
   nav.querySelector('#pub-logo').onclick = () => App.router.go(user ? '/dashboard' : '/');
   const dash = nav.querySelector('#pub-dash');
   if (dash) dash.onclick = () => App.router.go('/dashboard');
+  const link = nav.querySelector('#pub-link');
+  if (link) link.onclick = async () => {
+    try { const { url } = await App.api('/auth/discord/url'); window.location.href = url; }
+    catch (e) { App.toast(e.message, 'error'); }
+  };
   const login = nav.querySelector('#pub-login');
   if (login) login.onclick = () => App.router.go('/login');
   const register = nav.querySelector('#pub-register');
@@ -58,7 +72,10 @@ App.renderPublicLanding = () => {
         <div class="pub-hero-actions">
           <button class="btn btn-primary" id="pub-invite-hero" style="padding:13px 22px;font-size:15px">➕ Ajouter Nexora à ton serveur</button>
           ${user
-            ? `<button class="btn" id="pub-dash-hero" style="padding:13px 22px;font-size:15px">Mon dashboard</button>`
+            ? (user.discord_id
+                ? `<button class="btn" id="pub-dash-hero" style="padding:13px 22px;font-size:15px">📊 Ouvrir mon dashboard</button>`
+                : `<button class="btn btn-discord" id="pub-link-hero" style="padding:13px 22px;font-size:15px;width:auto">🎮 Lier mon Discord</button>
+                   <button class="btn" id="pub-dash-hero" style="padding:13px 22px;font-size:15px">Mon dashboard</button>`)
             : `<button class="btn" id="pub-register-hero" style="padding:13px 22px;font-size:15px">Créer mon compte gratuit</button>`}
         </div>
         <div class="pub-stats" id="pub-stats">
@@ -98,6 +115,11 @@ App.renderPublicLanding = () => {
   heroInvite.onclick = () => App.fetchFirstInviteUrl().then((url) => url ? invite(url) : App.toast('Aucun bot disponible pour l\'instant.', 'error'));
   const dashHero = page.querySelector('#pub-dash-hero');
   if (dashHero) dashHero.onclick = () => App.router.go('/dashboard');
+  const linkHero = page.querySelector('#pub-link-hero');
+  if (linkHero) linkHero.onclick = async () => {
+    try { const { url } = await App.api('/auth/discord/url'); window.location.href = url; }
+    catch (e) { App.toast(e.message, 'error'); }
+  };
   const regHero = page.querySelector('#pub-register-hero');
   if (regHero) regHero.onclick = () => App.router.go('/register');
 

@@ -411,7 +411,7 @@ App.renderBotHeader = (shell, bot) => {
   shell.appendChild(header);
 };
 
-// Le corps du bot est désormais rendu par Dashboard.mount (dashboard.js, façon DraftBot)
+// Le corps du bot est rendu par Dashboard.mount (dashboard.js, façon DraftBot)
 App.renderBotBody = (shell, bot) => {
   if (typeof Dashboard !== 'undefined' && Dashboard.mount) {
     Dashboard.mount(shell, bot).catch((e) => {
@@ -419,7 +419,7 @@ App.renderBotBody = (shell, bot) => {
     });
     return;
   }
-  BotViews.renderOverview(App.el('<div></div>'), bot);
+  shell.innerHTML = `<div class="empty-state"><div class="big">⚠️</div>Impossible de charger le dashboard.</div>`;
 };
 
 // ---------------------- Démarrage ----------------------

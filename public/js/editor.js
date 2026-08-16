@@ -220,7 +220,7 @@ Editor.open = async (bot, command = null, existingCommands = []) => {
       else await App.api(`/bots/${bot.id}/commands`, { method: 'POST', body: payload });
       App.closeModal();
       App.toast(command ? 'Commande mise à jour !' : 'Commande créée !');
-      BotViews.renderCommands(document.querySelector('.bot-content'), App.state.bot);
+      if (typeof Dashboard !== 'undefined' && Dashboard.refresh) Dashboard.refresh();
     } catch (e) { App.toast(e.message, 'error'); }
   };
 };

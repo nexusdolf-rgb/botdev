@@ -62,6 +62,14 @@ npm install
 npm start          # démarre sur http://localhost:3000
 ```
 
+## 🎨 Dashboard v2 (façon DraftBot) — reconstruction propre
+
+Le dashboard a été **entièrement reconstruit** (anciennes interfaces et fichiers morts supprimés) :
+
+- **Shell professionnel** : barre latérale avec **la liste de tes serveurs Discord** (icônes + statut) en haut, puis les modules du serveur sélectionné, puis les réglages du bot
+- **Sélecteur de serveur** + modules synchronisés en temps réel avec le bot (même base par serveur)
+- **Flux d'authentification fluide** : connexion avec Discord → les boutons « Se connecter / Créer un compte » **disparaissent automatiquement** → le dashboard s'ouvre directement sur tes serveurs. Si le compte n'est pas encore lié, un bouton « 🎮 Lier mon Discord » est proposé partout.
+
 ## 🎨 Dashboard v2 (façon DraftBot) + couche animation
 
 Le dashboard a été **entièrement reconstruit** : shell professionnel avec **barre latérale**, **sélecteur de serveur**, et un module par fonctionnalité — tout est configuré par serveur et **synchronisé en temps réel** avec le bot (même base).
