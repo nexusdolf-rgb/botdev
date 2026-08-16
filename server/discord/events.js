@@ -14,6 +14,8 @@ const EVENT_DEFS = {
       { key: 'channel', label: 'Salon (mention, ex: #bienvenue)', type: 'text', placeholder: '#bienvenue' },
       { key: 'message', label: 'Message ({user}, {server}, {count}…)', type: 'multiline', default: 'Bienvenue {user} sur {server} ! Tu es le membre n°{count} 🎉' },
       { key: 'embed', label: 'Envoyer en embed', type: 'checkbox', default: false },
+      { key: 'color', label: 'Couleur de l\'embed', type: 'text', default: '#57F287' },
+      { key: 'image', label: 'Image de l\'embed (URL, optionnel)', type: 'text', placeholder: 'https://…' },
     ],
   },
   member_leave: {
@@ -24,6 +26,8 @@ const EVENT_DEFS = {
       { key: 'channel', label: 'Salon (mention)', type: 'text', placeholder: '#au-revoir' },
       { key: 'message', label: 'Message', type: 'multiline', default: '{user} a quitté {server} 😢' },
       { key: 'embed', label: 'Envoyer en embed', type: 'checkbox', default: false },
+      { key: 'color', label: 'Couleur de l\'embed', type: 'text', default: '#ED4245' },
+      { key: 'image', label: 'Image de l\'embed (URL, optionnel)', type: 'text', placeholder: 'https://…' },
     ],
   },
   autorole: {
@@ -55,7 +59,8 @@ async function runJoinEvent(botId, member) {
     if (channel) {
       const text = render(member, botRecord, cfg.message);
       if (cfg.embed) {
-        const embed = new EmbedBuilder().setColor('#57F287').setDescription(text);
+        const embed = new EmbedBuilder().setColor(cfg.color || '#57F287').setDescription(text);
+        if (cfg.image) embed.setImage(String(cfg.image).trim());
         await channel.send({ embeds: [embed] }).catch(() => {});
       } else {
         await channel.send(text).catch(() => {});
@@ -81,7 +86,8 @@ async function runLeaveEvent(botId, member) {
   if (!channel) return;
   const text = render(member, botRecord, cfg.message);
   if (cfg.embed) {
-    const embed = new EmbedBuilder().setColor('#ED4245').setDescription(text);
+    const embed = new EmbedBuilder().setColor(cfg.color || '#ED4245').setDescription(text);
+    if (cfg.image) embed.setImage(String(cfg.image).trim());
     await channel.send({ embeds: [embed] }).catch(() => {});
   } else {
     await channel.send(text).catch(() => {});
@@ -123,4 +129,4 @@ async function resolveChannel(guild, query) {
   return guild.channels.cache.find(c => c.name.toLowerCase() === q.toLowerCase() && c.isTextBased()) || null;
 }
 
-module.exports = { EVENT_DEFS, eventsState, runJoinEvent, runLeaveEvent };
+module.exports = { EVENT_DEFS, eventsState, runJoinEvent, runLeaveEvent, resolveChannel };

@@ -107,6 +107,8 @@ router.post('/bots', requireAuth, (req, res) => {
     client_id: String(client_id || '').trim(),
     prefix: String(prefix || '!').slice(0, 5),
   });
+  // Les modules sont activés par défaut : le bot fonctionne immédiatement
+  Object.keys(MODULES).forEach(key => store.modules.set(id, key, true));
   res.json({ id });
 });
 
@@ -285,6 +287,122 @@ router.get('/bots/:id/economy/leaderboard', requireAuth, (req, res) => {
   if (!guild_id) return res.status(400).json({ error: 'guild_id requis' });
   const top = store.economy.top(bot.id, guild_id, 25);
   res.json({ top });
+});
+
+// ---------------------- Panneaux (tickets + menus de rôles) ----------------------
+const panels = require('./discord/panels');
+
+router.get('/bots/:id/panels', requireAuth, (req, res) => {
+  const bot = getOwnBot(req, res);
+  if (!bot) return;
+  res.json({
+    tickets: store.tickets.get(bot.id) || {
+      channel: '', message: '🎫 Besoin d\'aide ? Clique sur le bouton pour ouvrir un ticket !',
+      button_label: '🎫 Ouvrir un ticket', support_role: '', category: 'Tickets',
+    },
+    role_menus: store.roleMenus.all(bot.id),
+  });
+});
+
+router.put('/bots/:id/tickets', requireAuth, (req, res) => {
+  const bot = getOwnBot(req, res);
+  if (!bot) return;
+  const { channel, message, button_label, support_role, category } = req.body || {};
+  store.tickets.set(bot.id, {
+    channel: String(channel || '').slice(0, 100),
+    message: String(message || '').slice(0, 1900),
+    button_label: String(button_label || '🎫 Ouvrir un ticket').slice(0, 80),
+    support_role: String(support_role || '').slice(0, 100),
+    category: String(category || '').slice(0, 100),
+  });
+  res.json({ ok: true });
+});
+
+router.post('/bots/:id/tickets/send', requireAuth, async (req, res) => {
+  const bot = getOwnBot(req, res);
+  if (!bot) return;
+  if (!botManager.isOnline(bot.id)) return res.status(400).json({ error: 'Démarre le bot avant d\'envoyer un panneau.' });
+  const cfg = store.tickets.get(bot.id);
+  if (!cfg || !cfg.channel) return res.status(400).json({ error: 'Configure d\'abord le salon du panneau.' });
+  const entry = botManager.clients.get(bot.id);
+  try {
+    const channel = await panels.findChannel(entry.client, cfg.channel);
+    if (!channel) return res.status(400).json({ error: 'Salon introuvable. Vérifie le salon (mention #salon ou nom).' });
+    await panels.sendTicketPanel(bot.id, entry.client, channel);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ error: e.message.slice(0, 200) });
+  }
+});
+
+router.post('/bots/:id/role-menus', requireAuth, (req, res) => {
+  const bot = getOwnBot(req, res);
+  if (!bot) return;
+  const { name, content, placeholder, channel, options } = req.body || {};
+  if (!Array.isArray(options) || !options.length) return res.status(400).json({ error: 'Ajoute au moins un rôle au menu.' });
+  const id = store.roleMenus.create({
+    bot_id: bot.id,
+    name: String(name || 'Menu de rôles').slice(0, 50),
+    content: String(content || '').slice(0, 1900),
+    placeholder: String(placeholder || 'Choisis tes rôles…').slice(0, 150),
+    channel: String(channel || '').slice(0, 100),
+    options: JSON.stringify(options.map(o => ({
+      label: String(o.label || 'Rôle').slice(0, 100),
+      emoji: String(o.emoji || '').slice(0, 10),
+      role: String(o.role || '').slice(0, 100),
+    })).slice(0, 25)),
+  });
+  res.json({ id });
+});
+
+router.put('/role-menus/:id', requireAuth, (req, res) => {
+  const menu = store.roleMenus.get(Number(req.params.id));
+  if (!menu) return res.status(404).json({ error: 'Menu introuvable' });
+  const bot = store.bots.get(menu.bot_id);
+  if (!bot || bot.user_id !== req.userId) return res.status(404).json({ error: 'Menu introuvable' });
+  const fields = {};
+  const { name, content, placeholder, channel, options } = req.body || {};
+  if (name !== undefined) fields.name = String(name).slice(0, 50);
+  if (content !== undefined) fields.content = String(content).slice(0, 1900);
+  if (placeholder !== undefined) fields.placeholder = String(placeholder).slice(0, 150);
+  if (channel !== undefined) fields.channel = String(channel).slice(0, 100);
+  if (options !== undefined) {
+    if (!Array.isArray(options) || !options.length) return res.status(400).json({ error: 'Ajoute au moins un rôle au menu.' });
+    fields.options = JSON.stringify(options.map(o => ({
+      label: String(o.label || 'Rôle').slice(0, 100),
+      emoji: String(o.emoji || '').slice(0, 10),
+      role: String(o.role || '').slice(0, 100),
+    })).slice(0, 25));
+  }
+  store.roleMenus.update(menu.id, fields);
+  res.json({ ok: true });
+});
+
+router.delete('/role-menus/:id', requireAuth, (req, res) => {
+  const menu = store.roleMenus.get(Number(req.params.id));
+  if (!menu) return res.status(404).json({ error: 'Menu introuvable' });
+  const bot = store.bots.get(menu.bot_id);
+  if (!bot || bot.user_id !== req.userId) return res.status(404).json({ error: 'Menu introuvable' });
+  store.roleMenus.remove(menu.id);
+  res.json({ ok: true });
+});
+
+router.post('/role-menus/:id/send', requireAuth, async (req, res) => {
+  const menu = store.roleMenus.get(Number(req.params.id));
+  if (!menu) return res.status(404).json({ error: 'Menu introuvable' });
+  const bot = store.bots.get(menu.bot_id);
+  if (!bot || bot.user_id !== req.userId) return res.status(404).json({ error: 'Menu introuvable' });
+  if (!botManager.isOnline(bot.id)) return res.status(400).json({ error: 'Démarre le bot avant d\'envoyer un menu.' });
+  if (!menu.channel) return res.status(400).json({ error: 'Renseigne d\'abord le salon du menu.' });
+  const entry = botManager.clients.get(bot.id);
+  try {
+    const channel = await panels.findChannel(entry.client, menu.channel);
+    if (!channel) return res.status(400).json({ error: 'Salon introuvable. Vérifie le salon (mention #salon ou nom).' });
+    await panels.sendRoleMenu(bot.id, entry.client, menu, channel);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ error: e.message.slice(0, 200) });
+  }
 });
 
 module.exports = router;

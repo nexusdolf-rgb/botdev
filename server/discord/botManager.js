@@ -116,9 +116,14 @@ function attachListeners(botId, entry) {
     runMessageHandler(botId, entry, m).catch(e => console.error('[BotDev] message error:', e.message));
   });
 
-  client.on('interactionCreate', (i) => {
-    const { runInteractionHandler } = require('./engine');
-    runInteractionHandler(botId, entry, i).catch(e => console.error('[BotDev] interaction error:', e.message));
+  client.on('interactionCreate', async (i) => {
+    try {
+      const { dispatchPanels } = require('./panels');
+      const handled = await dispatchPanels(botId, i);
+      if (handled) return;
+      const { runInteractionHandler } = require('./engine');
+      await runInteractionHandler(botId, entry, i);
+    } catch (e) { console.error('[BotDev] interaction error:', e.message); }
   });
 
   client.on('guildMemberAdd', (member) => {

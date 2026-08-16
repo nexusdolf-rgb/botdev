@@ -362,6 +362,7 @@ App.renderBotBody = (shell, bot) => {
     ['overview', '📊', 'Vue d\'ensemble'],
     ['commands', '🧩', 'Commandes'],
     ['modules', '📦', 'Modules'],
+    ['panels', '🎛️', 'Panneaux'],
     ['events', '👋', 'Événements'],
     ['economy', '💰', 'Économie'],
     ['settings', '⚙️', 'Réglages'],
@@ -378,6 +379,7 @@ App.renderBotBody = (shell, bot) => {
   switch (App.state.tab) {
     case 'commands': BotViews.renderCommands(content, bot); break;
     case 'modules': BotViews.renderModules(content, bot); break;
+    case 'panels': BotViews.renderPanels(content, bot); break;
     case 'events': BotViews.renderEvents(content, bot); break;
     case 'economy': BotViews.renderEconomy(content, bot); break;
     case 'settings': BotViews.renderSettings(content, bot); break;

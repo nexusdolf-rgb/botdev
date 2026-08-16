@@ -14,8 +14,11 @@
   - Déclencheurs : commande préfixe, commande slash (avec options), mot-clé
   - Variables : `{user}`, `{args}`, `{server}`, `{coins}`, `{random.user}`…
   - Cooldowns par commande, boutons reliés à d'autres commandes
-- **Modules pré-faits en 1 clic** : Modération (kick, ban, warn, timeout, clear…), Utilitaires (ping, avatar, serverinfo…), Fun (8ball, meme, coinflip…), Économie (daily, balance, leaderboard)
-- **Événements** : message de bienvenue, message de départ, auto-rôle
+- **Modules pré-faits en 1 clic** : Modération (kick, ban, warn, timeout, clear…), Utilitaires (ping, avatar, serverinfo…), Fun (8ball, meme, coinflip…), Économie (daily, balance, leaderboard) — **activés automatiquement à la création du bot**
+- **Panneaux interactifs** :
+  - 🎫 **Système de tickets** : bouton → salon privé automatique par membre (avec rôle staff + bouton fermeture)
+  - 📋 **Menus de rôles** : menus déroulants où les membres choisissent leurs rôles
+- **Événements** : message de bienvenue (embed, couleur, image), message de départ, auto-rôle
 - **Économie** : solde en coins par serveur, classement consultable dans le dashboard
 
 ## 🚀 Installation

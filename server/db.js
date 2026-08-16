@@ -86,6 +86,25 @@ CREATE TABLE IF NOT EXISTS warnings (
   mod_id TEXT DEFAULT '',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS role_menus (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id INTEGER NOT NULL,
+  name TEXT DEFAULT '',
+  content TEXT DEFAULT '',
+  placeholder TEXT DEFAULT 'Choisis tes rôles…',
+  channel TEXT DEFAULT '',
+  options TEXT DEFAULT '[]'
+);
+
+CREATE TABLE IF NOT EXISTS tickets (
+  bot_id INTEGER PRIMARY KEY,
+  channel TEXT DEFAULT '',
+  message TEXT DEFAULT '🎫 Besoin d''aide ? Clique sur le bouton pour ouvrir un ticket !',
+  button_label TEXT DEFAULT '🎫 Ouvrir un ticket',
+  support_role TEXT DEFAULT '',
+  category TEXT DEFAULT 'Tickets'
+);
 `);
 
 // ---------------------- Utilisateurs & sessions ----------------------
@@ -189,4 +208,37 @@ const warnings = {
   count: (botId, guildId, userId) => db.prepare('SELECT COUNT(*) AS n FROM warnings WHERE bot_id = ? AND guild_id = ? AND user_id = ?').get(botId, guildId, userId).n,
 };
 
-module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings };
+// ---------------------- Menus de rôles ----------------------
+const roleMenus = {
+  all: (botId) => db.prepare('SELECT * FROM role_menus WHERE bot_id = ? ORDER BY id DESC').all(botId)
+    .map(m => ({ ...m, options: JSON.parse(m.options || '[]') })),
+  get: (id) => {
+    const r = db.prepare('SELECT * FROM role_menus WHERE id = ?').get(id);
+    return r ? { ...r, options: JSON.parse(r.options || '[]') } : null;
+  },
+  create: (data) => db.prepare('INSERT INTO role_menus (bot_id, name, content, placeholder, channel, options) VALUES (@bot_id, @name, @content, @placeholder, @channel, @options)').run(data).lastInsertRowid,
+  update: (id, fields) => {
+    const allowed = ['name', 'content', 'placeholder', 'channel', 'options'];
+    const sets = [], vals = [];
+    for (const k of allowed) if (k in fields) { sets.push(`${k} = ?`); vals.push(fields[k]); }
+    if (!sets.length) return;
+    vals.push(id);
+    db.prepare(`UPDATE role_menus SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
+  },
+  remove: (id) => db.prepare('DELETE FROM role_menus WHERE id = ?').run(id),
+};
+
+// ---------------------- Configuration des tickets ----------------------
+const tickets = {
+  get: (botId) => db.prepare('SELECT * FROM tickets WHERE bot_id = ?').get(botId) || null,
+  set: (botId, cfg) => db.prepare(`INSERT INTO tickets (bot_id, channel, message, button_label, support_role, category)
+    VALUES (@bot_id, @channel, @message, @button_label, @support_role, @category)
+    ON CONFLICT(bot_id) DO UPDATE SET
+      channel = excluded.channel,
+      message = excluded.message,
+      button_label = excluded.button_label,
+      support_role = excluded.support_role,
+      category = excluded.category`).run({ bot_id: botId, ...cfg }),
+};
+
+module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets };
