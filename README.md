@@ -85,8 +85,8 @@ Le dashboard a été **entièrement reconstruit** : shell professionnel avec **b
 
 | Module | Fonctionnalités |
 |---|---|
-| 🎫 Tickets | Types personnalisés, plusieurs rôles staff par type, transcriptions en MP à la suppression |
-| 👋 Bienvenue | Message d'accueil/départ (embed, couleur, image) + auto-rôles |
+| 🎫 Tickets | Types personnalisés, plusieurs rôles staff par type, transcriptions en MP à la suppression, **couleur du bouton**, **questionnaire d'ouverture optionnel**, badge d'état du panneau en direct |
+| 👋 Bienvenue | Message d'accueil/départ (embed, couleur, image) + auto-rôles — **sélecteurs de salon/rôle** et palette de couleurs dans le dashboard |
 | 📈 Niveaux | XP par message, annonces, récompenses de rôles |
 | 💰 Économie | Classement des coins |
 | 🛒 **Boutique** | Articles (rôle + prix en coins) — `/shop`, `/buy`, `/pay` |
