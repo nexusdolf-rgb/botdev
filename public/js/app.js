@@ -1,7 +1,7 @@
 // ============================================================
-// Nexora — Application principale (SPA)
+// Noxera — Application principale (SPA)
 // Connexion 100 % Discord (OAuth2). Site public + dashboard
-// pré-câblé à Nexora : aucun compte email, aucune création de bot.
+// pré-câblé à Noxera : aucun compte email, aucune création de bot.
 // ============================================================
 const App = {
   state: { user: null, bot: null, loaded: false },
@@ -107,7 +107,7 @@ App.router.run = async () => {
     return;
   }
 
-  // Accueil public (racine) : le site de Nexora, visible par tous
+  // Accueil public (racine) : le site de Noxera, visible par tous
   if (parts.length === 0) {
     App.renderPublicLanding();
     return;
@@ -126,7 +126,7 @@ App.router.run = async () => {
     return;
   }
 
-  App.renderNexoraDashboard();
+  App.renderNoxeraDashboard();
 };
 
 // ---------------------- Page « Connecte-toi avec Discord » ----------------------
@@ -136,7 +136,7 @@ App.renderConnect = () => {
   const page = App.el(`
     <div class="auth-wrap" id="connect-card">
       <div class="auth-left">
-        <div class="logo-row"><span class="logo">⚡</span> Nexora</div>
+        <div class="logo-row"><span class="logo">⚡</span> Noxera</div>
         <h1 style="margin-top:52px">Configure ton serveur<br/><span>en quelques clics</span></h1>
         <p class="tagline">Tickets automatiques, niveaux, boutique, giveaways, bienvenue… Tout se règle ici, sans mot de passe : on vérifie simplement avec ton compte Discord.</p>
         <ul class="auth-features">
@@ -154,7 +154,7 @@ App.renderConnect = () => {
           <p class="sub" style="margin:8px 0 22px">Aucun compte à créer, aucun mot de passe.<br/>Discord vérifie automatiquement tes serveurs et tes permissions.</p>
           <button class="btn btn-discord" id="connect-discord" style="padding:13px;font-size:15px">🎮 Se connecter avec Discord</button>
           <p style="margin-top:18px;font-size:12.5px;color:var(--text-dim)">
-            Seuls les <b>propriétaires</b> et <b>administrateurs</b> des serveurs où Nexora est présent peuvent configurer.
+            Seuls les <b>propriétaires</b> et <b>administrateurs</b> des serveurs où Noxera est présent peuvent configurer.
           </p>
           <a href="#/" style="font-size:12.5px">← Retour à l'accueil</a>
         </div>
@@ -175,7 +175,7 @@ App.renderNavbar = () => {
   const user = App.state.user;
   const nav = App.el(`
     <div class="navbar">
-      <div class="logo-row" style="cursor:pointer" id="nav-logo"><span class="logo">⚡</span> Nexora</div>
+      <div class="logo-row" style="cursor:pointer" id="nav-logo"><span class="logo">⚡</span> Noxera</div>
       <div class="navbar-right">
         ${user.is_admin ? `<button class="btn btn-ghost btn-sm" id="nav-admin">👑 Admin</button>` : ''}
         <div class="user-pill">
@@ -200,8 +200,8 @@ App.renderNavbar = () => {
   return nav;
 };
 
-// ---------------------- Dashboard Nexora ----------------------
-App.renderNexoraDashboard = async () => {
+// ---------------------- Dashboard Noxera ----------------------
+App.renderNoxeraDashboard = async () => {
   const root = document.getElementById('app');
   root.innerHTML = '';
   root.appendChild(App.renderNavbar());
@@ -209,11 +209,11 @@ App.renderNexoraDashboard = async () => {
   root.appendChild(shell);
 
   try {
-    const { bot, configured } = await App.api('/nexora');
+    const { bot, configured } = await App.api('/noxera');
     if (!configured || !bot) {
       shell.innerHTML = `
         <div class="dash-card" style="max-width:560px;margin:24px auto">
-          <h3>⚡ Nexora n'est pas encore branché</h3>
+          <h3>⚡ Noxera n'est pas encore branché</h3>
           <div class="desc">Ajoute la variable d'environnement <b>NEXORA_TOKEN</b> (token du bot) dans les réglages du service sur Render, puis redémarre. La connexion se fait automatiquement.</div>
         </div>`;
       return;
@@ -232,7 +232,7 @@ App.renderAdminPage = async () => {
   root.innerHTML = '';
   root.appendChild(App.renderNavbar());
   const page = App.el(`<div class="page">
-    <h1>👑 Administration Nexora</h1>
+    <h1>👑 Administration Noxera</h1>
     <p class="sub">Vue d'ensemble de la plateforme : utilisateurs liés et statut du bot.</p>
     <div class="stats-grid" id="a-stats"><div class="spinner"></div></div>
     <div class="card"><h3>👥 Utilisateurs (liés avec Discord)</h3><div class="card-sub">Les personnes qui se sont connectées au dashboard.</div><div id="a-users"><div class="spinner"></div></div></div>
@@ -245,7 +245,7 @@ App.renderAdminPage = async () => {
       <div class="stat-card"><div class="val">${stats.users}</div><div class="lbl">Utilisateurs liés</div></div>
       <div class="stat-card"><div class="val">${App.fmtNumber(stats.servers)}</div><div class="lbl">Serveurs Discord</div></div>
       <div class="stat-card"><div class="val">${App.fmtNumber(stats.members)}</div><div class="lbl">Membres touchés</div></div>
-      <div class="stat-card"><div class="val">${stats.online ? '🟢' : '🔴'}</div><div class="lbl">Nexora</div></div>`;
+      <div class="stat-card"><div class="val">${stats.online ? '🟢' : '🔴'}</div><div class="lbl">Noxera</div></div>`;
 
     const usersEl = page.querySelector('#a-users');
     if (!usersRes.users.length) usersEl.innerHTML = `<div class="empty-state">Aucun utilisateur.</div>`;

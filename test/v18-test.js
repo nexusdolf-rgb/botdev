@@ -27,9 +27,9 @@ const logging = require('../server/discord/logging');
   console.log('1️⃣  Magasin d\'images : écriture + lecture locale ✅ (', key.slice(0, 10) + '… )');
 
   // ---------- 2. Profil : API store ----------
-  store.botProfiles.set(1, 'G1', { name: 'Nexora du CHEAT', avatar_url: `/assets/${key}`, banner_url: '', bio: 'Le bot officiel !', color: '#ED4245' });
+  store.botProfiles.set(1, 'G1', { name: 'Noxera du CHEAT', avatar_url: `/assets/${key}`, banner_url: '', bio: 'Le bot officiel !', color: '#ED4245' });
   const p = store.botProfiles.get(1, 'G1');
-  assert(p.name === 'Nexora du CHEAT' && p.color === '#ED4245' && p.avatar_url.endsWith('.png'));
+  assert(p.name === 'Noxera du CHEAT' && p.color === '#ED4245' && p.avatar_url.endsWith('.png'));
   console.log('2️⃣  Profil enregistré ✅ (', p.name, p.color, ')');
 
   // ---------- 3. sendAsProfile : identité appliquée via webhook ----------
@@ -42,7 +42,7 @@ const logging = require('../server/discord/logging');
   const client = { user: { id: 'BOT1', displayAvatarURL: () => 'https://cdn/x.png' } };
   channel.fetchWebhooks = async () => [{ owner: { id: 'BOT1' }, send: async (payload) => { hookSend = payload; } }];
   await identity.sendAsProfile(client, 1, guild, channel, { content: 'Bienvenue !' });
-  assert(hookSend && hookSend.username === 'Nexora du CHEAT', 'nom personnalisé attendu');
+  assert(hookSend && hookSend.username === 'Noxera du CHEAT', 'nom personnalisé attendu');
   assert(hookSend.content === 'Bienvenue !');
   console.log('3️⃣  Webhook : message envoyé avec le nom personnalisé ✅');
 
@@ -54,9 +54,9 @@ const logging = require('../server/discord/logging');
   console.log('4️⃣  Sans profil → envoi normal (fallback) ✅');
 
   // ---------- 5. Carte de profil (/botprofile view) ----------
-  store.botProfiles.set(1, 'G1', { name: 'Nexora VIP', avatar_url: '', banner_url: '', bio: 'bio test', color: '#57F287' });
-  const embed = identity.buildProfileEmbed(1, 'G1', { name: 'Nexora' });
-  assert(embed.data.title.includes('Nexora VIP') && embed.data.description === 'bio test');
+  store.botProfiles.set(1, 'G1', { name: 'Noxera VIP', avatar_url: '', banner_url: '', bio: 'bio test', color: '#57F287' });
+  const embed = identity.buildProfileEmbed(1, 'G1', { name: 'Noxera' });
+  assert(embed.data.title.includes('Noxera VIP') && embed.data.description === 'bio test');
   console.log('5️⃣  Carte de profil ✅');
 
   // ---------- 6. Commandes /botprofile : permission + set + reset ----------

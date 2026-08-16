@@ -66,7 +66,7 @@ async function run() {
   // ---- Données locales ----
   const store = require('../server/db');
   store.users.create('test@botdev.fr', 'hash');
-  const botId = store.bots.create({ user_id: 1, name: 'Nexora', token: 'TOKEN_SECRET', client_id: '1', prefix: '!' });
+  const botId = store.bots.create({ user_id: 1, name: 'Noxera', token: 'TOKEN_SECRET', client_id: '1', prefix: '!' });
   store.commands.create({ bot_id: botId, name: 'bonjour', description: '', trigger_type: 'prefix', trigger_value: 'bonjour', options: '[]', blocks: '[]', cooldown: 0, enabled: 1, sort: 0 });
   store.tickets.set(botId, 'G1', { name: 'Support', channel: '#support', message: '', button_label: '🎫 Aide', support_role: 'Staff', category: 'Tickets' });
   console.log('2️⃣  Données locales créées (compte, bot, commande, tickets)');
@@ -93,7 +93,7 @@ async function run() {
   const store2 = require('../server/db');
   assert(store2.users.findByEmail('test@botdev.fr'), 'compte restauré');
   const bot = store2.bots.get(botId);
-  assert(bot && bot.name === 'Nexora' && bot.token === 'TOKEN_SECRET', 'bot restauré avec token');
+  assert(bot && bot.name === 'Noxera' && bot.token === 'TOKEN_SECRET', 'bot restauré avec token');
   assert(store2.commands.all(botId).length === 1, 'commande restaurée');
   const cfg = store2.tickets.get(botId, 'G1');
   assert(cfg && cfg.name === 'Support' && cfg.support_role === 'Staff', 'config tickets restaurée');

@@ -33,7 +33,7 @@ const imgServer = http.createServer((req, res) => {
   await new Promise((r) => imgServer.listen(0, '127.0.0.1', r));
   const imgUrl = `http://127.0.0.1:${imgServer.address().port}/avatar.png`;
 
-  store.bots.create({ user_id: 1, name: 'Nexora', token: 'T', client_id: '1', prefix: '!' });
+  store.bots.create({ user_id: 1, name: 'Noxera', token: 'T', client_id: '1', prefix: '!' });
 
   const guild = { id: 'G1', name: 'Serveur', ownerId: 'OWNER1' };
   let lastReply = null, lastEdit = null, shownModal = null;
@@ -71,9 +71,9 @@ const imgServer = http.createServer((req, res) => {
   console.log('1️⃣  /botprofile setup → modale « 📛 Nom du bot » ✅');
 
   // ---------- 2. Nom soumis → message de l\\'assistant (étape 1/5) ----------
-  await panels.dispatchPanels(1, wizard('bpw-modal:1:OWNER1', { isModalSubmit: () => true, fields: { getTextInputValue: () => 'Nexora du CHEAT' } }));
+  await panels.dispatchPanels(1, wizard('bpw-modal:1:OWNER1', { isModalSubmit: () => true, fields: { getTextInputValue: () => 'Noxera du CHEAT' } }));
   assert(lastReply.embeds && lastReply.embeds[0].data.title.includes('Étape 1/5'), 'étape 1 attendue');
-  assert(lastReply.embeds[0].data.fields[0].value.includes('Nexora du CHEAT'), 'nom dans le récap');
+  assert(lastReply.embeds[0].data.fields[0].value.includes('Noxera du CHEAT'), 'nom dans le récap');
   console.log('2️⃣  Nom enregistré → assistant affiché (étape 1/5) ✅');
 
   // ---------- 3. Suivant → modale bio ----------
@@ -125,7 +125,7 @@ const imgServer = http.createServer((req, res) => {
   // Le « Passer » sur la bannière avance → finalise
   const p = store.botProfiles.get(1, 'G1');
   assert(p, 'profil enregistré');
-  assert(p.name === 'Nexora du CHEAT', 'nom : ' + p.name);
+  assert(p.name === 'Noxera du CHEAT', 'nom : ' + p.name);
   assert(p.bio === 'Le bot officiel du serveur !', 'bio');
   assert(p.color === '#ED4245', 'couleur');
   assert(p.avatar_url && p.avatar_url.endsWith('.png'), 'avatar stocké : ' + p.avatar_url);

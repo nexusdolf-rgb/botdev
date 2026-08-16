@@ -867,7 +867,7 @@ router.get('/health/backup', (req, res) => {
 });
 
 // ============================================================
-// Pages publiques (sans connexion) : le dashboard public de Nexora
+// Pages publiques (sans connexion) : le dashboard public de Noxera
 // Les stats sont lues EN DIRECT depuis le processus du bot :
 // c'est la synchronisation live entre le dashboard et Discord.
 // ============================================================
@@ -880,8 +880,8 @@ function commandCategory(name) {
   return null;
 }
 
-// ⚡ Nexora (bot unique) : informations pour le dashboard connecté
-router.get('/nexora', requireAuth, (req, res) => {
+// ⚡ Noxera (bot unique) : informations pour le dashboard connecté
+router.get('/noxera', requireAuth, (req, res) => {
   const bot = store.db.prepare('SELECT * FROM bots ORDER BY id LIMIT 1').get();
   if (!bot) return res.json({ bot: null, configured: false });
   res.json({ bot: botDetail(bot), configured: true });
