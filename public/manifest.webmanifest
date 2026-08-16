@@ -1,7 +1,7 @@
 {
-  "name": "BotDev",
-  "short_name": "BotDev",
-  "description": "Créez vos bots Discord sans écrire une ligne de code",
+  "name": "Nexora",
+  "short_name": "Nexora",
+  "description": "Nexora — le bot Discord de ton serveur : tickets, niveaux, boutique, giveaways",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

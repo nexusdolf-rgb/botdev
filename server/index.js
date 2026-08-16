@@ -85,10 +85,38 @@ async function main() {
     res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
   });
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 BotDev démarré sur http://0.0.0.0:${PORT}`);
+  app.listen(PORT, '0.0.0.0', async () => {
+    console.log(`🚀 Nexora démarré sur http://0.0.0.0:${PORT}`);
+    await provisionNexora();
     startupBots();
   });
+
+  // ⚡ Nexora (bot unique) : créé automatiquement depuis les variables
+  // d'environnement — plus besoin de « créer un bot » depuis le dashboard.
+  async function provisionNexora() {
+    const token = process.env.NEXORA_TOKEN;
+    if (!token) {
+      console.log('[BotDev] ⚠️ NEXORA_TOKEN absent — Nexora n\'est pas branché (ajoute la variable sur Render).');
+      return null;
+    }
+    const clientId = process.env.NEXORA_CLIENT_ID || process.env.DISCORD_CLIENT_ID || '';
+    let bot = store.db.prepare('SELECT * FROM bots ORDER BY id LIMIT 1').get();
+    if (bot) {
+      store.bots.update(bot.id, { name: 'Nexora', token, client_id: clientId || bot.client_id });
+      bot = store.bots.get(bot.id);
+    } else {
+      const id = store.bots.create({ user_id: 1, name: 'Nexora', token, client_id: clientId, prefix: '!' });
+      bot = store.bots.get(id);
+    }
+    console.log(`⚡ Nexora provisionné (id ${bot.id}, client_id ${clientId || '?'})`);
+    try {
+      await botManager.loginBot(bot.id);
+      console.log('⚡ Nexora connecté à Discord 🟢');
+    } catch (e) {
+      console.log(`⚠️  Nexora provisionné mais connexion impossible : ${e.message}`);
+    }
+    return bot;
+  }
 
   // Reconnecte les bots qui étaient en ligne avant un redémarrage
   async function startupBots() {

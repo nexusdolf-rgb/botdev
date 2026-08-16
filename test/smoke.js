@@ -23,8 +23,21 @@ window.__finish = (n) => process.exit(n === 0 ? 0 : 1);
 
 window.fetch = async () => ({ ok: false, status: 401, json: async () => ({}) });
 
+
+// Lecture stable : la sandbox peut servir des lectures corrompues — on relit
+// jusqu'à obtenir deux lectures identiques consécutives.
+function readStable(p) {
+  let a = null;
+  for (let i = 0; i < 8; i++) {
+    const b = fs.readFileSync(p, 'utf8');
+    if (a !== null && a === b) return b;
+    a = b;
+  }
+  return a;
+}
+
 const scripts = ['app.js', 'editor.js', 'views.js', 'public.js', 'dashboard.js']
-  .map(f => fs.readFileSync(path.join(__dirname, '..', 'public', 'js', f), 'utf8'))
+  .map(f => readStable(path.join(__dirname, '..', 'public', 'js', f)))
   .join('\n;\n');
 
 const testCode = String.raw`
@@ -37,9 +50,10 @@ setTimeout(() => {
   check('Page publique rendue (landing)', !!document.querySelector('#public-landing'));
   check('Stats publiques présentes', !!document.querySelector('#pub-stats'));
   check('Section bots publiques', !!document.querySelector('#pub-bots'));
-  App.renderAuth('login');
-  check('Page auth rendue', !!document.querySelector('.auth-wrap'));
-  check('Champ email présent', !!document.querySelector('#auth-email'));
+  App.renderConnect();
+  check('Page connexion Discord rendue', !!document.querySelector('#connect-card'));
+  check('Bouton « Se connecter avec Discord » présent', !!document.querySelector('#connect-discord'));
+  check('Aucun champ email (100% Discord)', !document.querySelector('#auth-email'));
 
   try {
     const blocks = [

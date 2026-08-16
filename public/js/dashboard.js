@@ -128,13 +128,16 @@ Dashboard.renderSide = (aside) => {
     b.onclick = () => Dashboard.setModule(id);
     aside.appendChild(b);
   });
-  aside.appendChild(App.el(`<div class="dash-side-section">Bot</div>`));
-  Dashboard.BOT_MODULES.forEach(([id, ico, label]) => {
-    const b = App.el(`<button class="dash-side-item ${Dashboard.state.module === id ? 'active' : ''}" data-m="${id}"><span class="ico">${ico}</span>${label}</button>`);
-    b.onclick = () => Dashboard.setModule(id);
-    aside.appendChild(b);
-  });
-  aside.appendChild(App.el(`<div class="dash-side-foot">🤖 BotDev · ${App.escapeHtml(Dashboard.state.bot.name)}<br/>Synchronisé en temps réel avec Discord</div>`));
+  // Section « Bot » (commandes/modules globales) : fondateur uniquement
+  if (App.state.user && App.state.user.is_admin) {
+    aside.appendChild(App.el(`<div class="dash-side-section">Bot</div>`));
+    Dashboard.BOT_MODULES.forEach(([id, ico, label]) => {
+      const b = App.el(`<button class="dash-side-item ${Dashboard.state.module === id ? 'active' : ''}" data-m="${id}"><span class="ico">${ico}</span>${label}</button>`);
+      b.onclick = () => Dashboard.setModule(id);
+      aside.appendChild(b);
+    });
+  }
+  aside.appendChild(App.el(`<div class="dash-side-foot">⚡ ${App.escapeHtml(Dashboard.state.bot.name)}<br/>Synchronisé en temps réel avec Discord</div>`));
 };
 
 Dashboard.setModule = (id) => {
@@ -168,7 +171,6 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
     </div>
     <div class="dash-topbar-actions">
       <span class="dash-badge ${bot.online ? 'ok' : 'bad'}">${bot.online ? '🟢 En ligne' : '🔴 Hors ligne'}</span>
-      <button class="dash-btn" id="d-startstop">${bot.online ? '⏹ Arrêter' : '▶ Démarrer'}</button>
       <button class="dash-btn dash-btn-primary" id="d-invite2">➕ Ajouter le bot</button>
     </div>
   `;
@@ -177,13 +179,6 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
     await Dashboard.selectGuild(e.target.value);
   };
   topbar.querySelector('#d-invite2').onclick = () => App.openInvite(bot.invite_url);
-  topbar.querySelector('#d-startstop').onclick = async () => {
-    try {
-      if (bot.online) { await App.api(`/bots/${bot.id}/stop`, { method: 'POST' }); App.toast('Bot arrêté.'); }
-      else { await App.api(`/bots/${bot.id}/start`, { method: 'POST' }); App.toast('Bot démarré !'); }
-      App.renderBot();
-    } catch (e) { App.toast(e.message, 'error'); }
-  };
 };
 
 // ---------------------- Chargement serveur ----------------------

@@ -1,8 +1,10 @@
 // ============================================================
-// BotDev - Application principale (SPA)
+// Nexora — Application principale (SPA)
+// Connexion 100 % Discord (OAuth2). Site public + dashboard
+// pré-câblé à Nexora : aucun compte email, aucune création de bot.
 // ============================================================
 const App = {
-  state: { user: null, bots: [], bot: null, botId: null, tab: 'overview', loaded: false },
+  state: { user: null, bot: null, loaded: false },
   router: {},
 };
 
@@ -22,21 +24,15 @@ App.api = async (path, options = {}) => {
   let data = {};
   try { data = await res.json(); } catch {}
   if (!res.ok) {
-    if (res.status === 401) { App.router.go('#/login'); throw new Error('Session expirée'); }
+    if (res.status === 401) throw new Error('Session expirée — reconnecte-toi avec Discord.');
     throw new Error(data.error || 'Une erreur est survenue');
   }
   return data;
 };
 
-App.openInvite = (url) => {
-  try { window.open(url, '_blank', 'noopener'); } catch {}
-  navigator.clipboard.writeText(url)
-    .then(() => App.toast('Fenêtre Discord ouverte : choisis ton serveur dans le sélecteur ! (lien aussi copié)'))
-    .catch(() => App.toast('Choisis ton serveur dans la fenêtre Discord !'));
-};
-
 App.toast = (message, type = 'success') => {
   const box = document.getElementById('toasts');
+  if (!box) return;
   const t = App.el(`<div class="toast ${type}">${App.escapeHtml(message)}</div>`);
   box.appendChild(t);
   setTimeout(() => t.remove(), 4200);
@@ -65,17 +61,16 @@ App.modal = (innerHtml, large = false) => {
 
 App.closeModal = () => { document.getElementById('modal-root').innerHTML = ''; };
 
-// ---------------------- Router ----------------------
-const routes = {
-  '': () => App.renderDashboard(),
-  'dashboard': () => App.renderDashboard(),
-  'login': () => App.renderAuth('login'),
-  'register': () => App.renderAuth('register'),
-  'bots': () => App.renderBot(),
-  'bots/:id': () => App.renderBot(),
-  'bots/:id/:tab': () => App.renderBot(),
+App.openInvite = (url) => {
+  try { window.open(url, '_blank', 'noopener'); } catch {}
+  navigator.clipboard.writeText(url)
+    .then(() => App.toast('Fenêtre Discord ouverte : choisis ton serveur dans le sélecteur ! (lien aussi copié)'))
+    .catch(() => App.toast('Choisis ton serveur dans la fenêtre Discord !'));
 };
 
+App.fmtNumber = (n) => (n >= 1000 ? Math.round(n / 1000) + 'k' : String(n));
+
+// ---------------------- Router ----------------------
 App.router.parse = () => {
   const raw = (location.hash || '#/').replace(/^#\//, '');
   const [pathPart, query] = raw.split('?');
@@ -97,123 +92,90 @@ App.router.run = async () => {
   const { parts, query } = App.router.parse();
   const user = App.state.user;
 
-  // Messages OAuth2 (après connexion Discord)
+  // Messages OAuth2
   if (query && query.get('oauth')) {
     const o = query.get('oauth');
-    if (o === 'linked') App.toast('✅ Compte Discord lié avec succès !');
-    else if (o === 'nosecret') App.toast('Le Client Secret Discord n\'est pas configuré sur le serveur.', 'error');
+    if (o === 'linked') App.toast('✅ Compte Discord lié — bienvenue !');
+    else if (o === 'nosecret') App.toast("Le Client Secret Discord n'est pas configuré sur le serveur.", 'error');
     else App.toast('La connexion Discord a échoué. Réessaie.', 'error');
     history.replaceState(null, '', '#/dashboard');
   }
 
-  // 🌐 Page publique d'un bot : accessible à tous, connecté ou non
+  // Page publique du bot (consultable par tous, sans connexion)
   if (parts[0] === 'bot' && parts[1]) {
     App.renderPublicBot(Number(parts[1]));
     return;
   }
 
-  if (!user) {
-    if (parts[0] === 'register') { App.renderAuth('register'); return; }
-    if (parts[0] === 'login') { App.renderAuth('login'); return; }
+  // Accueil public (racine) : le site de Nexora, visible par tous
+  if (parts.length === 0) {
     App.renderPublicLanding();
     return;
   }
 
-  // Déjà connecté : pas de page login/register
-  if (parts[0] === 'login' || parts[0] === 'register') {
-    App.router.go('/dashboard');
-    return;
-  }
-
+  // Admin plateforme (propriétaire uniquement)
   if (parts[0] === 'admin') {
-    if (!user.is_admin) { App.router.go('/dashboard'); return; }
+    if (!user || !user.is_admin) { App.router.go('/dashboard'); return; }
     App.renderAdminPage();
     return;
   }
 
-  if (parts[0] === 'bots' && parts[1]) {
-    App.state.botId = Number(parts[1]);
-    App.state.tab = parts[2] || 'overview';
-    // Sous-page : configuration d'un serveur (ex : /bots/1/servers/123456)
-    App.state.serverGuildId = (parts[2] === 'servers' && parts[3]) ? parts[3] : null;
-    App.renderBot();
+  // Dashboard : connexion Discord OBLIGATOIRE (comme DraftBot)
+  if (!user || !user.discord_id) {
+    App.renderConnect();
     return;
   }
-  App.state.botId = null;
-  App.renderDashboard();
+
+  App.renderNexoraDashboard();
 };
 
-// ---------------------- Auth ----------------------
-App.renderAuth = (mode) => {
+// ---------------------- Page « Connecte-toi avec Discord » ----------------------
+App.renderConnect = () => {
   const root = document.getElementById('app');
   root.innerHTML = '';
-  root.appendChild(App.el(`
-    <div class="auth-wrap">
+  const page = App.el(`
+    <div class="auth-wrap" id="connect-card">
       <div class="auth-left">
-        <div class="logo-row"><span class="logo">🤖</span> BotDev</div>
-        <h1 style="margin-top:52px">Créez vos bots Discord<br/><span>sans écrire de code</span></h1>
-        <p class="tagline">Concevez, hébergez et gérez vos bots Discord depuis une interface visuelle. Glissez des blocs, activez des modules, c'est tout.</p>
+        <div class="logo-row"><span class="logo">⚡</span> Nexora</div>
+        <h1 style="margin-top:52px">Configure ton serveur<br/><span>en quelques clics</span></h1>
+        <p class="tagline">Tickets automatiques, niveaux, boutique, giveaways, bienvenue… Tout se règle ici, sans mot de passe : on vérifie simplement avec ton compte Discord.</p>
         <ul class="auth-features">
-          <li><span class="f-ico">🧩</span> Éditeur de commandes visuel par blocs</li>
-          <li><span class="f-ico">📦</span> +20 commandes pré-faites en un clic</li>
-          <li><span class="f-ico">👋</span> Événements de bienvenue et auto-rôles</li>
-          <li><span class="f-ico">💰</span> Système d'économie intégré</li>
-          <li><span class="f-ico">☁️</span> Hébergement 24/7 — rien à installer</li>
+          <li><span class="f-ico">🎫</span> Tickets avec types personnalisés & transcriptions</li>
+          <li><span class="f-ico">📈</span> Niveaux XP et récompenses de rôles</li>
+          <li><span class="f-ico">🛒</span> Boutique, économie et giveaways</li>
+          <li><span class="f-ico">👋</span> Bienvenue, auto-rôles et menus de rôles</li>
+          <li><span class="f-ico">🛡️</span> Modération et journaux complets</li>
         </ul>
       </div>
       <div class="auth-right">
-        <div class="auth-card">
-          <div class="logo-row"><span class="logo">🤖</span> BotDev</div>
-          <div class="auth-tabs" style="margin-top:26px">
-            <button data-mode="login" class="${mode === 'login' ? 'active' : ''}">Connexion</button>
-            <button data-mode="register" class="${mode === 'register' ? 'active' : ''}">Inscription</button>
-          </div>
-          <div class="form-error" id="auth-error"></div>
-          <label class="field-label">Adresse email</label>
-          <input class="input" id="auth-email" type="email" placeholder="toi@exemple.fr" autocomplete="email" />
-          <label class="field-label">Mot de passe</label>
-          <input class="input" id="auth-password" type="password" placeholder="••••••••" autocomplete="current-password" />
-          <button class="btn btn-primary" id="auth-submit">${mode === 'login' ? 'Se connecter' : 'Créer mon compte'}</button>
-          <div class="auth-divider">— ou —</div>
-          <button class="btn btn-discord" id="auth-discord">🎮 Se connecter avec Discord</button>
-          <p style="color:var(--text-dim);font-size:12px;margin-top:16px;text-align:center">${mode === 'login' ? 'Pas encore de compte ? ' : 'Déjà un compte ? '}<a href="${mode === 'login' ? '#/register' : '#/login'}">${mode === 'login' ? 'Inscris-toi' : 'Connecte-toi'}</a></p>
+        <div class="auth-card" style="text-align:center">
+          <div style="font-size:44px;margin-bottom:10px">🎮</div>
+          <h2>Connecte-toi avec Discord</h2>
+          <p class="sub" style="margin:8px 0 22px">Aucun compte à créer, aucun mot de passe.<br/>Discord vérifie automatiquement tes serveurs et tes permissions.</p>
+          <button class="btn btn-discord" id="connect-discord" style="padding:13px;font-size:15px">🎮 Se connecter avec Discord</button>
+          <p style="margin-top:18px;font-size:12.5px;color:var(--text-dim)">
+            Seuls les <b>propriétaires</b> et <b>administrateurs</b> des serveurs où Nexora est présent peuvent configurer.
+          </p>
+          <a href="#/" style="font-size:12.5px">← Retour à l'accueil</a>
         </div>
       </div>
     </div>
-  `));
-
-  root.querySelectorAll('.auth-tabs button').forEach(b => b.onclick = () => App.router.go(b.dataset.mode === 'login' ? '/login' : '/register'));
-  const showErr = (msg) => { const e = root.querySelector('#auth-error'); e.textContent = msg; e.classList.add('show'); };
-  const submit = async () => {
-    const email = root.querySelector('#auth-email').value.trim();
-    const password = root.querySelector('#auth-password').value;
-    if (!email || !password) return showErr('Remplis tous les champs.');
-    const btn = root.querySelector('#auth-submit');
-    btn.disabled = true; btn.textContent = 'Chargement…';
-    try {
-      await App.api(mode === 'login' ? '/auth/login' : '/auth/register', { method: 'POST', body: { email, password } });
-      App.state.loaded = false;
-      App.router.go('/dashboard');
-      location.reload();
-    } catch (err) { showErr(err.message); }
-    btn.disabled = false; btn.textContent = mode === 'login' ? 'Se connecter' : 'Créer mon compte';
-  };
-  root.querySelector('#auth-submit').onclick = submit;
-  root.querySelector('#auth-discord').onclick = async () => {
+  `);
+  root.appendChild(page);
+  page.querySelector('#connect-discord').onclick = async () => {
     try {
       const { url } = await App.api('/auth/discord/url');
       window.location.href = url;
     } catch (e) { App.toast(e.message, 'error'); }
   };
-  root.querySelector('#auth-password').onkeydown = (e) => { if (e.key === 'Enter') submit(); };
 };
 
-// ---------------------- Layout général ----------------------
+// ---------------------- Navbar (connecté) ----------------------
 App.renderNavbar = () => {
   const user = App.state.user;
   const nav = App.el(`
     <div class="navbar">
-      <div class="logo-row" style="cursor:pointer" id="nav-logo"><span class="logo">🤖</span> BotDev</div>
+      <div class="logo-row" style="cursor:pointer" id="nav-logo"><span class="logo">⚡</span> Nexora</div>
       <div class="navbar-right">
         ${user.is_admin ? `<button class="btn btn-ghost btn-sm" id="nav-admin">👑 Admin</button>` : ''}
         <div class="user-pill">
@@ -221,7 +183,7 @@ App.renderNavbar = () => {
             ? `<img class="user-avatar" style="border-radius:50%" src="https://cdn.discordapp.com/avatars/${App.escapeHtml(user.discord_id)}/${App.escapeHtml(user.discord_avatar)}.png" alt="" />`
             : `<div class="user-avatar">${App.escapeHtml((user.email[0] || '?').toUpperCase())}</div>`}
           <span>${App.escapeHtml(user.discord_username || user.email)}</span>
-          ${user.discord_id ? `<span class="chip" title="Compte Discord lié">🔗</span>` : ''}
+          <span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">🔗</span>
         </div>
         <button class="btn btn-ghost btn-sm" id="nav-logout">Déconnexion</button>
       </div>
@@ -232,125 +194,14 @@ App.renderNavbar = () => {
   if (adminBtn) adminBtn.onclick = () => App.router.go('/admin');
   nav.querySelector('#nav-logout').onclick = async () => {
     await App.api('/auth/logout', { method: 'POST' }).catch(() => {});
-    location.hash = '#/login';
+    location.hash = '#/';
     location.reload();
   };
   return nav;
 };
 
-// ---------------------- Dashboard ----------------------
-App.renderDashboard = async () => {
-  const root = document.getElementById('app');
-  root.innerHTML = '';
-  root.appendChild(App.renderNavbar());
-
-  const page = App.el(`<div class="page"><h1>Mes bots</h1><p class="sub">Gère tes bots Discord, ou crée-en un nouveau en moins de 2 minutes.</p><div class="bots-grid" id="grid"><div class="spinner"></div></div></div>`);
-  root.appendChild(page);
-  const grid = page.querySelector('#grid');
-
-  try {
-    const { bots } = await App.api('/bots');
-    App.state.bots = bots;
-    grid.innerHTML = '';
-
-    bots.forEach((bot) => {
-      const avatar = bot.avatar_url
-        ? `<img class="bot-avatar" src="${App.escapeHtml(bot.avatar_url)}" alt="" />`
-        : `<div class="bot-avatar fallback">🤖</div>`;
-      const card = App.el(`
-        <div class="bot-card">
-          <div class="bot-card-top">
-            ${avatar}
-            <div>
-              <h3>${App.escapeHtml(bot.name)}</h3>
-              <div class="uname">${bot.bot_username ? '@' + App.escapeHtml(bot.bot_username) : 'jamais connecté'}</div>
-            </div>
-          </div>
-          <div class="bot-card-status">
-            <span class="dot ${bot.online ? 'dot-online' : 'dot-offline'}"></span>
-            ${bot.online ? `En ligne — ${bot.guilds.length} serveur(s)` : 'Hors ligne'}
-          </div>
-          <div class="bot-card-actions">
-            <button class="btn btn-primary" data-open>Ouvrir</button>
-            <button class="btn" data-invite ${bot.invite_url ? '' : 'disabled'}>Inviter</button>
-            <button class="btn btn-danger btn-icon" data-del title="Supprimer">🗑</button>
-          </div>
-        </div>
-      `);
-      card.querySelector('[data-open]').onclick = () => App.router.go(`/bots/${bot.id}`);
-      card.querySelector('[data-invite]').onclick = () => {
-        if (bot.invite_url) App.openInvite(bot.invite_url);
-      };
-      card.querySelector('[data-del]').onclick = async () => {
-        if (!(await App.confirm(`Supprimer définitivement le bot « ${bot.name} » ?`))) return;
-        try {
-          await App.api(`/bots/${bot.id}`, { method: 'DELETE' });
-          App.toast('Bot supprimé.');
-          App.renderDashboard();
-        } catch (e) { App.toast(e.message, 'error'); }
-      };
-      grid.appendChild(card);
-    });
-
-    const newCard = App.el(`
-      <div class="new-bot-card">
-        <span class="plus">＋</span>
-        <span>Créer un nouveau bot</span>
-      </div>
-    `);
-    newCard.onclick = () => App.openCreateBotModal();
-    grid.appendChild(newCard);
-  } catch (e) {
-    grid.innerHTML = `<div class="empty-state"><div class="big">⚠️</div>${App.escapeHtml(e.message)}</div>`;
-  }
-};
-
-App.openCreateBotModal = () => {
-  App.modal(`
-    <div class="modal-header"><h3>➕ Créer un nouveau bot</h3><button class="x-btn" data-close>×</button></div>
-    <div class="modal-body">
-      <div class="help-box" style="margin-bottom:16px">
-        <b>Il te faut un bot Discord :</b>
-        <ol style="margin-top:6px">
-          <li>Va sur <b>discord.com/developers/applications</b> → <b>New Application</b></li>
-          <li>Onglet <b>Bot</b> → <b>Reset Token</b> puis <b>Copy</b> (le token)</li>
-          <li>Copie aussi l'<b>Application ID</b> (onglet General Information)</li>
-          <li>Dans l'onglet Bot, active <b>SERVER MEMBERS INTENT</b> et <b>MESSAGE CONTENT INTENT</b></li>
-        </ol>
-      </div>
-      <label class="field-label">Nom du bot (affiché dans BotDev)</label>
-      <input class="input" id="nb-name" placeholder="Mon super bot" maxlength="32" />
-      <label class="field-label">Token du bot</label>
-      <input class="input" id="nb-token" placeholder="Colle le token ici" />
-      <label class="field-label">Application ID (Client ID)</label>
-      <input class="input" id="nb-client" placeholder="123456789012345678" />
-      <label class="field-label">Préfixe (optionnel)</label>
-      <input class="input" id="nb-prefix" placeholder="!" maxlength="5" value="!" />
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" data-close>Annuler</button>
-      <button class="btn btn-primary" id="nb-submit">Créer le bot</button>
-    </div>
-  `);
-  document.querySelectorAll('[data-close]').forEach(b => b.onclick = App.closeModal);
-  document.getElementById('nb-submit').onclick = async () => {
-    const name = document.getElementById('nb-name').value.trim();
-    const token = document.getElementById('nb-token').value.trim();
-    const client_id = document.getElementById('nb-client').value.trim();
-    const prefix = document.getElementById('nb-prefix').value.trim() || '!';
-    if (!name || !token) return App.toast('Nom et token requis.', 'error');
-    try {
-      const { id } = await App.api('/bots', { method: 'POST', body: { name, token, client_id, prefix } });
-      App.closeModal();
-      App.toast('Bot créé ! Démarrons-le…');
-      await App.api(`/bots/${id}/start`, { method: 'POST' }).catch(() => {});
-      App.router.go(`/bots/${id}`);
-    } catch (e) { App.toast(e.message, 'error'); }
-  };
-};
-
-// ---------------------- Shell bot ----------------------
-App.renderBot = async () => {
+// ---------------------- Dashboard Nexora ----------------------
+App.renderNexoraDashboard = async () => {
   const root = document.getElementById('app');
   root.innerHTML = '';
   root.appendChild(App.renderNavbar());
@@ -358,68 +209,60 @@ App.renderBot = async () => {
   root.appendChild(shell);
 
   try {
-    const { bot } = await App.api(`/bots/${App.state.botId}`);
+    const { bot, configured } = await App.api('/nexora');
+    if (!configured || !bot) {
+      shell.innerHTML = `
+        <div class="dash-card" style="max-width:560px;margin:24px auto">
+          <h3>⚡ Nexora n'est pas encore branché</h3>
+          <div class="desc">Ajoute la variable d'environnement <b>NEXORA_TOKEN</b> (token du bot) dans les réglages du service sur Render, puis redémarre. La connexion se fait automatiquement.</div>
+        </div>`;
+      return;
+    }
     App.state.bot = bot;
     shell.innerHTML = '';
-    App.renderBotHeader(shell, bot);
-    App.renderBotBody(shell, bot);
+    await Dashboard.mount(shell, bot);
   } catch (e) {
-    shell.innerHTML = `<div class="empty-state"><div class="big">⚠️</div>${App.escapeHtml(e.message)}<br/><br/><button class="btn" onclick="location.hash='#/dashboard'">← Retour au dashboard</button></div>`;
+    shell.innerHTML = `<div class="empty-state"><div class="big">⚠️</div>${App.escapeHtml(e.message)}</div>`;
   }
 };
 
-App.renderBotHeader = (shell, bot) => {
-  const avatar = bot.avatar_url
-    ? `<img class="avatar" src="${App.escapeHtml(bot.avatar_url)}" alt="" />`
-    : `<div class="avatar fallback">🤖</div>`;
-  const header = App.el(`
-    <div class="bot-header">
-      <button class="btn btn-ghost btn-icon" id="back" title="Retour">←</button>
-      ${avatar}
-      <div>
-        <h2>${App.escapeHtml(bot.name)}</h2>
-        <div class="sub">${bot.bot_username ? '@' + App.escapeHtml(bot.bot_username) : 'Bot non connecté'} · ${bot.commands_count} commande(s)</div>
-      </div>
-      <div class="bot-header-actions">
-        <button class="btn btn-ghost" id="view-public" title="Voir la page publique du bot">🌐</button>
-        <span class="status-pill"><span class="dot ${bot.online ? 'dot-online' : 'dot-offline'}"></span>${bot.online ? 'En ligne' : 'Hors ligne'}</span>
-        <button class="btn" id="start-stop">${bot.online ? '⏹ Arrêter' : '▶ Démarrer'}</button>
-        <button class="btn btn-primary" id="invite" ${bot.invite_url ? '' : 'disabled'}>➕ Inviter</button>
-      </div>
-    </div>
-  `);
-  header.querySelector('#back').onclick = () => App.router.go('/dashboard');
-  header.querySelector('#view-public').onclick = () => App.router.go(`/bot/${bot.id}`);
-  header.querySelector('#invite').onclick = () => {
-    if (bot.invite_url) App.openInvite(bot.invite_url);
-  };
-  const startStop = header.querySelector('#start-stop');
-  startStop.onclick = async () => {
-    startStop.disabled = true;
-    try {
-      if (bot.online) {
-        await App.api(`/bots/${bot.id}/stop`, { method: 'POST' });
-        App.toast('Bot arrêté.');
-      } else {
-        const r = await App.api(`/bots/${bot.id}/start`, { method: 'POST' });
-        if (r.degraded) App.toast('Bot en ligne, mais mode réduit : active les intents ! (détails dans Vue d\'ensemble)', 'error');
-        else App.toast('Bot démarré ! 🚀');
-      }
-    } catch (e) { App.toast(e.message, 'error'); }
-    App.renderBot();
-  };
-  shell.appendChild(header);
-};
+// ---------------------- Admin plateforme (propriétaire) ----------------------
+App.renderAdminPage = async () => {
+  const root = document.getElementById('app');
+  root.innerHTML = '';
+  root.appendChild(App.renderNavbar());
+  const page = App.el(`<div class="page">
+    <h1>👑 Administration Nexora</h1>
+    <p class="sub">Vue d'ensemble de la plateforme : utilisateurs liés et statut du bot.</p>
+    <div class="stats-grid" id="a-stats"><div class="spinner"></div></div>
+    <div class="card"><h3>👥 Utilisateurs (liés avec Discord)</h3><div class="card-sub">Les personnes qui se sont connectées au dashboard.</div><div id="a-users"><div class="spinner"></div></div></div>
+  </div>`);
+  root.appendChild(page);
 
-// Le corps du bot est rendu par Dashboard.mount (dashboard.js, façon DraftBot)
-App.renderBotBody = (shell, bot) => {
-  if (typeof Dashboard !== 'undefined' && Dashboard.mount) {
-    Dashboard.mount(shell, bot).catch((e) => {
-      shell.innerHTML = `<div class="empty-state"><div class="big">⚠️</div>${App.escapeHtml(e.message)}</div>`;
-    });
-    return;
+  try {
+    const [stats, usersRes] = await Promise.all([App.api('/admin/stats'), App.api('/admin/users')]);
+    page.querySelector('#a-stats').innerHTML = `
+      <div class="stat-card"><div class="val">${stats.users}</div><div class="lbl">Utilisateurs liés</div></div>
+      <div class="stat-card"><div class="val">${App.fmtNumber(stats.servers)}</div><div class="lbl">Serveurs Discord</div></div>
+      <div class="stat-card"><div class="val">${App.fmtNumber(stats.members)}</div><div class="lbl">Membres touchés</div></div>
+      <div class="stat-card"><div class="val">${stats.online ? '🟢' : '🔴'}</div><div class="lbl">Nexora</div></div>`;
+
+    const usersEl = page.querySelector('#a-users');
+    if (!usersRes.users.length) usersEl.innerHTML = `<div class="empty-state">Aucun utilisateur.</div>`;
+    else {
+      usersEl.innerHTML = `<table class="leaderboard-table"><thead><tr><th>#</th><th>Discord</th><th>Inscrit le</th></tr></thead><tbody></tbody></table>`;
+      const tb = usersEl.querySelector('tbody');
+      usersRes.users.forEach((u) => {
+        tb.appendChild(App.el(`<tr>
+          <td>${u.id}${u.id === 1 ? ' <span class="chip">👑 fondateur</span>' : ''}</td>
+          <td>${u.discord_username ? '@' + App.escapeHtml(u.discord_username) : App.escapeHtml(u.email)}</td>
+          <td>${App.escapeHtml(String(u.created_at).slice(0, 10))}</td>
+        </tr>`));
+      });
+    }
+  } catch (e) {
+    page.querySelector('#a-stats').innerHTML = `<div class="empty-state">${App.escapeHtml(e.message)}</div>`;
   }
-  shell.innerHTML = `<div class="empty-state"><div class="big">⚠️</div>Impossible de charger le dashboard.</div>`;
 };
 
 // ---------------------- Démarrage ----------------------

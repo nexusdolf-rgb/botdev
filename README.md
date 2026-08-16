@@ -62,6 +62,15 @@ npm install
 npm start          # démarre sur http://localhost:3000
 ```
 
+## ⚡ Nexora — site public + dashboard (connexion 100 % Discord)
+
+La plateforme est devenue un **site dédié à Nexora** :
+
+- **Site public** (aucun compte requis) : accueil avec stats en direct, fonctionnalités, bouton d'invitation
+- **Connexion 100 % Discord** : les formulaires email/mot de passe sont supprimés — un seul bouton « 🎮 Se connecter avec Discord ». Une fois lié, les boutons disparaissent et le dashboard s'ouvre directement
+- **Dashboard pré-câblé à Nexora** : sidebar avec la liste des serveurs Discord de l'utilisateur + tous les modules (tickets, niveaux, boutique, giveaways, modération, journaux…) — seuls les propriétaires/administrateurs des serveurs où Nexora est présent peuvent configurer
+- **Provisionnement automatique** : Nexora est créé et connecté automatiquement au démarrage via les variables d'environnement (`NEXORA_TOKEN`, `NEXORA_CLIENT_ID`) — plus aucune « création de bot »
+
 ## 🎨 Dashboard v2 (façon DraftBot) — reconstruction propre
 
 Le dashboard a été **entièrement reconstruit** (anciennes interfaces et fichiers morts supprimés) :

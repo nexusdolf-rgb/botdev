@@ -880,6 +880,13 @@ function commandCategory(name) {
   return null;
 }
 
+// ⚡ Nexora (bot unique) : informations pour le dashboard connecté
+router.get('/nexora', requireAuth, (req, res) => {
+  const bot = store.db.prepare('SELECT * FROM bots ORDER BY id LIMIT 1').get();
+  if (!bot) return res.json({ bot: null, configured: false });
+  res.json({ bot: botDetail(bot), configured: true });
+});
+
 router.get('/public/stats', (req, res) => {
   const totalBots = store.db.prepare('SELECT COUNT(*) AS n FROM bots').get().n;
   const live = botManager.platformStats();

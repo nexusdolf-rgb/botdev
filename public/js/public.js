@@ -21,22 +21,18 @@ App.renderPublicNavbar = () => {
   const user = App.state.user;
   const nav = App.el(`
     <div class="navbar">
-      <div class="logo-row" style="cursor:pointer" id="pub-logo"><span class="logo">🤖</span> BotDev</div>
+      <div class="logo-row" style="cursor:pointer" id="pub-logo"><span class="logo">⚡</span> Nexora</div>
       <div class="navbar-right" id="pub-nav-right">
-        ${user
+        ${user && user.discord_id
           ? `<div class="user-pill">
                ${user.discord_avatar
                  ? `<img class="user-avatar" style="border-radius:50%" src="https://cdn.discordapp.com/avatars/${App.escapeHtml(user.discord_id)}/${App.escapeHtml(user.discord_avatar)}.png" alt="" />`
                  : `<div class="user-avatar">${App.escapeHtml((user.email[0] || '?').toUpperCase())}</div>`}
                <span>${App.escapeHtml(user.discord_username || user.email)}</span>
-               ${user.discord_id ? '<span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">🔗 Discord lié</span>' : ''}
+               <span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">🔗</span>
              </div>
-             ${user.discord_id
-               ? `<button class="btn btn-primary btn-sm" id="pub-dash">📊 Mon dashboard</button>`
-               : `<button class="btn btn-discord btn-sm" id="pub-link" style="width:auto">🎮 Lier mon Discord</button>
-                  <button class="btn btn-ghost btn-sm" id="pub-dash">Dashboard</button>`}`
-          : `<button class="btn btn-ghost btn-sm" id="pub-login">Se connecter</button>
-             <button class="btn btn-primary btn-sm" id="pub-register">Créer un compte</button>`}
+             <button class="btn btn-primary btn-sm" id="pub-dash">📊 Mon dashboard</button>`
+          : `<button class="btn btn-discord btn-sm" id="pub-connect" style="width:auto">🎮 Se connecter avec Discord</button>`}
       </div>
     </div>
   `);
@@ -48,10 +44,11 @@ App.renderPublicNavbar = () => {
     try { const { url } = await App.api('/auth/discord/url'); window.location.href = url; }
     catch (e) { App.toast(e.message, 'error'); }
   };
-  const login = nav.querySelector('#pub-login');
-  if (login) login.onclick = () => App.router.go('/login');
-  const register = nav.querySelector('#pub-register');
-  if (register) register.onclick = () => App.router.go('/register');
+  const connectBtn = nav.querySelector('#pub-connect');
+  if (connectBtn) connectBtn.onclick = async () => {
+    try { const { url } = await App.api('/auth/discord/url'); window.location.href = url; }
+    catch (e) { App.toast(e.message, 'error'); }
+  };
   return nav;
 };
 
@@ -65,18 +62,15 @@ App.renderPublicLanding = () => {
   const page = App.el(`
     <div id="public-landing">
       <div class="pub-hero">
-        <div class="pub-hero-badge">🌐 Le dashboard public de Nexora — synchronisé en direct</div>
-        <h1>Créez vos bots Discord<br/><span class="grad">sans écrire une ligne de code</span></h1>
-        <p class="pub-tagline">Tickets automatiques, menus de rôles, modération, économie et bien plus.
-        Tout se configure en quelques clics, directement depuis Discord ou depuis le dashboard.</p>
+        <div class="pub-hero-badge">⚡ Nexora — synchronisé en direct avec Discord</div>
+        <h1>Le bot qui anime<br/><span class="grad">ton serveur Discord</span></h1>
+        <p class="pub-tagline">Tickets automatiques avec transcriptions, niveaux XP, boutique, giveaways, bienvenue et modération.
+        Ajoute Nexora à ton serveur, puis configure tout depuis le dashboard avec ton compte Discord.</p>
         <div class="pub-hero-actions">
           <button class="btn btn-primary" id="pub-invite-hero" style="padding:13px 22px;font-size:15px">➕ Ajouter Nexora à ton serveur</button>
-          ${user
-            ? (user.discord_id
-                ? `<button class="btn" id="pub-dash-hero" style="padding:13px 22px;font-size:15px">📊 Ouvrir mon dashboard</button>`
-                : `<button class="btn btn-discord" id="pub-link-hero" style="padding:13px 22px;font-size:15px;width:auto">🎮 Lier mon Discord</button>
-                   <button class="btn" id="pub-dash-hero" style="padding:13px 22px;font-size:15px">Mon dashboard</button>`)
-            : `<button class="btn" id="pub-register-hero" style="padding:13px 22px;font-size:15px">Créer mon compte gratuit</button>`}
+          ${user && user.discord_id
+            ? `<button class="btn" id="pub-dash-hero" style="padding:13px 22px;font-size:15px">📊 Ouvrir mon dashboard</button>`
+            : `<button class="btn btn-discord" id="pub-connect-hero" style="padding:13px 22px;font-size:15px;width:auto">🎮 Se connecter avec Discord</button>`}
         </div>
         <div class="pub-stats" id="pub-stats">
           <div class="pub-stat"><div class="val">—</div><div class="lbl">Bots en ligne</div></div>
@@ -86,8 +80,8 @@ App.renderPublicLanding = () => {
       </div>
 
       <div class="pub-section">
-        <h2>🤖 Nos bots</h2>
-        <p class="pub-sub">Chaque bot a sa page publique avec ses statistiques en temps réel.</p>
+        <h2>🤖 Nexora en direct</h2>
+        <p class="pub-sub">Statistiques en temps réel, lues directement depuis Discord.</p>
         <div class="bots-grid" id="pub-bots"><div class="spinner"></div></div>
       </div>
 
@@ -104,7 +98,7 @@ App.renderPublicLanding = () => {
       </div>
 
       <div class="pub-footer">
-        Propulsé par <b>BotDev</b> — ${user ? '' : '<a href="#/login">Se connecter</a> · '}<a href="https://discord.com/developers/docs" target="_blank" rel="noopener">Documentation Discord</a>
+        <b>⚡ Nexora</b> — ton serveur mérite un bot à la hauteur · <a href="https://discord.com/developers/docs" target="_blank" rel="noopener">Documentation Discord</a>
       </div>
     </div>
   `);
@@ -115,13 +109,11 @@ App.renderPublicLanding = () => {
   heroInvite.onclick = () => App.fetchFirstInviteUrl().then((url) => url ? invite(url) : App.toast('Aucun bot disponible pour l\'instant.', 'error'));
   const dashHero = page.querySelector('#pub-dash-hero');
   if (dashHero) dashHero.onclick = () => App.router.go('/dashboard');
-  const linkHero = page.querySelector('#pub-link-hero');
-  if (linkHero) linkHero.onclick = async () => {
+  const connectHero = page.querySelector('#pub-connect-hero');
+  if (connectHero) connectHero.onclick = async () => {
     try { const { url } = await App.api('/auth/discord/url'); window.location.href = url; }
     catch (e) { App.toast(e.message, 'error'); }
   };
-  const regHero = page.querySelector('#pub-register-hero');
-  if (regHero) regHero.onclick = () => App.router.go('/register');
 
   const statsEl = page.querySelector('#pub-stats');
   const botsEl = page.querySelector('#pub-bots');
@@ -260,9 +252,9 @@ App.renderPublicBot = async (id) => {
         <div style="margin-top:14px;color:var(--text-dim);font-size:12px">💡 Une fois le bot sur ton serveur, tape <b>/help</b> pour le guide complet, et <b>/ticket setup</b> pour installer les tickets.</div>
       </div>
 
-      <div class="pub-footer" style="text-align:left">Propulsé par <b>BotDev</b></div>
+      <div class="pub-footer" style="text-align:left"><b>⚡ Nexora</b> — ajoute-le à ton serveur, puis configure-le avec ton compte Discord.</div>
     `;
-    shell.querySelector('#pub-back').onclick = () => App.router.go(App.state.user ? '/dashboard' : '/');
+    shell.querySelector('#pub-back').onclick = () => App.router.go(App.state.user && App.state.user.discord_id ? '/dashboard' : '/');
     shell.querySelector('#pub-invite').onclick = () => { if (b.invite_url) App.openInvite(b.invite_url); };
     shell.querySelector('#pub-refresh').onclick = render;
   };
