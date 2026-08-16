@@ -21,8 +21,8 @@ const STEPS = [
   { key: 'name', emoji: '📛', label: 'Nom du bot', q: 'Comment veux-tu que le bot s\'appelle sur **ce serveur** ?' },
   { key: 'bio', emoji: '📝', label: 'Bio du bot', q: 'Écris la **bio** affichée sur le profil du bot.' },
   { key: 'color', emoji: '🎨', label: 'Couleur', q: 'Choisis la **couleur** du profil dans le sélecteur.' },
-  { key: 'avatar', emoji: '🖼️', label: 'Avatar', q: '📱 **Ouvre ta galerie** (bouton ➕ de la barre de message) et envoie l\'**avatar** ici — le bot le récupère automatiquement (60 secondes).' },
-  { key: 'banner', emoji: '🎴', label: 'Bannière', q: '📱 **Ouvre ta galerie** (bouton ➕ de la barre de message) et envoie la **bannière** ici — récupérée automatiquement (60 secondes).' },
+  { key: 'avatar', emoji: '🖼️', label: 'Avatar', q: '**Ouvre ta galerie** :\n📱 **Option 1** : tape `/botprofile avatar` — l\'option « image » **ouvre ta galerie automatiquement**.\n📎 **Option 2** : touche le bouton ➕ de la barre de message et envoie la photo ici (récupérée automatiquement, 60 s).' },
+  { key: 'banner', emoji: '🎴', label: 'Bannière', q: '**Ouvre ta galerie** :\n📱 **Option 1** : tape `/botprofile banner` — l\'option « image » **ouvre ta galerie automatiquement**.\n📎 **Option 2** : touche le bouton ➕ et envoie la photo ici (récupérée automatiquement, 60 s).' },
 ];
 
 const COLORS = [
@@ -102,6 +102,7 @@ function componentsFor(state) {
   }
   if (step.key === 'avatar' || step.key === 'banner') {
     rows.push(new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`bpw:${state.botId}:${uid}:import`).setLabel('📷 Importer la photo').setStyle(ButtonStyle.Primary),
       new ButtonBuilder().setCustomId(`bpw:${state.botId}:${uid}:skip`).setLabel('⏭ Passer (sans image)').setStyle(ButtonStyle.Secondary),
     ));
   }
@@ -296,6 +297,14 @@ async function handleProfileWizardInteraction(botId, interaction) {
       state.step = Math.max(0, state.step - 1);
       return interaction.update(renderPayload(state));
     }
+    if (action === 'import') {
+      const step = STEPS[state.step];
+      const cmdName = step.key === 'banner' ? 'banner' : 'avatar';
+      return interaction.reply({
+        content: `📱 **Pour ouvrir ta galerie :**\n\n1️⃣ Tape \`/botprofile ${cmdName}\` puis touche l\'option « image » → **ta galerie s\'ouvre automatiquement** (la photo s\'appliquera directement à cette étape).\n\n2️⃣ Ou touche le **bouton ➕** de la barre de message, choisis ta photo et envoie-la ici — je la récupère automatiquement.`,
+        ephemeral: true,
+      });
+    }
     if (action === 'skip') {
       const fin = await advance(state);
       if (fin) return interaction.update(fin);
@@ -324,4 +333,26 @@ async function handleProfileWizardInteraction(botId, interaction) {
   return null;
 }
 
-module.exports = { startProfileWizard, handleProfileWizardInteraction, collectAttachment };
+// Applique une photo (venant de /botprofile avatar|banner) à l'assistant en cours.
+// Si l'assistant est à l'étape correspondante, on avance automatiquement.
+async function applyAttachmentToWizard(botId, guildId, userId, kind, url, contentType, size) {
+  const state = wizards.get(wKey(botId, guildId, userId));
+  if (!state) return false;
+  if (size && size > 3 * 1024 * 1024) throw new Error('Image trop lourde (3 Mo max)');
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Impossible de télécharger l'image (${res.status})`);
+  const buf = Buffer.from(await res.arrayBuffer());
+  if (!buf.length || buf.length > 3 * 1024 * 1024) throw new Error('Image trop lourde (3 Mo max)');
+  const key = await assets.put(buf, contentType || extFromUrl(url));
+  state.values[kind] = `/assets/${key}`;
+  const step = STEPS[state.step];
+  if (step && step.key === kind) {
+    stopCollector(state);
+    await advance(state);
+  } else {
+    try { await state.msg.edit(renderPayload(state)); } catch {}
+  }
+  return true;
+}
+
+module.exports = { startProfileWizard, handleProfileWizardInteraction, collectAttachment, applyAttachmentToWizard };

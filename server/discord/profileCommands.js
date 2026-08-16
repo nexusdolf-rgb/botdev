@@ -59,7 +59,17 @@ async function handleProfileCommand(botId, interaction) {
 
     if (sub === 'avatar' || sub === 'banner') {
       const file = interaction.options.getAttachment('image');
-      if (!file) return interaction.reply({ content: '❌ Joins une image (choisis-la dans ta galerie).', ephemeral: true });
+      if (!file) return interaction.reply({ content: '❌ Joins une image : touche l\'option « image », ta galerie s\'ouvre automatiquement.', ephemeral: true });
+      // Un assistant est en cours ? → on applique la photo directement à l'étape
+      try {
+        const { applyAttachmentToWizard } = require('./profileWizard');
+        const applied = await applyAttachmentToWizard(botId, guild.id, interaction.user.id, sub, file.url, file.contentType || 'image/png', file.size || 0);
+        if (applied) {
+          return interaction.reply({ content: `✅ Photo appliquée à l\'assistant ! Continue avec « Suivant ➡️ » ou envoie la suite.`, ephemeral: true });
+        }
+      } catch (e) {
+        return interaction.reply({ content: `⚠️ ${e.message.slice(0, 120)}`, ephemeral: true });
+      }
       if (file.size > 3 * 1024 * 1024) return interaction.reply({ content: '❌ Image trop lourde (3 Mo max).', ephemeral: true });
       try {
         const res = await fetch(file.url);

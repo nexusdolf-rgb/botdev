@@ -677,11 +677,15 @@ BotViews.renderServerConfig = async (content, bot, guildId) => {
       <div class="grid2" style="max-width:640px;margin-top:6px">
         <div>
           <label class="field-label">🖼️ Avatar (depuis ta galerie, 3 Mo max)</label>
-          <input type="file" id="p-avatar" accept="image/*" class="input" style="padding:7px" />
+          <input type="file" id="p-avatar-file" accept="image/*" style="display:none" />
+          <button class="btn" id="p-avatar-btn" type="button">📱 Choisir dans la galerie</button>
+          <div id="p-avatar-name" style="font-size:12px;color:var(--green);margin-top:6px"></div>
         </div>
         <div>
           <label class="field-label">🎴 Bannière (depuis ta galerie, 3 Mo max)</label>
-          <input type="file" id="p-banner" accept="image/*" class="input" style="padding:7px" />
+          <input type="file" id="p-banner-file" accept="image/*" style="display:none" />
+          <button class="btn" id="p-banner-btn" type="button">📱 Choisir dans la galerie</button>
+          <div id="p-banner-name" style="font-size:12px;color:var(--green);margin-top:6px"></div>
         </div>
       </div>
       <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
@@ -698,6 +702,20 @@ BotViews.renderServerConfig = async (content, bot, guildId) => {
     r.onload = () => resolve(r.result);
     r.readAsDataURL(f);
   });
+  // 📱 Boutons « Choisir dans la galerie » : ouvrent le sélecteur de photos du téléphone
+  const bindFilePicker = (btnId, inputId, nameId) => {
+    const btn = iCard.querySelector(btnId);
+    const input = iCard.querySelector(inputId);
+    const nameEl = iCard.querySelector(nameId);
+    if (!btn || !input) return;
+    btn.onclick = () => input.click();
+    input.onchange = () => {
+      const f = input.files && input.files[0];
+      if (f) nameEl.textContent = '✅ ' + f.name + ' (' + Math.round(f.size / 1024) + ' Ko)';
+    };
+  };
+  bindFilePicker('#p-avatar-btn', '#p-avatar-file', '#p-avatar-name');
+  bindFilePicker('#p-banner-btn', '#p-banner-file', '#p-banner-name');
   iCard.querySelector('#p-save').onclick = async () => {
     try {
       const body = {
@@ -705,8 +723,8 @@ BotViews.renderServerConfig = async (content, bot, guildId) => {
         bio: iCard.querySelector('#p-bio').value,
         color: iCard.querySelector('#p-color').value,
       };
-      const av = await readFile(iCard.querySelector('#p-avatar'));
-      const bn = await readFile(iCard.querySelector('#p-banner'));
+      const av = await readFile(iCard.querySelector('#p-avatar-file'));
+      const bn = await readFile(iCard.querySelector('#p-banner-file'));
       if (av) body.avatar_b64 = av;
       if (bn) body.banner_b64 = bn;
       await App.api(`/bots/${bot.id}/guilds/${guildId}/profile`, { method: 'PUT', body });
