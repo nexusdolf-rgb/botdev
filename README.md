@@ -20,6 +20,7 @@
   - 📋 **Menus de rôles** : menus déroulants où les membres choisissent leurs rôles (`/roles list`, `/roles send`)
 - **📚 Centre d'aide complet** : `/help` affiche toutes les catégories (tickets, rôles, modération, utilitaires, fun, économie, commandes personnalisées) et `/help commande` donne le détail + exemples (ex : `/help ticket`)
 - **🌍 Utilisable par tous, sans compte** : n'importe quel serveur qui ajoute le bot reçoit automatiquement toutes les commandes — aucun compte BotDev nécessaire pour les membres. La modération est réservée aux administrateurs.
+- **🌐 Dashboard public de Nexora** : chaque bot a sa **page publique** (`/bot/id`) avec ses statistiques **synchronisées en direct** (serveurs, membres, latence, uptime), la liste de ses commandes groupées par catégorie et son lien d'invitation — accessible à tous, sans compte. La page d'accueil affiche les stats de la plateforme en temps réel et l'annuaire des bots publics.
 - **📱 Mode application (PWA)** : icône, installation sur l'écran d'accueil, navigation par barre d'onglets sur mobile, chargement hors ligne
 - **Événements** : message de bienvenue (embed, couleur, image), message de départ, auto-rôle
 - **Économie** : solde en coins par serveur, classement consultable dans le dashboard

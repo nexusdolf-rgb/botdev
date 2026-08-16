@@ -5,7 +5,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const store = require('./db');
 const botManager = require('./discord/botManager');
-const { MODULES, CMD_DEFS, enabledModules } = require('./discord/premade');
+const { MODULES, CMD_DEFS, enabledModules, enabledCommandNames } = require('./discord/premade');
 const { EVENT_DEFS, eventsState } = require('./discord/events');
 
 const router = express.Router();
@@ -423,6 +423,67 @@ router.post('/role-menus/:id/send', requireAuth, async (req, res) => {
 router.get('/status/backup', requireAuth, (req, res) => {
   const backup = require('./backup');
   res.json({ enabled: backup.enabled(), repo: backup.repo(), branch: backup.branch() });
+});
+
+// ============================================================
+// Pages publiques (sans connexion) : le dashboard public de Nexora
+// Les stats sont lues EN DIRECT depuis le processus du bot :
+// c'est la synchronisation live entre le dashboard et Discord.
+// ============================================================
+
+// Catégorie d'une commande pré-faite (pour l'affichage groupé)
+function commandCategory(name) {
+  for (const [key, m] of Object.entries(MODULES)) {
+    if (m.commands.includes(name)) return { key, label: m.label, emoji: m.emoji };
+  }
+  return null;
+}
+
+router.get('/public/stats', (req, res) => {
+  const totalBots = store.db.prepare('SELECT COUNT(*) AS n FROM bots').get().n;
+  const live = botManager.platformStats();
+  res.json({ totalBots, ...live });
+});
+
+router.get('/public/bots', (req, res) => {
+  const rows = store.db.prepare('SELECT id, name, avatar_url, bot_username, client_id FROM bots ORDER BY created_at DESC').all();
+  const bots = rows.map((b) => {
+    const info = botManager.publicBotInfo(b.id);
+    return info || {
+      id: b.id, name: b.name, username: b.bot_username || '', avatar_url: b.avatar_url || '',
+      client_id: b.client_id || '', online: false, servers: 0, members: 0, ping: 0, uptime: 0,
+      invite_url: b.client_id ? `https://discord.com/oauth2/authorize?client_id=${b.client_id}&permissions=8&scope=bot%20applications.commands` : '',
+    };
+  });
+  res.json({ bots });
+});
+
+router.get('/public/bots/:id', (req, res) => {
+  const botId = Number(req.params.id);
+  const info = botManager.publicBotInfo(botId);
+  if (!info) return res.status(404).json({ error: 'Bot introuvable' });
+
+  // Commandes disponibles (modules activés + commandes personnalisées)
+  const categories = [];
+  const enabledNames = enabledCommandNames(botId);
+  for (const [key, m] of Object.entries(MODULES)) {
+    const cmds = m.commands.filter((n) => enabledNames.includes(n)).map((n) => ({ name: n, desc: CMD_DEFS[n] ? CMD_DEFS[n].desc : '' }));
+    if (cmds.length) categories.push({ key, label: m.label, emoji: m.emoji, commands: cmds });
+  }
+  const custom = store.commands.all(botId).filter((c) => c.enabled).map((c) => ({
+    name: c.name,
+    desc: c.description || '',
+    trigger: c.trigger_type === 'slash' ? `/${c.name}` : c.trigger_type === 'keyword' ? `mot-clé « ${c.trigger_value} »` : `${store.bots.get(botId).prefix}${c.trigger_value || c.name}`,
+  }));
+
+  res.json({
+    bot: {
+      ...info,
+      categories,
+      custom,
+      public_url: store.settings.get('public_url') || '',
+    },
+  });
 });
 
 module.exports = router;

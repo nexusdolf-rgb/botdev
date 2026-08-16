@@ -89,8 +89,16 @@ App.router.run = async () => {
   const { parts } = App.router.parse();
   const user = App.state.user;
 
+  // 🌐 Page publique d'un bot : accessible à tous, connecté ou non
+  if (parts[0] === 'bot' && parts[1]) {
+    App.renderPublicBot(Number(parts[1]));
+    return;
+  }
+
   if (!user) {
-    App.renderAuth(parts[0] === 'register' ? 'register' : 'login');
+    if (parts[0] === 'register') { App.renderAuth('register'); return; }
+    if (parts[0] === 'login') { App.renderAuth('login'); return; }
+    App.renderPublicLanding();
     return;
   }
 
@@ -328,6 +336,7 @@ App.renderBotHeader = (shell, bot) => {
         <div class="sub">${bot.bot_username ? '@' + App.escapeHtml(bot.bot_username) : 'Bot non connecté'} · ${bot.commands_count} commande(s)</div>
       </div>
       <div class="bot-header-actions">
+        <button class="btn btn-ghost" id="view-public" title="Voir la page publique du bot">🌐</button>
         <span class="status-pill"><span class="dot ${bot.online ? 'dot-online' : 'dot-offline'}"></span>${bot.online ? 'En ligne' : 'Hors ligne'}</span>
         <button class="btn" id="start-stop">${bot.online ? '⏹ Arrêter' : '▶ Démarrer'}</button>
         <button class="btn btn-primary" id="invite" ${bot.invite_url ? '' : 'disabled'}>➕ Inviter</button>
@@ -335,6 +344,7 @@ App.renderBotHeader = (shell, bot) => {
     </div>
   `);
   header.querySelector('#back').onclick = () => App.router.go('/dashboard');
+  header.querySelector('#view-public').onclick = () => App.router.go(`/bot/${bot.id}`);
   header.querySelector('#invite').onclick = () => {
     navigator.clipboard.writeText(bot.invite_url).then(() => App.toast('Lien d\'invitation copié !'));
   };

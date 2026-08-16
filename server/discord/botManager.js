@@ -54,6 +54,7 @@ async function connect(botId, record, intents, degradedHint) {
   });
 
   const entry = { client, record };
+  entry.startedAt = Date.now();
   clients.set(botId, entry);
 
   attachListeners(botId, entry);
@@ -212,4 +213,44 @@ async function applyBotAbout(botId, entry) {
   }
 }
 
-module.exports = { clients, getClient, isOnline, loginBot, logoutBot, stopAll, syncSlashCommands, applyPresence, applyBotAbout };
+// ---------------------- Stats publiques (dashboard public, synchro live) ----------------------
+// Lues en direct depuis le processus du bot : ce sont les vraies données Discord.
+function publicBotInfo(botId) {
+  const record = store.bots.get(botId);
+  if (!record) return null;
+  const entry = clients.get(botId);
+  const online = !!(entry && entry.client.isReady());
+  let servers = 0, members = 0, ping = 0, uptime = 0;
+  if (online) {
+    for (const g of entry.client.guilds.cache.values()) { servers++; members += g.memberCount || 0; }
+    ping = entry.client.ws.ping;
+    uptime = entry.startedAt ? Math.floor((Date.now() - entry.startedAt) / 1000) : 0;
+  }
+  return {
+    id: record.id,
+    name: record.name,
+    username: record.bot_username || '',
+    avatar_url: record.avatar_url || '',
+    client_id: record.client_id || '',
+    online,
+    servers,
+    members,
+    ping,
+    uptime,
+    invite_url: record.client_id
+      ? `https://discord.com/oauth2/authorize?client_id=${record.client_id}&permissions=8&scope=bot%20applications.commands`
+      : '',
+  };
+}
+
+function platformStats() {
+  let onlineBots = 0, servers = 0, members = 0;
+  for (const entry of clients.values()) {
+    if (!entry.client.isReady()) continue;
+    onlineBots++;
+    for (const g of entry.client.guilds.cache.values()) { servers++; members += g.memberCount || 0; }
+  }
+  return { onlineBots, servers, members };
+}
+
+module.exports = { clients, getClient, isOnline, loginBot, logoutBot, stopAll, syncSlashCommands, applyPresence, applyBotAbout, publicBotInfo, platformStats };

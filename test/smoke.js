@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
-const dom = new JSDOM(html, { url: 'http://localhost:3000/#/login', runScripts: 'outside-only', pretendToBeVisual: true });
+const dom = new JSDOM(html, { url: 'http://localhost:3000/#/', runScripts: 'outside-only', pretendToBeVisual: true });
 
 const window = dom.window;
 global.window = window;
@@ -23,7 +23,7 @@ window.__finish = (n) => process.exit(n === 0 ? 0 : 1);
 
 window.fetch = async () => ({ ok: false, status: 401, json: async () => ({}) });
 
-const scripts = ['app.js', 'editor.js', 'views.js']
+const scripts = ['app.js', 'editor.js', 'views.js', 'public.js']
   .map(f => fs.readFileSync(path.join(__dirname, '..', 'public', 'js', f), 'utf8'))
   .join('\n;\n');
 
@@ -34,6 +34,10 @@ setTimeout(() => {
   check('Editor défini', typeof Editor === 'object');
   check('BotViews défini', typeof BotViews === 'object');
   check('BLOCK_CATEGORIES', Array.isArray(BLOCK_CATEGORIES) && BLOCK_CATEGORIES.length === 4);
+  check('Page publique rendue (landing)', !!document.querySelector('#public-landing'));
+  check('Stats publiques présentes', !!document.querySelector('#pub-stats'));
+  check('Section bots publiques', !!document.querySelector('#pub-bots'));
+  App.renderAuth('login');
   check('Page auth rendue', !!document.querySelector('.auth-wrap'));
   check('Champ email présent', !!document.querySelector('#auth-email'));
 
