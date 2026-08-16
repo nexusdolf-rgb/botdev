@@ -64,7 +64,7 @@ async function connect(botId, record, intents, degradedHint) {
     return { already: false, degraded: !!degradedHint };
   } catch (err) {
     clients.delete(botId);
-    client.destroy().catch(() => {});
+    try { client.destroy(); } catch {}
     store.bots.update(botId, { enabled: 0, last_error: friendlyError(err) });
     throw err;
   }
@@ -85,8 +85,13 @@ async function logoutBot(botId) {
   store.bots.update(botId, { enabled: 0, last_error: '' });
 }
 
+// Arrêt complet au shutdown du serveur : on coupe les connexions SANS
+// marquer les bots désactivés, pour qu'ils se reconnectent au prochain démarrage.
 async function stopAll() {
-  for (const id of [...clients.keys()]) await logoutBot(id);
+  for (const [id, entry] of clients) {
+    try { entry.client.destroy(); } catch {}
+    clients.delete(id);
+  }
 }
 
 // ---------------------- Écouteurs ----------------------
@@ -140,10 +145,14 @@ function applyPresence(record) {
   const entry = clients.get(record.id);
   if (!entry) return;
   const { client } = entry;
-  client.user.setPresence({
-    status: record.status_type || 'online',
-    activities: record.status_text ? [{ name: record.status_text, type: 3 }] : [],
-  }).catch(() => {});
+  try {
+    client.user.setPresence({
+      status: record.status_type || 'online',
+      activities: record.status_text ? [{ name: record.status_text, type: 3 }] : [],
+    });
+  } catch (e) {
+    console.error('[BotDev] presence error:', e.message);
+  }
 }
 
 // ---------------------- Commandes slash ----------------------

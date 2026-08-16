@@ -68,6 +68,10 @@ function buildSlashPayloads(botId) {
     if (['avatar', 'userinfo', 'kick', 'ban', 'timeout', 'warn', 'warns', 'balance'].includes(name)) {
       options.push({ name: 'utilisateur', description: 'L\'utilisateur ciblé', type: ApplicationCommandOptionType.User, required: ['kick', 'ban', 'timeout', 'warn'].includes(name) });
     }
+    // IMPORTANT : Discord exige que les options requises soient placées avant les optionnelles
+    if (['timeout'].includes(name)) {
+      options.push({ name: 'minutes', description: 'Durée en minutes', type: ApplicationCommandOptionType.Integer, required: true });
+    }
     if (['kick', 'ban', 'timeout', 'warn'].includes(name)) {
       options.push({ name: 'raison', description: 'La raison', type: ApplicationCommandOptionType.String, required: false });
     }
@@ -80,9 +84,6 @@ function buildSlashPayloads(botId) {
     if (['roll'].includes(name)) {
       options.push({ name: 'max', description: 'Valeur max (défaut 6)', type: ApplicationCommandOptionType.Integer, required: false });
     }
-    if (['timeout'].includes(name)) {
-      options.push({ name: 'minutes', description: 'Durée en minutes', type: ApplicationCommandOptionType.Integer, required: true });
-    }
     if (['unban'].includes(name)) {
       options.push({ name: 'identifiant', description: 'ID de l\'utilisateur à débannir', type: ApplicationCommandOptionType.String, required: true });
     }
@@ -92,12 +93,15 @@ function buildSlashPayloads(botId) {
       payloads.push({
         name: c.name.toLowerCase().replace(/[^a-z0-9\-_]/g, '-').slice(0, 32),
         description: (c.description || 'Commande BotDev').slice(0, 100),
-        options: JSON.parse(c.options || '[]').slice(0, 25).map(o => ({
-          name: (o.name || 'option').toLowerCase().slice(0, 32),
-          description: (o.description || '').slice(0, 100),
-          type: optionType(o.type),
-          required: !!o.required,
-        })),
+        options: JSON.parse(c.options || '[]')
+          .slice(0, 25)
+          .map(o => ({
+            name: (o.name || 'option').toLowerCase().slice(0, 32),
+            description: (o.description || '').slice(0, 100),
+            type: optionType(o.type),
+            required: !!o.required,
+          }))
+          .sort((a, b) => (b.required ? 1 : 0) - (a.required ? 1 : 0)),
       });
     }
     payloads.push({
