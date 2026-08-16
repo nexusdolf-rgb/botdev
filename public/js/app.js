@@ -346,8 +346,9 @@ App.renderBotHeader = (shell, bot) => {
         await App.api(`/bots/${bot.id}/stop`, { method: 'POST' });
         App.toast('Bot arrêté.');
       } else {
-        await App.api(`/bots/${bot.id}/start`, { method: 'POST' });
-        App.toast('Bot démarré ! 🚀');
+        const r = await App.api(`/bots/${bot.id}/start`, { method: 'POST' });
+        if (r.degraded) App.toast('Bot en ligne, mais mode réduit : active les intents ! (détails dans Vue d\'ensemble)', 'error');
+        else App.toast('Bot démarré ! 🚀');
       }
     } catch (e) { App.toast(e.message, 'error'); }
     App.renderBot();

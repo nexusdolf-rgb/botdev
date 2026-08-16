@@ -119,12 +119,14 @@ router.get('/bots/:id', requireAuth, (req, res) => {
 router.patch('/bots/:id', requireAuth, (req, res) => {
   const bot = getOwnBot(req, res);
   if (!bot) return;
-  const { name, prefix, status_text, status_type } = req.body || {};
+  const { name, prefix, status_text, status_type, token, client_id } = req.body || {};
   const fields = {};
   if (name !== undefined) fields.name = String(name).slice(0, 32);
   if (prefix !== undefined) fields.prefix = String(prefix).slice(0, 5);
   if (status_text !== undefined) fields.status_text = String(status_text).slice(0, 128);
   if (status_type !== undefined) fields.status_type = ['online', 'idle', 'dnd', 'invisible'].includes(status_type) ? status_type : 'online';
+  if (token !== undefined && String(token).trim()) fields.token = String(token).trim();
+  if (client_id !== undefined) fields.client_id = String(client_id).trim();
   store.bots.update(bot.id, fields);
   botManager.applyPresence(store.bots.get(bot.id));
   res.json({ ok: true });

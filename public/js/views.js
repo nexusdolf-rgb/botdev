@@ -25,6 +25,10 @@ BotViews.renderOverview = async (content, bot) => {
         <div class="stat-card"><div class="val">${enabledMods}/4</div><div class="lbl">Modules actifs</div></div>
         <div class="stat-card"><div class="val">${enabledEvents}/3</div><div class="lbl">Événements actifs</div></div>
       </div>
+      ${fresh.last_error ? `<div class="card" style="border-color:rgba(254,231,92,.45);background:rgba(254,231,92,.04)">
+        <h3>⚠️ À corriger</h3>
+        <div class="card-sub" style="margin-bottom:0">${App.escapeHtml(fresh.last_error)}</div>
+      </div>` : ''}
       <div class="card">
         <div class="card-head-row">
           <div>
@@ -306,6 +310,10 @@ BotViews.renderSettings = async (content, bot) => {
       <h3>🖊️ Général</h3>
       <label class="field-label">Préfixe des commandes</label>
       <input class="input" id="s-prefix" maxlength="5" value="${App.escapeHtml(bot.prefix)}" style="max-width:200px" />
+      <label class="field-label">Application ID (invitations + commandes slash)</label>
+      <input class="input" id="s-client" value="${App.escapeHtml(bot.client_id || '')}" placeholder="123456789012345678" />
+      <label class="field-label">Token Discord (laisser vide pour ne pas changer)</label>
+      <input class="input" id="s-token" type="password" autocomplete="off" placeholder="Colle un nouveau token uniquement si tu veux le remplacer" />
       <label class="field-label">Statut du bot (texte affiché)</label>
       <input class="input" id="s-status" maxlength="128" value="${App.escapeHtml(bot.status_text)}" placeholder="Joue à …" />
       <label class="field-label">Présence</label>
@@ -322,16 +330,18 @@ BotViews.renderSettings = async (content, bot) => {
   `);
   el.querySelector('#s-save').onclick = async () => {
     try {
-      await App.api(`/bots/${bot.id}`, {
-        method: 'PATCH',
-        body: {
-          prefix: el.querySelector('#s-prefix').value.trim() || '!',
-          status_text: el.querySelector('#s-status').value,
-          status_type: el.querySelector('#s-type').value,
-        },
-      });
-      App.toast('Réglages enregistrés !');
+      const body = {
+        prefix: el.querySelector('#s-prefix').value.trim() || '!',
+        status_text: el.querySelector('#s-status').value,
+        status_type: el.querySelector('#s-type').value,
+        client_id: el.querySelector('#s-client').value.trim(),
+      };
+      const newToken = el.querySelector('#s-token').value.trim();
+      if (newToken) body.token = newToken;
+      await App.api(`/bots/${bot.id}`, { method: 'PATCH', body });
+      App.toast(newToken ? 'Réglages enregistrés ! Nouveau token actif après redémarrage du bot.' : 'Réglages enregistrés !');
       App.state.bot = { ...bot, prefix: el.querySelector('#s-prefix').value.trim() || '!' };
+      el.querySelector('#s-token').value = '';
     } catch (e) { App.toast(e.message, 'error'); }
   };
   el.querySelector('#s-delete').onclick = async () => {

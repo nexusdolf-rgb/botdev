@@ -116,7 +116,7 @@ const bots = {
   get: (id) => db.prepare('SELECT * FROM bots WHERE id = ?').get(id),
   create: (data) => db.prepare(`INSERT INTO bots (user_id, name, token, client_id, prefix) VALUES (@user_id, @name, @token, @client_id, @prefix)`).run(data).lastInsertRowid,
   update: (id, fields) => {
-    const allowed = ['name', 'prefix', 'status_text', 'status_type', 'enabled', 'last_error', 'avatar_url', 'bot_username', 'client_id'];
+    const allowed = ['name', 'prefix', 'status_text', 'status_type', 'enabled', 'last_error', 'avatar_url', 'bot_username', 'client_id', 'token'];
     const sets = [], vals = [];
     for (const k of allowed) if (k in fields) { sets.push(`${k} = ?`); vals.push(fields[k]); }
     if (!sets.length) return;

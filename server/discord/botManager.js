@@ -30,8 +30,25 @@ async function loginBot(botId) {
   const existing = clients.get(botId);
   if (existing) return { already: true };
 
+  try {
+    return await connect(botId, record, INTENTS, '');
+  } catch (err) {
+    // Repli : intents privilégiés refusés par Discord → connexion minimale
+    if (String(err.message || err).toLowerCase().includes('intent')) {
+      try {
+        return await connect(botId, record, [GatewayIntentBits.Guilds],
+          '⚠️ Intents à activer : dans le portail développeur Discord (onglet Bot), active « SERVER MEMBERS INTENT » et « MESSAGE CONTENT INTENT », puis redémarre ce bot. Sans eux, les commandes et événements ne fonctionnent pas.');
+      } catch (err2) {
+        throw err2;
+      }
+    }
+    throw err;
+  }
+}
+
+async function connect(botId, record, intents, degradedHint) {
   const client = new Client({
-    intents: INTENTS,
+    intents,
     partials: [Partials.Channel],
     presence: { status: record.status_type || 'online' },
   });
@@ -43,8 +60,8 @@ async function loginBot(botId) {
 
   try {
     await client.login(record.token);
-    store.bots.update(botId, { enabled: 1, last_error: '' });
-    return { already: false };
+    store.bots.update(botId, { enabled: 1, last_error: degradedHint });
+    return { already: false, degraded: !!degradedHint };
   } catch (err) {
     clients.delete(botId);
     client.destroy().catch(() => {});
