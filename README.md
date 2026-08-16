@@ -15,9 +15,10 @@
   - Variables : `{user}`, `{args}`, `{server}`, `{coins}`, `{random.user}`…
   - Cooldowns par commande, boutons reliés à d'autres commandes
 - **Modules pré-faits en 1 clic** : Modération (kick, ban, warn, timeout, clear…), Utilitaires (ping, avatar, serverinfo…), Fun (8ball, meme, coinflip…), Économie (daily, balance, leaderboard) — **activés automatiquement à la création du bot**
-- **Panneaux interactifs** :
-  - 🎫 **Système de tickets** : bouton → salon privé automatique par membre (avec rôle staff + bouton fermeture)
-  - 📋 **Menus de rôles** : menus déroulants où les membres choisissent leurs rôles
+- **Panneaux interactifs** (configuration par serveur, depuis le dashboard OU depuis Discord) :
+  - 🎫 **Système de tickets façon Ticket Tool** : bouton → salon privé automatique par membre (rôle staff, catégorie, bouton fermeture). Tout se configure sur Discord : `/ticket channel`, `/ticket role`, `/ticket category`, `/ticket button`, `/ticket message`, `/ticket panel`, `/ticket config`, `/ticket close`, `/ticket add`, `/ticket remove`
+  - 📋 **Menus de rôles** : menus déroulants où les membres choisissent leurs rôles (`/roles list`, `/roles send`)
+- **📱 Mode application (PWA)** : icône, installation sur l'écran d'accueil, navigation par barre d'onglets sur mobile, chargement hors ligne
 - **Événements** : message de bienvenue (embed, couleur, image), message de départ, auto-rôle
 - **Économie** : solde en coins par serveur, classement consultable dans le dashboard
 

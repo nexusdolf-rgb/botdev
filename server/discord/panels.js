@@ -26,6 +26,19 @@ async function findChannel(client, query) {
   return null;
 }
 
+// Recherche dans UN SEUL serveur (config par serveur)
+function findChannelInGuild(guild, query) {
+  const q = String(query || '').trim();
+  if (!q || !guild) return null;
+  const idMatch = q.match(/(\d{15,21})/);
+  if (idMatch) {
+    const c = guild.channels.cache.get(idMatch[1]);
+    if (c) return c;
+  }
+  const name = q.replace(/^#/, '').toLowerCase();
+  return guild.channels.cache.find(ch => ch.name.toLowerCase() === name && ch.isTextBased()) || null;
+}
+
 function resolveRole(guild, nameOrId) {
   const q = String(nameOrId || '').trim();
   if (!q) return null;
@@ -41,6 +54,11 @@ function resolveRole(guild, nameOrId) {
 // Retourne true si l'interaction a été traitée ici.
 async function dispatchPanels(botId, interaction) {
   try {
+    if (interaction.isChatInputCommand() && ['ticket', 'roles'].includes(interaction.commandName)) {
+      const { handlePanelCommand } = require('./panelCommands');
+      await handlePanelCommand(botId, interaction);
+      return true;
+    }
     if (interaction.isButton()) {
       const id = interaction.customId || '';
       if (id === `bd-ticket:${botId}`) { await handleTicketButton(botId, interaction); return true; }
@@ -68,8 +86,8 @@ async function dispatchPanels(botId, interaction) {
 }
 
 // ---------------------- Tickets ----------------------
-async function sendTicketPanel(botId, client, channel) {
-  const cfg = store.tickets.get(botId);
+async function sendTicketPanel(botId, guildId, client, channel) {
+  const cfg = store.tickets.get(botId, guildId);
   if (!cfg) throw new Error('Configuration des tickets introuvable');
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
@@ -81,9 +99,9 @@ async function sendTicketPanel(botId, client, channel) {
 }
 
 async function handleTicketButton(botId, interaction) {
-  const cfg = store.tickets.get(botId);
-  if (!cfg) return interaction.reply({ content: '⚠️ Les tickets ne sont pas configurés.', ephemeral: true });
   const guild = interaction.guild;
+  const cfg = store.tickets.get(botId, guild.id);
+  if (!cfg) return interaction.reply({ content: '⚠️ Les tickets ne sont pas configurés.', ephemeral: true });
   const member = interaction.member;
   const uname = (member.user.username || 'membre').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20) || 'membre';
 
@@ -186,4 +204,4 @@ async function handleRoleMenu(botId, interaction, menuId) {
   });
 }
 
-module.exports = { dispatchPanels, sendTicketPanel, sendRoleMenu, findChannel };
+module.exports = { dispatchPanels, sendTicketPanel, sendRoleMenu, findChannel, findChannelInGuild, resolveRole };

@@ -295,25 +295,30 @@ const panels = require('./discord/panels');
 router.get('/bots/:id/panels', requireAuth, (req, res) => {
   const bot = getOwnBot(req, res);
   if (!bot) return;
+  const { guild_id } = req.query;
+  if (!guild_id) return res.status(400).json({ error: 'guild_id requis' });
+  const cfg = store.tickets.get(bot.id, guild_id);
   res.json({
-    tickets: store.tickets.get(bot.id) || {
+    tickets: cfg || {
       channel: '', message: '🎫 Besoin d\'aide ? Clique sur le bouton pour ouvrir un ticket !',
       button_label: '🎫 Ouvrir un ticket', support_role: '', category: 'Tickets',
     },
-    role_menus: store.roleMenus.all(bot.id),
+    role_menus: store.roleMenus.all(bot.id, guild_id),
   });
 });
 
 router.put('/bots/:id/tickets', requireAuth, (req, res) => {
   const bot = getOwnBot(req, res);
   if (!bot) return;
-  const { channel, message, button_label, support_role, category } = req.body || {};
-  store.tickets.set(bot.id, {
-    channel: String(channel || '').slice(0, 100),
-    message: String(message || '').slice(0, 1900),
-    button_label: String(button_label || '🎫 Ouvrir un ticket').slice(0, 80),
-    support_role: String(support_role || '').slice(0, 100),
-    category: String(category || '').slice(0, 100),
+  const { guild_id, channel, message, button_label, support_role, category } = req.body || {};
+  if (!guild_id) return res.status(400).json({ error: 'guild_id requis' });
+  const current = store.tickets.get(bot.id, guild_id) || {};
+  store.tickets.set(bot.id, guild_id, {
+    channel: String(channel !== undefined ? channel : (current.channel || '')).slice(0, 100),
+    message: String(message !== undefined ? message : (current.message || '')).slice(0, 1900),
+    button_label: String(button_label !== undefined ? button_label : (current.button_label || '🎫 Ouvrir un ticket')).slice(0, 80),
+    support_role: String(support_role !== undefined ? support_role : (current.support_role || '')).slice(0, 100),
+    category: String(category !== undefined ? category : (current.category || 'Tickets')).slice(0, 100),
   });
   res.json({ ok: true });
 });
@@ -321,14 +326,18 @@ router.put('/bots/:id/tickets', requireAuth, (req, res) => {
 router.post('/bots/:id/tickets/send', requireAuth, async (req, res) => {
   const bot = getOwnBot(req, res);
   if (!bot) return;
+  const { guild_id } = req.body || {};
+  if (!guild_id) return res.status(400).json({ error: 'guild_id requis' });
   if (!botManager.isOnline(bot.id)) return res.status(400).json({ error: 'Démarre le bot avant d\'envoyer un panneau.' });
-  const cfg = store.tickets.get(bot.id);
+  const cfg = store.tickets.get(bot.id, guild_id);
   if (!cfg || !cfg.channel) return res.status(400).json({ error: 'Configure d\'abord le salon du panneau.' });
   const entry = botManager.clients.get(bot.id);
+  const guild = entry.client.guilds.cache.get(guild_id);
+  if (!guild) return res.status(400).json({ error: 'Le bot n\'est pas sur ce serveur.' });
   try {
-    const channel = await panels.findChannel(entry.client, cfg.channel);
+    const channel = panels.findChannelInGuild(guild, cfg.channel);
     if (!channel) return res.status(400).json({ error: 'Salon introuvable. Vérifie le salon (mention #salon ou nom).' });
-    await panels.sendTicketPanel(bot.id, entry.client, channel);
+    await panels.sendTicketPanel(bot.id, guild_id, entry.client, channel);
     res.json({ ok: true });
   } catch (e) {
     res.status(400).json({ error: e.message.slice(0, 200) });
@@ -338,10 +347,12 @@ router.post('/bots/:id/tickets/send', requireAuth, async (req, res) => {
 router.post('/bots/:id/role-menus', requireAuth, (req, res) => {
   const bot = getOwnBot(req, res);
   if (!bot) return;
-  const { name, content, placeholder, channel, options } = req.body || {};
+  const { guild_id, name, content, placeholder, channel, options } = req.body || {};
+  if (!guild_id) return res.status(400).json({ error: 'guild_id requis' });
   if (!Array.isArray(options) || !options.length) return res.status(400).json({ error: 'Ajoute au moins un rôle au menu.' });
   const id = store.roleMenus.create({
     bot_id: bot.id,
+    guild_id,
     name: String(name || 'Menu de rôles').slice(0, 50),
     content: String(content || '').slice(0, 1900),
     placeholder: String(placeholder || 'Choisis tes rôles…').slice(0, 150),
@@ -395,8 +406,10 @@ router.post('/role-menus/:id/send', requireAuth, async (req, res) => {
   if (!botManager.isOnline(bot.id)) return res.status(400).json({ error: 'Démarre le bot avant d\'envoyer un menu.' });
   if (!menu.channel) return res.status(400).json({ error: 'Renseigne d\'abord le salon du menu.' });
   const entry = botManager.clients.get(bot.id);
+  const guild = entry.client.guilds.cache.get(menu.guild_id);
+  if (!guild) return res.status(400).json({ error: 'Le bot n\'est pas sur ce serveur.' });
   try {
-    const channel = await panels.findChannel(entry.client, menu.channel);
+    const channel = panels.findChannelInGuild(guild, menu.channel);
     if (!channel) return res.status(400).json({ error: 'Salon introuvable. Vérifie le salon (mention #salon ou nom).' });
     await panels.sendRoleMenu(bot.id, entry.client, menu, channel);
     res.json({ ok: true });

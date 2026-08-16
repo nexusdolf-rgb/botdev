@@ -110,6 +110,55 @@ function buildSlashPayloads(botId) {
       options,
     });
   }
+
+  // Commandes de gestion des panneaux (toujours disponibles, admin uniquement)
+  payloads.push({
+    name: 'ticket',
+    description: '🎫 Configurer et gérer le système de tickets',
+    default_member_permissions: '8',
+    options: [
+      { name: 'channel', description: 'Définir le salon du panneau de tickets', type: ApplicationCommandOptionType.Subcommand, options: [
+        { name: 'salon', description: 'Le salon où sera envoyé le panneau', type: ApplicationCommandOptionType.Channel, required: true },
+      ]},
+      { name: 'category', description: 'Définir la catégorie des salons de tickets', type: ApplicationCommandOptionType.Subcommand, options: [
+        { name: 'nom', description: 'Nom de la catégorie', type: ApplicationCommandOptionType.String, required: true },
+      ]},
+      { name: 'role', description: 'Définir le rôle du staff (accès à tous les tickets)', type: ApplicationCommandOptionType.Subcommand, options: [
+        { name: 'role', description: 'Le rôle staff', type: ApplicationCommandOptionType.Role, required: true },
+      ]},
+      { name: 'button', description: 'Changer le texte du bouton', type: ApplicationCommandOptionType.Subcommand, options: [
+        { name: 'texte', description: 'Texte du bouton', type: ApplicationCommandOptionType.String, required: true },
+      ]},
+      { name: 'message', description: 'Changer le message affiché sur le panneau', type: ApplicationCommandOptionType.Subcommand, options: [
+        { name: 'texte', description: 'Message du panneau', type: ApplicationCommandOptionType.String, required: true },
+      ]},
+      { name: 'panel', description: 'Envoyer le panneau de tickets', type: ApplicationCommandOptionType.Subcommand, options: [
+        { name: 'salon', description: 'Salon (défaut : salon configuré ou salon actuel)', type: ApplicationCommandOptionType.Channel, required: false },
+      ]},
+      { name: 'config', description: 'Voir la configuration actuelle', type: ApplicationCommandOptionType.Subcommand },
+      { name: 'close', description: 'Fermer le ticket actuel', type: ApplicationCommandOptionType.Subcommand },
+      { name: 'add', description: 'Autoriser un membre à voir ce ticket', type: ApplicationCommandOptionType.Subcommand, options: [
+        { name: 'membre', description: 'Le membre à ajouter', type: ApplicationCommandOptionType.User, required: true },
+      ]},
+      { name: 'remove', description: 'Retirer un membre de ce ticket', type: ApplicationCommandOptionType.Subcommand, options: [
+        { name: 'membre', description: 'Le membre à retirer', type: ApplicationCommandOptionType.User, required: true },
+      ]},
+    ],
+  });
+
+  payloads.push({
+    name: 'roles',
+    description: '📋 Gérer les menus de rôles',
+    default_member_permissions: '8',
+    options: [
+      { name: 'list', description: 'Lister les menus de rôles de ce serveur', type: ApplicationCommandOptionType.Subcommand },
+      { name: 'send', description: 'Envoyer un menu de rôles', type: ApplicationCommandOptionType.Subcommand, options: [
+        { name: 'numero', description: 'Numéro du menu (voir /roles list)', type: ApplicationCommandOptionType.Integer, required: true },
+        { name: 'salon', description: 'Salon (défaut : salon configuré ou salon actuel)', type: ApplicationCommandOptionType.Channel, required: false },
+      ]},
+    ],
+  });
+
   return payloads;
 }
 

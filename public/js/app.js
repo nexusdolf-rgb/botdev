@@ -376,6 +376,13 @@ App.renderBotBody = (shell, bot) => {
   layout.appendChild(content);
   shell.appendChild(layout);
 
+  // Barre de navigation mobile (façon application)
+  const mobileNav = App.el(`<nav class="mobile-nav">${tabs.map(([id, ico, label]) =>
+    `<button class="${App.state.tab === id ? 'active' : ''}" data-tab="${id}"><span class="ico">${ico}</span>${label}</button>`
+  ).join('')}</nav>`);
+  mobileNav.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => App.router.go(`/bots/${bot.id}/${b.dataset.tab}`));
+  shell.appendChild(mobileNav);
+
   switch (App.state.tab) {
     case 'commands': BotViews.renderCommands(content, bot); break;
     case 'modules': BotViews.renderModules(content, bot); break;

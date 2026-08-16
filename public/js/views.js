@@ -255,126 +255,167 @@ BotViews.renderEvents = async (content, bot) => {
 // ---------------------- Panneaux (tickets + menus de rôles) ----------------------
 BotViews.renderPanels = async (content, bot) => {
   content.innerHTML = '<div class="spinner"></div>';
-  let data;
+  let fresh;
   try {
-    data = await App.api(`/bots/${bot.id}/panels`);
+    const r = await App.api(`/bots/${bot.id}`);
+    fresh = r.bot;
+    App.state.bot = fresh;
   } catch (e) {
     content.innerHTML = `<div class="empty-state">${App.escapeHtml(e.message)}</div>`;
     return;
   }
-  const { tickets, role_menus } = data;
+  if (!fresh.online || !fresh.guilds.length) {
+    content.innerHTML = `<div class="empty-state"><div class="big">🎛️</div>Démarre le bot et invite-le sur un serveur pour configurer les panneaux.</div>`;
+    return;
+  }
+
   const el = BotViews.setContent(content, `
     <h2 style="font-size:19px">🎛️ Panneaux</h2>
-    <p class="card-sub">Tes membres interagissent avec des boutons et des menus déroulants.</p>
+    <p class="card-sub">Configure tout ici OU directement sur Discord avec <b>/ticket</b> et <b>/roles</b> (comme Ticket Tool).</p>
+    <div class="card" style="padding:16px 22px">
+      <label class="field-label">Serveur</label>
+      <select class="select" id="panel-guild" style="max-width:380px">
+        ${fresh.guilds.map(g => `<option value="${g.id}">${App.escapeHtml(g.name)}</option>`).join('')}
+      </select>
+    </div>
     <div id="panels-wrap"></div>
   `);
+  const guildPick = el.querySelector('#panel-guild');
   const wrap = el.querySelector('#panels-wrap');
 
-  // ---------- Tickets ----------
-  const tCard = App.el(`
-    <div class="card">
-      <h3>🎫 Système de tickets</h3>
-      <div class="card-sub">Un bouton dans un salon : chaque clic crée un salon privé réservé au membre (et au staff).</div>
-      <div style="max-width:560px">
-        <label class="field-label">Salon du panneau (mention, ex : #support)</label>
-        <input class="input" id="t-channel" value="${App.escapeHtml(tickets.channel || '')}" placeholder="#support" />
-        <label class="field-label">Message du panneau</label>
-        <textarea class="input" id="t-message" rows="2">${App.escapeHtml(tickets.message || '')}</textarea>
-        <label class="field-label">Texte du bouton</label>
-        <input class="input" id="t-label" value="${App.escapeHtml(tickets.button_label || '')}" />
-        <label class="field-label">Rôle du staff (peut voir les tickets, optionnel)</label>
-        <input class="input" id="t-role" value="${App.escapeHtml(tickets.support_role || '')}" placeholder="Staff" />
-        <label class="field-label">Catégorie (créée automatiquement si absente)</label>
-        <input class="input" id="t-cat" value="${App.escapeHtml(tickets.category || '')}" placeholder="Tickets" />
-        <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
-          <button class="btn btn-primary" id="t-save">💾 Enregistrer</button>
-          <button class="btn" id="t-send">📨 Envoyer le panneau</button>
-        </div>
-      </div>
-    </div>
-  `);
-  tCard.querySelector('#t-save').onclick = async () => {
+  const load = async () => {
+    const guildId = guildPick.value;
+    wrap.innerHTML = '<div class="spinner"></div>';
+    let data;
     try {
-      await App.api(`/bots/${bot.id}/tickets`, {
-        method: 'PUT',
-        body: {
-          channel: tCard.querySelector('#t-channel').value.trim(),
-          message: tCard.querySelector('#t-message').value,
-          button_label: tCard.querySelector('#t-label').value.trim() || '🎫 Ouvrir un ticket',
-          support_role: tCard.querySelector('#t-role').value.trim(),
-          category: tCard.querySelector('#t-cat').value.trim() || 'Tickets',
-        },
-      });
-      App.toast('Configuration des tickets enregistrée !');
-    } catch (e) { App.toast(e.message, 'error'); }
-  };
-  tCard.querySelector('#t-send').onclick = async () => {
-    try {
-      await App.api(`/bots/${bot.id}/tickets/send`, { method: 'POST' });
-      App.toast('Panneau de tickets envoyé ! 🎫');
-    } catch (e) { App.toast(e.message, 'error'); }
-  };
-  wrap.appendChild(tCard);
-
-  // ---------- Menus de rôles ----------
-  const rCard = App.el(`
-    <div class="card">
-      <div class="card-head-row">
-        <div>
-          <h3>📋 Menus de rôles</h3>
-          <div class="card-sub" style="margin-bottom:0">Un menu déroulant où les membres choisissent leurs rôles.</div>
-        </div>
-        <button class="btn btn-primary" id="rm-new">＋ Nouveau menu</button>
-      </div>
-      <div id="rm-list" style="margin-top:14px"></div>
-    </div>
-  `);
-  const rmList = rCard.querySelector('#rm-list');
-  const renderMenus = () => {
-    if (!role_menus.length) {
-      rmList.innerHTML = `<div class="empty-state"><div class="big">📋</div>Aucun menu pour l'instant. Crée ton premier menu de rôles !</div>`;
-    } else {
-      rmList.innerHTML = '';
-      role_menus.forEach((m) => {
-        const row = App.el(`
-          <div class="cmd-row">
-            <div>
-              <div class="cname">${App.escapeHtml(m.name)}</div>
-              <div class="cdesc">${m.options.length} rôle(s) · ${m.channel ? 'salon : ' + App.escapeHtml(m.channel) : 'salon non défini'}</div>
-            </div>
-            <div class="right">
-              <button class="btn btn-sm" data-send>📨 Envoyer</button>
-              <button class="icon-btn" data-edit title="Modifier">✏️</button>
-              <button class="icon-btn" data-del title="Supprimer">🗑</button>
-            </div>
-          </div>
-        `);
-        row.querySelector('[data-send]').onclick = async () => {
-          try {
-            await App.api(`/role-menus/${m.id}/send`, { method: 'POST' });
-            App.toast('Menu envoyé ! 📋');
-          } catch (e) { App.toast(e.message, 'error'); }
-        };
-        row.querySelector('[data-edit]').onclick = () => BotViews.openRoleMenuModal(bot, m, role_menus);
-        row.querySelector('[data-del]').onclick = async () => {
-          if (!(await App.confirm(`Supprimer le menu « ${m.name} » ?`))) return;
-          try {
-            await App.api(`/role-menus/${m.id}`, { method: 'DELETE' });
-            App.toast('Menu supprimé.');
-            BotViews.renderPanels(content, bot);
-          } catch (e) { App.toast(e.message, 'error'); }
-        };
-        rmList.appendChild(row);
-      });
+      data = await App.api(`/bots/${bot.id}/panels?guild_id=${guildId}`);
+    } catch (e) {
+      wrap.innerHTML = `<div class="empty-state">${App.escapeHtml(e.message)}</div>`;
+      return;
     }
+    const { tickets, role_menus } = data;
+    wrap.innerHTML = '';
+
+    // ---------- Tickets ----------
+    const tCard = App.el(`
+      <div class="card">
+        <div class="card-head-row">
+          <div>
+            <h3>🎫 Système de tickets</h3>
+            <div class="card-sub">Un bouton dans un salon : chaque clic crée un salon privé réservé au membre (et au staff).</div>
+          </div>
+          <div style="max-width:320px">
+            <div class="help-box" style="font-size:12px">💡 <b>Plus rapide sur Discord :</b><br/>
+            <code>/ticket channel #support</code><br/>
+            <code>/ticket role @Staff</code><br/>
+            <code>/ticket category Tickets</code><br/>
+            <code>/ticket panel</code> (envoie le panneau)</div>
+          </div>
+        </div>
+        <div style="max-width:560px">
+          <label class="field-label">Salon du panneau (mention, ex : #support)</label>
+          <input class="input" id="t-channel" value="${App.escapeHtml(tickets.channel || '')}" placeholder="#support" />
+          <label class="field-label">Message du panneau</label>
+          <textarea class="input" id="t-message" rows="2">${App.escapeHtml(tickets.message || '')}</textarea>
+          <label class="field-label">Texte du bouton</label>
+          <input class="input" id="t-label" value="${App.escapeHtml(tickets.button_label || '')}" />
+          <label class="field-label">Rôle du staff (peut voir les tickets, optionnel)</label>
+          <input class="input" id="t-role" value="${App.escapeHtml(tickets.support_role || '')}" placeholder="Staff" />
+          <label class="field-label">Catégorie (créée automatiquement si absente)</label>
+          <input class="input" id="t-cat" value="${App.escapeHtml(tickets.category || '')}" placeholder="Tickets" />
+          <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
+            <button class="btn btn-primary" id="t-save">💾 Enregistrer</button>
+            <button class="btn" id="t-send">📨 Envoyer le panneau</button>
+          </div>
+        </div>
+      </div>
+    `);
+    tCard.querySelector('#t-save').onclick = async () => {
+      try {
+        await App.api(`/bots/${bot.id}/tickets`, {
+          method: 'PUT',
+          body: {
+            guild_id: guildId,
+            channel: tCard.querySelector('#t-channel').value.trim(),
+            message: tCard.querySelector('#t-message').value,
+            button_label: tCard.querySelector('#t-label').value.trim() || '🎫 Ouvrir un ticket',
+            support_role: tCard.querySelector('#t-role').value.trim(),
+            category: tCard.querySelector('#t-cat').value.trim() || 'Tickets',
+          },
+        });
+        App.toast('Configuration des tickets enregistrée !');
+      } catch (e) { App.toast(e.message, 'error'); }
+    };
+    tCard.querySelector('#t-send').onclick = async () => {
+      try {
+        await App.api(`/bots/${bot.id}/tickets/send`, { method: 'POST', body: { guild_id: guildId } });
+        App.toast('Panneau de tickets envoyé ! 🎫');
+      } catch (e) { App.toast(e.message, 'error'); }
+    };
+    wrap.appendChild(tCard);
+
+    // ---------- Menus de rôles ----------
+    const rCard = App.el(`
+      <div class="card">
+        <div class="card-head-row">
+          <div>
+            <h3>📋 Menus de rôles</h3>
+            <div class="card-sub" style="margin-bottom:0">Un menu déroulant où les membres choisissent leurs rôles. Envoie-le avec <b>/roles send</b> sur Discord.</div>
+          </div>
+          <button class="btn btn-primary" id="rm-new">＋ Nouveau menu</button>
+        </div>
+        <div id="rm-list" style="margin-top:14px"></div>
+      </div>
+    `);
+    const rmList = rCard.querySelector('#rm-list');
+    const renderMenus = () => {
+      if (!role_menus.length) {
+        rmList.innerHTML = `<div class="empty-state"><div class="big">📋</div>Aucun menu pour l'instant. Crée ton premier menu de rôles !</div>`;
+      } else {
+        rmList.innerHTML = '';
+        role_menus.forEach((m) => {
+          const row = App.el(`
+            <div class="cmd-row">
+              <div>
+                <div class="cname">${App.escapeHtml(m.name)}</div>
+                <div class="cdesc">${m.options.length} rôle(s) · ${m.channel ? 'salon : ' + App.escapeHtml(m.channel) : 'salon non défini'}</div>
+              </div>
+              <div class="right">
+                <button class="btn btn-sm" data-send>📨 Envoyer</button>
+                <button class="icon-btn" data-edit title="Modifier">✏️</button>
+                <button class="icon-btn" data-del title="Supprimer">🗑</button>
+              </div>
+            </div>
+          `);
+          row.querySelector('[data-send]').onclick = async () => {
+            try {
+              await App.api(`/role-menus/${m.id}/send`, { method: 'POST' });
+              App.toast('Menu envoyé ! 📋');
+            } catch (e) { App.toast(e.message, 'error'); }
+          };
+          row.querySelector('[data-edit]').onclick = () => BotViews.openRoleMenuModal(bot, guildId, m);
+          row.querySelector('[data-del]').onclick = async () => {
+            if (!(await App.confirm(`Supprimer le menu « ${m.name} » ?`))) return;
+            try {
+              await App.api(`/role-menus/${m.id}`, { method: 'DELETE' });
+              App.toast('Menu supprimé.');
+              load();
+            } catch (e) { App.toast(e.message, 'error'); }
+          };
+          rmList.appendChild(row);
+        });
+      }
+    };
+    renderMenus();
+    rCard.querySelector('#rm-new').onclick = () => BotViews.openRoleMenuModal(bot, guildId, null);
+    wrap.appendChild(rCard);
   };
-  renderMenus();
-  rCard.querySelector('#rm-new').onclick = () => BotViews.openRoleMenuModal(bot, null, role_menus);
-  wrap.appendChild(rCard);
+  guildPick.onchange = load;
+  load();
 };
 
 // Éditeur de menu de rôles (modale)
-BotViews.openRoleMenuModal = (bot, menu, menus) => {
+BotViews.openRoleMenuModal = (bot, guildId, menu) => {
   const isEdit = !!menu;
   const data = menu ? JSON.parse(JSON.stringify(menu)) : { name: '', content: '', placeholder: 'Choisis tes rôles…', channel: '', options: [{ label: 'Notifications', emoji: '🔔', role: '' }] };
 
@@ -434,6 +475,7 @@ BotViews.openRoleMenuModal = (bot, menu, menus) => {
 
   document.querySelector('#rm-save').onclick = async () => {
     const payload = {
+      guild_id: guildId,
       name: document.querySelector('#rm-name').value.trim() || 'Menu de rôles',
       content: document.querySelector('#rm-content').value,
       placeholder: document.querySelector('#rm-placeholder').value.trim() || 'Choisis tes rôles…',
