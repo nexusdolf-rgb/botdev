@@ -147,14 +147,16 @@ function isDefaultMessage(msg) {
   return s === LEGACY_DEFAULT_MESSAGE;
 }
 
-function defaultPanelDescription(buttonLabel) {
+function defaultPanelDescription(buttonLabel, hasTypes) {
   return [
     'Bienvenue dans notre **centre d\'assistance** 👋',
     '',
     'Tu as une question, un problème ou une suggestion ? Ouvre un **ticket privé** et notre équipe te répondra aussi vite que possible.',
     '',
     '**Comment ça marche ?**',
-    `1️⃣  Choisis un **type de ticket** ci-dessous (ou clique sur **${buttonLabel}**)`,
+    hasTypes
+      ? '1️⃣  Choisis un **type de ticket** dans le menu déroulant ci-dessous'
+      : `1️⃣  Clique sur **${buttonLabel}** ci-dessous`,
     '2️⃣  Décris ta demande dans le salon privé qui s\'ouvre automatiquement',
     '3️⃣  Notre équipe te répond — c\'est tout !',
   ].join('\n');
@@ -162,7 +164,7 @@ function defaultPanelDescription(buttonLabel) {
 
 function buildTicketPanelEmbed(cfg, client, types) {
   const desc = isDefaultMessage(cfg.message)
-    ? defaultPanelDescription(cfg.button_label || '🎫 Ouvrir un ticket')
+    ? defaultPanelDescription(cfg.button_label || '🎫 Ouvrir un ticket', types.length > 0)
     : String(cfg.message);
   const embed = new EmbedBuilder()
     .setColor('#5865F2')
@@ -193,6 +195,7 @@ async function sendTicketPanel(botId, guildId, client, channel) {
   const types = parseTypes(cfg);
   const rows = [];
   if (types.length) {
+    // Des types existent : seul le menu déroulant est affiché (pas de bouton en dessous)
     const select = new StringSelectMenuBuilder()
       .setCustomId(`bd-ttype:${botId}`)
       .setPlaceholder('🗂️ Choisis le type de ticket…')
@@ -205,13 +208,15 @@ async function sendTicketPanel(botId, guildId, client, channel) {
       select.addOptions(opt);
     }
     rows.push(new ActionRowBuilder().addComponents(select));
+  } else {
+    // Aucun type : simple bouton
+    rows.push(new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`bd-ticket:${botId}`)
+        .setLabel(cfg.button_label || '🎫 Ouvrir un ticket')
+        .setStyle(ButtonStyle.Primary)
+    ));
   }
-  rows.push(new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`bd-ticket:${botId}`)
-      .setLabel(cfg.button_label || '🎫 Ouvrir un ticket')
-      .setStyle(ButtonStyle.Primary)
-  ));
   await channel.send({ embeds: [buildTicketPanelEmbed(cfg, client, types)], components: rows });
 }
 
@@ -272,11 +277,30 @@ async function openTicket(botId, interaction, type) {
   const chosen = type || types[0] || null;
   const prefix = chosen ? slugify(chosen.label) : 'ticket';
   const uname = slugify(member.user.username);
-  const channelName = `${prefix}-${uname}`.slice(0, 32);
+  const baseName = `${prefix}-${uname}`.slice(0, 32);
 
-  const existing = guild.channels.cache.find((c) => c.name === channelName);
-  if (existing) {
-    return interaction.reply({ content: `Tu as déjà un ticket ouvert : ${existing}`, ephemeral: true });
+  // Un ticket n'est « ouvert » que si le membre peut encore le VOIR.
+  // Un ticket fermé (verrouillé) ne bloque donc plus l'ouverture d'un nouveau.
+  const existingOpen = guild.channels.cache.find((c) => {
+    if (!c || !c.name || !c.name.endsWith(`-${uname}`)) return false;
+    try {
+      const perms = c.permissionsFor ? c.permissionsFor(member.id) : null;
+      return perms ? perms.has(PermissionFlagsBits.ViewChannel) : true;
+    } catch { return true; }
+  });
+  if (existingOpen) {
+    const mention = (existingOpen && typeof existingOpen.toString === 'function' && existingOpen.id)
+      ? existingOpen.toString()
+      : (existingOpen && existingOpen.name ? `#${existingOpen.name}` : '');
+    return interaction.reply({ content: `Tu as déjà un ticket ouvert : ${mention}`, ephemeral: true });
+  }
+
+  // Si un ancien salon fermé porte déjà ce nom, on ajoute un suffixe (-2, -3…)
+  let channelName = baseName;
+  let counter = 1;
+  while (guild.channels.cache.find((c) => c && c.name === channelName)) {
+    counter += 1;
+    channelName = `${baseName}-${counter}`.slice(0, 32);
   }
 
   const support = resolveRole(guild, (chosen && chosen.staff_role) || cfg.support_role);

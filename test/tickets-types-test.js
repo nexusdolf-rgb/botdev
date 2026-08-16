@@ -48,7 +48,7 @@ const { buildSlashPayloads } = require('../server/discord/premade');
   const buttonRow = panelPayload.components.find((r) => r.components[0] && r.components[0].data.type === 2);
   assert(selectRow, 'menu déroulant attendu');
   assert(selectRow.components[0].options.length === 2, '2 types attendus');
-  assert(buttonRow.components[0].data.custom_id === 'bd-ticket:1');
+  assert(!buttonRow, 'PAS de bouton générique sous le menu déroulant');
   console.log('1️⃣  Panneau = embed + menu déroulant (Partenariat, Réclamation) + bouton ✅');
 
   // ---------- 2. Sélection d'un type → ticket avec catégorie dédiée ----------
