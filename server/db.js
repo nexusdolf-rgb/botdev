@@ -13,6 +13,10 @@ CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
+  discord_id TEXT DEFAULT '',
+  discord_username TEXT DEFAULT '',
+  discord_avatar TEXT DEFAULT '',
+  discord_guilds TEXT DEFAULT '',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -20,6 +24,13 @@ CREATE TABLE IF NOT EXISTS sessions (
   token TEXT PRIMARY KEY,
   user_id INTEGER NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  expires_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS discord_tokens (
+  user_id INTEGER PRIMARY KEY,
+  access_token TEXT NOT NULL,
+  refresh_token TEXT NOT NULL,
   expires_at TEXT NOT NULL
 );
 
@@ -62,10 +73,20 @@ CREATE TABLE IF NOT EXISTS modules (
 
 CREATE TABLE IF NOT EXISTS events (
   bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
   event_type TEXT NOT NULL,           -- member_join | member_leave | autorole
   enabled INTEGER DEFAULT 0,
   config TEXT DEFAULT '{}',
-  PRIMARY KEY (bot_id, event_type)
+  PRIMARY KEY (bot_id, guild_id, event_type)
+);
+
+CREATE TABLE IF NOT EXISTS guild_settings (
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  prefix TEXT DEFAULT '',
+  warn_limit INTEGER DEFAULT 0,
+  warn_action TEXT DEFAULT 'none',
+  PRIMARY KEY (bot_id, guild_id)
 );
 
 CREATE TABLE IF NOT EXISTS economy (
@@ -120,13 +141,48 @@ CREATE TABLE IF NOT EXISTS settings (
 try { db.exec("ALTER TABLE tickets ADD COLUMN name TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE role_menus ADD COLUMN guild_id TEXT DEFAULT ''"); } catch (e) {}
 
+// Migrations : colonnes Discord (OAuth2)
+try { db.exec("ALTER TABLE users ADD COLUMN discord_id TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN discord_username TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN discord_avatar TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN discord_guilds TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_discord ON users(discord_id) WHERE discord_id != ''"); } catch (e) {}
+
+// L'ancienne table events (globale) n'a pas de colonne guild_id : on la reconstruit
+const eventsCols = db.prepare("PRAGMA table_info(events)").all().map(c => c.name);
+if (!eventsCols.includes('guild_id')) {
+  db.exec('DROP TABLE events');
+  db.exec(`CREATE TABLE events (
+    bot_id INTEGER NOT NULL,
+    guild_id TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    enabled INTEGER DEFAULT 0,
+    config TEXT DEFAULT '{}',
+    PRIMARY KEY (bot_id, guild_id, event_type)
+  )`);
+}
+
 // ---------------------- Utilisateurs & sessions ----------------------
 const users = {
   findByEmail: (email) => db.prepare('SELECT * FROM users WHERE email = ?').get(String(email).toLowerCase().trim()),
-  findById: (id) => db.prepare('SELECT id, email, created_at FROM users WHERE id = ?').get(id),
-  create: (email, hash) => {
-    const r = db.prepare('INSERT INTO users (email, password_hash) VALUES (?, ?)').run(email, hash);
+  findById: (id) => db.prepare('SELECT id, email, discord_id, discord_username, discord_avatar, created_at FROM users WHERE id = ?').get(id),
+  findByDiscordId: (discordId) => db.prepare('SELECT * FROM users WHERE discord_id = ?').get(String(discordId)),
+  create: (email, hash, extra = {}) => {
+    const r = db.prepare('INSERT INTO users (email, password_hash, discord_id, discord_username, discord_avatar) VALUES (?, ?, ?, ?, ?)')
+      .run(email, hash, extra.discord_id || '', extra.discord_username || '', extra.discord_avatar || '');
     return r.lastInsertRowid;
+  },
+  updateDiscord: (id, fields) => {
+    const allowed = ['discord_id', 'discord_username', 'discord_avatar', 'discord_guilds'];
+    const sets = [], vals = [];
+    for (const k of allowed) if (k in fields) { sets.push(`${k} = ?`); vals.push(fields[k]); }
+    if (!sets.length) return;
+    vals.push(id);
+    db.prepare(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
+  },
+  discordGuilds: (id) => {
+    const r = db.prepare('SELECT discord_guilds FROM users WHERE id = ?').get(id);
+    try { return JSON.parse(r ? (r.discord_guilds || '[]') : '[]'); } catch { return []; }
   },
 };
 
@@ -187,16 +243,37 @@ const modules = {
   set: (botId, key, enabled) => db.prepare('INSERT INTO modules (bot_id, module_key, enabled) VALUES (?, ?, ?) ON CONFLICT(bot_id, module_key) DO UPDATE SET enabled = excluded.enabled').run(botId, key, enabled ? 1 : 0),
 };
 
-// ---------------------- Événements ----------------------
+// ---------------------- Jetons Discord (OAuth2) ----------------------
+const discordTokens = {
+  get: (userId) => db.prepare('SELECT * FROM discord_tokens WHERE user_id = ?').get(userId) || null,
+  set: (userId, { access, refresh, expires }) => db.prepare('INSERT INTO discord_tokens (user_id, access_token, refresh_token, expires_at) VALUES (?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET access_token = excluded.access_token, refresh_token = excluded.refresh_token, expires_at = excluded.expires_at')
+    .run(userId, access, refresh, expires),
+  remove: (userId) => db.prepare('DELETE FROM discord_tokens WHERE user_id = ?').run(userId),
+};
+
+// ---------------------- Événements (par serveur) ----------------------
 const events = {
-  all: (botId) => {
-    const rows = db.prepare('SELECT * FROM events WHERE bot_id = ?').all(botId);
+  all: (botId, guildId) => {
+    const rows = db.prepare('SELECT * FROM events WHERE bot_id = ? AND guild_id = ?').all(botId, guildId);
     const out = {};
     rows.forEach(r => out[r.event_type] = { enabled: !!r.enabled, config: JSON.parse(r.config || '{}') });
     return out;
   },
-  set: (botId, type, enabled, config) => db.prepare('INSERT INTO events (bot_id, event_type, enabled, config) VALUES (?, ?, ?, ?) ON CONFLICT(bot_id, event_type) DO UPDATE SET enabled = excluded.enabled, config = excluded.config')
-    .run(botId, type, enabled ? 1 : 0, JSON.stringify(config || {})),
+  set: (botId, guildId, type, enabled, config) => db.prepare('INSERT INTO events (bot_id, guild_id, event_type, enabled, config) VALUES (?, ?, ?, ?, ?) ON CONFLICT(bot_id, guild_id, event_type) DO UPDATE SET enabled = excluded.enabled, config = excluded.config')
+    .run(botId, guildId, type, enabled ? 1 : 0, JSON.stringify(config || {})),
+  countEnabled: (botId) => db.prepare('SELECT COUNT(*) AS n FROM events WHERE bot_id = ? AND enabled = 1').get(botId).n,
+};
+
+// ---------------------- Réglages par serveur (façon DraftBot) ----------------------
+const guildSettings = {
+  get: (botId, guildId) => db.prepare('SELECT * FROM guild_settings WHERE bot_id = ? AND guild_id = ?').get(botId, guildId) || null,
+  set: (botId, guildId, fields) => {
+    const cur = guildSettings.get(botId, guildId) || { prefix: '', warn_limit: 0, warn_action: 'none' };
+    const next = { ...cur, ...fields };
+    db.prepare(`INSERT INTO guild_settings (bot_id, guild_id, prefix, warn_limit, warn_action) VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(bot_id, guild_id) DO UPDATE SET prefix = excluded.prefix, warn_limit = excluded.warn_limit, warn_action = excluded.warn_action`)
+      .run(botId, guildId, next.prefix, next.warn_limit || 0, ['none', 'kick', 'ban'].includes(next.warn_action) ? next.warn_action : 'none');
+  },
 };
 
 // ---------------------- Économie ----------------------
@@ -264,4 +341,4 @@ const settings = {
   set: (key, value) => db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, String(value)),
 };
 
-module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings };
+module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings };

@@ -105,6 +105,8 @@ App.router.run = async () => {
   if (parts[0] === 'bots' && parts[1]) {
     App.state.botId = Number(parts[1]);
     App.state.tab = parts[2] || 'overview';
+    // Sous-page : configuration d'un serveur (ex : /bots/1/servers/123456)
+    App.state.serverGuildId = (parts[2] === 'servers' && parts[3]) ? parts[3] : null;
     App.renderBot();
     return;
   }
@@ -143,6 +145,8 @@ App.renderAuth = (mode) => {
           <label class="field-label">Mot de passe</label>
           <input class="input" id="auth-password" type="password" placeholder="••••••••" autocomplete="current-password" />
           <button class="btn btn-primary" id="auth-submit">${mode === 'login' ? 'Se connecter' : 'Créer mon compte'}</button>
+          <div class="auth-divider">— ou —</div>
+          <button class="btn btn-discord" id="auth-discord">🎮 Se connecter avec Discord</button>
           <p style="color:var(--text-dim);font-size:12px;margin-top:16px;text-align:center">${mode === 'login' ? 'Pas encore de compte ? ' : 'Déjà un compte ? '}<a href="${mode === 'login' ? '#/register' : '#/login'}">${mode === 'login' ? 'Inscris-toi' : 'Connecte-toi'}</a></p>
         </div>
       </div>
@@ -166,6 +170,12 @@ App.renderAuth = (mode) => {
     btn.disabled = false; btn.textContent = mode === 'login' ? 'Se connecter' : 'Créer mon compte';
   };
   root.querySelector('#auth-submit').onclick = submit;
+  root.querySelector('#auth-discord').onclick = async () => {
+    try {
+      const { url } = await App.api('/auth/discord/url');
+      window.location.href = url;
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
   root.querySelector('#auth-password').onkeydown = (e) => { if (e.key === 'Enter') submit(); };
 };
 
@@ -177,8 +187,10 @@ App.renderNavbar = () => {
       <div class="logo-row" style="cursor:pointer" id="nav-logo"><span class="logo">🤖</span> BotDev</div>
       <div class="navbar-right">
         <div class="user-pill">
-          <div class="user-avatar">${App.escapeHtml((user.email[0] || '?').toUpperCase())}</div>
-          <span>${App.escapeHtml(user.email)}</span>
+          ${user.discord_avatar
+            ? `<img class="user-avatar" style="border-radius:50%" src="https://cdn.discordapp.com/avatars/${App.escapeHtml(user.discord_id)}/${App.escapeHtml(user.discord_avatar)}.png" alt="" />`
+            : `<div class="user-avatar">${App.escapeHtml((user.email[0] || '?').toUpperCase())}</div>`}
+          <span>${App.escapeHtml(user.discord_username || user.email)}</span>
         </div>
         <button class="btn btn-ghost btn-sm" id="nav-logout">Déconnexion</button>
       </div>
@@ -370,10 +382,9 @@ App.renderBotBody = (shell, bot) => {
   const layout = App.el(`<div class="bot-layout"></div>`);
   const tabs = [
     ['overview', '📊', 'Vue d\'ensemble'],
+    ['servers', '🌍', 'Serveurs'],
     ['commands', '🧩', 'Commandes'],
     ['modules', '📦', 'Modules'],
-    ['panels', '🎛️', 'Panneaux'],
-    ['events', '👋', 'Événements'],
     ['economy', '💰', 'Économie'],
     ['settings', '⚙️', 'Réglages'],
   ];
@@ -394,10 +405,13 @@ App.renderBotBody = (shell, bot) => {
   shell.appendChild(mobileNav);
 
   switch (App.state.tab) {
+    case 'servers': {
+      if (App.state.serverGuildId) BotViews.renderServerConfig(content, bot, App.state.serverGuildId);
+      else BotViews.renderServers(content, bot);
+      break;
+    }
     case 'commands': BotViews.renderCommands(content, bot); break;
     case 'modules': BotViews.renderModules(content, bot); break;
-    case 'panels': BotViews.renderPanels(content, bot); break;
-    case 'events': BotViews.renderEvents(content, bot); break;
     case 'economy': BotViews.renderEconomy(content, bot); break;
     case 'settings': BotViews.renderSettings(content, bot); break;
     default: BotViews.renderOverview(content, bot);

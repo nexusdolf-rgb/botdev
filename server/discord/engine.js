@@ -55,7 +55,7 @@ async function buildCtx(botRecord, source) {
     serverId: guild ? guild.id : '',
     channelMention: channel ? `<#${channel.id}>` : '',
     channelId: channel ? channel.id : '',
-    prefix: botRecord.prefix,
+    prefix: (source.guild ? (effectivePrefix(botRecord.id, source.guild.id) || botRecord.prefix) : botRecord.prefix),
     args: '',
     arg1: '', arg2: '', arg3: '', arg4: '', arg5: '',
     count: guild ? (guild.memberCount || 0) : 0,
@@ -286,11 +286,17 @@ function checkCooldown(botId, commandId, userId, seconds) {
 }
 
 // ---------------------- Messages (préfixe / mot-clé) ----------------------
+function effectivePrefix(botId, guildId) {
+  const gs = store.guildSettings.get(botId, guildId);
+  return (gs && gs.prefix) || '';
+}
+
 async function runMessageHandler(botId, entry, message) {
   if (!message || message.author.bot || !message.guild) return;
   const record = store.bots.get(botId);
   if (!record) return;
-  const prefix = record.prefix || '!';
+  // Préfixe par serveur (réglable depuis le dashboard), sinon préfixe du bot
+  const prefix = effectivePrefix(botId, message.guild.id) || record.prefix || '!';
   const content = message.content || '';
 
   const cmds = store.commands.all(botId).filter(c => c.enabled);

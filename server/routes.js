@@ -3,6 +3,7 @@
 // ============================================================
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const store = require('./db');
 const botManager = require('./discord/botManager');
 const { MODULES, CMD_DEFS, enabledModules, enabledCommandNames } = require('./discord/premade');
@@ -61,6 +62,165 @@ router.get('/auth/me', requireAuth, (req, res) => {
   res.json({ user });
 });
 
+// ============================================================
+// Connexion avec Discord (OAuth2)
+// ============================================================
+function reqOrigin(req) {
+  const host = req.headers['x-forwarded-host'] || req.get('host') || '';
+  const proto = String(req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http')).split(',')[0].trim();
+  return `${proto}://${host}`;
+}
+
+function oauthClientId() {
+  if (process.env.DISCORD_CLIENT_ID) return process.env.DISCORD_CLIENT_ID;
+  const bot = store.db.prepare("SELECT client_id FROM bots WHERE client_id != '' LIMIT 1").get();
+  return bot ? bot.client_id : '';
+}
+
+function oauthRedirectUri(req) {
+  return process.env.DISCORD_REDIRECT_URI || `${reqOrigin(req)}/api/auth/discord/callback`;
+}
+
+router.get('/auth/discord/url', (req, res) => {
+  const clientId = oauthClientId();
+  if (!clientId) return res.status(400).json({ error: 'Aucune application Discord configurée.' });
+  const state = crypto.randomBytes(16).toString('hex');
+  res.cookie('bd_oauth_state', state, { httpOnly: true, sameSite: 'lax', maxAge: 600000 });
+  const url = 'https://discord.com/oauth2/authorize'
+    + `?client_id=${clientId}`
+    + `&redirect_uri=${encodeURIComponent(oauthRedirectUri(req))}`
+    + '&response_type=code'
+    + '&scope=' + encodeURIComponent('identify guilds')
+    + `&state=${state}`;
+  res.json({ url });
+});
+
+router.get('/auth/discord/callback', async (req, res) => {
+  const { code, state } = req.query;
+  if (!code || state !== req.cookies.bd_oauth_state) return res.redirect('/#/login?oauth=error');
+  res.clearCookie('bd_oauth_state');
+  const clientId = oauthClientId();
+  const secret = process.env.DISCORD_CLIENT_SECRET || '';
+  if (!secret) return res.redirect('/#/dashboard?oauth=nosecret');
+  try {
+    const tokenRes = await fetch('https://discord.com/api/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: secret,
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: oauthRedirectUri(req),
+      }),
+    });
+    if (!tokenRes.ok) return res.redirect('/#/dashboard?oauth=token');
+    const tokens = await tokenRes.json();
+    const h = { Authorization: `Bearer ${tokens.access_token}` };
+    const [meRes, guildsRes] = await Promise.all([
+      fetch('https://discord.com/api/v10/users/@me', { headers: h }),
+      fetch('https://discord.com/api/v10/users/@me/guilds', { headers: h }),
+    ]);
+    if (!meRes.ok) return res.redirect('/#/dashboard?oauth=me');
+    const me = await meRes.json();
+    const guilds = guildsRes.ok ? await guildsRes.json() : [];
+
+    let user = store.users.findByDiscordId(me.id);
+    if (!user) {
+      const userId = store.users.create(`discord:${me.id}@discord.botdev`, bcrypt.hashSync(crypto.randomBytes(16).toString('hex'), 10), {
+        discord_id: me.id,
+        discord_username: me.username,
+        discord_avatar: me.avatar || '',
+      });
+      user = { id: userId };
+    }
+    store.users.updateDiscord(user.id, {
+      discord_id: me.id,
+      discord_username: me.username,
+      discord_avatar: me.avatar || '',
+      discord_guilds: JSON.stringify(guilds.map((g) => ({ id: g.id, name: g.name, icon: g.icon || '', owner: !!g.owner, permissions: g.permissions || '0' }))),
+    });
+    store.discordTokens.set(user.id, {
+      access: tokens.access_token,
+      refresh: tokens.refresh_token || '',
+      expires: new Date(Date.now() + (tokens.expires_in || 604800) * 1000).toISOString(),
+    });
+    const session = store.sessions.create(user.id);
+    res.cookie(COOKIE, session, { httpOnly: true, sameSite: 'lax', maxAge: 30 * 86400000 });
+    res.redirect('/#/dashboard');
+  } catch (e) {
+    res.redirect('/#/dashboard?oauth=error');
+  }
+});
+
+async function refreshDiscordData(userId) {
+  const row = store.discordTokens.get(userId);
+  if (!row) return false;
+  let access = row.access_token;
+  if (new Date(row.expires_at) < new Date(Date.now() + 60000)) {
+    const secret = process.env.DISCORD_CLIENT_SECRET || '';
+    if (!secret || !row.refresh_token) return false;
+    const res = await fetch('https://discord.com/api/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ client_id: oauthClientId(), client_secret: secret, grant_type: 'refresh_token', refresh_token: row.refresh_token }),
+    });
+    if (!res.ok) return false;
+    const d = await res.json();
+    access = d.access_token;
+    store.discordTokens.set(userId, { access, refresh: d.refresh_token || row.refresh_token, expires: new Date(Date.now() + d.expires_in * 1000).toISOString() });
+  }
+  const h = { Authorization: `Bearer ${access}` };
+  const [meRes, guildsRes] = await Promise.all([
+    fetch('https://discord.com/api/v10/users/@me', { headers: h }),
+    fetch('https://discord.com/api/v10/users/@me/guilds', { headers: h }),
+  ]);
+  if (!meRes.ok) return false;
+  const me = await meRes.json();
+  const guilds = guildsRes.ok ? await guildsRes.json() : [];
+  store.users.updateDiscord(userId, {
+    discord_username: me.username,
+    discord_avatar: me.avatar || '',
+    discord_guilds: JSON.stringify(guilds.map((g) => ({ id: g.id, name: g.name, icon: g.icon || '', owner: !!g.owner, permissions: g.permissions || '0' }))),
+  });
+  return true;
+}
+
+async function userCanManageGuild(req, guildId) {
+  const user = store.users.findById(req.userId);
+  if (!user || !user.discord_id) return false;
+  const guilds = store.users.discordGuilds(req.userId);
+  const g = guilds.find((x) => x.id === guildId);
+  if (!g) return false;
+  if (g.owner) return true;
+  const perms = Number(g.permissions) || 0;
+  return (perms & 0x20) !== 0 || (perms & 0x8) !== 0;
+}
+
+router.get('/discord/guilds', requireAuth, async (req, res) => {
+  const user = store.users.findById(req.userId);
+  if (!user || !user.discord_id) return res.status(400).json({ error: 'Compte Discord non lié', needLink: true });
+  await refreshDiscordData(req.userId).catch(() => {});
+  const guilds = store.users.discordGuilds(req.userId);
+  const botGuilds = new Set();
+  for (const entry of botManager.clients.values()) {
+    if (!entry.client.isReady()) continue;
+    for (const g of entry.client.guilds.cache.values()) botGuilds.add(g.id);
+  }
+  const list = guilds.map((g) => {
+    const perms = Number(g.permissions) || 0;
+    return {
+      id: g.id,
+      name: g.name,
+      owner: !!g.owner,
+      canManage: !!g.owner || (perms & 0x20) !== 0 || (perms & 0x8) !== 0,
+      icon: g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png` : '',
+      hasBot: botGuilds.has(g.id),
+    };
+  });
+  res.json({ guilds: list, discord: { username: user.discord_username, avatar: user.discord_avatar } });
+});
+
 // ---------------------- Helpers bot ----------------------
 function getOwnBot(req, res) {
   const bot = store.bots.get(Number(req.params.id));
@@ -86,7 +246,7 @@ function botDetail(bot) {
     guilds,
     commands_count: store.commands.all(bot.id).length,
     modules: store.modules.all(bot.id),
-    events: eventsState(bot.id),
+    events_count: store.events.countEnabled(bot.id),
     invite_url: bot.client_id ? `https://discord.com/oauth2/authorize?client_id=${bot.client_id}&permissions=8&scope=bot%20applications.commands` : '',
   };
 }
@@ -261,21 +421,50 @@ router.put('/bots/:id/modules/:key', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
-// ---------------------- Événements ----------------------
-router.get('/bots/:id/events', requireAuth, (req, res) => {
+// ============================================================
+// Configuration par serveur (façon DraftBot)
+// ============================================================
+router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
   const bot = getOwnBot(req, res);
   if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) {
+    return res.status(403).json({ error: 'Tu dois être propriétaire ou avoir la permission « Gérer le serveur » sur ce serveur Discord.' });
+  }
+  const entry = botManager.clients.get(bot.id);
+  const dGuild = entry && entry.client.isReady() ? entry.client.guilds.cache.get(guildId) : null;
+  if (!dGuild) return res.status(400).json({ error: 'Le bot n\'est pas sur ce serveur (ou il est hors ligne).' });
+  const cfg = store.tickets.get(bot.id, guildId);
   res.json({
-    defs: EVENT_DEFS,
-    events: eventsState(bot.id),
+    guild: { id: guildId, name: dGuild.name, icon: dGuild.iconURL({ size: 128 }) || '', members: dGuild.memberCount || 0 },
+    settings: store.guildSettings.get(bot.id, guildId) || { prefix: '', warn_limit: 0, warn_action: 'none' },
+    tickets: cfg || { name: '', channel: '', message: '', button_label: '🎫 Ouvrir un ticket', support_role: '', category: 'Tickets' },
+    events: { defs: EVENT_DEFS, state: eventsState(bot.id, guildId) },
+    role_menus: store.roleMenus.all(bot.id, guildId),
   });
 });
 
-router.put('/bots/:id/events/:type', requireAuth, (req, res) => {
+router.put('/bots/:id/guilds/:guildId/settings', requireAuth, async (req, res) => {
   const bot = getOwnBot(req, res);
   if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const { prefix, warn_limit, warn_action } = req.body || {};
+  store.guildSettings.set(bot.id, guildId, {
+    prefix: String(prefix || '').slice(0, 5),
+    warn_limit: Math.max(0, parseInt(warn_limit, 10) || 0),
+    warn_action: ['none', 'kick', 'ban'].includes(warn_action) ? warn_action : 'none',
+  });
+  res.json({ ok: true });
+});
+
+router.put('/bots/:id/guilds/:guildId/events/:type', requireAuth, async (req, res) => {
+  const bot = getOwnBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   if (!EVENT_DEFS[req.params.type]) return res.status(404).json({ error: 'Événement introuvable' });
-  store.events.set(bot.id, req.params.type, !!req.body.enabled, req.body.config || {});
+  store.events.set(bot.id, guildId, req.params.type, !!req.body.enabled, req.body.config || {});
   res.json({ ok: true });
 });
 

@@ -396,7 +396,19 @@ async function execute(botId, entry, cmd, src) {
       const reason = isInt ? (src.interaction.options.getString('raison') || '') : '';
       store.warnings.add(botId, guild.id, target.id, reason || 'Aucune raison', author.id);
       const n = store.warnings.count(botId, guild.id, target.id);
-      await reply(`⚠️ **${target.tag || target.username}** a été averti (raison : ${reason || 'aucune'}). Total : **${n}** avertissement(s).`);
+      let extra = '';
+      // Automod : action automatique si la limite d'avertissements est atteinte
+      const gs = store.guildSettings.get(botId, guild.id) || {};
+      if (gs.warn_limit > 0 && n >= gs.warn_limit && (gs.warn_action === 'kick' || gs.warn_action === 'ban')) {
+        const tMember = guild.members.cache.get(target.id);
+        if (tMember) {
+          try {
+            if (gs.warn_action === 'kick' && tMember.kickable) { await tMember.kick('Limite d\'avertissements atteinte'); extra = '\n👢 **Expulsé** : limite d\'avertissements atteinte.'; }
+            else if (gs.warn_action === 'ban' && tMember.bannable) { await tMember.ban({ reason: 'Limite d\'avertissements atteinte' }); extra = '\n🔨 **Banni** : limite d\'avertissements atteinte.'; }
+          } catch {}
+        }
+      }
+      await reply(`⚠️ **${target.tag || target.username}** a été averti (raison : ${reason || 'aucune'}). Total : **${n}** avertissement(s).${extra}`);
       break;
     }
     case 'warns': {

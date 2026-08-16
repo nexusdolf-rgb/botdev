@@ -40,8 +40,8 @@ const EVENT_DEFS = {
   },
 };
 
-function eventsState(botId) {
-  const rows = store.events.all(botId);
+function eventsState(botId, guildId) {
+  const rows = store.events.all(botId, guildId);
   const out = {};
   for (const key of Object.keys(EVENT_DEFS)) {
     out[key] = rows[key] || { enabled: false, config: {} };
@@ -50,7 +50,7 @@ function eventsState(botId) {
 }
 
 async function runJoinEvent(botId, member) {
-  const state = store.events.all(botId);
+  const state = store.events.all(botId, member.guild.id);
   const botRecord = store.bots.get(botId);
 
   if (state.member_join && state.member_join.enabled) {
@@ -78,7 +78,7 @@ async function runJoinEvent(botId, member) {
 }
 
 async function runLeaveEvent(botId, member) {
-  const state = store.events.all(botId);
+  const state = store.events.all(botId, member.guild.id);
   const botRecord = store.bots.get(botId);
   if (!(state.member_leave && state.member_leave.enabled)) return;
   const cfg = state.member_leave.config || {};
