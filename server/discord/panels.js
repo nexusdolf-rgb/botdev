@@ -75,6 +75,12 @@ async function dispatchPanels(botId, interaction) {
     }
     const cid = String(interaction.customId || '');
 
+    // 📝 Raison demandée à l'ouverture d'un ticket + 🗑 raison de suppression (staff)
+    if (interaction.isModalSubmit()) {
+      if (cid.startsWith(`bd-treason:${botId}`)) { await submitReason(botId, interaction); return true; }
+      if (cid.startsWith(`bd-tdel:${botId}`)) { await submitDeleteReason(botId, interaction); return true; }
+    }
+
     // Assistant des types de tickets (/ticket types setup)
     if ((interaction.isStringSelectMenu() && cid.startsWith('bdw-ts:'))
       || (interaction.isRoleSelectMenu() && cid.startsWith('bdw-tr:'))
@@ -267,7 +273,7 @@ async function staffDeny(interaction) {
 }
 
 // ---------- Création du ticket ----------
-async function openTicket(botId, interaction, type) {
+async function openTicket(botId, interaction, type, reason = '') {
   const guild = interaction.guild;
   const member = interaction.member;
   const cfg = store.tickets.get(botId, guild.id);
@@ -333,7 +339,7 @@ async function openTicket(botId, interaction, type) {
   } catch (e) {
     return interaction.reply({ content: '⚠️ Je n\'ai pas pu créer le salon. Vérifie mes permissions (gérer les salons).', ephemeral: true });
   }
-  ticketMeta.set(channel.id, { openerId: member.id, typeLabel: chosen ? chosen.label : '' });
+  ticketMeta.set(channel.id, { openerId: member.id, typeLabel: chosen ? chosen.label : '', reason });
 
   // Boutons du staff : deux rangées propres
   const row1 = new ActionRowBuilder().addComponents(
@@ -345,6 +351,20 @@ async function openTicket(botId, interaction, type) {
     new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:delete`).setLabel('🗑 Supprimer').setStyle(ButtonStyle.Secondary),
   );
 
+  // Vérification MP dès l'ouverture : si les MP du membre sont fermés,
+  // on l'avertit tout de suite qu'il ne pourra pas recevoir la transcription.
+  let dmWarning = '';
+  try {
+    if (interaction.client && interaction.client.users) {
+      const openerUser = await interaction.client.users.fetch(member.id);
+      await openerUser.send(
+        `🎫 Ton ticket est ouvert sur **${guild.name}** (${channel}) !\nNous te répondrons au plus vite. À la fermeture, tu recevras la transcription ici.`
+      );
+    }
+  } catch {
+    dmWarning = '\n⚠️ **Mes messages privés ne t\'atteignent pas** : active « Autoriser les messages privés des membres du serveur » (Réglages Discord → Confidentialité) si tu veux recevoir la transcription à la fermeture.';
+  }
+
   const welcome = new EmbedBuilder()
     .setColor('#57F287')
     .setTitle('🎫 Ticket ouvert !')
@@ -352,12 +372,13 @@ async function openTicket(botId, interaction, type) {
       `Bienvenue ${member} 👋`,
       '',
       chosen ? `🗂️ **Type** : ${chosen.emoji || ''} ${chosen.label}` : null,
+      reason ? `📝 **Ta demande** : ${reason}` : null,
       support ? `🛡️ **Staff** : ${support.toString()}` : null,
       '',
       'Explique ta demande en détail (tu peux joindre des captures d\'écran ou des fichiers). Notre équipe te répondra ici **au plus vite**.',
       '',
       '🔒 Seul le **staff** peut fermer, mettre en attente, réouvrir ou supprimer ce ticket.',
-      '📄 À la fermeture, tu recevras la **transcription** en message privé.',
+      '📄 À la fermeture, tu recevras la **transcription** en message privé.' + dmWarning,
     ].filter(Boolean).join('\n'));
   const site = store.settings.get('public_url');
   if (site) welcome.setFooter({ text: `BotDev · ${site}` });
@@ -370,32 +391,72 @@ async function openTicket(botId, interaction, type) {
   await interaction.reply({ content: `✅ Ton ticket a été créé : ${channel}`, ephemeral: true });
 }
 
+// ---------- Raisons : ouverture & suppression ----------
+const pendingReasons = new Map(); // userId -> { botId, guildId, type }
+const pendingDeletes = new Map(); // userId -> { botId }
+
+function reasonModal(botId, customId, title, label, placeholder) {
+  const modal = new ModalBuilder().setCustomId(customId).setTitle(String(title).slice(0, 45));
+  const input = new TextInputBuilder()
+    .setCustomId('value')
+    .setLabel(String(label).slice(0, 45))
+    .setPlaceholder(String(placeholder).slice(0, 100))
+    .setStyle(TextInputStyle.Paragraph)
+    .setRequired(true)
+    .setMaxLength(1000);
+  modal.addComponents(new ActionRowBuilder().addComponents(input));
+  return modal;
+}
+
+async function askReason(botId, interaction, type) {
+  pendingReasons.set(interaction.user.id, { botId, guildId: interaction.guild.id, type, ts: Date.now() });
+  await interaction.showModal(reasonModal(
+    botId,
+    `bd-treason:${botId}`,
+    '📝 Ouvre ton ticket',
+    'Raison de ta demande',
+    'Explique brièvement pourquoi tu ouvres ce ticket…'
+  ));
+}
+
+async function submitReason(botId, interaction) {
+  const pending = pendingReasons.get(interaction.user.id);
+  pendingReasons.delete(interaction.user.id);
+  if (!pending || pending.botId !== botId || Date.now() - (pending.ts || 0) > WIZARD_TTL) {
+    return interaction.reply({ content: '⏰ Ta demande a expiré, réessaie.', ephemeral: true });
+  }
+  const reason = (interaction.fields.getTextInputValue('value') || '').trim();
+  await openTicket(botId, interaction, pending.type, reason);
+}
+
 async function handleTicketButton(botId, interaction) {
-  await openTicket(botId, interaction, null);
+  await askReason(botId, interaction, null);
 }
 
 async function handleTicketTypeSelect(botId, interaction) {
   const cfg = store.tickets.get(botId, interaction.guild.id) || {};
   const label = interaction.values[0];
   const type = parseTypes(cfg).find((t) => t.label === label) || { label };
-  await openTicket(botId, interaction, type);
+  await askReason(botId, interaction, type);
 }
 
 // ---------- Transcription + MP ----------
-async function buildTranscript(botId, interaction) {
+async function buildTranscript(botId, interaction, extraLines = []) {
   const channel = interaction.channel;
   const guild = interaction.guild;
   const meta = ticketMetaFor(channel);
   let text = '';
+  if (meta.reason) text += `📝 Raison du ticket : ${meta.reason}\n\n`;
   try {
     const fetched = await channel.messages.fetch({ limit: 100 });
     const arr = [...fetched.values()].reverse();
-    text = arr.map((m) => {
+    text += arr.map((m) => {
       const time = m.createdAt ? m.createdAt.toISOString().slice(11, 19) : '--:--:--';
       const content = m.content || (m.attachments && m.attachments.size ? '[pièce jointe]' : (m.embeds && m.embeds.length ? '[embed]' : ''));
       return `[${time}] ${m.author ? m.author.username : '?'}: ${content}`;
     }).join('\n');
   } catch {}
+  if (extraLines.length) text += '\n\n' + extraLines.join('\n');
   let token = '', url = '';
   try {
     token = crypto.randomBytes(8).toString('hex');
@@ -447,7 +508,9 @@ async function handleTicketClose(botId, interaction) {
   if (!isStaff(botId, interaction)) return staffDeny(interaction);
   const channel = interaction.channel;
   const guild = interaction.guild;
-  const t = await buildTranscript(botId, interaction);
+  const t = await buildTranscript(botId, interaction, [
+    `🔒 Ticket fermé par ${interaction.user.tag} le ${new Date().toISOString().slice(0, 16).replace('T', ' ')} (UTC)`,
+  ]);
   const dmOk = await sendTranscriptDm(interaction, guild, channel.name, t);
   if (t.openerId) {
     await channel.permissionOverwrites.edit(t.openerId, { ViewChannel: false, SendMessages: false }).catch(() => {});
@@ -482,22 +545,44 @@ async function handleTicketHold(botId, interaction) {
 
 async function handleTicketDeleteAsk(botId, interaction) {
   if (!isStaff(botId, interaction)) return staffDeny(interaction);
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:delconfirm`).setLabel('✅ Confirmer').setStyle(ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:delcancel`).setLabel('❌ Annuler').setStyle(ButtonStyle.Secondary),
-  );
+  pendingDeletes.set(interaction.user.id, { botId, ts: Date.now() });
+  await interaction.showModal(reasonModal(
+    botId,
+    `bd-tdel:${botId}`,
+    '🗑 Supprimer le ticket',
+    'Raison de la suppression',
+    'Ex : problème résolu, spam, hors sujet…'
+  ));
+}
+
+async function submitDeleteReason(botId, interaction) {
+  const pending = pendingDeletes.get(interaction.user.id);
+  pendingDeletes.delete(interaction.user.id);
+  if (!pending || pending.botId !== botId || Date.now() - (pending.ts || 0) > WIZARD_TTL) {
+    return interaction.reply({ content: '⏰ La suppression a expiré, réessaie.', ephemeral: true });
+  }
+  if (!isStaff(botId, interaction)) return staffDeny(interaction);
+  const reason = (interaction.fields.getTextInputValue('value') || '').trim() || 'aucune raison';
+  const channel = interaction.channel;
+  const guild = interaction.guild;
+  const t = await buildTranscript(botId, interaction, [
+    `🗑 Ticket supprimé par ${interaction.user.tag} — raison : ${reason}`,
+  ]);
+  const dmOk = await sendTranscriptDm(interaction, guild, channel.name, t);
   await interaction.reply({
-    content: '🗑 **Supprimer définitivement ce ticket ?**\nLa transcription sera envoyée en MP au créateur avant suppression.',
-    components: [row],
+    content: '🗑 Ticket supprimé.' + (dmOk ? ' 📄 Transcription envoyée en MP.' : ' ⚠️ MP impossible pour le créateur.'),
     ephemeral: true,
   });
+  setTimeout(() => { channel.delete().catch(() => {}); }, 2500);
 }
 
 async function handleTicketDeleteConfirm(botId, interaction) {
   if (!isStaff(botId, interaction)) return staffDeny(interaction);
   const channel = interaction.channel;
   const guild = interaction.guild;
-  const t = await buildTranscript(botId, interaction);
+  const t = await buildTranscript(botId, interaction, [
+    `🗑 Ticket supprimé par ${interaction.user.tag} — raison : aucune raison fournie`,
+  ]);
   const dmOk = await sendTranscriptDm(interaction, guild, channel.name, t);
   await interaction.update({
     content: '🗑 Ticket supprimé.' + (dmOk ? ' 📄 Transcription envoyée en MP.' : ' ⚠️ MP impossible pour le créateur.'),

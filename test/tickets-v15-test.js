@@ -47,15 +47,30 @@ const panels = require('../server/discord/panels');
     members: { me: null },
   };
 
-  const makeOpen = (typeLabel, channelSuffix) => ({
+  const makeOpen = (typeLabel) => ({
     guild, user: { id: 'U1' },
     member: { user: { id: 'U1', username: 'Membre', tag: 'Membre#1' }, roles: { cache: { has: () => false } } },
     customId: 'bd-ttype:1', values: [typeLabel],
     isStringSelectMenu: () => true, isButton: () => false, isChatInputCommand: () => false,
     isChannelSelectMenu: () => false, isRoleSelectMenu: () => false, isModalSubmit: () => false,
     reply: async (p) => { lastReply = p; },
+    showModal: async (m) => { shownModal = m; },
   });
-  let lastReply, lastCreated;
+  let lastReply, lastCreated, shownModal = null;
+
+  // Ouvre via le menu (modale raison) puis soumet la raison
+  const openType = async (typeLabel, reason) => {
+    shownModal = null;
+    await panels.dispatchPanels(1, makeOpen(typeLabel));
+    assert(shownModal, 'modale de raison attendue pour ' + typeLabel);
+    await panels.dispatchPanels(1, {
+      ...makeOpen(typeLabel),
+      customId: 'bd-treason:1',
+      isStringSelectMenu: () => false,
+      isModalSubmit: () => true,
+      fields: { getTextInputValue: () => reason },
+    });
+  };
 
   // ---------- 2. Premier ticket : nom normal ----------
   guild.channels.create = async (opts) => {
@@ -63,14 +78,14 @@ const panels = require('../server/discord/panels');
     lastCreated = { name: opts.name };
     return { id: 'CH1', name: opts.name, send: async () => {}, topic: opts.topic };
   };
-  await panels.dispatchPanels(1, makeOpen('Ticket contre admin'));
+  await openType('Ticket contre admin', 'Je me suis fait attaquer par un admin');
   assert(lastCreated.name === 'ticket-contre-ad-membre', 'nom : ' + lastCreated.name);
-  console.log('2️⃣  Premier ticket → « ticket-contre-ad-membre » ✅');
+  console.log('2️⃣  Premier ticket → « ticket-contre-ad-membre » (avec raison) ✅');
 
   // ---------- 3. Ticket ENCORE OUVERT (membre peut voir) → autre type refusé ----------
   channels.push({ id: 'CH1', name: 'ticket-contre-ad-membre', permissionsFor: () => ({ has: () => true }) });
   lastReply = null;
-  await panels.dispatchPanels(1, makeOpen('Signaler un bug'));
+  await openType('Signaler un bug', 'un bug');
   assert(lastReply.content.includes('déjà un ticket ouvert'), 'bloqué : ' + lastReply.content);
   console.log('3️⃣  Ticket ouvert → deuxième ticket REFUSÉ ✅ («', lastReply.content, '»)');
 
@@ -78,7 +93,7 @@ const panels = require('../server/discord/panels');
   channels.length = 0;
   channels.push({ id: 'CH1', name: 'ticket-contre-ad-membre', permissionsFor: () => ({ has: () => false }) });
   lastReply = null; lastCreated = null;
-  await panels.dispatchPanels(1, makeOpen('Ticket contre admin'));
+  await openType('Ticket contre admin', 'récidive');
   assert(lastCreated.name === 'ticket-contre-ad-membre-2', 'suffixe attendu : ' + lastCreated.name);
   console.log('4️⃣  Ticket fermé → MÊME type rouvert ✅ (« ' + lastCreated.name + ' »)');
 
@@ -86,7 +101,7 @@ const panels = require('../server/discord/panels');
   channels.length = 0;
   channels.push({ id: 'CH1', name: 'ticket-contre-ad-membre', permissionsFor: () => ({ has: () => false }) });
   lastCreated = null;
-  await panels.dispatchPanels(1, makeOpen('Signaler un bug'));
+  await openType('Signaler un bug', 'toujours le bug');
   assert(lastCreated.name === 'signaler-un-bug-membre', 'nom : ' + lastCreated.name);
   console.log('5️⃣  Ticket fermé → AUTRE type ouvert ✅ (« ' + lastCreated.name + ' »)');
 

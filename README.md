@@ -25,9 +25,17 @@
 - **📈 Niveaux (XP)** : les membres gagnent de l'XP en discutant, montent en niveau avec annonce automatique, **rôles de récompense par niveau**, `/rank` (niveau, XP, progression, rang) et `/levels` (classement) — configurable par serveur dans le dashboard (XP par message, cooldown, message personnalisé, salon d'annonce)
 - **🛡️ Auto-modération par serveur** : suppression automatique des liens (invitations/URL), des messages en majuscules, limite de mentions, anti-spam avec timeout 5 min (les admins/modérateurs sont ignorés)
 - **🎫 Système de tickets complet (façon Ticket Tool)** :
+  - **📝 Raison demandée à l'ouverture** : chaque ouverture de ticket (bouton ou menu de types) demande la raison de la demande dans une fenêtre — affichée dans le ticket et dans la transcription
+  - **🗑 Suppression avec raison** : le staff qui clique « Supprimer » saisit la raison de la suppression — consignée dans la transcription
+  - **⚠️ Vérification des MP à l'ouverture** : si les messages privés du membre sont fermés, il est prévenu dès l'ouverture qu'il ne recevra pas la transcription (et comment activer les MP)
+- **🎫 Système de tickets complet (façon Ticket Tool)** :
   - **Assistant interactif des types** (`/ticket types setup`) : comme l'assistant de configuration, mais pour le menu déroulant — choisis un type, **renomme-le**, choisis son **emoji**, sa **catégorie** et son **rôle staff** avec des menus de sélection (rien à écrire), ou supprime-le avec confirmation
   - **Boutons du ticket réservés au staff** : 🔒 **Fermer** · ⏸ **En attente** · 🔓 **Réouvrir** · 🗑 **Supprimer** (avec confirmation)
   - **📄 Transcription en MP fiable** : double résolution de l'utilisateur + statut honnête — si le MP échoue (messages privés fermés côté membre), le staff en est averti
+- **🎫 Système de tickets complet (façon Ticket Tool)** :
+  - **📝 Raison demandée à l'ouverture** : chaque ouverture de ticket (bouton ou menu de types) demande la raison de la demande dans une fenêtre — affichée dans le ticket et dans la transcription
+  - **🗑 Suppression avec raison** : le staff qui clique « Supprimer » saisit la raison de la suppression — consignée dans la transcription
+  - **⚠️ Vérification des MP à l'ouverture** : si les messages privés du membre sont fermés, il est prévenu dès l'ouverture qu'il ne recevra pas la transcription (et comment activer les MP)
 - **🎫 Système de tickets complet (façon Ticket Tool)** :
   - **Types de tickets 100 % personnalisables** : ajoute, renomme, supprime autant de types que tu veux (`/ticket types add|remove|list` ou dashboard) — « Ticket contre admin », « Candidature staff », « Signaler un bug »… Le panneau affiche un **menu déroulant** où chaque membre choisit son type
   - **Rôle staff PAR type de ticket** : chaque type peut avoir son propre rôle autorisé à gérer ses tickets

@@ -51,7 +51,7 @@ const { buildSlashPayloads } = require('../server/discord/premade');
   assert(!buttonRow, 'PAS de bouton générique sous le menu déroulant');
   console.log('1️⃣  Panneau = embed + menu déroulant (Partenariat, Réclamation) + bouton ✅');
 
-  // ---------- 2. Sélection d'un type → ticket avec catégorie dédiée ----------
+  // ---------- 2. Sélection d'un type → modale raison → ticket avec catégorie dédiée ----------
   const selectInteraction = {
     guild,
     member: { user: { id: 'U1', username: 'Je Suis Membre', tag: 'Je Suis Membre#1234' }, roles: { cache: { has: () => false } } },
@@ -60,9 +60,15 @@ const { buildSlashPayloads } = require('../server/discord/premade');
     isStringSelectMenu: () => true, isButton: () => false, isChatInputCommand: () => false,
     isChannelSelectMenu: () => false, isRoleSelectMenu: () => false, isModalSubmit: () => false,
     reply: async (p) => { lastReply = p; }, channel: null,
+    showModal: async (m) => { shownModalTT = m; },
   };
-  let lastReply = null;
+  let lastReply = null, shownModalTT = null;
   await panels.dispatchPanels(1, selectInteraction);
+  assert(shownModalTT, 'modale raison attendue');
+  await panels.dispatchPanels(1, {
+    ...selectInteraction, customId: 'bd-treason:1', isStringSelectMenu: () => false, isModalSubmit: () => true,
+    fields: { getTextInputValue: () => 'Partenariat test' },
+  });
   assert(created, 'salon créé');
   assert(created.name === 'partenariat-je-suis-membre', 'nom = type-utilisateur, obtenu : ' + created.name);
   assert(created.parent && created.permissionOverwrites.length === 3, 'permissions par défaut (staff + membre)');
@@ -70,10 +76,16 @@ const { buildSlashPayloads } = require('../server/discord/premade');
   assert(lastReply.content.includes('<#NEW_CH>'), 'réponse avec mention du salon');
   console.log('2️⃣  Sélection « 🤝 Partenariat » → salon "partenariat-…" créé ✅ (', created.name, ')');
 
-  // ---------- 3. Bouton → premier type par défaut ----------
+  // ---------- 3. Bouton → modale raison → premier type par défaut ----------
   created = null; sentPanel = null;
+  shownModalTT = null;
   const btnInteraction = { ...selectInteraction, customId: 'bd-ticket:1', isStringSelectMenu: () => false, isButton: () => true };
   await panels.dispatchPanels(1, btnInteraction);
+  assert(shownModalTT, 'modale raison attendue (bouton)');
+  await panels.dispatchPanels(1, {
+    ...btnInteraction, customId: 'bd-treason:1', isButton: () => false, isModalSubmit: () => true,
+    fields: { getTextInputValue: () => 'Demande simple' },
+  });
   assert(created && created.name.startsWith('partenariat-'), 'bouton → premier type');
   console.log('3️⃣  Bouton sans sélection → premier type utilisé ✅');
 

@@ -82,8 +82,15 @@ const { buildSlashPayloads } = require('../server/discord/premade');
     isStringSelectMenu: () => true, isButton: () => false, isChatInputCommand: () => false,
     isChannelSelectMenu: () => false, isRoleSelectMenu: () => false, isModalSubmit: () => false,
     reply: async () => {},
+    showModal: async (m) => { shownModal = m; },
   };
+  let shownModal = null;
   await panels.dispatchPanels(1, openInt);
+  assert(shownModal, 'modale de raison attendue');
+  await panels.dispatchPanels(1, {
+    ...openInt, customId: 'bd-treason:1', isStringSelectMenu: () => false, isModalSubmit: () => true,
+    fields: { getTextInputValue: () => 'Raison test' },
+  });
   assert(created && created.name.startsWith('ticket-contre-ad-'), 'nom attendu : ' + (created && created.name));
   assert(createdCategory && createdCategory.name === 'Admin', 'catégorie du type attendue');
   assert(created.parent === 'CAT1', 'salon dans la catégorie du type');
@@ -95,7 +102,13 @@ const { buildSlashPayloads } = require('../server/discord/premade');
   const welcomeSent = {};
   const ch2 = { ...ticketChannel, send: async (p) => { Object.assign(welcomeSent, p); } };
   guild.channels.create = async (opts) => ch2;
+  shownModal = null;
   await panels.dispatchPanels(1, openInt);
+  assert(shownModal, 'modale raison (2)');
+  await panels.dispatchPanels(1, {
+    ...openInt, customId: 'bd-treason:1', isStringSelectMenu: () => false, isModalSubmit: () => true,
+    fields: { getTextInputValue: () => 'Raison test' },
+  });
   const labels = welcomeSent.components[0].components.map((c) => c.data.label);
   assert(labels.includes('🔒 Fermer') && labels.includes('🔓 Réouvrir') && labels.includes('⏸ En attente'));
   console.log('3️⃣  Boutons dans le ticket :', labels.join(' | '), '✅');
@@ -113,6 +126,22 @@ const { buildSlashPayloads } = require('../server/discord/premade');
   await panels.dispatchPanels(1, makeCloseBtn(['R3']));
   assert(lastClose.content.includes('staff'), 'Devs refusé sur un ticket admin');
   console.log('4️⃣  Staff du type Devs sur ticket « admin » → REFUSÉ ✅');
+
+  // Suppression : modale raison
+  let delModal = null;
+  const delBtn = { ...makeCloseBtn(['R2']), customId: 'bd-tmenu:1:delete', showModal: async (m) => { delModal = m; } };
+  await panels.dispatchPanels(1, delBtn);
+  assert(delModal && delModal.data.title.includes('Supprimer'), 'modale raison de suppression attendue');
+  await panels.dispatchPanels(1, {
+    ...delBtn, customId: 'bd-tdel:1', isButton: () => false, isModalSubmit: () => true,
+    fields: { getTextInputValue: () => 'problème résolu' },
+    client: { users: { fetch: async (id) => ({ id, send: async () => {} }) } },
+    reply: async (p) => { lastClose = p; },
+  });
+  assert(lastClose.content.includes('Ticket supprimé'), 'suppression confirmée');
+  const trans = store.db.prepare('SELECT * FROM transcripts ORDER BY rowid DESC LIMIT 1').all()[0];
+  assert(trans && trans.messages.includes('raison : problème résolu'), 'raison dans la transcription');
+  console.log('4️⃣bis  🗑 Supprimer → modale raison → raison dans la transcription ✅');
 
   // ---------- 5. Staff du type « Admins » PEUT fermer → transcription + MP + verrou ----------
   let dmPayload = null;

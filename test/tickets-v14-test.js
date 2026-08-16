@@ -123,14 +123,21 @@ const { buildSlashPayloads } = require('../server/discord/premade');
       create: async (opts) => { if (opts.type === 4) return { id: 'CATX', name: opts.name }; return ticketChannel; },
     },
   };
+  let shownModalV14 = null;
   const openInt = {
     guild: guildOpen, user: { id: 'U1' },
     member: { user: { id: 'U1', username: 'Membre', tag: 'Membre#1' }, roles: { cache: { has: () => false } } },
     customId: 'bd-ticket:1', isButton: () => true, isStringSelectMenu: () => false, isChatInputCommand: () => false,
     isChannelSelectMenu: () => false, isRoleSelectMenu: () => false, isModalSubmit: () => false,
     reply: async () => {},
+    showModal: async (m) => { shownModalV14 = m; },
   };
   await panels.dispatchPanels(1, openInt);
+  assert(shownModalV14 && shownModalV14.data.title.includes('Ouvre ton ticket'), 'modale raison attendue');
+  await panels.dispatchPanels(1, {
+    ...openInt, customId: 'bd-treason:1', isButton: () => false, isModalSubmit: () => true,
+    fields: { getTextInputValue: () => 'Raison test' },
+  });
   const row1Labels = welcomePayload.components[0].components.map((c) => c.data.label);
   const row2Labels = welcomePayload.components[1].components.map((c) => c.data.label);
   assert(row1Labels.join(',') === '🔒 Fermer,⏸ En attente,🔓 Réouvrir');
@@ -152,17 +159,24 @@ const { buildSlashPayloads } = require('../server/discord/premade');
     client: { users: { fetch: async (id) => ({ id, send: async (p) => { dmPayload = p; } }) } },
   });
   let lastBtnReply, dmPayload = null;
-  await panels.dispatchPanels(1, staffBtn('bd-tmenu:1:delete', delChannel));
-  assert(lastBtnReply.content.includes('Supprimer définitivement'), 'confirmation demandée');
-  assert(lastBtnReply.components[0].components.length === 2, 'boutons Confirmer/Annuler');
-  console.log('9️⃣  🗑 Supprimer → confirmation demandée ✅');
+  let delModalV14 = null;
+  const delAskBtn = { ...staffBtn('bd-tmenu:1:delete', delChannel), showModal: async (m) => { delModalV14 = m; } };
+  await panels.dispatchPanels(1, delAskBtn);
+  assert(delModalV14 && delModalV14.data.title.includes('Supprimer'), 'modale raison de suppression demandée');
+  console.log('9️⃣  🗑 Supprimer → modale « Raison de la suppression » ✅');
 
-  await panels.dispatchPanels(1, staffBtn('bd-tmenu:1:delconfirm', delChannel));
+  await panels.dispatchPanels(1, {
+    ...staffBtn('bd-tdel:1', delChannel), isButton: () => false, isModalSubmit: () => true,
+    fields: { getTextInputValue: () => 'doublon' },
+  });
+  assert(lastBtnReply.content.includes('Ticket supprimé'), 'suppression confirmée : ' + lastBtnReply.content);
   assert(dmPayload && dmPayload.embeds[0].data.title.includes('fermé'), 'MP envoyé avant suppression');
   assert(dmPayload.files[0].name.startsWith('transcription-'), 'fichier transcription joint');
+  const trans14 = store.db.prepare('SELECT * FROM transcripts ORDER BY rowid DESC LIMIT 1').all()[0];
+  assert(trans14.messages.includes('raison : doublon'), 'raison dans la transcription');
   await new Promise((r) => setTimeout(r, 2600));
   assert(deleted === true, 'salon supprimé');
-  console.log('🔟  Confirmation → MP + transcription + salon supprimé ✅');
+  console.log('🔟  Raison soumise → MP + transcription (avec raison) + salon supprimé ✅');
 
   // ============ 11. Statut honnête : DM impossible → avertissement ============
   let dmFailedReply = null;
