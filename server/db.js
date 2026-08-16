@@ -146,6 +146,7 @@ CREATE TABLE IF NOT EXISTS tickets (
   button_label TEXT DEFAULT '🎫 Ouvrir un ticket',
   support_role TEXT DEFAULT '',
   category TEXT DEFAULT 'Tickets',
+  types TEXT DEFAULT '[]',
   PRIMARY KEY (bot_id, guild_id)
 );
 
@@ -157,6 +158,7 @@ CREATE TABLE IF NOT EXISTS settings (
 
 // Migrations légères (les colonnes ajoutées après coup)
 try { db.exec("ALTER TABLE tickets ADD COLUMN name TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE tickets ADD COLUMN types TEXT DEFAULT '[]'"); } catch (e) {}
 try { db.exec("ALTER TABLE role_menus ADD COLUMN guild_id TEXT DEFAULT ''"); } catch (e) {}
 
 // Migrations : colonnes Discord (OAuth2)
@@ -392,15 +394,19 @@ const roleMenus = {
 // ---------------------- Configuration des tickets (par serveur) ----------------------
 const tickets = {
   get: (botId, guildId) => db.prepare('SELECT * FROM tickets WHERE bot_id = ? AND guild_id = ?').get(botId, guildId) || null,
-  set: (botId, guildId, cfg) => db.prepare(`INSERT INTO tickets (bot_id, guild_id, name, channel, message, button_label, support_role, category)
-    VALUES (@bot_id, @guild_id, @name, @channel, @message, @button_label, @support_role, @category)
-    ON CONFLICT(bot_id, guild_id) DO UPDATE SET
-      name = excluded.name,
-      channel = excluded.channel,
-      message = excluded.message,
-      button_label = excluded.button_label,
-      support_role = excluded.support_role,
-      category = excluded.category`).run({ bot_id: botId, guild_id: guildId, name: '', ...cfg }),
+  set: (botId, guildId, cfg) => {
+    const types = typeof cfg.types === 'string' ? cfg.types : JSON.stringify(Array.isArray(cfg.types) ? cfg.types : []);
+    return db.prepare(`INSERT INTO tickets (bot_id, guild_id, name, channel, message, button_label, support_role, category, types)
+      VALUES (@bot_id, @guild_id, @name, @channel, @message, @button_label, @support_role, @category, @types)
+      ON CONFLICT(bot_id, guild_id) DO UPDATE SET
+        name = excluded.name,
+        channel = excluded.channel,
+        message = excluded.message,
+        button_label = excluded.button_label,
+        support_role = excluded.support_role,
+        category = excluded.category,
+        types = excluded.types`).run({ bot_id: botId, guild_id: guildId, name: '', ...cfg, types });
+  },
 };
 
 // ---------------------- Réglages généraux (clé/valeur) ----------------------

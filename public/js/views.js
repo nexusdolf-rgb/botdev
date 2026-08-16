@@ -62,7 +62,7 @@ BotViews.renderOverview = async (content, bot) => {
         </div>
       </div>
     `);
-    el.querySelector('#invite2').onclick = () => navigator.clipboard.writeText(fresh.invite_url).then(() => App.toast('Lien d\'invitation copié !'));
+    el.querySelector('#invite2').onclick = () => { if (fresh.invite_url) App.openInvite(fresh.invite_url); };
     el.querySelector('#go-cmds').onclick = () => App.router.go(`/bots/${bot.id}/commands`);
     el.querySelector('#go-mods').onclick = () => App.router.go(`/bots/${bot.id}/modules`);
     el.querySelector('#go-servers').onclick = () => App.router.go(`/bots/${bot.id}/servers`);
@@ -538,7 +538,7 @@ BotViews.renderServers = async (content, bot) => {
     <div class="card" style="display:flex;align-items:center;gap:13px;padding:16px 22px">
       <span style="font-size:26px">🎮</span>
       <div>
-        <b>Connecté en tant que ${App.escapeHtml(discord ? discord.username : 'Discord')}</b>
+        <b>Connecté en tant que ${App.escapeHtml(discord ? discord.username : 'Discord')}</b> <span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">🔗 Compte lié</span>
         <div class="card-sub" style="margin:0">${guilds.length} serveur(s) trouvé(s). Les serveurs marqués « gérer » sont configurables ici.</div>
       </div>
     </div>
@@ -576,7 +576,7 @@ BotViews.renderServers = async (content, bot) => {
     const openBtn = row.querySelector('[data-open]');
     if (openBtn) openBtn.onclick = () => App.router.go(`/bots/${bot.id}/servers/${g.id}`);
     const invBtn = row.querySelector('[data-invite]');
-    if (invBtn) invBtn.onclick = () => navigator.clipboard.writeText(bot.invite_url).then(() => App.toast('Lien d\'invitation copié ! Ajoute le bot puis reviens ici.'));
+    if (invBtn) invBtn.onclick = () => { if (bot.invite_url) App.openInvite(bot.invite_url); };
     wrap.appendChild(row);
   });
 };
@@ -595,6 +595,7 @@ BotViews.renderServerConfig = async (content, bot, guildId) => {
   }
   const { guild, settings, tickets, events, role_menus, xp_roles } = data;
   const evState = events.state || {};
+  const ticketTypes = (tickets.types && Array.isArray(tickets.types)) ? tickets.types : [];
 
   const el = BotViews.setContent(content, `
     <div class="bot-header" style="margin-bottom:16px">
@@ -765,16 +766,43 @@ BotViews.renderServerConfig = async (content, bot, guildId) => {
         <div><label class="field-label">Salon du panneau</label><input class="input" id="t-channel" value="${App.escapeHtml(tickets.channel || '')}" placeholder="#support" /></div>
         <div><label class="field-label">Texte du bouton</label><input class="input" id="t-label" value="${App.escapeHtml(tickets.button_label || '')}" /></div>
         <div><label class="field-label">Rôle du staff</label><input class="input" id="t-role" value="${App.escapeHtml(tickets.support_role || '')}" placeholder="Staff" /></div>
-        <div><label class="field-label">Catégorie (créée si absente)</label><input class="input" id="t-cat" value="${App.escapeHtml(tickets.category || '')}" placeholder="Tickets" /></div>
+        <div><label class="field-label">Catégorie par défaut (créée si absente)</label><input class="input" id="t-cat" value="${App.escapeHtml(tickets.category || '')}" placeholder="Tickets" /></div>
       </div>
       <label class="field-label">Message du panneau (vide = message automatique)</label>
       <textarea class="input" id="t-message" rows="2" style="max-width:640px">${App.escapeHtml(tickets.message || '')}</textarea>
+      <label class="field-label">🗂️ Types de tickets (menu déroulant sur le panneau)</label>
+      <div id="t-types"></div>
+      <button class="btn btn-sm btn-ghost" id="t-add-type" style="margin-top:8px">＋ Ajouter un type</button>
       <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
         <button class="btn btn-primary" id="t-save">💾 Enregistrer</button>
         <button class="btn" id="t-send">📨 Envoyer le panneau</button>
       </div>
     </div>
   `);
+  // --- Éditeur de types de tickets ---
+  const typesData = ticketTypes.map((t) => ({ label: t.label || '', emoji: t.emoji || '', category: t.category || '' }));
+  const typesEl = tCard.querySelector('#t-types');
+  const renderTypes = () => {
+    typesEl.innerHTML = '';
+    if (!typesData.length) {
+      typesEl.appendChild(App.el(`<div style="color:var(--text-dim);font-size:12.5px">Ex : 🤝 Partenariat (catégorie Partenariats), 🛒 Réclamation… Les membres choisiront leur type dans un menu déroulant.</div>`));
+    }
+    typesData.forEach((t, i) => {
+      const row = App.el(`
+        <div class="row-item" style="margin-top:7px">
+          <input class="input" data-k="emoji" value="${App.escapeHtml(t.emoji)}" placeholder="🤝" style="max-width:60px;text-align:center" />
+          <input class="input" data-k="label" value="${App.escapeHtml(t.label)}" placeholder="Nom du type" style="max-width:190px" />
+          <input class="input" data-k="category" value="${App.escapeHtml(t.category)}" placeholder="Catégorie (optionnel)" />
+          <button class="btn btn-danger btn-icon btn-sm" data-del>🗑</button>
+        </div>
+      `);
+      row.querySelectorAll('[data-k]').forEach((inp) => inp.addEventListener('input', () => { t[inp.dataset.k] = inp.value; }));
+      row.querySelector('[data-del]').onclick = () => { typesData.splice(i, 1); renderTypes(); };
+      typesEl.appendChild(row);
+    });
+  };
+  renderTypes();
+  tCard.querySelector('#t-add-type').onclick = () => { typesData.push({ label: '', emoji: '', category: '' }); renderTypes(); };
   tCard.querySelector('#t-save').onclick = async () => {
     try {
       await App.api(`/bots/${bot.id}/tickets`, {
@@ -786,6 +814,7 @@ BotViews.renderServerConfig = async (content, bot, guildId) => {
           button_label: tCard.querySelector('#t-label').value.trim() || '🎫 Ouvrir un ticket',
           support_role: tCard.querySelector('#t-role').value.trim(),
           category: tCard.querySelector('#t-cat').value.trim() || 'Tickets',
+          types: typesData.filter((t) => String(t.label).trim()),
         },
       });
       toast('Tickets enregistrés !');
@@ -979,6 +1008,24 @@ BotViews.renderSettings = async (content, bot) => {
       <button class="btn btn-danger" id="s-delete">🗑 Supprimer ce bot</button>
     </div>
   `);
+
+  // 🎮 Carte Compte Discord
+  const discCard = App.el(`
+    <div class="card">
+      <h3>🎮 Compte Discord</h3>
+      <div class="card-sub" id="disc-status" style="margin-bottom:10px">${App.state.user && App.state.user.discord_id
+        ? '✅ <b>Lié</b> en tant que <b>@' + App.escapeHtml(App.state.user.discord_username) + '</b> — tu peux configurer tes serveurs dans l\'onglet 🌍 Serveurs.'
+        : '⚠️ <b>Non lié</b> — lie ton compte pour configurer tes serveurs depuis le dashboard.'}</div>
+      <button class="btn ${App.state.user && App.state.user.discord_id ? '' : 'btn-discord'}" id="disc-link">${App.state.user && App.state.user.discord_id ? '🔁 Re-lier mon compte' : '🎮 Lier mon compte Discord'}</button>
+    </div>
+  `);
+  discCard.querySelector('#disc-link').onclick = async () => {
+    try {
+      const { url } = await App.api('/auth/discord/url');
+      window.location.href = url;
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+  el.insertBefore(discCard, el.firstChild);
 
   // 💾 Carte d'état de la sauvegarde automatique
   const backupCard = App.el(`

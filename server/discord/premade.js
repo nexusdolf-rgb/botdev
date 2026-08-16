@@ -133,6 +133,11 @@ function buildSlashPayloads(botId) {
     default_member_permissions: '8',
     options: [
       { name: 'setup', description: 'Assistant pas à pas : nom → catégorie → salon → rôle staff', type: ApplicationCommandOptionType.Subcommand },
+      { name: 'type', description: 'Ajouter un type de ticket (menu déroulant du panneau)', type: ApplicationCommandOptionType.Subcommand, options: [
+        { name: 'nom', description: 'Nom du type (ex : Partenariat)', type: ApplicationCommandOptionType.String, required: true },
+        { name: 'emoji', description: 'Emoji affiché dans le menu', type: ApplicationCommandOptionType.String, required: false },
+        { name: 'categorie', description: 'Catégorie dédiée (optionnel)', type: ApplicationCommandOptionType.String, required: false },
+      ]},
       { name: 'channel', description: 'Définir le salon du panneau de tickets', type: ApplicationCommandOptionType.Subcommand, options: [
         { name: 'salon', description: 'Le salon où sera envoyé le panneau', type: ApplicationCommandOptionType.Channel, required: true },
       ]},
@@ -523,7 +528,7 @@ function argsMatch(str, regex) {
 // ============================================================
 const HELP_DETAILS = {
   ticket: ['🎫 Tickets', 'Le système de tickets complet : un bouton dans un salon, chaque clic crée un salon privé réservé au membre et au staff.',
-    '`/ticket setup` — **Assistant avec menus de sélection** : choisis le nom, la catégorie, le salon et le rôle staff dans des menus déroulants (rien à écrire), puis « Suivant » → « Terminer ». Le panneau est envoyé automatiquement !\n`/ticket panel` — Envoyer le panneau\n`/ticket channel #salon` — Changer le salon\n`/ticket role @Staff` — Changer le rôle staff\n`/ticket category Nom` — Changer la catégorie\n`/ticket button Texte` — Changer le texte du bouton\n`/ticket message Texte` — Changer le message\n`/ticket config` — Voir la configuration\n`/ticket close` — Fermer un ticket\n`/ticket add @membre` / `/ticket remove @membre` — Gérer l\'accès au ticket\n\n🔒 Réservé au **propriétaire du serveur**'],
+    '`/ticket setup` — **Assistant avec menus de sélection** : choisis le nom, la catégorie, le salon et le rôle staff dans des menus déroulants (rien à écrire), puis « Suivant » → « Terminer ». Le panneau est envoyé automatiquement !\n`/ticket type Partenariat` — Ajouter un **type de ticket** (menu déroulant sur le panneau)\n`/ticket panel` — Envoyer le panneau\n`/ticket channel #salon` — Changer le salon\n`/ticket role @Staff` — Changer le rôle staff\n`/ticket category Nom` — Changer la catégorie\n`/ticket button Texte` — Changer le texte du bouton\n`/ticket message Texte` — Changer le message\n`/ticket config` — Voir la configuration\n`/ticket close` — Fermer un ticket (staff)\n`/ticket add @membre` / `/ticket remove @membre` — Gérer l\'accès au ticket (staff)\n\n🔒 Configuration réservée au **propriétaire du serveur** · fermeture réservée au **staff**'],
   roles: ['📋 Rôles', 'Les menus de rôles déroulants : les membres choisissent leurs rôles en cliquant.',
     '`/roles list` — Voir les menus de ce serveur\n`/roles send 1` — Envoyer le menu n°1 (ou précise un salon)\n\nCrée tes menus dans le **dashboard BotDev** (onglet Panneaux)'],
   ping: ['🔧 Utilitaire', 'Affiche la latence du bot.', '`/ping`', '`/ping` → 🏓 Pong ! Latence : 42 ms'],

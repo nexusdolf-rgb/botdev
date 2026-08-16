@@ -125,14 +125,23 @@ router.get('/auth/discord/callback', async (req, res) => {
     const me = await meRes.json();
     const guilds = guildsRes.ok ? await guildsRes.json() : [];
 
+    // 1) Compte Discord déjà connu ?
     let user = store.users.findByDiscordId(me.id);
+    // 2) Sinon : l'utilisateur est-il déjà connecté avec un compte email ? → on FUSIONNE
     if (!user) {
-      const userId = store.users.create(`discord:${me.id}@discord.botdev`, bcrypt.hashSync(crypto.randomBytes(16).toString('hex'), 10), {
-        discord_id: me.id,
-        discord_username: me.username,
-        discord_avatar: me.avatar || '',
-      });
-      user = { id: userId };
+      const sessToken = req.cookies[COOKIE];
+      const sess = sessToken ? store.sessions.find(sessToken) : null;
+      const current = sess ? store.users.findById(sess.user_id) : null;
+      if (current && !current.discord_id) {
+        user = { id: current.id };
+      } else {
+        const userId = store.users.create(`discord:${me.id}@discord.botdev`, bcrypt.hashSync(crypto.randomBytes(16).toString('hex'), 10), {
+          discord_id: me.id,
+          discord_username: me.username,
+          discord_avatar: me.avatar || '',
+        });
+        user = { id: userId };
+      }
     }
     store.users.updateDiscord(user.id, {
       discord_id: me.id,
@@ -147,7 +156,7 @@ router.get('/auth/discord/callback', async (req, res) => {
     });
     const session = store.sessions.create(user.id);
     res.cookie(COOKIE, session, { httpOnly: true, sameSite: 'lax', maxAge: 30 * 86400000 });
-    res.redirect('/#/dashboard');
+    res.redirect('/#/dashboard?oauth=linked');
   } catch (e) {
     res.redirect('/#/dashboard?oauth=error');
   }
@@ -435,6 +444,7 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
   const dGuild = entry && entry.client.isReady() ? entry.client.guilds.cache.get(guildId) : null;
   if (!dGuild) return res.status(400).json({ error: 'Le bot n\'est pas sur ce serveur (ou il est hors ligne).' });
   const cfg = store.tickets.get(bot.id, guildId);
+  const parsedTypes = (() => { try { const t = JSON.parse(cfg?.types || '[]'); return Array.isArray(t) ? t : []; } catch { return []; } })();
   const DEFAULT_GS = {
     prefix: '', warn_limit: 0, warn_action: 'none',
     xp_enabled: 1, xp_min: 10, xp_max: 25, xp_cooldown: 60, xp_message: '', xp_channel: '',
@@ -443,7 +453,7 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
   res.json({
     guild: { id: guildId, name: dGuild.name, icon: dGuild.iconURL({ size: 128 }) || '', members: dGuild.memberCount || 0 },
     settings: { ...DEFAULT_GS, ...(store.guildSettings.get(bot.id, guildId) || {}) },
-    tickets: cfg || { name: '', channel: '', message: '', button_label: '🎫 Ouvrir un ticket', support_role: '', category: 'Tickets' },
+    tickets: { name: '', channel: '', message: '', button_label: '🎫 Ouvrir un ticket', support_role: '', category: 'Tickets', types: [], ...(cfg || {}), types: parsedTypes },
     events: { defs: EVENT_DEFS, state: eventsState(bot.id, guildId) },
     role_menus: store.roleMenus.all(bot.id, guildId),
     xp_roles: store.xpRoles.all(bot.id, guildId),
@@ -546,17 +556,26 @@ router.get('/bots/:id/panels', requireAuth, (req, res) => {
 router.put('/bots/:id/tickets', requireAuth, (req, res) => {
   const bot = getOwnBot(req, res);
   if (!bot) return;
-  const { guild_id, name, channel, message, button_label, support_role, category } = req.body || {};
+  const { guild_id, name, channel, message, button_label, support_role, category, types } = req.body || {};
   if (!guild_id) return res.status(400).json({ error: 'guild_id requis' });
   const current = store.tickets.get(bot.id, guild_id) || {};
-  store.tickets.set(bot.id, guild_id, {
+  const payload = {
     name: String(name !== undefined ? name : (current.name || '')).slice(0, 50),
     channel: String(channel !== undefined ? channel : (current.channel || '')).slice(0, 100),
     message: String(message !== undefined ? message : (current.message || '')).slice(0, 1900),
     button_label: String(button_label !== undefined ? button_label : (current.button_label || '🎫 Ouvrir un ticket')).slice(0, 80),
     support_role: String(support_role !== undefined ? support_role : (current.support_role || '')).slice(0, 100),
     category: String(category !== undefined ? category : (current.category || 'Tickets')).slice(0, 100),
-  });
+  };
+  if (types !== undefined) {
+    payload.types = JSON.stringify((Array.isArray(types) ? types : [])
+      .map((t) => ({ label: String(t.label || '').slice(0, 100), emoji: String(t.emoji || '').slice(0, 10), category: String(t.category || '').slice(0, 100) }))
+      .filter((t) => t.label)
+      .slice(0, 25));
+  } else {
+    payload.types = current.types || '[]';
+  }
+  store.tickets.set(bot.id, guild_id, payload);
   res.json({ ok: true });
 });
 

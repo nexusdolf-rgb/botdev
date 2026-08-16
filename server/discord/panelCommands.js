@@ -14,7 +14,7 @@ const {
   ChannelType,
 } = require('discord.js');
 const store = require('../db');
-const { sendTicketPanel, sendRoleMenu, findChannelInGuild } = require('./panels');
+const { sendTicketPanel, sendRoleMenu, findChannelInGuild, resolveRole, parseTypes } = require('./panels');
 
 const DEFAULT_CFG = {
   name: '',
@@ -28,6 +28,24 @@ const DEFAULT_CFG = {
 function getCfg(botId, guildId) {
   const row = store.tickets.get(botId, guildId);
   return row ? { ...DEFAULT_CFG, ...row } : { ...DEFAULT_CFG };
+}
+
+// Seul le staff peut fermer / gérer les tickets
+function ticketStaff(botId, interaction) {
+  const guild = interaction.guild;
+  const member = interaction.member;
+  if (!guild || !member) return false;
+  try {
+    if (guild.ownerId === interaction.user.id) return true;
+    if (member.permissions && typeof member.permissions.has === 'function'
+      && member.permissions.has(PermissionsBitField.Flags.ManageGuild)) return true;
+  } catch {}
+  const cfg = store.tickets.get(botId, guild.id) || {};
+  if (cfg.support_role) {
+    const role = resolveRole(guild, cfg.support_role);
+    if (role && member.roles && member.roles.cache && member.roles.cache.has(role.id)) return true;
+  }
+  return false;
 }
 
 // ============================================================
@@ -300,17 +318,24 @@ async function handlePanelCommand(botId, interaction) {
   const isOwner = guild.ownerId === interaction.user.id;
   const isAdmin = member.permissions.has(PermissionsBitField.Flags.Administrator);
 
-  // Système de tickets : propriétaire du serveur uniquement
-  if (interaction.commandName === 'ticket' && !isOwner) {
-    return interaction.reply({ content: '⛔ Seul le **propriétaire du serveur** peut configurer le système de tickets.', ephemeral: true });
+  const sub = interaction.options.getSubcommand();
+  // Système de tickets :
+  //  - configuration : propriétaire du serveur uniquement
+  //  - gestion (close/add/remove) : propriétaire, admin OU staff (rôle support)
+  if (interaction.commandName === 'ticket') {
+    if (['close', 'add', 'remove'].includes(sub)) {
+      if (!isOwner && !isAdmin && !ticketStaff(botId, interaction)) {
+        return interaction.reply({ content: '🔒 Seul le **staff** (rôle support) ou les administrateurs peuvent gérer les tickets.', ephemeral: true });
+      }
+    } else if (!isOwner) {
+      return interaction.reply({ content: '⛔ Seul le **propriétaire du serveur** peut configurer le système de tickets.', ephemeral: true });
+    }
+    return handleTicket(botId, sub, interaction, guild);
   }
   // Menus de rôles : propriétaire ou administrateurs
-  if (interaction.commandName === 'roles' && !isOwner && !isAdmin) {
+  if (!isOwner && !isAdmin) {
     return interaction.reply({ content: '⛔ Réservé au propriétaire ou aux administrateurs.', ephemeral: true });
   }
-
-  const sub = interaction.options.getSubcommand();
-  if (interaction.commandName === 'ticket') return handleTicket(botId, sub, interaction, guild);
   return handleRoles(botId, sub, interaction, guild);
 }
 
@@ -368,6 +393,7 @@ async function handleTicket(botId, sub, interaction, guild) {
           { name: '🗂️ Catégorie', value: cfg.category || 'aucune', inline: true },
           { name: '🛡️ Rôle staff', value: cfg.support_role || 'aucun', inline: true },
           { name: '🔘 Bouton', value: cfg.button_label, inline: true },
+          { name: '🗂️ Types de tickets', value: parseTypes(cfg).map((t) => `${t.emoji || '🎫'} ${t.label}${t.category ? ' (→ ' + t.category + ')' : ''}`).join('\n').slice(0, 1024) || 'aucun (ajoute avec /ticket type)' },
           { name: '💬 Message', value: cfg.message.slice(0, 200), inline: false },
         )
         .setFooter({ text: 'Modifie tout avec /ticket setup (assistant) ou les sous-commandes rapides' });
@@ -375,8 +401,11 @@ async function handleTicket(botId, sub, interaction, guild) {
     }
     case 'close': {
       const ch = interaction.channel;
-      if (!ch || !ch.name.startsWith('ticket-')) {
+      if (!ch || !ch.name.startsWith('ticket-') && !ch.topic?.includes('Ticket de')) {
         return interaction.reply({ content: '❌ Cette commande doit être utilisée dans un salon de ticket.', ephemeral: true });
+      }
+      if (!ticketStaff(botId, interaction)) {
+        return interaction.reply({ content: '🔒 Seul le **staff** peut fermer ce ticket.', ephemeral: true });
       }
       await interaction.reply({ content: '🔒 Fermeture du ticket…', ephemeral: true });
       return setTimeout(() => ch.delete().catch(() => {}), 3000);
@@ -385,6 +414,9 @@ async function handleTicket(botId, sub, interaction, guild) {
       const ch = interaction.channel;
       if (!ch || !ch.name.startsWith('ticket-')) {
         return interaction.reply({ content: '❌ Utilise cette commande dans un salon de ticket.', ephemeral: true });
+      }
+      if (!ticketStaff(botId, interaction)) {
+        return interaction.reply({ content: '🔒 Seul le **staff** peut gérer les tickets.', ephemeral: true });
       }
       const user = interaction.options.getUser('membre');
       await ch.permissionOverwrites.edit(user.id, { ViewChannel: true, SendMessages: true }).catch(() => {});
@@ -395,9 +427,25 @@ async function handleTicket(botId, sub, interaction, guild) {
       if (!ch || !ch.name.startsWith('ticket-')) {
         return interaction.reply({ content: '❌ Utilise cette commande dans un salon de ticket.', ephemeral: true });
       }
+      if (!ticketStaff(botId, interaction)) {
+        return interaction.reply({ content: '🔒 Seul le **staff** peut gérer les tickets.', ephemeral: true });
+      }
       const user = interaction.options.getUser('membre');
       await ch.permissionOverwrites.edit(user.id, { ViewChannel: false, SendMessages: false }).catch(() => {});
       return interaction.reply({ content: `✅ ${user} ne peut plus voir ce ticket.`, ephemeral: true });
+    }
+    case 'type': {
+      const nom = (interaction.options.getString('nom') || '').trim();
+      if (!nom) return interaction.reply({ content: '❌ Donne un nom au type de ticket.', ephemeral: true });
+      const emoji = (interaction.options.getString('emoji') || '').trim();
+      const categorie = (interaction.options.getString('categorie') || '').trim();
+      const types = parseTypes(cfg).filter((t) => t.label.toLowerCase() !== nom.toLowerCase());
+      types.push({ label: nom.slice(0, 100), emoji: emoji.slice(0, 10), category: categorie.slice(0, 100) });
+      store.tickets.set(botId, guild.id, { ...cfg, types: JSON.stringify(types) });
+      return interaction.reply({
+        content: `✅ Type « ${emoji || '🎫'} ${nom} » ajouté !\nTypes actuels : ${types.map((t) => t.label).join(', ') || 'aucun'}\n\n📨 Re-envoie le panneau avec \`/ticket panel\` pour afficher le menu de sélection.`,
+        ephemeral: true,
+      });
     }
     default:
       return interaction.reply({ content: '❓ Sous-commande inconnue.', ephemeral: true });

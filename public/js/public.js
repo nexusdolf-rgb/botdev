@@ -93,7 +93,7 @@ App.renderPublicLanding = () => {
   `);
   root.appendChild(page);
 
-  const invite = (url) => navigator.clipboard.writeText(url).then(() => App.toast('Lien d\'invitation copié ! Partage-le avec tes amis. 🎉'));
+  const invite = (url) => App.openInvite(url);
   const heroInvite = page.querySelector('#pub-invite-hero');
   heroInvite.onclick = () => App.fetchFirstInviteUrl().then((url) => url ? invite(url) : App.toast('Aucun bot disponible pour l\'instant.', 'error'));
   const dashHero = page.querySelector('#pub-dash-hero');
@@ -146,7 +146,7 @@ App.renderPublicLanding = () => {
           </div>
         `);
         card.querySelector('[data-view]').onclick = () => App.router.go(`/bot/${b.id}`);
-        card.querySelector('[data-invite]').onclick = () => invite(b.invite_url);
+        card.querySelector('[data-invite]').onclick = () => { if (b.invite_url) invite(b.invite_url); };
         botsEl.appendChild(card);
       });
     } catch {}
@@ -241,7 +241,7 @@ App.renderPublicBot = async (id) => {
       <div class="pub-footer" style="text-align:left">Propulsé par <b>BotDev</b></div>
     `;
     shell.querySelector('#pub-back').onclick = () => App.router.go(App.state.user ? '/dashboard' : '/');
-    shell.querySelector('#pub-invite').onclick = () => navigator.clipboard.writeText(b.invite_url).then(() => App.toast('Lien d\'invitation copié ! 🎉'));
+    shell.querySelector('#pub-invite').onclick = () => { if (b.invite_url) App.openInvite(b.invite_url); };
     shell.querySelector('#pub-refresh').onclick = render;
   };
 

@@ -28,6 +28,13 @@ App.api = async (path, options = {}) => {
   return data;
 };
 
+App.openInvite = (url) => {
+  try { window.open(url, '_blank', 'noopener'); } catch {}
+  navigator.clipboard.writeText(url)
+    .then(() => App.toast('Fenêtre Discord ouverte : choisis ton serveur dans le sélecteur ! (lien aussi copié)'))
+    .catch(() => App.toast('Choisis ton serveur dans la fenêtre Discord !'));
+};
+
 App.toast = (message, type = 'success') => {
   const box = document.getElementById('toasts');
   const t = App.el(`<div class="toast ${type}">${App.escapeHtml(message)}</div>`);
@@ -70,9 +77,10 @@ const routes = {
 };
 
 App.router.parse = () => {
-  const hash = (location.hash || '#/').replace(/^#\//, '');
-  const parts = hash.split('/').filter(Boolean);
-  return { parts };
+  const raw = (location.hash || '#/').replace(/^#\//, '');
+  const [pathPart, query] = raw.split('?');
+  const parts = pathPart.split('/').filter(Boolean);
+  return { parts, query: query ? new URLSearchParams(query) : null };
 };
 
 App.router.go = (path) => { location.hash = `#/${path}`; };
@@ -86,8 +94,17 @@ App.router.run = async () => {
     App.state.loaded = true;
   }
 
-  const { parts } = App.router.parse();
+  const { parts, query } = App.router.parse();
   const user = App.state.user;
+
+  // Messages OAuth2 (après connexion Discord)
+  if (query && query.get('oauth')) {
+    const o = query.get('oauth');
+    if (o === 'linked') App.toast('✅ Compte Discord lié avec succès !');
+    else if (o === 'nosecret') App.toast('Le Client Secret Discord n\'est pas configuré sur le serveur.', 'error');
+    else App.toast('La connexion Discord a échoué. Réessaie.', 'error');
+    history.replaceState(null, '', '#/dashboard');
+  }
 
   // 🌐 Page publique d'un bot : accessible à tous, connecté ou non
   if (parts[0] === 'bot' && parts[1]) {
@@ -99,6 +116,12 @@ App.router.run = async () => {
     if (parts[0] === 'register') { App.renderAuth('register'); return; }
     if (parts[0] === 'login') { App.renderAuth('login'); return; }
     App.renderPublicLanding();
+    return;
+  }
+
+  // Déjà connecté : pas de page login/register
+  if (parts[0] === 'login' || parts[0] === 'register') {
+    App.router.go('/dashboard');
     return;
   }
 
@@ -191,6 +214,7 @@ App.renderNavbar = () => {
             ? `<img class="user-avatar" style="border-radius:50%" src="https://cdn.discordapp.com/avatars/${App.escapeHtml(user.discord_id)}/${App.escapeHtml(user.discord_avatar)}.png" alt="" />`
             : `<div class="user-avatar">${App.escapeHtml((user.email[0] || '?').toUpperCase())}</div>`}
           <span>${App.escapeHtml(user.discord_username || user.email)}</span>
+          ${user.discord_id ? `<span class="chip" title="Compte Discord lié">🔗</span>` : ''}
         </div>
         <button class="btn btn-ghost btn-sm" id="nav-logout">Déconnexion</button>
       </div>
@@ -246,7 +270,7 @@ App.renderDashboard = async () => {
       `);
       card.querySelector('[data-open]').onclick = () => App.router.go(`/bots/${bot.id}`);
       card.querySelector('[data-invite]').onclick = () => {
-        navigator.clipboard.writeText(bot.invite_url).then(() => App.toast('Lien d\'invitation copié !'));
+        if (bot.invite_url) App.openInvite(bot.invite_url);
       };
       card.querySelector('[data-del]').onclick = async () => {
         if (!(await App.confirm(`Supprimer définitivement le bot « ${bot.name} » ?`))) return;
@@ -358,7 +382,7 @@ App.renderBotHeader = (shell, bot) => {
   header.querySelector('#back').onclick = () => App.router.go('/dashboard');
   header.querySelector('#view-public').onclick = () => App.router.go(`/bot/${bot.id}`);
   header.querySelector('#invite').onclick = () => {
-    navigator.clipboard.writeText(bot.invite_url).then(() => App.toast('Lien d\'invitation copié !'));
+    if (bot.invite_url) App.openInvite(bot.invite_url);
   };
   const startStop = header.querySelector('#start-stop');
   startStop.onclick = async () => {
@@ -388,12 +412,13 @@ App.renderBotBody = (shell, bot) => {
     ['economy', '💰', 'Économie'],
     ['settings', '⚙️', 'Réglages'],
   ];
-  const sidebar = App.el(`<div class="bot-sidebar">${tabs.map(([id, ico, label]) =>
-    `<button class="side-link ${App.state.tab === id ? 'active' : ''}" data-tab="${id}"><span class="ico">${ico}</span>${label}</button>`
+  // Niveau 3 du menu : barre d'onglets en HAUT (façon DraftBot)
+  const topTabs = App.el(`<div class="bot-tabs">${tabs.map(([id, ico, label]) =>
+    `<button class="${App.state.tab === id ? 'active' : ''}" data-tab="${id}"><span class="ico">${ico}</span>${label}</button>`
   ).join('')}</div>`);
-  sidebar.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => App.router.go(`/bots/${bot.id}/${b.dataset.tab}`));
+  topTabs.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => App.router.go(`/bots/${bot.id}/${b.dataset.tab}`));
+  shell.appendChild(topTabs);
   const content = App.el(`<div class="bot-content"></div>`);
-  layout.appendChild(sidebar);
   layout.appendChild(content);
   shell.appendChild(layout);
 

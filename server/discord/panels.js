@@ -1,5 +1,7 @@
 // ============================================================
-// BotDev - Panneaux : tickets + menus de rôles (boutons & menus déroulants)
+// BotDev - Panneaux : tickets (avec TYPES de tickets en menu déroulant)
+//                    + menus de rôles
+// Seul le staff (rôle support ou Gérer le serveur) peut fermer les tickets.
 // ============================================================
 const {
   ActionRowBuilder, ButtonBuilder, ButtonStyle,
@@ -26,7 +28,6 @@ async function findChannel(client, query) {
   return null;
 }
 
-// Recherche dans UN SEUL serveur (config par serveur)
 function findChannelInGuild(guild, query) {
   const q = String(query || '').trim();
   if (!q || !guild) return null;
@@ -50,8 +51,12 @@ function resolveRole(guild, nameOrId) {
   return guild.roles.cache.find(r => r.name.toLowerCase() === q.toLowerCase()) || null;
 }
 
+function slugify(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 16) || 'ticket';
+}
+
 // ---------------------- Dispatch des interactions panneaux ----------------------
-// Retourne true si l'interaction a été traitée ici.
 async function dispatchPanels(botId, interaction) {
   try {
     if (interaction.isChatInputCommand() && ['ticket', 'roles'].includes(interaction.commandName)) {
@@ -59,8 +64,8 @@ async function dispatchPanels(botId, interaction) {
       await handlePanelCommand(botId, interaction);
       return true;
     }
-    // Assistant interactif /ticket setup (boutons + modales + menus de sélection)
     const cid = String(interaction.customId || '');
+    // Assistant interactif /ticket setup (boutons + modales + menus de sélection)
     if ((interaction.isButton() && cid.startsWith('bdw:'))
       || (interaction.isModalSubmit() && cid.startsWith('bdw-modal:'))
       || ((interaction.isStringSelectMenu() || interaction.isChannelSelectMenu() || interaction.isRoleSelectMenu()) && cid.startsWith('bdw-sel:'))) {
@@ -68,16 +73,19 @@ async function dispatchPanels(botId, interaction) {
       await handleWizardInteraction(botId, interaction);
       return true;
     }
+    // Sélection d'un TYPE de ticket (menu déroulant du panneau)
+    if (interaction.isStringSelectMenu() && cid.startsWith(`bd-ttype:${botId}`)) {
+      await handleTicketTypeSelect(botId, interaction);
+      return true;
+    }
     if (interaction.isButton()) {
-      const id = interaction.customId || '';
-      if (id === `bd-ticket:${botId}`) { await handleTicketButton(botId, interaction); return true; }
-      if (id === `bd-tmenu:${botId}:close`) { await handleTicketClose(botId, interaction); return true; }
+      if (cid === `bd-ticket:${botId}`) { await handleTicketButton(botId, interaction); return true; }
+      if (cid === `bd-tmenu:${botId}:close`) { await handleTicketClose(botId, interaction); return true; }
       return false;
     }
     if (interaction.isStringSelectMenu()) {
-      const id = interaction.customId || '';
-      if (id.startsWith(`bd-menu:${botId}:`)) {
-        await handleRoleMenu(botId, interaction, parseInt(id.split(':')[2], 10));
+      if (cid.startsWith(`bd-menu:${botId}:`)) {
+        await handleRoleMenu(botId, interaction, parseInt(cid.split(':')[2], 10));
         return true;
       }
       return false;
@@ -94,8 +102,15 @@ async function dispatchPanels(botId, interaction) {
   return false;
 }
 
-// ---------------------- Tickets ----------------------
+// ---------------------- Tickets (avec types) ----------------------
 const LEGACY_DEFAULT_MESSAGE = '🎫 Besoin d\'aide ? Clique sur le bouton pour ouvrir un ticket !';
+
+function parseTypes(cfg) {
+  try {
+    const t = Array.isArray(cfg.types) ? cfg.types : JSON.parse(cfg.types || '[]');
+    return Array.isArray(t) ? t.filter((x) => x && x.label) : [];
+  } catch { return []; }
+}
 
 function isDefaultMessage(msg) {
   const s = String(msg || '').trim();
@@ -110,13 +125,13 @@ function defaultPanelDescription(buttonLabel) {
     'Tu as une question, un problème ou une suggestion ? Ouvre un **ticket privé** et notre équipe te répondra aussi vite que possible.',
     '',
     '**Comment ça marche ?**',
-    `1️⃣  Clique sur **${buttonLabel}** ci-dessous`,
+    `1️⃣  Choisis un **type de ticket** ci-dessous (ou clique sur **${buttonLabel}**)`,
     '2️⃣  Décris ta demande dans le salon privé qui s\'ouvre automatiquement',
     '3️⃣  Notre équipe te répond — c\'est tout !',
   ].join('\n');
 }
 
-function buildTicketPanelEmbed(cfg, client) {
+function buildTicketPanelEmbed(cfg, client, types) {
   const desc = isDefaultMessage(cfg.message)
     ? defaultPanelDescription(cfg.button_label || '🎫 Ouvrir un ticket')
     : String(cfg.message);
@@ -127,8 +142,14 @@ function buildTicketPanelEmbed(cfg, client) {
     .addFields(
       { name: '🕐 Réponse rapide', value: 'Ton ticket est créé **instantanément** dans un salon privé.', inline: true },
       { name: '🔒 100 % privé', value: 'Seuls **toi et le staff** voient la conversation.', inline: true },
-      { name: '📩 Suivi facile', value: 'Ferme ton ticket en un clic quand tout est réglé.', inline: true },
+      { name: '📩 Suivi facile', value: 'Le staff ferme ton ticket en un clic quand tout est réglé.', inline: true },
     );
+  if (types.length) {
+    embed.addFields({
+      name: '🗂️ Types de tickets',
+      value: types.map((t) => `${t.emoji || '🎫'} **${t.label}**${t.category ? ` → catégorie « ${t.category} »` : ''}`).join('\n').slice(0, 1024),
+    });
+  }
   if (client && client.user) {
     try { embed.setThumbnail(client.user.displayAvatarURL({ dynamic: true })); } catch {}
   }
@@ -140,35 +161,75 @@ function buildTicketPanelEmbed(cfg, client) {
 async function sendTicketPanel(botId, guildId, client, channel) {
   const cfg = store.tickets.get(botId, guildId);
   if (!cfg) throw new Error('Configuration des tickets introuvable');
-  const row = new ActionRowBuilder().addComponents(
+  const types = parseTypes(cfg);
+  const rows = [];
+  if (types.length) {
+    const select = new StringSelectMenuBuilder()
+      .setCustomId(`bd-ttype:${botId}`)
+      .setPlaceholder('🗂️ Choisis le type de ticket…')
+      .setMinValues(1).setMaxValues(1);
+    for (const t of types.slice(0, 25)) {
+      const opt = new StringSelectMenuOptionBuilder()
+        .setLabel(String(t.label).slice(0, 100))
+        .setValue(String(t.label).slice(0, 100));
+      if (t.emoji && /^\p{Extended_Pictographic}/u.test(String(t.emoji))) opt.setEmoji(String(t.emoji));
+      select.addOptions(opt);
+    }
+    rows.push(new ActionRowBuilder().addComponents(select));
+  }
+  rows.push(new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`bd-ticket:${botId}`)
       .setLabel(cfg.button_label || '🎫 Ouvrir un ticket')
       .setStyle(ButtonStyle.Primary)
-  );
-  await channel.send({ embeds: [buildTicketPanelEmbed(cfg, client)], components: [row] });
+  ));
+  await channel.send({ embeds: [buildTicketPanelEmbed(cfg, client, types)], components: rows });
 }
 
-async function handleTicketButton(botId, interaction) {
+// Le membre est-il staff de ce serveur ? (rôle support OU Gérer le serveur)
+function isStaff(botId, interaction) {
   const guild = interaction.guild;
+  const member = interaction.member;
+  if (!guild || !member) return false;
+  try {
+    if (guild.ownerId === interaction.user.id) return true;
+    if (member.permissions && typeof member.permissions.has === 'function'
+      && member.permissions.has(PermissionFlagsBits.ManageGuild)) return true;
+  } catch {}
+  const cfg = store.tickets.get(botId, guild.id) || {};
+  if (cfg.support_role) {
+    const role = resolveRole(guild, cfg.support_role);
+    if (role && member.roles && member.roles.cache && member.roles.cache.has(role.id)) return true;
+  }
+  return false;
+}
+
+// Crée le salon du ticket (éventuellement selon un type)
+async function openTicket(botId, interaction, type) {
+  const guild = interaction.guild;
+  const member = interaction.member;
   const cfg = store.tickets.get(botId, guild.id);
   if (!cfg) return interaction.reply({ content: '⚠️ Les tickets ne sont pas configurés.', ephemeral: true });
-  const member = interaction.member;
-  const uname = (member.user.username || 'membre').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20) || 'membre';
 
-  // Un seul ticket ouvert par membre
-  const existing = guild.channels.cache.find(c => c.name === `ticket-${uname}`);
+  const types = parseTypes(cfg);
+  const chosen = type || types[0] || null;
+  const prefix = chosen ? slugify(chosen.label) : 'ticket';
+  const uname = slugify(member.user.username);
+  const channelName = `${prefix}-${uname}`.slice(0, 32);
+
+  const existing = guild.channels.cache.find((c) => c.name === channelName);
   if (existing) {
     return interaction.reply({ content: `Tu as déjà un ticket ouvert : ${existing}`, ephemeral: true });
   }
 
   const support = resolveRole(guild, cfg.support_role);
+  const catName = (chosen && chosen.category) ? chosen.category : (cfg.category || '');
   let parent = null;
-  if (cfg.category) {
-    const catName = String(cfg.category).toLowerCase();
-    parent = guild.channels.cache.find(c => c.type === ChannelType.GuildCategory && c.name.toLowerCase() === catName);
+  if (catName) {
+    const lower = String(catName).toLowerCase();
+    parent = guild.channels.cache.find((c) => c.type === ChannelType.GuildCategory && c.name.toLowerCase() === lower);
     if (!parent) {
-      try { parent = await guild.channels.create({ name: cfg.category, type: ChannelType.GuildCategory }); } catch {}
+      try { parent = await guild.channels.create({ name: catName, type: ChannelType.GuildCategory }); } catch {}
     }
   }
 
@@ -182,11 +243,11 @@ async function handleTicketButton(botId, interaction) {
   let channel;
   try {
     channel = await guild.channels.create({
-      name: `ticket-${uname}`,
+      name: channelName,
       type: ChannelType.GuildText,
       parent: parent ? parent.id : null,
       permissionOverwrites: perms,
-      topic: `Ticket de ${member.user.tag}`,
+      topic: `Ticket de ${member.user.tag}${chosen ? ` — type : ${chosen.label}` : ''}`,
     });
   } catch (e) {
     return interaction.reply({ content: '⚠️ Je n\'ai pas pu créer le salon. Vérifie mes permissions (gérer les salons).', ephemeral: true });
@@ -204,10 +265,11 @@ async function handleTicketButton(botId, interaction) {
     .setDescription([
       `Bienvenue ${member} 👋`,
       '',
+      chosen ? `🗂️ **Type** : ${chosen.emoji || ''} ${chosen.label}` : null,
       'Explique ta demande en détail (tu peux joindre des captures d\'écran ou des fichiers). Notre équipe te répondra ici **au plus vite**.',
       '',
-      '🔒 Une fois la conversation terminée, utilise le bouton ci-dessous pour fermer ton ticket.',
-    ].join('\n'));
+      '🔒 Seul le **staff** peut fermer ce ticket.',
+    ].filter(Boolean).join('\n'));
   const site = store.settings.get('public_url');
   if (site) welcome.setFooter({ text: `BotDev · ${site}` });
   await channel.send({
@@ -219,7 +281,21 @@ async function handleTicketButton(botId, interaction) {
   await interaction.reply({ content: `✅ Ton ticket a été créé : ${channel}`, ephemeral: true });
 }
 
+async function handleTicketButton(botId, interaction) {
+  await openTicket(botId, interaction, null);
+}
+
+async function handleTicketTypeSelect(botId, interaction) {
+  const cfg = store.tickets.get(botId, interaction.guild.id) || {};
+  const label = interaction.values[0];
+  const type = parseTypes(cfg).find((t) => t.label === label) || { label };
+  await openTicket(botId, interaction, type);
+}
+
 async function handleTicketClose(botId, interaction) {
+  if (!isStaff(botId, interaction)) {
+    return interaction.reply({ content: '🔒 Seul le **staff** peut fermer ce ticket.', ephemeral: true });
+  }
   const channel = interaction.channel;
   await interaction.reply({ content: '🔒 Fermeture du ticket…', ephemeral: true }).catch(() => {});
   setTimeout(() => { channel.delete().catch(() => {}); }, 3000);
@@ -268,4 +344,4 @@ async function handleRoleMenu(botId, interaction, menuId) {
   });
 }
 
-module.exports = { dispatchPanels, sendTicketPanel, sendRoleMenu, findChannel, findChannelInGuild, resolveRole };
+module.exports = { dispatchPanels, sendTicketPanel, sendRoleMenu, findChannel, findChannelInGuild, resolveRole, parseTypes, isStaff, openTicket };
