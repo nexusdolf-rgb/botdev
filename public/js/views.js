@@ -305,14 +305,15 @@ BotViews.renderPanels = async (content, bot) => {
             <div class="card-sub">Un bouton dans un salon : chaque clic crée un salon privé réservé au membre (et au staff).</div>
           </div>
           <div style="max-width:320px">
-            <div class="help-box" style="font-size:12px">💡 <b>Plus rapide sur Discord :</b><br/>
-            <code>/ticket channel #support</code><br/>
-            <code>/ticket role @Staff</code><br/>
-            <code>/ticket category Tickets</code><br/>
-            <code>/ticket panel</code> (envoie le panneau)</div>
+            <div class="help-box" style="font-size:12px">💡 <b>Encore plus rapide sur Discord :</b><br/>
+            <code>/ticket setup</code> — assistant pas à pas (nom → catégorie → salon → rôle)<br/>
+            <code>/ticket panel</code> — envoie le panneau<br/>
+            <code>/ticket config</code> — voir la configuration</div>
           </div>
         </div>
         <div style="max-width:560px">
+          <label class="field-label">Nom du panel</label>
+          <input class="input" id="t-name" value="${App.escapeHtml(tickets.name || '')}" placeholder="Support" />
           <label class="field-label">Salon du panneau (mention, ex : #support)</label>
           <input class="input" id="t-channel" value="${App.escapeHtml(tickets.channel || '')}" placeholder="#support" />
           <label class="field-label">Message du panneau</label>
@@ -336,6 +337,7 @@ BotViews.renderPanels = async (content, bot) => {
           method: 'PUT',
           body: {
             guild_id: guildId,
+            name: tCard.querySelector('#t-name').value.trim(),
             channel: tCard.querySelector('#t-channel').value.trim(),
             message: tCard.querySelector('#t-message').value,
             button_label: tCard.querySelector('#t-label').value.trim() || '🎫 Ouvrir un ticket',

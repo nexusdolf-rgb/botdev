@@ -101,6 +101,7 @@ CREATE TABLE IF NOT EXISTS role_menus (
 CREATE TABLE IF NOT EXISTS tickets (
   bot_id INTEGER NOT NULL,
   guild_id TEXT NOT NULL,
+  name TEXT DEFAULT '',
   channel TEXT DEFAULT '',
   message TEXT DEFAULT '🎫 Besoin d''aide ? Clique sur le bouton pour ouvrir un ticket !',
   button_label TEXT DEFAULT '🎫 Ouvrir un ticket',
@@ -109,6 +110,10 @@ CREATE TABLE IF NOT EXISTS tickets (
   PRIMARY KEY (bot_id, guild_id)
 );
 `);
+
+// Migrations légères (les colonnes ajoutées après coup)
+try { db.exec("ALTER TABLE tickets ADD COLUMN name TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE role_menus ADD COLUMN guild_id TEXT DEFAULT ''"); } catch (e) {}
 
 // ---------------------- Utilisateurs & sessions ----------------------
 const users = {
@@ -234,14 +239,15 @@ const roleMenus = {
 // ---------------------- Configuration des tickets (par serveur) ----------------------
 const tickets = {
   get: (botId, guildId) => db.prepare('SELECT * FROM tickets WHERE bot_id = ? AND guild_id = ?').get(botId, guildId) || null,
-  set: (botId, guildId, cfg) => db.prepare(`INSERT INTO tickets (bot_id, guild_id, channel, message, button_label, support_role, category)
-    VALUES (@bot_id, @guild_id, @channel, @message, @button_label, @support_role, @category)
+  set: (botId, guildId, cfg) => db.prepare(`INSERT INTO tickets (bot_id, guild_id, name, channel, message, button_label, support_role, category)
+    VALUES (@bot_id, @guild_id, @name, @channel, @message, @button_label, @support_role, @category)
     ON CONFLICT(bot_id, guild_id) DO UPDATE SET
+      name = excluded.name,
       channel = excluded.channel,
       message = excluded.message,
       button_label = excluded.button_label,
       support_role = excluded.support_role,
-      category = excluded.category`).run({ bot_id: botId, guild_id: guildId, ...cfg }),
+      category = excluded.category`).run({ bot_id: botId, guild_id: guildId, name: '', ...cfg }),
 };
 
 module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets };

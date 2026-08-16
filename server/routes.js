@@ -300,7 +300,7 @@ router.get('/bots/:id/panels', requireAuth, (req, res) => {
   const cfg = store.tickets.get(bot.id, guild_id);
   res.json({
     tickets: cfg || {
-      channel: '', message: '🎫 Besoin d\'aide ? Clique sur le bouton pour ouvrir un ticket !',
+      name: '', channel: '', message: '🎫 Besoin d\'aide ? Clique sur le bouton pour ouvrir un ticket !',
       button_label: '🎫 Ouvrir un ticket', support_role: '', category: 'Tickets',
     },
     role_menus: store.roleMenus.all(bot.id, guild_id),
@@ -310,10 +310,11 @@ router.get('/bots/:id/panels', requireAuth, (req, res) => {
 router.put('/bots/:id/tickets', requireAuth, (req, res) => {
   const bot = getOwnBot(req, res);
   if (!bot) return;
-  const { guild_id, channel, message, button_label, support_role, category } = req.body || {};
+  const { guild_id, name, channel, message, button_label, support_role, category } = req.body || {};
   if (!guild_id) return res.status(400).json({ error: 'guild_id requis' });
   const current = store.tickets.get(bot.id, guild_id) || {};
   store.tickets.set(bot.id, guild_id, {
+    name: String(name !== undefined ? name : (current.name || '')).slice(0, 50),
     channel: String(channel !== undefined ? channel : (current.channel || '')).slice(0, 100),
     message: String(message !== undefined ? message : (current.message || '')).slice(0, 1900),
     button_label: String(button_label !== undefined ? button_label : (current.button_label || '🎫 Ouvrir un ticket')).slice(0, 80),

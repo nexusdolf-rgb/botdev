@@ -59,6 +59,13 @@ async function dispatchPanels(botId, interaction) {
       await handlePanelCommand(botId, interaction);
       return true;
     }
+    // Assistant interactif /ticket setup (boutons + modales)
+    if ((interaction.isButton() && String(interaction.customId || '').startsWith('bdw:'))
+      || (interaction.isModalSubmit() && String(interaction.customId || '').startsWith('bdw-modal:'))) {
+      const { handleWizardInteraction } = require('./panelCommands');
+      await handleWizardInteraction(botId, interaction);
+      return true;
+    }
     if (interaction.isButton()) {
       const id = interaction.customId || '';
       if (id === `bd-ticket:${botId}`) { await handleTicketButton(botId, interaction); return true; }

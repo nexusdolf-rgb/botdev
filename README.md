@@ -16,8 +16,10 @@
   - Cooldowns par commande, boutons reliés à d'autres commandes
 - **Modules pré-faits en 1 clic** : Modération (kick, ban, warn, timeout, clear…), Utilitaires (ping, avatar, serverinfo…), Fun (8ball, meme, coinflip…), Économie (daily, balance, leaderboard) — **activés automatiquement à la création du bot**
 - **Panneaux interactifs** (configuration par serveur, depuis le dashboard OU depuis Discord) :
-  - 🎫 **Système de tickets façon Ticket Tool** : bouton → salon privé automatique par membre (rôle staff, catégorie, bouton fermeture). Tout se configure sur Discord : `/ticket channel`, `/ticket role`, `/ticket category`, `/ticket button`, `/ticket message`, `/ticket panel`, `/ticket config`, `/ticket close`, `/ticket add`, `/ticket remove`
+  - 🎫 **Système de tickets façon Ticket Tool** : **`/ticket setup` = assistant interactif pas à pas avec boutons** (nom du panel → catégorie → salon → rôle staff → « Suivant ➡️ » → « ✅ Terminer »). Bouton → salon privé automatique par membre (rôle staff, catégorie, bouton fermeture). Configuration rapide : `/ticket channel`, `/ticket role`, `/ticket category`, `/ticket button`, `/ticket message`, `/ticket panel`, `/ticket config`, `/ticket close`, `/ticket add`, `/ticket remove` — 🔒 réservé au **propriétaire du serveur**
   - 📋 **Menus de rôles** : menus déroulants où les membres choisissent leurs rôles (`/roles list`, `/roles send`)
+- **📚 Centre d'aide complet** : `/help` affiche toutes les catégories (tickets, rôles, modération, utilitaires, fun, économie, commandes personnalisées) et `/help commande` donne le détail + exemples (ex : `/help ticket`)
+- **🌍 Utilisable par tous, sans compte** : n'importe quel serveur qui ajoute le bot reçoit automatiquement toutes les commandes — aucun compte BotDev nécessaire pour les membres. La modération est réservée aux administrateurs.
 - **📱 Mode application (PWA)** : icône, installation sur l'écran d'accueil, navigation par barre d'onglets sur mobile, chargement hors ligne
 - **Événements** : message de bienvenue (embed, couleur, image), message de départ, auto-rôle
 - **Économie** : solde en coins par serveur, classement consultable dans le dashboard

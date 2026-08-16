@@ -87,6 +87,9 @@ function buildSlashPayloads(botId) {
     if (['unban'].includes(name)) {
       options.push({ name: 'identifiant', description: 'ID de l\'utilisateur à débannir', type: ApplicationCommandOptionType.String, required: true });
     }
+    if (['help'].includes(name)) {
+      options.push({ name: 'commande', description: 'Nom de la commande à détailler (ex : ticket)', type: ApplicationCommandOptionType.String, required: false });
+    }
     // Commandes personnalisées du bot (slash)
     const custom = store.commands.all(botId).filter(c => c.enabled && c.trigger_type === 'slash');
     for (const c of custom) {
@@ -104,11 +107,15 @@ function buildSlashPayloads(botId) {
           .sort((a, b) => (b.required ? 1 : 0) - (a.required ? 1 : 0)),
       });
     }
-    payloads.push({
-      name,
-      description: def.desc,
-      options,
-    });
+    const payload = { name, description: def.desc, options };
+    // Commandes de modération : visibles uniquement par les administrateurs
+    // (et par ceux qui ont la permission spécifique correspondante)
+    if (def.perms && def.perms.length) {
+      let bits = BigInt(PermissionsBitField.Flags.Administrator);
+      for (const p of def.perms) bits |= BigInt(p);
+      payload.default_member_permissions = bits.toString();
+    }
+    payloads.push(payload);
   }
 
   // Commandes de gestion des panneaux (toujours disponibles, admin uniquement)
@@ -117,6 +124,7 @@ function buildSlashPayloads(botId) {
     description: '🎫 Configurer et gérer le système de tickets',
     default_member_permissions: '8',
     options: [
+      { name: 'setup', description: 'Assistant pas à pas : nom → catégorie → salon → rôle staff', type: ApplicationCommandOptionType.Subcommand },
       { name: 'channel', description: 'Définir le salon du panneau de tickets', type: ApplicationCommandOptionType.Subcommand, options: [
         { name: 'salon', description: 'Le salon où sera envoyé le panneau', type: ApplicationCommandOptionType.Channel, required: true },
       ]},
@@ -299,12 +307,10 @@ async function execute(botId, entry, cmd, src) {
       break;
     }
     case 'help': {
-      const enabled = enabledCommandNames(botId);
-      const embed = new EmbedBuilder()
-        .setColor('#5865F2')
-        .setTitle('📚 Commandes disponibles')
-        .setDescription(enabled.length ? enabled.map(c => `\`${record.prefix}${c}\``).join(' · ') : 'Aucun module activé.')
-        .setFooter({ text: `Préfixe : ${record.prefix}` });
+      let requested = null;
+      if (isInt) requested = src.interaction.options.getString('commande') || null;
+      else requested = String(src.args || '').trim().split(/\s+/)[0] || null;
+      const embed = buildHelpEmbed(botId, record, client, guild, requested);
       await replyEmbed(embed);
       break;
     }
@@ -453,4 +459,131 @@ function argsMatch(str, regex) {
   return m ? m : null;
 }
 
-module.exports = { MODULES, CMD_DEFS, enabledModules, enabledCommandNames, buildSlashPayloads, handlePremadePrefix, handlePremadeSlash };
+// ============================================================
+// Centre d'aide /help (complet : catégories + détails par commande)
+// ============================================================
+const HELP_DETAILS = {
+  ticket: ['🎫 Tickets', 'Le système de tickets complet : un bouton dans un salon, chaque clic crée un salon privé réservé au membre et au staff.',
+    '`/ticket setup` — **Assistant pas à pas** (nom → catégorie → salon → rôle staff)\n`/ticket panel` — Envoyer le panneau\n`/ticket channel #salon` — Changer le salon\n`/ticket role @Staff` — Changer le rôle staff\n`/ticket category Nom` — Changer la catégorie\n`/ticket button Texte` — Changer le texte du bouton\n`/ticket message Texte` — Changer le message\n`/ticket config` — Voir la configuration\n`/ticket close` — Fermer un ticket\n`/ticket add @membre` / `/ticket remove @membre` — Gérer l\'accès au ticket\n\n🔒 Réservé au **propriétaire du serveur**'],
+  roles: ['📋 Rôles', 'Les menus de rôles déroulants : les membres choisissent leurs rôles en cliquant.',
+    '`/roles list` — Voir les menus de ce serveur\n`/roles send 1` — Envoyer le menu n°1 (ou précise un salon)\n\nCrée tes menus dans le **dashboard BotDev** (onglet Panneaux)'],
+  ping: ['🔧 Utilitaire', 'Affiche la latence du bot.', '`/ping`', '`/ping` → 🏓 Pong ! Latence : 42 ms'],
+  avatar: ['🔧 Utilitaire', 'Affiche l\'avatar d\'un membre.', '`/avatar @membre`', '`/avatar @Nexora`'],
+  userinfo: ['🔧 Utilitaire', 'Informations sur un membre (ID, date de création, arrivée).', '`/userinfo @membre`', '`/userinfo`'],
+  serverinfo: ['🔧 Utilitaire', 'Informations sur le serveur (membres, salons, rôles…).', '`/serverinfo`'],
+  botinfo: ['🔧 Utilitaire', 'Informations sur le bot (serveurs, latence…).', '`/botinfo`'],
+  kick: ['🛡️ Modération', 'Expulse un membre du serveur (il peut revenir avec une invitation).', '`/kick @membre raison`', '`/kick @spammeur Flood`'],
+  ban: ['🛡️ Modération', 'Bannit un membre définitivement.', '`/ban @membre raison`', '`/ban @spammeur`'],
+  unban: ['🛡️ Modération', 'Débannit un utilisateur avec son identifiant.', '`/unban ID`', '`/unban 123456789012345678`'],
+  timeout: ['🛡️ Modération', 'Empêche un membre d\'écrire pendant X minutes.', '`/timeout @membre minutes`', '`/timeout @membre 10`'],
+  warn: ['🛡️ Modération', 'Avertit un membre (les avertissements sont comptés).', '`/warn @membre raison`', '`/warn @membre insultes`'],
+  warns: ['🛡️ Modération', 'Liste les avertissements d\'un membre.', '`/warns @membre`'],
+  clear: ['🛡️ Modération', 'Supprime un nombre de messages du salon.', '`/clear nombre`', '`/clear 20`'],
+  '8ball': ['🎉 Fun', 'Pose une question, la boule magique répond.', '`/8ball question`', '`/8ball BotDev est-il génial ?`'],
+  meme: ['🎉 Fun', 'Envoie un meme aléatoire.', '`/meme`'],
+  coinflip: ['🎉 Fun', 'Lance une pièce : pile ou face.', '`/coinflip`', '`/coinflip` → 🪙 Face !'],
+  roll: ['🎉 Fun', 'Lance un dé (jusqu\'à la valeur choisie, défaut 6).', '`/roll max`', '`/roll 100` → 🎲 73'],
+  say: ['🎉 Fun', 'Le bot répète ton message.', '`/say texte`', '`/say Coucou !`'],
+  reverse: ['🎉 Fun', 'Inverse ton texte.', '`/reverse texte`', '`/reverse bonjour` → ruojnob'],
+  daily: ['💰 Économie', 'Récupère 100 coins, une fois par jour.', '`/daily`', '`/daily` → 🎁 +100 coins !'],
+  balance: ['💰 Économie', 'Affiche ton solde de coins.', '`/balance @membre`'],
+  leaderboard: ['💰 Économie', 'Le classement des coins du serveur.', '`/leaderboard`'],
+};
+
+function buildHelpEmbed(botId, record, client, guild, requested) {
+  const enabled = enabledCommandNames(botId);
+
+  // --- Détail d'une commande précise ---
+  if (requested) {
+    const key = requested.toLowerCase().replace(/^\//, '');
+    const detail = HELP_DETAILS[key];
+    const available = key === 'ticket' || key === 'roles' || enabled.includes(key);
+    if (detail && available) {
+      const embed = new EmbedBuilder()
+        .setColor('#5865F2')
+        .setTitle(`${detail[0]} · ${key}`)
+        .setDescription(detail[1]);
+      embed.addFields({ name: '📖 Utilisation', value: detail[2] });
+      if (detail[3]) embed.addFields({ name: '✨ Exemple', value: detail[3] });
+      embed.setFooter({ text: `Bot : ${client.user.username} · /help pour la liste complète` });
+      return embed;
+    }
+    return new EmbedBuilder()
+      .setColor('#ED4245')
+      .setTitle('❓ Commande introuvable')
+      .setDescription(`Je ne connais pas la commande « ${requested} ».\nTape \`/help\` pour voir la liste complète.`);
+  }
+
+  // --- Aide générale complète ---
+  const embed = new EmbedBuilder()
+    .setColor('#5865F2')
+    .setTitle(`📚 Centre d'aide — ${client.user.username}`)
+    .setDescription('Voici **tout ce que je sais faire**. Tape `/help commande` pour le détail d\'une commande (ex : `/help ticket`).')
+    .setThumbnail(client.user.displayAvatarURL({ dynamic: true }));
+
+  embed.addFields({
+    name: '🎫 Système de tickets — configuration',
+    value: [
+      '`/ticket setup` — **Assistant pas à pas** : nom du panel → catégorie → salon → rôle staff',
+      '`/ticket panel` — Envoyer le panneau avec le bouton dans un salon',
+      '`/ticket config` — Voir la configuration actuelle',
+      '`/ticket close` — Fermer un ticket · `/ticket add @membre` · `/ticket remove @membre`',
+      '*🔒 Réservé au propriétaire du serveur*',
+    ].join('\n'),
+  });
+
+  embed.addFields({
+    name: '📋 Menus de rôles',
+    value: [
+      '`/roles list` — Voir les menus de ce serveur',
+      '`/roles send 1` — Envoyer le menu n°1 dans un salon',
+      '*Les menus se créent dans le dashboard BotDev (onglet Panneaux)*',
+    ].join('\n'),
+  });
+
+  if (enabled.includes('kick')) {
+    embed.addFields({
+      name: '🛡️ Modération (administrateurs)',
+      value: '`/kick @membre` · `/ban @membre` · `/unban ID` · `/timeout @membre 10` · `/warn @membre raison` · `/warns @membre` · `/clear 20`',
+    });
+  }
+
+  if (enabled.includes('ping')) {
+    embed.addFields({
+      name: '🔧 Utilitaires',
+      value: '`/ping` · `/avatar @membre` · `/userinfo` · `/serverinfo` · `/botinfo` · `/help`',
+    });
+  }
+
+  if (enabled.includes('8ball')) {
+    embed.addFields({
+      name: '🎉 Fun',
+      value: '`/8ball question` · `/meme` · `/coinflip` · `/roll 100` · `/say texte` · `/reverse texte`',
+    });
+  }
+
+  if (enabled.includes('daily')) {
+    embed.addFields({
+      name: '💰 Économie',
+      value: '`/daily` — 100 coins par jour · `/balance` — ton solde · `/leaderboard` — le classement',
+    });
+  }
+
+  const custom = store.commands.all(botId).filter(c => c.enabled);
+  if (custom.length) {
+    embed.addFields({
+      name: '🧩 Commandes personnalisées',
+      value: custom.map((c) => {
+        const trig = c.trigger_type === 'slash' ? `/${c.name}` : c.trigger_type === 'keyword' ? `mot-clé « ${c.trigger_value} »` : `${record.prefix}${c.trigger_value || c.name}`;
+        return `\`${trig}\` — ${c.description || 'aucune description'}`;
+      }).join('\n').slice(0, 1024),
+    });
+  }
+
+  embed.setFooter({
+    text: `Préfixe : ${record.prefix} · Toutes les commandes fonctionnent automatiquement sur chaque serveur où le bot est présent — aucun compte requis.`,
+  });
+  return embed;
+}
+
+module.exports = { MODULES, CMD_DEFS, enabledModules, enabledCommandNames, buildSlashPayloads, handlePremadePrefix, handlePremadeSlash, buildHelpEmbed };
