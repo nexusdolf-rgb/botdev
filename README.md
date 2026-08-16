@@ -1,6 +1,37 @@
-# 🤖 BotDev
+# 🤖 Hoxera
 
-**BotDev** est une plateforme web pour créer et héberger des bots Discord **sans écrire une ligne de code** — inspirée de BotGhost, mais 100 % à toi.
+**Hoxera** est un bot Discord complet + dashboard web **100 % gratuit** (Render + GitHub), inspiré de DraftBot et Ticket Tool — sans écrire une ligne de code.
+
+## 🆕 Hoxera 2.0 (v33) — la grosse mise à jour
+
+### 🎮 Fun & communauté (côté Discord)
+- 💍 **Mariages** : `/marry @membre` (demande avec boutons Accepter/Refuser), `/divorce`, `/couple`
+- 🤗 **Actions entre membres** : `/hug` `/kiss` `/slap` `/pat` `/punch` (messages aléatoires)
+- 🕹️ **Jeux** : `/rps` (pierre-feuille-ciseaux), `/pendu` (8 vies, boutons A-Z), `/morpion @membre` (grille 3×3 à boutons)
+- 🎂 **Anniversaires** : `/birthday set jour mois` — le bot souhaite le jour J dans le salon configuré + rôle anniversaire (24 h)
+- ⏰ **Rappels** : `/remind 2h texte` → message privé à l'heure dite (max 30 jours, 10 en attente)
+- 🗳️ **Sondages** : `/poll question choix1 | choix2 | …` (jusqu'à 10 choix, votes par boutons, résultats en direct)
+- 🕵️ **Snipe** : `/snipe` — le dernier message supprimé du salon
+- 💰 **Économie enrichie** : `/work` (métiers, 1×/heure), `/gamble montant` (double ou rien), `/rob @membre` (40 % de réussite, sinon amende)
+
+### 🛡️ Modération & organisation
+- 🚨 **Anti-raid** : `/lockdown on|off` — verrouille/rouvre tous les salons en 1 clic (et restaure les permissions d'origine)
+- 🔊 **Salons vocaux temporaires** : un salon « ➕ Créer un vocal » → vocal au nom du membre, supprimé quand vide (max 10)
+- 📝 **Candidatures** : `/apply set #salon` + `/apply question …` (max 5) + `/apply panel` → formulaire en fenêtre privée, réponses dans un salon avec boutons ✅/❌ pour le staff (notification en MP au candidat)
+- 🔘 **Rôles par boutons** : en plus des menus déroulants, un clic = un rôle (re-clic = retiré)
+- 📜 **Journaux au choix** : filtres par type dans le dashboard (tickets / modération / auto-mod / arrivées-départs / boutique)
+
+### 📊 Dashboard enrichi
+- 👥 **Module Membres** : liste complète (avatar, rôles, niveau, coins) + recherche + **donner des coins, ajouter/retirer un rôle, kick** directement
+- 📈 **Module Statistiques** : graphiques 7 jours (messages/jour, nouveaux membres) + top actifs
+- 📅 **Module Annonces** : messages automatiques aux jours/heures choisis (jusqu'à 20)
+- 💡 Suggestions : approuver/refuser/supprimer depuis le dashboard
+- 🎫 Tickets : compteur de tickets ouverts + total
+- 🛒 Boutique : historique des 15 derniers achats
+- 💾 Sauvegarde : bouton « Sauvegarder maintenant » + date de la dernière sauvegarde
+- 🎂 Réglages serveur : salon/rôle des anniversaires + salons vocaux temporaires
+
+## ✨ Fonctionnalités
 
 ## ✨ Fonctionnalités
 

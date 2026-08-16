@@ -138,7 +138,10 @@ async function main() {
 
   // 💾 Sauvegarde automatique toutes les 10 minutes
   setInterval(async () => {
-    try { await backup.upload(store.db); }
+    try {
+      await backup.upload(store.db);
+      store.settings.set('last_backup', new Date().toISOString());
+    }
     catch (e) { console.error('[BotDev] Sauvegarde :', e.message); }
   }, 10 * 60000);
 

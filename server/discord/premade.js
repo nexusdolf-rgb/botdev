@@ -503,6 +503,7 @@ async function execute(botId, entry, cmd, src) {
       const row = store.economy.get(botId, guild.id, author.id);
       if (row.coins < item.price) return reply(`❌ Il te manque **${item.price - row.coins}** coins (article à ${item.price}).`);
       store.economy.add(botId, guild.id, author.id, -item.price);
+      store.shopPurchases.add(botId, guild.id, author.id, item.name, item.price);
       const role = guild.roles.cache.find((r) => r.name.toLowerCase() === item.role.toLowerCase());
       if (!role) {
         store.economy.add(botId, guild.id, author.id, item.price); // remboursement
@@ -885,12 +886,14 @@ function helpDescription() {
 
 function buildHelpEmbed(botId, record, client, guild, requested) {
   const enabled = enabledCommandNames(botId);
+  const { HELP_EXTRA } = require('./extra');
+  const DETAILS = { ...HELP_DETAILS, ...HELP_EXTRA };
 
   // --- Détail d'une commande précise ---
   if (requested) {
     const key = requested.toLowerCase().replace(/^\//, '');
-    const detail = HELP_DETAILS[key];
-    const available = ['ticket', 'roles', 'botprofile', 'modlogs', 'blacklist'].includes(key) || enabled.includes(key);
+    const detail = DETAILS[key];
+    const available = ['ticket', 'roles', 'botprofile', 'modlogs', 'blacklist'].includes(key) || enabled.includes(key) || !!HELP_EXTRA[key];
     if (detail && available) {
       const embed = new EmbedBuilder()
         .setColor('#5865F2')
@@ -977,6 +980,20 @@ function buildHelpEmbed(botId, record, client, guild, requested) {
   embed.addFields({
     name: '🎉 Communauté & animation',
     value: '`/shop` — boutique · `/buy article` — acheter · `/pay @membre montant` — transférer des coins\n`/giveaway` — tirages automatiques · `/suggest` — suggestions · `/temprole` — rôles temporaires · `/sanction` — sanctions prédéfinies',
+  });
+
+  embed.addFields({
+    name: '🧩 Hoxera 2.0 — jeux, social & organisation',
+    value: [
+      '💍 `/marry @membre` · `/divorce` · `/couple` — mariages sur le serveur',
+      '🤗 `/hug` · `/kiss` · `/slap` · `/pat` · `/punch` — actions entre membres',
+      '🕹️ `/rps` · `/pendu` · `/morpion @membre` — jeux dans le chat',
+      '🎂 `/birthday set jour mois` — anniversaires (souhaités automatiquement)',
+      '⏰ `/remind 2h texte` · 🗳️ `/poll question choix1 | choix2` · 🕵️ `/snipe`',
+      '💰 `/work` · `/gamble montant` · `/rob @membre` — économie enrichie',
+      '🚨 `/lockdown` (admin) · 🔊 `/voicetemp` (admin) · 📝 `/apply` (admin)',
+      '*Détails : `/help nom_de_la_commande` (ex : `/help mariage` → `/help marry`)*',
+    ].join('\n'),
   });
 
   const custom = store.commands.all(botId).filter(c => c.enabled);

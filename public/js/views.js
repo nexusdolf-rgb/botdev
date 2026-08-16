@@ -17,13 +17,18 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
         Chaque option attribue (ou retire) un rôle quand le membre la choisit.
         Saisis le <b>nom exact du rôle</b> tel qu'il existe sur ton serveur Discord.
       </div>
-      <label class="field-label">Nom du menu</label>
+      <label class="field-label">Nom du panneau</label>
       <input class="input" id="rm-name" maxlength="50" value="${App.escapeHtml(data.name)}" placeholder="Rôles & notifications" />
-      <label class="field-label">Message au-dessus du menu (optionnel)</label>
+      <label class="field-label">Style du panneau</label>
+      <select class="input" id="rm-mode">
+        <option value="menu" ${data.mode !== 'buttons' ? 'selected' : ''}>📋 Menu déroulant (plusieurs rôles d'un coup)</option>
+        <option value="buttons" ${data.mode === 'buttons' ? 'selected' : ''}>🔘 Boutons (un clic = un rôle, re-clic = retiré)</option>
+      </select>
+      <label class="field-label">Message au-dessus du panneau (optionnel)</label>
       <textarea class="input" id="rm-content" rows="2" placeholder="Choisis tes rôles !">${App.escapeHtml(data.content)}</textarea>
       <label class="field-label">Texte d'attente du menu déroulant</label>
       <input class="input" id="rm-placeholder" maxlength="150" value="${App.escapeHtml(data.placeholder)}" />
-      <label class="field-label">Salon où envoyer le menu (mention, ex : #rôles)</label>
+      <label class="field-label">Salon où envoyer le panneau (mention, ex : #rôles)</label>
       <input class="input" id="rm-channel" value="${App.escapeHtml(data.channel)}" placeholder="#rôles" />
       <label class="field-label">Options du menu</label>
       <div id="rm-options"></div>
@@ -68,6 +73,7 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
     const payload = {
       guild_id: guildId,
       name: document.querySelector('#rm-name').value.trim() || 'Menu de rôles',
+      mode: document.querySelector('#rm-mode').value === 'buttons' ? 'buttons' : 'menu',
       content: document.querySelector('#rm-content').value,
       placeholder: document.querySelector('#rm-placeholder').value.trim() || 'Choisis tes rôles…',
       channel: document.querySelector('#rm-channel').value.trim(),

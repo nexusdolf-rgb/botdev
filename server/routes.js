@@ -476,6 +476,7 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
   if (dGuild && dGuild.channels && dGuild.channels.cache) {
     for (const ch of dGuild.channels.cache.values()) {
       if (ch && ch.type === 0 && ch.name) channels.push({ id: ch.id, name: ch.name });
+      if (ch && ch.type === 2 && ch.name) channels.push({ id: ch.id, name: ch.name, voice: true });
       if (ch && ch.type === 4 && ch.name) channels.push({ id: ch.id, name: ch.name, category: true });
     }
   }
@@ -502,18 +503,29 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
     xp_enabled: 1, xp_min: 10, xp_max: 25, xp_cooldown: 60, xp_message: '', xp_channel: '',
     am_enabled: 0, am_links: 1, am_caps: 1, am_mentions: 5, am_spam: 5,
     log_channel: '',
+    birthday_channel: '', birthday_role: '', log_events: '',
   };
+  let logEvents = {};
+  try { logEvents = JSON.parse((store.guildSettings.get(bot.id, guildId) || {}).log_events || '{}') || {}; } catch {}
+  const ticketsStats = (() => {
+    try { return JSON.parse(store.settings.get(`ticket_stats_${guildId}`) || '{"total":0,"open":0}'); } catch { return { total: 0, open: 0 }; }
+  })();
   res.json({
     guild: { id: guildId, name: dGuild.name, icon: dGuild.iconURL({ size: 128 }) || '', members: dGuild.memberCount || 0 },
     channels,
     roles,
     settings: { ...DEFAULT_GS, ...(store.guildSettings.get(bot.id, guildId) || {}) },
     tickets: { name: '', channel: '', message: '', button_label: '🎫 Ouvrir un ticket', button_style: '1', require_reason: 1, support_role: '', category: 'Tickets', types: [], ...(cfg || {}), types: parsedTypes },
+    tickets_stats: ticketsStats,
     events: { defs: EVENT_DEFS, state: eventsState(bot.id, guildId) },
     role_menus: store.roleMenus.all(bot.id, guildId),
     xp_roles: store.xpRoles.all(bot.id, guildId),
     profile: store.botProfiles.get(bot.id, guildId) || { name: '', avatar_url: '', banner_url: '', bio: '', color: '#5865F2' },
     blacklist: store.blacklist.all(bot.id, guildId),
+    voicetemp: store.voicetemp.get(bot.id, guildId) || { creator_channel: '', category: '', name_template: '' },
+    applications: store.applications.get(bot.id, guildId) || { channel: '', questions: '[]', title: '📝 Candidature', enabled: 0 },
+    scheduled: store.scheduled.all(bot.id, guildId),
+    log_events: logEvents,
   });
 });
 
@@ -705,12 +717,15 @@ router.put('/bots/:id/guilds/:guildId/settings', requireAuth, async (req, res) =
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
-  const { prefix, warn_limit, warn_action, log_channel } = req.body || {};
+  const { prefix, warn_limit, warn_action, log_channel, birthday_channel, birthday_role, log_events } = req.body || {};
   store.guildSettings.set(bot.id, guildId, {
     prefix: String(prefix || '').slice(0, 5),
     warn_limit: Math.max(0, parseInt(warn_limit, 10) || 0),
     warn_action: ['none', 'kick', 'ban'].includes(warn_action) ? warn_action : 'none',
     ...(log_channel !== undefined ? { log_channel: String(log_channel).slice(0, 100) } : {}),
+    ...(birthday_channel !== undefined ? { birthday_channel: String(birthday_channel).slice(0, 100) } : {}),
+    ...(birthday_role !== undefined ? { birthday_role: String(birthday_role).slice(0, 100) } : {}),
+    ...(log_events !== undefined ? { log_events: JSON.stringify(log_events || {}) } : {}),
   });
   res.json({ ok: true });
 });
@@ -819,7 +834,7 @@ router.post('/bots/:id/tickets/send', requireAuth, async (req, res) => {
 router.post('/bots/:id/role-menus', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
   if (!bot) return;
-  const { guild_id, name, content, placeholder, channel, options } = req.body || {};
+  const { guild_id, name, content, placeholder, channel, options, mode } = req.body || {};
   if (!guild_id) return res.status(400).json({ error: 'guild_id requis' });
   if (!(await userCanManageGuild(req, guild_id))) return res.status(403).json({ error: 'Permission refusée.' });
   if (!Array.isArray(options) || !options.length) return res.status(400).json({ error: 'Ajoute au moins un rôle au menu.' });
@@ -830,6 +845,7 @@ router.post('/bots/:id/role-menus', requireAuth, async (req, res) => {
     content: String(content || '').slice(0, 1900),
     placeholder: String(placeholder || 'Choisis tes rôles…').slice(0, 150),
     channel: String(channel || '').slice(0, 100),
+    mode: mode === 'buttons' ? 'buttons' : 'menu',
     options: JSON.stringify(options.map(o => ({
       label: String(o.label || 'Rôle').slice(0, 100),
       emoji: String(o.emoji || '').slice(0, 10),
@@ -846,11 +862,12 @@ router.put('/role-menus/:id', requireAuth, async (req, res) => {
   if (!bot) return res.status(404).json({ error: 'Menu introuvable' });
   if (!(await userCanManageGuild(req, menu.guild_id))) return res.status(403).json({ error: 'Permission refusée.' });
   const fields = {};
-  const { name, content, placeholder, channel, options } = req.body || {};
+  const { name, content, placeholder, channel, options, mode } = req.body || {};
   if (name !== undefined) fields.name = String(name).slice(0, 50);
   if (content !== undefined) fields.content = String(content).slice(0, 1900);
   if (placeholder !== undefined) fields.placeholder = String(placeholder).slice(0, 150);
   if (channel !== undefined) fields.channel = String(channel).slice(0, 100);
+  if (mode !== undefined) fields.mode = mode === 'buttons' ? 'buttons' : 'menu';
   if (options !== undefined) {
     if (!Array.isArray(options) || !options.length) return res.status(400).json({ error: 'Ajoute au moins un rôle au menu.' });
     fields.options = JSON.stringify(options.map(o => ({
@@ -892,6 +909,272 @@ router.post('/role-menus/:id/send', requireAuth, async (req, res) => {
   } catch (e) {
     res.status(400).json({ error: e.message.slice(0, 200) });
   }
+});
+
+// ============================================================
+// Hoxera 2.0 — Membres (liste + actions directes depuis le dashboard)
+// ============================================================
+function guildEntryFor(bot, guildId) {
+  if (!botManager.isOnline(bot.id)) return null;
+  const entry = botManager.clients.get(bot.id);
+  return entry && entry.client.guilds.cache.get(guildId) ? entry : null;
+}
+
+router.get('/bots/:id/guilds/:guildId/members', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const entry = guildEntryFor(bot, guildId);
+  if (!entry) return res.status(400).json({ error: 'Le bot est hors ligne ou absent de ce serveur.' });
+  const guild = entry.client.guilds.cache.get(guildId);
+  const q = String(req.query.q || '').toLowerCase();
+  const out = [];
+  const cache = [...guild.members.cache.values()].filter((m) => !m.user.bot);
+  const sorted = cache.sort((a, b) => (b.roles.highest.position) - (a.roles.highest.position));
+  for (const m of sorted.slice(0, 300)) {
+    const tag = m.user.tag || m.user.username;
+    if (q && !tag.toLowerCase().includes(q) && !m.user.username.toLowerCase().includes(q)) continue;
+    const eco = store.economy.get(bot.id, guildId, m.id);
+    const xpRow = store.xp.get(bot.id, guildId, m.id);
+    out.push({
+      id: m.id,
+      tag,
+      username: m.user.username,
+      avatar: m.user.displayAvatarURL({ size: 64 }) || '',
+      roles: m.roles.cache.filter((r) => r.name !== '@everyone').map((r) => ({ id: r.id, name: r.name, color: r.hexColor })).slice(0, 8),
+      coins: eco ? eco.coins : 0,
+      xp: xpRow ? xpRow.xp : 0,
+      level: xpRow ? xpRow.level : 0,
+      joined: m.joinedAt ? m.joinedAt.toISOString() : '',
+      is_owner: m.id === guild.ownerId,
+    });
+    if (out.length >= 150) break;
+  }
+  res.json({ members: out });
+});
+
+router.post('/bots/:id/guilds/:guildId/members/coins', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const { user_id, amount } = req.body || {};
+  const amt = parseInt(amount, 10);
+  if (!user_id || !amt || amt < -1000000 || amt > 1000000) return res.status(400).json({ error: 'Membre ou montant invalide.' });
+  store.economy.ensure(bot.id, guildId, user_id);
+  store.economy.add(bot.id, guildId, user_id, amt);
+  const row = store.economy.get(bot.id, guildId, user_id);
+  res.json({ ok: true, coins: row.coins });
+});
+
+router.post('/bots/:id/guilds/:guildId/members/role', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const { user_id, role_id, action } = req.body || {};
+  if (!user_id || !role_id || !['add', 'remove'].includes(action)) return res.status(400).json({ error: 'Paramètres invalides.' });
+  const entry = guildEntryFor(bot, guildId);
+  if (!entry) return res.status(400).json({ error: 'Le bot est hors ligne.' });
+  const guild = entry.client.guilds.cache.get(guildId);
+  const member = await guild.members.fetch(user_id).catch(() => null);
+  const role = guild.roles.cache.get(role_id);
+  if (!member || !role) return res.status(404).json({ error: 'Membre ou rôle introuvable.' });
+  try {
+    if (action === 'add') await member.roles.add(role);
+    else await member.roles.remove(role);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ error: `Impossible (${e.message.slice(0, 120)})` });
+  }
+});
+
+router.post('/bots/:id/guilds/:guildId/members/kick', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const { user_id, reason } = req.body || {};
+  if (!user_id) return res.status(400).json({ error: 'Membre invalide.' });
+  const entry = guildEntryFor(bot, guildId);
+  if (!entry) return res.status(400).json({ error: 'Le bot est hors ligne.' });
+  const guild = entry.client.guilds.cache.get(guildId);
+  const member = await guild.members.fetch(user_id).catch(() => null);
+  if (!member) return res.status(404).json({ error: 'Membre introuvable.' });
+  try {
+    await member.kick(String(reason || '').slice(0, 400));
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ error: `Impossible (${e.message.slice(0, 120)})` });
+  }
+});
+
+// ============================================================
+// Hoxera 2.0 — Statistiques (graphiques du dashboard)
+// ============================================================
+router.get('/bots/:id/guilds/:guildId/stats', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const activity = store.msgStats.perDay(bot.id, guildId, 7);
+  const joins = store.joinStats.perDay(bot.id, guildId, 7);
+  const topRaw = store.msgStats.topUsers(bot.id, guildId, 7);
+  const entry = guildEntryFor(bot, guildId);
+  let topActive = [];
+  if (entry) {
+    const guild = entry.client.guilds.cache.get(guildId);
+    topActive = topRaw.map((t) => {
+      const m = guild.members.cache.get(t.user_id);
+      return { user_id: t.user_id, messages: t.n, tag: m ? m.user.tag : t.user_id, avatar: m ? m.user.displayAvatarURL({ size: 64 }) : '' };
+    }).filter((t) => !t.tag.includes('Bot'));
+  } else {
+    topActive = topRaw.map((t) => ({ user_id: t.user_id, messages: t.n, tag: t.user_id, avatar: '' }));
+  }
+  res.json({ activity, joins, top_active: topActive });
+});
+
+// ============================================================
+// Hoxera 2.0 — Boutique : historique d'achats
+// ============================================================
+router.get('/bots/:id/guilds/:guildId/shop/purchases', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  res.json({ purchases: store.shopPurchases.last(bot.id, req.params.guildId, 15) });
+});
+
+// ============================================================
+// Hoxera 2.0 — Suggestions : statut + suppression depuis le dashboard
+// ============================================================
+router.delete('/bots/:id/guilds/:guildId/suggestions/:sid', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  store.suggestions.remove(Number(req.params.sid));
+  res.json({ ok: true });
+});
+
+// ============================================================
+// Hoxera 2.0 — Annonces programmées (messages automatiques)
+// ============================================================
+router.get('/bots/:id/guilds/:guildId/scheduled', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  res.json({ scheduled: store.scheduled.all(bot.id, req.params.guildId) });
+});
+
+router.post('/bots/:id/guilds/:guildId/scheduled', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const { channel_id, hour, minute, days, text } = req.body || {};
+  if (!channel_id || !text || hour === undefined || minute === undefined) return res.status(400).json({ error: 'Salon, heure, minute et texte requis.' });
+  if (store.scheduled.all(bot.id, guildId).length >= 20) return res.status(400).json({ error: 'Maximum 20 annonces par serveur.' });
+  const id = store.scheduled.add(bot.id, guildId, {
+    channel_id: String(channel_id).slice(0, 100),
+    hour: Math.min(Math.max(parseInt(hour, 10) || 0, 0), 23),
+    minute: Math.min(Math.max(parseInt(minute, 10) || 0, 0), 59),
+    days: Array.isArray(days) ? days.join(',') : String(days || '1,2,3,4,5,6,7'),
+    text: String(text || '').slice(0, 1900),
+  });
+  res.json({ id });
+});
+
+router.put('/bots/:id/guilds/:guildId/scheduled/:sid', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const s = store.scheduled.get(Number(req.params.sid));
+  if (!s || s.bot_id !== bot.id || s.guild_id !== req.params.guildId) return res.status(404).json({ error: 'Annonce introuvable' });
+  const fields = {};
+  const { channel_id, hour, minute, days, text, enabled } = req.body || {};
+  if (channel_id !== undefined) fields.channel_id = String(channel_id).slice(0, 100);
+  if (hour !== undefined) fields.hour = Math.min(Math.max(parseInt(hour, 10) || 0, 0), 23);
+  if (minute !== undefined) fields.minute = Math.min(Math.max(parseInt(minute, 10) || 0, 0), 59);
+  if (days !== undefined) fields.days = Array.isArray(days) ? days.join(',') : String(days);
+  if (text !== undefined) fields.text = String(text).slice(0, 1900);
+  if (enabled !== undefined) fields.enabled = enabled ? 1 : 0;
+  store.scheduled.update(s.id, fields);
+  res.json({ ok: true });
+});
+
+router.delete('/bots/:id/guilds/:guildId/scheduled/:sid', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const s = store.scheduled.get(Number(req.params.sid));
+  if (!s || s.bot_id !== bot.id || s.guild_id !== req.params.guildId) return res.status(404).json({ error: 'Annonce introuvable' });
+  store.scheduled.remove(s.id);
+  res.json({ ok: true });
+});
+
+// ============================================================
+// Hoxera 2.0 — Salons vocaux temporaires (dashboard)
+// ============================================================
+router.put('/bots/:id/guilds/:guildId/voicetemp', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const { creator_channel, category, name_template } = req.body || {};
+  store.voicetemp.set(bot.id, req.params.guildId, {
+    creator_channel: String(creator_channel || '').slice(0, 100),
+    category: String(category || '').slice(0, 100),
+    name_template: String(name_template || '').slice(0, 50),
+  });
+  res.json({ ok: true });
+});
+
+router.delete('/bots/:id/guilds/:guildId/voicetemp', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  store.voicetemp.remove(bot.id, req.params.guildId);
+  res.json({ ok: true });
+});
+
+// ============================================================
+// Hoxera 2.0 — Candidatures (dashboard)
+// ============================================================
+router.put('/bots/:id/guilds/:guildId/applications', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const cur = store.applications.get(bot.id, guildId) || { channel: '', questions: '[]', title: '📝 Candidature', enabled: 0 };
+  const { channel, title, enabled } = req.body || {};
+  store.applications.set(bot.id, guildId, {
+    channel: channel !== undefined ? String(channel).slice(0, 100) : cur.channel,
+    questions: cur.questions,
+    title: title !== undefined ? String(title).slice(0, 100) : cur.title,
+    enabled: enabled !== undefined ? (enabled ? 1 : 0) : cur.enabled,
+  });
+  res.json({ ok: true });
+});
+
+// ============================================================
+// Hoxera 2.0 — Sauvegarde : lancer maintenant + dernière sauvegarde
+// ============================================================
+router.post('/backup/now', requireAuth, async (req, res) => {
+  const user = store.users.findById(req.userId);
+  if (!isPlatformAdmin(user)) return res.status(403).json({ error: 'Réservé au fondateur.' });
+  const backup = require('./backup');
+  if (!backup.enabled()) return res.status(400).json({ error: 'Sauvegarde non configurée (variables GitHub manquantes).' });
+  try {
+    await backup.upload(store.db);
+    store.settings.set('last_backup', new Date().toISOString());
+    res.json({ ok: true, at: new Date().toISOString() });
+  } catch (e) {
+    res.status(500).json({ error: e.message.slice(0, 200) });
+  }
+});
+
+router.get('/backup/status', requireAuth, (req, res) => {
+  const backup = require('./backup');
+  res.json({ enabled: backup.enabled(), repo: backup.repo(), branch: backup.branch(), last_backup: store.settings.get('last_backup') });
 });
 
 // ---------------------- Statut de la sauvegarde automatique ----------------------

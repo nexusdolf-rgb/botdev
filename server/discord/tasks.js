@@ -47,6 +47,12 @@ async function giveTempRole(botId, interaction, member, role, durationMs) {
 async function sweep(botId, entry) {
   try { await giveaway.sweep(botId, entry); } catch (e) { console.error('[BotDev] giveaway sweep:', e.message); }
 
+  // Hoxera 2.0 : rappels, messages programmés, anniversaires
+  const extra = require('./extra');
+  try { await extra.sweepReminders(botId, entry); } catch (e) { console.error('[Hoxera] reminders sweep:', e.message); }
+  try { extra.sweepScheduled(botId, entry); } catch (e) { console.error('[Hoxera] scheduled sweep:', e.message); }
+  try { await extra.sweepBirthdays(botId, entry); } catch (e) { console.error('[Hoxera] birthdays sweep:', e.message); }
+
   const due = store.tempRoles.due().filter((t) => t.bot_id === botId);
   for (const t of due) {
     try {

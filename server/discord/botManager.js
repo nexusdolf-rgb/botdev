@@ -10,6 +10,7 @@ const INTENTS = [
   GatewayIntentBits.GuildMessages,
   GatewayIntentBits.MessageContent,
   GatewayIntentBits.GuildModeration,
+  GatewayIntentBits.GuildVoiceStates,
 ];
 
 const clients = new Map(); // botId -> { client, record }
@@ -119,12 +120,27 @@ function attachListeners(botId, entry) {
   });
 
   client.on('messageCreate', (m) => {
+    const extra = require('./extra');
+    extra.trackMessage(botId, m);
     const { runMessageHandler } = require('./engine');
     runMessageHandler(botId, entry, m).catch(e => console.error('[BotDev] message error:', e.message));
   });
 
+  client.on('messageDelete', (m) => {
+    const { trackDeleted } = require('./extra');
+    trackDeleted(botId, m);
+  });
+
+  client.on('voiceStateUpdate', (oldState, newState) => {
+    const { onVoiceState } = require('./extra');
+    onVoiceState(botId, entry, oldState, newState);
+  });
+
   client.on('interactionCreate', async (i) => {
     try {
+      const extra = require('./extra');
+      const extraHandled = await extra.handleInteraction(botId, i);
+      if (extraHandled) return;
       const { dispatchPanels } = require('./panels');
       const handled = await dispatchPanels(botId, i);
       if (handled) return;
@@ -189,7 +205,8 @@ async function syncSlashCommands(botId, guildId, quiet = false) {
   if (!record) return;
 
   const { buildSlashPayloads } = require('./premade');
-  const payloads = buildSlashPayloads(botId);
+  const { buildExtraPayloads } = require('./extra');
+  const payloads = [...buildSlashPayloads(botId), ...buildExtraPayloads()];
   const appId = record.client_id || entry.client.user.id;
   await entry.client.rest.put(
     `/applications/${appId}/guilds/${guildId}/commands`,

@@ -16,6 +16,17 @@ const store = require('../db');
 const crypto = require('crypto');
 const logging = require('./logging');
 
+// 📊 Statistiques de tickets (affichées dans le dashboard)
+function bumpTicketStats(guildId, totalDelta, openDelta) {
+  try {
+    const key = `ticket_stats_${guildId}`;
+    const cur = JSON.parse(store.settings.get(key) || '{"total":0,"open":0}');
+    cur.total = Math.max(0, (cur.total || 0) + totalDelta);
+    cur.open = Math.max(0, (cur.open || 0) + openDelta);
+    store.settings.set(key, JSON.stringify(cur));
+  } catch {}
+}
+
 const WIZARD_TTL = 10 * 60000;
 
 // ---------------------- Résolution salon / rôle ----------------------
@@ -136,6 +147,11 @@ async function dispatchPanels(botId, interaction) {
     }
 
     if (interaction.isButton()) {
+      // 🔘 Menus de rôles en mode boutons : un clic = un rôle (activable/désactivable)
+      if (cid.startsWith(`bd-rmbtn:${botId}:`)) {
+        await handleRoleMenuButton(botId, interaction, parseInt(cid.split(':')[2], 10), cid.split(':').slice(3).join(':'));
+        return true;
+      }
       if (cid === `bd-ticket:${botId}`) { await handleTicketButton(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:close`) { await handleTicketClose(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:reopen`) { await handleTicketReopen(botId, interaction); return true; }
@@ -428,6 +444,7 @@ async function openTicket(botId, interaction, type, reason = '') {
     return interaction.reply({ content: '⚠️ Je n\'ai pas pu créer le salon. Vérifie mes permissions (gérer les salons).', ephemeral: true });
   }
   ticketMeta.set(channel.id, { openerId: member.id, typeLabel: chosen ? chosen.label : '', reason });
+  bumpTicketStats(guild.id, 1, 1);
 
   // Boutons du staff : deux rangées propres
   const row1 = new ActionRowBuilder().addComponents(
@@ -623,6 +640,7 @@ async function handleTicketClose(botId, interaction) {
     await channel.permissionOverwrites.edit(openerId, { ViewChannel: false, SendMessages: false }).catch(() => {});
   }
   store.closedTickets.add(channel.id, botId, guild.id);
+  bumpTicketStats(guild.id, 0, -1);
   await logging.log(botId, guild, {
     title: '🔒 Ticket fermé', color: '#ED4245',
     fields: [
@@ -641,6 +659,7 @@ async function handleTicketReopen(botId, interaction) {
   if (!isStaff(botId, interaction)) return staffDeny(interaction);
   const channel = interaction.channel;
   store.closedTickets.remove(channel.id);
+  bumpTicketStats(interaction.guild.id, 0, 1);
   const { openerId } = ticketMetaFor(channel);
   if (openerId) {
     await channel.permissionOverwrites.edit(openerId, { ViewChannel: true, SendMessages: true }).catch(() => {});
@@ -686,6 +705,7 @@ async function submitDeleteReason(botId, interaction) {
   const channel = interaction.channel;
   const guild = interaction.guild;
   store.closedTickets.add(channel.id, botId, guild.id);
+  bumpTicketStats(guild.id, 0, -1);
   const t = await buildTranscript(botId, interaction, [
     `🗑 Ticket supprimé par ${interaction.user.tag} — raison : ${reason}`,
   ]);
@@ -710,6 +730,7 @@ async function handleTicketDeleteConfirm(botId, interaction) {
   const channel = interaction.channel;
   const guild = interaction.guild;
   store.closedTickets.add(channel.id, botId, guild.id);
+  bumpTicketStats(guild.id, 0, -1);
   const t = await buildTranscript(botId, interaction, [
     `🗑 Ticket supprimé par ${interaction.user.tag} — raison : aucune raison fournie`,
   ]);
@@ -1106,6 +1127,25 @@ async function handleTypesWizardInteraction(botId, interaction) {
 // ============================================================
 async function sendRoleMenu(botId, client, menu, channel) {
   if (!menu.options || !menu.options.length) throw new Error('Ce menu n\'a aucune option.');
+  // 🔘 Mode boutons : un bouton par rôle (clic = activer/désactiver)
+  if (menu.mode === 'buttons') {
+    const rows = [];
+    const opts = menu.options.slice(0, 25);
+    for (let i = 0; i < opts.length; i += 5) {
+      const row = new ActionRowBuilder();
+      opts.slice(i, i + 5).forEach((o) => {
+        const btn = new ButtonBuilder()
+          .setCustomId(`bd-rmbtn:${botId}:${menu.id}:${String(o.role || '').slice(0, 80)}`)
+          .setLabel(String(o.label || o.role || 'Rôle').slice(0, 80))
+          .setStyle(ButtonStyle.Primary);
+        if (o.emoji && /^\p{Extended_Pictographic}/u.test(String(o.emoji))) btn.setEmoji(String(o.emoji));
+        row.addComponents(btn);
+      });
+      rows.push(row);
+    }
+    await channel.send({ content: menu.content || null, components: rows });
+    return;
+  }
   const row = new ActionRowBuilder();
   const select = new StringSelectMenuBuilder()
     .setCustomId(`bd-menu:${botId}:${menu.id}`)
@@ -1121,6 +1161,29 @@ async function sendRoleMenu(botId, client, menu, channel) {
   }
   row.addComponents(select);
   await channel.send({ content: menu.content || null, components: [row] });
+}
+
+// 🔘 Mode boutons : un clic = activation/désactivation d'un seul rôle
+async function handleRoleMenuButton(botId, interaction, menuId, roleRef) {
+  const menu = store.roleMenus.get(menuId);
+  if (!menu || menu.bot_id !== botId) return;
+  const guild = interaction.guild;
+  const member = interaction.member;
+  const opt = menu.options.find((o) => String(o.role || '') === roleRef);
+  if (!opt) return interaction.reply({ content: '❓ Ce rôle n\'existe plus dans ce menu.', ephemeral: true });
+  const role = resolveRole(guild, opt.role);
+  if (!role) return interaction.reply({ content: '❓ Le rôle est introuvable (renommé ou supprimé).', ephemeral: true });
+  const has = member.roles.cache.has(role.id);
+  try {
+    if (has) {
+      await member.roles.remove(role);
+      return interaction.reply({ content: `➖ Rôle **${role.name}** retiré.`, ephemeral: true });
+    }
+    await member.roles.add(role);
+    return interaction.reply({ content: `✅ Tu as reçu le rôle **${role.name}** !`, ephemeral: true });
+  } catch {
+    return interaction.reply({ content: '⚠️ Je n\'ai pas la permission de modifier ce rôle.', ephemeral: true });
+  }
 }
 
 async function handleRoleMenu(botId, interaction, menuId) {
@@ -1147,7 +1210,7 @@ async function handleRoleMenu(botId, interaction, menuId) {
 }
 
 module.exports = {
-  dispatchPanels, sendTicketPanel, sendRoleMenu, findChannel, findChannelInGuild,
+  dispatchPanels, sendTicketPanel, sendRoleMenu, findChannel, findChannelInGuild, bumpTicketStats,
   resolveRole, parseTypes, isStaff, staffForTicket, openTicket,
   startTypesWizard, handleTypesWizardInteraction,
   handleTicketDeleteAsk, ticketMetaFor,

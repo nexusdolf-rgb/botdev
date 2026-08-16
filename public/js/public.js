@@ -88,12 +88,16 @@ App.renderPublicLanding = () => {
       <div class="pub-section">
         <h2>✨ Tout ce que Hoxera sait faire</h2>
         <div class="pub-features">
-          <div class="pub-feature"><div class="f-ico">🎫</div><b>Tickets automatiques</b><p>Bouton → salon privé créé instantanément, avec rôle staff et fermeture en un clic.</p></div>
-          <div class="pub-feature"><div class="f-ico">📋</div><b>Menus de rôles</b><p>Des menus déroulants où chaque membre choisit ses rôles tout seul.</p></div>
-          <div class="pub-feature"><div class="f-ico">🛡️</div><b>Modération</b><p>Kick, ban, timeout, avertissements, purge de messages — réservé aux admins.</p></div>
-          <div class="pub-feature"><div class="f-ico">💰</div><b>Économie</b><p>Coins quotidiens, soldes et classement du serveur.</p></div>
-          <div class="pub-feature"><div class="f-ico">👋</div><b>Bienvenue & auto-rôles</b><p>Accueille les nouveaux membres et donne les rôles automatiquement.</p></div>
-          <div class="pub-feature"><div class="f-ico">🧩</div><b>Commandes personnalisées</b><p>Construis tes propres commandes par blocs, sans coder.</p></div>
+          <div class="pub-feature"><div class="f-ico">🎫</div><b>Tickets automatiques</b><p>Bouton → salon privé créé instantanément, avec rôle staff, types personnalisés et transcription en MP.</p></div>
+          <div class="pub-feature"><div class="f-ico">📋</div><b>Rôles en menus & boutons</b><p>Menus déroulants ou boutons : chaque membre choisit ses rôles tout seul.</p></div>
+          <div class="pub-feature"><div class="f-ico">🛡️</div><b>Modération & anti-raid</b><p>Kick, ban, timeout, avertissements, liste noire et verrouillage du serveur en 1 clic.</p></div>
+          <div class="pub-feature"><div class="f-ico">💰</div><b>Économie</b><p>Coins quotidiens, travail, paris, boutique et classement du serveur.</p></div>
+          <div class="pub-feature"><div class="f-ico">🕹️</div><b>Jeux & fun</b><p>Pendu, morpion, pierre-feuille-ciseaux, mariages et actions entre membres.</p></div>
+          <div class="pub-feature"><div class="f-ico">🎂</div><b>Anniversaires & rappels</b><p>Le bot souhaite les anniversaires et envoie des rappels en message privé.</p></div>
+          <div class="pub-feature"><div class="f-ico">🗳️</div><b>Sondages & suggestions</b><p>Votes en direct avec boutons, suggestions approuvées depuis le dashboard.</p></div>
+          <div class="pub-feature"><div class="f-ico">🔊</div><b>Salons vocaux temporaires</b><p>Un clic pour créer ton vocal, supprimé automatiquement quand il est vide.</p></div>
+          <div class="pub-feature"><div class="f-ico">📅</div><b>Annonces programmées</b><p>Messages automatiques aux jours et heures choisis, configurés depuis le dashboard.</p></div>
+          <div class="pub-feature"><div class="f-ico">👥</div><b>Dashboard complet</b><p>Membres gérables, statistiques, coins, rôles et kick — tout depuis ton téléphone.</p></div>
         </div>
       </div>
 

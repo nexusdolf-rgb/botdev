@@ -250,6 +250,96 @@ CREATE TABLE IF NOT EXISTS transcripts (
   messages TEXT DEFAULT '',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- Hoxera 2.0 : fun & communauté
+CREATE TABLE IF NOT EXISTS marriages (
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  user_a TEXT NOT NULL,
+  user_b TEXT NOT NULL,
+  date TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (bot_id, guild_id, user_a)
+);
+
+CREATE TABLE IF NOT EXISTS birthdays (
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  day INTEGER NOT NULL,
+  month INTEGER NOT NULL,
+  PRIMARY KEY (bot_id, guild_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS reminders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  channel_id TEXT DEFAULT '',
+  user_id TEXT NOT NULL,
+  at_ts INTEGER NOT NULL,
+  text TEXT DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS scheduled_messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  channel_id TEXT DEFAULT '',
+  hour INTEGER NOT NULL,
+  minute INTEGER NOT NULL,
+  days TEXT DEFAULT '1,2,3,4,5,6,7',
+  text TEXT DEFAULT '',
+  enabled INTEGER DEFAULT 1,
+  last_sent TEXT DEFAULT ''
+);
+
+-- Hoxera 2.0 : statistiques
+CREATE TABLE IF NOT EXISTS message_stats (
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  day TEXT NOT NULL,
+  count INTEGER DEFAULT 0,
+  PRIMARY KEY (bot_id, guild_id, user_id, day)
+);
+
+CREATE TABLE IF NOT EXISTS join_stats (
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  day TEXT NOT NULL,
+  count INTEGER DEFAULT 0,
+  PRIMARY KEY (bot_id, guild_id, day)
+);
+
+-- Hoxera 2.0 : boutique, candidatures, salons vocaux
+CREATE TABLE IF NOT EXISTS shop_purchases (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  item TEXT NOT NULL,
+  price INTEGER DEFAULT 0,
+  ts TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS applications (
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  channel TEXT DEFAULT '',
+  questions TEXT DEFAULT '[]',
+  title TEXT DEFAULT '📝 Candidature',
+  enabled INTEGER DEFAULT 0,
+  PRIMARY KEY (bot_id, guild_id)
+);
+
+CREATE TABLE IF NOT EXISTS voicetemp (
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  creator_channel TEXT DEFAULT '',
+  category TEXT DEFAULT '',
+  name_template TEXT DEFAULT '',
+  PRIMARY KEY (bot_id, guild_id)
+);
 `);
 
 // Migrations légères (les colonnes ajoutées après coup)
@@ -282,6 +372,17 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_links INTEGER DEFAULT 1"
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_caps INTEGER DEFAULT 1"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_mentions INTEGER DEFAULT 5"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_spam INTEGER DEFAULT 5"); } catch (e) {}
+
+// Hoxera 2.0 : colonnes ajoutées
+try { db.exec("ALTER TABLE tickets ADD COLUMN max_one INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE role_menus ADD COLUMN mode TEXT DEFAULT 'menu'"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN log_events TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN birthday_channel TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN birthday_role TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN lockdown_channels TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN voicetemp_channel TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN voicetemp_category TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN voicetemp_name TEXT DEFAULT ''"); } catch (e) {}
 
 // L'ancienne table events (globale) n'a pas de colonne guild_id : on la reconstruit
 const eventsCols = db.prepare("PRAGMA table_info(events)").all().map(c => c.name);
@@ -405,32 +506,36 @@ const guildSettings = {
   set: (botId, guildId, fields) => {
     const cur = guildSettings.get(botId, guildId) || { prefix: '', warn_limit: 0, warn_action: 'none' };
     const next = { ...cur, ...fields };
-    db.prepare(`INSERT INTO guild_settings (bot_id, guild_id, prefix, warn_limit, warn_action, xp_enabled, xp_min, xp_max, xp_cooldown, xp_message, xp_channel, am_enabled, am_links, am_caps, am_mentions, am_spam, log_channel, suggestion_channel)
-      VALUES (@bot_id, @guild_id, @prefix, @warn_limit, @warn_action, @xp_enabled, @xp_min, @xp_max, @xp_cooldown, @xp_message, @xp_channel, @am_enabled, @am_links, @am_caps, @am_mentions, @am_spam, @log_channel, @suggestion_channel)
-      ON CONFLICT(bot_id, guild_id) DO UPDATE SET prefix = excluded.prefix, warn_limit = excluded.warn_limit, warn_action = excluded.warn_action,
-        xp_enabled = excluded.xp_enabled, xp_min = excluded.xp_min, xp_max = excluded.xp_max, xp_cooldown = excluded.xp_cooldown,
-        xp_message = excluded.xp_message, xp_channel = excluded.xp_channel, am_enabled = excluded.am_enabled,
-        am_links = excluded.am_links, am_caps = excluded.am_caps, am_mentions = excluded.am_mentions, am_spam = excluded.am_spam,
-        log_channel = excluded.log_channel, suggestion_channel = excluded.suggestion_channel`)
-      .run({
-        bot_id: botId, guild_id: guildId,
-        prefix: String(next.prefix || '').slice(0, 5),
-        warn_limit: next.warn_limit || 0,
-        warn_action: ['none', 'kick', 'ban'].includes(next.warn_action) ? next.warn_action : 'none',
-        xp_enabled: (next.xp_enabled === undefined || next.xp_enabled === null) ? 1 : (next.xp_enabled ? 1 : 0),
-        xp_min: Math.min(Math.max(parseInt(next.xp_min, 10) || 10, 1), 1000),
-        xp_max: Math.max(parseInt(next.xp_max, 10) || 25, 1),
-        xp_cooldown: Math.max(parseInt(next.xp_cooldown, 10) || 60, 0),
-        xp_message: String(next.xp_message || '').slice(0, 500),
-        xp_channel: String(next.xp_channel || '').slice(0, 100),
-        am_enabled: next.am_enabled ? 1 : 0,
-        am_links: (next.am_links === 0 || next.am_links === false) ? 0 : 1,
-        am_caps: (next.am_caps === 0 || next.am_caps === false) ? 0 : 1,
-        am_mentions: Math.max(parseInt(next.am_mentions, 10) || 0, 0),
-        am_spam: Math.max(parseInt(next.am_spam, 10) || 0, 0),
-        log_channel: String(next.log_channel || '').slice(0, 100),
-        suggestion_channel: String(next.suggestion_channel || '').slice(0, 100),
-      });
+    const cols = ['prefix', 'warn_limit', 'warn_action', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name'];
+    const vals = {
+      bot_id: botId, guild_id: guildId,
+      prefix: String(next.prefix || '').slice(0, 5),
+      warn_limit: next.warn_limit || 0,
+      warn_action: ['none', 'kick', 'ban'].includes(next.warn_action) ? next.warn_action : 'none',
+      xp_enabled: (next.xp_enabled === undefined || next.xp_enabled === null) ? 1 : (next.xp_enabled ? 1 : 0),
+      xp_min: Math.min(Math.max(parseInt(next.xp_min, 10) || 10, 1), 1000),
+      xp_max: Math.max(parseInt(next.xp_max, 10) || 25, 1),
+      xp_cooldown: Math.max(parseInt(next.xp_cooldown, 10) || 60, 0),
+      xp_message: String(next.xp_message || '').slice(0, 500),
+      xp_channel: String(next.xp_channel || '').slice(0, 100),
+      am_enabled: next.am_enabled ? 1 : 0,
+      am_links: (next.am_links === 0 || next.am_links === false) ? 0 : 1,
+      am_caps: (next.am_caps === 0 || next.am_caps === false) ? 0 : 1,
+      am_mentions: Math.max(parseInt(next.am_mentions, 10) || 0, 0),
+      am_spam: Math.max(parseInt(next.am_spam, 10) || 0, 0),
+      log_channel: String(next.log_channel || '').slice(0, 100),
+      suggestion_channel: String(next.suggestion_channel || '').slice(0, 100),
+      log_events: String(next.log_events || '').slice(0, 1000),
+      birthday_channel: String(next.birthday_channel || '').slice(0, 100),
+      birthday_role: String(next.birthday_role || '').slice(0, 100),
+      lockdown_channels: String(next.lockdown_channels || '').slice(0, 4000),
+      voicetemp_channel: String(next.voicetemp_channel || '').slice(0, 100),
+      voicetemp_category: String(next.voicetemp_category || '').slice(0, 100),
+      voicetemp_name: String(next.voicetemp_name || '').slice(0, 50),
+    };
+    const sets = cols.map(c => `${c} = excluded.${c}`).join(', ');
+    const placeholders = ['bot_id', 'guild_id', ...cols].map(c => `@${c}`).join(', ');
+    db.prepare(`INSERT INTO guild_settings (${['bot_id', 'guild_id', ...cols].join(', ')}) VALUES (${placeholders}) ON CONFLICT(bot_id, guild_id) DO UPDATE SET ${sets}`).run(vals);
   },
 };
 
@@ -477,16 +582,17 @@ const warnings = {
 };
 
 // ---------------------- Menus de rôles ----------------------
+// ---------------------- Menus de rôles (menu déroulant OU boutons) ----------------------
 const roleMenus = {
   all: (botId, guildId) => db.prepare('SELECT * FROM role_menus WHERE bot_id = ? AND guild_id = ? ORDER BY id DESC').all(botId, guildId)
-    .map(m => ({ ...m, options: JSON.parse(m.options || '[]') })),
+    .map(m => ({ ...m, options: JSON.parse(m.options || '[]'), mode: m.mode || 'menu' })),
   get: (id) => {
     const r = db.prepare('SELECT * FROM role_menus WHERE id = ?').get(id);
-    return r ? { ...r, options: JSON.parse(r.options || '[]') } : null;
+    return r ? { ...r, options: JSON.parse(r.options || '[]'), mode: r.mode || 'menu' } : null;
   },
-  create: (data) => db.prepare('INSERT INTO role_menus (bot_id, guild_id, name, content, placeholder, channel, options) VALUES (@bot_id, @guild_id, @name, @content, @placeholder, @channel, @options)').run(data).lastInsertRowid,
+  create: (data) => db.prepare('INSERT INTO role_menus (bot_id, guild_id, name, content, placeholder, channel, options, mode) VALUES (@bot_id, @guild_id, @name, @content, @placeholder, @channel, @options, @mode)').run({ mode: 'menu', name: '', content: '', placeholder: 'Choisis tes rôles…', channel: '', options: '[]', ...data }).lastInsertRowid,
   update: (id, fields) => {
-    const allowed = ['name', 'content', 'placeholder', 'channel', 'options'];
+    const allowed = ['name', 'content', 'placeholder', 'channel', 'options', 'mode'];
     const sets = [], vals = [];
     for (const k of allowed) if (k in fields) { sets.push(`${k} = ?`); vals.push(fields[k]); }
     if (!sets.length) return;
@@ -501,8 +607,8 @@ const tickets = {
   get: (botId, guildId) => db.prepare('SELECT * FROM tickets WHERE bot_id = ? AND guild_id = ?').get(botId, guildId) || null,
   set: (botId, guildId, cfg) => {
     const types = typeof cfg.types === 'string' ? cfg.types : JSON.stringify(Array.isArray(cfg.types) ? cfg.types : []);
-    return db.prepare(`INSERT INTO tickets (bot_id, guild_id, name, channel, message, button_label, button_style, support_role, category, types, require_reason)
-      VALUES (@bot_id, @guild_id, @name, @channel, @message, @button_label, @button_style, @support_role, @category, @types, @require_reason)
+    return db.prepare(`INSERT INTO tickets (bot_id, guild_id, name, channel, message, button_label, button_style, support_role, category, types, require_reason, max_one)
+      VALUES (@bot_id, @guild_id, @name, @channel, @message, @button_label, @button_style, @support_role, @category, @types, @require_reason, @max_one)
       ON CONFLICT(bot_id, guild_id) DO UPDATE SET
         name = excluded.name,
         channel = excluded.channel,
@@ -512,10 +618,12 @@ const tickets = {
         support_role = excluded.support_role,
         category = excluded.category,
         types = excluded.types,
-        require_reason = excluded.require_reason`).run({
-          bot_id: botId, guild_id: guildId, name: '', ...cfg,
+        require_reason = excluded.require_reason,
+        max_one = excluded.max_one`).run({
+          bot_id: botId, guild_id: guildId, name: '', channel: '', message: '', button_label: '', button_style: '1', support_role: '', category: '', require_reason: 1, max_one: 0, ...cfg,
           button_style: String(['1','2','3','4'].includes(String(cfg.button_style)) ? cfg.button_style : '1'),
           require_reason: (cfg.require_reason === 0 || cfg.require_reason === false) ? 0 : 1,
+          max_one: cfg.max_one ? 1 : 0,
           types,
         });
   },
@@ -587,6 +695,7 @@ const suggestions = {
   create: (s) => db.prepare('INSERT INTO suggestions (bot_id, guild_id, author_id, text, message_id, channel_id) VALUES (?, ?, ?, ?, ?, ?)')
     .run(s.bot_id, s.guild_id, s.author_id, String(s.text || '').slice(0, 1500), s.message_id || '', s.channel_id || '').lastInsertRowid,
   setStatus: (id, status) => db.prepare('UPDATE suggestions SET status = ? WHERE id = ?').run(['pending', 'approved', 'denied'].includes(status) ? status : 'pending', id),
+  remove: (id) => db.prepare('DELETE FROM suggestions WHERE id = ?').run(id),
   vote: (id, authorId, direction) => {
     const row = suggestions.get(id);
     if (!row) return { ok: false };
@@ -654,4 +763,107 @@ const transcripts = {
   get: (token) => db.prepare('SELECT * FROM transcripts WHERE token = ?').get(String(token)) || null,
 };
 
-module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, shop, giveaways, suggestions, tempRoles, sanctions };
+// ---------------------- Mariages (fun & communauté) ----------------------
+const marriages = {
+  get: (botId, guildId, userId) => db.prepare('SELECT * FROM marriages WHERE bot_id = ? AND guild_id = ? AND (user_a = ? OR user_b = ?)').get(botId, guildId, userId, userId) || null,
+  count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM marriages WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
+  set: (botId, guildId, userA, userB) => db.prepare('INSERT INTO marriages (bot_id, guild_id, user_a, user_b, date) VALUES (?, ?, ?, ?, datetime(\'now\'))').run(botId, guildId, userA, userB),
+  remove: (botId, guildId, userA, userB) => db.prepare('DELETE FROM marriages WHERE bot_id = ? AND guild_id = ? AND ((user_a = ? AND user_b = ?) OR (user_a = ? AND user_b = ?))').run(botId, guildId, userA, userB, userB, userA),
+};
+
+// ---------------------- Anniversaires ----------------------
+const birthdays = {
+  all: (botId, guildId) => db.prepare('SELECT * FROM birthdays WHERE bot_id = ? AND guild_id = ? ORDER BY month, day').all(botId, guildId),
+  get: (botId, guildId, userId) => db.prepare('SELECT * FROM birthdays WHERE bot_id = ? AND guild_id = ? AND user_id = ?').get(botId, guildId, userId) || null,
+  set: (botId, guildId, userId, day, month) => db.prepare('INSERT INTO birthdays (bot_id, guild_id, user_id, day, month) VALUES (?, ?, ?, ?, ?) ON CONFLICT(bot_id, guild_id, user_id) DO UPDATE SET day = excluded.day, month = excluded.month').run(botId, guildId, userId, day, month),
+  remove: (botId, guildId, userId) => db.prepare('DELETE FROM birthdays WHERE bot_id = ? AND guild_id = ? AND user_id = ?').run(botId, guildId, userId),
+  today: (day, month) => db.prepare('SELECT * FROM birthdays WHERE day = ? AND month = ?').all(day, month),
+  // Qui a déjà été fêté aujourd'hui (pour éviter les doublons en cas de redémarrage)
+  celebrated: {
+    get: (key) => settings.get(`bday_done_${key}`),
+    set: (key) => settings.set(`bday_done_${key}`, new Date().toISOString().slice(0, 10)),
+    isNewDay: (key) => (settings.get(`bday_done_${key}`) || '') !== new Date().toISOString().slice(0, 10),
+  },
+};
+
+// ---------------------- Rappels ----------------------
+const reminders = {
+  all: () => db.prepare('SELECT * FROM reminders ORDER BY at_ts ASC').all(),
+  add: (botId, guildId, channelId, userId, atTs, text) => db.prepare('INSERT INTO reminders (bot_id, guild_id, channel_id, user_id, at_ts, text) VALUES (?, ?, ?, ?, ?, ?)').run(botId, guildId, channelId, userId, atTs, text),
+  due: (nowTs) => db.prepare('SELECT * FROM reminders WHERE at_ts <= ? ORDER BY at_ts ASC LIMIT 50').all(nowTs),
+  remove: (id) => db.prepare('DELETE FROM reminders WHERE id = ?').run(id),
+  userList: (userId) => db.prepare('SELECT * FROM reminders WHERE user_id = ? ORDER BY at_ts ASC LIMIT 10').all(userId),
+  userCount: (userId) => db.prepare('SELECT COUNT(*) AS n FROM reminders WHERE user_id = ?').get(userId).n,
+};
+
+// ---------------------- Messages programmés ----------------------
+const scheduled = {
+  all: (botId, guildId) => db.prepare('SELECT * FROM scheduled_messages WHERE bot_id = ? AND guild_id = ? ORDER BY hour, minute').all(botId, guildId),
+  get: (id) => db.prepare('SELECT * FROM scheduled_messages WHERE id = ?').get(id) || null,
+  add: (botId, guildId, s) => db.prepare('INSERT INTO scheduled_messages (bot_id, guild_id, channel_id, hour, minute, days, text, enabled) VALUES (?, ?, ?, ?, ?, ?, ?, 1)').run(botId, guildId, String(s.channel_id || ''), parseInt(s.hour, 10) || 0, parseInt(s.minute, 10) || 0, String(s.days || '1,2,3,4,5,6,7'), String(s.text || '').slice(0, 1900)).lastInsertRowid,
+  update: (id, fields) => {
+    const allowed = { channel_id: 'channel_id', hour: 'hour', minute: 'minute', days: 'days', text: 'text', enabled: 'enabled', last_sent: 'last_sent' };
+    const sets = [], vals = [];
+    for (const [k, col] of Object.entries(allowed)) if (k in fields) { sets.push(`${col} = ?`); vals.push(fields[k]); }
+    if (!sets.length) return;
+    vals.push(id);
+    db.prepare(`UPDATE scheduled_messages SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
+  },
+  remove: (id) => db.prepare('DELETE FROM scheduled_messages WHERE id = ?').run(id),
+  allEnabled: () => db.prepare('SELECT * FROM scheduled_messages WHERE enabled = 1').all(),
+};
+
+// ---------------------- Statistiques d'activité ----------------------
+const msgStats = {
+  bump: (botId, guildId, userId, day) => db.prepare('INSERT INTO message_stats (bot_id, guild_id, user_id, day, count) VALUES (?, ?, ?, ?, 1) ON CONFLICT(bot_id, guild_id, user_id, day) DO UPDATE SET count = count + 1').run(botId, guildId, userId, day),
+  perDay: (botId, guildId, days) => {
+    const out = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+      const r = db.prepare('SELECT COALESCE(SUM(count), 0) AS n FROM message_stats WHERE bot_id = ? AND guild_id = ? AND day = ?').get(botId, guildId, d);
+      out.push({ day: d, messages: r.n });
+    }
+    return out;
+  },
+  topUsers: (botId, guildId, days) => {
+    const since = new Date(Date.now() - (days - 1) * 86400000).toISOString().slice(0, 10);
+    return db.prepare('SELECT user_id, SUM(count) AS n FROM message_stats WHERE bot_id = ? AND guild_id = ? AND day >= ? GROUP BY user_id ORDER BY n DESC LIMIT 10').all(botId, guildId, since);
+  },
+};
+
+const joinStats = {
+  bump: (botId, guildId, day) => db.prepare('INSERT INTO join_stats (bot_id, guild_id, day, count) VALUES (?, ?, ?, 1) ON CONFLICT(bot_id, guild_id, day) DO UPDATE SET count = count + 1').run(botId, guildId, day),
+  perDay: (botId, guildId, days) => {
+    const out = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+      const r = db.prepare('SELECT COALESCE(SUM(count), 0) AS n FROM join_stats WHERE bot_id = ? AND guild_id = ? AND day = ?').get(botId, guildId, d);
+      out.push({ day: d, members: r.n });
+    }
+    return out;
+  },
+};
+
+// ---------------------- Historique d'achats boutique ----------------------
+const shopPurchases = {
+  add: (botId, guildId, userId, item, price) => db.prepare('INSERT INTO shop_purchases (bot_id, guild_id, user_id, item, price) VALUES (?, ?, ?, ?, ?)').run(botId, guildId, userId, item, price),
+  last: (botId, guildId, limit = 10) => db.prepare('SELECT * FROM shop_purchases WHERE bot_id = ? AND guild_id = ? ORDER BY id DESC LIMIT ?').all(botId, guildId, limit),
+};
+
+// ---------------------- Candidatures (applications) ----------------------
+const applications = {
+  get: (botId, guildId) => db.prepare('SELECT * FROM applications WHERE bot_id = ? AND guild_id = ?').get(botId, guildId) || null,
+  set: (botId, guildId, cfg) => db.prepare('INSERT INTO applications (bot_id, guild_id, channel, questions, title, enabled) VALUES (@bot_id, @guild_id, @channel, @questions, @title, @enabled) ON CONFLICT(bot_id, guild_id) DO UPDATE SET channel = excluded.channel, questions = excluded.questions, title = excluded.title, enabled = excluded.enabled').run({
+    bot_id: botId, guild_id: guildId, channel: '', title: '📝 Candidature', enabled: 0, ...cfg,
+    questions: typeof cfg.questions === 'string' ? cfg.questions : JSON.stringify(Array.isArray(cfg.questions) ? cfg.questions : []),
+  }),
+};
+
+// ---------------------- Salons vocaux temporaires ----------------------
+const voicetemp = {
+  get: (botId, guildId) => db.prepare('SELECT * FROM voicetemp WHERE bot_id = ? AND guild_id = ?').get(botId, guildId) || null,
+  set: (botId, guildId, cfg) => db.prepare('INSERT INTO voicetemp (bot_id, guild_id, creator_channel, category, name_template) VALUES (@bot_id, @guild_id, @creator_channel, @category, @name_template) ON CONFLICT(bot_id, guild_id) DO UPDATE SET creator_channel = excluded.creator_channel, category = excluded.category, name_template = excluded.name_template').run({ bot_id: botId, guild_id: guildId, creator_channel: '', category: '', name_template: '', ...cfg }),
+  remove: (botId, guildId) => db.prepare('DELETE FROM voicetemp WHERE bot_id = ? AND guild_id = ?').run(botId, guildId),
+};
+
+module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, msgStats, joinStats, shopPurchases, applications, voicetemp };

@@ -55,6 +55,11 @@ async function runJoinEvent(botId, member) {
   const state = store.events.all(botId, member.guild.id);
   const botRecord = store.bots.get(botId);
 
+  // 📈 Statistiques : nouveaux membres du jour
+  try {
+    store.joinStats.bump(botId, member.guild.id, new Date().toISOString().slice(0, 10));
+  } catch (e) { console.error('[Hoxera] join stats:', e.message); }
+
   if (state.member_join && state.member_join.enabled) {
     const cfg = state.member_join.config || {};
     const channel = await resolveChannel(member.guild, cfg.channel);

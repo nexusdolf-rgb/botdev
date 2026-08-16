@@ -86,6 +86,9 @@ Dashboard.MODULES = [
   ['roles', '📋', 'Rôles'],
   ['suggestions', '💡', 'Suggestions'],
   ['giveaways', '🎁', 'Giveaways'],
+  ['announcements', '📅', 'Annonces'],
+  ['members', '👥', 'Membres'],
+  ['stats', '📈', 'Statistiques'],
   ['logs', '📜', 'Journaux'],
   ['server', '⚙️', 'Réglages serveur'],
 ];
@@ -244,24 +247,31 @@ Dashboard.renderers = {};
 Dashboard.renderers.overview = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const g = data.guild;
+  const ts = data.tickets_stats || { total: 0, open: 0 };
   const root = Dashboard.header(content, '📊', `Vue d\'ensemble — ${App.escapeHtml(g.name)}`, `${g.members} membres · configuration de ${App.escapeHtml(bot.name)} sur ce serveur`);
   root.appendChild(App.el(`
     <div class="dash-stats">
       <div class="dash-stat"><div class="val">${g.members}</div><div class="lbl">Membres</div></div>
+      <div class="dash-stat"><div class="val">${ts.open}</div><div class="lbl">Tickets ouverts</div></div>
       <div class="dash-stat"><div class="val">${data.tickets.types ? data.tickets.types.length : 0}</div><div class="lbl">Types de tickets</div></div>
       <div class="dash-stat"><div class="val">${(data.xp_roles || []).length}</div><div class="lbl">Récompenses de niveau</div></div>
       <div class="dash-stat"><div class="val">${(data.role_menus || []).length}</div><div class="lbl">Menus de rôles</div></div>
+      <div class="dash-stat"><div class="val">${(data.scheduled || []).length}</div><div class="lbl">Annonces programmées</div></div>
     </div>`));
   const grid = App.el(`<div class="dash-grid"></div>`);
   const mods = [
     ['tickets', '🎫', 'Tickets', 'Types personnalisés, rôles staff multiples, transcriptions en MP'],
-    ['welcome', '👋', 'Bienvenue', 'Message d\'accueil, départ et auto-rôles'],
+    ['welcome', '👋', 'Bienvenue', 'Message d\'accueil, départ, auto-rôles et anniversaires'],
     ['levels', '📈', 'Niveaux', 'XP en discutant, annonces, récompenses de rôles'],
     ['shop', '🛒', 'Boutique', 'Les membres achètent des rôles avec leurs coins'],
-    ['moderation', '🛡️', 'Modération', 'Auto-mod, liste noire, sanctions prédéfinies'],
+    ['moderation', '🛡️', 'Modération', 'Auto-mod, liste noire, sanctions, anti-raid'],
     ['suggestions', '💡', 'Suggestions', 'Les membres proposent, tout le monde vote'],
     ['giveaways', '🎁', 'Giveaways', 'Tirages automatiques par réaction'],
-    ['logs', '📜', 'Journaux', 'Toutes les actions tracées dans un salon'],
+    ['announcements', '📅', 'Annonces', 'Messages automatiques à heure fixe'],
+    ['members', '👥', 'Membres', 'Liste complète : coins, rôles, actions directes'],
+    ['stats', '📈', 'Statistiques', 'Activité, nouveaux membres, top actifs'],
+    ['logs', '📜', 'Journaux', 'Choisis ce que le bot trace'],
+    ['roles', '📋', 'Rôles', 'Menus déroulants et boutons de rôles'],
   ];
   mods.forEach(([id, ico, label, desc]) => {
     const c = App.el(`
@@ -282,6 +292,13 @@ Dashboard.renderers.tickets = async (content, data) => {
   const t = data.tickets;
   const typesData = (t.types || []).map((x) => ({ label: x.label, emoji: x.emoji || '', category: x.category || '', staff_roles: (x.staff_roles && x.staff_roles.length) ? [...x.staff_roles] : [] }));
   const root = Dashboard.header(content, '🎫', 'Système de tickets', 'Bouton ou menu déroulant → salon privé automatique. Le tout est aussi configurable sur Discord avec /ticket.');
+  const ts = data.tickets_stats || { total: 0, open: 0 };
+  root.appendChild(App.el(`
+    <div class="dash-stats" style="margin-bottom:14px">
+      <div class="dash-stat"><div class="val">${ts.open}</div><div class="lbl">🎫 Ouverts en ce moment</div></div>
+      <div class="dash-stat"><div class="val">${ts.total}</div><div class="lbl">📦 Ouverts au total</div></div>
+      <div class="dash-stat"><div class="val">${typesData.length}</div><div class="lbl">🗂️ Types configurés</div></div>
+    </div>`));
 
   const textChannels = (data.channels || []).filter((ch) => !ch.category);
   const categories = (data.channels || []).filter((ch) => ch.category);
@@ -647,6 +664,20 @@ Dashboard.renderers.shop = async (content) => {
       App.toast('Boutique enregistrée !');
     } catch (e) { App.toast(e.message, 'error'); }
   };
+
+  const c2 = Dashboard.card(root, '🧾 Historique des achats', 'Les 15 derniers achats des membres.');
+  try {
+    const { purchases } = await App.api(`/bots/${bot.id}/guilds/${guildId}/shop/purchases`);
+    if (!purchases.length) c2.appendChild(App.el(`<div class="dash-empty">Aucun achat pour l\'instant.</div>`));
+    else {
+      const table = App.el(`<table class="dash-table"><thead><tr><th>Membre</th><th>Article</th><th>Prix</th><th>Quand</th></tr></thead><tbody></tbody></table>`);
+      const tb = table.querySelector('tbody');
+      purchases.forEach((p) => {
+        tb.appendChild(App.el(`<tr><td><@${p.user_id}></td><td>${App.escapeHtml(p.item)}</td><td>🪙 ${p.price}</td><td style="color:var(--d-dim);font-size:12px">${App.escapeHtml(p.ts)}</td></tr>`));
+      });
+      c2.appendChild(table);
+    }
+  } catch {}
 };
 
 // ---------- Modération ----------
@@ -741,31 +772,32 @@ Dashboard.renderers.moderation = async (content, data) => {
 // ---------- Rôles (menus) ----------
 Dashboard.renderers.roles = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '📋', 'Menus de rôles', 'Des menus déroulants où les membres choisissent leurs rôles eux-mêmes.');
-  const c = Dashboard.card(root, 'Menus', 'Envoie-les sur Discord avec /roles send (ou le bouton ci-dessous).');
+  const root = Dashboard.header(content, '📋', 'Menus & boutons de rôles', 'Deux styles au choix : menu déroulant (plusieurs rôles d\'un coup) ou boutons (un clic = un rôle, re-clic = retiré).');
+  const c = Dashboard.card(root, 'Panneaux', 'Envoie-les sur Discord avec /roles send (ou le bouton ci-dessous).');
   const menus = data.role_menus || [];
-  if (!menus.length) c.appendChild(App.el(`<div class="dash-empty"><div class="big">📋</div>Aucun menu pour l\'instant.</div>`));
+  if (!menus.length) c.appendChild(App.el(`<div class="dash-empty"><div class="big">📋</div>Aucun panneau pour l\'instant.</div>`));
   const list = App.el(`<div></div>`);
   menus.forEach((m) => {
+    const modeLabel = m.mode === 'buttons' ? '🔘 Boutons' : '📋 Menu déroulant';
     const row = App.el(`
       <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--d-border);border-radius:10px;padding:10px 14px;margin-bottom:8px">
-        <div style="flex:1"><b>${App.escapeHtml(m.name)}</b><div style="color:var(--d-dim);font-size:12px">${m.options.length} rôle(s)</div></div>
+        <div style="flex:1"><b>${App.escapeHtml(m.name)}</b><div style="color:var(--d-dim);font-size:12px">${m.options.length} rôle(s) · ${modeLabel}</div></div>
         <button class="dash-btn dash-btn-sm" data-send="${m.id}">📨 Envoyer</button>
         <button class="dash-btn dash-btn-danger dash-btn-sm" data-del="${m.id}">🗑</button>
       </div>`);
     row.querySelector('[data-send]').onclick = async () => {
-      try { await App.api(`/role-menus/${m.id}/send`, { method: 'POST' }); App.toast('Menu envoyé !'); }
+      try { await App.api(`/role-menus/${m.id}/send`, { method: 'POST' }); App.toast('Panneau envoyé !'); }
       catch (e) { App.toast(e.message, 'error'); }
     };
     row.querySelector('[data-del]').onclick = async () => {
-      if (!(await App.confirm(`Supprimer le menu « ${m.name} » ?`))) return;
-      try { await App.api(`/role-menus/${m.id}`, { method: 'DELETE' }); App.toast('Menu supprimé.'); Dashboard.renderers.roles(content, data); }
+      if (!(await App.confirm(`Supprimer le panneau « ${m.name} » ?`))) return;
+      try { await App.api(`/role-menus/${m.id}`, { method: 'DELETE' }); App.toast('Panneau supprimé.'); Dashboard.renderers.roles(content, data); }
       catch (e) { App.toast(e.message, 'error'); }
     };
     list.appendChild(row);
   });
   c.appendChild(list);
-  const newBtn = App.el(`<button class="dash-btn dash-btn-primary" style="margin-top:8px">＋ Nouveau menu de rôles</button>`);
+  const newBtn = App.el(`<button class="dash-btn dash-btn-primary" style="margin-top:8px">＋ Nouveau panneau de rôles</button>`);
   newBtn.onclick = () => BotViews.openRoleMenuModal(bot, guildId, null);
   c.appendChild(newBtn);
 };
@@ -788,9 +820,9 @@ Dashboard.renderers.suggestions = async (content, data) => {
   };
 
   const { suggestions } = await App.api(`/bots/${bot.id}/guilds/${guildId}/suggestions`);
-  const c2 = Dashboard.card(root, 'Liste', 'Clique pour changer le statut (✅/❌) — synchronisé avec les boutons du message Discord.');
+  const c2 = Dashboard.card(root, 'Liste', 'Change le statut (synchronisé avec Discord) ou supprime une suggestion.');
   if (!suggestions.length) c2.appendChild(App.el(`<div class="dash-empty">Aucune suggestion.</div>`));
-  const table = App.el(`<table class="dash-table"><thead><tr><th>#</th><th>Texte</th><th>Votes</th><th>Statut</th></tr></thead><tbody></tbody></table>`);
+  const table = App.el(`<table class="dash-table"><thead><tr><th>#</th><th>Texte</th><th>Votes</th><th>Statut</th><th></th></tr></thead><tbody></tbody></table>`);
   const tb = table.querySelector('tbody');
   suggestions.forEach((sg) => {
     const tr = App.el(`<tr>
@@ -804,9 +836,15 @@ Dashboard.renderers.suggestions = async (content, data) => {
           <option value="denied" ${sg.status === 'denied' ? 'selected' : ''}>❌ Refusée</option>
         </select>
       </td>
+      <td><button class="dash-btn dash-btn-danger dash-btn-sm" data-del>🗑</button></td>
     </tr>`);
     tr.querySelector('select').onchange = async (e) => {
       try { await App.api(`/bots/${bot.id}/guilds/${guildId}/suggestions/${sg.id}`, { method: 'PUT', body: { status: e.target.value } }); App.toast('Statut mis à jour !'); }
+      catch (err) { App.toast(err.message, 'error'); }
+    };
+    tr.querySelector('[data-del]').onclick = async () => {
+      if (!(await App.confirm('Supprimer cette suggestion ?'))) return;
+      try { await App.api(`/bots/${bot.id}/guilds/${guildId}/suggestions/${sg.id}`, { method: 'DELETE' }); App.toast('Suggestion supprimée.'); Dashboard.renderers.suggestions(content, data); }
       catch (err) { App.toast(err.message, 'error'); }
     };
     tb.appendChild(tr);
@@ -848,20 +886,237 @@ Dashboard.renderers.giveaways = async (content) => {
   }
 };
 
+// ---------- Membres (liste + actions) ----------
+Dashboard.renderers.members = async (content, data) => {
+  const { bot, guildId } = Dashboard.state;
+  const root = Dashboard.header(content, '👥', 'Membres du serveur', 'La liste des membres avec leurs rôles, niveaux et coins — et des actions directes.');
+  const rolesList = data.roles || [];
+  const c = Dashboard.card(root, 'Recherche', '');
+  c.innerHTML += `<input class="dash-input" id="m-search" placeholder="🔍 Rechercher un membre…" style="max-width:320px" />`;
+  const listEl = App.el(`<div id="m-list" style="margin-top:12px"></div>`);
+  root.appendChild(listEl);
+
+  let members = [];
+  try {
+    const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/members`);
+    members = r.members || [];
+  } catch (e) { listEl.appendChild(App.el(`<div class="dash-empty">${App.escapeHtml(e.message)}</div>`)); return; }
+
+  const render = (q = '') => {
+    listEl.innerHTML = '';
+    const filtered = members.filter((m) => !q || m.tag.toLowerCase().includes(q.toLowerCase()));
+    if (!filtered.length) { listEl.appendChild(App.el(`<div class="dash-empty">Aucun membre trouvé.</div>`)); return; }
+    filtered.forEach((m) => {
+      const rolesHtml = m.roles.length
+        ? m.roles.map((r) => `<span class="m-role" style="background:${r.color === '#000000' ? '#2f3136' : r.color}33;color:${r.color === '#000000' ? '#b9bbbe' : r.color};border:1px solid ${r.color === '#000000' ? '#2f3136' : r.color}55">${App.escapeHtml(r.name)}</span>`).join('')
+        : '<span style="color:var(--d-dim);font-size:11px">aucun rôle</span>';
+      const row = App.el(`
+        <div class="dash-member">
+          <img class="m-avatar" src="${App.escapeHtml(m.avatar)}" alt="" loading="lazy" />
+          <div class="m-info">
+            <b>${App.escapeHtml(m.username)}</b>${m.is_owner ? ' 👑' : ''}
+            <div class="m-roles">${rolesHtml}</div>
+            <div class="m-meta">🪙 ${m.coins} coins · ✨ ${m.level} (${m.xp} XP)</div>
+          </div>
+          <div class="m-actions">
+            <button class="dash-btn dash-btn-sm" data-coins>🪙 Coins</button>
+            <button class="dash-btn dash-btn-sm" data-role>🏷️ Rôle</button>
+            <button class="dash-btn dash-btn-danger dash-btn-sm" data-kick>👢</button>
+          </div>
+        </div>`);
+      row.querySelector('[data-coins]').onclick = () => App.prompt('🪙 Coins à donner (ex : 500, ou -100 pour retirer) :', '500').then(async (val) => {
+        if (!val) return;
+        const amt = parseInt(val, 10);
+        if (!amt) return App.toast('Montant invalide.', 'error');
+        try {
+          const r2 = await App.api(`/bots/${bot.id}/guilds/${guildId}/members/coins`, { method: 'POST', body: { user_id: m.id, amount: amt } });
+          m.coins = r2.coins;
+          App.toast(`${amt > 0 ? '+' : ''}${amt} coins pour ${m.username} !`);
+          render(c.querySelector('#m-search').value);
+        } catch (e) { App.toast(e.message, 'error'); }
+      });
+      row.querySelector('[data-role]').onclick = () => {
+        App.modal(`
+          <div class="modal-header"><h3>🏷️ Rôle — ${App.escapeHtml(m.username)}</h3><button class="x-btn" data-close>×</button></div>
+          <div class="modal-body">
+            <label class="field-label">Rôle</label>
+            <select class="input" id="mr-role">${rolesList.map((r) => `<option value="${App.escapeHtml(r.id)}">${App.escapeHtml(r.name)}</option>`).join('')}</select>
+            <div style="display:flex;gap:10px;margin-top:16px">
+              <button class="btn btn-primary" id="mr-add" style="flex:1">✅ Ajouter</button>
+              <button class="btn btn-danger" id="mr-remove" style="flex:1">➖ Retirer</button>
+            </div>
+          </div>`);
+        document.querySelector('[data-close]').onclick = App.closeModal;
+        document.querySelector('#mr-add').onclick = async () => {
+          try { await App.api(`/bots/${bot.id}/guilds/${guildId}/members/role`, { method: 'POST', body: { user_id: m.id, role_id: document.querySelector('#mr-role').value, action: 'add' } }); App.closeModal(); App.toast('Rôle ajouté !'); }
+          catch (e) { App.toast(e.message, 'error'); }
+        };
+        document.querySelector('#mr-remove').onclick = async () => {
+          try { await App.api(`/bots/${bot.id}/guilds/${guildId}/members/role`, { method: 'POST', body: { user_id: m.id, role_id: document.querySelector('#mr-role').value, action: 'remove' } }); App.closeModal(); App.toast('Rôle retiré !'); }
+          catch (e) { App.toast(e.message, 'error'); }
+        };
+      };
+      row.querySelector('[data-kick]').onclick = async () => {
+        if (!(await App.confirm(`Expulser ${m.username} du serveur ?`))) return;
+        try { await App.api(`/bots/${bot.id}/guilds/${guildId}/members/kick`, { method: 'POST', body: { user_id: m.id, reason: 'Expulsé depuis le dashboard Hoxera' } }); App.toast(`${m.username} a été expulsé.`); members = members.filter((x) => x.id !== m.id); render(c.querySelector('#m-search').value); }
+        catch (e) { App.toast(e.message, 'error'); }
+      };
+      listEl.appendChild(row);
+    });
+  };
+  c.querySelector('#m-search').addEventListener('input', (e) => render(e.target.value));
+  render();
+};
+
+// ---------- Statistiques ----------
+Dashboard.renderers.stats = async (content) => {
+  const { bot, guildId } = Dashboard.state;
+  const root = Dashboard.header(content, '📈', 'Statistiques du serveur', 'Activité des 7 derniers jours — mesurée automatiquement par le bot.');
+  let s;
+  try { s = await App.api(`/bots/${bot.id}/guilds/${guildId}/stats`); }
+  catch (e) { root.appendChild(App.el(`<div class="dash-empty">${App.escapeHtml(e.message)}</div>`)); return; }
+
+  const maxMsgs = Math.max(...s.activity.map((d) => d.messages), 1);
+  const maxJoins = Math.max(...s.joins.map((d) => d.members), 1);
+  const dayLabels = s.activity.map((d) => new Date(d.day + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' }));
+
+  const bars = (values, max, color, unit, labels) => values.map((v, i) => `
+    <div class="bar-col">
+      <div class="bar-val">${v}</div>
+      <div class="bar" style="height:${Math.max(4, Math.round((v / max) * 90))}px;background:${color}"></div>
+      <div class="bar-lbl">${App.escapeHtml(labels[i])}</div>
+    </div>`).join('');
+
+  const c1 = Dashboard.card(root, '💬 Messages par jour', '');
+  c1.appendChild(App.el(`<div class="chart">${bars(s.activity.map((d) => d.messages), maxMsgs, 'linear-gradient(180deg,#5865F2,#4752c4)', 'msg', dayLabels)}</div>`));
+  if (!s.activity.some((d) => d.messages)) c1.appendChild(App.el(`<div class="desc" style="margin-top:8px">📊 Les statistiques commencent à se remplir dès que les membres discutent !</div>`));
+
+  const c2 = Dashboard.card(root, '🆕 Nouveaux membres par jour', '');
+  c2.appendChild(App.el(`<div class="chart">${bars(s.joins.map((d) => d.members), maxJoins, 'linear-gradient(180deg,#57F287,#3ba55d)', 'mbr', dayLabels)}</div>`));
+
+  const c3 = Dashboard.card(root, '🏆 Top actifs (7 jours)', 'Les membres qui discutent le plus.');
+  if (!s.top_active.length) c3.appendChild(App.el(`<div class="dash-empty">Pas encore assez de messages.</div>`));
+  else {
+    s.top_active.forEach((t, i) => {
+      c3.appendChild(App.el(`
+        <div class="dash-member" style="border:none;padding:7px 2px">
+          <img class="m-avatar" src="${App.escapeHtml(t.avatar)}" alt="" loading="lazy" />
+          <div class="m-info"><b>${App.escapeHtml(t.tag)}</b><div class="m-meta">💬 ${t.messages} messages</div></div>
+          <div class="m-actions"><span class="dash-badge ${i === 0 ? 'ok' : ''}">${['🥇','🥈','🥉'][i] || `#${i + 1}`}</span></div>
+        </div>`));
+    });
+  }
+};
+
+// ---------- Annonces programmées ----------
+Dashboard.renderers.announcements = async (content, data) => {
+  const { bot, guildId } = Dashboard.state;
+  const root = Dashboard.header(content, '📅', 'Annonces programmées', 'Des messages envoyés automatiquement aux jours et heures choisis (ex : le lundi à 18 h).');
+  const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
+  const { scheduled } = await App.api(`/bots/${bot.id}/guilds/${guildId}/scheduled`);
+
+  const c = Dashboard.card(root, 'Mes annonces', 'Jusqu\'à 20 annonces. Heure de Paris (Europe/Paris).');
+  const list = App.el(`<div id="ann-list"></div>`);
+  c.appendChild(list);
+  const render = () => {
+    list.innerHTML = '';
+    if (!scheduled.length) list.appendChild(App.el(`<div class="dash-empty">Aucune annonce programmée.</div>`));
+    scheduled.forEach((a) => {
+      const days = String(a.days || '').split(',').map((x) => parseInt(x, 10)).filter(Boolean);
+      const dayNames = ['', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+      const row = App.el(`
+        <div class="dash-member" style="border:1px solid var(--d-border);border-radius:11px;margin-bottom:9px">
+          <div class="m-info" style="flex:1">
+            <b>🕐 ${String(a.hour).padStart(2, '0')}h${String(a.minute).padStart(2, '0')}</b>
+            <div class="m-meta">${days.length === 7 ? 'Tous les jours' : days.map((d) => dayNames[d]).join(' · ')} · <#${App.escapeHtml(a.channel_id)}></div>
+            <div style="color:var(--d-dim);font-size:12.5px;margin-top:4px;max-width:520px">${App.escapeHtml(a.text.slice(0, 160))}${a.text.length > 160 ? '…' : ''}</div>
+          </div>
+          <div class="m-actions">
+            <button class="dash-btn dash-btn-sm" data-toggle>${a.enabled ? '⏸ Désactiver' : '▶️ Activer'}</button>
+            <button class="dash-btn dash-btn-danger dash-btn-sm" data-del>🗑</button>
+          </div>
+        </div>`);
+      row.querySelector('[data-toggle]').onclick = async () => {
+        try {
+          await App.api(`/bots/${bot.id}/guilds/${guildId}/scheduled/${a.id}`, { method: 'PUT', body: { enabled: a.enabled ? 0 : 1 } });
+          App.toast(a.enabled ? 'Annonce désactivée.' : 'Annonce activée !');
+          Dashboard.renderers.announcements(content, data);
+        } catch (e) { App.toast(e.message, 'error'); }
+      };
+      row.querySelector('[data-del]').onclick = async () => {
+        if (!(await App.confirm('Supprimer cette annonce ?'))) return;
+        try { await App.api(`/bots/${bot.id}/guilds/${guildId}/scheduled/${a.id}`, { method: 'DELETE' }); App.toast('Annonce supprimée.'); Dashboard.renderers.announcements(content, data); }
+        catch (e) { App.toast(e.message, 'error'); }
+      };
+      list.appendChild(row);
+    });
+  };
+  render();
+
+  const c2 = Dashboard.card(root, '＋ Nouvelle annonce', '');
+  c2.innerHTML += `
+    <label class="dash-label">Salon</label>
+    <select class="dash-select" id="a-channel">${textChannels.map((ch) => `<option value="${ch.id}">💬 #${App.escapeHtml(ch.name)}</option>`).join('')}</select>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+      <div style="flex:1;min-width:110px"><label class="dash-label">Heure (0-23)</label><input class="dash-input" id="a-hour" type="number" min="0" max="23" value="18" /></div>
+      <div style="flex:1;min-width:110px"><label class="dash-label">Minute (0-59)</label><input class="dash-input" id="a-minute" type="number" min="0" max="59" value="0" /></div>
+    </div>
+    <label class="dash-label" style="margin-top:10px">Jours</label>
+    <div class="dash-filter-grid" style="grid-template-columns:repeat(auto-fit,minmax(90px,1fr))">
+      ${['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'].map((d, i) => `
+        <label class="dash-filter"><input type="checkbox" data-day="${i + 1}" checked /><span><b>${d}</b></span></label>`).join('')}
+    </div>
+    <label class="dash-label" style="margin-top:10px">Message</label>
+    <textarea class="dash-input" id="a-text" rows="3" placeholder="Ex : 📣 Rappel : réunion du staff ce soir à 20 h !"></textarea>
+    <button class="dash-btn dash-btn-primary" style="margin-top:12px" id="a-add">📅 Programmer</button>`;
+  c2.querySelector('#a-add').onclick = async () => {
+    const days = [...c2.querySelectorAll('[data-day]')].filter((x) => x.checked).map((x) => Number(x.dataset.day));
+    const text = c2.querySelector('#a-text').value.trim();
+    if (!days.length || !text) return App.toast('Choisis au moins un jour et écris le message.', 'error');
+    try {
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/scheduled`, { method: 'POST', body: {
+        channel_id: c2.querySelector('#a-channel').value,
+        hour: parseInt(c2.querySelector('#a-hour').value, 10) || 0,
+        minute: parseInt(c2.querySelector('#a-minute').value, 10) || 0,
+        days,
+        text,
+      }});
+      App.toast('Annonce programmée ! 🎉');
+      Dashboard.renderers.announcements(content, data);
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+};
+
 // ---------- Journaux ----------
 Dashboard.renderers.logs = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const s = data.settings;
-  const root = Dashboard.header(content, '📜', 'Journaux de modération', 'Un salon où le bot trace tout : sanctions, tickets, auto-mod, arrivées/départs.');
+  const ev = data.log_events || {};
+  const root = Dashboard.header(content, '📜', 'Journaux de modération', 'Un salon où le bot trace ce que TU choisis.');
   const c = Dashboard.card(root, 'Configuration', 'Active avec /modlogs set #salon ou ici.');
   c.innerHTML += `
     <label class="dash-label">Salon des journaux (ex : #logs)</label>
     <input class="dash-input" id="l-channel" value="${App.escapeHtml(s.log_channel || '')}" placeholder="#logs" />
-    <button class="dash-btn dash-btn-primary" style="margin-top:12px" id="l-save">💾 Enregistrer</button>
-    <div class="desc" style="margin-top:12px">Tracés automatiquement : kicks, bans, timeouts, avertissements, purges, sanctions prédéfinies, achats boutique, rôles temporaires, tickets (ouverture/fermeture/suppression), auto-modération, arrivées et départs.</div>`;
+    <label class="dash-label" style="margin-top:12px">📂 Que dois-je tracer ?</label>
+    <div class="dash-filter-grid">
+      ${[
+        ['tickets', '🎫 Tickets', 'ouverture, fermeture, suppression'],
+        ['mod', '🛡️ Modération', 'kick, ban, warn, timeout, purge…'],
+        ['automod', '🤖 Auto-mod', 'liens, spam, mots interdits…'],
+        ['joinleave', '👋 Arrivées / départs', 'nouveaux membres'],
+        ['other', '🛒 Boutique & divers', 'achats, verrouillages…'],
+      ].map(([key, label, desc]) => `
+        <label class="dash-filter">
+          <input type="checkbox" data-ev="${key}" ${ev[key] === 1 || ev[key] === true || !Object.keys(ev).length ? 'checked' : ''} />
+          <span><b>${label}</b><small>${desc}</small></span>
+        </label>`).join('')}
+    </div>
+    <button class="dash-btn dash-btn-primary" style="margin-top:14px" id="l-save">💾 Enregistrer</button>`;
   c.querySelector('#l-save').onclick = async () => {
     try {
-      await App.api(`/bots/${bot.id}/guilds/${guildId}/settings`, { method: 'PUT', body: { log_channel: c.querySelector('#l-channel').value.trim() } });
+      const map = {};
+      c.querySelectorAll('[data-ev]').forEach((inp) => { map[inp.dataset.ev] = inp.checked ? 1 : 0; });
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/settings`, { method: 'PUT', body: { log_channel: c.querySelector('#l-channel').value.trim(), log_events: map } });
       App.toast('Journaux enregistrés !');
     } catch (e) { App.toast(e.message, 'error'); }
   };
@@ -871,7 +1126,10 @@ Dashboard.renderers.logs = async (content, data) => {
 Dashboard.renderers.server = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const s = data.settings;
-  const root = Dashboard.header(content, '⚙️', 'Réglages du serveur', 'Préfixe propre au serveur et auto-modération par avertissements.');
+  const root = Dashboard.header(content, '⚙️', 'Réglages du serveur', 'Préfixe, anniversaires, salons vocaux temporaires et plus.');
+  const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
+  const categories = (data.channels || []).filter((ch) => ch.category);
+  const rolesList = data.roles || [];
   const c = Dashboard.card(root, 'Général', '');
   c.innerHTML += `
     <label class="dash-label">Préfixe (vide = « ${App.escapeHtml(bot.prefix)} »)</label>
@@ -912,6 +1170,59 @@ Dashboard.renderers.server = async (content, data) => {
     };
     c2.appendChild(row);
   });
+
+  // 🎂 Anniversaires
+  const c3 = Dashboard.card(root, '🎂 Anniversaires', 'Les membres enregistrent leur date avec /birthday set jour mois. Le jour J, le bot les souhaite (et peut donner un rôle).');
+  c3.innerHTML += `
+    <label class="dash-label">Salon des anniversaires</label>
+    <select class="dash-select" id="bd-channel">
+      <option value="">— Aucun (annonces désactivées) —</option>
+      ${textChannels.map((ch) => `<option value="${ch.id}" ${String(s.birthday_channel || '') === ch.id ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`).join('')}
+    </select>
+    <label class="dash-label">Rôle anniversaire (optionnel — donné 24 h)</label>
+    <select class="dash-select" id="bd-role">
+      <option value="">— Aucun —</option>
+      ${rolesList.map((r) => `<option value="${r.id}" ${String(s.birthday_role || '') === r.id ? 'selected' : ''}>🎂 ${App.escapeHtml(r.name)}</option>`).join('')}
+    </select>
+    <div style="margin-top:12px"><button class="dash-btn dash-btn-primary" id="bd-save">💾 Enregistrer</button></div>`;
+  c3.querySelector('#bd-save').onclick = async () => {
+    try {
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/settings`, { method: 'PUT', body: {
+        birthday_channel: c3.querySelector('#bd-channel').value,
+        birthday_role: c3.querySelector('#bd-role').value,
+      }});
+      App.toast('Anniversaires enregistrés !');
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+
+  // 🔊 Salons vocaux temporaires
+  const vt = data.voicetemp || { creator_channel: '', category: '', name_template: '' };
+  const voiceChannels = (data.channels || []).filter((ch) => ch.voice);
+  const c4 = Dashboard.card(root, '🔊 Salons vocaux temporaires', 'Un salon « ➕ Créer un vocal » : le bot crée un vocal au nom du membre et le supprime quand il est vide.');
+  c4.innerHTML += `
+    <label class="dash-label">Salon de création (vocal)</label>
+    <select class="dash-select" id="vt-channel">
+      <option value="">— Désactivé —</option>
+      ${voiceChannels.map((ch) => `<option value="${ch.id}" ${String(vt.creator_channel || '') === ch.id ? 'selected' : ''}>🔊 ${App.escapeHtml(ch.name)}</option>`).join('')}
+    </select>
+    <label class="dash-label">Catégorie des vocaux créés</label>
+    <select class="dash-select" id="vt-cat">
+      <option value="">— Catégorie du salon de création —</option>
+      ${categories.map((ch) => `<option value="${ch.id}" ${String(vt.category || '') === ch.id ? 'selected' : ''}>📁 ${App.escapeHtml(ch.name)}</option>`).join('')}
+    </select>
+    <label class="dash-label">Nom des salons (optionnel)</label>
+    <input class="dash-input" id="vt-name" value="${App.escapeHtml(vt.name_template || '')}" placeholder="🔊 {name}" style="max-width:300px" />
+    <div style="margin-top:12px"><button class="dash-btn dash-btn-primary" id="vt-save">💾 Enregistrer</button></div>`;
+  c4.querySelector('#vt-save').onclick = async () => {
+    try {
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/voicetemp`, { method: 'PUT', body: {
+        creator_channel: c4.querySelector('#vt-channel').value,
+        category: c4.querySelector('#vt-cat').value,
+        name_template: c4.querySelector('#vt-name').value.trim() || '🔊 {name}',
+      }});
+      App.toast('Salons vocaux enregistrés !');
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
 };
 
 // ---------- Commandes (niveau bot) ----------
@@ -993,9 +1304,18 @@ Dashboard.renderers.botsettings = async (content) => {
 
   const c2 = Dashboard.card(root, '💾 Sauvegarde automatique', 'Toutes les données (comptes, bots, configs) sont sauvegardées et restaurées à chaque mise à jour.');
   try {
-    const s = await App.api('/status/backup');
-    c2.appendChild(App.el(`<div class="desc" style="margin:0">${s.enabled
+    const s = await App.api('/backup/status');
+    const last = s.last_backup ? new Date(s.last_backup) : null;
+    const lastStr = last && !isNaN(last) ? last.toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : 'jamais';
+    c2.appendChild(App.el(`<div class="desc" style="margin:0 0 10px">${s.enabled
       ? `✅ <b>Active</b> — dépôt <code>${App.escapeHtml(s.repo)}</code> · sauvegarde toutes les 10 minutes + restauration au démarrage.`
       : '⚠️ Désactivée — configure BOTDEV_GH_TOKEN et BOTDEV_DATA_REPO sur Render.'}</div>`));
+    c2.appendChild(App.el(`<div class="dash-badge ${s.enabled ? 'ok' : 'warn'}" style="margin-bottom:10px">🕐 Dernière sauvegarde : ${lastStr}</div>`));
+    const nowBtn = App.el(`<button class="dash-btn dash-btn-primary">💾 Sauvegarder maintenant</button>`);
+    nowBtn.onclick = async () => {
+      try { await App.api('/backup/now', { method: 'POST' }); App.toast('Sauvegarde faite ! 🎉'); Dashboard.renderers.botsettings(content); }
+      catch (e) { App.toast(e.message, 'error'); }
+    };
+    c2.appendChild(nowBtn);
   } catch {}
 };

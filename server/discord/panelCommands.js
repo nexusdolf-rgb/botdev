@@ -485,6 +485,7 @@ async function handleTicket(botId, sub, group, interaction, guild) {
         await ch.permissionOverwrites.edit(openerId, { ViewChannel: false, SendMessages: false }).catch(() => {});
       }
       store.closedTickets.add(ch.id, botId, guild.id);
+      require('./panels').bumpTicketStats(guild.id, 0, -1);
       await logging.log(botId, guild, {
         title: '🔒 Ticket fermé', color: '#ED4245',
         fields: [

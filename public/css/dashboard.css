@@ -188,3 +188,72 @@
   .dash-table { display: block; overflow-x: auto; white-space: nowrap; }
   .dash-table th, .dash-table td { padding: 9px 10px; }
 }
+
+/* ============================================================
+   Hoxera 2.0 — Membres, statistiques, annonces, filtres
+   ============================================================ */
+
+/* ---------- Carte membre ---------- */
+.dash-member {
+  display: flex; align-items: center; gap: 12px;
+  border-bottom: 1px solid #222434; padding: 10px 2px;
+}
+.dash-member:last-child { border-bottom: none; }
+.m-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--d-card2); flex-shrink: 0; }
+.m-info { flex: 1; min-width: 0; }
+.m-info b { font-size: 14px; display: block; }
+.m-roles { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.m-role {
+  font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+  background: rgba(88,101,242,.14); color: #aab1ff;
+}
+.m-meta { color: var(--d-dim); font-size: 11.5px; margin-top: 3px; }
+.m-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+
+/* ---------- Filtres (journaux, jours d'annonces) ---------- */
+.dash-filter-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px; margin-top: 6px;
+}
+.dash-filter {
+  display: flex; align-items: center; gap: 9px;
+  background: var(--d-card2); border: 1px solid var(--d-border);
+  border-radius: 10px; padding: 9px 12px; cursor: pointer; transition: .12s;
+}
+.dash-filter:hover { border-color: var(--d-accent); }
+.dash-filter input { accent-color: var(--d-accent); width: 16px; height: 16px; cursor: pointer; flex-shrink: 0; }
+.dash-filter span { display: flex; flex-direction: column; }
+.dash-filter b { font-size: 12.5px; }
+.dash-filter small { color: var(--d-dim); font-size: 10.5px; }
+
+/* ---------- Graphiques (barres) ---------- */
+.chart {
+  display: flex; align-items: flex-end; gap: 8px;
+  height: 130px; padding: 6px 4px 0;
+}
+.bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 0; }
+.bar-val { font-size: 10.5px; font-weight: 700; color: var(--d-dim); margin-bottom: 3px; }
+.bar {
+  width: 100%; max-width: 34px; border-radius: 7px 7px 3px 3px;
+  min-height: 4px; transition: height .4s ease;
+  box-shadow: 0 3px 10px rgba(88,101,242,.25);
+}
+.bar-lbl { font-size: 10px; color: var(--d-dim); margin-top: 5px; white-space: nowrap; }
+
+/* ---------- Embellissements globaux 2.0 ---------- */
+.dash-stat { position: relative; overflow: hidden; transition: .15s; }
+.dash-stat:hover { border-color: var(--d-accent); transform: translateY(-2px); }
+.dash-stat .val { background: linear-gradient(120deg, var(--d-text), #aab1ff); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.dash-card { position: relative; }
+.dash-card h3 { font-size: 15.5px; }
+.dash-btn-primary:hover { filter: brightness(1.1); box-shadow: 0 5px 18px rgba(88,101,242,.45); }
+.dash-badge.ok { background: rgba(59,165,93,.12); }
+.dash-badge.warn { background: rgba(254,231,92,.1); }
+
+@media (max-width: 700px) {
+  .dash-member { flex-wrap: wrap; }
+  .m-actions { width: 100%; justify-content: flex-start; }
+  .dash-filter-grid { grid-template-columns: repeat(2, 1fr); }
+  .chart { gap: 4px; }
+  .bar { max-width: 100%; }
+}

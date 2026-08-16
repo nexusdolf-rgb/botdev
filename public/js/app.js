@@ -51,6 +51,25 @@ App.confirm = (message) => new Promise((resolve) => {
   document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => { App.closeModal(); resolve(false); });
 });
 
+App.prompt = (message, placeholder = '') => new Promise((resolve) => {
+  App.modal(`
+    <div class="modal-header"><h3>Saisie</h3><button class="x-btn" data-close>×</button></div>
+    <div class="modal-body">
+      <p style="line-height:1.6;margin-bottom:10px">${App.escapeHtml(message)}</p>
+      <input class="input" id="prompt-input" placeholder="${App.escapeHtml(placeholder)}" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close>Annuler</button>
+      <button class="btn btn-primary" id="prompt-ok">OK</button>
+    </div>
+  `);
+  const input = document.getElementById('prompt-input');
+  setTimeout(() => input && input.focus(), 50);
+  input.onkeydown = (e) => { if (e.key === 'Enter') document.getElementById('prompt-ok').click(); };
+  document.getElementById('prompt-ok').onclick = () => { const v = input.value.trim(); App.closeModal(); resolve(v); };
+  document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => { App.closeModal(); resolve(''); });
+});
+
 App.modal = (innerHtml, large = false) => {
   const root = document.getElementById('modal-root');
   const overlay = App.el(`<div class="modal-overlay"><div class="modal ${large ? 'large' : ''}">${innerHtml}</div></div>`);

@@ -16,8 +16,32 @@ function logChannel(botId, guild) {
 }
 
 // Événement de log. color: '#ED4245' (mod), '#57F287' (ok), '#FEE75C' (info), '#5865F2' (tickets)
-async function log(botId, guild, { title, description = '', color = '#5865F2', fields = [], footer = '' }) {
+// type (optionnel) : tickets | mod | automod | joinleave | other — filtré par le réglage log_events du serveur
+function classifyType(title, explicit) {
+  if (explicit) return explicit;
+  const t = String(title || '');
+  if (t.includes('Ticket')) return 'tickets';
+  if (t.includes('Auto-mod') || t.includes('Anti-spam') || t.includes('Liste noire')) return 'automod';
+  if (t.includes('membre') && (t.includes('Nouveau') || t.includes('parti') || t.includes('rejoint'))) return 'joinleave';
+  if (t.includes('Expulsion') || t.includes('Bannissement') || t.includes('Débannissement') || t.includes('Avertissement') || t.includes('Timeout') || t.includes('Purge') || t.includes('Sanction') || t.includes('Rôle temporaire') || t.includes('Verrouillage') || t.includes('Réouverture')) return 'mod';
+  return 'other';
+}
+
+function eventEnabled(gs, type) {
+  if (!gs || !gs.log_events) return true; // pas de filtre → tout est journalisé
   try {
+    const map = JSON.parse(gs.log_events);
+    if (!map || typeof map !== 'object' || !Object.keys(map).length) return true;
+    // Si le filtre existe, on ne journalise que les types marqués 1
+    return map[type] === 1 || map[type] === true;
+  } catch { return true; }
+}
+
+async function log(botId, guild, { title, description = '', color = '#5865F2', fields = [], footer = '', type = '' }) {
+  try {
+    const gs = store.guildSettings.get(botId, guild.id) || {};
+    const evType = classifyType(title, type);
+    if (!eventEnabled(gs, evType)) return;
     const channel = logChannel(botId, guild);
     if (!channel || !channel.send) return;
     const embed = new EmbedBuilder()
