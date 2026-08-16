@@ -411,45 +411,15 @@ App.renderBotHeader = (shell, bot) => {
   shell.appendChild(header);
 };
 
+// Le corps du bot est désormais rendu par Dashboard.mount (dashboard.js, façon DraftBot)
 App.renderBotBody = (shell, bot) => {
-  const layout = App.el(`<div class="bot-layout"></div>`);
-  const tabs = [
-    ['overview', '📊', 'Vue d\'ensemble'],
-    ['servers', '🌍', 'Serveurs'],
-    ['commands', '🧩', 'Commandes'],
-    ['modules', '📦', 'Modules'],
-    ['economy', '💰', 'Économie'],
-    ['settings', '⚙️', 'Réglages'],
-  ];
-  // Niveau 3 du menu : barre d'onglets en HAUT (façon DraftBot)
-  const topTabs = App.el(`<div class="bot-tabs">${tabs.map(([id, ico, label]) =>
-    `<button class="${App.state.tab === id ? 'active' : ''}" data-tab="${id}"><span class="ico">${ico}</span>${label}</button>`
-  ).join('')}</div>`);
-  topTabs.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => App.router.go(`/bots/${bot.id}/${b.dataset.tab}`));
-  shell.appendChild(topTabs);
-  const content = App.el(`<div class="bot-content"></div>`);
-  layout.appendChild(content);
-  shell.appendChild(layout);
-
-  // Barre de navigation mobile (façon application)
-  const mobileNav = App.el(`<nav class="mobile-nav">${tabs.map(([id, ico, label]) =>
-    `<button class="${App.state.tab === id ? 'active' : ''}" data-tab="${id}"><span class="ico">${ico}</span>${label}</button>`
-  ).join('')}</nav>`);
-  mobileNav.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => App.router.go(`/bots/${bot.id}/${b.dataset.tab}`));
-  shell.appendChild(mobileNav);
-
-  switch (App.state.tab) {
-    case 'servers': {
-      if (App.state.serverGuildId) BotViews.renderServerConfig(content, bot, App.state.serverGuildId);
-      else BotViews.renderServers(content, bot);
-      break;
-    }
-    case 'commands': BotViews.renderCommands(content, bot); break;
-    case 'modules': BotViews.renderModules(content, bot); break;
-    case 'economy': BotViews.renderEconomy(content, bot); break;
-    case 'settings': BotViews.renderSettings(content, bot); break;
-    default: BotViews.renderOverview(content, bot);
+  if (typeof Dashboard !== 'undefined' && Dashboard.mount) {
+    Dashboard.mount(shell, bot).catch((e) => {
+      shell.innerHTML = `<div class="empty-state"><div class="big">⚠️</div>${App.escapeHtml(e.message)}</div>`;
+    });
+    return;
   }
+  BotViews.renderOverview(App.el('<div></div>'), bot);
 };
 
 // ---------------------- Démarrage ----------------------

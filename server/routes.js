@@ -486,6 +486,96 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
   });
 });
 
+// ---------------------- Communauté (façon DraftBot) ----------------------
+// Boutique
+router.get('/bots/:id/guilds/:guildId/shop', requireAuth, async (req, res) => {
+  const bot = getOwnBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  res.json({ items: store.shop.all(bot.id, req.params.guildId) });
+});
+
+router.put('/bots/:id/guilds/:guildId/shop', requireAuth, async (req, res) => {
+  const bot = getOwnBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const items = Array.isArray(req.body.items) ? req.body.items.filter((i) => i && i.name && i.role).slice(0, 50) : [];
+  store.shop.replace(bot.id, req.params.guildId, items);
+  res.json({ ok: true, items: store.shop.all(bot.id, req.params.guildId) });
+});
+
+// Suggestions
+router.get('/bots/:id/guilds/:guildId/suggestions', requireAuth, async (req, res) => {
+  const bot = getOwnBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  res.json({ suggestions: store.suggestions.all(bot.id, req.params.guildId) });
+});
+
+router.put('/bots/:id/guilds/:guildId/suggestions/:sid', requireAuth, async (req, res) => {
+  const bot = getOwnBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  store.suggestions.setStatus(Number(req.params.sid), req.body.status);
+  res.json({ ok: true });
+});
+
+// Sanctions prédéfinies
+router.get('/bots/:id/guilds/:guildId/sanctions', requireAuth, async (req, res) => {
+  const bot = getOwnBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  res.json({ sanctions: store.sanctions.all(bot.id, req.params.guildId) });
+});
+
+router.put('/bots/:id/guilds/:guildId/sanctions', requireAuth, async (req, res) => {
+  const bot = getOwnBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const list = Array.isArray(req.body.sanctions) ? req.body.sanctions.filter((s) => s && s.name).slice(0, 25) : [];
+  const existing = store.sanctions.all(bot.id, req.params.guildId).map((s) => s.name);
+  for (const name of existing) if (!list.some((s) => s.name === name)) store.sanctions.remove(bot.id, req.params.guildId, name);
+  for (const s of list) store.sanctions.add(bot.id, req.params.guildId, s);
+  res.json({ ok: true, sanctions: store.sanctions.all(bot.id, req.params.guildId) });
+});
+
+// Giveaways
+router.get('/bots/:id/guilds/:guildId/giveaways', requireAuth, async (req, res) => {
+  const bot = getOwnBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  res.json({ giveaways: store.giveaways.all(bot.id, req.params.guildId) });
+});
+
+router.post('/bots/:id/guilds/:guildId/giveaways/:gid/end', requireAuth, async (req, res) => {
+  const bot = getOwnBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const g = store.giveaways.get(Number(req.params.gid));
+  if (!g || g.bot_id !== bot.id) return res.status(404).json({ error: 'Giveaway introuvable.' });
+  const entry = botManager.clients.get(bot.id);
+  if (!entry || !entry.client.isReady()) return res.status(400).json({ error: 'Le bot doit être en ligne.' });
+  const giveaway = require('./discord/giveaway');
+  const result = await giveaway.endGiveaway(bot.id, entry.client, g, false);
+  res.json({ ok: result.ok, winners: result.winners, reason: result.reason });
+});
+
+// Rôles temporaires
+router.get('/bots/:id/guilds/:guildId/temproles', requireAuth, async (req, res) => {
+  const bot = getOwnBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  res.json({ roles: store.tempRoles.all(bot.id, req.params.guildId) });
+});
+
+router.delete('/bots/:id/guilds/:guildId/temproles/:rid', requireAuth, async (req, res) => {
+  const bot = getOwnBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  store.tempRoles.remove(Number(req.params.rid));
+  res.json({ ok: true });
+});
+
 // Identité du bot sur un serveur (nom, bio, couleur + images en base64)
 router.put('/bots/:id/guilds/:guildId/profile', requireAuth, async (req, res) => {
   const bot = getOwnBot(req, res);

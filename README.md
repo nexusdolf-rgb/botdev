@@ -62,6 +62,24 @@ npm install
 npm start          # démarre sur http://localhost:3000
 ```
 
+## 🎨 Dashboard v2 (façon DraftBot) + couche animation
+
+Le dashboard a été **entièrement reconstruit** : shell professionnel avec **barre latérale**, **sélecteur de serveur**, et un module par fonctionnalité — tout est configuré par serveur et **synchronisé en temps réel** avec le bot (même base).
+
+| Module | Fonctionnalités |
+|---|---|
+| 🎫 Tickets | Types personnalisés, plusieurs rôles staff par type, transcriptions en MP à la suppression |
+| 👋 Bienvenue | Message d'accueil/départ (embed, couleur, image) + auto-rôles |
+| 📈 Niveaux | XP par message, annonces, récompenses de rôles |
+| 💰 Économie | Classement des coins |
+| 🛒 **Boutique** | Articles (rôle + prix en coins) — `/shop`, `/buy`, `/pay` |
+| 🛡️ Modération | Auto-mod, liste noire, **sanctions prédéfinies** (`/sanction`) |
+| 📋 Rôles | Menus déroulants de rôles |
+| 💡 **Suggestions** | `/suggest` + votes 👍👎 + statut staff — synchronisé dashboard ↔ Discord |
+| 🎁 **Giveaways** | `/giveaway create durée prix gagnants` — réaction 🎉, tirage automatique |
+| ⏳ **Rôles temporaires** | `/temprole @membre @rôle 2h` — retiré automatiquement |
+| 📜 Journaux | Salon de logs complet |
+
 ## 🔗 Connexion avec Discord (OAuth2) — configuration
 
 Pour activer « Se connecter avec Discord » et le dashboard par serveur :

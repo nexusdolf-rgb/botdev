@@ -128,6 +128,13 @@ async function dispatchPanels(botId, interaction) {
       return true;
     }
 
+    // 💡 Boutons de suggestions (votes + statut staff)
+    if (interaction.isButton() && cid.startsWith(`bd-sugg:${botId}`)) {
+      const { handleSuggestionButton } = require('./suggest');
+      await handleSuggestionButton(botId, interaction);
+      return true;
+    }
+
     if (interaction.isButton()) {
       if (cid === `bd-ticket:${botId}`) { await handleTicketButton(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:close`) { await handleTicketClose(botId, interaction); return true; }

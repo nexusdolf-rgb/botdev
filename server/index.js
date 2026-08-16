@@ -125,6 +125,14 @@ async function main() {
     }
   }, 30000);
 
+  // ⏰ Balayage 30 s : giveaways échus + rôles temporaires expirés
+  setInterval(async () => {
+    for (const [botId, entry] of botManager.clients) {
+      if (!entry.client.isReady()) continue;
+      try { await require('./discord/tasks').sweep(botId, entry); } catch (e) { console.error('[BotDev] sweep:', e.message); }
+    }
+  }, 30000);
+
   // Réparation automatique : toutes les 10 minutes, on re-synchronise les
   // commandes slash sur tous les serveurs des bots en ligne (au cas où un
   // serveur a été ajouté pendant une coupure) et on met la bio à jour.

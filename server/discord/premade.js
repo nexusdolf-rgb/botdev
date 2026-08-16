@@ -4,6 +4,9 @@
 const { EmbedBuilder, ApplicationCommandOptionType, PermissionsBitField } = require('discord.js');
 const { xpForLevel, levelFromXp } = require('./xp');
 const logging = require('./logging');
+const suggestEngine = require('./suggest');
+const giveawayEngine = require('./giveaway');
+const tasks = require('./tasks');
 const store = require('../db');
 
 const MODULES = {
@@ -26,6 +29,10 @@ const MODULES = {
   levels: {
     label: 'Niveaux', emoji: '📈', description: 'XP en discutant, niveau, classement…',
     commands: ['rank', 'levels'],
+  },
+  community: {
+    label: 'Communauté', emoji: '🎉', description: 'Giveaways, suggestions, boutique, rôles temporaires, sanctions…',
+    commands: ['giveaway', 'suggest', 'suggestions', 'shop', 'buy', 'pay', 'temprole', 'sanction'],
   },
 };
 
@@ -55,6 +62,14 @@ const CMD_DEFS = {
   rank: { label: 'rank', desc: 'Ton niveau, ton XP et ton rang' },
   levels: { label: 'levels', desc: 'Le classement des niveaux du serveur' },
   invite: { label: 'invite', desc: 'Le lien pour inviter le bot' },
+  giveaway: { label: 'giveaway', desc: 'Lancer un giveaway avec tirage automatique', perms: [PermissionsBitField.Flags.ManageGuild] },
+  suggest: { label: 'suggest', desc: 'Proposer une suggestion (votes 👍👎)' },
+  suggestions: { label: 'suggestions', desc: 'Configurer le salon des suggestions', perms: [PermissionsBitField.Flags.ManageGuild] },
+  shop: { label: 'shop', desc: 'Voir la boutique du serveur' },
+  buy: { label: 'buy', desc: 'Acheter un article avec tes coins' },
+  pay: { label: 'pay', desc: 'Transférer des coins à un membre' },
+  temprole: { label: 'temprole', desc: 'Donner un rôle temporaire', perms: [PermissionsBitField.Flags.ManageRoles] },
+  sanction: { label: 'sanction', desc: 'Appliquer une sanction prédéfinie', perms: [PermissionsBitField.Flags.ModerateMembers] },
 };
 
 function enabledModules(botId) {
@@ -98,6 +113,43 @@ function buildSlashPayloads(botId) {
     }
     if (['help'].includes(name)) {
       options.push({ name: 'commande', description: 'Nom de la commande à détailler (ex : ticket)', type: ApplicationCommandOptionType.String, required: false });
+    }
+    if (['suggest'].includes(name)) {
+      options.push({ name: 'texte', description: 'Ta suggestion', type: ApplicationCommandOptionType.String, required: true });
+    }
+    if (['shop'].includes(name)) {
+      options.push({ name: 'article', description: 'Nom de l\'article à acheter (optionnel : pour voir la boutique, laisse vide)', type: ApplicationCommandOptionType.String, required: false });
+    }
+    if (['buy'].includes(name)) {
+      options.push({ name: 'article', description: 'Nom de l\'article', type: ApplicationCommandOptionType.String, required: true });
+    }
+    if (['pay'].includes(name)) {
+      options.push({ name: 'membre', description: 'Le membre à qui envoyer des coins', type: ApplicationCommandOptionType.User, required: true });
+      options.push({ name: 'montant', description: 'Nombre de coins', type: ApplicationCommandOptionType.Integer, required: true });
+    }
+    if (['temprole'].includes(name)) {
+      options.push({ name: 'membre', description: 'Le membre', type: ApplicationCommandOptionType.User, required: true });
+      options.push({ name: 'role', description: 'Le rôle temporaire', type: ApplicationCommandOptionType.Role, required: true });
+      options.push({ name: 'duree', description: 'Durée (ex : 30m, 2h, 1d)', type: ApplicationCommandOptionType.String, required: true });
+    }
+    if (['sanction'].includes(name)) {
+      options.push({ name: 'membre', description: 'Le membre à sanctionner', type: ApplicationCommandOptionType.User, required: true });
+      options.push({ name: 'sanction', description: 'Nom de la sanction prédéfinie', type: ApplicationCommandOptionType.String, required: true });
+    }
+    if (['giveaway'].includes(name)) {
+      options.push({ name: 'action', description: 'Action', type: ApplicationCommandOptionType.String, required: true, choices: [
+        { name: 'create', value: 'create' }, { name: 'end', value: 'end' }, { name: 'reroll', value: 'reroll' },
+      ]});
+      options.push({ name: 'duree', description: 'Durée (ex : 30m, 2h, 1d)', type: ApplicationCommandOptionType.String, required: false });
+      options.push({ name: 'prix', description: 'Le prix à gagner', type: ApplicationCommandOptionType.String, required: false });
+      options.push({ name: 'gagnants', description: 'Nombre de gagnants', type: ApplicationCommandOptionType.Integer, required: false });
+      options.push({ name: 'message', description: 'ID du message du giveaway (pour end/reroll)', type: ApplicationCommandOptionType.String, required: false });
+    }
+    if (['suggestions'].includes(name)) {
+      options.push({ name: 'action', description: 'Action', type: ApplicationCommandOptionType.String, required: true, choices: [
+        { name: 'set', value: 'set' }, { name: 'off', value: 'off' }, { name: 'view', value: 'view' },
+      ]});
+      options.push({ name: 'salon', description: 'Salon des suggestions', type: ApplicationCommandOptionType.Channel, required: false });
     }
     // Commandes personnalisées du bot (slash)
     const custom = store.commands.all(botId).filter(c => c.enabled && c.trigger_type === 'slash');
@@ -426,6 +478,153 @@ async function execute(botId, entry, cmd, src) {
       await reply(`🔗 **Invite-moi sur ton serveur !**\nhttps://discord.com/oauth2/authorize?client_id=${record.client_id}&permissions=8&scope=bot%20applications.commands`);
       break;
     }
+    // ===================== Communauté =====================
+    case 'shop': {
+      const items = store.shop.all(botId, guild.id);
+      if (!items.length) {
+        return reply('🛒 La boutique est vide. Les administrateurs peuvent ajouter des articles depuis le **dashboard BotDev** (onglet Boutique).');
+      }
+      const embed = new EmbedBuilder()
+        .setColor('#FEE75C')
+        .setTitle('🛒 Boutique du serveur')
+        .setDescription('Achète un article avec tes coins : `/buy article`')
+        .setFooter({ text: `Solde : ${(store.economy.get(botId, guild.id, author.id) || {}).coins || 0} coins` });
+      for (const it of items) {
+        embed.addFields({ name: `${it.emoji} ${it.name} — ${it.price} coins`, value: it.description || 'Aucune description' });
+      }
+      await replyEmbed(embed);
+      break;
+    }
+    case 'buy': {
+      const name = isInt ? (src.interaction.options.getString('article') || '') : (src.args || '').trim();
+      const item = store.shop.all(botId, guild.id).find((i) => i.name.toLowerCase() === name.toLowerCase());
+      if (!item) return reply('❓ Article introuvable. Vois la boutique avec `/shop`.');
+      store.economy.ensure(botId, guild.id, author.id);
+      const row = store.economy.get(botId, guild.id, author.id);
+      if (row.coins < item.price) return reply(`❌ Il te manque **${item.price - row.coins}** coins (article à ${item.price}).`);
+      store.economy.add(botId, guild.id, author.id, -item.price);
+      const role = guild.roles.cache.find((r) => r.name.toLowerCase() === item.role.toLowerCase());
+      if (!role) {
+        store.economy.add(botId, guild.id, author.id, item.price); // remboursement
+        return reply('⚠️ Le rôle de cet article n\'existe plus — achat annulé.');
+      }
+      const member = guild.members.cache.get(author.id);
+      if (member) await member.roles.add(role).catch(() => {});
+      await logging.log(botId, guild, {
+        title: '🛒 Achat boutique', color: '#FEE75C',
+        fields: [
+          { name: '👤 Membre', value: `${author.tag || author.username}`, inline: true },
+          { name: '🛍️ Article', value: `${item.emoji} ${item.name}`, inline: true },
+          { name: '💰 Prix', value: String(item.price), inline: true },
+        ],
+      });
+      await reply(`✅ Achat réussi ! Tu reçois **${role.toString()}** pour ${item.price} coins.`);
+      break;
+    }
+    case 'pay': {
+      const target = isInt ? (src.interaction.options.getUser('membre') || null) : null;
+      const amount = isInt ? (src.interaction.options.getInteger('montant') || 0) : parseInt((src.args || '').split(/\s+/)[1], 10);
+      if (!target || !amount || amount <= 0) return reply('❓ Utilisation : `/pay @membre montant`.');
+      if (target.id === author.id) return reply('❌ Tu ne peux pas te payer toi-même.');
+      store.economy.ensure(botId, guild.id, author.id);
+      store.economy.ensure(botId, guild.id, target.id);
+      const from = store.economy.get(botId, guild.id, author.id);
+      if (from.coins < amount) return reply('❌ Solde insuffisant.');
+      store.economy.add(botId, guild.id, author.id, -amount);
+      store.economy.add(botId, guild.id, target.id, amount);
+      await reply(`💸 ${author} a envoyé **${amount} coins** à ${target} !`);
+      break;
+    }
+    case 'suggest': {
+      if (!isInt) return reply('💡 Utilise la commande slash `/suggest` pour envoyer une suggestion.');
+      const text = src.interaction.options.getString('texte') || '';
+      if (!text.trim()) return reply('❓ Écris ta suggestion : `/suggest ton idée`.');
+      return suggestEngine.submitSuggestion(botId, src.interaction, text);
+    }
+    case 'suggestions': {
+      const action = isInt ? (src.interaction.options.getString('action') || 'view') : 'view';
+      if (action === 'set') {
+        const ch = src.interaction.options.getChannel('salon');
+        if (!ch || !ch.isTextBased()) return reply('❌ Salon invalide.');
+        store.guildSettings.set(botId, guild.id, { suggestion_channel: `#${ch.name}` });
+        return reply(`✅ Les suggestions seront postées dans ${ch}.`);
+      }
+      if (action === 'off') {
+        store.guildSettings.set(botId, guild.id, { suggestion_channel: '' });
+        return reply('⛔ Suggestions désactivées.');
+      }
+      const gs = store.guildSettings.get(botId, guild.id) || {};
+      return reply(gs.suggestion_channel
+        ? `💡 Salon des suggestions : **${gs.suggestion_channel}**\nVotes avec 👍👎, statut par le staff (✅ Approuver / ❌ Refuser).`
+        : '💡 Aucun salon configuré. Utilise `/suggestions set #salon`.');
+    }
+    case 'giveaway': {
+      if (!isInt) return reply('🎁 Utilise la commande slash `/giveaway` pour lancer un tirage.');
+      const action = src.interaction.options.getString('action') || 'create';
+      const duree = src.interaction.options.getString('duree') || '1h';
+      const prix = src.interaction.options.getString('prix') || '🎁 Lot surprise';
+      const gagnants = src.interaction.options.getInteger('gagnants') || 1;
+      if (action === 'end' || action === 'reroll') {
+        const msgId = src.interaction.options.getString('message') || '';
+        const g = msgId ? store.giveaways.active(botId, guild.id).find((x) => x.message_id === msgId)
+          : store.giveaways.active(botId, guild.id)[0];
+        if (!g) return reply('❌ Aucun giveaway en cours trouvé.');
+        const res = await giveawayEngine.endGiveaway(botId, client, g, false);
+        return reply(res.ok
+          ? `🎉 Tirage terminé ! Gagnants : ${res.winners.join(', ') || 'aucun participant'}`
+          : `❌ ${res.reason}`);
+      }
+      const ms = giveawayEngine.parseDuration(duree);
+      if (!ms) return reply('❌ Durée invalide (ex : 30m, 2h, 1d).');
+      return giveawayEngine.startGiveaway(botId, src.interaction, ms, prix, gagnants);
+    }
+    case 'temprole': {
+      if (!isInt) return reply('⏳ Utilise la commande slash `/temprole`.');
+      const target = src.interaction.options.getMember('membre') || null;
+      const role = src.interaction.options.getRole('role') || null;
+      const duree = src.interaction.options.getString('duree') || '';
+      if (!target || !role) return reply('❓ Utilisation : `/temprole @membre @rôle 2h`.');
+      const ms = tasks.parseRoleDuration(duree);
+      if (!ms) return reply('❌ Durée invalide (ex : 30m, 2h, 1d).');
+      return tasks.giveTempRole(botId, src.interaction, target, role, ms);
+    }
+    case 'sanction': {
+      const target = isInt ? (src.interaction.options.getMember('membre') || null) : null;
+      const sname = isInt ? (src.interaction.options.getString('sanction') || '') : (src.args || '').trim();
+      if (!target) return reply('❓ Utilisation : `/sanction @membre nom_de_la_sanction`.');
+      const s = store.sanctions.get(botId, guild.id, sname);
+      if (!s) {
+        const list = store.sanctions.all(botId, guild.id);
+        return reply(list.length
+          ? `❓ Sanction introuvable. Disponibles : ${list.map((x) => x.name).join(', ')}`
+          : '❓ Aucune sanction prédéfinie. Ajoute-les depuis le **dashboard BotDev** (onglet Modération).');
+      }
+      const reason = s.message || 'Sanction prédéfinie';
+      try { await target.send(`⚠️ Tu as été sanctionné sur **${guild.name}** : ${reason}`); } catch {}
+      if (s.action === 'warn') {
+        store.warnings.add(botId, guild.id, target.id, reason, author.id);
+        await reply(`⚠️ ${target} averti : ${reason}`);
+      } else if (s.action === 'timeout') {
+        await target.timeout(Math.max(s.duration || 5, 1) * 60000, reason).catch(() => {});
+        await reply(`⏳ ${target} mis en timeout ${s.duration || 5} min : ${reason}`);
+      } else if (s.action === 'kick') {
+        await target.kick(reason).catch(() => reply('⚠️ Expulsion impossible.'));
+        await reply(`👢 ${target.user.tag} expulsé : ${reason}`);
+      } else if (s.action === 'ban') {
+        await target.ban({ reason }).catch(() => reply('⚠️ Bannissement impossible.'));
+        await reply(`🔨 ${target.user.tag} banni : ${reason}`);
+      }
+      await logging.log(botId, guild, {
+        title: '🛡️ Sanction prédéfinie', color: '#ED4245',
+        fields: [
+          { name: '👤 Membre', value: `${target.user.tag}`, inline: true },
+          { name: '⚖️ Sanction', value: s.name, inline: true },
+          { name: '🛡️ Par', value: `${author.tag || author.username}`, inline: true },
+          { name: '📝 Raison', value: reason },
+        ],
+      });
+      break;
+    }
     case '8ball': {
       const answers = ['Oui, absolument.', 'C\'est certain.', 'Sans aucun doute.', 'Oui, définitivement.', 'Tu peux compter dessus.', 'Essaie encore plus tard.', 'Ne compte pas dessus.', 'Ma réponse est non.', 'Mes sources disent non.', 'Très incertain.'];
       const q = isInt ? (src.interaction.options.getString('texte') || '') : (src.args || '');
@@ -661,6 +860,14 @@ const HELP_DETAILS = {
   rank: ['📈 Niveaux', 'Ton niveau, ton XP et ton rang sur ce serveur. Gagne de l\'XP en discutant !', '`/rank @membre`', '`/rank` → 📈 Niveau 3 · ✨ 950/1600 XP · 🏆 #2'],
   levels: ['📈 Niveaux', 'Le classement des niveaux du serveur.', '`/levels`'],
   invite: ['🔧 Utilitaire', 'Le lien pour inviter le bot sur un autre serveur.', '`/invite`'],
+  shop: ['🛒 Boutique', 'La boutique du serveur : achète des rôles avec tes coins.', '`/shop` (voir) · `buy` est `/buy article`'],
+  buy: ['🛒 Boutique', 'Achète un article de la boutique (rôle donné automatiquement).', '`/buy article`', '`/buy vip` → ✅ Tu reçois @VIP pour 500 coins'],
+  pay: ['💰 Économie', 'Transfère des coins à un membre.', '`/pay @membre montant`'],
+  suggest: ['💡 Suggestions', 'Propose une idée : les membres votent (👍👎), le staff tranche.', '`/suggest ton idée`'],
+  suggestions: ['💡 Suggestions', 'Configure le salon des suggestions (propriétaire/admin).', '`/suggestions set #salon` · `/suggestions off` · `/suggestions view`'],
+  giveaway: ['🎁 Giveaways', 'Lance un giveaway : les membres réagissent 🎉, le tirage est automatique.', '`/giveaway create 2h Prix 3` · `/giveaway end` · `/giveaway reroll`', '`/giveaway create 1d 🎁 Clé du jeu 1`'],
+  temprole: ['⏳ Rôles temporaires', 'Donne un rôle pour une durée limitée — retiré automatiquement.', '`/temprole @membre @rôle 2h`', '`/temprole @Membre @VIP 1d`'],
+  sanction: ['⚖️ Sanctions', 'Applique une sanction prédéfinie (configurée dans le dashboard).', '`/sanction @membre nom_de_la_sanction`'],
   botprofile: ['🤖 Identité du bot', 'Personnalise le bot sur CE serveur : nom, avatar, bannière (depuis ta galerie), bio et couleur. Le bot s\'exprime avec cette identité dans ses messages ici.',
     '`/botprofile setup` — **Assistant pas à pas** : nom → bio → **sélecteur de couleurs** → avatar (**📱 ta galerie s\'ouvre directement**, envoie la photo) → bannière (galerie aussi) → ✅ Enregistrer (boutons Suivant/Retour/Annuler)\n`/botprofile view` — voir le profil\n`/botprofile set nom|bio|couleur` — nom, bio, couleur\n`/botprofile avatar` — 📱 la galerie s\'ouvre automatiquement\n`/botprofile banner` — 📱 galerie aussi\n`/botprofile reset` — revenir à l\'identité globale\n\n🔒 Réservé au **propriétaire du serveur**'],
   modlogs: ['📋 Journaux', 'Un salon où le bot trace tout : modération, tickets, auto-mod, arrivées et départs.',
@@ -765,6 +972,11 @@ function buildHelpEmbed(botId, record, client, guild, requested) {
   embed.addFields({
     name: '🤖 Personnalisation du serveur (propriétaire / admins)',
     value: '`/botprofile` — identité du bot sur ce serveur (nom, avatar, bannière, bio)\n`/modlogs` — salon des journaux · `/blacklist` — mots interdits',
+  });
+
+  embed.addFields({
+    name: '🎉 Communauté & animation',
+    value: '`/shop` — boutique · `/buy article` — acheter · `/pay @membre montant` — transférer des coins\n`/giveaway` — tirages automatiques · `/suggest` — suggestions · `/temprole` — rôles temporaires · `/sanction` — sanctions prédéfinies',
   });
 
   const custom = store.commands.all(botId).filter(c => c.enabled);

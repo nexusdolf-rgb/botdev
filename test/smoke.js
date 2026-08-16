@@ -23,7 +23,7 @@ window.__finish = (n) => process.exit(n === 0 ? 0 : 1);
 
 window.fetch = async () => ({ ok: false, status: 401, json: async () => ({}) });
 
-const scripts = ['app.js', 'editor.js', 'views.js', 'public.js']
+const scripts = ['app.js', 'editor.js', 'views.js', 'public.js', 'dashboard.js']
   .map(f => fs.readFileSync(path.join(__dirname, '..', 'public', 'js', f), 'utf8'))
   .join('\n;\n');
 

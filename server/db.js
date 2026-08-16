@@ -166,6 +166,63 @@ CREATE TABLE IF NOT EXISTS bot_profiles (
   PRIMARY KEY (bot_id, guild_id)
 );
 
+CREATE TABLE IF NOT EXISTS shop_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  price INTEGER DEFAULT 100,
+  role TEXT DEFAULT '',
+  emoji TEXT DEFAULT '🛒'
+);
+
+CREATE TABLE IF NOT EXISTS giveaways (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  channel_id TEXT NOT NULL,
+  message_id TEXT NOT NULL,
+  prize TEXT DEFAULT '',
+  winners INTEGER DEFAULT 1,
+  ends_at INTEGER NOT NULL,
+  drawn INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS suggestions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  author_id TEXT DEFAULT '',
+  text TEXT DEFAULT '',
+  message_id TEXT DEFAULT '',
+  channel_id TEXT DEFAULT '',
+  status TEXT DEFAULT 'pending',
+  upvotes INTEGER DEFAULT 0,
+  downvotes INTEGER DEFAULT 0,
+  voters TEXT DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS temp_roles (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  role TEXT NOT NULL,
+  expires_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS sanctions (
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  action TEXT DEFAULT 'warn',
+  duration INTEGER DEFAULT 0,
+  message TEXT DEFAULT '',
+  PRIMARY KEY (bot_id, guild_id, name)
+);
+
 CREATE TABLE IF NOT EXISTS blacklist_words (
   bot_id INTEGER NOT NULL,
   guild_id TEXT NOT NULL,
@@ -207,6 +264,7 @@ try { db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_discord ON users(disc
 
 // Colonne log_channel
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN log_channel TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN suggestion_channel TEXT DEFAULT ''"); } catch (e) {}
 
 // Colonnes XP & auto-mod sur guild_settings
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN xp_enabled INTEGER DEFAULT 1"); } catch (e) {}
@@ -343,13 +401,13 @@ const guildSettings = {
   set: (botId, guildId, fields) => {
     const cur = guildSettings.get(botId, guildId) || { prefix: '', warn_limit: 0, warn_action: 'none' };
     const next = { ...cur, ...fields };
-    db.prepare(`INSERT INTO guild_settings (bot_id, guild_id, prefix, warn_limit, warn_action, xp_enabled, xp_min, xp_max, xp_cooldown, xp_message, xp_channel, am_enabled, am_links, am_caps, am_mentions, am_spam, log_channel)
-      VALUES (@bot_id, @guild_id, @prefix, @warn_limit, @warn_action, @xp_enabled, @xp_min, @xp_max, @xp_cooldown, @xp_message, @xp_channel, @am_enabled, @am_links, @am_caps, @am_mentions, @am_spam, @log_channel)
+    db.prepare(`INSERT INTO guild_settings (bot_id, guild_id, prefix, warn_limit, warn_action, xp_enabled, xp_min, xp_max, xp_cooldown, xp_message, xp_channel, am_enabled, am_links, am_caps, am_mentions, am_spam, log_channel, suggestion_channel)
+      VALUES (@bot_id, @guild_id, @prefix, @warn_limit, @warn_action, @xp_enabled, @xp_min, @xp_max, @xp_cooldown, @xp_message, @xp_channel, @am_enabled, @am_links, @am_caps, @am_mentions, @am_spam, @log_channel, @suggestion_channel)
       ON CONFLICT(bot_id, guild_id) DO UPDATE SET prefix = excluded.prefix, warn_limit = excluded.warn_limit, warn_action = excluded.warn_action,
         xp_enabled = excluded.xp_enabled, xp_min = excluded.xp_min, xp_max = excluded.xp_max, xp_cooldown = excluded.xp_cooldown,
         xp_message = excluded.xp_message, xp_channel = excluded.xp_channel, am_enabled = excluded.am_enabled,
         am_links = excluded.am_links, am_caps = excluded.am_caps, am_mentions = excluded.am_mentions, am_spam = excluded.am_spam,
-        log_channel = excluded.log_channel`)
+        log_channel = excluded.log_channel, suggestion_channel = excluded.suggestion_channel`)
       .run({
         bot_id: botId, guild_id: guildId,
         prefix: String(next.prefix || '').slice(0, 5),
@@ -367,6 +425,7 @@ const guildSettings = {
         am_mentions: Math.max(parseInt(next.am_mentions, 10) || 0, 0),
         am_spam: Math.max(parseInt(next.am_spam, 10) || 0, 0),
         log_channel: String(next.log_channel || '').slice(0, 100),
+        suggestion_channel: String(next.suggestion_channel || '').slice(0, 100),
       });
   },
 };
@@ -485,6 +544,73 @@ const blacklist = {
   remove: (botId, guildId, word) => db.prepare('DELETE FROM blacklist_words WHERE bot_id = ? AND guild_id = ? AND word = ?').run(botId, guildId, String(word).toLowerCase()),
 };
 
+// ---------------------- Boutique ----------------------
+const shop = {
+  all: (botId, guildId) => db.prepare('SELECT * FROM shop_items WHERE bot_id = ? AND guild_id = ? ORDER BY price ASC').all(botId, guildId),
+  get: (id) => db.prepare('SELECT * FROM shop_items WHERE id = ?').get(id) || null,
+  add: (botId, guildId, item) => db.prepare('INSERT INTO shop_items (bot_id, guild_id, name, description, price, role, emoji) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(botId, guildId, String(item.name || '').slice(0, 80), String(item.description || '').slice(0, 200), Math.max(1, parseInt(item.price, 10) || 1), String(item.role || '').slice(0, 100), String(item.emoji || '🛒').slice(0, 10)).lastInsertRowid,
+  remove: (id) => db.prepare('DELETE FROM shop_items WHERE id = ?').run(id),
+  replace: (botId, guildId, items) => {
+    db.prepare('DELETE FROM shop_items WHERE bot_id = ? AND guild_id = ?').run(botId, guildId);
+    for (const it of items) if (it && it.name && it.role) shop.add(botId, guildId, it);
+  },
+};
+
+// ---------------------- Giveaways ----------------------
+const giveaways = {
+  active: (botId, guildId) => db.prepare('SELECT * FROM giveaways WHERE bot_id = ? AND guild_id = ? AND drawn = 0 ORDER BY ends_at ASC').all(botId, guildId),
+  all: (botId, guildId) => db.prepare('SELECT * FROM giveaways WHERE bot_id = ? AND guild_id = ? ORDER BY id DESC LIMIT 30').all(botId, guildId),
+  get: (id) => db.prepare('SELECT * FROM giveaways WHERE id = ?').get(id) || null,
+  create: (g) => db.prepare('INSERT INTO giveaways (bot_id, guild_id, channel_id, message_id, prize, winners, ends_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(g.bot_id, g.guild_id, g.channel_id, g.message_id, String(g.prize || '').slice(0, 200), Math.max(1, parseInt(g.winners, 10) || 1), g.ends_at).lastInsertRowid,
+  markDrawn: (id) => db.prepare('UPDATE giveaways SET drawn = 1 WHERE id = ?').run(id),
+  remove: (id) => db.prepare('DELETE FROM giveaways WHERE id = ?').run(id),
+  due: () => db.prepare('SELECT * FROM giveaways WHERE drawn = 0 AND ends_at <= ?').all(Date.now()),
+};
+
+// ---------------------- Suggestions ----------------------
+const suggestions = {
+  all: (botId, guildId) => db.prepare('SELECT * FROM suggestions WHERE bot_id = ? AND guild_id = ? ORDER BY id DESC LIMIT 100').all(botId, guildId),
+  get: (id) => db.prepare('SELECT * FROM suggestions WHERE id = ?').get(id) || null,
+  create: (s) => db.prepare('INSERT INTO suggestions (bot_id, guild_id, author_id, text, message_id, channel_id) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(s.bot_id, s.guild_id, s.author_id, String(s.text || '').slice(0, 1500), s.message_id || '', s.channel_id || '').lastInsertRowid,
+  setStatus: (id, status) => db.prepare('UPDATE suggestions SET status = ? WHERE id = ?').run(['pending', 'approved', 'denied'].includes(status) ? status : 'pending', id),
+  vote: (id, authorId, direction) => {
+    const row = suggestions.get(id);
+    if (!row) return { ok: false };
+    let voters = {};
+    try { voters = JSON.parse(row.voters || '{}'); } catch {}
+    const prev = voters[authorId] || null;
+    let up = row.upvotes, down = row.downvotes;
+    if (prev === direction) return { ok: true, changed: false, up, down };
+    if (prev === 'up') up--;
+    if (prev === 'down') down--;
+    if (direction === 'up') up++;
+    if (direction === 'down') down++;
+    voters[authorId] = direction;
+    db.prepare('UPDATE suggestions SET upvotes = ?, downvotes = ?, voters = ? WHERE id = ?').run(up, down, JSON.stringify(voters), id);
+    return { ok: true, changed: true, up, down };
+  },
+};
+
+// ---------------------- Rôles temporaires ----------------------
+const tempRoles = {
+  all: (botId, guildId) => db.prepare('SELECT * FROM temp_roles WHERE bot_id = ? AND guild_id = ? ORDER BY expires_at ASC').all(botId, guildId),
+  add: (botId, guildId, userId, role, expiresAt) => db.prepare('INSERT INTO temp_roles (bot_id, guild_id, user_id, role, expires_at) VALUES (?, ?, ?, ?, ?)').run(botId, guildId, userId, String(role).slice(0, 100), expiresAt),
+  remove: (id) => db.prepare('DELETE FROM temp_roles WHERE id = ?').run(id),
+  due: () => db.prepare('SELECT * FROM temp_roles WHERE expires_at <= ?').all(Date.now()),
+};
+
+// ---------------------- Sanctions prédéfinies ----------------------
+const sanctions = {
+  all: (botId, guildId) => db.prepare('SELECT * FROM sanctions WHERE bot_id = ? AND guild_id = ? ORDER BY name').all(botId, guildId),
+  get: (botId, guildId, name) => db.prepare('SELECT * FROM sanctions WHERE bot_id = ? AND guild_id = ? AND name = ?').get(botId, guildId, name) || null,
+  add: (botId, guildId, s) => db.prepare('INSERT INTO sanctions (bot_id, guild_id, name, action, duration, message) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(bot_id, guild_id, name) DO UPDATE SET action = excluded.action, duration = excluded.duration, message = excluded.message')
+    .run(botId, guildId, String(s.name || '').slice(0, 50), ['warn', 'timeout', 'kick', 'ban'].includes(s.action) ? s.action : 'warn', Math.max(0, parseInt(s.duration, 10) || 0), String(s.message || '').slice(0, 1000)),
+  remove: (botId, guildId, name) => db.prepare('DELETE FROM sanctions WHERE bot_id = ? AND guild_id = ? AND name = ?').run(botId, guildId, name),
+};
+
 // ---------------------- Registre des tickets fermés ----------------------
 // Source de vérité : un salon listé ici est fermé, même si le cache Discord
 // n'est pas encore à jour → la vérification « déjà ouvert » ne se trompe plus.
@@ -517,4 +643,4 @@ const transcripts = {
   get: (token) => db.prepare('SELECT * FROM transcripts WHERE token = ?').get(String(token)) || null,
 };
 
-module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist };
+module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, shop, giveaways, suggestions, tempRoles, sanctions };
