@@ -170,6 +170,27 @@ function parseTypes(cfg) {
   } catch { return []; }
 }
 
+// Types normalisés : chaque type a staff_roles (liste) en plus de l'ancien staff_role
+function normalizeTypes(cfg) {
+  return parseTypes(cfg).map((t) => {
+    const roles = Array.isArray(t.staff_roles)
+      ? t.staff_roles.map((r) => String(r).trim()).filter(Boolean)
+      : (t.staff_role ? [String(t.staff_role).trim()] : []);
+    return { label: String(t.label || ''), emoji: String(t.emoji || ''), category: String(t.category || ''), staff_roles: roles };
+  });
+}
+
+// Rôles staff autorisés pour un ticket : ceux du type, sinon le rôle global
+function staffRolesForTicket(botId, guild, channel) {
+  const cfg = store.tickets.get(botId, guild.id) || {};
+  const { typeLabel } = ticketMetaFor(channel);
+  if (typeLabel) {
+    const type = normalizeTypes(cfg).find((t) => t.label === typeLabel);
+    if (type && type.staff_roles.length) return type.staff_roles;
+  }
+  return cfg.support_role ? [cfg.support_role] : [];
+}
+
 function isDefaultMessage(msg) {
   const s = String(msg || '').trim();
   if (!s) return true;
@@ -282,18 +303,14 @@ function isStaff(botId, interaction) {
     if (member.permissions && typeof member.permissions.has === 'function'
       && member.permissions.has(PermissionFlagsBits.ManageGuild)) return true;
   } catch {}
-  const cfg = store.tickets.get(botId, guild.id) || {};
-  let supportName = cfg.support_role;
-  const { typeLabel } = ticketMetaFor(interaction.channel);
-  if (typeLabel) {
-    const type = parseTypes(cfg).find((t) => t.label === typeLabel);
-    if (type && type.staff_role) supportName = type.staff_role;
-  }
-  if (supportName) {
-    const role = resolveRole(guild, supportName);
-    if (role && member.roles && member.roles.cache && member.roles.cache.has(role.id)) return true;
-  }
-  return false;
+  const roles = staffRolesForTicket(botId, guild, interaction.channel);
+  if (!roles.length) return false;
+  const memberRoles = (member.roles && member.roles.cache) ? member.roles.cache : null;
+  if (!memberRoles) return false;
+  return roles.some((name) => {
+    const role = resolveRole(guild, name);
+    return !!(role && memberRoles.has(role.id));
+  });
 }
 
 const staffForTicket = isStaff;
@@ -310,7 +327,15 @@ async function openTicket(botId, interaction, type, reason = '') {
   if (!cfg) return interaction.reply({ content: '⚠️ Les tickets ne sont pas configurés.', ephemeral: true });
 
   const types = parseTypes(cfg);
-  const chosen = type || types[0] || null;
+  const chosenRaw = type || types[0] || null;
+  const chosen = chosenRaw ? {
+    label: String(chosenRaw.label || ''),
+    emoji: String(chosenRaw.emoji || ''),
+    category: String(chosenRaw.category || ''),
+    staff_roles: Array.isArray(chosenRaw.staff_roles)
+      ? chosenRaw.staff_roles.map((r) => String(r).trim()).filter(Boolean)
+      : (chosenRaw.staff_role ? [String(chosenRaw.staff_role).trim()] : []),
+  } : null;
   const prefix = chosen ? slugify(chosen.label) : 'ticket';
   const uname = slugify(member.user.username);
   const baseName = `${prefix}-${uname}`.slice(0, 32);
@@ -360,7 +385,11 @@ async function openTicket(botId, interaction, type, reason = '') {
     channelName = `${baseName}-${counter}`.slice(0, 32);
   }
 
-  const support = resolveRole(guild, (chosen && chosen.staff_role) || cfg.support_role);
+  // TOUS les rôles staff du type (ou le rôle global) obtiennent l'accès
+  const staffNames = (chosen && chosen.staff_roles && chosen.staff_roles.length)
+    ? chosen.staff_roles
+    : (cfg.support_role ? [cfg.support_role] : []);
+  const supportRoles = staffNames.map((n) => resolveRole(guild, n)).filter(Boolean);
   const catName = (chosen && chosen.category) ? chosen.category : (cfg.category || '');
   let parent = null;
   if (catName) {
@@ -376,7 +405,7 @@ async function openTicket(botId, interaction, type, reason = '') {
     { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
     { id: member.id, allow },
   ];
-  if (support) perms.push({ id: support.id, allow });
+  for (const r of supportRoles) perms.push({ id: r.id, allow });
 
   let channel;
   try {
@@ -416,26 +445,29 @@ async function openTicket(botId, interaction, type, reason = '') {
     dmWarning = '\n⚠️ **Mes messages privés ne t\'atteignent pas** : active « Autoriser les messages privés des membres du serveur » (Réglages Discord → Confidentialité) si tu veux recevoir la transcription à la fermeture.';
   }
 
+  const staffMention = supportRoles.length ? supportRoles.map((r) => r.toString()).join(' ') : '';
   const welcome = new EmbedBuilder()
     .setColor('#57F287')
+    .setAuthor({ name: `Ticket de ${member.user.username}`, iconURL: member.user.displayAvatarURL ? member.user.displayAvatarURL({ dynamic: true }) : undefined })
     .setTitle('🎫 Ticket ouvert !')
-    .setDescription([
-      `Bienvenue ${member} 👋`,
-      '',
-      chosen ? `🗂️ **Type** : ${chosen.emoji || ''} ${chosen.label}` : null,
-      reason ? `📝 **Ta demande** : ${reason}` : null,
-      support ? `🛡️ **Staff** : ${support.toString()}` : null,
-      '',
-      'Explique ta demande en détail (tu peux joindre des captures d\'écran ou des fichiers). Notre équipe te répondra ici **au plus vite**.',
-      '',
-      '🔒 Seul le **staff** peut fermer, mettre en attente, réouvrir ou supprimer ce ticket.',
-      '📄 À la **suppression** du ticket, tu recevras la **transcription** en message privé.' + dmWarning,
-    ].filter(Boolean).join('\n'));
+    .setDescription('Merci de nous avoir contactés 👋 Voici ton espace privé — personne d\'autre que toi et le staff ne peut le voir.')
+    .addFields(
+      { name: '🗂️ Type', value: chosen ? `${chosen.emoji || ''} ${chosen.label}` : 'Ticket simple', inline: true },
+      { name: '🛡️ Staff', value: staffMention || 'aucun rôle défini', inline: true },
+      { name: '📝 Ta demande', value: reason ? reason.slice(0, 1024) : '—', inline: false },
+      { name: '📋 Comment ça se passe ?', value: [
+        '1️⃣ Explique ta demande en détail (tu peux joindre des captures d\'écran ou des fichiers).',
+        '2️⃣ Le staff te répond ici **au plus vite**.',
+        '3️⃣ À la **suppression** du ticket, tu reçois la **transcription** en message privé.',
+      ].join('\n') },
+      { name: '🔒 Boutons du staff', value: 'Fermer = verrouiller (réouvrable) · En attente = lecture seule · Réouvrir · Supprimer = point final (+ transcription en MP).' + dmWarning },
+    )
+    .setTimestamp();
   const site = store.settings.get('public_url');
   if (site) welcome.setFooter({ text: `BotDev · ${site}` });
   const identity = require('./identity');
   await identity.sendAsProfile(interaction.client, botId, guild, channel, {
-    content: `${member}${support ? ' · ' + support.toString() : ''}`,
+    content: `${member}${staffMention ? ' · ' + staffMention : ''}`,
     embeds: [welcome],
     components: [row1, row2],
   }).catch(() => {});
@@ -730,7 +762,10 @@ function typesPickEmbed(state) {
     .addFields({
       name: '📋 Types actuels',
       value: types.length
-        ? types.map((t) => `${t.emoji || '🎫'} **${t.label}**${t.category ? ` → ${t.category}` : ''}${t.staff_role ? ` · 🛡️ ${t.staff_role}` : ''}`).join('\n').slice(0, 1024)
+        ? types.map((t) => {
+            const roles = Array.isArray(t.staff_roles) ? t.staff_roles : (t.staff_role ? [t.staff_role] : []);
+            return `${t.emoji || '🎫'} **${t.label}**${t.category ? ` → ${t.category}` : ''}${roles.length ? ` · 🛡️ ${roles.join(', ')}` : ''}`;
+          }).join('\n').slice(0, 1024)
         : 'Aucun type — commence avec « ➕ Nouveau type ».',
     })
     .setFooter({ text: 'Le panneau (/ticket panel) affiche ces types dans un menu déroulant.' });
@@ -752,7 +787,9 @@ function typesPickComponents(state) {
 
 function currentType(state) {
   const t = typesList(state.botId, state.guildId).find((x) => x.label === state.current);
-  return t || { label: state.current, emoji: '', category: '', staff_role: '' };
+  if (!t) return { label: state.current, emoji: '', category: '', staff_roles: [] };
+  const roles = Array.isArray(t.staff_roles) ? t.staff_roles : (t.staff_role ? [t.staff_role] : []);
+  return { ...t, staff_roles: roles.filter(Boolean) };
 }
 
 function typesEditEmbed(state) {
@@ -764,7 +801,7 @@ function typesEditEmbed(state) {
     .addFields(
       { name: '😀 Emoji', value: t.emoji || 'aucun', inline: true },
       { name: '🗂️ Catégorie', value: t.category || 'par défaut', inline: true },
-      { name: '🛡️ Rôle staff', value: t.staff_role || 'aucun', inline: true },
+      { name: '🛡️ Rôles staff (' + t.staff_roles.length + ')', value: t.staff_roles.length ? t.staff_roles.join('\n') : 'aucun', inline: true },
     );
 }
 
@@ -773,7 +810,8 @@ function typesEditComponents(state) {
     { label: '✏️ Renommer', value: 'rename', emoji: '✏️' },
     { label: '😀 Changer l\'emoji', value: 'emoji', emoji: '😀' },
     { label: '🗂️ Changer la catégorie', value: 'category', emoji: '🗂️' },
-    { label: '🛡️ Changer le rôle staff', value: 'role', emoji: '🛡️' },
+    { label: '🛡️ ➕ Ajouter un rôle staff', value: 'addrole', emoji: '🛡️' },
+    { label: '🛡️ ➖ Retirer un rôle staff', value: 'removerole', emoji: '🛡️' },
     { label: '🗑 Supprimer ce type', value: 'delete', emoji: '🗑' },
     { label: '⬅️ Retour', value: 'back', emoji: '⬅️' },
   ];
@@ -802,19 +840,62 @@ function typesCategoryComponents(state) {
   )];
 }
 
-function typesRoleComponents(state) {
+// Étape « ➕ Ajouter un rôle staff » : sélecteur de rôle natif (répétable) + Terminé
+function typesAddRoleComponents(state) {
+  const t = currentType(state);
+  const used = (t.staff_roles || []).length;
   return [
     new ActionRowBuilder().addComponents(
       new (require('discord.js').RoleSelectMenuBuilder)()
         .setCustomId(`bdw-tr:${state.botId}:${state.userId}`)
-        .setPlaceholder('🛡️ Choisis le rôle staff…')
+        .setPlaceholder(`🛡️ Choisis un rôle à ajouter (${used} sélectionné(s))…`)
         .setMinValues(1).setMaxValues(1)
     ),
     new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId(`bdw-tb:${state.botId}:${state.userId}:norole`).setLabel('❌ Aucun rôle').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`bdw-tb:${state.botId}:${state.userId}:doneroles`).setLabel('✅ Terminé').setStyle(ButtonStyle.Success),
       new ButtonBuilder().setCustomId(`bdw-tb:${state.botId}:${state.userId}:back`).setLabel('⬅️ Retour').setStyle(ButtonStyle.Secondary),
     ),
   ];
+}
+
+function typesAddRoleEmbed(state) {
+  const t = currentType(state);
+  return new EmbedBuilder()
+    .setColor('#5865F2')
+    .setTitle(`🛡️ Rôles staff de « ${t.label} »`)
+    .setDescription('Sélectionne **autant de rôles que tu veux** : chacun pourra gérer les tickets de ce type (fermer, réouvrir, supprimer).')
+    .addFields({
+      name: `📋 Rôles actuels (${(t.staff_roles || []).length})`,
+      value: (t.staff_roles || []).length ? t.staff_roles.join('\n') : 'aucun',
+    });
+}
+
+// Étape « ➖ Retirer un rôle staff » : menu des rôles actuels (répétable)
+function typesRemoveRoleComponents(state) {
+  const t = currentType(state);
+  const roles = (t.staff_roles || []).slice(0, 23);
+  const opts = roles.map((r) => ({ label: r, value: r, emoji: '🛡️' }));
+  return [
+    new ActionRowBuilder().addComponents(
+      new StringSelectMenuBuilder()
+        .setCustomId(`bdw-ts:${state.botId}:${state.userId}`)
+        .setPlaceholder('Choisis un rôle à retirer…')
+        .setMinValues(1).setMaxValues(1)
+        .addOptions(opts.map((o) => typeOption(o.label, o.emoji, o.value)))
+    ),
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`bdw-tb:${state.botId}:${state.userId}:doneroles`).setLabel('✅ Terminé').setStyle(ButtonStyle.Success),
+      new ButtonBuilder().setCustomId(`bdw-tb:${state.botId}:${state.userId}:back`).setLabel('⬅️ Retour').setStyle(ButtonStyle.Secondary),
+    ),
+  ];
+}
+
+function typesRemoveRoleEmbed(state) {
+  const t = currentType(state);
+  return new EmbedBuilder()
+    .setColor('#ED4245')
+    .setTitle(`🛡️ Retirer un rôle de « ${t.label} »`)
+    .setDescription('Sélectionne un rôle pour le retirer de la gestion de ce type de ticket.');
 }
 
 function typesConfirmComponents(state) {
@@ -869,9 +950,15 @@ async function handleTypesWizardInteraction(botId, interaction) {
   const backToPick = () => { state.step = 'pick'; state.current = null; return { embeds: [typesPickEmbed(state)], components: typesPickComponents(state) }; };
   const backToEdit = () => { state.step = 'edit'; return { embeds: [typesEditEmbed(state)], components: typesEditComponents(state) }; };
 
-  // --- Menu déroulant (choix du type / action / catégorie) ---
+  // --- Menu déroulant (choix du type / action / catégorie / retrait de rôle) ---
   if (interaction.isStringSelectMenu()) {
     const v = interaction.values[0];
+    // Étape « ➖ Retirer un rôle staff » : répétable
+    if (state.step === 'removerole') {
+      const t = currentType(state);
+      updateType(botId, state.guildId, state.current, { staff_roles: (t.staff_roles || []).filter((r) => r !== v) });
+      return interaction.update({ embeds: [typesRemoveRoleEmbed(state)], components: typesRemoveRoleComponents(state) });
+    }
     if (state.step === 'pick') {
       if (v === '__done__') {
         typesWizards.delete(key);
@@ -901,13 +988,13 @@ async function handleTypesWizardInteraction(botId, interaction) {
           components: typesCategoryComponents(state),
         });
       }
-      if (v === 'role') {
-        state.step = 'role';
-        return interaction.update({
-          embeds: [new EmbedBuilder().setColor('#5865F2').setTitle('🛡️ Rôle staff du type')
-            .setDescription(`Sélectionne le rôle qui pourra gérer les tickets **${state.current}** (fermer, réouvrir, supprimer), ou clique « ❌ Aucun rôle ».`)],
-          components: typesRoleComponents(state),
-        });
+      if (v === 'addrole') {
+        state.step = 'addrole';
+        return interaction.update({ embeds: [typesAddRoleEmbed(state)], components: typesAddRoleComponents(state) });
+      }
+      if (v === 'removerole') {
+        state.step = 'removerole';
+        return interaction.update({ embeds: [typesRemoveRoleEmbed(state)], components: typesRemoveRoleComponents(state) });
       }
       if (v === 'delete') {
         state.step = 'confirmdelete';
@@ -930,19 +1017,23 @@ async function handleTypesWizardInteraction(botId, interaction) {
     return null;
   }
 
-  // --- Sélecteur de rôle natif ---
+  // --- Sélecteur de rôle natif (étape « ajouter un rôle staff ») : répétable ---
   if (interaction.isRoleSelectMenu()) {
     const role = interaction.guild.roles.cache.get(interaction.values[0]);
-    updateType(botId, state.guildId, state.current, { staff_role: role ? role.name : '' });
-    return interaction.update(backToEdit());
+    if (!role) return interaction.update({ embeds: [typesAddRoleEmbed(state)], components: typesAddRoleComponents(state) });
+    const t = currentType(state);
+    const roles = [...(t.staff_roles || [])];
+    if (!roles.includes(role.name)) roles.push(role.name);
+    updateType(botId, state.guildId, state.current, { staff_roles: roles });
+    return interaction.update({ embeds: [typesAddRoleEmbed(state)], components: typesAddRoleComponents(state) });
   }
 
-  // --- Boutons (aucun rôle / retour / confirmation) ---
+  // --- Boutons (terminer les rôles / retour / confirmation) ---
   if (interaction.isButton()) {
     const action = parts[3];
-    if (action === 'norole') { updateType(botId, state.guildId, state.current, { staff_role: '' }); return interaction.update(backToEdit()); }
+    if (action === 'doneroles') return interaction.update(backToEdit());
     if (action === 'back') {
-      if (state.step === 'role') return interaction.update(backToEdit());
+      if (state.step === 'addrole' || state.step === 'removerole') return interaction.update(backToEdit());
       return interaction.update(backToPick());
     }
     if (action === 'confirmdel') {

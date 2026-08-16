@@ -962,30 +962,57 @@ BotViews.renderServerConfig = async (content, bot, guildId) => {
     </div>
   `);
   // --- Éditeur de types de tickets ---
-  const typesData = ticketTypes.map((t) => ({ label: t.label || '', emoji: t.emoji || '', category: t.category || '', staff_role: t.staff_role || '' }));
+  const typesData = ticketTypes.map((t) => ({
+    label: t.label || '', emoji: t.emoji || '', category: t.category || '',
+    staff_roles: (t.staff_roles && t.staff_roles.length) ? [...t.staff_roles] : (t.staff_role ? [t.staff_role] : []),
+  }));
   const typesEl = tCard.querySelector('#t-types');
   const renderTypes = () => {
     typesEl.innerHTML = '';
     if (!typesData.length) {
-      typesEl.appendChild(App.el(`<div style="color:var(--text-dim);font-size:12.5px">Ex : 🤝 Partenariat, ⚔️ Ticket contre admin, 🐛 Signaler un bug, 📝 Candidature staff… Chaque type peut avoir sa catégorie et son rôle staff (qui ferme ses tickets). Les membres choisissent leur type dans le menu déroulant du panneau.</div>`));
+      typesEl.appendChild(App.el(`<div style="color:var(--text-dim);font-size:12.5px">Ex : 🤝 Partenariat, ⚔️ Ticket contre admin, 🐛 Signaler un bug, 📝 Candidature staff… Chaque type peut avoir sa catégorie et **plusieurs rôles staff** (qui ferment ses tickets). Les membres choisissent leur type dans le menu déroulant du panneau.</div>`));
     }
     typesData.forEach((t, i) => {
       const row = App.el(`
-        <div class="row-item" style="margin-top:7px">
-          <input class="input" data-k="emoji" value="${App.escapeHtml(t.emoji)}" placeholder="🤝" style="max-width:60px;text-align:center" />
-          <input class="input" data-k="label" value="${App.escapeHtml(t.label)}" placeholder="Nom du type" style="max-width:190px" />
-          <input class="input" data-k="category" value="${App.escapeHtml(t.category)}" placeholder="Catégorie (optionnel)" style="min-width:110px;flex:1" />
-          <input class="input" data-k="staff_role" value="${App.escapeHtml(t.staff_role)}" placeholder="Rôle staff du type (optionnel)" style="min-width:130px;flex:1" />
-          <button class="btn btn-danger btn-icon btn-sm" data-del>🗑</button>
+        <div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-top:8px;background:var(--bg2)">
+          <div class="row-item" style="flex-wrap:wrap">
+            <input class="input" data-k="emoji" value="${App.escapeHtml(t.emoji)}" placeholder="🤝" style="max-width:56px;text-align:center" />
+            <input class="input" data-k="label" value="${App.escapeHtml(t.label)}" placeholder="Nom du type" style="min-width:130px;flex:1" />
+            <input class="input" data-k="category" value="${App.escapeHtml(t.category)}" placeholder="Catégorie (optionnel)" style="min-width:110px;flex:1" />
+            <button class="btn btn-danger btn-icon btn-sm" data-del>🗑</button>
+          </div>
+          <label class="field-label">🛡️ Rôles staff de ce type (plusieurs possibles)</label>
+          <div class="t-roles" style="display:flex;flex-direction:column;gap:6px"></div>
+          <button class="btn btn-sm btn-ghost" data-addrole style="margin-top:6px">＋ Ajouter un rôle staff</button>
         </div>
       `);
-      row.querySelectorAll('[data-k]').forEach((inp) => inp.addEventListener('input', () => { t[inp.dataset.k] = inp.value; }));
+      row.querySelectorAll('input[data-k]').forEach((inp) => inp.addEventListener('input', () => { t[inp.dataset.k] = inp.value; }));
       row.querySelector('[data-del]').onclick = () => { typesData.splice(i, 1); renderTypes(); };
+      const rolesEl = row.querySelector('.t-roles');
+      const renderRoles = () => {
+        rolesEl.innerHTML = '';
+        t.staff_roles.forEach((r, j) => {
+          const rr = App.el(`
+            <div class="row-item">
+              <input class="input" value="${App.escapeHtml(r)}" placeholder="Nom exact du rôle (ex : Modérateur)" />
+              <button class="btn btn-danger btn-icon btn-sm" data-delrole>🗑</button>
+            </div>
+          `);
+          rr.querySelector('input').addEventListener('input', (e) => { t.staff_roles[j] = e.target.value; });
+          rr.querySelector('[data-delrole]').onclick = () => { t.staff_roles.splice(j, 1); renderRoles(); };
+          rolesEl.appendChild(rr);
+        });
+        if (!t.staff_roles.length) {
+          rolesEl.appendChild(App.el(`<div style="color:var(--text-dim);font-size:12px">Aucun rôle — ces tickets seront gérés par le rôle staff global.</div>`));
+        }
+      };
+      renderRoles();
+      row.querySelector('[data-addrole]').onclick = () => { t.staff_roles.push(''); renderRoles(); };
       typesEl.appendChild(row);
     });
   };
   renderTypes();
-  tCard.querySelector('#t-add-type').onclick = () => { typesData.push({ label: '', emoji: '', category: '', staff_role: '' }); renderTypes(); };
+  tCard.querySelector('#t-add-type').onclick = () => { typesData.push({ label: '', emoji: '', category: '', staff_roles: [] }); renderTypes(); };
   tCard.querySelector('#t-save').onclick = async () => {
     try {
       await App.api(`/bots/${bot.id}/tickets`, {
@@ -997,7 +1024,9 @@ BotViews.renderServerConfig = async (content, bot, guildId) => {
           button_label: tCard.querySelector('#t-label').value.trim() || '🎫 Ouvrir un ticket',
           support_role: tCard.querySelector('#t-role').value.trim(),
           category: tCard.querySelector('#t-cat').value.trim() || 'Tickets',
-          types: typesData.filter((t) => String(t.label).trim()),
+          types: typesData
+            .filter((t) => String(t.label).trim())
+            .map((t) => ({ label: t.label, emoji: t.emoji, category: t.category, staff_roles: (t.staff_roles || []).map((r) => String(r).trim()).filter(Boolean) })),
         },
       });
       toast('Tickets enregistrés !');

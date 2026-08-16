@@ -459,7 +459,15 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
   const dGuild = entry && entry.client.isReady() ? entry.client.guilds.cache.get(guildId) : null;
   if (!dGuild) return res.status(400).json({ error: 'Le bot n\'est pas sur ce serveur (ou il est hors ligne).' });
   const cfg = store.tickets.get(bot.id, guildId);
-  const parsedTypes = (() => { try { const t = JSON.parse(cfg?.types || '[]'); return Array.isArray(t) ? t : []; } catch { return []; } })();
+  const parsedTypes = (() => {
+    try {
+      const t = JSON.parse(cfg?.types || '[]');
+      return (Array.isArray(t) ? t : []).map((x) => {
+        const roles = Array.isArray(x.staff_roles) ? x.staff_roles : (x.staff_role ? [x.staff_role] : []);
+        return { label: x.label, emoji: x.emoji || '', category: x.category || '', staff_roles: roles.filter(Boolean) };
+      });
+    } catch { return []; }
+  })();
   const DEFAULT_GS = {
     prefix: '', warn_limit: 0, warn_action: 'none',
     xp_enabled: 1, xp_min: 10, xp_max: 25, xp_cooldown: 60, xp_message: '', xp_channel: '',
@@ -640,7 +648,17 @@ router.put('/bots/:id/tickets', requireAuth, (req, res) => {
   };
   if (types !== undefined) {
     payload.types = JSON.stringify((Array.isArray(types) ? types : [])
-      .map((t) => ({ label: String(t.label || '').slice(0, 100), emoji: String(t.emoji || '').slice(0, 10), category: String(t.category || '').slice(0, 100), staff_role: String(t.staff_role || '').slice(0, 100) }))
+      .map((t) => {
+        const roles = Array.isArray(t.staff_roles)
+          ? t.staff_roles.map((r) => String(r).trim()).filter(Boolean).slice(0, 10)
+          : (t.staff_role ? [String(t.staff_role).trim()] : []);
+        return {
+          label: String(t.label || '').slice(0, 100),
+          emoji: String(t.emoji || '').slice(0, 10),
+          category: String(t.category || '').slice(0, 100),
+          staff_roles: roles,
+        };
+      })
       .filter((t) => t.label)
       .slice(0, 25));
   } else {

@@ -69,23 +69,29 @@ const { buildSlashPayloads } = require('../server/discord/premade');
   assert(types.some((t) => t.label === 'Candidature staff'));
   console.log('3️⃣  Nom soumis → type créé ✅ (', types.map((t) => t.label).join(', '), ')');
 
-  // ============ 4. Étape edit : action « rôle staff » → sélecteur de rôle natif ============
-  const pickEdit = { ...owner, customId: 'bdw-ts:1:OWNER1', isStringSelectMenu: () => true, values: ['role'] };
+  // ============ 4. Étape edit : action « ➕ Ajouter un rôle staff » → sélecteur de rôle natif ============
+  const pickEdit = { ...owner, customId: 'bdw-ts:1:OWNER1', isStringSelectMenu: () => true, values: ['addrole'] };
   await panels.handleTypesWizardInteraction(1, pickEdit);
-  assert(lastReply.embeds[0].data.title.includes('Rôle staff'));
+  assert(lastReply.embeds[0].data.title.includes('Rôles staff de'));
   const roleSelect = lastReply.components[0].components[0];
   assert(roleSelect.data.type === 6, 'sélecteur de rôle natif attendu');
   const btnLabels = lastReply.components[1].components.map((b) => b.data.label);
-  assert(btnLabels.includes('❌ Aucun rôle'));
-  console.log('4️⃣  Action « 🛡️ Rôle staff » → sélecteur de rôle natif + bouton « ❌ Aucun rôle » ✅');
+  assert(btnLabels.includes('✅ Terminé'), 'bouton Terminé attendu');
+  console.log('4️⃣  Action « 🛡️ ➕ Ajouter un rôle staff » → sélecteur de rôle natif + « ✅ Terminé » ✅');
 
-  // ============ 5. Sélection du rôle Admins → staff_role enregistré ============
+  // ============ 5. Sélection du rôle Admins → staff_roles enregistré (on reste pour en ajouter d'autres) ============
   const rolePick = { ...owner, customId: 'bdw-tr:1:OWNER1', isRoleSelectMenu: () => true, values: ['R2'] };
   await panels.handleTypesWizardInteraction(1, rolePick);
+  assert(lastReply.embeds[0].data.title.includes('Rôles staff de'), 'reste sur l\'écran (répétable)');
+  const rolePick2 = { ...owner, customId: 'bdw-tr:1:OWNER1', isRoleSelectMenu: () => true, values: ['R1'] };
+  await panels.handleTypesWizardInteraction(1, rolePick2);
   types = JSON.parse(store.tickets.get(1, 'G1').types);
   const cand = types.find((t) => t.label === 'Candidature staff');
-  assert(cand.staff_role === 'Admins');
-  console.log('5️⃣  Rôle sélectionné → staff_role = Admins ✅');
+  assert(cand.staff_roles.includes('Admins') && cand.staff_roles.includes('Staff'), 'les 2 rôles ajoutés : ' + cand.staff_roles.join(','));
+  // ✅ Terminé → retour à l'édition
+  await panels.handleTypesWizardInteraction(1, { ...owner, customId: 'bdw-tb:1:OWNER1:doneroles', isButton: () => true });
+  assert(lastReply.embeds[0].data.title.includes('Candidature staff'), 'retour à l\'édition');
+  console.log('5️⃣  Deux rôles ajoutés (répétable) → staff_roles = Admins + Staff ✅');
 
   // ============ 6. Renommer via modale ============
   const renameSel = { ...owner, customId: 'bdw-ts:1:OWNER1', isStringSelectMenu: () => true, values: ['rename'] };

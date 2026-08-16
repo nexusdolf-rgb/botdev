@@ -72,7 +72,8 @@ const { buildSlashPayloads } = require('../server/discord/premade');
   assert(created, 'salon créé');
   assert(created.name === 'partenariat-je-suis-membre', 'nom = type-utilisateur, obtenu : ' + created.name);
   assert(created.parent && created.permissionOverwrites.length === 3, 'permissions par défaut (staff + membre)');
-  assert(sentPanel && sentPanel.embeds[0].data.description.includes('Partenariat'), 'type mentionné dans le bienvenue');
+  const welcomeFields = sentPanel.embeds[0].data.fields.map((f) => f.value).join(' | ');
+  assert(sentPanel && welcomeFields.includes('Partenariat'), 'type mentionné dans le bienvenue (champs)');
   assert(lastReply.content.includes('<#NEW_CH>'), 'réponse avec mention du salon');
   console.log('2️⃣  Sélection « 🤝 Partenariat » → salon "partenariat-…" créé ✅ (', created.name, ')');
 

@@ -366,11 +366,23 @@ async function handleTicket(botId, sub, group, interaction, guild) {
       const emoji = (interaction.options.getString('emoji') || '').trim();
       const categorie = (interaction.options.getString('categorie') || '').trim();
       const staffrole = (interaction.options.getString('staffrole') || '').trim();
+      const existingType = types.find((t) => t.label.toLowerCase() === nom.toLowerCase());
       const others = types.filter((t) => t.label.toLowerCase() !== nom.toLowerCase());
-      others.push({ label: nom.slice(0, 100), emoji: emoji.slice(0, 10), category: categorie.slice(0, 100), staff_role: staffrole.slice(0, 100) });
+      const staffRoles = existingType
+        ? [...(Array.isArray(existingType.staff_roles) ? existingType.staff_roles : (existingType.staff_role ? [existingType.staff_role] : []))]
+        : [];
+      if (staffrole && !staffRoles.includes(staffrole)) staffRoles.push(staffrole);
+      if (existingType) {
+        existingType.emoji = emoji || existingType.emoji || '';
+        existingType.category = categorie || existingType.category || '';
+        existingType.staff_roles = staffRoles;
+        others.push(existingType);
+      } else {
+        others.push({ label: nom.slice(0, 100), emoji: emoji.slice(0, 10), category: categorie.slice(0, 100), staff_roles: staffRoles });
+      }
       store.tickets.set(botId, guild.id, { ...cfg, types: JSON.stringify(others) });
       return interaction.reply({
-        content: `✅ Type « ${emoji || '🎫'} **${nom}** » ajouté !${staffrole ? `\n🛡️ Staff de ce type : ${staffrole}` : ''}\n\nTypes actuels : ${others.map((t) => t.label).join(', ') || 'aucun'}\n\n📨 Re-envoie le panneau avec \`/ticket panel\` pour mettre à jour le menu déroulant.`,
+        content: `✅ Type « ${emoji || '🎫'} **${nom}** » mis à jour !${staffRoles.length ? `\n🛡️ Staff de ce type : ${staffRoles.join(', ')}` : ''}\n\n💡 Ajoute **plusieurs rôles staff** avec \`/ticket types setup\` → « ➕ Ajouter un rôle staff ».\n\nTypes actuels : ${others.map((t) => t.label).join(', ') || 'aucun'}\n\n📨 Re-envoie le panneau avec \`/ticket panel\` pour mettre à jour le menu déroulant.`,
         ephemeral: true,
       });
     }
@@ -391,7 +403,10 @@ async function handleTicket(botId, sub, group, interaction, guild) {
     const embed = new EmbedBuilder()
       .setColor('#5865F2')
       .setTitle('🗂️ Types de tickets')
-      .setDescription(types.map((t) => `${t.emoji || '🎫'} **${t.label}**${t.category ? ` → catégorie « ${t.category} »` : ''}${t.staff_role ? ` · staff : ${t.staff_role}` : ''}`).join('\n'))
+      .setDescription(types.map((t) => {
+        const roles = Array.isArray(t.staff_roles) ? t.staff_roles : (t.staff_role ? [t.staff_role] : []);
+        return `${t.emoji || '🎫'} **${t.label}**${t.category ? ` → catégorie « ${t.category} »` : ''}${roles.length ? `\n    🛡️ Staff : ${roles.join(', ')}` : ''}`;
+      }).join('\n'))
       .setFooter({ text: 'Ajoute : /ticket types add · Supprime : /ticket types remove · Le panneau (/ticket panel) affiche le menu déroulant.' });
     return interaction.reply({ embeds: [embed], ephemeral: true });
   }
@@ -440,12 +455,15 @@ async function handleTicket(botId, sub, group, interaction, guild) {
           { name: '📛 Nom du panel', value: cfg.name || '—', inline: true },
           { name: '📨 Salon du panneau', value: cfg.channel || 'non défini (utilise `/ticket setup`)', inline: true },
           { name: '🗂️ Catégorie', value: cfg.category || 'aucune', inline: true },
-          { name: '🛡️ Rôle staff', value: cfg.support_role || 'aucun', inline: true },
+          { name: '🛡️ Rôle staff global', value: cfg.support_role || 'aucun (les types peuvent avoir les leurs)', inline: true },
           { name: '🔘 Bouton', value: cfg.button_label, inline: true },
-          { name: '🗂️ Types de tickets', value: parseTypes(cfg).map((t) => `${t.emoji || '🎫'} ${t.label}${t.category ? ' (→ ' + t.category + ')' : ''}`).join('\n').slice(0, 1024) || 'aucun (ajoute avec /ticket type)' },
+          { name: '🗂️ Types de tickets', value: parseTypes(cfg).map((t) => {
+            const roles = Array.isArray(t.staff_roles) ? t.staff_roles : (t.staff_role ? [t.staff_role] : []);
+            return `${t.emoji || '🎫'} **${t.label}**${t.category ? ' (→ ' + t.category + ')' : ''}${roles.length ? `\n    🛡️ Staff : ${roles.join(', ')}` : ''}`;
+          }).join('\n').slice(0, 1024) || 'aucun (ajoute avec /ticket types add)' },
           { name: '💬 Message', value: cfg.message.slice(0, 200), inline: false },
         )
-        .setFooter({ text: 'Modifie tout avec /ticket setup (assistant) ou les sous-commandes rapides' });
+        .setFooter({ text: 'Modifie tout avec /ticket setup ou /ticket types setup (assistants) et les sous-commandes rapides' });
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
     case 'close': {

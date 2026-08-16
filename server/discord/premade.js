@@ -133,13 +133,13 @@ function buildSlashPayloads(botId) {
     description: '🎫 Configurer et gérer le système de tickets',
     default_member_permissions: '8',
     options: [
-      { name: 'types', description: 'Gérer les types de tickets (assistant, ajouter, supprimer)', type: ApplicationCommandOptionType.SubcommandGroup, options: [
-        { name: 'setup', description: 'Assistant interactif : renommer, emoji, catégorie, rôle staff, suppression', type: ApplicationCommandOptionType.Subcommand },
+      { name: 'types', description: 'Gérer les types de tickets : assistant, ajout, suppression, rôles staff multiples', type: ApplicationCommandOptionType.SubcommandGroup, options: [
+        { name: 'setup', description: 'Assistant interactif : renommer, emoji, catégorie, PLUSIEURS rôles staff, suppression', type: ApplicationCommandOptionType.Subcommand },
         { name: 'add', description: 'Ajouter ou renommer un type de ticket', type: ApplicationCommandOptionType.Subcommand, options: [
           { name: 'nom', description: 'Nom du type (ex : Candidature staff)', type: ApplicationCommandOptionType.String, required: true },
           { name: 'emoji', description: 'Emoji affiché dans le menu', type: ApplicationCommandOptionType.String, required: false },
           { name: 'categorie', description: 'Catégorie dédiée (optionnel)', type: ApplicationCommandOptionType.String, required: false },
-          { name: 'staffrole', description: 'Rôle staff de CE type (qui peut fermer ses tickets)', type: ApplicationCommandOptionType.String, required: false },
+          { name: 'staffrole', description: 'Ajoute un rôle staff (pour EN ajouter plusieurs : /ticket types setup)', type: ApplicationCommandOptionType.String, required: false },
         ]},
         { name: 'remove', description: 'Supprimer un type de ticket', type: ApplicationCommandOptionType.Subcommand, options: [
           { name: 'nom', description: 'Nom du type à supprimer', type: ApplicationCommandOptionType.String, required: true },
@@ -636,7 +636,7 @@ function argsMatch(str, regex) {
 // ============================================================
 const HELP_DETAILS = {
   ticket: ['🎫 Tickets', 'Le système de tickets complet : un bouton dans un salon, chaque clic crée un salon privé réservé au membre et au staff.',
-    '`/ticket types setup` — **Assistant interactif des types** : choisis un type, renomme-le, choisis son emoji, sa catégorie et son rôle staff dans des menus de sélection, ou supprime-le\n`/ticket types add Nom` — Ajouter/renommer un **type de ticket** (emoji, catégorie et rôle staff dédiés en options) — le panneau affiche un menu déroulant de types\n`/ticket types remove Nom` — Supprimer un type\n`/ticket types list` — Voir les types\n`/ticket setup` — **Assistant avec menus de sélection** : nom → catégorie → salon → rôle staff\n`/ticket panel` — Envoyer le panneau\n`/ticket channel #salon` — Changer le salon\n`/ticket role @Staff` — Changer le rôle staff\n`/ticket category Nom` — Changer la catégorie\n`/ticket button Texte` — Changer le texte du bouton\n`/ticket message Texte` — Changer le message\n`/ticket config` — Voir la configuration\n`/ticket close` — **Verrouiller** un ticket (staff, réouvrable avec 🔓)\n`/ticket delete` — **Supprimer** un ticket (staff) — 📄 la **transcription** est envoyée en MP au créateur à ce moment\n`/ticket add @membre` / `/ticket remove @membre` — Gérer l\'accès au ticket (staff)\n\n🔒 Configuration réservée au **propriétaire du serveur** · gestion réservée au **staff**\n📄 La transcription part à la **suppression** (pas à la fermeture).\n\n🗂️ Exemples de types : Candidature staff, Ticket contre admin, Signaler un bug, Partenariat…'],
+    '`/ticket types setup` — **Assistant interactif des types** : choisis un type, renomme-le, choisis son emoji, sa catégorie, **ajoute AUTANT de rôles staff que tu veux** (sélecteur de rôle, répétable) ou retire-les, supprime-le avec confirmation\n`/ticket types add Nom` — Ajouter/renommer un **type de ticket** (option `staffrole` pour un rôle — pour en mettre plusieurs : setup) (emoji, catégorie et rôle staff dédiés en options) — le panneau affiche un menu déroulant de types\n`/ticket types remove Nom` — Supprimer un type\n`/ticket types list` — Voir les types\n`/ticket setup` — **Assistant avec menus de sélection** : nom → catégorie → salon → rôle staff\n`/ticket panel` — Envoyer le panneau\n`/ticket channel #salon` — Changer le salon\n`/ticket role @Staff` — Changer le rôle staff\n`/ticket category Nom` — Changer la catégorie\n`/ticket button Texte` — Changer le texte du bouton\n`/ticket message Texte` — Changer le message\n`/ticket config` — Voir la configuration\n`/ticket close` — **Verrouiller** un ticket (staff, réouvrable avec 🔓)\n`/ticket delete` — **Supprimer** un ticket (staff) — 📄 la **transcription** est envoyée en MP au créateur à ce moment\n`/ticket add @membre` / `/ticket remove @membre` — Gérer l\'accès au ticket (staff)\n\n🔒 Configuration réservée au **propriétaire du serveur** · gestion réservée au **staff**\n📄 La transcription part à la **suppression** (pas à la fermeture).\n\n🗂️ Exemples de types : Candidature staff, Ticket contre admin, Signaler un bug, Partenariat…'],
   ping: ['🔧 Utilitaire', 'Affiche la latence du bot.', '`/ping`', '`/ping` → 🏓 Pong ! Latence : 42 ms'],
   avatar: ['🔧 Utilitaire', 'Affiche l\'avatar d\'un membre.', '`/avatar @membre`', '`/avatar @Nexora`'],
   userinfo: ['🔧 Utilitaire', 'Informations sur un membre (ID, date de création, arrivée).', '`/userinfo @membre`', '`/userinfo`'],
@@ -711,10 +711,10 @@ function buildHelpEmbed(botId, record, client, guild, requested) {
     name: '🎫 Système de tickets — configuration',
     value: [
       '`/ticket setup` — **Assistant avec menus de sélection** : nom → catégorie → salon → rôle staff (rien à écrire)',
-      '`/ticket panel` — Envoyer le panneau avec le bouton dans un salon',
-      '`/ticket config` — Voir la configuration actuelle',
-      '`/ticket close` — Fermer un ticket · `/ticket add @membre` · `/ticket remove @membre`',
-      '*🔒 Réservé au propriétaire du serveur*',
+      '`/ticket types setup` — **Assistant des types** : renommer, emoji, catégorie, **plusieurs rôles staff**, suppression',
+      '`/ticket panel` — Envoyer le panneau · `/ticket config` — Voir la configuration',
+      '`/ticket close` — Verrouiller · `/ticket delete` — Supprimer (transcription en MP) · `/ticket add|remove @membre`',
+      '*🔒 Configuration réservée au propriétaire du serveur · gestion réservée aux rôles staff (plusieurs par type possibles)*',
     ].join('\n'),
   });
 

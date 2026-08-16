@@ -38,8 +38,9 @@
   - **⚠️ Vérification des MP à l'ouverture** : si les messages privés du membre sont fermés, il est prévenu dès l'ouverture qu'il ne recevra pas la transcription (et comment activer les MP)
 - **🎫 Système de tickets complet (façon Ticket Tool)** :
   - **Types de tickets 100 % personnalisables** : ajoute, renomme, supprime autant de types que tu veux (`/ticket types add|remove|list` ou dashboard) — « Ticket contre admin », « Candidature staff », « Signaler un bug »… Le panneau affiche un **menu déroulant** où chaque membre choisit son type
-  - **Rôle staff PAR type de ticket** : chaque type peut avoir son propre rôle autorisé à gérer ses tickets
-  - **Boutons réservés au staff** dans chaque ticket : 🔒 **Fermer** · ⏸ **En attente** (lecture seule) · 🔓 **Réouvrir**
+  - **PLUSIEURS rôles staff PAR type de ticket** : ajoute autant de rôles que tu veux (sélecteur de rôle répétable dans `/ticket types setup` → « ➕ Ajouter un rôle staff », ou dashboard) — tous peuvent gérer les tickets du type, et le retrait se fait par menu
+  - **Boutons réservés au staff** dans chaque ticket : 🔒 **Fermer** (verrouille) · ⏸ **En attente** (lecture seule) · 🔓 **Réouvrir** · 🗑 **Supprimer** (transcription en MP)
+  - **Salon de ticket soigné** : message de bienvenue avec l'avatar du créateur, le type, TOUS les rôles staff, la raison de la demande et le mode d'emploi en étapes
   - **📄 Transcription automatique — à la SUPPRESSION** : 🔒 Fermer = verrouiller (réouvrable, sans transcription) ; 🗑 Supprimer (`/ticket delete` ou bouton) = le créateur reçoit en **MP un message professionnel** + le **lien de sa transcription** (page web) + le **fichier .txt** joint
 - **🗂️ Types de tickets** : le panneau affiche un **menu déroulant** où le membre choisit son type (Partenariat, Réclamation, Recrutement…) ; chaque type peut avoir sa catégorie dédiée. Configurable depuis le dashboard (onglet Serveurs) et via `/ticket type`. 🔒 Seuls le **staff** (rôle support) et les administrateurs peuvent fermer/gérer les tickets.
 - **🔗 OAuth2 intelligent** : lier Discord fusionne avec le compte déjà connecté (pas de doublon), les boutons inutiles disparaissent une fois lié, et les boutons « Ajouter à ton serveur » ouvrent le **sélecteur de serveur Discord** (flux OAuth natif).

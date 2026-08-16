@@ -184,7 +184,7 @@ const { buildSlashPayloads } = require('../server/discord/premade');
   });
   await handlePanelCommand(1, ownerCmd('types', 'add'));
   let types = JSON.parse(store.tickets.get(1, 'G1').types);
-  assert(types.length === 4 && types[3].label === 'Ticket contre joueur' && types[3].staff_role === 'Modos');
+  assert(types.length === 4 && types[3].label === 'Ticket contre joueur' && Array.isArray(types[3].staff_roles) && types[3].staff_roles.includes('Modos'));
   console.log('8️⃣  /ticket types add « ⚔️ Ticket contre joueur » (staff Modos) ✅');
 
   // ---------- 9. remove + list ----------
