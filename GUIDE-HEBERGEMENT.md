@@ -14,13 +14,15 @@ La seule chose à faire : **héberger BotDev sur une machine qui reste allumée 
 
 | Option | Prix | 24h/24 | Carte bancaire ? | Difficulté | Avis |
 |---|---|---|---|---|---|
-| **GitHub + Glitch/Render (mobile, sans Termux)** | 0 € | Oui (avec UptimeRobot) | Non | ⭐⭐ | ✅ **Le plus simple sans PC ni Termux** |
+| **GitHub + Render + UptimeRobot (tout depuis Chrome)** | 0 € | Oui (ping 5 min) | Non | ⭐⭐ | ✅ **Le plus simple : tout depuis Chrome, code déjà poussé** |
+| **alwaysdata (hébergeur français)** | 0 € à vie | Oui | Non | ⭐⭐⭐ | Espace 100 Mo trop juste pour BotDev (~85 Mo) |
 | **Ton téléphone Android (Termux)** | 0 € | Oui, si branché | Non | ⭐⭐ | Bien pour tester seul |
 | **Ton PC** | 0 € | Seulement s'il reste allumé | Non | ⭐ | Pour commencer et tester |
 | **Oracle Cloud Always Free** | 0 € à vie | Oui | Oui (vérification, **jamais débité**) | ⭐⭐⭐ | ✅ **La vraie solution durable** |
 | **Google Cloud e2-micro** | 0 € à vie | Oui | Oui (vérification) | ⭐⭐⭐ | Bonne alternative |
 
-> 💡 **Mon conseil** : commence avec **GitHub + Glitch** (tout se fait dans Chrome sur ton téléphone, sans Termux et sans carte bancaire), puis passe sur **Oracle Cloud** quand tu veux du 24h/24 définitif et fiable. La carte bancaire demandée par Oracle ne sert qu'à vérifier ton identité : l'offre *Always Free* est gratuite à vie, il n'y a **aucun débit**.
+> 💡 **Mon conseil** : commence avec **GitHub + Render** (tout se fait dans Chrome sur ton téléphone, sans Termux et sans carte bancaire), puis passe sur **Oracle Cloud** quand tu veux du 24h/24 définitif et fiable.
+> ⚠️ **Glitch a fermé son hébergement de projets en juillet 2025** : le site ne sert plus qu'un blog. Ne l'utilise pas. La carte bancaire demandée par Oracle ne sert qu'à vérifier ton identité : l'offre *Always Free* est gratuite à vie, il n'y a **aucun débit**.
 
 ---
 
@@ -74,9 +76,11 @@ Pour une vraie app avec icône sur l'écran d'accueil : menu Chrome (⋮) → **
 
 ---
 
-## 📲 Option 1 bis — GitHub + Glitch/Render, 100 % depuis le navigateur du téléphone (sans Termux, sans PC)
+## 📲 Option 1 bis — GitHub + Render, 100 % depuis Chrome sur ton téléphone (sans Termux, sans PC, sans carte)
 
-C'est la méthode la plus simple si tu ne veux pas utiliser Termux. Tout se fait dans Chrome sur ton téléphone. **Rappel important : GitHub ne fait que stocker le code — il ne l'exécute pas** (GitHub Pages ne sert que des pages statiques, il ne peut pas faire tourner le bot). L'exécution se fait sur Glitch ou Render, qui récupèrent le code depuis GitHub.
+C'est la méthode la plus simple. Tout se fait dans Chrome. **Rappel important : GitHub ne fait que stocker le code — il ne l'exécute pas** (GitHub Pages ne sert que des pages statiques). L'exécution se fait sur Render, qui récupère le code depuis GitHub.
+
+> ⚠️ **Glitch est mort** : le site a fermé son hébergement de projets en juillet 2025 (il ne reste qu'un blog). Render est aujourd'hui la meilleure option gratuite sans carte bancaire (vérifié sur le site officiel de Render en 2026).
 
 ### Le schéma
 
@@ -84,42 +88,46 @@ C'est la méthode la plus simple si tu ne veux pas utiliser Termux. Tout se fait
 Ton téléphone (Chrome)
       │
       ▼
-GitHub (stocke le code, gratuit)
+GitHub (stocke le code, gratuit)  ← ✅ DÉJÀ FAIT : ton code est sur github.com/nexusdolf-rgb/botdev
       │
       ▼
-Glitch ou Render (exécute BotDev 24h/24, gratuit)
+Render (exécute BotDev 24h/24, gratuit, sans carte)
       │
       ▼
 UptimeRobot (ping toutes les 5 min pour empêcher la mise en veille, gratuit)
 ```
 
-### Étape 1 — Mettre le code sur GitHub (2 options)
+### Étape 1 — Créer le service sur Render (5 minutes)
 
-**Option A (recommandée, 2 minutes)** : demande à ton assistant Arena de pousser le code à ta place :
-1. Crée un compte gratuit sur [github.com](https://github.com) (inscription possible sur mobile)
-2. Crée un dépôt : bouton **+** → **New repository** → nom `botdev` → Public → Create
-3. Crée un token temporaire : avatar → **Settings** → **Developer settings** → **Personal access tokens** → **Fine-grained tokens** → **Generate new token** → choisis uniquement ton dépôt `botdev` → permission **Contents : Read and write** → expiration 7 jours
-4. Colle le token + le nom du dépôt dans le chat → le code est poussé → **supprime le token** ensuite dans tes réglages GitHub
+1. Va sur [render.com](https://render.com) → **Get Started** → inscris-toi de préférence avec ton **compte GitHub** (bouton GitHub)
+2. Tableau de bord → **New +** → **Web Service**
+3. **Connect GitHub** → autorise l'accès → choisis le dépôt **`botdev`** (ton dépôt apparaît, c'est automatique)
+4. Remplis :
+   - **Name** : `botdev` (l'URL publique sera `https://botdev.onrender.com`)
+   - **Region** : Frankfurt (EU Central) — plus proche de toi
+   - **Build Command** : `npm install` (pré-rempli)
+   - **Start Command** : `npm start` (pré-rempli)
+   - **Instance Type** : **Free** (512 Mo de RAM — suffisant pour BotDev)
+5. Clique **Create Web Service** → Render installe et démarre tout seul (2-3 min). Le tableau de bord affiche l'état « Live » avec ton URL.
 
-**Option B (manuel)** : sur github.com, ouvre ton dépôt → **Add file → Upload files** → sélectionne les fichiers du dossier `botdev` de `BotDev.zip` (pas de dossier `node_modules` dedans, il n'existe pas dans le zip). Possible sur mobile mais plus long (13 fichiers).
+### Étape 2 — Créer TON compte sur BotDev (tout de suite)
 
-### Étape 2 — Déployer sur Glitch (le plus simple, sans carte bancaire)
+Ouvre `https://botdev.onrender.com` dans Chrome → **inscris-toi** (ton email, ton mot de passe) → **Nouveau bot** → colle le token Discord + Application ID `1537443352281088000` → **Créer puis Démarrer**.
 
-1. Compte gratuit sur [glitch.com](https://glitch.com)
-2. **New project → Import from GitHub** → colle l'adresse de ton dépôt (ex : `https://github.com/tonpseudo/botdev`)
-3. Glitch installe tout seul (il lit `package.json`) et affiche l'URL publique de ton app, type `https://botdev.glitch.me`
-4. ⚠️ Glitch endort les projets après ~5 min sans visite → crée un compte gratuit sur [uptimerobot.com](https://uptimerobot.com) → **New monitor** → type **HTTP(S)** → colle ton URL glitch.me → intervalle 5 minutes → le projet ne dort plus jamais
+➡️ Le bot se connecte à Discord et le tour est joué. Menu Chrome ⋮ → « Ajouter à l'écran d'accueil » pour en faire une app.
 
-➡️ Ouvre l'URL glitch.me dans Chrome → BotDev est en ligne ! Menu ⋮ → « Ajouter à l'écran d'accueil » pour en faire une app.
+### Étape 3 — Empêcher la mise en veille (UptimeRobot, 3 minutes)
 
-### Étape 2 bis — Ou sur Render (même principe)
+Render **endort les services gratuits après 15 minutes sans visite** (ton bot se déconnecterait, il se reconnectera automatiquement au réveil — BotDev le gère — mais autant éviter ça) :
 
-1. Compte sur [render.com](https://render.com)
-2. **New → Web Service → Connect GitHub** → choisis le dépôt `botdev`
-3. Build command : `npm install` · Start command : `npm start` → **Create Web Service** (plan gratuit)
-4. ⚠️ Render endort les services gratuits après ~15 min sans visite → ajoute l'URL publique dans UptimeRobot (même manip qu'au-dessus)
+1. Compte gratuit sur [uptimerobot.com](https://uptimerobot.com) (email + mot de passe)
+2. **+ New monitor** → type **HTTP(s)** → URL : `https://botdev.onrender.com` → intervalle : **5 minutes**
+3. Voilà. Ton app reçoit une petite visite toutes les 5 minutes → elle ne s'endort jamais.
 
-⚠️ À savoir : l'offre gratuite de Render est de plus en plus restreinte (elle peut changer). Glitch reste la valeur sûre. **Koyeb n'est plus une option** : sa formule gratuite a été fermée aux nouveaux utilisateurs début 2026.
+### ⚠️ 2 choses à savoir sur le plan gratuit Render
+
+- **Le disque est temporaire** : les données (comptes, bots, commandes) sont effacées à chaque **redéploiement** (quand tu modifies le code). Une fois ton bot créé, ne redéploie pas le service. Pour du stockage permanent, l'option Oracle (plus bas) est la solution.
+- **750 heures par mois** : pile assez pour tourner tout le mois, 24h/24.
 
 ---
 
@@ -142,17 +150,17 @@ UptimeRobot (ping toutes les 5 min pour empêcher la mise en veille, gratuit)
 
 ---
 
-## 🧩 Option 3 — Glitch (gratuit, sans carte bancaire)
+## 🇫🇷 Option 3 — alwaysdata (hébergeur français, gratuit à vie, sans carte)
 
-[Glitch](https://glitch.com) héberge des apps Node.js gratuitement. Astuce pour le 24h/24 :
+[alwaysdata.com](https://www.alwaysdata.com/fr/) est un hébergeur français fiable qui propose un plan gratuit **à vie, sans carte bancaire**. Points forts : données persistantes, interface en français, serveurs en France.
 
-1. Crée un compte glitch.com
-2. **New project → Import from GitHub** : pousse d'abord le dossier `botdev` sur un dépôt GitHub (gratuit), puis importe-le
-3. Glitch détecte `package.json` et installe tout seul ; il fournit le port via la variable `PORT` (notre serveur la lit déjà ✅)
-4. Ouvre l'URL publique glitch.me : BotDev est en ligne !
-5. **Anti-sommeil** : Glitch endort les projets inactifs (~5 min). Crée un compte gratuit [UptimeRobot](https://uptimerobot.com) et ajoute un moniteur HTTP qui « ping » ton URL toutes les 5 minutes → le projet ne s'endort jamais.
+⚠️ **Attention** : le plan gratuit fait **100 Mo d'espace disque**, et BotDev avec ses dépendances pèse ~85 Mo. C'est *juste assez*, mais sans marge (les mises à jour de dépendances risquent de ne plus passer). À essayer seulement si Render ne te convient pas.
 
-⚠️ Limites : 1000 h/mois (suffisant pour 24h/24), disque limité. Bien pour démarrer.
+1. Inscription sur alwaysdata.com (email + mot de passe, aucune carte)
+2. **Sites → Ajouter un site** → type **Node.js** → version Node 20+
+3. Envoie les fichiers du projet (via le gestionnaire de fichiers web ou SFTP)
+4. Dans SSH (onglet Accès SSH) : `cd ~/mon_site && npm install` puis définis la commande de démarrage `npm start` dans les réglages du site
+5. L'URL publique est du type `https://botdev.alwaysdata.net`
 
 ---
 
@@ -289,6 +297,8 @@ Les données (utilisateurs, bots, commandes) sont sauvegardées dans le volume `
 ---
 
 ## ❓ Questions fréquentes
+
+**Pourquoi ne pas utiliser Glitch ?** Glitch a fermé son hébergement de projets en juillet 2025 — le site ne propose plus que des articles. On utilise Render (ou alwaysdata, ou Oracle) à la place.
 
 **Ça coûte vraiment 0 € ?** Oui. Oracle Always Free et Google e2-micro sont gratuits à vie tant que tu restes dans les quotas (BotDev consomme très peu).
 
