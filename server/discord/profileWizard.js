@@ -21,8 +21,8 @@ const STEPS = [
   { key: 'name', emoji: '📛', label: 'Nom du bot', q: 'Comment veux-tu que le bot s\'appelle sur **ce serveur** ?' },
   { key: 'bio', emoji: '📝', label: 'Bio du bot', q: 'Écris la **bio** affichée sur le profil du bot.' },
   { key: 'color', emoji: '🎨', label: 'Couleur', q: 'Choisis la **couleur** du profil dans le sélecteur.' },
-  { key: 'avatar', emoji: '🖼️', label: 'Avatar', q: 'Envoie l\'**avatar** : joins l\'image en pièce jointe dans ce salon (60 s), ou colle son URL.' },
-  { key: 'banner', emoji: '🎴', label: 'Bannière', q: 'Envoie la **bannière** : pièce jointe dans ce salon (60 s), ou URL.' },
+  { key: 'avatar', emoji: '🖼️', label: 'Avatar', q: '📱 **Ouvre ta galerie** (bouton ➕ de la barre de message) et envoie l\'**avatar** ici — le bot le récupère automatiquement (60 secondes).' },
+  { key: 'banner', emoji: '🎴', label: 'Bannière', q: '📱 **Ouvre ta galerie** (bouton ➕ de la barre de message) et envoie la **bannière** ici — récupérée automatiquement (60 secondes).' },
 ];
 
 const COLORS = [
@@ -102,8 +102,7 @@ function componentsFor(state) {
   }
   if (step.key === 'avatar' || step.key === 'banner') {
     rows.push(new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId(`bpw:${state.botId}:${uid}:url`).setLabel('🔗 Coller une URL').setStyle(ButtonStyle.Primary),
-      new ButtonBuilder().setCustomId(`bpw:${state.botId}:${uid}:skip`).setLabel('⏭ Passer').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`bpw:${state.botId}:${uid}:skip`).setLabel('⏭ Passer (sans image)').setStyle(ButtonStyle.Secondary),
     ));
   }
   rows.push(navRow(state));
@@ -281,15 +280,6 @@ async function handleProfileWizardInteraction(botId, interaction) {
       await showState(`✅ Couleur ${val} enregistrée !`);
       return;
     }
-    if (mode === 'url') {
-      if (!val) return interaction.reply({ content: '❌ URL vide.', ephemeral: true });
-      try {
-        await collectAttachment(state, val, extFromUrl(val), 0);
-        return interaction.reply({ content: '✅ Image téléchargée et enregistrée !', ephemeral: true });
-      } catch (e) {
-        return interaction.reply({ content: `⚠️ ${e.message.slice(0, 120)}`, ephemeral: true });
-      }
-    }
     return interaction.reply({ content: '✅ Enregistré !', ephemeral: true });
   }
 
@@ -311,9 +301,11 @@ async function handleProfileWizardInteraction(botId, interaction) {
       if (fin) return interaction.update(fin);
       return interaction.update(renderPayload(state));
     }
-    if (action === 'url') {
-      state.modal = 'url';
-      return interaction.showModal(textModal(botId, uid, `🔗 URL de ${state.step === 3 ? 'l\'avatar' : 'la bannière'}`, 'URL de l\'image (https://…)', 'https://…', false, true, ''));
+    // À l'étape avatar/bannière, « Suivant » équivaut à passer sans image
+    if (['avatar', 'banner'].includes(STEPS[state.step] && STEPS[state.step].key) && action === 'next') {
+      const fin = await advance(state);
+      if (fin) return interaction.update(fin);
+      return interaction.update(renderPayload(state));
     }
     if (action === 'next') {
       const step = STEPS[state.step];

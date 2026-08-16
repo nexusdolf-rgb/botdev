@@ -13,6 +13,15 @@ const store = require('../server/db');
 const panels = require('../server/discord/panels');
 const { buildSlashPayloads } = require('../server/discord/premade');
 
+// Simule le bouton ➕ de Discord : un collecteur qui attrape la pièce jointe (galerie)
+let collectorHandler = null;
+const fakeChannel = {
+  createMessageCollector: (opts) => ({
+    on: (evt, fn) => { if (evt === 'collect') collectorHandler = fn; },
+    stop: () => {},
+  }),
+};
+
 // Petit serveur HTTP local qui sert un PNG factice (pour l'URL de l'avatar)
 const PNG = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3, 4, 5, 6, 7, 8]);
 const imgServer = http.createServer((req, res) => {
@@ -46,7 +55,7 @@ const imgServer = http.createServer((req, res) => {
     guild,
     user: { id: 'OWNER1' },
     member: { permissions: { has: () => false } },
-    channel: null,
+    channel: fakeChannel,
     customId: cid,
     isButton: () => false, isModalSubmit: () => false, isStringSelectMenu: () => false,
     isChatInputCommand: () => false, isChannelSelectMenu: () => false, isRoleSelectMenu: () => false,
@@ -92,17 +101,23 @@ const imgServer = http.createServer((req, res) => {
   await panels.dispatchPanels(1, wizard('bpw:1:OWNER1:next', { isButton: () => true }));
   assert(lastReply.embeds[0].data.title.includes('Étape 4/5'), 'étape avatar attendue');
   const btnLabels = lastReply.components[0].components.map((c) => c.data.label);
-  assert(btnLabels.includes('🔗 Coller une URL') && btnLabels.includes('⏭ Passer'));
-  console.log('6️⃣  Étape avatar ✅ (', btnLabels.join(' | '), ')');
+  assert(btnLabels.some((l) => String(l).includes('Passer')), 'bouton Passer attendu');
+  assert(!btnLabels.some((l) => String(l).includes('URL')), 'aucun bouton URL');
+  console.log('6️⃣  Étape avatar ✅ (', btnLabels.join(' | '), ') — galerie via ➕');
 
-  // ---------- 7. URL → modale → téléchargement → bannière ----------
-  await panels.dispatchPanels(1, wizard('bpw:1:OWNER1:url', { isButton: () => true }));
-  assert(shownModal && shownModal.data.title.includes('URL'), 'modale URL attendue');
-  await panels.dispatchPanels(1, wizard('bpw-modal:1:OWNER1', { isModalSubmit: () => true, fields: { getTextInputValue: () => imgUrl } }));
-  assert(lastReply.content.includes('téléchargée'), 'image téléchargée : ' + (lastReply.content || ''));
+  // ---------- 7. Galerie : pièce jointe envoyée dans le salon → récupérée automatiquement ----------
+  assert(!lastReply.components[0].components.some((c) => c.data.label && String(c.data.label).includes('URL')), 'plus de bouton URL');
+  assert(collectorHandler, 'collecteur actif (attend la photo de la galerie)');
+  await new Promise((r) => setImmediate(r));
+  await collectorHandler({
+    author: { id: 'OWNER1' },
+    attachments: { size: 1, first: () => ({ url: imgUrl, contentType: 'image/png', size: PNG.length }) },
+    reply: async () => {},
+  });
+  await new Promise((r) => setImmediate(r));
   assert(lastEdit && lastEdit.embeds[0].data.title.includes('Étape 5/5'), 'étape bannière attendue');
   assert(lastEdit.embeds[0].data.fields[0].value.includes('✅ image'), 'avatar dans le récap');
-  console.log('7️⃣  Avatar par URL → téléchargé → étape bannière ✅');
+  console.log('7️⃣  Photo envoyée depuis la galerie → avatar récupéré automatiquement → étape bannière ✅');
 
   // ---------- 8. Passer la bannière → Enregistrement final ----------
   await panels.dispatchPanels(1, wizard('bpw:1:OWNER1:skip', { isButton: () => true }));

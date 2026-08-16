@@ -189,10 +189,10 @@ function buildSlashPayloads(botId) {
         { name: 'couleur', description: 'Couleur du profil (ex : #5865F2)', type: ApplicationCommandOptionType.String, required: false },
       ]},
       { name: 'avatar', description: 'Choisir un avatar depuis ta galerie', type: ApplicationCommandOptionType.Subcommand, options: [
-        { name: 'image', description: 'Image de ta galerie (3 Mo max)', type: ApplicationCommandOptionType.Attachment, required: true },
+        { name: 'image', description: '📱 La galerie s\'ouvre automatiquement — choisis ta photo (3 Mo max)', type: ApplicationCommandOptionType.Attachment, required: true },
       ]},
       { name: 'banner', description: 'Choisir une bannière depuis ta galerie', type: ApplicationCommandOptionType.Subcommand, options: [
-        { name: 'image', description: 'Image de ta galerie (3 Mo max)', type: ApplicationCommandOptionType.Attachment, required: true },
+        { name: 'image', description: '📱 La galerie s\'ouvre automatiquement — choisis ta photo (3 Mo max)', type: ApplicationCommandOptionType.Attachment, required: true },
       ]},
       { name: 'reset', description: 'Retirer l\'identité personnalisée de ce serveur', type: ApplicationCommandOptionType.Subcommand },
     ],
@@ -661,7 +661,7 @@ const HELP_DETAILS = {
   levels: ['📈 Niveaux', 'Le classement des niveaux du serveur.', '`/levels`'],
   invite: ['🔧 Utilitaire', 'Le lien pour inviter le bot sur un autre serveur.', '`/invite`'],
   botprofile: ['🤖 Identité du bot', 'Personnalise le bot sur CE serveur : nom, avatar, bannière (depuis ta galerie), bio et couleur. Le bot s\'exprime avec cette identité dans ses messages ici.',
-    '`/botprofile setup` — **Assistant pas à pas** : nom → bio → **sélecteur de couleurs** → avatar → bannière → ✅ Enregistrer (boutons Suivant/Retour/Annuler)\n`/botprofile view` — voir le profil\n`/botprofile set nom|bio|couleur` — nom, bio, couleur\n`/botprofile avatar` — avatar depuis ta galerie\n`/botprofile banner` — bannière depuis ta galerie\n`/botprofile reset` — revenir à l\'identité globale\n\n🔒 Réservé au **propriétaire du serveur**'],
+    '`/botprofile setup` — **Assistant pas à pas** : nom → bio → **sélecteur de couleurs** → avatar (**📱 ta galerie s\'ouvre directement**, envoie la photo) → bannière (galerie aussi) → ✅ Enregistrer (boutons Suivant/Retour/Annuler)\n`/botprofile view` — voir le profil\n`/botprofile set nom|bio|couleur` — nom, bio, couleur\n`/botprofile avatar` — 📱 la galerie s\'ouvre automatiquement\n`/botprofile banner` — 📱 galerie aussi\n`/botprofile reset` — revenir à l\'identité globale\n\n🔒 Réservé au **propriétaire du serveur**'],
   modlogs: ['📋 Journaux', 'Un salon où le bot trace tout : modération, tickets, auto-mod, arrivées et départs.',
     '`/modlogs set #salon` — activer\n`/modlogs view` — voir\n`/modlogs off` — désactiver'],
   blacklist: ['🔇 Liste noire', 'Des mots interdits : les messages qui les contiennent sont supprimés automatiquement.',
