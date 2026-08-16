@@ -14,7 +14,7 @@ const {
   ChannelType,
 } = require('discord.js');
 const store = require('../db');
-const { sendTicketPanel, sendRoleMenu, findChannelInGuild, resolveRole, parseTypes, staffForTicket } = require('./panels');
+const { sendTicketPanel, sendRoleMenu, findChannelInGuild, resolveRole, parseTypes, staffForTicket, startTypesWizard } = require('./panels');
 
 const DEFAULT_CFG = {
   name: '',
@@ -352,10 +352,13 @@ async function handleTicket(botId, sub, group, interaction, guild) {
     await interaction.reply({ content: '✅ Configuration enregistrée !', ephemeral: true });
   };
 
-  // ---- /ticket types (groupe) : ajouter / renommer / supprimer / lister ----
+  // ---- /ticket types (groupe) : assistant + ajouter / supprimer / lister ----
   if (group === 'types' || sub === 'type') {
     const types = parseTypes(cfg);
     const action = group === 'types' ? sub : 'add';
+    if (action === 'setup') {
+      return startTypesWizard(botId, interaction);
+    }
     if (action === 'add') {
       const nom = (interaction.options.getString('nom') || '').trim();
       if (!nom) return interaction.reply({ content: '❌ Donne un nom au type de ticket.', ephemeral: true });

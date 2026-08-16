@@ -771,6 +771,7 @@ BotViews.renderServerConfig = async (content, bot, guildId) => {
       <label class="field-label">Message du panneau (vide = message automatique)</label>
       <textarea class="input" id="t-message" rows="2" style="max-width:640px">${App.escapeHtml(tickets.message || '')}</textarea>
       <label class="field-label">🗂️ Types de tickets (menu déroulant sur le panneau)</label>
+      <div class="help-box" style="font-size:12px;margin-bottom:10px">💡 <b>Sur Discord, l'assistant interactif :</b> <code>/ticket types setup</code> — renommer, emoji, catégorie, rôle staff et suppression, le tout avec des menus de sélection.</div>
       <div id="t-types"></div>
       <button class="btn btn-sm btn-ghost" id="t-add-type" style="margin-top:8px">＋ Ajouter un type</button>
       <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
