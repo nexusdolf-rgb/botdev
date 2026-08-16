@@ -1,13 +1,17 @@
 // ============================================================
 // BotDev - Commandes Discord de gestion des panneaux (façon Ticket Tool)
-//   /ticket setup → assistant interactif pas à pas (nom → catégorie → salon → rôle)
-//   /ticket ...   → configuration rapide + gestion
+//   /ticket setup → assistant interactif avec MENUS DE SÉLECTION
+//   (nom → catégorie → salon → rôle staff) — on ne tape rien,
+//   on sélectionne dans les menus déroulants, puis « Suivant ».
 //   /roles ...    → menus de rôles
 // Réservées au propriétaire du serveur (tickets) / propriétaire ou admins (rôles)
 // ============================================================
 const {
   EmbedBuilder, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle,
   ModalBuilder, TextInputBuilder, TextInputStyle,
+  StringSelectMenuBuilder, StringSelectMenuOptionBuilder,
+  ChannelSelectMenuBuilder, RoleSelectMenuBuilder,
+  ChannelType,
 } = require('discord.js');
 const store = require('../db');
 const { sendTicketPanel, sendRoleMenu, findChannelInGuild } = require('./panels');
@@ -27,32 +31,96 @@ function getCfg(botId, guildId) {
 }
 
 // ============================================================
-// Assistant interactif /ticket setup
+// Assistant interactif /ticket setup (menus déroulants)
 // ============================================================
 const WIZARD_TTL = 10 * 60000; // 10 minutes
 
 const STEPS = [
-  { key: 'name', emoji: '📛', label: 'Nom du panel', ph: 'Support',
-    question: 'Donne un nom à ton système de tickets (ex : **Support**, **Aide**, **Recrutement**). C\'est juste un nom pour t\'y retrouver.' },
-  { key: 'category', emoji: '🗂️', label: 'Catégorie', ph: 'Tickets',
-    question: 'Dans quelle catégorie les salons de tickets seront-ils créés ? (elle sera créée automatiquement si elle n\'existe pas)' },
-  { key: 'channel', emoji: '📨', label: 'Salon du panneau', ph: '#support',
-    question: 'Dans quel salon veux-tu envoyer le panneau avec le bouton ? (ex : **#support**) — les membres cliqueront dessus pour ouvrir un ticket.' },
-  { key: 'role', emoji: '🛡️', label: 'Rôle du staff', ph: 'Staff',
-    question: 'Quel rôle peut voir tous les tickets ? (nom exact du rôle, ou laisse vide pour aucun)' },
+  { key: 'name', type: 'string', emoji: '📛', label: 'Nom du panel',
+    question: 'Donne un nom à ton système de tickets. **Sélectionne** un nom rapide ou écris le tien.' },
+  { key: 'category', type: 'string', emoji: '🗂️', label: 'Catégorie',
+    question: 'Dans quelle catégorie les salons de tickets seront-ils créés ? **Sélectionne** une catégorie existante ou crées-en une.' },
+  { key: 'channel', type: 'channel', emoji: '📨', label: 'Salon du panneau',
+    question: 'Dans quel salon veux-tu envoyer le panneau avec le bouton ? **Sélectionne** le salon dans le menu.' },
+  { key: 'role', type: 'role', emoji: '🛡️', label: 'Rôle du staff',
+    question: 'Quel rôle peut voir tous les tickets ? **Sélectionne** le rôle dans le menu (ou clique « Terminer » pour aucun).' },
+];
+
+const NAME_PRESETS = [
+  { label: 'Support', emoji: '🎫' },
+  { label: 'Aide', emoji: '🆘' },
+  { label: 'Recrutement', emoji: '📢' },
+  { label: 'Réclamations', emoji: '⚠️' },
+  { label: 'Général', emoji: '💬' },
 ];
 
 const wizards = new Map();
 const wizardKey = (botId, guildId, userId) => `${botId}:${guildId}:${userId}`;
 
-function wizardRow(state) {
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`bdw:${state.botId}:${state.userId}:write`).setLabel('✏️ Saisir').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId(`bdw:${state.botId}:${state.userId}:next`)
-      .setLabel(state.step >= STEPS.length - 1 ? '✅ Terminer' : 'Suivant ➡️').setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId(`bdw:${state.botId}:${state.userId}:cancel`).setLabel('❌ Annuler').setStyle(ButtonStyle.Secondary),
+function selectOptionsFor(state) {
+  const step = STEPS[state.step];
+  if (step.key === 'name') {
+    const opts = NAME_PRESETS.map(p => ({
+      label: p.label, value: p.label, emoji: p.emoji,
+    }));
+    opts.push({ label: 'Écrire un nom personnalisé', value: '__custom__', emoji: '✏️' });
+    return opts;
+  }
+  if (step.key === 'category') {
+    const seen = new Set();
+    const cats = [...state.guild.channels.cache.values()]
+      .filter(c => c.type === ChannelType.GuildCategory)
+      .filter(c => { const k = c.name.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; })
+      .slice(0, 23);
+    const opts = cats.map(c => ({ label: c.name.slice(0, 80), value: c.name.slice(0, 80) }));
+    opts.push({ label: 'Créer une nouvelle catégorie', value: '__custom__', emoji: '➕' });
+    return opts;
+  }
+  return [];
+}
+
+function stepComponents(state) {
+  const uid = state.userId;
+  const step = STEPS[state.step];
+  const rows = [];
+
+  const first = new ActionRowBuilder();
+  if (step.type === 'channel') {
+    first.addComponents(new ChannelSelectMenuBuilder()
+      .setCustomId(`bdw-sel:${state.botId}:${uid}`)
+      .setPlaceholder('📨 Sélectionne le salon du panneau…')
+      .setMinValues(1).setMaxValues(1)
+      .setChannelTypes([ChannelType.GuildText]));
+  } else if (step.type === 'role') {
+    first.addComponents(new RoleSelectMenuBuilder()
+      .setCustomId(`bdw-sel:${state.botId}:${uid}`)
+      .setPlaceholder('🛡️ Sélectionne le rôle du staff…')
+      .setMinValues(1).setMaxValues(1));
+  } else {
+    const opts = selectOptionsFor(state).map(o => {
+      const b = new StringSelectMenuOptionBuilder()
+        .setLabel(String(o.label).slice(0, 100))
+        .setValue(String(o.value).slice(0, 100));
+      if (o.emoji) b.setEmoji(String(o.emoji));
+      return b;
+    });
+    first.addComponents(new StringSelectMenuBuilder()
+      .setCustomId(`bdw-sel:${state.botId}:${uid}`)
+      .setPlaceholder(`Choisis : ${step.label}`)
+      .setMinValues(1).setMaxValues(1)
+      .addOptions(opts));
+  }
+  rows.push(first);
+
+  const second = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`bdw:${state.botId}:${uid}:next`)
+      .setLabel(state.step >= STEPS.length - 1 ? '✅ Terminer' : 'Suivant ➡️')
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId(`bdw:${state.botId}:${uid}:cancel`)
+      .setLabel('❌ Annuler').setStyle(ButtonStyle.Secondary),
   );
-  return row;
+  rows.push(second);
+  return rows;
 }
 
 function wizardEmbed(state) {
@@ -64,11 +132,11 @@ function wizardEmbed(state) {
   const lines = STEPS.map((s, i) => {
     const v = state.values[s.key];
     const mark = i < state.step ? '✅' : i === state.step ? '➡️' : '⏳';
-    let shown = v || '*non défini*';
+    const shown = v || '*non défini*';
     return `${mark} **${s.label}** : ${shown}`;
   });
   embed.addFields({ name: '📋 Récapitulatif', value: lines.join('\n') });
-  embed.setFooter({ text: 'Clique sur « ✏️ Saisir » pour écrire une valeur, puis « Suivant »' });
+  embed.setFooter({ text: 'Sélectionne dans le menu déroulant ci-dessus, ou clique « Suivant » pour garder la valeur actuelle.' });
   return embed;
 }
 
@@ -80,59 +148,82 @@ async function startWizard(botId, interaction) {
     channel: interaction.channel ? `#${interaction.channel.name}` : '',
     role: '',
   };
-  const state = { botId, guildId: interaction.guild.id, userId: interaction.user.id, step: 0, values, startedAt: Date.now() };
-  const msg = await interaction.reply({ embeds: [wizardEmbed(state)], components: [wizardRow(state)], fetchReply: true });
+  const state = {
+    botId, guildId: interaction.guild.id, userId: interaction.user.id,
+    step: 0, values, startedAt: Date.now(), guild: interaction.guild,
+  };
+  const msg = await interaction.reply({
+    embeds: [wizardEmbed(state)],
+    components: stepComponents(state),
+    fetchReply: true,
+  });
   state.msg = msg;
   wizards.set(key, state);
 }
 
-// Appelé depuis dispatchPanels pour les boutons et modales de l'assistant
+// Appelé depuis dispatchPanels pour les boutons, modales et menus de l'assistant
 async function handleWizardInteraction(botId, interaction) {
+  // --- Menus de sélection (chaîne / salon / rôle) ---
+  if (interaction.isStringSelectMenu() || interaction.isChannelSelectMenu() || interaction.isRoleSelectMenu()) {
+    const parts = (interaction.customId || '').split(':');
+    if (parts.length !== 3 || parts[1] !== String(botId)) return;
+    const uid = parts[2];
+    if (uid !== interaction.user.id) return;
+    const key = wizardKey(botId, interaction.guild.id, uid);
+    const state = wizards.get(key);
+    if (!state) return interaction.reply({ content: '⏰ Cet assistant a expiré. Relance `/ticket setup`.', ephemeral: true });
+
+    const step = STEPS[state.step];
+    if (interaction.isStringSelectMenu()) {
+      const v = interaction.values[0];
+      if (v === '__custom__') {
+        return showCustomModal(state, interaction);
+      }
+      state.values[step.key] = v;
+    } else if (interaction.isChannelSelectMenu()) {
+      const ch = interaction.guild.channels.cache.get(interaction.values[0]);
+      state.values.channel = ch ? `#${ch.name}` : interaction.values[0];
+    } else {
+      const role = interaction.guild.roles.cache.get(interaction.values[0]);
+      state.values.role = role ? role.name : interaction.values[0];
+    }
+
+    state.startedAt = Date.now();
+    state.step += 1;
+    if (state.step >= STEPS.length) return finalizeWizard(state, interaction);
+    return interaction.update({ embeds: [wizardEmbed(state)], components: stepComponents(state) });
+  }
+
+  // --- Boutons ---
   if (interaction.isButton()) {
     const parts = (interaction.customId || '').split(':');
     if (parts.length !== 4 || parts[1] !== String(botId)) return;
     const [, , uid, action] = parts;
     if (uid !== interaction.user.id) return;
-    const state = wizards.get(wizardKey(botId, interaction.guild.id, uid));
+    const key = wizardKey(botId, interaction.guild.id, uid);
+    const state = wizards.get(key);
     if (!state) return interaction.reply({ content: '⏰ Cet assistant a expiré. Relance `/ticket setup`.', ephemeral: true });
     if (Date.now() - state.startedAt > WIZARD_TTL) {
-      wizards.delete(wizardKey(botId, interaction.guild.id, uid));
+      wizards.delete(key);
       return interaction.update({ content: '⏰ Assistant expiré. Relance `/ticket setup`.', embeds: [], components: [] });
     }
-
     if (action === 'cancel') {
-      wizards.delete(wizardKey(botId, interaction.guild.id, uid));
+      wizards.delete(key);
       return interaction.update({ content: '❌ Configuration annulée.', embeds: [], components: [] });
     }
-
-    if (action === 'write') {
-      const step = STEPS[state.step];
-      const modal = new ModalBuilder()
-        .setCustomId(`bdw-modal:${state.botId}:${state.userId}`)
-        .setTitle(`${step.emoji} ${step.label}`);
-      const input = new TextInputBuilder()
-        .setCustomId('value')
-        .setLabel(step.label)
-        .setPlaceholder(step.ph)
-        .setStyle(TextInputStyle.Short)
-        .setMaxLength(100);
-      if (state.values[step.key]) input.setValue(state.values[step.key]);
-      modal.addComponents(new ActionRowBuilder().addComponents(input));
-      return interaction.showModal(modal);
-    }
-
     if (action === 'next') {
       state.step += 1;
       if (state.step >= STEPS.length) return finalizeWizard(state, interaction);
-      return interaction.update({ embeds: [wizardEmbed(state)], components: [wizardRow(state)] });
+      return interaction.update({ embeds: [wizardEmbed(state)], components: stepComponents(state) });
     }
     return null;
   }
 
+  // --- Modales (nom ou catégorie personnalisés) ---
   if (interaction.isModalSubmit()) {
     const parts = (interaction.customId || '').split(':');
     if (parts.length !== 3 || parts[1] !== String(botId)) return;
-    const [, , uid] = parts;
+    const uid = parts[2];
     if (uid !== interaction.user.id) return;
     const key = wizardKey(botId, interaction.guild.id, uid);
     const state = wizards.get(key);
@@ -141,9 +232,25 @@ async function handleWizardInteraction(botId, interaction) {
     const v = interaction.fields.getTextInputValue('value').trim();
     if (v) state.values[step.key] = v;
     state.startedAt = Date.now();
-    try { await state.msg.edit({ embeds: [wizardEmbed(state)], components: [wizardRow(state)] }); } catch {}
-    return interaction.reply({ content: `✅ « ${step.label} » enregistré ! Clique sur « Suivant » pour continuer.`, ephemeral: true });
+    try { await state.msg.edit({ embeds: [wizardEmbed(state)], components: stepComponents(state) }); } catch {}
+    return interaction.reply({ content: `✅ « ${step.label} » enregistré ! Sélectionne puis clique sur « Suivant » pour continuer.`, ephemeral: true });
   }
+}
+
+function showCustomModal(state, interaction) {
+  const step = STEPS[state.step];
+  const modal = new ModalBuilder()
+    .setCustomId(`bdw-modal:${state.botId}:${state.userId}`)
+    .setTitle(`${step.emoji} ${step.label}`);
+  const input = new TextInputBuilder()
+    .setCustomId('value')
+    .setLabel(step.label)
+    .setPlaceholder(step.key === 'name' ? 'Mon système de support' : 'Tickets')
+    .setStyle(TextInputStyle.Short)
+    .setMaxLength(100);
+  if (state.values[step.key]) input.setValue(state.values[step.key]);
+  modal.addComponents(new ActionRowBuilder().addComponents(input));
+  return interaction.showModal(modal);
 }
 
 async function finalizeWizard(state, interaction) {
@@ -193,7 +300,7 @@ async function handlePanelCommand(botId, interaction) {
   const isOwner = guild.ownerId === interaction.user.id;
   const isAdmin = member.permissions.has(PermissionsBitField.Flags.Administrator);
 
-  // Système de tickets : propriétaire du serveur uniquement (comme demandé)
+  // Système de tickets : propriétaire du serveur uniquement
   if (interaction.commandName === 'ticket' && !isOwner) {
     return interaction.reply({ content: '⛔ Seul le **propriétaire du serveur** peut configurer le système de tickets.', ephemeral: true });
   }
@@ -203,7 +310,7 @@ async function handlePanelCommand(botId, interaction) {
   }
 
   const sub = interaction.options.getSubcommand();
-  if (interaction.commandName === 'ticket') return handleTicket(botId, sub, interaction, guild, member);
+  if (interaction.commandName === 'ticket') return handleTicket(botId, sub, interaction, guild);
   return handleRoles(botId, sub, interaction, guild);
 }
 

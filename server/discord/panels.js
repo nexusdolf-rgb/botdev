@@ -59,9 +59,11 @@ async function dispatchPanels(botId, interaction) {
       await handlePanelCommand(botId, interaction);
       return true;
     }
-    // Assistant interactif /ticket setup (boutons + modales)
-    if ((interaction.isButton() && String(interaction.customId || '').startsWith('bdw:'))
-      || (interaction.isModalSubmit() && String(interaction.customId || '').startsWith('bdw-modal:'))) {
+    // Assistant interactif /ticket setup (boutons + modales + menus de sélection)
+    const cid = String(interaction.customId || '');
+    if ((interaction.isButton() && cid.startsWith('bdw:'))
+      || (interaction.isModalSubmit() && cid.startsWith('bdw-modal:'))
+      || ((interaction.isStringSelectMenu() || interaction.isChannelSelectMenu() || interaction.isRoleSelectMenu()) && cid.startsWith('bdw-sel:'))) {
       const { handleWizardInteraction } = require('./panelCommands');
       await handleWizardInteraction(botId, interaction);
       return true;

@@ -107,7 +107,13 @@ function attachListeners(botId, entry) {
         avatar_url: me ? me.displayAvatarURL({ size: 128 }) : '',
       });
       applyPresence(record);
-      await Promise.all([...client.guilds.cache.values()].map(g => syncSlashCommands(botId, g.id)));
+      // Synchronisation par serveur, indépendante (une erreur n'empêche pas les autres)
+      for (const g of client.guilds.cache.values()) {
+        try { await syncSlashCommands(botId, g.id, true); }
+        catch (e) { console.error(`[BotDev] sync ${g.id} (bot ${botId}):`, e.message); }
+      }
+      // Bio du bot : ajoute le lien vers BotDev
+      applyBotAbout(botId, entry).catch(() => {});
     } catch (e) { console.error(`[BotDev] ready error (bot ${botId}):`, e.message); }
   });
 
@@ -136,8 +142,21 @@ function attachListeners(botId, entry) {
     runLeaveEvent(botId, member).catch(e => console.error('[BotDev] leave event error:', e.message));
   });
 
-  client.on('guildCreate', async (guild) => {
-    await syncSlashCommands(botId, guild.id).catch(() => {});
+  // Nouveau serveur : synchronise les commandes avec retries automatiques
+  // (les commandes slash apparaissent ainsi dès l'ajout du bot)
+  client.on('guildCreate', (guild) => {
+    let attempts = 0;
+    const trySync = async () => {
+      attempts += 1;
+      try {
+        await syncSlashCommands(botId, guild.id, true);
+        console.log(`[BotDev] bot ${botId} : commandes synchronisées pour le nouveau serveur ${guild.name}`);
+      } catch (e) {
+        if (attempts < 3) setTimeout(trySync, 5000);
+        else console.error(`[BotDev] sync échouée pour ${guild.name} :`, e.message);
+      }
+    };
+    trySync();
   });
 
   client.on('error', (err) => {
@@ -162,7 +181,7 @@ function applyPresence(record) {
 
 // ---------------------- Commandes slash ----------------------
 // Enregistre les commandes slash au niveau du serveur (instantané)
-async function syncSlashCommands(botId, guildId) {
+async function syncSlashCommands(botId, guildId, quiet = false) {
   const entry = clients.get(botId);
   if (!entry || !entry.client.isReady()) return;
   const record = store.bots.get(botId);
@@ -175,7 +194,22 @@ async function syncSlashCommands(botId, guildId) {
     `/applications/${appId}/guilds/${guildId}/commands`,
     { body: payloads }
   );
-  console.log(`[BotDev] bot ${botId} : ${payloads.length} commandes slash enregistrées pour le serveur ${guildId}`);
+  if (!quiet) console.log(`[BotDev] bot ${botId} : ${payloads.length} commandes slash enregistrées pour le serveur ${guildId}`);
 }
 
-module.exports = { clients, getClient, isOnline, loginBot, logoutBot, stopAll, syncSlashCommands, applyPresence };
+// ---------------------- Bio du bot (lien vers BotDev) ----------------------
+async function applyBotAbout(botId, entry) {
+  const url = store.settings.get('public_url');
+  if (!url) return;
+  const text = `🤖 Créé avec BotDev — ${url}\nTickets, rôles, modération, économie et plus, sans coder.`;
+  if (store.settings.get(`about_${botId}`) === text) return; // déjà à jour
+  try {
+    await entry.client.rest.patch('/applications/@me', { body: { description: text.slice(0, 400) } });
+    store.settings.set(`about_${botId}`, text);
+    console.log(`[BotDev] bot ${botId} : bio « À propos » mise à jour avec ${url}`);
+  } catch (e) {
+    console.log(`[BotDev] bot ${botId} : bio non mise à jour (${e.message})`);
+  }
+}
+
+module.exports = { clients, getClient, isOnline, loginBot, logoutBot, stopAll, syncSlashCommands, applyPresence, applyBotAbout };

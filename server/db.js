@@ -109,6 +109,11 @@ CREATE TABLE IF NOT EXISTS tickets (
   category TEXT DEFAULT 'Tickets',
   PRIMARY KEY (bot_id, guild_id)
 );
+
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT DEFAULT ''
+);
 `);
 
 // Migrations légères (les colonnes ajoutées après coup)
@@ -250,4 +255,13 @@ const tickets = {
       category = excluded.category`).run({ bot_id: botId, guild_id: guildId, name: '', ...cfg }),
 };
 
-module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets };
+// ---------------------- Réglages généraux (clé/valeur) ----------------------
+const settings = {
+  get: (key) => {
+    const r = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
+    return r ? r.value : '';
+  },
+  set: (key, value) => db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, String(value)),
+};
+
+module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings };

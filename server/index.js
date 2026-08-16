@@ -14,6 +14,19 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json({ limit: '2mb' }));
 app.use(cookieParser());
 
+// Capture automatique de l'URL publique (première visite) :
+// elle sert à afficher le lien dans la bio du bot et dans /help
+app.use((req, res, next) => {
+  if (!store.settings.get('public_url')) {
+    const host = (req.headers['x-forwarded-host'] || req.get('host') || '');
+    const proto = String(req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http')).split(',')[0].trim();
+    if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
+      store.settings.set('public_url', `${proto}://${host}`);
+    }
+  }
+  next();
+});
+
 // API
 app.use('/api', routes);
 
@@ -62,6 +75,19 @@ setInterval(() => {
       .catch(() => {});
   }
 }, 30000);
+
+// Réparation automatique : toutes les 10 minutes, on re-synchronise les
+// commandes slash sur tous les serveurs des bots en ligne (au cas où un
+// serveur a été ajouté pendant une coupure) et on met la bio à jour.
+setInterval(async () => {
+  for (const [botId, entry] of botManager.clients) {
+    if (!entry.client.isReady()) continue;
+    for (const guild of entry.client.guilds.cache.values()) {
+      try { await botManager.syncSlashCommands(botId, guild.id, true); } catch {}
+    }
+    try { await botManager.applyBotAbout(botId, entry); } catch {}
+  }
+}, 10 * 60000);
 
 process.on('SIGTERM', async () => {
   await botManager.stopAll();

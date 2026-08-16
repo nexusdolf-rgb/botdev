@@ -464,7 +464,7 @@ function argsMatch(str, regex) {
 // ============================================================
 const HELP_DETAILS = {
   ticket: ['🎫 Tickets', 'Le système de tickets complet : un bouton dans un salon, chaque clic crée un salon privé réservé au membre et au staff.',
-    '`/ticket setup` — **Assistant pas à pas** (nom → catégorie → salon → rôle staff)\n`/ticket panel` — Envoyer le panneau\n`/ticket channel #salon` — Changer le salon\n`/ticket role @Staff` — Changer le rôle staff\n`/ticket category Nom` — Changer la catégorie\n`/ticket button Texte` — Changer le texte du bouton\n`/ticket message Texte` — Changer le message\n`/ticket config` — Voir la configuration\n`/ticket close` — Fermer un ticket\n`/ticket add @membre` / `/ticket remove @membre` — Gérer l\'accès au ticket\n\n🔒 Réservé au **propriétaire du serveur**'],
+    '`/ticket setup` — **Assistant avec menus de sélection** : choisis le nom, la catégorie, le salon et le rôle staff dans des menus déroulants (rien à écrire), puis « Suivant » → « Terminer ». Le panneau est envoyé automatiquement !\n`/ticket panel` — Envoyer le panneau\n`/ticket channel #salon` — Changer le salon\n`/ticket role @Staff` — Changer le rôle staff\n`/ticket category Nom` — Changer la catégorie\n`/ticket button Texte` — Changer le texte du bouton\n`/ticket message Texte` — Changer le message\n`/ticket config` — Voir la configuration\n`/ticket close` — Fermer un ticket\n`/ticket add @membre` / `/ticket remove @membre` — Gérer l\'accès au ticket\n\n🔒 Réservé au **propriétaire du serveur**'],
   roles: ['📋 Rôles', 'Les menus de rôles déroulants : les membres choisissent leurs rôles en cliquant.',
     '`/roles list` — Voir les menus de ce serveur\n`/roles send 1` — Envoyer le menu n°1 (ou précise un salon)\n\nCrée tes menus dans le **dashboard BotDev** (onglet Panneaux)'],
   ping: ['🔧 Utilitaire', 'Affiche la latence du bot.', '`/ping`', '`/ping` → 🏓 Pong ! Latence : 42 ms'],
@@ -489,6 +489,13 @@ const HELP_DETAILS = {
   balance: ['💰 Économie', 'Affiche ton solde de coins.', '`/balance @membre`'],
   leaderboard: ['💰 Économie', 'Le classement des coins du serveur.', '`/leaderboard`'],
 };
+
+function helpDescription() {
+  let d = 'Voici **tout ce que je sais faire**. Tape `/help commande` pour le détail d\'une commande (ex : `/help ticket`).';
+  const site = store.settings.get('public_url');
+  if (site) d += `\n🌐 **Dashboard** : ${site}`;
+  return d;
+}
 
 function buildHelpEmbed(botId, record, client, guild, requested) {
   const enabled = enabledCommandNames(botId);
@@ -518,13 +525,13 @@ function buildHelpEmbed(botId, record, client, guild, requested) {
   const embed = new EmbedBuilder()
     .setColor('#5865F2')
     .setTitle(`📚 Centre d'aide — ${client.user.username}`)
-    .setDescription('Voici **tout ce que je sais faire**. Tape `/help commande` pour le détail d\'une commande (ex : `/help ticket`).')
+    .setDescription(helpDescription())
     .setThumbnail(client.user.displayAvatarURL({ dynamic: true }));
 
   embed.addFields({
     name: '🎫 Système de tickets — configuration',
     value: [
-      '`/ticket setup` — **Assistant pas à pas** : nom du panel → catégorie → salon → rôle staff',
+      '`/ticket setup` — **Assistant avec menus de sélection** : nom → catégorie → salon → rôle staff (rien à écrire)',
       '`/ticket panel` — Envoyer le panneau avec le bouton dans un salon',
       '`/ticket config` — Voir la configuration actuelle',
       '`/ticket close` — Fermer un ticket · `/ticket add @membre` · `/ticket remove @membre`',
