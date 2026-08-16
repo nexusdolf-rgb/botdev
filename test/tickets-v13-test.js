@@ -143,22 +143,20 @@ const { buildSlashPayloads } = require('../server/discord/premade');
   assert(trans && trans.messages.includes('raison : problème résolu'), 'raison dans la transcription');
   console.log('4️⃣bis  🗑 Supprimer → modale raison → raison dans la transcription ✅');
 
-  // ---------- 5. Staff du type « Admins » PEUT fermer → transcription + MP + verrou ----------
+  // ---------- 5. Staff du type « Admins » PEUT fermer → verrou SANS transcription (elle part à la suppression) ----------
   let dmPayload = null;
   const staffClose = {
     ...makeCloseBtn(['R2']),
     client: { users: { fetch: async (id) => ({ id, send: async (p) => { dmPayload = p; } }) } },
   };
+  const transcriptsBeforeClose = store.db.prepare('SELECT COUNT(*) AS n FROM transcripts').get().n;
   await panels.dispatchPanels(1, staffClose);
-  console.log('   [debug] lastClose =', JSON.stringify(lastClose));
   assert(lastClose && lastClose.content.includes('fermé'), 'fermeture confirmée');
-  assert(dmPayload && dmPayload.embeds[0].data.title.includes('fermé'), 'MP envoyé');
-  assert(dmPayload.embeds[0].data.description.includes('transcription'), 'lien de transcription dans le MP');
-  assert(dmPayload.files && dmPayload.files[0].name.startsWith('transcription-'), 'fichier .txt joint');
+  assert(lastClose.content.includes('suppression'), 'mentionne que la transcription part à la suppression');
+  assert(dmPayload === null, 'PAS de MP à la fermeture');
+  assert(store.db.prepare('SELECT COUNT(*) AS n FROM transcripts').get().n === transcriptsBeforeClose, 'pas de nouvelle transcription à la fermeture');
   assert(channelOverwrites.member.view === false && channelOverwrites.member.send === false, 'salon verrouillé pour le créateur');
-  const transcript = store.db.prepare('SELECT * FROM transcripts').all()[0];
-  assert(transcript && transcript.messages.includes('Bonjour, j'), 'transcription stockée');
-  console.log('5️⃣  Fermeture par staff du type ✅ → MP professionnel + lien transcription + fichier + verrouillage');
+  console.log('5️⃣  Fermeture par staff du type ✅ → verrou SANS transcription (réservée à la suppression)');
 
   // ---------- 6. Réouvrir ----------
   await panels.dispatchPanels(1, { ...staffClose, customId: 'bd-tmenu:1:reopen' });

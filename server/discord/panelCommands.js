@@ -14,7 +14,8 @@ const {
   ChannelType,
 } = require('discord.js');
 const store = require('../db');
-const { sendTicketPanel, sendRoleMenu, findChannelInGuild, resolveRole, parseTypes, staffForTicket, startTypesWizard } = require('./panels');
+const { sendTicketPanel, sendRoleMenu, findChannelInGuild, resolveRole, parseTypes, staffForTicket, startTypesWizard, handleTicketDeleteAsk } = require('./panels');
+const logging = require('./logging');
 
 const DEFAULT_CFG = {
   name: '',
@@ -328,7 +329,7 @@ async function handlePanelCommand(botId, interaction) {
       if (!isOwner) {
         return interaction.reply({ content: '⛔ Seul le **propriétaire du serveur** peut configurer les types de tickets.', ephemeral: true });
       }
-    } else if (['close', 'add', 'remove'].includes(sub)) {
+    } else if (['close', 'add', 'remove', 'delete'].includes(sub)) {
       if (!isOwner && !isAdmin && !ticketStaff(botId, interaction) && !staffForTicket(botId, interaction)) {
         return interaction.reply({ content: '🔒 Seul le **staff** (rôle support) ou les administrateurs peuvent gérer les tickets.', ephemeral: true });
       }
@@ -449,14 +450,41 @@ async function handleTicket(botId, sub, group, interaction, guild) {
     }
     case 'close': {
       const ch = interaction.channel;
-      if (!ch || !ch.name.startsWith('ticket-') && !ch.topic?.includes('Ticket de')) {
+      const topic = ch && ch.topic ? ch.topic : '';
+      if (!ch || (!ch.name.startsWith('ticket-') && !topic.includes('Ticket de'))) {
         return interaction.reply({ content: '❌ Cette commande doit être utilisée dans un salon de ticket.', ephemeral: true });
       }
       if (!ticketStaff(botId, interaction)) {
         return interaction.reply({ content: '🔒 Seul le **staff** peut fermer ce ticket.', ephemeral: true });
       }
-      await interaction.reply({ content: '🔒 Fermeture du ticket…', ephemeral: true });
-      return setTimeout(() => ch.delete().catch(() => {}), 3000);
+      // 🔒 Fermer = verrouiller (le staff peut réouvrir) — la transcription part à la suppression
+      const m = topic.match(/\| (\d{15,21})/);
+      const openerId = m ? m[1] : null;
+      if (openerId) {
+        await ch.permissionOverwrites.edit(openerId, { ViewChannel: false, SendMessages: false }).catch(() => {});
+      }
+      store.closedTickets.add(ch.id, botId, guild.id);
+      await logging.log(botId, guild, {
+        title: '🔒 Ticket fermé', color: '#ED4245',
+        fields: [
+          { name: '📨 Salon', value: `<#${ch.id}>`, inline: true },
+          { name: '🛡️ Par', value: `${interaction.user.tag}`, inline: true },
+          { name: '📄 Transcription', value: 'envoyée à la suppression', inline: true },
+        ],
+      });
+      return interaction.reply({
+        content: '🔒 Ticket fermé. 📄 La **transcription** sera envoyée en MP au créateur au moment de la **suppression** (`/ticket delete`).',
+        ephemeral: true,
+      });
+    }
+    case 'delete': {
+      const ch = interaction.channel;
+      const topic = ch && ch.topic ? ch.topic : '';
+      if (!ch || (!ch.name.startsWith('ticket-') && !topic.includes('Ticket de'))) {
+        return interaction.reply({ content: '❌ Cette commande doit être utilisée dans un salon de ticket.', ephemeral: true });
+      }
+      // Demande la raison puis supprime (transcription envoyée en MP au créateur)
+      return handleTicketDeleteAsk(botId, interaction);
     }
     case 'add': {
       const ch = interaction.channel;

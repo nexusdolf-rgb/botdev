@@ -202,7 +202,7 @@ function buildTicketPanelEmbed(cfg, client, types) {
     .addFields(
       { name: '🕐 Réponse rapide', value: 'Ton ticket est créé **instantanément** dans un salon privé.', inline: true },
       { name: '🔒 100 % privé', value: 'Seuls **toi et le staff** voient la conversation.', inline: true },
-      { name: '📩 Suivi facile', value: 'Le staff ferme ton ticket en un clic, et tu reçois la **transcription en MP**.', inline: true },
+      { name: '📩 Suivi facile', value: 'Le staff **supprime** ton ticket et tu reçois la **transcription en MP**.', inline: true },
     );
   if (types.length) {
     embed.addFields({
@@ -409,7 +409,7 @@ async function openTicket(botId, interaction, type, reason = '') {
     if (interaction.client && interaction.client.users) {
       const openerUser = await interaction.client.users.fetch(member.id);
       await openerUser.send(
-        `🎫 Ton ticket est ouvert sur **${guild.name}** (${channel}) !\nNous te répondrons au plus vite. À la fermeture, tu recevras la transcription ici.`
+        `🎫 Ton ticket est ouvert sur **${guild.name}** (${channel}) !\nNous te répondrons au plus vite. À la suppression du ticket, tu recevras la transcription ici.`
       );
     }
   } catch {
@@ -429,7 +429,7 @@ async function openTicket(botId, interaction, type, reason = '') {
       'Explique ta demande en détail (tu peux joindre des captures d\'écran ou des fichiers). Notre équipe te répondra ici **au plus vite**.',
       '',
       '🔒 Seul le **staff** peut fermer, mettre en attente, réouvrir ou supprimer ce ticket.',
-      '📄 À la fermeture, tu recevras la **transcription** en message privé.' + dmWarning,
+      '📄 À la **suppression** du ticket, tu recevras la **transcription** en message privé.' + dmWarning,
     ].filter(Boolean).join('\n'));
   const site = store.settings.get('public_url');
   if (site) welcome.setFooter({ text: `BotDev · ${site}` });
@@ -566,16 +566,15 @@ async function sendTranscriptDm(interaction, guild, channelName, { text, url, op
 }
 
 // ---------- Fermer / Réouvrir / En attente / Supprimer (staff) ----------
+// 🔒 Fermer = verrouiller le ticket (le staff peut Réouvrir).
+// 📄 La transcription n'est envoyée qu'à la SUPPRESSION (le point final).
 async function handleTicketClose(botId, interaction) {
   if (!isStaff(botId, interaction)) return staffDeny(interaction);
   const channel = interaction.channel;
   const guild = interaction.guild;
-  const t = await buildTranscript(botId, interaction, [
-    `🔒 Ticket fermé par ${interaction.user.tag} le ${new Date().toISOString().slice(0, 16).replace('T', ' ')} (UTC)`,
-  ]);
-  const dmOk = await sendTranscriptDm(interaction, guild, channel.name, t);
-  if (t.openerId) {
-    await channel.permissionOverwrites.edit(t.openerId, { ViewChannel: false, SendMessages: false }).catch(() => {});
+  const { openerId } = ticketMetaFor(channel);
+  if (openerId) {
+    await channel.permissionOverwrites.edit(openerId, { ViewChannel: false, SendMessages: false }).catch(() => {});
   }
   store.closedTickets.add(channel.id, botId, guild.id);
   await logging.log(botId, guild, {
@@ -583,13 +582,11 @@ async function handleTicketClose(botId, interaction) {
     fields: [
       { name: '📨 Salon', value: `<#${channel.id}>`, inline: true },
       { name: '🛡️ Par', value: `${interaction.user.tag}`, inline: true },
-      { name: '📄 Transcription', value: dmOk ? 'envoyée en MP ✅' : 'MP impossible ⚠️', inline: true },
+      { name: '📄 Transcription', value: 'envoyée à la suppression', inline: true },
     ],
   });
   await interaction.reply({
-    content: '🔒 Ticket fermé.' + (dmOk
-      ? ' 📄 Transcription envoyée en MP au créateur.'
-      : ' ⚠️ Le MP n\'a pas pu être envoyé (messages privés fermés ou compte introuvable).'),
+    content: '🔒 Ticket fermé. 📄 La **transcription** sera envoyée en MP au créateur au moment de la **suppression** (`/ticket delete` ou bouton 🗑).',
     ephemeral: true,
   });
 }
@@ -634,6 +631,11 @@ async function submitDeleteReason(botId, interaction) {
     return interaction.reply({ content: '⏰ La suppression a expiré, réessaie.', ephemeral: true });
   }
   if (!isStaff(botId, interaction)) return staffDeny(interaction);
+  const chName = interaction.channel ? interaction.channel.name || '' : '';
+  const chTopic = interaction.channel && interaction.channel.topic ? interaction.channel.topic : '';
+  if (!chName.startsWith('ticket-') && !chTopic.includes('Ticket de')) {
+    return interaction.reply({ content: '❌ Cette commande doit être utilisée dans un salon de ticket.', ephemeral: true });
+  }
   const reason = (interaction.fields.getTextInputValue('value') || '').trim() || 'aucune raison';
   const channel = interaction.channel;
   const guild = interaction.guild;
@@ -1043,4 +1045,5 @@ module.exports = {
   dispatchPanels, sendTicketPanel, sendRoleMenu, findChannel, findChannelInGuild,
   resolveRole, parseTypes, isStaff, staffForTicket, openTicket,
   startTypesWizard, handleTypesWizardInteraction,
+  handleTicketDeleteAsk, ticketMetaFor,
 };

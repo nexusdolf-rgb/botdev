@@ -178,17 +178,25 @@ const { buildSlashPayloads } = require('../server/discord/premade');
   assert(deleted === true, 'salon supprimé');
   console.log('🔟  Raison soumise → MP + transcription (avec raison) + salon supprimé ✅');
 
-  // ============ 11. Statut honnête : DM impossible → avertissement ============
+  // ============ 11. Statut honnête : DM impossible à la SUPPRESSION → avertissement ============
   let dmFailedReply = null;
+  let delModalNoDm = null;
   const noDmStaff = {
-    ...staffBtn('bd-tmenu:1:close', ticketChannel),
+    ...staffBtn('bd-tmenu:1:delete', ticketChannel),
     reply: async (p) => { dmFailedReply = p; },
+    update: async (p) => { dmFailedReply = p; },
+    showModal: async (m) => { delModalNoDm = m; },
     client: { users: { fetch: async () => { throw new Error('no'); } } },
   };
   noDmStaff.guild = { ...guild, members: { fetch: async () => { throw new Error('no'); } } };
   await panels.dispatchPanels(1, noDmStaff);
+  assert(delModalNoDm && delModalNoDm.data.title.includes('Supprimer'), 'modale raison attendue');
+  await panels.dispatchPanels(1, {
+    ...noDmStaff, customId: 'bd-tdel:1', isButton: () => false, isModalSubmit: () => true,
+    fields: { getTextInputValue: () => 'doublon' },
+  });
   assert(dmFailedReply.content.includes('⚠️'), 'avertissement visible : ' + dmFailedReply.content);
-  console.log('1️⃣1️⃣  DM impossible → avertissement visible ✅ («', dmFailedReply.content, '»)');
+  console.log('1️⃣1️⃣  DM impossible (suppression) → avertissement visible ✅ («', dmFailedReply.content, '»)');
 
   // ============ 12. Payload : types setup ============
   const payloads = buildSlashPayloads(1);
