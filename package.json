@@ -1,0 +1,19 @@
+{
+  "name": "botdev",
+  "version": "1.0.0",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "node test/smoke.js"
+  },
+  "author": "BotDev",
+  "license": "ISC",
+  "description": "BotDev — Plateforme de création de bots Discord sans code",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^12.11.1",
+    "cookie-parser": "^1.4.7",
+    "discord.js": "^14.27.0",
+    "express": "^5.2.1"
+  }
+}

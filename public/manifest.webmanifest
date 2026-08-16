@@ -1,0 +1,10 @@
+{
+  "name": "BotDev",
+  "short_name": "BotDev",
+  "description": "Créez vos bots Discord sans écrire une ligne de code",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0d14",
+  "theme_color": "#5865F2",
+  "lang": "fr"
+}
