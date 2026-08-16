@@ -58,6 +58,14 @@ function resolveRole(guild, nameOrId) {
   return guild.roles.cache.find(r => r.name.toLowerCase() === q.toLowerCase()) || null;
 }
 
+function cacheChannels(guild) {
+  if (guild && guild.channels && guild.channels.cache) {
+    if (typeof guild.channels.cache.values === 'function') return [...guild.channels.cache.values()];
+    if (Array.isArray(guild.channels.cache)) return guild.channels.cache;
+  }
+  return [];
+}
+
 function slugify(s) {
   return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 16) || 'ticket';
@@ -285,10 +293,31 @@ async function openTicket(botId, interaction, type, reason = '') {
   const uname = slugify(member.user.username);
   const baseName = `${prefix}-${uname}`.slice(0, 32);
 
+  // 🔄 Réinitialisation automatique : purge les entrées du registre dont le
+  // salon n'existe plus, puis supprime les anciens salons fermés de ce membre
+  // → son nouveau ticket reprend le nom d'origine.
+  const allChannels = cacheChannels(guild);
+  store.closedTickets.pruneGuild(guild.id, allChannels.map((c) => c && c.id));
+
+  const memberPrefix = `${prefix}-${uname}`;
+  const staleChannels = allChannels.filter((c) => {
+    if (!c || !c.name || !c.name.startsWith(memberPrefix)) return false;
+    if (store.closedTickets.isClosed(c.id)) return true;
+    try {
+      const perms = c.permissionsFor ? c.permissionsFor(member.id) : null;
+      return perms ? !perms.has(PermissionFlagsBits.ViewChannel) : false;
+    } catch { return false; }
+  });
+  for (const stale of staleChannels) {
+    store.closedTickets.remove(stale.id);
+    try { await stale.delete(); } catch {}
+  }
+
   // Un ticket n'est « ouvert » que si le membre peut encore le VOIR.
-  // Un ticket fermé (verrouillé) ne bloque donc plus l'ouverture d'un nouveau.
+  // Les salons fermés par le bot (registre) sont ignorés.
   const existingOpen = guild.channels.cache.find((c) => {
     if (!c || !c.name || !c.name.endsWith(`-${uname}`)) return false;
+    if (store.closedTickets.isClosed(c.id)) return false;
     try {
       const perms = c.permissionsFor ? c.permissionsFor(member.id) : null;
       return perms ? perms.has(PermissionFlagsBits.ViewChannel) : true;
@@ -301,7 +330,7 @@ async function openTicket(botId, interaction, type, reason = '') {
     return interaction.reply({ content: `Tu as déjà un ticket ouvert : ${mention}`, ephemeral: true });
   }
 
-  // Si un ancien salon fermé porte déjà ce nom, on ajoute un suffixe (-2, -3…)
+  // Suffixe de sécurité (-2, -3…) si un salon porte encore le nom
   let channelName = baseName;
   let counter = 1;
   while (guild.channels.cache.find((c) => c && c.name === channelName)) {
@@ -515,6 +544,7 @@ async function handleTicketClose(botId, interaction) {
   if (t.openerId) {
     await channel.permissionOverwrites.edit(t.openerId, { ViewChannel: false, SendMessages: false }).catch(() => {});
   }
+  store.closedTickets.add(channel.id, botId, guild.id);
   await interaction.reply({
     content: '🔒 Ticket fermé.' + (dmOk
       ? ' 📄 Transcription envoyée en MP au créateur.'
@@ -526,6 +556,7 @@ async function handleTicketClose(botId, interaction) {
 async function handleTicketReopen(botId, interaction) {
   if (!isStaff(botId, interaction)) return staffDeny(interaction);
   const channel = interaction.channel;
+  store.closedTickets.remove(channel.id);
   const { openerId } = ticketMetaFor(channel);
   if (openerId) {
     await channel.permissionOverwrites.edit(openerId, { ViewChannel: true, SendMessages: true }).catch(() => {});
@@ -565,6 +596,7 @@ async function submitDeleteReason(botId, interaction) {
   const reason = (interaction.fields.getTextInputValue('value') || '').trim() || 'aucune raison';
   const channel = interaction.channel;
   const guild = interaction.guild;
+  store.closedTickets.add(channel.id, botId, guild.id);
   const t = await buildTranscript(botId, interaction, [
     `🗑 Ticket supprimé par ${interaction.user.tag} — raison : ${reason}`,
   ]);
@@ -580,6 +612,7 @@ async function handleTicketDeleteConfirm(botId, interaction) {
   if (!isStaff(botId, interaction)) return staffDeny(interaction);
   const channel = interaction.channel;
   const guild = interaction.guild;
+  store.closedTickets.add(channel.id, botId, guild.id);
   const t = await buildTranscript(botId, interaction, [
     `🗑 Ticket supprimé par ${interaction.user.tag} — raison : aucune raison fournie`,
   ]);

@@ -155,6 +155,13 @@ CREATE TABLE IF NOT EXISTS settings (
   value TEXT DEFAULT ''
 );
 
+CREATE TABLE IF NOT EXISTS closed_tickets (
+  channel_id TEXT PRIMARY KEY,
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  closed_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS transcripts (
   token TEXT PRIMARY KEY,
   bot_id INTEGER NOT NULL,
@@ -430,6 +437,22 @@ const settings = {
   set: (key, value) => db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, String(value)),
 };
 
+// ---------------------- Registre des tickets fermés ----------------------
+// Source de vérité : un salon listé ici est fermé, même si le cache Discord
+// n'est pas encore à jour → la vérification « déjà ouvert » ne se trompe plus.
+const closedTickets = {
+  add: (channelId, botId, guildId) => db.prepare("INSERT OR REPLACE INTO closed_tickets (channel_id, bot_id, guild_id, closed_at) VALUES (?, ?, ?, datetime('now'))").run(String(channelId), botId, guildId),
+  isClosed: (channelId) => !!db.prepare('SELECT 1 FROM closed_tickets WHERE channel_id = ?').get(String(channelId)),
+  remove: (channelId) => db.prepare('DELETE FROM closed_tickets WHERE channel_id = ?').run(String(channelId)),
+  // Nettoie les entrées dont le salon n'existe plus sur le serveur
+  pruneGuild: (guildId, existingIds) => {
+    const rows = db.prepare('SELECT channel_id FROM closed_tickets WHERE guild_id = ?').all(guildId);
+    const keep = new Set((existingIds || []).map(String));
+    const del = db.prepare('DELETE FROM closed_tickets WHERE channel_id = ?');
+    for (const r of rows) if (!keep.has(String(r.channel_id))) del.run(r.channel_id);
+  },
+};
+
 // ---------------------- Transcriptions de tickets ----------------------
 const transcripts = {
   add: (t) => db.prepare('INSERT INTO transcripts (token, bot_id, guild_id, channel_name, opener_id, type_label, server_name, messages) VALUES (@token, @bot_id, @guild_id, @channel_name, @opener_id, @type_label, @server_name, @messages)')
@@ -446,4 +469,4 @@ const transcripts = {
   get: (token) => db.prepare('SELECT * FROM transcripts WHERE token = ?').get(String(token)) || null,
 };
 
-module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts };
+module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets };

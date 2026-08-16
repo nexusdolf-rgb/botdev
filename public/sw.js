@@ -1,5 +1,5 @@
 // BotDev - Service Worker (mode app installable + chargement hors ligne)
-const CACHE = 'botdev-v14';
+const CACHE = 'botdev-v15';
 const ASSETS = [
   '/',
   '/css/style.css',
