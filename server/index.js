@@ -25,7 +25,7 @@ async function main() {
   const botManager = require('./discord/botManager');
 
   const app = express();
-  app.use(express.json({ limit: '2mb' }));
+  app.use(express.json({ limit: '15mb' }));
   app.use(cookieParser());
 
   // Capture automatique de l'URL publique (première visite) :

@@ -246,7 +246,14 @@ async function sendTicketPanel(botId, guildId, client, channel) {
         .setStyle(ButtonStyle.Primary)
     ));
   }
-  await channel.send({ embeds: [buildTicketPanelEmbed(cfg, client, types)], components: rows });
+  const identity = require('./identity');
+  const guild = client && client.guilds ? client.guilds.cache.get(guildId) : null;
+  const payload = { embeds: [buildTicketPanelEmbed(cfg, client, types)], components: rows };
+  if (guild) {
+    await identity.sendAsProfile(client, botId, guild, channel, payload);
+  } else {
+    await channel.send(payload);
+  }
 }
 
 // ---------- Métadonnées du ticket (topic + mémoire) ----------
@@ -426,7 +433,8 @@ async function openTicket(botId, interaction, type, reason = '') {
     ].filter(Boolean).join('\n'));
   const site = store.settings.get('public_url');
   if (site) welcome.setFooter({ text: `BotDev · ${site}` });
-  await channel.send({
+  const identity = require('./identity');
+  await identity.sendAsProfile(interaction.client, botId, guild, channel, {
     content: `${member}${support ? ' · ' + support.toString() : ''}`,
     embeds: [welcome],
     components: [row1, row2],

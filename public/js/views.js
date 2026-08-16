@@ -695,11 +695,30 @@ BotViews.renderServerConfig = async (content, bot, guildId) => {
       </div>
     </div>
   `);
-  const readFile = (input) => new Promise((resolve) => {
+  // 📱 Lit la photo de la galerie et la REDIMENSIONNE (max 512px avatar / 1024px bannière)
+  // → envoi léger (jamais rejeté par le serveur) et rapide même sur mobile.
+  const readFileResized = (input, maxSide) => new Promise((resolve) => {
     const f = input.files && input.files[0];
     if (!f) return resolve(null);
     const r = new FileReader();
-    r.onload = () => resolve(r.result);
+    r.onload = () => {
+      try {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            let { width, height } = img;
+            if (width > height && width > maxSide) { height = Math.round(height * maxSide / width); width = maxSide; }
+            else if (height >= width && height > maxSide) { width = Math.round(width * maxSide / height); height = maxSide; }
+            const canvas = document.createElement('canvas');
+            canvas.width = width; canvas.height = height;
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', 0.85));
+          } catch (e) { resolve(r.result); }
+        };
+        img.onerror = () => resolve(r.result);
+        img.src = r.result;
+      } catch (e) { resolve(r.result); }
+    };
     r.readAsDataURL(f);
   });
   // 📱 Boutons « Choisir dans la galerie » : ouvrent le sélecteur de photos du téléphone
@@ -723,8 +742,8 @@ BotViews.renderServerConfig = async (content, bot, guildId) => {
         bio: iCard.querySelector('#p-bio').value,
         color: iCard.querySelector('#p-color').value,
       };
-      const av = await readFile(iCard.querySelector('#p-avatar-file'));
-      const bn = await readFile(iCard.querySelector('#p-banner-file'));
+      const av = await readFileResized(iCard.querySelector('#p-avatar-file'), 512);
+      const bn = await readFileResized(iCard.querySelector('#p-banner-file'), 1024);
       if (av) body.avatar_b64 = av;
       if (bn) body.banner_b64 = bn;
       await App.api(`/bots/${bot.id}/guilds/${guildId}/profile`, { method: 'PUT', body });

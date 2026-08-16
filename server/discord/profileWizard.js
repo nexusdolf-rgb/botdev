@@ -173,10 +173,22 @@ async function advance(state) {
   state.startedAt = Date.now();
   state.step += 1;
   if (state.step >= STEPS.length) return finalize(state);
-  try { await state.msg.edit(renderPayload(state)); } catch {}
+  await safeEdit(state, renderPayload(state));
   const step = STEPS[state.step];
   if (step.key === 'avatar' || step.key === 'banner') startCollector(state);
   return null;
+}
+
+// Met à jour le message de l'assistant ; si l'édition échoue (message supprimé…),
+// on renvoie un nouveau message pour ne jamais laisser l'utilisateur bloqué.
+async function safeEdit(state, payload) {
+  try { await state.msg.edit(payload); return; } catch {}
+  try {
+    if (state.channel && typeof state.channel.send === 'function') {
+      const sent = await state.channel.send(payload);
+      state.msg = sent;
+    }
+  } catch {}
 }
 
 async function finalize(state) {
@@ -194,7 +206,7 @@ async function finalize(state) {
   embed.setTitle('✅ Identité mise à jour !')
     .setDescription('Le bot utilise maintenant cette identité sur **ce serveur uniquement** (messages, bienvenue, niveaux, tickets…).\nLe bot global n\'a pas été modifié.');
   const payload = { embeds: [embed], components: [] };
-  try { await state.msg.edit(payload); } catch {}
+  await safeEdit(state, payload);
   wizards.delete(wKey(state.botId, state.guildId, state.userId));
   return payload;
 }
@@ -256,7 +268,7 @@ async function handleProfileWizardInteraction(botId, interaction) {
 
     const showState = async (okMsg) => {
       if (state.msg) {
-        try { await state.msg.edit(renderPayload(state)); } catch {}
+        await safeEdit(state, renderPayload(state));
         return interaction.reply({ content: okMsg, ephemeral: true });
       }
       // Première création du message (après la modale du nom)
@@ -350,7 +362,7 @@ async function applyAttachmentToWizard(botId, guildId, userId, kind, url, conten
     stopCollector(state);
     await advance(state);
   } else {
-    try { await state.msg.edit(renderPayload(state)); } catch {}
+    await safeEdit(state, renderPayload(state));
   }
   return true;
 }

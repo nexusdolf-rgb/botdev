@@ -60,30 +60,34 @@ async function handleProfileCommand(botId, interaction) {
     if (sub === 'avatar' || sub === 'banner') {
       const file = interaction.options.getAttachment('image');
       if (!file) return interaction.reply({ content: '❌ Joins une image : touche l\'option « image », ta galerie s\'ouvre automatiquement.', ephemeral: true });
+      if (file.size > 3 * 1024 * 1024) return interaction.reply({ content: '❌ Image trop lourde (3 Mo max).', ephemeral: true });
+      // 📥 On répond immédiatement « en cours » : le téléchargement peut prendre
+      // quelques secondes, sinon Discord affiche « l\'application ne répond plus ».
+      try { await interaction.deferReply({ ephemeral: true }); } catch {}
       // Un assistant est en cours ? → on applique la photo directement à l'étape
       try {
         const { applyAttachmentToWizard } = require('./profileWizard');
         const applied = await applyAttachmentToWizard(botId, guild.id, interaction.user.id, sub, file.url, file.contentType || 'image/png', file.size || 0);
         if (applied) {
-          return interaction.reply({ content: `✅ Photo appliquée à l\'assistant ! Continue avec « Suivant ➡️ » ou envoie la suite.`, ephemeral: true });
+          return interaction.editReply({ content: `✅ Photo appliquée à l\'assistant ! Continue avec « Suivant ➡️ » ou envoie la suite.` });
         }
       } catch (e) {
-        return interaction.reply({ content: `⚠️ ${e.message.slice(0, 120)}`, ephemeral: true });
+        return interaction.editReply({ content: `⚠️ ${e.message.slice(0, 120)}` });
       }
-      if (file.size > 3 * 1024 * 1024) return interaction.reply({ content: '❌ Image trop lourde (3 Mo max).', ephemeral: true });
       try {
         const res = await fetch(file.url);
+        if (!res.ok) return interaction.editReply({ content: `⚠️ Impossible de récupérer l\'image (${res.status}).` });
         const buf = Buffer.from(await res.arrayBuffer());
+        if (!buf.length || buf.length > 3 * 1024 * 1024) return interaction.editReply({ content: '❌ Image trop lourde (3 Mo max).' });
         const key = await assets.put(buf, file.contentType || 'image/png');
         if (sub === 'avatar') p.avatar_url = `/assets/${key}`;
         else p.banner_url = `/assets/${key}`;
         store.botProfiles.set(botId, guild.id, p);
-        return interaction.reply({
+        return interaction.editReply({
           content: `✅ ${sub === 'avatar' ? 'Avatar' : 'Bannière'} enregistré ! Le bot utilisera cette identité sur ce serveur.\n\nVérifie avec \`/botprofile view\`.`,
-          ephemeral: true,
         });
       } catch (e) {
-        return interaction.reply({ content: `⚠️ Impossible de récupérer l'image : ${e.message.slice(0, 120)}`, ephemeral: true });
+        return interaction.editReply({ content: `⚠️ Impossible de récupérer l\'image : ${e.message.slice(0, 120)}` });
       }
     }
 

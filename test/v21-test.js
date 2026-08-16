@@ -48,6 +48,8 @@ const imgServer = http.createServer((req, res) => {
     channel: fakeChannel, commandName: 'botprofile',
     options: { getSubcommand: () => sub, getAttachment: () => attachment },
     reply: async (p) => { lastReply = p; },
+    deferReply: async () => {},
+    editReply: async (p) => { lastReply = p; },
   });
 
   // ---------- 1. Démarrage de l'assistant ----------
