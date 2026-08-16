@@ -13,10 +13,10 @@ const EVENT_DEFS = {
     emoji: '👋',
     description: 'Envoie un message quand un membre rejoint le serveur.',
     config: [
-      { key: 'channel', label: 'Salon (mention, ex: #bienvenue)', type: 'text', placeholder: '#bienvenue' },
+      { key: 'channel', label: 'Salon d\'accueil', type: 'channel', placeholder: '#bienvenue' },
       { key: 'message', label: 'Message ({user}, {server}, {count}…)', type: 'multiline', default: 'Bienvenue {user} sur {server} ! Tu es le membre n°{count} 🎉' },
       { key: 'embed', label: 'Envoyer en embed', type: 'checkbox', default: false },
-      { key: 'color', label: 'Couleur de l\'embed', type: 'text', default: '#57F287' },
+      { key: 'color', label: 'Couleur de l\'embed', type: 'color', default: '#57F287' },
       { key: 'image', label: 'Image de l\'embed (URL, optionnel)', type: 'text', placeholder: 'https://…' },
     ],
   },
@@ -25,10 +25,10 @@ const EVENT_DEFS = {
     emoji: '👋',
     description: 'Envoie un message quand un membre quitte le serveur.',
     config: [
-      { key: 'channel', label: 'Salon (mention)', type: 'text', placeholder: '#au-revoir' },
+      { key: 'channel', label: 'Salon des départs', type: 'channel', placeholder: '#au-revoir' },
       { key: 'message', label: 'Message', type: 'multiline', default: '{user} a quitté {server} 😢' },
       { key: 'embed', label: 'Envoyer en embed', type: 'checkbox', default: false },
-      { key: 'color', label: 'Couleur de l\'embed', type: 'text', default: '#ED4245' },
+      { key: 'color', label: 'Couleur de l\'embed', type: 'color', default: '#ED4245' },
       { key: 'image', label: 'Image de l\'embed (URL, optionnel)', type: 'text', placeholder: 'https://…' },
     ],
   },
@@ -37,7 +37,7 @@ const EVENT_DEFS = {
     emoji: '🏷️',
     description: 'Donne automatiquement un rôle aux nouveaux membres.',
     config: [
-      { key: 'role', label: 'Nom du rôle', type: 'text', placeholder: 'Membre' },
+      { key: 'role', label: 'Rôle à donner automatiquement', type: 'role', placeholder: 'Membre' },
     ],
   },
 };

@@ -266,12 +266,13 @@ async function sendTicketPanel(botId, guildId, client, channel) {
     }
     rows.push(new ActionRowBuilder().addComponents(select));
   } else {
-    // Aucun type : simple bouton
+    // Aucun type : simple bouton (style configurable)
+    const style = [ButtonStyle.Primary, ButtonStyle.Secondary, ButtonStyle.Success, ButtonStyle.Danger][Number(cfg.button_style) - 1] || ButtonStyle.Primary;
     rows.push(new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`bd-ticket:${botId}`)
         .setLabel(cfg.button_label || '🎫 Ouvrir un ticket')
-        .setStyle(ButtonStyle.Primary)
+        .setStyle(style)
     ));
   }
   const identity = require('./identity');
@@ -510,6 +511,12 @@ function reasonModal(botId, customId, title, label, placeholder) {
 }
 
 async function askReason(botId, interaction, type) {
+  const cfg = store.tickets.get(botId, interaction.guild.id) || {};
+  // Questionnaire désactivé → ouverture directe sans raison
+  if (cfg.require_reason === 0 || cfg.require_reason === false) {
+    await openTicket(botId, interaction, type, '');
+    return;
+  }
   pendingReasons.set(interaction.user.id, { botId, guildId: interaction.guild.id, type, ts: Date.now() });
   await interaction.showModal(reasonModal(
     botId,

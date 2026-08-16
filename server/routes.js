@@ -470,6 +470,23 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
   const entry = botManager.clients.get(bot.id);
   const dGuild = entry && entry.client.isReady() ? entry.client.guilds.cache.get(guildId) : null;
   if (!dGuild) return res.status(400).json({ error: 'Le bot n\'est pas sur ce serveur (ou il est hors ligne).' });
+  // Salons et rôles du serveur (lecture directe depuis le bot en ligne)
+  const channels = [];
+  const roles = [];
+  if (dGuild && dGuild.channels && dGuild.channels.cache) {
+    for (const ch of dGuild.channels.cache.values()) {
+      if (ch && ch.type === 0 && ch.name) channels.push({ id: ch.id, name: ch.name });
+      if (ch && ch.type === 4 && ch.name) channels.push({ id: ch.id, name: ch.name, category: true });
+    }
+  }
+  if (dGuild && dGuild.roles && dGuild.roles.cache) {
+    for (const r of dGuild.roles.cache.values()) {
+      if (r && r.name && r.name !== '@everyone') roles.push({ id: r.id, name: r.name });
+    }
+  }
+  channels.sort((a, b) => (b.category ? 1 : 0) - (a.category ? 1 : 0) || a.name.localeCompare(b.name));
+  roles.sort((a, b) => a.name.localeCompare(b.name));
+
   const cfg = store.tickets.get(bot.id, guildId);
   const parsedTypes = (() => {
     try {
@@ -488,8 +505,10 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
   };
   res.json({
     guild: { id: guildId, name: dGuild.name, icon: dGuild.iconURL({ size: 128 }) || '', members: dGuild.memberCount || 0 },
+    channels,
+    roles,
     settings: { ...DEFAULT_GS, ...(store.guildSettings.get(bot.id, guildId) || {}) },
-    tickets: { name: '', channel: '', message: '', button_label: '🎫 Ouvrir un ticket', support_role: '', category: 'Tickets', types: [], ...(cfg || {}), types: parsedTypes },
+    tickets: { name: '', channel: '', message: '', button_label: '🎫 Ouvrir un ticket', button_style: '1', require_reason: 1, support_role: '', category: 'Tickets', types: [], ...(cfg || {}), types: parsedTypes },
     events: { defs: EVENT_DEFS, state: eventsState(bot.id, guildId) },
     role_menus: store.roleMenus.all(bot.id, guildId),
     xp_roles: store.xpRoles.all(bot.id, guildId),
@@ -739,7 +758,7 @@ router.get('/bots/:id/panels', requireAuth, async (req, res) => {
 router.put('/bots/:id/tickets', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
   if (!bot) return;
-  const { guild_id, name, channel, message, button_label, support_role, category, types } = req.body || {};
+  const { guild_id, name, channel, message, button_label, button_style, require_reason, support_role, category, types } = req.body || {};
   if (!guild_id) return res.status(400).json({ error: 'guild_id requis' });
   if (!(await userCanManageGuild(req, guild_id))) return res.status(403).json({ error: 'Permission refusée.' });
   const current = store.tickets.get(bot.id, guild_id) || {};
@@ -748,6 +767,8 @@ router.put('/bots/:id/tickets', requireAuth, async (req, res) => {
     channel: String(channel !== undefined ? channel : (current.channel || '')).slice(0, 100),
     message: String(message !== undefined ? message : (current.message || '')).slice(0, 1900),
     button_label: String(button_label !== undefined ? button_label : (current.button_label || '🎫 Ouvrir un ticket')).slice(0, 80),
+    button_style: String(['1','2','3','4'].includes(String(button_style)) ? button_style : (current.button_style || '1')),
+    require_reason: (require_reason === 0 || require_reason === false) ? 0 : (require_reason === undefined ? (current.require_reason === 0 ? 0 : 1) : 1),
     support_role: String(support_role !== undefined ? support_role : (current.support_role || '')).slice(0, 100),
     category: String(category !== undefined ? category : (current.category || 'Tickets')).slice(0, 100),
   };

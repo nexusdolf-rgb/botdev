@@ -283,36 +283,109 @@ Dashboard.renderers.tickets = async (content, data) => {
   const typesData = (t.types || []).map((x) => ({ label: x.label, emoji: x.emoji || '', category: x.category || '', staff_roles: (x.staff_roles && x.staff_roles.length) ? [...x.staff_roles] : [] }));
   const root = Dashboard.header(content, '🎫', 'Système de tickets', 'Bouton ou menu déroulant → salon privé automatique. Le tout est aussi configurable sur Discord avec /ticket.');
 
+  const textChannels = (data.channels || []).filter((ch) => !ch.category);
+  const categories = (data.channels || []).filter((ch) => ch.category);
+  const rolesList = data.roles || [];
+  const curStyle = String(t.button_style || '1');
+  const reqReason = !(t.require_reason === 0 || t.require_reason === false);
+  const channelName = String(t.channel || '').replace(/^#/, '');
+  const channelFound = !!channelName && textChannels.some((ch) => ch.name === channelName);
+
   const c = Dashboard.card(root, 'Configuration', '');
-  c.querySelector('.desc').outerHTML = `<div class="desc">💡 Sur Discord : <b>/ticket setup</b> (assistant) et <b>/ticket types setup</b> (types + rôles staff).</div>`;
+  c.querySelector('.desc').outerHTML = `<div class="desc">💡 Sur Discord : <b>/ticket setup</b> (assistant) et <b>/ticket types setup</b> (types + rôles staff). Tout est synchronisé avec ce formulaire.</div>`;
+
+  // 📊 État actuel (data-status pour le retrouver après innerHTML +=)
+  c.appendChild(App.el(`<div data-status style="margin-bottom:12px"></div>`));
+
   c.innerHTML += `
-    <label class="dash-label">Salon du panneau</label>
-    <input class="dash-input" id="t-channel" value="${App.escapeHtml(t.channel || '')}" placeholder="#support" />
+    <label class="dash-label">Salon du panneau (sélecteur)</label>
+    <select class="dash-select" id="t-channel">
+      <option value="">— Choisir un salon —</option>
+      ${textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${String(t.channel || '') === '#' + ch.name ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`).join('')}
+    </select>
+    <input class="dash-input" id="t-channel-custom" value="${App.escapeHtml(t.channel || '')}" placeholder="…ou écris le salon (#support)" style="margin-top:6px" />
+
     <label class="dash-label">Texte du bouton</label>
-    <input class="dash-input" id="t-label" value="${App.escapeHtml(t.button_label || '')}" />
-    <label class="dash-label">Rôle staff global (si un type n\'a pas ses propres rôles)</label>
-    <input class="dash-input" id="t-role" value="${App.escapeHtml(t.support_role || '')}" placeholder="Staff" />
-    <label class="dash-label">Catégorie par défaut</label>
-    <input class="dash-input" id="t-cat" value="${App.escapeHtml(t.category || '')}" placeholder="Tickets" />
+    <input class="dash-input" id="t-label" value="${App.escapeHtml(t.button_label || '')}" placeholder="🎫 Ouvrir un ticket" />
+
+    <label class="dash-label">🎨 Couleur du bouton</label>
+    <select class="dash-select" id="t-style" style="max-width:240px">
+      <option value="1" ${curStyle === '1' ? 'selected' : ''}>🔵 Bleu (défaut)</option>
+      <option value="2" ${curStyle === '2' ? 'selected' : ''}>⚪ Gris</option>
+      <option value="3" ${curStyle === '3' ? 'selected' : ''}>🟢 Vert</option>
+      <option value="4" ${curStyle === '4' ? 'selected' : ''}>🔴 Rouge</option>
+    </select>
+
+    <label class="dash-label">📝 Questionnaire d'ouverture</label>
+    <label style="display:flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer">
+      <label class="switch"><input type="checkbox" id="t-reason" ${reqReason ? 'checked' : ''} /><span class="slider"></span></label>
+      <span style="color:var(--d-dim)">${reqReason ? '✅ Obligatoire : une raison est demandée avant l\'ouverture' : '❌ Désactivé : le ticket s\'ouvre directement'}</span>
+    </label>
+
+    <label class="dash-label">Rôle staff global (sélecteur)</label>
+    <select class="dash-select" id="t-role">
+      <option value="">— Choisir un rôle —</option>
+      ${rolesList.map((r) => `<option value="${App.escapeHtml(r.name)}" ${String(t.support_role || '') === r.name ? 'selected' : ''}>🛡️ ${App.escapeHtml(r.name)}</option>`).join('')}
+    </select>
+    <input class="dash-input" id="t-role-custom" value="${App.escapeHtml(t.support_role || '')}" placeholder="…ou écris le rôle (Staff)" style="margin-top:6px" />
+
+    <label class="dash-label">Catégorie par défaut (sélecteur)</label>
+    <select class="dash-select" id="t-cat">
+      <option value="">— Choisir une catégorie —</option>
+      ${categories.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${String(t.category || '') === ch.name ? 'selected' : ''}>📁 ${App.escapeHtml(ch.name)}</option>`).join('')}
+    </select>
+    <input class="dash-input" id="t-cat-custom" value="${App.escapeHtml(t.category || '')}" placeholder="…ou écris la catégorie (Tickets)" style="margin-top:6px" />
+
     <label class="dash-label">Message du panneau (vide = automatique)</label>
-    <textarea class="dash-input" id="t-msg" rows="2">${App.escapeHtml(t.message || '')}</textarea>
+    <textarea class="dash-input" id="t-msg" rows="3">${App.escapeHtml(t.message || '')}</textarea>
+
     <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
       <button class="dash-btn dash-btn-primary" id="t-save">💾 Enregistrer</button>
       <button class="dash-btn" id="t-send">📨 Envoyer le panneau</button>
     </div>`;
 
+  // Rafraîchit l'état affiché (re-query : innerHTML += a recréé le DOM)
+  const renderStatus = () => {
+    const zone = c.querySelector('[data-status]');
+    const chName = String(c.querySelector('#t-channel').value || c.querySelector('#t-channel-custom').value || '').replace(/^#/, '');
+    const found = !!chName && textChannels.some((ch) => ch.name === chName);
+    zone.innerHTML = found
+      ? `<span class="dash-badge ok">📨 Panneau configuré dans #${App.escapeHtml(chName)} — salon trouvé ✅</span>`
+      : (chName
+          ? `<span class="dash-badge warn">⚠️ Salon « #${App.escapeHtml(chName)} » non trouvé parmi les salons du bot (vérifie le nom)</span>`
+          : `<span class="dash-badge warn">⚠️ Aucun salon défini — choisis-en un puis « Envoyer le panneau »</span>`);
+  };
+  renderStatus();
+  c.querySelector('#t-channel').onchange = renderStatus;
+  c.querySelector('#t-channel-custom').addEventListener('input', renderStatus);
+  c.querySelector('#t-reason').onchange = () => {
+    const on = c.querySelector('#t-reason').checked;
+    c.querySelector('#t-reason').nextElementSibling.nextElementSibling.textContent = on
+      ? '✅ Obligatoire : une raison est demandée avant l\'ouverture'
+      : '❌ Désactivé : le ticket s\'ouvre directement';
+  };
+
+  const pick = (selectId, customId, fallback) => {
+    const s = c.querySelector(selectId).value.trim();
+    const cust = c.querySelector(customId).value.trim();
+    return s || cust || fallback;
+  };
+
   c.querySelector('#t-save').onclick = async () => {
     try {
       await App.api(`/bots/${bot.id}/tickets`, { method: 'PUT', body: {
         guild_id: guildId,
-        channel: c.querySelector('#t-channel').value.trim(),
+        channel: pick('#t-channel', '#t-channel-custom', ''),
         button_label: c.querySelector('#t-label').value.trim() || '🎫 Ouvrir un ticket',
-        support_role: c.querySelector('#t-role').value.trim(),
-        category: c.querySelector('#t-cat').value.trim() || 'Tickets',
+        button_style: c.querySelector('#t-style').value,
+        require_reason: c.querySelector('#t-reason').checked ? 1 : 0,
+        support_role: pick('#t-role', '#t-role-custom', ''),
+        category: pick('#t-cat', '#t-cat-custom', 'Tickets'),
         message: c.querySelector('#t-msg').value,
         types: typesData.filter((x) => x.label).map((x) => ({ label: x.label, emoji: x.emoji, category: x.category, staff_roles: x.staff_roles.filter(Boolean) })),
       }});
       App.toast('Tickets enregistrés !');
+      renderStatus();
     } catch (e) { App.toast(e.message, 'error'); }
   };
   c.querySelector('#t-send').onclick = async () => {
@@ -374,30 +447,82 @@ Dashboard.renderers.welcome = async (content, data) => {
   const root = Dashboard.header(content, '👋', 'Bienvenue & auto-rôles', 'Accueille les nouveaux membres et donne des rôles automatiquement.');
   const defs = data.events.defs;
   const state = data.events.state || {};
+  const textChannels = (data.channels || []).filter((c) => !c.category);
+  const categories = (data.channels || []).filter((c) => c.category);
+  const rolesList = data.roles || [];
+
   Object.entries(defs).forEach(([key, def]) => {
     const ev = state[key] || { enabled: false, config: {} };
     const c = Dashboard.card(root, `${def.emoji} ${def.label}`, def.description);
-    const toggleRow = App.el(`<label class="dash-label">Activer</label><label class="switch"><input type="checkbox" ${ev.enabled ? 'checked' : ''} /><span class="slider"></span></label>`);
+
+    // Interrupteur Activer
+    const toggleRow = App.el(`<div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0 4px"><label class="dash-label" style="margin:0">Activer</label><label class="switch"><input type="checkbox" ${ev.enabled ? 'checked' : ''} /><span class="slider"></span></label></div>`);
     c.appendChild(toggleRow);
     const toggle = toggleRow.querySelector('input');
     const cfgZone = App.el(`<div style="${ev.enabled ? '' : 'opacity:.45;pointer-events:none'}"></div>`);
+
     def.config.forEach((f) => {
       if (f.type === 'checkbox') {
         cfgZone.appendChild(App.el(`<label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:var(--d-dim);cursor:pointer"><input type="checkbox" data-k="${f.key}" ${ev.config[f.key] ? 'checked' : ''} /> ${f.label}</label>`));
-      } else {
-        cfgZone.appendChild(App.el(`<label class="dash-label">${f.label}</label>`));
-        cfgZone.appendChild(App.el(f.type === 'multiline'
-          ? `<textarea class="dash-input" rows="2" data-k="${f.key}">${App.escapeHtml(ev.config[f.key] ?? f.default ?? '')}</textarea>`
-          : `<input class="dash-input" data-k="${f.key}" value="${App.escapeHtml(ev.config[f.key] ?? '')}" placeholder="${f.placeholder || ''}" />`));
+        return;
       }
+      cfgZone.appendChild(App.el(`<label class="dash-label">${f.label}</label>`));
+
+      if (f.type === 'channel') {
+        // Sélecteur de salon (salons textuels + catégories)
+        const current = String(ev.config[f.key] || '');
+        const opts = ['<option value="">— Choisir un salon —</option>']
+          .concat(categories.map((ch) => `<option value="#${ch.name}" ${current === `#${ch.name}` ? 'selected' : ''}>📁 ${ch.name} (catégorie)</option>`))
+          .concat(textChannels.map((ch) => `<option value="#${ch.name}" ${current === `#${ch.name}` ? 'selected' : ''}>💬 #${ch.name}</option>`));
+        cfgZone.appendChild(App.el(`<select class="dash-select" data-k="${f.key}">${opts.join('')}</select>`));
+        if (!textChannels.length) {
+          cfgZone.appendChild(App.el(`<input class="dash-input" data-k="${f.key}" value="${App.escapeHtml(current)}" placeholder="${f.placeholder || '#salon'}" style="margin-top:6px" />`));
+        }
+        return;
+      }
+
+      if (f.type === 'role') {
+        const current = String(ev.config[f.key] || '');
+        const opts = ['<option value="">— Choisir un rôle —</option>']
+          .concat(rolesList.map((r) => `<option value="${App.escapeHtml(r.name)}" ${current === r.name ? 'selected' : ''}>🛡️ ${App.escapeHtml(r.name)}</option>`));
+        cfgZone.appendChild(App.el(`<select class="dash-select" data-k="${f.key}">${opts.join('')}</select>`));
+        if (!rolesList.length) {
+          cfgZone.appendChild(App.el(`<input class="dash-input" data-k="${f.key}" value="${App.escapeHtml(current)}" placeholder="${f.placeholder || 'Membre'}" style="margin-top:6px" />`));
+        }
+        return;
+      }
+
+      if (f.type === 'color') {
+        const current = String(ev.config[f.key] || f.default || '#5865F2');
+        cfgZone.appendChild(App.el(`<div style="display:flex;gap:10px;align-items:center"><input type="color" data-k="${f.key}" value="${App.escapeHtml(current)}" style="width:52px;height:40px;border:1px solid var(--d-border);border-radius:9px;background:var(--d-card2);padding:3px" /><input class="dash-input" data-k-hex="${f.key}" value="${App.escapeHtml(current)}" style="max-width:110px" /></div>`));
+        return;
+      }
+
+      if (f.type === 'multiline') {
+        cfgZone.appendChild(App.el(`<textarea class="dash-input" rows="3" data-k="${f.key}">${App.escapeHtml(ev.config[f.key] ?? f.default ?? '')}</textarea>`));
+        return;
+      }
+
+      cfgZone.appendChild(App.el(`<input class="dash-input" data-k="${f.key}" value="${App.escapeHtml(ev.config[f.key] ?? '')}" placeholder="${f.placeholder || ''}" />`));
     });
+
     const save = App.el(`<button class="dash-btn dash-btn-primary" style="margin-top:12px">💾 Enregistrer</button>`);
     cfgZone.appendChild(save);
     c.appendChild(cfgZone);
+
+    // Synchronise le champ hex avec le sélecteur de couleur
+    const colorPicker = cfgZone.querySelector('input[type=color]');
+    if (colorPicker) {
+      const hexInput = cfgZone.querySelector('[data-k-hex]');
+      colorPicker.addEventListener('input', () => { if (hexInput) hexInput.value = colorPicker.value; });
+      if (hexInput) hexInput.addEventListener('input', () => { if (/^#[0-9a-fA-F]{6}$/.test(hexInput.value)) colorPicker.value = hexInput.value; });
+    }
+
     toggle.onchange = () => {
       cfgZone.style.opacity = toggle.checked ? '' : '.45';
       cfgZone.style.pointerEvents = toggle.checked ? '' : 'none';
     };
+
     save.onclick = async () => {
       const config = {};
       cfgZone.querySelectorAll('[data-k]').forEach((inp) => { config[inp.dataset.k] = inp.type === 'checkbox' ? inp.checked : inp.value; });
@@ -417,7 +542,7 @@ Dashboard.renderers.levels = async (content, data) => {
   const root = Dashboard.header(content, '📈', 'Niveaux (XP)', 'Les membres gagnent de l\'XP en discutant, montent en niveau, et reçoivent des rôles en récompense.');
 
   const c = Dashboard.card(root, 'Gain d\'XP', '');
-  const toggleRow = App.el(`<label class="dash-label">Activer les niveaux</label><label class="switch"><input type="checkbox" ${s.xp_enabled ? 'checked' : ''} /><span class="slider"></span></label>`);
+  const toggleRow = App.el(`<div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0 4px"><label class="dash-label" style="margin:0">Activer les niveaux</label><label class="switch"><input type="checkbox" ${s.xp_enabled ? 'checked' : ''} /><span class="slider"></span></label></div>`);
   c.appendChild(toggleRow);
   c.innerHTML += `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:10px">

@@ -22,8 +22,10 @@ const DEFAULT_CFG = {
   channel: '',
   message: '🎫 Besoin d\'aide ? Clique sur le bouton pour ouvrir un ticket !',
   button_label: '🎫 Ouvrir un ticket',
+  button_style: '1',
   support_role: '',
   category: 'Tickets',
+  require_reason: 1,
 };
 
 function getCfg(botId, guildId) {
@@ -456,7 +458,8 @@ async function handleTicket(botId, sub, group, interaction, guild) {
           { name: '📨 Salon du panneau', value: cfg.channel || 'non défini (utilise `/ticket setup`)', inline: true },
           { name: '🗂️ Catégorie', value: cfg.category || 'aucune', inline: true },
           { name: '🛡️ Rôle staff global', value: cfg.support_role || 'aucun (les types peuvent avoir les leurs)', inline: true },
-          { name: '🔘 Bouton', value: cfg.button_label, inline: true },
+          { name: '🔘 Bouton', value: `${cfg.button_label} (${['bleu', 'gris', 'vert', 'rouge'][Number(cfg.button_style) - 1] || 'bleu'})`, inline: true },
+          { name: '📝 Questionnaire à l\'ouverture', value: (cfg.require_reason === 0 || cfg.require_reason === false) ? '❌ désactivé (ouverture directe)' : '✅ obligatoire (raison demandée)', inline: true },
           { name: '🗂️ Types de tickets', value: parseTypes(cfg).map((t) => {
             const roles = Array.isArray(t.staff_roles) ? t.staff_roles : (t.staff_role ? [t.staff_role] : []);
             return `${t.emoji || '🎫'} **${t.label}**${t.category ? ' (→ ' + t.category + ')' : ''}${roles.length ? `\n    🛡️ Staff : ${roles.join(', ')}` : ''}`;

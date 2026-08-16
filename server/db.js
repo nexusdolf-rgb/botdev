@@ -144,9 +144,11 @@ CREATE TABLE IF NOT EXISTS tickets (
   channel TEXT DEFAULT '',
   message TEXT DEFAULT '🎫 Besoin d''aide ? Clique sur le bouton pour ouvrir un ticket !',
   button_label TEXT DEFAULT '🎫 Ouvrir un ticket',
+  button_style TEXT DEFAULT '1',
   support_role TEXT DEFAULT '',
   category TEXT DEFAULT 'Tickets',
   types TEXT DEFAULT '[]',
+  require_reason INTEGER DEFAULT 1,
   PRIMARY KEY (bot_id, guild_id)
 );
 
@@ -253,6 +255,8 @@ CREATE TABLE IF NOT EXISTS transcripts (
 // Migrations légères (les colonnes ajoutées après coup)
 try { db.exec("ALTER TABLE tickets ADD COLUMN name TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE tickets ADD COLUMN types TEXT DEFAULT '[]'"); } catch (e) {}
+try { db.exec("ALTER TABLE tickets ADD COLUMN button_style TEXT DEFAULT '1'"); } catch (e) {}
+try { db.exec("ALTER TABLE tickets ADD COLUMN require_reason INTEGER DEFAULT 1"); } catch (e) {}
 try { db.exec("ALTER TABLE role_menus ADD COLUMN guild_id TEXT DEFAULT ''"); } catch (e) {}
 
 // Migrations : colonnes Discord (OAuth2)
@@ -497,16 +501,23 @@ const tickets = {
   get: (botId, guildId) => db.prepare('SELECT * FROM tickets WHERE bot_id = ? AND guild_id = ?').get(botId, guildId) || null,
   set: (botId, guildId, cfg) => {
     const types = typeof cfg.types === 'string' ? cfg.types : JSON.stringify(Array.isArray(cfg.types) ? cfg.types : []);
-    return db.prepare(`INSERT INTO tickets (bot_id, guild_id, name, channel, message, button_label, support_role, category, types)
-      VALUES (@bot_id, @guild_id, @name, @channel, @message, @button_label, @support_role, @category, @types)
+    return db.prepare(`INSERT INTO tickets (bot_id, guild_id, name, channel, message, button_label, button_style, support_role, category, types, require_reason)
+      VALUES (@bot_id, @guild_id, @name, @channel, @message, @button_label, @button_style, @support_role, @category, @types, @require_reason)
       ON CONFLICT(bot_id, guild_id) DO UPDATE SET
         name = excluded.name,
         channel = excluded.channel,
         message = excluded.message,
         button_label = excluded.button_label,
+        button_style = excluded.button_style,
         support_role = excluded.support_role,
         category = excluded.category,
-        types = excluded.types`).run({ bot_id: botId, guild_id: guildId, name: '', ...cfg, types });
+        types = excluded.types,
+        require_reason = excluded.require_reason`).run({
+          bot_id: botId, guild_id: guildId, name: '', ...cfg,
+          button_style: String(['1','2','3','4'].includes(String(cfg.button_style)) ? cfg.button_style : '1'),
+          require_reason: (cfg.require_reason === 0 || cfg.require_reason === false) ? 0 : 1,
+          types,
+        });
   },
 };
 
