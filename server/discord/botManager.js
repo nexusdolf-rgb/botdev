@@ -146,7 +146,23 @@ function attachListeners(botId, entry) {
       if (handled) return;
       const { runInteractionHandler } = require('./engine');
       await runInteractionHandler(botId, entry, i);
-    } catch (e) { console.error('[BotDev] interaction error:', e.message); }
+      // Filet de sécurité : si AUCUN gestionnaire n'a répondu (commande pas encore
+      // synchronisée, nom inconnu…), on répond quand même pour éviter le
+      // « L'application ne répond pas » de Discord.
+      if (i.isChatInputCommand() && !i.replied && !i.deferred) {
+        await i.reply({
+          content: '⏳ Cette commande n\'est pas encore prête sur ce serveur — la synchronisation se fait automatiquement (retente dans 5 à 10 minutes).',
+          ephemeral: true,
+        }).catch(() => {});
+      }
+    } catch (e) {
+      console.error('[BotDev] interaction error:', e.message);
+      try {
+        if (typeof i.isRepliable === 'function' && i.isRepliable() && !i.replied && !i.deferred) {
+          await i.reply({ content: '⚠️ Une erreur est survenue en traitant cette action — elle a été enregistrée, réessaie dans un instant.', ephemeral: true });
+        }
+      } catch {}
+    }
   });
 
   client.on('guildMemberAdd', (member) => {

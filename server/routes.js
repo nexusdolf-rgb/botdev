@@ -12,6 +12,16 @@ const { EVENT_DEFS, eventsState } = require('./discord/events');
 const router = express.Router();
 const COOKIE = 'botdev_session';
 
+// Emoji sûr (même règle que le bot) : évite de stocker des emojis invalides
+// qui feraient planter la construction des menus Discord.
+function safeEmojiWeb(s) {
+  const str = String(s || '').trim();
+  if (!str) return '';
+  if (/^<a?:[a-zA-Z0-9_]+:\d{15,21}>$/.test(str)) return str;
+  if (/^[\p{Extended_Pictographic}\u200D\uFE0F\u20E3\u{1F3FB}-\u{1F3FF}\u{1F1E6}-\u{1F1FF}]+$/u.test(str)) return str;
+  return '';
+}
+
 // ---------------------- Auth ----------------------
 async function requireAuth(req, res, next) {
   const token = req.cookies[COOKIE];
@@ -795,7 +805,7 @@ router.put('/bots/:id/tickets', requireAuth, async (req, res) => {
           : (t.staff_role ? [String(t.staff_role).trim()] : []);
         return {
           label: String(t.label || '').slice(0, 100),
-          emoji: String(t.emoji || '').slice(0, 10),
+          emoji: safeEmojiWeb(t.emoji).slice(0, 100),
           category: String(t.category || '').slice(0, 100),
           staff_roles: roles,
         };
@@ -848,7 +858,7 @@ router.post('/bots/:id/role-menus', requireAuth, async (req, res) => {
     mode: mode === 'buttons' ? 'buttons' : 'menu',
     options: JSON.stringify(options.map(o => ({
       label: String(o.label || 'Rôle').slice(0, 100),
-      emoji: String(o.emoji || '').slice(0, 10),
+      emoji: safeEmojiWeb(o.emoji).slice(0, 100),
       role: String(o.role || '').slice(0, 100),
     })).slice(0, 25)),
   });
@@ -872,7 +882,7 @@ router.put('/role-menus/:id', requireAuth, async (req, res) => {
     if (!Array.isArray(options) || !options.length) return res.status(400).json({ error: 'Ajoute au moins un rôle au menu.' });
     fields.options = JSON.stringify(options.map(o => ({
       label: String(o.label || 'Rôle').slice(0, 100),
-      emoji: String(o.emoji || '').slice(0, 10),
+      emoji: safeEmojiWeb(o.emoji).slice(0, 100),
       role: String(o.role || '').slice(0, 100),
     })).slice(0, 25));
   }

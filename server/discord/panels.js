@@ -784,8 +784,20 @@ function typeOption(label, emoji, value) {
   const b = new StringSelectMenuOptionBuilder()
     .setLabel(String(label).slice(0, 80))
     .setValue(String(value || label).slice(0, 100));
-  if (emoji) b.setEmoji(String(emoji).slice(0, 10));
+  const e = safeEmoji(emoji);
+  if (e) b.setEmoji(e);
   return b;
+}
+
+// Emoji sûr : ne garde que les vrais émojis (Unicode ou personnalisés <:nom:id>).
+// Un emoji invalide stocké (ex : du texte) faisait planter la construction des
+// menus → Discord affichait « L'application ne répond pas ».
+function safeEmoji(s) {
+  const str = String(s || '').trim();
+  if (!str) return '';
+  if (/^<a?:[a-zA-Z0-9_]+:\d{15,21}>$/.test(str)) return str;
+  if (/^[\p{Extended_Pictographic}\u200D\uFE0F\u20E3\u{1F3FB}-\u{1F3FF}\u{1F1E6}-\u{1F1FF}]+$/u.test(str)) return str;
+  return '';
 }
 
 function typesPickEmbed(state) {
@@ -961,13 +973,24 @@ async function startTypesWizard(botId, interaction) {
     step: 'pick', current: null, modal: null, startedAt: Date.now(),
     guild: interaction.guild, msg: null,
   };
-  const msg = await interaction.reply({
-    embeds: [typesPickEmbed(state)],
-    components: typesPickComponents(state),
-    fetchReply: true,
-  });
-  state.msg = msg;
-  typesWizards.set(typesWizardKey(botId, interaction.guild.id, interaction.user.id), state);
+  try {
+    const msg = await interaction.reply({
+      embeds: [typesPickEmbed(state)],
+      components: typesPickComponents(state),
+      fetchReply: true,
+    });
+    state.msg = msg;
+    typesWizards.set(typesWizardKey(botId, interaction.guild.id, interaction.user.id), state);
+  } catch (e) {
+    // Si le menu ne peut pas être construit (donnée invalide), on répond quand même
+    console.error('[BotDev] types wizard start:', e.message);
+    try {
+      await interaction.reply({
+        content: '⚠️ Un élément de la liste des types est invalide (probablement un emoji). Corrige les types dans le **dashboard** (onglet Tickets) puis relance `/ticket types setup`.',
+        ephemeral: true,
+      });
+    } catch {}
+  }
 }
 
 async function handleTypesWizardInteraction(botId, interaction) {
@@ -1107,7 +1130,12 @@ async function handleTypesWizardInteraction(botId, interaction) {
       return interaction.reply({ content: '✅ Type renommé !', ephemeral: true });
     }
     if (mode === 'emoji') {
-      updateType(botId, state.guildId, state.current, { emoji: val.slice(0, 10) });
+      if (val && !safeEmoji(val)) {
+        state.modal = 'emoji';
+        try { await state.msg.edit(backToEdit()); } catch {}
+        return interaction.reply({ content: '❌ Emoji invalide — utilise un vrai emoji (ex : 🤝) ou un emoji personnalisé du serveur.', ephemeral: true });
+      }
+      updateType(botId, state.guildId, state.current, { emoji: val.slice(0, 100) });
       try { await state.msg.edit(backToEdit()); } catch {}
       return interaction.reply({ content: '✅ Emoji enregistré !', ephemeral: true });
     }
@@ -1211,7 +1239,7 @@ async function handleRoleMenu(botId, interaction, menuId) {
 
 module.exports = {
   dispatchPanels, sendTicketPanel, sendRoleMenu, findChannel, findChannelInGuild, bumpTicketStats,
-  resolveRole, parseTypes, isStaff, staffForTicket, openTicket,
+  resolveRole, parseTypes, isStaff, staffForTicket, openTicket, safeEmoji,
   startTypesWizard, handleTypesWizardInteraction,
   handleTicketDeleteAsk, ticketMetaFor,
 };

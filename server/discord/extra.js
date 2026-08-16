@@ -403,7 +403,7 @@ async function handleSlash(botId, entry, interaction) {
       const minutes = Math.max(1, Math.floor((Date.now() - s.ts) / 60000));
       const embed = new EmbedBuilder()
         .setColor('#5865F2')
-        .setAuthor({ name: s.tag, iconURL: s.avatar })
+        .setAuthor(s.avatar ? { name: s.tag, iconURL: s.avatar } : { name: s.tag })
         .setDescription(s.content || (s.attachments ? `*${s.attachments} pièce(s) jointe(s)*` : '*Message vide*'))
         .setFooter({ text: `Supprimé il y a ~${minutes} min` });
       return interaction.reply({ embeds: [embed] });
@@ -739,10 +739,11 @@ async function handleModal(botId, entry, interaction) {
   const channel = guild.channels.cache.get(cfg.channel);
   if (!channel) return interaction.reply({ content: '📝 Le salon des candidatures a été supprimé. Préviens un admin !', ephemeral: true });
 
+  const authorAvatar = interaction.user.displayAvatarURL ? interaction.user.displayAvatarURL({ size: 128 }) : '';
   const embed = new EmbedBuilder()
     .setColor('#5865F2')
     .setTitle(cfg.title || '📝 Candidature')
-    .setAuthor({ name: interaction.user.tag, iconURL: interaction.user.displayAvatarURL({ size: 128 }) })
+    .setAuthor(authorAvatar ? { name: interaction.user.tag, iconURL: authorAvatar } : { name: interaction.user.tag })
     .setFooter({ text: `ID : ${interaction.user.id}` });
   questions.forEach((q, i) => {
     embed.addFields({ name: `❓ ${q}`, value: interaction.fields.getTextInputValue(`q${i}`) || '*pas de réponse*' });

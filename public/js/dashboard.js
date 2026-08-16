@@ -410,7 +410,31 @@ Dashboard.renderers.tickets = async (content, data) => {
     catch (e) { App.toast(e.message, 'error'); }
   };
 
-  const c2 = Dashboard.card(root, '🗂️ Types de tickets', 'Chaque type : emoji, catégorie et PLUSIEURS rôles staff.');
+  // 👀 Aperçu en direct du panneau (bouton + menu déroulant des types)
+  const btnColors = { '1': '#5865F2', '2': '#4E5058', '3': '#3BA55D', '4': '#ED4245' };
+  const preview = App.el(`<div id="t-preview" style="margin-top:16px;border:1px dashed var(--d-border);border-radius:12px;padding:14px 16px;background:var(--d-card2)"></div>`);
+  c.appendChild(preview);
+  const renderPreview = () => {
+    const label = c.querySelector('#t-label').value.trim() || '🎫 Ouvrir un ticket';
+    const style = c.querySelector('#t-style').value;
+    const color = btnColors[style] || '#5865F2';
+    const typesCount = typesData.filter((x) => x.label).length;
+    preview.innerHTML = `
+      <div class="dash-label" style="margin:0 0 8px">👀 Aperçu du panneau sur Discord</div>
+      <div style="background:#313338;border-radius:10px;padding:14px;color:#DBDEE1;font-size:13px">
+        <div style="margin-bottom:10px">🎫 ${App.escapeHtml(t.message || 'Besoin d\'aide ? Ouvre un ticket !')}</div>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:${color};color:#fff;font-weight:700;padding:7px 16px;border-radius:6px">${App.escapeHtml(label)}</span>
+        ${typesCount
+          ? `<div style="margin-top:12px;border:1px solid #1E1F22;border-radius:6px;padding:9px 12px;color:#A8ABAF">▾ ${typesData.filter((x) => x.label).map((x) => `${x.emoji || '🎫'} ${x.label}`).join('  ·  ')}</div>`
+          : `<div style="margin-top:10px;color:#A8ABAF;font-size:11.5px">Aucun type → un simple bouton s\'affichera.</div>`}
+      </div>`;
+  };
+  c.querySelector('#t-label').addEventListener('input', renderPreview);
+  c.querySelector('#t-style').addEventListener('change', renderPreview);
+  c.querySelector('#t-msg').addEventListener('input', renderPreview);
+  renderPreview();
+
+  const c2 = Dashboard.card(root, '🗂️ Types de tickets', 'Chaque type : emoji, catégorie et PLUSIEURS rôles staff — choisis dans des listes, comme sur Discord.');
   c2.appendChild(App.el(`<div id="t-types"></div>`));
   const addBtn = App.el(`<button class="dash-btn dash-btn-sm" id="t-add">＋ Ajouter un type</button>`);
   c2.appendChild(addBtn);
@@ -422,28 +446,66 @@ Dashboard.renderers.tickets = async (content, data) => {
     typesData.forEach((x, i) => {
       const row = App.el(`
         <div style="border:1px solid var(--d-border);border-radius:11px;padding:12px 14px;margin-bottom:10px;background:var(--d-card2)">
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <input class="dash-input" data-k="emoji" value="${App.escapeHtml(x.emoji)}" placeholder="🤝" style="max-width:58px;text-align:center" />
-            <input class="dash-input" data-k="label" value="${App.escapeHtml(x.label)}" placeholder="Nom du type" style="flex:1;min-width:130px" />
-            <input class="dash-input" data-k="category" value="${App.escapeHtml(x.category)}" placeholder="Catégorie (optionnel)" style="flex:1;min-width:110px" />
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <input class="dash-input" data-k="emoji" value="${App.escapeHtml(x.emoji)}" placeholder="🤝" style="max-width:64px;text-align:center" />
+            <input class="dash-input" data-k="label" value="${App.escapeHtml(x.label)}" placeholder="Nom du type" style="flex:1;min-width:140px" />
             <button class="dash-btn dash-btn-danger dash-btn-sm" data-del>🗑</button>
           </div>
-          <label class="dash-label">🛡️ Rôles staff (plusieurs possibles)</label>
+          <div data-emojierr style="color:#ff8a8d;font-size:11.5px;margin-top:3px;display:none">⚠️ Emoji invalide — utilise un vrai emoji (ex : 🤝)</div>
+          <label class="dash-label">🗂️ Catégorie (menu déroulant)</label>
+          <select class="dash-select" data-k="categorySel">
+            <option value="">— Catégorie par défaut (Tickets) —</option>
+            ${categories.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${x.category === ch.name ? 'selected' : ''}>📁 ${App.escapeHtml(ch.name)}</option>`).join('')}
+            ${x.category && !categories.some((ch) => ch.name === x.category) ? `<option value="${App.escapeHtml(x.category)}" selected>📁 ${App.escapeHtml(x.category)} (manuelle)</option>` : ''}
+            <option value="__custom__">✏️ Autre… (écrire)</option>
+          </select>
+          <input class="dash-input" data-k="category" value="${App.escapeHtml(x.category)}" placeholder="Ou écris la catégorie" style="margin-top:6px;${x.category && !categories.some((ch) => ch.name === x.category) ? '' : 'display:none'}" />
+          <label class="dash-label">🛡️ Rôles staff (plusieurs possibles — menus déroulants)</label>
           <div class="t-roles" style="display:flex;flex-direction:column;gap:6px"></div>
-          <button class="dash-btn dash-btn-sm" data-addrole style="margin-top:6px">＋ Rôle staff</button>
+          <button class="dash-btn dash-btn-sm" data-addrole style="margin-top:6px">＋ Ajouter un rôle staff</button>
         </div>`);
-      row.querySelectorAll('input[data-k]').forEach((inp) => inp.addEventListener('input', () => { x[inp.dataset.k] = inp.value; }));
-      row.querySelector('[data-del]').onclick = () => { typesData.splice(i, 1); renderTypes(); };
+      const emojiInp = row.querySelector('[data-k="emoji"]');
+      const emojiErr = row.querySelector('[data-emojierr]');
+      const emojiOk = (s) => {
+        const str = String(s || '').trim();
+        if (!str) return true;
+        return /^<a?:[a-zA-Z0-9_]+:\d{15,21}>$/.test(str) || /^[\p{Extended_Pictographic}\u200D\uFE0F\u20E3\u{1F3FB}-\u{1F3FF}\u{1F1E6}-\u{1F1FF}]+$/u.test(str);
+      };
+      emojiInp.addEventListener('input', () => {
+        x.emoji = emojiInp.value.trim();
+        emojiErr.style.display = emojiOk(x.emoji) ? 'none' : 'block';
+        renderPreview();
+      });
+      const labelInp = row.querySelector('[data-k="label"]');
+      labelInp.addEventListener('input', () => { x.label = labelInp.value; renderPreview(); });
+      const catSel = row.querySelector('[data-k="categorySel"]');
+      const catInp = row.querySelector('[data-k="category"]');
+      catSel.addEventListener('change', () => {
+        if (catSel.value === '__custom__') {
+          catInp.style.display = '';
+          x.category = catInp.value;
+        } else {
+          catInp.style.display = 'none';
+          x.category = catSel.value;
+        }
+        renderPreview();
+      });
+      catInp.addEventListener('input', () => { x.category = catInp.value; });
+      row.querySelector('[data-del]').onclick = () => { typesData.splice(i, 1); renderTypes(); renderPreview(); };
       const rolesEl = row.querySelector('.t-roles');
       const renderRoles = () => {
         rolesEl.innerHTML = '';
         x.staff_roles.forEach((r, j) => {
           const rr = App.el(`
             <div style="display:flex;gap:7px">
-              <input class="dash-input" value="${App.escapeHtml(r)}" placeholder="Nom exact du rôle" />
+              <select class="dash-select t-role-sel">
+                <option value="">— Choisir un rôle —</option>
+                ${rolesList.map((role) => `<option value="${App.escapeHtml(role.name)}" ${r === role.name ? 'selected' : ''}>🛡️ ${App.escapeHtml(role.name)}</option>`).join('')}
+                ${r && !rolesList.some((role) => role.name === r) ? `<option value="${App.escapeHtml(r)}" selected>🛡️ ${App.escapeHtml(r)} (introuvable ?)</option>` : ''}
+              </select>
               <button class="dash-btn dash-btn-danger dash-btn-sm">🗑</button>
             </div>`);
-          rr.querySelector('input').addEventListener('input', (e) => { x.staff_roles[j] = e.target.value; });
+          rr.querySelector('select').addEventListener('change', (e) => { x.staff_roles[j] = e.target.value; });
           rr.querySelector('button').onclick = () => { x.staff_roles.splice(j, 1); renderRoles(); };
           rolesEl.appendChild(rr);
         });

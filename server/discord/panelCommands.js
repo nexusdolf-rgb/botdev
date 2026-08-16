@@ -14,7 +14,7 @@ const {
   ChannelType,
 } = require('discord.js');
 const store = require('../db');
-const { sendTicketPanel, sendRoleMenu, findChannelInGuild, resolveRole, parseTypes, staffForTicket, startTypesWizard, handleTicketDeleteAsk } = require('./panels');
+const { sendTicketPanel, sendRoleMenu, findChannelInGuild, resolveRole, parseTypes, staffForTicket, startTypesWizard, handleTicketDeleteAsk, safeEmoji } = require('./panels');
 const logging = require('./logging');
 
 const DEFAULT_CFG = {
@@ -122,7 +122,8 @@ function stepComponents(state) {
       const b = new StringSelectMenuOptionBuilder()
         .setLabel(String(o.label).slice(0, 100))
         .setValue(String(o.value).slice(0, 100));
-      if (o.emoji) b.setEmoji(String(o.emoji));
+      const e = safeEmoji(o.emoji);
+      if (e) b.setEmoji(e);
       return b;
     });
     first.addComponents(new StringSelectMenuBuilder()
@@ -365,7 +366,9 @@ async function handleTicket(botId, sub, group, interaction, guild) {
     if (action === 'add') {
       const nom = (interaction.options.getString('nom') || '').trim();
       if (!nom) return interaction.reply({ content: '❌ Donne un nom au type de ticket.', ephemeral: true });
-      const emoji = (interaction.options.getString('emoji') || '').trim();
+      const emojiRaw = (interaction.options.getString('emoji') || '').trim();
+      const emoji = safeEmoji(emojiRaw);
+      if (emojiRaw && !emoji) return interaction.reply({ content: '❌ Emoji invalide — utilise un vrai emoji (ex : 🤝).', ephemeral: true });
       const categorie = (interaction.options.getString('categorie') || '').trim();
       const staffrole = (interaction.options.getString('staffrole') || '').trim();
       const existingType = types.find((t) => t.label.toLowerCase() === nom.toLowerCase());
@@ -535,10 +538,12 @@ async function handleTicket(botId, sub, group, interaction, guild) {
     case 'type': {
       const nom = (interaction.options.getString('nom') || '').trim();
       if (!nom) return interaction.reply({ content: '❌ Donne un nom au type de ticket.', ephemeral: true });
-      const emoji = (interaction.options.getString('emoji') || '').trim();
+      const emojiRaw = (interaction.options.getString('emoji') || '').trim();
+      const emoji = safeEmoji(emojiRaw);
+      if (emojiRaw && !emoji) return interaction.reply({ content: '❌ Emoji invalide — utilise un vrai emoji (ex : 🤝).', ephemeral: true });
       const categorie = (interaction.options.getString('categorie') || '').trim();
       const types = parseTypes(cfg).filter((t) => t.label.toLowerCase() !== nom.toLowerCase());
-      types.push({ label: nom.slice(0, 100), emoji: emoji.slice(0, 10), category: categorie.slice(0, 100) });
+      types.push({ label: nom.slice(0, 100), emoji: emoji.slice(0, 100), category: categorie.slice(0, 100) });
       store.tickets.set(botId, guild.id, { ...cfg, types: JSON.stringify(types) });
       return interaction.reply({
         content: `✅ Type « ${emoji || '🎫'} ${nom} » ajouté !\nTypes actuels : ${types.map((t) => t.label).join(', ') || 'aucun'}\n\n📨 Re-envoie le panneau avec \`/ticket panel\` pour afficher le menu de sélection.`,
