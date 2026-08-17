@@ -176,14 +176,14 @@ async function main() {
   }, 30000);
 
   // Réparation automatique : toutes les 10 minutes, on re-synchronise les
-  // commandes slash sur tous les serveurs des bots en ligne (au cas où un
-  // serveur a été ajouté pendant une coupure) et on met la bio à jour.
+  // commandes slash (par serveur + le lot global du badge /) et la bio.
   setInterval(async () => {
     for (const [botId, entry] of botManager.clients) {
       if (!entry.client.isReady()) continue;
       for (const guild of entry.client.guilds.cache.values()) {
         try { await botManager.syncSlashCommands(botId, guild.id, true); } catch {}
       }
+      try { await botManager.syncGlobalCommands(botId); } catch {}
       try { await botManager.applyBotAbout(botId, entry); } catch {}
     }
   }, 10 * 60000);

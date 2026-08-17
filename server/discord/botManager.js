@@ -114,6 +114,11 @@ function attachListeners(botId, entry) {
         try { await syncSlashCommands(botId, g.id, true); }
         catch (e) { console.error(`[BotDev] sync ${g.id} (bot ${botId}):`, e.message); }
       }
+      // 🌍 Commandes GLOBALES : un petit lot de commandes universelles.
+      // C'est ce qui déclenche le badge « Supports Commands (/) » sur le profil
+      // du bot (les commandes par serveur ne suffisent pas pour le badge).
+      try { await syncGlobalCommands(botId); }
+      catch (e) { console.error(`[BotDev] sync globale (bot ${botId}):`, e.message); }
       // Bio du bot : ajoute le lien vers BotDev
       applyBotAbout(botId, entry).catch(() => {});
     } catch (e) { console.error(`[BotDev] ready error (bot ${botId}):`, e.message); }
@@ -231,6 +236,31 @@ async function syncSlashCommands(botId, guildId, quiet = false) {
   if (!quiet) console.log(`[BotDev] bot ${botId} : ${payloads.length} commandes slash enregistrées pour le serveur ${guildId}`);
 }
 
+// ---------------------- Commandes slash GLOBALES ----------------------
+// Petit lot de commandes universelles (aucune configuration requise) :
+// elles marchent partout, y compris en MP, et c'est leur présence qui
+// déclenche le badge « Supports Commands (/) » sur le profil du bot.
+// Dans les serveurs, la version par serveur (plus complète) prend le dessus.
+const GLOBAL_COMMANDS = ['help', 'invite', 'ping', 'botinfo'];
+
+async function syncGlobalCommands(botId) {
+  const entry = clients.get(botId);
+  if (!entry || !entry.client.isReady()) return;
+  const record = store.bots.get(botId);
+  if (!record) return;
+
+  const { buildSlashPayloads } = require('./premade');
+  const all = buildSlashPayloads(botId);
+  const global = all.filter((p) => GLOBAL_COMMANDS.includes(p.name));
+  if (!global.length) return;
+  const appId = record.client_id || entry.client.user.id;
+  await entry.client.rest.put(
+    `/applications/${appId}/commands`,
+    { body: global }
+  );
+  console.log(`[BotDev] bot ${botId} : ${global.length} commandes globales enregistrées (badge /) — ${GLOBAL_COMMANDS.join(', ')}`);
+}
+
 // ---------------------- Bio du bot (« À propos de moi ») ----------------------
 // Belle bio avec le lien du dashboard et l'invitation à /help.
 // Limite Discord : 190 caractères — on vise ~176 avec les emojis.
@@ -298,4 +328,4 @@ function platformStats() {
   return { onlineBots, servers, members };
 }
 
-module.exports = { clients, getClient, isOnline, loginBot, logoutBot, stopAll, syncSlashCommands, applyPresence, applyBotAbout, aboutText, publicBotInfo, platformStats };
+module.exports = { clients, getClient, isOnline, loginBot, logoutBot, stopAll, syncSlashCommands, syncGlobalCommands, applyPresence, applyBotAbout, aboutText, publicBotInfo, platformStats };
