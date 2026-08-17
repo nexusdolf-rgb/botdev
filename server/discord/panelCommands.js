@@ -317,6 +317,10 @@ async function finalizeWizard(state, interaction) {
 // Dispatch principal des commandes
 // ============================================================
 async function handlePanelCommand(botId, interaction) {
+  // 🌍 Commandes globales : en message privé, on répond poliment.
+  if (!interaction.guild) {
+    return interaction.reply({ content: '🌍 Cette commande se configure sur un **serveur Discord**. Ajoute-moi à ton serveur avec `/invite` !', ephemeral: true });
+  }
   const member = interaction.member;
   const guild = interaction.guild;
   const isOwner = guild.ownerId === interaction.user.id;

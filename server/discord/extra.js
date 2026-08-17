@@ -253,6 +253,14 @@ const EXTRA_CMDS = new Set(['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap',
 async function handleSlash(botId, entry, interaction) {
   const cmd = interaction.commandName.toLowerCase();
   if (!EXTRA_CMDS.has(cmd)) return false;
+  // 🌍 Commandes globales : elles existent aussi en message privé.
+  // Ici on répond poliment et on invite à ajouter le bot sur un serveur.
+  if (!interaction.guild) {
+    return interaction.reply({
+      content: '🌍 Cette commande fonctionne sur un **serveur Discord**. Ajoute-moi à ton serveur avec `/invite` pour l\'utiliser !',
+      ephemeral: true,
+    });
+  }
   const guild = interaction.guild;
   const user = interaction.user;
   const member = interaction.member;

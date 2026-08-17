@@ -151,23 +151,6 @@ function buildSlashPayloads(botId) {
       ]});
       options.push({ name: 'salon', description: 'Salon des suggestions', type: ApplicationCommandOptionType.Channel, required: false });
     }
-    // Commandes personnalisées du bot (slash)
-    const custom = store.commands.all(botId).filter(c => c.enabled && c.trigger_type === 'slash');
-    for (const c of custom) {
-      payloads.push({
-        name: c.name.toLowerCase().replace(/[^a-z0-9\-_]/g, '-').slice(0, 32),
-        description: (c.description || 'Commande BotDev').slice(0, 100),
-        options: JSON.parse(c.options || '[]')
-          .slice(0, 25)
-          .map(o => ({
-            name: (o.name || 'option').toLowerCase().slice(0, 32),
-            description: (o.description || '').slice(0, 100),
-            type: optionType(o.type),
-            required: !!o.required,
-          }))
-          .sort((a, b) => (b.required ? 1 : 0) - (a.required ? 1 : 0)),
-      });
-    }
     const payload = { name, description: def.desc, options };
     // Commandes de modération : visibles uniquement par les administrateurs
     // (et par ceux qui ont la permission spécifique correspondante)
@@ -177,6 +160,24 @@ function buildSlashPayloads(botId) {
       payload.default_member_permissions = bits.toString();
     }
     payloads.push(payload);
+  }
+
+  // Commandes personnalisées du bot (slash) — une seule fois chacune
+  const custom = store.commands.all(botId).filter(c => c.enabled && c.trigger_type === 'slash');
+  for (const c of custom) {
+    payloads.push({
+      name: c.name.toLowerCase().replace(/[^a-z0-9\-_]/g, '-').slice(0, 32),
+      description: (c.description || 'Commande BotDev').slice(0, 100),
+      options: JSON.parse(c.options || '[]')
+        .slice(0, 25)
+        .map(o => ({
+          name: (o.name || 'option').toLowerCase().slice(0, 32),
+          description: (o.description || '').slice(0, 100),
+          type: optionType(o.type),
+          required: !!o.required,
+        }))
+        .sort((a, b) => (b.required ? 1 : 0) - (a.required ? 1 : 0)),
+    });
   }
 
   // Commandes de gestion des panneaux (toujours disponibles, admin uniquement)
@@ -353,6 +354,13 @@ async function execute(botId, entry, cmd, src) {
   };
   const reply = async (content) => send({ content });
   const replyEmbed = async (embed) => send({ embeds: [embed] });
+
+  // 🌍 Commandes globales : en message privé, seules les commandes
+  // universelles fonctionnent. Les autres répondent poliment.
+  const DM_SAFE = ['ping', 'invite', 'botinfo', 'help', '8ball', 'meme', 'coinflip', 'roll', 'say', 'reverse', 'avatar'];
+  if (!guild && isInt && !DM_SAFE.includes(cmd)) {
+    return reply('🌍 Cette commande fonctionne sur un **serveur Discord**. Ajoute-moi à ton serveur avec `/invite` !');
+  }
 
   const getUserArg = (name = 'utilisateur') => {
     if (isInt) {

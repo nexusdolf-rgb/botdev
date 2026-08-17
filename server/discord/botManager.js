@@ -237,11 +237,14 @@ async function syncSlashCommands(botId, guildId, quiet = false) {
 }
 
 // ---------------------- Commandes slash GLOBALES ----------------------
-// Petit lot de commandes universelles (aucune configuration requise) :
-// elles marchent partout, y compris en MP, et c'est leur présence qui
-// déclenche le badge « Supports Commands (/) » sur le profil du bot.
-// Dans les serveurs, la version par serveur (plus complète) prend le dessus.
-const GLOBAL_COMMANDS = ['help', 'invite', 'ping', 'botinfo'];
+// TOUTES les commandes sont enregistrées globalement : elles fonctionnent
+// partout (et déclenchent le badge « Supports Commands (/) »). Dans les
+// serveurs, la version par serveur (synchro instantanée) prend le dessus.
+// Précautions :
+//  - Limite Discord : 100 commandes globales → on plafonne à 90.
+//  - Limite de débit : on ne re-synchronise que si la liste a CHANGÉ (hash).
+//  - Erreurs (429 / dépassement) gérées sans faire tomber le bot.
+const crypto = require('crypto');
 
 async function syncGlobalCommands(botId) {
   const entry = clients.get(botId);
@@ -250,15 +253,32 @@ async function syncGlobalCommands(botId) {
   if (!record) return;
 
   const { buildSlashPayloads } = require('./premade');
-  const all = buildSlashPayloads(botId);
-  const global = all.filter((p) => GLOBAL_COMMANDS.includes(p.name));
-  if (!global.length) return;
+  const { buildExtraPayloads } = require('./extra');
+  const all = [...buildSlashPayloads(botId), ...buildExtraPayloads()];
+  if (!all.length) return;
+
+  const global = all.slice(0, 90); // plafond de sécurité (limite Discord : 100)
+  const hash = crypto.createHash('sha1').update(JSON.stringify(global)).digest('hex');
+  const key = `global_cmds_${botId}`;
+  if (store.settings.get(key) === hash) return; // déjà à jour → on évite la limite de débit
+
   const appId = record.client_id || entry.client.user.id;
-  await entry.client.rest.put(
-    `/applications/${appId}/commands`,
-    { body: global }
-  );
-  console.log(`[BotDev] bot ${botId} : ${global.length} commandes globales enregistrées (badge /) — ${GLOBAL_COMMANDS.join(', ')}`);
+  try {
+    await entry.client.rest.put(`/applications/${appId}/commands`, { body: global });
+    store.settings.set(key, hash);
+    console.log(`[BotDev] bot ${botId} : ${global.length} commandes GLOBALES enregistrées (badge /)${all.length > 90 ? ` — ${all.length - 90} ignorées (limite Discord)` : ''}`);
+  } catch (e) {
+    const msg = String(e.message || e);
+    if (msg.includes('429') || msg.includes('rate')) {
+      console.log(`[BotDev] bot ${botId} : commandes globales en attente (limite de débit Discord), nouvelle tentative au prochain cycle.`);
+      return;
+    }
+    if (msg.includes('cannot exceed 100')) {
+      console.error(`[BotDev] bot ${botId} : trop de commandes globales (${global.length}) — limite Discord de 100 dépassée.`);
+      return;
+    }
+    throw e;
+  }
 }
 
 // ---------------------- Bio du bot (« À propos de moi ») ----------------------

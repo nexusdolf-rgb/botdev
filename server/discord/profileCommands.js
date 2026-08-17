@@ -21,6 +21,10 @@ function isAdmin(interaction) {
 }
 
 async function handleProfileCommand(botId, interaction) {
+  // 🌍 Commandes globales : en message privé, on répond poliment.
+  if (!interaction.guild) {
+    return interaction.reply({ content: '🌍 Cette commande se configure sur un **serveur Discord**. Ajoute-moi à ton serveur avec `/invite` !', ephemeral: true });
+  }
   const guild = interaction.guild;
   const sub = interaction.options.getSubcommand();
   const botRecord = store.bots.get(botId);
