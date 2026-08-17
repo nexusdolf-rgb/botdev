@@ -17,7 +17,12 @@
 // ============================================================
 const store = require('./db');
 let sharp = null;
-try { sharp = require('sharp'); } catch (e) { console.error('[Hoxera] sharp indisponible :', e.message); }
+try {
+  sharp = require('sharp');
+  // ⚡ Force 4 pipelines d'images en parallèle, même sur l'instance
+  // gratuite de Render (1 cœur) → génération du GIF ~3-4× plus rapide.
+  try { sharp.concurrency(4); } catch {}
+} catch (e) { console.error('[Hoxera] sharp indisponible :', e.message); }
 let gifenc = null;
 try { gifenc = require('gifenc'); } catch (e) { console.error('[Hoxera] gifenc indisponible :', e.message); }
 

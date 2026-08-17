@@ -286,6 +286,10 @@ async function finalizeWizard(state, interaction) {
   };
   store.tickets.set(state.botId, guild.id, cfg);
 
+  // ⏱️ Accusé de réception immédiat avant l'envoi du panneau
+  // (l'assistant ne doit jamais afficher « l'application ne répond pas »)
+  try { await interaction.deferUpdate(); } catch {}
+
   const channel = findChannelInGuild(guild, cfg.channel) || interaction.channel;
   let sent = false, warn = '';
   if (channel && channel.isTextBased()) {
@@ -310,7 +314,7 @@ async function finalizeWizard(state, interaction) {
     .setFooter({ text: 'Modifie tout à tout moment avec /ticket channel, /ticket role, /ticket category…' });
 
   wizards.delete(wizardKey(state.botId, guild.id, state.userId));
-  await interaction.update({ embeds: [embed], components: [] });
+  await interaction.editReply({ embeds: [embed], components: [] }).catch(() => {});
 }
 
 // ============================================================
@@ -451,11 +455,14 @@ async function handleTicket(botId, sub, group, interaction, guild) {
       if (!channel && cfg.channel) channel = findChannelInGuild(guild, cfg.channel);
       if (!channel) channel = interaction.channel;
       if (!channel || !channel.isTextBased()) return interaction.reply({ content: '❌ Salon introuvable. Configure-le avec `/ticket setup` ou précise un salon.', ephemeral: true });
+      // ⏱️ Accusé de réception IMMÉDIAT : Discord n'affichera jamais
+      // « l'application ne répond pas », même si l'envoi prend du temps.
+      try { await interaction.deferReply({ ephemeral: true }); } catch {}
       try {
         await sendTicketPanel(botId, guild.id, interaction.client, channel);
-        return interaction.reply({ content: `✅ Panneau envoyé dans ${channel} !`, ephemeral: true });
+        return interaction.editReply({ content: `✅ Panneau envoyé dans ${channel} !` }).catch(() => {});
       } catch (e) {
-        return interaction.reply({ content: `⚠️ Erreur : ${e.message.slice(0, 150)}`, ephemeral: true });
+        return interaction.editReply({ content: `⚠️ Erreur : ${e.message.slice(0, 150)}` }).catch(() => {});
       }
     }
     case 'config': {
@@ -588,11 +595,13 @@ async function handleRoles(botId, sub, interaction, guild) {
       if (!channel && menu.channel) channel = findChannelInGuild(guild, menu.channel);
       if (!channel) channel = interaction.channel;
       if (!channel || !channel.isTextBased()) return interaction.reply({ content: '❌ Salon introuvable.', ephemeral: true });
+      // ⏱️ Accusé de réception immédiat
+      try { await interaction.deferReply({ ephemeral: true }); } catch {}
       try {
         await sendRoleMenu(botId, interaction.client, menu, channel);
-        return interaction.reply({ content: `✅ Menu « ${menu.name} » envoyé dans ${channel} !`, ephemeral: true });
+        return interaction.editReply({ content: `✅ Menu « ${menu.name} » envoyé dans ${channel} !` }).catch(() => {});
       } catch (e) {
-        return interaction.reply({ content: `⚠️ Erreur : ${e.message.slice(0, 150)}`, ephemeral: true });
+        return interaction.editReply({ content: `⚠️ Erreur : ${e.message.slice(0, 150)}` }).catch(() => {});
       }
     }
     default:

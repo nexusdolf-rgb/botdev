@@ -78,6 +78,7 @@ function fakeInteraction(over = {}) {
     showModal: async function (p) { this.replied = true; this.replies.push(['modal', p]); },
     deferReply: async function () { this.deferred = true; },
     deferUpdate: async function () { this.deferred = true; },
+    editReply: async function (p) { this.replied = true; this.replies.push(['edit', p]); return {}; },
     isRepliable: () => true,
     isChatInputCommand: function () { return !!this.isChat; },
     isButton: function () { return !!this.isBtn; },

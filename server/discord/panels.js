@@ -353,10 +353,16 @@ async function sendTicketPanel(botId, guildId, client, channel) {
   } else {
     await channel.send(payload);
   }
-  // 🔥 Pré-chauffage : génère la bannière animée de ce serveur en fond
-  // (elle sera prête quand Discord chargera l'image dans l'embed)
+  // 🔥 Pré-chauffage de la bannière animée : DÉCALÉ de 3 secondes pour
+  // laisser la commande se terminer d'abord (le rendu du GIF utilise le
+  // processeur de l'instance — on ne veut jamais ralentir l'interaction).
   if (serverName) {
-    try { require('../banner').warmupGif(serverName); } catch {}
+    try {
+      const n = serverName;
+      setTimeout(() => {
+        try { require('../banner').warmupGif(n); } catch {}
+      }, 3000);
+    } catch {}
   }
 }
 
