@@ -6,8 +6,13 @@
 //  - grille glitch RGB (points rouge/vert/bleu en diagonale, subtile)
 //  - texte « SUPPORT - {NOM DU SERVEUR} » blanc bold centré avec
 //    halo chromatique (rose + vert + cyan autour des lettres)
-//  - animation : balayage lumineux diagonal + dérive de la fumée +
-//    pulsation de la lueur — boucle continue (~6 s, comme la réf.)
+//  - animation : balayage lumineux diagonal + dérive de la fumée —
+//    boucle continue (~4-6 s, comme la référence)
+//
+// ⚡ Optimisation : le fond + texte (coûteux, avec halos flous) est
+// rendu UNE SEULE fois ; chaque trame ne dessine que la fumée qui
+// dérive (léger) et la compose → génération 4-5× plus rapide.
+//
 // Formats : GIF animé (affiché par Discord) / PNG statique (repli).
 // ============================================================
 const store = require('./db');
@@ -32,47 +37,12 @@ function escapeXml(s) {
     .replace(/'/g, '&#39;');
 }
 
-// SVG complet d'une trame. t : 0..1 (temps de l'animation)
-//  - drift : déplacement de la fumée (0..1)
-//  - glowPulse : intensité du halo (0.7..1.1)
-//  - shineX : position de la bande de brillance (en px, ou null)
-function bannerSvg(name, t = 0, glowPulse = 1, shineX = null) {
+// ---------- SVG de base (rendu UNE fois) : fond + texte + halos ----------
+function baseSvg(name) {
   const label = escapeXml(String(name || 'NEXORA').toUpperCase());
   const len = label.length;
   const size = len > 24 ? 34 : len > 18 ? 44 : len > 12 ? 56 : 66;
   const textY = H * 0.5;
-
-  // Fumée : trois volutes qui dérivent lentement
-  const drift = (base, amp, speed, phase) => base + amp * Math.sin((t * speed + phase) * Math.PI * 2);
-  const s1x = drift(W * 0.16, W * 0.03, 0.05, 0.0);
-  const s1y = drift(H * 0.75, H * 0.05, 0.07, 0.5);
-  const s2x = drift(W * 0.86, W * 0.04, 0.04, 0.3);
-  const s2y = drift(H * 0.25, H * 0.06, 0.06, 0.8);
-  const s3x = drift(W * 0.55, W * 0.05, 0.03, 0.6);
-  const s3y = drift(H * 0.95, H * 0.04, 0.05, 0.2);
-
-  const glowOp = (0.75 * glowPulse).toFixed(2);
-  const glowBlur = Math.round(14 * glowPulse);
-
-  // Bande de brillance (balayage diagonal gauche → droite)
-  let shine = '';
-  if (shineX !== null) {
-    const bandW = Math.round(W * 0.5);
-    const shX = Math.round(shineX);
-    shine = `<g transform="rotate(-20, ${shX + bandW / 2}, ${H / 2})" opacity="0.55">
-      <defs>
-        <linearGradient id="shineGrad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
-          <stop offset=".45" stop-color="#ffffff" stop-opacity=".12"/>
-          <stop offset=".5" stop-color="#ffffff" stop-opacity=".55"/>
-          <stop offset=".55" stop-color="#ffffff" stop-opacity=".12"/>
-          <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
-        </linearGradient>
-      </defs>
-      <rect x="${shX - H * 0.7}" y="0" width="${bandW + H * 1.4}" height="${H}" fill="url(#shineGrad)"/>
-    </g>`;
-  }
-
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
@@ -85,19 +55,15 @@ function bannerSvg(name, t = 0, glowPulse = 1, shineX = null) {
       <stop offset=".65" stop-color="#ff0033" stop-opacity=".10"/>
       <stop offset="1" stop-color="#ff0033" stop-opacity="0"/>
     </radialGradient>
-    <filter id="soft" x="-80%" y="-80%" width="260%" height="260%">
-      <feGaussianBlur stdDeviation="40"/>
-    </filter>
     <filter id="glowPink" x="-80%" y="-80%" width="260%" height="260%">
-      <feGaussianBlur stdDeviation="${Math.max(6, glowBlur)}"/>
+      <feGaussianBlur stdDeviation="9"/>
     </filter>
     <filter id="glowGreen" x="-80%" y="-80%" width="260%" height="260%">
-      <feGaussianBlur stdDeviation="${Math.max(6, glowBlur)}"/>
+      <feGaussianBlur stdDeviation="9"/>
     </filter>
     <filter id="glowCyan" x="-80%" y="-80%" width="260%" height="260%">
-      <feGaussianBlur stdDeviation="${Math.max(6, glowBlur)}"/>
+      <feGaussianBlur stdDeviation="9"/>
     </filter>
-    <!-- Grille glitch RGB : points rouge/vert/bleu en diagonale -->
     <pattern id="glitch" width="4" height="4" patternUnits="userSpaceOnUse">
       <rect width="4" height="4" fill="#000000" fill-opacity="0.35"/>
       <rect x="1" y="0" width="1" height="1" fill="#ff1a1a" fill-opacity="0.55"/>
@@ -108,30 +74,44 @@ function bannerSvg(name, t = 0, glowPulse = 1, shineX = null) {
   </defs>
   <rect width="${W}" height="${H}" fill="url(#bg)"/>
   <rect width="${W}" height="${H}" fill="url(#halo)"/>
-  <!-- Fumée rougeoyante (dérive lente) -->
-  <ellipse cx="${s1x.toFixed(1)}" cy="${s1y.toFixed(1)}" rx="${W * 0.38}" ry="${H * 0.28}" fill="#ff2030" opacity=".11" filter="url(#soft)"/>
-  <ellipse cx="${s2x.toFixed(1)}" cy="${s2y.toFixed(1)}" rx="${W * 0.32}" ry="${H * 0.34}" fill="#ff2030" opacity=".09" filter="url(#soft)"/>
-  <ellipse cx="${s3x.toFixed(1)}" cy="${s3y.toFixed(1)}" rx="${W * 0.45}" ry="${H * 0.2}" fill="#ff2030" opacity=".1" filter="url(#soft)"/>
-  <!-- Grille glitch RGB -->
   <rect width="${W}" height="${H}" fill="url(#glitch)"/>
-  <!-- Texte : halo chromatique (rose + vert + cyan décalés) puis blanc net -->
   <text x="${W / 2 + 3}" y="${textY + 1}" text-anchor="middle" dominant-baseline="central"
         font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="${size}"
-        fill="#ff3b5c" opacity="${glowOp}" filter="url(#glowPink)">${label}</text>
+        fill="#ff3b5c" opacity=".55" filter="url(#glowPink)">${label}</text>
   <text x="${W / 2 - 3}" y="${textY - 1}" text-anchor="middle" dominant-baseline="central"
         font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="${size}"
-        fill="#39ff6a" opacity="${glowOp}" filter="url(#glowGreen)">${label}</text>
+        fill="#39ff6a" opacity=".55" filter="url(#glowGreen)">${label}</text>
   <text x="${W / 2}" y="${textY + 3}" text-anchor="middle" dominant-baseline="central"
         font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="${size}"
-        fill="#39e6ff" opacity="${glowOp}" filter="url(#glowCyan)">${label}</text>
+        fill="#39e6ff" opacity=".5" filter="url(#glowCyan)">${label}</text>
   <text x="${W / 2}" y="${textY}" text-anchor="middle" dominant-baseline="central"
         font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="${size}"
         fill="#ffffff">${label}</text>
-  ${shine}
 </svg>`;
 }
 
-// Bande de brillance générique (composée par sharp sur le PNG de base)
+// ---------- Couche fumée (rendue par trame, légère) ----------
+function smokeSvg(t) {
+  const drift = (base, amp, speed, phase) => base + amp * Math.sin((t * speed + phase) * Math.PI * 2);
+  const s1x = drift(W * 0.16, W * 0.03, 0.05, 0.0);
+  const s1y = drift(H * 0.75, H * 0.05, 0.07, 0.5);
+  const s2x = drift(W * 0.86, W * 0.04, 0.04, 0.3);
+  const s2y = drift(H * 0.25, H * 0.06, 0.06, 0.8);
+  const s3x = drift(W * 0.55, W * 0.05, 0.03, 0.6);
+  const s3y = drift(H * 0.95, H * 0.04, 0.05, 0.2);
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="soft" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="40"/>
+    </filter>
+  </defs>
+  <ellipse cx="${s1x.toFixed(1)}" cy="${s1y.toFixed(1)}" rx="${W * 0.38}" ry="${H * 0.28}" fill="#ff2030" opacity=".11" filter="url(#soft)"/>
+  <ellipse cx="${s2x.toFixed(1)}" cy="${s2y.toFixed(1)}" rx="${W * 0.32}" ry="${H * 0.34}" fill="#ff2030" opacity=".09" filter="url(#soft)"/>
+  <ellipse cx="${s3x.toFixed(1)}" cy="${s3y.toFixed(1)}" rx="${W * 0.45}" ry="${H * 0.2}" fill="#ff2030" opacity=".1" filter="url(#soft)"/>
+</svg>`;
+}
+
+// ---------- Bande de brillance (balayage diagonal) ----------
 function shineSvg(width = W, height = H) {
   const bandW = Math.round(width * 0.5);
   return `<svg width="${bandW}" height="${height}" viewBox="0 0 ${bandW} ${height}" xmlns="http://www.w3.org/2000/svg">
@@ -150,13 +130,15 @@ function shineSvg(width = W, height = H) {
 </svg>`;
 }
 
-// PNG statique (repli) : trame « posée » (glow normal, pas de balayage)
+// PNG statique (repli) : base + fumée posée
 async function generateBanner(name) {
   const clean = String(name || '').trim().slice(0, 26) || 'NEXORA';
   if (!sharp) return null;
   if (cache.has(clean)) return cache.get(clean);
   try {
-    const buf = await sharp(Buffer.from(bannerSvg(clean, 0.25, 1, null))).png().toBuffer();
+    const base = await sharp(Buffer.from(baseSvg(clean))).png().toBuffer();
+    const smoke = await sharp(Buffer.from(smokeSvg(0.25))).png().toBuffer();
+    const buf = await sharp(base).composite([{ input: smoke, top: 0, left: 0 }]).png().toBuffer();
     cache.set(clean, buf);
     if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value);
     return buf;
@@ -166,45 +148,33 @@ async function generateBanner(name) {
   }
 }
 
-// GIF animé (comme la référence : balayage + dérive + pulsation, ~6 s)
-async function generateBannerGif(name, { sweepFrames = 36, driftFrames = 48, holdFrames = 30, delayMs = 50 } = {}) {
+// GIF animé : base rendue UNE fois + couches légères par trame
+async function generateBannerGif(name, { sweepFrames = 24, driftFrames = 32, holdFrames = 16, delayMs = 60 } = {}) {
   const clean = String(name || '').trim().slice(0, 26) || 'NEXORA';
   if (!sharp || !gifenc) return null;
   if (gifCache.has(clean)) return gifCache.get(clean);
   try {
     const { GIFEncoder, quantize, applyPalette } = gifenc;
-    const bandBuf = await sharp(Buffer.from(shineSvg(W, H))).png().toBuffer();
+    const baseBuf = await sharp(Buffer.from(baseSvg(clean))).png().toBuffer();
+    const shineBuf = await sharp(Buffer.from(shineSvg(W, H))).png().toBuffer();
     const bandW = Math.round(W * 0.5);
-
-    // Palette globale : calculée sur la trame centrale (représentative)
-    const centerBuf = await sharp(Buffer.from(bannerSvg(clean, 0.5, 1, null))).png().toBuffer();
-    const { data: centerRaw } = await sharp(centerBuf).raw().toBuffer({ resolveWithObject: true });
-    const palette = quantize(centerRaw, 256);
-
-    const gif = GIFEncoder();
     const totalFrames = sweepFrames + driftFrames + holdFrames;
 
-    // Rendu des trames : par lots en parallèle (le moteur d'images est
-    // multithreadé → génération 3 à 4× plus rapide), puis écriture en ordre.
+    // Rendu des trames par lots en parallèle : base + fumée (+ brillance)
     const frameDatas = new Array(totalFrames);
-    const BATCH = 8;
+    const BATCH = 12;
     for (let start = 0; start < totalFrames; start += BATCH) {
       const batch = [];
       for (let f = start; f < Math.min(start + BATCH, totalFrames); f++) {
         batch.push((async () => {
+          const t = f / totalFrames;
+          const smoke = await sharp(Buffer.from(smokeSvg(t))).png().toBuffer();
+          const comps = [{ input: smoke, top: 0, left: 0 }];
           if (f < sweepFrames) {
-            const t = f / sweepFrames;
-            const shineX = -bandW + (W + bandW) * t;
-            const frameSvg = bannerSvg(clean, t, 0.85 + 0.3 * Math.sin(t * Math.PI), null);
-            const out = await sharp(Buffer.from(frameSvg))
-              .composite([{ input: bandBuf, left: Math.round(shineX), top: 0 }])
-              .raw().toBuffer({ resolveWithObject: true });
-            return out.data;
+            const shineX = -bandW + (W + bandW) * (f / sweepFrames);
+            comps.push({ input: shineBuf, top: 0, left: Math.round(shineX) });
           }
-          const t = (sweepFrames + (f - sweepFrames)) / totalFrames;
-          const pulse = 0.9 + 0.15 * Math.sin((f - sweepFrames) / 6);
-          const out = await sharp(Buffer.from(bannerSvg(clean, t, pulse, null)))
-            .raw().toBuffer({ resolveWithObject: true });
+          const out = await sharp(baseBuf).composite(comps).raw().toBuffer({ resolveWithObject: true });
           return out.data;
         })());
       }
@@ -212,7 +182,9 @@ async function generateBannerGif(name, { sweepFrames = 36, driftFrames = 48, hol
       results.forEach((data, i) => { frameDatas[start + i] = data; });
     }
 
-    // Écriture des trames dans l'ordre (l'encodeur GIF est séquentiel)
+    // Palette globale (trame centrale) puis écriture des trames dans l'ordre
+    const palette = quantize(frameDatas[Math.floor(totalFrames / 2)], 256);
+    const gif = GIFEncoder();
     frameDatas.forEach((data) => {
       gif.writeFrame(applyPalette(data, palette), W, H, { palette, delay: delayMs });
     });
@@ -248,4 +220,4 @@ function warmupGif(name) {
     .finally(() => warming.delete(clean));
 }
 
-module.exports = { generateBanner, generateBannerGif, storedPanelName, warmupGif, bannerSvg, escapeXml, shineSvg, W, H };
+module.exports = { generateBanner, generateBannerGif, storedPanelName, warmupGif, baseSvg, smokeSvg, escapeXml, shineSvg, W, H };
