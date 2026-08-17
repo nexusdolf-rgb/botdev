@@ -470,6 +470,30 @@ router.put('/bots/:id/modules/:key', requireAuth, async (req, res) => {
 // ============================================================
 // Configuration par serveur (façon DraftBot)
 // ============================================================
+
+// ✅ Checklist de configuration : l'état d'avancement du serveur,
+// calculée à partir des mêmes données que le bot (source de vérité unique).
+function guildChecklist(payload) {
+  const s = payload.settings || {};
+  const t = payload.tickets || {};
+  const ev = payload.events ? (payload.events.state || {}) : {};
+  const items = [];
+  const add = (key, label, module, ok) => items.push({ key, label, module, done: !!ok });
+  add('tickets', '🎫 Système de tickets', 'tickets', !!(t.channel));
+  add('welcome', '👋 Message de bienvenue', 'welcome', !!(ev.member_join && ev.member_join.enabled));
+  add('autorole', '🏷️ Auto-rôle', 'welcome', !!(ev.autorole && ev.autorole.enabled));
+  add('levels', '📈 Niveaux (XP)', 'levels', s.xp_enabled !== 0);
+  add('automod', '🛡️ Auto-modération', 'moderation', !!s.am_enabled);
+  add('logs', '📜 Journaux de modération', 'logs', !!s.log_channel);
+  add('suggestions', '💡 Suggestions', 'suggestions', !!s.suggestion_channel);
+  add('shop', '🛒 Boutique', 'shop', (payload.shop_items || []).length > 0);
+  add('announcements', '📅 Annonces programmées', 'announcements', (payload.scheduled || []).length > 0);
+  add('birthdays', '🎂 Anniversaires', 'server', !!s.birthday_channel);
+  add('voicetemp', '🔊 Salons vocaux temporaires', 'server', !!(payload.voicetemp && payload.voicetemp.creator_channel));
+  add('profile', '🤖 Identité du bot', 'server', !!(payload.profile && (payload.profile.name || payload.profile.avatar_url)));
+  return items;
+}
+
 router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
   if (!bot) return;
@@ -520,7 +544,7 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
   const ticketsStats = (() => {
     try { return JSON.parse(store.settings.get(`ticket_stats_${guildId}`) || '{"total":0,"open":0}'); } catch { return { total: 0, open: 0 }; }
   })();
-  res.json({
+  const payload = {
     guild: { id: guildId, name: dGuild.name, icon: dGuild.iconURL({ size: 128 }) || '', members: dGuild.memberCount || 0 },
     channels,
     roles,
@@ -535,8 +559,13 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
     voicetemp: store.voicetemp.get(bot.id, guildId) || { creator_channel: '', category: '', name_template: '' },
     applications: store.applications.get(bot.id, guildId) || { channel: '', questions: '[]', title: '📝 Candidature', enabled: 0 },
     scheduled: store.scheduled.all(bot.id, guildId),
+    shop_items: store.shop.all(bot.id, guildId),
     log_events: logEvents,
-  });
+  };
+  // ✅ Checklist de configuration + 🚨 état du verrouillage anti-raid
+  payload.checklist = guildChecklist(payload);
+  try { payload.lockdown = require('./discord/lockdown').state(bot.id, dGuild); } catch { payload.lockdown = { locked: false, channels: [] }; }
+  res.json(payload);
 });
 
 // ---------------------- Communauté (façon DraftBot) ----------------------
@@ -1192,6 +1221,41 @@ router.get('/backup/status', requireAuth, (req, res) => {
   res.json({ enabled: backup.enabled(), repo: backup.repo(), branch: backup.branch(), last_backup: store.settings.get('last_backup') });
 });
 
+// ============================================================
+// Hoxera 2.5 — Anti-raid depuis le dashboard (verrouillage du serveur)
+// ============================================================
+router.get('/bots/:id/guilds/:guildId/lockdown', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const entry = guildEntryFor(bot, guildId);
+  if (!entry) return res.status(400).json({ error: 'Le bot est hors ligne ou absent de ce serveur.' });
+  const guild = entry.client.guilds.cache.get(guildId);
+  res.json(require('./discord/lockdown').state(bot.id, guild));
+});
+
+router.post('/bots/:id/guilds/:guildId/lockdown', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const { action } = req.body || {};
+  if (!['on', 'off'].includes(action)) return res.status(400).json({ error: 'Action invalide (on/off).' });
+  const entry = guildEntryFor(bot, guildId);
+  if (!entry) return res.status(400).json({ error: 'Le bot est hors ligne ou absent de ce serveur.' });
+  const guild = entry.client.guilds.cache.get(guildId);
+  const lockdown = require('./discord/lockdown');
+  const byTag = req.userId ? `dashboard (utilisateur #${req.userId})` : 'dashboard';
+  if (action === 'on') {
+    const r = await lockdown.on(bot.id, guild, byTag);
+    res.json({ ok: true, already: r.already, channels: r.channels, state: lockdown.state(bot.id, guild) });
+  } else {
+    const r = await lockdown.off(bot.id, guild, byTag);
+    res.json({ ok: true, reopened: r.reopened, state: lockdown.state(bot.id, guild) });
+  }
+});
+
 // ---------------------- Statut de la sauvegarde automatique ----------------------
 router.get('/status/backup', requireAuth, (req, res) => {
   const backup = require('./backup');
@@ -1323,3 +1387,4 @@ router.delete('/admin/users/:id', requireAuth, requireAdmin, async (req, res) =>
 });
 
 module.exports = router;
+module.exports.guildChecklist = guildChecklist;

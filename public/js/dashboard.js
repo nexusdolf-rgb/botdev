@@ -249,6 +249,33 @@ Dashboard.renderers.overview = async (content, data) => {
   const g = data.guild;
   const ts = data.tickets_stats || { total: 0, open: 0 };
   const root = Dashboard.header(content, '📊', `Vue d\'ensemble — ${App.escapeHtml(g.name)}`, `${g.members} membres · configuration de ${App.escapeHtml(bot.name)} sur ce serveur`);
+
+  // ✅ Checklist de configuration (confort : tout voir d'un coup d'œil)
+  const checklist = data.checklist || [];
+  const doneCount = checklist.filter((i) => i.done).length;
+  const pct = checklist.length ? Math.round((doneCount / checklist.length) * 100) : 0;
+  const clCard = Dashboard.card(root, '✅ Configuration du serveur', '');
+  clCard.innerHTML = '';
+  clCard.appendChild(App.el(`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+      <div style="flex:1;height:12px;background:var(--d-card2);border-radius:20px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#5865F2,#8B5CF6);border-radius:20px;transition:width .5s"></div>
+      </div>
+      <b style="font-size:14px">${pct}%</b>
+    </div>`));
+  const clGrid = App.el(`<div class="dash-checklist"></div>`);
+  clCard.appendChild(clGrid);
+  checklist.forEach((item) => {
+    const el = App.el(`
+      <button class="check-item ${item.done ? 'done' : ''}" title="${item.done ? 'Configuré ✅' : 'À configurer'}">
+        <span class="check-ico">${item.done ? '✅' : '⬜'}</span>
+        <span class="check-label">${App.escapeHtml(item.label)}</span>
+        <span class="check-go">Configurer →</span>
+      </button>`);
+    el.onclick = () => Dashboard.setModule(item.module);
+    clGrid.appendChild(el);
+  });
+
   root.appendChild(App.el(`
     <div class="dash-stats">
       <div class="dash-stat"><div class="val">${g.members}</div><div class="lbl">Membres</div></div>
@@ -258,6 +285,35 @@ Dashboard.renderers.overview = async (content, data) => {
       <div class="dash-stat"><div class="val">${(data.role_menus || []).length}</div><div class="lbl">Menus de rôles</div></div>
       <div class="dash-stat"><div class="val">${(data.scheduled || []).length}</div><div class="lbl">Annonces programmées</div></div>
     </div>`));
+
+  // 📈 En bref : l'activité réelle du serveur (7 derniers jours)
+  const brief = Dashboard.card(root, '📈 Ton serveur en bref', 'Activité mesurée par le bot sur les 7 derniers jours.');
+  try {
+    const st = await App.api(`/bots/${bot.id}/guilds/${guildId}/stats`);
+    const totalMsgs = st.activity.reduce((a, d) => a + d.messages, 0);
+    const totalJoins = st.joins.reduce((a, d) => a + d.members, 0);
+    const top3 = (st.top_active || []).slice(0, 3);
+    brief.appendChild(App.el(`
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <div class="dash-badge ok" style="padding:8px 14px">💬 ${totalMsgs} messages cette semaine</div>
+        <div class="dash-badge" style="padding:8px 14px">🆕 ${totalJoins} nouveau(x) membre(s)</div>
+        <div class="dash-badge warn" style="padding:8px 14px">🎫 ${ts.open} ticket(s) ouvert(s)</div>
+      </div>`));
+    if (top3.length) {
+      brief.appendChild(App.el(`<div class="dash-label" style="margin-top:0">🏆 Membres les plus actifs</div>`));
+      top3.forEach((t, i) => {
+        brief.appendChild(App.el(`
+          <div style="display:flex;align-items:center;gap:10px;padding:6px 2px;border-bottom:1px solid #222434">
+            <img src="${App.escapeHtml(t.avatar)}" style="width:28px;height:28px;border-radius:50%;background:var(--d-card2)" alt="" />
+            <span style="flex:1;font-size:13.5px">${App.escapeHtml(t.tag)}</span>
+            <span class="dash-badge ${i === 0 ? 'ok' : ''}">${['🥇','🥈','🥉'][i]} ${t.messages} msg</span>
+          </div>`));
+      });
+    } else {
+      brief.appendChild(App.el(`<div class="desc" style="margin:0">📊 Les statistiques se remplissent dès que les membres discutent !</div>`));
+    }
+  } catch { brief.appendChild(App.el(`<div class="desc" style="margin:0">Bot hors ligne — les statistiques reviendront dès qu\'il se reconnecte.</div>`)); }
+
   const grid = App.el(`<div class="dash-grid"></div>`);
   const mods = [
     ['tickets', '🎫', 'Tickets', 'Types personnalisés, rôles staff multiples, transcriptions en MP'],
@@ -619,6 +675,44 @@ Dashboard.renderers.welcome = async (content, data) => {
 
       cfgZone.appendChild(App.el(`<input class="dash-input" data-k="${f.key}" value="${App.escapeHtml(ev.config[f.key] ?? '')}" placeholder="${f.placeholder || ''}" />`));
     });
+
+    // 👀 Aperçu en direct : tu vois le message exactement comme sur Discord
+    if (key === 'member_join' || key === 'member_leave') {
+      const preview = App.el(`<div class="embed-preview"></div>`);
+      cfgZone.appendChild(preview);
+      const renderPreview = () => {
+        const msgEl = cfgZone.querySelector('[data-k="message"]');
+        const embedEl = cfgZone.querySelector('[data-k="embed"]');
+        const colorEl = cfgZone.querySelector('input[type=color][data-k="color"]');
+        const imageEl = cfgZone.querySelector('[data-k="image"]');
+        const msg = (msgEl ? msgEl.value : '') || '';
+        const isEmbed = embedEl ? embedEl.checked : false;
+        const color = colorEl ? colorEl.value : (def.default ? def.default : '#5865F2');
+        const image = imageEl ? imageEl.value.trim() : '';
+        const text = msg
+          .replace(/{user}/g, '@NouveauMembre')
+          .replace(/{user\.name}/g, 'NouveauMembre')
+          .replace(/{user\.tag}/g, 'NouveauMembre#1234')
+          .replace(/{server}/g, data.guild ? data.guild.name : 'Mon serveur')
+          .replace(/{count}/g, String(data.guild ? data.guild.members : 125));
+        preview.innerHTML = `
+          <div class="dash-label" style="margin:10px 0 6px">👀 Aperçu sur Discord</div>
+          <div class="embed-box" style="border-left:4px solid ${isEmbed ? App.escapeHtml(color) : '#57F287'}">
+            ${App.escapeHtml(text || 'Message vide…').replace(/\n/g, '<br/>')}
+            ${isEmbed && image ? `<img src="${App.escapeHtml(image)}" style="max-width:100%;border-radius:6px;margin-top:8px" alt="" />` : ''}
+          </div>`;
+      };
+      ['message', 'embed', 'color', 'image'].forEach((k) => {
+        const el = cfgZone.querySelector(`[data-k="${k}"]`);
+        if (el) {
+          el.addEventListener('input', renderPreview);
+          if (el.type === 'checkbox') el.addEventListener('change', renderPreview);
+        }
+      });
+      const hexEl = cfgZone.querySelector('[data-k-hex="color"]');
+      if (hexEl) hexEl.addEventListener('input', renderPreview);
+      renderPreview();
+    }
 
     const save = App.el(`<button class="dash-btn dash-btn-primary" style="margin-top:12px">💾 Enregistrer</button>`);
     cfgZone.appendChild(save);
@@ -1318,6 +1412,43 @@ Dashboard.renderers.server = async (content, data) => {
         name_template: c4.querySelector('#vt-name').value.trim() || '🔊 {name}',
       }});
       App.toast('Salons vocaux enregistrés !');
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+
+  // 🚨 Anti-raid depuis le dashboard (verrouillage du serveur en 1 clic)
+  const ld = data.lockdown || { locked: false, channels: [] };
+  const c5 = Dashboard.card(root, '🚨 Anti-raid (verrouillage)', 'En cas d\'attaque : verrouille tous les salons en 1 clic, puis rouvre-les. Même chose sur Discord avec /lockdown.');
+  c5.innerHTML += `<div id="ld-zone"></div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap">
+      <button class="dash-btn dash-btn-danger" id="ld-on">🚨 Verrouiller le serveur</button>
+      <button class="dash-btn" id="ld-off">🔓 Rouvrir le serveur</button>
+    </div>`;
+  const renderLock = () => {
+    const zone = c5.querySelector('#ld-zone');
+    if (ld.locked) {
+      const names = (ld.channels || []).slice(0, 12).map((ch) => '#' + App.escapeHtml(ch.name)).join(', ');
+      zone.innerHTML = `<div class="dash-badge bad" style="margin-bottom:8px">🔒 Serveur verrouillé — ${ld.channels.length} salon(s) en lecture seule</div>
+        <div style="font-size:12px;color:var(--d-dim);margin-bottom:12px">${names}${ld.channels.length > 12 ? '…' : ''}</div>`;
+    } else {
+      zone.innerHTML = `<div class="dash-badge ok" style="margin-bottom:12px">🔓 Serveur ouvert — tout le monde peut écrire normalement</div>`;
+    }
+  };
+  renderLock();
+  c5.querySelector('#ld-on').onclick = async () => {
+    if (!(await App.confirm('Verrouiller TOUS les salons du serveur ? Les membres ne pourront plus écrire (seuls les admins le pourront).'))) return;
+    try {
+      const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/lockdown`, { method: 'POST', body: { action: 'on' } });
+      ld.locked = r.state.locked; ld.channels = r.state.channels;
+      App.toast(r.already ? 'Le serveur était déjà verrouillé.' : `${r.channels} salon(s) verrouillés !`);
+      renderLock();
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+  c5.querySelector('#ld-off').onclick = async () => {
+    try {
+      const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/lockdown`, { method: 'POST', body: { action: 'off' } });
+      ld.locked = r.state.locked; ld.channels = r.state.channels;
+      App.toast(`${r.reopened} salon(s) rouverts !`);
+      renderLock();
     } catch (e) { App.toast(e.message, 'error'); }
   };
 };

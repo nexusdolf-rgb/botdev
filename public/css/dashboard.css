@@ -257,3 +257,37 @@
   .chart { gap: 4px; }
   .bar { max-width: 100%; }
 }
+
+/* ============================================================
+   Hoxera 2.5 — Checklist de configuration, aperçu d'embeds
+   ============================================================ */
+
+/* ---------- Checklist de configuration ---------- */
+.dash-checklist {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 8px;
+}
+.check-item {
+  display: flex; align-items: center; gap: 9px;
+  background: var(--d-card2); border: 1px solid var(--d-border);
+  border-radius: 10px; padding: 10px 12px; cursor: pointer;
+  font-family: inherit; font-size: 13px; color: var(--d-text); text-align: left;
+  transition: .13s;
+}
+.check-item:hover { border-color: var(--d-accent); transform: translateY(-1px); }
+.check-item .check-ico { font-size: 15px; flex-shrink: 0; }
+.check-item .check-label { flex: 1; }
+.check-item .check-go { font-size: 11px; color: var(--d-dim); opacity: 0; transition: .13s; white-space: nowrap; }
+.check-item:hover .check-go { opacity: 1; color: var(--d-accent); }
+.check-item.done { opacity: .82; }
+.check-item.done .check-label { text-decoration: none; }
+.check-item:not(.done) { border-style: dashed; }
+
+/* ---------- Aperçu d'embed (façon Discord) ---------- */
+.embed-box {
+  background: #2b2d31; border-radius: 6px; padding: 12px 14px;
+  color: #dbdee1; font-size: 13px; line-height: 1.55; max-width: 440px;
+}
+
+@media (max-width: 700px) {
+  .dash-checklist { grid-template-columns: 1fr 1fr; }
+}

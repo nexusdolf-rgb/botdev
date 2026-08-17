@@ -480,40 +480,15 @@ async function handleSlash(botId, entry, interaction) {
     case 'lockdown': {
       if (!isAdmin(member)) return interaction.reply({ content: '⛔ Réservé aux administrateurs.', ephemeral: true });
       const action = interaction.options.getString('action');
-      const gs = store.guildSettings.get(botId, guild.id) || {};
+      const lockdown = require('./lockdown');
       if (action === 'on') {
-        const existing = (() => { try { return JSON.parse(gs.lockdown_channels || '[]'); } catch { return []; } })();
-        if (existing.length) return interaction.reply({ content: '🔒 Le serveur est déjà verrouillé. `/lockdown off` pour rouvrir.', ephemeral: true });
-        const locked = [];
-        for (const ch of guild.channels.cache.values()) {
-          if (ch.type !== ChannelType.GuildText) continue;
-          const everyone = guild.roles.everyone;
-          const perms = ch.permissionsFor(everyone);
-          if (!perms || !perms.has(PermissionsBitField.Flags.ViewChannel)) continue;
-          const wasDenied = !perms.has(PermissionsBitField.Flags.SendMessages);
-          locked.push({ id: ch.id, wasDenied });
-          if (!wasDenied) {
-            await ch.permissionOverwrites.edit(everyone, { SendMessages: false }).catch(() => {});
-          }
-        }
-        store.guildSettings.set(botId, guild.id, { lockdown_channels: JSON.stringify(locked) });
-        await logging.log(botId, guild, { title: '🚨 Verrouillage du serveur', description: `${member.user.tag} a verrouillé ${locked.length} salon(s) (anti-raid).`, color: '#ED4245' });
-        return interaction.reply({ content: `🚨 **Serveur verrouillé !** ${locked.length} salon(s) sont en lecture seule. Rouvre avec \`/lockdown off\`` });
+        const res = await lockdown.on(botId, guild, member.user.tag);
+        if (res.already) return interaction.reply({ content: '🔒 Le serveur est déjà verrouillé. `/lockdown off` pour rouvrir.', ephemeral: true });
+        return interaction.reply({ content: `🚨 **Serveur verrouillé !** ${res.channels} salon(s) sont en lecture seule. Rouvre avec \`/lockdown off\`` });
       }
-      const existing = (() => { try { return JSON.parse(gs.lockdown_channels || '[]'); } catch { return []; } })();
-      if (!existing.length) return interaction.reply({ content: '🔓 Le serveur n\'est pas verrouillé.', ephemeral: true });
-      let reopened = 0;
-      for (const e of existing) {
-        const ch = guild.channels.cache.get(e.id);
-        if (!ch || !ch.isTextBased()) continue;
-        if (!e.wasDenied) {
-          await ch.permissionOverwrites.delete(guild.roles.everyone).catch(() => {});
-          reopened++;
-        }
-      }
-      store.guildSettings.set(botId, guild.id, { lockdown_channels: '' });
-      await logging.log(botId, guild, { title: '🔓 Réouverture du serveur', description: `${member.user.tag} a rouvert ${reopened} salon(s).`, color: '#57F287' });
-      return interaction.reply({ content: `🔓 **Serveur rouvert !** ${reopened} salon(s) sont de nouveau ouverts.` });
+      const res = await lockdown.off(botId, guild, member.user.tag);
+      if (!res.reopened) return interaction.reply({ content: '🔓 Le serveur n\'est pas verrouillé.', ephemeral: true });
+      return interaction.reply({ content: `🔓 **Serveur rouvert !** ${res.reopened} salon(s) sont de nouveau ouverts.` });
     }
     case 'voicetemp': {
       if (!isAdmin(member)) return interaction.reply({ content: '⛔ Réservé aux administrateurs.', ephemeral: true });
