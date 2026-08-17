@@ -808,6 +808,10 @@ router.put('/bots/:id/tickets', requireAuth, async (req, res) => {
           emoji: safeEmojiWeb(t.emoji).slice(0, 100),
           description: String(t.description || '').slice(0, 100),
           category: String(t.category || '').slice(0, 100),
+          questions: (Array.isArray(t.questions) ? t.questions : [])
+            .map((q) => String(q).slice(0, 45))
+            .filter(Boolean)
+            .slice(0, 5),
           staff_roles: roles,
         };
       })

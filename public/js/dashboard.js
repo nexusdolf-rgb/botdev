@@ -290,7 +290,7 @@ Dashboard.renderers.overview = async (content, data) => {
 Dashboard.renderers.tickets = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const t = data.tickets;
-  const typesData = (t.types || []).map((x) => ({ label: x.label, emoji: x.emoji || '', description: x.description || '', category: x.category || '', staff_roles: (x.staff_roles && x.staff_roles.length) ? [...x.staff_roles] : [] }));
+  const typesData = (t.types || []).map((x) => ({ label: x.label, emoji: x.emoji || '', description: x.description || '', category: x.category || '', questions: (Array.isArray(x.questions) && x.questions.length) ? [...x.questions] : [], staff_roles: (x.staff_roles && x.staff_roles.length) ? [...x.staff_roles] : [] }));
   const root = Dashboard.header(content, '🎫', 'Système de tickets', 'Bouton ou menu déroulant → salon privé automatique. Le tout est aussi configurable sur Discord avec /ticket.');
   const ts = data.tickets_stats || { total: 0, open: 0 };
   root.appendChild(App.el(`
@@ -399,7 +399,7 @@ Dashboard.renderers.tickets = async (content, data) => {
         support_role: pick('#t-role', '#t-role-custom', ''),
         category: pick('#t-cat', '#t-cat-custom', 'Tickets'),
         message: c.querySelector('#t-msg').value,
-        types: typesData.filter((x) => x.label).map((x) => ({ label: x.label, emoji: x.emoji, description: x.description, category: x.category, staff_roles: x.staff_roles.filter(Boolean) })),
+        types: typesData.filter((x) => x.label).map((x) => ({ label: x.label, emoji: x.emoji, description: x.description, category: x.category, questions: (x.questions || []).map((q) => String(q).slice(0, 45)).filter(Boolean).slice(0, 5), staff_roles: x.staff_roles.filter(Boolean) })),
       }});
       App.toast('Tickets enregistrés !');
       renderStatus();
@@ -425,7 +425,7 @@ Dashboard.renderers.tickets = async (content, data) => {
         <div style="margin-bottom:10px">🎫 ${App.escapeHtml(t.message || 'Besoin d\'aide ? Ouvre un ticket !')}</div>
         <span style="display:inline-flex;align-items:center;gap:6px;background:${color};color:#fff;font-weight:700;padding:7px 16px;border-radius:6px">${App.escapeHtml(label)}</span>
         ${typesCount
-          ? `<div style="margin-top:12px;border:1px solid #1E1F22;border-radius:6px;padding:9px 12px;color:#A8ABAF;text-align:left">${typesData.filter((x) => x.label).map((x) => `<div style="padding:4px 0">${App.escapeHtml(x.emoji || '🎫')} <b style="color:#DBDEE1">${App.escapeHtml(x.label)}</b>${x.description ? `<div style="font-size:11px;margin-left:20px;color:#949BA4">${App.escapeHtml(x.description.slice(0, 70))}${x.description.length > 70 ? '…' : ''}</div>` : ''}</div>`).join('')}</div>`
+          ? `<div style="margin-top:12px;border:1px solid #1E1F22;border-radius:6px;padding:9px 12px;color:#A8ABAF;text-align:left">${typesData.filter((x) => x.label).map((x) => `<div style="padding:4px 0">${App.escapeHtml(x.emoji || '🎫')} <b style="color:#DBDEE1">${App.escapeHtml(x.label)}</b>${(x.questions || []).length ? ` <span style="font-size:10px;background:rgba(88,101,242,.2);color:#aab1ff;padding:1px 7px;border-radius:8px">❓ ${x.questions.length} question(s)</span>` : ''}${x.description ? `<div style="font-size:11px;margin-left:20px;color:#949BA4">${App.escapeHtml(x.description.slice(0, 70))}${x.description.length > 70 ? '…' : ''}</div>` : ''}</div>`).join('')}</div>`
           : `<div style="margin-top:10px;color:#A8ABAF;font-size:11.5px">Aucun type → un simple bouton s\'affichera.</div>`}
       </div>`;
   };
@@ -466,6 +466,10 @@ Dashboard.renderers.tickets = async (content, data) => {
           <label class="dash-label">🛡️ Rôles staff (plusieurs possibles — menus déroulants)</label>
           <div class="t-roles" style="display:flex;flex-direction:column;gap:6px"></div>
           <button class="dash-btn dash-btn-sm" data-addrole style="margin-top:6px">＋ Ajouter un rôle staff</button>
+          <label class="dash-label" style="margin-top:12px">❓ Questionnaire (réponses OBLIGATOIRES à l'ouverture — max 5)</label>
+          <div class="t-questions" style="display:flex;flex-direction:column;gap:6px"></div>
+          <button class="dash-btn dash-btn-sm" data-addq style="margin-top:6px">＋ Ajouter une question</button>
+          <div style="color:var(--d-dim);font-size:10.5px;margin-top:5px">Vide = par défaut (seule la raison est demandée).</div>
         </div>`);
       const emojiInp = row.querySelector('[data-k="emoji"]');
       const emojiErr = row.querySelector('[data-emojierr]');
@@ -523,11 +527,32 @@ Dashboard.renderers.tickets = async (content, data) => {
       };
       renderRoles();
       row.querySelector('[data-addrole]').onclick = () => { x.staff_roles.push(''); renderRoles(); };
+      const qEl = row.querySelector('.t-questions');
+      const renderQs = () => {
+        qEl.innerHTML = '';
+        x.questions.forEach((q, j) => {
+          const rq = App.el(`
+            <div style="display:flex;gap:7px">
+              <input class="dash-input" value="${App.escapeHtml(q)}" placeholder="Ex : Non RP ?" maxlength="45" />
+              <button class="dash-btn dash-btn-danger dash-btn-sm">🗑</button>
+            </div>`);
+          rq.querySelector('input').addEventListener('input', (e) => { x.questions[j] = e.target.value; });
+          rq.querySelector('button').onclick = () => { x.questions.splice(j, 1); renderQs(); };
+          qEl.appendChild(rq);
+        });
+        if (!x.questions.length) qEl.appendChild(App.el(`<div style="color:var(--d-dim);font-size:12px">Aucune question — questionnaire par défaut (juste la raison).</div>`));
+      };
+      renderQs();
+      row.querySelector('[data-addq]').onclick = () => {
+        if (x.questions.length >= 5) return App.toast('Maximum 5 questions par type.', 'error');
+        x.questions.push('');
+        renderQs();
+      };
       el.appendChild(row);
     });
   };
   renderTypes();
-  c2.querySelector('#t-add').onclick = () => { typesData.push({ label: '', emoji: '', category: '', staff_roles: [] }); renderTypes(); };
+  c2.querySelector('#t-add').onclick = () => { typesData.push({ label: '', emoji: '', category: '', description: '', questions: [], staff_roles: [] }); renderTypes(); };
 };
 
 // ---------- Bienvenue ----------

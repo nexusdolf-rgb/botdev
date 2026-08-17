@@ -109,8 +109,9 @@ async function dispatchPanels(botId, interaction) {
       return true;
     }
 
-    // 📝 Raison demandée à l'ouverture d'un ticket + 🗑 raison de suppression (staff)
+    // 📝 Raison demandée à l'ouverture d'un ticket + ❓ questionnaire du type + 🗑 raison de suppression (staff)
     if (interaction.isModalSubmit()) {
+      if (cid.startsWith(`bd-tquest:${botId}`)) { await submitQuestionnaire(botId, interaction); return true; }
       if (cid.startsWith(`bd-treason:${botId}`)) { await submitReason(botId, interaction); return true; }
       if (cid.startsWith(`bd-tdel:${botId}`)) { await submitDeleteReason(botId, interaction); return true; }
     }
@@ -194,7 +195,8 @@ function parseTypes(cfg) {
 }
 
 // Types normalisés : chaque type a staff_roles (liste) en plus de l'ancien staff_role
-// + une description professionnelle (affichée sous le type dans le menu déroulant)
+// + une description professionnelle + un questionnaire personnalisé (questions
+// auxquelles le membre doit répondre OBLIGATOIREMENT à l'ouverture du ticket).
 function normalizeTypes(cfg) {
   return parseTypes(cfg).map((t) => {
     const roles = Array.isArray(t.staff_roles)
@@ -205,6 +207,9 @@ function normalizeTypes(cfg) {
       emoji: String(t.emoji || ''),
       category: String(t.category || ''),
       description: String(t.description || '').slice(0, 100),
+      questions: Array.isArray(t.questions)
+        ? t.questions.map((q) => String(q).slice(0, 45)).filter(Boolean).slice(0, 5)
+        : [],
       staff_roles: roles,
     };
   });
@@ -364,38 +369,50 @@ async function staffDeny(interaction) {
 
 // ---------- Création du ticket ----------
 // Embed de bienvenue du salon de ticket : textes professionnels,
-// type + description, équipe en charge, déroulement de la prise en charge.
-function ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning = '') {
+// type + description, équipe en charge, déroulement de la prise en charge,
+// et les réponses du questionnaire personnalisé (si le type en a un).
+function ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning = '', answers = []) {
   const typeFields = [
     { name: '🗂️ Type de ticket', value: chosen ? `${chosen.emoji ? chosen.emoji + ' ' : ''}**${chosen.label}**` : '**Ticket simple**', inline: true },
   ];
   if (chosen && chosen.description) {
     typeFields.push({ name: 'ℹ️ À propos de ce type', value: chosen.description.slice(0, 1024), inline: true });
   }
+  const fields = [...typeFields];
+  if (Array.isArray(answers) && answers.length) {
+    fields.push({
+      name: '📝 Réponses au questionnaire',
+      value: answers
+        .map((a, i) => `**${i + 1}. ${a.q}**\n↳ ${a.a}`)
+        .join('\n')
+        .slice(0, 1024),
+      inline: false,
+    });
+  }
+  fields.push(
+    { name: '🛡️ Équipe en charge', value: staffMention || 'le staff du serveur', inline: true },
+    { name: '📝 Votre demande', value: reason ? reason.slice(0, 1024) : '—', inline: false },
+    { name: '📋 Déroulement de la prise en charge', value: [
+      '1️⃣ Décrivez votre demande en détail (textes, captures d\'écran, fichiers).',
+      '2️⃣ Un membre du staff vous répond ici, dans ce salon privé.',
+      '3️⃣ À la fermeture définitive du ticket, la **transcription complète** vous est envoyée en message privé.',
+    ].join('\n') },
+    { name: '🔒 Boutons réservés au staff', value: '**🔒 Fermer** — verrouiller (réouvrable) · **⏸ En attente** — lecture seule · **🔓 Réouvrir** · **🗑 Supprimer** — fermeture définitive avec transcription en MP.' + dmWarning },
+  );
   const avatar = member.user.displayAvatarURL ? member.user.displayAvatarURL({ dynamic: true }) : '';
   const welcome = new EmbedBuilder()
     .setColor('#57F287')
     .setAuthor(avatar ? { name: `Ticket de ${member.user.username}`, iconURL: avatar } : { name: `Ticket de ${member.user.username}` })
     .setTitle('🎫 Ticket ouvert — prise en charge en cours')
     .setDescription(`Bienvenue ${member} ! Votre demande a bien été enregistrée. Un membre de notre équipe vous répondra dans les plus brefs délais.\n\nVous pouvez dès maintenant décrire votre demande en détail : textes, captures d'écran et fichiers sont les bienvenus.`)
-    .addFields(
-      ...typeFields,
-      { name: '🛡️ Équipe en charge', value: staffMention || 'le staff du serveur', inline: true },
-      { name: '📝 Votre demande', value: reason ? reason.slice(0, 1024) : '—', inline: false },
-      { name: '📋 Déroulement de la prise en charge', value: [
-        '1️⃣ Décrivez votre demande en détail (textes, captures d\'écran, fichiers).',
-        '2️⃣ Un membre du staff vous répond ici, dans ce salon privé.',
-        '3️⃣ À la fermeture définitive du ticket, la **transcription complète** vous est envoyée en message privé.',
-      ].join('\n') },
-      { name: '🔒 Boutons réservés au staff', value: '**🔒 Fermer** — verrouiller (réouvrable) · **⏸ En attente** — lecture seule · **🔓 Réouvrir** · **🗑 Supprimer** — fermeture définitive avec transcription en MP.' + dmWarning },
-    )
+    .addFields(...fields)
     .setTimestamp();
   const site = store.settings.get('public_url');
   if (site) welcome.setFooter({ text: `Hoxera · ${site}` });
   return welcome;
 }
 
-async function openTicket(botId, interaction, type, reason = '') {
+async function openTicket(botId, interaction, type, reason = '', answers = []) {
   const guild = interaction.guild;
   const member = interaction.member;
   const cfg = store.tickets.get(botId, guild.id);
@@ -408,6 +425,9 @@ async function openTicket(botId, interaction, type, reason = '') {
     emoji: String(chosenRaw.emoji || ''),
     category: String(chosenRaw.category || ''),
     description: String(chosenRaw.description || '').slice(0, 100),
+    questions: Array.isArray(chosenRaw.questions)
+      ? chosenRaw.questions.map((q) => String(q).slice(0, 45)).filter(Boolean).slice(0, 5)
+      : [],
     staff_roles: Array.isArray(chosenRaw.staff_roles)
       ? chosenRaw.staff_roles.map((r) => String(r).trim()).filter(Boolean)
       : (chosenRaw.staff_role ? [String(chosenRaw.staff_role).trim()] : []),
@@ -495,7 +515,7 @@ async function openTicket(botId, interaction, type, reason = '') {
   } catch (e) {
     return interaction.reply({ content: '⚠️ Je n\'ai pas pu créer le salon. Vérifie mes permissions (gérer les salons).', ephemeral: true });
   }
-  ticketMeta.set(channel.id, { openerId: member.id, typeLabel: chosen ? chosen.label : '', reason });
+  ticketMeta.set(channel.id, { openerId: member.id, typeLabel: chosen ? chosen.label : '', reason, answers });
   bumpTicketStats(guild.id, 1, 1);
 
   // Boutons du staff : deux rangées propres
@@ -523,7 +543,7 @@ async function openTicket(botId, interaction, type, reason = '') {
   }
 
   const staffMention = supportRoles.length ? supportRoles.map((r) => r.toString()).join(' ') : '';
-  const welcome = ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning);
+  const welcome = ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning, answers);
   const identity = require('./identity');
   await identity.sendAsProfile(interaction.client, botId, guild, channel, {
     content: `${member}${staffMention ? ' · ' + staffMention : ''}`,
@@ -561,14 +581,43 @@ function reasonModal(botId, customId, title, label, placeholder) {
   return modal;
 }
 
-async function askReason(botId, interaction, type) {
+// ❓ Questionnaire personnalisé du type (réponses OBLIGATOIRES) :
+// une modale avec une question par champ, puis la raison (si activée).
+const pendingQuestionnaires = new Map(); // userId -> { botId, guildId, type, ts }
+
+function questionnaireModal(botId, type) {
+  const questions = (type && type.questions && type.questions.length) ? type.questions : [];
+  const modal = new ModalBuilder()
+    .setCustomId(`bd-tquest:${botId}`)
+    .setTitle(`📝 ${type ? String(type.label || 'Ticket').slice(0, 30) : 'Ticket'} — questionnaire`);
+  questions.slice(0, 5).forEach((q, i) => {
+    modal.addComponents(new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId(`q${i}`)
+        .setLabel(String(q).slice(0, 45))
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+        .setMaxLength(500),
+    ));
+  });
+  return modal;
+}
+
+async function askReason(botId, interaction, type, answers = [], skipQuestionnaire = false) {
   const cfg = store.tickets.get(botId, interaction.guild.id) || {};
-  // Questionnaire désactivé → ouverture directe sans raison
-  if (cfg.require_reason === 0 || cfg.require_reason === false) {
-    await openTicket(botId, interaction, type, '');
+  // Questionnaire personnalisé du type : d'abord les questions obligatoires
+  // (sauf si on vient justement d'y répondre : skipQuestionnaire)
+  if (!skipQuestionnaire && type && type.questions && type.questions.length) {
+    pendingQuestionnaires.set(interaction.user.id, { botId, guildId: interaction.guild.id, type, ts: Date.now() });
+    await interaction.showModal(questionnaireModal(botId, type));
     return;
   }
-  pendingReasons.set(interaction.user.id, { botId, guildId: interaction.guild.id, type, ts: Date.now() });
+  // Questionnaire désactivé → ouverture directe sans raison
+  if (cfg.require_reason === 0 || cfg.require_reason === false) {
+    await openTicket(botId, interaction, type, '', answers);
+    return;
+  }
+  pendingReasons.set(interaction.user.id, { botId, guildId: interaction.guild.id, type, answers, ts: Date.now() });
   await interaction.showModal(reasonModal(
     botId,
     `bd-treason:${botId}`,
@@ -578,6 +627,21 @@ async function askReason(botId, interaction, type) {
   ));
 }
 
+async function submitQuestionnaire(botId, interaction) {
+  const pending = pendingQuestionnaires.get(interaction.user.id);
+  pendingQuestionnaires.delete(interaction.user.id);
+  if (!pending || pending.botId !== botId || Date.now() - (pending.ts || 0) > WIZARD_TTL) {
+    return interaction.reply({ content: '⏰ Ta demande a expiré, réessaie.', ephemeral: true });
+  }
+  const questions = (pending.type.questions || []);
+  const answers = questions.map((q, i) => ({
+    q: String(q).slice(0, 45),
+    a: (interaction.fields.getTextInputValue(`q${i}`) || '').trim().slice(0, 500) || '—',
+  }));
+  // On enchaîne : la raison (si activée) puis l'ouverture du ticket avec les réponses
+  await askReason(botId, interaction, pending.type, answers, true);
+}
+
 async function submitReason(botId, interaction) {
   const pending = pendingReasons.get(interaction.user.id);
   pendingReasons.delete(interaction.user.id);
@@ -585,7 +649,7 @@ async function submitReason(botId, interaction) {
     return interaction.reply({ content: '⏰ Ta demande a expiré, réessaie.', ephemeral: true });
   }
   const reason = (interaction.fields.getTextInputValue('value') || '').trim();
-  await openTicket(botId, interaction, pending.type, reason);
+  await openTicket(botId, interaction, pending.type, reason, pending.answers || []);
 }
 
 async function handleTicketButton(botId, interaction) {
@@ -606,6 +670,9 @@ async function buildTranscript(botId, interaction, extraLines = []) {
   const meta = ticketMetaFor(channel);
   let text = '';
   if (meta.reason) text += `📝 Raison du ticket : ${meta.reason}\n\n`;
+  if (Array.isArray(meta.answers) && meta.answers.length) {
+    text += '❓ Questionnaire :\n' + meta.answers.map((a) => `${a.q} → ${a.a}`).join('\n') + '\n\n';
+  }
   try {
     const fetched = await channel.messages.fetch({ limit: 100 });
     const arr = [...fetched.values()].reverse();
@@ -875,6 +942,7 @@ function currentType(state) {
 
 function typesEditEmbed(state) {
   const t = currentType(state);
+  const qs = Array.isArray(t.questions) ? t.questions.filter(Boolean) : [];
   return new EmbedBuilder()
     .setColor('#8B5CF6')
     .setTitle(`${t.emoji || '🎫'} ${t.label}`)
@@ -882,7 +950,8 @@ function typesEditEmbed(state) {
     .addFields(
       { name: '😀 Emoji', value: t.emoji || 'aucun', inline: true },
       { name: '🗂️ Catégorie', value: t.category || 'par défaut', inline: true },
-      { name: '📝 Description', value: t.description || '*aucune — ajoute une explication professionnelle affichée sous le type dans le menu*', inline: false },
+      { name: '📝 Description', value: t.description || '*aucune — ajoute une explication professionnelle affichée dans le centre d\'assistance*', inline: false },
+      { name: '❓ Questionnaire (' + qs.length + '/5)', value: qs.length ? qs.map((q, i) => `${i + 1}. ${q}`).join('\n') : '*aucun — par défaut, seule la raison est demandée*', inline: false },
       { name: '🛡️ Rôles staff (' + (t.staff_roles || []).length + ')', value: (t.staff_roles || []).length ? t.staff_roles.join('\n') : 'aucun', inline: true },
     );
 }
@@ -892,6 +961,7 @@ function typesEditComponents(state) {
     { label: '✏️ Renommer', value: 'rename', emoji: '✏️' },
     { label: '😀 Changer l\'emoji', value: 'emoji', emoji: '😀' },
     { label: '📝 Description du type', value: 'desc', emoji: '📝' },
+    { label: '❓ Questionnaire (questions obligatoires)', value: 'questions', emoji: '❓' },
     { label: '🗂️ Changer la catégorie', value: 'category', emoji: '🗂️' },
     { label: '🛡️ ➕ Ajouter un rôle staff', value: 'addrole', emoji: '🛡️' },
     { label: '🛡️ ➖ Retirer un rôle staff', value: 'removerole', emoji: '🛡️' },
@@ -979,6 +1049,59 @@ function typesRemoveRoleEmbed(state) {
     .setColor('#ED4245')
     .setTitle(`🛡️ Retirer un rôle de « ${t.label} »`)
     .setDescription('Sélectionne un rôle pour le retirer de la gestion de ce type de ticket.');
+}
+
+// ❓ Étape « Questionnaire » : questions obligatoires du type (ajout/retrait répétables)
+function typesQuestionsEmbed(state) {
+  const t = currentType(state);
+  const qs = (t.questions || []).filter(Boolean);
+  return new EmbedBuilder()
+    .setColor('#5865F2')
+    .setTitle(`❓ Questionnaire de « ${t.label} »`)
+    .setDescription('Les membres qui ouvrent ce type de ticket devront répondre **obligatoirement** à ces questions (une fenêtre s\'ouvre avant la création du ticket).\n\n*Par défaut : aucune question (seule la raison est demandée).*')
+    .addFields({
+      name: `📋 Questions actuelles (${qs.length}/5)`,
+      value: qs.length ? qs.map((q, i) => `**${i + 1}.** ${q}`).join('\n') : 'aucune',
+    });
+}
+
+function typesQuestionsComponents(state) {
+  const t = currentType(state);
+  const qs = (t.questions || []).filter(Boolean);
+  const opts = [
+    { label: '➕ Ajouter une question', value: '__addq__', emoji: '➕' },
+  ];
+  if (qs.length) opts.push({ label: '➖ Retirer une question', value: '__remq__', emoji: '➖' });
+  opts.push({ label: '✅ Terminé', value: '__doneq__', emoji: '✅' });
+  opts.push({ label: '⬅️ Retour', value: 'back', emoji: '⬅️' });
+  return [new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(`bdw-ts:${state.botId}:${state.userId}`)
+      .setPlaceholder('Gère le questionnaire…')
+      .setMinValues(1).setMaxValues(1)
+      .addOptions(opts.map((o) => typeOption(o.label, o.emoji, o.value)))
+  )];
+}
+
+function typesRemoveQuestionEmbed(state) {
+  const t = currentType(state);
+  return new EmbedBuilder()
+    .setColor('#ED4245')
+    .setTitle(`❓ Retirer une question de « ${t.label} »`)
+    .setDescription('Sélectionne la question à retirer du questionnaire.');
+}
+
+function typesRemoveQuestionComponents(state) {
+  const t = currentType(state);
+  const qs = (t.questions || []).filter(Boolean).slice(0, 23);
+  const opts = qs.map((q, i) => ({ label: `${i + 1}. ${q}`, value: q, emoji: '❓' }));
+  return [new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(`bdw-ts:${state.botId}:${state.userId}`)
+      .setPlaceholder('Choisis une question à retirer…')
+      .setMinValues(1).setMaxValues(1)
+      .addOptions(opts.map((o) => typeOption(o.label, o.emoji, o.value)))
+  )];
 }
 
 function typesConfirmComponents(state) {
@@ -1075,6 +1198,10 @@ async function handleTypesWizardInteraction(botId, interaction) {
       if (v === 'rename') { state.modal = 'rename'; return interaction.showModal(textModal(botId, uid, '✏️ Renommer', 'Nouveau nom', state.current, true, 100)); }
       if (v === 'emoji') { state.modal = 'emoji'; return interaction.showModal(textModal(botId, uid, '😀 Emoji', 'Emoji', '🤝', false, 10)); }
       if (v === 'desc') { state.modal = 'desc'; return interaction.showModal(textModal(botId, uid, '📝 Description du type', 'Description affichée sous le type', 'Ex : signale un abus du staff, en toute confidentialité', false, 100)); }
+      if (v === 'questions') {
+        state.step = 'questions';
+        return interaction.update({ embeds: [typesQuestionsEmbed(state)], components: typesQuestionsComponents(state) });
+      }
       if (v === 'category') {
         state.step = 'category';
         return interaction.update({
@@ -1108,6 +1235,26 @@ async function handleTypesWizardInteraction(botId, interaction) {
       }
       updateType(botId, state.guildId, state.current, { category: v });
       return interaction.update(backToEdit());
+    }
+    // ❓ Questionnaire personnalisé : ajouter / retirer des questions obligatoires
+    if (state.step === 'questions') {
+      if (v === '__addq__') {
+        state.modal = 'addquestion';
+        return interaction.showModal(textModal(botId, uid, '➕ Question du questionnaire', 'La question (obligatoire)', 'Ex : Quel est ton âge ?', true, 45));
+      }
+      if (v === '__remq__') {
+        state.step = 'removeq';
+        return interaction.update({ embeds: [typesRemoveQuestionEmbed(state)], components: typesRemoveQuestionComponents(state) });
+      }
+      if (v === '__doneq__' || v === 'back') return interaction.update(backToEdit());
+    }
+    if (state.step === 'removeq') {
+      const t = currentType(state);
+      const qs = (t.questions || []).filter(Boolean);
+      const questions = qs.filter((q) => q !== v);
+      updateType(botId, state.guildId, state.current, { questions });
+      state.step = 'questions';
+      return interaction.update({ embeds: [typesQuestionsEmbed(state)], components: typesQuestionsComponents(state) });
     }
     return null;
   }
@@ -1185,6 +1332,21 @@ async function handleTypesWizardInteraction(botId, interaction) {
       updateType(botId, state.guildId, state.current, { description: val.slice(0, 100) });
       try { await state.msg.edit(backToEdit()); } catch {}
       return interaction.reply({ content: '✅ Description enregistrée — elle apparaîtra sous le type dans le menu !', ephemeral: true });
+    }
+    if (mode === 'addquestion') {
+      const t = currentType(state);
+      const qs = (t.questions || []).filter(Boolean);
+      if (qs.length >= 5) {
+        state.step = 'questions';
+        try { await state.msg.edit({ embeds: [typesQuestionsEmbed(state)], components: typesQuestionsComponents(state) }); } catch {}
+        return interaction.reply({ content: '❌ Maximum 5 questions par type.', ephemeral: true });
+      }
+      if (!val) return interaction.reply({ content: '❌ Question vide — annulée.', ephemeral: true });
+      qs.push(val.slice(0, 45));
+      updateType(botId, state.guildId, state.current, { questions: qs });
+      state.step = 'questions';
+      try { await state.msg.edit({ embeds: [typesQuestionsEmbed(state)], components: typesQuestionsComponents(state) }); } catch {}
+      return interaction.reply({ content: `✅ Question ajoutée (${qs.length}/5) — les membres devront y répondre obligatoirement à l'ouverture !`, ephemeral: true });
     }
     return interaction.reply({ content: '✅ Enregistré !', ephemeral: true });
   }
