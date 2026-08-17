@@ -284,8 +284,9 @@ async function sendTicketPanel(botId, guildId, client, channel) {
   const types = normalizeTypes(cfg);
   const rows = [];
   if (types.length) {
-    // Des types existent : seul le menu déroulant est affiché (pas de bouton en dessous)
-    // Chaque type affiche son emoji + une description professionnelle en dessous.
+    // Des types existent : seul le menu déroulant est affiché (pas de bouton en dessous).
+    // Menu épuré : emoji + nom uniquement. Les détails de chaque type sont
+    // déjà présentés dans l'embed « Centre d'assistance » (champ dédié par type).
     const select = new StringSelectMenuBuilder()
       .setCustomId(`bd-ttype:${botId}`)
       .setPlaceholder('🗂️ Choisissez le type de ticket…')
@@ -293,8 +294,7 @@ async function sendTicketPanel(botId, guildId, client, channel) {
     for (const t of types.slice(0, 25)) {
       const opt = new StringSelectMenuOptionBuilder()
         .setLabel(String(t.label).slice(0, 100))
-        .setValue(String(t.label).slice(0, 100))
-        .setDescription(typeOptionDescription(t));
+        .setValue(String(t.label).slice(0, 100));
       const e = safeEmoji(t.emoji);
       if (e) opt.setEmoji(e);
       select.addOptions(opt);

@@ -64,6 +64,10 @@ const check = (label, cond) => {
   check('panneau : type 1 = description sous le titre', String(fieldFor('🤝 Ticket contre admin').value || '').includes('Signale un abus'));
   check('panneau : type 2 = champ dédié avec description auto', String(fieldFor('⚔️ Ticket contre joueur').value || '').startsWith('Ouvrir un ticket'));
   check('panneau : 3 encarts d\'info en haut', fields.filter((f) => f.inline).length === 3);
+  // 🧹 Menu déroulant épuré : emoji + nom uniquement, AUCUNE description dessous
+  const select = sent[0].components[0].components[0].toJSON();
+  check('menu : options sans description (épuré)', select.options.length === 2 && select.options.every((o) => !o.description));
+  check('menu : emojis conservés', select.options[0].emoji && select.options[1].emoji);
 
   // ---------- 4. Embed de bienvenue du salon privé ----------
   const member = { id: 'u1', user: { id: 'u1', username: 'Alice', displayAvatarURL: () => '' }, toString: () => '<@u1>' };
