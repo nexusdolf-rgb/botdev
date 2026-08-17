@@ -2,6 +2,7 @@
 // BotDev - Routes API
 // ============================================================
 const express = require('express');
+const path = require('path');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const store = require('./db');
@@ -11,6 +12,28 @@ const { EVENT_DEFS, eventsState } = require('./discord/events');
 
 const router = express.Router();
 const COOKIE = 'botdev_session';
+
+// ============================================================
+// 🖼️ Bannière du panneau de tickets, générée PAR SERVEUR
+// (publique : c'est Discord qui la charge pour l'afficher dans l'embed)
+// ============================================================
+router.get('/tickets/panel-banner/:guildId.png', async (req, res) => {
+  const guildId = String(req.params.guildId || '').replace(/[^0-9]/g, '').slice(0, 25);
+  const banner = require('./banner');
+  const name = banner.storedPanelName(guildId) || 'NEXORA';
+  try {
+    const buf = await banner.generateBanner(name);
+    if (buf) {
+      res.set('Content-Type', 'image/png');
+      res.set('Cache-Control', 'public, max-age=86400');
+      return res.send(buf);
+    }
+  } catch (e) {
+    console.error('[Hoxera] bannière panneau :', e.message);
+  }
+  // Repli : bannière générique « SUPPORT - NEXORA »
+  res.sendFile(path.join(__dirname, '..', 'public', 'icons', 'support-banner.png'));
+});
 
 // Emoji sûr (même règle que le bot) : évite de stocker des emojis invalides
 // qui feraient planter la construction des menus Discord.

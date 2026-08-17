@@ -256,9 +256,13 @@ function defaultPanelDescription(buttonLabel, hasTypes) {
 // message de patience et bannière. La logique des tickets
 // (menu, custom_id, création, permissions, fermeture…) est
 // 100 % inchangée — le menu déroulant reste en dessous, tel quel.
+// 🌍 PERSONNALISATION AUTOMATIQUE PAR SERVEUR :
+//  - « Support | {nom du serveur} » (titre)
+//  - « Bienvenue sur le support officiel de {nom du serveur} »
+//  - Bannière « SUPPORT - {NOM DU SERVEUR} » générée à la volée
+//    (Nexora = nom de repli si le serveur est inconnu).
 // ============================================================
-const PANEL_TITLE = '👑 Support | Nexora';
-const PANEL_WELCOME = 'Bienvenue sur le support officiel de Nexora';
+const PANEL_DEFAULT_NAME = 'Nexora';
 const PANEL_DESC = 'Pour ouvrir un ticket, sélectionnez la catégorie correspondante à votre besoin via le menu ci-dessous et veuillez détailler en quelques lignes votre demande avant l\'ouverture.';
 const PANEL_INFO_TITLE = '__ⓘ Informations importantes :__';
 const PANEL_RULES = [
@@ -269,12 +273,19 @@ const PANEL_RULES = [
 ];
 const PANEL_PATIENCE = '*⏳ Merci de votre patience, un membre du staff prendra votre ticket en charge dès que possible.*';
 
-function panelBannerUrl() {
+function panelBannerUrl(guildId, name) {
   const site = store.settings.get('public_url') || 'https://dash-hoxora.onrender.com';
+  // Bannière dynamique par serveur (le nom dans l'URL permet à Discord
+  // de recharger l'image si le serveur est renommé)
+  if (guildId && name && name !== PANEL_DEFAULT_NAME) {
+    return `${site}/api/tickets/panel-banner/${encodeURIComponent(guildId)}.png?n=${encodeURIComponent(String(name).slice(0, 60))}`;
+  }
+  // Repli : bannière générique « SUPPORT - NEXORA »
   return `${site}/icons/support-banner.png`;
 }
 
-function buildTicketPanelEmbed(cfg, client, types) {
+function buildTicketPanelEmbed(cfg, client, types, serverName = '', guildId = '') {
+  const name = String(serverName || '').trim().slice(0, 100) || PANEL_DEFAULT_NAME;
   // Le message personnalisé (configuré dans le dashboard) reste respecté :
   // s'il existe, il remplace le paragraphe d'explication standard.
   const customMsg = isDefaultMessage(cfg.message) ? '' : String(cfg.message);
@@ -282,15 +293,15 @@ function buildTicketPanelEmbed(cfg, client, types) {
 
   const embed = new EmbedBuilder()
     .setColor('#ED4245')
-    .setTitle(PANEL_TITLE)
-    .setDescription(`${PANEL_WELCOME}\n\n${paragraph}`)
+    .setTitle(`👑 Support | ${name}`)
+    .setDescription(`Bienvenue sur le support officiel de ${name}\n\n${paragraph}`)
     .addFields(
       { name: PANEL_INFO_TITLE, value: PANEL_RULES.join('\n') },
       { name: '\u200b', value: PANEL_PATIENCE },
     )
-    // 🖼️ Bannière « SUPPORT - NEXORA » : image servie par le site,
+    // 🖼️ Bannière « SUPPORT - {nom du serveur} » : image générée par le site,
     // affichée en bas de l'embed, juste au-dessus du menu déroulant.
-    .setImage(panelBannerUrl());
+    .setImage(panelBannerUrl(guildId, name));
   return embed;
 }
 
@@ -328,7 +339,14 @@ async function sendTicketPanel(botId, guildId, client, channel) {
   }
   const identity = require('./identity');
   const guild = client && client.guilds ? client.guilds.cache.get(guildId) : null;
-  const payload = { embeds: [buildTicketPanelEmbed(cfg, client, types)], components: rows };
+  // 🌍 Nom du serveur : mémorisé (pour la bannière dynamique) et affiché
+  // dans le titre + la bienvenue du panneau. Repli : « Nexora ».
+  let serverName = '';
+  if (guild && guild.name) {
+    serverName = String(guild.name).slice(0, 100);
+    try { store.guildSettings.set(botId, guildId, { panel_name: serverName }); } catch {}
+  }
+  const payload = { embeds: [buildTicketPanelEmbed(cfg, client, types, serverName, guildId)], components: rows };
   if (guild) {
     await identity.sendAsProfile(client, botId, guild, channel, payload);
   } else {

@@ -383,6 +383,8 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN lockdown_channels TEXT DEFA
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN voicetemp_channel TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN voicetemp_category TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN voicetemp_name TEXT DEFAULT ''"); } catch (e) {}
+// Nom du serveur affiché dans le panneau de tickets (bannière + titre automatiques)
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN panel_name TEXT DEFAULT ''"); } catch (e) {}
 
 // L'ancienne table events (globale) n'a pas de colonne guild_id : on la reconstruit
 const eventsCols = db.prepare("PRAGMA table_info(events)").all().map(c => c.name);
@@ -506,7 +508,7 @@ const guildSettings = {
   set: (botId, guildId, fields) => {
     const cur = guildSettings.get(botId, guildId) || { prefix: '', warn_limit: 0, warn_action: 'none' };
     const next = { ...cur, ...fields };
-    const cols = ['prefix', 'warn_limit', 'warn_action', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name'];
+    const cols = ['prefix', 'warn_limit', 'warn_action', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name'];
     const vals = {
       bot_id: botId, guild_id: guildId,
       prefix: String(next.prefix || '').slice(0, 5),
@@ -532,6 +534,7 @@ const guildSettings = {
       voicetemp_channel: String(next.voicetemp_channel || '').slice(0, 100),
       voicetemp_category: String(next.voicetemp_category || '').slice(0, 100),
       voicetemp_name: String(next.voicetemp_name || '').slice(0, 50),
+      panel_name: String(next.panel_name || '').slice(0, 100),
     };
     const sets = cols.map(c => `${c} = excluded.${c}`).join(', ');
     const placeholders = ['bot_id', 'guild_id', ...cols].map(c => `@${c}`).join(', ');
