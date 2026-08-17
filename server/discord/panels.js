@@ -353,6 +353,11 @@ async function sendTicketPanel(botId, guildId, client, channel) {
   } else {
     await channel.send(payload);
   }
+  // 🔥 Pré-chauffage : génère la bannière animée de ce serveur en fond
+  // (elle sera prête quand Discord chargera l'image dans l'embed)
+  if (serverName) {
+    try { require('../banner').warmupGif(serverName); } catch {}
+  }
 }
 
 // ---------- Métadonnées du ticket (topic + mémoire) ----------

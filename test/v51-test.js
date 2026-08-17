@@ -31,15 +31,16 @@ const check = (label, cond) => {
   check('GIF : généré', !!gif && gif.length > 10000);
   check('GIF : signature GIF89a', gif.slice(0, 6).toString() === 'GIF89a');
   const reader = new GifReader(gif);
-  check('GIF : 26 trames (24 balayage + 2 pause)', reader.numFrames() === 26);
+  check('GIF : 114 trames (balayage + dérive + pause)', reader.numFrames() === 114);
   check('GIF : boucle infinie', reader.loopCount() === 0);
+  check('GIF : dimensions 680x240 (référence)', reader.width === 680 && reader.height === 240);
   const delays = [];
   for (let i = 0; i < reader.numFrames(); i++) delays.push(reader.frameInfo(i).delay);
-  const sweepMs = delays.slice(0, 24).reduce((a, b) => a + b, 0) * 10;
-  const holdMs = delays.slice(24).reduce((a, b) => a + b, 0) * 10;
-  check('GIF : balayage fluide (~1,5 à 2,5 s)', sweepMs >= 1500 && sweepMs <= 2500);
-  check('GIF : pause (~2,5 à 3,5 s) avant rebouclage', holdMs >= 2500 && holdMs <= 3500);
-  check('GIF : taille raisonnable (< 3 Mo)', gif.length < 3 * 1024 * 1024);
+  const totalMs = delays.reduce((a, b) => a + b, 0) * 10;
+  const sweepMs = delays.slice(0, 36).reduce((a, b) => a + b, 0) * 10;
+  check('GIF : balayage ~1,8 s', sweepMs >= 1500 && sweepMs <= 2200);
+  check('GIF : boucle totale ~5,7 s (référence 6 s)', totalMs >= 5000 && totalMs <= 6500);
+  check('GIF : taille raisonnable (< 6 Mo, comme la réf 4,3 Mo)', gif.length < 6 * 1024 * 1024);
 
   // ---------- 3. PNG statique en repli ----------
   const png = await banner.generateBanner('Serveur Animé');
@@ -57,7 +58,7 @@ const check = (label, cond) => {
   });
   let routeOk = false, contentType = '', gifSize = 0, gifSignature = '';
   try {
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 100; i++) {
       try {
         const res = await fetch('http://localhost:3198/api/tickets/panel-banner/111222333.gif');
         if (res.ok) {
@@ -77,7 +78,7 @@ const check = (label, cond) => {
   check('route : répond 200 avec un GIF', routeOk);
   check('route : Content-Type image/gif', String(contentType).includes('image/gif'));
   check('route : GIF valide (signature)', gifSignature === 'GIF89a');
-  check('route : taille cohérente', gifSize > 10000 && gifSize < 3 * 1024 * 1024);
+  check('route : taille cohérente', gifSize > 10000 && gifSize < 6 * 1024 * 1024);
 
   store.db.close();
   console.log(failures === 0 ? '\n✅ V51 — Bannière animée (brillance qui balaie + bordeaux + fumée) : 100 % fonctionnelle. 🎉' : `\n❌ ${failures} vérification(s) en échec`);
