@@ -446,15 +446,25 @@ label.field-label {
 
 
 @media (max-width: 900px) {
+  body {
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: contain;
+  }
   .auth-left { display: none; }
   .auth-right { padding: 20px; align-items: flex-start; }
   .auth-card { width: 100%; }
   .auth-card h2 { font-size: 20px; }
 
-  /* Modales plein écran sur mobile */
-  .modal-overlay { padding: 0; }
-  .modal { width: 100vw; max-width: 100vw; max-height: 100dvh; height: auto; border-radius: 0; }
+  /* Modales : feuille glissante depuis le bas (façon Android) */
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal {
+    width: 100vw; max-width: 100vw; max-height: 92dvh;
+    border-radius: 20px 20px 0 0; border-bottom: none;
+    animation: sheetUp .25s cubic-bezier(.2, .9, .3, 1);
+    overscroll-behavior: contain;
+  }
   .modal.large { width: 100vw; }
+  @keyframes sheetUp { from { transform: translateY(60px); opacity: .4; } to { transform: none; opacity: 1; } }
 
   /* Boutons et champs tactiles */
   .btn { min-height: 42px; }
@@ -462,8 +472,18 @@ label.field-label {
   .input, .select, textarea.input { font-size: 16px; }
   .field-label { font-size: 11.5px; }
 
-  /* Navbar compacte */
-  .navbar { padding: 10px 14px; }
+  /* Retour tactile : les boutons réagissent au toucher */
+  .btn:active, .btn-sm:active, .btn-icon:active, .palette-item:active, .x-btn:active {
+    transform: scale(.95);
+  }
+  .btn, .btn-sm, .btn-icon, .x-btn, .palette-item { transition: transform .1s, filter .12s; }
+
+  /* Navbar compacte façon app bar */
+  .navbar {
+    padding: 8px 14px;
+    padding-top: calc(8px + env(safe-area-inset-top));
+    min-height: 52px;
+  }
   .navbar .user-pill span:not(.chip) { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   /* Éditeur de blocs : colonnes empilées */

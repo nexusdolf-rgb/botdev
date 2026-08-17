@@ -26,11 +26,13 @@ Dashboard.mount = async (shell, bot) => {
         <div class="dash-topbar" id="dash-topbar"></div>
         <div id="dash-content"><div class="spinner"></div></div>
       </main>
+      <nav class="dash-bnav" id="dash-bnav"></nav>
     </div>
   `);
   shell.appendChild(layout);
 
   Dashboard.renderSide(layout.querySelector('#dash-side'));
+  Dashboard.renderBottomNav(layout.querySelector('#dash-bnav'));
   Dashboard.renderTopbar(layout.querySelector('#dash-topbar'), discordGuilds, needLink);
   const content = layout.querySelector('#dash-content');
 
@@ -148,12 +150,82 @@ Dashboard.setModule = (id) => {
   Dashboard.refresh();
 };
 
+// ---------------------- Navigation basse (mode Android) ----------------------
+// 4 destinations principales + « Plus » qui ouvre la liste complète
+// des modules dans une feuille glissante (comme une app Android).
+Dashboard.BNav = [
+  ['overview', '📊', 'Accueil'],
+  ['tickets', '🎫', 'Tickets'],
+  ['members', '👥', 'Membres'],
+  ['stats', '📈', 'Stats'],
+];
+
+Dashboard.renderBottomNav = (nav) => {
+  if (!nav) return;
+  nav.innerHTML = '';
+  const cur = Dashboard.state.module;
+  Dashboard.BNav.forEach(([id, ico, label]) => {
+    const b = App.el(`
+      <button class="bnav-item ${cur === id ? 'active' : ''}" data-bnav="${id}">
+        <span class="bnav-ico">${ico}</span>
+        <span class="bnav-label">${label}</span>
+      </button>`);
+    b.onclick = () => Dashboard.setModule(id);
+    nav.appendChild(b);
+  });
+  const more = App.el(`
+    <button class="bnav-item" data-more>
+      <span class="bnav-ico">☰</span>
+      <span class="bnav-label">Plus</span>
+    </button>`);
+  more.onclick = () => Dashboard.openMoreSheet();
+  nav.appendChild(more);
+};
+
+// Feuille « Plus » : tous les modules, groupés, en bas de l'écran.
+Dashboard.openMoreSheet = () => {
+  const bot = Dashboard.state.bot;
+  const isAdmin = App.state.user && App.state.user.is_admin;
+  App.modal(`
+    <div class="modal-header" style="border:none">
+      <h3>⚡ Modules</h3>
+      <button class="x-btn" data-close>×</button>
+    </div>
+    <div class="modal-body" style="padding-top:0">
+      <div class="dash-label" style="margin-top:0">Serveur sélectionné</div>
+      <div class="sheet-grid">
+        ${Dashboard.MODULES.map(([id, ico, label]) => `
+          <button class="sheet-item ${Dashboard.state.module === id ? 'active' : ''}" data-sheet="${id}">
+            <span class="sheet-ico">${ico}</span><span>${label}</span>
+          </button>`).join('')}
+      </div>
+      ${isAdmin ? `
+        <div class="dash-label" style="margin-top:16px">🤖 Bot</div>
+        <div class="sheet-grid">
+          ${Dashboard.BOT_MODULES.map(([id, ico, label]) => `
+            <button class="sheet-item ${Dashboard.state.module === id ? 'active' : ''}" data-sheet="${id}">
+              <span class="sheet-ico">${ico}</span><span>${label}</span>
+            </button>`).join('')}
+        </div>` : ''}
+    </div>
+  `);
+  document.querySelectorAll('[data-close]').forEach((b) => { b.onclick = App.closeModal; });
+  document.querySelectorAll('[data-sheet]').forEach((b) => {
+    b.onclick = () => {
+      App.closeModal();
+      Dashboard.setModule(b.dataset.sheet);
+    };
+  });
+};
+
 // Re-rend le module courant (après une sauvegarde)
 Dashboard.refresh = () => {
   const shell = Dashboard.state.shell || document.querySelector('.bot-shell');
   if (!shell) return;
   const aside = shell.querySelector('.dash-side');
   if (aside) Dashboard.renderSide(aside);
+  const bnav = shell.querySelector('.dash-bnav');
+  if (bnav) Dashboard.renderBottomNav(bnav);
   const topbar = shell.querySelector('.dash-topbar');
   if (topbar && Dashboard.state.discordGuilds) Dashboard.renderTopbar(topbar, Dashboard.state.discordGuilds);
   Dashboard.renderContent(shell.querySelector('#dash-content'));
