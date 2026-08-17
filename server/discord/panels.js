@@ -250,38 +250,47 @@ function defaultPanelDescription(buttonLabel, hasTypes) {
   ].join('\n');
 }
 
+// ============================================================
+// 🎨 PANNEAU VISUEL « NEXORA » (référence)
+// Changement d'APPARENCE UNIQUEMENT : titre, textes, règles,
+// message de patience et bannière. La logique des tickets
+// (menu, custom_id, création, permissions, fermeture…) est
+// 100 % inchangée — le menu déroulant reste en dessous, tel quel.
+// ============================================================
+const PANEL_TITLE = '👑 Support | Nexora';
+const PANEL_WELCOME = 'Bienvenue sur le support officiel de Nexora';
+const PANEL_DESC = 'Pour ouvrir un ticket, sélectionnez la catégorie correspondante à votre besoin via le menu ci-dessous et veuillez détailler en quelques lignes votre demande avant l\'ouverture.';
+const PANEL_INFO_TITLE = '__ⓘ Informations importantes :__';
+const PANEL_RULES = [
+  '🔴➡️ Soyez clair et précis dans votre demande.',
+  '🔴➡️ Le manque de respect envers le staff est strictement interdit.',
+  '🔴➡️ Évitez les mentions inutiles.',
+  '🔴➡️ Les tickets inactifs pendant 2 heures seront automatiquement fermés puis supprimés.',
+];
+const PANEL_PATIENCE = '*⏳ Merci de votre patience, un membre du staff prendra votre ticket en charge dès que possible.*';
+
+function panelBannerUrl() {
+  const site = store.settings.get('public_url') || 'https://dash-hoxora.onrender.com';
+  return `${site}/icons/support-banner.png`;
+}
+
 function buildTicketPanelEmbed(cfg, client, types) {
-  const desc = isDefaultMessage(cfg.message)
-    ? defaultPanelDescription(cfg.button_label || '🎫 Ouvrir un ticket', types.length > 0)
-    : String(cfg.message);
+  // Le message personnalisé (configuré dans le dashboard) reste respecté :
+  // s'il existe, il remplace le paragraphe d'explication standard.
+  const customMsg = isDefaultMessage(cfg.message) ? '' : String(cfg.message);
+  const paragraph = customMsg || PANEL_DESC;
+
   const embed = new EmbedBuilder()
-    .setColor('#5865F2')
-    .setTitle('🎫 Centre d\'assistance')
-    .setDescription(desc)
+    .setColor('#ED4245')
+    .setTitle(PANEL_TITLE)
+    .setDescription(`${PANEL_WELCOME}\n\n${paragraph}`)
     .addFields(
-      { name: '🕐 Prise en charge rapide', value: 'Votre salon privé est ouvert **instantanément** : décrivez votre demande, notre équipe vous répond.', inline: true },
-      { name: '🔒 100 % privé', value: 'Seuls **vous et le staff** pouvez voir la conversation.', inline: true },
-      { name: '📩 Suivi assuré', value: 'À la fermeture, vous recevez la **transcription complète** en message privé.', inline: true },
-    );
-  if (types.length) {
-    // 🗂️ Chaque type est présenté avec son emoji en titre et sa description
-    // en dessous — bien organisé, comme une carte de services.
-    embed.addFields({
-      name: '🗂️ Nos services — choisissez dans le menu ci-dessous',
-      value: 'Chaque demande est traitée dans un **salon privé**, en toute confidentialité.',
-    });
-    for (const t of types.slice(0, 12)) {
-      embed.addFields({
-        name: `${t.emoji || '🎫'} ${t.label}${t.category ? ` — ${t.category}` : ''}`.slice(0, 256),
-        value: typeOptionDescription(t),
-      });
-    }
-  }
-  if (client && client.user) {
-    try { embed.setThumbnail(client.user.displayAvatarURL({ dynamic: true })); } catch {}
-  }
-  const site = store.settings.get('public_url');
-  if (site) embed.setFooter({ text: `Hoxera · ${site}` });
+      { name: PANEL_INFO_TITLE, value: PANEL_RULES.join('\n') },
+      { name: '\u200b', value: PANEL_PATIENCE },
+    )
+    // 🖼️ Bannière « SUPPORT - NEXORA » : image servie par le site,
+    // affichée en bas de l'embed, juste au-dessus du menu déroulant.
+    .setImage(panelBannerUrl());
   return embed;
 }
 

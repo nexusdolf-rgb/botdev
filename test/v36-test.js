@@ -49,24 +49,29 @@ const check = (label, cond) => {
   await panels.sendTicketPanel(BOT, G, null, fakeChannel);
   check('panneau : envoyé', sent.length === 1);
   const payloadJson = JSON.stringify(sent[0]);
-  check('panneau : placeholder « Choisissez le type de ticket… »', payloadJson.includes('Choisissez le type de ticket'));
-  check('panneau : description du type 1 affichée', payloadJson.includes('Signale un abus du staff, en toute confidentialité.'));
-  check('panneau : description par défaut du type 2', payloadJson.includes('Ouvrir un ticket « Ticket contre joueur »'));
-  check('panneau : emojis des types', payloadJson.includes('🤝') && payloadJson.includes('⚔️'));
+  check('panneau : placeholder « Choisissez le type de ticket… » conservé', payloadJson.includes('Choisissez le type de ticket'));
+  check('panneau : emojis des types dans le menu', payloadJson.includes('🤝') && payloadJson.includes('⚔️'));
   check('panneau : texte court et professionnel', payloadJson.includes('type de ticket') && !payloadJson.includes('Tu as une question, un problème'));
-  check('panneau : footer Hoxera', payloadJson.includes('Hoxera'));
-  // 🗂️ Organisation : chaque type = son propre champ (emoji + nom en titre, description dessous)
+  // 🎨 Nouveau panneau visuel « Nexora » (référence)
   const panelEmbed = sent[0].embeds[0].toJSON();
   const fields = panelEmbed.fields || [];
-  const fieldFor = (label) => fields.find((f) => String(f.name).includes(label)) || {};
-  check('panneau : section « Nos services »', !!fields.find((f) => String(f.name).includes('Nos services')));
-  check('panneau : type 1 = champ dédié avec emoji en titre', !!fieldFor('🤝 Ticket contre admin').name);
-  check('panneau : type 1 = description sous le titre', String(fieldFor('🤝 Ticket contre admin').value || '').includes('Signale un abus'));
-  check('panneau : type 2 = champ dédié avec description auto', String(fieldFor('⚔️ Ticket contre joueur').value || '').startsWith('Ouvrir un ticket'));
-  check('panneau : 3 encarts d\'info en haut', fields.filter((f) => f.inline).length === 3);
+  check('panneau : titre « 👑 Support | Nexora »', String(panelEmbed.title).includes('Support | Nexora'));
+  check('panneau : « Bienvenue sur le support officiel de Nexora »', String(panelEmbed.description).includes('Bienvenue sur le support officiel de Nexora'));
+  check('panneau : description « sélectionnez la catégorie… »', String(panelEmbed.description).includes('sélectionnez la catégorie correspondante'));
+  check('panneau : « ⓘ Informations importantes : » souligné', fields.some((f) => String(f.name).includes('Informations importantes') && String(f.name).includes('__')));
+  const rulesVal = String((fields.find((f) => String(f.name).includes('Informations')) || {}).value || '');
+  check('panneau : règle 1 (clair et précis)', rulesVal.includes('Soyez clair et précis'));
+  check('panneau : règle 2 (respect du staff)', rulesVal.includes('manque de respect'));
+  check('panneau : règle 3 (mentions)', rulesVal.includes('mentions inutiles'));
+  check('panneau : règle 4 (tickets inactifs 2 h)', rulesVal.includes('inactifs pendant 2 heures'));
+  check('panneau : flèches rouges 🔴➡️ sur les règles', (rulesVal.match(/🔴➡️/g) || []).length === 4);
+  const patienceVal = String((fields.find((f) => String(f.value).includes('patience')) || {}).value || '');
+  check('panneau : message de patience en italique', patienceVal.startsWith('*⏳ Merci de votre patience'));
+  check('panneau : bannière SUPPORT - NEXORA en image', String(panelEmbed.image && panelEmbed.image.url).includes('/icons/support-banner.png'));
   // 🧹 Menu déroulant épuré : emoji + nom uniquement, AUCUNE description dessous
   const select = sent[0].components[0].components[0].toJSON();
-  check('menu : options sans description (épuré)', select.options.length === 2 && select.options.every((o) => !o.description));
+  check('menu : un seul menu, options sans description', select.options.length === 2 && select.options.every((o) => !o.description));
+  check('menu : custom_id intact', String(select.custom_id) === `bd-ttype:${BOT}`);
   check('menu : emojis conservés', select.options[0].emoji && select.options[1].emoji);
 
   // ---------- 4. Embed de bienvenue du salon privé ----------
