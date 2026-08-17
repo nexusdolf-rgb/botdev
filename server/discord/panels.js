@@ -109,8 +109,10 @@ async function dispatchPanels(botId, interaction) {
       return true;
     }
 
-    // 📝 Raison demandée à l'ouverture d'un ticket + ❓ questionnaire du type + 🗑 raison de suppression (staff)
+    // 📝 Raison demandée à l'ouverture d'un ticket + ❓ questionnaire du type
+    // (modale combinée questions+raison) + 🗑 raison de suppression (staff)
     if (interaction.isModalSubmit()) {
+      if (cid.startsWith(`bd-tcomb:${botId}`)) { await submitCombined(botId, interaction); return true; }
       if (cid.startsWith(`bd-tquest:${botId}`)) { await submitQuestionnaire(botId, interaction); return true; }
       if (cid.startsWith(`bd-treason:${botId}`)) { await submitReason(botId, interaction); return true; }
       if (cid.startsWith(`bd-tdel:${botId}`)) { await submitDeleteReason(botId, interaction); return true; }
@@ -605,8 +607,14 @@ function reasonModal(botId, customId, title, label, placeholder) {
 }
 
 // ❓ Questionnaire personnalisé du type (réponses OBLIGATOIRES) :
-// une modale avec une question par champ, puis la raison (si activée).
+// ⚠️ Discord INTERDIT d'enchaîner deux modales : un formulaire ne peut pas
+// ouvrir un autre formulaire (c'était la cause de « ⚠️ Une erreur est
+// survenue »). → Tout tient dans UNE SEULE fenêtre :
+//  - questions + raison combinées (si questions < 5 et raison activée)
+//  - ou questions seules (raison désactivée / 5 questions)
+//  - ou raison seule (aucun questionnaire)
 const pendingQuestionnaires = new Map(); // userId -> { botId, guildId, type, ts }
+const pendingCombined = new Map();       // userId -> { botId, guildId, type, questions, ts }
 
 function questionnaireModal(botId, type) {
   const questions = (type && type.questions && type.questions.length)
@@ -628,31 +636,83 @@ function questionnaireModal(botId, type) {
   return modal;
 }
 
+// Une SEULE fenêtre : les questions + la raison à la fin (max 5 champs).
+function combinedModal(botId, type, questions) {
+  const modal = new ModalBuilder()
+    .setCustomId(`bd-tcomb:${botId}`)
+    .setTitle(`📝 ${type ? String(type.label || 'Ticket').slice(0, 28) : 'Ticket'} — ouverture`);
+  questions.forEach((q, i) => {
+    modal.addComponents(new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId(`q${i}`)
+        .setLabel(q)
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+        .setMaxLength(500),
+    ));
+  });
+  modal.addComponents(new ActionRowBuilder().addComponents(
+    new TextInputBuilder()
+      .setCustomId('reason')
+      .setLabel('📝 Pourquoi ouvres-tu ce ticket ?')
+      .setStyle(TextInputStyle.Paragraph)
+      .setRequired(true)
+      .setMaxLength(1000),
+  ));
+  return modal;
+}
+
 async function askReason(botId, interaction, type, answers = [], skipQuestionnaire = false) {
   const cfg = store.tickets.get(botId, interaction.guild.id) || {};
-  // Questionnaire personnalisé du type : d'abord les questions obligatoires
-  // (sauf si on vient justement d'y répondre : skipQuestionnaire)
-  if (!skipQuestionnaire && type && type.questions && type.questions.length) {
+  const wantReason = !(cfg.require_reason === 0 || cfg.require_reason === false);
+  const questions = (!skipQuestionnaire && type && Array.isArray(type.questions))
+    ? type.questions.map((q) => String(q).slice(0, 45)).filter(Boolean).slice(0, 5)
+    : [];
+
+  // Cas 1 : questions + raison → UNE SEULE modale combinée
+  // (Discord interdit modale → modale, on ne peut pas les enchaîner)
+  if (questions.length && wantReason && questions.length < 5) {
+    pendingCombined.set(interaction.user.id, { botId, guildId: interaction.guild.id, type, questions, ts: Date.now() });
+    await interaction.showModal(combinedModal(botId, type, questions));
+    return;
+  }
+  // Cas 2 : questions seules (raison désactivée, ou déjà 5 questions → la raison est incluse via la description du type)
+  if (questions.length) {
     pendingQuestionnaires.set(interaction.user.id, { botId, guildId: interaction.guild.id, type, ts: Date.now() });
     await interaction.showModal(questionnaireModal(botId, type));
     return;
   }
-  // Questionnaire désactivé → ouverture directe sans raison
-  if (cfg.require_reason === 0 || cfg.require_reason === false) {
-    // On diffère la réponse : l'ouverture du salon peut prendre quelques secondes,
-    // on évite ainsi le « Cette interaction a échoué ».
-    try { await interaction.deferReply({ ephemeral: true }); } catch {}
-    await openTicket(botId, interaction, type, '', answers);
+  // Cas 3 : raison seule
+  if (wantReason) {
+    pendingReasons.set(interaction.user.id, { botId, guildId: interaction.guild.id, type, answers, ts: Date.now() });
+    await interaction.showModal(reasonModal(
+      botId,
+      `bd-treason:${botId}`,
+      '📝 Ouvre ton ticket',
+      'Raison de ta demande',
+      'Explique brièvement pourquoi tu ouvres ce ticket…'
+    ));
     return;
   }
-  pendingReasons.set(interaction.user.id, { botId, guildId: interaction.guild.id, type, answers, ts: Date.now() });
-  await interaction.showModal(reasonModal(
-    botId,
-    `bd-treason:${botId}`,
-    '📝 Ouvre ton ticket',
-    'Raison de ta demande',
-    'Explique brièvement pourquoi tu ouvres ce ticket…'
-  ));
+  // Cas 4 : ouverture directe (ni questions ni raison)
+  try { await interaction.deferReply({ ephemeral: true }); } catch {}
+  await openTicket(botId, interaction, type, '', answers);
+}
+
+async function submitCombined(botId, interaction) {
+  const pending = pendingCombined.get(interaction.user.id);
+  pendingCombined.delete(interaction.user.id);
+  if (!pending || pending.botId !== botId || Date.now() - (pending.ts || 0) > WIZARD_TTL) {
+    return interaction.reply({ content: '⏰ Ta demande a expiré, réessaie.', ephemeral: true });
+  }
+  const answers = pending.questions.map((q, i) => ({
+    q: String(q).slice(0, 45),
+    a: (interaction.fields.getTextInputValue(`q${i}`) || '').trim().slice(0, 500) || '—',
+  }));
+  const reason = (interaction.fields.getTextInputValue('reason') || '').trim();
+  // Réponse différée AVANT l'ouverture (le salon peut prendre quelques secondes)
+  try { await interaction.deferReply({ ephemeral: true }); } catch {}
+  await openTicket(botId, interaction, pending.type, reason, answers);
 }
 
 async function submitQuestionnaire(botId, interaction) {
@@ -666,8 +726,10 @@ async function submitQuestionnaire(botId, interaction) {
     q: String(q).slice(0, 45),
     a: (interaction.fields.getTextInputValue(`q${i}`) || '').trim().slice(0, 500) || '—',
   }));
-  // On enchaîne : la raison (si activée) puis l'ouverture du ticket avec les réponses
-  await askReason(botId, interaction, pending.type, answers, true);
+  // ⚠️ Plus JAMAIS de modale après une modale (interdit par Discord) :
+  // la raison est soit déjà intégrée (modale combinée), soit sans objet ici.
+  try { await interaction.deferReply({ ephemeral: true }); } catch {}
+  await openTicket(botId, interaction, pending.type, '', answers);
 }
 
 async function submitReason(botId, interaction) {

@@ -129,50 +129,84 @@ const check = (label, cond) => {
   store.tickets.set(BOT, G, { require_reason: 1, types: JSON.stringify([
     { label: 'Recrutement', emoji: '💼', description: 'Rejoins notre équipe.', category: '', questions: ['Non RP ?', 'Quel âge as-tu ?'], staff_roles: [] },
   ]) });
-  // 3a. sélection du type dans le panneau
+  // 3a. sélection du type dans le panneau → UNE SEULE modale combinée
+  // (questions + raison ensemble : Discord interdit d'enchaîner deux modales)
   const wSel = makeI({ isSelect: true, customId: `bd-ttype:${BOT}`, values: ['Recrutement'] });
   await panels.dispatchPanels(BOT, wSel);
-  check('ouverture : le type → modale questionnaire', wSel.replied && wSel.replies[0][0] === 'modal');
+  check('ouverture : le type → UNE modale combinée', wSel.replied && wSel.replies[0][0] === 'modal');
   const modalData = wSel.replies[0][1];
-  check('ouverture : 2 champs obligatoires', modalData.components.length === 2);
-  // 3b. soumission des réponses → modale raison
-  const wAns = makeI({ isModal: true, customId: `bd-tquest:${BOT}`, fields: { getTextInputValue: (k) => (k === 'q0' ? 'Non' : '20 ans') } });
+  const modalJson = modalData.toJSON ? modalData.toJSON() : {};
+  check('ouverture : modale combinée (questions + raison)', modalJson.custom_id === `bd-tcomb:${BOT}`);
+  check('ouverture : 3 champs (2 questions + raison)', modalData.components.length === 3);
+  check('ouverture : tous les champs obligatoires', modalData.components.every((row) => row.components[0].data.required));
+  // 3b. soumission → le ticket s'ouvre DIRECTEMENT (aucune seconde modale)
+  const wAns = makeI({ isModal: true, customId: `bd-tcomb:${BOT}`, fields: { getTextInputValue: (k) => (k === 'q0' ? 'Non' : k === 'q1' ? '20 ans' : 'Je veux devenir modo') } });
   await panels.dispatchPanels(BOT, wAns);
-  const reasonModalJson = wAns.replies[0][1].toJSON ? wAns.replies[0][1].toJSON() : {};
-  check('ouverture : réponses → modale raison', wAns.replied && wAns.replies[0][0] === 'modal' && reasonModalJson.custom_id === `bd-treason:${BOT}`);
-  // 3c. raison → ouverture du ticket (réponse différée puis confirmation avec lien)
-  const wReason = makeI({ isModal: true, customId: `bd-treason:${BOT}`, fields: { getTextInputValue: () => 'Je veux devenir modo' } });
-  await panels.dispatchPanels(BOT, wReason);
-  check('ouverture : ticket créé', wReason.replied && wReason.deferred);
-  const lastReply = wReason.replies[wReason.replies.length - 1];
-  check('ouverture : confirmation avec le lien du ticket', lastReply && lastReply[0] === 'edit' && String(lastReply[1].content).includes('Ton ticket a été créé') && String(lastReply[1].content).includes('#recrutement-alice'));
-  check('ouverture : lien aussi envoyé en MP', dms.some((m) => String(m).includes('Rejoins-le ici')));
-  // 🔒 Le lien du salon de ticket reste PRIVÉ : aucun message public sous le panneau
-  check('ouverture : AUCUN message public sous le panneau (lien privé)', !sent.some((p) => p.content && String(p.content).includes('Ticket créé pour')));
   const ticketEmbeds = sent.filter((p) => p.embeds && p.embeds.length);
   const lastEmbed = ticketEmbeds.length ? ticketEmbeds[ticketEmbeds.length - 1].embeds[0].toJSON() : null;
   const embStr = lastEmbed ? JSON.stringify(lastEmbed) : '';
+  check('ouverture : ticket créé directement (pas de 2e modale)', wAns.replied && ticketEmbeds.length >= 1 && wAns.replies.every((r) => r[0] !== 'modal'));
   check('salon : réponses au questionnaire affichées', embStr.includes('Réponses au questionnaire') && embStr.includes('Non RP ?') && embStr.includes('20 ans'));
   check('salon : question 1 + réponse', embStr.includes('**1. Non RP ?**') && embStr.includes('↳ Non'));
   check('salon : la raison est affichée', embStr.includes('Je veux devenir modo'));
   const meta = panels.ticketMetaFor({ id: 'tk-1' });
   check('méta : réponses conservées (transcription)', Array.isArray(meta.answers) && meta.answers.length === 2 && meta.answers[0].q === 'Non RP ?');
+  check('méta : la raison est conservée', String(meta.reason).includes('devenir modo'));
+  const lastReply = wAns.replies[wAns.replies.length - 1];
+  check('ouverture : confirmation avec le lien du ticket', lastReply && lastReply[0] === 'edit' && String(lastReply[1].content).includes('Ton ticket a été créé') && String(lastReply[1].content).includes('#recrutement-alice'));
+  check('ouverture : lien aussi envoyé en MP', dms.some((m) => String(m).includes('Rejoins-le ici')));
+  // 🔒 Le lien du salon de ticket reste PRIVÉ : aucun message public sous le panneau
+  check('ouverture : AUCUN message public sous le panneau (lien privé)', !sent.some((p) => p.content && String(p.content).includes('Ticket créé pour')));
 
-  // ---------- 4. Raison désactivée : questionnaire → ouverture directe ----------
+  // ---------- 3bis. Raison seule (type sans questions) → modale raison → ouverture ----------
+  store.closedTickets.add('tk-1', BOT, G); // on « ferme » le ticket précédent pour la suite
+  sent.length = 0; dms.length = 0;
+  store.tickets.set(BOT, G, { require_reason: 1, types: JSON.stringify([
+    { label: 'Support', emoji: '🎧', description: '', category: '', questions: [], staff_roles: [] },
+  ]) });
+  const wSelR = makeI({ isSelect: true, customId: `bd-ttype:${BOT}`, values: ['Support'] });
+  await panels.dispatchPanels(BOT, wSelR);
+  const mR = wSelR.replies[0][1];
+  const mRjson = mR.toJSON ? mR.toJSON() : {};
+  check('raison seule : modale raison', wSelR.replies[0][0] === 'modal' && mRjson.custom_id === `bd-treason:${BOT}`);
+  const wReason2 = makeI({ isModal: true, customId: `bd-treason:${BOT}`, fields: { getTextInputValue: () => 'Un souci de connexion' } });
+  await panels.dispatchPanels(BOT, wReason2);
+  const embR = sent.filter((p) => p.embeds && p.embeds.length);
+  check('raison seule : ticket ouvert directement', wReason2.replied && embR.length === 1);
+  check('raison seule : la raison est affichée', JSON.stringify(embR[0].embeds[0].toJSON()).includes('Un souci de connexion'));
+  store.closedTickets.add('tk-1', BOT, G);
+
+  // ---------- 4. Raison désactivée : questionnaire seul → ouverture directe ----------
   sent.length = 0;
   store.tickets.set(BOT, G, { require_reason: 0, types: JSON.stringify([
     { label: 'Recrutement', emoji: '💼', description: '', category: '', questions: ['Dispo le week-end ?'], staff_roles: [] },
   ]) });
   const wSel2 = makeI({ isSelect: true, customId: `bd-ttype:${BOT}`, values: ['Recrutement'] });
   await panels.dispatchPanels(BOT, wSel2);
-  check('sans raison : modale questionnaire d\'abord', wSel2.replies[0][0] === 'modal');
+  const m2 = wSel2.replies[0][1];
+  const m2json = m2.toJSON ? m2.toJSON() : {};
+  check('sans raison : modale questionnaire seul', wSel2.replies[0][0] === 'modal' && m2json.custom_id === `bd-tquest:${BOT}` && m2.components.length === 1);
   const wAns2 = makeI({ isModal: true, customId: `bd-tquest:${BOT}`, fields: { getTextInputValue: () => 'Oui' } });
   await panels.dispatchPanels(BOT, wAns2);
   const afterEmbeds = sent.filter((p) => p.embeds && p.embeds.length);
   const last2 = wAns2.replies[wAns2.replies.length - 1];
-  check('sans raison : ticket ouvert directement (pas de 2e modale)', wAns2.replied && afterEmbeds.length === 1 && wAns2.replies.length === 1);
+  check('sans raison : ticket ouvert directement (pas de 2e modale)', wAns2.replied && afterEmbeds.length === 1 && wAns2.replies.every((r) => r[0] !== 'modal'));
   check('sans raison : confirmation avec lien', last2 && last2[0] === 'edit' && String(last2[1].content).includes('Ton ticket a été créé'));
   check('sans raison : réponse affichée dans le salon', JSON.stringify(afterEmbeds[0].embeds[0].toJSON()).includes('Dispo le week-end ?'));
+  store.closedTickets.add('tk-1', BOT, G); // fermeture pour la suite
+
+  // ---------- 4bis. 5 questions + raison activée → questionnaire seul (pas de 2e modale) ----------
+  sent.length = 0;
+  store.tickets.set(BOT, G, { require_reason: 1, types: JSON.stringify([
+    { label: 'Recrutement', emoji: '💼', description: '', category: '', questions: ['Q1', 'Q2', 'Q3', 'Q4', 'Q5'], staff_roles: [] },
+  ]) });
+  const wSel3 = makeI({ isSelect: true, customId: `bd-ttype:${BOT}`, values: ['Recrutement'] });
+  await panels.dispatchPanels(BOT, wSel3);
+  const m3 = wSel3.replies[0][1];
+  check('5 questions : modale questionnaire (5 champs, pas de raison)', wSel3.replies[0][0] === 'modal' && m3.components.length === 5);
+  const wAns3 = makeI({ isModal: true, customId: `bd-tquest:${BOT}`, fields: { getTextInputValue: (k) => 'réponse ' + k } });
+  await panels.dispatchPanels(BOT, wAns3);
+  check('5 questions : ouverture directe sans crash ni 2e modale', wAns3.replied && wAns3.replies.every((r) => r[0] !== 'modal') && sent.filter((p) => p.embeds && p.embeds.length).length === 1);
 
   // ---------- 5. Dashboard : questionnaire par type ----------
   const { JSDOM } = require('jsdom');
