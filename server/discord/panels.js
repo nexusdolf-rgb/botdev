@@ -535,7 +535,7 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
     if (interaction.client && interaction.client.users) {
       const openerUser = await interaction.client.users.fetch(member.id);
       await openerUser.send(
-        `🎫 Ton ticket est ouvert sur **${guild.name}** (${channel}) !\nNous te répondrons au plus vite. À la suppression du ticket, tu recevras la transcription ici.`
+        `🎫 Ton ticket est ouvert sur **${guild.name}** !\n👉 **Rejoins-le ici : ${channel}**\nNous te répondrons au plus vite. À la suppression du ticket, tu recevras la transcription ici.`
       );
     }
   } catch {
@@ -561,7 +561,14 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
     ],
   });
 
-  await interaction.reply({ content: `✅ Ton ticket a été créé : ${channel}`, ephemeral: true });
+  // Confirmation discrète (visible uniquement par l'auteur), avec le lien
+  // cliquable vers son salon de ticket.
+  const confirmMsg = `✅ Ton ticket a été créé : **${channel}** — clique dessus pour l'ouvrir ! (le lien est aussi dans tes messages privés)`;
+  if (interaction.deferred) {
+    await interaction.editReply({ content: confirmMsg }).catch(() => {});
+  } else {
+    await interaction.reply({ content: confirmMsg, ephemeral: true }).catch(() => {});
+  }
 }
 
 // ---------- Raisons : ouverture & suppression ----------
@@ -586,15 +593,17 @@ function reasonModal(botId, customId, title, label, placeholder) {
 const pendingQuestionnaires = new Map(); // userId -> { botId, guildId, type, ts }
 
 function questionnaireModal(botId, type) {
-  const questions = (type && type.questions && type.questions.length) ? type.questions : [];
+  const questions = (type && type.questions && type.questions.length)
+    ? type.questions.map((q) => String(q).slice(0, 45)).filter(Boolean).slice(0, 5)
+    : [];
   const modal = new ModalBuilder()
     .setCustomId(`bd-tquest:${botId}`)
     .setTitle(`📝 ${type ? String(type.label || 'Ticket').slice(0, 30) : 'Ticket'} — questionnaire`);
-  questions.slice(0, 5).forEach((q, i) => {
+  questions.forEach((q, i) => {
     modal.addComponents(new ActionRowBuilder().addComponents(
       new TextInputBuilder()
         .setCustomId(`q${i}`)
-        .setLabel(String(q).slice(0, 45))
+        .setLabel(q)
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true)
         .setMaxLength(500),
@@ -614,6 +623,9 @@ async function askReason(botId, interaction, type, answers = [], skipQuestionnai
   }
   // Questionnaire désactivé → ouverture directe sans raison
   if (cfg.require_reason === 0 || cfg.require_reason === false) {
+    // On diffère la réponse : l'ouverture du salon peut prendre quelques secondes,
+    // on évite ainsi le « Cette interaction a échoué ».
+    try { await interaction.deferReply({ ephemeral: true }); } catch {}
     await openTicket(botId, interaction, type, '', answers);
     return;
   }
@@ -649,6 +661,9 @@ async function submitReason(botId, interaction) {
     return interaction.reply({ content: '⏰ Ta demande a expiré, réessaie.', ephemeral: true });
   }
   const reason = (interaction.fields.getTextInputValue('value') || '').trim();
+  // Réponse différée : l'ouverture du salon peut prendre quelques secondes,
+  // la confirmation (avec le lien du ticket) arrive ensuite proprement.
+  try { await interaction.deferReply({ ephemeral: true }); } catch {}
   await openTicket(botId, interaction, pending.type, reason, pending.answers || []);
 }
 
@@ -659,7 +674,7 @@ async function handleTicketButton(botId, interaction) {
 async function handleTicketTypeSelect(botId, interaction) {
   const cfg = store.tickets.get(botId, interaction.guild.id) || {};
   const label = interaction.values[0];
-  const type = parseTypes(cfg).find((t) => t.label === label) || { label };
+  const type = normalizeTypes(cfg).find((t) => t.label === label) || { label, questions: [] };
   await askReason(botId, interaction, type);
 }
 

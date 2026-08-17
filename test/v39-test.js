@@ -35,6 +35,7 @@ const check = (label, cond) => {
 
   // ---------- Fakes ----------
   const sent = [];
+  const dms = [];
   const makeGuild = () => {
     const chans = new Map();
     const mk = (id, name, type) => { const c = { id, name, type, isTextBased: () => type === 0, send: async (p) => { sent.push(p); return {}; }, toString: () => '#' + name, permissionOverwrites: { edit: async () => ({}), delete: async () => ({}) }, permissionsFor: () => ({ has: () => true }) }; chans.set(id, c); return c; };
@@ -55,7 +56,7 @@ const check = (label, cond) => {
       members: { cache: new Map(), fetch: async () => null, me: { roles: { highest: { position: 100 } } } },
     };
   };
-  const makeUser = (id = 'u1') => ({ id, tag: 'Alice#0001', username: 'Alice', bot: false, displayAvatarURL: () => 'https://cdn.example.com/av.png', send: async () => ({}) });
+  const makeUser = (id = 'u1') => ({ id, tag: 'Alice#0001', username: 'Alice', bot: false, displayAvatarURL: () => 'https://cdn.example.com/av.png', send: async (m) => { dms.push(m); return {}; } });
   const makeI = (over = {}) => {
     const user = over.user || makeUser('u1');
     const member = over.member || { id: user.id, user, permissions: { has: () => true }, roles: { cache: new Map(), add: async () => ({}), remove: async () => ({}) } };
@@ -68,6 +69,8 @@ const check = (label, cond) => {
       options: { getString: () => null, getInteger: () => null, getUser: () => null, getChannel: () => null, getSubcommand: () => null, getSubcommandGroup: () => null },
       reply: async function (p) { this.replied = true; this.replies.push(['reply', p]); this.lastMsg = { id: 'msg-1001' }; return this.lastMsg; },
       update: async function (p) { this.replied = true; this.replies.push(['update', p]); return {}; },
+      deferReply: async function () { this.deferred = true; },
+      editReply: async function (p) { this.replied = true; this.replies.push(['edit', p]); return {}; },
       showModal: async function (p) { this.replied = true; this.replies.push(['modal', p]); },
       isRepliable: () => true,
       isChatInputCommand: function () { return !!this.isChat; },
@@ -137,10 +140,13 @@ const check = (label, cond) => {
   await panels.dispatchPanels(BOT, wAns);
   const reasonModalJson = wAns.replies[0][1].toJSON ? wAns.replies[0][1].toJSON() : {};
   check('ouverture : réponses → modale raison', wAns.replied && wAns.replies[0][0] === 'modal' && reasonModalJson.custom_id === `bd-treason:${BOT}`);
-  // 3c. raison → ouverture du ticket
+  // 3c. raison → ouverture du ticket (réponse différée puis confirmation avec lien)
   const wReason = makeI({ isModal: true, customId: `bd-treason:${BOT}`, fields: { getTextInputValue: () => 'Je veux devenir modo' } });
   await panels.dispatchPanels(BOT, wReason);
-  check('ouverture : ticket créé', wReason.replied);
+  check('ouverture : ticket créé', wReason.replied && wReason.deferred);
+  const lastReply = wReason.replies[wReason.replies.length - 1];
+  check('ouverture : confirmation avec le lien du ticket', lastReply && lastReply[0] === 'edit' && String(lastReply[1].content).includes('Ton ticket a été créé') && String(lastReply[1].content).includes('#recrutement-alice'));
+  check('ouverture : lien aussi envoyé en MP', dms.some((m) => String(m).includes('Rejoins-le ici')));
   const ticketEmbeds = sent.filter((p) => p.embeds && p.embeds.length);
   const lastEmbed = ticketEmbeds.length ? ticketEmbeds[ticketEmbeds.length - 1].embeds[0].toJSON() : null;
   const embStr = lastEmbed ? JSON.stringify(lastEmbed) : '';
@@ -161,7 +167,9 @@ const check = (label, cond) => {
   const wAns2 = makeI({ isModal: true, customId: `bd-tquest:${BOT}`, fields: { getTextInputValue: () => 'Oui' } });
   await panels.dispatchPanels(BOT, wAns2);
   const afterEmbeds = sent.filter((p) => p.embeds && p.embeds.length);
+  const last2 = wAns2.replies[wAns2.replies.length - 1];
   check('sans raison : ticket ouvert directement (pas de 2e modale)', wAns2.replied && afterEmbeds.length === 1 && wAns2.replies.length === 1);
+  check('sans raison : confirmation avec lien', last2 && last2[0] === 'edit' && String(last2[1].content).includes('Ton ticket a été créé'));
   check('sans raison : réponse affichée dans le salon', JSON.stringify(afterEmbeds[0].embeds[0].toJSON()).includes('Dispo le week-end ?'));
 
   // ---------- 5. Dashboard : questionnaire par type ----------
