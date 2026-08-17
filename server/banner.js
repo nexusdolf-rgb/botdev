@@ -25,8 +25,8 @@ const cache = new Map();    // nom -> Buffer PNG (statique)
 const gifCache = new Map(); // nom -> Buffer GIF (animé)
 const CACHE_MAX = 300;
 
-const W = 680;  // largeur de référence
-const H = 240;  // hauteur de référence
+const W = 544;  // largeur (proche référence, optimisée pour l'instance gratuite)
+const H = 192;  // hauteur
 
 function escapeXml(s) {
   return String(s || '')
@@ -149,7 +149,7 @@ async function generateBanner(name) {
 }
 
 // GIF animé : base rendue UNE fois + couches légères par trame
-async function generateBannerGif(name, { sweepFrames = 24, driftFrames = 32, holdFrames = 16, delayMs = 60 } = {}) {
+async function generateBannerGif(name, { sweepFrames = 20, driftFrames = 28, holdFrames = 12, delayMs = 60 } = {}) {
   const clean = String(name || '').trim().slice(0, 26) || 'NEXORA';
   if (!sharp || !gifenc) return null;
   if (gifCache.has(clean)) return gifCache.get(clean);

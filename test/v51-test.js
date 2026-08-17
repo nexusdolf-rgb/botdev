@@ -31,22 +31,22 @@ const check = (label, cond) => {
   check('GIF : généré', !!gif && gif.length > 10000);
   check('GIF : signature GIF89a', gif.slice(0, 6).toString() === 'GIF89a');
   const reader = new GifReader(gif);
-  check('GIF : 72 trames (balayage + dérive + pause)', reader.numFrames() === 72);
+  check('GIF : 60 trames (balayage + dérive + pause)', reader.numFrames() === 60);
   check('GIF : boucle infinie', reader.loopCount() === 0);
-  check('GIF : dimensions 680x240 (référence)', reader.width === 680 && reader.height === 240);
+  check('GIF : dimensions 544x192 (proche référence)', reader.width === 544 && reader.height === 192);
   const delays = [];
   for (let i = 0; i < reader.numFrames(); i++) delays.push(reader.frameInfo(i).delay);
   const totalMs = delays.reduce((a, b) => a + b, 0) * 10;
-  const sweepMs = delays.slice(0, 24).reduce((a, b) => a + b, 0) * 10;
-  check('GIF : balayage ~1,4 s', sweepMs >= 1200 && sweepMs <= 1700);
-  check('GIF : boucle totale ~4,3 s', totalMs >= 3800 && totalMs <= 4800);
+  const sweepMs = delays.slice(0, 20).reduce((a, b) => a + b, 0) * 10;
+  check('GIF : balayage ~1,2 s', sweepMs >= 1000 && sweepMs <= 1400);
+  check('GIF : boucle totale ~3,6 s', totalMs >= 3200 && totalMs <= 4000);
   check('GIF : taille raisonnable (< 6 Mo, comme la réf 4,3 Mo)', gif.length < 6 * 1024 * 1024);
 
   // ---------- 2bis. Le balayage bouge vraiment ----------
   const sharp = require('sharp');
   const lumProfile = async (page) => {
     const { data } = await sharp(gif, { page }).raw().toBuffer({ resolveWithObject: true });
-    const W = 680, out = [];
+    const W = reader.width, out = [];
     for (let x = 0; x < W; x += 34) {
       let s = 0, n = 0;
       for (let y = 10; y < 60; y++) { const i = (y * W + x) * 3; s += data[i] + data[i + 1] + data[i + 2]; n++; }
@@ -58,7 +58,7 @@ const check = (label, cond) => {
   const p12 = await lumProfile(12);
   const p23 = await lumProfile(23);
   const peakOf = (arr) => arr.reduce((best, v, i, a) => (v > a[best] ? i : best), 0);
-  check('balayage : pic lumineux au MILIEU à la trame 12', peakOf(p12) >= 8 && peakOf(p12) <= 16 && Math.max(...p12) > 150);
+  check('balayage : pic lumineux au MILIEU à la trame 12', peakOf(p12) >= 6 && peakOf(p12) <= 13 && Math.max(...p12) > 150);
   check('balayage : absent à la trame 0 (hors écran)', Math.max(...p0) < 130);
   check('balayage : sorti à la trame 23', Math.max(...p23) < 130);
 

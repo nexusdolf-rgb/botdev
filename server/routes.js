@@ -37,12 +37,14 @@ async function servePanelBanner(req, res) {
   } catch (e) {
     console.error('[Hoxera] bannière animée :', e.message);
   }
-  // 2) PNG statique (repli)
+  // 2) PNG statique (repli temporaire) — sans cache pour que Discord
+  //    revienne chercher l'image et reçoive le GIF animé dès qu'il est prêt
   try {
     const buf = await banner.generateBanner(name);
     if (buf) {
+      banner.warmupGif(name); // la génération continue en arrière-plan
       res.set('Content-Type', 'image/png');
-      res.set('Cache-Control', 'public, max-age=86400');
+      res.set('Cache-Control', 'no-cache');
       return res.send(buf);
     }
   } catch (e) {
