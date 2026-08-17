@@ -257,13 +257,18 @@ function buildTicketPanelEmbed(cfg, client, types) {
       { name: '📩 Suivi assuré', value: 'À la fermeture, vous recevez la **transcription complète** en message privé.', inline: true },
     );
   if (types.length) {
+    // 🗂️ Chaque type est présenté avec son emoji en titre et sa description
+    // en dessous — bien organisé, comme une carte de services.
     embed.addFields({
-      name: '🗂️ Types de tickets',
-      value: types.map((t) => {
-        const desc = t.description ? ` — ${t.description}` : '';
-        return `${t.emoji || '🎫'} **${t.label}**${t.category ? ` → « ${t.category} »` : ''}${desc}`;
-      }).join('\n').slice(0, 1024),
+      name: '🗂️ Nos services — choisissez dans le menu ci-dessous',
+      value: 'Chaque demande est traitée dans un **salon privé**, en toute confidentialité.',
     });
+    for (const t of types.slice(0, 12)) {
+      embed.addFields({
+        name: `${t.emoji || '🎫'} ${t.label}${t.category ? ` — ${t.category}` : ''}`.slice(0, 256),
+        value: typeOptionDescription(t),
+      });
+    }
   }
   if (client && client.user) {
     try { embed.setThumbnail(client.user.displayAvatarURL({ dynamic: true })); } catch {}

@@ -55,6 +55,15 @@ const check = (label, cond) => {
   check('panneau : emojis des types', payloadJson.includes('🤝') && payloadJson.includes('⚔️'));
   check('panneau : texte court et professionnel', payloadJson.includes('type de ticket') && !payloadJson.includes('Tu as une question, un problème'));
   check('panneau : footer Hoxera', payloadJson.includes('Hoxera'));
+  // 🗂️ Organisation : chaque type = son propre champ (emoji + nom en titre, description dessous)
+  const panelEmbed = sent[0].embeds[0].toJSON();
+  const fields = panelEmbed.fields || [];
+  const fieldFor = (label) => fields.find((f) => String(f.name).includes(label)) || {};
+  check('panneau : section « Nos services »', !!fields.find((f) => String(f.name).includes('Nos services')));
+  check('panneau : type 1 = champ dédié avec emoji en titre', !!fieldFor('🤝 Ticket contre admin').name);
+  check('panneau : type 1 = description sous le titre', String(fieldFor('🤝 Ticket contre admin').value || '').includes('Signale un abus'));
+  check('panneau : type 2 = champ dédié avec description auto', String(fieldFor('⚔️ Ticket contre joueur').value || '').startsWith('Ouvrir un ticket'));
+  check('panneau : 3 encarts d\'info en haut', fields.filter((f) => f.inline).length === 3);
 
   // ---------- 4. Embed de bienvenue du salon privé ----------
   const member = { id: 'u1', user: { id: 'u1', username: 'Alice', displayAvatarURL: () => '' }, toString: () => '<@u1>' };
