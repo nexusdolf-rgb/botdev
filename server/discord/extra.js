@@ -761,8 +761,10 @@ async function handleModal(botId, entry, interaction) {
     new ButtonBuilder().setCustomId(`hx:applyd:${guild.id}:accept:${interaction.user.id}`).setLabel('✅ Accepter').setStyle(ButtonStyle.Success),
     new ButtonBuilder().setCustomId(`hx:applyd:${guild.id}:refuse:${interaction.user.id}`).setLabel('❌ Refuser').setStyle(ButtonStyle.Danger),
   );
-  await channel.send({ embeds: [embed], components: [row] }).catch(() => {});
+  // ✅ Réponse d'abord (rapide), puis l'envoi au salon : sinon Discord
+  // coupe l'interaction si l'envoi prend du temps.
   await interaction.reply({ content: '📝 Candidature envoyée ! Le staff va l\'examiner. ✅', ephemeral: true });
+  await channel.send({ embeds: [embed], components: [row] }).catch(() => {});
   return true;
 }
 

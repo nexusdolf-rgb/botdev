@@ -63,7 +63,7 @@ const check = (label, cond) => {
     const i = {
       replied: false, deferred: false, replies: [], commandName: '', customId: '', values: [],
       fields: { getTextInputValue: () => '' }, user, member, guild: makeGuild(),
-      channel: { id: 'C1', isTextBased: () => true, send: async () => ({}) },
+      channel: { id: 'C1', name: 'support', isTextBased: () => true, send: async (p) => { sent.push(p); return {}; } },
       client: { user: { id: 'bot1' }, users: { fetch: async () => makeUser('u1') } },
       message: { id: 'msg-x', edit: async () => ({}), embeds: [], content: '' },
       options: { getString: () => null, getInteger: () => null, getUser: () => null, getChannel: () => null, getSubcommand: () => null, getSubcommandGroup: () => null },
@@ -147,6 +147,7 @@ const check = (label, cond) => {
   const lastReply = wReason.replies[wReason.replies.length - 1];
   check('ouverture : confirmation avec le lien du ticket', lastReply && lastReply[0] === 'edit' && String(lastReply[1].content).includes('Ton ticket a été créé') && String(lastReply[1].content).includes('#recrutement-alice'));
   check('ouverture : lien aussi envoyé en MP', dms.some((m) => String(m).includes('Rejoins-le ici')));
+  check('ouverture : confirmation PUBLIQUE sous le panneau', sent.some((p) => p.content && String(p.content).includes('Ticket créé pour') && String(p.content).includes('#recrutement-alice')));
   const ticketEmbeds = sent.filter((p) => p.embeds && p.embeds.length);
   const lastEmbed = ticketEmbeds.length ? ticketEmbeds[ticketEmbeds.length - 1].embeds[0].toJSON() : null;
   const embStr = lastEmbed ? JSON.stringify(lastEmbed) : '';

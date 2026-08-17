@@ -368,6 +368,17 @@ async function staffDeny(interaction) {
 }
 
 // ---------- Création du ticket ----------
+// Réponse d'interaction incassable : différée → editReply, sinon reply, sinon followUp.
+// Plus JAMAIS de « Cette interaction a échoué » ni de confirmation invisible.
+async function ackReply(interaction, payload) {
+  try {
+    if (interaction.deferred) return await interaction.editReply(payload);
+    return await interaction.reply(payload);
+  } catch {
+    try { return await interaction.followUp(payload); } catch { return null; }
+  }
+}
+
 // Embed de bienvenue du salon de ticket : textes professionnels,
 // type + description, équipe en charge, déroulement de la prise en charge,
 // et les réponses du questionnaire personnalisé (si le type en a un).
@@ -416,7 +427,7 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
   const guild = interaction.guild;
   const member = interaction.member;
   const cfg = store.tickets.get(botId, guild.id);
-  if (!cfg) return interaction.reply({ content: '⚠️ Les tickets ne sont pas configurés.', ephemeral: true });
+  if (!cfg) return ackReply(interaction, { content: '⚠️ Les tickets ne sont pas configurés.', ephemeral: true });
 
   const types = parseTypes(cfg);
   const chosenRaw = type || types[0] || null;
@@ -470,7 +481,7 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
     const mention = (existingOpen && typeof existingOpen.toString === 'function' && existingOpen.id)
       ? existingOpen.toString()
       : (existingOpen && existingOpen.name ? `#${existingOpen.name}` : '');
-    return interaction.reply({ content: `Tu as déjà un ticket ouvert : ${mention}`, ephemeral: true });
+    return ackReply(interaction, { content: `Tu as déjà un ticket ouvert : ${mention}`, ephemeral: true });
   }
 
   // Suffixe de sécurité (-2, -3…) si un salon porte encore le nom
@@ -513,7 +524,7 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
       topic: `Ticket de ${member.user.tag} | ${member.id} | ${chosen ? chosen.label : ''}`,
     });
   } catch (e) {
-    return interaction.reply({ content: '⚠️ Je n\'ai pas pu créer le salon. Vérifie mes permissions (gérer les salons).', ephemeral: true });
+    return ackReply(interaction, { content: '⚠️ Je n\'ai pas pu créer le salon. Vérifie mes permissions (gérer les salons).', ephemeral: true });
   }
   ticketMeta.set(channel.id, { openerId: member.id, typeLabel: chosen ? chosen.label : '', reason, answers });
   bumpTicketStats(guild.id, 1, 1);
@@ -542,32 +553,44 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
     dmWarning = '\n⚠️ **Mes messages privés ne t\'atteignent pas** : active « Autoriser les messages privés des membres du serveur » (Réglages Discord → Confidentialité) si tu veux recevoir la transcription à la fermeture.';
   }
 
-  const staffMention = supportRoles.length ? supportRoles.map((r) => r.toString()).join(' ') : '';
-  const welcome = ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning, answers);
-  const identity = require('./identity');
-  await identity.sendAsProfile(interaction.client, botId, guild, channel, {
-    content: `${member}${staffMention ? ' · ' + staffMention : ''}`,
-    embeds: [welcome],
-    components: [row1, row2],
-  }).catch(() => {});
+  // Bienvenue + journaux : ces étapes ne doivent JAMAIS empêcher la confirmation.
+  try {
+    const staffMention = supportRoles.length ? supportRoles.map((r) => r.toString()).join(' ') : '';
+    const welcome = ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning, answers);
+    const identity = require('./identity');
+    await identity.sendAsProfile(interaction.client, botId, guild, channel, {
+      content: `${member}${staffMention ? ' · ' + staffMention : ''}`,
+      embeds: [welcome],
+      components: [row1, row2],
+    }).catch(() => {});
 
-  await logging.log(botId, guild, {
-    title: '🎫 Ticket ouvert', color: '#5865F2',
-    fields: [
-      { name: '👤 Créateur', value: `<@${member.id}>`, inline: true },
-      { name: '📨 Salon', value: `<#${channel.id}>`, inline: true },
-      { name: '🗂️ Type', value: chosen ? `${chosen.emoji || ''} ${chosen.label}` : 'simple', inline: true },
-      { name: '📝 Raison', value: reason || '—' },
-    ],
-  });
+    await logging.log(botId, guild, {
+      title: '🎫 Ticket ouvert', color: '#5865F2',
+      fields: [
+        { name: '👤 Créateur', value: `<@${member.id}>`, inline: true },
+        { name: '📨 Salon', value: `<#${channel.id}>`, inline: true },
+        { name: '🗂️ Type', value: chosen ? `${chosen.emoji || ''} ${chosen.label}` : 'simple', inline: true },
+        { name: '📝 Raison', value: reason || '—' },
+      ],
+    });
+  } catch (e) {
+    console.error('[BotDev] ticket welcome/log:', e.message);
+  }
 
-  // Confirmation discrète (visible uniquement par l'auteur), avec le lien
-  // cliquable vers son salon de ticket.
-  const confirmMsg = `✅ Ton ticket a été créé : **${channel}** — clique dessus pour l'ouvrir ! (le lien est aussi dans tes messages privés)`;
-  if (interaction.deferred) {
-    await interaction.editReply({ content: confirmMsg }).catch(() => {});
-  } else {
-    await interaction.reply({ content: confirmMsg, ephemeral: true }).catch(() => {});
+  // ✅ Confirmation : TOUJOURS envoyée, quoi qu'il arrive.
+  // 1) Réponse à l'interaction (lien cliquable vers le salon de ticket)
+  const confirmMsg = `✅ Ton ticket a été créé : **${channel}** — clique dessus pour l'ouvrir !`;
+  await ackReply(interaction, { content: confirmMsg, ephemeral: true });
+  // 2) Message visible SOUS LE PANNEAU dans le salon des tickets
+  //    (indépendant de l'interaction : même si Discord coupe la réponse
+  //    éphémère, la confirmation reste visible pour tout le monde).
+  try {
+    const panelCh = interaction.channel;
+    if (panelCh && typeof panelCh.send === 'function' && panelCh.id !== channel.id) {
+      await panelCh.send({ content: `✅ Ticket créé pour ${member} : ${channel} — bonne prise en charge !` });
+    }
+  } catch (e) {
+    console.error('[BotDev] confirm panel:', e.message);
   }
 }
 
@@ -820,6 +843,9 @@ async function submitDeleteReason(botId, interaction) {
   const reason = (interaction.fields.getTextInputValue('value') || '').trim() || 'aucune raison';
   const channel = interaction.channel;
   const guild = interaction.guild;
+  // ⏱️ Réponse différée AVANT le travail long (transcription + MP) :
+  // sans ça, Discord coupe l'interaction au bout de 3 secondes.
+  try { await interaction.deferReply({ ephemeral: true }); } catch {}
   store.closedTickets.add(channel.id, botId, guild.id);
   bumpTicketStats(guild.id, 0, -1);
   const t = await buildTranscript(botId, interaction, [
@@ -834,7 +860,7 @@ async function submitDeleteReason(botId, interaction) {
       { name: '📝 Raison', value: reason },
     ],
   });
-  await interaction.reply({
+  await ackReply(interaction, {
     content: '🗑 Ticket supprimé.' + (dmOk ? ' 📄 Transcription envoyée en MP.' : ' ⚠️ MP impossible pour le créateur.'),
     ephemeral: true,
   });
