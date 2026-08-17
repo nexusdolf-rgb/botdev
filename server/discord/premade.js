@@ -310,29 +310,47 @@ function optionType(t) {
 
 // ---------------------- Gestion préfixe ----------------------
 async function handlePremadePrefix(botId, entry, message, cmdName, args) {
-  const enabled = enabledCommandNames(botId);
-  const cmd = cmdName.toLowerCase();
-  if (!enabled.includes(cmd)) return false;
-  const def = CMD_DEFS[cmd];
+  try {
+    const enabled = enabledCommandNames(botId);
+    const cmd = cmdName.toLowerCase();
+    if (!enabled.includes(cmd)) return false;
+    const def = CMD_DEFS[cmd];
 
-  if (def.perms && !message.member.permissions.has(def.perms)) {
-    await message.channel.send('⛔ Tu n\'as pas la permission d\'utiliser cette commande.');
+    if (def.perms && message.member && message.member.permissions && !message.member.permissions.has(def.perms)) {
+      await message.channel.send('⛔ Tu n\'as pas la permission d\'utiliser cette commande.').catch(() => {});
+      return true;
+    }
+
+    await execute(botId, entry, cmd, { message, args });
+    return true;
+  } catch (e) {
+    // 🛡️ Les commandes préfixe ne plantent jamais non plus
+    console.error('[BotDev] commande préfixe :', (e && e.message) || e);
+    try { await message.channel.send('⚠️ Une erreur est survenue — elle a été enregistrée.').catch(() => {}); } catch {}
     return true;
   }
-
-  await execute(botId, entry, cmd, { message, args });
-  return true;
 }
 
 async function handlePremadeSlash(botId, entry, interaction) {
-  const enabled = enabledCommandNames(botId);
-  const cmd = interaction.commandName.toLowerCase();
-  if (!enabled.includes(cmd)) return;
-  const def = CMD_DEFS[cmd];
-  if (def.perms && !interaction.member.permissions.has(def.perms)) {
-    return interaction.reply({ content: '⛔ Tu n\'as pas la permission d\'utiliser cette commande.', ephemeral: true });
+  try {
+    const enabled = enabledCommandNames(botId);
+    const cmd = interaction.commandName.toLowerCase();
+    if (!enabled.includes(cmd)) return;
+    const def = CMD_DEFS[cmd];
+    if (def.perms && !interaction.member.permissions.has(def.perms)) {
+      // permissions manquantes → refus propre
+      return interaction.reply({ content: '⛔ Tu n\'as pas la permission d\'utiliser cette commande.', ephemeral: true });
+    }
+    await execute(botId, entry, cmd, { interaction, args: '' });
+  } catch (e) {
+    // 🛡️ Aucune commande ne doit planter : réponse polie systématique
+    console.error('[BotDev] commande slash :', (e && e.message) || e);
+    try {
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({ content: '⚠️ Oups, une erreur est survenue — elle a été enregistrée, réessaie.', ephemeral: true }).catch(() => {});
+      }
+    } catch {}
   }
-  await execute(botId, entry, cmd, { interaction, args: '' });
 }
 
 async function execute(botId, entry, cmd, src) {
@@ -345,11 +363,17 @@ async function execute(botId, entry, cmd, src) {
   const member = src.message ? src.message.member : src.interaction.member;
 
   const send = async (payload) => {
-    if (isInt) {
-      if (!src._replied) { await src.interaction.reply(payload); src._replied = true; }
-      else await src.interaction.followUp(payload);
-    } else {
-      await channel.send(payload);
+    // 🛡️ L'envoi ne doit JAMAIS faire tomber une commande : en cas d'échec
+    // (limite Discord, message trop long…), on journalise et on continue.
+    try {
+      if (isInt) {
+        if (!src._replied) { await src.interaction.reply(payload); src._replied = true; }
+        else await src.interaction.followUp(payload);
+      } else {
+        await channel.send(payload);
+      }
+    } catch (e) {
+      console.error('[BotDev] send:', (e && e.message) || e);
     }
   };
   const reply = async (content) => send({ content });

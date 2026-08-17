@@ -79,6 +79,55 @@ function friendlyError(err) {
   return msg.slice(0, 300);
 }
 
+// ---------------------- Garde d'interaction (anti-crash / anti-blocage) ----------------------
+// TOUTE interaction passe par cette garde :
+//  - erreur dans un gestionnaire → réponse polie, le bot ne plante JAMAIS
+//  - trop lent (15 s) → réponse « patiente un instant » + le traitement
+//    continue en arrière-plan (plus jamais d'action « calée » sans réponse)
+//  - aucun gestionnaire (commande pas encore synchronisée…) → réponse d'attente
+async function guardInteraction(botId, entry, i, timeoutMs = 15000) {
+  const work = (async () => {
+    try {
+      const extra = require('./extra');
+      const extraHandled = await extra.handleInteraction(botId, i);
+      if (extraHandled) return;
+      const { dispatchPanels } = require('./panels');
+      const handled = await dispatchPanels(botId, i);
+      if (handled) return;
+      const { runInteractionHandler } = require('./engine');
+      await runInteractionHandler(botId, entry, i);
+      // Filet de sécurité : si AUCUN gestionnaire n'a répondu (commande pas encore
+      // synchronisée, nom inconnu…), on répond quand même pour éviter le
+      // « L'application ne répond pas » de Discord.
+      if (i.isChatInputCommand() && !i.replied && !i.deferred) {
+        await i.reply({
+          content: '⏳ Cette commande n\'est pas encore prête sur ce serveur — la synchronisation se fait automatiquement (retente dans 5 à 10 minutes).',
+          ephemeral: true,
+        }).catch(() => {});
+      }
+    } catch (e) {
+      console.error('[BotDev] interaction error:', (e && e.message) || e);
+      try {
+        if (typeof i.isRepliable === 'function' && i.isRepliable() && !i.replied && !i.deferred) {
+          await i.reply({ content: '⚠️ Une erreur est survenue en traitant cette action — elle a été enregistrée, réessaie dans un instant.', ephemeral: true });
+        }
+      } catch {}
+    }
+  })();
+
+  const timeout = new Promise((resolve) => setTimeout(() => resolve('TIMEOUT'), timeoutMs));
+  const result = await Promise.race([work, timeout]);
+  if (result === 'TIMEOUT') {
+    const id = String(i.customId || i.commandName || '?').slice(0, 80);
+    console.error(`[BotDev] ⏱️ Interaction trop lente (bot ${botId}, id=${id})`);
+    try {
+      if (typeof i.isRepliable === 'function' && i.isRepliable() && !i.replied && !i.deferred) {
+        await i.reply({ content: '⏳ Cette action prend trop de temps… réessaie dans un instant.', ephemeral: true }).catch(() => {});
+      }
+    } catch {}
+  }
+}
+
 async function logoutBot(botId) {
   const entry = clients.get(botId);
   if (!entry) return;
@@ -141,33 +190,8 @@ function attachListeners(botId, entry) {
     onVoiceState(botId, entry, oldState, newState);
   });
 
-  client.on('interactionCreate', async (i) => {
-    try {
-      const extra = require('./extra');
-      const extraHandled = await extra.handleInteraction(botId, i);
-      if (extraHandled) return;
-      const { dispatchPanels } = require('./panels');
-      const handled = await dispatchPanels(botId, i);
-      if (handled) return;
-      const { runInteractionHandler } = require('./engine');
-      await runInteractionHandler(botId, entry, i);
-      // Filet de sécurité : si AUCUN gestionnaire n'a répondu (commande pas encore
-      // synchronisée, nom inconnu…), on répond quand même pour éviter le
-      // « L'application ne répond pas » de Discord.
-      if (i.isChatInputCommand() && !i.replied && !i.deferred) {
-        await i.reply({
-          content: '⏳ Cette commande n\'est pas encore prête sur ce serveur — la synchronisation se fait automatiquement (retente dans 5 à 10 minutes).',
-          ephemeral: true,
-        }).catch(() => {});
-      }
-    } catch (e) {
-      console.error('[BotDev] interaction error:', e.message);
-      try {
-        if (typeof i.isRepliable === 'function' && i.isRepliable() && !i.replied && !i.deferred) {
-          await i.reply({ content: '⚠️ Une erreur est survenue en traitant cette action — elle a été enregistrée, réessaie dans un instant.', ephemeral: true });
-        }
-      } catch {}
-    }
+  client.on('interactionCreate', (i) => {
+    guardInteraction(botId, entry, i).catch((e) => console.error('[BotDev] interaction guard:', (e && e.message) || e));
   });
 
   client.on('guildMemberAdd', (member) => {
@@ -348,4 +372,4 @@ function platformStats() {
   return { onlineBots, servers, members };
 }
 
-module.exports = { clients, getClient, isOnline, loginBot, logoutBot, stopAll, syncSlashCommands, syncGlobalCommands, applyPresence, applyBotAbout, aboutText, publicBotInfo, platformStats };
+module.exports = { clients, getClient, isOnline, loginBot, logoutBot, stopAll, syncSlashCommands, syncGlobalCommands, applyPresence, applyBotAbout, aboutText, publicBotInfo, platformStats, guardInteraction };

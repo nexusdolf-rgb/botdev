@@ -16,6 +16,15 @@ const penduGames = new Map();   // `${guildId}:${messageId}` -> { word, shown, l
 const morpionGames = new Map(); // `${guildId}:${messageId}` -> { board, turn, p1, p2, over }
 const pollState = new Map();    // `${guildId}:${messageId}` -> { question, choices, votes: Map<userId, index> }
 
+// 🛡️ Anti-fuite mémoire : les parties/sondages abandonnés sont purgés
+// (les plus anciens d'abord) dès qu'un plafond est dépassé.
+function capMap(map, max) {
+  while (map.size > max) {
+    const first = map.keys().next().value;
+    map.delete(first);
+  }
+}
+
 // ---------------------- Snipe (derniers messages supprimés) ----------------------
 const snipeCache = new Map();   // `${guildId}:${channelId}` -> { tag, avatar, content, attachments, ts }
 
@@ -336,6 +345,7 @@ async function handleSlash(botId, entry, interaction) {
         fetchReply: true,
       });
       penduGames.set(`${guild.id}:${msg.id}`, state);
+      capMap(penduGames, 150); // 🛡️ purge les parties abandonnées
       return true;
     }
     case 'morpion': {
@@ -350,6 +360,7 @@ async function handleSlash(botId, entry, interaction) {
         fetchReply: true,
       });
       morpionGames.set(`${guild.id}:${msg.id}`, state);
+      capMap(morpionGames, 150); // 🛡️ purge les parties abandonnées
       return true;
     }
     // ---------------- Communauté ----------------
@@ -402,6 +413,7 @@ async function handleSlash(botId, entry, interaction) {
         fetchReply: true,
       });
       pollState.set(`${guild.id}:${msg.id}`, { question, choices, votes });
+      capMap(pollState, 300); // 🛡️ purge les anciens sondages
       return true;
     }
     case 'snipe': {
@@ -993,4 +1005,6 @@ module.exports = {
   parseDuration,
   formatDuration,
   HELP_EXTRA,
+  // 🧪 États internes exposés pour les tests (anti-fuite mémoire)
+  _test: { penduGames, morpionGames, pollState, capMap },
 };

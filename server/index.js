@@ -5,6 +5,8 @@ const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const backup = require('./backup');
+// 🛡️ Filets de sécurité : le processus ne meurt JAMAIS d'une erreur isolée
+require('./safety').install();
 
 const PORT = process.env.PORT || 3000;
 
