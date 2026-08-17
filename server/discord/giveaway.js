@@ -29,7 +29,7 @@ function buildEmbed(g) {
       `🏆 Gagnants : **${g.winners}**`,
       `⏰ Fin ${formatEnds(g.ends_at)}`,
     ].join('\n'))
-    .setFooter({ text: 'Giveaway propulsé par BotDev' })
+    .setFooter({ text: 'Giveaway propulsé par Hoxera' })
     .setTimestamp();
 }
 

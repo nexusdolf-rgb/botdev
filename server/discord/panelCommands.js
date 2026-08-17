@@ -568,7 +568,7 @@ async function handleRoles(botId, sub, interaction, guild) {
       const menus = store.roleMenus.all(botId, guild.id);
       if (!menus.length) {
         return interaction.reply({
-          content: '📋 Aucun menu sur ce serveur. Crée-en un dans le dashboard BotDev (onglet Panneaux), puis envoie-le avec `/roles send`.',
+          content: '📋 Aucun menu sur ce serveur. Crée-en un dans le dashboard Hoxera (onglet Rôles), puis envoie-le avec `/roles send`.',
           ephemeral: true,
         });
       }

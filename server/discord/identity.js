@@ -52,7 +52,7 @@ async function webhookFor(client, botId, guild, channel) {
     const hooks = await channel.fetchWebhooks();
     let hook = hooks.find((h) => h.owner && h.owner.id === client.user.id);
     if (!hook) {
-      hook = await channel.createWebhook({ name: 'BotDev Identity', avatar: client.user.displayAvatarURL({ size: 64 }) });
+      hook = await channel.createWebhook({ name: 'Hoxera Identity', avatar: client.user.displayAvatarURL({ size: 64 }) });
     }
     webhookCache.set(key, hook);
     return hook;

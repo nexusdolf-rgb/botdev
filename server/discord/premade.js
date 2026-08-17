@@ -435,7 +435,7 @@ async function execute(botId, entry, cmd, src) {
           { name: '🌍 Serveurs', value: String(client.guilds.cache.size), inline: true },
           { name: '👥 Utilisateurs', value: String(client.guilds.cache.reduce((a, g) => a + g.memberCount, 0)), inline: true },
           { name: '⚡ Latence', value: `${client.ws.ping} ms`, inline: true },
-          { name: '🤖 Hébergé par', value: 'BotDev', inline: true },
+          { name: '🤖 Créé avec amour', value: 'Hoxera ✨', inline: true },
         );
       await replyEmbed(embed);
       break;
@@ -942,7 +942,7 @@ function buildHelpEmbed(botId, record, client, guild, requested) {
     value: [
       '`/roles list` — Voir les menus de ce serveur',
       '`/roles send 1` — Envoyer le menu n°1 dans un salon',
-      '*Les menus se créent dans le dashboard BotDev (onglet Panneaux)*',
+      '*Les menus se créent dans le dashboard Hoxera (onglet Rôles)*',
     ].join('\n'),
   });
 

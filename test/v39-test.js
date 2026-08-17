@@ -147,7 +147,8 @@ const check = (label, cond) => {
   const lastReply = wReason.replies[wReason.replies.length - 1];
   check('ouverture : confirmation avec le lien du ticket', lastReply && lastReply[0] === 'edit' && String(lastReply[1].content).includes('Ton ticket a été créé') && String(lastReply[1].content).includes('#recrutement-alice'));
   check('ouverture : lien aussi envoyé en MP', dms.some((m) => String(m).includes('Rejoins-le ici')));
-  check('ouverture : confirmation PUBLIQUE sous le panneau', sent.some((p) => p.content && String(p.content).includes('Ticket créé pour') && String(p.content).includes('#recrutement-alice')));
+  // 🔒 Le lien du salon de ticket reste PRIVÉ : aucun message public sous le panneau
+  check('ouverture : AUCUN message public sous le panneau (lien privé)', !sent.some((p) => p.content && String(p.content).includes('Ticket créé pour')));
   const ticketEmbeds = sent.filter((p) => p.embeds && p.embeds.length);
   const lastEmbed = ticketEmbeds.length ? ticketEmbeds[ticketEmbeds.length - 1].embeds[0].toJSON() : null;
   const embStr = lastEmbed ? JSON.stringify(lastEmbed) : '';

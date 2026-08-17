@@ -577,21 +577,14 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
     console.error('[BotDev] ticket welcome/log:', e.message);
   }
 
-  // ✅ Confirmation : TOUJOURS envoyée, quoi qu'il arrive.
-  // 1) Réponse à l'interaction (lien cliquable vers le salon de ticket)
+  // ✅ Confirmation : TOUJOURS envoyée, quoi qu'il arrive — et PRIVÉE.
+  // Le lien vers le salon de ticket est réservé au créateur :
+  //  - réponse éphémère (visible uniquement par lui)
+  //  - + MP automatique (envoyé plus haut)
+  // Aucun message public n'est envoyé sous le panneau (le salon de ticket
+  // est privé, son lien ne doit pas être exposé à tout le serveur).
   const confirmMsg = `✅ Ton ticket a été créé : **${channel}** — clique dessus pour l'ouvrir !`;
   await ackReply(interaction, { content: confirmMsg, ephemeral: true });
-  // 2) Message visible SOUS LE PANNEAU dans le salon des tickets
-  //    (indépendant de l'interaction : même si Discord coupe la réponse
-  //    éphémère, la confirmation reste visible pour tout le monde).
-  try {
-    const panelCh = interaction.channel;
-    if (panelCh && typeof panelCh.send === 'function' && panelCh.id !== channel.id) {
-      await panelCh.send({ content: `✅ Ticket créé pour ${member} : ${channel} — bonne prise en charge !` });
-    }
-  } catch (e) {
-    console.error('[BotDev] confirm panel:', e.message);
-  }
 }
 
 // ---------- Raisons : ouverture & suppression ----------
