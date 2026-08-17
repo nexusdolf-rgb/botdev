@@ -290,7 +290,7 @@ Dashboard.renderers.overview = async (content, data) => {
 Dashboard.renderers.tickets = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const t = data.tickets;
-  const typesData = (t.types || []).map((x) => ({ label: x.label, emoji: x.emoji || '', category: x.category || '', staff_roles: (x.staff_roles && x.staff_roles.length) ? [...x.staff_roles] : [] }));
+  const typesData = (t.types || []).map((x) => ({ label: x.label, emoji: x.emoji || '', description: x.description || '', category: x.category || '', staff_roles: (x.staff_roles && x.staff_roles.length) ? [...x.staff_roles] : [] }));
   const root = Dashboard.header(content, '🎫', 'Système de tickets', 'Bouton ou menu déroulant → salon privé automatique. Le tout est aussi configurable sur Discord avec /ticket.');
   const ts = data.tickets_stats || { total: 0, open: 0 };
   root.appendChild(App.el(`
@@ -399,7 +399,7 @@ Dashboard.renderers.tickets = async (content, data) => {
         support_role: pick('#t-role', '#t-role-custom', ''),
         category: pick('#t-cat', '#t-cat-custom', 'Tickets'),
         message: c.querySelector('#t-msg').value,
-        types: typesData.filter((x) => x.label).map((x) => ({ label: x.label, emoji: x.emoji, category: x.category, staff_roles: x.staff_roles.filter(Boolean) })),
+        types: typesData.filter((x) => x.label).map((x) => ({ label: x.label, emoji: x.emoji, description: x.description, category: x.category, staff_roles: x.staff_roles.filter(Boolean) })),
       }});
       App.toast('Tickets enregistrés !');
       renderStatus();
@@ -425,7 +425,7 @@ Dashboard.renderers.tickets = async (content, data) => {
         <div style="margin-bottom:10px">🎫 ${App.escapeHtml(t.message || 'Besoin d\'aide ? Ouvre un ticket !')}</div>
         <span style="display:inline-flex;align-items:center;gap:6px;background:${color};color:#fff;font-weight:700;padding:7px 16px;border-radius:6px">${App.escapeHtml(label)}</span>
         ${typesCount
-          ? `<div style="margin-top:12px;border:1px solid #1E1F22;border-radius:6px;padding:9px 12px;color:#A8ABAF">▾ ${typesData.filter((x) => x.label).map((x) => `${x.emoji || '🎫'} ${x.label}`).join('  ·  ')}</div>`
+          ? `<div style="margin-top:12px;border:1px solid #1E1F22;border-radius:6px;padding:9px 12px;color:#A8ABAF;text-align:left">${typesData.filter((x) => x.label).map((x) => `<div style="padding:4px 0">${App.escapeHtml(x.emoji || '🎫')} <b style="color:#DBDEE1">${App.escapeHtml(x.label)}</b>${x.description ? `<div style="font-size:11px;margin-left:20px;color:#949BA4">${App.escapeHtml(x.description.slice(0, 70))}${x.description.length > 70 ? '…' : ''}</div>` : ''}</div>`).join('')}</div>`
           : `<div style="margin-top:10px;color:#A8ABAF;font-size:11.5px">Aucun type → un simple bouton s\'affichera.</div>`}
       </div>`;
   };
@@ -452,6 +452,9 @@ Dashboard.renderers.tickets = async (content, data) => {
             <button class="dash-btn dash-btn-danger dash-btn-sm" data-del>🗑</button>
           </div>
           <div data-emojierr style="color:#ff8a8d;font-size:11.5px;margin-top:3px;display:none">⚠️ Emoji invalide — utilise un vrai emoji (ex : 🤝)</div>
+          <label class="dash-label">📝 Description (affichée sous le type dans le menu)</label>
+          <input class="dash-input" data-k="description" maxlength="100" value="${App.escapeHtml(x.description)}" placeholder="Ex : signale un abus du staff, en toute confidentialité" />
+          <div style="color:var(--d-dim);font-size:10.5px;margin-top:2px">${String(x.description || '').length}/100 — si vide, une description professionnelle est générée automatiquement.</div>
           <label class="dash-label">🗂️ Catégorie (menu déroulant)</label>
           <select class="dash-select" data-k="categorySel">
             <option value="">— Catégorie par défaut (Tickets) —</option>
@@ -478,6 +481,13 @@ Dashboard.renderers.tickets = async (content, data) => {
       });
       const labelInp = row.querySelector('[data-k="label"]');
       labelInp.addEventListener('input', () => { x.label = labelInp.value; renderPreview(); });
+      const descInp = row.querySelector('[data-k="description"]');
+      descInp.addEventListener('input', () => {
+        x.description = descInp.value;
+        const cnt = descInp.nextElementSibling;
+        if (cnt) cnt.textContent = `${String(x.description || '').length}/100 — si vide, une description professionnelle est générée automatiquement.`;
+        renderPreview();
+      });
       const catSel = row.querySelector('[data-k="categorySel"]');
       const catInp = row.querySelector('[data-k="category"]');
       catSel.addEventListener('change', () => {

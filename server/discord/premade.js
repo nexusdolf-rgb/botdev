@@ -190,6 +190,7 @@ function buildSlashPayloads(botId) {
         { name: 'add', description: 'Ajouter ou renommer un type de ticket', type: ApplicationCommandOptionType.Subcommand, options: [
           { name: 'nom', description: 'Nom du type (ex : Candidature staff)', type: ApplicationCommandOptionType.String, required: true },
           { name: 'emoji', description: 'Emoji affiché dans le menu', type: ApplicationCommandOptionType.String, required: false },
+          { name: 'description', description: 'Explication affichée sous le type dans le menu', type: ApplicationCommandOptionType.String, required: false },
           { name: 'categorie', description: 'Catégorie dédiée (optionnel)', type: ApplicationCommandOptionType.String, required: false },
           { name: 'staffrole', description: 'Ajoute un rôle staff (pour EN ajouter plusieurs : /ticket types setup)', type: ApplicationCommandOptionType.String, required: false },
         ]},

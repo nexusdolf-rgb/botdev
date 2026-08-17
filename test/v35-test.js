@@ -12,23 +12,18 @@ const check = (label, cond) => {
   if (!cond) failures++;
 };
 
-const bio = aboutText('');
+const bio = aboutText();
 console.log('── Bio générée ──');
 console.log(bio);
 console.log('─────────────────');
 
 check('bio : 190 caractères max (Discord)', bio.length <= 190);
-check('bio : contient le lien du dashboard', bio.includes('https://dash-hoxora.onrender.com'));
+check('bio : contient le NOUVEAU lien du dashboard', bio.includes('https://dash-hoxora.onrender.com'));
 check('bio : invite à taper /help', bio.includes('/help'));
 check('bio : nom du bot Hoxera', bio.includes('Hoxera'));
 check('bio : modules principaux listés', bio.includes('Tickets') && bio.includes('XP') && bio.includes('Coins') && bio.includes('Giveaways') && bio.includes('Jeux'));
 check('bio : emojis présents', /[\u{1F300}-\u{1FAFF}]/u.test(bio));
-
-// Avec une URL personnalisée
-const custom = aboutText('https://mon-site.example.com');
-check('bio : URL personnalisée respectée', custom.includes('https://mon-site.example.com'));
-
-// La bio est sur 4 lignes propres
+check('bio : aucun ANCIEN lien possible', !bio.includes('botdev-kqbd') && !bio.includes('BotDev'));
 check('bio : 4 lignes', bio.split('\n').length === 4);
 
 console.log(failures === 0 ? '\n✅ V35 — Bio du bot prête (belle, lien + /help, dans la limite). 🎉' : `\n❌ ${failures} vérification(s) en échec`);

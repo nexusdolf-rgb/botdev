@@ -370,6 +370,7 @@ async function handleTicket(botId, sub, group, interaction, guild) {
       const emoji = safeEmoji(emojiRaw);
       if (emojiRaw && !emoji) return interaction.reply({ content: '❌ Emoji invalide — utilise un vrai emoji (ex : 🤝).', ephemeral: true });
       const categorie = (interaction.options.getString('categorie') || '').trim();
+      const description = (interaction.options.getString('description') || '').trim();
       const staffrole = (interaction.options.getString('staffrole') || '').trim();
       const existingType = types.find((t) => t.label.toLowerCase() === nom.toLowerCase());
       const others = types.filter((t) => t.label.toLowerCase() !== nom.toLowerCase());
@@ -379,11 +380,12 @@ async function handleTicket(botId, sub, group, interaction, guild) {
       if (staffrole && !staffRoles.includes(staffrole)) staffRoles.push(staffrole);
       if (existingType) {
         existingType.emoji = emoji || existingType.emoji || '';
+        existingType.description = description || existingType.description || '';
         existingType.category = categorie || existingType.category || '';
         existingType.staff_roles = staffRoles;
         others.push(existingType);
       } else {
-        others.push({ label: nom.slice(0, 100), emoji: emoji.slice(0, 10), category: categorie.slice(0, 100), staff_roles: staffRoles });
+        others.push({ label: nom.slice(0, 100), emoji: emoji.slice(0, 100), description: description.slice(0, 100), category: categorie.slice(0, 100), staff_roles: staffRoles });
       }
       store.tickets.set(botId, guild.id, { ...cfg, types: JSON.stringify(others) });
       return interaction.reply({

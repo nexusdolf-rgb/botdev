@@ -806,6 +806,7 @@ router.put('/bots/:id/tickets', requireAuth, async (req, res) => {
         return {
           label: String(t.label || '').slice(0, 100),
           emoji: safeEmojiWeb(t.emoji).slice(0, 100),
+          description: String(t.description || '').slice(0, 100),
           category: String(t.category || '').slice(0, 100),
           staff_roles: roles,
         };

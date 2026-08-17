@@ -24,6 +24,15 @@ async function main() {
   const routes = require('./routes');
   const botManager = require('./discord/botManager');
 
+  // 🆕 L'URL officielle du dashboard : remplace un éventuel ancien lien
+  // mémorisé dans la base restaurée (transcriptions, /help, pieds de page…)
+  const officialUrl = 'https://dash-hoxora.onrender.com';
+  const storedUrl = store.settings.get('public_url');
+  if (!storedUrl || !storedUrl.includes('dash-hoxora')) {
+    store.settings.set('public_url', officialUrl);
+    if (storedUrl) console.log(`[BotDev] 🔗 Lien du dashboard mis à jour : ${storedUrl} → ${officialUrl}`);
+  }
+
   const app = express();
   app.use(express.json({ limit: '15mb' }));
   app.use(cookieParser());

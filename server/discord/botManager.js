@@ -234,23 +234,24 @@ async function syncSlashCommands(botId, guildId, quiet = false) {
 // ---------------------- Bio du bot (« À propos de moi ») ----------------------
 // Belle bio avec le lien du dashboard et l'invitation à /help.
 // Limite Discord : 190 caractères — on vise ~176 avec les emojis.
-function aboutText(url) {
-  const site = (url || '').trim() || 'https://dash-hoxora.onrender.com';
+// Le lien est TOUJOURS le nouveau dashboard (pas l'ancien lien mémorisé).
+const OFFICIAL_URL = 'https://dash-hoxora.onrender.com';
+
+function aboutText() {
   return [
     '✨ Hoxera — le bot qui anime ton serveur !',
     '🎫 Tickets · 📈 XP · 💰 Coins · 🎁 Giveaways · 🕹️ Jeux',
-    `🌐 Dashboard : ${site}`,
+    `🌐 Dashboard : ${OFFICIAL_URL}`,
     '❓ /help → toutes les commandes',
   ].join('\n').slice(0, 190);
 }
 
 async function applyBotAbout(botId, entry) {
-  const url = store.settings.get('public_url');
-  const text = aboutText(url);
-  if (store.settings.get(`about2_${botId}`) === text) return; // déjà à jour
+  const text = aboutText();
+  if (store.settings.get(`about3_${botId}`) === text) return; // déjà à jour
   try {
     await entry.client.rest.patch('/applications/@me', { body: { description: text } });
-    store.settings.set(`about2_${botId}`, text);
+    store.settings.set(`about3_${botId}`, text);
     console.log(`[BotDev] bot ${botId} : bio « À propos » mise à jour (${text.length} caractères)`);
   } catch (e) {
     console.log(`[BotDev] bot ${botId} : bio non mise à jour (${e.message})`);

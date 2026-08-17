@@ -194,13 +194,26 @@ function parseTypes(cfg) {
 }
 
 // Types normalisés : chaque type a staff_roles (liste) en plus de l'ancien staff_role
+// + une description professionnelle (affichée sous le type dans le menu déroulant)
 function normalizeTypes(cfg) {
   return parseTypes(cfg).map((t) => {
     const roles = Array.isArray(t.staff_roles)
       ? t.staff_roles.map((r) => String(r).trim()).filter(Boolean)
       : (t.staff_role ? [String(t.staff_role).trim()] : []);
-    return { label: String(t.label || ''), emoji: String(t.emoji || ''), category: String(t.category || ''), staff_roles: roles };
+    return {
+      label: String(t.label || ''),
+      emoji: String(t.emoji || ''),
+      category: String(t.category || ''),
+      description: String(t.description || '').slice(0, 100),
+      staff_roles: roles,
+    };
   });
+}
+
+// Description professionnelle affichée sous un type dans le menu déroulant
+function typeOptionDescription(t) {
+  if (t.description) return t.description.slice(0, 100);
+  return `Ouvrir un ticket « ${t.label} » : notre équipe vous répond en privé.`.slice(0, 100);
 }
 
 // Rôles staff autorisés pour un ticket : ceux du type, sinon le rôle global
@@ -222,16 +235,11 @@ function isDefaultMessage(msg) {
 
 function defaultPanelDescription(buttonLabel, hasTypes) {
   return [
-    'Bienvenue dans notre **centre d\'assistance** 👋',
-    '',
-    'Tu as une question, un problème ou une suggestion ? Ouvre un **ticket privé** et notre équipe te répondra aussi vite que possible.',
-    '',
-    '**Comment ça marche ?**',
+    '**Une question, un problème ou une suggestion ?**',
     hasTypes
-      ? '1️⃣  Choisis un **type de ticket** dans le menu déroulant ci-dessous'
-      : `1️⃣  Clique sur **${buttonLabel}** ci-dessous`,
-    '2️⃣  Décris ta demande dans le salon privé qui s\'ouvre automatiquement',
-    '3️⃣  Notre équipe te répond — c\'est tout !',
+      ? 'Sélectionnez le **type de ticket** correspondant à votre demande dans le menu ci-dessous.'
+      : `Cliquez sur **${buttonLabel}** ci-dessous.`,
+    'Un **salon privé** s\'ouvre immédiatement : notre équipe vous répond au plus vite.',
   ].join('\n');
 }
 
@@ -244,40 +252,46 @@ function buildTicketPanelEmbed(cfg, client, types) {
     .setTitle('🎫 Centre d\'assistance')
     .setDescription(desc)
     .addFields(
-      { name: '🕐 Réponse rapide', value: 'Ton ticket est créé **instantanément** dans un salon privé.', inline: true },
-      { name: '🔒 100 % privé', value: 'Seuls **toi et le staff** voient la conversation.', inline: true },
-      { name: '📩 Suivi facile', value: 'Le staff **supprime** ton ticket et tu reçois la **transcription en MP**.', inline: true },
+      { name: '🕐 Prise en charge rapide', value: 'Votre salon privé est ouvert **instantanément** : décrivez votre demande, notre équipe vous répond.', inline: true },
+      { name: '🔒 100 % privé', value: 'Seuls **vous et le staff** pouvez voir la conversation.', inline: true },
+      { name: '📩 Suivi assuré', value: 'À la fermeture, vous recevez la **transcription complète** en message privé.', inline: true },
     );
   if (types.length) {
     embed.addFields({
       name: '🗂️ Types de tickets',
-      value: types.map((t) => `${t.emoji || '🎫'} **${t.label}**${t.category ? ` → catégorie « ${t.category} »` : ''}`).join('\n').slice(0, 1024),
+      value: types.map((t) => {
+        const desc = t.description ? ` — ${t.description}` : '';
+        return `${t.emoji || '🎫'} **${t.label}**${t.category ? ` → « ${t.category} »` : ''}${desc}`;
+      }).join('\n').slice(0, 1024),
     });
   }
   if (client && client.user) {
     try { embed.setThumbnail(client.user.displayAvatarURL({ dynamic: true })); } catch {}
   }
   const site = store.settings.get('public_url');
-  if (site) embed.setFooter({ text: `Propulsé par BotDev · ${site}` });
+  if (site) embed.setFooter({ text: `Hoxera · ${site}` });
   return embed;
 }
 
 async function sendTicketPanel(botId, guildId, client, channel) {
   const cfg = store.tickets.get(botId, guildId);
   if (!cfg) throw new Error('Configuration des tickets introuvable');
-  const types = parseTypes(cfg);
+  const types = normalizeTypes(cfg);
   const rows = [];
   if (types.length) {
     // Des types existent : seul le menu déroulant est affiché (pas de bouton en dessous)
+    // Chaque type affiche son emoji + une description professionnelle en dessous.
     const select = new StringSelectMenuBuilder()
       .setCustomId(`bd-ttype:${botId}`)
-      .setPlaceholder('🗂️ Choisis le type de ticket…')
+      .setPlaceholder('🗂️ Choisissez le type de ticket…')
       .setMinValues(1).setMaxValues(1);
     for (const t of types.slice(0, 25)) {
       const opt = new StringSelectMenuOptionBuilder()
         .setLabel(String(t.label).slice(0, 100))
-        .setValue(String(t.label).slice(0, 100));
-      if (t.emoji && /^\p{Extended_Pictographic}/u.test(String(t.emoji))) opt.setEmoji(String(t.emoji));
+        .setValue(String(t.label).slice(0, 100))
+        .setDescription(typeOptionDescription(t));
+      const e = safeEmoji(t.emoji);
+      if (e) opt.setEmoji(e);
       select.addOptions(opt);
     }
     rows.push(new ActionRowBuilder().addComponents(select));
@@ -344,6 +358,38 @@ async function staffDeny(interaction) {
 }
 
 // ---------- Création du ticket ----------
+// Embed de bienvenue du salon de ticket : textes professionnels,
+// type + description, équipe en charge, déroulement de la prise en charge.
+function ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning = '') {
+  const typeFields = [
+    { name: '🗂️ Type de ticket', value: chosen ? `${chosen.emoji ? chosen.emoji + ' ' : ''}**${chosen.label}**` : '**Ticket simple**', inline: true },
+  ];
+  if (chosen && chosen.description) {
+    typeFields.push({ name: 'ℹ️ À propos de ce type', value: chosen.description.slice(0, 1024), inline: true });
+  }
+  const avatar = member.user.displayAvatarURL ? member.user.displayAvatarURL({ dynamic: true }) : '';
+  const welcome = new EmbedBuilder()
+    .setColor('#57F287')
+    .setAuthor(avatar ? { name: `Ticket de ${member.user.username}`, iconURL: avatar } : { name: `Ticket de ${member.user.username}` })
+    .setTitle('🎫 Ticket ouvert — prise en charge en cours')
+    .setDescription(`Bienvenue ${member} ! Votre demande a bien été enregistrée. Un membre de notre équipe vous répondra dans les plus brefs délais.\n\nVous pouvez dès maintenant décrire votre demande en détail : textes, captures d'écran et fichiers sont les bienvenus.`)
+    .addFields(
+      ...typeFields,
+      { name: '🛡️ Équipe en charge', value: staffMention || 'le staff du serveur', inline: true },
+      { name: '📝 Votre demande', value: reason ? reason.slice(0, 1024) : '—', inline: false },
+      { name: '📋 Déroulement de la prise en charge', value: [
+        '1️⃣ Décrivez votre demande en détail (textes, captures d\'écran, fichiers).',
+        '2️⃣ Un membre du staff vous répond ici, dans ce salon privé.',
+        '3️⃣ À la fermeture définitive du ticket, la **transcription complète** vous est envoyée en message privé.',
+      ].join('\n') },
+      { name: '🔒 Boutons réservés au staff', value: '**🔒 Fermer** — verrouiller (réouvrable) · **⏸ En attente** — lecture seule · **🔓 Réouvrir** · **🗑 Supprimer** — fermeture définitive avec transcription en MP.' + dmWarning },
+    )
+    .setTimestamp();
+  const site = store.settings.get('public_url');
+  if (site) welcome.setFooter({ text: `Hoxera · ${site}` });
+  return welcome;
+}
+
 async function openTicket(botId, interaction, type, reason = '') {
   const guild = interaction.guild;
   const member = interaction.member;
@@ -356,6 +402,7 @@ async function openTicket(botId, interaction, type, reason = '') {
     label: String(chosenRaw.label || ''),
     emoji: String(chosenRaw.emoji || ''),
     category: String(chosenRaw.category || ''),
+    description: String(chosenRaw.description || '').slice(0, 100),
     staff_roles: Array.isArray(chosenRaw.staff_roles)
       ? chosenRaw.staff_roles.map((r) => String(r).trim()).filter(Boolean)
       : (chosenRaw.staff_role ? [String(chosenRaw.staff_role).trim()] : []),
@@ -471,25 +518,7 @@ async function openTicket(botId, interaction, type, reason = '') {
   }
 
   const staffMention = supportRoles.length ? supportRoles.map((r) => r.toString()).join(' ') : '';
-  const welcome = new EmbedBuilder()
-    .setColor('#57F287')
-    .setAuthor({ name: `Ticket de ${member.user.username}`, iconURL: member.user.displayAvatarURL ? member.user.displayAvatarURL({ dynamic: true }) : undefined })
-    .setTitle('🎫 Ticket ouvert !')
-    .setDescription('Merci de nous avoir contactés 👋 Voici ton espace privé — personne d\'autre que toi et le staff ne peut le voir.')
-    .addFields(
-      { name: '🗂️ Type', value: chosen ? `${chosen.emoji || ''} ${chosen.label}` : 'Ticket simple', inline: true },
-      { name: '🛡️ Staff', value: staffMention || 'aucun rôle défini', inline: true },
-      { name: '📝 Ta demande', value: reason ? reason.slice(0, 1024) : '—', inline: false },
-      { name: '📋 Comment ça se passe ?', value: [
-        '1️⃣ Explique ta demande en détail (tu peux joindre des captures d\'écran ou des fichiers).',
-        '2️⃣ Le staff te répond ici **au plus vite**.',
-        '3️⃣ À la **suppression** du ticket, tu reçois la **transcription** en message privé.',
-      ].join('\n') },
-      { name: '🔒 Boutons du staff', value: 'Fermer = verrouiller (réouvrable) · En attente = lecture seule · Réouvrir · Supprimer = point final (+ transcription en MP).' + dmWarning },
-    )
-    .setTimestamp();
-  const site = store.settings.get('public_url');
-  if (site) welcome.setFooter({ text: `BotDev · ${site}` });
+  const welcome = ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning);
   const identity = require('./identity');
   await identity.sendAsProfile(interaction.client, botId, guild, channel, {
     content: `${member}${staffMention ? ' · ' + staffMention : ''}`,
@@ -834,9 +863,9 @@ function typesPickComponents(state) {
 
 function currentType(state) {
   const t = typesList(state.botId, state.guildId).find((x) => x.label === state.current);
-  if (!t) return { label: state.current, emoji: '', category: '', staff_roles: [] };
+  if (!t) return { label: state.current, emoji: '', category: '', description: '', staff_roles: [] };
   const roles = Array.isArray(t.staff_roles) ? t.staff_roles : (t.staff_role ? [t.staff_role] : []);
-  return { ...t, staff_roles: roles.filter(Boolean) };
+  return { ...t, description: String(t.description || ''), staff_roles: roles.filter(Boolean) };
 }
 
 function typesEditEmbed(state) {
@@ -848,7 +877,8 @@ function typesEditEmbed(state) {
     .addFields(
       { name: '😀 Emoji', value: t.emoji || 'aucun', inline: true },
       { name: '🗂️ Catégorie', value: t.category || 'par défaut', inline: true },
-      { name: '🛡️ Rôles staff (' + t.staff_roles.length + ')', value: t.staff_roles.length ? t.staff_roles.join('\n') : 'aucun', inline: true },
+      { name: '📝 Description', value: t.description || '*aucune — ajoute une explication professionnelle affichée sous le type dans le menu*', inline: false },
+      { name: '🛡️ Rôles staff (' + (t.staff_roles || []).length + ')', value: (t.staff_roles || []).length ? t.staff_roles.join('\n') : 'aucun', inline: true },
     );
 }
 
@@ -856,6 +886,7 @@ function typesEditComponents(state) {
   const actions = [
     { label: '✏️ Renommer', value: 'rename', emoji: '✏️' },
     { label: '😀 Changer l\'emoji', value: 'emoji', emoji: '😀' },
+    { label: '📝 Description du type', value: 'desc', emoji: '📝' },
     { label: '🗂️ Changer la catégorie', value: 'category', emoji: '🗂️' },
     { label: '🛡️ ➕ Ajouter un rôle staff', value: 'addrole', emoji: '🛡️' },
     { label: '🛡️ ➖ Retirer un rôle staff', value: 'removerole', emoji: '🛡️' },
@@ -1038,6 +1069,7 @@ async function handleTypesWizardInteraction(botId, interaction) {
       if (v === 'back') return interaction.update(backToPick());
       if (v === 'rename') { state.modal = 'rename'; return interaction.showModal(textModal(botId, uid, '✏️ Renommer', 'Nouveau nom', state.current, true, 100)); }
       if (v === 'emoji') { state.modal = 'emoji'; return interaction.showModal(textModal(botId, uid, '😀 Emoji', 'Emoji', '🤝', false, 10)); }
+      if (v === 'desc') { state.modal = 'desc'; return interaction.showModal(textModal(botId, uid, '📝 Description du type', 'Description affichée sous le type', 'Ex : signale un abus du staff, en toute confidentialité', false, 100)); }
       if (v === 'category') {
         state.step = 'category';
         return interaction.update({
@@ -1144,6 +1176,11 @@ async function handleTypesWizardInteraction(botId, interaction) {
       try { await state.msg.edit(backToEdit()); } catch {}
       return interaction.reply({ content: '✅ Catégorie enregistrée !', ephemeral: true });
     }
+    if (mode === 'desc') {
+      updateType(botId, state.guildId, state.current, { description: val.slice(0, 100) });
+      try { await state.msg.edit(backToEdit()); } catch {}
+      return interaction.reply({ content: '✅ Description enregistrée — elle apparaîtra sous le type dans le menu !', ephemeral: true });
+    }
     return interaction.reply({ content: '✅ Enregistré !', ephemeral: true });
   }
 
@@ -1241,5 +1278,5 @@ module.exports = {
   dispatchPanels, sendTicketPanel, sendRoleMenu, findChannel, findChannelInGuild, bumpTicketStats,
   resolveRole, parseTypes, isStaff, staffForTicket, openTicket, safeEmoji,
   startTypesWizard, handleTypesWizardInteraction,
-  handleTicketDeleteAsk, ticketMetaFor,
+  handleTicketDeleteAsk, ticketMetaFor, ticketWelcomeEmbed, typeOptionDescription, normalizeTypes,
 };
