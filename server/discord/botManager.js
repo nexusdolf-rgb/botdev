@@ -231,16 +231,27 @@ async function syncSlashCommands(botId, guildId, quiet = false) {
   if (!quiet) console.log(`[BotDev] bot ${botId} : ${payloads.length} commandes slash enregistrées pour le serveur ${guildId}`);
 }
 
-// ---------------------- Bio du bot (lien vers BotDev) ----------------------
+// ---------------------- Bio du bot (« À propos de moi ») ----------------------
+// Belle bio avec le lien du dashboard et l'invitation à /help.
+// Limite Discord : 190 caractères — on vise ~176 avec les emojis.
+function aboutText(url) {
+  const site = (url || '').trim() || 'https://dash-hoxora.onrender.com';
+  return [
+    '✨ Hoxera — le bot qui anime ton serveur !',
+    '🎫 Tickets · 📈 XP · 💰 Coins · 🎁 Giveaways · 🕹️ Jeux',
+    `🌐 Dashboard : ${site}`,
+    '❓ /help → toutes les commandes',
+  ].join('\n').slice(0, 190);
+}
+
 async function applyBotAbout(botId, entry) {
   const url = store.settings.get('public_url');
-  if (!url) return;
-  const text = `🤖 Créé avec BotDev — ${url}\nTickets, rôles, modération, économie et plus, sans coder.`;
-  if (store.settings.get(`about_${botId}`) === text) return; // déjà à jour
+  const text = aboutText(url);
+  if (store.settings.get(`about2_${botId}`) === text) return; // déjà à jour
   try {
-    await entry.client.rest.patch('/applications/@me', { body: { description: text.slice(0, 400) } });
-    store.settings.set(`about_${botId}`, text);
-    console.log(`[BotDev] bot ${botId} : bio « À propos » mise à jour avec ${url}`);
+    await entry.client.rest.patch('/applications/@me', { body: { description: text } });
+    store.settings.set(`about2_${botId}`, text);
+    console.log(`[BotDev] bot ${botId} : bio « À propos » mise à jour (${text.length} caractères)`);
   } catch (e) {
     console.log(`[BotDev] bot ${botId} : bio non mise à jour (${e.message})`);
   }
@@ -286,4 +297,4 @@ function platformStats() {
   return { onlineBots, servers, members };
 }
 
-module.exports = { clients, getClient, isOnline, loginBot, logoutBot, stopAll, syncSlashCommands, applyPresence, applyBotAbout, publicBotInfo, platformStats };
+module.exports = { clients, getClient, isOnline, loginBot, logoutBot, stopAll, syncSlashCommands, applyPresence, applyBotAbout, aboutText, publicBotInfo, platformStats };
