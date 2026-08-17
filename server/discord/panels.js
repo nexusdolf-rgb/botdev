@@ -275,10 +275,11 @@ const PANEL_PATIENCE = '*⏳ Merci de votre patience, un membre du staff prendra
 
 function panelBannerUrl(guildId, name) {
   const site = store.settings.get('public_url') || 'https://dash-hoxora.onrender.com';
-  // Bannière dynamique par serveur (le nom dans l'URL permet à Discord
-  // de recharger l'image si le serveur est renommé)
+  // Bannière dynamique par serveur, en GIF animé (balayage de lumière).
+  // Le nom dans l'URL permet à Discord de recharger l'image si le serveur
+  // est renommé.
   if (guildId && name && name !== PANEL_DEFAULT_NAME) {
-    return `${site}/api/tickets/panel-banner/${encodeURIComponent(guildId)}.png?n=${encodeURIComponent(String(name).slice(0, 60))}`;
+    return `${site}/api/tickets/panel-banner/${encodeURIComponent(guildId)}.gif?n=${encodeURIComponent(String(name).slice(0, 60))}`;
   }
   // Repli : bannière générique « SUPPORT - NEXORA »
   return `${site}/icons/support-banner.png`;

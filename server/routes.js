@@ -16,11 +16,24 @@ const COOKIE = 'botdev_session';
 // ============================================================
 // 🖼️ Bannière du panneau de tickets, générée PAR SERVEUR
 // (publique : c'est Discord qui la charge pour l'afficher dans l'embed)
+// → GIF animé (balayage de lumière) en priorité, PNG statique en repli.
 // ============================================================
-router.get('/tickets/panel-banner/:guildId.png', async (req, res) => {
+async function servePanelBanner(req, res) {
   const guildId = String(req.params.guildId || '').replace(/[^0-9]/g, '').slice(0, 25);
   const banner = require('./banner');
   const name = banner.storedPanelName(guildId) || 'NEXORA';
+  // 1) GIF animé (brillance qui balaie la bannière)
+  try {
+    const gif = await banner.generateBannerGif(name);
+    if (gif && gif.length > 1000) {
+      res.set('Content-Type', 'image/gif');
+      res.set('Cache-Control', 'public, max-age=86400');
+      return res.send(gif);
+    }
+  } catch (e) {
+    console.error('[Hoxera] bannière animée :', e.message);
+  }
+  // 2) PNG statique (repli)
   try {
     const buf = await banner.generateBanner(name);
     if (buf) {
@@ -31,9 +44,12 @@ router.get('/tickets/panel-banner/:guildId.png', async (req, res) => {
   } catch (e) {
     console.error('[Hoxera] bannière panneau :', e.message);
   }
-  // Repli : bannière générique « SUPPORT - NEXORA »
+  // 3) Repli final : bannière générique « SUPPORT - NEXORA »
   res.sendFile(path.join(__dirname, '..', 'public', 'icons', 'support-banner.png'));
-});
+}
+
+router.get('/tickets/panel-banner/:guildId.gif', (req, res) => servePanelBanner(req, res));
+router.get('/tickets/panel-banner/:guildId.png', (req, res) => servePanelBanner(req, res));
 
 // Emoji sûr (même règle que le bot) : évite de stocker des emojis invalides
 // qui feraient planter la construction des menus Discord.
