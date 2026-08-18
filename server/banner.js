@@ -19,9 +19,11 @@ const store = require('./db');
 let sharp = null;
 try {
   sharp = require('sharp');
-  // ⚡ Force 4 pipelines d'images en parallèle, même sur l'instance
-  // gratuite de Render (1 cœur) → génération du GIF ~3-4× plus rapide.
-  try { sharp.concurrency(4); } catch {}
+  // ⚡ 2 pipelines d'images seulement : sur l'instance gratuite (1 cœur),
+  // un parallélisme trop élevé affamerait les interactions Discord
+  // (« n'a pas pu répondre à temps »). Les pauses entre lots (yieldMs)
+  // font le reste : la génération s'étale sans jamais bloquer le bot.
+  try { sharp.concurrency(2); } catch {}
 } catch (e) { console.error('[Hoxera] sharp indisponible :', e.message); }
 let gifenc = null;
 try { gifenc = require('gifenc'); } catch (e) { console.error('[Hoxera] gifenc indisponible :', e.message); }
@@ -154,7 +156,8 @@ async function generateBanner(name) {
 }
 
 // GIF animé : base rendue UNE fois + couches légères par trame
-async function generateBannerGif(name, { sweepFrames = 20, driftFrames = 28, holdFrames = 12, delayMs = 60 } = {}) {
+// yieldMs : pause entre les lots (laisse le processeur aux interactions)
+async function generateBannerGif(name, { sweepFrames = 20, driftFrames = 28, holdFrames = 12, delayMs = 60, yieldMs = 0 } = {}) {
   const clean = String(name || '').trim().slice(0, 26) || 'NEXORA';
   if (!sharp || !gifenc) return null;
   if (gifCache.has(clean)) return gifCache.get(clean);
@@ -168,6 +171,7 @@ async function generateBannerGif(name, { sweepFrames = 20, driftFrames = 28, hol
     // Rendu des trames par lots en parallèle : base + fumée (+ brillance)
     const frameDatas = new Array(totalFrames);
     const BATCH = 12;
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     for (let start = 0; start < totalFrames; start += BATCH) {
       const batch = [];
       for (let f = start; f < Math.min(start + BATCH, totalFrames); f++) {
@@ -185,6 +189,8 @@ async function generateBannerGif(name, { sweepFrames = 20, driftFrames = 28, hol
       }
       const results = await Promise.all(batch);
       results.forEach((data, i) => { frameDatas[start + i] = data; });
+      // 🫁 Laisse le processeur aux interactions Discord entre les lots
+      if (yieldMs > 0) await sleep(yieldMs);
     }
 
     // Palette globale (trame centrale) puis écriture des trames dans l'ordre
@@ -212,15 +218,15 @@ function storedPanelName(guildId) {
   } catch { return ''; }
 }
 
-// 🔥 Pré-chauffage : lance la génération du GIF en arrière-plan
-// (appelé dès l'envoi du panneau → l'image est prête quand Discord
-// vient la chercher). Évite les générations en double.
+// 🔥 Pré-chauffage : lance la génération du GIF en arrière-plan,
+// AVEC des pauses entre les lots (le processeur reste libre pour les
+// interactions Discord — plus jamais « n'a pas pu répondre à temps »).
 const warming = new Set();
 function warmupGif(name) {
   const clean = String(name || '').trim().slice(0, 26) || 'NEXORA';
   if (gifCache.has(clean) || warming.has(clean)) return;
   warming.add(clean);
-  generateBannerGif(clean)
+  generateBannerGif(clean, { yieldMs: 300 })
     .catch((e) => console.error('[Hoxera] pré-chauffage bannière :', e.message))
     .finally(() => warming.delete(clean));
 }

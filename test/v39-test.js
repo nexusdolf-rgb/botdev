@@ -93,7 +93,7 @@ const check = (label, cond) => {
   // action « ❓ Questionnaire »
   const wQ = makeI({ isSelect: true, customId: `bdw-ts:${BOT}:u1`, values: ['questions'] });
   await panels.dispatchPanels(BOT, wQ);
-  check('wizard : étape questionnaire ouverte', wQ.replied && wQ.replies[0][0] === 'update');
+  check('wizard : étape questionnaire ouverte', wQ.replied && ['update', 'edit'].includes(wQ.replies[0][0]));
   // ajouter une question
   const wAdd = makeI({ isSelect: true, customId: `bdw-ts:${BOT}:u1`, values: ['__addq__'] });
   await panels.dispatchPanels(BOT, wAdd);

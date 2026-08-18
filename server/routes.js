@@ -22,12 +22,13 @@ async function servePanelBanner(req, res) {
   const guildId = String(req.params.guildId || '').replace(/[^0-9]/g, '').slice(0, 25);
   const banner = require('./banner');
   const name = banner.storedPanelName(guildId) || 'NEXORA';
-  // 1) GIF animé — avec garde-fou de 30 s (si la génération est trop lente,
-  //    on sert le PNG statique tout de suite ; le GIF arrive au prochain chargement)
+  // 1) GIF animé — déjà en cache ? On le sert tout de suite.
+  //    Sinon, on tente au maximum 8 secondes (jamais plus : sur l'instance
+  //    gratuite, bloquer davantage affamerait les interactions Discord).
   try {
     const gif = await Promise.race([
       banner.generateBannerGif(name),
-      new Promise((resolve) => setTimeout(() => resolve(null), 30000)),
+      new Promise((resolve) => setTimeout(() => resolve(null), 8000)),
     ]);
     if (gif && gif.length > 1000) {
       res.set('Content-Type', 'image/gif');

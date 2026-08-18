@@ -1313,8 +1313,20 @@ async function handleTypesWizardInteraction(botId, interaction) {
   if (!state) return interaction.reply({ content: '⏰ Assistant expiré. Relance `/ticket types setup`.', ephemeral: true });
   if (Date.now() - state.startedAt > WIZARD_TTL) {
     typesWizards.delete(key);
-    return interaction.update({ content: '⏰ Assistant expiré. Relance `/ticket types setup`.', embeds: [], components: [] });
+    return upd({ content: '⏰ Assistant expiré. Relance `/ticket types setup`.', embeds: [], components: [] });
   }
+
+  // ⚡ Accusé de réception IMMÉDIAT avant tout travail : même si le
+  // processeur est occupé (génération de bannière, autre serveur…),
+  // Discord a déjà sa réponse → plus jamais « n'a pas pu répondre à temps ».
+  const upd = async (payload) => {
+    try { await interaction.deferUpdate(); } catch {}
+    return interaction.editReply(payload).catch(() => {});
+  };
+  const ackReply = async (payload) => {
+    try { await interaction.deferReply({ ephemeral: true }); } catch {}
+    return interaction.editReply(payload).catch(() => {});
+  };
 
   const backToPick = () => { state.step = 'pick'; state.current = null; return { embeds: [typesPickEmbed(state)], components: typesPickComponents(state) }; };
   const backToEdit = () => { state.step = 'edit'; return { embeds: [typesEditEmbed(state)], components: typesEditComponents(state) }; };
@@ -1326,12 +1338,12 @@ async function handleTypesWizardInteraction(botId, interaction) {
     if (state.step === 'removerole') {
       const t = currentType(state);
       updateType(botId, state.guildId, state.current, { staff_roles: (t.staff_roles || []).filter((r) => r !== v) });
-      return interaction.update({ embeds: [typesRemoveRoleEmbed(state)], components: typesRemoveRoleComponents(state) });
+      return upd({ embeds: [typesRemoveRoleEmbed(state)], components: typesRemoveRoleComponents(state) });
     }
     if (state.step === 'pick') {
       if (v === '__done__') {
         typesWizards.delete(key);
-        return interaction.update({
+        return upd({
           embeds: [new EmbedBuilder().setColor('#57F287').setTitle('✅ Terminé !')
             .setDescription('📨 Envoie le panneau avec `/ticket panel` pour afficher ton menu déroulant.')],
           components: [],
@@ -1343,20 +1355,20 @@ async function handleTypesWizardInteraction(botId, interaction) {
       }
       state.current = v;
       state.step = 'edit';
-      return interaction.update(backToEdit());
+      return upd(backToEdit());
     }
     if (state.step === 'edit') {
-      if (v === 'back') return interaction.update(backToPick());
+      if (v === 'back') return upd(backToPick());
       if (v === 'rename') { state.modal = 'rename'; return interaction.showModal(textModal(botId, uid, '✏️ Renommer', 'Nouveau nom', state.current, true, 100)); }
       if (v === 'emoji') { state.modal = 'emoji'; return interaction.showModal(textModal(botId, uid, '😀 Emoji', 'Emoji', '🤝', false, 10)); }
       if (v === 'desc') { state.modal = 'desc'; return interaction.showModal(textModal(botId, uid, '📝 Description du type', 'Description affichée sous le type', 'Ex : signale un abus du staff, en toute confidentialité', false, 100)); }
       if (v === 'questions') {
         state.step = 'questions';
-        return interaction.update({ embeds: [typesQuestionsEmbed(state)], components: typesQuestionsComponents(state) });
+        return upd({ embeds: [typesQuestionsEmbed(state)], components: typesQuestionsComponents(state) });
       }
       if (v === 'category') {
         state.step = 'category';
-        return interaction.update({
+        return upd({
           embeds: [new EmbedBuilder().setColor('#5865F2').setTitle('🗂️ Catégorie du type')
             .setDescription(`Choisis la catégorie pour **${state.current}** (ou écris-en une nouvelle).`)],
           components: typesCategoryComponents(state),
@@ -1364,15 +1376,15 @@ async function handleTypesWizardInteraction(botId, interaction) {
       }
       if (v === 'addrole') {
         state.step = 'addrole';
-        return interaction.update({ embeds: [typesAddRoleEmbed(state)], components: typesAddRoleComponents(state) });
+        return upd({ embeds: [typesAddRoleEmbed(state)], components: typesAddRoleComponents(state) });
       }
       if (v === 'removerole') {
         state.step = 'removerole';
-        return interaction.update({ embeds: [typesRemoveRoleEmbed(state)], components: typesRemoveRoleComponents(state) });
+        return upd({ embeds: [typesRemoveRoleEmbed(state)], components: typesRemoveRoleComponents(state) });
       }
       if (v === 'delete') {
         state.step = 'confirmdelete';
-        return interaction.update({
+        return upd({
           embeds: [new EmbedBuilder().setColor('#ED4245').setTitle('🗑 Supprimer ce type ?')
             .setDescription(`Le type **${state.current}** sera retiré du menu déroulant. Les tickets déjà ouverts ne sont pas affectés.`)],
           components: typesConfirmComponents(state),
@@ -1386,7 +1398,7 @@ async function handleTypesWizardInteraction(botId, interaction) {
         return interaction.showModal(textModal(botId, uid, '➕ Nouvelle catégorie', 'Nom de la catégorie', 'Partenariats', true, 100));
       }
       updateType(botId, state.guildId, state.current, { category: v });
-      return interaction.update(backToEdit());
+      return upd(backToEdit());
     }
     // ❓ Questionnaire personnalisé : ajouter / retirer des questions obligatoires
     if (state.step === 'questions') {
@@ -1396,9 +1408,9 @@ async function handleTypesWizardInteraction(botId, interaction) {
       }
       if (v === '__remq__') {
         state.step = 'removeq';
-        return interaction.update({ embeds: [typesRemoveQuestionEmbed(state)], components: typesRemoveQuestionComponents(state) });
+        return upd({ embeds: [typesRemoveQuestionEmbed(state)], components: typesRemoveQuestionComponents(state) });
       }
-      if (v === '__doneq__' || v === 'back') return interaction.update(backToEdit());
+      if (v === '__doneq__' || v === 'back') return upd(backToEdit());
     }
     if (state.step === 'removeq') {
       const t = currentType(state);
@@ -1406,7 +1418,7 @@ async function handleTypesWizardInteraction(botId, interaction) {
       const questions = qs.filter((q) => q !== v);
       updateType(botId, state.guildId, state.current, { questions });
       state.step = 'questions';
-      return interaction.update({ embeds: [typesQuestionsEmbed(state)], components: typesQuestionsComponents(state) });
+      return upd({ embeds: [typesQuestionsEmbed(state)], components: typesQuestionsComponents(state) });
     }
     return null;
   }
@@ -1414,38 +1426,42 @@ async function handleTypesWizardInteraction(botId, interaction) {
   // --- Sélecteur de rôle natif (étape « ajouter un rôle staff ») : répétable ---
   if (interaction.isRoleSelectMenu()) {
     const role = interaction.guild.roles.cache.get(interaction.values[0]);
-    if (!role) return interaction.update({ embeds: [typesAddRoleEmbed(state)], components: typesAddRoleComponents(state) });
+    if (!role) return upd({ embeds: [typesAddRoleEmbed(state)], components: typesAddRoleComponents(state) });
     const t = currentType(state);
     const roles = [...(t.staff_roles || [])];
     if (!roles.includes(role.name)) roles.push(role.name);
     updateType(botId, state.guildId, state.current, { staff_roles: roles });
-    return interaction.update({ embeds: [typesAddRoleEmbed(state)], components: typesAddRoleComponents(state) });
+    return upd({ embeds: [typesAddRoleEmbed(state)], components: typesAddRoleComponents(state) });
   }
 
   // --- Boutons (terminer les rôles / retour / confirmation) ---
   if (interaction.isButton()) {
     const action = parts[3];
-    if (action === 'doneroles') return interaction.update(backToEdit());
+    if (action === 'doneroles') return upd(backToEdit());
     if (action === 'back') {
-      if (state.step === 'addrole' || state.step === 'removerole') return interaction.update(backToEdit());
-      return interaction.update(backToPick());
+      if (state.step === 'addrole' || state.step === 'removerole') return upd(backToEdit());
+      return upd(backToPick());
     }
     if (action === 'confirmdel') {
       removeType(botId, state.guildId, state.current);
       state.step = 'pick'; state.current = null;
-      return interaction.update(backToPick());
+      return upd(backToPick());
     }
-    if (action === 'cancel') return interaction.update(backToEdit());
+    if (action === 'cancel') return upd(backToEdit());
     return null;
   }
 
   // --- Modales (nom / renommage / emoji / catégorie) ---
   if (interaction.isModalSubmit()) {
+    // ⚡ Accusé de réception immédiat : le traitement (et la mise à jour
+    // du message de l'assistant) se fait ENSUITE, sans jamais dépasser
+    // le délai de 3 secondes de Discord.
+    try { await interaction.deferReply({ ephemeral: true }); } catch {}
     const val = (interaction.fields.getTextInputValue('value') || '').trim();
     const mode = state.modal;
     state.modal = null;
     if (mode === 'name') {
-      if (!val) return interaction.reply({ content: '❌ Nom vide — annulé.', ephemeral: true });
+      if (!val) return ackReply({ content: '❌ Nom vide — annulé.', ephemeral: true });
       const existing = typesList(botId, state.guildId).find((t) => t.label.toLowerCase() === val.toLowerCase());
       if (existing) {
         state.current = existing.label;
@@ -1456,34 +1472,34 @@ async function handleTypesWizardInteraction(botId, interaction) {
         state.step = 'edit';
       }
       try { await state.msg.edit(backToEdit()); } catch {}
-      return interaction.reply({ content: `✅ Type « ${val} » prêt — choisis son emoji, sa catégorie et son rôle staff dans le menu.`, ephemeral: true });
+      return ackReply({ content: `✅ Type « ${val} » prêt — choisis son emoji, sa catégorie et son rôle staff dans le menu.`, ephemeral: true });
     }
     if (mode === 'rename') {
-      if (!val) return interaction.reply({ content: '❌ Nom vide — annulé.', ephemeral: true });
+      if (!val) return ackReply({ content: '❌ Nom vide — annulé.', ephemeral: true });
       updateType(botId, state.guildId, state.current, { label: val.slice(0,100) });
       state.current = val.slice(0, 100);
       try { await state.msg.edit(backToEdit()); } catch {}
-      return interaction.reply({ content: '✅ Type renommé !', ephemeral: true });
+      return ackReply({ content: '✅ Type renommé !', ephemeral: true });
     }
     if (mode === 'emoji') {
       if (val && !safeEmoji(val)) {
         state.modal = 'emoji';
         try { await state.msg.edit(backToEdit()); } catch {}
-        return interaction.reply({ content: '❌ Emoji invalide — utilise un vrai emoji (ex : 🤝) ou un emoji personnalisé du serveur.', ephemeral: true });
+        return ackReply({ content: '❌ Emoji invalide — utilise un vrai emoji (ex : 🤝) ou un emoji personnalisé du serveur.', ephemeral: true });
       }
       updateType(botId, state.guildId, state.current, { emoji: val.slice(0, 100) });
       try { await state.msg.edit(backToEdit()); } catch {}
-      return interaction.reply({ content: '✅ Emoji enregistré !', ephemeral: true });
+      return ackReply({ content: '✅ Emoji enregistré !', ephemeral: true });
     }
     if (mode === 'category') {
       updateType(botId, state.guildId, state.current, { category: val.slice(0, 100) });
       try { await state.msg.edit(backToEdit()); } catch {}
-      return interaction.reply({ content: '✅ Catégorie enregistrée !', ephemeral: true });
+      return ackReply({ content: '✅ Catégorie enregistrée !', ephemeral: true });
     }
     if (mode === 'desc') {
       updateType(botId, state.guildId, state.current, { description: val.slice(0, 100) });
       try { await state.msg.edit(backToEdit()); } catch {}
-      return interaction.reply({ content: '✅ Description enregistrée — elle apparaîtra sous le type dans le menu !', ephemeral: true });
+      return ackReply({ content: '✅ Description enregistrée — elle apparaîtra sous le type dans le menu !', ephemeral: true });
     }
     if (mode === 'addquestion') {
       const t = currentType(state);
@@ -1491,16 +1507,16 @@ async function handleTypesWizardInteraction(botId, interaction) {
       if (qs.length >= 5) {
         state.step = 'questions';
         try { await state.msg.edit({ embeds: [typesQuestionsEmbed(state)], components: typesQuestionsComponents(state) }); } catch {}
-        return interaction.reply({ content: '❌ Maximum 5 questions par type.', ephemeral: true });
+        return ackReply({ content: '❌ Maximum 5 questions par type.', ephemeral: true });
       }
-      if (!val) return interaction.reply({ content: '❌ Question vide — annulée.', ephemeral: true });
+      if (!val) return ackReply({ content: '❌ Question vide — annulée.', ephemeral: true });
       qs.push(val.slice(0, 45));
       updateType(botId, state.guildId, state.current, { questions: qs });
       state.step = 'questions';
       try { await state.msg.edit({ embeds: [typesQuestionsEmbed(state)], components: typesQuestionsComponents(state) }); } catch {}
       return interaction.reply({ content: `✅ Question ajoutée (${qs.length}/5) — les membres devront y répondre obligatoirement à l'ouverture !`, ephemeral: true });
     }
-    return interaction.reply({ content: '✅ Enregistré !', ephemeral: true });
+    return ackReply({ content: '✅ Enregistré !', ephemeral: true });
   }
 
   return null;

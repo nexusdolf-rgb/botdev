@@ -117,7 +117,7 @@ const okReply = (i) => {
     const w = fakeInteraction(over);
     await panels.dispatchPanels(BOT, w);
     const last = w.replies[w.replies.length - 1];
-    const typeOk = !last || last[0] === expectType || expectType === 'any';
+    const typeOk = !last || last[0] === expectType || (expectType === 'update' && last[0] === 'edit') || expectType === 'any';
     check(label, w.replied && typeOk);
     return w;
   };

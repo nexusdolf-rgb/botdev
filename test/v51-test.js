@@ -70,35 +70,44 @@ const check = (label, cond) => {
   const gif2 = await banner.generateBannerGif('Serveur Animé');
   check('GIF : cache (même buffer)', gif2 === gif);
 
-  // ---------- 5. Route HTTP ----------
+  // ---------- 5. Route HTTP (GIF immédiat, ou PNG + GIF après pré-chauffage) ----------
   const child = spawn(process.execPath, ['server/index.js'], {
     cwd: path.join(__dirname, '..'),
     env: { ...process.env, PORT: '3198', BOTDEV_DATA_DIR: process.env.BOTDEV_DATA_DIR, BOTDEV_GH_TOKEN: '', BOTDEV_DATA_REPO: '' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
-  let routeOk = false, contentType = '', gifSize = 0, gifSignature = '';
+  const fetchBanner = async () => {
+    const res = await fetch('http://localhost:3198/api/tickets/panel-banner/111222333.gif');
+    if (!res.ok) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    return { contentType: res.headers.get('content-type') || '', buf };
+  };
+  let first = null;
   try {
-    for (let i = 0; i < 100; i++) {
-      try {
-        const res = await fetch('http://localhost:3198/api/tickets/panel-banner/111222333.gif');
-        if (res.ok) {
-          contentType = res.headers.get('content-type') || '';
-          const buf = Buffer.from(await res.arrayBuffer());
-          gifSize = buf.length;
-          gifSignature = buf.slice(0, 6).toString();
-          routeOk = true;
-          break;
-        }
-      } catch {}
+    for (let i = 0; i < 40; i++) {
+      try { first = await fetchBanner(); if (first) break; } catch {}
       await new Promise((r) => setTimeout(r, 500));
+    }
+    check('route : répond 200 dès la première requête', !!first);
+    check('route : image servie (gif ou png)', first && (String(first.contentType).includes('image/gif') || String(first.contentType).includes('image/png')));
+    if (first && String(first.contentType).includes('image/png')) {
+      // Repli PNG : le GIF est en cours de génération en arrière-plan
+      // → Discord reviendra et recevra le GIF (vérifié ici).
+      let gifAfter = null;
+      for (let i = 0; i < 60; i++) {
+        await new Promise((r) => setTimeout(r, 1000));
+        gifAfter = await fetchBanner();
+        if (gifAfter && String(gifAfter.contentType).includes('image/gif')) break;
+      }
+      check('route : le GIF arrive après le pré-chauffage (repli → animé)', !!gifAfter && String(gifAfter.contentType).includes('image/gif'));
+      check('route : GIF valide (signature)', !!gifAfter && gifAfter.buf.slice(0, 6).toString() === 'GIF89a');
+    } else if (first) {
+      check('route : GIF valide directement (signature)', first.buf.slice(0, 6).toString() === 'GIF89a');
+      check('route : taille cohérente', first.buf.length > 10000 && first.buf.length < 6 * 1024 * 1024);
     }
   } finally {
     try { child.kill('SIGKILL'); } catch {}
   }
-  check('route : répond 200 avec un GIF', routeOk);
-  check('route : Content-Type image/gif', String(contentType).includes('image/gif'));
-  check('route : GIF valide (signature)', gifSignature === 'GIF89a');
-  check('route : taille cohérente', gifSize > 10000 && gifSize < 6 * 1024 * 1024);
 
   store.db.close();
   console.log(failures === 0 ? '\n✅ V51 — Bannière animée (brillance qui balaie + bordeaux + fumée) : 100 % fonctionnelle. 🎉' : `\n❌ ${failures} vérification(s) en échec`);
