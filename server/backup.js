@@ -64,10 +64,11 @@ async function download() {
   const token = process.env.BOTDEV_GH_TOKEN;
   const r = repo();
   const b = branch();
+  const apiUrl = `/repos/${r}/contents/${FILE}${b ? `?ref=${encodeURIComponent(b)}` : ''}`;
   let meta = null;
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      meta = await module.exports.ghJson(`/repos/${r}/contents/${FILE}${b ? `?ref=${encodeURIComponent(b)}` : ''}`, { token });
+      meta = await module.exports.ghJson(apiUrl, { token });
       break;
     } catch (e) {
       if (e.status === 404 && attempt < 3) {
@@ -79,12 +80,26 @@ async function download() {
     }
   }
   let buf = null;
-  if (meta && typeof meta.content === 'string') {
+  // 1) Contenu base64 (fichiers ≤ 1 Mo). ⚠️ Pour les fichiers > 1 Mo, l'API
+  //    renvoie content = "" (chaîne vide !) → on ne décode QUE si non vide.
+  if (meta && typeof meta.content === 'string' && meta.content.length > 0) {
     buf = Buffer.from(meta.content.replace(/\s/g, ''), 'base64');
-  } else if (meta && meta.download_url) {
-    const res = await fetch(meta.download_url, { headers: { Authorization: `Bearer ${token}` } });
-    if (!res.ok) throw new Error(`download ${res.status}`);
-    buf = Buffer.from(await res.arrayBuffer());
+  }
+  // 2) Téléchargement brut via download_url (fichiers > 1 Mo)
+  if ((!buf || buf.length === 0) && meta && meta.download_url) {
+    try {
+      const res = await fetch(meta.download_url, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) buf = Buffer.from(await res.arrayBuffer());
+    } catch {}
+  }
+  // 3) Dernier recours : brut via l'API avec Accept: raw
+  if ((!buf || buf.length === 0) && meta && meta.sha) {
+    try {
+      const raw = await fetch(`${GITHUB_API}${apiUrl}`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.raw' },
+      });
+      if (raw.ok) buf = Buffer.from(await raw.arrayBuffer());
+    } catch {}
   }
   if (!buf || buf.length === 0) return null;
   if (!isValidSqlite(buf)) {

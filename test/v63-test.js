@@ -47,6 +47,22 @@ const check = (label, cond) => {
   check('restore : base distante saine → acceptée', r2 === true);
 
   // ---------- 2. upload() : base locale vide → sauvegarde annulée ----------
+  // (régression du bug « fichier > 1 Mo » : l'API GitHub renvoie
+  //  content = "" et il faut passer par download_url)
+  {
+    const origFetch = global.fetch;
+    const goodBuf2 = fs.readFileSync(path.join(process.env.BOTDEV_DATA_DIR, 'good.db'));
+    backup.ghJson = async () => ({ content: '', download_url: 'https://fake.local/botdev.db', sha: 'x' });
+    global.fetch = async (url) => {
+      if (String(url).includes('fake.local')) return { ok: true, arrayBuffer: async () => goodBuf2.buffer.slice(goodBuf2.byteOffset, goodBuf2.byteOffset + goodBuf2.byteLength) };
+      return origFetch(url);
+    };
+    const bigBuf = await backup.download();
+    global.fetch = origFetch;
+    check('download : fichier > 1 Mo (content vide) → récupéré via download_url', !!bigBuf && bigBuf.length === goodBuf2.length);
+  }
+
+  // ---------- 3. upload() : base locale vide → sauvegarde annulée ----------
   const store = require('../server/db');
   // La restauration ci-dessus a écrit la base « bonne » dans le fichier
   // local → on repart d'une base réellement vide pour ce test.
