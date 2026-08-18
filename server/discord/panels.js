@@ -595,8 +595,9 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
   try {
     if (interaction.client && interaction.client.users) {
       const openerUser = await interaction.client.users.fetch(member.id);
+      const typeLine = chosen ? ` (type : ${chosen.emoji ? chosen.emoji + ' ' : ''}**${chosen.label}**)` : '';
       await openerUser.send(
-        `🎫 Ton ticket est ouvert sur **${guild.name}** !\n👉 **Rejoins-le ici : ${channel}**\nNous te répondrons au plus vite. À la suppression du ticket, tu recevras la transcription ici.`
+        `🎫 Ton ticket${typeLine} est ouvert sur **${guild.name}** !\n👉 **Rejoins-le ici : ${channel}**\nNous te répondrons au plus vite. À la suppression du ticket, tu recevras la transcription ici.`
       );
     }
   } catch {
@@ -608,8 +609,11 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
     const staffMention = supportRoles.length ? supportRoles.map((r) => r.toString()).join(' ') : '';
     const welcome = ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning, answers);
     const identity = require('./identity');
+    // 🎫 La PREMIÈRE LIGNE du salon annonce le type + le créateur : le staff
+    // voit d'un coup d'œil de quel type de ticket il s'agit et qui l'a ouvert.
+    const typeTitle = chosen ? `${chosen.emoji ? chosen.emoji + ' ' : ''}**${chosen.label}**` : '**Ticket**';
     await identity.sendAsProfile(interaction.client, botId, guild, channel, {
-      content: `${member}${staffMention ? ' · ' + staffMention : ''}`,
+      content: `🎫 ${typeTitle} — ticket de ${member}${staffMention ? ' · ' + staffMention : ''}`,
       embeds: [welcome],
       components: [row1, row2],
     }).catch(() => {});
@@ -633,7 +637,8 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
   //  - + MP automatique (envoyé plus haut)
   // Aucun message public n'est envoyé sous le panneau (le salon de ticket
   // est privé, son lien ne doit pas être exposé à tout le serveur).
-  const confirmMsg = `✅ Ton ticket a été créé : **${channel}** — clique dessus pour l'ouvrir !`;
+  const typeConfirm = chosen ? `${chosen.emoji ? chosen.emoji + ' ' : ''}**${chosen.label}**` : '';
+  const confirmMsg = `✅ Ton ticket ${typeConfirm} a été créé : **${channel}** — clique dessus pour l'ouvrir !`;
   await ackReply(interaction, { content: confirmMsg, ephemeral: true });
 }
 

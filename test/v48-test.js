@@ -75,6 +75,7 @@ const check = (label, cond) => {
   const channelsCreated = [];
   const makeGuild = () => {
     const chans = new Map();
+    const ticketSends = [];
     const mk = (id, name, type) => {
       const c = {
         id, name, type, topic: '', isTextBased: () => type === 0,
@@ -90,10 +91,11 @@ const check = (label, cond) => {
     const coll = (map) => ({ get: (k) => map.get(k), has: (k) => map.has(k), find: (fn) => [...map.values()].find(fn), values: () => map.values() });
     return {
       id: 'G1', name: 'Serveur', ownerId: 'u1', memberCount: 5,
+      ticketSends,
       channels: {
         cache: coll(chans),
         create: async (opts) => {
-          const c = { id: 'tk-1', name: opts.name, type: opts.type, topic: opts.topic, isTextBased: () => true, send: async () => ({}), toString: () => '#' + opts.name, permissionOverwrites: { edit: async () => ({}), delete: async () => ({}) }, permissionsFor: () => ({ has: () => true }) };
+          const c = { id: 'tk-1', name: opts.name, type: opts.type, topic: opts.topic, isTextBased: () => true, send: async (p) => { ticketSends.push(p); return {}; }, toString: () => '#' + opts.name, permissionOverwrites: { edit: async () => ({}), delete: async () => ({}) }, permissionsFor: () => ({ has: () => true }) };
           chans.set(c.id, c);
           channelsCreated.push(opts);
           return c;
@@ -136,8 +138,17 @@ const check = (label, cond) => {
   check('logique : nom du salon inchangé', String(channelsCreated[0].name).startsWith('reclamation-bob'));
   check('logique : permissions appliquées (overwrites)', Array.isArray(channelsCreated[0].permissionOverwrites) && channelsCreated[0].permissionOverwrites.length === 3);
   check('logique : topic du salon inchangé', String(channelsCreated[0].topic).includes('Bob#0001'));
+  // 🎫 Le TYPE du ticket est visible partout pour le staff
+  const tSends = wAns.guild.ticketSends || [];
+  const firstMsg = tSends[0] || {};
+  check('type : le salon est nommé « reclamation-bob » (type + créateur)', String(channelsCreated[0].name) === 'reclamation-bob');
+  check('type : le topic contient « Réclamation »', String(channelsCreated[0].topic).includes('Réclamation'));
+  check('type : la PREMIÈRE LIGNE du salon annonce « **Réclamation** — ticket de »', String(firstMsg.content || '').includes('**Réclamation**') && String(firstMsg.content || '').includes('ticket de'));
+  const tEmb = firstMsg.embeds && firstMsg.embeds[0] ? JSON.stringify(firstMsg.embeds[0].toJSON()) : '';
+  check('type : l\'embed de bienvenue affiche « Réclamation »', tEmb.includes('Réclamation'));
   const lastReply = wAns.replies[wAns.replies.length - 1];
-  check('logique : confirmation privée avec le lien', lastReply && String(lastReply[1].content).includes('Ton ticket a été créé'));
+  check('logique : confirmation privée avec le lien', lastReply && String(lastReply[1].content).includes('Ton ticket') && String(lastReply[1].content).includes('a été créé') && String(lastReply[1].content).includes('#reclamation-bob'));
+  check('type : la confirmation privée mentionne le type', lastReply && String(lastReply[1].content).includes('Réclamation'));
 
   // 3c. fermeture par le staff : bouton INTACT
   const staffI = makeI({ isBtn: true, customId: `bd-tmenu:${BOT}:close` });

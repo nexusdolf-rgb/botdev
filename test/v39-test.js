@@ -153,7 +153,7 @@ const check = (label, cond) => {
   check('méta : réponses conservées (transcription)', Array.isArray(meta.answers) && meta.answers.length === 2 && meta.answers[0].q === 'Non RP ?');
   check('méta : la raison est conservée', String(meta.reason).includes('devenir modo'));
   const lastReply = wAns.replies[wAns.replies.length - 1];
-  check('ouverture : confirmation avec le lien du ticket', lastReply && lastReply[0] === 'edit' && String(lastReply[1].content).includes('Ton ticket a été créé') && String(lastReply[1].content).includes('#recrutement-alice'));
+  check('ouverture : confirmation avec le lien du ticket', lastReply && lastReply[0] === 'edit' && String(lastReply[1].content).includes('Ton ticket') && String(lastReply[1].content).includes('a été créé') && String(lastReply[1].content).includes('#recrutement-alice'));
   check('ouverture : lien aussi envoyé en MP', dms.some((m) => String(m).includes('Rejoins-le ici')));
   // 🔒 Le lien du salon de ticket reste PRIVÉ : aucun message public sous le panneau
   check('ouverture : AUCUN message public sous le panneau (lien privé)', !sent.some((p) => p.content && String(p.content).includes('Ticket créé pour')));
@@ -191,7 +191,7 @@ const check = (label, cond) => {
   const afterEmbeds = sent.filter((p) => p.embeds && p.embeds.length);
   const last2 = wAns2.replies[wAns2.replies.length - 1];
   check('sans raison : ticket ouvert directement (pas de 2e modale)', wAns2.replied && afterEmbeds.length === 1 && wAns2.replies.every((r) => r[0] !== 'modal'));
-  check('sans raison : confirmation avec lien', last2 && last2[0] === 'edit' && String(last2[1].content).includes('Ton ticket a été créé'));
+  check('sans raison : confirmation avec lien', last2 && last2[0] === 'edit' && String(last2[1].content).includes('Ton ticket') && String(last2[1].content).includes('a été créé'));
   check('sans raison : réponse affichée dans le salon', JSON.stringify(afterEmbeds[0].embeds[0].toJSON()).includes('Dispo le week-end ?'));
   store.closedTickets.add('tk-1', BOT, G); // fermeture pour la suite
 
