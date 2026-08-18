@@ -30,6 +30,9 @@ const check = (label, cond) => {
   const gif = await banner.generateBannerGif('Serveur Animé');
   check('GIF : généré', !!gif && gif.length > 10000);
   check('GIF : signature GIF89a', gif.slice(0, 6).toString() === 'GIF89a');
+  // ✍️ Le texte de la bannière est bien « SUPPORT - {NOM} » (référence)
+  check('bannière : texte « SUPPORT - SERVEUR ANIMÉ »', banner.baseSvg('Serveur Animé').includes('SUPPORT - SERVEUR ANIM'));
+  check('bannière : pas de doublon de préfixe', !banner.baseSvg('Support - X').includes('SUPPORT - SUPPORT'));
   const reader = new GifReader(gif);
   check('GIF : 60 trames (balayage + dérive + pause)', reader.numFrames() === 60);
   check('GIF : boucle infinie', reader.loopCount() === 0);

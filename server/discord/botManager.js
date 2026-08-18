@@ -168,6 +168,16 @@ function attachListeners(botId, entry) {
       // du bot (les commandes par serveur ne suffisent pas pour le badge).
       try { await syncGlobalCommands(botId); }
       catch (e) { console.error(`[BotDev] sync globale (bot ${botId}):`, e.message); }
+      // 🎬 Pré-chauffage des bannières animées : pour CHAQUE serveur où le
+      // bot est présent, la bannière « SUPPORT - {nom} » est générée et
+      // sauvegardée dès la connexion → le prochain /ticket panel l'envoie
+      // animée INSTANTANÉMENT (même après une mise en veille de Render).
+      try {
+        const banner = require('../banner');
+        for (const g of client.guilds.cache.values()) {
+          if (g && g.name) banner.warmupGif(String(g.name).slice(0, 26));
+        }
+      } catch {}
       // Bio du bot : ajoute le lien vers BotDev
       applyBotAbout(botId, entry).catch(() => {});
     } catch (e) { console.error(`[BotDev] ready error (bot ${botId}):`, e.message); }
@@ -207,6 +217,8 @@ function attachListeners(botId, entry) {
   // Nouveau serveur : synchronise les commandes avec retries automatiques
   // (les commandes slash apparaissent ainsi dès l'ajout du bot)
   client.on('guildCreate', (guild) => {
+    // 🎬 Prépare aussi sa bannière animée dès l'arrivée
+    try { require('../banner').warmupGif(String(guild.name || '').slice(0, 26)); } catch {}
     let attempts = 0;
     const trySync = async () => {
       attempts += 1;

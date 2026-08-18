@@ -46,7 +46,9 @@ function escapeXml(s) {
 
 // ---------- SVG de base (rendu UNE fois) : fond + texte + halos ----------
 function baseSvg(name) {
-  const label = escapeXml(String(name || 'NEXORA').toUpperCase());
+  const raw = String(name || 'NEXORA').toUpperCase();
+  // Comme la référence : « SUPPORT - CARRE RP » → « SUPPORT - {NOM} »
+  const label = escapeXml(raw.startsWith('SUPPORT') ? raw : `SUPPORT - ${raw}`);
   const len = label.length;
   const size = len > 24 ? 34 : len > 18 ? 44 : len > 12 ? 56 : 66;
   const textY = H * 0.5;

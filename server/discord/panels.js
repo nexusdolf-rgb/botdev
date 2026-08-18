@@ -366,7 +366,7 @@ async function sendTicketPanel(botId, guildId, client, channel) {
   // 🧹 Un seul panneau à la fois : on efface les anciens avant d'envoyer
   try { await pruneOldPanels(channel); } catch {}
 
-  // 🎬 La bannière ANIMÉE est générée AVANT l'envoi (attente max 20 s).
+  // 🎬 La bannière ANIMÉE est générée AVANT l'envoi (attente max 30 s).
   // Comme Discord télécharge l'image une seule fois au moment de l'envoi,
   // c'est le seul moyen fiable d'avoir un panneau animé du premier coup.
   // Le GIF est ensuite mis en cache persistant → instantané pour toujours.
@@ -376,7 +376,7 @@ async function sendTicketPanel(botId, guildId, client, channel) {
       const banner = require('../banner');
       const gif = await Promise.race([
         banner.generateBannerGif(serverName, { yieldMs: 150 }),
-        new Promise((resolve) => setTimeout(() => resolve(null), 20000)),
+        new Promise((resolve) => setTimeout(() => resolve(null), 30000)),
       ]);
       gifReady = !!(gif && gif.length > 1000);
       if (!gifReady) banner.warmupGif(serverName); // continue en arrière-plan
