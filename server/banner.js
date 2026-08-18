@@ -175,40 +175,37 @@ async function generateBannerGif(name, { sweepFrames = 20, driftFrames = 28, hol
     const shineBuf = await sharp(Buffer.from(shineSvg(W, H))).png().toBuffer();
     const bandW = Math.round(W * 0.5);
     const totalFrames = sweepFrames + driftFrames + holdFrames;
-
-    // Rendu des trames par lots en parallèle : base + fumée (+ brillance)
-    const frameDatas = new Array(totalFrames);
-    const BATCH = 12;
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-    for (let start = 0; start < totalFrames; start += BATCH) {
-      const batch = [];
-      for (let f = start; f < Math.min(start + BATCH, totalFrames); f++) {
-        batch.push((async () => {
-          const t = f / totalFrames;
-          const smoke = await sharp(Buffer.from(smokeSvg(t))).png().toBuffer();
-          const comps = [{ input: smoke, top: 0, left: 0 }];
-          if (f < sweepFrames) {
-            const shineX = -bandW + (W + bandW) * (f / sweepFrames);
-            comps.push({ input: shineBuf, top: 0, left: Math.round(shineX) });
-          }
-          const out = await sharp(baseBuf).composite(comps).raw().toBuffer({ resolveWithObject: true });
-          return out.data;
-        })());
-      }
-      const results = await Promise.all(batch);
-      results.forEach((data, i) => { frameDatas[start + i] = data; });
-      // 🫁 Laisse le processeur aux interactions Discord entre les lots
-      if (yieldMs > 0) await sleep(yieldMs);
-    }
 
-    // Palette globale (trame centrale) puis écriture des trames dans l'ordre
-    // (l'encodeur est séquentiel, mais on laisse l'event loop respirer
-    // toutes les 4 trames pour ne jamais bloquer les interactions Discord)
-    const palette = quantize(frameDatas[Math.floor(totalFrames / 2)], 256);
+    // 🧠 Palette calculée sur la trame centrale uniquement (mémoire maîtrisée)
+    const renderFrame = async (f) => {
+      const t = f / totalFrames;
+      const smoke = await sharp(Buffer.from(smokeSvg(t))).png().toBuffer();
+      const comps = [{ input: smoke, top: 0, left: 0 }];
+      if (f < sweepFrames) {
+        const shineX = -bandW + (W + bandW) * (f / sweepFrames);
+        comps.push({ input: shineBuf, top: 0, left: Math.round(shineX) });
+      }
+      const out = await sharp(baseBuf).composite(comps).raw().toBuffer({ resolveWithObject: true });
+      return out.data;
+    };
+    const middleData = await renderFrame(Math.floor(totalFrames / 2));
+    const palette = quantize(middleData, 256);
+
+    // 🧠 Rendu PAR LOT puis écriture immédiate : jamais plus d'un lot en
+    // mémoire (l'instance gratuite n'a que 512 Mo — c'est ce qui faisait
+    // tomber le bot quand 4 bannières se généraient en parallèle).
     const gif = GIFEncoder();
-    for (let i = 0; i < frameDatas.length; i++) {
-      gif.writeFrame(applyPalette(frameDatas[i], palette), W, H, { palette, delay: delayMs });
-      if (i % 4 === 3) await sleep(0);
+    const BATCH = 8;
+    for (let start = 0; start < totalFrames; start += BATCH) {
+      const end = Math.min(start + BATCH, totalFrames);
+      const batch = [];
+      for (let f = start; f < end; f++) batch.push(renderFrame(f));
+      const datas = await Promise.all(batch);
+      datas.forEach((data) => {
+        gif.writeFrame(applyPalette(data, palette), W, H, { palette, delay: delayMs });
+      });
+      if (yieldMs > 0) await sleep(yieldMs);
     }
     gif.finish();
     const buf = Buffer.from(gif.bytes());
