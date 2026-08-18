@@ -35,6 +35,11 @@ async function main() {
     if (storedUrl) console.log(`[BotDev] 🔗 Lien du dashboard mis à jour : ${storedUrl} → ${officialUrl}`);
   }
 
+  // 🤖 Hoxera doit TOUJOURS être en ligne : on force le drapeau « activé »
+  // à chaque démarrage (une déconnexion passagère pouvait le mettre à 0
+  // dans la sauvegarde et empêcher toute reconnexion future).
+  try { store.db.prepare('UPDATE bots SET enabled = 1').run(); } catch {}
+
   const app = express();
   app.use(express.json({ limit: '15mb' }));
   app.use(cookieParser());
@@ -156,16 +161,28 @@ async function main() {
     catch (e) { console.error('[BotDev] Sauvegarde :', e.message); }
   }, 10 * 60000);
 
-  // Chien de garde : redémarre automatiquement un bot qui se déconnecte
+  // Chien de garde renforcé : le bot ne reste JAMAIS hors ligne.
+  // - toute connexion morte (pas prête depuis 10 min) est détruite
+  // - reconnexion forcée toutes les 60 secondes en cas d'échec
+  // - TOUS les bots sont surveillés (même si un drapeau interne dit « éteint »)
   const retryTracker = new Map();
   setInterval(() => {
-    const bots = store.db.prepare('SELECT id FROM bots WHERE enabled = 1').all();
+    const bots = store.db.prepare('SELECT id FROM bots').all();
     for (const { id } of bots) {
+      const entry = botManager.clients.get(id);
+      const stuck = entry && !entry.client.isReady() && Date.now() - (entry.startedAt || Date.now()) > 10 * 60000;
+      if (stuck) {
+        console.log(`[watchdog] bot ${id} bloqué — reconnexion forcée`);
+        try { entry.client.destroy(); } catch {}
+        botManager.clients.delete(id);
+      }
       if (botManager.isOnline(id)) { retryTracker.delete(id); continue; }
       const last = retryTracker.get(id) || 0;
-      if (Date.now() - last < 5 * 60000) continue;
+      if (Date.now() - last < 60000) continue;
       retryTracker.set(id, Date.now());
-      botManager.loginBot(id).then(() => console.log(`[watchdog] bot ${id} reconnecté`)).catch(() => {});
+      botManager.reconnectBot(id)
+        .then(() => console.log(`[watchdog] bot ${id} reconnecté`))
+        .catch((e) => console.log(`[watchdog] bot ${id} : ${e.message}`));
     }
   }, 30000);
 

@@ -1330,6 +1330,27 @@ router.get('/health/backup', (req, res) => {
   res.json({ enabled: backup.enabled() });
 });
 
+// 🩺 Diagnostic public du bot (aucune donnée sensible) : état de connexion,
+// ancienneté des connexions, dernière erreur enregistrée — sert à débugger
+// à distance sans accès aux journaux Render.
+router.get('/health/bot', (req, res) => {
+  const rows = store.db.prepare('SELECT id, name, enabled, last_error, bot_username FROM bots').all();
+  const clientsState = [];
+  for (const [id, entry] of botManager.clients) {
+    clientsState.push({
+      id,
+      ready: !!(entry.client && entry.client.isReady()),
+      startedAt: entry.startedAt || null,
+      ageMs: entry.startedAt ? Date.now() - entry.startedAt : null,
+    });
+  }
+  res.json({
+    processUptimeMs: Math.round(process.uptime() * 1000),
+    bots: rows.map((r) => ({ id: r.id, name: r.name, enabled: !!r.enabled, last_error: String(r.last_error || '').slice(0, 200), username: r.bot_username || '' })),
+    clients: clientsState,
+  });
+});
+
 // ============================================================
 // Pages publiques (sans connexion) : le dashboard public de Hoxera
 // Les stats sont lues EN DIRECT depuis le processus du bot :

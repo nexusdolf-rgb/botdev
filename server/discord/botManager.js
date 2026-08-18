@@ -29,7 +29,16 @@ async function loginBot(botId) {
   const record = store.bots.get(botId);
   if (!record) throw new Error('Bot introuvable');
   const existing = clients.get(botId);
-  if (existing) return { already: true };
+  if (existing) {
+    // Connexion morte (pas prête depuis plus de 60 s) → on nettoie et on
+    // reconnecte, au lieu de croire le bot « déjà connecté ».
+    if (!existing.client.isReady() && Date.now() - (existing.startedAt || 0) > 60000) {
+      try { existing.client.destroy(); } catch {}
+      clients.delete(botId);
+    } else {
+      return { already: true };
+    }
+  }
 
   try {
     return await connect(botId, record, INTENTS, '');
@@ -134,6 +143,19 @@ async function logoutBot(botId) {
   try { entry.client.destroy(); } catch {}
   clients.delete(botId);
   store.bots.update(botId, { enabled: 0, last_error: '' });
+}
+
+// 🔄 Reconnexion FORCÉE : détruit toute connexion morte et repart de zéro.
+// (Sans ça, une session Discord morte restait dans la mémoire et loginBot
+// croyait le bot « déjà connecté » → le bot restait hors ligne pour toujours.)
+async function reconnectBot(botId) {
+  const existing = clients.get(botId);
+  if (existing) {
+    try { existing.client.destroy(); } catch {}
+    clients.delete(botId);
+  }
+  store.bots.update(botId, { enabled: 1 });
+  return loginBot(botId);
 }
 
 // Arrêt complet au shutdown du serveur : on coupe les connexions SANS
@@ -389,4 +411,4 @@ function platformStats() {
   return { onlineBots, servers, members };
 }
 
-module.exports = { clients, getClient, isOnline, loginBot, logoutBot, stopAll, syncSlashCommands, syncGlobalCommands, applyPresence, applyBotAbout, aboutText, publicBotInfo, platformStats, guardInteraction };
+module.exports = { clients, getClient, isOnline, loginBot, reconnectBot, logoutBot, stopAll, syncSlashCommands, syncGlobalCommands, applyPresence, applyBotAbout, aboutText, publicBotInfo, platformStats, guardInteraction };
