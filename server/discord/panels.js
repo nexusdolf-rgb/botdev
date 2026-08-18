@@ -275,14 +275,10 @@ const PANEL_PATIENCE = '*⏳ Merci de votre patience, un membre du staff prendra
 
 function panelBannerUrl(guildId, name) {
   const site = store.settings.get('public_url') || 'https://dash-hoxora.onrender.com';
-  // Bannière dynamique par serveur, en GIF animé (balayage de lumière).
-  // Le nom dans l'URL permet à Discord de recharger l'image si le serveur
-  // est renommé.
-  if (guildId && name && name !== PANEL_DEFAULT_NAME) {
-    return `${site}/api/tickets/panel-banner/${encodeURIComponent(guildId)}.gif?n=${encodeURIComponent(String(name).slice(0, 60))}`;
-  }
-  // Repli : bannière générique « SUPPORT - NEXORA »
-  return `${site}/icons/support-banner.png`;
+  // Toujours la route dynamique : elle sert le GIF ANIMÉ avec le nom du
+  // serveur (ou « NEXORA » si le nom est inconnu) et gère ses replis
+  // en interne. Plus aucun panneau ne pointe vers l'ancienne image fixe.
+  return `${site}/api/tickets/panel-banner/${encodeURIComponent(guildId || '0')}.gif?n=${encodeURIComponent(String(name || '').slice(0, 60))}`;
 }
 
 function buildTicketPanelEmbed(cfg, client, types, serverName = '', guildId = '') {
@@ -304,6 +300,24 @@ function buildTicketPanelEmbed(cfg, client, types, serverName = '', guildId = ''
     // affichée en bas de l'embed, juste au-dessus du menu déroulant.
     .setImage(panelBannerUrl(guildId, name));
   return embed;
+}
+
+// 🧹 Nettoie les anciens panneaux de tickets du salon (titre « 👑 Support | »)
+// pour qu'il n'y ait TOUJOURS qu'un seul panneau : le plus récent.
+async function pruneOldPanels(channel) {
+  try {
+    if (!channel || !channel.messages || typeof channel.messages.fetch !== 'function') return;
+    const fetched = await channel.messages.fetch({ limit: 25 });
+    for (const msg of fetched.values()) {
+      try {
+        const emb = msg.embeds && msg.embeds[0];
+        const title = emb && emb.title;
+        if (title && String(title).startsWith('👑 Support |') && typeof msg.delete === 'function') {
+          await msg.delete();
+        }
+      } catch {}
+    }
+  } catch {}
 }
 
 async function sendTicketPanel(botId, guildId, client, channel) {
@@ -347,6 +361,9 @@ async function sendTicketPanel(botId, guildId, client, channel) {
     serverName = String(guild.name).slice(0, 100);
     try { store.guildSettings.set(botId, guildId, { panel_name: serverName }); } catch {}
   }
+  // 🧹 Un seul panneau à la fois : on efface les anciens avant d'envoyer
+  try { await pruneOldPanels(channel); } catch {}
+
   const payload = { embeds: [buildTicketPanelEmbed(cfg, client, types, serverName, guildId)], components: rows };
   if (guild) {
     await identity.sendAsProfile(client, botId, guild, channel, payload);

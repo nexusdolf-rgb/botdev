@@ -66,7 +66,7 @@ const check = (label, cond) => {
   await panels.sendTicketPanel(BOT, 'G3', null, chC);
   const embedC = sentC[0].embeds[0].toJSON();
   check('repli : titre « 👑 Support | Nexora »', embedC.title === '👑 Support | Nexora');
-  check('repli : bannière générique', embedC.image.url.includes('/icons/support-banner.png'));
+  check('repli : bannière animée dynamique (nom NEXORA par défaut)', embedC.image.url.includes('/api/tickets/panel-banner/G3.gif'));
 
   // ---------- 5. Logique intacte : menu et sélection ----------
   store.tickets.set(BOT, 'G1', { ...store.tickets.get(BOT, 'G1'), types: JSON.stringify([{ label: 'Réclamation', emoji: '⚠️', questions: [], staff_roles: [] }]) });

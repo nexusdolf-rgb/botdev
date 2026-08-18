@@ -42,7 +42,7 @@ const check = (label, cond) => {
   check('panneau : titre exact', embed.title === '👑 Support | Nexora');
   check('panneau : bienvenue exacte', embed.description.startsWith('Bienvenue sur le support officiel de Nexora'));
   check('panneau : description exacte présente', embed.description.includes('sélectionnez la catégorie correspondante à votre besoin via le menu ci-dessous'));
-  check('panneau : bannière après le texte (image)', embed.image && embed.image.url.includes('/icons/support-banner.png'));
+  check('panneau : bannière après le texte (image)', embed.image && embed.image.url.includes('/api/tickets/panel-banner/G1.gif'));
   check('menu : custom_id INTACT', select.custom_id === `bd-ttype:${BOT}`);
   check('menu : placeholder conservé', select.placeholder.includes('Choisissez le type de ticket'));
   check('menu : 2 options (les types existants)', select.options.length === 2);
@@ -54,6 +54,22 @@ const check = (label, cond) => {
   await panels.sendTicketPanel(BOT, G, null, fakeChannel);
   check('message perso : toujours utilisé', sent[0].embeds[0].toJSON().description.includes('Message perso du serveur'));
   store.tickets.set(BOT, G, { ...store.tickets.get(BOT, G), message: '' });
+
+  // ---------- 2bis. Nettoyage : un seul panneau à la fois ----------
+  const deleted = [];
+  const mkMsg = (id, title) => ({ id, embeds: title ? [{ title }] : [], delete: async () => { deleted.push(id); } });
+  const oldChannel = {
+    id: 'C2', name: 'support',
+    messages: { fetch: async () => ({ values: () => [
+      mkMsg('m1', '👑 Support | Nexora'),
+      mkMsg('m2', 'Un message normal'),
+      mkMsg('m3', '👑 Support | Carré RP'),
+    ] }) },
+    send: async () => ({}),
+  };
+  await panels.sendTicketPanel(BOT, G, null, oldChannel);
+  check('nettoyage : les 2 anciens panneaux sont supprimés', deleted.includes('m1') && deleted.includes('m3'));
+  check('nettoyage : le message normal est conservé', !deleted.includes('m2'));
 
   // ---------- 3. La logique est INTACTE : sélection → questionnaire → ticket ----------
   const channelsCreated = [];
