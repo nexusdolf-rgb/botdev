@@ -67,7 +67,7 @@ async function download() {
   let meta = null;
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      meta = await ghJson(`/repos/${r}/contents/${FILE}${b ? `?ref=${encodeURIComponent(b)}` : ''}`, { token });
+      meta = await module.exports.ghJson(`/repos/${r}/contents/${FILE}${b ? `?ref=${encodeURIComponent(b)}` : ''}`, { token });
       break;
     } catch (e) {
       if (e.status === 404 && attempt < 3) {
@@ -102,9 +102,28 @@ async function restore() {
   }
   console.log(`[BotDev] 💾 Sauvegarde activée : ${repo()}${branch() ? ` (branche ${branch()})` : ''}`);
   try {
-    const buf = await download();
+    const buf = await module.exports.download();
     if (!buf) {
       console.log('[BotDev] ℹ️ Aucune sauvegarde distante (premier démarrage)');
+      return false;
+    }
+    // 🛟 VALIDATION ANTI-CATASTROPHE : on ne restaure JAMAIS une sauvegarde
+    // sans bot (base vide). C'est ce qui a détruit les données : une base
+    // vide avait écrasé la bonne, puis tout le monde la restaurait.
+    let valid = false;
+    try {
+      const Database = require('better-sqlite3');
+      const tmp = paths.dbPath + '.incoming';
+      fs.writeFileSync(tmp, buf);
+      const check = new Database(tmp, { readonly: true });
+      const n = check.prepare('SELECT COUNT(*) AS n FROM bots').get().n || 0;
+      check.close();
+      fs.rmSync(tmp, { force: true });
+      valid = n > 0;
+    } catch { valid = false; }
+    if (!valid) {
+      const hasLocal = (() => { try { return fs.statSync(paths.dbPath).size > 10000; } catch { return false; } })();
+      console.log('🛟 Sauvegarde distante SANS bot — ignorée.' + (hasLocal ? ' Les données locales sont conservées.' : ' Démarrage à vide (première installation).'));
       return false;
     }
     fs.writeFileSync(paths.dbPath, buf);
@@ -139,10 +158,21 @@ async function upload(db) {
   const buf = await snapshot(db);
   let sha = null;
   try {
-    const meta = await ghJson(`/repos/${r}/contents/${FILE}${b ? `?ref=${encodeURIComponent(b)}` : ''}`, { token });
+    const meta = await module.exports.ghJson(`/repos/${r}/contents/${FILE}${b ? `?ref=${encodeURIComponent(b)}` : ''}`, { token });
     sha = meta && meta.sha;
   } catch (e) {
     if (e.status !== 404) throw e;
+  }
+
+  // 🛟 GARDE-FOU ANTI-CATASTROPHE : ne JAMAIS écraser la bonne sauvegarde
+  // distante par une base vide/fraîche (bot absent). C'est exactement ce qui
+  // a détruit les données : une instance sans données a sauvegardé sa base
+  // vide par-dessus la bonne.
+  let botCount = 0;
+  try { botCount = db.prepare('SELECT COUNT(*) AS n FROM bots').get().n || 0; } catch {}
+  if (botCount === 0 && sha) {
+    console.log('🛟 Sauvegarde ANNULÉE : la base locale n\'a aucun bot (base vide ?) — la bonne sauvegarde distante est préservée.');
+    return false;
   }
   const body = {
     message: `💾 botdev.db (${new Date().toISOString()})`,
@@ -150,9 +180,9 @@ async function upload(db) {
     ...(sha ? { sha } : {}),
     ...(b ? { branch: b } : {}),
   };
-  await ghJson(`/repos/${r}/contents/${FILE}`, { method: 'PUT', body: JSON.stringify(body), token });
+  await module.exports.ghJson(`/repos/${r}/contents/${FILE}`, { method: 'PUT', body: JSON.stringify(body), token });
   console.log(`[BotDev] 💾 Sauvegarde envoyée (${buf.length} octets)`);
   return true;
 }
 
-module.exports = { enabled, repo, branch, download, restore, upload };
+module.exports = { enabled, repo, branch, download, restore, upload, ghJson };

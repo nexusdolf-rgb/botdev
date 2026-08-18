@@ -1347,6 +1347,7 @@ router.get('/health/bot', (req, res) => {
   res.json({
     processUptimeMs: Math.round(process.uptime() * 1000),
     tokenConfigured: !!(process.env.HOXERA_TOKEN || process.env.NOXERA_TOKEN || process.env.NEXORA_TOKEN),
+    oauthConfigured: !!(process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET),
     botCount: rows.length,
     bootRestore: store.settings.get('boot_restore') || 'inconnu',
     backupEnabled: !!process.env.BOTDEV_GH_TOKEN && !!process.env.BOTDEV_DATA_REPO,
