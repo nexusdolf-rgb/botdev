@@ -73,8 +73,8 @@ const check = (label, cond) => {
   const gif2 = await banner.generateBannerGif('Serveur Animé');
   check('GIF : cache (même buffer)', gif2 === gif);
   // 💾 Cache persistant : le GIF survit aux redémarrages (base sauvegardée)
-  const persistedRow = store.db.prepare('SELECT gif FROM banner_cache WHERE name = ?').get('Serveur Animé');
-  check('GIF : sauvegardé en base (persistant)', !!persistedRow && persistedRow.gif.length > 10000);
+  const persistedRow = store.db.prepare('SELECT gif FROM banner_cache WHERE name = ?').get('2:Serveur Animé');
+  check('GIF : sauvegardé en base (persistant, versionné)', !!persistedRow && persistedRow.gif.length > 10000);
 
   // ---------- 5. Route HTTP (GIF immédiat, ou PNG + GIF après pré-chauffage) ----------
   const child = spawn(process.execPath, ['server/index.js'], {

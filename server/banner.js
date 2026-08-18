@@ -231,15 +231,18 @@ function storedPanelName(guildId) {
 // 💾 Cache PERSISTANT : le GIF généré est stocké en base (la base est
 // sauvegardée sur GitHub toutes les 10 min → la bannière animée survit
 // aux redémarrages, aux mises en veille de Render et aux redéploiements).
+// Versionné : quand le style change, on incrémente BANNER_GEN et les
+// anciennes bannières sont ignorées puis régénérées.
+const BANNER_GEN = 2;
 function dbGetGif(name) {
   try {
-    const row = store.db.prepare('SELECT gif FROM banner_cache WHERE name = ?').get(String(name));
+    const row = store.db.prepare('SELECT gif FROM banner_cache WHERE name = ?').get(`${BANNER_GEN}:${String(name)}`);
     return row && row.gif ? Buffer.from(row.gif) : null;
   } catch { return null; }
 }
 function dbSetGif(name, buf) {
   try {
-    store.db.prepare('INSERT OR REPLACE INTO banner_cache (name, gif) VALUES (?, ?)').run(String(name), buf);
+    store.db.prepare('INSERT OR REPLACE INTO banner_cache (name, gif) VALUES (?, ?)').run(`${BANNER_GEN}:${String(name)}`, buf);
   } catch (e) { console.error('[Hoxera] cache bannière :', e.message); }
 }
 
