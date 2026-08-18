@@ -42,7 +42,7 @@ const check = (label, cond) => {
   check('panneau : titre exact', embed.title === '👑 Support | Nexora');
   check('panneau : bienvenue exacte', embed.description.startsWith('Bienvenue sur le support officiel de Nexora'));
   check('panneau : description exacte présente', embed.description.includes('sélectionnez la catégorie correspondante à votre besoin via le menu ci-dessous'));
-  check('panneau : bannière après le texte (image)', embed.image && embed.image.url.includes('/api/tickets/panel-banner/G1.gif'));
+  check('panneau : bannière après le texte (image)', embed.image && embed.image.url.includes('/api/tickets/panel-banner/G1.'));
   check('menu : custom_id INTACT', select.custom_id === `bd-ttype:${BOT}`);
   check('menu : placeholder conservé', select.placeholder.includes('Choisissez le type de ticket'));
   check('menu : 2 options (les types existants)', select.options.length === 2);

@@ -69,6 +69,9 @@ const check = (label, cond) => {
   // ---------- 4. Cache ----------
   const gif2 = await banner.generateBannerGif('Serveur Animé');
   check('GIF : cache (même buffer)', gif2 === gif);
+  // 💾 Cache persistant : le GIF survit aux redémarrages (base sauvegardée)
+  const persistedRow = store.db.prepare('SELECT gif FROM banner_cache WHERE name = ?').get('Serveur Animé');
+  check('GIF : sauvegardé en base (persistant)', !!persistedRow && persistedRow.gif.length > 10000);
 
   // ---------- 5. Route HTTP (GIF immédiat, ou PNG + GIF après pré-chauffage) ----------
   const child = spawn(process.execPath, ['server/index.js'], {
@@ -105,6 +108,12 @@ const check = (label, cond) => {
       check('route : GIF valide directement (signature)', first.buf.slice(0, 6).toString() === 'GIF89a');
       check('route : taille cohérente', first.buf.length > 10000 && first.buf.length < 6 * 1024 * 1024);
     }
+    // Route .png : statique rapide (repli quand le GIF n'est pas prêt)
+    const pngRes = await fetch('http://localhost:3198/api/tickets/panel-banner/111222333.png');
+    const pngBuf = pngRes.ok ? Buffer.from(await pngRes.arrayBuffer()) : null;
+    check('route .png : répond', !!pngBuf && pngBuf.length > 1000);
+    check('route .png : signature PNG', !!pngBuf && pngBuf.slice(0, 4).toString('hex') === '89504e47');
+    check('route .png : Content-Type image/png', String(pngRes.headers.get('content-type') || '').includes('image/png'));
   } finally {
     try { child.kill('SIGKILL'); } catch {}
   }

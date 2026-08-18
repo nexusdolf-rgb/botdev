@@ -340,6 +340,14 @@ CREATE TABLE IF NOT EXISTS voicetemp (
   name_template TEXT DEFAULT '',
   PRIMARY KEY (bot_id, guild_id)
 );
+
+-- 🎬 Bannières animées générées (cache persistant : survit aux
+-- redémarrages et aux redéploiements grâce à la sauvegarde GitHub)
+CREATE TABLE IF NOT EXISTS banner_cache (
+  name TEXT PRIMARY KEY,
+  gif BLOB,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 `);
 
 // Migrations légères (les colonnes ajoutées après coup)

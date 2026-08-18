@@ -18,17 +18,16 @@ const COOKIE = 'botdev_session';
 // (publique : c'est Discord qui la charge pour l'afficher dans l'embed)
 // → GIF animé (balayage de lumière) en priorité, PNG statique en repli.
 // ============================================================
-async function servePanelBanner(req, res) {
+async function serveGifBanner(req, res) {
   const guildId = String(req.params.guildId || '').replace(/[^0-9]/g, '').slice(0, 25);
   const banner = require('./banner');
   const name = banner.storedPanelName(guildId) || 'NEXORA';
-  // 1) GIF animé — déjà en cache ? On le sert tout de suite.
-  //    Sinon, on tente au maximum 8 secondes (jamais plus : sur l'instance
-  //    gratuite, bloquer davantage affamerait les interactions Discord).
+  // GIF animé : normalement déjà en cache persistant (généré à l'envoi du
+  // panneau). Sinon on tente 30 s (la requête vient d'un ancien panneau).
   try {
     const gif = await Promise.race([
-      banner.generateBannerGif(name),
-      new Promise((resolve) => setTimeout(() => resolve(null), 8000)),
+      banner.generateBannerGif(name, { yieldMs: 150 }),
+      new Promise((resolve) => setTimeout(() => resolve(null), 30000)),
     ]);
     if (gif && gif.length > 1000) {
       res.set('Content-Type', 'image/gif');
@@ -38,25 +37,41 @@ async function servePanelBanner(req, res) {
   } catch (e) {
     console.error('[Hoxera] bannière animée :', e.message);
   }
-  // 2) PNG statique (repli temporaire) — sans cache pour que Discord
-  //    revienne chercher l'image et reçoive le GIF animé dès qu'il est prêt
+  // Repli : PNG statique (avec le bon nom de serveur)
   try {
     const buf = await banner.generateBanner(name);
     if (buf) {
-      banner.warmupGif(name); // la génération continue en arrière-plan
       res.set('Content-Type', 'image/png');
-      res.set('Cache-Control', 'no-cache');
+      res.set('Cache-Control', 'public, max-age=3600');
       return res.send(buf);
     }
   } catch (e) {
     console.error('[Hoxera] bannière panneau :', e.message);
   }
-  // 3) Repli final : bannière générique « SUPPORT - NEXORA »
   res.sendFile(path.join(__dirname, '..', 'public', 'icons', 'support-banner.png'));
 }
 
-router.get('/tickets/panel-banner/:guildId.gif', (req, res) => servePanelBanner(req, res));
-router.get('/tickets/panel-banner/:guildId.png', (req, res) => servePanelBanner(req, res));
+async function servePngBanner(req, res) {
+  const guildId = String(req.params.guildId || '').replace(/[^0-9]/g, '').slice(0, 25);
+  const banner = require('./banner');
+  const name = banner.storedPanelName(guildId) || 'NEXORA';
+  // PNG statique uniquement : rapide (~1 s), servi quand le GIF n'était
+  // pas prêt au moment de l'envoi du panneau.
+  try {
+    const buf = await banner.generateBanner(name);
+    if (buf) {
+      res.set('Content-Type', 'image/png');
+      res.set('Cache-Control', 'public, max-age=3600');
+      return res.send(buf);
+    }
+  } catch (e) {
+    console.error('[Hoxera] bannière panneau :', e.message);
+  }
+  res.sendFile(path.join(__dirname, '..', 'public', 'icons', 'support-banner.png'));
+}
+
+router.get('/tickets/panel-banner/:guildId.gif', (req, res) => serveGifBanner(req, res));
+router.get('/tickets/panel-banner/:guildId.png', (req, res) => servePngBanner(req, res));
 
 // Emoji sûr (même règle que le bot) : évite de stocker des emojis invalides
 // qui feraient planter la construction des menus Discord.

@@ -161,6 +161,12 @@ async function generateBannerGif(name, { sweepFrames = 20, driftFrames = 28, hol
   const clean = String(name || '').trim().slice(0, 26) || 'NEXORA';
   if (!sharp || !gifenc) return null;
   if (gifCache.has(clean)) return gifCache.get(clean);
+  // 1) Cache persistant (base) : la bannière animée est déjà prête ?
+  const persisted = dbGetGif(clean);
+  if (persisted && persisted.length > 1000) {
+    gifCache.set(clean, persisted);
+    return persisted;
+  }
   try {
     const { GIFEncoder, quantize, applyPalette } = gifenc;
     const baseBuf = await sharp(Buffer.from(baseSvg(clean))).png().toBuffer();
@@ -194,15 +200,20 @@ async function generateBannerGif(name, { sweepFrames = 20, driftFrames = 28, hol
     }
 
     // Palette globale (trame centrale) puis écriture des trames dans l'ordre
+    // (l'encodeur est séquentiel, mais on laisse l'event loop respirer
+    // toutes les 4 trames pour ne jamais bloquer les interactions Discord)
     const palette = quantize(frameDatas[Math.floor(totalFrames / 2)], 256);
     const gif = GIFEncoder();
-    frameDatas.forEach((data) => {
-      gif.writeFrame(applyPalette(data, palette), W, H, { palette, delay: delayMs });
-    });
+    for (let i = 0; i < frameDatas.length; i++) {
+      gif.writeFrame(applyPalette(frameDatas[i], palette), W, H, { palette, delay: delayMs });
+      if (i % 4 === 3) await sleep(0);
+    }
     gif.finish();
     const buf = Buffer.from(gif.bytes());
     gifCache.set(clean, buf);
     if (gifCache.size > CACHE_MAX) gifCache.delete(gifCache.keys().next().value);
+    // 💾 Cache persistant : prochaine fois (et après redémarrage), instantané
+    dbSetGif(clean, buf);
     return buf;
   } catch (e) {
     console.error('[Hoxera] génération de bannière animée :', e.message);
@@ -216,6 +227,21 @@ function storedPanelName(guildId) {
     const row = store.db.prepare("SELECT panel_name FROM guild_settings WHERE guild_id = ? AND panel_name != '' LIMIT 1").get(String(guildId));
     return row ? String(row.panel_name).slice(0, 26) : '';
   } catch { return ''; }
+}
+
+// 💾 Cache PERSISTANT : le GIF généré est stocké en base (la base est
+// sauvegardée sur GitHub toutes les 10 min → la bannière animée survit
+// aux redémarrages, aux mises en veille de Render et aux redéploiements).
+function dbGetGif(name) {
+  try {
+    const row = store.db.prepare('SELECT gif FROM banner_cache WHERE name = ?').get(String(name));
+    return row && row.gif ? Buffer.from(row.gif) : null;
+  } catch { return null; }
+}
+function dbSetGif(name, buf) {
+  try {
+    store.db.prepare('INSERT OR REPLACE INTO banner_cache (name, gif) VALUES (?, ?)').run(String(name), buf);
+  } catch (e) { console.error('[Hoxera] cache bannière :', e.message); }
 }
 
 // 🔥 Pré-chauffage : lance la génération du GIF en arrière-plan,

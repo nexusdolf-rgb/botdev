@@ -67,7 +67,7 @@ const check = (label, cond) => {
   check('panneau : flèches rouges 🔴➡️ sur les règles', (rulesVal.match(/🔴➡️/g) || []).length === 4);
   const patienceVal = String((fields.find((f) => String(f.value).includes('patience')) || {}).value || '');
   check('panneau : message de patience en italique', patienceVal.startsWith('*⏳ Merci de votre patience'));
-  check('panneau : bannière animée en image (route dynamique)', String(panelEmbed.image && panelEmbed.image.url).includes('/api/tickets/panel-banner/G1.gif'));
+  check('panneau : bannière en image (route dynamique)', String(panelEmbed.image && panelEmbed.image.url).includes('/api/tickets/panel-banner/G1.'));
   // 🧹 Menu déroulant épuré : emoji + nom uniquement, AUCUNE description dessous
   const select = sent[0].components[0].components[0].toJSON();
   check('menu : un seul menu, options sans description', select.options.length === 2 && select.options.every((o) => !o.description));
