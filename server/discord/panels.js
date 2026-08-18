@@ -275,10 +275,11 @@ const PANEL_PATIENCE = '*⏳ Merci de votre patience, un membre du staff prendra
 
 function panelBannerUrl(guildId, name) {
   const site = store.settings.get('public_url') || 'https://dash-hoxora.onrender.com';
-  // Bannière STATIQUE par serveur (générée en ~1 s par la route, mise en
-  // cache) : l'envoi du panneau est instantané et ne charge plus le
-  // processeur (l'animation a été retirée pour la stabilité).
-  return `${site}/api/tickets/panel-banner/${encodeURIComponent(guildId || '0')}.png?n=${encodeURIComponent(String(name || '').slice(0, 60))}`;
+  // Bannière STATIQUE par serveur (générée en ~1 s, mise en cache).
+  // ⚠️ Le paramètre v= sert à casser le cache de Discord : chaque fois que
+  // le style de la bannière change, on incrémente → Discord recharge
+  // l'image au lieu d'afficher l'ancienne mémorisée.
+  return `${site}/api/tickets/panel-banner/${encodeURIComponent(guildId || '0')}.png?v=3&n=${encodeURIComponent(String(name || '').slice(0, 60))}`;
 }
 
 function buildTicketPanelEmbed(cfg, client, types, serverName = '', guildId = '') {
@@ -1605,4 +1606,5 @@ module.exports = {
   resolveRole, parseTypes, isStaff, staffForTicket, openTicket, safeEmoji,
   startTypesWizard, handleTypesWizardInteraction,
   handleTicketDeleteAsk, ticketMetaFor, ticketWelcomeEmbed, typeOptionDescription, normalizeTypes,
+  __testPanelBannerUrl: panelBannerUrl,
 };

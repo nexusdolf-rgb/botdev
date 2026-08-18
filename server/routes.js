@@ -30,7 +30,7 @@ function servePanelBannerPng(req, res) {
       buf.then((png) => {
         if (png) {
           res.set('Content-Type', 'image/png');
-          res.set('Cache-Control', 'public, max-age=3600');
+          res.set('Cache-Control', 'public, max-age=600');
           res.send(png);
         } else {
           res.sendFile(path.join(__dirname, '..', 'public', 'icons', 'support-banner.png'));
@@ -40,7 +40,7 @@ function servePanelBannerPng(req, res) {
     }
     if (buf) {
       res.set('Content-Type', 'image/png');
-      res.set('Cache-Control', 'public, max-age=3600');
+      res.set('Cache-Control', 'public, max-age=600');
       res.send(buf);
       return;
     }

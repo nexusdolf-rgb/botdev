@@ -33,6 +33,11 @@ const check = (label, cond) => {
   check('bannière : pas de doublon de préfixe', !banner.baseSvg('Support - X').includes('SUPPORT - SUPPORT'));
   check('bannière : nom stocké retrouvé', banner.storedPanelName('111222333') === 'Carré RP');
 
+  // ---------- 1bis. URL de bannière versionnée (casse le cache de Discord) ----------
+  const panels = require('../server/discord/panels');
+  const url = panels.__testPanelBannerUrl ? panels.__testPanelBannerUrl('111222333', 'Carré RP') : '';
+  check('URL bannière : versionnée (?v=3) pour forcer Discord à recharger', !!url && url.includes('.png?v=3') && url.includes('Carr'));
+
   // ---------- 2. Plus aucun code GIF ----------
   check('GIF supprimé : generateBannerGif n\'existe plus', typeof banner.generateBannerGif === 'undefined');
   check('GIF supprimé : warmupGif n\'existe plus', typeof banner.warmupGif === 'undefined');
