@@ -273,17 +273,15 @@ const PANEL_RULES = [
 ];
 const PANEL_PATIENCE = '*⏳ Merci de votre patience, un membre du staff prendra votre ticket en charge dès que possible.*';
 
-function panelBannerUrl(guildId, name, gifReady = false) {
+function panelBannerUrl(guildId, name) {
   const site = store.settings.get('public_url') || 'https://dash-hoxora.onrender.com';
-  // 🎬 gifReady = la bannière ANIMÉE est déjà générée (et en cache) :
-  // le panneau pointe vers elle. Sinon, version statique instantanée
-  // (Discord télécharge l'image UNE fois à l'envoi et ne la recharge
-  // jamais — on ne mise donc jamais sur un GIF pas encore prêt).
-  const ext = gifReady ? 'gif' : 'png';
-  return `${site}/api/tickets/panel-banner/${encodeURIComponent(guildId || '0')}.${ext}?n=${encodeURIComponent(String(name || '').slice(0, 60))}`;
+  // Bannière STATIQUE par serveur (générée en ~1 s par la route, mise en
+  // cache) : l'envoi du panneau est instantané et ne charge plus le
+  // processeur (l'animation a été retirée pour la stabilité).
+  return `${site}/api/tickets/panel-banner/${encodeURIComponent(guildId || '0')}.png?n=${encodeURIComponent(String(name || '').slice(0, 60))}`;
 }
 
-function buildTicketPanelEmbed(cfg, client, types, serverName = '', guildId = '', gifReady = false) {
+function buildTicketPanelEmbed(cfg, client, types, serverName = '', guildId = '') {
   const name = String(serverName || '').trim().slice(0, 100) || PANEL_DEFAULT_NAME;
   // Le message personnalisé (configuré dans le dashboard) reste respecté :
   // s'il existe, il remplace le paragraphe d'explication standard.
@@ -300,7 +298,7 @@ function buildTicketPanelEmbed(cfg, client, types, serverName = '', guildId = ''
     )
     // 🖼️ Bannière « SUPPORT - {nom du serveur} » : image générée par le site,
     // affichée en bas de l'embed, juste au-dessus du menu déroulant.
-    .setImage(panelBannerUrl(guildId, name, gifReady));
+    .setImage(panelBannerUrl(guildId, name));
   return embed;
 }
 
@@ -366,39 +364,13 @@ async function sendTicketPanel(botId, guildId, client, channel) {
   // 🧹 Un seul panneau à la fois : on efface les anciens avant d'envoyer
   try { await pruneOldPanels(channel); } catch {}
 
-  // 🎬 La bannière ANIMÉE est générée AVANT l'envoi (attente max 30 s).
-  // Comme Discord télécharge l'image une seule fois au moment de l'envoi,
-  // c'est le seul moyen fiable d'avoir un panneau animé du premier coup.
-  // Le GIF est ensuite mis en cache persistant → instantané pour toujours.
-  let gifReady = false;
-  if (serverName) {
-    try {
-      const banner = require('../banner');
-      const gif = await Promise.race([
-        banner.generateBannerGif(serverName, { yieldMs: 150 }),
-        new Promise((resolve) => setTimeout(() => resolve(null), 30000)),
-      ]);
-      gifReady = !!(gif && gif.length > 1000);
-      if (!gifReady) banner.warmupGif(serverName); // continue en arrière-plan
-    } catch { /* bannière statique en repli */ }
-  }
-
-  const payload = { embeds: [buildTicketPanelEmbed(cfg, client, types, serverName, guildId, gifReady)], components: rows };
+  // 🖼️ Envoi immédiat : la bannière STATIQUE est générée par la route
+  // (~1 s, mise en cache) — aucune attente, aucune charge ici.
+  const payload = { embeds: [buildTicketPanelEmbed(cfg, client, types, serverName, guildId)], components: rows };
   if (guild) {
     await identity.sendAsProfile(client, botId, guild, channel, payload);
   } else {
     await channel.send(payload);
-  }
-  // 🔥 Pré-chauffage de la bannière animée : DÉCALÉ de 3 secondes pour
-  // laisser la commande se terminer d'abord (le rendu du GIF utilise le
-  // processeur de l'instance — on ne veut jamais ralentir l'interaction).
-  if (serverName) {
-    try {
-      const n = serverName;
-      setTimeout(() => {
-        try { require('../banner').warmupGif(n); } catch {}
-      }, 3000);
-    } catch {}
   }
 }
 

@@ -16,6 +16,9 @@ const fs = require('fs');
 const paths = require('./paths');
 
 const GITHUB_API = process.env.BOTDEV_GITHUB_API || 'https://api.github.com';
+// 🛟 Taille max de la sauvegarde : sous la limite de 1 Mo de l'API GitHub
+// (les fichiers plus gros ne sont plus lisibles via l'API standard).
+const MAX_BACKUP_BYTES = 900 * 1024;
 const FILE = 'botdev.db';
 
 function enabled() {
@@ -180,6 +183,16 @@ async function upload(db) {
   const r = repo();
   const b = branch();
   const buf = await snapshot(db);
+
+  // 🛟 GARDE-FOU TAILLE : la base ne doit JAMAIS repasser au-dessus de la
+  // limite de 1 Mo de l'API GitHub (c'est exactement ce qui a déclenché la
+  // panne). Au-delà, on refuse de sauvegarder et on journalise.
+  const bufSize = buf.length;
+  if (bufSize > MAX_BACKUP_BYTES) {
+    console.error(`🛟 Sauvegarde ANNULÉE : la base fait ${bufSize} octets (max ${MAX_BACKUP_BYTES}). Vérifie ce qui la fait grossir !`);
+    return false;
+  }
+
   let sha = null;
   try {
     const meta = await module.exports.ghJson(`/repos/${r}/contents/${FILE}${b ? `?ref=${encodeURIComponent(b)}` : ''}`, { token });
@@ -204,9 +217,19 @@ async function upload(db) {
     ...(sha ? { sha } : {}),
     ...(b ? { branch: b } : {}),
   };
-  await module.exports.ghJson(`/repos/${r}/contents/${FILE}`, { method: 'PUT', body: JSON.stringify(body), token });
-  console.log(`[BotDev] 💾 Sauvegarde envoyée (${buf.length} octets)`);
-  return true;
+  // 🔁 3 tentatives en cas d'erreur réseau passagère
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      await module.exports.ghJson(`/repos/${r}/contents/${FILE}`, { method: 'PUT', body: JSON.stringify(body), token });
+      console.log(`[BotDev] 💾 Sauvegarde envoyée (${bufSize} octets${attempt > 1 ? `, tentative ${attempt}` : ''})`);
+      return true;
+    } catch (e) {
+      if (attempt === 3) throw e;
+      console.log(`[BotDev] ⚠️ Sauvegarde échouée (${e.message}) — nouvelle tentative…`);
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    }
+  }
+  return false;
 }
 
-module.exports = { enabled, repo, branch, download, restore, upload, ghJson, getLastRestoreInfo: () => lastRestoreInfo };
+module.exports = { enabled, repo, branch, download, restore, upload, ghJson, snapshot, getLastRestoreInfo: () => lastRestoreInfo, MAX_BACKUP_BYTES };

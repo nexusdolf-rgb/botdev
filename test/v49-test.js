@@ -43,7 +43,7 @@ const check = (label, cond) => {
   const embedA = sentA[0].embeds[0].toJSON();
   check('serveur A : titre « 👑 Support | Carré RP Officiel »', embedA.title === '👑 Support | Carré RP Officiel');
   check('serveur A : bienvenue avec le nom', embedA.description.startsWith('Bienvenue sur le support officiel de Carré RP Officiel'));
-  check('serveur A : bannière dynamique (URL du serveur)', embedA.image.url.includes('/api/tickets/panel-banner/G1.gif'));
+  check('serveur A : bannière dynamique (URL du serveur)', embedA.image.url.includes('/api/tickets/panel-banner/G1.png'));
   check('serveur A : nom mémorisé en base', store.guildSettings.get(BOT, 'G1').panel_name === 'Carré RP Officiel');
   check('serveur A : nom mémorisé retrouvé pour la bannière', banner.storedPanelName('G1') === 'Carré RP Officiel');
 
@@ -56,7 +56,7 @@ const check = (label, cond) => {
   const embedB = sentB[0].embeds[0].toJSON();
   check('serveur B : titre avec SON nom', embedB.title === '👑 Support | Les Copains 🎉');
   check('serveur B : bienvenue avec SON nom', embedB.description.includes('Les Copains 🎉'));
-  check('serveur B : bannière différente (G2)', embedB.image.url.includes('/api/tickets/panel-banner/G2.gif'));
+  check('serveur B : bannière différente (G2)', embedB.image.url.includes('/api/tickets/panel-banner/G2.png'));
   check('serveur B : pas de mélange avec le serveur A', embedB.title !== embedA.title && embedB.image.url !== embedA.image.url);
 
   // ---------- 4. Repli Nexora (client sans guildes) ----------

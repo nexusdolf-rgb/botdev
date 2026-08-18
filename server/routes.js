@@ -16,34 +16,33 @@ const COOKIE = 'botdev_session';
 // ============================================================
 // 🖼️ Bannière du panneau de tickets, générée PAR SERVEUR
 // (publique : c'est Discord qui la charge pour l'afficher dans l'embed)
-// → GIF animé (balayage de lumière) en priorité, PNG statique en repli.
+// STATIQUE uniquement : génération ~1 s, zéro charge, zéro échec.
+// Les anciennes URLs en .gif restent valides (elles servent le PNG).
 // ============================================================
-async function serveGifBanner(req, res) {
+function servePanelBannerPng(req, res) {
   const guildId = String(req.params.guildId || '').replace(/[^0-9]/g, '').slice(0, 25);
   const banner = require('./banner');
   const name = banner.storedPanelName(guildId) || 'NEXORA';
-  // GIF animé : normalement déjà en cache persistant (généré à l'envoi du
-  // panneau). Sinon on tente 30 s (la requête vient d'un ancien panneau).
   try {
-    const gif = await Promise.race([
-      banner.generateBannerGif(name, { yieldMs: 150 }),
-      new Promise((resolve) => setTimeout(() => resolve(null), 30000)),
-    ]);
-    if (gif && gif.length > 1000) {
-      res.set('Content-Type', 'image/gif');
-      res.set('Cache-Control', 'public, max-age=86400');
-      return res.send(gif);
+    const buf = banner.generateBanner(name);
+    if (buf && buf.then) {
+      // génération asynchrone (première fois)
+      buf.then((png) => {
+        if (png) {
+          res.set('Content-Type', 'image/png');
+          res.set('Cache-Control', 'public, max-age=3600');
+          res.send(png);
+        } else {
+          res.sendFile(path.join(__dirname, '..', 'public', 'icons', 'support-banner.png'));
+        }
+      }).catch(() => res.sendFile(path.join(__dirname, '..', 'public', 'icons', 'support-banner.png')));
+      return;
     }
-  } catch (e) {
-    console.error('[Hoxera] bannière animée :', e.message);
-  }
-  // Repli : PNG statique (avec le bon nom de serveur)
-  try {
-    const buf = await banner.generateBanner(name);
     if (buf) {
       res.set('Content-Type', 'image/png');
       res.set('Cache-Control', 'public, max-age=3600');
-      return res.send(buf);
+      res.send(buf);
+      return;
     }
   } catch (e) {
     console.error('[Hoxera] bannière panneau :', e.message);
@@ -51,27 +50,8 @@ async function serveGifBanner(req, res) {
   res.sendFile(path.join(__dirname, '..', 'public', 'icons', 'support-banner.png'));
 }
 
-async function servePngBanner(req, res) {
-  const guildId = String(req.params.guildId || '').replace(/[^0-9]/g, '').slice(0, 25);
-  const banner = require('./banner');
-  const name = banner.storedPanelName(guildId) || 'NEXORA';
-  // PNG statique uniquement : rapide (~1 s), servi quand le GIF n'était
-  // pas prêt au moment de l'envoi du panneau.
-  try {
-    const buf = await banner.generateBanner(name);
-    if (buf) {
-      res.set('Content-Type', 'image/png');
-      res.set('Cache-Control', 'public, max-age=3600');
-      return res.send(buf);
-    }
-  } catch (e) {
-    console.error('[Hoxera] bannière panneau :', e.message);
-  }
-  res.sendFile(path.join(__dirname, '..', 'public', 'icons', 'support-banner.png'));
-}
-
-router.get('/tickets/panel-banner/:guildId.gif', (req, res) => serveGifBanner(req, res));
-router.get('/tickets/panel-banner/:guildId.png', (req, res) => servePngBanner(req, res));
+router.get('/tickets/panel-banner/:guildId.png', (req, res) => servePanelBannerPng(req, res));
+router.get('/tickets/panel-banner/:guildId.gif', (req, res) => servePanelBannerPng(req, res));
 
 // Emoji sûr (même règle que le bot) : évite de stocker des emojis invalides
 // qui feraient planter la construction des menus Discord.
@@ -1471,6 +1451,15 @@ router.delete('/admin/users/:id', requireAuth, requireAdmin, async (req, res) =>
   store.db.prepare('DELETE FROM discord_tokens WHERE user_id = ?').run(targetId);
   store.db.prepare('DELETE FROM users WHERE id = ?').run(targetId);
   res.json({ ok: true });
+});
+
+// 🛟 Filet de sécurité final : AUCUNE route ne doit faire tomber le serveur.
+// Toute erreur non gérée devient une réponse JSON propre (500).
+router.use((err, req, res, next) => {
+  console.error('[BotDev] Erreur route API :', (err && err.message) || err);
+  try {
+    if (!res.headersSent) res.status(500).json({ error: 'Erreur interne du serveur — elle a été journalisée.' });
+  } catch {}
 });
 
 module.exports = router;

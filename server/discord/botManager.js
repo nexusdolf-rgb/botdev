@@ -190,21 +190,6 @@ function attachListeners(botId, entry) {
       // du bot (les commandes par serveur ne suffisent pas pour le badge).
       try { await syncGlobalCommands(botId); }
       catch (e) { console.error(`[BotDev] sync globale (bot ${botId}):`, e.message); }
-      // 🎬 Pré-chauffage des bannières animées : UNE À LA FOIS (séquentiel)
-      // pour ne jamais saturer la mémoire de l'instance gratuite. Chaque
-      // bannière « SUPPORT - {nom} » est générée puis sauvegardée → les
-      // /ticket panel suivants envoient l'animé instantanément.
-      try {
-        const banner = require('../banner');
-        const names = [...client.guilds.cache.values()]
-          .map((g) => (g && g.name ? String(g.name).slice(0, 26) : ''))
-          .filter(Boolean);
-        (async () => {
-          for (const n of names) {
-            try { await banner.generateBannerGif(n, { yieldMs: 400 }); } catch {}
-          }
-        })().catch(() => {});
-      } catch {}
       // Bio du bot : ajoute le lien vers BotDev
       applyBotAbout(botId, entry).catch(() => {});
     } catch (e) { console.error(`[BotDev] ready error (bot ${botId}):`, e.message); }
@@ -244,8 +229,6 @@ function attachListeners(botId, entry) {
   // Nouveau serveur : synchronise les commandes avec retries automatiques
   // (les commandes slash apparaissent ainsi dès l'ajout du bot)
   client.on('guildCreate', (guild) => {
-    // 🎬 Prépare aussi sa bannière animée dès l'arrivée
-    try { require('../banner').warmupGif(String(guild.name || '').slice(0, 26)); } catch {}
     let attempts = 0;
     const trySync = async () => {
       attempts += 1;

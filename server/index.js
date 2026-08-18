@@ -33,6 +33,13 @@ async function main() {
   const botManager = require('./discord/botManager');
   store.settings.set('boot_restore', restoreStatus);
 
+  // 🧪 Contrôle d'intégrité de la base au démarrage : si la base est
+  // corrompue, on le sait tout de suite (au lieu de découvertes en cascade).
+  try {
+    const check = store.db.prepare('PRAGMA quick_check').get();
+    console.log(`[BotDev] 🧪 Intégrité base : ${check && check.quick_check === 'ok' ? 'OK ✅' : String(check && check.quick_check)}`);
+  } catch (e) { console.error('[BotDev] 🧪 Contrôle intégrité impossible :', e.message); }
+
   // 🆕 L'URL officielle du dashboard : remplace un éventuel ancien lien
   // mémorisé dans la base restaurée (transcriptions, /help, pieds de page…)
   const officialUrl = 'https://dash-hoxora.onrender.com';

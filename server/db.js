@@ -341,13 +341,6 @@ CREATE TABLE IF NOT EXISTS voicetemp (
   PRIMARY KEY (bot_id, guild_id)
 );
 
--- 🎬 Bannières animées générées (cache persistant : survit aux
--- redémarrages et aux redéploiements grâce à la sauvegarde GitHub)
-CREATE TABLE IF NOT EXISTS banner_cache (
-  name TEXT PRIMARY KEY,
-  gif BLOB,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
 `);
 
 // Migrations légères (les colonnes ajoutées après coup)
@@ -393,6 +386,13 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN voicetemp_category TEXT DEF
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN voicetemp_name TEXT DEFAULT ''"); } catch (e) {}
 // Nom du serveur affiché dans le panneau de tickets (bannière + titre automatiques)
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN panel_name TEXT DEFAULT ''"); } catch (e) {}
+
+// 🗑 Ancien cache de bannières animées : supprimé (les GIF faisaient
+// grossir la sauvegarde au-delà de la limite de 1 Mo de l'API GitHub).
+try { db.exec('DROP TABLE IF EXISTS banner_cache'); } catch (e) {}
+// 📦 Compactage : libère réellement la place (fichier de sauvegarde
+// plus léger → plus jamais au-dessus de la limite de 1 Mo de GitHub).
+try { db.exec('VACUUM'); } catch (e) {}
 
 // L'ancienne table events (globale) n'a pas de colonne guild_id : on la reconstruit
 const eventsCols = db.prepare("PRAGMA table_info(events)").all().map(c => c.name);
