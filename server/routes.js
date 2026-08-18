@@ -1346,6 +1346,10 @@ router.get('/health/bot', (req, res) => {
   }
   res.json({
     processUptimeMs: Math.round(process.uptime() * 1000),
+    tokenConfigured: !!(process.env.HOXERA_TOKEN || process.env.NOXERA_TOKEN || process.env.NEXORA_TOKEN),
+    botCount: rows.length,
+    bootRestore: store.settings.get('boot_restore') || 'inconnu',
+    backupEnabled: !!process.env.BOTDEV_GH_TOKEN && !!process.env.BOTDEV_DATA_REPO,
     bots: rows.map((r) => ({ id: r.id, name: r.name, enabled: !!r.enabled, last_error: String(r.last_error || '').slice(0, 200), username: r.bot_username || '' })),
     clients: clientsState,
   });

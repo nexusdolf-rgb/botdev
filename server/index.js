@@ -12,7 +12,13 @@ const PORT = process.env.PORT || 3000;
 
 async function main() {
   // 1) Restauration des données (sauvegarde GitHub) AVANT d'ouvrir la base
-  await backup.restore();
+  let restoreStatus = 'inconnu';
+  try {
+    const ok = await backup.restore();
+    restoreStatus = ok ? 'ok' : (backup.enabled() ? 'echec' : 'desactivee');
+  } catch (e) {
+    restoreStatus = 'erreur:' + String(e.message || e).slice(0, 60);
+  }
 
   // 1 bis) Rapatriement des images d'identité (avatars/bannières)
   try {
@@ -25,6 +31,7 @@ async function main() {
   const store = require('./db');
   const routes = require('./routes');
   const botManager = require('./discord/botManager');
+  store.settings.set('boot_restore', restoreStatus);
 
   // 🆕 L'URL officielle du dashboard : remplace un éventuel ancien lien
   // mémorisé dans la base restaurée (transcriptions, /help, pieds de page…)
