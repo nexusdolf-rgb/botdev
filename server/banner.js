@@ -31,13 +31,25 @@ function escapeXml(s) {
     .replace(/'/g, '&#39;');
 }
 
+// Taille de police automatique : le texte tient TOUJOURS dans la bannière,
+// quelle que soit la longueur du nom du serveur (court = grand, long = réduit).
+// Coefficient 0.72 : largeur moyenne réelle d'une majuscule bold DejaVu
+// (mesurée empiriquement — 0.62 faisait déborder les noms).
+const BANNER_MARGIN = 48; // 24 px de marge de chaque côté
+function autoFontSize(label) {
+  const available = W - BANNER_MARGIN;
+  const est = Math.floor(available / (Math.max(1, label.length) * 0.72));
+  return Math.max(12, Math.min(64, est));
+}
+
 // Fond + texte avec halos chromatiques (rendu en une seule passe)
 function baseSvg(name) {
   const raw = String(name || 'NEXORA').toUpperCase();
   const label = escapeXml(raw.startsWith('SUPPORT') ? raw : `SUPPORT - ${raw}`);
-  const len = label.length;
-  const size = len > 24 ? 34 : len > 18 ? 44 : len > 12 ? 56 : 66;
+  const size = autoFontSize(label);
+  const available = W - BANNER_MARGIN;
   const textY = H * 0.5;
+  const textProps = `font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="${size}"`;
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
@@ -77,16 +89,16 @@ function baseSvg(name) {
   <ellipse cx="${W * 0.55}" cy="${H * 0.95}" rx="${W * 0.45}" ry="${H * 0.2}" fill="#ff2030" opacity=".1" filter="url(#soft)"/>
   <rect width="${W}" height="${H}" fill="url(#glitch)"/>
   <text x="${W / 2 + 3}" y="${textY + 1}" text-anchor="middle" dominant-baseline="central"
-        font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="${size}"
+        ${textProps}
         fill="#ff3b5c" opacity=".55" filter="url(#glowPink)">${label}</text>
   <text x="${W / 2 - 3}" y="${textY - 1}" text-anchor="middle" dominant-baseline="central"
-        font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="${size}"
+        ${textProps}
         fill="#39ff6a" opacity=".55" filter="url(#glowGreen)">${label}</text>
   <text x="${W / 2}" y="${textY + 3}" text-anchor="middle" dominant-baseline="central"
-        font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="${size}"
+        ${textProps}
         fill="#39e6ff" opacity=".5" filter="url(#glowCyan)">${label}</text>
   <text x="${W / 2}" y="${textY}" text-anchor="middle" dominant-baseline="central"
-        font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="${size}"
+        ${textProps}
         fill="#ffffff">${label}</text>
 </svg>`;
 }

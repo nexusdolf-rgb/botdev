@@ -279,7 +279,7 @@ function panelBannerUrl(guildId, name) {
   // ⚠️ Le paramètre v= sert à casser le cache de Discord : chaque fois que
   // le style de la bannière change, on incrémente → Discord recharge
   // l'image au lieu d'afficher l'ancienne mémorisée.
-  return `${site}/api/tickets/panel-banner/${encodeURIComponent(guildId || '0')}.png?v=3&n=${encodeURIComponent(String(name || '').slice(0, 60))}`;
+  return `${site}/api/tickets/panel-banner/${encodeURIComponent(guildId || '0')}.png?v=4&n=${encodeURIComponent(String(name || '').slice(0, 60))}`;
 }
 
 function buildTicketPanelEmbed(cfg, client, types, serverName = '', guildId = '') {

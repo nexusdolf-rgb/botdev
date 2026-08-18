@@ -36,7 +36,27 @@ const check = (label, cond) => {
   // ---------- 1bis. URL de bannière versionnée (casse le cache de Discord) ----------
   const panels = require('../server/discord/panels');
   const url = panels.__testPanelBannerUrl ? panels.__testPanelBannerUrl('111222333', 'Carré RP') : '';
-  check('URL bannière : versionnée (?v=3) pour forcer Discord à recharger', !!url && url.includes('.png?v=3') && url.includes('Carr'));
+  check('URL bannière : versionnée (?v=3) pour forcer Discord à recharger', !!url && url.includes('.png?v=4') && url.includes('Carr'));
+
+  // ---------- 1ter. Le texte tient TOUJOURS dans la bannière (aucun débordement) ----------
+  const sharp = require('sharp');
+  for (const nm of ['RP', 'Carré RP', 'OneState CI-ML-SN', '[ ONE | ONE ] CHEAT', 'Un Serveur Avec Un Nom Vraiment Tres Long Pour Tester La Taille Max']) {
+    const p = await banner.generateBanner(nm);
+    const { data, info } = await sharp(p).raw().toBuffer({ resolveWithObject: true });
+    const ch = info.channels, W = info.width;
+    let minX = W, maxX = 0;
+    for (let y = 0; y < info.height; y++) {
+      for (let x = 0; x < W; x++) {
+        const i = (y * W + x) * ch;
+        if (data[i] > 200 && data[i + 1] > 200 && data[i + 2] > 200) { if (x < minX) minX = x; if (x > maxX) maxX = x; }
+      }
+    }
+    check(`bannière « ${nm.slice(0, 25)} » : texte dans les marges (x ${minX}→${maxX} / ${W})`, minX >= 10 && maxX <= W - 10);
+  }
+  // Taille adaptative : nom court = plus grand, nom long = réduit mais lisible
+  const sizeShort = Number(banner.baseSvg('RP').match(/font-size="(\d+)"/)[1]);
+  const sizeLong = Number(banner.baseSvg('Un Serveur Avec Un Nom Vraiment Tres Long').match(/font-size="(\d+)"/)[1]);
+  check('bannière : taille adaptée (court = plus grand)', sizeShort > sizeLong && sizeLong >= 12);
 
   // ---------- 2. Plus aucun code GIF ----------
   check('GIF supprimé : generateBannerGif n\'existe plus', typeof banner.generateBannerGif === 'undefined');
