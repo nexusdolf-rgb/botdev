@@ -14,8 +14,8 @@ async function main() {
   // 1) Restauration des données (sauvegarde GitHub) AVANT d'ouvrir la base
   let restoreStatus = 'inconnu';
   try {
-    const ok = await backup.restore();
-    restoreStatus = ok ? 'ok' : (backup.enabled() ? 'echec' : 'desactivee');
+    await backup.restore();
+    restoreStatus = backup.getLastRestoreInfo() || 'inconnu';
   } catch (e) {
     restoreStatus = 'erreur:' + String(e.message || e).slice(0, 60);
   }

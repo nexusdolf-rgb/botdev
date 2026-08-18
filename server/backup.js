@@ -95,8 +95,10 @@ async function download() {
 }
 
 // Restaure la base au démarrage (à appeler AVANT d'ouvrir la base locale).
+let lastRestoreInfo = 'inconnu';
 async function restore() {
   if (!enabled()) {
+    lastRestoreInfo = 'sauvegarde desactivee';
     console.log('[BotDev] 💾 Sauvegarde désactivée (BOTDEV_GH_TOKEN / BOTDEV_DATA_REPO absents) — données locales uniquement');
     return false;
   }
@@ -104,6 +106,7 @@ async function restore() {
   try {
     const buf = await module.exports.download();
     if (!buf) {
+      lastRestoreInfo = 'aucune sauvegarde distante (download null)';
       console.log('[BotDev] ℹ️ Aucune sauvegarde distante (premier démarrage)');
       return false;
     }
@@ -111,28 +114,34 @@ async function restore() {
     // sans bot (base vide). C'est ce qui a détruit les données : une base
     // vide avait écrasé la bonne, puis tout le monde la restaurait.
     let valid = false;
+    let n = 0;
     try {
       const Database = require('better-sqlite3');
       const tmp = paths.dbPath + '.incoming';
       fs.writeFileSync(tmp, buf);
       const check = new Database(tmp, { readonly: true });
-      const n = check.prepare('SELECT COUNT(*) AS n FROM bots').get().n || 0;
+      n = check.prepare('SELECT COUNT(*) AS n FROM bots').get().n || 0;
       check.close();
       fs.rmSync(tmp, { force: true });
       valid = n > 0;
-    } catch { valid = false; }
+    } catch (e) {
+      lastRestoreInfo = 'validation impossible: ' + String(e.message || e).slice(0, 80);
+      valid = false;
+    }
     if (!valid) {
-      const hasLocal = (() => { try { return fs.statSync(paths.dbPath).size > 10000; } catch { return false; } })();
-      console.log('🛟 Sauvegarde distante SANS bot — ignorée.' + (hasLocal ? ' Les données locales sont conservées.' : ' Démarrage à vide (première installation).'));
+      if (!lastRestoreInfo.startsWith('validation')) lastRestoreInfo = 'sauvegarde distante SANS bot — ignoree (taille ' + buf.length + ')';
+      console.log('🛟 Sauvegarde distante SANS bot — ignorée. (taille reçue : ' + buf.length + ' octets)');
       return false;
     }
     fs.writeFileSync(paths.dbPath, buf);
     for (const suffix of ['-wal', '-shm']) {
       try { fs.rmSync(paths.dbPath + suffix, { force: true }); } catch {}
     }
+    lastRestoreInfo = 'ok (' + buf.length + ' octets, ' + n + ' bot(s))';
     console.log(`[BotDev] ✅ Données restaurées depuis GitHub (${buf.length} octets)`);
     return true;
   } catch (e) {
+    lastRestoreInfo = 'erreur: ' + String(e.message || e).slice(0, 120);
     console.log(`[BotDev] ⚠️ Restauration impossible (${e.message}) — démarrage avec les données locales`);
     return false;
   }
@@ -185,4 +194,4 @@ async function upload(db) {
   return true;
 }
 
-module.exports = { enabled, repo, branch, download, restore, upload, ghJson };
+module.exports = { enabled, repo, branch, download, restore, upload, ghJson, getLastRestoreInfo: () => lastRestoreInfo };
