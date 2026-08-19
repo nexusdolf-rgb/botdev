@@ -571,11 +571,20 @@ async function handleTicket(botId, sub, group, interaction, guild) {
 // ---------------------- /roles ----------------------
 async function handleRoles(botId, sub, interaction, guild) {
   switch (sub) {
+    case 'setup': {
+      // 📋 Assistant interactif : nom → texte → salon → rôles (sélecteurs)
+      const { start } = require('./roleWizard');
+      return start(botId, interaction, null);
+    }
+    case 'edit': {
+      const { start } = require('./roleWizard');
+      return start(botId, interaction, 'pick');
+    }
     case 'list': {
       const menus = store.roleMenus.all(botId, guild.id);
       if (!menus.length) {
         return interaction.reply({
-          content: '📋 Aucun menu sur ce serveur. Crée-en un dans le dashboard Hoxera (onglet Rôles), puis envoie-le avec `/roles send`.',
+          content: '📋 Aucun panneau de rôles sur ce serveur.\n➡️ Crée-en un directement ici avec **`/roles setup`** (assistant pas à pas : nom, texte, salon et rôles en menus de sélection) — ou depuis le dashboard (onglet Rôles).',
           ephemeral: true,
         });
       }

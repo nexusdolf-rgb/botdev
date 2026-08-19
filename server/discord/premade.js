@@ -286,6 +286,8 @@ function buildSlashPayloads(botId) {
     description: '📋 Gérer les menus de rôles',
     default_member_permissions: '8',
     options: [
+      { name: 'setup', description: 'Assistant pas à pas : nom → texte → salon → rôles (menus de sélection)', type: ApplicationCommandOptionType.Subcommand },
+      { name: 'edit', description: 'Modifier un panneau de rôles existant', type: ApplicationCommandOptionType.Subcommand },
       { name: 'list', description: 'Lister les menus de rôles de ce serveur', type: ApplicationCommandOptionType.Subcommand },
       { name: 'send', description: 'Envoyer un menu de rôles', type: ApplicationCommandOptionType.Subcommand, options: [
         { name: 'numero', description: 'Numéro du menu (voir /roles list)', type: ApplicationCommandOptionType.Integer, required: true },

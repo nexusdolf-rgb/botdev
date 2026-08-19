@@ -100,6 +100,13 @@ async function dispatchPanels(botId, interaction) {
     }
     const cid = String(interaction.customId || '');
 
+    // 📋 Assistant /roles setup & /roles edit (menus, sélecteurs, modales)
+    if (cid.startsWith('rls:')) {
+      const { handleWizardInteraction } = require('./roleWizard');
+      await handleWizardInteraction(botId, interaction);
+      return true;
+    }
+
     // Assistant interactif /botprofile setup (boutons + modales + sélecteur de couleurs)
     if ((interaction.isButton() && cid.startsWith('bpw:'))
       || (interaction.isStringSelectMenu() && cid.startsWith('bpw-sel:'))
