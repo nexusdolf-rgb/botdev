@@ -859,9 +859,10 @@ async function sendTranscriptDm(interaction, guild, channelName, { text, url, op
     try { user = (await guild.members.fetch(openerId)).user; } catch {}
   }
   if (!user) return false;
-  // 🖼️ La bannière « SUPPORT - {nom du serveur} » (générée automatiquement
-  // par serveur) est affichée dans le MP, comme sur le panneau de tickets.
+  // 🖼️ La bannière du PROFIL du bot (le robot Nexora) est affichée dans
+  // le MP — c'est l'identité du bot, la même que sur son profil Discord.
   const serverName = String(guild.name || 'Nexora').slice(0, 100);
+  const site = store.settings.get('public_url') || 'https://dash-hoxora.onrender.com';
   const embed = new EmbedBuilder()
     .setColor('#ED4245')
     .setTitle('🎫 Ton ticket a été clôturé')
@@ -875,7 +876,7 @@ async function sendTranscriptDm(interaction, guild, channelName, { text, url, op
       '',
       '💬 *Besoin d\'aide à nouveau ? Rouvre simplement un ticket depuis le panneau du serveur.*',
     ].join('\n'))
-    .setImage(panelBannerUrl(guild.id, serverName))
+    .setImage(`${site}/icons/nexora-profile-banner.png`)
     .setFooter({ text: 'Nexora · Système de tickets' });
   try {
     await user.send({

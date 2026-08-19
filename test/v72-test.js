@@ -47,8 +47,8 @@ const check = (label, cond) => {
   check('MP : nom du serveur dans le remerciement', String(emb.description).includes('Carré RP Officiel'));
   check('MP : lien de la transcription', String(emb.description).includes('https://dash-hoxora.onrender.com/transcript/abc123'));
   check('MP : invite à rouvrir un ticket', String(emb.description).includes('Rouvre simplement un ticket'));
-  // 🖼️ Bannière SUPPORT - nom du serveur (même générateur que le panneau)
-  check('MP : bannière « SUPPORT - ... » en image', emb.image && emb.image.url.includes('/api/tickets/panel-banner/G1.png') && emb.image.url.includes('Carr'));
+  // 🖼️ Bannière du PROFIL du bot (le robot Nexora) — identique au profil Discord
+  check('MP : bannière du profil du bot (robot) en image', emb.image && emb.image.url.includes('/icons/nexora-profile-banner.png'));
   check('MP : footer Nexora', String(emb.footer.text).includes('Nexora'));
   // 📄 Fichier .txt joint
   check('MP : fichier transcription .txt joint', payload.files && payload.files.length === 1 && String(payload.files[0].name).includes('question-bob') && payload.files[0].name.endsWith('.txt'));
