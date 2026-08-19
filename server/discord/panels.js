@@ -859,17 +859,24 @@ async function sendTranscriptDm(interaction, guild, channelName, { text, url, op
     try { user = (await guild.members.fetch(openerId)).user; } catch {}
   }
   if (!user) return false;
+  // 🖼️ La bannière « SUPPORT - {nom du serveur} » (générée automatiquement
+  // par serveur) est affichée dans le MP, comme sur le panneau de tickets.
+  const serverName = String(guild.name || 'Nexora').slice(0, 100);
   const embed = new EmbedBuilder()
-    .setColor('#5865F2')
-    .setTitle('🎫 Ton ticket a été fermé')
+    .setColor('#ED4245')
+    .setTitle('🎫 Ton ticket a été clôturé')
     .setDescription([
-      `Merci d\'avoir contacté l\'équipe de **${guild.name}** ! 👋`,
+      `Merci d'avoir contacté l'équipe de **${serverName}** 👋`,
       '',
-      'Ton ticket a été traité et fermé par notre équipe. Si tu as besoin de quoi que ce soit, n\'hésite pas à ouvrir un nouveau ticket.',
+      'Ton ticket a été **traité et clôturé** par notre équipe.',
+      'Tu trouveras ci-dessous l\'intégralité de la conversation :',
       '',
-      url ? `📄 **Ta transcription** : [Clique ici](${url})` : '📄 **Ta transcription** : fichier joint ci-dessous.',
+      url ? `📄 **Consulter la transcription** : [clique ici](${url})` : '📄 **Transcription** : fichier joint ci-dessous.',
+      '',
+      '💬 *Besoin d\'aide à nouveau ? Rouvre simplement un ticket depuis le panneau du serveur.*',
     ].join('\n'))
-    .setFooter({ text: 'BotDev · tickets automatiques' });
+    .setImage(panelBannerUrl(guild.id, serverName))
+    .setFooter({ text: 'Nexora · Système de tickets' });
   try {
     await user.send({
       embeds: [embed],
@@ -1618,5 +1625,6 @@ module.exports = {
   resolveRole, parseTypes, isStaff, staffForTicket, openTicket, safeEmoji,
   startTypesWizard, handleTypesWizardInteraction,
   handleTicketDeleteAsk, ticketMetaFor, ticketWelcomeEmbed, typeOptionDescription, normalizeTypes,
+  sendTranscriptDm,
   __testPanelBannerUrl: panelBannerUrl,
 };
