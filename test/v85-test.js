@@ -139,31 +139,49 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   check('notes : doublon détecté', store.ticketRatings.has(BOT, G, 5) === true && store.ticketRatings.has(BOT, G, 99) === false);
   check('notes : note hors limites bornée à 5', store.ticketRatings.add(BOT, G, { number: 7, opener_id: 'u4', rating: 9 }) && store.ticketRatings.stats(BOT, G).count === 3);
 
-  // ---------- 9. Fermeture par le créateur : réservée à l'ouvreur ----------
+  // ---------- 9. Boutons réservés au STAFF (le créateur n'a plus de bouton) ----------
+  store.tickets.set(BOT, G, { support_role: 'Staff', types: '[]', require_reason: 0 });
   store.openTickets.add(BOT, G, { channel_id: 'CT4', number: 3, opener_id: '1336752601802473482', opener_tag: 'Deux#0002', type_label: '' });
   const channelMsgs = [];
   const replies = [];
-  const mkInteraction = (userId) => ({
+  const mkBtnInteraction = (userId, hasStaffRole, cid = 'bd-tmenu:1:close') => ({
     user: { id: userId, tag: userId + '#0001' },
-    guild: { id: G, name: 'Serveur Test' },
+    member: {
+      user: { id: userId, tag: userId + '#0001' },
+      roles: { cache: { has: () => hasStaffRole } },
+      permissions: { has: () => false },
+    },
+    guild: { id: G, name: 'Serveur Test', ownerId: 'OWNER1', roles: { cache: { get: () => null, find: () => ({ id: 'R2', name: 'Staff' }) } } },
     channel: {
       id: 'CT4', topic: 'Ticket #3 de X | 1336752601802473482 |',
       permissionOverwrites: { edit: async () => {} },
       send: async (p) => { channelMsgs.push(p.content); return {}; },
     },
+    customId: cid,
+    isButton: () => true, isStringSelectMenu: () => false, isChatInputCommand: () => false,
+    isChannelSelectMenu: () => false, isRoleSelectMenu: () => false, isModalSubmit: () => false,
     reply: async (p) => { replies.push(p); },
+    deferReply: async () => { replies.push({ content: 'DEFERRED' }); },
+    editReply: async (p) => { replies.push(p); },
+    deferUpdate: async () => {},
+    isRepliable: () => true,
+    update: async () => {},
+    showModal: async () => {},
   });
-  // Un tiers essaie de fermer → refus
-  const intruder = mkInteraction('u99');
-  await panels.handleOpenerClose(BOT, intruder);
-  check('fermeture créateur : un tiers est refusé', replies.some((r) => r.content.includes('Seul le créateur')));
-  check('fermeture créateur : le ticket reste ouvert', !store.openTickets.getByChannel('CT4').closed_at);
-  // L'ouvreur ferme → OK
-  const opener = mkInteraction('1336752601802473482');
-  await panels.handleOpenerClose(BOT, opener);
-  check('fermeture créateur : l\'ouvreur peut fermer', !!store.openTickets.getByChannel('CT4').closed_at);
-  check('fermeture créateur : message dans le salon', channelMsgs.some((c) => c.includes('créateur')));
-  check('fermeture créateur : confirmation envoyée', replies.some((r) => r.content.includes('fermé')));
+  // Un membre NON-staff (même le créateur) clique sur « Fermer » → refus net
+  const nonStaff = mkBtnInteraction('1336752601802473482', false);
+  await panels.dispatchPanels(BOT, nonStaff);
+  check('staff : un non-staff est refusé sur les boutons', replies.some((r) => r && r.content && r.content.includes('staff')));
+  check('staff : le ticket reste ouvert après le refus', !store.openTickets.getByChannel('CT4').closed_at);
+  // L'ancien bouton du créateur (bd-tclose) n'existe plus : il ne fait rien
+  const oldBtn = mkBtnInteraction('1336752601802473482', false, 'bd-tclose:1');
+  await panels.dispatchPanels(BOT, oldBtn);
+  check('staff : l\'ancien bouton créateur (bd-tclose) n\'existe plus', !store.openTickets.getByChannel('CT4').closed_at);
+  // Un STAFF clique sur « Fermer » → accusé de réception immédiat (defer) puis confirmation
+  const staffBtn = mkBtnInteraction('STAFF2', true);
+  await panels.dispatchPanels(BOT, staffBtn);
+  check('anti-échec : accusé de réception immédiat (defer)', replies.some((r) => r && r.content === 'DEFERRED'));
+  check('staff : fermeture confirmée après le travail', !!store.openTickets.getByChannel('CT4').closed_at);
   store.openTickets.remove('CT4');
 
   // ---------- 10. Traductions ----------

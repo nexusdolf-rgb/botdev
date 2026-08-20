@@ -178,7 +178,6 @@ async function dispatchPanels(botId, interaction) {
       if (cid === `bd-tmenu:${botId}:delete`) { await handleTicketDeleteAsk(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:delconfirm`) { await handleTicketDeleteConfirm(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:delcancel`) { await handleTicketDeleteCancel(interaction); return true; }
-      if (cid === `bd-tclose:${botId}`) { await handleOpenerClose(botId, interaction); return true; }
       return false;
     }
 
@@ -430,6 +429,43 @@ async function staffDeny(interaction) {
   return interaction.reply({ content: '🔒 Seul le **staff** de ce type de ticket peut utiliser ce bouton.', ephemeral: true });
 }
 
+// 🚨 Anti « échec d'interaction » : accuse réception IMMÉDIATEMENT (avant tout
+// travail réseau/base). Discord coupe l'interaction après 3 secondes — sur
+// Render (lent), attendre la fin du travail faisait expirer la fenêtre.
+async function safeDefer(interaction) {
+  try {
+    if (!interaction.deferred && !interaction.replied && typeof interaction.deferReply === 'function') {
+      await interaction.deferReply({ ephemeral: true });
+    }
+  } catch { /* déjà répondu ou différé : on continue */ }
+}
+
+// Variante pour les boutons SUR un message : diffère la mise à jour du message.
+async function safeDeferUpdate(interaction) {
+  try {
+    if (!interaction.deferred && !interaction.replied && typeof interaction.deferUpdate === 'function') {
+      await interaction.deferUpdate();
+    }
+  } catch { /* on continue */ }
+}
+
+// Fiche en base manquante (ticket ouvert AVANT la v85) → on la crée à la volée.
+function ensureTicketRow(botId, guild, channel) {
+  try {
+    if (!channel || !channel.id) return;
+    if (store.openTickets.getByChannel(channel.id)) return;
+    const meta = ticketMetaFor(channel);
+    const number = store.ticketCounters.next(botId, guild.id);
+    store.openTickets.add(botId, guild.id, {
+      channel_id: channel.id,
+      number,
+      opener_id: meta.openerId || '',
+      opener_tag: '',
+      type_label: meta.typeLabel || '',
+    });
+  } catch { /* jamais bloquant */ }
+}
+
 // ---------- Création du ticket ----------
 // Réponse d'interaction incassable : différée → editReply, sinon reply, sinon followUp.
 // Plus JAMAIS de « Cette interaction a échoué » ni de confirmation invisible.
@@ -604,20 +640,18 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
   const prevCount = store.transcripts.countByOpener(botId, guild.id, member.id);
   bumpTicketStats(guild.id, 1, 1);
 
-  // Boutons du staff + bouton du créateur : trois rangées propres
+  // Boutons (staff uniquement) : deux rangées propres et ordonnées
+  // Rangée 1 — suivi du ticket : prise en charge → attente → fermer → réouvrir
   const row1 = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:claim`).setLabel('🖐️ Prendre en charge').setStyle(ButtonStyle.Success),
     new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:hold`).setLabel('⏸ En attente').setStyle(ButtonStyle.Primary),
     new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:close`).setLabel('🔒 Fermer').setStyle(ButtonStyle.Danger),
     new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:reopen`).setLabel('🔓 Réouvrir').setStyle(ButtonStyle.Secondary),
   );
+  // Rangée 2 — gestion du salon : ajouter un membre → supprimer définitivement
   const row2 = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:addmember`).setLabel('➕ Ajouter un membre').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:delete`).setLabel('🗑 Supprimer').setStyle(ButtonStyle.Secondary),
-  );
-  // Rangée du CRÉATEUR : il peut fermer son propre ticket (le staff peut réouvrir)
-  const row3 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`bd-tclose:${botId}`).setLabel('🔒 Fermer le ticket').setStyle(ButtonStyle.Danger),
   );
 
   // Vérification MP dès l'ouverture : si les MP du membre sont fermés,
@@ -648,7 +682,7 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
     await identity.sendAsProfile(interaction.client, botId, guild, channel, {
       content: i18n.t(lang, 'ticket_first_line', { type: typeTitle, member: `${member}` }) + (staffMention ? ' · ' + staffMention : ''),
       embeds: [welcome],
-      components: [row1, row2, row3],
+      components: [row1, row2],
     }).catch(() => {});
 
     await logging.log(botId, guild, {
@@ -943,8 +977,10 @@ async function sendTranscriptDm(clientOrInteraction, guild, channelName, { text,
 // 📄 La transcription n'est envoyée qu'à la SUPPRESSION (le point final).
 async function handleTicketClose(botId, interaction) {
   if (!isStaff(botId, interaction)) return staffDeny(interaction);
+  await safeDefer(interaction);
   const channel = interaction.channel;
   const guild = interaction.guild;
+  ensureTicketRow(botId, guild, channel);
   const { openerId } = ticketMetaFor(channel);
   if (openerId) {
     await channel.permissionOverwrites.edit(openerId, { ViewChannel: false, SendMessages: false }).catch(() => {});
@@ -960,7 +996,7 @@ async function handleTicketClose(botId, interaction) {
       { name: '📄 Transcription', value: 'envoyée à la suppression', inline: true },
     ],
   });
-  await interaction.reply({
+  await ackReply(interaction, {
     content: '🔒 Ticket fermé. 📄 La **transcription** sera envoyée en MP au créateur au moment de la **suppression** (`/ticket delete` ou bouton 🗑).',
     ephemeral: true,
   });
@@ -968,7 +1004,9 @@ async function handleTicketClose(botId, interaction) {
 
 async function handleTicketReopen(botId, interaction) {
   if (!isStaff(botId, interaction)) return staffDeny(interaction);
+  await safeDefer(interaction);
   const channel = interaction.channel;
+  ensureTicketRow(botId, interaction.guild, channel);
   store.closedTickets.remove(channel.id);
   store.openTickets.update(channel.id, { closed_at: '' });
   bumpTicketStats(interaction.guild.id, 0, 1);
@@ -976,20 +1014,22 @@ async function handleTicketReopen(botId, interaction) {
   if (openerId) {
     await channel.permissionOverwrites.edit(openerId, { ViewChannel: true, SendMessages: true }).catch(() => {});
   }
-  await interaction.reply({ content: '🔓 Ticket réouvert !', ephemeral: true });
+  await ackReply(interaction, { content: '🔓 Ticket réouvert !', ephemeral: true });
 }
 
 // 🖐️ Prendre en charge : le staff s'attribue le ticket (visible dans le salon
 // et dans la transcription) — évite que deux modos répondent en même temps.
 async function handleTicketClaim(botId, interaction) {
   if (!isStaff(botId, interaction)) return staffDeny(interaction);
+  await safeDefer(interaction);
   const channel = interaction.channel;
   const guild = interaction.guild;
   const lang = i18n.langForGuild(guild.id);
+  ensureTicketRow(botId, guild, channel);
   const row = store.openTickets.getByChannel(channel.id);
-  if (!row) return interaction.reply({ content: '❌ Ticket introuvable (fiche absente).', ephemeral: true });
+  if (!row) return ackReply(interaction, { content: '❌ Ticket introuvable.', ephemeral: true });
   if (row.claimed_by && row.claimed_by !== interaction.user.id) {
-    return interaction.reply({ content: `🖐️ Ce ticket est déjà pris en charge par **${row.claimed_tag || 'un membre du staff'}**.`, ephemeral: true });
+    return ackReply(interaction, { content: `🖐️ Ce ticket est déjà pris en charge par **${row.claimed_tag || 'un membre du staff'}**.`, ephemeral: true });
   }
   store.openTickets.update(channel.id, {
     claimed_by: interaction.user.id,
@@ -1006,7 +1046,7 @@ async function handleTicketClaim(botId, interaction) {
       ],
     });
   } catch {}
-  await interaction.reply({ content: i18n.t(lang, 'ticket_claim_ok'), ephemeral: true });
+  await ackReply(interaction, { content: i18n.t(lang, 'ticket_claim_ok'), ephemeral: true });
 }
 
 // ➕ Ajouter un membre : le staff invite une autre personne dans le salon privé
@@ -1054,31 +1094,6 @@ async function submitAddMember(botId, interaction) {
 }
 
 // 🔒 Fermeture par le CRÉATEUR (rangée dédiée, cliquable uniquement par lui)
-async function handleOpenerClose(botId, interaction) {
-  const channel = interaction.channel;
-  const guild = interaction.guild;
-  const meta = ticketMetaFor(channel);
-  if (!meta.openerId || meta.openerId !== interaction.user.id) {
-    return interaction.reply({ content: '🔒 Seul le créateur du ticket peut utiliser ce bouton (le staff a ses propres boutons ci-dessus).', ephemeral: true });
-  }
-  const lang = i18n.langForGuild(guild.id);
-  await channel.permissionOverwrites.edit(meta.openerId, { ViewChannel: false, SendMessages: false }).catch(() => {});
-  store.closedTickets.add(channel.id, botId, guild.id);
-  store.openTickets.update(channel.id, { closed_at: new Date().toISOString() });
-  bumpTicketStats(guild.id, 0, -1);
-  await channel.send({ content: i18n.t(lang, 'ticket_close_opener') }).catch(() => {});
-  try {
-    await logging.log(botId, guild, {
-      title: '🔒 Ticket fermé par le créateur', color: '#ED4245',
-      fields: [
-        { name: '📨 Salon', value: `<#${channel.id}>`, inline: true },
-        { name: '👤 Créateur', value: `${interaction.user.tag}`, inline: true },
-      ],
-    });
-  } catch {}
-  await interaction.reply({ content: i18n.t(lang, 'ticket_close_opener_reply'), ephemeral: true });
-}
-
 // ⭐ Note du support : boutons 1-5 étoiles envoyés en MP après la clôture
 async function sendRatingDm(client, guild, openerId, number, lang) {
   if (!openerId || !number) return false;
@@ -1126,12 +1141,14 @@ async function handleRating(botId, interaction) {
 
 async function handleTicketHold(botId, interaction) {
   if (!isStaff(botId, interaction)) return staffDeny(interaction);
+  await safeDefer(interaction);
   const channel = interaction.channel;
+  ensureTicketRow(botId, interaction.guild, channel);
   const { openerId } = ticketMetaFor(channel);
   if (openerId) {
     await channel.permissionOverwrites.edit(openerId, { ViewChannel: true, SendMessages: false }).catch(() => {});
   }
-  await interaction.reply({ content: '⏸ Ticket mis en attente (le créateur ne peut plus écrire).', ephemeral: true });
+  await ackReply(interaction, { content: '⏸ Ticket mis en attente (le créateur ne peut plus écrire).', ephemeral: true });
 }
 
 async function handleTicketDeleteAsk(botId, interaction) {
@@ -1191,6 +1208,8 @@ async function submitDeleteReason(botId, interaction) {
 
 async function handleTicketDeleteConfirm(botId, interaction) {
   if (!isStaff(botId, interaction)) return staffDeny(interaction);
+  // 🚨 Accusé de réception immédiat : la transcription prend du temps
+  await safeDeferUpdate(interaction);
   const channel = interaction.channel;
   const guild = interaction.guild;
   store.closedTickets.add(channel.id, botId, guild.id);
@@ -1203,9 +1222,9 @@ async function handleTicketDeleteConfirm(botId, interaction) {
   const ratingLang = i18n.langForGuild(guild.id);
   await sendRatingDm(interaction.client, guild, t.openerId, ticketRow ? ticketRow.number : 0, ratingLang).catch(() => {});
   store.openTickets.remove(channel.id);
-  await interaction.update({
+  await ackReply(interaction, {
     content: '🗑 Ticket supprimé.' + (dmOk ? ' 📄 Transcription envoyée en MP.' : ' ⚠️ MP impossible pour le créateur.'),
-    embeds: [], components: [],
+    ephemeral: false,
   }).catch(() => {});
   setTimeout(() => { channel.delete().catch(() => {}); }, 2500);
 }
@@ -1946,6 +1965,6 @@ module.exports = {
   resolveRole, parseTypes, isStaff, staffForTicket, openTicket, safeEmoji,
   startTypesWizard, handleTypesWizardInteraction,
   handleTicketDeleteAsk, ticketMetaFor, ticketWelcomeEmbed, typeOptionDescription, normalizeTypes,
-  sendTranscriptDm, sweepInactiveTickets, buildTranscriptFromChannel, sendRatingDm, handleOpenerClose,
+  sendTranscriptDm, sweepInactiveTickets, buildTranscriptFromChannel, sendRatingDm,
   __testPanelBannerUrl: panelBannerUrl,
 };

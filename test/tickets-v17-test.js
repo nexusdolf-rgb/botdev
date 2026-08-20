@@ -89,6 +89,10 @@ const panels = require('../server/discord/panels');
     isChannelSelectMenu: () => false, isRoleSelectMenu: () => false, isModalSubmit: () => false,
     reply: async (p) => { lastReply = p; },
     update: async (p) => { lastReply = p; },
+    deferReply: async () => { lastReply = null; },
+    deferUpdate: async () => { lastReply = null; },
+    editReply: async (p) => { lastReply = p; },
+    isRepliable: () => true,
     showModal: async (m) => { shownModal = m; },
     client: { users: { fetch: async (id) => ({ id, send: async () => {} }) } },
   });
