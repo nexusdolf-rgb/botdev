@@ -16,7 +16,7 @@ const MODULES = {
   },
   utility: {
     label: 'Utilitaires', emoji: '🔧', description: 'Ping, avatar, infos serveur et utilisateur…',
-    commands: ['ping', 'avatar', 'userinfo', 'serverinfo', 'botinfo', 'help', 'invite'],
+    commands: ['ping', 'avatar', 'userinfo', 'serverinfo', 'botinfo', 'help', 'invite', 'lang'],
   },
   fun: {
     label: 'Fun', emoji: '🎉', description: '8ball, meme, pile ou face, dés, say…',
@@ -62,6 +62,7 @@ const CMD_DEFS = {
   rank: { label: 'rank', desc: 'Ton niveau, ton XP et ton rang' },
   levels: { label: 'levels', desc: 'Le classement des niveaux du serveur' },
   invite: { label: 'invite', desc: 'Le lien pour inviter le bot' },
+  lang: { label: 'lang', desc: 'Choisis la langue du bot sur ce serveur (fr/en)', perms: [PermissionsBitField.Flags.ManageGuild] },
   giveaway: { label: 'giveaway', desc: 'Lancer un giveaway avec tirage automatique', perms: [PermissionsBitField.Flags.ManageGuild] },
   suggest: { label: 'suggest', desc: 'Proposer une suggestion (votes 👍👎)' },
   suggestions: { label: 'suggestions', desc: 'Configurer le salon des suggestions', perms: [PermissionsBitField.Flags.ManageGuild] },
@@ -89,6 +90,12 @@ function buildSlashPayloads(botId) {
   for (const name of enabledCommandNames(botId)) {
     const def = CMD_DEFS[name];
     const options = [];
+    if (name === 'lang') {
+      options.push({ name: 'langue', description: 'fr = Français · en = English', type: ApplicationCommandOptionType.String, required: true, choices: [
+        { name: '🇫🇷 Français', value: 'fr' },
+        { name: '🇬🇧 English', value: 'en' },
+      ]});
+    }
     if (['avatar', 'userinfo', 'kick', 'ban', 'timeout', 'warn', 'warns', 'balance', 'rank'].includes(name)) {
       options.push({ name: 'utilisateur', description: 'L\'utilisateur ciblé', type: ApplicationCommandOptionType.User, required: ['kick', 'ban', 'timeout', 'warn'].includes(name) });
     }
@@ -513,6 +520,19 @@ async function execute(botId, entry, cmd, src) {
       await reply(`🔗 **Invite-moi sur ton serveur !**\nhttps://discord.com/oauth2/authorize?client_id=${record.client_id}&permissions=8&scope=bot%20applications.commands`);
       break;
     }
+    case 'lang': {
+      if (!guild) return reply('🌍 Cette commande se configure sur un serveur.');
+      const wanted = isInt ? (src.interaction.options.getString('langue') || '') : (src.args || '').trim();
+      if (!['fr', 'en'].includes(wanted)) {
+        return reply('❓ Utilisation : `/lang fr` ou `/lang en`.');
+      }
+      store.guildSettings.set(botId, guild.id, { lang: wanted });
+      const i18n = require('../i18n');
+      await reply(wanted === 'en'
+        ? i18n.t('en', 'lang_set')
+        : i18n.t('fr', 'lang_set'));
+      break;
+    }
     // ===================== Communauté =====================
     case 'shop': {
       const items = store.shop.all(botId, guild.id);
@@ -896,6 +916,7 @@ const HELP_DETAILS = {
   rank: ['📈 Niveaux', 'Ton niveau, ton XP et ton rang sur ce serveur. Gagne de l\'XP en discutant !', '`/rank @membre`', '`/rank` → 📈 Niveau 3 · ✨ 950/1600 XP · 🏆 #2'],
   levels: ['📈 Niveaux', 'Le classement des niveaux du serveur.', '`/levels`'],
   invite: ['🔧 Utilitaire', 'Le lien pour inviter le bot sur un autre serveur.', '`/invite`'],
+  lang: ['🌍 Langue', 'Choisis la langue du bot sur CE serveur : français ou anglais. Tous les messages publics (panneau de tickets, bienvenue, transcriptions…) suivent.', '`/lang fr` · `/lang en`', '`/lang en` → 🌍 Server language set to: English 🇬🇧'],
   shop: ['🛒 Boutique', 'La boutique du serveur : achète des rôles avec tes coins.', '`/shop` (voir) · `buy` est `/buy article`'],
   buy: ['🛒 Boutique', 'Achète un article de la boutique (rôle donné automatiquement).', '`/buy article`', '`/buy vip` → ✅ Tu reçois @VIP pour 500 coins'],
   pay: ['💰 Économie', 'Transfère des coins à un membre.', '`/pay @membre montant`'],

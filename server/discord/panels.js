@@ -267,18 +267,11 @@ function defaultPanelDescription(buttonLabel, hasTypes) {
 //  - « Support | {nom du serveur} » (titre)
 //  - « Bienvenue sur le support officiel de {nom du serveur} »
 //  - Bannière « SUPPORT - {NOM DU SERVEUR} » générée à la volée
-//    (Nexora = nom de repli si le serveur est inconnu).
+//    (Nexora = nom de repli si le serveur est inconnu)
+//  - Textes dans la langue du serveur (/lang fr|en)
 // ============================================================
+const i18n = require('../i18n');
 const PANEL_DEFAULT_NAME = 'Nexora';
-const PANEL_DESC = 'Pour ouvrir un ticket, sélectionnez la catégorie correspondante à votre besoin via le menu ci-dessous et veuillez détailler en quelques lignes votre demande avant l\'ouverture.';
-const PANEL_INFO_TITLE = '__ⓘ Informations importantes :__';
-const PANEL_RULES = [
-  '🔴➡️ Soyez clair et précis dans votre demande.',
-  '🔴➡️ Le manque de respect envers le staff est strictement interdit.',
-  '🔴➡️ Évitez les mentions inutiles.',
-  '🔴➡️ Les tickets inactifs pendant 2 heures seront automatiquement fermés puis supprimés.',
-];
-const PANEL_PATIENCE = '*⏳ Merci de votre patience, un membre du staff prendra votre ticket en charge dès que possible.*';
 
 function panelBannerUrl(guildId, name) {
   const site = store.settings.get('public_url') || 'https://dash-hoxora.onrender.com';
@@ -291,18 +284,21 @@ function panelBannerUrl(guildId, name) {
 
 function buildTicketPanelEmbed(cfg, client, types, serverName = '', guildId = '') {
   const name = String(serverName || '').trim().slice(0, 100) || PANEL_DEFAULT_NAME;
+  // 🌍 Textes dans la langue du serveur
+  const lang = i18n.langForGuild(guildId);
+  const P = i18n.panelTexts(lang);
   // Le message personnalisé (configuré dans le dashboard) reste respecté :
   // s'il existe, il remplace le paragraphe d'explication standard.
   const customMsg = isDefaultMessage(cfg.message) ? '' : String(cfg.message);
-  const paragraph = customMsg || PANEL_DESC;
+  const paragraph = customMsg || P.desc;
 
   const embed = new EmbedBuilder()
     .setColor('#ED4245')
-    .setTitle(`👑 Support | ${name}`)
-    .setDescription(`Bienvenue sur le support officiel de ${name}\n\n${paragraph}`)
+    .setTitle(P.title(name))
+    .setDescription(`${P.welcome(name)}\n\n${paragraph}`)
     .addFields(
-      { name: PANEL_INFO_TITLE, value: PANEL_RULES.join('\n') },
-      { name: '\u200b', value: PANEL_PATIENCE },
+      { name: P.infoTitle, value: P.rules.join('\n') },
+      { name: '\u200b', value: P.patience },
     )
     // 🖼️ Bannière « SUPPORT - {nom du serveur} » : image générée par le site,
     // affichée en bas de l'embed, juste au-dessus du menu déroulant.
@@ -439,17 +435,17 @@ async function ackReply(interaction, payload) {
 // Embed de bienvenue du salon de ticket : textes professionnels,
 // type + description, équipe en charge, déroulement de la prise en charge,
 // et les réponses du questionnaire personnalisé (si le type en a un).
-function ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning = '', answers = []) {
+function ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning = '', answers = [], lang = 'fr') {
   const typeFields = [
-    { name: '🗂️ Type de ticket', value: chosen ? `${chosen.emoji ? chosen.emoji + ' ' : ''}**${chosen.label}**` : '**Ticket simple**', inline: true },
+    { name: i18n.t(lang, 'ticket_type'), value: chosen ? `${chosen.emoji ? chosen.emoji + ' ' : ''}**${chosen.label}**` : '**Ticket simple**', inline: true },
   ];
   if (chosen && chosen.description) {
-    typeFields.push({ name: 'ℹ️ À propos de ce type', value: chosen.description.slice(0, 1024), inline: true });
+    typeFields.push({ name: i18n.t(lang, 'ticket_about'), value: chosen.description.slice(0, 1024), inline: true });
   }
   const fields = [...typeFields];
   if (Array.isArray(answers) && answers.length) {
     fields.push({
-      name: '📝 Réponses au questionnaire',
+      name: i18n.t(lang, 'ticket_answers'),
       value: answers
         .map((a, i) => `**${i + 1}. ${a.q}**\n↳ ${a.a}`)
         .join('\n')
@@ -458,21 +454,21 @@ function ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning = ''
     });
   }
   fields.push(
-    { name: '🛡️ Équipe en charge', value: staffMention || 'le staff du serveur', inline: true },
-    { name: '📝 Votre demande', value: reason ? reason.slice(0, 1024) : '—', inline: false },
-    { name: '📋 Déroulement de la prise en charge', value: [
-      '1️⃣ Décrivez votre demande en détail (textes, captures d\'écran, fichiers).',
-      '2️⃣ Un membre du staff vous répond ici, dans ce salon privé.',
-      '3️⃣ À la fermeture définitive du ticket, la **transcription complète** vous est envoyée en message privé.',
+    { name: i18n.t(lang, 'ticket_team'), value: staffMention || i18n.t(lang, 'ticket_team_default'), inline: true },
+    { name: i18n.t(lang, 'ticket_reason'), value: reason ? reason.slice(0, 1024) : '—', inline: false },
+    { name: i18n.t(lang, 'ticket_steps'), value: [
+      i18n.t(lang, 'ticket_step1'),
+      i18n.t(lang, 'ticket_step2'),
+      i18n.t(lang, 'ticket_step3'),
     ].join('\n') },
-    { name: '🔒 Boutons réservés au staff', value: '**🔒 Fermer** — verrouiller (réouvrable) · **⏸ En attente** — lecture seule · **🔓 Réouvrir** · **🗑 Supprimer** — fermeture définitive avec transcription en MP.' + dmWarning },
+    { name: i18n.t(lang, 'ticket_buttons'), value: i18n.t(lang, 'ticket_buttons_desc') + dmWarning },
   );
   const avatar = member.user.displayAvatarURL ? member.user.displayAvatarURL({ dynamic: true }) : '';
   const welcome = new EmbedBuilder()
     .setColor('#57F287')
     .setAuthor(avatar ? { name: `Ticket de ${member.user.username}`, iconURL: avatar } : { name: `Ticket de ${member.user.username}` })
-    .setTitle('🎫 Ticket ouvert — prise en charge en cours')
-    .setDescription(`Bienvenue ${member} ! Votre demande a bien été enregistrée. Un membre de notre équipe vous répondra dans les plus brefs délais.\n\nVous pouvez dès maintenant décrire votre demande en détail : textes, captures d'écran et fichiers sont les bienvenus.`)
+    .setTitle(i18n.t(lang, 'ticket_title'))
+    .setDescription(i18n.t(lang, 'ticket_welcome_desc', { member: `${member}` }))
     .addFields(...fields)
     .setTimestamp();
   const site = store.settings.get('public_url');
@@ -613,14 +609,15 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
 
   // Bienvenue + journaux : ces étapes ne doivent JAMAIS empêcher la confirmation.
   try {
+    const lang = i18n.langForGuild(guild.id);
     const staffMention = supportRoles.length ? supportRoles.map((r) => r.toString()).join(' ') : '';
-    const welcome = ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning, answers);
+    const welcome = ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning, answers, lang);
     const identity = require('./identity');
     // 🎫 La PREMIÈRE LIGNE du salon annonce le type + le créateur : le staff
     // voit d'un coup d'œil de quel type de ticket il s'agit et qui l'a ouvert.
     const typeTitle = chosen ? `${chosen.emoji ? chosen.emoji + ' ' : ''}**${chosen.label}**` : '**Ticket**';
     await identity.sendAsProfile(interaction.client, botId, guild, channel, {
-      content: `🎫 ${typeTitle} — ticket de ${member}${staffMention ? ' · ' + staffMention : ''}`,
+      content: i18n.t(lang, 'ticket_first_line', { type: typeTitle, member: `${member}` }) + (staffMention ? ' · ' + staffMention : ''),
       embeds: [welcome],
       components: [row1, row2],
     }).catch(() => {});
@@ -644,8 +641,9 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
   //  - + MP automatique (envoyé plus haut)
   // Aucun message public n'est envoyé sous le panneau (le salon de ticket
   // est privé, son lien ne doit pas être exposé à tout le serveur).
+  const lang = i18n.langForGuild(guild.id);
   const typeConfirm = chosen ? `${chosen.emoji ? chosen.emoji + ' ' : ''}**${chosen.label}**` : '';
-  const confirmMsg = `✅ Ton ticket ${typeConfirm} a été créé : **${channel}** — clique dessus pour l'ouvrir !`;
+  const confirmMsg = i18n.t(lang, 'ticket_confirm', { type: typeConfirm, channel: `${channel}` });
   await ackReply(interaction, { content: confirmMsg, ephemeral: true });
 }
 
@@ -863,23 +861,19 @@ async function sendTranscriptDm(interaction, guild, channelName, { text, url, op
   // avec l'URL toujours à jour (mise à jour automatique au démarrage).
   // Repli : copie locale de la bannière servie par le site.
   const serverName = String(guild.name || 'Nexora').slice(0, 100);
+  // 🌍 Transcription dans la langue du serveur
+  const lang = i18n.langForGuild(guild.id);
   const siteUrl = store.settings.get('public_url') || 'https://dash-hoxora.onrender.com';
   const profileBanner = store.settings.get('profile_banner_url') || `${siteUrl}/icons/nexora-profile-banner.png`;
+  const desc = url
+    ? i18n.t(lang, 'transcript_desc', { server: serverName, url })
+    : i18n.t(lang, 'transcript_desc_file', { server: serverName });
   const embed = new EmbedBuilder()
     .setColor('#ED4245')
-    .setTitle('🎫 Ton ticket a été clôturé')
-    .setDescription([
-      `Merci d'avoir contacté l'équipe de **${serverName}** 👋`,
-      '',
-      'Ton ticket a été **traité et clôturé** par notre équipe.',
-      'Tu trouveras ci-dessous l\'intégralité de la conversation :',
-      '',
-      url ? `📄 **Consulter la transcription** : [clique ici](${url})` : '📄 **Transcription** : fichier joint ci-dessous.',
-      '',
-      '💬 *Besoin d\'aide à nouveau ? Rouvre simplement un ticket depuis le panneau du serveur.*',
-    ].join('\n'))
+    .setTitle(i18n.t(lang, 'transcript_title'))
+    .setDescription(desc)
     .setImage(profileBanner)
-    .setFooter({ text: 'Nexora · Système de tickets' });
+    .setFooter({ text: 'Nexora · ' + i18n.t(lang, 'footer_tickets') });
   try {
     await user.send({
       embeds: [embed],

@@ -95,12 +95,22 @@ function friendlyError(err) {
 //    continue en arrière-plan (plus jamais d'action « calée » sans réponse)
 //  - aucun gestionnaire (commande pas encore synchronisée…) → réponse d'attente
 async function guardInteraction(botId, entry, i, timeoutMs = 15000) {
+  // 🌍 Messages dans la langue du serveur
+  const lang = (() => {
+    try {
+      const i18n = require('../i18n');
+      return i18n.langForGuild(i.guild ? i.guild.id : null);
+    } catch { return 'fr'; }
+  })();
+  const t = (key) => {
+    try { return require('../i18n').t(lang, key); } catch { return key; }
+  };
   // 📉 Mode dégradé CRITIQUE : Discord est saturé → on répond immédiatement
   // « très occupé » au lieu de laisser l'interaction expirer en silence.
   try {
     const resilience = require('../resilience');
     if (resilience.shouldDeferReplies() && i.isChatInputCommand && i.isChatInputCommand()) {
-      await i.reply({ content: '😅 Nexora est très sollicité en ce moment — réessaie dans une minute !', ephemeral: true }).catch(() => {});
+      await i.reply({ content: t('guard_busy'), ephemeral: true }).catch(() => {});
       return;
     }
   } catch {}
@@ -120,7 +130,7 @@ async function guardInteraction(botId, entry, i, timeoutMs = 15000) {
       // « L'application ne répond pas » de Discord.
       if (i.isChatInputCommand() && !i.replied && !i.deferred) {
         await i.reply({
-          content: '⏳ Cette commande n\'est pas encore prête sur ce serveur — la synchronisation se fait automatiquement (retente dans 5 à 10 minutes).',
+          content: t('guard_not_ready'),
           ephemeral: true,
         }).catch(() => {});
       }
@@ -134,7 +144,7 @@ async function guardInteraction(botId, entry, i, timeoutMs = 15000) {
       } catch {}
       try {
         if (typeof i.isRepliable === 'function' && i.isRepliable() && !i.replied && !i.deferred) {
-          await i.reply({ content: '⚠️ Une erreur est survenue en traitant cette action — elle a été enregistrée, réessaie dans un instant.', ephemeral: true });
+          await i.reply({ content: t('guard_error'), ephemeral: true });
         }
       } catch {}
     }
@@ -147,7 +157,7 @@ async function guardInteraction(botId, entry, i, timeoutMs = 15000) {
     console.error(`[BotDev] ⏱️ Interaction trop lente (bot ${botId}, id=${id})`);
     try {
       if (typeof i.isRepliable === 'function' && i.isRepliable() && !i.replied && !i.deferred) {
-        await i.reply({ content: '⏳ Cette action prend trop de temps… réessaie dans un instant.', ephemeral: true }).catch(() => {});
+        await i.reply({ content: t('guard_slow'), ephemeral: true }).catch(() => {});
       }
     } catch {}
   }
