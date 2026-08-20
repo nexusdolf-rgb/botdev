@@ -974,6 +974,11 @@ Dashboard.renderers.moderation = async (content, data) => {
     </div>
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--d-dim);margin-top:10px"><input type="checkbox" id="am-staff" ${s.am_ignore_staff !== 0 ? 'checked' : ''} /> Ignorer les admins et modérateurs</label>
     <div class="desc" style="margin:8px 0 0">💡 Pour tester : décoche « Ignorer les admins » — sinon tes propres messages ne sont jamais filtrés (protection par défaut).</div>
+    <label class="dash-label" style="margin-top:12px">Message d'avertissement en MP (vide = standard)</label>
+    <input class="dash-input" id="am-warn" value="${App.escapeHtml(s.am_warn_text || '')}" placeholder="Vide = message standard traduit FR/EN. Variables : {reason} et {server}." />
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+      <div style="flex:1;min-width:110px"><label class="dash-label">Timeout spam (minutes)</label><input class="dash-input" id="am-timeout" type="number" min="1" max="1440" value="${s.am_timeout_min ?? 5}" /></div>
+    </div>
     <button class="dash-btn dash-btn-primary" style="margin-top:12px" id="am-save">💾 Enregistrer</button>`;
   c.querySelector('#am-save').onclick = async () => {
     try {
@@ -984,11 +989,80 @@ Dashboard.renderers.moderation = async (content, data) => {
         mentions: parseInt(c.querySelector('#am-men').value, 10) || 0,
         spam: parseInt(c.querySelector('#am-spam').value, 10) || 0,
         ignore_staff: c.querySelector('#am-staff').checked,
+        warn_text: c.querySelector('#am-warn').value,
+        timeout_min: parseInt(c.querySelector('#am-timeout').value, 10) || 5,
         blacklist: blacklistData.map((w) => w.word),
       }});
       App.toast('Auto-modération enregistrée !');
     } catch (e) { App.toast(e.message, 'error'); }
   };
+
+  // 🛡️ Permissions réelles du bot sur ce serveur
+  const cPerm = Dashboard.card(root, '🛡️ Permissions du bot sur ce serveur', 'Ce que Nexora peut réellement faire — vérifié en direct auprès de Discord.');
+  const permBox = App.el(`<div class="desc">Vérification en cours…</div>`);
+  cPerm.appendChild(permBox);
+  (async () => {
+    try {
+      const p = await App.api(`/bots/${bot.id}/guilds/${guildId}/permissions`);
+      if (!p.online) { permBox.innerHTML = `<div class="desc">Bot hors ligne — les permissions seront vérifiées à son retour.</div>`; return; }
+      if (!p.perms) { permBox.innerHTML = `<div class="desc">Serveur introuvable pour le bot.</div>`; return; }
+      const items = [
+        ['manageMessages', '🗑 Supprimer les messages', 'l\'auto-mod peut effacer les messages'],
+        ['moderateMembers', '⏱ Mettre en timeout', 'l\'anti-spam peut punir'],
+        ['manageChannels', '⚙️ Gérer les salons', 'tickets et salons vocaux temporaires'],
+        ['kickMembers', '👢 Expulser des membres', 'sanctions'],
+        ['banMembers', '🔨 Bannir des membres', 'sanctions'],
+        ['administrator', '👑 Administrateur', 'toutes les permissions'],
+      ];
+      permBox.innerHTML = items.map(([k, label, desc]) => `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #222434">
+          <span style="font-size:16px">${p.perms[k] ? '✅' : '❌'}</span>
+          <div style="flex:1;min-width:0"><b style="font-size:13.5px">${label}</b><div class="m-meta">${desc}</div></div>
+          ${p.perms[k] ? '<span class="dash-badge ok">OK</span>' : '<span class="dash-badge bad">Manquante</span>'}
+        </div>`).join('');
+      if (!p.perms.manageMessages && !p.perms.administrator) {
+        permBox.insertAdjacentHTML('beforeend', `<div class="desc" style="margin:10px 0 0;color:var(--d-yellow)">⚠️ Sans « Supprimer les messages », l'auto-mod ne peut pas effacer les messages : réinvite le bot avec les permissions demandées.</div>`);
+      }
+    } catch (e) { permBox.innerHTML = `<div class="desc">Vérification impossible : ${App.escapeHtml(e.message)}</div>`; }
+  })();
+
+  // 🧪 Test réel de l'auto-mod
+  const textChannelsAm = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
+  const cTest = Dashboard.card(root, '🧪 Tester l\'auto-mod', 'Envoie un vrai message piégé dans un salon : le bot doit le supprimer. Le résultat s\'affiche ici.');
+  cTest.innerHTML += `
+    <label class="dash-label">Salon du test</label>
+    <select class="dash-select" id="am-test-ch">${textChannelsAm.map((ch) => `<option value="${ch.id}">💬 #${App.escapeHtml(ch.name)}</option>`).join('')}</select>
+    <label class="dash-label">Type de piège</label>
+    <select class="dash-select" id="am-test-type">
+      <option value="link">🔗 Lien interdit</option>
+      <option value="caps">🔠 MAJUSCULES</option>
+      <option value="mentions">📣 Mentions en trop</option>
+      <option value="word">🔇 Mot interdit</option>
+      <option value="spam">💥 Rafale (spam)</option>
+    </select>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="dash-btn dash-btn-primary" id="am-test-go" style="flex:1">🧪 Lancer le test</button>
+    </div>
+    <div id="am-test-result" style="margin-top:12px"></div>`;
+  cTest.querySelector('#am-test-go').onclick = async () => {
+    const resBox = cTest.querySelector('#am-test-result');
+    const go = cTest.querySelector('#am-test-go');
+    resBox.innerHTML = `<div class="desc">🧪 Test en cours… regarde le salon <#${cTest.querySelector('#am-test-ch').value}> !</div>`;
+    go.disabled = true;
+    try {
+      const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/automod/test`, { method: 'POST', body: {
+        channel_id: cTest.querySelector('#am-test-ch').value,
+        type: cTest.querySelector('#am-test-type').value,
+      }});
+      if (r.hint === 'mentions_off') resBox.innerHTML = `<div class="desc">ℹ️ La limite de mentions est à 0 (illimité) — rien à tester pour ce filtre.</div>`;
+      else if (r.hint === 'no_words') resBox.innerHTML = `<div class="desc">ℹ️ Ajoute d'abord un mot dans la liste noire, puis relance le test.</div>`;
+      else if (r.acted && r.deleted) resBox.innerHTML = `<div style="padding:12px;border:1px solid rgba(59,165,93,.4);border-radius:10px;background:rgba(59,165,93,.08)">✅ <b>L'auto-mod fonctionne !</b> Le message a été supprimé (raison : ${App.escapeHtml(r.reason || '—')}).</div>`;
+      else if (r.acted) resBox.innerHTML = `<div style="padding:12px;border:1px solid rgba(254,231,92,.4);border-radius:10px;background:rgba(254,231,92,.08)">⚠️ <b>Détecté mais pas supprimé.</b> Vérifie la carte « Permissions du bot » ci-dessus : il lui faut « Supprimer les messages ».</div>`;
+      else resBox.innerHTML = `<div style="padding:12px;border:1px solid rgba(237,66,69,.4);border-radius:10px;background:rgba(237,66,69,.08)">❌ <b>Le bot n'a pas réagi.</b> Vérifie que l'auto-mod est activé, que le filtre testé est coché, et que le salon du test n'est pas exclu.</div>`;
+    } catch (e) { resBox.innerHTML = `<div style="padding:12px;border:1px solid rgba(237,66,69,.4);border-radius:10px;background:rgba(237,66,69,.08)">❌ ${App.escapeHtml(e.message)}</div>`; }
+    go.disabled = false;
+  };
+
   const c2 = Dashboard.card(root, '🔇 Liste noire', 'Les messages contenant ces mots sont supprimés automatiquement.');
   c2.appendChild(App.el(`<div id="bl-list"></div>`));
   c2.appendChild(App.el(`<button class="dash-btn dash-btn-sm" id="bl-add" style="margin-top:8px">＋ Ajouter un mot</button>`));
@@ -1422,6 +1496,25 @@ Dashboard.renderers.logs = async (content, data) => {
       App.toast('Journaux enregistrés !');
     } catch (e) { App.toast(e.message, 'error'); }
   };
+
+  // 🛡️ Historique des actions d'auto-mod (visible même sans salon #logs)
+  const hc = Dashboard.card(root, '🛡️ Auto-modération — dernières actions', 'Les 20 dernières suppressions automatiques sur ce serveur.');
+  const hList = App.el(`<div class="desc">Chargement…</div>`);
+  hc.appendChild(hList);
+  (async () => {
+    try {
+      const { logs } = await App.api(`/bots/${bot.id}/guilds/${guildId}/automod/logs`);
+      if (!logs.length) { hList.innerHTML = `<div class="desc">Aucune action pour l'instant. Les suppressions de l'auto-mod apparaîtront ici.</div>`; return; }
+      hList.innerHTML = logs.slice(0, 20).map((l) => `
+        <div style="display:flex;align-items:center;gap:10px;padding:7px 2px;border-bottom:1px solid #222434">
+          <span style="font-size:15px">🛡️</span>
+          <div style="flex:1;min-width:0">
+            <b style="font-size:13px">${App.escapeHtml(l.user_tag || 'membre inconnu')}</b>
+            <div class="m-meta">${App.escapeHtml(l.reason)} · ${App.escapeHtml(String(l.created_at || '').replace('T', ' '))}</div>
+          </div>
+        </div>`).join('');
+    } catch { hList.innerHTML = `<div class="desc">Historique indisponible pour le moment.</div>`; }
+  })();
 };
 
 // ---------- Réglages serveur ----------

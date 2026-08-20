@@ -1,7 +1,7 @@
 // ============================================================
 // BotDev - Gestionnaire de bots Discord (un client par bot)
 // ============================================================
-const { Client, GatewayIntentBits, Partials } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, PermissionsBitField } = require('discord.js');
 const store = require('../db');
 
 const INTENTS = [
@@ -22,6 +22,30 @@ function getClient(botId) {
 function isOnline(botId) {
   const e = clients.get(botId);
   return !!(e && e.client.isReady());
+}
+
+// Permissions RÉELLES du bot sur un serveur (diagnostic dashboard).
+// Renvoie toujours un objet, même si le bot est hors ligne (perms vides).
+function getGuildPerms(botId, guildId) {
+  const e = clients.get(botId);
+  if (!e || !e.client.isReady()) return { online: false, perms: null };
+  const guild = e.client.guilds.cache.get(String(guildId));
+  if (!guild) return { online: true, perms: null, reason: 'server_not_found' };
+  const me = guild.members && guild.members.me;
+  const has = (flag) => !!(me && me.permissions && me.permissions.has(flag));
+  const F = PermissionsBitField.Flags;
+  return {
+    online: true,
+    perms: {
+      administrator: has(F.Administrator),
+      manageMessages: has(F.ManageMessages),
+      moderateMembers: has(F.ModerateMembers), // timeouts
+      manageChannels: has(F.ManageChannels),
+      kickMembers: has(F.KickMembers),
+      banMembers: has(F.BanMembers),
+      viewChannel: has(F.ViewChannel),
+    },
+  };
 }
 
 // ---------------------- Connexion ----------------------
@@ -429,4 +453,4 @@ function platformStats() {
   return { onlineBots, servers, members };
 }
 
-module.exports = { clients, getClient, isOnline, loginBot, reconnectBot, logoutBot, stopAll, syncSlashCommands, syncGlobalCommands, applyPresence, applyBotAbout, aboutText, publicBotInfo, platformStats, guardInteraction };
+module.exports = { clients, getClient, isOnline, getGuildPerms, loginBot, reconnectBot, logoutBot, stopAll, syncSlashCommands, syncGlobalCommands, applyPresence, applyBotAbout, aboutText, publicBotInfo, platformStats, guardInteraction };

@@ -233,6 +233,20 @@ CREATE TABLE IF NOT EXISTS blacklist_words (
   PRIMARY KEY (bot_id, guild_id, word)
 );
 
+-- Historique des actions d'auto-modération (visible dans le dashboard)
+CREATE TABLE IF NOT EXISTS automod_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  user_id TEXT DEFAULT '',
+  user_tag TEXT DEFAULT '',
+  reason TEXT DEFAULT '',
+  content TEXT DEFAULT '',
+  channel_id TEXT DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_automod_logs_guild ON automod_logs (bot_id, guild_id, id DESC);
+
 CREATE TABLE IF NOT EXISTS closed_tickets (
   channel_id TEXT PRIMARY KEY,
   bot_id INTEGER NOT NULL,
@@ -376,6 +390,8 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_caps INTEGER DEFAULT 1")
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_mentions INTEGER DEFAULT 5"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_spam INTEGER DEFAULT 5"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_ignore_staff INTEGER DEFAULT 1"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_warn_text TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_timeout_min INTEGER DEFAULT 5"); } catch (e) {}
 
 // Hoxera 2.0 : colonnes ajoutées
 try { db.exec("ALTER TABLE tickets ADD COLUMN max_one INTEGER DEFAULT 0"); } catch (e) {}
@@ -521,7 +537,7 @@ const guildSettings = {
   set: (botId, guildId, fields) => {
     const cur = guildSettings.get(botId, guildId) || { prefix: '', warn_limit: 0, warn_action: 'none' };
     const next = { ...cur, ...fields };
-    const cols = ['prefix', 'warn_limit', 'warn_action', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'lang', 'timezone'];
+    const cols = ['prefix', 'warn_limit', 'warn_action', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_warn_text', 'am_timeout_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'lang', 'timezone'];
     const vals = {
       bot_id: botId, guild_id: guildId,
       prefix: String(next.prefix || '').slice(0, 5),
@@ -539,6 +555,8 @@ const guildSettings = {
       am_mentions: Math.max(parseInt(next.am_mentions, 10) || 0, 0),
       am_spam: Math.max(parseInt(next.am_spam, 10) || 0, 0),
       am_ignore_staff: (next.am_ignore_staff === 0 || next.am_ignore_staff === false) ? 0 : 1,
+      am_warn_text: String(next.am_warn_text || '').slice(0, 1000),
+      am_timeout_min: Math.min(Math.max(parseInt(next.am_timeout_min, 10) || 5, 1), 1440),
       log_channel: String(next.log_channel || '').slice(0, 100),
       suggestion_channel: String(next.suggestion_channel || '').slice(0, 100),
       log_events: String(next.log_events || '').slice(0, 1000),
@@ -680,6 +698,18 @@ const blacklist = {
   all: (botId, guildId) => db.prepare('SELECT word FROM blacklist_words WHERE bot_id = ? AND guild_id = ? ORDER BY word').all(botId, guildId).map((r) => r.word),
   add: (botId, guildId, word) => db.prepare('INSERT OR IGNORE INTO blacklist_words (bot_id, guild_id, word) VALUES (?, ?, ?)').run(botId, guildId, String(word).toLowerCase().slice(0, 50)),
   remove: (botId, guildId, word) => db.prepare('DELETE FROM blacklist_words WHERE bot_id = ? AND guild_id = ? AND word = ?').run(botId, guildId, String(word).toLowerCase()),
+};
+
+// ---------------------- Journal d'auto-modération ----------------------
+const automodLogs = {
+  add: (botId, guildId, entry) => db.prepare('INSERT INTO automod_logs (bot_id, guild_id, user_id, user_tag, reason, content, channel_id) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(botId, guildId,
+      String(entry.user_id || '').slice(0, 30),
+      String(entry.user_tag || '').slice(0, 100),
+      String(entry.reason || '').slice(0, 200),
+      String(entry.content || '').slice(0, 500),
+      String(entry.channel_id || '').slice(0, 30)),
+  recent: (botId, guildId, limit = 50) => db.prepare('SELECT * FROM automod_logs WHERE bot_id = ? AND guild_id = ? ORDER BY id DESC LIMIT ?').all(botId, guildId, Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200)),
 };
 
 // ---------------------- Boutique ----------------------
@@ -885,4 +915,4 @@ const voicetemp = {
   remove: (botId, guildId) => db.prepare('DELETE FROM voicetemp WHERE bot_id = ? AND guild_id = ?').run(botId, guildId),
 };
 
-module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, msgStats, joinStats, shopPurchases, applications, voicetemp };
+module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, automodLogs, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, msgStats, joinStats, shopPurchases, applications, voicetemp };

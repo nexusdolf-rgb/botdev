@@ -37,6 +37,8 @@ function purgeOldData(db) {
     report.giveaways = db.prepare(`DELETE FROM giveaways WHERE drawn = 1 AND ends_at < (strftime('%s','now') - 30*86400) * 1000`).run().changes;
     // Rappels expirés oubliés (sécurité : normalement retirés à l'envoi)
     report.reminders = db.prepare(`DELETE FROM reminders WHERE at_ts < (strftime('%s','now') * 1000) - 86400000`).run().changes;
+    // Historique d'auto-modération (30 jours)
+    report.automod_logs = db.prepare(`DELETE FROM automod_logs WHERE created_at < datetime('now', '-30 days')`).run().changes;
   } catch (e) {
     console.error('[Hoxera] Purge :', e.message);
   }

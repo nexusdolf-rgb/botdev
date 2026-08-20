@@ -775,7 +775,7 @@ router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) =>
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
-  const { enabled, links, caps, mentions, spam, ignore_staff, blacklist } = req.body || {};
+  const { enabled, links, caps, mentions, spam, ignore_staff, warn_text, timeout_min, blacklist } = req.body || {};
   store.guildSettings.set(bot.id, guildId, {
     am_enabled: enabled ? 1 : 0,
     am_links: (links === false || links === 0) ? 0 : 1,
@@ -783,6 +783,8 @@ router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) =>
     am_mentions: Math.max(parseInt(mentions, 10) || 0, 0),
     am_spam: Math.max(parseInt(spam, 10) || 0, 0),
     ...(ignore_staff !== undefined ? { am_ignore_staff: ignore_staff ? 1 : 0 } : {}),
+    ...(warn_text !== undefined ? { am_warn_text: String(warn_text).slice(0, 1000) } : {}),
+    ...(timeout_min !== undefined ? { am_timeout_min: Math.min(Math.max(parseInt(timeout_min, 10) || 5, 1), 1440) } : {}),
   });
   if (Array.isArray(blacklist)) {
     const words = blacklist.map((w) => String(w).trim().toLowerCase()).filter((w) => w.length >= 2).slice(0, 100);
@@ -791,6 +793,77 @@ router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) =>
     for (const w of words) store.blacklist.add(bot.id, guildId, w);
   }
   res.json({ ok: true });
+});
+
+// Historique des actions d'auto-modération (visible dans le dashboard)
+router.get('/bots/:id/guilds/:guildId/automod/logs', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  res.json({ logs: store.automodLogs.recent(bot.id, req.params.guildId, 50) });
+});
+
+// Permissions RÉELLES du bot sur un serveur (diagnostic)
+router.get('/bots/:id/guilds/:guildId/permissions', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  res.json(botManager.getGuildPerms(bot.id, req.params.guildId));
+});
+
+// 🧪 Test réel de l'auto-mod : envoie un message piégé dans un salon,
+// l'auto-mod le traite, et le dashboard reçoit le résultat exact.
+router.post('/bots/:id/guilds/:guildId/automod/test', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const { channel_id, type } = req.body || {};
+  if (!channel_id) return res.status(400).json({ error: 'Choisis un salon pour le test.' });
+  const types = ['link', 'caps', 'mentions', 'word', 'spam'];
+  if (!types.includes(type)) return res.status(400).json({ error: 'Type de test inconnu.' });
+  const entry = botManager.clients.get(bot.id);
+  if (!entry || !entry.client.isReady()) return res.status(503).json({ error: 'Le bot est hors ligne — impossible de tester.' });
+  const guild = entry.client.guilds.cache.get(guildId);
+  if (!guild) return res.status(404).json({ error: 'Serveur introuvable pour le bot.' });
+  const channel = guild.channels.cache.get(String(channel_id));
+  if (!channel || typeof channel.send !== 'function') return res.status(404).json({ error: 'Salon introuvable.' });
+  const gs = store.guildSettings.get(bot.id, guildId) || {};
+  if (gs.am_enabled !== 1) return res.status(400).json({ error: 'Active d\'abord l\'auto-modération, puis relance le test.' });
+  const { runAutomod } = require('./discord/automod');
+  const results = [];
+
+  try {
+    if (type === 'spam') {
+      const limit = Math.min(Math.max(parseInt(gs.am_spam, 10) || 3, 1), 20);
+      let last = null;
+      for (let i = 0; i < limit; i++) {
+        const sent = await channel.send({ content: `test auto-mod ${i + 1}` }).catch(() => null);
+        if (!sent) break;
+        last = await runAutomod(bot.id, sent, { force: true, noDm: true }).catch(() => ({ acted: false }));
+      }
+      return res.json({ ok: true, type, acted: !!(last && last.acted), reason: last && last.reason, hint: 'spam' });
+    }
+    let content = '';
+    if (type === 'link') content = 'test https://discord.gg/hoxera-test';
+    if (type === 'caps') content = 'TEST AUTOMOD HOXERA';
+    if (type === 'mentions') {
+      const limit = Math.min(Math.max(parseInt(gs.am_mentions, 10) || 0, 0), 20);
+      if (limit <= 0) return res.json({ ok: true, type, acted: false, reason: '', hint: 'mentions_off' });
+      content = Array.from({ length: limit + 1 }, (_, i) => `<@${990000000000000000 + i}>`).join(' ');
+    }
+    if (type === 'word') {
+      const words = store.blacklist.all(bot.id, guildId);
+      if (!words.length) return res.json({ ok: true, type, acted: false, reason: '', hint: 'no_words' });
+      content = `voici un test ${words[0]}`;
+    }
+    const sent = await channel.send({ content }).catch((e) => ({ sendError: e.message }));
+    if (sent && sent.sendError) return res.status(500).json({ error: `Envoi impossible : ${sent.sendError}` });
+    const r = await runAutomod(bot.id, sent, { force: true, noDm: true }).catch(() => ({ acted: false }));
+    return res.json({ ok: true, type, acted: !!r.acted, reason: r.reason || '', deleted: !!r.deleted });
+  } catch (e) {
+    return res.status(500).json({ error: `Test échoué : ${(e && e.message) || e}` });
+  }
 });
 
 router.put('/bots/:id/guilds/:guildId/settings', requireAuth, async (req, res) => {
