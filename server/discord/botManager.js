@@ -179,6 +179,15 @@ function attachListeners(botId, entry) {
         bot_username: me ? `${me.username}#${me.discriminator === '0' ? '' : me.discriminator}` : '',
         avatar_url: me ? me.displayAvatarURL({ size: 128 }) : '',
       });
+      // 🖼️ Bannière de profil du bot : on garde l'URL à jour automatiquement
+      // (utilisée dans le MP de transcription — si la bannière change au
+      // portail développeur, le MP suivra tout seul au prochain démarrage).
+      try {
+        const meInfo = await entry.client.rest.get('/users/@me');
+        if (meInfo && meInfo.banner) {
+          store.settings.set('profile_banner_url', `https://cdn.discordapp.com/banners/${meInfo.id}/${meInfo.banner}.png?size=1024`);
+        }
+      } catch {}
       applyPresence(record);
       // Synchronisation par serveur, indépendante (une erreur n'empêche pas les autres)
       for (const g of client.guilds.cache.values()) {

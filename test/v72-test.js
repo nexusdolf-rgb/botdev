@@ -47,12 +47,23 @@ const check = (label, cond) => {
   check('MP : nom du serveur dans le remerciement', String(emb.description).includes('Carré RP Officiel'));
   check('MP : lien de la transcription', String(emb.description).includes('https://dash-hoxora.onrender.com/transcript/abc123'));
   check('MP : invite à rouvrir un ticket', String(emb.description).includes('Rouvre simplement un ticket'));
-  // 🖼️ Bannière du PROFIL du bot (le robot Nexora) — identique au profil Discord
-  check('MP : bannière du profil du bot (robot) en image', emb.image && emb.image.url.includes('/icons/nexora-profile-banner.png'));
+  // 🖼️ Bannière du PROFIL du bot (repli local si l'URL Discord n'est pas encore connue)
+  check('MP : bannière du profil du bot en image', emb.image && emb.image.url.includes('/icons/nexora-profile-banner.png'));
   check('MP : footer Nexora', String(emb.footer.text).includes('Nexora'));
   // 📄 Fichier .txt joint
   check('MP : fichier transcription .txt joint', payload.files && payload.files.length === 1 && String(payload.files[0].name).includes('question-bob') && payload.files[0].name.endsWith('.txt'));
   check('MP : contenu du fichier correct', String(payload.files[0].attachment.toString()).includes('Bonjour !'));
+
+  // ---------- 1bis. Si l'URL de la bannière du profil est connue (mise à jour
+  // automatique au démarrage), c'est ELLE qui est utilisée ----------
+  store.settings.set('profile_banner_url', 'https://cdn.discordapp.com/banners/1537443352281088000/abc123.png?size=1024');
+  const sent2 = [];
+  const opener2 = { id: 'u2', username: 'Bob', send: async (p) => { sent2.push(p); return {}; } };
+  const interaction2b = { client: { users: { fetch: async () => opener2 } } };
+  await panels.sendTranscriptDm(interaction2b, guild, 'question-bob', { text: 'test', url: '', openerId: 'u2' });
+  const emb2 = sent2[0].embeds[0].toJSON();
+  check('MP : bannière actuelle du profil utilisée (CDN Discord)', emb2.image && emb2.image.url.includes('cdn.discordapp.com/banners/') && emb2.image.url.includes('abc123'));
+  store.settings.set('profile_banner_url', '');
 
   // ---------- 2. MP fermés → pas de crash, retour false ----------
   const closed = { id: 'u3', username: 'DMfermé', send: async () => { throw new Error('DM fermés'); } };
