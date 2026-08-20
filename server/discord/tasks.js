@@ -53,6 +53,10 @@ async function sweep(botId, entry) {
   try { extra.sweepScheduled(botId, entry); } catch (e) { console.error('[Hoxera] scheduled sweep:', e.message); }
   try { await extra.sweepBirthdays(botId, entry); } catch (e) { console.error('[Hoxera] birthdays sweep:', e.message); }
 
+  // 🎫 Fermeture automatique des tickets inactifs (promis sur le panneau)
+  try { const panels = require('./panels'); await panels.sweepInactiveTickets(botId, entry); }
+  catch (e) { console.error('[Hoxera] ticket sweep:', e.message); }
+
   const due = store.tempRoles.due().filter((t) => t.bot_id === botId);
   for (const t of due) {
     try {

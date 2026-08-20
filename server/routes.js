@@ -795,6 +795,14 @@ router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) =>
   res.json({ ok: true });
 });
 
+// Note moyenne du support (étoiles données par les membres après la clôture)
+router.get('/bots/:id/guilds/:guildId/tickets/rating', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  res.json(store.ticketRatings.stats(bot.id, req.params.guildId));
+});
+
 // Historique des actions d'auto-modération (visible dans le dashboard)
 router.get('/bots/:id/guilds/:guildId/automod/logs', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);

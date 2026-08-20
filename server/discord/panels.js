@@ -123,6 +123,13 @@ async function dispatchPanels(botId, interaction) {
       if (cid.startsWith(`bd-tquest:${botId}`)) { await submitQuestionnaire(botId, interaction); return true; }
       if (cid.startsWith(`bd-treason:${botId}`)) { await submitReason(botId, interaction); return true; }
       if (cid.startsWith(`bd-tdel:${botId}`)) { await submitDeleteReason(botId, interaction); return true; }
+      if (cid.startsWith(`bd-taddm:${botId}`)) { await submitAddMember(botId, interaction); return true; }
+    }
+
+    // ⭐ Note du support (boutons 1-5 étoiles envoyés en MP après la clôture)
+    if (interaction.isButton() && cid.startsWith('bd-rate:')) {
+      await handleRating(botId, interaction);
+      return true;
     }
 
     // Assistant des types de tickets (/ticket types setup)
@@ -166,9 +173,12 @@ async function dispatchPanels(botId, interaction) {
       if (cid === `bd-tmenu:${botId}:close`) { await handleTicketClose(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:reopen`) { await handleTicketReopen(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:hold`) { await handleTicketHold(botId, interaction); return true; }
+      if (cid === `bd-tmenu:${botId}:claim`) { await handleTicketClaim(botId, interaction); return true; }
+      if (cid === `bd-tmenu:${botId}:addmember`) { await handleTicketAddAsk(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:delete`) { await handleTicketDeleteAsk(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:delconfirm`) { await handleTicketDeleteConfirm(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:delcancel`) { await handleTicketDeleteCancel(interaction); return true; }
+      if (cid === `bd-tclose:${botId}`) { await handleOpenerClose(botId, interaction); return true; }
       return false;
     }
 
@@ -383,7 +393,7 @@ const ticketMeta = new Map(); // channelId -> { openerId, typeLabel }
 
 function parseTopic(topic) {
   const t = String(topic || '');
-  const m = t.match(/\| (\d{15,21})(?: \| (.*))?$/);
+  const m = t.match(/\| (\d{15,21})(?:\s*\|\s*(.*?))?\s*$/);
   return { openerId: m ? m[1] : null, typeLabel: m && m[2] ? m[2].trim() : null };
 }
 
@@ -435,9 +445,10 @@ async function ackReply(interaction, payload) {
 // Embed de bienvenue du salon de ticket : textes professionnels,
 // type + description, équipe en charge, déroulement de la prise en charge,
 // et les réponses du questionnaire personnalisé (si le type en a un).
-function ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning = '', answers = [], lang = 'fr') {
+function ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning = '', answers = [], lang = 'fr', meta = {}) {
   const typeFields = [
     { name: i18n.t(lang, 'ticket_type'), value: chosen ? `${chosen.emoji ? chosen.emoji + ' ' : ''}**${chosen.label}**` : '**Ticket simple**', inline: true },
+    { name: i18n.t(lang, 'ticket_opened_at'), value: meta.openedAt ? meta.openedAt.replace('T', ' ').slice(0, 16) + ' UTC' : new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC', inline: true },
   ];
   if (chosen && chosen.description) {
     typeFields.push({ name: i18n.t(lang, 'ticket_about'), value: chosen.description.slice(0, 1024), inline: true });
@@ -455,6 +466,7 @@ function ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning = ''
   }
   fields.push(
     { name: i18n.t(lang, 'ticket_team'), value: staffMention || i18n.t(lang, 'ticket_team_default'), inline: true },
+    { name: i18n.t(lang, 'ticket_previous'), value: meta.prevCount ? `${meta.prevCount}` : i18n.t(lang, 'ticket_previous_none'), inline: true },
     { name: i18n.t(lang, 'ticket_reason'), value: reason ? reason.slice(0, 1024) : '—', inline: false },
     { name: i18n.t(lang, 'ticket_steps'), value: [
       i18n.t(lang, 'ticket_step1'),
@@ -466,7 +478,7 @@ function ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning = ''
   const avatar = member.user.displayAvatarURL ? member.user.displayAvatarURL({ dynamic: true }) : '';
   const welcome = new EmbedBuilder()
     .setColor('#57F287')
-    .setAuthor(avatar ? { name: `Ticket de ${member.user.username}`, iconURL: avatar } : { name: `Ticket de ${member.user.username}` })
+    .setAuthor(avatar ? { name: `Ticket de ${member.user.username}${meta.number ? ` · #${meta.number}` : ''}`, iconURL: avatar } : { name: `Ticket de ${member.user.username}${meta.number ? ` · #${meta.number}` : ''}` })
     .setTitle(i18n.t(lang, 'ticket_title'))
     .setDescription(i18n.t(lang, 'ticket_welcome_desc', { member: `${member}` }))
     .addFields(...fields)
@@ -568,28 +580,44 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
   for (const r of supportRoles) perms.push({ id: r.id, allow });
 
   let channel;
+  const ticketNumber = store.ticketCounters.next(botId, guild.id);
   try {
     channel = await guild.channels.create({
       name: channelName,
       type: ChannelType.GuildText,
       parent: parent ? parent.id : null,
       permissionOverwrites: perms,
-      topic: `Ticket de ${member.user.tag} | ${member.id} | ${chosen ? chosen.label : ''}`,
+      topic: `Ticket #${ticketNumber} de ${member.user.tag} | ${member.id} | ${chosen ? chosen.label : ''}`,
     });
   } catch (e) {
     return ackReply(interaction, { content: '⚠️ Je n\'ai pas pu créer le salon. Vérifie mes permissions (gérer les salons).', ephemeral: true });
   }
   ticketMeta.set(channel.id, { openerId: member.id, typeLabel: chosen ? chosen.label : '', reason, answers });
+  // 📋 Fiche en base : numéro, horodatage, dernière activité (fermeture auto)
+  store.openTickets.add(botId, guild.id, {
+    channel_id: channel.id,
+    number: ticketNumber,
+    opener_id: member.id,
+    opener_tag: member.user.tag || member.user.username,
+    type_label: chosen ? chosen.label : '',
+  });
+  const prevCount = store.transcripts.countByOpener(botId, guild.id, member.id);
   bumpTicketStats(guild.id, 1, 1);
 
-  // Boutons du staff : deux rangées propres
+  // Boutons du staff + bouton du créateur : trois rangées propres
   const row1 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:close`).setLabel('🔒 Fermer').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:claim`).setLabel('🖐️ Prendre en charge').setStyle(ButtonStyle.Success),
     new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:hold`).setLabel('⏸ En attente').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:reopen`).setLabel('🔓 Réouvrir').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:close`).setLabel('🔒 Fermer').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:reopen`).setLabel('🔓 Réouvrir').setStyle(ButtonStyle.Secondary),
   );
   const row2 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:addmember`).setLabel('➕ Ajouter un membre').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:delete`).setLabel('🗑 Supprimer').setStyle(ButtonStyle.Secondary),
+  );
+  // Rangée du CRÉATEUR : il peut fermer son propre ticket (le staff peut réouvrir)
+  const row3 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`bd-tclose:${botId}`).setLabel('🔒 Fermer le ticket').setStyle(ButtonStyle.Danger),
   );
 
   // Vérification MP dès l'ouverture : si les MP du membre sont fermés,
@@ -611,7 +639,8 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
   try {
     const lang = i18n.langForGuild(guild.id);
     const staffMention = supportRoles.length ? supportRoles.map((r) => r.toString()).join(' ') : '';
-    const welcome = ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning, answers, lang);
+    const openRow = store.openTickets.getByChannel(channel.id);
+    const welcome = ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning, answers, lang, { number: ticketNumber, prevCount, openedAt: openRow ? openRow.opened_at : new Date().toISOString() });
     const identity = require('./identity');
     // 🎫 La PREMIÈRE LIGNE du salon annonce le type + le créateur : le staff
     // voit d'un coup d'œil de quel type de ticket il s'agit et qui l'a ouvert.
@@ -619,7 +648,7 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
     await identity.sendAsProfile(interaction.client, botId, guild, channel, {
       content: i18n.t(lang, 'ticket_first_line', { type: typeTitle, member: `${member}` }) + (staffMention ? ' · ' + staffMention : ''),
       embeds: [welcome],
-      components: [row1, row2],
+      components: [row1, row2, row3],
     }).catch(() => {});
 
     await logging.log(botId, guild, {
@@ -650,6 +679,12 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
 // ---------- Raisons : ouverture & suppression ----------
 const pendingReasons = new Map(); // userId -> { botId, guildId, type }
 const pendingDeletes = new Map(); // userId -> { botId }
+const pendingAdds = new Map();    // userId -> { botId, ts } (ajout d'un membre au ticket)
+
+// Fermeture automatique des tickets inactifs (promis sur le panneau)
+const INACTIVE_CLOSE_MIN = 120;          // fermeture après 2 h sans activité
+const INACTIVE_WARN_BEFORE_MIN = 10;     // rappel 10 min avant la fermeture
+const CLOSED_DELETE_AFTER_MIN = 24 * 60; // suppression 24 h après fermeture
 
 function reasonModal(botId, customId, title, label, placeholder) {
   const modal = new ModalBuilder().setCustomId(customId).setTitle(String(title).slice(0, 45));
@@ -819,7 +854,17 @@ async function buildTranscript(botId, interaction, extraLines = []) {
   const channel = interaction.channel;
   const guild = interaction.guild;
   const meta = ticketMetaFor(channel);
+  const row = store.openTickets.getByChannel(channel.id);
   let text = '';
+  // 📋 En-tête professionnel : numéro, dates, prise en charge
+  if (row) {
+    text += `🎫 Ticket #${row.number}${meta.typeLabel ? ` — ${meta.typeLabel}` : ''}\n`;
+    text += `📅 Ouvert le ${String(row.opened_at || '').replace('T', ' ').slice(0, 19)} UTC`;
+    if (row.closed_at) text += ` · Fermé le ${String(row.closed_at).replace('T', ' ').slice(0, 19)} UTC`;
+    text += '\n';
+    if (row.claimed_tag) text += `🖐️ Pris en charge par ${row.claimed_tag}\n`;
+    text += '\n';
+  }
   if (meta.reason) text += `📝 Raison du ticket : ${meta.reason}\n\n`;
   if (Array.isArray(meta.answers) && meta.answers.length) {
     text += '❓ Questionnaire :\n' + meta.answers.map((a) => `${a.q} → ${a.a}`).join('\n') + '\n\n';
@@ -829,8 +874,14 @@ async function buildTranscript(botId, interaction, extraLines = []) {
     const arr = [...fetched.values()].reverse();
     text += arr.map((m) => {
       const time = m.createdAt ? m.createdAt.toISOString().slice(11, 19) : '--:--:--';
-      const content = m.content || (m.attachments && m.attachments.size ? '[pièce jointe]' : (m.embeds && m.embeds.length ? '[embed]' : ''));
-      return `[${time}] ${m.author ? m.author.username : '?'}: ${content}`;
+      let atts = [];
+      try {
+        if (m.attachments && m.attachments.size) atts = [...m.attachments.values()].map((a) => a.url);
+        else if (Array.isArray(m.attachments)) atts = m.attachments.map((a) => a.url || a.name || '[fichier]');
+      } catch {}
+      const content = m.content || (atts.length ? '[pièce jointe]' : (m.embeds && m.embeds.length ? '[embed]' : ''));
+      const line = `[${time}] ${m.author ? m.author.username : '?'}: ${content}`;
+      return atts.length ? line + '\n  📎 ' + atts.join('\n  📎 ') : line;
     }).join('\n');
   } catch {}
   if (extraLines.length) text += '\n\n' + extraLines.join('\n');
@@ -849,10 +900,11 @@ async function buildTranscript(botId, interaction, extraLines = []) {
 }
 
 // Envoie la transcription en MP. Résout l'utilisateur avec double fallback.
-async function sendTranscriptDm(interaction, guild, channelName, { text, url, openerId }) {
+async function sendTranscriptDm(clientOrInteraction, guild, channelName, { text, url, openerId }) {
   if (!openerId) return false;
+  const client = clientOrInteraction && clientOrInteraction.client ? clientOrInteraction.client : clientOrInteraction;
   let user = null;
-  try { user = await interaction.client.users.fetch(openerId); } catch {}
+  try { user = await client.users.fetch(openerId); } catch {}
   if (!user) {
     try { user = (await guild.members.fetch(openerId)).user; } catch {}
   }
@@ -898,6 +950,7 @@ async function handleTicketClose(botId, interaction) {
     await channel.permissionOverwrites.edit(openerId, { ViewChannel: false, SendMessages: false }).catch(() => {});
   }
   store.closedTickets.add(channel.id, botId, guild.id);
+  store.openTickets.update(channel.id, { closed_at: new Date().toISOString() });
   bumpTicketStats(guild.id, 0, -1);
   await logging.log(botId, guild, {
     title: '🔒 Ticket fermé', color: '#ED4245',
@@ -917,12 +970,158 @@ async function handleTicketReopen(botId, interaction) {
   if (!isStaff(botId, interaction)) return staffDeny(interaction);
   const channel = interaction.channel;
   store.closedTickets.remove(channel.id);
+  store.openTickets.update(channel.id, { closed_at: '' });
   bumpTicketStats(interaction.guild.id, 0, 1);
   const { openerId } = ticketMetaFor(channel);
   if (openerId) {
     await channel.permissionOverwrites.edit(openerId, { ViewChannel: true, SendMessages: true }).catch(() => {});
   }
   await interaction.reply({ content: '🔓 Ticket réouvert !', ephemeral: true });
+}
+
+// 🖐️ Prendre en charge : le staff s'attribue le ticket (visible dans le salon
+// et dans la transcription) — évite que deux modos répondent en même temps.
+async function handleTicketClaim(botId, interaction) {
+  if (!isStaff(botId, interaction)) return staffDeny(interaction);
+  const channel = interaction.channel;
+  const guild = interaction.guild;
+  const lang = i18n.langForGuild(guild.id);
+  const row = store.openTickets.getByChannel(channel.id);
+  if (!row) return interaction.reply({ content: '❌ Ticket introuvable (fiche absente).', ephemeral: true });
+  if (row.claimed_by && row.claimed_by !== interaction.user.id) {
+    return interaction.reply({ content: `🖐️ Ce ticket est déjà pris en charge par **${row.claimed_tag || 'un membre du staff'}**.`, ephemeral: true });
+  }
+  store.openTickets.update(channel.id, {
+    claimed_by: interaction.user.id,
+    claimed_tag: interaction.user.tag,
+    claimed_at: new Date().toISOString(),
+  });
+  await channel.send({ content: i18n.t(lang, 'ticket_claim_msg', { staff: `${interaction.user}` }) }).catch(() => {});
+  try {
+    await logging.log(botId, guild, {
+      title: '🖐️ Ticket pris en charge', color: '#57F287',
+      fields: [
+        { name: '📨 Salon', value: `<#${channel.id}>`, inline: true },
+        { name: '🛡️ Par', value: `${interaction.user.tag}`, inline: true },
+      ],
+    });
+  } catch {}
+  await interaction.reply({ content: i18n.t(lang, 'ticket_claim_ok'), ephemeral: true });
+}
+
+// ➕ Ajouter un membre : le staff invite une autre personne dans le salon privé
+async function handleTicketAddAsk(botId, interaction) {
+  if (!isStaff(botId, interaction)) return staffDeny(interaction);
+  pendingAdds.set(interaction.user.id, { botId, ts: Date.now() });
+  const lang = i18n.langForGuild(interaction.guild.id);
+  await interaction.showModal(new ModalBuilder()
+    .setCustomId(`bd-taddm:${botId}`)
+    .setTitle(i18n.t(lang, 'ticket_add_modal_title').slice(0, 45))
+    .addComponents(new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId('value')
+        .setLabel(i18n.t(lang, 'ticket_add_modal_label'))
+        .setPlaceholder(i18n.t(lang, 'ticket_add_modal_ph'))
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+    )));
+}
+
+async function submitAddMember(botId, interaction) {
+  const pending = pendingAdds.get(interaction.user.id);
+  pendingAdds.delete(interaction.user.id);
+  if (!pending || pending.botId !== botId || Date.now() - (pending.ts || 0) > WIZARD_TTL) {
+    return interaction.reply({ content: '⏰ L\'ajout a expiré, réessaie.', ephemeral: true });
+  }
+  if (!isStaff(botId, interaction)) return staffDeny(interaction);
+  const guild = interaction.guild;
+  const channel = interaction.channel;
+  const lang = i18n.langForGuild(guild.id);
+  const q = (interaction.fields.getTextInputValue('value') || '').trim();
+  let member = null;
+  const idMatch = q.match(/(\d{15,21})/);
+  if (idMatch) member = await guild.members.fetch(idMatch[1]).catch(() => null);
+  if (!member) {
+    member = guild.members.cache.find((m) => {
+      const name = (m.user && m.user.username ? m.user.username : '').toLowerCase();
+      const nick = (m.nickname || '').toLowerCase();
+      return name === q.toLowerCase() || nick === q.toLowerCase();
+    }) || null;
+  }
+  if (!member) return interaction.reply({ content: i18n.t(lang, 'ticket_add_err'), ephemeral: true });
+  await channel.permissionOverwrites.edit(member.id, { ViewChannel: true, SendMessages: true, ReadMessageHistory: true }).catch(() => {});
+  await interaction.reply({ content: i18n.t(lang, 'ticket_add_ok', { member: `${member}` }) });
+}
+
+// 🔒 Fermeture par le CRÉATEUR (rangée dédiée, cliquable uniquement par lui)
+async function handleOpenerClose(botId, interaction) {
+  const channel = interaction.channel;
+  const guild = interaction.guild;
+  const meta = ticketMetaFor(channel);
+  if (!meta.openerId || meta.openerId !== interaction.user.id) {
+    return interaction.reply({ content: '🔒 Seul le créateur du ticket peut utiliser ce bouton (le staff a ses propres boutons ci-dessus).', ephemeral: true });
+  }
+  const lang = i18n.langForGuild(guild.id);
+  await channel.permissionOverwrites.edit(meta.openerId, { ViewChannel: false, SendMessages: false }).catch(() => {});
+  store.closedTickets.add(channel.id, botId, guild.id);
+  store.openTickets.update(channel.id, { closed_at: new Date().toISOString() });
+  bumpTicketStats(guild.id, 0, -1);
+  await channel.send({ content: i18n.t(lang, 'ticket_close_opener') }).catch(() => {});
+  try {
+    await logging.log(botId, guild, {
+      title: '🔒 Ticket fermé par le créateur', color: '#ED4245',
+      fields: [
+        { name: '📨 Salon', value: `<#${channel.id}>`, inline: true },
+        { name: '👤 Créateur', value: `${interaction.user.tag}`, inline: true },
+      ],
+    });
+  } catch {}
+  await interaction.reply({ content: i18n.t(lang, 'ticket_close_opener_reply'), ephemeral: true });
+}
+
+// ⭐ Note du support : boutons 1-5 étoiles envoyés en MP après la clôture
+async function sendRatingDm(client, guild, openerId, number, lang) {
+  if (!openerId || !number) return false;
+  let user = null;
+  try { user = await client.users.fetch(openerId); } catch {}
+  if (!user) {
+    try { user = (await guild.members.fetch(openerId)).user; } catch {}
+  }
+  if (!user) return false;
+  const row = new ActionRowBuilder().addComponents(
+    [1, 2, 3, 4, 5].map((n) => new ButtonBuilder()
+      .setCustomId(`bd-rate:${guild.id}:${number}:${n}:${lang}`)
+      .setLabel('⭐'.repeat(n))
+      .setStyle(n >= 4 ? ButtonStyle.Success : ButtonStyle.Secondary))
+  );
+  try {
+    await user.send({
+      embeds: [new EmbedBuilder()
+        .setColor('#FEE75C')
+        .setTitle(i18n.t(lang, 'ticket_rating_title'))
+        .setDescription(i18n.t(lang, 'ticket_rating_desc', { number, server: guild.name }))],
+      components: [row],
+    });
+    return true;
+  } catch { return false; }
+}
+
+async function handleRating(botId, interaction) {
+  const parts = String(interaction.customId || '').split(':');
+  // bd-rate:{guildId}:{number}:{stars}:{lang}
+  if (parts.length < 5) return;
+  const guildId = parts[1];
+  const number = parseInt(parts[2], 10);
+  const stars = parseInt(parts[3], 10);
+  const lang = i18n.normalize(parts[4]);
+  if (!guildId || !number || !stars) return;
+  if (store.ticketRatings.has(botId, guildId, number)) {
+    try { await interaction.update({ content: i18n.t(lang, 'ticket_rating_already'), embeds: [], components: [] }); } catch { await interaction.reply({ content: i18n.t(lang, 'ticket_rating_already'), ephemeral: true }).catch(() => {}); }
+    return;
+  }
+  store.ticketRatings.add(botId, guildId, { number, opener_id: interaction.user.id, rating: stars });
+  try { await interaction.update({ content: i18n.t(lang, 'ticket_rating_done', { stars }), embeds: [], components: [] }); }
+  catch { try { await interaction.reply({ content: i18n.t(lang, 'ticket_rating_done', { stars }), ephemeral: true }); } catch {} }
 }
 
 async function handleTicketHold(botId, interaction) {
@@ -956,7 +1155,7 @@ async function submitDeleteReason(botId, interaction) {
   if (!isStaff(botId, interaction)) return staffDeny(interaction);
   const chName = interaction.channel ? interaction.channel.name || '' : '';
   const chTopic = interaction.channel && interaction.channel.topic ? interaction.channel.topic : '';
-  if (!chName.startsWith('ticket-') && !chTopic.includes('Ticket de')) {
+  if (!chName.startsWith('ticket-') && !chTopic.includes('Ticket de') && !chTopic.includes('Ticket #')) {
     return interaction.reply({ content: '❌ Cette commande doit être utilisée dans un salon de ticket.', ephemeral: true });
   }
   const reason = (interaction.fields.getTextInputValue('value') || '').trim() || 'aucune raison';
@@ -967,10 +1166,14 @@ async function submitDeleteReason(botId, interaction) {
   try { await interaction.deferReply({ ephemeral: true }); } catch {}
   store.closedTickets.add(channel.id, botId, guild.id);
   bumpTicketStats(guild.id, 0, -1);
+  const ticketRow = store.openTickets.getByChannel(channel.id);
   const t = await buildTranscript(botId, interaction, [
     `🗑 Ticket supprimé par ${interaction.user.tag} — raison : ${reason}`,
   ]);
   const dmOk = await sendTranscriptDm(interaction, guild, channel.name, t);
+  const ratingLang = i18n.langForGuild(guild.id);
+  await sendRatingDm(interaction.client, guild, t.openerId, ticketRow ? ticketRow.number : 0, ratingLang).catch(() => {});
+  store.openTickets.remove(channel.id);
   await logging.log(botId, guild, {
     title: '🗑 Ticket supprimé', color: '#ED4245',
     fields: [
@@ -992,10 +1195,14 @@ async function handleTicketDeleteConfirm(botId, interaction) {
   const guild = interaction.guild;
   store.closedTickets.add(channel.id, botId, guild.id);
   bumpTicketStats(guild.id, 0, -1);
+  const ticketRow = store.openTickets.getByChannel(channel.id);
   const t = await buildTranscript(botId, interaction, [
     `🗑 Ticket supprimé par ${interaction.user.tag} — raison : aucune raison fournie`,
   ]);
   const dmOk = await sendTranscriptDm(interaction, guild, channel.name, t);
+  const ratingLang = i18n.langForGuild(guild.id);
+  await sendRatingDm(interaction.client, guild, t.openerId, ticketRow ? ticketRow.number : 0, ratingLang).catch(() => {});
+  store.openTickets.remove(channel.id);
   await interaction.update({
     content: '🗑 Ticket supprimé.' + (dmOk ? ' 📄 Transcription envoyée en MP.' : ' ⚠️ MP impossible pour le créateur.'),
     embeds: [], components: [],
@@ -1617,11 +1824,128 @@ async function handleRoleMenu(botId, interaction, menuId) {
   });
 }
 
+// ============================================================
+// ⏰ Fermeture automatique des tickets inactifs (promis sur le panneau)
+//   - rappel 10 min avant la fermeture (2 h sans activité)
+//   - fermeture auto (verrouillage + notification)
+//   - suppression auto 24 h après fermeture (transcription envoyée en MP)
+// Appelé par tasks.js toutes les 30 secondes pour chaque bot.
+// ============================================================
+async function sweepInactiveTickets(botId, entry, now = new Date()) {
+  try {
+    // Tous les tickets ouverts du bot, tous serveurs confondus
+    const all = store.db.prepare('SELECT * FROM open_tickets WHERE bot_id = ?').all(botId);
+    for (const row of all) {
+      try {
+        const guild = entry.client.guilds.cache.get(row.guild_id);
+        const channel = guild ? guild.channels.cache.get(row.channel_id) : null;
+        if (!channel) { store.openTickets.remove(row.channel_id); continue; }
+        const lang = i18n.langForGuild(row.guild_id);
+        if (!row.closed_at) {
+          // Ticket OUVERT : inactivité ?
+          const last = new Date(row.last_activity || row.opened_at || Date.now()).getTime();
+          const inactiveMin = (now.getTime() - last) / 60000;
+          if (inactiveMin >= INACTIVE_CLOSE_MIN) {
+            // Fermeture automatique
+            if (row.opener_id) {
+              await channel.permissionOverwrites.edit(row.opener_id, { ViewChannel: false, SendMessages: false }).catch(() => {});
+            }
+            store.closedTickets.add(channel.id, botId, row.guild_id);
+            store.openTickets.update(channel.id, { closed_at: now.toISOString(), warned_inactive: 0 });
+            bumpTicketStats(row.guild_id, 0, -1);
+            await channel.send({ content: i18n.t(lang, 'ticket_auto_closed') }).catch(() => {});
+            try {
+              await logging.log(botId, guild, {
+                title: '⏰ Ticket fermé automatiquement (2 h sans activité)', color: '#FEE75C',
+                fields: [
+                  { name: '📨 Salon', value: `<#${channel.id}>`, inline: true },
+                  { name: '🎫 Numéro', value: `#${row.number}`, inline: true },
+                ],
+              });
+            } catch {}
+          } else if (inactiveMin >= INACTIVE_CLOSE_MIN - INACTIVE_WARN_BEFORE_MIN && !row.warned_inactive) {
+            // Rappel 10 min avant la fermeture
+            store.openTickets.update(channel.id, { warned_inactive: 1 });
+            await channel.send({ content: i18n.t(lang, 'ticket_auto_warn') }).catch(() => {});
+          }
+        } else {
+          // Ticket FERMÉ : suppression 24 h après
+          const closedMs = new Date(row.closed_at).getTime();
+          if (now.getTime() - closedMs >= CLOSED_DELETE_AFTER_MIN * 60000) {
+            const t = await buildTranscriptFromChannel(botId, channel, guild, [
+              i18n.t(lang, 'ticket_auto_deleted'),
+            ]);
+            await sendTranscriptDm(entry.client, guild, channel.name || '', t);
+            store.openTickets.remove(channel.id);
+            await channel.send({ content: i18n.t(lang, 'ticket_auto_deleted') }).catch(() => {});
+            setTimeout(() => { channel.delete('Ticket fermé depuis plus de 24 h').catch(() => {}); }, 1500);
+            try {
+              await logging.log(botId, guild, {
+                title: '⏰ Ticket supprimé automatiquement (fermé depuis 24 h)', color: '#FEE75C',
+                fields: [{ name: '📨 Salon', value: `#${channel.name || channel.id}` }],
+              });
+            } catch {}
+          }
+        }
+      } catch (e) {
+        console.error('[BotDev] ticket sweep (fiche):', e.message);
+      }
+    }
+  } catch (e) {
+    console.error('[BotDev] ticket sweep:', e.message);
+  }
+}
+
+// Transcription sans interaction (pour la suppression automatique)
+async function buildTranscriptFromChannel(botId, channel, guild, extraLines = []) {
+  const meta = ticketMetaFor(channel);
+  const row = store.openTickets.getByChannel(channel.id);
+  let text = '';
+  if (row) {
+    text += `🎫 Ticket #${row.number}${meta.typeLabel ? ` — ${meta.typeLabel}` : ''}\n`;
+    text += `📅 Ouvert le ${String(row.opened_at || '').replace('T', ' ').slice(0, 19)} UTC · Fermé le ${String(row.closed_at || '').replace('T', ' ').slice(0, 19)} UTC\n`;
+    if (row.claimed_tag) text += `🖐️ Pris en charge par ${row.claimed_tag}\n`;
+    text += '\n';
+  }
+  if (meta.reason) text += `📝 Raison du ticket : ${meta.reason}\n\n`;
+  if (Array.isArray(meta.answers) && meta.answers.length) {
+    text += '❓ Questionnaire :\n' + meta.answers.map((a) => `${a.q} → ${a.a}`).join('\n') + '\n\n';
+  }
+  try {
+    const fetched = await channel.messages.fetch({ limit: 100 });
+    const arr = [...fetched.values()].reverse();
+    text += arr.map((m) => {
+      const time = m.createdAt ? m.createdAt.toISOString().slice(11, 19) : '--:--:--';
+      let atts = [];
+      try {
+        if (m.attachments && m.attachments.size) atts = [...m.attachments.values()].map((a) => a.url);
+        else if (Array.isArray(m.attachments)) atts = m.attachments.map((a) => a.url || a.name || '[fichier]');
+      } catch {}
+      const content = m.content || (atts.length ? '[pièce jointe]' : '[message]');
+      const line = `[${time}] ${m.author ? m.author.username : '?'}: ${content}`;
+      return atts.length ? line + '\n  📎 ' + atts.join('\n  📎 ') : line;
+    }).join('\n');
+  } catch {}
+  if (extraLines.length) text += '\n\n' + extraLines.join('\n');
+  let token = '', url = '';
+  try {
+    token = crypto.randomBytes(8).toString('hex');
+    store.transcripts.add({
+      token, bot_id: botId, guild_id: guild.id, channel_name: channel.name || '',
+      opener_id: meta.openerId || '', type_label: meta.typeLabel || '', server_name: guild.name,
+      messages: text.slice(0, 300000),
+    });
+    const site = store.settings.get('public_url');
+    if (site) url = `${site}/transcript/${token}`;
+  } catch (e) { console.error('[BotDev] transcript:', e.message); }
+  return { text, url, openerId: meta.openerId };
+}
+
 module.exports = {
   dispatchPanels, sendTicketPanel, sendRoleMenu, findChannel, findChannelInGuild, bumpTicketStats,
   resolveRole, parseTypes, isStaff, staffForTicket, openTicket, safeEmoji,
   startTypesWizard, handleTypesWizardInteraction,
   handleTicketDeleteAsk, ticketMetaFor, ticketWelcomeEmbed, typeOptionDescription, normalizeTypes,
-  sendTranscriptDm,
+  sendTranscriptDm, sweepInactiveTickets, buildTranscriptFromChannel, sendRatingDm, handleOpenerClose,
   __testPanelBannerUrl: panelBannerUrl,
 };

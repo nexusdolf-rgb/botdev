@@ -247,6 +247,46 @@ CREATE TABLE IF NOT EXISTS automod_logs (
 );
 CREATE INDEX IF NOT EXISTS idx_automod_logs_guild ON automod_logs (bot_id, guild_id, id DESC);
 
+-- Tickets ouverts (fiche par salon de ticket) : numéro, prise en charge,
+-- horodatages, dernière activité (fermeture automatique), note du support.
+CREATE TABLE IF NOT EXISTS open_tickets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  channel_id TEXT UNIQUE NOT NULL,
+  number INTEGER NOT NULL,
+  opener_id TEXT DEFAULT '',
+  opener_tag TEXT DEFAULT '',
+  type_label TEXT DEFAULT '',
+  opened_at TEXT NOT NULL DEFAULT (datetime('now')),
+  claimed_by TEXT DEFAULT '',
+  claimed_tag TEXT DEFAULT '',
+  claimed_at TEXT DEFAULT '',
+  closed_at TEXT DEFAULT '',
+  last_activity TEXT DEFAULT '',
+  warned_inactive INTEGER DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_open_tickets_guild ON open_tickets (bot_id, guild_id);
+
+-- Numérotation des tickets par serveur (#1, #2, #3…)
+CREATE TABLE IF NOT EXISTS ticket_counters (
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  next INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (bot_id, guild_id)
+);
+
+-- Notes du support (1 à 5 étoiles) données par les membres à la fermeture
+CREATE TABLE IF NOT EXISTS ticket_ratings (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  number INTEGER NOT NULL,
+  opener_id TEXT DEFAULT '',
+  rating INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS closed_tickets (
   channel_id TEXT PRIMARY KEY,
   bot_id INTEGER NOT NULL,
@@ -712,6 +752,50 @@ const automodLogs = {
   recent: (botId, guildId, limit = 50) => db.prepare('SELECT * FROM automod_logs WHERE bot_id = ? AND guild_id = ? ORDER BY id DESC LIMIT ?').all(botId, guildId, Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200)),
 };
 
+// ---------------------- Tickets ouverts (fiche par salon) ----------------------
+const openTickets = {
+  add: (botId, guildId, t) => db.prepare(`INSERT INTO open_tickets (bot_id, guild_id, channel_id, number, opener_id, opener_tag, type_label, opened_at, last_activity)
+    VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`)
+    .run(botId, guildId, String(t.channel_id), t.number, String(t.opener_id || '').slice(0, 30), String(t.opener_tag || '').slice(0, 100), String(t.type_label || '').slice(0, 100)),
+  getByChannel: (channelId) => db.prepare('SELECT * FROM open_tickets WHERE channel_id = ?').get(String(channelId)) || null,
+  allForGuild: (botId, guildId) => db.prepare('SELECT * FROM open_tickets WHERE bot_id = ? AND guild_id = ? ORDER BY id ASC').all(botId, guildId),
+  // Nouvelle activité dans le salon → repousse l'échéance d'inactivité
+  touch: (channelId, iso) => db.prepare("UPDATE open_tickets SET last_activity = ?, warned_inactive = 0 WHERE channel_id = ?").run(iso, String(channelId)),
+  update: (channelId, fields) => {
+    const cols = ['claimed_by', 'claimed_tag', 'claimed_at', 'closed_at', 'warned_inactive'];
+    const sets = []; const vals = [];
+    for (const c of cols) if (fields[c] !== undefined) { sets.push(`${c} = ?`); vals.push(fields[c]); }
+    if (!sets.length) return;
+    vals.push(String(channelId));
+    db.prepare(`UPDATE open_tickets SET ${sets.join(', ')} WHERE channel_id = ?`).run(...vals);
+  },
+  remove: (channelId) => db.prepare('DELETE FROM open_tickets WHERE channel_id = ?').run(String(channelId)),
+};
+
+// ---------------------- Numérotation des tickets ----------------------
+const ticketCounters = {
+  next: (botId, guildId) => {
+    const row = db.prepare('SELECT next FROM ticket_counters WHERE bot_id = ? AND guild_id = ?').get(botId, guildId);
+    if (row) {
+      db.prepare('UPDATE ticket_counters SET next = next + 1 WHERE bot_id = ? AND guild_id = ?').run(botId, guildId);
+      return row.next;
+    }
+    db.prepare('INSERT INTO ticket_counters (bot_id, guild_id, next) VALUES (?, ?, 2)').run(botId, guildId);
+    return 1;
+  },
+};
+
+// ---------------------- Notes du support (étoiles) ----------------------
+const ticketRatings = {
+  add: (botId, guildId, entry) => db.prepare('INSERT INTO ticket_ratings (bot_id, guild_id, number, opener_id, rating) VALUES (?, ?, ?, ?, ?)')
+    .run(botId, guildId, entry.number, String(entry.opener_id || '').slice(0, 30), Math.min(Math.max(parseInt(entry.rating, 10) || 1, 1), 5)),
+  has: (botId, guildId, number) => !!db.prepare('SELECT 1 FROM ticket_ratings WHERE bot_id = ? AND guild_id = ? AND number = ?').get(botId, guildId, number),
+  stats: (botId, guildId) => {
+    const r = db.prepare('SELECT COUNT(*) AS count, ROUND(AVG(rating), 1) AS avg FROM ticket_ratings WHERE bot_id = ? AND guild_id = ?').get(botId, guildId);
+    return { count: r.count || 0, avg: r.avg || 0 };
+  },
+};
+
 // ---------------------- Boutique ----------------------
 const shop = {
   all: (botId, guildId) => db.prepare('SELECT * FROM shop_items WHERE bot_id = ? AND guild_id = ? ORDER BY price ASC').all(botId, guildId),
@@ -810,6 +894,8 @@ const transcripts = {
       messages: String(t.messages || '').slice(0, 300000),
     }),
   get: (token) => db.prepare('SELECT * FROM transcripts WHERE token = ?').get(String(token)) || null,
+  // Nombre de tickets déjà ouverts par un membre (affiché au staff à l'ouverture)
+  countByOpener: (botId, guildId, openerId) => db.prepare('SELECT COUNT(*) AS n FROM transcripts WHERE bot_id = ? AND guild_id = ? AND opener_id = ?').get(botId, guildId, String(openerId)).n,
 };
 
 // ---------------------- Mariages (fun & communauté) ----------------------
@@ -915,4 +1001,4 @@ const voicetemp = {
   remove: (botId, guildId) => db.prepare('DELETE FROM voicetemp WHERE bot_id = ? AND guild_id = ?').run(botId, guildId),
 };
 
-module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, automodLogs, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, msgStats, joinStats, shopPurchases, applications, voicetemp };
+module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, automodLogs, openTickets, ticketCounters, ticketRatings, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, msgStats, joinStats, shopPurchases, applications, voicetemp };

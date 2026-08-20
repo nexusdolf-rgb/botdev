@@ -436,7 +436,18 @@ Dashboard.renderers.tickets = async (content, data) => {
       <div class="dash-stat"><div class="val">${ts.open}</div><div class="lbl">🎫 Ouverts en ce moment</div></div>
       <div class="dash-stat"><div class="val">${ts.total}</div><div class="lbl">📦 Ouverts au total</div></div>
       <div class="dash-stat"><div class="val">${typesData.length}</div><div class="lbl">🗂️ Types configurés</div></div>
+      <div class="dash-stat"><div class="val" id="t-rating-val">…</div><div class="lbl">⭐ Note du support</div></div>
     </div>`));
+  (async () => {
+    try {
+      const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/tickets/rating`);
+      const el = document.getElementById('t-rating-val');
+      if (el) el.textContent = r.count ? `${r.avg}/5 (${r.count} avis)` : '—';
+    } catch {
+      const el = document.getElementById('t-rating-val');
+      if (el) el.textContent = '—';
+    }
+  })();
 
   const textChannels = (data.channels || []).filter((ch) => !ch.category);
   const categories = (data.channels || []).filter((ch) => ch.category);

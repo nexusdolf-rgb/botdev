@@ -295,6 +295,12 @@ async function runMessageHandler(botId, entry, message) {
   if (!message || message.author.bot || !message.guild) return;
   const record = store.bots.get(botId);
   if (!record) return;
+  // 🎫 Activité dans un salon de ticket → repousse l'échéance de fermeture auto
+  try {
+    if (message.channel && message.channel.id) {
+      store.openTickets.touch(message.channel.id, new Date().toISOString());
+    }
+  } catch {}
   // 🛡️ Auto-modération puis 📈 XP (avant l'analyse des commandes)
   const { runAutomod } = require('./automod');
   const xpEngine = require('./xp');
