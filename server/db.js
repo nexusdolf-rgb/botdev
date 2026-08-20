@@ -4,6 +4,7 @@
 const Database = require('better-sqlite3');
 const crypto = require('crypto');
 const paths = require('./paths');
+const tzUtil = require('./tz');
 
 const db = new Database(paths.dbPath);
 db.pragma('journal_mode = WAL');
@@ -359,6 +360,7 @@ try { db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_discord ON users(disc
 
 // Colonne log_channel
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN log_channel TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN timezone TEXT DEFAULT 'Europe/Paris'"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN suggestion_channel TEXT DEFAULT ''"); } catch (e) {}
 
 // Colonnes XP & auto-mod sur guild_settings
@@ -518,7 +520,7 @@ const guildSettings = {
   set: (botId, guildId, fields) => {
     const cur = guildSettings.get(botId, guildId) || { prefix: '', warn_limit: 0, warn_action: 'none' };
     const next = { ...cur, ...fields };
-    const cols = ['prefix', 'warn_limit', 'warn_action', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'lang'];
+    const cols = ['prefix', 'warn_limit', 'warn_action', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'lang', 'timezone'];
     const vals = {
       bot_id: botId, guild_id: guildId,
       prefix: String(next.prefix || '').slice(0, 5),
@@ -546,6 +548,7 @@ const guildSettings = {
       voicetemp_name: String(next.voicetemp_name || '').slice(0, 50),
       panel_name: String(next.panel_name || '').slice(0, 100),
       lang: ['fr', 'en'].includes(String(next.lang || '')) ? String(next.lang) : 'fr',
+      timezone: tzUtil.safeTz(next.timezone),
     };
     const sets = cols.map(c => `${c} = excluded.${c}`).join(', ');
     const placeholders = ['bot_id', 'guild_id', ...cols].map(c => `@${c}`).join(', ');

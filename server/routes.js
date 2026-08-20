@@ -797,7 +797,7 @@ router.put('/bots/:id/guilds/:guildId/settings', requireAuth, async (req, res) =
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
-  const { prefix, warn_limit, warn_action, log_channel, birthday_channel, birthday_role, log_events } = req.body || {};
+  const { prefix, warn_limit, warn_action, log_channel, birthday_channel, birthday_role, log_events, timezone } = req.body || {};
   store.guildSettings.set(bot.id, guildId, {
     prefix: String(prefix || '').slice(0, 5),
     warn_limit: Math.max(0, parseInt(warn_limit, 10) || 0),
@@ -806,6 +806,7 @@ router.put('/bots/:id/guilds/:guildId/settings', requireAuth, async (req, res) =
     ...(birthday_channel !== undefined ? { birthday_channel: String(birthday_channel).slice(0, 100) } : {}),
     ...(birthday_role !== undefined ? { birthday_role: String(birthday_role).slice(0, 100) } : {}),
     ...(log_events !== undefined ? { log_events: JSON.stringify(log_events || {}) } : {}),
+    ...(timezone !== undefined ? { timezone: String(timezone).slice(0, 64) } : {}),
   });
   res.json({ ok: true });
 });

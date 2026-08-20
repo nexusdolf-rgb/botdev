@@ -10,6 +10,7 @@ const {
 } = require('discord.js');
 const store = require('../db');
 const logging = require('./logging');
+const tzUtil = require('../tz');
 
 // ---------------------- États de jeu (en mémoire) ----------------------
 const penduGames = new Map();   // `${guildId}:${messageId}` -> { word, shown, lives, playerId }
@@ -919,38 +920,54 @@ async function sweepReminders(botId, entry) {
   }
 }
 
-function sweepScheduled(botId, entry) {
-  const now = new Date();
-  const today = now.toISOString().slice(0, 10);
-  // 1 = lundi … 7 = dimanche
-  const dow = now.getUTCDay() === 0 ? 7 : now.getUTCDay();
-  const hour = now.getUTCHours();
-  const minute = now.getUTCMinutes();
+function sweepScheduled(botId, entry, now = new Date()) {
+  const nowMin = Math.floor(now.getTime() / 60000);
   for (const s of store.scheduled.allEnabled()) {
     if (s.bot_id !== botId) continue;
-    if (s.last_sent === today) continue;
+    // Heure LOCALE du serveur Discord (Europe/Paris par défaut), jamais UTC
+    const tz = tzUtil.safeTz((store.guildSettings.get(botId, s.guild_id) || {}).timezone);
+    const p = tzUtil.parts(now, tz);
+    if (s.last_sent === p.ymd) continue; // déjà envoyée aujourd'hui (heure locale)
     const days = String(s.days || '').split(',').map((x) => parseInt(x.trim(), 10)).filter(Boolean);
-    if (!days.includes(dow)) continue;
-    if (s.hour !== hour || s.minute !== minute) continue;
+    if (!days.includes(p.dow)) continue; // pas le bon jour de la semaine
+    const occMin = Math.floor(tzUtil.zonedInstant(p.ymd, s.hour, s.minute, tz) / 60000);
+    if (occMin > nowMin) continue;          // pas encore l'heure
+    if (occMin < nowMin - 10) continue;     // fenêtre ratée depuis > 10 min → on saute
     const guild = entry.client.guilds.cache.get(s.guild_id);
     const channel = guild ? guild.channels.cache.get(s.channel_id) : null;
-    if (channel) {
-      channel.send({ content: s.text }).catch(() => {});
-      store.scheduled.update(s.id, { last_sent: today });
-    }
+    if (!channel) continue;                 // salon introuvable → on réessaiera au prochain balayage
+    const localTime = `${String(s.hour).padStart(2, '0')}:${String(s.minute).padStart(2, '0')}`;
+    channel.send({ content: s.text, allowedMentions: { parse: ['everyone', 'roles', 'users'] } })
+      .then(() => {
+        store.scheduled.update(s.id, { last_sent: p.ymd });
+        console.log(`[Hoxera] ✅ Annonce envoyée (serveur ${s.guild_id}, salon #${s.channel_id}, ${p.ymd} ${localTime} ${tz})`);
+      })
+      .catch((err) => {
+        if (err && err.code === 50013) {
+          // Mentions (@everyone/@here) interdites par les permissions → on retente sans les activer
+          channel.send({ content: s.text, allowedMentions: { parse: [] } })
+            .then(() => {
+              store.scheduled.update(s.id, { last_sent: p.ymd });
+              console.log(`[Hoxera] ✅ Annonce envoyée sans mentions (permission manquante) — ${p.ymd} ${localTime} ${tz}`);
+            })
+            .catch((e2) => console.error(`[Hoxera] ❌ Annonce impossible à envoyer (#${s.channel_id}) : ${e2.message} — nouvel essai au prochain balayage`));
+          return;
+        }
+        console.error(`[Hoxera] ❌ Annonce impossible à envoyer (#${s.channel_id}) : ${err.message} — nouvel essai au prochain balayage`);
+      });
   }
 }
 
-async function sweepBirthdays(botId, entry) {
-  const today = new Date();
+async function sweepBirthdays(botId, entry, now = new Date()) {
   const keyDate = `${botId}`;
   if (!store.birthdays.celebrated.isNewDay(keyDate)) return;
-  // Retire le rôle anniversaire des fêtés d'hier
+  // Retire le rôle anniversaire des fêtés d'hier (heure locale de chaque serveur)
   try {
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
     for (const guild of entry.client.guilds.cache.values()) {
       const gs = store.guildSettings.get(botId, guild.id) || {};
       if (!gs.birthday_role) continue;
+      const tz = tzUtil.safeTz(gs.timezone);
+      const yesterday = tzUtil.parts(new Date(now.getTime() - 86400000), tz).ymd;
       const prevKey = `bday_role_${guild.id}_${yesterday}`;
       let prev = [];
       try { prev = JSON.parse(store.settings.get(prevKey) || '[]'); } catch {}
@@ -963,13 +980,14 @@ async function sweepBirthdays(botId, entry) {
   } catch (e) { console.error('[Hoxera] bday cleanup:', e.message); }
 
   store.birthdays.celebrated.set(keyDate);
-  const day = today.getUTCDate();
-  const month = today.getUTCMonth() + 1;
-  for (const b of store.birthdays.today(day, month)) {
+  // Célèbre les anniversaires du jour (heure locale de chaque serveur)
+  for (const guild of entry.client.guilds.cache.values()) {
+    const gs = store.guildSettings.get(botId, guild.id) || {};
+    const tz = tzUtil.safeTz(gs.timezone);
+    const p = tzUtil.parts(now, tz);
+    const list = store.birthdays.today(p.day, p.month).filter((b) => String(b.bot_id) === String(botId) && b.guild_id === guild.id);
+    for (const b of list) {
     try {
-      const guild = entry.client.guilds.cache.get(b.guild_id);
-      if (!guild) continue;
-      const gs = store.guildSettings.get(botId, b.guild_id) || {};
       const member = await guild.members.fetch(b.user_id).catch(() => null);
       if (!member) continue;
       const channel = gs.birthday_channel ? (guild.channels.cache.get(gs.birthday_channel) || guild.channels.cache.find((c) => c.name.toLowerCase() === String(gs.birthday_channel).toLowerCase())) : null;
@@ -980,7 +998,7 @@ async function sweepBirthdays(botId, entry) {
         const role = guild.roles.cache.get(gs.birthday_role) || guild.roles.cache.find((r) => r.name.toLowerCase() === String(gs.birthday_role).toLowerCase());
         if (role && guild.members.me && role.position < guild.members.me.roles.highest.position) {
           await member.roles.add(role).catch(() => {});
-          const key = `bday_role_${guild.id}_${today.toISOString().slice(0, 10)}`;
+          const key = `bday_role_${guild.id}_${p.ymd}`;
           let arr = [];
           try { arr = JSON.parse(store.settings.get(key) || '[]'); } catch {}
           if (!arr.includes(member.id)) {
@@ -990,6 +1008,7 @@ async function sweepBirthdays(botId, entry) {
         }
       }
     } catch (e) { console.error('[Hoxera] bday announce:', e.message); }
+    }
   }
 }
 

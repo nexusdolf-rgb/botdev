@@ -1279,13 +1279,34 @@ Dashboard.renderers.stats = async (content) => {
 };
 
 // ---------- Annonces programmées ----------
+const ANNOUNCEMENT_TZ_OPTIONS = [
+  ['Europe/Paris', '🇫🇷 Paris (Europe/Paris)'],
+  ['Europe/Brussels', '🇧🇪 Bruxelles (Europe/Brussels)'],
+  ['Europe/London', '🇬🇧 Londres (Europe/London)'],
+  ['Europe/Madrid', '🇪🇸 Madrid (Europe/Madrid)'],
+  ['Europe/Zurich', '🇨🇭 Genève (Europe/Zurich)'],
+  ['America/Toronto', '🇨🇦 Montréal (America/Toronto)'],
+  ['America/New_York', '🇺🇸 New York (America/New_York)'],
+  ['America/Los_Angeles', '🇺🇸 Los Angeles (America/Los_Angeles)'],
+  ['America/Sao_Paulo', '🇧🇷 São Paulo (America/Sao_Paulo)'],
+  ['America/Mexico_City', '🇲🇽 Mexico (America/Mexico_City)'],
+  ['Africa/Casablanca', '🇲🇦 Casablanca (Africa/Casablanca)'],
+  ['Africa/Dakar', '🇸🇳 Dakar (Africa/Dakar)'],
+  ['Indian/Reunion', '🇷🇪 La Réunion (Indian/Reunion)'],
+  ['Indian/Antananarivo', '🇲🇬 Antananarivo (Indian/Antananarivo)'],
+  ['Asia/Tokyo', '🇯🇵 Tokyo (Asia/Tokyo)'],
+  ['Australia/Sydney', '🇦🇺 Sydney (Australia/Sydney)'],
+];
+const ANNOUNCEMENT_TZ_LABEL = Object.fromEntries(ANNOUNCEMENT_TZ_OPTIONS.map(([tz, label]) => [tz, label.split(' (')[0]]));
+
 Dashboard.renderers.announcements = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const root = Dashboard.header(content, '📅', 'Annonces programmées', 'Des messages envoyés automatiquement aux jours et heures choisis (ex : le lundi à 18 h).');
   const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
   const { scheduled } = await App.api(`/bots/${bot.id}/guilds/${guildId}/scheduled`);
+  const currentTz = ((data.settings || {}).timezone) || 'Europe/Paris';
 
-  const c = Dashboard.card(root, 'Mes annonces', 'Jusqu\'à 20 annonces. Heure de Paris (Europe/Paris).');
+  const c = Dashboard.card(root, 'Mes annonces', `Jusqu'à 20 annonces. Envoi à l'heure de : ${ANNOUNCEMENT_TZ_LABEL[currentTz] || currentTz}.`);
   const list = App.el(`<div id="ann-list"></div>`);
   c.appendChild(list);
   const render = () => {
@@ -1325,7 +1346,9 @@ Dashboard.renderers.announcements = async (content, data) => {
 
   const c2 = Dashboard.card(root, '＋ Nouvelle annonce', '');
   c2.innerHTML += `
-    <label class="dash-label">Salon</label>
+    <label class="dash-label">Fuseau horaire (heure d'envoi)</label>
+    <select class="dash-select" id="a-tz">${ANNOUNCEMENT_TZ_OPTIONS.map(([tz, label]) => `<option value="${tz}" ${tz === currentTz ? 'selected' : ''}>${label}</option>`).join('')}</select>
+    <label class="dash-label" style="margin-top:10px">Salon</label>
     <select class="dash-select" id="a-channel">${textChannels.map((ch) => `<option value="${ch.id}">💬 #${App.escapeHtml(ch.name)}</option>`).join('')}</select>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
       <div style="flex:1;min-width:110px"><label class="dash-label">Heure (0-23)</label><input class="dash-input" id="a-hour" type="number" min="0" max="23" value="18" /></div>
@@ -1344,6 +1367,10 @@ Dashboard.renderers.announcements = async (content, data) => {
     const text = c2.querySelector('#a-text').value.trim();
     if (!days.length || !text) return App.toast('Choisis au moins un jour et écris le message.', 'error');
     try {
+      const chosenTz = c2.querySelector('#a-tz').value;
+      if (chosenTz !== currentTz) {
+        await App.api(`/bots/${bot.id}/guilds/${guildId}/settings`, { method: 'PUT', body: { timezone: chosenTz } });
+      }
       await App.api(`/bots/${bot.id}/guilds/${guildId}/scheduled`, { method: 'POST', body: {
         channel_id: c2.querySelector('#a-channel').value,
         hour: parseInt(c2.querySelector('#a-hour').value, 10) || 0,
