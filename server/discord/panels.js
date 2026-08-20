@@ -378,7 +378,7 @@ async function sendTicketPanel(botId, guildId, client, channel) {
   if (guild) {
     await identity.sendAsProfile(client, botId, guild, channel, payload);
   } else {
-    await channel.send(payload);
+    await require('../queue').send(channel, payload);
   }
 }
 
@@ -1557,7 +1557,7 @@ async function sendRoleMenu(botId, client, menu, channel) {
       });
       rows.push(row);
     }
-    await channel.send({ content: menu.content || null, components: rows });
+    await require('../queue').send(channel, { content: menu.content || null, components: rows });
     return;
   }
   const row = new ActionRowBuilder();
@@ -1574,7 +1574,7 @@ async function sendRoleMenu(botId, client, menu, channel) {
     select.addOptions(opt);
   }
   row.addComponents(select);
-  await channel.send({ content: menu.content || null, components: [row] });
+  await require('../queue').send(channel, { content: menu.content || null, components: [row] });
 }
 
 // 🔘 Mode boutons : un clic = activation/désactivation d'un seul rôle

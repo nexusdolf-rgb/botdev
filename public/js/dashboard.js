@@ -1661,6 +1661,20 @@ Dashboard.renderers.health = async (content) => {
     </div>`);
     grid.appendChild(cGuards);
 
+    // 🚦 File d'attente (anti-limites Discord)
+    const q = h.queue || { waiting: 0, active: 0, processed: 0, failed: 0, refused: 0 };
+    const cQueue = App.el(`<div class="dash-card"><h3>🚦 File d'attente</h3>
+      <div class="desc">Tous les envois vers Discord passent par ici : les rafales sont lissées pour ne jamais dépasser les limites.</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        <div class="dash-stat" style="padding:10px"><div class="val">${q.waiting}</div><div class="lbl">En attente</div></div>
+        <div class="dash-stat" style="padding:10px"><div class="val">${q.active}</div><div class="lbl">En cours</div></div>
+        <div class="dash-stat" style="padding:10px"><div class="val">${q.processed}</div><div class="lbl">Traitées</div></div>
+        <div class="dash-stat" style="padding:10px"><div class="val">${q.failed}</div><div class="lbl">Échecs</div></div>
+        <div class="dash-stat" style="padding:10px"><div class="val">${q.refused}</div><div class="lbl">Refusées (file pleine)</div></div>
+      </div>
+    </div>`);
+    grid.appendChild(cQueue);
+
     // ⚠️ Erreurs 24h
     const cErr = App.el(`<div class="dash-card"><h3>⚠️ Erreurs (24 h)</h3>
       <div class="desc">Les incidents récupérés automatiquement — le bot continue de tourner.</div>

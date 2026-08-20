@@ -61,23 +61,31 @@ async function webhookFor(client, botId, guild, channel) {
   }
 }
 
-// Envoie un message avec l'identité du serveur (fallback : envoi normal)
+// Envoie un message avec l'identité du serveur (fallback : envoi normal).
+// 🚦 Tous les envois passent par la FILE D'ATTENTE intelligente :
+// les rafales (bienvenues, tickets, panneaux) sont lissées pour ne
+// jamais dépasser les limites de débit de Discord.
 async function sendAsProfile(client, botId, guild, channel, payload) {
+  const queue = require('../queue');
   const p = profile(botId, guild.id);
   if (!p || !p.name) {
-    return channel.send(payload).catch(() => {});
+    return queue.send(channel, payload);
   }
   const hook = await webhookFor(client, botId, guild, channel);
-  if (!hook) return channel.send(payload).catch(() => {});
-  try {
-    await hook.send({
-      ...payload,
-      username: p.name.slice(0, 80),
-      avatarURL: absoluteUrl(p.avatar_url) || undefined,
-    });
-  } catch {
-    await channel.send(payload).catch(() => {});
-  }
+  if (!hook) return queue.send(channel, payload);
+  const key = 'identite/' + String(botId) + '/' + String(guild.id).slice(0, 18);
+  return queue.enqueue(async () => {
+    try {
+      await hook.send({
+        ...payload,
+        username: p.name.slice(0, 80),
+        avatarURL: absoluteUrl(p.avatar_url) || undefined,
+      });
+      return true;
+    } catch {
+      try { await channel.send(payload); return true; } catch { return false; }
+    }
+  }, key);
 }
 
 module.exports = { profile, buildProfileEmbed, sendAsProfile, absoluteUrl };

@@ -1343,6 +1343,7 @@ router.get('/health/bot', (req, res) => {
     memory: (healthInfo && healthInfo.memory) || {},
     errors24h: (healthInfo && healthInfo.errors24h) || { count: 0, last: [] },
     platform: (healthInfo && healthInfo.platform) || {},
+    queue: (healthInfo && healthInfo.queue) || { waiting: 0, active: 0, processed: 0, failed: 0, refused: 0 },
     bots: rows.map((r) => ({ id: r.id, name: r.name, enabled: !!r.enabled, last_error: String(r.last_error || '').slice(0, 200), username: r.bot_username || '' })),
     clients: clientsState,
   });

@@ -41,6 +41,8 @@ function snapshot() {
   let dbInfo = { fileSizeKo: 0 };
   try { dbInfo = maintenance.dbStats(store.db); } catch {}
   const last24 = errorsLast24h();
+  let queueInfo = { waiting: 0, active: 0, processed: 0, failed: 0, refused: 0 };
+  try { queueInfo = require('./queue').statsSnapshot(); } catch {}
   return {
     ts: Date.now(),
     processUptimeS: Math.round(process.uptime()),
@@ -52,6 +54,7 @@ function snapshot() {
     platform,
     botsOnline: bots.filter((b) => b.online).length,
     db: dbInfo,
+    queue: queueInfo,
     errors24h: {
       count: last24.length,
       last: last24.slice(0, 5).map((e) => ({ source: e.source, message: e.message, at: e.ts })),

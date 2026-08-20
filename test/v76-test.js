@@ -87,6 +87,7 @@ const check = (label, cond) => {
       memory: { heapUsedMb: 78, heapTotalMb: 120, rssMb: 140 },
       errors24h: { count: 1, last: [{ source: 'interaction', message: 'erreur test', at: Date.now() - 60000 }] },
       platform: { servers: 6, members: 146 },
+      queue: { waiting: 2, active: 1, processed: 340, failed: 0, refused: 0 },
       bots: [{ id: 1, name: 'Hoxera', enabled: true, last_error: '', username: 'Nexora#2500' }],
       clients: [],
     });
@@ -109,6 +110,7 @@ const check = (label, cond) => {
       guards: c.textContent.includes('Anti-base-vide') && c.textContent.includes('Reconnexion forcée'),
       errors: c.textContent.includes('1 erreur') || c.textContent.includes('erreur(s)'),
       errorDetail: c.textContent.includes('erreur test'),
+      queue: c.textContent.includes('File d\'attente') && c.textContent.includes('340'),
       cards: c.querySelectorAll('.dash-card').length,
     };
   })();
@@ -116,7 +118,7 @@ const check = (label, cond) => {
   await new Promise((r) => setTimeout(r, 2500));
   const res = await w.__r;
   console.log(JSON.stringify(res, null, 2));
-  const ok = res.online && res.servers && res.uptime && res.memory && res.db && res.backup && res.guards && res.errors && res.errorDetail && res.cards === 4;
+  const ok = res.online && res.servers && res.uptime && res.memory && res.db && res.backup && res.guards && res.errors && res.errorDetail && res.cards === 5 && res.queue;
 
   store.db.close();
   console.log(ok && failures === 0 ? '\n✅ V76 — Brique 2 « Centre de santé » : 100 % fonctionnel. 🎉' : `\n❌ ${failures} vérification(s) en échec`);
