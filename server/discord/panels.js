@@ -178,6 +178,14 @@ async function dispatchPanels(botId, interaction) {
       if (cid === `bd-tmenu:${botId}:delete`) { await handleTicketDeleteAsk(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:delconfirm`) { await handleTicketDeleteConfirm(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:delcancel`) { await handleTicketDeleteCancel(interaction); return true; }
+      // Ancien bouton « Fermer le ticket » du créateur (retiré en v86) :
+      // les tickets ouverts AVANT la mise à jour l'affichent encore → réponse propre.
+      if (cid.startsWith(`bd-tclose:`)) {
+        try {
+          await interaction.reply({ content: 'ℹ️ Ce bouton n\'est plus actif — la fermeture est réservée au staff (boutons 🔒 Fermer / 🗑 Supprimer).', ephemeral: true });
+        } catch {}
+        return true;
+      }
       return false;
     }
 
