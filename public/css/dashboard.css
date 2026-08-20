@@ -170,7 +170,7 @@
 
   /* Grille et cartes en une colonne */
   .dash-grid { grid-template-columns: 1fr; }
-  .dash-stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .dash-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .dash-card { padding: 16px 15px; }
 
   /* En-tête de module plus compact */
@@ -253,7 +253,9 @@
 @media (max-width: 700px) {
   .dash-member { flex-wrap: wrap; }
   .m-actions { width: 100%; justify-content: flex-start; }
-  .dash-filter-grid { grid-template-columns: repeat(2, 1fr); }
+  .dash-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dash-filter { min-width: 0; }
+  .dash-filter span { min-width: 0; overflow: hidden; }
   .chart { gap: 4px; }
   .bar { max-width: 100%; }
 }
@@ -289,7 +291,9 @@
 }
 
 @media (max-width: 700px) {
-  .dash-checklist { grid-template-columns: 1fr 1fr; }
+  .dash-checklist { grid-template-columns: 1fr; } /* une colonne : libellés complets */
+  .check-item { min-width: 0; }
+  .check-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 
 /* ============================================================
@@ -309,11 +313,12 @@
     font-family: Roboto, "Segoe UI", system-ui, sans-serif;
   }
 
-  /* ---------- App bar (haut) ---------- */
+  /* ---------- App bar (haut) : la SEULE barre collante ---------- */
   .dash-topbar {
-    position: sticky; top: 56px; z-index: 40;
-    background: rgba(14, 15, 21, .92); backdrop-filter: blur(10px);
-    margin: 0 -12px 14px; padding: 10px 12px;
+    position: sticky; top: 0; z-index: 40;
+    background: rgba(14, 15, 21, .94); backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    margin: 0 -12px 14px; padding: calc(10px + env(safe-area-inset-top)) 12px 12px;
     border-bottom: 1px solid var(--d-border);
   }
   .dash-server-pick {
@@ -322,6 +327,9 @@
   }
   .dash-server-pick select { font-size: 15.5px; min-height: 44px; }
   .dash-server-pick img { width: 38px; height: 38px; border-radius: 11px; }
+  .dash-topbar { flex-direction: row; align-items: center; gap: 10px; }
+  .dash-topbar-actions { margin-left: auto; }
+  .dash-topbar-actions .dash-btn { flex: 0 0 auto; }
 
   /* ---------- La sidebar devient inutile : la nav basse la remplace ---------- */
   .dash-side { display: none; }
@@ -344,11 +352,15 @@
     -webkit-tap-highlight-color: transparent;
   }
   .bnav-item:active { transform: scale(.92); }
-  .bnav-ico { font-size: 21px; line-height: 1; transition: .15s; }
+  .bnav-ico {
+    font-size: 21px; line-height: 1; transition: .15s;
+    border-radius: 999px; padding: 3px 13px;
+  }
   .bnav-label { letter-spacing: .2px; }
   .bnav-item.active { color: #fff; }
   .bnav-item.active .bnav-ico {
-    transform: translateY(-2px) scale(1.1);
+    background: rgba(88, 101, 242, .18);
+    transform: translateY(-1px);
     filter: drop-shadow(0 2px 8px rgba(88, 101, 242, .6));
   }
   .bnav-item.active::before {
@@ -358,13 +370,13 @@
   }
 
   /* ---------- Feuille « Plus » (bottom sheet) ---------- */
-  .sheet-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .sheet-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .sheet-item {
     display: flex; align-items: center; gap: 10px;
     background: var(--d-card2); border: 1px solid var(--d-border);
     border-radius: 12px; padding: 12px; color: var(--d-text);
     font-family: inherit; font-size: 13.5px; font-weight: 600;
-    text-align: left; cursor: pointer; min-height: 48px; transition: .12s;
+    text-align: left; cursor: pointer; min-height: 52px; min-width: 0; transition: .12s;
     -webkit-tap-highlight-color: transparent;
   }
   .sheet-item:active { transform: scale(.96); border-color: var(--d-accent); }
@@ -372,7 +384,19 @@
   .sheet-ico { font-size: 19px; }
 
   /* ---------- Contenu : laisser la place à la barre basse ---------- */
-  .dash-main { padding: 0 12px calc(96px + env(safe-area-inset-bottom)); }
+  .dash-main { padding: 8px 12px calc(96px + env(safe-area-inset-bottom)); }
+
+  /* ---------- Zones tactiles ≥ 44 px (recommandation Android) ---------- */
+  .dash-btn { min-height: 46px; padding: 10px 16px; }
+  .dash-btn-sm { min-height: 40px; }
+  .dash-filter { min-height: 48px; }
+  .check-item { min-height: 48px; }
+  .check-go { display: none; } /* « Configurer → » n'apparaît que sur ordinateur (au survol) */
+  .switch { width: 52px; height: 30px; }
+  .switch .slider::before { height: 22px; width: 22px; left: 4px; top: 4px; }
+  .switch input:checked + .slider::before { transform: translateX(22px); }
+  .switch::after { content: ''; position: absolute; inset: -10px; } /* zone tactile étendue */
+  .x-btn { min-width: 44px; min-height: 44px; font-size: 22px; }
 
   /* ---------- Retour tactile sur tous les éléments cliquables ---------- */
   .dash-btn:active, .check-item:active, .dash-card[style*="cursor:pointer"]:active {
@@ -400,4 +424,12 @@
 
   /* ---------- Tableaux : défilement tactile fluide ---------- */
   .dash-table { -webkit-overflow-scrolling: touch; }
+
+  /* ---------- Finitions « app » ---------- */
+  .dash-card { padding: 16px; border-radius: 16px; }
+  .dash-stat { padding: 14px; border-radius: 16px; }
+  .dash-stat .val { font-size: 21px; }
+  .dash-module-header .m-icon { width: 38px; height: 38px; border-radius: 12px; font-size: 18px; }
+  .dash-module-header h1 { font-size: 16.5px; }
+  .dash-module-header .sub { font-size: 12px; }
 }

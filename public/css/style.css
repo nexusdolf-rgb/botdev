@@ -478,13 +478,21 @@ label.field-label {
   }
   .btn, .btn-sm, .btn-icon, .x-btn, .palette-item { transition: transform .1s, filter .12s; }
 
-  /* Navbar compacte façon app bar */
+  /* Navbar compacte façon app bar (elle défile ; l'app bar du dashboard reste collée) */
   .navbar {
-    padding: 8px 14px;
+    position: static;
+    padding: 8px 12px;
     padding-top: calc(8px + env(safe-area-inset-top));
     min-height: 52px;
   }
-  .navbar .user-pill span:not(.chip) { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .navbar-right { gap: 8px; }
+  .navbar .user-pill { gap: 0; }
+  .navbar .user-pill span, .navbar .user-pill .chip { display: none; }
+  .navbar .user-pill .user-avatar { width: 32px; height: 32px; }
+  .navbar #nav-admin { display: none; } /* le bouton Admin reste sur ordinateur */
+  .navbar .nl-lbl { display: none; }     /* Déconnexion = icône seule */
+  .navbar .nl-ico { font-size: 16px; line-height: 1; }
+  .navbar .btn-sm { min-height: 44px; min-width: 44px; justify-content: center; padding: 0 10px; }
 
   /* Éditeur de blocs : colonnes empilées */
   .editor-layout { flex-direction: column; }

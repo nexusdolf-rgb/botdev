@@ -237,6 +237,8 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
   const bot = Dashboard.state.bot;
   const manageable = discordGuilds.filter((g) => g.canManage);
   const cur = discordGuilds.find((g) => g.id === Dashboard.state.guildId);
+  // Le bouton « Ajouter le bot » ne sert que s'il manque sur au moins un serveur gérable
+  const needsInvite = discordGuilds.some((g) => g.canManage && !g.hasBot);
   topbar.innerHTML = `
     <div class="dash-server-pick">
       ${cur && cur.icon ? `<img src="${App.escapeHtml(cur.icon)}" alt="" />` : '<span style="font-size:20px">🌍</span>'}
@@ -247,14 +249,15 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
     </div>
     <div class="dash-topbar-actions">
       <span class="dash-badge ${bot.online ? 'ok' : 'bad'}">${bot.online ? '🟢 En ligne' : '🔴 Hors ligne'}</span>
-      <button class="dash-btn dash-btn-primary" id="d-invite2">➕ Ajouter le bot</button>
+      ${needsInvite ? `<button class="dash-btn dash-btn-primary" id="d-invite2">➕ Ajouter le bot</button>` : ''}
     </div>
   `;
   topbar.querySelector('#d-guild').onchange = async (e) => {
     if (!e.target.value) return;
     await Dashboard.selectGuild(e.target.value);
   };
-  topbar.querySelector('#d-invite2').onclick = () => App.openInvite(bot.invite_url);
+  const inviteBtn = topbar.querySelector('#d-invite2');
+  if (inviteBtn) inviteBtn.onclick = () => App.openInvite(bot.invite_url);
 };
 
 // ---------------------- Chargement serveur ----------------------

@@ -204,7 +204,7 @@ App.renderNavbar = () => {
           <span>${App.escapeHtml(user.discord_username || user.email)}</span>
           <span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">🔗</span>
         </div>
-        <button class="btn btn-ghost btn-sm" id="nav-logout">Déconnexion</button>
+        <button class="btn btn-ghost btn-sm" id="nav-logout" title="Déconnexion"><span class="nl-ico">⏻</span><span class="nl-lbl">Déconnexion</span></button>
       </div>
     </div>
   `);
