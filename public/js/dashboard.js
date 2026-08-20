@@ -97,6 +97,7 @@ Dashboard.MODULES = [
 Dashboard.BOT_MODULES = [
   ['commands', '🧩', 'Commandes'],
   ['modules', '📦', 'Modules'],
+  ['health', '🩺', 'Santé du bot'],
   ['botsettings', '🤖', 'Réglages du bot'],
 ];
 
@@ -279,7 +280,13 @@ Dashboard.renderContent = async (content) => {
   const { bot, guildId, module } = Dashboard.state;
   content.innerHTML = '<div class="spinner"></div>';
 
-  const botLevel = ['commands', 'modules', 'botsettings'].includes(module);
+  // 🩺 On coupe l'actualisation automatique de la page Santé si on la quitte
+  if (module !== 'health' && Dashboard.state.healthTimer) {
+    clearInterval(Dashboard.state.healthTimer);
+    Dashboard.state.healthTimer = null;
+  }
+
+  const botLevel = ['commands', 'modules', 'health', 'botsettings'].includes(module);
   if (!botLevel && !guildId) return;
 
   try {
@@ -1582,6 +1589,97 @@ Dashboard.renderers.modules = async (content) => {
     grid.appendChild(card);
   });
   root.appendChild(grid);
+};
+
+// ---------- Santé du bot (centre de santé, fondateur) ----------
+Dashboard.renderers.health = async (content) => {
+  const bot = Dashboard.state.bot;
+  const root = Dashboard.header(content, '🩺', 'Santé du bot', 'État en direct du processus : mémoire, base, sauvegarde, garde-fous et erreurs des 24 h.');
+
+  const render = async () => {
+    let h = {};
+    try { h = await App.api('/health/bot'); } catch (e) { root.innerHTML = `<div class="dash-empty">${App.escapeHtml(e.message)}</div>`; return; }
+    const mem = h.memory || {};
+    const heapPct = mem.heapTotalMb ? Math.min(100, Math.round((mem.heapUsedMb / mem.heapTotalMb) * 100)) : 0;
+    const heapGlobalPct = Math.min(100, Math.round((mem.heapUsedMb || 0) / 512 * 100)); // instance 512 Mo
+    const lastB = h.lastBackup ? new Date(h.lastBackup) : null;
+    const lastBStr = lastB && !isNaN(lastB) ? lastB.toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'jamais';
+    const errs = h.errors24h || { count: 0, last: [] };
+    const uptime = Math.round((h.processUptimeMs || 0) / 1000);
+
+    Dashboard.header(content, '🩺', 'Santé du bot', 'État en direct — actualisation automatique toutes les 30 secondes.');
+
+    // 🟢 Statut global
+    const statsEl = App.el(`
+      <div class="dash-stats">
+        <div class="dash-stat"><div class="val">${bot.online ? '🟢 En ligne' : '🔴 Hors ligne'}</div><div class="lbl">Bot</div></div>
+        <div class="dash-stat"><div class="val">${(h.platform && h.platform.servers) ?? '-'}</div><div class="lbl">Serveurs</div></div>
+        <div class="dash-stat"><div class="val">${(h.platform && h.platform.members) ?? '-'}</div><div class="lbl">Membres</div></div>
+        <div class="dash-stat"><div class="val">${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m</div><div class="lbl">Processus en vie</div></div>
+      </div>`);
+    root.appendChild(statsEl);
+
+    const grid = App.el(`<div class="dash-grid"></div>`);
+    root.appendChild(grid);
+
+    // 🧠 Mémoire
+    const cMem = App.el(`<div class="dash-card"><h3>🧠 Mémoire</h3>
+      <div class="desc">Sur l'instance (512 Mo) — alertes automatiques au-delà de 400 Mo.</div>
+      <div class="dash-label">Utilisée : ${mem.heapUsedMb ?? '-'} Mo / ${mem.heapTotalMb ?? '-'} Mo</div>
+      <div style="height:12px;background:var(--d-card2);border-radius:20px;overflow:hidden;margin:8px 0 4px">
+        <div style="height:100%;width:${heapPct}%;background:linear-gradient(90deg,#5865F2,#8B5CF6);border-radius:20px"></div>
+      </div>
+      <div style="color:var(--d-dim);font-size:11.5px">${heapGlobalPct}% de l'instance · RSS ${mem.rssMb ?? '-'} Mo</div>
+    </div>`);
+    grid.appendChild(cMem);
+
+    // 💾 Base + sauvegarde
+    const cDb = App.el(`<div class="dash-card"><h3>💾 Base & sauvegarde</h3>
+      <div class="desc">Limite de sécurité : 900 Ko (jamais dépassée grâce au nettoyage automatique).</div>
+      <div class="dash-badge ${(h.db && h.db.fileSizeKo) < 700 ? 'ok' : 'warn'}">📦 Base : ${(h.db && h.db.fileSizeKo) ?? '-'} Ko</div>
+      <div style="height:10px;background:var(--d-card2);border-radius:20px;overflow:hidden;margin:10px 0 4px">
+        <div style="height:100%;width:${Math.min(100, ((h.db && h.db.fileSizeKo) || 0) / 900 * 100)}%;background:${(h.db && h.db.fileSizeKo) > 700 ? '#ED4245' : 'linear-gradient(90deg,#3BA55D,#57F287)'};border-radius:20px"></div>
+      </div>
+      <div style="color:var(--d-dim);font-size:11.5px;margin-bottom:10px">${h.db && h.db.tables ? Object.keys(h.db.tables).length + ' tables avec des données' : ''}</div>
+      <div class="dash-badge ${h.backupEnabled ? 'ok' : 'warn'}">💾 Sauvegarde ${h.backupEnabled ? 'active' : 'désactivée'}</div>
+      <div style="color:var(--d-dim);font-size:12px;margin-top:6px">🕐 Dernière : ${lastBStr} · démarrage : ${App.escapeHtml(h.bootRestore || '?')}</div>
+    </div>`);
+    grid.appendChild(cDb);
+
+    // 🛡️ Garde-fous
+    const guards = [
+      ['🛟 Anti-base-vide (restauration + sauvegarde)', true],
+      ['📏 Anti-dépassement 900 Ko', true],
+      ['🐕 Reconnexion forcée (60 s)', true],
+      ['⏱️ Anti-blocage des interactions (15 s)', true],
+      ['💥 Anti-crash (réponses polies)', true],
+      ['🧹 Nettoyage auto (24 h)', true],
+    ];
+    const cGuards = App.el(`<div class="dash-card"><h3>🛡️ Garde-fous actifs</h3>
+      <div class="desc">Les protections installées — toutes actives en permanence.</div>
+      ${guards.map(([label]) => `<div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid #222434;font-size:13px"><span>✅</span>${label}</div>`).join('')}
+    </div>`);
+    grid.appendChild(cGuards);
+
+    // ⚠️ Erreurs 24h
+    const cErr = App.el(`<div class="dash-card"><h3>⚠️ Erreurs (24 h)</h3>
+      <div class="desc">Les incidents récupérés automatiquement — le bot continue de tourner.</div>
+      <div class="dash-badge ${errs.count === 0 ? 'ok' : 'bad'}">${errs.count} erreur(s)</div>
+      ${errs.count === 0
+        ? `<div class="dash-empty" style="padding:18px">Tout est calme 🎉</div>`
+        : `<div style="margin-top:10px">${errs.last.map((e) => `
+          <div style="background:var(--d-card2);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:12px">
+            <b>${App.escapeHtml(e.source)}</b> <span style="color:var(--d-dim)">· ${new Date(e.at).toLocaleTimeString('fr-FR')}</span>
+            <div style="color:var(--d-dim);word-break:break-word">${App.escapeHtml(e.message)}</div>
+          </div>`).join('')}</div>`}
+    </div>`);
+    grid.appendChild(cErr);
+  };
+
+  await render();
+  // 🔄 Actualisation automatique tant que la page Santé est ouverte
+  if (Dashboard.state.healthTimer) clearInterval(Dashboard.state.healthTimer);
+  Dashboard.state.healthTimer = setInterval(() => render().catch(() => {}), 30000);
 };
 
 // ---------- Réglages du bot ----------

@@ -1328,6 +1328,9 @@ router.get('/health/bot', (req, res) => {
   // surveiller à distance que la sauvegarde reste sous la limite de 1 Mo.
   let dbInfo = { sizeKo: 0 };
   try { dbInfo = require('./maintenance').dbStats(store.db); } catch {}
+  // 🩺 Santé complète : mémoire, erreurs 24 h, plateforme
+  let healthInfo = {};
+  try { healthInfo = require('./health').snapshot(); } catch {}
   res.json({
     processUptimeMs: Math.round(process.uptime() * 1000),
     tokenConfigured: !!(process.env.HOXERA_TOKEN || process.env.NOXERA_TOKEN || process.env.NEXORA_TOKEN),
@@ -1335,7 +1338,11 @@ router.get('/health/bot', (req, res) => {
     botCount: rows.length,
     bootRestore: store.settings.get('boot_restore') || 'inconnu',
     backupEnabled: !!process.env.BOTDEV_GH_TOKEN && !!process.env.BOTDEV_DATA_REPO,
+    lastBackup: store.settings.get('last_backup') || '',
     db: dbInfo,
+    memory: (healthInfo && healthInfo.memory) || {},
+    errors24h: (healthInfo && healthInfo.errors24h) || { count: 0, last: [] },
+    platform: (healthInfo && healthInfo.platform) || {},
     bots: rows.map((r) => ({ id: r.id, name: r.name, enabled: !!r.enabled, last_error: String(r.last_error || '').slice(0, 200), username: r.bot_username || '' })),
     clients: clientsState,
   });
@@ -1462,6 +1469,7 @@ router.delete('/admin/users/:id', requireAuth, requireAdmin, async (req, res) =>
 // Toute erreur non gérée devient une réponse JSON propre (500).
 router.use((err, req, res, next) => {
   console.error('[BotDev] Erreur route API :', (err && err.message) || err);
+  try { require('./health').recordError('api', (err && err.message) || err); } catch {}
   try {
     if (!res.headersSent) res.status(500).json({ error: 'Erreur interne du serveur — elle a été journalisée.' });
   } catch {}

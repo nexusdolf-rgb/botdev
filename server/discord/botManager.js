@@ -116,6 +116,7 @@ async function guardInteraction(botId, entry, i, timeoutMs = 15000) {
       }
     } catch (e) {
       console.error('[BotDev] interaction error:', (e && e.message) || e);
+      try { require('../health').recordError('interaction', (e && e.message) || e); } catch {}
       try {
         if (typeof i.isRepliable === 'function' && i.isRepliable() && !i.replied && !i.deferred) {
           await i.reply({ content: '⚠️ Une erreur est survenue en traitant cette action — elle a été enregistrée, réessaie dans un instant.', ephemeral: true });

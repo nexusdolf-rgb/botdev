@@ -6,10 +6,13 @@
 // + Surveillance de la mémoire et des avertissements Node.
 // ============================================================
 function install() {
+  const health = require('./health');
   process.on('uncaughtException', (err) => {
+    health.recordError('processus', (err && err.message) || err);
     console.error('[Hoxera] ⚠️ Erreur inattendue (récupérée, le bot continue) :', (err && err.message) || err);
   });
   process.on('unhandledRejection', (reason) => {
+    health.recordError('promesse', (reason && reason.message) || reason);
     console.error('[Hoxera] ⚠️ Promesse non gérée (récupérée, le bot continue) :', (reason && reason.message) || reason);
   });
   process.on('warning', (w) => {
