@@ -83,7 +83,14 @@ function enqueue(task, key = 'tache') {
     return Promise.resolve(false);
   }
   return new Promise((resolve) => {
-    queue.push({ task, resolve, key: String(key).slice(0, 60), addedAt: Date.now() });
+    // 🛡️ Résilience : les erreurs de débit/réseau déclenchent des
+    // retentatives automatiques (backoff court : 0,8 s puis 1,6 s)
+    // avant d'abandonner — et le circuit breaker passe en mode dégradé.
+    const resilientTask = () => {
+      const resilience = require('./resilience');
+      return resilience.retry(task, { category: 'envoi', maxRetries: 2, baseDelay: 800 });
+    };
+    queue.push({ task: resilientTask, resolve, key: String(key).slice(0, 60), addedAt: Date.now() });
     stats.waiting = queue.length;
     pump();
   });

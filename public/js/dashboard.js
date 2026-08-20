@@ -1661,6 +1661,16 @@ Dashboard.renderers.health = async (content) => {
     </div>`);
     grid.appendChild(cGuards);
 
+    // 📉 Alerte de résilience (si le mode dégradé est actif)
+    const res = h.resilience || { state: 'ok', failuresInWindow: 0 };
+    if (res.state !== 'ok') {
+      root.appendChild(App.el(`
+        <div class="dash-card" style="border-color:rgba(254,231,92,.5);background:rgba(254,231,92,.06);margin-bottom:14px">
+          <h3>📉 Mode ${res.state === 'critique' ? 'critique' : 'dégradé'} — Discord ralentit</h3>
+          <div class="desc" style="margin:0">${res.failuresInWindow} échec(s) en 1 minute. Le bot ralentit et retente automatiquement${res.state === 'critique' ? ' — certaines commandes répondent « très sollicité »' : ''}. Retour à la normale automatique dès que Discord récupère.</div>
+        </div>`));
+    }
+
     // 🚦 File d'attente (anti-limites Discord)
     const q = h.queue || { waiting: 0, active: 0, processed: 0, failed: 0, refused: 0 };
     const cQueue = App.el(`<div class="dash-card"><h3>🚦 File d'attente</h3>

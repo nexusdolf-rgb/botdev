@@ -43,6 +43,8 @@ function snapshot() {
   const last24 = errorsLast24h();
   let queueInfo = { waiting: 0, active: 0, processed: 0, failed: 0, refused: 0 };
   try { queueInfo = require('./queue').statsSnapshot(); } catch {}
+  let resilienceInfo = { state: 'ok', failuresInWindow: 0 };
+  try { resilienceInfo = require('./resilience').status(); } catch {}
   return {
     ts: Date.now(),
     processUptimeS: Math.round(process.uptime()),
@@ -55,6 +57,7 @@ function snapshot() {
     botsOnline: bots.filter((b) => b.online).length,
     db: dbInfo,
     queue: queueInfo,
+    resilience: resilienceInfo,
     errors24h: {
       count: last24.length,
       last: last24.slice(0, 5).map((e) => ({ source: e.source, message: e.message, at: e.ts })),

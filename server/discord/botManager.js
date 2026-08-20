@@ -95,6 +95,16 @@ function friendlyError(err) {
 //    continue en arrière-plan (plus jamais d'action « calée » sans réponse)
 //  - aucun gestionnaire (commande pas encore synchronisée…) → réponse d'attente
 async function guardInteraction(botId, entry, i, timeoutMs = 15000) {
+  // 📉 Mode dégradé CRITIQUE : Discord est saturé → on répond immédiatement
+  // « très occupé » au lieu de laisser l'interaction expirer en silence.
+  try {
+    const resilience = require('../resilience');
+    if (resilience.shouldDeferReplies() && i.isChatInputCommand && i.isChatInputCommand()) {
+      await i.reply({ content: '😅 Nexora est très sollicité en ce moment — réessaie dans une minute !', ephemeral: true }).catch(() => {});
+      return;
+    }
+  } catch {}
+
   const work = (async () => {
     try {
       const extra = require('./extra');
@@ -117,6 +127,11 @@ async function guardInteraction(botId, entry, i, timeoutMs = 15000) {
     } catch (e) {
       console.error('[BotDev] interaction error:', (e && e.message) || e);
       try { require('../health').recordError('interaction', (e && e.message) || e); } catch {}
+      // 📉 Seules les erreurs de débit/réseau alimentent le circuit breaker
+      try {
+        const resilience = require('../resilience');
+        if (resilience.isRateOrNetwork(e)) resilience.recordFailure('interaction');
+      } catch {}
       try {
         if (typeof i.isRepliable === 'function' && i.isRepliable() && !i.replied && !i.deferred) {
           await i.reply({ content: '⚠️ Une erreur est survenue en traitant cette action — elle a été enregistrée, réessaie dans un instant.', ephemeral: true });
