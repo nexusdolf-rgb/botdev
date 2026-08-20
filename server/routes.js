@@ -1324,6 +1324,10 @@ router.get('/health/bot', (req, res) => {
       ageMs: entry.startedAt ? Date.now() - entry.startedAt : null,
     });
   }
+  // 🩺 Taille de la base + compteurs (sans données sensibles) : permet de
+  // surveiller à distance que la sauvegarde reste sous la limite de 1 Mo.
+  let dbInfo = { sizeKo: 0 };
+  try { dbInfo = require('./maintenance').dbStats(store.db); } catch {}
   res.json({
     processUptimeMs: Math.round(process.uptime() * 1000),
     tokenConfigured: !!(process.env.HOXERA_TOKEN || process.env.NOXERA_TOKEN || process.env.NEXORA_TOKEN),
@@ -1331,6 +1335,7 @@ router.get('/health/bot', (req, res) => {
     botCount: rows.length,
     bootRestore: store.settings.get('boot_restore') || 'inconnu',
     backupEnabled: !!process.env.BOTDEV_GH_TOKEN && !!process.env.BOTDEV_DATA_REPO,
+    db: dbInfo,
     bots: rows.map((r) => ({ id: r.id, name: r.name, enabled: !!r.enabled, last_error: String(r.last_error || '').slice(0, 200), username: r.bot_username || '' })),
     clients: clientsState,
   });

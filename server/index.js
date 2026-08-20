@@ -40,6 +40,16 @@ async function main() {
     console.log(`[BotDev] 🧪 Intégrité base : ${check && check.quick_check === 'ok' ? 'OK ✅' : String(check && check.quick_check)}`);
   } catch (e) { console.error('[BotDev] 🧪 Contrôle intégrité impossible :', e.message); }
 
+  // 🧹 Maintenance automatique : nettoyage des anciennes données au
+  // démarrage puis toutes les 24 h (la base reste légère pour toujours).
+  try {
+    const maintenance = require('./maintenance');
+    maintenance.runDaily(store.db);
+    setInterval(() => {
+      try { maintenance.runDaily(store.db); } catch (e) { console.error('[Hoxera] maintenance :', e.message); }
+    }, 24 * 3600000);
+  } catch (e) { console.error('[Hoxera] maintenance indisponible :', e.message); }
+
   // 🆕 L'URL officielle du dashboard : remplace un éventuel ancien lien
   // mémorisé dans la base restaurée (transcriptions, /help, pieds de page…)
   const officialUrl = 'https://dash-hoxora.onrender.com';
