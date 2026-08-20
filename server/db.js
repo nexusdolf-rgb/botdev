@@ -375,6 +375,7 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_links INTEGER DEFAULT 1"
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_caps INTEGER DEFAULT 1"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_mentions INTEGER DEFAULT 5"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_spam INTEGER DEFAULT 5"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_ignore_staff INTEGER DEFAULT 1"); } catch (e) {}
 
 // Hoxera 2.0 : colonnes ajoutées
 try { db.exec("ALTER TABLE tickets ADD COLUMN max_one INTEGER DEFAULT 0"); } catch (e) {}
@@ -520,7 +521,7 @@ const guildSettings = {
   set: (botId, guildId, fields) => {
     const cur = guildSettings.get(botId, guildId) || { prefix: '', warn_limit: 0, warn_action: 'none' };
     const next = { ...cur, ...fields };
-    const cols = ['prefix', 'warn_limit', 'warn_action', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'lang', 'timezone'];
+    const cols = ['prefix', 'warn_limit', 'warn_action', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'lang', 'timezone'];
     const vals = {
       bot_id: botId, guild_id: guildId,
       prefix: String(next.prefix || '').slice(0, 5),
@@ -537,6 +538,7 @@ const guildSettings = {
       am_caps: (next.am_caps === 0 || next.am_caps === false) ? 0 : 1,
       am_mentions: Math.max(parseInt(next.am_mentions, 10) || 0, 0),
       am_spam: Math.max(parseInt(next.am_spam, 10) || 0, 0),
+      am_ignore_staff: (next.am_ignore_staff === 0 || next.am_ignore_staff === false) ? 0 : 1,
       log_channel: String(next.log_channel || '').slice(0, 100),
       suggestion_channel: String(next.suggestion_channel || '').slice(0, 100),
       log_events: String(next.log_events || '').slice(0, 1000),

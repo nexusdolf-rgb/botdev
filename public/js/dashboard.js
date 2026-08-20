@@ -961,7 +961,8 @@ Dashboard.renderers.moderation = async (content, data) => {
   const { sanctions } = await App.api(`/bots/${bot.id}/guilds/${guildId}/sanctions`);
   const root = Dashboard.header(content, '🛡️', 'Modération', 'Auto-modération, liste noire et sanctions prédéfinies (/sanction membre nom).');
 
-  const c = Dashboard.card(root, 'Auto-modération', 'Le bot supprime automatiquement (les admins et modérateurs sont ignorés).');
+  const c = Dashboard.card(root, 'Auto-modération', 'Le bot supprime automatiquement les liens, les MAJUSCULES, les mentions excessives, le spam et les mots interdits.');
+  const blacklistData = blacklist.map((w) => ({ word: w }));
   c.innerHTML += `
     <label class="dash-label">Activer</label>
     <label class="switch"><input type="checkbox" id="am-on" ${s.am_enabled ? 'checked' : ''} /><span class="slider"></span></label>
@@ -971,6 +972,8 @@ Dashboard.renderers.moderation = async (content, data) => {
       <div><label class="dash-label">Mentions max (0 = illimité)</label><input class="dash-input" id="am-men" type="number" value="${s.am_mentions ?? 5}" /></div>
       <div><label class="dash-label">Spam : messages / 5 s</label><input class="dash-input" id="am-spam" type="number" value="${s.am_spam ?? 5}" /></div>
     </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--d-dim);margin-top:10px"><input type="checkbox" id="am-staff" ${s.am_ignore_staff !== 0 ? 'checked' : ''} /> Ignorer les admins et modérateurs</label>
+    <div class="desc" style="margin:8px 0 0">💡 Pour tester : décoche « Ignorer les admins » — sinon tes propres messages ne sont jamais filtrés (protection par défaut).</div>
     <button class="dash-btn dash-btn-primary" style="margin-top:12px" id="am-save">💾 Enregistrer</button>`;
   c.querySelector('#am-save').onclick = async () => {
     try {
@@ -980,13 +983,12 @@ Dashboard.renderers.moderation = async (content, data) => {
         caps: c.querySelector('#am-caps').checked,
         mentions: parseInt(c.querySelector('#am-men').value, 10) || 0,
         spam: parseInt(c.querySelector('#am-spam').value, 10) || 0,
+        ignore_staff: c.querySelector('#am-staff').checked,
         blacklist: blacklistData.map((w) => w.word),
       }});
       App.toast('Auto-modération enregistrée !');
     } catch (e) { App.toast(e.message, 'error'); }
   };
-
-  const blacklistData = blacklist.map((w) => ({ word: w }));
   const c2 = Dashboard.card(root, '🔇 Liste noire', 'Les messages contenant ces mots sont supprimés automatiquement.');
   c2.appendChild(App.el(`<div id="bl-list"></div>`));
   c2.appendChild(App.el(`<button class="dash-btn dash-btn-sm" id="bl-add" style="margin-top:8px">＋ Ajouter un mot</button>`));

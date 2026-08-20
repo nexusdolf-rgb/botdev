@@ -775,13 +775,14 @@ router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) =>
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
-  const { enabled, links, caps, mentions, spam, blacklist } = req.body || {};
+  const { enabled, links, caps, mentions, spam, ignore_staff, blacklist } = req.body || {};
   store.guildSettings.set(bot.id, guildId, {
     am_enabled: enabled ? 1 : 0,
     am_links: (links === false || links === 0) ? 0 : 1,
     am_caps: (caps === false || caps === 0) ? 0 : 1,
     am_mentions: Math.max(parseInt(mentions, 10) || 0, 0),
     am_spam: Math.max(parseInt(spam, 10) || 0, 0),
+    ...(ignore_staff !== undefined ? { am_ignore_staff: ignore_staff ? 1 : 0 } : {}),
   });
   if (Array.isArray(blacklist)) {
     const words = blacklist.map((w) => String(w).trim().toLowerCase()).filter((w) => w.length >= 2).slice(0, 100);
