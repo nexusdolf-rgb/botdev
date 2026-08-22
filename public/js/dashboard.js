@@ -1432,6 +1432,27 @@ Dashboard.renderers.stats = async (content) => {
         </div>`));
     });
   }
+
+  // 🧭 Commandes utilisées (stats d'utilisation v88)
+  try {
+    const cs = await App.api(`/bots/${bot.id}/guilds/${guildId}/stats/commands`);
+    const c4 = Dashboard.card(root, '🧭 Commandes utilisées', `${cs.total} commande(s) au total (30 derniers jours).`);
+    if (!cs.total) {
+      c4.appendChild(App.el(`<div class="desc" style="margin:0">Les compteurs se remplissent dès que les membres utilisent les commandes.</div>`));
+    } else {
+      const maxCmd = Math.max(...cs.byDay.map((d) => d.commands), 1);
+      c4.appendChild(App.el(`<div class="chart">${bars(cs.byDay.map((d) => d.commands), maxCmd, 'linear-gradient(180deg,#8B5CF6,#6d28d9)', 'cmd', cs.byDay.map((d) => new Date(d.day + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' })))}</div>`));
+      c4.appendChild(App.el(`<div class="dash-label" style="margin-top:12px">Top commandes (30 j)</div>`));
+      cs.top.slice(0, 8).forEach((c5, i) => {
+        c4.appendChild(App.el(`
+          <div style="display:flex;align-items:center;gap:10px;padding:6px 2px;border-bottom:1px solid #222434">
+            <span style="font-size:15px">${['🥇','🥈','🥉'][i] || `#${i + 1}`}</span>
+            <span style="flex:1;font-size:13.5px">/${App.escapeHtml(c5.command)}</span>
+            <span class="dash-badge">${c5.n} fois</span>
+          </div>`));
+      });
+    }
+  } catch { /* les stats de commandes s'affichent dès qu'elles existent */ }
 };
 
 // ---------- Annonces programmées ----------
@@ -1556,8 +1577,14 @@ Dashboard.renderers.logs = async (content, data) => {
         ['tickets', '🎫 Tickets', 'ouverture, fermeture, suppression'],
         ['mod', '🛡️ Modération', 'kick, ban, warn, timeout, purge…'],
         ['automod', '🤖 Auto-mod', 'liens, spam, mots interdits…'],
+        ['messages', '💬 Messages', 'supprimés, modifiés, purge massive'],
+        ['roles', '🏷️ Rôles', 'créés, supprimés, modifiés, rôles des membres'],
+        ['channels', '📂 Salons', 'créés, supprimés, modifiés, fils'],
+        ['server', '⚙️ Serveur', 'réglages modifiés, webhooks'],
+        ['voice', '🔊 Vocal', 'connexions, déconnexions, déplacements'],
+        ['security', '🚨 Sécurité', 'raids, verrouillages, bouclier'],
         ['joinleave', '👋 Arrivées / départs', 'nouveaux membres'],
-        ['other', '🛒 Boutique & divers', 'achats, verrouillages…'],
+        ['other', '🛒 Boutique & divers', 'achats…'],
       ].map(([key, label, desc]) => `
         <label class="dash-filter">
           <input type="checkbox" data-ev="${key}" ${ev[key] === 1 || ev[key] === true || !Object.keys(ev).length ? 'checked' : ''} />

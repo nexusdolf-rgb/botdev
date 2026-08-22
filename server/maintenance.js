@@ -18,6 +18,7 @@ const RETENTION = {
   shop_purchases: 90,   // historique d'achats
   warnings: 90,         // avertissements de modération
   closed_tickets: 7,    // registre des salons fermés (purge de secours)
+  cmd_stats: 30,        // compteurs de commandes par jour
 };
 
 function purgeOldData(db) {
@@ -39,6 +40,8 @@ function purgeOldData(db) {
     report.reminders = db.prepare(`DELETE FROM reminders WHERE at_ts < (strftime('%s','now') * 1000) - 86400000`).run().changes;
     // Historique d'auto-modération (30 jours)
     report.automod_logs = db.prepare(`DELETE FROM automod_logs WHERE created_at < datetime('now', '-30 days')`).run().changes;
+    // Statistiques de commandes (30 jours)
+    report.cmd_stats = db.prepare(`DELETE FROM cmd_stats WHERE day < date('now', '-${RETENTION.cmd_stats} days')`).run().changes;
   } catch (e) {
     console.error('[Hoxera] Purge :', e.message);
   }
@@ -52,7 +55,7 @@ function dbStats(db) {
     out.fileSizeBytes = fs.statSync(paths.dbPath).size;
     out.fileSizeKo = Math.round(out.fileSizeBytes / 1024);
   } catch {}
-  const tables = ['users', 'sessions', 'bots', 'commands', 'role_menus', 'tickets', 'xp', 'economy', 'warnings', 'suggestions', 'giveaways', 'transcripts', 'message_stats', 'join_stats', 'shop_purchases', 'reminders', 'marriages', 'birthdays', 'temp_roles', 'scheduled_messages'];
+  const tables = ['users', 'sessions', 'bots', 'commands', 'role_menus', 'tickets', 'xp', 'economy', 'warnings', 'suggestions', 'giveaways', 'transcripts', 'message_stats', 'join_stats', 'shop_purchases', 'reminders', 'marriages', 'birthdays', 'temp_roles', 'scheduled_messages', 'cmd_stats', 'open_tickets', 'ticket_ratings'];
   try {
     for (const t of tables) {
       const n = db.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get().n;

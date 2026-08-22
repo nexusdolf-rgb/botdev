@@ -15,6 +15,19 @@ const i18n = require('../i18n');
 
 // botId:guildId:userId -> { times: [ms], messages: [Message] }
 const spamTracker = new Map();
+// Messages récemment supprimés par l'auto-mod (évite le double journal)
+const recentlyDeleted = new Map(); // messageId -> ts
+
+function wasAutomodded(messageId) {
+  const ts = recentlyDeleted.get(String(messageId));
+  if (!ts) return false;
+  if (Date.now() - ts > 60000) { recentlyDeleted.delete(String(messageId)); return false; }
+  return true;
+}
+
+function markAutomodded(messageId) {
+  recentlyDeleted.set(String(messageId), Date.now());
+}
 
 // Prépare la phrase d'avertissement (texte personnalisé ou modèle traduit)
 function warnText(gs, lang, server, reason) {
@@ -145,7 +158,7 @@ async function runAutomod(botId, message, opts = {}) {
 
   if (reason) {
     let deleted = false;
-    try { if (message.deletable) { await message.delete(); deleted = true; } } catch { }
+    try { if (message.deletable) { markAutomodded(message.id); await message.delete(); deleted = true; } } catch { }
     recordAction(botId, message, reason);
     try {
       await logging.log(botId, message.guild, {
@@ -185,7 +198,7 @@ async function runAutomod(botId, message, opts = {}) {
       // 1) Supprime les messages du spammeur
       let deletedCount = 0;
       for (const m of entry.messages) {
-        try { if (m.deletable) { await m.delete(); deletedCount++; } } catch { }
+        try { if (m.deletable) { markAutomodded(m.id); await m.delete(); deletedCount++; } } catch { }
       }
       // 2) Timeout (durée réglable)
       const minutes = Math.min(Math.max(parseInt(gs.am_timeout_min, 10) || 5, 1), 1440);
@@ -214,4 +227,4 @@ async function runAutomod(botId, message, opts = {}) {
   return { acted: false };
 }
 
-module.exports = { runAutomod, blacklistWordMatch, _test: { spamTracker } };
+module.exports = { runAutomod, blacklistWordMatch, wasAutomodded, _test: { spamTracker } };

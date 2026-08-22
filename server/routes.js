@@ -795,6 +795,19 @@ router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) =>
   res.json({ ok: true });
 });
 
+// 📊 Statistiques d'utilisation des commandes (par serveur)
+router.get('/bots/:id/guilds/:guildId/stats/commands', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const guildId = req.params.guildId;
+  res.json({
+    total: store.cmdStats.total(bot.id, guildId),
+    top: store.cmdStats.top(bot.id, guildId, 12),
+    byDay: store.cmdStats.perDay(bot.id, guildId, 7),
+  });
+});
+
 // Note moyenne du support (étoiles données par les membres après la clôture)
 router.get('/bots/:id/guilds/:guildId/tickets/rating', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);

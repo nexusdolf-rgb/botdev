@@ -141,6 +141,12 @@ async function guardInteraction(botId, entry, i, timeoutMs = 15000) {
 
   const work = (async () => {
     try {
+      // 📊 Statistique d'utilisation : 1 compteur par commande et par jour
+      try {
+        if (i.isChatInputCommand && i.isChatInputCommand() && i.commandName) {
+          store.cmdStats.bump(botId, i.guild ? i.guild.id : 'dm', i.commandName, new Date().toISOString().slice(0, 10));
+        }
+      } catch { /* jamais bloquant */ }
       const extra = require('./extra');
       const extraHandled = await extra.handleInteraction(botId, i);
       if (extraHandled) return;
@@ -264,11 +270,67 @@ function attachListeners(botId, entry) {
   client.on('messageDelete', (m) => {
     const { trackDeleted } = require('./extra');
     trackDeleted(botId, m);
+    // 📋 Journal d'audit : messages supprimés (sauf ceux de l'auto-mod, déjà tracés)
+    try { require('./auditLog').onMessageDelete(botId, m); } catch (e) { console.error('[BotDev] audit msgDelete:', e.message); }
+  });
+
+  client.on('messageDeleteBulk', (msgs) => {
+    try { require('./auditLog').onMessageDeleteBulk(botId, msgs); } catch (e) { console.error('[BotDev] audit bulk:', e.message); }
+  });
+
+  client.on('messageUpdate', (oldMsg, newMsg) => {
+    try { require('./auditLog').onMessageUpdate(botId, oldMsg, newMsg); } catch (e) { console.error('[BotDev] audit msgUpdate:', e.message); }
+  });
+
+  client.on('guildMemberUpdate', (oldMember, newMember) => {
+    try { require('./auditLog').onGuildMemberUpdate(botId, oldMember, newMember); } catch (e) { console.error('[BotDev] audit memberUpdate:', e.message); }
+  });
+
+  client.on('channelCreate', (c) => {
+    try { require('./auditLog').onChannelCreate(botId, c); } catch (e) { console.error('[BotDev] audit chCreate:', e.message); }
+  });
+
+  client.on('channelDelete', (c) => {
+    try { require('./auditLog').onChannelDelete(botId, c); } catch (e) { console.error('[BotDev] audit chDelete:', e.message); }
+  });
+
+  client.on('channelUpdate', (oldC, newC) => {
+    try { require('./auditLog').onChannelUpdate(botId, oldC, newC); } catch (e) { console.error('[BotDev] audit chUpdate:', e.message); }
+  });
+
+  client.on('threadCreate', (t) => {
+    try { require('./auditLog').onThreadCreate(botId, t); } catch (e) { console.error('[BotDev] audit thCreate:', e.message); }
+  });
+
+  client.on('threadDelete', (t) => {
+    try { require('./auditLog').onThreadDelete(botId, t); } catch (e) { console.error('[BotDev] audit thDelete:', e.message); }
+  });
+
+  client.on('roleCreate', (r) => {
+    try { require('./auditLog').onRoleCreate(botId, r); } catch (e) { console.error('[BotDev] audit roleCreate:', e.message); }
+  });
+
+  client.on('roleDelete', (r) => {
+    try { require('./auditLog').onRoleDelete(botId, r); } catch (e) { console.error('[BotDev] audit roleDelete:', e.message); }
+  });
+
+  client.on('roleUpdate', (oldR, newR) => {
+    try { require('./auditLog').onRoleUpdate(botId, oldR, newR); } catch (e) { console.error('[BotDev] audit roleUpdate:', e.message); }
+  });
+
+  client.on('guildUpdate', (oldG, newG) => {
+    try { require('./auditLog').onGuildUpdate(botId, oldG, newG); } catch (e) { console.error('[BotDev] audit guildUpdate:', e.message); }
+  });
+
+  client.on('webhooksUpdate', (c) => {
+    try { require('./auditLog').onWebhooksUpdate(botId, c); } catch (e) { console.error('[BotDev] audit webhooks:', e.message); }
   });
 
   client.on('voiceStateUpdate', (oldState, newState) => {
     const { onVoiceState } = require('./extra');
     onVoiceState(botId, entry, oldState, newState);
+    // 📋 Journal d'audit : connexions / déconnexions / déplacements vocaux
+    try { require('./auditLog').onVoiceState(botId, oldState, newState); } catch (e) { console.error('[BotDev] audit voice:', e.message); }
   });
 
   client.on('interactionCreate', (i) => {

@@ -335,6 +335,18 @@ CREATE TABLE IF NOT EXISTS reminders (
   text TEXT DEFAULT ''
 );
 
+-- Statistiques d'utilisation des commandes (par jour)
+CREATE TABLE IF NOT EXISTS cmd_stats (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  command TEXT NOT NULL,
+  day TEXT NOT NULL,
+  count INTEGER NOT NULL DEFAULT 1,
+  UNIQUE(bot_id, guild_id, command, day)
+);
+CREATE INDEX IF NOT EXISTS idx_cmd_stats_day ON cmd_stats (bot_id, guild_id, day);
+
 CREATE TABLE IF NOT EXISTS scheduled_messages (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   bot_id INTEGER NOT NULL,
@@ -437,6 +449,28 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN antiraid_threshold INTEGER 
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN antiraid_window INTEGER DEFAULT 30"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN antiraid_action TEXT DEFAULT 'lockdown'"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN antiraid_unlock_min INTEGER DEFAULT 0"); } catch (e) {}
+
+// v88 : nouvelles catégories de journaux (messages, rôles, salons, serveur,
+// vocal, sécurité) activées par défaut sur les configurations existantes.
+function migrateLogCategories(targetDb) {
+  const NEW_LOG_CATS = { messages: 1, roles: 1, channels: 1, server: 1, voice: 1, security: 1 };
+  const rows = targetDb.prepare("SELECT bot_id, guild_id, log_events FROM guild_settings WHERE log_events != ''").all();
+  const upd = targetDb.prepare('UPDATE guild_settings SET log_events = ? WHERE bot_id = ? AND guild_id = ?');
+  let updated = 0;
+  for (const r of rows) {
+    try {
+      const map = JSON.parse(r.log_events);
+      if (!map || typeof map !== 'object' || !Object.keys(map).length) continue;
+      let changed = false;
+      for (const [k, v] of Object.entries(NEW_LOG_CATS)) {
+        if (map[k] === undefined) { map[k] = v; changed = true; }
+      }
+      if (changed) { upd.run(JSON.stringify(map), r.bot_id, r.guild_id); updated++; }
+    } catch { /* ligne illisible : on laisse */ }
+  }
+  return updated;
+}
+try { migrateLogCategories(db); } catch (e) {}
 
 // Hoxera 2.0 : colonnes ajoutées
 try { db.exec("ALTER TABLE tickets ADD COLUMN max_one INTEGER DEFAULT 0"); } catch (e) {}
@@ -875,6 +909,22 @@ const sanctions = {
   remove: (botId, guildId, name) => db.prepare('DELETE FROM sanctions WHERE bot_id = ? AND guild_id = ? AND name = ?').run(botId, guildId, name),
 };
 
+// ---------------------- Stats d'utilisation des commandes ----------------------
+const cmdStats = {
+  bump: (botId, guildId, command, day) => db.prepare('INSERT INTO cmd_stats (bot_id, guild_id, command, day, count) VALUES (?, ?, ?, ?, 1) ON CONFLICT(bot_id, guild_id, command, day) DO UPDATE SET count = count + 1').run(botId, guildId, String(command).slice(0, 32), day),
+  total: (botId, guildId) => db.prepare('SELECT COALESCE(SUM(count), 0) AS n FROM cmd_stats WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
+  top: (botId, guildId, limit = 12) => db.prepare('SELECT command, SUM(count) AS n FROM cmd_stats WHERE bot_id = ? AND guild_id = ? GROUP BY command ORDER BY n DESC, command ASC LIMIT ?').all(botId, guildId, Math.min(Math.max(parseInt(limit, 10) || 12, 1), 50)),
+  perDay: (botId, guildId, days = 7) => {
+    const out = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+      const r = db.prepare('SELECT COALESCE(SUM(count), 0) AS n FROM cmd_stats WHERE bot_id = ? AND guild_id = ? AND day = ?').get(botId, guildId, d);
+      out.push({ day: d, commands: r.n });
+    }
+    return out;
+  },
+};
+
 // ---------------------- Registre des tickets fermés ----------------------
 // Source de vérité : un salon listé ici est fermé, même si le cache Discord
 // n'est pas encore à jour → la vérification « déjà ouvert » ne se trompe plus.
@@ -1012,4 +1062,4 @@ const voicetemp = {
   remove: (botId, guildId) => db.prepare('DELETE FROM voicetemp WHERE bot_id = ? AND guild_id = ?').run(botId, guildId),
 };
 
-module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, automodLogs, openTickets, ticketCounters, ticketRatings, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, msgStats, joinStats, shopPurchases, applications, voicetemp };
+module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, msgStats, joinStats, shopPurchases, applications, voicetemp, migrateLogCategories };

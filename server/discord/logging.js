@@ -23,7 +23,9 @@ function classifyType(title, explicit) {
   if (t.includes('Ticket')) return 'tickets';
   if (t.includes('Auto-mod') || t.includes('Anti-spam') || t.includes('Liste noire')) return 'automod';
   if (t.includes('membre') && (t.includes('Nouveau') || t.includes('parti') || t.includes('rejoint'))) return 'joinleave';
-  if (t.includes('Expulsion') || t.includes('Bannissement') || t.includes('Débannissement') || t.includes('Avertissement') || t.includes('Timeout') || t.includes('Purge') || t.includes('Sanction') || t.includes('Rôle temporaire') || t.includes('Verrouillage') || t.includes('Réouverture')) return 'mod';
+  // Sécurité : raids, verrouillages, bouclier
+  if (t.includes('RAID') || t.includes('raid') || t.includes('Bouclier') || t.includes('Verrouillage') || t.includes('Réouverture') || t.includes('Sécurité')) return 'security';
+  if (t.includes('Expulsion') || t.includes('Bannissement') || t.includes('Débannissement') || t.includes('Avertissement') || t.includes('Timeout') || t.includes('Purge') || t.includes('Sanction') || t.includes('Rôle temporaire')) return 'mod';
   return 'other';
 }
 
@@ -59,4 +61,4 @@ async function log(botId, guild, { title, description = '', color = '#5865F2', f
   }
 }
 
-module.exports = { log, logChannel };
+module.exports = { log, logChannel, eventEnabled, classifyType };
