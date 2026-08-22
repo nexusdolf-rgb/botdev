@@ -432,6 +432,11 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_spam INTEGER DEFAULT 5")
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_ignore_staff INTEGER DEFAULT 1"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_warn_text TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_timeout_min INTEGER DEFAULT 5"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN antiraid_enabled INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN antiraid_threshold INTEGER DEFAULT 10"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN antiraid_window INTEGER DEFAULT 30"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN antiraid_action TEXT DEFAULT 'lockdown'"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN antiraid_unlock_min INTEGER DEFAULT 0"); } catch (e) {}
 
 // Hoxera 2.0 : colonnes ajoutées
 try { db.exec("ALTER TABLE tickets ADD COLUMN max_one INTEGER DEFAULT 0"); } catch (e) {}
@@ -577,7 +582,7 @@ const guildSettings = {
   set: (botId, guildId, fields) => {
     const cur = guildSettings.get(botId, guildId) || { prefix: '', warn_limit: 0, warn_action: 'none' };
     const next = { ...cur, ...fields };
-    const cols = ['prefix', 'warn_limit', 'warn_action', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_warn_text', 'am_timeout_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'lang', 'timezone'];
+    const cols = ['prefix', 'warn_limit', 'warn_action', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_warn_text', 'am_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'lang', 'timezone'];
     const vals = {
       bot_id: botId, guild_id: guildId,
       prefix: String(next.prefix || '').slice(0, 5),
@@ -597,6 +602,11 @@ const guildSettings = {
       am_ignore_staff: (next.am_ignore_staff === 0 || next.am_ignore_staff === false) ? 0 : 1,
       am_warn_text: String(next.am_warn_text || '').slice(0, 1000),
       am_timeout_min: Math.min(Math.max(parseInt(next.am_timeout_min, 10) || 5, 1), 1440),
+      antiraid_enabled: next.antiraid_enabled ? 1 : 0,
+      antiraid_threshold: Math.min(Math.max(parseInt(next.antiraid_threshold, 10) || 10, 2), 100),
+      antiraid_window: Math.min(Math.max(parseInt(next.antiraid_window, 10) || 30, 5), 600),
+      antiraid_action: ['lockdown', 'alert'].includes(String(next.antiraid_action)) ? String(next.antiraid_action) : 'lockdown',
+      antiraid_unlock_min: Math.min(Math.max(parseInt(next.antiraid_unlock_min, 10) || 0, 0), 1440),
       log_channel: String(next.log_channel || '').slice(0, 100),
       suggestion_channel: String(next.suggestion_channel || '').slice(0, 100),
       log_events: String(next.log_events || '').slice(0, 1000),
@@ -713,6 +723,7 @@ const settings = {
     return r ? r.value : '';
   },
   set: (key, value) => db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, String(value)),
+  keysLike: (pattern) => db.prepare('SELECT key FROM settings WHERE key LIKE ?').all(String(pattern)).map((r) => r.key),
 };
 
 // ---------------------- Identité du bot par serveur ----------------------

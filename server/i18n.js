@@ -69,6 +69,12 @@ const STRINGS = {
     ticket_rating_thanks: '🙏 Merci pour ta note ! Elle aide {server} à s\'améliorer.',
     ticket_rating_done: '⭐ Note enregistrée : {stars}/5 — merci !',
     ticket_rating_already: 'Tu as déjà noté ce ticket.',
+    // Bouclier anti-raid
+    raid_alert_title: '🚨 RAID DÉTECTÉ — {server}',
+    raid_alert_desc: '**{count} arrivées en {window} secondes** détectées → verrouillage automatique des salons pour protéger le serveur. Réouvre-les avec le dashboard ou `/lockdown off`.',
+    raid_alert_only: '**{count} arrivées en {window} secondes** détectées → alerte envoyée (mode alerte : pas de verrouillage).',
+    raid_auto_unlock: '\n🔓 Réouverture automatique prévue dans {minutes} minute(s).',
+    raid_unlocked: 'Fin du verrouillage automatique après {minutes} minute(s). Le serveur est rouvert.',
     // Messages génériques (garde d'interaction)
     guard_not_ready: '⏳ Cette commande n\'est pas encore prête sur ce serveur — la synchronisation se fait automatiquement (retente dans 5 à 10 minutes).',
     guard_error: '⚠️ Une erreur est survenue en traitant cette action — elle a été enregistrée, réessaie dans un instant.',
@@ -144,6 +150,12 @@ const STRINGS = {
     ticket_rating_thanks: '🙏 Thank you! Your rating helps {server} improve.',
     ticket_rating_done: '⭐ Rating saved: {stars}/5 — thank you!',
     ticket_rating_already: 'You already rated this ticket.',
+    // Anti-raid shield
+    raid_alert_title: '🚨 RAID DETECTED — {server}',
+    raid_alert_desc: '**{count} joins in {window} seconds** detected → automatic channel lockdown to protect the server. Reopen from the dashboard or `/lockdown off`.',
+    raid_alert_only: '**{count} joins in {window} seconds** detected → alert sent (alert mode: no lockdown).',
+    raid_auto_unlock: '\n🔓 Automatic reopen planned in {minutes} minute(s).',
+    raid_unlocked: 'Automatic lockdown over after {minutes} minute(s). The server is reopened.',
     guard_not_ready: '⏳ This command is not ready yet on this server — it syncs automatically (try again in 5–10 minutes).',
     guard_error: '⚠️ Something went wrong while handling this action — it was logged, please try again in a moment.',
     guard_slow: '⏳ This action is taking too long… please try again in a moment.',

@@ -57,6 +57,10 @@ async function sweep(botId, entry) {
   try { const panels = require('./panels'); await panels.sweepInactiveTickets(botId, entry); }
   catch (e) { console.error('[Hoxera] ticket sweep:', e.message); }
 
+  // 🛡️ Anti-raid : purge du compteur + réouverture automatique programmée
+  try { const antiraid = require('./antiraid'); await antiraid.sweep(botId, entry); }
+  catch (e) { console.error('[Hoxera] anti-raid sweep:', e.message); }
+
   const due = store.tempRoles.due().filter((t) => t.bot_id === botId);
   for (const t of due) {
     try {

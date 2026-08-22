@@ -1074,6 +1074,72 @@ Dashboard.renderers.moderation = async (content, data) => {
     go.disabled = false;
   };
 
+  // 🛡️ Bouclier anti-raid automatique
+  const cRaid = Dashboard.card(root, '🛡️ Bouclier anti-raid', 'Détecte un afflux anormal de nouveaux membres et protège le serveur tout seul.');
+  const raidBox = App.el(`<div class="desc">Chargement…</div>`);
+  cRaid.appendChild(raidBox);
+  (async () => {
+    try {
+      const st = await App.api(`/bots/${bot.id}/guilds/${guildId}/antiraid/state`);
+      const cfg = st.config || {};
+      raidBox.innerHTML = `
+        <label class="dash-label">Armer le bouclier</label>
+        <label class="switch"><input type="checkbox" id="raid-on" ${cfg.enabled ? 'checked' : ''} /><span class="slider"></span></label>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:10px">
+          <div><label class="dash-label">Seuil (arrivées)</label><input class="dash-input" id="raid-th" type="number" min="2" max="100" value="${cfg.threshold ?? 10}" /></div>
+          <div><label class="dash-label">Fenêtre (secondes)</label><input class="dash-input" id="raid-win" type="number" min="5" max="600" value="${cfg.window ?? 30}" /></div>
+          <div><label class="dash-label">Action</label><select class="dash-select" id="raid-act">
+            <option value="lockdown" ${cfg.action === 'lockdown' ? 'selected' : ''}>🔒 Verrouiller les salons</option>
+            <option value="alert" ${cfg.action === 'alert' ? 'selected' : ''}>🔔 Alerter seulement</option>
+          </select></div>
+          <div><label class="dash-label">Réouverture auto (min, 0 = manuel)</label><input class="dash-input" id="raid-unlock" type="number" min="0" max="1440" value="${cfg.unlockMin ?? 0}" /></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+          <button class="dash-btn dash-btn-primary" id="raid-save" style="flex:1">💾 Enregistrer</button>
+          <button class="dash-btn" id="raid-test" style="flex:1">🧪 Tester (verrouille 1 min)</button>
+        </div>
+        <div id="raid-status" style="margin-top:10px"></div>`;
+      const statusEl = cRaid.querySelector('#raid-status');
+      if (st.raid) {
+        const when = new Date(st.raid.triggeredAt).toLocaleString('fr-FR');
+        statusEl.innerHTML = `<div style="padding:10px 12px;border:1px solid rgba(237,66,69,.4);border-radius:10px;background:rgba(237,66,69,.08);font-size:13px">🚨 <b>Raid détecté</b> le ${when} — ${st.raid.count} arrivées en ${st.raid.window}s (${st.raid.action === 'lockdown' ? st.raid.locked + ' salon(s) verrouillé(s)' : 'alerte'})${st.raid.unlockAt ? ' · réouverture auto programmée' : ''}<br/><button class="dash-btn dash-btn-sm" id="raid-unlock-now" style="margin-top:8px">🔓 Réouvrir maintenant</button></div>`;
+        cRaid.querySelector('#raid-unlock-now').onclick = async () => {
+          try { await App.api(`/bots/${bot.id}/guilds/${guildId}/antiraid/unlock`, { method: 'POST' }); App.toast('Serveur réouvert !'); Dashboard.renderers.moderation(content, data); }
+          catch (e) { App.toast(e.message, 'error'); }
+        };
+      } else if (st.lockdown && st.lockdown.locked) {
+        statusEl.innerHTML = `<div style="padding:10px 12px;border:1px solid rgba(254,231,92,.4);border-radius:10px;background:rgba(254,231,92,.08);font-size:13px">🔒 Le serveur est verrouillé (${st.lockdown.channels.length} salon(s)). <button class="dash-btn dash-btn-sm" id="raid-unlock-now" style="margin-top:8px">🔓 Réouvrir</button></div>`;
+        cRaid.querySelector('#raid-unlock-now').onclick = async () => {
+          try { await App.api(`/bots/${bot.id}/guilds/${guildId}/antiraid/unlock`, { method: 'POST' }); App.toast('Serveur réouvert !'); Dashboard.renderers.moderation(content, data); }
+          catch (e) { App.toast(e.message, 'error'); }
+        };
+      } else {
+        statusEl.innerHTML = `<div class="desc" style="margin:0">${cfg.enabled ? '✅ Bouclier armé — le serveur est protégé.' : '⚠️ Bouclier désarmé.'}</div>`;
+      }
+      cRaid.querySelector('#raid-save').onclick = async () => {
+        try {
+          await App.api(`/bots/${bot.id}/guilds/${guildId}/antiraid`, { method: 'PUT', body: {
+            enabled: cRaid.querySelector('#raid-on').checked,
+            threshold: parseInt(cRaid.querySelector('#raid-th').value, 10) || 10,
+            window: parseInt(cRaid.querySelector('#raid-win').value, 10) || 30,
+            action: cRaid.querySelector('#raid-act').value,
+            unlock_min: parseInt(cRaid.querySelector('#raid-unlock').value, 10) || 0,
+          }});
+          App.toast('Bouclier anti-raid enregistré !');
+          Dashboard.renderers.moderation(content, data);
+        } catch (e) { App.toast(e.message, 'error'); }
+      };
+      cRaid.querySelector('#raid-test').onclick = async () => {
+        try {
+          App.toast('🧪 Raid simulé : le serveur se verrouille 1 minute…');
+          const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/antiraid/test`, { method: 'POST' });
+          App.toast(r.action === 'lockdown' ? `🚨 ${r.locked} salon(s) verrouillé(s) — réouverture auto dans 1 min !` : '🔔 Alerte de raid envoyée !');
+          Dashboard.renderers.moderation(content, data);
+        } catch (e) { App.toast(e.message, 'error'); }
+      };
+    } catch (e) { raidBox.innerHTML = `<div class="desc">Bouclier indisponible : ${App.escapeHtml(e.message)}</div>`; }
+  })();
+
   const c2 = Dashboard.card(root, '🔇 Liste noire', 'Les messages contenant ces mots sont supprimés automatiquement.');
   c2.appendChild(App.el(`<div id="bl-list"></div>`));
   c2.appendChild(App.el(`<button class="dash-btn dash-btn-sm" id="bl-add" style="margin-top:8px">＋ Ajouter un mot</button>`));

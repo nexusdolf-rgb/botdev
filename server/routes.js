@@ -803,6 +803,75 @@ router.get('/bots/:id/guilds/:guildId/tickets/rating', requireAuth, async (req, 
   res.json(store.ticketRatings.stats(bot.id, req.params.guildId));
 });
 
+// 🛡️ Bouclier anti-raid : configuration
+router.put('/bots/:id/guilds/:guildId/antiraid', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const { enabled, threshold, window, action, unlock_min } = req.body || {};
+  store.guildSettings.set(bot.id, req.params.guildId, {
+    antiraid_enabled: enabled ? 1 : 0,
+    antiraid_threshold: Math.min(Math.max(parseInt(threshold, 10) || 10, 2), 100),
+    antiraid_window: Math.min(Math.max(parseInt(window, 10) || 30, 5), 600),
+    antiraid_action: ['lockdown', 'alert'].includes(action) ? action : 'lockdown',
+    antiraid_unlock_min: Math.min(Math.max(parseInt(unlock_min, 10) || 0, 0), 1440),
+  });
+  res.json({ ok: true });
+});
+
+// 🛡️ État actuel du bouclier (armé ? serveur verrouillé ? quand ?)
+router.get('/bots/:id/guilds/:guildId/antiraid/state', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const antiraid = require('./discord/antiraid');
+  const entry = botManager.clients.get(bot.id);
+  const guild = entry && entry.client.guilds.cache.get(req.params.guildId);
+  res.json({
+    config: antiraid.config(bot.id, req.params.guildId),
+    raid: antiraid.raidState(req.params.guildId),
+    lockdown: guild ? require('./discord/lockdown').state(bot.id, guild) : { locked: false, channels: [] },
+  });
+});
+
+// 🛡️ Test RÉEL : verrouille le serveur comme un vrai raid (réouverture auto
+// forcée à 1 minute pour ne pas laisser le serveur fermé).
+router.post('/bots/:id/guilds/:guildId/antiraid/test', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const entry = botManager.clients.get(bot.id);
+  if (!entry || !entry.client.isReady()) return res.status(503).json({ error: 'Le bot est hors ligne — impossible de tester.' });
+  const guild = entry.client.guilds.cache.get(guildId);
+  if (!guild) return res.status(404).json({ error: 'Serveur introuvable pour le bot.' });
+  const antiraid = require('./discord/antiraid');
+  const cfg = antiraid.config(bot.id, guildId);
+  const r = await antiraid.trigger(bot.id, guild, {
+    count: cfg.threshold,
+    window: cfg.window,
+    action: cfg.action,
+    unlockMin: 1, // test : réouverture automatique après 1 minute
+    byTag: `Test du dashboard par ${req.userId}`,
+  });
+  res.json({ ok: true, ...r });
+});
+
+// 🔓 Réouverture manuelle immédiate
+router.post('/bots/:id/guilds/:guildId/antiraid/unlock', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const entry = botManager.clients.get(bot.id);
+  if (!entry || !entry.client.isReady()) return res.status(503).json({ error: 'Le bot est hors ligne.' });
+  const guild = entry.client.guilds.cache.get(guildId);
+  if (!guild) return res.status(404).json({ error: 'Serveur introuvable pour le bot.' });
+  const antiraid = require('./discord/antiraid');
+  await antiraid.unlockNow(bot.id, guild);
+  res.json({ ok: true });
+});
+
 // Historique des actions d'auto-modération (visible dans le dashboard)
 router.get('/bots/:id/guilds/:guildId/automod/logs', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
