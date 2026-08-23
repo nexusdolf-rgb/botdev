@@ -852,6 +852,33 @@ router.post('/bots/:id/guilds/:guildId/livesocials', requireAuth, async (req, re
   store.liveSocials.add(bot.id, req.params.guildId, String(user_id || '').slice(0, 30), parsed.platform, parsed.handle);
   res.json({ ok: true, platform: parsed.platform, handle: parsed.handle });
 });
+// 🧪 Test RÉEL de la bienvenue / du départ : le bot envoie le vrai message
+// dans le vrai salon, avec TOI comme membre — sans quitter le serveur.
+router.post('/bots/:id/guilds/:guildId/events/:type/test', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const type = req.params.type;
+  if (!['member_join', 'member_leave'].includes(type)) return res.status(400).json({ error: 'Type inconnu.' });
+  const entry = botManager.clients.get(bot.id);
+  if (!entry || !entry.client.isReady()) return res.status(503).json({ error: 'Bot hors ligne.' });
+  const guild = entry.client.guilds.cache.get(guildId);
+  if (!guild) return res.status(404).json({ error: 'Serveur introuvable.' });
+  const me = store.users.get(req.userId);
+  if (!me || !me.discord_id) return res.status(400).json({ error: 'Compte Discord non lié.' });
+  const member = await guild.members.fetch(me.discord_id).catch(() => null);
+  if (!member) return res.status(404).json({ error: 'Tu n\'es pas membre de ce serveur.' });
+  try {
+    const events = require('./discord/events');
+    if (type === 'member_join') await events.runJoinEvent(bot.id, member, { test: true });
+    else await events.runLeaveEvent(bot.id, member, { test: true });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e).slice(0, 200) });
+  }
+});
+
 // 📰 Flux d'activité du serveur (Vue d'ensemble)
 router.get('/bots/:id/guilds/:guildId/activity', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);

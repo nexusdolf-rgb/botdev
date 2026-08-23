@@ -1007,6 +1007,21 @@ Dashboard.renderers.welcome = async (content, data) => {
     }
     const save = App.el(`<button class="dash-btn dash-btn-primary" style="margin-top:12px">💾 Enregistrer</button>`);
     cfgZone.appendChild(save);
+    // 🧪 Bouton de test réel (arrivée / départ) : le bot envoie le vrai
+    // message dans le vrai salon, avec TOI comme membre — vérification
+    // instantanée sans quitter le serveur.
+    if (key === 'member_join' || key === 'member_leave') {
+      const testBtn = App.el(`<button class="dash-btn" style="margin-top:12px;margin-left:8px">🧪 Tester ${key === 'member_join' ? 'l\'arrivée' : 'le départ'}</button>`);
+      testBtn.onclick = async () => {
+        testBtn.disabled = true; testBtn.textContent = '⏳ Envoi…';
+        try {
+          await App.api(`/bots/${bot.id}/guilds/${guildId}/events/${key}/test`, { method: 'POST' });
+          App.toast('🧪 Message de test envoyé — va voir le salon ! (Pense à 💾 Enregistrer d\'abord si tu viens de modifier.)');
+        } catch (e) { App.toast(e.message, 'error'); }
+        testBtn.disabled = false; testBtn.textContent = `🧪 Tester ${key === 'member_join' ? 'l\'arrivée' : 'le départ'}`;
+      };
+      cfgZone.appendChild(testBtn);
+    }
     c.appendChild(cfgZone);
 
     // Synchronise le champ hex avec le sélecteur de couleur

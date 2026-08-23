@@ -16,7 +16,7 @@ const EVENT_DEFS = {
       { key: 'channel', label: 'Salon d\'accueil', type: 'channel', placeholder: '#bienvenue' },
       { key: 'message', label: 'Message ({user}, {server}, {count}…)', type: 'multiline', default: 'Bienvenue {user} sur {server} ! Tu es le membre n°{count} 🎉' },
       { key: 'card', label: '🖼️ Carte de bienvenue en image (avatar + pseudo)', type: 'checkbox', default: false },
-      { key: 'embed', label: 'Envoyer en embed', type: 'checkbox', default: false },
+      { key: 'plain', label: '📝 Mode texte simple (désactive le panneau premium)', type: 'checkbox', default: false },
       { key: 'color', label: 'Couleur de l\'embed', type: 'color', default: '#57F287' },
       { key: 'image', label: 'Image de l\'embed (URL, optionnel)', type: 'text', placeholder: 'https://…' },
     ],
@@ -28,7 +28,7 @@ const EVENT_DEFS = {
     config: [
       { key: 'channel', label: 'Salon des départs', type: 'channel', placeholder: '#au-revoir' },
       { key: 'message', label: 'Message', type: 'multiline', default: '{user} a quitté {server} 😢' },
-      { key: 'embed', label: 'Envoyer en embed', type: 'checkbox', default: false },
+      { key: 'plain', label: '📝 Mode texte simple (désactive le panneau premium)', type: 'checkbox', default: false },
       { key: 'color', label: 'Couleur de l\'embed', type: 'color', default: '#ED4245' },
       { key: 'image', label: 'Image de l\'embed (URL, optionnel)', type: 'text', placeholder: 'https://…' },
     ],
@@ -53,24 +53,30 @@ function eventsState(botId, guildId) {
   return out;
 }
 
-async function runJoinEvent(botId, member) {
+async function runJoinEvent(botId, member, opts = {}) {
+  const trace = (msg) => console.log(`[Hoxera] 👋 arrivée ${member.id} : ${msg}`);
   const state = store.events.all(botId, member.guild.id);
   const botRecord = store.bots.get(botId);
 
-  // 📈 Statistiques : nouveaux membres du jour
-  try {
-    store.joinStats.bump(botId, member.guild.id, new Date().toISOString().slice(0, 10));
-  } catch (e) { console.error('[Hoxera] join stats:', e.message); }
+  // 📈 Statistiques : nouveaux membres du jour (pas en mode test)
+  if (!opts.test) {
+    try {
+      store.joinStats.bump(botId, member.guild.id, new Date().toISOString().slice(0, 10));
+    } catch (e) { console.error('[Hoxera] join stats:', e.message); }
+  }
 
   // 🛡️ Bouclier anti-raid : compteur d'arrivées + déclenchement éventuel
-  try {
-    const antiraid = require('./antiraid');
-    await antiraid.onJoin(botId, member);
-  } catch (e) { console.error('[Hoxera] anti-raid join:', e.message); }
+  if (!opts.test) {
+    try {
+      const antiraid = require('./antiraid');
+      await antiraid.onJoin(botId, member);
+    } catch (e) { console.error('[Hoxera] anti-raid join:', e.message); }
+  }
 
   if (state.member_join && state.member_join.enabled) {
     const cfg = state.member_join.config || {};
     const channel = await resolveChannel(member.guild, cfg.channel);
+    trace(`bienvenue activée · salon « ${cfg.channel || ''} » → ${channel ? '#' + channel.name : 'INTROUVABLE ❌'}`);
     if (channel) {
       const text = render(member, botRecord, cfg.message);
       // 🖼️ Carte de bienvenue en image (avatar + pseudo) — jamais bloquante :
@@ -83,8 +89,8 @@ async function runJoinEvent(botId, member) {
           if (buf && buf.length) files = [{ attachment: buf, name: 'bienvenue.png' }];
         } catch (e) { console.error('[Hoxera] carte de bienvenue :', e.message); }
       }
-      if (cfg.embed) {
-        // 🏆 Panneau de bienvenue PREMIUM : avatar, n° de membre, âge du
+      if (!cfg.plain) {
+        // 🏆 Panneau de bienvenue PREMIUM (par défaut — case « texte simple » pour l'ancien style) : avatar, n° de membre, âge du
         // compte, recruteur (traqueur d'invitations) — un vrai tableau pro.
         const user = member.user || {};
         const avatarUrl = user.displayAvatarURL ? user.displayAvatarURL({ size: 256 }) : '';
@@ -115,19 +121,21 @@ async function runJoinEvent(botId, member) {
         } else if (avatarUrl) {
           embed.setThumbnail(avatarUrl);
         }
-        await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { embeds: [embed], files }).catch(() => {});
+        const ok = await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { embeds: [embed], files }).then(() => true).catch((e) => { trace('envoi panneau ÉCHOUÉ : ' + e.message); return false; });
+        trace(ok ? 'panneau premium envoyé ✅' : 'panneau premium NON envoyé ❌ (permissions ?)');
       } else {
-        await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { content: text, files }).catch(() => {});
+        const ok = await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { content: text, files }).then(() => true).catch((e) => { trace('envoi texte ÉCHOUÉ : ' + e.message); return false; });
+        trace(ok ? 'message texte envoyé ✅' : 'message texte NON envoyé ❌');
       }
       await logging.log(botId, member.guild, {
         title: '👋 Nouveau membre',
-        description: `${member.user.tag} a rejoint le serveur (membre n°${member.guild.memberCount || 0})`,
+        description: `${(member.user && (member.user.tag || member.user.username)) || "Un membre"} a rejoint le serveur (membre n°${member.guild.memberCount || 0})`,
         color: '#57F287',
       });
     }
   }
 
-  if (state.autorole && state.autorole.enabled) {
+  if (!opts.test && state.autorole && state.autorole.enabled) {
     const cfg = state.autorole.config || {};
     // 🏷️ v2.1 : PLUSIEURS rôles possibles (liste « roles » séparée par des
     // virgules) + compatibilité avec l'ancien réglage « role » (un seul).
@@ -155,16 +163,19 @@ function parseRoleList(cfg) {
   return out;
 }
 
-async function runLeaveEvent(botId, member) {
+async function runLeaveEvent(botId, member, opts = {}) {
+  const trace = (msg) => console.log(`[Hoxera] 👋 départ ${member.id} : ${msg}`);
+  trace(`événement reçu (user: ${member.user ? 'ok' : 'ABSENT'}${member.partial ? ' · partiel' : ''})`);
   const state = store.events.all(botId, member.guild.id);
   const botRecord = store.bots.get(botId);
-  if (!(state.member_leave && state.member_leave.enabled)) return;
+  if (!(state.member_leave && state.member_leave.enabled)) { trace('départ non activé'); return; }
   const cfg = state.member_leave.config || {};
   const channel = await resolveChannel(member.guild, cfg.channel);
+  trace(`salon « ${cfg.channel || ''} » → ${channel ? '#' + channel.name : 'INTROUVABLE ❌'}`);
   if (!channel) return;
   const text = render(member, botRecord, cfg.message);
-  if (cfg.embed) {
-    // 🏆 Panneau de départ assorti au panneau de bienvenue (membre partiel
+  if (!cfg.plain) {
+    // 🏆 Panneau de départ assorti (premium par défaut) au panneau de bienvenue (membre partiel
     // possible : chaque info est optionnelle, rien ne casse).
     const user = member.user || {};
     const avatarUrl = user.displayAvatarURL ? user.displayAvatarURL({ size: 256 }) : '';
@@ -181,13 +192,15 @@ async function runLeaveEvent(botId, member) {
       .setTimestamp();
     if (avatarUrl) embed.setThumbnail(avatarUrl);
     if (cfg.image) embed.setImage(String(cfg.image).trim());
-    await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { embeds: [embed] }).catch(() => {});
+    const ok = await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { embeds: [embed] }).then(() => true).catch((e) => { trace('envoi ÉCHOUÉ : ' + e.message); return false; });
+    trace(ok ? 'panneau de départ envoyé ✅' : 'panneau NON envoyé ❌ (permissions ?)');
   } else {
     await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { content: text }).catch(() => {});
   }
+  if (opts.test) return; // en test : pas de journal serveur
   await logging.log(botId, member.guild, {
     title: '👋 Membre parti',
-    description: `${member.user.tag} a quitté le serveur`,
+    description: `${(member.user && (member.user.tag || member.user.username)) || 'Un membre'} a quitté le serveur`,
     color: '#ED4245',
   });
 }
