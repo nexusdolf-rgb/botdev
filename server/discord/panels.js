@@ -606,14 +606,28 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
     ? chosen.staff_roles
     : (cfg.support_role ? [cfg.support_role] : []);
   const supportRoles = staffNames.map((n) => resolveRole(guild, n)).filter(Boolean);
+  // 🗂️ Placement du salon (v2.4) : le ticket doit apparaître LÀ où le staff
+  // l'attend — jamais dans une catégorie parachutée tout en haut du serveur.
+  // Ordre de priorité :
+  //  1. la catégorie configurée (celle du type, sinon la globale) si elle EXISTE ;
+  //  2. sinon la catégorie du salon du panneau (là où le membre a cliqué) ;
+  //  3. en dernier recours on crée la catégorie configurée, puis on la
+  //     POSITIONNE juste sous la catégorie du panneau (pas au sommet du serveur).
   const catName = (chosen && chosen.category) ? chosen.category : (cfg.category || '');
+  const panelChannel = interaction.channel && interaction.channel.parent !== undefined ? interaction.channel : null;
+  const panelParent = panelChannel && panelChannel.parent ? panelChannel.parent : null;
   let parent = null;
   if (catName) {
     const lower = String(catName).toLowerCase();
     parent = guild.channels.cache.find((c) => c.type === ChannelType.GuildCategory && c.name.toLowerCase() === lower);
-    if (!parent) {
-      try { parent = await guild.channels.create({ name: catName, type: ChannelType.GuildCategory }); } catch {}
-    }
+  }
+  if (!parent && panelParent) parent = panelParent;
+  if (!parent && catName) {
+    try {
+      parent = await guild.channels.create({ name: catName, type: ChannelType.GuildCategory });
+      // La nouvelle catégorie descend SOUS celle du panneau (jamais en haut)
+      if (parent && panelParent) await parent.setPosition(panelParent.position + 1).catch(() => {});
+    } catch {}
   }
 
   const allow = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles, PermissionFlagsBits.EmbedLinks];
@@ -636,6 +650,13 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
   } catch (e) {
     return ackReply(interaction, { content: '⚠️ Je n\'ai pas pu créer le salon. Vérifie mes permissions (gérer les salons).', ephemeral: true });
   }
+  // 📍 Si le ticket est dans la MÊME catégorie que le panneau : on le place
+  // JUSTE SOUS le salon du panneau — le staff le voit apparaître immédiatement.
+  try {
+    if (panelChannel && channel.parentId && panelChannel.parentId === channel.parentId) {
+      await channel.setPosition(panelChannel.position + 1);
+    }
+  } catch { /* le placement ne doit jamais faire échouer l'ouverture */ }
   ticketMeta.set(channel.id, { openerId: member.id, typeLabel: chosen ? chosen.label : '', reason, answers });
   // 📋 Fiche en base : numéro, horodatage, dernière activité (fermeture auto)
   store.openTickets.add(botId, guild.id, {
@@ -716,7 +737,11 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
   const lang = i18n.langForGuild(guild.id);
   const typeConfirm = chosen ? `${chosen.emoji ? chosen.emoji + ' ' : ''}**${chosen.label}**` : '';
   const confirmMsg = i18n.t(lang, 'ticket_confirm', { type: typeConfirm, channel: `${channel}` });
-  await ackReply(interaction, { content: confirmMsg, ephemeral: true });
+  // 🎫 Bouton-lien direct vers le salon du ticket (en plus de la mention)
+  const linkRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel('🎫 Ouvrir mon ticket').setURL(`https://discord.com/channels/${guild.id}/${channel.id}`)
+  );
+  await ackReply(interaction, { content: confirmMsg, components: [linkRow], ephemeral: true });
 }
 
 // ---------- Raisons : ouverture & suppression ----------
