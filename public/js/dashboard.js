@@ -88,7 +88,7 @@ Dashboard.MODULES = [
   ['roles', '📋', 'Rôles'],
   ['suggestions', '💡', 'Suggestions'],
   ['giveaways', '🎁', 'Giveaways'],
-  ['community', '⭐', 'Starboard & Invitations'],
+  ['community', '⭐', 'Communauté & Lives'],
   ['announcements', '📅', 'Annonces'],
   ['members', '👥', 'Membres'],
   ['stats', '📈', 'Statistiques'],
@@ -752,6 +752,25 @@ Dashboard.renderers.welcome = async (content, data) => {
         cfgZone.appendChild(App.el(`<label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:var(--d-dim);cursor:pointer"><input type="checkbox" data-k="${f.key}" ${ev.config[f.key] ? 'checked' : ''} /> ${f.label}</label>`));
         return;
       }
+      if (f.type === 'rolesmulti') {
+        // 🏷️ Sélection MULTIPLE de rôles (cases à cocher) — enregistrée en
+        // liste séparée par des virgules.
+        cfgZone.appendChild(App.el(`<label class="dash-label">${f.label}</label>`));
+        const selected = String(ev.config[f.key] || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+        const box = App.el(`<div class="dash-roles-multi" data-k="${f.key}" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px"></div>`);
+        rolesList.filter((r) => r.name !== '@everyone').forEach((r) => {
+          const on = selected.includes(r.name.toLowerCase());
+          const chip = App.el(`<label style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid ${on ? 'rgba(88,101,242,.6)' : 'var(--d-border)'};border-radius:999px;cursor:pointer;font-size:12.5px;background:${on ? 'rgba(88,101,242,.14)' : 'transparent'}"><input type="checkbox" style="display:none" value="${App.escapeHtml(r.name)}" ${on ? 'checked' : ''}/><span style="width:9px;height:9px;border-radius:50%;background:${r.color && r.color !== '#000000' ? r.color : '#8b8fa3'}"></span>${App.escapeHtml(r.name)}</label>`);
+          const input = chip.querySelector('input');
+          input.onchange = () => {
+            chip.style.borderColor = input.checked ? 'rgba(88,101,242,.6)' : 'var(--d-border)';
+            chip.style.background = input.checked ? 'rgba(88,101,242,.14)' : 'transparent';
+          };
+          box.appendChild(chip);
+        });
+        cfgZone.appendChild(box);
+        return;
+      }
       cfgZone.appendChild(App.el(`<label class="dash-label">${f.label}</label>`));
 
       if (f.type === 'channel') {
@@ -849,7 +868,14 @@ Dashboard.renderers.welcome = async (content, data) => {
 
     save.onclick = async () => {
       const config = {};
-      cfgZone.querySelectorAll('[data-k]').forEach((inp) => { config[inp.dataset.k] = inp.type === 'checkbox' ? inp.checked : inp.value; });
+      cfgZone.querySelectorAll('[data-k]').forEach((inp) => {
+        if (inp.classList && inp.classList.contains('dash-roles-multi')) {
+          // 🏷️ multi-rôles : liste des cases cochées, séparée par des virgules
+          config[inp.dataset.k] = [...inp.querySelectorAll('input:checked')].map((x) => x.value).join(', ');
+          return;
+        }
+        config[inp.dataset.k] = inp.type === 'checkbox' ? inp.checked : inp.value;
+      });
       try {
         await App.api(`/bots/${bot.id}/guilds/${guildId}/events/${key}`, { method: 'PUT', body: { enabled: toggle.checked, config } });
         App.toast('Événement enregistré !');
@@ -1648,8 +1674,94 @@ Dashboard.renderers.logs = async (content, data) => {
 Dashboard.renderers.community = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const s = data.settings || {};
-  const root = Dashboard.header(content, '⭐', 'Starboard & Invitations', 'Les messages populaires épinglés automatiquement + le classement des recruteurs.');
+  const root = Dashboard.header(content, '⭐', 'Communauté & Lives', 'Starboard, classement des recruteurs et annonces automatiques de live.');
   const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
+
+  // ---- 🔴 Carte Annonces de live ----
+  const cl = Dashboard.card(root, '🔴 Annonces de live', 'Enregistre le lien TikTok / Twitch / YouTube / Kick d\'un membre : dès qu\'il lance un live, le bot l\'annonce automatiquement (pseudo + photo de profil + bouton Regarder) dans le salon choisi.');
+  const liveChanOpts = ['<option value="">— Désactivé (choisir un salon pour activer) —</option>']
+    .concat(textChannels.map((ch) => `<option value="#${ch.name}" ${String(s.live_channel || '') === `#${ch.name}` ? 'selected' : ''}>💬 #${ch.name}</option>`));
+  cl.innerHTML += `
+    <label class="dash-label">Salon des annonces de live</label>
+    <select class="dash-select" id="lv-chan" style="max-width:320px">${liveChanOpts.join('')}</select>
+    <label class="dash-label">Mention envoyée avec l'annonce</label>
+    <select class="dash-select" id="lv-ping" style="max-width:320px">
+      <option value="everyone" ${(s.live_ping || 'everyone') === 'everyone' ? 'selected' : ''}>📣 @everyone (tout le monde)</option>
+      <option value="here" ${s.live_ping === 'here' ? 'selected' : ''}>🔔 @here (membres connectés)</option>
+      <option value="none" ${s.live_ping === 'none' ? 'selected' : ''}>🔕 Aucune mention</option>
+    </select>
+    <div style="margin-top:12px"><button class="dash-btn dash-btn-primary" id="lv-save">💾 Enregistrer</button></div>
+    <div style="height:1px;background:var(--d-border);margin:16px 0"></div>
+    <label class="dash-label">Ajouter un compte à suivre</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input class="dash-input" id="lv-link" placeholder="Lien complet (tiktok.com/@pseudo) ou @pseudo" style="flex:2;min-width:220px" />
+      <select class="dash-select" id="lv-platform" style="flex:1;min-width:130px">
+        <option value="tiktok">🎵 TikTok</option>
+        <option value="twitch">🟣 Twitch</option>
+        <option value="youtube">▶️ YouTube</option>
+        <option value="kick">🟢 Kick</option>
+      </select>
+      <select class="dash-select" id="lv-member" style="flex:1;min-width:160px"><option value="">👤 Membre lié (optionnel)</option></select>
+      <button class="dash-btn dash-btn-primary" id="lv-add">➕ Suivre</button>
+    </div>
+    <div id="lv-list" style="margin-top:14px"></div>
+    <div style="font-size:12px;color:var(--d-dim);margin-top:8px">💡 Vérification toutes les 3 minutes · 20 comptes max · une annonce par live (anti-doublon 30 min).</div>`;
+
+  cl.querySelector('#lv-save').onclick = async () => {
+    try {
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/settings`, { method: 'PUT', body: {
+        prefix: s.prefix || '', warn_limit: s.warn_limit || 0, warn_action: s.warn_action || 'none',
+        live_channel: cl.querySelector('#lv-chan').value,
+        live_ping: cl.querySelector('#lv-ping').value,
+      }});
+      App.toast('Annonces de live enregistrées !');
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+
+  const PLAT = { tiktok: ['🎵', 'TikTok'], twitch: ['🟣', 'Twitch'], youtube: ['▶️', 'YouTube'], kick: ['🟢', 'Kick'] };
+  const renderSocials = async () => {
+    const list = cl.querySelector('#lv-list');
+    list.innerHTML = '';
+    try {
+      const { socials } = await App.api(`/bots/${bot.id}/guilds/${guildId}/livesocials`);
+      if (!socials.length) { list.appendChild(App.el(`<div class="dash-empty" style="padding:14px">Aucun compte suivi pour l'instant.</div>`)); return; }
+      socials.forEach((so) => {
+        const [emo, lab] = PLAT[so.platform] || ['🌐', so.platform];
+        const row = App.el(`
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--d-border)">
+            <span style="font-size:17px">${emo}</span>
+            <div style="flex:1;min-width:0">
+              <b>@${App.escapeHtml(so.handle)}</b> <span style="color:var(--d-dim);font-size:12px">· ${lab}${so.user_id ? ` · lié à un membre` : ''}</span>
+            </div>
+            <span class="dash-badge ${so.last_status === 'live' ? 'ok' : ''}">${so.last_status === 'live' ? '🔴 EN LIVE' : '⚫ hors ligne'}</span>
+            <button class="dash-btn dash-btn-danger dash-btn-sm">✕</button>
+          </div>`);
+        row.querySelector('button').onclick = async () => {
+          try { await App.api(`/bots/${bot.id}/guilds/${guildId}/livesocials/${so.id}`, { method: 'DELETE' }); App.toast('Compte retiré.'); renderSocials(); }
+          catch (e) { App.toast(e.message, 'error'); }
+        };
+        list.appendChild(row);
+      });
+    } catch (e) { list.appendChild(App.el(`<div class="dash-empty">${App.escapeHtml(e.message)}</div>`)); }
+  };
+  cl.querySelector('#lv-add').onclick = async () => {
+    try {
+      const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/livesocials`, { method: 'POST', body: {
+        link: cl.querySelector('#lv-link').value,
+        platform: cl.querySelector('#lv-platform').value,
+        user_id: cl.querySelector('#lv-member').value,
+      }});
+      App.toast(`Compte @${r.handle} (${r.platform}) suivi !`);
+      cl.querySelector('#lv-link').value = '';
+      renderSocials();
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+  renderSocials();
+  // Liste des membres pour lier un compte (asynchrone, non bloquant)
+  App.api(`/bots/${bot.id}/guilds/${guildId}/members`).then(({ members }) => {
+    const sel = cl.querySelector('#lv-member');
+    (members || []).slice(0, 100).forEach((m) => sel.appendChild(App.el(`<option value="${m.id}">👤 ${App.escapeHtml(m.username || m.tag)}</option>`)));
+  }).catch(() => {});
 
   // ---- Carte Starboard ----
   const c1 = Dashboard.card(root, '⭐ Starboard', 'Quand un message reçoit assez d\'étoiles (réaction ⭐), il est épinglé dans le salon choisi — le mur de la gloire de ton serveur.');

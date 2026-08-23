@@ -36,9 +36,10 @@ const EVENT_DEFS = {
   autorole: {
     label: 'Auto-rôle',
     emoji: '🏷️',
-    description: 'Donne automatiquement un rôle aux nouveaux membres.',
+    description: 'Donne automatiquement un ou PLUSIEURS rôles aux nouveaux membres.',
     config: [
-      { key: 'role', label: 'Rôle à donner automatiquement', type: 'role', placeholder: 'Membre' },
+      { key: 'roles', label: 'Rôles à donner automatiquement (plusieurs possibles)', type: 'rolesmulti', placeholder: 'Membre, Nouveau' },
+      { key: 'role', label: 'Ancien réglage (un seul rôle — laisser vide si la liste ci-dessus est utilisée)', type: 'role', placeholder: 'Membre' },
     ],
   },
 };
@@ -100,11 +101,30 @@ async function runJoinEvent(botId, member) {
 
   if (state.autorole && state.autorole.enabled) {
     const cfg = state.autorole.config || {};
-    const role = member.guild.roles.cache.find(r => r.name.toLowerCase() === String(cfg.role || '').toLowerCase());
-    if (role && member.guild.members.me && role.position < member.guild.members.me.roles.highest.position) {
-      await member.roles.add(role).catch(() => {});
+    // 🏷️ v2.1 : PLUSIEURS rôles possibles (liste « roles » séparée par des
+    // virgules) + compatibilité avec l'ancien réglage « role » (un seul).
+    const wanted = parseRoleList(cfg);
+    for (const name of wanted) {
+      const role = member.guild.roles.cache.find(r => r.name.toLowerCase() === name.toLowerCase());
+      if (role && member.guild.members.me && role.position < member.guild.members.me.roles.highest.position) {
+        await member.roles.add(role).catch(() => {});
+      }
     }
   }
+}
+
+// 🏷️ Liste des rôles voulus par l'auto-rôle (fonction PURE, testable) :
+// combine la liste multiple (cfg.roles, séparés par des virgules) et
+// l'ancien réglage simple (cfg.role), sans doublons ni entrées vides.
+function parseRoleList(cfg) {
+  const out = [];
+  const push = (v) => {
+    const name = String(v || '').trim();
+    if (name && !out.some((x) => x.toLowerCase() === name.toLowerCase())) out.push(name);
+  };
+  String((cfg && cfg.roles) || '').split(',').forEach(push);
+  push(cfg && cfg.role);
+  return out;
 }
 
 async function runLeaveEvent(botId, member) {
@@ -164,4 +184,4 @@ async function resolveChannel(guild, query) {
   return guild.channels.cache.find(c => c.name.toLowerCase() === q.toLowerCase() && c.isTextBased()) || null;
 }
 
-module.exports = { EVENT_DEFS, eventsState, runJoinEvent, runLeaveEvent, resolveChannel };
+module.exports = { EVENT_DEFS, eventsState, runJoinEvent, runLeaveEvent, resolveChannel, parseRoleList };

@@ -823,6 +823,33 @@ router.get('/bots/:id/guilds/:guildId/community', requireAuth, async (req, res) 
   });
 });
 
+// 🔴 Annonces de live : liste / ajout / suppression des liens sociaux
+router.get('/bots/:id/guilds/:guildId/livesocials', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  res.json({ socials: store.liveSocials.all(bot.id, req.params.guildId) });
+});
+router.post('/bots/:id/guilds/:guildId/livesocials', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const { link, platform, user_id } = req.body || {};
+  const { parseSocial } = require('./discord/liveWatch');
+  const parsed = parseSocial(link, platform);
+  if (!parsed) return res.status(400).json({ error: 'Lien ou pseudo invalide. Colle un lien complet (tiktok.com/@pseudo, twitch.tv/pseudo…) ou un @pseudo + la plateforme.' });
+  if (store.liveSocials.count(bot.id, req.params.guildId) >= 20) return res.status(400).json({ error: 'Limite atteinte : 20 comptes suivis par serveur.' });
+  store.liveSocials.add(bot.id, req.params.guildId, String(user_id || '').slice(0, 30), parsed.platform, parsed.handle);
+  res.json({ ok: true, platform: parsed.platform, handle: parsed.handle });
+});
+router.delete('/bots/:id/guilds/:guildId/livesocials/:sid', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  store.liveSocials.remove(bot.id, req.params.guildId, Number(req.params.sid));
+  res.json({ ok: true });
+});
+
 // Note moyenne du support (étoiles données par les membres après la clôture)
 router.get('/bots/:id/guilds/:guildId/tickets/rating', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
@@ -976,7 +1003,7 @@ router.put('/bots/:id/guilds/:guildId/settings', requireAuth, async (req, res) =
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
-  const { prefix, warn_limit, warn_action, warn_timeout_limit, warn_timeout_min, starboard_channel, starboard_min, log_channel, birthday_channel, birthday_role, log_events, timezone } = req.body || {};
+  const { prefix, warn_limit, warn_action, warn_timeout_limit, warn_timeout_min, starboard_channel, starboard_min, live_channel, live_ping, log_channel, birthday_channel, birthday_role, log_events, timezone } = req.body || {};
   store.guildSettings.set(bot.id, guildId, {
     prefix: String(prefix || '').slice(0, 5),
     warn_limit: Math.max(0, parseInt(warn_limit, 10) || 0),
@@ -985,6 +1012,8 @@ router.put('/bots/:id/guilds/:guildId/settings', requireAuth, async (req, res) =
     ...(warn_timeout_min !== undefined ? { warn_timeout_min: Math.min(Math.max(parseInt(warn_timeout_min, 10) || 60, 1), 10080) } : {}),
     ...(starboard_channel !== undefined ? { starboard_channel: String(starboard_channel).slice(0, 100) } : {}),
     ...(starboard_min !== undefined ? { starboard_min: Math.min(Math.max(parseInt(starboard_min, 10) || 3, 1), 50) } : {}),
+    ...(live_channel !== undefined ? { live_channel: String(live_channel).slice(0, 100) } : {}),
+    ...(live_ping !== undefined ? { live_ping: ['everyone', 'here', 'none'].includes(live_ping) ? live_ping : 'everyone' } : {}),
     ...(log_channel !== undefined ? { log_channel: String(log_channel).slice(0, 100) } : {}),
     ...(birthday_channel !== undefined ? { birthday_channel: String(birthday_channel).slice(0, 100) } : {}),
     ...(birthday_role !== undefined ? { birthday_role: String(birthday_role).slice(0, 100) } : {}),

@@ -507,6 +507,17 @@ try { db.exec(`CREATE TABLE IF NOT EXISTS invite_joins (
   joined_at TEXT DEFAULT (datetime('now')),
   PRIMARY KEY (bot_id, guild_id, user_id))`); } catch (e) {}
 
+// v2.1 — 🔴 Annonces de live + auto-rôle multiple
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN live_channel TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN live_ping TEXT DEFAULT 'everyone'"); } catch (e) {}
+try { db.exec(`CREATE TABLE IF NOT EXISTS live_socials (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id INTEGER NOT NULL, guild_id TEXT NOT NULL,
+  user_id TEXT DEFAULT '', platform TEXT NOT NULL, handle TEXT NOT NULL,
+  last_status TEXT DEFAULT 'off', last_announce_ts INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now')),
+  UNIQUE (bot_id, guild_id, platform, handle))`); } catch (e) {}
+
 // 🗑 Ancien cache de bannières animées : supprimé (les GIF faisaient
 // grossir la sauvegarde au-delà de la limite de 1 Mo de l'API GitHub).
 try { db.exec('DROP TABLE IF EXISTS banner_cache'); } catch (e) {}
@@ -636,7 +647,7 @@ const guildSettings = {
   set: (botId, guildId, fields) => {
     const cur = guildSettings.get(botId, guildId) || { prefix: '', warn_limit: 0, warn_action: 'none' };
     const next = { ...cur, ...fields };
-    const cols = ['prefix', 'warn_limit', 'warn_action', 'warn_timeout_limit', 'warn_timeout_min', 'starboard_channel', 'starboard_min', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_warn_text', 'am_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'lang', 'timezone'];
+    const cols = ['prefix', 'warn_limit', 'warn_action', 'warn_timeout_limit', 'warn_timeout_min', 'starboard_channel', 'starboard_min', 'live_channel', 'live_ping', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_warn_text', 'am_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'lang', 'timezone'];
     const vals = {
       bot_id: botId, guild_id: guildId,
       prefix: String(next.prefix || '').slice(0, 5),
@@ -646,6 +657,8 @@ const guildSettings = {
       warn_timeout_min: Math.min(Math.max(parseInt(next.warn_timeout_min, 10) || 60, 1), 10080),
       starboard_channel: String(next.starboard_channel || '').slice(0, 100),
       starboard_min: Math.min(Math.max(parseInt(next.starboard_min, 10) || 3, 1), 50),
+      live_channel: String(next.live_channel || '').slice(0, 100),
+      live_ping: ['everyone', 'here', 'none'].includes(String(next.live_ping || '')) ? String(next.live_ping) : 'everyone',
       xp_enabled: (next.xp_enabled === undefined || next.xp_enabled === null) ? 1 : (next.xp_enabled ? 1 : 0),
       xp_min: Math.min(Math.max(parseInt(next.xp_min, 10) || 10, 1), 1000),
       xp_max: Math.max(parseInt(next.xp_max, 10) || 25, 1),
@@ -1114,4 +1127,13 @@ const inviteJoins = {
   whoInvited: (botId, guildId, userId) => db.prepare('SELECT * FROM invite_joins WHERE bot_id = ? AND guild_id = ? AND user_id = ?').get(botId, guildId, String(userId)) || null,
 };
 
-module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, migrateLogCategories };
+// ---------------------- 🔴 Annonces de live ----------------------
+const liveSocials = {
+  all: (botId, guildId) => db.prepare('SELECT * FROM live_socials WHERE bot_id = ? AND guild_id = ? ORDER BY id').all(botId, guildId),
+  add: (botId, guildId, userId, platform, handle) => db.prepare('INSERT INTO live_socials (bot_id, guild_id, user_id, platform, handle) VALUES (?, ?, ?, ?, ?) ON CONFLICT(bot_id, guild_id, platform, handle) DO UPDATE SET user_id = excluded.user_id').run(botId, guildId, String(userId || ''), String(platform), String(handle).slice(0, 60)),
+  remove: (botId, guildId, id) => db.prepare('DELETE FROM live_socials WHERE bot_id = ? AND guild_id = ? AND id = ?').run(botId, guildId, id),
+  setStatus: (botId, guildId, id, status, announceTs) => db.prepare('UPDATE live_socials SET last_status = ?, last_announce_ts = ? WHERE bot_id = ? AND guild_id = ? AND id = ?').run(String(status), parseInt(announceTs, 10) || 0, botId, guildId, id),
+  count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM live_socials WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
+};
+
+module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, migrateLogCategories };

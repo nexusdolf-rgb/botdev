@@ -243,6 +243,15 @@ async function main() {
     }
   }, 30000);
 
+  // 🔴 Annonces de live : balayage toutes les 3 minutes (TikTok, Twitch,
+  // YouTube, Kick) — annonce automatique dans le salon dédié au passage en live.
+  setInterval(() => {
+    try {
+      const liveWatch = require('./discord/liveWatch');
+      liveWatch.sweep(botManager).catch((e) => console.error('[Hoxera] live sweep :', e.message));
+    } catch (e) { console.error('[Hoxera] liveWatch indisponible :', e.message); }
+  }, 3 * 60000);
+
   // ⏰ Balayage 30 s : giveaways échus + rôles temporaires expirés
   setInterval(async () => {
     for (const [botId, entry] of botManager.clients) {
