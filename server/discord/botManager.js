@@ -579,17 +579,17 @@ async function syncGlobalCommands(botId) {
 }
 
 // ---------------------- Bio du bot (« À propos de moi ») ----------------------
-// Belle bio avec le lien du dashboard et l'invitation à /help.
-// Limite Discord : 190 caractères — on vise ~176 avec les emojis.
-// Le lien est TOUJOURS le nouveau dashboard (pas l'ancien lien mémorisé).
+// Belle bio avec le dashboard, le serveur support officiel et /help.
+// Limite Discord : 190 caractères — longueur vérifiée par test automatique.
 const OFFICIAL_URL = 'https://hoxera.onrender.com';
+const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3'; // Serveur support officiel de Nexora
 
 function aboutText() {
   return [
     '✨ Hoxera — le bot qui anime ton serveur !',
-    '🎫 Tickets · 📈 XP · 💰 Coins · 🎁 Giveaways · 🕹️ Jeux',
+    '🎫 Tickets · 📈 XP · 💰 Coins · 🕹️ Jeux · ❓ /help',
     `🌐 Dashboard : ${OFFICIAL_URL}`,
-    '❓ /help → toutes les commandes',
+    `🆘 Support : ${SUPPORT_URL}`,
   ].join('\n').slice(0, 190);
 }
 

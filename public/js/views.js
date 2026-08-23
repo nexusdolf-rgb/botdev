@@ -28,11 +28,14 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
       <textarea class="input" id="rm-content" rows="2" placeholder="Choisis tes rôles !">${App.escapeHtml(data.content)}</textarea>
       <label class="field-label">Texte d'attente du menu déroulant</label>
       <input class="input" id="rm-placeholder" maxlength="150" value="${App.escapeHtml(data.placeholder)}" />
-      <label class="field-label">Salon où envoyer le panneau (mention, ex : #rôles)</label>
-      <input class="input" id="rm-channel" value="${App.escapeHtml(data.channel)}" placeholder="#rôles" />
+      <label class="field-label">Salon où envoyer le panneau</label>
+      <select class="input" id="rm-channel">
+        <option value="">— Choisir un salon —</option>
+      </select>
       <label class="field-label">Options du menu</label>
       <div id="rm-options"></div>
       <button class="btn btn-sm btn-ghost" id="rm-add-opt" style="margin-top:8px">＋ Ajouter un rôle</button>
+      <datalist id="rm-roles-list"></datalist>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" data-close>Annuler</button>
@@ -42,6 +45,27 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
   document.querySelectorAll('[data-close]').forEach(b => b.onclick = App.closeModal);
   const optWrap = document.querySelector('#rm-options');
 
+  // 📋 Sélecteur de salons : rempli avec les salons textuels du serveur
+  // (fini la saisie à la main). L'ancienne valeur reste sélectionnée même
+  // si le salon a été renommé/supprimé (option « actuelle » ajoutée).
+  const chanSel = document.querySelector('#rm-channel');
+  const guildData = (typeof Dashboard !== 'undefined' && Dashboard.state && Dashboard.state.guildData) || {};
+  const chans = (guildData.channels || []).filter((ch) => !ch.category && !ch.voice);
+  const current = String(data.channel || '');
+  chans.forEach((ch) => {
+    const val = `#${ch.name}`;
+    chanSel.appendChild(App.el(`<option value="${App.escapeHtml(val)}" ${current === val ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`));
+  });
+  if (current && ![...chanSel.options].some((o) => o.value === current)) {
+    chanSel.appendChild(App.el(`<option value="${App.escapeHtml(current)}" selected>${App.escapeHtml(current)} (actuel)</option>`));
+  }
+
+  // 🏷️ Suggestions automatiques des noms de rôles (datalist)
+  const rolesDl = document.querySelector('#rm-roles-list');
+  (guildData.roles || []).filter((r) => r.name !== '@everyone').forEach((r) => {
+    rolesDl.appendChild(App.el(`<option value="${App.escapeHtml(r.name)}"></option>`));
+  });
+
   const renderOpts = () => {
     optWrap.innerHTML = '';
     data.options.forEach((o, i) => {
@@ -49,7 +73,7 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
         <div class="row-item" style="margin-top:7px">
           <input class="input" data-k="emoji" placeholder="😀" value="${App.escapeHtml(o.emoji)}" style="max-width:56px;text-align:center" />
           <input class="input" data-k="label" placeholder="Texte affiché" value="${App.escapeHtml(o.label)}" style="max-width:170px" />
-          <input class="input" data-k="role" placeholder="Nom exact du rôle" value="${App.escapeHtml(o.role)}" />
+          <input class="input" data-k="role" placeholder="Nom exact du rôle" value="${App.escapeHtml(o.role)}" list="rm-roles-list" />
           <button class="btn btn-danger btn-icon btn-sm" data-del>🗑</button>
         </div>
       `);
