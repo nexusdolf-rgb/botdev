@@ -102,34 +102,42 @@ Dashboard.BOT_MODULES = [
   ['botsettings', '🤖', 'Réglages du bot'],
 ];
 
+// 🎛️ Composant partagé : carte de sélection du serveur (style DraftBot).
+// Le vrai <select> natif est superposé en invisible : look custom, ergonomie native.
+Dashboard.serverPicker = () => {
+  const guilds = Dashboard.state.discordGuilds || [];
+  const cur = guilds.find((g) => g.id === Dashboard.state.guildId);
+  const initial = cur ? (cur.name || '?').trim()[0].toUpperCase() : '🌍';
+  const pick = App.el(`
+    <div class="dash-server-card" title="Changer de serveur">
+      ${cur && cur.icon
+        ? `<img src="${App.escapeHtml(cur.icon)}" alt="" />`
+        : `<span class="srv-fallback">${App.escapeHtml(initial)}</span>`}
+      <div class="srv-txt">
+        <span class="srv-label">Serveur</span>
+        <b>${cur ? App.escapeHtml(cur.name) : 'Choisir un serveur…'}</b>
+      </div>
+      <span class="srv-caret">⌄</span>
+      <select aria-label="Changer de serveur">
+        <option value="">— Choisir un serveur —</option>
+        ${guilds.map((g) => `<option value="${g.id}" ${g.id === Dashboard.state.guildId ? 'selected' : ''}>${App.escapeHtml(g.name)}${g.hasBot ? '' : ' · bot absent'}${!g.canManage ? ' · lecture seule' : ''}</option>`).join('')}
+      </select>
+    </div>`);
+  pick.querySelector('select').onchange = async (e) => {
+    const g = guilds.find((x) => x.id === e.target.value);
+    if (!g) return;
+    if (!g.hasBot) { App.openInvite(Dashboard.state.bot.invite_url); App.toast('Ajoute le bot sur ce serveur pour le configurer !'); return; }
+    if (!g.canManage) { App.toast('Lecture seule : il te faut la permission « Gérer le serveur ».', 'error'); return; }
+    await Dashboard.selectGuild(g.id);
+  };
+  return pick;
+};
+
 Dashboard.renderSide = (aside) => {
   aside.innerHTML = '';
+  aside.appendChild(Dashboard.serverPicker());
 
-  // 👉 Serveurs Discord (comme DraftBot : liste en haut de la sidebar)
-  const servers = (Dashboard.state.discordGuilds || []).slice(0, 25);
-  if (servers.length) {
-    aside.appendChild(App.el(`<div class="dash-side-section">Mes serveurs</div>`));
-    servers.forEach((g) => {
-      const selected = Dashboard.state.guildId === g.id;
-      const item = App.el(`
-        <button class="dash-side-item ${selected ? 'active' : ''}" title="${App.escapeHtml(g.name)}">
-          ${g.icon
-            ? `<img src="${App.escapeHtml(g.icon)}" style="width:20px;height:20px;border-radius:6px" alt="" />`
-            : '<span class="ico">🌍</span>'}
-          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${App.escapeHtml(g.name)}</span>
-          <span class="dot ${g.hasBot ? 'dot-online' : 'dot-offline'}" title="${g.hasBot ? 'Bot présent' : 'Bot absent'}"></span>
-        </button>`);
-      item.onclick = async () => {
-        if (g.hasBot && g.canManage) { await Dashboard.selectGuild(g.id); return; }
-        if (!g.hasBot) { App.openInvite(Dashboard.state.bot.invite_url); App.toast('Ajoute le bot sur ce serveur pour le configurer !'); return; }
-        App.toast('Lecture seule : il te faut la permission « Gérer le serveur ».', 'error');
-      };
-      aside.appendChild(item);
-    });
-    aside.appendChild(App.el(`<div style="height:1px;background:var(--d-border);margin:10px 14px"></div>`));
-  }
-
-  aside.appendChild(App.el(`<div class="dash-side-section">Serveur sélectionné</div>`));
+  aside.appendChild(App.el(`<div class="dash-side-section">Gestion du serveur</div>`));
   Dashboard.MODULES.forEach(([id, ico, label]) => {
     const b = App.el(`<button class="dash-side-item ${Dashboard.state.module === id ? 'active' : ''}" data-m="${id}"><span class="ico">${ico}</span>${label}</button>`);
     b.onclick = () => Dashboard.setModule(id);
@@ -137,7 +145,7 @@ Dashboard.renderSide = (aside) => {
   });
   // Section « Bot » (commandes/modules globales) : fondateur uniquement
   if (App.state.user && App.state.user.is_admin) {
-    aside.appendChild(App.el(`<div class="dash-side-section">Bot</div>`));
+    aside.appendChild(App.el(`<div class="dash-side-section">Administration du bot</div>`));
     Dashboard.BOT_MODULES.forEach(([id, ico, label]) => {
       const b = App.el(`<button class="dash-side-item ${Dashboard.state.module === id ? 'active' : ''}" data-m="${id}"><span class="ico">${ico}</span>${label}</button>`);
       b.onclick = () => Dashboard.setModule(id);
@@ -244,33 +252,33 @@ Dashboard.refresh = () => {
 // ---------------------- Barre du haut ----------------------
 Dashboard.renderTopbar = (topbar, discordGuilds) => {
   const bot = Dashboard.state.bot;
-  const manageable = discordGuilds.filter((g) => g.canManage);
   const cur = discordGuilds.find((g) => g.id === Dashboard.state.guildId);
-  // Le bouton « Ajouter le bot » ne sert que s'il manque sur au moins un serveur gérable
   const needsInvite = discordGuilds.some((g) => g.canManage && !g.hasBot);
+  const all = [...Dashboard.MODULES, ...Dashboard.BOT_MODULES];
+  const mod = all.find(([id]) => id === Dashboard.state.module) || ['', '📊', 'Vue d\'ensemble'];
   topbar.innerHTML = `
-    <div class="dash-bot-chip" title="${App.escapeHtml(bot.bot_username || bot.name)}">
-      ${bot.avatar_url ? `<img src="${App.escapeHtml(bot.avatar_url)}" alt="" />` : '<span class="chip-fallback">🤖</span>'}
-      <div class="chip-txt">
-        <b>${App.escapeHtml(bot.name)}</b>
-        <span class="${bot.online ? 'on' : 'off'}">${bot.online ? '● En ligne' : '● Hors ligne'}</span>
+    <div class="dash-crumb">
+      <span class="crumb-ico">${mod[1]}</span>
+      <div class="crumb-txt">
+        <b>${App.escapeHtml(mod[2])}</b>
+        <span>${cur ? App.escapeHtml(cur.name) : 'Aucun serveur sélectionné'}</span>
       </div>
     </div>
-    <div class="dash-server-pick">
-      ${cur && cur.icon ? `<img src="${App.escapeHtml(cur.icon)}" alt="" />` : '<span style="font-size:20px">🌍</span>'}
-      <select id="d-guild">
-        <option value="">— Choisir un serveur —</option>
-        ${discordGuilds.map((g) => `<option value="${g.id}" ${g.id === Dashboard.state.guildId ? 'selected' : ''}>${App.escapeHtml(g.name)}${g.hasBot ? '' : ' (bot absent)'}${!g.canManage ? ' · lecture seule' : ''}</option>`).join('')}
-      </select>
-    </div>
     <div class="dash-topbar-actions">
-      ${needsInvite ? `<button class="dash-btn dash-btn-primary" id="d-invite2">➕ Ajouter le bot</button>` : ''}
+      ${needsInvite ? `<button class="dash-btn" id="d-invite2">➕ Ajouter le bot</button>` : ''}
+      <div class="dash-bot-chip" title="${App.escapeHtml(bot.bot_username || bot.name)}">
+        ${bot.avatar_url ? `<img src="${App.escapeHtml(bot.avatar_url)}" alt="" />` : '<span class="chip-fallback">🤖</span>'}
+        <div class="chip-txt">
+          <b>${App.escapeHtml(bot.name)}</b>
+          <span class="${bot.online ? 'on' : 'off'}">${bot.online ? '● En ligne' : '● Hors ligne'}</span>
+        </div>
+      </div>
     </div>
   `;
-  topbar.querySelector('#d-guild').onchange = async (e) => {
-    if (!e.target.value) return;
-    await Dashboard.selectGuild(e.target.value);
-  };
+  // 📱 Sur mobile la sidebar est masquée : le sélecteur de serveur vit ici
+  const mobilePick = Dashboard.serverPicker();
+  mobilePick.classList.add('topbar-pick');
+  topbar.appendChild(mobilePick);
   const inviteBtn = topbar.querySelector('#d-invite2');
   if (inviteBtn) inviteBtn.onclick = () => App.openInvite(bot.invite_url);
 };

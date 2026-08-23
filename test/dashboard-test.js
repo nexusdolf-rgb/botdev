@@ -56,8 +56,8 @@ window.__results = (async () => {
       modules: shell ? shell.querySelectorAll('.dash-side-item').length : 0,
       header: shell && shell.querySelector('.dash-module-header h1') ? shell.querySelector('.dash-module-header h1').textContent : 'VIDE',
       statCards: shell ? shell.querySelectorAll('.dash-stat').length : 0,
-      guildPick: shell && shell.querySelector('#d-guild') ? shell.querySelector('#d-guild').value : null,
-      botSection: shell ? !![...shell.querySelectorAll('.dash-side-section')].find((s) => s.textContent === 'Bot') : false,
+      guildPick: shell && shell.querySelector('.dash-server-card select') ? shell.querySelector('.dash-server-card select').value : null,
+      botSection: shell ? !![...shell.querySelectorAll('.dash-side-section')].find((s) => s.textContent.includes('Administration du bot')) : false,
       errorShown: shell ? !!shell.querySelector('.empty-state') : false,
     };
 

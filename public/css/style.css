@@ -527,3 +527,11 @@ label.field-label {
   .mobile-nav button .ico { font-size: 19px; }
   .mobile-nav button.active { color: #8b93ff; }
 }
+
+/* ✨ v2.0 : typographie professionnelle (Inter) + navbar en verre */
+body { font-family: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; }
+.navbar {
+  background: rgba(13, 13, 20, .72) !important;
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(42, 42, 64, .8);
+}
