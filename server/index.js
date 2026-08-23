@@ -52,9 +52,9 @@ async function main() {
 
   // 🆕 L'URL officielle du dashboard : remplace un éventuel ancien lien
   // mémorisé dans la base restaurée (transcriptions, /help, pieds de page…)
-  const officialUrl = 'https://dash-hoxora.onrender.com';
+  const officialUrl = 'https://hoxera.onrender.com';
   const storedUrl = store.settings.get('public_url');
-  if (!storedUrl || !storedUrl.includes('dash-hoxora')) {
+  if (!storedUrl || !storedUrl.includes('//hoxera.onrender.com')) {
     store.settings.set('public_url', officialUrl);
     if (storedUrl) console.log(`[BotDev] 🔗 Lien du dashboard mis à jour : ${storedUrl} → ${officialUrl}`);
   }
@@ -185,7 +185,7 @@ async function main() {
   // (risque de refroidissement). On s'auto-visite toutes les 10 min via
   // l'URL publique : la requête traverse l'équilibreur de Render et compte
   // comme du vrai trafic entrant.
-  const selfUrl = process.env.RENDER_EXTERNAL_URL || 'https://dash-hoxora.onrender.com';
+  const selfUrl = process.env.RENDER_EXTERNAL_URL || 'https://hoxera.onrender.com';
   if (selfUrl) {
     console.log(`[BotDev] 🌙 Garde-éveil activé : auto-visite de ${selfUrl}/ping toutes les 10 min`);
     setInterval(() => { fetch(`${selfUrl}/ping`).catch(() => {}); }, 10 * 60000);

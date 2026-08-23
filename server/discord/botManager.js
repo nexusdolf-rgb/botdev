@@ -552,7 +552,7 @@ async function syncGlobalCommands(botId) {
 // Belle bio avec le lien du dashboard et l'invitation à /help.
 // Limite Discord : 190 caractères — on vise ~176 avec les emojis.
 // Le lien est TOUJOURS le nouveau dashboard (pas l'ancien lien mémorisé).
-const OFFICIAL_URL = 'https://dash-hoxora.onrender.com';
+const OFFICIAL_URL = 'https://hoxera.onrender.com';
 
 function aboutText() {
   return [
