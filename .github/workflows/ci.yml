@@ -1,0 +1,32 @@
+name: CI — Tests Hoxera
+
+# 🛡️ Garde-fou automatique : chaque push / pull request sur main
+# exécute la suite de tests complète. Si ça échoue, le commit est
+# marqué d'une croix rouge ❌ sur GitHub — on sait immédiatement
+# qu'une mise à jour a cassé quelque chose.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Vérification syntaxe + secrets + tests
+        run: bash scripts/check.sh
