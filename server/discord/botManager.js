@@ -54,9 +54,11 @@ async function loginBot(botId) {
   if (!record) throw new Error('Bot introuvable');
   const existing = clients.get(botId);
   if (existing) {
-    // Connexion morte (pas prête depuis plus de 60 s) → on nettoie et on
-    // reconnecte, au lieu de croire le bot « déjà connecté ».
-    if (!existing.client.isReady() && Date.now() - (existing.startedAt || 0) > 60000) {
+    // Connexion morte (pas prête depuis plus de 6 min, soit plus que le
+    // timeout patient de 5 min du login) → on nettoie et on reconnecte,
+    // au lieu de croire le bot « déjà connecté ». Une tentative plus
+    // récente est laissée tranquille (elle est peut-être en train d'aboutir).
+    if (!existing.client.isReady() && Date.now() - (existing.startedAt || 0) > 360000) {
       try { existing.client.destroy(); } catch {}
       clients.delete(botId);
     } else {
@@ -125,17 +127,17 @@ async function connect(botId, record, intents, degradedHint) {
   attachListeners(botId, entry);
 
   try {
-    // ⏱️ Timeout de connexion : client.login() peut rester suspendu POUR
-    // TOUJOURS quand la passerelle Discord est injoignable (réseau coupé,
-    // refroidissement Cloudflare après une tempête de reconnexions…).
-    // Sans timeout : aucune erreur, aucun log, bot fantôme. Avec : l'échec
-    // devient visible et le chien de garde peut réessayer proprement.
+    // ⏱️ Timeout de connexion PATIENT (5 min) : pendant un refroidissement,
+    // Discord accepte parfois la connexion très lentement (>90 s). Abandonner
+    // trop tôt créait des « clients zombies » : la connexion aboutissait
+    // APRÈS notre abandon, recevait les commandes des membres mais n'était
+    // plus enregistrée → « L'application ne répond pas » partout.
     console.log(`[BotDev] 🔌 bot ${botId} : connexion à Discord…`);
     await Promise.race([
       client.login(record.token),
       new Promise((_, reject) => setTimeout(
-        () => reject(new Error('Connexion Discord trop longue (>90 s) — passerelle injoignable ou refroidissement en cours')),
-        90000
+        () => reject(new Error('Connexion Discord trop longue (>5 min) — passerelle injoignable ou refroidissement en cours')),
+        300000
       ).unref()),
     ]);
     console.log(`[BotDev] 🔌 bot ${botId} : connecté ✅`);
@@ -156,6 +158,14 @@ async function connect(botId, record, intents, degradedHint) {
       } catch {}
     }
     clients.delete(botId);
+    // 🧟 Anti-zombie : démontage COMPLET — on retire tous les écouteurs
+    // (un zombie qui se connecterait quand même après coup ne ferait plus
+    // rien) et on programme sa destruction s'il finit par aboutir.
+    try { client.removeAllListeners(); } catch {}
+    try {
+      client.once('clientReady', () => { try { client.destroy(); } catch {} });
+      client.once('ready', () => { try { client.destroy(); } catch {} });
+    } catch {}
     try { client.destroy(); } catch {}
     store.bots.update(botId, { enabled: 0, last_error: friendlyError(err) });
     throw err;
@@ -205,7 +215,11 @@ async function guardInteraction(botId, entry, i, timeoutMs = 15000) {
         }
       } catch { /* jamais bloquant */ }
       const extra = require('./extra');
-      const extraHandled = await extra.handleInteraction(botId, i);
+      // ⚠️ Bug historique corrigé (introduit en v1.50 le 17/08) : l'appel
+      // passait (botId, i) alors que la fonction attend (botId, entry, i) —
+      // l'interaction arrivait dans le paramètre « entry » et TOUTES les
+      // interactions du module extra plantaient en silence.
+      const extraHandled = await extra.handleInteraction(botId, entry, i);
       if (extraHandled) return;
       const { dispatchPanels } = require('./panels');
       const handled = await dispatchPanels(botId, i);
