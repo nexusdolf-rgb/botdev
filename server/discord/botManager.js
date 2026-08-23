@@ -427,6 +427,20 @@ async function syncSlashCommands(botId, guildId, quiet = false) {
 //  - Erreurs (429 / dépassement) gérées sans faire tomber le bot.
 const crypto = require('crypto');
 
+// 🧭 Décision de synchronisation globale (fonction PURE, testable) :
+//  - 'sync'  : la liste voulue a changé → il faut pousser
+//  - 'drift' : le hash dit « à jour » MAIS l'état réel chez Discord ne
+//              correspond pas (ex: un démarrage sur base vide a écrasé la
+//              liste) → il faut re-pousser. Sans cette vérification, le
+//              bot fait confiance à sa mémoire pour toujours et les
+//              commandes « disparues » ne reviennent JAMAIS.
+//  - 'skip'  : tout est cohérent → on ne touche à rien (limite de débit)
+function globalSyncDecision(storedHash, wantedHash, discordCount, wantedCount) {
+  if (storedHash !== wantedHash) return 'sync';
+  if (discordCount !== wantedCount) return 'drift';
+  return 'skip';
+}
+
 async function syncGlobalCommands(botId) {
   const entry = clients.get(botId);
   if (!entry || !entry.client.isReady()) return;
@@ -441,9 +455,21 @@ async function syncGlobalCommands(botId) {
   const global = all.slice(0, 90); // plafond de sécurité (limite Discord : 100)
   const hash = crypto.createHash('sha1').update(JSON.stringify(global)).digest('hex');
   const key = `global_cmds_${botId}`;
-  if (store.settings.get(key) === hash) return; // déjà à jour → on évite la limite de débit
-
   const appId = record.client_id || entry.client.user.id;
+
+  if (store.settings.get(key) === hash) {
+    // 🧭 Anti-dérive : on vérifie l'état RÉEL chez Discord (1 lecture toutes
+    // les 10 min, sans risque de limite de débit).
+    let discordCount = -1;
+    try {
+      const current = await entry.client.rest.get(`/applications/${appId}/commands`);
+      if (Array.isArray(current)) discordCount = current.length;
+    } catch { return; } // lecture impossible → on réessaiera au prochain cycle
+    const decision = globalSyncDecision(store.settings.get(key), hash, discordCount, global.length);
+    if (decision === 'skip') return;
+    console.log(`[BotDev] bot ${botId} : dérive des commandes globales détectée (${discordCount} chez Discord ≠ ${global.length} attendues) — re-synchronisation…`);
+  }
+
   try {
     await entry.client.rest.put(`/applications/${appId}/commands`, { body: global });
     store.settings.set(key, hash);
@@ -529,4 +555,4 @@ function platformStats() {
   return { onlineBots, servers, members };
 }
 
-module.exports = { clients, getClient, isOnline, getGuildPerms, loginBot, reconnectBot, logoutBot, stopAll, syncSlashCommands, syncGlobalCommands, applyPresence, applyBotAbout, aboutText, publicBotInfo, platformStats, guardInteraction };
+module.exports = { clients, getClient, isOnline, getGuildPerms, loginBot, reconnectBot, logoutBot, stopAll, syncSlashCommands, syncGlobalCommands, globalSyncDecision, applyPresence, applyBotAbout, aboutText, publicBotInfo, platformStats, guardInteraction };
