@@ -301,15 +301,78 @@ Dashboard.loadGuild = async () => {
   return data;
 };
 
+// ============================================================
+// 💾 Barre de sauvegarde intelligente (v2.7)
+// Dès qu'un champ est modifié, une barre flottante apparaît :
+// « Tout enregistrer » déclenche TOUS les boutons 💾 du module d'un
+// coup (avec un seul récap), « Annuler » recharge le module.
+// Plus JAMAIS de réglage perdu parce qu'un 💾 était resté oublié.
+// ============================================================
+Dashboard.saveBar = () => {
+  let bar = document.querySelector('#dash-savebar');
+  if (bar) return bar;
+  bar = App.el(`
+    <div id="dash-savebar" class="dash-savebar" hidden>
+      <span class="sb-txt">✏️ Modifications non enregistrées</span>
+      <div class="sb-actions">
+        <button class="dash-btn dash-btn-sm" id="sb-cancel">↩️ Annuler</button>
+        <button class="dash-btn dash-btn-primary dash-btn-sm" id="sb-save">💾 Tout enregistrer</button>
+      </div>
+    </div>`);
+  document.body.appendChild(bar);
+  bar.querySelector('#sb-cancel').onclick = () => { Dashboard.hideSaveBar(); Dashboard.refresh(); };
+  bar.querySelector('#sb-save').onclick = async () => {
+    const content = document.querySelector('#dash-content');
+    if (!content) return;
+    const btns = [...content.querySelectorAll('button')].filter((b) => /💾/.test(b.textContent || ''));
+    if (!btns.length) { Dashboard.hideSaveBar(); return; }
+    const saveBtn = bar.querySelector('#sb-save');
+    saveBtn.disabled = true; saveBtn.textContent = '⏳ Enregistrement…';
+    // Les confirmations individuelles sont regroupées en UN seul récap
+    const orig = App.toast;
+    const msgs = [];
+    App.toast = (m, t) => { msgs.push({ m, t }); };
+    try {
+      for (const b of btns) { b.click(); await new Promise((r) => setTimeout(r, 450)); }
+      await new Promise((r) => setTimeout(r, 450));
+    } finally { App.toast = orig; }
+    const errs = msgs.filter((x) => x.t === 'error');
+    if (errs.length) App.toast(`⚠️ ${errs[0].m}`, 'error');
+    else App.toast('✅ Tout est enregistré !');
+    saveBtn.disabled = false; saveBtn.textContent = '💾 Tout enregistrer';
+    if (!errs.length) Dashboard.hideSaveBar();
+  };
+  return bar;
+};
+Dashboard.showSaveBar = () => { const b = Dashboard.saveBar(); b.hidden = false; requestAnimationFrame(() => b.classList.add('on')); };
+Dashboard.hideSaveBar = () => { const b = document.querySelector('#dash-savebar'); if (b) { b.classList.remove('on'); b.hidden = true; } };
+Dashboard.watchDirty = (content) => {
+  const mark = (e) => {
+    const t = e.target;
+    if (!t || !(t.matches && (t.matches('input, select, textarea')))) return;
+    Dashboard.showSaveBar();
+  };
+  content.addEventListener('input', mark);
+  content.addEventListener('change', mark);
+};
+
 Dashboard.renderContent = async (content) => {
   if (!content) return;
   const { bot, guildId, module } = Dashboard.state;
   content.innerHTML = '<div class="spinner"></div>';
+  // 💾 Nouveau module = page propre : barre de sauvegarde masquée + surveillance
+  Dashboard.hideSaveBar();
+  if (!content.dataset.dirtyWatched) { Dashboard.watchDirty(content); content.dataset.dirtyWatched = '1'; }
 
   // 🩺 On coupe l'actualisation automatique de la page Santé si on la quitte
   if (module !== 'health' && Dashboard.state.healthTimer) {
     clearInterval(Dashboard.state.healthTimer);
     Dashboard.state.healthTimer = null;
+  }
+  // 📰 Idem pour le flux d'activité de la Vue d'ensemble
+  if (module !== 'overview' && Dashboard.state.feedTimer) {
+    clearInterval(Dashboard.state.feedTimer);
+    Dashboard.state.feedTimer = null;
   }
 
   const botLevel = ['commands', 'modules', 'health', 'botsettings'].includes(module);
@@ -359,6 +422,24 @@ Dashboard.renderers.overview = async (content, data) => {
   const checklist = data.checklist || [];
   const doneCount = checklist.filter((i) => i.done).length;
   const pct = checklist.length ? Math.round((doneCount / checklist.length) * 100) : 0;
+
+  // 👋 PREMIÈRE VISITE : si le serveur est encore (presque) vierge, on
+  // accueille avec un héros clair : quoi faire, dans quel ordre, en 3 étapes.
+  if (pct < 25) {
+    const hero = App.el(`
+      <div class="dash-hero">
+        <div class="hero-badge">✨ Bienvenue !</div>
+        <h2>Configurons <b>${App.escapeHtml(g.name)}</b> ensemble</h2>
+        <p>Ton bot est en ligne et prêt. Trois étapes suffisent pour un serveur au top — clique sur une carte pour commencer :</p>
+        <div class="hero-steps">
+          <button class="hero-step" data-go="tickets"><span class="hs-num">1</span><span class="hs-emoji">🎫</span><b>Le support</b><span>Panneau de tickets + types + salon de logs staff</span></button>
+          <button class="hero-step" data-go="welcome"><span class="hs-num">2</span><span class="hs-emoji">👋</span><b>L'accueil</b><span>Message de bienvenue (avec carte image !) + auto-rôles</span></button>
+          <button class="hero-step" data-go="community"><span class="hs-num">3</span><span class="hs-emoji">⭐</span><b>La communauté</b><span>Starboard, invitations et annonces de live</span></button>
+        </div>
+      </div>`);
+    hero.querySelectorAll('[data-go]').forEach((b) => { b.onclick = () => Dashboard.setModule(b.dataset.go); });
+    root.appendChild(hero);
+  }
   const clCard = Dashboard.card(root, '✅ Configuration du serveur', '');
   clCard.innerHTML = '';
   clCard.appendChild(App.el(`
@@ -390,6 +471,41 @@ Dashboard.renderers.overview = async (content, data) => {
       <div class="dash-stat"><div class="val">${(data.role_menus || []).length}</div><div class="lbl">Menus de rôles</div></div>
       <div class="dash-stat"><div class="val">${(data.scheduled || []).length}</div><div class="lbl">Annonces programmées</div></div>
     </div>`));
+
+  // 📰 Flux d'activité : le serveur vit sous tes yeux
+  const feed = Dashboard.card(root, '📰 Activité récente', 'Tout ce que le bot fait pour toi, en direct — actualisé toutes les 30 secondes.');
+  const feedList = App.el(`<div id="ov-feed"></div>`);
+  feed.appendChild(feedList);
+  const relTime = (iso) => {
+    const t = new Date(String(iso).replace(' ', 'T') + (String(iso).includes('Z') ? '' : 'Z')).getTime();
+    const m = Math.max(0, Math.round((Date.now() - t) / 60000));
+    if (m < 1) return 'à l\'instant';
+    if (m < 60) return `il y a ${m} min`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `il y a ${h} h`;
+    return `il y a ${Math.floor(h / 24)} j`;
+  };
+  const loadFeed = async () => {
+    try {
+      const { items } = await App.api(`/bots/${bot.id}/guilds/${guildId}/activity`);
+      feedList.innerHTML = '';
+      if (!items.length) {
+        feedList.appendChild(App.el(`<div class="dash-empty" style="padding:16px">Encore rien à raconter — le flux se remplit dès que le bot agit (tickets, lives, starboard, sanctions…).</div>`));
+        return;
+      }
+      items.forEach((it) => {
+        feedList.appendChild(App.el(`
+          <div class="feed-item">
+            <span class="feed-emoji">${it.emoji || '•'}</span>
+            <span class="feed-text">${App.escapeHtml(it.text)}</span>
+            <span class="feed-time">${relTime(it.created_at)}</span>
+          </div>`));
+      });
+    } catch { /* silencieux */ }
+  };
+  loadFeed();
+  if (Dashboard.state.feedTimer) clearInterval(Dashboard.state.feedTimer);
+  Dashboard.state.feedTimer = setInterval(loadFeed, 30000);
 
   // 📈 En bref : l'activité réelle du serveur (7 derniers jours)
   const brief = Dashboard.card(root, '📈 Ton serveur en bref', 'Activité mesurée par le bot sur les 7 derniers jours.');
@@ -863,6 +979,32 @@ Dashboard.renderers.welcome = async (content, data) => {
       renderPreview();
     }
 
+    // 👀 Aperçu Discord en direct (message de bienvenue uniquement)
+    if (key === 'member_join') {
+      const pv = App.el(`<div class="dc-preview" style="margin-top:12px"><div class="dash-label" style="margin:0 0 8px">👀 Aperçu sur Discord</div><div class="dc-msg"></div></div>`);
+      const renderPv = () => {
+        const msgEl = pv.querySelector('.dc-msg');
+        const get = (k) => { const el = cfgZone.querySelector(`[data-k="${k}"]`); return el ? (el.type === 'checkbox' ? el.checked : el.value) : ''; };
+        const txt = String(get('message') || 'Bienvenue {user} !').replace('{user}', '@NouveauMembre').replace('{server}', 'Ton serveur').replace('{count}', '145');
+        const color = get('color') || '#57F287';
+        const isEmbed = !!get('embed');
+        const hasCard = !!get('card');
+        msgEl.innerHTML = `
+          <div style="display:flex;gap:10px">
+            <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#5865F2,#8B5CF6);flex-shrink:0"></div>
+            <div style="min-width:0;flex:1">
+              <div style="font-size:13px"><b style="color:#f2f3f5">${App.escapeHtml(Dashboard.state.bot.name)}</b> <span style="background:#5865F2;color:#fff;font-size:9px;padding:1px 5px;border-radius:4px;vertical-align:middle">✓ APP</span></div>
+              ${isEmbed
+                ? `<div style="border-left:4px solid ${App.escapeHtml(color)};background:#2B2D31;border-radius:4px;padding:10px 12px;margin-top:4px;font-size:13px;color:#dbdee1">${App.escapeHtml(txt)}${hasCard ? '<div style="margin-top:8px;height:74px;border-radius:8px;background:linear-gradient(135deg,#1b1e2e,#2b1e46);display:flex;align-items:center;justify-content:center;color:#8f93a8;font-size:12px">🖼️ Carte de bienvenue (avatar + pseudo)</div>' : ''}</div>`
+                : `<div style="font-size:13.5px;color:#dbdee1;margin-top:2px">${App.escapeHtml(txt)}</div>${hasCard ? '<div style="margin-top:6px;height:74px;max-width:340px;border-radius:8px;background:linear-gradient(135deg,#1b1e2e,#2b1e46);display:flex;align-items:center;justify-content:center;color:#8f93a8;font-size:12px">🖼️ Carte de bienvenue (avatar + pseudo)</div>' : ''}`}
+            </div>
+          </div>`;
+      };
+      cfgZone.addEventListener('input', renderPv);
+      cfgZone.addEventListener('change', renderPv);
+      cfgZone.appendChild(pv);
+      setTimeout(renderPv, 0);
+    }
     const save = App.el(`<button class="dash-btn dash-btn-primary" style="margin-top:12px">💾 Enregistrer</button>`);
     cfgZone.appendChild(save);
     c.appendChild(cfgZone);
@@ -1720,6 +1862,15 @@ Dashboard.renderers.community = async (content, data) => {
       </select>
       <select class="dash-select" id="lv-member" style="flex:1;min-width:160px"><option value="">👤 Membre lié (optionnel)</option></select>
       <button class="dash-btn dash-btn-primary" id="lv-add">➕ Suivre</button>
+    </div>
+    <div class="dc-preview" style="margin-top:14px"><div class="dash-label" style="margin:0 0 8px">👀 Aperçu de l'annonce</div>
+      <div style="font-size:12.5px;color:#dbdee1;margin-bottom:6px">@everyone</div>
+      <div style="border-left:4px solid #FE2C55;background:#2B2D31;border-radius:4px;padding:12px 14px;max-width:430px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#FE2C55,#8B5CF6);display:inline-block"></span><b style="font-size:13px;color:#f2f3f5">93_vlz est en live !</b></div>
+        <div style="font-weight:700;font-size:14px;color:#fff">🎵 🔴 LIVE sur TikTok</div>
+        <div style="font-size:12.5px;color:#b5bac1;margin:6px 0">✨ Rejoins-le maintenant, il t'attend…</div>
+        <div style="display:inline-block;background:#4E5058;color:#fff;font-size:12px;font-weight:600;padding:7px 14px;border-radius:6px">▶️ Regarder le live TikTok</div>
+      </div>
     </div>
     <div id="lv-list" style="margin-top:14px"></div>
     <div style="font-size:12px;color:var(--d-dim);margin-top:8px">💡 Vérification toutes les 3 minutes · 20 comptes max · une annonce par live (anti-doublon 30 min).</div>`;

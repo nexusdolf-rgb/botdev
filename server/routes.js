@@ -852,6 +852,14 @@ router.post('/bots/:id/guilds/:guildId/livesocials', requireAuth, async (req, re
   store.liveSocials.add(bot.id, req.params.guildId, String(user_id || '').slice(0, 30), parsed.platform, parsed.handle);
   res.json({ ok: true, platform: parsed.platform, handle: parsed.handle });
 });
+// 📰 Flux d'activité du serveur (Vue d'ensemble)
+router.get('/bots/:id/guilds/:guildId/activity', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  res.json({ items: store.activity.recent(bot.id, req.params.guildId, 30) });
+});
+
 // 🧪 Test en direct d'un compte suivi : le serveur (IP de production) exécute
 // le détecteur et renvoie ce que la plateforme voit VRAIMENT.
 router.post('/bots/:id/guilds/:guildId/livesocials/:sid/test', requireAuth, async (req, res) => {

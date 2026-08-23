@@ -1137,6 +1137,30 @@ try { db.exec(`CREATE TABLE IF NOT EXISTS ticket_log_msgs (
   created_at TEXT DEFAULT (datetime('now')),
   PRIMARY KEY (bot_id, guild_id, number))`); } catch (e) {}
 
+// v2.7 — 📰 Flux d'activité du serveur (dashboard)
+try { db.exec(`CREATE TABLE IF NOT EXISTS activity (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id INTEGER NOT NULL, guild_id TEXT NOT NULL,
+  emoji TEXT DEFAULT '', text TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now')));
+CREATE INDEX IF NOT EXISTS idx_activity_guild ON activity (bot_id, guild_id, id)`); } catch (e) {}
+
+// ---------------------- 📰 Flux d'activité ----------------------
+// Chaque action marquante du bot laisse une trace lisible pour le dashboard.
+// Rétention : 200 entrées par serveur (purge automatique à l'insertion).
+const activity = {
+  add: (botId, guildId, emoji, text) => {
+    try {
+      db.prepare('INSERT INTO activity (bot_id, guild_id, emoji, text) VALUES (?, ?, ?, ?)')
+        .run(botId, String(guildId), String(emoji || '').slice(0, 8), String(text || '').slice(0, 300));
+      db.prepare(`DELETE FROM activity WHERE bot_id = ? AND guild_id = ? AND id NOT IN (
+        SELECT id FROM activity WHERE bot_id = ? AND guild_id = ? ORDER BY id DESC LIMIT 200)`)
+        .run(botId, String(guildId), botId, String(guildId));
+    } catch { /* le flux ne doit JAMAIS casser une action réelle */ }
+  },
+  recent: (botId, guildId, limit = 30) => db.prepare('SELECT emoji, text, created_at FROM activity WHERE bot_id = ? AND guild_id = ? ORDER BY id DESC LIMIT ?').all(botId, String(guildId), Math.min(Math.max(parseInt(limit, 10) || 30, 1), 100)),
+};
+
 // ---------------------- 📔 Journal des tickets ----------------------
 const ticketLogMsgs = {
   set: (botId, guildId, number, channelId, messageId) => db.prepare('INSERT INTO ticket_log_msgs (bot_id, guild_id, number, channel_id, message_id) VALUES (?, ?, ?, ?, ?) ON CONFLICT(bot_id, guild_id, number) DO UPDATE SET channel_id = excluded.channel_id, message_id = excluded.message_id').run(botId, guildId, number, String(channelId), String(messageId)),
@@ -1153,4 +1177,4 @@ const liveSocials = {
   count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM live_socials WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
 };
 
-module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, migrateLogCategories };
+module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories };

@@ -83,6 +83,7 @@ async function onReaction(botId, reaction) {
     if (decision === 'post') {
       const sent = await board.send({ content: `⭐ **${stars}**`, embeds: [embed] }).catch(() => null);
       if (sent) store.starboard.set(botId, guild.id, msg.id, sent.id, stars);
+      if (sent) store.activity.add(botId, guild.id, '⭐', `Message de ${author.tag || author.username || 'un membre'} épinglé au starboard (${stars} étoiles)`);
     } else {
       // mise à jour du compteur (ou suppression si retombé à 0)
       const starMsg = await board.messages.fetch(existing.star_message_id).catch(() => null);

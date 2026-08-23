@@ -167,6 +167,7 @@ async function announce(botId, guild, channel, social, res, gs) {
     components: [row],
     allowedMentions: { parse: ping ? ['everyone'] : [] },
   });
+  store.activity.add(botId, guild.id, '🔴', `${res.name} (@${social.handle}) en live sur ${p.label} — annoncé dans #${channel.name}`);
   try {
     const logging = require('./logging');
     await logging.log(botId, guild, { title: '🔴 Annonce de live', description: `${res.name} (@${social.handle} · ${p.label}) annoncé dans #${channel.name}`, color: '#FE2C55' });

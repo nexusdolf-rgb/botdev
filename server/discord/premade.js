@@ -794,6 +794,7 @@ async function execute(botId, entry, cmd, src) {
       const reason = isInt ? (src.interaction.options.getString('raison') || '') : '';
       store.warnings.add(botId, guild.id, target.id, reason || 'Aucune raison', author.id);
       const n = store.warnings.count(botId, guild.id, target.id);
+      store.activity.add(botId, guild.id, '⚠️', `${target.tag || target.username} averti par ${author.tag || author.username} (total : ${n})`);
       let extra = '';
       // ⚖️ Paliers de sanctions automatiques (v1.98) : palier 1 = timeout,
       // palier 2 = timeout/kick/ban — la sanction la plus sévère atteinte s'applique.

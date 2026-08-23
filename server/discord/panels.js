@@ -669,6 +669,7 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
   });
   const prevCount = store.transcripts.countByOpener(botId, guild.id, member.id);
   bumpTicketStats(guild.id, 1, 1);
+  store.activity.add(botId, guild.id, '🎫', `Ticket #${ticketNumber} ouvert par ${member.user.tag || member.user.username}${chosen ? ' · ' + chosen.label : ''}`);
 
   // Boutons (staff uniquement) : deux rangées propres et ordonnées
   // Rangée 1 — suivi du ticket : prise en charge → attente → fermer → réouvrir
@@ -1163,6 +1164,7 @@ async function handleTicketClaim(botId, interaction) {
     claimed_tag: interaction.user.tag,
     claimed_at: new Date().toISOString(),
   });
+  store.activity.add(botId, guild.id, '🖐️', `Ticket #${row.number} pris en charge par ${interaction.user.tag}`);
   await channel.send({ content: i18n.t(lang, 'ticket_claim_msg', { staff: `${interaction.user}` }) }).catch(() => {});
   try {
     await logging.log(botId, guild, {
@@ -1319,6 +1321,7 @@ async function submitDeleteReason(botId, interaction) {
   const dmOk = await sendTranscriptDm(interaction, guild, channel.name, t);
   // 📔 Panneau récapitulatif dans le journal des tickets (staff)
   await sendTicketRecap(botId, interaction, { row: ticketRow, meta: ticketMetaFor(channel), closeReason: reason, transcript: t });
+  store.activity.add(botId, guild.id, '🗑', `Ticket #${ticketRow ? ticketRow.number : '?'} supprimé par ${interaction.user.tag} — ${reason}`);
   const ratingLang = i18n.langForGuild(guild.id);
   await sendRatingDm(interaction.client, guild, t.openerId, ticketRow ? ticketRow.number : 0, ratingLang).catch(() => {});
   store.openTickets.remove(channel.id);
@@ -1352,6 +1355,7 @@ async function handleTicketDeleteConfirm(botId, interaction) {
   const dmOk = await sendTranscriptDm(interaction, guild, channel.name, t);
   // 📔 Panneau récapitulatif dans le journal des tickets (staff)
   await sendTicketRecap(botId, interaction, { row: ticketRow, meta: ticketMetaFor(channel), closeReason: '', transcript: t });
+  store.activity.add(botId, guild.id, '🗑', `Ticket #${ticketRow ? ticketRow.number : '?'} supprimé par ${interaction.user.tag}`);
   const ratingLang = i18n.langForGuild(guild.id);
   await sendRatingDm(interaction.client, guild, t.openerId, ticketRow ? ticketRow.number : 0, ratingLang).catch(() => {});
   store.openTickets.remove(channel.id);
