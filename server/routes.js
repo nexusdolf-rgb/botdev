@@ -572,7 +572,17 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
       const t = JSON.parse(cfg?.types || '[]');
       return (Array.isArray(t) ? t : []).map((x) => {
         const roles = Array.isArray(x.staff_roles) ? x.staff_roles : (x.staff_role ? [x.staff_role] : []);
-        return { label: x.label, emoji: x.emoji || '', category: x.category || '', staff_roles: roles.filter(Boolean) };
+        // ⚠️ TOUS les champs doivent être renvoyés au dashboard : avant,
+        // description et questions étaient omis ici → le dashboard les
+        // rechargeait vides et les ÉCRASAIT au prochain « Enregistrer ».
+        return {
+          label: x.label,
+          emoji: x.emoji || '',
+          category: x.category || '',
+          description: x.description || '',
+          questions: Array.isArray(x.questions) ? x.questions.map((q) => String(q)).filter(Boolean).slice(0, 5) : [],
+          staff_roles: roles.filter(Boolean),
+        };
       });
     } catch { return []; }
   })();
