@@ -144,7 +144,15 @@ Dashboard.renderSide = (aside) => {
       aside.appendChild(b);
     });
   }
-  aside.appendChild(App.el(`<div class="dash-side-foot">⚡ ${App.escapeHtml(Dashboard.state.bot.name)}<br/>Synchronisé en temps réel avec Discord</div>`));
+  aside.appendChild(App.el(`<div class="dash-side-foot">
+    <div style="display:flex;align-items:center;gap:10px">
+      ${Dashboard.state.bot.avatar_url ? `<img src="${App.escapeHtml(Dashboard.state.bot.avatar_url)}" style="width:34px;height:34px;border-radius:50%;box-shadow:0 0 0 2px rgba(88,101,242,.4)" alt=""/>` : '<span style="font-size:22px">⚡</span>'}
+      <div>
+        <b style="color:var(--d-text)">${App.escapeHtml(Dashboard.state.bot.name)}</b><br/>
+        <span style="font-size:11px">Synchronisé en temps réel</span>
+      </div>
+    </div>
+  </div>`));
 };
 
 Dashboard.setModule = (id) => {
@@ -241,6 +249,13 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
   // Le bouton « Ajouter le bot » ne sert que s'il manque sur au moins un serveur gérable
   const needsInvite = discordGuilds.some((g) => g.canManage && !g.hasBot);
   topbar.innerHTML = `
+    <div class="dash-bot-chip" title="${App.escapeHtml(bot.bot_username || bot.name)}">
+      ${bot.avatar_url ? `<img src="${App.escapeHtml(bot.avatar_url)}" alt="" />` : '<span class="chip-fallback">🤖</span>'}
+      <div class="chip-txt">
+        <b>${App.escapeHtml(bot.name)}</b>
+        <span class="${bot.online ? 'on' : 'off'}">${bot.online ? '● En ligne' : '● Hors ligne'}</span>
+      </div>
+    </div>
     <div class="dash-server-pick">
       ${cur && cur.icon ? `<img src="${App.escapeHtml(cur.icon)}" alt="" />` : '<span style="font-size:20px">🌍</span>'}
       <select id="d-guild">
@@ -249,7 +264,6 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
       </select>
     </div>
     <div class="dash-topbar-actions">
-      <span class="dash-badge ${bot.online ? 'ok' : 'bad'}">${bot.online ? '🟢 En ligne' : '🔴 Hors ligne'}</span>
       ${needsInvite ? `<button class="dash-btn dash-btn-primary" id="d-invite2">➕ Ajouter le bot</button>` : ''}
     </div>
   `;
