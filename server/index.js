@@ -84,6 +84,9 @@ async function main() {
   // API
   app.use('/api', routes);
 
+  // 🏓 Endpoint ultra-léger pour le garde-éveil (aucune base, aucun calcul)
+  app.get('/ping', (req, res) => res.type('text').send('pong'));
+
   // 📄 Page publique d'une transcription de ticket (lien envoyé en MP)
   app.get('/transcript/:token', (req, res) => {
     const t = store.transcripts.get(req.params.token);
@@ -175,6 +178,18 @@ async function main() {
 
   // Nettoyage périodique des sessions expirées
   setInterval(() => store.sessions.cleanup(), 3600000);
+
+  // 🌙 Garde-éveil (plan gratuit Render) : sans requête entrante pendant
+  // ~15 min, Render endort le service → le bot disparaît de Discord et
+  // chaque réveil coûte un redémarrage complet + une reconnexion passerelle
+  // (risque de refroidissement). On s'auto-visite toutes les 10 min via
+  // l'URL publique : la requête traverse l'équilibreur de Render et compte
+  // comme du vrai trafic entrant.
+  const selfUrl = process.env.RENDER_EXTERNAL_URL || 'https://dash-hoxora.onrender.com';
+  if (selfUrl) {
+    console.log(`[BotDev] 🌙 Garde-éveil activé : auto-visite de ${selfUrl}/ping toutes les 10 min`);
+    setInterval(() => { fetch(`${selfUrl}/ping`).catch(() => {}); }, 10 * 60000);
+  }
 
   // 💾 Sauvegarde automatique toutes les 10 minutes
   setInterval(async () => {
