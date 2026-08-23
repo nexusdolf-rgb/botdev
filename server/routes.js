@@ -852,6 +852,25 @@ router.post('/bots/:id/guilds/:guildId/livesocials', requireAuth, async (req, re
   store.liveSocials.add(bot.id, req.params.guildId, String(user_id || '').slice(0, 30), parsed.platform, parsed.handle);
   res.json({ ok: true, platform: parsed.platform, handle: parsed.handle });
 });
+// 🧪 Test en direct d'un compte suivi : le serveur (IP de production) exécute
+// le détecteur et renvoie ce que la plateforme voit VRAIMENT.
+router.post('/bots/:id/guilds/:guildId/livesocials/:sid/test', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const s = store.liveSocials.all(bot.id, req.params.guildId).find((x) => x.id === Number(req.params.sid));
+  if (!s) return res.status(404).json({ error: 'Compte introuvable.' });
+  const gs = store.guildSettings.get(bot.id, req.params.guildId) || {};
+  try {
+    const { CHECKERS } = require('./discord/liveWatch');
+    const r = await CHECKERS[s.platform](s.handle);
+    if (!r) return res.json({ ok: false, channelSet: !!gs.live_channel, error: 'Plateforme injoignable depuis le serveur (réessaie dans quelques minutes).' });
+    res.json({ ok: true, channelSet: !!gs.live_channel, live: r.live, name: r.name });
+  } catch (e) {
+    res.json({ ok: false, channelSet: !!gs.live_channel, error: String(e.message || e).slice(0, 200) });
+  }
+});
+
 router.delete('/bots/:id/guilds/:guildId/livesocials/:sid', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
   if (!bot) return;

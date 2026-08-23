@@ -1696,6 +1696,9 @@ Dashboard.renderers.community = async (content, data) => {
   const liveChanOpts = ['<option value="">— Désactivé (choisir un salon pour activer) —</option>']
     .concat(textChannels.map((ch) => `<option value="#${ch.name}" ${String(s.live_channel || '') === `#${ch.name}` ? 'selected' : ''}>💬 #${ch.name}</option>`));
   cl.innerHTML += `
+    <div id="lv-status" style="margin-bottom:10px">${s.live_channel
+      ? `<span class="dash-badge ok">✅ Annonces ACTIVES dans ${App.escapeHtml(s.live_channel)}</span>`
+      : `<span class="dash-badge warn">⚠️ AUCUN salon choisi — les annonces sont DÉSACTIVÉES ! Choisis un salon ci-dessous.</span>`}</div>
     <label class="dash-label">Salon des annonces de live</label>
     <select class="dash-select" id="lv-chan" style="max-width:320px">${liveChanOpts.join('')}</select>
     <label class="dash-label">Mention envoyée avec l'annonce</label>
@@ -1721,15 +1724,21 @@ Dashboard.renderers.community = async (content, data) => {
     <div id="lv-list" style="margin-top:14px"></div>
     <div style="font-size:12px;color:var(--d-dim);margin-top:8px">💡 Vérification toutes les 3 minutes · 20 comptes max · une annonce par live (anti-doublon 30 min).</div>`;
 
+  // 💾 Enregistrement des réglages live (partagé : bouton 💾 ET ajout de compte)
+  const saveLiveSettings = async () => {
+    await App.api(`/bots/${bot.id}/guilds/${guildId}/settings`, { method: 'PUT', body: {
+      prefix: s.prefix || '', warn_limit: s.warn_limit || 0, warn_action: s.warn_action || 'none',
+      live_channel: cl.querySelector('#lv-chan').value,
+      live_ping: cl.querySelector('#lv-ping').value,
+    }});
+    const chosen = cl.querySelector('#lv-chan').value;
+    cl.querySelector('#lv-status').innerHTML = chosen
+      ? `<span class="dash-badge ok">✅ Annonces ACTIVES dans ${App.escapeHtml(chosen)}</span>`
+      : `<span class="dash-badge warn">⚠️ AUCUN salon choisi — les annonces sont DÉSACTIVÉES !</span>`;
+  };
   cl.querySelector('#lv-save').onclick = async () => {
-    try {
-      await App.api(`/bots/${bot.id}/guilds/${guildId}/settings`, { method: 'PUT', body: {
-        prefix: s.prefix || '', warn_limit: s.warn_limit || 0, warn_action: s.warn_action || 'none',
-        live_channel: cl.querySelector('#lv-chan').value,
-        live_ping: cl.querySelector('#lv-ping').value,
-      }});
-      App.toast('Annonces de live enregistrées !');
-    } catch (e) { App.toast(e.message, 'error'); }
+    try { await saveLiveSettings(); App.toast('Annonces de live enregistrées !'); }
+    catch (e) { App.toast(e.message, 'error'); }
   };
 
   const PLAT = { tiktok: ['🎵', 'TikTok'], twitch: ['🟣', 'Twitch'], youtube: ['▶️', 'YouTube'], kick: ['🟢', 'Kick'] };
@@ -1748,9 +1757,20 @@ Dashboard.renderers.community = async (content, data) => {
               <b>@${App.escapeHtml(so.handle)}</b> <span style="color:var(--d-dim);font-size:12px">· ${lab}${so.user_id ? ` · lié à un membre` : ''}</span>
             </div>
             <span class="dash-badge ${so.last_status === 'live' ? 'ok' : ''}">${so.last_status === 'live' ? '🔴 EN LIVE' : '⚫ hors ligne'}</span>
-            <button class="dash-btn dash-btn-danger dash-btn-sm">✕</button>
+            <button class="dash-btn dash-btn-sm" data-test>🧪 Tester</button>
+            <button class="dash-btn dash-btn-danger dash-btn-sm" data-del>✕</button>
           </div>`);
-        row.querySelector('button').onclick = async () => {
+        row.querySelector('[data-test]').onclick = async () => {
+          const btn = row.querySelector('[data-test]');
+          btn.disabled = true; btn.textContent = '⏳…';
+          try {
+            const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/livesocials/${so.id}/test`, { method: 'POST' });
+            if (!r.ok) App.toast(`🧪 ${r.error}`, 'error');
+            else App.toast(`🧪 ${r.name} : ${r.live ? '🔴 EN LIVE en ce moment' : '⚫ pas en live actuellement'}${r.channelSet ? '' : ' — ⚠️ mais AUCUN salon d\'annonces configuré !'}`, r.live && r.channelSet ? undefined : (r.channelSet ? undefined : 'error'));
+          } catch (e) { App.toast(e.message, 'error'); }
+          btn.disabled = false; btn.textContent = '🧪 Tester';
+        };
+        row.querySelector('[data-del]').onclick = async () => {
           try { await App.api(`/bots/${bot.id}/guilds/${guildId}/livesocials/${so.id}`, { method: 'DELETE' }); App.toast('Compte retiré.'); renderSocials(); }
           catch (e) { App.toast(e.message, 'error'); }
         };
@@ -1760,12 +1780,16 @@ Dashboard.renderers.community = async (content, data) => {
   };
   cl.querySelector('#lv-add').onclick = async () => {
     try {
+      // 💾 L'ajout enregistre AUSSI le salon/mention sélectionnés : une seule
+      // action suffit, plus jamais d'annonces silencieusement désactivées.
+      await saveLiveSettings();
       const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/livesocials`, { method: 'POST', body: {
         link: cl.querySelector('#lv-link').value,
         platform: cl.querySelector('#lv-platform').value,
         user_id: cl.querySelector('#lv-member').value,
       }});
-      App.toast(`Compte @${r.handle} (${r.platform}) suivi !`);
+      const chanOk = !!cl.querySelector('#lv-chan').value;
+      App.toast(`Compte @${r.handle} (${r.platform}) suivi !${chanOk ? '' : ' ⚠️ Choisis aussi un salon d\'annonces !'}`, chanOk ? undefined : 'error');
       cl.querySelector('#lv-link').value = '';
       renderSocials();
     } catch (e) { App.toast(e.message, 'error'); }
