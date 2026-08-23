@@ -74,7 +74,9 @@ async function announce(botId, message, level, gs) {
     .replace(/\{level\}/g, String(level))
     .replace(/\{server\}/g, message.guild.name);
   let channel = null;
-  if (gs.xp_channel) channel = resolveChannel(message.guild, gs.xp_channel);
+  // ⚠️ resolveChannel est ASYNCHRONE : sans await, on recevait une promesse
+  // (sans .send) → l'annonce partait toujours dans le salon du message.
+  if (gs.xp_channel) channel = await resolveChannel(message.guild, gs.xp_channel);
   channel = channel || message.channel;
   if (channel && channel.send) {
     const identity = require('./identity');

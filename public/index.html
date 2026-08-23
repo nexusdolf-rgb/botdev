@@ -26,9 +26,17 @@
   <script src="/js/public.js?v=101"></script>
   <script src="/js/dashboard.js?v=101"></script>
   <script>
-    // Mode app installable (PWA)
+    // Mode app installable (PWA) + MISE À JOUR AUTOMATIQUE :
+    // dès qu'une nouvelle version du site est installée, la page se
+    // recharge une fois toute seule — plus besoin de vider le cache.
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+      let reloadedOnce = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (reloadedOnce) return;
+        reloadedOnce = true;
+        window.location.reload();
+      });
     }
   </script>
 </body>

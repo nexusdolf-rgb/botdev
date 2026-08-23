@@ -175,7 +175,12 @@ function render(member, botRecord, template) {
 
 async function resolveChannel(guild, query) {
   if (!query) return null;
-  const q = String(query).trim();
+  // ⚠️ Le dashboard enregistre les salons avec un « # » (ex : #bienvenue) —
+  // le nom réel du salon n'en a pas : on le retire AVANT de comparer.
+  // (Bug historique : « #『✈️』arrivant » ne matchait jamais « 『✈️』arrivant »
+  // → messages de bienvenue/départ silencieusement abandonnés.)
+  const q = String(query).trim().replace(/^#/, '');
+  if (!q) return null;
   const idMatch = q.match(/(\d{15,21})/);
   if (idMatch) {
     const ch = await guild.channels.fetch(idMatch[1]).catch(() => null);
