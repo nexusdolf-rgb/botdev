@@ -535,3 +535,100 @@ body { font-family: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, sans-
   backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid rgba(42, 42, 64, .8);
 }
+
+/* ============================================================
+   🌟 HOXERA v2.8 — page d'accueil vivante (animations + pro)
+   ============================================================ */
+
+/* Halos flottants derrière le héros */
+.pub-hero { position: relative; overflow: visible; }
+.pub-blob {
+  position: absolute; border-radius: 50%; filter: blur(70px); opacity: .5;
+  pointer-events: none; z-index: -1; animation: blobFloat 11s ease-in-out infinite;
+}
+.pub-blob.b1 { width: 340px; height: 340px; background: rgba(88,101,242,.4); top: -80px; left: 4%; }
+.pub-blob.b2 { width: 280px; height: 280px; background: rgba(139,92,246,.34); top: 30px; right: 6%; animation-delay: -4s; }
+.pub-blob.b3 { width: 220px; height: 220px; background: rgba(235,69,158,.22); bottom: -60px; left: 42%; animation-delay: -8s; }
+@keyframes blobFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(26px, -18px) scale(1.08); }
+  66% { transform: translate(-20px, 14px) scale(.95); }
+}
+
+/* Titre : dégradé animé qui ondule */
+.grad-anim {
+  background: linear-gradient(90deg, #5865F2, #8B5CF6, #EB459E, #8B5CF6, #5865F2);
+  background-size: 300% 100%;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  animation: gradSlide 7s linear infinite;
+}
+@keyframes gradSlide { from { background-position: 0% 0; } to { background-position: 300% 0; } }
+.hero-title { animation: heroIn .7s cubic-bezier(.2,.8,.25,1) both; }
+.pub-tagline { animation: heroIn .7s .12s cubic-bezier(.2,.8,.25,1) both; }
+.pub-hero-actions { animation: heroIn .7s .22s cubic-bezier(.2,.8,.25,1) both; }
+@keyframes heroIn { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+
+/* Badge scintillant */
+.pub-hero-badge.shimmer { position: relative; overflow: hidden; }
+.pub-hero-badge.shimmer::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.16) 50%, transparent 70%);
+  transform: translateX(-120%); animation: shimmer 3.4s ease-in-out infinite;
+}
+@keyframes shimmer { 0%, 60% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+
+/* Lien serveur support sous les boutons */
+.pub-support-link { margin-top: 14px; }
+.pub-support-link a { color: var(--text-dim); font-size: 13px; transition: color .15s; }
+.pub-support-link a:hover { color: #EB459E; }
+
+/* Révélation au défilement */
+.reveal { opacity: 0; transform: translateY(22px); transition: opacity .55s ease, transform .55s cubic-bezier(.2,.8,.25,1); }
+.reveal.in { opacity: 1; transform: none; }
+
+/* Cartes fonctionnalités : bordure dégradée au survol */
+.pub-feature { transition: transform .18s ease, box-shadow .2s ease, border-color .2s ease; }
+.pub-feature:hover {
+  transform: translateY(-4px);
+  border-color: rgba(88,101,242,.55) !important;
+  box-shadow: 0 16px 34px -18px rgba(88,101,242,.5);
+}
+.pub-feature .f-ico { transition: transform .2s ease; }
+.pub-feature:hover .f-ico { transform: scale(1.18) rotate(-6deg); }
+
+/* 📊 Maquette du dashboard (dessinée en CSS pur) */
+.pub-mock {
+  max-width: 760px; margin: 26px auto 0;
+  background: #14151f; border: 1px solid var(--border); border-radius: 16px;
+  overflow: hidden; box-shadow: 0 30px 70px -30px rgba(0,0,0,.85), 0 0 0 1px rgba(88,101,242,.12);
+  animation: mockFloat 7s ease-in-out infinite;
+}
+@keyframes mockFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+.mock-bar { display: flex; align-items: center; gap: 7px; padding: 11px 14px; background: #191b28; border-bottom: 1px solid var(--border); }
+.mock-bar .dot { width: 10px; height: 10px; border-radius: 50%; }
+.mock-bar .dot.r { background: #ed4245; } .mock-bar .dot.y { background: #fee75c; } .mock-bar .dot.g { background: #3ba55d; }
+.mock-url { margin-left: 10px; font-size: 11px; color: var(--text-dim); background: #10111a; border-radius: 6px; padding: 3px 12px; }
+.mock-body { display: flex; min-height: 250px; }
+.mock-side { width: 160px; border-right: 1px solid var(--border); padding: 12px 10px; background: #10121d; }
+.mock-srv { display: flex; align-items: center; gap: 8px; background: #1a1c2c; border: 1px solid var(--border); border-radius: 10px; padding: 8px; margin-bottom: 12px; }
+.mock-srv .ms-ico { width: 26px; height: 26px; border-radius: 8px; background: linear-gradient(135deg, #5865F2, #8B5CF6); color: #fff; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.mock-srv .ms-lines { flex: 1; } .mock-srv .ms-lines i { display: block; height: 5px; border-radius: 3px; background: #2c2f45; margin: 3px 0; }
+.mock-srv .ms-lines i:first-child { width: 80%; }
+.mock-item { height: 26px; border-radius: 8px; margin: 6px 0; background: #181a29; }
+.mock-item.active { background: linear-gradient(90deg, rgba(88,101,242,.35), rgba(139,92,246,.15)); box-shadow: inset 0 0 0 1px rgba(88,101,242,.4); }
+.mock-main { flex: 1; padding: 14px; }
+.mock-stats { display: flex; gap: 10px; margin-bottom: 12px; }
+.mock-stat { flex: 1; height: 52px; border-radius: 10px; background: #181a29; border-top: 2px solid rgba(88,101,242,.5); }
+.mock-card { border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 10px; background: #161826; }
+.mc-line { height: 8px; border-radius: 4px; background: #262940; margin: 8px 0; }
+.mc-line.w40 { width: 40%; } .mc-line.w60 { width: 60%; } .mc-line.w75 { width: 75%; } .mc-line.w90 { width: 90%; }
+.mc-bar { height: 12px; border-radius: 6px; margin-top: 10px; background: linear-gradient(90deg, #5865F2, #8B5CF6 60%, #262940 60%); }
+
+/* Pied de page */
+.pub-footer-links { margin-top: 8px; display: flex; gap: 10px; justify-content: center; align-items: center; font-size: 13px; }
+
+/* Respect des préférences réduites */
+@media (prefers-reduced-motion: reduce) {
+  .pub-blob, .grad-anim, .pub-mock, .pub-hero-badge.shimmer::after { animation: none !important; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+}

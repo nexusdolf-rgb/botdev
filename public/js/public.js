@@ -62,8 +62,9 @@ App.renderPublicLanding = () => {
   const page = App.el(`
     <div id="public-landing">
       <div class="pub-hero">
-        <div class="pub-hero-badge">⚡ Hoxera — synchronisé en direct avec Discord</div>
-        <h1>Le bot qui anime<br/><span class="grad">ton serveur Discord</span></h1>
+        <div class="pub-blob b1"></div><div class="pub-blob b2"></div><div class="pub-blob b3"></div>
+        <div class="pub-hero-badge shimmer">⚡ Hoxera — synchronisé en direct avec Discord</div>
+        <h1 class="hero-title">Le bot qui anime<br/><span class="grad grad-anim">ton serveur Discord</span></h1>
         <p class="pub-tagline">Tickets automatiques avec transcriptions, niveaux XP, boutique, giveaways, bienvenue et modération.
         Ajoute Hoxera à ton serveur, puis configure tout depuis le dashboard avec ton compte Discord.</p>
         <div class="pub-hero-actions">
@@ -72,6 +73,7 @@ App.renderPublicLanding = () => {
             ? `<button class="btn" id="pub-dash-hero" style="padding:13px 22px;font-size:15px">📊 Ouvrir mon dashboard</button>`
             : `<button class="btn btn-discord" id="pub-connect-hero" style="padding:13px 22px;font-size:15px;width:auto">🎮 Se connecter avec Discord</button>`}
         </div>
+        <div class="pub-support-link"><a href="https://discord.gg/X9hTdr9N3" target="_blank" rel="noopener">🆘 Rejoindre le serveur support officiel</a></div>
         <div class="pub-stats" id="pub-stats">
           <div class="pub-stat"><div class="val">—</div><div class="lbl">Bots en ligne</div></div>
           <div class="pub-stat"><div class="val">—</div><div class="lbl">Serveurs Discord</div></div>
@@ -79,30 +81,54 @@ App.renderPublicLanding = () => {
         </div>
       </div>
 
-      <div class="pub-section">
+      <div class="pub-section reveal">
         <h2>🤖 Hoxera en direct</h2>
         <p class="pub-sub">Statistiques en temps réel, lues directement depuis Discord.</p>
         <div class="bots-grid" id="pub-bots"><div class="spinner"></div></div>
       </div>
 
-      <div class="pub-section">
+      <div class="pub-section reveal">
+        <h2>📊 Un dashboard digne des plus grands</h2>
+        <p class="pub-sub">Configure tout depuis ton téléphone ou ton PC — design pro, sauvegarde intelligente, flux d'activité en direct.</p>
+        <div class="pub-mock">
+          <div class="mock-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="mock-url">hoxera.onrender.com</span></div>
+          <div class="mock-body">
+            <div class="mock-side">
+              <div class="mock-srv"><span class="ms-ico">N</span><span class="ms-lines"><i></i><i></i></span></div>
+              <div class="mock-item active"></div><div class="mock-item"></div><div class="mock-item"></div><div class="mock-item"></div><div class="mock-item"></div>
+            </div>
+            <div class="mock-main">
+              <div class="mock-stats"><div class="mock-stat"></div><div class="mock-stat"></div><div class="mock-stat"></div></div>
+              <div class="mock-card"><div class="mc-line w60"></div><div class="mc-line w90"></div><div class="mc-line w75"></div></div>
+              <div class="mock-card"><div class="mc-line w40"></div><div class="mc-bar"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pub-section reveal">
         <h2>✨ Tout ce que Hoxera sait faire</h2>
         <div class="pub-features">
-          <div class="pub-feature"><div class="f-ico">🎫</div><b>Tickets automatiques</b><p>Bouton → salon privé créé instantanément, avec rôle staff, types personnalisés et transcription en MP.</p></div>
-          <div class="pub-feature"><div class="f-ico">📋</div><b>Rôles en menus & boutons</b><p>Menus déroulants ou boutons : chaque membre choisit ses rôles tout seul.</p></div>
-          <div class="pub-feature"><div class="f-ico">🛡️</div><b>Modération & anti-raid</b><p>Kick, ban, timeout, avertissements, liste noire et verrouillage du serveur en 1 clic.</p></div>
-          <div class="pub-feature"><div class="f-ico">💰</div><b>Économie</b><p>Coins quotidiens, travail, paris, boutique et classement du serveur.</p></div>
-          <div class="pub-feature"><div class="f-ico">🕹️</div><b>Jeux & fun</b><p>Pendu, morpion, pierre-feuille-ciseaux, mariages et actions entre membres.</p></div>
-          <div class="pub-feature"><div class="f-ico">🎂</div><b>Anniversaires & rappels</b><p>Le bot souhaite les anniversaires et envoie des rappels en message privé.</p></div>
-          <div class="pub-feature"><div class="f-ico">🗳️</div><b>Sondages & suggestions</b><p>Votes en direct avec boutons, suggestions approuvées depuis le dashboard.</p></div>
-          <div class="pub-feature"><div class="f-ico">🔊</div><b>Salons vocaux temporaires</b><p>Un clic pour créer ton vocal, supprimé automatiquement quand il est vide.</p></div>
-          <div class="pub-feature"><div class="f-ico">📅</div><b>Annonces programmées</b><p>Messages automatiques aux jours et heures choisis, configurés depuis le dashboard.</p></div>
-          <div class="pub-feature"><div class="f-ico">👥</div><b>Dashboard complet</b><p>Membres gérables, statistiques, coins, rôles et kick — tout depuis ton téléphone.</p></div>
+          <div class="pub-feature reveal"><div class="f-ico">🎫</div><b>Tickets automatiques</b><p>Bouton → salon privé créé instantanément, avec rôle staff, types personnalisés et transcription en MP.</p></div>
+          <div class="pub-feature reveal"><div class="f-ico">📋</div><b>Rôles en menus & boutons</b><p>Menus déroulants ou boutons : chaque membre choisit ses rôles tout seul.</p></div>
+          <div class="pub-feature reveal"><div class="f-ico">🛡️</div><b>Modération & anti-raid</b><p>Kick, ban, timeout, avertissements, liste noire et verrouillage du serveur en 1 clic.</p></div>
+          <div class="pub-feature reveal"><div class="f-ico">💰</div><b>Économie</b><p>Coins quotidiens, travail, paris, boutique et classement du serveur.</p></div>
+          <div class="pub-feature reveal"><div class="f-ico">🕹️</div><b>Jeux & fun</b><p>Pendu, morpion, pierre-feuille-ciseaux, mariages et actions entre membres.</p></div>
+          <div class="pub-feature reveal"><div class="f-ico">🎂</div><b>Anniversaires & rappels</b><p>Le bot souhaite les anniversaires et envoie des rappels en message privé.</p></div>
+          <div class="pub-feature reveal"><div class="f-ico">🗳️</div><b>Sondages & suggestions</b><p>Votes en direct avec boutons, suggestions approuvées depuis le dashboard.</p></div>
+          <div class="pub-feature reveal"><div class="f-ico">🔊</div><b>Salons vocaux temporaires</b><p>Un clic pour créer ton vocal, supprimé automatiquement quand il est vide.</p></div>
+          <div class="pub-feature reveal"><div class="f-ico">📅</div><b>Annonces programmées</b><p>Messages automatiques aux jours et heures choisis, configurés depuis le dashboard.</p></div>
+          <div class="pub-feature reveal"><div class="f-ico">👥</div><b>Dashboard complet</b><p>Membres gérables, statistiques, coins, rôles et kick — tout depuis ton téléphone.</p></div>
         </div>
       </div>
 
       <div class="pub-footer">
-        <b>⚡ Hoxera</b> — ton serveur mérite un bot à la hauteur · <a href="https://discord.com/developers/docs" target="_blank" rel="noopener">Documentation Discord</a>
+        <b>⚡ Hoxera</b> — ton serveur mérite un bot à la hauteur
+        <div class="pub-footer-links">
+          <a href="https://discord.gg/X9hTdr9N3" target="_blank" rel="noopener">🆘 Serveur support</a>
+          <span>·</span>
+          <a href="#" id="pub-foot-dash">📊 Dashboard</a>
+        </div>
       </div>
     </div>
   `);
@@ -119,6 +145,35 @@ App.renderPublicLanding = () => {
     catch (e) { App.toast(e.message, 'error'); }
   };
 
+  const footDash = page.querySelector('#pub-foot-dash');
+  if (footDash) footDash.onclick = (e) => { e.preventDefault(); App.router.go('/dashboard'); };
+
+  // 🎬 Révélation au défilement (dégradation propre si non supporté)
+  try {
+    if (typeof IntersectionObserver !== 'undefined') {
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
+      }, { threshold: 0.12 });
+      page.querySelectorAll('.reveal').forEach((el, i) => { el.style.transitionDelay = `${Math.min(i % 6, 4) * 60}ms`; io.observe(el); });
+    } else {
+      page.querySelectorAll('.reveal').forEach((el) => el.classList.add('in'));
+    }
+  } catch { page.querySelectorAll('.reveal').forEach((el) => el.classList.add('in')); }
+
+  // 🔢 Compteur animé (chiffres qui montent)
+  const countUp = (el, text) => {
+    const num = parseInt(String(text).replace(/[^0-9]/g, ''), 10);
+    if (!num || num < 10 || typeof requestAnimationFrame === 'undefined') { el.textContent = text; return; }
+    const t0 = Date.now(); const dur = 900;
+    const tick = () => {
+      const p = Math.min(1, (Date.now() - t0) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = App.fmtNumber(Math.round(num * eased));
+      if (p < 1) requestAnimationFrame(tick); else el.textContent = text;
+    };
+    tick();
+  };
+
   const statsEl = page.querySelector('#pub-stats');
   const botsEl = page.querySelector('#pub-bots');
 
@@ -127,8 +182,8 @@ App.renderPublicLanding = () => {
       const s = await App.api('/public/stats');
       const vals = statsEl.querySelectorAll('.val');
       vals[0].textContent = `${s.onlineBots}/${s.totalBots}`;
-      vals[1].textContent = App.fmtNumber(s.servers);
-      vals[2].textContent = App.fmtNumber(s.members);
+      countUp(vals[1], App.fmtNumber(s.servers));
+      countUp(vals[2], App.fmtNumber(s.members));
     } catch {}
   };
 
