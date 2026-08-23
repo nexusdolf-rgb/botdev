@@ -1011,7 +1011,7 @@ async function sweepBirthdays(botId, entry, now = new Date()) {
     try {
       const member = await guild.members.fetch(b.user_id).catch(() => null);
       if (!member) continue;
-      const channel = gs.birthday_channel ? (guild.channels.cache.get(gs.birthday_channel) || guild.channels.cache.find((c) => c.name.toLowerCase() === String(gs.birthday_channel).toLowerCase())) : null;
+      const channel = gs.birthday_channel ? (guild.channels.cache.get(gs.birthday_channel) || guild.channels.cache.find((c) => c.name.toLowerCase() === String(gs.birthday_channel).replace(/^#/, '').toLowerCase())) : null;
       if (channel) {
         await channel.send({ content: `🎂🎉 **Joyeux anniversaire ${member} !** On te souhaite une superbe journée ! 🥳🎁` }).catch(() => {});
       }

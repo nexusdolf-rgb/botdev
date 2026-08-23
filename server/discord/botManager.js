@@ -118,7 +118,11 @@ async function connect(botId, record, intents, degradedHint) {
 
   const client = new Client({
     intents,
-    partials: [Partials.Channel, Partials.Message, Partials.Reaction], // partials Message/Reaction : étoiles sur des messages anciens
+    // Partials : Message/Reaction pour le starboard sur d'anciens messages,
+    // GuildMember/User pour que guildMemberRemove arrive MÊME si le membre
+    // n'était pas en cache (sans ça : événements de DÉPART silencieusement
+    // jetés par discord.js → messages d'au revoir jamais envoyés).
+    partials: [Partials.Channel, Partials.Message, Partials.Reaction, Partials.GuildMember, Partials.User],
     presence: { status: record.status_type || 'online' },
   });
 

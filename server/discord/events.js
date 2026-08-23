@@ -84,9 +84,37 @@ async function runJoinEvent(botId, member) {
         } catch (e) { console.error('[Hoxera] carte de bienvenue :', e.message); }
       }
       if (cfg.embed) {
-        const embed = new EmbedBuilder().setColor(cfg.color || '#57F287').setDescription(text);
-        if (files.length) embed.setImage('attachment://bienvenue.png');
-        else if (cfg.image) embed.setImage(String(cfg.image).trim());
+        // 🏆 Panneau de bienvenue PREMIUM : avatar, n° de membre, âge du
+        // compte, recruteur (traqueur d'invitations) — un vrai tableau pro.
+        const user = member.user || {};
+        const avatarUrl = user.displayAvatarURL ? user.displayAvatarURL({ size: 256 }) : '';
+        const createdTs = user.createdTimestamp ? Math.floor(user.createdTimestamp / 1000) : 0;
+        let invitedBy = '';
+        try {
+          const ij = store.inviteJoins.whoInvited(botId, member.guild.id, member.id);
+          if (ij && ij.inviter_id) invitedBy = `<@${ij.inviter_id}>`;
+        } catch {}
+        const embed = new EmbedBuilder()
+          .setColor(cfg.color || '#57F287')
+          .setAuthor({ name: `${user.tag || user.username || 'Nouveau membre'} vient d'arriver !`, iconURL: avatarUrl || undefined })
+          .setTitle(`👋 Bienvenue sur ${member.guild.name} !`)
+          .setDescription(text)
+          .addFields(
+            { name: '👥 Tu es le membre', value: `**n°${member.guild.memberCount || '?'}**`, inline: true },
+            ...(createdTs ? [{ name: '📅 Compte créé', value: `<t:${createdTs}:R>`, inline: true }] : []),
+            ...(invitedBy ? [{ name: '🎟️ Invité par', value: invitedBy, inline: true }] : []),
+          )
+          .setFooter({ text: member.guild.name, iconURL: member.guild.iconURL ? (member.guild.iconURL({ size: 64 }) || undefined) : undefined })
+          .setTimestamp();
+        if (files.length) {
+          embed.setImage('attachment://bienvenue.png'); // la carte remplit le panneau
+          if (avatarUrl) embed.setThumbnail(avatarUrl);
+        } else if (cfg.image) {
+          embed.setImage(String(cfg.image).trim());
+          if (avatarUrl) embed.setThumbnail(avatarUrl);
+        } else if (avatarUrl) {
+          embed.setThumbnail(avatarUrl);
+        }
         await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { embeds: [embed], files }).catch(() => {});
       } else {
         await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { content: text, files }).catch(() => {});
@@ -136,7 +164,22 @@ async function runLeaveEvent(botId, member) {
   if (!channel) return;
   const text = render(member, botRecord, cfg.message);
   if (cfg.embed) {
-    const embed = new EmbedBuilder().setColor(cfg.color || '#ED4245').setDescription(text);
+    // 🏆 Panneau de départ assorti au panneau de bienvenue (membre partiel
+    // possible : chaque info est optionnelle, rien ne casse).
+    const user = member.user || {};
+    const avatarUrl = user.displayAvatarURL ? user.displayAvatarURL({ size: 256 }) : '';
+    const joinedTs = member.joinedTimestamp ? Math.floor(member.joinedTimestamp / 1000) : 0;
+    const embed = new EmbedBuilder()
+      .setColor(cfg.color || '#ED4245')
+      .setAuthor({ name: `${user.tag || user.username || 'Un membre'} s'en va…`, iconURL: avatarUrl || undefined })
+      .setDescription(text)
+      .addFields(
+        { name: '👥 Membres restants', value: `**${member.guild.memberCount || '?'}**`, inline: true },
+        ...(joinedTs ? [{ name: '🕐 Était membre depuis', value: `<t:${joinedTs}:R>`, inline: true }] : []),
+      )
+      .setFooter({ text: member.guild.name, iconURL: member.guild.iconURL ? (member.guild.iconURL({ size: 64 }) || undefined) : undefined })
+      .setTimestamp();
+    if (avatarUrl) embed.setThumbnail(avatarUrl);
     if (cfg.image) embed.setImage(String(cfg.image).trim());
     await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { embeds: [embed] }).catch(() => {});
   } else {
@@ -151,11 +194,12 @@ async function runLeaveEvent(botId, member) {
 
 function render(member, botRecord, template) {
   const guild = member.guild;
+  const u = member.user || {}; // membre partiel possible (départ non mis en cache)
   const ctx = {
     vars: {
       userMention: `<@${member.id}>`,
-      userTag: member.user.tag,
-      userName: member.user.username,
+      userTag: u.tag || u.username || 'un membre',
+      userName: u.username || 'un membre',
       userId: member.id,
       serverName: guild.name,
       serverId: guild.id,
