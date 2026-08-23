@@ -643,6 +643,7 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
     number: ticketNumber,
     opener_id: member.id,
     opener_tag: member.user.tag || member.user.username,
+    open_reason: reason || '',
     type_label: chosen ? chosen.label : '',
   });
   const prevCount = store.transcripts.countByOpener(botId, guild.id, member.id);
@@ -911,9 +912,11 @@ async function buildTranscript(botId, interaction, extraLines = []) {
   if (Array.isArray(meta.answers) && meta.answers.length) {
     text += '❓ Questionnaire :\n' + meta.answers.map((a) => `${a.q} → ${a.a}`).join('\n') + '\n\n';
   }
+  let msgCount = 0;
   try {
     const fetched = await channel.messages.fetch({ limit: 100 });
     const arr = [...fetched.values()].reverse();
+    msgCount = arr.length;
     text += arr.map((m) => {
       const time = m.createdAt ? m.createdAt.toISOString().slice(11, 19) : '--:--:--';
       let atts = [];
@@ -938,7 +941,7 @@ async function buildTranscript(botId, interaction, extraLines = []) {
     const site = store.settings.get('public_url');
     if (site) url = `${site}/transcript/${token}`;
   } catch (e) { console.error('[BotDev] transcript:', e.message); }
-  return { text, url, openerId: meta.openerId };
+  return { text, url, openerId: meta.openerId, msgCount };
 }
 
 // Envoie la transcription en MP. Résout l'utilisateur avec double fallback.
@@ -978,6 +981,97 @@ async function sendTranscriptDm(clientOrInteraction, guild, channelName, { text,
     console.log('[BotDev] DM transcription impossible:', e.message);
     return false;
   }
+}
+
+// ============================================================
+// 📔 Journal des tickets (v2.3) — panneau récapitulatif STAFF
+// Posté dans le salon dédié (réglage « ticket_log_channel ») à la
+// suppression du ticket : qui a ouvert, quel staff a pris en charge,
+// raisons d'ouverture/fermeture, durée, messages, lien transcription.
+// L'évaluation ⭐ est ajoutée au panneau quand le membre note (édition).
+// Ne touche PAS au MP de transcription du créateur.
+// ============================================================
+function formatDuration(fromIso) {
+  const from = new Date(String(fromIso || '').replace(' ', 'T') + (String(fromIso || '').includes('Z') ? '' : 'Z')).getTime();
+  if (!from || Number.isNaN(from)) return '—';
+  let mins = Math.max(1, Math.round((Date.now() - from) / 60000));
+  const d = Math.floor(mins / 1440); mins -= d * 1440;
+  const h = Math.floor(mins / 60); const m = mins - h * 60;
+  return [d ? `${d} j` : '', h ? `${h} h` : '', `${m} min`].filter(Boolean).join(' ');
+}
+
+async function sendTicketRecap(botId, interaction, { row, meta, closeReason, transcript }) {
+  try {
+    const guild = interaction.guild;
+    const gs = store.guildSettings.get(botId, guild.id) || {};
+    const chanName = String(gs.ticket_log_channel || '').replace(/^#/, '').trim();
+    if (!chanName) return; // journal des tickets non configuré
+    const board = guild.channels.cache.find((c) => c.name === chanName && c.isTextBased && c.isTextBased());
+    if (!board) return;
+
+    const openerId = (row && row.opener_id) || meta.openerId || '';
+    const openerTag = (row && row.opener_tag) || 'Membre inconnu';
+    const openReason = (row && row.open_reason) || meta.reason || '';
+    const number = row ? row.number : 0;
+
+    // Vignette : l'avatar du créateur du ticket (meilleur effort)
+    let openerAvatar = '';
+    try {
+      if (openerId) {
+        const u = await interaction.client.users.fetch(openerId);
+        openerAvatar = u.displayAvatarURL({ size: 128 }) || '';
+      }
+    } catch {}
+
+    const embed = new EmbedBuilder()
+      .setColor('#5865F2')
+      .setTitle(`📔 Récapitulatif — Ticket #${number}${row && row.type_label ? ` · ${row.type_label}` : ''}`)
+      .addFields(
+        { name: '👤 Ouvert par', value: openerId ? `<@${openerId}>\n\`${openerTag}\`` : `\`${openerTag}\``, inline: true },
+        { name: '🖐️ Pris en charge par', value: row && row.claimed_by ? `<@${row.claimed_by}>\n\`${row.claimed_tag}\`` : '— personne', inline: true },
+        { name: '🔒 Fermé par', value: `<@${interaction.user.id}>\n\`${interaction.user.tag}\``, inline: true },
+        { name: '📝 Raison d\'ouverture', value: (openReason || '—').slice(0, 1000), inline: false },
+        { name: '🔐 Raison de fermeture', value: (closeReason || '—').slice(0, 1000), inline: false },
+        { name: '⏱️ Durée', value: row ? formatDuration(row.opened_at) : '—', inline: true },
+        { name: '💬 Messages', value: String(transcript.msgCount || 0), inline: true },
+        { name: '⭐ Évaluation', value: 'En attente de la note du membre…', inline: true },
+      )
+      .setFooter({ text: `${guild.name} · Journal des tickets`, iconURL: guild.iconURL ? (guild.iconURL({ size: 64 }) || undefined) : undefined })
+      .setTimestamp();
+    if (openerAvatar) embed.setThumbnail(openerAvatar);
+
+    const components = [];
+    if (transcript.url) {
+      components.push(new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel('📜 Voir la transcription complète').setURL(transcript.url)
+      ));
+    }
+
+    const sent = await board.send({ embeds: [embed], components }).catch(() => null);
+    if (sent && number) store.ticketLogMsgs.set(botId, guild.id, number, board.id, sent.id);
+  } catch (e) {
+    console.error('[Hoxera] récap ticket :', e.message);
+  }
+}
+
+// ⭐ Quand le membre note son ticket, le panneau du journal est mis à jour.
+async function updateRecapRating(botId, client, guildId, number, stars) {
+  try {
+    const ref = store.ticketLogMsgs.get(botId, guildId, number);
+    if (!ref) return;
+    const guild = client.guilds.cache.get(String(guildId));
+    if (!guild) return;
+    const channel = guild.channels.cache.get(ref.channel_id);
+    if (!channel) return;
+    const msg = await channel.messages.fetch(ref.message_id).catch(() => null);
+    if (!msg || !msg.embeds || !msg.embeds.length) return;
+    const embed = EmbedBuilder.from(msg.embeds[0]);
+    const fields = (msg.embeds[0].fields || []).map((f) =>
+      f.name === '⭐ Évaluation' ? { name: f.name, value: `${'⭐'.repeat(stars)} (${stars}/5)`, inline: true } : f
+    );
+    embed.setFields(fields);
+    await msg.edit({ embeds: [embed] }).catch(() => {});
+  } catch { /* jamais bloquant */ }
 }
 
 // ---------- Fermer / Réouvrir / En attente / Supprimer (staff) ----------
@@ -1143,6 +1237,8 @@ async function handleRating(botId, interaction) {
     return;
   }
   store.ticketRatings.add(botId, guildId, { number, opener_id: interaction.user.id, rating: stars });
+  // 📔 Le panneau du journal des tickets affiche désormais la note
+  updateRecapRating(botId, interaction.client, guildId, number, stars).catch(() => {});
   try { await interaction.update({ content: i18n.t(lang, 'ticket_rating_done', { stars }), embeds: [], components: [] }); }
   catch { try { await interaction.reply({ content: i18n.t(lang, 'ticket_rating_done', { stars }), ephemeral: true }); } catch {} }
 }
@@ -1196,6 +1292,8 @@ async function submitDeleteReason(botId, interaction) {
     `🗑 Ticket supprimé par ${interaction.user.tag} — raison : ${reason}`,
   ]);
   const dmOk = await sendTranscriptDm(interaction, guild, channel.name, t);
+  // 📔 Panneau récapitulatif dans le journal des tickets (staff)
+  await sendTicketRecap(botId, interaction, { row: ticketRow, meta: ticketMetaFor(channel), closeReason: reason, transcript: t });
   const ratingLang = i18n.langForGuild(guild.id);
   await sendRatingDm(interaction.client, guild, t.openerId, ticketRow ? ticketRow.number : 0, ratingLang).catch(() => {});
   store.openTickets.remove(channel.id);
@@ -1227,6 +1325,8 @@ async function handleTicketDeleteConfirm(botId, interaction) {
     `🗑 Ticket supprimé par ${interaction.user.tag} — raison : aucune raison fournie`,
   ]);
   const dmOk = await sendTranscriptDm(interaction, guild, channel.name, t);
+  // 📔 Panneau récapitulatif dans le journal des tickets (staff)
+  await sendTicketRecap(botId, interaction, { row: ticketRow, meta: ticketMetaFor(channel), closeReason: '', transcript: t });
   const ratingLang = i18n.langForGuild(guild.id);
   await sendRatingDm(interaction.client, guild, t.openerId, ticketRow ? ticketRow.number : 0, ratingLang).catch(() => {});
   store.openTickets.remove(channel.id);
@@ -1938,9 +2038,11 @@ async function buildTranscriptFromChannel(botId, channel, guild, extraLines = []
   if (Array.isArray(meta.answers) && meta.answers.length) {
     text += '❓ Questionnaire :\n' + meta.answers.map((a) => `${a.q} → ${a.a}`).join('\n') + '\n\n';
   }
+  let msgCount = 0;
   try {
     const fetched = await channel.messages.fetch({ limit: 100 });
     const arr = [...fetched.values()].reverse();
+    msgCount = arr.length;
     text += arr.map((m) => {
       const time = m.createdAt ? m.createdAt.toISOString().slice(11, 19) : '--:--:--';
       let atts = [];
@@ -1965,7 +2067,7 @@ async function buildTranscriptFromChannel(botId, channel, guild, extraLines = []
     const site = store.settings.get('public_url');
     if (site) url = `${site}/transcript/${token}`;
   } catch (e) { console.error('[BotDev] transcript:', e.message); }
-  return { text, url, openerId: meta.openerId };
+  return { text, url, openerId: meta.openerId, msgCount };
 }
 
 module.exports = {

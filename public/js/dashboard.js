@@ -528,6 +528,13 @@ Dashboard.renderers.tickets = async (content, data) => {
     <label class="dash-label">Message du panneau (vide = automatique)</label>
     <textarea class="dash-input" id="t-msg" rows="3">${App.escapeHtml(t.message || '')}</textarea>
 
+    <label class="dash-label">📔 Journal des tickets (salon staff — récapitulatif à la fermeture)</label>
+    <select class="dash-select" id="t-logchan">
+      <option value="">— Désactivé (choisir un salon pour activer) —</option>
+      ${textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${String((data.settings || {}).ticket_log_channel || '') === '#' + ch.name ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`).join('')}
+    </select>
+    <div style="font-size:12px;color:var(--d-dim);margin-top:6px">À chaque fermeture : panneau récap (qui a ouvert, staff en charge, raisons, durée, messages, lien transcription, note ⭐). Le MP du créateur ne change pas.</div>
+
     <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
       <button class="dash-btn dash-btn-primary" id="t-save">💾 Enregistrer</button>
       <button class="dash-btn" id="t-send">📨 Envoyer le panneau</button>
@@ -572,6 +579,13 @@ Dashboard.renderers.tickets = async (content, data) => {
         category: pick('#t-cat', '#t-cat-custom', 'Tickets'),
         message: c.querySelector('#t-msg').value,
         types: typesData.filter((x) => x.label).map((x) => ({ label: x.label, emoji: x.emoji, description: x.description, category: x.category, questions: (x.questions || []).map((q) => String(q).slice(0, 45)).filter(Boolean).slice(0, 5), staff_roles: x.staff_roles.filter(Boolean) })),
+      }});
+      // 📔 Journal des tickets : réglage serveur (indépendant de la config du panneau)
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/settings`, { method: 'PUT', body: {
+        prefix: (data.settings || {}).prefix || '',
+        warn_limit: (data.settings || {}).warn_limit || 0,
+        warn_action: (data.settings || {}).warn_action || 'none',
+        ticket_log_channel: c.querySelector('#t-logchan').value,
       }});
       App.toast('Tickets enregistrés !');
       renderStatus();

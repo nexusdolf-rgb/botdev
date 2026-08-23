@@ -647,7 +647,7 @@ const guildSettings = {
   set: (botId, guildId, fields) => {
     const cur = guildSettings.get(botId, guildId) || { prefix: '', warn_limit: 0, warn_action: 'none' };
     const next = { ...cur, ...fields };
-    const cols = ['prefix', 'warn_limit', 'warn_action', 'warn_timeout_limit', 'warn_timeout_min', 'starboard_channel', 'starboard_min', 'live_channel', 'live_ping', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_warn_text', 'am_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'lang', 'timezone'];
+    const cols = ['prefix', 'warn_limit', 'warn_action', 'warn_timeout_limit', 'warn_timeout_min', 'starboard_channel', 'starboard_min', 'live_channel', 'live_ping', 'ticket_log_channel', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_warn_text', 'am_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'lang', 'timezone'];
     const vals = {
       bot_id: botId, guild_id: guildId,
       prefix: String(next.prefix || '').slice(0, 5),
@@ -659,6 +659,7 @@ const guildSettings = {
       starboard_min: Math.min(Math.max(parseInt(next.starboard_min, 10) || 3, 1), 50),
       live_channel: String(next.live_channel || '').slice(0, 100),
       live_ping: ['everyone', 'here', 'none'].includes(String(next.live_ping || '')) ? String(next.live_ping) : 'everyone',
+      ticket_log_channel: String(next.ticket_log_channel || '').slice(0, 100),
       xp_enabled: (next.xp_enabled === undefined || next.xp_enabled === null) ? 1 : (next.xp_enabled ? 1 : 0),
       xp_min: Math.min(Math.max(parseInt(next.xp_min, 10) || 10, 1), 1000),
       xp_max: Math.max(parseInt(next.xp_max, 10) || 25, 1),
@@ -836,9 +837,9 @@ const automodLogs = {
 
 // ---------------------- Tickets ouverts (fiche par salon) ----------------------
 const openTickets = {
-  add: (botId, guildId, t) => db.prepare(`INSERT INTO open_tickets (bot_id, guild_id, channel_id, number, opener_id, opener_tag, type_label, opened_at, last_activity)
-    VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`)
-    .run(botId, guildId, String(t.channel_id), t.number, String(t.opener_id || '').slice(0, 30), String(t.opener_tag || '').slice(0, 100), String(t.type_label || '').slice(0, 100)),
+  add: (botId, guildId, t) => db.prepare(`INSERT INTO open_tickets (bot_id, guild_id, channel_id, number, opener_id, opener_tag, type_label, open_reason, opened_at, last_activity)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`)
+    .run(botId, guildId, String(t.channel_id), t.number, String(t.opener_id || '').slice(0, 30), String(t.opener_tag || '').slice(0, 100), String(t.type_label || '').slice(0, 100), String(t.open_reason || '').slice(0, 500)),
   getByChannel: (channelId) => db.prepare('SELECT * FROM open_tickets WHERE channel_id = ?').get(String(channelId)) || null,
   allForGuild: (botId, guildId) => db.prepare('SELECT * FROM open_tickets WHERE bot_id = ? AND guild_id = ? ORDER BY id ASC').all(botId, guildId),
   // Nouvelle activité dans le salon → repousse l'échéance d'inactivité
@@ -1127,6 +1128,22 @@ const inviteJoins = {
   whoInvited: (botId, guildId, userId) => db.prepare('SELECT * FROM invite_joins WHERE bot_id = ? AND guild_id = ? AND user_id = ?').get(botId, guildId, String(userId)) || null,
 };
 
+// v2.3 — 📔 Journal des tickets (récap staff à la fermeture)
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN ticket_log_channel TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE open_tickets ADD COLUMN open_reason TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec(`CREATE TABLE IF NOT EXISTS ticket_log_msgs (
+  bot_id INTEGER NOT NULL, guild_id TEXT NOT NULL, number INTEGER NOT NULL,
+  channel_id TEXT NOT NULL, message_id TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now')),
+  PRIMARY KEY (bot_id, guild_id, number))`); } catch (e) {}
+
+// ---------------------- 📔 Journal des tickets ----------------------
+const ticketLogMsgs = {
+  set: (botId, guildId, number, channelId, messageId) => db.prepare('INSERT INTO ticket_log_msgs (bot_id, guild_id, number, channel_id, message_id) VALUES (?, ?, ?, ?, ?) ON CONFLICT(bot_id, guild_id, number) DO UPDATE SET channel_id = excluded.channel_id, message_id = excluded.message_id').run(botId, guildId, number, String(channelId), String(messageId)),
+  get: (botId, guildId, number) => db.prepare('SELECT * FROM ticket_log_msgs WHERE bot_id = ? AND guild_id = ? AND number = ?').get(botId, guildId, number) || null,
+  remove: (botId, guildId, number) => db.prepare('DELETE FROM ticket_log_msgs WHERE bot_id = ? AND guild_id = ? AND number = ?').run(botId, guildId, number),
+};
+
 // ---------------------- 🔴 Annonces de live ----------------------
 const liveSocials = {
   all: (botId, guildId) => db.prepare('SELECT * FROM live_socials WHERE bot_id = ? AND guild_id = ? ORDER BY id').all(botId, guildId),
@@ -1136,4 +1153,4 @@ const liveSocials = {
   count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM live_socials WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
 };
 
-module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, migrateLogCategories };
+module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, migrateLogCategories };

@@ -1003,7 +1003,7 @@ router.put('/bots/:id/guilds/:guildId/settings', requireAuth, async (req, res) =
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
-  const { prefix, warn_limit, warn_action, warn_timeout_limit, warn_timeout_min, starboard_channel, starboard_min, live_channel, live_ping, log_channel, birthday_channel, birthday_role, log_events, timezone } = req.body || {};
+  const { prefix, warn_limit, warn_action, warn_timeout_limit, warn_timeout_min, starboard_channel, starboard_min, live_channel, live_ping, ticket_log_channel, log_channel, birthday_channel, birthday_role, log_events, timezone } = req.body || {};
   store.guildSettings.set(bot.id, guildId, {
     prefix: String(prefix || '').slice(0, 5),
     warn_limit: Math.max(0, parseInt(warn_limit, 10) || 0),
@@ -1014,6 +1014,7 @@ router.put('/bots/:id/guilds/:guildId/settings', requireAuth, async (req, res) =
     ...(starboard_min !== undefined ? { starboard_min: Math.min(Math.max(parseInt(starboard_min, 10) || 3, 1), 50) } : {}),
     ...(live_channel !== undefined ? { live_channel: String(live_channel).slice(0, 100) } : {}),
     ...(live_ping !== undefined ? { live_ping: ['everyone', 'here', 'none'].includes(live_ping) ? live_ping : 'everyone' } : {}),
+    ...(ticket_log_channel !== undefined ? { ticket_log_channel: String(ticket_log_channel).slice(0, 100) } : {}),
     ...(log_channel !== undefined ? { log_channel: String(log_channel).slice(0, 100) } : {}),
     ...(birthday_channel !== undefined ? { birthday_channel: String(birthday_channel).slice(0, 100) } : {}),
     ...(birthday_role !== undefined ? { birthday_role: String(birthday_role).slice(0, 100) } : {}),
