@@ -478,6 +478,9 @@ async function resyncSlash(bot) {
   if (!botManager.isOnline(bot.id)) return;
   const entry = botManager.clients.get(bot.id);
   if (!entry) return;
+  // 🌍 v1.93 : les commandes sont GLOBALES — une seule synchro pour tous les
+  // serveurs (la synchro « par serveur » ne fait plus que retirer les vieux doublons).
+  await botManager.syncGlobalCommands(bot.id).catch(() => {});
   await Promise.all([...entry.client.guilds.cache.values()].map(g => botManager.syncSlashCommands(bot.id, g.id).catch(() => {})));
 }
 

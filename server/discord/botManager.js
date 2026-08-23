@@ -80,7 +80,28 @@ async function loginBot(botId) {
   }
 }
 
+// 🧊 Pause anti-refroidissement (fonction PURE, testable) : après plusieurs
+// échecs consécutifs de la passerelle, marteler Discord PROLONGE le blocage
+// de l'IP. On impose donc une vraie pause : 15 min au 3e échec, 30 min au
+// 4e, 60 min à partir du 5e. Remise à zéro dès la première connexion réussie.
+// L'état est PERSISTANT (base de données) : un redéploiement ne remet pas
+// le compteur à zéro (sinon chaque mise à jour relançait le martelage).
+function gatewayPauseMs(failCount) {
+  if (failCount < 3) return 0;
+  return Math.min(15 * 60000 * Math.pow(2, failCount - 3), 60 * 60000);
+}
+const GW_KEY = 'gw_fail_state';
+function readGwState() {
+  try { return JSON.parse(store.settings.get(GW_KEY) || '{}') || {}; } catch { return {}; }
+}
+
 async function connect(botId, record, intents, degradedHint) {
+  // 🧊 Pause en cours ? On refuse poliment (le chien de garde réessaiera).
+  const gw = readGwState();
+  if (gw.until && Date.now() < gw.until) {
+    throw new Error(`pause anti-refroidissement — reprise dans ~${Math.ceil((gw.until - Date.now()) / 60000)} min (${gw.count} échecs passerelle consécutifs)`);
+  }
+
   const client = new Client({
     intents,
     partials: [Partials.Channel],
@@ -108,10 +129,22 @@ async function connect(botId, record, intents, degradedHint) {
       ).unref()),
     ]);
     console.log(`[BotDev] 🔌 bot ${botId} : connecté ✅`);
+    try { store.settings.set(GW_KEY, '{}'); } catch {} // compteur d'échecs remis à zéro
     store.bots.update(botId, { enabled: 1, last_error: degradedHint });
     return { already: false, degraded: !!degradedHint };
   } catch (err) {
     console.log(`[BotDev] 🔌 bot ${botId} : échec de connexion — ${String(err.message || err).slice(0, 140)}`);
+    // 🧊 Échec de type « passerelle injoignable » → on compte et on impose
+    // une pause croissante pour laisser le refroidissement se lever.
+    if (String(err.message || '').includes('trop longue')) {
+      try {
+        const st = readGwState();
+        const count = (st.count || 0) + 1;
+        const pause = gatewayPauseMs(count);
+        store.settings.set(GW_KEY, JSON.stringify({ count, until: pause ? Date.now() + pause : 0 }));
+        if (pause) console.log(`[BotDev] 🧊 bot ${botId} : ${count} échecs passerelle consécutifs — pause de ${Math.round(pause / 60000)} min pour laisser le refroidissement se lever`);
+      } catch {}
+    }
     clients.delete(botId);
     try { client.destroy(); } catch {}
     store.bots.update(botId, { enabled: 0, last_error: friendlyError(err) });
@@ -399,22 +432,25 @@ function applyPresence(record) {
 }
 
 // ---------------------- Commandes slash ----------------------
-// Enregistre les commandes slash au niveau du serveur (instantané)
+// 🌍 v1.93 : TOUTES les commandes sont GLOBALES — une mise à jour = tous les
+// serveurs d'un coup (y compris les serveurs futurs), zéro doublon dans le
+// menu « / ». Cette fonction ne fait plus qu'une chose : retirer UNE FOIS
+// les anciennes copies « par serveur » (sinon chaque commande apparaissait
+// en double : version globale + version serveur, parfois périmée).
 async function syncSlashCommands(botId, guildId, quiet = false) {
   const entry = clients.get(botId);
   if (!entry || !entry.client.isReady()) return;
   const record = store.bots.get(botId);
   if (!record) return;
-
-  const { buildSlashPayloads } = require('./premade');
-  const { buildExtraPayloads } = require('./extra');
-  const payloads = [...buildSlashPayloads(botId), ...buildExtraPayloads()];
+  const key = `guild_cmds_cleared_${guildId}`;
+  if (store.settings.get(key) === 'oui') return;
   const appId = record.client_id || entry.client.user.id;
   await entry.client.rest.put(
     `/applications/${appId}/guilds/${guildId}/commands`,
-    { body: payloads }
+    { body: [] }
   );
-  if (!quiet) console.log(`[BotDev] bot ${botId} : ${payloads.length} commandes slash enregistrées pour le serveur ${guildId}`);
+  store.settings.set(key, 'oui');
+  if (!quiet) console.log(`[BotDev] bot ${botId} : anciennes copies par serveur retirées (${guildId}) — tout est global désormais`);
 }
 
 // ---------------------- Commandes slash GLOBALES ----------------------
@@ -452,7 +488,7 @@ async function syncGlobalCommands(botId) {
   const all = [...buildSlashPayloads(botId), ...buildExtraPayloads()];
   if (!all.length) return;
 
-  const global = all.slice(0, 90); // plafond de sécurité (limite Discord : 100)
+  const global = all.slice(0, 90).map(p => ({ ...p, dm_permission: false })); // plafond de sécurité (limite Discord : 100) + commandes réservées aux serveurs
   const hash = crypto.createHash('sha1').update(JSON.stringify(global)).digest('hex');
   const key = `global_cmds_${botId}`;
   const appId = record.client_id || entry.client.user.id;
@@ -555,4 +591,4 @@ function platformStats() {
   return { onlineBots, servers, members };
 }
 
-module.exports = { clients, getClient, isOnline, getGuildPerms, loginBot, reconnectBot, logoutBot, stopAll, syncSlashCommands, syncGlobalCommands, globalSyncDecision, applyPresence, applyBotAbout, aboutText, publicBotInfo, platformStats, guardInteraction };
+module.exports = { clients, getClient, isOnline, getGuildPerms, loginBot, reconnectBot, logoutBot, stopAll, syncSlashCommands, syncGlobalCommands, globalSyncDecision, gatewayPauseMs, applyPresence, applyBotAbout, aboutText, publicBotInfo, platformStats, guardInteraction };
