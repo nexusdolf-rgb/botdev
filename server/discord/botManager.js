@@ -82,13 +82,14 @@ async function loginBot(botId) {
 
 // 🧊 Pause anti-refroidissement (fonction PURE, testable) : après plusieurs
 // échecs consécutifs de la passerelle, marteler Discord PROLONGE le blocage
-// de l'IP. On impose donc une vraie pause : 15 min au 3e échec, 30 min au
-// 4e, 60 min à partir du 5e. Remise à zéro dès la première connexion réussie.
-// L'état est PERSISTANT (base de données) : un redéploiement ne remet pas
-// le compteur à zéro (sinon chaque mise à jour relançait le martelage).
+// de l'IP. Pause : 10 min au 3e échec, puis 20 min maximum — un essai toutes
+// les 20 min est déjà ultra-respectueux (~3/heure) et permet de revenir en
+// ligne au plus vite dès que le blocage se lève. Remise à zéro dès la
+// première connexion réussie. L'état est PERSISTANT (base de données) : un
+// redéploiement ne remet pas le compteur à zéro.
 function gatewayPauseMs(failCount) {
   if (failCount < 3) return 0;
-  return Math.min(15 * 60000 * Math.pow(2, failCount - 3), 60 * 60000);
+  return Math.min(10 * 60000 * Math.pow(2, failCount - 3), 20 * 60000);
 }
 const GW_KEY = 'gw_fail_state';
 function readGwState() {
@@ -97,9 +98,18 @@ function readGwState() {
 
 async function connect(botId, record, intents, degradedHint) {
   // 🧊 Pause en cours ? On refuse poliment (le chien de garde réessaiera).
+  // Une pause héritée d'un ancien barème plus sévère est raccourcie au
+  // plafond actuel (20 min) pour ne jamais attendre plus que nécessaire.
   const gw = readGwState();
-  if (gw.until && Date.now() < gw.until) {
-    throw new Error(`pause anti-refroidissement — reprise dans ~${Math.ceil((gw.until - Date.now()) / 60000)} min (${gw.count} échecs passerelle consécutifs)`);
+  if (gw.until) {
+    const maxUntil = Date.now() + 20 * 60000;
+    if (gw.until > maxUntil) {
+      gw.until = maxUntil;
+      try { store.settings.set(GW_KEY, JSON.stringify(gw)); } catch {}
+    }
+    if (Date.now() < gw.until) {
+      throw new Error(`pause anti-refroidissement — reprise dans ~${Math.ceil((gw.until - Date.now()) / 60000)} min (${gw.count} échecs passerelle consécutifs)`);
+    }
   }
 
   const client = new Client({

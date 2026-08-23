@@ -16,11 +16,11 @@ assert.strictEqual(bm.gatewayPauseMs(0), 0);
 assert.strictEqual(bm.gatewayPauseMs(1), 0);
 assert.strictEqual(bm.gatewayPauseMs(2), 0);
 console.log('✅ échecs 1-2 : pas de pause (le recul progressif du chien de garde suffit)');
-assert.strictEqual(bm.gatewayPauseMs(3), 15 * 60000);
-assert.strictEqual(bm.gatewayPauseMs(4), 30 * 60000);
-assert.strictEqual(bm.gatewayPauseMs(5), 60 * 60000);
-assert.strictEqual(bm.gatewayPauseMs(9), 60 * 60000);
-console.log('✅ 3e échec : 15 min, 4e : 30 min, 5e et + : 60 min (plafond)');
+assert.strictEqual(bm.gatewayPauseMs(3), 10 * 60000);
+assert.strictEqual(bm.gatewayPauseMs(4), 20 * 60000);
+assert.strictEqual(bm.gatewayPauseMs(5), 20 * 60000);
+assert.strictEqual(bm.gatewayPauseMs(9), 20 * 60000);
+console.log('✅ 3e échec : 10 min, 4e et + : 20 min (plafond — ~3 essais/h, ultra-respectueux)');
 
 // ---- 2. La synchro « par serveur » ne pousse PLUS de commandes : elle ne
 //      fait que retirer les anciens doublons, UNE seule fois par serveur.
