@@ -208,6 +208,12 @@ async function main() {
         botManager.clients.delete(id);
       }
       if (botManager.isOnline(id)) { retryTracker.delete(id); continue; }
+      // 🕊️ Une tentative de connexion FRAÎCHE est en cours (moins de 2 min) :
+      // on la laisse aboutir au lieu de la détruire — le timeout de 90 s du
+      // login la fera échouer proprement si besoin. (Avant : le chien de
+      // garde tuait la connexion naissante au bout de 30 s → churn infini.)
+      const inflight = botManager.clients.get(id);
+      if (inflight && !inflight.client.isReady() && Date.now() - (inflight.startedAt || 0) < 120000) continue;
       const t = retryTracker.get(id) || { last: 0, fails: 0 };
       const delay = Math.min(60000 * Math.pow(2, t.fails), 10 * 60000);
       if (Date.now() - t.last < delay) continue;
