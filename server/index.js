@@ -187,9 +187,16 @@ async function main() {
 
   // Chien de garde renforcé : le bot ne reste JAMAIS hors ligne.
   // - toute connexion morte (pas prête depuis 10 min) est détruite
-  // - reconnexion forcée toutes les 60 secondes en cas d'échec
+  // - reconnexion avec recul progressif (voir ci-dessous)
   // - TOUS les bots sont surveillés (même si un drapeau interne dit « éteint »)
-  const retryTracker = new Map();
+  // Chien de garde renforcé : le bot ne reste JAMAIS hors ligne.
+  // - toute connexion morte (pas prête depuis 10 min) est détruite
+  // - reconnexion avec RECUL PROGRESSIF : 1 min, puis 2, 4, 8, 10 min max
+  //   (réinitialisé dès qu'une connexion réussit). Sans ce recul : tempête
+  //   de reconnexions → Discord/Cloudflare met l'IP en refroidissement et
+  //   toutes les connexions restent suspendues.
+  // - TOUS les bots sont surveillés (même si un drapeau interne dit « éteint »)
+  const retryTracker = new Map(); // id -> { last, fails }
   setInterval(() => {
     const bots = store.db.prepare('SELECT id FROM bots').all();
     for (const { id } of bots) {
@@ -201,12 +208,18 @@ async function main() {
         botManager.clients.delete(id);
       }
       if (botManager.isOnline(id)) { retryTracker.delete(id); continue; }
-      const last = retryTracker.get(id) || 0;
-      if (Date.now() - last < 60000) continue;
-      retryTracker.set(id, Date.now());
+      const t = retryTracker.get(id) || { last: 0, fails: 0 };
+      const delay = Math.min(60000 * Math.pow(2, t.fails), 10 * 60000);
+      if (Date.now() - t.last < delay) continue;
+      t.last = Date.now();
+      retryTracker.set(id, t);
       botManager.reconnectBot(id)
-        .then(() => console.log(`[watchdog] bot ${id} reconnecté`))
-        .catch((e) => console.log(`[watchdog] bot ${id} : ${e.message}`));
+        .then(() => { retryTracker.delete(id); console.log(`[watchdog] bot ${id} reconnecté`); })
+        .catch((e) => {
+          t.fails = Math.min(t.fails + 1, 4);
+          const next = Math.round(Math.min(60000 * Math.pow(2, t.fails), 600000) / 60000);
+          console.log(`[watchdog] bot ${id} (échec n°${t.fails}, prochain essai dans ~${next} min) : ${e.message}`);
+        });
     }
   }, 30000);
 

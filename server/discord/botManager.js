@@ -94,10 +94,24 @@ async function connect(botId, record, intents, degradedHint) {
   attachListeners(botId, entry);
 
   try {
-    await client.login(record.token);
+    // ⏱️ Timeout de connexion : client.login() peut rester suspendu POUR
+    // TOUJOURS quand la passerelle Discord est injoignable (réseau coupé,
+    // refroidissement Cloudflare après une tempête de reconnexions…).
+    // Sans timeout : aucune erreur, aucun log, bot fantôme. Avec : l'échec
+    // devient visible et le chien de garde peut réessayer proprement.
+    console.log(`[BotDev] 🔌 bot ${botId} : connexion à Discord…`);
+    await Promise.race([
+      client.login(record.token),
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error('Connexion Discord trop longue (>90 s) — passerelle injoignable ou refroidissement en cours')),
+        90000
+      ).unref()),
+    ]);
+    console.log(`[BotDev] 🔌 bot ${botId} : connecté ✅`);
     store.bots.update(botId, { enabled: 1, last_error: degradedHint });
     return { already: false, degraded: !!degradedHint };
   } catch (err) {
+    console.log(`[BotDev] 🔌 bot ${botId} : échec de connexion — ${String(err.message || err).slice(0, 140)}`);
     clients.delete(botId);
     try { client.destroy(); } catch {}
     store.bots.update(botId, { enabled: 0, last_error: friendlyError(err) });
