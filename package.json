@@ -4,7 +4,9 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "test": "node test/smoke.js"
+    "test": "node test/run-all.js",
+    "test:smoke": "node test/smoke.js",
+    "check": "bash scripts/check.sh"
   },
   "author": "BotDev",
   "license": "ISC",

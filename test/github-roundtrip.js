@@ -1,9 +1,15 @@
 // Test de roundtrip RÉEL contre GitHub (branche backup, base factice)
+// ⚠️ ATTENTION : à lancer UNIQUEMENT avec un dépôt de TEST dans BOTDEV_DATA_REPO,
+// jamais le dépôt de production (le garde-fou « base vide » protège, mais ne
+// tentez pas le diable). Test MANUEL — exclu de la suite automatique.
 // Usage : BOTDEV_DATA_DIR=/tmp/ghbktest/data BOTDEV_GH_TOKEN=... node test/github-roundtrip.js
 const fs = require('fs');
 const Database = require('better-sqlite3');
 
 (async () => {
+  // 0. Nettoyage d'un éventuel passage précédent (sinon « table fake already exists »)
+  fs.rmSync('/tmp/ghbktest', { recursive: true, force: true });
+
   // 1. Base factice (aucun secret)
   const fakePath = '/tmp/ghbktest/fake.db';
   fs.mkdirSync('/tmp/ghbktest/data', { recursive: true });
