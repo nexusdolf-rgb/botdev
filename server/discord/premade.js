@@ -795,14 +795,25 @@ async function execute(botId, entry, cmd, src) {
       store.warnings.add(botId, guild.id, target.id, reason || 'Aucune raison', author.id);
       const n = store.warnings.count(botId, guild.id, target.id);
       let extra = '';
-      // Automod : action automatique si la limite d'avertissements est atteinte
+      // ⚖️ Paliers de sanctions automatiques (v1.98) : palier 1 = timeout,
+      // palier 2 = timeout/kick/ban — la sanction la plus sévère atteinte s'applique.
       const gs = store.guildSettings.get(botId, guild.id) || {};
-      if (gs.warn_limit > 0 && n >= gs.warn_limit && (gs.warn_action === 'kick' || gs.warn_action === 'ban')) {
+      const { sanctionForWarns } = require('./community');
+      const auto = sanctionForWarns(n, gs);
+      if (auto) {
         const tMember = guild.members.cache.get(target.id);
         if (tMember) {
           try {
-            if (gs.warn_action === 'kick' && tMember.kickable) { await tMember.kick('Limite d\'avertissements atteinte'); extra = '\n👢 **Expulsé** : limite d\'avertissements atteinte.'; }
-            else if (gs.warn_action === 'ban' && tMember.bannable) { await tMember.ban({ reason: 'Limite d\'avertissements atteinte' }); extra = '\n🔨 **Banni** : limite d\'avertissements atteinte.'; }
+            if (auto.action === 'timeout' && tMember.moderatable) {
+              await tMember.timeout(auto.minutes * 60000, `${n} avertissements — sanction automatique`);
+              extra = `\n⏳ **Timeout automatique** : ${auto.minutes} min (${n} avertissements).`;
+            } else if (auto.action === 'kick' && tMember.kickable) {
+              await tMember.kick('Limite d\'avertissements atteinte');
+              extra = '\n👢 **Expulsé** : limite d\'avertissements atteinte.';
+            } else if (auto.action === 'ban' && tMember.bannable) {
+              await tMember.ban({ reason: 'Limite d\'avertissements atteinte' });
+              extra = '\n🔨 **Banni** : limite d\'avertissements atteinte.';
+            }
           } catch {}
         }
       }

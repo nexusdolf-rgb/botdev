@@ -15,6 +15,7 @@ const EVENT_DEFS = {
     config: [
       { key: 'channel', label: 'Salon d\'accueil', type: 'channel', placeholder: '#bienvenue' },
       { key: 'message', label: 'Message ({user}, {server}, {count}…)', type: 'multiline', default: 'Bienvenue {user} sur {server} ! Tu es le membre n°{count} 🎉' },
+      { key: 'card', label: '🖼️ Carte de bienvenue en image (avatar + pseudo)', type: 'checkbox', default: false },
       { key: 'embed', label: 'Envoyer en embed', type: 'checkbox', default: false },
       { key: 'color', label: 'Couleur de l\'embed', type: 'color', default: '#57F287' },
       { key: 'image', label: 'Image de l\'embed (URL, optionnel)', type: 'text', placeholder: 'https://…' },
@@ -71,12 +72,23 @@ async function runJoinEvent(botId, member) {
     const channel = await resolveChannel(member.guild, cfg.channel);
     if (channel) {
       const text = render(member, botRecord, cfg.message);
+      // 🖼️ Carte de bienvenue en image (avatar + pseudo) — jamais bloquante :
+      // si la génération échoue, le message part sans image.
+      let files = [];
+      if (cfg.card) {
+        try {
+          const community = require('./community');
+          const buf = await community.welcomeCard(member);
+          if (buf && buf.length) files = [{ attachment: buf, name: 'bienvenue.png' }];
+        } catch (e) { console.error('[Hoxera] carte de bienvenue :', e.message); }
+      }
       if (cfg.embed) {
         const embed = new EmbedBuilder().setColor(cfg.color || '#57F287').setDescription(text);
-        if (cfg.image) embed.setImage(String(cfg.image).trim());
-        await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { embeds: [embed] }).catch(() => {});
+        if (files.length) embed.setImage('attachment://bienvenue.png');
+        else if (cfg.image) embed.setImage(String(cfg.image).trim());
+        await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { embeds: [embed], files }).catch(() => {});
       } else {
-        await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { content: text }).catch(() => {});
+        await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { content: text, files }).catch(() => {});
       }
       await logging.log(botId, member.guild, {
         title: '👋 Nouveau membre',

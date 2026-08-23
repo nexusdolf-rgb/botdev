@@ -811,6 +811,18 @@ router.get('/bots/:id/guilds/:guildId/stats/commands', requireAuth, async (req, 
   });
 });
 
+// 📨 Top des recruteurs (traqueur d'invitations) + ⭐ compteur starboard
+router.get('/bots/:id/guilds/:guildId/community', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const guildId = req.params.guildId;
+  res.json({
+    invitesTop: store.inviteJoins.top(bot.id, guildId, 10),
+    starboardCount: store.starboard.count(bot.id, guildId),
+  });
+});
+
 // Note moyenne du support (étoiles données par les membres après la clôture)
 router.get('/bots/:id/guilds/:guildId/tickets/rating', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
@@ -964,11 +976,15 @@ router.put('/bots/:id/guilds/:guildId/settings', requireAuth, async (req, res) =
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
-  const { prefix, warn_limit, warn_action, log_channel, birthday_channel, birthday_role, log_events, timezone } = req.body || {};
+  const { prefix, warn_limit, warn_action, warn_timeout_limit, warn_timeout_min, starboard_channel, starboard_min, log_channel, birthday_channel, birthday_role, log_events, timezone } = req.body || {};
   store.guildSettings.set(bot.id, guildId, {
     prefix: String(prefix || '').slice(0, 5),
     warn_limit: Math.max(0, parseInt(warn_limit, 10) || 0),
-    warn_action: ['none', 'kick', 'ban'].includes(warn_action) ? warn_action : 'none',
+    warn_action: ['none', 'timeout', 'kick', 'ban'].includes(warn_action) ? warn_action : 'none',
+    ...(warn_timeout_limit !== undefined ? { warn_timeout_limit: Math.max(0, parseInt(warn_timeout_limit, 10) || 0) } : {}),
+    ...(warn_timeout_min !== undefined ? { warn_timeout_min: Math.min(Math.max(parseInt(warn_timeout_min, 10) || 60, 1), 10080) } : {}),
+    ...(starboard_channel !== undefined ? { starboard_channel: String(starboard_channel).slice(0, 100) } : {}),
+    ...(starboard_min !== undefined ? { starboard_min: Math.min(Math.max(parseInt(starboard_min, 10) || 3, 1), 50) } : {}),
     ...(log_channel !== undefined ? { log_channel: String(log_channel).slice(0, 100) } : {}),
     ...(birthday_channel !== undefined ? { birthday_channel: String(birthday_channel).slice(0, 100) } : {}),
     ...(birthday_role !== undefined ? { birthday_role: String(birthday_role).slice(0, 100) } : {}),

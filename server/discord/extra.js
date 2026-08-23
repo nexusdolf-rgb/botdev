@@ -168,6 +168,10 @@ function buildExtraPayloads() {
     {
       name: 'snipe', description: '🕵️ Affiche le dernier message supprimé de ce salon',
     },
+    {
+      name: 'invites', description: '📨 Tes invitations + le top des recruteurs du serveur',
+      options: [{ name: 'membre', description: 'Voir les invitations d\'un autre membre (optionnel)', type: ApplicationCommandOptionType.User, required: false }],
+    },
     // ---------- Économie enrichie ----------
     {
       name: 'work', description: '💼 Travaille pour gagner des coins (1 fois par heure)',
@@ -258,7 +262,7 @@ async function handleInteraction(botId, entry, interaction) {
 }
 
 // ---------------------- Commandes slash ----------------------
-const EXTRA_CMDS = new Set(['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch', 'rps', 'pendu', 'morpion', 'birthday', 'remind', 'poll', 'snipe', 'work', 'gamble', 'rob', 'lockdown', 'voicetemp', 'apply']);
+const EXTRA_CMDS = new Set(['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch', 'rps', 'pendu', 'morpion', 'birthday', 'remind', 'poll', 'snipe', 'work', 'gamble', 'rob', 'lockdown', 'voicetemp', 'apply', 'invites']);
 
 async function handleSlash(botId, entry, interaction) {
   const cmd = interaction.commandName.toLowerCase();
@@ -427,6 +431,23 @@ async function handleSlash(botId, entry, interaction) {
         .setAuthor(s.avatar ? { name: s.tag, iconURL: s.avatar } : { name: s.tag })
         .setDescription(s.content || (s.attachments ? `*${s.attachments} pièce(s) jointe(s)*` : '*Message vide*'))
         .setFooter({ text: `Supprimé il y a ~${minutes} min` });
+      return interaction.reply({ embeds: [embed] });
+    }
+    // ---------------- 📨 Invitations ----------------
+    case 'invites': {
+      const target = interaction.options.getUser('membre') || user;
+      const count = store.inviteJoins.countBy(botId, guild.id, target.id);
+      const top = store.inviteJoins.top(botId, guild.id, 10);
+      const whoMe = store.inviteJoins.whoInvited(botId, guild.id, target.id);
+      const medals = ['🥇', '🥈', '🥉'];
+      const lines = top.length
+        ? top.map((r, idx) => `${medals[idx] || `**${idx + 1}.**`} <@${r.inviter_id}> — **${r.n}** invitation(s)`).join('\n')
+        : '*Aucune invitation traquée pour l\'instant. (Le bot doit avoir la permission « Gérer le serveur » pour voir les invitations.)*';
+      const embed = new EmbedBuilder()
+        .setColor('#5865F2')
+        .setTitle('📨 Invitations')
+        .setDescription(`👤 **${target.username}** a invité **${count}** membre(s)${whoMe ? `\n🎟️ Invité(e) par <@${whoMe.inviter_id}>` : ''}\n\n**🏆 Top des recruteurs**\n${lines}`)
+        .setFooter({ text: guild.name });
       return interaction.reply({ embeds: [embed] });
     }
     // ---------------- Économie enrichie ----------------

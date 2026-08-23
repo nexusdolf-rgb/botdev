@@ -88,6 +88,7 @@ Dashboard.MODULES = [
   ['roles', '📋', 'Rôles'],
   ['suggestions', '💡', 'Suggestions'],
   ['giveaways', '🎁', 'Giveaways'],
+  ['community', '⭐', 'Starboard & Invitations'],
   ['announcements', '📅', 'Annonces'],
   ['members', '👥', 'Membres'],
   ['stats', '📈', 'Statistiques'],
@@ -1621,6 +1622,66 @@ Dashboard.renderers.logs = async (content, data) => {
   })();
 };
 
+// ---------- ⭐ Starboard & 📨 Invitations ----------
+Dashboard.renderers.community = async (content, data) => {
+  const { bot, guildId } = Dashboard.state;
+  const s = data.settings || {};
+  const root = Dashboard.header(content, '⭐', 'Starboard & Invitations', 'Les messages populaires épinglés automatiquement + le classement des recruteurs.');
+  const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
+
+  // ---- Carte Starboard ----
+  const c1 = Dashboard.card(root, '⭐ Starboard', 'Quand un message reçoit assez d\'étoiles (réaction ⭐), il est épinglé dans le salon choisi — le mur de la gloire de ton serveur.');
+  const chanOpts = ['<option value="">— Désactivé (choisir un salon pour activer) —</option>']
+    .concat(textChannels.map((ch) => `<option value="#${ch.name}" ${String(s.starboard_channel || '') === `#${ch.name}` ? 'selected' : ''}>💬 #${ch.name}</option>`));
+  c1.innerHTML += `
+    <label class="dash-label">Salon du starboard</label>
+    <select class="dash-select" id="sb-chan" style="max-width:320px">${chanOpts.join('')}</select>
+    <label class="dash-label">Nombre d'étoiles minimum</label>
+    <input class="dash-input" id="sb-min" type="number" min="1" max="50" value="${s.starboard_min || 3}" style="max-width:140px" />
+    <div style="font-size:12.5px;color:var(--d-dim);margin-top:8px">💡 Astuce : 3 étoiles est un bon réglage pour un serveur de moins de 500 membres.</div>
+    <div style="margin-top:14px"><button class="dash-btn dash-btn-primary" id="sb-save">💾 Enregistrer</button></div>`;
+  c1.querySelector('#sb-save').onclick = async () => {
+    try {
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/settings`, { method: 'PUT', body: {
+        prefix: s.prefix || '', warn_limit: s.warn_limit || 0, warn_action: s.warn_action || 'none',
+        starboard_channel: c1.querySelector('#sb-chan').value,
+        starboard_min: parseInt(c1.querySelector('#sb-min').value, 10) || 3,
+      }});
+      App.toast('Starboard enregistré !');
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+
+  // ---- Carte Invitations ----
+  const c2 = Dashboard.card(root, '📨 Traqueur d\'invitations', 'Qui recrute le plus ? Le bot détecte automatiquement quelle invitation chaque nouveau membre a utilisée. Commande : /invites');
+  try {
+    const [{ invitesTop, starboardCount }, membersRes] = await Promise.all([
+      App.api(`/bots/${bot.id}/guilds/${guildId}/community`),
+      App.api(`/bots/${bot.id}/guilds/${guildId}/members`).catch(() => ({ members: [] })),
+    ]);
+    const byId = new Map((membersRes.members || []).map((m) => [String(m.id), m]));
+    c2.appendChild(App.el(`<div style="font-size:12.5px;color:var(--d-dim);margin-bottom:10px">⭐ ${starboardCount} message(s) au starboard · ⚠️ Le bot doit avoir la permission « Gérer le serveur » pour lire les invitations.</div>`));
+    if (!invitesTop.length) {
+      c2.appendChild(App.el(`<div class="dash-empty">Aucune invitation traquée pour l'instant — le classement se remplit à chaque nouvelle arrivée.</div>`));
+    } else {
+      const medals = ['🥇', '🥈', '🥉'];
+      invitesTop.forEach((r, idx) => {
+        const m = byId.get(String(r.inviter_id));
+        const name = m ? (m.displayName || m.username || m.tag || r.inviter_id) : r.inviter_id;
+        const avatar = m && m.avatar ? `<img src="${App.escapeHtml(m.avatar)}" style="width:28px;height:28px;border-radius:50%" alt=""/>` : '<span style="width:28px;height:28px;border-radius:50%;background:var(--d-border);display:inline-block"></span>';
+        c2.appendChild(App.el(`
+          <div style="display:flex;align-items:center;gap:12px;padding:9px 4px;border-bottom:1px solid var(--d-border)">
+            <span style="width:34px;text-align:center;font-size:${idx < 3 ? '20px' : '14px'}">${medals[idx] || (idx + 1) + '.'}</span>
+            ${avatar}
+            <span style="flex:1;font-weight:600">${App.escapeHtml(String(name))}</span>
+            <span class="dash-badge">${r.n} invitation(s)</span>
+          </div>`));
+      });
+    }
+  } catch (e) {
+    c2.appendChild(App.el(`<div class="dash-empty">${App.escapeHtml(e.message)}</div>`));
+  }
+};
+
 // ---------- Réglages serveur ----------
 Dashboard.renderers.server = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
@@ -1633,14 +1694,24 @@ Dashboard.renderers.server = async (content, data) => {
   c.innerHTML += `
     <label class="dash-label">Préfixe (vide = « ${App.escapeHtml(bot.prefix)} »)</label>
     <input class="dash-input" id="g-prefix" maxlength="5" value="${App.escapeHtml(s.prefix || '')}" placeholder="${App.escapeHtml(bot.prefix)}" style="max-width:200px" />
-    <label class="dash-label">Limite d\'avertissements (0 = désactivé)</label>
-    <input class="dash-input" id="g-warn" type="number" min="0" value="${s.warn_limit || 0}" style="max-width:200px" />
-    <label class="dash-label">Action à la limite</label>
-    <select class="dash-select" id="g-action" style="max-width:220px">
-      <option value="none" ${s.warn_action === 'none' ? 'selected' : ''}>Aucune</option>
-      <option value="kick" ${s.warn_action === 'kick' ? 'selected' : ''}>👢 Expulser</option>
-      <option value="ban" ${s.warn_action === 'ban' ? 'selected' : ''}>🔨 Bannir</option>
-    </select>
+    <div class="dash-tier-box" style="margin-top:14px;padding:14px;border:1px solid var(--d-border);border-radius:12px">
+      <div style="font-weight:700;margin-bottom:2px">⚖️ Sanctions automatiques progressives</div>
+      <div style="font-size:12.5px;color:var(--d-dim);margin-bottom:6px">Exemple pro : 3 avertissements → timeout, 5 → expulsion. La sanction la plus sévère atteinte s'applique.</div>
+      <label class="dash-label">Palier 1 — timeout après X avertissements (0 = désactivé)</label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <input class="dash-input" id="g-warn-t1" type="number" min="0" value="${s.warn_timeout_limit || 0}" style="max-width:140px" />
+        <div style="display:flex;align-items:center;gap:8px"><input class="dash-input" id="g-warn-t1min" type="number" min="1" max="10080" value="${s.warn_timeout_min || 60}" style="max-width:120px" /><span style="font-size:13px;color:var(--d-dim)">minutes de timeout</span></div>
+      </div>
+      <label class="dash-label">Palier 2 — sanction finale après X avertissements (0 = désactivé)</label>
+      <input class="dash-input" id="g-warn" type="number" min="0" value="${s.warn_limit || 0}" style="max-width:140px" />
+      <label class="dash-label">Action du palier 2</label>
+      <select class="dash-select" id="g-action" style="max-width:220px">
+        <option value="none" ${s.warn_action === 'none' ? 'selected' : ''}>Aucune</option>
+        <option value="timeout" ${s.warn_action === 'timeout' ? 'selected' : ''}>⏳ Timeout</option>
+        <option value="kick" ${s.warn_action === 'kick' ? 'selected' : ''}>👢 Expulser</option>
+        <option value="ban" ${s.warn_action === 'ban' ? 'selected' : ''}>🔨 Bannir</option>
+      </select>
+    </div>
     <div style="margin-top:14px"><button class="dash-btn dash-btn-primary" id="g-save">💾 Enregistrer</button></div>`;
   c.querySelector('#g-save').onclick = async () => {
     try {
@@ -1648,6 +1719,8 @@ Dashboard.renderers.server = async (content, data) => {
         prefix: c.querySelector('#g-prefix').value.trim(),
         warn_limit: parseInt(c.querySelector('#g-warn').value, 10) || 0,
         warn_action: c.querySelector('#g-action').value,
+        warn_timeout_limit: parseInt(c.querySelector('#g-warn-t1').value, 10) || 0,
+        warn_timeout_min: parseInt(c.querySelector('#g-warn-t1min').value, 10) || 60,
       }});
       App.toast('Réglages enregistrés !');
     } catch (e) { App.toast(e.message, 'error'); }

@@ -487,6 +487,26 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN panel_name TEXT DEFAULT ''"
 // 🌍 Langue du serveur (tous les messages publics du bot suivent) — fr par défaut
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN lang TEXT DEFAULT 'fr'"); } catch (e) {}
 
+// v1.98 — Communauté PRO : paliers de sanctions, starboard, invitations
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN warn_timeout_limit INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN warn_timeout_min INTEGER DEFAULT 60"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN starboard_channel TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN starboard_min INTEGER DEFAULT 3"); } catch (e) {}
+try { db.exec(`CREATE TABLE IF NOT EXISTS starboard_posts (
+  bot_id INTEGER NOT NULL, guild_id TEXT NOT NULL, message_id TEXT NOT NULL,
+  star_message_id TEXT NOT NULL, stars INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now')),
+  PRIMARY KEY (bot_id, guild_id, message_id))`); } catch (e) {}
+try { db.exec(`CREATE TABLE IF NOT EXISTS invite_uses (
+  bot_id INTEGER NOT NULL, guild_id TEXT NOT NULL, code TEXT NOT NULL,
+  uses INTEGER DEFAULT 0, inviter_id TEXT DEFAULT '',
+  PRIMARY KEY (bot_id, guild_id, code))`); } catch (e) {}
+try { db.exec(`CREATE TABLE IF NOT EXISTS invite_joins (
+  bot_id INTEGER NOT NULL, guild_id TEXT NOT NULL, user_id TEXT NOT NULL,
+  inviter_id TEXT NOT NULL, code TEXT DEFAULT '',
+  joined_at TEXT DEFAULT (datetime('now')),
+  PRIMARY KEY (bot_id, guild_id, user_id))`); } catch (e) {}
+
 // 🗑 Ancien cache de bannières animées : supprimé (les GIF faisaient
 // grossir la sauvegarde au-delà de la limite de 1 Mo de l'API GitHub).
 try { db.exec('DROP TABLE IF EXISTS banner_cache'); } catch (e) {}
@@ -616,12 +636,16 @@ const guildSettings = {
   set: (botId, guildId, fields) => {
     const cur = guildSettings.get(botId, guildId) || { prefix: '', warn_limit: 0, warn_action: 'none' };
     const next = { ...cur, ...fields };
-    const cols = ['prefix', 'warn_limit', 'warn_action', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_warn_text', 'am_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'lang', 'timezone'];
+    const cols = ['prefix', 'warn_limit', 'warn_action', 'warn_timeout_limit', 'warn_timeout_min', 'starboard_channel', 'starboard_min', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_warn_text', 'am_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'lang', 'timezone'];
     const vals = {
       bot_id: botId, guild_id: guildId,
       prefix: String(next.prefix || '').slice(0, 5),
       warn_limit: next.warn_limit || 0,
-      warn_action: ['none', 'kick', 'ban'].includes(next.warn_action) ? next.warn_action : 'none',
+      warn_action: ['none', 'timeout', 'kick', 'ban'].includes(next.warn_action) ? next.warn_action : 'none',
+      warn_timeout_limit: Math.max(parseInt(next.warn_timeout_limit, 10) || 0, 0),
+      warn_timeout_min: Math.min(Math.max(parseInt(next.warn_timeout_min, 10) || 60, 1), 10080),
+      starboard_channel: String(next.starboard_channel || '').slice(0, 100),
+      starboard_min: Math.min(Math.max(parseInt(next.starboard_min, 10) || 3, 1), 50),
       xp_enabled: (next.xp_enabled === undefined || next.xp_enabled === null) ? 1 : (next.xp_enabled ? 1 : 0),
       xp_min: Math.min(Math.max(parseInt(next.xp_min, 10) || 10, 1), 1000),
       xp_max: Math.max(parseInt(next.xp_max, 10) || 25, 1),
@@ -1062,4 +1086,32 @@ const voicetemp = {
   remove: (botId, guildId) => db.prepare('DELETE FROM voicetemp WHERE bot_id = ? AND guild_id = ?').run(botId, guildId),
 };
 
-module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, msgStats, joinStats, shopPurchases, applications, voicetemp, migrateLogCategories };
+// ---------------------- ⭐ Starboard ----------------------
+const starboard = {
+  get: (botId, guildId, messageId) => db.prepare('SELECT * FROM starboard_posts WHERE bot_id = ? AND guild_id = ? AND message_id = ?').get(botId, guildId, String(messageId)) || null,
+  set: (botId, guildId, messageId, starMessageId, stars) => db.prepare('INSERT INTO starboard_posts (bot_id, guild_id, message_id, star_message_id, stars) VALUES (?, ?, ?, ?, ?) ON CONFLICT(bot_id, guild_id, message_id) DO UPDATE SET star_message_id = excluded.star_message_id, stars = excluded.stars').run(botId, guildId, String(messageId), String(starMessageId), parseInt(stars, 10) || 0),
+  remove: (botId, guildId, messageId) => db.prepare('DELETE FROM starboard_posts WHERE bot_id = ? AND guild_id = ? AND message_id = ?').run(botId, guildId, String(messageId)),
+  count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM starboard_posts WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
+};
+
+// ---------------------- 📨 Invitations ----------------------
+const inviteUses = {
+  all: (botId, guildId) => db.prepare('SELECT * FROM invite_uses WHERE bot_id = ? AND guild_id = ?').all(botId, guildId),
+  replaceAll: (botId, guildId, rows) => {
+    const del = db.prepare('DELETE FROM invite_uses WHERE bot_id = ? AND guild_id = ?');
+    const ins = db.prepare('INSERT INTO invite_uses (bot_id, guild_id, code, uses, inviter_id) VALUES (?, ?, ?, ?, ?)');
+    const tx = db.transaction(() => {
+      del.run(botId, guildId);
+      for (const r of (rows || [])) ins.run(botId, guildId, String(r.code), parseInt(r.uses, 10) || 0, String(r.inviter_id || ''));
+    });
+    tx();
+  },
+};
+const inviteJoins = {
+  add: (botId, guildId, userId, inviterId, code) => db.prepare('INSERT INTO invite_joins (bot_id, guild_id, user_id, inviter_id, code) VALUES (?, ?, ?, ?, ?) ON CONFLICT(bot_id, guild_id, user_id) DO UPDATE SET inviter_id = excluded.inviter_id, code = excluded.code').run(botId, guildId, String(userId), String(inviterId), String(code || '')),
+  countBy: (botId, guildId, inviterId) => db.prepare('SELECT COUNT(*) AS n FROM invite_joins WHERE bot_id = ? AND guild_id = ? AND inviter_id = ?').get(botId, guildId, String(inviterId)).n,
+  top: (botId, guildId, limit = 10) => db.prepare('SELECT inviter_id, COUNT(*) AS n FROM invite_joins WHERE bot_id = ? AND guild_id = ? GROUP BY inviter_id ORDER BY n DESC LIMIT ?').all(botId, guildId, Math.min(Math.max(parseInt(limit, 10) || 10, 1), 30)),
+  whoInvited: (botId, guildId, userId) => db.prepare('SELECT * FROM invite_joins WHERE bot_id = ? AND guild_id = ? AND user_id = ?').get(botId, guildId, String(userId)) || null,
+};
+
+module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, migrateLogCategories };

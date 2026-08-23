@@ -11,6 +11,8 @@ const INTENTS = [
   GatewayIntentBits.MessageContent,
   GatewayIntentBits.GuildModeration,
   GatewayIntentBits.GuildVoiceStates,
+  GatewayIntentBits.GuildMessageReactions, // ⭐ starboard
+  GatewayIntentBits.GuildInvites,          // 📨 traqueur d'invitations
 ];
 
 const clients = new Map(); // botId -> { client, record }
@@ -116,7 +118,7 @@ async function connect(botId, record, intents, degradedHint) {
 
   const client = new Client({
     intents,
-    partials: [Partials.Channel],
+    partials: [Partials.Channel, Partials.Message, Partials.Reaction], // partials Message/Reaction : étoiles sur des messages anciens
     presence: { status: record.status_type || 'online' },
   });
 
@@ -328,6 +330,11 @@ function attachListeners(botId, entry) {
       catch (e) { console.error(`[BotDev] sync globale (bot ${botId}):`, e.message); }
       // Bio du bot : ajoute le lien vers BotDev
       applyBotAbout(botId, entry).catch(() => {});
+      // 📨 Relevé initial des invitations de chaque serveur (traqueur)
+      try {
+        const community = require('./community');
+        for (const g of client.guilds.cache.values()) community.cacheInvites(botId, g).catch(() => {});
+      } catch {}
     } catch (e) { console.error(`[BotDev] ready error (bot ${botId}):`, e.message); }
   });
 
@@ -409,6 +416,9 @@ function attachListeners(botId, entry) {
   });
 
   client.on('guildMemberAdd', (member) => {
+    // 📨 Attribution de l'invitation AVANT tout (le relevé doit être frais)
+    const community = require('./community');
+    community.onMemberJoinInvites(botId, member).catch(() => {});
     const { runJoinEvent } = require('./events');
     runJoinEvent(botId, member).catch(e => console.error('[BotDev] join event error:', e.message));
   });
@@ -420,6 +430,26 @@ function attachListeners(botId, entry) {
 
   // Nouveau serveur : synchronise les commandes avec retries automatiques
   // (les commandes slash apparaissent ainsi dès l'ajout du bot)
+  // ⭐ Starboard : réactions étoile ajoutées/retirées
+  client.on('messageReactionAdd', (reaction) => {
+    const community = require('./community');
+    community.onReaction(botId, reaction).catch(() => {});
+  });
+  client.on('messageReactionRemove', (reaction) => {
+    const community = require('./community');
+    community.onReaction(botId, reaction).catch(() => {});
+  });
+
+  // 📨 Traqueur d'invitations : cache tenu à jour en continu
+  client.on('inviteCreate', (invite) => {
+    const community = require('./community');
+    if (invite.guild) community.cacheInvites(botId, invite.guild).catch(() => {});
+  });
+  client.on('inviteDelete', (invite) => {
+    const community = require('./community');
+    if (invite.guild) community.cacheInvites(botId, invite.guild).catch(() => {});
+  });
+
   client.on('guildCreate', (guild) => {
     let attempts = 0;
     const trySync = async () => {
