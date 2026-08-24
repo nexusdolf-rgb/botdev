@@ -632,3 +632,22 @@ body { font-family: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, sans-
   .pub-blob, .grad-anim, .pub-mock, .pub-hero-badge.shimmer::after { animation: none !important; }
   .reveal { opacity: 1; transform: none; transition: none; }
 }
+
+/* 🍞 Toasts v3.2 : icône, barre de vie, entrée élastique */
+.toast {
+  display: flex; align-items: center; gap: 10px;
+  border-radius: 13px !important; font-weight: 600;
+  box-shadow: 0 14px 34px -12px rgba(0,0,0,.75) !important;
+  animation: toastIn .3s cubic-bezier(.2,.9,.3,1.25) both !important;
+  position: relative; overflow: hidden;
+}
+.toast::before { content: '✅'; font-size: 15px; }
+.toast.error::before { content: '⚠️'; }
+.toast::after {
+  content: ''; position: absolute; left: 0; bottom: 0; height: 3px; width: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  animation: toastLife 4.2s linear both;
+}
+.toast.error::after { background: linear-gradient(90deg, #ed4245, #f97316); }
+@keyframes toastIn { from { opacity: 0; transform: translateY(14px) scale(.94); } to { opacity: 1; transform: none; } }
+@keyframes toastLife { from { width: 100%; } to { width: 0; } }

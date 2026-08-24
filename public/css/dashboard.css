@@ -704,3 +704,97 @@ body::-webkit-scrollbar-thumb:hover { background: #3a3f5c; background-clip: cont
   background: #313338; border: 1px solid #1E1F22; border-radius: 12px;
   padding: 14px 16px;
 }
+
+/* ============================================================
+   🚀 HOXERA v3.2 — palette Ctrl+K, accents, squelettes, finitions
+   ============================================================ */
+
+/* 🔍 Palette de commandes */
+.dash-palette-overlay {
+  position: fixed; inset: 0; z-index: 400;
+  background: rgba(8, 9, 14, .68); backdrop-filter: blur(6px);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 12vh 16px 0; animation: dashIn .15s ease both;
+}
+.dash-palette {
+  width: 100%; max-width: 560px;
+  background: var(--d-card); border: 1px solid rgba(88,101,242,.4);
+  border-radius: 18px; overflow: hidden;
+  box-shadow: 0 30px 90px -20px rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,.03) inset;
+  animation: palettePop .18s cubic-bezier(.2,.9,.3,1.2) both;
+}
+@keyframes palettePop { from { transform: scale(.96) translateY(-8px); opacity: 0; } to { transform: none; opacity: 1; } }
+.dash-palette input {
+  width: 100%; background: transparent; border: none; outline: none;
+  color: var(--d-text); font-size: 15.5px; font-family: inherit;
+  padding: 17px 20px; border-bottom: 1px solid var(--d-border);
+}
+.dp-list { max-height: 330px; overflow-y: auto; padding: 7px; }
+.dp-item {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  background: none; border: none; color: var(--d-text); font-family: inherit;
+  padding: 11px 13px; border-radius: 11px; cursor: pointer; text-align: left; font-size: 14px;
+}
+.dp-item.sel { background: linear-gradient(90deg, rgba(88,101,242,.22), rgba(139,92,246,.08)); box-shadow: inset 0 0 0 1px rgba(88,101,242,.35); }
+.dp-ico { width: 30px; height: 30px; border-radius: 9px; background: rgba(255,255,255,.05); display: inline-flex; align-items: center; justify-content: center; font-size: 15px; }
+.dp-label { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dp-sub { font-size: 11px; color: var(--d-dim); }
+.dp-hint { padding: 9px 18px; font-size: 11px; color: var(--d-dim); border-top: 1px solid var(--d-border); }
+.dp-empty { padding: 22px; text-align: center; color: var(--d-dim); font-size: 13px; }
+
+/* 🔘 Boutons-icônes de la topbar */
+.dash-iconbtn {
+  width: 38px; height: 38px; border-radius: 11px; cursor: pointer;
+  background: var(--d-card2); border: 1px solid var(--d-border);
+  color: var(--d-text); font-size: 15px; display: inline-flex;
+  align-items: center; justify-content: center; transition: .15s; font-family: inherit;
+}
+.dash-iconbtn:hover { border-color: var(--d-accent); transform: translateY(-1px); box-shadow: 0 6px 16px -8px var(--d-glow); }
+.dash-iconbtn:active { transform: scale(.94); }
+
+/* 🎨 Sélecteur d'accent */
+.dash-accent-wrap { position: relative; }
+.dash-accent-pop {
+  position: absolute; top: 46px; right: 0; z-index: 200;
+  display: flex; gap: 8px; padding: 10px 12px;
+  background: var(--d-card); border: 1px solid var(--d-border); border-radius: 12px;
+  box-shadow: 0 16px 40px -14px rgba(0,0,0,.8);
+  animation: palettePop .15s ease both;
+}
+.acc-dot {
+  width: 26px; height: 26px; border-radius: 50%; border: 2px solid rgba(255,255,255,.15);
+  cursor: pointer; transition: .12s;
+}
+.acc-dot:hover { transform: scale(1.2); border-color: #fff; }
+
+/* 💀 Squelettes de chargement (perception de vitesse) */
+.dash-skeleton { animation: dashIn .2s ease both; }
+.sk-header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+.sk-ico { width: 46px; height: 46px; border-radius: 13px; }
+.sk-ico, .sk-line, .sk-stat {
+  background: linear-gradient(90deg, var(--d-card2) 25%, #262a40 50%, var(--d-card2) 75%);
+  background-size: 200% 100%; animation: skShine 1.3s linear infinite;
+}
+@keyframes skShine { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.sk-line { height: 13px; border-radius: 7px; margin: 9px 0; }
+.sk-line.thin { height: 9px; opacity: .6; }
+.sk-line.w25 { width: 25%; } .sk-line.w30 { width: 30%; } .sk-line.w40 { width: 40%; }
+.sk-line.w50 { width: 50%; } .sk-line.w60 { width: 60%; } .sk-line.w75 { width: 75%; }
+.sk-line.w80 { width: 80%; } .sk-line.w90 { width: 90%; }
+.sk-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 18px; }
+.sk-stat { height: 74px; border-radius: 14px; }
+.sk-card { border: 1px solid var(--d-border); border-radius: 16px; padding: 18px 20px; margin-bottom: 16px; background: var(--d-card); }
+
+/* 💬 Infobulles (data-tip) */
+[data-tip] { position: relative; }
+[data-tip]:hover::after {
+  content: attr(data-tip); position: absolute; bottom: calc(100% + 8px); left: 50%;
+  transform: translateX(-50%); white-space: nowrap; z-index: 300;
+  background: #0b0c14; color: var(--d-text); font-size: 11.5px; font-weight: 600;
+  border: 1px solid var(--d-border); border-radius: 8px; padding: 6px 10px;
+  box-shadow: 0 8px 20px -8px rgba(0,0,0,.8); pointer-events: none;
+  animation: dashIn .12s ease both;
+}
+
+/* Sélection de texte aux couleurs du thème */
+::selection { background: rgba(88,101,242,.4); color: #fff; }

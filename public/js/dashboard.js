@@ -249,6 +249,88 @@ Dashboard.refresh = () => {
   Dashboard.renderContent(shell.querySelector('#dash-content'));
 };
 
+// ---------------------- 🔍 Palette de commandes (Ctrl+K) ----------------------
+// Le raccourci des pros : cherche un module ou un serveur et saute dessus.
+Dashboard.openPalette = () => {
+  if (document.querySelector('#dash-palette')) return;
+  const guilds = (Dashboard.state.discordGuilds || []).filter((g) => g.hasBot && g.canManage);
+  const entries = [
+    ...Dashboard.MODULES.map(([id, ico, label]) => ({ kind: 'module', id, ico, label, sub: 'Module' })),
+    ...((App.state.user && App.state.user.is_admin) ? Dashboard.BOT_MODULES.map(([id, ico, label]) => ({ kind: 'module', id, ico, label, sub: 'Administration' })) : []),
+    ...guilds.map((g) => ({ kind: 'guild', id: g.id, ico: '🌍', label: g.name, sub: 'Changer de serveur' })),
+  ];
+  const ov = App.el(`
+    <div id="dash-palette" class="dash-palette-overlay">
+      <div class="dash-palette">
+        <input type="text" placeholder="Chercher un module ou un serveur…" />
+        <div class="dp-list"></div>
+        <div class="dp-hint">↑↓ naviguer · Entrée ouvrir · Échap fermer</div>
+      </div>
+    </div>`);
+  document.body.appendChild(ov);
+  const input = ov.querySelector('input');
+  const list = ov.querySelector('.dp-list');
+  let sel = 0; let shown = [];
+  const close = () => ov.remove();
+  const go = (e) => {
+    close();
+    if (!e) return;
+    if (e.kind === 'guild') Dashboard.selectGuild(e.id);
+    else Dashboard.setModule(e.id);
+  };
+  const renderList = () => {
+    const q = input.value.trim().toLowerCase();
+    shown = entries.filter((e) => !q || e.label.toLowerCase().includes(q)).slice(0, 9);
+    sel = Math.min(sel, Math.max(0, shown.length - 1));
+    list.innerHTML = '';
+    if (!shown.length) { list.appendChild(App.el(`<div class="dp-empty">Aucun résultat</div>`)); return; }
+    shown.forEach((e, i) => {
+      const row = App.el(`<button class="dp-item ${i === sel ? 'sel' : ''}"><span class="dp-ico">${e.ico}</span><span class="dp-label">${App.escapeHtml(e.label)}</span><span class="dp-sub">${e.sub}</span></button>`);
+      row.onclick = () => go(e);
+      row.onmouseenter = () => { sel = i; renderList(); };
+      list.appendChild(row);
+    });
+  };
+  input.oninput = () => { sel = 0; renderList(); };
+  input.onkeydown = (ev) => {
+    if (ev.key === 'Escape') { close(); }
+    else if (ev.key === 'ArrowDown') { ev.preventDefault(); sel = Math.min(sel + 1, shown.length - 1); renderList(); }
+    else if (ev.key === 'ArrowUp') { ev.preventDefault(); sel = Math.max(sel - 1, 0); renderList(); }
+    else if (ev.key === 'Enter') { ev.preventDefault(); go(shown[sel]); }
+  };
+  ov.onclick = (ev) => { if (ev.target === ov) close(); };
+  renderList();
+  setTimeout(() => input.focus(), 30);
+};
+if (!window.__hxPaletteKey) {
+  window.__hxPaletteKey = true;
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && Dashboard.state && Dashboard.state.shell) {
+      e.preventDefault();
+      Dashboard.openPalette();
+    }
+  });
+}
+
+// ---------------------- 🎨 Accent personnalisable ----------------------
+Dashboard.ACCENTS = [
+  ['Blurple', '#5865F2', '#8B5CF6'],
+  ['Océan', '#3B82F6', '#06B6D4'],
+  ['Émeraude', '#10B981', '#34D399'],
+  ['Sunset', '#F59E0B', '#EF4444'],
+  ['Rose', '#EC4899', '#8B5CF6'],
+  ['Rouge', '#EF4444', '#F97316'],
+];
+Dashboard.applyAccent = (name) => {
+  const acc = Dashboard.ACCENTS.find((a) => a[0] === name) || Dashboard.ACCENTS[0];
+  const r = document.documentElement;
+  r.style.setProperty('--d-accent', acc[1]);
+  r.style.setProperty('--d-accent2', acc[2]);
+  r.style.setProperty('--d-glow', acc[1] + '59');
+  try { localStorage.setItem('hx-accent', acc[0]); } catch {}
+};
+try { Dashboard.applyAccent(localStorage.getItem('hx-accent') || 'Blurple'); } catch {}
+
 // ---------------------- Barre du haut ----------------------
 Dashboard.renderTopbar = (topbar, discordGuilds) => {
   const bot = Dashboard.state.bot;
@@ -265,6 +347,14 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
       </div>
     </div>
     <div class="dash-topbar-actions">
+      <button class="dash-iconbtn" id="d-palette" data-tip="Recherche rapide (Ctrl+K)">🔍</button>
+      <button class="dash-iconbtn" id="d-refresh" data-tip="Actualiser le module">🔄</button>
+      <div class="dash-accent-wrap">
+        <button class="dash-iconbtn" id="d-accent" data-tip="Couleur du dashboard">🎨</button>
+        <div class="dash-accent-pop" hidden>
+          ${Dashboard.ACCENTS.map(([n, c1, c2]) => `<button class="acc-dot" data-acc="${n}" title="${n}" style="background:linear-gradient(135deg,${c1},${c2})"></button>`).join('')}
+        </div>
+      </div>
       ${needsInvite ? `<button class="dash-btn" id="d-invite2">➕ Ajouter le bot</button>` : ''}
       <div class="dash-bot-chip" title="${App.escapeHtml(bot.bot_username || bot.name)}">
         ${bot.avatar_url ? `<img src="${App.escapeHtml(bot.avatar_url)}" alt="" />` : '<span class="chip-fallback">🤖</span>'}
@@ -281,6 +371,14 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
   topbar.appendChild(mobilePick);
   const inviteBtn = topbar.querySelector('#d-invite2');
   if (inviteBtn) inviteBtn.onclick = () => App.openInvite(bot.invite_url);
+  topbar.querySelector('#d-palette').onclick = () => Dashboard.openPalette();
+  topbar.querySelector('#d-refresh').onclick = () => { App.toast('Module actualisé !'); Dashboard.refresh(); };
+  const accBtn = topbar.querySelector('#d-accent');
+  const accPop = topbar.querySelector('.dash-accent-pop');
+  accBtn.onclick = (e) => { e.stopPropagation(); accPop.hidden = !accPop.hidden; };
+  accPop.querySelectorAll('[data-acc]').forEach((d) => {
+    d.onclick = () => { Dashboard.applyAccent(d.dataset.acc); accPop.hidden = true; App.toast(`🎨 Thème « ${d.dataset.acc} » appliqué !`); };
+  });
 };
 
 // ---------------------- Chargement serveur ----------------------
@@ -359,7 +457,13 @@ Dashboard.watchDirty = (content) => {
 Dashboard.renderContent = async (content) => {
   if (!content) return;
   const { bot, guildId, module } = Dashboard.state;
-  content.innerHTML = '<div class="spinner"></div>';
+  content.innerHTML = `
+    <div class="dash-skeleton">
+      <div class="sk-header"><div class="sk-ico"></div><div style="flex:1"><div class="sk-line w40"></div><div class="sk-line w60 thin"></div></div></div>
+      <div class="sk-stats"><div class="sk-stat"></div><div class="sk-stat"></div><div class="sk-stat"></div></div>
+      <div class="sk-card"><div class="sk-line w30"></div><div class="sk-line w90 thin"></div><div class="sk-line w75 thin"></div><div class="sk-line w50 thin"></div></div>
+      <div class="sk-card"><div class="sk-line w25"></div><div class="sk-line w80 thin"></div></div>
+    </div>`;
   // 💾 Nouveau module = page propre : barre de sauvegarde masquée + surveillance
   Dashboard.hideSaveBar();
   if (!content.dataset.dirtyWatched) { Dashboard.watchDirty(content); content.dataset.dirtyWatched = '1'; }
