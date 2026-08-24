@@ -499,6 +499,27 @@ try {
     db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(migrationKey, 'done');
   }
 } catch (e) {}
+// Les anciennes lignes avaient été numérotées 3/2, 4/2… car elles ne
+// connaissaient pas encore les cycles. On les renumérote une seule fois dans
+// leur cycle réel ; aucune ligne d'historique n'est supprimée.
+try {
+  const migrationKey = 'migration_auto_warning_number_v2';
+  const alreadyMigrated = db.prepare('SELECT value FROM settings WHERE key = ?').get(migrationKey);
+  if (!alreadyMigrated) {
+    const usersWithWarnings = db.prepare('SELECT DISTINCT bot_id, guild_id, user_id FROM warnings').all();
+    const readWarnings = db.prepare('SELECT id, action FROM warnings WHERE bot_id = ? AND guild_id = ? AND user_id = ? ORDER BY id ASC');
+    const renumber = db.prepare('UPDATE warnings SET warning_no = ? WHERE id = ?');
+    for (const w of usersWithWarnings) {
+      let active = 0;
+      for (const row of readWarnings.all(w.bot_id, w.guild_id, w.user_id)) {
+        active += 1;
+        renumber.run(active, row.id);
+        if (['timeout', 'kick', 'ban'].includes(row.action)) active = 0;
+      }
+    }
+    db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(migrationKey, 'done');
+  }
+} catch (e) {}
 // Messages publics d'avertissement : suppression à 24 h, persistante même
 // après un redémarrage Render.
 try { db.exec(`CREATE TABLE IF NOT EXISTS automod_warning_messages (
