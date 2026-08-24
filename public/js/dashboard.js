@@ -1422,7 +1422,7 @@ Dashboard.renderers.moderation = async (content, data) => {
     </div>
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--d-dim);margin-top:10px"><input type="checkbox" id="am-staff" ${s.am_ignore_staff !== 0 ? 'checked' : ''} /> Ignorer les admins et modérateurs</label>
     <div class="desc" style="margin:8px 0 0">💡 Pour tester : décoche « Ignorer les admins » — sinon tes propres messages ne sont jamais filtrés (protection par défaut).</div>
-    <label class="dash-label" style="margin-top:12px">Message d'avertissement en MP (vide = standard)</label>
+    <label class="dash-label" style="margin-top:12px">Message privé d'avertissement (vide = standard)</label>
     <input class="dash-input" id="am-warn" value="${App.escapeHtml(s.am_warn_text || '')}" placeholder="Vide = message standard traduit FR/EN. Variables : {reason} et {server}." />
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
       <div style="flex:1;min-width:110px"><label class="dash-label">Timeout spam (minutes)</label><input class="dash-input" id="am-timeout" type="number" min="1" max="1440" value="${s.am_timeout_min ?? 5}" /></div>
