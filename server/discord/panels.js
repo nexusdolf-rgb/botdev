@@ -658,15 +658,16 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
   // tapés à la main dans le dashboard — un seul tiret de différence et
   // l'ancienne comparaison stricte créait une CATÉGORIE CLONE en haut du
   // serveur. On compare désormais le « cœur » du nom (lettres/chiffres).
+  // 🚫 RÈGLE ABSOLUE (v3.6) : le bot ne crée JAMAIS de catégorie. Jamais.
+  //  1. catégorie configurée retrouvée (correspondance floue) → le ticket y va ;
+  //  2. sinon catégorie du panneau → le ticket y va, sous le panneau ;
+  //  3. sinon (panneau hors catégorie) → le ticket est créé SANS catégorie,
+  //     positionné juste à côté du panneau. Aucune catégorie fantôme possible.
   let parent = findCategoryFuzzy(guild, catName);
-  if (!parent && panelParent) parent = panelParent;
-  if (!parent && catName && !panelParent) {
-    // Dernier recours ABSOLU (panneau hors catégorie ET catégorie introuvable)
-    try {
-      parent = await guild.channels.create({ name: catName, type: ChannelType.GuildCategory });
-      if (parent && panelChannel) await parent.setPosition(Math.max(0, (panelChannel.rawPosition || 0))).catch(() => {});
-    } catch {}
-  }
+  let placeRule = parent ? `catégorie configurée « ${parent.name} »` : '';
+  if (!parent && panelParent) { parent = panelParent; placeRule = `catégorie du panneau « ${panelParent.name} »`; }
+  if (!parent) placeRule = 'sans catégorie, à côté du panneau';
+  console.log(`[Hoxera] 🎫 placement du ticket : ${placeRule}${catName ? ` (config : « ${catName} »)` : ''}`);
 
   const allow = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles, PermissionFlagsBits.EmbedLinks];
   const perms = [
@@ -691,7 +692,7 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
   // 📍 Si le ticket est dans la MÊME catégorie que le panneau : on le place
   // JUSTE SOUS le salon du panneau — le staff le voit apparaître immédiatement.
   try {
-    if (panelChannel && channel.parentId && panelChannel.parentId === channel.parentId) {
+    if (panelChannel && (channel.parentId || null) === (panelChannel.parentId || null)) {
       await channel.setPosition(panelChannel.position + 1);
     }
   } catch { /* le placement ne doit jamais faire échouer l'ouverture */ }

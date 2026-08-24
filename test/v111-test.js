@@ -42,8 +42,9 @@ console.log('✅ recherche floue : 3 ou 4 tirets, décoré ou pas — la VRAIE c
 // 3. La création de catégorie est désormais un DERNIER RECOURS ABSOLU
 const src = fs.readFileSync(__dirname + '/../server/discord/panels.js', 'utf8');
 assert.ok(src.includes('findCategoryFuzzy(guild, catName)'), 'résolution floue branchée');
-assert.ok(src.includes('!parent && catName && !panelParent'), 'création SEULEMENT si panneau hors catégorie ET catégorie introuvable');
-assert.ok(src.includes('if (!parent && panelParent) parent = panelParent;'), 'repli : catégorie du panneau');
-console.log('✅ plus JAMAIS de catégorie clone : repli sur la catégorie du panneau, création = dernier recours absolu');
+// 🚫 v3.6 : ZÉRO création de catégorie dans TOUT le fichier
+assert.ok(!src.includes('type: ChannelType.GuildCategory }'), 'le bot ne peut PLUS créer de catégorie — nulle part');
+assert.ok(src.includes('placement du ticket'), 'règle de placement tracée dans les logs');
+console.log('✅ création de catégorie SUPPRIMÉE du code : catégorie fantôme structurellement impossible');
 
 console.log('\n🎉 Tous les tests v3.4 passent');

@@ -15,21 +15,20 @@ const src = fs.readFileSync(__dirname + '/../server/discord/panels.js', 'utf8');
 // 1. La logique de placement est présente et dans le BON ordre
 const block = src.slice(src.indexOf('Placement du salon (v2.4)'), src.indexOf('const allow = [PermissionFlagsBits.ViewChannel'));
 assert.ok(block.length > 100, 'bloc de placement présent avant les permissions');
-assert.ok(block.includes('if (!parent && panelParent) parent = panelParent;'), 'repli : catégorie du panneau');
+assert.ok(block.includes('if (!parent && panelParent) { parent = panelParent;'), 'repli : catégorie du panneau');
 const idxExisting = block.indexOf('findCategoryFuzzy(guild, catName)');
 const idxPanel = block.indexOf('if (!parent && panelParent)');
-const idxCreate = block.indexOf('guild.channels.create({ name: catName, type: ChannelType.GuildCategory })');
-assert.ok(idxExisting !== -1 && idxExisting < idxPanel && idxPanel < idxCreate,
-  'ordre correct : catégorie existante (résolution FLOUE) → catégorie du panneau → création en dernier recours');
-console.log('✅ ordre de placement : existante (floue) → panneau → création (dernier recours)');
+assert.ok(idxExisting !== -1 && idxPanel !== -1 && idxExisting < idxPanel,
+  'ordre correct : catégorie existante (résolution FLOUE) → catégorie du panneau');
+console.log('✅ ordre de placement : existante (floue) → panneau → à côté du panneau');
 
-// 2. La création est réservée au cas « panneau hors catégorie »
-assert.ok(block.includes('!parent && catName && !panelParent'), 'création uniquement si le panneau est hors catégorie');
-console.log('✅ création de catégorie = dernier recours absolu (jamais de clone)');
+// 2. v3.6 : AUCUNE création de catégorie possible
+assert.ok(!block.includes('guild.channels.create({ name: catName'), 'aucune création de catégorie dans le placement');
+console.log('✅ création de catégorie totalement supprimée');
 
 // 3. Ticket placé juste sous le salon du panneau (même catégorie)
 assert.ok(src.includes('channel.setPosition(panelChannel.position + 1)'), 'ticket sous le salon du panneau');
-assert.ok(src.includes('panelChannel.parentId === channel.parentId'), 'uniquement si même catégorie');
+assert.ok(src.includes('(channel.parentId || null) === (panelChannel.parentId || null)'), 'même catégorie OU tous deux hors catégorie');
 console.log('✅ ticket placé juste sous le salon du panneau quand même catégorie');
 
 // 4. Le placement ne casse jamais l'ouverture (try/catch autour du setPosition)
