@@ -766,8 +766,8 @@ const tickets = {
   get: (botId, guildId) => db.prepare('SELECT * FROM tickets WHERE bot_id = ? AND guild_id = ?').get(botId, guildId) || null,
   set: (botId, guildId, cfg) => {
     const types = typeof cfg.types === 'string' ? cfg.types : JSON.stringify(Array.isArray(cfg.types) ? cfg.types : []);
-    return db.prepare(`INSERT INTO tickets (bot_id, guild_id, name, channel, message, button_label, button_style, support_role, category, types, require_reason, max_one)
-      VALUES (@bot_id, @guild_id, @name, @channel, @message, @button_label, @button_style, @support_role, @category, @types, @require_reason, @max_one)
+    return db.prepare(`INSERT INTO tickets (bot_id, guild_id, name, channel, message, button_label, button_style, support_role, category, types, require_reason, max_one, menu_channel, menu_message)
+      VALUES (@bot_id, @guild_id, @name, @channel, @message, @button_label, @button_style, @support_role, @category, @types, @require_reason, @max_one, @menu_channel, @menu_message)
       ON CONFLICT(bot_id, guild_id) DO UPDATE SET
         name = excluded.name,
         channel = excluded.channel,
@@ -778,8 +778,10 @@ const tickets = {
         category = excluded.category,
         types = excluded.types,
         require_reason = excluded.require_reason,
-        max_one = excluded.max_one`).run({
-          bot_id: botId, guild_id: guildId, name: '', channel: '', message: '', button_label: '', button_style: '1', support_role: '', category: '', require_reason: 1, max_one: 0, ...cfg,
+        max_one = excluded.max_one,
+        menu_channel = excluded.menu_channel,
+        menu_message = excluded.menu_message`).run({
+          bot_id: botId, guild_id: guildId, name: '', channel: '', message: '', button_label: '', button_style: '1', support_role: '', category: '', require_reason: 1, max_one: 0, menu_channel: '', menu_message: '', ...cfg,
           button_style: String(['1','2','3','4'].includes(String(cfg.button_style)) ? cfg.button_style : '1'),
           require_reason: (cfg.require_reason === 0 || cfg.require_reason === false) ? 0 : 1,
           max_one: cfg.max_one ? 1 : 0,
@@ -1130,6 +1132,9 @@ const inviteJoins = {
 
 // v2.3 — 📔 Journal des tickets (récap staff à la fermeture)
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN ticket_log_channel TEXT DEFAULT ''"); } catch (e) {}
+// v3.5 — panneau MENU déroulant indépendant du panneau BOUTON
+try { db.exec("ALTER TABLE tickets ADD COLUMN menu_channel TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE tickets ADD COLUMN menu_message TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE open_tickets ADD COLUMN open_reason TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec(`CREATE TABLE IF NOT EXISTS ticket_log_msgs (
   bot_id INTEGER NOT NULL, guild_id TEXT NOT NULL, number INTEGER NOT NULL,

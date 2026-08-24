@@ -57,18 +57,22 @@ const check = (label, cond) => {
 
   // ---------- 2bis. Nettoyage : un seul panneau à la fois ----------
   const deleted = [];
-  const mkMsg = (id, title) => ({ id, embeds: title ? [{ title }] : [], delete: async () => { deleted.push(id); } });
+  const mkMsg = (id, title, comps) => ({ id, embeds: title ? [{ title }] : [], components: comps || [], delete: async () => { deleted.push(id); } });
   const oldChannel = {
     id: 'C2', name: 'support',
     messages: { fetch: async () => ({ values: () => [
-      mkMsg('m1', '👑 Support | Nexora'),
+      mkMsg('m1', '👑 Support | Nexora', [{ components: [{ customId: 'bd-ttype:1' }] }]),
       mkMsg('m2', 'Un message normal'),
       mkMsg('m3', '👑 Support | Carré RP'),
     ] }) },
     send: async () => ({}),
   };
   await panels.sendTicketPanel(BOT, G, null, oldChannel);
-  check('nettoyage : les 2 anciens panneaux sont supprimés', deleted.includes('m1') && deleted.includes('m3'));
+  // v3.5 : cohabitation — le nouveau panneau (MENU, car des types existent)
+  // remplace l'ancien panneau MENU (m1) mais LAISSE le panneau bouton (m3).
+  check('nettoyage ciblé : l\'ancien panneau MENU est remplacé', deleted.includes('m1'));
+  check('cohabitation : le panneau BOUTON voisin est conservé', !deleted.includes('m3'));
+  check('les messages normaux ne sont jamais touchés', !deleted.includes('m2'));
   check('nettoyage : le message normal est conservé', !deleted.includes('m2'));
 
   // ---------- 3. La logique est INTACTE : sélection → questionnaire → ticket ----------

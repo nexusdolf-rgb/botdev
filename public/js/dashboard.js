@@ -832,8 +832,39 @@ Dashboard.renderers.tickets = async (content, data) => {
 
     <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
       <button class="dash-btn dash-btn-primary" id="t-save">💾 Enregistrer</button>
-      <button class="dash-btn" id="t-send">📨 Envoyer le panneau</button>
+      <button class="dash-btn" id="t-send">📨 Envoyer le panneau BOUTON</button>
+    </div>
+    <div style="font-size:12px;color:var(--d-dim);margin-top:8px">🔘 Le panneau BOUTON = un simple bouton (ouvre un ticket du premier type). Le panneau MENU déroulant se configure dans la carte dédiée en dessous.</div>`;
+
+  // 🗂️ Carte PANNEAU MENU DÉROULANT — indépendante du panneau bouton :
+  // son salon, son message, son 💾 et son 📨.
+  const cm = Dashboard.card(root, '🗂️ Panneau MENU déroulant', 'Le panneau avec la liste des types de tickets (menu déroulant). Indépendant du panneau bouton : chacun son salon, son message, ses boutons.');
+  const menuChanOpts = ['<option value="">— Même salon que le panneau bouton —</option>']
+    .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${String(t.menu_channel || '') === '#' + ch.name ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`));
+  cm.innerHTML += `
+    <label class="dash-label">Salon du panneau menu</label>
+    <select class="dash-select" id="tm-channel">${menuChanOpts.join('')}</select>
+    <label class="dash-label">Message du panneau menu (vide = même message que le panneau bouton)</label>
+    <textarea class="dash-input" id="tm-msg" rows="3">${App.escapeHtml(t.menu_message || '')}</textarea>
+    <div style="font-size:12px;color:var(--d-dim);margin-top:6px">🗂️ Les types affichés dans le menu se gèrent dans la carte « Types de tickets ». Les deux panneaux peuvent cohabiter, même dans le même salon.</div>
+    <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
+      <button class="dash-btn dash-btn-primary" id="tm-save">💾 Enregistrer</button>
+      <button class="dash-btn" id="tm-send">📨 Envoyer le panneau MENU</button>
     </div>`;
+  cm.querySelector('#tm-save').onclick = async () => {
+    try {
+      await App.api(`/bots/${bot.id}/tickets`, { method: 'PUT', body: {
+        guild_id: guildId,
+        menu_channel: cm.querySelector('#tm-channel').value,
+        menu_message: cm.querySelector('#tm-msg').value,
+      }});
+      App.toast('Panneau menu enregistré !');
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+  cm.querySelector('#tm-send').onclick = async () => {
+    try { await App.api(`/bots/${bot.id}/tickets/send`, { method: 'POST', body: { guild_id: guildId, mode: 'menu' } }); App.toast('Panneau MENU envoyé !'); }
+    catch (e) { App.toast(e.message, 'error'); }
+  };
 
   // Rafraîchit l'état affiché (re-query : innerHTML += a recréé le DOM)
   const renderStatus = () => {
@@ -887,7 +918,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     } catch (e) { App.toast(e.message, 'error'); }
   };
   c.querySelector('#t-send').onclick = async () => {
-    try { await App.api(`/bots/${bot.id}/tickets/send`, { method: 'POST', body: { guild_id: guildId } }); App.toast('Panneau envoyé !'); }
+    try { await App.api(`/bots/${bot.id}/tickets/send`, { method: 'POST', body: { guild_id: guildId, mode: 'button' } }); App.toast('Panneau BOUTON envoyé !'); }
     catch (e) { App.toast(e.message, 'error'); }
   };
 

@@ -1202,7 +1202,7 @@ router.get('/bots/:id/panels', requireAuth, async (req, res) => {
 router.put('/bots/:id/tickets', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
   if (!bot) return;
-  const { guild_id, name, channel, message, button_label, button_style, require_reason, support_role, category, types } = req.body || {};
+  const { guild_id, name, channel, message, button_label, button_style, require_reason, support_role, category, types, menu_channel, menu_message } = req.body || {};
   if (!guild_id) return res.status(400).json({ error: 'guild_id requis' });
   if (!(await userCanManageGuild(req, guild_id))) return res.status(403).json({ error: 'Permission refusée.' });
   const current = store.tickets.get(bot.id, guild_id) || {};
@@ -1215,6 +1215,8 @@ router.put('/bots/:id/tickets', requireAuth, async (req, res) => {
     require_reason: (require_reason === 0 || require_reason === false) ? 0 : (require_reason === undefined ? (current.require_reason === 0 ? 0 : 1) : 1),
     support_role: String(support_role !== undefined ? support_role : (current.support_role || '')).slice(0, 100),
     category: String(category !== undefined ? category : (current.category || 'Tickets')).slice(0, 100),
+    menu_channel: String(menu_channel !== undefined ? menu_channel : (current.menu_channel || '')).slice(0, 100),
+    menu_message: String(menu_message !== undefined ? menu_message : (current.menu_message || '')).slice(0, 1900),
   };
   if (types !== undefined) {
     payload.types = JSON.stringify((Array.isArray(types) ? types : [])
@@ -1246,19 +1248,21 @@ router.put('/bots/:id/tickets', requireAuth, async (req, res) => {
 router.post('/bots/:id/tickets/send', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
   if (!bot) return;
-  const { guild_id } = req.body || {};
+  const { guild_id, mode } = req.body || {};
   if (!guild_id) return res.status(400).json({ error: 'guild_id requis' });
   if (!(await userCanManageGuild(req, guild_id))) return res.status(403).json({ error: 'Permission refusée.' });
   if (!botManager.isOnline(bot.id)) return res.status(400).json({ error: 'Démarre le bot avant d\'envoyer un panneau.' });
   const cfg = store.tickets.get(bot.id, guild_id);
-  if (!cfg || !cfg.channel) return res.status(400).json({ error: 'Configure d\'abord le salon du panneau.' });
+  const panelMode = ['button', 'menu'].includes(mode) ? mode : 'auto';
+  const chanCfg = panelMode === 'menu' ? (cfg && (cfg.menu_channel || cfg.channel)) : (cfg && cfg.channel);
+  if (!cfg || !chanCfg) return res.status(400).json({ error: 'Configure d\'abord le salon du panneau.' });
   const entry = botManager.clients.get(bot.id);
   const guild = entry.client.guilds.cache.get(guild_id);
   if (!guild) return res.status(400).json({ error: 'Le bot n\'est pas sur ce serveur.' });
   try {
-    const channel = panels.findChannelInGuild(guild, cfg.channel);
+    const channel = panels.findChannelInGuild(guild, chanCfg);
     if (!channel) return res.status(400).json({ error: 'Salon introuvable. Vérifie le salon (mention #salon ou nom).' });
-    await panels.sendTicketPanel(bot.id, guild_id, entry.client, channel);
+    await panels.sendTicketPanel(bot.id, guild_id, entry.client, channel, panelMode);
     res.json({ ok: true });
   } catch (e) {
     res.status(400).json({ error: e.message.slice(0, 200) });

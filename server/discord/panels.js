@@ -325,7 +325,7 @@ function buildTicketPanelEmbed(cfg, client, types, serverName = '', guildId = ''
 
 // 🧹 Nettoie les anciens panneaux de tickets du salon (titre « 👑 Support | »)
 // pour qu'il n'y ait TOUJOURS qu'un seul panneau : le plus récent.
-async function pruneOldPanels(channel) {
+async function pruneOldPanels(channel, kind = '') {
   try {
     if (!channel || !channel.messages || typeof channel.messages.fetch !== 'function') return;
     const fetched = await channel.messages.fetch({ limit: 25 });
@@ -333,18 +333,33 @@ async function pruneOldPanels(channel) {
       try {
         const emb = msg.embeds && msg.embeds[0];
         const title = emb && emb.title;
-        if (title && String(title).startsWith('👑 Support |') && typeof msg.delete === 'function') {
-          await msg.delete();
+        if (!title || !String(title).startsWith('👑 Support |') || typeof msg.delete !== 'function') continue;
+        // 🎛️ On ne supprime que les panneaux du MÊME genre : le panneau
+        // bouton et le panneau menu peuvent vivre côte à côte.
+        if (kind) {
+          const ids = JSON.stringify(msg.components || '');
+          const isMenu = ids.includes('bd-ttype');
+          if (kind === 'menu' && !isMenu) continue;
+          if (kind === 'button' && isMenu) continue;
         }
+        await msg.delete();
       } catch {}
     }
   } catch {}
 }
 
-async function sendTicketPanel(botId, guildId, client, channel) {
+async function sendTicketPanel(botId, guildId, client, channel, mode = 'auto') {
   const cfg = store.tickets.get(botId, guildId);
   if (!cfg) throw new Error('Configuration des tickets introuvable');
-  const types = normalizeTypes(cfg);
+  let types = normalizeTypes(cfg);
+  // 🎛️ v3.5 : DEUX panneaux indépendants.
+  //  - 'button' : bouton simple UNIQUEMENT (même si des types existent)
+  //  - 'menu'   : menu déroulant des types UNIQUEMENT (exige des types)
+  //  - 'auto'   : ancien comportement (menu si types, sinon bouton)
+  if (mode === 'button') types = [];
+  if (mode === 'menu' && !types.length) throw new Error('Crée d\'abord des types de tickets (le menu déroulant en a besoin).');
+  const useMenuMsg = mode === 'menu' && String(cfg.menu_message || '').trim();
+  const cfgForEmbed = useMenuMsg ? { ...cfg, message: cfg.menu_message } : cfg;
   const rows = [];
   if (types.length) {
     // Des types existent : seul le menu déroulant est affiché (pas de bouton en dessous).
@@ -382,12 +397,13 @@ async function sendTicketPanel(botId, guildId, client, channel) {
     serverName = String(guild.name).slice(0, 100);
     try { store.guildSettings.set(botId, guildId, { panel_name: serverName }); } catch {}
   }
-  // 🧹 Un seul panneau à la fois : on efface les anciens avant d'envoyer
-  try { await pruneOldPanels(channel); } catch {}
+  // 🧹 Un seul panneau DU MÊME TYPE à la fois : le panneau bouton et le
+  // panneau menu peuvent cohabiter (même dans le même salon).
+  try { await pruneOldPanels(channel, types.length ? 'menu' : 'button'); } catch {}
 
   // 🖼️ Envoi immédiat : la bannière STATIQUE est générée par la route
   // (~1 s, mise en cache) — aucune attente, aucune charge ici.
-  const payload = { embeds: [buildTicketPanelEmbed(cfg, client, types, serverName, guildId)], components: rows };
+  const payload = { embeds: [buildTicketPanelEmbed(cfgForEmbed, client, types, serverName, guildId)], components: rows };
   if (guild) {
     await identity.sendAsProfile(client, botId, guild, channel, payload);
   } else {
