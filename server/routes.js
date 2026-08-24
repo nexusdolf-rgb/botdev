@@ -1365,6 +1365,10 @@ router.put('/bots/:id/guilds/:guildId/advanced-tickets', requireAuth, async (req
       button_label: String(t.button_label || '').trim().slice(0, 80),
       emoji: safeEmojiWeb(t.emoji).slice(0, 100),
       description: String(t.description || '').trim().slice(0, 100),
+      questions: (Array.isArray(t.questions) ? t.questions : [])
+        .map((q) => String(q).trim().slice(0, 45))
+        .filter(Boolean)
+        .slice(0, 5),
       category: String(t.category || '').trim().slice(0, 100),
       color: /^#[0-9a-fA-F]{6}$/.test(String(t.color || '')) ? String(t.color) : '#5865F2',
       button_style: ['1', '2', '3', '4'].includes(String(t.button_style)) ? String(t.button_style) : '1',

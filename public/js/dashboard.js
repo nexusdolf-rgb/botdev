@@ -1120,9 +1120,10 @@ Dashboard.renderers.tickets = async (content, data) => {
     message: String(adv.message || ''),
     image_url: String(adv.image_url || 'https://hoxera.is-a.dev/icons/support-banner.png'),
     require_reason: adv.require_reason === 0 ? 0 : 1,
-    types: (Array.isArray(adv.types) && adv.types.length ? adv.types : [{ id: 't1', label: 'Support', emoji: '🎫', button_label: '', description: 'Demande générale au staff', category: '', color: '#5865F2', button_style: '1', staff_roles: [] }]).map((x, i) => ({
+    types: (Array.isArray(adv.types) && adv.types.length ? adv.types : [{ id: 't1', label: 'Support', emoji: '🎫', button_label: '', description: 'Demande générale au staff', category: '', questions: [], color: '#5865F2', button_style: '1', staff_roles: [] }]).map((x, i) => ({
       id: String(x.id || `t${i + 1}`), label: String(x.label || ''), emoji: String(x.emoji || ''), button_label: String(x.button_label || ''),
       description: String(x.description || ''), category: String(x.category || ''),
+      questions: (Array.isArray(x.questions) ? x.questions : []).map((q) => String(q).trim()).filter(Boolean).slice(0, 5),
       color: /^#[0-9a-fA-F]{6}$/.test(String(x.color || '')) ? String(x.color) : '#5865F2',
       button_style: ['1', '2', '3', '4'].includes(String(x.button_style)) ? String(x.button_style) : '1',
       staff_roles: Array.isArray(x.staff_roles) ? [...x.staff_roles] : [],
@@ -1153,9 +1154,10 @@ Dashboard.renderers.tickets = async (content, data) => {
     <label class="dash-label">Message au-dessus du panneau (optionnel)</label>
     <textarea class="dash-input" id="adv-message" rows="2" maxlength="1900" placeholder="Choisis le service dont tu as besoin…">${App.escapeHtml(advancedData.message)}</textarea>
     <label style="display:flex;align-items:center;gap:9px;font-size:13px;color:var(--d-dim);margin-top:10px;cursor:pointer"><input type="checkbox" id="adv-reason" ${advancedData.require_reason ? 'checked' : ''} /> Demander une raison avant de créer le ticket</label>
+    <div style="font-size:11.5px;color:var(--d-dim);margin-top:5px">Chaque type peut aussi avoir son propre questionnaire. S'il y a moins de 5 questions, la raison est ajoutée dans la même fenêtre ; Discord limite une fenêtre à 5 champs.</div>
     <div style="margin-top:16px;padding:14px;border:1px solid rgba(88,101,242,.32);border-radius:14px;background:linear-gradient(135deg,rgba(88,101,242,.08),rgba(139,92,246,.04))">
       <div style="font-weight:800;font-size:14px">🗂️ Types du nouveau système</div>
-      <div style="font-size:12px;color:var(--d-dim);margin:4px 0 12px">Maximum 25 types Discord. Chaque type possède sa couleur d'embed et son style de bouton.</div>
+      <div style="font-size:12px;color:var(--d-dim);margin:4px 0 12px">Maximum 25 types Discord. Chaque type possède sa couleur, son bouton, ses rôles staff et jusqu'à 5 questions obligatoires.</div>
       <div id="adv-types"></div>
       <button class="dash-btn dash-btn-sm" id="adv-add-type" style="margin-top:8px">＋ Ajouter un type</button>
     </div>
@@ -1173,9 +1175,12 @@ Dashboard.renderers.tickets = async (content, data) => {
     const imageUrl = c3.querySelector('#adv-image').value.trim();
     const imagePreview = /^https:\/\//i.test(imageUrl) ? `<img src="${App.escapeHtml(imageUrl)}" alt="" style="display:block;width:100%;max-height:180px;object-fit:cover;border-radius:8px;margin-bottom:12px" />` : '';
     const validTypes = advancedData.types.filter((x) => x.label.trim());
+    const questionBadge = (x) => (x.questions && x.questions.length)
+      ? `<span style="display:inline-block;margin-left:6px;font-size:10px;background:rgba(88,101,242,.2);color:#AAB1FF;padding:1px 6px;border-radius:8px">❓ ${x.questions.length}</span>`
+      : '';
     const body = mode === 'menu'
-      ? `<div style="border:1px solid #1E1F22;border-radius:8px;padding:10px 12px;color:#A8ABAF">📋 Choisis un type…<div style="margin-top:8px">${validTypes.map((x) => `<div style="padding:6px 8px;border-top:1px solid #3f4147"><span style="color:${x.color}">●</span> ${App.escapeHtml(x.emoji || '🎫')} <b style="color:#DBDEE1">${App.escapeHtml(x.label)}</b><small style="display:block;margin-left:22px;color:#949BA4">${App.escapeHtml(x.description || 'Ouvrir un ticket en privé.')}</small></div>`).join('')}</div></div>`
-      : `<div style="display:flex;flex-direction:column;gap:8px">${validTypes.map((x) => `<div style="padding:9px 10px;border-left:4px solid ${x.color};border-top:1px solid #3f4147"><b style="display:block;color:#DBDEE1">${App.escapeHtml(x.emoji || '🎫')} ${App.escapeHtml(x.label)}</b><small style="display:block;color:#949BA4;margin:3px 0 7px">${App.escapeHtml(x.description || 'Ouvrir un ticket en privé.')}</small><span style="display:inline-flex;background:${advColorToStyle[x.button_style] || '#5865F2'};color:#fff;font-weight:700;padding:6px 10px;border-radius:6px">${App.escapeHtml(x.emoji || '🎫')} ${App.escapeHtml(x.button_label || ('Envoyer un ticket ' + x.label.toLowerCase()))}</span></div>`).join('') || '<span style="color:var(--d-dim)">Ajoute un type pour voir l’aperçu.</span>'}</div>`;
+      ? `<div style="border:1px solid #1E1F22;border-radius:8px;padding:10px 12px;color:#A8ABAF">📋 Choisis un type…<div style="margin-top:8px">${validTypes.map((x) => `<div style="padding:6px 8px;border-top:1px solid #3f4147"><span style="color:${x.color}">●</span> ${App.escapeHtml(x.emoji || '🎫')} <b style="color:#DBDEE1">${App.escapeHtml(x.label)}</b>${questionBadge(x)}<small style="display:block;margin-left:22px;color:#949BA4">${App.escapeHtml(x.description || 'Ouvrir un ticket en privé.')}</small></div>`).join('')}</div></div>`
+      : `<div style="display:flex;flex-direction:column;gap:8px">${validTypes.map((x) => `<div style="padding:9px 10px;border-left:4px solid ${x.color};border-top:1px solid #3f4147"><b style="display:block;color:#DBDEE1">${App.escapeHtml(x.emoji || '🎫')} ${App.escapeHtml(x.label)}${questionBadge(x)}</b><small style="display:block;color:#949BA4;margin:3px 0 7px">${App.escapeHtml(x.description || 'Ouvrir un ticket en privé.')}</small><span style="display:inline-flex;background:${advColorToStyle[x.button_style] || '#5865F2'};color:#fff;font-weight:700;padding:6px 10px;border-radius:6px">${App.escapeHtml(x.emoji || '🎫')} ${App.escapeHtml(x.button_label || ('Envoyer un ticket ' + x.label.toLowerCase()))}</span></div>`).join('') || '<span style="color:var(--d-dim)">Ajoute un type pour voir l’aperçu.</span>'}</div>`;
     c3.querySelector('#adv-preview').innerHTML = `<div class="dash-label" style="margin:0 0 7px">👀 Aperçu Discord</div><div style="background:#313338;border-radius:10px;padding:14px;color:#DBDEE1;font-size:13px">${imagePreview}<div style="font-weight:700;margin-bottom:10px">🎨 ${App.escapeHtml(c3.querySelector('#adv-name').value || 'Créer un ticket')}</div>${body}</div>`;
   };
   const advRenderTypes = () => {
@@ -1207,6 +1212,10 @@ Dashboard.renderers.tickets = async (content, data) => {
           <input class="dash-input" data-k="description" value="${App.escapeHtml(type.description)}" placeholder="Ex : demande privée au staff" maxlength="100" />
           <label class="dash-label">Texte du bouton (vide = « Envoyer un ticket + nom »)</label>
           <input class="dash-input" data-k="button_label" value="${App.escapeHtml(type.button_label)}" placeholder="Envoyer un ticket ${App.escapeHtml(type.label || 'support')}" maxlength="80" />
+          <label class="dash-label" style="margin-top:12px">❓ Questionnaire de ce type (réponses obligatoires — max 5)</label>
+          <div data-questions style="display:flex;flex-direction:column;gap:6px"></div>
+          <button class="dash-btn dash-btn-sm" data-addquestion style="margin-top:6px">＋ Ajouter une question</button>
+          <div style="color:var(--d-dim);font-size:10.5px;margin-top:5px">Au clic sur ce type, le membre devra répondre à ces questions avant la création du ticket.</div>
           <label class="dash-label">Rôles staff autorisés (sélection)</label>
           <div data-roles></div>
           <button class="dash-btn dash-btn-sm" data-addrole style="margin-top:6px">＋ Ajouter un rôle staff</button>
@@ -1228,11 +1237,41 @@ Dashboard.renderers.tickets = async (content, data) => {
         });
       };
       renderTypeRoles();
+      const questionsEl = row.querySelector('[data-questions]');
+      const renderTypeQuestions = () => {
+        questionsEl.innerHTML = '';
+        if (!type.questions.length) {
+          questionsEl.appendChild(App.el(`<div style="font-size:11.5px;color:var(--d-dim)">Aucune question — seule la raison générale sera demandée si elle est activée.</div>`));
+        }
+        type.questions.forEach((question, questionIndex) => {
+          const questionRow = App.el(`
+            <div style="display:flex;gap:7px;align-items:center">
+              <span style="font-size:11px;color:var(--d-dim);min-width:17px">${questionIndex + 1}.</span>
+              <input class="dash-input" value="${App.escapeHtml(question)}" placeholder="Ex : Quel est ton pseudo ?" maxlength="45" style="flex:1" />
+              <button class="dash-btn dash-btn-danger dash-btn-sm">🗑</button>
+            </div>`);
+          questionRow.querySelector('input').addEventListener('input', (event) => {
+            type.questions[questionIndex] = event.target.value;
+          });
+          questionRow.querySelector('button').onclick = () => {
+            type.questions.splice(questionIndex, 1);
+            renderTypeQuestions();
+            advRenderPreview();
+          };
+          questionsEl.appendChild(questionRow);
+        });
+      };
+      renderTypeQuestions();
       row.querySelectorAll('[data-k]').forEach((input) => {
         const event = input.type === 'color' || input.tagName === 'SELECT' ? 'change' : 'input';
         input.addEventListener(event, () => { type[input.dataset.k] = input.value; advRenderPreview(); });
       });
       row.querySelector('[data-addrole]').onclick = () => { type.staff_roles.push(''); renderTypeRoles(); };
+      row.querySelector('[data-addquestion]').onclick = () => {
+        if (type.questions.length >= 5) return App.toast('Maximum 5 questions par type.', 'error');
+        type.questions.push('');
+        renderTypeQuestions();
+      };
       row.querySelector('[data-del]').onclick = () => { advancedData.types.splice(index, 1); advRenderTypes(); advRenderPreview(); };
       advTypesEl.appendChild(row);
     });
@@ -1244,7 +1283,7 @@ Dashboard.renderers.tickets = async (content, data) => {
   c3.querySelector('#adv-mode').onchange = advRenderPreview;
   c3.querySelector('#adv-add-type').onclick = () => {
     if (advancedData.types.length >= 25) return App.toast('Discord limite ce panneau à 25 types.', 'error');
-    advancedData.types.push({ id: `t${Date.now()}`, label: '', emoji: '🎫', description: '', category: '', color: '#5865F2', button_style: '1', staff_roles: [] });
+    advancedData.types.push({ id: `t${Date.now()}`, label: '', emoji: '🎫', description: '', category: '', questions: [], color: '#5865F2', button_style: '1', staff_roles: [] });
     advRenderTypes(); advRenderPreview();
   };
   c3.querySelector('#adv-save').onclick = async () => {

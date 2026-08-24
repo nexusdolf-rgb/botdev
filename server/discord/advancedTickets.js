@@ -1,5 +1,5 @@
 // ============================================================
-// Hoxera — 🎨 Système de tickets personnalisés (v3.14)
+// Hoxera — 🎨 Système de tickets personnalisés (v3.16)
 // Système INDÉPENDANT de l'ancien module tickets :
 // - panneau en boutons simples OU menu déroulant ;
 // - affichage vertical professionnel façon panneau Discord ;
@@ -56,6 +56,9 @@ function normalizeType(raw = {}, index = 0) {
     button_label: String(raw.button_label || '').trim().slice(0, 80),
     emoji: String(raw.emoji || '').trim().slice(0, 100),
     description: String(raw.description || '').trim().slice(0, 100),
+    questions: Array.isArray(raw.questions)
+      ? raw.questions.map((q) => String(q).trim().slice(0, 45)).filter(Boolean).slice(0, 5)
+      : [],
     category: String(raw.category || '').trim().slice(0, 100),
     color: validColor(raw.color),
     button_style: ['1', '2', '3', '4'].includes(String(raw.button_style)) ? String(raw.button_style) : '1',
@@ -204,6 +207,42 @@ function advancedConfigForOpen(config, type) {
   };
 }
 
+// Discord limite une modale à cinq champs. Comme dans l'ancien système,
+// les questions du type et la raison générale sont donc réunies dans une
+// seule fenêtre lorsque cela tient (maximum quatre questions + la raison).
+const ADVANCED_MODAL_TTL = 10 * 60000;
+const pendingReasons = new Map();
+const pendingQuestionnaires = new Map();
+const pendingCombined = new Map();
+
+function pendingKey(botId, guildId, userId) {
+  return `${botId}:${guildId}:${userId}`;
+}
+
+function questionsFor(type) {
+  return type && Array.isArray(type.questions)
+    ? type.questions.map((q) => String(q).trim().slice(0, 45)).filter(Boolean).slice(0, 5)
+    : [];
+}
+
+function wantsReason(config) {
+  return !(config.require_reason === 0 || config.require_reason === false);
+}
+
+function fieldValue(interaction, customId) {
+  try {
+    return interaction.fields && typeof interaction.fields.getTextInputValue === 'function'
+      ? String(interaction.fields.getTextInputValue(customId) || '').trim()
+      : '';
+  } catch {
+    return '';
+  }
+}
+
+function expiredReply(interaction) {
+  return interaction.reply({ content: '⏰ Ta demande a expiré, réessaie depuis le panneau.', ephemeral: true }).catch(() => {});
+}
+
 function reasonModal(botId, panelId, type) {
   return new ModalBuilder()
     .setCustomId(`hx2-reason:${botId}:${panelId}:${type.id}`)
@@ -219,14 +258,59 @@ function reasonModal(botId, panelId, type) {
     ));
 }
 
-async function openForType(botId, interaction, config, type, reason = '') {
+function questionnaireModal(botId, panelId, type, questions) {
+  const modal = new ModalBuilder()
+    .setCustomId(`hx2-tquest:${botId}:${panelId}:${type.id}`)
+    .setTitle(`📝 ${type.label} — questionnaire`.slice(0, 45));
+  questions.forEach((question, index) => {
+    modal.addComponents(new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId(`q${index}`)
+        .setLabel(question)
+        .setPlaceholder('Écris ta réponse…')
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+        .setMaxLength(500),
+    ));
+  });
+  return modal;
+}
+
+function combinedModal(botId, panelId, type, questions) {
+  const modal = new ModalBuilder()
+    .setCustomId(`hx2-tcomb:${botId}:${panelId}:${type.id}`)
+    .setTitle(`📝 ${type.label} — ouverture`.slice(0, 45));
+  questions.forEach((question, index) => {
+    modal.addComponents(new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId(`q${index}`)
+        .setLabel(question)
+        .setPlaceholder('Écris ta réponse…')
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+        .setMaxLength(500),
+    ));
+  });
+  modal.addComponents(new ActionRowBuilder().addComponents(
+    new TextInputBuilder()
+      .setCustomId('reason')
+      .setLabel('📝 Pourquoi ouvres-tu ce ticket ?')
+      .setPlaceholder('Explique brièvement ta demande…')
+      .setStyle(TextInputStyle.Paragraph)
+      .setRequired(true)
+      .setMaxLength(1000),
+  ));
+  return modal;
+}
+
+async function openForType(botId, interaction, config, type, reason = '', answers = []) {
   const panels = require('./panels');
   try {
     if (!interaction.deferred && !interaction.replied && typeof interaction.deferReply === 'function') {
       await interaction.deferReply({ ephemeral: true });
     }
   } catch {}
-  await panels.openTicket(botId, interaction, type, reason, [], advancedConfigForOpen(config, type));
+  await panels.openTicket(botId, interaction, type, reason, answers, advancedConfigForOpen(config, type));
 }
 
 async function startTypeInteraction(botId, interaction, panelId, typeId) {
@@ -241,24 +325,88 @@ async function startTypeInteraction(botId, interaction, panelId, typeId) {
     await interaction.reply({ content: '⚠️ Ce type de ticket n\'existe plus. Le panneau doit être renvoyé.', ephemeral: true }).catch(() => {});
     return;
   }
-  if (config.require_reason) {
-    await interaction.showModal(reasonModal(botId, config.id, type));
-  } else {
-    await openForType(botId, interaction, config, type);
+
+  const questions = questionsFor(type);
+  const key = pendingKey(botId, guild.id, interaction.user.id);
+  const reason = wantsReason(config);
+  // Une modale unique : questions du type + raison générale, comme dans
+  // l'ancien système. C'est important : Discord interdit modale → modale.
+  if (questions.length && reason && questions.length < 5) {
+    pendingCombined.set(key, { botId, guildId: guild.id, panelId, type, questions, ts: Date.now() });
+    return interaction.showModal(combinedModal(botId, panelId, type, questions));
   }
+  if (questions.length) {
+    // Cinq questions remplissent déjà la limite Discord : la raison générale
+    // n'est pas ajoutée dans ce cas, exactement comme l'ancien système.
+    pendingQuestionnaires.set(key, { botId, guildId: guild.id, panelId, type, questions, ts: Date.now() });
+    return interaction.showModal(questionnaireModal(botId, panelId, type, questions));
+  }
+  if (reason) {
+    pendingReasons.set(key, { botId, guildId: guild.id, panelId, type, ts: Date.now() });
+    return interaction.showModal(reasonModal(botId, panelId, type));
+  }
+  return openForType(botId, interaction, config, type);
+}
+
+function currentAdvancedType(botId, interaction, panelId, typeId) {
+  const guild = interaction.guild;
+  const config = guild ? getConfig(botId, guild.id) : null;
+  const type = config && Number(config.id) === Number(panelId) ? typeById(config, typeId) : null;
+  return { config, type };
+}
+
+async function handleCombinedSubmit(botId, interaction, panelId, typeId) {
+  const guildId = interaction.guild && interaction.guild.id;
+  const key = pendingKey(botId, guildId, interaction.user.id);
+  const pending = pendingCombined.get(key);
+  pendingCombined.delete(key);
+  if (!pending || Date.now() - (pending.ts || 0) > ADVANCED_MODAL_TTL) return expiredReply(interaction);
+  const { config, type } = currentAdvancedType(botId, interaction, panelId, typeId);
+  if (!config || !type) {
+    await interaction.reply({ content: '⚠️ Ce type de ticket n\'est plus disponible.', ephemeral: true }).catch(() => {});
+    return;
+  }
+  const answers = pending.questions.map((question, index) => ({
+    q: String(question).slice(0, 45),
+    a: fieldValue(interaction, `q${index}`).slice(0, 500) || '—',
+  }));
+  const reason = fieldValue(interaction, 'reason').slice(0, 1000);
+  await openForType(botId, interaction, config, type, reason, answers);
+}
+
+async function handleQuestionnaireSubmit(botId, interaction, panelId, typeId) {
+  const guildId = interaction.guild && interaction.guild.id;
+  const key = pendingKey(botId, guildId, interaction.user.id);
+  const pending = pendingQuestionnaires.get(key);
+  pendingQuestionnaires.delete(key);
+  if (!pending || Date.now() - (pending.ts || 0) > ADVANCED_MODAL_TTL) return expiredReply(interaction);
+  const { config, type } = currentAdvancedType(botId, interaction, panelId, typeId);
+  if (!config || !type) {
+    await interaction.reply({ content: '⚠️ Ce type de ticket n\'est plus disponible.', ephemeral: true }).catch(() => {});
+    return;
+  }
+  const answers = pending.questions.map((question, index) => ({
+    q: String(question).slice(0, 45),
+    a: fieldValue(interaction, `q${index}`).slice(0, 500) || '—',
+  }));
+  await openForType(botId, interaction, config, type, '', answers);
 }
 
 async function handleReasonSubmit(botId, interaction, panelId, typeId) {
   const guild = interaction.guild;
   const config = guild ? getConfig(botId, guild.id) : null;
   const type = config && Number(config.id) === Number(panelId) ? typeById(config, typeId) : null;
+  const key = guild ? pendingKey(botId, guild.id, interaction.user.id) : '';
+  const pending = key ? pendingReasons.get(key) : null;
+  if (pending) {
+    pendingReasons.delete(key);
+    if (Date.now() - (pending.ts || 0) > ADVANCED_MODAL_TTL) return expiredReply(interaction);
+  }
   if (!config || !type) {
     await interaction.reply({ content: '⚠️ Ce type de ticket n\'est plus disponible.', ephemeral: true }).catch(() => {});
     return;
   }
-  const reason = interaction.fields && typeof interaction.fields.getTextInputValue === 'function'
-    ? String(interaction.fields.getTextInputValue('reason') || '').trim()
-    : '';
+  const reason = fieldValue(interaction, 'reason').slice(0, 1000);
   await openForType(botId, interaction, config, type, reason);
 }
 
@@ -271,6 +419,13 @@ async function handleInteraction(botId, interaction) {
   if (!cid.startsWith('hx2-')) return false;
 
   const parts = cid.split(':');
+  if (isModal && parts[1] === String(botId) && ['hx2-tcomb', 'hx2-tquest'].includes(parts[0])) {
+    const panelId = Number(parts[2]);
+    const typeId = parts.slice(3).join(':');
+    if (parts[0] === 'hx2-tcomb') await handleCombinedSubmit(botId, interaction, panelId, typeId);
+    else await handleQuestionnaireSubmit(botId, interaction, panelId, typeId);
+    return true;
+  }
   if (isModal && parts[0] === 'hx2-reason' && parts[1] === String(botId)) {
     await handleReasonSubmit(botId, interaction, Number(parts[2]), parts.slice(3).join(':'));
     return true;
