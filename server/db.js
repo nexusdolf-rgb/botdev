@@ -482,6 +482,23 @@ try {
     seedCounter.run(w.bot_id, w.guild_id, w.user_id, active);
   }
 } catch (e) {}
+// Compatibilité avec les avertissements créés avant le compteur actif : ces
+// anciennes lignes pouvaient continuer après une sanction et produire « 3/2 ».
+// On repart une seule fois de zéro pour les membres ayant déjà eu une
+// sanction ; les futures sessions utilisent ensuite le compteur persistant.
+try {
+  const migrationKey = 'migration_auto_warning_reset_v1';
+  const alreadyMigrated = db.prepare('SELECT value FROM settings WHERE key = ?').get(migrationKey);
+  if (!alreadyMigrated) {
+    const counters = db.prepare('SELECT bot_id, guild_id, user_id FROM warning_counters').all();
+    const hadSanction = db.prepare(`SELECT 1 FROM warnings WHERE bot_id = ? AND guild_id = ? AND user_id = ?
+      AND action IN ('timeout', 'kick', 'ban') LIMIT 1`);
+    const reset = db.prepare(`UPDATE warning_counters SET active_count = 0, updated_at = datetime('now')
+      WHERE bot_id = ? AND guild_id = ? AND user_id = ?`);
+    for (const c of counters) if (hadSanction.get(c.bot_id, c.guild_id, c.user_id)) reset.run(c.bot_id, c.guild_id, c.user_id);
+    db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(migrationKey, 'done');
+  }
+} catch (e) {}
 // Messages publics d'avertissement : suppression à 24 h, persistante même
 // après un redémarrage Render.
 try { db.exec(`CREATE TABLE IF NOT EXISTS automod_warning_messages (
