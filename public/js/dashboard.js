@@ -1429,7 +1429,7 @@ Dashboard.renderers.moderation = async (content, data) => {
     </div>
     <div style="margin-top:16px;padding:14px;border:1px solid rgba(254,231,92,.28);border-radius:14px;background:linear-gradient(135deg,rgba(254,231,92,.08),rgba(237,66,69,.05))">
       <div style="font-weight:800;font-size:14px">⚠️ Avertissements progressifs</div>
-      <div style="font-size:12.5px;color:var(--d-dim);margin:5px 0 12px">Chaque infraction auto-mod supprimée est enregistrée. Le 1er avertissement est affiché dans le salon ; au 2e, une sanction automatique peut être appliquée. Les paliers suivants sont 4, 6, 8…</div>
+      <div style="font-size:12.5px;color:var(--d-dim);margin:5px 0 12px">Chaque infraction auto-mod supprimée est enregistrée. Le 1er avertissement est affiché dans le salon ; au 2e, une sanction automatique peut être appliquée. Après une sanction réussie, le compteur actif repart à 0, tandis que l’historique reste visible ci-dessous.</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px">
         <div><label class="dash-label">Sanction tous les X avertissements (0 = désactivé)</label><input class="dash-input" id="am-warn-limit" type="number" min="0" max="50" value="${s.am_warn_limit ?? 2}" /></div>
         <div><label class="dash-label">Action automatique</label><select class="dash-select" id="am-warn-action">
@@ -1549,7 +1549,7 @@ Dashboard.renderers.moderation = async (content, data) => {
         <div style="font-size:12px;color:var(--d-dim);margin-bottom:8px">👥 Membres concernés · palier configuré : <b>${cfg.limit || 'désactivé'}</b>${cfg.action && cfg.action !== 'none' ? ` → ${App.escapeHtml(actionLabel(cfg.action))}` : ''}</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin-bottom:14px">
           ${summary.slice(0, 8).map((s) => `<div style="display:flex;align-items:center;gap:8px;padding:10px 11px;border:1px solid var(--d-border);border-radius:12px;background:rgba(88,101,242,.06)">
-            <span style="font-size:18px">⚠️</span><div style="flex:1;min-width:0"><b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${App.escapeHtml(s.user_tag)}</b><span style="font-size:11.5px;color:var(--d-dim)">${s.count} avertissement(s)</span></div>
+            <span style="font-size:18px">⚠️</span><div style="flex:1;min-width:0"><b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${App.escapeHtml(s.user_tag)}</b><span style="font-size:11.5px;color:var(--d-dim)">${s.count} actif(s)${s.history_count ? ` · ${s.history_count} historique(s)` : ''}</span></div>
             <button class="dash-btn dash-btn-danger dash-btn-sm" data-clear-warnings="${App.escapeHtml(s.user_id)}" title="Réinitialiser">↺</button>
           </div>`).join('')}
         </div>` : '';

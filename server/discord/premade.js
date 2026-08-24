@@ -796,6 +796,7 @@ async function execute(botId, entry, cmd, src) {
       const n = store.warnings.count(botId, guild.id, target.id);
       store.activity.add(botId, guild.id, '⚠️', `${target.tag || target.username} averti par ${author.tag || author.username} (total : ${n})`);
       let extra = '';
+      let sanctionApplied = false;
       // ⚖️ Paliers de sanctions automatiques (v1.98) : palier 1 = timeout,
       // palier 2 = timeout/kick/ban — la sanction la plus sévère atteinte s'applique.
       const gs = store.guildSettings.get(botId, guild.id) || {};
@@ -807,16 +808,22 @@ async function execute(botId, entry, cmd, src) {
           try {
             if (auto.action === 'timeout' && tMember.moderatable) {
               await tMember.timeout(auto.minutes * 60000, `${n} avertissements — sanction automatique`);
+              sanctionApplied = true;
               extra = `\n⏳ **Timeout automatique** : ${auto.minutes} min (${n} avertissements).`;
             } else if (auto.action === 'kick' && tMember.kickable) {
               await tMember.kick('Limite d\'avertissements atteinte');
+              sanctionApplied = true;
               extra = '\n👢 **Expulsé** : limite d\'avertissements atteinte.';
             } else if (auto.action === 'ban' && tMember.bannable) {
               await tMember.ban({ reason: 'Limite d\'avertissements atteinte' });
+              sanctionApplied = true;
               extra = '\n🔨 **Banni** : limite d\'avertissements atteinte.';
             }
           } catch {}
         }
+      }
+      if (sanctionApplied) {
+        try { store.warnings.resetActive(botId, guild.id, target.id); } catch {}
       }
       await logging.log(botId, guild, {
         title: '⚠️ Avertissement', color: '#FEE75C',

@@ -457,6 +457,31 @@ try { db.exec("ALTER TABLE warnings ADD COLUMN message_id TEXT DEFAULT ''"); } c
 try { db.exec("ALTER TABLE warnings ADD COLUMN warning_no INTEGER DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE warnings ADD COLUMN action TEXT DEFAULT 'warn'"); } catch (e) {}
 try { db.exec("CREATE INDEX IF NOT EXISTS idx_warnings_guild_user ON warnings (bot_id, guild_id, user_id, id DESC)"); } catch (e) {}
+// Compteur ACTIF séparé de l'historique : après une sanction réussie,
+// le membre repart à 0 sans effacer les avertissements visibles au dashboard.
+try { db.exec(`CREATE TABLE IF NOT EXISTS warning_counters (
+  bot_id INTEGER NOT NULL, guild_id TEXT NOT NULL, user_id TEXT NOT NULL,
+  active_count INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT DEFAULT (datetime('now')),
+  PRIMARY KEY (bot_id, guild_id, user_id)
+)`); } catch (e) {}
+try { db.exec("CREATE INDEX IF NOT EXISTS idx_warning_counters_guild ON warning_counters (bot_id, guild_id)"); } catch (e) {}
+// Migration idempotente des anciens avertissements : si le dernier était
+// déjà associé à une sanction, le compteur actif commence à zéro.
+try {
+  const usersWithWarnings = db.prepare('SELECT DISTINCT bot_id, guild_id, user_id FROM warnings').all();
+  const readWarnings = db.prepare('SELECT action FROM warnings WHERE bot_id = ? AND guild_id = ? AND user_id = ? ORDER BY id ASC');
+  const seedCounter = db.prepare(`INSERT OR IGNORE INTO warning_counters (bot_id, guild_id, user_id, active_count)
+    VALUES (?, ?, ?, ?)`);
+  for (const w of usersWithWarnings) {
+    let active = 0;
+    for (const row of readWarnings.all(w.bot_id, w.guild_id, w.user_id)) {
+      active += 1;
+      if (['timeout', 'kick', 'ban'].includes(row.action)) active = 0;
+    }
+    seedCounter.run(w.bot_id, w.guild_id, w.user_id, active);
+  }
+} catch (e) {}
 // Messages publics d'avertissement : suppression à 24 h, persistante même
 // après un redémarrage Render.
 try { db.exec(`CREATE TABLE IF NOT EXISTS automod_warning_messages (
@@ -769,21 +794,49 @@ const economy = {
 
 // ---------------------- Avertissements ----------------------
 const warnings = {
-  add: (botId, guildId, userId, reason, modId, meta = {}) => db.prepare(`INSERT INTO warnings
-    (bot_id, guild_id, user_id, reason, mod_id, source, channel_id, message_id, warning_no, action)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
-      botId, guildId, String(userId || ''), String(reason || '').slice(0, 500), String(modId || '').slice(0, 40),
-      ['automod', 'manual', 'system'].includes(meta.source) ? meta.source : 'manual',
-      String(meta.channel_id || '').slice(0, 40), String(meta.message_id || '').slice(0, 40),
-      Math.max(parseInt(meta.warning_no, 10) || 0, 0),
-      ['warn', 'timeout', 'kick', 'ban'].includes(meta.action) ? meta.action : 'warn'),
+  add: (botId, guildId, userId, reason, modId, meta = {}) => {
+    const uid = String(userId || '');
+    const source = ['automod', 'manual', 'system'].includes(meta.source) ? meta.source : 'manual';
+    const action = ['warn', 'timeout', 'kick', 'ban'].includes(meta.action) ? meta.action : 'warn';
+    const tx = db.transaction(() => {
+      const current = db.prepare('SELECT active_count FROM warning_counters WHERE bot_id = ? AND guild_id = ? AND user_id = ?').get(botId, guildId, uid);
+      const warningNo = (current ? Number(current.active_count) : 0) + 1;
+      const inserted = db.prepare(`INSERT INTO warnings
+        (bot_id, guild_id, user_id, reason, mod_id, source, channel_id, message_id, warning_no, action)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+          botId, guildId, uid, String(reason || '').slice(0, 500), String(modId || '').slice(0, 40), source,
+          String(meta.channel_id || '').slice(0, 40), String(meta.message_id || '').slice(0, 40), warningNo, action);
+      db.prepare(`INSERT INTO warning_counters (bot_id, guild_id, user_id, active_count, updated_at)
+        VALUES (?, ?, ?, ?, datetime('now'))
+        ON CONFLICT(bot_id, guild_id, user_id) DO UPDATE SET active_count = excluded.active_count, updated_at = excluded.updated_at`)
+        .run(botId, guildId, uid, warningNo);
+      return { lastInsertRowid: inserted.lastInsertRowid, changes: inserted.changes, warningNo };
+    });
+    return tx();
+  },
   setAction: (id, action) => db.prepare("UPDATE warnings SET action = ? WHERE id = ?").run(['warn', 'timeout', 'kick', 'ban'].includes(action) ? action : 'warn', id),
+  resetActive: (botId, guildId, userId) => db.prepare(`INSERT INTO warning_counters (bot_id, guild_id, user_id, active_count, updated_at)
+    VALUES (?, ?, ?, 0, datetime('now'))
+    ON CONFLICT(bot_id, guild_id, user_id) DO UPDATE SET active_count = 0, updated_at = excluded.updated_at`).run(botId, guildId, String(userId || '')),
   list: (botId, guildId, userId) => db.prepare('SELECT * FROM warnings WHERE bot_id = ? AND guild_id = ? AND user_id = ? ORDER BY id DESC LIMIT 10').all(botId, guildId, userId),
-  count: (botId, guildId, userId) => db.prepare('SELECT COUNT(*) AS n FROM warnings WHERE bot_id = ? AND guild_id = ? AND user_id = ?').get(botId, guildId, userId).n,
+  count: (botId, guildId, userId) => {
+    const uid = String(userId || '');
+    const row = db.prepare('SELECT active_count FROM warning_counters WHERE bot_id = ? AND guild_id = ? AND user_id = ?').get(botId, guildId, uid);
+    return row ? Number(row.active_count) || 0 : db.prepare('SELECT COUNT(*) AS n FROM warnings WHERE bot_id = ? AND guild_id = ? AND user_id = ?').get(botId, guildId, uid).n;
+  },
   recent: (botId, guildId, limit = 50) => db.prepare('SELECT * FROM warnings WHERE bot_id = ? AND guild_id = ? ORDER BY id DESC LIMIT ?').all(botId, guildId, Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200)),
-  summary: (botId, guildId, limit = 50) => db.prepare(`SELECT user_id, COUNT(*) AS count, MAX(id) AS last_id, MAX(created_at) AS last_at
-    FROM warnings WHERE bot_id = ? AND guild_id = ? GROUP BY user_id ORDER BY last_id DESC LIMIT ?`).all(botId, guildId, Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200)),
-  clear: (botId, guildId, userId) => db.prepare('DELETE FROM warnings WHERE bot_id = ? AND guild_id = ? AND user_id = ?').run(botId, guildId, String(userId || '')),
+  summary: (botId, guildId, limit = 50) => db.prepare(`SELECT w.user_id, COALESCE(c.active_count, 0) AS count, COUNT(w.id) AS history_count, MAX(w.id) AS last_id, MAX(w.created_at) AS last_at
+    FROM warnings w LEFT JOIN warning_counters c ON c.bot_id = w.bot_id AND c.guild_id = w.guild_id AND c.user_id = w.user_id
+    WHERE w.bot_id = ? AND w.guild_id = ? GROUP BY w.user_id ORDER BY last_id DESC LIMIT ?`).all(botId, guildId, Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200)),
+  clear: (botId, guildId, userId) => {
+    const uid = String(userId || '');
+    const tx = db.transaction(() => {
+      const result = db.prepare('DELETE FROM warnings WHERE bot_id = ? AND guild_id = ? AND user_id = ?').run(botId, guildId, uid);
+      db.prepare('DELETE FROM warning_counters WHERE bot_id = ? AND guild_id = ? AND user_id = ?').run(botId, guildId, uid);
+      return result;
+    });
+    return tx();
+  },
 };
 
 // ---------------------- Messages publics d'avertissement ----------------------

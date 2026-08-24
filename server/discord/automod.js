@@ -84,7 +84,7 @@ function recordAction(botId, message, reason) {
 // forcés du dashboard ne créent volontairement aucun avertissement réel.
 function registerAutomodWarning(botId, message, reason, opts = {}, gs = null) {
   if (opts.force) return { count: 0, sanction: null, saved: false };
-  const count = store.warnings.count(botId, message.guild.id, message.author.id) + 1;
+  let count = store.warnings.count(botId, message.guild.id, message.author.id) + 1;
   let saved = false;
   let id = 0;
   try {
@@ -92,10 +92,10 @@ function registerAutomodWarning(botId, message, reason, opts = {}, gs = null) {
       source: 'automod',
       channel_id: message.channel ? message.channel.id : '',
       message_id: message.id || '',
-      warning_no: count,
       action: 'warn',
     });
     id = Number(inserted && inserted.lastInsertRowid) || 0;
+    count = Number(inserted && inserted.warningNo) || count;
     saved = true;
   } catch (e) {
     console.error('[Hoxera] avertissement auto-mod non enregistré :', e.message);
@@ -276,7 +276,10 @@ async function runAutomod(botId, message, opts = {}) {
     if (!opts.force && warning.sanction) {
       sanctionResult = await applyAutoSanction(message, warning.sanction, reason, warning.count);
       if (warning.id && sanctionResult.applied) {
-        try { store.warnings.setAction(warning.id, sanctionResult.action); } catch { }
+        try {
+          store.warnings.setAction(warning.id, sanctionResult.action);
+          store.warnings.resetActive(botId, message.guild.id, message.author.id);
+        } catch { }
       }
     }
 
@@ -370,7 +373,10 @@ async function runAutomod(botId, message, opts = {}) {
         }
       }
       if (warning.id && sanctionResult.applied) {
-        try { store.warnings.setAction(warning.id, sanctionResult.action); } catch { }
+        try {
+          store.warnings.setAction(warning.id, sanctionResult.action);
+          if (warning.sanction) store.warnings.resetActive(botId, message.guild.id, message.author.id);
+        } catch { }
       }
       const actionText = sanctionResult.applied
         ? `, ${sanctionResult.action}${sanctionResult.minutes ? ' ' + sanctionResult.minutes + ' min' : ''}`

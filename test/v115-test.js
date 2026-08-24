@@ -1,4 +1,4 @@
-// Test v3.9 — avertissements auto-mod publics + sanction au 2e palier
+// Test v3.10 — avertissements auto-mod publics + reset après sanction
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
@@ -84,8 +84,8 @@ const routes = fs.readFileSync(path.join(__dirname, '..', 'server/routes.js'), '
   // 1. Les décisions de palier sont explicites et sans sanction au 1er.
   assert.strictEqual(community.autoModSanctionForWarning(1, { am_warn_limit: 2, am_warn_action: 'timeout', am_warn_timeout_min: 10 }), null);
   assert.deepStrictEqual(community.autoModSanctionForWarning(2, { am_warn_limit: 2, am_warn_action: 'timeout', am_warn_timeout_min: 10 }), { action: 'timeout', minutes: 10, threshold: 2 });
-  assert.strictEqual(community.autoModSanctionForWarning(3, { am_warn_limit: 2, am_warn_action: 'timeout', am_warn_timeout_min: 10 }), null);
-  console.log('✅ palier : 1er avertissement, sanction au 2e, pas de sanction répétée au 3e');
+  assert.deepStrictEqual(community.autoModSanctionForWarning(3, { am_warn_limit: 2, am_warn_action: 'timeout', am_warn_timeout_min: 10 }), { action: 'timeout', minutes: 10, threshold: 2 });
+  console.log('✅ palier : 1er avertissement, sanction au 2e, compteur actif remis à zéro après sanction');
 
   // 2. Première infraction caps : suppression + avertissement dans le même salon.
   const first = makeMessage();
@@ -123,21 +123,24 @@ const routes = fs.readFileSync(path.join(__dirname, '..', 'server/routes.js'), '
   assert.strictEqual(rows[0].action, 'timeout');
   assert.strictEqual(rows[0].channel_id, 'C-CAPS');
   assert.strictEqual(rows[1].warning_no, 1);
-  assert.strictEqual(store.warnings.summary(botId, guildId, 10)[0].count, 2);
+  assert.strictEqual(store.warnings.summary(botId, guildId, 10)[0].count, 0);
+  assert.strictEqual(store.warnings.summary(botId, guildId, 10)[0].history_count, 2);
+  assert.strictEqual(store.warnings.count(botId, guildId, 'U-WARN'), 0);
   const pendingPublicWarnings = store.automodWarningMessages.due(Date.now() + (24 * 60 * 60 * 1000) + 1000);
   assert.ok(pendingPublicWarnings.length >= 2, 'les messages publics sont planifiés à 24 h');
   console.log('✅ dashboard : 1er et 2e avertissements conservés avec raison, salon et sanction');
 
-  // 5. Le 3e avertissement reste visible mais ne répète pas immédiatement le
-  // timeout : prochain palier à 4.
+  // 5. Après la sanction, le prochain incident repart à 1/2 ; l'historique
+  // conserve néanmoins les deux avertissements précédents.
   const third = makeMessage();
   const r3 = await automod.runAutomod(botId, third);
-  assert.strictEqual(r3.warningCount, 3);
+  assert.strictEqual(r3.warningCount, 1);
   assert.strictEqual(r3.sanction.applied, false);
   assert.strictEqual(timeoutCalls, 1);
   assert.strictEqual(channelMessages.length, 3);
-  assert.ok(channelMessages[2].embeds[0].data.title.includes('3/2'));
-  console.log('✅ 3e avertissement : affiché dans l\'historique sans sanction répétitive');
+  assert.ok(channelMessages[2].embeds[0].data.title.includes('1/2'));
+  assert.strictEqual(store.warnings.count(botId, guildId, 'U-WARN'), 1);
+  console.log('✅ après sanction : compteur actif revenu à 0 puis nouvel incident affiché 1/2');
 
   // 6. Les tests forcés du dashboard restent sans avertissement réel.
   const forced = makeMessage('U-TEST');

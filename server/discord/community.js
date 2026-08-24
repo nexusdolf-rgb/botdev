@@ -34,15 +34,15 @@ function sanctionForWarns(count, gs) {
 // ------------------------------------------------------------
 // 🤖 Sanction d'un avertissement AUTO-MOD (fonction pure)
 // L'auto-mod compte tous les avertissements du membre (manuels + automatiques)
-// et applique l'action à chaque palier : 2e, 4e, 6e avertissement…
-// Ainsi, le 3e message ne déclenche pas une sanction répétée à chaque fois.
+// et applique l'action au seuil configuré. Après une sanction réussie, le
+// compteur ACTIF repart à zéro ; l'historique reste visible au dashboard.
 // ------------------------------------------------------------
 function autoModSanctionForWarning(count, gs) {
   const g = gs || {};
   const n = Math.max(parseInt(count, 10) || 0, 0);
   const limit = Math.max(parseInt(g.am_warn_limit, 10) || 0, 0);
   const action = String(g.am_warn_action || 'none');
-  if (!limit || n < limit || n % limit !== 0) return null;
+  if (!limit || n < limit) return null;
   if (!['timeout', 'kick', 'ban'].includes(action)) return null;
   return {
     action,
