@@ -651,7 +651,13 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
   //  2. sinon la catégorie du salon du panneau (là où le membre a cliqué) ;
   //  3. en dernier recours on crée la catégorie configurée, puis on la
   //     POSITIONNE juste sous la catégorie du panneau (pas au sommet du serveur).
-  const catName = (chosen && chosen.category) ? chosen.category : (cfg.category || '');
+  // 📁 Priorité des catégories : (1) catégorie du PANNEAU MENU si le ticket
+  // vient du menu déroulant (réglage explicite du dashboard — zéro ambiguïté),
+  // (2) catégorie du type, (3) catégorie par défaut.
+  const fromMenu = !!type;
+  const catName = (fromMenu && String(cfg.menu_category || '').trim())
+    ? cfg.menu_category
+    : ((chosen && chosen.category) ? chosen.category : (cfg.category || ''));
   const panelChannel = interaction.channel && interaction.channel.parent !== undefined ? interaction.channel : null;
   const panelParent = panelChannel && panelChannel.parent ? panelChannel.parent : null;
   // 🧲 Résolution FLOUE : les noms décorés (────〔🎫・SUPPORT・〕────) sont

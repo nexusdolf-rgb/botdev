@@ -844,6 +844,12 @@ Dashboard.renderers.tickets = async (content, data) => {
   cm.innerHTML += `
     <label class="dash-label">Salon du panneau menu</label>
     <select class="dash-select" id="tm-channel">${menuChanOpts.join('')}</select>
+    <label class="dash-label">📁 Catégorie où créer les salons de tickets du MENU</label>
+    <select class="dash-select" id="tm-cat">
+      <option value="">— Automatique (catégorie du type, sinon celle par défaut) —</option>
+      ${categories.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${String(t.menu_category || '') === ch.name ? 'selected' : ''}>📁 ${App.escapeHtml(ch.name)}</option>`).join('')}
+    </select>
+    <div style="font-size:12px;color:var(--d-dim);margin-top:4px">✅ Si tu choisis une catégorie ici, TOUS les tickets ouverts via le menu iront dedans — priorité absolue, zéro ambiguïté.</div>
     <label class="dash-label">Message du panneau menu (vide = même message que le panneau bouton)</label>
     <textarea class="dash-input" id="tm-msg" rows="3">${App.escapeHtml(t.menu_message || '')}</textarea>
     <div style="font-size:12px;color:var(--d-dim);margin-top:6px">🗂️ Les types affichés dans le menu se gèrent dans la carte « Types de tickets ». Les deux panneaux peuvent cohabiter, même dans le même salon.</div>
@@ -857,6 +863,7 @@ Dashboard.renderers.tickets = async (content, data) => {
         guild_id: guildId,
         menu_channel: cm.querySelector('#tm-channel').value,
         menu_message: cm.querySelector('#tm-msg').value,
+        menu_category: cm.querySelector('#tm-cat').value,
       }});
       App.toast('Panneau menu enregistré !');
     } catch (e) { App.toast(e.message, 'error'); }

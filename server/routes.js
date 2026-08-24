@@ -1202,7 +1202,7 @@ router.get('/bots/:id/panels', requireAuth, async (req, res) => {
 router.put('/bots/:id/tickets', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
   if (!bot) return;
-  const { guild_id, name, channel, message, button_label, button_style, require_reason, support_role, category, types, menu_channel, menu_message } = req.body || {};
+  const { guild_id, name, channel, message, button_label, button_style, require_reason, support_role, category, types, menu_channel, menu_message, menu_category } = req.body || {};
   if (!guild_id) return res.status(400).json({ error: 'guild_id requis' });
   if (!(await userCanManageGuild(req, guild_id))) return res.status(403).json({ error: 'Permission refusée.' });
   const current = store.tickets.get(bot.id, guild_id) || {};
@@ -1217,6 +1217,7 @@ router.put('/bots/:id/tickets', requireAuth, async (req, res) => {
     category: String(category !== undefined ? category : (current.category || 'Tickets')).slice(0, 100),
     menu_channel: String(menu_channel !== undefined ? menu_channel : (current.menu_channel || '')).slice(0, 100),
     menu_message: String(menu_message !== undefined ? menu_message : (current.menu_message || '')).slice(0, 1900),
+    menu_category: String(menu_category !== undefined ? menu_category : (current.menu_category || '')).slice(0, 100),
   };
   if (types !== undefined) {
     payload.types = JSON.stringify((Array.isArray(types) ? types : [])
