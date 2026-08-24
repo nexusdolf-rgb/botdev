@@ -1325,6 +1325,79 @@ router.post('/bots/:id/tickets/send', requireAuth, async (req, res) => {
   }
 });
 
+// ============================================================
+// 🎨 Nouveau système de tickets personnalisés — totalement séparé de
+// /bots/:id/tickets et de la table historique `tickets`.
+// ============================================================
+router.get('/bots/:id/guilds/:guildId/advanced-tickets', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const cfg = store.advancedTickets.get(bot.id, guildId);
+  res.json({ config: cfg || {
+    id: null, bot_id: bot.id, guild_id: guildId, name: 'Tickets personnalisés', mode: 'buttons',
+    channel: '', message: '', require_reason: 1, types: [], panel_message_id: '', panel_channel: '',
+  } });
+});
+
+router.put('/bots/:id/guilds/:guildId/advanced-tickets', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const body = req.body || {};
+  const current = store.advancedTickets.get(bot.id, guildId) || {};
+  const rawTypes = Array.isArray(body.types) ? body.types : (current.types || []);
+  const usedIds = new Set();
+  const types = rawTypes.slice(0, 25).map((t, i) => {
+    let id = String(t.id || `t${i + 1}`).replace(/[^a-zA-Z0-9_-]/g, '-').replace(/^-+|-+$/g, '').slice(0, 32) || `t${i + 1}`;
+    if (usedIds.has(id)) id = `t${i + 1}`;
+    while (usedIds.has(id)) id = `${id}-x`;
+    usedIds.add(id);
+    const roles = Array.isArray(t.staff_roles)
+      ? t.staff_roles.map((r) => String(r).trim()).filter(Boolean).slice(0, 10)
+      : (t.staff_role ? [String(t.staff_role).trim()] : []);
+    return {
+      id,
+      label: String(t.label || '').trim().slice(0, 80),
+      emoji: safeEmojiWeb(t.emoji).slice(0, 100),
+      description: String(t.description || '').trim().slice(0, 100),
+      category: String(t.category || '').trim().slice(0, 100),
+      color: /^#[0-9a-fA-F]{6}$/.test(String(t.color || '')) ? String(t.color) : '#5865F2',
+      button_style: ['1', '2', '3', '4'].includes(String(t.button_style)) ? String(t.button_style) : '1',
+      staff_roles: roles,
+    };
+  }).filter((t) => t.label);
+  store.advancedTickets.set(bot.id, guildId, {
+    name: body.name !== undefined ? String(body.name).trim().slice(0, 80) : (current.name || 'Tickets personnalisés'),
+    mode: body.mode === 'menu' ? 'menu' : 'buttons',
+    channel: body.channel !== undefined ? String(body.channel).trim().slice(0, 100) : (current.channel || ''),
+    message: body.message !== undefined ? String(body.message).slice(0, 1900) : (current.message || ''),
+    require_reason: body.require_reason !== undefined
+      ? ((body.require_reason === 0 || body.require_reason === false) ? 0 : 1)
+      : (current.require_reason === 0 ? 0 : 1),
+    types,
+  });
+  res.json({ ok: true, config: store.advancedTickets.get(bot.id, guildId) });
+});
+
+router.post('/bots/:id/guilds/:guildId/advanced-tickets/send', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  if (!botManager.isOnline(bot.id)) return res.status(400).json({ error: 'Démarre le bot avant d\'envoyer le nouveau panneau.' });
+  const entry = botManager.clients.get(bot.id);
+  try {
+    const advanced = require('./discord/advancedTickets');
+    const sent = await advanced.sendPanel(bot.id, guildId, entry.client);
+    res.json({ ok: true, message_id: sent.id });
+  } catch (e) {
+    res.status(400).json({ error: String(e.message || e).slice(0, 240) });
+  }
+});
+
 router.post('/bots/:id/role-menus', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
   if (!bot) return;

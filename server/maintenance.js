@@ -57,7 +57,7 @@ function dbStats(db) {
     out.fileSizeBytes = fs.statSync(paths.dbPath).size;
     out.fileSizeKo = Math.round(out.fileSizeBytes / 1024);
   } catch {}
-  const tables = ['users', 'sessions', 'bots', 'commands', 'role_menus', 'tickets', 'xp', 'economy', 'warnings', 'automod_warning_messages', 'suggestions', 'giveaways', 'transcripts', 'message_stats', 'join_stats', 'shop_purchases', 'reminders', 'marriages', 'birthdays', 'temp_roles', 'scheduled_messages', 'cmd_stats', 'open_tickets', 'ticket_ratings'];
+  const tables = ['users', 'sessions', 'bots', 'commands', 'role_menus', 'tickets', 'advanced_ticket_panels', 'advanced_ticket_channels', 'xp', 'economy', 'warnings', 'automod_warning_messages', 'suggestions', 'giveaways', 'transcripts', 'message_stats', 'join_stats', 'shop_purchases', 'reminders', 'marriages', 'birthdays', 'temp_roles', 'scheduled_messages', 'cmd_stats', 'open_tickets', 'ticket_ratings'];
   try {
     for (const t of tables) {
       const n = db.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get().n;

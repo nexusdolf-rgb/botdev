@@ -938,6 +938,52 @@ const tickets = {
   },
 };
 
+// ---------------------- 🎨 Tickets personnalisés (nouveau système) ----------------------
+const advancedTickets = {
+  get: (botId, guildId) => {
+    const row = db.prepare('SELECT * FROM advanced_ticket_panels WHERE bot_id = ? AND guild_id = ?').get(botId, guildId);
+    if (!row) return null;
+    let types = [];
+    try { types = JSON.parse(row.types || '[]'); } catch {}
+    return { ...row, types: Array.isArray(types) ? types : [] };
+  },
+  set: (botId, guildId, cfg) => db.prepare(`INSERT INTO advanced_ticket_panels
+    (bot_id, guild_id, name, mode, channel, message, require_reason, types, updated_at)
+    VALUES (@bot_id, @guild_id, @name, @mode, @channel, @message, @require_reason, @types, datetime('now'))
+    ON CONFLICT(bot_id, guild_id) DO UPDATE SET
+      name = excluded.name, mode = excluded.mode, channel = excluded.channel,
+      message = excluded.message, require_reason = excluded.require_reason,
+      types = excluded.types, updated_at = datetime('now')`).run({
+        bot_id: botId, guild_id: guildId,
+        name: String(cfg.name || 'Tickets personnalisés').slice(0, 80),
+        mode: cfg.mode === 'menu' ? 'menu' : 'buttons',
+        channel: String(cfg.channel || '').slice(0, 100),
+        message: String(cfg.message || '').slice(0, 1900),
+        require_reason: (cfg.require_reason === 0 || cfg.require_reason === false) ? 0 : 1,
+        types: typeof cfg.types === 'string' ? cfg.types : JSON.stringify(Array.isArray(cfg.types) ? cfg.types : []),
+      }),
+  setPanelMessage: (botId, guildId, messageId, channelId) => db.prepare(`UPDATE advanced_ticket_panels
+    SET panel_message_id = ?, panel_channel = ?, updated_at = datetime('now') WHERE bot_id = ? AND guild_id = ?`).run(String(messageId || ''), String(channelId || ''), botId, guildId),
+  clearPanelMessage: (botId, guildId) => db.prepare(`UPDATE advanced_ticket_panels
+    SET panel_message_id = '', panel_channel = '', updated_at = datetime('now') WHERE bot_id = ? AND guild_id = ?`).run(botId, guildId),
+  bindChannel: (channelId, botId, guildId, panelId, typeId, typeLabel, staffRoles, color) => db.prepare(`INSERT INTO advanced_ticket_channels
+    (channel_id, bot_id, guild_id, panel_id, type_id, type_label, staff_roles, color)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(channel_id) DO UPDATE SET bot_id = excluded.bot_id, guild_id = excluded.guild_id,
+      panel_id = excluded.panel_id, type_id = excluded.type_id, type_label = excluded.type_label,
+      staff_roles = excluded.staff_roles, color = excluded.color`).run(
+      String(channelId), botId, String(guildId), panelId, String(typeId || ''), String(typeLabel || '').slice(0, 100),
+      JSON.stringify(Array.isArray(staffRoles) ? staffRoles.slice(0, 10) : []), /^#[0-9a-fA-F]{6}$/.test(String(color || '')) ? color : '#5865F2'),
+  byChannel: (channelId) => {
+    const row = db.prepare('SELECT * FROM advanced_ticket_channels WHERE channel_id = ?').get(String(channelId));
+    if (!row) return null;
+    let staffRoles = [];
+    try { staffRoles = JSON.parse(row.staff_roles || '[]'); } catch {}
+    return { ...row, staff_roles: Array.isArray(staffRoles) ? staffRoles : [] };
+  },
+  unbindChannel: (channelId) => db.prepare('DELETE FROM advanced_ticket_channels WHERE channel_id = ?').run(String(channelId)),
+};
+
 // ---------------------- Réglages généraux (clé/valeur) ----------------------
 const settings = {
   get: (key) => {
@@ -1291,6 +1337,28 @@ try { db.exec(`CREATE TABLE IF NOT EXISTS ticket_log_msgs (
   created_at TEXT DEFAULT (datetime('now')),
   PRIMARY KEY (bot_id, guild_id, number))`); } catch (e) {}
 
+// v3.14 — 🎨 Système de tickets personnalisés indépendant de l'ancien.
+try { db.exec(`CREATE TABLE IF NOT EXISTS advanced_ticket_panels (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id INTEGER NOT NULL, guild_id TEXT NOT NULL,
+  name TEXT DEFAULT 'Tickets personnalisés',
+  mode TEXT DEFAULT 'buttons',
+  channel TEXT DEFAULT '', message TEXT DEFAULT '',
+  require_reason INTEGER DEFAULT 1,
+  types TEXT DEFAULT '[]',
+  panel_message_id TEXT DEFAULT '', panel_channel TEXT DEFAULT '',
+  created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')),
+  UNIQUE (bot_id, guild_id)
+)`); } catch (e) {}
+try { db.exec(`CREATE TABLE IF NOT EXISTS advanced_ticket_channels (
+  channel_id TEXT PRIMARY KEY,
+  bot_id INTEGER NOT NULL, guild_id TEXT NOT NULL,
+  panel_id INTEGER NOT NULL, type_id TEXT DEFAULT '', type_label TEXT DEFAULT '',
+  staff_roles TEXT DEFAULT '[]', color TEXT DEFAULT '#5865F2',
+  created_at TEXT DEFAULT (datetime('now'))
+)`); } catch (e) {}
+try { db.exec("CREATE INDEX IF NOT EXISTS idx_advanced_ticket_channels_guild ON advanced_ticket_channels (bot_id, guild_id)"); } catch (e) {}
+
 // v2.7 — 📰 Flux d'activité du serveur (dashboard)
 try { db.exec(`CREATE TABLE IF NOT EXISTS activity (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1344,4 +1412,4 @@ const liveSocials = {
   count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM live_socials WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
 };
 
-module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories };
+module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories };

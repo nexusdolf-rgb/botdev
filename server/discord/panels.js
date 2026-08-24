@@ -100,6 +100,13 @@ async function dispatchPanels(botId, interaction) {
     }
     const cid = String(interaction.customId || '');
 
+    // 🎨 Nouveau système de tickets personnalisés (préfixe séparé) :
+    // il est traité avant l'ancien système, sans modifier ses IDs ni ses données.
+    if (cid.startsWith('hx2-')) {
+      const advanced = require('./advancedTickets');
+      return await advanced.handleInteraction(botId, interaction);
+    }
+
     // 📋 Assistant /roles setup & /roles edit (menus, sélecteurs, modales)
     if (cid.startsWith('rls:')) {
       const { handleWizardInteraction } = require('./roleWizard');
@@ -249,6 +256,12 @@ function typeOptionDescription(t) {
 
 // Rôles staff autorisés pour un ticket : ceux du type, sinon le rôle global
 function staffRolesForTicket(botId, guild, channel) {
+  // Le nouveau système garde ses propres rôles par salon. Si aucun mapping
+  // n'existe, on retombe exactement sur l'ancien comportement.
+  try {
+    const advanced = channel && store.advancedTickets.byChannel(channel.id);
+    if (advanced && Array.isArray(advanced.staff_roles) && advanced.staff_roles.length) return advanced.staff_roles;
+  } catch {}
   const cfg = store.tickets.get(botId, guild.id) || {};
   const { typeLabel } = ticketMetaFor(channel);
   if (typeLabel) {
@@ -537,7 +550,7 @@ function ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning = ''
   );
   const avatar = member.user.displayAvatarURL ? member.user.displayAvatarURL({ dynamic: true }) : '';
   const welcome = new EmbedBuilder()
-    .setColor('#57F287')
+    .setColor(/^#[0-9a-fA-F]{6}$/.test(String(chosen && chosen.color || '')) ? chosen.color : '#57F287')
     .setAuthor(avatar ? { name: `Ticket de ${member.user.username}${meta.number ? ` · #${meta.number}` : ''}`, iconURL: avatar } : { name: `Ticket de ${member.user.username}${meta.number ? ` · #${meta.number}` : ''}` })
     .setTitle(i18n.t(lang, 'ticket_title'))
     .setDescription(i18n.t(lang, 'ticket_welcome_desc', { member: `${member}` }))
@@ -570,10 +583,12 @@ function findCategoryFuzzy(guild, name) {
   return cache.find((c) => isCat(c) && normDecorName(c.name) === core) || null;
 }
 
-async function openTicket(botId, interaction, type, reason = '', answers = []) {
+async function openTicket(botId, interaction, type, reason = '', answers = [], configOverride = null) {
   const guild = interaction.guild;
   const member = interaction.member;
-  const cfg = store.tickets.get(botId, guild.id);
+  // configOverride est réservé au nouveau système de tickets personnalisés.
+  // Les appels historiques continuent de lire exclusivement la table tickets.
+  const cfg = configOverride || store.tickets.get(botId, guild.id);
   if (!cfg) return ackReply(interaction, { content: '⚠️ Les tickets ne sont pas configurés.', ephemeral: true });
 
   const types = parseTypes(cfg);
@@ -582,6 +597,7 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
     label: String(chosenRaw.label || ''),
     emoji: String(chosenRaw.emoji || ''),
     category: String(chosenRaw.category || ''),
+    color: /^#[0-9a-fA-F]{6}$/.test(String(chosenRaw.color || '')) ? String(chosenRaw.color) : '',
     description: String(chosenRaw.description || '').slice(0, 100),
     questions: Array.isArray(chosenRaw.questions)
       ? chosenRaw.questions.map((q) => String(q).slice(0, 45)).filter(Boolean).slice(0, 5)
@@ -703,6 +719,17 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
     }
   } catch { /* le placement ne doit jamais faire échouer l'ouverture */ }
   ticketMeta.set(channel.id, { openerId: member.id, typeLabel: chosen ? chosen.label : '', reason, answers });
+  // 🎨 Nouveau système : le mapping privé conserve les rôles/couleur du type
+  // pour les boutons staff, sans toucher à la configuration historique.
+  if (configOverride && configOverride.advanced_panel_id) {
+    try {
+      store.advancedTickets.bindChannel(
+        channel.id, botId, guild.id, configOverride.advanced_panel_id,
+        configOverride.advanced_type_id || '', chosen ? chosen.label : '',
+        chosen && chosen.staff_roles ? chosen.staff_roles : [], chosen && chosen.color ? chosen.color : '#5865F2',
+      );
+    } catch (e) { console.error('[Hoxera] mapping ticket personnalisé :', e.message); }
+  }
   // 📋 Fiche en base : numéro, horodatage, dernière activité (fermeture auto)
   store.openTickets.add(botId, guild.id, {
     channel_id: channel.id,
@@ -1370,6 +1397,7 @@ async function submitDeleteReason(botId, interaction) {
   const ratingLang = i18n.langForGuild(guild.id);
   await sendRatingDm(interaction.client, guild, t.openerId, ticketRow ? ticketRow.number : 0, ratingLang).catch(() => {});
   store.openTickets.remove(channel.id);
+  try { store.advancedTickets.unbindChannel(channel.id); } catch {}
   await logging.log(botId, guild, {
     title: '🗑 Ticket supprimé', color: '#ED4245',
     fields: [
@@ -1404,6 +1432,7 @@ async function handleTicketDeleteConfirm(botId, interaction) {
   const ratingLang = i18n.langForGuild(guild.id);
   await sendRatingDm(interaction.client, guild, t.openerId, ticketRow ? ticketRow.number : 0, ratingLang).catch(() => {});
   store.openTickets.remove(channel.id);
+  try { store.advancedTickets.unbindChannel(channel.id); } catch {}
   await ackReply(interaction, {
     content: '🗑 Ticket supprimé.' + (dmOk ? ' 📄 Transcription envoyée en MP.' : ' ⚠️ MP impossible pour le créateur.'),
     ephemeral: false,
@@ -2078,6 +2107,7 @@ async function sweepInactiveTickets(botId, entry, now = new Date()) {
             ]);
             await sendTranscriptDm(entry.client, guild, channel.name || '', t);
             store.openTickets.remove(channel.id);
+            try { store.advancedTickets.unbindChannel(channel.id); } catch {}
             await channel.send({ content: i18n.t(lang, 'ticket_auto_deleted') }).catch(() => {});
             setTimeout(() => { channel.delete('Ticket fermé depuis plus de 24 h').catch(() => {}); }, 1500);
             try {

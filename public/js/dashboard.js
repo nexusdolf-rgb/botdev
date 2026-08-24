@@ -777,6 +777,8 @@ Dashboard.renderers.overview = async (content, data) => {
 Dashboard.renderers.tickets = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const t = data.tickets;
+  let advancedConfig = null;
+  try { advancedConfig = (await App.api(`/bots/${bot.id}/guilds/${guildId}/advanced-tickets`)).config || null; } catch {}
   const typesData = (t.types || []).map((x) => ({ label: x.label, emoji: x.emoji || '', description: x.description || '', category: x.category || '', questions: (Array.isArray(x.questions) && x.questions.length) ? [...x.questions] : [], staff_roles: (x.staff_roles && x.staff_roles.length) ? [...x.staff_roles] : [] }));
   const root = Dashboard.header(content, '🎫', 'Système de tickets', 'Bouton ou menu déroulant → salon privé automatique. Le tout est aussi configurable sur Discord avec /ticket.');
   const ts = data.tickets_stats || { total: 0, open: 0 };
@@ -1103,6 +1105,161 @@ Dashboard.renderers.tickets = async (content, data) => {
   };
   renderTypes();
   c2.querySelector('#t-add').onclick = () => { typesData.push({ label: '', emoji: '', category: '', description: '', questions: [], staff_roles: [] }); renderTypes(); };
+
+  // ============================================================
+  // 🎨 NOUVEAU système indépendant : Tickets personnalisés
+  // Il est volontairement placé SOUS l'ancien système et possède sa propre
+  // table, ses propres IDs d'interaction et son propre panneau Discord.
+  // ============================================================
+  const adv = advancedConfig || { id: null, name: 'Tickets personnalisés', mode: 'buttons', channel: '', message: '', require_reason: 1, types: [] };
+  const advancedData = {
+    ...adv,
+    name: String(adv.name || 'Tickets personnalisés'),
+    mode: adv.mode === 'menu' ? 'menu' : 'buttons',
+    channel: String(adv.channel || ''),
+    message: String(adv.message || ''),
+    require_reason: adv.require_reason === 0 ? 0 : 1,
+    types: (Array.isArray(adv.types) && adv.types.length ? adv.types : [{ id: 't1', label: 'Support', emoji: '🎫', description: 'Demande générale au staff', category: '', color: '#5865F2', button_style: '1', staff_roles: [] }]).map((x, i) => ({
+      id: String(x.id || `t${i + 1}`), label: String(x.label || ''), emoji: String(x.emoji || ''),
+      description: String(x.description || ''), category: String(x.category || ''),
+      color: /^#[0-9a-fA-F]{6}$/.test(String(x.color || '')) ? String(x.color) : '#5865F2',
+      button_style: ['1', '2', '3', '4'].includes(String(x.button_style)) ? String(x.button_style) : '1',
+      staff_roles: Array.isArray(x.staff_roles) ? [...x.staff_roles] : [],
+    })),
+  };
+  const c3 = Dashboard.card(root, '🎨 Système de tickets personnalisés', 'Nouveau système indépendant : boutons simples ou menu déroulant, plusieurs types et couleur personnalisée par type. L’ancien système au-dessus ne sera jamais modifié.');
+  const advChannelOptions = ['<option value="">— Choisir un salon —</option>']
+    .concat(textChannels.map((ch) => {
+      const selected = advancedData.channel === ch.id || advancedData.channel === `#${ch.name}`;
+      return `<option value="${App.escapeHtml(ch.id)}" ${selected ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`;
+    }));
+  if (advancedData.channel && !textChannels.some((ch) => advancedData.channel === ch.id || advancedData.channel === `#${ch.name}`)) {
+    advChannelOptions.push(`<option value="${App.escapeHtml(advancedData.channel)}" selected>${App.escapeHtml(advancedData.channel)} (actuel)</option>`);
+  }
+  c3.innerHTML += `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span class="dash-badge ok">✅ Système séparé</span><span style="font-size:12px;color:var(--d-dim)">${advancedData.id ? 'Configuration enregistrée' : 'Pas encore configuré'}</span></div>
+    <label class="dash-label">Nom visible du nouveau panneau</label>
+    <input class="dash-input" id="adv-name" value="${App.escapeHtml(advancedData.name)}" placeholder="Tickets personnalisés" maxlength="80" />
+    <label class="dash-label">Type d'affichage</label>
+    <select class="dash-select" id="adv-mode" style="max-width:300px">
+      <option value="buttons" ${advancedData.mode === 'buttons' ? 'selected' : ''}>🔘 Boutons simples (un bouton par type)</option>
+      <option value="menu" ${advancedData.mode === 'menu' ? 'selected' : ''}>📋 Menu déroulant (choix du type)</option>
+    </select>
+    <label class="dash-label">Salon où envoyer le nouveau panneau</label>
+    <select class="dash-select" id="adv-channel" style="max-width:360px">${advChannelOptions.join('')}</select>
+    <label class="dash-label">Message au-dessus du panneau (optionnel)</label>
+    <textarea class="dash-input" id="adv-message" rows="2" maxlength="1900" placeholder="Choisis le service dont tu as besoin…">${App.escapeHtml(advancedData.message)}</textarea>
+    <label style="display:flex;align-items:center;gap:9px;font-size:13px;color:var(--d-dim);margin-top:10px;cursor:pointer"><input type="checkbox" id="adv-reason" ${advancedData.require_reason ? 'checked' : ''} /> Demander une raison avant de créer le ticket</label>
+    <div style="margin-top:16px;padding:14px;border:1px solid rgba(88,101,242,.32);border-radius:14px;background:linear-gradient(135deg,rgba(88,101,242,.08),rgba(139,92,246,.04))">
+      <div style="font-weight:800;font-size:14px">🗂️ Types du nouveau système</div>
+      <div style="font-size:12px;color:var(--d-dim);margin:4px 0 12px">Maximum 25 types Discord. Chaque type possède sa couleur d'embed et son style de bouton.</div>
+      <div id="adv-types"></div>
+      <button class="dash-btn dash-btn-sm" id="adv-add-type" style="margin-top:8px">＋ Ajouter un type</button>
+    </div>
+    <div id="adv-preview" style="margin-top:14px"></div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px">
+      <button class="dash-btn dash-btn-primary" id="adv-save">💾 Enregistrer le nouveau système</button>
+      <button class="dash-btn" id="adv-send">📨 Envoyer le nouveau panneau</button>
+    </div>
+    <div id="adv-status" class="desc" style="margin-top:8px"></div>`;
+
+  const advTypesEl = c3.querySelector('#adv-types');
+  const advColorToStyle = { '1': '#5865F2', '2': '#4E5058', '3': '#3BA55D', '4': '#ED4245' };
+  const advRenderPreview = () => {
+    const mode = c3.querySelector('#adv-mode').value;
+    const validTypes = advancedData.types.filter((x) => x.label.trim());
+    const body = mode === 'menu'
+      ? `<div style="border:1px solid #1E1F22;border-radius:8px;padding:10px 12px;color:#A8ABAF">📋 Choisis un type…<div style="margin-top:8px">${validTypes.map((x) => `<div style="padding:6px 8px;border-top:1px solid #3f4147"><span style="color:${x.color}">●</span> ${App.escapeHtml(x.emoji || '🎫')} <b style="color:#DBDEE1">${App.escapeHtml(x.label)}</b><small style="display:block;margin-left:22px;color:#949BA4">${App.escapeHtml(x.description || 'Ouvrir un ticket en privé.')}</small></div>`).join('')}</div></div>`
+      : `<div style="display:flex;gap:7px;flex-wrap:wrap">${validTypes.map((x) => `<span style="display:inline-flex;align-items:center;gap:5px;background:${advColorToStyle[x.button_style] || '#5865F2'};border-left:4px solid ${x.color};color:#fff;font-weight:700;padding:8px 12px;border-radius:7px">${App.escapeHtml(x.emoji || '🎫')} ${App.escapeHtml(x.label)}</span>`).join('') || '<span style="color:var(--d-dim)">Ajoute un type pour voir l’aperçu.</span>'}</div>`;
+    c3.querySelector('#adv-preview').innerHTML = `<div class="dash-label" style="margin:0 0 7px">👀 Aperçu Discord</div><div style="background:#313338;border-radius:10px;padding:14px;color:#DBDEE1;font-size:13px"><div style="font-weight:700;margin-bottom:10px">🎨 ${App.escapeHtml(c3.querySelector('#adv-name').value || 'Tickets personnalisés')}</div>${body}</div>`;
+  };
+  const advRenderTypes = () => {
+    advTypesEl.innerHTML = '';
+    advancedData.types.forEach((type, index) => {
+      const availableRoles = rolesList.filter((r) => r.name !== '@everyone');
+      const row = App.el(`
+        <div style="border:1px solid var(--d-border);border-radius:12px;padding:12px;margin:8px 0;background:var(--d-card2)">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input class="dash-input" data-k="emoji" value="${App.escapeHtml(type.emoji)}" placeholder="🎫" style="max-width:60px;text-align:center" />
+            <input class="dash-input" data-k="label" value="${App.escapeHtml(type.label)}" placeholder="Nom du type" maxlength="80" style="flex:1;min-width:150px" />
+            <input class="dash-input" data-k="color" type="color" value="${type.color}" title="Couleur de l'embed" style="width:48px;height:38px;padding:3px" />
+            <button class="dash-btn dash-btn-danger dash-btn-sm" data-del>🗑</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:9px">
+            <div><label class="dash-label">Style du bouton</label><select class="dash-select" data-k="button_style">
+              <option value="1" ${type.button_style === '1' ? 'selected' : ''}>🔵 Bleu</option>
+              <option value="2" ${type.button_style === '2' ? 'selected' : ''}>⚪ Gris</option>
+              <option value="3" ${type.button_style === '3' ? 'selected' : ''}>🟢 Vert</option>
+              <option value="4" ${type.button_style === '4' ? 'selected' : ''}>🔴 Rouge</option>
+            </select></div>
+            <div><label class="dash-label">Catégorie Discord</label><select class="dash-select" data-k="category">
+              <option value="">— Catégorie du panneau —</option>
+              ${categories.map((cat) => `<option value="${App.escapeHtml(cat.name)}" ${type.category === cat.name ? 'selected' : ''}>📁 ${App.escapeHtml(cat.name)}</option>`).join('')}
+              ${type.category && !categories.some((cat) => cat.name === type.category) ? `<option value="${App.escapeHtml(type.category)}" selected>📁 ${App.escapeHtml(type.category)} (actuelle)</option>` : ''}
+            </select></div>
+          </div>
+          <label class="dash-label">Description du type</label>
+          <input class="dash-input" data-k="description" value="${App.escapeHtml(type.description)}" placeholder="Ex : demande privée au staff" maxlength="100" />
+          <label class="dash-label">Rôles staff autorisés (sélection)</label>
+          <div data-roles></div>
+          <button class="dash-btn dash-btn-sm" data-addrole style="margin-top:6px">＋ Ajouter un rôle staff</button>
+        </div>`);
+      const rolesEl = row.querySelector('[data-roles]');
+      const renderTypeRoles = () => {
+        rolesEl.innerHTML = '';
+        if (!type.staff_roles.length) rolesEl.appendChild(App.el(`<div style="font-size:11.5px;color:var(--d-dim)">Aucun rôle spécifique — gestionnaire du serveur uniquement.</div>`));
+        type.staff_roles.forEach((roleName, roleIndex) => {
+          const roleOptions = ['<option value="">— Choisir un rôle staff —</option>']
+            .concat(availableRoles.map((role) => `<option value="${App.escapeHtml(role.name)}" ${roleName === role.name ? 'selected' : ''}>🛡️ ${App.escapeHtml(role.name)}</option>`));
+          if (roleName && !availableRoles.some((role) => role.name === roleName)) roleOptions.push(`<option value="${App.escapeHtml(roleName)}" selected>🛡️ ${App.escapeHtml(roleName)} (actuel)</option>`);
+          const rr = App.el(`<div style="display:flex;gap:7px;margin-top:6px"><select class="dash-select" style="flex:1">${roleOptions.join('')}</select><button class="dash-btn dash-btn-danger dash-btn-sm">🗑</button></div>`);
+          const sel = rr.querySelector('select');
+          if (roleName && [...sel.options].some((option) => option.value === roleName)) sel.value = roleName;
+          sel.onchange = () => { type.staff_roles[roleIndex] = sel.value; };
+          rr.querySelector('button').onclick = () => { type.staff_roles.splice(roleIndex, 1); renderTypeRoles(); };
+          rolesEl.appendChild(rr);
+        });
+      };
+      renderTypeRoles();
+      row.querySelectorAll('[data-k]').forEach((input) => {
+        const event = input.type === 'color' || input.tagName === 'SELECT' ? 'change' : 'input';
+        input.addEventListener(event, () => { type[input.dataset.k] = input.value; advRenderPreview(); });
+      });
+      row.querySelector('[data-addrole]').onclick = () => { type.staff_roles.push(''); renderTypeRoles(); };
+      row.querySelector('[data-del]').onclick = () => { advancedData.types.splice(index, 1); advRenderTypes(); advRenderPreview(); };
+      advTypesEl.appendChild(row);
+    });
+  };
+  advRenderTypes();
+  advRenderPreview();
+  c3.querySelector('#adv-name').oninput = advRenderPreview;
+  c3.querySelector('#adv-mode').onchange = advRenderPreview;
+  c3.querySelector('#adv-add-type').onclick = () => {
+    if (advancedData.types.length >= 25) return App.toast('Discord limite ce panneau à 25 types.', 'error');
+    advancedData.types.push({ id: `t${Date.now()}`, label: '', emoji: '🎫', description: '', category: '', color: '#5865F2', button_style: '1', staff_roles: [] });
+    advRenderTypes(); advRenderPreview();
+  };
+  c3.querySelector('#adv-save').onclick = async () => {
+    const validTypes = advancedData.types.filter((x) => x.label.trim());
+    if (!validTypes.length) return App.toast('Ajoute au moins un type de ticket.', 'error');
+    try {
+      const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/advanced-tickets`, { method: 'PUT', body: {
+        name: c3.querySelector('#adv-name').value.trim(), mode: c3.querySelector('#adv-mode').value,
+        channel: c3.querySelector('#adv-channel').value, message: c3.querySelector('#adv-message').value,
+        require_reason: c3.querySelector('#adv-reason').checked ? 1 : 0, types: validTypes,
+      }});
+      advancedData.id = r.config && r.config.id;
+      c3.querySelector('#adv-status').textContent = '✅ Nouveau système enregistré. Tu peux maintenant envoyer son panneau.';
+      App.toast('Nouveau système de tickets enregistré !');
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+  c3.querySelector('#adv-send').onclick = async () => {
+    try {
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/advanced-tickets/send`, { method: 'POST' });
+      c3.querySelector('#adv-status').textContent = '✅ Nouveau panneau envoyé dans le salon choisi. L’ancien panneau n’a pas été touché.';
+      App.toast('Nouveau panneau personnalisé envoyé !');
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
 };
 
 // ---------- Bienvenue ----------
