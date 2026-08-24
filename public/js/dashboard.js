@@ -1130,6 +1130,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     })),
   };
   const c3 = Dashboard.card(root, '🎨 Système de tickets personnalisés', 'Nouveau système indépendant : boutons simples ou menu déroulant, plusieurs types et couleur personnalisée par type. L’ancien système au-dessus ne sera jamais modifié.');
+  c3.classList.add('adv-builder-card');
   const advChannelOptions = ['<option value="">— Choisir un salon —</option>']
     .concat(textChannels.map((ch) => {
       const selected = advancedData.channel === ch.id || advancedData.channel === `#${ch.name}`;
@@ -1139,7 +1140,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     advChannelOptions.push(`<option value="${App.escapeHtml(advancedData.channel)}" selected>${App.escapeHtml(advancedData.channel)} (actuel)</option>`);
   }
   c3.innerHTML += `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span class="dash-badge ok">✅ Système séparé</span><span style="font-size:12px;color:var(--d-dim)">${advancedData.id ? 'Configuration enregistrée' : 'Pas encore configuré'}</span></div>
+    <div class="adv-builder-status"><span class="dash-badge ok">✅ Système séparé</span><span class="adv-status-copy">${advancedData.id ? 'Configuration enregistrée' : 'Pas encore configuré'}</span></div>
     <label class="dash-label">Nom visible du nouveau panneau</label>
     <input class="dash-input" id="adv-name" value="${App.escapeHtml(advancedData.name)}" placeholder="Tickets personnalisés" maxlength="80" />
     <label class="dash-label">Type d'affichage</label>
@@ -1153,22 +1154,26 @@ Dashboard.renderers.tickets = async (content, data) => {
     <input class="dash-input" id="adv-image" value="${App.escapeHtml(advancedData.image_url)}" placeholder="https://.../image.png" />
     <label class="dash-label">Message au-dessus du panneau (optionnel)</label>
     <textarea class="dash-input" id="adv-message" rows="2" maxlength="1900" placeholder="Choisis le service dont tu as besoin…">${App.escapeHtml(advancedData.message)}</textarea>
-    <label style="display:flex;align-items:center;gap:9px;font-size:13px;color:var(--d-dim);margin-top:10px;cursor:pointer"><input type="checkbox" id="adv-reason" ${advancedData.require_reason ? 'checked' : ''} /> Demander une raison avant de créer le ticket</label>
-    <div style="font-size:11.5px;color:var(--d-dim);margin-top:5px">Chaque type peut aussi avoir son propre questionnaire. S'il y a moins de 5 questions, la raison est ajoutée dans la même fenêtre ; Discord limite une fenêtre à 5 champs.</div>
-    <div style="margin-top:16px;padding:14px;border:1px solid rgba(88,101,242,.32);border-radius:14px;background:linear-gradient(135deg,rgba(88,101,242,.08),rgba(139,92,246,.04))">
-      <div style="font-weight:800;font-size:14px">🗂️ Types du nouveau système</div>
-      <div style="font-size:12px;color:var(--d-dim);margin:4px 0 12px">Maximum 25 types Discord. Chaque type possède sa couleur, son bouton, ses rôles staff et jusqu'à 5 questions obligatoires.</div>
-      <div id="adv-types"></div>
-      <button class="dash-btn dash-btn-sm" id="adv-add-type" style="margin-top:8px">＋ Ajouter un type</button>
+    <label class="adv-check-row"><input type="checkbox" id="adv-reason" ${advancedData.require_reason ? 'checked' : ''} /><span><b>Demander une raison avant de créer le ticket</b><small>La raison sera ajoutée au questionnaire si Discord a encore un champ disponible.</small></span></label>
+    <div class="adv-builder-grid">
+      <div class="adv-types-panel">
+        <div class="adv-panel-heading"><div><b>🗂️ Types du nouveau système</b><small>Chaque type possède sa couleur, son bouton, ses rôles staff et jusqu'à 5 questions obligatoires.</small></div><span class="adv-count" id="adv-type-count"></span></div>
+        <div id="adv-types"></div>
+        <button class="dash-btn dash-btn-sm adv-add-type" id="adv-add-type">＋ Ajouter un type</button>
+      </div>
+      <div id="adv-preview" class="adv-preview-shell"></div>
     </div>
-    <div id="adv-preview" style="margin-top:14px"></div>
-    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px">
+    <div class="adv-builder-actions">
       <button class="dash-btn dash-btn-primary" id="adv-save">💾 Enregistrer le nouveau système</button>
       <button class="dash-btn" id="adv-send">📨 Envoyer le nouveau panneau</button>
     </div>
-    <div id="adv-status" class="desc" style="margin-top:8px"></div>`;
+    <div id="adv-status" class="desc adv-status-line"></div>`;
 
   const advTypesEl = c3.querySelector('#adv-types');
+  const advTypeCountEl = c3.querySelector('#adv-type-count');
+  const updateAdvTypeCount = () => {
+    if (advTypeCountEl) advTypeCountEl.textContent = `${advancedData.types.filter((type) => type.label.trim()).length}/25`;
+  };
   const advColorToStyle = { '1': '#5865F2', '2': '#4E5058', '3': '#3BA55D', '4': '#ED4245' };
   const advRenderPreview = () => {
     const mode = c3.querySelector('#adv-mode').value;
@@ -1181,15 +1186,17 @@ Dashboard.renderers.tickets = async (content, data) => {
     const body = mode === 'menu'
       ? `<div style="border:1px solid #1E1F22;border-radius:8px;padding:10px 12px;color:#A8ABAF">📋 Choisis un type…<div style="margin-top:8px">${validTypes.map((x) => `<div style="padding:6px 8px;border-top:1px solid #3f4147"><span style="color:${x.color}">●</span> ${App.escapeHtml(x.emoji || '🎫')} <b style="color:#DBDEE1">${App.escapeHtml(x.label)}</b>${questionBadge(x)}<small style="display:block;margin-left:22px;color:#949BA4">${App.escapeHtml(x.description || 'Ouvrir un ticket en privé.')}</small></div>`).join('')}</div></div>`
       : `<div style="display:flex;flex-direction:column;gap:8px">${validTypes.map((x) => `<div style="padding:9px 10px;border-left:4px solid ${x.color};border-top:1px solid #3f4147"><b style="display:block;color:#DBDEE1">${App.escapeHtml(x.emoji || '🎫')} ${App.escapeHtml(x.label)}${questionBadge(x)}</b><small style="display:block;color:#949BA4;margin:3px 0 7px">${App.escapeHtml(x.description || 'Ouvrir un ticket en privé.')}</small><span style="display:inline-flex;background:${advColorToStyle[x.button_style] || '#5865F2'};color:#fff;font-weight:700;padding:6px 10px;border-radius:6px">${App.escapeHtml(x.emoji || '🎫')} ${App.escapeHtml(x.button_label || ('Envoyer un ticket ' + x.label.toLowerCase()))}</span></div>`).join('') || '<span style="color:var(--d-dim)">Ajoute un type pour voir l’aperçu.</span>'}</div>`;
-    c3.querySelector('#adv-preview').innerHTML = `<div class="dash-label" style="margin:0 0 7px">👀 Aperçu Discord</div><div style="background:#313338;border-radius:10px;padding:14px;color:#DBDEE1;font-size:13px">${imagePreview}<div style="font-weight:700;margin-bottom:10px">🎨 ${App.escapeHtml(c3.querySelector('#adv-name').value || 'Créer un ticket')}</div>${body}</div>`;
+    c3.querySelector('#adv-preview').innerHTML = `<div class="adv-preview-title">👀 Aperçu Discord <span>Mis à jour en direct</span></div><div class="adv-discord-preview">${imagePreview}<div class="adv-discord-title">🎨 ${App.escapeHtml(c3.querySelector('#adv-name').value || 'Créer un ticket')}</div>${body}</div>`;
   };
   const advRenderTypes = () => {
     advTypesEl.innerHTML = '';
+    updateAdvTypeCount();
     advancedData.types.forEach((type, index) => {
       const availableRoles = rolesList.filter((r) => r.name !== '@everyone');
       const row = App.el(`
-        <div style="border:1px solid var(--d-border);border-radius:12px;padding:12px;margin:8px 0;background:var(--d-card2)">
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div class="adv-type-card">
+          <div class="adv-type-head">
+            <span class="adv-type-number">${String(index + 1).padStart(2, '0')}</span>
             <input class="dash-input" data-k="emoji" value="${App.escapeHtml(type.emoji)}" placeholder="🎫" style="max-width:60px;text-align:center" />
             <input class="dash-input" data-k="label" value="${App.escapeHtml(type.label)}" placeholder="Nom du type" maxlength="80" style="flex:1;min-width:150px" />
             <input class="dash-input" data-k="color" type="color" value="${type.color}" title="Couleur de l'embed" style="width:48px;height:38px;padding:3px" />
@@ -1245,7 +1252,7 @@ Dashboard.renderers.tickets = async (content, data) => {
         }
         type.questions.forEach((question, questionIndex) => {
           const questionRow = App.el(`
-            <div style="display:flex;gap:7px;align-items:center">
+            <div class="adv-question-row">
               <span style="font-size:11px;color:var(--d-dim);min-width:17px">${questionIndex + 1}.</span>
               <input class="dash-input" value="${App.escapeHtml(question)}" placeholder="Ex : Quel est ton pseudo ?" maxlength="45" style="flex:1" />
               <button class="dash-btn dash-btn-danger dash-btn-sm">🗑</button>
@@ -1264,7 +1271,11 @@ Dashboard.renderers.tickets = async (content, data) => {
       renderTypeQuestions();
       row.querySelectorAll('[data-k]').forEach((input) => {
         const event = input.type === 'color' || input.tagName === 'SELECT' ? 'change' : 'input';
-        input.addEventListener(event, () => { type[input.dataset.k] = input.value; advRenderPreview(); });
+        input.addEventListener(event, () => {
+          type[input.dataset.k] = input.value;
+          if (input.dataset.k === 'label') updateAdvTypeCount();
+          advRenderPreview();
+        });
       });
       row.querySelector('[data-addrole]').onclick = () => { type.staff_roles.push(''); renderTypeRoles(); };
       row.querySelector('[data-addquestion]').onclick = () => {
