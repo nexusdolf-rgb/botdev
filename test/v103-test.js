@@ -23,7 +23,7 @@ console.log('✅ bandeau d\'état impossible à rater (ACTIVES / DÉSACTIVÉES)'
 assert.ok(dash.includes('data-test') && dash.includes('/test`, { method: \'POST\' }'), 'bouton Tester branché');
 assert.ok(routes.includes("livesocials/:sid/test"), 'endpoint de test présent');
 assert.ok(routes.includes('CHECKERS[s.platform](s.handle)'), 'le test exécute le vrai détecteur');
-assert.ok(routes.includes('channelSet: !!gs.live_channel'), 'le test signale si le salon manque');
+assert.ok(routes.includes('channelSet: !!channel'), 'le test vérifie le vrai salon côté Discord');
 console.log('✅ test en direct depuis le serveur + alerte salon manquant');
 
 console.log('\n🎉 Tous les tests v2.6 passent');

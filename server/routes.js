@@ -902,10 +902,10 @@ router.get('/bots/:id/guilds/:guildId/notifications', requireAuth, async (req, r
     const gs = store.guildSettings.get(bot.id, guildId) || {};
     const ev = store.events.all(bot.id, guildId) || {};
     const tcfg = store.tickets.get(bot.id, guildId) || {};
+    const { findLiveChannel } = require('./discord/liveWatch');
     const findChan = (q) => {
-      const name = String(q || '').trim().replace(/^#/, '').toLowerCase();
-      if (!name) return undefined; // non configuré
-      return guild.channels.cache.find((c) => c.name && c.name.toLowerCase() === name && c.isTextBased && c.isTextBased()) || null;
+      if (!String(q || '').trim().replace(/^#/, '')) return undefined; // non configuré
+      return findLiveChannel(guild, q);
     };
     // Chaque salon configuré doit exister ET être écrivable par le bot
     const checks = [
@@ -959,21 +959,26 @@ router.get('/bots/:id/guilds/:guildId/activity', requireAuth, async (req, res) =
 });
 
 // 🧪 Test en direct d'un compte suivi : le serveur (IP de production) exécute
-// le détecteur et renvoie ce que la plateforme voit VRAIMENT.
+// le détecteur ET vérifie le vrai salon/les permissions d'annonce.
 router.post('/bots/:id/guilds/:guildId/livesocials/:sid/test', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
   if (!bot) return;
-  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
-  const s = store.liveSocials.all(bot.id, req.params.guildId).find((x) => x.id === Number(req.params.sid));
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const s = store.liveSocials.all(bot.id, guildId).find((x) => x.id === Number(req.params.sid));
   if (!s) return res.status(404).json({ error: 'Compte introuvable.' });
-  const gs = store.guildSettings.get(bot.id, req.params.guildId) || {};
+  const gs = store.guildSettings.get(bot.id, guildId) || {};
   try {
-    const { CHECKERS } = require('./discord/liveWatch');
-    const r = await CHECKERS[s.platform](s.handle);
-    if (!r) return res.json({ ok: false, channelSet: !!gs.live_channel, error: 'Plateforme injoignable depuis le serveur (réessaie dans quelques minutes).' });
-    res.json({ ok: true, channelSet: !!gs.live_channel, live: r.live, name: r.name });
+    const { CHECKERS, findLiveChannel, channelPermissionIssue } = require('./discord/liveWatch');
+    const entry = botManager.clients.get(bot.id);
+    const guild = entry && entry.client && entry.client.isReady() ? entry.client.guilds.cache.get(guildId) : null;
+    const channel = guild ? findLiveChannel(guild, gs.live_channel) : null;
+    const channelIssue = channel ? channelPermissionIssue(guild, channel) : (gs.live_channel ? 'salon d\'annonces introuvable côté bot' : 'aucun salon d\'annonces configuré');
+    const r = CHECKERS[s.platform] ? await CHECKERS[s.platform](s.handle) : null;
+    if (!r) return res.json({ ok: false, channelSet: !!channel, channelName: channel ? channel.name : '', channelIssue, error: 'Plateforme injoignable depuis le serveur (réessaie dans quelques minutes).' });
+    res.json({ ok: true, channelSet: !!channel, channelName: channel ? channel.name : '', channelIssue, live: r.live, liveKey: r.liveKey || '', name: r.name });
   } catch (e) {
-    res.json({ ok: false, channelSet: !!gs.live_channel, error: String(e.message || e).slice(0, 200) });
+    res.json({ ok: false, channelSet: false, error: String(e.message || e).slice(0, 200) });
   }
 });
 

@@ -31,8 +31,8 @@ const store = require('../server/db');
   console.log('✅ toujours en live : pas de doublon');
   assert.strictEqual(live.liveDecision('off', false, 0, now), 'none');
   console.log('✅ hors ligne : aucune annonce');
-  assert.strictEqual(live.liveDecision('off', true, now - 10 * 60000, now), 'none');
-  console.log('✅ anti-doublon 30 min (redémarrage/faux positif) respecté');
+  assert.strictEqual(live.liveDecision('off', true, now - 10 * 60000, now), 'announce');
+  console.log('✅ nouveau live après redémarrage annoncé immédiatement (plus de cooldown arbitraire)');
   assert.strictEqual(live.liveDecision('off', true, now - 45 * 60000, now), 'announce');
   console.log('✅ nouveau live après 45 min : annoncé');
 

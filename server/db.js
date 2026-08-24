@@ -517,6 +517,13 @@ try { db.exec(`CREATE TABLE IF NOT EXISTS live_socials (
   last_status TEXT DEFAULT 'off', last_announce_ts INTEGER DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now')),
   UNIQUE (bot_id, guild_id, platform, handle))`); } catch (e) {}
+// v3.8 — état fiable des sessions live : une clé de session (room/stream),
+// confirmation de sortie et diagnostic du dernier contrôle. Les anciennes
+// bases reçoivent ces colonnes sans perdre les comptes suivis.
+try { db.exec("ALTER TABLE live_socials ADD COLUMN live_key TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE live_socials ADD COLUMN offline_streak INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE live_socials ADD COLUMN last_checked_at INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE live_socials ADD COLUMN last_error TEXT DEFAULT ''"); } catch (e) {}
 
 // 🗑 Ancien cache de bannières animées : supprimé (les GIF faisaient
 // grossir la sauvegarde au-delà de la limite de 1 Mo de l'API GitHub).
@@ -1180,7 +1187,20 @@ const liveSocials = {
   all: (botId, guildId) => db.prepare('SELECT * FROM live_socials WHERE bot_id = ? AND guild_id = ? ORDER BY id').all(botId, guildId),
   add: (botId, guildId, userId, platform, handle) => db.prepare('INSERT INTO live_socials (bot_id, guild_id, user_id, platform, handle) VALUES (?, ?, ?, ?, ?) ON CONFLICT(bot_id, guild_id, platform, handle) DO UPDATE SET user_id = excluded.user_id').run(botId, guildId, String(userId || ''), String(platform), String(handle).slice(0, 60)),
   remove: (botId, guildId, id) => db.prepare('DELETE FROM live_socials WHERE bot_id = ? AND guild_id = ? AND id = ?').run(botId, guildId, id),
-  setStatus: (botId, guildId, id, status, announceTs) => db.prepare('UPDATE live_socials SET last_status = ?, last_announce_ts = ? WHERE bot_id = ? AND guild_id = ? AND id = ?').run(String(status), parseInt(announceTs, 10) || 0, botId, guildId, id),
+  // Compatibilité avec l'ancien code/tests : les nouveaux champs ont des
+  // valeurs sûres lorsqu'un appel ne fournit que le statut et la date.
+  setStatus: (botId, guildId, id, status, announceTs, liveKey = '', offlineStreak = 0, checkedAt = Date.now(), error = '') => db.prepare(`UPDATE live_socials
+    SET last_status = ?, last_announce_ts = ?, live_key = ?, offline_streak = ?, last_checked_at = ?, last_error = ?
+    WHERE bot_id = ? AND guild_id = ? AND id = ?`).run(
+      String(status || 'off'), parseInt(announceTs, 10) || 0,
+      String(liveKey || '').slice(0, 200), Math.max(parseInt(offlineStreak, 10) || 0, 0),
+      parseInt(checkedAt, 10) || Date.now(), String(error || '').slice(0, 300), botId, guildId, id),
+  saveState: (botId, guildId, id, state = {}) => db.prepare(`UPDATE live_socials
+    SET last_status = ?, last_announce_ts = ?, live_key = ?, offline_streak = ?, last_checked_at = ?, last_error = ?
+    WHERE bot_id = ? AND guild_id = ? AND id = ?`).run(
+      String(state.status || 'off'), parseInt(state.announceTs, 10) || 0,
+      String(state.liveKey || '').slice(0, 200), Math.max(parseInt(state.offlineStreak, 10) || 0, 0),
+      parseInt(state.lastCheckedAt, 10) || Date.now(), String(state.lastError || '').slice(0, 300), botId, guildId, id),
   count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM live_socials WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
 };
 

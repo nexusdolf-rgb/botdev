@@ -2105,7 +2105,7 @@ Dashboard.renderers.community = async (content, data) => {
       </div>
     </div>
     <div id="lv-list" style="margin-top:14px"></div>
-    <div style="font-size:12px;color:var(--d-dim);margin-top:8px">💡 Vérification toutes les 3 minutes · 20 comptes max · une annonce par live (anti-doublon 30 min).</div>`;
+    <div style="font-size:12px;color:var(--d-dim);margin-top:8px">💡 Vérification automatique toutes les 60 secondes · 20 comptes max · une annonce par session live (les faux hors-ligne sont confirmés).</div>`;
 
   // 💾 Enregistrement des réglages live (partagé : bouton 💾 ET ajout de compte)
   const saveLiveSettings = async () => {
@@ -2133,15 +2133,24 @@ Dashboard.renderers.community = async (content, data) => {
       if (!socials.length) { list.appendChild(App.el(`<div class="dash-empty" style="padding:14px">Aucun compte suivi pour l'instant.</div>`)); return; }
       socials.forEach((so) => {
         const [emo, lab] = PLAT[so.platform] || ['🌐', so.platform];
+        const checkedLabel = so.last_checked_at
+          ? ` · contrôle ${new Date(Number(so.last_checked_at)).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+          : '';
+        const errorLine = so.last_error
+          ? `<div style="font-size:11.5px;color:#faa61a;margin-top:5px">⚠️ ${App.escapeHtml(so.last_error)}</div>`
+          : '';
         const row = App.el(`
-          <div style="display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--d-border)">
-            <span style="font-size:17px">${emo}</span>
-            <div style="flex:1;min-width:0">
-              <b>@${App.escapeHtml(so.handle)}</b> <span style="color:var(--d-dim);font-size:12px">· ${lab}${so.user_id ? ` · lié à un membre` : ''}</span>
+          <div style="padding:9px 4px;border-bottom:1px solid var(--d-border)">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:17px">${emo}</span>
+              <div style="flex:1;min-width:0">
+                <b>@${App.escapeHtml(so.handle)}</b> <span style="color:var(--d-dim);font-size:12px">· ${lab}${so.user_id ? ` · lié à un membre` : ''}${checkedLabel}</span>
+              </div>
+              <span class="dash-badge ${so.last_status === 'live' ? 'ok' : ''}">${so.last_status === 'live' ? '🔴 EN LIVE' : '⚫ hors ligne'}</span>
+              <button class="dash-btn dash-btn-sm" data-test>🧪 Tester</button>
+              <button class="dash-btn dash-btn-danger dash-btn-sm" data-del>✕</button>
             </div>
-            <span class="dash-badge ${so.last_status === 'live' ? 'ok' : ''}">${so.last_status === 'live' ? '🔴 EN LIVE' : '⚫ hors ligne'}</span>
-            <button class="dash-btn dash-btn-sm" data-test>🧪 Tester</button>
-            <button class="dash-btn dash-btn-danger dash-btn-sm" data-del>✕</button>
+            ${errorLine}
           </div>`);
         row.querySelector('[data-test]').onclick = async () => {
           const btn = row.querySelector('[data-test]');
@@ -2149,7 +2158,10 @@ Dashboard.renderers.community = async (content, data) => {
           try {
             const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/livesocials/${so.id}/test`, { method: 'POST' });
             if (!r.ok) App.toast(`🧪 ${r.error}`, 'error');
-            else App.toast(`🧪 ${r.name} : ${r.live ? '🔴 EN LIVE en ce moment' : '⚫ pas en live actuellement'}${r.channelSet ? '' : ' — ⚠️ mais AUCUN salon d\'annonces configuré !'}`, r.live && r.channelSet ? undefined : (r.channelSet ? undefined : 'error'));
+            else {
+              const channelHint = r.channelSet ? ` · salon #${r.channelName || 'configuré'} prêt` : ` — ⚠️ ${r.channelIssue || 'salon d\'annonces introuvable'}`;
+              App.toast(`🧪 ${r.name} : ${r.live ? '🔴 EN LIVE en ce moment' : '⚫ pas en live actuellement'}${channelHint}`, r.channelSet && !r.channelIssue ? undefined : 'error');
+            }
           } catch (e) { App.toast(e.message, 'error'); }
           btn.disabled = false; btn.textContent = '🧪 Tester';
         };
