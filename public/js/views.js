@@ -15,7 +15,7 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
     <div class="modal-body">
       <div class="help-box" style="margin-bottom:14px">
         Chaque option attribue (ou retire) un rôle quand le membre la choisit.
-        Saisis le <b>nom exact du rôle</b> tel qu'il existe sur ton serveur Discord.
+        Sur mobile comme sur PC, sélectionne le rôle directement dans la liste Discord du serveur.
       </div>
       <label class="field-label">Nom du panneau</label>
       <input class="input" id="rm-name" maxlength="50" value="${App.escapeHtml(data.name)}" placeholder="Rôles & notifications" />
@@ -66,19 +66,29 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
     rolesDl.appendChild(App.el(`<option value="${App.escapeHtml(r.name)}"></option>`));
   });
 
+  const roleChoices = (guildData.roles || []).filter((r) => r.name !== '@everyone');
   const renderOpts = () => {
     optWrap.innerHTML = '';
     data.options.forEach((o, i) => {
+      const roleOptions = ['<option value="">— Choisir un rôle —</option>']
+        .concat(roleChoices.map((r) => `<option value="${App.escapeHtml(r.name)}" ${o.role === r.name ? 'selected' : ''}>🛡️ ${App.escapeHtml(r.name)}</option>`));
+      if (o.role && !roleChoices.some((r) => r.name === o.role)) {
+        roleOptions.push(`<option value="${App.escapeHtml(o.role)}" selected>🛡️ ${App.escapeHtml(o.role)} (introuvable ?)</option>`);
+      }
+      const roleControl = roleChoices.length
+        ? `<select class="input" data-k="role">${roleOptions.join('')}</select>`
+        : `<input class="input" data-k="role" placeholder="Aucun rôle reçu — écris le nom" value="${App.escapeHtml(o.role)}" list="rm-roles-list" />`;
       const row = App.el(`
         <div class="row-item" style="margin-top:7px">
           <input class="input" data-k="emoji" placeholder="😀" value="${App.escapeHtml(o.emoji)}" style="max-width:56px;text-align:center" />
           <input class="input" data-k="label" placeholder="Texte affiché" value="${App.escapeHtml(o.label)}" style="max-width:170px" />
-          <input class="input" data-k="role" placeholder="Nom exact du rôle" value="${App.escapeHtml(o.role)}" list="rm-roles-list" />
+          ${roleControl}
           <button class="btn btn-danger btn-icon btn-sm" data-del>🗑</button>
         </div>
       `);
-      row.querySelectorAll('[data-k]').forEach(inp => {
-        inp.addEventListener('input', () => { o[inp.dataset.k] = inp.value; });
+      row.querySelectorAll('[data-k]').forEach((inp) => {
+        const event = inp.tagName === 'SELECT' ? 'change' : 'input';
+        inp.addEventListener(event, () => { o[inp.dataset.k] = inp.value; });
       });
       row.querySelector('[data-del]').onclick = () => {
         data.options.splice(i, 1);

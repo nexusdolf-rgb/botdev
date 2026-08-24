@@ -754,6 +754,7 @@ body::-webkit-scrollbar-thumb:hover { background: #3a3f5c; background-clip: cont
 
 /* 🎨 Sélecteur d'accent */
 .dash-accent-wrap { position: relative; }
+.dash-accent-pop[hidden], .dash-bell-pop[hidden] { display: none !important; }
 .dash-accent-pop {
   position: absolute; top: 46px; right: 0; z-index: 200;
   display: flex; gap: 8px; padding: 10px 12px;

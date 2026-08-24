@@ -339,6 +339,27 @@ Dashboard.applyAccent = (name) => {
 };
 try { Dashboard.applyAccent(localStorage.getItem('hx-accent') || 'Blurple'); } catch {}
 
+// 🎨/🔔 Popovers : un clic sur l'icône ouvre, un second clic ou un clic
+// ailleurs ferme. Le gestionnaire unique évite les panneaux « collés » lors
+// des re-rendus du topbar et fonctionne aussi sur écran tactile.
+Dashboard.closePopovers = (except = null) => {
+  document.querySelectorAll('.dash-accent-pop, .dash-bell-pop').forEach((pop) => {
+    if (pop !== except) pop.hidden = true;
+  });
+};
+if (!window.__hxPopoverDismiss) {
+  window.__hxPopoverDismiss = true;
+  document.addEventListener('click', (event) => {
+    const inside = event.target && event.target.closest
+      ? event.target.closest('#d-bell, .dash-bell-pop, #d-accent, .dash-accent-pop')
+      : null;
+    if (!inside) Dashboard.closePopovers();
+  }, true);
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') Dashboard.closePopovers();
+  });
+}
+
 // ---------------------- 🌍 Grille de serveurs (choix visuel) ----------------------
 Dashboard.renderServerGrid = (content) => {
   const guilds = Dashboard.state.discordGuilds || [];
@@ -445,11 +466,21 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
     warnings.forEach((w) => list.appendChild(App.el(`<div class="bp-item warn"><span>${w.icon || '⚠️'}</span><div>${App.escapeHtml(w.text)}</div></div>`)));
     infos.forEach((i2) => list.appendChild(App.el(`<div class="bp-item"><span>${i2.icon || 'ℹ️'}</span><div>${App.escapeHtml(i2.text)}</div></div>`)));
   });
-  bellBtn.onclick = (e) => { e.stopPropagation(); bellPop.hidden = !bellPop.hidden; };
-  topbar.querySelector('#d-refresh').onclick = () => { App.toast('Module actualisé !'); Dashboard.refresh(); };
+  bellBtn.onclick = (e) => {
+    e.stopPropagation();
+    const open = bellPop.hidden;
+    Dashboard.closePopovers(open ? bellPop : null);
+    bellPop.hidden = !open;
+  };
+  topbar.querySelector('#d-refresh').onclick = () => { Dashboard.closePopovers(); App.toast('Module actualisé !'); Dashboard.refresh(); };
   const accBtn = topbar.querySelector('#d-accent');
   const accPop = topbar.querySelector('.dash-accent-pop');
-  accBtn.onclick = (e) => { e.stopPropagation(); accPop.hidden = !accPop.hidden; };
+  accBtn.onclick = (e) => {
+    e.stopPropagation();
+    const open = accPop.hidden;
+    Dashboard.closePopovers(open ? accPop : null);
+    accPop.hidden = !open;
+  };
   accPop.querySelectorAll('[data-acc]').forEach((d) => {
     d.onclick = () => { Dashboard.applyAccent(d.dataset.acc); accPop.hidden = true; App.toast(`🎨 Thème « ${d.dataset.acc} » appliqué !`); };
   });
@@ -1297,19 +1328,29 @@ Dashboard.renderers.levels = async (content, data) => {
   const c2 = Dashboard.card(root, '🏆 Récompenses de niveau', 'Rôle donné automatiquement quand le membre atteint le niveau.');
   c2.appendChild(App.el(`<div id="xp-roles"></div>`));
   c2.appendChild(App.el(`<button class="dash-btn dash-btn-sm" id="xp-add" style="margin-top:8px">＋ Ajouter une récompense</button>`));
+  const xpRoleChoices = (data.roles || []).filter((role) => role.name !== '@everyone');
 
   const renderRoles = () => {
     const el = c2.querySelector('#xp-roles');
     el.innerHTML = '';
     if (!rolesData.length) el.appendChild(App.el(`<div class="dash-empty">Aucune récompense.</div>`));
     rolesData.forEach((r, i) => {
+      const options = ['<option value="">— Choisir un rôle —</option>']
+        .concat(xpRoleChoices.map((role) => `<option value="${App.escapeHtml(role.name)}" ${r.role === role.name ? 'selected' : ''}>🛡️ ${App.escapeHtml(role.name)}</option>`));
+      if (r.role && !xpRoleChoices.some((role) => role.name === r.role)) options.push(`<option value="${App.escapeHtml(r.role)}" selected>🛡️ ${App.escapeHtml(r.role)} (introuvable ?)</option>`);
+      const roleControl = xpRoleChoices.length
+        ? `<select class="dash-select" data-k="role">${options.join('')}</select>`
+        : `<input class="dash-input" data-k="role" value="${App.escapeHtml(r.role)}" placeholder="Aucun rôle reçu — écris le nom" />`;
       const row = App.el(`
-        <div style="display:flex;gap:8px;margin-bottom:8px">
+        <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
           <input class="dash-input" data-k="level" type="number" value="${r.level}" style="max-width:100px" />
-          <input class="dash-input" data-k="role" value="${App.escapeHtml(r.role)}" placeholder="Nom exact du rôle" />
+          ${roleControl}
           <button class="dash-btn dash-btn-danger dash-btn-sm" data-del>🗑</button>
         </div>`);
-      row.querySelectorAll('[data-k]').forEach((inp) => inp.addEventListener('input', () => { r[inp.dataset.k] = inp.dataset.k === 'level' ? (parseInt(inp.value, 10) || 1) : inp.value; }));
+      row.querySelectorAll('[data-k]').forEach((inp) => {
+        const event = inp.tagName === 'SELECT' ? 'change' : 'input';
+        inp.addEventListener(event, () => { r[inp.dataset.k] = inp.dataset.k === 'level' ? (parseInt(inp.value, 10) || 1) : inp.value; });
+      });
       row.querySelector('[data-del]').onclick = () => { rolesData.splice(i, 1); renderRoles(); };
       el.appendChild(row);
     });
@@ -1348,11 +1389,12 @@ Dashboard.renderers.economy = async (content, data) => {
 };
 
 // ---------- Boutique ----------
-Dashboard.renderers.shop = async (content) => {
+Dashboard.renderers.shop = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const root = Dashboard.header(content, '🛒', 'Boutique', 'Les membres achètent des rôles avec leurs coins (/shop, /buy). Tu gères les articles ici.');
   const { items } = await App.api(`/bots/${bot.id}/guilds/${guildId}/shop`);
   const itemsData = items.map((i) => ({ id: i.id, name: i.name, description: i.description, price: i.price, role: i.role, emoji: i.emoji }));
+  const roleChoices = (data && data.roles || []).filter((role) => role.name !== '@everyone');
   const c = Dashboard.card(root, 'Articles', 'Prix en coins. Le rôle est donné automatiquement à l\'achat.');
   c.appendChild(App.el(`<div id="shop-items"></div>`));
   c.appendChild(App.el(`<button class="dash-btn dash-btn-sm" id="shop-add" style="margin-top:8px">＋ Ajouter un article</button>`));
@@ -1361,16 +1403,25 @@ Dashboard.renderers.shop = async (content) => {
     el.innerHTML = '';
     if (!itemsData.length) el.appendChild(App.el(`<div class="dash-empty">Boutique vide.</div>`));
     itemsData.forEach((it, i) => {
+      const roleOptions = ['<option value="">— Choisir un rôle —</option>']
+        .concat(roleChoices.map((role) => `<option value="${App.escapeHtml(role.name)}" ${it.role === role.name ? 'selected' : ''}>🛡️ ${App.escapeHtml(role.name)}</option>`));
+      if (it.role && !roleChoices.some((role) => role.name === it.role)) roleOptions.push(`<option value="${App.escapeHtml(it.role)}" selected>🛡️ ${App.escapeHtml(it.role)} (introuvable ?)</option>`);
+      const roleControl = roleChoices.length
+        ? `<select class="dash-select" data-k="role">${roleOptions.join('')}</select>`
+        : `<input class="dash-input" data-k="role" value="${App.escapeHtml(it.role)}" placeholder="Aucun rôle reçu — écris le nom" />`;
       const row = App.el(`
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
           <input class="dash-input" data-k="emoji" value="${App.escapeHtml(it.emoji)}" style="max-width:58px;text-align:center" />
           <input class="dash-input" data-k="name" value="${App.escapeHtml(it.name)}" placeholder="Nom" style="min-width:110px;flex:1" />
-          <input class="dash-input" data-k="role" value="${App.escapeHtml(it.role)}" placeholder="Rôle exact" style="min-width:110px;flex:1" />
+          ${roleControl}
           <input class="dash-input" data-k="price" type="number" value="${it.price}" style="max-width:90px" />
           <input class="dash-input" data-k="description" value="${App.escapeHtml(it.description)}" placeholder="Description" style="min-width:130px;flex:1" />
           <button class="dash-btn dash-btn-danger dash-btn-sm" data-del>🗑</button>
         </div>`);
-      row.querySelectorAll('[data-k]').forEach((inp) => inp.addEventListener('input', () => { it[inp.dataset.k] = inp.dataset.k === 'price' ? (parseInt(inp.value, 10) || 1) : inp.value; }));
+      row.querySelectorAll('[data-k]').forEach((inp) => {
+        const event = inp.tagName === 'SELECT' ? 'change' : 'input';
+        inp.addEventListener(event, () => { it[inp.dataset.k] = inp.dataset.k === 'price' ? (parseInt(inp.value, 10) || 1) : inp.value; });
+      });
       row.querySelector('[data-del]').onclick = () => { itemsData.splice(i, 1); render(); };
       el.appendChild(row);
     });
