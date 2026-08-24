@@ -9,6 +9,26 @@ const App = {
 };
 
 // ---------------------- Utilitaires ----------------------
+// 🌊 Effet « ripple » Material sur TOUS les boutons (délégué global)
+if (typeof document !== 'undefined' && !window.__hxRipple) {
+  window.__hxRipple = true;
+  document.addEventListener('click', (e) => {
+    const btn = e.target && e.target.closest ? e.target.closest('.btn, .dash-btn, .dash-iconbtn, .hero-step, .srv-card') : null;
+    if (!btn || btn.disabled) return;
+    try {
+      const r = btn.getBoundingClientRect();
+      const d = Math.max(r.width, r.height) * 1.1;
+      const s = document.createElement('span');
+      s.className = 'hx-ripple';
+      s.style.width = s.style.height = d + 'px';
+      s.style.left = (e.clientX - r.left - d / 2) + 'px';
+      s.style.top = (e.clientY - r.top - d / 2) + 'px';
+      btn.appendChild(s);
+      setTimeout(() => s.remove(), 550);
+    } catch {}
+  }, true);
+}
+
 App.el = (html) => {
   const t = document.createElement('template');
   t.innerHTML = html.trim();
@@ -167,25 +187,34 @@ App.renderConnect = () => {
         </ul>
       </div>
       <div class="auth-right">
-        <div class="auth-card" style="text-align:center">
-          <div style="font-size:44px;margin-bottom:10px">🎮</div>
+        <div class="auth-card auth-glass" style="text-align:center">
+          <div class="auth-bot-ava">🤖</div>
           <h2>Connecte-toi avec Discord</h2>
-          <p class="sub" style="margin:8px 0 22px">Aucun compte à créer, aucun mot de passe.<br/>Discord vérifie automatiquement tes serveurs et tes permissions.</p>
+          <p class="sub" style="margin:8px 0 20px">Aucun compte à créer, aucun mot de passe.<br/>Discord vérifie automatiquement tes serveurs et tes permissions.</p>
           <button class="btn btn-discord" id="connect-discord" style="padding:13px;font-size:15px">🎮 Se connecter avec Discord</button>
-          <p style="margin-top:18px;font-size:12.5px;color:var(--text-dim)">
-            Seuls les <b>propriétaires</b> et <b>administrateurs</b> des serveurs où Hoxera est présent peuvent configurer.
-          </p>
+          <div class="auth-trust">
+            <span>🔒 Connexion sécurisée OAuth2 — nous ne voyons <b>jamais</b> ton mot de passe</span>
+            <span>👁️ Accès demandé : ton pseudo, ton avatar et ta liste de serveurs. Rien d'autre.</span>
+            <span>🛡️ Seuls les <b>admins</b> des serveurs peuvent configurer.</span>
+          </div>
           <a href="#/" style="font-size:12.5px">← Retour à l'accueil</a>
         </div>
       </div>
     </div>
   `);
   root.appendChild(page);
-  page.querySelector('#connect-discord').onclick = async () => {
+  page.querySelector('#connect-discord').onclick = async (ev) => {
+    const b = ev.currentTarget;
+    b.classList.add('loading'); b.disabled = true;
+    b.innerHTML = '<span class="btn-spin"></span> Connexion à Discord…';
     try {
       const { url } = await App.api('/auth/discord/url');
       window.location.href = url;
-    } catch (e) { App.toast(e.message, 'error'); }
+    } catch (e) {
+      App.toast(e.message, 'error');
+      b.classList.remove('loading'); b.disabled = false;
+      b.textContent = '🎮 Se connecter avec Discord';
+    }
   };
 };
 

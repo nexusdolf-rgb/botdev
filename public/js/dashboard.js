@@ -50,10 +50,18 @@ Dashboard.mount = async (shell, bot) => {
     return;
   }
 
-  // Sélectionne le premier serveur configurable où le bot est présent
-  const first = discordGuilds.find((g) => g.canManage && g.hasBot) || discordGuilds.find((g) => g.hasBot);
-  if (first) {
-    await Dashboard.selectGuild(first.id);
+  // 🌍 Dernier serveur utilisé mémorisé → on y retourne directement.
+  // Sinon : GRILLE DE CARTES SERVEURS (le pattern signature des dashboards pro).
+  let saved = null;
+  try { saved = localStorage.getItem('hx-guild'); } catch {}
+  const savedGuild = discordGuilds.find((g) => g.id === saved && g.hasBot && g.canManage);
+  const usable = discordGuilds.filter((g) => g.hasBot);
+  if (savedGuild) {
+    await Dashboard.selectGuild(savedGuild.id);
+  } else if (usable.length === 1 && usable[0].canManage) {
+    await Dashboard.selectGuild(usable[0].id);
+  } else if (discordGuilds.length) {
+    Dashboard.renderServerGrid(content);
   } else {
     content.innerHTML = `
       <div class="dash-card" style="max-width:560px;margin:20px auto">
@@ -331,6 +339,47 @@ Dashboard.applyAccent = (name) => {
 };
 try { Dashboard.applyAccent(localStorage.getItem('hx-accent') || 'Blurple'); } catch {}
 
+// ---------------------- 🌍 Grille de serveurs (choix visuel) ----------------------
+Dashboard.renderServerGrid = (content) => {
+  const guilds = Dashboard.state.discordGuilds || [];
+  content.innerHTML = '';
+  const wrap = App.el(`
+    <div class="srv-grid-page">
+      <div class="srv-grid-head">
+        <h2>🌍 Choisis un serveur</h2>
+        <p>Sélectionne le serveur à configurer — ou invite ${App.escapeHtml(Dashboard.state.bot.name)} sur un nouveau.</p>
+      </div>
+      <div class="srv-grid"></div>
+    </div>`);
+  const grid = wrap.querySelector('.srv-grid');
+  guilds.forEach((g) => {
+    const initial = (g.name || '?').trim()[0].toUpperCase();
+    const card = App.el(`
+      <button class="srv-card ${g.hasBot ? '' : 'no-bot'}">
+        ${g.icon ? `<img src="${App.escapeHtml(g.icon)}" alt="" />` : `<span class="srv-card-fallback">${App.escapeHtml(initial)}</span>`}
+        <b>${App.escapeHtml(g.name)}</b>
+        ${g.hasBot
+          ? (g.canManage ? '<span class="srv-badge ok">✅ Configurer</span>' : '<span class="srv-badge">🔒 Lecture seule</span>')
+          : '<span class="srv-badge invite">➕ Inviter le bot</span>'}
+      </button>`);
+    card.onclick = () => {
+      if (!g.hasBot) { App.openInvite(Dashboard.state.bot.invite_url); App.toast('Ajoute le bot puis reviens — le serveur sera configurable !'); return; }
+      if (!g.canManage) { App.toast('Il te faut la permission « Gérer le serveur ».', 'error'); return; }
+      Dashboard.selectGuild(g.id);
+    };
+    grid.appendChild(card);
+  });
+  content.appendChild(wrap);
+};
+
+// ---------------------- 🔔 Centre de notifications ----------------------
+Dashboard.loadNotifications = async () => {
+  const { bot, guildId } = Dashboard.state;
+  if (!guildId) return { warnings: [], infos: [] };
+  try { return await App.api(`/bots/${bot.id}/guilds/${guildId}/notifications`); }
+  catch { return { warnings: [], infos: [] }; }
+};
+
 // ---------------------- Barre du haut ----------------------
 Dashboard.renderTopbar = (topbar, discordGuilds) => {
   const bot = Dashboard.state.bot;
@@ -347,6 +396,11 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
       </div>
     </div>
     <div class="dash-topbar-actions">
+      <div class="dash-accent-wrap">
+        <button class="dash-iconbtn" id="d-bell" data-tip="Notifications">🔔<span class="bell-badge" hidden></span></button>
+        <div class="dash-bell-pop" hidden><div class="bp-list"><div class="dp-empty">Chargement…</div></div></div>
+      </div>
+      <button class="dash-iconbtn" id="d-theme" data-tip="Mode clair / sombre">🌓</button>
       <button class="dash-iconbtn" id="d-palette" data-tip="Recherche rapide (Ctrl+K)">🔍</button>
       <button class="dash-iconbtn" id="d-refresh" data-tip="Actualiser le module">🔄</button>
       <div class="dash-accent-wrap">
@@ -372,6 +426,26 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
   const inviteBtn = topbar.querySelector('#d-invite2');
   if (inviteBtn) inviteBtn.onclick = () => App.openInvite(bot.invite_url);
   topbar.querySelector('#d-palette').onclick = () => Dashboard.openPalette();
+  // 🌓 Mode clair / sombre
+  topbar.querySelector('#d-theme').onclick = () => {
+    const light = !document.documentElement.classList.contains('hx-light');
+    document.documentElement.classList.toggle('hx-light', light);
+    try { localStorage.setItem('hx-theme', light ? 'light' : 'dark'); } catch {}
+    App.toast(light ? '☀️ Mode clair activé' : '🌙 Mode sombre activé');
+  };
+  // 🔔 Notifications : badge + panneau
+  const bellBtn = topbar.querySelector('#d-bell');
+  const bellPop = topbar.querySelector('.dash-bell-pop');
+  const bellBadge = topbar.querySelector('.bell-badge');
+  Dashboard.loadNotifications().then(({ warnings = [], infos = [] }) => {
+    if (warnings.length) { bellBadge.textContent = warnings.length; bellBadge.hidden = false; }
+    const list = bellPop.querySelector('.bp-list');
+    list.innerHTML = '';
+    if (!warnings.length && !infos.length) { list.appendChild(App.el(`<div class="dp-empty">✅ Tout va bien — aucune alerte !</div>`)); return; }
+    warnings.forEach((w) => list.appendChild(App.el(`<div class="bp-item warn"><span>${w.icon || '⚠️'}</span><div>${App.escapeHtml(w.text)}</div></div>`)));
+    infos.forEach((i2) => list.appendChild(App.el(`<div class="bp-item"><span>${i2.icon || 'ℹ️'}</span><div>${App.escapeHtml(i2.text)}</div></div>`)));
+  });
+  bellBtn.onclick = (e) => { e.stopPropagation(); bellPop.hidden = !bellPop.hidden; };
   topbar.querySelector('#d-refresh').onclick = () => { App.toast('Module actualisé !'); Dashboard.refresh(); };
   const accBtn = topbar.querySelector('#d-accent');
   const accPop = topbar.querySelector('.dash-accent-pop');
@@ -384,6 +458,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
 // ---------------------- Chargement serveur ----------------------
 Dashboard.selectGuild = async (guildId) => {
   Dashboard.state.guildId = guildId;
+  try { localStorage.setItem('hx-guild', guildId); } catch {}
   const shell = Dashboard.state.shell || document.querySelector('.bot-shell');
   if (shell) {
     Dashboard.renderTopbar(shell.querySelector('.dash-topbar'), Dashboard.state.discordGuilds);

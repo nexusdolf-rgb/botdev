@@ -879,6 +879,77 @@ router.post('/bots/:id/guilds/:guildId/events/:type/test', requireAuth, async (r
   }
 });
 
+// 🔔 Centre de notifications : le dashboard détecte lui-même les problèmes
+// (salon configuré introuvable, permissions manquantes) + infos utiles.
+router.get('/bots/:id/guilds/:guildId/notifications', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const warnings = [];
+  const infos = [];
+  try {
+    const entry = botManager.clients.get(bot.id);
+    if (!entry || !entry.client.isReady()) {
+      warnings.push({ icon: '🔴', text: 'Le bot est hors ligne — aucune fonctionnalité ne tourne.' });
+      return res.json({ warnings, infos });
+    }
+    const guild = entry.client.guilds.cache.get(guildId);
+    if (!guild) return res.json({ warnings: [{ icon: '❓', text: 'Serveur introuvable côté bot.' }], infos });
+    const me = guild.members.me;
+    const { PermissionFlagsBits } = require('discord.js');
+
+    const gs = store.guildSettings.get(bot.id, guildId) || {};
+    const ev = store.events.all(bot.id, guildId) || {};
+    const tcfg = store.tickets.get(bot.id, guildId) || {};
+    const findChan = (q) => {
+      const name = String(q || '').trim().replace(/^#/, '').toLowerCase();
+      if (!name) return undefined; // non configuré
+      return guild.channels.cache.find((c) => c.name && c.name.toLowerCase() === name && c.isTextBased && c.isTextBased()) || null;
+    };
+    // Chaque salon configuré doit exister ET être écrivable par le bot
+    const checks = [
+      ['Bienvenue', ev.member_join && ev.member_join.enabled ? (ev.member_join.config || {}).channel : ''],
+      ['Départs', ev.member_leave && ev.member_leave.enabled ? (ev.member_leave.config || {}).channel : ''],
+      ['Panneau de tickets', tcfg.channel],
+      ['Journal des tickets', gs.ticket_log_channel],
+      ['Journaux du serveur', gs.log_channel],
+      ['Starboard', gs.starboard_channel],
+      ['Annonces de live', gs.live_channel],
+      ['Suggestions', gs.suggestion_channel],
+    ];
+    for (const [label, q] of checks) {
+      const c = findChan(q);
+      if (c === undefined) continue; // module non configuré : rien à dire
+      if (c === null) { warnings.push({ icon: '🔎', text: `${label} : le salon « ${q} » est introuvable (renommé ou supprimé ?)` }); continue; }
+      const perms = me ? c.permissionsFor(me) : null;
+      if (perms && !perms.has(PermissionFlagsBits.SendMessages)) warnings.push({ icon: '🔒', text: `${label} : le bot ne peut pas ÉCRIRE dans #${c.name}` });
+      else if (perms && !perms.has(PermissionFlagsBits.EmbedLinks)) warnings.push({ icon: '🖼️', text: `${label} : il manque « Intégrer des liens » dans #${c.name} (panneaux invisibles)` });
+    }
+    // Permissions globales selon les modules actifs
+    const has = (f) => !!(me && me.permissions && me.permissions.has(f));
+    if ((ev.autorole && ev.autorole.enabled) && !has(PermissionFlagsBits.ManageRoles)) warnings.push({ icon: '🏷️', text: 'Auto-rôle actif mais permission « Gérer les rôles » manquante.' });
+    if (tcfg.channel && !has(PermissionFlagsBits.ManageChannels)) warnings.push({ icon: '🎫', text: 'Tickets actifs mais permission « Gérer les salons » manquante.' });
+    if ((gs.warn_timeout_limit > 0 || gs.warn_limit > 0) && !has(PermissionFlagsBits.ModerateMembers)) warnings.push({ icon: '⚖️', text: 'Sanctions automatiques actives mais permission « Exclure temporairement » manquante.' });
+    if (store.liveSocials.count(bot.id, guildId) > 0 && !gs.live_channel) warnings.push({ icon: '🔴', text: 'Comptes live suivis mais AUCUN salon d\'annonces configuré !' });
+    if (store.inviteJoins.top(bot.id, guildId, 1).length === 0 && !has(PermissionFlagsBits.ManageGuild)) infos.push({ icon: '📨', text: 'Traqueur d\'invitations : donne « Gérer le serveur » au bot pour l\'activer.' });
+
+    // Infos du jour
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+      const j = store.db.prepare('SELECT count FROM join_stats WHERE bot_id = ? AND guild_id = ? AND day = ?').get(bot.id, guildId, today);
+      if (j && j.count) infos.push({ icon: '🆕', text: `${j.count} nouveau(x) membre(s) aujourd'hui — bienvenue à eux !` });
+    } catch {}
+    try {
+      const open = store.openTickets.allForGuild(bot.id, guildId).filter((t) => !t.closed_at).length;
+      if (open) infos.push({ icon: '🎫', text: `${open} ticket(s) ouvert(s) en ce moment.` });
+    } catch {}
+  } catch (e) {
+    warnings.push({ icon: '⚠️', text: 'Vérification impossible : ' + String(e.message || e).slice(0, 80) });
+  }
+  res.json({ warnings, infos });
+});
+
 // 📰 Flux d'activité du serveur (Vue d'ensemble)
 router.get('/bots/:id/guilds/:guildId/activity', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);

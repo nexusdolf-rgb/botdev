@@ -798,3 +798,101 @@ body::-webkit-scrollbar-thumb:hover { background: #3a3f5c; background-clip: cont
 
 /* Sélection de texte aux couleurs du thème */
 ::selection { background: rgba(88,101,242,.4); color: #fff; }
+
+/* ============================================================
+   🏆 HOXERA v3.3 — grille serveurs, cloche, mode clair, boutons
+   ============================================================ */
+
+/* 🌍 Grille de cartes serveurs */
+.srv-grid-page { max-width: 860px; margin: 26px auto; }
+.srv-grid-head { text-align: center; margin-bottom: 26px; }
+.srv-grid-head h2 { font-size: 24px; }
+.srv-grid-head p { color: var(--d-dim); font-size: 14px; margin-top: 6px; }
+.srv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+.srv-card {
+  position: relative; overflow: hidden; cursor: pointer; font-family: inherit;
+  display: flex; flex-direction: column; align-items: center; gap: 11px;
+  padding: 26px 16px 20px; color: var(--d-text);
+  background: linear-gradient(180deg, rgba(255,255,255,.02), transparent), var(--d-card);
+  border: 1px solid var(--d-border); border-radius: 18px; transition: .18s;
+  animation: dashIn .25s ease both;
+}
+.srv-card:hover { transform: translateY(-4px); border-color: rgba(88,101,242,.6); box-shadow: 0 18px 40px -18px var(--d-glow); }
+.srv-card img, .srv-card-fallback { width: 64px; height: 64px; border-radius: 20px; }
+.srv-card-fallback {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 800; color: #fff;
+  background: linear-gradient(135deg, var(--d-accent), var(--d-accent2));
+}
+.srv-card b { font-size: 14.5px; text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.srv-card .srv-badge { font-size: 11.5px; font-weight: 700; padding: 4px 12px; border-radius: 999px; background: var(--d-card2); color: var(--d-dim); border: 1px solid var(--d-border); }
+.srv-card .srv-badge.ok { color: #5be087; border-color: rgba(59,165,93,.4); background: rgba(59,165,93,.1); }
+.srv-card .srv-badge.invite { color: #aab1ff; border-color: rgba(88,101,242,.45); background: rgba(88,101,242,.12); }
+.srv-card.no-bot { opacity: .75; }
+.srv-card.no-bot:hover { opacity: 1; }
+
+/* 🔔 Cloche + panneau de notifications */
+.bell-badge {
+  position: absolute; top: -4px; right: -4px; min-width: 17px; height: 17px;
+  border-radius: 999px; background: linear-gradient(135deg, #ed4245, #f97316);
+  color: #fff; font-size: 10px; font-weight: 800; display: inline-flex;
+  align-items: center; justify-content: center; padding: 0 4px;
+  box-shadow: 0 2px 8px -2px rgba(237,66,69,.8); animation: bellPulse 2s ease infinite;
+}
+@keyframes bellPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+#d-bell { position: relative; }
+.dash-bell-pop {
+  position: absolute; top: 46px; right: 0; z-index: 200; width: 330px; max-width: 86vw;
+  background: var(--d-card); border: 1px solid var(--d-border); border-radius: 14px;
+  box-shadow: 0 18px 46px -14px rgba(0,0,0,.85); animation: palettePop .15s ease both;
+  max-height: 380px; overflow-y: auto; padding: 8px;
+}
+.bp-item {
+  display: flex; gap: 10px; align-items: flex-start; padding: 10px 11px;
+  border-radius: 10px; font-size: 12.5px; line-height: 1.45; color: var(--d-text);
+}
+.bp-item span { font-size: 15px; flex-shrink: 0; }
+.bp-item.warn { background: rgba(237,66,69,.07); border: 1px solid rgba(237,66,69,.18); margin-bottom: 6px; }
+
+/* 🌊 Ripple universel */
+.btn, .dash-btn, .dash-iconbtn, .hero-step, .srv-card { position: relative; overflow: hidden; }
+.hx-ripple {
+  position: absolute; border-radius: 50%; pointer-events: none;
+  background: rgba(255,255,255,.28); transform: scale(0);
+  animation: hxRipple .55s ease-out both;
+}
+@keyframes hxRipple { to { transform: scale(2.4); opacity: 0; } }
+
+/* 🎚️ Interrupteurs premium : ✓ / ✕ dans le curseur */
+.switch .slider::after {
+  content: '✕'; position: absolute; top: 50%; transform: translateY(-50%);
+  right: 6px; font-size: 9px; font-weight: 800; color: rgba(255,255,255,.5);
+}
+.switch input:checked + .slider::after { content: '✓'; left: 7px; right: auto; color: #fff; }
+
+/* ☀️ MODE CLAIR complet (bouton 🌓, mémorisé par appareil) */
+html.hx-light {
+  --d-bg: #f2f3f8; --d-side: #ffffff; --d-card: #ffffff; --d-card2: #f0f1f7;
+  --d-border: #dfe2ec; --d-text: #1c1e26; --d-dim: #6b7085;
+}
+html.hx-light body, html.hx-light .dash-shell {
+  background:
+    radial-gradient(1100px 500px at 85% -10%, rgba(88,101,242,.07), transparent 60%),
+    radial-gradient(900px 460px at -10% 30%, rgba(139,92,246,.05), transparent 55%),
+    var(--d-bg);
+  color: var(--d-text);
+}
+html.hx-light .dash-card, html.hx-light .dash-stat, html.hx-light .dash-topbar,
+html.hx-light .dash-server-card, html.hx-light .dash-palette, html.hx-light .dash-bell-pop,
+html.hx-light .dash-accent-pop, html.hx-light .srv-card {
+  box-shadow: 0 6px 22px -14px rgba(30, 34, 60, .25);
+}
+html.hx-light .dash-stat .val { background: linear-gradient(90deg, #1c1e26, #4d55c7); -webkit-background-clip: text; background-clip: text; }
+html.hx-light .dash-savebar { background: rgba(255,255,255,.94); }
+html.hx-light .dash-savebar .sb-txt { color: #b07d10; }
+html.hx-light .dc-preview { background: #f2f3f5; border-color: #e3e5ea; }
+html.hx-light .dc-preview [style*="color:#dbdee1"], html.hx-light .dc-preview [style*="color:#f2f3f5"] { filter: invert(.85) hue-rotate(180deg); }
+html.hx-light .sk-ico, html.hx-light .sk-line, html.hx-light .sk-stat {
+  background: linear-gradient(90deg, #e8eaf2 25%, #f5f6fa 50%, #e8eaf2 75%);
+  background-size: 200% 100%;
+}

@@ -651,3 +651,28 @@ body { font-family: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, sans-
 .toast.error::after { background: linear-gradient(90deg, #ed4245, #f97316); }
 @keyframes toastIn { from { opacity: 0; transform: translateY(14px) scale(.94); } to { opacity: 1; transform: none; } }
 @keyframes toastLife { from { width: 100%; } to { width: 0; } }
+
+/* 🎭 v3.3 : page de connexion théâtralisée + spinner de bouton */
+.auth-glass {
+  background: rgba(24, 24, 38, .66) !important;
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(88,101,242,.35) !important;
+  box-shadow: 0 30px 80px -24px rgba(0,0,0,.8), 0 0 60px -30px rgba(88,101,242,.5) !important;
+}
+.auth-bot-ava {
+  width: 76px; height: 76px; margin: 0 auto 14px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-size: 36px;
+  background: linear-gradient(135deg, #5865F2, #8B5CF6);
+  box-shadow: 0 0 0 4px rgba(88,101,242,.25), 0 14px 30px -10px rgba(88,101,242,.6);
+  animation: avaFloat 3.4s ease-in-out infinite;
+}
+@keyframes avaFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+.auth-trust { display: flex; flex-direction: column; gap: 7px; margin: 18px 0 14px; text-align: left; }
+.auth-trust span { font-size: 12px; color: var(--text-dim); line-height: 1.45; }
+.btn-spin {
+  width: 15px; height: 15px; border-radius: 50%; display: inline-block;
+  border: 2px solid rgba(255,255,255,.35); border-top-color: #fff;
+  animation: btnSpin .7s linear infinite; vertical-align: -3px; margin-right: 6px;
+}
+@keyframes btnSpin { to { transform: rotate(360deg); } }
+html.hx-light body { background: #f2f3f8; color: #1c1e26; }
