@@ -948,17 +948,18 @@ const advancedTickets = {
     return { ...row, types: Array.isArray(types) ? types : [] };
   },
   set: (botId, guildId, cfg) => db.prepare(`INSERT INTO advanced_ticket_panels
-    (bot_id, guild_id, name, mode, channel, message, require_reason, types, updated_at)
-    VALUES (@bot_id, @guild_id, @name, @mode, @channel, @message, @require_reason, @types, datetime('now'))
+    (bot_id, guild_id, name, mode, channel, message, image_url, require_reason, types, updated_at)
+    VALUES (@bot_id, @guild_id, @name, @mode, @channel, @message, @image_url, @require_reason, @types, datetime('now'))
     ON CONFLICT(bot_id, guild_id) DO UPDATE SET
       name = excluded.name, mode = excluded.mode, channel = excluded.channel,
-      message = excluded.message, require_reason = excluded.require_reason,
+      message = excluded.message, image_url = excluded.image_url, require_reason = excluded.require_reason,
       types = excluded.types, updated_at = datetime('now')`).run({
         bot_id: botId, guild_id: guildId,
-        name: String(cfg.name || 'Tickets personnalisés').slice(0, 80),
+        name: String(cfg.name || 'Créer un ticket').slice(0, 80),
         mode: cfg.mode === 'menu' ? 'menu' : 'buttons',
         channel: String(cfg.channel || '').slice(0, 100),
         message: String(cfg.message || '').slice(0, 1900),
+        image_url: String(cfg.image_url || '').slice(0, 500),
         require_reason: (cfg.require_reason === 0 || cfg.require_reason === false) ? 0 : 1,
         types: typeof cfg.types === 'string' ? cfg.types : JSON.stringify(Array.isArray(cfg.types) ? cfg.types : []),
       }),
@@ -1341,9 +1342,9 @@ try { db.exec(`CREATE TABLE IF NOT EXISTS ticket_log_msgs (
 try { db.exec(`CREATE TABLE IF NOT EXISTS advanced_ticket_panels (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   bot_id INTEGER NOT NULL, guild_id TEXT NOT NULL,
-  name TEXT DEFAULT 'Tickets personnalisés',
+  name TEXT DEFAULT 'Créer un ticket',
   mode TEXT DEFAULT 'buttons',
-  channel TEXT DEFAULT '', message TEXT DEFAULT '',
+  channel TEXT DEFAULT '', message TEXT DEFAULT '', image_url TEXT DEFAULT '',
   require_reason INTEGER DEFAULT 1,
   types TEXT DEFAULT '[]',
   panel_message_id TEXT DEFAULT '', panel_channel TEXT DEFAULT '',
@@ -1358,6 +1359,7 @@ try { db.exec(`CREATE TABLE IF NOT EXISTS advanced_ticket_channels (
   created_at TEXT DEFAULT (datetime('now'))
 )`); } catch (e) {}
 try { db.exec("CREATE INDEX IF NOT EXISTS idx_advanced_ticket_channels_guild ON advanced_ticket_channels (bot_id, guild_id)"); } catch (e) {}
+try { db.exec("ALTER TABLE advanced_ticket_panels ADD COLUMN image_url TEXT DEFAULT ''"); } catch (e) {}
 
 // v2.7 — 📰 Flux d'activité du serveur (dashboard)
 try { db.exec(`CREATE TABLE IF NOT EXISTS activity (

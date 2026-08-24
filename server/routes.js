@@ -1336,8 +1336,9 @@ router.get('/bots/:id/guilds/:guildId/advanced-tickets', requireAuth, async (req
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   const cfg = store.advancedTickets.get(bot.id, guildId);
   res.json({ config: cfg || {
-    id: null, bot_id: bot.id, guild_id: guildId, name: 'Tickets personnalisés', mode: 'buttons',
-    channel: '', message: '', require_reason: 1, types: [], panel_message_id: '', panel_channel: '',
+    id: null, bot_id: bot.id, guild_id: guildId, name: 'Créer un ticket', mode: 'buttons',
+    channel: '', message: '', image_url: 'https://hoxera.is-a.dev/icons/support-banner.png', require_reason: 1,
+    types: [], panel_message_id: '', panel_channel: '',
   } });
 });
 
@@ -1361,6 +1362,7 @@ router.put('/bots/:id/guilds/:guildId/advanced-tickets', requireAuth, async (req
     return {
       id,
       label: String(t.label || '').trim().slice(0, 80),
+      button_label: String(t.button_label || '').trim().slice(0, 80),
       emoji: safeEmojiWeb(t.emoji).slice(0, 100),
       description: String(t.description || '').trim().slice(0, 100),
       category: String(t.category || '').trim().slice(0, 100),
@@ -1370,10 +1372,13 @@ router.put('/bots/:id/guilds/:guildId/advanced-tickets', requireAuth, async (req
     };
   }).filter((t) => t.label);
   store.advancedTickets.set(bot.id, guildId, {
-    name: body.name !== undefined ? String(body.name).trim().slice(0, 80) : (current.name || 'Tickets personnalisés'),
+    name: body.name !== undefined ? String(body.name).trim().slice(0, 80) : (current.name || 'Créer un ticket'),
     mode: body.mode === 'menu' ? 'menu' : 'buttons',
     channel: body.channel !== undefined ? String(body.channel).trim().slice(0, 100) : (current.channel || ''),
     message: body.message !== undefined ? String(body.message).slice(0, 1900) : (current.message || ''),
+    image_url: body.image_url !== undefined
+      ? (/^https:\/\//i.test(String(body.image_url).trim()) ? String(body.image_url).trim().slice(0, 500) : '')
+      : (current.image_url || ''),
     require_reason: body.require_reason !== undefined
       ? ((body.require_reason === 0 || body.require_reason === false) ? 0 : 1)
       : (current.require_reason === 0 ? 0 : 1),

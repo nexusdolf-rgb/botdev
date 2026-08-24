@@ -35,22 +35,28 @@ const dashSource = fs.readFileSync(path.join(__dirname, '..', 'public/js/dashboa
   assert.strictEqual(cfg.types.length, 6);
   console.log('✅ stockage séparé : ancien système intact, nouveau système enregistré');
 
-  // 2. Mode boutons : 5 boutons maximum par rangée, IDs séparés et styles.
+  // 2. Mode boutons : Components V2 place chaque bouton à côté de son type,
+  // verticalement, exactement comme le modèle visuel fourni.
   const buttonPayload = advanced.buildPanelPayload(cfg);
-  assert.strictEqual(buttonPayload.components.length, 2);
-  assert.strictEqual(buttonPayload.components[0].components.length, 5);
-  assert.strictEqual(buttonPayload.components[1].components.length, 1);
-  assert.ok(buttonPayload.components[0].components[0].data.custom_id.startsWith(`hx2-btn:${botId}:`));
-  assert.strictEqual(buttonPayload.components[0].components[0].data.style, 4);
-  assert.ok(buttonPayload.embeds[0].data.fields[0].value.includes('Signaler un bug'));
-  console.log('✅ mode boutons : plusieurs types, rangées Discord valides et IDs indépendants');
+  assert.strictEqual(buttonPayload.flags, 32768); // MessageFlags.IsComponentsV2
+  assert.strictEqual(buttonPayload.components.length, 1);
+  const buttonContainer = buttonPayload.components[0];
+  assert.strictEqual(buttonContainer.data.type, 17);
+  const sections = buttonContainer.components.filter((component) => component.data.type === 9);
+  assert.strictEqual(sections.length, 6);
+  assert.ok(sections[0].accessory.data.custom_id.startsWith(`hx2-btn:${botId}:`));
+  assert.strictEqual(sections[0].accessory.data.style, 4);
+  assert.ok(sections[0].components[0].data.content.includes('Signaler un bug'));
+  console.log('✅ mode boutons : présentation verticale, bouton à droite et IDs indépendants');
 
   // 3. Mode menu : options, descriptions et valeurs stables.
   store.advancedTickets.set(botId, 'G1', { ...cfg, mode: 'menu' });
   const menuCfg = store.advancedTickets.get(botId, 'G1');
   const menuPayload = advanced.buildPanelPayload(menuCfg);
   assert.strictEqual(menuPayload.components.length, 1);
-  const select = menuPayload.components[0].components[0];
+  const menuContainer = menuPayload.components[0];
+  const menuRow = menuContainer.components.find((component) => component.data.type === 1);
+  const select = menuRow.components[0];
   assert.ok(select.data.custom_id.startsWith(`hx2-menu:${botId}:`));
   assert.strictEqual(select.options.length, 6);
   assert.strictEqual(select.options[0].data.value, 'bug');

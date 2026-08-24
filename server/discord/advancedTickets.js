@@ -2,6 +2,7 @@
 // Hoxera — 🎨 Système de tickets personnalisés (v3.14)
 // Système INDÉPENDANT de l'ancien module tickets :
 // - panneau en boutons simples OU menu déroulant ;
+// - affichage vertical professionnel façon panneau Discord ;
 // - plusieurs types ;
 // - couleur par type dans l'embed du ticket ;
 // - panneau précédent de CE système remplacé, jamais l'ancien ;
@@ -11,11 +12,14 @@ const {
   ActionRowBuilder, ButtonBuilder, ButtonStyle,
   StringSelectMenuBuilder, StringSelectMenuOptionBuilder,
   ModalBuilder, TextInputBuilder, TextInputStyle,
-  EmbedBuilder,
+  ContainerBuilder, TextDisplayBuilder, SectionBuilder,
+  SeparatorBuilder, MediaGalleryBuilder, MediaGalleryItemBuilder,
+  MessageFlags,
 } = require('discord.js');
 const store = require('../db');
 
 const DEFAULT_COLOR = '#5865F2';
+const DEFAULT_IMAGE = 'https://hoxera.is-a.dev/icons/support-banner.png';
 const BUTTON_STYLES = {
   '1': ButtonStyle.Primary,
   '2': ButtonStyle.Secondary,
@@ -28,9 +32,18 @@ function validColor(value) {
   return /^#[0-9a-fA-F]{6}$/.test(String(value || '')) ? String(value) : DEFAULT_COLOR;
 }
 
+function colorInt(value) {
+  return parseInt(validColor(value).slice(1), 16);
+}
+
 function safeId(value, fallback) {
   const id = String(value || '').replace(/[^a-zA-Z0-9_-]/g, '-').replace(/^-+|-+$/g, '').slice(0, 32);
   return id || fallback;
+}
+
+function safeImage(value) {
+  const image = String(value || '').trim().slice(0, 500);
+  return /^https:\/\//i.test(image) ? image : '';
 }
 
 function normalizeType(raw = {}, index = 0) {
@@ -40,6 +53,7 @@ function normalizeType(raw = {}, index = 0) {
   return {
     id: safeId(raw.id, `t${index + 1}`),
     label: String(raw.label || '').trim().slice(0, 80),
+    button_label: String(raw.button_label || '').trim().slice(0, 80),
     emoji: String(raw.emoji || '').trim().slice(0, 100),
     description: String(raw.description || '').trim().slice(0, 100),
     category: String(raw.category || '').trim().slice(0, 100),
@@ -57,9 +71,10 @@ function normalizeConfig(row = {}) {
   return {
     ...row,
     mode: row.mode === 'menu' ? 'menu' : 'buttons',
-    name: String(row.name || 'Tickets personnalisés').slice(0, 80),
+    name: String(row.name || 'Créer un ticket').slice(0, 80),
     channel: String(row.channel || '').slice(0, 100),
     message: String(row.message || '').slice(0, 1900),
+    image_url: safeImage(row.image_url || DEFAULT_IMAGE),
     require_reason: (row.require_reason === 0 || row.require_reason === false) ? 0 : 1,
     types: (Array.isArray(types) ? types : []).map((t, i) => normalizeType(t, i)).filter((t) => t.label).slice(0, 25),
   };
@@ -82,22 +97,35 @@ function descriptionFor(type) {
   return type.description || `Ouvrir un ticket « ${type.label} » en privé.`;
 }
 
+function buttonLabelFor(type) {
+  return type.button_label || `Envoyer un ticket ${type.label.toLowerCase()}`;
+}
+
 function buildPanelPayload(config) {
   const cfg = normalizeConfig(config);
   if (!cfg.id) throw new Error('Le panneau personnalisé n\'est pas encore enregistré.');
   if (!cfg.types.length) throw new Error('Ajoute au moins un type de ticket personnalisé.');
 
-  const lines = cfg.types.map((type) => `${colorSymbol(type)} ${type.emoji || '🎫'} **${type.label}** — ${descriptionFor(type)}`).join('\n');
-  const embed = new EmbedBuilder()
-    .setColor(DEFAULT_COLOR)
-    .setTitle(`🎨 ${cfg.name}`)
-    .setDescription(cfg.message || 'Choisis le type de ticket qui correspond à ta demande :')
-    .addFields({ name: '🗂️ Types disponibles', value: lines.slice(0, 1024) })
-    .setFooter({ text: 'Hoxera · système de tickets personnalisés' })
-    .setTimestamp();
+  // Components V2 permet de placer chaque bouton à droite de son type,
+  // comme dans le modèle visuel fourni : description puis bouton, verticalement.
+  const container = new ContainerBuilder()
+    .setAccentColor(colorInt(cfg.types[0].color));
+  if (cfg.image_url) {
+    container.addMediaGalleryComponents(
+      new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(cfg.image_url))
+    );
+  }
+  container
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(`## ${cfg.name}`))
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(cfg.message || 'Choisis le type de ticket qui correspond à ta demande :'))
+    .addSeparatorComponents(new SeparatorBuilder().setDivider(true));
 
-  const rows = [];
   if (cfg.mode === 'menu') {
+    // En mode menu, les descriptions restent visibles dans le panneau et le
+    // sélecteur unique se trouve à la fin du conteneur.
+    container.addTextDisplayComponents(new TextDisplayBuilder().setContent(
+      cfg.types.map((type) => `${colorSymbol(type)} ${type.emoji || '🎫'} **${type.label}**\n${descriptionFor(type)}`).join('\n\n').slice(0, 3900)
+    ));
     const select = new StringSelectMenuBuilder()
       .setCustomId(`hx2-menu:${cfg.bot_id}:${cfg.id}`)
       .setPlaceholder('🗂️ Choisis un type de ticket…')
@@ -108,29 +136,30 @@ function buildPanelPayload(config) {
         .setLabel(`${colorSymbol(type)} ${type.label}`.slice(0, 100))
         .setDescription(descriptionFor(type).slice(0, 100))
         .setValue(type.id);
-      // Le vrai emoji du type reste prioritaire ; le symbole de couleur est
-      // déjà présent dans le label afin de rester visible dans un menu Discord.
       const panels = require('./panels');
       const emoji = panels.safeEmoji(type.emoji);
       if (emoji) option.setEmoji(emoji);
       select.addOptions(option);
     }
-    rows.push(new ActionRowBuilder().addComponents(select));
+    container.addActionRowComponents(new ActionRowBuilder().addComponents(select));
   } else {
-    // Discord limite une rangée à 5 boutons : jusqu'à 25 types, 5 rangées.
-    for (let i = 0; i < cfg.types.length; i += 5) {
-      const row = new ActionRowBuilder();
-      for (const type of cfg.types.slice(i, i + 5)) {
-        const button = new ButtonBuilder()
-          .setCustomId(`hx2-btn:${cfg.bot_id}:${cfg.id}:${type.id}`)
-          .setLabel(`${type.emoji ? type.emoji + ' ' : ''}${type.label}`.slice(0, 80))
-          .setStyle(BUTTON_STYLES[type.button_style] || ButtonStyle.Primary);
-        row.addComponents(button);
-      }
-      rows.push(row);
+    for (const type of cfg.types) {
+      const button = new ButtonBuilder()
+        .setCustomId(`hx2-btn:${cfg.bot_id}:${cfg.id}:${type.id}`)
+        .setLabel(buttonLabelFor(type).slice(0, 80))
+        .setStyle(BUTTON_STYLES[type.button_style] || ButtonStyle.Primary);
+      const panels = require('./panels');
+      const emoji = panels.safeEmoji(type.emoji);
+      if (emoji) button.setEmoji(emoji);
+      const section = new SectionBuilder()
+        .addTextDisplayComponents(new TextDisplayBuilder().setContent(
+          `### ${type.emoji || '🎫'} ${type.label}\n${colorSymbol(type)} ${descriptionFor(type)}`
+        ))
+        .setButtonAccessory(button);
+      container.addSectionComponents(section);
     }
   }
-  return { embeds: [embed], components: rows };
+  return { flags: MessageFlags.IsComponentsV2, components: [container] };
 }
 
 async function deletePreviousPanel(guild, config) {
@@ -239,8 +268,7 @@ async function handleInteraction(botId, interaction) {
   const isButton = interaction && typeof interaction.isButton === 'function' && interaction.isButton();
   const isSelect = interaction && typeof interaction.isStringSelectMenu === 'function' && interaction.isStringSelectMenu();
   const isModal = interaction && typeof interaction.isModalSubmit === 'function' && interaction.isModalSubmit();
-  const prefix = `hx2-`;
-  if (!cid.startsWith(prefix)) return false;
+  if (!cid.startsWith('hx2-')) return false;
 
   const parts = cid.split(':');
   if (isModal && parts[0] === 'hx2-reason' && parts[1] === String(botId)) {

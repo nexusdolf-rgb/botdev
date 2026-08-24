@@ -1111,16 +1111,17 @@ Dashboard.renderers.tickets = async (content, data) => {
   // Il est volontairement placé SOUS l'ancien système et possède sa propre
   // table, ses propres IDs d'interaction et son propre panneau Discord.
   // ============================================================
-  const adv = advancedConfig || { id: null, name: 'Tickets personnalisés', mode: 'buttons', channel: '', message: '', require_reason: 1, types: [] };
+  const adv = advancedConfig || { id: null, name: 'Créer un ticket', mode: 'buttons', channel: '', message: '', image_url: 'https://hoxera.is-a.dev/icons/support-banner.png', require_reason: 1, types: [] };
   const advancedData = {
     ...adv,
-    name: String(adv.name || 'Tickets personnalisés'),
+    name: String(adv.name || 'Créer un ticket'),
     mode: adv.mode === 'menu' ? 'menu' : 'buttons',
     channel: String(adv.channel || ''),
     message: String(adv.message || ''),
+    image_url: String(adv.image_url || 'https://hoxera.is-a.dev/icons/support-banner.png'),
     require_reason: adv.require_reason === 0 ? 0 : 1,
-    types: (Array.isArray(adv.types) && adv.types.length ? adv.types : [{ id: 't1', label: 'Support', emoji: '🎫', description: 'Demande générale au staff', category: '', color: '#5865F2', button_style: '1', staff_roles: [] }]).map((x, i) => ({
-      id: String(x.id || `t${i + 1}`), label: String(x.label || ''), emoji: String(x.emoji || ''),
+    types: (Array.isArray(adv.types) && adv.types.length ? adv.types : [{ id: 't1', label: 'Support', emoji: '🎫', button_label: '', description: 'Demande générale au staff', category: '', color: '#5865F2', button_style: '1', staff_roles: [] }]).map((x, i) => ({
+      id: String(x.id || `t${i + 1}`), label: String(x.label || ''), emoji: String(x.emoji || ''), button_label: String(x.button_label || ''),
       description: String(x.description || ''), category: String(x.category || ''),
       color: /^#[0-9a-fA-F]{6}$/.test(String(x.color || '')) ? String(x.color) : '#5865F2',
       button_style: ['1', '2', '3', '4'].includes(String(x.button_style)) ? String(x.button_style) : '1',
@@ -1147,6 +1148,8 @@ Dashboard.renderers.tickets = async (content, data) => {
     </select>
     <label class="dash-label">Salon où envoyer le nouveau panneau</label>
     <select class="dash-select" id="adv-channel" style="max-width:360px">${advChannelOptions.join('')}</select>
+    <label class="dash-label">Image en haut du panneau (URL https, optionnelle)</label>
+    <input class="dash-input" id="adv-image" value="${App.escapeHtml(advancedData.image_url)}" placeholder="https://.../image.png" />
     <label class="dash-label">Message au-dessus du panneau (optionnel)</label>
     <textarea class="dash-input" id="adv-message" rows="2" maxlength="1900" placeholder="Choisis le service dont tu as besoin…">${App.escapeHtml(advancedData.message)}</textarea>
     <label style="display:flex;align-items:center;gap:9px;font-size:13px;color:var(--d-dim);margin-top:10px;cursor:pointer"><input type="checkbox" id="adv-reason" ${advancedData.require_reason ? 'checked' : ''} /> Demander une raison avant de créer le ticket</label>
@@ -1167,11 +1170,13 @@ Dashboard.renderers.tickets = async (content, data) => {
   const advColorToStyle = { '1': '#5865F2', '2': '#4E5058', '3': '#3BA55D', '4': '#ED4245' };
   const advRenderPreview = () => {
     const mode = c3.querySelector('#adv-mode').value;
+    const imageUrl = c3.querySelector('#adv-image').value.trim();
+    const imagePreview = /^https:\/\//i.test(imageUrl) ? `<img src="${App.escapeHtml(imageUrl)}" alt="" style="display:block;width:100%;max-height:180px;object-fit:cover;border-radius:8px;margin-bottom:12px" />` : '';
     const validTypes = advancedData.types.filter((x) => x.label.trim());
     const body = mode === 'menu'
       ? `<div style="border:1px solid #1E1F22;border-radius:8px;padding:10px 12px;color:#A8ABAF">📋 Choisis un type…<div style="margin-top:8px">${validTypes.map((x) => `<div style="padding:6px 8px;border-top:1px solid #3f4147"><span style="color:${x.color}">●</span> ${App.escapeHtml(x.emoji || '🎫')} <b style="color:#DBDEE1">${App.escapeHtml(x.label)}</b><small style="display:block;margin-left:22px;color:#949BA4">${App.escapeHtml(x.description || 'Ouvrir un ticket en privé.')}</small></div>`).join('')}</div></div>`
-      : `<div style="display:flex;gap:7px;flex-wrap:wrap">${validTypes.map((x) => `<span style="display:inline-flex;align-items:center;gap:5px;background:${advColorToStyle[x.button_style] || '#5865F2'};border-left:4px solid ${x.color};color:#fff;font-weight:700;padding:8px 12px;border-radius:7px">${App.escapeHtml(x.emoji || '🎫')} ${App.escapeHtml(x.label)}</span>`).join('') || '<span style="color:var(--d-dim)">Ajoute un type pour voir l’aperçu.</span>'}</div>`;
-    c3.querySelector('#adv-preview').innerHTML = `<div class="dash-label" style="margin:0 0 7px">👀 Aperçu Discord</div><div style="background:#313338;border-radius:10px;padding:14px;color:#DBDEE1;font-size:13px"><div style="font-weight:700;margin-bottom:10px">🎨 ${App.escapeHtml(c3.querySelector('#adv-name').value || 'Tickets personnalisés')}</div>${body}</div>`;
+      : `<div style="display:flex;flex-direction:column;gap:8px">${validTypes.map((x) => `<div style="padding:9px 10px;border-left:4px solid ${x.color};border-top:1px solid #3f4147"><b style="display:block;color:#DBDEE1">${App.escapeHtml(x.emoji || '🎫')} ${App.escapeHtml(x.label)}</b><small style="display:block;color:#949BA4;margin:3px 0 7px">${App.escapeHtml(x.description || 'Ouvrir un ticket en privé.')}</small><span style="display:inline-flex;background:${advColorToStyle[x.button_style] || '#5865F2'};color:#fff;font-weight:700;padding:6px 10px;border-radius:6px">${App.escapeHtml(x.emoji || '🎫')} ${App.escapeHtml(x.button_label || ('Envoyer un ticket ' + x.label.toLowerCase()))}</span></div>`).join('') || '<span style="color:var(--d-dim)">Ajoute un type pour voir l’aperçu.</span>'}</div>`;
+    c3.querySelector('#adv-preview').innerHTML = `<div class="dash-label" style="margin:0 0 7px">👀 Aperçu Discord</div><div style="background:#313338;border-radius:10px;padding:14px;color:#DBDEE1;font-size:13px">${imagePreview}<div style="font-weight:700;margin-bottom:10px">🎨 ${App.escapeHtml(c3.querySelector('#adv-name').value || 'Créer un ticket')}</div>${body}</div>`;
   };
   const advRenderTypes = () => {
     advTypesEl.innerHTML = '';
@@ -1200,6 +1205,8 @@ Dashboard.renderers.tickets = async (content, data) => {
           </div>
           <label class="dash-label">Description du type</label>
           <input class="dash-input" data-k="description" value="${App.escapeHtml(type.description)}" placeholder="Ex : demande privée au staff" maxlength="100" />
+          <label class="dash-label">Texte du bouton (vide = « Envoyer un ticket + nom »)</label>
+          <input class="dash-input" data-k="button_label" value="${App.escapeHtml(type.button_label)}" placeholder="Envoyer un ticket ${App.escapeHtml(type.label || 'support')}" maxlength="80" />
           <label class="dash-label">Rôles staff autorisés (sélection)</label>
           <div data-roles></div>
           <button class="dash-btn dash-btn-sm" data-addrole style="margin-top:6px">＋ Ajouter un rôle staff</button>
@@ -1233,6 +1240,7 @@ Dashboard.renderers.tickets = async (content, data) => {
   advRenderTypes();
   advRenderPreview();
   c3.querySelector('#adv-name').oninput = advRenderPreview;
+  c3.querySelector('#adv-image').oninput = advRenderPreview;
   c3.querySelector('#adv-mode').onchange = advRenderPreview;
   c3.querySelector('#adv-add-type').onclick = () => {
     if (advancedData.types.length >= 25) return App.toast('Discord limite ce panneau à 25 types.', 'error');
@@ -1246,6 +1254,7 @@ Dashboard.renderers.tickets = async (content, data) => {
       const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/advanced-tickets`, { method: 'PUT', body: {
         name: c3.querySelector('#adv-name').value.trim(), mode: c3.querySelector('#adv-mode').value,
         channel: c3.querySelector('#adv-channel').value, message: c3.querySelector('#adv-message').value,
+        image_url: c3.querySelector('#adv-image').value.trim(),
         require_reason: c3.querySelector('#adv-reason').checked ? 1 : 0, types: validTypes,
       }});
       advancedData.id = r.config && r.config.id;
