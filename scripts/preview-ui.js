@@ -7,7 +7,7 @@ const fs = require('fs');
 const dom = new JSDOM(`<!DOCTYPE html><html><body>
   <div id="app"></div><div id="toasts"></div><div id="modal-root"></div>
   <div class="bot-shell" id="shell"></div>
-</body></html>`, { runScripts: 'outside-only', url: 'https://hoxera.onrender.com/' });
+</body></html>`, { runScripts: 'outside-only', url: 'https://hoxera.is-a.dev/' });
 const { window } = dom;
 global.window = window; global.document = window.document;
 

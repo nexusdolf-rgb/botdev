@@ -18,7 +18,7 @@ console.log(bio);
 console.log('─────────────────');
 
 check('bio : 190 caractères max (Discord)', bio.length <= 190);
-check('bio : contient le NOUVEAU lien du dashboard', bio.includes('https://hoxera.onrender.com'));
+check('bio : contient le NOUVEAU lien du dashboard', bio.includes('https://hoxera.is-a.dev'));
 check('bio : invite à taper /help', bio.includes('/help'));
 check('bio : nom du bot Hoxera', bio.includes('Hoxera'));
 check('bio : modules principaux listés', bio.includes('Tickets') && bio.includes('XP') && bio.includes('Coins') && bio.includes('Jeux'));

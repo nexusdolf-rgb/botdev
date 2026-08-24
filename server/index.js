@@ -52,9 +52,10 @@ async function main() {
 
   // 🆕 L'URL officielle du dashboard : remplace un éventuel ancien lien
   // mémorisé dans la base restaurée (transcriptions, /help, pieds de page…)
-  const officialUrl = 'https://hoxera.onrender.com';
+  const officialUrl = 'https://hoxera.is-a.dev';
   const storedUrl = store.settings.get('public_url');
-  if (!storedUrl || !storedUrl.includes('//hoxera.onrender.com')) {
+  const oldOfficialUrls = ['https://hoxera.onrender.com', 'https://botdev-kqbd.onrender.com'];
+  if (!storedUrl || oldOfficialUrls.some((old) => storedUrl.startsWith(old))) {
     store.settings.set('public_url', officialUrl);
     if (storedUrl) console.log(`[BotDev] 🔗 Lien du dashboard mis à jour : ${storedUrl} → ${officialUrl}`);
   }
@@ -185,7 +186,8 @@ async function main() {
   // (risque de refroidissement). On s'auto-visite toutes les 10 min via
   // l'URL publique : la requête traverse l'équilibreur de Render et compte
   // comme du vrai trafic entrant.
-  const selfUrl = process.env.RENDER_EXTERNAL_URL || 'https://hoxera.onrender.com';
+  // URL canonique (le domaine Render reste accessible comme secours).
+  const selfUrl = officialUrl;
   if (selfUrl) {
     console.log(`[BotDev] 🌙 Garde-éveil activé : auto-visite de ${selfUrl}/ping toutes les 10 min`);
     setInterval(() => { fetch(`${selfUrl}/ping`).catch(() => {}); }, 10 * 60000);

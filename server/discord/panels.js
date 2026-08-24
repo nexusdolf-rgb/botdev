@@ -291,7 +291,7 @@ const i18n = require('../i18n');
 const PANEL_DEFAULT_NAME = 'Nexora';
 
 function panelBannerUrl(guildId, name) {
-  const site = store.settings.get('public_url') || 'https://hoxera.onrender.com';
+  const site = store.settings.get('public_url') || 'https://hoxera.is-a.dev';
   // Bannière STATIQUE par serveur (générée en ~1 s, mise en cache).
   // ⚠️ Le paramètre v= sert à casser le cache de Discord : chaque fois que
   // le style de la bannière change, on incrémente → Discord recharge
@@ -1031,7 +1031,7 @@ async function sendTranscriptDm(clientOrInteraction, guild, channelName, { text,
   const serverName = String(guild.name || 'Nexora').slice(0, 100);
   // 🌍 Transcription dans la langue du serveur
   const lang = i18n.langForGuild(guild.id);
-  const siteUrl = store.settings.get('public_url') || 'https://hoxera.onrender.com';
+  const siteUrl = store.settings.get('public_url') || 'https://hoxera.is-a.dev';
   const profileBanner = store.settings.get('profile_banner_url') || `${siteUrl}/icons/nexora-profile-banner.png`;
   const desc = url
     ? i18n.t(lang, 'transcript_desc', { server: serverName, url })

@@ -585,7 +585,7 @@ async function syncGlobalCommands(botId) {
 // ---------------------- Bio du bot (« À propos de moi ») ----------------------
 // Belle bio avec le dashboard, le serveur support officiel et /help.
 // Limite Discord : 190 caractères — longueur vérifiée par test automatique.
-const OFFICIAL_URL = 'https://hoxera.onrender.com';
+const OFFICIAL_URL = 'https://hoxera.is-a.dev';
 const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3'; // Serveur support officiel de Nexora
 
 function aboutText() {

@@ -28,7 +28,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   sondages, rappels, rôles par boutons/menus, salons vocaux temporaires, candidatures,
   starboard ⭐, traqueur d'invitations 📨, annonces de live 🔴 (TikTok/Twitch/YouTube/Kick),
   cartes de bienvenue en image 🖼️, auto-rôles multiples, i18n FR/EN
-- **Dashboard** : https://hoxera.onrender.com — connexion OAuth2 Discord, design pro
+- **Dashboard** : https://hoxera.is-a.dev — connexion OAuth2 Discord, design pro
   façon DraftBot (sidebar avec carte serveur, fil d'ariane, PWA installable)
 
 ## 🗂️ INFRASTRUCTURE
@@ -42,7 +42,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 | Déploiement | `git push` sur main → Render redéploie automatiquement (~1 min) |
 | CI | GitHub Actions sur botdev (tests à chaque push) |
 | Garde-éveil externe | workflow `keepalive.yml` dans botdev-data (ping /ping toutes les 10 min) |
-| Santé | `https://hoxera.onrender.com/api/health/bot` (JSON : bot en ligne, serveurs, erreurs, sauvegardes) |
+| Santé | `https://hoxera.is-a.dev/api/health/bot` (JSON : bot en ligne, serveurs, erreurs, sauvegardes) |
 
 ## 🏗️ ARCHITECTURE DU CODE
 
@@ -88,7 +88,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 ## 🚀 PREMIÈRE MISSION DU NOUVEL AGENT
 
 1. Clone `https://github.com/nexusdolf-rgb/botdev`, `npm install`, lis le dernier commit
-2. Vérifie l'état : `https://hoxera.onrender.com/api/health/bot` (bot en ligne ? erreurs ?)
+2. Vérifie l'état : `https://hoxera.is-a.dev/api/health/bot` (bot en ligne ? erreurs ?)
 3. Lance `bash scripts/check.sh` → doit être 🟢 (43+ tests)
 4. Vérifie mes tokens (GitHub 200, Render 200, Discord `users/@me`)
 5. Fais-moi un point de situation clair, puis attends mes instructions

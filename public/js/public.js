@@ -91,7 +91,7 @@ App.renderPublicLanding = () => {
         <h2>📊 Un dashboard digne des plus grands</h2>
         <p class="pub-sub">Configure tout depuis ton téléphone ou ton PC — design pro, sauvegarde intelligente, flux d'activité en direct.</p>
         <div class="pub-mock">
-          <div class="mock-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="mock-url">hoxera.onrender.com</span></div>
+          <div class="mock-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="mock-url">hoxera.is-a.dev</span></div>
           <div class="mock-body">
             <div class="mock-side">
               <div class="mock-srv"><span class="ms-ico">N</span><span class="ms-lines"><i></i><i></i></span></div>

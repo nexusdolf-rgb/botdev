@@ -133,7 +133,7 @@ Le dashboard a été **entièrement reconstruit** : shell professionnel avec **b
 Pour activer « Se connecter avec Discord » et le dashboard par serveur :
 
 1. Sur le **portail développeur Discord** (application de ton bot) : onglet **OAuth2** → **Reset Secret** (copie le *Client Secret*), et dans **Redirects**, ajoute :
-   `https://botdev-kqbd.onrender.com/api/auth/discord/callback`
+   `https://hoxera.is-a.dev/api/auth/discord/callback`
    (remplace par ton URL si différente)
 2. Sur Render → ton service → **Environment** :
    | Variable | Valeur |

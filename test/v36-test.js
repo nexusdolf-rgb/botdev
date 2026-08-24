@@ -27,11 +27,11 @@ const check = (label, cond) => {
 
   // ---------- 1. Bio : nouveau lien ----------
   const bio = botManager.aboutText();
-  check('bio : NOUVEAU lien présent', bio.includes('https://hoxera.onrender.com'));
+  check('bio : NOUVEAU lien présent', bio.includes('https://hoxera.is-a.dev'));
   check('bio : aucun ancien lien', !bio.includes('botdev-kqbd') && !bio.includes('BotDev'));
 
   // ---------- 2 & 3. Panneau avec descriptions ----------
-  store.settings.set('public_url', 'https://hoxera.onrender.com');
+  store.settings.set('public_url', 'https://hoxera.is-a.dev');
   store.tickets.set(BOT, G, {
     message: '', button_label: '🎫 Ouvrir un ticket', button_style: '1',
     types: JSON.stringify([
