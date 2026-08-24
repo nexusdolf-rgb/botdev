@@ -32,6 +32,26 @@ function sanctionForWarns(count, gs) {
 }
 
 // ------------------------------------------------------------
+// 🤖 Sanction d'un avertissement AUTO-MOD (fonction pure)
+// L'auto-mod compte tous les avertissements du membre (manuels + automatiques)
+// et applique l'action à chaque palier : 2e, 4e, 6e avertissement…
+// Ainsi, le 3e message ne déclenche pas une sanction répétée à chaque fois.
+// ------------------------------------------------------------
+function autoModSanctionForWarning(count, gs) {
+  const g = gs || {};
+  const n = Math.max(parseInt(count, 10) || 0, 0);
+  const limit = Math.max(parseInt(g.am_warn_limit, 10) || 0, 0);
+  const action = String(g.am_warn_action || 'none');
+  if (!limit || n < limit || n % limit !== 0) return null;
+  if (!['timeout', 'kick', 'ban'].includes(action)) return null;
+  return {
+    action,
+    minutes: action === 'timeout' ? Math.min(Math.max(parseInt(g.am_warn_timeout_min, 10) || 10, 1), 1440) : 0,
+    threshold: limit,
+  };
+}
+
+// ------------------------------------------------------------
 // ⭐ Starboard — décision pure
 // ------------------------------------------------------------
 function starboardDecision(stars, minStars, alreadyPosted) {
@@ -200,7 +220,7 @@ async function welcomeCard(member) {
 }
 
 module.exports = {
-  sanctionForWarns,
+  sanctionForWarns, autoModSanctionForWarning,
   starboardDecision, onReaction,
   detectInviteUsed, cacheInvites, onMemberJoinInvites,
   welcomeCardSvg, welcomeCard,

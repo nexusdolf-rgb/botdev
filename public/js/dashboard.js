@@ -1409,7 +1409,7 @@ Dashboard.renderers.moderation = async (content, data) => {
   const { sanctions } = await App.api(`/bots/${bot.id}/guilds/${guildId}/sanctions`);
   const root = Dashboard.header(content, '🛡️', 'Modération', 'Auto-modération, liste noire et sanctions prédéfinies (/sanction membre nom).');
 
-  const c = Dashboard.card(root, 'Auto-modération', 'Le bot supprime automatiquement les liens, les MAJUSCULES, les mentions excessives, le spam et les mots interdits.');
+  const c = Dashboard.card(root, 'Auto-modération', 'Le bot supprime automatiquement les liens, les MAJUSCULES, les mentions excessives, le spam et les mots interdits, puis gère les avertissements et sanctions comme un bot professionnel.');
   const blacklistData = blacklist.map((w) => ({ word: w }));
   c.innerHTML += `
     <label class="dash-label">Activer</label>
@@ -1427,6 +1427,21 @@ Dashboard.renderers.moderation = async (content, data) => {
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
       <div style="flex:1;min-width:110px"><label class="dash-label">Timeout spam (minutes)</label><input class="dash-input" id="am-timeout" type="number" min="1" max="1440" value="${s.am_timeout_min ?? 5}" /></div>
     </div>
+    <div style="margin-top:16px;padding:14px;border:1px solid rgba(254,231,92,.28);border-radius:14px;background:linear-gradient(135deg,rgba(254,231,92,.08),rgba(237,66,69,.05))">
+      <div style="font-weight:800;font-size:14px">⚠️ Avertissements progressifs</div>
+      <div style="font-size:12.5px;color:var(--d-dim);margin:5px 0 12px">Chaque infraction auto-mod supprimée est enregistrée. Le 1er avertissement est affiché dans le salon ; au 2e, une sanction automatique peut être appliquée. Les paliers suivants sont 4, 6, 8…</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px">
+        <div><label class="dash-label">Sanction tous les X avertissements (0 = désactivé)</label><input class="dash-input" id="am-warn-limit" type="number" min="0" max="50" value="${s.am_warn_limit ?? 2}" /></div>
+        <div><label class="dash-label">Action automatique</label><select class="dash-select" id="am-warn-action">
+          <option value="none" ${s.am_warn_action === 'none' ? 'selected' : ''}>🔕 Aucune (journal seulement)</option>
+          <option value="timeout" ${(s.am_warn_action || 'timeout') === 'timeout' ? 'selected' : ''}>⏳ Timeout</option>
+          <option value="kick" ${s.am_warn_action === 'kick' ? 'selected' : ''}>👢 Expulser</option>
+          <option value="ban" ${s.am_warn_action === 'ban' ? 'selected' : ''}>🔨 Bannir</option>
+        </select></div>
+        <div><label class="dash-label">Durée du timeout (minutes)</label><input class="dash-input" id="am-warn-timeout" type="number" min="1" max="1440" value="${s.am_warn_timeout_min ?? 10}" /></div>
+      </div>
+      <div style="font-size:11.5px;color:var(--d-dim);margin-top:9px">💡 Réglage conseillé : <b>2</b> + <b>Timeout 10 min</b>. Le compteur communique avec les avertissements manuels `/warn`.</div>
+    </div>
     <button class="dash-btn dash-btn-primary" style="margin-top:12px" id="am-save">💾 Enregistrer</button>`;
   c.querySelector('#am-save').onclick = async () => {
     try {
@@ -1439,6 +1454,9 @@ Dashboard.renderers.moderation = async (content, data) => {
         ignore_staff: c.querySelector('#am-staff').checked,
         warn_text: c.querySelector('#am-warn').value,
         timeout_min: parseInt(c.querySelector('#am-timeout').value, 10) || 5,
+        warn_limit: parseInt(c.querySelector('#am-warn-limit').value, 10) || 0,
+        warn_action: c.querySelector('#am-warn-action').value,
+        warn_timeout_min: parseInt(c.querySelector('#am-warn-timeout').value, 10) || 10,
         blacklist: blacklistData.map((w) => w.word),
       }});
       App.toast('Auto-modération enregistrée !');
@@ -1510,6 +1528,58 @@ Dashboard.renderers.moderation = async (content, data) => {
     } catch (e) { resBox.innerHTML = `<div style="padding:12px;border:1px solid rgba(237,66,69,.4);border-radius:10px;background:rgba(237,66,69,.08)">❌ ${App.escapeHtml(e.message)}</div>`; }
     go.disabled = false;
   };
+
+  // ⚠️ Centre des avertissements : la progression reste visible même si le
+  // message public est retiré après 15 secondes.
+  const cWarnings = Dashboard.card(root, '⚠️ Centre des avertissements', 'Historique unifié des avertissements manuels et auto-mod : 1er avertissement, 2e palier et sanctions appliquées.');
+  const warningBox = App.el(`<div class="desc">Chargement des avertissements…</div>`);
+  cWarnings.appendChild(warningBox);
+  const renderWarnings = async () => {
+    try {
+      const payload = await App.api(`/bots/${bot.id}/guilds/${guildId}/warnings`);
+      const warningRows = payload.warnings || [];
+      const summary = payload.summary || [];
+      const cfg = payload.config || {};
+      if (!warningRows.length) {
+        warningBox.innerHTML = `<div class="dash-empty" style="padding:16px 4px">✅ Aucun avertissement enregistré pour le moment.</div>`;
+        return;
+      }
+      const actionLabel = (action) => ({ timeout: '⏳ timeout', kick: '👢 expulsion', ban: '🔨 bannissement', warn: '⚠️ avertissement' }[action] || '⚠️ avertissement');
+      const summaryHtml = summary.length ? `
+        <div style="font-size:12px;color:var(--d-dim);margin-bottom:8px">👥 Membres concernés · palier configuré : <b>${cfg.limit || 'désactivé'}</b>${cfg.action && cfg.action !== 'none' ? ` → ${App.escapeHtml(actionLabel(cfg.action))}` : ''}</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin-bottom:14px">
+          ${summary.slice(0, 8).map((s) => `<div style="display:flex;align-items:center;gap:8px;padding:10px 11px;border:1px solid var(--d-border);border-radius:12px;background:rgba(88,101,242,.06)">
+            <span style="font-size:18px">⚠️</span><div style="flex:1;min-width:0"><b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${App.escapeHtml(s.user_tag)}</b><span style="font-size:11.5px;color:var(--d-dim)">${s.count} avertissement(s)</span></div>
+            <button class="dash-btn dash-btn-danger dash-btn-sm" data-clear-warnings="${App.escapeHtml(s.user_id)}" title="Réinitialiser">↺</button>
+          </div>`).join('')}
+        </div>` : '';
+      const listHtml = warningRows.slice(0, 30).map((w) => {
+        const isAuto = w.source === 'automod';
+        const level = isAuto && w.warning_no ? `${w.warning_no}${cfg.limit ? '/' + cfg.limit : ''}` : 'staff';
+        const origin = isAuto ? '🤖 Auto-mod' : '🛡️ Staff';
+        const action = w.action && w.action !== 'warn' ? ` · ${actionLabel(w.action)}` : '';
+        const channel = w.channel_name ? ` · #${w.channel_name}` : '';
+        return `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 4px;border-bottom:1px solid var(--d-border)">
+          <span style="min-width:38px;text-align:center;padding:5px 4px;border-radius:8px;background:${isAuto && Number(w.warning_no) >= Number(cfg.limit || 999999) ? 'rgba(237,66,69,.18)' : 'rgba(254,231,92,.14)'};font-size:11px;font-weight:800">${App.escapeHtml(String(level))}</span>
+          <div style="flex:1;min-width:0"><b>${App.escapeHtml(w.user_tag || w.user_id)}</b><div class="m-meta">${origin}${action}${channel} · ${App.escapeHtml(w.reason || 'Aucune raison')} · ${App.escapeHtml(String(w.created_at || '').replace('T', ' '))}</div></div>
+        </div>`;
+      }).join('');
+      warningBox.innerHTML = summaryHtml + `<div style="font-size:12px;color:var(--d-dim);margin:4px 0 6px">🧾 Dernières actions</div>${listHtml}`;
+      warningBox.querySelectorAll('[data-clear-warnings]').forEach((btn) => {
+        btn.onclick = async () => {
+          if (!(await App.confirm('Réinitialiser tous les avertissements de ce membre ?'))) return;
+          try {
+            await App.api(`/bots/${bot.id}/guilds/${guildId}/warnings/${btn.dataset.clearWarnings}`, { method: 'DELETE' });
+            App.toast('Avertissements réinitialisés.');
+            renderWarnings();
+          } catch (e) { App.toast(e.message, 'error'); }
+        };
+      });
+    } catch (e) {
+      warningBox.innerHTML = `<div class="desc">Historique des avertissements indisponible : ${App.escapeHtml(e.message)}</div>`;
+    }
+  };
+  renderWarnings();
 
   // 🛡️ Bouclier anti-raid automatique
   const cRaid = Dashboard.card(root, '🛡️ Bouclier anti-raid', 'Détecte un afflux anormal de nouveaux membres et protège le serveur tout seul.');

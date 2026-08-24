@@ -590,6 +590,7 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
     prefix: '', warn_limit: 0, warn_action: 'none',
     xp_enabled: 1, xp_min: 10, xp_max: 25, xp_cooldown: 60, xp_message: '', xp_channel: '',
     am_enabled: 0, am_links: 1, am_caps: 1, am_mentions: 5, am_spam: 5,
+    am_warn_limit: 2, am_warn_action: 'timeout', am_warn_timeout_min: 10,
     log_channel: '',
     birthday_channel: '', birthday_role: '', log_events: '',
   };
@@ -788,7 +789,7 @@ router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) =>
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
-  const { enabled, links, caps, mentions, spam, ignore_staff, warn_text, timeout_min, blacklist } = req.body || {};
+  const { enabled, links, caps, mentions, spam, ignore_staff, warn_text, timeout_min, warn_limit, warn_action, warn_timeout_min, blacklist } = req.body || {};
   store.guildSettings.set(bot.id, guildId, {
     am_enabled: enabled ? 1 : 0,
     am_links: (links === false || links === 0) ? 0 : 1,
@@ -798,6 +799,9 @@ router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) =>
     ...(ignore_staff !== undefined ? { am_ignore_staff: ignore_staff ? 1 : 0 } : {}),
     ...(warn_text !== undefined ? { am_warn_text: String(warn_text).slice(0, 1000) } : {}),
     ...(timeout_min !== undefined ? { am_timeout_min: Math.min(Math.max(parseInt(timeout_min, 10) || 5, 1), 1440) } : {}),
+    ...(warn_limit !== undefined ? { am_warn_limit: Math.min(Math.max(parseInt(warn_limit, 10) || 0, 0), 50) } : {}),
+    ...(warn_action !== undefined ? { am_warn_action: ['none', 'timeout', 'kick', 'ban'].includes(String(warn_action)) ? String(warn_action) : 'timeout' } : {}),
+    ...(warn_timeout_min !== undefined ? { am_warn_timeout_min: Math.min(Math.max(parseInt(warn_timeout_min, 10) || 10, 1), 1440) } : {}),
   });
   if (Array.isArray(blacklist)) {
     const words = blacklist.map((w) => String(w).trim().toLowerCase()).filter((w) => w.length >= 2).slice(0, 100);
@@ -930,7 +934,9 @@ router.get('/bots/:id/guilds/:guildId/notifications', requireAuth, async (req, r
     const has = (f) => !!(me && me.permissions && me.permissions.has(f));
     if ((ev.autorole && ev.autorole.enabled) && !has(PermissionFlagsBits.ManageRoles)) warnings.push({ icon: '🏷️', text: 'Auto-rôle actif mais permission « Gérer les rôles » manquante.' });
     if (tcfg.channel && !has(PermissionFlagsBits.ManageChannels)) warnings.push({ icon: '🎫', text: 'Tickets actifs mais permission « Gérer les salons » manquante.' });
-    if ((gs.warn_timeout_limit > 0 || gs.warn_limit > 0) && !has(PermissionFlagsBits.ModerateMembers)) warnings.push({ icon: '⚖️', text: 'Sanctions automatiques actives mais permission « Exclure temporairement » manquante.' });
+    if (((gs.warn_timeout_limit > 0 || gs.warn_limit > 0 || (gs.am_warn_limit > 0 && gs.am_warn_action === 'timeout')) && !has(PermissionFlagsBits.ModerateMembers))) warnings.push({ icon: '⚖️', text: 'Timeouts automatiques actifs mais permission « Exclure temporairement » manquante.' });
+    if (gs.am_warn_limit > 0 && gs.am_warn_action === 'kick' && !has(PermissionFlagsBits.KickMembers)) warnings.push({ icon: '👢', text: 'Sanction auto-mod réglée sur expulsion mais permission « Expulser des membres » manquante.' });
+    if (gs.am_warn_limit > 0 && gs.am_warn_action === 'ban' && !has(PermissionFlagsBits.BanMembers)) warnings.push({ icon: '🔨', text: 'Sanction auto-mod réglée sur bannissement mais permission « Bannir des membres » manquante.' });
     if (store.liveSocials.count(bot.id, guildId) > 0 && !gs.live_channel) warnings.push({ icon: '🔴', text: 'Comptes live suivis mais AUCUN salon d\'annonces configuré !' });
     if (store.inviteJoins.top(bot.id, guildId, 1).length === 0 && !has(PermissionFlagsBits.ManageGuild)) infos.push({ icon: '📨', text: 'Traqueur d\'invitations : donne « Gérer le serveur » au bot pour l\'activer.' });
 
@@ -1073,6 +1079,50 @@ router.get('/bots/:id/guilds/:guildId/automod/logs', requireAuth, async (req, re
   if (!bot) return;
   if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   res.json({ logs: store.automodLogs.recent(bot.id, req.params.guildId, 50) });
+});
+
+// ⚠️ Historique unifié des avertissements (manuel + auto-mod), visible dans
+// le panneau de modération. Les noms sont enrichis depuis le cache Discord.
+router.get('/bots/:id/guilds/:guildId/warnings', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const entry = botManager.clients.get(bot.id);
+  const guild = entry && entry.client && entry.client.isReady() ? entry.client.guilds.cache.get(guildId) : null;
+  const memberName = (userId) => {
+    const member = guild && guild.members && guild.members.cache ? guild.members.cache.get(String(userId)) : null;
+    return member ? (member.user && (member.user.tag || member.user.username)) || member.displayName || String(userId) : String(userId);
+  };
+  const channelName = (channelId) => {
+    const channel = guild && guild.channels && guild.channels.cache ? guild.channels.cache.get(String(channelId)) : null;
+    return channel ? channel.name : '';
+  };
+  const settings = store.guildSettings.get(bot.id, guildId) || {};
+  res.json({
+    warnings: store.warnings.recent(bot.id, guildId, 100).map((w) => ({
+      ...w,
+      user_tag: memberName(w.user_id),
+      channel_name: channelName(w.channel_id),
+    })),
+    summary: store.warnings.summary(bot.id, guildId, 100).map((w) => ({ ...w, user_tag: memberName(w.user_id) })),
+    config: {
+      limit: parseInt(settings.am_warn_limit, 10) || 0,
+      action: settings.am_warn_action || 'none',
+      timeout_min: parseInt(settings.am_warn_timeout_min, 10) || 10,
+    },
+  });
+});
+
+// Réinitialisation réservée au gestionnaire du serveur : le membre repart
+// avec zéro avertissement, sans supprimer les journaux auto-mod détaillés.
+router.delete('/bots/:id/guilds/:guildId/warnings/:userId', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  store.warnings.clear(bot.id, guildId, req.params.userId);
+  res.json({ ok: true });
 });
 
 // Permissions RÉELLES du bot sur un serveur (diagnostic)

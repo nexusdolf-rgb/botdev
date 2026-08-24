@@ -118,7 +118,7 @@ const check = (label, cond) => {
   store.guildSettings.set(BOT, G, { am_warn_text: '⚠️ Serveur {server} : message supprimé ({reason}).' });
   const mCust = makeMsg('https://custom.test');
   const rCust = await runAutomod(BOT, mCust);
-  check('personnalisé : variables {reason} et {server} remplacées', rCust.acted === true && mCust._dms[0].content === '⚠️ Serveur Serveur Test : message supprimé (lien non autorisé).');
+  check('personnalisé : variables {reason} et {server} remplacées', rCust.acted === true && mCust._dms[0].content.startsWith('⚠️ Serveur Serveur Test : message supprimé (lien non autorisé).') && mCust._dms[0].content.includes('Avertissement'));
   store.guildSettings.set(BOT, G, { am_warn_text: '' });
 
   // ---------- 4. MP fermés → repli journal + historique ----------

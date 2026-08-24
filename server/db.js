@@ -444,6 +444,19 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_spam INTEGER DEFAULT 5")
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_ignore_staff INTEGER DEFAULT 1"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_warn_text TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_timeout_min INTEGER DEFAULT 5"); } catch (e) {}
+// v3.9 — avertissements publics progressifs de l'auto-mod :
+// 1er avertissement visible dans le salon, 2e palier sanctionnable.
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_warn_limit INTEGER DEFAULT 2"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_warn_action TEXT DEFAULT 'timeout'"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_warn_timeout_min INTEGER DEFAULT 10"); } catch (e) {}
+// Historique unifié : les avertissements manuels et auto-mod peuvent être
+// affichés ensemble dans le panneau et comptés pour l'escalade.
+try { db.exec("ALTER TABLE warnings ADD COLUMN source TEXT DEFAULT 'manual'"); } catch (e) {}
+try { db.exec("ALTER TABLE warnings ADD COLUMN channel_id TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE warnings ADD COLUMN message_id TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE warnings ADD COLUMN warning_no INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE warnings ADD COLUMN action TEXT DEFAULT 'warn'"); } catch (e) {}
+try { db.exec("CREATE INDEX IF NOT EXISTS idx_warnings_guild_user ON warnings (bot_id, guild_id, user_id, id DESC)"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN antiraid_enabled INTEGER DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN antiraid_threshold INTEGER DEFAULT 10"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN antiraid_window INTEGER DEFAULT 30"); } catch (e) {}
@@ -654,7 +667,7 @@ const guildSettings = {
   set: (botId, guildId, fields) => {
     const cur = guildSettings.get(botId, guildId) || { prefix: '', warn_limit: 0, warn_action: 'none' };
     const next = { ...cur, ...fields };
-    const cols = ['prefix', 'warn_limit', 'warn_action', 'warn_timeout_limit', 'warn_timeout_min', 'starboard_channel', 'starboard_min', 'live_channel', 'live_ping', 'ticket_log_channel', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_warn_text', 'am_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'lang', 'timezone'];
+    const cols = ['prefix', 'warn_limit', 'warn_action', 'warn_timeout_limit', 'warn_timeout_min', 'starboard_channel', 'starboard_min', 'live_channel', 'live_ping', 'ticket_log_channel', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_warn_text', 'am_timeout_min', 'am_warn_limit', 'am_warn_action', 'am_warn_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'lang', 'timezone'];
     const vals = {
       bot_id: botId, guild_id: guildId,
       prefix: String(next.prefix || '').slice(0, 5),
@@ -681,6 +694,9 @@ const guildSettings = {
       am_ignore_staff: (next.am_ignore_staff === 0 || next.am_ignore_staff === false) ? 0 : 1,
       am_warn_text: String(next.am_warn_text || '').slice(0, 1000),
       am_timeout_min: Math.min(Math.max(parseInt(next.am_timeout_min, 10) || 5, 1), 1440),
+      am_warn_limit: Number.isFinite(parseInt(next.am_warn_limit, 10)) ? Math.min(Math.max(parseInt(next.am_warn_limit, 10), 0), 50) : 2,
+      am_warn_action: ['none', 'timeout', 'kick', 'ban'].includes(String(next.am_warn_action || '')) ? String(next.am_warn_action) : 'timeout',
+      am_warn_timeout_min: Math.min(Math.max(parseInt(next.am_warn_timeout_min, 10) || 10, 1), 1440),
       antiraid_enabled: next.antiraid_enabled ? 1 : 0,
       antiraid_threshold: Math.min(Math.max(parseInt(next.antiraid_threshold, 10) || 10, 2), 100),
       antiraid_window: Math.min(Math.max(parseInt(next.antiraid_window, 10) || 30, 5), 600),
@@ -742,9 +758,21 @@ const economy = {
 
 // ---------------------- Avertissements ----------------------
 const warnings = {
-  add: (botId, guildId, userId, reason, modId) => db.prepare('INSERT INTO warnings (bot_id, guild_id, user_id, reason, mod_id) VALUES (?, ?, ?, ?, ?)').run(botId, guildId, userId, reason, modId),
+  add: (botId, guildId, userId, reason, modId, meta = {}) => db.prepare(`INSERT INTO warnings
+    (bot_id, guild_id, user_id, reason, mod_id, source, channel_id, message_id, warning_no, action)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+      botId, guildId, String(userId || ''), String(reason || '').slice(0, 500), String(modId || '').slice(0, 40),
+      ['automod', 'manual', 'system'].includes(meta.source) ? meta.source : 'manual',
+      String(meta.channel_id || '').slice(0, 40), String(meta.message_id || '').slice(0, 40),
+      Math.max(parseInt(meta.warning_no, 10) || 0, 0),
+      ['warn', 'timeout', 'kick', 'ban'].includes(meta.action) ? meta.action : 'warn'),
+  setAction: (id, action) => db.prepare("UPDATE warnings SET action = ? WHERE id = ?").run(['warn', 'timeout', 'kick', 'ban'].includes(action) ? action : 'warn', id),
   list: (botId, guildId, userId) => db.prepare('SELECT * FROM warnings WHERE bot_id = ? AND guild_id = ? AND user_id = ? ORDER BY id DESC LIMIT 10').all(botId, guildId, userId),
   count: (botId, guildId, userId) => db.prepare('SELECT COUNT(*) AS n FROM warnings WHERE bot_id = ? AND guild_id = ? AND user_id = ?').get(botId, guildId, userId).n,
+  recent: (botId, guildId, limit = 50) => db.prepare('SELECT * FROM warnings WHERE bot_id = ? AND guild_id = ? ORDER BY id DESC LIMIT ?').all(botId, guildId, Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200)),
+  summary: (botId, guildId, limit = 50) => db.prepare(`SELECT user_id, COUNT(*) AS count, MAX(id) AS last_id, MAX(created_at) AS last_at
+    FROM warnings WHERE bot_id = ? AND guild_id = ? GROUP BY user_id ORDER BY last_id DESC LIMIT ?`).all(botId, guildId, Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200)),
+  clear: (botId, guildId, userId) => db.prepare('DELETE FROM warnings WHERE bot_id = ? AND guild_id = ? AND user_id = ?').run(botId, guildId, String(userId || '')),
 };
 
 // ---------------------- Menus de rôles ----------------------
