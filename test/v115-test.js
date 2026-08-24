@@ -18,6 +18,8 @@ const routes = fs.readFileSync(path.join(__dirname, '..', 'server/routes.js'), '
   assert.ok(dashboard.includes('am-warn-limit') && dashboard.includes('/warnings'));
   assert.ok(!dashboard.includes('`/warn`'), 'un texte /warn ne doit pas fermer le template JavaScript');
   assert.ok(routes.includes("guilds/:guildId/warnings") && routes.includes("warnings/:userId"));
+  const tasks = fs.readFileSync(path.join(__dirname, '..', 'server/discord/tasks.js'), 'utf8');
+  assert.ok(tasks.includes('sweepAutomodWarningMessages') && tasks.includes('automodWarningMessages.due'));
   console.log('✅ dashboard : configuration des paliers + centre historique branchés');
   const botId = 1;
   const guildId = 'G-WARN';
@@ -122,6 +124,8 @@ const routes = fs.readFileSync(path.join(__dirname, '..', 'server/routes.js'), '
   assert.strictEqual(rows[0].channel_id, 'C-CAPS');
   assert.strictEqual(rows[1].warning_no, 1);
   assert.strictEqual(store.warnings.summary(botId, guildId, 10)[0].count, 2);
+  const pendingPublicWarnings = store.automodWarningMessages.due(Date.now() + (24 * 60 * 60 * 1000) + 1000);
+  assert.ok(pendingPublicWarnings.length >= 2, 'les messages publics sont planifiés à 24 h');
   console.log('✅ dashboard : 1er et 2e avertissements conservés avec raison, salon et sanction');
 
   // 5. Le 3e avertissement reste visible mais ne répète pas immédiatement le

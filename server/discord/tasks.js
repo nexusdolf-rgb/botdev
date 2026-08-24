@@ -43,8 +43,35 @@ async function giveTempRole(botId, interaction, member, role, durationMs) {
   });
 }
 
+// Supprime les avertissements publics arrivés à 24 h. La référence est
+// persistée en base : un redémarrage du bot ne laisse pas le message éternel.
+async function sweepAutomodWarningMessages(botId, entry) {
+  const due = store.automodWarningMessages.due(Date.now(), 200).filter((row) => row.bot_id === botId);
+  for (const row of due) {
+    const guild = entry && entry.client && entry.client.guilds.cache.get(row.guild_id);
+    const channel = guild && guild.channels && guild.channels.cache.get(row.channel_id);
+    if (!channel || !channel.messages || typeof channel.messages.fetch !== 'function') continue;
+    const message = await channel.messages.fetch(row.message_id).catch(() => null);
+    if (!message) {
+      // Le message a déjà disparu (modérateur, Discord ou timer local).
+      store.automodWarningMessages.remove(row.id);
+      continue;
+    }
+    try {
+      try { require('./automod').markAutomodded(row.message_id); } catch {}
+      await message.delete();
+      store.automodWarningMessages.remove(row.id);
+    } catch (e) {
+      // On conserve la référence pour réessayer au prochain cycle si les
+      // permissions Discord ont changé ou si le réseau était momentanément HS.
+      console.error(`[Hoxera] expiration avertissement #${row.message_id} : ${String(e.message || e).slice(0, 160)}`);
+    }
+  }
+}
+
 // Retire les rôles temporaires arrivés à échéance
 async function sweep(botId, entry) {
+  try { await sweepAutomodWarningMessages(botId, entry); } catch (e) { console.error('[Hoxera] expiration avertissements:', e.message); }
   try { await giveaway.sweep(botId, entry); } catch (e) { console.error('[BotDev] giveaway sweep:', e.message); }
 
   // Hoxera 2.0 : rappels, messages programmés, anniversaires
@@ -82,4 +109,4 @@ async function sweep(botId, entry) {
   }
 }
 
-module.exports = { parseRoleDuration, formatDuration, giveTempRole, sweep };
+module.exports = { parseRoleDuration, formatDuration, giveTempRole, sweepAutomodWarningMessages, sweep };

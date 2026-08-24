@@ -17,6 +17,7 @@ const RETENTION = {
   suggestions: 90,      // suggestions traitées anciennes
   shop_purchases: 90,   // historique d'achats
   warnings: 90,         // avertissements de modération
+  automod_warning_messages: 7, // références de suppression 24 h (filet de secours)
   closed_tickets: 7,    // registre des salons fermés (purge de secours)
   cmd_stats: 30,        // compteurs de commandes par jour
 };
@@ -31,6 +32,7 @@ function purgeOldData(db) {
     report.transcripts = db.prepare(`DELETE FROM transcripts WHERE created_at < datetime('now', '-${RETENTION.transcripts} days')`).run().changes;
     report.suggestions = db.prepare(`DELETE FROM suggestions WHERE created_at < datetime('now', '-${RETENTION.suggestions} days')`).run().changes;
     report.warnings = db.prepare(`DELETE FROM warnings WHERE created_at < datetime('now', '-${RETENTION.warnings} days')`).run().changes;
+    report.automod_warning_messages = db.prepare(`DELETE FROM automod_warning_messages WHERE delete_at < (strftime('%s','now') * 1000) - ${RETENTION.automod_warning_messages} * 86400000`).run().changes;
     report.closed_tickets = db.prepare(`DELETE FROM closed_tickets WHERE closed_at < datetime('now', '-${RETENTION.closed_tickets} days')`).run().changes;
     // Tables avec colonne « ts »
     report.shop_purchases = db.prepare(`DELETE FROM shop_purchases WHERE ts < datetime('now', '-${RETENTION.shop_purchases} days')`).run().changes;
@@ -55,7 +57,7 @@ function dbStats(db) {
     out.fileSizeBytes = fs.statSync(paths.dbPath).size;
     out.fileSizeKo = Math.round(out.fileSizeBytes / 1024);
   } catch {}
-  const tables = ['users', 'sessions', 'bots', 'commands', 'role_menus', 'tickets', 'xp', 'economy', 'warnings', 'suggestions', 'giveaways', 'transcripts', 'message_stats', 'join_stats', 'shop_purchases', 'reminders', 'marriages', 'birthdays', 'temp_roles', 'scheduled_messages', 'cmd_stats', 'open_tickets', 'ticket_ratings'];
+  const tables = ['users', 'sessions', 'bots', 'commands', 'role_menus', 'tickets', 'xp', 'economy', 'warnings', 'automod_warning_messages', 'suggestions', 'giveaways', 'transcripts', 'message_stats', 'join_stats', 'shop_purchases', 'reminders', 'marriages', 'birthdays', 'temp_roles', 'scheduled_messages', 'cmd_stats', 'open_tickets', 'ticket_ratings'];
   try {
     for (const t of tables) {
       const n = db.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get().n;

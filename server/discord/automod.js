@@ -15,6 +15,8 @@ const logging = require('./logging');
 const i18n = require('../i18n');
 const { autoModSanctionForWarning } = require('./community');
 
+const PUBLIC_WARNING_TTL_MS = 24 * 60 * 60 * 1000;
+
 // botId:guildId:userId -> { times: [ms], messages: [Message] }
 const spamTracker = new Map();
 // Messages récemment supprimés par l'auto-mod (évite le double journal)
@@ -138,9 +140,9 @@ function sanctionPublicText(lang, sanction, result) {
 }
 
 // Avertissement visible dans le MÊME salon que le message supprimé.
-// Le message est retiré après 15 secondes pour ne pas polluer le salon ;
-// l'historique complet reste dans le dashboard.
-async function sendPublicWarning(message, lang, reason, warningCount, gs, sanction, sanctionResult, deleted) {
+// Le message est retiré après 24 heures ; la suppression est persistante
+// grâce à la table dédiée, même après un redémarrage Render.
+async function sendPublicWarning(botId, message, lang, reason, warningCount, gs, sanction, sanctionResult, deleted) {
   if (!message.channel || typeof message.channel.send !== 'function') return { sent: false, error: 'salon non envoyable' };
   const limit = Math.max(parseInt(gs.am_warn_limit, 10) || 0, 0);
   const limitText = limit > 0 ? `/${limit}` : '';
@@ -170,11 +172,24 @@ async function sendPublicWarning(message, lang, reason, warningCount, gs, sancti
     embeds: [embed],
     allowedMentions: { users: message.author.id ? [String(message.author.id)] : [] },
   });
-  if (sent && typeof sent.delete === 'function') {
-    const timer = setTimeout(() => sent.delete().catch(() => {}), 15000);
+  if (sent && sent.id) {
+    const deleteAt = Date.now() + PUBLIC_WARNING_TTL_MS;
+    try {
+      store.automodWarningMessages.add(botId, message.guild.id, message.channel.id, sent.id, deleteAt);
+    } catch (e) {
+      console.error('[Hoxera] expiration de l\'avertissement non enregistrée :', e.message);
+    }
+    const removePublicWarning = async () => {
+      try { if (typeof sent.delete === 'function') { markAutomodded(sent.id); await sent.delete(); } }
+      catch { /* message déjà supprimé ou permission perdue */ }
+      try { store.automodWarningMessages.removeByMessage(botId, message.guild.id, message.channel.id, sent.id); } catch {}
+    };
+    // Le timer accélère la suppression sur une instance stable. La table
+    // persistante est le filet de sécurité lors d'un redémarrage Render.
+    const timer = setTimeout(removePublicWarning, PUBLIC_WARNING_TTL_MS);
     if (timer && typeof timer.unref === 'function') timer.unref();
   }
-  return { sent: true };
+  return { sent: true, deleteAt: Date.now() + PUBLIC_WARNING_TTL_MS };
 }
 
 // Vérifie qu'un mot interdit apparaît comme MOT ENTIER dans le message :
@@ -284,7 +299,7 @@ async function runAutomod(botId, message, opts = {}) {
     let publicWarning = { sent: false, error: '' };
     if (!opts.force && warning.count) {
       try {
-        publicWarning = await sendPublicWarning(message, lang, reason, warning.count, gs, warning.sanction, sanctionResult, deleted);
+        publicWarning = await sendPublicWarning(botId, message, lang, reason, warning.count, gs, warning.sanction, sanctionResult, deleted);
       } catch (e) {
         publicWarning = { sent: false, error: String(e.message || e).slice(0, 180) };
         console.error('[Hoxera] avertissement public impossible :', publicWarning.error);
@@ -373,7 +388,7 @@ async function runAutomod(botId, message, opts = {}) {
       let publicWarning = { sent: false, error: '' };
       if (!opts.force && warning.count) {
         try {
-          publicWarning = await sendPublicWarning(message, lang, reasonLabel, warning.count, gs, spamSanction, sanctionResult, deletedCount > 0);
+          publicWarning = await sendPublicWarning(botId, message, lang, reasonLabel, warning.count, gs, spamSanction, sanctionResult, deletedCount > 0);
         } catch (e) {
           publicWarning = { sent: false, error: String(e.message || e).slice(0, 180) };
           console.error('[Hoxera] avertissement public anti-spam impossible :', publicWarning.error);
@@ -404,5 +419,6 @@ module.exports = {
   runAutomod,
   blacklistWordMatch,
   wasAutomodded,
+  markAutomodded,
   _test: { spamTracker, registerAutomodWarning, applyAutoSanction, sendPublicWarning },
 };

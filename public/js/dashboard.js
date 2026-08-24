@@ -1530,7 +1530,7 @@ Dashboard.renderers.moderation = async (content, data) => {
   };
 
   // ⚠️ Centre des avertissements : la progression reste visible même si le
-  // message public est retiré après 15 secondes.
+  // message public est automatiquement retiré après 24 heures.
   const cWarnings = Dashboard.card(root, '⚠️ Centre des avertissements', 'Historique unifié des avertissements manuels et auto-mod : 1er avertissement, 2e palier et sanctions appliquées.');
   const warningBox = App.el(`<div class="desc">Chargement des avertissements…</div>`);
   cWarnings.appendChild(warningBox);

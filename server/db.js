@@ -457,6 +457,17 @@ try { db.exec("ALTER TABLE warnings ADD COLUMN message_id TEXT DEFAULT ''"); } c
 try { db.exec("ALTER TABLE warnings ADD COLUMN warning_no INTEGER DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE warnings ADD COLUMN action TEXT DEFAULT 'warn'"); } catch (e) {}
 try { db.exec("CREATE INDEX IF NOT EXISTS idx_warnings_guild_user ON warnings (bot_id, guild_id, user_id, id DESC)"); } catch (e) {}
+// Messages publics d'avertissement : suppression à 24 h, persistante même
+// après un redémarrage Render.
+try { db.exec(`CREATE TABLE IF NOT EXISTS automod_warning_messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id INTEGER NOT NULL, guild_id TEXT NOT NULL,
+  channel_id TEXT NOT NULL, message_id TEXT NOT NULL,
+  delete_at INTEGER NOT NULL,
+  created_at TEXT DEFAULT (datetime('now')),
+  UNIQUE (bot_id, guild_id, channel_id, message_id)
+)`); } catch (e) {}
+try { db.exec("CREATE INDEX IF NOT EXISTS idx_automod_warning_due ON automod_warning_messages (bot_id, delete_at)"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN antiraid_enabled INTEGER DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN antiraid_threshold INTEGER DEFAULT 10"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN antiraid_window INTEGER DEFAULT 30"); } catch (e) {}
@@ -773,6 +784,16 @@ const warnings = {
   summary: (botId, guildId, limit = 50) => db.prepare(`SELECT user_id, COUNT(*) AS count, MAX(id) AS last_id, MAX(created_at) AS last_at
     FROM warnings WHERE bot_id = ? AND guild_id = ? GROUP BY user_id ORDER BY last_id DESC LIMIT ?`).all(botId, guildId, Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200)),
   clear: (botId, guildId, userId) => db.prepare('DELETE FROM warnings WHERE bot_id = ? AND guild_id = ? AND user_id = ?').run(botId, guildId, String(userId || '')),
+};
+
+// ---------------------- Messages publics d'avertissement ----------------------
+const automodWarningMessages = {
+  add: (botId, guildId, channelId, messageId, deleteAt) => db.prepare(`INSERT OR IGNORE INTO automod_warning_messages
+    (bot_id, guild_id, channel_id, message_id, delete_at) VALUES (?, ?, ?, ?, ?)`).run(
+      botId, String(guildId), String(channelId), String(messageId), Math.max(parseInt(deleteAt, 10) || 0, 0)),
+  due: (now = Date.now(), limit = 200) => db.prepare('SELECT * FROM automod_warning_messages WHERE delete_at <= ? ORDER BY delete_at ASC LIMIT ?').all(parseInt(now, 10) || Date.now(), Math.min(Math.max(parseInt(limit, 10) || 200, 1), 500)),
+  remove: (id) => db.prepare('DELETE FROM automod_warning_messages WHERE id = ?').run(id),
+  removeByMessage: (botId, guildId, channelId, messageId) => db.prepare('DELETE FROM automod_warning_messages WHERE bot_id = ? AND guild_id = ? AND channel_id = ? AND message_id = ?').run(botId, String(guildId), String(channelId), String(messageId)),
 };
 
 // ---------------------- Menus de rôles ----------------------
@@ -1232,4 +1253,4 @@ const liveSocials = {
   count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM live_socials WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
 };
 
-module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories };
+module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories };
