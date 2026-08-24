@@ -16,16 +16,16 @@ const src = fs.readFileSync(__dirname + '/../server/discord/panels.js', 'utf8');
 const block = src.slice(src.indexOf('Placement du salon (v2.4)'), src.indexOf('const allow = [PermissionFlagsBits.ViewChannel'));
 assert.ok(block.length > 100, 'bloc de placement présent avant les permissions');
 assert.ok(block.includes('if (!parent && panelParent) parent = panelParent;'), 'repli : catégorie du panneau');
-const idxExisting = block.indexOf('guild.channels.cache.find((c) => c.type === ChannelType.GuildCategory');
+const idxExisting = block.indexOf('findCategoryFuzzy(guild, catName)');
 const idxPanel = block.indexOf('if (!parent && panelParent)');
 const idxCreate = block.indexOf('guild.channels.create({ name: catName, type: ChannelType.GuildCategory })');
 assert.ok(idxExisting !== -1 && idxExisting < idxPanel && idxPanel < idxCreate,
-  'ordre correct : catégorie existante → catégorie du panneau → création en dernier recours');
-console.log('✅ ordre de placement : existante → panneau → création (dernier recours)');
+  'ordre correct : catégorie existante (résolution FLOUE) → catégorie du panneau → création en dernier recours');
+console.log('✅ ordre de placement : existante (floue) → panneau → création (dernier recours)');
 
-// 2. Une catégorie créée est repositionnée SOUS celle du panneau
-assert.ok(block.includes('parent.setPosition(panelParent.position + 1)'), 'nouvelle catégorie positionnée sous celle du panneau');
-console.log('✅ catégorie créée = positionnée sous celle du panneau (plus jamais en haut du serveur)');
+// 2. La création est réservée au cas « panneau hors catégorie »
+assert.ok(block.includes('!parent && catName && !panelParent'), 'création uniquement si le panneau est hors catégorie');
+console.log('✅ création de catégorie = dernier recours absolu (jamais de clone)');
 
 // 3. Ticket placé juste sous le salon du panneau (même catégorie)
 assert.ok(src.includes('channel.setPosition(panelChannel.position + 1)'), 'ticket sous le salon du panneau');

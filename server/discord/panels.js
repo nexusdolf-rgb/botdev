@@ -532,6 +532,28 @@ function ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning = ''
   return welcome;
 }
 
+// 🧲 Normalisation d'un nom décoré : on ne garde que lettres et chiffres.
+// « ────〔🎫・SUPPORT・〕──── » → « support » — les tirets, emojis, crochets
+// et caractères invisibles ne peuvent plus faire échouer une comparaison.
+function normDecorName(s) {
+  return String(s || '').toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}]/gu, '');
+}
+
+// Trouve une catégorie : correspondance exacte d'abord, puis FLOUE (cœur du
+// nom identique). Renvoie null si vraiment introuvable — on ne crée JAMAIS
+// de doublon visuellement identique.
+function findCategoryFuzzy(guild, name) {
+  const q = String(name || '').trim();
+  if (!q) return null;
+  const cache = guild.channels.cache;
+  const isCat = (c) => c && c.type === ChannelType.GuildCategory && c.name;
+  const exact = cache.find((c) => isCat(c) && c.name.toLowerCase() === q.toLowerCase());
+  if (exact) return exact;
+  const core = normDecorName(q);
+  if (!core) return null;
+  return cache.find((c) => isCat(c) && normDecorName(c.name) === core) || null;
+}
+
 async function openTicket(botId, interaction, type, reason = '', answers = []) {
   const guild = interaction.guild;
   const member = interaction.member;
@@ -616,17 +638,17 @@ async function openTicket(botId, interaction, type, reason = '', answers = []) {
   const catName = (chosen && chosen.category) ? chosen.category : (cfg.category || '');
   const panelChannel = interaction.channel && interaction.channel.parent !== undefined ? interaction.channel : null;
   const panelParent = panelChannel && panelChannel.parent ? panelChannel.parent : null;
-  let parent = null;
-  if (catName) {
-    const lower = String(catName).toLowerCase();
-    parent = guild.channels.cache.find((c) => c.type === ChannelType.GuildCategory && c.name.toLowerCase() === lower);
-  }
+  // 🧲 Résolution FLOUE : les noms décorés (────〔🎫・SUPPORT・〕────) sont
+  // tapés à la main dans le dashboard — un seul tiret de différence et
+  // l'ancienne comparaison stricte créait une CATÉGORIE CLONE en haut du
+  // serveur. On compare désormais le « cœur » du nom (lettres/chiffres).
+  let parent = findCategoryFuzzy(guild, catName);
   if (!parent && panelParent) parent = panelParent;
-  if (!parent && catName) {
+  if (!parent && catName && !panelParent) {
+    // Dernier recours ABSOLU (panneau hors catégorie ET catégorie introuvable)
     try {
       parent = await guild.channels.create({ name: catName, type: ChannelType.GuildCategory });
-      // La nouvelle catégorie descend SOUS celle du panneau (jamais en haut)
-      if (parent && panelParent) await parent.setPosition(panelParent.position + 1).catch(() => {});
+      if (parent && panelChannel) await parent.setPosition(Math.max(0, (panelChannel.rawPosition || 0))).catch(() => {});
     } catch {}
   }
 
@@ -2100,6 +2122,7 @@ async function buildTranscriptFromChannel(botId, channel, guild, extraLines = []
 }
 
 module.exports = {
+  normDecorName, findCategoryFuzzy,
   dispatchPanels, sendTicketPanel, sendRoleMenu, findChannel, findChannelInGuild, bumpTicketStats,
   resolveRole, parseTypes, isStaff, staffForTicket, openTicket, safeEmoji,
   startTypesWizard, handleTypesWizardInteraction,
