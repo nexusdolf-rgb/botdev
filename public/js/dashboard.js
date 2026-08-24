@@ -1440,7 +1440,7 @@ Dashboard.renderers.moderation = async (content, data) => {
         </select></div>
         <div><label class="dash-label">Durée du timeout (minutes)</label><input class="dash-input" id="am-warn-timeout" type="number" min="1" max="1440" value="${s.am_warn_timeout_min ?? 10}" /></div>
       </div>
-      <div style="font-size:11.5px;color:var(--d-dim);margin-top:9px">💡 Réglage conseillé : <b>2</b> + <b>Timeout 10 min</b>. Le compteur communique avec les avertissements manuels `/warn`.</div>
+      <div style="font-size:11.5px;color:var(--d-dim);margin-top:9px">💡 Réglage conseillé : <b>2</b> + <b>Timeout 10 min</b>. Le compteur communique avec les avertissements manuels avec /warn.</div>
     </div>
     <button class="dash-btn dash-btn-primary" style="margin-top:12px" id="am-save">💾 Enregistrer</button>`;
   c.querySelector('#am-save').onclick = async () => {

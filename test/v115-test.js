@@ -16,6 +16,7 @@ const routes = fs.readFileSync(path.join(__dirname, '..', 'server/routes.js'), '
 (async () => {
   assert.ok(dashboard.includes('Avertissements progressifs') && dashboard.includes('Centre des avertissements'));
   assert.ok(dashboard.includes('am-warn-limit') && dashboard.includes('/warnings'));
+  assert.ok(!dashboard.includes('`/warn`'), 'un texte /warn ne doit pas fermer le template JavaScript');
   assert.ok(routes.includes("guilds/:guildId/warnings") && routes.includes("warnings/:userId"));
   console.log('✅ dashboard : configuration des paliers + centre historique branchés');
   const botId = 1;
