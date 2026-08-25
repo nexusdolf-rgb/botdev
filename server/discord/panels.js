@@ -60,15 +60,34 @@ function findChannelInGuild(guild, query) {
   return guild.channels.cache.find(ch => ch.name.toLowerCase() === name && ch.isTextBased()) || null;
 }
 
+function roleKey(value) {
+  return String(value || '')
+    .replace(/[<@&>]/g, '')
+    .replace(/^@+/, '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\p{L}\p{N}]/gu, '');
+}
+
 function resolveRole(guild, nameOrId) {
   const q = String(nameOrId || '').trim();
-  if (!q) return null;
-  const id = q.replace(/[<@&>]/g, '');
+  if (!q || !guild || !guild.roles || !guild.roles.cache) return null;
+  const id = q.replace(/[<@&>]/g, '').trim();
   if (/^\d{15,21}$/.test(id)) {
-    const byId = guild.roles.cache.get(id);
+    const byId = typeof guild.roles.cache.get === 'function' ? guild.roles.cache.get(id) : null;
     if (byId) return byId;
   }
-  return guild.roles.cache.find(r => r.name.toLowerCase() === q.toLowerCase()) || null;
+  const exact = typeof guild.roles.cache.find === 'function'
+    ? guild.roles.cache.find((r) => String(r.name || '').toLowerCase() === q.toLowerCase())
+    : null;
+  if (exact) return exact;
+  // Les rôles décorés sont fréquents sur Discord :
+  // « 🟢 🎫・Team Support » doit aussi retrouver « Team Support ».
+  const key = roleKey(q);
+  if (!key || typeof guild.roles.cache.find !== 'function') return null;
+  return guild.roles.cache.find((r) => roleKey(r.name) === key) || null;
 }
 
 function cacheChannels(guild) {
@@ -255,21 +274,39 @@ function typeOptionDescription(t) {
   return `Ouvrir un ticket « ${t.label} » : notre équipe vous répond en privé.`.slice(0, 100);
 }
 
-// Rôles staff autorisés pour un ticket : ceux du type, sinon le rôle global
+function uniqueRoleRefs(...groups) {
+  const out = [];
+  const seen = new Set();
+  for (const group of groups) {
+    for (const value of (Array.isArray(group) ? group : [group])) {
+      const ref = String(value || '').trim();
+      const key = roleKey(ref);
+      if (!ref || seen.has(key || ref.toLowerCase())) continue;
+      seen.add(key || ref.toLowerCase());
+      out.push(ref);
+    }
+  }
+  return out.slice(0, 25);
+}
+
+// Rôles staff autorisés pour un ticket : les rôles du type ET le rôle global.
+// L'ancien code faisait « type OU global » : un rôle global pouvait donc
+// perdre l'accès dès qu'un type avait sa propre liste.
+function staffRoleRefsForConfig(cfg, chosen = null) {
+  return uniqueRoleRefs(chosen && chosen.staff_roles, cfg && cfg.support_role);
+}
+
 function staffRolesForTicket(botId, guild, channel) {
-  // Le nouveau système garde ses propres rôles par salon. Si aucun mapping
-  // n'existe, on retombe exactement sur l'ancien comportement.
+  // Le nouveau système garde ses propres rôles par salon. Si un mapping
+  // existe, il reste prioritaire et indépendant de la table historique.
   try {
     const advanced = channel && store.advancedTickets.byChannel(channel.id);
-    if (advanced && Array.isArray(advanced.staff_roles) && advanced.staff_roles.length) return advanced.staff_roles;
+    if (advanced && Array.isArray(advanced.staff_roles) && advanced.staff_roles.length) return uniqueRoleRefs(advanced.staff_roles);
   } catch {}
   const cfg = store.tickets.get(botId, guild.id) || {};
   const { typeLabel } = ticketMetaFor(channel);
-  if (typeLabel) {
-    const type = normalizeTypes(cfg).find((t) => t.label === typeLabel);
-    if (type && type.staff_roles.length) return type.staff_roles;
-  }
-  return cfg.support_role ? [cfg.support_role] : [];
+  const type = typeLabel ? normalizeTypes(cfg).find((t) => t.label === typeLabel) : null;
+  return staffRoleRefsForConfig(cfg, type);
 }
 
 function isDefaultMessage(msg) {
@@ -596,6 +633,30 @@ function findCategoryFuzzy(guild, name) {
   return cache.find((c) => isCat(c) && normDecorName(c.name) === core) || null;
 }
 
+function parentIdOf(channel) {
+  if (!channel) return '';
+  return String(channel.parentId || (channel.parent && channel.parent.id) || '');
+}
+
+function panelParentOf(guild, panelChannel) {
+  if (!guild || !panelChannel) return null;
+  if (panelChannel.parent && panelChannel.parent.id) return panelChannel.parent;
+  const parentId = parentIdOf(panelChannel);
+  return parentId && guild.channels && guild.channels.cache && typeof guild.channels.cache.get === 'function'
+    ? guild.channels.cache.get(parentId) || null
+    : null;
+}
+
+function panelChannelOf(guild, interaction, configOverride) {
+  const live = interaction && interaction.channel;
+  if (live && live.id) return live;
+  const configuredId = configOverride && configOverride.panel_channel_id;
+  if (configuredId && guild && guild.channels && guild.channels.cache && typeof guild.channels.cache.get === 'function') {
+    return guild.channels.cache.get(String(configuredId)) || null;
+  }
+  return null;
+}
+
 async function openTicket(botId, interaction, type, reason = '', answers = [], configOverride = null) {
   const guild = interaction.guild;
   const member = interaction.member;
@@ -668,11 +729,13 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
     channelName = `${baseName}-${counter}`.slice(0, 32);
   }
 
-  // TOUS les rôles staff du type (ou le rôle global) obtiennent l'accès
-  const staffNames = (chosen && chosen.staff_roles && chosen.staff_roles.length)
-    ? chosen.staff_roles
-    : (cfg.support_role ? [cfg.support_role] : []);
-  const supportRoles = staffNames.map((n) => resolveRole(guild, n)).filter(Boolean);
+  // TOUS les rôles staff du type ET le rôle global obtiennent l'accès.
+  // Une résolution tolérante est utilisée pour les noms décorés/copiés depuis
+  // le dashboard ; on ne fait jamais confiance à un seul nom strict.
+  const staffNames = staffRoleRefsForConfig(cfg, chosen);
+  const supportRoles = await resolveRoleRefs(guild, staffNames);
+  const unresolvedStaff = staffNames.filter((name) => !supportRoles.some((role) => roleKey(role.name) === roleKey(name) || role.id === name.replace(/[<@&>]/g, '')));
+  if (unresolvedStaff.length) console.warn(`[Hoxera] 🎫 rôles staff introuvables pour ${chosen ? chosen.label : 'ticket'} : ${unresolvedStaff.join(', ')}`);
   // 🗂️ Placement du salon (v2.4) : le ticket doit apparaître LÀ où le staff
   // l'attend — jamais dans une catégorie parachutée tout en haut du serveur.
   // Ordre de priorité :
@@ -680,15 +743,15 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
   //  2. sinon la catégorie du salon du panneau (là où le membre a cliqué) ;
   //  3. en dernier recours on crée la catégorie configurée, puis on la
   //     POSITIONNE juste sous la catégorie du panneau (pas au sommet du serveur).
-  // 📁 Priorité des catégories : (1) catégorie du PANNEAU MENU si le ticket
-  // vient du menu déroulant (réglage explicite du dashboard — zéro ambiguïté),
-  // (2) catégorie du type, (3) catégorie par défaut.
+  // 📁 Priorité des catégories : (1) catégorie explicite du PANNEAU MENU,
+  // (2) catégorie du type, (3) catégorie par défaut. Pour apparaître sous le
+  // panneau, la catégorie choisie doit être la même que celle du panneau.
   const fromMenu = !!type;
   const catName = (fromMenu && String(cfg.menu_category || '').trim())
     ? cfg.menu_category
     : ((chosen && chosen.category) ? chosen.category : (cfg.category || ''));
-  const panelChannel = interaction.channel && interaction.channel.parent !== undefined ? interaction.channel : null;
-  const panelParent = panelChannel && panelChannel.parent ? panelChannel.parent : null;
+  const panelChannel = panelChannelOf(guild, interaction, configOverride);
+  const panelParent = panelParentOf(guild, panelChannel);
   // 🧲 Résolution FLOUE : les noms décorés (────〔🎫・SUPPORT・〕────) sont
   // tapés à la main dans le dashboard — un seul tiret de différence et
   // l'ancienne comparaison stricte créait une CATÉGORIE CLONE en haut du
@@ -727,7 +790,11 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
   // 📍 Si le ticket est dans la MÊME catégorie que le panneau : on le place
   // JUSTE SOUS le salon du panneau — le staff le voit apparaître immédiatement.
   try {
-    if (panelChannel && (channel.parentId || null) === (panelChannel.parentId || null)) {
+    if (panelChannel
+      && ((channel.parentId || null) === (panelChannel.parentId || null)
+        || parentIdOf(channel) === parentIdOf(panelChannel))
+      && Number.isFinite(Number(panelChannel.position))
+      && typeof channel.setPosition === 'function') {
       await channel.setPosition(panelChannel.position + 1);
     }
   } catch { /* le placement ne doit jamais faire échouer l'ouverture */ }
@@ -2137,6 +2204,106 @@ async function handleRoleMenu(botId, interaction, menuId) {
 }
 
 // ============================================================
+// 🧰 Réparation défensive des tickets déjà ouverts
+// Les anciennes versions pouvaient laisser un salon avec uniquement le
+// créateur ou avec une mauvaise catégorie. On répare sans supprimer le salon,
+// le message, le numéro ou l'identifiant d'interaction.
+async function resolveRoleRefs(guild, refs) {
+  let roles = (refs || []).map((ref) => resolveRole(guild, ref)).filter(Boolean);
+  if (roles.length < (refs || []).length && guild && guild.roles && typeof guild.roles.fetch === 'function') {
+    await guild.roles.fetch().catch(() => {});
+    roles = (refs || []).map((ref) => resolveRole(guild, ref)).filter(Boolean);
+  }
+  return roles.filter((role, index, list) => list.findIndex((item) => item.id === role.id) === index);
+}
+
+function channelAllowsView(channel, targetId) {
+  const cache = channel && channel.permissionOverwrites && channel.permissionOverwrites.cache;
+  if (!cache || typeof cache.get !== 'function') return null;
+  const overwrite = cache.get(String(targetId));
+  if (!overwrite) return false;
+  try {
+    if (overwrite.allow && typeof overwrite.allow.has === 'function') return overwrite.allow.has(PermissionFlagsBits.ViewChannel);
+    if (overwrite.allow && typeof overwrite.allow.bitfield === 'bigint') return (overwrite.allow.bitfield & BigInt(PermissionFlagsBits.ViewChannel)) !== 0n;
+  } catch {}
+  return null;
+}
+
+function ticketPlacementConfig(botId, guild, channel, row) {
+  const advancedMapping = channel && store.advancedTickets.byChannel(channel.id);
+  const advanced = store.advancedTickets.get(botId, guild.id);
+  const advancedType = advanced && Array.isArray(advanced.types)
+    ? advanced.types.find((type) => String(type.label || '') === String(row.type_label || ''))
+    : null;
+  if (advancedMapping || advancedType) {
+    const type = advancedType || {};
+    const panel = advanced && advanced.panel_channel
+      ? guild.channels.cache.get(String(advanced.panel_channel)) || null
+      : null;
+    return {
+      refs: uniqueRoleRefs(type.staff_roles, ''),
+      category: type.category || '',
+      panel,
+    };
+  }
+  const cfg = store.tickets.get(botId, guild.id) || {};
+  const type = normalizeTypes(cfg).find((item) => String(item.label) === String(row.type_label || '')) || null;
+  const panelRef = cfg.menu_channel || cfg.channel || '';
+  const panel = findChannelInGuild(guild, panelRef);
+  return {
+    refs: staffRoleRefsForConfig(cfg, type),
+    category: (cfg.menu_category && String(cfg.menu_category).trim()) || (type && type.category) || cfg.category || '',
+    panel,
+  };
+}
+
+async function repairTicketChannel(botId, guild, channel, row) {
+  if (!guild || !channel || !row) return { repaired: false, roles: 0, moved: false };
+  const cfg = ticketPlacementConfig(botId, guild, channel, row);
+  const roles = await resolveRoleRefs(guild, cfg.refs);
+  let repaired = false;
+  for (const role of roles) {
+    const allowed = channelAllowsView(channel, role.id);
+    if (allowed === false || allowed === null) {
+      await channel.permissionOverwrites.edit(role.id, {
+        ViewChannel: true, SendMessages: true, ReadMessageHistory: true,
+        AttachFiles: true, EmbedLinks: true,
+      }).catch(() => {});
+      repaired = true;
+    }
+  }
+  if (row.opener_id) {
+    const creatorAllowed = channelAllowsView(channel, row.opener_id);
+    if (creatorAllowed === false || creatorAllowed === null) {
+      await channel.permissionOverwrites.edit(row.opener_id, {
+        ViewChannel: true, SendMessages: true, ReadMessageHistory: true,
+      }).catch(() => {});
+      repaired = true;
+    }
+  }
+
+  const wantedParent = findCategoryFuzzy(guild, cfg.category) || panelParentOf(guild, cfg.panel);
+  const currentParent = parentIdOf(channel);
+  let moved = false;
+  if (wantedParent && currentParent !== String(wantedParent.id) && typeof channel.setParent === 'function') {
+    await channel.setParent(wantedParent.id, { lockPermissions: false }).catch(() => {});
+    moved = true;
+    repaired = true;
+  }
+  const panelPosition = cfg.panel && Number(cfg.panel.position);
+  const samePanelParent = cfg.panel && parentIdOf(channel) === parentIdOf(cfg.panel);
+  const channelPosition = Number(channel.position);
+  // Ne déplace pas tous les anciens tickets à chaque balayage : seul un
+  // ticket placé au-dessus du panneau (ou déplacé de catégorie) est corrigé.
+  if (samePanelParent && Number.isFinite(panelPosition) && typeof channel.setPosition === 'function'
+    && (moved || !Number.isFinite(channelPosition) || channelPosition <= panelPosition)) {
+    await channel.setPosition(panelPosition + 1).catch(() => {});
+    moved = true;
+  }
+  return { repaired, roles: roles.length, moved };
+}
+
+// ============================================================
 // ⏰ Fermeture automatique des tickets inactifs (promis sur le panneau)
 //   - rappel 10 min avant la fermeture (2 h sans activité)
 //   - fermeture auto (verrouillage + notification)
@@ -2152,6 +2319,10 @@ async function sweepInactiveTickets(botId, entry, now = new Date()) {
         const guild = entry.client.guilds.cache.get(row.guild_id);
         const channel = guild ? guild.channels.cache.get(row.channel_id) : null;
         if (!channel) { store.openTickets.remove(row.channel_id); continue; }
+        try {
+          const repair = await repairTicketChannel(botId, guild, channel, row);
+          if (repair.repaired) console.log(`[Hoxera] 🧰 ticket #${row.number} réparé : ${repair.roles} rôle(s), ${repair.moved ? 'placement corrigé' : 'accès vérifié'}`);
+        } catch (e) { console.error(`[Hoxera] 🧰 réparation ticket #${row.number} : ${e.message}`); }
         const lang = i18n.langForGuild(row.guild_id);
         if (!row.closed_at) {
           // Ticket OUVERT : inactivité ?
@@ -2283,7 +2454,8 @@ async function buildTranscriptFromChannel(botId, channel, guild, extraLines = []
 module.exports = {
   normDecorName, findCategoryFuzzy,
   dispatchPanels, sendTicketPanel, sendRoleMenu, findChannel, findChannelInGuild, bumpTicketStats,
-  resolveRole, parseTypes, isStaff, staffForTicket, openTicket, safeEmoji,
+  resolveRole, roleKey, uniqueRoleRefs, staffRoleRefsForConfig, parseTypes, isStaff, staffForTicket, openTicket, safeEmoji,
+  parentIdOf, panelParentOf, panelChannelOf, repairTicketChannel,
   startTypesWizard, handleTypesWizardInteraction,
   handleTicketDeleteAsk, ticketMetaFor, ticketWelcomeEmbed, typeOptionDescription, normalizeTypes,
   sendTranscriptDm, sweepInactiveTickets, buildTranscriptFromChannel, sendRatingDm,

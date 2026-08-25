@@ -197,7 +197,7 @@ async function sendPanel(botId, guildId, client) {
   return sent;
 }
 
-function advancedConfigForOpen(config, type) {
+function advancedConfigForOpen(config, type, interaction = null) {
   return {
     // Ces propriétés sont lues par panels.openTicket ; aucune écriture dans
     // la table historique `tickets` n'est faite.
@@ -208,6 +208,9 @@ function advancedConfigForOpen(config, type) {
     types: [],
     advanced_panel_id: config.id,
     advanced_type_id: type.id,
+    // Le salon réellement cliqué est transmis explicitement : le placement
+    // ne dépend plus d'une déduction fragile lors de l'ouverture.
+    panel_channel_id: interaction && interaction.channel ? interaction.channel.id : (config.panel_channel || ''),
   };
 }
 
@@ -314,7 +317,7 @@ async function openForType(botId, interaction, config, type, reason = '', answer
       await interaction.deferReply({ ephemeral: true });
     }
   } catch {}
-  await panels.openTicket(botId, interaction, type, reason, answers, advancedConfigForOpen(config, type));
+  await panels.openTicket(botId, interaction, type, reason, answers, advancedConfigForOpen(config, type, interaction));
 }
 
 async function startTypeInteraction(botId, interaction, panelId, typeId) {
