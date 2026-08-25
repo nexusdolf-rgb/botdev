@@ -35,7 +35,6 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
       <label class="field-label">Options du menu</label>
       <div id="rm-options"></div>
       <button class="btn btn-sm btn-ghost" id="rm-add-opt" style="margin-top:8px">＋ Ajouter un rôle</button>
-      <datalist id="rm-roles-list"></datalist>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" data-close>Annuler</button>
@@ -54,30 +53,36 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
   const current = String(data.channel || '');
   chans.forEach((ch) => {
     const val = `#${ch.name}`;
-    chanSel.appendChild(App.el(`<option value="${App.escapeHtml(val)}" ${current === val ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`));
+    const selected = typeof Dashboard !== 'undefined' && Dashboard.discordRefMatches
+      ? Dashboard.discordRefMatches(current, ch)
+      : current === val;
+    chanSel.appendChild(App.el(`<option value="${App.escapeHtml(val)}" ${selected ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`));
   });
-  if (current && ![...chanSel.options].some((o) => o.value === current)) {
-    chanSel.appendChild(App.el(`<option value="${App.escapeHtml(current)}" selected>${App.escapeHtml(current)} (actuel)</option>`));
+  const channelKnown = chans.some((ch) => typeof Dashboard !== 'undefined' && Dashboard.discordRefMatches
+    ? Dashboard.discordRefMatches(current, ch)
+    : current === `#${ch.name}`);
+  if (current && !channelKnown) {
+    chanSel.appendChild(App.el(`<option value="${App.escapeHtml(current)}" selected>⚠️ ${App.escapeHtml(current)} (configuration actuelle — salon introuvable)</option>`));
   }
-
-  // 🏷️ Suggestions automatiques des noms de rôles (datalist)
-  const rolesDl = document.querySelector('#rm-roles-list');
-  (guildData.roles || []).filter((r) => r.name !== '@everyone').forEach((r) => {
-    rolesDl.appendChild(App.el(`<option value="${App.escapeHtml(r.name)}"></option>`));
-  });
 
   const roleChoices = (guildData.roles || []).filter((r) => r.name !== '@everyone');
   const renderOpts = () => {
     optWrap.innerHTML = '';
     data.options.forEach((o, i) => {
-      const roleOptions = ['<option value="">— Choisir un rôle —</option>']
-        .concat(roleChoices.map((r) => `<option value="${App.escapeHtml(r.name)}" ${o.role === r.name ? 'selected' : ''}>🛡️ ${App.escapeHtml(r.name)}</option>`));
-      if (o.role && !roleChoices.some((r) => r.name === o.role)) {
-        roleOptions.push(`<option value="${App.escapeHtml(o.role)}" selected>🛡️ ${App.escapeHtml(o.role)} (introuvable ?)</option>`);
+      const roleOptions = [roleChoices.length ? '<option value="">— Choisir un rôle —</option>' : '<option value="" disabled>— Aucun rôle reçu de Discord —</option>']
+        .concat(roleChoices.map((r) => {
+          const selected = typeof Dashboard !== 'undefined' && Dashboard.discordRefMatches
+            ? Dashboard.discordRefMatches(o.role, r)
+            : o.role === r.name;
+          return `<option value="${App.escapeHtml(r.name)}" ${selected ? 'selected' : ''}>🛡️ ${App.escapeHtml(r.name)}</option>`;
+        }));
+      const roleKnown = roleChoices.some((r) => typeof Dashboard !== 'undefined' && Dashboard.discordRefMatches
+        ? Dashboard.discordRefMatches(o.role, r)
+        : o.role === r.name);
+      if (o.role && !roleKnown) {
+        roleOptions.push(`<option value="${App.escapeHtml(o.role)}" selected>⚠️ ${App.escapeHtml(o.role)} (configuration actuelle — rôle introuvable)</option>`);
       }
-      const roleControl = roleChoices.length
-        ? `<select class="input" data-k="role">${roleOptions.join('')}</select>`
-        : `<input class="input" data-k="role" placeholder="Aucun rôle reçu — écris le nom" value="${App.escapeHtml(o.role)}" list="rm-roles-list" />`;
+      const roleControl = `<select class="input" data-k="role">${roleOptions.join('')}</select>`;
       const row = App.el(`
         <div class="row-item" style="margin-top:7px">
           <input class="input" data-k="emoji" placeholder="😀" value="${App.escapeHtml(o.emoji)}" style="max-width:56px;text-align:center" />

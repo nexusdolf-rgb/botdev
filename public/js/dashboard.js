@@ -8,6 +8,26 @@ const Dashboard = {
 
 Dashboard.api = App.api;
 
+// ---------------------- Références Discord ----------------------
+// Les valeurs historiques peuvent être des noms (#salon, rôle, catégorie)
+// alors que les modules récents utilisent parfois les IDs. Ces helpers
+// reconnaissent les deux formats et affichent toujours une sélection native.
+Dashboard.discordRefMatches = (current, item) => {
+  const value = String(current || '').trim();
+  if (!value || !item) return false;
+  const id = String(item.id || '').trim();
+  const name = String(item.name || '').trim();
+  return value === id || value === name || value === `#${name}`;
+};
+
+Dashboard.currentDiscordOption = (current, items, icon = '⚠️', label = 'configuration actuelle — élément introuvable') => {
+  const value = String(current || '').trim();
+  if (!value || (items || []).some((item) => Dashboard.discordRefMatches(value, item))) return '';
+  return `<option value="${App.escapeHtml(value)}" selected>${icon} ${App.escapeHtml(value)} (${label})</option>`;
+};
+
+Dashboard.noDiscordChoice = (label) => `<option value="" disabled>— ${App.escapeHtml(label)} —</option>`;
+
 // ---------------------- Shell ----------------------
 Dashboard.mount = async (shell, bot) => {
   Dashboard.state.bot = bot;
@@ -800,13 +820,11 @@ Dashboard.renderers.tickets = async (content, data) => {
     }
   })();
 
-  const textChannels = (data.channels || []).filter((ch) => !ch.category);
+  const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
   const categories = (data.channels || []).filter((ch) => ch.category);
-  const rolesList = data.roles || [];
+  const rolesList = (data.roles || []).filter((role) => role.name !== '@everyone');
   const curStyle = String(t.button_style || '1');
   const reqReason = !(t.require_reason === 0 || t.require_reason === false);
-  const channelName = String(t.channel || '').replace(/^#/, '');
-  const channelFound = !!channelName && textChannels.some((ch) => ch.name === channelName);
 
   const c = Dashboard.card(root, 'Configuration', '');
   c.querySelector('.desc').outerHTML = `<div class="desc">💡 Sur Discord : <b>/ticket setup</b> (assistant) et <b>/ticket types setup</b> (types + rôles staff). Tout est synchronisé avec ce formulaire.</div>`;
@@ -815,12 +833,12 @@ Dashboard.renderers.tickets = async (content, data) => {
   c.appendChild(App.el(`<div data-status style="margin-bottom:12px"></div>`));
 
   c.innerHTML += `
-    <label class="dash-label">Salon du panneau (sélecteur)</label>
+    <label class="dash-label">Salon du panneau</label>
     <select class="dash-select" id="t-channel">
-      <option value="">— Choisir un salon —</option>
-      ${textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${String(t.channel || '') === '#' + ch.name ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`).join('')}
+      ${textChannels.length ? '<option value="">— Choisir un salon —</option>' : Dashboard.noDiscordChoice('Aucun salon texte reçu de Discord')}
+      ${textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(t.channel, ch) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`).join('')}
+      ${Dashboard.currentDiscordOption(t.channel, textChannels)}
     </select>
-    <input class="dash-input" id="t-channel-custom" value="${App.escapeHtml(t.channel || '')}" placeholder="…ou écris le salon (#support)" style="margin-top:6px" />
 
     <label class="dash-label">Texte du bouton</label>
     <input class="dash-input" id="t-label" value="${App.escapeHtml(t.button_label || '')}" placeholder="🎫 Ouvrir un ticket" />
@@ -839,19 +857,19 @@ Dashboard.renderers.tickets = async (content, data) => {
       <span style="color:var(--d-dim)">${reqReason ? '✅ Obligatoire : une raison est demandée avant l\'ouverture' : '❌ Désactivé : le ticket s\'ouvre directement'}</span>
     </label>
 
-    <label class="dash-label">Rôle staff global (sélecteur)</label>
+    <label class="dash-label">Rôle staff global</label>
     <select class="dash-select" id="t-role">
-      <option value="">— Choisir un rôle —</option>
-      ${rolesList.map((r) => `<option value="${App.escapeHtml(r.name)}" ${String(t.support_role || '') === r.name ? 'selected' : ''}>🛡️ ${App.escapeHtml(r.name)}</option>`).join('')}
+      ${rolesList.length ? '<option value="">— Choisir un rôle —</option>' : Dashboard.noDiscordChoice('Aucun rôle reçu de Discord')}
+      ${rolesList.map((r) => `<option value="${App.escapeHtml(r.name)}" ${Dashboard.discordRefMatches(t.support_role, r) ? 'selected' : ''}>🛡️ ${App.escapeHtml(r.name)}</option>`).join('')}
+      ${Dashboard.currentDiscordOption(t.support_role, rolesList, '⚠️', 'configuration actuelle — rôle introuvable')}
     </select>
-    <input class="dash-input" id="t-role-custom" value="${App.escapeHtml(t.support_role || '')}" placeholder="…ou écris le rôle (Staff)" style="margin-top:6px" />
 
-    <label class="dash-label">Catégorie par défaut (sélecteur)</label>
+    <label class="dash-label">Catégorie par défaut</label>
     <select class="dash-select" id="t-cat">
-      <option value="">— Choisir une catégorie —</option>
-      ${categories.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${String(t.category || '') === ch.name ? 'selected' : ''}>📁 ${App.escapeHtml(ch.name)}</option>`).join('')}
+      ${categories.length ? '<option value="">— Choisir une catégorie —</option>' : Dashboard.noDiscordChoice('Aucune catégorie reçue de Discord')}
+      ${categories.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(t.category, ch) ? 'selected' : ''}>📁 ${App.escapeHtml(ch.name)}</option>`).join('')}
+      ${Dashboard.currentDiscordOption(t.category, categories, '⚠️', 'configuration actuelle — catégorie introuvable')}
     </select>
-    <input class="dash-input" id="t-cat-custom" value="${App.escapeHtml(t.category || '')}" placeholder="…ou écris la catégorie (Tickets)" style="margin-top:6px" />
 
     <label class="dash-label">Message du panneau (vide = automatique)</label>
     <textarea class="dash-input" id="t-msg" rows="3">${App.escapeHtml(t.message || '')}</textarea>
@@ -859,7 +877,8 @@ Dashboard.renderers.tickets = async (content, data) => {
     <label class="dash-label">📔 Journal des tickets (salon staff — récapitulatif à la fermeture)</label>
     <select class="dash-select" id="t-logchan">
       <option value="">— Désactivé (choisir un salon pour activer) —</option>
-      ${textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${String((data.settings || {}).ticket_log_channel || '') === '#' + ch.name ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`).join('')}
+      ${textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches((data.settings || {}).ticket_log_channel, ch) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`).join('')}
+      ${Dashboard.currentDiscordOption((data.settings || {}).ticket_log_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable')}
     </select>
     <div style="font-size:12px;color:var(--d-dim);margin-top:6px">À chaque fermeture : panneau récap (qui a ouvert, staff en charge, raisons, durée, messages, lien transcription, note ⭐). Le MP du créateur ne change pas.</div>
 
@@ -873,14 +892,18 @@ Dashboard.renderers.tickets = async (content, data) => {
   // son salon, son message, son 💾 et son 📨.
   const cm = Dashboard.card(root, '🗂️ Panneau MENU déroulant', 'Le panneau avec la liste des types de tickets (menu déroulant). Indépendant du panneau bouton : chacun son salon, son message, ses boutons.');
   const menuChanOpts = ['<option value="">— Même salon que le panneau bouton —</option>']
-    .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${String(t.menu_channel || '') === '#' + ch.name ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`));
+    .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(t.menu_channel, ch) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`));
+  if (t.menu_channel && !textChannels.some((ch) => Dashboard.discordRefMatches(t.menu_channel, ch))) {
+    menuChanOpts.push(Dashboard.currentDiscordOption(t.menu_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable'));
+  }
   cm.innerHTML += `
     <label class="dash-label">Salon du panneau menu</label>
     <select class="dash-select" id="tm-channel">${menuChanOpts.join('')}</select>
     <label class="dash-label">📁 Catégorie où créer les salons de tickets du MENU</label>
     <select class="dash-select" id="tm-cat">
       <option value="">— Automatique (catégorie du type, sinon celle par défaut) —</option>
-      ${categories.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${String(t.menu_category || '') === ch.name ? 'selected' : ''}>📁 ${App.escapeHtml(ch.name)}</option>`).join('')}
+      ${categories.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(t.menu_category, ch) ? 'selected' : ''}>📁 ${App.escapeHtml(ch.name)}</option>`).join('')}
+      ${Dashboard.currentDiscordOption(t.menu_category, categories, '⚠️', 'configuration actuelle — catégorie introuvable')}
     </select>
     <div style="font-size:12px;color:var(--d-dim);margin-top:4px">✅ Si tu choisis une catégorie ici, TOUS les tickets ouverts via le menu iront dedans — priorité absolue, zéro ambiguïté.</div>
     <label class="dash-label">Message du panneau menu (vide = même message que le panneau bouton)</label>
@@ -909,17 +932,16 @@ Dashboard.renderers.tickets = async (content, data) => {
   // Rafraîchit l'état affiché (re-query : innerHTML += a recréé le DOM)
   const renderStatus = () => {
     const zone = c.querySelector('[data-status]');
-    const chName = String(c.querySelector('#t-channel').value || c.querySelector('#t-channel-custom').value || '').replace(/^#/, '');
-    const found = !!chName && textChannels.some((ch) => ch.name === chName);
-    zone.innerHTML = found
-      ? `<span class="dash-badge ok">📨 Panneau configuré dans #${App.escapeHtml(chName)} — salon trouvé ✅</span>`
-      : (chName
-          ? `<span class="dash-badge warn">⚠️ Salon « #${App.escapeHtml(chName)} » non trouvé parmi les salons du bot (vérifie le nom)</span>`
+    const selected = c.querySelector('#t-channel').value.trim();
+    const selectedChannel = textChannels.find((ch) => Dashboard.discordRefMatches(selected, ch));
+    zone.innerHTML = selectedChannel
+      ? `<span class="dash-badge ok">📨 Panneau configuré dans #${App.escapeHtml(selectedChannel.name)} — salon trouvé ✅</span>`
+      : (selected
+          ? `<span class="dash-badge warn">⚠️ Le salon enregistré n'est plus disponible dans Discord</span>`
           : `<span class="dash-badge warn">⚠️ Aucun salon défini — choisis-en un puis « Envoyer le panneau »</span>`);
   };
   renderStatus();
   c.querySelector('#t-channel').onchange = renderStatus;
-  c.querySelector('#t-channel-custom').addEventListener('input', renderStatus);
   c.querySelector('#t-reason').onchange = () => {
     const on = c.querySelector('#t-reason').checked;
     c.querySelector('#t-reason').nextElementSibling.nextElementSibling.textContent = on
@@ -927,22 +949,16 @@ Dashboard.renderers.tickets = async (content, data) => {
       : '❌ Désactivé : le ticket s\'ouvre directement';
   };
 
-  const pick = (selectId, customId, fallback) => {
-    const s = c.querySelector(selectId).value.trim();
-    const cust = c.querySelector(customId).value.trim();
-    return s || cust || fallback;
-  };
-
   c.querySelector('#t-save').onclick = async () => {
     try {
       await App.api(`/bots/${bot.id}/tickets`, { method: 'PUT', body: {
         guild_id: guildId,
-        channel: pick('#t-channel', '#t-channel-custom', ''),
+        channel: c.querySelector('#t-channel').value.trim(),
         button_label: c.querySelector('#t-label').value.trim() || '🎫 Ouvrir un ticket',
         button_style: c.querySelector('#t-style').value,
         require_reason: c.querySelector('#t-reason').checked ? 1 : 0,
-        support_role: pick('#t-role', '#t-role-custom', ''),
-        category: pick('#t-cat', '#t-cat-custom', 'Tickets'),
+        support_role: c.querySelector('#t-role').value.trim(),
+        category: c.querySelector('#t-cat').value.trim() || 'Tickets',
         message: c.querySelector('#t-msg').value,
         types: typesData.filter((x) => x.label).map((x) => ({ label: x.label, emoji: x.emoji, description: x.description, category: x.category, questions: (x.questions || []).map((q) => String(q).slice(0, 45)).filter(Boolean).slice(0, 5), staff_roles: x.staff_roles.filter(Boolean) })),
       }});
@@ -1007,14 +1023,12 @@ Dashboard.renderers.tickets = async (content, data) => {
           <label class="dash-label">📝 Description (affichée sous le type dans le menu)</label>
           <input class="dash-input" data-k="description" maxlength="100" value="${App.escapeHtml(x.description)}" placeholder="Ex : signale un abus du staff, en toute confidentialité" />
           <div style="color:var(--d-dim);font-size:10.5px;margin-top:2px">${String(x.description || '').length}/100 — si vide, une description professionnelle est générée automatiquement.</div>
-          <label class="dash-label">🗂️ Catégorie (menu déroulant)</label>
+          <label class="dash-label">🗂️ Catégorie</label>
           <select class="dash-select" data-k="categorySel">
-            <option value="">— Catégorie par défaut (Tickets) —</option>
-            ${categories.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${x.category === ch.name ? 'selected' : ''}>📁 ${App.escapeHtml(ch.name)}</option>`).join('')}
-            ${x.category && !categories.some((ch) => ch.name === x.category) ? `<option value="${App.escapeHtml(x.category)}" selected>📁 ${App.escapeHtml(x.category)} (manuelle)</option>` : ''}
-            <option value="__custom__">✏️ Autre… (écrire)</option>
+            ${categories.length ? '<option value="">— Catégorie par défaut (Tickets) —</option>' : Dashboard.noDiscordChoice('Aucune catégorie reçue de Discord')}
+            ${categories.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(x.category, ch) ? 'selected' : ''}>📁 ${App.escapeHtml(ch.name)}</option>`).join('')}
+            ${Dashboard.currentDiscordOption(x.category, categories, '⚠️', 'configuration actuelle — catégorie introuvable')}
           </select>
-          <input class="dash-input" data-k="category" value="${App.escapeHtml(x.category)}" placeholder="Ou écris la catégorie" style="margin-top:6px;${x.category && !categories.some((ch) => ch.name === x.category) ? '' : 'display:none'}" />
           <label class="dash-label">🛡️ Rôles staff (plusieurs possibles — menus déroulants)</label>
           <div class="t-roles" style="display:flex;flex-direction:column;gap:6px"></div>
           <button class="dash-btn dash-btn-sm" data-addrole style="margin-top:6px">＋ Ajouter un rôle staff</button>
@@ -1045,18 +1059,10 @@ Dashboard.renderers.tickets = async (content, data) => {
         renderPreview();
       });
       const catSel = row.querySelector('[data-k="categorySel"]');
-      const catInp = row.querySelector('[data-k="category"]');
       catSel.addEventListener('change', () => {
-        if (catSel.value === '__custom__') {
-          catInp.style.display = '';
-          x.category = catInp.value;
-        } else {
-          catInp.style.display = 'none';
-          x.category = catSel.value;
-        }
+        x.category = catSel.value;
         renderPreview();
       });
-      catInp.addEventListener('input', () => { x.category = catInp.value; });
       row.querySelector('[data-del]').onclick = () => { typesData.splice(i, 1); renderTypes(); renderPreview(); };
       const rolesEl = row.querySelector('.t-roles');
       const renderRoles = () => {
@@ -1065,9 +1071,9 @@ Dashboard.renderers.tickets = async (content, data) => {
           const rr = App.el(`
             <div style="display:flex;gap:7px">
               <select class="dash-select t-role-sel">
-                <option value="">— Choisir un rôle —</option>
-                ${rolesList.map((role) => `<option value="${App.escapeHtml(role.name)}" ${r === role.name ? 'selected' : ''}>🛡️ ${App.escapeHtml(role.name)}</option>`).join('')}
-                ${r && !rolesList.some((role) => role.name === r) ? `<option value="${App.escapeHtml(r)}" selected>🛡️ ${App.escapeHtml(r)} (introuvable ?)</option>` : ''}
+                ${rolesList.length ? '<option value="">— Choisir un rôle —</option>' : Dashboard.noDiscordChoice('Aucun rôle reçu de Discord')}
+                ${rolesList.map((role) => `<option value="${App.escapeHtml(role.name)}" ${Dashboard.discordRefMatches(r, role) ? 'selected' : ''}>🛡️ ${App.escapeHtml(role.name)}</option>`).join('')}
+                ${r && !rolesList.some((role) => Dashboard.discordRefMatches(r, role)) ? `<option value="${App.escapeHtml(r)}" selected>⚠️ ${App.escapeHtml(r)} (configuration actuelle — rôle introuvable)</option>` : ''}
               </select>
               <button class="dash-btn dash-btn-danger dash-btn-sm">🗑</button>
             </div>`);
@@ -1211,8 +1217,8 @@ Dashboard.renderers.tickets = async (content, data) => {
             </select></div>
             <div><label class="dash-label">Catégorie Discord</label><select class="dash-select" data-k="category">
               <option value="">— Catégorie du panneau —</option>
-              ${categories.map((cat) => `<option value="${App.escapeHtml(cat.name)}" ${type.category === cat.name ? 'selected' : ''}>📁 ${App.escapeHtml(cat.name)}</option>`).join('')}
-              ${type.category && !categories.some((cat) => cat.name === type.category) ? `<option value="${App.escapeHtml(type.category)}" selected>📁 ${App.escapeHtml(type.category)} (actuelle)</option>` : ''}
+              ${categories.map((cat) => `<option value="${App.escapeHtml(cat.name)}" ${Dashboard.discordRefMatches(type.category, cat) ? 'selected' : ''}>📁 ${App.escapeHtml(cat.name)}</option>`).join('')}
+              ${Dashboard.currentDiscordOption(type.category, categories, '⚠️', 'configuration actuelle — catégorie introuvable')}
             </select></div>
           </div>
           <label class="dash-label">Description du type</label>
@@ -1232,9 +1238,9 @@ Dashboard.renderers.tickets = async (content, data) => {
         rolesEl.innerHTML = '';
         if (!type.staff_roles.length) rolesEl.appendChild(App.el(`<div style="font-size:11.5px;color:var(--d-dim)">Aucun rôle spécifique — gestionnaire du serveur uniquement.</div>`));
         type.staff_roles.forEach((roleName, roleIndex) => {
-          const roleOptions = ['<option value="">— Choisir un rôle staff —</option>']
-            .concat(availableRoles.map((role) => `<option value="${App.escapeHtml(role.name)}" ${roleName === role.name ? 'selected' : ''}>🛡️ ${App.escapeHtml(role.name)}</option>`));
-          if (roleName && !availableRoles.some((role) => role.name === roleName)) roleOptions.push(`<option value="${App.escapeHtml(roleName)}" selected>🛡️ ${App.escapeHtml(roleName)} (actuel)</option>`);
+          const roleOptions = [availableRoles.length ? '<option value="">— Choisir un rôle staff —</option>' : Dashboard.noDiscordChoice('Aucun rôle reçu de Discord')]
+            .concat(availableRoles.map((role) => `<option value="${App.escapeHtml(role.name)}" ${Dashboard.discordRefMatches(roleName, role) ? 'selected' : ''}>🛡️ ${App.escapeHtml(role.name)}</option>`));
+          if (roleName && !availableRoles.some((role) => Dashboard.discordRefMatches(roleName, role))) roleOptions.push(`<option value="${App.escapeHtml(roleName)}" selected>⚠️ ${App.escapeHtml(roleName)} (configuration actuelle — rôle introuvable)</option>`);
           const rr = App.el(`<div style="display:flex;gap:7px;margin-top:6px"><select class="dash-select" style="flex:1">${roleOptions.join('')}</select><button class="dash-btn dash-btn-danger dash-btn-sm">🗑</button></div>`);
           const sel = rr.querySelector('select');
           if (roleName && [...sel.options].some((option) => option.value === roleName)) sel.value = roleName;
@@ -1327,9 +1333,9 @@ Dashboard.renderers.welcome = async (content, data) => {
   const root = Dashboard.header(content, '👋', 'Bienvenue & auto-rôles', 'Accueille les nouveaux membres et donne des rôles automatiquement.');
   const defs = data.events.defs;
   const state = data.events.state || {};
-  const textChannels = (data.channels || []).filter((c) => !c.category);
+  const textChannels = (data.channels || []).filter((c) => !c.category && !c.voice);
   const categories = (data.channels || []).filter((c) => c.category);
-  const rolesList = data.roles || [];
+  const rolesList = (data.roles || []).filter((role) => role.name !== '@everyone');
 
   Object.entries(defs).forEach(([key, def]) => {
     const ev = state[key] || { enabled: false, config: {} };
@@ -1368,26 +1374,23 @@ Dashboard.renderers.welcome = async (content, data) => {
       cfgZone.appendChild(App.el(`<label class="dash-label">${f.label}</label>`));
 
       if (f.type === 'channel') {
-        // Sélecteur de salon (salons textuels + catégories)
+        // Un salon Discord se choisit toujours dans la liste. Une ancienne
+        // valeur introuvable reste visible pour éviter de l'effacer sans
+        // avertissement, mais ne redevient jamais un champ libre.
         const current = String(ev.config[f.key] || '');
-        const opts = ['<option value="">— Choisir un salon —</option>']
-          .concat(categories.map((ch) => `<option value="#${ch.name}" ${current === `#${ch.name}` ? 'selected' : ''}>📁 ${ch.name} (catégorie)</option>`))
-          .concat(textChannels.map((ch) => `<option value="#${ch.name}" ${current === `#${ch.name}` ? 'selected' : ''}>💬 #${ch.name}</option>`));
+        const opts = [textChannels.length ? '<option value="">— Choisir un salon —</option>' : Dashboard.noDiscordChoice('Aucun salon texte reçu de Discord')]
+          .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(current, ch) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`))
+          .concat(Dashboard.currentDiscordOption(current, textChannels));
         cfgZone.appendChild(App.el(`<select class="dash-select" data-k="${f.key}">${opts.join('')}</select>`));
-        if (!textChannels.length) {
-          cfgZone.appendChild(App.el(`<input class="dash-input" data-k="${f.key}" value="${App.escapeHtml(current)}" placeholder="${f.placeholder || '#salon'}" style="margin-top:6px" />`));
-        }
         return;
       }
 
       if (f.type === 'role') {
         const current = String(ev.config[f.key] || '');
-        const opts = ['<option value="">— Choisir un rôle —</option>']
-          .concat(rolesList.map((r) => `<option value="${App.escapeHtml(r.name)}" ${current === r.name ? 'selected' : ''}>🛡️ ${App.escapeHtml(r.name)}</option>`));
+        const opts = [rolesList.length ? '<option value="">— Choisir un rôle —</option>' : Dashboard.noDiscordChoice('Aucun rôle reçu de Discord')]
+          .concat(rolesList.map((r) => `<option value="${App.escapeHtml(r.name)}" ${Dashboard.discordRefMatches(current, r) ? 'selected' : ''}>🛡️ ${App.escapeHtml(r.name)}</option>`))
+          .concat(Dashboard.currentDiscordOption(current, rolesList, '⚠️', 'configuration actuelle — rôle introuvable'));
         cfgZone.appendChild(App.el(`<select class="dash-select" data-k="${f.key}">${opts.join('')}</select>`));
-        if (!rolesList.length) {
-          cfgZone.appendChild(App.el(`<input class="dash-input" data-k="${f.key}" value="${App.escapeHtml(current)}" placeholder="${f.placeholder || 'Membre'}" style="margin-top:6px" />`));
-        }
         return;
       }
 
@@ -1523,6 +1526,7 @@ Dashboard.renderers.welcome = async (content, data) => {
 Dashboard.renderers.levels = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const s = data.settings;
+  const textChannels = (data.channels || []).filter((channel) => !channel.category && !channel.voice);
   const rolesData = (data.xp_roles || []).map((r) => ({ level: r.level, role: r.role }));
   const root = Dashboard.header(content, '📈', 'Niveaux (XP)', 'Les membres gagnent de l\'XP en discutant, montent en niveau, et reçoivent des rôles en récompense.');
 
@@ -1538,7 +1542,11 @@ Dashboard.renderers.levels = async (content, data) => {
     <label class="dash-label">Message de niveau (variables {user}, {level})</label>
     <input class="dash-input" id="xp-msg" value="${App.escapeHtml(s.xp_message || '')}" placeholder="{user} vient d\'atteindre le niveau {level} ! 🎉" />
     <label class="dash-label">Salon d\'annonce (vide = salon du message)</label>
-    <input class="dash-input" id="xp-channel" value="${App.escapeHtml(s.xp_channel || '')}" placeholder="#niveaux" />
+    <select class="dash-select" id="xp-channel">
+      <option value="">— Salon du message —</option>
+      ${textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(s.xp_channel, ch) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`).join('')}
+      ${Dashboard.currentDiscordOption(s.xp_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable')}
+    </select>
     <button class="dash-btn dash-btn-primary" style="margin-top:14px" id="xp-save">💾 Enregistrer</button>`;
 
   const c2 = Dashboard.card(root, '🏆 Récompenses de niveau', 'Rôle donné automatiquement quand le membre atteint le niveau.');
@@ -1551,12 +1559,10 @@ Dashboard.renderers.levels = async (content, data) => {
     el.innerHTML = '';
     if (!rolesData.length) el.appendChild(App.el(`<div class="dash-empty">Aucune récompense.</div>`));
     rolesData.forEach((r, i) => {
-      const options = ['<option value="">— Choisir un rôle —</option>']
-        .concat(xpRoleChoices.map((role) => `<option value="${App.escapeHtml(role.name)}" ${r.role === role.name ? 'selected' : ''}>🛡️ ${App.escapeHtml(role.name)}</option>`));
-      if (r.role && !xpRoleChoices.some((role) => role.name === r.role)) options.push(`<option value="${App.escapeHtml(r.role)}" selected>🛡️ ${App.escapeHtml(r.role)} (introuvable ?)</option>`);
-      const roleControl = xpRoleChoices.length
-        ? `<select class="dash-select" data-k="role">${options.join('')}</select>`
-        : `<input class="dash-input" data-k="role" value="${App.escapeHtml(r.role)}" placeholder="Aucun rôle reçu — écris le nom" />`;
+      const options = [xpRoleChoices.length ? '<option value="">— Choisir un rôle —</option>' : Dashboard.noDiscordChoice('Aucun rôle reçu de Discord')]
+        .concat(xpRoleChoices.map((role) => `<option value="${App.escapeHtml(role.name)}" ${Dashboard.discordRefMatches(r.role, role) ? 'selected' : ''}>🛡️ ${App.escapeHtml(role.name)}</option>`));
+      if (r.role && !xpRoleChoices.some((role) => Dashboard.discordRefMatches(r.role, role))) options.push(`<option value="${App.escapeHtml(r.role)}" selected>⚠️ ${App.escapeHtml(r.role)} (configuration actuelle — rôle introuvable)</option>`);
+      const roleControl = `<select class="dash-select" data-k="role">${options.join('')}</select>`;
       const row = App.el(`
         <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
           <input class="dash-input" data-k="level" type="number" value="${r.level}" style="max-width:100px" />
@@ -1619,12 +1625,10 @@ Dashboard.renderers.shop = async (content, data) => {
     el.innerHTML = '';
     if (!itemsData.length) el.appendChild(App.el(`<div class="dash-empty">Boutique vide.</div>`));
     itemsData.forEach((it, i) => {
-      const roleOptions = ['<option value="">— Choisir un rôle —</option>']
-        .concat(roleChoices.map((role) => `<option value="${App.escapeHtml(role.name)}" ${it.role === role.name ? 'selected' : ''}>🛡️ ${App.escapeHtml(role.name)}</option>`));
-      if (it.role && !roleChoices.some((role) => role.name === it.role)) roleOptions.push(`<option value="${App.escapeHtml(it.role)}" selected>🛡️ ${App.escapeHtml(it.role)} (introuvable ?)</option>`);
-      const roleControl = roleChoices.length
-        ? `<select class="dash-select" data-k="role">${roleOptions.join('')}</select>`
-        : `<input class="dash-input" data-k="role" value="${App.escapeHtml(it.role)}" placeholder="Aucun rôle reçu — écris le nom" />`;
+      const roleOptions = [roleChoices.length ? '<option value="">— Choisir un rôle —</option>' : Dashboard.noDiscordChoice('Aucun rôle reçu de Discord')]
+        .concat(roleChoices.map((role) => `<option value="${App.escapeHtml(role.name)}" ${Dashboard.discordRefMatches(it.role, role) ? 'selected' : ''}>🛡️ ${App.escapeHtml(role.name)}</option>`));
+      if (it.role && !roleChoices.some((role) => Dashboard.discordRefMatches(it.role, role))) roleOptions.push(`<option value="${App.escapeHtml(it.role)}" selected>⚠️ ${App.escapeHtml(it.role)} (configuration actuelle — rôle introuvable)</option>`);
+      const roleControl = `<select class="dash-select" data-k="role">${roleOptions.join('')}</select>`;
       const row = App.el(`
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
           <input class="dash-input" data-k="emoji" value="${App.escapeHtml(it.emoji)}" style="max-width:58px;text-align:center" />
@@ -1680,7 +1684,14 @@ Dashboard.renderers.moderation = async (content, data) => {
   } catch {}
   const s = { ...serverSettings, ...(automodDraft && typeof automodDraft === 'object' ? automodDraft : {}) };
   const blacklist = automodDraft && Array.isArray(automodDraft.blacklist) ? automodDraft.blacklist : (data.blacklist || []);
-  const { sanctions } = await App.api(`/bots/${bot.id}/guilds/${guildId}/sanctions`);
+  const [{ sanctions }, memberResult] = await Promise.all([
+    App.api(`/bots/${bot.id}/guilds/${guildId}/sanctions`),
+    App.api(`/bots/${bot.id}/guilds/${guildId}/members`).catch(() => ({ members: [] })),
+  ]);
+  const automodMembers = (memberResult.members || []).map((member) => ({
+    id: String(member.id),
+    name: String(member.username || member.tag || member.id),
+  }));
   const root = Dashboard.header(content, '🛡️', 'Modération', 'Auto-modération, liste noire et sanctions prédéfinies (/sanction membre nom).');
 
   const parseAMList = (value) => {
@@ -1709,7 +1720,7 @@ Dashboard.renderers.moderation = async (content, data) => {
   const actionOptions = (rule) => Object.entries(actionLabels).map(([value, label]) => `<option value="${value}" ${String(ruleActions[rule] || 'inherit') === value ? 'selected' : ''}>${label}</option>`).join('');
   const selectedExemptRoles = new Set(parseAMList(s.am_exempt_roles));
   const selectedExemptChannels = new Set(parseAMList(s.am_exempt_channels));
-  const selectedExemptUsers = parseAMList(s.am_exempt_users);
+  const selectedExemptUsers = new Set(parseAMList(s.am_exempt_users));
   const rolesList = (data.roles || []).filter((role) => role.name !== '@everyone');
   const channelList = (data.channels || []).filter((channel) => !channel.category && !channel.voice);
   const blacklistData = blacklist.map((word) => ({ word: String(word || '') }));
@@ -1805,7 +1816,7 @@ Dashboard.renderers.moderation = async (content, data) => {
       rule_actions,
       exempt_roles: [...selectedExemptRoles],
       exempt_channels: [...selectedExemptChannels],
-      exempt_users: content.querySelector('#am-exempt-users') ? parseAMList(content.querySelector('#am-exempt-users').value) : selectedExemptUsers,
+      exempt_users: [...selectedExemptUsers],
       blacklist: blacklistData.map((word) => word.word),
     };
   };
@@ -1843,13 +1854,16 @@ Dashboard.renderers.moderation = async (content, data) => {
       <div><label class="dash-label">Rôles ignorés</label><div class="am-choice-list" id="am-exempt-roles"></div></div>
       <div><label class="dash-label">Salons ignorés</label><div class="am-choice-list" id="am-exempt-channels"></div></div>
     </div>
-    <label class="dash-label">Membres ignorés</label>
-    <input class="dash-input" id="am-exempt-users" value="${App.escapeHtml(selectedExemptUsers.join(', '))}" placeholder="IDs ou mentions séparés par des virgules" />
-    <div class="am-help">Les membres sont enregistrés par identifiant Discord. Exemple : <code>123456789012345678</code>.</div>`;
+    <div><label class="dash-label">Membres ignorés</label><div class="am-choice-list" id="am-exempt-users"></div></div>
+    <div class="am-help">Sélectionne directement les membres à ignorer. Les anciennes valeurs restent affichées si un membre n'est plus disponible.</div>`;
   const renderAMChoices = (element, items, selected, icon, emptyText) => {
     element.innerHTML = '';
-    if (!items.length) { element.appendChild(App.el(`<span class="am-choice-empty">${emptyText}</span>`)); return; }
-    items.forEach((item) => {
+    const list = Array.isArray(items) ? items : [];
+    if (!list.length && !selected.size) {
+      element.appendChild(App.el(`<span class="am-choice-empty">${emptyText}</span>`));
+      return;
+    }
+    list.forEach((item) => {
       const id = String(item.id || item.name || '');
       const name = String(item.name || id);
       const isSelected = selected.has(id) || selected.has(name);
@@ -1862,9 +1876,19 @@ Dashboard.renderers.moderation = async (content, data) => {
       };
       element.appendChild(chip);
     });
+    // Une ancienne référence (membre, rôle ou salon) peut ne plus exister.
+    // On l'affiche sans remettre de champ texte libre et on la conserve
+    // jusqu'à ce que l'utilisateur la décoche explicitement.
+    [...selected].filter((ref) => !list.some((item) => Dashboard.discordRefMatches(ref, item))).forEach((ref) => {
+      const chip = App.el(`<label class="am-choice selected"><input type="checkbox" value="${App.escapeHtml(ref)}" checked/><span>⚠️</span><b>${App.escapeHtml(ref)} (introuvable)</b></label>`);
+      const input = chip.querySelector('input');
+      input.onchange = () => { selected.delete(ref); chip.remove(); };
+      element.appendChild(chip);
+    });
   };
   renderAMChoices(cExceptions.querySelector('#am-exempt-roles'), rolesList, selectedExemptRoles, '🛡️', 'Aucun rôle disponible.');
   renderAMChoices(cExceptions.querySelector('#am-exempt-channels'), channelList, selectedExemptChannels, '💬', 'Aucun salon textuel disponible.');
+  renderAMChoices(cExceptions.querySelector('#am-exempt-users'), automodMembers, selectedExemptUsers, '👤', 'Aucun membre reçu de Discord.');
 
   // 📊 Résumé des actions réelles et des observations
   const cSummary = Dashboard.card(root, '📊 Activité Auto-Mod', 'Les chiffres viennent du journal du bot et distinguent les observations des actions réellement appliquées.');
@@ -2200,10 +2224,15 @@ Dashboard.renderers.suggestions = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const root = Dashboard.header(content, '💡', 'Suggestions', 'Les membres proposent (/suggest), tout le monde vote, le staff tranche.');
   const s = data.settings;
+  const textChannels = (data.channels || []).filter((channel) => !channel.category && !channel.voice);
   const c = Dashboard.card(root, 'Configuration', '');
   c.innerHTML += `
-    <label class="dash-label">Salon des suggestions (ex : #suggestions)</label>
-    <input class="dash-input" id="s-channel" value="${App.escapeHtml(s.suggestion_channel || '')}" placeholder="#suggestions" />
+    <label class="dash-label">Salon des suggestions</label>
+    <select class="dash-select" id="s-channel">
+      <option value="">— Désactivé —</option>
+      ${textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.suggestion_channel, channel) ? 'selected' : ''}>💡 #${App.escapeHtml(channel.name)}</option>`).join('')}
+      ${Dashboard.currentDiscordOption(s.suggestion_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable')}
+    </select>
     <button class="dash-btn dash-btn-primary" style="margin-top:12px" id="s-save">💾 Enregistrer</button>`;
   c.querySelector('#s-save').onclick = async () => {
     try {
@@ -2682,11 +2711,16 @@ Dashboard.renderers.logs = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const s = data.settings;
   const ev = data.log_events || {};
+  const textChannels = (data.channels || []).filter((channel) => !channel.category && !channel.voice);
   const root = Dashboard.header(content, '📜', 'Journaux de modération', 'Un salon où le bot trace ce que TU choisis.');
   const c = Dashboard.card(root, 'Configuration', 'Active avec /modlogs set #salon ou ici.');
   c.innerHTML += `
-    <label class="dash-label">Salon des journaux (ex : #logs)</label>
-    <input class="dash-input" id="l-channel" value="${App.escapeHtml(s.log_channel || '')}" placeholder="#logs" />
+    <label class="dash-label">Salon des journaux</label>
+    <select class="dash-select" id="l-channel">
+      <option value="">— Journaux désactivés —</option>
+      ${textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.log_channel, channel) ? 'selected' : ''}>📜 #${App.escapeHtml(channel.name)}</option>`).join('')}
+      ${Dashboard.currentDiscordOption(s.log_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable')}
+    </select>
     <label class="dash-label" style="margin-top:12px">📂 Que dois-je tracer ?</label>
     <div class="dash-filter-grid">
       ${[
@@ -2747,7 +2781,10 @@ Dashboard.renderers.community = async (content, data) => {
   // ---- 🔴 Carte Annonces de live ----
   const cl = Dashboard.card(root, '🔴 Annonces de live', 'Enregistre le lien TikTok / Twitch / YouTube / Kick d\'un membre : dès qu\'il lance un live, le bot l\'annonce automatiquement (pseudo + photo de profil + bouton Regarder) dans le salon choisi.');
   const liveChanOpts = ['<option value="">— Désactivé (choisir un salon pour activer) —</option>']
-    .concat(textChannels.map((ch) => `<option value="#${ch.name}" ${String(s.live_channel || '') === `#${ch.name}` ? 'selected' : ''}>💬 #${ch.name}</option>`));
+    .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(s.live_channel, ch) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`));
+  if (s.live_channel && !textChannels.some((ch) => Dashboard.discordRefMatches(s.live_channel, ch))) {
+    liveChanOpts.push(Dashboard.currentDiscordOption(s.live_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable'));
+  }
   cl.innerHTML += `
     <div id="lv-status" style="margin-bottom:10px">${s.live_channel
       ? `<span class="dash-badge ok">✅ Annonces ACTIVES dans ${App.escapeHtml(s.live_channel)}</span>`
@@ -2878,7 +2915,10 @@ Dashboard.renderers.community = async (content, data) => {
   // ---- Carte Starboard ----
   const c1 = Dashboard.card(root, '⭐ Starboard', 'Quand un message reçoit assez d\'étoiles (réaction ⭐), il est épinglé dans le salon choisi — le mur de la gloire de ton serveur.');
   const chanOpts = ['<option value="">— Désactivé (choisir un salon pour activer) —</option>']
-    .concat(textChannels.map((ch) => `<option value="#${ch.name}" ${String(s.starboard_channel || '') === `#${ch.name}` ? 'selected' : ''}>💬 #${ch.name}</option>`));
+    .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(s.starboard_channel, ch) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`));
+  if (s.starboard_channel && !textChannels.some((ch) => Dashboard.discordRefMatches(s.starboard_channel, ch))) {
+    chanOpts.push(Dashboard.currentDiscordOption(s.starboard_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable'));
+  }
   c1.innerHTML += `
     <label class="dash-label">Salon du starboard</label>
     <select class="dash-select" id="sb-chan" style="max-width:320px">${chanOpts.join('')}</select>
