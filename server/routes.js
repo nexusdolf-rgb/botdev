@@ -1766,6 +1766,57 @@ router.delete('/bots/:id/guilds/:guildId/scheduled/:sid', requireAuth, async (re
 });
 
 // ============================================================
+// 📣 Annonces personnalisées immédiates — indépendantes des programmées
+// ============================================================
+router.get('/bots/:id/guilds/:guildId/announcements/custom', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  res.json({ config: store.customAnnouncements.get(bot.id, guildId) || {
+    id: null, bot_id: bot.id, guild_id: guildId, name: 'Annonce personnalisée', title: '', message: '',
+    color: '#5865F2', image_url: '', footer: '', channels: [], ping_roles: [],
+  } });
+});
+
+router.put('/bots/:id/guilds/:guildId/announcements/custom', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const current = store.customAnnouncements.get(bot.id, guildId) || {};
+  const body = req.body || {};
+  const announcements = require('./discord/announcements');
+  const config = announcements.normalizeConfig({
+    ...current,
+    ...body,
+    channels: body.channels !== undefined ? body.channels : current.channels,
+    ping_roles: body.ping_roles !== undefined ? body.ping_roles : current.ping_roles,
+  });
+  if (!config.message.trim()) return res.status(400).json({ error: 'Écris le contenu de ton annonce.' });
+  if (!config.channels.length) return res.status(400).json({ error: 'Choisis au moins un salon de publication.' });
+  store.customAnnouncements.set(bot.id, guildId, config);
+  res.json({ ok: true, config: store.customAnnouncements.get(bot.id, guildId) });
+});
+
+router.post('/bots/:id/guilds/:guildId/announcements/custom/send', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  if (!botManager.isOnline(bot.id)) return res.status(400).json({ error: 'Démarre le bot avant de publier une annonce.' });
+  const entry = botManager.clients.get(bot.id);
+  if (!entry || !entry.client) return res.status(400).json({ error: 'Le bot est momentanément indisponible.' });
+  try {
+    const announcements = require('./discord/announcements');
+    const result = await announcements.sendAnnouncement(bot.id, guildId, entry.client);
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ error: String(e.message || e).slice(0, 240) });
+  }
+});
+
+// ============================================================
 // Hoxera 2.0 — Salons vocaux temporaires (dashboard)
 // ============================================================
 router.put('/bots/:id/guilds/:guildId/voicetemp', requireAuth, async (req, res) => {

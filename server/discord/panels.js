@@ -51,6 +51,13 @@ async function findChannel(client, query) {
 function findChannelInGuild(guild, query) {
   const q = String(query || '').trim();
   if (!q || !guild) return null;
+  // Le dashboard stocke les vrais IDs Discord, mais les tests et certains
+  // imports historiques peuvent utiliser un identifiant court : on tente le
+  // cache directement avant d'appliquer la validation numérique Discord.
+  if (guild.channels.cache && typeof guild.channels.cache.get === 'function') {
+    const direct = guild.channels.cache.get(q);
+    if (direct) return direct;
+  }
   const idMatch = q.match(/(\d{15,21})/);
   if (idMatch) {
     const c = guild.channels.cache.get(idMatch[1]);
@@ -75,6 +82,10 @@ function resolveRole(guild, nameOrId) {
   const q = String(nameOrId || '').trim();
   if (!q || !guild || !guild.roles || !guild.roles.cache) return null;
   const id = q.replace(/[<@&>]/g, '').trim();
+  if (typeof guild.roles.cache.get === 'function') {
+    const direct = guild.roles.cache.get(id);
+    if (direct) return direct;
+  }
   if (/^\d{15,21}$/.test(id)) {
     const byId = typeof guild.roles.cache.get === 'function' ? guild.roles.cache.get(id) : null;
     if (byId) return byId;

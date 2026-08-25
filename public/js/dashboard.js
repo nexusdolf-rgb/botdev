@@ -2447,10 +2447,159 @@ Dashboard.renderers.announcements = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const root = Dashboard.header(content, '📅', 'Annonces programmées', 'Des messages envoyés automatiquement aux jours et heures choisis (ex : le lundi à 18 h).');
   const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
-  const { scheduled } = await App.api(`/bots/${bot.id}/guilds/${guildId}/scheduled`);
+  const rolesList = (data.roles || []).filter((role) => role.name !== '@everyone');
+  const [scheduledResult, customResult] = await Promise.all([
+    App.api(`/bots/${bot.id}/guilds/${guildId}/scheduled`),
+    App.api(`/bots/${bot.id}/guilds/${guildId}/announcements/custom`).catch(() => ({ config: null })),
+  ]);
+  const scheduled = scheduledResult.scheduled || [];
+  const customAnnouncement = customResult.config || { id: null, name: 'Annonce personnalisée', title: '', message: '', color: '#5865F2', image_url: '', footer: '', channels: [], ping_roles: [] };
   const currentTz = ((data.settings || {}).timezone) || 'Europe/Paris';
 
-  const c = Dashboard.card(root, 'Mes annonces', `Jusqu'à 20 annonces. Envoi à l'heure de : ${ANNOUNCEMENT_TZ_LABEL[currentTz] || currentTz}.`);
+  // 📣 Le nouveau composeur est indépendant des annonces programmées.
+  const cCustom = Dashboard.card(root, '📣 Annonce personnalisée', 'Compose un panneau complet, choisis plusieurs salons et les rôles à mentionner, puis publie-le immédiatement. Les annonces programmées historiques restent conservées en dessous.');
+  cCustom.classList.add('custom-announcement-card');
+  const customData = {
+    ...customAnnouncement,
+    name: String(customAnnouncement.name || 'Annonce personnalisée'),
+    title: String(customAnnouncement.title || ''),
+    message: String(customAnnouncement.message || ''),
+    color: /^#[0-9a-fA-F]{6}$/.test(String(customAnnouncement.color || '')) ? String(customAnnouncement.color) : '#5865F2',
+    image_url: String(customAnnouncement.image_url || ''),
+    footer: String(customAnnouncement.footer || ''),
+  };
+  const selectedAnnChannels = new Set(Array.isArray(customAnnouncement.channels) ? customAnnouncement.channels.map(String) : []);
+  const selectedAnnRoles = new Set(Array.isArray(customAnnouncement.ping_roles) ? customAnnouncement.ping_roles.map(String) : []);
+  const announcementMarks = [
+    ['B', '**', '**', 'Gras'],
+    ['I', '*', '*', 'Italique'],
+    ['U', '__', '__', 'Souligné'],
+    ['S', '~~', '~~', 'Barré'],
+    ['<>', '`', '`', 'Code court'],
+    ['{}', '```\n', '\n```', 'Bloc de code'],
+    ['❯', '> ', '', 'Citation'],
+    ['•', '- ', '', 'Liste'],
+    ['🔗', '[', '](https://...)', 'Lien Markdown'],
+  ];
+  cCustom.innerHTML += `
+    <div class="ca-status-row"><span class="dash-badge ok">✨ Éditeur visuel</span><span class="ca-status-copy">Formatage Discord pris en charge : gras, italique, souligné, code et citations.</span></div>
+    <div class="ca-top-grid">
+      <div>
+        <label class="dash-label">Nom de cette annonce</label>
+        <input class="dash-input" id="ca-name" value="${App.escapeHtml(customData.name)}" maxlength="80" placeholder="Annonce de la communauté" />
+        <label class="dash-label">Titre affiché sur Discord</label>
+        <input class="dash-input" id="ca-title" value="${App.escapeHtml(customData.title)}" maxlength="256" placeholder="📣 Grande annonce" />
+      </div>
+      <div>
+        <label class="dash-label">Couleur du panneau</label>
+        <div class="ca-color-row"><input type="color" id="ca-color" value="${customData.color}" /><input class="dash-input" id="ca-color-hex" value="${customData.color}" maxlength="7" placeholder="#5865F2" /></div>
+        <label class="dash-label">Image en bas du panneau (optionnelle)</label>
+        <input class="dash-input" id="ca-image" value="${App.escapeHtml(customData.image_url)}" maxlength="500" placeholder="https://.../image.png" />
+      </div>
+    </div>
+    <div class="ca-destination-grid">
+      <div><label class="dash-label">Salons de publication (plusieurs possibles)</label><div class="ca-choice-list" id="ca-channels"></div></div>
+      <div><label class="dash-label">Rôles à mentionner</label><div class="ca-choice-list" id="ca-roles"></div></div>
+    </div>
+    <label class="dash-label">Message complet</label>
+    <div class="ca-toolbar" role="toolbar" aria-label="Formatage du message">${announcementMarks.map(([label,,, title], index) => `<button type="button" class="ca-mark" data-mark="${index}" title="${title}">${label}</button>`).join('')}</div>
+    <textarea class="dash-input ca-message" id="ca-message" rows="9" maxlength="4000" placeholder="Écris ton annonce ici…">${App.escapeHtml(customData.message)}</textarea>
+    <div class="ca-editor-help">Sélectionne un texte puis clique sur un bouton, ou clique sans sélectionner pour insérer un modèle. Les mentions de rôles seront ajoutées automatiquement en haut du panneau.</div>
+    <label class="dash-label">Footer de l'annonce (optionnel)</label>
+    <input class="dash-input" id="ca-footer" value="${App.escapeHtml(customData.footer)}" maxlength="200" placeholder="Hoxera · Informations du serveur" />
+    <div class="ca-preview-wrap" id="ca-preview"></div>
+    <div class="ca-actions"><button class="dash-btn dash-btn-sm" id="ca-save">📝 Enregistrer le brouillon</button><button class="dash-btn dash-btn-primary" id="ca-send">🚀 Publier maintenant</button></div>
+    <div class="ca-status-line" id="ca-status"></div>`;
+
+  const caMessage = cCustom.querySelector('#ca-message');
+  const caPreview = cCustom.querySelector('#ca-preview');
+  const caStatus = cCustom.querySelector('#ca-status');
+  const renderAnnouncementChoices = (element, items, selected, icon, emptyText) => {
+    element.innerHTML = '';
+    if (!items.length) { element.appendChild(App.el(`<span class="ca-choice-empty">${emptyText}</span>`)); return; }
+    items.forEach((item) => {
+      const id = String(item.id || item.name || '');
+      const name = String(item.name || id);
+      const active = selected.has(id) || selected.has(name);
+      const chip = App.el(`<label class="ca-choice ${active ? 'selected' : ''}"><input type="checkbox" value="${App.escapeHtml(id)}" ${active ? 'checked' : ''}/><span>${icon}</span><b>${App.escapeHtml(name)}</b></label>`);
+      const input = chip.querySelector('input');
+      input.onchange = () => { if (input.checked) { selected.add(id); selected.delete(name); } else { selected.delete(id); selected.delete(name); } chip.classList.toggle('selected', input.checked); renderAnnouncementPreview(); };
+      element.appendChild(chip);
+    });
+  };
+  const markdownPreview = (value) => {
+    let html = App.escapeHtml(String(value || ''));
+    html = html.replace(/```([\s\S]*?)```/g, '<pre>$1</pre>');
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    html = html.replace(/\[([^\]]+)\]\((https:\/\/[^)]+)\)/g, '<a href="$2">$1</a>');
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/__([^_]+)__/g, '<u>$1</u>');
+    html = html.replace(/~~([^~]+)~~/g, '<s>$1</s>');
+    html = html.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+    html = html.replace(/^&gt; (.*)$/gm, '<blockquote>$1</blockquote>');
+    html = html.replace(/^- (.*)$/gm, '<div class="ca-bullet">• $1</div>');
+    return html.replace(/\n/g, '<br/>');
+  };
+  const renderAnnouncementPreview = () => {
+    const color = /^#[0-9a-fA-F]{6}$/.test(cCustom.querySelector('#ca-color').value) ? cCustom.querySelector('#ca-color').value : '#5865F2';
+    const roleNames = [...selectedAnnRoles].map((ref) => rolesList.find((role) => String(role.id) === ref || String(role.name) === ref)).filter(Boolean).map((role) => `<span class="ca-role-mention">@${App.escapeHtml(role.name)}</span>`).join(' ');
+    const image = cCustom.querySelector('#ca-image').value.trim();
+    caPreview.innerHTML = `<div class="ca-preview-label">👀 Aperçu Discord <span>Actualisé en direct</span></div><div class="ca-discord-preview"><div class="ca-discord-author"><span class="ca-bot-avatar">⚡</span><b>Hoxera</b><span>APP</span></div>${roleNames ? `<div class="ca-preview-pings">${roleNames}</div>` : ''}<div class="ca-embed-preview" style="border-left-color:${color}">${cCustom.querySelector('#ca-title').value.trim() ? `<div class="ca-embed-title">${App.escapeHtml(cCustom.querySelector('#ca-title').value.trim())}</div>` : ''}<div class="ca-embed-body">${markdownPreview(caMessage.value) || '<span class="ca-placeholder">Ton message apparaîtra ici…</span>'}</div>${image && /^https:\/\//i.test(image) ? `<img src="${App.escapeHtml(image)}" alt="" />` : ''}<div class="ca-embed-footer">${App.escapeHtml(cCustom.querySelector('#ca-footer').value.trim() || 'Hoxera · Annonce du serveur')}</div></div></div>`;
+  };
+  renderAnnouncementChoices(cCustom.querySelector('#ca-channels'), textChannels, selectedAnnChannels, '💬', 'Aucun salon textuel disponible.');
+  renderAnnouncementChoices(cCustom.querySelector('#ca-roles'), rolesList, selectedAnnRoles, '🛡️', 'Aucun rôle disponible.');
+  const insertAnnouncementMark = (before, after) => {
+    const start = caMessage.selectionStart;
+    const end = caMessage.selectionEnd;
+    const selected = caMessage.value.slice(start, end);
+    const value = selected || (before === '> ' || before === '- ' ? 'ton texte' : before === '[' ? 'texte' : 'texte');
+    caMessage.value = `${caMessage.value.slice(0, start)}${before}${value}${after}${caMessage.value.slice(end)}`;
+    const cursor = start + before.length + value.length + after.length;
+    caMessage.focus();
+    caMessage.setSelectionRange(cursor, cursor);
+    renderAnnouncementPreview();
+  };
+  cCustom.querySelectorAll('[data-mark]').forEach((button) => {
+    button.onclick = () => { const mark = announcementMarks[Number(button.dataset.mark)]; insertAnnouncementMark(mark[1], mark[2]); };
+  });
+  cCustom.querySelector('#ca-color').oninput = (event) => { cCustom.querySelector('#ca-color-hex').value = event.target.value.toUpperCase(); renderAnnouncementPreview(); };
+  cCustom.querySelector('#ca-color-hex').oninput = (event) => { const value = event.target.value.trim(); if (/^#[0-9a-fA-F]{6}$/.test(value)) { cCustom.querySelector('#ca-color').value = value; renderAnnouncementPreview(); } };
+  ['#ca-title', '#ca-image', '#ca-footer'].forEach((selector) => cCustom.querySelector(selector).addEventListener('input', renderAnnouncementPreview));
+  caMessage.addEventListener('input', renderAnnouncementPreview);
+  renderAnnouncementPreview();
+  const collectCustomAnnouncement = () => ({
+    name: cCustom.querySelector('#ca-name').value.trim(),
+    title: cCustom.querySelector('#ca-title').value.trim(),
+    message: caMessage.value,
+    color: cCustom.querySelector('#ca-color').value,
+    image_url: cCustom.querySelector('#ca-image').value.trim(),
+    footer: cCustom.querySelector('#ca-footer').value.trim(),
+    channels: [...selectedAnnChannels],
+    ping_roles: [...selectedAnnRoles],
+  });
+  const saveCustomAnnouncement = async (silent = false) => {
+    const payload = collectCustomAnnouncement();
+    if (!payload.message.trim()) throw new Error('Écris le contenu de ton annonce.');
+    if (!payload.channels.length) throw new Error('Choisis au moins un salon de publication.');
+    const result = await App.api(`/bots/${bot.id}/guilds/${guildId}/announcements/custom`, { method: 'PUT', body: payload });
+    if (caStatus) caStatus.textContent = silent ? '✅ Brouillon enregistré, publication en cours…' : '🟡 Brouillon enregistré. Il sera publié uniquement après le bouton « Publier maintenant ».'.replace('uniquement', silent ? 'ensuite' : 'uniquement');
+    if (!silent) App.toast('Brouillon d’annonce enregistré !');
+    return result;
+  };
+  cCustom.querySelector('#ca-save').onclick = async () => { try { await saveCustomAnnouncement(false); } catch (e) { App.toast(e.message, 'error'); } };
+  cCustom.querySelector('#ca-send').onclick = async () => {
+    const button = cCustom.querySelector('#ca-send');
+    button.disabled = true; button.textContent = '⏳ Publication…';
+    try {
+      await saveCustomAnnouncement(true);
+      const result = await App.api(`/bots/${bot.id}/guilds/${guildId}/announcements/custom/send`, { method: 'POST' });
+      caStatus.textContent = `✅ Annonce publiée dans ${result.sent || 0} salon(s).` + (result.missingChannels && result.missingChannels.length ? ' Certains salons sont introuvables.' : '');
+      App.toast('Annonce publiée sur Discord !');
+    } catch (e) { App.toast(e.message, 'error'); }
+    button.disabled = false; button.textContent = '🚀 Publier maintenant';
+  };
+
+  const c = Dashboard.card(root, 'Mes annonces programmées', `Jusqu'à 20 annonces. Envoi à l'heure de : ${ANNOUNCEMENT_TZ_LABEL[currentTz] || currentTz}.`);
   const list = App.el(`<div id="ann-list"></div>`);
   c.appendChild(list);
   const render = () => {

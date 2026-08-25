@@ -360,6 +360,25 @@ CREATE TABLE IF NOT EXISTS scheduled_messages (
   last_sent TEXT DEFAULT ''
 );
 
+-- v3.22 — annonce personnalisée envoyée immédiatement dans plusieurs salons.
+-- Indépendante des annonces programmées historiques.
+CREATE TABLE IF NOT EXISTS custom_announcements (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  name TEXT DEFAULT 'Annonce personnalisée',
+  title TEXT DEFAULT '',
+  message TEXT DEFAULT '',
+  color TEXT DEFAULT '#5865F2',
+  image_url TEXT DEFAULT '',
+  footer TEXT DEFAULT '',
+  channels TEXT DEFAULT '[]',
+  ping_roles TEXT DEFAULT '[]',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (bot_id, guild_id)
+);
+
 -- Hoxera 2.0 : statistiques
 CREATE TABLE IF NOT EXISTS message_stats (
   bot_id INTEGER NOT NULL,
@@ -1286,6 +1305,44 @@ const scheduled = {
   allEnabled: () => db.prepare('SELECT * FROM scheduled_messages WHERE enabled = 1').all(),
 };
 
+// ---------------------- 📣 Annonce personnalisée immédiate ----------------------
+function jsonArray(value, max, maxLength) {
+  let list = value;
+  if (typeof list === 'string') {
+    try { list = JSON.parse(list || '[]'); } catch { list = list.split(/[,\n]/); }
+  }
+  if (!Array.isArray(list)) list = [];
+  return [...new Set(list.map((x) => String(x || '').trim().slice(0, maxLength)).filter(Boolean))].slice(0, max);
+}
+
+const customAnnouncements = {
+  get: (botId, guildId) => {
+    const row = db.prepare('SELECT * FROM custom_announcements WHERE bot_id = ? AND guild_id = ?').get(botId, guildId);
+    if (!row) return null;
+    let channels = []; let pingRoles = [];
+    try { channels = JSON.parse(row.channels || '[]'); } catch {}
+    try { pingRoles = JSON.parse(row.ping_roles || '[]'); } catch {}
+    return { ...row, channels: Array.isArray(channels) ? channels : [], ping_roles: Array.isArray(pingRoles) ? pingRoles : [] };
+  },
+  set: (botId, guildId, cfg = {}) => db.prepare(`INSERT INTO custom_announcements
+    (bot_id, guild_id, name, title, message, color, image_url, footer, channels, ping_roles, updated_at)
+    VALUES (@bot_id, @guild_id, @name, @title, @message, @color, @image_url, @footer, @channels, @ping_roles, datetime('now'))
+    ON CONFLICT(bot_id, guild_id) DO UPDATE SET
+      name = excluded.name, title = excluded.title, message = excluded.message,
+      color = excluded.color, image_url = excluded.image_url, footer = excluded.footer,
+      channels = excluded.channels, ping_roles = excluded.ping_roles, updated_at = datetime('now')`).run({
+        bot_id: botId, guild_id: guildId,
+        name: String(cfg.name || 'Annonce personnalisée').trim().slice(0, 80),
+        title: String(cfg.title || '').trim().slice(0, 256),
+        message: String(cfg.message || '').slice(0, 4000),
+        color: /^#[0-9a-fA-F]{6}$/.test(String(cfg.color || '')) ? String(cfg.color) : '#5865F2',
+        image_url: /^https:\/\//i.test(String(cfg.image_url || '').trim()) ? String(cfg.image_url).trim().slice(0, 500) : '',
+        footer: String(cfg.footer || '').trim().slice(0, 200),
+        channels: JSON.stringify(jsonArray(cfg.channels, 20, 100)),
+        ping_roles: JSON.stringify(jsonArray(cfg.ping_roles, 10, 100)),
+      }),
+};
+
 // ---------------------- Statistiques d'activité ----------------------
 const msgStats = {
   bump: (botId, guildId, userId, day) => db.prepare('INSERT INTO message_stats (bot_id, guild_id, user_id, day, count) VALUES (?, ?, ?, ?, 1) ON CONFLICT(bot_id, guild_id, user_id, day) DO UPDATE SET count = count + 1').run(botId, guildId, userId, day),
@@ -1456,4 +1513,4 @@ const liveSocials = {
   count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM live_socials WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
 };
 
-module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories };
+module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories };
