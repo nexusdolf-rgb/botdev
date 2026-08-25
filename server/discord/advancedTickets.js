@@ -154,14 +154,18 @@ function buildPanelPayload(config) {
       const panels = require('./panels');
       const emoji = panels.safeEmoji(type.emoji);
       if (emoji) button.setEmoji(emoji);
+      const questionHint = type.questions && type.questions.length ? ` · ❓ ${type.questions.length} question(s)` : '';
       const section = new SectionBuilder()
         .addTextDisplayComponents(new TextDisplayBuilder().setContent(
-          `### ${type.emoji || '🎫'} ${type.label}\n${colorSymbol(type)} ${descriptionFor(type)}`
+          `### ${type.emoji || '🎫'} ${type.label}\n${colorSymbol(type)} ${descriptionFor(type)}${questionHint}`
         ))
         .setButtonAccessory(button);
       container.addSectionComponents(section);
     }
   }
+  container
+    .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent('-# Hoxera · Support privé · Choisis une option pour commencer'));
   return { flags: MessageFlags.IsComponentsV2, components: [container] };
 }
 

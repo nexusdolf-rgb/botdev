@@ -24,8 +24,10 @@ function buildProfileEmbed(botId, guildId, botRecord) {
   const p = profile(botId, guildId);
   const embed = new EmbedBuilder()
     .setColor(p && p.color ? p.color : '#5865F2')
+    .setAuthor({ name: 'Hoxera · Identité personnalisée' })
     .setTitle(`${p && p.name ? p.name : botRecord.name} — identité de ce serveur`)
-    .setDescription(p && p.bio ? p.bio : 'Aucune bio définie pour ce serveur.');
+    .setDescription(p && p.bio ? p.bio : 'Aucune bio définie pour ce serveur.')
+    .setTimestamp();
   if (p && p.avatar_url) {
     const url = absoluteUrl(p.avatar_url);
     if (url) embed.setThumbnail(url);

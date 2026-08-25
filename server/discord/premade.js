@@ -8,6 +8,7 @@ const suggestEngine = require('./suggest');
 const giveawayEngine = require('./giveaway');
 const tasks = require('./tasks');
 const store = require('../db');
+const ui = require('./ui');
 
 const MODULES = {
   moderation: {
@@ -387,6 +388,7 @@ async function execute(botId, entry, cmd, src) {
   };
   const reply = async (content) => send({ content });
   const replyEmbed = async (embed) => send({ embeds: [embed] });
+  const replyPanel = async (options, components = []) => send(ui.panel(options, components));
 
   // 🌍 Commandes globales : en message privé, seules les commandes
   // universelles fonctionnent. Les autres répondent poliment.
@@ -517,7 +519,13 @@ async function execute(botId, entry, cmd, src) {
     }
     case 'invite': {
       if (!record.client_id) return reply('❌ Application ID manquant.');
-      await reply(`🔗 **Invite-moi sur ton serveur !**\nhttps://discord.com/oauth2/authorize?client_id=${record.client_id}&permissions=8&scope=bot%20applications.commands`);
+      await replyPanel({
+        variant: 'brand',
+        title: '🔗 Ajouter Hoxera à un serveur',
+        description: 'Utilise le bouton ou le lien ci-dessous pour inviter le bot.',
+        fields: [{ name: '🌐 Lien d’invitation', value: `https://discord.com/oauth2/authorize?client_id=${record.client_id}&permissions=8&scope=bot%20applications.commands` }],
+        footer: 'Hoxera · Invitation officielle',
+      }, [ui.linkRow('➕ Inviter le bot', `https://discord.com/oauth2/authorize?client_id=${record.client_id}&permissions=8&scope=bot%20applications.commands`)]);
       break;
     }
     case 'lang': {
@@ -574,7 +582,13 @@ async function execute(botId, entry, cmd, src) {
           { name: '💰 Prix', value: String(item.price), inline: true },
         ],
       });
-      await reply(`✅ Achat réussi ! Tu reçois **${role.toString()}** pour ${item.price} coins.`);
+      await replyPanel({
+        variant: 'success',
+        title: '🛒 Achat réussi !',
+        description: `Tu reçois **${role.toString()}**.`,
+        fields: [{ name: '💰 Prix', value: `${item.price} coins`, inline: true }, { name: '🏷️ Rôle', value: role.name, inline: true }],
+        footer: `Hoxera · ${guild.name} · Boutique`,
+      });
       break;
     }
     case 'pay': {
@@ -588,7 +602,13 @@ async function execute(botId, entry, cmd, src) {
       if (from.coins < amount) return reply('❌ Solde insuffisant.');
       store.economy.add(botId, guild.id, author.id, -amount);
       store.economy.add(botId, guild.id, target.id, amount);
-      await reply(`💸 ${author} a envoyé **${amount} coins** à ${target} !`);
+      await replyPanel({
+        variant: 'success',
+        title: '💸 Transfert effectué',
+        description: `${author} a envoyé des coins à ${target}.`,
+        fields: [{ name: '🪙 Montant', value: `${amount} coins`, inline: true }, { name: '👤 Destinataire', value: `${target}`, inline: true }],
+        footer: `Hoxera · ${guild.name} · Économie`,
+      });
       break;
     }
     case 'suggest': {
@@ -656,7 +676,18 @@ async function execute(botId, entry, cmd, src) {
           : '❓ Aucune sanction prédéfinie. Ajoute-les depuis le **dashboard BotDev** (onglet Modération).');
       }
       const reason = s.message || 'Sanction prédéfinie';
-      try { await target.send(`⚠️ Tu as été sanctionné sur **${guild.name}** : ${reason}`); } catch {}
+      try {
+        await target.send(ui.panel({
+          variant: 'danger',
+          title: '⚠️ Sanction appliquée',
+          description: `Tu as été sanctionné sur **${guild.name}**.`,
+          fields: [
+            { name: '⚖️ Type', value: s.name, inline: true },
+            { name: '📝 Motif', value: reason, inline: false },
+          ],
+          footer: `Hoxera · ${guild.name} · Modération`,
+        }));
+      } catch {}
       if (s.action === 'warn') {
         store.warnings.add(botId, guild.id, target.id, reason, author.id);
         await reply(`⚠️ ${target} averti : ${reason}`);
@@ -735,7 +766,13 @@ async function execute(botId, entry, cmd, src) {
           { name: '📝 Raison', value: reason || 'Aucune', inline: true },
         ],
       });
-      await reply(`✅ **${target.tag || target.username}** a été expulsé.`);
+      await replyPanel({
+        variant: 'success',
+        title: '👢 Expulsion effectuée',
+        description: `**${target.tag || target.username}** a été expulsé du serveur.`,
+        fields: [{ name: '📝 Raison', value: reason || 'Aucune', inline: true }],
+        footer: `Hoxera · ${guild.name} · Modération`,
+      });
       break;
     }
     case 'ban': {
@@ -753,7 +790,13 @@ async function execute(botId, entry, cmd, src) {
           { name: '📝 Raison', value: reason || 'Aucune', inline: true },
         ],
       });
-      await reply(`🔨 **${target.tag || target.username}** a été banni.`);
+      await replyPanel({
+        variant: 'danger',
+        title: '🔨 Bannissement effectué',
+        description: `**${target.tag || target.username}** a été banni du serveur.`,
+        fields: [{ name: '📝 Raison', value: reason || 'Aucune', inline: true }],
+        footer: `Hoxera · ${guild.name} · Modération`,
+      });
       break;
     }
     case 'unban': {
@@ -767,7 +810,13 @@ async function execute(botId, entry, cmd, src) {
           { name: '🛡️ Par', value: `${author.tag || author.username}`, inline: true },
         ],
       });
-      await reply(`✅ L\'utilisateur \`${id}\` a été débanni.`);
+      await replyPanel({
+        variant: 'success',
+        title: '🔓 Débannissement effectué',
+        description: `L'utilisateur ${id} a été débanni.`,
+        fields: [{ name: '🆔 Identifiant', value: id, inline: true }],
+        footer: `Hoxera · ${guild.name} · Modération`,
+      });
       break;
     }
     case 'timeout': {
@@ -785,7 +834,13 @@ async function execute(botId, entry, cmd, src) {
           { name: '⏱ Durée', value: `${minutes} minute(s)`, inline: true },
         ],
       });
-      await reply(`⏳ **${target.tag || target.username}** est en timeout pour ${minutes} minute(s).`);
+      await replyPanel({
+        variant: 'warning',
+        title: '⏳ Timeout appliqué',
+        description: `**${target.tag || target.username}** ne peut plus écrire temporairement.`,
+        fields: [{ name: '⏱ Durée', value: `${minutes} minute(s)`, inline: true }],
+        footer: `Hoxera · ${guild.name} · Modération`,
+      });
       break;
     }
     case 'warn': {
@@ -834,7 +889,17 @@ async function execute(botId, entry, cmd, src) {
           { name: '🔢 Total', value: String(n), inline: true },
         ],
       });
-      await reply(`⚠️ **${target.tag || target.username}** a été averti (raison : ${reason || 'aucune'}). Total : **${n}** avertissement(s).${extra}`);
+      await replyPanel({
+        variant: 'warning',
+        title: '⚠️ Avertissement enregistré',
+        description: `**${target.tag || target.username}** a été averti.`,
+        fields: [
+          { name: '📝 Raison', value: reason || 'Aucune', inline: false },
+          { name: '🔢 Total actif', value: `${n} avertissement(s)`, inline: true },
+          ...(extra ? [{ name: '⚖️ Suite', value: extra.replace(/^\n/, '') }] : []),
+        ],
+        footer: `Hoxera · ${guild.name} · Modération`,
+      });
       break;
     }
     case 'warns': {
@@ -861,7 +926,13 @@ async function execute(botId, entry, cmd, src) {
           { name: '🛡️ Par', value: `${author.tag || author.username}`, inline: true },
         ],
       });
-      await reply(`🧹 **${count}** message(s) supprimé(s).`);
+      await replyPanel({
+        variant: 'success',
+        title: '🧹 Nettoyage terminé',
+        description: `${count} message(s) ont été supprimé(s) dans ce salon.`,
+        fields: [{ name: '🛡️ Action effectuée par', value: `${author.tag || author.username}`, inline: true }],
+        footer: `Hoxera · ${guild.name} · Modération`,
+      });
       break;
     }
     case 'daily': {
@@ -875,14 +946,26 @@ async function execute(botId, entry, cmd, src) {
       store.economy.add(botId, guild.id, author.id, 100);
       store.economy.setDaily(botId, guild.id, author.id, today);
       const after = store.economy.get(botId, guild.id, author.id);
-      await reply(`🎁 **+100 coins** ! Ton solde : **${after.coins}** coins.`);
+      await replyPanel({
+        variant: 'success',
+        title: '🎁 Récompense quotidienne',
+        description: 'Tu as récupéré ta récompense du jour.',
+        fields: [{ name: '🪙 Récompense', value: '+100 coins', inline: true }, { name: '💰 Nouveau solde', value: `${after.coins} coins`, inline: true }],
+        footer: `Hoxera · ${guild.name} · Économie`,
+      });
       break;
     }
     case 'balance': {
       if (!guild) return;
       const target = getUserArg() || author;
       const row = store.economy.get(botId, guild.id, target.id);
-      await reply(`💰 **${target.tag || target.username}** possède **${row ? row.coins : 0}** coins.`);
+      await replyPanel({
+        variant: 'economy',
+        title: '💰 Solde de coins',
+        description: `**${target.tag || target.username}** possède des coins sur ce serveur.`,
+        fields: [{ name: '🪙 Solde actuel', value: `${row ? row.coins : 0} coins`, inline: true }],
+        footer: `Hoxera · ${guild.name} · Économie`,
+      });
       break;
     }
     case 'leaderboard': {

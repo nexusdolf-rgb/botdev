@@ -5,6 +5,7 @@
 const store = require('../db');
 const giveaway = require('./giveaway');
 const logging = require('./logging');
+const ui = require('./ui');
 
 function parseRoleDuration(str) {
   const s = String(str || '').trim().toLowerCase();
@@ -38,7 +39,16 @@ async function giveTempRole(botId, interaction, member, role, durationMs) {
     ],
   });
   return interaction.reply({
-    content: `✅ ${member} reçoit le rôle **${role.name}** pendant ${formatDuration(durationMs)} (retiré automatiquement).`,
+    ...ui.panel({
+      variant: 'success',
+      title: '🏷️ Rôle temporaire attribué',
+      description: `${member} reçoit le rôle **${role.name}**.`,
+      fields: [
+        { name: '⏱️ Durée', value: formatDuration(durationMs), inline: true },
+        { name: '🔄 Retrait', value: 'Automatique à la fin de la durée.', inline: true },
+      ],
+      footer: `Hoxera · ${interaction.guild.name} · Rôles temporaires`,
+    }),
     ephemeral: true,
   });
 }

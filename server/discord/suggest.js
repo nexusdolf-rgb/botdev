@@ -26,6 +26,7 @@ function buildEmbed(s, authorTag) {
       { name: '👍 Votes', value: String(s.upvotes), inline: true },
       { name: '👎 Votes', value: String(s.downvotes), inline: true },
     )
+    .setFooter({ text: `Hoxera · Suggestion #${s.id} · Vote avec les boutons` })
     .setTimestamp();
 }
 

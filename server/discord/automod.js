@@ -14,6 +14,7 @@ const store = require('../db');
 const logging = require('./logging');
 const i18n = require('../i18n');
 const { autoModSanctionForWarning } = require('./community');
+const ui = require('./ui');
 
 const PUBLIC_WARNING_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -138,7 +139,16 @@ async function sendWarn(botId, message, gs, lang, text) {
   let dmOk = false;
   try {
     if (message.author && typeof message.author.send === 'function') {
-      await message.author.send({ content: text });
+      await message.author.send({
+        content: text,
+        embeds: [ui.embed({
+          variant: 'danger',
+          title: '🛡️ Avertissement Auto-Mod',
+          description: 'Ton message a été pris en compte par la protection du serveur. Les détails sont indiqués dans le message ci-dessus.',
+          fields: [{ name: '🧭 Conseil', value: 'Respecte les règles du serveur pour éviter une prochaine sanction.' }],
+          footer: 'Hoxera · Protection du serveur',
+        })],
+      });
       dmOk = true;
     }
   } catch { /* MP fermés */ }

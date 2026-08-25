@@ -4,6 +4,7 @@
 // ============================================================
 const { EmbedBuilder } = require('discord.js');
 const store = require('../db');
+const ui = require('./ui');
 
 function parseDuration(str) {
   const s = String(str || '').trim().toLowerCase();
@@ -84,10 +85,19 @@ async function announceWinners(client, g, winners, reroll = false) {
     await message.edit({ embeds: [embed] }).catch(() => {});
   }
   if (channel) {
+    const winnerMentions = winners.map((u) => u.toString()).join(' ');
     await channel.send({
-      content: winners.length
-        ? `🎉 Félicitations ${winners.map((u) => u.toString()).join(' ')} ! Vous gagnez **${g.prize}** !`
-        : `🎁 Le giveaway « ${g.prize} » n'a eu aucun participant.`,
+      content: winnerMentions || undefined,
+      embeds: [ui.embed({
+        variant: winners.length ? 'success' : 'warning',
+        title: winners.length ? '🎉 Giveaway terminé !' : '🎁 Giveaway sans gagnant',
+        description: winners.length
+          ? `Félicitations ${winnerMentions} ! Vous remportez **${g.prize}** !`
+          : `Le giveaway « ${g.prize} » n'a eu aucun participant.`,
+        fields: [{ name: '🏆 Résultat', value: winners.length ? `${winners.length} gagnant(s)` : 'Aucun participant', inline: true }],
+        footer: 'Hoxera · Giveaways',
+      })],
+      allowedMentions: { users: winners.map((u) => String(u.id)) },
     }).catch(() => {});
   }
 }

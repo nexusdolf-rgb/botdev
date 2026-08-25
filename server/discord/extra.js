@@ -11,6 +11,7 @@ const {
 const store = require('../db');
 const logging = require('./logging');
 const tzUtil = require('../tz');
+const ui = require('./ui');
 
 // ---------------------- États de jeu (en mémoire) ----------------------
 const penduGames = new Map();   // `${guildId}:${messageId}` -> { word, shown, lives, playerId }
@@ -295,10 +296,17 @@ async function handleSlash(botId, entry, interaction) {
         new ButtonBuilder().setCustomId(`hx:marry:${guild.id}:a:${user.id}:${target.id}`).setLabel('💍 Accepter').setStyle(ButtonStyle.Success),
         new ButtonBuilder().setCustomId(`hx:marry:${guild.id}:r:${user.id}:${target.id}`).setLabel('❌ Refuser').setStyle(ButtonStyle.Danger),
       );
-      await interaction.reply({
-        content: `💍 **${target}**, ${user} te demande en mariage !\nUne belle histoire commence peut-être… clique sur ton choix :`,
-        components: [row],
-      });
+      const proposal = ui.panel({
+        variant: 'live',
+        title: '💍 Une demande en mariage !',
+        description: `**${target}**, ${user} te demande en mariage !\n\nUne belle histoire commence peut-être. Choisis ta réponse ci-dessous.`,
+        fields: [
+          { name: '💌 Demandeur', value: `${user}`, inline: true },
+          { name: '💑 Destinataire', value: `${target}`, inline: true },
+        ],
+        footer: `Hoxera · ${guild.name} · Réponse réservée à ${target.username}`,
+      }, [row]);
+      await interaction.reply({ ...proposal, fetchReply: true });
       return true;
     }
     case 'divorce': {
@@ -306,7 +314,12 @@ async function handleSlash(botId, entry, interaction) {
       if (!cur) return interaction.reply({ content: '💔 Tu n\'es pas marié(e) sur ce serveur.', ephemeral: true });
       const other = cur.user_a === user.id ? cur.user_b : cur.user_a;
       store.marriages.remove(botId, guild.id, cur.user_a, cur.user_b);
-      return interaction.reply({ content: `💔 ${user} et <@${other}> ont divorcé… le serveur verse une petite larme.` });
+      return interaction.reply(ui.panel({
+        variant: 'danger',
+        title: '💔 Divorce enregistré',
+        description: `${user} et <@${other}> ont divorcé… le serveur verse une petite larme.`,
+        footer: `Hoxera · ${guild.name} · Vie sociale`,
+      }));
     }
     case 'couple': {
       const target = interaction.options.getUser('membre') || user;
@@ -317,18 +330,24 @@ async function handleSlash(botId, entry, interaction) {
       const other = cur.user_a === target.id ? cur.user_b : cur.user_a;
       const d = cur.date ? new Date(cur.date.replace(' ', 'T') + 'Z') : null;
       const dateStr = d && !isNaN(d) ? d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : 'récemment';
-      const embed = new EmbedBuilder()
-        .setColor('#EB459E')
-        .setTitle(`💍 Couple de ${target.username}`)
-        .setDescription(`${target} ❤️ <@${other}>`)
-        .setFooter({ text: `Mariés depuis le ${dateStr}` });
-      return interaction.reply({ embeds: [embed] });
+      return interaction.reply(ui.panel({
+        color: '#EB459E',
+        title: `💍 Couple de ${target.username}`,
+        description: `${target} ❤️ <@${other}>`,
+        fields: [{ name: '📅 Depuis', value: dateStr, inline: true }],
+        footer: `Hoxera · ${guild.name} · Vie sociale`,
+      }));
     }
     case 'hug': case 'kiss': case 'slap': case 'pat': case 'punch': {
       const target = interaction.options.getUser('membre');
       if (!target || target.id === user.id) return interaction.reply({ content: '❓ Mentionne un membre (autre que toi).', ephemeral: true });
       const text = rand(ACTION_TEXTS[cmd]).replace('{a}', `<@${user.id}>`).replace('{b}', `<@${target.id}>`);
-      return interaction.reply({ content: text });
+      return interaction.reply(ui.panel({
+        variant: 'live',
+        title: `${cmd === 'hug' ? '🤗 Câlin' : cmd === 'kiss' ? '😘 Bisou' : cmd === 'slap' ? '👋 Petite claque' : cmd === 'pat' ? '🐶 Caresse' : '👊 Duel amical'}`,
+        description: text,
+        footer: `Hoxera · ${guild.name} · Vie sociale`,
+      }));
     }
     // ---------------- Jeux ----------------
     case 'rps': {
@@ -338,17 +357,29 @@ async function handleSlash(botId, entry, interaction) {
       if (move === botMove) result = `Égalité ! ${RPS_EMOJI[move]} contre ${RPS_EMOJI[botMove]} — on refait ?`;
       else if (RPS_WINS[move] === botMove) result = `Tu gagnes ! ${RPS_EMOJI[move]} bat ${RPS_EMOJI[botMove]} 🏆`;
       else result = `Je gagne ! ${RPS_EMOJI[botMove]} bat ${RPS_EMOJI[move]} 😎`;
-      return interaction.reply({ content: `🪨🍃✂️ **${user.username}** joue ${RPS_EMOJI[move]} **${move}**…\nMoi je joue ${RPS_EMOJI[botMove]} **${botMove}** !\n\n${result}` });
+      return interaction.reply(ui.panel({
+        variant: result.startsWith('Tu gagnes') ? 'success' : result.startsWith('Je gagne') ? 'danger' : 'warning',
+        title: '🪨🍃✂️ Pierre · Feuille · Ciseaux',
+        description: result,
+        fields: [
+          { name: '🎮 Ton choix', value: `${RPS_EMOJI[move]} ${move}`, inline: true },
+          { name: '🤖 Mon choix', value: `${RPS_EMOJI[botMove]} ${botMove}`, inline: true },
+        ],
+        footer: `Hoxera · Duel de ${user.username}`,
+      }));
     }
     case 'pendu': {
       const word = rand(PENDU_WORDS);
       const shown = word.split('').map(() => '⬜').join(' ');
       const state = { word, guessed: new Set(), lives: 8, playerId: user.id };
-      const msg = await interaction.reply({
-        content: `🪢 **Pendu** — ${user}, devine le mot !\n\n${shown}\n\nVies : ${'❤️'.repeat(8)}`,
-        components: letterRows(guild.id),
-        fetchReply: true,
-      });
+      const penduPanel = ui.panel({
+        variant: 'brand',
+        title: '🪢 Pendu',
+        description: `${user}, devine le mot caché !\n\n${shown}`,
+        fields: [{ name: '❤️ Vies restantes', value: '❤️'.repeat(8), inline: true }, { name: '🧭 Règle', value: 'Choisis une lettre par bouton.', inline: true }],
+        footer: `Hoxera · Partie de ${user.username}`,
+      }, letterRows(guild.id));
+      const msg = await interaction.reply({ ...penduPanel, fetchReply: true });
       penduGames.set(`${guild.id}:${msg.id}`, state);
       capMap(penduGames, 150); // 🛡️ purge les parties abandonnées
       return true;
@@ -359,11 +390,14 @@ async function handleSlash(botId, entry, interaction) {
       const state = { board: Array(9).fill(null), turn: user.id, p1: user.id, p2: target.id, over: false, symbols: { } };
       state.symbols[user.id] = '❌';
       state.symbols[target.id] = '⭕';
-      const msg = await interaction.reply({
-        content: `⭕❌ **Morpion** : ${user} (❌) contre ${target} (⭕)\n\nAu tour de ${user} !`,
-        components: boardRows(guild.id, state),
-        fetchReply: true,
-      });
+      const morpionPanel = ui.panel({
+        variant: 'brand',
+        title: '⭕❌ Morpion',
+        description: `${user} (❌) contre ${target} (⭕)\n\nAu tour de ${user} !`,
+        fields: [{ name: '🎯 Objectif', value: 'Aligne trois symboles pour gagner.', inline: true }, { name: '🔁 Tour', value: `${user}`, inline: true }],
+        footer: `Hoxera · Partie de ${user.username}`,
+      }, boardRows(guild.id, state));
+      const msg = await interaction.reply({ ...morpionPanel, fetchReply: true });
       morpionGames.set(`${guild.id}:${msg.id}`, state);
       capMap(morpionGames, 150); // 🛡️ purge les parties abandonnées
       return true;
@@ -393,8 +427,15 @@ async function handleSlash(botId, entry, interaction) {
         return { ...b, next: d };
       }).sort((a, b) => a.next - b.next).slice(0, 10);
       const lines = sorted.map((b, i) => `${i === 0 ? '🎂' : '📅'} <@${b.user_id}> — le **${String(b.day).padStart(2, '0')}/${String(b.month).padStart(2, '0')}**${i === 0 ? ' *(le prochain !)*' : ''}`);
-      const embed = new EmbedBuilder().setColor('#FEE75C').setTitle('🎂 Anniversaires du serveur').setDescription(lines.join('\n') || 'Aucun');
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.reply({
+        ...ui.panel({
+          variant: 'warning',
+          title: '🎂 Anniversaires du serveur',
+          description: lines.join('\n') || 'Aucun',
+          footer: `Hoxera · ${guild.name} · Anniversaires`,
+        }),
+        ephemeral: true,
+      });
     }
     case 'remind': {
       const duree = interaction.options.getString('duree') || '';
@@ -467,7 +508,13 @@ async function handleSlash(botId, entry, interaction) {
       store.economy.ensure(botId, guild.id, user.id);
       store.economy.add(botId, guild.id, user.id, gain);
       store.settings.set(key, String(Date.now()));
-      return interaction.reply({ content: `💼 ${job[0]} **${job[1]}** → tu gagnes **${gain} coins** ! 🪙` });
+      return interaction.reply(ui.panel({
+        variant: 'success',
+        title: '💼 Travail terminé',
+        description: `${job[0]} ${job[1]} !`,
+        fields: [{ name: '🪙 Récompense', value: `+${gain} coins`, inline: true }],
+        footer: `Hoxera · ${guild.name} · Économie`,
+      }));
     }
     case 'gamble': {
       const amount = interaction.options.getInteger('montant');
@@ -478,10 +525,22 @@ async function handleSlash(botId, entry, interaction) {
       const win = Math.random() < 0.5;
       if (win) {
         store.economy.add(botId, guild.id, user.id, amount);
-        return interaction.reply({ content: `🎰 **JACKPOT !** Tu doubles ta mise : **+${amount} coins** ! (nouveau solde : ${row.coins + amount})` });
+        return interaction.reply(ui.panel({
+          variant: 'success',
+          title: '🎰 JACKPOT !',
+          description: `Tu doubles ta mise : **+${amount} coins** !`,
+          fields: [{ name: '💰 Nouveau solde', value: `${row.coins + amount} coins`, inline: true }],
+          footer: `Hoxera · ${guild.name} · Économie`,
+        }));
       }
       store.economy.add(botId, guild.id, user.id, -amount);
-      return interaction.reply({ content: `🎰 Raté… tu perds **${amount} coins**. (solde : ${row.coins - amount})` });
+      return interaction.reply(ui.panel({
+        variant: 'danger',
+        title: '🎰 Pari perdu',
+        description: `Tu perds **${amount} coins**.`,
+        fields: [{ name: '💰 Solde restant', value: `${row.coins - amount} coins`, inline: true }],
+        footer: `Hoxera · ${guild.name} · Économie`,
+      }));
     }
     case 'rob': {
       const target = interaction.options.getUser('membre');
@@ -503,12 +562,24 @@ async function handleSlash(botId, entry, interaction) {
         const stolen = Math.floor(victim.coins * (0.1 + Math.random() * 0.1));
         store.economy.add(botId, guild.id, target.id, -stolen);
         store.economy.add(botId, guild.id, user.id, stolen);
-        return interaction.reply({ content: `🦹 Nuit réussie ! Tu voles **${stolen} coins** à ${target} 😈` });
+        return interaction.reply(ui.panel({
+          variant: 'success',
+          title: '🦹 Vol réussi !',
+          description: `Tu voles **${stolen} coins** à ${target} 😈`,
+          fields: [{ name: '🎯 Cible', value: `${target}`, inline: true }],
+          footer: `Hoxera · ${guild.name} · Économie`,
+        }));
       }
       const fine = Math.max(10, Math.floor(me.coins * 0.15));
       store.economy.add(botId, guild.id, user.id, -fine);
       store.economy.add(botId, guild.id, target.id, fine);
-      return interaction.reply({ content: `🚓 **Raté !** ${target} t'a surpris et te réclame **${fine} coins** de dédommagement…` });
+      return interaction.reply(ui.panel({
+        variant: 'warning',
+        title: '🚓 Vol échoué',
+        description: `${target} t'a surpris et te réclame **${fine} coins** de dédommagement…`,
+        fields: [{ name: '💸 Amende', value: `${fine} coins`, inline: true }],
+        footer: `Hoxera · ${guild.name} · Économie`,
+      }));
     }
     // ---------------- Modération / organisation ----------------
     case 'lockdown': {
@@ -518,11 +589,22 @@ async function handleSlash(botId, entry, interaction) {
       if (action === 'on') {
         const res = await lockdown.on(botId, guild, member.user.tag);
         if (res.already) return interaction.reply({ content: '🔒 Le serveur est déjà verrouillé. `/lockdown off` pour rouvrir.', ephemeral: true });
-        return interaction.reply({ content: `🚨 **Serveur verrouillé !** ${res.channels} salon(s) sont en lecture seule. Rouvre avec \`/lockdown off\`` });
+        return interaction.reply(ui.panel({
+          variant: 'danger',
+          title: '🚨 Serveur verrouillé',
+          description: `${res.channels} salon(s) sont maintenant en lecture seule.`,
+          fields: [{ name: '🔓 Pour rouvrir', value: 'Utilise `/lockdown off` quand la situation est maîtrisée.' }],
+          footer: `Hoxera · ${guild.name} · Sécurité`,
+        }));
       }
       const res = await lockdown.off(botId, guild, member.user.tag);
       if (!res.reopened) return interaction.reply({ content: '🔓 Le serveur n\'est pas verrouillé.', ephemeral: true });
-      return interaction.reply({ content: `🔓 **Serveur rouvert !** ${res.reopened} salon(s) sont de nouveau ouverts.` });
+      return interaction.reply(ui.panel({
+        variant: 'success',
+        title: '🔓 Serveur rouvert',
+        description: `${res.reopened} salon(s) sont de nouveau ouverts.`,
+        footer: `Hoxera · ${guild.name} · Sécurité`,
+      }));
     }
     case 'voicetemp': {
       if (!isAdmin(member)) return interaction.reply({ content: '⛔ Réservé aux administrateurs.', ephemeral: true });
@@ -580,12 +662,13 @@ async function handleSlash(botId, entry, interaction) {
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId(`hx:apply:${guild.id}`).setLabel('📝 Faire une candidature').setStyle(ButtonStyle.Primary),
       );
-      const embed = new EmbedBuilder()
-        .setColor('#5865F2')
-        .setTitle(cfg.title || '📝 Candidature')
-        .setDescription(`Clique sur le bouton pour candidater : tu répondras à **${questions.length} question(s)** dans une fenêtre privée.`)
-        .setFooter({ text: 'Seul le staff verra tes réponses.' });
-      await interaction.reply({ embeds: [embed], components: [row] });
+      await interaction.reply(ui.panel({
+        variant: 'brand',
+        title: cfg.title || '📝 Candidature',
+        description: `Clique sur le bouton pour candidater : tu répondras à **${questions.length} question(s)** dans une fenêtre privée.`,
+        fields: [{ name: '🔒 Confidentialité', value: 'Seul le staff verra tes réponses.' }],
+        footer: `Hoxera · ${guild.name} · Candidatures`,
+      }, [row]));
       return true;
     }
   }
@@ -616,9 +699,20 @@ async function handleButton(botId, entry, interaction) {
       );
       if (choice === 'a') {
         store.marriages.set(botId, guild.id, from, to);
-        await interaction.update({ content: `🎉 **Félicitations ${user} et <@${from}> !**\nVous êtes désormais mariés sur ce serveur 💍❤️\n*${rand(MARRIED_POINTS)} ${guild.name} compte ${store.marriages.count(botId, guild.id)} couple(s)*`, components: [row] });
+        await interaction.update(ui.panel({
+          variant: 'success',
+          title: '💍 Mariage accepté !',
+          description: `Félicitations ${user} et <@${from}> ! Vous êtes désormais mariés sur ce serveur 💍❤️`,
+          fields: [{ name: '✨ Ambiance', value: `${rand(MARRIED_POINTS)} ${guild.name} compte ${store.marriages.count(botId, guild.id)} couple(s)` }],
+          footer: `Hoxera · ${guild.name} · Vie sociale`,
+        }, [row]));
       } else {
-        await interaction.update({ content: `💔 ${user} a refusé la demande de <@${from}>… ce n\'est que partie remise !`, components: [row] });
+        await interaction.update(ui.panel({
+          variant: 'danger',
+          title: '💔 Demande refusée',
+          description: `${user} a refusé la demande de <@${from}>… ce n'est que partie remise !`,
+          footer: `Hoxera · ${guild.name} · Vie sociale`,
+        }, [row]));
       }
       return true;
     }
@@ -649,12 +743,13 @@ async function handleButton(botId, entry, interaction) {
         const correct = state.word.includes(letter);
         content = `🪢 **Pendu** — ${user}, devine le mot !\n\n${shown}\n\nVies : ${'❤️'.repeat(state.lives)}${'🖤'.repeat(8 - state.lives)}\n\n${correct ? '✅ Bonne lettre !' : '❌ Raté…'}\n*Lettres essayées : ${lettersTried}*`;
       }
-      if (over) {
-        penduGames.delete(key);
-        await interaction.update({ content, components: [] });
-      } else {
-        await interaction.update({ content, components: letterRows(guild.id) });
-      }
+      if (over) penduGames.delete(key);
+      await interaction.update(ui.panel({
+        variant: over && won ? 'success' : over ? 'danger' : 'brand',
+        title: over ? (won ? '🪢 Pendu · gagné !' : '🪢 Pendu · terminé') : '🪢 Pendu',
+        description: content,
+        footer: `Hoxera · Partie de ${state.playerId}`,
+      }, over ? [] : letterRows(guild.id)));
       return true;
     }
     case 'morpion': {
@@ -677,7 +772,12 @@ async function handleButton(botId, entry, interaction) {
         content = `⭕❌ **Morpion** : <@${state.p1}> (❌) contre <@${state.p2}> (⭕)\n\nAu tour de <@${state.turn}> !`;
       }
       if (state.over) morpionGames.delete(key);
-      await interaction.update({ content, components: state.over ? boardRows(guild.id, state, true) : boardRows(guild.id, state) });
+      await interaction.update(ui.panel({
+        variant: winner ? 'success' : state.over ? 'warning' : 'brand',
+        title: state.over ? '⭕❌ Morpion · partie terminée' : '⭕❌ Morpion',
+        description: content,
+        footer: `Hoxera · Tour de ${state.over ? 'fin de partie' : state.turn}`,
+      }, state.over ? boardRows(guild.id, state, true) : boardRows(guild.id, state)));
       return true;
     }
     case 'poll': {
@@ -726,7 +826,13 @@ async function handleButton(botId, entry, interaction) {
         });
         try {
           const applicant = await guild.members.fetch(applicantId);
-          await applicant.send({ content: `🎉 **Bonne nouvelle !** Ta candidature sur **${guild.name}** a été **acceptée** par ${user.tag}.` }).catch(() => {});
+          await applicant.send(ui.panel({
+            variant: 'success',
+            title: '🎉 Candidature acceptée',
+            description: `Bonne nouvelle ! Ta candidature sur **${guild.name}** a été acceptée par ${user.tag}.`,
+            fields: [{ name: '✅ Prochaine étape', value: 'Le staff va maintenant te transmettre les informations nécessaires.' }],
+            footer: `Hoxera · ${guild.name} · Candidatures`,
+          })).catch(() => {});
         } catch {}
       } else {
         await interaction.update({
@@ -735,7 +841,13 @@ async function handleButton(botId, entry, interaction) {
         });
         try {
           const applicant = await guild.members.fetch(applicantId);
-          await applicant.send({ content: `😔 Ta candidature sur **${guild.name}** a été **refusée**. Tu peux retenter plus tard !` }).catch(() => {});
+          await applicant.send(ui.panel({
+            variant: 'danger',
+            title: '😔 Candidature refusée',
+            description: `Ta candidature sur **${guild.name}** a été refusée. Tu pourras retenter plus tard.`,
+            fields: [{ name: '💡 Conseil', value: 'N’hésite pas à améliorer ta candidature avant une nouvelle demande.' }],
+            footer: `Hoxera · ${guild.name} · Candidatures`,
+          })).catch(() => {});
         } catch {}
       }
       return true;
@@ -887,7 +999,15 @@ async function onVoiceState(botId, entry, oldState, newState) {
       try { mine = JSON.parse(store.settings.get(mineKey) || '[]'); } catch {}
       mine = mine.filter((id) => guild.channels.cache.has(id));
       if (mine.length >= 10) {
-        try { await newState.member.send('🔊 Trop de salons vocaux ouverts (max 10). Rejoins-en un existant !').catch(() => {}); } catch {}
+        try {
+          await newState.member.send(ui.panel({
+            variant: 'warning',
+            title: '🔊 Limite de salons vocaux',
+            description: 'Tu as atteint la limite de 10 salons vocaux temporaires ouverts.',
+            fields: [{ name: '💡 Que faire ?', value: 'Rejoins un salon existant ou quitte un salon temporaire avant d’en créer un nouveau.' }],
+            footer: 'Hoxera · Salons vocaux temporaires',
+          })).catch(() => {});
+        } catch {}
         return;
       }
       store.settings.set(creatingKey, '1');
@@ -930,11 +1050,18 @@ async function sweepReminders(botId, entry) {
   for (const r of due) {
     try {
       const user = await entry.client.users.fetch(r.user_id).catch(() => null);
-      const sent = user && await user.send({ content: `⏰ **Rappel** : ${r.text}` }).then(() => true).catch(() => false);
+      const reminderPanel = ui.panel({
+        variant: 'warning',
+        title: '⏰ Ton rappel',
+        description: String(r.text || 'Rappel sans texte').slice(0, 4000),
+        fields: [{ name: '🧭 Serveur', value: entry.client.guilds.cache.get(r.guild_id)?.name || 'Ton serveur', inline: true }],
+        footer: 'Hoxera · Rappel personnel',
+      });
+      const sent = user && await user.send(reminderPanel).then(() => true).catch(() => false);
       if (!sent) {
         const guild = entry.client.guilds.cache.get(r.guild_id);
         const channel = guild && r.channel_id ? guild.channels.cache.get(r.channel_id) : null;
-        if (channel) await channel.send({ content: `⏰ <@${r.user_id}>, ton rappel : ${r.text}` }).catch(() => {});
+        if (channel) await channel.send({ content: `<@${r.user_id}>`, embeds: reminderPanel.embeds, allowedMentions: { users: [String(r.user_id)] } }).catch(() => {});
       }
     } catch (e) { console.error('[Hoxera] reminder error:', e.message); }
     store.reminders.remove(r.id);
@@ -958,7 +1085,15 @@ function sweepScheduled(botId, entry, now = new Date()) {
     const channel = guild ? guild.channels.cache.get(s.channel_id) : null;
     if (!channel) continue;                 // salon introuvable → on réessaiera au prochain balayage
     const localTime = `${String(s.hour).padStart(2, '0')}:${String(s.minute).padStart(2, '0')}`;
-    channel.send({ content: s.text, allowedMentions: { parse: ['everyone', 'roles', 'users'] } })
+    const scheduledPanel = ui.panel({
+      variant: 'brand',
+      title: '📅 Annonce programmée',
+      description: '',
+      fields: [{ name: '🕘 Horaire', value: `${localTime} · ${tz}`, inline: true }, { name: '💬 Message programmé', value: 'Le message personnalisé est affiché juste au-dessus.', inline: false }],
+      footer: `Hoxera · ${guild.name} · Annonce automatique`,
+    });
+    const visualPayload = { ...scheduledPanel, content: s.text, allowedMentions: { parse: ['everyone', 'roles', 'users'] } };
+    channel.send(visualPayload)
       .then(() => {
         store.scheduled.update(s.id, { last_sent: p.ymd });
         console.log(`[Hoxera] ✅ Annonce envoyée (serveur ${s.guild_id}, salon #${s.channel_id}, ${p.ymd} ${localTime} ${tz})`);
@@ -966,7 +1101,7 @@ function sweepScheduled(botId, entry, now = new Date()) {
       .catch((err) => {
         if (err && err.code === 50013) {
           // Mentions (@everyone/@here) interdites par les permissions → on retente sans les activer
-          channel.send({ content: s.text, allowedMentions: { parse: [] } })
+          channel.send({ ...scheduledPanel, content: s.text, allowedMentions: { parse: [] } })
             .then(() => {
               store.scheduled.update(s.id, { last_sent: p.ymd });
               console.log(`[Hoxera] ✅ Annonce envoyée sans mentions (permission manquante) — ${p.ymd} ${localTime} ${tz}`);
@@ -1013,7 +1148,17 @@ async function sweepBirthdays(botId, entry, now = new Date()) {
       if (!member) continue;
       const channel = gs.birthday_channel ? (guild.channels.cache.get(gs.birthday_channel) || guild.channels.cache.find((c) => c.name.toLowerCase() === String(gs.birthday_channel).replace(/^#/, '').toLowerCase())) : null;
       if (channel) {
-        await channel.send({ content: `🎂🎉 **Joyeux anniversaire ${member} !** On te souhaite une superbe journée ! 🥳🎁` }).catch(() => {});
+        await channel.send({
+          content: `<@${member.id}>`,
+          embeds: [ui.embed({
+            variant: 'warning',
+            title: '🎂 Joyeux anniversaire !',
+            description: `Toute la communauté souhaite une superbe journée à ${member} ! 🥳🎁`,
+            fields: [{ name: '🎉 Message du serveur', value: 'Profite bien de cette journée spéciale !' }],
+            footer: `Hoxera · ${guild.name} · Anniversaires`,
+          })],
+          allowedMentions: { users: [String(member.id)] },
+        }).catch(() => {});
       }
       if (gs.birthday_role) {
         const role = guild.roles.cache.get(gs.birthday_role) || guild.roles.cache.find((r) => r.name.toLowerCase() === String(gs.birthday_role).toLowerCase());

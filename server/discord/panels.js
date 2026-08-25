@@ -15,6 +15,7 @@ const {
 const store = require('../db');
 const crypto = require('crypto');
 const logging = require('./logging');
+const ui = require('./ui');
 
 // 📊 Statistiques de tickets (affichées dans le dashboard)
 function bumpTicketStats(guildId, totalDelta, openDelta) {
@@ -324,6 +325,7 @@ function buildTicketPanelEmbed(cfg, client, types, serverName = '', guildId = ''
 
   const embed = new EmbedBuilder()
     .setColor('#ED4245')
+    .setAuthor({ name: `${name} · Centre d'assistance` })
     .setTitle(P.title(name))
     .setDescription(`${P.welcome(name)}\n\n${paragraph}`)
     .addFields(
@@ -332,7 +334,16 @@ function buildTicketPanelEmbed(cfg, client, types, serverName = '', guildId = ''
     )
     // 🖼️ Bannière « SUPPORT - {nom du serveur} » : image générée par le site,
     // affichée en bas de l'embed, juste au-dessus du menu déroulant.
-    .setImage(panelBannerUrl(guildId, name));
+    .setImage(panelBannerUrl(guildId, name))
+    .setFooter({ text: `Hoxera · ${name} · Sélectionne une option pour commencer` })
+    .setTimestamp();
+  if (types && types.length) {
+    embed.addFields({
+      name: '🗂️ Types disponibles',
+      value: types.slice(0, 25).map((t) => `${t.emoji || '🎫'} **${t.label}**${t.questions && t.questions.length ? ` · ❓ ${t.questions.length}` : ''}`).join('\n').slice(0, 1024),
+      inline: false,
+    });
+  }
   return embed;
 }
 
@@ -557,7 +568,9 @@ function ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning = ''
     .addFields(...fields)
     .setTimestamp();
   const site = store.settings.get('public_url');
-  if (site) welcome.setFooter({ text: `Hoxera · ${site}` });
+  const footerSite = site || 'hoxera.is-a.dev';
+  welcome.setFooter({ text: `Hoxera · Ticket${meta.number ? ` #${meta.number}` : ''} · ${footerSite}` });
+  if (avatar) welcome.setThumbnail(avatar);
   return welcome;
 }
 
@@ -754,7 +767,7 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
   // Rangée 2 — gestion du salon : ajouter un membre → supprimer définitivement
   const row2 = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:addmember`).setLabel('➕ Ajouter un membre').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:delete`).setLabel('🗑 Supprimer').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:delete`).setLabel('🗑 Supprimer définitivement').setStyle(ButtonStyle.Danger),
   );
 
   // Vérification MP dès l'ouverture : si les MP du membre sont fermés,
@@ -763,10 +776,28 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
   try {
     if (interaction.client && interaction.client.users) {
       const openerUser = await interaction.client.users.fetch(member.id);
-      const typeLine = chosen ? ` (type : ${chosen.emoji ? chosen.emoji + ' ' : ''}**${chosen.label}**)` : '';
-      await openerUser.send(
-        `🎫 Ton ticket${typeLine} est ouvert sur **${guild.name}** !\n👉 **Rejoins-le ici : ${channel}**\nNous te répondrons au plus vite. À la suppression du ticket, tu recevras la transcription ici.`
-      );
+      const lang = i18n.langForGuild(guild.id);
+      const ticketTitle = chosen ? `${chosen.emoji ? chosen.emoji + ' ' : ''}${chosen.label}` : 'Support';
+      const dmEmbed = ui.embed({
+        color: chosen && chosen.color ? chosen.color : ui.COLORS.ticket,
+        title: '🎫 Ton ticket est ouvert',
+        description: `Ta demande sur **${guild.name}** a bien été créée.
+
+Notre équipe va te répondre dans le salon privé prévu pour toi.`,
+        fields: [
+          { name: '🗂️ Type', value: ticketTitle, inline: true },
+          { name: '🔢 Numéro', value: `#${ticketNumber}`, inline: true },
+          { name: '📌 Prochaine étape', value: 'Ouvre ton ticket et réponds aux messages du staff.', inline: false },
+          { name: '🔗 Accès direct', value: `Rejoins-le ici : ${channel}`, inline: false },
+        ],
+        footer: `Hoxera · ${guild.name} · ${i18n.t(lang, 'footer_tickets')}`,
+        thumbnail: interaction.client.user && interaction.client.user.displayAvatarURL ? interaction.client.user.displayAvatarURL({ size: 128 }) : '',
+      });
+      const ticketLink = new ButtonBuilder()
+        .setStyle(ButtonStyle.Link)
+        .setLabel('🎫 Ouvrir mon ticket')
+        .setURL(`https://discord.com/channels/${guild.id}/${channel.id}`);
+      await openerUser.send({ embeds: [dmEmbed], components: [new ActionRowBuilder().addComponents(ticketLink)] });
     }
   } catch {
     dmWarning = '\n⚠️ **Mes messages privés ne t\'atteignent pas** : active « Autoriser les messages privés des membres du serveur » (Réglages Discord → Confidentialité) si tu veux recevoir la transcription à la fermeture.';
@@ -1072,6 +1103,7 @@ async function sendTranscriptDm(clientOrInteraction, guild, channelName, { text,
   try {
     await user.send({
       embeds: [embed],
+      components: url ? [ui.linkRow('📜 Ouvrir la transcription', url)] : [],
       files: [{ attachment: Buffer.from(text || 'Transcription indisponible.', 'utf-8'), name: `transcription-${channelName}.txt` }],
     });
     return true;
@@ -1188,6 +1220,16 @@ async function handleTicketClose(botId, interaction) {
   store.closedTickets.add(channel.id, botId, guild.id);
   store.openTickets.update(channel.id, { closed_at: new Date().toISOString() });
   bumpTicketStats(guild.id, 0, -1);
+  await channel.send(ui.panel({
+    variant: 'danger',
+    title: '🔒 Ticket fermé',
+    description: 'Le ticket est maintenant verrouillé. Le créateur ne peut plus écrire, mais le staff peut encore le réouvrir.',
+    fields: [
+      { name: '🛡️ Fermé par', value: `${interaction.user}`, inline: true },
+      { name: '📄 Transcription', value: 'Elle sera envoyée à la suppression définitive.', inline: true },
+    ],
+    footer: 'Hoxera · Ticket verrouillé',
+  })).catch(() => {});
   await logging.log(botId, guild, {
     title: '🔒 Ticket fermé', color: '#ED4245',
     fields: [
@@ -1214,6 +1256,13 @@ async function handleTicketReopen(botId, interaction) {
   if (openerId) {
     await channel.permissionOverwrites.edit(openerId, { ViewChannel: true, SendMessages: true }).catch(() => {});
   }
+  await channel.send(ui.panel({
+    variant: 'success',
+    title: '🔓 Ticket réouvert',
+    description: 'Le créateur peut de nouveau répondre. Le staff peut reprendre le traitement du ticket.',
+    fields: [{ name: '🛡️ Réouvert par', value: `${interaction.user}`, inline: true }],
+    footer: 'Hoxera · Ticket actif',
+  })).catch(() => {});
   await ackReply(interaction, { content: '🔓 Ticket réouvert !', ephemeral: true });
 }
 
@@ -1237,7 +1286,16 @@ async function handleTicketClaim(botId, interaction) {
     claimed_at: new Date().toISOString(),
   });
   store.activity.add(botId, guild.id, '🖐️', `Ticket #${row.number} pris en charge par ${interaction.user.tag}`);
-  await channel.send({ content: i18n.t(lang, 'ticket_claim_msg', { staff: `${interaction.user}` }) }).catch(() => {});
+  await channel.send(ui.panel({
+    variant: 'success',
+    title: '🖐️ Ticket pris en charge',
+    description: i18n.t(lang, 'ticket_claim_msg', { staff: `${interaction.user}` }),
+    fields: [
+      { name: '🛡️ Staff responsable', value: `${interaction.user}`, inline: true },
+      { name: '🔢 Ticket', value: `#${row.number}`, inline: true },
+    ],
+    footer: `Hoxera · Ticket #${row.number} · Suivi du support`,
+  })).catch(() => {});
   try {
     await logging.log(botId, guild, {
       title: '🖐️ Ticket pris en charge', color: '#57F287',
@@ -1312,10 +1370,14 @@ async function sendRatingDm(client, guild, openerId, number, lang) {
   );
   try {
     await user.send({
-      embeds: [new EmbedBuilder()
-        .setColor('#FEE75C')
-        .setTitle(i18n.t(lang, 'ticket_rating_title'))
-        .setDescription(i18n.t(lang, 'ticket_rating_desc', { number, server: guild.name }))],
+      embeds: [ui.embed({
+        variant: 'warning',
+        title: `⭐ ${i18n.t(lang, 'ticket_rating_title')}`,
+        description: i18n.t(lang, 'ticket_rating_desc', { number, server: guild.name }),
+        fields: [{ name: '🧭 Comment noter ?', value: 'Choisis une note ci-dessous. Ton avis aide le staff à améliorer le support.' }],
+        footer: `Hoxera · Ticket #${number} · Évaluation du support`,
+        thumbnail: client && client.user && client.user.displayAvatarURL ? client.user.displayAvatarURL({ size: 128 }) : '',
+      })],
       components: [row],
     });
     return true;
@@ -1351,6 +1413,13 @@ async function handleTicketHold(botId, interaction) {
   if (openerId) {
     await channel.permissionOverwrites.edit(openerId, { ViewChannel: true, SendMessages: false }).catch(() => {});
   }
+  await channel.send(ui.panel({
+    variant: 'warning',
+    title: '⏸ Ticket mis en attente',
+    description: 'Le ticket est temporairement en pause. Le créateur ne peut plus écrire jusqu’à la reprise du traitement.',
+    fields: [{ name: '🛡️ Mis en attente par', value: `${interaction.user}`, inline: true }],
+    footer: 'Hoxera · Ticket en attente',
+  })).catch(() => {});
   await ackReply(interaction, { content: '⏸ Ticket mis en attente (le créateur ne peut plus écrire).', ephemeral: true });
 }
 
@@ -1973,9 +2042,22 @@ async function handleTypesWizardInteraction(botId, interaction) {
 async function sendRoleMenu(botId, client, menu, channel) {
   if (!menu.options || !menu.options.length) throw new Error('Ce menu n\'a aucune option.');
   // 🔘 Mode boutons : un bouton par rôle (clic = activer/désactiver)
+  const panelOptions = menu.options.slice(0, 25);
+  const rolePanel = (components) => {
+    const payload = ui.panel({
+      variant: 'brand',
+      title: `📋 ${menu.name || 'Rôles du serveur'}`,
+      description: menu.content || 'Choisis tes rôles ci-dessous. Tu peux les activer ou les retirer à tout moment.',
+      fields: [{ name: '🧭 Comment ça marche ?', value: menu.mode === 'buttons' ? 'Clique sur un bouton pour recevoir ou retirer le rôle correspondant.' : 'Sélectionne un ou plusieurs rôles dans le menu déroulant.' }],
+      footer: `Hoxera · ${panelOptions.length} rôle(s) disponible(s)`,
+    });
+    payload.components = components;
+    return payload;
+  };
+  // 🔘 Mode boutons : un bouton par rôle (clic = activer/désactiver)
   if (menu.mode === 'buttons') {
     const rows = [];
-    const opts = menu.options.slice(0, 25);
+    const opts = panelOptions;
     for (let i = 0; i < opts.length; i += 5) {
       const row = new ActionRowBuilder();
       opts.slice(i, i + 5).forEach((o) => {
@@ -1988,7 +2070,7 @@ async function sendRoleMenu(botId, client, menu, channel) {
       });
       rows.push(row);
     }
-    await require('../queue').send(channel, { content: menu.content || null, components: rows });
+    await require('../queue').send(channel, rolePanel(rows));
     return;
   }
   const row = new ActionRowBuilder();
@@ -2005,7 +2087,7 @@ async function sendRoleMenu(botId, client, menu, channel) {
     select.addOptions(opt);
   }
   row.addComponents(select);
-  await require('../queue').send(channel, { content: menu.content || null, components: [row] });
+  await require('../queue').send(channel, rolePanel([row]));
 }
 
 // 🔘 Mode boutons : un clic = activation/désactivation d'un seul rôle
@@ -2083,7 +2165,15 @@ async function sweepInactiveTickets(botId, entry, now = new Date()) {
             store.closedTickets.add(channel.id, botId, row.guild_id);
             store.openTickets.update(channel.id, { closed_at: now.toISOString(), warned_inactive: 0 });
             bumpTicketStats(row.guild_id, 0, -1);
-            await channel.send({ content: i18n.t(lang, 'ticket_auto_closed') }).catch(() => {});
+            const autoClosedPanel = ui.panel({
+              variant: 'danger',
+              title: '⏰ Ticket fermé automatiquement',
+              description: i18n.t(lang, 'ticket_auto_closed'),
+              fields: [{ name: '⌛ Motif', value: 'Aucune activité pendant 2 heures.', inline: true }, { name: '📄 Suite', value: 'Le ticket pourra être supprimé automatiquement après le délai prévu.', inline: true }],
+              footer: `Hoxera · Ticket #${row.number} · Fermeture automatique`,
+            });
+            autoClosedPanel.content = i18n.t(lang, 'ticket_auto_closed');
+            await channel.send(autoClosedPanel).catch(() => {});
             try {
               await logging.log(botId, guild, {
                 title: '⏰ Ticket fermé automatiquement (2 h sans activité)', color: '#FEE75C',
@@ -2096,7 +2186,15 @@ async function sweepInactiveTickets(botId, entry, now = new Date()) {
           } else if (inactiveMin >= INACTIVE_CLOSE_MIN - INACTIVE_WARN_BEFORE_MIN && !row.warned_inactive) {
             // Rappel 10 min avant la fermeture
             store.openTickets.update(channel.id, { warned_inactive: 1 });
-            await channel.send({ content: i18n.t(lang, 'ticket_auto_warn') }).catch(() => {});
+            const autoWarnPanel = ui.panel({
+              variant: 'warning',
+              title: '⚠️ Ticket bientôt fermé',
+              description: i18n.t(lang, 'ticket_auto_warn'),
+              fields: [{ name: '⏳ Inactivité', value: 'Le ticket sera fermé si aucune réponse n’arrive.', inline: true }, { name: '💬 Action', value: 'Un nouveau message remet le délai à zéro.', inline: true }],
+              footer: `Hoxera · Ticket #${row.number} · Rappel automatique`,
+            });
+            autoWarnPanel.content = i18n.t(lang, 'ticket_auto_warn');
+            await channel.send(autoWarnPanel).catch(() => {});
           }
         } else {
           // Ticket FERMÉ : suppression 24 h après
@@ -2108,7 +2206,15 @@ async function sweepInactiveTickets(botId, entry, now = new Date()) {
             await sendTranscriptDm(entry.client, guild, channel.name || '', t);
             store.openTickets.remove(channel.id);
             try { store.advancedTickets.unbindChannel(channel.id); } catch {}
-            await channel.send({ content: i18n.t(lang, 'ticket_auto_deleted') }).catch(() => {});
+            const autoDeletedPanel = ui.panel({
+              variant: 'danger',
+              title: '🗑️ Ticket supprimé automatiquement',
+              description: i18n.t(lang, 'ticket_auto_deleted'),
+              fields: [{ name: '📄 Transcription', value: 'Elle a été préparée et envoyée au créateur si ses MP sont ouverts.', inline: true }],
+              footer: `Hoxera · Ticket #${row.number} · Suppression automatique`,
+            });
+            autoDeletedPanel.content = i18n.t(lang, 'ticket_auto_deleted');
+            await channel.send(autoDeletedPanel).catch(() => {});
             setTimeout(() => { channel.delete('Ticket fermé depuis plus de 24 h').catch(() => {}); }, 1500);
             try {
               await logging.log(botId, guild, {

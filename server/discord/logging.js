@@ -48,7 +48,9 @@ async function log(botId, guild, { title, description = '', color = '#5865F2', f
     if (!channel || !channel.send) return;
     const embed = new EmbedBuilder()
       .setColor(color)
+      .setAuthor({ name: `Hoxera · ${String(guild.name || 'Journal du serveur').slice(0, 180)}` })
       .setTitle(title.slice(0, 256))
+      .setFooter({ text: String(footer || 'Journal automatique · Hoxera').slice(0, 2048) })
       .setTimestamp();
     if (description) embed.setDescription(String(description).slice(0, 1024));
     for (const f of fields.slice(0, 8)) {
