@@ -16,6 +16,7 @@ const store = require('../db');
 const crypto = require('crypto');
 const logging = require('./logging');
 const ui = require('./ui');
+const { canConfigureGuild } = require('./permissions');
 
 // 📊 Statistiques de tickets (affichées dans le dashboard)
 function bumpTicketStats(guildId, totalDelta, openDelta) {
@@ -504,11 +505,7 @@ function isStaff(botId, interaction) {
   const guild = interaction.guild;
   const member = interaction.member;
   if (!guild || !member) return false;
-  try {
-    if (guild.ownerId === interaction.user.id) return true;
-    if (member.permissions && typeof member.permissions.has === 'function'
-      && member.permissions.has(PermissionFlagsBits.ManageGuild)) return true;
-  } catch {}
+  if (canConfigureGuild(guild, member, interaction.user && interaction.user.id)) return true;
   const roles = staffRolesForTicket(botId, guild, interaction.channel);
   if (!roles.length) return false;
   const memberRoles = (member.roles && member.roles.cache) ? member.roles.cache : null;
@@ -1871,6 +1868,9 @@ function textModal(botId, uid, title, label, placeholder, required, maxLen) {
 }
 
 async function startTypesWizard(botId, interaction) {
+  if (!canConfigureGuild(interaction.guild, interaction.member, interaction.user && interaction.user.id)) {
+    return interaction.reply({ content: '⛔ Seul le propriétaire du serveur ou un membre ayant la permission Discord « Administrateur » peut configurer les types de tickets.', ephemeral: true });
+  }
   const state = {
     botId, guildId: interaction.guild.id, userId: interaction.user.id,
     step: 'pick', current: null, modal: null, startedAt: Date.now(),
@@ -1897,6 +1897,9 @@ async function startTypesWizard(botId, interaction) {
 }
 
 async function handleTypesWizardInteraction(botId, interaction) {
+  if (!canConfigureGuild(interaction.guild, interaction.member, interaction.user && interaction.user.id)) {
+    return interaction.reply({ content: '⛔ Ton accès de configuration a été retiré. Seul le propriétaire ou un membre ayant la permission Discord « Administrateur » peut continuer.', ephemeral: true });
+  }
   const parts = String(interaction.customId || '').split(':');
   const uid = parts[2];
   if (!uid || uid !== interaction.user.id) return;

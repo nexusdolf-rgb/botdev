@@ -7,6 +7,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const store = require('./db');
 const botManager = require('./discord/botManager');
+const { oauthGuildCanConfigure, accessKind } = require('./discord/permissions');
 const { MODULES, CMD_DEFS, enabledModules, enabledCommandNames } = require('./discord/premade');
 const { EVENT_DEFS, eventsState } = require('./discord/events');
 
@@ -258,11 +259,8 @@ async function userCanManageGuild(req, guildId) {
   const user = store.users.findById(req.userId);
   if (!user || !user.discord_id) return false;
   const guilds = store.users.discordGuilds(req.userId);
-  const g = guilds.find((x) => x.id === guildId);
-  if (!g) return false;
-  if (g.owner) return true;
-  const perms = Number(g.permissions) || 0;
-  return (perms & 0x20) !== 0 || (perms & 0x8) !== 0;
+  const g = guilds.find((x) => String(x.id) === String(guildId));
+  return oauthGuildCanConfigure(g);
 }
 
 router.get('/discord/guilds', requireAuth, async (req, res) => {
@@ -275,17 +273,16 @@ router.get('/discord/guilds', requireAuth, async (req, res) => {
     if (!entry.client.isReady()) continue;
     for (const g of entry.client.guilds.cache.values()) botGuilds.add(g.id);
   }
-  const list = guilds.map((g) => {
-    const perms = Number(g.permissions) || 0;
-    return {
-      id: g.id,
-      name: g.name,
-      owner: !!g.owner,
-      canManage: !!g.owner || (perms & 0x20) !== 0 || (perms & 0x8) !== 0,
-      icon: g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png` : '',
-      hasBot: botGuilds.has(g.id),
-    };
-  });
+  const list = guilds.map((g) => ({
+    id: g.id,
+    name: g.name,
+    owner: !!g.owner,
+    canManage: oauthGuildCanConfigure(g),
+    canConfigure: oauthGuildCanConfigure(g),
+    access: accessKind(g),
+    icon: g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png` : '',
+    hasBot: botGuilds.has(g.id),
+  }));
   res.json({ guilds: list, discord: { username: user.discord_username, avatar: user.discord_avatar } });
 });
 
@@ -307,8 +304,9 @@ function getOwnBot(req, res) {
 }
 
 // Hoxera est un bot UNIQUE et public : l'accès n'est plus lié à la
-// « propriété » du bot (legacy multi-utilisateurs), mais aux permissions
-// de l'utilisateur sur CHAQUE serveur (userCanManageGuild).
+// « propriété » du bot (legacy multi-utilisateurs), mais à l'autorisation
+// de configuration de l'utilisateur sur CHAQUE serveur (propriétaire ou
+// permission Discord « Administrateur »).
 function getAnyBot(req, res) {
   const bot = store.bots.get(Number(req.params.id));
   if (!bot) {
@@ -543,7 +541,7 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) {
-    return res.status(403).json({ error: 'Tu dois être propriétaire ou avoir la permission « Gérer le serveur » sur ce serveur Discord.' });
+    return res.status(403).json({ error: 'Tu dois être propriétaire du serveur ou avoir la permission Discord « Administrateur ».' });
   }
   const entry = botManager.clients.get(bot.id);
   const dGuild = entry && entry.client.isReady() ? entry.client.guilds.cache.get(guildId) : null;

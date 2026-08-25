@@ -40,7 +40,7 @@ Dashboard.mount = async (shell, bot) => {
     content.innerHTML = `
       <div class="dash-card" style="max-width:560px;margin:20px auto">
         <h3>🔗 Lie ton compte Discord</h3>
-        <div class="desc">Pour configurer tes serveurs depuis le dashboard (comme DraftBot), connecte ton compte Discord. On vérifiera automatiquement tes serveurs et tes permissions.</div>
+        <div class="desc">Pour configurer tes serveurs depuis le dashboard (comme DraftBot), connecte ton compte Discord. On vérifiera automatiquement tes serveurs et ta permission Discord « Administrateur ».</div>
         <button class="dash-btn dash-btn-primary" id="d-link">🎮 Lier mon compte Discord</button>
       </div>`;
     content.querySelector('#d-link').onclick = async () => {
@@ -135,7 +135,7 @@ Dashboard.serverPicker = () => {
     const g = guilds.find((x) => x.id === e.target.value);
     if (!g) return;
     if (!g.hasBot) { App.openInvite(Dashboard.state.bot.invite_url); App.toast('Ajoute le bot sur ce serveur pour le configurer !'); return; }
-    if (!g.canManage) { App.toast('Lecture seule : il te faut la permission « Gérer le serveur ».', 'error'); return; }
+    if (!g.canManage) { App.toast('Lecture seule : il te faut la permission Discord « Administrateur » ou être propriétaire du serveur.', 'error'); return; }
     await Dashboard.selectGuild(g.id);
   };
   return pick;
@@ -385,7 +385,7 @@ Dashboard.renderServerGrid = (content) => {
       </button>`);
     card.onclick = () => {
       if (!g.hasBot) { App.openInvite(Dashboard.state.bot.invite_url); App.toast('Ajoute le bot puis reviens — le serveur sera configurable !'); return; }
-      if (!g.canManage) { App.toast('Il te faut la permission « Gérer le serveur ».', 'error'); return; }
+      if (!g.canManage) { App.toast('Il te faut la permission Discord « Administrateur » ou être propriétaire du serveur.', 'error'); return; }
       Dashboard.selectGuild(g.id);
     };
     grid.appendChild(card);

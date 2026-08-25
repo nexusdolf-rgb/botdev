@@ -10,6 +10,7 @@ const {
 } = require('discord.js');
 const store = require('../db');
 const logging = require('./logging');
+const { canConfigureGuild } = require('./permissions');
 const tzUtil = require('../tz');
 const ui = require('./ui');
 
@@ -56,7 +57,7 @@ function trackMessage(botId, message) {
 
 // ---------------------- Helpers ----------------------
 function isAdmin(member) {
-  return !!member && (member.permissions.has(PermissionsBitField.Flags.ManageGuild) || member.id === member.guild?.ownerId);
+  return canConfigureGuild(member && member.guild, member, member && member.id);
 }
 
 function dayKey() {
@@ -93,7 +94,7 @@ function helpFor(key) {
 
 // ---------------------- Définitions des commandes slash ----------------------
 function buildExtraPayloads() {
-  const admin = PermissionsBitField.Flags.ManageGuild.toString();
+  const admin = PermissionsBitField.Flags.Administrator.toString();
   return [
     // ---------- Social ----------
     {

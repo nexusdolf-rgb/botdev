@@ -3,21 +3,20 @@
 //   /botprofile  → identité du bot sur CE serveur (nom, avatar, bannière, bio, couleur)
 //   /modlogs     → salon des journaux de modération
 //   /blacklist   → liste noire de mots
-// Permissions : propriétaire du serveur (botprofile) / propriétaire ou admins (modlogs, blacklist)
+// Permissions : propriétaire ou Administrateur sur le serveur concerné.
 // ============================================================
-const { PermissionsBitField, EmbedBuilder, AttachmentBuilder } = require('discord.js');
+const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
 const store = require('../db');
 const assets = require('../assets');
 const identity = require('./identity');
+const { canConfigureGuild } = require('./permissions');
 
 function isOwner(interaction) {
   return interaction.guild.ownerId === interaction.user.id;
 }
 
 function isAdmin(interaction) {
-  return interaction.member && interaction.member.permissions
-    && typeof interaction.member.permissions.has === 'function'
-    && interaction.member.permissions.has(PermissionsBitField.Flags.Administrator);
+  return canConfigureGuild(interaction.guild, interaction.member, interaction.user && interaction.user.id);
 }
 
 async function handleProfileCommand(botId, interaction) {
@@ -30,8 +29,8 @@ async function handleProfileCommand(botId, interaction) {
   const botRecord = store.bots.get(botId);
 
   if (interaction.commandName === 'botprofile') {
-    if (!isOwner(interaction)) {
-      return interaction.reply({ content: '⛔ Seul le **propriétaire du serveur** peut personnaliser l\'identité du bot.', ephemeral: true });
+    if (!isAdmin(interaction)) {
+      return interaction.reply({ content: '⛔ Seul le **propriétaire du serveur** ou un membre ayant la permission Discord **Administrateur** peut personnaliser l\'identité du bot.', ephemeral: true });
     }
     if (sub === 'setup') {
       const { startProfileWizard } = require('./profileWizard');

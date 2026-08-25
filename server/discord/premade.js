@@ -9,6 +9,7 @@ const giveawayEngine = require('./giveaway');
 const tasks = require('./tasks');
 const store = require('../db');
 const ui = require('./ui');
+const { canConfigureGuild } = require('./permissions');
 
 const MODULES = {
   moderation: {
@@ -63,10 +64,10 @@ const CMD_DEFS = {
   rank: { label: 'rank', desc: 'Ton niveau, ton XP et ton rang' },
   levels: { label: 'levels', desc: 'Le classement des niveaux du serveur' },
   invite: { label: 'invite', desc: 'Le lien pour inviter le bot' },
-  lang: { label: 'lang', desc: 'Choisis la langue du bot sur ce serveur (fr/en)', perms: [PermissionsBitField.Flags.ManageGuild] },
-  giveaway: { label: 'giveaway', desc: 'Lancer un giveaway avec tirage automatique', perms: [PermissionsBitField.Flags.ManageGuild] },
+  lang: { label: 'lang', desc: 'Choisis la langue du bot sur ce serveur (fr/en)', perms: [PermissionsBitField.Flags.Administrator] },
+  giveaway: { label: 'giveaway', desc: 'Lancer un giveaway avec tirage automatique', perms: [PermissionsBitField.Flags.Administrator] },
   suggest: { label: 'suggest', desc: 'Proposer une suggestion (votes 👍👎)' },
-  suggestions: { label: 'suggestions', desc: 'Configurer le salon des suggestions', perms: [PermissionsBitField.Flags.ManageGuild] },
+  suggestions: { label: 'suggestions', desc: 'Configurer le salon des suggestions', perms: [PermissionsBitField.Flags.Administrator] },
   shop: { label: 'shop', desc: 'Voir la boutique du serveur' },
   buy: { label: 'buy', desc: 'Acheter un article avec tes coins' },
   pay: { label: 'pay', desc: 'Transférer des coins à un membre' },
@@ -318,6 +319,19 @@ function optionType(t) {
   }
 }
 
+function hasPremadeCommandPermission(def, guild, member) {
+  if (!def || !def.perms || !def.perms.length) return true;
+  // Les commandes déclarées avec Administrator sont des commandes de
+  // configuration : propriétaire et Administrator sont autorisés. Les
+  // commandes qui demandent une permission métier (Kick, ManageRoles, etc.)
+  // restent contrôlées par cette permission précise.
+  const administrator = String(PermissionsBitField.Flags.Administrator);
+  const isConfigurationCommand = def.perms.some((p) => String(p) === administrator);
+  if (isConfigurationCommand && canConfigureGuild(guild, member, member && member.id)) return true;
+  return !!(member && member.permissions && typeof member.permissions.has === 'function'
+    && member.permissions.has(def.perms));
+}
+
 // ---------------------- Gestion préfixe ----------------------
 async function handlePremadePrefix(botId, entry, message, cmdName, args) {
   try {
@@ -326,8 +340,8 @@ async function handlePremadePrefix(botId, entry, message, cmdName, args) {
     if (!enabled.includes(cmd)) return false;
     const def = CMD_DEFS[cmd];
 
-    if (def.perms && message.member && message.member.permissions && !message.member.permissions.has(def.perms)) {
-      await message.channel.send('⛔ Tu n\'as pas la permission d\'utiliser cette commande.').catch(() => {});
+    if (!hasPremadeCommandPermission(def, message.guild, message.member)) {
+      await message.channel.send('⛔ Cette commande est réservée au propriétaire du serveur ou à un membre ayant la permission Discord « Administrateur ».').catch(() => {});
       return true;
     }
 
@@ -347,9 +361,9 @@ async function handlePremadeSlash(botId, entry, interaction) {
     const cmd = interaction.commandName.toLowerCase();
     if (!enabled.includes(cmd)) return;
     const def = CMD_DEFS[cmd];
-    if (def.perms && !interaction.member.permissions.has(def.perms)) {
+    if (!hasPremadeCommandPermission(def, interaction.guild, interaction.member)) {
       // permissions manquantes → refus propre
-      return interaction.reply({ content: '⛔ Tu n\'as pas la permission d\'utiliser cette commande.', ephemeral: true });
+      return interaction.reply({ content: '⛔ Cette commande est réservée au propriétaire du serveur ou à un membre ayant la permission Discord « Administrateur ».', ephemeral: true });
     }
     await execute(botId, entry, cmd, { interaction, args: '' });
   } catch (e) {
@@ -993,7 +1007,7 @@ function argsMatch(str, regex) {
 // ============================================================
 const HELP_DETAILS = {
   ticket: ['🎫 Tickets', 'Le système de tickets complet : un bouton dans un salon, chaque clic crée un salon privé réservé au membre et au staff.',
-    '`/ticket types setup` — **Assistant interactif des types** : choisis un type, renomme-le, choisis son emoji, sa catégorie, **ajoute AUTANT de rôles staff que tu veux** (sélecteur de rôle, répétable) ou retire-les, supprime-le avec confirmation\n`/ticket types add Nom` — Ajouter/renommer un **type de ticket** (option `staffrole` pour un rôle — pour en mettre plusieurs : setup) (emoji, catégorie et rôle staff dédiés en options) — le panneau affiche un menu déroulant de types\n`/ticket types remove Nom` — Supprimer un type\n`/ticket types list` — Voir les types\n`/ticket setup` — **Assistant avec menus de sélection** : nom → catégorie → salon → rôle staff\n`/ticket panel` — Envoyer le panneau\n`/ticket channel #salon` — Changer le salon\n`/ticket role @Staff` — Changer le rôle staff\n`/ticket category Nom` — Changer la catégorie\n`/ticket button Texte` — Changer le texte du bouton\n`/ticket message Texte` — Changer le message\n`/ticket config` — Voir la configuration\n`/ticket close` — **Verrouiller** un ticket (staff, réouvrable avec 🔓)\n`/ticket delete` — **Supprimer** un ticket (staff) — 📄 la **transcription** est envoyée en MP au créateur à ce moment\n`/ticket add @membre` / `/ticket remove @membre` — Gérer l\'accès au ticket (staff)\n\n🔒 Configuration réservée au **propriétaire du serveur** · gestion réservée au **staff**\n📄 La transcription part à la **suppression** (pas à la fermeture).\n\n🗂️ Exemples de types : Candidature staff, Ticket contre admin, Signaler un bug, Partenariat…'],
+    '`/ticket types setup` — **Assistant interactif des types** : choisis un type, renomme-le, choisis son emoji, sa catégorie, **ajoute AUTANT de rôles staff que tu veux** (sélecteur de rôle, répétable) ou retire-les, supprime-le avec confirmation\n`/ticket types add Nom` — Ajouter/renommer un **type de ticket** (option `staffrole` pour un rôle — pour en mettre plusieurs : setup) (emoji, catégorie et rôle staff dédiés en options) — le panneau affiche un menu déroulant de types\n`/ticket types remove Nom` — Supprimer un type\n`/ticket types list` — Voir les types\n`/ticket setup` — **Assistant avec menus de sélection** : nom → catégorie → salon → rôle staff\n`/ticket panel` — Envoyer le panneau\n`/ticket channel #salon` — Changer le salon\n`/ticket role @Staff` — Changer le rôle staff\n`/ticket category Nom` — Changer la catégorie\n`/ticket button Texte` — Changer le texte du bouton\n`/ticket message Texte` — Changer le message\n`/ticket config` — Voir la configuration\n`/ticket close` — **Verrouiller** un ticket (staff, réouvrable avec 🔓)\n`/ticket delete` — **Supprimer** un ticket (staff) — 📄 la **transcription** est envoyée en MP au créateur à ce moment\n`/ticket add @membre` / `/ticket remove @membre` — Gérer l\'accès au ticket (staff)\n\n🔒 Configuration réservée au **propriétaire du serveur** ou aux membres ayant la permission **Administrateur** · gestion réservée au **staff**\n📄 La transcription part à la **suppression** (pas à la fermeture).\n\n🗂️ Exemples de types : Candidature staff, Ticket contre admin, Signaler un bug, Partenariat…'],
   ping: ['🔧 Utilitaire', 'Affiche la latence du bot.', '`/ping`', '`/ping` → 🏓 Pong ! Latence : 42 ms'],
   avatar: ['🔧 Utilitaire', 'Affiche l\'avatar d\'un membre.', '`/avatar @membre`', '`/avatar @Hoxera`'],
   userinfo: ['🔧 Utilitaire', 'Informations sur un membre (ID, date de création, arrivée).', '`/userinfo @membre`', '`/userinfo`'],
@@ -1028,7 +1042,7 @@ const HELP_DETAILS = {
   temprole: ['⏳ Rôles temporaires', 'Donne un rôle pour une durée limitée — retiré automatiquement.', '`/temprole @membre @rôle 2h`', '`/temprole @Membre @VIP 1d`'],
   sanction: ['⚖️ Sanctions', 'Applique une sanction prédéfinie (configurée dans le dashboard).', '`/sanction @membre nom_de_la_sanction`'],
   botprofile: ['🤖 Identité du bot', 'Personnalise le bot sur CE serveur : nom, avatar, bannière (depuis ta galerie), bio et couleur. Le bot s\'exprime avec cette identité dans ses messages ici.',
-    '`/botprofile setup` — **Assistant pas à pas** : nom → bio → **sélecteur de couleurs** → avatar (**📱 ta galerie s\'ouvre directement**, envoie la photo) → bannière (galerie aussi) → ✅ Enregistrer (boutons Suivant/Retour/Annuler)\n`/botprofile view` — voir le profil\n`/botprofile set nom|bio|couleur` — nom, bio, couleur\n`/botprofile avatar` — 📱 la galerie s\'ouvre automatiquement\n`/botprofile banner` — 📱 galerie aussi\n`/botprofile reset` — revenir à l\'identité globale\n\n🔒 Réservé au **propriétaire du serveur**'],
+    '`/botprofile setup` — **Assistant pas à pas** : nom → bio → **sélecteur de couleurs** → avatar (**📱 ta galerie s\'ouvre directement**, envoie la photo) → bannière (galerie aussi) → ✅ Enregistrer (boutons Suivant/Retour/Annuler)\n`/botprofile view` — voir le profil\n`/botprofile set nom|bio|couleur` — nom, bio, couleur\n`/botprofile avatar` — 📱 la galerie s\'ouvre automatiquement\n`/botprofile banner` — 📱 galerie aussi\n`/botprofile reset` — revenir à l\'identité globale\n\n🔒 Réservé au **propriétaire du serveur** ou à un membre ayant la permission **Administrateur**'],
   modlogs: ['📋 Journaux', 'Un salon où le bot trace tout : modération, tickets, auto-mod, arrivées et départs.',
     '`/modlogs set #salon` — activer\n`/modlogs view` — voir\n`/modlogs off` — désactiver'],
   blacklist: ['🔇 Liste noire', 'Des mots interdits : les messages qui les contiennent sont supprimés automatiquement.',
@@ -1082,7 +1096,7 @@ function buildHelpEmbed(botId, record, client, guild, requested) {
       '`/ticket types setup` — **Assistant des types** : renommer, emoji, catégorie, **plusieurs rôles staff**, suppression',
       '`/ticket panel` — Envoyer le panneau · `/ticket config` — Voir la configuration',
       '`/ticket close` — Verrouiller · `/ticket delete` — Supprimer (transcription en MP) · `/ticket add|remove @membre`',
-      '*🔒 Configuration réservée au propriétaire du serveur · gestion réservée aux rôles staff (plusieurs par type possibles)*',
+      '*🔒 Configuration réservée au propriétaire du serveur ou aux membres ayant la permission Administrateur · gestion réservée aux rôles staff (plusieurs par type possibles)*',
     ].join('\n'),
   });
 

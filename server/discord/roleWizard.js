@@ -16,6 +16,7 @@ const {
 } = require('discord.js');
 const store = require('../db');
 const panels = require('./panels');
+const { canConfigureGuild } = require('./permissions');
 
 const wizards = new Map(); // `${botId}:${guildId}:${userId}` -> state
 const wizardKey = (botId, guildId, userId) => `${botId}:${guildId}:${userId}`;
@@ -160,6 +161,9 @@ function backToEdit(state) {
 async function start(botId, interaction, editId) {
   const uid = interaction.user.id;
   const guild = interaction.guild;
+  if (!canConfigureGuild(guild, interaction.member, uid)) {
+    return interaction.reply({ content: '⛔ Seul le propriétaire du serveur ou un membre ayant la permission Discord « Administrateur » peut configurer les menus de rôles.', ephemeral: true });
+  }
 
   if (editId === 'pick') {
     const menus = store.roleMenus.all(botId, guild.id);
@@ -281,6 +285,9 @@ async function finish(botId, state, interaction) {
 async function handleWizardInteraction(botId, interaction) {
   const cid = String(interaction.customId || '');
   if (!cid.startsWith('rls:')) return false;
+  if (!canConfigureGuild(interaction.guild, interaction.member, interaction.user && interaction.user.id)) {
+    return interaction.reply({ content: '⛔ Ton accès de configuration a été retiré. Seul le propriétaire ou un membre ayant la permission Discord « Administrateur » peut continuer.', ephemeral: true });
+  }
   const parts = cid.split(':');
   const uid = parts[3];
   if (!uid || uid !== interaction.user.id) {

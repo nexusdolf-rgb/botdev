@@ -12,6 +12,7 @@ const {
 const store = require('../db');
 const assets = require('../assets');
 const identity = require('./identity');
+const { canConfigureGuild } = require('./permissions');
 
 const WIZARD_TTL = 10 * 60000;
 const wizards = new Map();
@@ -213,8 +214,8 @@ async function finalize(state) {
 
 // Démarrage : modale du nom (première réponse de l'interaction)
 async function startProfileWizard(botId, interaction) {
-  if (interaction.guild.ownerId !== interaction.user.id) {
-    return interaction.reply({ content: '⛔ Seul le **propriétaire du serveur** peut personnaliser le bot.', ephemeral: true });
+  if (!canConfigureGuild(interaction.guild, interaction.member, interaction.user && interaction.user.id)) {
+    return interaction.reply({ content: '⛔ Seul le propriétaire du serveur ou un membre ayant la permission Discord « Administrateur » peut personnaliser le bot.', ephemeral: true });
   }
   const existing = store.botProfiles.get(botId, interaction.guild.id) || {};
   const botRecord = store.bots.get(botId);
@@ -240,8 +241,8 @@ async function handleProfileWizardInteraction(botId, interaction) {
   if (!uid || uid !== interaction.user.id) return;
   const state = wizards.get(wKey(botId, interaction.guild.id, uid));
   if (!state) return interaction.reply({ content: '⏰ Assistant expiré. Relance `/botprofile setup`.', ephemeral: true });
-  if (interaction.guild.ownerId !== interaction.user.id) {
-    return interaction.reply({ content: '⛔ Seul le **propriétaire du serveur** peut personnaliser le bot.', ephemeral: true });
+  if (!canConfigureGuild(interaction.guild, interaction.member, interaction.user && interaction.user.id)) {
+    return interaction.reply({ content: '⛔ Ton accès de configuration a été retiré. Seul le propriétaire ou un membre ayant la permission Discord « Administrateur » peut continuer.', ephemeral: true });
   }
   if (Date.now() - state.startedAt > WIZARD_TTL) {
     wizards.delete(wKey(botId, interaction.guild.id, uid));

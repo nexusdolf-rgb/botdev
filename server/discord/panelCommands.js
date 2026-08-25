@@ -4,10 +4,11 @@
 //   (nom → catégorie → salon → rôle staff) — on ne tape rien,
 //   on sélectionne dans les menus déroulants, puis « Suivant ».
 //   /roles ...    → menus de rôles
-// Réservées au propriétaire du serveur (tickets) / propriétaire ou admins (rôles)
+// Réservées au propriétaire du serveur ou aux membres ayant la permission
+// Discord native « Administrateur » (tickets et rôles).
 // ============================================================
 const {
-  EmbedBuilder, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle,
+  EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle,
   ModalBuilder, TextInputBuilder, TextInputStyle,
   StringSelectMenuBuilder, StringSelectMenuOptionBuilder,
   ChannelSelectMenuBuilder, RoleSelectMenuBuilder,
@@ -16,6 +17,7 @@ const {
 const store = require('../db');
 const { sendTicketPanel, sendRoleMenu, findChannelInGuild, resolveRole, parseTypes, staffForTicket, startTypesWizard, handleTicketDeleteAsk, safeEmoji } = require('./panels');
 const logging = require('./logging');
+const { canConfigureGuild } = require('./permissions');
 
 const DEFAULT_CFG = {
   name: '',
@@ -38,11 +40,7 @@ function ticketStaff(botId, interaction) {
   const guild = interaction.guild;
   const member = interaction.member;
   if (!guild || !member) return false;
-  try {
-    if (guild.ownerId === interaction.user.id) return true;
-    if (member.permissions && typeof member.permissions.has === 'function'
-      && member.permissions.has(PermissionsBitField.Flags.ManageGuild)) return true;
-  } catch {}
+  if (canConfigureGuild(guild, member, interaction.user && interaction.user.id)) return true;
   const cfg = store.tickets.get(botId, guild.id) || {};
   if (cfg.support_role) {
     const role = resolveRole(guild, cfg.support_role);
@@ -163,6 +161,9 @@ function wizardEmbed(state) {
 }
 
 async function startWizard(botId, interaction) {
+  if (!canConfigureGuild(interaction.guild, interaction.member, interaction.user && interaction.user.id)) {
+    return interaction.reply({ content: '⛔ Seul le propriétaire du serveur ou un membre ayant la permission Discord « Administrateur » peut configurer les tickets.', ephemeral: true });
+  }
   const key = wizardKey(botId, interaction.guild.id, interaction.user.id);
   const values = {
     name: 'Support',
@@ -185,6 +186,9 @@ async function startWizard(botId, interaction) {
 
 // Appelé depuis dispatchPanels pour les boutons, modales et menus de l'assistant
 async function handleWizardInteraction(botId, interaction) {
+  if (!canConfigureGuild(interaction.guild, interaction.member, interaction.user && interaction.user.id)) {
+    return interaction.reply({ content: '⛔ Ton accès de configuration a été retiré. Seul le propriétaire ou un membre ayant la permission Discord « Administrateur » peut continuer.', ephemeral: true });
+  }
   // --- Menus de sélection (chaîne / salon / rôle) ---
   if (interaction.isStringSelectMenu() || interaction.isChannelSelectMenu() || interaction.isRoleSelectMenu()) {
     const parts = (interaction.customId || '').split(':');
@@ -327,30 +331,29 @@ async function handlePanelCommand(botId, interaction) {
   }
   const member = interaction.member;
   const guild = interaction.guild;
-  const isOwner = guild.ownerId === interaction.user.id;
-  const isAdmin = member.permissions.has(PermissionsBitField.Flags.Administrator);
+  const canConfigure = canConfigureGuild(guild, member, interaction.user && interaction.user.id);
 
   const sub = interaction.options.getSubcommand();
   const group = (typeof interaction.options.getSubcommandGroup === 'function') ? interaction.options.getSubcommandGroup() : null;
   // Système de tickets :
-  //  - configuration (dont les types) : propriétaire du serveur uniquement
-  //  - gestion (close/add/remove) : propriétaire, admin OU staff (rôle du type)
+  //  - configuration (dont les types) : propriétaire ou Administrateur
+  //  - gestion (close/add/remove) : propriétaire, Administrateur ou rôle staff
   if (interaction.commandName === 'ticket') {
     if (group === 'types' || sub === 'type') {
-      if (!isOwner) {
-        return interaction.reply({ content: '⛔ Seul le **propriétaire du serveur** peut configurer les types de tickets.', ephemeral: true });
+      if (!canConfigure) {
+        return interaction.reply({ content: '⛔ Seul le **propriétaire du serveur** ou un membre ayant la permission Discord **Administrateur** peut configurer les types de tickets.', ephemeral: true });
       }
     } else if (['close', 'add', 'remove', 'delete'].includes(sub)) {
-      if (!isOwner && !isAdmin && !ticketStaff(botId, interaction) && !staffForTicket(botId, interaction)) {
-        return interaction.reply({ content: '🔒 Seul le **staff** (rôle support) ou les administrateurs peuvent gérer les tickets.', ephemeral: true });
+      if (!canConfigure && !ticketStaff(botId, interaction) && !staffForTicket(botId, interaction)) {
+        return interaction.reply({ content: '🔒 Seul le **staff** (rôle support), le propriétaire ou un administrateur peut gérer les tickets.', ephemeral: true });
       }
-    } else if (!isOwner) {
-      return interaction.reply({ content: '⛔ Seul le **propriétaire du serveur** peut configurer le système de tickets.', ephemeral: true });
+    } else if (!canConfigure) {
+      return interaction.reply({ content: '⛔ Seul le **propriétaire du serveur** ou un membre ayant la permission Discord **Administrateur** peut configurer le système de tickets.', ephemeral: true });
     }
     return handleTicket(botId, sub, group, interaction, guild);
   }
   // Menus de rôles : propriétaire ou administrateurs
-  if (!isOwner && !isAdmin) {
+  if (!canConfigure) {
     return interaction.reply({ content: '⛔ Réservé au propriétaire ou aux administrateurs.', ephemeral: true });
   }
   return handleRoles(botId, sub, interaction, guild);
