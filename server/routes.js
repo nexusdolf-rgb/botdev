@@ -590,6 +590,7 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
     prefix: '', warn_limit: 0, warn_action: 'none',
     xp_enabled: 1, xp_min: 10, xp_max: 25, xp_cooldown: 60, xp_message: '', xp_channel: '',
     am_enabled: 0, am_links: 1, am_caps: 1, am_mentions: 5, am_spam: 5,
+    am_mode: 'enforce', am_rule_actions: '{}', am_exempt_roles: '[]', am_exempt_channels: '[]', am_exempt_users: '[]',
     am_warn_limit: 2, am_warn_action: 'timeout', am_warn_timeout_min: 10,
     log_channel: '',
     birthday_channel: '', birthday_role: '', log_events: '',
@@ -784,12 +785,59 @@ router.put('/bots/:id/guilds/:guildId/xp', requireAuth, async (req, res) => {
 });
 
 // Auto-modération par serveur
+const AUTOMOD_RULES = ['links', 'caps', 'mentions', 'words', 'spam'];
+const AUTOMOD_RULE_ACTIONS = ['inherit', 'log', 'delete', 'warn', 'timeout', 'kick', 'ban'];
+
+function payloadList(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== 'string') return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed;
+  } catch {}
+  return value.split(/[,\n]/).map((x) => x.trim()).filter(Boolean);
+}
+
+function normalizeAutomodList(value, max, maxLength) {
+  return [...new Set(payloadList(value)
+    .map((entry) => String(entry || '').trim().slice(0, maxLength))
+    .filter(Boolean))].slice(0, max);
+}
+
+function normalizeAutomodUsers(value) {
+  return [...new Set(payloadList(value).map((entry) => {
+    const id = String(entry || '').replace(/[<@!>]/g, '').trim();
+    return /^\\d{15,21}$/.test(id) ? id : '';
+  }).filter(Boolean))].slice(0, 100);
+}
+
+function normalizeAutomodRuleActions(value) {
+  let source = value;
+  if (typeof source === 'string') {
+    try { source = JSON.parse(source); } catch { source = {}; }
+  }
+  const out = {};
+  if (!source || typeof source !== 'object' || Array.isArray(source)) return out;
+  for (const rule of AUTOMOD_RULES) {
+    const action = String(source[rule] || 'inherit');
+    if (AUTOMOD_RULE_ACTIONS.includes(action) && action !== 'inherit') out[rule] = action;
+  }
+  return out;
+}
+
 router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
-  const { enabled, links, caps, mentions, spam, ignore_staff, warn_text, timeout_min, warn_limit, warn_action, warn_timeout_min, blacklist } = req.body || {};
+  const body = req.body || {};
+  const { enabled, links, caps, mentions, spam, ignore_staff, warn_text, timeout_min, warn_limit, warn_action, warn_timeout_min, blacklist } = body;
+  const advancedFields = {};
+  if (body.mode !== undefined) advancedFields.am_mode = body.mode === 'observe' ? 'observe' : 'enforce';
+  if (body.rule_actions !== undefined) advancedFields.am_rule_actions = JSON.stringify(normalizeAutomodRuleActions(body.rule_actions));
+  if (body.exempt_roles !== undefined) advancedFields.am_exempt_roles = JSON.stringify(normalizeAutomodList(body.exempt_roles, 50, 30));
+  if (body.exempt_channels !== undefined) advancedFields.am_exempt_channels = JSON.stringify(normalizeAutomodList(body.exempt_channels, 100, 100));
+  if (body.exempt_users !== undefined) advancedFields.am_exempt_users = JSON.stringify(normalizeAutomodUsers(body.exempt_users));
   store.guildSettings.set(bot.id, guildId, {
     am_enabled: enabled ? 1 : 0,
     am_links: (links === false || links === 0) ? 0 : 1,
@@ -802,6 +850,7 @@ router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) =>
     ...(warn_limit !== undefined ? { am_warn_limit: Math.min(Math.max(parseInt(warn_limit, 10) || 0, 0), 50) } : {}),
     ...(warn_action !== undefined ? { am_warn_action: ['none', 'timeout', 'kick', 'ban'].includes(String(warn_action)) ? String(warn_action) : 'timeout' } : {}),
     ...(warn_timeout_min !== undefined ? { am_warn_timeout_min: Math.min(Math.max(parseInt(warn_timeout_min, 10) || 10, 1), 1440) } : {}),
+    ...advancedFields,
   });
   if (Array.isArray(blacklist)) {
     const words = blacklist.map((w) => String(w).trim().toLowerCase()).filter((w) => w.length >= 2).slice(0, 100);
@@ -810,6 +859,34 @@ router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) =>
     for (const w of words) store.blacklist.add(bot.id, guildId, w);
   }
   res.json({ ok: true });
+});
+
+// 📊 Centre de contrôle Auto-Mod : statistiques agrégées pour le dashboard.
+router.get('/bots/:id/guilds/:guildId/automod/summary', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  res.json(store.automodLogs.summary(bot.id, guildId));
+});
+
+// 🧪 Simulateur sans risque : analyse un texte avec les règles réelles,
+// sans envoyer, supprimer ou sanctionner aucun message Discord.
+router.post('/bots/:id/guilds/:guildId/automod/simulate', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const content = String((req.body || {}).content || '').slice(0, 2000);
+  if (!content.trim()) return res.status(400).json({ error: 'Écris un message à analyser.' });
+  const automod = require('./discord/automod');
+  const result = automod.analyzeContent(bot.id, guildId, content, {
+    channelId: String((req.body || {}).channel_id || '').slice(0, 100),
+    channelName: String((req.body || {}).channel_name || '').slice(0, 100),
+    userId: String((req.body || {}).user_id || '').slice(0, 30),
+    spamCount: Math.min(Math.max(parseInt((req.body || {}).spam_count, 10) || 0, 0), 100),
+  });
+  res.json({ ok: true, content, ...result });
 });
 
 // 📊 Statistiques d'utilisation des commandes (par serveur)

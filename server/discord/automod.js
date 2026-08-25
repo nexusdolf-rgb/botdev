@@ -1,5 +1,5 @@
 // ============================================================
-// BotDev - Auto-modération (par serveur) :
+// BotDev - Auto-modération (par serveur, v3.18 Control Center) :
 //   - suppression des liens (invitations Discord, URL)
 //   - suppression des messages trop en MAJUSCULES
 //   - limite de mentions par message
@@ -31,6 +31,95 @@ function wasAutomodded(messageId) {
 
 function markAutomodded(messageId) {
   recentlyDeleted.set(String(messageId), Date.now());
+}
+
+const AUTOMOD_RULE_ACTIONS = ['inherit', 'log', 'delete', 'warn', 'timeout', 'kick', 'ban'];
+
+function parseList(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== 'string') return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed;
+  } catch {}
+  return value.split(/[,\n]/).map((x) => x.trim()).filter(Boolean);
+}
+
+function ruleActionFor(gs, rule) {
+  let actions = gs && gs.am_rule_actions;
+  if (typeof actions === 'string') {
+    try { actions = JSON.parse(actions || '{}'); } catch { actions = {}; }
+  }
+  const action = actions && typeof actions === 'object' ? String(actions[rule] || 'inherit') : 'inherit';
+  return AUTOMOD_RULE_ACTIONS.includes(action) && action !== 'inherit' ? action : null;
+}
+
+function isAutomodExempt(message, gs) {
+  if (!message || !gs) return false;
+  const userValues = parseList(gs.am_exempt_users).map(String);
+  if (message.author && userValues.includes(String(message.author.id))) return true;
+
+  const channel = message.channel;
+  const channelValues = parseList(gs.am_exempt_channels).map(String).map((x) => x.toLowerCase());
+  if (channel && channelValues.length) {
+    const candidates = [String(channel.id || ''), String(channel.name || ''), channel.name ? `#${channel.name}` : '']
+      .filter(Boolean).map((x) => x.toLowerCase());
+    if (candidates.some((x) => channelValues.includes(x))) return true;
+  }
+
+  const roleValues = parseList(gs.am_exempt_roles).map(String).map((x) => x.toLowerCase());
+  if (roleValues.length && message.member && message.member.roles && message.member.roles.cache) {
+    let roles = [];
+    try {
+      const values = typeof message.member.roles.cache.values === 'function'
+        ? [...message.member.roles.cache.values()]
+        : [];
+      roles = values.flatMap((role) => [String(role.id || ''), String(role.name || '')]);
+    } catch {}
+    if (roles.filter(Boolean).some((x) => roleValues.includes(x.toLowerCase()))) return true;
+  }
+  return false;
+}
+
+// Détection sans effet de bord : le simulateur et le traitement réel utilisent
+// exactement les mêmes règles et le même ordre de priorité.
+function detectContent(botId, guildId, content, gsOverride = null) {
+  const gs = gsOverride || store.guildSettings.get(botId, guildId) || {};
+  const lang = i18n.langForGuild(guildId);
+  const text = String(content || '');
+  if (gs.am_links === 1 && /(discord\.gg\/|discordapp\.com\/invite\/|discord\.com\/invite\/|https?:\/\/)/i.test(text)) {
+    const reasonKey = 'am_reason_link';
+    return { rule: 'links', reasonKey, reason: i18n.t(lang, reasonKey) };
+  }
+  if (gs.am_caps === 1) {
+    const letters = text.match(/[a-zà-ÿ]/gi) || [];
+    const caps = text.match(/[A-ZÀ-Ý]/g) || [];
+    if (letters.length) {
+      const ratio = caps.length / letters.length;
+      const allCapsShort = letters.length >= 5 && caps.length === letters.length;
+      const mostlyCapsLong = text.length > 12 && letters.length >= 8 && ratio > 0.7;
+      if (allCapsShort || mostlyCapsLong) {
+        const reasonKey = 'am_reason_caps';
+        return { rule: 'caps', reasonKey, reason: i18n.t(lang, reasonKey) };
+      }
+    }
+  }
+  if (Number(gs.am_mentions) > 0) {
+    const mentions = (text.match(/<@!?\d+>/g) || []).length;
+    if (mentions > Number(gs.am_mentions)) {
+      const reasonKey = 'am_reason_mentions';
+      return { rule: 'mentions', reasonKey, reason: i18n.t(lang, reasonKey) };
+    }
+  }
+  const words = store.blacklist.all(botId, guildId);
+  if (words.length) {
+    const hit = words.find((word) => blacklistWordMatch(text, word));
+    if (hit) {
+      const reasonKey = 'am_reason_word';
+      return { rule: 'words', reasonKey, reason: i18n.t(lang, reasonKey, { word: hit }) };
+    }
+  }
+  return null;
 }
 
 // Prépare la phrase d'avertissement (texte personnalisé ou modèle traduit)
@@ -68,7 +157,7 @@ async function sendWarn(botId, message, gs, lang, text) {
 }
 
 // Trace l'action de modération dans l'historique du dashboard
-function recordAction(botId, message, reason) {
+function recordAction(botId, message, reason, meta = {}) {
   try {
     store.automodLogs.add(botId, message.guild.id, {
       user_id: message.author.id,
@@ -76,6 +165,9 @@ function recordAction(botId, message, reason) {
       reason,
       content: (message.content || '').slice(0, 500),
       channel_id: message.channel ? message.channel.id : '',
+      rule: meta.rule || '',
+      action: meta.action || '',
+      observed: meta.observed ? 1 : 0,
     });
   } catch { }
 }
@@ -203,6 +295,129 @@ function blacklistWordMatch(content, word) {
   return re.test(content || '');
 }
 
+function analyzeContent(botId, guildId, content, opts = {}) {
+  const gs = store.guildSettings.get(botId, guildId) || {};
+  const result = { enabled: gs.am_enabled === 1, mode: gs.am_mode === 'observe' ? 'observe' : 'enforce', matched: false, exempt: false };
+  if (!result.enabled) return result;
+  const fakeMessage = {
+    author: { id: String(opts.userId || '') },
+    channel: { id: String(opts.channelId || ''), name: String(opts.channelName || '') },
+    member: null,
+  };
+  if (isAutomodExempt(fakeMessage, gs)) return { ...result, exempt: true };
+  let detection = detectContent(botId, guildId, content, gs);
+  // Le spam nécessite un nombre de messages : le simulateur peut fournir ce
+  // compteur sans envoyer de rafale réelle sur Discord.
+  if (!detection && Number(opts.spamCount) > 0 && Number(gs.am_spam) > 0 && Number(opts.spamCount) >= Number(gs.am_spam)) {
+    detection = { rule: 'spam', reasonKey: 'am_reason_spam', reason: i18n.t(i18n.langForGuild(guildId), 'am_reason_spam') };
+  }
+  if (!detection) return result;
+  const configuredAction = ruleActionFor(gs, detection.rule);
+  const action = result.mode === 'observe' ? 'observe' : (configuredAction || 'legacy');
+  return {
+    ...result,
+    matched: true,
+    rule: detection.rule,
+    reason: detection.reason,
+    reasonKey: detection.reasonKey,
+    action,
+    wouldDelete: result.mode !== 'observe' && action !== 'log',
+    wouldWarn: result.mode !== 'observe' && ['legacy', 'warn', 'timeout', 'kick', 'ban'].includes(action),
+  };
+}
+
+// Applique une action choisie dans le Control Center. Quand aucune action
+// personnalisée n'est enregistrée, runAutomod conserve son chemin historique.
+async function applyConfiguredAction(botId, message, detection, opts, gs, lang, serverName, messages = [message]) {
+  const action = ruleActionFor(gs, detection.rule);
+  if (!action) return null;
+  if (gs.am_mode === 'observe') {
+    recordAction(botId, message, detection.reason, { rule: detection.rule, action: 'observe', observed: 1 });
+    try {
+      await logging.log(botId, message.guild, {
+        title: '👀 Auto-modération · observation',
+        description: `Règle détectée sans action : ${detection.reason}`,
+        color: '#FEE75C', type: 'automod',
+        fields: [{ name: '📋 Règle', value: detection.rule, inline: true }, { name: '💬 Message', value: String(message.content || '').slice(0, 500) || '—' }],
+      });
+    } catch {}
+    return { acted: true, observed: true, rule: detection.rule, action: 'observe', reason: detection.reason, deleted: false, deletedCount: 0, warningCount: 0, publicWarning: false, sanction: { applied: false, action: '', minutes: 0, error: '' } };
+  }
+
+  const deleteMessages = action !== 'log';
+  let deletedCount = 0;
+  if (deleteMessages) {
+    for (const current of messages) {
+      try {
+        if (current && current.deletable && typeof current.delete === 'function') {
+          markAutomodded(current.id);
+          await current.delete();
+          deletedCount++;
+        }
+      } catch {}
+    }
+  }
+
+  const needsWarning = ['warn', 'timeout', 'kick', 'ban'].includes(action);
+  let warning = { count: 0, sanction: null, saved: false, id: 0 };
+  if (needsWarning && !opts.force) {
+    // Une action par règle est prioritaire : elle ne doit pas déclencher en
+    // plus le palier global, sinon une règle « avertir » pourrait bannir.
+    warning = registerAutomodWarning(botId, message, detection.reason, opts, {
+      ...gs, warn_limit: 0, warn_timeout_limit: 0, am_warn_limit: 0,
+    });
+  }
+
+  let sanction = null;
+  if (['timeout', 'kick', 'ban'].includes(action)) {
+    sanction = { action, minutes: action === 'timeout' ? Math.min(Math.max(parseInt(gs.am_timeout_min, 10) || 5, 1), 1440) : 0 };
+    warning.sanction = opts.force ? null : sanction;
+  }
+  let sanctionResult = { applied: false, action: '', minutes: 0, error: '' };
+  if (sanction && !opts.force) {
+    sanctionResult = await applyAutoSanction(message, sanction, detection.reason, warning.count);
+    if (warning.id && sanctionResult.applied) {
+      try {
+        store.warnings.setAction(warning.id, sanctionResult.action);
+        store.warnings.resetActive(botId, message.guild.id, message.author.id);
+      } catch {}
+    }
+  }
+
+  recordAction(botId, message, detection.reason, { rule: detection.rule, action, observed: 0 });
+  try {
+    await logging.log(botId, message.guild, {
+      title: `🛡️ Auto-modération · ${detection.rule}`,
+      description: `${action === 'log' ? 'Message détecté' : 'Message traité'} (${detection.reason})`,
+      color: action === 'log' ? '#FEE75C' : '#ED4245', type: 'automod',
+      fields: [
+        { name: '👤 Auteur', value: `<@${message.author.id}>`, inline: true },
+        { name: '📋 Action', value: action, inline: true },
+        { name: '💬 Message', value: String(message.content || '').slice(0, 500) || '—' },
+      ],
+    });
+  } catch {}
+
+  let publicWarning = { sent: false, error: '' };
+  if (!opts.force && warning.count) {
+    try { publicWarning = await sendPublicWarning(botId, message, lang, detection.reason, warning.count, gs, warning.sanction, sanctionResult, deletedCount > 0); }
+    catch (e) { publicWarning = { sent: false, error: String(e.message || e).slice(0, 180) }; }
+  }
+  if (!opts.noDm && needsWarning) {
+    let text = deletedCount > 0
+      ? warnText(gs, lang, serverName, detection.reason)
+      : i18n.t(lang, 'am_dm_no_perm', { server: serverName, reason: detection.reason });
+    if (warning.count) text += `\\n${i18n.t(lang, 'am_dm_warning_count', { server: serverName, count: warning.count, limit: gs.am_warn_limit > 0 ? '/' + gs.am_warn_limit : '' })}`;
+    if (warning.sanction) text += `\\n${sanctionPublicText(lang, warning.sanction, sanctionResult)}`;
+    await sendWarn(botId, message, gs, lang, text);
+  }
+  return {
+    acted: true, observed: false, rule: detection.rule, action, reason: detection.reason,
+    deleted: deletedCount > 0, deletedCount, warningCount: warning.count,
+    publicWarning: publicWarning.sent, sanction: sanctionResult,
+  };
+}
+
 async function runAutomod(botId, message, opts = {}) {
   if (!message || !message.guild) return { acted: false };
   if (message.author.bot && !opts.force) return { acted: false };
@@ -217,50 +432,29 @@ async function runAutomod(botId, message, opts = {}) {
   if (!opts.force && ignoreStaff && member && member.permissions && typeof member.permissions.has === 'function') {
     if (member.permissions.has(PermissionsBitField.Flags.Administrator)
       || member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
-      return { acted: false };
+      return { acted: false, exempt: true, exemption: 'staff' };
     }
   }
+  if (!opts.force && isAutomodExempt(message, gs)) return { acted: false, exempt: true, exemption: 'custom' };
 
   const content = message.content || '';
-  let reason = null;
-  let reasonKey = null;
+  const detection = detectContent(botId, message.guild.id, content, gs);
+  const reason = detection && detection.reason;
 
-  // Liens
-  if (gs.am_links === 1 && /(discord\.gg\/|discordapp\.com\/invite\/|discord\.com\/invite\/|https?:\/\/)/i.test(content)) {
-    reasonKey = 'am_reason_link';
-    reason = i18n.t(lang, reasonKey);
-  }
-  // Majuscules
-  if (!reason && gs.am_caps === 1) {
-    const letters = content.match(/[a-zà-ÿ]/gi) || [];
-    const caps = content.match(/[A-ZÀ-Ý]/g) || [];
-    if (letters.length) {
-      const ratio = caps.length / letters.length;
-      const allCapsShort = letters.length >= 5 && caps.length === letters.length;
-      const mostlyCapsLong = content.length > 12 && letters.length >= 8 && ratio > 0.7;
-      if (allCapsShort || mostlyCapsLong) {
-        reasonKey = 'am_reason_caps';
-        reason = i18n.t(lang, reasonKey);
-      }
-    }
-  }
-  // Mentions
-  if (!reason && Number(gs.am_mentions) > 0) {
-    const mentions = (content.match(/<@!?\d+>/g) || []).length;
-    if (mentions > Number(gs.am_mentions)) {
-      reasonKey = 'am_reason_mentions';
-      reason = i18n.t(lang, reasonKey);
-    }
-  }
-  // Liste noire de mots
-  if (!reason) {
-    const words = store.blacklist.all(botId, message.guild.id);
-    if (words.length) {
-      const hit = words.find((w) => blacklistWordMatch(content, w));
-      if (hit) {
-        reasonKey = 'am_reason_word';
-        reason = i18n.t(lang, reasonKey, { word: hit });
-      }
+  if (reason) {
+    const configuredResult = await applyConfiguredAction(botId, message, detection, opts, gs, lang, serverName);
+    if (configuredResult) return configuredResult;
+    if (gs.am_mode === 'observe') {
+      recordAction(botId, message, reason, { rule: detection.rule, action: 'observe', observed: 1 });
+      try {
+        await logging.log(botId, message.guild, {
+          title: '👀 Auto-modération · observation',
+          description: `Règle détectée sans action : ${reason}`,
+          color: '#FEE75C', type: 'automod',
+          fields: [{ name: '📋 Règle', value: detection.rule, inline: true }, { name: '💬 Message', value: String(content).slice(0, 500) || '—' }],
+        });
+      } catch {}
+      return { acted: true, observed: true, rule: detection.rule, action: 'observe', reason, deleted: false, warningCount: 0, publicWarning: false, sanction: { applied: false, action: '', minutes: 0, error: '' } };
     }
   }
 
@@ -283,7 +477,7 @@ async function runAutomod(botId, message, opts = {}) {
       }
     }
 
-    recordAction(botId, message, reason);
+    recordAction(botId, message, reason, { rule: detection.rule, action: 'legacy' });
     try {
       await logging.log(botId, message.guild, {
         title: '🛡️ Auto-modération',
@@ -342,6 +536,24 @@ async function runAutomod(botId, message, opts = {}) {
     spamTracker.set(key, entry);
     if (entry.times.length >= limit) {
       const burstCount = entry.times.length;
+      const reasonLabel = i18n.t(lang, 'am_reason_spam');
+      const detection = { rule: 'spam', reasonKey: 'am_reason_spam', reason: reasonLabel };
+      // Une rafale est consommée dès qu'elle est traitée, y compris en mode
+      // observation ou avec une action personnalisée.
+      spamTracker.set(key, { times: [], messages: [] });
+      const configuredResult = await applyConfiguredAction(botId, message, detection, opts, gs, lang, serverName, entry.messages);
+      if (configuredResult) return configuredResult;
+      if (gs.am_mode === 'observe') {
+        recordAction(botId, message, reasonLabel, { rule: 'spam', action: 'observe', observed: 1 });
+        try {
+          await logging.log(botId, message.guild, {
+            title: '👀 Auto-modération · observation',
+            description: `Rafale détectée sans action : ${burstCount} message(s) en 5 s`,
+            color: '#FEE75C', type: 'automod',
+          });
+        } catch {}
+        return { acted: true, observed: true, rule: 'spam', action: 'observe', reason: reasonLabel, deleted: false, deletedCount: 0, warningCount: 0, publicWarning: false, sanction: { applied: false, action: '', minutes: 0, error: '' } };
+      }
       spamTracker.set(key, { times: [], messages: [] });
       // 1) Supprime les messages du spammeur
       let deletedCount = 0;
@@ -352,7 +564,6 @@ async function runAutomod(botId, message, opts = {}) {
       // 2) Le spam est lui-même un avertissement. S'il atteint un palier,
       // la sanction progressive prime ; sinon on conserve le timeout
       // anti-spam historique configuré dans « Timeout spam ».
-      const reasonLabel = i18n.t(lang, 'am_reason_spam');
       const warning = registerAutomodWarning(botId, message, reasonLabel, opts, gs);
       let sanctionResult = { applied: false, action: '', minutes: 0, error: '' };
       let spamSanction = null;
@@ -381,7 +592,7 @@ async function runAutomod(botId, message, opts = {}) {
       const actionText = sanctionResult.applied
         ? `, ${sanctionResult.action}${sanctionResult.minutes ? ' ' + sanctionResult.minutes + ' min' : ''}`
         : '';
-      recordAction(botId, message, `${reasonLabel} (${deletedCount} message(s) supprimé(s)${actionText})`);
+      recordAction(botId, message, `${reasonLabel} (${deletedCount} message(s) supprimé(s)${actionText})`, { rule: 'spam', action: 'legacy' });
       try {
         await logging.log(botId, message.guild, {
           title: '🛡️ Anti-spam',
@@ -423,6 +634,10 @@ async function runAutomod(botId, message, opts = {}) {
 
 module.exports = {
   runAutomod,
+  analyzeContent,
+  detectContent,
+  ruleActionFor,
+  isAutomodExempt,
   blacklistWordMatch,
   wasAutomodded,
   markAutomodded,

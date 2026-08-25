@@ -442,6 +442,13 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_caps INTEGER DEFAULT 1")
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_mentions INTEGER DEFAULT 5"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_spam INTEGER DEFAULT 5"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_ignore_staff INTEGER DEFAULT 1"); } catch (e) {}
+// v3.18 — Auto-Mod Control Center : observation, actions par règle et exceptions.
+// Les valeurs par défaut gardent exactement le comportement historique.
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_mode TEXT DEFAULT 'enforce'"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_rule_actions TEXT DEFAULT '{}'"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_exempt_roles TEXT DEFAULT '[]'"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_exempt_channels TEXT DEFAULT '[]'"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_exempt_users TEXT DEFAULT '[]'"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_warn_text TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_timeout_min INTEGER DEFAULT 5"); } catch (e) {}
 // v3.9 — avertissements publics progressifs de l'auto-mod :
@@ -456,6 +463,11 @@ try { db.exec("ALTER TABLE warnings ADD COLUMN channel_id TEXT DEFAULT ''"); } c
 try { db.exec("ALTER TABLE warnings ADD COLUMN message_id TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE warnings ADD COLUMN warning_no INTEGER DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE warnings ADD COLUMN action TEXT DEFAULT 'warn'"); } catch (e) {}
+// v3.18 — métadonnées lisibles des actions auto-mod pour le centre de contrôle.
+try { db.exec("ALTER TABLE automod_logs ADD COLUMN rule TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE automod_logs ADD COLUMN action TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE automod_logs ADD COLUMN observed INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("CREATE INDEX IF NOT EXISTS idx_automod_logs_rule ON automod_logs (bot_id, guild_id, rule, id DESC)"); } catch (e) {}
 try { db.exec("CREATE INDEX IF NOT EXISTS idx_warnings_guild_user ON warnings (bot_id, guild_id, user_id, id DESC)"); } catch (e) {}
 // Compteur ACTIF séparé de l'historique : après une sanction réussie,
 // le membre repart à 0 sans effacer les avertissements visibles au dashboard.
@@ -741,7 +753,7 @@ const guildSettings = {
   set: (botId, guildId, fields) => {
     const cur = guildSettings.get(botId, guildId) || { prefix: '', warn_limit: 0, warn_action: 'none' };
     const next = { ...cur, ...fields };
-    const cols = ['prefix', 'warn_limit', 'warn_action', 'warn_timeout_limit', 'warn_timeout_min', 'starboard_channel', 'starboard_min', 'live_channel', 'live_ping', 'ticket_log_channel', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_warn_text', 'am_timeout_min', 'am_warn_limit', 'am_warn_action', 'am_warn_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'lang', 'timezone'];
+    const cols = ['prefix', 'warn_limit', 'warn_action', 'warn_timeout_limit', 'warn_timeout_min', 'starboard_channel', 'starboard_min', 'live_channel', 'live_ping', 'ticket_log_channel', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_mode', 'am_rule_actions', 'am_exempt_roles', 'am_exempt_channels', 'am_exempt_users', 'am_warn_text', 'am_timeout_min', 'am_warn_limit', 'am_warn_action', 'am_warn_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'lang', 'timezone'];
     const vals = {
       bot_id: botId, guild_id: guildId,
       prefix: String(next.prefix || '').slice(0, 5),
@@ -766,6 +778,19 @@ const guildSettings = {
       am_mentions: Math.max(parseInt(next.am_mentions, 10) || 0, 0),
       am_spam: Math.max(parseInt(next.am_spam, 10) || 0, 0),
       am_ignore_staff: (next.am_ignore_staff === 0 || next.am_ignore_staff === false) ? 0 : 1,
+      am_mode: String(next.am_mode || 'enforce') === 'observe' ? 'observe' : 'enforce',
+      am_rule_actions: typeof next.am_rule_actions === 'string'
+        ? next.am_rule_actions.slice(0, 2000)
+        : JSON.stringify(next.am_rule_actions && typeof next.am_rule_actions === 'object' ? next.am_rule_actions : {}),
+      am_exempt_roles: typeof next.am_exempt_roles === 'string'
+        ? next.am_exempt_roles.slice(0, 4000)
+        : JSON.stringify(Array.isArray(next.am_exempt_roles) ? next.am_exempt_roles : []),
+      am_exempt_channels: typeof next.am_exempt_channels === 'string'
+        ? next.am_exempt_channels.slice(0, 4000)
+        : JSON.stringify(Array.isArray(next.am_exempt_channels) ? next.am_exempt_channels : []),
+      am_exempt_users: typeof next.am_exempt_users === 'string'
+        ? next.am_exempt_users.slice(0, 4000)
+        : JSON.stringify(Array.isArray(next.am_exempt_users) ? next.am_exempt_users : []),
       am_warn_text: String(next.am_warn_text || '').slice(0, 1000),
       am_timeout_min: Math.min(Math.max(parseInt(next.am_timeout_min, 10) || 5, 1), 1440),
       am_warn_limit: Number.isFinite(parseInt(next.am_warn_limit, 10)) ? Math.min(Math.max(parseInt(next.am_warn_limit, 10), 0), 50) : 2,
@@ -1022,14 +1047,31 @@ const blacklist = {
 
 // ---------------------- Journal d'auto-modération ----------------------
 const automodLogs = {
-  add: (botId, guildId, entry) => db.prepare('INSERT INTO automod_logs (bot_id, guild_id, user_id, user_tag, reason, content, channel_id) VALUES (?, ?, ?, ?, ?, ?, ?)')
-    .run(botId, guildId,
+  add: (botId, guildId, entry) => db.prepare(`INSERT INTO automod_logs
+    (bot_id, guild_id, user_id, user_tag, reason, content, channel_id, rule, action, observed)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+      botId, guildId,
       String(entry.user_id || '').slice(0, 30),
       String(entry.user_tag || '').slice(0, 100),
       String(entry.reason || '').slice(0, 200),
       String(entry.content || '').slice(0, 500),
-      String(entry.channel_id || '').slice(0, 30)),
+      String(entry.channel_id || '').slice(0, 30),
+      String(entry.rule || '').slice(0, 32),
+      String(entry.action || '').slice(0, 32),
+      entry.observed ? 1 : 0),
   recent: (botId, guildId, limit = 50) => db.prepare('SELECT * FROM automod_logs WHERE bot_id = ? AND guild_id = ? ORDER BY id DESC LIMIT ?').all(botId, guildId, Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200)),
+  summary: (botId, guildId) => {
+    const totals = db.prepare(`SELECT COUNT(*) AS total,
+      SUM(CASE WHEN date(created_at) = date('now') THEN 1 ELSE 0 END) AS today,
+      SUM(CASE WHEN observed = 1 THEN 1 ELSE 0 END) AS observed,
+      SUM(CASE WHEN observed = 0 AND action != 'log' THEN 1 ELSE 0 END) AS enforced
+      FROM automod_logs WHERE bot_id = ? AND guild_id = ?`).get(botId, guildId);
+    const byRule = db.prepare(`SELECT COALESCE(NULLIF(rule, ''), 'unknown') AS rule, COUNT(*) AS count
+      FROM automod_logs WHERE bot_id = ? AND guild_id = ? GROUP BY rule ORDER BY count DESC, rule ASC LIMIT 10`).all(botId, guildId);
+    const byAction = db.prepare(`SELECT COALESCE(NULLIF(action, ''), 'legacy') AS action, COUNT(*) AS count
+      FROM automod_logs WHERE bot_id = ? AND guild_id = ? GROUP BY action ORDER BY count DESC, action ASC LIMIT 10`).all(botId, guildId);
+    return { total: Number(totals.total) || 0, today: Number(totals.today) || 0, observed: Number(totals.observed) || 0, enforced: Number(totals.enforced) || 0, byRule, byAction };
+  },
 };
 
 // ---------------------- Tickets ouverts (fiche par salon) ----------------------

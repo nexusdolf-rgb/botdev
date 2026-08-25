@@ -1671,63 +1671,239 @@ Dashboard.renderers.shop = async (content, data) => {
 // ---------- Modération ----------
 Dashboard.renderers.moderation = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const s = data.settings;
-  const blacklist = data.blacklist || [];
+  const serverSettings = data.settings || {};
+  const draftKey = `hx-am-draft:${bot.id}:${guildId}`;
+  let automodDraft = null;
+  try {
+    const storedDraft = localStorage.getItem(draftKey);
+    if (storedDraft) automodDraft = JSON.parse(storedDraft);
+  } catch {}
+  const s = { ...serverSettings, ...(automodDraft && typeof automodDraft === 'object' ? automodDraft : {}) };
+  const blacklist = automodDraft && Array.isArray(automodDraft.blacklist) ? automodDraft.blacklist : (data.blacklist || []);
   const { sanctions } = await App.api(`/bots/${bot.id}/guilds/${guildId}/sanctions`);
   const root = Dashboard.header(content, '🛡️', 'Modération', 'Auto-modération, liste noire et sanctions prédéfinies (/sanction membre nom).');
 
-  const c = Dashboard.card(root, 'Auto-modération', 'Le bot supprime automatiquement les liens, les MAJUSCULES, les mentions excessives, le spam et les mots interdits, puis gère les avertissements et sanctions comme un bot professionnel.');
-  const blacklistData = blacklist.map((w) => ({ word: w }));
+  const parseAMList = (value) => {
+    if (Array.isArray(value)) return value.map(String).filter(Boolean);
+    if (typeof value !== 'string') return [];
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed.map(String).filter(Boolean);
+    } catch {}
+    return value.split(/[,\n]/).map((x) => x.trim()).filter(Boolean);
+  };
+  const parseAMObject = (value) => {
+    if (value && typeof value === 'object' && !Array.isArray(value)) return value;
+    try { const parsed = JSON.parse(value || '{}'); return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}; } catch { return {}; }
+  };
+  const ruleActions = parseAMObject(s.am_rule_actions);
+  const actionLabels = {
+    inherit: 'Comportement actuel',
+    log: '📋 Journal seulement',
+    delete: '🗑️ Supprimer uniquement',
+    warn: '⚠️ Supprimer + avertir',
+    timeout: '⏱️ Supprimer + timeout',
+    kick: '👢 Supprimer + expulser',
+    ban: '🔨 Supprimer + bannir',
+  };
+  const actionOptions = (rule) => Object.entries(actionLabels).map(([value, label]) => `<option value="${value}" ${String(ruleActions[rule] || 'inherit') === value ? 'selected' : ''}>${label}</option>`).join('');
+  const selectedExemptRoles = new Set(parseAMList(s.am_exempt_roles));
+  const selectedExemptChannels = new Set(parseAMList(s.am_exempt_channels));
+  const selectedExemptUsers = parseAMList(s.am_exempt_users);
+  const rolesList = (data.roles || []).filter((role) => role.name !== '@everyone');
+  const channelList = (data.channels || []).filter((channel) => !channel.category && !channel.voice);
+  const blacklistData = blacklist.map((word) => ({ word: String(word || '') }));
+
+  const c = Dashboard.card(root, '🛡️ Auto-modération', 'Un centre de protection complet : règles séparées, mode observation, actions maîtrisées et simulation sans risque.');
+  c.classList.add('am-control-card');
   c.innerHTML += `
-    <label class="dash-label">Activer</label>
-    <label class="switch"><input type="checkbox" id="am-on" ${s.am_enabled ? 'checked' : ''} /><span class="slider"></span></label>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:10px">
-      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--d-dim)"><input type="checkbox" id="am-links" ${s.am_links ? 'checked' : ''} /> Supprimer les liens</label>
-      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--d-dim)"><input type="checkbox" id="am-caps" ${s.am_caps ? 'checked' : ''} /> Supprimer les MAJUSCULES</label>
-      <div><label class="dash-label">Mentions max (0 = illimité)</label><input class="dash-input" id="am-men" type="number" value="${s.am_mentions ?? 5}" /></div>
-      <div><label class="dash-label">Spam : messages / 5 s</label><input class="dash-input" id="am-spam" type="number" value="${s.am_spam ?? 5}" /></div>
+    <div class="am-control-hero">
+      <div class="am-hero-copy"><span class="am-shield-icon">🛡️</span><div><b>Protection intelligente</b><small id="am-status-line">${automodDraft ? '🟡 Brouillon local affiché — pas encore publié.' : (s.am_enabled ? 'Le serveur est protégé.' : 'La protection est désactivée.')}</small></div></div>
+      <label class="am-main-toggle"><span>Activer</span><input type="checkbox" id="am-on" ${s.am_enabled ? 'checked' : ''} /><i></i></label>
     </div>
-    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--d-dim);margin-top:10px"><input type="checkbox" id="am-staff" ${s.am_ignore_staff !== 0 ? 'checked' : ''} /> Ignorer les admins et modérateurs</label>
-    <div class="desc" style="margin:8px 0 0">💡 Pour tester : décoche « Ignorer les admins » — sinon tes propres messages ne sont jamais filtrés (protection par défaut).</div>
-    <label class="dash-label" style="margin-top:12px">Message privé d'avertissement (vide = standard)</label>
-    <input class="dash-input" id="am-warn" value="${App.escapeHtml(s.am_warn_text || '')}" placeholder="Vide = message standard traduit FR/EN. Variables : {reason} et {server}." />
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
-      <div style="flex:1;min-width:110px"><label class="dash-label">Timeout spam (minutes)</label><input class="dash-input" id="am-timeout" type="number" min="1" max="1440" value="${s.am_timeout_min ?? 5}" /></div>
+    <div class="am-mode-row">
+      <div><label class="dash-label">Mode de fonctionnement</label><select class="dash-select" id="am-mode" style="max-width:260px">
+        <option value="enforce" ${s.am_mode !== 'observe' ? 'selected' : ''}>🛡️ Protection active</option>
+        <option value="observe" ${s.am_mode === 'observe' ? 'selected' : ''}>👀 Observation sans sanction</option>
+      </select></div>
+      <div class="am-mode-note" id="am-mode-note">${s.am_mode === 'observe' ? '👀 Les règles seront enregistrées, mais aucun message ne sera supprimé et aucune sanction ne sera appliquée.' : '🟢 Les règles appliquent les actions configurées aux messages détectés.'}</div>
     </div>
-    <div style="margin-top:16px;padding:14px;border:1px solid rgba(254,231,92,.28);border-radius:14px;background:linear-gradient(135deg,rgba(254,231,92,.08),rgba(237,66,69,.05))">
-      <div style="font-weight:800;font-size:14px">⚠️ Avertissements progressifs</div>
-      <div style="font-size:12.5px;color:var(--d-dim);margin:5px 0 12px">Chaque infraction auto-mod supprimée est enregistrée. Le 1er avertissement est affiché dans le salon ; au 2e, une sanction automatique peut être appliquée. Après une sanction réussie, le compteur actif repart à 0, tandis que l’historique reste visible ci-dessous.</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px">
-        <div><label class="dash-label">Sanction tous les X avertissements (0 = désactivé)</label><input class="dash-input" id="am-warn-limit" type="number" min="0" max="50" value="${s.am_warn_limit ?? 2}" /></div>
+    <div class="am-rule-heading"><div><b>Règles de protection</b><small>Chaque règle peut avoir sa propre action. « Comportement actuel » conserve la logique historique.</small></div><span class="dash-badge ok">⚡ Temps réel</span></div>
+    <div class="am-rule-grid">
+      <div class="am-rule-card" data-am-rule-card="links">
+        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">🔗</span><div><b>Liens et invitations</b><small>Bloque les URL et invitations Discord.</small></div></div><input type="checkbox" id="am-links" ${s.am_links ? 'checked' : ''} /></div>
+        <label class="am-rule-action">Action<select class="dash-select" id="am-action-links" data-am-action="links">${actionOptions('links')}</select></label>
+      </div>
+      <div class="am-rule-card" data-am-rule-card="caps">
+        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">🔠</span><div><b>Majuscules</b><small>Détecte les messages écrits presque entièrement en majuscules.</small></div></div><input type="checkbox" id="am-caps" ${s.am_caps ? 'checked' : ''} /></div>
+        <label class="am-rule-action">Action<select class="dash-select" id="am-action-caps" data-am-action="caps">${actionOptions('caps')}</select></label>
+      </div>
+      <div class="am-rule-card" data-am-rule-card="mentions">
+        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">📣</span><div><b>Mentions excessives</b><small>Bloque les rafales de mentions dans un message.</small></div></div></div>
+        <label class="am-rule-setting">Mentions maximum <input class="dash-input" id="am-men" type="number" min="0" max="100" value="${s.am_mentions ?? 5}" /><small>0 = illimité</small></label>
+        <label class="am-rule-action">Action<select class="dash-select" id="am-action-mentions" data-am-action="mentions">${actionOptions('mentions')}</select></label>
+      </div>
+      <div class="am-rule-card" data-am-rule-card="words">
+        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">🚫</span><div><b>Mots interdits</b><small>Utilise la liste noire configurée plus bas.</small></div></div><span class="am-rule-state">${blacklist.length ? '🟢 Actif' : '⚪ En attente'}</span></div>
+        <label class="am-rule-action">Action<select class="dash-select" id="am-action-words" data-am-action="words">${actionOptions('words')}</select></label>
+      </div>
+      <div class="am-rule-card" data-am-rule-card="spam">
+        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">💥</span><div><b>Anti-spam</b><small>Détecte plusieurs messages envoyés en peu de temps.</small></div></div></div>
+        <label class="am-rule-setting">Messages en 5 secondes <input class="dash-input" id="am-spam" type="number" min="0" max="50" value="${s.am_spam ?? 5}" /><small>0 = désactivé</small></label>
+        <label class="am-rule-action">Action<select class="dash-select" id="am-action-spam" data-am-action="spam">${actionOptions('spam')}</select></label>
+      </div>
+    </div>
+    <div class="am-policy-row">
+      <label class="am-inline-toggle"><input type="checkbox" id="am-staff" ${s.am_ignore_staff !== 0 ? 'checked' : ''} /><span><b>Ignorer les administrateurs et modérateurs</b><small>Recommandé pour éviter de filtrer le staff.</small></span></label>
+      <div class="am-policy-time"><label class="dash-label">Durée du timeout par règle (minutes)</label><input class="dash-input" id="am-timeout" type="number" min="1" max="1440" value="${s.am_timeout_min ?? 5}" /></div>
+    </div>
+    <label class="dash-label">Message privé d'avertissement (vide = message standard)</label>
+    <input class="dash-input" id="am-warn" value="${App.escapeHtml(s.am_warn_text || '')}" placeholder="Variables disponibles : {reason} et {server}." />
+    <div class="am-warning-panel">
+      <div class="am-panel-title"><div><b>⚠️ Avertissements progressifs</b><small>Le compteur actif est séparé de l'historique et repart à zéro après une sanction réussie.</small></div><span>1 → 2 → action</span></div>
+      <div class="am-warning-grid">
+        <div><label class="dash-label">Sanction après X avertissements</label><input class="dash-input" id="am-warn-limit" type="number" min="0" max="50" value="${s.am_warn_limit ?? 2}" /><small class="am-help">0 = désactivé</small></div>
         <div><label class="dash-label">Action automatique</label><select class="dash-select" id="am-warn-action">
-          <option value="none" ${s.am_warn_action === 'none' ? 'selected' : ''}>🔕 Aucune (journal seulement)</option>
-          <option value="timeout" ${(s.am_warn_action || 'timeout') === 'timeout' ? 'selected' : ''}>⏳ Timeout</option>
+          <option value="none" ${s.am_warn_action === 'none' ? 'selected' : ''}>🔕 Journal seulement</option>
+          <option value="timeout" ${(s.am_warn_action || 'timeout') === 'timeout' ? 'selected' : ''}>⏱️ Timeout</option>
           <option value="kick" ${s.am_warn_action === 'kick' ? 'selected' : ''}>👢 Expulser</option>
           <option value="ban" ${s.am_warn_action === 'ban' ? 'selected' : ''}>🔨 Bannir</option>
         </select></div>
         <div><label class="dash-label">Durée du timeout (minutes)</label><input class="dash-input" id="am-warn-timeout" type="number" min="1" max="1440" value="${s.am_warn_timeout_min ?? 10}" /></div>
       </div>
-      <div style="font-size:11.5px;color:var(--d-dim);margin-top:9px">💡 Réglage conseillé : <b>2</b> + <b>Timeout 10 min</b>. Le compteur communique avec les avertissements manuels avec /warn.</div>
     </div>
-    <button class="dash-btn dash-btn-primary" style="margin-top:12px" id="am-save">💾 Enregistrer</button>`;
+    <div class="am-save-row"><span class="am-save-hint">💡 Brouillon local → teste en observation → publie quand tout est correct.</span><div class="am-save-actions">${automodDraft ? '<button class="dash-btn dash-btn-danger dash-btn-sm" id="am-clear-draft">↩️ Restaurer le publié</button>' : ''}<button class="dash-btn dash-btn-sm" id="am-draft">📝 Enregistrer le brouillon</button><button class="dash-btn dash-btn-primary" id="am-save">💾 🚀 Publier les réglages</button></div></div>`;
+
+  const syncAMStatus = () => {
+    const on = c.querySelector('#am-on').checked;
+    const mode = c.querySelector('#am-mode').value;
+    const status = c.querySelector('#am-status-line');
+    const note = c.querySelector('#am-mode-note');
+    if (status) status.textContent = !on ? 'La protection est désactivée.' : (mode === 'observe' ? 'Le serveur est observé sans sanction.' : 'Le serveur est protégé en temps réel.');
+    if (note) note.textContent = mode === 'observe'
+      ? '👀 Les règles seront enregistrées, mais aucun message ne sera supprimé et aucune sanction ne sera appliquée.'
+      : '🟢 Les règles appliquent les actions configurées aux messages détectés.';
+  };
+  c.querySelector('#am-on').onchange = syncAMStatus;
+  c.querySelector('#am-mode').onchange = syncAMStatus;
+  const collectAutomodForm = () => {
+    const rule_actions = {};
+    c.querySelectorAll('[data-am-action]').forEach((select) => { if (select.value !== 'inherit') rule_actions[select.dataset.amAction] = select.value; });
+    return {
+      enabled: c.querySelector('#am-on').checked,
+      mode: c.querySelector('#am-mode').value,
+      links: c.querySelector('#am-links').checked,
+      caps: c.querySelector('#am-caps').checked,
+      mentions: parseInt(c.querySelector('#am-men').value, 10) || 0,
+      spam: parseInt(c.querySelector('#am-spam').value, 10) || 0,
+      ignore_staff: c.querySelector('#am-staff').checked,
+      warn_text: c.querySelector('#am-warn').value,
+      timeout_min: parseInt(c.querySelector('#am-timeout').value, 10) || 5,
+      warn_limit: parseInt(c.querySelector('#am-warn-limit').value, 10) || 0,
+      warn_action: c.querySelector('#am-warn-action').value,
+      warn_timeout_min: parseInt(c.querySelector('#am-warn-timeout').value, 10) || 10,
+      rule_actions,
+      exempt_roles: [...selectedExemptRoles],
+      exempt_channels: [...selectedExemptChannels],
+      exempt_users: content.querySelector('#am-exempt-users') ? parseAMList(content.querySelector('#am-exempt-users').value) : selectedExemptUsers,
+      blacklist: blacklistData.map((word) => word.word),
+    };
+  };
+  const saveAutomodDraft = () => {
+    try {
+      localStorage.setItem(draftKey, JSON.stringify(collectAutomodForm()));
+      App.toast('🟡 Brouillon Auto-Mod enregistré sur cet appareil.');
+      const status = c.querySelector('#am-status-line');
+      if (status) status.textContent = '🟡 Brouillon local enregistré — pas encore publié.';
+    } catch { App.toast('Impossible d’enregistrer le brouillon.', 'error'); }
+  };
+  c.querySelector('#am-draft').onclick = saveAutomodDraft;
   c.querySelector('#am-save').onclick = async () => {
     try {
-      await App.api(`/bots/${bot.id}/guilds/${guildId}/automod`, { method: 'PUT', body: {
-        enabled: c.querySelector('#am-on').checked,
-        links: c.querySelector('#am-links').checked,
-        caps: c.querySelector('#am-caps').checked,
-        mentions: parseInt(c.querySelector('#am-men').value, 10) || 0,
-        spam: parseInt(c.querySelector('#am-spam').value, 10) || 0,
-        ignore_staff: c.querySelector('#am-staff').checked,
-        warn_text: c.querySelector('#am-warn').value,
-        timeout_min: parseInt(c.querySelector('#am-timeout').value, 10) || 5,
-        warn_limit: parseInt(c.querySelector('#am-warn-limit').value, 10) || 0,
-        warn_action: c.querySelector('#am-warn-action').value,
-        warn_timeout_min: parseInt(c.querySelector('#am-warn-timeout').value, 10) || 10,
-        blacklist: blacklistData.map((w) => w.word),
-      }});
-      App.toast('Auto-modération enregistrée !');
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/automod`, { method: 'PUT', body: collectAutomodForm() });
+      try { localStorage.removeItem(draftKey); } catch {}
+      App.toast('🚀 Auto-modération publiée !');
+      syncAMStatus();
+      const status = c.querySelector('#am-status-line');
+      if (status) status.textContent = '🟢 Configuration publiée et active.';
     } catch (e) { App.toast(e.message, 'error'); }
+  };
+  const clearDraft = c.querySelector('#am-clear-draft');
+  if (clearDraft) clearDraft.onclick = () => {
+    try { localStorage.removeItem(draftKey); } catch {}
+    App.toast('Configuration publiée restaurée.');
+    Dashboard.renderers.moderation(content, data);
+  };
+
+  // 🚧 Exceptions configurables (rôles, salons et membres)
+  const cExceptions = Dashboard.card(root, '🚧 Exceptions et zones de confiance', 'Choisis qui et où l’auto-mod doit ignorer. Les exceptions personnalisées s’ajoutent à l’option « Ignorer le staff ».');
+  cExceptions.classList.add('am-exceptions-card');
+  cExceptions.innerHTML += `
+    <div class="am-exception-grid">
+      <div><label class="dash-label">Rôles ignorés</label><div class="am-choice-list" id="am-exempt-roles"></div></div>
+      <div><label class="dash-label">Salons ignorés</label><div class="am-choice-list" id="am-exempt-channels"></div></div>
+    </div>
+    <label class="dash-label">Membres ignorés</label>
+    <input class="dash-input" id="am-exempt-users" value="${App.escapeHtml(selectedExemptUsers.join(', '))}" placeholder="IDs ou mentions séparés par des virgules" />
+    <div class="am-help">Les membres sont enregistrés par identifiant Discord. Exemple : <code>123456789012345678</code>.</div>`;
+  const renderAMChoices = (element, items, selected, icon, emptyText) => {
+    element.innerHTML = '';
+    if (!items.length) { element.appendChild(App.el(`<span class="am-choice-empty">${emptyText}</span>`)); return; }
+    items.forEach((item) => {
+      const id = String(item.id || item.name || '');
+      const name = String(item.name || id);
+      const isSelected = selected.has(id) || selected.has(name);
+      const chip = App.el(`<label class="am-choice ${isSelected ? 'selected' : ''}"><input type="checkbox" value="${App.escapeHtml(id)}" ${isSelected ? 'checked' : ''}/><span>${icon}</span><b>${App.escapeHtml(name)}</b></label>`);
+      const input = chip.querySelector('input');
+      input.onchange = () => {
+        if (input.checked) { selected.add(id); selected.delete(name); }
+        else { selected.delete(id); selected.delete(name); }
+        chip.classList.toggle('selected', input.checked);
+      };
+      element.appendChild(chip);
+    });
+  };
+  renderAMChoices(cExceptions.querySelector('#am-exempt-roles'), rolesList, selectedExemptRoles, '🛡️', 'Aucun rôle disponible.');
+  renderAMChoices(cExceptions.querySelector('#am-exempt-channels'), channelList, selectedExemptChannels, '💬', 'Aucun salon textuel disponible.');
+
+  // 📊 Résumé des actions réelles et des observations
+  const cSummary = Dashboard.card(root, '📊 Activité Auto-Mod', 'Les chiffres viennent du journal du bot et distinguent les observations des actions réellement appliquées.');
+  cSummary.classList.add('am-summary-card');
+  const summaryBox = App.el(`<div class="am-summary-loading">Chargement des statistiques…</div>`);
+  cSummary.appendChild(summaryBox);
+  (async () => {
+    try {
+      const stats = await App.api(`/bots/${bot.id}/guilds/${guildId}/automod/summary`);
+      const ruleLabels = { links: '🔗 Liens', caps: '🔠 Majuscules', mentions: '📣 Mentions', words: '🚫 Mots', spam: '💥 Spam', unknown: '❔ Autre' };
+      const topRules = (stats.byRule || []).slice(0, 5).map((entry) => `<span class="am-summary-tag">${ruleLabels[entry.rule] || App.escapeHtml(entry.rule)} <b>${entry.count}</b></span>`).join('') || '<span class="am-help">Aucune action enregistrée.</span>';
+      summaryBox.innerHTML = `<div class="am-summary-stats"><div><b>${stats.today || 0}</b><small>Aujourd’hui</small></div><div><b>${stats.enforced || 0}</b><small>Actions appliquées</small></div><div><b>${stats.observed || 0}</b><small>Observations</small></div><div><b>${stats.total || 0}</b><small>Total</small></div></div><div class="am-summary-label">Règles les plus déclenchées</div><div class="am-summary-tags">${topRules}</div>`;
+    } catch { summaryBox.innerHTML = '<div class="am-help">Les statistiques apparaîtront dès la première action du bot.</div>'; }
+  })();
+
+  // 🧪 Simulation sans risque : aucun message Discord n'est envoyé.
+  const cSim = Dashboard.card(root, '🧪 Simulateur sans risque', 'Teste une phrase avec les vraies règles du serveur. Cette simulation ne supprime rien, ne crée aucun avertissement et ne sanctionne personne.');
+  cSim.classList.add('am-simulator-card');
+  cSim.innerHTML += `
+    <textarea class="dash-input am-sim-text" id="am-sim-content" rows="3" maxlength="2000" placeholder="Écris ici un message à analyser… Ex : https://exemple.com"></textarea>
+    <div class="am-sim-controls"><select class="dash-select" id="am-sim-channel"><option value="">— Aucun salon spécifique —</option>${channelList.map((channel) => `<option value="${App.escapeHtml(channel.id)}">💬 #${App.escapeHtml(channel.name)}</option>`).join('')}</select><input class="dash-input" id="am-sim-spam" type="number" min="0" max="100" value="0" placeholder="Rafale (0 = non)" title="Nombre de messages simulés en 5 secondes" /><button class="dash-btn dash-btn-primary" id="am-sim-go">🧪 Analyser</button></div>
+    <div id="am-sim-result" class="am-sim-result"></div>`;
+  cSim.querySelector('#am-sim-go').onclick = async () => {
+    const contentValue = cSim.querySelector('#am-sim-content').value.trim();
+    const resultBox = cSim.querySelector('#am-sim-result');
+    const button = cSim.querySelector('#am-sim-go');
+    if (!contentValue) { resultBox.innerHTML = '<div class="am-result neutral">Écris un message avant de lancer l’analyse.</div>'; return; }
+    button.disabled = true; button.textContent = '⏳ Analyse…';
+    try {
+      const channelId = cSim.querySelector('#am-sim-channel').value;
+      const channel = channelList.find((item) => item.id === channelId);
+      const result = await App.api(`/bots/${bot.id}/guilds/${guildId}/automod/simulate`, { method: 'POST', body: { content: contentValue, channel_id: channelId, channel_name: channel ? channel.name : '', spam_count: parseInt(cSim.querySelector('#am-sim-spam').value, 10) || 0 } });
+      if (!result.enabled) resultBox.innerHTML = '<div class="am-result neutral">⚪ Auto-modération désactivée : aucune règle ne sera appliquée.</div>';
+      else if (result.exempt) resultBox.innerHTML = '<div class="am-result neutral">🛡️ Ce message serait ignoré car le salon, le rôle ou le membre est dans les exceptions.</div>';
+      else if (!result.matched) resultBox.innerHTML = '<div class="am-result success">✅ Aucun filtre ne détecte ce message.</div>';
+      else if (result.mode === 'observe') resultBox.innerHTML = `<div class="am-result observe">👀 Règle détectée : <b>${App.escapeHtml(result.rule)}</b><br/>Mode observation : le message serait conservé et aucune sanction ne serait appliquée.</div>`;
+      else resultBox.innerHTML = `<div class="am-result ${result.action === 'ban' ? 'danger' : 'warning'}">${result.action === 'legacy' ? '🛡️' : '⚡'} Règle détectée : <b>${App.escapeHtml(result.rule)}</b><br/>Action prévue : <b>${App.escapeHtml(actionLabels[result.action] || result.action)}</b><br/><small>${App.escapeHtml(result.reason || '')}</small></div>`;
+    } catch (e) { resultBox.innerHTML = `<div class="am-result danger">❌ ${App.escapeHtml(e.message)}</div>`; }
+    button.disabled = false; button.textContent = '🧪 Analyser';
   };
 
   // 🛡️ Permissions réelles du bot sur ce serveur
@@ -1789,6 +1965,7 @@ Dashboard.renderers.moderation = async (content, data) => {
       }});
       if (r.hint === 'mentions_off') resBox.innerHTML = `<div class="desc">ℹ️ La limite de mentions est à 0 (illimité) — rien à tester pour ce filtre.</div>`;
       else if (r.hint === 'no_words') resBox.innerHTML = `<div class="desc">ℹ️ Ajoute d'abord un mot dans la liste noire, puis relance le test.</div>`;
+      else if (r.observed) resBox.innerHTML = `<div style="padding:12px;border:1px solid rgba(254,231,92,.4);border-radius:10px;background:rgba(254,231,92,.08)">👀 <b>Mode observation actif.</b> La règle a été détectée, mais aucun message n'a été supprimé et aucune sanction n'a été appliquée.</div>`;
       else if (r.acted && r.deleted) resBox.innerHTML = `<div style="padding:12px;border:1px solid rgba(59,165,93,.4);border-radius:10px;background:rgba(59,165,93,.08)">✅ <b>L'auto-mod fonctionne !</b> Le message a été supprimé (raison : ${App.escapeHtml(r.reason || '—')}).</div>`;
       else if (r.acted) resBox.innerHTML = `<div style="padding:12px;border:1px solid rgba(254,231,92,.4);border-radius:10px;background:rgba(254,231,92,.08)">⚠️ <b>Détecté mais pas supprimé.</b> Vérifie la carte « Permissions du bot » ci-dessus : il lui faut « Supprimer les messages ».</div>`;
       else resBox.innerHTML = `<div style="padding:12px;border:1px solid rgba(237,66,69,.4);border-radius:10px;background:rgba(237,66,69,.08)">❌ <b>Le bot n'a pas réagi.</b> Vérifie que l'auto-mod est activé, que le filtre testé est coché, et que le salon du test n'est pas exclu.</div>`;
@@ -1799,8 +1976,18 @@ Dashboard.renderers.moderation = async (content, data) => {
   // ⚠️ Centre des avertissements : la progression reste visible même si le
   // message public est automatiquement retiré après 24 heures.
   const cWarnings = Dashboard.card(root, '⚠️ Centre des avertissements', 'Historique unifié des avertissements manuels et auto-mod : 1er avertissement, 2e palier et sanctions appliquées. Les messages publics restent 24 h puis sont supprimés automatiquement.');
+  const warningFilters = App.el(`<div class="am-warning-filters"><button class="am-filter active" data-warning-filter="all">Tous</button><button class="am-filter" data-warning-filter="automod">🤖 Auto-Mod</button><button class="am-filter" data-warning-filter="staff">🛡️ Staff</button><button class="am-filter" data-warning-filter="recent">🕘 24 h</button></div>`);
   const warningBox = App.el(`<div class="desc">Chargement des avertissements…</div>`);
+  cWarnings.appendChild(warningFilters);
   cWarnings.appendChild(warningBox);
+  let warningFilter = 'all';
+  warningFilters.querySelectorAll('[data-warning-filter]').forEach((button) => {
+    button.onclick = () => {
+      warningFilter = button.dataset.warningFilter;
+      warningFilters.querySelectorAll('[data-warning-filter]').forEach((item) => item.classList.toggle('active', item === button));
+      renderWarnings();
+    };
+  });
   const renderWarnings = async () => {
     try {
       const payload = await App.api(`/bots/${bot.id}/guilds/${guildId}/warnings`);
@@ -1820,7 +2007,13 @@ Dashboard.renderers.moderation = async (content, data) => {
             <button class="dash-btn dash-btn-danger dash-btn-sm" data-clear-warnings="${App.escapeHtml(s.user_id)}" title="Réinitialiser">↺</button>
           </div>`).join('')}
         </div>` : '';
-      const listHtml = warningRows.slice(0, 30).map((w) => {
+      const visibleWarnings = warningRows.filter((warning) => {
+        if (warningFilter === 'automod') return warning.source === 'automod';
+        if (warningFilter === 'staff') return warning.source !== 'automod';
+        if (warningFilter === 'recent') return Date.now() - new Date(warning.created_at || 0).getTime() <= 24 * 60 * 60 * 1000;
+        return true;
+      });
+      const listHtml = visibleWarnings.slice(0, 30).map((w) => {
         const isAuto = w.source === 'automod';
         const level = isAuto && w.warning_no ? `${w.warning_no}${cfg.limit ? '/' + cfg.limit : ''}` : 'staff';
         const origin = isAuto ? '🤖 Auto-mod' : '🛡️ Staff';
@@ -1831,7 +2024,7 @@ Dashboard.renderers.moderation = async (content, data) => {
           <div style="flex:1;min-width:0"><b>${App.escapeHtml(w.user_tag || w.user_id)}</b><div class="m-meta">${origin}${action}${channel} · ${App.escapeHtml(w.reason || 'Aucune raison')} · ${App.escapeHtml(String(w.created_at || '').replace('T', ' '))}</div></div>
         </div>`;
       }).join('');
-      warningBox.innerHTML = summaryHtml + `<div style="font-size:12px;color:var(--d-dim);margin:4px 0 6px">🧾 Dernières actions</div>${listHtml}`;
+      warningBox.innerHTML = summaryHtml + `<div style="font-size:12px;color:var(--d-dim);margin:4px 0 6px">🧾 Dernières actions</div>${listHtml || '<div class="am-help">Aucun avertissement pour ce filtre.</div>'}`;
       warningBox.querySelectorAll('[data-clear-warnings]').forEach((btn) => {
         btn.onclick = async () => {
           if (!(await App.confirm('Réinitialiser tous les avertissements de ce membre ?'))) return;
