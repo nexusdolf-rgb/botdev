@@ -450,6 +450,15 @@ CREATE TABLE IF NOT EXISTS voicetemp (
 
 `);
 
+// Index de lecture : ils réduisent le temps des contrôles auth/dashboard
+// sans modifier les données ni le comportement historique.
+try { db.exec('CREATE INDEX IF NOT EXISTS idx_users_discord_id ON users (discord_id)'); } catch (e) {}
+try { db.exec('CREATE INDEX IF NOT EXISTS idx_bots_user_id ON bots (user_id)'); } catch (e) {}
+try { db.exec('CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions (user_id)'); } catch (e) {}
+try { db.exec('CREATE INDEX IF NOT EXISTS idx_platform_audit_target ON platform_audit_log (target_user_id, id DESC)'); } catch (e) {}
+try { db.exec('CREATE INDEX IF NOT EXISTS idx_suggestions_guild_created ON suggestions (bot_id, guild_id, created_at DESC)'); } catch (e) {}
+try { db.exec('CREATE INDEX IF NOT EXISTS idx_scheduled_guild ON scheduled_messages (bot_id, guild_id, enabled, hour, minute)'); } catch (e) {}
+
 // Migrations légères (les colonnes ajoutées après coup)
 try { db.exec("ALTER TABLE tickets ADD COLUMN name TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE tickets ADD COLUMN types TEXT DEFAULT '[]'"); } catch (e) {}

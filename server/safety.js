@@ -18,14 +18,17 @@ function install() {
   process.on('warning', (w) => {
     console.error('[Hoxera] ⚠️ Avertissement Node :', (w && w.message) || w);
   });
-  // 🧠 Surveillance mémoire : alerte avant que l'instance gratuite (512 Mo)
-  // ne soit saturée — permet d'agir avant un crash.
-  setInterval(() => {
-    const mem = process.memoryUsage();
-    if (mem.heapUsed > 400 * 1024 * 1024) {
-      console.error(`[Hoxera] 🧠 MÉMOIRE HAUTE : ${Math.round(mem.heapUsed / 1024 / 1024)} Mo utilisés — risque de saturation !`);
-    }
-  }, 5 * 60000).unref();
+  // 🧠 Surveillance mémoire : plusieurs seuils, nettoyage des caches non
+  // essentiels et état exposé au centre de santé avant un éventuel OOM.
+  const resourceGuard = require('./resourceGuard');
+  const checkMemory = () => {
+    const info = resourceGuard.observe();
+    if (info.state === 'watch') console.warn(`[Hoxera] 👀 MÉMOIRE À SURVEILLER : RSS ${info.rssMb} Mo / ${info.limitMb} Mo.`);
+    if (info.state === 'high') console.error(`[Hoxera] ⚠️ MÉMOIRE ÉLEVÉE : RSS ${info.rssMb} Mo / ${info.limitMb} Mo.`);
+    if (info.state === 'critical') console.error(`[Hoxera] 🚨 MÉMOIRE CRITIQUE : RSS ${info.rssMb} Mo / ${info.limitMb} Mo.`);
+  };
+  checkMemory();
+  setInterval(checkMemory, 60000).unref();
 }
 
 module.exports = { install };

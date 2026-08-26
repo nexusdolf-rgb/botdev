@@ -200,8 +200,9 @@ async function main() {
   // 💾 Sauvegarde automatique toutes les 10 minutes
   setInterval(async () => {
     try {
-      await backup.upload(store.db);
-      store.settings.set('last_backup', new Date().toISOString());
+      const saved = await backup.upload(store.db);
+      if (saved) store.settings.set('last_backup', new Date().toISOString());
+      else console.warn('[BotDev] ⚠️ Sauvegarde non effectuée : la dernière sauvegarde valide est conservée.');
     }
     catch (e) { console.error('[BotDev] Sauvegarde :', e.message); }
   }, 10 * 60000);

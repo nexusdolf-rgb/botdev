@@ -1,7 +1,7 @@
 // BotDev - Service Worker (mode app installable + chargement hors ligne)
 // Stratégie : HTML/JS/CSS en réseau d'abord (toujours à jour),
 // images/icônes en cache d'abord. L'API passe toujours par le réseau.
-const CACHE = 'botdev-v132';
+const CACHE = 'botdev-v133';
 const ASSETS = [
   '/',
   '/manifest.webmanifest',

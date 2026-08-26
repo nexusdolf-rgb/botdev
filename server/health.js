@@ -45,6 +45,10 @@ function snapshot() {
   try { queueInfo = require('./queue').statsSnapshot(); } catch {}
   let resilienceInfo = { state: 'ok', failuresInWindow: 0 };
   try { resilienceInfo = require('./resilience').status(); } catch {}
+  let resources = {};
+  try { resources = require('./resourceGuard').observe(mem); } catch {}
+  let cache = {};
+  try { cache = require('./cache').cacheStats(); } catch {}
   return {
     ts: Date.now(),
     processUptimeS: Math.round(process.uptime()),
@@ -53,6 +57,8 @@ function snapshot() {
       heapTotalMb: Math.round(mem.heapTotal / 1024 / 1024),
       rssMb: Math.round(mem.rss / 1024 / 1024),
     },
+    resources,
+    cache,
     platform,
     botsOnline: bots.filter((b) => b.online).length,
     db: dbInfo,

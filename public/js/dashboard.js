@@ -3193,6 +3193,8 @@ Dashboard.renderers.health = async (content) => {
     let h = {};
     try { h = await App.api('/health/bot'); } catch (e) { root.innerHTML = `<div class="dash-empty">${App.escapeHtml(e.message)}</div>`; return; }
     const mem = h.memory || {};
+    const resource = h.resources || {};
+    const cache = h.cache || {};
     const heapPct = mem.heapTotalMb ? Math.min(100, Math.round((mem.heapUsedMb / mem.heapTotalMb) * 100)) : 0;
     const heapGlobalPct = Math.min(100, Math.round((mem.heapUsedMb || 0) / 512 * 100)); // instance 512 Mo
     const lastB = h.lastBackup ? new Date(h.lastBackup) : null;
@@ -3223,6 +3225,7 @@ Dashboard.renderers.health = async (content) => {
         <div style="height:100%;width:${heapPct}%;background:linear-gradient(90deg,#5865F2,#8B5CF6);border-radius:20px"></div>
       </div>
       <div style="color:var(--d-dim);font-size:11.5px">${heapGlobalPct}% de l'instance · RSS ${mem.rssMb ?? '-'} Mo</div>
+      <div style="color:var(--d-dim);font-size:11.5px;margin-top:6px">${resource.state === 'critical' ? '🚨 Pression critique' : resource.state === 'high' ? '⚠️ Pression élevée' : resource.state === 'watch' ? '👀 À surveiller' : '🟢 Niveau normal'} · cache ${cache.entries ?? 0} entrée(s) en mémoire</div>
     </div>`);
     grid.appendChild(cMem);
 

@@ -9,6 +9,7 @@ const store = require('./db');
 const botManager = require('./discord/botManager');
 const { oauthGuildCanConfigure, accessKind } = require('./discord/permissions');
 const security = require('./security');
+const { AsyncTTLCache, TTLCache } = require('./cache');
 const { MODULES, CMD_DEFS, enabledModules, enabledCommandNames } = require('./discord/premade');
 const { EVENT_DEFS, eventsState } = require('./discord/events');
 
@@ -20,6 +21,14 @@ const platformMutationRateLimit = security.rateLimit({
   name: 'platform-admin', windowMs: 60000, max: 30,
   key: (req) => req.userId || req.ip,
 });
+
+// Les listes relisibles de Discord sont mises en cache brièvement pour
+// absorber les ouvertures simultanées du dashboard sans relire la même
+// Collection 1 000 fois. La base reste la source de vérité.
+const discordRefreshCache = new AsyncTTLCache({ ttlMs: 60000, max: 2000 });
+const guildCatalogCache = new TTLCache({ ttlMs: 30000, max: 500 });
+const membersCache = new AsyncTTLCache({ ttlMs: 30000, max: 2000 });
+const statsCache = new AsyncTTLCache({ ttlMs: 15000, max: 500 });
 
 function setSessionCookie(req, res, token) {
   res.cookie(COOKIE, token, security.secureCookieOptions(req, 30 * 86400000));
@@ -261,36 +270,38 @@ router.get('/auth/discord/callback', oauthRateLimit, async (req, res) => {
 });
 
 async function refreshDiscordData(userId) {
-  const row = store.discordTokens.get(userId);
-  if (!row) return false;
-  let access = row.access_token;
-  if (new Date(row.expires_at) < new Date(Date.now() + 60000)) {
-    const secret = process.env.DISCORD_CLIENT_SECRET || '';
-    if (!secret || !row.refresh_token) return false;
-    const res = await fetch('https://discord.com/api/oauth2/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ client_id: oauthClientId(), client_secret: secret, grant_type: 'refresh_token', refresh_token: row.refresh_token }),
+  return discordRefreshCache.getOrLoad(String(userId), async () => {
+    const row = store.discordTokens.get(userId);
+    if (!row) return false;
+    let access = row.access_token;
+    if (new Date(row.expires_at) < new Date(Date.now() + 60000)) {
+      const secret = process.env.DISCORD_CLIENT_SECRET || '';
+      if (!secret || !row.refresh_token) return false;
+      const res = await fetch('https://discord.com/api/oauth2/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ client_id: oauthClientId(), client_secret: secret, grant_type: 'refresh_token', refresh_token: row.refresh_token }),
+      });
+      if (!res.ok) return false;
+      const d = await res.json();
+      access = d.access_token;
+      store.discordTokens.set(userId, { access, refresh: d.refresh_token || row.refresh_token, expires: new Date(Date.now() + d.expires_in * 1000).toISOString() });
+    }
+    const h = { Authorization: `Bearer ${access}` };
+    const [meRes, guildsRes] = await Promise.all([
+      fetch('https://discord.com/api/v10/users/@me', { headers: h }),
+      fetch('https://discord.com/api/v10/users/@me/guilds', { headers: h }),
+    ]);
+    if (!meRes.ok) return false;
+    const me = await meRes.json();
+    const guilds = guildsRes.ok ? await guildsRes.json() : [];
+    store.users.updateDiscord(userId, {
+      discord_username: me.username,
+      discord_avatar: me.avatar || '',
+      discord_guilds: JSON.stringify(guilds.map((g) => ({ id: g.id, name: g.name, icon: g.icon || '', owner: !!g.owner, permissions: g.permissions || '0' }))),
     });
-    if (!res.ok) return false;
-    const d = await res.json();
-    access = d.access_token;
-    store.discordTokens.set(userId, { access, refresh: d.refresh_token || row.refresh_token, expires: new Date(Date.now() + d.expires_in * 1000).toISOString() });
-  }
-  const h = { Authorization: `Bearer ${access}` };
-  const [meRes, guildsRes] = await Promise.all([
-    fetch('https://discord.com/api/v10/users/@me', { headers: h }),
-    fetch('https://discord.com/api/v10/users/@me/guilds', { headers: h }),
-  ]);
-  if (!meRes.ok) return false;
-  const me = await meRes.json();
-  const guilds = guildsRes.ok ? await guildsRes.json() : [];
-  store.users.updateDiscord(userId, {
-    discord_username: me.username,
-    discord_avatar: me.avatar || '',
-    discord_guilds: JSON.stringify(guilds.map((g) => ({ id: g.id, name: g.name, icon: g.icon || '', owner: !!g.owner, permissions: g.permissions || '0' }))),
+    return true;
   });
-  return true;
 }
 
 async function userCanManageGuild(req, guildId) {
@@ -575,17 +586,10 @@ function guildChecklist(payload) {
   return items;
 }
 
-router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
-  const bot = getAnyBot(req, res);
-  if (!bot) return;
-  const guildId = req.params.guildId;
-  if (!(await userCanManageGuild(req, guildId))) {
-    return res.status(403).json({ error: 'Tu dois être propriétaire du serveur ou avoir la permission Discord « Administrateur ».' });
-  }
-  const entry = botManager.clients.get(bot.id);
-  const dGuild = entry && entry.client.isReady() ? entry.client.guilds.cache.get(guildId) : null;
-  if (!dGuild) return res.status(400).json({ error: 'Le bot n\'est pas sur ce serveur (ou il est hors ligne).' });
-  // Salons et rôles du serveur (lecture directe depuis le bot en ligne)
+function guildCatalog(dGuild) {
+  const key = String(dGuild && dGuild.id || 'unknown');
+  const cached = guildCatalogCache.get(key);
+  if (cached) return cached;
   const channels = [];
   const roles = [];
   if (dGuild && dGuild.channels && dGuild.channels.cache) {
@@ -602,6 +606,22 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
   }
   channels.sort((a, b) => (b.category ? 1 : 0) - (a.category ? 1 : 0) || a.name.localeCompare(b.name));
   roles.sort((a, b) => a.name.localeCompare(b.name));
+  return guildCatalogCache.set(key, { channels, roles });
+}
+
+router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) {
+    return res.status(403).json({ error: 'Tu dois être propriétaire du serveur ou avoir la permission Discord « Administrateur ».' });
+  }
+  const entry = botManager.clients.get(bot.id);
+  const dGuild = entry && entry.client.isReady() ? entry.client.guilds.cache.get(guildId) : null;
+  if (!dGuild) return res.status(400).json({ error: 'Le bot n\'est pas sur ce serveur (ou il est hors ligne).' });
+  // Salons et rôles du serveur : catalogue Discord relisible mis en cache
+  // brièvement pour absorber les ouvertures simultanées du dashboard.
+  const { channels, roles } = guildCatalog(dGuild);
 
   const cfg = store.tickets.get(bot.id, guildId);
   const parsedTypes = (() => {
@@ -1618,30 +1638,34 @@ router.get('/bots/:id/guilds/:guildId/members', requireAuth, async (req, res) =>
   const entry = guildEntryFor(bot, guildId);
   if (!entry) return res.status(400).json({ error: 'Le bot est hors ligne ou absent de ce serveur.' });
   const guild = entry.client.guilds.cache.get(guildId);
-  const q = String(req.query.q || '').toLowerCase();
-  const out = [];
-  const cache = [...guild.members.cache.values()].filter((m) => !m.user.bot);
-  const sorted = cache.sort((a, b) => (b.roles.highest.position) - (a.roles.highest.position));
-  for (const m of sorted.slice(0, 300)) {
-    const tag = m.user.tag || m.user.username;
-    if (q && !tag.toLowerCase().includes(q) && !m.user.username.toLowerCase().includes(q)) continue;
-    const eco = store.economy.get(bot.id, guildId, m.id);
-    const xpRow = store.xp.get(bot.id, guildId, m.id);
-    out.push({
-      id: m.id,
-      tag,
-      username: m.user.username,
-      avatar: m.user.displayAvatarURL({ size: 64 }) || '',
-      roles: m.roles.cache.filter((r) => r.name !== '@everyone').map((r) => ({ id: r.id, name: r.name, color: r.hexColor })).slice(0, 8),
-      coins: eco ? eco.coins : 0,
-      xp: xpRow ? xpRow.xp : 0,
-      level: xpRow ? xpRow.level : 0,
-      joined: m.joinedAt ? m.joinedAt.toISOString() : '',
-      is_owner: m.id === guild.ownerId,
-    });
-    if (out.length >= 150) break;
-  }
-  res.json({ members: out });
+  const q = String(req.query.q || '').trim().toLowerCase().slice(0, 80);
+  const cacheKey = `${bot.id}:${guildId}:${q}`;
+  const payload = await membersCache.getOrLoad(cacheKey, async () => {
+    const out = [];
+    const cache = [...guild.members.cache.values()].filter((m) => !m.user.bot);
+    const sorted = cache.sort((a, b) => (b.roles.highest.position) - (a.roles.highest.position));
+    for (const m of sorted.slice(0, 300)) {
+      const tag = m.user.tag || m.user.username;
+      if (q && !tag.toLowerCase().includes(q) && !m.user.username.toLowerCase().includes(q)) continue;
+      const eco = store.economy.get(bot.id, guildId, m.id);
+      const xpRow = store.xp.get(bot.id, guildId, m.id);
+      out.push({
+        id: m.id,
+        tag,
+        username: m.user.username,
+        avatar: m.user.displayAvatarURL({ size: 64 }) || '',
+        roles: m.roles.cache.filter((r) => r.name !== '@everyone').map((r) => ({ id: r.id, name: r.name, color: r.hexColor })).slice(0, 8),
+        coins: eco ? eco.coins : 0,
+        xp: xpRow ? xpRow.xp : 0,
+        level: xpRow ? xpRow.level : 0,
+        joined: m.joinedAt ? m.joinedAt.toISOString() : '',
+        is_owner: m.id === guild.ownerId,
+      });
+      if (out.length >= 150) break;
+    }
+    return { members: out };
+  });
+  res.json(payload);
 });
 
 router.post('/bots/:id/guilds/:guildId/members/coins', requireAuth, async (req, res) => {
@@ -1655,6 +1679,7 @@ router.post('/bots/:id/guilds/:guildId/members/coins', requireAuth, async (req, 
   store.economy.ensure(bot.id, guildId, user_id);
   store.economy.add(bot.id, guildId, user_id, amt);
   const row = store.economy.get(bot.id, guildId, user_id);
+  membersCache.clear();
   res.json({ ok: true, coins: row.coins });
 });
 
@@ -1674,6 +1699,7 @@ router.post('/bots/:id/guilds/:guildId/members/role', requireAuth, async (req, r
   try {
     if (action === 'add') await member.roles.add(role);
     else await member.roles.remove(role);
+    membersCache.clear();
     res.json({ ok: true });
   } catch (e) {
     res.status(400).json({ error: `Impossible (${e.message.slice(0, 120)})` });
@@ -1694,6 +1720,7 @@ router.post('/bots/:id/guilds/:guildId/members/kick', requireAuth, async (req, r
   if (!member) return res.status(404).json({ error: 'Membre introuvable.' });
   try {
     await member.kick(String(reason || '').slice(0, 400));
+    membersCache.clear();
     res.json({ ok: true });
   } catch (e) {
     res.status(400).json({ error: `Impossible (${e.message.slice(0, 120)})` });
@@ -1708,21 +1735,24 @@ router.get('/bots/:id/guilds/:guildId/stats', requireAuth, async (req, res) => {
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
-  const activity = store.msgStats.perDay(bot.id, guildId, 7);
-  const joins = store.joinStats.perDay(bot.id, guildId, 7);
-  const topRaw = store.msgStats.topUsers(bot.id, guildId, 7);
-  const entry = guildEntryFor(bot, guildId);
-  let topActive = [];
-  if (entry) {
-    const guild = entry.client.guilds.cache.get(guildId);
-    topActive = topRaw.map((t) => {
-      const m = guild.members.cache.get(t.user_id);
-      return { user_id: t.user_id, messages: t.n, tag: m ? m.user.tag : t.user_id, avatar: m ? m.user.displayAvatarURL({ size: 64 }) : '' };
-    }).filter((t) => !t.tag.includes('Bot'));
-  } else {
-    topActive = topRaw.map((t) => ({ user_id: t.user_id, messages: t.n, tag: t.user_id, avatar: '' }));
-  }
-  res.json({ activity, joins, top_active: topActive });
+  const payload = await statsCache.getOrLoad(`${bot.id}:${guildId}`, async () => {
+    const activity = store.msgStats.perDay(bot.id, guildId, 7);
+    const joins = store.joinStats.perDay(bot.id, guildId, 7);
+    const topRaw = store.msgStats.topUsers(bot.id, guildId, 7);
+    const entry = guildEntryFor(bot, guildId);
+    let topActive = [];
+    if (entry) {
+      const guild = entry.client.guilds.cache.get(guildId);
+      topActive = topRaw.map((t) => {
+        const m = guild.members.cache.get(t.user_id);
+        return { user_id: t.user_id, messages: t.n, tag: m ? m.user.tag : t.user_id, avatar: m ? m.user.displayAvatarURL({ size: 64 }) : '' };
+      }).filter((t) => !t.tag.includes('Bot'));
+    } else {
+      topActive = topRaw.map((t) => ({ user_id: t.user_id, messages: t.n, tag: t.user_id, avatar: '' }));
+    }
+    return { activity, joins, top_active: topActive };
+  });
+  res.json(payload);
 });
 
 // ============================================================
@@ -1905,7 +1935,8 @@ router.post('/backup/now', requireAuth, platformMutationRateLimit, async (req, r
   const backup = require('./backup');
   if (!backup.enabled()) return res.status(400).json({ error: 'Sauvegarde non configurée (variables GitHub manquantes).' });
   try {
-    await backup.upload(store.db);
+    const saved = await backup.upload(store.db);
+    if (!saved) return res.status(503).json({ error: 'Sauvegarde non effectuée : la dernière sauvegarde valide est conservée.' });
     store.settings.set('last_backup', new Date().toISOString());
     res.json({ ok: true, at: new Date().toISOString() });
   } catch (e) {
@@ -1997,6 +2028,8 @@ router.get('/health/bot', (req, res) => {
     lastBackup: store.settings.get('last_backup') || '',
     db: dbInfo,
     memory: (healthInfo && healthInfo.memory) || {},
+    resources: (healthInfo && healthInfo.resources) || {},
+    cache: (healthInfo && healthInfo.cache) || {},
     errors24h: (healthInfo && healthInfo.errors24h) || { count: 0, last: [] },
     platform: (healthInfo && healthInfo.platform) || {},
     queue: (healthInfo && healthInfo.queue) || { waiting: 0, active: 0, processed: 0, failed: 0, refused: 0 },
