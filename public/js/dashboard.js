@@ -2977,7 +2977,8 @@ Dashboard.renderers.community = async (content, data) => {
 Dashboard.renderers.server = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const s = data.settings;
-  const root = Dashboard.header(content, '⚙️', 'Réglages du serveur', 'Préfixe, anniversaires, salons vocaux temporaires et plus.');
+  const currentLanguage = ['fr', 'en'].includes(String(s.lang || 'fr')) ? String(s.lang || 'fr') : 'fr';
+  const root = Dashboard.header(content, '⚙️', 'Réglages du serveur', 'Préfixe, langue, anniversaires, salons vocaux temporaires et plus.');
   const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
   const categories = (data.channels || []).filter((ch) => ch.category);
   const rolesList = data.roles || [];
@@ -2985,6 +2986,12 @@ Dashboard.renderers.server = async (content, data) => {
   c.innerHTML += `
     <label class="dash-label">Préfixe (vide = « ${App.escapeHtml(bot.prefix)} »)</label>
     <input class="dash-input" id="g-prefix" maxlength="5" value="${App.escapeHtml(s.prefix || '')}" placeholder="${App.escapeHtml(bot.prefix)}" style="max-width:200px" />
+    <label class="dash-label" style="margin-top:12px">🌍 Langue de Nexora sur ce serveur</label>
+    <select class="dash-select" id="g-lang" style="max-width:280px">
+      <option value="fr" ${currentLanguage === 'fr' ? 'selected' : ''}>🇫🇷 Français</option>
+      <option value="en" ${currentLanguage === 'en' ? 'selected' : ''}>🇬🇧 English</option>
+    </select>
+    <div class="desc" style="margin-top:6px">Les panneaux de tickets, messages publics, arrivées et transcriptions suivront cette langue. Le réglage est propre à ce serveur.</div>
     <div class="dash-tier-box" style="margin-top:14px;padding:14px;border:1px solid var(--d-border);border-radius:12px">
       <div style="font-weight:700;margin-bottom:2px">⚖️ Sanctions automatiques progressives</div>
       <div style="font-size:12.5px;color:var(--d-dim);margin-bottom:6px">Exemple pro : 3 avertissements → timeout, 5 → expulsion. La sanction la plus sévère atteinte s'applique.</div>
@@ -3008,6 +3015,7 @@ Dashboard.renderers.server = async (content, data) => {
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/settings`, { method: 'PUT', body: {
         prefix: c.querySelector('#g-prefix').value.trim(),
+        lang: c.querySelector('#g-lang').value,
         warn_limit: parseInt(c.querySelector('#g-warn').value, 10) || 0,
         warn_action: c.querySelector('#g-action').value,
         warn_timeout_limit: parseInt(c.querySelector('#g-warn-t1').value, 10) || 0,

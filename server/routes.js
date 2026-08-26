@@ -1328,9 +1328,10 @@ router.put('/bots/:id/guilds/:guildId/settings', requireAuth, async (req, res) =
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
-  const { prefix, warn_limit, warn_action, warn_timeout_limit, warn_timeout_min, starboard_channel, starboard_min, live_channel, live_ping, ticket_log_channel, log_channel, birthday_channel, birthday_role, log_events, timezone } = req.body || {};
+  const { prefix, lang, warn_limit, warn_action, warn_timeout_limit, warn_timeout_min, starboard_channel, starboard_min, live_channel, live_ping, ticket_log_channel, log_channel, birthday_channel, birthday_role, log_events, timezone } = req.body || {};
   store.guildSettings.set(bot.id, guildId, {
     prefix: String(prefix || '').slice(0, 5),
+    ...(lang !== undefined ? { lang: ['fr', 'en'].includes(String(lang)) ? String(lang) : 'fr' } : {}),
     warn_limit: Math.max(0, parseInt(warn_limit, 10) || 0),
     warn_action: ['none', 'timeout', 'kick', 'ban'].includes(warn_action) ? warn_action : 'none',
     ...(warn_timeout_limit !== undefined ? { warn_timeout_limit: Math.max(0, parseInt(warn_timeout_limit, 10) || 0) } : {}),
