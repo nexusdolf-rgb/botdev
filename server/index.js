@@ -5,6 +5,7 @@ const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const backup = require('./backup');
+const security = require('./security');
 // 🛡️ Filets de sécurité : le processus ne meurt JAMAIS d'une erreur isolée
 require('./safety').install();
 
@@ -66,6 +67,9 @@ async function main() {
   try { store.db.prepare('UPDATE bots SET enabled = 1').run(); } catch {}
 
   const app = express();
+  app.disable('x-powered-by');
+  app.set('trust proxy', 1);
+  app.use(security.securityHeaders);
   app.use(express.json({ limit: '15mb' }));
   app.use(cookieParser());
 
@@ -82,8 +86,8 @@ async function main() {
     next();
   });
 
-  // API
-  app.use('/api', routes);
+  // API : contrôle d'origine avant toutes les routes et permissions métier.
+  app.use('/api', security.originGuard, routes);
 
   // 🏓 Endpoint ultra-léger pour le garde-éveil (aucune base, aucun calcul)
   app.get('/ping', (req, res) => res.type('text').send('pong'));

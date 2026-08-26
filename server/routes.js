@@ -8,11 +8,22 @@ const crypto = require('crypto');
 const store = require('./db');
 const botManager = require('./discord/botManager');
 const { oauthGuildCanConfigure, accessKind } = require('./discord/permissions');
+const security = require('./security');
 const { MODULES, CMD_DEFS, enabledModules, enabledCommandNames } = require('./discord/premade');
 const { EVENT_DEFS, eventsState } = require('./discord/events');
 
 const router = express.Router();
 const COOKIE = 'botdev_session';
+const authRateLimit = security.rateLimit({ name: 'auth', windowMs: 15 * 60000, max: 20 });
+const oauthRateLimit = security.rateLimit({ name: 'oauth', windowMs: 10 * 60000, max: 30 });
+const platformMutationRateLimit = security.rateLimit({
+  name: 'platform-admin', windowMs: 60000, max: 30,
+  key: (req) => req.userId || req.ip,
+});
+
+function setSessionCookie(req, res, token) {
+  res.cookie(COOKIE, token, security.secureCookieOptions(req, 30 * 86400000));
+}
 
 // ============================================================
 // 🖼️ Bannière du panneau de tickets, générée PAR SERVEUR
@@ -70,15 +81,23 @@ async function requireAuth(req, res, next) {
   if (!token) return res.status(401).json({ error: 'Non connecté' });
   const session = store.sessions.find(token);
   if (!session || new Date(session.expires_at) < new Date()) return res.status(401).json({ error: 'Session expirée' });
+  const currentUser = store.users.findById(session.user_id);
+  if (!currentUser) {
+    store.sessions.destroy(token);
+    res.clearCookie(COOKIE);
+    return res.status(401).json({ error: 'Session invalide' });
+  }
   if (store.platformBans.isBanned(session.user_id)) {
+    store.sessions.destroy(token);
     res.clearCookie(COOKIE);
     return res.status(403).json({ error: 'Ce compte est banni de Nexora.' });
   }
   req.userId = session.user_id;
+  req.currentUser = currentUser;
   next();
 }
 
-router.post('/auth/register', (req, res) => {
+router.post('/auth/register', authRateLimit, (req, res) => {
   if (process.env.REGISTRATION_CLOSED === '1') {
     return res.status(403).json({ error: 'Les inscriptions sont fermées. Contacte l\'administrateur.' });
   }
@@ -91,11 +110,11 @@ router.post('/auth/register', (req, res) => {
   const hash = bcrypt.hashSync(String(password), 10);
   const userId = store.users.create(normalized, hash);
   const token = store.sessions.create(userId);
-  res.cookie(COOKIE, token, { httpOnly: true, sameSite: 'lax', maxAge: 30 * 86400000 });
+  setSessionCookie(req, res, token);
   res.json({ ok: true });
 });
 
-router.post('/auth/login', (req, res) => {
+router.post('/auth/login', authRateLimit, (req, res) => {
   const { email, password } = req.body || {};
   const user = email && store.users.findByEmail(email);
   if (!user || !bcrypt.compareSync(String(password || ''), user.password_hash)) {
@@ -105,7 +124,7 @@ router.post('/auth/login', (req, res) => {
     return res.status(403).json({ error: 'Ce compte est banni de Nexora.' });
   }
   const token = store.sessions.create(user.id);
-  res.cookie(COOKIE, token, { httpOnly: true, sameSite: 'lax', maxAge: 30 * 86400000 });
+  setSessionCookie(req, res, token);
   res.json({ ok: true });
 });
 
@@ -118,14 +137,20 @@ router.post('/auth/logout', (req, res) => {
 
 function isPlatformAdmin(user) {
   if (!user) return false;
-  // Identité Discord explicite du fondateur : elle prend priorité sur le
-  // compte interne historique et garantit qu'un seul compte lié est admin.
-  const discordIds = (process.env.NEXORA_ADMIN_DISCORD_ID || '').split(',').map((s) => s.trim()).filter(Boolean);
-  if (discordIds.length) return !!user.discord_id && discordIds.includes(String(user.discord_id));
+  // Identité Discord explicite du fondateur : une seule valeur valide est
+  // acceptée. Une valeur absente ou mal formée ne donne jamais un accès.
+  const configuredDiscordId = process.env.NEXORA_ADMIN_DISCORD_ID;
+  if (configuredDiscordId !== undefined) {
+    const discordId = String(configuredDiscordId).trim();
+    return /^\d{15,21}$/.test(discordId) && String(user.discord_id || '') === discordId;
+  }
+  // Liste email explicite conservée pour les installations historiques ;
+  // elle doit contenir une seule adresse pour respecter le mode fondateur.
   const env = (process.env.ADMIN_EMAILS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
-  if (env.length) return env.includes(String(user.email || '').toLowerCase());
-  // Sans configuration explicite : le premier utilisateur inscrit reste admin
-  // pour préserver les anciennes installations.
+  if (env.length) return env.length === 1 && env[0] === String(user.email || '').toLowerCase();
+  // En production, l'absence de configuration est un verrouillage complet.
+  // Le repli historique reste disponible uniquement hors production/tests.
+  if (process.env.NEXORA_ADMIN_FAIL_CLOSED === '1' || process.env.NODE_ENV === 'production' || process.env.RENDER === 'true') return false;
   return user.id === 1;
 }
 
@@ -153,11 +178,11 @@ function oauthRedirectUri(req) {
   return process.env.DISCORD_REDIRECT_URI || `${reqOrigin(req)}/api/auth/discord/callback`;
 }
 
-router.get('/auth/discord/url', (req, res) => {
+router.get('/auth/discord/url', oauthRateLimit, (req, res) => {
   const clientId = oauthClientId();
   if (!clientId) return res.status(400).json({ error: 'Aucune application Discord configurée.' });
   const state = crypto.randomBytes(16).toString('hex');
-  res.cookie('bd_oauth_state', state, { httpOnly: true, sameSite: 'lax', maxAge: 600000 });
+  res.cookie('bd_oauth_state', state, security.secureCookieOptions(req, 600000));
   const url = 'https://discord.com/oauth2/authorize'
     + `?client_id=${clientId}`
     + `&redirect_uri=${encodeURIComponent(oauthRedirectUri(req))}`
@@ -167,7 +192,7 @@ router.get('/auth/discord/url', (req, res) => {
   res.json({ url });
 });
 
-router.get('/auth/discord/callback', async (req, res) => {
+router.get('/auth/discord/callback', oauthRateLimit, async (req, res) => {
   const { code, state } = req.query;
   if (!code || state !== req.cookies.bd_oauth_state) return res.redirect('/#/login?oauth=error');
   res.clearCookie('bd_oauth_state');
@@ -228,7 +253,7 @@ router.get('/auth/discord/callback', async (req, res) => {
       expires: new Date(Date.now() + (tokens.expires_in || 604800) * 1000).toISOString(),
     });
     const session = store.sessions.create(user.id);
-    res.cookie(COOKIE, session, { httpOnly: true, sameSite: 'lax', maxAge: 30 * 86400000 });
+    setSessionCookie(req, res, session);
     res.redirect('/#/dashboard?oauth=linked');
   } catch (e) {
     res.redirect('/#/dashboard?oauth=error');
@@ -301,8 +326,9 @@ router.get('/discord/guilds', requireAuth, async (req, res) => {
 
 // ---------------------- Admin plateforme ----------------------
 function requireAdmin(req, res, next) {
-  const user = store.users.findById(req.userId);
+  const user = req.currentUser || store.users.findById(req.userId);
   if (!user || !isPlatformAdmin(user)) return res.status(403).json({ error: 'Réservé à l\'administrateur de la plateforme.' });
+  req.isPlatformAdmin = true;
   next();
 }
 
@@ -1873,7 +1899,7 @@ router.put('/bots/:id/guilds/:guildId/applications', requireAuth, async (req, re
 // ============================================================
 // Hoxera 2.0 — Sauvegarde : lancer maintenant + dernière sauvegarde
 // ============================================================
-router.post('/backup/now', requireAuth, async (req, res) => {
+router.post('/backup/now', requireAuth, platformMutationRateLimit, async (req, res) => {
   const user = store.users.findById(req.userId);
   if (!isPlatformAdmin(user)) return res.status(403).json({ error: 'Réservé au fondateur.' });
   const backup = require('./backup');
@@ -2158,6 +2184,27 @@ router.get('/admin/users', requireAuth, requireAdmin, (req, res) => {
   res.json({ users });
 });
 
+router.get('/admin/audit', requireAuth, requireAdmin, (req, res) => {
+  const rows = store.db.prepare(`
+    SELECT a.id, a.actor_user_id, a.target_user_id, a.action, a.details, a.created_at,
+      au.discord_username AS actor_discord_username,
+      tu.discord_username AS target_discord_username
+    FROM platform_audit_log a
+    LEFT JOIN users au ON au.id = a.actor_user_id
+    LEFT JOIN users tu ON tu.id = a.target_user_id
+    ORDER BY a.id DESC LIMIT 100`).all();
+  res.json({ audit: rows.map((row) => ({
+    id: row.id,
+    actor_user_id: row.actor_user_id,
+    actor: row.actor_discord_username || `Compte #${row.actor_user_id}`,
+    target_user_id: row.target_user_id,
+    target: row.target_discord_username || (row.target_user_id ? `Compte #${row.target_user_id}` : '—'),
+    action: row.action,
+    details: row.details || '',
+    created_at: row.created_at,
+  })) });
+});
+
 router.get('/admin/bots', requireAuth, requireAdmin, (req, res) => {
   const rows = store.db.prepare(`
     SELECT b.id, b.name, b.bot_username, b.enabled, u.email AS owner_email
@@ -2171,17 +2218,18 @@ router.get('/admin/bots', requireAuth, requireAdmin, (req, res) => {
   res.json({ bots: out });
 });
 
-router.post('/admin/users/:id/unlink-discord', requireAuth, requireAdmin, (req, res) => {
+router.post('/admin/users/:id/unlink-discord', requireAuth, requireAdmin, platformMutationRateLimit, (req, res) => {
   const target = adminTarget(req, res);
   if (!target) return;
   store.users.updateDiscord(target.targetId, {
     discord_id: '', discord_username: '', discord_avatar: '', discord_guilds: '[]',
   });
   store.discordTokens.remove(target.targetId);
+  store.platformAudit.add(req.userId, target.targetId, 'unlink_discord', 'Liaison Discord supprimée, compte conservé.');
   res.json({ ok: true, message: 'Compte Discord délié. Le compte Nexora est conservé.' });
 });
 
-router.post('/admin/users/:id/ban', requireAuth, requireAdmin, (req, res) => {
+router.post('/admin/users/:id/ban', requireAuth, requireAdmin, platformMutationRateLimit, (req, res) => {
   const target = adminTarget(req, res);
   if (!target) return;
   const reason = String((req.body || {}).reason || '').trim().slice(0, 500);
@@ -2189,21 +2237,24 @@ router.post('/admin/users/:id/ban', requireAuth, requireAdmin, (req, res) => {
   // Les sessions et le jeton OAuth ne servent plus à un compte banni.
   store.db.prepare('DELETE FROM sessions WHERE user_id = ?').run(target.targetId);
   store.discordTokens.remove(target.targetId);
+  store.platformAudit.add(req.userId, target.targetId, 'ban_user', reason ? `Raison : ${reason}` : 'Aucune raison fournie.');
   res.json({ ok: true, message: 'Compte banni de Nexora.' });
 });
 
-router.delete('/admin/users/:id/ban', requireAuth, requireAdmin, (req, res) => {
+router.delete('/admin/users/:id/ban', requireAuth, requireAdmin, platformMutationRateLimit, (req, res) => {
   const target = adminTarget(req, res);
   if (!target) return;
   store.platformBans.remove(target.targetId);
+  store.platformAudit.add(req.userId, target.targetId, 'unban_user', 'Bannissement Nexora retiré.');
   res.json({ ok: true, message: 'Compte débanni de Nexora. Il devra se reconnecter.' });
 });
 
-router.delete('/admin/users/:id', requireAuth, requireAdmin, async (req, res) => {
+router.delete('/admin/users/:id', requireAuth, requireAdmin, platformMutationRateLimit, async (req, res) => {
   const target = adminTarget(req, res);
   if (!target) return;
   const bots = store.bots.all(target.targetId);
   for (const bot of bots) await botManager.logoutBot(bot.id);
+  store.platformAudit.add(req.userId, target.targetId, 'delete_user', 'Compte et données associées supprimés.');
   deleteUserData(target.targetId, bots.map((bot) => Number(bot.id)));
   res.json({ ok: true, message: 'Compte Nexora et données associées supprimés.' });
 });

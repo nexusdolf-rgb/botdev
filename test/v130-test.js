@@ -9,7 +9,7 @@ const path = require('path');
 
 process.env.NODE_ENV = 'test';
 process.env.ADMIN_EMAILS = '';
-process.env.NEXORA_ADMIN_DISCORD_ID = 'DISCORD_ADMIN';
+process.env.NEXORA_ADMIN_DISCORD_ID = '100000000000000001';
 process.env.BOTDEV_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'hoxera-v130-'));
 
 const store = require('../server/db');
@@ -17,11 +17,11 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 
 (async () => {
-  const adminId = store.users.create('fondateur@nexora.test', 'x', { discord_id: 'DISCORD_ADMIN', discord_username: 'Fondateur' });
+  const adminId = store.users.create('fondateur@nexora.test', 'x', { discord_id: '100000000000000001', discord_username: 'Fondateur' });
   assert.strictEqual(Number(adminId), 1, 'le fondateur est le premier compte');
-  const targetId = store.users.create('membre@nexora.test', 'x', { discord_id: 'DISCORD_TARGET', discord_username: 'Membre Test' });
+  const targetId = store.users.create('membre@nexora.test', 'x', { discord_id: '100000000000000002', discord_username: 'Membre Test' });
   store.users.updateDiscord(targetId, {
-    discord_id: 'DISCORD_TARGET',
+    discord_id: '100000000000000002',
     discord_username: 'Membre Test',
     discord_avatar: 'avatar',
     discord_guilds: JSON.stringify([{ id: 'G1', name: 'Serveur test', owner: true, permissions: '0' }]),
@@ -52,6 +52,8 @@ const cookieParser = require('cookie-parser');
 
   const initial = await fetchJson('/admin/users', { headers: { Cookie: adminCookie } });
   assert.strictEqual(initial.status, 200);
+  const initialAudit = await fetchJson('/admin/audit', { headers: { Cookie: adminCookie } });
+  assert.strictEqual(initialAudit.status, 200, 'journal admin accessible uniquement au fondateur');
   const listed = initial.json.users.find((u) => Number(u.id) === Number(targetId));
   assert(listed && listed.discord_linked && listed.guild_count === 1 && !listed.banned, 'compte Discord listé avec son serveur');
   const denied = await fetchJson('/admin/users', { headers: { Cookie: targetCookie } });
@@ -66,7 +68,7 @@ const cookieParser = require('cookie-parser');
 
   // Relie de nouveau le compte uniquement pour tester le bannissement.
   store.users.updateDiscord(targetId, {
-    discord_id: 'DISCORD_TARGET', discord_username: 'Membre Test', discord_avatar: 'avatar',
+    discord_id: '100000000000000002', discord_username: 'Membre Test', discord_avatar: 'avatar',
     discord_guilds: JSON.stringify([{ id: 'G1', name: 'Serveur test', owner: true, permissions: '0' }]),
   });
   store.sessions.create(targetId);
@@ -99,6 +101,11 @@ const cookieParser = require('cookie-parser');
   assert.strictEqual(store.bots.get(targetBotId), undefined, 'bot utilisateur supprimé');
   assert.strictEqual(store.db.prepare('SELECT COUNT(*) AS n FROM commands WHERE bot_id = ?').get(targetBotId).n, 0, 'commandes associées supprimées');
   assert.strictEqual(store.db.prepare('SELECT COUNT(*) AS n FROM tickets WHERE bot_id = ?').get(targetBotId).n, 0, 'configuration associée supprimée');
+  const audit = await fetchJson('/admin/audit', { headers: { Cookie: adminCookie } });
+  assert(audit.json.audit.some((entry) => entry.action === 'unlink_discord'));
+  assert(audit.json.audit.some((entry) => entry.action === 'ban_user'));
+  assert(audit.json.audit.some((entry) => entry.action === 'unban_user'));
+  assert(audit.json.audit.some((entry) => entry.action === 'delete_user'));
   console.log('6️⃣  Suppression complète : compte, bot et données associées supprimés ✅');
   server.close();
 

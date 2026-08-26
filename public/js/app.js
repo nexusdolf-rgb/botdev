@@ -283,11 +283,26 @@ App.renderAdminPage = async () => {
   const page = App.el(`<div class="page admin-platform-page">
     <h1>👑 Administration Nexora</h1>
     <p class="sub">Espace privé du fondateur : comptes liés à Discord, accès à Nexora et protection de la plateforme.</p>
+    <div class="card admin-security-status">
+      <h3>🛡️ Protection active</h3>
+      <div class="card-sub">Mode développeur sécurisé : diagnostics avancés sans contourner les permissions.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">✅ Identité fondateur verrouillée</span>
+        <span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">✅ Accès serveur contrôlé côté API</span>
+        <span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">✅ Sessions et actions sensibles protégées</span>
+        <span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">✅ Aucun secret affiché</span>
+      </div>
+    </div>
     <div class="stats-grid" id="a-stats"><div class="spinner"></div></div>
     <div class="card">
       <h3>👥 Comptes Nexora liés à Discord</h3>
       <div class="card-sub">Tu peux délier Discord, bannir un compte ou supprimer définitivement ses données. Ton propre compte est toujours protégé.</div>
       <div id="a-users"><div class="spinner"></div></div>
+    </div>
+    <div class="card">
+      <h3>🛡️ Journal de sécurité</h3>
+      <div class="card-sub">Historique des actions sensibles réalisées dans l’administration globale.</div>
+      <div id="a-audit"><div class="spinner"></div></div>
     </div>
   </div>`);
   root.appendChild(page);
@@ -295,8 +310,13 @@ App.renderAdminPage = async () => {
   const render = async () => {
     const statsEl = page.querySelector('#a-stats');
     const usersEl = page.querySelector('#a-users');
+    const auditEl = page.querySelector('#a-audit');
     try {
-      const [stats, usersRes] = await Promise.all([App.api('/admin/stats'), App.api('/admin/users')]);
+      const [stats, usersRes, auditRes] = await Promise.all([
+        App.api('/admin/stats'),
+        App.api('/admin/users'),
+        App.api('/admin/audit'),
+      ]);
       statsEl.innerHTML = `
         <div class="stat-card"><div class="val">${stats.users}</div><div class="lbl">Comptes Nexora</div></div>
         <div class="stat-card"><div class="val">${stats.linked ?? 0}</div><div class="lbl">Liés à Discord</div></div>
@@ -305,9 +325,8 @@ App.renderAdminPage = async () => {
 
       if (!usersRes.users || !usersRes.users.length) {
         usersEl.innerHTML = `<div class="empty-state">Aucun compte utilisateur.</div>`;
-        return;
-      }
-      usersEl.innerHTML = `<div style="overflow-x:auto"><table class="leaderboard-table admin-users-table"><thead><tr><th>Compte</th><th>Discord lié</th><th>Serveurs</th><th>Statut</th><th>Actions</th></tr></thead><tbody></tbody></table></div>`;
+      } else {
+        usersEl.innerHTML = `<div style="overflow-x:auto"><table class="leaderboard-table admin-users-table"><thead><tr><th>Compte</th><th>Discord lié</th><th>Serveurs</th><th>Statut</th><th>Actions</th></tr></thead><tbody></tbody></table></div>`;
       const tb = usersEl.querySelector('tbody');
       usersRes.users.forEach((u) => {
         const isCurrent = Number(u.id) === Number(App.state.user && App.state.user.id);
@@ -362,6 +381,20 @@ App.renderAdminPage = async () => {
         };
         tb.appendChild(row);
       });
+      }
+
+      const audit = auditRes.audit || [];
+      const actionLabels = {
+        unlink_discord: '🔗 Discord délié',
+        ban_user: '⛔ Compte banni',
+        unban_user: '✅ Compte débanni',
+        delete_user: '🗑 Compte supprimé',
+      };
+      if (!audit.length) {
+        auditEl.innerHTML = `<div class="empty-state">Aucune action sensible enregistrée.</div>`;
+      } else {
+        auditEl.innerHTML = `<div style="overflow-x:auto"><table class="leaderboard-table"><thead><tr><th>Date</th><th>Action</th><th>Par</th><th>Cible</th><th>Détail</th></tr></thead><tbody>${audit.slice(0, 50).map((entry) => `<tr><td>${App.escapeHtml(String(entry.created_at || '').slice(0, 16))}</td><td>${App.escapeHtml(actionLabels[entry.action] || entry.action)}</td><td>${App.escapeHtml(entry.actor || '')}</td><td>${App.escapeHtml(entry.target || '')}</td><td style="max-width:260px">${App.escapeHtml(entry.details || '')}</td></tr>`).join('')}</tbody></table></div>`;
+      }
     } catch (e) {
       statsEl.innerHTML = `<div class="empty-state">${App.escapeHtml(e.message)}</div>`;
       usersEl.innerHTML = '';
