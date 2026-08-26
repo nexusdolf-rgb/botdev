@@ -122,6 +122,7 @@ Dashboard.MODULES = [
   ['stats', '📈', 'Statistiques'],
   ['logs', '📜', 'Journaux'],
   ['server', '⚙️', 'Réglages serveur'],
+  ['botprofile', '🤖', 'Identité du bot'],
 ];
 Dashboard.BOT_MODULES = [
   ['commands', '🧩', 'Commandes'],
@@ -3129,6 +3130,95 @@ Dashboard.renderers.server = async (content, data) => {
       ld.locked = r.state.locked; ld.channels = r.state.channels;
       App.toast(`${r.reopened} salon(s) rouverts !`);
       renderLock();
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+};
+
+// ---------- Identité du bot par serveur ----------
+Dashboard.renderers.botprofile = async (content, data) => {
+  const { bot, guildId } = Dashboard.state;
+  const profile = data.profile || {};
+  const serverName = data.guild && data.guild.name ? data.guild.name : 'ce serveur';
+  const root = Dashboard.header(content, '🤖', 'Identité du bot', `Personnalise Nexora uniquement sur ${serverName}.`);
+  const card = Dashboard.card(root, '🤖 Profil de Nexora sur ce serveur', 'Cette identité est indépendante des autres serveurs et ne modifie jamais le bot global.');
+  const avatar = profile.avatar_url || bot.avatar_url || '';
+  const banner = profile.banner_url || '';
+  card.innerHTML += `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:14px;border:1px solid rgba(88,101,242,.28);border-radius:10px;background:rgba(88,101,242,.07)">
+      <span style="font-size:20px">🔒</span><div><b>Configuration limitée à ce serveur</b><div class="desc" style="margin:2px 0 0">Les autres serveurs conservent leur propre nom et leurs propres images.</div></div>
+    </div>
+    <label class="dash-label">Nom affiché par Nexora sur ce serveur</label>
+    <input class="dash-input" id="bp-name" maxlength="80" value="${App.escapeHtml(profile.name || '')}" placeholder="Hoxera" />
+    <div class="desc" style="margin-top:5px">Le nom personnalisé apparaît dans les messages envoyés par Nexora sur ce serveur. L’application bot globale n’est pas renommée.</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:16px">
+      <div>
+        <label class="dash-label">🖼️ Photo du bot sur ce serveur</label>
+        <input class="dash-input" id="bp-avatar" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
+        <div class="desc" style="margin-top:5px">Image maximum : 3 Mo. Sans image personnalisée, l’avatar global est utilisé.</div>
+        <div id="bp-avatar-preview" style="margin-top:10px">${avatar ? `<img src="${App.escapeHtml(avatar)}" alt="Avatar actuel" style="width:88px;height:88px;border-radius:50%;object-fit:cover;border:3px solid rgba(88,101,242,.45)" />` : '<div class="dash-empty" style="padding:12px">Avatar global utilisé</div>'}</div>
+      </div>
+      <div>
+        <label class="dash-label">🎴 Bannière du bot sur ce serveur</label>
+        <input class="dash-input" id="bp-banner" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
+        <div class="desc" style="margin-top:5px">Image maximum : 3 Mo. Elle apparaît dans le profil et les embeds d’identité.</div>
+        <div id="bp-banner-preview" style="margin-top:10px">${banner ? `<img src="${App.escapeHtml(banner)}" alt="Bannière actuelle" style="display:block;width:100%;max-width:390px;height:120px;border-radius:10px;object-fit:cover;border:1px solid rgba(88,101,242,.35)" />` : '<div class="dash-empty" style="padding:12px">Aucune bannière personnalisée</div>'}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:18px">
+      <button class="dash-btn dash-btn-primary" id="bp-save">💾 Enregistrer l’identité</button>
+      <button class="dash-btn dash-btn-danger" id="bp-reset">♻️ Reprendre l’identité globale</button>
+    </div>
+    <div class="desc" id="bp-status" style="margin-top:10px"></div>`;
+
+  const fileAsDataUrl = (file) => new Promise((resolve, reject) => {
+    if (!file) return resolve('');
+    if (!String(file.type || '').startsWith('image/')) return reject(new Error('Choisis un fichier image.'));
+    if (file.size > 3 * 1024 * 1024) return reject(new Error('Image trop lourde : 3 Mo maximum.'));
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('Lecture de l’image impossible.'));
+    reader.readAsDataURL(file);
+  });
+  const previewFile = (input, target, kind) => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    if (!String(file.type || '').startsWith('image/') || file.size > 3 * 1024 * 1024) {
+      input.value = '';
+      App.toast(kind + ' invalide ou trop lourde (3 Mo maximum).', 'error');
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    target.innerHTML = `<img src="${url}" alt="Aperçu" style="display:block;width:${kind === 'Photo' ? '88px' : '100%'};max-width:390px;height:${kind === 'Photo' ? '88px' : '120px'};border-radius:${kind === 'Photo' ? '50%' : '10px'};object-fit:cover;border:2px solid rgba(88,101,242,.45)" />`;
+  };
+  const avatarInput = card.querySelector('#bp-avatar');
+  const bannerInput = card.querySelector('#bp-banner');
+  avatarInput.onchange = () => previewFile(avatarInput, card.querySelector('#bp-avatar-preview'), 'Photo');
+  bannerInput.onchange = () => previewFile(bannerInput, card.querySelector('#bp-banner-preview'), 'Bannière');
+
+  card.querySelector('#bp-save').onclick = async () => {
+    const button = card.querySelector('#bp-save');
+    const status = card.querySelector('#bp-status');
+    button.disabled = true; button.textContent = '⏳ Enregistrement…';
+    try {
+      const body = { name: card.querySelector('#bp-name').value.trim() };
+      if (avatarInput.files && avatarInput.files[0]) body.avatar_b64 = await fileAsDataUrl(avatarInput.files[0]);
+      if (bannerInput.files && bannerInput.files[0]) body.banner_b64 = await fileAsDataUrl(bannerInput.files[0]);
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/profile`, { method: 'PUT', body });
+      status.textContent = '✅ Identité enregistrée uniquement pour ce serveur.';
+      App.toast('Identité de Nexora enregistrée pour ce serveur !');
+      await Dashboard.renderContent(content);
+    } catch (e) {
+      status.textContent = `⚠️ ${e.message}`;
+      App.toast(e.message, 'error');
+    }
+    button.disabled = false; button.textContent = '💾 Enregistrer l’identité';
+  };
+  card.querySelector('#bp-reset').onclick = async () => {
+    if (!(await App.confirm(`Reprendre l’identité globale de Nexora sur ${serverName} ?`))) return;
+    try {
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/profile`, { method: 'DELETE' });
+      App.toast('Identité globale reprise sur ce serveur.');
+      await Dashboard.renderContent(content);
     } catch (e) { App.toast(e.message, 'error'); }
   };
 };
