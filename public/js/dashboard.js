@@ -171,11 +171,10 @@ Dashboard.renderSide = (aside) => {
     b.onclick = () => Dashboard.setModule(id);
     aside.appendChild(b);
   });
-  // Espace global Nexora : visible uniquement par l'administrateur
-  // de la plateforme, même si d'autres membres sont administrateurs Discord.
+  // Administrateur global : reste tout en bas de la gestion du serveur.
+  // Ce bouton dépend du compte fondateur, jamais du serveur sélectionné.
   if (App.state.user && App.state.user.is_admin) {
-    aside.appendChild(App.el(`<div class="dash-side-section">Administration Nexora</div>`));
-    const platformAdmin = App.el(`<button class="dash-side-item" data-platform-admin="true"><span class="ico">👑</span>Espace administrateur</button>`);
+    const platformAdmin = App.el(`<button class="dash-side-item dash-global-admin" data-platform-admin="true" title="Administration globale de Nexora"><span class="ico">👑</span>Administrateur global</button>`);
     platformAdmin.onclick = () => App.router.go('/admin');
     aside.appendChild(platformAdmin);
 
