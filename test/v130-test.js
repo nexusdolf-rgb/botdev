@@ -9,6 +9,7 @@ const path = require('path');
 
 process.env.NODE_ENV = 'test';
 process.env.ADMIN_EMAILS = '';
+process.env.NEXORA_ADMIN_DISCORD_ID = 'DISCORD_ADMIN';
 process.env.BOTDEV_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'hoxera-v130-'));
 
 const store = require('../server/db');

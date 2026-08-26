@@ -118,9 +118,14 @@ router.post('/auth/logout', (req, res) => {
 
 function isPlatformAdmin(user) {
   if (!user) return false;
+  // Identité Discord explicite du fondateur : elle prend priorité sur le
+  // compte interne historique et garantit qu'un seul compte lié est admin.
+  const discordIds = (process.env.NEXORA_ADMIN_DISCORD_ID || '').split(',').map((s) => s.trim()).filter(Boolean);
+  if (discordIds.length) return !!user.discord_id && discordIds.includes(String(user.discord_id));
   const env = (process.env.ADMIN_EMAILS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
   if (env.length) return env.includes(String(user.email || '').toLowerCase());
-  // Sans variable d'environnement : le premier utilisateur inscrit est admin
+  // Sans configuration explicite : le premier utilisateur inscrit reste admin
+  // pour préserver les anciennes installations.
   return user.id === 1;
 }
 
