@@ -103,6 +103,7 @@ async function requireAuth(req, res, next) {
   }
   req.userId = session.user_id;
   req.currentUser = currentUser;
+  req.isPlatformAdmin = isPlatformAdmin(currentUser);
   next();
 }
 
@@ -346,7 +347,7 @@ function requireAdmin(req, res, next) {
 // ---------------------- Helpers bot ----------------------
 function getOwnBot(req, res) {
   const bot = store.bots.get(Number(req.params.id));
-  if (!bot || bot.user_id !== req.userId) {
+  if (!bot || (bot.user_id !== req.userId && !req.isPlatformAdmin)) {
     res.status(404).json({ error: 'Bot introuvable' });
     return null;
   }
@@ -495,7 +496,7 @@ router.patch('/commands/:id', requireAuth, async (req, res) => {
   const cmd = store.commands.get(Number(req.params.id));
   if (!cmd) return res.status(404).json({ error: 'Commande introuvable' });
   const bot = store.bots.get(cmd.bot_id);
-  if (!bot || bot.user_id !== req.userId) return res.status(404).json({ error: 'Commande introuvable' });
+  if (!bot || (bot.user_id !== req.userId && !req.isPlatformAdmin)) return res.status(404).json({ error: 'Commande introuvable' });
   const fields = {};
   const { name, description, trigger_type, trigger_value, options, blocks, cooldown, enabled, sort } = req.body || {};
   if (name !== undefined) fields.name = String(name).slice(0, 32);
@@ -516,7 +517,7 @@ router.delete('/commands/:id', requireAuth, async (req, res) => {
   const cmd = store.commands.get(Number(req.params.id));
   if (!cmd) return res.status(404).json({ error: 'Commande introuvable' });
   const bot = store.bots.get(cmd.bot_id);
-  if (!bot || bot.user_id !== req.userId) return res.status(404).json({ error: 'Commande introuvable' });
+  if (!bot || (bot.user_id !== req.userId && !req.isPlatformAdmin)) return res.status(404).json({ error: 'Commande introuvable' });
   store.commands.remove(cmd.id);
   await resyncSlash(bot);
   res.json({ ok: true });
