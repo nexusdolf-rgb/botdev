@@ -135,6 +135,7 @@ App.router.run = async () => {
   if (query && query.get('oauth')) {
     const o = query.get('oauth');
     if (o === 'linked') App.toast('✅ Compte Discord lié — bienvenue !');
+    else if (o === 'banned') App.toast('⛔ Ce compte est banni de Nexora.', 'error');
     else if (o === 'nosecret') App.toast("Le Client Secret Discord n'est pas configuré sur le serveur.", 'error');
     else App.toast('La connexion Discord a échoué. Réessaie.', 'error');
     history.replaceState(null, '', '#/dashboard');
@@ -274,43 +275,100 @@ App.renderHoxeraDashboard = async () => {
   }
 };
 
-// ---------------------- Admin plateforme (propriétaire) ----------------------
+// ---------------------- Administration Nexora (fondateur uniquement) ----------------------
 App.renderAdminPage = async () => {
   const root = document.getElementById('app');
   root.innerHTML = '';
   root.appendChild(App.renderNavbar());
-  const page = App.el(`<div class="page">
-    <h1>👑 Administration Hoxera</h1>
-    <p class="sub">Vue d'ensemble de la plateforme : utilisateurs liés et statut du bot.</p>
+  const page = App.el(`<div class="page admin-platform-page">
+    <h1>👑 Administration Nexora</h1>
+    <p class="sub">Espace privé du fondateur : comptes liés à Discord, accès à Nexora et protection de la plateforme.</p>
     <div class="stats-grid" id="a-stats"><div class="spinner"></div></div>
-    <div class="card"><h3>👥 Utilisateurs (liés avec Discord)</h3><div class="card-sub">Les personnes qui se sont connectées au dashboard.</div><div id="a-users"><div class="spinner"></div></div></div>
+    <div class="card">
+      <h3>👥 Comptes Nexora liés à Discord</h3>
+      <div class="card-sub">Tu peux délier Discord, bannir un compte ou supprimer définitivement ses données. Ton propre compte est toujours protégé.</div>
+      <div id="a-users"><div class="spinner"></div></div>
+    </div>
   </div>`);
   root.appendChild(page);
 
-  try {
-    const [stats, usersRes] = await Promise.all([App.api('/admin/stats'), App.api('/admin/users')]);
-    page.querySelector('#a-stats').innerHTML = `
-      <div class="stat-card"><div class="val">${stats.users}</div><div class="lbl">Utilisateurs liés</div></div>
-      <div class="stat-card"><div class="val">${App.fmtNumber(stats.servers)}</div><div class="lbl">Serveurs Discord</div></div>
-      <div class="stat-card"><div class="val">${App.fmtNumber(stats.members)}</div><div class="lbl">Membres touchés</div></div>
-      <div class="stat-card"><div class="val">${stats.online ? '🟢' : '🔴'}</div><div class="lbl">Hoxera</div></div>`;
-
+  const render = async () => {
+    const statsEl = page.querySelector('#a-stats');
     const usersEl = page.querySelector('#a-users');
-    if (!usersRes.users.length) usersEl.innerHTML = `<div class="empty-state">Aucun utilisateur.</div>`;
-    else {
-      usersEl.innerHTML = `<table class="leaderboard-table"><thead><tr><th>#</th><th>Discord</th><th>Inscrit le</th></tr></thead><tbody></tbody></table>`;
+    try {
+      const [stats, usersRes] = await Promise.all([App.api('/admin/stats'), App.api('/admin/users')]);
+      statsEl.innerHTML = `
+        <div class="stat-card"><div class="val">${stats.users}</div><div class="lbl">Comptes Nexora</div></div>
+        <div class="stat-card"><div class="val">${stats.linked ?? 0}</div><div class="lbl">Liés à Discord</div></div>
+        <div class="stat-card"><div class="val">${stats.banned ?? 0}</div><div class="lbl">Bannis de Nexora</div></div>
+        <div class="stat-card"><div class="val">${stats.online ? '🟢' : '🔴'}</div><div class="lbl">Hoxera</div></div>`;
+
+      if (!usersRes.users || !usersRes.users.length) {
+        usersEl.innerHTML = `<div class="empty-state">Aucun compte utilisateur.</div>`;
+        return;
+      }
+      usersEl.innerHTML = `<div style="overflow-x:auto"><table class="leaderboard-table admin-users-table"><thead><tr><th>Compte</th><th>Discord lié</th><th>Serveurs</th><th>Statut</th><th>Actions</th></tr></thead><tbody></tbody></table></div>`;
       const tb = usersEl.querySelector('tbody');
       usersRes.users.forEach((u) => {
-        tb.appendChild(App.el(`<tr>
-          <td>${u.id}${u.id === 1 ? ' <span class="chip">👑 fondateur</span>' : ''}</td>
-          <td>${u.discord_username ? '@' + App.escapeHtml(u.discord_username) : App.escapeHtml(u.email)}</td>
-          <td>${App.escapeHtml(String(u.created_at).slice(0, 10))}</td>
-        </tr>`));
+        const isCurrent = Number(u.id) === Number(App.state.user && App.state.user.id);
+        const guildNames = (u.guilds || []).slice(0, 5).map((g) => App.escapeHtml(g.name)).join(', ');
+        const moreGuilds = (u.guilds || []).length > 5 ? ` +${u.guilds.length - 5}` : '';
+        const discordCell = u.discord_linked
+          ? `<b>${App.escapeHtml('@' + (u.discord_username || u.discord_id))}</b><small style="display:block;color:var(--text-dim)">ID ${App.escapeHtml(u.discord_id)}</small>`
+          : `<span style="color:var(--text-dim)">Non lié</span><small style="display:block;color:var(--text-dim)">${App.escapeHtml(u.email)}</small>`;
+        const statusCell = u.banned
+          ? `<span class="chip" style="color:#ff8a8d;border-color:rgba(237,66,69,.45)">⛔ Banni</span><small style="display:block;color:var(--text-dim);max-width:180px">${App.escapeHtml(u.ban_reason || 'Aucune raison')}</small>`
+          : `<span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">✅ Actif</span>`;
+        const actions = isCurrent
+          ? `<span style="font-size:12px;color:var(--text-dim)">👑 Compte protégé</span>`
+          : `<div style="display:flex;gap:6px;flex-wrap:wrap">
+              ${u.discord_linked ? '<button class="btn btn-ghost btn-sm" data-unlink>🔗 Délier</button>' : ''}
+              ${u.banned ? '<button class="btn btn-ghost btn-sm" data-unban>✅ Débannir</button>' : '<button class="btn btn-ghost btn-sm" data-ban>⛔ Bannir</button>'}
+              <button class="btn btn-danger btn-sm" data-delete>🗑 Supprimer</button>
+            </div>`;
+        const row = App.el(`<tr>
+          <td><b>#${u.id}</b>${Number(u.bots_count) ? `<small style="display:block;color:var(--text-dim)">${u.bots_count} bot(s)</small>` : ''}</td>
+          <td>${discordCell}</td>
+          <td title="${App.escapeHtml(guildNames)}">${u.guild_count || 0}${guildNames ? `<small style="display:block;color:var(--text-dim);max-width:230px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${guildNames}${moreGuilds}</small>` : ''}</td>
+          <td>${statusCell}</td>
+          <td>${actions}</td>
+        </tr>`);
+
+        const reload = async () => { await render(); };
+        const unlink = row.querySelector('[data-unlink]');
+        if (unlink) unlink.onclick = async () => {
+          if (!(await App.confirm('Délier le compte Discord de cet utilisateur ? Son compte Nexora sera conservé, mais il devra relier Discord pour revenir.'))) return;
+          try { await App.api(`/admin/users/${u.id}/unlink-discord`, { method: 'POST' }); App.toast('Compte Discord délié.'); await reload(); }
+          catch (e) { App.toast(e.message, 'error'); }
+        };
+        const ban = row.querySelector('[data-ban]');
+        if (ban) ban.onclick = async () => {
+          if (!(await App.confirm('Bannir cet utilisateur de Nexora ? Ses données seront conservées et le bannissement pourra être retiré.'))) return;
+          const reason = await App.prompt('Raison du bannissement (optionnelle)', 'Abus de la plateforme');
+          try { await App.api(`/admin/users/${u.id}/ban`, { method: 'POST', body: { reason } }); App.toast('Utilisateur banni de Nexora.'); await reload(); }
+          catch (e) { App.toast(e.message, 'error'); }
+        };
+        const unban = row.querySelector('[data-unban]');
+        if (unban) unban.onclick = async () => {
+          if (!(await App.confirm('Débannir cet utilisateur de Nexora ?'))) return;
+          try { await App.api(`/admin/users/${u.id}/ban`, { method: 'DELETE' }); App.toast('Utilisateur débanni.'); await reload(); }
+          catch (e) { App.toast(e.message, 'error'); }
+        };
+        const del = row.querySelector('[data-delete]');
+        if (del) del.onclick = async () => {
+          if (!(await App.confirm('Supprimer définitivement ce compte et toutes ses données Nexora ? Cette action est irréversible.'))) return;
+          try { await App.api(`/admin/users/${u.id}`, { method: 'DELETE' }); App.toast('Compte et données supprimés.'); await reload(); }
+          catch (e) { App.toast(e.message, 'error'); }
+        };
+        tb.appendChild(row);
       });
+    } catch (e) {
+      statsEl.innerHTML = `<div class="empty-state">${App.escapeHtml(e.message)}</div>`;
+      usersEl.innerHTML = '';
     }
-  } catch (e) {
-    page.querySelector('#a-stats').innerHTML = `<div class="empty-state">${App.escapeHtml(e.message)}</div>`;
-  }
+  };
+
+  await render();
 };
 
 // ---------------------- Démarrage ----------------------

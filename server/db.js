@@ -21,6 +21,15 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Contrôle d'accès à la plateforme Nexora (indépendant des permissions Discord).
+-- Un bannissement conserve les données afin qu'un débannissement soit possible.
+CREATE TABLE IF NOT EXISTS platform_bans (
+  user_id INTEGER PRIMARY KEY,
+  reason TEXT DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  created_by INTEGER DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS sessions (
   token TEXT PRIMARY KEY,
   user_id INTEGER NOT NULL,
@@ -686,6 +695,16 @@ const users = {
     const r = db.prepare('SELECT discord_guilds FROM users WHERE id = ?').get(id);
     try { return JSON.parse(r ? (r.discord_guilds || '[]') : '[]'); } catch { return []; }
   },
+};
+
+const platformBans = {
+  get: (userId) => db.prepare('SELECT * FROM platform_bans WHERE user_id = ?').get(userId) || null,
+  isBanned: (userId) => !!db.prepare('SELECT 1 FROM platform_bans WHERE user_id = ?').get(userId),
+  all: () => db.prepare('SELECT * FROM platform_bans ORDER BY created_at DESC').all(),
+  set: (userId, reason = '', createdBy = 0) => db.prepare(`INSERT INTO platform_bans (user_id, reason, created_by)
+    VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET reason = excluded.reason, created_at = datetime('now'), created_by = excluded.created_by`)
+    .run(userId, String(reason || '').slice(0, 500), createdBy || 0),
+  remove: (userId) => db.prepare('DELETE FROM platform_bans WHERE user_id = ?').run(userId),
 };
 
 const sessions = {
@@ -1513,4 +1532,4 @@ const liveSocials = {
   count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM live_socials WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
 };
 
-module.exports = { db, users, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories };
+module.exports = { db, users, platformBans, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories };

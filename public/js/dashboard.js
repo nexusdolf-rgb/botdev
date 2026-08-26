@@ -171,8 +171,14 @@ Dashboard.renderSide = (aside) => {
     b.onclick = () => Dashboard.setModule(id);
     aside.appendChild(b);
   });
-  // Section « Bot » (commandes/modules globales) : fondateur uniquement
+  // Espace global Nexora : visible uniquement par l'administrateur
+  // de la plateforme, même si d'autres membres sont administrateurs Discord.
   if (App.state.user && App.state.user.is_admin) {
+    aside.appendChild(App.el(`<div class="dash-side-section">Administration Nexora</div>`));
+    const platformAdmin = App.el(`<button class="dash-side-item" data-platform-admin="true"><span class="ico">👑</span>Espace administrateur</button>`);
+    platformAdmin.onclick = () => App.router.go('/admin');
+    aside.appendChild(platformAdmin);
+
     aside.appendChild(App.el(`<div class="dash-side-section">Administration du bot</div>`));
     Dashboard.BOT_MODULES.forEach(([id, ico, label]) => {
       const b = App.el(`<button class="dash-side-item ${Dashboard.state.module === id ? 'active' : ''}" data-m="${id}"><span class="ico">${ico}</span>${label}</button>`);

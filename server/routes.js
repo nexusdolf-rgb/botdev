@@ -70,6 +70,10 @@ async function requireAuth(req, res, next) {
   if (!token) return res.status(401).json({ error: 'Non connecté' });
   const session = store.sessions.find(token);
   if (!session || new Date(session.expires_at) < new Date()) return res.status(401).json({ error: 'Session expirée' });
+  if (store.platformBans.isBanned(session.user_id)) {
+    res.clearCookie(COOKIE);
+    return res.status(403).json({ error: 'Ce compte est banni de Nexora.' });
+  }
   req.userId = session.user_id;
   next();
 }
@@ -96,6 +100,9 @@ router.post('/auth/login', (req, res) => {
   const user = email && store.users.findByEmail(email);
   if (!user || !bcrypt.compareSync(String(password || ''), user.password_hash)) {
     return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
+  }
+  if (store.platformBans.isBanned(user.id)) {
+    return res.status(403).json({ error: 'Ce compte est banni de Nexora.' });
   }
   const token = store.sessions.create(user.id);
   res.cookie(COOKIE, token, { httpOnly: true, sameSite: 'lax', maxAge: 30 * 86400000 });
@@ -203,6 +210,7 @@ router.get('/auth/discord/callback', async (req, res) => {
         user = { id: userId };
       }
     }
+    if (store.platformBans.isBanned(user.id)) return res.redirect('/#/login?oauth=banned');
     store.users.updateDiscord(user.id, {
       discord_id: me.id,
       discord_username: me.username,
@@ -2036,22 +2044,113 @@ router.get('/public/bots/:id', (req, res) => {
 });
 
 // ============================================================
-// Panneau admin plateforme (le fondateur de BotDev)
+// Panneau admin plateforme (réservé au fondateur Nexora)
 // ============================================================
+function parseAdminGuilds(raw) {
+  try {
+    const list = JSON.parse(raw || '[]');
+    if (!Array.isArray(list)) return [];
+    return list.slice(0, 100).map((g) => ({
+      id: String(g.id || ''),
+      name: String(g.name || 'Serveur sans nom').slice(0, 100),
+      owner: !!g.owner,
+    })).filter((g) => g.id);
+  } catch { return []; }
+}
+
+// Toutes les tables possédant des données attachées à un bot utilisateur.
+// La liste est volontairement explicite : elle évite une suppression globale
+// accidentelle et garantit qu'un compte supprimé ne laisse pas ses données.
+const BOT_DATA_TABLES = [
+  'commands', 'modules', 'events', 'guild_settings', 'xp', 'xp_roles', 'economy',
+  'warnings', 'warning_counters', 'role_menus', 'tickets', 'bot_profiles',
+  'shop_items', 'giveaways', 'suggestions', 'temp_roles', 'sanctions',
+  'blacklist_words', 'automod_logs', 'automod_warning_messages', 'open_tickets',
+  'ticket_counters', 'ticket_ratings', 'closed_tickets', 'transcripts',
+  'marriages', 'birthdays', 'reminders', 'cmd_stats', 'scheduled_messages',
+  'custom_announcements', 'message_stats', 'join_stats', 'shop_purchases',
+  'applications', 'voicetemp', 'starboard_posts', 'invite_uses', 'invite_joins',
+  'live_socials', 'ticket_log_msgs', 'advanced_ticket_panels',
+  'advanced_ticket_channels', 'activity',
+];
+
+function deleteUserData(targetId, botIds) {
+  const transaction = store.db.transaction(() => {
+    if (botIds.length) {
+      const placeholders = botIds.map(() => '?').join(',');
+      for (const table of BOT_DATA_TABLES) {
+        store.db.prepare(`DELETE FROM ${table} WHERE bot_id IN (${placeholders})`).run(...botIds);
+      }
+      store.db.prepare(`DELETE FROM bots WHERE id IN (${placeholders})`).run(...botIds);
+    }
+    store.db.prepare('DELETE FROM sessions WHERE user_id = ?').run(targetId);
+    store.db.prepare('DELETE FROM discord_tokens WHERE user_id = ?').run(targetId);
+    store.db.prepare('DELETE FROM platform_bans WHERE user_id = ?').run(targetId);
+    store.db.prepare('DELETE FROM users WHERE id = ?').run(targetId);
+  });
+  transaction();
+}
+
+function adminTarget(req, res) {
+  const targetId = Number(req.params.id);
+  if (!Number.isInteger(targetId) || targetId < 1) {
+    res.status(400).json({ error: 'Identifiant utilisateur invalide.' });
+    return null;
+  }
+  if (targetId === req.userId) {
+    res.status(400).json({ error: 'Tu ne peux pas modifier ton propre compte administrateur.' });
+    return null;
+  }
+  const target = store.users.findById(targetId);
+  if (!target) {
+    res.status(404).json({ error: 'Utilisateur introuvable.' });
+    return null;
+  }
+  if (isPlatformAdmin(target)) {
+    res.status(400).json({ error: 'Un compte administrateur de la plateforme est protégé.' });
+    return null;
+  }
+  return { targetId, target };
+}
+
 router.get('/admin/stats', requireAuth, requireAdmin, (req, res) => {
   const users = store.db.prepare('SELECT COUNT(*) AS n FROM users').get().n;
+  const linked = store.db.prepare("SELECT COUNT(*) AS n FROM users WHERE discord_id IS NOT NULL AND discord_id != ''").get().n;
+  const banned = store.db.prepare('SELECT COUNT(*) AS n FROM platform_bans').get().n;
   const bots = store.db.prepare('SELECT COUNT(*) AS n FROM bots').get().n;
   const online = store.db.prepare('SELECT COUNT(*) AS n FROM bots WHERE enabled = 1').get().n;
   const live = botManager.platformStats();
-  res.json({ users, bots, online, ...live });
+  res.json({ users, linked, banned, bots, online, ...live });
 });
 
 router.get('/admin/users', requireAuth, requireAdmin, (req, res) => {
   const rows = store.db.prepare(`
-    SELECT u.id, u.email, u.discord_username, u.created_at,
-      (SELECT COUNT(*) FROM bots b WHERE b.user_id = u.id) AS bots_count
-    FROM users u ORDER BY u.created_at DESC LIMIT 200`).all();
-  res.json({ users: rows });
+    SELECT u.id, u.email, u.discord_id, u.discord_username, u.discord_avatar,
+      u.discord_guilds, u.created_at,
+      (SELECT COUNT(*) FROM bots b WHERE b.user_id = u.id) AS bots_count,
+      (pb.user_id IS NOT NULL) AS banned,
+      pb.reason AS ban_reason, pb.created_at AS banned_at
+    FROM users u LEFT JOIN platform_bans pb ON pb.user_id = u.id
+    ORDER BY u.created_at DESC LIMIT 200`).all();
+  const users = rows.map((u) => {
+    const guilds = parseAdminGuilds(u.discord_guilds);
+    return {
+      id: u.id,
+      email: u.email,
+      discord_id: u.discord_id || '',
+      discord_username: u.discord_username || '',
+      discord_avatar: u.discord_avatar || '',
+      discord_linked: !!u.discord_id,
+      guild_count: guilds.length,
+      guilds,
+      created_at: u.created_at,
+      bots_count: u.bots_count || 0,
+      banned: !!u.banned,
+      ban_reason: u.ban_reason || '',
+      banned_at: u.banned_at || '',
+    };
+  });
+  res.json({ users });
 });
 
 router.get('/admin/bots', requireAuth, requireAdmin, (req, res) => {
@@ -2067,21 +2166,41 @@ router.get('/admin/bots', requireAuth, requireAdmin, (req, res) => {
   res.json({ bots: out });
 });
 
+router.post('/admin/users/:id/unlink-discord', requireAuth, requireAdmin, (req, res) => {
+  const target = adminTarget(req, res);
+  if (!target) return;
+  store.users.updateDiscord(target.targetId, {
+    discord_id: '', discord_username: '', discord_avatar: '', discord_guilds: '[]',
+  });
+  store.discordTokens.remove(target.targetId);
+  res.json({ ok: true, message: 'Compte Discord délié. Le compte Nexora est conservé.' });
+});
+
+router.post('/admin/users/:id/ban', requireAuth, requireAdmin, (req, res) => {
+  const target = adminTarget(req, res);
+  if (!target) return;
+  const reason = String((req.body || {}).reason || '').trim().slice(0, 500);
+  store.platformBans.set(target.targetId, reason, req.userId);
+  // Les sessions et le jeton OAuth ne servent plus à un compte banni.
+  store.db.prepare('DELETE FROM sessions WHERE user_id = ?').run(target.targetId);
+  store.discordTokens.remove(target.targetId);
+  res.json({ ok: true, message: 'Compte banni de Nexora.' });
+});
+
+router.delete('/admin/users/:id/ban', requireAuth, requireAdmin, (req, res) => {
+  const target = adminTarget(req, res);
+  if (!target) return;
+  store.platformBans.remove(target.targetId);
+  res.json({ ok: true, message: 'Compte débanni de Nexora. Il devra se reconnecter.' });
+});
+
 router.delete('/admin/users/:id', requireAuth, requireAdmin, async (req, res) => {
-  const targetId = Number(req.params.id);
-  if (targetId === req.userId) return res.status(400).json({ error: 'Tu ne peux pas supprimer ton propre compte.' });
-  const target = store.users.findById(targetId);
-  if (!target) return res.status(404).json({ error: 'Utilisateur introuvable.' });
-  const bots = store.bots.all(targetId);
-  for (const b of bots) {
-    await botManager.logoutBot(b.id);
-    store.commands.removeAll(b.id);
-    store.bots.remove(b.id);
-  }
-  store.db.prepare('DELETE FROM sessions WHERE user_id = ?').run(targetId);
-  store.db.prepare('DELETE FROM discord_tokens WHERE user_id = ?').run(targetId);
-  store.db.prepare('DELETE FROM users WHERE id = ?').run(targetId);
-  res.json({ ok: true });
+  const target = adminTarget(req, res);
+  if (!target) return;
+  const bots = store.bots.all(target.targetId);
+  for (const bot of bots) await botManager.logoutBot(bot.id);
+  deleteUserData(target.targetId, bots.map((bot) => Number(bot.id)));
+  res.json({ ok: true, message: 'Compte Nexora et données associées supprimés.' });
 });
 
 // 🛟 Filet de sécurité final : AUCUNE route ne doit faire tomber le serveur.
