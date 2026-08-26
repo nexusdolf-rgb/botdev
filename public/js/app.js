@@ -170,26 +170,15 @@ App.router.run = async () => {
 };
 
 // ---------------------- Avatar public de Nexora ----------------------
-// Les pages publiques ne disposent pas encore de la fiche /hoxera privée.
-// Elles récupèrent donc l'avatar depuis la route publique, sans exposer de
-// token ni de donnée sensible. Le résultat est partagé pendant la session.
-App.publicBotInfoPromise = null;
-App.loadPublicBotAvatar = async (root) => {
-  if (!root || typeof App.api !== 'function') return;
-  try {
-    if (!App.publicBotInfoPromise) {
-      App.publicBotInfoPromise = App.api('/public/bots').catch(() => ({ bots: [] }));
-    }
-    const result = await App.publicBotInfoPromise;
-    const bot = (result.bots || []).find((item) => String(item.name || '').toLowerCase() === 'hoxera' && item.avatar_url)
-      || (result.bots || []).find((item) => item.avatar_url);
-    if (!bot || !bot.avatar_url) return;
-    root.querySelectorAll('[data-brand-logo]').forEach((oldLogo) => {
-      const image = App.el(`<img class="logo" data-brand-logo src="${App.escapeHtml(bot.avatar_url)}" alt="Avatar de Nexora" style="border-radius:50%;object-fit:cover" />`);
-      image.onerror = () => image.replaceWith(App.el('<span class="logo" data-brand-logo>⚡</span>'));
-      oldLogo.replaceWith(image);
-    });
-  } catch {}
+// Les pages publiques utilisent une route locale qui sert l'avatar réel du
+// bot. Cela évite qu'un blocage du CDN Discord laisse uniquement le logo ⚡.
+App.loadPublicBotAvatar = (root) => {
+  if (!root) return;
+  root.querySelectorAll('[data-brand-logo]').forEach((oldLogo) => {
+    const image = App.el('<img class="logo" data-brand-logo src="/api/public/bot-avatar" alt="Avatar de Nexora" style="border-radius:50%;object-fit:cover" />');
+    image.onerror = () => { if (image.isConnected) image.replaceWith(App.el('<span class="logo" data-brand-logo>⚡</span>')); };
+    if (oldLogo.isConnected) oldLogo.replaceWith(image);
+  });
 };
 
 // ---------------------- Page « Connecte-toi avec Discord » ----------------------

@@ -24,8 +24,8 @@ w.App.api = async (url) => {
   w.App.renderConnect();
   await new Promise((resolve) => setTimeout(resolve, 0));
   const brand = w.document.querySelector('#connect-card [data-brand-logo]');
-  assert(brand && brand.tagName === 'IMG', 'photo affichée sur la page de connexion');
-  assert.strictEqual(brand.getAttribute('src'), 'https://cdn.discordapp.com/avatars/1/nexora.png');
+  assert(brand && brand.tagName === 'IMG', 'photo prévue sur la page de connexion');
+  assert.strictEqual(brand.getAttribute('src'), '/api/public/bot-avatar');
   console.log('1️⃣  Accueil connexion : photo de Nexora affichée en haut à gauche ✅');
 
   const nav = w.App.renderPublicNavbar ? w.App.renderPublicNavbar() : null;
@@ -36,7 +36,7 @@ w.App.api = async (url) => {
   console.log('2️⃣  Navbar publique : avatar prévu et chargé depuis la route publique ✅');
 
   const appSource = fs.readFileSync('public/js/app.js', 'utf8');
-  assert(appSource.includes("App.api('/public/bots')"));
+  assert(appSource.includes('/api/public/bot-avatar'));
   assert(appSource.includes('image.onerror'));
   console.log('3️⃣  Fallback éclair conservé uniquement si la photo est indisponible ✅');
 

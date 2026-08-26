@@ -29,6 +29,7 @@ const discordRefreshCache = new AsyncTTLCache({ ttlMs: 60000, max: 2000 });
 const guildCatalogCache = new TTLCache({ ttlMs: 30000, max: 500 });
 const membersCache = new AsyncTTLCache({ ttlMs: 30000, max: 2000 });
 const statsCache = new AsyncTTLCache({ ttlMs: 15000, max: 500 });
+const publicAvatarCache = new TTLCache({ ttlMs: 10 * 60000, max: 2 });
 
 function setSessionCookie(req, res, token) {
   res.cookie(COOKIE, token, security.secureCookieOptions(req, 30 * 86400000));
@@ -2079,6 +2080,34 @@ router.get('/public/bots', (req, res) => {
     };
   });
   res.json({ bots });
+});
+
+// Avatar public de Nexora : proxy local court pour éviter qu'un blocage
+// navigateur/CDN ne remplace la photo par le logo de secours.
+router.get('/public/bot-avatar', async (req, res) => {
+  const fallback = path.join(__dirname, '..', 'public', 'icons', 'icon-512.png');
+  const cached = publicAvatarCache.get('hoxera');
+  if (cached) {
+    res.set('Content-Type', cached.contentType);
+    res.set('Cache-Control', 'public, max-age=600');
+    return res.send(cached.buffer);
+  }
+  try {
+    const bot = store.db.prepare('SELECT avatar_url FROM bots ORDER BY id LIMIT 1').get();
+    const url = bot && /^https:\/\//i.test(String(bot.avatar_url || '')) ? String(bot.avatar_url) : '';
+    if (url) {
+      const image = await fetch(url);
+      const contentType = String(image.headers.get('content-type') || '').toLowerCase();
+      const buffer = Buffer.from(await image.arrayBuffer());
+      if (image.ok && contentType.startsWith('image/') && buffer.length > 0 && buffer.length <= 5 * 1024 * 1024) {
+        publicAvatarCache.set('hoxera', { buffer, contentType });
+        res.set('Content-Type', contentType);
+        res.set('Cache-Control', 'public, max-age=600');
+        return res.send(buffer);
+      }
+    }
+  } catch {}
+  return res.sendFile(fallback);
 });
 
 router.get('/public/bots/:id', (req, res) => {
