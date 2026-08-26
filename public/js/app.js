@@ -222,9 +222,13 @@ App.renderConnect = () => {
 // ---------------------- Navbar (connecté) ----------------------
 App.renderNavbar = () => {
   const user = App.state.user;
+  const bot = App.state.bot;
+  const brand = bot && bot.avatar_url
+    ? `<img id="nav-brand-avatar" class="logo" src="${App.escapeHtml(bot.avatar_url)}" alt="Avatar de Nexora" style="border-radius:50%;object-fit:cover" />`
+    : '<span class="logo">⚡</span>';
   const nav = App.el(`
     <div class="navbar">
-      <div class="logo-row" style="cursor:pointer" id="nav-logo"><span class="logo">⚡</span> Hoxera</div>
+      <div class="logo-row" style="cursor:pointer" id="nav-logo">${brand} Hoxera</div>
       <div class="navbar-right">
         ${user.is_admin ? `<button class="btn btn-ghost btn-sm" id="nav-admin">👑 Admin</button>` : ''}
         <div class="user-pill">
@@ -238,6 +242,8 @@ App.renderNavbar = () => {
       </div>
     </div>
   `);
+  const brandImage = nav.querySelector('#nav-brand-avatar');
+  if (brandImage) brandImage.onerror = () => brandImage.replaceWith(App.el('<span class="logo">⚡</span>'));
   nav.querySelector('#nav-logo').onclick = () => App.router.go('/dashboard');
   const adminBtn = nav.querySelector('#nav-admin');
   if (adminBtn) adminBtn.onclick = () => App.router.go('/admin');
@@ -268,6 +274,10 @@ App.renderHoxeraDashboard = async () => {
       return;
     }
     App.state.bot = bot;
+    // La barre a été créée avant le chargement de /hoxera : on la reconstruit
+    // maintenant pour afficher l'avatar Discord réel du bot.
+    const currentNav = root.querySelector('.navbar');
+    if (currentNav) currentNav.replaceWith(App.renderNavbar());
     shell.innerHTML = '';
     await Dashboard.mount(shell, bot);
   } catch (e) {
