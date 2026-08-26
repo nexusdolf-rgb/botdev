@@ -169,6 +169,29 @@ App.router.run = async () => {
   App.renderHoxeraDashboard();
 };
 
+// ---------------------- Avatar public de Nexora ----------------------
+// Les pages publiques ne disposent pas encore de la fiche /hoxera privée.
+// Elles récupèrent donc l'avatar depuis la route publique, sans exposer de
+// token ni de donnée sensible. Le résultat est partagé pendant la session.
+App.publicBotInfoPromise = null;
+App.loadPublicBotAvatar = async (root) => {
+  if (!root || typeof App.api !== 'function') return;
+  try {
+    if (!App.publicBotInfoPromise) {
+      App.publicBotInfoPromise = App.api('/public/bots').catch(() => ({ bots: [] }));
+    }
+    const result = await App.publicBotInfoPromise;
+    const bot = (result.bots || []).find((item) => String(item.name || '').toLowerCase() === 'hoxera' && item.avatar_url)
+      || (result.bots || []).find((item) => item.avatar_url);
+    if (!bot || !bot.avatar_url) return;
+    root.querySelectorAll('[data-brand-logo]').forEach((oldLogo) => {
+      const image = App.el(`<img class="logo" data-brand-logo src="${App.escapeHtml(bot.avatar_url)}" alt="Avatar de Nexora" style="border-radius:50%;object-fit:cover" />`);
+      image.onerror = () => image.replaceWith(App.el('<span class="logo" data-brand-logo>⚡</span>'));
+      oldLogo.replaceWith(image);
+    });
+  } catch {}
+};
+
 // ---------------------- Page « Connecte-toi avec Discord » ----------------------
 App.renderConnect = () => {
   const root = document.getElementById('app');
@@ -176,7 +199,7 @@ App.renderConnect = () => {
   const page = App.el(`
     <div class="auth-wrap" id="connect-card">
       <div class="auth-left">
-        <div class="logo-row"><span class="logo">⚡</span> Hoxera</div>
+        <div class="logo-row"><span class="logo" data-brand-logo>⚡</span> Hoxera</div>
         <h1 style="margin-top:52px">Configure ton serveur<br/><span>en quelques clics</span></h1>
         <p class="tagline">Tickets automatiques, niveaux, boutique, giveaways, bienvenue… Tout se règle ici, sans mot de passe : on vérifie simplement avec ton compte Discord.</p>
         <ul class="auth-features">
@@ -204,6 +227,7 @@ App.renderConnect = () => {
     </div>
   `);
   root.appendChild(page);
+  App.loadPublicBotAvatar(page);
   page.querySelector('#connect-discord').onclick = async (ev) => {
     const b = ev.currentTarget;
     b.classList.add('loading'); b.disabled = true;

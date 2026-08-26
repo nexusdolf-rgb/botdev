@@ -21,7 +21,7 @@ App.renderPublicNavbar = () => {
   const user = App.state.user;
   const nav = App.el(`
     <div class="navbar">
-      <div class="logo-row" style="cursor:pointer" id="pub-logo"><span class="logo">⚡</span> Hoxera</div>
+      <div class="logo-row" style="cursor:pointer" id="pub-logo"><span class="logo" data-brand-logo>⚡</span> Hoxera</div>
       <div class="navbar-right" id="pub-nav-right">
         ${user && user.discord_id
           ? `<div class="user-pill">
@@ -37,6 +37,7 @@ App.renderPublicNavbar = () => {
     </div>
   `);
   nav.querySelector('#pub-logo').onclick = () => App.router.go(user ? '/dashboard' : '/');
+  App.loadPublicBotAvatar(nav);
   const dash = nav.querySelector('#pub-dash');
   if (dash) dash.onclick = () => App.router.go('/dashboard');
   const link = nav.querySelector('#pub-link');
