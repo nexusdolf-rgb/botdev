@@ -17,13 +17,14 @@ assert.strictEqual(t.menu_category, '🎫 SUPPORT');
 assert.strictEqual(t.menu_channel, '#menu', 'autres champs intacts');
 console.log('✅ base : menu_category persistée sans effet de bord');
 
-// 2. Priorité dans openTicket : type > menu > catégorie globale
+// 2. Priorité : anciens panneaux = menu/globale ; nouveau système = type dédié
 assert.ok(panels.includes('const fromMenu = !!type;'), 'détection ticket ouvert via le menu');
 assert.ok(panels.includes('const typeCategory = chosen && String(chosen.category || \'\').trim();'), 'catégorie dédiée du type');
-assert.ok(panels.includes('const catName = typeCategory || menuCategory'), 'catégorie du type prioritaire');
-assert.ok(panels.includes('Aucune catégorie de tickets n’est configurée'), 'absence de catégorie refusée');
-assert.ok(panels.includes('La catégorie configurée pour ce type de ticket est introuvable'), 'catégorie introuvable refusée');
-console.log('✅ priorité : catégorie du TYPE → catégorie du MENU → catégorie globale, sans repli');
+assert.ok(panels.includes('const catName = configOverride'), 'source de catégorie différenciée');
+assert.ok(panels.includes('menuCategory || globalCategory || typeCategory'), 'catégorie du panneau prioritaire pour l’ancien système');
+assert.ok(panels.includes('Aucune catégorie de tickets n’est configurée'), 'absence de catégorie traitée');
+assert.ok(panels.includes('La catégorie configurée pour ce type de ticket est introuvable'), 'catégorie introuvable traitée');
+console.log('✅ priorité : panneau ancien stable, type personnalisé dédié, sans catégorie automatique');
 
 // 3. Toujours AUCUNE création de catégorie possible
 assert.ok(!panels.includes('type: ChannelType.GuildCategory }'), 'création de catégorie toujours impossible');

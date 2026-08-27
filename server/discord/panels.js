@@ -769,16 +769,20 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
   // catégorie. Le bot ne crée jamais de catégorie.
   // 📁 Nouveau système personnalisé : une catégorie existante choisie sur le
   // type devient obligatoire et aucun repli silencieux n'est autorisé.
-  // 📁 Priorité historique des catégories : (1) catégorie explicite du PANNEAU MENU,
-  // (2) catégorie du type, (3) catégorie par défaut. Le nouveau système donne
-  // la priorité à la catégorie du type pour respecter son réglage dédié.
+  // 📁 Anciens panneaux : la catégorie MENU/globale est prioritaire ; une
+  // catégorie de type restante ne sert qu’en compatibilité si aucun réglage
+  // global n’existe. Dans tous les cas, aucune catégorie n’est créée.
   const fromMenu = !!type;
-  // Tous les systèmes suivent désormais la même règle : la catégorie du type
-  // est prioritaire, puis la catégorie du panneau MENU, puis la catégorie
-  // globale. Une catégorie existante est obligatoire pour tout nouveau ticket.
+  // Placement fiable : le nouveau système personnalisé garde la catégorie
+  // du type. Les anciens panneaux utilisent la catégorie globale/menu du
+  // panneau comme source de vérité afin qu’un nom de type (« Suggestion »)
+  // ne devienne jamais une catégorie automatique.
   const typeCategory = chosen && String(chosen.category || '').trim();
   const menuCategory = fromMenu && String(cfg.menu_category || '').trim();
-  const catName = typeCategory || menuCategory || String(cfg.category || '').trim();
+  const globalCategory = String(cfg.category || '').trim();
+  const catName = configOverride
+    ? (typeCategory || menuCategory || globalCategory)
+    : (menuCategory || globalCategory || typeCategory);
   const panelChannel = panelChannelOf(guild, interaction, configOverride);
   const panelParent = panelParentOf(guild, panelChannel);
   // 🧲 Résolution FLOUE : les noms décorés (────〔🎫・SUPPORT・〕────) sont
@@ -2305,7 +2309,7 @@ function ticketPlacementConfig(botId, guild, channel, row) {
   const panel = findChannelInGuild(guild, panelRef);
   return {
     refs: staffRoleRefsForConfig(cfg, type),
-    category: (type && String(type.category || '').trim()) || (cfg.menu_category && String(cfg.menu_category).trim()) || cfg.category || '',
+    category: (cfg.menu_category && String(cfg.menu_category).trim()) || cfg.category || (type && String(type.category || '').trim()) || '',
     strict: true,
     panel,
   };

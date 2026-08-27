@@ -12,7 +12,8 @@ const src = fs.readFileSync(__dirname + '/../server/discord/panels.js', 'utf8');
 // 1. La logique de placement est présente et stricte
 const block = src.slice(src.indexOf('Placement du salon (v2.4)'), src.indexOf('const allow = [PermissionFlagsBits.ViewChannel'));
 assert.ok(block.length > 100, 'bloc de placement présent avant les permissions');
-assert.ok(block.includes('const catName = typeCategory || menuCategory'), 'catégorie du type prioritaire');
+assert.ok(block.includes('const catName = configOverride'), 'source de catégorie différenciée par système');
+assert.ok(block.includes('menuCategory || globalCategory || typeCategory'), 'anciens panneaux utilisent le réglage global');
 assert.ok(block.includes('!catName'), 'catégorie vérifiée');
 assert.ok(block.includes('if (!parent && panelParent) { parent = panelParent;'), 'repli historique sûr vers la catégorie du panneau');
 assert.ok(block.includes('sans catégorie (aucune catégorie valide configurée)'), 'aucune catégorie créée en dernier recours');

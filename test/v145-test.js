@@ -76,12 +76,12 @@ function interactionFor(userId) {
   const typed = interactionFor('USER-TYPE');
   await panels.openTicket(botId, typed, { label: 'Support', emoji: '🎫', category: categoryType.id, staff_roles: [staffRole.name] });
   assert(lastCreate, 'ticket legacy créé');
-  assert.strictEqual(lastCreate.parent, categoryType.id, 'la catégorie du type est prioritaire');
+  assert.strictEqual(lastCreate.parent, categoryPanel.id, 'les anciens panneaux utilisent la catégorie du menu');
   assert(!lastCreate.permissionOverwrites.some((overwrite) => overwrite.type === ChannelType.GuildCategory), 'aucune permission de catégorie créée');
   assert(lastCreate.permissionOverwrites.some((overwrite) => overwrite.id === guild.id && overwrite.deny.includes(PermissionFlagsBits.ViewChannel)), 'membres généraux refusés');
   assert(lastCreate.permissionOverwrites.some((overwrite) => overwrite.id === 'USER-TYPE' && overwrite.allow.includes(PermissionFlagsBits.ViewChannel)), 'créateur autorisé');
   assert(lastCreate.permissionOverwrites.some((overwrite) => overwrite.id === staffRole.id && overwrite.allow.includes(PermissionFlagsBits.ViewChannel)), 'staff autorisé');
-  console.log('✅ ancien menu/type : ticket placé dans la catégorie du type, créateur + staff autorisés');
+  console.log('✅ ancien menu/type : ticket placé dans la catégorie du panneau, créateur + staff autorisés');
 
   // Parcours ancien bouton simple : la catégorie globale sélectionnée est
   // utilisée, sans création de catégorie ni placement au hasard.
@@ -108,7 +108,8 @@ function interactionFor(userId) {
   assert(![...channels.values()].some((channel) => channel.type === ChannelType.GuildCategory && channel.name === 'Tickets'), 'aucune catégorie créée');
   console.log('✅ ancienne configuration sans catégorie : repli sûr vers le panneau, aucune catégorie créée');
 
-  assert(source.includes('const catName = typeCategory || menuCategory'));
+  assert(source.includes('const catName = configOverride'));
+  assert(source.includes('menuCategory || globalCategory || typeCategory'));
   assert(source.includes('let parent = null') && source.includes('findCategoryRef'));
   assert(!source.includes('type: ChannelType.GuildCategory }'));
   assert(dashboard.includes('Catégorie de création du ticket'));
