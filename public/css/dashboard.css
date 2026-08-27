@@ -1773,3 +1773,174 @@ html.hx-light .dash-input, html.hx-light .dash-select, html.hx-light textarea.da
 @media (prefers-reduced-motion: reduce) {
   #dash-content > *, .dash-module-header, .dash-side-item, .dash-btn, .dash-filter, .am-choice, .ca-choice { animation: none !important; transition: none !important; }
 }
+
+/* ============================================================
+   NEXORA v4.1 — Mobile topbar fiable
+   Barre d'actions tactile, panneaux en portal et notifications visibles.
+   ============================================================ */
+
+/* Les panneaux sortis de la ligne scrollable gardent une position stable
+   même quand la topbar est sticky ou que le téléphone change d'orientation. */
+.dash-topbar-popover {
+  position: fixed;
+  z-index: 450;
+}
+.dash-bell-pop.dash-topbar-popover {
+  top: 0;
+  right: 12px;
+}
+.dash-accent-pop.dash-topbar-popover {
+  top: 0;
+  right: 12px;
+}
+
+.bp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 3px 3px 9px 5px;
+  margin-bottom: 3px;
+  border-bottom: 1px solid var(--d-border);
+}
+.bp-head b { font-size: 13px; color: var(--d-text); }
+.bp-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border: 1px solid var(--d-border);
+  border-radius: 9px;
+  color: var(--d-dim);
+  background: transparent;
+  font: inherit;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.bp-close:hover { color: var(--d-text); border-color: var(--d-accent); background: rgba(112,130,255,.12); }
+
+@media (max-width: 900px) {
+  /* Deux lignes lisibles : serveur, puis actions. La ligne d'actions peut
+     défiler horizontalement si « Ajouter le bot » est aussi présent, sans
+     réduire les boutons ni faire passer la notification hors de l'écran. */
+  .dash-topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 9px;
+    overflow: visible;
+  }
+  .dash-topbar > .dash-server-card.topbar-pick {
+    order: 1;
+    grid-column: 1;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    flex: none;
+  }
+  .dash-topbar > .dash-topbar-actions {
+    order: 2;
+    grid-column: 1;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    flex: none;
+    flex-wrap: nowrap;
+    align-items: center;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding: 1px 1px 3px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-inline: contain;
+  }
+  .dash-topbar-actions::-webkit-scrollbar { display: none; }
+  .dash-topbar-actions > * { flex: 0 0 auto; }
+  .dash-topbar-actions .dash-iconbtn {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    border-radius: 13px;
+  }
+  .dash-topbar-actions .dash-btn { flex: 0 0 auto; min-height: 44px; white-space: nowrap; }
+  .dash-topbar-actions .dash-bot-chip { flex: 0 0 auto; min-width: 44px; }
+  .dash-accent-wrap { flex: 0 0 auto; }
+
+  /* Sur téléphone, une notification est une vraie feuille flottante. Elle
+     reste au-dessus du contenu et de la barre basse, avec une zone de clic
+     confortable et une hauteur adaptée aux petits écrans. */
+  .dash-bell-pop.dash-topbar-popover {
+    top: auto !important;
+    left: max(12px, env(safe-area-inset-left)) !important;
+    right: max(12px, env(safe-area-inset-right)) !important;
+    bottom: calc(78px + env(safe-area-inset-bottom)) !important;
+    width: auto;
+    max-width: none;
+    max-height: 64vh;
+    max-height: min(64dvh, 460px);
+    border-radius: 18px;
+    padding: 10px;
+    z-index: 450;
+    box-shadow: 0 24px 60px -18px rgba(0,0,0,.95), 0 0 0 1px rgba(255,255,255,.04) inset;
+    animation: mobileTopbarSheet .2s cubic-bezier(.2,.85,.25,1) both;
+  }
+  .dash-bell-pop.dash-topbar-popover .bp-list { max-height: none; overflow: visible; }
+  .dash-bell-pop.dash-topbar-popover .bp-item { min-height: 42px; padding: 11px 10px; }
+
+  /* Le choix de couleur ne doit pas être coupé par le défilement horizontal
+     des actions. Les pastilles deviennent une petite feuille accessible. */
+  .dash-accent-pop.dash-topbar-popover {
+    top: auto !important;
+    left: max(12px, env(safe-area-inset-left)) !important;
+    right: max(12px, env(safe-area-inset-right)) !important;
+    bottom: calc(78px + env(safe-area-inset-bottom)) !important;
+    width: auto;
+    max-width: none;
+    justify-content: space-around;
+    gap: 8px;
+    padding: 13px 12px;
+    border-radius: 18px;
+    z-index: 450;
+    box-shadow: 0 24px 60px -18px rgba(0,0,0,.95), 0 0 0 1px rgba(255,255,255,.04) inset;
+    animation: mobileTopbarSheet .2s cubic-bezier(.2,.85,.25,1) both;
+  }
+  .dash-accent-pop.dash-topbar-popover .acc-dot {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+  }
+
+  /* Les infobulles hover ne sont pas adaptées au tactile. Les aria-label
+     restent disponibles pour les lecteurs d'écran et les boutons sont grands. */
+  [data-tip]:hover::after { display: none; }
+  .bp-close { width: 36px; height: 36px; flex-basis: 36px; }
+
+  /* La recherche reste utilisable avec le clavier virtuel sans être
+     repoussée sous la barre du navigateur. */
+  .dash-palette-overlay {
+    padding: max(76px, calc(60px + env(safe-area-inset-top))) 12px 16px;
+  }
+  .dash-palette { max-height: calc(100dvh - 100px); }
+}
+
+@keyframes mobileTopbarSheet {
+  from { opacity: 0; transform: translateY(12px) scale(.985); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 520px) {
+  .dash-topbar { gap: 8px; padding-left: 10px; padding-right: 10px; }
+  .dash-topbar-actions { gap: 6px; }
+  .dash-topbar-actions .dash-iconbtn { width: 42px; min-width: 42px; height: 42px; }
+  .dash-topbar-actions .dash-bot-chip { padding: 6px 8px !important; }
+  .dash-topbar-actions .dash-bot-chip img,
+  .dash-topbar-actions .dash-bot-chip .chip-fallback { width: 30px !important; height: 30px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-bell-pop.dash-topbar-popover,
+  .dash-accent-pop.dash-topbar-popover { animation: none !important; }
+}

@@ -374,12 +374,29 @@ try { Dashboard.applyAccent(localStorage.getItem('hx-accent') || 'Blurple'); } c
 
 // 🎨/🔔 Popovers : un clic sur l'icône ouvre, un second clic ou un clic
 // ailleurs ferme. Le gestionnaire unique évite les panneaux « collés » lors
-// des re-rendus du topbar et fonctionne aussi sur écran tactile.
+// des re-rendus de la topbar et fonctionne aussi sur écran tactile.
 Dashboard.closePopovers = (except = null) => {
   document.querySelectorAll('.dash-accent-pop, .dash-bell-pop').forEach((pop) => {
-    if (pop !== except) pop.hidden = true;
+    if (pop !== except) {
+      pop.hidden = true;
+      if (pop.id === 'dash-bell-pop') document.querySelector('#d-bell')?.setAttribute('aria-expanded', 'false');
+      if (pop.id === 'dash-accent-pop') document.querySelector('#d-accent')?.setAttribute('aria-expanded', 'false');
+    }
   });
 };
+
+// Un panneau ouvert sur ordinateur reste sous son bouton quand la fenêtre
+// change de taille ou défile. En mode téléphone, le CSS le transforme en
+// feuille flottante pleine largeur au-dessus de la navigation basse.
+if (!window.__hxTopbarPopoverPosition) {
+  window.__hxTopbarPopoverPosition = true;
+  const reposition = () => {
+    Dashboard.positionTopbarPopover(document.querySelector('#dash-bell-pop:not([hidden])'), document.querySelector('#d-bell'));
+    Dashboard.positionTopbarPopover(document.querySelector('#dash-accent-pop:not([hidden])'), document.querySelector('#d-accent'));
+  };
+  window.addEventListener('resize', reposition, { passive: true });
+  window.addEventListener('scroll', reposition, { passive: true, capture: true });
+}
 if (!window.__hxPopoverDismiss) {
   window.__hxPopoverDismiss = true;
   document.addEventListener('click', (event) => {
@@ -435,7 +452,30 @@ Dashboard.loadNotifications = async () => {
 };
 
 // ---------------------- Barre du haut ----------------------
+// Les panneaux de la topbar sont montés dans le body (portal) : sur téléphone
+// ils ne sont jamais coupés par la barre d'actions horizontale ni cachés sous
+// le contenu. Sur ordinateur, leur position est recalée sous le bouton.
+Dashboard.removeTopbarPortals = () => {
+  document.querySelectorAll('[data-dash-topbar-popover="true"]').forEach((node) => node.remove());
+};
+
+Dashboard.positionTopbarPopover = (popover, button) => {
+  if (!popover || popover.hidden || !button) return;
+  const isMobile = window.matchMedia
+    ? window.matchMedia('(max-width: 900px)').matches
+    : window.innerWidth <= 900;
+  if (isMobile) {
+    ['top', 'right', 'bottom', 'left'].forEach((property) => popover.style.removeProperty(property));
+    return;
+  }
+  const rect = button.getBoundingClientRect();
+  popover.style.top = `${Math.round(rect.bottom + 8)}px`;
+  popover.style.right = `${Math.max(12, Math.round(window.innerWidth - rect.right))}px`;
+};
+
 Dashboard.renderTopbar = (topbar, discordGuilds) => {
+  if (!topbar) return;
+  Dashboard.removeTopbarPortals();
   const bot = Dashboard.state.bot;
   const cur = discordGuilds.find((g) => g.id === Dashboard.state.guildId);
   const needsInvite = discordGuilds.some((g) => g.canManage && !g.hasBot);
@@ -449,23 +489,19 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
         <span>${cur ? App.escapeHtml(cur.name) : 'Aucun serveur sélectionné'}</span>
       </div>
     </div>
-    <div class="dash-topbar-actions">
+    <div class="dash-topbar-actions" aria-label="Actions rapides du dashboard">
       <div class="dash-accent-wrap">
-        <button class="dash-iconbtn" id="d-bell" data-tip="Notifications">🔔<span class="bell-badge" hidden></span></button>
-        <div class="dash-bell-pop" hidden><div class="bp-list"><div class="dp-empty">Chargement…</div></div></div>
+        <button class="dash-iconbtn" id="d-bell" data-tip="Notifications" aria-label="Notifications" aria-controls="dash-bell-pop" aria-expanded="false">🔔<span class="bell-badge" hidden></span></button>
       </div>
-      <button class="dash-iconbtn" id="d-theme" data-tip="Mode clair / sombre">🌓</button>
-      <button class="dash-iconbtn" id="d-palette" data-tip="Recherche rapide (Ctrl+K)">🔍</button>
-      <button class="dash-iconbtn" id="d-refresh" data-tip="Actualiser le module">🔄</button>
+      <button class="dash-iconbtn" id="d-theme" data-tip="Mode clair / sombre" aria-label="Changer le thème">🌓</button>
+      <button class="dash-iconbtn" id="d-palette" data-tip="Recherche rapide (Ctrl+K)" aria-label="Rechercher un module ou un serveur">🔍</button>
+      <button class="dash-iconbtn" id="d-refresh" data-tip="Actualiser le module" aria-label="Actualiser le module">🔄</button>
       <div class="dash-accent-wrap">
-        <button class="dash-iconbtn" id="d-accent" data-tip="Couleur du dashboard">🎨</button>
-        <div class="dash-accent-pop" hidden>
-          ${Dashboard.ACCENTS.map(([n, c1, c2]) => `<button class="acc-dot" data-acc="${n}" title="${n}" style="background:linear-gradient(135deg,${c1},${c2})"></button>`).join('')}
-        </div>
+        <button class="dash-iconbtn" id="d-accent" data-tip="Couleur du dashboard" aria-label="Choisir la couleur du dashboard" aria-controls="dash-accent-pop" aria-expanded="false">🎨</button>
       </div>
-      ${needsInvite ? `<button class="dash-btn" id="d-invite2">➕ Ajouter le bot</button>` : ''}
-      <div class="dash-bot-chip" title="${App.escapeHtml(bot.bot_username || bot.name)}">
-        ${bot.avatar_url ? `<img src="${App.escapeHtml(bot.avatar_url)}" alt="" />` : '<span class="chip-fallback">🤖</span>'}
+      ${needsInvite ? `<button class="dash-btn" id="d-invite2" aria-label="Ajouter le bot au serveur">➕ Ajouter le bot</button>` : ''}
+      <div class="dash-bot-chip" title="${App.escapeHtml(bot.bot_username || bot.name)}" aria-label="${App.escapeHtml(bot.name)}">
+        ${bot.avatar_url ? `<img src="${App.escapeHtml(bot.avatar_url)}" alt="Avatar de ${App.escapeHtml(bot.name)}" />` : '<span class="chip-fallback" aria-hidden="true">🤖</span>'}
         <div class="chip-txt">
           <b>${App.escapeHtml(bot.name)}</b>
           <span class="${bot.online ? 'on' : 'off'}">${bot.online ? '● En ligne' : '● Hors ligne'}</span>
@@ -477,9 +513,24 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
   const mobilePick = Dashboard.serverPicker();
   mobilePick.classList.add('topbar-pick');
   topbar.appendChild(mobilePick);
+
+  // Portals : sortir les panneaux de la ligne scrollable évite tout clipping
+  // sur les petits écrans et permet un vrai panneau lisible au-dessus du contenu.
+  const bellPop = App.el(`
+    <div id="dash-bell-pop" class="dash-bell-pop dash-topbar-popover" data-dash-topbar-popover="true" hidden role="dialog" aria-label="Notifications" aria-live="polite">
+      <div class="bp-head"><b>🔔 Notifications</b><button class="bp-close" type="button" aria-label="Fermer les notifications">×</button></div>
+      <div class="bp-list"><div class="dp-empty">Chargement…</div></div>
+    </div>`);
+  const accPop = App.el(`
+    <div id="dash-accent-pop" class="dash-accent-pop dash-topbar-popover" data-dash-topbar-popover="true" hidden role="dialog" aria-label="Couleur du dashboard">
+      ${Dashboard.ACCENTS.map(([n, c1, c2]) => `<button class="acc-dot" type="button" data-acc="${n}" aria-label="Thème ${n}" title="${n}" style="background:linear-gradient(135deg,${c1},${c2})"></button>`).join('')}
+    </div>`);
+  document.body.appendChild(bellPop);
+  document.body.appendChild(accPop);
+
   const inviteBtn = topbar.querySelector('#d-invite2');
   if (inviteBtn) inviteBtn.onclick = () => App.openInvite(bot.invite_url);
-  topbar.querySelector('#d-palette').onclick = () => Dashboard.openPalette();
+  topbar.querySelector('#d-palette').onclick = () => { Dashboard.closePopovers(); Dashboard.openPalette(); };
   // 🌓 Mode clair / sombre
   topbar.querySelector('#d-theme').onclick = () => {
     const light = !document.documentElement.classList.contains('hx-light');
@@ -487,35 +538,47 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
     try { localStorage.setItem('hx-theme', light ? 'light' : 'dark'); } catch {}
     App.toast(light ? '☀️ Mode clair activé' : '🌙 Mode sombre activé');
   };
-  // 🔔 Notifications : badge + panneau
+  // 🔔 Notifications : badge + panneau, dans un portal hors de la topbar
   const bellBtn = topbar.querySelector('#d-bell');
-  const bellPop = topbar.querySelector('.dash-bell-pop');
   const bellBadge = topbar.querySelector('.bell-badge');
   Dashboard.loadNotifications().then(({ warnings = [], infos = [] }) => {
     if (warnings.length) { bellBadge.textContent = warnings.length; bellBadge.hidden = false; }
     const list = bellPop.querySelector('.bp-list');
     list.innerHTML = '';
     if (!warnings.length && !infos.length) { list.appendChild(App.el(`<div class="dp-empty">✅ Tout va bien — aucune alerte !</div>`)); return; }
-    warnings.forEach((w) => list.appendChild(App.el(`<div class="bp-item warn"><span>${w.icon || '⚠️'}</span><div>${App.escapeHtml(w.text)}</div></div>`)));
-    infos.forEach((i2) => list.appendChild(App.el(`<div class="bp-item"><span>${i2.icon || 'ℹ️'}</span><div>${App.escapeHtml(i2.text)}</div></div>`)));
+    warnings.forEach((w) => list.appendChild(App.el(`<div class="bp-item warn"><span>${w.icon || '⚠️'}</span><div>${App.escapeHtml(w.text)}</div>`)));
+    infos.forEach((i2) => list.appendChild(App.el(`<div class="bp-item"><span>${i2.icon || 'ℹ️'}</span><div>${App.escapeHtml(i2.text)}</div>`)));
   });
   bellBtn.onclick = (e) => {
     e.stopPropagation();
     const open = bellPop.hidden;
     Dashboard.closePopovers(open ? bellPop : null);
     bellPop.hidden = !open;
+    bellBtn.setAttribute('aria-expanded', String(open));
+    if (open) Dashboard.positionTopbarPopover(bellPop, bellBtn);
+  };
+  bellPop.querySelector('.bp-close').onclick = (e) => {
+    e.stopPropagation();
+    bellPop.hidden = true;
+    bellBtn.setAttribute('aria-expanded', 'false');
   };
   topbar.querySelector('#d-refresh').onclick = () => { Dashboard.closePopovers(); App.toast('Module actualisé !'); Dashboard.refresh(); };
   const accBtn = topbar.querySelector('#d-accent');
-  const accPop = topbar.querySelector('.dash-accent-pop');
   accBtn.onclick = (e) => {
     e.stopPropagation();
     const open = accPop.hidden;
     Dashboard.closePopovers(open ? accPop : null);
     accPop.hidden = !open;
+    accBtn.setAttribute('aria-expanded', String(open));
+    if (open) Dashboard.positionTopbarPopover(accPop, accBtn);
   };
   accPop.querySelectorAll('[data-acc]').forEach((d) => {
-    d.onclick = () => { Dashboard.applyAccent(d.dataset.acc); accPop.hidden = true; App.toast(`🎨 Thème « ${d.dataset.acc} » appliqué !`); };
+    d.onclick = () => {
+      Dashboard.applyAccent(d.dataset.acc);
+      accPop.hidden = true;
+      accBtn.setAttribute('aria-expanded', 'false');
+      App.toast(`🎨 Thème « ${d.dataset.acc} » appliqué !`);
+    };
   });
 };
 
