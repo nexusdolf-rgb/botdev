@@ -164,6 +164,13 @@ Dashboard.serverPicker = () => {
 
 Dashboard.renderSide = (aside) => {
   aside.innerHTML = '';
+  const bot = Dashboard.state.bot || {};
+  const brandAvatar = bot.avatar_url
+    ? `<img class="dash-side-brand-avatar" src="${App.escapeHtml(bot.avatar_url)}" alt="" />`
+    : '<span class="dash-side-brand-avatar fallback">⚡</span>';
+  aside.appendChild(App.el(`<div class="dash-side-brand">${brandAvatar}<div class="dash-side-brand-copy"><b>${App.escapeHtml(bot.name || 'Hoxera')}</b><span>Control Center</span></div><span class="dash-side-brand-status" title="${bot.online ? 'Bot en ligne' : 'Bot hors ligne'}"></span></div>`));
+  const sideBrandImage = aside.querySelector('.dash-side-brand-avatar:not(.fallback)');
+  if (sideBrandImage) sideBrandImage.onerror = () => sideBrandImage.replaceWith(App.el('<span class="dash-side-brand-avatar fallback">⚡</span>'));
   aside.appendChild(Dashboard.serverPicker());
 
   aside.appendChild(App.el(`<div class="dash-side-section">Gestion du serveur</div>`));
