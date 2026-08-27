@@ -286,6 +286,10 @@ CREATE TABLE IF NOT EXISTS automod_member_blacklist (
   panel_channel_id TEXT DEFAULT '',
   panel_message_id TEXT DEFAULT '',
   active INTEGER NOT NULL DEFAULT 1,
+  expires_at INTEGER NOT NULL DEFAULT 0,
+  trigger_type TEXT DEFAULT 'immediate',
+  trigger_count INTEGER NOT NULL DEFAULT 1,
+  threshold INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   removed_at TEXT DEFAULT '',
   removed_by TEXT DEFAULT '',
@@ -293,6 +297,22 @@ CREATE TABLE IF NOT EXISTS automod_member_blacklist (
 );
 CREATE INDEX IF NOT EXISTS idx_automod_member_blacklist_guild
   ON automod_member_blacklist (bot_id, guild_id, active, created_at DESC);
+
+-- Compteurs persistants des sanctions Auto-Mod. Ils sont indexés par
+-- comportement et sanction : un spam/timeout ne se mélange jamais avec un
+-- lien/ban. Ils sont remis à zéro quand une blacklist est déclenchée.
+CREATE TABLE IF NOT EXISTS automod_blacklist_counters (
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  rule TEXT NOT NULL,
+  action TEXT NOT NULL,
+  count INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (bot_id, guild_id, user_id, rule, action)
+);
+CREATE INDEX IF NOT EXISTS idx_automod_blacklist_counters_user
+  ON automod_blacklist_counters (bot_id, guild_id, user_id, updated_at DESC);
 
 -- Tickets ouverts (fiche par salon de ticket) : numéro, prise en charge,
 -- horodatages, dernière activité (fermeture automatique), note du support.
@@ -523,10 +543,18 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_mode TEXT DEFAULT 'enfor
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_rule_actions TEXT DEFAULT '{}'"); } catch (e) {}
 // v5.1 — blacklist des membres par serveur après une action Auto-Mod.
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_rules TEXT DEFAULT '{}'"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_thresholds TEXT DEFAULT '{}'"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_duration_min INTEGER DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_channel TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_title TEXT DEFAULT '🚫 Membre ajouté à la blacklist'"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_color TEXT DEFAULT '#ED4245'"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_footer TEXT DEFAULT 'Blacklist du serveur · Nexora'"); } catch (e) {}
+try { db.exec("ALTER TABLE automod_member_blacklist ADD COLUMN expires_at INTEGER NOT NULL DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE automod_member_blacklist ADD COLUMN trigger_type TEXT DEFAULT 'immediate'"); } catch (e) {}
+try { db.exec("ALTER TABLE automod_member_blacklist ADD COLUMN trigger_count INTEGER NOT NULL DEFAULT 1"); } catch (e) {}
+try { db.exec("ALTER TABLE automod_member_blacklist ADD COLUMN threshold INTEGER NOT NULL DEFAULT 0"); } catch (e) {}
+try { db.exec("CREATE TABLE IF NOT EXISTS automod_blacklist_counters (bot_id INTEGER NOT NULL, guild_id TEXT NOT NULL, user_id TEXT NOT NULL, rule TEXT NOT NULL, action TEXT NOT NULL, count INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT (datetime('now')), PRIMARY KEY (bot_id, guild_id, user_id, rule, action))"); } catch (e) {}
+try { db.exec("CREATE INDEX IF NOT EXISTS idx_automod_blacklist_counters_user ON automod_blacklist_counters (bot_id, guild_id, user_id, updated_at DESC)"); } catch (e) {}
 try { db.exec("CREATE INDEX IF NOT EXISTS idx_automod_member_blacklist_user ON automod_member_blacklist (bot_id, guild_id, user_id, active)"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_exempt_roles TEXT DEFAULT '[]'"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_exempt_channels TEXT DEFAULT '[]'"); } catch (e) {}
@@ -853,7 +881,7 @@ const guildSettings = {
   set: (botId, guildId, fields) => {
     const cur = guildSettings.get(botId, guildId) || { prefix: '', warn_limit: 0, warn_action: 'none' };
     const next = { ...cur, ...fields };
-    const cols = ['prefix', 'warn_limit', 'warn_action', 'warn_timeout_limit', 'warn_timeout_min', 'starboard_channel', 'starboard_min', 'live_channel', 'live_ping', 'ticket_log_channel', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_mode', 'am_rule_actions', 'am_blacklist_rules', 'am_blacklist_channel', 'am_blacklist_title', 'am_blacklist_color', 'am_blacklist_footer', 'am_exempt_roles', 'am_exempt_channels', 'am_exempt_users', 'am_warn_text', 'am_timeout_min', 'am_warn_limit', 'am_warn_action', 'am_warn_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'lang', 'timezone'];
+    const cols = ['prefix', 'warn_limit', 'warn_action', 'warn_timeout_limit', 'warn_timeout_min', 'starboard_channel', 'starboard_min', 'live_channel', 'live_ping', 'ticket_log_channel', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_mode', 'am_rule_actions', 'am_blacklist_rules', 'am_blacklist_thresholds', 'am_blacklist_duration_min', 'am_blacklist_channel', 'am_blacklist_title', 'am_blacklist_color', 'am_blacklist_footer', 'am_exempt_roles', 'am_exempt_channels', 'am_exempt_users', 'am_warn_text', 'am_timeout_min', 'am_warn_limit', 'am_warn_action', 'am_warn_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'lang', 'timezone'];
     const vals = {
       bot_id: botId, guild_id: guildId,
       prefix: String(next.prefix || '').slice(0, 5),
@@ -885,6 +913,10 @@ const guildSettings = {
       am_blacklist_rules: typeof next.am_blacklist_rules === 'string'
         ? next.am_blacklist_rules.slice(0, 1000)
         : JSON.stringify(next.am_blacklist_rules && typeof next.am_blacklist_rules === 'object' ? next.am_blacklist_rules : {}),
+      am_blacklist_thresholds: typeof next.am_blacklist_thresholds === 'string'
+        ? next.am_blacklist_thresholds.slice(0, 1000)
+        : JSON.stringify(next.am_blacklist_thresholds && typeof next.am_blacklist_thresholds === 'object' ? next.am_blacklist_thresholds : {}),
+      am_blacklist_duration_min: Math.min(Math.max(parseInt(next.am_blacklist_duration_min, 10) || 0, 0), 525600),
       am_blacklist_channel: String(next.am_blacklist_channel || '').slice(0, 100),
       am_blacklist_title: String(next.am_blacklist_title || '🚫 Membre ajouté à la blacklist').slice(0, 120),
       am_blacklist_color: /^#[0-9a-fA-F]{6}$/.test(String(next.am_blacklist_color || '')) ? String(next.am_blacklist_color) : '#ED4245',
@@ -1154,17 +1186,30 @@ const blacklist = {
 
 // ---------------------- Blacklist des membres (par serveur) ----------------------
 const memberBlacklist = {
-  active: (botId, guildId, limit = 100) => db.prepare(`SELECT * FROM automod_member_blacklist
-    WHERE bot_id = ? AND guild_id = ? AND active = 1 ORDER BY created_at DESC, id DESC LIMIT ?`)
-    .all(botId, String(guildId), Math.min(Math.max(parseInt(limit, 10) || 100, 1), 200)),
-  all: (botId, guildId, limit = 100) => db.prepare(`SELECT * FROM automod_member_blacklist
-    WHERE bot_id = ? AND guild_id = ? ORDER BY active DESC, created_at DESC, id DESC LIMIT ?`)
-    .all(botId, String(guildId), Math.min(Math.max(parseInt(limit, 10) || 100, 1), 200)),
-  get: (botId, guildId, userId) => db.prepare(`SELECT * FROM automod_member_blacklist
-    WHERE bot_id = ? AND guild_id = ? AND user_id = ?`).get(botId, String(guildId), String(userId)) || null,
+  expire: (botId, guildId) => db.prepare(`UPDATE automod_member_blacklist
+    SET active = 0, removed_at = datetime('now'), removed_by = 'system:expiration'
+    WHERE bot_id = ? AND guild_id = ? AND active = 1 AND expires_at > 0 AND expires_at <= ?`)
+    .run(botId, String(guildId), Date.now()),
+  active: (botId, guildId, limit = 100) => {
+    memberBlacklist.expire(botId, guildId);
+    return db.prepare(`SELECT * FROM automod_member_blacklist
+      WHERE bot_id = ? AND guild_id = ? AND active = 1 ORDER BY created_at DESC, id DESC LIMIT ?`)
+      .all(botId, String(guildId), Math.min(Math.max(parseInt(limit, 10) || 100, 1), 200));
+  },
+  all: (botId, guildId, limit = 100) => {
+    memberBlacklist.expire(botId, guildId);
+    return db.prepare(`SELECT * FROM automod_member_blacklist
+      WHERE bot_id = ? AND guild_id = ? ORDER BY active DESC, created_at DESC, id DESC LIMIT ?`)
+      .all(botId, String(guildId), Math.min(Math.max(parseInt(limit, 10) || 100, 1), 200));
+  },
+  get: (botId, guildId, userId) => {
+    memberBlacklist.expire(botId, guildId);
+    return db.prepare(`SELECT * FROM automod_member_blacklist
+      WHERE bot_id = ? AND guild_id = ? AND user_id = ?`).get(botId, String(guildId), String(userId)) || null;
+  },
   add: (botId, guildId, entry = {}) => db.prepare(`INSERT INTO automod_member_blacklist
-    (bot_id, guild_id, user_id, user_tag, reason, rule, action, source_channel_id, source_message_id, panel_channel_id, panel_message_id, active, created_at, removed_at, removed_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), '', '')
+    (bot_id, guild_id, user_id, user_tag, reason, rule, action, source_channel_id, source_message_id, panel_channel_id, panel_message_id, active, expires_at, trigger_type, trigger_count, threshold, created_at, removed_at, removed_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, datetime('now'), '', '')
     ON CONFLICT(bot_id, guild_id, user_id) DO UPDATE SET
       user_tag = excluded.user_tag,
       reason = excluded.reason,
@@ -1175,6 +1220,10 @@ const memberBlacklist = {
       panel_channel_id = excluded.panel_channel_id,
       panel_message_id = excluded.panel_message_id,
       active = 1,
+      expires_at = excluded.expires_at,
+      trigger_type = excluded.trigger_type,
+      trigger_count = excluded.trigger_count,
+      threshold = excluded.threshold,
       created_at = datetime('now'),
       removed_at = '',
       removed_by = ''`)
@@ -1183,7 +1232,10 @@ const memberBlacklist = {
       String(entry.user_tag || '').slice(0, 100), String(entry.reason || '').slice(0, 500),
       String(entry.rule || '').slice(0, 32), String(entry.action || '').slice(0, 32),
       String(entry.source_channel_id || '').slice(0, 30), String(entry.source_message_id || '').slice(0, 40),
-      String(entry.panel_channel_id || '').slice(0, 30), String(entry.panel_message_id || '').slice(0, 40)),
+      String(entry.panel_channel_id || '').slice(0, 30), String(entry.panel_message_id || '').slice(0, 40),
+      Math.max(parseInt(entry.expires_at, 10) || 0, 0),
+      ['immediate', 'threshold'].includes(String(entry.trigger_type)) ? String(entry.trigger_type) : 'immediate',
+      Math.max(parseInt(entry.trigger_count, 10) || 1, 1), Math.max(parseInt(entry.threshold, 10) || 0, 0)),
   setPanel: (botId, guildId, userId, channelId, messageId) => db.prepare(`UPDATE automod_member_blacklist
     SET panel_channel_id = ?, panel_message_id = ? WHERE bot_id = ? AND guild_id = ? AND user_id = ?`)
     .run(String(channelId || '').slice(0, 30), String(messageId || '').slice(0, 40), botId, String(guildId), String(userId)),
@@ -1191,6 +1243,25 @@ const memberBlacklist = {
     SET active = 0, removed_at = datetime('now'), removed_by = ?
     WHERE bot_id = ? AND guild_id = ? AND user_id = ? AND active = 1`)
     .run(String(removedBy || '').slice(0, 30), botId, String(guildId), String(userId)),
+};
+
+const memberBlacklistCounters = {
+  get: (botId, guildId, userId, rule, action) => db.prepare(`SELECT * FROM automod_blacklist_counters
+    WHERE bot_id = ? AND guild_id = ? AND user_id = ? AND rule = ? AND action = ?`)
+    .get(botId, String(guildId), String(userId), String(rule), String(action)) || null,
+  increment: (botId, guildId, userId, rule, action) => {
+    db.prepare(`INSERT INTO automod_blacklist_counters (bot_id, guild_id, user_id, rule, action, count, updated_at)
+      VALUES (?, ?, ?, ?, ?, 1, datetime('now'))
+      ON CONFLICT(bot_id, guild_id, user_id, rule, action) DO UPDATE SET count = count + 1, updated_at = datetime('now')`)
+      .run(botId, String(guildId), String(userId), String(rule), String(action));
+    return memberBlacklistCounters.get(botId, guildId, userId, rule, action);
+  },
+  reset: (botId, guildId, userId, rule, action) => db.prepare(`DELETE FROM automod_blacklist_counters
+    WHERE bot_id = ? AND guild_id = ? AND user_id = ? AND rule = ? AND action = ?`)
+    .run(botId, String(guildId), String(userId), String(rule), String(action)),
+  resetUser: (botId, guildId, userId) => db.prepare(`DELETE FROM automod_blacklist_counters
+    WHERE bot_id = ? AND guild_id = ? AND user_id = ?`)
+    .run(botId, String(guildId), String(userId)),
 };
 
 // ---------------------- Journal d'auto-modération ----------------------
@@ -1642,4 +1713,4 @@ const liveSocials = {
   count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM live_socials WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
 };
 
-module.exports = { db, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, memberBlacklist, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories };
+module.exports = { db, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, memberBlacklist, memberBlacklistCounters, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories };

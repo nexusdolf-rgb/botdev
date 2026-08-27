@@ -2426,5 +2426,49 @@ html.hx-light .am-blacklist-badge, html.hx-light .am-blacklist-count { color: #b
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .am-blacklist-toggle, .am-blacklist-row, .am-member-blacklist-row { transition: none !important; }
+  .am-blacklist-toggle, .am-threshold-box, .am-member-blacklist-row { transition: none !important; }
+}
+
+/* v5.2 — durée et seuil progressif de blacklist */
+.am-threshold-box {
+  margin-top: 10px;
+  padding: 9px 10px;
+  border: 1px dashed rgba(240,108,117,.24);
+  border-radius: 11px;
+  background: rgba(240,108,117,.03);
+}
+.am-threshold-box > label {
+  display: block;
+  margin-bottom: 6px;
+  color: #b4c0d1;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .35px;
+  text-transform: uppercase;
+}
+.am-threshold-controls { display: flex; align-items: center; gap: 8px; }
+.am-threshold-controls .dash-input { width: 86px; min-height: 38px; flex: 0 0 86px; font-size: 14px; font-weight: 800; text-align: center; }
+.am-threshold-controls span { color: var(--d-dim); font-size: 10.5px; line-height: 1.3; }
+.am-threshold-box > small { display: block; margin-top: 6px; color: var(--d-dim); font-size: 10px; line-height: 1.35; }
+.am-blacklist-duration {
+  display: grid;
+  grid-template-columns: minmax(190px, 280px) minmax(0, 1fr);
+  align-items: end;
+  gap: 13px;
+  margin-bottom: 13px;
+  padding: 11px 12px;
+  border: 1px solid rgba(240,108,117,.18);
+  border-radius: 12px;
+  background: rgba(240,108,117,.035);
+}
+.am-blacklist-duration .dash-select { margin-top: 0; }
+.am-blacklist-duration > small { padding-bottom: 8px; color: var(--d-dim); font-size: 10.5px; line-height: 1.4; }
+
+html.hx-light .am-threshold-box { background: rgba(187,76,88,.025); border-color: rgba(187,76,88,.25); }
+html.hx-light .am-threshold-box > label { color: #687893; }
+html.hx-light .am-blacklist-duration { background: rgba(187,76,88,.025); border-color: rgba(187,76,88,.22); }
+
+@media (max-width: 900px) {
+  .am-blacklist-duration { grid-template-columns: 1fr; gap: 3px; align-items: stretch; }
+  .am-blacklist-duration > small { padding-bottom: 0; }
 }

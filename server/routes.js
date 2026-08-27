@@ -649,7 +649,7 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
     prefix: '', warn_limit: 0, warn_action: 'none',
     xp_enabled: 1, xp_min: 10, xp_max: 25, xp_cooldown: 60, xp_message: '', xp_channel: '',
     am_enabled: 0, am_links: 1, am_caps: 1, am_mentions: 5, am_spam: 5,
-    am_mode: 'enforce', am_rule_actions: '{}', am_blacklist_rules: '{}', am_blacklist_channel: '',
+    am_mode: 'enforce', am_rule_actions: '{}', am_blacklist_rules: '{}', am_blacklist_thresholds: '{}', am_blacklist_duration_min: 0, am_blacklist_channel: '',
     am_blacklist_title: '🚫 Membre ajouté à la blacklist', am_blacklist_color: '#ED4245', am_blacklist_footer: 'Blacklist du serveur · Nexora',
     am_exempt_roles: '[]', am_exempt_channels: '[]', am_exempt_users: '[]',
     am_warn_limit: 2, am_warn_action: 'timeout', am_warn_timeout_min: 10,
@@ -901,6 +901,20 @@ function normalizeAutomodBlacklistRules(value) {
   return out;
 }
 
+function normalizeAutomodBlacklistThresholds(value) {
+  let source = value;
+  if (typeof source === 'string') {
+    try { source = JSON.parse(source); } catch { source = {}; }
+  }
+  const out = {};
+  if (!source || typeof source !== 'object' || Array.isArray(source)) return out;
+  for (const rule of AUTOMOD_BLACKLIST_RULES) {
+    const count = Math.min(Math.max(parseInt(source[rule], 10) || 0, 0), 50);
+    if (count > 0) out[rule] = count;
+  }
+  return out;
+}
+
 router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
   if (!bot) return;
@@ -912,6 +926,8 @@ router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) =>
   if (body.mode !== undefined) advancedFields.am_mode = body.mode === 'observe' ? 'observe' : 'enforce';
   if (body.rule_actions !== undefined) advancedFields.am_rule_actions = JSON.stringify(normalizeAutomodRuleActions(body.rule_actions));
   if (body.blacklist_rules !== undefined) advancedFields.am_blacklist_rules = JSON.stringify(normalizeAutomodBlacklistRules(body.blacklist_rules));
+  if (body.blacklist_thresholds !== undefined) advancedFields.am_blacklist_thresholds = JSON.stringify(normalizeAutomodBlacklistThresholds(body.blacklist_thresholds));
+  if (body.blacklist_duration_min !== undefined) advancedFields.am_blacklist_duration_min = Math.min(Math.max(parseInt(body.blacklist_duration_min, 10) || 0, 0), 525600);
   if (body.blacklist_channel !== undefined) advancedFields.am_blacklist_channel = String(body.blacklist_channel || '').slice(0, 100);
   if (body.blacklist_title !== undefined) advancedFields.am_blacklist_title = String(body.blacklist_title || '🚫 Membre ajouté à la blacklist').slice(0, 120);
   if (body.blacklist_color !== undefined) advancedFields.am_blacklist_color = /^#[0-9a-fA-F]{6}$/.test(String(body.blacklist_color || '')) ? String(body.blacklist_color) : '#ED4245';
@@ -1250,6 +1266,7 @@ router.delete('/bots/:id/guilds/:guildId/automod/blacklist/:userId', requireAuth
   if (!/^\d{15,21}$/.test(userId)) return res.status(400).json({ error: 'Membre invalide.' });
   const result = store.memberBlacklist.remove(bot.id, guildId, userId, req.userId || '');
   if (!result.changes) return res.status(404).json({ error: 'Ce membre n’est pas dans la blacklist active.' });
+  store.memberBlacklistCounters.resetUser(bot.id, guildId, userId);
   res.json({ ok: true });
 });
 
@@ -2196,7 +2213,7 @@ const BOT_DATA_TABLES = [
   'commands', 'modules', 'events', 'guild_settings', 'xp', 'xp_roles', 'economy',
   'warnings', 'warning_counters', 'role_menus', 'tickets', 'bot_profiles',
   'shop_items', 'giveaways', 'suggestions', 'temp_roles', 'sanctions',
-  'blacklist_words', 'automod_logs', 'automod_member_blacklist', 'automod_warning_messages', 'open_tickets',
+  'blacklist_words', 'automod_logs', 'automod_member_blacklist', 'automod_blacklist_counters', 'automod_warning_messages', 'open_tickets',
   'ticket_counters', 'ticket_ratings', 'closed_tickets', 'transcripts',
   'marriages', 'birthdays', 'reminders', 'cmd_stats', 'scheduled_messages',
   'custom_announcements', 'message_stats', 'join_stats', 'shop_purchases',

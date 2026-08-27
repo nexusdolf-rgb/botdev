@@ -1851,7 +1851,9 @@ Dashboard.renderers.moderation = async (content, data) => {
   };
   const ruleActions = parseAMObject(s.am_rule_actions);
   const blacklistRuleActions = parseAMObject(s.am_blacklist_rules);
+  const blacklistThresholds = parseAMObject(s.am_blacklist_thresholds);
   const blacklistAfter = (rule) => !!(blacklistRuleActions[rule] === true || blacklistRuleActions[rule] === 1 || blacklistRuleActions[rule] === '1' || blacklistRuleActions[rule] === 'true');
+  const blacklistThresholdFor = (rule) => Math.min(Math.max(parseInt(blacklistThresholds[rule], 10) || 0, 0), 50);
   const actionLabels = {
     inherit: 'Comportement actuel',
     log: '📋 Journal seulement',
@@ -1875,6 +1877,9 @@ Dashboard.renderers.moderation = async (content, data) => {
   if (currentBlacklistChannel && !channelList.some((channel) => Dashboard.discordRefMatches(currentBlacklistChannel, channel))) {
     blacklistChannelOptions.push(Dashboard.currentDiscordOption(currentBlacklistChannel, channelList, '⚠️', 'configuration actuelle — salon blacklist introuvable'));
   }
+  const blacklistDuration = Math.min(Math.max(parseInt(s.am_blacklist_duration_min, 10) || 0, 0), 525600);
+  const blacklistDurations = [[0, '♾️ Permanente'], [60, '1 heure'], [360, '6 heures'], [1440, '24 heures'], [4320, '3 jours'], [10080, '7 jours'], [43200, '30 jours'], [525600, '365 jours']];
+  const blacklistDurationOptions = blacklistDurations.map(([value, label]) => `<option value="${value}" ${blacklistDuration === value ? 'selected' : ''}>${label}</option>`);
   const blacklistData = blacklist.map((word) => ({ word: String(word || '') }));
   const memberBlacklistData = Array.isArray(data.automod_blacklist) ? data.automod_blacklist : [];
 
@@ -1898,28 +1903,33 @@ Dashboard.renderers.moderation = async (content, data) => {
         <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">🔗</span><div><b>Liens et invitations</b><small>Bloque les URL et invitations Discord.</small></div></div><input type="checkbox" id="am-links" ${s.am_links ? 'checked' : ''} /></div>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-links" data-am-action="links">${actionOptions('links')}</select></label>
         <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-links" data-am-blacklist-rule="links" ${blacklistAfter('links') ? 'checked' : ''} /><span><b>🚫 Blacklist après sanction</b><small>Ajoute le membre au registre du serveur et envoie le panneau dédié.</small></span></label>
+        <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><input class="dash-input" type="number" min="0" max="50" data-am-threshold="links" value="${blacklistThresholdFor('links')}" /><span>sanction(s) identique(s)</span></div><small>0 = désactivé. La sanction choisie ci-dessus doit être appliquée.</small></div>
       </div>
       <div class="am-rule-card" data-am-rule-card="caps">
         <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">🔠</span><div><b>Majuscules</b><small>Détecte les messages écrits presque entièrement en majuscules.</small></div></div><input type="checkbox" id="am-caps" ${s.am_caps ? 'checked' : ''} /></div>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-caps" data-am-action="caps">${actionOptions('caps')}</select></label>
         <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-caps" data-am-blacklist-rule="caps" ${blacklistAfter('caps') ? 'checked' : ''} /><span><b>🚫 Blacklist après sanction</b><small>Conserve le membre dans la blacklist de ce serveur.</small></span></label>
+        <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><input class="dash-input" type="number" min="0" max="50" data-am-threshold="caps" value="${blacklistThresholdFor('caps')}" /><span>sanction(s) identique(s)</span></div><small>0 = désactivé. La sanction choisie ci-dessus doit être appliquée.</small></div>
       </div>
       <div class="am-rule-card" data-am-rule-card="mentions">
         <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">📣</span><div><b>Mentions excessives</b><small>Bloque les rafales de mentions dans un message.</small></div></div></div>
         <label class="am-rule-setting">Mentions maximum <input class="dash-input" id="am-men" type="number" min="0" max="100" value="${s.am_mentions ?? 5}" /><small>0 = illimité</small></label>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-mentions" data-am-action="mentions">${actionOptions('mentions')}</select></label>
         <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-mentions" data-am-blacklist-rule="mentions" ${blacklistAfter('mentions') ? 'checked' : ''} /><span><b>🚫 Blacklist après sanction</b><small>Ajoute le membre seulement après une action réellement appliquée.</small></span></label>
+        <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><input class="dash-input" type="number" min="0" max="50" data-am-threshold="mentions" value="${blacklistThresholdFor('mentions')}" /><span>sanction(s) identique(s)</span></div><small>0 = désactivé. La sanction choisie ci-dessus doit être appliquée.</small></div>
       </div>
       <div class="am-rule-card" data-am-rule-card="words">
         <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">🚫</span><div><b>Mots interdits</b><small>Utilise la liste noire configurée plus bas.</small></div></div><span class="am-rule-state">${blacklist.length ? '🟢 Actif' : '⚪ En attente'}</span></div>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-words" data-am-action="words">${actionOptions('words')}</select></label>
         <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-words" data-am-blacklist-rule="words" ${blacklistAfter('words') ? 'checked' : ''} /><span><b>🚫 Blacklist après sanction</b><small>Le mot interdit déclenche aussi la blacklist du membre.</small></span></label>
+        <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><input class="dash-input" type="number" min="0" max="50" data-am-threshold="words" value="${blacklistThresholdFor('words')}" /><span>sanction(s) identique(s)</span></div><small>0 = désactivé. La sanction choisie ci-dessus doit être appliquée.</small></div>
       </div>
       <div class="am-rule-card" data-am-rule-card="spam">
         <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">💥</span><div><b>Anti-spam</b><small>Détecte plusieurs messages envoyés en peu de temps.</small></div></div></div>
         <label class="am-rule-setting">Messages en 5 secondes <input class="dash-input" id="am-spam" type="number" min="0" max="50" value="${s.am_spam ?? 5}" /><small>0 = désactivé</small></label>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-spam" data-am-action="spam">${actionOptions('spam')}</select></label>
         <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-spam" data-am-blacklist-rule="spam" ${blacklistAfter('spam') ? 'checked' : ''} /><span><b>🚫 Blacklist après sanction</b><small>Classe le membre après la détection de spam confirmée.</small></span></label>
+        <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><input class="dash-input" type="number" min="0" max="50" data-am-threshold="spam" value="${blacklistThresholdFor('spam')}" /><span>sanction(s) identique(s)</span></div><small>0 = désactivé. La sanction choisie ci-dessus doit être appliquée.</small></div>
       </div>
     </div>
     <div class="am-policy-row">
@@ -1943,6 +1953,7 @@ Dashboard.renderers.moderation = async (content, data) => {
     </div>
     <div class="am-blacklist-config">
       <div class="am-panel-title"><div><b>🚫 Blacklist des membres par serveur</b><small>Après une sanction réellement appliquée, Nexora enregistre le membre ici et publie un panneau dans le salon choisi.</small></div><span class="am-blacklist-badge">Serveur uniquement</span></div>
+      <div class="am-blacklist-duration"><div><label class="dash-label">Durée d’une blacklist</label><select class="dash-select" id="am-blacklist-duration">${blacklistDurationOptions.join('')}</select></div><small>Cette durée s’applique aux blacklists immédiates et à celles déclenchées après plusieurs sanctions. Le compteur est remis à zéro après le déclenchement.</small></div>
       <div class="am-blacklist-grid">
         <div><label class="dash-label">Salon dédié aux panneaux blacklist</label><select class="dash-select" id="am-blacklist-channel">${blacklistChannelOptions.join('')}</select><small class="am-help">Le panneau sera envoyé dans ce salon après l’action Auto-Mod. Si le salon est introuvable, le membre reste enregistré mais l’envoi sera signalé.</small></div>
         <div><label class="dash-label">Titre du panneau</label><input class="dash-input" id="am-blacklist-title" maxlength="120" value="${App.escapeHtml(s.am_blacklist_title || '🚫 Membre ajouté à la blacklist')}" placeholder="🚫 Membre ajouté à la blacklist" /><label class="dash-label">Couleur du panneau</label><div class="am-blacklist-color"><input type="color" id="am-blacklist-color" value="${/^#[0-9a-fA-F]{6}$/.test(String(s.am_blacklist_color || '')) ? String(s.am_blacklist_color) : '#ED4245'}" /><input class="dash-input" id="am-blacklist-color-text" maxlength="7" value="${App.escapeHtml(/^#[0-9a-fA-F]{6}$/.test(String(s.am_blacklist_color || '')) ? String(s.am_blacklist_color) : '#ED4245')}" aria-label="Code couleur du panneau" /></div></div>
@@ -1978,8 +1989,12 @@ Dashboard.renderers.moderation = async (content, data) => {
     c.querySelectorAll('[data-am-action]').forEach((select) => { if (select.value !== 'inherit') rule_actions[select.dataset.amAction] = select.value; });
     const blacklist_rules = {};
     c.querySelectorAll('[data-am-blacklist-rule]').forEach((input) => { if (input.checked) blacklist_rules[input.dataset.amBlacklistRule] = true; });
-    return {
-      enabled: c.querySelector('#am-on').checked,
+    const blacklist_thresholds = {};
+    c.querySelectorAll('[data-am-threshold]').forEach((input) => {
+      const count = Math.min(Math.max(parseInt(input.value, 10) || 0, 0), 50);
+      if (count > 0) blacklist_thresholds[input.dataset.amThreshold] = count;
+    });
+    return {      enabled: c.querySelector('#am-on').checked,
       mode: c.querySelector('#am-mode').value,
       links: c.querySelector('#am-links').checked,
       caps: c.querySelector('#am-caps').checked,
@@ -1993,6 +2008,8 @@ Dashboard.renderers.moderation = async (content, data) => {
       warn_timeout_min: parseInt(c.querySelector('#am-warn-timeout').value, 10) || 10,
       rule_actions,
       blacklist_rules,
+      blacklist_thresholds,
+      blacklist_duration_min: parseInt(c.querySelector('#am-blacklist-duration').value, 10) || 0,
       blacklist_channel: c.querySelector('#am-blacklist-channel').value,
       blacklist_title: c.querySelector('#am-blacklist-title').value,
       blacklist_color: /^#[0-9a-fA-F]{6}$/.test(c.querySelector('#am-blacklist-color-text').value.trim()) ? c.querySelector('#am-blacklist-color-text').value.trim() : '#ED4245',
@@ -2040,6 +2057,12 @@ Dashboard.renderers.moderation = async (content, data) => {
     const channel = channelList.find((item) => String(item.id) === String(id));
     return channel ? `#${channel.name}` : (id ? 'Salon introuvable' : 'Salon inconnu');
   };
+  const blacklistTriggerText = (entry) => entry.trigger_type === 'threshold'
+    ? `${entry.trigger_count || 0}/${entry.threshold || 0} sanctions identiques`
+    : 'Blacklist immédiate';
+  const blacklistExpiryText = (entry) => Number(entry.expires_at) > 0
+    ? `expire le ${new Date(Number(entry.expires_at)).toLocaleString('fr-FR')}`
+    : 'permanente';
   const renderMemberBlacklist = () => {
     memberBlacklistBox.innerHTML = '';
     const count = cMemberBlacklist.querySelector('.am-blacklist-count');
@@ -2052,7 +2075,7 @@ Dashboard.renderers.moderation = async (content, data) => {
       const row = App.el(`
         <div class="am-member-blacklist-row">
           <span class="am-member-blacklist-icon">🚫</span>
-          <div class="am-member-blacklist-copy"><b>${App.escapeHtml(entry.user_tag || entry.user_id || 'Membre inconnu')}</b><small>${App.escapeHtml(blacklistRuleLabels[entry.rule] || entry.rule || 'Auto-Mod')} · ${App.escapeHtml(blacklistActionLabels[entry.action] || entry.action || 'Action')} · ${App.escapeHtml(sourceChannelName(entry.source_channel_id))}</small><small>${App.escapeHtml(entry.reason || 'Aucune raison')} · ${App.escapeHtml(entry.created_at || '')}</small></div>
+          <div class="am-member-blacklist-copy"><b>${App.escapeHtml(entry.user_tag || entry.user_id || 'Membre inconnu')}</b><small>${App.escapeHtml(blacklistRuleLabels[entry.rule] || entry.rule || 'Auto-Mod')} · ${App.escapeHtml(blacklistActionLabels[entry.action] || entry.action || 'Action')} · ${App.escapeHtml(sourceChannelName(entry.source_channel_id))}</small><small>${App.escapeHtml(blacklistTriggerText(entry))} · ${App.escapeHtml(blacklistExpiryText(entry))}</small><small>${App.escapeHtml(entry.reason || 'Aucune raison')} · ${App.escapeHtml(entry.created_at || '')}</small></div>
           <button class="dash-btn dash-btn-danger dash-btn-sm" data-remove-blacklist="${App.escapeHtml(entry.user_id || '')}" title="Retirer de la blacklist">Retirer</button>
         </div>`);
       row.querySelector('[data-remove-blacklist]').onclick = async () => {

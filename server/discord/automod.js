@@ -65,6 +65,20 @@ function blacklistAfterRuleFor(gs, rule) {
     && !!(rules && typeof rules === 'object' && (rules[rule] === true || rules[rule] === 1 || rules[rule] === '1' || rules[rule] === 'true'));
 }
 
+function blacklistThresholdFor(gs, rule) {
+  let thresholds = gs && gs.am_blacklist_thresholds;
+  if (typeof thresholds === 'string') {
+    try { thresholds = JSON.parse(thresholds || '{}'); } catch { thresholds = {}; }
+  }
+  if (!thresholds || typeof thresholds !== 'object' || Array.isArray(thresholds)) return 0;
+  const count = Math.min(Math.max(parseInt(thresholds[rule], 10) || 0, 0), 50);
+  return count;
+}
+
+function blacklistDurationMinutes(gs) {
+  return Math.min(Math.max(parseInt(gs && gs.am_blacklist_duration_min, 10) || 0, 0), 525600);
+}
+
 function resolveTextChannel(guild, reference) {
   const raw = String(reference || '').trim();
   if (!raw || !guild || !guild.channels || !guild.channels.cache) return null;
@@ -95,17 +109,50 @@ async function applyMemberBlacklist(botId, message, detection, options = {}) {
   const gs = options.gs || {};
   const action = String(options.action || '');
   const actionApplied = !!options.actionApplied;
+  const directBlacklist = blacklistAfterRuleFor(gs, detection && detection.rule);
+  const threshold = blacklistThresholdFor(gs, detection && detection.rule);
   if (!message || !message.guild || !message.author || options.force || !detection
-    || !blacklistAfterRuleFor(gs, detection.rule)
+    || (!directBlacklist && !threshold)
     || !actionApplied || action === 'log' || action === 'observe') {
     return { blacklisted: false, panelSent: false, reason: 'not_configured' };
   }
 
   const userId = String(message.author.id || '').trim();
   if (!userId) return { blacklisted: false, panelSent: false, reason: 'user_missing' };
+
+  let triggerType = 'immediate';
+  let triggerCount = 1;
+  let thresholdValue = 0;
+  if (!directBlacklist) {
+    // Le compteur est volontairement limité aux sanctions réelles et
+    // identifiées : Auto-Mod uniquement, comportement + sanction identiques.
+    if (!['delete', 'warn', 'timeout', 'kick', 'ban'].includes(action)) {
+      return { blacklisted: false, panelSent: false, reason: 'threshold_action_unavailable' };
+    }
+    triggerType = 'threshold';
+    thresholdValue = threshold;
+    try {
+      const counter = store.memberBlacklistCounters.increment(botId, message.guild.id, userId, detection.rule, action);
+      triggerCount = Number(counter && counter.count) || 1;
+    } catch (e) {
+      console.error('[Hoxera] compteur blacklist non enregistré :', e.message);
+      return { blacklisted: false, panelSent: false, reason: 'counter_error' };
+    }
+    if (triggerCount < thresholdValue) {
+      return {
+        blacklisted: false,
+        panelSent: false,
+        reason: 'threshold_pending',
+        threshold: { count: triggerCount, limit: thresholdValue, rule: detection.rule, action },
+      };
+    }
+  }
+
   const sourceChannelId = String(message.channel && message.channel.id || '');
   const sourceMessageId = String(message.id || '');
   const userTag = String(message.author.tag || message.author.username || userId);
+  const durationMinutes = blacklistDurationMinutes(gs);
+  const expiresAt = durationMinutes > 0 ? Date.now() + durationMinutes * 60000 : 0;
   let record;
   try {
     record = store.memberBlacklist.add(botId, message.guild.id, {
@@ -116,11 +163,18 @@ async function applyMemberBlacklist(botId, message, detection, options = {}) {
       action,
       source_channel_id: sourceChannelId,
       source_message_id: sourceMessageId,
+      expires_at: expiresAt,
+      trigger_type: triggerType,
+      trigger_count: triggerCount,
+      threshold: thresholdValue,
     });
   } catch (e) {
     console.error('[Hoxera] blacklist membre non enregistrée :', e.message);
     return { blacklisted: false, panelSent: false, reason: 'database_error' };
   }
+  // Choix confirmé : le compteur repart à zéro dès que la blacklist est
+  // déclenchée. Le prochain cycle recommence proprement.
+  try { store.memberBlacklistCounters.resetUser(botId, message.guild.id, userId); } catch {}
 
   const panelChannel = resolveTextChannel(message.guild, gs.am_blacklist_channel);
   let panelSent = false;
@@ -135,6 +189,8 @@ async function applyMemberBlacklist(botId, message, detection, options = {}) {
     const footer = String(gs.am_blacklist_footer || 'Blacklist du serveur · Nexora').trim().slice(0, 200) || 'Blacklist du serveur · Nexora';
     const sourceChannel = message.channel && message.channel.id ? `<#${message.channel.id}>` : 'Salon inconnu';
     const sourceMessage = message.url && /^https?:\/\//.test(String(message.url)) ? `[Ouvrir le message](${String(message.url).slice(0, 500)})` : 'Lien indisponible';
+    const expirationText = expiresAt ? new Date(expiresAt).toLocaleString('fr-FR') : 'Permanente';
+    const triggerText = triggerType === 'threshold' ? `${triggerCount}/${thresholdValue} sanctions identiques` : 'Blacklist immédiate après sanction';
     let thumbnail = '';
     try { if (typeof message.author.displayAvatarURL === 'function') thumbnail = message.author.displayAvatarURL({ extension: 'png', size: 128 }); } catch {}
     const embed = ui.embed({
@@ -148,6 +204,8 @@ async function applyMemberBlacklist(botId, message, detection, options = {}) {
         { name: '⚖️ Action appliquée', value: blacklistActionText(action, options.sanctionResult || {}, options.deletedCount || 0), inline: true },
         { name: '📨 Salon d’origine', value: sourceChannel, inline: true },
         { name: '🔗 Message source', value: sourceMessage, inline: true },
+        { name: '📊 Déclenchement', value: triggerText, inline: true },
+        { name: '⏳ Durée', value: expiresAt ? `Jusqu’au ${expirationText}` : 'Permanente', inline: true },
         { name: '🚫 Statut', value: 'Blacklist active sur ce serveur', inline: true },
         { name: '💬 Contenu détecté', value: String(message.content || '—').slice(0, 900) || '—' },
       ],
@@ -174,6 +232,11 @@ async function applyMemberBlacklist(botId, message, detection, options = {}) {
     panelError,
     recordId: Number(record && record.lastInsertRowid) || 0,
     action,
+    triggerType,
+    triggerCount,
+    threshold: thresholdValue,
+    durationMinutes,
+    expiresAt,
   };
 }
 
@@ -620,7 +683,7 @@ async function runAutomod(botId, message, opts = {}) {
 
     const blacklistResult = await applyMemberBlacklist(botId, message, detection, {
       gs,
-      action: sanctionResult.applied ? sanctionResult.action : (warning.saved ? 'warn' : 'legacy'),
+      action: sanctionResult.applied ? sanctionResult.action : (warning.saved ? 'warn' : (deleted ? 'delete' : 'legacy')),
       actionApplied: deleted || warning.saved || sanctionResult.applied,
       deletedCount: deleted ? 1 : 0,
       sanctionResult,
@@ -745,7 +808,7 @@ async function runAutomod(botId, message, opts = {}) {
         : '';
       const blacklistResult = await applyMemberBlacklist(botId, message, detection, {
         gs,
-        action: sanctionResult.applied ? sanctionResult.action : (warning.saved ? 'warn' : 'legacy'),
+        action: sanctionResult.applied ? sanctionResult.action : (warning.saved ? 'warn' : (deletedCount > 0 ? 'delete' : 'legacy')),
         actionApplied: deletedCount > 0 || warning.saved || sanctionResult.applied,
         deletedCount,
         sanctionResult,
