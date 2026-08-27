@@ -175,6 +175,12 @@ App.router.run = async () => {
 App.loadPublicBotAvatar = (root) => {
   if (!root) return;
   root.querySelectorAll('[data-brand-logo]').forEach((oldLogo) => {
+    // Le logo est déjà une image dans le HTML initial : on lui ajoute
+    // seulement un fallback pour éviter un second chargement inutile.
+    if (oldLogo.tagName === 'IMG') {
+      oldLogo.onerror = () => { if (oldLogo.isConnected) oldLogo.replaceWith(App.el('<span class="logo" data-brand-logo>⚡</span>')); };
+      return;
+    }
     const image = App.el('<img class="logo" data-brand-logo src="/api/public/bot-avatar" alt="Avatar de Nexora" style="border-radius:50%;object-fit:cover" />');
     image.onerror = () => { if (image.isConnected) image.replaceWith(App.el('<span class="logo" data-brand-logo>⚡</span>')); };
     if (oldLogo.isConnected) oldLogo.replaceWith(image);
@@ -188,7 +194,7 @@ App.renderConnect = () => {
   const page = App.el(`
     <div class="auth-wrap" id="connect-card">
       <div class="auth-left">
-        <div class="logo-row"><span class="logo" data-brand-logo>⚡</span> Hoxera</div>
+        <div class="logo-row"><img class="logo" data-brand-logo src="/api/public/bot-avatar" alt="Avatar de Nexora" style="border-radius:50%;object-fit:cover" /> Hoxera</div>
         <h1 style="margin-top:52px">Configure ton serveur<br/><span>en quelques clics</span></h1>
         <p class="tagline">Tickets automatiques, niveaux, boutique, giveaways, bienvenue… Tout se règle ici, sans mot de passe : on vérifie simplement avec ton compte Discord.</p>
         <ul class="auth-features">

@@ -21,7 +21,7 @@ App.renderPublicNavbar = () => {
   const user = App.state.user;
   const nav = App.el(`
     <div class="navbar">
-      <div class="logo-row" style="cursor:pointer" id="pub-logo"><span class="logo" data-brand-logo>⚡</span> Hoxera</div>
+      <div class="logo-row" style="cursor:pointer" id="pub-logo"><img class="logo" data-brand-logo src="/api/public/bot-avatar" alt="Avatar de Nexora" style="border-radius:50%;object-fit:cover" /> Hoxera</div>
       <div class="navbar-right" id="pub-nav-right">
         ${user && user.discord_id
           ? `<div class="user-pill">
