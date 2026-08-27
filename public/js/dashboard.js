@@ -690,8 +690,13 @@ Dashboard.renderContent = async (content) => {
     if (fn) await fn(content, data);
     else content.innerHTML = `<div class="dash-empty">Module introuvable.</div>`;
   } catch (e) {
-    content.innerHTML = `<div class="dash-empty"><div class="big">⚠️</div>${App.escapeHtml(e.message)}<br/><br/>
-      <button class="dash-btn" onclick="location.reload()">Actualiser</button></div>`;
+    content.innerHTML = `
+      <div class="dash-state-card is-error" role="alert">
+        <div class="state-icon">⚠️</div>
+        <div class="state-copy"><h2>Impossible de charger ce module</h2><p>${App.escapeHtml(e.message || 'Une erreur temporaire est survenue.')}</p></div>
+        <button class="dash-btn dash-btn-primary" id="dash-retry">Réessayer</button>
+      </div>`;
+    content.querySelector('#dash-retry')?.addEventListener('click', () => Dashboard.renderContent(content));
   }
 };
 
@@ -700,17 +705,26 @@ Dashboard.renderContent = async (content) => {
 // ============================================================
 Dashboard.header = (content, icon, title, sub) => {
   content.innerHTML = '';
+  const isBotScope = ['commands', 'modules', 'health', 'botsettings'].includes(Dashboard.state.module);
+  const isGuildScope = Boolean(Dashboard.state.guildId) && !isBotScope;
+  const bot = Dashboard.state.bot || {};
+  const statusLabel = bot.online === false ? 'Nexora hors ligne' : 'Nexora en ligne';
+  const statusClass = bot.online === false ? 'is-offline' : 'is-online';
   content.appendChild(App.el(`
-    <div class="dash-module-header">
-      <div class="m-icon">${icon}</div>
-      <div><h1>${title}</h1><div class="sub">${sub}</div></div>
+    <div class="dash-module-header" data-module-header>
+      <div class="m-icon" aria-hidden="true">${icon}</div>
+      <div class="module-header-copy"><h1>${title}</h1><div class="sub">${sub}</div></div>
+      <div class="module-header-meta">
+        <span class="module-scope"><span class="module-scope-dot ${statusClass}"></span>${isGuildScope ? 'Serveur sélectionné' : 'Configuration globale'}</span>
+        <span class="module-status ${statusClass}">${statusLabel}</span>
+      </div>
     </div>
   `));
   return content;
 };
 
 Dashboard.card = (content, title, desc, inner = '') => {
-  const c = App.el(`<div class="dash-card"><div class="card-head"><div><h3>${title}</h3><div class="desc">${desc}</div></div></div>${inner}</div>`);
+  const c = App.el(`<div class="dash-card" data-dash-card><div class="card-head"><div class="card-heading"><h3>${title}</h3><div class="desc">${desc}</div></div></div>${inner}</div>`);
   content.appendChild(c);
   return c;
 };
@@ -723,6 +737,40 @@ Dashboard.renderers.overview = async (content, data) => {
   const g = data.guild;
   const ts = data.tickets_stats || { total: 0, open: 0 };
   const root = Dashboard.header(content, '📊', `Vue d\'ensemble — ${App.escapeHtml(g.name)}`, `${g.members} membres · configuration de ${App.escapeHtml(bot.name)} sur ce serveur`);
+  const greeting = new Date().getHours() < 18 ? 'Bonjour' : 'Bonsoir';
+  const serverInitial = String(g.name || '?').trim().slice(0, 1).toUpperCase() || '?';
+  const serverIcon = g.icon || g.icon_url || '';
+  const statusText = bot.online === false ? 'Nexora est hors ligne' : 'Nexora est opérationnel';
+  const statusClass = bot.online === false ? 'is-offline' : 'is-online';
+  const overviewIntro = App.el(`
+    <section class="ov-intro" aria-label="Résumé du serveur">
+      <div class="ov-intro-server">
+        ${serverIcon
+          ? `<img class="ov-server-avatar" src="${App.escapeHtml(serverIcon)}" alt="" />`
+          : `<span class="ov-server-avatar fallback">${App.escapeHtml(serverInitial)}</span>`}
+        <div class="ov-intro-copy">
+          <span class="ov-eyebrow">${greeting}, administrateur</span>
+          <h2>${App.escapeHtml(g.name)}</h2>
+          <p>${App.escapeHtml(statusText)} · ${App.escapeHtml(String(g.members || 0))} membres suivis par Nexora.</p>
+        </div>
+      </div>
+      <div class="ov-intro-health ${statusClass}">
+        <span class="ov-health-dot ${statusClass}"></span>
+        <div><b>${App.escapeHtml(statusText)}</b><small>Synchronisation en temps réel</small></div>
+      </div>
+    </section>`);
+  root.appendChild(overviewIntro);
+
+  const quickActions = App.el(`
+    <div class="ov-quick-actions" aria-label="Actions rapides">
+      <span class="ov-quick-label">Actions rapides</span>
+      <button class="ov-quick-action" data-go="tickets"><span>🎫</span><b>Configurer les tickets</b><i>→</i></button>
+      <button class="ov-quick-action" data-go="welcome"><span>👋</span><b>Préparer l’accueil</b><i>→</i></button>
+      <button class="ov-quick-action" data-go="moderation"><span>🛡️</span><b>Vérifier la sécurité</b><i>→</i></button>
+      <button class="ov-quick-action" data-go="botprofile"><span>🤖</span><b>Personnaliser Nexora</b><i>→</i></button>
+    </div>`);
+  quickActions.querySelectorAll('[data-go]').forEach((button) => { button.onclick = () => Dashboard.setModule(button.dataset.go); });
+  root.appendChild(quickActions);
 
   // ✅ Checklist de configuration (confort : tout voir d'un coup d'œil)
   const checklist = data.checklist || [];
@@ -747,13 +795,17 @@ Dashboard.renderers.overview = async (content, data) => {
     root.appendChild(hero);
   }
   const clCard = Dashboard.card(root, '✅ Configuration du serveur', '');
+  clCard.classList.add('ov-checklist-card');
   clCard.innerHTML = '';
   clCard.appendChild(App.el(`
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-      <div style="flex:1;height:12px;background:var(--d-card2);border-radius:20px;overflow:hidden">
-        <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#5865F2,#8B5CF6);border-radius:20px;transition:width .5s"></div>
+    <div class="ov-progress-summary">
+      <div class="ov-progress-head">
+        <div class="ov-progress-copy"><b>${pct === 100 ? 'Serveur prêt' : 'Progression de la configuration'}</b><span>${doneCount} étape(s) terminée(s) sur ${checklist.length || 0}</span></div>
+        <strong>${pct}%</strong>
       </div>
-      <b style="font-size:14px">${pct}%</b>
+      <div class="ov-progress-track" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Progression de la configuration">
+        <div class="ov-progress-value" style="width:${pct}%"></div>
+      </div>
     </div>`));
   const clGrid = App.el(`<div class="dash-checklist"></div>`);
   clCard.appendChild(clGrid);
@@ -768,18 +820,31 @@ Dashboard.renderers.overview = async (content, data) => {
     clGrid.appendChild(el);
   });
 
-  root.appendChild(App.el(`
-    <div class="dash-stats">
-      <div class="dash-stat"><div class="val">${g.members}</div><div class="lbl">Membres</div></div>
-      <div class="dash-stat"><div class="val">${ts.open}</div><div class="lbl">Tickets ouverts</div></div>
-      <div class="dash-stat"><div class="val">${data.tickets.types ? data.tickets.types.length : 0}</div><div class="lbl">Types de tickets</div></div>
-      <div class="dash-stat"><div class="val">${(data.xp_roles || []).length}</div><div class="lbl">Récompenses de niveau</div></div>
-      <div class="dash-stat"><div class="val">${(data.role_menus || []).length}</div><div class="lbl">Menus de rôles</div></div>
-      <div class="dash-stat"><div class="val">${(data.scheduled || []).length}</div><div class="lbl">Annonces programmées</div></div>
-    </div>`));
+  const stats = [
+    ['👥', g.members, 'Membres', 'Communauté suivie'],
+    ['🎫', ts.open, 'Tickets ouverts', 'À traiter maintenant'],
+    ['🗂️', data.tickets.types ? data.tickets.types.length : 0, 'Types de tickets', 'Support organisé'],
+    ['🏆', (data.xp_roles || []).length, 'Récompenses de niveau', 'Progression des membres'],
+    ['📋', (data.role_menus || []).length, 'Menus de rôles', 'Accès simplifiés'],
+    ['📅', (data.scheduled || []).length, 'Annonces programmées', 'Prochains envois'],
+  ];
+  const statsEl = App.el(`<div class="dash-stats ov-stats"></div>`);
+  stats.forEach(([icon, value, label, note]) => {
+    statsEl.appendChild(App.el(`
+      <div class="dash-stat ov-stat">
+        <div class="ov-stat-top"><span class="ov-stat-icon">${icon}</span><span class="ov-stat-note">${note}</span></div>
+        <div class="val">${App.escapeHtml(String(value))}</div>
+        <div class="lbl">${label}</div>
+      </div>`));
+  });
+  root.appendChild(statsEl);
 
-  // 📰 Flux d'activité : le serveur vit sous tes yeux
-  const feed = Dashboard.card(root, '📰 Activité récente', 'Tout ce que le bot fait pour toi, en direct — actualisé toutes les 30 secondes.');
+  // 📰 Flux d'activité + résumé : deux colonnes sur grand écran, une seule
+  // colonne sur mobile pour garder une lecture naturelle.
+  const activityGrid = App.el(`<div class="ov-activity-grid"></div>`);
+  root.appendChild(activityGrid);
+  const feed = Dashboard.card(activityGrid, '📰 Activité récente', 'Tout ce que le bot fait pour toi, en direct — actualisé toutes les 30 secondes.');
+  feed.classList.add('ov-feed-card');
   const feedList = App.el(`<div id="ov-feed"></div>`);
   feed.appendChild(feedList);
   const relTime = (iso) => {
@@ -814,7 +879,8 @@ Dashboard.renderers.overview = async (content, data) => {
   Dashboard.state.feedTimer = setInterval(loadFeed, 30000);
 
   // 📈 En bref : l'activité réelle du serveur (7 derniers jours)
-  const brief = Dashboard.card(root, '📈 Ton serveur en bref', 'Activité mesurée par le bot sur les 7 derniers jours.');
+  const brief = Dashboard.card(activityGrid, '📈 Ton serveur en bref', 'Activité mesurée par le bot sur les 7 derniers jours.');
+  brief.classList.add('ov-brief-card');
   try {
     const st = await App.api(`/bots/${bot.id}/guilds/${guildId}/stats`);
     const totalMsgs = st.activity.reduce((a, d) => a + d.messages, 0);
@@ -841,7 +907,7 @@ Dashboard.renderers.overview = async (content, data) => {
     }
   } catch { brief.appendChild(App.el(`<div class="desc" style="margin:0">Bot hors ligne — les statistiques reviendront dès qu\'il se reconnecte.</div>`)); }
 
-  const grid = App.el(`<div class="dash-grid"></div>`);
+  const grid = App.el(`<div class="dash-grid ov-module-grid"></div>`);
   const mods = [
     ['tickets', '🎫', 'Tickets', 'Types personnalisés, rôles staff multiples, transcriptions en MP'],
     ['welcome', '👋', 'Bienvenue', 'Message d\'accueil, départ, auto-rôles et anniversaires'],
@@ -858,10 +924,10 @@ Dashboard.renderers.overview = async (content, data) => {
   ];
   mods.forEach(([id, ico, label, desc]) => {
     const c = App.el(`
-      <div class="dash-card" style="cursor:pointer">
-        <h3>${ico} ${label}</h3>
-        <div class="desc">${desc}</div>
-        <button class="dash-btn dash-btn-sm" data-go="${id}">Configurer →</button>
+      <div class="dash-card ov-module-card" data-module-card="${id}" style="cursor:pointer">
+        <div class="ov-module-icon" aria-hidden="true">${ico}</div>
+        <div class="ov-module-copy"><h3>${label}</h3><div class="desc">${desc}</div></div>
+        <button class="dash-btn dash-btn-sm" data-go="${id}">Configurer <span aria-hidden="true">→</span></button>
       </div>`);
     c.querySelector('[data-go]').onclick = () => Dashboard.setModule(id);
     grid.appendChild(c);

@@ -1,4 +1,4 @@
-// Test v4.1 — topbar mobile, notifications et actions tactiles
+// Test v5.0 — Control Center, topbar mobile et interface tactile
 const assert = require('assert');
 const fs = require('fs');
 const { JSDOM } = require('jsdom');
@@ -13,7 +13,12 @@ const sw = fs.readFileSync('public/sw.js', 'utf8');
 assert(dashboardSource.includes('Dashboard.removeTopbarPortals'));
 assert(dashboardSource.includes('data-dash-topbar-popover="true"'));
 assert(dashboardSource.includes('aria-expanded'));
+assert(dashboardSource.includes('module-header-meta'));
+assert(dashboardSource.includes('ov-intro') && dashboardSource.includes('ov-quick-actions'));
+assert(dashboardSource.includes('ov-progress-track') && dashboardSource.includes('ov-module-card'));
+assert(dashboardSource.includes('dash-state-card') && dashboardSource.includes('dash-retry'));
 assert(dashboardCss.includes('NEXORA v4.1 — Mobile topbar fiable'));
+assert(dashboardCss.includes('NEXORA v5.0 — Control Center humain'));
 assert(dashboardCss.includes('grid-template-columns: minmax(0, 1fr)'));
 assert(dashboardCss.includes('overflow-x: auto'));
 assert(dashboardCss.includes('.dash-bell-pop.dash-topbar-popover'));
@@ -39,6 +44,8 @@ w.App.api = async (path) => {
   if (String(path).includes('/notifications')) {
     return { warnings: [{ icon: '⚠️', text: 'Salon de logs à vérifier' }], infos: [] };
   }
+  if (String(path).includes('/activity')) return { items: [] };
+  if (String(path).includes('/stats')) return { activity: [], joins: [], top_active: [] };
   return {};
 };
 w.App.toast = () => {};
@@ -89,13 +96,31 @@ console.log('2️⃣  Notifications et couleur : portails, fermeture et re-rendu
 
 const versions = index.match(/\?v=(\d+)/g) || [];
 assert.strictEqual(versions.length, 7);
-assert(versions.every((v) => v === '?v=141'));
-assert(sw.includes("const CACHE = 'botdev-v141';"));
-console.log('3️⃣  Cache frontend : index.html et service worker synchronisés en v141 ✅');
+assert(versions.every((v) => v === '?v=142'));
+assert(sw.includes("const CACHE = 'botdev-v142';"));
+console.log('3️⃣  Cache frontend : index.html et service worker synchronisés en v142 ✅');
 
-setTimeout(() => {
+setTimeout(async () => {
   const pop = w.document.querySelector('#dash-bell-pop');
   assert(pop.textContent.includes('Salon de logs à vérifier'));
   console.log('4️⃣  Données asynchrones : contenu de notification chargé dans le panneau ✅');
-  console.log('\n🎉 Tous les tests v4.1 passent !');
+
+  const overview = w.document.createElement('div');
+  w.Dashboard.state.module = 'overview';
+  await w.Dashboard.renderers.overview(overview, {
+    guild: { id: 'G1', name: 'Serveur de test', members: 42, icon: '' },
+    tickets: { types: [] },
+    tickets_stats: { total: 8, open: 2 },
+    checklist: [{ module: 'tickets', label: 'Tickets', done: true }, { module: 'welcome', label: 'Bienvenue', done: false }],
+    xp_roles: [], role_menus: [], scheduled: [],
+  });
+  assert(overview.querySelector('.ov-intro'), 'résumé du serveur');
+  assert(overview.querySelector('.ov-quick-actions'), 'actions rapides');
+  assert.strictEqual(overview.querySelectorAll('.ov-stat').length, 6, 'six statistiques');
+  assert(overview.querySelector('.ov-progress-track'), 'progression de configuration');
+  assert(overview.querySelector('.ov-module-card'), 'cartes modules');
+  assert(overview.querySelector('.module-header-meta'), 'contexte du module');
+  if (w.Dashboard.state.feedTimer) w.clearInterval(w.Dashboard.state.feedTimer);
+  console.log('5️⃣  Vue d’ensemble : résumé, progression, statistiques et actions rapides ✅');
+  console.log('\n🎉 Tous les tests v5.0 passent !');
 }, 0);
