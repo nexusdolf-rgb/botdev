@@ -1277,7 +1277,7 @@ Dashboard.renderers.tickets = async (content, data) => {
       staff_roles: Array.isArray(x.staff_roles) ? [...x.staff_roles] : [],
     })),
   };
-  const c3 = Dashboard.card(root, '🎨 Système de tickets personnalisés', 'Nouveau système indépendant : boutons simples ou menu déroulant, plusieurs types et couleur personnalisée par type. L’ancien système au-dessus ne sera jamais modifié.');
+  const c3 = Dashboard.card(root, '🎨 Système de tickets personnalisés', 'Nouveau système indépendant : un salon privé par ticket, placé dans la catégorie choisie pour son type. L’ancien système au-dessus ne sera jamais modifié.');
   c3.classList.add('adv-builder-card');
   const advChannelOptions = ['<option value="">— Choisir un salon —</option>']
     .concat(textChannels.map((ch) => {
@@ -1303,6 +1303,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     <label class="dash-label">Message au-dessus du panneau (optionnel)</label>
     <textarea class="dash-input" id="adv-message" rows="2" maxlength="1900" placeholder="Choisis le service dont tu as besoin…">${App.escapeHtml(advancedData.message)}</textarea>
     <label class="adv-check-row"><input type="checkbox" id="adv-reason" ${advancedData.require_reason ? 'checked' : ''} /><span><b>Demander une raison avant de créer le ticket</b><small>La raison sera ajoutée au questionnaire si Discord a encore un champ disponible.</small></span></label>
+    <div class="adv-placement-notice"><span>📁</span><div><b>Placement simple et prévisible</b><small>Chaque type doit avoir une catégorie existante. Le même salon privé sera visible uniquement par son créateur et le staff autorisé à ce type.</small></div></div>
     <div class="adv-builder-grid">
       <div class="adv-types-panel">
         <div class="adv-panel-heading"><div><b>🗂️ Types du nouveau système</b><small>Chaque type possède sa couleur, son bouton, ses rôles staff et jusqu'à 5 questions obligatoires.</small></div><span class="adv-count" id="adv-type-count"></span></div>
@@ -1357,11 +1358,11 @@ Dashboard.renderers.tickets = async (content, data) => {
               <option value="3" ${type.button_style === '3' ? 'selected' : ''}>🟢 Vert</option>
               <option value="4" ${type.button_style === '4' ? 'selected' : ''}>🔴 Rouge</option>
             </select></div>
-            <div><label class="dash-label">Catégorie Discord</label><select class="dash-select" data-k="category">
-              <option value="">— Catégorie du panneau —</option>
-              ${categories.map((cat) => `<option value="${App.escapeHtml(cat.name)}" ${Dashboard.discordRefMatches(type.category, cat) ? 'selected' : ''}>📁 ${App.escapeHtml(cat.name)}</option>`).join('')}
+            <div><label class="dash-label">Catégorie de création du ticket</label><select class="dash-select" data-k="category">
+              <option value="">— Choisir une catégorie (obligatoire) —</option>
+              ${categories.map((cat) => `<option value="${App.escapeHtml(cat.id)}" ${Dashboard.discordRefMatches(type.category, cat) ? 'selected' : ''}>📁 ${App.escapeHtml(cat.name)}</option>`).join('')}
               ${Dashboard.currentDiscordOption(type.category, categories, '⚠️', 'configuration actuelle — catégorie introuvable')}
-            </select></div>
+            </select><small class="adv-category-help">Le salon privé sera créé directement ici. Nexora ne créera jamais de catégorie.</small></div>
           </div>
           <label class="dash-label">Description du type</label>
           <input class="dash-input" data-k="description" value="${App.escapeHtml(type.description)}" placeholder="Ex : demande privée au staff" maxlength="100" />
@@ -1448,6 +1449,8 @@ Dashboard.renderers.tickets = async (content, data) => {
   c3.querySelector('#adv-save').onclick = async () => {
     const validTypes = advancedData.types.filter((x) => x.label.trim());
     if (!validTypes.length) return App.toast('Ajoute au moins un type de ticket.', 'error');
+    const missingCategory = validTypes.find((type) => !String(type.category || '').trim());
+    if (missingCategory) return App.toast(`Choisis une catégorie Discord pour le type « ${missingCategory.label} ».`, 'error');
     try {
       const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/advanced-tickets`, { method: 'PUT', body: {
         name: c3.querySelector('#adv-name').value.trim(), mode: c3.querySelector('#adv-mode').value,

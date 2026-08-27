@@ -641,6 +641,25 @@ function findCategoryFuzzy(guild, name) {
   return cache.find((c) => isCat(c) && normDecorName(c.name) === core) || null;
 }
 
+// Le nouveau sélecteur du dashboard enregistre l'ID Discord. Les anciennes
+// configurations enregistrent parfois le nom : on garde les deux formats.
+function findCategoryRef(guild, reference) {
+  const q = String(reference || '').trim();
+  if (!q || !guild || !guild.channels || !guild.channels.cache) return null;
+  const cache = guild.channels.cache;
+  const isCategory = (channel) => channel && channel.type === ChannelType.GuildCategory;
+  if (typeof cache.get === 'function') {
+    const direct = cache.get(q);
+    if (isCategory(direct)) return direct;
+    const id = q.match(/\d{15,21}/)?.[0];
+    if (id) {
+      const byId = cache.get(id);
+      if (isCategory(byId)) return byId;
+    }
+  }
+  return findCategoryFuzzy(guild, q);
+}
+
 function parentIdOf(channel) {
   if (!channel) return '';
   return String(channel.parentId || (channel.parent && channel.parent.id) || '');
@@ -746,18 +765,21 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
   if (unresolvedStaff.length) console.warn(`[Hoxera] 🎫 rôles staff introuvables pour ${chosen ? chosen.label : 'ticket'} : ${unresolvedStaff.join(', ')}`);
   // 🗂️ Placement du salon (v2.4) : le ticket doit apparaître LÀ où le staff
   // l'attend — jamais dans une catégorie parachutée tout en haut du serveur.
-  // Ordre de priorité :
-  //  1. la catégorie configurée (celle du type, sinon la globale) si elle EXISTE ;
-  //  2. sinon la catégorie du salon du panneau (là où le membre a cliqué) ;
-  //  3. en dernier recours on crée la catégorie configurée, puis on la
-  //     POSITIONNE juste sous la catégorie du panneau (pas au sommet du serveur).
-  // 📁 Priorité des catégories : (1) catégorie explicite du PANNEAU MENU,
-  // (2) catégorie du type, (3) catégorie par défaut. Pour apparaître sous le
-  // panneau, la catégorie choisie doit être la même que celle du panneau.
+  // Parcours historique : catégorie configurée → catégorie du panneau → sans
+  // catégorie. Le bot ne crée jamais de catégorie.
+  // 📁 Nouveau système personnalisé : une catégorie existante choisie sur le
+  // type devient obligatoire et aucun repli silencieux n'est autorisé.
+  // 📁 Priorité historique des catégories : (1) catégorie explicite du PANNEAU MENU,
+  // (2) catégorie du type, (3) catégorie par défaut. Le nouveau système donne
+  // la priorité à la catégorie du type pour respecter son réglage dédié.
   const fromMenu = !!type;
-  const catName = (fromMenu && String(cfg.menu_category || '').trim())
-    ? cfg.menu_category
-    : ((chosen && chosen.category) ? chosen.category : (cfg.category || ''));
+  // Le nouveau système personnalisé privilégie toujours la catégorie du type.
+  // L'ancien parcours conserve sa priorité historique menu → type → défaut.
+  const catName = configOverride && chosen && String(chosen.category || '').trim()
+    ? chosen.category
+    : ((fromMenu && String(cfg.menu_category || '').trim())
+      ? cfg.menu_category
+      : ((chosen && chosen.category) ? chosen.category : (cfg.category || '')));
   const panelChannel = panelChannelOf(guild, interaction, configOverride);
   const panelParent = panelParentOf(guild, panelChannel);
   // 🧲 Résolution FLOUE : les noms décorés (────〔🎫・SUPPORT・〕────) sont
@@ -769,10 +791,20 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
   //  2. sinon catégorie du panneau → le ticket y va, sous le panneau ;
   //  3. sinon (panneau hors catégorie) → le ticket est créé SANS catégorie,
   //     positionné juste à côté du panneau. Aucune catégorie fantôme possible.
+  const categoryRequired = !!(configOverride && configOverride.advanced_panel_id && configOverride.category_required);
   let parent = findCategoryFuzzy(guild, catName);
+  if (!parent && catName) parent = findCategoryRef(guild, catName);
+  if (categoryRequired && !catName) {
+    return ackReply(interaction, { content: '⚠️ Ce type de ticket n’a pas de catégorie configurée. Demande au staff de choisir une catégorie dans le dashboard.', ephemeral: true });
+  }
+  if (categoryRequired && !parent) {
+    return ackReply(interaction, { content: '⚠️ La catégorie configurée pour ce type de ticket est introuvable. Aucun salon n’a été créé : corrige la catégorie dans le dashboard.', ephemeral: true });
+  }
   let placeRule = parent ? `catégorie configurée « ${parent.name} »` : '';
-  if (!parent && panelParent) { parent = panelParent; placeRule = `catégorie du panneau « ${panelParent.name} »`; }
-  if (!parent) placeRule = 'sans catégorie, à côté du panneau';
+  if (!categoryRequired) {
+    if (!parent && panelParent) { parent = panelParent; placeRule = `catégorie du panneau « ${panelParent.name} »`; }
+    if (!parent) placeRule = 'sans catégorie, à côté du panneau';
+  }
   console.log(`[Hoxera] 🎫 placement du ticket : ${placeRule}${catName ? ` (config : « ${catName} »)` : ''}`);
 
   const allow = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles, PermissionFlagsBits.EmbedLinks];
@@ -2257,6 +2289,7 @@ function ticketPlacementConfig(botId, guild, channel, row) {
     return {
       refs: uniqueRoleRefs(type.staff_roles, ''),
       category: type.category || '',
+      strict: true,
       panel,
     };
   }
@@ -2296,7 +2329,9 @@ async function repairTicketChannel(botId, guild, channel, row) {
     }
   }
 
-  const wantedParent = findCategoryFuzzy(guild, cfg.category) || panelParentOf(guild, cfg.panel);
+  const wantedParent = cfg.strict
+    ? findCategoryRef(guild, cfg.category)
+    : (findCategoryRef(guild, cfg.category) || panelParentOf(guild, cfg.panel));
   const currentParent = parentIdOf(channel);
   let moved = false;
   if (wantedParent && currentParent !== String(wantedParent.id) && typeof channel.setParent === 'function') {
@@ -2466,7 +2501,7 @@ async function buildTranscriptFromChannel(botId, channel, guild, extraLines = []
 }
 
 module.exports = {
-  normDecorName, findCategoryFuzzy,
+  normDecorName, findCategoryFuzzy, findCategoryRef,
   dispatchPanels, sendTicketPanel, sendRoleMenu, findChannel, findChannelInGuild, bumpTicketStats,
   resolveRole, roleKey, uniqueRoleRefs, staffRoleRefsForConfig, parseTypes, isStaff, staffForTicket, openTicket, safeEmoji,
   parentIdOf, panelParentOf, panelChannelOf, repairTicketChannel,

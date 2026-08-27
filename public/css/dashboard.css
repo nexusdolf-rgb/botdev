@@ -2472,3 +2472,26 @@ html.hx-light .am-blacklist-duration { background: rgba(187,76,88,.025); border-
   .am-blacklist-duration { grid-template-columns: 1fr; gap: 3px; align-items: stretch; }
   .am-blacklist-duration > small { padding-bottom: 0; }
 }
+
+/* v5.3 — placement strict des tickets personnalisés */
+.adv-placement-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px 13px;
+  border: 1px solid rgba(112,130,255,.3);
+  border-radius: 13px;
+  background: linear-gradient(135deg, rgba(112,130,255,.09), rgba(154,123,255,.035));
+}
+.adv-placement-notice > span { display: inline-flex; align-items: center; justify-content: center; width: 31px; height: 31px; flex: 0 0 31px; border-radius: 10px; background: rgba(112,130,255,.15); font-size: 16px; }
+.adv-placement-notice b { display: block; color: #dce3f2; font-size: 12px; }
+.adv-placement-notice small { display: block; margin-top: 3px; color: var(--d-dim); font-size: 10.5px; line-height: 1.4; }
+.adv-category-help { display: block; margin-top: 5px; color: var(--d-dim); font-size: 10.5px; line-height: 1.35; }
+html.hx-light .adv-placement-notice { border-color: #d5dded; background: linear-gradient(135deg, rgba(86,103,217,.07), rgba(154,123,255,.025)); }
+html.hx-light .adv-placement-notice b { color: #30405c; }
+
+@media (max-width: 520px) {
+  .adv-placement-notice { padding: 10px; }
+  .adv-category-help { font-size: 10px; }
+}
