@@ -837,6 +837,15 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
   } catch (e) {
     return ackReply(interaction, { content: '⚠️ Je n\'ai pas pu créer le salon. Vérifie mes permissions (gérer les salons).', ephemeral: true });
   }
+  // 🧭 Vérification défensive : Discord reçoit normalement `parent` dans la
+  // création. Si son cache renvoie encore un autre parent, on le rattache
+  // explicitement à la catégorie choisie, sans jamais créer de catégorie.
+  try {
+    if (parent && parentIdOf(channel) !== String(parent.id) && typeof channel.setParent === 'function') {
+      await channel.setParent(parent.id, { lockPermissions: false });
+    }
+  } catch (e) { console.warn(`[Hoxera] 🎫 rattachement de la catégorie impossible : ${e.message}`); }
+
   // 📍 Si le ticket est dans la MÊME catégorie que le panneau : on le place
   // JUSTE SOUS le salon du panneau — le staff le voit apparaître immédiatement.
   try {

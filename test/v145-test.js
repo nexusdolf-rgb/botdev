@@ -111,6 +111,7 @@ function interactionFor(userId) {
   assert(source.includes('const catName = configOverride'));
   assert(source.includes('menuCategory || globalCategory || typeCategory'));
   assert(source.includes('let parent = null') && source.includes('findCategoryRef'));
+  assert(source.includes('channel.setParent(parent.id, { lockPermissions: false })'));
   assert(!source.includes('type: ChannelType.GuildCategory }'));
   assert(dashboard.includes('Catégorie de création du ticket'));
   console.log('✅ invariant global : aucun système de ticket ne peut créer une catégorie');
