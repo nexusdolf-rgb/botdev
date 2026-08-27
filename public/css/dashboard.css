@@ -2324,3 +2324,107 @@ html.hx-light .dash-state-card { background: #fff; border-color: #d9e1ef; }
   .dash-card[data-dash-card], .ov-intro, .ov-quick-action, .ov-module-card, .dash-state-card,
   .ov-progress-value, .dash-btn, .dash-iconbtn { animation: none !important; transition: none !important; }
 }
+
+/* ============================================================
+   NEXORA v5.1 — Auto-Mod : blacklist des membres par serveur
+   Une règle déclenche une action, puis un registre et un panneau dédié.
+   ============================================================ */
+.am-blacklist-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 11px;
+  padding: 10px 11px;
+  border: 1px solid rgba(240,108,117,.22);
+  border-radius: 11px;
+  background: rgba(240,108,117,.055);
+  color: var(--d-text);
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, transform .16s ease;
+}
+.am-blacklist-toggle:hover { border-color: rgba(240,108,117,.52); background: rgba(240,108,117,.095); transform: translateY(-1px); }
+.am-blacklist-toggle input { width: 17px; height: 17px; margin-top: 2px; flex: 0 0 auto; accent-color: var(--d-red); cursor: pointer; }
+.am-blacklist-toggle span { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.am-blacklist-toggle b { font-size: 11.5px; }
+.am-blacklist-toggle small { color: var(--d-dim); font-size: 10.5px; line-height: 1.35; }
+
+.am-blacklist-config {
+  margin-top: 17px;
+  padding: 15px;
+  border: 1px solid rgba(240,108,117,.26);
+  border-radius: 16px;
+  background:
+    radial-gradient(540px 180px at 100% 0%, rgba(240,108,117,.09), transparent 70%),
+    linear-gradient(145deg, rgba(255,255,255,.025), transparent 60%),
+    rgba(11,17,27,.34);
+}
+.am-blacklist-config .am-panel-title { margin-bottom: 13px; }
+.am-blacklist-config .am-panel-title > div { min-width: 0; }
+.am-blacklist-config .am-panel-title small { max-width: 720px; }
+.am-blacklist-badge, .am-blacklist-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  padding: 4px 9px;
+  border: 1px solid rgba(240,108,117,.34);
+  border-radius: 999px;
+  color: #ffb3b8;
+  background: rgba(240,108,117,.09);
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.am-blacklist-count { margin-left: 5px; padding: 3px 7px; vertical-align: middle; }
+.am-blacklist-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(280px, .95fr); gap: 14px; align-items: start; }
+.am-blacklist-config .dash-label { margin-top: 0; }
+.am-blacklist-config .am-help { margin-top: 6px; }
+.am-blacklist-color { display: flex; align-items: center; gap: 8px; }
+.am-blacklist-color input[type="color"] { width: 48px; height: 43px; padding: 3px; flex: 0 0 48px; border: 1px solid var(--d-border-soft); border-radius: 11px; background: var(--d-card2); cursor: pointer; }
+.am-blacklist-color .dash-input { min-width: 0; }
+.am-blacklist-preview { display: flex; align-items: center; gap: 10px; margin-top: 13px; padding: 10px 11px; border: 1px dashed rgba(240,108,117,.3); border-radius: 12px; background: rgba(240,108,117,.045); }
+.am-blacklist-preview-icon { display: inline-flex; align-items: center; justify-content: center; width: 31px; height: 31px; flex: 0 0 31px; border-radius: 10px; background: rgba(240,108,117,.14); font-size: 16px; }
+.am-blacklist-preview b { display: block; color: #ffb3b8; font-size: 11px; }
+.am-blacklist-preview small { display: block; margin-top: 2px; color: var(--d-dim); font-size: 10.5px; line-height: 1.35; }
+
+.am-member-blacklist-card { border-color: rgba(240,108,117,.27) !important; }
+.am-member-blacklist-card .card-heading h3 { display: flex; align-items: center; flex-wrap: wrap; gap: 3px; }
+.am-member-blacklist-list { display: flex; flex-direction: column; gap: 7px; }
+.am-member-blacklist-row { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 10px 11px; border: 1px solid rgba(49,65,88,.72); border-radius: 12px; background: rgba(255,255,255,.022); transition: background .14s ease, border-color .14s ease; }
+.am-member-blacklist-row:hover { border-color: rgba(240,108,117,.4); background: rgba(240,108,117,.055); }
+.am-member-blacklist-icon { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex: 0 0 32px; border-radius: 10px; background: rgba(240,108,117,.12); font-size: 16px; }
+.am-member-blacklist-copy { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.am-member-blacklist-copy b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #edf2fa; font-size: 12.5px; }
+.am-member-blacklist-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--d-dim); font-size: 10.5px; }
+.am-member-blacklist-row .dash-btn { flex: 0 0 auto; }
+.am-blacklist-empty { display: flex; align-items: center; gap: 10px; padding: 14px 4px; color: var(--d-dim); }
+.am-blacklist-empty > span { display: inline-flex; align-items: center; justify-content: center; width: 31px; height: 31px; border-radius: 10px; background: rgba(73,209,125,.1); }
+.am-blacklist-empty b, .am-blacklist-empty small { display: block; }
+.am-blacklist-empty b { color: #b7c4d5; font-size: 12px; }
+.am-blacklist-empty small { margin-top: 2px; font-size: 10.5px; }
+
+html.hx-light .am-blacklist-config { background: radial-gradient(540px 180px at 100% 0%, rgba(240,108,117,.07), transparent 70%), rgba(255,255,255,.55); border-color: rgba(187,76,88,.28); }
+html.hx-light .am-blacklist-toggle { background: rgba(240,108,117,.045); }
+html.hx-light .am-member-blacklist-row { background: rgba(240,108,117,.025); border-color: #d9e1ef; }
+html.hx-light .am-member-blacklist-copy b { color: #27334a; }
+html.hx-light .am-blacklist-badge, html.hx-light .am-blacklist-count { color: #b34e5b; background: rgba(187,76,88,.07); }
+
+@media (max-width: 900px) {
+  .am-blacklist-grid { grid-template-columns: 1fr; gap: 4px; }
+  .am-blacklist-config { padding: 13px; }
+  .am-blacklist-config .am-panel-title { align-items: flex-start; }
+  .am-member-blacklist-row { align-items: flex-start; flex-wrap: wrap; }
+  .am-member-blacklist-copy { flex-basis: calc(100% - 52px); }
+  .am-member-blacklist-row .dash-btn { width: 100%; justify-content: center; margin-left: 42px; }
+}
+
+@media (max-width: 520px) {
+  .am-blacklist-toggle { padding: 9px; }
+  .am-blacklist-config .am-panel-title { gap: 8px; }
+  .am-blacklist-badge { font-size: 9px; }
+  .am-blacklist-color input[type="color"] { width: 45px; flex-basis: 45px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .am-blacklist-toggle, .am-blacklist-row, .am-member-blacklist-row { transition: none !important; }
+}

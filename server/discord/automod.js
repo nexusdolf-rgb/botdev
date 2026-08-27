@@ -35,6 +35,7 @@ function markAutomodded(messageId) {
 }
 
 const AUTOMOD_RULE_ACTIONS = ['inherit', 'log', 'delete', 'warn', 'timeout', 'kick', 'ban'];
+const AUTOMOD_BLACKLIST_RULES = ['links', 'caps', 'mentions', 'words', 'spam'];
 
 function parseList(value) {
   if (Array.isArray(value)) return value;
@@ -53,6 +54,127 @@ function ruleActionFor(gs, rule) {
   }
   const action = actions && typeof actions === 'object' ? String(actions[rule] || 'inherit') : 'inherit';
   return AUTOMOD_RULE_ACTIONS.includes(action) && action !== 'inherit' ? action : null;
+}
+
+function blacklistAfterRuleFor(gs, rule) {
+  let rules = gs && gs.am_blacklist_rules;
+  if (typeof rules === 'string') {
+    try { rules = JSON.parse(rules || '{}'); } catch { rules = {}; }
+  }
+  return AUTOMOD_BLACKLIST_RULES.includes(rule)
+    && !!(rules && typeof rules === 'object' && (rules[rule] === true || rules[rule] === 1 || rules[rule] === '1' || rules[rule] === 'true'));
+}
+
+function resolveTextChannel(guild, reference) {
+  const raw = String(reference || '').trim();
+  if (!raw || !guild || !guild.channels || !guild.channels.cache) return null;
+  const cache = guild.channels.cache;
+  const id = raw.match(/\d{15,21}/)?.[0] || raw;
+  const direct = typeof cache.get === 'function' ? (cache.get(id) || cache.get(raw)) : null;
+  if (direct && typeof direct.send === 'function') return direct;
+  if (typeof cache.find !== 'function') return null;
+  const name = raw.replace(/^#/, '').toLowerCase();
+  return cache.find((channel) => channel && typeof channel.send === 'function'
+    && String(channel.name || '').toLowerCase() === name) || null;
+}
+
+function blacklistActionText(action, sanctionResult = {}, deletedCount = 0) {
+  if (action === 'timeout') return sanctionResult.applied ? `⏱️ Timeout${sanctionResult.minutes ? ` · ${sanctionResult.minutes} min` : ''}` : `⚠️ Timeout non appliqué${sanctionResult.error ? ` · ${sanctionResult.error}` : ''}`;
+  if (action === 'kick') return sanctionResult.applied ? '👢 Membre expulsé' : `⚠️ Expulsion non appliquée${sanctionResult.error ? ` · ${sanctionResult.error}` : ''}`;
+  if (action === 'ban') return sanctionResult.applied ? '🔨 Membre banni' : `⚠️ Bannissement non appliqué${sanctionResult.error ? ` · ${sanctionResult.error}` : ''}`;
+  if (action === 'warn') return '⚠️ Avertissement enregistré';
+  if (action === 'delete') return deletedCount > 0 ? '🗑️ Message supprimé' : '⚠️ Suppression non appliquée';
+  if (action === 'legacy') return deletedCount > 0 ? '🛡️ Action historique appliquée' : '⚠️ Action historique partielle';
+  return String(action || 'Action Auto-Mod').slice(0, 180);
+}
+
+// Ajoute un membre à la blacklist du serveur uniquement après une action
+// réellement appliquée, puis publie un panneau dédié si un salon est choisi.
+// La table reste locale au serveur : aucune propagation vers les autres guilds.
+async function applyMemberBlacklist(botId, message, detection, options = {}) {
+  const gs = options.gs || {};
+  const action = String(options.action || '');
+  const actionApplied = !!options.actionApplied;
+  if (!message || !message.guild || !message.author || options.force || !detection
+    || !blacklistAfterRuleFor(gs, detection.rule)
+    || !actionApplied || action === 'log' || action === 'observe') {
+    return { blacklisted: false, panelSent: false, reason: 'not_configured' };
+  }
+
+  const userId = String(message.author.id || '').trim();
+  if (!userId) return { blacklisted: false, panelSent: false, reason: 'user_missing' };
+  const sourceChannelId = String(message.channel && message.channel.id || '');
+  const sourceMessageId = String(message.id || '');
+  const userTag = String(message.author.tag || message.author.username || userId);
+  let record;
+  try {
+    record = store.memberBlacklist.add(botId, message.guild.id, {
+      user_id: userId,
+      user_tag: userTag,
+      reason: detection.reason,
+      rule: detection.rule,
+      action,
+      source_channel_id: sourceChannelId,
+      source_message_id: sourceMessageId,
+    });
+  } catch (e) {
+    console.error('[Hoxera] blacklist membre non enregistrée :', e.message);
+    return { blacklisted: false, panelSent: false, reason: 'database_error' };
+  }
+
+  const panelChannel = resolveTextChannel(message.guild, gs.am_blacklist_channel);
+  let panelSent = false;
+  let panelError = '';
+  if (!panelChannel) {
+    panelError = String(gs.am_blacklist_channel || '').trim()
+      ? 'Salon blacklist introuvable ou non envoyable.'
+      : 'Aucun salon blacklist configuré.';
+  } else {
+    const color = /^#[0-9a-fA-F]{6}$/.test(String(gs.am_blacklist_color || '')) ? String(gs.am_blacklist_color) : '#ED4245';
+    const title = String(gs.am_blacklist_title || '🚫 Membre ajouté à la blacklist').trim().slice(0, 256) || '🚫 Membre ajouté à la blacklist';
+    const footer = String(gs.am_blacklist_footer || 'Blacklist du serveur · Nexora').trim().slice(0, 200) || 'Blacklist du serveur · Nexora';
+    const sourceChannel = message.channel && message.channel.id ? `<#${message.channel.id}>` : 'Salon inconnu';
+    const sourceMessage = message.url && /^https?:\/\//.test(String(message.url)) ? `[Ouvrir le message](${String(message.url).slice(0, 500)})` : 'Lien indisponible';
+    let thumbnail = '';
+    try { if (typeof message.author.displayAvatarURL === 'function') thumbnail = message.author.displayAvatarURL({ extension: 'png', size: 128 }); } catch {}
+    const embed = ui.embed({
+      color,
+      title,
+      description: `Le membre <@${userId}> a été ajouté à la blacklist de **${String(message.guild.name || 'ce serveur').slice(0, 180)}** après une action Auto-Mod.`,
+      thumbnail,
+      fields: [
+        { name: '👤 Utilisateur', value: `<@${userId}>\n${userTag.slice(0, 90)}`, inline: true },
+        { name: '📋 Comportement', value: String(detection.reason || detection.rule || 'Règle Auto-Mod').slice(0, 1024), inline: true },
+        { name: '⚖️ Action appliquée', value: blacklistActionText(action, options.sanctionResult || {}, options.deletedCount || 0), inline: true },
+        { name: '📨 Salon d’origine', value: sourceChannel, inline: true },
+        { name: '🔗 Message source', value: sourceMessage, inline: true },
+        { name: '🚫 Statut', value: 'Blacklist active sur ce serveur', inline: true },
+        { name: '💬 Contenu détecté', value: String(message.content || '—').slice(0, 900) || '—' },
+      ],
+      footer,
+      timestamp: new Date(),
+    });
+    try {
+      const sent = await panelChannel.send({
+        content: `<@${userId}>`,
+        embeds: [embed],
+        allowedMentions: { users: [userId] },
+      });
+      panelSent = true;
+      if (sent && sent.id) {
+        try { store.memberBlacklist.setPanel(botId, message.guild.id, userId, panelChannel.id, sent.id); } catch {}
+      }
+    } catch (e) {
+      panelError = String(e.message || e).slice(0, 180);
+    }
+  }
+  return {
+    blacklisted: true,
+    panelSent,
+    panelError,
+    recordId: Number(record && record.lastInsertRowid) || 0,
+    action,
+  };
 }
 
 function isAutomodExempt(message, gs) {
@@ -394,6 +516,15 @@ async function applyConfiguredAction(botId, message, detection, opts, gs, lang, 
     }
   }
 
+  const actionApplied = action === 'delete'
+    ? deletedCount > 0
+    : action === 'warn'
+      ? warning.saved
+      : sanctionResult.applied;
+  const blacklistResult = await applyMemberBlacklist(botId, message, detection, {
+    gs, action, actionApplied, deletedCount, sanctionResult, force: opts.force,
+  });
+
   recordAction(botId, message, detection.reason, { rule: detection.rule, action, observed: 0 });
   try {
     await logging.log(botId, message.guild, {
@@ -424,7 +555,7 @@ async function applyConfiguredAction(botId, message, detection, opts, gs, lang, 
   return {
     acted: true, observed: false, rule: detection.rule, action, reason: detection.reason,
     deleted: deletedCount > 0, deletedCount, warningCount: warning.count,
-    publicWarning: publicWarning.sent, sanction: sanctionResult,
+    publicWarning: publicWarning.sent, sanction: sanctionResult, blacklist: blacklistResult,
   };
 }
 
@@ -487,6 +618,15 @@ async function runAutomod(botId, message, opts = {}) {
       }
     }
 
+    const blacklistResult = await applyMemberBlacklist(botId, message, detection, {
+      gs,
+      action: sanctionResult.applied ? sanctionResult.action : (warning.saved ? 'warn' : 'legacy'),
+      actionApplied: deleted || warning.saved || sanctionResult.applied,
+      deletedCount: deleted ? 1 : 0,
+      sanctionResult,
+      force: opts.force,
+    });
+
     recordAction(botId, message, reason, { rule: detection.rule, action: 'legacy' });
     try {
       await logging.log(botId, message.guild, {
@@ -530,6 +670,7 @@ async function runAutomod(botId, message, opts = {}) {
       warningCount: warning.count,
       publicWarning: publicWarning.sent,
       sanction: sanctionResult,
+      blacklist: blacklistResult,
     };
   }
 
@@ -602,6 +743,14 @@ async function runAutomod(botId, message, opts = {}) {
       const actionText = sanctionResult.applied
         ? `, ${sanctionResult.action}${sanctionResult.minutes ? ' ' + sanctionResult.minutes + ' min' : ''}`
         : '';
+      const blacklistResult = await applyMemberBlacklist(botId, message, detection, {
+        gs,
+        action: sanctionResult.applied ? sanctionResult.action : (warning.saved ? 'warn' : 'legacy'),
+        actionApplied: deletedCount > 0 || warning.saved || sanctionResult.applied,
+        deletedCount,
+        sanctionResult,
+        force: opts.force,
+      });
       recordAction(botId, message, `${reasonLabel} (${deletedCount} message(s) supprimé(s)${actionText})`, { rule: 'spam', action: 'legacy' });
       try {
         await logging.log(botId, message.guild, {
@@ -635,6 +784,7 @@ async function runAutomod(botId, message, opts = {}) {
         warningCount: warning.count,
         publicWarning: publicWarning.sent,
         sanction: sanctionResult,
+        blacklist: blacklistResult,
       };
     }
   }
@@ -647,6 +797,8 @@ module.exports = {
   analyzeContent,
   detectContent,
   ruleActionFor,
+  blacklistAfterRuleFor,
+  applyMemberBlacklist,
   isAutomodExempt,
   blacklistWordMatch,
   wasAutomodded,

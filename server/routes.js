@@ -649,7 +649,9 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
     prefix: '', warn_limit: 0, warn_action: 'none',
     xp_enabled: 1, xp_min: 10, xp_max: 25, xp_cooldown: 60, xp_message: '', xp_channel: '',
     am_enabled: 0, am_links: 1, am_caps: 1, am_mentions: 5, am_spam: 5,
-    am_mode: 'enforce', am_rule_actions: '{}', am_exempt_roles: '[]', am_exempt_channels: '[]', am_exempt_users: '[]',
+    am_mode: 'enforce', am_rule_actions: '{}', am_blacklist_rules: '{}', am_blacklist_channel: '',
+    am_blacklist_title: '🚫 Membre ajouté à la blacklist', am_blacklist_color: '#ED4245', am_blacklist_footer: 'Blacklist du serveur · Nexora',
+    am_exempt_roles: '[]', am_exempt_channels: '[]', am_exempt_users: '[]',
     am_warn_limit: 2, am_warn_action: 'timeout', am_warn_timeout_min: 10,
     log_channel: '',
     birthday_channel: '', birthday_role: '', log_events: '',
@@ -671,6 +673,7 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
     xp_roles: store.xpRoles.all(bot.id, guildId),
     profile: store.botProfiles.get(bot.id, guildId) || { name: '', avatar_url: '', banner_url: '', bio: '', color: '#5865F2' },
     blacklist: store.blacklist.all(bot.id, guildId),
+    automod_blacklist: store.memberBlacklist.active(bot.id, guildId, 100),
     voicetemp: store.voicetemp.get(bot.id, guildId) || { creator_channel: '', category: '', name_template: '' },
     applications: store.applications.get(bot.id, guildId) || { channel: '', questions: '[]', title: '📝 Candidature', enabled: 0 },
     scheduled: store.scheduled.all(bot.id, guildId),
@@ -846,6 +849,7 @@ router.put('/bots/:id/guilds/:guildId/xp', requireAuth, async (req, res) => {
 // Auto-modération par serveur
 const AUTOMOD_RULES = ['links', 'caps', 'mentions', 'words', 'spam'];
 const AUTOMOD_RULE_ACTIONS = ['inherit', 'log', 'delete', 'warn', 'timeout', 'kick', 'ban'];
+const AUTOMOD_BLACKLIST_RULES = AUTOMOD_RULES;
 
 function payloadList(value) {
   if (Array.isArray(value)) return value;
@@ -866,7 +870,7 @@ function normalizeAutomodList(value, max, maxLength) {
 function normalizeAutomodUsers(value) {
   return [...new Set(payloadList(value).map((entry) => {
     const id = String(entry || '').replace(/[<@!>]/g, '').trim();
-    return /^\\d{15,21}$/.test(id) ? id : '';
+    return /^\d{15,21}$/.test(id) ? id : '';
   }).filter(Boolean))].slice(0, 100);
 }
 
@@ -884,6 +888,19 @@ function normalizeAutomodRuleActions(value) {
   return out;
 }
 
+function normalizeAutomodBlacklistRules(value) {
+  let source = value;
+  if (typeof source === 'string') {
+    try { source = JSON.parse(source); } catch { source = {}; }
+  }
+  const out = {};
+  if (!source || typeof source !== 'object' || Array.isArray(source)) return out;
+  for (const rule of AUTOMOD_BLACKLIST_RULES) {
+    if (source[rule] === true || source[rule] === 1 || source[rule] === '1' || source[rule] === 'true') out[rule] = true;
+  }
+  return out;
+}
+
 router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
   if (!bot) return;
@@ -894,6 +911,11 @@ router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) =>
   const advancedFields = {};
   if (body.mode !== undefined) advancedFields.am_mode = body.mode === 'observe' ? 'observe' : 'enforce';
   if (body.rule_actions !== undefined) advancedFields.am_rule_actions = JSON.stringify(normalizeAutomodRuleActions(body.rule_actions));
+  if (body.blacklist_rules !== undefined) advancedFields.am_blacklist_rules = JSON.stringify(normalizeAutomodBlacklistRules(body.blacklist_rules));
+  if (body.blacklist_channel !== undefined) advancedFields.am_blacklist_channel = String(body.blacklist_channel || '').slice(0, 100);
+  if (body.blacklist_title !== undefined) advancedFields.am_blacklist_title = String(body.blacklist_title || '🚫 Membre ajouté à la blacklist').slice(0, 120);
+  if (body.blacklist_color !== undefined) advancedFields.am_blacklist_color = /^#[0-9a-fA-F]{6}$/.test(String(body.blacklist_color || '')) ? String(body.blacklist_color) : '#ED4245';
+  if (body.blacklist_footer !== undefined) advancedFields.am_blacklist_footer = String(body.blacklist_footer || 'Blacklist du serveur · Nexora').slice(0, 200);
   if (body.exempt_roles !== undefined) advancedFields.am_exempt_roles = JSON.stringify(normalizeAutomodList(body.exempt_roles, 50, 30));
   if (body.exempt_channels !== undefined) advancedFields.am_exempt_channels = JSON.stringify(normalizeAutomodList(body.exempt_channels, 100, 100));
   if (body.exempt_users !== undefined) advancedFields.am_exempt_users = JSON.stringify(normalizeAutomodUsers(body.exempt_users));
@@ -1215,6 +1237,20 @@ router.get('/bots/:id/guilds/:guildId/automod/logs', requireAuth, async (req, re
   if (!bot) return;
   if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   res.json({ logs: store.automodLogs.recent(bot.id, req.params.guildId, 50) });
+});
+
+// 🚫 Retrait d'un membre de la blacklist du serveur. On conserve la ligne
+// pour l'historique et on ne supprime jamais le journal Auto-Mod.
+router.delete('/bots/:id/guilds/:guildId/automod/blacklist/:userId', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const userId = String(req.params.userId || '').replace(/[<@!>]/g, '');
+  if (!/^\d{15,21}$/.test(userId)) return res.status(400).json({ error: 'Membre invalide.' });
+  const result = store.memberBlacklist.remove(bot.id, guildId, userId, req.userId || '');
+  if (!result.changes) return res.status(404).json({ error: 'Ce membre n’est pas dans la blacklist active.' });
+  res.json({ ok: true });
 });
 
 // ⚠️ Historique unifié des avertissements (manuel + auto-mod), visible dans
@@ -2160,7 +2196,7 @@ const BOT_DATA_TABLES = [
   'commands', 'modules', 'events', 'guild_settings', 'xp', 'xp_roles', 'economy',
   'warnings', 'warning_counters', 'role_menus', 'tickets', 'bot_profiles',
   'shop_items', 'giveaways', 'suggestions', 'temp_roles', 'sanctions',
-  'blacklist_words', 'automod_logs', 'automod_warning_messages', 'open_tickets',
+  'blacklist_words', 'automod_logs', 'automod_member_blacklist', 'automod_warning_messages', 'open_tickets',
   'ticket_counters', 'ticket_ratings', 'closed_tickets', 'transcripts',
   'marriages', 'birthdays', 'reminders', 'cmd_stats', 'scheduled_messages',
   'custom_announcements', 'message_stats', 'join_stats', 'shop_purchases',
