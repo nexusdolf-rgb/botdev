@@ -773,13 +773,12 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
   // (2) catégorie du type, (3) catégorie par défaut. Le nouveau système donne
   // la priorité à la catégorie du type pour respecter son réglage dédié.
   const fromMenu = !!type;
-  // Le nouveau système personnalisé privilégie toujours la catégorie du type.
-  // L'ancien parcours conserve sa priorité historique menu → type → défaut.
-  const catName = configOverride && chosen && String(chosen.category || '').trim()
-    ? chosen.category
-    : ((fromMenu && String(cfg.menu_category || '').trim())
-      ? cfg.menu_category
-      : ((chosen && chosen.category) ? chosen.category : (cfg.category || '')));
+  // Tous les systèmes suivent désormais la même règle : la catégorie du type
+  // est prioritaire, puis la catégorie du panneau MENU, puis la catégorie
+  // globale. Une catégorie existante est obligatoire pour tout nouveau ticket.
+  const typeCategory = chosen && String(chosen.category || '').trim();
+  const menuCategory = fromMenu && String(cfg.menu_category || '').trim();
+  const catName = typeCategory || menuCategory || String(cfg.category || '').trim();
   const panelChannel = panelChannelOf(guild, interaction, configOverride);
   const panelParent = panelParentOf(guild, panelChannel);
   // 🧲 Résolution FLOUE : les noms décorés (────〔🎫・SUPPORT・〕────) sont
@@ -791,19 +790,26 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
   //  2. sinon catégorie du panneau → le ticket y va, sous le panneau ;
   //  3. sinon (panneau hors catégorie) → le ticket est créé SANS catégorie,
   //     positionné juste à côté du panneau. Aucune catégorie fantôme possible.
-  const categoryRequired = !!(configOverride && configOverride.advanced_panel_id && configOverride.category_required);
-  let parent = findCategoryFuzzy(guild, catName);
-  if (!parent && catName) parent = findCategoryRef(guild, catName);
+  const categoryRequired = !!(configOverride && configOverride.category_required);
+  let parent = null;
+  if (catName) {
+    // Ancien nom décoré : la recherche floue reste la première tentative.
+    const legacyCategory = findCategoryFuzzy(guild, catName);
+    parent = legacyCategory || findCategoryRef(guild, catName);
+  }
   if (categoryRequired && !catName) {
-    return ackReply(interaction, { content: '⚠️ Ce type de ticket n’a pas de catégorie configurée. Demande au staff de choisir une catégorie dans le dashboard.', ephemeral: true });
+    return ackReply(interaction, { content: '⚠️ Aucune catégorie de tickets n’est configurée pour ce type. Choisis une catégorie Discord existante dans le dashboard.', ephemeral: true });
   }
   if (categoryRequired && !parent) {
     return ackReply(interaction, { content: '⚠️ La catégorie configurée pour ce type de ticket est introuvable. Aucun salon n’a été créé : corrige la catégorie dans le dashboard.', ephemeral: true });
   }
   let placeRule = parent ? `catégorie configurée « ${parent.name} »` : '';
   if (!categoryRequired) {
+    // Compatibilité des anciens panneaux : si aucune catégorie valide n'est
+    // disponible, on utilise celle du panneau si elle existe, sinon le salon
+    // reste sans catégorie. Le bot ne crée jamais de catégorie.
     if (!parent && panelParent) { parent = panelParent; placeRule = `catégorie du panneau « ${panelParent.name} »`; }
-    if (!parent) placeRule = 'sans catégorie, à côté du panneau';
+    if (!parent) placeRule = 'sans catégorie (aucune catégorie valide configurée)';
   }
   console.log(`[Hoxera] 🎫 placement du ticket : ${placeRule}${catName ? ` (config : « ${catName} »)` : ''}`);
 
@@ -2299,7 +2305,8 @@ function ticketPlacementConfig(botId, guild, channel, row) {
   const panel = findChannelInGuild(guild, panelRef);
   return {
     refs: staffRoleRefsForConfig(cfg, type),
-    category: (cfg.menu_category && String(cfg.menu_category).trim()) || (type && type.category) || cfg.category || '',
+    category: (type && String(type.category || '').trim()) || (cfg.menu_category && String(cfg.menu_category).trim()) || cfg.category || '',
+    strict: true,
     panel,
   };
 }

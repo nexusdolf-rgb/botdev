@@ -1,4 +1,4 @@
-// Test v3.7 — Catégorie du panneau MENU : priorité absolue, zéro ambiguïté
+// Test v3.7 — Catégorie dédiée du type : priorité absolue, zéro ambiguïté
 const assert = require('assert');
 const fs = require('fs');
 const dir = '/tmp/v37test-' + Date.now();
@@ -17,13 +17,13 @@ assert.strictEqual(t.menu_category, '🎫 SUPPORT');
 assert.strictEqual(t.menu_channel, '#menu', 'autres champs intacts');
 console.log('✅ base : menu_category persistée sans effet de bord');
 
-// 2. Priorité dans openTicket : menu > type > défaut, UNIQUEMENT via le menu
+// 2. Priorité dans openTicket : type > menu > catégorie globale
 assert.ok(panels.includes('const fromMenu = !!type;'), 'détection ticket ouvert via le menu');
-assert.ok(panels.includes("(fromMenu && String(cfg.menu_category || '').trim())"), 'priorité au réglage du panneau menu');
-const idx = panels.indexOf('cfg.menu_category');
-const after = panels.slice(idx, idx + 260);
-assert.ok(after.includes('chosen.category') && after.includes('cfg.category'), 'replis type puis défaut conservés');
-console.log('✅ priorité : catégorie du MENU (si définie) → catégorie du type → catégorie par défaut');
+assert.ok(panels.includes('const typeCategory = chosen && String(chosen.category || \'\').trim();'), 'catégorie dédiée du type');
+assert.ok(panels.includes('const catName = typeCategory || menuCategory'), 'catégorie du type prioritaire');
+assert.ok(panels.includes('Aucune catégorie de tickets n’est configurée'), 'absence de catégorie refusée');
+assert.ok(panels.includes('La catégorie configurée pour ce type de ticket est introuvable'), 'catégorie introuvable refusée');
+console.log('✅ priorité : catégorie du TYPE → catégorie du MENU → catégorie globale, sans repli');
 
 // 3. Toujours AUCUNE création de catégorie possible
 assert.ok(!panels.includes('type: ChannelType.GuildCategory }'), 'création de catégorie toujours impossible');

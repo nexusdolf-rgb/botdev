@@ -212,7 +212,7 @@ function advancedConfigForOpen(config, type, interaction = null) {
     // ne dépend plus d'une déduction fragile lors de l'ouverture.
     // Dès qu'une catégorie est choisie, le nouveau système l'exige : aucune
     // création ni repli silencieux vers la catégorie du panneau.
-    category_required: Boolean(String(type.category || '').trim()),
+    category_required: true,
     panel_channel_id: interaction && interaction.channel ? interaction.channel.id : (config.panel_channel || ''),
   };
 }

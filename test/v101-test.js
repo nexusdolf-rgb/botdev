@@ -1,9 +1,6 @@
-// Test v2.4 — 🗂️ Placement du salon de ticket + lien direct créateur
-// Problème corrigé : la catégorie se créait TOUT EN HAUT du serveur et le
-// ticket partait là-bas. Désormais : catégorie configurée si elle existe,
-// sinon celle du panneau ; ticket placé JUSTE SOUS le salon du panneau
-// quand ils partagent la même catégorie ; catégorie créée en dernier
-// recours positionnée sous celle du panneau.
+// Test v2.4 — 🗂️ Placement strict du salon de ticket + lien direct créateur
+// Une catégorie Discord existante est obligatoire pour tous les nouveaux
+// tickets. Aucune catégorie n'est créée et aucun ticket n'est placé au hasard.
 const assert = require('assert');
 const fs = require('fs');
 const dir = '/tmp/v24test-' + Date.now();
@@ -12,15 +9,14 @@ process.env.BOTDEV_DATA_DIR = dir;
 
 const src = fs.readFileSync(__dirname + '/../server/discord/panels.js', 'utf8');
 
-// 1. La logique de placement est présente et dans le BON ordre
+// 1. La logique de placement est présente et stricte
 const block = src.slice(src.indexOf('Placement du salon (v2.4)'), src.indexOf('const allow = [PermissionFlagsBits.ViewChannel'));
 assert.ok(block.length > 100, 'bloc de placement présent avant les permissions');
-assert.ok(block.includes('if (!parent && panelParent) { parent = panelParent;'), 'repli : catégorie du panneau');
-const idxExisting = block.indexOf('findCategoryFuzzy(guild, catName)');
-const idxPanel = block.indexOf('if (!parent && panelParent)');
-assert.ok(idxExisting !== -1 && idxPanel !== -1 && idxExisting < idxPanel,
-  'ordre correct : catégorie existante (résolution FLOUE) → catégorie du panneau');
-console.log('✅ ordre de placement : existante (floue) → panneau → à côté du panneau');
+assert.ok(block.includes('const catName = typeCategory || menuCategory'), 'catégorie du type prioritaire');
+assert.ok(block.includes('!catName'), 'catégorie vérifiée');
+assert.ok(block.includes('if (!parent && panelParent) { parent = panelParent;'), 'repli historique sûr vers la catégorie du panneau');
+assert.ok(block.includes('sans catégorie (aucune catégorie valide configurée)'), 'aucune catégorie créée en dernier recours');
+console.log('✅ placement : catégorie du type → panneau menu → globale, sans création automatique');
 
 // 2. v3.6 : AUCUNE création de catégorie possible
 assert.ok(!block.includes('guild.channels.create({ name: catName'), 'aucune création de catégorie dans le placement');

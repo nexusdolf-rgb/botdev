@@ -99,7 +99,7 @@ function interactionFor() {
   assert(dashboard.includes('Choisis une catégorie Discord pour le type'));
   assert(dashboard.includes('Le salon privé sera créé directement ici'));
   assert(dashboard.includes('type.category') && dashboard.includes('missingCategory'));
-  assert(fs.readFileSync(path.join(__dirname, '..', 'server/discord/panels.js'), 'utf8').includes('categoryRequired'));
+  assert(fs.readFileSync(path.join(__dirname, '..', 'server/discord/panels.js'), 'utf8').includes('const typeCategory = chosen'));
   assert(fs.readFileSync(path.join(__dirname, '..', 'server/discord/panels.js'), 'utf8').includes('findCategoryRef'));
   console.log('✅ dashboard : catégorie obligatoire et validation du nouveau placement présents');
 
