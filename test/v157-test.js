@@ -18,7 +18,7 @@ assert(js.includes('MutationObserver(() => Dashboard.enhanceSelects(zone))'), 'o
 
 // 2. Le sélecteur de serveur et le multi-sélecteur utilisent le dropdown custom
 assert(!js.includes('<select aria-label="Changer de serveur">'), "l'ancien select invisible du sélecteur de serveur est encore là");
-assert(js.includes('searchable: () => guilds.length > 8'), 'recherche du sélecteur de serveur manquante');
+assert(js.includes('Dashboard.openServerPicker'), 'grille de sélection des serveurs manquante');
 assert(js.includes('dd-add-btn'), 'bouton ＋ Ajouter du multi-sélecteur manquant');
 
 // 3. Le panneau : recherche, options, état sélectionné, navigation clavier, feuille mobile

@@ -319,21 +319,37 @@ router.get('/discord/guilds', requireAuth, async (req, res) => {
   if (!user || !user.discord_id) return res.status(400).json({ error: 'Compte Discord non lié', needLink: true });
   await refreshDiscordData(req.userId).catch(() => {});
   const guilds = store.users.discordGuilds(req.userId);
-  const botGuilds = new Set();
+  // Données riches (bannière, membres, boosts) pour les serveurs où le bot
+  // est présent : elles alimentent la grille de sélection de serveurs.
+  const botGuilds = new Map();
   for (const entry of botManager.clients.values()) {
     if (!entry.client.isReady()) continue;
-    for (const g of entry.client.guilds.cache.values()) botGuilds.add(g.id);
+    for (const g of entry.client.guilds.cache.values()) {
+      if (!botGuilds.has(g.id)) {
+        botGuilds.set(g.id, {
+          banner: (typeof g.bannerURL === 'function' ? g.bannerURL({ size: 1024 }) : '') || '',
+          members: g.memberCount || 0,
+          boosts: g.premiumSubscriptionCount || 0,
+        });
+      }
+    }
   }
-  const list = guilds.map((g) => ({
-    id: g.id,
-    name: g.name,
-    owner: !!g.owner,
-    canManage: oauthGuildCanConfigure(g),
-    canConfigure: oauthGuildCanConfigure(g),
-    access: accessKind(g),
-    icon: g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png` : '',
-    hasBot: botGuilds.has(g.id),
-  }));
+  const list = guilds.map((g) => {
+    const info = botGuilds.get(g.id);
+    return {
+      id: g.id,
+      name: g.name,
+      owner: !!g.owner,
+      canManage: oauthGuildCanConfigure(g),
+      canConfigure: oauthGuildCanConfigure(g),
+      access: accessKind(g),
+      icon: g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png` : '',
+      hasBot: botGuilds.has(g.id),
+      banner: info ? info.banner : '',
+      members: info ? info.members : 0,
+      boosts: info ? info.boosts : 0,
+    };
+  });
   res.json({ guilds: list, discord: { username: user.discord_username, avatar: user.discord_avatar } });
 });
 
@@ -663,7 +679,19 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
     try { return JSON.parse(store.settings.get(`ticket_stats_${guildId}`) || '{"total":0,"open":0}'); } catch { return { total: 0, open: 0 }; }
   })();
   const payload = {
-    guild: { id: guildId, name: dGuild.name, icon: dGuild.iconURL({ size: 128 }) || '', members: dGuild.memberCount || 0 },
+    guild: {
+      id: guildId,
+      name: dGuild.name,
+      icon: dGuild.iconURL({ size: 128 }) || '',
+      // 🖼️ Bannière + stats riches pour la page d'accueil du serveur
+      banner: (typeof dGuild.bannerURL === 'function' ? dGuild.bannerURL({ size: 1024 }) : '') || '',
+      members: dGuild.memberCount || 0,
+      boosts: dGuild.premiumSubscriptionCount || 0,
+      channelsCount: dGuild.channels ? dGuild.channels.cache.size : 0,
+      rolesCount: dGuild.roles ? dGuild.roles.cache.size : 0,
+      createdAt: dGuild.createdTimestamp || 0,
+      description: dGuild.description || '',
+    },
     channels,
     roles,
     settings: { ...DEFAULT_GS, ...(store.guildSettings.get(bot.id, guildId) || {}) },

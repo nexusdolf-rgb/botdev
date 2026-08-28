@@ -24,9 +24,6 @@ assert(css.includes('@media (max-width: 700px)'), 'repli mobile manquant');
 assert(js.includes("foot.className = 'card-actions'"), 'regroupement des boutons manquant');
 assert(css.includes('.card-actions {'), 'styles .card-actions manquants');
 
-// 4. Version v159 déployée (cache PWA + assets)
-assert(!index.includes('?v=158'), 'index.html référence encore v158');
-assert.strictEqual((index.match(/\?v=159/g) || []).length, 7, 'index.html doit référencer v159 7 fois');
-assert(sw.includes("'botdev-v159'"), 'le cache du service worker n’est pas en v159');
+// 4. Version : gérée par le test de la version courante (v160)
 
 console.log('✅ v159 : réglages en lignes façon Discord/DraftBot, pieds de carte, cache v159');

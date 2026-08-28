@@ -452,8 +452,69 @@ Dashboard.BOT_MODULES = [
 ];
 
 // 🎛️ Composant partagé : carte de sélection du serveur (style DraftBot).
-// Le sélecteur de serveur ouvre un vrai menu déroulant : icône du serveur,
-// indice « bot absent / lecture seule », recherche dès 9 serveurs.
+// 🗂️ Grille de sélection de serveurs (façon DraftBot) : grandes cartes avec
+// bannière, icône en recouvrement, stats et état du bot. Recherche dès 9 serveurs.
+Dashboard.openServerPicker = () => {
+  const guilds = Dashboard.state.discordGuilds || [];
+  const wantSearch = guilds.length > 8;
+  const initialOf = (name) => (String(name || '?').trim()[0] || '?').toUpperCase();
+  App.modal(`
+    <div class="sp-picker" id="sp-picker">
+      <div class="sp-head">
+        <div class="sp-head-copy">
+          <h2>Choisis un serveur</h2>
+          <p>${guilds.length} serveur${guilds.length > 1 ? 's' : ''} · ${guilds.filter((g) => g.hasBot).length} avec Nexora</p>
+        </div>
+        ${wantSearch ? '<input type="text" class="sp-search" placeholder="🔍 Rechercher un serveur…" aria-label="Rechercher un serveur" />' : ''}
+        <button type="button" class="sp-close" aria-label="Fermer">×</button>
+      </div>
+      <div class="sp-grid">
+        ${guilds.map((g) => `
+          <button type="button" class="sp-card${g.id === Dashboard.state.guildId ? ' is-current' : ''}" data-gid="${App.escapeHtml(g.id)}" data-name="${App.escapeHtml(String(g.name || '').toLowerCase())}">
+            <span class="sp-banner" style="${g.banner ? `background-image:url('${App.escapeHtml(g.banner)}')` : ''}">
+              ${g.banner ? '' : `<span class="sp-fallback">${App.escapeHtml(initialOf(g.name))}</span>`}
+              ${g.id === Dashboard.state.guildId ? '<span class="sp-current-tag">✓ Serveur actif</span>' : ''}
+              ${g.canManage ? '' : '<span class="sp-ro">Lecture seule</span>'}
+            </span>
+            <span class="sp-body">
+              <span class="sp-ico">${g.icon ? `<img src="${App.escapeHtml(g.icon)}" alt="" />` : `<span>${App.escapeHtml(initialOf(g.name))}</span>`}</span>
+              <span class="sp-txt">
+                <b>${App.escapeHtml(g.name)}</b>
+                <small>${g.hasBot ? (g.members ? `${App.escapeHtml(String(g.members))} membres` : 'Nexora présent') : 'Nexora absent — inviter'}</small>
+              </span>
+              <span class="sp-mark">${g.hasBot ? '→' : '＋'}</span>
+            </span>
+          </button>`).join('')}
+      </div>
+    </div>`, true);
+  const picker = document.querySelector('#sp-picker');
+  if (!picker) return;
+  picker.querySelector('.sp-close').onclick = () => App.closeModal();
+  picker.closest('.modal-overlay')?.addEventListener('mousedown', (e) => {
+    if (e.target.classList && e.target.classList.contains('modal-overlay')) App.closeModal();
+  });
+  const search = picker.querySelector('.sp-search');
+  if (search) {
+    search.oninput = () => {
+      const q = search.value.trim().toLowerCase();
+      picker.querySelectorAll('.sp-card').forEach((card) => {
+        card.style.display = !q || (card.dataset.name || '').includes(q) ? '' : 'none';
+      });
+    };
+  }
+  picker.querySelectorAll('.sp-card').forEach((card) => {
+    card.onclick = async () => {
+      const g = guilds.find((x) => x.id === card.dataset.gid);
+      if (!g) return;
+      if (!g.hasBot) { App.openInvite(Dashboard.state.bot.invite_url); App.toast('Ajoute le bot sur ce serveur pour le configurer !'); return; }
+      if (!g.canManage) { App.toast('Lecture seule : il te faut la permission Discord « Administrateur » ou être propriétaire du serveur.', 'error'); return; }
+      App.closeModal();
+      await Dashboard.selectGuild(g.id);
+    };
+  });
+};
+
+// La carte serveur de la sidebar ouvre la grande grille de sélection.
 Dashboard.serverPicker = () => {
   const guilds = Dashboard.state.discordGuilds || [];
   const cur = guilds.find((g) => g.id === Dashboard.state.guildId);
@@ -469,24 +530,10 @@ Dashboard.serverPicker = () => {
       </div>
       <span class="srv-caret" aria-hidden="true">⌄</span>
     </div>`);
-  Dashboard.dropdownMenu({
-    trigger: pick,
-    searchable: () => guilds.length > 8,
-    getOptions: () => guilds.map((g) => ({
-      value: g.id,
-      label: g.name || 'Serveur',
-      img: g.icon || '',
-      fallback: (g.name || '?').trim()[0].toUpperCase(),
-      hint: !g.hasBot ? 'bot absent — clique pour l’inviter' : (!g.canManage ? 'lecture seule' : ''),
-      selected: g.id === Dashboard.state.guildId,
-    })),
-    onSelect: async (id) => {
-      const g = guilds.find((x) => x.id === id);
-      if (!g) return;
-      if (!g.hasBot) { App.openInvite(Dashboard.state.bot.invite_url); App.toast('Ajoute le bot sur ce serveur pour le configurer !'); return; }
-      if (!g.canManage) { App.toast('Lecture seule : il te faut la permission Discord « Administrateur » ou être propriétaire du serveur.', 'error'); return; }
-      await Dashboard.selectGuild(g.id);
-    },
+  const open = () => Dashboard.openServerPicker();
+  pick.addEventListener('click', open);
+  pick.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
   });
   return pick;
 };
@@ -1280,10 +1327,23 @@ Dashboard.renderers.overview = async (content, data) => {
   const greeting = new Date().getHours() < 18 ? 'Bonjour' : 'Bonsoir';
   const serverInitial = String(g.name || '?').trim().slice(0, 1).toUpperCase() || '?';
   const serverIcon = g.icon || g.icon_url || '';
+  const serverBanner = g.banner || '';
   const statusText = bot.online === false ? 'Nexora est hors ligne' : 'Nexora est opérationnel';
   const statusClass = bot.online === false ? 'is-offline' : 'is-online';
+  // 🖼️ Stats riches du serveur (bannière, boosts, salons, rôles, création)
+  const createdLabel = g.createdAt
+    ? new Date(g.createdAt).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+    : '';
+  const heroChips = [
+    g.members ? `<span class="ov-hero-chip"><span>👥</span><b>${App.escapeHtml(String(g.members))}</b><small>membres</small></span>` : '',
+    g.boosts ? `<span class="ov-hero-chip"><span>🚀</span><b>${App.escapeHtml(String(g.boosts))}</b><small>boost${g.boosts > 1 ? 's' : ''}</small></span>` : '',
+    g.channelsCount ? `<span class="ov-hero-chip"><span>#️⃣</span><b>${App.escapeHtml(String(g.channelsCount))}</b><small>salons</small></span>` : '',
+    g.rolesCount ? `<span class="ov-hero-chip"><span>🎭</span><b>${App.escapeHtml(String(g.rolesCount))}</b><small>rôles</small></span>` : '',
+    createdLabel ? `<span class="ov-hero-chip"><span>🎂</span><small>créé en ${App.escapeHtml(createdLabel)}</small></span>` : '',
+  ].filter(Boolean).join('');
   const overviewIntro = App.el(`
-    <section class="ov-intro ov-welcome-panel" aria-label="Résumé du serveur">
+    <section class="ov-intro ov-welcome-panel${serverBanner ? ' has-banner' : ''}" aria-label="Résumé du serveur">
+      ${serverBanner ? `<span class="ov-hero-bg" style="background-image:url('${App.escapeHtml(serverBanner)}')" aria-hidden="true"></span>` : ''}
       <div class="ov-intro-server">
         ${serverIcon
           ? `<img class="ov-server-avatar" src="${App.escapeHtml(serverIcon)}" alt="" />`
@@ -1291,7 +1351,7 @@ Dashboard.renderers.overview = async (content, data) => {
         <div class="ov-intro-copy">
           <span class="ov-eyebrow">${greeting}, administrateur</span>
           <h2>Bienvenue dans ton espace de gestion</h2>
-          <p>${App.escapeHtml(g.name)} · ${App.escapeHtml(String(g.members || 0))} membres · tous les réglages de Nexora au même endroit.</p>
+          <p>${App.escapeHtml(g.name)}${g.description ? ` · ${App.escapeHtml(g.description)}` : ` · ${App.escapeHtml(String(g.members || 0))} membres · tous les réglages de Nexora au même endroit.`}</p>
         </div>
       </div>
       <div class="ov-intro-health ${statusClass}">
@@ -1299,6 +1359,7 @@ Dashboard.renderers.overview = async (content, data) => {
         <div><b>${App.escapeHtml(statusText)}</b><small>Dernière synchronisation disponible</small></div>
         <button class="ov-welcome-settings" data-go="server" type="button">Réglages <span>→</span></button>
       </div>
+      ${heroChips ? `<div class="ov-hero-stats">${heroChips}</div>` : ''}
     </section>`);
   overviewIntro.querySelector('[data-go]').onclick = () => Dashboard.setModule('server');
   workspace.appendChild(overviewIntro);
