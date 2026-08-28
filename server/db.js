@@ -314,6 +314,21 @@ CREATE TABLE IF NOT EXISTS automod_blacklist_counters (
 CREATE INDEX IF NOT EXISTS idx_automod_blacklist_counters_user
   ON automod_blacklist_counters (bot_id, guild_id, user_id, updated_at DESC);
 
+-- Correspondance entre les règles natives Discord et les clés Nexora.
+-- Seules les règles créées par Nexora sont suivies et modifiées.
+CREATE TABLE IF NOT EXISTS native_automod_rules (
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  rule_key TEXT NOT NULL,
+  discord_rule_id TEXT NOT NULL,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (bot_id, guild_id, rule_key)
+);
+CREATE INDEX IF NOT EXISTS idx_native_automod_rules_guild
+  ON native_automod_rules (bot_id, guild_id, discord_rule_id);
+
 -- Tickets ouverts (fiche par salon de ticket) : numéro, prise en charge,
 -- horodatages, dernière activité (fermeture automatique), note du support.
 CREATE TABLE IF NOT EXISTS open_tickets (
@@ -549,6 +564,10 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_channel TEXT D
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_title TEXT DEFAULT '🚫 Membre ajouté à la blacklist'"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_color TEXT DEFAULT '#ED4245'"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_footer TEXT DEFAULT 'Blacklist du serveur · Nexora'"); } catch (e) {}
+// v6 — miroir passif des règles Auto-Mod officielles de Discord.
+// Il utilise uniquement des alertes natives pour éviter les doubles sanctions.
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_native_enabled INTEGER DEFAULT 1"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_native_alert_channel TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE automod_member_blacklist ADD COLUMN expires_at INTEGER NOT NULL DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE automod_member_blacklist ADD COLUMN trigger_type TEXT DEFAULT 'immediate'"); } catch (e) {}
 try { db.exec("ALTER TABLE automod_member_blacklist ADD COLUMN trigger_count INTEGER NOT NULL DEFAULT 1"); } catch (e) {}
@@ -881,7 +900,7 @@ const guildSettings = {
   set: (botId, guildId, fields) => {
     const cur = guildSettings.get(botId, guildId) || { prefix: '', warn_limit: 0, warn_action: 'none' };
     const next = { ...cur, ...fields };
-    const cols = ['prefix', 'warn_limit', 'warn_action', 'warn_timeout_limit', 'warn_timeout_min', 'starboard_channel', 'starboard_min', 'live_channel', 'live_ping', 'ticket_log_channel', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_mode', 'am_rule_actions', 'am_blacklist_rules', 'am_blacklist_thresholds', 'am_blacklist_duration_min', 'am_blacklist_channel', 'am_blacklist_title', 'am_blacklist_color', 'am_blacklist_footer', 'am_exempt_roles', 'am_exempt_channels', 'am_exempt_users', 'am_warn_text', 'am_timeout_min', 'am_warn_limit', 'am_warn_action', 'am_warn_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'lang', 'timezone'];
+    const cols = ['prefix', 'warn_limit', 'warn_action', 'warn_timeout_limit', 'warn_timeout_min', 'starboard_channel', 'starboard_min', 'live_channel', 'live_ping', 'ticket_log_channel', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_mode', 'am_rule_actions', 'am_blacklist_rules', 'am_blacklist_thresholds', 'am_blacklist_duration_min', 'am_blacklist_channel', 'am_blacklist_title', 'am_blacklist_color', 'am_blacklist_footer', 'am_native_enabled', 'am_native_alert_channel', 'am_exempt_roles', 'am_exempt_channels', 'am_exempt_users', 'am_warn_text', 'am_timeout_min', 'am_warn_limit', 'am_warn_action', 'am_warn_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'lang', 'timezone'];
     const vals = {
       bot_id: botId, guild_id: guildId,
       prefix: String(next.prefix || '').slice(0, 5),
@@ -921,6 +940,8 @@ const guildSettings = {
       am_blacklist_title: String(next.am_blacklist_title || '🚫 Membre ajouté à la blacklist').slice(0, 120),
       am_blacklist_color: /^#[0-9a-fA-F]{6}$/.test(String(next.am_blacklist_color || '')) ? String(next.am_blacklist_color) : '#ED4245',
       am_blacklist_footer: String(next.am_blacklist_footer || 'Blacklist du serveur · Nexora').slice(0, 200),
+      am_native_enabled: next.am_native_enabled === 0 || next.am_native_enabled === false ? 0 : 1,
+      am_native_alert_channel: String(next.am_native_alert_channel || '').slice(0, 100),
       am_exempt_roles: typeof next.am_exempt_roles === 'string'
         ? next.am_exempt_roles.slice(0, 4000)
         : JSON.stringify(Array.isArray(next.am_exempt_roles) ? next.am_exempt_roles : []),
@@ -1262,6 +1283,23 @@ const memberBlacklistCounters = {
   resetUser: (botId, guildId, userId) => db.prepare(`DELETE FROM automod_blacklist_counters
     WHERE bot_id = ? AND guild_id = ? AND user_id = ?`)
     .run(botId, String(guildId), String(userId)),
+};
+
+// ---------------------- Règles Auto-Mod officielles Discord ----------------------
+const nativeAutomodRules = {
+  all: (botId, guildId) => db.prepare(`SELECT * FROM native_automod_rules
+    WHERE bot_id = ? AND guild_id = ? ORDER BY rule_key`).all(botId, String(guildId)),
+  get: (botId, guildId, ruleKey) => db.prepare(`SELECT * FROM native_automod_rules
+    WHERE bot_id = ? AND guild_id = ? AND rule_key = ?`).get(botId, String(guildId), String(ruleKey)) || null,
+  set: (botId, guildId, ruleKey, discordRuleId, enabled = true) => db.prepare(`INSERT INTO native_automod_rules
+    (bot_id, guild_id, rule_key, discord_rule_id, enabled, updated_at)
+    VALUES (?, ?, ?, ?, ?, datetime('now'))
+    ON CONFLICT(bot_id, guild_id, rule_key) DO UPDATE SET discord_rule_id = excluded.discord_rule_id, enabled = excluded.enabled, updated_at = datetime('now')`)
+    .run(botId, String(guildId), String(ruleKey), String(discordRuleId), enabled ? 1 : 0),
+  setEnabled: (botId, guildId, ruleKey, enabled) => db.prepare(`UPDATE native_automod_rules
+    SET enabled = ?, updated_at = datetime('now') WHERE bot_id = ? AND guild_id = ? AND rule_key = ?`)
+    .run(enabled ? 1 : 0, botId, String(guildId), String(ruleKey)),
+  remove: (botId, guildId, ruleKey) => db.prepare('DELETE FROM native_automod_rules WHERE bot_id = ? AND guild_id = ? AND rule_key = ?').run(botId, String(guildId), String(ruleKey)),
 };
 
 // ---------------------- Journal d'auto-modération ----------------------
@@ -1713,4 +1751,4 @@ const liveSocials = {
   count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM live_socials WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
 };
 
-module.exports = { db, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, memberBlacklist, memberBlacklistCounters, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories };
+module.exports = { db, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories };

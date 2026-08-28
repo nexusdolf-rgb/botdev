@@ -1883,6 +1883,14 @@ Dashboard.renderers.moderation = async (content, data) => {
   const blacklistDuration = Math.min(Math.max(parseInt(s.am_blacklist_duration_min, 10) || 0, 0), 525600);
   const blacklistDurations = [[0, '♾️ Permanente'], [60, '1 heure'], [360, '6 heures'], [1440, '24 heures'], [4320, '3 jours'], [10080, '7 jours'], [43200, '30 jours'], [525600, '365 jours']];
   const blacklistDurationOptions = blacklistDurations.map(([value, label]) => `<option value="${value}" ${blacklistDuration === value ? 'selected' : ''}>${label}</option>`);
+  const nativeAlertChannel = String(s.am_native_alert_channel || '').trim();
+  const nativeChannelOptions = [
+    '<option value="">— Utiliser le salon de logs ou blacklist —</option>',
+    ...channelList.map((channel) => `<option value="${App.escapeHtml(channel.id)}" ${Dashboard.discordRefMatches(nativeAlertChannel, channel) ? 'selected' : ''}>💬 #${App.escapeHtml(channel.name)}</option>`),
+  ];
+  if (nativeAlertChannel && !channelList.some((channel) => Dashboard.discordRefMatches(nativeAlertChannel, channel))) {
+    nativeChannelOptions.push(Dashboard.currentDiscordOption(nativeAlertChannel, channelList, '⚠️', 'configuration actuelle — salon introuvable'));
+  }
   const blacklistData = blacklist.map((word) => ({ word: String(word || '') }));
   const memberBlacklistData = Array.isArray(data.automod_blacklist) ? data.automod_blacklist : [];
 
@@ -2017,6 +2025,8 @@ Dashboard.renderers.moderation = async (content, data) => {
       blacklist_title: c.querySelector('#am-blacklist-title').value,
       blacklist_color: /^#[0-9a-fA-F]{6}$/.test(c.querySelector('#am-blacklist-color-text').value.trim()) ? c.querySelector('#am-blacklist-color-text').value.trim() : '#ED4245',
       blacklist_footer: c.querySelector('#am-blacklist-footer').value,
+      native_enabled: document.querySelector('#am-native-on') ? document.querySelector('#am-native-on').checked : (s.am_native_enabled !== 0),
+      native_alert_channel: document.querySelector('#am-native-channel') ? document.querySelector('#am-native-channel').value : nativeAlertChannel,
       exempt_roles: [...selectedExemptRoles],
       exempt_channels: [...selectedExemptChannels],
       exempt_users: [...selectedExemptUsers],
@@ -2047,6 +2057,39 @@ Dashboard.renderers.moderation = async (content, data) => {
     try { localStorage.removeItem(draftKey); } catch {}
     App.toast('Configuration publiée restaurée.');
     Dashboard.renderers.moderation(content, data);
+  };
+
+  // ☁️ Miroir officiel Discord : les règles natives restent en alerte
+  // uniquement ; les sanctions avancées continuent d’être appliquées par Nexora.
+  const cNative = Dashboard.card(root, '☁️ Auto-Mod officiel Discord', 'Nexora peut synchroniser des règles Auto-Mod officielles pour obtenir le badge « Uses AutoMod » quand Discord atteint son seuil. Aucun doublon de sanction : les règles natives sont en mode alerte.');
+  cNative.classList.add('am-native-card');
+  cNative.innerHTML += `
+    <div class="am-native-hero"><div class="am-native-copy"><span class="am-native-icon">☁️</span><div><b>Miroir officiel actif</b><small>Discord reçoit de vraies règles liées à ta configuration, sans remplacer le système Nexora.</small></div></div><label class="am-native-toggle"><span>Activer</span><input type="checkbox" id="am-native-on" ${s.am_native_enabled !== 0 ? 'checked' : ''} /><i></i></label></div>
+    <div class="am-native-grid"><div><label class="dash-label">Salon des alertes Auto-Mod officielles</label><select class="dash-select" id="am-native-channel">${nativeChannelOptions.join('')}</select><small class="am-help">Choisis un salon ou laisse Nexora utiliser le salon de logs/blacklist. Les alertes natives ne sanctionnent pas deux fois.</small></div><div class="am-native-status" id="am-native-status"><span class="am-native-status-dot"></span><div><b>Lecture des règles Discord…</b><small>Vérification en cours</small></div></div></div>
+    <div class="am-native-actions"><span class="am-help">Le badge officiel apparaît uniquement selon les règles et le seuil définis par Discord.</span><button class="dash-btn dash-btn-primary" id="am-native-sync">☁️ Synchroniser avec Discord</button></div>`;
+  const nativeStatusBox = cNative.querySelector('#am-native-status');
+  const renderNativeStatus = async () => {
+    try {
+      const nativeStatus = await App.api(`/bots/${bot.id}/guilds/${guildId}/automod/native`);
+      const count = Number(nativeStatus.nativeRules) || 0;
+      nativeStatusBox.innerHTML = nativeStatus.badgeEligible
+        ? `<span class="am-native-status-dot is-ok"></span><div><b>✅ Seuil Auto-Mod atteint</b><small>${count} règle(s) native(s) détectée(s) par Discord.</small></div>`
+        : `<span class="am-native-status-dot ${nativeStatus.ok ? '' : 'is-warn'}"></span><div><b>${nativeStatus.ok ? `☁️ ${count} règle(s) native(s) active(s)` : '⚠️ Synchronisation à vérifier'}</b><small>${nativeStatus.ok ? `${Math.max(0, 100 - count)} règle(s) native(s) manquante(s) pour le seuil indicatif.` : App.escapeHtml(nativeStatus.error || 'Choisis un salon d’alerte et synchronise.')}</small></div>`;
+    } catch (e) {
+      nativeStatusBox.innerHTML = `<span class="am-native-status-dot is-warn"></span><div><b>⚠️ API Discord indisponible</b><small>${App.escapeHtml(e.message)}</small></div>`;
+    }
+  };
+  renderNativeStatus();
+  cNative.querySelector('#am-native-sync').onclick = async () => {
+    const syncButton = cNative.querySelector('#am-native-sync');
+    syncButton.disabled = true; syncButton.textContent = '⏳ Synchronisation…';
+    try {
+      const result = await App.api(`/bots/${bot.id}/guilds/${guildId}/automod/native/sync`, { method: 'POST', body: { enabled: cNative.querySelector('#am-native-on').checked, alert_channel: cNative.querySelector('#am-native-channel').value } });
+      if (result.ok) App.toast(`☁️ Auto-Mod officiel synchronisé : ${result.created || 0} créée(s), ${result.updated || 0} mise(s) à jour.`);
+      else App.toast(result.error || 'Synchronisation Auto-Mod officielle impossible.', 'error');
+      renderNativeStatus();
+    } catch (e) { App.toast(e.message, 'error'); }
+    syncButton.disabled = false; syncButton.textContent = '☁️ Synchroniser avec Discord';
   };
 
   // 🚫 Membres actuellement blacklistés sur ce serveur.

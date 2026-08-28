@@ -40,6 +40,7 @@ function getGuildPerms(botId, guildId) {
     online: true,
     perms: {
       administrator: has(F.Administrator),
+      manageGuild: has(F.ManageGuild),
       manageMessages: has(F.ManageMessages),
       moderateMembers: has(F.ModerateMembers), // timeouts
       manageChannels: has(F.ManageChannels),
@@ -332,6 +333,13 @@ function attachListeners(botId, entry) {
       // du bot (les commandes par serveur ne suffisent pas pour le badge).
       try { await syncGlobalCommands(botId); }
       catch (e) { console.error(`[BotDev] sync globale (bot ${botId}):`, e.message); }
+      // ☁️ Miroir Auto-Mod officiel : uniquement si la configuration Nexora
+      // l’autorise. Les règles natives sont en mode alerte, donc aucune double
+      // sanction avec le moteur Nexora.
+      try {
+        const nativeAutomod = require('./nativeAutomod');
+        await nativeAutomod.syncAll(botId, client);
+      } catch (e) { console.error(`[BotDev] Auto-Mod officiel (bot ${botId}):`, e.message); }
       // Bio du bot : ajoute le lien vers BotDev
       applyBotAbout(botId, entry).catch(() => {});
       // 📨 Relevé initial des invitations de chaque serveur (traqueur)

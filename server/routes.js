@@ -651,6 +651,7 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
     am_enabled: 0, am_links: 1, am_caps: 1, am_mentions: 5, am_spam: 5,
     am_mode: 'enforce', am_rule_actions: '{}', am_blacklist_rules: '{}', am_blacklist_thresholds: '{}', am_blacklist_duration_min: 0, am_blacklist_channel: '',
     am_blacklist_title: '🚫 Membre ajouté à la blacklist', am_blacklist_color: '#ED4245', am_blacklist_footer: 'Blacklist du serveur · Nexora',
+    am_native_enabled: 1, am_native_alert_channel: '',
     am_exempt_roles: '[]', am_exempt_channels: '[]', am_exempt_users: '[]',
     am_warn_limit: 2, am_warn_action: 'timeout', am_warn_timeout_min: 10,
     log_channel: '',
@@ -932,6 +933,8 @@ router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) =>
   if (body.blacklist_title !== undefined) advancedFields.am_blacklist_title = String(body.blacklist_title || '🚫 Membre ajouté à la blacklist').slice(0, 120);
   if (body.blacklist_color !== undefined) advancedFields.am_blacklist_color = /^#[0-9a-fA-F]{6}$/.test(String(body.blacklist_color || '')) ? String(body.blacklist_color) : '#ED4245';
   if (body.blacklist_footer !== undefined) advancedFields.am_blacklist_footer = String(body.blacklist_footer || 'Blacklist du serveur · Nexora').slice(0, 200);
+  if (body.native_enabled !== undefined) advancedFields.am_native_enabled = body.native_enabled ? 1 : 0;
+  if (body.native_alert_channel !== undefined) advancedFields.am_native_alert_channel = String(body.native_alert_channel || '').slice(0, 100);
   if (body.exempt_roles !== undefined) advancedFields.am_exempt_roles = JSON.stringify(normalizeAutomodList(body.exempt_roles, 50, 30));
   if (body.exempt_channels !== undefined) advancedFields.am_exempt_channels = JSON.stringify(normalizeAutomodList(body.exempt_channels, 100, 100));
   if (body.exempt_users !== undefined) advancedFields.am_exempt_users = JSON.stringify(normalizeAutomodUsers(body.exempt_users));
@@ -955,7 +958,17 @@ router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) =>
     for (const w of existing) if (!words.includes(w)) store.blacklist.remove(bot.id, guildId, w);
     for (const w of words) store.blacklist.add(bot.id, guildId, w);
   }
-  res.json({ ok: true });
+  let native = null;
+  if (body.native_enabled !== undefined || body.native_alert_channel !== undefined) {
+    try {
+      const entry = botManager.clients.get(bot.id);
+      const guild = entry && entry.client.isReady() ? entry.client.guilds.cache.get(guildId) : null;
+      native = guild
+        ? await require('./discord/nativeAutomod').syncGuild(bot.id, guild, { client: entry.client })
+        : { ok: false, error: 'Le bot est hors ligne ou absent de ce serveur.' };
+    } catch (e) { native = { ok: false, error: String(e.message || e).slice(0, 180) }; }
+  }
+  res.json({ ok: true, native });
 });
 
 // 📊 Centre de contrôle Auto-Mod : statistiques agrégées pour le dashboard.
@@ -965,6 +978,37 @@ router.get('/bots/:id/guilds/:guildId/automod/summary', requireAuth, async (req,
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   res.json(store.automodLogs.summary(bot.id, guildId));
+});
+
+// ☁️ Auto-Mod officiel Discord : état des règles natives créées par Nexora.
+router.get('/bots/:id/guilds/:guildId/automod/native', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const entry = botManager.clients.get(bot.id);
+  const guild = entry && entry.client.isReady() ? entry.client.guilds.cache.get(guildId) : null;
+  if (!guild) return res.status(503).json({ error: 'Le bot est hors ligne ou absent de ce serveur.' });
+  const nativeAutomod = require('./discord/nativeAutomod');
+  res.json(await nativeAutomod.status(bot.id, guild, entry.client));
+});
+
+router.post('/bots/:id/guilds/:guildId/automod/native/sync', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const body = req.body || {};
+  store.guildSettings.set(bot.id, guildId, {
+    ...(body.enabled !== undefined ? { am_native_enabled: body.enabled ? 1 : 0 } : {}),
+    ...(body.alert_channel !== undefined ? { am_native_alert_channel: String(body.alert_channel || '').slice(0, 100) } : {}),
+  });
+  const entry = botManager.clients.get(bot.id);
+  const guild = entry && entry.client.isReady() ? entry.client.guilds.cache.get(guildId) : null;
+  if (!guild) return res.status(503).json({ error: 'Le bot est hors ligne ou absent de ce serveur.' });
+  const nativeAutomod = require('./discord/nativeAutomod');
+  const result = await nativeAutomod.syncGuild(bot.id, guild, { client: entry.client });
+  res.status(result.ok ? 200 : 400).json(result);
 });
 
 // 🧪 Simulateur sans risque : analyse un texte avec les règles réelles,
@@ -2213,7 +2257,7 @@ const BOT_DATA_TABLES = [
   'commands', 'modules', 'events', 'guild_settings', 'xp', 'xp_roles', 'economy',
   'warnings', 'warning_counters', 'role_menus', 'tickets', 'bot_profiles',
   'shop_items', 'giveaways', 'suggestions', 'temp_roles', 'sanctions',
-  'blacklist_words', 'automod_logs', 'automod_member_blacklist', 'automod_blacklist_counters', 'automod_warning_messages', 'open_tickets',
+  'blacklist_words', 'automod_logs', 'automod_member_blacklist', 'automod_blacklist_counters', 'native_automod_rules', 'automod_warning_messages', 'open_tickets',
   'ticket_counters', 'ticket_ratings', 'closed_tickets', 'transcripts',
   'marriages', 'birthdays', 'reminders', 'cmd_stats', 'scheduled_messages',
   'custom_announcements', 'message_stats', 'join_stats', 'shop_purchases',

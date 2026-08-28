@@ -2495,3 +2495,56 @@ html.hx-light .adv-placement-notice b { color: #30405c; }
   .adv-placement-notice { padding: 10px; }
   .adv-category-help { font-size: 10px; }
 }
+
+/* ============================================================
+   NEXORA v6 — Auto-Mod officiel Discord
+   Miroir passif en alertes : le moteur Nexora garde les sanctions.
+   ============================================================ */
+.am-native-card {
+  border-color: rgba(112,130,255,.34) !important;
+  background:
+    radial-gradient(620px 220px at 100% 0%, rgba(112,130,255,.13), transparent 72%),
+    linear-gradient(145deg, rgba(255,255,255,.025), transparent 60%),
+    var(--d-card);
+}
+.am-native-hero { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:13px 14px; border:1px solid rgba(112,130,255,.26); border-radius:14px; background:rgba(112,130,255,.07); }
+.am-native-copy { display:flex; align-items:center; gap:10px; min-width:0; }
+.am-native-icon { display:inline-flex; align-items:center; justify-content:center; width:35px; height:35px; flex:0 0 35px; border-radius:11px; background:linear-gradient(145deg,rgba(112,130,255,.35),rgba(154,123,255,.2)); font-size:17px; }
+.am-native-copy > div { display:flex; flex-direction:column; gap:3px; min-width:0; }
+.am-native-copy b { color:#e9edff; font-size:13px; }
+.am-native-copy small { color:var(--d-dim); font-size:10.5px; line-height:1.4; }
+.am-native-toggle { position:relative; display:flex; align-items:center; gap:8px; flex:0 0 auto; color:var(--d-text); font-size:11px; font-weight:800; cursor:pointer; }
+.am-native-toggle input { position:absolute; width:1px; height:1px; opacity:0; }
+.am-native-toggle i { position:relative; width:47px; height:28px; display:inline-block; border:1px solid var(--d-border); border-radius:999px; background:#303a4d; transition:.18s; }
+.am-native-toggle i::after { content:''; position:absolute; top:4px; left:4px; width:18px; height:18px; border-radius:50%; background:#c8cfdd; box-shadow:0 2px 7px rgba(0,0,0,.35); transition:.18s; }
+.am-native-toggle input:checked + i { border-color:rgba(132,143,255,.65); background:linear-gradient(135deg,#6478ff,#946fff); box-shadow:0 0 15px -4px var(--d-glow); }
+.am-native-toggle input:checked + i::after { transform:translateX(19px); background:#fff; }
+.am-native-toggle input:focus-visible + i { outline:3px solid rgba(132,143,255,.3); outline-offset:2px; }
+.am-native-grid { display:grid; grid-template-columns:minmax(220px,1fr) minmax(230px,.9fr); gap:13px; align-items:end; margin-top:13px; }
+.am-native-grid .dash-label { margin-top:0; }
+.am-native-status { display:flex; align-items:center; gap:9px; min-height:48px; padding:9px 11px; border:1px solid var(--d-border-soft); border-radius:12px; background:rgba(255,255,255,.025); }
+.am-native-status > div { display:flex; flex-direction:column; gap:3px; min-width:0; }
+.am-native-status b { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#dfe6f3; font-size:11.5px; }
+.am-native-status small { color:var(--d-dim); font-size:10.5px; line-height:1.35; }
+.am-native-status-dot { width:8px; height:8px; flex:0 0 8px; border-radius:50%; background:#8795aa; }
+.am-native-status-dot.is-ok { background:var(--d-green); box-shadow:0 0 0 4px rgba(73,209,125,.1),0 0 12px rgba(73,209,125,.45); }
+.am-native-status-dot.is-warn { background:var(--d-yellow); box-shadow:0 0 0 4px rgba(244,201,107,.1); }
+.am-native-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:13px; padding-top:12px; border-top:1px solid rgba(49,65,88,.6); }
+.am-native-actions .am-help { margin:0; max-width:620px; }
+.am-native-actions .dash-btn { flex:0 0 auto; }
+html.hx-light .am-native-card { background:radial-gradient(620px 220px at 100% 0%,rgba(86,103,217,.1),transparent 72%),#fff; border-color:#d5dded !important; }
+html.hx-light .am-native-hero { background:rgba(86,103,217,.055); border-color:#d5dded; }
+html.hx-light .am-native-copy b, html.hx-light .am-native-status b { color:#2d3a54; }
+html.hx-light .am-native-status { background:rgba(86,103,217,.025); border-color:#d9e1ef; }
+
+@media (max-width:900px) {
+  .am-native-hero { align-items:flex-start; flex-direction:column; }
+  .am-native-toggle { align-self:stretch; justify-content:space-between; }
+  .am-native-grid { grid-template-columns:1fr; gap:5px; }
+  .am-native-actions { align-items:stretch; flex-direction:column; }
+  .am-native-actions .dash-btn { width:100%; justify-content:center; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .am-native-toggle i, .am-native-toggle i::after { transition:none !important; }
+}
