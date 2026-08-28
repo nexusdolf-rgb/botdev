@@ -48,8 +48,10 @@ setTimeout(() => {
   check('BotViews défini', typeof BotViews === 'object');
   check('BLOCK_CATEGORIES', Array.isArray(BLOCK_CATEGORIES) && BLOCK_CATEGORIES.length === 4);
   check('Page publique rendue (landing)', !!document.querySelector('#public-landing'));
-  check('Stats publiques présentes', !!document.querySelector('#pub-stats'));
-  check('Section bots publiques', !!document.querySelector('#pub-bots'));
+  check('Hero façon DraftBot (mot rotatif)', !!document.querySelector('#dh-rot'));
+  check('Bouton Ajouter à Discord', !!document.querySelector('#pub-invite-hero'));
+  check('4 vitrines DraftBot', document.querySelectorAll('.dh-feature').length === 4);
+  check('Footer DraftBot', !!document.querySelector('.dh-footer-content'));
   App.renderConnect();
   check('Page connexion Discord rendue', !!document.querySelector('#connect-card'));
   check('Bouton « Se connecter avec Discord » présent', !!document.querySelector('#connect-discord'));

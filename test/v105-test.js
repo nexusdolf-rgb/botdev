@@ -15,14 +15,13 @@ assert.ok(pub.includes('IntersectionObserver') && pub.includes("typeof Intersect
 assert.ok(css.includes('.reveal.in'), 'style de révélation');
 console.log('✅ révélation au défilement avec dégradation propre');
 
-// 3. Compteurs animés
-assert.ok(pub.includes('const countUp') && pub.includes('requestAnimationFrame'), 'compteurs animés');
-console.log('✅ statistiques : chiffres qui montent');
+// 3. Animations vivantes (v166 : particules animées en canvas)
+assert.ok(pub.includes('requestAnimationFrame'), 'animation requestAnimationFrame');
+console.log('✅ particules animées en continu (canvas)');
 
-// 4. Maquette dashboard + section
-assert.ok(pub.includes('Un dashboard digne des plus grands') && pub.includes('pub-mock'), 'section maquette');
-assert.ok(css.includes('.mock-side') && css.includes('@keyframes mockFloat'), 'maquette CSS flottante');
-console.log('✅ maquette du dashboard dessinée en CSS (flottante)');
+// 4. Les 4 vitrines façon DraftBot
+assert.ok((pub.match(/class="dh-feature reveal"/g) || []).length === 4, '4 vitrines');
+console.log('✅ 4 vitrines façon DraftBot (Action Réaction, Niveaux, Modération, Stats)');
 
 // 5. Liens support + accessibilité mouvement
 assert.ok((pub.match(/discord\.gg\/X9hTdr9N3/g) || []).length >= 2, 'lien support (héros + footer)');
@@ -30,7 +29,7 @@ assert.ok(css.includes('prefers-reduced-motion'), 'respect des préférences de 
 console.log('✅ serveur support (héros + pied de page) + accessibilité');
 
 // 6. La page se rend toujours (smoke jsdom la couvre) — éléments clés intacts
-for (const k of ['pub-stats', 'pub-bots', 'pub-invite-hero', 'public-landing']) assert.ok(pub.includes(k), k + ' intact');
-console.log('✅ éléments essentiels intacts (stats, bots, boutons)');
+for (const k of ['dh-rot', 'dh-invite', 'pub-invite-hero', 'dh-footer-content', 'public-landing']) assert.ok(pub.includes(k), k + ' intact');
+console.log('✅ éléments essentiels intacts (hero, bouton, footer)');
 
 console.log('\n🎉 Tous les tests v2.8 passent');

@@ -54,13 +54,8 @@ assert(styleCss.includes('.dh-footer-item .item-title'), 'styles des titres du f
 // 5. Une seule définition de la landing + rotation câblée + nos sections conservées
 assert.strictEqual((pubJs.match(/App\.renderPublicLanding = /g) || []).length, 1, 'renderPublicLanding défini plusieurs fois');
 assert(pubJs.includes('rotWords'), 'rotation des mots non câblée');
-assert(pubJs.includes('Hoxera en direct'), 'section stats en direct manquante');
-assert((pubJs.match(/pub-feature /g) || []).length === 10, '10 cartes fonctionnalités attendues');
 assert(pubJs.includes('discord.gg/X9hTdr9N3'), 'lien support manquant');
 
-// 6. Version v165 déployée (cache PWA + assets)
-assert(!index.includes('?v=164'), 'index.html référence encore v164');
-assert.strictEqual((index.match(/\?v=165/g) || []).length, 7, 'index.html doit référencer v165 7 fois');
-assert(sw.includes("'botdev-v165'"), 'le cache du service worker n’est pas en v165');
+// 6. Version : gérée par le test de la version courante (v166)
 
-console.log('✅ v165 : interface publique clonée de draftbot.fr — couleurs, hero, 4 vitrines, footer');
+console.log('✅ v165 (conservé) : interface clonée de draftbot.fr — couleurs, hero, 4 vitrines, footer');
