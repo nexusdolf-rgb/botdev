@@ -2859,3 +2859,612 @@ html.hx-light .dash-table-wrap .dash-table thead th { background: #f7f9fd; }
 @media (prefers-reduced-motion: reduce) {
   .dash-side-brand-status, .dash-card[data-dash-card]:focus-within { transition: none !important; }
 }
+
+/* ============================================================
+   NEXORA v9.0 — Slate & Clay
+   Refonte visuelle inspirée des panels Discord modernes :
+   surfaces calmes, hiérarchie nette, accent argile et contrôles plats.
+   Les routes, données et identifiants des modules restent inchangés.
+   ============================================================ */
+:root {
+  --d-bg: #36393f;
+  --d-side: #2b2d31;
+  --d-card: #36393f;
+  --d-card2: #2b2d31;
+  --d-border: #202225;
+  --d-border-soft: #4f545c;
+  --d-border-strong: #72767d;
+  --d-text: #f2f3f5;
+  --d-dim: #b5bac1;
+  --d-accent: #e07a5f;
+  --d-accent2: #c95b49;
+  --d-green: #57f287;
+  --d-red: #ed4245;
+  --d-yellow: #faa61a;
+  --d-glow: rgba(224,122,95,.28);
+  --d-radius-card: 6px;
+  --d-radius-control: 4px;
+  --d-surface-1: #36393f;
+  --d-surface-2: #40444b;
+  --d-surface-3: #2b2d31;
+  --d-focus-ring: 0 0 0 2px rgba(224,122,95,.28);
+  --d-content-max: 1240px;
+  color-scheme: dark;
+}
+
+/* Le dashboard prend toute la largeur disponible, comme un vrai panel. */
+.bot-shell.dashboard-shell-host {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+body:has(.dashboard-shell-host),
+body:has(.dashboard-shell-host) #app {
+  background: #36393f;
+}
+body:has(.dashboard-shell-host) .navbar {
+  min-height: 58px;
+  padding: 8px 24px;
+  background: #2b2d31 !important;
+  border-bottom: 1px solid #202225;
+  box-shadow: none;
+}
+body:has(.dashboard-shell-host) .navbar .logo-row { color: #f2f3f5; }
+body:has(.dashboard-shell-host) .navbar .logo {
+  width: 34px;
+  height: 34px;
+  border: 2px solid #e07a5f;
+  border-radius: 50%;
+  background: #202225;
+  box-shadow: none;
+}
+body:has(.dashboard-shell-host) .navbar .btn {
+  min-height: 36px;
+  border-radius: 4px;
+  color: #f2f3f5;
+  background: transparent;
+  border-color: #4f545c;
+  box-shadow: none;
+}
+body:has(.dashboard-shell-host) .navbar .btn:hover { color: #fff; background: #40444b; border-color: #72767d; }
+body:has(.dashboard-shell-host) .navbar .btn-primary,
+body:has(.dashboard-shell-host) .navbar .btn-discord { background: #e07a5f !important; border-color: #e07a5f !important; }
+body:has(.dashboard-shell-host) .navbar .user-pill { color: #b5bac1; }
+body:has(.dashboard-shell-host) .navbar .chip { border-radius: 4px; }
+
+.dashboard-shell-host .dash-shell {
+  min-height: calc(100vh - 58px);
+  background: #36393f;
+}
+.dashboard-shell-host .dash-side {
+  width: 278px;
+  top: 58px;
+  height: calc(100vh - 58px);
+  padding: 20px 0 12px;
+  overflow-y: auto;
+  background: #2b2d31;
+  border-right: 1px solid #202225;
+  box-shadow: none;
+}
+.dashboard-shell-host .dash-side::before { display: none; }
+.dashboard-shell-host .dash-side > * { position: relative; z-index: 1; }
+
+/* Marque centrée et statuts discrets, à la manière d'un panel de bot. */
+.dashboard-shell-host .dash-side-brand {
+  position: relative;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  margin: 0 22px 18px;
+  padding: 0 0 18px;
+  text-align: center;
+  border-bottom: 1px solid #4f545c;
+}
+.dashboard-shell-host .dash-side-brand-avatar,
+.dashboard-shell-host .dash-side-brand-avatar.fallback {
+  width: 82px;
+  height: 82px;
+  flex-basis: 82px;
+  border-radius: 50%;
+  border: 2px solid #e07a5f;
+  background: #202225;
+  box-shadow: none;
+}
+.dashboard-shell-host .dash-side-brand-avatar.fallback { color: #f2f3f5; font-size: 30px; }
+.dashboard-shell-host .dash-side-brand-copy { align-items: center; max-width: 100%; }
+.dashboard-shell-host .dash-side-brand-copy b { color: #f2f3f5; font-size: 17px; }
+.dashboard-shell-host .dash-side-brand-copy span { margin-top: 2px; color: #b5bac1; font-size: 11px; letter-spacing: .15px; text-transform: none; }
+.dashboard-shell-host .dash-side-brand-status {
+  position: absolute;
+  top: 66px;
+  right: calc(50% - 42px);
+  width: 11px;
+  height: 11px;
+  margin: 0;
+  border: 2px solid #2b2d31;
+  background: #57f287;
+  box-shadow: none;
+}
+.dashboard-shell-host .dash-side-section {
+  padding: 14px 24px 7px;
+  color: #949ba4;
+  font-size: 10px;
+  letter-spacing: .7px;
+}
+.dashboard-shell-host .dash-side-item {
+  width: 100%;
+  min-height: 43px;
+  margin: 0;
+  padding: 9px 24px;
+  border: 0;
+  border-left: 3px solid transparent;
+  border-radius: 0;
+  color: #b5bac1;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  transition: background .14s ease, border-color .14s ease, color .14s ease;
+}
+.dashboard-shell-host .dash-side-item .ico {
+  width: 24px;
+  height: 24px;
+  border-radius: 0;
+  color: #dbdee1;
+  background: transparent;
+  font-size: 17px;
+}
+.dashboard-shell-host .dash-side-item:hover {
+  color: #fff;
+  background: #323438;
+  border-color: transparent;
+  border-left-color: #72767d;
+  transform: none;
+}
+.dashboard-shell-host .dash-side-item:hover .ico { background: transparent; transform: none; }
+.dashboard-shell-host .dash-side-item.active {
+  color: #e07a5f;
+  background: #323438;
+  border-color: transparent;
+  border-left-color: #e07a5f;
+  box-shadow: none;
+}
+.dashboard-shell-host .dash-side-item.active .ico { color: #e07a5f; background: transparent; }
+.dashboard-shell-host .dash-global-admin {
+  margin-top: 11px;
+  color: #e8b2a4;
+  background: rgba(224,122,95,.06);
+  border-top: 1px solid rgba(224,122,95,.18);
+  border-bottom: 1px solid rgba(224,122,95,.18);
+}
+.dashboard-shell-host .dash-global-admin:hover { color: #fff; background: rgba(224,122,95,.14); border-left-color: #e07a5f; }
+.dashboard-shell-host .dash-side-foot {
+  margin: auto 20px 0;
+  padding: 15px 4px 2px;
+  color: #949ba4;
+  border-top: 1px solid #4f545c;
+}
+.dashboard-shell-host .dash-side-foot img { border-radius: 50% !important; box-shadow: none !important; border: 1px solid #e07a5f; }
+
+/* Zone de travail : fond uni, largeur maîtrisée, zéro effet « vitrine IA ». */
+.dashboard-shell-host .dash-main {
+  min-width: 0;
+  padding: 24px 42px 72px;
+  background: #36393f;
+}
+.dashboard-shell-host #dash-content { max-width: var(--d-content-max); margin: 0 auto; }
+.dashboard-shell-host .dash-topbar {
+  min-height: 48px;
+  margin: 0 auto 24px;
+  padding: 0 0 12px;
+  border: 0;
+  border-bottom: 1px solid #4f545c;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.dashboard-shell-host .dash-crumb { gap: 10px; }
+.dashboard-shell-host .dash-crumb .crumb-ico {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  border: 1px solid #4f545c;
+  background: #40444b;
+  font-size: 16px;
+  box-shadow: none;
+}
+.dashboard-shell-host .dash-crumb .crumb-txt b { color: #f2f3f5; font-size: 14px; }
+.dashboard-shell-host .dash-crumb .crumb-txt span { color: #b5bac1; font-size: 11px; }
+.dashboard-shell-host .dash-topbar-actions { gap: 6px; }
+.dashboard-shell-host .dash-iconbtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 4px;
+  border: 1px solid #4f545c;
+  color: #b5bac1;
+  background: transparent;
+  box-shadow: none;
+}
+.dashboard-shell-host .dash-iconbtn:hover { color: #fff; background: #40444b; border-color: #72767d; transform: none; box-shadow: none; }
+.dashboard-shell-host .dash-bot-chip {
+  min-height: 36px;
+  padding: 3px 8px 3px 5px !important;
+  border: 1px solid #4f545c !important;
+  border-radius: 4px !important;
+  background: #2b2d31 !important;
+  box-shadow: none;
+}
+.dashboard-shell-host .dash-bot-chip img,
+.dashboard-shell-host .dash-bot-chip .chip-fallback {
+  width: 29px !important;
+  height: 29px !important;
+  border-radius: 50% !important;
+  border: 1px solid #e07a5f;
+  box-shadow: none;
+}
+.dashboard-shell-host .dash-bot-chip .chip-txt b { color: #f2f3f5; font-size: 12px; }
+.dashboard-shell-host .dash-bot-chip .chip-txt span { font-size: 10px; }
+
+/* Titres de modules : une ligne de séparation et un seul accent. */
+.dashboard-shell-host .dash-module-header {
+  min-height: 70px;
+  margin-bottom: 22px;
+  padding: 0 0 16px;
+  border-bottom: 1px solid #4f545c;
+  animation: slatePanelIn .18s ease both;
+}
+.dashboard-shell-host .dash-module-header::after {
+  left: 0;
+  bottom: -1px;
+  width: 92px;
+  height: 2px;
+  border-radius: 0;
+  background: #e07a5f;
+  opacity: 1;
+}
+.dashboard-shell-host .dash-module-header .m-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 0;
+  color: #e07a5f;
+  background: transparent;
+  box-shadow: none;
+  font-size: 23px;
+}
+.dashboard-shell-host .module-header-copy h1 {
+  color: #f2f3f5;
+  font-size: 23px;
+  letter-spacing: -.2px;
+}
+.dashboard-shell-host .module-header-copy .sub { color: #b5bac1; font-size: 12px; }
+.dashboard-shell-host .module-header-meta { gap: 6px; }
+.dashboard-shell-host .module-scope,
+.dashboard-shell-host .module-status {
+  min-height: 26px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border-color: #4f545c;
+  color: #b5bac1;
+  background: #40444b;
+  font-size: 10px;
+  box-shadow: none;
+}
+.dashboard-shell-host .module-status.is-online { color: #57f287; border-color: rgba(87,242,135,.35); background: rgba(87,242,135,.08); }
+.dashboard-shell-host .module-status.is-offline { color: #ed4245; border-color: rgba(237,66,69,.4); background: rgba(237,66,69,.08); }
+.dashboard-shell-host .module-scope-dot.is-online { background: #57f287; box-shadow: none; }
+.dashboard-shell-host .module-scope-dot.is-offline { background: #ed4245; box-shadow: none; }
+.dashboard-shell-host .module-back {
+  min-height: 34px;
+  padding: 6px 9px;
+  border-radius: 4px;
+  border-color: #4f545c;
+  color: #b5bac1;
+  background: transparent;
+  box-shadow: none;
+}
+.dashboard-shell-host .module-back:hover { color: #fff; background: #40444b; border-color: #e07a5f; transform: none; box-shadow: none; }
+
+/* Cartes et surfaces : rectangles sobres, espacés comme des panneaux de réglages. */
+.dashboard-shell-host .dash-card,
+.dashboard-shell-host .dash-card[data-dash-card] {
+  margin-bottom: 16px;
+  padding: 20px 22px;
+  border: 1px solid #4f545c;
+  border-radius: 6px;
+  background: #36393f !important;
+  box-shadow: none !important;
+  transition: border-color .14s ease, background .14s ease;
+}
+.dashboard-shell-host .dash-card[data-dash-card]::after,
+.dashboard-shell-host .dash-stat::before,
+.dashboard-shell-host .dash-stat::after { display: none !important; }
+.dashboard-shell-host .dash-card:hover,
+.dashboard-shell-host .dash-card[data-dash-card]:hover {
+  border-color: #72767d;
+  box-shadow: none !important;
+  transform: none;
+}
+.dashboard-shell-host .dash-card[data-dash-card] .card-head {
+  min-height: 0;
+  margin-bottom: 18px;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.dashboard-shell-host .dash-card h3,
+.dashboard-shell-host .dash-card[data-dash-card] .card-heading h3 { color: #f2f3f5; font-size: 16px; letter-spacing: 0; }
+.dashboard-shell-host .dash-card .desc,
+.dashboard-shell-host .dash-card[data-dash-card] .card-heading .desc { color: #b5bac1; line-height: 1.5; }
+.dashboard-shell-host .dash-card[data-dash-card] .dash-label { color: #b5bac1; }
+.dashboard-shell-host .dash-grid { gap: 14px; }
+.dashboard-shell-host .dash-stats { gap: 10px; }
+.dashboard-shell-host .dash-stat {
+  min-height: 92px;
+  padding: 14px 16px;
+  border-radius: 5px;
+  border: 1px solid #4f545c;
+  border-left: 3px solid #e07a5f;
+  background: #40444b !important;
+  box-shadow: none !important;
+}
+.dashboard-shell-host .dash-stat .val {
+  color: #f2f3f5 !important;
+  background: none !important;
+  -webkit-text-fill-color: #f2f3f5 !important;
+  font-size: 23px;
+}
+.dashboard-shell-host .dash-stat .lbl { color: #b5bac1; }
+
+/* Champs et boutons : mêmes dimensions, même bordure, même accent. */
+.dashboard-shell-host .dash-input,
+.dashboard-shell-host .dash-select,
+.dashboard-shell-host textarea.dash-input {
+  min-height: 42px;
+  border: 1px solid #202225 !important;
+  border-radius: 4px !important;
+  color: #f2f3f5 !important;
+  background: #2b2d31 !important;
+  box-shadow: none !important;
+  transition: border-color .14s ease, background .14s ease;
+}
+.dashboard-shell-host .dash-input:hover,
+.dashboard-shell-host .dash-select:hover { border-color: #72767d !important; background: #323438 !important; }
+.dashboard-shell-host .dash-input:focus,
+.dashboard-shell-host .dash-select:focus,
+.dashboard-shell-host textarea.dash-input:focus {
+  border-color: #e07a5f !important;
+  background: #2b2d31 !important;
+  box-shadow: 0 0 0 2px rgba(224,122,95,.22) !important;
+}
+.dashboard-shell-host .dash-input::placeholder { color: #949ba4; }
+.dashboard-shell-host .dash-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23b5bac1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 12px center !important;
+  background-size: 14px !important;
+}
+.dashboard-shell-host .dash-select option { color: #f2f3f5; background: #2b2d31; }
+.dashboard-shell-host .dash-btn {
+  min-height: 38px;
+  padding: 8px 14px;
+  border: 1px solid #4f545c !important;
+  border-radius: 4px !important;
+  color: #f2f3f5;
+  background: #4f545c !important;
+  box-shadow: none !important;
+  transform: none !important;
+  transition: background .14s ease, border-color .14s ease, color .14s ease;
+}
+.dashboard-shell-host .dash-btn::before { display: none !important; }
+.dashboard-shell-host .dash-btn:hover {
+  color: #fff;
+  background: #5b626a !important;
+  border-color: #72767d !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+.dashboard-shell-host .dash-btn:active { transform: none !important; }
+.dashboard-shell-host .dash-btn-primary {
+  color: #fff !important;
+  background: #e07a5f !important;
+  border-color: #e07a5f !important;
+  box-shadow: none !important;
+}
+.dashboard-shell-host .dash-btn-primary:hover { background: #eb8b70 !important; border-color: #eb8b70 !important; filter: none; }
+.dashboard-shell-host .dash-btn-danger { color: #ffb3b7; background: rgba(237,66,69,.12) !important; border-color: rgba(237,66,69,.55) !important; }
+.dashboard-shell-host .dash-btn-danger:hover { background: rgba(237,66,69,.22) !important; border-color: #ed4245 !important; }
+.dashboard-shell-host .dash-btn-sm { min-height: 34px; padding: 6px 11px; }
+.dashboard-shell-host .hx-ripple { display: none !important; }
+
+/* Interrupteurs et badges de statut. */
+.dashboard-shell-host .switch .slider,
+.dashboard-shell-host .am-main-toggle i,
+.dashboard-shell-host .am-native-toggle i { background: #202225 !important; border-color: #4f545c !important; box-shadow: none !important; }
+.dashboard-shell-host .switch input:checked + .slider,
+.dashboard-shell-host .am-main-toggle input:checked + i,
+.dashboard-shell-host .am-native-toggle input:checked + i { background: #e07a5f !important; border-color: #e07a5f !important; box-shadow: none !important; }
+.dashboard-shell-host .dash-badge { border-radius: 4px; background: #40444b; border-color: #4f545c; color: #b5bac1; }
+.dashboard-shell-host .dash-badge.ok { color: #57f287; border-color: rgba(87,242,135,.45); background: rgba(87,242,135,.08); }
+.dashboard-shell-host .dash-badge.warn { color: #faa61a; border-color: rgba(250,166,26,.45); background: rgba(250,166,26,.08); }
+.dashboard-shell-host .dash-badge.bad { color: #ed4245; border-color: rgba(237,66,69,.5); background: rgba(237,66,69,.08); }
+
+/* Vue d'ensemble : accueil clair et utile, sans cartes flottantes excessives. */
+.dashboard-shell-host .ov-intro,
+.dashboard-shell-host .dash-hero {
+  margin-bottom: 16px;
+  padding: 22px;
+  border: 1px solid #4f545c;
+  border-radius: 6px;
+  background: #40444b !important;
+  box-shadow: none !important;
+}
+.dashboard-shell-host .ov-server-avatar { border-radius: 50%; border: 2px solid #e07a5f; background: #2b2d31; box-shadow: none; }
+.dashboard-shell-host .ov-intro-copy h2 { color: #f2f3f5; }
+.dashboard-shell-host .ov-intro-copy p { color: #b5bac1; }
+.dashboard-shell-host .ov-intro-health { border-radius: 4px; background: rgba(87,242,135,.08); border-color: rgba(87,242,135,.45); box-shadow: none; }
+.dashboard-shell-host .ov-quick-actions { margin-bottom: 16px; padding: 7px; border: 1px solid #4f545c; border-radius: 5px; background: #2b2d31; box-shadow: none; }
+.dashboard-shell-host .ov-quick-label { color: #b5bac1; }
+.dashboard-shell-host .ov-quick-action { min-height: 36px; border: 1px solid #4f545c; border-radius: 4px; color: #f2f3f5; background: #40444b; box-shadow: none; }
+.dashboard-shell-host .ov-quick-action:hover { color: #fff; border-color: #e07a5f; background: #4f545c; transform: none; }
+.dashboard-shell-host .ov-quick-action i { color: #e07a5f; }
+.dashboard-shell-host .ov-progress-track { background: #202225; box-shadow: none; }
+.dashboard-shell-host .ov-progress-value { background: #e07a5f; box-shadow: none; }
+.dashboard-shell-host .ov-module-card { background: #40444b !important; }
+.dashboard-shell-host .ov-module-icon { border: 0; border-radius: 4px; background: #2b2d31; }
+.dashboard-shell-host .ov-module-card > .dash-btn { background: #4f545c !important; }
+
+/* Règles et éditeurs spécialisés gardent la même surface neutre. */
+.dashboard-shell-host .am-control-card,
+.dashboard-shell-host .am-exceptions-card,
+.dashboard-shell-host .am-summary-card,
+.dashboard-shell-host .am-simulator-card,
+.dashboard-shell-host .custom-announcement-card,
+.dashboard-shell-host .adv-builder-card { background: #36393f !important; border-color: #4f545c; box-shadow: none; }
+.dashboard-shell-host .am-control-hero,
+.dashboard-shell-host .am-mode-row,
+.dashboard-shell-host .am-policy-row,
+.dashboard-shell-host .am-warning-panel,
+.dashboard-shell-host .am-blacklist-config,
+.dashboard-shell-host .am-native-card,
+.dashboard-shell-host .adv-types-panel,
+.dashboard-shell-host .adv-preview-shell,
+.dashboard-shell-host .ca-preview-wrap {
+  border-color: #4f545c;
+  border-radius: 5px;
+  background: #40444b !important;
+  box-shadow: none;
+}
+.dashboard-shell-host .am-rule-card,
+.dashboard-shell-host .adv-type-card { border-color: #4f545c; border-radius: 5px; background: #2b2d31 !important; box-shadow: none; }
+.dashboard-shell-host .am-rule-card:hover,
+.dashboard-shell-host .adv-type-card:hover { border-color: #72767d; transform: none; box-shadow: none; }
+.dashboard-shell-host .am-rule-icon,
+.dashboard-shell-host .am-shield-icon,
+.dashboard-shell-host .ov-stat-icon { background: #2b2d31; border-color: #4f545c; box-shadow: none; }
+.dashboard-shell-host .am-choice,
+.dashboard-shell-host .ca-choice,
+.dashboard-shell-host .discord-multi-choice { border-radius: 4px; background: #2b2d31; box-shadow: none; }
+.dashboard-shell-host .am-choice.selected,
+.dashboard-shell-host .ca-choice.selected { border-color: #e07a5f; color: #f2f3f5; background: rgba(224,122,95,.14); box-shadow: none; }
+.dashboard-shell-host .discord-multi-choice.selected { border-color: #e07a5f; background: rgba(224,122,95,.14); }
+.dashboard-shell-host .discord-multi-select { background-color: #2b2d31 !important; }
+.dashboard-shell-host .discord-multi-remove { border-radius: 3px; background: #4f545c; }
+.dashboard-shell-host .discord-multi-remove:hover { background: #ed4245; }
+
+/* Tableaux, modales, palette et aperçus : même vocabulaire de surfaces. */
+.dashboard-shell-host .dash-table th { color: #b5bac1; background: #2b2d31; }
+.dashboard-shell-host .dash-table td { border-bottom-color: #4f545c; }
+.dashboard-shell-host .dash-table tbody tr:hover td { background: rgba(224,122,95,.07); }
+body:has(.dashboard-shell-host) .modal,
+body:has(.dashboard-shell-host) .dash-palette,
+body:has(.dashboard-shell-host) .dash-bell-pop,
+body:has(.dashboard-shell-host) .dash-accent-pop {
+  border: 1px solid #4f545c;
+  border-radius: 6px;
+  background: #36393f;
+  box-shadow: 0 12px 28px rgba(0,0,0,.35);
+}
+body:has(.dashboard-shell-host) .modal-header,
+body:has(.dashboard-shell-host) .modal-footer { border-color: #4f545c; background: #36393f; }
+body:has(.dashboard-shell-host) .modal .btn {
+  min-height: 38px;
+  border-radius: 4px;
+  border-color: #4f545c;
+  background: #4f545c;
+  box-shadow: none;
+}
+body:has(.dashboard-shell-host) .modal .btn-primary { background: #e07a5f; border-color: #e07a5f; }
+.dashboard-shell-host .dash-savebar { border-radius: 5px; background: #2b2d31; border-color: #e07a5f; box-shadow: 0 8px 20px rgba(0,0,0,.35); }
+.dashboard-shell-host .dash-savebar .sb-txt { color: #f0b29f; }
+.dashboard-shell-host .dc-preview,
+.dashboard-shell-host .adv-discord-preview,
+.dashboard-shell-host .ca-discord-preview { border-radius: 5px; box-shadow: none; }
+
+@keyframes slatePanelIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.dashboard-shell-host #dash-content > * { animation: slatePanelIn .18s ease both; }
+.dashboard-shell-host .dash-card,
+.dashboard-shell-host .dash-btn,
+.dashboard-shell-host .dash-iconbtn,
+.dashboard-shell-host .ov-quick-action { transition-duration: .14s; }
+
+/* Mode clair : déclinaison claire du même système, sans réintroduire les gradients. */
+html.hx-light {
+  --d-bg: #f2f3f5;
+  --d-side: #e3e5e8;
+  --d-card: #f2f3f5;
+  --d-card2: #fff;
+  --d-border: #c7c9cc;
+  --d-border-soft: #b5bac1;
+  --d-text: #2e3338;
+  --d-dim: #5c636b;
+  --d-accent: #c85f49;
+  --d-accent2: #a94838;
+  --d-glow: rgba(200,95,73,.24);
+}
+html.hx-light body:has(.dashboard-shell-host),
+html.hx-light body:has(.dashboard-shell-host) #app,
+html.hx-light .dashboard-shell-host .dash-shell,
+html.hx-light .dashboard-shell-host .dash-main { background: #f2f3f5; }
+html.hx-light body:has(.dashboard-shell-host) .navbar,
+html.hx-light .dashboard-shell-host .dash-side { background: #e3e5e8 !important; border-color: #c7c9cc; }
+html.hx-light .dashboard-shell-host .dash-side-brand { border-color: #b5bac1; }
+html.hx-light .dashboard-shell-host .dash-side-brand-status { border-color: #e3e5e8; }
+html.hx-light .dashboard-shell-host .dash-side-item { color: #5c636b; }
+html.hx-light .dashboard-shell-host .dash-side-item:hover,
+html.hx-light .dashboard-shell-host .dash-side-item.active { color: #a94838; background: #d8dade; }
+html.hx-light .dashboard-shell-host .dash-card,
+html.hx-light .dashboard-shell-host .dash-card[data-dash-card] { background: #f2f3f5 !important; border-color: #b5bac1; }
+html.hx-light .dashboard-shell-host .dash-stat,
+html.hx-light .dashboard-shell-host .ov-intro,
+html.hx-light .dashboard-shell-host .dash-hero,
+html.hx-light .dashboard-shell-host .ov-module-card { background: #fff !important; border-color: #c7c9cc; }
+html.hx-light .dashboard-shell-host .dash-input,
+html.hx-light .dashboard-shell-host .dash-select,
+html.hx-light .dashboard-shell-host textarea.dash-input { color: #2e3338 !important; background: #fff !important; border-color: #b5bac1 !important; }
+html.hx-light .dashboard-shell-host .dash-btn { color: #2e3338; background: #e3e5e8 !important; border-color: #b5bac1 !important; }
+html.hx-light .dashboard-shell-host .dash-btn-primary { color: #fff !important; background: #c85f49 !important; border-color: #c85f49 !important; }
+html.hx-light .dashboard-shell-host .dash-select option { color: #2e3338; background: #fff; }
+
+@media (max-width: 1200px) {
+  .dashboard-shell-host .dash-main { padding-left: 28px; padding-right: 28px; }
+  .dashboard-shell-host .dash-side { width: 258px; }
+}
+@media (max-width: 900px) {
+  body:has(.dashboard-shell-host) .navbar { padding: 7px 12px; }
+  .dashboard-shell-host .dash-main { padding: 12px 12px calc(104px + env(safe-area-inset-bottom)); }
+  .dashboard-shell-host .dash-topbar {
+    margin: 0 -12px 18px;
+    padding: calc(8px + env(safe-area-inset-top)) 12px 10px;
+    border-bottom: 1px solid #4f545c;
+    background: #2b2d31;
+  }
+  .dashboard-shell-host .dash-topbar-actions { gap: 5px; }
+  .dashboard-shell-host .dash-topbar-actions .dash-iconbtn { width: 38px; min-width: 38px; height: 38px; }
+  .dashboard-shell-host .dash-module-header { min-height: 64px; margin-bottom: 17px; padding-bottom: 13px; }
+  .dashboard-shell-host .dash-module-header .m-icon { width: 36px; height: 36px; font-size: 20px; }
+  .dashboard-shell-host .module-header-copy h1 { font-size: 19px; }
+  .dashboard-shell-host .dash-card,
+  .dashboard-shell-host .dash-card[data-dash-card] { padding: 17px 15px; border-radius: 5px; }
+  .dashboard-shell-host .dash-btn { min-height: 42px; }
+  .dashboard-shell-host .dash-stat { min-height: 86px; padding: 13px; }
+  .dashboard-shell-host .ov-intro,
+  .dashboard-shell-host .dash-hero { padding: 16px; }
+  .dashboard-shell-host .dash-savebar { bottom: calc(86px + env(safe-area-inset-bottom)); }
+}
+@media (max-width: 520px) {
+  .dashboard-shell-host .dash-main { padding-left: 10px; padding-right: 10px; }
+  .dashboard-shell-host .dash-topbar { margin-left: -10px; margin-right: -10px; padding-left: 10px; padding-right: 10px; }
+  .dashboard-shell-host .dash-module-header h1 { font-size: 17px; }
+  .dashboard-shell-host .dash-module-header .sub { font-size: 11px; }
+  .dashboard-shell-host .dash-card,
+  .dashboard-shell-host .dash-card[data-dash-card] { padding: 16px 13px; }
+  .dashboard-shell-host .module-status { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-shell-host #dash-content > *,
+  .dashboard-shell-host .dash-card,
+  .dashboard-shell-host .dash-btn,
+  .dashboard-shell-host .dash-iconbtn { animation: none !important; transition: none !important; }
+}

@@ -134,6 +134,7 @@ Dashboard.renderDiscordMultiSelect = (host, {
 
 // ---------------------- Shell ----------------------
 Dashboard.mount = async (shell, bot) => {
+  shell.classList.add('dashboard-shell-host');
   Dashboard.state.bot = bot;
   Dashboard.state.shell = shell;
   Dashboard.state.guildId = null;
@@ -481,12 +482,12 @@ if (!window.__hxPaletteKey) {
 
 // ---------------------- 🎨 Accent personnalisable ----------------------
 Dashboard.ACCENTS = [
-  ['Blurple', '#5865F2', '#8B5CF6'],
-  ['Océan', '#3B82F6', '#06B6D4'],
-  ['Émeraude', '#10B981', '#34D399'],
-  ['Sunset', '#F59E0B', '#EF4444'],
-  ['Rose', '#EC4899', '#8B5CF6'],
-  ['Rouge', '#EF4444', '#F97316'],
+  ['Argile', '#E07A5F', '#C95B49'],
+  ['Océan', '#3B82F6', '#1677B7'],
+  ['Sauge', '#57A773', '#2D8A68'],
+  ['Moutarde', '#D99A32', '#B96D2E'],
+  ['Prune', '#9B6BB3', '#70458E'],
+  ['Rouge', '#D95459', '#A93642'],
 ];
 Dashboard.applyAccent = (name) => {
   const acc = Dashboard.ACCENTS.find((a) => a[0] === name) || Dashboard.ACCENTS[0];
@@ -494,9 +495,19 @@ Dashboard.applyAccent = (name) => {
   r.style.setProperty('--d-accent', acc[1]);
   r.style.setProperty('--d-accent2', acc[2]);
   r.style.setProperty('--d-glow', acc[1] + '59');
-  try { localStorage.setItem('hx-accent', acc[0]); } catch {}
+  try {
+    localStorage.setItem('hx-accent', acc[0]);
+    localStorage.setItem('hx-accent-v2', acc[0]);
+  } catch {}
 };
-try { Dashboard.applyAccent(localStorage.getItem('hx-accent') || 'Blurple'); } catch {}
+// La nouvelle direction visuelle démarre en Argile. L'ancien choix Blurple
+// ne doit pas réinjecter automatiquement l'ancienne palette violette ; les
+// choix faits depuis cette version restent ensuite mémorisés.
+try {
+  const legacyAccent = localStorage.getItem('hx-accent');
+  const savedAccent = localStorage.getItem('hx-accent-v2') || (legacyAccent && legacyAccent !== 'Blurple' ? legacyAccent : 'Argile');
+  Dashboard.applyAccent(savedAccent);
+} catch {}
 
 // 🎨/🔔 Popovers : un clic sur l'icône ouvre, un second clic ou un clic
 // ailleurs ferme. Le gestionnaire unique évite les panneaux « collés » lors
