@@ -64,21 +64,100 @@ App.renderPublicLanding = () => {
     <div id="public-landing">
       <div class="pub-hero">
         <div class="pub-blob b1"></div><div class="pub-blob b2"></div><div class="pub-blob b3"></div>
+        <div class="pub-particles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
         <div class="pub-hero-badge shimmer">⚡ Hoxera — synchronisé en direct avec Discord</div>
-        <h1 class="hero-title">Le bot qui anime<br/><span class="grad grad-anim">ton serveur Discord</span></h1>
-        <p class="pub-tagline">Tickets automatiques avec transcriptions, niveaux XP, boutique, giveaways, bienvenue et modération.
-        Ajoute Hoxera à ton serveur, puis configure tout depuis le dashboard avec ton compte Discord.</p>
+        <h1 class="hero-title">Hoxera, ton bot Discord<br/><span class="grad grad-anim">français multitâche</span></h1>
+        <p class="pub-rotline">Un bot pour <span class="pub-rot" id="pub-rot">La Modération</span></p>
         <div class="pub-hero-actions">
-          <button class="btn btn-primary" id="pub-invite-hero" style="padding:13px 22px;font-size:15px">➕ Ajouter Hoxera à ton serveur</button>
+          <button class="btn btn-primary pub-btn-discord" id="pub-invite-hero">
+            <svg viewBox="0 0 127.14 96.36" width="22" height="17" fill="currentColor" aria-hidden="true"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.03A97.68,97.68,0,0,0,49,6.03,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/></svg>
+            Ajouter à Discord
+          </button>
           ${user && user.discord_id
-            ? `<button class="btn" id="pub-dash-hero" style="padding:13px 22px;font-size:15px">📊 Ouvrir mon dashboard</button>`
-            : `<button class="btn btn-discord" id="pub-connect-hero" style="padding:13px 22px;font-size:15px;width:auto">🎮 Se connecter avec Discord</button>`}
+            ? `<button class="btn" id="pub-dash-hero">📊 Ouvrir mon dashboard</button>`
+            : `<button class="btn btn-discord" id="pub-connect-hero" style="width:auto">🎮 Se connecter avec Discord</button>`}
         </div>
         <div class="pub-support-link"><a href="https://discord.gg/X9hTdr9N3" target="_blank" rel="noopener">🆘 Rejoindre le serveur support officiel</a></div>
         <div class="pub-stats" id="pub-stats">
           <div class="pub-stat"><div class="val">—</div><div class="lbl">Bots en ligne</div></div>
           <div class="pub-stat"><div class="val">—</div><div class="lbl">Serveurs Discord</div></div>
           <div class="pub-stat"><div class="val">—</div><div class="lbl">Membres touchés</div></div>
+        </div>
+        <div class="pub-wave" aria-hidden="true"><svg viewBox="0 0 1440 120" preserveAspectRatio="none"><path d="M0,64L80,69.3C160,75,320,85,480,80C640,75,800,53,960,48C1120,43,1280,53,1360,58.7L1440,64L1440,120L0,120Z" fill="var(--bg)"/></svg></div>
+      </div>
+
+      <div class="db-feature reveal">
+        <div class="db-visual" aria-hidden="true">
+          <div class="dbv-discord">
+            <div class="dbv-msg">
+              <span class="dbv-ava">🤖</span>
+              <div class="dbv-body">
+                <div class="dbv-head"><b>Hoxera</b><span class="dbv-tag">BOT</span></div>
+                <div class="dbv-embed"><b>Choisis tes rôles</b><span class="dbv-foot">Rôles à la carte</span></div>
+                <div class="dbv-btns"><span>🎨 Graphiste</span><span>🎮 Joueur</span><span>📢 Annonces</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="db-content">
+          <h2>Action Réaction</h2>
+          <p>Un clic, un émoji et Hoxera réagit.</p>
+          <p>Utilisez l'ensemble des commandes grâce aux réactions et aux menus de rôles, jusque dans les moindres détails.</p>
+          <p>Tout est facile, accessible, intuitif. Alors réagissez !</p>
+        </div>
+      </div>
+
+      <div class="db-feature rev reveal">
+        <div class="db-visual" aria-hidden="true">
+          <div class="dbv-rank">
+            <div class="dbv-rank-card">
+              <span class="dbv-medal">🥇</span>
+              <div class="dbv-rank-info">
+                <b>Niveau 24</b>
+                <span class="dbv-bar"><i style="width:72%"></i></span>
+                <small>12 480 / 17 300 XP</small>
+              </div>
+            </div>
+            <div class="dbv-rank-row"><span class="dbv-coin">🪙</span><b>2 450</b><small>coins</small><span class="dbv-chip">🏅 Rôle « Actif » offert</span></div>
+            <div class="dbv-rank-row"><span class="dbv-coin">🛒</span><b>Boutique</b><small>objets & bonus</small></div>
+          </div>
+        </div>
+        <div class="db-content">
+          <h2>Niveaux &amp; économie</h2>
+          <p>Laissez vos membres se démarquer sur votre serveur grâce aux systèmes de niveaux et d'économie personnalisables.</p>
+          <p>Vous pourrez afficher le classement, proposer des récompenses, une boutique et bien plus encore !</p>
+        </div>
+      </div>
+
+      <div class="db-feature reveal">
+        <div class="db-visual" aria-hidden="true">
+          <div class="dbv-mod">
+            <div class="dbv-mod-row"><span>⚠️</span><b>Avertissement</b><i>accumulés</i></div>
+            <div class="dbv-mod-row"><span>🔇</span><b>Sourdine</b><i>temporisée</i></div>
+            <div class="dbv-mod-row"><span>👢</span><b>Expulsion</b><i>avec motif</i></div>
+            <div class="dbv-mod-row"><span>🔨</span><b>Bannissement</b><i>définitif</i></div>
+            <div class="dbv-mod-foot">une seule commande · sanction progressive</div>
+          </div>
+        </div>
+        <div class="db-content">
+          <h2>Modération</h2>
+          <p>Qui osera vous tenir tête avec Hoxera à vos côtés ?</p>
+          <p>Avertissements, sourdine, expulsion ou bannissement — tous ces outils, individuels ou regroupés dans une seule commande de sanction, seront votre meilleure arme.</p>
+        </div>
+      </div>
+
+      <div class="db-feature rev reveal">
+        <div class="db-visual" aria-hidden="true">
+          <div class="dbv-stats">
+            <div class="dbv-stats-head"><b>Activité du serveur</b><span>7 jours</span></div>
+            <div class="dbv-chart"><i style="height:34%"></i><i style="height:52%"></i><i style="height:41%"></i><i style="height:68%"></i><i style="height:59%"></i><i style="height:84%"></i><i style="height:72%"></i></div>
+            <div class="dbv-stats-foot"><span>Messages</span><span>Arrivées</span><span>Commandes</span></div>
+          </div>
+        </div>
+        <div class="db-content">
+          <h2>Statistiques</h2>
+          <p>Messages, arrivées, commandes les plus utilisées : Hoxera enregistre la vie de votre serveur.</p>
+          <p>Consultez, partagez et comparez l'activité de votre communauté, jour après jour, depuis le dashboard.</p>
         </div>
       </div>
 
@@ -124,11 +203,25 @@ App.renderPublicLanding = () => {
       </div>
 
       <div class="pub-footer">
-        <b>⚡ Hoxera</b> — ton serveur mérite un bot à la hauteur
-        <div class="pub-footer-links">
-          <a href="https://discord.gg/X9hTdr9N3" target="_blank" rel="noopener">🆘 Serveur support</a>
-          <span>·</span>
-          <a href="#" id="pub-foot-dash">📊 Dashboard</a>
+        <div class="pub-footer-grid">
+          <div class="pub-footer-col pub-footer-brand">
+            <b>⚡ Hoxera</b>
+            <p>Le bot français qui anime ton serveur Discord : tickets, niveaux, économie et modération.</p>
+          </div>
+          <div class="pub-footer-col">
+            <b>Navigation</b>
+            <a href="#" id="pub-foot-home">Accueil</a>
+            <a href="#" id="pub-foot-dash">Dashboard</a>
+            <a href="https://hoxera.is-a.dev/api/health/bot" target="_blank" rel="noopener">Statut du service</a>
+          </div>
+          <div class="pub-footer-col">
+            <b>Communauté</b>
+            <a href="https://discord.gg/X9hTdr9N3" target="_blank" rel="noopener">🆘 Serveur support</a>
+            <a href="https://discord.com/oauth2/authorize?client_id=1537443352281088000&scope=bot+applications.commands&permissions=8" target="_blank" rel="noopener">➕ Ajouter le bot</a>
+          </div>
+        </div>
+        <div class="pub-footer-bottom">
+          <span>© 2026 Hoxera — fait avec ❤️ pour les communautés francophones</span>
         </div>
       </div>
     </div>
@@ -148,6 +241,23 @@ App.renderPublicLanding = () => {
 
   const footDash = page.querySelector('#pub-foot-dash');
   if (footDash) footDash.onclick = (e) => { e.preventDefault(); App.router.go('/dashboard'); };
+  const footHome = page.querySelector('#pub-foot-home');
+  if (footHome) footHome.onclick = (e) => { e.preventDefault(); App.router.go('/'); };
+
+  // 🎠 « Un bot pour … » — le mot tourne (façon DraftBot)
+  const rotEl = page.querySelector('#pub-rot');
+  if (rotEl) {
+    const rotWords = ['La Modération', 'Les Niveaux', 'L\'Économie', 'Les Réactions', 'L\'Automatisation', 'Les Statistiques', 'Les Conversations', 'Les Informations', 'Des Outils', 'Le Contrôle'];
+    let rotI = 0;
+    setInterval(() => {
+      rotEl.classList.add('out');
+      setTimeout(() => {
+        rotI = (rotI + 1) % rotWords.length;
+        rotEl.textContent = rotWords[rotI];
+        rotEl.classList.remove('out');
+      }, 240);
+    }, 2600);
+  }
 
   // 🎬 Révélation au défilement (dégradation propre si non supporté)
   try {

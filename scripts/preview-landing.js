@@ -1,4 +1,4 @@
-// Preview v163 — rend la page d'accueil publique SIMPLE dans jsdom et vérifie le DOM
+// Preview v164 — rend la landing façon DraftBot dans jsdom et vérifie le DOM
 const { JSDOM } = require('jsdom');
 const fs = require('fs');
 
@@ -24,20 +24,29 @@ const testSnippet = String.raw`
 window.__results = (async () => {
   await new Promise((r) => setTimeout(r, 1200));
   const html = document.querySelector('#app') ? document.querySelector('#app').innerHTML : '';
+  const rot = document.querySelector('#pub-rot');
   return {
-    hero: html.includes('pub-hero'),
-    stats: html.includes('pub-stats'),
+    heroTitle: html.includes('français multitâche'),
+    rotLine: html.includes('Un bot pour'),
+    rotText: rot ? rot.textContent : null,
+    discordBtn: html.includes('pub-btn-discord') && html.includes('Ajouter à Discord'),
+    particles: html.includes('pub-particles'),
+    wave: html.includes('pub-wave'),
+    showcases: (html.match(/class="db-feature/g) || []).length,
+    actionReaction: html.includes('Action Réaction'),
+    levels: html.includes('Niveaux &amp; économie'),
+    moderation: html.includes('<h2>Modération</h2>'),
+    stats: html.includes('<h2>Statistiques</h2>'),
+    visualRoles: html.includes('Choisis tes rôles'),
+    visualRank: html.includes('Niveau 24'),
+    visualMod: html.includes('Sourdine'),
+    visualChart: html.includes('dbv-chart'),
     liveSection: html.includes('id="pub-bots"'),
     mockDash: html.includes('pub-mock'),
     features: (html.match(/pub-feature /g) || []).length,
-    footer: html.includes('pub-footer-links'),
+    footerCols: html.includes('pub-footer-grid') && html.includes('Communauté'),
     supportLink: html.includes('discord.gg/X9hTdr9N3'),
-    // Rien des sections retirées
-    showcases: (html.match(/pub-showcase/g) || []).length,
-    cta: html.includes('pub-cta'),
-    footerGrid: html.includes('pub-footer-grid'),
-    rotWord: html.includes('pub-rot'),
-    fakeNames: html.includes('Léo') || html.includes('Choisis tes rôles'),
+    rotatedLater: await new Promise((res) => setTimeout(() => res(rot ? rot.textContent : null), 3000)),
   };
 })();
 `;
@@ -46,9 +55,13 @@ w.eval(code + '\n;\n' + testSnippet);
 setTimeout(async () => {
   const r = await w.__results;
   console.log(JSON.stringify(r, null, 2));
-  const ok = r.hero && r.stats && r.liveSection && r.mockDash && r.features === 10
-    && r.footer && r.supportLink
-    && r.showcases === 0 && !r.cta && !r.footerGrid && !r.rotWord && !r.fakeNames;
-  console.log(ok ? '✅ LANDING SIMPLE OK' : '❌ PROBLÈME');
+  const ok = r.heroTitle && r.rotLine && r.rotText === 'La Modération' && r.discordBtn
+    && r.particles && r.wave && r.showcases === 4
+    && r.actionReaction && r.levels && r.moderation && r.stats
+    && r.visualRoles && r.visualRank && r.visualMod && r.visualChart
+    && r.liveSection && r.mockDash && r.features === 10
+    && r.footerCols && r.supportLink
+    && r.rotatedLater && r.rotatedLater !== r.rotText;
+  console.log(ok ? '✅ LANDING V164 OK (mot rotatif confirmé : ' + r.rotText + ' → ' + r.rotatedLater + ')' : '❌ PROBLÈME');
   process.exit(ok ? 0 : 1);
-}, 2400);
+}, 4600);

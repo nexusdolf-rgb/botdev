@@ -825,3 +825,192 @@ a:hover { color: #c3caff; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; }
 }
+
+/* ============================================================
+   🎠 v164 — landing façon DraftBot : « Un bot pour », particules,
+   vague, 4 vitrines courtes, footer en colonnes
+   ============================================================ */
+.pub-hero { position: relative; overflow: hidden; }
+.pub-rotline {
+  font-size: clamp(19px, 3.4vw, 26px); font-weight: 800; letter-spacing: -.3px;
+  margin: 14px 0 20px; color: var(--text-dim);
+}
+.pub-rot {
+  display: inline-block; color: var(--accent);
+  transition: opacity .24s ease, transform .24s ease, filter .24s ease;
+}
+.pub-rot.out { opacity: 0; transform: translateY(10px); filter: blur(4px); }
+
+/* Bouton Discord (logo + libellé, façon DraftBot) */
+.pub-btn-discord { display: inline-flex; align-items: center; gap: 10px; padding: 13px 24px !important; font-size: 15px; }
+
+/* Particules flottantes du hero */
+.pub-particles { position: absolute; inset: 0; pointer-events: none; }
+.pub-particles i {
+  position: absolute; width: 5px; height: 5px; border-radius: 50%;
+  background: rgba(224,122,95,.45);
+  animation: pub-float 9s ease-in-out infinite;
+}
+.pub-particles i:nth-child(1) { left: 8%; top: 22%; animation-delay: 0s; }
+.pub-particles i:nth-child(2) { left: 18%; top: 64%; width: 4px; height: 4px; animation-delay: -2s; }
+.pub-particles i:nth-child(3) { left: 30%; top: 38%; animation-delay: -4s; }
+.pub-particles i:nth-child(4) { left: 42%; top: 74%; width: 3px; height: 3px; animation-delay: -1s; }
+.pub-particles i:nth-child(5) { left: 52%; top: 18%; animation-delay: -6s; }
+.pub-particles i:nth-child(6) { left: 62%; top: 56%; width: 4px; height: 4px; animation-delay: -3s; }
+.pub-particles i:nth-child(7) { left: 72%; top: 30%; animation-delay: -5s; }
+.pub-particles i:nth-child(8) { left: 82%; top: 68%; width: 3px; height: 3px; animation-delay: -7s; }
+.pub-particles i:nth-child(9) { left: 90%; top: 42%; animation-delay: -2.5s; }
+.pub-particles i:nth-child(10) { left: 12%; top: 46%; width: 3px; height: 3px; animation-delay: -8s; }
+.pub-particles i:nth-child(11) { left: 66%; top: 84%; animation-delay: -4.5s; }
+.pub-particles i:nth-child(12) { left: 36%; top: 12%; width: 4px; height: 4px; animation-delay: -3.5s; }
+@keyframes pub-float {
+  0%, 100% { transform: translateY(0); opacity: .25; }
+  50% { transform: translateY(-16px); opacity: .85; }
+}
+
+/* Vague de séparation sous le hero */
+.pub-wave { position: absolute; left: 0; right: 0; bottom: -1px; line-height: 0; pointer-events: none; }
+.pub-wave svg { width: 100%; height: 70px; display: block; }
+
+/* --- Les 4 vitrines façon DraftBot --- */
+.db-feature {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 40px; align-items: center;
+  max-width: 1000px; margin: 0 auto 26px; padding: 30px 0;
+}
+.db-feature.rev .db-visual { order: 2; }
+.db-content h2 { font-size: clamp(24px, 3.6vw, 32px); letter-spacing: -.6px; margin-bottom: 14px; }
+.db-content p { color: var(--text-dim); font-size: 15.5px; line-height: 1.65; margin: 0 0 10px; }
+.db-content p:first-of-type { color: var(--text); font-weight: 600; font-size: 16.5px; }
+
+/* Visuel 1 — message Discord (menus de rôles) */
+.dbv-discord {
+  background: #313338; border-radius: 14px; padding: 16px;
+  box-shadow: 0 24px 60px -30px rgba(0,0,0,.8);
+  transform: perspective(1200px) rotateY(-5deg); transition: transform .3s ease;
+}
+.db-feature.rev .dbv-discord { transform: perspective(1200px) rotateY(5deg); }
+.db-feature:hover .dbv-discord, .db-feature:hover .dbv-rank, .db-feature:hover .dbv-mod, .db-feature:hover .dbv-stats { transform: perspective(1200px) rotateY(0); }
+.dbv-msg { display: flex; gap: 12px; }
+.dbv-ava {
+  width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%;
+  background: linear-gradient(135deg, #e07a5f, #c95b49);
+  display: flex; align-items: center; justify-content: center; font-size: 19px;
+}
+.dbv-body { flex: 1; min-width: 0; }
+.dbv-head { display: flex; align-items: center; gap: 7px; }
+.dbv-head b { color: #f2f3f5; font-size: 14.5px; }
+.dbv-tag { padding: 1.5px 5px; border-radius: 4px; background: #e07a5f; color: #fff; font-size: 8.5px; font-weight: 800; letter-spacing: .4px; }
+.dbv-embed {
+  margin-top: 8px; padding: 10px 14px; background: #2b2d31;
+  border-left: 4px solid #e07a5f; border-radius: 6px;
+}
+.dbv-embed b { display: block; color: #f2f3f5; font-size: 14px; }
+.dbv-embed small { display: block; color: #dbdee1; font-size: 12.5px; margin-top: 3px; }
+.dbv-foot { display: block; margin-top: 6px; color: #949ba4; font-size: 10.5px; }
+.dbv-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.dbv-btns span {
+  padding: 8px 14px; border-radius: 6px; background: #4e5058;
+  color: #fff; font-size: 13px; font-weight: 600;
+}
+
+/* Visuel 2 — carte de niveau */
+.dbv-rank {
+  display: grid; gap: 10px;
+  transform: perspective(1200px) rotateY(-5deg); transition: transform .3s ease;
+}
+.db-feature.rev .dbv-rank { transform: perspective(1200px) rotateY(5deg); }
+.dbv-rank-card {
+  display: flex; align-items: center; gap: 14px; padding: 16px 18px;
+  border-radius: 14px; border: 1px solid rgba(224,122,95,.4);
+  background: linear-gradient(145deg, rgba(224,122,95,.15), rgba(224,122,95,.04) 60%), var(--panel);
+  box-shadow: 0 18px 40px -24px rgba(224,122,95,.5);
+}
+.dbv-medal { font-size: 30px; }
+.dbv-rank-info { flex: 1; min-width: 0; }
+.dbv-rank-info b { display: block; color: var(--text); font-size: 16px; }
+.dbv-bar { display: block; height: 9px; border-radius: 5px; background: rgba(255,255,255,.07); overflow: hidden; margin: 7px 0 5px; }
+.dbv-bar i { display: block; height: 100%; border-radius: 5px; background: linear-gradient(90deg, #e07a5f, #f2a65e); }
+.dbv-rank-info small { color: var(--text-dim); font-size: 11px; }
+.dbv-rank-row {
+  display: flex; align-items: center; gap: 10px; padding: 11px 16px;
+  border-radius: 12px; background: var(--panel); border: 1px solid var(--border);
+  color: var(--text); font-size: 13.5px;
+}
+.dbv-rank-row b { font-size: 14.5px; }
+.dbv-rank-row small { color: var(--text-dim); }
+.dbv-chip {
+  margin-left: auto; padding: 4px 10px; border-radius: 20px; font-size: 11px;
+  background: rgba(224,122,95,.12); border: 1px solid rgba(224,122,95,.3); color: var(--accent);
+}
+
+/* Visuel 3 — outils de modération */
+.dbv-mod {
+  display: grid; gap: 8px;
+  transform: perspective(1200px) rotateY(-5deg); transition: transform .3s ease;
+}
+.db-feature.rev .dbv-mod { transform: perspective(1200px) rotateY(5deg); }
+.dbv-mod-row {
+  display: flex; align-items: center; gap: 12px; padding: 13px 16px;
+  border-radius: 12px; background: var(--panel); border: 1px solid var(--border);
+  color: var(--text); font-size: 14px;
+}
+.dbv-mod-row span { font-size: 19px; }
+.dbv-mod-row i { margin-left: auto; color: var(--text-dim); font-style: normal; font-size: 12px; }
+.dbv-mod-foot {
+  text-align: center; color: var(--text-dim); font-size: 11.5px; padding-top: 2px;
+  text-transform: uppercase; letter-spacing: 1px;
+}
+
+/* Visuel 4 — graphique statistiques */
+.dbv-stats {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 18px;
+  transform: perspective(1200px) rotateY(-5deg); transition: transform .3s ease;
+  box-shadow: 0 24px 60px -30px rgba(0,0,0,.6);
+}
+.db-feature.rev .dbv-stats { transform: perspective(1200px) rotateY(5deg); }
+.dbv-stats-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+.dbv-stats-head b { color: var(--text); font-size: 14px; }
+.dbv-stats-head span { color: var(--text-dim); font-size: 11.5px; }
+.dbv-chart { display: flex; align-items: flex-end; gap: 8px; height: 110px; }
+.dbv-chart i {
+  flex: 1; border-radius: 6px 6px 2px 2px;
+  background: linear-gradient(180deg, #f2a65e, #c95b49);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25);
+  animation: dbv-grow .8s cubic-bezier(.2,.7,.3,1) both;
+}
+.dbv-chart i:nth-child(2) { animation-delay: .06s; } .dbv-chart i:nth-child(3) { animation-delay: .12s; }
+.dbv-chart i:nth-child(4) { animation-delay: .18s; } .dbv-chart i:nth-child(5) { animation-delay: .24s; }
+.dbv-chart i:nth-child(6) { animation-delay: .3s; } .dbv-chart i:nth-child(7) { animation-delay: .36s; }
+@keyframes dbv-grow { from { height: 4px !important; opacity: .2; } }
+.dbv-stats-foot { display: flex; gap: 8px; margin-top: 12px; }
+.dbv-stats-foot span {
+  flex: 1; text-align: center; padding: 7px 4px; border-radius: 9px;
+  background: rgba(224,122,95,.07); border: 1px solid rgba(224,122,95,.18);
+  color: var(--text-dim); font-size: 11px;
+}
+
+/* Footer en colonnes */
+.pub-footer { padding: 26px 26px 20px; text-align: left; }
+.pub-footer-grid {
+  display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 26px;
+  padding-bottom: 18px; margin-bottom: 14px; border-bottom: 1px solid var(--border);
+}
+.pub-footer-brand p { color: var(--text-dim); font-size: 13px; line-height: 1.6; margin: 8px 0 0; max-width: 320px; }
+.pub-footer-col { display: flex; flex-direction: column; gap: 9px; }
+.pub-footer-col > b { color: var(--text); font-size: 13px; margin-bottom: 2px; }
+.pub-footer-col a { color: var(--text-dim); font-size: 13px; text-decoration: none; transition: color .2s; }
+.pub-footer-col a:hover { color: var(--accent); }
+.pub-footer-bottom { text-align: center; color: var(--text-dim); font-size: 12px; }
+
+@media (max-width: 760px) {
+  .db-feature { grid-template-columns: 1fr; gap: 18px; padding: 18px 0; margin-bottom: 10px; }
+  .db-feature.rev .db-visual { order: 0; }
+  .dbv-discord, .dbv-rank, .dbv-mod, .dbv-stats { transform: none; }
+  .db-feature:hover .dbv-discord, .db-feature:hover .dbv-rank, .db-feature:hover .dbv-mod, .db-feature:hover .dbv-stats { transform: none; }
+  .pub-footer-grid { grid-template-columns: 1fr; gap: 18px; }
+  .pub-wave svg { height: 40px; }
+}
+
+/* v164 : hero avec vague — espace pour ne pas couvrir les stats */
+.pub-hero { padding-bottom: 108px !important; overflow: hidden; }

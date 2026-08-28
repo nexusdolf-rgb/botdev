@@ -111,8 +111,8 @@ function message(overrides = {}) {
   assert.ok(styles.includes('.am-control-card') && styles.includes('.am-rule-card') && styles.includes('.am-result'));
   const index = fs.readFileSync(path.join(__dirname, '..', 'public/index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public/sw.js'), 'utf8');
-  assert.strictEqual((index.match(/\\?v=163/g) || []).length, 7);
-  assert.ok(sw.includes("const CACHE = 'botdev-v163';"));
+  assert.strictEqual((index.match(/\\?v=164/g) || []).length, 7);
+  assert.ok(sw.includes("const CACHE = 'botdev-v164';"));
   console.log('✅ dashboard : Control Center, simulateur sans risque, règles et exceptions présents');
 
   console.log('\n🎉 Tous les tests v3.18 passent');
