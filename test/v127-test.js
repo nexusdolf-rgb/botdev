@@ -30,8 +30,8 @@ App.api = async (url) => {
   assert.ok(content.querySelector('.custom-announcement-card'));
   assert.ok(content.querySelector('#ca-message'));
   assert.strictEqual(content.querySelectorAll('[data-mark]').length, 9);
-  assert.strictEqual(content.querySelector('#ca-channels select.discord-multi-select')?.tagName, 'SELECT');
-  assert.strictEqual(content.querySelector('#ca-roles select.discord-multi-select')?.tagName, 'SELECT');
+  assert.strictEqual(content.querySelector('#ca-channels .dd-add-btn')?.tagName, 'BUTTON');
+  assert.strictEqual(content.querySelector('#ca-roles .dd-add-btn')?.tagName, 'BUTTON');
   assert.strictEqual(content.querySelectorAll('#ca-channels input[type="checkbox"], #ca-roles input[type="checkbox"]').length, 0);
   assert.ok(content.querySelector('#ca-save') && content.querySelector('#ca-send'));
 

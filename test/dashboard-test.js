@@ -56,7 +56,7 @@ window.__results = (async () => {
       modules: shell ? shell.querySelectorAll('.dash-side-item').length : 0,
       header: shell && shell.querySelector('.dash-module-header h1') ? shell.querySelector('.dash-module-header h1').textContent : 'VIDE',
       statCards: shell ? shell.querySelectorAll('.dash-stat').length : 0,
-      guildPick: shell && shell.querySelector('.dash-server-card select') ? shell.querySelector('.dash-server-card select').value : null,
+      guildPick: shell && shell.querySelector('.dash-server-card') ? (shell.querySelector('.dash-server-card .srv-txt b')?.textContent || '') : null,
       botSection: shell ? !![...shell.querySelectorAll('.dash-side-section')].find((s) => s.textContent.includes('Administration du bot')) : false,
       errorShown: shell ? !!shell.querySelector('.empty-state') : false,
     };
@@ -99,7 +99,7 @@ setTimeout(async () => {
   try {
     const results = await w.__results;
     console.log(JSON.stringify(results, null, 2));
-    const ok = results.modules >= 15 && (results.header.includes('Tableau') || results.header.includes('Vue')) && results.guildPick === 'G1'
+    const ok = results.modules >= 15 && (results.header.includes('Tableau') || results.header.includes('Vue')) && results.guildPick === 'Serveur Test'
       && results.botSection && !results.errorShown
       && results.welcome && !results.welcome.error && results.welcome.channelSelect
       && results.welcome.colorPicker && results.welcome.roleSelect && results.welcome.cards >= 2

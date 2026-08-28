@@ -43,10 +43,10 @@ Dashboard.currentDiscordOption = (current, items, icon = '⚠️', label = 'conf
 Dashboard.noDiscordChoice = (label) => `<option value="" disabled>— ${App.escapeHtml(label)} —</option>`;
 
 // Sélecteur multi-valeurs commun aux réglages Discord.
-// Un <select> natif sert à ajouter un élément à la liste, puis chaque choix
-// apparaît avec un bouton Retirer. C'est plus clair et plus pratique sur
-// mobile que plusieurs cases cachées, tout en conservant les anciennes
-// références introuvables jusqu'à leur retrait explicite.
+// Un bouton « ＋ Ajouter » ouvre le menu déroulant custom (avec recherche
+// dès que la liste est longue), puis chaque choix apparaît avec un bouton
+// Retirer. Les anciennes références introuvables restent visibles avec un
+// avertissement jusqu'à leur retrait explicite.
 Dashboard.renderDiscordMultiSelect = (host, {
   items = [],
   selected = new Set(),
@@ -77,27 +77,24 @@ Dashboard.renderDiscordMultiSelect = (host, {
 
   host.innerHTML = '';
   host.classList.add('discord-multi-host');
-  const picker = App.el(`<div class="discord-multi-picker"><select class="dash-select discord-multi-select" aria-label="${App.escapeHtml(placeholder)}"></select><div class="discord-multi-values" aria-live="polite"></div></div>`);
-  const select = picker.querySelector('select');
+  const picker = App.el(`<div class="discord-multi-picker"><button type="button" class="dd-add-btn" aria-label="${App.escapeHtml(placeholder)}">＋ ${App.escapeHtml(placeholder)}</button><div class="discord-multi-values" aria-live="polite"></div></div>`);
+  const addBtn = picker.querySelector('.dd-add-btn');
   const values = picker.querySelector('.discord-multi-values');
 
-  const render = () => {
+  const availableItems = () => {
     const chosenKnown = new Set([...chosen].map((ref) => {
       const item = findItem(ref);
       return item ? refFor(item) : null;
     }).filter(Boolean));
-    const available = list.filter((item) => !chosenKnown.has(refFor(item)));
-    select.innerHTML = `<option value="">＋ ${App.escapeHtml(placeholder)}</option>`;
-    available.forEach((item) => {
-      const ref = refFor(item);
-      if (!ref) return;
-      select.innerHTML += `<option value="${App.escapeHtml(ref)}">${App.escapeHtml(icon)} ${App.escapeHtml(labelFor(item))}</option>`;
-    });
-    if (!available.length) {
-      const message = list.length ? 'Tous les éléments disponibles sont sélectionnés.' : emptyText;
-      select.innerHTML += `<option value="" disabled>— ${App.escapeHtml(message)} —</option>`;
-    }
-    select.value = '';
+    return list.filter((item) => !chosenKnown.has(refFor(item)));
+  };
+
+  const render = () => {
+    const available = availableItems();
+    addBtn.innerHTML = available.length
+      ? `＋ ${App.escapeHtml(placeholder)}`
+      : `✓ ${App.escapeHtml(list.length ? 'Tout est sélectionné' : emptyText)}`;
+    addBtn.classList.toggle('is-done', !available.length);
 
     values.innerHTML = '';
     if (!chosen.size) {
@@ -118,18 +115,221 @@ Dashboard.renderDiscordMultiSelect = (host, {
     });
   };
 
-  select.onchange = () => {
-    const ref = String(select.value || '').trim();
-    if (!ref) return;
-    chosen.add(ref);
-    render();
-    onChange(chosen);
-  };
+  Dashboard.dropdownMenu({
+    trigger: addBtn,
+    searchable: () => list.length > 7,
+    getOptions: () => {
+      const available = availableItems();
+      if (!available.length) {
+        const message = list.length ? 'Tous les éléments disponibles sont sélectionnés.' : emptyText;
+        return [{ value: '', label: message, disabled: true }];
+      }
+      return available.map((item) => {
+        const ref = refFor(item);
+        return { value: ref || '', label: labelFor(item), icon: String(icon || '•'), selected: false };
+      }).filter((o) => o.value);
+    },
+    onSelect: (ref) => {
+      ref = String(ref || '').trim();
+      if (!ref) return;
+      chosen.add(ref);
+      render();
+      onChange(chosen);
+    },
+  });
   render();
   host.appendChild(picker);
   host.__discordSelected = chosen;
   host.__discordRender = render;
-  return { host, picker, select, values, selected: chosen, render };
+  return { host, picker, addBtn, values, selected: chosen, render };
+};
+
+// ---------------------- 🎛️ Menu déroulant custom (façon panel pro) ----------------------
+// Un vrai dropdown comme les grands panels : options bien visibles (icône +
+// libellé + indice), recherche instantanée, option courante cochée ✓ et
+// navigation clavier. Le panneau vit en « portail » (position fixed sur
+// <body>) : il n'est jamais rogné, ni par la sidebar scrollable ni par les
+// cartes ; sur mobile il devient une feuille qui monte du bas.
+Dashboard.ddCloseAll = () => {
+  document.querySelectorAll('.dd-panel[data-open="1"]').forEach((p) => {
+    p.hidden = true;
+    p.dataset.open = '0';
+    if (p._ddCleanup) { p._ddCleanup(); p._ddCleanup = null; }
+  });
+  document.querySelectorAll('[aria-expanded="true"][data-dd-trigger]').forEach((t) => t.setAttribute('aria-expanded', 'false'));
+};
+
+// dropdownMenu({ trigger, getOptions, onSelect, searchable, minPanelWidth })
+//   trigger    : élément cliquable qui ouvre le menu (bouton, carte…)
+//   getOptions : () => [{ value, label, icon, img, fallback, hint, disabled, selected }]
+//   onSelect   : (value) appelé quand l'utilisateur choisit une option
+//   searchable : bool ou () => bool (affiche le champ de recherche)
+Dashboard.dropdownMenu = ({ trigger, getOptions, onSelect, searchable = false, minPanelWidth = 0 }) => {
+  const panel = App.el('<div class="dd-panel" role="listbox" aria-label="Options" hidden></div>');
+  document.body.appendChild(panel);
+  trigger.setAttribute('data-dd-trigger', 'true');
+  trigger.setAttribute('aria-haspopup', 'listbox');
+  trigger.setAttribute('aria-expanded', 'false');
+  let activeIndex = -1;
+
+  const position = () => {
+    const r = trigger.getBoundingClientRect();
+    const mq = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 700px)') : null;
+    if (mq && mq.matches) {
+      panel.classList.add('is-sheet');
+      panel.style.left = panel.style.right = panel.style.top = panel.style.bottom = panel.style.width = '';
+      return;
+    }
+    panel.classList.remove('is-sheet');
+    const width = Math.max(minPanelWidth || 0, r.width, 236);
+    const clamped = Math.min(width, 360);
+    const spaceBelow = window.innerHeight - r.bottom;
+    const est = Math.min(panel.offsetHeight || 300, 336);
+    const up = spaceBelow < Math.min(est + 10, 240) && r.top > spaceBelow;
+    panel.classList.toggle('is-up', up);
+    panel.style.width = clamped + 'px';
+    panel.style.left = Math.max(10, Math.min(r.left, window.innerWidth - clamped - 10)) + 'px';
+    if (up) { panel.style.top = 'auto'; panel.style.bottom = (window.innerHeight - r.top + 8) + 'px'; }
+    else { panel.style.bottom = 'auto'; panel.style.top = (r.bottom + 8) + 'px'; }
+  };
+
+  const renderList = (filter = '') => {
+    const q = String(filter || '').trim().toLowerCase();
+    let opts = getOptions() || [];
+    if (q) opts = opts.filter((o) => String(o.label || '').toLowerCase().includes(q) || String(o.hint || '').toLowerCase().includes(q));
+    panel.innerHTML = '';
+    const wantSearch = (typeof searchable === 'function' ? searchable() : searchable) || (getOptions() || []).length > 7;
+    if (wantSearch) {
+      const search = App.el(`<div class="dd-search"><span aria-hidden="true">🔍</span><input type="text" placeholder="Rechercher…" aria-label="Rechercher une option" value="${App.escapeHtml(filter || '')}" /></div>`);
+      const input = search.querySelector('input');
+      input.oninput = () => renderList(input.value);
+      input.onkeydown = (e) => {
+        const rows = Array.from(panel.querySelectorAll('.dd-option:not(.is-disabled)'));
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          activeIndex = e.key === 'ArrowDown' ? Math.min(activeIndex + 1, rows.length - 1) : Math.max(activeIndex - 1, 0);
+          rows.forEach((row, i) => row.classList.toggle('is-active', i === activeIndex));
+          if (rows[activeIndex] && typeof rows[activeIndex].scrollIntoView === 'function') rows[activeIndex].scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          const row = rows[activeIndex] || rows[0];
+          if (row) choose(String(row.dataset.value));
+        } else if (e.key === 'Escape') { e.stopPropagation(); close(); trigger.focus(); }
+      };
+      panel.appendChild(search);
+    }
+    const list = App.el('<div class="dd-list"></div>');
+    if (!opts.length) list.appendChild(App.el('<div class="dd-empty">Aucun résultat</div>'));
+    opts.forEach((o) => {
+      const row = App.el(`<div class="dd-option${o.selected ? ' is-selected' : ''}${o.disabled ? ' is-disabled' : ''}" role="option" aria-selected="${o.selected ? 'true' : 'false'}" data-value="${App.escapeHtml(String(o.value))}">
+        <span class="dd-opt-ico">${o.img ? `<img src="${App.escapeHtml(o.img)}" alt="" />` : (o.icon ? App.escapeHtml(String(o.icon)) : (o.fallback ? `<span class="dd-opt-fallback">${App.escapeHtml(String(o.fallback))}</span>` : ''))}</span>
+        <span class="dd-opt-txt"><b>${App.escapeHtml(String(o.label))}</b>${o.hint ? `<small>${App.escapeHtml(String(o.hint))}</small>` : ''}</span>
+        ${o.selected ? '<span class="dd-check" aria-hidden="true">✓</span>' : ''}
+      </div>`);
+      if (!o.disabled) row.onclick = () => choose(String(o.value));
+      list.appendChild(row);
+    });
+    panel.appendChild(list);
+    activeIndex = -1;
+  };
+
+  const open = () => {
+    if (trigger.disabled || trigger.classList.contains('is-disabled')) return;
+    Dashboard.ddCloseAll();
+    renderList('');
+    panel.hidden = false;
+    panel.dataset.open = '1';
+    trigger.setAttribute('aria-expanded', 'true');
+    position();
+    const searchInput = panel.querySelector('.dd-search input');
+    if (searchInput) searchInput.focus();
+    const reposition = () => { if (panel.dataset.open === '1') position(); };
+    const onDocDown = (e) => {
+      if (panel.dataset.open !== '1') return;
+      if (panel.contains(e.target) || trigger.contains(e.target)) return;
+      close();
+    };
+    const onKey = (e) => { if (e.key === 'Escape') close(); };
+    window.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
+    document.addEventListener('mousedown', onDocDown);
+    document.addEventListener('keydown', onKey);
+    panel._ddCleanup = () => {
+      window.removeEventListener('scroll', reposition, true);
+      window.removeEventListener('resize', reposition);
+      document.removeEventListener('mousedown', onDocDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  };
+  const close = () => {
+    panel.hidden = true;
+    panel.dataset.open = '0';
+    trigger.setAttribute('aria-expanded', 'false');
+    if (panel._ddCleanup) { panel._ddCleanup(); panel._ddCleanup = null; }
+  };
+  const choose = (value) => { close(); onSelect(value); };
+
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (panel.dataset.open === '1') close(); else open();
+  });
+  trigger.addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && panel.dataset.open !== '1') { e.preventDefault(); open(); }
+    else if (e.key === 'ArrowDown' && panel.dataset.open !== '1') { e.preventDefault(); open(); }
+    else if (e.key === 'Escape' && panel.dataset.open === '1') close();
+  });
+  return { open, close, panel, position };
+};
+
+// Améliore un <select> natif : le champ garde sa sémantique (valeur +
+// handlers onchange existants intacts) mais s'ouvre désormais dans un vrai
+// menu déroulant avec options visibles et recherche.
+Dashboard.enhanceSelect = (select) => {
+  if (!select || select.dataset.dd === '1' || select.closest('.dd-host')) return;
+  select.dataset.dd = '1';
+  const host = App.el('<div class="dd-host"></div>');
+  select.parentNode.insertBefore(host, select);
+  host.appendChild(select);
+  const trigger = App.el('<button type="button" class="dd-trigger" aria-haspopup="listbox"></button>');
+  host.appendChild(trigger);
+
+  const currentLabel = () => {
+    const o = select.options[select.selectedIndex];
+    return o ? o.textContent.trim() : (select.dataset.ddPlaceholder || '—');
+  };
+  const renderTrigger = () => {
+    trigger.innerHTML = `<span class="dd-value">${App.escapeHtml(currentLabel())}</span><span class="dd-caret" aria-hidden="true">⌄</span>`;
+    trigger.classList.toggle('is-empty', !String(select.value || '').trim());
+    trigger.classList.toggle('is-disabled', !!select.disabled);
+    trigger.disabled = !!select.disabled;
+  };
+
+  Dashboard.dropdownMenu({
+    trigger,
+    searchable: () => select.options.length > 7,
+    getOptions: () => Array.from(select.options).map((o) => ({
+      value: o.value,
+      label: o.textContent.trim(),
+      disabled: o.disabled,
+      selected: o.value === select.value,
+    })),
+    onSelect: (value) => {
+      select.value = value;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      renderTrigger();
+    },
+  });
+
+  // Libellé toujours à jour : les options sont souvent régénérées en direct.
+  const mo = new MutationObserver(renderTrigger);
+  mo.observe(select, { childList: true, attributes: true, attributeFilter: ['disabled'] });
+  select.addEventListener('change', renderTrigger);
+  renderTrigger();
+};
+
+Dashboard.enhanceSelects = (root) => {
+  if (!root) return;
+  root.querySelectorAll('select.dash-select:not([data-dd])').forEach((s) => Dashboard.enhanceSelect(s));
 };
 
 // ---------------------- Shell ----------------------
@@ -161,6 +361,15 @@ Dashboard.mount = async (shell, bot) => {
   Dashboard.renderBottomNav(layout.querySelector('#dash-bnav'));
   Dashboard.renderTopbar(layout.querySelector('#dash-topbar'), discordGuilds, needLink);
   const content = layout.querySelector('#dash-content');
+
+  // 🎛️ Sélecteurs façon panel pro : chaque <select> du contenu (et des
+  // modales) devient un vrai menu déroulant dès qu'il apparaît dans le DOM,
+  // y compris ceux rendus plus tard en asynchrone.
+  [content, document.querySelector('#modal-root')].filter(Boolean).forEach((zone) => {
+    Dashboard.enhanceSelects(zone);
+    const ddObserver = new MutationObserver(() => Dashboard.enhanceSelects(zone));
+    ddObserver.observe(zone, { childList: true, subtree: true });
+  });
 
   if (needLink) {
     content.innerHTML = `
@@ -238,13 +447,14 @@ Dashboard.BOT_MODULES = [
 ];
 
 // 🎛️ Composant partagé : carte de sélection du serveur (style DraftBot).
-// Le vrai <select> natif est superposé en invisible : look custom, ergonomie native.
+// Le sélecteur de serveur ouvre un vrai menu déroulant : icône du serveur,
+// indice « bot absent / lecture seule », recherche dès 9 serveurs.
 Dashboard.serverPicker = () => {
   const guilds = Dashboard.state.discordGuilds || [];
   const cur = guilds.find((g) => g.id === Dashboard.state.guildId);
   const initial = cur ? (cur.name || '?').trim()[0].toUpperCase() : '🌍';
   const pick = App.el(`
-    <div class="dash-server-card" title="Changer de serveur">
+    <div class="dash-server-card" title="Changer de serveur" role="button" tabindex="0">
       ${cur && cur.icon
         ? `<img src="${App.escapeHtml(cur.icon)}" alt="" />`
         : `<span class="srv-fallback">${App.escapeHtml(initial)}</span>`}
@@ -252,19 +462,27 @@ Dashboard.serverPicker = () => {
         <span class="srv-label">Serveur</span>
         <b>${cur ? App.escapeHtml(cur.name) : 'Choisir un serveur…'}</b>
       </div>
-      <span class="srv-caret">⌄</span>
-      <select aria-label="Changer de serveur">
-        <option value="">— Choisir un serveur —</option>
-        ${guilds.map((g) => `<option value="${g.id}" ${g.id === Dashboard.state.guildId ? 'selected' : ''}>${App.escapeHtml(g.name)}${g.hasBot ? '' : ' · bot absent'}${!g.canManage ? ' · lecture seule' : ''}</option>`).join('')}
-      </select>
+      <span class="srv-caret" aria-hidden="true">⌄</span>
     </div>`);
-  pick.querySelector('select').onchange = async (e) => {
-    const g = guilds.find((x) => x.id === e.target.value);
-    if (!g) return;
-    if (!g.hasBot) { App.openInvite(Dashboard.state.bot.invite_url); App.toast('Ajoute le bot sur ce serveur pour le configurer !'); return; }
-    if (!g.canManage) { App.toast('Lecture seule : il te faut la permission Discord « Administrateur » ou être propriétaire du serveur.', 'error'); return; }
-    await Dashboard.selectGuild(g.id);
-  };
+  Dashboard.dropdownMenu({
+    trigger: pick,
+    searchable: () => guilds.length > 8,
+    getOptions: () => guilds.map((g) => ({
+      value: g.id,
+      label: g.name || 'Serveur',
+      img: g.icon || '',
+      fallback: (g.name || '?').trim()[0].toUpperCase(),
+      hint: !g.hasBot ? 'bot absent — clique pour l’inviter' : (!g.canManage ? 'lecture seule' : ''),
+      selected: g.id === Dashboard.state.guildId,
+    })),
+    onSelect: async (id) => {
+      const g = guilds.find((x) => x.id === id);
+      if (!g) return;
+      if (!g.hasBot) { App.openInvite(Dashboard.state.bot.invite_url); App.toast('Ajoute le bot sur ce serveur pour le configurer !'); return; }
+      if (!g.canManage) { App.toast('Lecture seule : il te faut la permission Discord « Administrateur » ou être propriétaire du serveur.', 'error'); return; }
+      await Dashboard.selectGuild(g.id);
+    },
+  });
   return pick;
 };
 
@@ -301,7 +519,7 @@ Dashboard.renderSide = (aside) => {
   }
   aside.appendChild(App.el(`<div class="dash-side-foot">
     <div style="display:flex;align-items:center;gap:10px">
-      ${Dashboard.state.bot.avatar_url ? `<img src="${App.escapeHtml(Dashboard.state.bot.avatar_url)}" style="width:34px;height:34px;border-radius:50%;box-shadow:0 0 0 2px rgba(88,101,242,.4)" alt=""/>` : '<span style="font-size:22px">⚡</span>'}
+      ${Dashboard.state.bot.avatar_url ? `<img src="${App.escapeHtml(Dashboard.state.bot.avatar_url)}" style="width:34px;height:34px;border-radius:50%;box-shadow:0 0 0 2px rgba(var(--d-accent-rgb,224,122,95),.45)" alt=""/>` : '<span style="font-size:22px">⚡</span>'}
       <div>
         <b style="color:var(--d-text)">${App.escapeHtml(Dashboard.state.bot.name)}</b><br/>
         <span style="font-size:11px">Synchronisé en temps réel</span>
@@ -492,8 +710,13 @@ Dashboard.ACCENTS = [
 Dashboard.applyAccent = (name) => {
   const acc = Dashboard.ACCENTS.find((a) => a[0] === name) || Dashboard.ACCENTS[0];
   const r = document.documentElement;
+  const hex = String(acc[1] || '#e07a5f').replace('#', '');
+  const full = hex.length === 3 ? hex.split('').map((c) => c + c).join('') : hex;
+  const n = parseInt(full, 16);
+  const rgb = `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
   r.style.setProperty('--d-accent', acc[1]);
   r.style.setProperty('--d-accent2', acc[2]);
+  r.style.setProperty('--d-accent-rgb', rgb);
   r.style.setProperty('--d-glow', acc[1] + '59');
   try {
     localStorage.setItem('hx-accent', acc[0]);

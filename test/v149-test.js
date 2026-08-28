@@ -64,7 +64,7 @@ const data = {
   const moderation = w.document.createElement('div');
   await Dashboard.renderers.moderation(moderation, data);
   for (const id of ['am-exempt-roles', 'am-exempt-channels', 'am-exempt-users']) {
-    assert.strictEqual(moderation.querySelector(`#${id} select.discord-multi-select`)?.tagName, 'SELECT', `${id} doit être un sélecteur natif`);
+    assert.strictEqual(moderation.querySelector(`#${id} .dd-add-btn`)?.tagName, 'BUTTON', `${id} doit proposer le bouton d'ajout du menu déroulant`);
     assert.strictEqual(moderation.querySelectorAll(`#${id} input[type="checkbox"]`).length, 0, `${id} ne doit plus afficher de cases`);
     assert(moderation.querySelector(`#${id} .discord-multi-remove`), `${id} doit permettre de retirer un choix`);
   }
@@ -72,11 +72,20 @@ const data = {
   assert.deepStrictEqual([...moderation.querySelector('#am-exempt-channels').__discordSelected], ['C2'], 'le salon historique est converti vers son ID');
   assert.deepStrictEqual([...moderation.querySelector('#am-exempt-users').__discordSelected], ['U1']);
 
-  const roleSelect = moderation.querySelector('#am-exempt-roles select');
-  roleSelect.value = 'R2';
-  roleSelect.dispatchEvent(new w.Event('change', { bubbles: true }));
-  assert([...moderation.querySelector('#am-exempt-roles').__discordSelected].includes('R2'), 'un rôle peut être ajouté avec le sélecteur');
-  assert(![...roleSelect.options].some((option) => option.value === 'R2'), 'un rôle déjà ajouté disparaît des choix disponibles');
+  // Nouveau flux (v157) : le bouton « ＋ » ouvre le menu déroulant custom
+  // (panneau en portail sur <body>) ; choisir une option l'ajoute.
+  const roleAddBtn = moderation.querySelector('#am-exempt-roles .dd-add-btn');
+  roleAddBtn.click();
+  let rolePanel = w.document.querySelector('.dd-panel[data-open="1"]');
+  assert(rolePanel, 'le menu déroulant du multi-sélecteur s’ouvre');
+  const roleOption = rolePanel.querySelector('.dd-option[data-value="R2"]');
+  assert(roleOption, 'le rôle R2 est proposé dans le menu déroulant');
+  roleOption.click();
+  assert([...moderation.querySelector('#am-exempt-roles').__discordSelected].includes('R2'), 'un rôle peut être ajouté avec le menu déroulant');
+  roleAddBtn.click();
+  rolePanel = w.document.querySelector('.dd-panel[data-open="1"]');
+  assert(rolePanel && !rolePanel.querySelector('.dd-option[data-value="R2"]'), 'un rôle déjà ajouté disparaît des choix disponibles');
+  roleAddBtn.click();
   moderation.querySelector('#am-exempt-roles .discord-multi-remove').click();
   assert(![...moderation.querySelector('#am-exempt-roles').__discordSelected].includes('R1'), 'un rôle peut être retiré');
 
@@ -91,8 +100,8 @@ const data = {
   const announcements = w.document.createElement('div');
   Dashboard.state.module = 'announcements';
   await Dashboard.renderers.announcements(announcements, data);
-  assert.strictEqual(announcements.querySelector('#ca-channels select.discord-multi-select')?.tagName, 'SELECT');
-  assert.strictEqual(announcements.querySelector('#ca-roles select.discord-multi-select')?.tagName, 'SELECT');
+  assert.strictEqual(announcements.querySelector('#ca-channels .dd-add-btn')?.tagName, 'BUTTON');
+  assert.strictEqual(announcements.querySelector('#ca-roles .dd-add-btn')?.tagName, 'BUTTON');
   assert.strictEqual(announcements.querySelectorAll('#ca-channels input[type="checkbox"], #ca-roles input[type="checkbox"]').length, 0);
   assert.strictEqual(announcements.querySelector('#ca-channels').__discordSelected.has('C1'), true);
   assert.strictEqual(announcements.querySelector('#ca-roles').__discordSelected.has('R1'), true);
@@ -103,7 +112,7 @@ const data = {
   await Dashboard.renderers.welcome(welcome, data);
   const autorole = welcome.querySelector('[data-k="roles"]');
   assert(autorole);
-  assert.strictEqual(autorole.querySelector('select.discord-multi-select')?.tagName, 'SELECT');
+  assert.strictEqual(autorole.querySelector('.dd-add-btn')?.tagName, 'BUTTON');
   assert.strictEqual(autorole.querySelectorAll('input[type="checkbox"]').length, 0);
   assert.strictEqual(autorole.__discordSelected.has('Staff'), true, 'la compatibilité des noms de rôles est conservée pour l’auto-rôle');
   console.log('3️⃣  Bienvenue / auto-rôle : la liste de rôles utilise un sélecteur ✅');
@@ -111,7 +120,7 @@ const data = {
   const source = fs.readFileSync('public/js/dashboard.js', 'utf8');
   const css = fs.readFileSync('public/css/dashboard.css', 'utf8');
   assert(source.includes('Dashboard.renderDiscordMultiSelect'));
-  assert(css.includes('.discord-multi-select') && css.includes('.discord-multi-remove'));
+  assert(css.includes('.dd-add-btn') && css.includes('.discord-multi-remove'));
   console.log('4️⃣  Composant commun et style responsive présents ✅');
   console.log('\n🎉 Tous les tests v8.1 passent !');
 })().catch((error) => {

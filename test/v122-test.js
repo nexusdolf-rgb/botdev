@@ -48,8 +48,8 @@ const data = {
   assert.ok(content.querySelector('#am-sim-go'));
   assert.ok(content.querySelector('#am-exempt-roles'));
   assert.ok(content.querySelector('#am-exempt-channels'));
-  assert.strictEqual(content.querySelector('#am-exempt-roles select.discord-multi-select')?.tagName, 'SELECT');
-  assert.strictEqual(content.querySelector('#am-exempt-channels select.discord-multi-select')?.tagName, 'SELECT');
+  assert.strictEqual(content.querySelector('#am-exempt-roles .dd-add-btn')?.tagName, 'BUTTON');
+  assert.strictEqual(content.querySelector('#am-exempt-channels .dd-add-btn')?.tagName, 'BUTTON');
   assert.strictEqual(content.querySelectorAll('#am-exempt-roles input[type="checkbox"], #am-exempt-channels input[type="checkbox"]').length, 0);
   assert.ok(content.textContent.includes('Avertissements progressifs'));
   console.log('✅ Control Center Auto-Mod rendu : règles, exceptions, brouillon et simulateur');
