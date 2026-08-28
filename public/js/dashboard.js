@@ -881,41 +881,45 @@ Dashboard.renderers.overview = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const g = data.guild;
   const ts = data.tickets_stats || { total: 0, open: 0 };
-  const root = Dashboard.header(content, '📊', `Vue d\'ensemble — ${App.escapeHtml(g.name)}`, `${g.members} membres · configuration de ${App.escapeHtml(bot.name)} sur ce serveur`);
+  const root = Dashboard.header(content, '⌂', 'Tableau de bord', `Gestion de ${App.escapeHtml(g.name)} · ${g.members} membres · Nexora`);
   const greeting = new Date().getHours() < 18 ? 'Bonjour' : 'Bonsoir';
   const serverInitial = String(g.name || '?').trim().slice(0, 1).toUpperCase() || '?';
   const serverIcon = g.icon || g.icon_url || '';
   const statusText = bot.online === false ? 'Nexora est hors ligne' : 'Nexora est opérationnel';
   const statusClass = bot.online === false ? 'is-offline' : 'is-online';
+  const workspace = App.el('<div class="ov-workspace"></div>');
+  root.appendChild(workspace);
   const overviewIntro = App.el(`
-    <section class="ov-intro" aria-label="Résumé du serveur">
+    <section class="ov-intro ov-welcome-panel" aria-label="Résumé du serveur">
       <div class="ov-intro-server">
         ${serverIcon
           ? `<img class="ov-server-avatar" src="${App.escapeHtml(serverIcon)}" alt="" />`
           : `<span class="ov-server-avatar fallback">${App.escapeHtml(serverInitial)}</span>`}
         <div class="ov-intro-copy">
           <span class="ov-eyebrow">${greeting}, administrateur</span>
-          <h2>${App.escapeHtml(g.name)}</h2>
-          <p>${App.escapeHtml(statusText)} · ${App.escapeHtml(String(g.members || 0))} membres suivis par Nexora.</p>
+          <h2>Bienvenue dans ton espace de gestion</h2>
+          <p>${App.escapeHtml(g.name)} · ${App.escapeHtml(String(g.members || 0))} membres · tous les réglages de Nexora au même endroit.</p>
         </div>
       </div>
       <div class="ov-intro-health ${statusClass}">
         <span class="ov-health-dot ${statusClass}"></span>
-        <div><b>${App.escapeHtml(statusText)}</b><small>Synchronisation en temps réel</small></div>
+        <div><b>${App.escapeHtml(statusText)}</b><small>Dernière synchronisation disponible</small></div>
+        <button class="ov-welcome-settings" data-go="server" type="button">Réglages <span>→</span></button>
       </div>
     </section>`);
-  root.appendChild(overviewIntro);
+  overviewIntro.querySelector('[data-go]').onclick = () => Dashboard.setModule('server');
+  workspace.appendChild(overviewIntro);
 
   const quickActions = App.el(`
-    <div class="ov-quick-actions" aria-label="Actions rapides">
-      <span class="ov-quick-label">Actions rapides</span>
-      <button class="ov-quick-action" data-go="tickets"><span>🎫</span><b>Configurer les tickets</b><i>→</i></button>
-      <button class="ov-quick-action" data-go="welcome"><span>👋</span><b>Préparer l’accueil</b><i>→</i></button>
-      <button class="ov-quick-action" data-go="moderation"><span>🛡️</span><b>Vérifier la sécurité</b><i>→</i></button>
-      <button class="ov-quick-action" data-go="botprofile"><span>🤖</span><b>Personnaliser Nexora</b><i>→</i></button>
+    <div class="ov-quick-actions ov-access-bar" aria-label="Accès rapides">
+      <span class="ov-quick-label">Accès rapides</span>
+      <button class="ov-quick-action" data-go="tickets"><span>🎫</span><b>Tickets</b><small>Configurer</small><i>→</i></button>
+      <button class="ov-quick-action" data-go="welcome"><span>👋</span><b>Bienvenue</b><small>Préparer</small><i>→</i></button>
+      <button class="ov-quick-action" data-go="moderation"><span>🛡️</span><b>Modération</b><small>Protéger</small><i>→</i></button>
+      <button class="ov-quick-action" data-go="botprofile"><span>🤖</span><b>Identité du bot</b><small>Personnaliser</small><i>→</i></button>
     </div>`);
   quickActions.querySelectorAll('[data-go]').forEach((button) => { button.onclick = () => Dashboard.setModule(button.dataset.go); });
-  root.appendChild(quickActions);
+  workspace.appendChild(quickActions);
 
   // ✅ Checklist de configuration (confort : tout voir d'un coup d'œil)
   const checklist = data.checklist || [];
@@ -937,11 +941,11 @@ Dashboard.renderers.overview = async (content, data) => {
         </div>
       </div>`);
     hero.querySelectorAll('[data-go]').forEach((b) => { b.onclick = () => Dashboard.setModule(b.dataset.go); });
-    root.appendChild(hero);
+    workspace.appendChild(hero);
   }
-  const clCard = Dashboard.card(root, '✅ Configuration du serveur', '');
+  const clCard = Dashboard.card(workspace, '✅ Configuration du serveur', '');
   clCard.classList.add('ov-checklist-card');
-  clCard.innerHTML = '';
+  clCard.innerHTML = '<div class="ov-section-heading"><b>Configuration du serveur</b><span>Les éléments importants de ton installation Nexora</span></div>';
   clCard.appendChild(App.el(`
     <div class="ov-progress-summary">
       <div class="ov-progress-head">
@@ -982,12 +986,12 @@ Dashboard.renderers.overview = async (content, data) => {
         <div class="lbl">${label}</div>
       </div>`));
   });
-  root.appendChild(statsEl);
+  workspace.appendChild(statsEl);
 
   // 📰 Flux d'activité + résumé : deux colonnes sur grand écran, une seule
   // colonne sur mobile pour garder une lecture naturelle.
   const activityGrid = App.el(`<div class="ov-activity-grid"></div>`);
-  root.appendChild(activityGrid);
+  workspace.appendChild(activityGrid);
   const feed = Dashboard.card(activityGrid, '📰 Activité récente', 'Tout ce que le bot fait pour toi, en direct — actualisé toutes les 30 secondes.');
   feed.classList.add('ov-feed-card');
   const feedList = App.el(`<div id="ov-feed"></div>`);
@@ -1077,7 +1081,7 @@ Dashboard.renderers.overview = async (content, data) => {
     c.querySelector('[data-go]').onclick = () => Dashboard.setModule(id);
     grid.appendChild(c);
   });
-  root.appendChild(grid);
+  workspace.appendChild(grid);
 };
 
 // ---------- Tickets ----------

@@ -99,7 +99,7 @@ setTimeout(async () => {
   try {
     const results = await w.__results;
     console.log(JSON.stringify(results, null, 2));
-    const ok = results.modules >= 15 && results.header.includes('Vue') && results.guildPick === 'G1'
+    const ok = results.modules >= 15 && (results.header.includes('Tableau') || results.header.includes('Vue')) && results.guildPick === 'G1'
       && results.botSection && !results.errorShown
       && results.welcome && !results.welcome.error && results.welcome.channelSelect
       && results.welcome.colorPicker && results.welcome.roleSelect && results.welcome.cards >= 2

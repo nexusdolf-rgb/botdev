@@ -3755,3 +3755,115 @@ html.hx-light .dashboard-shell-host .dash-btn-primary { color: #fff !important; 
   .dashboard-shell-host .dash-card h3 { font-size: 17px; }
 }
 html.hx-light { color-scheme: light; }
+
+/* ============================================================
+   NEXORA v11.0 — Accueil organisé
+   L'accueil n'est plus une simple grille de cartes :
+   contexte du serveur, accès rapides, progression puis activité.
+   ============================================================ */
+.dashboard-shell-host .ov-workspace { display: flex; flex-direction: column; gap: 0; }
+.dashboard-shell-host .ov-welcome-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  min-height: 132px;
+  margin-bottom: 18px;
+  padding: 24px 26px;
+  border-left: 4px solid #e07a5f;
+}
+.dashboard-shell-host .ov-welcome-panel .ov-server-avatar { width: 64px; height: 64px; flex-basis: 64px; }
+.dashboard-shell-host .ov-welcome-panel .ov-intro-copy h2 { font-size: 22px; font-weight: 600; }
+.dashboard-shell-host .ov-welcome-panel .ov-intro-health { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 10px; min-width: 220px; align-items: center; }
+.dashboard-shell-host .ov-welcome-panel .ov-intro-health > div { min-width: 0; }
+.dashboard-shell-host .ov-welcome-settings {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid #4f545c;
+  border-radius: 4px;
+  color: #f2f3f5;
+  background: #2b2d31;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.dashboard-shell-host .ov-welcome-settings:hover { border-color: #e07a5f; background: #4f545c; }
+.dashboard-shell-host .ov-welcome-settings span { color: #e07a5f; font-size: 15px; }
+.dashboard-shell-host .ov-access-bar {
+  display: grid;
+  grid-template-columns: auto repeat(4, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 8px;
+  padding: 8px;
+  margin-bottom: 26px;
+  border-radius: 5px;
+}
+.dashboard-shell-host .ov-access-bar .ov-quick-label {
+  display: flex;
+  align-items: center;
+  min-width: 92px;
+  padding: 0 12px 0 6px;
+  color: #b5bac1;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+.dashboard-shell-host .ov-access-bar .ov-quick-action {
+  display: grid;
+  grid-template-columns: 25px minmax(0, 1fr) auto;
+  grid-template-rows: 1fr 1fr;
+  column-gap: 7px;
+  row-gap: 0;
+  align-items: center;
+  min-width: 0;
+  min-height: 52px;
+  padding: 7px 9px;
+  text-align: left;
+}
+.dashboard-shell-host .ov-access-bar .ov-quick-action > span { grid-row: 1 / -1; align-self: center; font-size: 18px; }
+.dashboard-shell-host .ov-access-bar .ov-quick-action b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.dashboard-shell-host .ov-access-bar .ov-quick-action small { color: #b5bac1; font-size: 10px; }
+.dashboard-shell-host .ov-access-bar .ov-quick-action i { grid-column: 3; grid-row: 1 / -1; align-self: center; }
+.dashboard-shell-host .ov-section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid #4f545c;
+}
+.dashboard-shell-host .ov-section-heading b { color: #f2f3f5; font-size: 20px; font-weight: 600; }
+.dashboard-shell-host .ov-section-heading span { color: #b5bac1; font-size: 12px; }
+.dashboard-shell-host .ov-checklist-card { padding: 20px 22px !important; }
+.dashboard-shell-host .ov-checklist-card .ov-section-heading { border-bottom-color: #72767d; }
+.dashboard-shell-host .ov-stats { margin-top: 0; }
+.dashboard-shell-host .ov-module-grid { margin-top: 10px; }
+.dashboard-shell-host .ov-module-grid::before {
+  content: 'Modules du serveur';
+  grid-column: 1 / -1;
+  padding: 0 0 7px;
+  color: #b5bac1;
+  border-bottom: 1px solid #4f545c;
+  font-size: 20px;
+  font-weight: 600;
+}
+.dashboard-shell-host .ov-module-grid .ov-module-card { margin-top: 0; }
+
+@media (max-width: 900px) {
+  .dashboard-shell-host .ov-welcome-panel { grid-template-columns: 1fr; gap: 15px; padding: 18px 16px; }
+  .dashboard-shell-host .ov-welcome-panel .ov-intro-health { min-width: 0; width: 100%; }
+  .dashboard-shell-host .ov-access-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 21px; }
+  .dashboard-shell-host .ov-access-bar .ov-quick-label { grid-column: 1 / -1; min-height: 26px; padding: 0 6px; }
+  .dashboard-shell-host .ov-section-heading { align-items: flex-start; flex-direction: column; gap: 4px; }
+}
+@media (max-width: 520px) {
+  .dashboard-shell-host .ov-access-bar { grid-template-columns: 1fr; }
+  .dashboard-shell-host .ov-access-bar .ov-quick-label { grid-column: auto; }
+  .dashboard-shell-host .ov-welcome-panel .ov-intro-copy h2 { font-size: 18px; }
+  .dashboard-shell-host .ov-section-heading b,
+  .dashboard-shell-host .ov-module-grid::before { font-size: 17px; }
+}
