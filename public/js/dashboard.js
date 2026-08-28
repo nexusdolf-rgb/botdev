@@ -167,6 +167,7 @@ Dashboard.ddCloseAll = () => {
 Dashboard.dropdownMenu = ({ trigger, getOptions, onSelect, searchable = false, minPanelWidth = 0 }) => {
   const panel = App.el('<div class="dd-panel" role="listbox" aria-label="Options" hidden></div>');
   document.body.appendChild(panel);
+  panel._ddTrigger = trigger;
   trigger.setAttribute('data-dd-trigger', 'true');
   trigger.setAttribute('aria-haspopup', 'listbox');
   trigger.setAttribute('aria-expanded', 'false');
@@ -252,11 +253,15 @@ Dashboard.dropdownMenu = ({ trigger, getOptions, onSelect, searchable = false, m
     const onKey = (e) => { if (e.key === 'Escape') close(); };
     window.addEventListener('scroll', reposition, true);
     window.addEventListener('resize', reposition);
+    // pointerdown couvre souris ET tactile ; mousedown est conservé pour les
+    // navigateurs anciens (iOS n'émet pas toujours d'événements souris).
+    document.addEventListener('pointerdown', onDocDown);
     document.addEventListener('mousedown', onDocDown);
     document.addEventListener('keydown', onKey);
     panel._ddCleanup = () => {
       window.removeEventListener('scroll', reposition, true);
       window.removeEventListener('resize', reposition);
+      document.removeEventListener('pointerdown', onDocDown);
       document.removeEventListener('mousedown', onDocDown);
       document.removeEventListener('keydown', onKey);
     };
@@ -1246,10 +1251,10 @@ Dashboard.renderers.overview = async (content, data) => {
   const quickActions = App.el(`
     <div class="ov-quick-actions ov-access-bar" aria-label="Accès rapides">
       <span class="ov-quick-label">Accès rapides</span>
-      <button class="ov-quick-action" data-go="tickets"><span>🎫</span><b>Tickets</b><small>Configurer</small><i>→</i></button>
-      <button class="ov-quick-action" data-go="welcome"><span>👋</span><b>Bienvenue</b><small>Préparer</small><i>→</i></button>
-      <button class="ov-quick-action" data-go="moderation"><span>🛡️</span><b>Modération</b><small>Protéger</small><i>→</i></button>
-      <button class="ov-quick-action" data-go="botprofile"><span>🤖</span><b>Identité du bot</b><small>Personnaliser</small><i>→</i></button>
+      <button class="ov-quick-action" data-go="tickets"><span>🎫</span><div class="ov-qa-txt"><b>Tickets</b><small>Configurer</small></div><i>→</i></button>
+      <button class="ov-quick-action" data-go="welcome"><span>👋</span><div class="ov-qa-txt"><b>Bienvenue</b><small>Préparer</small></div><i>→</i></button>
+      <button class="ov-quick-action" data-go="moderation"><span>🛡️</span><div class="ov-qa-txt"><b>Modération</b><small>Protéger</small></div><i>→</i></button>
+      <button class="ov-quick-action" data-go="botprofile"><span>🤖</span><div class="ov-qa-txt"><b>Identité du bot</b><small>Personnaliser</small></div><i>→</i></button>
     </div>`);
   quickActions.querySelectorAll('[data-go]').forEach((button) => { button.onclick = () => Dashboard.setModule(button.dataset.go); });
   workspace.appendChild(quickActions);

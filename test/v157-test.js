@@ -43,8 +43,8 @@ assert(css.includes('.dash-btn-lg'), 'taille lg des boutons manquante');
 assert(css.includes('.dash-btn:focus-visible'), 'anneau de focus des boutons manquant');
 
 // 6. Version v157 déployée (cache PWA + assets)
-assert(!index.includes('?v=156'), 'index.html référence encore v156');
-assert(index.includes('?v=157'), 'index.html ne référence pas v157');
-assert(sw.includes("'botdev-v157'"), 'le cache du service worker n’est pas en v157');
+// version gérée par le test de la version courante (v158)
+
+
 
 console.log('✅ v157 : sélecteurs custom façon panel pro, identité Argile, boutons unifiés — dashboard v157');
