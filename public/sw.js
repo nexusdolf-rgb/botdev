@@ -1,13 +1,13 @@
 // BotDev - Service Worker (mode app installable + chargement hors ligne)
 // Stratégie : HTML/JS/CSS en réseau d'abord (toujours à jour),
 // images/icônes en cache d'abord. L'API passe toujours par le réseau.
-const CACHE = 'botdev-v154';
+const CACHE = 'botdev-v156';
 const ASSETS = [
   '/',
   '/manifest.webmanifest',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  '/icons/icon-maskable-512.png',
+  '/icons/nexora-robot-mark-192.png',
+  '/icons/nexora-robot-mark.png',
+  '/icons/nexora-robot-mark.svg',
 ];
 
 self.addEventListener('install', (event) => {

@@ -273,7 +273,7 @@ Dashboard.renderSide = (aside) => {
   const bot = Dashboard.state.bot || {};
   const brandAvatar = bot.avatar_url
     ? `<img class="dash-side-brand-avatar" src="${App.escapeHtml(bot.avatar_url)}" alt="" />`
-    : '<span class="dash-side-brand-avatar fallback">⚡</span>';
+    : '<img class="dash-side-brand-avatar fallback-logo" src="/icons/nexora-robot-mark.svg" alt="Logo Nexora" />';
   aside.appendChild(App.el(`<div class="dash-side-brand">${brandAvatar}<div class="dash-side-brand-copy"><b>${App.escapeHtml(bot.name || 'Hoxera')}</b><span>Control Center</span></div><span class="dash-side-brand-status" title="${bot.online ? 'Bot en ligne' : 'Bot hors ligne'}"></span></div>`));
   const sideBrandImage = aside.querySelector('.dash-side-brand-avatar:not(.fallback)');
   if (sideBrandImage) sideBrandImage.onerror = () => sideBrandImage.replaceWith(App.el('<span class="dash-side-brand-avatar fallback">⚡</span>'));
@@ -596,6 +596,10 @@ Dashboard.removeTopbarPortals = () => {
   document.querySelectorAll('[data-dash-topbar-popover="true"]').forEach((node) => node.remove());
 };
 
+Dashboard.removeMobileDrawers = () => {
+  document.querySelectorAll('[data-dash-mobile-layer="true"]').forEach((node) => node.remove());
+};
+
 Dashboard.positionTopbarPopover = (popover, button) => {
   if (!popover || popover.hidden || !button) return;
   const isMobile = window.matchMedia
@@ -613,12 +617,21 @@ Dashboard.positionTopbarPopover = (popover, button) => {
 Dashboard.renderTopbar = (topbar, discordGuilds) => {
   if (!topbar) return;
   Dashboard.removeTopbarPortals();
+  Dashboard.removeMobileDrawers();
   const bot = Dashboard.state.bot;
   const cur = discordGuilds.find((g) => g.id === Dashboard.state.guildId);
   const needsInvite = discordGuilds.some((g) => g.canManage && !g.hasBot);
   const all = [...Dashboard.MODULES, ...Dashboard.BOT_MODULES];
   const mod = all.find(([id]) => id === Dashboard.state.module) || ['', '📊', 'Vue d\'ensemble'];
   topbar.innerHTML = `
+    <div class="dash-mobile-bar" aria-label="Navigation mobile">
+      <button class="dash-mobile-navbtn" id="d-mobile-menu" type="button" aria-label="Ouvrir le menu principal" aria-expanded="false">☰</button>
+      <div class="dash-mobile-brand">
+        ${bot.avatar_url ? `<img src="${App.escapeHtml(bot.avatar_url)}" alt="" />` : '<img src="/icons/nexora-robot-mark.svg" alt="Logo Nexora" />'}
+        <b>${App.escapeHtml(bot.name || 'Nexora')}</b>
+      </div>
+      <button class="dash-mobile-navbtn" id="d-mobile-modules" type="button" aria-label="Ouvrir les serveurs et modules" aria-expanded="false">▦</button>
+    </div>
     <div class="dash-crumb">
       <span class="crumb-ico">${mod[1]}</span>
       <div class="crumb-txt">
@@ -664,6 +677,102 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
     </div>`);
   document.body.appendChild(bellPop);
   document.body.appendChild(accPop);
+
+  // 📱 Navigation mobile inspirée d'un vrai panel : un menu général et un
+  // tiroir séparé pour les serveurs/modules. Sur desktop, ces éléments sont
+  // masqués ; la sidebar classique reste la navigation principale.
+  const mobileUser = App.state.user || {};
+  const mobileUserName = mobileUser.discord_username || mobileUser.email || 'Compte Discord';
+  const mobileLayer = App.el(`
+    <div class="dash-mobile-layer" data-dash-mobile-layer="true">
+      <div class="dash-mobile-backdrop" id="dash-mobile-backdrop" hidden></div>
+      <aside class="dash-mobile-drawer dash-mobile-site-drawer" id="dash-mobile-site-drawer" hidden aria-label="Menu principal">
+        <div class="dash-mobile-drawer-head"><b>Menu Nexora</b><button class="dash-mobile-close" id="d-mobile-site-close" type="button" aria-label="Fermer le menu">×</button></div>
+        <nav class="dash-mobile-site-links">
+          <button type="button" data-mobile-home><span>⌂</span>Accueil</button>
+          <button type="button" data-mobile-open-modules><span>▦</span>Serveurs et modules</button>
+          ${mobileUser.is_admin ? '<button type="button" data-mobile-admin><span>♛</span>Administration globale</button>' : ''}
+        </nav>
+        <div class="dash-mobile-drawer-account">
+          <span class="dash-mobile-account-avatar">${App.escapeHtml(String(mobileUserName).slice(0, 1).toUpperCase())}</span>
+          <div><b>${App.escapeHtml(mobileUserName)}</b><small>Compte connecté</small></div>
+          <button type="button" data-mobile-logout aria-label="Déconnexion">⏻</button>
+        </div>
+      </aside>
+      <aside class="dash-mobile-drawer dash-mobile-modules-drawer" id="dash-mobile-modules-drawer" hidden aria-label="Serveurs et modules">
+        <div class="dash-mobile-drawer-head"><b>Serveurs et modules</b><button class="dash-mobile-close" id="d-mobile-modules-close" type="button" aria-label="Fermer les modules">×</button></div>
+        <div class="dash-mobile-modules-body"><div class="dash-mobile-server-rail" id="dash-mobile-server-rail"></div><div class="dash-mobile-module-list" id="dash-mobile-module-list"></div></div>
+      </aside>
+    </div>`);
+  document.body.appendChild(mobileLayer);
+
+  const mobileBackdrop = mobileLayer.querySelector('#dash-mobile-backdrop');
+  const siteDrawer = mobileLayer.querySelector('#dash-mobile-site-drawer');
+  const modulesDrawer = mobileLayer.querySelector('#dash-mobile-modules-drawer');
+  const mobileMenuButton = topbar.querySelector('#d-mobile-menu');
+  const mobileModulesButton = topbar.querySelector('#d-mobile-modules');
+  const closeMobileDrawers = () => {
+    siteDrawer.hidden = true;
+    modulesDrawer.hidden = true;
+    mobileBackdrop.hidden = true;
+    document.body.classList.remove('dash-mobile-drawer-open');
+    mobileMenuButton?.setAttribute('aria-expanded', 'false');
+    mobileModulesButton?.setAttribute('aria-expanded', 'false');
+  };
+  const openMobileDrawer = (drawer, button) => {
+    Dashboard.closePopovers();
+    siteDrawer.hidden = drawer !== siteDrawer;
+    modulesDrawer.hidden = drawer !== modulesDrawer;
+    mobileBackdrop.hidden = false;
+    document.body.classList.add('dash-mobile-drawer-open');
+    mobileMenuButton?.setAttribute('aria-expanded', String(drawer === siteDrawer));
+    mobileModulesButton?.setAttribute('aria-expanded', String(drawer === modulesDrawer));
+  };
+  const moduleRail = mobileLayer.querySelector('#dash-mobile-server-rail');
+  const moduleList = mobileLayer.querySelector('#dash-mobile-module-list');
+  const renderMobileModules = () => {
+    const currentGuild = (discordGuilds || []).find((guild) => guild.id === Dashboard.state.guildId);
+    moduleRail.innerHTML = '';
+    (discordGuilds || []).forEach((guild) => {
+      const initial = String(guild.name || '?').trim().slice(0, 1).toUpperCase() || '?';
+      const item = App.el(`<button type="button" class="dash-mobile-server-item ${guild.id === Dashboard.state.guildId ? 'active' : ''}" data-mobile-guild="${App.escapeHtml(guild.id)}" title="${App.escapeHtml(guild.name)}">${guild.icon ? `<img src="${App.escapeHtml(guild.icon)}" alt="" />` : `<span>${App.escapeHtml(initial)}</span>`}</button>`);
+      item.onclick = async () => {
+        if (!guild.hasBot) { App.openInvite(Dashboard.state.bot.invite_url); return; }
+        if (!guild.canManage) { App.toast('Lecture seule : permission Administrateur requise.', 'error'); return; }
+        closeMobileDrawers();
+        await Dashboard.selectGuild(guild.id);
+      };
+      moduleRail.appendChild(item);
+    });
+    moduleList.innerHTML = `<div class="dash-mobile-current-server"><small>Serveur sélectionné</small><b>${App.escapeHtml(currentGuild ? currentGuild.name : 'Choisis un serveur')}</b></div>`;
+    if (!currentGuild) {
+      moduleList.appendChild(App.el('<div class="dash-mobile-module-empty">Sélectionne un serveur à gauche.</div>'));
+      return;
+    }
+    const groups = [['Gestion du serveur', Dashboard.MODULES], ...(mobileUser.is_admin ? [['Administration du bot', Dashboard.BOT_MODULES]] : [])];
+    groups.forEach(([label, entries]) => {
+      moduleList.appendChild(App.el(`<div class="dash-mobile-module-group">${App.escapeHtml(label)}</div>`));
+      entries.forEach(([id, icon, name]) => {
+        const button = App.el(`<button type="button" class="dash-mobile-module-item ${Dashboard.state.module === id ? 'active' : ''}" data-mobile-module="${App.escapeHtml(id)}"><span>${icon}</span><b>${App.escapeHtml(name)}</b><i>›</i></button>`);
+        button.onclick = () => { closeMobileDrawers(); Dashboard.setModule(id); };
+        moduleList.appendChild(button);
+      });
+    });
+  };
+  renderMobileModules();
+  mobileBackdrop.onclick = closeMobileDrawers;
+  mobileMenuButton?.addEventListener('click', (event) => { event.stopPropagation(); openMobileDrawer(siteDrawer, mobileMenuButton); });
+  mobileModulesButton?.addEventListener('click', (event) => { event.stopPropagation(); renderMobileModules(); openMobileDrawer(modulesDrawer, mobileModulesButton); });
+  mobileLayer.querySelector('#d-mobile-site-close').onclick = closeMobileDrawers;
+  mobileLayer.querySelector('#d-mobile-modules-close').onclick = closeMobileDrawers;
+  mobileLayer.querySelector('[data-mobile-home]').onclick = () => { closeMobileDrawers(); Dashboard.setModule('overview'); };
+  mobileLayer.querySelector('[data-mobile-open-modules]').onclick = () => { renderMobileModules(); openMobileDrawer(modulesDrawer, mobileModulesButton); };
+  mobileLayer.querySelector('[data-mobile-admin]')?.addEventListener('click', () => { closeMobileDrawers(); App.router.go('/admin'); });
+  mobileLayer.querySelector('[data-mobile-logout]').onclick = async () => {
+    await App.api('/auth/logout', { method: 'POST' }).catch(() => {});
+    location.hash = '#/';
+    location.reload();
+  };
 
   const inviteBtn = topbar.querySelector('#d-invite2');
   if (inviteBtn) inviteBtn.onclick = () => App.openInvite(bot.invite_url);
