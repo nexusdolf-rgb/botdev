@@ -61,122 +61,75 @@ App.renderPublicLanding = () => {
   root.appendChild(App.renderPublicNavbar());
 
   const page = App.el(`
-    <div id="public-landing" class="dh">
-      <div class="dh-hero">
-        <canvas id="dh-particles" class="dh-particles"></canvas>
-        <div class="dh-bot-part">
-          <div class="dh-logo"><img src="/api/public/bot-avatar" alt="Avatar de Nexora" /></div>
-          <div class="dh-title">
-            <div class="dh-description">Hoxera, ton bot Discord français multitâche</div>
-            <div class="dh-activities">Un bot pour&nbsp;<span class="dh-rot visible" id="dh-rot">La Modération</span></div>
-          </div>
-          <button class="dh-invite" id="pub-invite-hero">
-            <svg viewBox="0 0 127.14 96.36" width="22" height="24" fill="currentColor" aria-hidden="true"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.03A97.68,97.68,0,0,0,49,6.03,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/></svg>
-            Ajouter à Discord
-          </button>
+    <div id="public-landing">
+      <div class="pub-hero">
+        <div class="pub-blob b1"></div><div class="pub-blob b2"></div><div class="pub-blob b3"></div>
+        <div class="pub-hero-badge shimmer">⚡ Hoxera — synchronisé en direct avec Discord</div>
+        <h1 class="hero-title">Le bot qui anime<br/><span class="grad grad-anim">ton serveur Discord</span></h1>
+        <p class="pub-tagline">Tickets automatiques avec transcriptions, niveaux XP, boutique, giveaways, bienvenue et modération.
+        Ajoute Hoxera à ton serveur, puis configure tout depuis le dashboard avec ton compte Discord.</p>
+        <div class="pub-hero-actions">
+          <button class="btn btn-primary" id="pub-invite-hero" style="padding:13px 22px;font-size:15px">➕ Ajouter Hoxera à ton serveur</button>
+          ${user && user.discord_id
+            ? `<button class="btn" id="pub-dash-hero" style="padding:13px 22px;font-size:15px">📊 Ouvrir mon dashboard</button>`
+            : `<button class="btn btn-discord" id="pub-connect-hero" style="padding:13px 22px;font-size:15px;width:auto">🎮 Se connecter avec Discord</button>`}
         </div>
-        <div class="dh-wave-container" aria-hidden="true"><div class="dh-wave"></div></div>
+        <div class="pub-support-link"><a href="https://discord.gg/X9hTdr9N3" target="_blank" rel="noopener">🆘 Rejoindre le serveur support officiel</a></div>
+        <div class="pub-stats" id="pub-stats">
+          <div class="pub-stat"><div class="val">—</div><div class="lbl">Bots en ligne</div></div>
+          <div class="pub-stat"><div class="val">—</div><div class="lbl">Serveurs Discord</div></div>
+          <div class="pub-stat"><div class="val">—</div><div class="lbl">Membres touchés</div></div>
+        </div>
       </div>
 
-      <div class="dh-features">
-        <div class="dh-features-content">
-          <div class="dh-feature reveal">
-            <div class="dh-image" aria-hidden="true">
-              <div class="dbv-discord">
-                <div class="dbv-msg">
-                  <span class="dbv-ava">🤖</span>
-                  <div class="dbv-body">
-                    <div class="dbv-head"><b>Hoxera</b><span class="dbv-tag">BOT</span></div>
-                    <div class="dbv-embed"><b>Choisis tes rôles</b><small>Un clic, et le rôle est à toi.</small><span class="dbv-foot">Rôles à la carte</span></div>
-                    <div class="dbv-btns"><span>🎨 Graphiste</span><span>🎮 Joueur</span><span>📢 Annonces</span></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="dh-content">
-              <div class="dh-f-title"><h2>Action Réaction</h2></div>
-              <p>Un clic, un émoji et Hoxera réagit.</p>
-              <p>Utilisez les menus de rôles à boutons, réactions ou sélections, jusque dans les moindres détails.</p>
-              <p>Tout est facile, accessible, intuitif. Alors réagissez !</p>
-            </div>
-          </div>
+      <div class="pub-section reveal">
+        <h2>🤖 Hoxera en direct</h2>
+        <p class="pub-sub">Statistiques en temps réel, lues directement depuis Discord.</p>
+        <div class="bots-grid" id="pub-bots"><div class="spinner"></div></div>
+      </div>
 
-          <div class="dh-feature reveal">
-            <div class="dh-image" aria-hidden="true">
-              <div class="dbv-rank">
-                <div class="dbv-rank-card">
-                  <span class="dbv-medal">🥇</span>
-                  <div class="dbv-rank-info">
-                    <b>Niveau 24</b>
-                    <span class="dbv-bar"><i style="width:72%"></i></span>
-                    <small>12 480 / 17 300 XP</small>
-                  </div>
-                </div>
-                <div class="dbv-rank-row"><span class="dbv-coin">🪙</span><b>2 450</b><small>coins</small><span class="dbv-chip">🏅 Rôle « Actif »</span></div>
-                <div class="dbv-rank-row"><span class="dbv-coin">🛒</span><b>Boutique</b><small>objets & bonus</small></div>
-              </div>
+      <div class="pub-section reveal">
+        <h2>📊 Un dashboard digne des plus grands</h2>
+        <p class="pub-sub">Configure tout depuis ton téléphone ou ton PC — design pro, sauvegarde intelligente, flux d'activité en direct.</p>
+        <div class="pub-mock">
+          <div class="mock-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="mock-url">hoxera.is-a.dev</span></div>
+          <div class="mock-body">
+            <div class="mock-side">
+              <div class="mock-srv"><span class="ms-ico">N</span><span class="ms-lines"><i></i><i></i></span></div>
+              <div class="mock-item active"></div><div class="mock-item"></div><div class="mock-item"></div><div class="mock-item"></div><div class="mock-item"></div>
             </div>
-            <div class="dh-content">
-              <div class="dh-f-title"><h2>Niveaux &amp; économie</h2></div>
-              <p>Laissez vos membres se démarquer sur votre serveur grâce aux systèmes de niveaux et d'économie personnalisables.</p>
-              <p>Vous pourrez afficher le classement, proposer des récompenses, une boutique et bien plus encore !</p>
-            </div>
-          </div>
-
-          <div class="dh-feature reveal">
-            <div class="dh-image" aria-hidden="true">
-              <div class="dbv-mod">
-                <div class="dbv-mod-row"><span>⚠️</span><b>Avertissement</b><i>accumulés</i></div>
-                <div class="dbv-mod-row"><span>🔇</span><b>Sourdine</b><i>temporisée</i></div>
-                <div class="dbv-mod-row"><span>👢</span><b>Expulsion</b><i>avec motif</i></div>
-                <div class="dbv-mod-row"><span>🔨</span><b>Bannissement</b><i>définitif</i></div>
-                <div class="dbv-mod-foot">une seule commande de sanction</div>
-              </div>
-            </div>
-            <div class="dh-content">
-              <div class="dh-f-title"><h2>Modération</h2></div>
-              <p>Qui osera vous tenir tête avec Hoxera à vos côtés ?</p>
-              <p>Avertissements, sourdine, expulsion ou bannissement, tous ces outils individuels ou regroupés dans une seule commande de sanction seront votre meilleure arme.</p>
-            </div>
-          </div>
-
-          <div class="dh-feature reveal">
-            <div class="dh-image" aria-hidden="true">
-              <div class="dbv-stats">
-                <div class="dbv-stats-head"><b>Activité du serveur</b><span>7 jours</span></div>
-                <div class="dbv-chart"><i style="height:34%"></i><i style="height:52%"></i><i style="height:41%"></i><i style="height:68%"></i><i style="height:59%"></i><i style="height:84%"></i><i style="height:72%"></i></div>
-                <div class="dbv-stats-foot"><span>Messages</span><span>Arrivées</span><span>Commandes</span></div>
-              </div>
-            </div>
-            <div class="dh-content">
-              <div class="dh-f-title"><h2>Statistiques</h2></div>
-              <p>Messages, arrivées, commandes les plus utilisées : Hoxera enregistre la vie de votre serveur.</p>
-              <p>Consultez, partagez et comparez l'activité de votre communauté, jour après jour, depuis le dashboard.</p>
+            <div class="mock-main">
+              <div class="mock-stats"><div class="mock-stat"></div><div class="mock-stat"></div><div class="mock-stat"></div></div>
+              <div class="mock-card"><div class="mc-line w60"></div><div class="mc-line w90"></div><div class="mc-line w75"></div></div>
+              <div class="mock-card"><div class="mc-line w40"></div><div class="mc-bar"></div></div>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="dh-footer">
-        <div class="dh-footer-content">
-          <div class="dh-footer-item dh-footer-logo">
-            <div class="dh-logo-mini">⚡</div>
-            <b>Hoxera</b>
-          </div>
-          <div class="dh-footer-item">
-            <div class="item-title">Navigation</div>
-            <a href="#" id="pub-foot-home">Accueil</a>
-            <a href="#" id="pub-foot-dash">Dashboard</a>
-            <a href="https://hoxera.is-a.dev/api/health/bot" target="_blank" rel="noopener">Statut du service</a>
-          </div>
-          <div class="dh-footer-item">
-            <div class="item-title">Communauté</div>
-            <a href="https://discord.gg/X9hTdr9N3" target="_blank" rel="noopener">Serveur support</a>
-            <a href="https://discord.com/oauth2/authorize?client_id=1537443352281088000&scope=bot+applications.commands&permissions=8" target="_blank" rel="noopener">Ajouter le bot</a>
-          </div>
+      <div class="pub-section reveal">
+        <h2>✨ Tout ce que Hoxera sait faire</h2>
+        <div class="pub-features">
+          <div class="pub-feature reveal"><div class="f-ico">🎫</div><b>Tickets automatiques</b><p>Bouton → salon privé créé instantanément, avec rôle staff, types personnalisés et transcription en MP.</p></div>
+          <div class="pub-feature reveal"><div class="f-ico">📋</div><b>Rôles en menus & boutons</b><p>Menus déroulants ou boutons : chaque membre choisit ses rôles tout seul.</p></div>
+          <div class="pub-feature reveal"><div class="f-ico">🛡️</div><b>Modération & anti-raid</b><p>Kick, ban, timeout, avertissements, liste noire et verrouillage du serveur en 1 clic.</p></div>
+          <div class="pub-feature reveal"><div class="f-ico">💰</div><b>Économie</b><p>Coins quotidiens, travail, paris, boutique et classement du serveur.</p></div>
+          <div class="pub-feature reveal"><div class="f-ico">🕹️</div><b>Jeux & fun</b><p>Pendu, morpion, pierre-feuille-ciseaux, mariages et actions entre membres.</p></div>
+          <div class="pub-feature reveal"><div class="f-ico">🎂</div><b>Anniversaires & rappels</b><p>Le bot souhaite les anniversaires et envoie des rappels en message privé.</p></div>
+          <div class="pub-feature reveal"><div class="f-ico">🗳️</div><b>Sondages & suggestions</b><p>Votes en direct avec boutons, suggestions approuvées depuis le dashboard.</p></div>
+          <div class="pub-feature reveal"><div class="f-ico">🔊</div><b>Salons vocaux temporaires</b><p>Un clic pour créer ton vocal, supprimé automatiquement quand il est vide.</p></div>
+          <div class="pub-feature reveal"><div class="f-ico">📅</div><b>Annonces programmées</b><p>Messages automatiques aux jours et heures choisis, configurés depuis le dashboard.</p></div>
+          <div class="pub-feature reveal"><div class="f-ico">👥</div><b>Dashboard complet</b><p>Membres gérables, statistiques, coins, rôles et kick — tout depuis ton téléphone.</p></div>
         </div>
-        <div class="dh-footer-legal"><a href="https://discord.gg/X9hTdr9N3" target="_blank" rel="noopener">Support Discord</a></div>
-        <div class="dh-footer-copyright"><span class="text">Copyright © 2026 Hoxera — Tous droits réservés</span></div>
+      </div>
+
+      <div class="pub-footer">
+        <b>⚡ Hoxera</b> — ton serveur mérite un bot à la hauteur
+        <div class="pub-footer-links">
+          <a href="https://discord.gg/X9hTdr9N3" target="_blank" rel="noopener">🆘 Serveur support</a>
+          <span>·</span>
+          <a href="#" id="pub-foot-dash">📊 Dashboard</a>
+        </div>
       </div>
     </div>
   `);
@@ -195,54 +148,6 @@ App.renderPublicLanding = () => {
 
   const footDash = page.querySelector('#pub-foot-dash');
   if (footDash) footDash.onclick = (e) => { e.preventDefault(); App.router.go('/dashboard'); };
-  const footHome = page.querySelector('#pub-foot-home');
-  if (footHome) footHome.onclick = (e) => { e.preventDefault(); App.router.go('/'); };
-
-  // 🎠 « Un bot pour … » — fondu push-in/push-out (façon DraftBot)
-  const rotEl = page.querySelector('#dh-rot');
-  if (rotEl) {
-    const rotWords = ['La Modération', 'Les Niveaux', 'L\'Économie', 'Les Réactions', 'L\'Automatisation', 'Les Statistiques', 'Les Conversations', 'Les Informations', 'Des Outils', 'Le Contrôle'];
-    let rotI = 0;
-    setInterval(() => {
-      rotEl.classList.remove('visible');
-      setTimeout(() => {
-        rotI = (rotI + 1) % rotWords.length;
-        rotEl.textContent = rotWords[rotI];
-        rotEl.classList.add('visible');
-      }, 450);
-    }, 2800);
-  }
-
-  // ✨ Particules reliées (façon DraftBot)
-  const canvas = page.querySelector('#dh-particles');
-  if (canvas && canvas.getContext) {
-    try {
-      const ctx = canvas.getContext('2d');
-      const resize = () => { canvas.width = canvas.offsetWidth || 600; canvas.height = canvas.offsetHeight || 600; };
-      resize();
-      const N = Math.max(18, Math.min(40, Math.floor(canvas.width / 30)));
-      const pts = [];
-      for (let k = 0; k < N; k++) pts.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, vx: (Math.random() - .5) * .5, vy: (Math.random() - .5) * .5 });
-      const tick = () => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        pts.forEach((p) => {
-          p.x += p.vx; p.y += p.vy;
-          if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
-          if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
-        });
-        ctx.strokeStyle = 'rgba(205,110,87,.16)'; ctx.lineWidth = 1;
-        for (let a = 0; a < pts.length; a++) for (let b = a + 1; b < pts.length; b++) {
-          const dx = pts[a].x - pts[b].x, dy = pts[a].y - pts[b].y, d2 = dx * dx + dy * dy;
-          if (d2 < 130 * 130) { ctx.beginPath(); ctx.moveTo(pts[a].x, pts[a].y); ctx.lineTo(pts[b].x, pts[b].y); ctx.stroke(); }
-        }
-        ctx.fillStyle = 'rgba(205,110,87,.5)';
-        pts.forEach((p) => { ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, 7); ctx.fill(); });
-        requestAnimationFrame(tick);
-      };
-      tick();
-      window.addEventListener('resize', resize);
-    } catch {}
-  }
 
   // 🎬 Révélation au défilement (dégradation propre si non supporté)
   try {
@@ -251,10 +156,171 @@ App.renderPublicLanding = () => {
         entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
       }, { threshold: 0.12 });
       page.querySelectorAll('.reveal').forEach((el, i) => { el.style.transitionDelay = `${Math.min(i % 6, 4) * 60}ms`; io.observe(el); });
-      page.querySelectorAll('.dh-feature').forEach((el) => io.observe(el));
     } else {
-      page.querySelectorAll('.reveal, .dh-feature').forEach((el) => el.classList.add('in'));
+      page.querySelectorAll('.reveal').forEach((el) => el.classList.add('in'));
     }
-  } catch {}
+  } catch { page.querySelectorAll('.reveal').forEach((el) => el.classList.add('in')); }
 
+  // 🔢 Compteur animé (chiffres qui montent)
+  const countUp = (el, text) => {
+    const num = parseInt(String(text).replace(/[^0-9]/g, ''), 10);
+    if (!num || num < 10 || typeof requestAnimationFrame === 'undefined') { el.textContent = text; return; }
+    const t0 = Date.now(); const dur = 900;
+    const tick = () => {
+      const p = Math.min(1, (Date.now() - t0) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = App.fmtNumber(Math.round(num * eased));
+      if (p < 1) requestAnimationFrame(tick); else el.textContent = text;
+    };
+    tick();
+  };
+
+  const statsEl = page.querySelector('#pub-stats');
+  const botsEl = page.querySelector('#pub-bots');
+
+  const loadStats = async () => {
+    try {
+      const s = await App.api('/public/stats');
+      const vals = statsEl.querySelectorAll('.val');
+      vals[0].textContent = `${s.onlineBots}/${s.totalBots}`;
+      countUp(vals[1], App.fmtNumber(s.servers));
+      countUp(vals[2], App.fmtNumber(s.members));
+    } catch {}
+  };
+
+  const loadBots = async () => {
+    try {
+      const { bots } = await App.api('/public/bots');
+      botsEl.innerHTML = '';
+      if (!bots.length) {
+        botsEl.innerHTML = `<div class="empty-state"><div class="big">🤖</div>Aucun bot public pour l'instant.</div>`;
+        return;
+      }
+      bots.forEach((b) => {
+        const avatar = b.avatar_url
+          ? `<img class="bot-avatar" src="${App.escapeHtml(b.avatar_url)}" alt="" />`
+          : `<div class="bot-avatar fallback">🤖</div>`;
+        const card = App.el(`
+          <div class="bot-card">
+            <div class="bot-card-top">
+              ${avatar}
+              <div>
+                <h3>${App.escapeHtml(b.name)}</h3>
+                <div class="uname">${b.username ? '@' + App.escapeHtml(b.username) : 'jamais connecté'}</div>
+              </div>
+            </div>
+            <div class="bot-card-status">
+              <span class="dot ${b.online ? 'dot-online' : 'dot-offline'}"></span>
+              ${b.online ? `En ligne — ${App.fmtNumber(b.servers)} serveur(s) · ${App.fmtNumber(b.members)} membres` : 'Hors ligne'}
+            </div>
+            <div class="bot-card-actions">
+              <button class="btn btn-primary" data-view>Voir la page</button>
+              <button class="btn" data-invite ${b.invite_url ? '' : 'disabled'}>Inviter</button>
+            </div>
+          </div>
+        `);
+        card.querySelector('[data-view]').onclick = () => App.router.go(`/bot/${b.id}`);
+        card.querySelector('[data-invite]').onclick = () => { if (b.invite_url) invite(b.invite_url); };
+        botsEl.appendChild(card);
+      });
+    } catch {}
+  };
+
+  loadStats();
+  loadBots();
+  const timer = setInterval(() => { loadStats(); loadBots(); }, 30000);
+  App.currentPublicTimer && clearInterval(App.currentPublicTimer);
+  App.currentPublicTimer = timer;
+};
+
+// Récupère le lien d'invitation du premier bot public
+App.fetchFirstInviteUrl = async () => {
+  try {
+    const { bots } = await App.api('/public/bots');
+    const online = bots.find((b) => b.invite_url);
+    return online ? online.invite_url : null;
+  } catch { return null; }
+};
+
+// ---------------------- Page publique d'un bot ----------------------
+App.renderPublicBot = async (id) => {
+  const root = document.getElementById('app');
+  root.innerHTML = '';
+  root.appendChild(App.renderPublicNavbar());
+
+  const shell = App.el(`<div class="bot-shell"><div class="center-loading"><div class="spinner"></div></div></div>`);
+  root.appendChild(shell);
+
+  const render = async () => {
+    let data;
+    try {
+      data = await App.api(`/public/bots/${id}`);
+    } catch (e) {
+      shell.innerHTML = `<div class="empty-state"><div class="big">🤖</div>${App.escapeHtml(e.message === 'Session expirée' ? 'Bot introuvable.' : e.message)}<br/><br/><button class="btn" onclick="location.hash='#/'">← Retour</button></div>`;
+      return;
+    }
+    const b = data.bot;
+    const avatar = b.avatar_url
+      ? `<img class="pub-avatar" src="${App.escapeHtml(b.avatar_url)}" alt="" />`
+      : `<div class="pub-avatar fallback">🤖</div>`;
+
+    shell.innerHTML = `
+      <div class="pub-bot-hero">
+        <button class="btn btn-ghost btn-icon" id="pub-back" title="Retour">←</button>
+        ${avatar}
+        <div style="flex:1;min-width:0">
+          <h2 style="font-size:22px">${App.escapeHtml(b.name)}</h2>
+          <div class="sub">${b.username ? '@' + App.escapeHtml(b.username) : 'Bot non connecté'}</div>
+          <div class="pub-bot-status" style="margin-top:8px">
+            <span class="status-pill"><span class="dot ${b.online ? 'dot-online' : 'dot-offline'}"></span>${b.online ? 'En ligne' : 'Hors ligne'}</span>
+            ${b.public_url ? `<span class="chip">🌐 ${App.escapeHtml(b.public_url)}</span>` : ''}
+          </div>
+        </div>
+        <div class="pub-bot-actions">
+          <button class="btn btn-primary" id="pub-invite" ${b.invite_url ? '' : 'disabled'}>➕ Ajouter à ton serveur</button>
+          <button class="btn" id="pub-refresh">🔄 Actualiser</button>
+        </div>
+      </div>
+
+      <div class="stats-grid" style="margin-top:18px">
+        <div class="stat-card"><div class="val">${b.online ? App.fmtNumber(b.servers) : '—'}</div><div class="lbl">Serveurs</div></div>
+        <div class="stat-card"><div class="val">${b.online ? App.fmtNumber(b.members) : '—'}</div><div class="lbl">Membres touchés</div></div>
+        <div class="stat-card"><div class="val">${b.online ? b.ping + ' ms' : '—'}</div><div class="lbl">Latence</div></div>
+        <div class="stat-card"><div class="val">${b.online ? App.fmtUptime(b.uptime) : '—'}</div><div class="lbl">Uptime</div></div>
+      </div>
+
+      <div class="card">
+        <h3>📚 Commandes</h3>
+        <div class="card-sub">Toutes ces commandes fonctionnent automatiquement sur chaque serveur où le bot est ajouté.</div>
+        ${b.categories.map((cat) => `
+          <div style="margin-bottom:14px">
+            <div class="zone-label">${cat.emoji} ${App.escapeHtml(cat.label)}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              ${cat.commands.map((c) => `<span class="chip" title="${App.escapeHtml(c.desc)}">/${c.name}</span>`).join('')}
+            </div>
+          </div>
+        `).join('')}
+        ${b.custom.length ? `
+          <div style="margin-bottom:6px">
+            <div class="zone-label">🧩 Commandes personnalisées</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              ${b.custom.map((c) => `<span class="chip" title="${App.escapeHtml(c.desc)}">${App.escapeHtml(c.trigger)}</span>`).join('')}
+            </div>
+          </div>
+        ` : ''}
+        ${!b.categories.length && !b.custom.length ? `<div class="empty-state">Aucune commande activée pour le moment.</div>` : ''}
+        <div style="margin-top:14px;color:var(--text-dim);font-size:12px">💡 Une fois le bot sur ton serveur, tape <b>/help</b> pour le guide complet, et <b>/ticket setup</b> pour installer les tickets.</div>
+      </div>
+
+      <div class="pub-footer" style="text-align:left"><b>⚡ Hoxera</b> — ajoute-le à ton serveur, puis configure-le avec ton compte Discord.</div>
+    `;
+    shell.querySelector('#pub-back').onclick = () => App.router.go(App.state.user && App.state.user.discord_id ? '/dashboard' : '/');
+    shell.querySelector('#pub-invite').onclick = () => { if (b.invite_url) App.openInvite(b.invite_url); };
+    shell.querySelector('#pub-refresh').onclick = render;
+  };
+
+  await render();
+  const timer = setInterval(render, 30000);
+  App.currentPublicTimer && clearInterval(App.currentPublicTimer);
+  App.currentPublicTimer = timer;
 };
