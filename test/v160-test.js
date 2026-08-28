@@ -36,9 +36,6 @@ assert(js.includes('has-banner'), 'classe has-banner manquante');
 assert(css.includes('.ov-hero-bg {'), 'styles de la bannière du hero manquants');
 assert(css.includes('.ov-hero-chip {'), 'styles des puces de stats manquants');
 
-// 4. Version v160 déployée (cache PWA + assets)
-assert(!index.includes('?v=159'), 'index.html référence encore v159');
-assert.strictEqual((index.match(/\?v=160/g) || []).length, 7, 'index.html doit référencer v160 7 fois');
-assert(sw.includes("'botdev-v160'"), 'le cache du service worker n’est pas en v160');
+// 4. Version : gérée par le test de la version courante (v161)
 
 console.log('✅ v160 : grille de sélection de serveurs + hero à bannière et stats riches — dashboard v160');
