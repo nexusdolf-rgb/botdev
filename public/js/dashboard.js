@@ -879,16 +879,17 @@ Dashboard.renderers = {};
 // ---------- Vue d'ensemble ----------
 Dashboard.renderers.overview = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const g = data.guild;
+  const g = data.guild || { name: 'Serveur', members: 0 };
   const ts = data.tickets_stats || { total: 0, open: 0 };
   const root = Dashboard.header(content, '⌂', 'Tableau de bord', `Gestion de ${App.escapeHtml(g.name)} · ${g.members} membres · Nexora`);
+  const workspace = App.el('<div class="ov-workspace ov-draft-home"></div>');
+  root.appendChild(workspace);
+
   const greeting = new Date().getHours() < 18 ? 'Bonjour' : 'Bonsoir';
   const serverInitial = String(g.name || '?').trim().slice(0, 1).toUpperCase() || '?';
   const serverIcon = g.icon || g.icon_url || '';
   const statusText = bot.online === false ? 'Nexora est hors ligne' : 'Nexora est opérationnel';
   const statusClass = bot.online === false ? 'is-offline' : 'is-online';
-  const workspace = App.el('<div class="ov-workspace"></div>');
-  root.appendChild(workspace);
   const overviewIntro = App.el(`
     <section class="ov-intro ov-welcome-panel" aria-label="Résumé du serveur">
       <div class="ov-intro-server">
@@ -921,167 +922,138 @@ Dashboard.renderers.overview = async (content, data) => {
   quickActions.querySelectorAll('[data-go]').forEach((button) => { button.onclick = () => Dashboard.setModule(button.dataset.go); });
   workspace.appendChild(quickActions);
 
-  // ✅ Checklist de configuration (confort : tout voir d'un coup d'œil)
-  const checklist = data.checklist || [];
-  const doneCount = checklist.filter((i) => i.done).length;
+  const checklist = Array.isArray(data.checklist) ? data.checklist : [];
+  const doneCount = checklist.filter((item) => item.done).length;
   const pct = checklist.length ? Math.round((doneCount / checklist.length) * 100) : 0;
+  const columns = App.el('<div class="ov-home-columns"></div>');
+  const mainColumn = App.el('<div class="ov-home-main"></div>');
+  const sideColumn = App.el('<aside class="ov-home-side"></aside>');
+  columns.appendChild(mainColumn);
+  columns.appendChild(sideColumn);
 
-  // 👋 PREMIÈRE VISITE : si le serveur est encore (presque) vierge, on
-  // accueille avec un héros clair : quoi faire, dans quel ordre, en 3 étapes.
-  if (pct < 25) {
-    const hero = App.el(`
-      <div class="dash-hero">
-        <div class="hero-badge">✨ Bienvenue !</div>
-        <h2>Configurons <b>${App.escapeHtml(g.name)}</b> ensemble</h2>
-        <p>Ton bot est en ligne et prêt. Trois étapes suffisent pour un serveur au top — clique sur une carte pour commencer :</p>
-        <div class="hero-steps">
-          <button class="hero-step" data-go="tickets"><span class="hs-num">1</span><span class="hs-emoji">🎫</span><b>Le support</b><span>Panneau de tickets + types + salon de logs staff</span></button>
-          <button class="hero-step" data-go="welcome"><span class="hs-num">2</span><span class="hs-emoji">👋</span><b>L'accueil</b><span>Message de bienvenue (avec carte image !) + auto-rôles</span></button>
-          <button class="hero-step" data-go="community"><span class="hs-num">3</span><span class="hs-emoji">⭐</span><b>La communauté</b><span>Starboard, invitations et annonces de live</span></button>
-        </div>
-      </div>`);
-    hero.querySelectorAll('[data-go]').forEach((b) => { b.onclick = () => Dashboard.setModule(b.dataset.go); });
-    workspace.appendChild(hero);
-  }
-  const clCard = Dashboard.card(workspace, '✅ Configuration du serveur', '');
-  clCard.classList.add('ov-checklist-card');
-  clCard.innerHTML = '<div class="ov-section-heading"><b>Configuration du serveur</b><span>Les éléments importants de ton installation Nexora</span></div>';
-  clCard.appendChild(App.el(`
-    <div class="ov-progress-summary">
+  const configPanel = App.el(`
+    <section class="ov-config-panel ov-checklist-card">
+      <div class="ov-section-heading"><b>Configuration du serveur</b><span>${doneCount} étape(s) terminée(s) sur ${checklist.length || 0}</span></div>
       <div class="ov-progress-head">
-        <div class="ov-progress-copy"><b>${pct === 100 ? 'Serveur prêt' : 'Progression de la configuration'}</b><span>${doneCount} étape(s) terminée(s) sur ${checklist.length || 0}</span></div>
+        <div class="ov-progress-copy"><b>${pct === 100 ? 'Serveur prêt' : 'Progression de la configuration'}</b><span>Les éléments importants de ton installation Nexora</span></div>
         <strong>${pct}%</strong>
       </div>
-      <div class="ov-progress-track" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Progression de la configuration">
-        <div class="ov-progress-value" style="width:${pct}%"></div>
-      </div>
-    </div>`));
-  const clGrid = App.el(`<div class="dash-checklist"></div>`);
-  clCard.appendChild(clGrid);
+      <div class="ov-progress-track" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Progression de la configuration"><div class="ov-progress-value" style="width:${pct}%"></div></div>
+      <div class="ov-config-list"></div>
+    </section>`);
+  const configList = configPanel.querySelector('.ov-config-list');
+  if (!checklist.length) configList.appendChild(App.el('<div class="ov-config-empty">Aucune étape à afficher pour le moment.</div>'));
   checklist.forEach((item) => {
-    const el = App.el(`
-      <button class="check-item ${item.done ? 'done' : ''}" title="${item.done ? 'Configuré ✅' : 'À configurer'}">
-        <span class="check-ico">${item.done ? '✅' : '⬜'}</span>
-        <span class="check-label">${App.escapeHtml(item.label)}</span>
-        <span class="check-go">Configurer →</span>
+    const row = App.el(`
+      <button class="ov-config-row check-item ${item.done ? 'done' : ''}" type="button">
+        <span class="ov-config-check">${item.done ? '✓' : '○'}</span>
+        <span class="ov-config-copy"><b>${App.escapeHtml(item.label)}</b><small>${item.done ? 'Configuration active · Configurer →' : 'À configurer · Configurer →'}</small></span>
+        <span class="ov-config-arrow">→</span>
       </button>`);
-    el.onclick = () => Dashboard.setModule(item.module);
-    clGrid.appendChild(el);
+    row.onclick = () => Dashboard.setModule(item.module);
+    configList.appendChild(row);
   });
+  mainColumn.appendChild(configPanel);
+
+  if (pct < 25) {
+    const onboarding = App.el(`
+      <section class="dash-hero ov-onboarding">
+        <div class="hero-badge">Premiers réglages</div>
+        <h2>Mettons ${App.escapeHtml(g.name)} en place</h2>
+        <p>Ton bot est prêt. Commence par le support, l'accueil et la sécurité.</p>
+        <div class="hero-steps">
+          <button class="hero-step" data-go="tickets"><span class="hs-num">1</span><span class="hs-emoji">🎫</span><b>Support</b><span>Tickets et catégories</span></button>
+          <button class="hero-step" data-go="welcome"><span class="hs-num">2</span><span class="hs-emoji">👋</span><b>Accueil</b><span>Bienvenue et auto-rôles</span></button>
+          <button class="hero-step" data-go="community"><span class="hs-num">3</span><span class="hs-emoji">⭐</span><b>Communauté</b><span>Starboard, lives et annonces</span></button>
+        </div>
+      </section>`);
+    onboarding.querySelectorAll('[data-go]').forEach((button) => { button.onclick = () => Dashboard.setModule(button.dataset.go); });
+    mainColumn.appendChild(onboarding);
+  }
 
   const stats = [
     ['👥', g.members, 'Membres', 'Communauté suivie'],
     ['🎫', ts.open, 'Tickets ouverts', 'À traiter maintenant'],
-    ['🗂️', data.tickets.types ? data.tickets.types.length : 0, 'Types de tickets', 'Support organisé'],
+    ['🗂️', data.tickets && data.tickets.types ? data.tickets.types.length : 0, 'Types de tickets', 'Support organisé'],
     ['🏆', (data.xp_roles || []).length, 'Récompenses de niveau', 'Progression des membres'],
     ['📋', (data.role_menus || []).length, 'Menus de rôles', 'Accès simplifiés'],
     ['📅', (data.scheduled || []).length, 'Annonces programmées', 'Prochains envois'],
   ];
-  const statsEl = App.el(`<div class="dash-stats ov-stats"></div>`);
+  const statsSection = App.el('<section class="ov-home-side-section ov-summary-section"><div class="ov-side-heading"><b>Résumé du serveur</b><span>État actuel</span></div><div class="dash-stats ov-stats"></div></section>');
+  const statsEl = statsSection.querySelector('.ov-stats');
   stats.forEach(([icon, value, label, note]) => {
-    statsEl.appendChild(App.el(`
-      <div class="dash-stat ov-stat">
-        <div class="ov-stat-top"><span class="ov-stat-icon">${icon}</span><span class="ov-stat-note">${note}</span></div>
-        <div class="val">${App.escapeHtml(String(value))}</div>
-        <div class="lbl">${label}</div>
-      </div>`));
+    statsEl.appendChild(App.el(`<div class="dash-stat ov-stat"><div class="ov-stat-top"><span class="ov-stat-icon">${icon}</span><span class="ov-stat-note">${note}</span></div><div class="val">${App.escapeHtml(String(value))}</div><div class="lbl">${label}</div></div>`));
   });
-  workspace.appendChild(statsEl);
+  sideColumn.appendChild(statsSection);
 
-  // 📰 Flux d'activité + résumé : deux colonnes sur grand écran, une seule
-  // colonne sur mobile pour garder une lecture naturelle.
-  const activityGrid = App.el(`<div class="ov-activity-grid"></div>`);
-  workspace.appendChild(activityGrid);
-  const feed = Dashboard.card(activityGrid, '📰 Activité récente', 'Tout ce que le bot fait pour toi, en direct — actualisé toutes les 30 secondes.');
-  feed.classList.add('ov-feed-card');
-  const feedList = App.el(`<div id="ov-feed"></div>`);
-  feed.appendChild(feedList);
+  const feedSection = App.el('<section class="ov-home-side-section ov-home-feed"><div class="ov-side-heading"><b>Activité récente</b><span>En direct</span></div><div id="ov-feed"><div class="ov-feed-empty">Chargement de l’activité…</div></div></section>');
+  sideColumn.appendChild(feedSection);
+  const feedList = feedSection.querySelector('#ov-feed');
   const relTime = (iso) => {
     const t = new Date(String(iso).replace(' ', 'T') + (String(iso).includes('Z') ? '' : 'Z')).getTime();
-    const m = Math.max(0, Math.round((Date.now() - t) / 60000));
-    if (m < 1) return 'à l\'instant';
-    if (m < 60) return `il y a ${m} min`;
-    const h = Math.floor(m / 60);
-    if (h < 24) return `il y a ${h} h`;
-    return `il y a ${Math.floor(h / 24)} j`;
+    const minutes = Math.max(0, Math.round((Date.now() - t) / 60000));
+    if (minutes < 1) return 'à l’instant';
+    if (minutes < 60) return `il y a ${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `il y a ${hours} h`;
+    return `il y a ${Math.floor(hours / 24)} j`;
   };
   const loadFeed = async () => {
     try {
       const { items } = await App.api(`/bots/${bot.id}/guilds/${guildId}/activity`);
       feedList.innerHTML = '';
       if (!items.length) {
-        feedList.appendChild(App.el(`<div class="dash-empty" style="padding:16px">Encore rien à raconter — le flux se remplit dès que le bot agit (tickets, lives, starboard, sanctions…).</div>`));
+        feedList.appendChild(App.el('<div class="ov-feed-empty">Le flux se remplira dès que Nexora agit.</div>'));
         return;
       }
-      items.forEach((it) => {
-        feedList.appendChild(App.el(`
-          <div class="feed-item">
-            <span class="feed-emoji">${it.emoji || '•'}</span>
-            <span class="feed-text">${App.escapeHtml(it.text)}</span>
-            <span class="feed-time">${relTime(it.created_at)}</span>
-          </div>`));
-      });
-    } catch { /* silencieux */ }
+      items.forEach((item) => feedList.appendChild(App.el(`<div class="feed-item"><span class="feed-emoji">${item.emoji || '•'}</span><span class="feed-text">${App.escapeHtml(item.text)}</span><span class="feed-time">${relTime(item.created_at)}</span></div>`)));
+    } catch { feedList.innerHTML = '<div class="ov-feed-empty">Activité indisponible pour le moment.</div>'; }
   };
   loadFeed();
   if (Dashboard.state.feedTimer) clearInterval(Dashboard.state.feedTimer);
   Dashboard.state.feedTimer = setInterval(loadFeed, 30000);
 
-  // 📈 En bref : l'activité réelle du serveur (7 derniers jours)
-  const brief = Dashboard.card(activityGrid, '📈 Ton serveur en bref', 'Activité mesurée par le bot sur les 7 derniers jours.');
-  brief.classList.add('ov-brief-card');
+  const briefSection = App.el('<section class="ov-home-side-section ov-home-brief"><div class="ov-side-heading"><b>Ton serveur en bref</b><span>7 derniers jours</span></div><div class="ov-brief-content"><span class="ov-feed-empty">Chargement des statistiques…</span></div></section>');
+  sideColumn.appendChild(briefSection);
   try {
     const st = await App.api(`/bots/${bot.id}/guilds/${guildId}/stats`);
-    const totalMsgs = st.activity.reduce((a, d) => a + d.messages, 0);
-    const totalJoins = st.joins.reduce((a, d) => a + d.members, 0);
+    const totalMsgs = (st.activity || []).reduce((sum, day) => sum + Number(day.messages || 0), 0);
+    const totalJoins = (st.joins || []).reduce((sum, day) => sum + Number(day.members || 0), 0);
     const top3 = (st.top_active || []).slice(0, 3);
-    brief.appendChild(App.el(`
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
-        <div class="dash-badge ok" style="padding:8px 14px">💬 ${totalMsgs} messages cette semaine</div>
-        <div class="dash-badge" style="padding:8px 14px">🆕 ${totalJoins} nouveau(x) membre(s)</div>
-        <div class="dash-badge warn" style="padding:8px 14px">🎫 ${ts.open} ticket(s) ouvert(s)</div>
-      </div>`));
+    const brief = briefSection.querySelector('.ov-brief-content');
+    brief.innerHTML = `<div class="ov-brief-badges"><span class="dash-badge ok">💬 ${totalMsgs} messages</span><span class="dash-badge">🆕 ${totalJoins} arrivée(s)</span><span class="dash-badge warn">🎫 ${ts.open} ticket(s)</span></div>`;
     if (top3.length) {
-      brief.appendChild(App.el(`<div class="dash-label" style="margin-top:0">🏆 Membres les plus actifs</div>`));
-      top3.forEach((t, i) => {
-        brief.appendChild(App.el(`
-          <div style="display:flex;align-items:center;gap:10px;padding:6px 2px;border-bottom:1px solid #222434">
-            <img src="${App.escapeHtml(t.avatar)}" style="width:28px;height:28px;border-radius:50%;background:var(--d-card2)" alt="" />
-            <span style="flex:1;font-size:13.5px">${App.escapeHtml(t.tag)}</span>
-            <span class="dash-badge ${i === 0 ? 'ok' : ''}">${['🥇','🥈','🥉'][i]} ${t.messages} msg</span>
-          </div>`));
-      });
-    } else {
-      brief.appendChild(App.el(`<div class="desc" style="margin:0">📊 Les statistiques se remplissent dès que les membres discutent !</div>`));
+      brief.innerHTML += '<div class="dash-label ov-top-label">Membres actifs</div>';
+      top3.forEach((member, index) => { brief.innerHTML += `<div class="ov-top-member"><span>${['🥇', '🥈', '🥉'][index]}</span><b>${App.escapeHtml(member.tag)}</b><small>${member.messages} msg</small></div>`; });
     }
-  } catch { brief.appendChild(App.el(`<div class="desc" style="margin:0">Bot hors ligne — les statistiques reviendront dès qu\'il se reconnecte.</div>`)); }
+  } catch {
+    briefSection.querySelector('.ov-brief-content').innerHTML = '<div class="ov-feed-empty">Statistiques indisponibles pour le moment.</div>';
+  }
 
-  const grid = App.el(`<div class="dash-grid ov-module-grid"></div>`);
-  const mods = [
-    ['tickets', '🎫', 'Tickets', 'Types personnalisés, rôles staff multiples, transcriptions en MP'],
-    ['welcome', '👋', 'Bienvenue', 'Message d\'accueil, départ, auto-rôles et anniversaires'],
-    ['levels', '📈', 'Niveaux', 'XP en discutant, annonces, récompenses de rôles'],
-    ['shop', '🛒', 'Boutique', 'Les membres achètent des rôles avec leurs coins'],
-    ['moderation', '🛡️', 'Modération', 'Auto-mod, liste noire, sanctions, anti-raid'],
-    ['suggestions', '💡', 'Suggestions', 'Les membres proposent, tout le monde vote'],
-    ['giveaways', '🎁', 'Giveaways', 'Tirages automatiques par réaction'],
-    ['announcements', '📅', 'Annonces', 'Messages automatiques à heure fixe'],
-    ['members', '👥', 'Membres', 'Liste complète : coins, rôles, actions directes'],
-    ['stats', '📈', 'Statistiques', 'Activité, nouveaux membres, top actifs'],
-    ['logs', '📜', 'Journaux', 'Choisis ce que le bot trace'],
-    ['roles', '📋', 'Rôles', 'Menus déroulants et boutons de rôles'],
+  workspace.appendChild(columns);
+  const moduleSection = App.el('<section class="ov-module-section"><div class="ov-section-heading"><b>Modules du serveur</b><span>Choisis une fonctionnalité à configurer</span></div><div class="dash-grid ov-module-grid"></div></section>');
+  const grid = moduleSection.querySelector('.ov-module-grid');
+  const modules = [
+    ['tickets', '🎫', 'Tickets', 'Types personnalisés et support privé'],
+    ['welcome', '👋', 'Bienvenue', 'Accueil, départ et auto-rôles'],
+    ['levels', '📈', 'Niveaux', 'XP et récompenses des membres'],
+    ['shop', '🛒', 'Boutique', 'Articles et rôles à acheter'],
+    ['moderation', '🛡️', 'Modération', 'Auto-Mod, blacklist et anti-raid'],
+    ['suggestions', '💡', 'Suggestions', 'Propositions et votes'],
+    ['giveaways', '🎁', 'Giveaways', 'Tirages automatiques'],
+    ['announcements', '📅', 'Annonces', 'Messages programmés'],
+    ['members', '👥', 'Membres', 'Liste et actions rapides'],
+    ['stats', '📊', 'Statistiques', 'Activité du serveur'],
+    ['logs', '📜', 'Journaux', 'Événements enregistrés'],
+    ['roles', '📋', 'Rôles', 'Menus et boutons'],
   ];
-  mods.forEach(([id, ico, label, desc]) => {
-    const c = App.el(`
-      <div class="dash-card ov-module-card" data-module-card="${id}" style="cursor:pointer">
-        <div class="ov-module-icon" aria-hidden="true">${ico}</div>
-        <div class="ov-module-copy"><h3>${label}</h3><div class="desc">${desc}</div></div>
-        <button class="dash-btn dash-btn-sm" data-go="${id}">Configurer <span aria-hidden="true">→</span></button>
-      </div>`);
-    c.querySelector('[data-go]').onclick = () => Dashboard.setModule(id);
-    grid.appendChild(c);
+  modules.forEach(([id, icon, label, description]) => {
+    const card = App.el(`<div class="dash-card ov-module-card" data-module-card="${id}"><div class="ov-module-icon" aria-hidden="true">${icon}</div><div class="ov-module-copy"><h3>${label}</h3><div class="desc">${description}</div></div><button class="dash-btn dash-btn-sm" data-go="${id}">Ouvrir <span aria-hidden="true">→</span></button></div>`);
+    card.onclick = (event) => { if (!event.target.closest('button')) Dashboard.setModule(id); };
+    card.querySelector('[data-go]').onclick = () => Dashboard.setModule(id);
+    grid.appendChild(card);
   });
-  workspace.appendChild(grid);
+  workspace.appendChild(moduleSection);
 };
 
 // ---------- Tickets ----------

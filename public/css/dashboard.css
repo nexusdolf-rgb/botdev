@@ -3867,3 +3867,129 @@ html.hx-light { color-scheme: light; }
   .dashboard-shell-host .ov-section-heading b,
   .dashboard-shell-host .ov-module-grid::before { font-size: 17px; }
 }
+
+/* ============================================================
+   NEXORA v12.0 — Accueil en espace de travail
+   Construction en deux colonnes : configuration à gauche,
+   résumé et activité à droite, comme un vrai panneau de gestion.
+   ============================================================ */
+.dashboard-shell-host .ov-home-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(300px, .78fr);
+  gap: 22px;
+  align-items: start;
+}
+.dashboard-shell-host .ov-home-main,
+.dashboard-shell-host .ov-home-side { min-width: 0; }
+.dashboard-shell-host .ov-home-side { display: flex; flex-direction: column; gap: 18px; }
+.dashboard-shell-host .ov-config-panel {
+  padding: 0 !important;
+  margin-bottom: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.dashboard-shell-host .ov-config-panel .ov-section-heading { margin-bottom: 16px; }
+.dashboard-shell-host .ov-config-list { display: flex; flex-direction: column; border: 1px solid #4f545c; border-radius: 5px; overflow: hidden; }
+.dashboard-shell-host .ov-config-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 22px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 64px;
+  padding: 11px 14px;
+  border: 0;
+  border-bottom: 1px solid #4f545c;
+  color: #f2f3f5;
+  background: #40444b;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background .14s ease, padding .14s ease, color .14s ease;
+}
+.dashboard-shell-host .ov-config-row:last-child { border-bottom: 0; }
+.dashboard-shell-host .ov-config-row:hover { padding-left: 18px; color: #fff; background: #4f545c; }
+.dashboard-shell-host .ov-config-row.done .ov-config-check { color: #57f287; border-color: rgba(87,242,135,.55); }
+.dashboard-shell-host .ov-config-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #72767d;
+  border-radius: 50%;
+  color: #b5bac1;
+  font-size: 15px;
+  font-weight: 800;
+}
+.dashboard-shell-host .ov-config-copy { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.dashboard-shell-host .ov-config-copy b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.dashboard-shell-host .ov-config-copy small { color: #b5bac1; font-size: 11px; }
+.dashboard-shell-host .ov-config-arrow { color: #e07a5f; font-size: 18px; text-align: center; }
+.dashboard-shell-host .ov-config-empty { padding: 20px; color: #b5bac1; background: #40444b; }
+.dashboard-shell-host .ov-home-side-section {
+  padding: 16px;
+  border: 1px solid #4f545c;
+  border-radius: 5px;
+  background: #40444b;
+}
+.dashboard-shell-host .ov-side-heading,
+.dashboard-shell-host .ov-section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.dashboard-shell-host .ov-side-heading { margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #4f545c; }
+.dashboard-shell-host .ov-side-heading b { color: #f2f3f5; font-size: 16px; font-weight: 600; }
+.dashboard-shell-host .ov-side-heading span { color: #b5bac1; font-size: 10px; }
+.dashboard-shell-host .ov-summary-section .ov-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.dashboard-shell-host .ov-summary-section .ov-stat {
+  min-height: 86px;
+  padding: 11px !important;
+  border: 1px solid #4f545c;
+  border-left: 2px solid #e07a5f;
+  border-radius: 4px;
+  background: #2b2d31 !important;
+}
+.dashboard-shell-host .ov-summary-section .ov-stat-top { margin-bottom: 8px; }
+.dashboard-shell-host .ov-summary-section .ov-stat-icon { width: 24px; height: 24px; border-radius: 3px; background: transparent; border: 0; font-size: 14px; }
+.dashboard-shell-host .ov-summary-section .ov-stat .val { font-size: 20px !important; }
+.dashboard-shell-host .ov-summary-section .ov-stat .lbl { font-size: 10px; }
+.dashboard-shell-host .ov-summary-section .ov-stat-note { display: none; }
+.dashboard-shell-host .ov-home-feed #ov-feed { min-height: 40px; }
+.dashboard-shell-host .ov-home-feed .feed-item { padding: 9px 0; border-bottom-color: #4f545c; }
+.dashboard-shell-host .ov-home-feed .feed-item:last-child { border-bottom: 0; }
+.dashboard-shell-host .ov-home-feed .feed-emoji { width: 26px; height: 26px; border-radius: 3px; background: #2b2d31; }
+.dashboard-shell-host .ov-home-feed .feed-text { font-size: 11px; }
+.dashboard-shell-host .ov-home-feed .feed-time { font-size: 10px; }
+.dashboard-shell-host .ov-feed-empty { padding: 8px 0; color: #b5bac1; font-size: 11px; }
+.dashboard-shell-host .ov-brief-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.dashboard-shell-host .ov-brief-badges .dash-badge { padding: 5px 7px !important; font-size: 10px; }
+.dashboard-shell-host .ov-top-label { margin-top: 16px; color: #b5bac1; }
+.dashboard-shell-host .ov-top-member { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 7px; align-items: center; min-height: 31px; border-bottom: 1px solid #4f545c; color: #f2f3f5; font-size: 11px; }
+.dashboard-shell-host .ov-top-member:last-child { border-bottom: 0; }
+.dashboard-shell-host .ov-top-member small { color: #b5bac1; }
+.dashboard-shell-host .ov-module-section { margin-top: 25px; }
+.dashboard-shell-host .ov-module-section .ov-section-heading { margin-bottom: 15px; padding-bottom: 11px; border-bottom: 1px solid #72767d; }
+.dashboard-shell-host .ov-module-section .ov-section-heading b { font-size: 20px; font-weight: 600; }
+.dashboard-shell-host .ov-module-grid { margin-top: 0; }
+.dashboard-shell-host .ov-module-grid::before { display: none; }
+.dashboard-shell-host .ov-module-card { min-height: 128px; }
+
+@media (max-width: 1000px) {
+  .dashboard-shell-host .ov-home-columns { grid-template-columns: minmax(0, 1.25fr) minmax(260px, .85fr); gap: 14px; }
+}
+@media (max-width: 900px) {
+  .dashboard-shell-host .ov-home-columns { grid-template-columns: 1fr; gap: 18px; }
+  .dashboard-shell-host .ov-home-side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .dashboard-shell-host .ov-summary-section { grid-column: 1 / -1; }
+}
+@media (max-width: 520px) {
+  .dashboard-shell-host .ov-home-side { display: flex; }
+  .dashboard-shell-host .ov-welcome-panel .ov-intro-health { display: grid; }
+  .dashboard-shell-host .ov-section-heading,
+  .dashboard-shell-host .ov-side-heading { align-items: flex-start; flex-direction: column; gap: 4px; }
+}
