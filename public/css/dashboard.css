@@ -3468,3 +3468,290 @@ html.hx-light .dashboard-shell-host .dash-select option { color: #2e3338; backgr
   .dashboard-shell-host .dash-btn,
   .dashboard-shell-host .dash-iconbtn { animation: none !important; transition: none !important; }
 }
+
+/* ============================================================
+   NEXORA v10.0 — Draft Panel layout
+   Même logique d'interface qu'un panel Discord professionnel :
+   sidebar fixe, contenu gris uni, titres séparés par une ligne,
+   contrôles sombres et accent argile. Identité Nexora conservée.
+   ============================================================ */
+:root {
+  --d-bg: #36393f;
+  --d-side: #2b2d31;
+  --d-card: #36393f;
+  --d-card2: #2b2d31;
+  --d-border: #202225;
+  --d-border-soft: #4f545c;
+  --d-text: #f2f3f5;
+  --d-dim: #b5bac1;
+  --d-accent: #e07a5f;
+  --d-accent2: #c95b49;
+  --d-glow: rgba(224,122,95,.25);
+  --d-radius-card: 5px;
+  --d-radius-control: 4px;
+}
+
+/* La page devient un vrai espace de configuration, pas une vitrine. */
+.dashboard-shell-host .dash-shell { background: #36393f; }
+.dashboard-shell-host .dash-side {
+  width: 300px;
+  background: #2b2d31;
+  border-right: 1px solid #202225;
+  box-shadow: none;
+}
+.dashboard-shell-host .dash-side-brand {
+  margin: 0 26px 20px;
+  padding-bottom: 20px;
+  gap: 10px;
+  border-bottom: 1px solid #4f545c;
+}
+.dashboard-shell-host .dash-side-brand-avatar,
+.dashboard-shell-host .dash-side-brand-avatar.fallback {
+  width: 88px;
+  height: 88px;
+  flex-basis: 88px;
+  border: 2px solid #e07a5f;
+  background: #202225;
+}
+.dashboard-shell-host .dash-side-brand-copy b { font-size: 18px; }
+.dashboard-shell-host .dash-side-brand-copy span { color: #b5bac1; font-size: 12px; }
+.dashboard-shell-host .dash-side-brand-status { top: 72px; right: calc(50% - 45px); }
+.dashboard-shell-host .dash-side-section {
+  padding: 15px 28px 7px;
+  color: #949ba4;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+.dashboard-shell-host .dash-side-item {
+  min-height: 44px;
+  padding: 10px 28px;
+  border-left: 3px solid transparent;
+  font-size: 14px;
+}
+.dashboard-shell-host .dash-side-item .ico { width: 24px; height: 24px; font-size: 18px; }
+.dashboard-shell-host .dash-side-item:hover { background: #323438; border-left-color: #72767d; }
+.dashboard-shell-host .dash-side-item.active {
+  color: #e07a5f;
+  background: #323438;
+  border-left-color: #e07a5f;
+}
+.dashboard-shell-host .dash-side-item.active .ico { color: #e07a5f; }
+.dashboard-shell-host .dash-global-admin { margin-top: 12px; background: rgba(224,122,95,.07); }
+.dashboard-shell-host .dash-side-foot { margin-left: 26px; margin-right: 26px; }
+
+/* Barre d'outils très discrète : le contenu reste prioritaire. */
+.dashboard-shell-host .dash-main { padding: 28px 46px 80px; }
+.dashboard-shell-host #dash-content { max-width: 1160px; }
+.dashboard-shell-host .dash-topbar {
+  min-height: 32px;
+  margin: 0 auto 16px;
+  padding: 0 0 8px;
+  border: 0;
+  border-bottom: 1px solid #4f545c;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.dashboard-shell-host .dash-crumb { display: none; }
+.dashboard-shell-host .dash-topbar-actions { width: 100%; justify-content: flex-end; }
+.dashboard-shell-host .dash-topbar-actions .dash-iconbtn { width: 34px; height: 34px; }
+.dashboard-shell-host .dash-topbar-actions .dash-bot-chip { min-height: 34px; }
+
+/* Titre de module : grand titre, ligne horizontale, accent unique. */
+.dashboard-shell-host .dash-module-header {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-height: 68px;
+  margin-bottom: 25px;
+  padding: 0 0 17px;
+  border-bottom: 1px solid #72767d;
+}
+.dashboard-shell-host .dash-module-header::after { width: 120px; height: 2px; background: #e07a5f; }
+.dashboard-shell-host .dash-module-header .m-icon { width: 34px; height: 34px; font-size: 22px; color: #e07a5f; }
+.dashboard-shell-host .module-header-copy h1 { font-size: 26px; font-weight: 700; letter-spacing: 0; }
+.dashboard-shell-host .module-header-copy .sub { font-size: 13px; color: #b5bac1; }
+.dashboard-shell-host .module-header-meta { gap: 5px; }
+.dashboard-shell-host .module-scope,
+.dashboard-shell-host .module-status { min-height: 24px; padding: 3px 7px; border-radius: 4px; font-size: 9.5px; }
+
+/* Les cartes principales deviennent des sections de réglages ouvertes. */
+.dashboard-shell-host #dash-content > .dash-card[data-dash-card],
+.dashboard-shell-host .ov-activity-grid > .dash-card[data-dash-card],
+.dashboard-shell-host .am-control-card,
+.dashboard-shell-host .adv-builder-card,
+.dashboard-shell-host .custom-announcement-card {
+  padding: 0 0 28px;
+  margin-bottom: 28px;
+  border: 0;
+  border-bottom: 1px solid #4f545c;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.dashboard-shell-host #dash-content > .dash-card[data-dash-card]:hover,
+.dashboard-shell-host .ov-activity-grid > .dash-card[data-dash-card]:hover { border-color: #72767d; box-shadow: none !important; }
+.dashboard-shell-host .dash-card[data-dash-card] .card-head {
+  margin-bottom: 20px;
+  padding: 0;
+  border: 0;
+}
+.dashboard-shell-host .dash-card[data-dash-card] .card-heading h3,
+.dashboard-shell-host .dash-card h3 {
+  color: #f2f3f5;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.dashboard-shell-host .dash-card[data-dash-card] .card-heading .desc,
+.dashboard-shell-host .dash-card .desc {
+  max-width: 850px;
+  margin-top: 5px;
+  color: #b5bac1;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Les petites cartes de l'accueil restent des objets cliquables. */
+.dashboard-shell-host .ov-intro,
+.dashboard-shell-host .dash-hero,
+.dashboard-shell-host .ov-checklist-card {
+  border: 1px solid #4f545c;
+  border-radius: 5px;
+  background: #40444b !important;
+  box-shadow: none !important;
+}
+.dashboard-shell-host .ov-module-card,
+.dashboard-shell-host .ov-feed-card,
+.dashboard-shell-host .ov-brief-card {
+  padding: 17px !important;
+  margin-bottom: 0 !important;
+  border: 1px solid #4f545c !important;
+  border-radius: 5px !important;
+  background: #40444b !important;
+  box-shadow: none !important;
+}
+.dashboard-shell-host .ov-module-card h3,
+.dashboard-shell-host .ov-feed-card h3,
+.dashboard-shell-host .ov-brief-card h3 { font-size: 15px; }
+.dashboard-shell-host .ov-module-card .desc,
+.dashboard-shell-host .ov-feed-card .desc,
+.dashboard-shell-host .ov-brief-card .desc { font-size: 12px; }
+
+/* Formulaires façon panel : le contrôle occupe la largeur et se lit tout de suite. */
+.dashboard-shell-host .dash-label {
+  margin-top: 18px;
+  color: #b5bac1;
+  font-size: 11px;
+  letter-spacing: .65px;
+}
+.dashboard-shell-host .dash-input,
+.dashboard-shell-host .dash-select,
+.dashboard-shell-host textarea.dash-input {
+  min-height: 45px;
+  border: 1px solid #202225 !important;
+  border-radius: 4px !important;
+  background: #2b2d31 !important;
+  color: #f2f3f5 !important;
+  box-shadow: none !important;
+}
+.dashboard-shell-host .dash-input:focus,
+.dashboard-shell-host .dash-select:focus,
+.dashboard-shell-host textarea.dash-input:focus {
+  border-color: #e07a5f !important;
+  box-shadow: 0 0 0 2px rgba(224,122,95,.22) !important;
+}
+.dashboard-shell-host .dash-btn {
+  min-height: 40px;
+  border: 1px solid #4f545c !important;
+  border-radius: 4px !important;
+  background: #4f545c !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+.dashboard-shell-host .dash-btn:hover { background: #5b626a !important; border-color: #72767d !important; transform: none !important; }
+.dashboard-shell-host .dash-btn-primary { background: #e07a5f !important; border-color: #e07a5f !important; color: #fff !important; }
+.dashboard-shell-host .dash-btn-primary:hover { background: #eb8b70 !important; border-color: #eb8b70 !important; }
+.dashboard-shell-host .dash-btn-danger { background: rgba(237,66,69,.12) !important; border-color: rgba(237,66,69,.55) !important; color: #ffb3b7; }
+.dashboard-shell-host .dash-btn::before,
+.dashboard-shell-host .hx-ripple { display: none !important; }
+
+/* Surfaces secondaires : règles Auto-Mod, éditeur et sélecteurs multiples. */
+.dashboard-shell-host .am-rule-card,
+.dashboard-shell-host .adv-type-card,
+.dashboard-shell-host .am-control-hero,
+.dashboard-shell-host .am-mode-row,
+.dashboard-shell-host .am-policy-row,
+.dashboard-shell-host .am-warning-panel,
+.dashboard-shell-host .am-blacklist-config,
+.dashboard-shell-host .am-native-card,
+.dashboard-shell-host .adv-types-panel,
+.dashboard-shell-host .adv-preview-shell,
+.dashboard-shell-host .ca-preview-wrap {
+  border: 1px solid #4f545c;
+  border-radius: 4px;
+  background: #40444b !important;
+  box-shadow: none !important;
+}
+.dashboard-shell-host .am-rule-card,
+.dashboard-shell-host .adv-type-card { background: #2b2d31 !important; }
+.dashboard-shell-host .am-rule-card:hover,
+.dashboard-shell-host .adv-type-card:hover { border-color: #72767d; transform: none; }
+.dashboard-shell-host .am-choice,
+.dashboard-shell-host .ca-choice,
+.dashboard-shell-host .discord-multi-choice { border-radius: 4px; background: #2b2d31; box-shadow: none; }
+.dashboard-shell-host .am-choice.selected,
+.dashboard-shell-host .ca-choice.selected,
+.dashboard-shell-host .discord-multi-choice.selected { border-color: #e07a5f; background: rgba(224,122,95,.14); }
+.dashboard-shell-host .discord-multi-select { margin-top: 0; }
+
+/* Progression, tableaux et navigation basse : accent argile partout. */
+.dashboard-shell-host .ov-progress-value { background: #e07a5f; box-shadow: none; }
+.dashboard-shell-host .dash-stat { border-left-color: #e07a5f; background: #40444b !important; }
+.dashboard-shell-host .dash-table th { background: #2b2d31; }
+.dashboard-shell-host .dash-table tbody tr:hover td { background: rgba(224,122,95,.08); }
+.dashboard-shell-host .dash-bnav { background: #2b2d31; border-color: #202225; }
+.dashboard-shell-host .bnav-item.active { color: #e07a5f; }
+.dashboard-shell-host .bnav-item.active .bnav-ico { background: rgba(224,122,95,.16); }
+.dashboard-shell-host .bnav-item.active::before { background: #e07a5f; }
+
+html.hx-light .dashboard-shell-host .dash-shell,
+html.hx-light .dashboard-shell-host .dash-main,
+html.hx-light body:has(.dashboard-shell-host),
+html.hx-light body:has(.dashboard-shell-host) #app { background: #f2f3f5; }
+html.hx-light .dashboard-shell-host .dash-side,
+html.hx-light body:has(.dashboard-shell-host) .navbar { background: #e3e5e8 !important; border-color: #c7c9cc; }
+html.hx-light .dashboard-shell-host #dash-content > .dash-card[data-dash-card],
+html.hx-light .dashboard-shell-host .ov-activity-grid > .dash-card[data-dash-card] { border-color: #b5bac1; }
+html.hx-light .dashboard-shell-host .dash-card[data-dash-card] .card-heading h3,
+html.hx-light .dashboard-shell-host .dash-card h3,
+html.hx-light .dashboard-shell-host .module-header-copy h1 { color: #2e3338; }
+html.hx-light .dashboard-shell-host .dash-card[data-dash-card] .card-heading .desc,
+html.hx-light .dashboard-shell-host .dash-card .desc { color: #5c636b; }
+html.hx-light .dashboard-shell-host .dash-input,
+html.hx-light .dashboard-shell-host .dash-select,
+html.hx-light .dashboard-shell-host textarea.dash-input { color: #2e3338 !important; background: #fff !important; border-color: #b5bac1 !important; }
+html.hx-light .dashboard-shell-host .dash-btn { color: #2e3338; background: #e3e5e8 !important; border-color: #b5bac1 !important; }
+html.hx-light .dashboard-shell-host .dash-btn-primary { color: #fff !important; background: #c85f49 !important; border-color: #c85f49 !important; }
+
+@media (max-width: 1200px) {
+  .dashboard-shell-host .dash-side { width: 260px; }
+  .dashboard-shell-host .dash-main { padding-left: 30px; padding-right: 30px; }
+}
+@media (max-width: 900px) {
+  .dashboard-shell-host .dash-main { padding: 12px 12px calc(104px + env(safe-area-inset-bottom)); }
+  .dashboard-shell-host .dash-topbar { margin: 0 -12px 18px; padding: calc(8px + env(safe-area-inset-top)) 12px 10px; border-bottom-color: #4f545c; background: #2b2d31; }
+  .dashboard-shell-host .dash-crumb { display: none; }
+  .dashboard-shell-host .dash-topbar-actions { justify-content: flex-start; }
+  .dashboard-shell-host .dash-module-header { min-height: 62px; margin-bottom: 20px; padding-bottom: 13px; }
+  .dashboard-shell-host .module-header-copy h1 { font-size: 20px; }
+  .dashboard-shell-host .dash-card[data-dash-card] { padding-bottom: 22px; margin-bottom: 22px; }
+  .dashboard-shell-host .dash-card[data-dash-card] .card-heading h3,
+  .dashboard-shell-host .dash-card h3 { font-size: 18px; }
+}
+@media (max-width: 520px) {
+  .dashboard-shell-host .dash-main { padding-left: 10px; padding-right: 10px; }
+  .dashboard-shell-host .dash-topbar { margin-left: -10px; margin-right: -10px; padding-left: 10px; padding-right: 10px; }
+  .dashboard-shell-host .module-header-copy h1 { font-size: 18px; }
+  .dashboard-shell-host .dash-card[data-dash-card] .card-heading h3,
+  .dashboard-shell-host .dash-card h3 { font-size: 17px; }
+}
+html.hx-light { color-scheme: light; }
