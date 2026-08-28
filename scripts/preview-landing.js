@@ -38,6 +38,10 @@ window.__results = (async () => {
     liveSection: html.includes('id="pub-bots"'),
     supportLink: html.includes('discord.gg/X9hTdr9N3'),
     footer: html.includes('pub-footer'),
+    roleMock: html.includes('Choisis tes rôles') && html.includes('Graphiste'),
+    statsMock: html.includes('st-chart') && html.includes('Activité du serveur'),
+    cta: html.includes('pub-invite-cta') && html.includes('Prêt à faire vibrer ton serveur ?'),
+    footerCols: html.includes('pub-footer-grid') && html.includes('Communauté'),
     // Le mot a-t-il tourné après >3s ?
     rotatedLater: await new Promise((res) => setTimeout(() => res(rot ? rot.textContent : null), 3000)),
   };
@@ -49,7 +53,8 @@ setTimeout(async () => {
   const r = await w.__results;
   console.log(JSON.stringify(r, null, 2));
   const ok = r.hero && r.rotWord && r.rotText === 'ton serveur Discord'
-    && r.showcases === 3 && r.ticketMock && r.xpMock && r.modMock && r.kickers === 3
+    && r.showcases === 5 && r.ticketMock && r.xpMock && r.modMock && r.kickers === 5
+    && r.roleMock && r.statsMock && r.cta && r.footerCols
     && r.liveSection && r.supportLink && r.footer
     && r.rotatedLater && r.rotatedLater !== r.rotText;
   console.log(ok ? '✅ LANDING V161 OK (mot rotatif confirmé : ' + r.rotText + ' → ' + r.rotatedLater + ')' : '❌ PROBLÈME');

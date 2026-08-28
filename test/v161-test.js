@@ -36,9 +36,6 @@ for (const legacy of ['#5865F2', '#8B5CF6', '#EB459E', '#7082ff', '#9a7bff', '#a
 }
 assert(styleCss.includes('--accent: #e07a5f;'), 'accent principal du site public pas en Argile');
 
-// 4. Version v161 déployée (cache PWA + assets)
-assert(!index.includes('?v=160'), 'index.html référence encore v160');
-assert.strictEqual((index.match(/\?v=161/g) || []).length, 7, 'index.html doit référencer v161 7 fois');
-assert(sw.includes("'botdev-v161'"), 'le cache du service worker n’est pas en v161');
+// 4. Version : gérée par le test de la version courante (v162)
 
 console.log('✅ v161 : accueil public façon DraftBot — mot rotatif, vitrines Discord, identité Argile');
