@@ -1,4 +1,4 @@
-// Test v7 — refonte complète du dashboard et navigation Retour
+// Test v8 — finition complète du dashboard et navigation Retour
 const assert = require('assert');
 const fs = require('fs');
 const { JSDOM } = require('jsdom');
@@ -12,12 +12,12 @@ assert(source.includes('Dashboard.goBack'));
 assert(source.includes('moduleHistory'));
 assert(source.includes('data-module-back'));
 assert(source.includes('module-header-lead'));
-assert(css.includes("NEXORA v7.0 — Interface d'équipe expérimentée"));
+assert(css.includes("NEXORA v8.0 — Product Polish"));
 for (const selector of ['.module-back', '.module-header-lead', '.dash-card[data-dash-card]', '.dash-btn:active', '.dash-input:focus']) {
   assert(css.includes(selector), `style manquant : ${selector}`);
 }
 assert(css.includes('@media (max-width: 900px)'));
-console.log('1️⃣  Design system v7 : surfaces, contrôles, espacements et responsive présents ✅');
+console.log('1️⃣  Design system v8 : surfaces, contrôles, espacements et responsive présents ✅');
 
 const dom = new JSDOM('<!doctype html><html><body><div id="app"></div><div id="toasts"></div><div id="modal-root"></div></body></html>', {
   url: 'https://hoxera.is-a.dev/#/dashboard', runScripts: 'outside-only', pretendToBeVisual: true,
@@ -27,6 +27,7 @@ global.window = w; global.document = w.document; global.navigator = w.navigator;
 w.fetch = async () => ({ ok: true, json: async () => ({}) });
 w.eval(fs.readFileSync('public/js/app.js', 'utf8') + '\n' + source + '\nwindow.App=App;window.Dashboard=Dashboard;');
 w.App.state = { user: { id: 2, is_admin: false } };
+w.scrollTo = () => {};
 w.App.toast = () => {};
 w.Dashboard.state = { bot: { id: 1, name: 'Hoxera', online: true }, guildId: 'G1', module: 'overview', moduleHistory: [], discordGuilds: [] };
 let refreshes = 0;
@@ -58,4 +59,4 @@ assert.strictEqual(versions.length, 7);
 assert(versions.every((version) => version === '?v=147'));
 assert(sw.includes("const CACHE = 'botdev-v147';"));
 console.log('3️⃣  Cache frontend : assets et service worker synchronisés en v147 ✅');
-console.log('\n🎉 Tous les tests v7 passent !');
+console.log('\n🎉 Tous les tests v8 passent !');

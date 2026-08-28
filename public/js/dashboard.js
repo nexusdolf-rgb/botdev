@@ -6,6 +6,19 @@ const Dashboard = {
   state: { bot: null, guildId: null, guildData: null, module: 'overview', moduleHistory: [], discordGuilds: [] },
 };
 
+Dashboard.moduleIds = () => [...Dashboard.MODULES, ...Dashboard.BOT_MODULES].map(([id]) => id);
+Dashboard.persistedModule = () => {
+  try {
+    const saved = localStorage.getItem('hx-module');
+    if (!Dashboard.moduleIds().includes(saved)) return 'overview';
+    if (Dashboard.BOT_MODULES.some(([id]) => id === saved) && !(App.state.user && App.state.user.is_admin)) return 'overview';
+    return saved;
+  } catch { return 'overview'; }
+};
+Dashboard.scrollToTop = () => {
+  try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch { try { window.scrollTo(0, 0); } catch {} }
+};
+
 Dashboard.api = App.api;
 
 // ---------------------- Références Discord ----------------------
@@ -34,7 +47,7 @@ Dashboard.mount = async (shell, bot) => {
   Dashboard.state.shell = shell;
   Dashboard.state.guildId = null;
   Dashboard.state.guildData = null;
-  Dashboard.state.module = 'overview';
+  Dashboard.state.module = Dashboard.persistedModule();
   Dashboard.state.moduleHistory = [];
   shell.innerHTML = '';
 
@@ -219,6 +232,8 @@ Dashboard.setModule = (id, options = {}) => {
     }
   }
   Dashboard.state.module = next;
+  try { localStorage.setItem('hx-module', next); } catch {}
+  Dashboard.scrollToTop();
   Dashboard.refresh();
 };
 
@@ -245,16 +260,16 @@ Dashboard.renderBottomNav = (nav) => {
   const cur = Dashboard.state.module;
   Dashboard.BNav.forEach(([id, ico, label]) => {
     const b = App.el(`
-      <button class="bnav-item ${cur === id ? 'active' : ''}" data-bnav="${id}">
-        <span class="bnav-ico">${ico}</span>
+      <button class="bnav-item ${cur === id ? 'active' : ''}" data-bnav="${id}" aria-label="${label}" ${cur === id ? 'aria-current="page"' : ''}>
+        <span class="bnav-ico" aria-hidden="true">${ico}</span>
         <span class="bnav-label">${label}</span>
       </button>`);
     b.onclick = () => Dashboard.setModule(id);
     nav.appendChild(b);
   });
   const more = App.el(`
-    <button class="bnav-item" data-more>
-      <span class="bnav-ico">☰</span>
+    <button class="bnav-item" data-more aria-label="Plus de modules">
+      <span class="bnav-ico" aria-hidden="true">☰</span>
       <span class="bnav-label">Plus</span>
     </button>`);
   more.onclick = () => Dashboard.openMoreSheet();
@@ -714,9 +729,10 @@ Dashboard.renderContent = async (content) => {
       <div class="dash-state-card is-error" role="alert">
         <div class="state-icon">⚠️</div>
         <div class="state-copy"><h2>Impossible de charger ce module</h2><p>${App.escapeHtml(e.message || 'Une erreur temporaire est survenue.')}</p></div>
-        <button class="dash-btn dash-btn-primary" id="dash-retry">Réessayer</button>
+        <div class="state-actions"><button class="dash-btn" id="dash-error-back">← Retour</button><button class="dash-btn dash-btn-primary" id="dash-retry">Réessayer</button></div>
       </div>`;
     content.querySelector('#dash-retry')?.addEventListener('click', () => Dashboard.renderContent(content));
+    content.querySelector('#dash-error-back')?.addEventListener('click', () => Dashboard.goBack());
   }
 };
 
