@@ -3,7 +3,7 @@
 // Shell à sidebar + sélecteur de serveur + modules par serveur.
 // ============================================================
 const Dashboard = {
-  state: { bot: null, guildId: null, guildData: null, module: 'overview', discordGuilds: [] },
+  state: { bot: null, guildId: null, guildData: null, module: 'overview', moduleHistory: [], discordGuilds: [] },
 };
 
 Dashboard.api = App.api;
@@ -35,6 +35,7 @@ Dashboard.mount = async (shell, bot) => {
   Dashboard.state.guildId = null;
   Dashboard.state.guildData = null;
   Dashboard.state.module = 'overview';
+  Dashboard.state.moduleHistory = [];
   shell.innerHTML = '';
 
   const { discordGuilds, needLink } = await Dashboard.loadDiscordGuilds();
@@ -204,9 +205,28 @@ Dashboard.renderSide = (aside) => {
   </div>`));
 };
 
-Dashboard.setModule = (id) => {
-  Dashboard.state.module = id;
+Dashboard.setModule = (id, options = {}) => {
+  const next = String(id || 'overview');
+  const current = String(Dashboard.state.module || 'overview');
+  if (next === current) return;
+  if (!options.fromBack) {
+    if (next === 'overview') {
+      Dashboard.state.moduleHistory = [];
+    } else {
+      const history = Array.isArray(Dashboard.state.moduleHistory) ? Dashboard.state.moduleHistory : [];
+      if (history[history.length - 1] !== current) history.push(current);
+      Dashboard.state.moduleHistory = history.slice(-20);
+    }
+  }
+  Dashboard.state.module = next;
   Dashboard.refresh();
+};
+
+Dashboard.goBack = () => {
+  const history = Array.isArray(Dashboard.state.moduleHistory) ? Dashboard.state.moduleHistory : [];
+  const previous = history.pop() || 'overview';
+  Dashboard.state.moduleHistory = history;
+  Dashboard.setModule(previous, { fromBack: true });
 };
 
 // ---------------------- Navigation basse (mode Android) ----------------------
@@ -710,16 +730,23 @@ Dashboard.header = (content, icon, title, sub) => {
   const bot = Dashboard.state.bot || {};
   const statusLabel = bot.online === false ? 'Nexora hors ligne' : 'Nexora en ligne';
   const statusClass = bot.online === false ? 'is-offline' : 'is-online';
-  content.appendChild(App.el(`
+  const canGoBack = Dashboard.state.module !== 'overview' && Array.isArray(Dashboard.state.moduleHistory) && Dashboard.state.moduleHistory.length > 0;
+  const header = App.el(`
     <div class="dash-module-header" data-module-header>
-      <div class="m-icon" aria-hidden="true">${icon}</div>
+      <div class="module-header-lead">
+        ${canGoBack ? '<button class="module-back" type="button" data-module-back aria-label="Retour au module précédent"><span aria-hidden="true">←</span><span class="module-back-label">Retour</span></button>' : '<span class="module-back-placeholder" aria-hidden="true"></span>'}
+        <div class="m-icon" aria-hidden="true">${icon}</div>
+      </div>
       <div class="module-header-copy"><h1>${title}</h1><div class="sub">${sub}</div></div>
       <div class="module-header-meta">
         <span class="module-scope"><span class="module-scope-dot ${statusClass}"></span>${isGuildScope ? 'Serveur sélectionné' : 'Configuration globale'}</span>
         <span class="module-status ${statusClass}">${statusLabel}</span>
       </div>
     </div>
-  `));
+  `);
+  content.appendChild(header);
+  const back = header.querySelector('[data-module-back]');
+  if (back) back.onclick = () => Dashboard.goBack();
   return content;
 };
 

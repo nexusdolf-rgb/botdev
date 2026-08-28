@@ -2548,3 +2548,218 @@ html.hx-light .am-native-status { background:rgba(86,103,217,.025); border-color
 @media (prefers-reduced-motion:reduce) {
   .am-native-toggle i, .am-native-toggle i::after { transition:none !important; }
 }
+
+/* ============================================================
+   NEXORA v7.0 — Interface d'équipe expérimentée
+   Dernière couche de cohérence : densité, retour, états et mobile.
+   ============================================================ */
+:root {
+  --d-bg: #0a111b;
+  --d-side: #0e1723;
+  --d-card: #131e2c;
+  --d-card2: #19283b;
+  --d-border: #293b53;
+  --d-border-soft: rgba(58,78,105,.72);
+  --d-border-focus: #8190ff;
+  --d-text: #eef3fb;
+  --d-dim: #8d9db4;
+  --d-accent: #7182f6;
+  --d-accent2: #9a83e6;
+  --d-glow: rgba(113,130,246,.5);
+  --d-radius-card: 18px;
+  --d-radius-control: 12px;
+}
+
+/* Surface principale : un fond discret pour laisser respirer les cartes. */
+.dash-shell {
+  background:
+    linear-gradient(rgba(126,146,188,.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(126,146,188,.018) 1px, transparent 1px),
+    radial-gradient(900px 500px at 84% -10%, rgba(113,130,246,.075), transparent 72%),
+    var(--d-bg);
+  background-size: 48px 48px, 48px 48px, auto, auto;
+}
+.dash-main { padding: 26px 32px 80px; }
+#dash-content { max-width: 1320px; }
+
+/* Sidebar : une navigation d'équipe, pas une liste d'icônes lumineuses. */
+.dash-side {
+  width: 276px;
+  padding: 15px 10px 12px;
+  background: linear-gradient(180deg, rgba(19,30,45,.97), rgba(10,16,25,.99));
+  border-right-color: rgba(58,78,105,.7);
+}
+.dash-side-brand { margin: 1px 6px 18px; padding: 3px 5px 16px; }
+.dash-side-brand-avatar { width: 41px; height: 41px; flex-basis: 41px; border-radius: 14px; }
+.dash-side-section { padding: 14px 16px 7px; color: #71839c; font-size: 10px; letter-spacing: 1.55px; }
+.dash-side-item {
+  min-height: 43px;
+  margin: 2px 1px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  color: #8f9db1;
+  transition: background .16s ease, border-color .16s ease, color .16s ease, transform .16s ease, box-shadow .16s ease;
+}
+.dash-side-item .ico { width: 30px; height: 30px; border-radius: 10px; background: rgba(255,255,255,.04); }
+.dash-side-item:hover { color: #f0f4fb; background: rgba(113,130,246,.085); border-color: rgba(129,144,255,.18); transform: translateX(2px); }
+.dash-side-item.active { color: #fff; background: linear-gradient(100deg, rgba(113,130,246,.25), rgba(154,131,230,.09)); border-color: rgba(129,144,255,.34); box-shadow: inset 3px 0 0 var(--d-accent), 0 10px 24px -20px var(--d-glow); }
+.dash-side-item.active .ico { background: linear-gradient(145deg, rgba(113,130,246,.4), rgba(154,131,230,.24)); }
+.dash-global-admin { color: #dacfff; background: rgba(154,131,230,.055); border-color: rgba(154,131,230,.22); }
+.dash-side-foot { border-top-color: rgba(58,78,105,.68); }
+
+/* Topbar : contexte à gauche, outils à droite, sans surcharge. */
+.dash-topbar {
+  min-height: 70px;
+  margin-bottom: 25px;
+  padding: 12px 15px;
+  border-radius: 17px;
+  border-color: rgba(58,78,105,.78);
+  background: linear-gradient(145deg, rgba(25,39,58,.88), rgba(14,23,35,.95));
+  box-shadow: 0 18px 42px -32px rgba(0,0,0,.95), inset 0 1px 0 rgba(255,255,255,.045);
+}
+.dash-topbar-actions { gap: 8px; }
+.dash-iconbtn { width: 41px; height: 41px; border-radius: 12px; background: rgba(24,38,57,.94); border-color: rgba(58,78,105,.9); }
+.dash-iconbtn:hover { background: rgba(47,64,95,.78); border-color: rgba(129,144,255,.72); }
+.dash-bot-chip { border-color: rgba(58,78,105,.9) !important; background: rgba(24,38,57,.94) !important; }
+
+/* En-têtes de module avec vrai bouton Retour. */
+.dash-module-header {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 15px;
+  min-height: 78px;
+  padding: 2px 2px 18px;
+  margin-bottom: 23px;
+}
+.module-header-lead { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.module-back, .module-back-placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+.module-back {
+  gap: 6px;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid rgba(58,78,105,.9);
+  border-radius: 10px;
+  color: #bac7d8;
+  background: rgba(24,38,57,.75);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform .15s ease, border-color .15s ease, background .15s ease, color .15s ease;
+}
+.module-back:hover { color: #fff; border-color: var(--d-border-focus); background: rgba(113,130,246,.16); transform: translateX(-2px); }
+.module-back:active { transform: scale(.97); }
+.module-back-placeholder { width: 0; overflow: hidden; }
+.dash-module-header .m-icon { width: 52px; height: 52px; border-radius: 16px; }
+.module-header-copy { min-width: 0; }
+.module-header-copy h1 { font-size: 22px; }
+.module-header-copy .sub { max-width: 760px; }
+.module-header-meta { align-self: center; }
+
+/* Cartes : même niveau de finition sur tous les modules historiques. */
+.dash-card[data-dash-card] {
+  border-radius: var(--d-radius-card);
+  border-color: rgba(58,78,105,.78);
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.035), transparent 42%),
+    linear-gradient(180deg, rgba(19,30,44,.98), rgba(14,23,35,.98));
+  box-shadow: 0 1px 0 rgba(255,255,255,.045) inset, 0 20px 46px -36px rgba(0,0,0,.96);
+}
+.dash-card[data-dash-card]::after { content: ''; position: absolute; left: 19px; right: 19px; top: 0; height: 1px; background: linear-gradient(90deg, rgba(129,144,255,.25), transparent 64%); pointer-events: none; }
+.dash-card[data-dash-card] .card-head { padding-bottom: 12px; margin-bottom: 16px; border-bottom-color: rgba(58,78,105,.62); }
+.dash-card[data-dash-card] .card-heading h3 { font-size: 15.5px; }
+.dash-card[data-dash-card] .card-heading .desc { color: #8e9eb4; }
+.dash-card[data-dash-card]:hover { border-color: rgba(129,144,255,.42); box-shadow: 0 1px 0 rgba(255,255,255,.055) inset, 0 25px 55px -38px rgba(0,0,0,.98); }
+
+/* Contrôles : états lisibles, clics précis, sans effet plastique. */
+.dash-input, .dash-select, textarea.dash-input { min-height: 45px; border-radius: var(--d-radius-control); border-color: rgba(58,78,105,.9); background: linear-gradient(180deg, rgba(255,255,255,.035), transparent 68%), #111c2b; }
+.dash-input:hover, .dash-select:hover { border-color: rgba(129,144,255,.52); background-color: #152338; }
+.dash-input:focus, .dash-select:focus, textarea.dash-input:focus { border-color: var(--d-border-focus); box-shadow: 0 0 0 4px rgba(113,130,246,.14), inset 0 1px 0 rgba(255,255,255,.06); }
+.dash-label { color: #92a2b8; }
+.dash-btn { min-height: 42px; border-radius: 12px; border-color: rgba(58,78,105,.92); background: #19283b; color: #edf3fb; transition: transform .15s ease, border-color .15s ease, background .15s ease, box-shadow .15s ease, filter .15s ease; }
+.dash-btn:hover { border-color: rgba(129,144,255,.72); background: #243754; box-shadow: 0 13px 28px -22px var(--d-glow); }
+.dash-btn:active { transform: translateY(1px) scale(.985); }
+.dash-btn-primary { background: linear-gradient(135deg, #6578ee, #8f78dc); box-shadow: 0 13px 30px -18px var(--d-glow), inset 0 1px 0 rgba(255,255,255,.22); }
+.dash-btn-primary:hover { background: linear-gradient(135deg, #7487ff, #a08ae9); filter: none; }
+.dash-btn-danger { color: #ffb0b6; background: rgba(240,108,117,.1); border-color: rgba(240,108,117,.34); }
+.dash-btn-danger:hover { background: rgba(240,108,117,.17); border-color: rgba(240,108,117,.7); }
+.dash-btn:disabled { transform: none; box-shadow: none; }
+
+/* Espacements cohérents pour les grilles de réglages écrites dans les modules. */
+.dash-card[data-dash-card] > .dash-input,
+.dash-card[data-dash-card] > .dash-select,
+.dash-card[data-dash-card] > textarea.dash-input { margin-bottom: 2px; }
+.dash-card[data-dash-card] .dash-table { font-size: 13px; }
+.dash-card[data-dash-card] .dash-table th { color: #8495ad; }
+
+/* Aperçu de sauvegarde : plus lisible au-dessus de la navigation mobile. */
+.dash-savebar { border-radius: 15px; background: rgba(17,27,41,.95); border-color: rgba(129,144,255,.52); }
+.dash-savebar .dash-btn { min-height: 38px; }
+
+/* Mode clair : même contraste et mêmes niveaux, sans blanc éblouissant. */
+html.hx-light {
+  --d-bg: #f3f6fb;
+  --d-side: #edf2f9;
+  --d-card: #fff;
+  --d-card2: #f2f5fa;
+  --d-border: #d8e1ee;
+  --d-border-soft: rgba(190,204,222,.88);
+  --d-border-strong: #c3d0e1;
+  --d-text: #1e2a3c;
+  --d-dim: #6c7c94;
+  --d-accent: #5f70dc;
+  --d-accent2: #8668d2;
+  --d-glow: rgba(95,112,220,.3);
+}
+html.hx-light .dash-shell { background: linear-gradient(rgba(70,85,135,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(70,85,135,.035) 1px, transparent 1px), radial-gradient(900px 500px at 82% -12%, rgba(95,112,220,.12), transparent 70%), #f3f6fb; background-size: 48px 48px, 48px 48px, auto, auto; }
+html.hx-light .dash-side { background: linear-gradient(180deg, #f2f5fb, #e9eff8); border-color: #d4deeb; }
+html.hx-light .dash-topbar { background: rgba(255,255,255,.88); border-color: #d6e0ed; }
+html.hx-light .dash-iconbtn, html.hx-light .dash-bot-chip { color: #40506b; background: #f6f8fc !important; border-color: #d3deeb !important; }
+html.hx-light .module-back { color: #586985; background: #f8faff; border-color: #d1dce9; }
+html.hx-light .dash-card[data-dash-card] { background: linear-gradient(145deg, rgba(95,112,220,.035), transparent 42%), #fff; border-color: #d6e0ed; box-shadow: 0 20px 46px -34px rgba(52,67,105,.35); }
+html.hx-light .dash-card[data-dash-card] .card-heading .desc { color: #71819a; }
+html.hx-light .dash-input, html.hx-light .dash-select, html.hx-light textarea.dash-input { background: #f8faff; color: #263149; border-color: #cbd8e8; }
+html.hx-light .dash-btn { color: #31415c; background: #f4f7fb; border-color: #ccd8e8; }
+html.hx-light .dash-btn:hover { background: #eaf0ff; }
+html.hx-light .dash-btn-primary { color: #fff; background: linear-gradient(135deg, #6274e2, #876bd2); }
+html.hx-light .ov-quick-actions { background: rgba(255,255,255,.78); }
+
+@media (max-width: 1200px) {
+  .dash-main { padding-left: 24px; padding-right: 24px; }
+  .dash-side { width: 252px; }
+  .dash-module-header { grid-template-columns: auto minmax(0, 1fr) auto; }
+}
+
+@media (max-width: 900px) {
+  .dash-main { padding: 15px 12px calc(104px + env(safe-area-inset-bottom)); }
+  .dash-topbar { min-height: 0; margin-bottom: 17px; padding: calc(10px + env(safe-area-inset-top)) 12px 11px; }
+  .dash-module-header { grid-template-columns: auto minmax(0, 1fr); gap: 11px; min-height: 66px; padding: 2px 0 15px; }
+  .module-header-lead { gap: 8px; }
+  .module-back { min-width: 38px; min-height: 38px; padding: 7px 9px; }
+  .module-back-label { display: none; }
+  .dash-module-header .m-icon { width: 44px; height: 44px; border-radius: 14px; font-size: 20px; }
+  .module-header-meta { grid-column: 1 / -1; justify-content: flex-start; margin-top: -2px; }
+  .dash-card[data-dash-card]::after { left: 16px; right: 16px; }
+  .dash-card[data-dash-card] .card-head { margin-bottom: 14px; }
+  .dash-savebar { bottom: calc(86px + env(safe-area-inset-bottom)); }
+}
+
+@media (max-width: 520px) {
+  .dash-main { padding-left: 10px; padding-right: 10px; }
+  .dash-topbar { margin-left: -10px; margin-right: -10px; padding-left: 10px; padding-right: 10px; }
+  .dash-module-header { gap: 9px; }
+  .dash-module-header h1 { font-size: 17px; }
+  .dash-module-header .sub { font-size: 11.5px; }
+  .module-scope { font-size: 9.5px; }
+  .dash-card[data-dash-card] { padding: 17px 15px; }
+  .dash-btn { min-height: 44px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .module-back, .dash-card[data-dash-card], .dash-btn, .dash-iconbtn, .ov-quick-action { animation: none !important; transition: none !important; }
+}
