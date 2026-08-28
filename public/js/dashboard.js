@@ -30,7 +30,8 @@ Dashboard.discordRefMatches = (current, item) => {
   if (!value || !item) return false;
   const id = String(item.id || '').trim();
   const name = String(item.name || '').trim();
-  return value === id || value === name || value === `#${name}`;
+  const lower = value.toLowerCase();
+  return value === id || lower === name.toLowerCase() || lower === `#${name.toLowerCase()}`;
 };
 
 Dashboard.currentDiscordOption = (current, items, icon = '⚠️', label = 'configuration actuelle — élément introuvable') => {
@@ -40,6 +41,96 @@ Dashboard.currentDiscordOption = (current, items, icon = '⚠️', label = 'conf
 };
 
 Dashboard.noDiscordChoice = (label) => `<option value="" disabled>— ${App.escapeHtml(label)} —</option>`;
+
+// Sélecteur multi-valeurs commun aux réglages Discord.
+// Un <select> natif sert à ajouter un élément à la liste, puis chaque choix
+// apparaît avec un bouton Retirer. C'est plus clair et plus pratique sur
+// mobile que plusieurs cases cachées, tout en conservant les anciennes
+// références introuvables jusqu'à leur retrait explicite.
+Dashboard.renderDiscordMultiSelect = (host, {
+  items = [],
+  selected = new Set(),
+  icon = '•',
+  placeholder = 'Ajouter un élément',
+  emptyText = 'Aucun élément reçu de Discord.',
+  selectedEmptyText = 'Aucun élément sélectionné.',
+  getValue = (item) => item && (item.id || item.name),
+  getLabel = (item) => item && (item.name || item.id),
+  selectedClass = 'discord-multi-choice',
+  onChange = () => {},
+} = {}) => {
+  const list = Array.isArray(items) ? items.filter(Boolean) : [];
+  const chosen = selected instanceof Set ? selected : new Set(Array.isArray(selected) ? selected : []);
+  const refFor = (item) => String(getValue(item) || '').trim();
+  const labelFor = (item) => String(getLabel(item) || refFor(item));
+  const findItem = (ref) => list.find((item) => Dashboard.discordRefMatches(ref, item));
+
+  // Une valeur historique enregistrée avec le nom est convertie vers l'ID
+  // quand Discord nous fournit l'élément. Les références absentes restent
+  // intactes et seront affichées avec l'avertissement « introuvable ».
+  const normalized = [...chosen].map((ref) => {
+    const item = findItem(ref);
+    return item ? refFor(item) : String(ref || '').trim();
+  }).filter(Boolean);
+  chosen.clear();
+  [...new Set(normalized)].forEach((ref) => chosen.add(ref));
+
+  host.innerHTML = '';
+  host.classList.add('discord-multi-host');
+  const picker = App.el(`<div class="discord-multi-picker"><select class="dash-select discord-multi-select" aria-label="${App.escapeHtml(placeholder)}"></select><div class="discord-multi-values" aria-live="polite"></div></div>`);
+  const select = picker.querySelector('select');
+  const values = picker.querySelector('.discord-multi-values');
+
+  const render = () => {
+    const chosenKnown = new Set([...chosen].map((ref) => {
+      const item = findItem(ref);
+      return item ? refFor(item) : null;
+    }).filter(Boolean));
+    const available = list.filter((item) => !chosenKnown.has(refFor(item)));
+    select.innerHTML = `<option value="">＋ ${App.escapeHtml(placeholder)}</option>`;
+    available.forEach((item) => {
+      const ref = refFor(item);
+      if (!ref) return;
+      select.innerHTML += `<option value="${App.escapeHtml(ref)}">${App.escapeHtml(icon)} ${App.escapeHtml(labelFor(item))}</option>`;
+    });
+    if (!available.length) {
+      const message = list.length ? 'Tous les éléments disponibles sont sélectionnés.' : emptyText;
+      select.innerHTML += `<option value="" disabled>— ${App.escapeHtml(message)} —</option>`;
+    }
+    select.value = '';
+
+    values.innerHTML = '';
+    if (!chosen.size) {
+      values.appendChild(App.el(`<span class="discord-multi-empty">${App.escapeHtml(selectedEmptyText)}</span>`));
+      return;
+    }
+    [...chosen].forEach((ref) => {
+      const item = findItem(ref);
+      const known = !!item;
+      const label = known ? labelFor(item) : `${ref} (introuvable)`;
+      const chip = App.el(`<span class="${selectedClass} selected ${known ? '' : 'is-missing'}"><span class="discord-multi-icon">${known ? icon : '⚠️'}</span><b>${App.escapeHtml(label)}</b><button type="button" class="discord-multi-remove" aria-label="Retirer ${App.escapeHtml(label)}">×</button></span>`);
+      chip.querySelector('.discord-multi-remove').onclick = () => {
+        chosen.delete(ref);
+        render();
+        onChange(chosen);
+      };
+      values.appendChild(chip);
+    });
+  };
+
+  select.onchange = () => {
+    const ref = String(select.value || '').trim();
+    if (!ref) return;
+    chosen.add(ref);
+    render();
+    onChange(chosen);
+  };
+  render();
+  host.appendChild(picker);
+  host.__discordSelected = chosen;
+  host.__discordRender = render;
+  return { host, picker, select, values, selected: chosen, render };
+};
 
 // ---------------------- Shell ----------------------
 Dashboard.mount = async (shell, bot) => {
@@ -1541,20 +1632,21 @@ Dashboard.renderers.welcome = async (content, data) => {
         return;
       }
       if (f.type === 'rolesmulti') {
-        // 🏷️ Sélection MULTIPLE de rôles (cases à cocher) — enregistrée en
-        // liste séparée par des virgules.
+        // 🏷️ Sélecteur multiple de rôles : l'événement historique attend
+        // des noms séparés par des virgules, donc on conserve volontairement
+        // le nom comme valeur de compatibilité.
         cfgZone.appendChild(App.el(`<label class="dash-label">${f.label}</label>`));
-        const selected = String(ev.config[f.key] || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
-        const box = App.el(`<div class="dash-roles-multi" data-k="${f.key}" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px"></div>`);
-        rolesList.filter((r) => r.name !== '@everyone').forEach((r) => {
-          const on = selected.includes(r.name.toLowerCase());
-          const chip = App.el(`<label style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid ${on ? 'rgba(88,101,242,.6)' : 'var(--d-border)'};border-radius:999px;cursor:pointer;font-size:12.5px;background:${on ? 'rgba(88,101,242,.14)' : 'transparent'}"><input type="checkbox" style="display:none" value="${App.escapeHtml(r.name)}" ${on ? 'checked' : ''}/><span style="width:9px;height:9px;border-radius:50%;background:${r.color && r.color !== '#000000' ? r.color : '#8b8fa3'}"></span>${App.escapeHtml(r.name)}</label>`);
-          const input = chip.querySelector('input');
-          input.onchange = () => {
-            chip.style.borderColor = input.checked ? 'rgba(88,101,242,.6)' : 'var(--d-border)';
-            chip.style.background = input.checked ? 'rgba(88,101,242,.14)' : 'transparent';
-          };
-          box.appendChild(chip);
+        const selected = new Set(String(ev.config[f.key] || '').split(',').map((value) => value.trim()).filter(Boolean));
+        const box = App.el(`<div class="dash-roles-multi" data-k="${f.key}"></div>`);
+        Dashboard.renderDiscordMultiSelect(box, {
+          items: rolesList,
+          selected,
+          icon: '🛡️',
+          placeholder: 'Ajouter un rôle automatique',
+          emptyText: 'Aucun rôle reçu de Discord.',
+          selectedEmptyText: 'Aucun rôle automatique sélectionné.',
+          getValue: (role) => role.name,
+          selectedClass: 'discord-multi-choice',
         });
         cfgZone.appendChild(box);
         return;
@@ -1696,8 +1788,8 @@ Dashboard.renderers.welcome = async (content, data) => {
       const config = {};
       cfgZone.querySelectorAll('[data-k]').forEach((inp) => {
         if (inp.classList && inp.classList.contains('dash-roles-multi')) {
-          // 🏷️ multi-rôles : liste des cases cochées, séparée par des virgules
-          config[inp.dataset.k] = [...inp.querySelectorAll('input:checked')].map((x) => x.value).join(', ');
+          // 🏷️ multi-rôles : valeurs du sélecteur, séparées par des virgules
+          config[inp.dataset.k] = [...(inp.__discordSelected || [])].join(', ');
           return;
         }
         config[inp.dataset.k] = inp.type === 'checkbox' ? inp.checked : inp.value;
@@ -2190,41 +2282,35 @@ Dashboard.renderers.moderation = async (content, data) => {
       <div><label class="dash-label">Rôles ignorés</label><div class="am-choice-list" id="am-exempt-roles"></div></div>
       <div><label class="dash-label">Salons ignorés</label><div class="am-choice-list" id="am-exempt-channels"></div></div>
     </div>
-    <div><label class="dash-label">Membres ignorés</label><div class="am-choice-list" id="am-exempt-users"></div></div>
-    <div class="am-help">Sélectionne directement les membres à ignorer. Les anciennes valeurs restent affichées si un membre n'est plus disponible.</div>`;
-  const renderAMChoices = (element, items, selected, icon, emptyText) => {
-    element.innerHTML = '';
-    const list = Array.isArray(items) ? items : [];
-    if (!list.length && !selected.size) {
-      element.appendChild(App.el(`<span class="am-choice-empty">${emptyText}</span>`));
-      return;
-    }
-    list.forEach((item) => {
-      const id = String(item.id || item.name || '');
-      const name = String(item.name || id);
-      const isSelected = selected.has(id) || selected.has(name);
-      const chip = App.el(`<label class="am-choice ${isSelected ? 'selected' : ''}"><input type="checkbox" value="${App.escapeHtml(id)}" ${isSelected ? 'checked' : ''}/><span>${icon}</span><b>${App.escapeHtml(name)}</b></label>`);
-      const input = chip.querySelector('input');
-      input.onchange = () => {
-        if (input.checked) { selected.add(id); selected.delete(name); }
-        else { selected.delete(id); selected.delete(name); }
-        chip.classList.toggle('selected', input.checked);
-      };
-      element.appendChild(chip);
-    });
-    // Une ancienne référence (membre, rôle ou salon) peut ne plus exister.
-    // On l'affiche sans remettre de champ texte libre et on la conserve
-    // jusqu'à ce que l'utilisateur la décoche explicitement.
-    [...selected].filter((ref) => !list.some((item) => Dashboard.discordRefMatches(ref, item))).forEach((ref) => {
-      const chip = App.el(`<label class="am-choice selected"><input type="checkbox" value="${App.escapeHtml(ref)}" checked/><span>⚠️</span><b>${App.escapeHtml(ref)} (introuvable)</b></label>`);
-      const input = chip.querySelector('input');
-      input.onchange = () => { selected.delete(ref); chip.remove(); };
-      element.appendChild(chip);
-    });
-  };
-  renderAMChoices(cExceptions.querySelector('#am-exempt-roles'), rolesList, selectedExemptRoles, '🛡️', 'Aucun rôle disponible.');
-  renderAMChoices(cExceptions.querySelector('#am-exempt-channels'), channelList, selectedExemptChannels, '💬', 'Aucun salon textuel disponible.');
-  renderAMChoices(cExceptions.querySelector('#am-exempt-users'), automodMembers, selectedExemptUsers, '👤', 'Aucun membre reçu de Discord.');
+    <div style="margin-top:14px"><label class="dash-label">Membres ignorés</label><div class="am-choice-list" id="am-exempt-users"></div></div>
+    <div class="am-help">Utilise le sélecteur pour ajouter plusieurs éléments. Les anciennes références restent affichées avec ⚠️ si Discord ne les renvoie plus.</div>`;
+  Dashboard.renderDiscordMultiSelect(cExceptions.querySelector('#am-exempt-roles'), {
+    items: rolesList,
+    selected: selectedExemptRoles,
+    icon: '🛡️',
+    placeholder: 'Ajouter un rôle à ignorer',
+    emptyText: 'Aucun rôle reçu de Discord.',
+    selectedEmptyText: 'Aucun rôle ignoré.',
+    selectedClass: 'am-choice',
+  });
+  Dashboard.renderDiscordMultiSelect(cExceptions.querySelector('#am-exempt-channels'), {
+    items: channelList,
+    selected: selectedExemptChannels,
+    icon: '💬',
+    placeholder: 'Ajouter un salon à ignorer',
+    emptyText: 'Aucun salon textuel reçu de Discord.',
+    selectedEmptyText: 'Aucun salon ignoré.',
+    selectedClass: 'am-choice',
+  });
+  Dashboard.renderDiscordMultiSelect(cExceptions.querySelector('#am-exempt-users'), {
+    items: automodMembers,
+    selected: selectedExemptUsers,
+    icon: '👤',
+    placeholder: 'Ajouter un membre à ignorer',
+    emptyText: 'Aucun membre reçu de Discord.',
+    selectedEmptyText: 'Aucun membre ignoré.',
+    selectedClass: 'am-choice',
+  });
 
   // 📊 Résumé des actions réelles et des observations
   const cSummary = Dashboard.card(root, '📊 Activité Auto-Mod', 'Les chiffres viennent du journal du bot et distinguent les observations des actions réellement appliquées.');
@@ -2879,19 +2965,6 @@ Dashboard.renderers.announcements = async (content, data) => {
   const caMessage = cCustom.querySelector('#ca-message');
   const caPreview = cCustom.querySelector('#ca-preview');
   const caStatus = cCustom.querySelector('#ca-status');
-  const renderAnnouncementChoices = (element, items, selected, icon, emptyText) => {
-    element.innerHTML = '';
-    if (!items.length) { element.appendChild(App.el(`<span class="ca-choice-empty">${emptyText}</span>`)); return; }
-    items.forEach((item) => {
-      const id = String(item.id || item.name || '');
-      const name = String(item.name || id);
-      const active = selected.has(id) || selected.has(name);
-      const chip = App.el(`<label class="ca-choice ${active ? 'selected' : ''}"><input type="checkbox" value="${App.escapeHtml(id)}" ${active ? 'checked' : ''}/><span>${icon}</span><b>${App.escapeHtml(name)}</b></label>`);
-      const input = chip.querySelector('input');
-      input.onchange = () => { if (input.checked) { selected.add(id); selected.delete(name); } else { selected.delete(id); selected.delete(name); } chip.classList.toggle('selected', input.checked); renderAnnouncementPreview(); };
-      element.appendChild(chip);
-    });
-  };
   const markdownPreview = (value) => {
     let html = App.escapeHtml(String(value || ''));
     html = html.replace(/```([\s\S]*?)```/g, '<pre>$1</pre>');
@@ -2911,8 +2984,25 @@ Dashboard.renderers.announcements = async (content, data) => {
     const image = cCustom.querySelector('#ca-image').value.trim();
     caPreview.innerHTML = `<div class="ca-preview-label">👀 Aperçu Discord <span>Actualisé en direct</span></div><div class="ca-discord-preview"><div class="ca-discord-author"><span class="ca-bot-avatar">⚡</span><b>Hoxera</b><span>APP</span></div>${roleNames ? `<div class="ca-preview-pings">${roleNames}</div>` : ''}<div class="ca-embed-preview" style="border-left-color:${color}">${cCustom.querySelector('#ca-title').value.trim() ? `<div class="ca-embed-title">${App.escapeHtml(cCustom.querySelector('#ca-title').value.trim())}</div>` : ''}<div class="ca-embed-body">${markdownPreview(caMessage.value) || '<span class="ca-placeholder">Ton message apparaîtra ici…</span>'}</div>${image && /^https:\/\//i.test(image) ? `<img src="${App.escapeHtml(image)}" alt="" />` : ''}<div class="ca-embed-footer">${App.escapeHtml(cCustom.querySelector('#ca-footer').value.trim() || 'Hoxera · Annonce du serveur')}</div></div></div>`;
   };
-  renderAnnouncementChoices(cCustom.querySelector('#ca-channels'), textChannels, selectedAnnChannels, '💬', 'Aucun salon textuel disponible.');
-  renderAnnouncementChoices(cCustom.querySelector('#ca-roles'), rolesList, selectedAnnRoles, '🛡️', 'Aucun rôle disponible.');
+  Dashboard.renderDiscordMultiSelect(cCustom.querySelector('#ca-channels'), {
+    items: textChannels,
+    selected: selectedAnnChannels,
+    icon: '💬',
+    placeholder: 'Ajouter un salon de publication',
+    emptyText: 'Aucun salon textuel reçu de Discord.',
+    selectedEmptyText: 'Aucun salon de publication sélectionné.',
+    selectedClass: 'ca-choice',
+  });
+  Dashboard.renderDiscordMultiSelect(cCustom.querySelector('#ca-roles'), {
+    items: rolesList,
+    selected: selectedAnnRoles,
+    icon: '🛡️',
+    placeholder: 'Ajouter un rôle à mentionner',
+    emptyText: 'Aucun rôle reçu de Discord.',
+    selectedEmptyText: 'Aucun rôle à mentionner.',
+    selectedClass: 'ca-choice',
+    onChange: renderAnnouncementPreview,
+  });
   const insertAnnouncementMark = (before, after) => {
     const start = caMessage.selectionStart;
     const end = caMessage.selectionEnd;

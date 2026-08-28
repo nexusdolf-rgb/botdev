@@ -1267,6 +1267,20 @@ html.hx-light .adv-check-row { background: rgba(88,101,242,.055); }
 .am-choice:hover { border-color: rgba(132,143,255,.6); color: var(--d-text); transform: translateY(-1px); }
 .am-choice.selected { border-color: rgba(110,231,160,.55); color: #8df0b2; background: rgba(59,165,93,.13); box-shadow: 0 5px 14px -12px rgba(59,165,93,.9); }
 .am-choice-empty { color: var(--d-dim); font-size: 11.5px; padding: 8px 0; }
+
+/* Sélecteurs multi-valeurs : un vrai menu natif + les choix déjà ajoutés. */
+.discord-multi-picker { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.discord-multi-select { width: 100%; margin-top: 0; }
+.discord-multi-values { display: flex; flex-wrap: wrap; gap: 7px; min-height: 28px; }
+.discord-multi-empty { color: var(--d-dim); font-size: 11.5px; padding: 5px 0; }
+.discord-multi-choice { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 6px 9px; border: 1px solid var(--d-border); border-radius: 999px; color: var(--d-text); background: var(--d-card2); font-size: 11px; }
+.discord-multi-choice b { max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.discord-multi-choice.is-missing, .am-choice.is-missing, .ca-choice.is-missing { color: #ffd27a; border-color: rgba(254,190,92,.48); background: rgba(254,190,92,.09); box-shadow: none; }
+.discord-multi-icon { line-height: 1; }
+.am-choice .discord-multi-remove, .ca-choice .discord-multi-remove, .discord-multi-choice .discord-multi-remove { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%; color: currentColor; background: rgba(255,255,255,.1); font: inherit; font-size: 15px; line-height: 1; cursor: pointer; }
+.am-choice .discord-multi-remove:hover, .ca-choice .discord-multi-remove:hover, .discord-multi-choice .discord-multi-remove:hover { color: #fff; background: rgba(237,66,69,.8); }
+.am-exceptions-card .dash-label { margin-bottom: 6px; }
+
 .am-summary-card { border-color: rgba(88,101,242,.25); }
 .am-summary-loading { color: var(--d-dim); font-size: 12px; }
 .am-summary-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
@@ -1730,8 +1744,8 @@ html.hx-light .ca-preview-wrap { background: rgba(255,255,255,.55); }
 .dash-badge.warn { color: #f5d878; border-color: rgba(244,201,107,.42); background: rgba(244,201,107,.08); }
 .dash-badge.bad { color: #ff9da3; border-color: rgba(240,108,117,.42); background: rgba(240,108,117,.08); }
 
-.dash-filter, .am-choice, .ca-choice { background: #152131; border-color: #2b3a51; transition: transform .16s ease, border-color .16s ease, background .16s ease, box-shadow .16s ease; }
-.dash-filter:hover, .am-choice:hover, .ca-choice:hover { transform: translateY(-1px); border-color: rgba(112,130,255,.62); background: #1a2a40; box-shadow: 0 9px 22px -18px rgba(112,130,255,.8); }
+.dash-filter, .am-choice, .ca-choice, .discord-multi-choice { background: #152131; border-color: #2b3a51; transition: transform .16s ease, border-color .16s ease, background .16s ease, box-shadow .16s ease; }
+.dash-filter:hover, .am-choice:hover, .ca-choice:hover, .discord-multi-choice:hover { transform: translateY(-1px); border-color: rgba(112,130,255,.62); background: #1a2a40; box-shadow: 0 9px 22px -18px rgba(112,130,255,.8); }
 .dash-filter input, .am-choice input, .ca-choice input { accent-color: #7082ff; }
 
 .dash-savebar { background: rgba(17,25,38,.94); border-color: rgba(112,130,255,.5); box-shadow: 0 22px 50px -22px #000, inset 0 1px 0 rgba(255,255,255,.06); }
@@ -1771,7 +1785,7 @@ html.hx-light .dash-input, html.hx-light .dash-select, html.hx-light textarea.da
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #dash-content > *, .dash-module-header, .dash-side-item, .dash-btn, .dash-filter, .am-choice, .ca-choice { animation: none !important; transition: none !important; }
+  #dash-content > *, .dash-module-header, .dash-side-item, .dash-btn, .dash-filter, .am-choice, .ca-choice, .discord-multi-choice { animation: none !important; transition: none !important; }
 }
 
 /* ============================================================
