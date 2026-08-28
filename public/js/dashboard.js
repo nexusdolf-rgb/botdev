@@ -1161,7 +1161,11 @@ Dashboard.renderContent = async (content) => {
   try {
     const data = botLevel ? null : await Dashboard.loadGuild();
     const fn = Dashboard.renderers[module];
-    if (fn) await fn(content, data);
+    if (fn) {
+      await fn(content, data);
+      // 🧷 Mise en page des réglages en lignes (libellé à gauche, contrôle à droite)
+      Dashboard.layoutSettingRows(content);
+    }
     else content.innerHTML = `<div class="dash-empty">Module introuvable.</div>`;
   } catch (e) {
     content.innerHTML = `
@@ -1212,6 +1216,57 @@ Dashboard.card = (content, title, desc, inner = '') => {
 };
 
 Dashboard.renderers = {};
+
+// ============================================================
+// 🧷 Mise en page des réglages façon Discord/DraftBot (v159)
+// Après le rendu d'un module, chaque couple « libellé + contrôle »
+// devient une ligne : texte à gauche, contrôle à droite. Les boutons
+// en fin de carte sont regroupés dans un pied de carte aligné à droite.
+// ============================================================
+Dashboard.SETTING_ROW_CONTROLS = 'select.dash-select, input.dash-input, textarea.dash-input, label.switch, .dash-roles-multi, .discord-multi-host, .dd-host';
+
+Dashboard.layoutSettingRows = (root) => {
+  if (!root || !root.querySelectorAll) return;
+  // 1) Lignes « libellé → contrôle »
+  root.querySelectorAll('.dash-label').forEach((label) => {
+    const parent = label.parentElement;
+    if (!parent || parent.classList.contains('setting-row')) return;
+    if (parent.style && parent.style.display === 'flex') {
+      // Déjà une ligne construite en inline (ex : « Activer ») → harmonisation
+      const next = label.nextElementSibling;
+      if (next && (next.classList.contains('switch') || next.matches(Dashboard.SETTING_ROW_CONTROLS))) parent.classList.add('setting-row');
+      return;
+    }
+    const next = label.nextElementSibling;
+    if (!next) return;
+    const isControl = next.matches(Dashboard.SETTING_ROW_CONTROLS)
+      || (next.tagName === 'DIV' && next.querySelector('input[type="color"]'))
+      || (next.tagName === 'DIV' && next.querySelector('.discord-multi-picker'))
+      || (next.tagName === 'DIV' && next.querySelector('select.dash-select'));
+    if (!isControl) return;
+    const row = document.createElement('div');
+    row.className = 'setting-row';
+    parent.insertBefore(row, label);
+    row.appendChild(label);
+    row.appendChild(next);
+  });
+  // 2) Boutons en fin de zone → pied de carte aligné à droite
+  root.querySelectorAll('.dash-card .dash-btn').forEach((btn) => {
+    const parent = btn.parentElement;
+    if (!parent || parent.classList.contains('card-actions') || parent.closest('.card-actions') || parent.closest('.setting-row') || parent.closest('.card-head')) return;
+    const kids = Array.from(parent.children);
+    const trailing = [];
+    for (let i = kids.length - 1; i >= 0; i--) {
+      if (kids[i].classList && kids[i].classList.contains('dash-btn')) trailing.unshift(kids[i]);
+      else break;
+    }
+    if (!trailing.length || !trailing.includes(btn)) return;
+    const foot = document.createElement('div');
+    foot.className = 'card-actions';
+    parent.insertBefore(foot, trailing[0]);
+    trailing.forEach((b) => foot.appendChild(b));
+  });
+};
 
 // ---------- Vue d'ensemble ----------
 Dashboard.renderers.overview = async (content, data) => {

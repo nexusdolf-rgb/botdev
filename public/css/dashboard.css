@@ -4364,3 +4364,42 @@ html.hx-light { color-scheme: light; }
   .dashboard-shell-host .ov-quick-action { min-height: 62px; }
   .dashboard-shell-host .ov-welcome-panel .ov-intro-copy h2 { font-size: 19px; }
 }
+
+/* ============================================================
+   🧷 Lignes de réglage façon Discord/DraftBot (v159)
+   Chaque réglage : libellé à gauche, contrôle à droite.
+   Sur mobile, la ligne se replie en pile lisible.
+   ============================================================ */
+.setting-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 18px; padding: 13px 2px;
+  border-bottom: 1px solid rgba(255,255,255,.055);
+}
+.setting-row:last-child { border-bottom: none; padding-bottom: 4px; }
+.setting-row > .dash-label {
+  flex: 1; min-width: 0; margin: 0 !important;
+  font-size: 13.5px; font-weight: 650; color: var(--d-text);
+}
+.setting-row > .dash-select, .setting-row > input.dash-input { width: 300px; flex: 0 1 300px; }
+.setting-row > textarea.dash-input { flex: 1 1 100%; min-height: 90px; }
+.setting-row > label.switch { flex-shrink: 0; }
+.setting-row > .dash-roles-multi, .setting-row > .discord-multi-host, .setting-row > .dd-host { flex: 0 1 340px; max-width: 340px; }
+.setting-row > div { flex: 0 1 300px; display: flex; gap: 8px; align-items: center; min-width: 0; }
+
+/* Pied de carte : actions regroupées à droite */
+.card-actions {
+  display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;
+  padding-top: 14px; margin-top: 10px;
+  border-top: 1px solid rgba(255,255,255,.055);
+}
+.card-actions .dash-btn { min-height: 38px; }
+
+/* 📱 Mobile : chaque ligne se replie en pile (libellé puis contrôle) */
+@media (max-width: 700px) {
+  .setting-row { flex-direction: column; align-items: stretch; gap: 9px; }
+  .setting-row > .dash-select, .setting-row > input.dash-input,
+  .setting-row > .dash-roles-multi, .setting-row > .discord-multi-host,
+  .setting-row > .dd-host, .setting-row > div { width: 100%; flex: 1 1 auto; max-width: none; }
+  .card-actions { justify-content: stretch; }
+  .card-actions .dash-btn { flex: 1; }
+}

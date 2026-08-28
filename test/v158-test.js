@@ -29,9 +29,6 @@ assert(css.includes('.dashboard-shell-host .ov-quick-action > span'), 'tuiles d�
 assert(css.includes('.ov-qa-txt'), 'empilement titre/sous-titre des actions rapides manquant');
 assert(js.includes('ov-qa-txt'), 'le HTML des actions rapides n’utilise pas le wrapper ov-qa-txt');
 
-// 5. Version v158 déployée (cache PWA + assets)
-assert(!index.includes('?v=157'), 'index.html référence encore v157');
-assert.strictEqual((index.match(/\?v=158/g) || []).length, 7, 'index.html doit référencer v158 7 fois');
-assert(sw.includes("'botdev-v158'"), 'le cache du service worker n’est pas en v158');
+// 5. Version : gérée par le test de la version courante (v159)
 
 console.log('✅ v158 : panneau qui se ferme (souris + tactile), accueil Argile, zéro couleur legacy — dashboard v158');
