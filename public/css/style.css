@@ -826,71 +826,13 @@ a:hover { color: #c3caff; }
   *, *::before, *::after { scroll-behavior: auto !important; }
 }
 
-/* ============================================================
-   🎠 v164 — landing façon DraftBot : « Un bot pour », particules,
-   vague, 4 vitrines courtes, footer en colonnes
-   ============================================================ */
-.pub-hero { position: relative; overflow: hidden; }
-.pub-rotline {
-  font-size: clamp(19px, 3.4vw, 26px); font-weight: 800; letter-spacing: -.3px;
-  margin: 14px 0 20px; color: var(--text-dim);
-}
-.pub-rot {
-  display: inline-block; color: var(--accent);
-  transition: opacity .24s ease, transform .24s ease, filter .24s ease;
-}
-.pub-rot.out { opacity: 0; transform: translateY(10px); filter: blur(4px); }
-
-/* Bouton Discord (logo + libellé, façon DraftBot) */
-.pub-btn-discord { display: inline-flex; align-items: center; gap: 10px; padding: 13px 24px !important; font-size: 15px; }
-
-/* Particules flottantes du hero */
-.pub-particles { position: absolute; inset: 0; pointer-events: none; }
-.pub-particles i {
-  position: absolute; width: 5px; height: 5px; border-radius: 50%;
-  background: rgba(224,122,95,.45);
-  animation: pub-float 9s ease-in-out infinite;
-}
-.pub-particles i:nth-child(1) { left: 8%; top: 22%; animation-delay: 0s; }
-.pub-particles i:nth-child(2) { left: 18%; top: 64%; width: 4px; height: 4px; animation-delay: -2s; }
-.pub-particles i:nth-child(3) { left: 30%; top: 38%; animation-delay: -4s; }
-.pub-particles i:nth-child(4) { left: 42%; top: 74%; width: 3px; height: 3px; animation-delay: -1s; }
-.pub-particles i:nth-child(5) { left: 52%; top: 18%; animation-delay: -6s; }
-.pub-particles i:nth-child(6) { left: 62%; top: 56%; width: 4px; height: 4px; animation-delay: -3s; }
-.pub-particles i:nth-child(7) { left: 72%; top: 30%; animation-delay: -5s; }
-.pub-particles i:nth-child(8) { left: 82%; top: 68%; width: 3px; height: 3px; animation-delay: -7s; }
-.pub-particles i:nth-child(9) { left: 90%; top: 42%; animation-delay: -2.5s; }
-.pub-particles i:nth-child(10) { left: 12%; top: 46%; width: 3px; height: 3px; animation-delay: -8s; }
-.pub-particles i:nth-child(11) { left: 66%; top: 84%; animation-delay: -4.5s; }
-.pub-particles i:nth-child(12) { left: 36%; top: 12%; width: 4px; height: 4px; animation-delay: -3.5s; }
-@keyframes pub-float {
-  0%, 100% { transform: translateY(0); opacity: .25; }
-  50% { transform: translateY(-16px); opacity: .85; }
-}
-
-/* Vague de séparation sous le hero */
-.pub-wave { position: absolute; left: 0; right: 0; bottom: -1px; line-height: 0; pointer-events: none; }
-.pub-wave svg { width: 100%; height: 70px; display: block; }
-
-/* --- Les 4 vitrines façon DraftBot --- */
-.db-feature {
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 40px; align-items: center;
-  max-width: 1000px; margin: 0 auto 26px; padding: 30px 0;
-}
-.db-feature.rev .db-visual { order: 2; }
-.db-content h2 { font-size: clamp(24px, 3.6vw, 32px); letter-spacing: -.6px; margin-bottom: 14px; }
-.db-content p { color: var(--text-dim); font-size: 15.5px; line-height: 1.65; margin: 0 0 10px; }
-.db-content p:first-of-type { color: var(--text); font-weight: 600; font-size: 16.5px; }
-
+/* ---------- Visuels des vitrines (conservés de v164) ---------- */
 /* Visuel 1 — message Discord (menus de rôles) */
 .dbv-discord {
   background: #313338; border-radius: 14px; padding: 16px;
   box-shadow: 0 24px 60px -30px rgba(0,0,0,.8);
   transform: perspective(1200px) rotateY(-5deg); transition: transform .3s ease;
 }
-.db-feature.rev .dbv-discord { transform: perspective(1200px) rotateY(5deg); }
-.db-feature:hover .dbv-discord, .db-feature:hover .dbv-rank, .db-feature:hover .dbv-mod, .db-feature:hover .dbv-stats { transform: perspective(1200px) rotateY(0); }
 .dbv-msg { display: flex; gap: 12px; }
 .dbv-ava {
   width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%;
@@ -913,13 +855,11 @@ a:hover { color: #c3caff; }
   padding: 8px 14px; border-radius: 6px; background: #4e5058;
   color: #fff; font-size: 13px; font-weight: 600;
 }
-
 /* Visuel 2 — carte de niveau */
 .dbv-rank {
   display: grid; gap: 10px;
   transform: perspective(1200px) rotateY(-5deg); transition: transform .3s ease;
 }
-.db-feature.rev .dbv-rank { transform: perspective(1200px) rotateY(5deg); }
 .dbv-rank-card {
   display: flex; align-items: center; gap: 14px; padding: 16px 18px;
   border-radius: 14px; border: 1px solid rgba(224,122,95,.4);
@@ -943,13 +883,11 @@ a:hover { color: #c3caff; }
   margin-left: auto; padding: 4px 10px; border-radius: 20px; font-size: 11px;
   background: rgba(224,122,95,.12); border: 1px solid rgba(224,122,95,.3); color: var(--accent);
 }
-
 /* Visuel 3 — outils de modération */
 .dbv-mod {
   display: grid; gap: 8px;
   transform: perspective(1200px) rotateY(-5deg); transition: transform .3s ease;
 }
-.db-feature.rev .dbv-mod { transform: perspective(1200px) rotateY(5deg); }
 .dbv-mod-row {
   display: flex; align-items: center; gap: 12px; padding: 13px 16px;
   border-radius: 12px; background: var(--panel); border: 1px solid var(--border);
@@ -961,14 +899,12 @@ a:hover { color: #c3caff; }
   text-align: center; color: var(--text-dim); font-size: 11.5px; padding-top: 2px;
   text-transform: uppercase; letter-spacing: 1px;
 }
-
 /* Visuel 4 — graphique statistiques */
 .dbv-stats {
   background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 18px;
   transform: perspective(1200px) rotateY(-5deg); transition: transform .3s ease;
   box-shadow: 0 24px 60px -30px rgba(0,0,0,.6);
 }
-.db-feature.rev .dbv-stats { transform: perspective(1200px) rotateY(5deg); }
 .dbv-stats-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
 .dbv-stats-head b { color: var(--text); font-size: 14px; }
 .dbv-stats-head span { color: var(--text-dim); font-size: 11.5px; }
@@ -979,38 +915,122 @@ a:hover { color: #c3caff; }
   box-shadow: inset 0 1px 0 rgba(255,255,255,.25);
   animation: dbv-grow .8s cubic-bezier(.2,.7,.3,1) both;
 }
-.dbv-chart i:nth-child(2) { animation-delay: .06s; } .dbv-chart i:nth-child(3) { animation-delay: .12s; }
-.dbv-chart i:nth-child(4) { animation-delay: .18s; } .dbv-chart i:nth-child(5) { animation-delay: .24s; }
-.dbv-chart i:nth-child(6) { animation-delay: .3s; } .dbv-chart i:nth-child(7) { animation-delay: .36s; }
-@keyframes dbv-grow { from { height: 4px !important; opacity: .2; } }
+.dbv-chart i:nth-child(2) { animation-delay: .06s; }
+.dbv-chart i:nth-child(3) { animation-delay: .12s; }
+.dbv-chart i:nth-child(4) { animation-delay: .18s; }
+.dbv-chart i:nth-child(5) { animation-delay: .24s; }
+.dbv-chart i:nth-child(6) { animation-delay: .3s; }
+.dbv-chart i:nth-child(7) { animation-delay: .36s; }
+@keyframes dbv-grow { from { height: 4px !important; opacity: .2; }
 .dbv-stats-foot { display: flex; gap: 8px; margin-top: 12px; }
 .dbv-stats-foot span {
   flex: 1; text-align: center; padding: 7px 4px; border-radius: 9px;
   background: rgba(224,122,95,.07); border: 1px solid rgba(224,122,95,.18);
   color: var(--text-dim); font-size: 11px;
 }
+.dbv-discord, .dbv-rank, .dbv-mod, .dbv-stats { transform: none; }
 
-/* Footer en colonnes */
-.pub-footer { padding: 26px 26px 20px; text-align: left; }
-.pub-footer-grid {
-  display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 26px;
-  padding-bottom: 18px; margin-bottom: 14px; border-bottom: 1px solid var(--border);
+/* ============================================================
+   🎠 v165 — interface publique clonée de draftbot.fr
+   Fond #202225 · accent #cd6e57 · Open Sans · vague animée
+   ============================================================ */
+#public-landing.dh {
+  background: #202225; color: #fff; min-height: 100vh;
+  font-family: 'Open Sans', -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
-.pub-footer-brand p { color: var(--text-dim); font-size: 13px; line-height: 1.6; margin: 8px 0 0; max-width: 320px; }
-.pub-footer-col { display: flex; flex-direction: column; gap: 9px; }
-.pub-footer-col > b { color: var(--text); font-size: 13px; margin-bottom: 2px; }
-.pub-footer-col a { color: var(--text-dim); font-size: 13px; text-decoration: none; transition: color .2s; }
-.pub-footer-col a:hover { color: var(--accent); }
-.pub-footer-bottom { text-align: center; color: var(--text-dim); font-size: 12px; }
+.navbar { background: #202225; border-bottom: 1px solid #292b2f; }
 
-@media (max-width: 760px) {
-  .db-feature { grid-template-columns: 1fr; gap: 18px; padding: 18px 0; margin-bottom: 10px; }
-  .db-feature.rev .db-visual { order: 0; }
-  .dbv-discord, .dbv-rank, .dbv-mod, .dbv-stats { transform: none; }
-  .db-feature:hover .dbv-discord, .db-feature:hover .dbv-rank, .db-feature:hover .dbv-mod, .db-feature:hover .dbv-stats { transform: none; }
-  .pub-footer-grid { grid-template-columns: 1fr; gap: 18px; }
-  .pub-wave svg { height: 40px; }
+/* ---------- HERO ---------- */
+.dh-hero { background: #202225; position: relative; overflow: hidden; }
+.dh-particles { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
+.dh-bot-part {
+  position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center;
+  max-width: 700px; margin: 0 auto; padding: 46px 20px 160px;
+}
+.dh-logo {
+  width: 170px; height: 170px; border-radius: 50%; background: #292b2f;
+  border: 3px solid #cd6e57; overflow: hidden; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 24px 70px -18px rgba(205,110,87,.4);
+}
+.dh-logo img { width: 100%; height: 100%; object-fit: cover; }
+.dh-title { display: flex; flex-direction: column; align-items: center; margin: 16px 0 25px; }
+.dh-description { color: #ffffffb3; font-size: 20px; font-weight: 400; text-align: center; margin: 20px 0 0; }
+.dh-activities { display: flex; align-items: baseline; justify-content: center; height: 44px; font-size: 20px; color: #ffffffb3; }
+.dh-rot { color: #cd6e57; font-size: 30px; font-weight: 700; white-space: nowrap; transition: opacity .45s ease; }
+.dh-rot:not(.visible) { opacity: 0; }
+@keyframes dh-push-in { from { opacity: 0; } to { opacity: 1; } }
+.dh-rot.visible { animation: dh-push-in .6s ease; }
+.dh-invite {
+  background: #cd6e57; border: none; border-radius: 4px; color: #fff;
+  font-size: 18px; font-weight: 600; font-family: inherit;
+  display: inline-flex; align-items: center; gap: 12px; padding: 14px 18px;
+  cursor: pointer; transition: filter .2s;
+}
+.dh-invite:hover { filter: brightness(1.12); }
+
+/* Vague animée (défilement continu, une tuile = boucle parfaite) */
+.dh-wave-container { position: absolute; bottom: -40px; left: 0; right: 0; height: 190px; overflow: hidden; z-index: 1; pointer-events: none; }
+.dh-wave {
+  height: 190px; width: 100vw;
+  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='2064' height='219' fill='none'><path fill='%23383c41' d='M0 68.7C493.6-82.9 334.5 185.8 993.2 39.8 1652-106.2 1544.8 211.3 2064 68.7V219H0z'/><path stroke='url(#g1)' stroke-width='2' d='M0 68.7C493.6-82.9 334.5 185.8 993.2 39.8 1652-106.2 1544.8 211.3 2064 68.7'/><path stroke='url(#g2)' stroke-width='2' opacity='.55' d='M0 84.7C493.6-66.9 334.5 201.8 993.2 55.8 1652-90.2 1544.8 227.3 2064 84.7'/><defs><linearGradient id='g1' x1='2066' x2='-8' y1='26' y2='18' gradientUnits='userSpaceOnUse'><stop stop-color='%23cd6e57'/><stop offset='.235' stop-color='%23a45b44'/><stop offset='.493' stop-color='%23cd6e57'/><stop offset='.801' stop-color='%23a45b44'/><stop offset='1' stop-color='%23cd6e57'/></linearGradient><linearGradient id='g2' x1='2066' x2='-8' y1='42' y2='34' gradientUnits='userSpaceOnUse'><stop stop-color='%23a45b44'/><stop offset='.235' stop-color='%23cd6e57'/><stop offset='.493' stop-color='%23a45b44'/><stop offset='.801' stop-color='%23cd6e57'/><stop offset='1' stop-color='%23a45b44'/></linearGradient></defs></svg>");
+  background-repeat: repeat-x;
+  animation: dh-wave 5s linear infinite;
+}
+@keyframes dh-wave {
+  0% { background-position: calc(100% - 100vw) 0; }
+  to { background-position: 0 0; }
 }
 
-/* v164 : hero avec vague — espace pour ne pas couvrir les stats */
-.pub-hero { padding-bottom: 108px !important; overflow: hidden; }
+/* ---------- LES 4 VITRINES (fond #383c41, glissement latéral au scroll) ---------- */
+.dh-features { background: #383c41; padding: 30px 20px 80px; display: flex; flex-direction: column; align-items: center; }
+.dh-features-content { max-width: 1200px; width: 100%; }
+.dh-feature {
+  display: flex; justify-content: center; opacity: 0; padding: 30px 30px 30px 0;
+  transform: translateX(-100px); transition: transform .7s ease-in-out, opacity 1s ease-in-out;
+}
+.dh-feature:nth-child(2n) { flex-direction: row-reverse; padding: 10px 0 10px 30px; transform: translateX(100px); }
+.dh-feature.in { opacity: 1; transform: translateX(0); }
+.dh-image { height: 350px; width: 400px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.dh-content { flex: 1 0; display: flex; flex-direction: column; justify-content: center; margin: 0 64px; }
+.dh-f-title h2 { color: #cd6e57; font-size: 50px; line-height: 72px; margin: 0; text-transform: uppercase; font-weight: 800; }
+.dh-content p { color: #fff; font-size: 17px; letter-spacing: .05em; line-height: 30px; margin: 0; }
+
+/* ---------- NOS SECTIONS (harmonisées) ---------- */
+#public-landing.dh .pub-section > h2 { color: #cd6e57; text-transform: uppercase; letter-spacing: .02em; }
+
+/* ---------- FOOTER (#292b2f, colonnes) ---------- */
+.dh-footer { background: #292b2f; }
+.dh-footer-content { display: flex; justify-content: space-between; flex-wrap: wrap; max-width: 1480px; margin: 0 auto; padding: 0 30px; }
+.dh-footer-item { display: flex; flex-direction: column; align-items: flex-start; min-width: 200px; padding: 40px 0 10px; }
+.dh-footer-logo { align-items: center; justify-content: center; }
+.dh-logo-mini { width: 54px; height: 54px; border-radius: 50%; background: #cd6e57; display: flex; align-items: center; justify-content: center; font-size: 26px; }
+.dh-footer-logo b { color: #fff; font-size: 20px; margin-top: 8px; }
+.dh-footer-item .item-title { color: #dc755c; font-size: 26px; font-weight: 600; margin: 20px 0 5px; }
+.dh-footer-item a { color: #fff; font-size: 16px; margin: 7px 0; text-decoration: none; transition: color .2s; }
+.dh-footer-item a:hover { color: #cd6e57; }
+.dh-footer-legal { display: flex; flex-wrap: wrap; gap: 6px 20px; justify-content: center; margin: 12px 16px 0; }
+.dh-footer-legal a { color: #bfbfbf; font-size: 14px; text-decoration: none; transition: color .3s ease; }
+.dh-footer-legal a:hover { color: #cd6e57; }
+.dh-footer-copyright { display: flex; justify-content: center; align-items: center; }
+.dh-footer-copyright .text { color: #bfbfbf; font-size: 16px; margin: 16px 16px 20px; text-align: center; }
+
+/* ---------- MOBILE (comme DraftBot : images masquées ≤ 980px) ---------- */
+@media (max-width: 980px) {
+  .dh-feature { flex-direction: column; padding: 10px 0 30px; transform: translateX(-40px); }
+  .dh-feature:nth-child(2n) { flex-direction: column; padding: 10px 0 30px; transform: translateX(-40px); }
+  .dh-image { display: none; }
+  .dh-content { margin: 0; }
+  .dh-f-title h2 { font-size: 36px; line-height: 46px; }
+}
+@media (max-width: 720px) {
+  .dh-wave-container { height: 160px; }
+  .dh-wave { height: 160px; }
+  .dh-logo { width: 130px; height: 130px; }
+  .dh-rot { font-size: 24px; }
+  .dh-description { font-size: 17px; }
+  .dh-activities { font-size: 17px; height: 36px; }
+  .dh-invite { font-size: 16px; }
+  .dh-footer-content { flex-direction: column; align-items: center; }
+  .dh-footer-item { align-items: center; }
+}

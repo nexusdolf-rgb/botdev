@@ -4,11 +4,11 @@ const fs = require('fs');
 const pub = fs.readFileSync(__dirname + '/../public/js/public.js', 'utf8');
 const css = fs.readFileSync(__dirname + '/../public/css/style.css', 'utf8');
 
-// 1. Héros animé
-assert.ok(pub.includes('pub-blob b1') && pub.includes('pub-blob b3'), 'halos flottants');
-assert.ok(pub.includes('grad-anim') && css.includes('@keyframes gradSlide'), 'titre en dégradé animé');
-assert.ok(css.includes('@keyframes blobFloat') && css.includes('@keyframes heroIn'), 'animations d\'entrée');
-console.log('✅ héros : halos flottants + titre dégradé animé + entrées en fondu');
+// 1. Héros animé (v165 : particules + vague + mot rotatif, façon draftbot.fr)
+assert.ok(pub.includes('dh-particles') && pub.includes('dh-wave'), 'particules et vague animée');
+assert.ok(pub.includes('dh-rot') && css.includes('@keyframes dh-push-in'), 'mot du titre en rotation');
+assert.ok(css.includes('@keyframes dh-wave') && css.includes('@keyframes dbv-grow'), 'animations d\'entrée');
+console.log('✅ héros : particules reliées + vague défilante + mot rotatif');
 
 // 2. Révélation au défilement, robuste hors navigateur
 assert.ok(pub.includes('IntersectionObserver') && pub.includes("typeof IntersectionObserver !== 'undefined'"), 'reveal protégé (jsdom/vieux navigateurs)');
