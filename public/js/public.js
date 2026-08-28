@@ -65,7 +65,7 @@ App.renderPublicLanding = () => {
       <div class="pub-hero">
         <div class="pub-blob b1"></div><div class="pub-blob b2"></div><div class="pub-blob b3"></div>
         <div class="pub-hero-badge shimmer">⚡ Hoxera — synchronisé en direct avec Discord</div>
-        <h1 class="hero-title">Le bot qui anime<br/><span class="grad grad-anim rot-word" id="pub-rot">ton serveur Discord</span></h1>
+        <h1 class="hero-title">Le bot qui anime<br/><span class="grad grad-anim">ton serveur Discord</span></h1>
         <p class="pub-tagline">Tickets automatiques avec transcriptions, niveaux XP, boutique, giveaways, bienvenue et modération.
         Ajoute Hoxera à ton serveur, puis configure tout depuis le dashboard avec ton compte Discord.</p>
         <div class="pub-hero-actions">
@@ -79,176 +79,6 @@ App.renderPublicLanding = () => {
           <div class="pub-stat"><div class="val">—</div><div class="lbl">Bots en ligne</div></div>
           <div class="pub-stat"><div class="val">—</div><div class="lbl">Serveurs Discord</div></div>
           <div class="pub-stat"><div class="val">—</div><div class="lbl">Membres touchés</div></div>
-        </div>
-      </div>
-
-      <div class="pub-section reveal">
-        <div class="pub-showcase">
-          <div class="pub-sc-visual">
-            <div class="dc-mock" aria-hidden="true">
-              <div class="dcm-msg">
-                <span class="dcm-ava">🤖</span>
-                <div class="dcm-body">
-                  <div class="dcm-head"><b>Nexora</b><span class="dcm-tag">BOT</span><span class="dcm-time">aujourd'hui à 14:02</span></div>
-                  <div class="dcm-embed dcm-e-clay">
-                    <span class="dcm-e-bar"></span>
-                    <div class="dcm-e-body">
-                      <b>Support — Besoin d'aide ?</b>
-                      <p>Clique sur le bouton ci-dessous : un salon privé avec le staff s'ouvre instantanément.</p>
-                      <span class="dcm-e-foot">Nexora · Tickets</span>
-                    </div>
-                  </div>
-                  <div class="dcm-actions"><span class="dcm-btn">🎫 Ouvrir un ticket</span></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="pub-sc-copy">
-            <span class="pub-sc-kicker">🎫 Tickets</span>
-            <h3>Des tickets qui se gèrent tout seuls</h3>
-            <p>Un membre clique, son salon privé apparaît avec le rôle staff invité. À la fermeture, la conversation repart en transcription propre, notée par le membre.</p>
-            <ul class="pub-sc-list">
-              <li>Panneaux à boutons et types de tickets personnalisés</li>
-              <li>Transcriptions, journal staff et note d'expérience ⭐</li>
-              <li>Catégories, questions et rôle staff automatiques</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="pub-section reveal">
-        <div class="pub-showcase reverse">
-          <div class="pub-sc-visual">
-            <div class="xp-mock" aria-hidden="true">
-              <div class="xp-card is-first">
-                <span class="xp-rank">🥇</span>
-                <span class="xp-ava">🐺</span>
-                <div class="xp-info"><b>Léo</b><small>Niveau 24 · 12 480 XP</small><span class="xp-bar"><i style="width:72%"></i></span></div>
-              </div>
-              <div class="xp-card">
-                <span class="xp-rank">🥈</span>
-                <span class="xp-ava">🎧</span>
-                <div class="xp-info"><b>Chloé</b><small>Niveau 19 · 8 950 XP</small><span class="xp-bar"><i style="width:54%"></i></span></div>
-              </div>
-              <div class="xp-card">
-                <span class="xp-rank">🥉</span>
-                <span class="xp-ava">🎮</span>
-                <div class="xp-info"><b>Max</b><small>Niveau 17 · 7 210 XP</small><span class="xp-bar"><i style="width:47%"></i></span></div>
-              </div>
-            </div>
-          </div>
-          <div class="pub-sc-copy">
-            <span class="pub-sc-kicker">📈 Niveaux & économie</span>
-            <h3>Des membres qui reviennent chaque jour</h3>
-            <p>XP par message, rôles-récompenses, coins quotidiens, métiers, paris et boutique : de vraies raisons de participer à la vie du serveur.</p>
-            <ul class="pub-sc-list">
-              <li>Classement du serveur et cartes de niveau</li>
-              <li>Coins, travail, vols et boutique d'objets</li>
-              <li>Anti-triche intégré et paliers configurables</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="pub-section reveal">
-        <div class="pub-showcase">
-          <div class="pub-sc-visual">
-            <div class="dc-mock" aria-hidden="true">
-              <div class="dcm-msg">
-                <span class="dcm-ava">🛡️</span>
-                <div class="dcm-body">
-                  <div class="dcm-head"><b>Nexora</b><span class="dcm-tag">BOT</span><span class="dcm-time">aujourd'hui à 02:14</span></div>
-                  <div class="dcm-embed dcm-e-red">
-                    <span class="dcm-e-bar"></span>
-                    <div class="dcm-e-body">
-                      <b>🚫 Spam éliminé — anti-raid activé</b>
-                      <p>10 comptes créés aujourd'hui ont été neutralisés en moins de 3 secondes. Le serveur reste calme.</p>
-                      <span class="dcm-e-foot">Journal de modération</span>
-                    </div>
-                  </div>
-                  <div class="dcm-actions"><span class="dcm-btn">🔴 Mode verrouillage</span></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="pub-sc-copy">
-            <span class="pub-sc-kicker">🛡️ Modération</span>
-            <h3>Un serveur protégé, jour et nuit</h3>
-            <p>Auto-Mod officiel Discord, anti-raid, sanctions progressives et liste noire : Hoxera veille pendant que tu dors.</p>
-            <ul class="pub-sc-list">
-              <li>Liens, majuscules, mentions et spam filtrés en direct</li>
-              <li>Sanctions progressives : rappel → silence → exclusion</li>
-              <li>Verrouillage du serveur en un seul clic</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="pub-section reveal">
-        <div class="pub-showcase reverse">
-          <div class="pub-sc-visual">
-            <div class="dc-mock" aria-hidden="true">
-              <div class="dcm-msg">
-                <span class="dcm-ava">🤖</span>
-                <div class="dcm-body">
-                  <div class="dcm-head"><b>Nexora</b><span class="dcm-tag">BOT</span><span class="dcm-time">aujourd'hui à 18:30</span></div>
-                  <div class="dcm-embed dcm-e-clay">
-                    <span class="dcm-e-bar"></span>
-                    <div class="dcm-e-body">
-                      <b>Choisis tes rôles</b>
-                      <p>Un clic, et le rôle est à toi. Change d'avis ? Re-clique pour le retirer.</p>
-                    </div>
-                  </div>
-                  <div class="dcm-actions dcm-actions-wrap">
-                    <span class="dcm-btn">🎨 Graphiste</span>
-                    <span class="dcm-btn">🎮 Joueur</span>
-                    <span class="dcm-btn">📢 Annonces</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="pub-sc-copy">
-            <span class="pub-sc-kicker">🏷️ Action Réaction</span>
-            <h3>Un clic, un rôle</h3>
-            <p>Les membres choisissent eux-mêmes leurs rôles via des boutons ou réactions : couleurs, jeux, notifications… fini les demandes en MP au staff.</p>
-            <ul class="pub-sc-list">
-              <li>Menus de rôles à boutons, réactions ou sélection</li>
-              <li>Rôles limités, exclusifs ou à choix unique</li>
-              <li>Un salon privé et un message pour chaque rôle</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="pub-section reveal">
-        <div class="pub-showcase">
-          <div class="pub-sc-visual">
-            <div class="st-mock" aria-hidden="true">
-              <div class="st-head"><b>📊 Activité du serveur</b><span>7 derniers jours</span></div>
-              <div class="st-chart">
-                <i style="height:34%"></i><i style="height:52%"></i><i style="height:41%"></i>
-                <i style="height:68%"></i><i style="height:59%"></i><i style="height:84%"></i>
-                <i style="height:72%"></i>
-              </div>
-              <div class="st-days"><span>lun</span><span>mar</span><span>mer</span><span>jeu</span><span>ven</span><span>sam</span><span>dim</span></div>
-              <div class="st-nums">
-                <div><b>1 240</b><small>messages</small></div>
-                <div><b>+18</b><small>nouveaux membres</small></div>
-                <div><b>96%</b><small>messages gardés</small></div>
-              </div>
-            </div>
-          </div>
-          <div class="pub-sc-copy">
-            <span class="pub-sc-kicker">📊 Statistiques</span>
-            <h3>Connais ton serveur par cœur</h3>
-            <p>Messages, arrivées, commandes les plus utilisées : Hoxera enregistre l'activité et te montre ce qui marche vraiment.</p>
-            <ul class="pub-sc-list">
-              <li>Graphiques d'activité des 7 derniers jours</li>
-              <li>Classement des commandes les plus populaires</li>
-              <li>Historique des arrivées et départs</li>
-            </ul>
-          </div>
         </div>
       </div>
 
@@ -293,39 +123,12 @@ App.renderPublicLanding = () => {
         </div>
       </div>
 
-      <div class="pub-section reveal">
-        <div class="pub-cta">
-          <div class="pub-cta-blob"></div>
-          <h2>Prêt à faire vibrer ton serveur ?</h2>
-          <p>Hoxera s'ajoute en 30 secondes, se configure en 5 minutes, et travaille pour toi 24h/24.</p>
-          <div class="pub-cta-actions">
-            <button class="btn btn-primary" id="pub-invite-cta">➕ Ajouter Hoxera — gratuit</button>
-            <button class="btn" id="pub-dash-cta">📊 Découvrir le dashboard</button>
-          </div>
-          <div class="pub-cta-note">Aucune carte bancaire · Configuration en français · Support réactif sur <a href="https://discord.gg/X9hTdr9N3" target="_blank" rel="noopener">discord.gg/X9hTdr9N3</a></div>
-        </div>
-      </div>
-
       <div class="pub-footer">
-        <div class="pub-footer-grid">
-          <div class="pub-footer-col pub-footer-brand">
-            <b>⚡ Hoxera</b>
-            <p>Le bot français qui anime ton serveur Discord : tickets, niveaux, économie, giveaways et modération.</p>
-          </div>
-          <div class="pub-footer-col">
-            <b>Navigation</b>
-            <a href="#" id="pub-foot-home">Accueil</a>
-            <a href="#" id="pub-foot-dash">Dashboard</a>
-            <a href="https://hoxera.is-a.dev/api/health/bot" target="_blank" rel="noopener">Statut du service</a>
-          </div>
-          <div class="pub-footer-col">
-            <b>Communauté</b>
-            <a href="https://discord.gg/X9hTdr9N3" target="_blank" rel="noopener">🆘 Serveur support</a>
-            <a href="https://discord.com/oauth2/authorize?client_id=1537443352281088000&scope=bot+applications.commands&permissions=8" target="_blank" rel="noopener">➕ Ajouter le bot</a>
-          </div>
-        </div>
-        <div class="pub-footer-bottom">
-          <span>© 2026 Hoxera — fait avec ❤️ pour les communautés francophones</span>
+        <b>⚡ Hoxera</b> — ton serveur mérite un bot à la hauteur
+        <div class="pub-footer-links">
+          <a href="https://discord.gg/X9hTdr9N3" target="_blank" rel="noopener">🆘 Serveur support</a>
+          <span>·</span>
+          <a href="#" id="pub-foot-dash">📊 Dashboard</a>
         </div>
       </div>
     </div>
@@ -345,29 +148,6 @@ App.renderPublicLanding = () => {
 
   const footDash = page.querySelector('#pub-foot-dash');
   if (footDash) footDash.onclick = (e) => { e.preventDefault(); App.router.go('/dashboard'); };
-  const footHome = page.querySelector('#pub-foot-home');
-  if (footHome) footHome.onclick = (e) => { e.preventDefault(); App.router.go('/'); };
-
-  // CTA final
-  const ctaInvite = page.querySelector('#pub-invite-cta');
-  if (ctaInvite) ctaInvite.onclick = () => App.fetchFirstInviteUrl().then((url) => url ? invite(url) : App.toast('Aucun bot disponible pour l\'instant.', 'error'));
-  const ctaDash = page.querySelector('#pub-dash-cta');
-  if (ctaDash) ctaDash.onclick = () => App.router.go('/dashboard');
-
-  // 🎠 Le mot du titre tourne (façon DraftBot) : ton serveur Discord → tes tickets → …
-  const rotEl = page.querySelector('#pub-rot');
-  if (rotEl) {
-    const rotWords = ['ton serveur Discord', 'tes tickets', 'tes niveaux XP', 'ton économie', 'tes menus de rôles', 'tes giveaways', 'tes statistiques', 'ta modération', 'ta communauté'];
-    let rotI = 0;
-    setInterval(() => {
-      rotEl.classList.add('out');
-      setTimeout(() => {
-        rotI = (rotI + 1) % rotWords.length;
-        rotEl.textContent = rotWords[rotI];
-        rotEl.classList.remove('out');
-      }, 260);
-    }, 2800);
-  }
 
   // 🎬 Révélation au défilement (dégradation propre si non supporté)
   try {

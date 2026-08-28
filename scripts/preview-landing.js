@@ -1,4 +1,4 @@
-// Preview v161 — rend la page d'accueil publique dans jsdom et vérifie le DOM
+// Preview v163 — rend la page d'accueil publique SIMPLE dans jsdom et vérifie le DOM
 const { JSDOM } = require('jsdom');
 const fs = require('fs');
 
@@ -22,28 +22,22 @@ const code = ['app.js', 'editor.js', 'views.js', 'public.js']
 
 const testSnippet = String.raw`
 window.__results = (async () => {
-  await new Promise((r) => setTimeout(r, 1200)); // routeur + fetchs
-  const app = document.querySelector('#app');
-  const html = app ? app.innerHTML : '';
-  const rot = document.querySelector('#pub-rot');
+  await new Promise((r) => setTimeout(r, 1200));
+  const html = document.querySelector('#app') ? document.querySelector('#app').innerHTML : '';
   return {
     hero: html.includes('pub-hero'),
-    rotWord: !!rot,
-    rotText: rot ? rot.textContent : null,
-    showcases: (html.match(/pub-showcase/g) || []).length,
-    ticketMock: html.includes('Ouvrir un ticket'),
-    xpMock: html.includes('Niveau 24'),
-    modMock: html.includes('anti-raid'),
-    kickers: (html.match(/pub-sc-kicker/g) || []).length,
+    stats: html.includes('pub-stats'),
     liveSection: html.includes('id="pub-bots"'),
+    mockDash: html.includes('pub-mock'),
+    features: (html.match(/pub-feature /g) || []).length,
+    footer: html.includes('pub-footer-links'),
     supportLink: html.includes('discord.gg/X9hTdr9N3'),
-    footer: html.includes('pub-footer'),
-    roleMock: html.includes('Choisis tes rôles') && html.includes('Graphiste'),
-    statsMock: html.includes('st-chart') && html.includes('Activité du serveur'),
-    cta: html.includes('pub-invite-cta') && html.includes('Prêt à faire vibrer ton serveur ?'),
-    footerCols: html.includes('pub-footer-grid') && html.includes('Communauté'),
-    // Le mot a-t-il tourné après >3s ?
-    rotatedLater: await new Promise((res) => setTimeout(() => res(rot ? rot.textContent : null), 3000)),
+    // Rien des sections retirées
+    showcases: (html.match(/pub-showcase/g) || []).length,
+    cta: html.includes('pub-cta'),
+    footerGrid: html.includes('pub-footer-grid'),
+    rotWord: html.includes('pub-rot'),
+    fakeNames: html.includes('Léo') || html.includes('Choisis tes rôles'),
   };
 })();
 `;
@@ -52,11 +46,9 @@ w.eval(code + '\n;\n' + testSnippet);
 setTimeout(async () => {
   const r = await w.__results;
   console.log(JSON.stringify(r, null, 2));
-  const ok = r.hero && r.rotWord && r.rotText === 'ton serveur Discord'
-    && r.showcases === 5 && r.ticketMock && r.xpMock && r.modMock && r.kickers === 5
-    && r.roleMock && r.statsMock && r.cta && r.footerCols
-    && r.liveSection && r.supportLink && r.footer
-    && r.rotatedLater && r.rotatedLater !== r.rotText;
-  console.log(ok ? '✅ LANDING V161 OK (mot rotatif confirmé : ' + r.rotText + ' → ' + r.rotatedLater + ')' : '❌ PROBLÈME');
+  const ok = r.hero && r.stats && r.liveSection && r.mockDash && r.features === 10
+    && r.footer && r.supportLink
+    && r.showcases === 0 && !r.cta && !r.footerGrid && !r.rotWord && !r.fakeNames;
+  console.log(ok ? '✅ LANDING SIMPLE OK' : '❌ PROBLÈME');
   process.exit(ok ? 0 : 1);
-}, 4600);
+}, 2400);
