@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v182**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v183**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -91,17 +91,17 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   historique `banner-pro-final.png`) après rejet des variantes v178/v179.
 - **v181** : première tentative — tête premium posée à la place exacte du robot
   (centre 1331/288, 373×394). L'utilisateur a corrigé : « t'aurais dû le calquer ».
-- **v182 (ACTUELLE)** : bannière finale = fond v177 (sans robot, effacé par diffusion
-  numpy) + tête premium **calquée pixel par pixel depuis la v179** : mêmes pixels,
-  même taille (426×450), même position (centre 1300/322), avec son aura et ses
-  effets tels quels. Vérifié : position identique à la v179 au pixel près, texte et
-  côté gauche 0 pixel modifié, cœur de tête à 2/255 près de la v179. Fichier actif :
-  `assets/banner-v182-final.png` ; bannière Discord = hash `88e12b507ee9`.
-  Méthode du calque : crop de la zone (1087,97)→(1513,547) dans
-  `banner-premium-final.png`, masque = silhouette alpha de la tête dilatée 25 px +
-  flou 40 px, composé sur le fond vidé. Crops site inchangés :
-  profile = `crop(0,2,1632,654)→1500×600` ; support = `resize(1696×682)→crop(0,29,1696,653)`.
-  Avatar du bot = logo argent « tête de robot » fournie par l'utilisateur.
+- **v182** : tête premium calquée pixel par pixel depuis la v179 (426×450 @ 1300/322)
+  sur le fond v177 vidé de son robot. Remplacée dès la v183.
+- **v183 (ACTUELLE)** : bannière finale = fond v177 (sans robot) + **LOGO ARGENT calqué**
+  (l'avatar Discord du bot, `optimus-logo-v2.png`, choisi par l'utilisateur : « pas celui
+  que tu viens de créer il y a 4 minutes »). Pose en mode **écran** : le fond noir pur de
+  l'avatar laisse la bannière intacte, seul le logo argent se dépose — mêmes taille et
+  position que la tête premium (enveloppe 413×429, centre 1299/329, écart 1 px).
+  Vérifié : 0 pixel modifié hors du logo, texte intact, marges <25 nettoyées à noir.
+  Fichier actif : `assets/banner-v183-final.png` ; bannière Discord = hash `5c094021`.
+  Crops site inchangés : profile = `crop(0,2,1632,654)→1500×600` ;
+  support = `resize(1696×682)→crop(0,29,1696,653)`.
 
 ## 🎨 IDENTITÉ VISUELLE (pipeline pro)
 
@@ -166,10 +166,10 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 
 ## 📌 ÉTAT AU 29/08/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v182** (tête premium calquée depuis la v179 sur le fond v177)
-- Bot « Optimus Prime » en ligne, 7 serveurs, 0 erreur 24h, 114 tests verts
-- Identité Discord à jour : avatar (logo argent), bannière (v182 : calque tête v179),
-  username, bio 4 lignes, icône d'application
+- Dernière version : **v183** (logo argent calqué à la place de la tête premium)
+- Bot « Optimus Prime » en ligne, 7 serveurs, 0 erreur 24h, 115 tests verts
+- Identité Discord à jour : avatar (logo argent), bannière (v183 : logo argent calqué
+  sur le fond cinéma), username, bio 4 lignes, icône d'application
 - ⏳ En attente utilisateur : renommer le rôle « Nexora » à la main sur 6 serveurs
   (Discord ne le permet pas automatiquement — voir piège n°4)
 - Idées en attente (non commencées) : fiche membre complète, recherche dans les
