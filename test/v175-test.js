@@ -35,11 +35,7 @@ const sharp = require('sharp');
   assert(stMp.size > 400000, `bannière MP trop légère (${stMp.size} octets) — version HD manquante ?`);
   assert(stTk.size > 400000, `bannière tickets trop légère (${stTk.size} octets)`);
 
-  // ---------- 3. Version v175 ----------
-  assert.strictEqual((index.match(/\?v=175/g) || []).length, 7,
-    'index.html doit référencer v175 7 fois');
-  assert(sw.includes('botdev-v175'), 'le cache du service worker n’est pas en v175');
-  assert(!index.includes('?v=174'), 'index.html référence encore v174');
+  // ---------- 3. Version : gérée par le test de la version courante (v176) ----------
 
   console.log('✅ v175-test : bannière ultra-nette + bio complète « Optimus Prime » verrouillées');
 })().catch((e) => { console.error('❌', e.message); process.exit(1); });

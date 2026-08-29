@@ -327,6 +327,9 @@ function attachListeners(botId, entry) {
       for (const g of client.guilds.cache.values()) {
         try { await syncSlashCommands(botId, g.id, true); }
         catch (e) { console.error(`[BotDev] sync ${g.id} (bot ${botId}):`, e.message); }
+        // 🏷️ Le rôle intégré du bot porte le nom du bot (Discord ne le met
+        // pas à jour seul — ex. ancien nom → « Optimus Prime »).
+        try { await syncBotRoleName(botId, client, g); } catch {}
       }
       // 🌍 Commandes GLOBALES : un petit lot de commandes universelles.
       // C'est ce qui déclenche le badge « Supports Commands (/) » sur le profil
@@ -475,6 +478,8 @@ function attachListeners(botId, entry) {
       }
     };
     trySync();
+    // 🏷️ Rôle intégré : porter le nom actuel du bot dès l'arrivée
+    syncBotRoleName(botId, client, guild).catch(() => {});
   });
 
   client.on('error', (err) => {
@@ -614,6 +619,27 @@ async function applyBotAbout(botId, entry) {
     console.log(`[BotDev] bot ${botId} : bio « À propos » mise à jour (${text.length} caractères)`);
   } catch (e) {
     console.log(`[BotDev] bot ${botId} : bio non mise à jour (${e.message})`);
+  }
+}
+
+// ---------------------- Rôle intégré du bot ----------------------
+// 🏷️ Quand un bot rejoint un serveur, Discord crée un rôle à son nom…
+// mais ne le renomme JAMAIS ensuite si le bot change de nom (le rôle
+// reste bloqué sur l'ancien nom). Le bot renomme donc lui-même son
+// propre rôle sur chaque serveur, à chaque démarrage.
+async function syncBotRoleName(botId, client, guild) {
+  try {
+    if (!guild || !guild.roles || !client.user) return;
+    const record = store.bots.get(botId);
+    const wanted = String((record && record.name) || client.user.username || 'Optimus Prime').slice(0, 90);
+    const role = guild.roles.cache.find((r) => r.tags && r.tags.botId === String(client.user.id))
+      || (guild.members && guild.members.me ? guild.members.me.roles.cache.find((r) => r.managed) : null);
+    if (role && role.name !== wanted) {
+      await guild.roles.edit(role, { name: wanted }, 'Synchronisation du nom du bot');
+      console.log(`[BotDev] bot ${botId} : rôle renommé « ${wanted} » sur ${guild.name}`);
+    }
+  } catch (e) {
+    console.log(`[BotDev] bot ${botId} : rôle non renommé sur ${guild && guild.name} (${e.message})`);
   }
 }
 
