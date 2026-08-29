@@ -1,16 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="emblème robot Optimus Prime">
   <title>emblème robot Optimus Prime — logo de secours</title>
-  <!-- fond sombre -->
-  <rect width="64" height="64" rx="12" fill="#1f2430"/>
-  <!-- casque bleu métallique -->
-  <path d="M17 25 L32 11 L47 25 L47 43 L32 54 L17 43 Z" fill="#4f7ff0"/>
-  <!-- crête centrale argile -->
+  <!-- fond noir -->
+  <rect width="64" height="64" rx="12" fill="#111418"/>
+  <!-- casque argent métallique -->
+  <path d="M17 25 L32 11 L47 25 L47 43 L32 54 L17 43 Z" fill="#c8ccd2"/>
+  <!-- crête centrale (accent argile du site) -->
   <path d="M30 6 h4 v11 l-2 3 l-2 -3 Z" fill="#e07a5f"/>
-  <!-- plaque faciale argent -->
+  <!-- plaque faciale claire -->
   <path d="M23 27 L32 22 L41 27 L41 40 L32 46 L23 40 Z" fill="#f2f3f5"/>
   <!-- yeux -->
-  <rect x="26.5" y="31" width="4.5" height="4" rx="1.2" fill="#1f2430"/>
-  <rect x="33" y="31" width="4.5" height="4" rx="1.2" fill="#1f2430"/>
-  <!-- menton argile -->
+  <rect x="26.5" y="31" width="4.5" height="4" rx="1.2" fill="#111418"/>
+  <rect x="33" y="31" width="4.5" height="4" rx="1.2" fill="#111418"/>
+  <!-- menton -->
   <path d="M28 45 h8 l-4 5 Z" fill="#e07a5f"/>
 </svg>

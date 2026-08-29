@@ -63,10 +63,6 @@ assert(native.includes("RULE_PREFIX = 'Optimus Prime · Auto-Mod officiel · '")
   'nativeAutomod : nouveau préfixe de règle');
 assert(native.includes('legacyName'), 'nativeAutomod : les règles historiques doivent rester reconnues');
 
-// ---------- 5. Version v172 ----------
-assert.strictEqual((index.match(/\?v=172/g) || []).length, 7,
-  'index.html doit référencer v172 7 fois');
-assert(sw.includes('botdev-v172'), 'le cache du service worker n’est pas en v172');
-assert(!index.includes('?v=171'), 'index.html référence encore v171');
+// ---------- 5. Version : gérée par le test de la version courante (v173) ----------
 
 console.log('✅ v172-test : renommage « Optimus Prime » + identité visuelle verrouillés');
