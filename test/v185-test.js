@@ -1,9 +1,9 @@
 // ══════════════════════════════════════════════════════════════
-// TEST v184 — RETOUR à la bannière « 3D premium » ORIGINALE (v179),
-// demandé explicitement par l'utilisateur après les essais de
-// calque (v181 tête brute, v182 tête calquée, v183 logo argent).
-// Fichier actif : banner-premium-final.png, appliqué tel quel sur
-// Discord (hash 899d2f260cc4 — identique à l'époque de la v179,
+// TEST v185 — RETOUR à la bannière « robot 3D cinéma » (v177), la
+// favorite de l'utilisateur, identifiée par lui parmi 4 candidates
+// (« police professionnelle + tête de robot avec des couleurs »).
+// Fichier actif : banner-pro-final.png, appliqué tel quel sur
+// Discord (hash 6b5b30ea78d3 — identique à l'époque v177/v180,
 // preuve que le fichier est l'original à l'octet près).
 // ══════════════════════════════════════════════════════════════
 const fs = require('fs');
@@ -14,7 +14,7 @@ const root = path.join(__dirname, '..');
 const index = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
 const sw = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
 
-// ---------- 1. Les bannières du site sont la version v179/v184 ----------
+// ---------- 1. Les bannières du site sont la version v177/v185 ----------
 const sharp = require('sharp');
 (async () => {
   const mp = await sharp(path.join(root, 'public/icons/nexora-profile-banner.png')).metadata();
@@ -43,7 +43,11 @@ const sharp = require('sharp');
   for (const v of rawHead) { if (v > 150) headBright += 1; }
   assert(headBright > 5000, `la tête premium doit être visible (${headBright} pixels clairs)`);
 
-  // ---------- 4. Version : gérée par le test de la version courante (v185) ----------
+  // ---------- 4. Version v185 ----------
+  assert.strictEqual((index.match(/\?v=185/g) || []).length, 7,
+    'index.html doit référencer v185 7 fois');
+  assert(sw.includes('botdev-v185'), 'le cache du service worker n’est pas en v185');
+  assert(!index.includes('?v=184'), 'index.html référence encore v184');
 
-  console.log('✅ v184-test : bannière 3D premium v179 (historique, remplacée par la v185)');
+  console.log('✅ v185-test : bannière robot 3D cinéma (v177) restaurée — choix confirmé par l\u2019utilisateur');
 })().catch((e) => { console.error('❌', e.message); process.exit(1); });

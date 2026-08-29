@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v184**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v185**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -94,11 +94,14 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **v182** : tête premium calquée pixel par pixel depuis la v179 (426×450 @ 1300/322)
   sur le fond v177 vidé de son robot. Remplacée dès la v183.
 - **v183** : logo argent calqué sur le fond v177 — remplacé dès la v184.
-- **v184 (ACTUELLE)** : **RETOUR à la bannière « 3D premium » ORIGINALE (v179)**, demandé
-  explicitement par l'utilisateur après les essais v181-v183. Fichier actif :
-  `assets/banner-premium-final.png`, appliqué TEL QUEL (hash Discord 899d2f260cc4 =
-  celui de l'époque v179 → fichier identique à l'octet près). Les variantes v181/v182/v183
-  sont conservées dans assets/ mais ne sont plus actives.
+- **v184** : retour à la bannière « 3D premium » v179 — remplacée dès la v185.
+- **v185 (ACTUELLE)** : **RETOUR à la bannière « robot 3D cinéma » (v177)** — la favorite
+  de l'utilisateur, identifiée par LUI parmi 4 candidates présentées en image (sa
+  description : « police professionnelle + tête de robot avec des couleurs »). Fichier
+  actif : `assets/banner-pro-final.png`, appliqué TEL QUEL (hash Discord 6b5b30ea78d3 =
+  celui des époques v177/v180 → fichier identique à l'octet près). C'est la 2e restauration
+  de cette bannière (v180 puis v185) : après v177→v185, l'utilisateur a comparé robot
+  cinéma / tête premium / logo argent et revient à la v177.
   (Précédent v183 : fond v177 (sans robot) + LOGO ARGENT calqué
   (l'avatar Discord du bot, `optimus-logo-v2.png`, choisi par l'utilisateur : « pas celui
   que tu viens de créer il y a 4 minutes »). Pose en mode **écran** : le fond noir pur de
@@ -172,10 +175,11 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 
 ## 📌 ÉTAT AU 29/08/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v184** (retour à la bannière 3D premium originale v179)
-- Bot « Optimus Prime » en ligne, 7 serveurs, 0 erreur 24h, 116 tests verts
-- Identité Discord à jour : avatar (logo argent), bannière (v184 = v179 premium
-  originale), username, bio 4 lignes, icône d'application
+- Dernière version : **v185** (retour à la bannière robot 3D cinéma v177 — choix
+  confirmé par l'utilisateur parmi 4 candidates)
+- Bot « Optimus Prime » en ligne, 7 serveurs, 0 erreur 24h, 117 tests verts
+- Identité Discord à jour : avatar (logo argent), bannière (v185 = v177 robot cinéma),
+  username, bio 4 lignes, icône d'application
 - ⏳ En attente utilisateur : renommer le rôle « Nexora » à la main sur 6 serveurs
   (Discord ne le permet pas automatiquement — voir piège n°4)
 - Idées en attente (non commencées) : fiche membre complète, recherche dans les
