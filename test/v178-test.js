@@ -1,8 +1,7 @@
 // ══════════════════════════════════════════════════════════════
-// TEST v177 — Bannière « pro » : typographie réelle (Poppins)
-// L'utilisateur voulait un rendu professionnel, pas « généré par
-// IA ». Le texte est désormais composé avec une vraie police, pas
-// par le modèle d'image : « OPTIMUS PRIME » est pixel-perfect.
+// TEST v178 — Bannière : la tête du logo du profil est désormais
+// dans la bannière (identité visuelle unifiée avatar + bannière).
+// Typographie réelle Poppins conservée (voir v177).
 // ══════════════════════════════════════════════════════════════
 const fs = require('fs');
 const path = require('path');
@@ -36,7 +35,19 @@ const sharp = require('sharp');
   assert(max >= 250, `le texte doit contenir du blanc pur (max mesuré : ${max})`);
   assert(bright > 3000, `assez de pixels de glyphes attendus (${bright} trouvés)`);
 
-  // ---------- 3. Version : gérée par le test de la version courante (v178) ----------
+  // ---------- 3. La tête est présente à droite (zone claire du sujet) ----------
+  const rawHead = await sharp(path.join(root, 'public/icons/nexora-profile-banner.png'))
+    .extract({ left: 1100, top: 100, width: 400, height: 450 }) // zone de la tête
+    .greyscale().raw().toBuffer();
+  let headBright = 0;
+  for (const v of rawHead) { if (v > 150) headBright += 1; }
+  assert(headBright > 5000, `la tête du logo doit être visible à droite (${headBright} pixels clairs)`);
 
-  console.log('✅ v177-test : bannière pro (typographie réelle) verrouillée');
+  // ---------- 4. Version v178 ----------
+  assert.strictEqual((index.match(/\?v=178/g) || []).length, 7,
+    'index.html doit référencer v178 7 fois');
+  assert(sw.includes('botdev-v178'), 'le cache du service worker n’est pas en v178');
+  assert(!index.includes('?v=177'), 'index.html référence encore v177');
+
+  console.log('✅ v178-test : bannière unifiée (tête du logo + typo réelle) verrouillée');
 })().catch((e) => { console.error('❌', e.message); process.exit(1); });
