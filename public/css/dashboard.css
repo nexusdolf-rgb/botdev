@@ -154,7 +154,7 @@
 .dash-empty .big { font-size: 38px; margin-bottom: 8px; }
 
 /* ---------- Responsive mobile ---------- */
-@media (max-width: 900px) {
+@media (max-width: 900px), (hover: none) and (pointer: coarse) and (max-height: 800px) {
   .dash-shell { flex-direction: column; }
   .dash-main { padding: 14px 12px 96px; }
 
@@ -317,7 +317,7 @@
 /* ---------- Barre de navigation basse (desktop : cachée) ---------- */
 .dash-bnav { display: none; }
 
-@media (max-width: 900px) {
+@media (max-width: 900px), (hover: none) and (pointer: coarse) and (max-height: 800px) {
   /* Le corps se comporte comme une app : pas de zoom fantôme, pas de
      surbrillance bleue, pas de tirer-pour-rafraîchir accidentel. */
   body {
@@ -636,7 +636,7 @@ body::-webkit-scrollbar-thumb:hover { background: #3a3f5c; background-clip: cont
 #dash-content > .dash-card { margin-bottom: 16px; }
 
 /* Mobile : la carte serveur remplace l'ancien sélecteur dans la topbar */
-@media (max-width: 900px) {
+@media (max-width: 900px), (hover: none) and (pointer: coarse) and (max-height: 800px) {
   .dash-topbar { border-radius: 0; border-left: none; border-right: none; border-top: none; }
   .dash-topbar .dash-server-card.topbar-pick { display: flex; flex: 1; margin: 0; }
   .dash-crumb { display: none; }
@@ -712,7 +712,7 @@ body::-webkit-scrollbar-thumb:hover { background: #3a3f5c; background-clip: cont
 .dash-savebar.on { transform: translateX(-50%) translateY(0); opacity: 1; }
 .dash-savebar .sb-txt { font-size: 13px; font-weight: 600; color: #ffd166; white-space: nowrap; }
 .dash-savebar .sb-actions { display: flex; gap: 8px; }
-@media (max-width: 900px) { .dash-savebar { bottom: 86px; width: calc(100% - 24px); justify-content: space-between; } }
+@media (max-width: 900px), (hover: none) and (pointer: coarse) and (max-height: 800px) { .dash-savebar { bottom: 86px; width: calc(100% - 24px); justify-content: space-between; } }
 
 /* 👀 Aperçus « comme sur Discord » */
 .dc-preview {
@@ -1158,7 +1158,7 @@ html.hx-light .adv-type-card { background: linear-gradient(180deg, rgba(var(--d-
 html.hx-light .adv-preview-shell { background: rgba(255,255,255,.55); }
 html.hx-light .adv-check-row { background: rgba(var(--d-accent-rgb), .055); }
 
-@media (max-width: 900px) {
+@media (max-width: 900px), (hover: none) and (pointer: coarse) and (max-height: 800px) {
   .adv-builder-grid { grid-template-columns: 1fr; gap: 13px; }
   .adv-preview-shell { position: static; }
   .adv-builder-actions { flex-direction: column; align-items: stretch; }
@@ -1323,7 +1323,7 @@ html.hx-light .am-control-hero { background: linear-gradient(135deg, rgba(59,165
 html.hx-light .am-rule-card { background: linear-gradient(180deg, rgba(var(--d-accent-rgb), .035), transparent 45%), var(--d-card2); }
 html.hx-light .am-preview-shell, html.hx-light .am-mode-row, html.hx-light .am-policy-row { background: rgba(255,255,255,.55); }
 
-@media (max-width: 900px) {
+@media (max-width: 900px), (hover: none) and (pointer: coarse) and (max-height: 800px) {
   .am-rule-grid, .am-warning-grid, .am-exception-grid { grid-template-columns: 1fr; }
   .am-mode-row, .am-policy-row { grid-template-columns: 1fr; align-items: stretch; }
   .am-warning-grid { gap: 2px; }
@@ -1633,7 +1633,7 @@ html.hx-light .dash-input:focus, html.hx-light .dash-select:focus, html.hx-light
   .dash-main { padding-left: 22px; padding-right: 22px; }
   .dash-side { width: 248px; }
 }
-@media (max-width: 900px) {
+@media (max-width: 900px), (hover: none) and (pointer: coarse) and (max-height: 800px) {
   .dash-main { padding: 8px 12px calc(98px + env(safe-area-inset-bottom)); }
   .dash-topbar { top: 0; border-radius: 0; margin: 0 -12px 14px; padding: calc(10px + env(safe-area-inset-top)) 12px 11px; }
   .dash-card { padding: 18px 16px; border-radius: 18px; }
@@ -1708,7 +1708,7 @@ html.hx-light .dash-input:focus, html.hx-light .dash-select:focus, html.hx-light
 html.hx-light .custom-announcement-card { background: radial-gradient(620px 220px at 100% 0%, rgba(139,92,246,.1), transparent 70%), var(--d-card); }
 html.hx-light .ca-toolbar { background: linear-gradient(180deg, rgba(var(--d-accent-rgb), .05), transparent), var(--d-card2); }
 html.hx-light .ca-preview-wrap { background: rgba(255,255,255,.55); }
-@media (max-width: 900px) {
+@media (max-width: 900px), (hover: none) and (pointer: coarse) and (max-height: 800px) {
   .ca-top-grid, .ca-destination-grid { grid-template-columns: 1fr; gap: 4px; }
   .ca-preview-wrap { margin-left: 0; margin-right: 0; }
   .ca-actions { flex-direction: column; align-items: stretch; }
@@ -1896,7 +1896,7 @@ html.hx-light .dash-side-item.active { color: #34416c; background: linear-gradie
 html.hx-light .dash-card h3, html.hx-light .dash-stat .val, html.hx-light .dash-crumb .crumb-txt b { color: #20283a; }
 html.hx-light .dash-input, html.hx-light .dash-select, html.hx-light textarea.dash-input { background: #f7f9fd; color: #263149; border-color: #cdd8e9; }
 
-@media (max-width: 900px) {
+@media (max-width: 900px), (hover: none) and (pointer: coarse) and (max-height: 800px) {
   .dash-main { padding: 13px 12px 96px; }
   .dash-side { top: 52px; height: auto; padding: 7px 8px; background: rgba(13,19,29,.97); border-bottom-color: rgba(49,65,88,.82); }
   .dash-side::before { display: none; }
@@ -1963,7 +1963,7 @@ html.hx-light .dash-input, html.hx-light .dash-select, html.hx-light textarea.da
 }
 .bp-close:hover { color: var(--d-text); border-color: var(--d-accent); background: rgba(var(--d-accent-rgb), .12); }
 
-@media (max-width: 900px) {
+@media (max-width: 900px), (hover: none) and (pointer: coarse) and (max-height: 800px) {
   /* Deux lignes lisibles : serveur, puis actions. La ligne d'actions peut
      défiler horizontalement si « Ajouter le bot » est aussi présent, sans
      réduire les boutons ni faire passer la notification hors de l'écran. */
@@ -2412,7 +2412,7 @@ html.hx-light .dash-state-card { background: #fff; border-color: #d9e1ef; }
   .dash-module-header .m-icon { width: 48px; height: 48px; }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 900px), (hover: none) and (pointer: coarse) and (max-height: 800px) {
   .dash-main { padding: 15px 12px calc(104px + env(safe-area-inset-bottom)); }
   .dash-module-header {
     grid-template-columns: 44px minmax(0, 1fr);
@@ -2550,7 +2550,7 @@ html.hx-light .am-member-blacklist-row { background: rgba(240,108,117,.025); bor
 html.hx-light .am-member-blacklist-copy b { color: #27334a; }
 html.hx-light .am-blacklist-badge, html.hx-light .am-blacklist-count { color: #b34e5b; background: rgba(187,76,88,.07); }
 
-@media (max-width: 900px) {
+@media (max-width: 900px), (hover: none) and (pointer: coarse) and (max-height: 800px) {
   .am-blacklist-grid { grid-template-columns: 1fr; gap: 4px; }
   .am-blacklist-config { padding: 13px; }
   .am-blacklist-config .am-panel-title { align-items: flex-start; }
@@ -2609,7 +2609,7 @@ html.hx-light .am-threshold-box { background: rgba(187,76,88,.025); border-color
 html.hx-light .am-threshold-box > label { color: #687893; }
 html.hx-light .am-blacklist-duration { background: rgba(187,76,88,.025); border-color: rgba(187,76,88,.22); }
 
-@media (max-width: 900px) {
+@media (max-width: 900px), (hover: none) and (pointer: coarse) and (max-height: 800px) {
   .am-blacklist-duration { grid-template-columns: 1fr; gap: 3px; align-items: stretch; }
   .am-blacklist-duration > small { padding-bottom: 0; }
 }
@@ -2678,7 +2678,7 @@ html.hx-light .am-native-hero { background:rgba(86,103,217,.055); border-color:#
 html.hx-light .am-native-copy b, html.hx-light .am-native-status b { color:#2d3a54; }
 html.hx-light .am-native-status { background:rgba(86,103,217,.025); border-color:#d9e1ef; }
 
-@media (max-width:900px) {
+@media (max-width:900px), (hover: none) and (pointer: coarse) and (max-height: 800px) {
   .am-native-hero { align-items:flex-start; flex-direction:column; }
   .am-native-toggle { align-self:stretch; justify-content:space-between; }
   .am-native-grid { grid-template-columns:1fr; gap:5px; }
@@ -2876,7 +2876,7 @@ html.hx-light .ov-quick-actions { background: rgba(255,255,255,.78); }
   .dash-module-header { grid-template-columns: auto minmax(0, 1fr) auto; }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 900px), (hover: none) and (pointer: coarse) and (max-height: 800px) {
   .dash-main { padding: 15px 12px calc(104px + env(safe-area-inset-bottom)); }
   .dash-topbar { min-height: 0; margin-bottom: 17px; padding: calc(10px + env(safe-area-inset-top)) 12px 11px; }
   .dash-module-header { grid-template-columns: auto minmax(0, 1fr); gap: 11px; min-height: 66px; padding: 2px 0 15px; }
@@ -2968,7 +2968,7 @@ html.hx-light .dash-card[data-dash-card]::after { background: linear-gradient(90
 html.hx-light .dash-table-wrap { border-color: #d9e1ef; box-shadow: inset 0 1px 0 rgba(70,85,135,.05); }
 html.hx-light .dash-table-wrap .dash-table thead th { background: #f7f9fd; }
 
-@media (max-width: 900px) {
+@media (max-width: 900px), (hover: none) and (pointer: coarse) and (max-height: 800px) {
   .dash-module-header { min-height: 70px; }
   .module-header-meta { max-width: none; }
   .dash-state-card .state-actions { width: 100%; }
@@ -3558,7 +3558,7 @@ html.hx-light .dashboard-shell-host .dash-select option { color: #2e3338; backgr
   .dashboard-shell-host .dash-main { padding-left: 28px; padding-right: 28px; }
   .dashboard-shell-host .dash-side { width: 258px; }
 }
-@media (max-width: 900px) {
+@media (max-width: 900px), (hover: none) and (pointer: coarse) and (max-height: 800px) {
   body:has(.dashboard-shell-host) .navbar { padding: 7px 12px; }
   .dashboard-shell-host .dash-main { padding: 12px 12px calc(104px + env(safe-area-inset-bottom)); }
   .dashboard-shell-host .dash-topbar {
@@ -3863,7 +3863,7 @@ html.hx-light .dashboard-shell-host .dash-btn-primary { color: #fff !important; 
   .dashboard-shell-host .dash-side { width: 260px; }
   .dashboard-shell-host .dash-main { padding-left: 30px; padding-right: 30px; }
 }
-@media (max-width: 900px) {
+@media (max-width: 900px), (hover: none) and (pointer: coarse) and (max-height: 800px) {
   .dashboard-shell-host .dash-main { padding: 12px 12px calc(104px + env(safe-area-inset-bottom)); }
   .dashboard-shell-host .dash-topbar { margin: 0 -12px 18px; padding: calc(8px + env(safe-area-inset-top)) 12px 10px; border-bottom-color: #4f545c; background: #2b2d31; }
   .dashboard-shell-host .dash-crumb { display: none; }
@@ -3980,7 +3980,7 @@ html.hx-light { color-scheme: light; }
 }
 .dashboard-shell-host .ov-module-grid .ov-module-card { margin-top: 0; }
 
-@media (max-width: 900px) {
+@media (max-width: 900px), (hover: none) and (pointer: coarse) and (max-height: 800px) {
   .dashboard-shell-host .ov-welcome-panel { grid-template-columns: 1fr; gap: 15px; padding: 18px 16px; }
   .dashboard-shell-host .ov-welcome-panel .ov-intro-health { min-width: 0; width: 100%; }
   .dashboard-shell-host .ov-access-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 21px; }
@@ -4109,7 +4109,7 @@ html.hx-light { color-scheme: light; }
 @media (max-width: 1000px) {
   .dashboard-shell-host .ov-home-columns { grid-template-columns: minmax(0, 1.25fr) minmax(260px, .85fr); gap: 14px; }
 }
-@media (max-width: 900px) {
+@media (max-width: 900px), (hover: none) and (pointer: coarse) and (max-height: 800px) {
   .dashboard-shell-host .ov-home-columns { grid-template-columns: 1fr; gap: 18px; }
   .dashboard-shell-host .ov-home-side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .dashboard-shell-host .ov-summary-section { grid-column: 1 / -1; }
@@ -4129,7 +4129,7 @@ html.hx-light { color-scheme: light; }
 .dash-mobile-layer { display: none; }
 .dash-mobile-drawer[hidden], .dash-mobile-backdrop[hidden] { display: none !important; }
 
-@media (max-width: 900px) {
+@media (max-width: 900px), (hover: none) and (pointer: coarse) and (max-height: 800px) {
   body:has(.dashboard-shell-host) .navbar { display: none !important; }
   body:has(.dashboard-shell-host) { overflow-x: hidden; }
   body.dash-mobile-drawer-open { overflow: hidden; }
@@ -4594,3 +4594,109 @@ html.hx-light { color-scheme: light; }
   .eb-grid2 { grid-template-columns: 1fr; }
   .eb-btnrow { grid-template-columns: 52px minmax(0,1fr) 100px 40px; }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   ▼ v170 — Indicateur « la liste continue en dessous »
+   Retour utilisateur : les listes défilables (sidebar, tiroir modules)
+   semblaient coupées net → les modules du bas paraissaient « cachés ».
+   Ce bouton colle au bas de la zone visible et y amène d'un toucher.
+   ══════════════════════════════════════════════════════════════════ */
+.scroll-hint {
+  position: sticky; bottom: 0; left: 0; right: 0; z-index: 5;
+  display: none; align-items: center; justify-content: center;
+  width: 100%; margin: 0; padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+  border: 0; border-radius: 0;
+  color: #f2f3f5;
+  background: linear-gradient(180deg, rgba(20, 21, 31, .82), #14151f 62%);
+  font: inherit; font-size: 12px; font-weight: 700; letter-spacing: .4px;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.scroll-hint.on { display: flex; }
+.scroll-hint:hover { color: #fff; }
+html.hx-light .scroll-hint { color: #23252d; background: linear-gradient(180deg, rgba(242, 243, 245, .88), #f2f3f5 62%); }
+
+/* ══════════════════════════════════════════════════════════════════
+   ☀️ v170 — Mode clair : plus AUCUN texte invisible
+   Le look « Discord » du dashboard force des fonds sombres ; en mode
+   clair, certains textes héritaient de l'encre sombre du thème (→
+   sombre sur sombre) ou gardaient leur blanc codé en dur sur des
+   fonds devenus clairs (→ blanc sur blanc). Logique :
+   fond sombre conservé → texte clair ; fond clair → texte sombre.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* 1) Barre publique du haut : fond clair → textes sombres */
+html.hx-light .navbar { color: #23252d; }
+html.hx-light .navbar .logo-row,
+html.hx-light .navbar a,
+html.hx-light .navbar .user-pill,
+html.hx-light .navbar .btn-ghost { color: #23252d; }
+html.hx-light .navbar .nl-lbl,
+html.hx-light .navbar .user-pill small { color: #5c636b; }
+
+/* 2) Sidebar + bandeau mobile : fonds clairs → textes sombres */
+html.hx-light .dashboard-shell-host .dash-side-brand-copy b { color: #23252d; }
+html.hx-light .dashboard-shell-host .dash-side-brand-copy span { color: #5c636b; }
+html.hx-light .dashboard-shell-host .dash-mobile-brand { color: #23252d; }
+
+/* 3) Boîtes « look Discord » qui RESTENT sombres → texte clair dedans
+      (uniquement les boîtes réellement sombres : héros, règles, politiques) */
+html.hx-light .dashboard-shell-host .am-control-hero,
+html.hx-light .dashboard-shell-host .am-mode-row,
+html.hx-light .dashboard-shell-host .am-policy-row,
+html.hx-light .dashboard-shell-host .am-warning-panel,
+html.hx-light .dashboard-shell-host .am-blacklist-config,
+html.hx-light .dashboard-shell-host .adv-types-panel,
+html.hx-light .dashboard-shell-host .adv-preview-shell,
+html.hx-light .dashboard-shell-host .ca-preview-wrap,
+html.hx-light .dashboard-shell-host .am-rule-card,
+html.hx-light .dashboard-shell-host .adv-type-card { color: #dbdee1; }
+html.hx-light .dashboard-shell-host .am-control-hero b,
+html.hx-light .dashboard-shell-host .am-mode-row b,
+html.hx-light .dashboard-shell-host .am-policy-row b,
+html.hx-light .dashboard-shell-host .am-warning-panel b,
+html.hx-light .dashboard-shell-host .am-blacklist-config b,
+html.hx-light .dashboard-shell-host .am-rule-card b,
+html.hx-light .dashboard-shell-host .adv-type-card b,
+html.hx-light .dashboard-shell-host .adv-panel-heading b { color: #f2f3f5; }
+html.hx-light .dashboard-shell-host .am-control-hero small,
+html.hx-light .dashboard-shell-host .am-mode-row small,
+html.hx-light .dashboard-shell-host .am-policy-row small,
+html.hx-light .dashboard-shell-host .am-warning-panel small,
+html.hx-light .dashboard-shell-host .am-blacklist-config small,
+html.hx-light .dashboard-shell-host .am-rule-card small,
+html.hx-light .dashboard-shell-host .adv-type-card small { color: #b5bac1; }
+html.hx-light .dashboard-shell-host .am-rule-icon { color: #dbdee1; }
+html.hx-light .dashboard-shell-host .am-main-toggle { color: #dbdee1; }
+/* l'interrupteur « natif » vit sur un héros clair → encre sombre, déjà OK */
+
+/* 4) Chips bleu nuit (jours, choix multiples) : fond gardé → texte clair */
+html.hx-light .dashboard-shell-host .dash-filter,
+html.hx-light .dashboard-shell-host .am-choice,
+html.hx-light .dashboard-shell-host .ca-choice,
+html.hx-light .dashboard-shell-host .discord-multi-choice { color: #dbdee1; }
+html.hx-light .dashboard-shell-host .dash-filter b,
+html.hx-light .dashboard-shell-host .am-choice b,
+html.hx-light .dashboard-shell-host .ca-choice b { color: #f2f3f5; }
+html.hx-light .dashboard-shell-host .ca-mark { color: #f2f3f5; background: rgba(255,255,255,.05) !important; border-color: #4f545c !important; }
+
+/* 5) Zones devenues claires → titres, valeurs et libellés sombres */
+html.hx-light .dashboard-shell-host .dash-stat .val { color: #20283a !important; background: none !important; -webkit-text-fill-color: currentColor; }
+html.hx-light .dashboard-shell-host .dash-label { color: #5c636b; }
+html.hx-light .dashboard-shell-host .ov-intro-copy h2 { color: #1c1e26; }
+html.hx-light .dashboard-shell-host .ov-intro-copy p { color: #5c636b; }
+html.hx-light .dashboard-shell-host .ov-quick-label { color: #5c636b; }
+html.hx-light .dashboard-shell-host .ov-section-heading b { color: #1c1e26; }
+html.hx-light .dashboard-shell-host .ov-section-heading span { color: #5c636b; }
+html.hx-light .dashboard-shell-host .ov-side-heading { color: #5c636b; }
+html.hx-light .dashboard-shell-host .ov-top-member { color: #1c1e26; border-bottom-color: #c7c9cc; }
+html.hx-light .dashboard-shell-host .ov-top-member small { color: #5c636b; }
+html.hx-light .dashboard-shell-host .ov-config-copy small { color: #5c636b; }
+html.hx-light .dashboard-shell-host .ov-checklist-card .ov-section-heading { border-bottom-color: #c7c9cc; }
+
+/* 6) Aperçu Discord (.dc-preview) : c'est une maquette de Discord → on la
+      garde sur fond sombre dans les deux thèmes (au lieu d'un filtre
+      approximatif qui inversait aussi les textes dans les encarts sombres) */
+html.hx-light .dashboard-shell-host .dc-preview { background: #313338 !important; border-color: #1e1f22; }
+html.hx-light .dc-preview [style*="color:#dbdee1"],
+html.hx-light .dc-preview [style*="color:#f2f3f5"],
+html.hx-light .dc-preview [style*="color:#b5bac1"] { filter: none; }

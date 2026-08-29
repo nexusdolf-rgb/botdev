@@ -21,10 +21,7 @@ assert(dashJs.includes('const memberCount = String((data.guild && data.guild.mem
 assert(!dashJs.includes(".replace('{server}', 'Ton serveur')"), 'le fallback codé en dur « Ton serveur » doit être remplacé');
 assert(!dashJs.includes(".replace('{count}', '145')"), 'le compteur codé en dur « 145 » doit être remplacé');
 
-// 4. Version v169 déployée (cache PWA + assets)
-assert(!index.includes('?v=168'), 'index.html référence encore v168');
-assert.strictEqual((index.match(/\?v=169/g) || []).length, 7, 'index.html doit référencer v169 7 fois');
-assert(sw.includes("'botdev-v169'"), 'le cache du service worker n’est pas en v169');
+// 4. Version : gérée par le test de la version courante (v170)
 
 // 5. Rendu réel dans jsdom : UN SEUL aperçu, avec le vrai nom du serveur
 const { JSDOM } = require('jsdom');

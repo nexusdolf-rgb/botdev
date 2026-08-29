@@ -539,6 +539,33 @@ Dashboard.serverPicker = () => {
   return pick;
 };
 
+// ▼ v170 — Indicateur « la liste continue en dessous » : sans lui, une liste
+// défilable (sidebar desktop, tiroir des modules mobile) paraît coupée net
+// et les éléments du bas semblent « cachés ». Le bouton colle au bas de la
+// zone visible, indique qu'il y a une suite et y amène d'un simple toucher.
+Dashboard.mountScrollHint = (container, label) => {
+  if (!container) return;
+  let hint = null;
+  for (const child of container.children) { if (child.classList && child.classList.contains('scroll-hint')) { hint = child; break; } }
+  if (!hint) {
+    hint = App.el('<button class="scroll-hint" type="button"></button>');
+    hint.onclick = () => container.scrollTo({ top: container.scrollTop + container.clientHeight * 0.85, behavior: 'smooth' });
+    container.appendChild(hint);
+  }
+  const update = () => {
+    const reste = container.scrollHeight - container.clientHeight - container.scrollTop;
+    hint.classList.toggle('on', reste > 60);
+    hint.textContent = `▼ ${label}`;
+  };
+  if (!container.__scrollHintBound) {
+    container.addEventListener('scroll', update, { passive: true });
+    container.__scrollHintBound = true;
+  }
+  container.__scrollHintUpdate = update;
+  update();
+  setTimeout(update, 350);
+};
+
 Dashboard.renderSide = (aside) => {
   aside.innerHTML = '';
   const bot = Dashboard.state.bot || {};
@@ -579,6 +606,7 @@ Dashboard.renderSide = (aside) => {
       </div>
     </div>
   </div>`));
+  Dashboard.mountScrollHint(aside, 'La suite des modules');
 };
 
 Dashboard.setModule = (id, options = {}) => {
@@ -878,8 +906,10 @@ Dashboard.removeMobileDrawers = () => {
 
 Dashboard.positionTopbarPopover = (popover, button) => {
   if (!popover || popover.hidden || !button) return;
+  // 📱 Interface compacte : écran étroit OU appareil tactile en paysage
+  // (téléphone tourné : la sidebar desktop y coupe la liste des modules)
   const isMobile = window.matchMedia
-    ? window.matchMedia('(max-width: 900px)').matches
+    ? window.matchMedia('(max-width: 900px), (hover: none) and (pointer: coarse) and (max-height: 800px)').matches
     : window.innerWidth <= 900;
   if (isMobile) {
     ['top', 'right', 'bottom', 'left'].forEach((property) => popover.style.removeProperty(property));
@@ -1034,6 +1064,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
         moduleList.appendChild(button);
       });
     });
+    Dashboard.mountScrollHint(moduleList, 'La suite des modules');
   };
   renderMobileModules();
   mobileBackdrop.onclick = closeMobileDrawers;
