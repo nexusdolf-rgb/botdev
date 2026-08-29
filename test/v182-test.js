@@ -1,9 +1,9 @@
 // ══════════════════════════════════════════════════════════════
-// TEST v181 — La tête 3D premium remplace le robot dans la
-// bannière « cinéma », à la même position et à la même taille.
-// Choix explicite de l'utilisateur ; tout le reste de la
-// bannière (fond, effets, typographie Poppins) est inchangé
-// au pixel près (vérifié : 0 pixel modifié hors zone du robot).
+// TEST v182 — La tête 3D premium est CALQUÉE depuis la bannière
+// v179 : mêmes pixels, même taille (426×450), même position
+// (centre 1300/322), posée sur le fond v177 sans le robot.
+// Choix explicite de l'utilisateur (« t'aurais dû le calquer »).
+// Tout le reste de la bannière est inchangé au pixel près.
 // ══════════════════════════════════════════════════════════════
 const fs = require('fs');
 const path = require('path');
@@ -13,7 +13,7 @@ const root = path.join(__dirname, '..');
 const index = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
 const sw = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
 
-// ---------- 1. Les bannières du site sont la version v181 ----------
+// ---------- 1. Les bannières du site sont la version v182 ----------
 const sharp = require('sharp');
 (async () => {
   const mp = await sharp(path.join(root, 'public/icons/nexora-profile-banner.png')).metadata();
@@ -34,15 +34,19 @@ const sharp = require('sharp');
   assert(max >= 250, `le texte doit contenir du blanc pur (max mesuré : ${max})`);
   assert(bright > 3000, `assez de pixels de glyphes attendus (${bright} trouvés)`);
 
-  // ---------- 3. La tête premium est présente à droite ----------
+  // ---------- 3. La tête calquée est présente à droite (position v179) ----------
   const rawHead = await sharp(path.join(root, 'public/icons/nexora-profile-banner.png'))
-    .extract({ left: 1100, top: 100, width: 400, height: 450 }) // zone de la tête
+    .extract({ left: 1050, top: 100, width: 420, height: 420 }) // zone tête calquée
     .greyscale().raw().toBuffer();
   let headBright = 0;
   for (const v of rawHead) { if (v > 150) headBright += 1; }
-  assert(headBright > 5000, `la tête premium doit être visible à droite (${headBright} pixels clairs)`);
+  assert(headBright > 5000, `la tête premium calquée doit être visible (${headBright} pixels clairs)`);
 
-  // ---------- 4. Version : gérée par le test de la version courante (v182) ----------
+  // ---------- 4. Version v182 ----------
+  assert.strictEqual((index.match(/\?v=182/g) || []).length, 7,
+    'index.html doit référencer v182 7 fois');
+  assert(sw.includes('botdev-v182'), 'le cache du service worker n’est pas en v182');
+  assert(!index.includes('?v=181'), 'index.html référence encore v181');
 
-  console.log('✅ v181-test : tête premium posée à la place du robot (historique)');
+  console.log('✅ v182-test : tête premium calquée depuis la v179 sur le fond v177');
 })().catch((e) => { console.error('❌', e.message); process.exit(1); });
