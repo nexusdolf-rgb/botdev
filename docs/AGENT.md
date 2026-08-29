@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v180**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v181**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -87,10 +87,17 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   variables `NEXORA_ADMIN_*`, noms de fichiers `nexora-*` (procure pas de renommer)
 - **v174** : le nom du bot vit dans la base (renommable via `PATCH /api/bots/1`) ;
   `provisionHoxera()` ne force PLUS le nom au démarrage
-- **v180** : bannière finale = **« robot 3D cinéma + typographie Poppins »** (fichier
-  historique `banner-pro-final.png`, appliqué sur Discord). L'utilisateur a comparé avec
-  la tête du logo (v178/v179) et préféré celle-ci. Avatar du bot = logo argent
-  « tête de robot » fournie par l'utilisateur (appliquée via API Discord)
+- **v180** : retour à la bannière « robot 3D cinéma + typographie Poppins » (fichier
+  historique `banner-pro-final.png`) après rejet des variantes v178/v179.
+- **v181 (ACTUELLE)** : bannière finale = **« robot cinéma SANS le robot »** — à la place
+  exacte du robot (centre 1331/288, 373×394) se trouve la **tête 3D premium** (v179,
+  `head-premium-cut.png`), choix explicite de l'utilisateur. Tout le reste est identique
+  au pixel près (vérifié : 0 pixel modifié hors zone du robot, texte intact). Fichier
+  actif : `assets/banner-v181-final.png` ; bannière Discord = hash `28281ea8922c`.
+  Avatar du bot = logo argent « tête de robot » fournie par l'utilisateur.
+  Pipeline du remplacement : diffusion numpy (effacement du robot, init bilinéaire +
+  600 itérations + grain apparié), puis pose de la tête 75 % opaque. Crops site :
+  profile = `crop(0,2,1632,654)→1500×600` ; support = `resize(1696×682)→crop(0,29,1696,653)`.
 
 ## 🎨 IDENTITÉ VISUELLE (pipeline pro)
 
@@ -155,10 +162,10 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 
 ## 📌 ÉTAT AU 29/08/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v180** (bannière « robot cinéma » restaurée + ce document)
-- Bot « Optimus Prime » en ligne, 7 serveurs, 0 erreur 24h, 112 tests verts
-- Identité Discord à jour : avatar (logo argent), bannière (robot cinéma + Poppins),
-  username, bio 4 lignes, icône d'application
+- Dernière version : **v181** (tête 3D premium à la place du robot dans la bannière cinéma)
+- Bot « Optimus Prime » en ligne, 7 serveurs, 0 erreur 24h, 113 tests verts
+- Identité Discord à jour : avatar (logo argent), bannière (v181 : tête premium sur fond
+  cinéma), username, bio 4 lignes, icône d'application
 - ⏳ En attente utilisateur : renommer le rôle « Nexora » à la main sur 6 serveurs
   (Discord ne le permet pas automatiquement — voir piège n°4)
 - Idées en attente (non commencées) : fiche membre complète, recherche dans les
