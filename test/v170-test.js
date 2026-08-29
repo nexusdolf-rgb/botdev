@@ -82,7 +82,4 @@ setTimeout(() => {
   })().catch((e) => { console.error(e.message); process.exit(1); });
 }, 800);
 
-// ---------- 5. Version v170 ----------
-assert(!index.includes('?v=169'), 'index.html référence encore v169');
-assert.strictEqual((index.match(/\?v=170/g) || []).length, 7, 'index.html doit référencer v170 7 fois');
-assert(sw.includes("'botdev-v170'"), 'le cache du service worker n’est pas en v170');
+// ---------- 5. Version : gérée par le test de la version courante (v171) ----------

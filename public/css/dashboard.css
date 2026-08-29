@@ -4700,3 +4700,50 @@ html.hx-light .dashboard-shell-host .dc-preview { background: #313338 !important
 html.hx-light .dc-preview [style*="color:#dbdee1"],
 html.hx-light .dc-preview [style*="color:#f2f3f5"],
 html.hx-light .dc-preview [style*="color:#b5bac1"] { filter: none; }
+
+/* ══════════════════════════════════════════════════════════════
+   ☀️ v171 — Mode clair sur ordinateur : dernière passe
+   Le thème suit le réglage du système ; sur un ordinateur en
+   apparence claire, il restait des textes blancs sur fond clair
+   (barre du haut, sidebar, badges, boutons). Tout passe en encre
+   sombre — sauf ce qui vit sur les surfaces restées sombres.
+   ══════════════════════════════════════════════════════════════ */
+
+/* Barre publique : pseudo du compte connecté */
+html.hx-light .navbar .user-pill span { color: #23252d; }
+
+/* Sidebar : carte du serveur, icônes des modules, pied de colonne */
+html.hx-light .dashboard-shell-host .dash-server-card .srv-txt b { color: #23252d; }
+html.hx-light .dashboard-shell-host .dash-server-card .srv-txt small { color: #5c636b; }
+html.hx-light .dashboard-shell-host .dash-side-item .ico { color: #5c636b; }
+html.hx-light .dashboard-shell-host .dash-side-foot { color: #5c636b; }
+html.hx-light .dashboard-shell-host .dash-side-foot b { color: #23252d; }
+
+/* Topbar : puce du bot */
+html.hx-light .dashboard-shell-host .dash-bot-chip .chip-txt b { color: #23252d; }
+html.hx-light .dashboard-shell-host .dash-bot-chip .chip-txt small { color: #5c636b; }
+
+/* Badges de statut : les verts/jaunes pâles deviennent lisibles */
+html.hx-light .dashboard-shell-host .dash-badge.ok { color: #1a7f42; border-color: rgba(26,127,66,.4); background: rgba(26,127,66,.09); }
+html.hx-light .dashboard-shell-host .dash-badge.warn { color: #9a6700; border-color: rgba(154,103,0,.4); background: rgba(154,103,0,.09); }
+html.hx-light .dashboard-shell-host .dash-badge.bad { color: #c03537; border-color: rgba(192,53,55,.4); background: rgba(192,53,55,.09); }
+
+/* Tickets avancés : le titre d'aperçu vit sur une surface sombre */
+html.hx-light .dashboard-shell-host .adv-preview-title { color: #f2f3f5; }
+
+/* Annonces personnalisées : boutons <> {} 🔗 de la barre d'outils (fond clair) */
+html.hx-light .dashboard-shell-host .ca-mark { color: #23252d; background: #e3e5e8; border-color: #c7c9cc; }
+
+/* Embed Builder : boutons d'action principaux */
+html.hx-light .dashboard-shell-host .btn-primary { color: #fff !important; background: #c85f49 !important; border-color: #c85f49 !important; }
+html.hx-light .dashboard-shell-host .btn-primary:hover { background: #a94838 !important; border-color: #a94838 !important; }
+
+/* Modération : onglets de filtre */
+html.hx-light .dashboard-shell-host .am-filter { color: #5c636b; }
+html.hx-light .dashboard-shell-host .am-filter.active { color: #a94838; background: rgba(200,95,73,.14); border-color: rgba(200,95,73,.4); }
+
+/* Vue d'ensemble : pastille de santé du bot */
+html.hx-light .dashboard-shell-host .ov-intro-health b { color: #1a7f42; }
+/* Annonces personnalisées : libellé d'aperçu sur surface sombre (idem v171) */
+html.hx-light .dashboard-shell-host .ca-preview-label { color: #f2f3f5; }
+html.hx-light .dashboard-shell-host .ca-preview-label span { color: #b5bac1; }
