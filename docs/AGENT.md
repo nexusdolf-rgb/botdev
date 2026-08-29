@@ -1,4 +1,4 @@
-# 🤖 GUIDE DE L'AGENT — Projet Hoxera (bot Discord + dashboard)
+# 🤖 GUIDE DE L'AGENT — Projet Hoxera (bot Discord « Optimus Prime » + dashboard)
 
 > Document de passation : tout agent (IA ou humain) qui reprend ce projet doit lire ceci.
 
@@ -14,88 +14,153 @@ Tu es mon développeur senior attitré sur le projet **Hoxera**. Tu prends le re
 agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Vérifie avant de toucher** : clone le dépôt, lis le code, comprends avant de modifier
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
-- **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNN-test.js`)
+- **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : v2.3) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v180**) avec description détaillée
+
+## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
+
+- **Débutant** : je suis juste tes instructions, fais TOUT le travail technique toi-même
+- **Toujours en français simple**, explications courtes et rassurantes
+- **Je refuse de repartir de zéro** : on continue toujours le code existant
+- **Vérifie les faits AVANT de me rassurer** (je panique vite ; j'ai déjà cru un token
+  changé alors que non)
+- Quand une demande annule du travail récent : demande-moi une clarification avant d'exécuter
+- Je fournis mes tokens/access dans le chat quand tu me les demandes
 
 ## 📦 LE PROJET
 
-**Hoxera** : bot Discord tout-en-un (~25 000 lignes) + dashboard web, 100 % gratuit.
-- **Bot Discord « Optimus Prime »** — client_id : `1537443352281088000` — en ligne sur 7+ serveurs
-- 61+ commandes slash GLOBALES : tickets pro (types, transcriptions, notes ⭐, journal staff),
-  modération + auto-mod + anti-raid + sanctions progressives (paliers timeout/kick/ban),
-  XP/niveaux, économie, giveaways, jeux (morpion, pendu, rps), mariages, anniversaires,
-  sondages, rappels, rôles par boutons/menus, salons vocaux temporaires, candidatures,
-  starboard ⭐, traqueur d'invitations 📨, annonces de live 🔴 (TikTok/Twitch/YouTube/Kick),
-  cartes de bienvenue en image 🖼️, auto-rôles multiples, i18n FR/EN
-- **Dashboard** : https://hoxera.is-a.dev — connexion OAuth2 Discord, design pro
-  façon DraftBot (sidebar avec carte serveur, fil d'ariane, PWA installable)
+**Hoxera** : plateforme web + bot Discord tout-en-un, 100 % gratuit.
+- **Bot « Optimus Prime »** (ex-« Nexora », renommé le 29/08/2026) — client_id :
+  `1537443352281088000` — en ligne sur 7 serveurs
+- Tickets pro (types, transcriptions, notes ⭐), modération + auto-mod + anti-raid,
+  XP/niveaux, économie, giveaways, jeux, mariages, anniversaires, sondages, rappels,
+  rôles par boutons, salons vocaux temporaires, starboard, traqueur d'invitations,
+  annonces de live, cartes de bienvenue, auto-rôles, i18n FR/EN
+- **Dashboard** : https://hoxera.is-a.dev — connexion OAuth2 Discord, PWA installable,
+  16 modules, thème sombre + clair, mobile + desktop
 
 ## 🗂️ INFRASTRUCTURE
 
 | Élément | Détail |
 |---|---|
-| Code | `github.com/nexusdolf-rgb/botdev` (branche `main`) |
-| Sauvegardes données | `github.com/nexusdolf-rgb/botdev-data` (botdev.db poussé toutes les 10 min + à l'extinction, restauré au démarrage) |
+| Code | `github.com/nexusdolf-rgb/botdev` (branche `main`, **dépôt PUBLIC** → zéro secret dedans) |
+| Sauvegardes données | `github.com/nexusdolf-rgb/botdev-data` (PRIVÉ — botdev.db poussé toutes les ~10 min, restauré au boot) |
 | Hébergement | Render **web service « hoxera »** `srv-da5i2h2jobas73epvos0`, région **Oregon**, plan free |
-| ⚠️ Ancien service | « Dash-hoxora » (Frankfurt) **SUSPENDU** — ne pas réactiver (IP bloquée par Discord le 23/08) : deux bots simultanés = conflit |
+| ⚠️ Ancien service | « Dash-hoxora » `srv-da133gs9v7es73afo2lg` **SUSPENDU** — ne pas réactiver (IP bloquée par Discord) : jamais 2 services actifs avec le même token |
 | Déploiement | `git push` sur main → Render redéploie automatiquement (~1 min) |
-| CI | GitHub Actions sur botdev (tests à chaque push) |
-| Garde-éveil externe | workflow `keepalive.yml` dans botdev-data (ping /ping toutes les 10 min) |
-| Santé | `https://hoxera.is-a.dev/api/health/bot` (JSON : bot en ligne, serveurs, erreurs, sauvegardes) |
+| CI | GitHub Actions (tests à chaque push, ~2,5 min) |
+| Santé | `https://hoxera.is-a.dev/api/health/bot` (JSON : bot, serveurs, erreurs 24h, backup) |
 
 ## 🏗️ ARCHITECTURE DU CODE
 
 - Node.js + Express + discord.js v14 + better-sqlite3 + sharp — `npm start` → `server/index.js`
-- `server/db.js` : TOUTE la base (tables + accesseurs `store.*`, migrations par `ALTER TABLE ... catch`)
-- `server/discord/` : `botManager.js` (connexion, intents, commandes globales, garde d'interaction),
-  `panels.js` (tickets), `premade.js` (commandes), `extra.js` (jeux/social/invites),
-  `events.js` (bienvenue/auto-rôle), `community.js` (starboard/invitations/carte bienvenue/sanctions),
-  `liveWatch.js` (annonces de live), `automod.js`, `antiraid.js`, `xp.js`, `logging.js`, `i18n.js`
-- `server/backup.js` : sauvegarde/restauration GitHub (garde-fou anti-écrasement si base vide)
-- `public/` : SPA vanilla JS — `js/dashboard.js` (modules), `js/views.js`, `css/dashboard.css`
-- `test/` : ~43 tests. **`bash scripts/check.sh` = syntaxe + secrets + suite complète (OBLIGATOIRE avant push)**
-- `scripts/preview-ui.js` : rendu jsdom du dashboard pour inspecter l'interface sans navigateur
+- `server/db.js` : toute la base (tables + accesseurs `store.*`, migrations `ALTER TABLE…catch`)
+- `server/discord/` : `botManager.js` (connexion, sync commandes, bio, rôle), `panels.js`
+  (tickets), `premade.js`, `extra.js`, `events.js`, `community.js`, `liveWatch.js`,
+  `automod.js`, `antiraid.js`, `xp.js`, `logging.js`, `i18n.js`, `nativeAutomod.js`
+- `public/` : SPA vanilla JS — `js/dashboard.js` (modules), `js/app.js`, `js/public.js`
+  (landing), `css/dashboard.css` (bloc « mode clair » en fin de fichier)
+- `test/` : **112 tests**. `bash scripts/check.sh` = syntaxe + secrets + suite (OBLIGATOIRE)
+- `docs/AGENT.md` : ce document — **le mettre à jour à chaque grande étape**
+
+## 🔁 RECETTE DE LIVRAISON (à connaître par cœur)
+
+1. Modifier le code → `bash scripts/check.sh` → tout vert
+2. **Bump de version** : `public/index.html` `?v=NNN` **×7** + `public/sw.js` `botdev-vNNN`
+   + les 6 « pinneurs » (`test/v120/121/123/128/142/147-test.js`) + nouveau
+   `test/vNNN-test.js` (reprend les pins de version, on les retire du test précédent)
+3. Commit FR détaillé → `git push origin main` → CI verte → Render déploie
+4. Vérifier prod : `?v=NNN` dans l'HTML, `/api/health/bot` (0 erreur), CI success
+
+## 📜 HISTORIQUE RÉCENT (décisions à ne pas défaire)
+
+- **v163** : landing « DraftBot-like » REJETÉE (longs textes + fausses données perso) —
+  interdit définitif de ces éléments
+- **v167** : restauration de **l'ancienne page d'origine Nexora** (badge « synchronisé en
+  direct », titre dégradé animé, stats live, 10 fonctionnalités, accent Argile `#e07a5f`).
+  **FINALE — ne plus la retoucher** (le clone DraftBot ne doit pas revenir)
+- **v170/v171** : plus AUCUN texte invisible (mobile + desktop, thème sombre + clair ;
+  l'app suit `prefers-color-scheme`, bloc `hx-light` complet dans dashboard.css)
+- **v172-v176** : le bot « Nexora » devient **« Optimus Prime »** (Discord + code + base).
+  Le SITE garde le nom « Hoxera » (c'est la plateforme). Conservés : chemins `/api/nexora`,
+  variables `NEXORA_ADMIN_*`, noms de fichiers `nexora-*` (procure pas de renommer)
+- **v174** : le nom du bot vit dans la base (renommable via `PATCH /api/bots/1`) ;
+  `provisionHoxera()` ne force PLUS le nom au démarrage
+- **v180** : bannière finale = **« robot 3D cinéma + typographie Poppins »** (fichier
+  historique `banner-pro-final.png`, appliqué sur Discord). L'utilisateur a comparé avec
+  la tête du logo (v178/v179) et préféré celle-ci. Avatar du bot = logo argent
+  « tête de robot » fournie par l'utilisateur (appliquée via API Discord)
+
+## 🎨 IDENTITÉ VISUELLE (pipeline pro)
+
+- **Avatar Discord** = logo argent/noir de l'utilisateur (1024×1024) + même image pour
+  favicon/PWA (`public/icons/nexora-robot-mark*.png`, `icon-*.png`)
+- **Bannière Discord** = 1632×656 (1632 = 5:2) ; même image recadrée pour
+  `public/icons/nexora-profile-banner.png` (1500×600, MP transcription) et
+  `public/icons/support-banner.png` (1696×624, panneaux tickets)
+- **Méthode « pas générée par IA »** : générer le fond/emblème SANS texte, puis composer
+  le texte avec une vraie police (Poppins ExtraBold) via PIL : dégradé argent vertical
+  sur TOUTE la hauteur des capitales + ombre douce + interlettrage. Vérifier par OCR
+  (tesseract) que le texte se lit parfaitement
+- Bio du bot = `aboutText()` dans botManager.js, réappliquée à chaque démarrage
+  (4 lignes : accroche / modules / dashboard / support — limite Discord 190 caractères)
 
 ## ⚠️ PIÈGES CONNUS (appris à la dure)
 
-1. **Frontend** : les assets sont chargés avec `?v=NNN` dans `public/index.html` + cache
-   `botdev-vNNN` dans `public/sw.js` → **INCRÉMENTE LES DEUX à chaque modif frontend**,
-   sinon personne ne voit les changements (PWA/cache navigateur)
-2. **Commandes slash** : GLOBALES uniquement (pas de copies par serveur : doublons).
-   Anti-dérive automatique intégré (vérifie l'état réel chez Discord toutes les 10 min)
-3. **IP partagée Render free** : Discord peut bloquer la passerelle (connexions suspendues).
-   Protections en place : timeout login 5 min, pauses persistantes 10→20 min (`gw_fail_state`),
-   chien de garde patient. Si blocage long : migrer de région via l'API Render (créer un
-   service dans une autre région, copier les env vars, suspendre l'ancien — déjà fait une fois)
-4. **Jamais 2 services actifs** avec le même token Discord
-5. TikTok live = point d'accès non officiel (`/api-live/user/room/`) : peut casser un jour
-6. La base SQLite est EFFACÉE à chaque déploiement Render → tout passe par la
-   restauration GitHub au boot. Ne jamais casser `backup.js`
-7. Détection de secrets dans check.sh : ne jamais mettre de token en dur dans le code
+1. **Cache** : `?v=NNN` ×7 + `botdev-vNNN` (sw.js) à incrémenter à CHAQUE modif frontend
+2. **La base SQLite est éphémère** : restaurée depuis GitHub au boot → **toute modif de
+   données devant survivre à un déploiement** (ex. renommer le bot via l'API) doit être
+   suivie de `POST /api/backup/now` (cookie de session dashboard) sinon elle est perdue
+3. **Cloudflare bloque python urllib sur discord.com** (erreur 1010) : utiliser `curl`
+   pour l'API Discord (avatar, bannière, username, description — tout passe par
+   `PATCH /users/@me` et `PATCH /applications/@me` en base64 data-URI PNG)
+4. **Rôle intégré du bot** : Discord ne le renomme JAMAIS quand on renomme le bot
+   (le nom est figé à l'ajout). Le bot essaie de le faire lui-même au démarrage
+   (`syncBotRoleName`) mais ça ne marche que si le bot possède un rôle AU-DESSUS du sien
+   — sinon 403. Seul remède : le renommer à la main par serveur (Paramètres → Rôles)
+5. **Environnement sandbox de l'agent** (effacé entre les sessions) : `npm install`
+   requis avant `check.sh` ; `git config user.name/email` + remote à restaurer
+   (token GitHub dans `/home/user/agent-config.sh` s'il persiste, sinon l'utilisateur
+   fournit) ; `/tmp` vidé ; tesseract via `apt-get install tesseract-ocr` ;
+   le token du bot se récupère via l'API Render (env vars du service)
+6. **Token GitHub fine-grained expire ~7 jours** : si push refusé, demander un nouveau
+   à l'utilisateur (droits : Contents RW + Workflows RW sur botdev ET botdev-data)
+7. **Commandes slash** : GLOBALES uniquement. **Jamais 2 services actifs** avec le même
+   token. IP Render free peut être bloquée par Discord → migrer de région via l'API
+8. Détection de secrets dans check.sh : **jamais de token en dur** (le dépôt est public)
+9. Ancien token PAT dans les vieux scripts : INVALIDE — toujours tester `api.github.com/user`
 
 ## 🔑 MES ACCÈS (à remplacer avant d'envoyer)
 
-- ⚠️ **Aucun secret dans ce dépôt.** L'utilisateur (nexusdolf-rgb) fournira dans le chat :
-  un token GitHub fine-grained (botdev + botdev-data, Contents RW + Workflows RW),
-  la clé API Render, et le token du bot Discord si nécessaire.
-- Variables d'environnement sur Render (service hoxera → Environment) :
-  `HOXERA_TOKEN` (token Discord), `HOXERA_CLIENT_ID`/`DISCORD_CLIENT_ID` = 1537443352281088000,
-  `DISCORD_CLIENT_SECRET` (OAuth dashboard), `BOTDEV_GH_TOKEN` (sauvegardes),
-  `BOTDEV_DATA_REPO` = nexusdolf-rgb/botdev-data
-- Serveur support officiel : https://discord.gg/X9hTdr9N3 (affiché dans la bio du bot)
+- ⚠️ **Aucun secret dans ce dépôt (public !)**. L'utilisateur (nexusdolf-rgb) fournira
+  dans le chat : token GitHub fine-grained, clé API Render (`rnd_…`), et si besoin le
+  token du bot. Récupération autonome : `GET https://api.render.com/v1/services/
+  srv-da5i2h2jobas73epvos0/env-vars` avec la clé Render (contient HOXERA_TOKEN, etc.)
+- Variables Render : `HOXERA_TOKEN`, `HOXERA_CLIENT_ID`/`DISCORD_CLIENT_ID` =
+  1537443352281088000, `DISCORD_CLIENT_SECRET`, `BOTDEV_GH_TOKEN` (sauvegardes),
+  `BOTDEV_DATA_REPO` = nexusdolf-rgb/botdev-data, `NEXORA_ADMIN_*` (accès fondateur)
+- Serveur support : https://discord.gg/X9hTdr9N3 · Serveur de test :
+  guild `1539668540787925052`
+- Dashboard : session via cookie `botdev_session=<<< … >>>` (l'utilisateur la fournit
+  ou on se connecte via OAuth) — permet `PATCH /api/bots/1`, `POST /api/backup/now`
 
 ## 🚀 PREMIÈRE MISSION DU NOUVEL AGENT
 
 1. Clone `https://github.com/nexusdolf-rgb/botdev`, `npm install`, lis le dernier commit
 2. Vérifie l'état : `https://hoxera.is-a.dev/api/health/bot` (bot en ligne ? erreurs ?)
-3. Lance `bash scripts/check.sh` → doit être 🟢 (43+ tests)
-4. Vérifie mes tokens (GitHub 200, Render 200, Discord `users/@me`)
+3. `bash scripts/check.sh` → doit être 🟢 (112 tests, ~2,5 min)
+4. Vérifie les tokens (GitHub 200, Render 200, Discord `users/@me` avec curl)
 5. Fais-moi un point de situation clair, puis attends mes instructions
 
-## 📌 ÉTAT AU 24/08/2026 (dernière mise à jour de ce document)
+## 📌 ÉTAT AU 29/08/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v2.3** (journal des tickets staff avec récap + note ⭐ auto)
-- Bot en ligne, 7 serveurs, 0 erreur, toutes protections actives
-- Idées en attente (non commencées) : recherche dans les transcriptions depuis le
-  dashboard, rappels récurrents, constructeur d'embeds, /afk
+- Dernière version : **v180** (bannière « robot cinéma » restaurée + ce document)
+- Bot « Optimus Prime » en ligne, 7 serveurs, 0 erreur 24h, 112 tests verts
+- Identité Discord à jour : avatar (logo argent), bannière (robot cinéma + Poppins),
+  username, bio 4 lignes, icône d'application
+- ⏳ En attente utilisateur : renommer le rôle « Nexora » à la main sur 6 serveurs
+  (Discord ne le permet pas automatiquement — voir piège n°4)
+- Idées en attente (non commencées) : fiche membre complète, recherche dans les
+  transcriptions, fil d'activité, classements XP/coins, historique sanctions,
+  rappels récurrents, /afk

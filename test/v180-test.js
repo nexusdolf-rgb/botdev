@@ -1,6 +1,7 @@
 // ══════════════════════════════════════════════════════════════
-// TEST v179 — Bannière : tête premium (re-rendu cinématique de
-// la tête du logo + vignette + double lueur + aura cyan).
+// TEST v180 — Retour à la bannière « robot 3D cinéma » (v177),
+// préférée par l'utilisateur après comparaison avec la version
+// « tête du logo » (v178/v179). Typographie Poppins conservée.
 // ══════════════════════════════════════════════════════════════
 const fs = require('fs');
 const path = require('path');
@@ -42,7 +43,11 @@ const sharp = require('sharp');
   for (const v of rawHead) { if (v > 150) headBright += 1; }
   assert(headBright > 5000, `la tête du logo doit être visible à droite (${headBright} pixels clairs)`);
 
-  // ---------- 4. Version : gérée par le test de la version courante (v180) ----------
+  // ---------- 4. Version v180 ----------
+  assert.strictEqual((index.match(/\?v=180/g) || []).length, 7,
+    'index.html doit référencer v180 7 fois');
+  assert(sw.includes('botdev-v180'), 'le cache du service worker n’est pas en v180');
+  assert(!index.includes('?v=179'), 'index.html référence encore v179');
 
-  console.log('✅ v179-test : bannière tête premium (cinéma) verrouillée');
+  console.log('✅ v180-test : bannière robot 3D cinéma (version préférée) restaurée');
 })().catch((e) => { console.error('❌', e.message); process.exit(1); });
