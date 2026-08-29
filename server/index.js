@@ -152,10 +152,12 @@ async function main() {
     const clientId = process.env.HOXERA_CLIENT_ID || process.env.NOXERA_CLIENT_ID || process.env.NEXORA_CLIENT_ID || process.env.DISCORD_CLIENT_ID || '';
     let bot = store.db.prepare('SELECT * FROM bots ORDER BY id LIMIT 1').get();
     if (bot) {
-      store.bots.update(bot.id, { name: 'Hoxera', token, client_id: clientId || bot.client_id });
+      // v174 : le nom du bot vit dans la base (renommable depuis le dashboard).
+      // Au démarrage on ne resynchronise que les identifiants techniques.
+      store.bots.update(bot.id, { token, client_id: clientId || bot.client_id });
       bot = store.bots.get(bot.id);
     } else {
-      const id = store.bots.create({ user_id: 1, name: 'Hoxera', token, client_id: clientId, prefix: '!' });
+      const id = store.bots.create({ user_id: 1, name: 'Optimus Prime', token, client_id: clientId, prefix: '!' });
       bot = store.bots.get(id);
     }
     console.log(`⚡ Hoxera provisionné (id ${bot.id}, client_id ${clientId || '?'})`);

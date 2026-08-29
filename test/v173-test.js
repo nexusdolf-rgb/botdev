@@ -43,11 +43,7 @@ const sharp = require('sharp');
   assert(svg.includes('#c8ccd2'), 'SVG : casque argent du nouveau logo');
   assert(svg.includes('#111418'), 'SVG : fond noir du nouveau logo');
 
-  // ---------- 4. Version v173 ----------
-  assert.strictEqual((index.match(/\?v=173/g) || []).length, 7,
-    'index.html doit référencer v173 7 fois');
-  assert(sw.includes('botdev-v173'), 'le cache du service worker n’est pas en v173');
-  assert(!index.includes('?v=172'), 'index.html référence encore v172');
+  // ---------- 4. Version : gérée par le test de la version courante (v174) ----------
   assert((sw.match(/nexora-robot-mark/g) || []).length >= 3,
     'le service worker doit mettre en cache les nouveaux visuels');
 
