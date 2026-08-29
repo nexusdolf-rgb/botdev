@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v185**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v186**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -95,13 +95,46 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   sur le fond v177 vidé de son robot. Remplacée dès la v183.
 - **v183** : logo argent calqué sur le fond v177 — remplacé dès la v184.
 - **v184** : retour à la bannière « 3D premium » v179 — remplacée dès la v185.
-- **v185 (ACTUELLE)** : **RETOUR à la bannière « robot 3D cinéma » (v177)** — la favorite
+- **v185** : **RETOUR à la bannière « robot 3D cinéma » (v177)** — la favorite
   de l'utilisateur, identifiée par LUI parmi 4 candidates présentées en image (sa
   description : « police professionnelle + tête de robot avec des couleurs »). Fichier
   actif : `assets/banner-pro-final.png`, appliqué TEL QUEL (hash Discord 6b5b30ea78d3 =
   celui des époques v177/v180 → fichier identique à l'octet près). C'est la 2e restauration
   de cette bannière (v180 puis v185) : après v177→v185, l'utilisateur a comparé robot
   cinéma / tête premium / logo argent et revient à la v177.
+- **v186 (ACTUELLE)** : **AUDIT UI COMPLET DU DASHBOARD** (demande : « plein de
+  débordements de textes » + « aucune trace des bugs » avant déploiement). Audit
+  Puppeteer maison (`/home/user/audit-tools/audit.js` + `audit2.js`) : 12 passes
+  (6 tailles d'écran 320→1920px × 18 modules × 2 thèmes + modales + page admin +
+  contraste mode clair) → **0 problème**. Correctifs (fin de `dashboard.css`, bloc
+  « AUDIT UI v186 » + correctifs 6-22) :
+  1. topbar ≤520px (marges -12px vs padding), badge cloche `hidden` écrasé par
+     `display:inline-flex`, pied `.card-actions` injecté dans la colonne 36px des
+     grilles de cartes (`grid-column:1/-1` + boutons nowrap + `flex:1 1 auto`),
+     `.am-warning-grid` 2 colonnes 521-1100px.
+  2. Labels écrasés : `.setting-row > .dash-label { flex:1 1 auto; min-width:100px;
+     overflow-wrap:anywhere }` + `input[type=number]{min-width:84px}`.
+  3. **LE bug « textes cachés » v171 (ordinateur de l'utilisateur = thème CLAIR)** :
+     la couche « Discord » du CSS (l.3000-4300, sédiment v9-v13) code ses couleurs
+     EN DUR et redéfinit les variables sur `:root` → en thème clair : ~20 surfaces
+     sombres (`#40444b/#2b2d31` dont certaines avec `!important`) + ~200 textes
+     `#b5bac1/#f2f3f5` illisibles (ratio 1,8-2). Fix : bloc light complet en fin de
+     fichier — remap des variables (`--d-dim:#5d6375`, `--d-surface-*`…), flip des
+     surfaces avec `!important` (la couche sédimentaire en utilise → il en faut aussi),
+     textes internes foncés via `:is(...)` groupé, puis RÉ-AFFIRMATION des couleurs
+     d'accent (vert statut `#178a43`, bandeau jaune `#8a6d00`, boutons primaires).
+  4. **Les 5 maquettes « comme sur Discord » restent sombres dans les 2 thèmes**
+     (`.dc-preview`, `.adv-discord-preview`, `.ca-discord-preview`, `.eb-discord`,
+     panneau tickets) : textes clairs dessus, ratios mesurés 4,5-12,6 → lisibles.
+  5. Cartes « types de tickets » à 1024px : cellules de 151px → labels `min-width:0`,
+     `.adv-type-head{flex-wrap:wrap}` (la ligne emoji+nom+couleur débordait de 11px).
+  6. Auto-Mod à 320px : `.am-native-grid` en `minmax(0,1fr)` (la colonne gonflait à
+     325px derrière un sélecteur custom réfractaire au rétrécissement).
+  7. Puces d'action rapides de l'accueil ≤360px (« Personnaliser » clippé de 3px).
+  8. Chips des jours d'annonces : `minmax(125px,1fr)` dans `dashboard.js` (« Dimanche »).
+  ⚠️ Leçons : le thème clair se teste avec un VRAI audit contraste (passe D) ; les
+  overrides light doivent gagner contre `!important` ; jamais de `white-space:nowrap`
+  sans base flex correcte ; jamais de flip de surface sans gérer ses textes internes.
   (Précédent v183 : fond v177 (sans robot) + LOGO ARGENT calqué
   (l'avatar Discord du bot, `optimus-logo-v2.png`, choisi par l'utilisateur : « pas celui
   que tu viens de créer il y a 4 minutes »). Pose en mode **écran** : le fond noir pur de
@@ -175,9 +208,9 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 
 ## 📌 ÉTAT AU 29/08/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v185** (retour à la bannière robot 3D cinéma v177 — choix
-  confirmé par l'utilisateur parmi 4 candidates)
-- Bot « Optimus Prime » en ligne, 7 serveurs, 0 erreur 24h, 117 tests verts
+- Dernière version : **v186** (audit UI complet du dashboard : 0 problème sur 12 passes
+  Puppeteer — 320→1920px, thèmes sombre + clair, modales, admin, contraste)
+- Bot « Optimus Prime » en ligne, 7 serveurs, 0 erreur 24h, 118 tests verts
 - Identité Discord à jour : avatar (logo argent), bannière (v185 = v177 robot cinéma),
   username, bio 4 lignes, icône d'application
 - ⏳ En attente utilisateur : renommer le rôle « Nexora » à la main sur 6 serveurs

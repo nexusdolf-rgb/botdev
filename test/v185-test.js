@@ -43,11 +43,7 @@ const sharp = require('sharp');
   for (const v of rawHead) { if (v > 150) headBright += 1; }
   assert(headBright > 5000, `la tête premium doit être visible (${headBright} pixels clairs)`);
 
-  // ---------- 4. Version v185 ----------
-  assert.strictEqual((index.match(/\?v=185/g) || []).length, 7,
-    'index.html doit référencer v185 7 fois');
-  assert(sw.includes('botdev-v185'), 'le cache du service worker n’est pas en v185');
-  assert(!index.includes('?v=184'), 'index.html référence encore v184');
+  // ---------- 4. Version : gérée par le test de la version courante (v186) ----------
 
   console.log('✅ v185-test : bannière robot 3D cinéma (v177) restaurée — choix confirmé par l\u2019utilisateur');
 })().catch((e) => { console.error('❌', e.message); process.exit(1); });

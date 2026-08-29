@@ -61,7 +61,9 @@ assert(css.includes(`.ov-intro-health b { color: #1a7f42; }`),
   'pastille de santé lisible en clair');
 
 // ---------- 9. Chaque nouveau sélecteur v171 est bien préfixé hx-light ----------
-const sel171 = css.split('v171 —')[1] || '';
+// (borné au bloc v171 : les passes suivantes — v186 audit UI — ont leurs
+//  propres correctifs de mise en page valides pour les deux thèmes)
+const sel171 = (css.split('v171 —')[1] || '').split('AUDIT UI v186')[0];
 assert(!/\n(?!\s*\/|\*|html\.hx-light|\s*$)[a-z.#[]/.test(sel171),
   'la passe v171 ne doit cibler QUE html.hx-light');
 

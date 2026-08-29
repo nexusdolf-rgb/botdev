@@ -4377,10 +4377,17 @@ html.hx-light { color-scheme: light; }
 }
 .setting-row:last-child { border-bottom: none; padding-bottom: 4px; }
 .setting-row > .dash-label {
-  flex: 1; min-width: 0; margin: 0 !important;
+  /* 🔧 AUDIT v186 : « flex:1 » (base 0) laissait l'étiquette rétrécir
+     jusqu'à 11px dans les lignes étroites → textes invisibles.
+     Base « auto » + minimum : l'étiquette garde une taille lisible
+     et passe sur 2 lignes si besoin. */
+  flex: 1 1 auto; min-width: 100px; margin: 0 !important;
   font-size: 13.5px; font-weight: 650; color: var(--d-text);
+  overflow-wrap: anywhere;
 }
 .setting-row > .dash-select, .setting-row > input.dash-input { width: 300px; flex: 0 1 300px; }
+/* Les champs numériques peuvent rétrécir davantage (ils restent utilisables) */
+.setting-row > input.dash-input[type="number"] { min-width: 84px; }
 .setting-row > textarea.dash-input { flex: 1 1 100%; min-height: 90px; }
 .setting-row > label.switch { flex-shrink: 0; }
 .setting-row > .dash-roles-multi, .setting-row > .discord-multi-host, .setting-row > .dd-host { flex: 0 1 340px; max-width: 340px; }
@@ -4747,3 +4754,316 @@ html.hx-light .dashboard-shell-host .ov-intro-health b { color: #1a7f42; }
 /* Annonces personnalisées : libellé d'aperçu sur surface sombre (idem v171) */
 html.hx-light .dashboard-shell-host .ca-preview-label { color: #f2f3f5; }
 html.hx-light .dashboard-shell-host .ca-preview-label span { color: #b5bac1; }
+
+/* ════════════════════════════════════════════════════════════════
+   🔧 AUDIT UI v186 — correctifs de débordements (mesurés au pixel)
+   Audit programmatique : 375px + 1440px × thèmes clair/sombre,
+   18 modules + picker + grille de serveurs.
+   ════════════════════════════════════════════════════════════════ */
+
+/* 1️⃣ Scroll horizontal de 2px sur mobile : à ≤520px le contenu n'a
+   que 10px de marge interne mais d'anciens blocs imposent encore
+   -12px à la topbar → elle dépasse de 2px de chaque côté.
+   Ce bloc, placé en FIN de fichier, gagne la cascade. */
+@media (max-width: 520px) {
+  .dash-main,
+  .dashboard-shell-host .dash-main { padding-left: 10px; padding-right: 10px; }
+  .dash-topbar,
+  .dashboard-shell-host .dash-topbar {
+    margin-left: -10px;
+    margin-right: -10px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+}
+
+/* 2️⃣ Cloche 🔔 rognée : .bell-badge { display:inline-flex } écrasait
+   l'attribut hidden → le badge vide prenait de la place. */
+.bell-badge[hidden] { display: none !important; }
+
+/* 3️⃣ Pied de carte (.card-actions) dans les cartes en grille : il
+   atterrissait dans la colonne de l'icône (36px) → bouton « Ouvrir → »
+   écrasé. Il doit traverser toute la carte, et un bouton ne rétrécit
+   jamais sous la taille de son texte. */
+.dash-card > .card-actions { grid-column: 1 / -1; }
+.card-actions .dash-btn { flex-shrink: 0; white-space: nowrap; max-width: 100%; }
+
+/* 4️⃣ Grille « avertissements » : 3 colonnes trop étroites entre 521
+   et 1100px (étiquettes écrasées) → 2 colonnes, puis 1 sur mobile. */
+@media (max-width: 1100px) and (min-width: 521px) {
+  .am-warning-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* 5️⃣ Boutons d'action sur mobile : « flex:1 » (base 0) donnait à chaque
+   bouton une part égale de la ligne, plus étroite que son texte.
+   Base « auto » : chaque bouton garde au moins la largeur de son
+   libellé, les autres passent à la ligne (flex-wrap). */
+@media (max-width: 700px) {
+  .card-actions .dash-btn { flex: 1 1 auto; }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   🔧 AUDIT UI v186 (suite) — MODE CLAIR : remap complet de la
+   couche « Discord » (v9-v13). Cette couche codait ses couleurs en
+   dur : fonds #40444b/#2b2d31, textes #b5bac1/#f2f3f5. Résultat en
+   mode clair (celui de l'ordinateur de l'utilisateur) : grandes
+   zones sombres + ~194 textes illisibles (ratio 1,8).
+   ════════════════════════════════════════════════════════════════ */
+
+/* 6️⃣ Variables du shell, version claire (priorité sur :root sombre) */
+html.hx-light .dashboard-shell-host,
+html.hx-light body:has(.dashboard-shell-host) {
+  --d-bg: #f2f3f8; --d-side: #ffffff; --d-card: #ffffff; --d-card2: #f0f1f7;
+  --d-border: #dfe2ec; --d-border-soft: #c8ccd6; --d-border-strong: #b6bcc7;
+  --d-text: #1c1e26; --d-dim: #5d6375; --d-green: #178a43;
+  --d-glow: rgba(224, 122, 95, .18);
+}
+
+/* 7️⃣ Textes « clairs sur sombre » → foncés sur clair */
+html.hx-light body:has(.dashboard-shell-host) .navbar .logo-row,
+html.hx-light .dashboard-shell-host .dash-side-brand-copy b,
+html.hx-light .dashboard-shell-host .dash-crumb .crumb-txt b,
+html.hx-light .dashboard-shell-host .dash-bot-chip .chip-txt b,
+html.hx-light .dashboard-shell-host .dash-card[data-dash-card] .card-heading h3,
+html.hx-light .dashboard-shell-host .ov-intro-copy h2,
+html.hx-light .dashboard-shell-host .dd-trigger,
+html.hx-light .dashboard-shell-host .dash-select option { color: #1c1e26; }
+html.hx-light .dashboard-shell-host .module-header-copy h1 { color: #1c1e26 !important; -webkit-text-fill-color: #1c1e26 !important; }
+html.hx-light .dashboard-shell-host .dash-stat .val { color: #1c1e26 !important; -webkit-text-fill-color: #1c1e26 !important; }
+html.hx-light .dashboard-shell-host .dash-select option { background: #ffffff; }
+
+/* 8️⃣ Textes gris pâles (#b5bac1 → gris lisible) */
+html.hx-light body:has(.dashboard-shell-host) .navbar .user-pill,
+html.hx-light .dashboard-shell-host .dash-side-brand-copy span,
+html.hx-light .dashboard-shell-host .dash-side-item,
+html.hx-light .dashboard-shell-host .dash-side-item svg,
+html.hx-light .dashboard-shell-host .dash-crumb .crumb-txt span,
+html.hx-light .dashboard-shell-host .dash-iconbtn,
+html.hx-light .dashboard-shell-host .module-back,
+html.hx-light .dashboard-shell-host .module-status,
+html.hx-light .dashboard-shell-host .module-header-copy .sub,
+html.hx-light .dashboard-shell-host .dash-card[data-dash-card] .card-heading .desc,
+html.hx-light .dashboard-shell-host .dash-card[data-dash-card] .dash-label,
+html.hx-light .dashboard-shell-host .dash-stat .lbl,
+html.hx-light .dashboard-shell-host .ov-intro-copy p,
+html.hx-light .dashboard-shell-host .ov-quick-label,
+html.hx-light .dashboard-shell-host .dash-table th,
+html.hx-light .dashboard-shell-host .dash-badge { color: #5d6375; }
+
+/* 9️⃣ Textes gris moyens (#949ba4 → plus foncés) et icônes */
+html.hx-light .dashboard-shell-host .dash-side-section,
+html.hx-light .dashboard-shell-host .dash-side-foot,
+html.hx-light .dashboard-shell-host .dash-input::placeholder { color: #6a7080; }
+html.hx-light .dashboard-shell-host .dash-side-item > svg,
+html.hx-light .dashboard-shell-host .dash-side-item > i { color: #2e3338; }
+
+/* 🔟 Surfaces sombres → claires */
+html.hx-light .dashboard-shell-host .am-control-hero,
+html.hx-light .dashboard-shell-host .am-mode-row,
+html.hx-light .dashboard-shell-host .am-policy-row,
+html.hx-light .dashboard-shell-host .am-warning-panel,
+html.hx-light .dashboard-shell-host .am-blacklist-config,
+html.hx-light .dashboard-shell-host .ov-config-row .check-item,
+html.hx-light .dashboard-shell-host .adv-types-panel,
+html.hx-light .dashboard-shell-host .adv-preview-shell,
+html.hx-light .dashboard-shell-host .dash-badge { background: #eef0f5; }
+html.hx-light .dashboard-shell-host .adv-type-card,
+html.hx-light .dashboard-shell-host .am-rule-card,
+html.hx-light .dashboard-shell-host .am-shield-icon,
+html.hx-light .dashboard-shell-host .am-rule-icon,
+html.hx-light .dashboard-shell-host .ov-module-icon { background: #f7f8fb; }
+html.hx-light .dashboard-shell-host .adv-discord-preview { background: radial-gradient(240px 100px at 100% 0%, rgba(var(--d-accent-rgb), .1), transparent 70%), #313338; color: #dbdee1; }
+/* ℹ️ Les aperçus « comme sur Discord » (.dc-preview, .adv-discord-preview,
+   .ca-discord-preview, .eb-discord) restent sombres dans les DEUX thèmes :
+   ce sont des maquettes de messages Discord (textes clairs dessus = lisibles). */
+html.hx-light .dashboard-shell-host .ov-hero-chip { background: rgba(255, 255, 255, .78); color: #1c1e26; }
+html.hx-light .dashboard-shell-host .dash-side-brand-avatar,
+html.hx-light .dashboard-shell-host .logo { background: #ffffff; border-color: #dfe2ec; color: #1c1e26; }
+html.hx-light .dashboard-shell-host .dash-table th { background: #f0f1f7; }
+html.hx-light .dashboard-shell-host .dash-iconbtn { background: #ffffff; border-color: #c8ccd6; }
+html.hx-light .dashboard-shell-host .ov-quick-action { background: #ffffff; border-color: #dfe2ec; color: #1c1e26; }
+
+/* 1️⃣1️⃣ Survol et boutons : plus de blanc-sur-sombre */
+html.hx-light .dashboard-shell-host .dash-side-item:hover,
+html.hx-light .dashboard-shell-host .dash-iconbtn:hover,
+html.hx-light .dashboard-shell-host .module-back:hover,
+html.hx-light .dashboard-shell-host .dash-btn:hover,
+html.hx-light body:has(.dashboard-shell-host) .navbar .btn:hover { color: #1c1e26; background: #e3e6ee; border-color: #b6bcc7; }
+html.hx-light .dashboard-shell-host .dash-btn { color: #2e3338; }
+html.hx-light .dashboard-shell-host .dash-btn-primary { color: #ffffff !important; }
+
+/* 1️⃣2️⃣ Pastilles « en ligne » et bandeau jaune : teintes lisibles en clair */
+html.hx-light .dashboard-shell-host .dash-badge.ok,
+html.hx-light .dashboard-shell-host .module-status.is-online,
+html.hx-light .dashboard-shell-host .dash-bot-chip .chip-txt .on { color: #178a43; }
+html.hx-light .dashboard-shell-host .module-status.is-online { border-color: rgba(23, 138, 67, .35); background: rgba(23, 138, 67, .08); }
+html.hx-light .dashboard-shell-host .dash-badge.ok { border-color: rgba(23, 138, 67, .4); background: rgba(23, 138, 67, .08); }
+html.hx-light .dashboard-shell-host .am-panel-title > span,
+html.hx-light .dashboard-shell-host .am-result.observe,
+html.hx-light .dashboard-shell-host .am-result.warning { color: #8a6d00; border-color: rgba(180, 140, 10, .35); background: rgba(254, 231, 92, .22); }
+
+/* 1️⃣3️⃣ Topbar mobile et sidebar : fonds sombres résiduels */
+html.hx-light .dashboard-shell-host .dash-topbar { background: #ffffff; border-bottom-color: #dfe2ec; }
+html.hx-light .dashboard-shell-host .dash-side { background: #ffffff; }
+html.hx-light .dashboard-shell-host .slider { background: #c8ccd6; }
+html.hx-light .dashboard-shell-host .slider::-webkit-slider-thumb { background: #ffffff; border-color: #b6bcc7; }
+
+/* 1️⃣4️⃣ AUDIT v186 — cartes « types de tickets » (adv-type-card)
+   À 1024px les cellules font 151px : le label (min-width 100px)
+   écrasait le sélecteur custom à 27px, et la ligne d'en-tête
+   (emoji + nom + couleur + poubelle) débordait de 11px. */
+.dashboard-shell-host .adv-type-head { flex-wrap: wrap; }
+.dashboard-shell-host .adv-type-card .setting-row > .dash-label { min-width: 0; }
+.dashboard-shell-host .adv-type-card .setting-row > .dd-host { min-width: 0; max-width: 100%; }
+
+/* 1️⃣5️⃣ AUDIT v186 — Auto-Mod à 320px : la grille .am-native-grid
+   laissait son unique colonne grossir à la taille du sélecteur
+   (325px) au lieu de rester à la largeur de l'écran. minmax(0,1fr)
+   = colonne jamais plus large que son conteneur. */
+@media (max-width: 520px) {
+  .dashboard-shell-host .am-native-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .dashboard-shell-host .am-native-grid > * { min-width: 0; max-width: 100%; }
+  .dashboard-shell-host .setting-row > .dd-host { min-width: 0; max-width: 100%; }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   🔧 AUDIT UI v186 (fin) — MODE CLAIR, passe 2. La couche sédimentaire
+   (l.3300-3840) force des fonds sombres avec !important : les overrides
+   simples perdaient la cascade. Contre-attaque : !important + sélecteur
+   plus précis + fin de fichier = victoire garantie.
+   ════════════════════════════════════════════════════════════════ */
+
+/* 1️⃣6️⃣ Surfaces #40444b/#36393f → gris clair */
+html.hx-light .dashboard-shell-host .ov-intro,
+html.hx-light .dashboard-shell-host .dash-hero,
+html.hx-light .dashboard-shell-host .ov-module-card,
+html.hx-light .dashboard-shell-host .ov-checklist-card,
+html.hx-light .dashboard-shell-host .ov-feed-card,
+html.hx-light .dashboard-shell-host .ov-brief-card,
+html.hx-light .dashboard-shell-host .dash-stat,
+html.hx-light .dashboard-shell-host .am-control-hero,
+html.hx-light .dashboard-shell-host .am-mode-row,
+html.hx-light .dashboard-shell-host .am-policy-row,
+html.hx-light .dashboard-shell-host .am-warning-panel,
+html.hx-light .dashboard-shell-host .am-blacklist-config,
+html.hx-light .dashboard-shell-host .am-native-card,
+html.hx-light .dashboard-shell-host .am-control-card,
+html.hx-light .dashboard-shell-host .am-exceptions-card,
+html.hx-light .dashboard-shell-host .am-summary-card,
+html.hx-light .dashboard-shell-host .am-simulator-card,
+html.hx-light .dashboard-shell-host .custom-announcement-card,
+html.hx-light .dashboard-shell-host .adv-builder-card,
+html.hx-light .dashboard-shell-host .adv-types-panel,
+html.hx-light .dashboard-shell-host .adv-preview-shell,
+html.hx-light .dashboard-shell-host .ca-preview-wrap,
+html.hx-light .dashboard-shell-host .ov-config-row,
+html.hx-light .dashboard-shell-host .ov-home-side-section,
+html.hx-light .dashboard-shell-host .ov-config-empty {
+  background: #eef0f5 !important;
+  border-color: #dfe2ec !important;
+  box-shadow: 0 6px 18px -16px rgba(35, 40, 80, .25) !important;
+}
+
+/* 1️⃣7️⃣ Surfaces #2b2d31 → blanc cassé */
+html.hx-light .dashboard-shell-host .am-rule-card,
+html.hx-light .dashboard-shell-host .adv-type-card,
+html.hx-light .dashboard-shell-host .ov-module-icon,
+html.hx-light .dashboard-shell-host .am-shield-icon,
+html.hx-light .dashboard-shell-host .am-rule-icon {
+  background: #f7f8fb !important;
+  border-color: #dfe2ec !important;
+  box-shadow: none !important;
+}
+html.hx-light .dashboard-shell-host .am-shield-icon,
+html.hx-light .dashboard-shell-host .am-rule-icon { color: #2e3338; }
+html.hx-light .dashboard-shell-host .am-blacklist-preview-icon { background: rgba(240, 108, 117, .12) !important; color: #b3424d; }
+
+/* 1️⃣8️⃣ Petits éléments sombres résiduels */
+html.hx-light .dashboard-shell-host .crumb-ico { background: #eef0f5 !important; }
+html.hx-light .dashboard-shell-host .module-status { background: rgba(23, 138, 67, .08) !important; }
+html.hx-light .dashboard-shell-host .ov-module-card > .dash-btn { background: #ffffff !important; color: #2e3338 !important; border-color: #c8ccd6 !important; }
+html.hx-light .dashboard-shell-host .ov-progress-track { background: #dfe2ec !important; }
+html.hx-light .dashboard-shell-host .am-native-toggle i,
+html.hx-light .dashboard-shell-host .switch .slider { background: #c8ccd6 !important; border-color: #b6bcc7 !important; box-shadow: none !important; }
+html.hx-light .dashboard-shell-host .dash-filter,
+html.hx-light .dashboard-shell-host .am-choice,
+html.hx-light .dashboard-shell-host .ca-choice,
+html.hx-light .dashboard-shell-host .discord-multi-choice { background: #ffffff !important; border-color: #c8ccd6 !important; }
+html.hx-light .dashboard-shell-host .dash-filter,
+html.hx-light .dashboard-shell-host .am-choice,
+html.hx-light .dashboard-shell-host .ca-choice { color: #2e3338; }
+html.hx-light .dashboard-shell-host .dash-mobile-server-item { background: #ffffff !important; color: #1c1e26 !important; }
+html.hx-light .dashboard-shell-host .ov-server-avatar { background: #ffffff; }
+html.hx-light .dashboard-shell-host .adv-count { color: #7a4a3a; }
+html.hx-light .dashboard-shell-host .ov-quick-action small,
+html.hx-light .dashboard-shell-host .ov-quick-action span { color: #5d6375; }
+html.hx-light .dashboard-shell-host .ov-feed-card small,
+html.hx-light .dashboard-shell-host .ov-feed-card span,
+html.hx-light .dashboard-shell-host .ov-brief-card small,
+html.hx-light .dashboard-shell-host .ov-brief-card span,
+html.hx-light .dashboard-shell-host .ov-feed-empty,
+html.hx-light .dashboard-shell-host .ov-home-side-section small,
+html.hx-light .dashboard-shell-host .ov-home-side-section span { color: #5d6375; }
+html.hx-light .dashboard-shell-host .ov-intro-copy b { color: #157347; }
+html.hx-light .dashboard-shell-host .ov-intro-copy small { color: #5d6375; }
+
+/* 1️⃣9️⃣ Textes internes des panneaux Auto-Mod / tickets */
+html.hx-light .dashboard-shell-host .am-rule-card b,
+html.hx-light .dashboard-shell-host .am-blacklist-config b,
+html.hx-light .dashboard-shell-host .am-warning-panel b,
+html.hx-light .dashboard-shell-host .am-policy-row b,
+html.hx-light .dashboard-shell-host .am-mode-row b,
+html.hx-light .dashboard-shell-host .am-control-hero b { color: #1c1e26; }
+html.hx-light .dashboard-shell-host .am-rule-card small,
+html.hx-light .dashboard-shell-host .am-blacklist-config small,
+html.hx-light .dashboard-shell-host .am-warning-panel small,
+html.hx-light .dashboard-shell-host .am-policy-row small,
+html.hx-light .dashboard-shell-host .am-mode-row small,
+html.hx-light .dashboard-shell-host .am-control-hero small { color: #5d6375; }
+html.hx-light .dashboard-shell-host .am-rule-label,
+html.hx-light .dashboard-shell-host .am-blacklist-config label,
+html.hx-light .dashboard-shell-host .am-warning-panel label { color: #5d6375; }
+html.hx-light .dashboard-shell-host .dd-add-btn { background: #ffffff !important; color: #178a43 !important; }
+html.hx-light .dashboard-shell-host .am-blacklist-preview b { color: #5d6375; }
+html.hx-light .dashboard-shell-host .am-filter { color: #8f3d2c; }
+html.hx-light .dashboard-shell-host .adv-question-count { color: #4752c4; }
+
+/* 2️⃣0️⃣ AUDIT v186 — très petits écrans (≤360px) : les 4 puces
+   d'action rapide de l'accueil (« Configurer », « Personnaliser »…)
+   étaient 3px trop larges → padding et police resserrés. */
+@media (max-width: 360px) {
+  .dashboard-shell-host .ov-quick-action { padding: 7px 7px; gap: 6px; font-size: 11.5px; }
+  .dashboard-shell-host .ov-quick-actions { padding: 7px; gap: 6px; }
+}
+
+/* 2️⃣1️⃣ AUDIT v186 — MODE CLAIR, passe 3 : les textes internes des
+   surfaces fraîchement éclaircies (titres #f2f3f5, petites lignes
+   #b5bac1) deviennent foncés, une fois pour toutes. */
+html.hx-light .dashboard-shell-host :is(.ov-intro, .dash-hero, .ov-module-card, .ov-checklist-card, .ov-feed-card, .ov-brief-card, .dash-stat, .am-control-hero, .am-mode-row, .am-policy-row, .am-warning-panel, .am-blacklist-config, .am-native-card, .am-control-card, .am-exceptions-card, .am-summary-card, .am-simulator-card, .custom-announcement-card, .adv-builder-card, .adv-types-panel, .adv-preview-shell, .ca-preview-wrap, .ov-config-row, .ov-home-side-section, .ov-config-empty, .am-rule-card, .adv-type-card) :is(h1, h2, h3, h4, b, strong) { color: #1c1e26; }
+html.hx-light .dashboard-shell-host :is(.ov-intro, .dash-hero, .ov-module-card, .ov-checklist-card, .ov-feed-card, .ov-brief-card, .dash-stat, .am-control-hero, .am-mode-row, .am-policy-row, .am-warning-panel, .am-blacklist-config, .am-native-card, .am-control-card, .am-exceptions-card, .am-summary-card, .am-simulator-card, .custom-announcement-card, .adv-builder-card, .adv-types-panel, .adv-preview-shell, .ca-preview-wrap, .ov-config-row, .ov-home-side-section, .ov-config-empty, .am-rule-card, .adv-type-card) :is(small, label, span) { color: #5d6375; }
+
+/* …sauf les maquettes Discord, qui restent sombres (textes hérités clairs). */
+html.hx-light .dashboard-shell-host :is(.dc-preview, .adv-discord-preview, .ca-discord-preview, .eb-discord) { color: #dbdee1; }
+html.hx-light .dashboard-shell-host :is(.dc-preview, .adv-discord-preview, .ca-discord-preview, .eb-discord) :is(h1, h2, h3, h4, b, strong, small, span, label, p) { color: inherit; }
+html.hx-light .dashboard-shell-host .adv-discord-title { color: #f2f3f5; }
+
+/* Couleurs d'accent ré-affirmées APRÈS le passage générique. */
+html.hx-light .dashboard-shell-host .dash-badge.ok,
+html.hx-light .dashboard-shell-host .module-status.is-online,
+html.hx-light .dashboard-shell-host .dash-bot-chip .chip-txt .on { color: #178a43; }
+html.hx-light .dashboard-shell-host .am-panel-title > span,
+html.hx-light .dashboard-shell-host .am-result.observe,
+html.hx-light .dashboard-shell-host .am-result.warning { color: #8a6d00; border-color: rgba(180, 140, 10, .35); background: rgba(254, 231, 92, .22); }
+html.hx-light .dashboard-shell-host .adv-types-panel .adv-type-number { color: #4752c4; }
+html.hx-light .dashboard-shell-host .dash-btn-primary { color: #ffffff !important; }
+html.hx-light .dashboard-shell-host .ov-eyebrow { color: #c95b49; }
+
+/* 2️⃣2️⃣ AUDIT v186 — 2 derniers textes pâles en mode clair :
+   le titre « 👀 Aperçu Discord » (couleur héritée du shell sombre)
+   et la boîte « Aucun membre blacklisté ». */
+html.hx-light .dashboard-shell-host .adv-preview-shell,
+html.hx-light .dashboard-shell-host .adv-preview-title { color: #1c1e26; }
+html.hx-light .dashboard-shell-host .adv-preview-title span { color: #178a43; }
+html.hx-light .dashboard-shell-host .ca-preview-label span { color: #178a43; }
+html.hx-light .dashboard-shell-host .am-blacklist-empty b { color: #1c1e26; }
+html.hx-light .dashboard-shell-host .am-blacklist-empty small { color: #5d6375; }

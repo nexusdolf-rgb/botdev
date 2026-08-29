@@ -3845,7 +3845,7 @@ Dashboard.renderers.announcements = async (content, data) => {
       <div style="flex:1;min-width:110px"><label class="dash-label">Minute (0-59)</label><input class="dash-input" id="a-minute" type="number" min="0" max="59" value="0" /></div>
     </div>
     <label class="dash-label" style="margin-top:10px">Jours</label>
-    <div class="dash-filter-grid" style="grid-template-columns:repeat(auto-fit,minmax(90px,1fr))">
+    <div class="dash-filter-grid" style="grid-template-columns:repeat(auto-fit,minmax(125px,1fr))">
       ${['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'].map((d, i) => `
         <label class="dash-filter"><input type="checkbox" data-day="${i + 1}" checked /><span><b>${d}</b></span></label>`).join('')}
     </div>
