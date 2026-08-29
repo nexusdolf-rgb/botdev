@@ -1,7 +1,6 @@
 // ══════════════════════════════════════════════════════════════
-// TEST v178 — Bannière : la tête du logo du profil est désormais
-// dans la bannière (identité visuelle unifiée avatar + bannière).
-// Typographie réelle Poppins conservée (voir v177).
+// TEST v179 — Bannière : tête premium (re-rendu cinématique de
+// la tête du logo + vignette + double lueur + aura cyan).
 // ══════════════════════════════════════════════════════════════
 const fs = require('fs');
 const path = require('path');
@@ -43,7 +42,11 @@ const sharp = require('sharp');
   for (const v of rawHead) { if (v > 150) headBright += 1; }
   assert(headBright > 5000, `la tête du logo doit être visible à droite (${headBright} pixels clairs)`);
 
-  // ---------- 4. Version : gérée par le test de la version courante (v179) ----------
+  // ---------- 4. Version v179 ----------
+  assert.strictEqual((index.match(/\?v=179/g) || []).length, 7,
+    'index.html doit référencer v179 7 fois');
+  assert(sw.includes('botdev-v179'), 'le cache du service worker n’est pas en v179');
+  assert(!index.includes('?v=178'), 'index.html référence encore v178');
 
-  console.log('✅ v178-test : bannière unifiée (tête du logo + typo réelle) verrouillée');
+  console.log('✅ v179-test : bannière tête premium (cinéma) verrouillée');
 })().catch((e) => { console.error('❌', e.message); process.exit(1); });
