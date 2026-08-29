@@ -70,11 +70,7 @@ const sharp = require('sharp');
   const st = fs.statSync(path.join(root, 'public/icons/nexora-profile-banner.png'));
   assert(st.size > 400000, 'bannière MP : version HD attendue');
 
-  // ---------- 4. Version v176 ----------
-  assert.strictEqual((index.match(/\?v=176/g) || []).length, 7,
-    'index.html doit référencer v176 7 fois');
-  assert(sw.includes('botdev-v176'), 'le cache du service worker n’est pas en v176');
-  assert(!index.includes('?v=175'), 'index.html référence encore v175');
+  // ---------- 4. Version : gérée par le test de la version courante (v177) ----------
 
   console.log('✅ v176-test : bannière finale + rôle du bot synchronisé partout');
 })().catch((e) => { console.error('❌', e.message); process.exit(1); });
