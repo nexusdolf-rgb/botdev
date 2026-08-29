@@ -1,5 +1,5 @@
 // ============================================================
-// Test Hoxera v48 — Nouveau panneau visuel « Nexora »
+// Test Hoxera v48 — Nouveau panneau visuel « Optimus Prime »
 // Objectif : le panneau RESSEMBLE à la référence, mais TOUTE la
 // logique reste identique (menu, custom_id, création, permissions,
 // questionnaire, fermeture).
@@ -39,8 +39,8 @@ const check = (label, cond) => {
   const embed = sent[0].embeds[0].toJSON();
   const select = sent[0].components[0].components[0].toJSON();
   check('panneau : UN SEUL menu déroulant', sent[0].components[0].components.length === 1);
-  check('panneau : titre exact', embed.title === '👑 Support | Nexora');
-  check('panneau : bienvenue exacte', embed.description.startsWith('Bienvenue sur le support officiel de Nexora'));
+  check('panneau : titre exact', embed.title === '👑 Support | Optimus Prime');
+  check('panneau : bienvenue exacte', embed.description.startsWith('Bienvenue sur le support officiel de Optimus Prime'));
   check('panneau : description exacte présente', embed.description.includes('sélectionnez la catégorie correspondante à votre besoin via le menu ci-dessous'));
   check('panneau : bannière après le texte (image)', embed.image && embed.image.url.includes('/api/tickets/panel-banner/G1.'));
   check('menu : custom_id INTACT', select.custom_id === `bd-ttype:${BOT}`);
@@ -61,7 +61,7 @@ const check = (label, cond) => {
   const oldChannel = {
     id: 'C2', name: 'support',
     messages: { fetch: async () => ({ values: () => [
-      mkMsg('m1', '👑 Support | Nexora', [{ components: [{ customId: 'bd-ttype:1' }] }]),
+      mkMsg('m1', '👑 Support | Optimus Prime', [{ components: [{ customId: 'bd-ttype:1' }] }]),
       mkMsg('m2', 'Un message normal'),
       mkMsg('m3', '👑 Support | Carré RP'),
     ] }) },
@@ -165,6 +165,6 @@ const check = (label, cond) => {
   check('logique : ticket marqué fermé (registre)', store.closedTickets.isClosed('tk-1'));
 
   store.db.close();
-  console.log(failures === 0 ? '\n✅ V48 — Nouveau panneau Nexora appliqué, logique 100 % intacte. 🎉' : `\n❌ ${failures} vérification(s) en échec`);
+  console.log(failures === 0 ? '\n✅ V48 — Nouveau panneau Optimus Prime appliqué, logique 100 % intacte. 🎉' : `\n❌ ${failures} vérification(s) en échec`);
   process.exit(failures === 0 ? 0 : 1);
 })().catch((e) => { console.error('❌', e); process.exit(1); });

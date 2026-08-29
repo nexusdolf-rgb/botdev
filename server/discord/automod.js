@@ -186,7 +186,7 @@ async function applyMemberBlacklist(botId, message, detection, options = {}) {
   } else {
     const color = /^#[0-9a-fA-F]{6}$/.test(String(gs.am_blacklist_color || '')) ? String(gs.am_blacklist_color) : '#ED4245';
     const title = String(gs.am_blacklist_title || '🚫 Membre ajouté à la blacklist').trim().slice(0, 256) || '🚫 Membre ajouté à la blacklist';
-    const footer = String(gs.am_blacklist_footer || 'Blacklist du serveur · Nexora').trim().slice(0, 200) || 'Blacklist du serveur · Nexora';
+    const footer = String(gs.am_blacklist_footer || 'Blacklist du serveur · Optimus Prime').trim().slice(0, 200) || 'Blacklist du serveur · Optimus Prime';
     const sourceChannel = message.channel && message.channel.id ? `<#${message.channel.id}>` : 'Salon inconnu';
     const sourceMessage = message.url && /^https?:\/\//.test(String(message.url)) ? `[Ouvrir le message](${String(message.url).slice(0, 500)})` : 'Lien indisponible';
     const expirationText = expiresAt ? new Date(expiresAt).toLocaleString('fr-FR') : 'Permanente';

@@ -21,7 +21,7 @@ w.App.api = async (url) => {
 (async () => {
   const content = w.document.createElement('div');
   await w.Dashboard.renderers.overview(content, {
-    guild: { id: 'G1', name: 'Communauté Nexora', members: 482, icon: '' },
+    guild: { id: 'G1', name: 'Communauté Optimus Prime', members: 482, icon: '' },
     tickets: { types: [] }, tickets_stats: { total: 12, open: 2 },
     checklist: [{ module: 'tickets', label: 'Tickets', done: true }, { module: 'moderation', label: 'Auto-Mod', done: false }],
     xp_roles: [], role_menus: [], scheduled: [],

@@ -1,4 +1,4 @@
-// Test v14 — identité Nexora : logo robot original et cache PWA
+// Test v14 — identité Optimus Prime : logo robot original et cache PWA
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
@@ -16,4 +16,4 @@ assert(manifest.includes('/icons/nexora-robot-mark.png') && manifest.includes('#
 assert(sw.includes('/icons/nexora-robot-mark.svg'));
 assert(dashboard.includes('/icons/nexora-robot-mark.svg'));
 assert(index.includes('/icons/nexora-robot-mark.png'));
-console.log('✅ v14 : logo robot Nexora original intégré au dashboard, favicon et PWA');
+console.log('✅ v14 : logo robot Optimus Prime original intégré au dashboard, favicon et PWA');

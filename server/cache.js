@@ -1,5 +1,5 @@
 // ============================================================
-// Nexora — Cache mémoire borné et dédupliqué
+// Optimus Prime — Cache mémoire borné et dédupliqué
 //
 // Utilisé uniquement pour des données Discord relisibles (catalogues,
 // listes de membres). Les données importantes restent en SQLite et le

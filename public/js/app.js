@@ -135,7 +135,7 @@ App.router.run = async () => {
   if (query && query.get('oauth')) {
     const o = query.get('oauth');
     if (o === 'linked') App.toast('✅ Compte Discord lié — bienvenue !');
-    else if (o === 'banned') App.toast('⛔ Ce compte est banni de Nexora.', 'error');
+    else if (o === 'banned') App.toast('⛔ Ce compte est banni d’Optimus Prime.', 'error');
     else if (o === 'nosecret') App.toast("Le Client Secret Discord n'est pas configuré sur le serveur.", 'error');
     else App.toast('La connexion Discord a échoué. Réessaie.', 'error');
     history.replaceState(null, '', '#/dashboard');
@@ -169,7 +169,7 @@ App.router.run = async () => {
   App.renderHoxeraDashboard();
 };
 
-// ---------------------- Avatar public de Nexora ----------------------
+// ---------------------- Avatar public d’Optimus Prime ----------------------
 // Les pages publiques utilisent une route locale qui sert l'avatar réel du
 // bot. Cela évite qu'un blocage du CDN Discord laisse uniquement le logo ⚡.
 App.loadPublicBotAvatar = (root) => {
@@ -181,7 +181,7 @@ App.loadPublicBotAvatar = (root) => {
       oldLogo.onerror = () => { if (oldLogo.isConnected) oldLogo.replaceWith(App.el('<span class="logo" data-brand-logo>⚡</span>')); };
       return;
     }
-    const image = App.el('<img class="logo" data-brand-logo src="/api/public/bot-avatar" alt="Avatar de Nexora" style="border-radius:50%;object-fit:cover" />');
+    const image = App.el('<img class="logo" data-brand-logo src="/api/public/bot-avatar" alt="Avatar d’Optimus Prime" style="border-radius:50%;object-fit:cover" />');
     image.onerror = () => { if (image.isConnected) image.replaceWith(App.el('<span class="logo" data-brand-logo>⚡</span>')); };
     if (oldLogo.isConnected) oldLogo.replaceWith(image);
   });
@@ -194,7 +194,7 @@ App.renderConnect = () => {
   const page = App.el(`
     <div class="auth-wrap" id="connect-card">
       <div class="auth-left">
-        <div class="logo-row"><img class="logo" data-brand-logo src="/api/public/bot-avatar" alt="Avatar de Nexora" style="border-radius:50%;object-fit:cover" /> Hoxera</div>
+        <div class="logo-row"><img class="logo" data-brand-logo src="/api/public/bot-avatar" alt="Avatar d’Optimus Prime" style="border-radius:50%;object-fit:cover" /> Hoxera</div>
         <h1 style="margin-top:52px">Configure ton serveur<br/><span>en quelques clics</span></h1>
         <p class="tagline">Tickets automatiques, niveaux, boutique, giveaways, bienvenue… Tout se règle ici, sans mot de passe : on vérifie simplement avec ton compte Discord.</p>
         <ul class="auth-features">
@@ -243,7 +243,7 @@ App.renderNavbar = () => {
   const user = App.state.user;
   const bot = App.state.bot;
   const brand = bot && bot.avatar_url
-    ? `<img id="nav-brand-avatar" class="logo" src="${App.escapeHtml(bot.avatar_url)}" alt="Avatar de Nexora" style="border-radius:50%;object-fit:cover" />`
+    ? `<img id="nav-brand-avatar" class="logo" src="${App.escapeHtml(bot.avatar_url)}" alt="Avatar d’Optimus Prime" style="border-radius:50%;object-fit:cover" />`
     : '<span class="logo">⚡</span>';
   const nav = App.el(`
     <div class="navbar">
@@ -304,14 +304,14 @@ App.renderHoxeraDashboard = async () => {
   }
 };
 
-// ---------------------- Administration Nexora (fondateur uniquement) ----------------------
+// ---------------------- Administration Optimus Prime (fondateur uniquement) ----------------------
 App.renderAdminPage = async () => {
   const root = document.getElementById('app');
   root.innerHTML = '';
   root.appendChild(App.renderNavbar());
   const page = App.el(`<div class="page admin-platform-page">
-    <h1>👑 Administration Nexora</h1>
-    <p class="sub">Espace privé du fondateur : comptes liés à Discord, accès à Nexora et protection de la plateforme.</p>
+    <h1>👑 Administration Optimus Prime</h1>
+    <p class="sub">Espace privé du fondateur : comptes liés à Discord, accès à Optimus Prime et protection de la plateforme.</p>
     <div class="card admin-security-status">
       <h3>🛡️ Protection active</h3>
       <div class="card-sub">Mode développeur sécurisé : diagnostics avancés sans contourner les permissions.</div>
@@ -324,7 +324,7 @@ App.renderAdminPage = async () => {
     </div>
     <div class="stats-grid" id="a-stats"><div class="spinner"></div></div>
     <div class="card">
-      <h3>👥 Comptes Nexora liés à Discord</h3>
+      <h3>👥 Comptes Optimus Prime liés à Discord</h3>
       <div class="card-sub">Tu peux délier Discord, bannir un compte ou supprimer définitivement ses données. Ton propre compte est toujours protégé.</div>
       <div id="a-users"><div class="spinner"></div></div>
     </div>
@@ -347,9 +347,9 @@ App.renderAdminPage = async () => {
         App.api('/admin/audit'),
       ]);
       statsEl.innerHTML = `
-        <div class="stat-card"><div class="val">${stats.users}</div><div class="lbl">Comptes Nexora</div></div>
+        <div class="stat-card"><div class="val">${stats.users}</div><div class="lbl">Comptes Optimus Prime</div></div>
         <div class="stat-card"><div class="val">${stats.linked ?? 0}</div><div class="lbl">Liés à Discord</div></div>
-        <div class="stat-card"><div class="val">${stats.banned ?? 0}</div><div class="lbl">Bannis de Nexora</div></div>
+        <div class="stat-card"><div class="val">${stats.banned ?? 0}</div><div class="lbl">Bannis d’Optimus Prime</div></div>
         <div class="stat-card"><div class="val">${stats.online ? '🟢' : '🔴'}</div><div class="lbl">Hoxera</div></div>`;
 
       if (!usersRes.users || !usersRes.users.length) {
@@ -385,26 +385,26 @@ App.renderAdminPage = async () => {
         const reload = async () => { await render(); };
         const unlink = row.querySelector('[data-unlink]');
         if (unlink) unlink.onclick = async () => {
-          if (!(await App.confirm('Délier le compte Discord de cet utilisateur ? Son compte Nexora sera conservé, mais il devra relier Discord pour revenir.'))) return;
+          if (!(await App.confirm('Délier le compte Discord de cet utilisateur ? Son compte Optimus Prime sera conservé, mais il devra relier Discord pour revenir.'))) return;
           try { await App.api(`/admin/users/${u.id}/unlink-discord`, { method: 'POST' }); App.toast('Compte Discord délié.'); await reload(); }
           catch (e) { App.toast(e.message, 'error'); }
         };
         const ban = row.querySelector('[data-ban]');
         if (ban) ban.onclick = async () => {
-          if (!(await App.confirm('Bannir cet utilisateur de Nexora ? Ses données seront conservées et le bannissement pourra être retiré.'))) return;
+          if (!(await App.confirm('Bannir cet utilisateur d’Optimus Prime ? Ses données seront conservées et le bannissement pourra être retiré.'))) return;
           const reason = await App.prompt('Raison du bannissement (optionnelle)', 'Abus de la plateforme');
-          try { await App.api(`/admin/users/${u.id}/ban`, { method: 'POST', body: { reason } }); App.toast('Utilisateur banni de Nexora.'); await reload(); }
+          try { await App.api(`/admin/users/${u.id}/ban`, { method: 'POST', body: { reason } }); App.toast('Utilisateur banni d’Optimus Prime.'); await reload(); }
           catch (e) { App.toast(e.message, 'error'); }
         };
         const unban = row.querySelector('[data-unban]');
         if (unban) unban.onclick = async () => {
-          if (!(await App.confirm('Débannir cet utilisateur de Nexora ?'))) return;
+          if (!(await App.confirm('Débannir cet utilisateur d’Optimus Prime ?'))) return;
           try { await App.api(`/admin/users/${u.id}/ban`, { method: 'DELETE' }); App.toast('Utilisateur débanni.'); await reload(); }
           catch (e) { App.toast(e.message, 'error'); }
         };
         const del = row.querySelector('[data-delete]');
         if (del) del.onclick = async () => {
-          if (!(await App.confirm('Supprimer définitivement ce compte et toutes ses données Nexora ? Cette action est irréversible.'))) return;
+          if (!(await App.confirm('Supprimer définitivement ce compte et toutes ses données Optimus Prime ? Cette action est irréversible.'))) return;
           try { await App.api(`/admin/users/${u.id}`, { method: 'DELETE' }); App.toast('Compte et données supprimés.'); await reload(); }
           catch (e) { App.toast(e.message, 'error'); }
         };

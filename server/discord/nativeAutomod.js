@@ -1,7 +1,7 @@
 // ============================================================
-// Nexora — Miroir Auto-Mod officiel Discord
+// Optimus Prime — Miroir Auto-Mod officiel Discord
 //
-// Le moteur Nexora reste la source des sanctions avancées. Ce module crée
+// Le moteur Optimus Prime reste la source des sanctions avancées. Ce module crée
 // uniquement des règles natives Discord en mode alerte : elles sont réelles,
 // utiles et n'appliquent pas une deuxième sanction au même message.
 // Les règles créées par un administrateur ou un autre bot ne sont jamais
@@ -14,7 +14,11 @@ const {
 } = require('discord.js');
 const store = require('../db');
 
-const RULE_PREFIX = 'Nexora · Auto-Mod officiel · ';
+const RULE_PREFIX = 'Optimus Prime · Auto-Mod officiel · ';
+// Ancien préfixe (avant le renommage en « Optimus Prime ») : les règles déjà
+// présentes sur les serveurs doivent continuer d'être reconnues, puis être
+// renommées automatiquement au prochain passage de syncGuild.
+const LEGACY_RULE_PREFIX = 'Nexora · Auto-Mod officiel · ';
 const RULE_KEYS = ['links', 'words', 'spam', 'mentions'];
 const NATIVE_ACTIONS = Object.freeze({
   alert: AutoModerationActionType.SendAlertMessage,
@@ -120,7 +124,9 @@ function ruleCreatedByBot(rule, client) {
 function findManagedRule(rules, mapping, spec, client) {
   const mapped = mapping && rules.get(String(mapping.discord_rule_id));
   if (mapped && ruleCreatedByBot(mapped, client)) return mapped;
-  return rules.find((rule) => rule.name === spec.name && ruleCreatedByBot(rule, client)) || null;
+  const legacyName = LEGACY_RULE_PREFIX + spec.name.slice(RULE_PREFIX.length);
+  return rules.find((rule) => (rule.name === spec.name || rule.name === legacyName)
+    && ruleCreatedByBot(rule, client)) || null;
 }
 
 function managedRows(botId, guildId) {
@@ -158,7 +164,7 @@ async function syncGuild(botId, guild, options = {}) {
     : [];
   const result = { ok: true, nativeRules: rules.size, managed: 0, created: 0, updated: 0, disabled: 0, skipped: [], errors: [] };
   if (settings.am_native_enabled === 0 || settings.am_enabled !== 1) {
-    result.disabled = await disableManaged(botId, guild.id, rules, options.client, 'Miroir officiel désactivé dans Nexora');
+    result.disabled = await disableManaged(botId, guild.id, rules, options.client, 'Miroir officiel désactivé dans Optimus Prime');
     return { ...result, managed: managedRows(botId, guild.id).length, reason: 'disabled' };
   }
   if (!alertChannel) {
@@ -171,7 +177,7 @@ async function syncGuild(botId, guild, options = {}) {
     if (desired.has(row.rule_key)) continue;
     const oldRule = rules.get(String(row.discord_rule_id));
     if (oldRule && ruleCreatedByBot(oldRule, options.client) && oldRule.enabled) {
-      try { await oldRule.edit({ enabled: false, reason: 'Règle Nexora non configurée' }); } catch {}
+      try { await oldRule.edit({ enabled: false, reason: 'Règle Optimus Prime non configurée' }); } catch {}
     }
     try { store.nativeAutomodRules.setEnabled(botId, guild.id, row.rule_key, false); } catch {}
     result.disabled++;
@@ -181,7 +187,7 @@ async function syncGuild(botId, guild, options = {}) {
     let rule = findManagedRule(rules, mapping, spec, options.client);
     try {
       if (rule && !sameTrigger(rule, spec)) {
-        await rule.delete('Mise à jour de la règle Auto-Mod officielle Nexora');
+        await rule.delete('Mise à jour de la règle Auto-Mod officielle Optimus Prime');
         rule = null;
       }
       if (rule) {
@@ -193,7 +199,7 @@ async function syncGuild(botId, guild, options = {}) {
           enabled: true,
           exemptRoles: spec.exemptRoles,
           exemptChannels: spec.exemptChannels,
-          reason: 'Synchronisation Auto-Mod officielle Nexora',
+          reason: 'Synchronisation Auto-Mod officielle Optimus Prime',
         });
         result.updated++;
       } else {
@@ -206,7 +212,7 @@ async function syncGuild(botId, guild, options = {}) {
           enabled: true,
           exemptRoles: spec.exemptRoles,
           exemptChannels: spec.exemptChannels,
-          reason: 'Création Auto-Mod officielle Nexora',
+          reason: 'Création Auto-Mod officielle Optimus Prime',
         });
         result.created++;
       }

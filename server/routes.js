@@ -100,7 +100,7 @@ async function requireAuth(req, res, next) {
   if (store.platformBans.isBanned(session.user_id)) {
     store.sessions.destroy(token);
     res.clearCookie(COOKIE);
-    return res.status(403).json({ error: 'Ce compte est banni de Nexora.' });
+    return res.status(403).json({ error: 'Ce compte est banni d’Optimus Prime.' });
   }
   req.userId = session.user_id;
   req.currentUser = currentUser;
@@ -132,7 +132,7 @@ router.post('/auth/login', authRateLimit, (req, res) => {
     return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
   }
   if (store.platformBans.isBanned(user.id)) {
-    return res.status(403).json({ error: 'Ce compte est banni de Nexora.' });
+    return res.status(403).json({ error: 'Ce compte est banni d’Optimus Prime.' });
   }
   const token = store.sessions.create(user.id);
   setSessionCookie(req, res, token);
@@ -666,7 +666,7 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
     xp_enabled: 1, xp_min: 10, xp_max: 25, xp_cooldown: 60, xp_message: '', xp_channel: '',
     am_enabled: 0, am_links: 1, am_caps: 1, am_mentions: 5, am_spam: 5,
     am_mode: 'enforce', am_rule_actions: '{}', am_blacklist_rules: '{}', am_blacklist_thresholds: '{}', am_blacklist_duration_min: 0, am_blacklist_channel: '',
-    am_blacklist_title: '🚫 Membre ajouté à la blacklist', am_blacklist_color: '#ED4245', am_blacklist_footer: 'Blacklist du serveur · Nexora',
+    am_blacklist_title: '🚫 Membre ajouté à la blacklist', am_blacklist_color: '#ED4245', am_blacklist_footer: 'Blacklist du serveur · Optimus Prime',
     am_native_enabled: 1, am_native_alert_channel: '',
     am_exempt_roles: '[]', am_exempt_channels: '[]', am_exempt_users: '[]',
     am_warn_limit: 2, am_warn_action: 'timeout', am_warn_timeout_min: 10,
@@ -960,7 +960,7 @@ router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) =>
   if (body.blacklist_channel !== undefined) advancedFields.am_blacklist_channel = String(body.blacklist_channel || '').slice(0, 100);
   if (body.blacklist_title !== undefined) advancedFields.am_blacklist_title = String(body.blacklist_title || '🚫 Membre ajouté à la blacklist').slice(0, 120);
   if (body.blacklist_color !== undefined) advancedFields.am_blacklist_color = /^#[0-9a-fA-F]{6}$/.test(String(body.blacklist_color || '')) ? String(body.blacklist_color) : '#ED4245';
-  if (body.blacklist_footer !== undefined) advancedFields.am_blacklist_footer = String(body.blacklist_footer || 'Blacklist du serveur · Nexora').slice(0, 200);
+  if (body.blacklist_footer !== undefined) advancedFields.am_blacklist_footer = String(body.blacklist_footer || 'Blacklist du serveur · Optimus Prime').slice(0, 200);
   if (body.native_enabled !== undefined) advancedFields.am_native_enabled = body.native_enabled ? 1 : 0;
   if (body.native_alert_channel !== undefined) advancedFields.am_native_alert_channel = String(body.native_alert_channel || '').slice(0, 100);
   if (body.exempt_roles !== undefined) advancedFields.am_exempt_roles = JSON.stringify(normalizeAutomodList(body.exempt_roles, 50, 30));
@@ -1008,7 +1008,7 @@ router.get('/bots/:id/guilds/:guildId/automod/summary', requireAuth, async (req,
   res.json(store.automodLogs.summary(bot.id, guildId));
 });
 
-// ☁️ Auto-Mod officiel Discord : état des règles natives créées par Nexora.
+// ☁️ Auto-Mod officiel Discord : état des règles natives créées par Optimus Prime.
 router.get('/bots/:id/guilds/:guildId/automod/native', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
   if (!bot) return;
@@ -2308,7 +2308,7 @@ router.get('/public/bots', (req, res) => {
   res.json({ bots });
 });
 
-// Avatar public de Nexora : proxy local court pour éviter qu'un blocage
+// Avatar public d’Optimus Prime : proxy local court pour éviter qu'un blocage
 // navigateur/CDN ne remplace la photo par le logo de secours.
 router.get('/public/bot-avatar', async (req, res) => {
   const fallback = path.join(__dirname, '..', 'public', 'icons', 'icon-512.png');
@@ -2365,7 +2365,7 @@ router.get('/public/bots/:id', (req, res) => {
 });
 
 // ============================================================
-// Panneau admin plateforme (réservé au fondateur Nexora)
+// Panneau admin plateforme (réservé au fondateur Optimus Prime)
 // ============================================================
 function parseAdminGuilds(raw) {
   try {
@@ -2516,7 +2516,7 @@ router.post('/admin/users/:id/unlink-discord', requireAuth, requireAdmin, platfo
   });
   store.discordTokens.remove(target.targetId);
   store.platformAudit.add(req.userId, target.targetId, 'unlink_discord', 'Liaison Discord supprimée, compte conservé.');
-  res.json({ ok: true, message: 'Compte Discord délié. Le compte Nexora est conservé.' });
+  res.json({ ok: true, message: 'Compte Discord délié. Le compte Optimus Prime est conservé.' });
 });
 
 router.post('/admin/users/:id/ban', requireAuth, requireAdmin, platformMutationRateLimit, (req, res) => {
@@ -2528,15 +2528,15 @@ router.post('/admin/users/:id/ban', requireAuth, requireAdmin, platformMutationR
   store.db.prepare('DELETE FROM sessions WHERE user_id = ?').run(target.targetId);
   store.discordTokens.remove(target.targetId);
   store.platformAudit.add(req.userId, target.targetId, 'ban_user', reason ? `Raison : ${reason}` : 'Aucune raison fournie.');
-  res.json({ ok: true, message: 'Compte banni de Nexora.' });
+  res.json({ ok: true, message: 'Compte banni d’Optimus Prime.' });
 });
 
 router.delete('/admin/users/:id/ban', requireAuth, requireAdmin, platformMutationRateLimit, (req, res) => {
   const target = adminTarget(req, res);
   if (!target) return;
   store.platformBans.remove(target.targetId);
-  store.platformAudit.add(req.userId, target.targetId, 'unban_user', 'Bannissement Nexora retiré.');
-  res.json({ ok: true, message: 'Compte débanni de Nexora. Il devra se reconnecter.' });
+  store.platformAudit.add(req.userId, target.targetId, 'unban_user', 'Bannissement Optimus Prime retiré.');
+  res.json({ ok: true, message: 'Compte débanni d’Optimus Prime. Il devra se reconnecter.' });
 });
 
 router.delete('/admin/users/:id', requireAuth, requireAdmin, platformMutationRateLimit, async (req, res) => {
@@ -2546,7 +2546,7 @@ router.delete('/admin/users/:id', requireAuth, requireAdmin, platformMutationRat
   for (const bot of bots) await botManager.logoutBot(bot.id);
   store.platformAudit.add(req.userId, target.targetId, 'delete_user', 'Compte et données associées supprimés.');
   deleteUserData(target.targetId, bots.map((bot) => Number(bot.id)));
-  res.json({ ok: true, message: 'Compte Nexora et données associées supprimés.' });
+  res.json({ ok: true, message: 'Compte Optimus Prime et données associées supprimés.' });
 });
 
 // 🛟 Filet de sécurité final : AUCUNE route ne doit faire tomber le serveur.

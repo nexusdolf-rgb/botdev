@@ -59,13 +59,13 @@ const check = (label, cond) => {
   check('serveur B : bannière différente (G2)', embedB.image.url.includes('/api/tickets/panel-banner/G2.png'));
   check('serveur B : pas de mélange avec le serveur A', embedB.title !== embedA.title && embedB.image.url !== embedA.image.url);
 
-  // ---------- 4. Repli Nexora (client sans guildes) ----------
+  // ---------- 4. Repli Optimus Prime (client sans guildes) ----------
   store.tickets.set(BOT, 'G3', { require_reason: 1, support_role: 'Staff', channel: '#support', types: '[]' });
   const sentC = [];
   const chC = { id: 'C1', name: 'support', send: async (p) => { sentC.push(p); return {}; } };
   await panels.sendTicketPanel(BOT, 'G3', null, chC);
   const embedC = sentC[0].embeds[0].toJSON();
-  check('repli : titre « 👑 Support | Nexora »', embedC.title === '👑 Support | Nexora');
+  check('repli : titre « 👑 Support | Optimus Prime »', embedC.title === '👑 Support | Optimus Prime');
   check('repli : bannière statique rapide (nom inconnu)', embedC.image.url.includes('/api/tickets/panel-banner/G3.png'));
 
   // ---------- 5. Logique intacte : menu et sélection ----------

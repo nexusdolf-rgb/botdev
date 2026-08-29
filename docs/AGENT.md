@@ -21,7 +21,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 ## 📦 LE PROJET
 
 **Hoxera** : bot Discord tout-en-un (~25 000 lignes) + dashboard web, 100 % gratuit.
-- **Bot Discord « Nexora »** — client_id : `1537443352281088000` — en ligne sur 7+ serveurs
+- **Bot Discord « Optimus Prime »** — client_id : `1537443352281088000` — en ligne sur 7+ serveurs
 - 61+ commandes slash GLOBALES : tickets pro (types, transcriptions, notes ⭐, journal staff),
   modération + auto-mod + anti-raid + sanctions progressives (paliers timeout/kick/ban),
   XP/niveaux, économie, giveaways, jeux (morpion, pendu, rps), mariages, anniversaires,

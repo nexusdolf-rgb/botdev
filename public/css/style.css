@@ -387,7 +387,7 @@ label.field-label {
 @keyframes spin { to { transform: rotate(360deg); } }
 .center-loading { display: flex; justify-content: center; padding: 50px; }
 
-/* ---------------------- Pages publiques (dashboard Nexora) ---------------------- */
+/* ---------------------- Pages publiques (dashboard Optimus Prime) ---------------------- */
 .pub-hero {
   text-align: center; padding: 64px 24px 48px; max-width: 860px; margin: 0 auto;
 }

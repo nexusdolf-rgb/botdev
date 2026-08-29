@@ -13,7 +13,7 @@ w.fetch = async (url) => {
   const resp = (body) => ({ ok: true, status: 200, json: async () => body });
   if (path.endsWith('/api/auth/me')) return resp({ user: null });
   if (path.endsWith('/api/public/stats')) return resp({ bots: 1, servers: 7, members: 1240 });
-  if (path.endsWith('/api/public/bots')) return resp({ bots: [{ name: 'Nexora', servers: 7, members: 1240, online: true }] });
+  if (path.endsWith('/api/public/bots')) return resp({ bots: [{ name: 'Optimus Prime', servers: 7, members: 1240, online: true }] });
   return resp({});
 };
 

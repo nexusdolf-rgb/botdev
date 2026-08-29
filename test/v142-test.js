@@ -65,7 +65,7 @@ assert(topbar.querySelector('#d-theme'), 'bouton thème présent');
 assert(topbar.querySelector('#d-palette'), 'recherche présente');
 assert(topbar.querySelector('#d-refresh'), 'actualisation présente');
 assert(topbar.querySelector('#d-accent'), 'couleur présente');
-assert(topbar.querySelector('.dash-bot-chip'), 'profil Nexora présent');
+assert(topbar.querySelector('.dash-bot-chip'), 'profil Optimus Prime présent');
 assert(!topbar.querySelector('.dash-bell-pop'), 'notifications sorties de la ligne scrollable');
 assert(!topbar.querySelector('.dash-accent-pop'), 'couleurs sorties de la ligne scrollable');
 assert.strictEqual(w.document.querySelectorAll('[data-dash-topbar-popover="true"]').length, 2);
@@ -96,9 +96,9 @@ console.log('2️⃣  Notifications et couleur : portails, fermeture et re-rendu
 
 const versions = index.match(/\?v=(\d+)/g) || [];
 assert.strictEqual(versions.length, 7);
-assert(versions.every((v) => v === '?v=171'));
-assert(sw.includes("const CACHE = 'botdev-v171';"));
-console.log('3️⃣  Cache frontend : index.html et service worker synchronisés en v171 ✅');
+assert(versions.every((v) => v === '?v=172'));
+assert(sw.includes("const CACHE = 'botdev-v172';"));
+console.log('3️⃣  Cache frontend : index.html et service worker synchronisés en v172 ✅');
 
 setTimeout(async () => {
   const pop = w.document.querySelector('#dash-bell-pop');

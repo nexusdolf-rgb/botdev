@@ -9,7 +9,7 @@
   --d-border: #2a2d3d;
   --d-text: #e9eaf2;
   --d-dim: #8b8fa3;
-  /* Identité Nexora : Argile (terracotta du logo) — remplaçable au runtime */
+  /* Identité Optimus Prime : Argile (terracotta du logo) — remplaçable au runtime */
   --d-accent: #e07a5f;
   --d-accent2: #c95b49;
   --d-accent-rgb: 224,122,95;
@@ -2639,7 +2639,7 @@ html.hx-light .adv-placement-notice b { color: #30405c; }
 
 /* ============================================================
    NEXORA v6 — Auto-Mod officiel Discord
-   Miroir passif en alertes : le moteur Nexora garde les sanctions.
+   Miroir passif en alertes : le moteur Optimus Prime garde les sanctions.
    ============================================================ */
 .am-native-card {
   border-color: rgba(var(--d-accent-rgb), .34) !important;
@@ -3600,7 +3600,7 @@ html.hx-light .dashboard-shell-host .dash-select option { color: #2e3338; backgr
    NEXORA v10.0 — Draft Panel layout
    Même logique d'interface qu'un panel Discord professionnel :
    sidebar fixe, contenu gris uni, titres séparés par une ligne,
-   contrôles sombres et accent argile. Identité Nexora conservée.
+   contrôles sombres et accent argile. Identité Optimus Prime conservée.
    ============================================================ */
 :root {
   --d-bg: #36393f;
@@ -4240,7 +4240,7 @@ html.hx-light { color-scheme: light; }
    cohérence PC / mobile avec le reste du panel.
    ============================================================ */
 
-/* Hero : panneau de bienvenue signature Nexora */
+/* Hero : panneau de bienvenue signature Optimus Prime */
 .dashboard-shell-host .ov-welcome-panel {
   position: relative;
   border: 1px solid rgba(var(--d-accent-rgb), .32);

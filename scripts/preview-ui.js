@@ -19,10 +19,10 @@ const { App, Dashboard } = window;
 
 // Données factices réalistes
 Dashboard.state = {
-  bot: { id: 1, name: 'Hoxera', bot_username: 'Nexora', avatar_url: 'https://cdn.discordapp.com/avatars/1/x.png', online: true, prefix: '!', invite_url: '#' },
+  bot: { id: 1, name: 'Hoxera', bot_username: 'Optimus Prime', avatar_url: 'https://cdn.discordapp.com/avatars/1/x.png', online: true, prefix: '!', invite_url: '#' },
   guildId: 'g1', module: 'overview',
   discordGuilds: [
-    { id: 'g1', name: 'Support Nexora', icon: 'https://cdn.discordapp.com/icons/g1/a.png', hasBot: true, canManage: true },
+    { id: 'g1', name: 'Support Optimus Prime', icon: 'https://cdn.discordapp.com/icons/g1/a.png', hasBot: true, canManage: true },
     { id: 'g2', name: 'Communauté CODM', icon: null, hasBot: true, canManage: true },
     { id: 'g3', name: 'OneState', icon: null, hasBot: false, canManage: true },
   ],

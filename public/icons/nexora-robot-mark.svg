@@ -1,22 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
-  <title id="title">Nexora — emblème robot</title>
-  <desc id="desc">Emblème original de Nexora : un visage robotique dans un bouclier géométrique.</desc>
-  <rect width="512" height="512" rx="96" fill="#202225"/>
-  <polygon points="256,48 424,124 394,350 256,460 118,350 88,124" fill="#e07a5f"/>
-  <polygon points="256,78 394,140 368,329 256,419 144,329 118,140" fill="#202225"/>
-  <polygon points="140,350 140,160 184,160 184,350" fill="#e07a5f"/>
-  <polygon points="328,160 372,160 372,350 328,350" fill="#e07a5f"/>
-  <polygon points="158,344 158,276 176,294 176,344" fill="#f2f3f5"/>
-  <polygon points="336,344 336,294 354,276 354,344" fill="#f2f3f5"/>
-  <rect x="250" y="116" width="12" height="44" rx="6" fill="#f2f3f5"/>
-  <circle cx="256" cy="100" r="17" fill="#e07a5f"/>
-  <circle cx="256" cy="100" r="7" fill="#f2f3f5"/>
-  <rect x="158" y="192" width="196" height="142" rx="43" fill="#2b2d31" stroke="#e07a5f" stroke-width="12"/>
-  <rect x="190" y="238" width="46" height="28" rx="14" fill="#f2f3f5"/>
-  <rect x="276" y="238" width="46" height="28" rx="14" fill="#f2f3f5"/>
-  <circle cx="213" cy="252" r="9" fill="#e07a5f"/>
-  <circle cx="299" cy="252" r="9" fill="#e07a5f"/>
-  <polygon points="218,293 294,293 282,310 230,310" fill="#f2f3f5"/>
-  <polygon points="168,190 139,211 139,242 168,226" fill="#f2f3f5"/>
-  <polygon points="344,190 373,211 373,242 344,226" fill="#f2f3f5"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="emblème robot Optimus Prime">
+  <title>emblème robot Optimus Prime — logo de secours</title>
+  <!-- fond sombre -->
+  <rect width="64" height="64" rx="12" fill="#1f2430"/>
+  <!-- casque bleu métallique -->
+  <path d="M17 25 L32 11 L47 25 L47 43 L32 54 L17 43 Z" fill="#4f7ff0"/>
+  <!-- crête centrale argile -->
+  <path d="M30 6 h4 v11 l-2 3 l-2 -3 Z" fill="#e07a5f"/>
+  <!-- plaque faciale argent -->
+  <path d="M23 27 L32 22 L41 27 L41 40 L32 46 L23 40 Z" fill="#f2f3f5"/>
+  <!-- yeux -->
+  <rect x="26.5" y="31" width="4.5" height="4" rx="1.2" fill="#1f2430"/>
+  <rect x="33" y="31" width="4.5" height="4" rx="1.2" fill="#1f2430"/>
+  <!-- menton argile -->
+  <path d="M28 45 h8 l-4 5 Z" fill="#e07a5f"/>
 </svg>

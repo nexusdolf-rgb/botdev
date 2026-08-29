@@ -70,7 +70,7 @@ window.__results = (async () => {
   const out = {};
   try {
     const host = document.createElement('div');
-    Dashboard.state.bot = { id: 1, name: 'Nexora' };
+    Dashboard.state.bot = { id: 1, name: 'Optimus Prime' };
     Dashboard.state.guildId = 'G1';
     const gdata = await App.api('/bots/1/guilds/G1');
     await Dashboard.renderers.welcome(host, gdata);

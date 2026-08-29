@@ -88,7 +88,7 @@ function makeMessage(content = 'viens ici https://example.com', userId = '123456
     am_blacklist_channel: 'C-BLACKLIST',
     am_blacklist_title: '🚫 Alerte sécurité',
     am_blacklist_color: '#AA1122',
-    am_blacklist_footer: 'Journal sécurité · Nexora',
+    am_blacklist_footer: 'Journal sécurité · Optimus Prime',
   });
   const initialSettings = store.guildSettings.get(BOT, GUILD);
   assert.deepStrictEqual(JSON.parse(initialSettings.am_blacklist_rules), { links: true });

@@ -333,9 +333,9 @@ function attachListeners(botId, entry) {
       // du bot (les commandes par serveur ne suffisent pas pour le badge).
       try { await syncGlobalCommands(botId); }
       catch (e) { console.error(`[BotDev] sync globale (bot ${botId}):`, e.message); }
-      // ☁️ Miroir Auto-Mod officiel : uniquement si la configuration Nexora
+      // ☁️ Miroir Auto-Mod officiel : uniquement si la configuration Optimus Prime
       // l’autorise. Les règles natives sont en mode alerte, donc aucune double
-      // sanction avec le moteur Nexora.
+      // sanction avec le moteur Optimus Prime.
       try {
         const nativeAutomod = require('./nativeAutomod');
         await nativeAutomod.syncAll(botId, client);
@@ -594,7 +594,7 @@ async function syncGlobalCommands(botId) {
 // Belle bio avec le dashboard, le serveur support officiel et /help.
 // Limite Discord : 190 caractères — longueur vérifiée par test automatique.
 const OFFICIAL_URL = 'https://hoxera.is-a.dev';
-const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3'; // Serveur support officiel de Nexora
+const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3'; // Serveur support officiel d’Optimus Prime
 
 function aboutText() {
   return [

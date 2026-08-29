@@ -1,4 +1,4 @@
-// Test v167 — retour à l'ancienne page d'accueil de Nexora (celle d'avant le clone DraftBot)
+// Test v167 — retour à l'ancienne page d'accueil d’Optimus Prime (celle d'avant le clone DraftBot)
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
@@ -18,7 +18,7 @@ for (const removedCss of ['.dh-hero', '.dh-feature', '.dh-footer', '#public-land
 }
 assert(!index.includes('Open+Sans'), 'la police Open Sans (DraftBot) doit être retirée');
 
-// 2. L'ancienne page d'accueil de Nexora est complète
+// 2. L'ancienne page d'accueil d’Optimus Prime est complète
 assert(pubJs.includes('pub-hero'), 'hero manquant');
 assert(pubJs.includes('Le bot qui anime'), 'titre original manquant');
 assert(pubJs.includes('grad grad-anim'), 'dégradé animé du titre manquant');
@@ -43,4 +43,4 @@ assert(styleCss.includes('--accent: #e07a5f;'), 'accent principal pas en Argile'
 
 // 4. Version : gérée par le test de la version courante (v168)
 
-console.log('✅ v167 (conservé) : ancienne page d’accueil de Nexora — clone DraftBot retiré');
+console.log('✅ v167 (conservé) : ancienne page d’accueil d’Optimus Prime — clone DraftBot retiré');

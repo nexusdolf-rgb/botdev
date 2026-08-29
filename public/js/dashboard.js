@@ -464,7 +464,7 @@ Dashboard.openServerPicker = () => {
       <div class="sp-head">
         <div class="sp-head-copy">
           <h2>Choisis un serveur</h2>
-          <p>${guilds.length} serveur${guilds.length > 1 ? 's' : ''} · ${guilds.filter((g) => g.hasBot).length} avec Nexora</p>
+          <p>${guilds.length} serveur${guilds.length > 1 ? 's' : ''} · ${guilds.filter((g) => g.hasBot).length} avec Optimus Prime</p>
         </div>
         ${wantSearch ? '<input type="text" class="sp-search" placeholder="🔍 Rechercher un serveur…" aria-label="Rechercher un serveur" />' : ''}
         <button type="button" class="sp-close" aria-label="Fermer">×</button>
@@ -481,7 +481,7 @@ Dashboard.openServerPicker = () => {
               <span class="sp-ico">${g.icon ? `<img src="${App.escapeHtml(g.icon)}" alt="" />` : `<span>${App.escapeHtml(initialOf(g.name))}</span>`}</span>
               <span class="sp-txt">
                 <b>${App.escapeHtml(g.name)}</b>
-                <small>${g.hasBot ? (g.members ? `${App.escapeHtml(String(g.members))} membres` : 'Nexora présent') : 'Nexora absent — inviter'}</small>
+                <small>${g.hasBot ? (g.members ? `${App.escapeHtml(String(g.members))} membres` : 'Optimus Prime présent') : 'Optimus Prime absent — inviter'}</small>
               </span>
               <span class="sp-mark">${g.hasBot ? '→' : '＋'}</span>
             </span>
@@ -571,7 +571,7 @@ Dashboard.renderSide = (aside) => {
   const bot = Dashboard.state.bot || {};
   const brandAvatar = bot.avatar_url
     ? `<img class="dash-side-brand-avatar" src="${App.escapeHtml(bot.avatar_url)}" alt="" />`
-    : '<img class="dash-side-brand-avatar fallback-logo" src="/icons/nexora-robot-mark.svg" alt="Logo Nexora" />';
+    : '<img class="dash-side-brand-avatar fallback-logo" src="/icons/nexora-robot-mark.svg" alt="Logo Optimus Prime" />';
   aside.appendChild(App.el(`<div class="dash-side-brand">${brandAvatar}<div class="dash-side-brand-copy"><b>${App.escapeHtml(bot.name || 'Hoxera')}</b><span>Control Center</span></div><span class="dash-side-brand-status" title="${bot.online ? 'Bot en ligne' : 'Bot hors ligne'}"></span></div>`));
   const sideBrandImage = aside.querySelector('.dash-side-brand-avatar:not(.fallback)');
   if (sideBrandImage) sideBrandImage.onerror = () => sideBrandImage.replaceWith(App.el('<span class="dash-side-brand-avatar fallback">⚡</span>'));
@@ -586,7 +586,7 @@ Dashboard.renderSide = (aside) => {
   // Administrateur global : reste tout en bas de la gestion du serveur.
   // Ce bouton dépend du compte fondateur, jamais du serveur sélectionné.
   if (App.state.user && App.state.user.is_admin) {
-    const platformAdmin = App.el(`<button class="dash-side-item dash-global-admin" data-platform-admin="true" title="Administration globale de Nexora"><span class="ico">👑</span>Administrateur global</button>`);
+    const platformAdmin = App.el(`<button class="dash-side-item dash-global-admin" data-platform-admin="true" title="Administration globale d’Optimus Prime"><span class="ico">👑</span>Administrateur global</button>`);
     platformAdmin.onclick = () => App.router.go('/admin');
     aside.appendChild(platformAdmin);
 
@@ -933,8 +933,8 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
     <div class="dash-mobile-bar" aria-label="Navigation mobile">
       <button class="dash-mobile-navbtn" id="d-mobile-menu" type="button" aria-label="Ouvrir le menu principal" aria-expanded="false">☰</button>
       <div class="dash-mobile-brand">
-        ${bot.avatar_url ? `<img src="${App.escapeHtml(bot.avatar_url)}" alt="" />` : '<img src="/icons/nexora-robot-mark.svg" alt="Logo Nexora" />'}
-        <b>${App.escapeHtml(bot.name || 'Nexora')}</b>
+        ${bot.avatar_url ? `<img src="${App.escapeHtml(bot.avatar_url)}" alt="" />` : '<img src="/icons/nexora-robot-mark.svg" alt="Logo Optimus Prime" />'}
+        <b>${App.escapeHtml(bot.name || 'Optimus Prime')}</b>
       </div>
       <button class="dash-mobile-navbtn" id="d-mobile-modules" type="button" aria-label="Ouvrir les serveurs et modules" aria-expanded="false">▦</button>
     </div>
@@ -993,7 +993,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
     <div class="dash-mobile-layer" data-dash-mobile-layer="true">
       <div class="dash-mobile-backdrop" id="dash-mobile-backdrop" hidden></div>
       <aside class="dash-mobile-drawer dash-mobile-site-drawer" id="dash-mobile-site-drawer" hidden aria-label="Menu principal">
-        <div class="dash-mobile-drawer-head"><b>Menu Nexora</b><button class="dash-mobile-close" id="d-mobile-site-close" type="button" aria-label="Fermer le menu">×</button></div>
+        <div class="dash-mobile-drawer-head"><b>Menu Optimus Prime</b><button class="dash-mobile-close" id="d-mobile-site-close" type="button" aria-label="Fermer le menu">×</button></div>
         <nav class="dash-mobile-site-links">
           <button type="button" data-mobile-home><span>⌂</span>Accueil</button>
           <button type="button" data-mobile-open-modules><span>▦</span>Serveurs et modules</button>
@@ -1266,7 +1266,7 @@ Dashboard.header = (content, icon, title, sub) => {
   const isBotScope = ['commands', 'modules', 'health', 'botsettings'].includes(Dashboard.state.module);
   const isGuildScope = Boolean(Dashboard.state.guildId) && !isBotScope;
   const bot = Dashboard.state.bot || {};
-  const statusLabel = bot.online === false ? 'Nexora hors ligne' : 'Nexora en ligne';
+  const statusLabel = bot.online === false ? 'Optimus Prime hors ligne' : 'Optimus Prime en ligne';
   const statusClass = bot.online === false ? 'is-offline' : 'is-online';
   const canGoBack = Dashboard.state.module !== 'overview' && Array.isArray(Dashboard.state.moduleHistory) && Dashboard.state.moduleHistory.length > 0;
   const header = App.el(`
@@ -1352,7 +1352,7 @@ Dashboard.renderers.overview = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const g = data.guild || { name: 'Serveur', members: 0 };
   const ts = data.tickets_stats || { total: 0, open: 0 };
-  const root = Dashboard.header(content, '⌂', 'Tableau de bord', `Gestion de ${App.escapeHtml(g.name)} · ${g.members} membres · Nexora`);
+  const root = Dashboard.header(content, '⌂', 'Tableau de bord', `Gestion de ${App.escapeHtml(g.name)} · ${g.members} membres · Optimus Prime`);
   const workspace = App.el('<div class="ov-workspace ov-draft-home"></div>');
   root.appendChild(workspace);
 
@@ -1360,7 +1360,7 @@ Dashboard.renderers.overview = async (content, data) => {
   const serverInitial = String(g.name || '?').trim().slice(0, 1).toUpperCase() || '?';
   const serverIcon = g.icon || g.icon_url || '';
   const serverBanner = g.banner || '';
-  const statusText = bot.online === false ? 'Nexora est hors ligne' : 'Nexora est opérationnel';
+  const statusText = bot.online === false ? 'Optimus Prime est hors ligne' : 'Optimus Prime est opérationnel';
   const statusClass = bot.online === false ? 'is-offline' : 'is-online';
   // 🖼️ Stats riches du serveur (bannière, boosts, salons, rôles, création)
   const createdLabel = g.createdAt
@@ -1383,7 +1383,7 @@ Dashboard.renderers.overview = async (content, data) => {
         <div class="ov-intro-copy">
           <span class="ov-eyebrow">${greeting}, administrateur</span>
           <h2>Bienvenue dans ton espace de gestion</h2>
-          <p>${App.escapeHtml(g.name)}${g.description ? ` · ${App.escapeHtml(g.description)}` : ` · ${App.escapeHtml(String(g.members || 0))} membres · tous les réglages de Nexora au même endroit.`}</p>
+          <p>${App.escapeHtml(g.name)}${g.description ? ` · ${App.escapeHtml(g.description)}` : ` · ${App.escapeHtml(String(g.members || 0))} membres · tous les réglages d’Optimus Prime au même endroit.`}</p>
         </div>
       </div>
       <div class="ov-intro-health ${statusClass}">
@@ -1420,7 +1420,7 @@ Dashboard.renderers.overview = async (content, data) => {
     <section class="ov-config-panel ov-checklist-card">
       <div class="ov-section-heading"><b>Configuration du serveur</b><span>${doneCount} étape(s) terminée(s) sur ${checklist.length || 0}</span></div>
       <div class="ov-progress-head">
-        <div class="ov-progress-copy"><b>${pct === 100 ? 'Serveur prêt' : 'Progression de la configuration'}</b><span>Les éléments importants de ton installation Nexora</span></div>
+        <div class="ov-progress-copy"><b>${pct === 100 ? 'Serveur prêt' : 'Progression de la configuration'}</b><span>Les éléments importants de ton installation Optimus Prime</span></div>
         <strong>${pct}%</strong>
       </div>
       <div class="ov-progress-track" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Progression de la configuration"><div class="ov-progress-value" style="width:${pct}%"></div></div>
@@ -1488,7 +1488,7 @@ Dashboard.renderers.overview = async (content, data) => {
       const { items } = await App.api(`/bots/${bot.id}/guilds/${guildId}/activity`);
       feedList.innerHTML = '';
       if (!items.length) {
-        feedList.appendChild(App.el('<div class="ov-feed-empty">Le flux se remplira dès que Nexora agit.</div>'));
+        feedList.appendChild(App.el('<div class="ov-feed-empty">Le flux se remplira dès que Optimus Prime agit.</div>'));
         return;
       }
       items.forEach((item) => feedList.appendChild(App.el(`<div class="feed-item"><span class="feed-emoji">${item.emoji || '•'}</span><span class="feed-text">${App.escapeHtml(item.text)}</span><span class="feed-time">${relTime(item.created_at)}</span></div>`)));
@@ -1968,7 +1968,7 @@ Dashboard.renderers.tickets = async (content, data) => {
               <option value="">— Choisir une catégorie (obligatoire) —</option>
               ${categories.map((cat) => `<option value="${App.escapeHtml(cat.id)}" ${Dashboard.discordRefMatches(type.category, cat) ? 'selected' : ''}>📁 ${App.escapeHtml(cat.name)}</option>`).join('')}
               ${Dashboard.currentDiscordOption(type.category, categories, '⚠️', 'configuration actuelle — catégorie introuvable')}
-            </select><small class="adv-category-help">Le salon privé sera créé directement ici. Nexora ne créera jamais de catégorie.</small></div>
+            </select><small class="adv-category-help">Le salon privé sera créé directement ici. Optimus Prime ne créera jamais de catégorie.</small></div>
           </div>
           <label class="dash-label">Description du type</label>
           <input class="dash-input" data-k="description" value="${App.escapeHtml(type.description)}" placeholder="Ex : demande privée au staff" maxlength="100" />
@@ -2534,13 +2534,13 @@ Dashboard.renderers.moderation = async (content, data) => {
       </div>
     </div>
     <div class="am-blacklist-config">
-      <div class="am-panel-title"><div><b>🚫 Blacklist des membres par serveur</b><small>Après une sanction réellement appliquée, Nexora enregistre le membre ici et publie un panneau dans le salon choisi.</small></div><span class="am-blacklist-badge">Serveur uniquement</span></div>
+      <div class="am-panel-title"><div><b>🚫 Blacklist des membres par serveur</b><small>Après une sanction réellement appliquée, Optimus Prime enregistre le membre ici et publie un panneau dans le salon choisi.</small></div><span class="am-blacklist-badge">Serveur uniquement</span></div>
       <div class="am-blacklist-duration"><div><label class="dash-label">Durée d’une blacklist</label><select class="dash-select" id="am-blacklist-duration">${blacklistDurationOptions.join('')}</select></div><small>Cette durée s’applique aux blacklists immédiates et à celles déclenchées après plusieurs sanctions. Le compteur est remis à zéro après le déclenchement.</small></div>
       <div class="am-blacklist-grid">
         <div><label class="dash-label">Salon dédié aux panneaux blacklist</label><select class="dash-select" id="am-blacklist-channel">${blacklistChannelOptions.join('')}</select><small class="am-help">Le panneau sera envoyé dans ce salon après l’action Auto-Mod. Si le salon est introuvable, le membre reste enregistré mais l’envoi sera signalé.</small></div>
         <div><label class="dash-label">Titre du panneau</label><input class="dash-input" id="am-blacklist-title" maxlength="120" value="${App.escapeHtml(s.am_blacklist_title || '🚫 Membre ajouté à la blacklist')}" placeholder="🚫 Membre ajouté à la blacklist" /><label class="dash-label">Couleur du panneau</label><div class="am-blacklist-color"><input type="color" id="am-blacklist-color" value="${/^#[0-9a-fA-F]{6}$/.test(String(s.am_blacklist_color || '')) ? String(s.am_blacklist_color) : '#ED4245'}" /><input class="dash-input" id="am-blacklist-color-text" maxlength="7" value="${App.escapeHtml(/^#[0-9a-fA-F]{6}$/.test(String(s.am_blacklist_color || '')) ? String(s.am_blacklist_color) : '#ED4245')}" aria-label="Code couleur du panneau" /></div></div>
       </div>
-      <label class="dash-label">Pied de panneau</label><input class="dash-input" id="am-blacklist-footer" maxlength="200" value="${App.escapeHtml(s.am_blacklist_footer || 'Blacklist du serveur · Nexora')}" placeholder="Blacklist du serveur · Nexora" />
+      <label class="dash-label">Pied de panneau</label><input class="dash-input" id="am-blacklist-footer" maxlength="200" value="${App.escapeHtml(s.am_blacklist_footer || 'Blacklist du serveur · Optimus Prime')}" placeholder="Blacklist du serveur · Optimus Prime" />
       <div class="am-blacklist-preview"><span class="am-blacklist-preview-icon">🚫</span><div><b>Prévisualisation</b><small>Le panneau indiquera l’utilisateur, le comportement, l’action appliquée, le salon d’origine et la date.</small></div></div>
     </div>
     <div class="am-save-row"><span class="am-save-hint">💡 Brouillon local → teste en observation → publie quand tout est correct.</span><div class="am-save-actions">${automodDraft ? '<button class="dash-btn dash-btn-danger dash-btn-sm" id="am-clear-draft">↩️ Restaurer le publié</button>' : ''}<button class="dash-btn dash-btn-sm" id="am-draft">📝 Enregistrer le brouillon</button><button class="dash-btn dash-btn-primary" id="am-save">💾 🚀 Publier les réglages</button></div></div>`;
@@ -2631,12 +2631,12 @@ Dashboard.renderers.moderation = async (content, data) => {
   };
 
   // ☁️ Miroir officiel Discord : les règles natives restent en alerte
-  // uniquement ; les sanctions avancées continuent d’être appliquées par Nexora.
-  const cNative = Dashboard.card(root, '☁️ Auto-Mod officiel Discord', 'Nexora peut synchroniser des règles Auto-Mod officielles pour obtenir le badge « Uses AutoMod » quand Discord atteint son seuil. Aucun doublon de sanction : les règles natives sont en mode alerte.');
+  // uniquement ; les sanctions avancées continuent d’être appliquées par Optimus Prime.
+  const cNative = Dashboard.card(root, '☁️ Auto-Mod officiel Discord', 'Optimus Prime peut synchroniser des règles Auto-Mod officielles pour obtenir le badge « Uses AutoMod » quand Discord atteint son seuil. Aucun doublon de sanction : les règles natives sont en mode alerte.');
   cNative.classList.add('am-native-card');
   cNative.innerHTML += `
-    <div class="am-native-hero"><div class="am-native-copy"><span class="am-native-icon">☁️</span><div><b>Miroir officiel actif</b><small>Discord reçoit de vraies règles liées à ta configuration, sans remplacer le système Nexora.</small></div></div><label class="am-native-toggle"><span>Activer</span><input type="checkbox" id="am-native-on" ${s.am_native_enabled !== 0 ? 'checked' : ''} /><i></i></label></div>
-    <div class="am-native-grid"><div><label class="dash-label">Salon des alertes Auto-Mod officielles</label><select class="dash-select" id="am-native-channel">${nativeChannelOptions.join('')}</select><small class="am-help">Choisis un salon ou laisse Nexora utiliser le salon de logs/blacklist. Les alertes natives ne sanctionnent pas deux fois.</small></div><div class="am-native-status" id="am-native-status"><span class="am-native-status-dot"></span><div><b>Lecture des règles Discord…</b><small>Vérification en cours</small></div></div></div>
+    <div class="am-native-hero"><div class="am-native-copy"><span class="am-native-icon">☁️</span><div><b>Miroir officiel actif</b><small>Discord reçoit de vraies règles liées à ta configuration, sans remplacer le système Optimus Prime.</small></div></div><label class="am-native-toggle"><span>Activer</span><input type="checkbox" id="am-native-on" ${s.am_native_enabled !== 0 ? 'checked' : ''} /><i></i></label></div>
+    <div class="am-native-grid"><div><label class="dash-label">Salon des alertes Auto-Mod officielles</label><select class="dash-select" id="am-native-channel">${nativeChannelOptions.join('')}</select><small class="am-help">Choisis un salon ou laisse Optimus Prime utiliser le salon de logs/blacklist. Les alertes natives ne sanctionnent pas deux fois.</small></div><div class="am-native-status" id="am-native-status"><span class="am-native-status-dot"></span><div><b>Lecture des règles Discord…</b><small>Vérification en cours</small></div></div></div>
     <div class="am-native-actions"><span class="am-help">Le badge officiel apparaît uniquement selon les règles et le seuil définis par Discord.</span><button class="dash-btn dash-btn-primary" id="am-native-sync">☁️ Synchroniser avec Discord</button></div>`;
   const nativeStatusBox = cNative.querySelector('#am-native-status');
   const renderNativeStatus = async () => {
@@ -2789,7 +2789,7 @@ Dashboard.renderers.moderation = async (content, data) => {
   };
 
   // 🛡️ Permissions réelles du bot sur ce serveur
-  const cPerm = Dashboard.card(root, '🛡️ Permissions du bot sur ce serveur', 'Ce que Nexora peut réellement faire — vérifié en direct auprès de Discord.');
+  const cPerm = Dashboard.card(root, '🛡️ Permissions du bot sur ce serveur', 'Ce que Optimus Prime peut réellement faire — vérifié en direct auprès de Discord.');
   const permBox = App.el(`<div class="desc">Vérification en cours…</div>`);
   cPerm.appendChild(permBox);
   (async () => {
@@ -3179,7 +3179,7 @@ Dashboard.renderers.embeds = async (content, data) => {
   const g = data.guild || {};
   const serverName = g.name || 'ton serveur';
   const memberCount = g.members || '?';
-  const botName = (bot && bot.name) || 'Nexora';
+  const botName = (bot && bot.name) || 'Optimus Prime';
 
   // Brouillon persistant (conservé quand on change de module)
   if (!Dashboard.embedDraft) {
@@ -3225,7 +3225,7 @@ Dashboard.renderers.embeds = async (content, data) => {
         </div>
       </div>
       <div><label class="dash-label">Pied de page</label>
-        <input class="dash-input" id="eb-footer" maxlength="2048" placeholder="Nexora · ${App.escapeHtml(serverName)}" /></div>
+        <input class="dash-input" id="eb-footer" maxlength="2048" placeholder="Optimus Prime · ${App.escapeHtml(serverName)}" /></div>
     </div>
     <div class="eb-grid2">
       <div><label class="dash-label">Grande image (URL)</label>
@@ -4149,7 +4149,7 @@ Dashboard.renderers.server = async (content, data) => {
   c.innerHTML += `
     <label class="dash-label">Préfixe (vide = « ${App.escapeHtml(bot.prefix)} »)</label>
     <input class="dash-input" id="g-prefix" maxlength="5" value="${App.escapeHtml(s.prefix || '')}" placeholder="${App.escapeHtml(bot.prefix)}" style="max-width:200px" />
-    <label class="dash-label" style="margin-top:12px">🌍 Langue de Nexora sur ce serveur</label>
+    <label class="dash-label" style="margin-top:12px">🌍 Langue d’Optimus Prime sur ce serveur</label>
     <select class="dash-select" id="g-lang" style="max-width:280px">
       <option value="fr" ${currentLanguage === 'fr' ? 'selected' : ''}>🇫🇷 Français</option>
       <option value="en" ${currentLanguage === 'en' ? 'selected' : ''}>🇬🇧 English</option>
@@ -4301,17 +4301,17 @@ Dashboard.renderers.botprofile = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const profile = data.profile || {};
   const serverName = data.guild && data.guild.name ? data.guild.name : 'ce serveur';
-  const root = Dashboard.header(content, '🤖', 'Identité du bot', `Personnalise Nexora uniquement sur ${serverName}.`);
-  const card = Dashboard.card(root, '🤖 Profil de Nexora sur ce serveur', 'Cette identité est indépendante des autres serveurs et ne modifie jamais le bot global.');
+  const root = Dashboard.header(content, '🤖', 'Identité du bot', `Personnalise Optimus Prime uniquement sur ${serverName}.`);
+  const card = Dashboard.card(root, '🤖 Profil d’Optimus Prime sur ce serveur', 'Cette identité est indépendante des autres serveurs et ne modifie jamais le bot global.');
   const avatar = profile.avatar_url || bot.avatar_url || '';
   const banner = profile.banner_url || '';
   card.innerHTML += `
     <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:14px;border:1px solid rgba(88,101,242,.28);border-radius:10px;background:rgba(88,101,242,.07)">
       <span style="font-size:20px">🔒</span><div><b>Configuration limitée à ce serveur</b><div class="desc" style="margin:2px 0 0">Les autres serveurs conservent leur propre nom et leurs propres images.</div></div>
     </div>
-    <label class="dash-label">Nom affiché par Nexora sur ce serveur</label>
+    <label class="dash-label">Nom affiché par Optimus Prime sur ce serveur</label>
     <input class="dash-input" id="bp-name" maxlength="80" value="${App.escapeHtml(profile.name || '')}" placeholder="Hoxera" />
-    <div class="desc" style="margin-top:5px">Le nom personnalisé apparaît dans les messages envoyés par Nexora sur ce serveur. L’application bot globale n’est pas renommée.</div>
+    <div class="desc" style="margin-top:5px">Le nom personnalisé apparaît dans les messages envoyés par Optimus Prime sur ce serveur. L’application bot globale n’est pas renommée.</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:16px">
       <div>
         <label class="dash-label">🖼️ Photo du bot sur ce serveur</label>
@@ -4367,7 +4367,7 @@ Dashboard.renderers.botprofile = async (content, data) => {
       if (bannerInput.files && bannerInput.files[0]) body.banner_b64 = await fileAsDataUrl(bannerInput.files[0]);
       await App.api(`/bots/${bot.id}/guilds/${guildId}/profile`, { method: 'PUT', body });
       status.textContent = '✅ Identité enregistrée uniquement pour ce serveur.';
-      App.toast('Identité de Nexora enregistrée pour ce serveur !');
+      App.toast('Identité d’Optimus Prime enregistrée pour ce serveur !');
       await Dashboard.renderContent(content);
     } catch (e) {
       status.textContent = `⚠️ ${e.message}`;
@@ -4376,7 +4376,7 @@ Dashboard.renderers.botprofile = async (content, data) => {
     button.disabled = false; button.textContent = '💾 Enregistrer l’identité';
   };
   card.querySelector('#bp-reset').onclick = async () => {
-    if (!(await App.confirm(`Reprendre l’identité globale de Nexora sur ${serverName} ?`))) return;
+    if (!(await App.confirm(`Reprendre l’identité globale d’Optimus Prime sur ${serverName} ?`))) return;
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/profile`, { method: 'DELETE' });
       App.toast('Identité globale reprise sur ce serveur.');

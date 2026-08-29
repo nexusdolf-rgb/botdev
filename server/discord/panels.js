@@ -353,11 +353,11 @@ function defaultPanelDescription(buttonLabel, hasTypes) {
 //  - « Support | {nom du serveur} » (titre)
 //  - « Bienvenue sur le support officiel de {nom du serveur} »
 //  - Bannière « SUPPORT - {NOM DU SERVEUR} » générée à la volée
-//    (Nexora = nom de repli si le serveur est inconnu)
+//    (Optimus Prime = nom de repli si le serveur est inconnu)
 //  - Textes dans la langue du serveur (/lang fr|en)
 // ============================================================
 const i18n = require('../i18n');
-const PANEL_DEFAULT_NAME = 'Nexora';
+const PANEL_DEFAULT_NAME = 'Optimus Prime';
 
 function panelBannerUrl(guildId, name) {
   const site = store.settings.get('public_url') || 'https://hoxera.is-a.dev';
@@ -470,7 +470,7 @@ async function sendTicketPanel(botId, guildId, client, channel, mode = 'auto') {
   const identity = require('./identity');
   const guild = client && client.guilds ? client.guilds.cache.get(guildId) : null;
   // 🌍 Nom du serveur : mémorisé (pour la bannière dynamique) et affiché
-  // dans le titre + la bienvenue du panneau. Repli : « Nexora ».
+  // dans le titre + la bienvenue du panneau. Repli : « Optimus Prime ».
   let serverName = '';
   if (guild && guild.name) {
     serverName = String(guild.name).slice(0, 100);
@@ -1218,7 +1218,7 @@ async function sendTranscriptDm(clientOrInteraction, guild, channelName, { text,
   // 🖼️ La bannière du PROFIL du bot (le robot) est affichée dans le MP,
   // avec l'URL toujours à jour (mise à jour automatique au démarrage).
   // Repli : copie locale de la bannière servie par le site.
-  const serverName = String(guild.name || 'Nexora').slice(0, 100);
+  const serverName = String(guild.name || 'Optimus Prime').slice(0, 100);
   // 🌍 Transcription dans la langue du serveur
   const lang = i18n.langForGuild(guild.id);
   const siteUrl = store.settings.get('public_url') || 'https://hoxera.is-a.dev';
@@ -1231,7 +1231,7 @@ async function sendTranscriptDm(clientOrInteraction, guild, channelName, { text,
     .setTitle(i18n.t(lang, 'transcript_title'))
     .setDescription(desc)
     .setImage(profileBanner)
-    .setFooter({ text: 'Nexora · ' + i18n.t(lang, 'footer_tickets') });
+    .setFooter({ text: 'Optimus Prime · ' + i18n.t(lang, 'footer_tickets') });
   try {
     await user.send({
       embeds: [embed],

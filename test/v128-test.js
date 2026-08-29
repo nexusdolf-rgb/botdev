@@ -1,5 +1,5 @@
 // ============================================================
-// Test v3.23 — Accès Nexora réservé au propriétaire ou à
+// Test v3.23 — Accès Optimus Prime réservé au propriétaire ou à
 // la permission Discord native « Administrateur ».
 // ============================================================
 const assert = require('assert');
@@ -166,8 +166,8 @@ console.log('2️⃣  Commandes de configuration : permission native Administrat
   assert(dashboardSource.includes('permission Discord « Administrateur »'));
   const indexSource = fs.readFileSync(path.join(__dirname, '..', 'public/index.html'), 'utf8');
   const swSource = fs.readFileSync(path.join(__dirname, '..', 'public/sw.js'), 'utf8');
-  assert.strictEqual((indexSource.match(/\?v=171/g) || []).length, 7);
-  assert(swSource.includes("const CACHE = 'botdev-v171';"));
+  assert.strictEqual((indexSource.match(/\?v=172/g) || []).length, 7);
+  assert(swSource.includes("const CACHE = 'botdev-v172';"));
   assert(buildSlashPayloads(1).some((p) => p.name === 'ticket' && p.default_member_permissions === '8'));
   console.log('6️⃣  Frontend versionné et permissions slash synchronisées ✅');
 

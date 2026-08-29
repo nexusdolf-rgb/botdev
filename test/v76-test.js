@@ -88,7 +88,7 @@ const check = (label, cond) => {
       errors24h: { count: 1, last: [{ source: 'interaction', message: 'erreur test', at: Date.now() - 60000 }] },
       platform: { servers: 6, members: 146 },
       queue: { waiting: 2, active: 1, processed: 340, failed: 0, refused: 0 },
-      bots: [{ id: 1, name: 'Hoxera', enabled: true, last_error: '', username: 'Nexora#2500' }],
+      bots: [{ id: 1, name: 'Hoxera', enabled: true, last_error: '', username: 'Optimus Prime#2500' }],
       clients: [],
     });
     return resp({ ok: true });

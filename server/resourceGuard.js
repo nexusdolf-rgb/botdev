@@ -1,5 +1,5 @@
 // ============================================================
-// Nexora — Protection des ressources (mémoire)
+// Optimus Prime — Protection des ressources (mémoire)
 //
 // Ce garde-fou ne tue jamais le processus et ne supprime aucune donnée
 // persistante. Il observe la mémoire RSS, vide les caches non essentiels

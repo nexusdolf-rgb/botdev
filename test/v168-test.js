@@ -62,7 +62,7 @@ w.fetch = async (url, opts) => {
   const p = String(url).split('?')[0];
   const resp = (body) => ({ ok: true, status: 200, json: async () => body });
   if (p.endsWith('/api/auth/me')) return resp({ user: { id: 1, email: 'a@b.fr', discord_id: 'D1', discord_username: 'a', is_admin: true } });
-  if (p.endsWith('/api/nexora') || p.endsWith('/api/hoxera')) return resp({ configured: true, bot: { id: 1, name: 'Nexora', prefix: '!', online: true, invite_url: 'https://x', status_text: '', avatar_url: '', bot_username: 'Nexora#1', guilds: [] } });
+  if (p.endsWith('/api/nexora') || p.endsWith('/api/hoxera')) return resp({ configured: true, bot: { id: 1, name: 'Optimus Prime', prefix: '!', online: true, invite_url: 'https://x', status_text: '', avatar_url: '', bot_username: 'Optimus Prime#1', guilds: [] } });
   if (p.endsWith('/api/discord/guilds')) return resp({ guilds: [{ id: 'G1', name: 'Serveur Test', owner: true, canManage: true, hasBot: true, icon: '' }], discord: { username: 'a', avatar: '' } });
   if (p.endsWith('/embed-templates')) return resp({ templates: [{ id: 7, name: 'Règlement', payload: { title: 'Règlement' }, createdAt: '2026-08-29 10:00:00' }] });
   if (p.endsWith('/guilds/G1')) return resp({
@@ -86,7 +86,7 @@ window.__results = (async () => {
   try {
     const host = document.createElement('div');
     // Comme le vrai dashboard : state.bot + guildId définis avant le module
-    Dashboard.state.bot = { id: 1, name: 'Nexora', prefix: '!' };
+    Dashboard.state.bot = { id: 1, name: 'Optimus Prime', prefix: '!' };
     Dashboard.state.guildId = 'G1';
     const gdata = await App.api('/bots/1/guilds/G1');
     await Dashboard.renderers.embeds(host, gdata);

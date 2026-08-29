@@ -1,5 +1,5 @@
 // ============================================================
-// Test v3.25 — Espace Administration Nexora : comptes liés,
+// Test v3.25 — Espace Administration Optimus Prime : comptes liés,
 // déliaison Discord, bannissement/débannissement et suppression.
 // ============================================================
 const assert = require('assert');
@@ -66,9 +66,9 @@ const cookieParser = require('cookie-parser');
 
   const unlink = await fetchJson(`/admin/users/${targetId}/unlink-discord`, { method: 'POST', headers: { Cookie: adminCookie } });
   assert.strictEqual(unlink.status, 200);
-  assert(store.users.findById(targetId) && !store.users.findById(targetId).discord_id, 'compte Nexora conservé après déliaison');
+  assert(store.users.findById(targetId) && !store.users.findById(targetId).discord_id, 'compte Optimus Prime conservé après déliaison');
   assert.strictEqual(store.discordTokens.get(targetId), null, 'jeton Discord supprimé après déliaison');
-  console.log('2️⃣  Délier Discord : liaison supprimée, compte Nexora conservé ✅');
+  console.log('2️⃣  Délier Discord : liaison supprimée, compte Optimus Prime conservé ✅');
 
   // Relie de nouveau le compte uniquement pour tester le bannissement.
   store.users.updateDiscord(targetId, {
@@ -77,13 +77,13 @@ const cookieParser = require('cookie-parser');
   });
   store.sessions.create(targetId);
   const ban = await fetchJson(`/admin/users/${targetId}/ban`, {
-    method: 'POST', headers: { Cookie: adminCookie }, body: JSON.stringify({ reason: 'Test de modération Nexora' }),
+    method: 'POST', headers: { Cookie: adminCookie }, body: JSON.stringify({ reason: 'Test de modération Optimus Prime' }),
   });
   assert.strictEqual(ban.status, 200);
   assert(store.platformBans.isBanned(targetId), 'bannissement enregistré');
   const bannedSession = await fetchJson('/auth/me', { headers: { Cookie: targetCookie } });
   assert([401, 403].includes(bannedSession.status), 'session d un compte banni refusée');
-  console.log('3️⃣  Bannir Nexora : accès bloqué et données conservées ✅');
+  console.log('3️⃣  Bannir Optimus Prime : accès bloqué et données conservées ✅');
 
   const unban = await fetchJson(`/admin/users/${targetId}/ban`, { method: 'DELETE', headers: { Cookie: adminCookie } });
   assert.strictEqual(unban.status, 200);
@@ -91,7 +91,7 @@ const cookieParser = require('cookie-parser');
   const freshTargetCookie = `botdev_session=${store.sessions.create(targetId)}`;
   const unbannedMe = await fetchJson('/auth/me', { headers: { Cookie: freshTargetCookie } });
   assert.strictEqual(unbannedMe.status, 200, 'compte débanni reconnectable');
-  console.log('4️⃣  Débannir Nexora : reconnexion possible ✅');
+  console.log('4️⃣  Débannir Optimus Prime : reconnexion possible ✅');
 
   const selfBan = await fetchJson(`/admin/users/${adminId}/ban`, { method: 'POST', headers: { Cookie: adminCookie }, body: JSON.stringify({ reason: 'non' }) });
   const selfDelete = await fetchJson(`/admin/users/${adminId}`, { method: 'DELETE', headers: { Cookie: adminCookie } });

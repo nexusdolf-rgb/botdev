@@ -65,11 +65,6 @@ const sel171 = css.split('v171 —')[1] || '';
 assert(!/\n(?!\s*\/|\*|html\.hx-light|\s*$)[a-z.#[]/.test(sel171),
   'la passe v171 ne doit cibler QUE html.hx-light');
 
-// ---------- 10. Version v171 ----------
-assert.strictEqual((index.match(/\?v=171/g) || []).length, 7,
-  'index.html doit référencer v171 7 fois');
-assert(sw.includes("'botdev-v171'") || sw.includes('botdev-v171'),
-  'le cache du service worker n’est pas en v171');
-assert(!index.includes('?v=170'), 'index.html référence encore v170');
+// ---------- 10. Version : gérée par le test de la version courante (v172) ----------
 
 console.log('✅ v171-test : 27 vérifications OK (mode clair desktop verrouillé)');

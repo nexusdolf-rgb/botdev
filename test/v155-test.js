@@ -22,7 +22,7 @@ w.eval(fs.readFileSync('public/js/app.js', 'utf8') + '\n' + source + '\nwindow.A
 w.App.state = { user: { id: 1, is_admin: false, discord_username: 'testeur' } };
 w.App.api = async () => ({ warnings: [], infos: [] });
 w.Dashboard.state = {
-  bot: { id: 1, name: 'Nexora', online: true, avatar_url: '' },
+  bot: { id: 1, name: 'Optimus Prime', online: true, avatar_url: '' },
   guildId: 'G1', module: 'overview', discordGuilds: [
     { id: 'G1', name: 'Serveur principal', hasBot: true, canManage: true },
     { id: 'G2', name: 'Autre serveur', hasBot: true, canManage: true },

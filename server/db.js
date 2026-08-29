@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- Contrôle d'accès à la plateforme Nexora (indépendant des permissions Discord).
+-- Contrôle d'accès à la plateforme Optimus Prime (indépendant des permissions Discord).
 -- Un bannissement conserve les données afin qu'un débannissement soit possible.
 CREATE TABLE IF NOT EXISTS platform_bans (
   user_id INTEGER PRIMARY KEY,
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS platform_bans (
   created_by INTEGER DEFAULT 0
 );
 
--- Journal minimal des actions sensibles de l'administration Nexora.
+-- Journal minimal des actions sensibles de l'administration Optimus Prime.
 -- Aucun token, mot de passe ou contenu OAuth n'est enregistré ici.
 CREATE TABLE IF NOT EXISTS platform_audit_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -314,8 +314,8 @@ CREATE TABLE IF NOT EXISTS automod_blacklist_counters (
 CREATE INDEX IF NOT EXISTS idx_automod_blacklist_counters_user
   ON automod_blacklist_counters (bot_id, guild_id, user_id, updated_at DESC);
 
--- Correspondance entre les règles natives Discord et les clés Nexora.
--- Seules les règles créées par Nexora sont suivies et modifiées.
+-- Correspondance entre les règles natives Discord et les clés Optimus Prime.
+-- Seules les règles créées par Optimus Prime sont suivies et modifiées.
 CREATE TABLE IF NOT EXISTS native_automod_rules (
   bot_id INTEGER NOT NULL,
   guild_id TEXT NOT NULL,
@@ -563,7 +563,7 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_duration_min I
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_channel TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_title TEXT DEFAULT '🚫 Membre ajouté à la blacklist'"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_color TEXT DEFAULT '#ED4245'"); } catch (e) {}
-try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_footer TEXT DEFAULT 'Blacklist du serveur · Nexora'"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_footer TEXT DEFAULT 'Blacklist du serveur · Optimus Prime'"); } catch (e) {}
 // v6 — miroir passif des règles Auto-Mod officielles de Discord.
 // Il utilise uniquement des alertes natives pour éviter les doubles sanctions.
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_native_enabled INTEGER DEFAULT 1"); } catch (e) {}
@@ -939,7 +939,7 @@ const guildSettings = {
       am_blacklist_channel: String(next.am_blacklist_channel || '').slice(0, 100),
       am_blacklist_title: String(next.am_blacklist_title || '🚫 Membre ajouté à la blacklist').slice(0, 120),
       am_blacklist_color: /^#[0-9a-fA-F]{6}$/.test(String(next.am_blacklist_color || '')) ? String(next.am_blacklist_color) : '#ED4245',
-      am_blacklist_footer: String(next.am_blacklist_footer || 'Blacklist du serveur · Nexora').slice(0, 200),
+      am_blacklist_footer: String(next.am_blacklist_footer || 'Blacklist du serveur · Optimus Prime').slice(0, 200),
       am_native_enabled: next.am_native_enabled === 0 || next.am_native_enabled === false ? 0 : 1,
       am_native_alert_channel: String(next.am_native_alert_channel || '').slice(0, 100),
       am_exempt_roles: typeof next.am_exempt_roles === 'string'

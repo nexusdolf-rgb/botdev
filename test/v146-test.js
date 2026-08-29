@@ -100,9 +100,9 @@ const client = { user: { id: 'BOT-USER' } };
   const disabled = await native.syncGuild(BOT, guild, { client });
   assert.strictEqual(disabled.disabled, 4);
   assert([...rules.values()].every((rule) => rule.enabled === false));
-  console.log('✅ désactivation : les règles Nexora sont désactivées sans toucher aux règles externes');
+  console.log('✅ désactivation : les règles Optimus Prime sont désactivées sans toucher aux règles externes');
 
-  assert(native.RULE_PREFIX.includes('Nexora'));
+  assert(native.RULE_PREFIX.includes('Optimus Prime'));
   assert(routes.includes('/automod/native'));
   assert(routes.includes('/automod/native/sync'));
   assert(dashboard.includes('am-native-on') && dashboard.includes('am-native-sync'));

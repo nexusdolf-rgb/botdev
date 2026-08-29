@@ -1,7 +1,7 @@
 // ============================================================
 // Hoxera — Autorisations de configuration par serveur
 //
-// Règle Nexora :
+// Règle Optimus Prime :
 //   - le propriétaire du serveur a toujours accès ;
 //   - un membre qui possède la permission Discord native
 //     « Administrateur » a accès ;

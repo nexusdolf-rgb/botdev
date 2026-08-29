@@ -1,5 +1,5 @@
 // ============================================================
-// Test v3.36 — Route locale de l'avatar public Nexora.
+// Test v3.36 — Route locale de l'avatar public Optimus Prime.
 // ============================================================
 const assert = require('assert');
 const fs = require('fs');
@@ -33,7 +33,7 @@ store.bots.update(1, { avatar_url: 'https://cdn.example.test/nexora.png' });
   server.close();
   global.fetch = originalFetch;
   store.db.close();
-  console.log('✅ Avatar public : proxy local sert la vraie image Nexora sans exposer de données sensibles');
+  console.log('✅ Avatar public : proxy local sert la vraie image Optimus Prime sans exposer de données sensibles');
 })().catch((error) => {
   console.error('❌', error.stack || error.message);
   process.exit(1);

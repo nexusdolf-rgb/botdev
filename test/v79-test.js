@@ -99,7 +99,7 @@ const check = (label, cond) => {
     };
     return i;
   };
-  const entry = { client: { user: { username: 'Nexora' } } };
+  const entry = { client: { user: { username: 'Optimus Prime' } } };
   const wEn = mkI({ langVal: 'en' });
   await premade.handlePremadeSlash(BOT, entry, wEn);
   check('/lang en : répond en anglais', wEn._replied && wEn.replies.some((r) => String(r.content || '').includes('Server language set to')));

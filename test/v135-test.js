@@ -1,6 +1,6 @@
 // ============================================================
 // Test v3.35 — La page d'accueil de connexion et la navbar
-// publique affichent l'avatar public réel de Nexora.
+// publique affichent l'avatar public réel d’Optimus Prime.
 // ============================================================
 const assert = require('assert');
 const fs = require('fs');
@@ -26,7 +26,7 @@ w.App.api = async (url) => {
   const brand = w.document.querySelector('#connect-card [data-brand-logo]');
   assert(brand && brand.tagName === 'IMG', 'photo prévue sur la page de connexion');
   assert.strictEqual(brand.getAttribute('src'), '/api/public/bot-avatar');
-  console.log('1️⃣  Accueil connexion : photo de Nexora affichée en haut à gauche ✅');
+  console.log('1️⃣  Accueil connexion : photo d’Optimus Prime affichée en haut à gauche ✅');
 
   const nav = w.App.renderPublicNavbar ? w.App.renderPublicNavbar() : null;
   // public.js est chargé dans index.html ; ce test vérifie aussi sa source.

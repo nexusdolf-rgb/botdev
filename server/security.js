@@ -1,5 +1,5 @@
 // ============================================================
-// Nexora — protections HTTP du dashboard
+// Optimus Prime — protections HTTP du dashboard
 //
 // Ce module ne donne jamais de permission : il ajoute uniquement des
 // garde-fous. En cas de doute (origine inconnue, limite dépassée), la

@@ -1,5 +1,5 @@
 // ============================================================
-// Test v3.34 — Le dashboard affiche l'avatar réel de Nexora
+// Test v3.34 — Le dashboard affiche l'avatar réel d’Optimus Prime
 // dans la barre de navigation, avec fallback éclair si l'image échoue.
 // ============================================================
 const assert = require('assert');
@@ -21,7 +21,7 @@ w.App.state = {
 const nav = w.App.renderNavbar();
 assert(nav.querySelector('#nav-brand-avatar'), 'avatar réel présent dans la barre');
 assert.strictEqual(nav.querySelector('#nav-brand-avatar').getAttribute('src'), 'https://cdn.discordapp.com/avatars/1/avatar.png');
-console.log('1️⃣  Dashboard : avatar réel de Nexora utilisé dans la barre ✅');
+console.log('1️⃣  Dashboard : avatar réel d’Optimus Prime utilisé dans la barre ✅');
 
 const image = nav.querySelector('#nav-brand-avatar');
 image.dispatchEvent(new w.Event('error'));
@@ -30,6 +30,6 @@ console.log('2️⃣  Dashboard : fallback éclair conservé si Discord ne fourn
 
 const source = fs.readFileSync('public/js/app.js', 'utf8');
 assert(source.includes('currentNav.replaceWith(App.renderNavbar())'));
-console.log('3️⃣  Dashboard : barre reconstruite après chargement de l avatar Nexora ✅');
+console.log('3️⃣  Dashboard : barre reconstruite après chargement de l avatar Optimus Prime ✅');
 
 console.log('\n🎉 Tous les tests v3.34 passent !');
