@@ -53,10 +53,6 @@ const probe = `
 const out = execFileSync('node', ['-e', probe], { cwd: root, encoding: 'utf8' }).trim();
 assert(out.startsWith('OK'), 'le nom doit survivre à un redémarrage');
 
-// ---------- 3. Version v174 ----------
-assert.strictEqual((index.match(/\?v=174/g) || []).length, 7,
-  'index.html doit référencer v174 7 fois');
-assert(sw.includes('botdev-v174'), 'le cache du service worker n’est pas en v174');
-assert(!index.includes('?v=173'), 'index.html référence encore v173');
+// ---------- 3. Version : gérée par le test de la version courante (v175) ----------
 
 console.log('✅ v174-test : le nom du bot survit aux redémarrages et déploiements');

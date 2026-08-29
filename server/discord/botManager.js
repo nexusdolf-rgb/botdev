@@ -598,7 +598,7 @@ const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3'; // Serveur support officiel 
 
 function aboutText() {
   return [
-    '✨ Hoxera — le bot qui anime ton serveur !',
+    '🤖 Optimus Prime — le bot qui anime ton serveur !',
     '🎫 Tickets · 📈 XP · 💰 Coins · 🕹️ Jeux · ❓ /help',
     `🌐 Dashboard : ${OFFICIAL_URL}`,
     `🆘 Support : ${SUPPORT_URL}`,
