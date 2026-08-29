@@ -206,7 +206,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 4. Vérifie les tokens (GitHub 200, Render 200, Discord `users/@me` avec curl)
 5. Fais-moi un point de situation clair, puis attends mes instructions
 
-## 📌 ÉTAT AU 29/08/2026 (dernière mise à jour de ce document)
+## 📌 ÉTAT AU 30/08/2026 (dernière mise à jour de ce document)
 
 - Dernière version : **v186** (audit UI complet du dashboard : 0 problème sur 12 passes
   Puppeteer — 320→1920px, thèmes sombre + clair, modales, admin, contraste)
