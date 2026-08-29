@@ -32,7 +32,8 @@ assert(css.includes('.dd-add-btn'), 'styles du bouton ajouter manquants');
 // 4. Identité Argile par défaut + accent RGB dynamique (plus aucun violet codé en dur)
 assert(css.includes('--d-accent: #e07a5f'), 'accent par défaut Argile manquant dans :root');
 assert(css.includes('--d-accent-rgb: 224,122,95'), 'composante RGB de l’accent manquante');
-assert(!css.includes('rgba(88,101,242'), 'reste du blurple codé en dur dans le CSS');
+// (exception v168 : l'aperçu Discord de l'Embed Builder simule les vraies couleurs Discord)
+assert(!css.slice(0, css.indexOf('🧱 Embed Builder') >= 0 ? css.indexOf('🧱 Embed Builder') : css.length).includes('rgba(88,101,242'), 'reste du blurple codé en dur dans le CSS');
 assert(!css.includes('rgba(88, 101, 242'), 'reste du blurple espacé codé en dur dans le CSS');
 assert(!css.includes('rgba(132,143,255'), 'reste du violet clair codé en dur dans le CSS');
 assert(js.includes("--d-accent-rgb"), 'l’applicateur d’accent ne pilote pas --d-accent-rgb');

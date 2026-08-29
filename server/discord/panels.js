@@ -165,6 +165,12 @@ async function dispatchPanels(botId, interaction) {
       if (cid.startsWith(`bd-taddm:${botId}`)) { await submitAddMember(botId, interaction); return true; }
     }
 
+    // 🧱 Embed Builder : boutons décoratifs (aucune action, réponse discrète)
+    if (interaction.isButton() && cid.startsWith('eb:')) {
+      await interaction.reply({ content: '🧱 Bouton décoratif créé avec l\'Embed Builder — il n\'a pas d\'action programmée.', ephemeral: true }).catch(() => {});
+      return true;
+    }
+
     // ⭐ Note du support (boutons 1-5 étoiles envoyés en MP après la clôture)
     if (interaction.isButton() && cid.startsWith('bd-rate:')) {
       await handleRating(botId, interaction);

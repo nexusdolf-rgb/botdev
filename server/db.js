@@ -1618,6 +1618,13 @@ const shopPurchases = {
   last: (botId, guildId, limit = 10) => db.prepare('SELECT * FROM shop_purchases WHERE bot_id = ? AND guild_id = ? ORDER BY id DESC LIMIT ?').all(botId, guildId, limit),
 };
 
+// ---------------------- Embed Builder (modèles sauvegardés) ----------------------
+const embedTemplates = {
+  list: (botId, guildId) => db.prepare('SELECT id, name, payload, created_at FROM embed_templates WHERE bot_id = ? AND guild_id = ? ORDER BY id DESC').all(botId, guildId),
+  add: (botId, guildId, name, payload) => db.prepare('INSERT INTO embed_templates (bot_id, guild_id, name, payload) VALUES (?, ?, ?, ?)').run(botId, guildId, String(name || 'Modèle').slice(0, 80), JSON.stringify(payload || {})),
+  remove: (id, botId, guildId) => db.prepare('DELETE FROM embed_templates WHERE id = ? AND bot_id = ? AND guild_id = ?').run(id, botId, guildId),
+};
+
 // ---------------------- Candidatures (applications) ----------------------
 const applications = {
   get: (botId, guildId) => db.prepare('SELECT * FROM applications WHERE bot_id = ? AND guild_id = ?').get(botId, guildId) || null,
@@ -1699,6 +1706,15 @@ try { db.exec("CREATE INDEX IF NOT EXISTS idx_advanced_ticket_channels_guild ON 
 try { db.exec("ALTER TABLE advanced_ticket_panels ADD COLUMN image_url TEXT DEFAULT ''"); } catch (e) {}
 
 // v2.7 — 📰 Flux d'activité du serveur (dashboard)
+try { db.exec(`CREATE TABLE IF NOT EXISTS embed_templates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id TEXT NOT NULL,
+  guild_id TEXT NOT NULL,
+  name TEXT NOT NULL DEFAULT 'Modèle',
+  payload TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+)`); } catch (e) {}
+
 try { db.exec(`CREATE TABLE IF NOT EXISTS activity (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   bot_id INTEGER NOT NULL, guild_id TEXT NOT NULL,
@@ -1751,4 +1767,4 @@ const liveSocials = {
   count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM live_socials WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
 };
 
-module.exports = { db, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories };
+module.exports = { db, embedTemplates, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories };

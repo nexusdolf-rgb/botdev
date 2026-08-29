@@ -96,9 +96,9 @@ console.log('2️⃣  Notifications et couleur : portails, fermeture et re-rendu
 
 const versions = index.match(/\?v=(\d+)/g) || [];
 assert.strictEqual(versions.length, 7);
-assert(versions.every((v) => v === '?v=167'));
-assert(sw.includes("const CACHE = 'botdev-v167';"));
-console.log('3️⃣  Cache frontend : index.html et service worker synchronisés en v167 ✅');
+assert(versions.every((v) => v === '?v=168'));
+assert(sw.includes("const CACHE = 'botdev-v168';"));
+console.log('3️⃣  Cache frontend : index.html et service worker synchronisés en v168 ✅');
 
 setTimeout(async () => {
   const pop = w.document.querySelector('#dash-bell-pop');

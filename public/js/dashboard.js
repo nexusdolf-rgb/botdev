@@ -438,6 +438,7 @@ Dashboard.MODULES = [
   ['giveaways', '🎁', 'Giveaways'],
   ['community', '⭐', 'Communauté & Lives'],
   ['announcements', '📅', 'Annonces'],
+  ['embeds', '🧱', 'Embed Builder'],
   ['members', '👥', 'Membres'],
   ['stats', '📈', 'Statistiques'],
   ['logs', '📜', 'Journaux'],
@@ -3171,6 +3172,312 @@ Dashboard.renderers.giveaways = async (content) => {
 };
 
 // ---------- Membres (liste + actions) ----------
+// ============================================================
+// 🧱 Embed Builder (v168) — constructeur visuel de messages du bot
+// ============================================================
+Dashboard.embedDraft = Dashboard.embedDraft || null;
+
+Dashboard.renderers.embeds = async (content, data) => {
+  const { bot, guildId } = Dashboard.state;
+  const root = Dashboard.header(content, '🧱', 'Embed Builder', 'Construis visuellement les messages de ton bot : aperçu Discord en direct, envoi immédiat dans un salon et modèles réutilisables.');
+  const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
+  const g = data.guild || {};
+  const serverName = g.name || 'ton serveur';
+  const memberCount = g.members || '?';
+  const botName = (bot && bot.name) || 'Nexora';
+
+  // Brouillon persistant (conservé quand on change de module)
+  if (!Dashboard.embedDraft) {
+    Dashboard.embedDraft = {
+      content: '', author: '', title: '', description: '', color: '#e07a5f',
+      image: '', thumbnail: '', footer: '', buttons: [],
+    };
+  }
+  const d = Dashboard.embedDraft;
+
+  const wrap = App.el('<div class="eb-wrap"></div>');
+  root.appendChild(wrap);
+  const leftCol = App.el('<div class="eb-col eb-editor-col"></div>');
+  const rightCol = App.el('<div class="eb-col eb-preview-col"></div>');
+  wrap.append(leftCol, rightCol);
+
+  // ---------- Carte 1 : le message ----------
+  const cMsg = Dashboard.card(leftCol, '✍️ Ton message', 'Le texte au-dessus de l\'embed (optionnel) et l\'embed lui-même.');
+  cMsg.innerHTML += `
+    <div class="eb-vars">
+      <span class="eb-vars-lbl">Variables :</span>
+      <code class="eb-var" title="Mention du membre">{user}</code>
+      <code class="eb-var" title="Pseudo sans mention">{username}</code>
+      <code class="eb-var" title="Nom du serveur">{server}</code>
+      <code class="eb-var" title="Nombre de membres">{memberCount}</code>
+    </div>
+    <label class="dash-label">Message (au-dessus de l'embed)</label>
+    <textarea class="dash-input" id="eb-content" rows="2" maxlength="2000" placeholder="Bonjour {user} ! 👋"></textarea>
+    <div class="eb-grid2">
+      <div><label class="dash-label">Auteur (petite ligne au-dessus du titre)</label>
+        <input class="dash-input" id="eb-author" maxlength="256" placeholder="📢 Annonces" /></div>
+      <div><label class="dash-label">Titre</label>
+        <input class="dash-input" id="eb-title" maxlength="256" placeholder="📣 Grande nouvelle" /></div>
+    </div>
+    <label class="dash-label">Description</label>
+    <textarea class="dash-input" id="eb-description" rows="5" maxlength="4096" placeholder="Écris ton texte ici… **gras**, *italique*, \`code\`"></textarea>
+    <div class="eb-grid2">
+      <div>
+        <label class="dash-label">Couleur de la barre</label>
+        <div class="eb-color-row">
+          <input type="color" id="eb-color" value="${App.escapeHtml(d.color)}" />
+          ${['#e07a5f', '#57F287', '#5865F2', '#FEE75C', '#ED4245', '#EB459E'].map((c) => `<button type="button" class="eb-preset" data-c="${c}" style="background:${c}" title="${c}"></button>`).join('')}
+        </div>
+      </div>
+      <div><label class="dash-label">Pied de page</label>
+        <input class="dash-input" id="eb-footer" maxlength="2048" placeholder="Nexora · ${App.escapeHtml(serverName)}" /></div>
+    </div>
+    <div class="eb-grid2">
+      <div><label class="dash-label">Grande image (URL)</label>
+        <input class="dash-input" id="eb-image" maxlength="500" placeholder="https://…/image.png" /></div>
+      <div><label class="dash-label">Miniature en haut à droite (URL)</label>
+        <input class="dash-input" id="eb-thumbnail" maxlength="500" placeholder="https://…/mini.png" /></div>
+    </div>
+  `;
+
+  // ---------- Carte 2 : les boutons ----------
+  const cBtns = Dashboard.card(leftCol, '🔘 Boutons', "Jusqu'à 5 boutons sous le message. « Lien » ouvre une page web, les autres sont décoratifs.");
+  cBtns.innerHTML += `<div id="eb-btn-list"></div><button type="button" class="btn btn-sm eb-btn-add" id="eb-btn-add">➕ Ajouter un bouton</button>`;
+
+  // ---------- Carte 3 : les modèles ----------
+  const cTpl = Dashboard.card(leftCol, '💾 Modèles', 'Sauvegarde tes constructions pour les réutiliser plus tard.');
+  cTpl.innerHTML += `
+    <div class="eb-tpl-save">
+      <input class="dash-input" id="eb-tpl-name" maxlength="80" placeholder="Nom du modèle (ex : Règlement)" />
+      <button type="button" class="btn btn-primary btn-sm" id="eb-tpl-save">💾 Sauvegarder</button>
+    </div>
+    <div id="eb-tpl-list"><div class="eb-tpl-empty">Aucun modèle pour l'instant.</div></div>
+  `;
+
+  // ---------- Colonne droite : envoi + aperçu ----------
+  rightCol.innerHTML += `
+    <div class="dash-card eb-send-card">
+      <div class="card-head"><div class="card-heading"><h3>🚀 Envoyer</h3><div class="desc">Le message part immédiatement dans le salon choisi.</div></div></div>
+      <label class="dash-label">Salon de destination</label>
+      <select class="dash-input" id="eb-channel">
+        <option value="">— Choisir un salon —</option>
+        ${textChannels.map((ch) => `<option value="${App.escapeHtml(String(ch.id))}">#${App.escapeHtml(ch.name)}</option>`).join('')}
+      </select>
+      <div class="eb-actions">
+        <button type="button" class="btn btn-primary" id="eb-send">🚀 Envoyer le message</button>
+        <button type="button" class="btn" id="eb-copy">📋 Copier le JSON</button>
+      </div>
+    </div>
+    <div class="dash-card eb-preview-card">
+      <div class="card-head"><div class="card-heading"><h3>👀 Aperçu en direct</h3><div class="desc">Exactement comme tes membres le verront sur Discord.</div></div></div>
+      <div id="eb-preview"></div>
+    </div>
+  `;
+
+  // ---------- Lecture de l'état ----------
+  const field = (id) => cMsg.querySelector('#' + id);
+  const readDraft = () => {
+    ['content', 'author', 'title', 'description', 'color', 'image', 'thumbnail', 'footer'].forEach((k) => {
+      const el = field('eb-' + k);
+      if (el) d[k] = el.value;
+    });
+    d.buttons = (d.buttons || []).filter((b) => b && b.label !== '__deleted__');
+  };
+
+  const mdLite = (s) => App.escapeHtml(String(s || ''))
+    .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+    .replace(/__([^_]+)__/g, '<u>$1</u>')
+    .replace(/\*([^*]+)\*/g, '<i>$1</i>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\n/g, '<br>');
+  const vars = (s) => String(s || '')
+    .replace(/\{user\}/g, '<span class="eb-mention">@membre</span>')
+    .replace(/\{username\}/g, 'membre')
+    .replace(/\{server\}/g, App.escapeHtml(serverName))
+    .replace(/\{memberCount\}/g, String(memberCount));
+
+  // ---------- Aperçu ----------
+  const updatePreview = () => {
+    readDraft();
+    const host = rightCol.querySelector('#eb-preview');
+    if (!host) return;
+    const hasEmbed = d.author || d.title || d.description || d.image || d.thumbnail || d.footer;
+    const initials = (botName.trim()[0] || 'N').toUpperCase();
+    host.innerHTML = `
+      <div class="eb-discord">
+        <div class="eb-dmsg">
+          <span class="eb-dava">${initials}</span>
+          <div class="eb-dbody">
+            <div class="eb-dhead"><b>${App.escapeHtml(botName)}</b><span class="eb-dtag">BOT</span><span class="eb-dtime">aujourd'hui à ${new Date().getHours().toString().padStart(2, '0')}:${new Date().getMinutes().toString().padStart(2, '0')}</span></div>
+            ${d.content ? `<div class="eb-dcontent">${vars(mdLite(d.content))}</div>` : ''}
+            ${hasEmbed ? `
+            <div class="eb-embed" style="border-left-color:${App.escapeHtml(d.color || '#e07a5f')}">
+              <div class="eb-e-main">
+                ${d.author ? `<div class="eb-e-author">${vars(mdLite(d.author))}</div>` : ''}
+                ${d.title ? `<div class="eb-e-title">${vars(mdLite(d.title))}</div>` : ''}
+                ${d.description ? `<div class="eb-e-desc">${vars(mdLite(d.description))}</div>` : ''}
+                ${d.image && /^https?:\/\//.test(d.image) ? `<img class="eb-e-img" src="${App.escapeHtml(d.image)}" alt="" onerror="this.style.display='none'" />` : ''}
+                ${d.footer ? `<div class="eb-e-footer">${vars(mdLite(d.footer))}</div>` : ''}
+              </div>
+              ${d.thumbnail && /^https?:\/\//.test(d.thumbnail) ? `<img class="eb-e-thumb" src="${App.escapeHtml(d.thumbnail)}" alt="" onerror="this.style.display='none'" />` : ''}
+            </div>` : ''}
+            ${(d.buttons || []).length ? `<div class="eb-btns">${d.buttons.map((b) => `
+              <span class="eb-btn s${Number(b.style) || 1}">${b.emoji ? App.escapeHtml(b.emoji) + ' ' : ''}${App.escapeHtml(b.label || 'Bouton')}${Number(b.style) === 5 ? ' 🔗' : ''}</span>`).join('')}</div>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
+  // ---------- Éditeur de boutons ----------
+  const renderButtons = () => {
+    const host = cBtns.querySelector('#eb-btn-list');
+    if (!host) return;
+    d.buttons = d.buttons || [];
+    if (!d.buttons.length) {
+      host.innerHTML = '<div class="eb-tpl-empty">Aucun bouton — le message sera sans boutons.</div>';
+      return;
+    }
+    host.innerHTML = d.buttons.map((b, i) => `
+      <div class="eb-btnrow" data-i="${i}">
+        <input class="dash-input eb-b-emoji" maxlength="16" placeholder="😀" value="${App.escapeHtml(b.emoji || '')}" title="Émoji du bouton" />
+        <input class="dash-input eb-b-label" maxlength="80" placeholder="Texte du bouton" value="${App.escapeHtml(b.label || '')}" />
+        <select class="dash-input eb-b-style" title="Couleur du bouton">
+          <option value="1"${Number(b.style) === 1 ? ' selected' : ''}>Bleu</option>
+          <option value="2"${Number(b.style) === 2 ? ' selected' : ''}>Gris</option>
+          <option value="3"${Number(b.style) === 3 ? ' selected' : ''}>Vert</option>
+          <option value="4"${Number(b.style) === 4 ? ' selected' : ''}>Rouge</option>
+          <option value="5"${Number(b.style) === 5 ? ' selected' : ''}>🔗 Lien</option>
+        </select>
+        <button type="button" class="btn btn-sm eb-b-del" title="Retirer ce bouton">🗑</button>
+        ${Number(b.style) === 5 ? `<input class="dash-input eb-b-url" maxlength="500" placeholder="https://… (page à ouvrir)" value="${App.escapeHtml(b.url || '')}" />` : ''}
+      </div>
+    `).join('');
+    host.querySelectorAll('.eb-btnrow').forEach((row) => {
+      const i = Number(row.dataset.i);
+      const sync = () => {
+        d.buttons[i] = {
+          emoji: row.querySelector('.eb-b-emoji').value,
+          label: row.querySelector('.eb-b-label').value,
+          style: Number(row.querySelector('.eb-b-style').value) || 1,
+          url: (row.querySelector('.eb-b-url') || {}).value || '',
+        };
+      };
+      row.querySelectorAll('input, select').forEach((el) => {
+        el.addEventListener('input', () => { sync(); updatePreview(); });
+        el.addEventListener('change', () => { sync(); renderButtons(); updatePreview(); });
+      });
+      row.querySelector('.eb-b-del').onclick = () => { d.buttons.splice(i, 1); renderButtons(); updatePreview(); };
+    });
+  };
+  cBtns.querySelector('#eb-btn-add').onclick = () => {
+    if ((d.buttons || []).length >= 5) return App.toast('Maximum 5 boutons.', 'error');
+    d.buttons = d.buttons || [];
+    d.buttons.push({ emoji: '', label: '', style: 1, url: '' });
+    renderButtons(); updatePreview();
+  };
+
+  // ---------- Champs → brouillon + aperçu ----------
+  cMsg.querySelectorAll('input, textarea').forEach((el) => el.addEventListener('input', updatePreview));
+  cMsg.querySelectorAll('.eb-preset').forEach((p) => p.onclick = () => {
+    field('eb-color').value = p.dataset.c; updatePreview();
+  });
+
+  // ---------- Envoi ----------
+  const getPayload = () => {
+    readDraft();
+    return {
+      content: d.content, author: d.author, title: d.title, description: d.description,
+      color: d.color, image: d.image, thumbnail: d.thumbnail, footer: d.footer,
+      buttons: (d.buttons || []).map((b) => ({ emoji: b.emoji || '', label: b.label || 'Bouton', style: Number(b.style) || 1, url: b.url || '' })),
+    };
+  };
+  rightCol.querySelector('#eb-send').onclick = async () => {
+    const channel = rightCol.querySelector('#eb-channel').value;
+    if (!channel) return App.toast('Choisis d\'abord un salon.', 'error');
+    const btn = rightCol.querySelector('#eb-send');
+    btn.disabled = true; btn.textContent = '⏳ Envoi…';
+    try {
+      const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/embed/send`, { method: 'POST', body: { channel, ...getPayload() } });
+      App.toast(`✅ Message envoyé dans #${r.channel || channel} !`);
+    } catch (e) { App.toast(e.message, 'error'); }
+    btn.disabled = false; btn.textContent = '🚀 Envoyer le message';
+  };
+  rightCol.querySelector('#eb-copy').onclick = async () => {
+    const json = JSON.stringify(getPayload(), null, 2);
+    try {
+      await navigator.clipboard.writeText(json);
+      App.toast('📋 JSON copié dans le presse-papiers !');
+    } catch {
+      App.modal(`<div class="eb-json"><h3>JSON du message</h3><pre>${App.escapeHtml(json)}</pre></div>`, true);
+    }
+  };
+
+  // ---------- Modèles ----------
+  const renderTemplates = (list) => {
+    const host = cTpl.querySelector('#eb-tpl-list');
+    if (!host) return;
+    if (!list.length) { host.innerHTML = '<div class="eb-tpl-empty">Aucun modèle pour l\'instant.</div>'; return; }
+    host.innerHTML = list.map((t) => `
+      <div class="eb-tpl-item">
+        <div class="eb-tpl-copy"><b>${App.escapeHtml(t.name)}</b><small>${App.escapeHtml(String(t.createdAt || '').slice(0, 10))}</small></div>
+        <div class="eb-tpl-actions">
+          <button type="button" class="btn btn-sm" data-load="${t.id}">Charger</button>
+          <button type="button" class="btn btn-sm" data-del="${t.id}">🗑</button>
+        </div>
+      </div>
+    `).join('');
+    host.querySelectorAll('[data-load]').forEach((b) => b.onclick = () => {
+      const t = list.find((x) => String(x.id) === b.dataset.load);
+      if (!t) return;
+      const p = t.payload || {};
+      Object.assign(d, {
+        content: p.content || '', author: p.author || '', title: p.title || '', description: p.description || '',
+        color: p.color || '#e07a5f', image: p.image || '', thumbnail: p.thumbnail || '', footer: p.footer || '',
+        buttons: Array.isArray(p.buttons) ? p.buttons.map((x) => ({ ...x })) : [],
+      });
+      ['content', 'author', 'title', 'description', 'color', 'image', 'thumbnail', 'footer'].forEach((k) => {
+        const el = field('eb-' + k);
+        if (el) el.value = d[k] || (k === 'color' ? '#e07a5f' : '');
+      });
+      renderButtons();
+      updatePreview();
+      App.toast(`✅ Modèle « ${t.name} » chargé !`);
+    });
+    host.querySelectorAll('[data-del]').forEach((b) => b.onclick = async () => {
+      try {
+        await App.api(`/bots/${bot.id}/guilds/${guildId}/embed-templates/${b.dataset.del}`, { method: 'DELETE' });
+        App.toast('🗑 Modèle supprimé.');
+        loadTemplates();
+      } catch (e) { App.toast(e.message, 'error'); }
+    });
+  };
+  const loadTemplates = async () => {
+    try { const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/embed-templates`); renderTemplates(r.templates || []); }
+    catch { renderTemplates([]); }
+  };
+  cTpl.querySelector('#eb-tpl-save').onclick = async () => {
+    const name = cTpl.querySelector('#eb-tpl-name').value.trim();
+    if (!name) return App.toast('Donne un nom à ton modèle.', 'error');
+    try {
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/embed-templates`, { method: 'POST', body: { name, ...getPayload() } });
+      App.toast(`💾 Modèle « ${name} » sauvegardé !`);
+      cTpl.querySelector('#eb-tpl-name').value = '';
+      loadTemplates();
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+
+  // Restauration du brouillon dans les champs
+  ['content', 'author', 'title', 'description', 'color', 'image', 'thumbnail', 'footer'].forEach((k) => {
+    const el = field('eb-' + k);
+    if (el && d[k]) el.value = d[k];
+  });
+
+  renderButtons();
+  updatePreview();
+  loadTemplates();
+};
+
 Dashboard.renderers.members = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const root = Dashboard.header(content, '👥', 'Membres du serveur', 'La liste des membres avec leurs rôles, niveaux et coins — et des actions directes.');

@@ -41,9 +41,6 @@ assert(pubJs.includes('const countUp'), 'compteurs animés manquants');
 assert.strictEqual((pubJs.match(/App\.renderPublicLanding = /g) || []).length, 1, 'renderPublicLanding défini plusieurs fois');
 assert(styleCss.includes('--accent: #e07a5f;'), 'accent principal pas en Argile');
 
-// 4. Version v167 déployée (cache PWA + assets)
-assert(!index.includes('?v=166'), 'index.html référence encore v166');
-assert.strictEqual((index.match(/\?v=167/g) || []).length, 7, 'index.html doit référencer v167 7 fois');
-assert(sw.includes("'botdev-v167'"), 'le cache du service worker n’est pas en v167');
+// 4. Version : gérée par le test de la version courante (v168)
 
-console.log('✅ v167 : ancienne page d’accueil de Nexora restaurée — clone DraftBot retiré');
+console.log('✅ v167 (conservé) : ancienne page d’accueil de Nexora — clone DraftBot retiré');

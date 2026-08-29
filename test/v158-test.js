@@ -18,8 +18,11 @@ assert(js.includes("'mousedown', onDocDown"), 'écoute mousedown manquante (sour
 assert(js.includes("document.removeEventListener('pointerdown', onDocDown"), 'nettoyage pointerdown manquant');
 
 // 3. Plus AUCUNE couleur violette/bleue legacy codée en dur dans le CSS
+// (exception v168 : l'aperçu Discord de l'Embed Builder simule les vraies couleurs de Discord)
+const ebStart = css.indexOf('🧱 Embed Builder');
+const cssHorsApercu = ebStart >= 0 ? css.slice(0, ebStart) : css;
 for (const legacy of ['112,130,255', '154,123,255', '96,164,255', '#6376ff', '#916dff', '#7e8efc', '#7487ff', '#a07eff', '#a08ae9', '5865F2', '8B5CF6']) {
-  assert(!css.includes(legacy), `couleur legacy encore présente : ${legacy}`);
+  assert(!cssHorsApercu.includes(legacy), `couleur legacy encore présente : ${legacy}`);
 }
 
 // 4. Accueil refondu : hero signature + actions rapides en cartes à tuiles

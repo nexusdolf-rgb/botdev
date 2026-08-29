@@ -2012,6 +2012,107 @@ router.post('/bots/:id/guilds/:guildId/announcements/custom/send', requireAuth, 
 });
 
 // ============================================================
+// 🧱 Embed Builder — construire, envoyer, sauvegarder des messages
+// ============================================================
+const EMBED_BUTTON_STYLES = { 1: 'Primary', 2: 'Secondary', 3: 'Success', 4: 'Danger', 5: 'Link' };
+
+function sanitizeEmbedPayload(body) {
+  const b = body || {};
+  const str = (v, max) => String(v == null ? '' : v).slice(0, max);
+  const embed = {
+    content: str(b.content, 2000),
+    author: str(b.author, 256),
+    title: str(b.title, 256),
+    description: str(b.description, 4096),
+    color: /^#[0-9a-fA-F]{6}$/.test(String(b.color || '')) ? b.color : '',
+    image: str(b.image, 500),
+    thumbnail: str(b.thumbnail, 500),
+    footer: str(b.footer, 2048),
+    buttons: Array.isArray(b.buttons) ? b.buttons.slice(0, 5).map((x) => ({
+      emoji: str(x && x.emoji, 32),
+      label: str(x && x.label, 80) || 'Bouton',
+      style: [1, 2, 3, 4, 5].includes(Number(x && x.style)) ? Number(x.style) : 1,
+      url: /^https?:\/\/.+/.test(String(x && x.url || '')) ? String(x.url).slice(0, 500) : '',
+    })) : [],
+  };
+  if (embed.image && !/^https?:\/\//.test(embed.image)) embed.image = '';
+  if (embed.thumbnail && !/^https?:\/\//.test(embed.thumbnail)) embed.thumbnail = '';
+  return embed;
+}
+
+// Envoyer le message construit dans un salon
+router.post('/bots/:id/guilds/:guildId/embed/send', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  if (!botManager.isOnline(bot.id)) return res.status(400).json({ error: 'Démarre le bot avant d\'envoyer un message.' });
+  const entry = botManager.clients.get(bot.id);
+  if (!entry || !entry.client) return res.status(400).json({ error: 'Le bot est momentanément indisponible.' });
+  try {
+    const payload = sanitizeEmbedPayload(req.body || {});
+    const channelId = String((req.body || {}).channel || '');
+    const guild = entry.client.guilds.cache.get(String(guildId));
+    const channel = guild && guild.channels && guild.channels.cache ? guild.channels.cache.get(channelId) : null;
+    if (!channel || typeof channel.send !== 'function') return res.status(400).json({ error: 'Salon introuvable (ou le bot n\'y a pas accès).' });
+    const { EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
+    const e = new EmbedBuilder();
+    let hasEmbed = false;
+    if (payload.author) { e.setAuthor({ name: payload.author }); hasEmbed = true; }
+    if (payload.title) { e.setTitle(payload.title); hasEmbed = true; }
+    if (payload.description) { e.setDescription(payload.description); hasEmbed = true; }
+    if (payload.color) { e.setColor(payload.color); hasEmbed = true; }
+    if (payload.image) { e.setImage(payload.image); hasEmbed = true; }
+    if (payload.thumbnail) { e.setThumbnail(payload.thumbnail); hasEmbed = true; }
+    if (payload.footer) { e.setFooter({ text: payload.footer }); hasEmbed = true; }
+    const msg = { content: payload.content || undefined, embeds: hasEmbed ? [e] : [], components: [] };
+    if (payload.buttons.length) {
+      const row = new ActionRowBuilder();
+      payload.buttons.forEach((b, idx) => {
+        const btn = new ButtonBuilder().setLabel(payload.buttons[idx].label).setStyle(ButtonStyle[EMBED_BUTTON_STYLES[b.style]]);
+        if (b.emoji) { try { btn.setEmoji(b.emoji); } catch {} }
+        if (b.style === 5 && b.url) btn.setURL(b.url);
+        else btn.setCustomId(`eb:${Date.now()}:${idx}`);
+        row.addComponents(btn);
+      });
+      msg.components = [row];
+    }
+    const sent = await channel.send(msg);
+    res.json({ ok: true, messageId: sent && sent.id, channel: channel.name || channelId });
+  } catch (e) {
+    res.status(400).json({ error: String(e.message || e).slice(0, 240) });
+  }
+});
+
+// Lister / sauvegarder / supprimer les modèles
+router.get('/bots/:id/guilds/:guildId/embed-templates', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  try {
+    const list = store.embedTemplates.list(bot.id, req.params.guildId).map((t) => ({ id: t.id, name: t.name, payload: JSON.parse(t.payload || '{}'), createdAt: t.created_at }));
+    res.json({ templates: list });
+  } catch { res.json({ templates: [] }); }
+});
+
+router.post('/bots/:id/guilds/:guildId/embed-templates', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const payload = sanitizeEmbedPayload(req.body || {});
+  store.embedTemplates.add(bot.id, req.params.guildId, (req.body || {}).name, payload);
+  res.json({ ok: true });
+});
+
+router.delete('/bots/:id/guilds/:guildId/embed-templates/:tid', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  store.embedTemplates.remove(Number(req.params.tid) || 0, bot.id, req.params.guildId);
+  res.json({ ok: true });
+});
+
+// ============================================================
 // Hoxera 2.0 — Salons vocaux temporaires (dashboard)
 // ============================================================
 router.put('/bots/:id/guilds/:guildId/voicetemp', requireAuth, async (req, res) => {
