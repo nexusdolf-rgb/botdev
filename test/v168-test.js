@@ -48,10 +48,7 @@ assert(dbJs.includes('embed_templates'), 'table embed_templates manquante');
 assert(dbJs.includes('embedTemplates'), 'store embedTemplates manquant');
 assert(panelsJs.includes("cid.startsWith('eb:')"), 'gestionnaire des boutons décoratifs manquant');
 
-// 5. Version v168 déployée (cache PWA + assets)
-assert(!index.includes('?v=167'), 'index.html référence encore v167');
-assert.strictEqual((index.match(/\?v=168/g) || []).length, 7, 'index.html doit référencer v168 7 fois');
-assert(sw.includes("'botdev-v168'"), 'le cache du service worker n’est pas en v168');
+// 5. Version : gérée par le test de la version courante (v169)
 
 // 6. Rendu réel dans jsdom : le module s'affiche et l'aperçu réagit
 const { JSDOM } = require('jsdom');

@@ -142,13 +142,14 @@ const check = (label, cond) => {
       };
     } catch (e) { out.overview = { error: e.message }; }
 
-    // Bienvenue : aperçu d'embed en direct
+    // Bienvenue : aperçu Discord en direct (v169 : .dc-preview a remplacé l'ancien .embed-box)
     try {
       const c = document.createElement('div');
       await Dashboard.renderers.welcome(c, gdata);
+      await new Promise((r) => setTimeout(r, 200));
       out.welcome = {
-        preview: !!c.querySelector('.embed-box'),
-        previewText: c.querySelector('.embed-box') ? c.querySelector('.embed-box').textContent : '',
+        preview: !!c.querySelector('.dc-preview'),
+        previewText: c.querySelector('.dc-msg') ? c.querySelector('.dc-msg').textContent : '',
         colorPicker: !!c.querySelector('input[type=color][data-k="color"]'),
       };
     } catch (e) { out.welcome = { error: e.message }; }

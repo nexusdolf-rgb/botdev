@@ -2129,51 +2129,15 @@ Dashboard.renderers.welcome = async (content, data) => {
       cfgZone.appendChild(App.el(`<input class="dash-input" data-k="${f.key}" value="${App.escapeHtml(ev.config[f.key] ?? '')}" placeholder="${f.placeholder || ''}" />`));
     });
 
-    // 👀 Aperçu en direct : tu vois le message exactement comme sur Discord
+    // 👀 Aperçu Discord en direct (arrivée + départ), avec les vraies données du serveur
     if (key === 'member_join' || key === 'member_leave') {
-      const preview = App.el(`<div class="embed-preview"></div>`);
-      cfgZone.appendChild(preview);
-      const renderPreview = () => {
-        const msgEl = cfgZone.querySelector('[data-k="message"]');
-        const embedEl = cfgZone.querySelector('[data-k="embed"]');
-        const colorEl = cfgZone.querySelector('input[type=color][data-k="color"]');
-        const imageEl = cfgZone.querySelector('[data-k="image"]');
-        const msg = (msgEl ? msgEl.value : '') || '';
-        const isEmbed = embedEl ? embedEl.checked : false;
-        const color = colorEl ? colorEl.value : (def.default ? def.default : '#5865F2');
-        const image = imageEl ? imageEl.value.trim() : '';
-        const text = msg
-          .replace(/{user}/g, '@NouveauMembre')
-          .replace(/{user\.name}/g, 'NouveauMembre')
-          .replace(/{user\.tag}/g, 'NouveauMembre#1234')
-          .replace(/{server}/g, data.guild ? data.guild.name : 'Mon serveur')
-          .replace(/{count}/g, String(data.guild ? data.guild.members : 125));
-        preview.innerHTML = `
-          <div class="dash-label" style="margin:10px 0 6px">👀 Aperçu sur Discord</div>
-          <div class="embed-box" style="border-left:4px solid ${isEmbed ? App.escapeHtml(color) : '#57F287'}">
-            ${App.escapeHtml(text || 'Message vide…').replace(/\n/g, '<br/>')}
-            ${isEmbed && image ? `<img src="${App.escapeHtml(image)}" style="max-width:100%;border-radius:6px;margin-top:8px" alt="" />` : ''}
-          </div>`;
-      };
-      ['message', 'embed', 'color', 'image'].forEach((k) => {
-        const el = cfgZone.querySelector(`[data-k="${k}"]`);
-        if (el) {
-          el.addEventListener('input', renderPreview);
-          if (el.type === 'checkbox') el.addEventListener('change', renderPreview);
-        }
-      });
-      const hexEl = cfgZone.querySelector('[data-k-hex="color"]');
-      if (hexEl) hexEl.addEventListener('input', renderPreview);
-      renderPreview();
-    }
-
-    // 👀 Aperçu Discord en direct (message de bienvenue uniquement)
-    if (key === 'member_join') {
       const pv = App.el(`<div class="dc-preview" style="margin-top:12px"><div class="dash-label" style="margin:0 0 8px">👀 Aperçu sur Discord</div><div class="dc-msg"></div></div>`);
       const renderPv = () => {
         const msgEl = pv.querySelector('.dc-msg');
         const get = (k) => { const el = cfgZone.querySelector(`[data-k="${k}"]`); return el ? (el.type === 'checkbox' ? el.checked : el.value) : ''; };
-        const txt = String(get('message') || 'Bienvenue {user} !').replace('{user}', '@NouveauMembre').replace('{server}', 'Ton serveur').replace('{count}', '145');
+        const serverName = (data.guild && data.guild.name) || 'Ton serveur';
+        const memberCount = String((data.guild && data.guild.members) || '?');
+        const txt = String(get('message') || 'Bienvenue {user} !').replace('{user}', '@NouveauMembre').replace('{server}', serverName).replace('{count}', memberCount);
         const color = get('color') || '#57F287';
         const isEmbed = !!get('embed');
         const hasCard = !!get('card');
