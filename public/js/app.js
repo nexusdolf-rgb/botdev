@@ -109,6 +109,27 @@ App.openInvite = (url) => {
 
 App.fmtNumber = (n) => (n >= 1000 ? Math.round(n / 1000) + 'k' : String(n));
 
+// Télécharge un tableau de lignes au format CSV (v190).
+// rows: [{ col1: val, col2: val, ... }]
+App.downloadCSV = (filename, rows) => {
+  if (!rows || !rows.length) { App.toast('Rien à exporter.', 'error'); return; }
+  const esc = (v) => {
+    const s = String(v ?? '');
+    return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const headers = Object.keys(rows[0]);
+  const lines = [headers.map(esc).join(';')];
+  rows.forEach((r) => lines.push(headers.map((h) => esc(r[h])).join(';')));
+  const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+};
+
 // ---------------------- Router ----------------------
 App.router.parse = () => {
   const raw = (location.hash || '#/').replace(/^#\//, '');
@@ -144,6 +165,18 @@ App.router.run = async () => {
   // Page publique du bot (consultable par tous, sans connexion)
   if (parts[0] === 'bot' && parts[1]) {
     App.renderPublicBot(Number(parts[1]));
+    return;
+  }
+
+  // Page publique d'un serveur Discord (v190) — visible sans connexion
+  if (parts[0] === 'g' && parts[1]) {
+    App.renderPublicGuild(String(parts[1]));
+    return;
+  }
+
+  // Page de statut publique (v190) — état des bots, sans connexion
+  if (parts[0] === 'status') {
+    App.renderPublicStatus();
     return;
   }
 

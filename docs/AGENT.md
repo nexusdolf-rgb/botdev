@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v189**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v190**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -36,7 +36,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - Tickets pro (types, transcriptions, notes ⭐), modération + auto-mod + anti-raid,
   XP/niveaux, économie, giveaways, jeux, mariages, anniversaires, sondages, rappels,
   rôles par boutons, salons vocaux temporaires, starboard, traqueur d'invitations,
-  annonces de live, cartes de bienvenue, auto-rôles, i18n FR/EN
+  annonces de live, cartes de bienvenue, auto-rôles, i18n 6 langues (fr/en/es/de/pt/it)
 - **Dashboard** : https://hoxera.is-a.dev — connexion OAuth2 Discord, PWA installable,
   16 modules, thème sombre + clair, mobile + desktop
 
@@ -135,7 +135,22 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   ⚠️ Leçons : le thème clair se teste avec un VRAI audit contraste (passe D) ; les
   overrides light doivent gagner contre `!important` ; jamais de `white-space:nowrap`
   sans base flex correcte ; jamais de flip de surface sans gérer ses textes internes.
-- **v189 (ACTUELLE)** : **LOT 2 « Gaming & stream »** — événements/tournois.
+- **v190 (ACTUELLE)** : **LOT 4 « International & fun »**.
+  - **Multi-langues** : `server/i18n.js` étendu à 6 langues (fr, en, es, de, pt, it),
+    `/lang` accepte les 6 codes, repli automatique sur le français pour les clés
+    non traduites (aucune casse).
+  - **Page publique par serveur** : route `/public/guilds/:guildId` +
+    `botManager.guildPublicInfo()` / `botPublicGuilds()`, page front `#/g/<id>`
+    (nom, icône, membres, événements à venir `guildEvents.upcomingByGuild`,
+    top quiz), section « Serveurs publics » sur la page du bot.
+  - **Quiz compétitif** : `/quiz` (jouer / top), table `quiz_scores`, boutons
+    🇦🇧🇨 (`hxquiz:`), +10 pts (bonus +5 si < 8 s), classement par serveur,
+    module dashboard « Quiz » avec export CSV.
+  - **Série de connexion** : `/daily` bonus streak +25/jour (plafond +300),
+    colonne `economy.daily_streak`, affichée dans l'économie du dashboard.
+  - **Page de statut publique** `#/status` + export CSV (Économie).
+  - 122 tests verts (`test/v190-test.js`).
+- **v189** : **LOT 2 « Gaming & stream »** — événements/tournois.
   Nouveau module `server/discord/guildEvents.js` : commande `/event`
   (create/list/delete), table `guild_events` (participants JSON, rappels
   reminded_24h/reminded_1h), boutons `hxev:join/leave`, sweep toutes les 60 s
@@ -233,15 +248,16 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 
 1. Clone `https://github.com/nexusdolf-rgb/botdev`, `npm install`, lis le dernier commit
 2. Vérifie l'état : `https://hoxera.is-a.dev/api/health/bot` (bot en ligne ? erreurs ?)
-3. `bash scripts/check.sh` → doit être 🟢 (112 tests, ~2,5 min)
+3. `bash scripts/check.sh` → doit être 🟢 (122 tests, ~2,5 min)
 4. Vérifie les tokens (GitHub 200, Render 200, Discord `users/@me` avec curl)
 5. Fais-moi un point de situation clair, puis attends mes instructions
 
 ## 📌 ÉTAT AU 30/08/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v189** — LOT 2 : événements/tournois (`/event`,
-  boutons Participer, rappels 24h/1h, dashboard Événements). Lives 4 plateformes
-  déjà en place (liveWatch). Voir la section v189 ci-dessus.
+- Dernière version : **v190** — LOT 4 : multi-langues 6 langues, page publique
+  par serveur (`#/g/<id>`), quiz compétitif (`/quiz`), série de connexion
+  (`/daily` streak), page de statut publique (`#/status`), export CSV.
+  Voir la section v190 ci-dessus.
 - v188 livré : LOT 1 « Quick wins communauté » :
   - **/afk** : statut AFK persistant (table `afk`, upsert par membre), sortie auto
     dès que le membre écrit, prévention des autres à la mention (sans boucle)
@@ -257,6 +273,6 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   username, bio 4 lignes, icône d'application
 - ⏳ En attente utilisateur : renommer le rôle « Nexora » à la main sur 6 serveurs
   (Discord ne le permet pas automatiquement — voir piège n°4)
-- Roadmap : LOT 1 ✅ (v188) et LOT 2 ✅ (v189 — événements/tournois ; lives déjà
-  présents). LOT 3 = modmail, /profile, recherche transcriptions ;
-  LOT 4 = page publique serveur, multi-langues, quiz… Musique mise de côté.
+- Roadmap : LOT 1 ✅ (v188), LOT 2 ✅ (v189), LOT 4 ✅ (v190 — 6 langues,
+  page publique serveur, quiz, série de connexion, statut public, export CSV).
+  LOT 3 (backlog) = modmail, /profile, recherche transcriptions. Musique écartée.

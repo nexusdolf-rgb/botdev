@@ -22,12 +22,6 @@ const routesSrc = fs.readFileSync(path.join(root, 'server/routes.js'), 'utf8');
 const dashSrc = fs.readFileSync(path.join(root, 'public/js/dashboard.js'), 'utf8');
 const premadeSrc = fs.readFileSync(path.join(root, 'server/discord/premade.js'), 'utf8');
 
-// ---------- 1. Pins de version (repris des tests précédents) ----------
-assert.strictEqual((index.match(/\?v=189/g) || []).length, 7,
-  'index.html doit référencer v189 7 fois');
-assert(sw.includes('botdev-v189'), 'le cache du service worker n’est pas en v189');
-assert(!index.includes('?v=188'), 'index.html référence encore v188');
-
 // ---------- 2. Base de données ----------
 assert(dbSrc.includes('CREATE TABLE IF NOT EXISTS guild_events ('),
   'la table guild_events manque dans db.js');

@@ -135,6 +135,18 @@ CREATE TABLE IF NOT EXISTS economy (
   user_id TEXT NOT NULL,
   coins INTEGER DEFAULT 0,
   last_daily TEXT DEFAULT '',
+  daily_streak INTEGER DEFAULT 0,
+  PRIMARY KEY (bot_id, guild_id, user_id)
+);
+
+-- Scores du quiz (v190) : compétition par serveur
+CREATE TABLE IF NOT EXISTS quiz_scores (
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  score INTEGER DEFAULT 0,
+  answers INTEGER DEFAULT 0,
+  updated_at TEXT DEFAULT '',
   PRIMARY KEY (bot_id, guild_id, user_id)
 );
 
@@ -558,6 +570,7 @@ try { db.exec("ALTER TABLE tickets ADD COLUMN types TEXT DEFAULT '[]'"); } catch
 try { db.exec("ALTER TABLE tickets ADD COLUMN button_style TEXT DEFAULT '1'"); } catch (e) {}
 try { db.exec("ALTER TABLE tickets ADD COLUMN require_reason INTEGER DEFAULT 1"); } catch (e) {}
 try { db.exec("ALTER TABLE reminders ADD COLUMN repeat_mode TEXT DEFAULT 'once'"); } catch (e) {}
+try { db.exec("ALTER TABLE economy ADD COLUMN daily_streak INTEGER DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE role_menus ADD COLUMN guild_id TEXT DEFAULT ''"); } catch (e) {}
 
 // Migrations : colonnes Discord (OAuth2)
@@ -1004,7 +1017,7 @@ const guildSettings = {
       voicetemp_category: String(next.voicetemp_category || '').slice(0, 100),
       voicetemp_name: String(next.voicetemp_name || '').slice(0, 50),
       panel_name: String(next.panel_name || '').slice(0, 100),
-      lang: ['fr', 'en'].includes(String(next.lang || '')) ? String(next.lang) : 'fr',
+      lang: ['fr', 'en', 'es', 'de', 'pt', 'it'].includes(String(next.lang || '')) ? String(next.lang) : 'fr',
       timezone: tzUtil.safeTz(next.timezone),
     };
     const sets = cols.map(c => `${c} = excluded.${c}`).join(', ');
@@ -1045,6 +1058,7 @@ const economy = {
     db.prepare('UPDATE economy SET coins = coins + ? WHERE bot_id = ? AND guild_id = ? AND user_id = ?').run(amount, botId, guildId, userId);
   },
   setDaily: (botId, guildId, userId, date) => db.prepare('UPDATE economy SET last_daily = ? WHERE bot_id = ? AND guild_id = ? AND user_id = ?').run(date, botId, guildId, userId),
+  setDailyStreak: (botId, guildId, userId, streak) => db.prepare('UPDATE economy SET daily_streak = ? WHERE bot_id = ? AND guild_id = ? AND user_id = ?').run(streak, botId, guildId, userId),
   top: (botId, guildId, limit = 10) => db.prepare('SELECT * FROM economy WHERE bot_id = ? AND guild_id = ? ORDER BY coins DESC LIMIT ?').all(botId, guildId, limit),
   count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM economy WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
   guildsWithData: (botId) => db.prepare('SELECT DISTINCT guild_id FROM economy WHERE bot_id = ?').all(botId).map(r => r.guild_id),
@@ -1601,6 +1615,18 @@ const guildEvents = {
   },
   // Tous les événements à venir de tous les serveurs (pour le balayage)
   allUpcoming: () => db.prepare('SELECT * FROM guild_events WHERE starts_at >= ? ORDER BY starts_at ASC LIMIT 200').all(Date.now()),
+  // Événements à venir d'un serveur précis (page publique serveur, v190)
+  upcomingByGuild: (guildId, limit = 5) => db.prepare('SELECT * FROM guild_events WHERE guild_id = ? AND starts_at >= ? ORDER BY starts_at ASC LIMIT ?').all(String(guildId), Date.now(), Math.min(Math.max(parseInt(limit, 10) || 5, 1), 20)),
+};
+
+// ---------------------- Quiz compétitif (v190) ----------------------
+const quizScores = {
+  get: (botId, guildId, userId) => db.prepare('SELECT * FROM quiz_scores WHERE bot_id = ? AND guild_id = ? AND user_id = ?').get(botId, guildId, String(userId)) || null,
+  addResult: (botId, guildId, userId, gained) => db.prepare(`INSERT INTO quiz_scores (bot_id, guild_id, user_id, score, answers, updated_at)
+    VALUES (?, ?, ?, ?, 1, ?)
+    ON CONFLICT(bot_id, guild_id, user_id) DO UPDATE SET score = score + excluded.score, answers = answers + 1, updated_at = excluded.updated_at`)
+    .run(botId, guildId, String(userId), gained, new Date().toISOString()),
+  top: (botId, guildId, limit = 10) => db.prepare('SELECT * FROM quiz_scores WHERE bot_id = ? AND guild_id = ? ORDER BY score DESC, answers ASC LIMIT ?').all(botId, guildId, Math.min(Math.max(parseInt(limit, 10) || 10, 1), 25)),
 };
 
 // ---------------------- Messages programmés ----------------------
@@ -1844,4 +1870,4 @@ const liveSocials = {
   count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM live_socials WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
 };
 
-module.exports = { db, embedTemplates, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, afk, guildEvents, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories };
+module.exports = { db, embedTemplates, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, afk, guildEvents, quizScores, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories };

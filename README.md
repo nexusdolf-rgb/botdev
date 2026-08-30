@@ -13,6 +13,10 @@
 - 🌙 **AFK** : `/afk [raison]` → les autres sont prévenus si tu es mentionné, ton statut se retire tout seul dès que tu écris
 - 🏆 **Classements** : `/top` (XP) et `/top type:coins` (coins) — pages navigables avec boutons ◀ ▶
 - 🎮 **Événements & tournois** : `/event create titre=… quand=JJ/MM HH:MM` — les membres s'inscrivent avec un bouton « Participer », rappels automatiques 24 h et 1 h avant, gestion dans le dashboard (onglet Événements)
+- 🧠 **Quiz compétitif** : `/quiz` — +10 points par bonne réponse (+5 de bonus si rapide), classement par serveur dans le dashboard (onglet Quiz, export CSV)
+- 🌍 **6 langues** : `/lang fr|en|es|de|pt|it` — les messages du bot (panneaux, tickets, transcriptions, auto-mod) suivent la langue du serveur
+- 🏠 **Pages publiques** : chaque serveur a sa page (`…/g/<id>` : membres, événements, top quiz) et Hoxera a une page de statut (`…/status`)
+- 🔥 **Série de connexion** : `/daily` récompense les membres assidus (+25 par jour de série, plafond +300)
 - 🗳️ **Sondages** : `/poll question choix1 | choix2 | …` (jusqu'à 10 choix, votes par boutons, résultats en direct)
 - 🕵️ **Snipe** : `/snipe` — le dernier message supprimé du salon
 - 💰 **Économie enrichie** : `/work` (métiers, 1×/heure), `/gamble montant` (double ou rien), `/rob @membre` (40 % de réussite, sinon amende)

@@ -1507,7 +1507,7 @@ router.put('/bots/:id/guilds/:guildId/settings', requireAuth, async (req, res) =
   const { prefix, lang, warn_limit, warn_action, warn_timeout_limit, warn_timeout_min, starboard_channel, starboard_min, live_channel, live_ping, ticket_log_channel, log_channel, birthday_channel, birthday_role, log_events, timezone } = req.body || {};
   store.guildSettings.set(bot.id, guildId, {
     prefix: String(prefix || '').slice(0, 5),
-    ...(lang !== undefined ? { lang: ['fr', 'en'].includes(String(lang)) ? String(lang) : 'fr' } : {}),
+    ...(lang !== undefined ? { lang: ['fr', 'en', 'es', 'de', 'pt', 'it'].includes(String(lang)) ? String(lang) : 'fr' } : {}),
     warn_limit: Math.max(0, parseInt(warn_limit, 10) || 0),
     warn_action: ['none', 'timeout', 'kick', 'ban'].includes(warn_action) ? warn_action : 'none',
     ...(warn_timeout_limit !== undefined ? { warn_timeout_limit: Math.max(0, parseInt(warn_timeout_limit, 10) || 0) } : {}),
@@ -1537,6 +1537,16 @@ router.put('/bots/:id/guilds/:guildId/events/:type', requireAuth, async (req, re
 });
 
 // ---------------------- Économie ----------------------
+router.get('/bots/:id/guilds/:guildId/quiz/top', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const { guildId } = req.params;
+  if (!guildId) return res.status(400).json({ error: 'guild_id requis' });
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const top = store.quizScores.top(bot.id, guildId, 25);
+  res.json({ top });
+});
+
 router.get('/bots/:id/economy/leaderboard', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
   if (!bot) return;
@@ -2410,8 +2420,34 @@ router.get('/public/bots/:id', (req, res) => {
       categories,
       custom,
       public_url: store.settings.get('public_url') || '',
+      public_guilds: botManager.botPublicGuilds(botId),
     },
   });
+});
+
+// ============================================================
+// Page publique par serveur (v190) — visible sans connexion
+// URL : /g/<guild_id> → affiche le serveur, ses événements et le top quiz
+// ============================================================
+router.get('/public/guilds/:guildId', (req, res) => {
+  const guildId = String(req.params.guildId);
+  const info = botManager.guildPublicInfo(guildId);
+  if (!info) return res.status(404).json({ error: 'Serveur introuvable ou bot hors ligne.' });
+
+  const events = store.guildEvents.upcomingByGuild(guildId, 5).map((e) => ({
+    id: e.id,
+    title: e.title,
+    description: e.description || '',
+    starts_at: e.starts_at,
+    channel_id: e.channel_id || '',
+    participants: (() => { try { return JSON.parse(e.participants || '[]'); } catch { return []; } })(),
+  }));
+  const quizTop = store.quizScores.top(info.bot_id, guildId, 10).map((r) => ({
+    user_id: r.user_id,
+    score: r.score,
+    answers: r.answers,
+  }));
+  res.json({ guild: info, events, quiz_top: quizTop });
 });
 
 // ============================================================

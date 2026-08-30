@@ -18,6 +18,41 @@ const ui = require('./ui');
 const penduGames = new Map();   // `${guildId}:${messageId}` -> { word, shown, lives, playerId }
 const morpionGames = new Map(); // `${guildId}:${messageId}` -> { board, turn, p1, p2, over }
 const pollState = new Map();    // `${guildId}:${messageId}` -> { question, choices, votes: Map<userId, index> }
+const quizState = new Map();    // `${guildId}:${messageId}` -> { q, correct, answered, ts }
+
+// 🧠 Banque de questions du quiz (v190) — culture générale + gaming
+const QUIZ_BANK = [
+  ['Quelle est la capitale du Japon ?', 'Tokyo', 'Osaka', 'Kyoto'],
+  ['Quelle est la capitale de l\'Australie ?', 'Canberra', 'Sydney', 'Melbourne'],
+  ['Quel est le plus grand océan du monde ?', 'Pacifique', 'Atlantique', 'Indien'],
+  ['Combien de joueurs dans une équipe de football ?', '11', '10', '12'],
+  ['Quel jeu a popularisé le mode « Battle Royale » ?', 'PUBG', 'Fortnite', 'Apex Legends'],
+  ['Quelle console a sorti Nintendo en 2017 ?', 'Switch', 'Wii U', 'GameCube'],
+  ['Quel est le créateur de Minecraft ?', 'Notch', 'Mark Zuckerberg', 'Gabe Newell'],
+  ['Combien de côtés a un hexagone ?', '6', '5', '7'],
+  ['Quel est le plus haut sommet du monde ?', 'Everest', 'K2', 'Mont Blanc'],
+  ['Quel pays a gagné la Coupe du Monde 2018 ?', 'France', 'Brésil', 'Allemagne'],
+  ['Quel est le symbole chimique de l\'or ?', 'Au', 'Ag', 'Fe'],
+  ['Combien de couleurs a un arc-en-ciel ?', '7', '6', '8'],
+  ['Quel est le plus grand désert du monde ?', 'Antarctique', 'Sahara', 'Gobi'],
+  ['Quel studio a créé Fortnite ?', 'Epic Games', 'Riot Games', 'Ubisoft'],
+  ['Quelle année a vu la sortie du premier iPhone ?', '2007', '2005', '2010'],
+  ['Quel est l\'animal le plus rapide sur terre ?', 'Guépard', 'Lion', 'Antilope'],
+  ['Combien de minutes dans une heure ?', '60', '100', '90'],
+  ['Quel jeu a pour héros « Mario » ?', 'Super Mario', 'Sonic', 'Crash Bandicoot'],
+  ['Quel est le pays le plus peuplé du monde ?', 'Inde', 'Chine', 'USA'],
+  ['Quel est le plus petit os du corps humain ?', 'Étrier', 'Phalange', 'Côtes'],
+  ['Quel est le nom du serveur Minecraft le plus célèbre ?', 'Hypixel', 'Mineplex', 'Cubecraft'],
+  ['Quel est le continent le plus grand ?', 'Asie', 'Afrique', 'Europe'],
+  ['Combien de joueurs dans une équipe de basketball ?', '5', '6', '7'],
+  ['Quel est le nom du personnage principal de Zelda ?', 'Link', 'Zelda', 'Ganon'],
+  ['Quelle est la monnaie du Japon ?', 'Yen', 'Won', 'Yuan'],
+  ['Quel est le premier jeu Pokémon ?', 'Vert/Rouge', 'Or/Argent', 'Émeraude'],
+  ['Combien de planètes dans notre système solaire ?', '8', '9', '7'],
+  ['Quel est le sport national du Japon ?', 'Sumo', 'Judo', 'Karate'],
+  ['Quel est le nom du robot mascotte de Hoxera ?', 'Optimus Prime', 'Bender', 'Robo'],
+  ['Quel est le plus grand mammifère du monde ?', 'Baleine bleue', 'Éléphant', 'Girafe'],
+];
 
 // 🛡️ Anti-fuite mémoire : les parties/sondages abandonnés sont purgés
 // (les plus anciens d'abord) dès qu'un plafond est dépassé.
@@ -142,6 +177,12 @@ function buildExtraPayloads() {
       name: 'morpion', description: '⭕ Joue au morpion contre un membre',
       options: [{ name: 'adversaire', description: 'Ton adversaire', type: ApplicationCommandOptionType.User, required: true }],
     },
+    {
+      name: 'quiz', description: '🧠 Quiz : gagne des points, monte au classement !',
+      options: [{ name: 'action', description: 'Jouer ou voir le classement', type: ApplicationCommandOptionType.String, required: false, choices: [
+        { name: 'jouer — lancer une question', value: 'jouer' }, { name: 'top — classement du serveur', value: 'top' },
+      ]}],
+    },
     // ---------- Communauté ----------
     {
       name: 'birthday', description: '🎂 Gère ton anniversaire (le bot te souhaite le jour J !)',
@@ -260,6 +301,7 @@ const HELP_EXTRA = {
   apply: ['📝 Candidatures', 'Les membres cliquent sur un bouton, répondent à TES questions dans une fenêtre, et leurs réponses arrivent dans un salon avec des boutons Accepter/Refuser pour le staff.', '`/apply set #salon` · `/apply question ta question` (max 5) · `/apply panel` · `/apply view` · `/apply off`', '`/apply set #candidatures` puis `/apply question Quel âge as-tu ?` puis `/apply panel`'],
   afk: ['🌙 AFK', 'Tu passes AFK : si quelqu\'un te mentionne, le bot le prévient. Ton statut se retire tout seul dès que tu écris à nouveau.', '`/afk` · `/afk raison`', '`/afk je mange` → 🔕 @X est AFK : je mange (depuis 2 min)'],
   top: ['🏆 Classement', 'Affiche le classement du serveur (XP ou coins) en pages de 10, navigables avec les boutons ◀ ▶.', '`/top` (XP) · `/top type:coins`', '`/top` → 🥇 @Léa — ✨ Niv. 12 (3 250 XP)'],
+  quiz: ['🧠 Quiz', 'Réponds aux questions à choix multiples : +10 points par bonne réponse, +5 si tu réponds vite. Ton score monte au classement du serveur.', '`/quiz` · `/quiz action:top`', '`/quiz` → 🧠 Quelle est la capitale du Japon ? → 🇯🇵 Tokyo → +10 points !'],
 };
 
 // ============================================================
@@ -282,7 +324,7 @@ async function handleInteraction(botId, entry, interaction) {
 }
 
 // ---------------------- Commandes slash ----------------------
-const EXTRA_CMDS = new Set(['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch', 'rps', 'pendu', 'morpion', 'birthday', 'remind', 'poll', 'snipe', 'work', 'gamble', 'rob', 'lockdown', 'voicetemp', 'apply', 'invites', 'afk', 'top']);
+const EXTRA_CMDS = new Set(['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch', 'rps', 'pendu', 'morpion', 'birthday', 'remind', 'poll', 'snipe', 'work', 'gamble', 'rob', 'lockdown', 'voicetemp', 'apply', 'invites', 'afk', 'top', 'quiz']);
 
 async function handleSlash(botId, entry, interaction) {
   const cmd = interaction.commandName.toLowerCase();
@@ -419,6 +461,42 @@ async function handleSlash(botId, entry, interaction) {
       const msg = await interaction.reply({ ...morpionPanel, fetchReply: true });
       morpionGames.set(`${guild.id}:${msg.id}`, state);
       capMap(morpionGames, 150); // 🛡️ purge les parties abandonnées
+      return true;
+    }
+    // ---------------- Quiz (v190) ----------------
+    case 'quiz': {
+      const action = interaction.options.getString('action') || 'jouer';
+      if (action === 'top') {
+        const top = store.quizScores.top(botId, guild.id, 10);
+        if (!top.length) return interaction.reply({ content: '🧠 Personne n\'a encore joué au quiz sur ce serveur — lance `/quiz` !', ephemeral: true });
+        const lines = top.map((r, i) => {
+          const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '`' + (i + 1) + '.`';
+          return `${medal} <@${r.user_id}> — ${r.score} pts (${r.answers} réponse(s))`;
+        });
+        return interaction.reply({
+          ...ui.panel({ variant: 'brand', title: '🧠 Classement Quiz', description: lines.join('\n'), footer: `Hoxera · ${guild.name} · Quiz` }),
+          ephemeral: true,
+        });
+      }
+      // Jouer : choisir une question au hasard, répartir les 3 choix
+      const [question, correct, ...wrongs] = QUIZ_BANK[Math.floor(Math.random() * QUIZ_BANK.length)];
+      const choices = [correct, ...wrongs].sort(() => Math.random() - 0.5);
+      const correctIdx = choices.indexOf(correct);
+      const embed = new EmbedBuilder()
+        .setColor(0x5865F2)
+        .setTitle('🧠 Quiz')
+        .setDescription(`**${question}**\n\n⚡ Réponds vite : **+5 points bonus** si tu réponds en moins de **8 secondes** !`)
+        .setFooter({ text: `Hoxera · ${guild.name} · Bonne réponse : +10 pts (+5 si rapide)` })
+        .setTimestamp();
+      const row = new ActionRowBuilder().addComponents(
+        ['🇦', '🇧', '🇨'].map((e, i) => new ButtonBuilder()
+          .setCustomId(`hxquiz:${guild.id}:${i}`)
+          .setLabel(e)
+          .setStyle(ButtonStyle.Primary)),
+      );
+      const msg = await interaction.reply({ embeds: [embed], components: [row], fetchReply: true });
+      quizState.set(`${guild.id}:${msg.id}`, { q: question, correct, correctIdx, answered: false, ts: Date.now() });
+      capMap(quizState, 200);
       return true;
     }
     // ---------------- Communauté ----------------
@@ -898,6 +976,34 @@ async function handleButton(botId, entry, interaction) {
       }, state.over ? boardRows(guild.id, state, true) : boardRows(guild.id, state)));
       return true;
     }
+    case 'quiz': {
+      const gid = parts[2], pick = parseInt(parts[3], 10);
+      const key = `${gid}:${interaction.message.id}`;
+      const st = quizState.get(key);
+      if (!st) return interaction.reply({ content: '🧠 Cette question est terminée.', ephemeral: true });
+      if (st.answered) return interaction.reply({ content: '🧠 Déjà répondu !', ephemeral: true });
+      st.answered = true;
+      const correctPick = pick === st.correctIdx;
+      const fast = Date.now() - st.ts <= 8000;
+      const gained = correctPick ? (fast ? 15 : 10) : 0;
+      if (correctPick) store.quizScores.addResult(botId, guild.id, user.id, gained);
+      const emojis = ['🇦', '🇧', '🇨'];
+      const row = new ActionRowBuilder().addComponents(
+        [0, 1, 2].map((i) => new ButtonBuilder()
+          .setCustomId(`hxquiz:${guild.id}:${i}`)
+          .setLabel(emojis[i])
+          .setStyle(i === st.correctIdx ? ButtonStyle.Success : ButtonStyle.Danger)
+          .setDisabled(true)),
+      );
+      const embed = new EmbedBuilder()
+        .setColor(correctPick ? 0x57f287 : 0xed4245)
+        .setTitle('🧠 Quiz')
+        .setDescription(`${correctPick ? '✅ **Bonne réponse !**' : '❌ **Mauvaise réponse…**'}\n\n**${st.q}**\n\nLa bonne réponse était : **${st.correct}**${correctPick ? `\n\n✨ +${gained} points${fast ? ' (bonus rapidité ⚡)' : ''}` : ''}`)
+        .setFooter({ text: `Hoxera · ${guild.name} · Quiz` })
+        .setTimestamp();
+      await interaction.update({ embeds: [embed], components: [row] });
+      return true;
+    }
     case 'poll': {
       const gid = parts[2], idx = parseInt(parts[3], 10);
       const key = `${gid}:${interaction.message.id}`;
@@ -1326,5 +1432,5 @@ module.exports = {
   nextRepeatTs,
   HELP_EXTRA,
   // 🧪 États internes exposés pour les tests (anti-fuite mémoire)
-  _test: { penduGames, morpionGames, pollState, capMap },
+  _test: { penduGames, morpionGames, pollState, quizState, capMap },
 };

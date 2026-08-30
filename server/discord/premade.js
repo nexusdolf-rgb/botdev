@@ -64,7 +64,7 @@ const CMD_DEFS = {
   rank: { label: 'rank', desc: 'Ton niveau, ton XP et ton rang' },
   levels: { label: 'levels', desc: 'Le classement des niveaux du serveur' },
   invite: { label: 'invite', desc: 'Le lien pour inviter le bot' },
-  lang: { label: 'lang', desc: 'Choisis la langue du bot sur ce serveur (fr/en)', perms: [PermissionsBitField.Flags.Administrator] },
+  lang: { label: 'lang', desc: 'Choisis la langue du bot sur ce serveur (fr, en, es, de, pt, it)', perms: [PermissionsBitField.Flags.Administrator] },
   giveaway: { label: 'giveaway', desc: 'Lancer un giveaway avec tirage automatique', perms: [PermissionsBitField.Flags.Administrator] },
   suggest: { label: 'suggest', desc: 'Proposer une suggestion (votes 👍👎)' },
   suggestions: { label: 'suggestions', desc: 'Configurer le salon des suggestions', perms: [PermissionsBitField.Flags.Administrator] },
@@ -93,9 +93,13 @@ function buildSlashPayloads(botId) {
     const def = CMD_DEFS[name];
     const options = [];
     if (name === 'lang') {
-      options.push({ name: 'langue', description: 'fr = Français · en = English', type: ApplicationCommandOptionType.String, required: true, choices: [
+      options.push({ name: 'langue', description: 'fr · en · es · de · pt · it', type: ApplicationCommandOptionType.String, required: true, choices: [
         { name: '🇫🇷 Français', value: 'fr' },
         { name: '🇬🇧 English', value: 'en' },
+        { name: '🇪🇸 Español', value: 'es' },
+        { name: '🇩🇪 Deutsch', value: 'de' },
+        { name: '🇵🇹 Português', value: 'pt' },
+        { name: '🇮🇹 Italiano', value: 'it' },
       ]});
     }
     if (['avatar', 'userinfo', 'kick', 'ban', 'timeout', 'warn', 'warns', 'balance', 'rank'].includes(name)) {
@@ -545,14 +549,12 @@ async function execute(botId, entry, cmd, src) {
     case 'lang': {
       if (!guild) return reply('🌍 Cette commande se configure sur un serveur.');
       const wanted = isInt ? (src.interaction.options.getString('langue') || '') : (src.args || '').trim();
-      if (!['fr', 'en'].includes(wanted)) {
-        return reply('❓ Utilisation : `/lang fr` ou `/lang en`.');
+      if (!['fr', 'en', 'es', 'de', 'pt', 'it'].includes(wanted)) {
+        return reply('❓ Utilisation : `/lang fr|en|es|de|pt|it`.');
       }
       store.guildSettings.set(botId, guild.id, { lang: wanted });
       const i18n = require('../i18n');
-      await reply(wanted === 'en'
-        ? i18n.t('en', 'lang_set')
-        : i18n.t('fr', 'lang_set'));
+      await reply(i18n.t(wanted, 'lang_set'));
       break;
     }
     // ===================== Communauté =====================
@@ -953,18 +955,33 @@ async function execute(botId, entry, cmd, src) {
       if (!guild) return;
       const row = store.economy.get(botId, guild.id, author.id);
       const today = new Date().toISOString().slice(0, 10);
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
       if (row && row.last_daily === today) {
-        return reply(`⏳ Tu as déjà récupéré tes coins aujourd'hui. Reviens demain !`);
+        const streak = Number(row.daily_streak) || 0;
+        return reply(streak > 1
+          ? `⏳ Tu as déjà récupéré tes coins aujourd'hui (série : ${streak} jours 🔥). Reviens demain pour continuer !`
+          : `⏳ Tu as déjà récupéré tes coins aujourd'hui. Reviens demain !`);
       }
+      // 🔥 Série de connexion (v190) : un jour consécutif → +1, sinon reset
+      let streak = 0;
+      if (row && row.last_daily === yesterday) streak = (Number(row.daily_streak) || 0) + 1;
+      else streak = 1;
+      const base = 100;
+      const bonus = Math.min(25 * (streak - 1), 300); // plafond +300
+      const reward = base + bonus;
       store.economy.ensure(botId, guild.id, author.id);
-      store.economy.add(botId, guild.id, author.id, 100);
+      store.economy.add(botId, guild.id, author.id, reward);
       store.economy.setDaily(botId, guild.id, author.id, today);
+      store.economy.setDailyStreak(botId, guild.id, author.id, streak);
       const after = store.economy.get(botId, guild.id, author.id);
       await replyPanel({
         variant: 'success',
         title: '🎁 Récompense quotidienne',
-        description: 'Tu as récupéré ta récompense du jour.',
-        fields: [{ name: '🪙 Récompense', value: '+100 coins', inline: true }, { name: '💰 Nouveau solde', value: `${after.coins} coins`, inline: true }],
+        description: streak > 1 ? `Série de **${streak} jours** 🔥 continue !` : 'Tu as récupéré ta récompense du jour.',
+        fields: [
+          { name: '🪙 Récompense', value: `+${reward} coins${bonus > 0 ? ` (dont +${bonus} de bonus série 🔥)` : ''}`, inline: true },
+          { name: '💰 Nouveau solde', value: `${after.coins} coins`, inline: true },
+        ],
         footer: `Hoxera · ${guild.name} · Économie`,
       });
       break;
@@ -1032,7 +1049,7 @@ const HELP_DETAILS = {
   rank: ['📈 Niveaux', 'Ton niveau, ton XP et ton rang sur ce serveur. Gagne de l\'XP en discutant !', '`/rank @membre`', '`/rank` → 📈 Niveau 3 · ✨ 950/1600 XP · 🏆 #2'],
   levels: ['📈 Niveaux', 'Le classement des niveaux du serveur.', '`/levels`'],
   invite: ['🔧 Utilitaire', 'Le lien pour inviter le bot sur un autre serveur.', '`/invite`'],
-  lang: ['🌍 Langue', 'Choisis la langue du bot sur CE serveur : français ou anglais. Tous les messages publics (panneau de tickets, bienvenue, transcriptions…) suivent.', '`/lang fr` · `/lang en`', '`/lang en` → 🌍 Server language set to: English 🇬🇧'],
+  lang: ['🌍 Langue', 'Choisis la langue du bot sur CE serveur : fr, en, es, de, pt ou it. Tous les messages publics (panneau de tickets, bienvenue, transcriptions…) suivent.', '`/lang fr` · `/lang en` · `/lang es` · `/lang de` · `/lang pt` · `/lang it`', '`/lang it` → 🌍 Lingua del bot impostata su italiano in questo server. 🇮🇹'],
   shop: ['🛒 Boutique', 'La boutique du serveur : achète des rôles avec tes coins.', '`/shop` (voir) · `buy` est `/buy article`'],
   buy: ['🛒 Boutique', 'Achète un article de la boutique (rôle donné automatiquement).', '`/buy article`', '`/buy vip` → ✅ Tu reçois @VIP pour 500 coins'],
   pay: ['💰 Économie', 'Transfère des coins à un membre.', '`/pay @membre montant`'],

@@ -33,7 +33,8 @@ const check = (label, cond) => {
   check('i18n : t() anglais', i18n.t('en', 'panel_welcome', { server: 'Test' }).includes('Welcome to the official support of Test'));
   check('i18n : variables remplacées', i18n.t('en', 'ticket_first_line', { type: '❓ Question', member: '@Bob' }).includes('ticket from @Bob'));
   check('i18n : normalisation (EN → en)', i18n.normalize('EN') === 'en');
-  check('i18n : langue inconnue → fr', i18n.normalize('de') === 'fr');
+  check('i18n : langue inconnue → fr', i18n.normalize('xx') === 'fr');
+  check('i18n : les 6 langues sont reconnues', ['fr', 'en', 'es', 'de', 'pt', 'it'].every((l) => i18n.normalize(l) === l));
   check('i18n : clé inconnue → repli fr ou clé (jamais de crash)', typeof i18n.t('en', 'cle_inexistante') === 'string');
   check('i18n : panelTexts règles (4)', i18n.panelTexts('en').rules.length === 4 && i18n.panelTexts('en').rules[0].includes('Be clear'));
 

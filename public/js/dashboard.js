@@ -437,6 +437,7 @@ Dashboard.MODULES = [
   ['suggestions', '💡', 'Suggestions'],
   ['giveaways', '🎁', 'Giveaways'],
   ['events', '🎮', 'Événements'],
+  ['quiz', '🧠', 'Quiz'],
   ['community', '⭐', 'Communauté & Lives'],
   ['announcements', '📅', 'Annonces'],
   ['embeds', '🧱', 'Embed Builder'],
@@ -2320,10 +2321,17 @@ Dashboard.renderers.economy = async (content, data) => {
   const c = Dashboard.card(root, '🏆 Classement', 'Les 25 membres les plus riches de ce serveur.');
   if (!lb.top.length) c.appendChild(App.el(`<div class="dash-empty"><div class="big">🪙</div>Aucune transaction pour l\'instant — les membres gagnent des coins avec /daily !</div>`));
   else {
-    const table = App.el(`<table class="dash-table"><thead><tr><th>#</th><th>Membre</th><th>Coins</th></tr></thead><tbody></tbody></table>`);
+    const table = App.el(`<table class="dash-table"><thead><tr><th>#</th><th>Membre</th><th>Coins</th><th>Série 🔥</th></tr></thead><tbody></tbody></table>`);
     const tb = table.querySelector('tbody');
-    lb.top.forEach((r, i) => tb.appendChild(App.el(`<tr><td>${['🥇','🥈','🥉'][i] || i + 1}</td><td><@${r.user_id}></td><td>🪙 ${r.coins}</td></tr>`)));
+    lb.top.forEach((r, i) => tb.appendChild(App.el(`<tr><td>${['🥇','🥈','🥉'][i] || i + 1}</td><td><@${r.user_id}></td><td>🪙 ${r.coins}</td><td>${Number(r.daily_streak) > 1 ? `${r.daily_streak} j` : '—'}</td></tr>`)));
     c.appendChild(table);
+    // 📥 Export CSV (v190)
+    const exp = App.el(`<div style="margin-top:12px"><button class="btn btn-sm" id="exp-csv">📥 Exporter CSV</button></div>`);
+    c.appendChild(exp);
+    exp.querySelector('#exp-csv').onclick = () => {
+      const rows = lb.top.map((r, i) => ({ rang: i + 1, user_id: r.user_id, coins: r.coins, serie_jours: Number(r.daily_streak) || 0 }));
+      App.downloadCSV(`economie_${Dashboard.state.guildId}.csv`, rows);
+    };
   }
 };
 
@@ -3965,6 +3973,26 @@ Dashboard.renderers.logs = async (content, data) => {
 };
 
 // ---------- 🎮 Événements & tournois (v189) ----------
+Dashboard.renderers.quiz = async (content, data) => {
+  const { bot, guildId } = Dashboard.state;
+  const root = Dashboard.header(content, '🧠', 'Quiz', 'Les membres gagnent des points avec /quiz sur le serveur. Bonne réponse : +10 pts, +5 de bonus si rapide.');
+  const { top } = await App.api(`/bots/${bot.id}/guilds/${guildId}/quiz/top`);
+  const c = Dashboard.card(root, '🏆 Classement Quiz', 'Les 25 meilleurs joueurs de ce serveur.');
+  if (!top.length) c.appendChild(App.el(`<div class="dash-empty"><div class="big">🧠</div>Personne n\'a encore joué au quiz — lance <b>/quiz</b> sur le serveur !</div>`));
+  else {
+    const table = App.el(`<table class="dash-table"><thead><tr><th>#</th><th>Membre</th><th>Points</th><th>Réponses</th></tr></thead><tbody></tbody></table>`);
+    const tb = table.querySelector('tbody');
+    top.forEach((r, i) => tb.appendChild(App.el(`<tr><td>${['🥇','🥈','🥉'][i] || i + 1}</td><td><@${r.user_id}></td><td>${r.score} pts</td><td>${r.answers}</td></tr>`)));
+    c.appendChild(table);
+    const exp = App.el(`<div style="margin-top:12px"><button class="btn btn-sm" id="quiz-exp-csv">📥 Exporter CSV</button></div>`);
+    c.appendChild(exp);
+    exp.querySelector('#quiz-exp-csv').onclick = () => {
+      const rows = top.map((r, i) => ({ rang: i + 1, user_id: r.user_id, points: r.score, reponses: r.answers }));
+      App.downloadCSV(`quiz_${guildId}.csv`, rows);
+    };
+  }
+};
+
 Dashboard.renderers.events = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const root = Dashboard.header(content, '🎮', 'Événements & tournois', 'Crée des événements datés : les membres s\'inscrivent avec un bouton, et le bot rappelle automatiquement 24 h et 1 h avant.');
