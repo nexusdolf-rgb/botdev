@@ -414,7 +414,19 @@ CREATE TABLE IF NOT EXISTS reminders (
   channel_id TEXT DEFAULT '',
   user_id TEXT NOT NULL,
   at_ts INTEGER NOT NULL,
-  text TEXT DEFAULT ''
+  text TEXT DEFAULT '',
+  repeat_mode TEXT DEFAULT 'once'
+);
+
+-- Statut AFK (v188) : un membre passe AFK, on prévient les autres
+-- qui le mentionnent, et le statut se retire dès qu'il écrit.
+CREATE TABLE IF NOT EXISTS afk (
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  reason TEXT DEFAULT '',
+  since_ts INTEGER NOT NULL,
+  PRIMARY KEY (bot_id, guild_id, user_id)
 );
 
 -- Statistiques d'utilisation des commandes (par jour)
@@ -525,6 +537,7 @@ try { db.exec("ALTER TABLE tickets ADD COLUMN name TEXT DEFAULT ''"); } catch (e
 try { db.exec("ALTER TABLE tickets ADD COLUMN types TEXT DEFAULT '[]'"); } catch (e) {}
 try { db.exec("ALTER TABLE tickets ADD COLUMN button_style TEXT DEFAULT '1'"); } catch (e) {}
 try { db.exec("ALTER TABLE tickets ADD COLUMN require_reason INTEGER DEFAULT 1"); } catch (e) {}
+try { db.exec("ALTER TABLE reminders ADD COLUMN repeat_mode TEXT DEFAULT 'once'"); } catch (e) {}
 try { db.exec("ALTER TABLE role_menus ADD COLUMN guild_id TEXT DEFAULT ''"); } catch (e) {}
 
 // Migrations : colonnes Discord (OAuth2)
@@ -987,6 +1000,7 @@ const xp = {
     ON CONFLICT(bot_id, guild_id, user_id) DO UPDATE SET xp = xp + excluded.xp, last_ts = excluded.last_ts`).run(botId, guildId, userId, amount, ts),
   setLevel: (botId, guildId, userId, level) => db.prepare('UPDATE xp SET level = ? WHERE bot_id = ? AND guild_id = ? AND user_id = ?').run(level, botId, guildId, userId),
   top: (botId, guildId, limit = 10) => db.prepare('SELECT * FROM xp WHERE bot_id = ? AND guild_id = ? ORDER BY xp DESC LIMIT ?').all(botId, guildId, limit),
+  count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM xp WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
   rankOf: (botId, guildId, userId) => db.prepare('SELECT COUNT(*) AS n FROM xp WHERE bot_id = ? AND guild_id = ? AND xp > (SELECT COALESCE((SELECT xp FROM xp WHERE bot_id = ? AND guild_id = ? AND user_id = ?), 0))').get(botId, guildId, botId, guildId, userId).n + 1,
 };
 
@@ -1012,6 +1026,7 @@ const economy = {
   },
   setDaily: (botId, guildId, userId, date) => db.prepare('UPDATE economy SET last_daily = ? WHERE bot_id = ? AND guild_id = ? AND user_id = ?').run(date, botId, guildId, userId),
   top: (botId, guildId, limit = 10) => db.prepare('SELECT * FROM economy WHERE bot_id = ? AND guild_id = ? ORDER BY coins DESC LIMIT ?').all(botId, guildId, limit),
+  count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM economy WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
   guildsWithData: (botId) => db.prepare('SELECT DISTINCT guild_id FROM economy WHERE bot_id = ?').all(botId).map(r => r.guild_id),
 };
 
@@ -1519,11 +1534,20 @@ const birthdays = {
 // ---------------------- Rappels ----------------------
 const reminders = {
   all: () => db.prepare('SELECT * FROM reminders ORDER BY at_ts ASC').all(),
-  add: (botId, guildId, channelId, userId, atTs, text) => db.prepare('INSERT INTO reminders (bot_id, guild_id, channel_id, user_id, at_ts, text) VALUES (?, ?, ?, ?, ?, ?)').run(botId, guildId, channelId, userId, atTs, text),
+  add: (botId, guildId, channelId, userId, atTs, text, repeatMode = 'once') => db.prepare('INSERT INTO reminders (bot_id, guild_id, channel_id, user_id, at_ts, text, repeat_mode) VALUES (?, ?, ?, ?, ?, ?, ?)').run(botId, guildId, channelId, userId, atTs, text, ['once', 'hourly', 'daily', 'weekly'].includes(repeatMode) ? repeatMode : 'once'),
   due: (nowTs) => db.prepare('SELECT * FROM reminders WHERE at_ts <= ? ORDER BY at_ts ASC LIMIT 50').all(nowTs),
   remove: (id) => db.prepare('DELETE FROM reminders WHERE id = ?').run(id),
   userList: (userId) => db.prepare('SELECT * FROM reminders WHERE user_id = ? ORDER BY at_ts ASC LIMIT 10').all(userId),
   userCount: (userId) => db.prepare('SELECT COUNT(*) AS n FROM reminders WHERE user_id = ?').get(userId).n,
+};
+
+// ---------------------- Statut AFK (v188) ----------------------
+const afk = {
+  set: (botId, guildId, userId, reason) => db.prepare('INSERT INTO afk (bot_id, guild_id, user_id, reason, since_ts) VALUES (?, ?, ?, ?, ?) ON CONFLICT(bot_id, guild_id, user_id) DO UPDATE SET reason = excluded.reason')
+    .run(botId, guildId, String(userId), String(reason || '').slice(0, 200), Date.now()),
+  get: (botId, guildId, userId) => db.prepare('SELECT * FROM afk WHERE bot_id = ? AND guild_id = ? AND user_id = ?').get(botId, guildId, String(userId)) || null,
+  remove: (botId, guildId, userId) => db.prepare('DELETE FROM afk WHERE bot_id = ? AND guild_id = ? AND user_id = ?').run(botId, guildId, String(userId)),
+  all: (botId, guildId) => db.prepare('SELECT * FROM afk WHERE bot_id = ? AND guild_id = ?').all(botId, guildId),
 };
 
 // ---------------------- Messages programmés ----------------------
@@ -1767,4 +1791,4 @@ const liveSocials = {
   count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM live_socials WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
 };
 
-module.exports = { db, embedTemplates, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories };
+module.exports = { db, embedTemplates, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, afk, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories };

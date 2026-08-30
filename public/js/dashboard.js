@@ -3552,6 +3552,30 @@ Dashboard.renderers.members = async (content, data) => {
   };
   c.querySelector('#m-search').addEventListener('input', (e) => render(e.target.value));
   render();
+
+  // 📜 Historique des sanctions (v188) : les avertissements récents du serveur
+  const warnCard = Dashboard.card(root, '📜 Avertissements récents', 'Les dernières sanctions infligées sur le serveur (warn, timeout, kick, ban) — issues de la modération et de l\'auto-modération.');
+  const warnList = App.el('<div id="m-warnings" style="display:flex;flex-direction:column;gap:6px;margin-top:10px"></div>');
+  warnCard.appendChild(warnList);
+  try {
+    const wr = await App.api(`/bots/${bot.id}/guilds/${guildId}/warnings`);
+    const warns = wr.warnings || [];
+    if (!warns.length) {
+      warnList.appendChild(App.el('<div class="dash-empty">Aucun avertissement pour le moment — tout est calme. 🕊️</div>'));
+    } else {
+      const actionLabel = { warn: '⚠️ warn', timeout: '⏱️ timeout', kick: '👢 kick', ban: '🔨 ban' };
+      warns.slice(0, 20).forEach((w) => {
+        const tag = w.user_tag || w.user_id;
+        warnList.appendChild(App.el(`
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:var(--d-surface-2,#23262e);font-size:13px">
+            <b style="min-width:140px;overflow:hidden;text-overflow:ellipsis">${App.escapeHtml(tag)}</b>
+            <span style="font-size:11px;padding:1px 8px;border-radius:99px;background:rgba(237,66,69,.15);color:#ed4245;white-space:nowrap">${App.escapeHtml(actionLabel[w.action] || w.action || 'warn')}</span>
+            <span style="flex:1;min-width:120px;color:var(--d-dim,#a0a5b3);overflow-wrap:anywhere">${App.escapeHtml(w.reason || '—')}</span>
+            <span style="font-size:11px;color:var(--d-dim,#a0a5b3);white-space:nowrap">${App.escapeHtml(String(w.created_at || '').replace('T', ' ').slice(0, 16))}${w.channel_name ? ' · #' + App.escapeHtml(w.channel_name) : ''}</span>
+          </div>`));
+      });
+    }
+  } catch (e) { warnList.appendChild(App.el(`<div class="dash-empty">${App.escapeHtml(e.message)}</div>`)); }
 };
 
 // ---------- Statistiques ----------

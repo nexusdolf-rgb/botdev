@@ -154,11 +154,27 @@ function buildExtraPayloads() {
       ],
     },
     {
-      name: 'remind', description: '⏰ Le bot t\'envoie un rappel en message privé',
+      name: 'remind', description: '⏰ Le bot t\'envoie un rappel en message privé (répétable)',
       options: [
         { name: 'duree', description: 'Dans combien de temps ? (ex : 10m, 2h, 1d)', type: ApplicationCommandOptionType.String, required: true },
         { name: 'texte', description: 'Le message du rappel', type: ApplicationCommandOptionType.String, required: true },
+        { name: 'repeat', description: 'Répéter ce rappel ? (optionnel)', type: ApplicationCommandOptionType.String, required: false, choices: [
+          { name: '🔂 Une seule fois', value: 'once' },
+          { name: '⏱️ Toutes les heures', value: 'hourly' },
+          { name: '📅 Tous les jours', value: 'daily' },
+          { name: '🗓️ Toutes les semaines', value: 'weekly' },
+        ]},
       ],
+    },
+    {
+      name: 'afk', description: '🌙 Passe AFK : on prévient les autres quand ils te mentionnent',
+      options: [{ name: 'raison', description: 'Pourquoi es-tu AFK ? (optionnel)', type: ApplicationCommandOptionType.String, required: false }],
+    },
+    {
+      name: 'top', description: '🏆 Classement du serveur : XP ou coins, avec navigation par pages',
+      options: [{ name: 'type', description: 'Le classement à afficher', type: ApplicationCommandOptionType.String, required: false, choices: [
+        { name: '✨ XP', value: 'xp' }, { name: '🪙 Coins', value: 'coins' },
+      ]}],
     },
     {
       name: 'poll', description: '🗳️ Crée un sondage avec des boutons de vote',
@@ -233,7 +249,7 @@ const HELP_EXTRA = {
   pendu: ['🪢 Pendu', 'Devine le mot caché lettre par lettre (8 vies).', '`/pendu`'],
   morpion: ['⭕ Morpion', 'Joue au morpion (tic-tac-toe) contre un membre, à tour de rôle sur une grille à boutons.', '`/morpion @membre`'],
   birthday: ['🎂 Anniversaire', 'Enregistre ta date : le jour J, le bot te souhaite un joyeux anniversaire dans le salon configuré (et te donne le rôle anniversaire s\'il est défini).', '`/birthday set jour mois` · `/birthday remove` · `/birthday list`', '`/birthday set 14 7` → 🎂 Enregistré ! (14 juillet)'],
-  remind: ['⏰ Rappel', 'Le bot t\'envoie un message privé à l\'heure dite.', '`/remind durée texte` (durée : 10m, 2h, 1d)', '`/remind 2h sortir le poulet` → MP dans 2 h'],
+  remind: ['⏰ Rappel', 'Le bot t\'envoie un message privé à l\'heure dite. Tu peux aussi le **répéter** toutes les heures, tous les jours ou toutes les semaines.', '`/remind durée texte` (durée : 10m, 2h, 1d) · `/remind durée texte repeat: quotidien|hebdo|horaire`', '`/remind 2h sortir le poulet` → MP dans 2 h · `/remind 1d check-up daily` → MP chaque jour'],
   poll: ['🗳️ Sondage', 'Crée un sondage : les membres votent avec des boutons, les résultats s\'affichent en direct.', '`/poll question choix1 | choix2 | …`', '`/poll Pizza ou burger ? Pizza | Burger | Sushi`'],
   snipe: ['🕵️ Snipe', 'Affiche le dernier message supprimé de ce salon.', '`/snipe`'],
   work: ['💼 Travail', 'Travaille pour gagner des coins (entre 50 et 150, 1 fois par heure).', '`/work`', '`/work` → 🧑‍🍳 Tu as cuisiné : +120 coins !'],
@@ -242,6 +258,8 @@ const HELP_EXTRA = {
   lockdown: ['🚨 Anti-raid', 'Verrouille tous les salons texte en 1 clic (personne ne peut écrire sauf les admins) puis rouvre tout. Idéal contre un raid.', '`/lockdown on` · `/lockdown off`', '`/lockdown on` → 🔒 12 salons verrouillés'],
   voicetemp: ['🔊 Salons vocaux temporaires', 'Un salon « ➕ Créer un vocal » : dès qu\'un membre le rejoint, un salon à son nom est créé, et il est supprimé automatiquement quand il est vide.', '`/voicetemp set` (avec salon + catégorie) · `/voicetemp view` · `/voicetemp off`'],
   apply: ['📝 Candidatures', 'Les membres cliquent sur un bouton, répondent à TES questions dans une fenêtre, et leurs réponses arrivent dans un salon avec des boutons Accepter/Refuser pour le staff.', '`/apply set #salon` · `/apply question ta question` (max 5) · `/apply panel` · `/apply view` · `/apply off`', '`/apply set #candidatures` puis `/apply question Quel âge as-tu ?` puis `/apply panel`'],
+  afk: ['🌙 AFK', 'Tu passes AFK : si quelqu\'un te mentionne, le bot le prévient. Ton statut se retire tout seul dès que tu écris à nouveau.', '`/afk` · `/afk raison`', '`/afk je mange` → 🔕 @X est AFK : je mange (depuis 2 min)'],
+  top: ['🏆 Classement', 'Affiche le classement du serveur (XP ou coins) en pages de 10, navigables avec les boutons ◀ ▶.', '`/top` (XP) · `/top type:coins`', '`/top` → 🥇 @Léa — ✨ Niv. 12 (3 250 XP)'],
 };
 
 // ============================================================
@@ -264,7 +282,7 @@ async function handleInteraction(botId, entry, interaction) {
 }
 
 // ---------------------- Commandes slash ----------------------
-const EXTRA_CMDS = new Set(['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch', 'rps', 'pendu', 'morpion', 'birthday', 'remind', 'poll', 'snipe', 'work', 'gamble', 'rob', 'lockdown', 'voicetemp', 'apply', 'invites']);
+const EXTRA_CMDS = new Set(['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch', 'rps', 'pendu', 'morpion', 'birthday', 'remind', 'poll', 'snipe', 'work', 'gamble', 'rob', 'lockdown', 'voicetemp', 'apply', 'invites', 'afk', 'top']);
 
 async function handleSlash(botId, entry, interaction) {
   const cmd = interaction.commandName.toLowerCase();
@@ -441,12 +459,23 @@ async function handleSlash(botId, entry, interaction) {
     case 'remind': {
       const duree = interaction.options.getString('duree') || '';
       const texte = interaction.options.getString('texte') || '';
+      const repeat = interaction.options.getString('repeat') || 'once';
       const ms = parseDuration(duree);
       if (!ms) return interaction.reply({ content: '❓ Durée invalide. Exemples : `10m` (minutes), `2h` (heures), `1d` (jours).', ephemeral: true });
       if (ms > 30 * 86400000) return interaction.reply({ content: '⏰ Max 30 jours pour un rappel.', ephemeral: true });
       if (store.reminders.userCount(user.id) >= 10) return interaction.reply({ content: '⏰ Tu as déjà 10 rappels en attente, attends qu\'ils partent.', ephemeral: true });
-      store.reminders.add(botId, guild.id, interaction.channel.id, user.id, Date.now() + ms, texte.slice(0, 300));
-      return interaction.reply({ content: `⏰ C\'est noté ! Je te rappellerai **${formatDuration(ms)}** en message privé.`, ephemeral: true });
+      store.reminders.add(botId, guild.id, interaction.channel.id, user.id, Date.now() + ms, texte.slice(0, 300), repeat);
+      const repeatLabel = { once: '', hourly: ' (répété toutes les heures)', daily: ' (répété chaque jour)', weekly: ' (répété chaque semaine)' }[repeat] || '';
+      return interaction.reply({ content: `⏰ C\'est noté ! Je te rappellerai **${formatDuration(ms)}** en message privé${repeatLabel}.`, ephemeral: true });
+    }
+    case 'afk': {
+      const raison = interaction.options.getString('raison') || '';
+      store.afk.set(botId, guild.id, user.id, raison);
+      return interaction.reply({ content: `🌙 Tu es maintenant AFK${raison ? ` : **${raison}**` : ''}. Je préviendrai les autres qui te mentionnent, et ton statut se retirera tout seul dès que tu écriras.`, ephemeral: true });
+    }
+    case 'top': {
+      const type = interaction.options.getString('type') || 'xp';
+      return renderTop(botId, entry, interaction, guild, type, 0);
     }
     case 'poll': {
       const question = (interaction.options.getString('question') || '').slice(0, 250);
@@ -677,8 +706,96 @@ async function handleSlash(botId, entry, interaction) {
 }
 
 // ---------------------- Boutons ----------------------
+// ---------------------- Classement /top (v188) ----------------------
+async function topUserName(guild, client, userId) {
+  try {
+    const member = guild.members.cache.get(String(userId));
+    if (member) return member.user.username;
+    const u = await client.users.fetch(String(userId)).catch(() => null);
+    return u ? u.username : 'Membre inconnu';
+  } catch { return 'Membre inconnu'; }
+}
+
+async function renderTop(botId, entry, interaction, guild, type, page, message = null) {
+  const perPage = 10;
+  const total = type === 'coins' ? store.economy.count(botId, guild.id) : store.xp.count(botId, guild.id);
+  const maxPage = Math.max(0, Math.ceil(total / perPage) - 1);
+  page = Math.min(Math.max(page, 0), maxPage);
+  const rows = type === 'coins'
+    ? store.economy.top(botId, guild.id, (page + 1) * perPage)
+    : store.xp.top(botId, guild.id, (page + 1) * perPage);
+  const pageRows = rows.slice(page * perPage, (page + 1) * perPage);
+  if (!pageRows.length) {
+    const empty = { content: type === 'coins'
+      ? '🪙 Personne n\'a encore de coins ici — les membres en gagnent avec `/daily`, `/work`, `/gamble`…'
+      : '✨ Personne n\'a encore d\'XP ici — les membres en gagnent automatiquement en discutant !' };
+    if (message) return message.update(empty).catch(() => {});
+    return interaction.reply({ ...empty, ephemeral: true });
+  }
+  const lines = [];
+  for (let i = 0; i < pageRows.length; i++) {
+    const r = pageRows[i];
+    const rank = page * perPage + i + 1;
+    const name = await topUserName(guild, entry.client, r.user_id);
+    const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `\`${rank}.\``;
+    if (type === 'coins') lines.push(`${medal} **${name}** — 🪙 ${r.coins}`);
+    else lines.push(`${medal} **${name}** — ✨ Niv. ${r.level} (${r.xp} XP)`);
+  }
+  const embed = new EmbedBuilder()
+    .setColor(type === 'coins' ? 0xf1c40f : 0x57f287)
+    .setTitle(type === 'coins' ? '🪙 Classement Coins' : '✨ Classement XP')
+    .setDescription(lines.join('\n'))
+    .setFooter({ text: `Hoxera · ${guild.name} · Page ${page + 1}/${maxPage + 1} · ${total} membre(s) classé(s)` })
+    .setTimestamp();
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`hxtop:${guild.id}:${type}:${page - 1}`).setLabel('◀').setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
+    new ButtonBuilder().setCustomId(`hxtop:${guild.id}:${type}:${page + 1}`).setLabel('▶').setStyle(ButtonStyle.Secondary).setDisabled(page >= maxPage),
+  );
+  const payload = { embeds: [embed], components: [row] };
+  if (message) return message.update(payload).catch(() => {});
+  return interaction.reply({ ...payload, fetchReply: true });
+}
+
+// ---------------------- Statut AFK (v188) ----------------------
+// Appelé à chaque message : sort l'auteur de l'AFK et prévient quand
+// on mentionne un membre AFK.
+async function onMessage(botId, m) {
+  if (!m || !m.guild || !m.guild.id) return;
+  if (m.author && m.author.bot) return;
+  const guildId = m.guild.id;
+  const uid = String(m.author.id);
+  // 1) L'auteur revient : il écrit → fin de l'AFK.
+  const own = store.afk.get(botId, guildId, uid);
+  if (own) {
+    store.afk.remove(botId, guildId, uid);
+    await m.reply({ content: '👋 Bienvenue ! Tu n\'es plus AFK.' }).catch(() => {});
+    return;
+  }
+  // 2) On mentionne un membre AFK → on prévient (sans boucle de mentions).
+  const mentions = m.mentions && m.mentions.users ? [...m.mentions.users.values()] : [];
+  if (!mentions.length) return;
+  const hit = [];
+  for (const u of mentions) {
+    const r = store.afk.get(botId, guildId, String(u.id));
+    if (r) hit.push(r);
+  }
+  if (!hit.length) return;
+  const lines = hit.map((r) => {
+    const mins = Math.max(1, Math.floor((Date.now() - r.since_ts) / 60000));
+    return `<@${r.user_id}> est AFK${r.reason ? ` : **${r.reason}**` : ''} (depuis ${mins} min)`;
+  }).join('\n');
+  await m.reply({ content: `🔕 ${lines}`, allowedMentions: { users: [] } }).catch(() => {});
+}
+
 async function handleButton(botId, entry, interaction) {
   const id = interaction.customId || '';
+  if (id.startsWith('hxtop:')) {
+    const parts = id.split(':');
+    const gid = parts[1], type = parts[2] === 'coins' ? 'coins' : 'xp', page = parseInt(parts[3], 10) || 0;
+    if (gid !== interaction.guild.id) return true;
+    await renderTop(botId, entry, interaction, interaction.guild, type, page, interaction.message).catch(() => {});
+    return true;
+  }
   if (!id.startsWith('hx:')) return false;
   const parts = id.split(':');
   const kind = parts[1];
@@ -1046,6 +1163,13 @@ async function onVoiceState(botId, entry, oldState, newState) {
 }
 
 // ---------------------- Tâches périodiques (appelées depuis tasks.js) ----------------------
+// Calcule la prochaine échéance d'un rappel récurrent (v188).
+function nextRepeatTs(mode, fromTs) {
+  if (mode === 'hourly') return fromTs + 3600000;
+  if (mode === 'weekly') return fromTs + 7 * 86400000;
+  return fromTs + 86400000; // daily (et défaut)
+}
+
 async function sweepReminders(botId, entry) {
   const due = store.reminders.due(Date.now()).filter((r) => r.bot_id === botId);
   for (const r of due) {
@@ -1065,6 +1189,14 @@ async function sweepReminders(botId, entry) {
         if (channel) await channel.send({ content: `<@${r.user_id}>`, embeds: reminderPanel.embeds, allowedMentions: { users: [String(r.user_id)] } }).catch(() => {});
       }
     } catch (e) { console.error('[Hoxera] reminder error:', e.message); }
+    // 🔁 Rappel récurrent : on le reprogramme à la prochaine échéance
+    // au lieu de le supprimer.
+    const mode = r.repeat_mode || 'once';
+    if (mode !== 'once') {
+      try {
+        store.reminders.add(r.bot_id, r.guild_id, r.channel_id, r.user_id, nextRepeatTs(mode, r.at_ts), r.text, mode);
+      } catch (e) { console.error('[Hoxera] reminder rearm error:', e.message); }
+    }
     store.reminders.remove(r.id);
   }
 }
@@ -1184,12 +1316,14 @@ module.exports = {
   handleInteraction,
   trackDeleted,
   trackMessage,
+  onMessage,
   onVoiceState,
   sweepReminders,
   sweepScheduled,
   sweepBirthdays,
   parseDuration,
   formatDuration,
+  nextRepeatTs,
   HELP_EXTRA,
   // 🧪 États internes exposés pour les tests (anti-fuite mémoire)
   _test: { penduGames, morpionGames, pollState, capMap },

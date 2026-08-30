@@ -9,7 +9,9 @@
 - 🤗 **Actions entre membres** : `/hug` `/kiss` `/slap` `/pat` `/punch` (messages aléatoires)
 - 🕹️ **Jeux** : `/rps` (pierre-feuille-ciseaux), `/pendu` (8 vies, boutons A-Z), `/morpion @membre` (grille 3×3 à boutons)
 - 🎂 **Anniversaires** : `/birthday set jour mois` — le bot souhaite le jour J dans le salon configuré + rôle anniversaire (24 h)
-- ⏰ **Rappels** : `/remind 2h texte` → message privé à l'heure dite (max 30 jours, 10 en attente)
+- ⏰ **Rappels** : `/remind 2h texte` → message privé à l'heure dite (max 30 jours, 10 en attente) — avec option **répétition** : `/remind 1d Check-up repeat: quotidien` (horaire / quotidien / hebdomadaire)
+- 🌙 **AFK** : `/afk [raison]` → les autres sont prévenus si tu es mentionné, ton statut se retire tout seul dès que tu écris
+- 🏆 **Classements** : `/top` (XP) et `/top type:coins` (coins) — pages navigables avec boutons ◀ ▶
 - 🗳️ **Sondages** : `/poll question choix1 | choix2 | …` (jusqu'à 10 choix, votes par boutons, résultats en direct)
 - 🕵️ **Snipe** : `/snipe` — le dernier message supprimé du salon
 - 💰 **Économie enrichie** : `/work` (métiers, 1×/heure), `/gamble montant` (double ou rien), `/rob @membre` (40 % de réussite, sinon amende)

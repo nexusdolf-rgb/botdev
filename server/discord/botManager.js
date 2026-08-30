@@ -356,6 +356,8 @@ function attachListeners(botId, entry) {
   client.on('messageCreate', (m) => {
     const extra = require('./extra');
     extra.trackMessage(botId, m);
+    // 🌙 Statut AFK (v188) : sort l'auteur de l'AFK + prévient les mentions
+    extra.onMessage(botId, m).catch(() => {});
     const { runMessageHandler } = require('./engine');
     runMessageHandler(botId, entry, m).catch(e => console.error('[BotDev] message error:', e.message));
   });

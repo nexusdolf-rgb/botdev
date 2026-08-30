@@ -47,10 +47,6 @@ let depth = 0;
 for (const c of css) { if (c === '{') depth++; if (c === '}') depth--; if (depth < 0) break; }
 assert(depth === 0, `accolades CSS déséquilibrées (${depth})`);
 
-// ---------- 3. Version v187 ----------
-assert.strictEqual((index.match(/\?v=187/g) || []).length, 7,
-  'index.html doit référencer v187 7 fois');
-assert(sw.includes('botdev-v187'), 'le cache du service worker n’est pas en v187');
-assert(!index.includes('?v=186'), 'index.html référence encore v186');
+// ---------- 3. (Les pins de version sont désormais dans v188-test.js) ----------
 
 console.log('✅ v187-test : audit étendu — 0 problème sur les 5 nouvelles passes (déroulants, sombre, éphémères, thème, extrême)');
