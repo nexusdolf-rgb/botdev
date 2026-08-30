@@ -1059,13 +1059,14 @@ function helpDescription() {
 function buildHelpEmbed(botId, record, client, guild, requested) {
   const enabled = enabledCommandNames(botId);
   const { HELP_EXTRA } = require('./extra');
-  const DETAILS = { ...HELP_DETAILS, ...HELP_EXTRA };
+  const { HELP_EVENTS } = require('./guildEvents');
+  const DETAILS = { ...HELP_DETAILS, ...HELP_EXTRA, ...HELP_EVENTS };
 
   // --- Détail d'une commande précise ---
   if (requested) {
     const key = requested.toLowerCase().replace(/^\//, '');
     const detail = DETAILS[key];
-    const available = ['ticket', 'roles', 'botprofile', 'modlogs', 'blacklist'].includes(key) || enabled.includes(key) || !!HELP_EXTRA[key];
+    const available = ['ticket', 'roles', 'botprofile', 'modlogs', 'blacklist'].includes(key) || enabled.includes(key) || !!HELP_EXTRA[key] || !!HELP_EVENTS[key];
     if (detail && available) {
       const embed = new EmbedBuilder()
         .setColor('#5865F2')
@@ -1166,6 +1167,11 @@ function buildHelpEmbed(botId, record, client, guild, requested) {
       '🚨 `/lockdown` (admin) · 🔊 `/voicetemp` (admin) · 📝 `/apply` (admin)',
       '*Détails : `/help nom_de_la_commande` (ex : `/help mariage` → `/help marry`)*',
     ].join('\n'),
+  });
+
+  embed.addFields({
+    name: '🎮 Événements & tournois (admins)',
+    value: '`/event create titre=… quand=25/08 20:00` — créer (description, salon, rôle en option) · `/event list` · `/event delete`\n*Les membres s\'inscrivent avec le bouton « 🎮 Participer », rappels automatiques 24 h et 1 h avant. Gestion aussi dans le dashboard → Événements.*',
   });
 
   const custom = store.commands.all(botId).filter(c => c.enabled);

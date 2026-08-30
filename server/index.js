@@ -264,6 +264,19 @@ async function main() {
   setTimeout(runLiveSweep, 10000);
   setInterval(runLiveSweep, 60000);
 
+  // 🎮 Événements & tournois : rappels 24 h / 1 h avant + nettoyage du passé
+  const runGuildEventSweep = () => {
+    try {
+      const guildEvents = require('./discord/guildEvents');
+      for (const [botId, entry] of botManager.clients) {
+        if (!entry.client.isReady()) continue;
+        guildEvents.sweepGuildEvents(botId, entry).catch((e) => console.error('[Hoxera] event sweep :', e.message));
+      }
+    } catch (e) { console.error('[Hoxera] guildEvents indisponible :', e.message); }
+  };
+  setTimeout(runGuildEventSweep, 15000);
+  setInterval(runGuildEventSweep, 60000);
+
   // ⏰ Balayage 30 s : giveaways échus + rôles temporaires expirés
   setInterval(async () => {
     for (const [botId, entry] of botManager.clients) {

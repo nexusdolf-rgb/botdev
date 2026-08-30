@@ -436,6 +436,7 @@ Dashboard.MODULES = [
   ['roles', '📋', 'Rôles'],
   ['suggestions', '💡', 'Suggestions'],
   ['giveaways', '🎁', 'Giveaways'],
+  ['events', '🎮', 'Événements'],
   ['community', '⭐', 'Communauté & Lives'],
   ['announcements', '📅', 'Annonces'],
   ['embeds', '🧱', 'Embed Builder'],
@@ -3961,6 +3962,116 @@ Dashboard.renderers.logs = async (content, data) => {
         </div>`).join('');
     } catch { hList.innerHTML = `<div class="desc">Historique indisponible pour le moment.</div>`; }
   })();
+};
+
+// ---------- 🎮 Événements & tournois (v189) ----------
+Dashboard.renderers.events = async (content, data) => {
+  const { bot, guildId } = Dashboard.state;
+  const root = Dashboard.header(content, '🎮', 'Événements & tournois', 'Crée des événements datés : les membres s\'inscrivent avec un bouton, et le bot rappelle automatiquement 24 h et 1 h avant.');
+  const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
+
+  // ---- 📋 Liste des événements ----
+  const listCard = Dashboard.card(root, '📋 Événements du serveur', '');
+  const listEl = App.el('<div id="ev-list" style="display:flex;flex-direction:column;gap:8px;margin-top:10px"></div>');
+  listCard.appendChild(listEl);
+
+  const fmtDate = (ts) => {
+    try {
+      return new Date(ts).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch { return String(ts); }
+  };
+
+  const renderList = async () => {
+    listEl.innerHTML = '';
+    let events = [];
+    try {
+      const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/events`);
+      events = r.events || [];
+    } catch (e) { listEl.appendChild(App.el(`<div class="dash-empty">${App.escapeHtml(e.message)}</div>`)); return; }
+    const upcoming = events.filter((e) => e.starts_at > Date.now()).sort((a, b) => a.starts_at - b.starts_at);
+    if (!upcoming.length) {
+      listEl.appendChild(App.el('<div class="dash-empty">Aucun événement à venir. Crée ton premier tournoi ci-dessous ! 🎮</div>'));
+      return;
+    }
+    upcoming.forEach((ev) => {
+      let participants = [];
+      try { participants = JSON.parse(ev.participants || '[]'); } catch {}
+      const item = App.el(`
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--d-surface-2,#23262e);border:1px solid var(--d-border,#2f323b)">
+          <div style="flex:1;min-width:180px">
+            <b>🎮 ${App.escapeHtml(ev.title)}</b>
+            <div style="font-size:12px;color:var(--d-dim,#a0a5b3)">🕒 ${App.escapeHtml(fmtDate(ev.starts_at))}${ev.ping_role && ev.ping_role !== 'none' ? ' · 📣 ' + App.escapeHtml(ev.ping_role) : ''}</div>
+            ${ev.description ? `<div style="font-size:12px;color:var(--d-dim,#a0a5b3);overflow-wrap:anywhere">${App.escapeHtml(ev.description).slice(0, 160)}</div>` : ''}
+          </div>
+          <div style="text-align:center;min-width:70px">
+            <b style="font-size:18px">${participants.length}</b>
+            <div style="font-size:10px;color:var(--d-dim,#a0a5b3)">inscrit(s)</div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="dash-btn dash-btn-sm" data-ev-copy>🔗</button>
+            <button class="dash-btn dash-btn-danger dash-btn-sm" data-ev-del>🗑️</button>
+          </div>
+        </div>`);
+      item.querySelector('[data-ev-copy]').onclick = () => {
+        const tz = 'Europe/Paris';
+        const p = new Date(ev.starts_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+        App.toast('Commande copiée : /event create ' + ev.title);
+        const cmd = `/event create titre:${ev.title} quand:${p}${ev.ping_role && ev.ping_role !== 'none' ? ' role:' + ev.ping_role : ''}`;
+        try { navigator.clipboard.writeText(cmd); } catch {}
+        App.modal(`<div class="modal-header"><h3>📋 Commande de recréation</h3><button class="x-btn" data-close>×</button></div><div class="modal-body"><p style="font-size:13px;overflow-wrap:anywhere">${App.escapeHtml(cmd)}</p><div style="display:flex;gap:10px;margin-top:14px"><button class="btn btn-primary" data-close style="flex:1">OK</button></div></div>`);
+        document.querySelectorAll('[data-close]').forEach((b) => b.onclick = App.closeModal);
+      };
+      item.querySelector('[data-ev-del]').onclick = async () => {
+        if (!(await App.confirm(`Supprimer l'événement « ${ev.title} » ?`))) return;
+        try { await App.api(`/bots/${bot.id}/guilds/${guildId}/events/${ev.id}`, { method: 'DELETE' }); App.toast('Événement supprimé.'); renderList(); }
+        catch (e) { App.toast(e.message, 'error'); }
+      };
+      listEl.appendChild(item);
+    });
+  };
+  await renderList();
+
+  // ---- ➕ Créer un événement ----
+  const createCard = Dashboard.card(root, '➕ Créer un événement', 'Titre, date (JJ/MM HH:MM — heure du serveur), description, salon d\'annonce et rôle à mentionner en option.');
+  const chOpts = ['<option value="">— Salon actuel / premier salon texte —</option>']
+    .concat(textChannels.map((ch) => `<option value="${ch.id}">#${App.escapeHtml(ch.name)}</option>`));
+  createCard.innerHTML += `
+    <label class="dash-label">Titre *</label>
+    <input class="dash-input" id="ev-title" placeholder="Tournoi CODM — 1v1" style="max-width:420px" />
+    <label class="dash-label">Date & heure (JJ/MM HH:MM) *</label>
+    <input class="dash-input" id="ev-when" placeholder="25/08 20:00" style="max-width:180px" />
+    <label class="dash-label">Description</label>
+    <input class="dash-input" id="ev-desc" placeholder="Règles, prix, lien…" style="max-width:420px" />
+    <label class="dash-label">Salon d'annonce</label>
+    <select class="dash-select" id="ev-chan" style="max-width:320px">${chOpts.join('')}</select>
+    <label class="dash-label">Rôle à mentionner (nom du rôle, laisser vide = aucune mention)</label>
+    <input class="dash-input" id="ev-role" placeholder="Ex : Joueur CODM" style="max-width:320px" />
+    <div style="margin-top:14px"><button class="dash-btn dash-btn-primary" id="ev-create">🎮 Créer l'événement</button></div>`;
+  createCard.querySelector('#ev-create').onclick = async () => {
+    const title = createCard.querySelector('#ev-title').value.trim();
+    const when = createCard.querySelector('#ev-when').value.trim();
+    if (!title || !when) return App.toast('Titre et date sont obligatoires.', 'error');
+    const channelId = createCard.querySelector('#ev-chan').value;
+    const role = createCard.querySelector('#ev-role').value.trim();
+    try {
+      const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/events`, {
+        method: 'POST',
+        body: {
+          title,
+          starts_at: when,
+          description: createCard.querySelector('#ev-desc').value.trim(),
+          channel_id: channelId,
+          ping_role: role || 'none',
+        },
+      });
+      App.toast('Événement créé ! 🎉');
+      createCard.querySelector('#ev-title').value = '';
+      createCard.querySelector('#ev-when').value = '';
+      createCard.querySelector('#ev-desc').value = '';
+      createCard.querySelector('#ev-role').value = '';
+      renderList();
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
 };
 
 // ---------- ⭐ Starboard & 📨 Invitations ----------

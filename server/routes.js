@@ -1242,6 +1242,56 @@ router.delete('/bots/:id/guilds/:guildId/livesocials/:sid', requireAuth, async (
   res.json({ ok: true });
 });
 
+// 🎮 Événements & tournois (v189)
+router.get('/bots/:id/guilds/:guildId/events', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const tz = (store.guildSettings.get(bot.id, req.params.guildId) || {}).timezone || 'Europe/Paris';
+  res.json({ events: store.guildEvents.all(bot.id, req.params.guildId), tz });
+});
+
+router.post('/bots/:id/guilds/:guildId/events', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const { title, description, starts_at, channel_id, ping_role } = req.body || {};
+  const tz = (store.guildSettings.get(bot.id, req.params.guildId) || {}).timezone || 'Europe/Paris';
+  const { parseWhen } = require('./discord/guildEvents');
+  let startsAt = parseInt(starts_at, 10) || 0;
+  if (!startsAt && typeof starts_at === 'string') startsAt = parseWhen(starts_at, tz) || 0;
+  if (!startsAt || startsAt <= Date.now()) return res.status(400).json({ error: 'Date invalide ou passée.' });
+  if (store.guildEvents.all(bot.id, req.params.guildId).length >= 50) return res.status(400).json({ error: 'Limite : 50 événements par serveur.' });
+  const id = store.guildEvents.add(bot.id, req.params.guildId, {
+    title: String(title || '').slice(0, 100),
+    description: String(description || '').slice(0, 1000),
+    starts_at: startsAt,
+    channel_id: String(channel_id || '').slice(0, 40),
+    ping_role: String(ping_role || 'none').slice(0, 100),
+    created_by: String(req.userId || ''),
+  });
+  // Envoi du message d'annonce si le bot est en ligne sur ce serveur
+  try {
+    const entry = botManager.clients.get(bot.id);
+    const guild = entry && entry.client.isReady() ? entry.client.guilds.cache.get(req.params.guildId) : null;
+    const channel = guild && channel_id ? guild.channels.cache.get(String(channel_id)) : null;
+    if (channel && typeof channel.send === 'function') {
+      const guildEvents = require('./discord/guildEvents');
+      const ev = store.guildEvents.get(id);
+      await channel.send({ embeds: guildEvents.eventPanel(entry, req.params.guildId, ev).embeds, components: guildEvents.eventButtons(ev) }).catch(() => {});
+    }
+  } catch (e) { console.error('[Hoxera] event announce:', e.message); }
+  res.json({ ok: true, id });
+});
+
+router.delete('/bots/:id/guilds/:guildId/events/:eid', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  store.guildEvents.remove(Number(req.params.eid));
+  res.json({ ok: true });
+});
+
 // Note moyenne du support (étoiles données par les membres après la clôture)
 router.get('/bots/:id/guilds/:guildId/tickets/rating', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);

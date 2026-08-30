@@ -429,6 +429,26 @@ CREATE TABLE IF NOT EXISTS afk (
   PRIMARY KEY (bot_id, guild_id, user_id)
 );
 
+-- Événements / tournois du serveur (v189) : le staff crée un événement
+-- avec date/heure, les membres s'inscrivent via un bouton, et le bot
+-- rappelle automatiquement 24 h puis 1 h avant.
+CREATE TABLE IF NOT EXISTS guild_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  starts_at INTEGER NOT NULL,
+  channel_id TEXT DEFAULT '',
+  ping_role TEXT DEFAULT 'none',
+  participants TEXT DEFAULT '[]',
+  reminded_24h INTEGER DEFAULT 0,
+  reminded_1h INTEGER DEFAULT 0,
+  created_by TEXT DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_guild_events_start ON guild_events (bot_id, guild_id, starts_at);
+
 -- Statistiques d'utilisation des commandes (par jour)
 CREATE TABLE IF NOT EXISTS cmd_stats (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1550,6 +1570,39 @@ const afk = {
   all: (botId, guildId) => db.prepare('SELECT * FROM afk WHERE bot_id = ? AND guild_id = ?').all(botId, guildId),
 };
 
+// ---------------------- Événements / tournois (v189) ----------------------
+const guildEvents = {
+  all: (botId, guildId) => db.prepare('SELECT * FROM guild_events WHERE bot_id = ? AND guild_id = ? ORDER BY starts_at ASC').all(botId, guildId),
+  upcoming: (botId, guildId, limit = 20) => db.prepare('SELECT * FROM guild_events WHERE bot_id = ? AND guild_id = ? AND starts_at >= ? ORDER BY starts_at ASC LIMIT ?').all(botId, guildId, Date.now(), Math.min(Math.max(parseInt(limit, 10) || 20, 1), 50)),
+  get: (id) => db.prepare('SELECT * FROM guild_events WHERE id = ?').get(id) || null,
+  add: (botId, guildId, e) => db.prepare('INSERT INTO guild_events (bot_id, guild_id, title, description, starts_at, channel_id, ping_role, participants, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(botId, guildId, String(e.title || 'Événement').slice(0, 100), String(e.description || '').slice(0, 1000), parseInt(e.starts_at, 10) || Date.now(), String(e.channel_id || '').slice(0, 40), String(e.ping_role || 'none').slice(0, 100), JSON.stringify(Array.isArray(e.participants) ? e.participants : []), String(e.created_by || '').slice(0, 40)).lastInsertRowid,
+  update: (id, fields) => {
+    const allowed = { title: 'title', description: 'description', starts_at: 'starts_at', channel_id: 'channel_id', ping_role: 'ping_role', participants: 'participants', reminded_24h: 'reminded_24h', reminded_1h: 'reminded_1h' };
+    const sets = [], vals = [];
+    for (const [k, col] of Object.entries(allowed)) if (k in fields) { sets.push(`${col} = ?`); vals.push(fields[k]); }
+    if (!sets.length) return;
+    vals.push(id);
+    db.prepare(`UPDATE guild_events SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
+  },
+  remove: (id) => db.prepare('DELETE FROM guild_events WHERE id = ?').run(id),
+  participants: (id) => {
+    const e = db.prepare('SELECT participants FROM guild_events WHERE id = ?').get(id);
+    if (!e) return [];
+    try { const arr = JSON.parse(e.participants || '[]'); return Array.isArray(arr) ? arr : []; } catch { return []; }
+  },
+  toggleParticipant: (id, userId) => {
+    const list = guildEvents.participants(id);
+    const uid = String(userId);
+    const idx = list.indexOf(uid);
+    if (idx >= 0) list.splice(idx, 1); else list.push(uid);
+    guildEvents.update(id, { participants: JSON.stringify(list) });
+    return { joined: idx < 0, participants: list };
+  },
+  // Tous les événements à venir de tous les serveurs (pour le balayage)
+  allUpcoming: () => db.prepare('SELECT * FROM guild_events WHERE starts_at >= ? ORDER BY starts_at ASC LIMIT 200').all(Date.now()),
+};
+
 // ---------------------- Messages programmés ----------------------
 const scheduled = {
   all: (botId, guildId) => db.prepare('SELECT * FROM scheduled_messages WHERE bot_id = ? AND guild_id = ? ORDER BY hour, minute').all(botId, guildId),
@@ -1791,4 +1844,4 @@ const liveSocials = {
   count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM live_socials WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
 };
 
-module.exports = { db, embedTemplates, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, afk, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories };
+module.exports = { db, embedTemplates, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, afk, guildEvents, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories };

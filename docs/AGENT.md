@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v188**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v189**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -135,11 +135,16 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   ⚠️ Leçons : le thème clair se teste avec un VRAI audit contraste (passe D) ; les
   overrides light doivent gagner contre `!important` ; jamais de `white-space:nowrap`
   sans base flex correcte ; jamais de flip de surface sans gérer ses textes internes.
-- **v188 (ACTUELLE)** : **LOT 1 « Quick wins communauté »** — 4 features (voir l'état
-  en bas de ce document). Nouveauté technique : table `afk`, colonne
-  `reminders.repeat_mode`, compteurs xp/economy.count, `extra.onMessage` branché
-  dans messageCreate, panneau « Avertissements récents » dans le module Membres,
-  boutons de pagination `hxtop:`. 120 tests verts.
+- **v189 (ACTUELLE)** : **LOT 2 « Gaming & stream »** — événements/tournois.
+  Nouveau module `server/discord/guildEvents.js` : commande `/event`
+  (create/list/delete), table `guild_events` (participants JSON, rappels
+  reminded_24h/reminded_1h), boutons `hxev:join/leave`, sweep toutes les 60 s
+  (rappel 24 h puis 1 h avant, message de démarrage, nettoyage), module dashboard
+  « Événements », routes GET/POST/DELETE `/events`, section /help. Les lives
+  TikTok/Twitch/YouTube/Kick existaient déjà (liveWatch). 121 tests verts.
+- **v188** : **LOT 1 « Quick wins communauté »** — /afk, /top paginé, historique
+  sanctions (module Membres), rappels récurrents (repeat_mode). Table `afk`,
+  compteurs xp/economy.count, `extra.onMessage`, boutons `hxtop:`. 120 tests verts.
 - **v187** : **AUDIT UI ÉTENDU** (`audit-tools/audit3.js`, 5 passes) — l'utilisateur
   a demandé de « continuer les analyses ». Résultat : 0 problème partout.
   1. **E — menus déroulants OUVERTS** (20 panneaux) : le `.dd-panel` restait sombre
@@ -234,7 +239,10 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 
 ## 📌 ÉTAT AU 30/08/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v188** — LOT 1 « Quick wins communauté » :
+- Dernière version : **v189** — LOT 2 : événements/tournois (`/event`,
+  boutons Participer, rappels 24h/1h, dashboard Événements). Lives 4 plateformes
+  déjà en place (liveWatch). Voir la section v189 ci-dessus.
+- v188 livré : LOT 1 « Quick wins communauté » :
   - **/afk** : statut AFK persistant (table `afk`, upsert par membre), sortie auto
     dès que le membre écrit, prévention des autres à la mention (sans boucle)
   - **/top** : classement XP ou coins paginé (10/page, boutons ◀ ▶ `hxtop:`),
@@ -249,7 +257,6 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   username, bio 4 lignes, icône d'application
 - ⏳ En attente utilisateur : renommer le rôle « Nexora » à la main sur 6 serveurs
   (Discord ne le permet pas automatiquement — voir piège n°4)
-- Roadmap validée par l'utilisateur (voir `hoxera/AUDIT_PRODUIT.md` chez l'utilisateur) :
-  LOT 2 = tournois/événements gaming + lives Twitch/YouTube/Kick ;
-  LOT 3 = modmail, /profile, recherche transcriptions ; LOT 4 = page publique serveur,
-  multi-langues, quiz… Musique mise de côté (avis équipe).
+- Roadmap : LOT 1 ✅ (v188) et LOT 2 ✅ (v189 — événements/tournois ; lives déjà
+  présents). LOT 3 = modmail, /profile, recherche transcriptions ;
+  LOT 4 = page publique serveur, multi-langues, quiz… Musique mise de côté.

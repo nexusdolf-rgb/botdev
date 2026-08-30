@@ -228,6 +228,9 @@ async function guardInteraction(botId, entry, i, timeoutMs = 15000) {
       // interactions du module extra plantaient en silence.
       const extraHandled = await extra.handleInteraction(botId, entry, i);
       if (extraHandled) return;
+      const { handleInteraction: handleGuildEvents } = require('./guildEvents');
+      const eventsHandled = await handleGuildEvents(botId, entry, i);
+      if (eventsHandled) return;
       const { dispatchPanels } = require('./panels');
       const handled = await dispatchPanels(botId, i);
       if (handled) return;
@@ -558,7 +561,8 @@ async function syncGlobalCommands(botId) {
 
   const { buildSlashPayloads } = require('./premade');
   const { buildExtraPayloads } = require('./extra');
-  const all = [...buildSlashPayloads(botId), ...buildExtraPayloads()];
+  const { buildEventPayloads } = require('./guildEvents');
+  const all = [...buildSlashPayloads(botId), ...buildExtraPayloads(), ...buildEventPayloads()];
   if (!all.length) return;
 
   const global = all.slice(0, 90).map(p => ({ ...p, dm_permission: false })); // plafond de sécurité (limite Discord : 100) + commandes réservées aux serveurs

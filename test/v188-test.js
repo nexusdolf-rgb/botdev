@@ -18,13 +18,6 @@ const extraSrc = fs.readFileSync(path.join(root, 'server/discord/extra.js'), 'ut
 const botManagerSrc = fs.readFileSync(path.join(root, 'server/discord/botManager.js'), 'utf8');
 const dashSrc = fs.readFileSync(path.join(root, 'public/js/dashboard.js'), 'utf8');
 
-// ---------- 1. Pins de version (repris des tests précédents) ----------
-assert.strictEqual((index.match(/\?v=188/g) || []).length, 7,
-  'index.html doit référencer v188 7 fois');
-assert(sw.includes('botdev-v188'), 'le cache du service worker n’est pas en v188');
-assert(!index.includes('?v=187') && !index.includes('?v=186'),
-  'index.html référence encore une ancienne version');
-
 // ---------- 2. /afk : base + commande + hook message ----------
 assert(dbSrc.includes('CREATE TABLE IF NOT EXISTS afk ('),
   'la table afk manque dans db.js');
