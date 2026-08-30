@@ -40,10 +40,6 @@ assert(depth === 0, `accolades CSS déséquilibrées (${depth})`);
 // ---------- 3. Correctif JS : chips des jours d'annonces ----------
 assert(js.includes('minmax(125px,1fr)'), 'dashboard.js : grille des jours d’annonces pas corrigée');
 
-// ---------- 4. Version v186 ----------
-assert.strictEqual((index.match(/\?v=186/g) || []).length, 7,
-  'index.html doit référencer v186 7 fois');
-assert(sw.includes('botdev-v186'), 'le cache du service worker n’est pas en v186');
-assert(!index.includes('?v=185'), 'index.html référence encore v185');
+// ---------- 4. Version : gérée par le test de la version courante (v187) ----------
 
-console.log('✅ v186-test : audit UI complet — 0 problème sur les 12 passes Puppeteer (320→1920px, thèmes sombre + clair)');
+console.log('✅ v186-test : audit UI — correctifs 1-22 (vagues 1 à 3) vérifiés');

@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v186**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v187**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -102,7 +102,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   celui des époques v177/v180 → fichier identique à l'octet près). C'est la 2e restauration
   de cette bannière (v180 puis v185) : après v177→v185, l'utilisateur a comparé robot
   cinéma / tête premium / logo argent et revient à la v177.
-- **v186 (ACTUELLE)** : **AUDIT UI COMPLET DU DASHBOARD** (demande : « plein de
+- **v186** : **AUDIT UI COMPLET DU DASHBOARD** (demande : « plein de
   débordements de textes » + « aucune trace des bugs » avant déploiement). Audit
   Puppeteer maison (`/home/user/audit-tools/audit.js` + `audit2.js`) : 12 passes
   (6 tailles d'écran 320→1920px × 18 modules × 2 thèmes + modales + page admin +
@@ -135,6 +135,27 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   ⚠️ Leçons : le thème clair se teste avec un VRAI audit contraste (passe D) ; les
   overrides light doivent gagner contre `!important` ; jamais de `white-space:nowrap`
   sans base flex correcte ; jamais de flip de surface sans gérer ses textes internes.
+- **v187 (ACTUELLE)** : **AUDIT UI ÉTENDU** (`audit-tools/audit3.js`, 5 passes) — l'utilisateur
+  a demandé de « continuer les analyses ». Résultat : 0 problème partout.
+  1. **E — menus déroulants OUVERTS** (20 panneaux) : le `.dd-panel` restait sombre
+     (#232637) en mode clair avec textes hérités foncés → illisible. Version claire
+     complète (fond, recherche, options).
+  2. **F — contraste MODE SOMBRE** (23 modules × 2 tailles) : propre d'origine ✓
+     (les boutons blanc-sur-accent ratio 3 = standard assumé, exclus de la passe).
+  3. **G — interfaces éphémères JAMAIS ouvertes par les audits précédents** :
+     palette Ctrl+K, cloche 🔔, sélecteur de couleur 🎨, modale de confirmation =
+     fonds #36393f forcés par la couche v10 (l.3487-3497) → tous flippés clairs ;
+     tiroir « Plus » mobile idem (+ textes du compte) ; toast ✓.
+  4. **H — bascule de thème EN DIRECT** : fonctionne (faux positif initial = mesure
+     pendant une transition CSS → toujours attendre ~450 ms).
+  5. **I — contenu extrême** (noms de 90-160 caractères) : fil d'Ariane en ellipsis,
+     titres en `overflow-wrap:anywhere`, pieds de cartes défilables — plus de scroll
+     horizontal. Et correction bonus : l'ancienne passe claire v170 (l.4650-4760)
+     mettait des textes clairs sur les chips « Lundi…Dimanche » et filtres logs
+     devenus blancs → neutralisée (correctif 23).
+  Leçons v187 : tester les UI éphémères OUVERTES ; une navigation hash seule ne
+  recharge PAS la page (thème non appliqué) → `page.reload()` ; fond rgba : mélanger
+  sur l'ancêtre opaque sinon faux positifs.
   (Précédent v183 : fond v177 (sans robot) + LOGO ARGENT calqué
   (l'avatar Discord du bot, `optimus-logo-v2.png`, choisi par l'utilisateur : « pas celui
   que tu viens de créer il y a 4 minutes »). Pose en mode **écran** : le fond noir pur de
@@ -208,9 +229,10 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 
 ## 📌 ÉTAT AU 30/08/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v186** (audit UI complet du dashboard : 0 problème sur 12 passes
-  Puppeteer — 320→1920px, thèmes sombre + clair, modales, admin, contraste)
-- Bot « Optimus Prime » en ligne, 7 serveurs, 0 erreur 24h, 118 tests verts
+- Dernière version : **v187** (audit UI étendu : 0 problème sur 17 passes au total —
+  audit.js 4 configs, audit2.js 12 passes, audit3.js 5 passes incl. menus déroulants
+  ouverts, mode sombre, interfaces éphémères, bascule thème, contenu extrême)
+- Bot « Optimus Prime » en ligne, 7 serveurs, 0 erreur 24h, 119 tests verts
 - Identité Discord à jour : avatar (logo argent), bannière (v185 = v177 robot cinéma),
   username, bio 4 lignes, icône d'application
 - ⏳ En attente utilisateur : renommer le rôle « Nexora » à la main sur 6 serveurs

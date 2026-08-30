@@ -5067,3 +5067,105 @@ html.hx-light .dashboard-shell-host .adv-preview-title span { color: #178a43; }
 html.hx-light .dashboard-shell-host .ca-preview-label span { color: #178a43; }
 html.hx-light .dashboard-shell-host .am-blacklist-empty b { color: #1c1e26; }
 html.hx-light .dashboard-shell-host .am-blacklist-empty small { color: #5d6375; }
+
+/* 2️⃣3️⃣ AUDIT v187 — neutralise l'ANCIENNE passe claire (v170, l.4650-4760)
+   qui gardait sombres des boîtes que v186 a éclaircies, et mettait des
+   textes CLAIRS sur les puces (devenues blanches au correctif 18) :
+   « Lundi…Dimanche », filtres logs « 🎫 Tickets… », « <> », aperçu annonces. */
+html.hx-light .dashboard-shell-host .dash-filter,
+html.hx-light .dashboard-shell-host .am-choice,
+html.hx-light .dashboard-shell-host .ca-choice,
+html.hx-light .dashboard-shell-host .discord-multi-choice { color: #2e3338; }
+html.hx-light .dashboard-shell-host .dash-filter b,
+html.hx-light .dashboard-shell-host .am-choice b,
+html.hx-light .dashboard-shell-host .ca-choice b { color: #1c1e26; }
+html.hx-light .dashboard-shell-host .dash-filter small,
+html.hx-light .dashboard-shell-host .am-choice small,
+html.hx-light .dashboard-shell-host .ca-choice small { color: #5d6375; }
+html.hx-light .dashboard-shell-host .ca-mark { color: #1c1e26; background: #eef0f5 !important; border-color: #c8ccd6 !important; }
+html.hx-light .dashboard-shell-host .ca-preview-label { color: #1c1e26; }
+html.hx-light .dashboard-shell-host .am-main-toggle { color: #1c1e26; }
+
+/* Conteneurs éclaircies : la couleur de base héritée redevient foncée
+   (l'ancienne passe y laissait #dbdee1 pour des boîtes alors sombres). */
+html.hx-light .dashboard-shell-host :is(.am-control-hero, .am-mode-row, .am-policy-row, .am-warning-panel, .am-blacklist-config, .adv-types-panel, .adv-preview-shell, .ca-preview-wrap, .am-rule-card, .adv-type-card) { color: #5d6375; }
+
+/* ════════════════════════════════════════════════════════════════
+   🔧 AUDIT v187 — passes E (menus déroulants OUVERTS), G (tiroir
+   « Plus »), I (contenu extrême) de l'audit étendu audit3.js.
+   ════════════════════════════════════════════════════════════════ */
+
+/* 2️⃣4️⃣ Panneaux des menus déroulants : ils restaient SOMbres (#232637)
+   en mode clair avec, en plus, des textes foncés hérités des cartes
+   éclaircies → illisibles. Version claire complète. */
+html.hx-light .dd-panel {
+  background: #ffffff; border-color: #c8ccd6;
+  box-shadow: 0 18px 50px -12px rgba(35, 40, 80, .25), 0 2px 8px rgba(35, 40, 80, .12);
+}
+html.hx-light .dd-panel .dd-search { border-bottom-color: #e3e6ee; }
+html.hx-light .dd-panel .dd-search input { background: #eef0f5; border-color: #c8ccd6; color: #1c1e26; }
+html.hx-light .dd-panel .dd-search input:focus { background: #ffffff; }
+html.hx-light .dd-panel .dd-search input::placeholder { color: #6a7080; }
+html.hx-light .dd-panel .dd-opt-ico { background: rgba(0, 0, 0, .05); }
+html.hx-light .dd-panel .dd-empty { color: #5d6375; }
+html.hx-light .dd-panel .dd-add-btn { background: transparent; }
+
+/* 2️⃣5️⃣ Tiroir « Plus » (mobile) : même traitement — fond blanc,
+   textes foncés, rails et pied clairs. */
+html.hx-light .dash-mobile-modules-drawer { background: #ffffff; color: #1c1e26; border-right-color: #dfe2ec; box-shadow: 12px 0 28px rgba(35, 40, 80, .18); }
+html.hx-light .dash-mobile-drawer-head { background: #f0f1f7; border-bottom-color: #dfe2ec; }
+html.hx-light .dash-mobile-site-links button { color: #5d6375; border-bottom-color: rgba(190, 196, 210, .4); }
+html.hx-light .dash-mobile-site-links button:hover { color: #1c1e26; background: #e3e6ee; }
+html.hx-light .dash-mobile-drawer-account { background: #f0f1f7; border-top-color: #dfe2ec; }
+html.hx-light .dash-mobile-drawer-account small { color: #5d6375; }
+html.hx-light .dash-mobile-server-rail { background: #f0f1f7; border-right-color: #dfe2ec; }
+html.hx-light .dash-mobile-server-item { background: #ffffff; color: #1c1e26; }
+html.hx-light .dash-mobile-server-item.active { background: #e07a5f; color: #ffffff; }
+html.hx-light .dash-mobile-module-list { background: #ffffff; }
+html.hx-light .dash-mobile-module-group { color: #6a7080; }
+html.hx-light .dash-mobile-module-item { color: #5d6375; }
+html.hx-light .dash-mobile-module-item:hover, html.hx-light .dash-mobile-module-item.active { color: #1c1e26; }
+
+/* 2️⃣6️⃣ Contenu extrême (audit I) : nom de serveur de 90 caractères,
+   mots interminables → plus jamais de défilement horizontal.
+   - fil d'Ariane : ellipsis (comme Discord)
+   - titres de module : retour à la ligne forcé
+   - boutons : les mots très longs se coupent ; le pied de carte
+     (boutons insécables par le correctif n°3) défile en interne. */
+.dash-crumb .crumb-txt { min-width: 0; }
+.dash-crumb .crumb-txt b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dash-crumb .crumb-txt span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.module-header-copy h1, .module-header-copy .sub { overflow-wrap: anywhere; }
+.dashboard-shell-host .dash-btn { overflow-wrap: anywhere; }
+.dash-card > .card-actions { overflow-x: auto; }
+
+/* 2️⃣7️⃣ AUDIT v187 — popovers & modales : la couche v10 (l.3488-3497)
+   forçait #36393f sur la palette de commandes, la cloche de
+   notifications, le sélecteur de couleur et les bandes de modales —
+   invisibles en mode clair car jamais ouvertes pendant les audits. */
+html.hx-light body:has(.dashboard-shell-host) .modal,
+html.hx-light body:has(.dashboard-shell-host) .dash-palette,
+html.hx-light body:has(.dashboard-shell-host) .dash-bell-pop,
+html.hx-light body:has(.dashboard-shell-host) .dash-accent-pop {
+  background: #ffffff !important; border-color: #dfe2ec !important;
+  box-shadow: 0 18px 50px -12px rgba(35, 40, 80, .28);
+}
+html.hx-light body:has(.dashboard-shell-host) .modal-header,
+html.hx-light body:has(.dashboard-shell-host) .modal-footer {
+  background: #f0f1f7; border-color: #dfe2ec; color: #1c1e26;
+}
+html.hx-light .modal-title { color: #1c1e26; }
+
+/* 2️⃣8️⃣ Tiroir « Plus » : derniers textes pâles (nom du compte,
+   initiales de serveur) + rappels d'accent après le passage générique. */
+html.hx-light .dash-mobile-modules-drawer :is(b, strong) { color: #1c1e26; }
+html.hx-light .dash-mobile-modules-drawer :is(small) { color: #5d6375; }
+html.hx-light .dash-mobile-drawer-account b { color: #1c1e26; }
+html.hx-light .dash-mobile-server-item.active { background: #e07a5f; color: #ffffff; }
+html.hx-light .dash-mobile-account-avatar { background: #e07a5f; color: #ffffff; }
+html.hx-light .dash-mobile-close { color: #e07a5f; }
+html.hx-light .dash-mobile-site-links button span { color: #e07a5f; }
+/* 2️⃣9️⃣ Les modales vivent hors du shell : le label de base #92a2b8
+   (l.2824) y restait pâle (ratio 2,6 sur blanc). */
+html.hx-light .dash-label { color: #5d6375; }
+html.hx-light .modal .dash-label { color: #5d6375; }
