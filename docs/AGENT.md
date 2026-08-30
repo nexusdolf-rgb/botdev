@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v191**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v192**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -135,7 +135,14 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   ⚠️ Leçons : le thème clair se teste avec un VRAI audit contraste (passe D) ; les
   overrides light doivent gagner contre `!important` ; jamais de `white-space:nowrap`
   sans base flex correcte ; jamais de flip de surface sans gérer ses textes internes.
-- **v191 (ACTUELLE)** : **RETRAIT des pages publiques** (demande utilisateur).
+- **v192 (ACTUELLE)** : **CORRECTIF aperçu des annonces de live**. L'aperçu de la
+  carte « Annonces de live » affichait un pseudo d'exemple codé en dur
+  (« 93_vlz est en live ! ») sur TOUS les serveurs — confondu avec un compte
+  suivi réel. Il est désormais DYNAMIQUE : premier compte suivi du serveur,
+  ou exemple neutre « @ton_streamer » si aucun. Aussi : nettoyage automatique
+  des bases de test dans /tmp au début de check.sh (évite SQLITE_FULL).
+  124 tests verts (`test/v192-test.js`). Bump cache v192.
+- **v191** : **RETRAIT des pages publiques** (demande utilisateur).
   Les pages publiques par serveur (`#/g/<id>`, route `/public/guilds/:guildId`,
   `guildPublicInfo`/`botPublicGuilds`, section « Serveurs publics » de la page
   bot, `upcomingByGuild`) et la page de statut publique (`#/status`) ont été
@@ -255,16 +262,15 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 
 1. Clone `https://github.com/nexusdolf-rgb/botdev`, `npm install`, lis le dernier commit
 2. Vérifie l'état : `https://hoxera.is-a.dev/api/health/bot` (bot en ligne ? erreurs ?)
-3. `bash scripts/check.sh` → doit être 🟢 (123 tests, ~2,5 min)
+3. `bash scripts/check.sh` → doit être 🟢 (124 tests, ~2,5 min)
 4. Vérifie les tokens (GitHub 200, Render 200, Discord `users/@me` avec curl)
 5. Fais-moi un point de situation clair, puis attends mes instructions
 
 ## 📌 ÉTAT AU 30/08/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v191** — retrait des pages publiques (serveur `#/g/<id>`
-  et statut `#/status`) à la demande de l'utilisateur. Le LOT 4 livré en v190
-  reste : 6 langues, quiz (`/quiz`), série de connexion (`/daily`), export CSV.
-  Voir la section v191 ci-dessus.
+- Dernière version : **v192** — correctif aperçu des annonces de live (pseudo
+  codé en dur « 93_vlz » supprimé, aperçu dynamique + exemple neutre).
+  Voir la section v192 ci-dessus.
 - v188 livré : LOT 1 « Quick wins communauté » :
   - **/afk** : statut AFK persistant (table `afk`, upsert par membre), sortie auto
     dès que le membre écrit, prévention des autres à la mention (sans boucle)

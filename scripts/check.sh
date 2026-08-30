@@ -11,6 +11,10 @@ set -u
 cd "$(dirname "$0")/.."
 ERR=0
 
+# 🧹 Les tests créent des bases temporaires dans /tmp (hoxera-*, botdev-*, v*test-*…).
+# Sans nettoyage, /tmp finit plein et les tests échouent en SQLITE_FULL.
+find /tmp -maxdepth 1 -type d \( -name "hoxera-*" -o -name "botdev-*" -o -name "v*test-*" -o -name "v17*-*" -o -name "ticket*" -o -name "backup*" -o -name "xptest*" -o -name "apptest*" \) -exec rm -rf {} + 2>/dev/null || true
+
 echo "── 1/3 Vérification de syntaxe ─────────────────"
 while IFS= read -r f; do
   if ! node --check "$f" 2>/tmp/synerr; then

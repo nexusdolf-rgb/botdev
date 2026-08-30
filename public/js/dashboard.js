@@ -4143,13 +4143,7 @@ Dashboard.renderers.community = async (content, data) => {
       <button class="dash-btn dash-btn-primary" id="lv-add">➕ Suivre</button>
     </div>
     <div class="dc-preview" style="margin-top:14px"><div class="dash-label" style="margin:0 0 8px">👀 Aperçu de l'annonce</div>
-      <div style="font-size:12.5px;color:#dbdee1;margin-bottom:6px">@everyone</div>
-      <div style="border-left:4px solid #FE2C55;background:#2B2D31;border-radius:4px;padding:12px 14px;max-width:430px">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#FE2C55,#8B5CF6);display:inline-block"></span><b style="font-size:13px;color:#f2f3f5">93_vlz est en live !</b></div>
-        <div style="font-weight:700;font-size:14px;color:#fff">🎵 🔴 LIVE sur TikTok</div>
-        <div style="font-size:12.5px;color:#b5bac1;margin:6px 0">✨ Rejoins-le maintenant, il t'attend…</div>
-        <div style="display:inline-block;background:#4E5058;color:#fff;font-size:12px;font-weight:600;padding:7px 14px;border-radius:6px">▶️ Regarder le live TikTok</div>
-      </div>
+      <div id="lv-preview">…</div>
     </div>
     <div id="lv-list" style="margin-top:14px"></div>
     <div style="font-size:12px;color:var(--d-dim);margin-top:8px">💡 Vérification automatique toutes les 60 secondes · 20 comptes max · une annonce par session live (les faux hors-ligne sont confirmés).</div>`;
@@ -4172,11 +4166,30 @@ Dashboard.renderers.community = async (content, data) => {
   };
 
   const PLAT = { tiktok: ['🎵', 'TikTok'], twitch: ['🟣', 'Twitch'], youtube: ['▶️', 'YouTube'], kick: ['🟢', 'Kick'] };
+  // 👀 Aperçu DYNAMIQUE de l'annonce : le premier compte suivi du serveur,
+  // ou un exemple neutre (« ton_streamer ») s'il n'y en a aucun. Plus jamais
+  // de pseudo réel affiché par erreur sur un autre serveur (v192).
+  const renderPreview = (socials) => {
+    const pv = cl.querySelector('#lv-preview');
+    if (!pv) return;
+    const s = (socials || [])[0];
+    const handle = s ? `@${s.handle}` : '@ton_streamer';
+    const [emo, lab] = s ? (PLAT[s.platform] || ['🌐', s.platform]) : ['🎵', 'TikTok'];
+    pv.innerHTML = `
+      <div style="font-size:12.5px;color:#dbdee1;margin-bottom:6px">@everyone</div>
+      <div style="border-left:4px solid #FE2C55;background:#2B2D31;border-radius:4px;padding:12px 14px;max-width:430px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#FE2C55,#8B5CF6);display:inline-block"></span><b style="font-size:13px;color:#f2f3f5">${App.escapeHtml(handle)} est en live !</b></div>
+        <div style="font-weight:700;font-size:14px;color:#fff">${emo} 🔴 LIVE sur ${lab}</div>
+        <div style="font-size:12.5px;color:#b5bac1;margin:6px 0">✨ Rejoins-le maintenant, il t'attend…</div>
+        <div style="display:inline-block;background:#4E5058;color:#fff;font-size:12px;font-weight:600;padding:7px 14px;border-radius:6px">▶️ Regarder le live ${lab}</div>
+      </div>`;
+  };
   const renderSocials = async () => {
     const list = cl.querySelector('#lv-list');
     list.innerHTML = '';
     try {
       const { socials } = await App.api(`/bots/${bot.id}/guilds/${guildId}/livesocials`);
+      renderPreview(socials);
       if (!socials.length) { list.appendChild(App.el(`<div class="dash-empty" style="padding:14px">Aucun compte suivi pour l'instant.</div>`)); return; }
       socials.forEach((so) => {
         const [emo, lab] = PLAT[so.platform] || ['🌐', so.platform];
@@ -4236,6 +4249,7 @@ Dashboard.renderers.community = async (content, data) => {
       renderSocials();
     } catch (e) { App.toast(e.message, 'error'); }
   };
+  renderPreview([]);
   renderSocials();
   // Liste des membres pour lier un compte (asynchrone, non bloquant)
   App.api(`/bots/${bot.id}/guilds/${guildId}/members`).then(({ members }) => {

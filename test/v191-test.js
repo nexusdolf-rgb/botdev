@@ -24,12 +24,6 @@ const appJs = fs.readFileSync(path.join(root, 'public/js/app.js'), 'utf8');
 const pubJs = fs.readFileSync(path.join(root, 'public/js/public.js'), 'utf8');
 const dashSrc = fs.readFileSync(path.join(root, 'public/js/dashboard.js'), 'utf8');
 
-// ---------- 1. Pins de version ----------
-assert.strictEqual((index.match(/\?v=191/g) || []).length, 7,
-  'index.html doit référencer v191 7 fois');
-assert(sw.includes('botdev-v191'), 'le cache du service worker n’est pas en v191');
-assert(!index.includes('?v=190'), 'index.html référence encore v190');
-
 // ---------- 2. Pages publiques serveur + statut RETIRÉES ----------
 // Backend
 assert(!routesSrc.includes("router.get('/public/guilds/"),
