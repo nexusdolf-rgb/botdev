@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v190**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v191**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -135,7 +135,14 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   ⚠️ Leçons : le thème clair se teste avec un VRAI audit contraste (passe D) ; les
   overrides light doivent gagner contre `!important` ; jamais de `white-space:nowrap`
   sans base flex correcte ; jamais de flip de surface sans gérer ses textes internes.
-- **v190 (ACTUELLE)** : **LOT 4 « International & fun »**.
+- **v191 (ACTUELLE)** : **RETRAIT des pages publiques** (demande utilisateur).
+  Les pages publiques par serveur (`#/g/<id>`, route `/public/guilds/:guildId`,
+  `guildPublicInfo`/`botPublicGuilds`, section « Serveurs publics » de la page
+  bot, `upcomingByGuild`) et la page de statut publique (`#/status`) ont été
+  **supprimées** — plus rien de public ne liste les serveurs. Le reste du LOT 4
+  reste livré : 6 langues, quiz, série /daily, export CSV, événements.
+  123 tests verts (`test/v191-test.js`). Bump cache v191.
+- **v190** : **LOT 4 « International & fun »**.
   - **Multi-langues** : `server/i18n.js` étendu à 6 langues (fr, en, es, de, pt, it),
     `/lang` accepte les 6 codes, repli automatique sur le français pour les clés
     non traduites (aucune casse).
@@ -248,16 +255,16 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 
 1. Clone `https://github.com/nexusdolf-rgb/botdev`, `npm install`, lis le dernier commit
 2. Vérifie l'état : `https://hoxera.is-a.dev/api/health/bot` (bot en ligne ? erreurs ?)
-3. `bash scripts/check.sh` → doit être 🟢 (122 tests, ~2,5 min)
+3. `bash scripts/check.sh` → doit être 🟢 (123 tests, ~2,5 min)
 4. Vérifie les tokens (GitHub 200, Render 200, Discord `users/@me` avec curl)
 5. Fais-moi un point de situation clair, puis attends mes instructions
 
 ## 📌 ÉTAT AU 30/08/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v190** — LOT 4 : multi-langues 6 langues, page publique
-  par serveur (`#/g/<id>`), quiz compétitif (`/quiz`), série de connexion
-  (`/daily` streak), page de statut publique (`#/status`), export CSV.
-  Voir la section v190 ci-dessus.
+- Dernière version : **v191** — retrait des pages publiques (serveur `#/g/<id>`
+  et statut `#/status`) à la demande de l'utilisateur. Le LOT 4 livré en v190
+  reste : 6 langues, quiz (`/quiz`), série de connexion (`/daily`), export CSV.
+  Voir la section v191 ci-dessus.
 - v188 livré : LOT 1 « Quick wins communauté » :
   - **/afk** : statut AFK persistant (table `afk`, upsert par membre), sortie auto
     dès que le membre écrit, prévention des autres à la mention (sans boucle)
@@ -273,6 +280,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   username, bio 4 lignes, icône d'application
 - ⏳ En attente utilisateur : renommer le rôle « Nexora » à la main sur 6 serveurs
   (Discord ne le permet pas automatiquement — voir piège n°4)
-- Roadmap : LOT 1 ✅ (v188), LOT 2 ✅ (v189), LOT 4 ✅ (v190 — 6 langues,
-  page publique serveur, quiz, série de connexion, statut public, export CSV).
-  LOT 3 (backlog) = modmail, /profile, recherche transcriptions. Musique écartée.
+- Roadmap : LOT 1 ✅ (v188), LOT 2 ✅ (v189), LOT 4 ✅ (v190, puis v191 :
+  retrait des pages publiques serveur/statut à la demande — il reste 6 langues,
+  quiz, série de connexion, export CSV). LOT 3 (backlog) = modmail, /profile,
+  recherche transcriptions. Musique écartée.

@@ -2420,34 +2420,8 @@ router.get('/public/bots/:id', (req, res) => {
       categories,
       custom,
       public_url: store.settings.get('public_url') || '',
-      public_guilds: botManager.botPublicGuilds(botId),
     },
   });
-});
-
-// ============================================================
-// Page publique par serveur (v190) — visible sans connexion
-// URL : /g/<guild_id> → affiche le serveur, ses événements et le top quiz
-// ============================================================
-router.get('/public/guilds/:guildId', (req, res) => {
-  const guildId = String(req.params.guildId);
-  const info = botManager.guildPublicInfo(guildId);
-  if (!info) return res.status(404).json({ error: 'Serveur introuvable ou bot hors ligne.' });
-
-  const events = store.guildEvents.upcomingByGuild(guildId, 5).map((e) => ({
-    id: e.id,
-    title: e.title,
-    description: e.description || '',
-    starts_at: e.starts_at,
-    channel_id: e.channel_id || '',
-    participants: (() => { try { return JSON.parse(e.participants || '[]'); } catch { return []; } })(),
-  }));
-  const quizTop = store.quizScores.top(info.bot_id, guildId, 10).map((r) => ({
-    user_id: r.user_id,
-    score: r.score,
-    answers: r.answers,
-  }));
-  res.json({ guild: info, events, quiz_top: quizTop });
 });
 
 // ============================================================

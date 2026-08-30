@@ -168,18 +168,6 @@ App.router.run = async () => {
     return;
   }
 
-  // Page publique d'un serveur Discord (v190) — visible sans connexion
-  if (parts[0] === 'g' && parts[1]) {
-    App.renderPublicGuild(String(parts[1]));
-    return;
-  }
-
-  // Page de statut publique (v190) — état des bots, sans connexion
-  if (parts[0] === 'status') {
-    App.renderPublicStatus();
-    return;
-  }
-
   // Accueil public (racine) : le site de Hoxera, visible par tous
   if (parts.length === 0) {
     App.renderPublicLanding();

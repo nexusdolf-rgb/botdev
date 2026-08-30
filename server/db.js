@@ -1615,8 +1615,6 @@ const guildEvents = {
   },
   // Tous les événements à venir de tous les serveurs (pour le balayage)
   allUpcoming: () => db.prepare('SELECT * FROM guild_events WHERE starts_at >= ? ORDER BY starts_at ASC LIMIT 200').all(Date.now()),
-  // Événements à venir d'un serveur précis (page publique serveur, v190)
-  upcomingByGuild: (guildId, limit = 5) => db.prepare('SELECT * FROM guild_events WHERE guild_id = ? AND starts_at >= ? ORDER BY starts_at ASC LIMIT ?').all(String(guildId), Date.now(), Math.min(Math.max(parseInt(limit, 10) || 5, 1), 20)),
 };
 
 // ---------------------- Quiz compétitif (v190) ----------------------

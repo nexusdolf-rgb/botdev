@@ -128,8 +128,6 @@ App.renderPublicLanding = () => {
         <div class="pub-footer-links">
           <a href="https://discord.gg/X9hTdr9N3" target="_blank" rel="noopener">🆘 Serveur support</a>
           <span>·</span>
-          <a href="#/status" data-foot-status>📡 Statut</a>
-          <span>·</span>
           <a href="#" id="pub-foot-dash">📊 Dashboard</a>
         </div>
       </div>
@@ -150,8 +148,6 @@ App.renderPublicLanding = () => {
 
   const footDash = page.querySelector('#pub-foot-dash');
   if (footDash) footDash.onclick = (e) => { e.preventDefault(); App.router.go('/dashboard'); };
-  const footStatus = page.querySelector('[data-foot-status]');
-  if (footStatus) footStatus.onclick = (e) => { e.preventDefault(); App.router.go('/status'); };
 
   // 🎬 Révélation au défilement (dégradation propre si non supporté)
   try {
@@ -316,213 +312,10 @@ App.renderPublicBot = async (id) => {
         <div style="margin-top:14px;color:var(--text-dim);font-size:12px">💡 Une fois le bot sur ton serveur, tape <b>/help</b> pour le guide complet, et <b>/ticket setup</b> pour installer les tickets.</div>
       </div>
 
-      ${b.public_guilds && b.public_guilds.length ? `
-      <div class="card">
-        <h3>🏠 Serveurs publics</h3>
-        <div class="card-sub">Chaque serveur où ${App.escapeHtml(b.name)} est présent a sa propre page publique : événements à venir, top quiz, etc.</div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          ${b.public_guilds.map((s) => `
-            <div style="display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--border);border-radius:8px;cursor:pointer" data-guild="${App.escapeHtml(s.guild_id)}">
-              <div style="width:32px;height:32px;border-radius:50%;overflow:hidden;background:var(--bg-soft,#eee);display:flex;align-items:center;justify-content:center">
-                ${s.icon_url ? `<img src="${App.escapeHtml(s.icon_url)}" alt="" style="width:32px;height:32px;object-fit:cover" onerror="this.outerHTML='🏠'" />` : '🏠'}
-              </div>
-              <div style="flex:1;min-width:0">
-                <div style="font-weight:600">${App.escapeHtml(s.guild_name)}</div>
-                <div style="color:var(--text-dim);font-size:12px">👥 ${App.fmtNumber(s.member_count)} membres</div>
-              </div>
-              <span class="chip">Voir la page →</span>
-            </div>`).join('')}
-        </div>
-      </div>` : ''}
-
       <div class="pub-footer" style="text-align:left"><b>⚡ Hoxera</b> — ajoute-le à ton serveur, puis configure-le avec ton compte Discord.</div>
     `;
     shell.querySelector('#pub-back').onclick = () => App.router.go(App.state.user && App.state.user.discord_id ? '/dashboard' : '/');
     shell.querySelector('#pub-invite').onclick = () => { if (b.invite_url) App.openInvite(b.invite_url); };
-    shell.querySelector('#pub-refresh').onclick = render;
-    shell.querySelectorAll('[data-guild]').forEach((el) => {
-      el.onclick = () => App.router.go(`/g/${el.getAttribute('data-guild')}`);
-    });
-  };
-
-  await render();
-  const timer = setInterval(render, 30000);
-  App.currentPublicTimer && clearInterval(App.currentPublicTimer);
-  App.currentPublicTimer = timer;
-};
-
-// ---------------------- Page publique d'un serveur (v190) ----------------------
-// URL : #/g/<guild_id> — le serveur, ses événements et le top quiz, sans connexion.
-App.renderPublicGuild = async (guildId) => {
-  const root = document.getElementById('app');
-  root.innerHTML = '';
-  root.appendChild(App.renderPublicNavbar());
-
-  const shell = App.el(`<div class="bot-shell"><div class="center-loading"><div class="spinner"></div></div></div>`);
-  root.appendChild(shell);
-
-  const render = async () => {
-    let data;
-    try {
-      data = await App.api(`/public/guilds/${encodeURIComponent(guildId)}`);
-    } catch (e) {
-      shell.innerHTML = `<div class="empty-state"><div class="big">🏠</div>${App.escapeHtml(e.message === 'Session expirée' ? 'Serveur introuvable.' : e.message)}<br/><br/><button class="btn" onclick="location.hash='#/'">← Retour à l'accueil</button></div>`;
-      return;
-    }
-    const g = data.guild;
-    const events = data.events || [];
-    const quizTop = data.quiz_top || [];
-    const avatar = g.guild_icon_url
-      ? `<img class="pub-avatar" src="${App.escapeHtml(g.guild_icon_url)}" alt="" onerror="this.outerHTML='<div class=\\'pub-avatar fallback\\'>🏠</div>'" />`
-      : `<div class="pub-avatar fallback">🏠</div>`;
-
-    const fmtDate = (ts) => {
-      try {
-        const d = new Date(Number(ts));
-        if (isNaN(d.getTime())) return '—';
-        return d.toLocaleString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-      } catch { return '—'; }
-    };
-
-    shell.innerHTML = `
-      <div class="pub-bot-hero">
-        <button class="btn btn-ghost btn-icon" id="pub-back" title="Retour">←</button>
-        ${avatar}
-        <div style="flex:1;min-width:0">
-          <h2 style="font-size:22px">${App.escapeHtml(g.guild_name)}</h2>
-          <div class="sub">Serveur Discord servi par <b>${App.escapeHtml(g.bot_name)}</b> ${g.bot_username ? '(' + App.escapeHtml(g.bot_username) + ')' : ''}</div>
-          <div class="pub-bot-status" style="margin-top:8px">
-            <span class="status-pill"><span class="dot dot-online"></span>En ligne</span>
-            <span class="chip">👥 ${App.fmtNumber(g.member_count)} membres</span>
-          </div>
-        </div>
-        <div class="pub-bot-actions">
-          <button class="btn btn-primary" id="pub-invite">➕ Inviter ${App.escapeHtml(g.bot_name)}</button>
-          <button class="btn" id="pub-refresh">🔄 Actualiser</button>
-        </div>
-      </div>
-
-      <div class="stats-grid" style="margin-top:18px">
-        <div class="stat-card"><div class="val">${App.fmtNumber(g.member_count)}</div><div class="lbl">Membres</div></div>
-        <div class="stat-card"><div class="val">${events.length}</div><div class="lbl">Événements à venir</div></div>
-        <div class="stat-card"><div class="val">${quizTop.length}</div><div class="lbl">Joueurs au quiz</div></div>
-        <div class="stat-card"><div class="val">${quizTop.reduce((s, r) => s + r.answers, 0)}</div><div class="lbl">Réponses au quiz</div></div>
-      </div>
-
-      <div class="card">
-        <h3>🗓️ Prochains événements</h3>
-        ${events.length ? `<div style="display:flex;flex-direction:column;gap:8px">
-          ${events.map((e) => `
-            <div style="display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--border);border-radius:10px">
-              <div style="font-size:20px">📅</div>
-              <div style="flex:1;min-width:0">
-                <div style="font-weight:600">${App.escapeHtml(e.title)}</div>
-                <div style="color:var(--text-dim);font-size:12px">${App.escapeHtml(fmtDate(e.starts_at))} · ${e.participants.length} participant(s)</div>
-              </div>
-            </div>`).join('')}
-        </div>` : `<div class="empty-state"><div class="big">🗓️</div>Aucun événement à venir sur ce serveur pour le moment.</div>`}
-      </div>
-
-      <div class="card">
-        <h3>🧠 Top Quiz du serveur</h3>
-        ${quizTop.length ? `<div style="display:flex;flex-direction:column;gap:6px">
-          ${quizTop.map((r, i) => `
-            <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:var(--bg-soft,#f5f5f5)">
-              <div style="width:26px;font-weight:700;text-align:center">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</div>
-              <div style="flex:1;min-width:0"><b>@${App.escapeHtml(r.user_id.slice(-6))}</b> <span style="color:var(--text-dim);font-size:12px">· ${r.answers} réponse(s)</span></div>
-              <div class="chip">${r.score} pts</div>
-            </div>`).join('')}
-        </div>` : `<div class="empty-state"><div class="big">🧠</div>Personne n'a encore joué au quiz ici — lance <b>/quiz</b> sur le serveur !</div>`}
-      </div>
-
-      <div class="pub-footer" style="text-align:left"><b>⚡ Hoxera</b> — page publique générée automatiquement pour ${App.escapeHtml(g.guild_name)}.</div>
-    `;
-
-    shell.querySelector('#pub-back').onclick = () => App.router.go('/');
-    shell.querySelector('#pub-invite').onclick = async () => {
-      try {
-        const { bots } = await App.api('/public/bots');
-        const b = bots.find((x) => x.id === g.bot_id) || bots.find((x) => x.invite_url);
-        if (b && b.invite_url) App.openInvite(b.invite_url);
-        else App.toast('Aucun lien d’invitation disponible.', 'error');
-      } catch { App.toast('Impossible de récupérer le lien d’invitation.', 'error'); }
-    };
-    shell.querySelector('#pub-refresh').onclick = render;
-  };
-
-  await render();
-  const timer = setInterval(render, 30000);
-  App.currentPublicTimer && clearInterval(App.currentPublicTimer);
-  App.currentPublicTimer = timer;
-};
-
-// ---------------------- Page de statut publique (v190) ----------------------
-// URL : #/status — état de tous les bots Hoxera en direct, sans connexion.
-App.renderPublicStatus = async () => {
-  const root = document.getElementById('app');
-  root.innerHTML = '';
-  root.appendChild(App.renderPublicNavbar());
-
-  const shell = App.el(`<div class="bot-shell"><div class="center-loading"><div class="spinner"></div></div></div>`);
-  root.appendChild(shell);
-
-  const render = async () => {
-    let stats, bots;
-    try {
-      [stats, { bots }] = await Promise.all([App.api('/public/stats'), App.api('/public/bots')]);
-    } catch (e) {
-      shell.innerHTML = `<div class="empty-state"><div class="big">📡</div>${App.escapeHtml(e.message)}<br/><br/><button class="btn" onclick="location.hash='#/'">← Retour à l'accueil</button></div>`;
-      return;
-    }
-    shell.innerHTML = `
-      <div class="pub-bot-hero">
-        <button class="btn btn-ghost btn-icon" id="pub-back" title="Retour">←</button>
-        <div style="font-size:34px;margin-right:12px">📡</div>
-        <div style="flex:1;min-width:0">
-          <h2 style="font-size:22px">Statut de Hoxera</h2>
-          <div class="sub">État des bots en direct — toutes les 30 secondes.</div>
-          <div class="pub-bot-status" style="margin-top:8px">
-            <span class="status-pill"><span class="dot ${stats.onlineBots > 0 ? 'dot-online' : 'dot-offline'}"></span>${stats.onlineBots > 0 ? 'Opérationnel' : 'Indisponible'}</span>
-            <span class="chip">🤖 ${stats.onlineBots}/${stats.totalBots} en ligne</span>
-          </div>
-        </div>
-        <div class="pub-bot-actions">
-          <button class="btn" id="pub-refresh">🔄 Actualiser</button>
-        </div>
-      </div>
-
-      <div class="stats-grid" style="margin-top:18px">
-        <div class="stat-card"><div class="val">${App.fmtNumber(stats.servers)}</div><div class="lbl">Serveurs Discord</div></div>
-        <div class="stat-card"><div class="val">${App.fmtNumber(stats.members)}</div><div class="lbl">Membres touchés</div></div>
-        <div class="stat-card"><div class="val">${stats.onlineBots}</div><div class="lbl">Bots en ligne</div></div>
-        <div class="stat-card"><div class="val">${stats.totalBots}</div><div class="lbl">Bots au total</div></div>
-      </div>
-
-      <div class="card">
-        <h3>🤖 Bots</h3>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          ${bots.map((b) => `
-            <div style="display:flex;align-items:center;gap:12px;padding:10px;border:1px solid var(--border);border-radius:10px">
-              ${b.avatar_url
-                ? `<img class="bot-avatar" style="width:40px;height:40px" src="${App.escapeHtml(b.avatar_url)}" alt="" onerror="this.outerHTML='<div class=\\'bot-avatar fallback\\'>🤖</div>'" />`
-                : `<div class="bot-avatar fallback">🤖</div>`}
-              <div style="flex:1;min-width:0">
-                <div style="font-weight:600">${App.escapeHtml(b.name)}</div>
-                <div class="sub">${b.username ? '@' + App.escapeHtml(b.username) : 'jamais connecté'}</div>
-              </div>
-              <div style="text-align:right;font-size:12px;color:var(--text-dim)">
-                ${b.online
-                  ? `${App.fmtNumber(b.servers)} serveur(s) · ${App.fmtNumber(b.members)} membres<br/>⚡ ${b.ping} ms · ⏱ ${App.fmtUptime(b.uptime)}`
-                  : 'Hors ligne'}
-              </div>
-              <span class="status-pill"><span class="dot ${b.online ? 'dot-online' : 'dot-offline'}"></span>${b.online ? 'En ligne' : 'Hors ligne'}</span>
-            </div>`).join('')}
-        </div>
-      </div>
-
-      <div class="pub-footer" style="text-align:left"><b>⚡ Hoxera</b> — page de statut automatique, rafraîchie en direct.</div>
-    `;
-    shell.querySelector('#pub-back').onclick = () => App.router.go('/');
     shell.querySelector('#pub-refresh').onclick = render;
   };
 

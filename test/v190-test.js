@@ -1,10 +1,11 @@
 // ══════════════════════════════════════════════════════════════
 // TEST v190 — LOT 4 « International & fun » :
 //  1. Multi-langues : 6 langues (fr/en/es/de/pt/it) + repli français
-//  2. Page publique par serveur (#/g/<id>) : événements + top quiz
-//  3. Quiz compétitif : /quiz, boutons 🇦🇧🇨, scores, classement
-//  4. Série de connexion /daily (streak + bonus plafonné)
-//  5. Page de statut publique (#/status) + export CSV (dashboard)
+//  2. Quiz compétitif : /quiz, boutons 🇦🇧🇨, scores, classement
+//  3. Série de connexion /daily (streak + bonus plafonné)
+//  4. Export CSV (dashboard)
+//  NB : les pages publiques serveur/statut de la v190 ont été retirées
+//  en v191 à la demande de l'utilisateur (voir test/v191-test.js).
 // ══════════════════════════════════════════════════════════════
 const fs = require('fs');
 const path = require('path');
@@ -23,12 +24,6 @@ const premadeSrc = fs.readFileSync(path.join(root, 'server/discord/premade.js'),
 const appJs = fs.readFileSync(path.join(root, 'public/js/app.js'), 'utf8');
 const pubJs = fs.readFileSync(path.join(root, 'public/js/public.js'), 'utf8');
 const dashSrc = fs.readFileSync(path.join(root, 'public/js/dashboard.js'), 'utf8');
-
-// ---------- 1. Pins de version ----------
-assert.strictEqual((index.match(/\?v=190/g) || []).length, 7,
-  'index.html doit référencer v190 7 fois');
-assert(sw.includes('botdev-v190'), 'le cache du service worker n’est pas en v190');
-assert(!index.includes('?v=189'), 'index.html référence encore v189');
 
 // ---------- 2. Multi-langues (i18n 6 langues + repli fr) ----------
 assert(i18nSrc.includes("fr: 'fr'") && i18nSrc.includes("en: 'en'")
@@ -72,24 +67,9 @@ assert(exSrc.includes('QUIZ_BANK'), 'la banque de questions manque');
 assert(exSrc.includes('bonus rapidité'), 'le bonus rapidité manque');
 assert(exSrc.includes('quizState,'), 'quizState non exposé pour les tests');
 
-// ---------- 5. Page publique serveur + statut + CSV ----------
-assert(bmSrc.includes('guildPublicInfo'), 'guildPublicInfo manque dans botManager');
-assert(bmSrc.includes('botPublicGuilds'), 'botPublicGuilds manque dans botManager');
-assert(dbSrc.includes('upcomingByGuild:'), 'upcomingByGuild manque dans db.js');
-assert(routesSrc.includes("router.get('/public/guilds/:guildId'"),
-  'route /public/guilds/:guildId manquante');
+// ---------- 5. Dashboard quiz + export CSV ----------
 assert(routesSrc.includes("router.get('/bots/:id/guilds/:guildId/quiz/top'"),
   'route dashboard quiz/top manquante');
-assert(appJs.includes("parts[0] === 'g' && parts[1]"),
-  'routeur #/g/:id manquant dans app.js');
-assert(appJs.includes("parts[0] === 'status'"),
-  'routeur #/status manquant dans app.js');
-assert(pubJs.includes('App.renderPublicGuild = '),
-  'renderPublicGuild manque dans public.js');
-assert(pubJs.includes('App.renderPublicStatus = '),
-  'renderPublicStatus manque dans public.js');
-assert(pubJs.includes('data-guild'),
-  'les liens vers les serveurs publics manquent sur la page bot');
 assert(appJs.includes('App.downloadCSV = '),
   'App.downloadCSV manque dans app.js');
 assert(dashSrc.includes("['quiz', '🧠', 'Quiz']"),
@@ -149,16 +129,7 @@ const bonus = Math.min(25 * (streak - 1), 300);
 assert.strictEqual(streak, 5, 'série attendue : 5');
 assert.strictEqual(bonus, 100, 'bonus attendu : +100 (plafond respecté)');
 
-// 6d. Événements : upcomingByGuild (page publique serveur)
-const evId = store.guildEvents.add(1, 'g1', {
-  title: 'Tournoi Quiz', starts_at: Date.now() + 86400000, channel_id: 'c1', created_by: 'u9',
-});
-const ups = store.guildEvents.upcomingByGuild('g1', 5);
-assert(ups.some((e) => e.id === evId), 'upcomingByGuild doit remonter l’événement');
-assert.strictEqual(store.guildEvents.upcomingByGuild('gX', 5).length, 0,
-  'upcomingByGuild isolé par serveur');
-
-// 6e. Payload /quiz : options attendues
+// 6d. Payload /quiz : options attendues
 const payloads = extra.buildExtraPayloads();
 const quizCmd = payloads.find((p) => p.name === 'quiz');
 assert(quizCmd, 'payload /quiz absent');
@@ -167,8 +138,7 @@ assert(optNames.includes('action'), 'option action absente de /quiz');
 const actionOpt = quizCmd.options.find((o) => o.name === 'action');
 assert((actionOpt.choices || []).length >= 2, 'les choix jouer/top manquent');
 
-// 6f. Nettoyage
-store.guildEvents.remove(evId);
+// 6e. Nettoyage
 try { store.db.close(); } catch {}
 
-console.log('✅ v190-test : LOT 4 — 6 langues, page publique serveur, quiz compétitif, série de connexion, statut public, export CSV — 0 problème (logique réelle vérifiée)');
+console.log('✅ v190-test : LOT 4 — 6 langues, quiz compétitif, série de connexion, export CSV — 0 problème (logique réelle vérifiée)');

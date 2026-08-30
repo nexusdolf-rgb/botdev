@@ -679,42 +679,6 @@ function publicBotInfo(botId) {
   };
 }
 
-
-// ---------------------- Page publique par serveur (v190) ----------------------
-// Retrouve quel bot sert un serveur Discord et renvoie les infos publiques du serveur.
-function guildPublicInfo(guildId) {
-  const gid = String(guildId);
-  for (const [botId, entry] of clients) {
-    if (!entry.client.isReady()) continue;
-    const guild = entry.client.guilds.cache.get(gid);
-    if (!guild) continue;
-    const record = store.bots.get(botId);
-    return {
-      guild_id: gid,
-      guild_name: guild.name || 'Serveur sans nom',
-      guild_icon_url: guild.iconURL ? guild.iconURL({ size: 256 }) : '',
-      member_count: guild.memberCount || 0,
-      bot_id: botId,
-      bot_name: record ? record.name : '',
-      bot_username: record ? record.bot_username || '' : '',
-      online: true,
-    };
-  }
-  return null;
-}
-
-// Liste des serveurs publics servis par un bot (pour la page publique du bot).
-function botPublicGuilds(botId) {
-  const entry = clients.get(botId);
-  if (!entry || !entry.client.isReady()) return [];
-  const out = [];
-  for (const g of entry.client.guilds.cache.values()) {
-    out.push({ guild_id: g.id, guild_name: g.name || 'Serveur sans nom', member_count: g.memberCount || 0, icon_url: g.iconURL ? g.iconURL({ size: 128 }) : '' });
-  }
-  out.sort((a, b) => b.member_count - a.member_count);
-  return out.slice(0, 50);
-}
-
 function platformStats() {
   let onlineBots = 0, servers = 0, members = 0;
   for (const entry of clients.values()) {
@@ -725,4 +689,4 @@ function platformStats() {
   return { onlineBots, servers, members };
 }
 
-module.exports = { clients, getClient, isOnline, getGuildPerms, loginBot, reconnectBot, logoutBot, stopAll, syncSlashCommands, syncGlobalCommands, globalSyncDecision, gatewayPauseMs, applyPresence, applyBotAbout, aboutText, publicBotInfo, guildPublicInfo, botPublicGuilds, platformStats, guardInteraction };
+module.exports = { clients, getClient, isOnline, getGuildPerms, loginBot, reconnectBot, logoutBot, stopAll, syncSlashCommands, syncGlobalCommands, globalSyncDecision, gatewayPauseMs, applyPresence, applyBotAbout, aboutText, publicBotInfo, platformStats, guardInteraction };
