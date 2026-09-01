@@ -19,7 +19,7 @@ const EVENT_DEFS = {
       { key: 'plain', label: '📝 Mode texte simple (désactive le panneau premium)', type: 'checkbox', default: false },
       { key: 'color', label: 'Couleur de l\'embed', type: 'color', default: '#57F287' },
       { key: 'image', label: 'Image de l\'embed (URL, optionnel)', type: 'text', placeholder: 'https://…' },
-      { key: 'channels', label: '📌 Salons à mentionner (règles, tickets, chat général…) — utilise {channels} dans le message', type: 'channelsmulti', default: '' },
+      { key: 'channels', label: '📌 Salons à détailler (règles, tickets, chat général…) — une phrase par salon, utilise {channels} dans le message', type: 'channelsmulti', default: '' },
     ],
   },
   member_leave: {
@@ -248,7 +248,11 @@ function channelMentions(guild, raw, resolve) {
     const ch = resolve ? resolve(guild, ref) : null;
     if (!ch) continue;
     const label = String((item && item.label) || '').trim();
-    lines.push(label ? `${label} → <#${ch.id}>` : `<#${ch.id}>`);
+    const mention = `<#${ch.id}>`;
+    // v2.1 : si la phrase contient {salon}, la mention est insérée À L'INTÉRIEUR
+    // (ex : « Je vous invite à prendre connaissance de {salon} » → … de #regles).
+    if (label.includes('{salon}')) lines.push(label.split('{salon}').join(mention));
+    else lines.push(label ? `${label} → ${mention}` : mention);
   }
   return lines.join('\n');
 }

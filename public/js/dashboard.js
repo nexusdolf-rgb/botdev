@@ -2206,7 +2206,7 @@ Dashboard.renderers.welcome = async (content, data) => {
             <div class="cm-row" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed var(--d-border)">
               <label class="switch" style="flex-shrink:0"><input type="checkbox" data-cm-check="${App.escapeHtml(ref)}" ${checked ? 'checked' : ''} /><span class="slider"></span></label>
               <span style="flex:0 1 auto;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px">💬 #${App.escapeHtml(ch.name)}</span>
-              <input class="dash-input" data-cm-label="${App.escapeHtml(ref)}" placeholder="Libellé (ex : 📜 Règles, 🎫 Ticket…)" value="${App.escapeHtml(label)}" style="flex:1 1 180px;min-width:0;height:34px;padding:4px 10px" ${checked ? '' : 'disabled'} />
+              <input class="dash-input" data-cm-label="${App.escapeHtml(ref)}" placeholder="Phrase (ex : je vous invite à prendre connaissance de {salon})" value="${App.escapeHtml(label)}" style="flex:1 1 180px;min-width:0;height:34px;padding:4px 10px" ${checked ? '' : 'disabled'} />
             </div>`);
           row.querySelector('[data-cm-check]').onchange = (e) => {
             row.querySelector('[data-cm-label]').disabled = !e.target.checked;
@@ -2215,7 +2215,7 @@ Dashboard.renderers.welcome = async (content, data) => {
         });
         cfgZone.appendChild(App.el(`<label class="dash-label" style="margin-top:8px">${f.label}</label>`));
         cfgZone.appendChild(box);
-        cfgZone.appendChild(App.el(`<div style="font-size:12px;color:var(--d-dim);margin-top:6px">💡 Dans le message, écris <b>{channels}</b> à l'endroit où les salons doivent apparaître. Ex : « Bienvenue {user} ! Je t'invite à jeter un œil ici :\n{channels} »</div>`));
+        cfgZone.appendChild(App.el(`<div style="font-size:12px;color:var(--d-dim);margin-top:6px">💡 Écris <b>{channels}</b> dans le message à l'endroit où les salons apparaissent. Dans la phrase de chaque salon, écris <b>{salon}</b> pour mettre la mention cliquable : ex « Je vous invite à prendre connaissance de {salon} »</div>`));
         return;
       }
 
@@ -2224,6 +2224,18 @@ Dashboard.renderers.welcome = async (content, data) => {
 
     // 👀 Aperçu Discord en direct (arrivée + départ), avec les vraies données du serveur
     if (key === 'member_join' || key === 'member_leave') {
+      // ✨ Modèle prêt à l'emploi : message bien organisé avec mention du membre
+      // ({user} → @membre) et salons détaillés ({channels} + {salon} par phrase).
+      const tmplBtn = App.el(`<button class="dash-btn" style="margin-top:10px">✨ Modèle ${key === 'member_join' ? '« bienvenue pro »' : '« départ pro »'}</button>`);
+      tmplBtn.onclick = () => {
+        const msgEl = cfgZone.querySelector('[data-k="message"]');
+        if (!msgEl) return;
+        msgEl.value = (key === 'member_join')
+          ? "👋 Bienvenue {user} sur {server} !\nTu es le membre n°{count} 🎉\n\nPour bien commencer, je vous invite à prendre connaissance de :\n{channels}\n\nPassez un bon moment parmi nous — l'équipe est là pour vous aider ! 🚀"
+          : "👋 Au revoir {user} !\nMerci d'avoir fait partie de {server}.\nBonne continuation — vous restez le bienvenu si vous revenez ! 💛";
+        msgEl.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+      cfgZone.appendChild(tmplBtn);
       const pv = App.el(`<div class="dc-preview" style="margin-top:12px"><div class="dash-label" style="margin:0 0 8px">👀 Aperçu sur Discord</div><div class="dc-msg"></div></div>`);
       const renderPv = () => {
         const msgEl = pv.querySelector('.dc-msg');
@@ -2238,7 +2250,12 @@ Dashboard.renderers.welcome = async (content, data) => {
             cm.querySelectorAll('[data-cm-check]').forEach((cb) => {
               if (!cb.checked) return;
               const lbl = cm.querySelector(`[data-cm-label="${CSS.escape(cb.dataset.cmCheck)}"]`);
-              sel.push((lbl && lbl.value.trim()) ? lbl.value.trim() + ' → #' + cb.dataset.cmCheck.replace(/^#/, '') : '#' + cb.dataset.cmCheck.replace(/^#/, ''));
+              let line = (lbl && lbl.value.trim()) ? lbl.value.trim() : '';
+              const chName = cb.dataset.cmCheck.replace(/^#/, '');
+              if (line.includes('{salon}')) line = line.split('{salon}').join('#' + chName);
+              else if (line) line += ' → #' + chName;
+              else line = '#' + chName;
+              sel.push(line);
             });
             channelsPv = sel.join('\n');
           }
