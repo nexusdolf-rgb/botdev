@@ -3,6 +3,7 @@
 // ============================================================
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const store = require('./db');
@@ -73,6 +74,47 @@ function servePanelBannerPng(req, res) {
 
 router.get('/tickets/panel-banner/:guildId.png', (req, res) => servePanelBannerPng(req, res));
 router.get('/tickets/panel-banner/:guildId.gif', (req, res) => servePanelBannerPng(req, res));
+
+// ============================================================
+// 🖼️ Images importées par les utilisateurs (panneaux de tickets,
+// MP de fermeture…) — stockées dans le dossier de données.
+// ============================================================
+function uploadsDir() {
+  return path.join(process.env.BOTDEV_DATA_DIR || path.join(__dirname, '..'), 'uploads');
+}
+router.post('/bots/:id/guilds/:guildId/uploads', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const data = String((req.body || {}).data || '');
+  const m = data.match(/^data:(image\/(?:png|jpe?g|gif|webp));base64,(.+)$/i);
+  if (!m) return res.status(400).json({ error: 'Image invalide — formats acceptés : PNG, JPEG, GIF, WebP.' });
+  const buf = Buffer.from(m[2], 'base64');
+  if (!buf.length || buf.length > 2 * 1024 * 1024) return res.status(400).json({ error: 'Image trop lourde (maximum 2 Mo).' });
+  const ext = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp' }[m[1]];
+  const sig = buf.slice(0, 12).toString('hex');
+  const okSig = ext === 'png' ? sig.startsWith('89504e47')
+    : ext === 'jpg' ? sig.startsWith('ffd8ff')
+    : ext === 'gif' ? sig.startsWith('47494638')
+    : sig.includes('57454250');
+  if (!okSig) return res.status(400).json({ error: 'Fichier non reconnu comme image.' });
+  const dir = uploadsDir();
+  fs.mkdirSync(dir, { recursive: true });
+  const file = `${bot.id}-${guildId}-${Date.now()}-${crypto.randomBytes(3).toString('hex')}.${ext}`;
+  fs.writeFileSync(path.join(dir, file), buf);
+  res.json({ url: `/api/uploads/${file}` });
+});
+router.get('/uploads/:file', (req, res) => {
+  const file = String(req.params.file || '').replace(/[^a-zA-Z0-9._-]/g, '');
+  const dir = uploadsDir();
+  const p = path.join(dir, file);
+  if (!file || !p.startsWith(dir)) return res.status(404).end();
+  const types = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp' };
+  res.set('Content-Type', types[path.extname(file).toLowerCase()] || 'application/octet-stream');
+  res.set('Cache-Control', 'public, max-age=86400');
+  res.sendFile(p, (err) => { if (err) res.status(404).end(); });
+});
 
 // Emoji sûr (même règle que le bot) : évite de stocker des emojis invalides
 // qui feraient planter la construction des menus Discord.
@@ -763,6 +805,58 @@ router.post('/bots/:id/guilds/:guildId/giveaways/:gid/end', requireAuth, async (
   const giveaway = require('./discord/giveaway');
   const result = await giveaway.endGiveaway(bot.id, entry.client, g, false);
   res.json({ ok: result.ok, winners: result.winners, reason: result.reason });
+});
+
+// ⚙️ Configuration des giveaways (v198)
+router.put('/bots/:id/guilds/:guildId/giveaways/config', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const b = req.body || {};
+  store.guildSettings.set(bot.id, req.params.guildId, {
+    giveaway_channel: String(b.channel || '').slice(0, 100),
+    giveaway_default_duration: Math.min(Math.max(parseInt(b.default_duration, 10) || 0, 0), 720),
+    giveaway_default_winners: Math.min(Math.max(parseInt(b.default_winners, 10) || 1, 1), 50),
+    giveaway_ping_role: String(b.ping_role || '').slice(0, 100),
+    giveaway_color: /^#[0-9a-fA-F]{6}$/.test(String(b.color || '')) ? String(b.color) : '',
+    giveaway_message: String(b.message || '').slice(0, 1500),
+  });
+  res.json({ ok: true });
+});
+
+// 🎁 Lancer un giveaway depuis le dashboard (v198)
+router.post('/bots/:id/guilds/:guildId/giveaways', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const b = req.body || {};
+  const prize = String(b.prize || '').trim().slice(0, 200);
+  if (!prize) return res.status(400).json({ error: 'Indique le prix à gagner.' });
+  const winners = Math.min(Math.max(parseInt(b.winners, 10) || 1, 1), 50);
+  const durationMin = Math.min(Math.max(parseInt(b.duration_min, 10) || 60, 1), 43200);
+  if (!botManager.isOnline(bot.id)) return res.status(400).json({ error: 'Le bot doit être en ligne pour lancer un giveaway.' });
+  const entry = botManager.clients.get(bot.id);
+  const guild = entry.client.guilds.cache.get(guildId);
+  if (!guild) return res.status(400).json({ error: 'Le bot n\'est pas sur ce serveur.' });
+  const giveaway = require('./discord/giveaway');
+  const chanRef = String(b.channel || '').trim();
+  const settings = store.guildSettings.get(bot.id, guildId) || {};
+  const targetRef = chanRef || settings.giveaway_channel || '';
+  if (!targetRef) return res.status(400).json({ error: 'Choisis un salon (ou configure le salon par défaut).' });
+  const channel = panels.findChannelInGuild(guild, targetRef);
+  if (!channel) return res.status(400).json({ error: 'Salon introuvable. Vérifie le salon choisi.' });
+  try {
+    const r = await giveaway.startGiveawayDashboard(bot.id, guild, channel, {
+      prize, winners, durationMin,
+      pingRole: String(b.ping_role !== undefined ? b.ping_role : settings.giveaway_ping_role || ''),
+      message: String(b.message !== undefined ? b.message : settings.giveaway_message || ''),
+      color: String(b.color !== undefined ? b.color : settings.giveaway_color || ''),
+    });
+    res.json({ ok: true, ends_at: r.ends_at, channel: r.channel });
+  } catch (e) {
+    res.status(400).json({ error: e.message.slice(0, 200) });
+  }
 });
 
 // Rôles temporaires
@@ -1574,6 +1668,54 @@ router.get('/bots/:id/guilds/:guildId/quiz/top', requireAuth, async (req, res) =
   res.json({ top });
 });
 
+// 🧠 Quiz personnalisés (v198) : banques de questions par serveur
+router.get('/bots/:id/guilds/:guildId/quiz/sets', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  res.json({ sets: store.quizSets.all(bot.id, req.params.guildId) });
+});
+router.post('/bots/:id/guilds/:guildId/quiz/sets', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const id = store.quizSets.create(bot.id, req.params.guildId, req.body || {});
+  res.json({ ok: true, id });
+});
+router.put('/bots/:id/guilds/:guildId/quiz/sets/:sid', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const set = store.quizSets.get(Number(req.params.sid));
+  if (!set || set.bot_id !== bot.id || set.guild_id !== req.params.guildId) return res.status(404).json({ error: 'Quiz introuvable.' });
+  store.quizSets.update(Number(req.params.sid), req.body || {});
+  res.json({ ok: true });
+});
+router.delete('/bots/:id/guilds/:guildId/quiz/sets/:sid', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const set = store.quizSets.get(Number(req.params.sid));
+  if (!set || set.bot_id !== bot.id || set.guild_id !== req.params.guildId) return res.status(404).json({ error: 'Quiz introuvable.' });
+  store.quizSets.remove(Number(req.params.sid));
+  res.json({ ok: true });
+});
+
+// ⚙️ Configuration du quiz (v198) : salon, points, bonus
+router.put('/bots/:id/guilds/:guildId/quiz/config', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const b = req.body || {};
+  store.guildSettings.set(bot.id, req.params.guildId, {
+    quiz_channel: String(b.channel || '').slice(0, 100),
+    quiz_points: Math.min(Math.max(parseInt(b.points, 10) || 10, 1), 1000),
+    quiz_bonus: Math.min(Math.max(parseInt(b.bonus, 10) || 5, 0), 500),
+    quiz_bonus_window: Math.min(Math.max(parseInt(b.bonus_window, 10) || 8, 1), 120),
+  });
+  res.json({ ok: true });
+});
+
 router.get('/bots/:id/economy/leaderboard', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
   if (!bot) return;
@@ -1606,7 +1748,7 @@ router.get('/bots/:id/panels', requireAuth, async (req, res) => {
 router.put('/bots/:id/tickets', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
   if (!bot) return;
-  const { guild_id, name, channel, message, button_label, button_style, require_reason, support_role, category, types, menu_channel, menu_message, menu_category } = req.body || {};
+  const { guild_id, name, channel, message, button_label, button_style, require_reason, support_role, category, types, menu_channel, menu_message, menu_category, image_url } = req.body || {};
   if (!guild_id) return res.status(400).json({ error: 'guild_id requis' });
   if (!(await userCanManageGuild(req, guild_id))) return res.status(403).json({ error: 'Permission refusée.' });
   const current = store.tickets.get(bot.id, guild_id) || {};
@@ -1622,6 +1764,7 @@ router.put('/bots/:id/tickets', requireAuth, async (req, res) => {
     menu_channel: String(menu_channel !== undefined ? menu_channel : (current.menu_channel || '')).slice(0, 100),
     menu_message: String(menu_message !== undefined ? menu_message : (current.menu_message || '')).slice(0, 1900),
     menu_category: String(menu_category !== undefined ? menu_category : (current.menu_category || '')).slice(0, 100),
+    image_url: String(image_url !== undefined ? image_url : (current.image_url || '')).slice(0, 500),
   };
   if (types !== undefined) {
     payload.types = JSON.stringify((Array.isArray(types) ? types : [])
@@ -1672,6 +1815,20 @@ router.post('/bots/:id/tickets/send', requireAuth, async (req, res) => {
   } catch (e) {
     res.status(400).json({ error: e.message.slice(0, 200) });
   }
+});
+
+// 💬 Message privé envoyé après la fermeture d'un ticket (v198) —
+// vide = message par défaut du bot (avec transcription). Image = par défaut sans image.
+router.put('/bots/:id/guilds/:guildId/tickets/dm', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const b = req.body || {};
+  store.guildSettings.set(bot.id, req.params.guildId, {
+    close_dm_message: String(b.message || '').slice(0, 1500),
+    close_dm_image: String(b.image || '').slice(0, 500),
+  });
+  res.json({ ok: true });
 });
 
 // ============================================================
@@ -1988,6 +2145,22 @@ router.delete('/bots/:id/guilds/:guildId/suggestions/:sid', requireAuth, async (
   if (!bot) return;
   if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   store.suggestions.remove(Number(req.params.sid));
+  res.json({ ok: true });
+});
+
+// ⚙️ Configuration des suggestions (v198) : salon, couleur, ping, 👎, salon des approuvées
+router.put('/bots/:id/guilds/:guildId/suggestions/config', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const b = req.body || {};
+  store.guildSettings.set(bot.id, req.params.guildId, {
+    suggestion_channel: String(b.channel || '').slice(0, 100),
+    suggestion_color: /^#[0-9a-fA-F]{6}$/.test(String(b.color || '')) ? String(b.color) : '',
+    suggestion_ping_role: String(b.ping_role || '').slice(0, 100),
+    suggestion_downvotes: (b.downvotes === 0 || b.downvotes === false) ? 0 : 1,
+    suggestion_approve_channel: String(b.approve_channel || '').slice(0, 100),
+  });
   res.json({ ok: true });
 });
 

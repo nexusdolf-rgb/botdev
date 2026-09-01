@@ -19,19 +19,31 @@ function formatEnds(endsAt) {
   return `<t:${Math.floor(endsAt / 1000)}:R>`;
 }
 
-function buildEmbed(g) {
+function buildEmbed(g, settings = {}) {
+  const customMsg = String((settings && settings.message) || '').trim();
+  const color = /^#[0-9a-fA-F]{6}$/.test(String((settings && settings.color) || '')) ? settings.color : '#FEE75C';
+  const lines = [
+    `**${g.prize}**`,
+    '',
+    customMsg || 'Réagis avec 🎉 pour participer !',
+    `🏆 Gagnants : **${g.winners}**`,
+    `⏰ Fin ${formatEnds(g.ends_at)}`,
+  ];
   return new EmbedBuilder()
-    .setColor('#FEE75C')
+    .setColor(color)
     .setTitle('🎁 GIVEAWAY')
-    .setDescription([
-      `**${g.prize}**`,
-      '',
-      `Réagis avec 🎉 pour participer !`,
-      `🏆 Gagnants : **${g.winners}**`,
-      `⏰ Fin ${formatEnds(g.ends_at)}`,
-    ].join('\n'))
+    .setDescription(lines.join('\n'))
     .setFooter({ text: 'Giveaway propulsé par Hoxera' })
     .setTimestamp();
+}
+
+// Rôle à mentionner au lancement : '@everyone' ou nom de rôle → mention Discord
+function pingMention(guild, ref) {
+  const str = String(ref || '').trim();
+  if (!str) return '';
+  if (str === '@everyone') return '@everyone';
+  const role = guild.roles.cache.find((r) => r.id === str || r.name === str.replace(/^@/, ''));
+  return role ? `<@&${role.id}>` : '';
 }
 
 // Démarre un giveaway : envoie l'embed + réaction, enregistre en base
@@ -40,8 +52,16 @@ async function startGiveaway(botId, interaction, durationMs, prize, winners) {
   if (!channel || typeof channel.send !== 'function') {
     return interaction.reply({ content: '❌ Salon invalide.', ephemeral: true });
   }
+  const settings = store.guildSettings.get(botId, interaction.guild.id) || {};
+  const color = settings.giveaway_color || '';
+  const message = settings.giveaway_message || '';
+  const ping = pingMention(interaction.guild, settings.giveaway_ping_role || '');
   const endsAt = Date.now() + Math.min(Math.max(durationMs, 15000), 30 * 86400000);
-  const msg = await channel.send({ embeds: [buildEmbed({ prize, winners, ends_at: endsAt })] });
+  const msg = await channel.send({
+    content: ping || undefined,
+    embeds: [buildEmbed({ prize, winners, ends_at: endsAt }, { color, message })],
+    allowedMentions: { roles: ping ? [String(ping).replace(/<@&|>/g, '')] : [], everyone: ping === '@everyone' },
+  });
   await msg.react('🎉').catch(() => {});
   store.giveaways.create({
     bot_id: botId, guild_id: interaction.guild.id,
@@ -52,6 +72,25 @@ async function startGiveaway(botId, interaction, durationMs, prize, winners) {
     content: `🎁 Giveaway lancé dans ${channel} ! Tirage ${formatEnds(endsAt)} (${winners} gagnant(s)).`,
     ephemeral: true,
   });
+}
+
+// 🎁 Création depuis le dashboard (v198) : salon choisi, ping, message, couleur
+async function startGiveawayDashboard(botId, guild, channel, opts) {
+  const { prize, winners, durationMin, pingRole = '', message = '', color = '' } = opts || {};
+  const endsAt = Date.now() + Math.min(Math.max(parseInt(durationMin, 10) * 60000 || 3600000, 15000), 30 * 86400000);
+  const ping = pingMention(guild, pingRole);
+  const msg = await channel.send({
+    content: ping || undefined,
+    embeds: [buildEmbed({ prize, winners, ends_at: endsAt }, { color, message })],
+    allowedMentions: { roles: ping ? [String(ping).replace(/<@&|>/g, '')] : [], everyone: ping === '@everyone' },
+  });
+  await msg.react('🎉').catch(() => {});
+  const id = store.giveaways.create({
+    bot_id: botId, guild_id: guild.id,
+    channel_id: channel.id, message_id: msg.id,
+    prize, winners, ends_at: endsAt,
+  });
+  return { id, ends_at: endsAt, channel: channel.id };
 }
 
 // Tire les gagnants parmi les réactions 🎉
@@ -135,4 +174,4 @@ async function sweep(botId, entry) {
   }
 }
 
-module.exports = { parseDuration, buildEmbed, startGiveaway, endGiveaway, sweep };
+module.exports = { parseDuration, buildEmbed, pingMention, startGiveaway, startGiveawayDashboard, endGiveaway, sweep };

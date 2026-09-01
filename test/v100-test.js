@@ -41,7 +41,7 @@ const src = fs.readFileSync(__dirname + '/../server/discord/panels.js', 'utf8');
   console.log('✅ panels.js : récap branché (2 chemins), note ⭐, raison, bouton transcription');
 
   // ---- 5. Le MP du créateur n'est PAS touché ----
-  assert.ok(src.includes('sendTranscriptDm(interaction, guild, channel.name, t)'), 'MP transcription créateur intact');
+  assert.ok(src.includes('sendTranscriptDm(interaction, guild, channel.name, t, botId)') || src.includes('sendTranscriptDm(interaction, guild, channel.name, t)'), 'MP transcription créateur intact');
   console.log('✅ transcription en MP du créateur inchangée');
 
   // ---- 6. Durée lisible ----

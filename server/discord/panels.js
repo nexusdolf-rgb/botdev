@@ -387,9 +387,9 @@ function buildTicketPanelEmbed(cfg, client, types, serverName = '', guildId = ''
       { name: P.infoTitle, value: P.rules.join('\n') },
       { name: '\u200b', value: P.patience },
     )
-    // 🖼️ Bannière « SUPPORT - {nom du serveur} » : image générée par le site,
-    // affichée en bas de l'embed, juste au-dessus du menu déroulant.
-    .setImage(panelBannerUrl(guildId, name))
+    // 🖼️ Image du panneau : image importée par l'utilisateur (v198) si présente,
+    // sinon bannière « SUPPORT - {nom du serveur} » générée par le site.
+    .setImage(String(cfg.image_url || '').trim() || panelBannerUrl(guildId, name))
     .setFooter({ text: `Hoxera · ${name} · Sélectionne une option pour commencer` })
     .setTimestamp();
   if (types && types.length) {
@@ -1206,7 +1206,7 @@ async function buildTranscript(botId, interaction, extraLines = []) {
 }
 
 // Envoie la transcription en MP. Résout l'utilisateur avec double fallback.
-async function sendTranscriptDm(clientOrInteraction, guild, channelName, { text, url, openerId }) {
+async function sendTranscriptDm(clientOrInteraction, guild, channelName, { text, url, openerId }, botId) {
   if (!openerId) return false;
   const client = clientOrInteraction && clientOrInteraction.client ? clientOrInteraction.client : clientOrInteraction;
   let user = null;
@@ -1219,18 +1219,24 @@ async function sendTranscriptDm(clientOrInteraction, guild, channelName, { text,
   // avec l'URL toujours à jour (mise à jour automatique au démarrage).
   // Repli : copie locale de la bannière servie par le site.
   const serverName = String(guild.name || 'Optimus Prime').slice(0, 100);
-  // 🌍 Transcription dans la langue du serveur
+  // 🌍 Transcription dans la langue du serveur (ou message personnalisé v198)
   const lang = i18n.langForGuild(guild.id);
   const siteUrl = store.settings.get('public_url') || 'https://hoxera.is-a.dev';
   const profileBanner = store.settings.get('profile_banner_url') || `${siteUrl}/icons/nexora-profile-banner.png`;
-  const desc = url
-    ? i18n.t(lang, 'transcript_desc', { server: serverName, url })
-    : i18n.t(lang, 'transcript_desc_file', { server: serverName });
+  const resolvedBotId = botId || (guild.client && guild.client.botId) || 0;
+  const gs = resolvedBotId ? store.guildSettings.get(resolvedBotId, guild.id) || {} : {};
+  const customMsg = String(gs.close_dm_message || '').trim();
+  const customImg = String(gs.close_dm_image || '').trim();
+  const desc = customMsg
+    ? customMsg.replace(/{server}/g, serverName).replace(/{url}/g, url || '')
+    : (url
+        ? i18n.t(lang, 'transcript_desc', { server: serverName, url })
+        : i18n.t(lang, 'transcript_desc_file', { server: serverName }));
   const embed = new EmbedBuilder()
     .setColor('#ED4245')
-    .setTitle(i18n.t(lang, 'transcript_title'))
+    .setTitle(customMsg ? serverName + ' · ' + i18n.t(lang, 'transcript_title') : i18n.t(lang, 'transcript_title'))
     .setDescription(desc)
-    .setImage(profileBanner)
+    .setImage(customImg || profileBanner)
     .setFooter({ text: 'Optimus Prime · ' + i18n.t(lang, 'footer_tickets') });
   try {
     await user.send({
@@ -1591,7 +1597,7 @@ async function submitDeleteReason(botId, interaction) {
   const t = await buildTranscript(botId, interaction, [
     `🗑 Ticket supprimé par ${interaction.user.tag} — raison : ${reason}`,
   ]);
-  const dmOk = await sendTranscriptDm(interaction, guild, channel.name, t);
+  const dmOk = await sendTranscriptDm(interaction, guild, channel.name, t, botId);
   // 📔 Panneau récapitulatif dans le journal des tickets (staff)
   await sendTicketRecap(botId, interaction, { row: ticketRow, meta: ticketMetaFor(channel), closeReason: reason, transcript: t });
   store.activity.add(botId, guild.id, '🗑', `Ticket #${ticketRow ? ticketRow.number : '?'} supprimé par ${interaction.user.tag} — ${reason}`);
@@ -1626,7 +1632,7 @@ async function handleTicketDeleteConfirm(botId, interaction) {
   const t = await buildTranscript(botId, interaction, [
     `🗑 Ticket supprimé par ${interaction.user.tag} — raison : aucune raison fournie`,
   ]);
-  const dmOk = await sendTranscriptDm(interaction, guild, channel.name, t);
+  const dmOk = await sendTranscriptDm(interaction, guild, channel.name, t, botId);
   // 📔 Panneau récapitulatif dans le journal des tickets (staff)
   await sendTicketRecap(botId, interaction, { row: ticketRow, meta: ticketMetaFor(channel), closeReason: '', transcript: t });
   store.activity.add(botId, guild.id, '🗑', `Ticket #${ticketRow ? ticketRow.number : '?'} supprimé par ${interaction.user.tag}`);
@@ -2449,7 +2455,7 @@ async function sweepInactiveTickets(botId, entry, now = new Date()) {
             const t = await buildTranscriptFromChannel(botId, channel, guild, [
               i18n.t(lang, 'ticket_auto_deleted'),
             ]);
-            await sendTranscriptDm(entry.client, guild, channel.name || '', t);
+            await sendTranscriptDm(entry.client, guild, channel.name || '', t, botId);
             store.openTickets.remove(channel.id);
             try { store.advancedTickets.unbindChannel(channel.id); } catch {}
             const autoDeletedPanel = ui.panel({

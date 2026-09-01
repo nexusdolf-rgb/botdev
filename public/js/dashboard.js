@@ -1627,6 +1627,7 @@ Dashboard.renderers.tickets = async (content, data) => {
 
     <label class="dash-label">Message du panneau (vide = automatique)</label>
     <textarea class="dash-input" id="t-msg" rows="3">${App.escapeHtml(t.message || '')}</textarea>
+    <div style="margin-top:14px" data-panel-img></div>
 
     <label class="dash-label">📔 Journal des tickets (salon staff — récapitulatif à la fermeture)</label>
     <select class="dash-select" id="t-logchan">
@@ -1683,6 +1684,30 @@ Dashboard.renderers.tickets = async (content, data) => {
     catch (e) { App.toast(e.message, 'error'); }
   };
 
+  // 🖼️ Image personnalisée du panneau principal (vide = bannière générée par défaut)
+  let panelImage = String(t.image_url || '');
+  c.querySelector('[data-panel-img]').appendChild(Dashboard.imageField('🖼️ Image du panneau (importée)', panelImage, (v) => { panelImage = v; }, 'Vide = bannière « SUPPORT » générée automatiquement. Importe une image (PNG/JPG/GIF/WebP) pour l\'afficher en bas du panneau.'));
+
+  // 💬 Message privé après fermeture (v198) — personnalisable, vide = défaut
+  const cdm = Dashboard.card(root, '💬 Message privé après fermeture', 'Envoyé au créateur quand son ticket est fermé, avec la transcription. Laisse vide pour garder le message automatique du bot.');
+  let dmImage = String((data.settings || {}).close_dm_image || '');
+  cdm.innerHTML += `
+    <label class="dash-label">Message personnalisé (vide = message automatique)</label>
+    <textarea class="dash-input" id="tdm-msg" rows="4" placeholder="${App.escapeHtml('Ex : Merci d\'avoir contacté le support ! Ta demande #12 est traitée.')}">${App.escapeHtml((data.settings || {}).close_dm_message || '')}</textarea>
+    <div style="font-size:12px;color:var(--d-dim);margin-top:6px">💡 Tu peux utiliser <b>{server}</b> (nom du serveur) et <b>{url}</b> (lien de la transcription).</div>
+    <div style="margin-top:12px" data-dm-img></div>
+    <div style="margin-top:14px"><button class="dash-btn dash-btn-primary" id="tdm-save">💾 Enregistrer</button></div>`;
+  cdm.querySelector('[data-dm-img]').appendChild(Dashboard.imageField('🖼️ Image du message privé', dmImage, (v) => { dmImage = v; }, 'Vide = image par défaut du bot. Importe la tienne pour personnaliser le message de fermeture.'));
+  cdm.querySelector('#tdm-save').onclick = async () => {
+    try {
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/tickets/dm`, { method: 'PUT', body: {
+        message: cdm.querySelector('#tdm-msg').value,
+        image: dmImage,
+      }});
+      App.toast('Message de fermeture enregistré !');
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+
   // Rafraîchit l'état affiché (re-query : innerHTML += a recréé le DOM)
   const renderStatus = () => {
     const zone = c.querySelector('[data-status]');
@@ -1714,6 +1739,7 @@ Dashboard.renderers.tickets = async (content, data) => {
         support_role: c.querySelector('#t-role').value.trim(),
         category: c.querySelector('#t-cat').value.trim() || 'Tickets',
         message: c.querySelector('#t-msg').value,
+        image_url: panelImage,
         types: typesData.filter((x) => x.label).map((x) => ({ label: x.label, emoji: x.emoji, description: x.description, category: x.category, questions: (x.questions || []).map((q) => String(q).slice(0, 45)).filter(Boolean).slice(0, 5), staff_roles: x.staff_roles.filter(Boolean) })),
       }});
       // 📔 Journal des tickets : réglage serveur (indépendant de la config du panneau)
@@ -3096,19 +3122,51 @@ Dashboard.renderers.suggestions = async (content, data) => {
   const root = Dashboard.header(content, '💡', 'Suggestions', 'Les membres proposent (/suggest), tout le monde vote, le staff tranche.');
   const s = data.settings;
   const textChannels = (data.channels || []).filter((channel) => !channel.category && !channel.voice);
+  const rolesList = (data.roles || []).filter((role) => role.name !== '@everyone');
   const c = Dashboard.card(root, 'Configuration', '');
+  const pingOpts = ['<option value="">— Aucun (ne pas mentionner) —</option>', `<option value="@everyone" ${s.suggestion_ping_role === '@everyone' ? 'selected' : ''}>📣 @everyone (tout le monde)</option>`]
+    .concat(rolesList.map((r) => `<option value="${App.escapeHtml(r.name)}" ${s.suggestion_ping_role === r.name || s.suggestion_ping_role === r.id ? 'selected' : ''}>@${App.escapeHtml(r.name)}</option>`));
   c.innerHTML += `
-    <label class="dash-label">Salon des suggestions</label>
-    <select class="dash-select" id="s-channel">
-      <option value="">— Désactivé —</option>
-      ${textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.suggestion_channel, channel) ? 'selected' : ''}>💡 #${App.escapeHtml(channel.name)}</option>`).join('')}
-      ${Dashboard.currentDiscordOption(s.suggestion_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable')}
-    </select>
+    <div class="setting-row">
+      <label class="dash-label">Salon des suggestions</label>
+      <select class="dash-select" id="s-channel">
+        <option value="">— Désactivé —</option>
+        ${textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.suggestion_channel, channel) ? 'selected' : ''}>💡 #${App.escapeHtml(channel.name)}</option>`).join('')}
+        ${Dashboard.currentDiscordOption(s.suggestion_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable')}
+      </select>
+    </div>
+    <div class="setting-row">
+      <label class="dash-label">🎨 Couleur de l\'annonce</label>
+      <input class="dash-input" id="s-color" type="color" value="${/^#[0-9a-fA-F]{6}$/.test(String(s.suggestion_color)) ? s.suggestion_color : '#5865F2'}" style="width:64px;height:38px;padding:2px" />
+    </div>
+    <div class="setting-row">
+      <label class="dash-label">Rôle à mentionner à chaque suggestion</label>
+      <select class="dash-select" id="s-ping">${pingOpts.join('')}</select>
+    </div>
+    <div class="setting-row" style="flex-wrap:wrap">
+      <label class="dash-label">👎 Autoriser les votes négatifs</label>
+      <label class="switch"><input type="checkbox" id="s-downvotes" ${s.suggestion_downvotes !== 0 && s.suggestion_downvotes !== false ? 'checked' : ''} /><span class="slider"></span></label>
+    </div>
+    <div class="setting-row">
+      <label class="dash-label">📢 Salon des approuvées (annonce publique quand une suggestion est validée)</label>
+      <select class="dash-select" id="s-approve">
+        <option value="">— Désactivé —</option>
+        ${textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.suggestion_approve_channel, channel) ? 'selected' : ''}>📢 #${App.escapeHtml(channel.name)}</option>`).join('')}
+        ${Dashboard.currentDiscordOption(s.suggestion_approve_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable')}
+      </select>
+    </div>
+    <div style="font-size:12px;color:var(--d-dim);margin-top:6px">💡 Vide = système par défaut. Rien à modifier ici pour les membres : les suggestions sont postées dans le salon choisi avec les boutons 👍/👎.</div>
     <button class="dash-btn dash-btn-primary" style="margin-top:12px" id="s-save">💾 Enregistrer</button>`;
   c.querySelector('#s-save').onclick = async () => {
     try {
-      await App.api(`/bots/${bot.id}/guilds/${guildId}/settings`, { method: 'PUT', body: { suggestion_channel: c.querySelector('#s-channel').value.trim() } });
-      App.toast('Salon des suggestions enregistré !');
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/suggestions/config`, { method: 'PUT', body: {
+        channel: c.querySelector('#s-channel').value.trim(),
+        color: c.querySelector('#s-color').value,
+        ping_role: c.querySelector('#s-ping').value.trim(),
+        downvotes: c.querySelector('#s-downvotes').checked ? 1 : 0,
+        approve_channel: c.querySelector('#s-approve').value.trim(),
+      }});
+      App.toast('Configuration des suggestions enregistrée !');
     } catch (e) { App.toast(e.message, 'error'); }
   };
 
@@ -3146,17 +3204,184 @@ Dashboard.renderers.suggestions = async (content, data) => {
 };
 
 // ---------- Giveaways ----------
+// 🖼️ Import d'image (v198) : le fichier choisi est envoyé au serveur qui
+// renvoie une URL publique (utilisée dans les panneaux / MP de fermeture).
+Dashboard.uploadImage = async (file) => {
+  if (!file) return '';
+  const dataUrl = await new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+  const { bot, guildId } = Dashboard.state;
+  const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/uploads`, { method: 'POST', body: { data: dataUrl } });
+  return (r && r.url) || '';
+};
+
+// Champ image : import + aperçu + « Retirer » (vide = par défaut automatique)
+Dashboard.imageField = (label, value, onChange, hint = '') => {
+  const wrap = App.el(`<div class="dash-image-field">
+    <label class="dash-label">${label}</label>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <div data-preview style="width:132px;height:74px;border-radius:8px;border:1px dashed var(--d-border);background:rgba(255,255,255,.04);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:11px;color:var(--d-dim);text-align:center;padding:4px;line-height:1.3">${value ? '' : 'Aucune image<br/>⚠️ par défaut'}</div>
+      <div style="display:flex;flex-direction:column;gap:6px;min-width:180px">
+        <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" data-file style="font-size:12px;max-width:220px" />
+        <button class="dash-btn dash-btn-sm" data-upload>📤 Importer</button>
+        <button class="dash-btn dash-btn-sm dash-btn-ghost" data-remove ${value ? '' : 'disabled'}>🗑 Retirer (défaut)</button>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--d-dim);margin-top:6px">${hint || (value ? '✅ Image personnalisée enregistrée' : '💡 Laisser vide = image générée automatiquement (par défaut)')}</div>
+  </div>`);
+  const preview = wrap.querySelector('[data-preview]');
+  const fileInput = wrap.querySelector('[data-file]');
+  if (value) {
+    const img = new Image();
+    img.onload = () => { preview.innerHTML = ''; img.style.cssText = 'width:100%;height:100%;object-fit:cover'; preview.appendChild(img); };
+    img.src = value;
+  }
+  wrap.querySelector('[data-upload]').onclick = async () => {
+    const f = fileInput.files[0];
+    if (!f) return App.toast('Choisis d\'abord une image (PNG, JPG, GIF, WebP).');
+    const btn = wrap.querySelector('[data-upload]');
+    btn.disabled = true; btn.textContent = '⏳ Import…';
+    try {
+      const url = await Dashboard.uploadImage(f);
+      if (!url) throw new Error('image refusée par le serveur');
+      const img = new Image();
+      img.onload = () => { preview.innerHTML = ''; img.style.cssText = 'width:100%;height:100%;object-fit:cover'; preview.appendChild(img); };
+      img.src = url;
+      wrap.querySelector('[data-remove]').disabled = false;
+      App.toast('✅ Image importée ! Clique sur 💾 Enregistrer pour l\'appliquer.');
+      onChange(url);
+    } catch (e) {
+      App.toast('Erreur : ' + (e.message || 'image refusée'), 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = '📤 Importer';
+    }
+  };
+  wrap.querySelector('[data-remove]').onclick = () => {
+    preview.innerHTML = 'Aucune image<br/>⚠️ par défaut';
+    fileInput.value = '';
+    wrap.querySelector('[data-remove]').disabled = true;
+    onChange('');
+    App.toast('Image retirée — le système utilisera son image par défaut.');
+  };
+  return wrap;
+};
+
 Dashboard.renderers.giveaways = async (content) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '🎁', 'Giveaways', 'Tirages automatiques par réaction 🎉 (/giveaway create durée prix gagnants).');
-  const { giveaways } = await App.api(`/bots/${bot.id}/guilds/${guildId}/giveaways`);
-  const active = giveaways.filter((g) => !g.drawn);
-  const c = Dashboard.card(root, 'En cours', '');
-  if (!active.length) c.appendChild(App.el(`<div class="dash-empty">Aucun giveaway en cours.</div>`));
+  const root = Dashboard.header(content, '🎁', 'Giveaways', 'Tirages automatiques par réaction 🎉 — tout se configure ici.');
+  const data = Dashboard.state.guildData || {};
+  const s = data.settings || {};
+  const textChannels = (data.channels || []).filter((channel) => !channel.category && !channel.voice);
+  const rolesList = (data.roles || []).filter((role) => role.name !== '@everyone');
+  const gwSettings = await App.api(`/bots/${bot.id}/guilds/${guildId}/giveaways`);
+
+  // ⚙️ Configuration par défaut
+  const c = Dashboard.card(root, '⚙️ Configuration', 'Valeurs par défaut utilisées partout : les giveaways lancés sur Discord (/giveaway) et ceux créés ici.');
+
+  const chanOpts = ['<option value="">— Choisir un salon (aucun par défaut) —</option>']
+    .concat(textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.giveaway_channel, channel) ? 'selected' : ''}>💬 #${App.escapeHtml(channel.name)}</option>`));
+  if (s.giveaway_channel && !textChannels.some((ch) => Dashboard.discordRefMatches(s.giveaway_channel, ch))) {
+    chanOpts.push(Dashboard.currentDiscordOption(s.giveaway_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable'));
+  }
+  const pingOpts = ['<option value="">— Aucun (ne pas mentionner) —</option>', `<option value="@everyone" ${s.giveaway_ping_role === '@everyone' ? 'selected' : ''}>📣 @everyone (tout le monde)</option>`]
+    .concat(rolesList.map((r) => `<option value="${App.escapeHtml(r.name)}" ${s.giveaway_ping_role === r.name || s.giveaway_ping_role === r.id ? 'selected' : ''}>@${App.escapeHtml(r.name)}</option>`));
+
+  c.innerHTML += `
+    <div class="setting-row">
+      <label class="dash-label">Salon par défaut</label>
+      <select class="dash-select" id="gw-channel">${chanOpts.join('')}</select>
+    </div>
+    <div class="setting-row" style="flex-wrap:wrap">
+      <label class="dash-label">Durée par défaut (heures)</label>
+      <input class="dash-input" id="gw-duration" type="number" min="0" max="720" value="${parseInt(s.giveaway_default_duration, 10) || 0}" style="max-width:140px" />
+      <label class="dash-label" style="margin-top:10px">Gagnants par défaut</label>
+      <input class="dash-input" id="gw-winners" type="number" min="1" max="50" value="${parseInt(s.giveaway_default_winners, 10) || 1}" style="max-width:140px" />
+    </div>
+    <div class="setting-row">
+      <label class="dash-label">Rôle à mentionner au lancement</label>
+      <select class="dash-select" id="gw-ping">${pingOpts.join('')}</select>
+    </div>
+    <div class="setting-row">
+      <label class="dash-label">🎨 Couleur de l\'annonce</label>
+      <input class="dash-input" id="gw-color" type="color" value="${/^#[0-9a-fA-F]{6}$/.test(String(s.giveaway_color)) ? s.giveaway_color : '#FEE75C'}" style="width:64px;height:38px;padding:2px" />
+    </div>
+    <label class="dash-label">Message personnalisé (vide = « Réagis avec 🎉 pour participer ! »)</label>
+    <textarea class="dash-input" id="gw-msg" rows="2">${App.escapeHtml(s.giveaway_message || '')}</textarea>
+    <div style="margin-top:12px"><button class="dash-btn dash-btn-primary" id="gw-save">💾 Enregistrer la configuration</button></div>`;
+  c.querySelector('#gw-save').onclick = async () => {
+    try {
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/giveaways/config`, { method: 'PUT', body: {
+        channel: c.querySelector('#gw-channel').value.trim(),
+        default_duration: parseInt(c.querySelector('#gw-duration').value, 10) || 0,
+        default_winners: parseInt(c.querySelector('#gw-winners').value, 10) || 1,
+        ping_role: c.querySelector('#gw-ping').value.trim(),
+        color: c.querySelector('#gw-color').value,
+        message: c.querySelector('#gw-msg').value,
+      }});
+      App.toast('Configuration des giveaways enregistrée !');
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+
+  // ➕ Créer un giveaway
+  const c3 = Dashboard.card(root, '➕ Lancer un giveaway', 'Le bot envoie l\'annonce dans le salon choisi avec le bouton 🎉 pour participer.');
+  const createChanOpts = ['<option value="">— Salon par défaut —</option>']
+    .concat(textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.giveaway_channel, channel) ? 'selected' : ''}>💬 #${App.escapeHtml(channel.name)}</option>`));
+  c3.innerHTML += `
+    <div class="setting-row" style="flex-wrap:wrap">
+      <label class="dash-label">🏆 Prix à gagner *</label>
+      <input class="dash-input" id="gw-new-prize" placeholder="Ex : 50€ Nitro, une clé de jeu…" style="flex:1 1 220px;min-width:0" />
+    </div>
+    <div class="setting-row" style="flex-wrap:wrap">
+      <label class="dash-label">Salon</label>
+      <select class="dash-select" id="gw-new-channel">${createChanOpts.join('')}</select>
+    </div>
+    <div class="setting-row" style="flex-wrap:wrap">
+      <label class="dash-label">Durée (minutes)</label>
+      <input class="dash-input" id="gw-new-duration" type="number" min="1" max="43200" value="${(parseInt(s.giveaway_default_duration, 10) || 0) * 60 || 60}" style="max-width:140px" />
+      <label class="dash-label" style="margin-top:10px">Gagnants</label>
+      <input class="dash-input" id="gw-new-winners" type="number" min="1" max="50" value="${parseInt(s.giveaway_default_winners, 10) || 1}" style="max-width:140px" />
+    </div>
+    <div class="setting-row">
+      <label class="dash-label">Rôle à mentionner</label>
+      <select class="dash-select" id="gw-new-ping">${pingOpts.join('')}</select>
+    </div>
+    <div class="setting-row" style="flex-wrap:wrap">
+      <label class="dash-label">Message personnalisé</label>
+      <textarea class="dash-input" id="gw-new-msg" rows="2" placeholder="${App.escapeHtml('Ex : Gros giveaway de rentrée ! 🎉')}">${App.escapeHtml(s.giveaway_message || '')}</textarea>
+    </div>
+    <div style="margin-top:12px"><button class="dash-btn dash-btn-primary" id="gw-create">🚀 Lancer le giveaway</button></div>`;
+  c3.querySelector('#gw-create').onclick = async () => {
+    const prize = c3.querySelector('#gw-new-prize').value.trim();
+    if (!prize) return App.toast('Indique le prix à gagner !', 'error');
+    const btn = c3.querySelector('#gw-create');
+    btn.disabled = true; btn.textContent = '⏳ Envoi…';
+    try {
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/giveaways`, { method: 'POST', body: {
+        prize,
+        channel: c3.querySelector('#gw-new-channel').value.trim(),
+        duration_min: parseInt(c3.querySelector('#gw-new-duration').value, 10) || 60,
+        winners: parseInt(c3.querySelector('#gw-new-winners').value, 10) || 1,
+        ping_role: c3.querySelector('#gw-new-ping').value.trim(),
+        message: c3.querySelector('#gw-new-msg').value,
+      }});
+      App.toast('🎁 Giveaway lancé !');
+      setTimeout(() => Dashboard.renderContent(document.querySelector('#dash-content')), 900);
+    } catch (e) { App.toast(e.message, 'error'); }
+    finally { btn.disabled = false; btn.textContent = '🚀 Lancer le giveaway'; }
+  };
+
+  // En cours
+  const active = gwSettings.giveaways.filter((g) => !g.drawn);
+  const c2 = Dashboard.card(root, 'En cours', '');
+  if (!active.length) c2.appendChild(App.el(`<div class="dash-empty">Aucun giveaway en cours.</div>`));
   active.forEach((g) => {
     const row = App.el(`
       <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--d-border);border-radius:10px;padding:10px 14px;margin-bottom:8px">
-        <div style="flex:1"><b>🎁 ${App.escapeHtml(g.prize)}</b><div style="color:var(--d-dim);font-size:12px">${g.winners} gagnant(s) · fin <t:${Math.floor(g.ends_at / 1000)}:R></div></div>
+        <div style="flex:1;min-width:0"><b>🎁 ${App.escapeHtml(g.prize)}</b><div style="color:var(--d-dim);font-size:12px">${g.winners} gagnant(s) · fin <t:${Math.floor(g.ends_at / 1000)}:R></div></div>
         <button class="dash-btn dash-btn-danger dash-btn-sm" data-end="${g.id}">⏹ Terminer maintenant</button>
       </div>`);
     row.querySelector('[data-end]').onclick = async () => {
@@ -3167,15 +3392,15 @@ Dashboard.renderers.giveaways = async (content) => {
         Dashboard.renderers.giveaways(content);
       } catch (e) { App.toast(e.message, 'error'); }
     };
-    c.appendChild(row);
+    c2.appendChild(row);
   });
-  const c2 = Dashboard.card(root, 'Historique', 'Les 30 derniers giveaways.');
-  if (!giveaways.length) c2.appendChild(App.el(`<div class="dash-empty">Aucun historique.</div>`));
+  const c4 = Dashboard.card(root, 'Historique', 'Les 30 derniers giveaways.');
+  if (!gwSettings.giveaways.length) c4.appendChild(App.el(`<div class="dash-empty">Aucun historique.</div>`));
   else {
     const table = App.el(`<table class="dash-table"><thead><tr><th>Prix</th><th>Gagnants</th><th>Statut</th></tr></thead><tbody></tbody></table>`);
     const tb = table.querySelector('tbody');
-    giveaways.slice(0, 15).forEach((g) => tb.appendChild(App.el(`<tr><td>${App.escapeHtml(g.prize)}</td><td>${g.winners}</td><td>${g.drawn ? '✅ Terminé' : '⏳ En cours'}</td></tr>`)));
-    c2.appendChild(table);
+    gwSettings.giveaways.slice(0, 15).forEach((g) => tb.appendChild(App.el(`<tr><td>${App.escapeHtml(g.prize)}</td><td>${g.winners}</td><td>${g.drawn ? '✅ Terminé' : '⏳ En cours'}</td></tr>`)));
+    c4.appendChild(table);
   }
 };
 
@@ -3979,17 +4204,172 @@ Dashboard.renderers.logs = async (content, data) => {
 // ---------- 🎮 Événements & tournois (v189) ----------
 Dashboard.renderers.quiz = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '🧠', 'Quiz', 'Les membres gagnent des points avec /quiz sur le serveur. Bonne réponse : +10 pts, +5 de bonus si rapide.');
+  const root = Dashboard.header(content, '🧠', 'Quiz', 'Crée tes propres quiz, choisis le salon, règle les points. Les membres répondent avec /quiz.');
+  const s = data.settings || {};
+  const textChannels = (data.channels || []).filter((channel) => !channel.category && !channel.voice);
+  const setsData = await App.api(`/bots/${bot.id}/guilds/${guildId}/quiz/sets`);
+
+  // ⚙️ Configuration générale
+  const c = Dashboard.card(root, '⚙️ Configuration du quiz', 'Le salon choisi reçoit les questions de /quiz. Vide = le salon où la commande est lancée.');
+  const chanOpts = ['<option value="">— Salon où la commande est lancée —</option>']
+    .concat(textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.quiz_channel, channel) ? 'selected' : ''}>💬 #${App.escapeHtml(channel.name)}</option>`));
+  if (s.quiz_channel && !textChannels.some((ch) => Dashboard.discordRefMatches(s.quiz_channel, ch))) {
+    chanOpts.push(Dashboard.currentDiscordOption(s.quiz_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable'));
+  }
+  c.innerHTML += `
+    <div class="setting-row">
+      <label class="dash-label">Salon des questions</label>
+      <select class="dash-select" id="qz-channel">${chanOpts.join('')}</select>
+    </div>
+    <div class="setting-row" style="flex-wrap:wrap">
+      <label class="dash-label">Points par bonne réponse</label>
+      <input class="dash-input" id="qz-points" type="number" min="1" max="1000" value="${parseInt(s.quiz_points, 10) || 10}" style="max-width:130px" />
+      <label class="dash-label" style="margin-top:10px">Points bonus (réponse rapide)</label>
+      <input class="dash-input" id="qz-bonus" type="number" min="0" max="500" value="${parseInt(s.quiz_bonus, 10) || 5}" style="max-width:130px" />
+      <label class="dash-label" style="margin-top:10px">Fenêtre bonus (secondes)</label>
+      <input class="dash-input" id="qz-window" type="number" min="1" max="120" value="${parseInt(s.quiz_bonus_window, 10) || 8}" style="max-width:130px" />
+    </div>
+    <div style="margin-top:12px"><button class="dash-btn dash-btn-primary" id="qz-save">💾 Enregistrer</button></div>`;
+  c.querySelector('#qz-save').onclick = async () => {
+    try {
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/quiz/config`, { method: 'PUT', body: {
+        channel: c.querySelector('#qz-channel').value.trim(),
+        points: parseInt(c.querySelector('#qz-points').value, 10) || 10,
+        bonus: parseInt(c.querySelector('#qz-bonus').value, 10) || 5,
+        bonus_window: parseInt(c.querySelector('#qz-window').value, 10) || 8,
+      }});
+      App.toast('Configuration du quiz enregistrée !');
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+
+  // 📚 Mes quiz
+  const list = Dashboard.card(root, '📚 Mes quiz', 'Tes banques de questions. Désactive un quiz pour qu\'il ne sorte plus dans /quiz (les questions restent).');
+  const sets = setsData.sets || [];
+  if (!sets.length) list.appendChild(App.el(`<div class="dash-empty"><div class="big">🧠</div>Tu n\'as pas encore créé de quiz — utilise le formulaire « ➕ Créer un quiz » ci-dessous.<br/><span style="font-size:12px;color:var(--d-dim)">Sans quiz personnalisé, /quiz utilise la banque de questions par défaut.</span></div>`));
+  sets.forEach((set) => {
+    const qCount = (set.questions || []).length;
+    const row = App.el(`
+      <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--d-border);border-radius:10px;padding:10px 14px;margin-bottom:8px;flex-wrap:wrap">
+        <div style="flex:1;min-width:0">
+          <b>🧠 ${App.escapeHtml(set.name || 'Mon quiz')}</b>
+          <div style="color:var(--d-dim);font-size:12px">${qCount} question(s)${set.channel ? ' · salon #' + App.escapeHtml(set.channel.replace(/^#/, '')) : ''} ${set.enabled ? '' : ' · <span style="color:#ED4245">désactivé</span>'}</div>
+        </div>
+        <label class="switch" title="Activer / désactiver"><input type="checkbox" data-toggle="${set.id}" ${set.enabled ? 'checked' : ''} /><span class="slider"></span></label>
+        <button class="dash-btn dash-btn-sm" data-edit="${set.id}">✏️ Modifier</button>
+        <button class="dash-btn dash-btn-danger dash-btn-sm" data-del="${set.id}">🗑</button>
+      </div>`);
+    row.querySelector('[data-toggle]').onchange = async (e) => {
+      try {
+        await App.api(`/bots/${bot.id}/guilds/${guildId}/quiz/sets/${set.id}`, { method: 'PUT', body: { enabled: e.target.checked ? 1 : 0 } });
+        App.toast(e.target.checked ? 'Quiz activé !' : 'Quiz désactivé.');
+      } catch (err) { App.toast(err.message, 'error'); e.target.checked = !e.target.checked; }
+    };
+    row.querySelector('[data-edit]').onclick = () => renderEditor(set);
+    row.querySelector('[data-del]').onclick = async () => {
+      if (!(await App.confirm('Supprimer ce quiz et toutes ses questions ?'))) return;
+      try { await App.api(`/bots/${bot.id}/guilds/${guildId}/quiz/sets/${set.id}`, { method: 'DELETE' }); App.toast('Quiz supprimé.'); Dashboard.renderers.quiz(content, data); }
+      catch (err) { App.toast(err.message, 'error'); }
+    };
+    list.appendChild(row);
+  });
+
+  // ➕ Créer / ✏️ Modifier un quiz
+  const editor = Dashboard.card(root, '➕ Créer un quiz', 'Ajoute autant de questions que tu veux : une question + la bonne réponse + deux mauvaises réponses.');
+  let editingId = null;
+  const editorName = App.el(`<input class="dash-input" id="qze-name" placeholder="Nom du quiz (ex : Culture générale, Jeux vidéo…)" style="max-width:420px" />`);
+  const editorChan = App.el(`<select class="dash-select" id="qze-channel">${chanOpts.join('')}</select>`);
+  const qWrap = App.el(`<div data-qwrap style="margin-top:14px"></div>`);
+  const addQBtn = App.el(`<button class="dash-btn dash-btn-sm" id="qze-add">➕ Ajouter une question</button>`);
+  const saveRow = App.el(`<div style="margin-top:8px;display:flex;gap:9px;align-items:center;flex-wrap:wrap"><button class="dash-btn dash-btn-primary" id="qze-save" style="margin-top:14px">💾 Enregistrer le quiz</button></div>`);
+  const saveB = saveRow.querySelector('#qze-save');
+  editor.appendChild(App.el(`<div>
+    <label class="dash-label" style="margin-top:0">Nom du quiz</label></div>`));
+  editor.appendChild(editorName);
+  editor.appendChild(App.el(`<label class="dash-label" style="margin-top:12px">Salon (vide = salon par défaut)</label>`));
+  editor.appendChild(editorChan);
+  editor.appendChild(qWrap);
+  editor.appendChild(addQBtn);
+  editor.appendChild(saveRow);
+
+  const qRow = (q = {}) => {
+    const row = App.el(`
+      <div data-qrow style="border:1px solid var(--d-border);border-radius:10px;padding:10px;margin-bottom:8px;display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input class="dash-input" data-f-q placeholder="❓ Question (ex : Quelle est la capitale du Japon ?)" value="${App.escapeHtml(q.q || '')}" style="flex:1 1 260px;min-width:0" />
+          <button class="dash-btn dash-btn-danger dash-btn-sm" data-q-del>✕</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input class="dash-input" data-f-ok placeholder="✅ Bonne réponse" value="${App.escapeHtml(q.correct || '')}" style="flex:1 1 150px;min-width:0" />
+          <input class="dash-input" data-f-w1 placeholder="❌ Mauvaise réponse 1" value="${App.escapeHtml((q.wrong && q.wrong[0]) || '')}" style="flex:1 1 150px;min-width:0" />
+          <input class="dash-input" data-f-w2 placeholder="❌ Mauvaise réponse 2" value="${App.escapeHtml((q.wrong && q.wrong[1]) || '')}" style="flex:1 1 150px;min-width:0" />
+        </div>
+      </div>`);
+    row.querySelector('[data-q-del]').onclick = () => { row.remove(); };
+    return row;
+  };
+  const addRow = (q) => qWrap.appendChild(qRow(q));
+  addQBtn.onclick = () => addRow({});
+  const collect = () => {
+    const out = [];
+    qWrap.querySelectorAll('[data-f-q]').forEach((inp, i) => {
+      const container = inp.closest('[data-qrow]');
+      const q = inp.value.trim();
+      const ok = container.querySelector('[data-f-ok]').value.trim();
+      const w1 = container.querySelector('[data-f-w1]').value.trim();
+      const w2 = container.querySelector('[data-f-w2]').value.trim();
+      if (!q || !ok) return;
+      const wrong = [w1, w2].filter(Boolean);
+      if (wrong.length < 2) wrong.push('…');
+      out.push({ q: q.slice(0, 300), correct: ok.slice(0, 120), wrong: wrong.map((w) => String(w).slice(0, 120)) });
+    });
+    return out;
+  };
+
+  const renderEditor = (set) => {
+    editingId = set.id;
+    const headTitle = editor.querySelector('.card-head h3');
+    if (headTitle) headTitle.textContent = '✏️ Modifier le quiz';
+    editorName.value = set.name || '';
+    if (set.channel) {
+      const opt = editorChan.querySelector(`option[value="${CSS.escape(set.channel)}"]`);
+      if (opt) opt.selected = true; else editorChan.value = '';
+    } else editorChan.value = '';
+    qWrap.innerHTML = '';
+    (set.questions || []).forEach((q) => addRow(q));
+    if (!(set.questions || []).length) addRow({});
+    saveB.textContent = '💾 Enregistrer les modifications';
+    editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  saveB.onclick = async () => {
+    const name = editorName.value.trim();
+    const questions = collect();
+    if (!name) return App.toast('Donne un nom à ton quiz !', 'error');
+    if (!questions.length) return App.toast('Ajoute au moins une question complète (question + bonne réponse).', 'error');
+    const body = { name: name.slice(0, 80), channel: editorChan.value.trim(), questions };
+    try {
+      if (editingId) {
+        await App.api(`/bots/${bot.id}/guilds/${guildId}/quiz/sets/${editingId}`, { method: 'PUT', body });
+        App.toast('Quiz mis à jour !');
+      } else {
+        await App.api(`/bots/${bot.id}/guilds/${guildId}/quiz/sets`, { method: 'POST', body });
+        App.toast('Quiz créé !');
+      }
+      Dashboard.renderers.quiz(content, data);
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+
+  // 🏆 Classement
   const { top } = await App.api(`/bots/${bot.id}/guilds/${guildId}/quiz/top`);
-  const c = Dashboard.card(root, '🏆 Classement Quiz', 'Les 25 meilleurs joueurs de ce serveur.');
-  if (!top.length) c.appendChild(App.el(`<div class="dash-empty"><div class="big">🧠</div>Personne n\'a encore joué au quiz — lance <b>/quiz</b> sur le serveur !</div>`));
+  const c2 = Dashboard.card(root, '🏆 Classement Quiz', 'Les 25 meilleurs joueurs de ce serveur.');
+  if (!top.length) c2.appendChild(App.el(`<div class="dash-empty"><div class="big">🧠</div>Personne n\'a encore joué au quiz — lance <b>/quiz</b> sur le serveur !</div>`));
   else {
     const table = App.el(`<table class="dash-table"><thead><tr><th>#</th><th>Membre</th><th>Points</th><th>Réponses</th></tr></thead><tbody></tbody></table>`);
     const tb = table.querySelector('tbody');
     top.forEach((r, i) => tb.appendChild(App.el(`<tr><td>${['🥇','🥈','🥉'][i] || i + 1}</td><td><@${r.user_id}></td><td>${r.score} pts</td><td>${r.answers}</td></tr>`)));
-    c.appendChild(table);
+    c2.appendChild(table);
     const exp = App.el(`<div style="margin-top:12px"><button class="btn btn-sm" id="quiz-exp-csv">📥 Exporter CSV</button></div>`);
-    c.appendChild(exp);
+    c2.appendChild(exp);
     exp.querySelector('#quiz-exp-csv').onclick = () => {
       const rows = top.map((r, i) => ({ rang: i + 1, user_id: r.user_id, points: r.score, reponses: r.answers }));
       App.downloadCSV(`quiz_${guildId}.csv`, rows);

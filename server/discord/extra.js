@@ -478,15 +478,30 @@ async function handleSlash(botId, entry, interaction) {
           ephemeral: true,
         });
       }
-      // Jouer : choisir une question au hasard, répartir les 3 choix
-      const [question, correct, ...wrongs] = QUIZ_BANK[Math.floor(Math.random() * QUIZ_BANK.length)];
+      // Jouer : choisir une question au hasard (quiz personnalisés du serveur
+      // s'il y en a, sinon la banque par défaut), répartir les 3 choix.
+      const quizSettings = store.guildSettings.get(botId, guild.id) || {};
+      const pts = Math.min(Math.max(parseInt(quizSettings.quiz_points, 10) || 10, 1), 1000);
+      const bonus = Math.min(Math.max(parseInt(quizSettings.quiz_bonus, 10) || 5, 0), 500);
+      const bonusWindow = Math.min(Math.max(parseInt(quizSettings.quiz_bonus_window, 10) || 8, 1), 120);
+      const pool = store.quizSets.pool(botId, guild.id);
+      const bank = pool.length ? pool : QUIZ_BANK;
+      const raw = bank[Math.floor(Math.random() * bank.length)];
+      let question, correct, wrongs;
+      if (raw && typeof raw === 'object' && raw.q) {
+        question = raw.q; correct = raw.correct;
+        wrongs = Array.isArray(raw.wrong) ? raw.wrong.slice(0, 2) : [];
+        while (wrongs.length < 2) wrongs.push('…');
+      } else {
+        [question, correct, ...wrongs] = raw;
+      }
       const choices = [correct, ...wrongs].sort(() => Math.random() - 0.5);
       const correctIdx = choices.indexOf(correct);
       const embed = new EmbedBuilder()
         .setColor(0x5865F2)
         .setTitle('🧠 Quiz')
-        .setDescription(`**${question}**\n\n⚡ Réponds vite : **+5 points bonus** si tu réponds en moins de **8 secondes** !`)
-        .setFooter({ text: `Hoxera · ${guild.name} · Bonne réponse : +10 pts (+5 si rapide)` })
+        .setDescription(`**${question}**\n\n⚡ Réponds vite : **+${bonus} points bonus** si tu réponds en moins de **${bonusWindow} secondes** !`)
+        .setFooter({ text: `Hoxera · ${guild.name} · Bonne réponse : +${pts} pts (+${bonus} si rapide)` })
         .setTimestamp();
       const row = new ActionRowBuilder().addComponents(
         ['🇦', '🇧', '🇨'].map((e, i) => new ButtonBuilder()
@@ -494,9 +509,22 @@ async function handleSlash(botId, entry, interaction) {
           .setLabel(e)
           .setStyle(ButtonStyle.Primary)),
       );
-      const msg = await interaction.reply({ embeds: [embed], components: [row], fetchReply: true });
-      quizState.set(`${guild.id}:${msg.id}`, { q: question, correct, correctIdx, answered: false, ts: Date.now() });
+      // Salon configuré : la question est envoyée là-bas (réponse éphémère ici)
+      let target = interaction.channel;
+      let ephemeralSend = false;
+      const chanRef = String(quizSettings.quiz_channel || '').trim();
+      if (chanRef) {
+        const idMatch = chanRef.match(/(\d{15,21})/);
+        const found = idMatch ? guild.channels.cache.get(idMatch[1]) : null
+          || guild.channels.cache.find((c) => c && c.name && c.name.toLowerCase() === chanRef.replace(/^#/, '').toLowerCase() && c.isTextBased && c.isTextBased());
+        if (found && typeof found.send === 'function') { target = found; ephemeralSend = true; }
+      }
+      const msg = ephemeralSend
+        ? await target.send({ embeds: [embed], components: [row] })
+        : await interaction.reply({ embeds: [embed], components: [row], fetchReply: true });
+      quizState.set(`${guild.id}:${msg.id}`, { q: question, correct, correctIdx, answered: false, ts: Date.now(), points: pts, bonus, window: bonusWindow });
       capMap(quizState, 200);
+      if (ephemeralSend) await interaction.reply({ content: `🧠 Question envoyée dans ${target} !`, ephemeral: true }).catch(() => {});
       return true;
     }
     // ---------------- Communauté ----------------
@@ -984,8 +1012,9 @@ async function handleButton(botId, entry, interaction) {
       if (st.answered) return interaction.reply({ content: '🧠 Déjà répondu !', ephemeral: true });
       st.answered = true;
       const correctPick = pick === st.correctIdx;
-      const fast = Date.now() - st.ts <= 8000;
-      const gained = correctPick ? (fast ? 15 : 10) : 0;
+      const pts = st.points || 10, bonus = st.bonus || 5, windowMs = (st.window || 8) * 1000;
+      const fast = Date.now() - st.ts <= windowMs;
+      const gained = correctPick ? (fast ? pts + bonus : pts) : 0;
       if (correctPick) store.quizScores.addResult(botId, guild.id, user.id, gained);
       const emojis = ['🇦', '🇧', '🇨'];
       const row = new ActionRowBuilder().addComponents(

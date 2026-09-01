@@ -86,7 +86,7 @@ const PROBE = `(() => {
 
     // --- D) Contrôles interactifs trop petits pour le confort tactile ---
     const interactive = tag === 'button' || tag === 'input' || tag === 'select' || tag === 'textarea' || (tag === 'a' && cls.includes('btn'));
-    const isCheckable = (tag === 'input') && (el.type === 'checkbox' || el.type === 'radio');
+    const isCheckable = (tag === 'input') && (el.type === 'checkbox' || el.type === 'radio' || el.type === 'file');
     if (interactive && r.height > 0 && !isCheckable) {
       if (r.height < 32 || (r.width < 40 && !cls.includes('icn') && !cls.includes('caret'))) {
         issues.push({ type: 'small-control', sel, text, h: Math.round(r.height), w: Math.round(r.width) });

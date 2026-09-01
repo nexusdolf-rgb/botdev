@@ -808,6 +808,41 @@ try { db.exec('DROP TABLE IF EXISTS banner_cache'); } catch (e) {}
 // plus léger → plus jamais au-dessus de la limite de 1 Mo de GitHub).
 try { db.exec('VACUUM'); } catch (e) {}
 
+// ============================================================
+// v1.98 — « Tout est configurable » (v198) : Giveaways, Suggestions,
+// panneau tickets (image), MP de fermeture, quiz personnalisés.
+// ============================================================
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN giveaway_channel TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN giveaway_default_duration INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN giveaway_default_winners INTEGER DEFAULT 1"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN giveaway_ping_role TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN giveaway_color TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN giveaway_message TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN suggestion_color TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN suggestion_ping_role TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN suggestion_downvotes INTEGER DEFAULT 1"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN suggestion_approve_channel TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN close_dm_message TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN close_dm_image TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN quiz_channel TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN quiz_points INTEGER DEFAULT 10"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN quiz_bonus INTEGER DEFAULT 5"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN quiz_bonus_window INTEGER DEFAULT 8"); } catch (e) {}
+// 🖼️ Image personnalisée du panneau de tickets (vide = bannière générée par défaut)
+try { db.exec("ALTER TABLE tickets ADD COLUMN image_url TEXT DEFAULT ''"); } catch (e) {}
+// 🧠 Quiz personnalisés : plusieurs banques de questions par serveur
+try { db.exec(`CREATE TABLE IF NOT EXISTS quiz_sets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  name TEXT DEFAULT 'Mon quiz',
+  channel TEXT DEFAULT '',
+  enabled INTEGER DEFAULT 1,
+  questions TEXT DEFAULT '[]',
+  created_at TEXT DEFAULT (datetime('now'))
+)`); } catch (e) {}
+try { db.exec('CREATE INDEX IF NOT EXISTS idx_quiz_sets_guild ON quiz_sets (bot_id, guild_id)'); } catch (e) {}
+
 // L'ancienne table events (globale) n'a pas de colonne guild_id : on la reconstruit
 const eventsCols = db.prepare("PRAGMA table_info(events)").all().map(c => c.name);
 if (!eventsCols.includes('guild_id')) {
@@ -948,7 +983,11 @@ const guildSettings = {
   set: (botId, guildId, fields) => {
     const cur = guildSettings.get(botId, guildId) || { prefix: '', warn_limit: 0, warn_action: 'none' };
     const next = { ...cur, ...fields };
-    const cols = ['prefix', 'warn_limit', 'warn_action', 'warn_timeout_limit', 'warn_timeout_min', 'starboard_channel', 'starboard_min', 'live_channel', 'live_ping', 'ticket_log_channel', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_mode', 'am_rule_actions', 'am_blacklist_rules', 'am_blacklist_thresholds', 'am_blacklist_duration_min', 'am_blacklist_channel', 'am_blacklist_title', 'am_blacklist_color', 'am_blacklist_footer', 'am_native_enabled', 'am_native_alert_channel', 'am_exempt_roles', 'am_exempt_channels', 'am_exempt_users', 'am_warn_text', 'am_timeout_min', 'am_warn_limit', 'am_warn_action', 'am_warn_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'modmail_enabled', 'modmail_channel', 'lang', 'timezone'];
+    const cols = ['prefix', 'warn_limit', 'warn_action', 'warn_timeout_limit', 'warn_timeout_min', 'starboard_channel', 'starboard_min', 'live_channel', 'live_ping', 'ticket_log_channel', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_mode', 'am_rule_actions', 'am_blacklist_rules', 'am_blacklist_thresholds', 'am_blacklist_duration_min', 'am_blacklist_channel', 'am_blacklist_title', 'am_blacklist_color', 'am_blacklist_footer', 'am_native_enabled', 'am_native_alert_channel', 'am_exempt_roles', 'am_exempt_channels', 'am_exempt_users', 'am_warn_text', 'am_timeout_min', 'am_warn_limit', 'am_warn_action', 'am_warn_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'modmail_enabled', 'modmail_channel', 'lang', 'timezone',
+    'giveaway_channel', 'giveaway_default_duration', 'giveaway_default_winners', 'giveaway_ping_role', 'giveaway_color', 'giveaway_message',
+    'suggestion_color', 'suggestion_ping_role', 'suggestion_downvotes', 'suggestion_approve_channel',
+    'close_dm_message', 'close_dm_image',
+    'quiz_channel', 'quiz_points', 'quiz_bonus', 'quiz_bonus_window'];
     const vals = {
       bot_id: botId, guild_id: guildId,
       prefix: String(next.prefix || '').slice(0, 5),
@@ -1023,6 +1062,22 @@ const guildSettings = {
       modmail_channel: String(next.modmail_channel || '').slice(0, 100),
       lang: ['fr', 'en', 'es', 'de', 'pt', 'it'].includes(String(next.lang || '')) ? String(next.lang) : 'fr',
       timezone: tzUtil.safeTz(next.timezone),
+      giveaway_channel: String(next.giveaway_channel || '').slice(0, 100),
+      giveaway_default_duration: Math.min(Math.max(parseInt(next.giveaway_default_duration, 10) || 0, 0), 720),
+      giveaway_default_winners: Math.min(Math.max(parseInt(next.giveaway_default_winners, 10) || 1, 1), 50),
+      giveaway_ping_role: String(next.giveaway_ping_role || '').slice(0, 100),
+      giveaway_color: /^#[0-9a-fA-F]{6}$/.test(String(next.giveaway_color || '')) ? String(next.giveaway_color) : '',
+      giveaway_message: String(next.giveaway_message || '').slice(0, 1500),
+      suggestion_color: /^#[0-9a-fA-F]{6}$/.test(String(next.suggestion_color || '')) ? String(next.suggestion_color) : '',
+      suggestion_ping_role: String(next.suggestion_ping_role || '').slice(0, 100),
+      suggestion_downvotes: (next.suggestion_downvotes === 0 || next.suggestion_downvotes === false) ? 0 : 1,
+      suggestion_approve_channel: String(next.suggestion_approve_channel || '').slice(0, 100),
+      close_dm_message: String(next.close_dm_message || '').slice(0, 1500),
+      close_dm_image: String(next.close_dm_image || '').slice(0, 500),
+      quiz_channel: String(next.quiz_channel || '').slice(0, 100),
+      quiz_points: Math.min(Math.max(parseInt(next.quiz_points, 10) || 10, 1), 1000),
+      quiz_bonus: Math.min(Math.max(parseInt(next.quiz_bonus, 10) || 5, 0), 500),
+      quiz_bonus_window: Math.min(Math.max(parseInt(next.quiz_bonus_window, 10) || 8, 1), 120),
     };
     const sets = cols.map(c => `${c} = excluded.${c}`).join(', ');
     const placeholders = ['bot_id', 'guild_id', ...cols].map(c => `@${c}`).join(', ');
@@ -1151,8 +1206,8 @@ const tickets = {
   get: (botId, guildId) => db.prepare('SELECT * FROM tickets WHERE bot_id = ? AND guild_id = ?').get(botId, guildId) || null,
   set: (botId, guildId, cfg) => {
     const types = typeof cfg.types === 'string' ? cfg.types : JSON.stringify(Array.isArray(cfg.types) ? cfg.types : []);
-    return db.prepare(`INSERT INTO tickets (bot_id, guild_id, name, channel, message, button_label, button_style, support_role, category, types, require_reason, max_one, menu_channel, menu_message, menu_category)
-      VALUES (@bot_id, @guild_id, @name, @channel, @message, @button_label, @button_style, @support_role, @category, @types, @require_reason, @max_one, @menu_channel, @menu_message, @menu_category)
+    return db.prepare(`INSERT INTO tickets (bot_id, guild_id, name, channel, message, button_label, button_style, support_role, category, types, require_reason, max_one, menu_channel, menu_message, menu_category, image_url)
+      VALUES (@bot_id, @guild_id, @name, @channel, @message, @button_label, @button_style, @support_role, @category, @types, @require_reason, @max_one, @menu_channel, @menu_message, @menu_category, @image_url)
       ON CONFLICT(bot_id, guild_id) DO UPDATE SET
         name = excluded.name,
         channel = excluded.channel,
@@ -1166,11 +1221,14 @@ const tickets = {
         max_one = excluded.max_one,
         menu_channel = excluded.menu_channel,
         menu_message = excluded.menu_message,
-        menu_category = excluded.menu_category`).run({
-          bot_id: botId, guild_id: guildId, name: '', channel: '', message: '', button_label: '', button_style: '1', support_role: '', category: '', require_reason: 1, max_one: 0, menu_channel: '', menu_message: '', menu_category: '', ...cfg,
+        menu_category = excluded.menu_category,
+        image_url = excluded.image_url`).run({
+          bot_id: botId, guild_id: guildId, name: '', channel: '', message: '', button_label: '', button_style: '1', support_role: '', category: '', require_reason: 1, max_one: 0, menu_channel: '', menu_message: '', menu_category: '', image_url: '', ...cfg,
           button_style: String(['1','2','3','4'].includes(String(cfg.button_style)) ? cfg.button_style : '1'),
           require_reason: (cfg.require_reason === 0 || cfg.require_reason === false) ? 0 : 1,
           max_one: cfg.max_one ? 1 : 0,
+          // 🖼️ Image du panneau : préservée si non envoyée (vide = bannière par défaut)
+          image_url: String(cfg.image_url !== undefined ? cfg.image_url : ((tickets.get(botId, guildId) || {}).image_url || '')).slice(0, 500),
           types,
         });
   },
@@ -1673,6 +1731,42 @@ const quizScores = {
   top: (botId, guildId, limit = 10) => db.prepare('SELECT * FROM quiz_scores WHERE bot_id = ? AND guild_id = ? ORDER BY score DESC, answers ASC LIMIT ?').all(botId, guildId, Math.min(Math.max(parseInt(limit, 10) || 10, 1), 25)),
 };
 
+// ---------------------- 🧠 Quiz personnalisés (v198) ----------------------
+const quizSets = {
+  all: (botId, guildId) => db.prepare('SELECT * FROM quiz_sets WHERE bot_id = ? AND guild_id = ? ORDER BY id ASC').all(botId, guildId)
+    .map((r) => {
+      let questions = [];
+      try { questions = JSON.parse(r.questions || '[]'); } catch {}
+      return { ...r, questions: Array.isArray(questions) ? questions : [] };
+    }),
+  get: (id) => db.prepare('SELECT * FROM quiz_sets WHERE id = ?').get(id) || null,
+  create: (botId, guildId, set) => db.prepare('INSERT INTO quiz_sets (bot_id, guild_id, name, channel, enabled, questions) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(botId, guildId,
+      String(set.name || 'Mon quiz').slice(0, 80),
+      String(set.channel || '').slice(0, 100),
+      set.enabled === 0 || set.enabled === false ? 0 : 1,
+      JSON.stringify(Array.isArray(set.questions) ? set.questions.slice(0, 200) : []).slice(0, 100000)).lastInsertRowid,
+  update: (id, set) => {
+    const sets = [], vals = [];
+    const allowed = { name: 'name', channel: 'channel', enabled: 'enabled', questions: 'questions' };
+    for (const [k, col] of Object.entries(allowed)) {
+      if (!(k in set)) continue;
+      if (k === 'questions') vals.push(JSON.stringify(Array.isArray(set.questions) ? set.questions.slice(0, 200) : []).slice(0, 100000));
+      else if (k === 'enabled') vals.push(set.enabled === 0 || set.enabled === false ? 0 : 1);
+      else vals.push(String(set[k] || '').slice(0, k === 'name' ? 80 : 100));
+      sets.push(`${col} = ?`);
+    }
+    if (!sets.length) return;
+    vals.push(id);
+    db.prepare(`UPDATE quiz_sets SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
+  },
+  remove: (id) => db.prepare('DELETE FROM quiz_sets WHERE id = ?').run(id),
+  // Toutes les questions des quiz activés du serveur (utilisé par /quiz)
+  pool: (botId, guildId) => quizSets.all(botId, guildId)
+    .filter((s) => s.enabled)
+    .flatMap((s) => s.questions || []),
+};
+
 // ---------------------- Messages programmés ----------------------
 const scheduled = {
   all: (botId, guildId) => db.prepare('SELECT * FROM scheduled_messages WHERE bot_id = ? AND guild_id = ? ORDER BY hour, minute').all(botId, guildId),
@@ -1914,4 +2008,4 @@ const liveSocials = {
   count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM live_socials WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
 };
 
-module.exports = { db, embedTemplates, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, modmail, closedTickets, botProfiles, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, afk, guildEvents, quizScores, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories };
+module.exports = { db, embedTemplates, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, modmail, closedTickets, botProfiles, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, afk, guildEvents, quizScores, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories, quizSets };
