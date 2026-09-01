@@ -5306,3 +5306,97 @@ html.hx-light .dashboard-shell-host .module-header-meta .module-status {
     scroll-behavior: auto !important;
   }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   🔧 AUDIT UI v197 — débordements, tailles et positions
+   Corrige : rangées de types de tickets coupées (boutons 🗑 masqués),
+   grille Embed qui déborde, boutons d'icônes réduits à 34px, cibles
+   tactiles < 40px, titres/sélecteurs qui débordent sur mobile.
+   ════════════════════════════════════════════════════════════════ */
+
+/* 1) Dropdowns custom : ne débordent JAMAIS de leur conteneur */
+.dd-host { max-width: 100%; min-width: 0; }
+
+/* 2) Tickets — « Types de tickets » : les rangées de rôles staff et
+   de questions occupent toute la largeur et se replient au lieu de
+   faire déborder la carte (le bouton 🗑 était masqué par overflow) */
+.setting-row > div { max-width: 100%; }
+.setting-row > .t-roles,
+.setting-row > .t-questions,
+.setting-row > .t-staff {
+  flex: 1 1 100%; max-width: 100%; min-width: 0;
+}
+.t-roles > div, .t-questions > div { flex-wrap: wrap; min-width: 0; max-width: 100%; }
+.t-roles .dd-host, .t-questions .dd-host,
+.t-roles .dash-select, .t-questions .dash-select { flex: 1 1 100%; min-width: 0; max-width: 100%; }
+.t-roles .dash-input, .t-questions .dash-input { min-width: 0; max-width: 100%; flex: 1 1 200px; }
+.t-roles > div .dash-btn, .t-questions > div .dash-btn { flex-shrink: 0; }
+
+/* 3) Boutons d'icônes du haut de page : vraie cible tactile 40px
+   (annule l'override à 34px de la couche v195) */
+.dashboard-shell-host .dash-topbar-actions .dash-iconbtn,
+.dash-iconbtn { width: 40px !important; min-width: 40px; height: 40px !important; min-height: 40px; }
+
+/* 4) Navigation mobile : boutons ☰ / ▦ à 42px (confort pouce) */
+.dashboard-shell-host .dash-mobile-navbtn { width: 42px !important; height: 42px !important; min-width: 42px; min-height: 42px; }
+
+/* 5) Bouton « Retour » des modules */
+.dashboard-shell-host .module-back { min-height: 40px; min-width: 44px; padding: 8px 13px; }
+
+/* 6) Fermeture du sélecteur de serveurs */
+.sp-close { width: 40px; height: 40px; min-width: 40px; min-height: 40px; }
+
+/* 7) Petits boutons (suppression 🗑, etc.) : cible tactile minimale */
+.dash-btn-sm { min-height: 38px; min-width: 40px; }
+
+/* 8) Filtres Auto-Mod (pills) : hauteur confortable */
+.am-filter { min-height: 34px; display: inline-flex; align-items: center; }
+
+/* 9) Boutons « à marquer / marqué » des annonces */
+.ca-mark { min-height: 38px; min-width: 40px; }
+
+/* 10) Presets de couleurs de l'Embed Builder : cibles rondes larges */
+.eb-preset { width: 40px; height: 40px; }
+.eb-color-row input[type="color"] { height: 36px; }
+
+/* 11) Grille de l'Embed Builder : les colonnes ne peuvent pas
+   s'étendre au-delà du conteneur (1fr laissait les inputs élargir
+   la carte de plus de 350px) */
+.eb-wrap, .eb-editor-col, .eb-preview-col { min-width: 0; }
+.eb-grid2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.eb-grid2 > * { min-width: 0; }
+.eb-grid2 .setting-row { flex-wrap: wrap; }
+.eb-grid2 .setting-row > .dash-label { flex: 1 1 100%; min-width: 0; }
+.eb-grid2 .setting-row > input.dash-input,
+.eb-grid2 .setting-row > .dash-select,
+.eb-grid2 .setting-row > textarea.dash-input { width: 100%; flex: 1 1 100%; min-width: 0; max-width: 100%; }
+
+/* 12) En-têtes de cartes : le texte se plie au lieu de pousser le
+   contrôle (switch) hors de la carte */
+.dash-card .card-head > * { min-width: 0; }
+.dash-card .card-head h3,
+.dash-card .card-head .desc { overflow-wrap: anywhere; }
+
+/* 13) Titre et sous-titre de module : se plient sur mobile */
+.dash-module-header { flex-wrap: wrap; }
+.dash-module-header h1,
+.dash-module-header .sub { min-width: 0; overflow-wrap: anywhere; }
+.dash-module-header h1, .module-header-copy h1 { white-space: normal; }
+
+/* 14) Interrupteurs (switch) : ne débordent pas des lignes flex */
+label.switch { flex-shrink: 0; max-width: 100%; }
+
+/* 15) Cases à cocher et radios : un peu plus grandes + couleur du thème */
+input[type="checkbox"], input[type="radio"] {
+  width: 20px; height: 20px; flex-shrink: 0;
+  accent-color: var(--d-accent, #e07a5f); cursor: pointer;
+}
+
+/* 16) Noms de serveurs très longs : coupés proprement au lieu de
+   pousser la carte (ellipsis avec titre complet au survol) */
+.srv-card b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 20) Tiroir de navigation mobile : avatars de serveurs et fermeture
+   à une vraie taille tactile (Discord utilise 48px) */
+.dash-mobile-server-item { width: 42px !important; height: 42px !important; flex-basis: 42px !important; }
+.dash-mobile-close { width: 40px !important; height: 40px !important; min-width: 40px !important; }

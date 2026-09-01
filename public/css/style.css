@@ -984,3 +984,22 @@ html.hx-light .hp-pillar { background: #fff; }
 html.hx-light .hp-step { background: #fff; }
 html.hx-light .hp-faq-item { background: #fff; }
 html.hx-light .hp-cta-inner { background: radial-gradient(600px 240px at 50% -40%, rgba(224,122,95,.18), transparent 70%), linear-gradient(145deg, rgba(224,122,95,.06), rgba(139,92,246,.03)), #fff; }
+
+/* ════════════════════════════════════════════════════════════════
+   🔧 AUDIT UI v197 — landing publique
+   ════════════════════════════════════════════════════════════════ */
+/* Boutons CTA du hero : ne rétrécissent pas sous leur texte
+   (le texte débordait du fond du bouton de 12px sur mobile) */
+.pub-hero-actions .btn, .hp-cta-actions .btn { flex-shrink: 0; max-width: 100%; }
+
+/* Blobs décoratifs : jamais de barre de défilement horizontale
+   sur mobile (l'animation de pulsation les faisait dépasser de 4px) */
+.pub-blob { max-width: 100%; }
+@media (max-width: 700px) {
+  .pub-hero { overflow: hidden; }
+}
+
+/* ---------- Audit UI v197 — CTA final mobile : le texte doit rentrer ---------- */
+@media (max-width: 700px) {
+  .hp-cta-actions .btn { white-space: normal; }
+}

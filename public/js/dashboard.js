@@ -486,7 +486,7 @@ Dashboard.openServerPicker = () => {
             <span class="sp-body">
               <span class="sp-ico">${g.icon ? `<img src="${App.escapeHtml(g.icon)}" alt="" />` : `<span>${App.escapeHtml(initialOf(g.name))}</span>`}</span>
               <span class="sp-txt">
-                <b>${App.escapeHtml(g.name)}</b>
+                <b title="${App.escapeHtml(g.name)}">${App.escapeHtml(g.name)}</b>
                 <small>${g.hasBot ? (g.members ? `${App.escapeHtml(String(g.members))} membres` : 'Optimus Prime présent') : 'Optimus Prime absent — inviter'}</small>
               </span>
               <span class="sp-mark">${g.hasBot ? '→' : '＋'}</span>
@@ -533,7 +533,7 @@ Dashboard.serverPicker = () => {
         : `<span class="srv-fallback">${App.escapeHtml(initial)}</span>`}
       <div class="srv-txt">
         <span class="srv-label">Serveur</span>
-        <b>${cur ? App.escapeHtml(cur.name) : 'Choisir un serveur…'}</b>
+        <b title="${cur ? App.escapeHtml(cur.name) : 'Choisir un serveur…'}">${cur ? App.escapeHtml(cur.name) : 'Choisir un serveur…'}</b>
       </div>
       <span class="srv-caret" aria-hidden="true">⌄</span>
     </div>`);
@@ -875,7 +875,7 @@ Dashboard.renderServerGrid = (content) => {
     const card = App.el(`
       <button class="srv-card ${g.hasBot ? '' : 'no-bot'}">
         ${g.icon ? `<img src="${App.escapeHtml(g.icon)}" alt="" />` : `<span class="srv-card-fallback">${App.escapeHtml(initial)}</span>`}
-        <b>${App.escapeHtml(g.name)}</b>
+        <b title="${App.escapeHtml(g.name)}">${App.escapeHtml(g.name)}</b>
         ${g.hasBot
           ? (g.canManage ? '<span class="srv-badge ok">✅ Configurer</span>' : '<span class="srv-badge">🔒 Lecture seule</span>')
           : '<span class="srv-badge invite">➕ Inviter le bot</span>'}
