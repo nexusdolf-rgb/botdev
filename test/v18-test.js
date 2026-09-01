@@ -172,12 +172,13 @@ const logging = require('../server/discord/logging');
     return { status: res.status, json, cookie: (res.headers.get('set-cookie') || '').split(';')[0] };
   };
 
-  // Compte admin (id 1) + compte lambda (id 2)
-  const reg = await fetchJson('/auth/register', { method: 'POST', body: JSON.stringify({ email: 'admin@botdev.fr', password: 'BotDev2026!' }) });
-  assert(reg.status === 200, 'register OK');
-  const adminCookie = reg.cookie;
-  const reg2 = await fetchJson('/auth/register', { method: 'POST', body: JSON.stringify({ email: 'user2@botdev.fr', password: 'BotDev2026!' }) });
-  const user2Cookie = reg2.cookie;
+  // Compte admin (id 1) + compte lambda (id 2) — création directe : depuis
+  // v193 l'inscription par email/mot de passe a été retirée (connexion 100 %
+  // OAuth2 Discord), donc on crée comptes + sessions de test ici.
+  const adminId = store.users.create('admin@botdev.fr', 'x');
+  const user2Id = store.users.create('user2@botdev.fr', 'x');
+  const adminCookie = `botdev_session=${store.sessions.create(adminId)}`;
+  const user2Cookie = `botdev_session=${store.sessions.create(user2Id)}`;
 
   const me = await fetchJson('/auth/me', { headers: { Cookie: adminCookie } });
   assert(me.json.user.is_admin === true, 'id 1 = admin');

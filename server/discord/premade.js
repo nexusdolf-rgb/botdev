@@ -49,7 +49,9 @@ const CMD_DEFS = {
   meme: { label: 'meme', desc: 'Un meme aléatoire' },
   coinflip: { label: 'coinflip', desc: 'Pile ou face' },
   roll: { label: 'roll', desc: 'Lance un dé' },
-  say: { label: 'say', desc: 'Répète ton message' },
+  // 🔐 /say fait parler le bot : réservé au propriétaire / administrateurs
+  // (défini à l'enregistrement + vérifié à l'exécution + message de refus propre)
+  say: { label: 'say', desc: 'Répète ton message (réservé aux admins)', perms: [PermissionsBitField.Flags.Administrator] },
   reverse: { label: 'reverse', desc: 'Inverse ton texte' },
   kick: { label: 'kick', desc: 'Expulse un membre', perms: [PermissionsBitField.Flags.KickMembers] },
   ban: { label: 'ban', desc: 'Bannit un membre', perms: [PermissionsBitField.Flags.BanMembers] },
@@ -561,7 +563,7 @@ async function execute(botId, entry, cmd, src) {
     case 'shop': {
       const items = store.shop.all(botId, guild.id);
       if (!items.length) {
-        return reply('🛒 La boutique est vide. Les administrateurs peuvent ajouter des articles depuis le **dashboard BotDev** (onglet Boutique).');
+        return reply('🛒 La boutique est vide. Les administrateurs peuvent ajouter des articles depuis le **dashboard Hoxera** (onglet Boutique).');
       }
       const embed = new EmbedBuilder()
         .setColor('#FEE75C')
@@ -689,7 +691,7 @@ async function execute(botId, entry, cmd, src) {
         const list = store.sanctions.all(botId, guild.id);
         return reply(list.length
           ? `❓ Sanction introuvable. Disponibles : ${list.map((x) => x.name).join(', ')}`
-          : '❓ Aucune sanction prédéfinie. Ajoute-les depuis le **dashboard BotDev** (onglet Modération).');
+          : '❓ Aucune sanction prédéfinie. Ajoute-les depuis le **dashboard Hoxera** (onglet Modération).');
       }
       const reason = s.message || 'Sanction prédéfinie';
       try {
@@ -735,13 +737,28 @@ async function execute(botId, entry, cmd, src) {
       break;
     }
     case 'meme': {
+      // 🛡️ API externe (meme-api.com) : timeout, erreurs réseau/HTTP et
+      // données invalides gérés proprement — le bot ne reste jamais bloqué.
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 8000);
       try {
-        const res = await fetch('https://meme-api.com/gimme');
-        const data = await res.json();
-        const embed = new EmbedBuilder().setColor('#5865F2').setTitle(data.title).setImage(data.url).setFooter({ text: `r/${data.subreddit}` });
+        const res = await fetch('https://meme-api.com/gimme', { signal: controller.signal });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json().catch(() => null);
+        const title = data && data.title ? String(data.title).slice(0, 256) : 'Meme';
+        const url = data && data.url && typeof data.url === 'string' ? data.url : null;
+        if (!url) throw new Error('Aucune image dans la réponse');
+        const sub = data && data.subreddit ? `r/${String(data.subreddit).slice(0, 100)}` : 'meme-api.com';
+        const embed = new EmbedBuilder().setColor('#5865F2').setTitle(title).setImage(url).setFooter({ text: sub });
         await replyEmbed(embed);
-      } catch {
-        await reply('😢 Impossible de récupérer un meme pour le moment.');
+      } catch (e) {
+        if (e && e.name === 'AbortError') {
+          await reply('⏱️ L\'API de memes ne répond pas pour le moment. Réessaie dans quelques instants.');
+        } else {
+          await reply('😢 Impossible de récupérer un meme pour le moment. Réessaie dans quelques secondes.');
+        }
+      } finally {
+        clearTimeout(timer);
       }
       break;
     }

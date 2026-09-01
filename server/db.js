@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS bots (
   token TEXT NOT NULL,
   client_id TEXT DEFAULT '',
   prefix TEXT DEFAULT '!',
-  status_text TEXT DEFAULT 'BotDev',
+  status_text TEXT DEFAULT 'HOXERA',
   status_type TEXT DEFAULT 'online',
   avatar_url TEXT DEFAULT '',
   bot_username TEXT DEFAULT '',

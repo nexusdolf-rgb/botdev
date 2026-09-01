@@ -1193,7 +1193,7 @@ async function buildTranscript(botId, interaction, extraLines = []) {
   if (extraLines.length) text += '\n\n' + extraLines.join('\n');
   let token = '', url = '';
   try {
-    token = crypto.randomBytes(8).toString('hex');
+    token = crypto.randomBytes(16).toString('hex');
     store.transcripts.add({
       token, bot_id: botId, guild_id: guild.id, channel_name: channel.name,
       opener_id: meta.openerId || '', type_label: meta.typeLabel || '', server_name: guild.name,
@@ -2514,7 +2514,7 @@ async function buildTranscriptFromChannel(botId, channel, guild, extraLines = []
   if (extraLines.length) text += '\n\n' + extraLines.join('\n');
   let token = '', url = '';
   try {
-    token = crypto.randomBytes(8).toString('hex');
+    token = crypto.randomBytes(16).toString('hex');
     store.transcripts.add({
       token, bot_id: botId, guild_id: guild.id, channel_name: channel.name || '',
       opener_id: meta.openerId || '', type_label: meta.typeLabel || '', server_name: guild.name,

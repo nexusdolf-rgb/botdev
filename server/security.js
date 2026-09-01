@@ -52,7 +52,9 @@ function requestHost(req) {
 }
 
 function configuredOrigins() {
-  return (process.env.NEXORA_ALLOWED_ORIGINS || 'https://hoxera.is-a.dev,https://hoxera.onrender.com')
+  // v193 : l'ancien domaine de secours Render a été retiré (service suspendu,
+  // IP bloquée par Discord). Seul le domaine officiel est autorisé.
+  return (process.env.NEXORA_ALLOWED_ORIGINS || 'https://hoxera.is-a.dev')
     .split(',').map((origin) => origin.trim().replace(/\/$/, '').toLowerCase()).filter(Boolean);
 }
 

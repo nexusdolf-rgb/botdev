@@ -15,7 +15,6 @@ const { EVENT_DEFS, eventsState } = require('./discord/events');
 
 const router = express.Router();
 const COOKIE = 'botdev_session';
-const authRateLimit = security.rateLimit({ name: 'auth', windowMs: 15 * 60000, max: 20 });
 const oauthRateLimit = security.rateLimit({ name: 'oauth', windowMs: 10 * 60000, max: 30 });
 const platformMutationRateLimit = security.rateLimit({
   name: 'platform-admin', windowMs: 60000, max: 30,
@@ -44,7 +43,7 @@ function setSessionCookie(req, res, token) {
 function servePanelBannerPng(req, res) {
   const guildId = String(req.params.guildId || '').replace(/[^0-9]/g, '').slice(0, 25);
   const banner = require('./banner');
-  const name = banner.storedPanelName(guildId) || 'NEXORA';
+  const name = banner.storedPanelName(guildId) || 'HOXERA';
   try {
     const buf = banner.generateBanner(name);
     if (buf && buf.then) {
@@ -108,36 +107,10 @@ async function requireAuth(req, res, next) {
   next();
 }
 
-router.post('/auth/register', authRateLimit, (req, res) => {
-  if (process.env.REGISTRATION_CLOSED === '1') {
-    return res.status(403).json({ error: 'Les inscriptions sont fermées. Contacte l\'administrateur.' });
-  }
-  const { email, password } = req.body || {};
-  if (!email || !password) return res.status(400).json({ error: 'Email et mot de passe requis' });
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Email invalide' });
-  if (String(password).length < 6) return res.status(400).json({ error: 'Mot de passe : 6 caractères minimum' });
-  const normalized = String(email).toLowerCase().trim();
-  if (store.users.findByEmail(normalized)) return res.status(409).json({ error: 'Un compte existe déjà avec cet email' });
-  const hash = bcrypt.hashSync(String(password), 10);
-  const userId = store.users.create(normalized, hash);
-  const token = store.sessions.create(userId);
-  setSessionCookie(req, res, token);
-  res.json({ ok: true });
-});
-
-router.post('/auth/login', authRateLimit, (req, res) => {
-  const { email, password } = req.body || {};
-  const user = email && store.users.findByEmail(email);
-  if (!user || !bcrypt.compareSync(String(password || ''), user.password_hash)) {
-    return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
-  }
-  if (store.platformBans.isBanned(user.id)) {
-    return res.status(403).json({ error: 'Ce compte est banni d’Optimus Prime.' });
-  }
-  const token = store.sessions.create(user.id);
-  setSessionCookie(req, res, token);
-  res.json({ ok: true });
-});
+// ⚠️ Routes email/mot de passe (/auth/register, /auth/login) supprimées en v193 :
+// mortes depuis le passage au 100 % OAuth2 Discord (aucune référence dans le
+// front, aucun test fonctionnel). La connexion se fait exclusivement via
+// /auth/discord/* (voir plus bas). bcrypt reste utilisé par l'OAuth2.
 
 router.post('/auth/logout', (req, res) => {
   const token = req.cookies[COOKIE];
@@ -385,6 +358,9 @@ function getAnyBot(req, res) {
 }
 
 function botDetail(bot) {
+  // 🛡️ Le token Discord n'est JAMAIS renvoyé à l'API : il n'est utilisé que
+  // côté serveur (connexion du bot). Le dashboard n'en a pas besoin.
+  const { token, ...safeBot } = bot || {};
   const entry = botManager.clients.get(bot.id);
   const online = botManager.isOnline(bot.id);
   let guilds = [];
@@ -394,7 +370,7 @@ function botDetail(bot) {
     }));
   }
   return {
-    ...bot,
+    ...safeBot,
     online,
     guilds,
     commands_count: store.commands.all(bot.id).length,
@@ -2309,7 +2285,7 @@ router.get('/health/bot', (req, res) => {
   try { healthInfo = require('./health').snapshot(); } catch {}
   res.json({
     processUptimeMs: Math.round(process.uptime() * 1000),
-    tokenConfigured: !!(process.env.HOXERA_TOKEN || process.env.NOXERA_TOKEN || process.env.NEXORA_TOKEN),
+    tokenConfigured: !!(process.env.HOXERA_TOKEN),
     oauthConfigured: !!(process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET),
     botCount: rows.length,
     bootRestore: store.settings.get('boot_restore') || 'inconnu',

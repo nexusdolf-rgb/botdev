@@ -309,7 +309,7 @@ App.renderHoxeraDashboard = async () => {
       shell.innerHTML = `
         <div class="dash-card" style="max-width:560px;margin:24px auto">
           <h3>⚡ Hoxera n'est pas encore branché</h3>
-          <div class="desc">Ajoute la variable d'environnement <b>NEXORA_TOKEN</b> (token du bot) dans les réglages du service sur Render, puis redémarre. La connexion se fait automatiquement.</div>
+          <div class="desc">Ajoute la variable d'environnement <b>HOXERA_TOKEN</b> (token du bot) dans les réglages du service sur Render, puis redémarre. La connexion se fait automatiquement.</div>
         </div>`;
       return;
     }

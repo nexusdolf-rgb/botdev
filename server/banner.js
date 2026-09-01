@@ -44,7 +44,7 @@ function autoFontSize(label) {
 
 // Fond + texte avec halos chromatiques (rendu en une seule passe)
 function baseSvg(name) {
-  const raw = String(name || 'NEXORA').toUpperCase();
+  const raw = String(name || 'HOXERA').toUpperCase();
   const label = escapeXml(raw.startsWith('SUPPORT') ? raw : `SUPPORT - ${raw}`);
   const size = autoFontSize(label);
   const available = W - BANNER_MARGIN;
@@ -105,7 +105,7 @@ function baseSvg(name) {
 
 // PNG statique (~1 s de génération, mis en cache mémoire ensuite)
 async function generateBanner(name) {
-  const clean = String(name || '').trim().slice(0, 26) || 'NEXORA';
+  const clean = String(name || '').trim().slice(0, 26) || 'HOXERA';
   if (!sharp) return null;
   if (cache.has(clean)) return cache.get(clean);
   try {

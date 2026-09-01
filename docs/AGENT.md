@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v192**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v193**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -135,7 +135,21 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   ⚠️ Leçons : le thème clair se teste avec un VRAI audit contraste (passe D) ; les
   overrides light doivent gagner contre `!important` ; jamais de `white-space:nowrap`
   sans base flex correcte ; jamais de flip de surface sans gérer ses textes internes.
-- **v192 (ACTUELLE)** : **CORRECTIF aperçu des annonces de live**. L'aperçu de la
+- **v193 (ACTUELLE)** : **PHASE 1 — sécurité, nettoyage et corrections urgentes**.
+  1) Rebranding : « BotDev »/« NEXORA » visibles remplacés par Hoxera (statut
+  par défaut, panneau par défaut, bannières, boutique, sanctions, footer
+  transcription, aide dashboard) ; ancien domaine de secours retiré des
+  origines autorisées. 2) `/say` protégé : réservé au propriétaire/
+  Administrateur (vérifié à l'exécution + masqué à l'enregistrement, refus propre).
+  3) `/meme` robuste : timeout 8 s, erreurs HTTP/réseau/données invalides
+  gérées, le bot ne se bloque jamais. 4) Routes mortes `/auth/register` et
+  `/auth/login` supprimées (connexion 100 % OAuth2 ; bcrypt conservé pour
+  l'OAuth2). 5) Env vars obsolètes : plus que HOXERA_TOKEN (les anciens noms
+  n'existaient pas en prod). 6) Anciens domaines retirés (sauf règles de
+  correction de base restaurée). 7) Sécurité : le token Discord n'est PLUS
+  jamais renvoyé par l'API ; tokens de transcription passés de 64 à 128 bits.
+  125 tests verts (`test/v193-test.js`). Bump cache v193.
+- **v192** : **CORRECTIF aperçu des annonces de live**. L'aperçu de la
   carte « Annonces de live » affichait un pseudo d'exemple codé en dur
   (« 93_vlz est en live ! ») sur TOUS les serveurs — confondu avec un compte
   suivi réel. Il est désormais DYNAMIQUE : premier compte suivi du serveur,
@@ -262,15 +276,16 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 
 1. Clone `https://github.com/nexusdolf-rgb/botdev`, `npm install`, lis le dernier commit
 2. Vérifie l'état : `https://hoxera.is-a.dev/api/health/bot` (bot en ligne ? erreurs ?)
-3. `bash scripts/check.sh` → doit être 🟢 (124 tests, ~2,5 min)
+3. `bash scripts/check.sh` → doit être 🟢 (125 tests, ~2,5 min)
 4. Vérifie les tokens (GitHub 200, Render 200, Discord `users/@me` avec curl)
 5. Fais-moi un point de situation clair, puis attends mes instructions
 
 ## 📌 ÉTAT AU 30/08/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v192** — correctif aperçu des annonces de live (pseudo
-  codé en dur « 93_vlz » supprimé, aperçu dynamique + exemple neutre).
-  Voir la section v192 ci-dessus.
+- Dernière version : **v193** — Phase 1 « Sécurité, nettoyage et corrections
+  urgentes » (rebranding, /say protégé, /meme robuste, routes email mortes
+  supprimées, env vars nettoyées, token masqué côté API, transcriptions 128
+  bits). 125 tests verts. Voir la section v193 ci-dessus.
 - v188 livré : LOT 1 « Quick wins communauté » :
   - **/afk** : statut AFK persistant (table `afk`, upsert par membre), sortie auto
     dès que le membre écrit, prévention des autres à la mention (sans boucle)

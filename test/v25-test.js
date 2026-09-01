@@ -126,8 +126,9 @@ const { buildSlashPayloads } = require('../server/discord/premade');
     return { status: res.status, json, cookie: (res.headers.get('set-cookie') || '').split(';')[0] };
   };
 
-  const reg = await fetchJson('/auth/register', { method: 'POST', body: JSON.stringify({ email: 'admin@botdev.fr', password: 'BotDev2026!' }) });
-  const ck = reg.cookie;
+  // Compte admin créé directement (l'inscription email a été retirée en v193)
+  const adminId = store.users.create('admin@botdev.fr', 'x');
+  const ck = `botdev_session=${store.sessions.create(adminId)}`;
   const botId = (await fetchJson('/bots', { method: 'POST', headers: { Cookie: ck }, body: JSON.stringify({ name: 'Hoxera', token: 'T', client_id: '1', prefix: '!' }) })).json.id;
   // lien Discord simulé
   const store2 = require('../server/db');

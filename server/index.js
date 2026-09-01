@@ -52,7 +52,10 @@ async function main() {
   } catch (e) { console.error('[Hoxera] maintenance indisponible :', e.message); }
 
   // 🆕 L'URL officielle du dashboard : remplace un éventuel ancien lien
-  // mémorisé dans la base restaurée (transcriptions, /help, pieds de page…)
+  // mémorisé dans la base restaurée (transcriptions, /help, pieds de page…).
+  // Les anciennes URLs ci-dessous ne sont PAS utilisées : ce sont des règles
+  // de correction (si une base restaurée contient un de ces liens morts, il
+  // est automatiquement remplacé par l'URL officielle).
   const officialUrl = 'https://hoxera.is-a.dev';
   const storedUrl = store.settings.get('public_url');
   const oldOfficialUrls = ['https://hoxera.onrender.com', 'https://botdev-kqbd.onrender.com'];
@@ -104,7 +107,7 @@ async function main() {
   <div style="background:linear-gradient(135deg,#5865F2,#8B5CF6);border-radius:14px;padding:20px 22px;margin-bottom:18px">
     <div style="font-size:20px;font-weight:800">🎫 Transcription de ticket</div>
     <div style="opacity:.9;font-size:13px;margin-top:5px">Serveur : <b>${esc(t.server_name)}</b>${t.type_label ? ' · Type : <b>' + esc(t.type_label) + '</b>' : ''} · Salon : <b>#${esc(t.channel_name)}</b></div>
-    <div style="opacity:.75;font-size:12px;margin-top:5px">Fermé le ${esc(String(t.created_at).replace('T', ' ').slice(0, 16))} (UTC) · Propulsé par BotDev</div>
+    <div style="opacity:.75;font-size:12px;margin-top:5px">Fermé le ${esc(String(t.created_at).replace('T', ' ').slice(0, 16))} (UTC) · Propulsé par Hoxera</div>
   </div>
   <div style="background:#131320;border:1px solid #2a2a40;border-radius:14px;overflow:hidden">${lines}</div>
 </div></body></html>`);
@@ -141,15 +144,16 @@ async function main() {
 
   // ⚡ Hoxera (bot unique) : créé automatiquement depuis les variables
   // d'environnement — plus besoin de « créer un bot » depuis le dashboard.
-  // HOXERA_TOKEN est le nom recommandé ; les anciens noms restent acceptés
-  // (NOXERA_TOKEN, NEXORA_TOKEN) pour ne jamais casser l'existant.
+  // v193 : les anciens noms de variables (NOXERA_TOKEN, NEXORA_TOKEN) ont été
+  // retirés — seul HOXERA_TOKEN est accepté (aucun de ces anciens noms n'était
+  // défini en production).
   async function provisionHoxera() {
-    const token = process.env.HOXERA_TOKEN || process.env.NOXERA_TOKEN || process.env.NEXORA_TOKEN;
+    const token = process.env.HOXERA_TOKEN;
     if (!token) {
       console.log('[BotDev] ⚠️ HOXERA_TOKEN absent — Hoxera n\'est pas branché (ajoute la variable sur Render).');
       return null;
     }
-    const clientId = process.env.HOXERA_CLIENT_ID || process.env.NOXERA_CLIENT_ID || process.env.NEXORA_CLIENT_ID || process.env.DISCORD_CLIENT_ID || '';
+    const clientId = process.env.HOXERA_CLIENT_ID || process.env.DISCORD_CLIENT_ID || '';
     let bot = store.db.prepare('SELECT * FROM bots ORDER BY id LIMIT 1').get();
     if (bot) {
       // v174 : le nom du bot vit dans la base (renommable depuis le dashboard).
