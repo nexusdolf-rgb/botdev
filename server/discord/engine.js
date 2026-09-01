@@ -28,6 +28,7 @@ function resolveVariables(template, ctx) {
     .replace(/\{arg5\}/g, v.arg5 || '')
     .replace(/\{count\}/g, String(v.count ?? ''))
     .replace(/\{coins\}/g, String(v.coins ?? 0))
+    .replace(/\{channels\}/g, v.channelsMention || '')
     .replace(/\{random\.user\}/g, v.randomUser || '')
     .replace(/\{bot\}/g, v.botMention || '');
 }

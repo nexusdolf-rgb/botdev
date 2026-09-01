@@ -2189,6 +2189,36 @@ Dashboard.renderers.welcome = async (content, data) => {
         return;
       }
 
+      if (f.type === 'channelsmulti') {
+        // 📌 Salons à mentionner dans le message (règles, tickets, chat général…).
+        // Chaque salon sélectionné peut avoir un libellé (ex : « 📜 Règles »).
+        // La variable {channels} dans le message devient les mentions cliquables.
+        let current = [];
+        try { current = JSON.parse(String(ev.config[f.key] || '') || '[]') || []; } catch {}
+        const map = new Map(current.filter((x) => x && x.channel).map((x) => [String(x.channel), String(x.label || '')]));
+        const box = App.el(`<div class="dash-channelsmulti" data-k="${f.key}" data-channelsmulti="1"></div>`);
+        if (!textChannels.length) box.appendChild(App.el(Dashboard.noDiscordChoice('Aucun salon texte reçu de Discord')));
+        textChannels.forEach((ch) => {
+          const ref = '#' + ch.name;
+          const checked = map.has(ref) || map.has(ch.id);
+          const label = map.get(ref) ?? map.get(ch.id) ?? '';
+          const row = App.el(`
+            <div class="cm-row" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed var(--d-border)">
+              <label class="switch" style="flex-shrink:0"><input type="checkbox" data-cm-check="${App.escapeHtml(ref)}" ${checked ? 'checked' : ''} /><span class="slider"></span></label>
+              <span style="flex:0 1 auto;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px">💬 #${App.escapeHtml(ch.name)}</span>
+              <input class="dash-input" data-cm-label="${App.escapeHtml(ref)}" placeholder="Libellé (ex : 📜 Règles, 🎫 Ticket…)" value="${App.escapeHtml(label)}" style="flex:1 1 180px;min-width:0;height:34px;padding:4px 10px" ${checked ? '' : 'disabled'} />
+            </div>`);
+          row.querySelector('[data-cm-check]').onchange = (e) => {
+            row.querySelector('[data-cm-label]').disabled = !e.target.checked;
+          };
+          box.appendChild(row);
+        });
+        cfgZone.appendChild(App.el(`<label class="dash-label" style="margin-top:8px">${f.label}</label>`));
+        cfgZone.appendChild(box);
+        cfgZone.appendChild(App.el(`<div style="font-size:12px;color:var(--d-dim);margin-top:6px">💡 Dans le message, écris <b>{channels}</b> à l'endroit où les salons doivent apparaître. Ex : « Bienvenue {user} ! Je t'invite à jeter un œil ici :\n{channels} »</div>`));
+        return;
+      }
+
       cfgZone.appendChild(App.el(`<input class="dash-input" data-k="${f.key}" value="${App.escapeHtml(ev.config[f.key] ?? '')}" placeholder="${f.placeholder || ''}" />`));
     });
 
@@ -2200,7 +2230,22 @@ Dashboard.renderers.welcome = async (content, data) => {
         const get = (k) => { const el = cfgZone.querySelector(`[data-k="${k}"]`); return el ? (el.type === 'checkbox' ? el.checked : el.value) : ''; };
         const serverName = (data.guild && data.guild.name) || 'Ton serveur';
         const memberCount = String((data.guild && data.guild.members) || '?');
-        const txt = String(get('message') || 'Bienvenue {user} !').replace('{user}', '@NouveauMembre').replace('{server}', serverName).replace('{count}', memberCount);
+        let channelsPv = '';
+        try {
+          const cm = cfgZone.querySelector('[data-channelsmulti]');
+          if (cm) {
+            const sel = [];
+            cm.querySelectorAll('[data-cm-check]').forEach((cb) => {
+              if (!cb.checked) return;
+              const lbl = cm.querySelector(`[data-cm-label="${CSS.escape(cb.dataset.cmCheck)}"]`);
+              sel.push((lbl && lbl.value.trim()) ? lbl.value.trim() + ' → #' + cb.dataset.cmCheck.replace(/^#/, '') : '#' + cb.dataset.cmCheck.replace(/^#/, ''));
+            });
+            channelsPv = sel.join('\n');
+          }
+        } catch {}
+        let txt = String(get('message') || 'Bienvenue {user} !').replace('{user}', '@NouveauMembre').replace('{server}', serverName).replace('{count}', memberCount);
+        if (txt.includes('{channels}')) txt = txt.replace('{channels}', channelsPv || '(aucun salon sélectionné)');
+        const pvLines = (txt.split('\n') || []).map((l) => App.escapeHtml(l)).join('<br/>');
         const color = get('color') || '#57F287';
         const isEmbed = !!get('embed');
         const hasCard = !!get('card');
@@ -2210,8 +2255,8 @@ Dashboard.renderers.welcome = async (content, data) => {
             <div style="min-width:0;flex:1">
               <div style="font-size:13px"><b style="color:#f2f3f5">${App.escapeHtml(Dashboard.state.bot.name)}</b> <span style="background:#5865F2;color:#fff;font-size:9px;padding:1px 5px;border-radius:4px;vertical-align:middle">✓ APP</span></div>
               ${isEmbed
-                ? `<div style="border-left:4px solid ${App.escapeHtml(color)};background:#2B2D31;border-radius:4px;padding:10px 12px;margin-top:4px;font-size:13px;color:#dbdee1">${App.escapeHtml(txt)}${hasCard ? '<div style="margin-top:8px;height:74px;border-radius:8px;background:linear-gradient(135deg,#1b1e2e,#2b1e46);display:flex;align-items:center;justify-content:center;color:#8f93a8;font-size:12px">🖼️ Carte de bienvenue (avatar + pseudo)</div>' : ''}</div>`
-                : `<div style="font-size:13.5px;color:#dbdee1;margin-top:2px">${App.escapeHtml(txt)}</div>${hasCard ? '<div style="margin-top:6px;height:74px;max-width:340px;border-radius:8px;background:linear-gradient(135deg,#1b1e2e,#2b1e46);display:flex;align-items:center;justify-content:center;color:#8f93a8;font-size:12px">🖼️ Carte de bienvenue (avatar + pseudo)</div>' : ''}`}
+                ? `<div style="border-left:4px solid ${App.escapeHtml(color)};background:#2B2D31;border-radius:4px;padding:10px 12px;margin-top:4px;font-size:13px;color:#dbdee1">${pvLines}${hasCard ? '<div style="margin-top:8px;height:74px;border-radius:8px;background:linear-gradient(135deg,#1b1e2e,#2b1e46);display:flex;align-items:center;justify-content:center;color:#8f93a8;font-size:12px">🖼️ Carte de bienvenue (avatar + pseudo)</div>' : ''}</div>`
+                : `<div style="font-size:13.5px;color:#dbdee1;margin-top:2px">${pvLines}</div>${hasCard ? '<div style="margin-top:6px;height:74px;max-width:340px;border-radius:8px;background:linear-gradient(135deg,#1b1e2e,#2b1e46);display:flex;align-items:center;justify-content:center;color:#8f93a8;font-size:12px">🖼️ Carte de bienvenue (avatar + pseudo)</div>' : ''}`}
             </div>
           </div>`;
       };
@@ -2258,6 +2303,18 @@ Dashboard.renderers.welcome = async (content, data) => {
         if (inp.classList && inp.classList.contains('dash-roles-multi')) {
           // 🏷️ multi-rôles : valeurs du sélecteur, séparées par des virgules
           config[inp.dataset.k] = [...(inp.__discordSelected || [])].join(', ');
+          return;
+        }
+        if (inp.dataset.channelsmulti) {
+          // 📌 salons à mentionner : JSON [{channel, label}]
+          const rows = [];
+          inp.querySelectorAll('[data-cm-check]').forEach((cb) => {
+            if (!cb.checked) return;
+            const ref = cb.dataset.cmCheck;
+            const labelInp = inp.querySelector(`[data-cm-label="${CSS.escape(ref)}"]`);
+            rows.push({ channel: ref, label: labelInp ? labelInp.value.trim() : '' });
+          });
+          config[inp.dataset.k] = JSON.stringify(rows);
           return;
         }
         config[inp.dataset.k] = inp.type === 'checkbox' ? inp.checked : inp.value;

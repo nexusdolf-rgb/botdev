@@ -19,6 +19,7 @@ const EVENT_DEFS = {
       { key: 'plain', label: '📝 Mode texte simple (désactive le panneau premium)', type: 'checkbox', default: false },
       { key: 'color', label: 'Couleur de l\'embed', type: 'color', default: '#57F287' },
       { key: 'image', label: 'Image de l\'embed (URL, optionnel)', type: 'text', placeholder: 'https://…' },
+      { key: 'channels', label: '📌 Salons à mentionner (règles, tickets, chat général…) — utilise {channels} dans le message', type: 'channelsmulti', default: '' },
     ],
   },
   member_leave: {
@@ -31,6 +32,7 @@ const EVENT_DEFS = {
       { key: 'plain', label: '📝 Mode texte simple (désactive le panneau premium)', type: 'checkbox', default: false },
       { key: 'color', label: 'Couleur de l\'embed', type: 'color', default: '#ED4245' },
       { key: 'image', label: 'Image de l\'embed (URL, optionnel)', type: 'text', placeholder: 'https://…' },
+      { key: 'channels', label: '📌 Salons à mentionner — utilise {channels} dans le message', type: 'channelsmulti', default: '' },
     ],
   },
   autorole: {
@@ -78,7 +80,8 @@ async function runJoinEvent(botId, member, opts = {}) {
     const channel = await resolveChannel(member.guild, cfg.channel);
     trace(`bienvenue activée · salon « ${cfg.channel || ''} » → ${channel ? '#' + channel.name : 'INTROUVABLE ❌'}`);
     if (channel) {
-      const text = render(member, botRecord, cfg.message);
+      const channelsMention = channelMentions(member.guild, cfg.channels, resolveChannel);
+      const text = render(member, botRecord, cfg.message, { channelsMention });
       // 🖼️ Carte de bienvenue en image (avatar + pseudo) — jamais bloquante :
       // si la génération échoue, le message part sans image.
       let files = [];
@@ -173,7 +176,8 @@ async function runLeaveEvent(botId, member, opts = {}) {
   const channel = await resolveChannel(member.guild, cfg.channel);
   trace(`salon « ${cfg.channel || ''} » → ${channel ? '#' + channel.name : 'INTROUVABLE ❌'}`);
   if (!channel) return;
-  const text = render(member, botRecord, cfg.message);
+  const channelsMention = channelMentions(member.guild, cfg.channels, resolveChannel);
+  const text = render(member, botRecord, cfg.message, { channelsMention });
   if (!cfg.plain) {
     // 🏆 Panneau de départ assorti (premium par défaut) au panneau de bienvenue (membre partiel
     // possible : chaque info est optionnelle, rien ne casse).
@@ -205,11 +209,12 @@ async function runLeaveEvent(botId, member, opts = {}) {
   });
 }
 
-function render(member, botRecord, template) {
+function render(member, botRecord, template, extraVars = {}) {
   const guild = member.guild;
   const u = member.user || {}; // membre partiel possible (départ non mis en cache)
   const ctx = {
     vars: {
+      ...extraVars,
       userMention: `<@${member.id}>`,
       userTag: u.tag || u.username || 'un membre',
       userName: u.username || 'un membre',
@@ -230,6 +235,24 @@ function render(member, botRecord, template) {
   return resolveVariables(template || '', ctx);
 }
 
+// 📌 Salons à mentionner (v200) : config JSON [{channel, label}] → texte cliquable.
+// Ex : « 📜 Règles → <#123> » sur chaque ligne. Les salons introuvables sont ignorés.
+function channelMentions(guild, raw, resolve) {
+  let list = [];
+  try { list = JSON.parse(String(raw || '') || '[]'); } catch { return ''; }
+  if (!Array.isArray(list)) return '';
+  const lines = [];
+  for (const item of list) {
+    const ref = String((item && item.channel) || '').trim();
+    if (!ref) continue;
+    const ch = resolve ? resolve(guild, ref) : null;
+    if (!ch) continue;
+    const label = String((item && item.label) || '').trim();
+    lines.push(label ? `${label} → <#${ch.id}>` : `<#${ch.id}>`);
+  }
+  return lines.join('\n');
+}
+
 async function resolveChannel(guild, query) {
   if (!query) return null;
   // ⚠️ Le dashboard enregistre les salons avec un « # » (ex : #bienvenue) —
@@ -246,4 +269,4 @@ async function resolveChannel(guild, query) {
   return guild.channels.cache.find(c => c.name.toLowerCase() === q.toLowerCase() && c.isTextBased()) || null;
 }
 
-module.exports = { EVENT_DEFS, eventsState, runJoinEvent, runLeaveEvent, resolveChannel, parseRoleList };
+module.exports = { EVENT_DEFS, eventsState, runJoinEvent, runLeaveEvent, resolveChannel, parseRoleList, channelMentions };
