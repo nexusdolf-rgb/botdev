@@ -30,7 +30,7 @@ const MODULES = {
   },
   levels: {
     label: 'Niveaux', emoji: '📈', description: 'XP en discutant, niveau, classement…',
-    commands: ['rank', 'levels'],
+    commands: ['rank', 'levels', 'profile'],
   },
   community: {
     label: 'Communauté', emoji: '🎉', description: 'Giveaways, suggestions, boutique, rôles temporaires, sanctions…',
@@ -53,6 +53,7 @@ const CMD_DEFS = {
   // (défini à l'enregistrement + vérifié à l'exécution + message de refus propre)
   say: { label: 'say', desc: 'Répète ton message (réservé aux admins)', perms: [PermissionsBitField.Flags.Administrator] },
   reverse: { label: 'reverse', desc: 'Inverse ton texte' },
+  profile: { label: 'profile', desc: 'Carte de profil d\'un membre' },
   kick: { label: 'kick', desc: 'Expulse un membre', perms: [PermissionsBitField.Flags.KickMembers] },
   ban: { label: 'ban', desc: 'Bannit un membre', perms: [PermissionsBitField.Flags.BanMembers] },
   unban: { label: 'unban', desc: 'Débannit un utilisateur', perms: [PermissionsBitField.Flags.BanMembers] },
@@ -104,7 +105,7 @@ function buildSlashPayloads(botId) {
         { name: '🇮🇹 Italiano', value: 'it' },
       ]});
     }
-    if (['avatar', 'userinfo', 'kick', 'ban', 'timeout', 'warn', 'warns', 'balance', 'rank'].includes(name)) {
+    if (['avatar', 'userinfo', 'kick', 'ban', 'timeout', 'warn', 'warns', 'balance', 'rank', 'profile'].includes(name)) {
       options.push({ name: 'utilisateur', description: 'L\'utilisateur ciblé', type: ApplicationCommandOptionType.User, required: ['kick', 'ban', 'timeout', 'warn'].includes(name) });
     }
     // IMPORTANT : Discord exige que les options requises soient placées avant les optionnelles
@@ -534,6 +535,44 @@ async function execute(botId, entry, cmd, src) {
         .setColor('#5865F2')
         .setTitle('📈 Classement des niveaux')
         .setDescription(top.map((r, i) => `${medal[i] || `**${i + 1}.**`} <@${r.user_id}> — niveau **${r.level}** (${r.xp} XP)`).join('\n'));
+      await replyEmbed(embed);
+      break;
+    }
+    case 'profile': {
+      // 🪪 Carte de profil d'un membre (Phase 3, v196) : niveau, coins,
+      // rang, rôle principal et date d'arrivée sur le serveur.
+      const target = getUserArg() || author;
+      const row = store.xp.get(botId, guild.id, target.id) || { xp: 0, level: 0 };
+      const level = row.level || 0;
+      const cur = xpForLevel(level);
+      const next = xpForLevel(level + 1);
+      const pct = Math.max(0, Math.min(1, (row.xp - cur) / Math.max(1, (next - cur))));
+      const bars = 10;
+      const bar = '▰'.repeat(Math.round(pct * bars)) + '▱'.repeat(bars - Math.round(pct * bars));
+      const pos = store.xp.rankOf(botId, guild.id, target.id);
+      const coins = (store.economy.get(botId, guild.id, target.id) || {}).coins || 0;
+      const member = (guild.members && guild.members.cache.get(target.id)) || null;
+      const topRole = member && member.roles && member.roles.cache
+        ? [...member.roles.cache.values()].filter((r) => r.name !== '@everyone').sort((a, b) => b.position - a.position)[0]
+        : null;
+      const joined = member && member.joinedAt ? new Date(member.joinedAt) : null;
+      const joinedStr = joined && !isNaN(joined)
+        ? joined.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+        : 'inconnue';
+      const fields = [
+        { name: '📈 Niveau', value: String(level), inline: true },
+        { name: '🏆 Rang', value: `#${pos}`, inline: true },
+        { name: '💰 Coins', value: String(coins), inline: true },
+        { name: 'Progression', value: `${bar} ${Math.round(pct * 100)}%` },
+      ];
+      if (topRole) fields.push({ name: '🛡️ Rôle principal', value: topRole.name.slice(0, 100), inline: true });
+      fields.push({ name: '📅 Membre depuis', value: joinedStr, inline: true });
+      const embed = new EmbedBuilder()
+        .setColor('#5865F2')
+        .setAuthor({ name: `Profil de ${target.username}`, iconURL: target.displayAvatarURL({ dynamic: true }) })
+        .setThumbnail(target.displayAvatarURL({ dynamic: true }))
+        .addFields(fields)
+        .setFooter({ text: `Optimus Prime · ${guild.name}` });
       await replyEmbed(embed);
       break;
     }

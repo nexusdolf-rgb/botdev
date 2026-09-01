@@ -758,6 +758,8 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN voicetemp_category TEXT DEF
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN voicetemp_name TEXT DEFAULT ''"); } catch (e) {}
 // Nom du serveur affiché dans le panneau de tickets (bannière + titre automatiques)
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN panel_name TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN modmail_enabled INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN modmail_channel TEXT DEFAULT ''"); } catch (e) {}
 // 🌍 Langue du serveur (tous les messages publics du bot suivent) — fr par défaut
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN lang TEXT DEFAULT 'fr'"); } catch (e) {}
 
@@ -946,7 +948,7 @@ const guildSettings = {
   set: (botId, guildId, fields) => {
     const cur = guildSettings.get(botId, guildId) || { prefix: '', warn_limit: 0, warn_action: 'none' };
     const next = { ...cur, ...fields };
-    const cols = ['prefix', 'warn_limit', 'warn_action', 'warn_timeout_limit', 'warn_timeout_min', 'starboard_channel', 'starboard_min', 'live_channel', 'live_ping', 'ticket_log_channel', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_mode', 'am_rule_actions', 'am_blacklist_rules', 'am_blacklist_thresholds', 'am_blacklist_duration_min', 'am_blacklist_channel', 'am_blacklist_title', 'am_blacklist_color', 'am_blacklist_footer', 'am_native_enabled', 'am_native_alert_channel', 'am_exempt_roles', 'am_exempt_channels', 'am_exempt_users', 'am_warn_text', 'am_timeout_min', 'am_warn_limit', 'am_warn_action', 'am_warn_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'lang', 'timezone'];
+    const cols = ['prefix', 'warn_limit', 'warn_action', 'warn_timeout_limit', 'warn_timeout_min', 'starboard_channel', 'starboard_min', 'live_channel', 'live_ping', 'ticket_log_channel', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_mode', 'am_rule_actions', 'am_blacklist_rules', 'am_blacklist_thresholds', 'am_blacklist_duration_min', 'am_blacklist_channel', 'am_blacklist_title', 'am_blacklist_color', 'am_blacklist_footer', 'am_native_enabled', 'am_native_alert_channel', 'am_exempt_roles', 'am_exempt_channels', 'am_exempt_users', 'am_warn_text', 'am_timeout_min', 'am_warn_limit', 'am_warn_action', 'am_warn_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'modmail_enabled', 'modmail_channel', 'lang', 'timezone'];
     const vals = {
       bot_id: botId, guild_id: guildId,
       prefix: String(next.prefix || '').slice(0, 5),
@@ -1017,6 +1019,8 @@ const guildSettings = {
       voicetemp_category: String(next.voicetemp_category || '').slice(0, 100),
       voicetemp_name: String(next.voicetemp_name || '').slice(0, 50),
       panel_name: String(next.panel_name || '').slice(0, 100),
+      modmail_enabled: next.modmail_enabled ? 1 : 0,
+      modmail_channel: String(next.modmail_channel || '').slice(0, 100),
       lang: ['fr', 'en', 'es', 'de', 'pt', 'it'].includes(String(next.lang || '')) ? String(next.lang) : 'fr',
       timezone: tzUtil.safeTz(next.timezone),
     };
@@ -1540,6 +1544,48 @@ const transcripts = {
   get: (token) => db.prepare('SELECT * FROM transcripts WHERE token = ?').get(String(token)) || null,
   // Nombre de tickets déjà ouverts par un membre (affiché au staff à l'ouverture)
   countByOpener: (botId, guildId, openerId) => db.prepare('SELECT COUNT(*) AS n FROM transcripts WHERE bot_id = ? AND guild_id = ? AND opener_id = ?').get(botId, guildId, String(openerId)).n,
+  // 🔎 Recherche de transcriptions (dashboard) : par salon, serveur, ouvreur,
+  // type ou contenu. Sans mot-clé : les 100 plus récentes du serveur.
+  list: (botId, guildId, q = '') => {
+    const query = String(q || '').trim().slice(0, 60);
+    if (!query) {
+      return db.prepare('SELECT token, channel_name, server_name, opener_id, type_label, created_at FROM transcripts WHERE bot_id = ? AND guild_id = ? ORDER BY created_at DESC, token DESC LIMIT 100')
+        .all(botId, String(guildId));
+    }
+    const like = `%${query}%`;
+    return db.prepare(`SELECT token, channel_name, server_name, opener_id, type_label, created_at FROM transcripts
+      WHERE bot_id = ? AND guild_id = ? AND (channel_name LIKE ? OR server_name LIKE ? OR opener_id LIKE ? OR type_label LIKE ? OR messages LIKE ?)
+      ORDER BY created_at DESC, token DESC LIMIT 100`)
+      .all(botId, String(guildId), like, like, like, like, like);
+  },
+};
+
+// ---------------------- 💬 Modmail (messages privés → serveur) ----------------------
+// Chaque conversation = un fil Discord dans le salon modmail du serveur.
+// L'utilisateur écrit en MP au bot, le staff répond dans le fil (relais MP).
+try { db.exec(`
+CREATE TABLE IF NOT EXISTS modmail_threads (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  user_tag TEXT DEFAULT '',
+  thread_id TEXT NOT NULL,
+  channel_id TEXT DEFAULT '',
+  closed INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now')),
+  closed_at TEXT DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_modmail_open ON modmail_threads (bot_id, guild_id, user_id, closed);`); } catch (e) {}
+
+const modmail = {
+  openByUser: (botId, guildId, userId) => db.prepare('SELECT * FROM modmail_threads WHERE bot_id = ? AND guild_id = ? AND user_id = ? AND closed = 0 ORDER BY id DESC LIMIT 1').get(botId, String(guildId), String(userId)) || null,
+  findByThread: (botId, threadId) => db.prepare('SELECT * FROM modmail_threads WHERE bot_id = ? AND thread_id = ?').get(botId, String(threadId)) || null,
+  create: (t) => db.prepare('INSERT INTO modmail_threads (bot_id, guild_id, user_id, user_tag, thread_id, channel_id) VALUES (@bot_id, @guild_id, @user_id, @user_tag, @thread_id, @channel_id)')
+    .run({ bot_id: t.bot_id, guild_id: String(t.guild_id), user_id: String(t.user_id), user_tag: String(t.user_tag || '').slice(0, 60), thread_id: String(t.thread_id), channel_id: String(t.channel_id || '') }),
+  close: (id) => db.prepare("UPDATE modmail_threads SET closed = 1, closed_at = datetime('now') WHERE id = ?").run(id),
+  listOpen: (botId, guildId) => db.prepare('SELECT * FROM modmail_threads WHERE bot_id = ? AND guild_id = ? AND closed = 0 ORDER BY id DESC LIMIT 100').all(botId, String(guildId)),
+  listAll: (botId, guildId, limit = 50) => db.prepare('SELECT * FROM modmail_threads WHERE bot_id = ? AND guild_id = ? ORDER BY id DESC LIMIT ?').all(botId, String(guildId), Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200)),
 };
 
 // ---------------------- Mariages (fun & communauté) ----------------------
@@ -1868,4 +1914,4 @@ const liveSocials = {
   count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM live_socials WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
 };
 
-module.exports = { db, embedTemplates, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, closedTickets, botProfiles, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, afk, guildEvents, quizScores, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories };
+module.exports = { db, embedTemplates, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, modmail, closedTickets, botProfiles, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, afk, guildEvents, quizScores, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories };

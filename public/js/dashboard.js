@@ -445,6 +445,8 @@ Dashboard.MODULES = [
   ['members', '👥', 'Membres'],
   ['stats', '📈', 'Statistiques'],
   ['logs', '📜', 'Journaux'],
+  ['transcripts', '🔎', 'Transcriptions'],
+  ['modmail', '💬', 'Modmail'],
   ['server', '⚙️', 'Réglages serveur'],
   ['botprofile', '🤖', 'Identité du bot'],
 ];
@@ -453,6 +455,7 @@ Dashboard.BOT_MODULES = [
   ['modules', '📦', 'Modules'],
   ['health', '🩺', 'Santé du bot'],
   ['botsettings', '🤖', 'Réglages du bot'],
+  ['help', '❓', 'Aide & Guide'],
 ];
 
 // 🎛️ Composant partagé : carte de sélection du serveur (style DraftBot).
@@ -1237,7 +1240,7 @@ Dashboard.renderContent = async (content) => {
     Dashboard.state.feedTimer = null;
   }
 
-  const botLevel = ['commands', 'modules', 'health', 'botsettings'].includes(module);
+  const botLevel = ['commands', 'modules', 'health', 'botsettings', 'help'].includes(module);
   if (!botLevel && !guildId) return;
 
   try {
@@ -1266,7 +1269,7 @@ Dashboard.renderContent = async (content) => {
 // ============================================================
 Dashboard.header = (content, icon, title, sub) => {
   content.innerHTML = '';
-  const isBotScope = ['commands', 'modules', 'health', 'botsettings'].includes(Dashboard.state.module);
+  const isBotScope = ['commands', 'modules', 'health', 'botsettings', 'help'].includes(Dashboard.state.module);
   const isGuildScope = Boolean(Dashboard.state.guildId) && !isBotScope;
   const bot = Dashboard.state.bot || {};
   const statusLabel = bot.online === false ? 'Optimus Prime hors ligne' : 'Optimus Prime en ligne';
@@ -4787,4 +4790,170 @@ Dashboard.renderers.botsettings = async (content) => {
     };
     c2.appendChild(nowBtn);
   } catch {}
+};
+
+// ============================================================
+// Phase 3 (v196) — Fonctionnalités avancées
+// ============================================================
+
+// 🔎 Recherche de transcriptions
+Dashboard.renderers.transcripts = async (content, data) => {
+  const { bot, guildId } = Dashboard.state;
+  const root = Dashboard.header(content, '🔎', 'Recherche de transcriptions', 'Retrouve un ticket fermé par salon, serveur, ouvreur, type ou contenu.');
+  const searchCard = App.el(`
+    <div class="dash-card">
+      <div class="card-head">
+        <div><h3>🔎 Rechercher</h3><div class="desc">Tape un mot-clé (salon, membre, contenu…) puis appuie sur Entrée — sans mot-clé, les 100 dernières transcriptions.</div></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
+        <input class="dash-input" id="tr-search" placeholder="Ex : support, Bob, remboursement…" style="flex:1;min-width:220px" />
+        <button class="dash-btn dash-btn-primary" id="tr-go">Rechercher</button>
+      </div>
+    </div>`);
+  root.appendChild(searchCard);
+  const listEl = App.el(`<div id="tr-list" style="margin-top:16px"><div class="dash-empty"><div class="big">🔎</div><p>Lance une recherche pour voir les transcriptions du serveur.</p></div></div>`);
+  root.appendChild(listEl);
+  const run = async (q) => {
+    listEl.innerHTML = '<div class="spinner"></div>';
+    try {
+      const { items } = await App.api(`/bots/${bot.id}/guilds/${guildId}/transcripts${q ? '?q=' + encodeURIComponent(q) : ''}`);
+      if (!items || !items.length) {
+        listEl.innerHTML = '<div class="dash-empty"><div class="big">📭</div><p>Aucune transcription trouvée pour cette recherche.</p></div>';
+        return;
+      }
+      listEl.innerHTML = `<div style="overflow-x:auto"><table class="dash-table"><thead><tr><th>Salon</th><th>Type</th><th>Serveur</th><th>Ouvreur</th><th>Date</th><th></th></tr></thead><tbody></tbody></table></div>`;
+      const tb = listEl.querySelector('tbody');
+      items.forEach((t) => {
+        const tr = App.el(`<tr>
+          <td><b>#${App.escapeHtml(t.channel_name || '—')}</b></td>
+          <td>${App.escapeHtml(t.type_label || '—')}</td>
+          <td>${App.escapeHtml(t.server_name || '—')}</td>
+          <td>${App.escapeHtml(t.opener_id || '—')}</td>
+          <td style="white-space:nowrap">${App.escapeHtml(String(t.created_at || '').slice(0, 16))}</td>
+          <td><a class="dash-btn dash-btn-sm" target="_blank" rel="noopener" href="/transcript/${App.escapeHtml(t.token)}">👁 Voir</a></td>
+        </tr>`);
+        tb.appendChild(tr);
+      });
+    } catch (e) {
+      listEl.innerHTML = `<div class="dash-empty"><div class="big">⚠️</div><p>${App.escapeHtml(e.message)}</p></div>`;
+    }
+  };
+  const go = () => run(searchCard.querySelector('#tr-search').value.trim());
+  searchCard.querySelector('#tr-go').onclick = go;
+  searchCard.querySelector('#tr-search').onkeydown = (e) => { if (e.key === 'Enter') go(); };
+  run('');
+};
+
+// 💬 Modmail : configuration + conversations
+Dashboard.renderers.modmail = async (content, data) => {
+  const { bot, guildId } = Dashboard.state;
+  const root = Dashboard.header(content, '💬', 'Modmail', 'Tes membres t\'écrivent en message privé : chaque conversation arrive dans un fil du salon choisi. Le staff répond dans le fil, le membre reçoit en MP.');
+  const textChannels = (data.channels || []).filter((c) => !c.category && !c.voice);
+
+  const load = async () => {
+    root.querySelectorAll('.dash-card[data-mm]').forEach((c) => c.remove());
+    let m;
+    try { m = await App.api(`/bots/${bot.id}/guilds/${guildId}/modmail`); }
+    catch (e) { root.appendChild(App.el(`<div class="dash-empty"><div class="big">⚠️</div><p>${App.escapeHtml(e.message)}</p></div>`)); return; }
+
+    // ——— Configuration ———
+    const cfgCard = App.el(`
+      <div class="dash-card" data-mm>
+        <div class="card-head">
+          <div><h3>⚙️ Configuration</h3><div class="desc">Active le modmail et choisis le salon où les conversations apparaîtront.</div></div>
+          <label class="switch" aria-label="Activer le modmail"><input type="checkbox" id="mm-enabled" ${m.enabled ? 'checked' : ''} /><span class="slider"></span></label>
+        </div>
+        <div style="margin-top:12px">
+          <label class="dash-label">Salon des conversations</label>
+          <select class="dash-select" id="mm-channel" ${m.enabled ? '' : 'disabled'}>
+            <option value="">— Choisir un salon —</option>
+            ${textChannels.map((c) => {
+              const val = '#' + c.name;
+              const sel = typeof Dashboard.discordRefMatches === 'function' && Dashboard.discordRefMatches(m.channel, c) ? 'selected' : '';
+              return `<option value="${App.escapeHtml(val)}" ${sel}>💬 #${App.escapeHtml(c.name)}</option>`;
+            }).join('')}
+          </select>
+        </div>
+        <div style="margin-top:14px"><button class="dash-btn dash-btn-primary" id="mm-save">💾 Enregistrer</button></div>
+      </div>`);
+    root.appendChild(cfgCard);
+    const en = cfgCard.querySelector('#mm-enabled');
+    const chan = cfgCard.querySelector('#mm-channel');
+    en.onchange = () => { chan.disabled = !en.checked; };
+    cfgCard.querySelector('#mm-save').onclick = async () => {
+      try {
+        await App.api(`/bots/${bot.id}/guilds/${guildId}/modmail`, { method: 'PUT', body: { enabled: en.checked, channel: chan.value } });
+        App.toast('Modmail enregistré !');
+        await load();
+      } catch (e) { App.toast(e.message, 'error'); }
+    };
+
+    // ——— Conversations ouvertes ———
+    const open = m.open || [];
+    const openCard = App.el(`
+      <div class="dash-card" data-mm style="margin-top:16px">
+        <h3>💬 Conversations ouvertes (${open.length})</h3>
+        <div class="desc">Réponds directement dans le fil Discord du salon modmail — le membre recevra ta réponse en MP.</div>
+        ${open.length ? `<div style="overflow-x:auto;margin-top:8px"><table class="dash-table"><thead><tr><th>Membre</th><th>Ouverte le</th><th></th></tr></thead><tbody></tbody></table></div>` : `<div class="dash-empty" style="margin-top:10px"><div class="big">📭</div><p>Aucune conversation ouverte.</p></div>`}
+      </div>`);
+    root.appendChild(openCard);
+    const tb = openCard.querySelector('tbody');
+    if (tb) {
+      open.forEach((t) => {
+        const tr = App.el(`<tr>
+          <td><b>${App.escapeHtml(t.user_tag || t.user_id)}</b><small style="display:block;color:var(--d-dim)">ID ${App.escapeHtml(t.user_id)}</small></td>
+          <td style="white-space:nowrap">${App.escapeHtml(String(t.created_at || '').slice(0, 16))}</td>
+          <td><button class="dash-btn dash-btn-sm dash-btn-danger" data-close>🔒 Fermer</button></td>
+        </tr>`);
+        tr.querySelector('[data-close]').onclick = async () => {
+          try {
+            await App.api(`/bots/${bot.id}/guilds/${guildId}/modmail/close`, { method: 'POST', body: { threadId: t.thread_id } });
+            App.toast('Conversation fermée.');
+            await load();
+          } catch (e) { App.toast(e.message, 'error'); }
+        };
+        tb.appendChild(tr);
+      });
+    }
+  };
+  await load();
+};
+
+// ❓ Aide intégrée (module global du bot)
+Dashboard.renderers.help = async (content) => {
+  const root = Dashboard.header(content, '❓', 'Aide & Guide', 'Bien démarrer, configurer, se faire aider — tout est ici.');
+  const bot = Dashboard.state.bot || {};
+  const serverName = (Dashboard.state.guildData && Dashboard.state.guildData.name) || 'ton serveur';
+
+  const block = (icon, title, desc) => `<div class="dash-card" style="margin-bottom:16px"><h3>${icon} ${title}</h3><div class="desc">${desc}</div></div>`;
+
+  root.appendChild(App.el(block('🚀', 'Bien démarrer en 3 étapes', `
+    <ol style="margin:0;padding-left:20px;line-height:1.9">
+      <li><b>Ajoute ${App.escapeHtml(bot.name || 'Hoxera')}</b> à ${App.escapeHtml(serverName)} (bouton « Ajouter le bot » en haut à droite).</li>
+      <li><b>Choisis ton serveur</b> dans le sélecteur en haut, puis ouvre un module depuis le menu de gauche.</li>
+      <li><b>Enregistre tes réglages</b> : chaque module a son bouton « Enregistrer » — une barre de sauvegarde apparaît en bas dès qu'un réglage change.</li>
+    </ol>`)));
+
+  root.appendChild(App.el(block('🧩', 'Les modules en un coup d\'œil', `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px">
+      <div class="dash-badge" style="display:flex;gap:8px;padding:10px">🎫 Tickets : boutons, types, transcriptions automatiques en MP</div>
+      <div class="dash-badge" style="display:flex;gap:8px;padding:10px">👋 Bienvenue : message d'accueil + rôles automatiques</div>
+      <div class="dash-badge" style="display:flex;gap:8px;padding:10px">📈 Niveaux : XP, rangs, récompenses de rôles, /profile</div>
+      <div class="dash-badge" style="display:flex;gap:8px;padding:10px">💰 Économie : coins, boutique, giveaways, classement</div>
+      <div class="dash-badge" style="display:flex;gap:8px;padding:10px">🛡️ Modération : sanctions, blacklist, anti-raid, journaux</div>
+      <div class="dash-badge" style="display:flex;gap:8px;padding:10px">💬 Modmail : tes membres t'écrivent en MP, tu réponds ici</div>
+    </div>`)));
+
+  root.appendChild(App.el(block('⚡', 'Astuces', `
+    <ul style="margin:0;padding-left:20px;line-height:1.9">
+      <li><b>Recherche rapide</b> : touche <kbd>Ctrl</kbd>+<kbd>K</kbd> (ou l'icône 🔍) pour sauter d'un module à l'autre.</li>
+      <li><b>Mode clair / sombre</b> : bouton 🌓 en haut à droite, mémorisé sur ton appareil.</li>
+      <li><b>Couleur du dashboard</b> : bouton 🎨 pour choisir ta teinte préférée.</li>
+      <li><b>Chaque serveur a ses réglages</b> : change de serveur dans le sélecteur en haut.</li>
+      <li><b>Mobile</b> : navigation en bas d'écran (Accueil, Tickets, Membres, Stats + « Plus »).</li>
+    </ul>`)));
+
+  root.appendChild(App.el(block('🆘', 'Besoin d\'aide ?', `
+    <p style="margin:0 0 12px;color:var(--d-dim);line-height:1.6">Rejoins le serveur support officiel : l'équipe et la communauté répondent en français.</p>
+    <a class="dash-btn" target="_blank" rel="noopener" href="https://discord.gg/X9hTdr9N3" style="text-decoration:none">🆘 Rejoindre le support</a>`)));
 };

@@ -1186,6 +1186,57 @@ router.get('/bots/:id/guilds/:guildId/activity', requireAuth, async (req, res) =
   res.json({ items: store.activity.recent(bot.id, req.params.guildId, 30) });
 });
 
+// 🔎 Recherche de transcriptions (Phase 3, v196) : par salon, serveur,
+// ouvreur, type ou contenu. Sans mot-clé : les 100 plus récentes.
+router.get('/bots/:id/guilds/:guildId/transcripts', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const q = String(req.query.q || '').trim().slice(0, 60);
+  res.json({ items: store.transcripts.list(bot.id, req.params.guildId, q) });
+});
+
+// 💬 Modmail : configuration + conversations ouvertes (Phase 3, v196)
+router.get('/bots/:id/guilds/:guildId/modmail', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const cfg = store.guildSettings.get(bot.id, req.params.guildId) || {};
+  res.json({
+    enabled: !!cfg.modmail_enabled,
+    channel: cfg.modmail_channel || '',
+    open: store.modmail.listOpen(bot.id, req.params.guildId),
+    history: store.modmail.listAll(bot.id, req.params.guildId, 20),
+  });
+});
+
+router.put('/bots/:id/guilds/:guildId/modmail', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const { enabled, channel } = req.body || {};
+  const cfg = store.guildSettings.get(bot.id, req.params.guildId) || {};
+  store.guildSettings.set(bot.id, req.params.guildId, {
+    modmail_enabled: enabled === undefined ? !!cfg.modmail_enabled : !!enabled,
+    modmail_channel: String(channel || cfg.modmail_channel || '').slice(0, 100),
+  });
+  store.activity.add(bot.id, req.params.guildId, '💬', 'Modmail : configuration mise à jour');
+  res.json({ ok: true });
+});
+
+router.post('/bots/:id/guilds/:guildId/modmail/close', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const { threadId } = req.body || {};
+  const list = store.modmail.listOpen(bot.id, req.params.guildId);
+  const target = list.find((t) => String(t.thread_id) === String(threadId || ''));
+  if (!target) return res.status(404).json({ error: 'Conversation introuvable ou déjà fermée.' });
+  store.modmail.close(target.id);
+  store.activity.add(bot.id, req.params.guildId, '🔒', 'Modmail : conversation fermée');
+  res.json({ ok: true });
+});
+
 // 🧪 Test en direct d'un compte suivi : le serveur (IP de production) exécute
 // le détecteur ET vérifie le vrai salon/les permissions d'annonce.
 router.post('/bots/:id/guilds/:guildId/livesocials/:sid/test', requireAuth, async (req, res) => {

@@ -13,6 +13,7 @@ const INTENTS = [
   GatewayIntentBits.GuildVoiceStates,
   GatewayIntentBits.GuildMessageReactions, // ⭐ starboard
   GatewayIntentBits.GuildInvites,          // 📨 traqueur d'invitations
+  GatewayIntentBits.DirectMessages,        // 💬 modmail (messages privés → serveur)
 ];
 
 const clients = new Map(); // botId -> { client, record }
@@ -361,6 +362,8 @@ function attachListeners(botId, entry) {
     extra.trackMessage(botId, m);
     // 🌙 Statut AFK (v188) : sort l'auteur de l'AFK + prévient les mentions
     extra.onMessage(botId, m).catch(() => {});
+    // 💬 Modmail (v196) : messages privés → serveur, réponses staff → MP
+    require('./modmail').onMessage(botId, m).catch((e) => console.error('[BotDev] modmail:', (e && e.message) || e));
     const { runMessageHandler } = require('./engine');
     runMessageHandler(botId, entry, m).catch(e => console.error('[BotDev] message error:', e.message));
   });
