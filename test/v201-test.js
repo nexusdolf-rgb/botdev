@@ -34,7 +34,7 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
       ['300', { id: '300', name: 'general' }],
     ]) },
   };
-  const fakeResolve = (guild, ref) => {
+  const fakeResolve = async (guild, ref) => {
     const name = String(ref || '').replace(/^#/, '').toLowerCase();
     for (const ch of guild.channels.cache.values()) if (ch.name.toLowerCase() === name) return ch;
     return null;
@@ -42,19 +42,19 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
 
   // ================= 1. {salon} dans la phrase =================
   console.log('\n1️⃣  Phrases détaillées ({salon})');
-  const out1 = events.channelMentions(fakeGuild, JSON.stringify([
+  const out1 = await events.channelMentions(fakeGuild, JSON.stringify([
     { channel: '#regles', label: '📜 Je vous invite à prendre connaissance de {salon}' },
   ]), fakeResolve);
   check('phrase avec {salon} → mention à l\u0027intérieur', out1 === '📜 Je vous invite à prendre connaissance de <#100>');
-  const out2 = events.channelMentions(fakeGuild, JSON.stringify([
+  const out2 = await events.channelMentions(fakeGuild, JSON.stringify([
     { channel: '#regles', label: '{salon}' },
   ]), fakeResolve);
   check('{salon} seul → mention seule', out2 === '<#100>');
-  const out3 = events.channelMentions(fakeGuild, JSON.stringify([
+  const out3 = await events.channelMentions(fakeGuild, JSON.stringify([
     { channel: '#regles', label: 'Deux mentions : {salon} et encore {salon}' },
   ]), fakeResolve);
   check('plusieurs {salon} remplacés', out3 === 'Deux mentions : <#100> et encore <#100>');
-  const out4 = events.channelMentions(fakeGuild, JSON.stringify([
+  const out4 = await events.channelMentions(fakeGuild, JSON.stringify([
     { channel: '#regles', label: '📜 Je vous invite à prendre connaissance de {salon}' },
     { channel: '#tickets', label: '🎫 Besoin d\u0027aide ? Ouvre un ticket : {salon}' },
     { channel: '#general', label: '💬 Viens discuter : {salon}' },
@@ -65,12 +65,12 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
 
   // ================= 2. Compatibilité arrière =================
   console.log('\n2️⃣  Compatibilité arrière');
-  const old1 = events.channelMentions(fakeGuild, JSON.stringify([{ channel: '#tickets', label: '🎫 Ticket' }]), fakeResolve);
+  const old1 = await events.channelMentions(fakeGuild, JSON.stringify([{ channel: '#tickets', label: '🎫 Ticket' }]), fakeResolve);
   check('ancien format « phrase → mention »', old1 === '🎫 Ticket → <#200>');
-  const old2 = events.channelMentions(fakeGuild, JSON.stringify([{ channel: '#general', label: '' }]), fakeResolve);
+  const old2 = await events.channelMentions(fakeGuild, JSON.stringify([{ channel: '#general', label: '' }]), fakeResolve);
   check('sans phrase → mention seule', old2 === '<#300>');
-  check('salon introuvable ignoré', events.channelMentions(fakeGuild, JSON.stringify([{ channel: '#x', label: 'X' }]), fakeResolve) === '');
-  check('JSON invalide → rien', events.channelMentions(fakeGuild, 'bzzt', fakeResolve) === '');
+  check('salon introuvable ignoré', await events.channelMentions(fakeGuild, JSON.stringify([{ channel: '#x', label: 'X' }]), fakeResolve) === '');
+  check('JSON invalide → rien', await events.channelMentions(fakeGuild, 'bzzt', fakeResolve) === '');
 
   // ================= 3. Définitions + dashboard =================
   console.log('\n3️⃣  Dashboard (modèle + aperçu)');

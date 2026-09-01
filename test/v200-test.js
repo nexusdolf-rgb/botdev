@@ -45,7 +45,7 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
       ['300', { id: '300', name: 'general' }],
     ]) },
   };
-  const fakeResolve = (guild, ref) => {
+  const fakeResolve = async (guild, ref) => {
     const name = String(ref || '').replace(/^#/, '').toLowerCase();
     for (const ch of guild.channels.cache.values()) {
       if (ch.name.toLowerCase() === name) return ch;
@@ -58,22 +58,22 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
     { channel: '#tickets', label: '🎫 Ticket' },
     { channel: '#general', label: '💬 Chat général' },
   ]);
-  const out1 = events.channelMentions(fakeGuild, cfg1, fakeResolve);
+  const out1 = await events.channelMentions(fakeGuild, cfg1, fakeResolve);
   check('3 mentions construites', out1.split('\n').length === 3);
   check('format : libellé → mention', out1.includes('📜 Règles → <#100>') && out1.includes('🎫 Ticket → <#200>'));
   check('toutes les lignes sont des mentions valides', /^.+ → <#\d+>$/.test(out1.split('\n')[0]));
   // Sans libellé : juste la mention
   const cfg2 = JSON.stringify([{ channel: '#general', label: '' }]);
-  const out2 = events.channelMentions(fakeGuild, cfg2, fakeResolve);
+  const out2 = await events.channelMentions(fakeGuild, cfg2, fakeResolve);
   check('sans libellé → mention seule', out2 === '<#300>');
   // Salon introuvable : ignoré
   const cfg3 = JSON.stringify([{ channel: '#inexistant', label: 'X' }, { channel: '#regles', label: 'R' }]);
-  const out3 = events.channelMentions(fakeGuild, cfg3, fakeResolve);
+  const out3 = await events.channelMentions(fakeGuild, cfg3, fakeResolve);
   check('salon introuvable ignoré', out3 === 'R → <#100>');
   // JSON invalide / vide : chaîne vide
-  check('config vide → rien', events.channelMentions(fakeGuild, '', fakeResolve) === '');
-  check('JSON invalide → rien', events.channelMentions(fakeGuild, 'pas du json', fakeResolve) === '');
-  check('null → rien', events.channelMentions(fakeGuild, null, fakeResolve) === '');
+  check('config vide → rien', await events.channelMentions(fakeGuild, '', fakeResolve) === '');
+  check('JSON invalide → rien', await events.channelMentions(fakeGuild, 'pas du json', fakeResolve) === '');
+  check('null → rien', await events.channelMentions(fakeGuild, null, fakeResolve) === '');
 
   // ================= 3. resolveVariables {channels} =================
   console.log('\n3️⃣  Variable {channels}');
@@ -87,8 +87,8 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
   // ================= 4. render() passe channelsMention =================
   console.log('\n4️⃣  Intégration dans render()');
   const src = read('server/discord/events.js');
-  check('runJoinEvent passe channelsMention', src.includes("const channelsMention = channelMentions(member.guild, cfg.channels, resolveChannel);"));
-  check('runLeaveEvent passe channelsMention', src.includes("const channelsMention = channelMentions(member.guild, cfg.channels, resolveChannel);"));
+  check('runJoinEvent passe channelsMention', src.includes("const channelsMention = await channelMentions(member.guild, cfg.channels, resolveChannel);"));
+  check('runLeaveEvent passe channelsMention', src.includes("const channelsMention = await channelMentions(member.guild, cfg.channels, resolveChannel);"));
   check('render accepte extraVars', src.includes('function render(member, botRecord, template, extraVars = {})'));
   const engineSrc = read('server/discord/engine.js');
   check('engine : {channels} ajouté', engineSrc.includes('.replace(/\\{channels\\}/g, v.channelsMention || \'\')'));

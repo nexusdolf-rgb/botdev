@@ -2190,32 +2190,77 @@ Dashboard.renderers.welcome = async (content, data) => {
       }
 
       if (f.type === 'channelsmulti') {
-        // 📌 Salons à mentionner dans le message (règles, tickets, chat général…).
-        // Chaque salon sélectionné peut avoir un libellé (ex : « 📜 Règles »).
-        // La variable {channels} dans le message devient les mentions cliquables.
+        // 📌 Sélecteur de salons à détailler : on choisit les salons dans la
+        // liste déroulante (➕ Ajouter), chacun reçoit une phrase où {salon}
+        // devient la mention cliquable du salon. La variable {channels} dans
+        // le message affiche toutes les phrases, une par ligne.
         let current = [];
         try { current = JSON.parse(String(ev.config[f.key] || '') || '[]') || []; } catch {}
-        const map = new Map(current.filter((x) => x && x.channel).map((x) => [String(x.channel), String(x.label || '')]));
-        const box = App.el(`<div class="dash-channelsmulti" data-k="${f.key}" data-channelsmulti="1"></div>`);
-        if (!textChannels.length) box.appendChild(App.el(Dashboard.noDiscordChoice('Aucun salon texte reçu de Discord')));
+        const labels = new Map(); // ref '#nom' → phrase
+        const order = [];         // refs dans l'ordre d'ajout
+        current.forEach((x) => {
+          if (x && x.channel && !labels.has(String(x.channel))) {
+            order.push(String(x.channel));
+            labels.set(String(x.channel), String(x.label || ''));
+          }
+        });
+        // Recaler les anciennes configs (ID Discord) sur le nom « #nom »
         textChannels.forEach((ch) => {
           const ref = '#' + ch.name;
-          const checked = map.has(ref) || map.has(ch.id);
-          const label = map.get(ref) ?? map.get(ch.id) ?? '';
-          const row = App.el(`
-            <div class="cm-row" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed var(--d-border)">
-              <label class="switch" style="flex-shrink:0"><input type="checkbox" data-cm-check="${App.escapeHtml(ref)}" ${checked ? 'checked' : ''} /><span class="slider"></span></label>
-              <span style="flex:0 1 auto;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px">💬 #${App.escapeHtml(ch.name)}</span>
-              <input class="dash-input" data-cm-label="${App.escapeHtml(ref)}" placeholder="Phrase (ex : je vous invite à prendre connaissance de {salon})" value="${App.escapeHtml(label)}" style="flex:1 1 180px;min-width:0;height:34px;padding:4px 10px" ${checked ? '' : 'disabled'} />
-            </div>`);
-          row.querySelector('[data-cm-check]').onchange = (e) => {
-            row.querySelector('[data-cm-label]').disabled = !e.target.checked;
-          };
-          box.appendChild(row);
+          if (labels.has(String(ch.id)) && !labels.has(ref)) {
+            labels.set(ref, labels.get(String(ch.id)));
+            labels.delete(String(ch.id));
+            const i = order.indexOf(String(ch.id));
+            if (i >= 0) order[i] = ref;
+          }
         });
         cfgZone.appendChild(App.el(`<label class="dash-label" style="margin-top:8px">${f.label}</label>`));
+        const box = App.el(`<div class="dash-channelsmulti" data-k="${f.key}" data-channelsmulti="1"></div>`);
         cfgZone.appendChild(box);
-        cfgZone.appendChild(App.el(`<div style="font-size:12px;color:var(--d-dim);margin-top:6px">💡 Écris <b>{channels}</b> dans le message à l'endroit où les salons apparaissent. Dans la phrase de chaque salon, écris <b>{salon}</b> pour mettre la mention cliquable : ex « Je vous invite à prendre connaissance de {salon} »</div>`));
+        cfgZone.appendChild(App.el(`<div style="font-size:12px;color:var(--d-dim);margin-top:6px;line-height:1.6">💡 <b>Comment ça marche :</b><br/>• Dans le message, écris <b>{channels}</b> à l'endroit où les salons doivent apparaître.<br/>• Pour chaque salon ajouté, écris une phrase avec <b>{salon}</b> : la mention cliquable du salon est insérée à la place.<br/>• Exemple : « 📜 Je vous invite à prendre connaissance de {salon} » → « 📜 Je vous invite à prendre connaissance de #regles »</div>`));
+        let addRow = null;
+        const refresh = () => {
+          box.querySelectorAll('.cm-row').forEach((r) => r.remove());
+          if (addRow) {
+            const taken = new Set(order);
+            addRow.querySelector('[data-cm-add]').innerHTML = ['<option value="">— Ajouter un salon —</option>']
+              .concat(textChannels.filter((ch) => !taken.has('#' + ch.name)).map((ch) => `<option value="${App.escapeHtml('#' + ch.name)}">💬 #${App.escapeHtml(ch.name)}</option>`))
+              .join('');
+          }
+          order.forEach((ref) => {
+            const row = App.el(`
+            <div class="cm-row" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed var(--d-border)">
+              <span style="flex:0 1 auto;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--d-text)">💬 <b>#${App.escapeHtml(String(ref).replace(/^#/, ''))}</b></span>
+              <input class="dash-input" data-cm-label="${App.escapeHtml(ref)}" placeholder="Phrase (ex : je vous invite à prendre connaissance de {salon})" value="${App.escapeHtml(labels.get(ref) || '')}" style="flex:1 1 180px;min-width:0;height:34px;padding:4px 10px" />
+              <button class="dash-btn" type="button" data-cm-remove="${App.escapeHtml(ref)}" title="Retirer ce salon" style="padding:7px 12px">✖</button>
+            </div>`);
+            row.querySelector('[data-cm-remove]').onclick = () => {
+              labels.delete(ref);
+              const i = order.indexOf(ref);
+              if (i >= 0) order.splice(i, 1);
+              refresh();
+              box.dispatchEvent(new Event('change', { bubbles: true }));
+            };
+            if (addRow) box.insertBefore(row, addRow); else box.appendChild(row);
+          });
+        };
+        if (!textChannels.length) {
+          box.appendChild(App.el(Dashboard.noDiscordChoice('Aucun salon texte reçu de Discord')));
+        } else {
+          addRow = App.el(`<div style="display:flex;gap:8px;margin-top:8px">
+            <select class="dash-select" data-cm-add style="flex:1;min-width:0"></select>
+            <button class="dash-btn" type="button" data-cm-addbtn>➕ Ajouter</button>
+          </div>`);
+          box.appendChild(addRow);
+          addRow.querySelector('[data-cm-addbtn]').onclick = () => {
+            const ref = addRow.querySelector('[data-cm-add]').value;
+            if (!ref) { App.toast('Choisis d\u0027abord un salon dans la liste.', 'error'); return; }
+            if (!labels.has(ref)) { order.push(ref); labels.set(ref, ''); }
+            refresh();
+            box.dispatchEvent(new Event('change', { bubbles: true }));
+          };
+        }
+        refresh();
         return;
       }
 
@@ -2247,11 +2292,10 @@ Dashboard.renderers.welcome = async (content, data) => {
           const cm = cfgZone.querySelector('[data-channelsmulti]');
           if (cm) {
             const sel = [];
-            cm.querySelectorAll('[data-cm-check]').forEach((cb) => {
-              if (!cb.checked) return;
-              const lbl = cm.querySelector(`[data-cm-label="${CSS.escape(cb.dataset.cmCheck)}"]`);
-              let line = (lbl && lbl.value.trim()) ? lbl.value.trim() : '';
-              const chName = cb.dataset.cmCheck.replace(/^#/, '');
+            cm.querySelectorAll('.cm-row [data-cm-label]').forEach((lbl) => {
+              let line = lbl.value.trim();
+              const chName = String(lbl.dataset.cmLabel || '').replace(/^#/, '');
+              if (!chName) return;
               if (line.includes('{salon}')) line = line.split('{salon}').join('#' + chName);
               else if (line) line += ' → #' + chName;
               else line = '#' + chName;
@@ -2323,13 +2367,12 @@ Dashboard.renderers.welcome = async (content, data) => {
           return;
         }
         if (inp.dataset.channelsmulti) {
-          // 📌 salons à mentionner : JSON [{channel, label}]
+          // 📌 salons à détailler : JSON [{channel, label}] (compatible v200/v201)
           const rows = [];
-          inp.querySelectorAll('[data-cm-check]').forEach((cb) => {
-            if (!cb.checked) return;
-            const ref = cb.dataset.cmCheck;
-            const labelInp = inp.querySelector(`[data-cm-label="${CSS.escape(ref)}"]`);
-            rows.push({ channel: ref, label: labelInp ? labelInp.value.trim() : '' });
+          inp.querySelectorAll('.cm-row [data-cm-label]').forEach((lbl) => {
+            const ref = lbl.dataset.cmLabel;
+            if (!ref) return;
+            rows.push({ channel: ref, label: lbl.value.trim() });
           });
           config[inp.dataset.k] = JSON.stringify(rows);
           return;

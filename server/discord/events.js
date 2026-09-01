@@ -80,7 +80,7 @@ async function runJoinEvent(botId, member, opts = {}) {
     const channel = await resolveChannel(member.guild, cfg.channel);
     trace(`bienvenue activée · salon « ${cfg.channel || ''} » → ${channel ? '#' + channel.name : 'INTROUVABLE ❌'}`);
     if (channel) {
-      const channelsMention = channelMentions(member.guild, cfg.channels, resolveChannel);
+      const channelsMention = await channelMentions(member.guild, cfg.channels, resolveChannel);
       const text = render(member, botRecord, cfg.message, { channelsMention });
       // 🖼️ Carte de bienvenue en image (avatar + pseudo) — jamais bloquante :
       // si la génération échoue, le message part sans image.
@@ -176,7 +176,7 @@ async function runLeaveEvent(botId, member, opts = {}) {
   const channel = await resolveChannel(member.guild, cfg.channel);
   trace(`salon « ${cfg.channel || ''} » → ${channel ? '#' + channel.name : 'INTROUVABLE ❌'}`);
   if (!channel) return;
-  const channelsMention = channelMentions(member.guild, cfg.channels, resolveChannel);
+  const channelsMention = await channelMentions(member.guild, cfg.channels, resolveChannel);
   const text = render(member, botRecord, cfg.message, { channelsMention });
   if (!cfg.plain) {
     // 🏆 Panneau de départ assorti (premium par défaut) au panneau de bienvenue (membre partiel
@@ -237,7 +237,7 @@ function render(member, botRecord, template, extraVars = {}) {
 
 // 📌 Salons à mentionner (v200) : config JSON [{channel, label}] → texte cliquable.
 // Ex : « 📜 Règles → <#123> » sur chaque ligne. Les salons introuvables sont ignorés.
-function channelMentions(guild, raw, resolve) {
+async function channelMentions(guild, raw, resolve) {
   let list = [];
   try { list = JSON.parse(String(raw || '') || '[]'); } catch { return ''; }
   if (!Array.isArray(list)) return '';
@@ -245,7 +245,9 @@ function channelMentions(guild, raw, resolve) {
   for (const item of list) {
     const ref = String((item && item.channel) || '').trim();
     if (!ref) continue;
-    const ch = resolve ? resolve(guild, ref) : null;
+    // ⚠️ resolveChannel est async : il faut AWAIT, sinon « ch » est une
+    // Promesse et « ch.id » vaut undefined → <#undefined> dans le panneau.
+    const ch = resolve ? await resolve(guild, ref) : null;
     if (!ch) continue;
     const label = String((item && item.label) || '').trim();
     const mention = `<#${ch.id}>`;
