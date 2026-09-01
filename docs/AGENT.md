@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v193**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v194**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -149,6 +149,21 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   correction de base restaurée). 7) Sécurité : le token Discord n'est PLUS
   jamais renvoyé par l'API ; tokens de transcription passés de 64 à 128 bits.
   125 tests verts (`test/v193-test.js`). Bump cache v193.
+- **v194 (ACTUELLE)** : **DASHBOARD ULTRA PRO (Phase 2)** — finitions UX
+  complètes en couche purement additive (rien n'est retiré) :
+  1) Design tokens (`--dp-radius-card`, `--dp-shadow-*`, `--dp-ring`, …) ;
+  2) Accessibilité : focus visible restauré partout (outline 3px accent,
+  neutralise l'ancien « outline: none ») ;
+  3) Hiérarchie : cartes avec hover lift + ombre douce, stats élargies,
+  survol de lignes de tableaux, méta du module en chips ;
+  4) États vides `.dash-empty` affinés (bordures pointillées, icône) ;
+  5) Scrollbar fine ; 6) Mode clair v194 (ombres et survols adaptés) ;
+  7) `prefers-reduced-motion` global (animations coupées) ;
+  8) Page Modules enrichie (badge ● Activé/○ Désactivé + compteur de
+  commandes + mise à jour du badge sans rechargement) ;
+  9) Notifications annoncées aux lecteurs d'écran (`aria-live="polite"`),
+  scroll doux respectant reduced-motion.
+  126 tests verts (`test/v194-test.js`). Bump cache v194.
 - **v192** : **CORRECTIF aperçu des annonces de live**. L'aperçu de la
   carte « Annonces de live » affichait un pseudo d'exemple codé en dur
   (« 93_vlz est en live ! ») sur TOUS les serveurs — confondu avec un compte
@@ -276,16 +291,23 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 
 1. Clone `https://github.com/nexusdolf-rgb/botdev`, `npm install`, lis le dernier commit
 2. Vérifie l'état : `https://hoxera.is-a.dev/api/health/bot` (bot en ligne ? erreurs ?)
-3. `bash scripts/check.sh` → doit être 🟢 (125 tests, ~2,5 min)
+3. `bash scripts/check.sh` → doit être 🟢 (126 tests, ~2,5 min)
 4. Vérifie les tokens (GitHub 200, Render 200, Discord `users/@me` avec curl)
 5. Fais-moi un point de situation clair, puis attends mes instructions
 
-## 📌 ÉTAT AU 30/08/2026 (dernière mise à jour de ce document)
+## 📌 ÉTAT AU 01/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v193** — Phase 1 « Sécurité, nettoyage et corrections
-  urgentes » (rebranding, /say protégé, /meme robuste, routes email mortes
-  supprimées, env vars nettoyées, token masqué côté API, transcriptions 128
-  bits). 125 tests verts. Voir la section v193 ci-dessus.
+- Dernière version : **v194** — Dashboard Ultra Pro (Phase 2) : couche UX
+  additive (design tokens --dp-*, focus visible partout, hover lift des
+  cartes, survol de lignes des tableaux, états vides affinés, scrollbar fine,
+  reduced-motion global, mode clair v194), page Modules enrichie (badge
+  Activé/Désactivé + compteur de commandes), notifications annoncées
+  (aria-live), scroll doux respectant reduced-motion. 126 tests verts.
+  Voir la section v194 ci-dessus.
+- v193 livré : Phase 1 « Sécurité, nettoyage et corrections urgentes »
+  (rebranding, /say protégé, /meme robuste, routes email mortes supprimées,
+  env vars nettoyées, token masqué côté API, transcriptions 128 bits).
+  125 tests verts. Voir la section v193 ci-dessus.
 - v188 livré : LOT 1 « Quick wins communauté » :
   - **/afk** : statut AFK persistant (table `afk`, upsert par membre), sortie auto
     dès que le membre écrit, prévention des autres à la mention (sans boucle)

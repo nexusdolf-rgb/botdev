@@ -16,7 +16,8 @@ Dashboard.persistedModule = () => {
   } catch { return 'overview'; }
 };
 Dashboard.scrollToTop = () => {
-  try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch { try { window.scrollTo(0, 0); } catch {} }
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  try { window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }); } catch { try { window.scrollTo(0, 0); } catch {} }
 };
 
 Dashboard.api = App.api;
@@ -4602,18 +4603,31 @@ Dashboard.renderers.modules = async (content) => {
   const { modules } = await App.api(`/bots/${bot.id}/modules`);
   const grid = App.el(`<div class="dash-grid"></div>`);
   modules.forEach((m) => {
+    const cmds = m.commands || [];
+    const count = cmds.length;
+    const on = !!m.enabled;
     const card = App.el(`
-      <div class="dash-card">
+      <div class="dash-card" data-module-card="${App.escapeHtml(m.key)}">
         <div class="card-head">
-          <div><h3>${m.emoji} ${m.label}</h3><div class="desc">${App.escapeHtml(m.description)}</div></div>
-          <label class="switch"><input type="checkbox" ${m.enabled ? 'checked' : ''} /><span class="slider"></span></label>
+          <div><h3>${m.emoji} ${App.escapeHtml(m.label)}</h3><div class="desc">${App.escapeHtml(m.description)}</div></div>
+          <label class="switch" aria-label="Module ${App.escapeHtml(m.label)}"><input type="checkbox" ${on ? 'checked' : ''} /><span class="slider"></span></label>
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px">${m.commands.map((c) => `<span class="dash-badge">${App.escapeHtml(bot.prefix)}${c.name}</span>`).join('')}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;flex-wrap:wrap">
+          <span class="dash-badge ${on ? 'ok' : 'bad'}">${on ? '● Activé' : '○ Désactivé'}</span>
+          <span style="color:var(--d-dim);font-size:11.5px;font-weight:650">${count} commande${count > 1 ? 's' : ''}</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">${cmds.map((c) => `<span class="dash-badge">${App.escapeHtml(bot.prefix)}${App.escapeHtml(c.name)}</span>`).join('')}</div>
       </div>`);
     card.querySelector('input').onchange = async (e) => {
       try {
         await App.api(`/bots/${bot.id}/modules/${m.key}`, { method: 'PUT', body: { enabled: e.target.checked } });
         App.toast(`Module ${m.label} ${e.target.checked ? 'activé' : 'désactivé'} !`);
+        // Met à jour le badge d'état sans recharger toute la page
+        const badge = card.querySelector('.dash-badge.ok, .dash-badge.bad');
+        if (badge) {
+          badge.className = 'dash-badge ' + (e.target.checked ? 'ok' : 'bad');
+          badge.textContent = e.target.checked ? '● Activé' : '○ Désactivé';
+        }
       } catch (err) { App.toast(err.message, 'error'); e.target.checked = !e.target.checked; }
     };
     grid.appendChild(card);
