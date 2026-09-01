@@ -825,3 +825,162 @@ a:hover { color: #c3caff; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; }
 }
+
+/* ============================================================
+   🏠 HOXERA ULTRA PRO v195 — Home (Phase 3)
+   Nouveau design spectaculaire de la page d'accueil, construit
+   PAR-DESSUS la landing v167 (classes/id verrouillées conservées).
+   ============================================================ */
+
+/* ---------- Navbar : liens d'ancrage ---------- */
+.navbar { position: sticky; top: 0; z-index: 60; }
+.navbar-links { display: flex; align-items: center; gap: 4px; margin-left: 18px; }
+.navbar-links a {
+  color: var(--text-dim); font-size: 13.5px; font-weight: 650;
+  padding: 8px 12px; border-radius: 9px; text-decoration: none;
+  transition: color .15s ease, background .15s ease;
+}
+.navbar-links a:hover { color: var(--text); background: rgba(255,255,255,.06); }
+html.hx-light .navbar-links a:hover { background: rgba(20,22,40,.07); color: #1c1e26; }
+
+/* ---------- Kicker de section ---------- */
+.hp-kicker {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11.5px; font-weight: 800; letter-spacing: 1.6px;
+  text-transform: uppercase; color: var(--accent);
+  margin-bottom: 10px;
+}
+.hp-kicker::before {
+  content: ''; width: 22px; height: 2px; border-radius: 99px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+}
+.hp-section { scroll-margin-top: 84px; }
+
+/* ---------- Présentation Hoxera ---------- */
+.hp-about-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 18px; margin-top: 26px; }
+.hp-about-card {
+  display: flex; align-items: center; gap: 18px;
+  background: linear-gradient(145deg, rgba(var(--accent-rgb,224,122,95), .09), rgba(139,92,246,.05)), var(--panel2);
+  border: 1px solid var(--border); border-radius: 18px; padding: 24px;
+}
+.hp-about-card h3 { font-size: 17px; margin-bottom: 6px; }
+.hp-about-card p { color: var(--text-dim); font-size: 13.5px; line-height: 1.6; margin: 0; }
+.hp-robot {
+  width: 76px; height: 76px; border-radius: 20px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 38px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  box-shadow: 0 14px 30px -12px rgba(224,122,95,.55);
+}
+.hp-pillars { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.hp-pillar {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: var(--panel2); border: 1px solid var(--border);
+  border-radius: 14px; padding: 16px;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .2s ease;
+}
+.hp-pillar:hover { transform: translateY(-3px); border-color: rgba(224,122,95,.5); box-shadow: 0 14px 28px -18px rgba(224,122,95,.45); }
+.hp-pillar-ico {
+  width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+  background: rgba(224,122,95,.14); border: 1px solid rgba(224,122,95,.3);
+}
+.hp-pillar b { font-size: 14px; display: block; }
+.hp-pillar p { color: var(--text-dim); font-size: 12.5px; line-height: 1.5; margin: 4px 0 0; }
+
+.hp-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 20px; }
+.hp-step {
+  background: var(--panel2); border: 1px solid var(--border);
+  border-radius: 14px; padding: 16px 18px; position: relative;
+}
+.hp-step-n {
+  position: absolute; top: -11px; left: 16px;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff; font-size: 12px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 14px -6px rgba(224,122,95,.6);
+}
+.hp-step b { display: block; margin: 6px 0 4px; font-size: 14px; }
+.hp-step p { color: var(--text-dim); font-size: 12.5px; line-height: 1.5; margin: 0; }
+
+/* ---------- FAQ (accordéon) ---------- */
+.hp-faq { max-width: 780px; margin: 26px auto 0; display: flex; flex-direction: column; gap: 10px; }
+.hp-faq-item {
+  background: var(--panel2); border: 1px solid var(--border);
+  border-radius: 14px; overflow: hidden;
+  transition: border-color .18s ease, box-shadow .2s ease;
+}
+.hp-faq-item:hover { border-color: rgba(224,122,95,.45); }
+.hp-faq-item[open] { border-color: rgba(224,122,95,.55); box-shadow: 0 14px 30px -20px rgba(224,122,95,.5); }
+.hp-faq-item summary {
+  cursor: pointer; list-style: none; display: flex; align-items: center; gap: 10px;
+  padding: 16px 18px; font-weight: 700; font-size: 14.5px;
+}
+.hp-faq-item summary::-webkit-details-marker { display: none; }
+.hp-faq-item summary::after {
+  content: '+'; margin-left: auto; font-size: 20px; font-weight: 600;
+  color: var(--accent); transition: transform .2s ease;
+}
+.hp-faq-item[open] summary::after { transform: rotate(45deg); }
+.hp-faq-item p {
+  color: var(--text-dim); font-size: 13.5px; line-height: 1.65;
+  padding: 0 18px 16px; margin: 0;
+}
+.hp-faq-item[open] summary { border-bottom: 1px solid var(--border); }
+
+/* ---------- CTA final ---------- */
+.hp-cta { padding: 10px 26px 50px; }
+.hp-cta-inner {
+  max-width: 900px; margin: 0 auto; text-align: center;
+  background:
+    radial-gradient(600px 240px at 50% -40%, rgba(224,122,95,.28), transparent 70%),
+    linear-gradient(145deg, rgba(224,122,95,.08), rgba(139,92,246,.05)), var(--panel2);
+  border: 1px solid rgba(224,122,95,.35);
+  border-radius: 24px; padding: 44px 30px;
+  box-shadow: 0 30px 80px -30px rgba(0,0,0,.8);
+}
+.hp-cta-inner h2 { font-size: 26px; letter-spacing: -.4px; margin-bottom: 10px; }
+.hp-cta-inner p { color: var(--text-dim); max-width: 540px; margin: 0 auto 22px; line-height: 1.6; }
+.hp-cta-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+/* ---------- Footer enrichi ---------- */
+.hp-footer { padding: 34px 26px 22px; border-top: 1px solid var(--border); }
+.hp-footer-cols {
+  max-width: 1080px; margin: 0 auto; display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr; gap: 26px; text-align: left;
+}
+.hp-footer-col { display: flex; flex-direction: column; gap: 8px; }
+.hp-footer-col > b { font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-dim); margin-bottom: 4px; }
+.hp-footer-col a { color: var(--text-dim); font-size: 13.5px; text-decoration: none; transition: color .15s ease; }
+.hp-footer-col a:hover { color: var(--accent); }
+.hp-footer-brand b { font-size: 17px; }
+.hp-footer-brand p { color: var(--text-dim); font-size: 13px; line-height: 1.6; margin: 6px 0 0; }
+.hp-footer-bottom {
+  max-width: 1080px; margin: 24px auto 0; padding-top: 16px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  color: var(--text-dim); font-size: 12.5px;
+}
+
+/* ---------- Responsive Home Ultra Pro ---------- */
+@media (max-width: 900px) {
+  .navbar-links { display: none; }
+  .hp-about-grid { grid-template-columns: 1fr; }
+  .hp-pillars { grid-template-columns: 1fr 1fr; }
+  .hp-steps { grid-template-columns: 1fr; gap: 18px; }
+  .hp-footer-cols { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 560px) {
+  .hp-about-card { flex-direction: column; text-align: center; }
+  .hp-pillars { grid-template-columns: 1fr; }
+  .hp-footer-cols { grid-template-columns: 1fr; }
+  .hp-cta-inner { padding: 34px 20px; }
+  .hp-footer-bottom { justify-content: center; text-align: center; }
+}
+
+/* ---------- Mode clair ---------- */
+html.hx-light .hp-about-card { background: linear-gradient(145deg, rgba(224,122,95,.08), rgba(139,92,246,.03)), #fff; box-shadow: 0 8px 24px -16px rgba(30,34,60,.28); }
+html.hx-light .hp-pillar { background: #fff; }
+html.hx-light .hp-step { background: #fff; }
+html.hx-light .hp-faq-item { background: #fff; }
+html.hx-light .hp-cta-inner { background: radial-gradient(600px 240px at 50% -40%, rgba(224,122,95,.18), transparent 70%), linear-gradient(145deg, rgba(224,122,95,.06), rgba(139,92,246,.03)), #fff; }

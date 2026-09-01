@@ -17,11 +17,18 @@ App.fmtUptime = (seconds) => {
 App.fmtNumber = (n) => (n >= 1000 ? Math.round(n / 1000) + 'k' : String(n));
 
 // ---------------------- Navbar publique ----------------------
-App.renderPublicNavbar = () => {
+App.renderPublicNavbar = (withLandingLinks = false) => {
   const user = App.state.user;
   const nav = App.el(`
     <div class="navbar">
       <div class="logo-row" style="cursor:pointer" id="pub-logo"><img class="logo" data-brand-logo src="/api/public/bot-avatar" alt="Avatar d’Optimus Prime" style="border-radius:50%;object-fit:cover" /> Hoxera</div>
+      ${withLandingLinks ? `
+      <nav class="navbar-links" aria-label="Navigation de la page d'accueil">
+        <a href="#hp-about" data-anchor="hp-about">Hoxera</a>
+        <a href="#hp-features" data-anchor="hp-features">Fonctionnalités</a>
+        <a href="#hp-preview" data-anchor="hp-preview">Aperçu</a>
+        <a href="#hp-faq" data-anchor="hp-faq">FAQ</a>
+      </nav>` : ''}
       <div class="navbar-right" id="pub-nav-right">
         ${user && user.discord_id
           ? `<div class="user-pill">
@@ -37,6 +44,18 @@ App.renderPublicNavbar = () => {
     </div>
   `);
   nav.querySelector('#pub-logo').onclick = () => App.router.go(user ? '/dashboard' : '/');
+  if (withLandingLinks) {
+    nav.querySelectorAll('[data-anchor]').forEach((a) => {
+      a.onclick = (e) => {
+        e.preventDefault();
+        const el = document.getElementById(a.dataset.anchor);
+        if (el) {
+          const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          try { el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }); } catch { el.scrollIntoView(); }
+        }
+      };
+    });
+  }
   App.loadPublicBotAvatar(nav);
   const dash = nav.querySelector('#pub-dash');
   if (dash) dash.onclick = () => App.router.go('/dashboard');
@@ -58,7 +77,7 @@ App.renderPublicLanding = () => {
   const user = App.state.user;
   const root = document.getElementById('app');
   root.innerHTML = '';
-  root.appendChild(App.renderPublicNavbar());
+  root.appendChild(App.renderPublicNavbar(true));
 
   const page = App.el(`
     <div id="public-landing">
@@ -82,32 +101,35 @@ App.renderPublicLanding = () => {
         </div>
       </div>
 
-      <div class="pub-section reveal">
-        <h2>🤖 Hoxera en direct</h2>
-        <p class="pub-sub">Statistiques en temps réel, lues directement depuis Discord.</p>
-        <div class="bots-grid" id="pub-bots"><div class="spinner"></div></div>
-      </div>
-
-      <div class="pub-section reveal">
-        <h2>📊 Un dashboard digne des plus grands</h2>
-        <p class="pub-sub">Configure tout depuis ton téléphone ou ton PC — design pro, sauvegarde intelligente, flux d'activité en direct.</p>
-        <div class="pub-mock">
-          <div class="mock-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="mock-url">hoxera.is-a.dev</span></div>
-          <div class="mock-body">
-            <div class="mock-side">
-              <div class="mock-srv"><span class="ms-ico">N</span><span class="ms-lines"><i></i><i></i></span></div>
-              <div class="mock-item active"></div><div class="mock-item"></div><div class="mock-item"></div><div class="mock-item"></div><div class="mock-item"></div>
-            </div>
-            <div class="mock-main">
-              <div class="mock-stats"><div class="mock-stat"></div><div class="mock-stat"></div><div class="mock-stat"></div></div>
-              <div class="mock-card"><div class="mc-line w60"></div><div class="mc-line w90"></div><div class="mc-line w75"></div></div>
-              <div class="mock-card"><div class="mc-line w40"></div><div class="mc-bar"></div></div>
+      <!-- 🎯 Présentation Hoxera -->
+      <div class="pub-section reveal hp-section" id="hp-about">
+        <div class="hp-kicker">Hoxera en bref</div>
+        <h2>Le robot d'animation, pensé comme un produit</h2>
+        <p class="pub-sub">Pas juste une liste de commandes : une expérience complète, du premier message d'accueil au journal d'audit, en passant par un dashboard qui te fait gagner du temps.</p>
+        <div class="hp-about-grid">
+          <div class="hp-about-card">
+            <div class="hp-robot" aria-hidden="true"><span>🤖</span></div>
+            <div>
+              <h3>Optimus Prime, ton nouveau membre</h3>
+              <p>Hoxera est le bot officiel « Optimus Prime » : une seule identité, un seul dashboard, et toutes les fonctions dont un serveur Discord a besoin — sans abonnement.</p>
             </div>
           </div>
+          <div class="hp-pillars">
+            <div class="hp-pillar"><div class="hp-pillar-ico">⚡</div><div><b>Immédiat</b><p>Configuré en quelques minutes, fonctionne dès l'ajout.</p></div></div>
+            <div class="hp-pillar"><div class="hp-pillar-ico">🛡️</div><div><b>Sûr</b><p>Permissions Discord respectées, journal de sécurité, token protégé.</p></div></div>
+            <div class="hp-pillar"><div class="hp-pillar-ico">📱</div><div><b>Partout</b><p>Dashboard complet sur téléphone comme sur PC.</p></div></div>
+            <div class="hp-pillar"><div class="hp-pillar-ico">🎓</div><div><b>Simple</b><p>Menus et aides intégrés : pas besoin d'être expert.</p></div></div>
+          </div>
+        </div>
+        <div class="hp-steps">
+          <div class="hp-step"><span class="hp-step-n">1</span><b>Ajoute le bot</b><p>Un clic sur « Ajouter Hoxera », choisis ton serveur.</p></div>
+          <div class="hp-step"><span class="hp-step-n">2</span><b>Connecte-toi</b><p>Identifie-toi avec Discord pour accéder à ton dashboard.</p></div>
+          <div class="hp-step"><span class="hp-step-n">3</span><b>Configure</b><p>Active les modules et personnalise ton serveur en direct.</p></div>
         </div>
       </div>
 
-      <div class="pub-section reveal">
+      <div class="pub-section reveal hp-section" id="hp-features">
+        <span class="hp-kicker">Fonctionnalités</span>
         <h2>✨ Tout ce que Hoxera sait faire</h2>
         <div class="pub-features">
           <div class="pub-feature reveal"><div class="f-ico">🎫</div><b>Tickets automatiques</b><p>Bouton → salon privé créé instantanément, avec rôle staff, types personnalisés et transcription en MP.</p></div>
@@ -123,12 +145,103 @@ App.renderPublicLanding = () => {
         </div>
       </div>
 
-      <div class="pub-footer">
-        <b>⚡ Hoxera</b> — ton serveur mérite un bot à la hauteur
-        <div class="pub-footer-links">
-          <a href="https://discord.gg/X9hTdr9N3" target="_blank" rel="noopener">🆘 Serveur support</a>
-          <span>·</span>
-          <a href="#" id="pub-foot-dash">📊 Dashboard</a>
+      <div class="pub-section reveal">
+        <h2>🤖 Hoxera en direct</h2>
+        <p class="pub-sub">Statistiques en temps réel, lues directement depuis Discord.</p>
+        <div class="bots-grid" id="pub-bots"><div class="spinner"></div></div>
+      </div>
+
+      <div class="pub-section reveal hp-section" id="hp-preview">
+        <span class="hp-kicker">Aperçu</span>
+        <h2>📊 Un dashboard digne des plus grands</h2>
+        <p class="pub-sub">Configure tout depuis ton téléphone ou ton PC — design pro, sauvegarde intelligente, flux d'activité en direct.</p>
+        <div class="pub-mock">
+          <div class="mock-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="mock-url">hoxera.is-a.dev</span></div>
+          <div class="mock-body">
+            <div class="mock-side">
+              <div class="mock-srv"><span class="ms-ico">H</span><span class="ms-lines"><i></i><i></i></span></div>
+              <div class="mock-item active"></div><div class="mock-item"></div><div class="mock-item"></div><div class="mock-item"></div><div class="mock-item"></div>
+            </div>
+            <div class="mock-main">
+              <div class="mock-stats"><div class="mock-stat"></div><div class="mock-stat"></div><div class="mock-stat"></div></div>
+              <div class="mock-card"><div class="mc-line w60"></div><div class="mc-line w90"></div><div class="mc-line w75"></div></div>
+              <div class="mock-card"><div class="mc-line w40"></div><div class="mc-bar"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ❓ FAQ -->
+      <div class="pub-section reveal hp-section" id="hp-faq">
+        <span class="hp-kicker">FAQ</span>
+        <h2>Questions fréquentes</h2>
+        <div class="hp-faq">
+          <details class="hp-faq-item" open>
+            <summary>Est-ce que Hoxera est gratuit ?</summary>
+            <p>Oui. Hoxera est gratuit et le reste : toutes les fonctions sont incluses, sans abonnement ni compte payant. Tu ne paies que si tu veux un jour soutenir le projet (une option future, jamais obligatoire).</p>
+          </details>
+          <details class="hp-faq-item">
+            <summary>Quelles permissions Discord sont nécessaires ?</summary>
+            <p>Le bot demande les permissions « Administrateur » lors de l'ajout pour pouvoir créer des salons (tickets), gérer les rôles (auto-rôles, giveaways) et modérer (kick, ban, timeout). Tu peux les ajuster ensuite dans les réglages de ton serveur.</p>
+          </details>
+          <details class="hp-faq-item">
+            <summary>Comment fonctionne la connexion au dashboard ?</summary>
+            <p>Uniquement avec ton compte Discord (OAuth2). Aucun mot de passe à retenir : tu te connectes, on vérifie tes serveurs et ta permission, et tu configures tes serveurs en quelques clics.</p>
+          </details>
+          <details class="hp-faq-item">
+            <summary>Le bot fonctionne-t-il sur mobile ?</summary>
+            <p>Oui. Le dashboard est entièrement responsive : navigation en bas d'écran, menus glissants, et toutes les fonctions sont accessibles depuis un téléphone.</p>
+          </details>
+          <details class="hp-faq-item">
+            <summary>Mes données sont-elles en sécurité ?</summary>
+            <p>Oui. Le token du bot n'est jamais renvoyé au navigateur, les transcriptions de tickets utilisent des liens difficiles à deviner (128 bits), et un journal de sécurité trace les actions sensibles.</p>
+          </details>
+          <details class="hp-faq-item">
+            <summary>Comment obtenir de l'aide ?</summary>
+            <p>Rejoins le serveur support officiel (lien dans le menu et le pied de page) : la communauté et l'équipe répondent rapidement, en français.</p>
+          </details>
+        </div>
+      </div>
+
+      <!-- 🚀 CTA final -->
+      <div class="hp-cta reveal">
+        <div class="hp-cta-inner">
+          <h2>Prêt à donner vie à ton serveur ?</h2>
+          <p>Ajoute Hoxera maintenant — c'est gratuit, configuré en quelques minutes, et il t'accompagne pas à pas.</p>
+          <div class="hp-cta-actions">
+            <button class="btn btn-primary" id="pub-invite-cta" style="padding:13px 22px;font-size:15px">➕ Ajouter Hoxera à ton serveur</button>
+            ${user && user.discord_id
+              ? `<button class="btn" id="pub-dash-cta" style="padding:13px 22px;font-size:15px">📊 Ouvrir mon dashboard</button>`
+              : `<button class="btn btn-discord" id="pub-connect-cta" style="padding:13px 22px;font-size:15px;width:auto">🎮 Se connecter avec Discord</button>`}
+          </div>
+        </div>
+      </div>
+
+      <div class="pub-footer hp-footer">
+        <div class="hp-footer-cols">
+          <div class="hp-footer-col">
+            <div class="hp-footer-brand"><b>⚡ Hoxera</b><p>Le bot d'animation tout-en-un pour ton serveur Discord.</p></div>
+          </div>
+          <div class="hp-footer-col">
+            <b>Produit</b>
+            <a href="#hp-about" data-anchor="hp-about">Présentation</a>
+            <a href="#hp-features" data-anchor="hp-features">Fonctionnalités</a>
+            <a href="#hp-preview" data-anchor="hp-preview">Aperçu du dashboard</a>
+            <a href="#hp-faq" data-anchor="hp-faq">FAQ</a>
+          </div>
+          <div class="hp-footer-col">
+            <b>Accès</b>
+            <a href="#" id="pub-foot-dash">📊 Dashboard</a>
+            <a href="https://discord.gg/X9hTdr9N3" target="_blank" rel="noopener">🆘 Serveur support</a>
+          </div>
+        </div>
+        <div class="hp-footer-bottom">
+          <span>© ${new Date().getFullYear()} Hoxera — Optimus Prime</span>
+          <div class="pub-footer-links">
+            <a href="https://discord.gg/X9hTdr9N3" target="_blank" rel="noopener">🆘 Serveur support</a>
+            <span>·</span>
+            <a href="#" id="pub-foot-dash-2">📊 Dashboard</a>
+          </div>
         </div>
       </div>
     </div>
@@ -138,16 +251,37 @@ App.renderPublicLanding = () => {
   const invite = (url) => App.openInvite(url);
   const heroInvite = page.querySelector('#pub-invite-hero');
   heroInvite.onclick = () => App.fetchFirstInviteUrl().then((url) => url ? invite(url) : App.toast('Aucun bot disponible pour l\'instant.', 'error'));
+  const ctaInvite = page.querySelector('#pub-invite-cta');
+  if (ctaInvite) ctaInvite.onclick = () => App.fetchFirstInviteUrl().then((url) => url ? invite(url) : App.toast('Aucun bot disponible pour l\'instant.', 'error'));
   const dashHero = page.querySelector('#pub-dash-hero');
   if (dashHero) dashHero.onclick = () => App.router.go('/dashboard');
+  const dashCta = page.querySelector('#pub-dash-cta');
+  if (dashCta) dashCta.onclick = () => App.router.go('/dashboard');
   const connectHero = page.querySelector('#pub-connect-hero');
   if (connectHero) connectHero.onclick = async () => {
+    try { const { url } = await App.api('/auth/discord/url'); window.location.href = url; }
+    catch (e) { App.toast(e.message, 'error'); }
+  };
+  const connectCta = page.querySelector('#pub-connect-cta');
+  if (connectCta) connectCta.onclick = async () => {
     try { const { url } = await App.api('/auth/discord/url'); window.location.href = url; }
     catch (e) { App.toast(e.message, 'error'); }
   };
 
   const footDash = page.querySelector('#pub-foot-dash');
   if (footDash) footDash.onclick = (e) => { e.preventDefault(); App.router.go('/dashboard'); };
+  const footDash2 = page.querySelector('#pub-foot-dash-2');
+  if (footDash2) footDash2.onclick = (e) => { e.preventDefault(); App.router.go('/dashboard'); };
+  page.querySelectorAll('[data-anchor]').forEach((a) => {
+    a.onclick = (e) => {
+      e.preventDefault();
+      const el = document.getElementById(a.dataset.anchor);
+      if (el) {
+        const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        try { el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }); } catch { el.scrollIntoView(); }
+      }
+    };
+  });
 
   // 🎬 Révélation au défilement (dégradation propre si non supporté)
   try {

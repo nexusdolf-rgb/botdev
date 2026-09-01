@@ -96,8 +96,8 @@ console.log('2️⃣  Notifications et couleur : portails, fermeture et re-rendu
 
 const versions = index.match(/\?v=(\d+)/g) || [];
 assert.strictEqual(versions.length, 7);
-assert(versions.every((v) => v === '?v=194'));
-assert(sw.includes("const CACHE = 'botdev-v194';"));
+assert(versions.every((v) => v === '?v=195'));
+assert(sw.includes("const CACHE = 'botdev-v195';"));
 console.log('3️⃣  Cache frontend : index.html et service worker synchronisés en v180 ✅');
 
 setTimeout(async () => {
