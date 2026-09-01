@@ -205,6 +205,32 @@ async function main() {
     await page.close();
   }
 
+  // ═══ ESPACE FONDATEUR (#/admin) — si un ADMIN_TOKEN est fourni ═══
+  if (process.env.ADMIN_TOKEN) {
+    console.log('\n█████ ESPACE FONDATEUR (#/admin) █████');
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1440, height: 900 });
+    await page.setCookie({ name: 'botdev_session', value: process.env.ADMIN_TOKEN, domain: '127.0.0.1', path: '/' });
+    await page.goto(BASE + '/#/admin', { waitUntil: 'domcontentloaded', timeout: 25000 }).catch(e => console.log('goto err', e.message));
+    await page.waitForFunction('document.querySelector(".admin-platform-page")', { timeout: 20000 }).catch(() => {});
+    await new Promise(r => setTimeout(r, 3000));
+    const tabs = ['overview', 'users', 'bots', 'audit', 'settings'];
+    for (const t of tabs) {
+      try {
+        await page.evaluate((tab) => { App.ADMIN_TAB = tab; const b = document.querySelector('.admin-tab[data-tab="' + tab + '"]'); if (b) b.click(); }, t);
+        await new Promise(r => setTimeout(r, 1800));
+        const data = await page.evaluate(PROBE);
+        data.issues = data.issues || [];
+        report['admin-' + t] = data.issues;
+        await page.screenshot({ path: `${OUT}/admin-${t}.png`, fullPage: false });
+        console.log(`  admin/${t.padEnd(9)} ${String(data.issues.length).padStart(3)} pb   ${data.issues.slice(0, 6).map(i => i.type + '@' + i.sel).join(' · ')}`);
+      } catch (e) {
+        console.log(`  admin/${t} ERREUR ${e.message.slice(0, 90)}`);
+      }
+    }
+    await page.close();
+  }
+
   fs.writeFileSync(path.join(OUT, 'report.json'), JSON.stringify(report, null, 2));
   console.log('\n═══════════ SYNTHÈSE ═══════════');
   let total = 0;

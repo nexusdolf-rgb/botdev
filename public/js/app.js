@@ -326,64 +326,162 @@ App.renderHoxeraDashboard = async () => {
 };
 
 // ---------------------- Administration Optimus Prime (fondateur uniquement) ----------------------
+App.ADMIN_TAB = App.ADMIN_TAB || 'overview';
+
+// 👑 HUB FONDATEUR (v199) — espace privé du créateur d'Optimus Prime.
+// Onglets : Vue d'ensemble (stats + santé + activité + actions rapides),
+// Comptes (recherche + gestion), Bots (démarrer/arrêter), Journal de
+// sécurité (filtrable), Réglages plateforme (URL publique, bannière, sauvegarde).
 App.renderAdminPage = async () => {
   const root = document.getElementById('app');
   root.innerHTML = '';
   root.appendChild(App.renderNavbar());
-  const page = App.el(`<div class="page admin-platform-page">
-    <h1>👑 Administration Optimus Prime</h1>
-    <p class="sub">Espace privé du fondateur : comptes liés à Discord, accès à Optimus Prime et protection de la plateforme.</p>
-    <div class="card admin-security-status">
-      <h3>🛡️ Protection active</h3>
-      <div class="card-sub">Mode développeur sécurisé : diagnostics avancés sans contourner les permissions.</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">✅ Identité fondateur verrouillée</span>
-        <span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">✅ Accès serveur contrôlé côté API</span>
-        <span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">✅ Sessions et actions sensibles protégées</span>
-        <span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">✅ Aucun secret affiché</span>
+  const page = App.el(`
+    <div class="page admin-platform-page">
+      <div class="admin-head">
+        <div>
+          <h1>👑 Espace fondateur</h1>
+          <p class="sub">Administration privée d'Optimus Prime — statistiques, comptes, bots et protection de la plateforme.</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="a-refresh">🔄 Rafraîchir</button>
       </div>
-    </div>
-    <div class="stats-grid" id="a-stats"><div class="spinner"></div></div>
-    <div class="card">
-      <h3>👥 Comptes Optimus Prime liés à Discord</h3>
-      <div class="card-sub">Tu peux délier Discord, bannir un compte ou supprimer définitivement ses données. Ton propre compte est toujours protégé.</div>
-      <div id="a-users"><div class="spinner"></div></div>
-    </div>
-    <div class="card">
-      <h3>🛡️ Journal de sécurité</h3>
-      <div class="card-sub">Historique des actions sensibles réalisées dans l’administration globale.</div>
-      <div id="a-audit"><div class="spinner"></div></div>
-    </div>
-  </div>`);
+      <div class="admin-tabs" id="a-tabs"></div>
+      <div id="a-body"></div>
+    </div>`);
   root.appendChild(page);
 
-  const render = async () => {
-    const statsEl = page.querySelector('#a-stats');
-    const usersEl = page.querySelector('#a-users');
-    const auditEl = page.querySelector('#a-audit');
-    try {
-      const [stats, usersRes, auditRes] = await Promise.all([
-        App.api('/admin/stats'),
-        App.api('/admin/users'),
-        App.api('/admin/audit'),
-      ]);
-      statsEl.innerHTML = `
-        <div class="stat-card"><div class="val">${stats.users}</div><div class="lbl">Comptes Optimus Prime</div></div>
-        <div class="stat-card"><div class="val">${stats.linked ?? 0}</div><div class="lbl">Liés à Discord</div></div>
-        <div class="stat-card"><div class="val">${stats.banned ?? 0}</div><div class="lbl">Bannis d’Optimus Prime</div></div>
-        <div class="stat-card"><div class="val">${stats.online ? '🟢' : '🔴'}</div><div class="lbl">Hoxera</div></div>`;
+  const TABS = [
+    ['overview', '👑', 'Vue d\'ensemble'],
+    ['users', '👥', 'Comptes'],
+    ['bots', '🤖', 'Bots'],
+    ['audit', '🛡️', 'Journal'],
+    ['settings', '⚙️', 'Réglages'],
+  ];
+  const tabsEl = page.querySelector('#a-tabs');
+  const bodyEl = page.querySelector('#a-body');
+  page.querySelector('#a-refresh').onclick = () => renderBody();
 
-      if (!usersRes.users || !usersRes.users.length) {
-        usersEl.innerHTML = `<div class="empty-state">Aucun compte utilisateur.</div>`;
-      } else {
-        usersEl.innerHTML = `<div style="overflow-x:auto"><table class="leaderboard-table admin-users-table"><thead><tr><th>Compte</th><th>Discord lié</th><th>Serveurs</th><th>Statut</th><th>Actions</th></tr></thead><tbody></tbody></table></div>`;
+  const renderTabs = () => {
+    tabsEl.innerHTML = '';
+    TABS.forEach(([id, ico, label]) => {
+      const b = App.el(`<button class="admin-tab ${App.ADMIN_TAB === id ? 'active' : ''}" data-tab="${id}"><span class="t-ico">${ico}</span>${label}</button>`);
+      b.onclick = () => { App.ADMIN_TAB = id; renderTabs(); renderBody(); };
+      tabsEl.appendChild(b);
+    });
+  };
+
+  const renderBody = async () => {
+    bodyEl.innerHTML = `<div class="admin-loading"><div class="spinner"></div></div>`;
+    try {
+      if (App.ADMIN_TAB === 'overview') await renderOverview();
+      else if (App.ADMIN_TAB === 'users') await renderUsers();
+      else if (App.ADMIN_TAB === 'bots') await renderBots();
+      else if (App.ADMIN_TAB === 'audit') await renderAudit();
+      else if (App.ADMIN_TAB === 'settings') await renderSettings();
+    } catch (e) {
+      bodyEl.innerHTML = `<div class="empty-state">${App.escapeHtml(e.message)}</div>`;
+    }
+  };
+
+  // ─────────────────── Vue d'ensemble ───────────────────
+  const renderOverview = async () => {
+    const [stats, system, activityRes] = await Promise.all([
+      App.api('/admin/stats'),
+      App.api('/admin/system'),
+      App.api('/admin/activity?limit=40'),
+    ]);
+    const uptime = Math.floor((system.uptimeMs || 0) / 1000);
+    const upStr = uptime > 86400 ? Math.floor(uptime / 86400) + ' j ' + Math.floor((uptime % 86400) / 3600) + ' h'
+      : uptime > 3600 ? Math.floor(uptime / 3600) + ' h ' + Math.floor((uptime % 3600) / 60) + ' min'
+      : Math.max(1, Math.floor(uptime / 60)) + ' min';
+    bodyEl.innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-card"><div class="val">${stats.users}</div><div class="lbl">👤 Comptes</div></div>
+        <div class="stat-card"><div class="val">${stats.linked ?? 0}</div><div class="lbl">🔗 Liés à Discord</div></div>
+        <div class="stat-card"><div class="val">${stats.banned ?? 0}</div><div class="lbl">⛔ Bannis</div></div>
+        <div class="stat-card"><div class="val">${stats.servers ?? 0}</div><div class="lbl">🖥️ Serveurs</div></div>
+        <div class="stat-card"><div class="val">${stats.members ?? 0}</div><div class="lbl">👥 Membres suivis</div></div>
+        <div class="stat-card"><div class="val">${(stats.tickets ?? 0) + (stats.openTickets ?? 0)}</div><div class="lbl">🎫 Tickets traités</div></div>
+        <div class="stat-card"><div class="val">${stats.messages24h ?? 0}</div><div class="lbl">💬 Messages 24 h</div></div>
+        <div class="stat-card"><div class="val">${stats.online ? '🟢' : '🔴'}</div><div class="lbl">Bot Hoxera</div></div>
+      </div>
+
+      <div class="card">
+        <h3>🩺 Santé du système</h3>
+        <div class="card-sub">État du serveur, du bot et des sauvegardes.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">✅ Serveur en ligne — ${App.escapeHtml(upStr)}</span>
+          <span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">✅ ${stats.online ? 'Bot connecté' : 'Bot hors ligne'}</span>
+          <span class="chip" style="color:${system.backupEnabled ? '#57F287' : '#ff8a8d'};border-color:${system.backupEnabled ? 'rgba(87,242,135,.4)' : 'rgba(237,66,69,.45)'}">${system.backupEnabled ? '✅ Sauvegardes automatiques actives' : '⚠️ Sauvegardes désactivées'}</span>
+          <span class="chip">💾 Dernière sauvegarde : ${system.lastBackup ? App.escapeHtml(String(system.lastBackup).slice(0, 16)) : 'jamais'}</span>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
+          <button class="btn btn-sm" id="a-backup-now">💾 Sauvegarder maintenant</button>
+          <button class="btn btn-sm" id="a-restart-bot">🔄 Redémarrer le bot</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🌍 Activité récente</h3>
+        <div class="card-sub">Ce qui se passe sur tous les serveurs en ce moment.</div>
+        <div id="a-feed">${!activityRes.items.length ? '<div class="empty-state">Aucune activité pour l\'instant.</div>' : activityRes.items.map((it) => `
+          <div class="activity-item">
+            <span class="a-emoji">${App.escapeHtml(it.emoji || '•')}</span>
+            <span class="a-text">${App.escapeHtml(it.text)}</span>
+            <span class="a-meta">${it.guild_name ? App.escapeHtml(it.guild_name) : ''}${it.bot_name ? ' · ' + App.escapeHtml(it.bot_name) : ''} · ${App.escapeHtml(String(it.created_at || '').slice(5, 16))}</span>
+          </div>`).join('')}</div>
+      </div>`;
+
+    bodyEl.querySelector('#a-backup-now').onclick = async () => {
+      const b = bodyEl.querySelector('#a-backup-now');
+      b.disabled = true; b.textContent = '⏳ Sauvegarde…';
+      try {
+        const r = await App.api('/backup/now', { method: 'POST' });
+        App.toast(r.ok ? '✅ Sauvegarde terminée !' : (r.error || 'Erreur'));
+      } catch (e) { App.toast(e.message, 'error'); }
+      finally { b.disabled = false; b.textContent = '💾 Sauvegarder maintenant'; renderBody(); }
+    };
+    bodyEl.querySelector('#a-restart-bot').onclick = async () => {
+      if (!(await App.confirm('Redémarrer le bot Optimus Prime ? Il sera indisponible ~10 secondes.'))) return;
+      try {
+        await App.api('/bots/1/stop', { method: 'POST' });
+        await new Promise((r) => setTimeout(r, 800));
+        await App.api('/bots/1/start', { method: 'POST' });
+        App.toast('🔄 Bot redémarré !');
+        renderBody();
+      } catch (e) { App.toast(e.message, 'error'); }
+    };
+  };
+
+  // ─────────────────── Comptes ───────────────────
+  const renderUsers = async () => {
+    const query = (App.ADMIN_Q = App.ADMIN_Q || '');
+    bodyEl.innerHTML = `
+      <div class="card">
+        <h3>👥 Comptes Optimus Prime liés à Discord</h3>
+        <div class="card-sub">Délier Discord, bannir ou supprimer un compte. Ton propre compte est toujours protégé.</div>
+        <div class="admin-toolbar">
+          <input class="dash-input" id="a-search" placeholder="🔎 Rechercher (nom, ID Discord, email)…" value="${App.escapeHtml(query)}" style="max-width:340px" />
+          <button class="btn btn-sm" id="a-search-go">Rechercher</button>
+          ${query ? '<button class="btn btn-sm btn-ghost" id="a-search-clear">✕ Réinitialiser</button>' : ''}
+        </div>
+        <div id="a-users"><div class="spinner" style="margin:20px auto"></div></div>
+      </div>`;
+    const res = await App.api('/admin/users' + (query ? '?q=' + encodeURIComponent(query) : ''));
+    const usersEl = bodyEl.querySelector('#a-users');
+    if (!res.users || !res.users.length) {
+      usersEl.innerHTML = `<div class="empty-state">${query ? 'Aucun compte trouvé pour « ' + App.escapeHtml(query) + ' ».' : 'Aucun compte utilisateur.'}</div>`;
+    } else {
+      usersEl.innerHTML = `<div style="overflow-x:auto"><table class="leaderboard-table admin-users-table"><thead><tr><th>Compte</th><th>Discord lié</th><th>Serveurs</th><th>Statut</th><th>Actions</th></tr></thead><tbody></tbody></table></div>`;
       const tb = usersEl.querySelector('tbody');
-      usersRes.users.forEach((u) => {
+      res.users.forEach((u) => {
         const isCurrent = Number(u.id) === Number(App.state.user && App.state.user.id);
+        const avatar = u.discord_avatar && u.discord_id
+          ? `https://cdn.discordapp.com/avatars/${u.discord_id}/${u.discord_avatar}.png?size=64` : '';
         const guildNames = (u.guilds || []).slice(0, 5).map((g) => App.escapeHtml(g.name)).join(', ');
         const moreGuilds = (u.guilds || []).length > 5 ? ` +${u.guilds.length - 5}` : '';
         const discordCell = u.discord_linked
-          ? `<b>${App.escapeHtml('@' + (u.discord_username || u.discord_id))}</b><small style="display:block;color:var(--text-dim)">ID ${App.escapeHtml(u.discord_id)}</small>`
+          ? `<span style="display:flex;align-items:center;gap:8px">${avatar ? `<img src="${avatar}" style="width:28px;height:28px;border-radius:50%" alt=""/>` : '<span style="width:28px;height:28px;border-radius:50%;background:var(--panel);display:inline-flex;align-items:center;justify-content:center">🎭</span>'}<span><b>${App.escapeHtml('@' + (u.discord_username || u.discord_id))}</b><small style="display:block;color:var(--text-dim)">ID ${App.escapeHtml(u.discord_id)}</small></span></span>`
           : `<span style="color:var(--text-dim)">Non lié</span><small style="display:block;color:var(--text-dim)">${App.escapeHtml(u.email)}</small>`;
         const statusCell = u.banned
           ? `<span class="chip" style="color:#ff8a8d;border-color:rgba(237,66,69,.45)">⛔ Banni</span><small style="display:block;color:var(--text-dim);max-width:180px">${App.escapeHtml(u.ban_reason || 'Aucune raison')}</small>`
@@ -403,7 +501,7 @@ App.renderAdminPage = async () => {
           <td>${actions}</td>
         </tr>`);
 
-        const reload = async () => { await render(); };
+        const reload = async () => { await renderBody(); };
         const unlink = row.querySelector('[data-unlink]');
         if (unlink) unlink.onclick = async () => {
           if (!(await App.confirm('Délier le compte Discord de cet utilisateur ? Son compte Optimus Prime sera conservé, mais il devra relier Discord pour revenir.'))) return;
@@ -412,14 +510,14 @@ App.renderAdminPage = async () => {
         };
         const ban = row.querySelector('[data-ban]');
         if (ban) ban.onclick = async () => {
-          if (!(await App.confirm('Bannir cet utilisateur d’Optimus Prime ? Ses données seront conservées et le bannissement pourra être retiré.'))) return;
+          if (!(await App.confirm('Bannir cet utilisateur d\'Optimus Prime ? Ses données seront conservées et le bannissement pourra être retiré.'))) return;
           const reason = await App.prompt('Raison du bannissement (optionnelle)', 'Abus de la plateforme');
-          try { await App.api(`/admin/users/${u.id}/ban`, { method: 'POST', body: { reason } }); App.toast('Utilisateur banni d’Optimus Prime.'); await reload(); }
+          try { await App.api(`/admin/users/${u.id}/ban`, { method: 'POST', body: { reason } }); App.toast('Utilisateur banni d\'Optimus Prime.'); await reload(); }
           catch (e) { App.toast(e.message, 'error'); }
         };
         const unban = row.querySelector('[data-unban]');
         if (unban) unban.onclick = async () => {
-          if (!(await App.confirm('Débannir cet utilisateur d’Optimus Prime ?'))) return;
+          if (!(await App.confirm('Débannir cet utilisateur d\'Optimus Prime ?'))) return;
           try { await App.api(`/admin/users/${u.id}/ban`, { method: 'DELETE' }); App.toast('Utilisateur débanni.'); await reload(); }
           catch (e) { App.toast(e.message, 'error'); }
         };
@@ -431,27 +529,149 @@ App.renderAdminPage = async () => {
         };
         tb.appendChild(row);
       });
-      }
+    }
+    bodyEl.querySelector('#a-search-go').onclick = () => { App.ADMIN_Q = bodyEl.querySelector('#a-search').value.trim(); renderBody(); };
+    bodyEl.querySelector('#a-search').addEventListener('keydown', (e) => { if (e.key === 'Enter') { App.ADMIN_Q = bodyEl.querySelector('#a-search').value.trim(); renderBody(); } });
+    const clear = bodyEl.querySelector('#a-search-clear');
+    if (clear) clear.onclick = () => { App.ADMIN_Q = ''; renderBody(); };
+  };
 
-      const audit = auditRes.audit || [];
-      const actionLabels = {
-        unlink_discord: '🔗 Discord délié',
-        ban_user: '⛔ Compte banni',
-        unban_user: '✅ Compte débanni',
-        delete_user: '🗑 Compte supprimé',
-      };
-      if (!audit.length) {
-        auditEl.innerHTML = `<div class="empty-state">Aucune action sensible enregistrée.</div>`;
-      } else {
-        auditEl.innerHTML = `<div style="overflow-x:auto"><table class="leaderboard-table"><thead><tr><th>Date</th><th>Action</th><th>Par</th><th>Cible</th><th>Détail</th></tr></thead><tbody>${audit.slice(0, 50).map((entry) => `<tr><td>${App.escapeHtml(String(entry.created_at || '').slice(0, 16))}</td><td>${App.escapeHtml(actionLabels[entry.action] || entry.action)}</td><td>${App.escapeHtml(entry.actor || '')}</td><td>${App.escapeHtml(entry.target || '')}</td><td style="max-width:260px">${App.escapeHtml(entry.details || '')}</td></tr>`).join('')}</tbody></table></div>`;
-      }
-    } catch (e) {
-      statsEl.innerHTML = `<div class="empty-state">${App.escapeHtml(e.message)}</div>`;
-      usersEl.innerHTML = '';
+  // ─────────────────── Bots ───────────────────
+  const renderBots = async () => {
+    bodyEl.innerHTML = `<div class="card"><h3>🤖 Bots de la plateforme</h3><div class="card-sub">Contrôle complet en tant que fondateur : démarrer, arrêter, redémarrer.</div><div id="a-bots"><div class="spinner" style="margin:20px auto"></div></div></div>`;
+    const res = await App.api('/admin/bots');
+    const botsEl = bodyEl.querySelector('#a-bots');
+    if (!res.bots || !res.bots.length) {
+      botsEl.innerHTML = `<div class="empty-state">Aucun bot enregistré.</div>`;
+    } else {
+      botsEl.innerHTML = `<div style="overflow-x:auto"><table class="leaderboard-table"><thead><tr><th>Bot</th><th>État</th><th>Serveurs</th><th>Propriétaire</th><th>Actions</th></tr></thead><tbody></tbody></table></div>`;
+      const tb = botsEl.querySelector('tbody');
+      res.bots.forEach((b) => {
+        const statusCell = b.online
+          ? `<span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">🟢 En ligne</span>`
+          : `<span class="chip" style="color:#ff8a8d;border-color:rgba(237,66,69,.45)">🔴 Hors ligne</span>`;
+        const row = App.el(`<tr>
+          <td><b>${App.escapeHtml(b.name || 'Sans nom')}</b>${b.bot_username ? `<small style="display:block;color:var(--text-dim)">${App.escapeHtml(b.bot_username)}</small>` : ''}</td>
+          <td>${statusCell}</td>
+          <td>${b.servers ?? 0}</td>
+          <td style="color:var(--text-dim);font-size:12.5px">${App.escapeHtml(b.owner_email || '—')}</td>
+          <td><div style="display:flex;gap:6px;flex-wrap:wrap">
+            ${b.online
+              ? '<button class="btn btn-ghost btn-sm" data-restart>🔄 Redémarrer</button><button class="btn btn-danger btn-sm" data-stop>⏹ Arrêter</button>'
+              : '<button class="btn btn-sm" data-start>▶️ Démarrer</button>'}
+          </div></td>
+        </tr>`);
+        const doRestart = async (btn) => {
+          if (!(await App.confirm('Redémarrer ce bot ? Il sera indisponible ~10 secondes.'))) return;
+          btn.disabled = true;
+          try {
+            await App.api(`/bots/${b.id}/stop`, { method: 'POST' });
+            await new Promise((r) => setTimeout(r, 800));
+            await App.api(`/bots/${b.id}/start`, { method: 'POST' });
+            App.toast('🔄 Bot redémarré !');
+            renderBody();
+          } catch (e) { App.toast(e.message, 'error'); btn.disabled = false; }
+        };
+        const start = row.querySelector('[data-start]');
+        if (start) start.onclick = async () => {
+          start.disabled = true;
+          try { await App.api(`/bots/${b.id}/start`, { method: 'POST' }); App.toast('▶️ Bot démarré !'); renderBody(); }
+          catch (e) { App.toast(e.message, 'error'); start.disabled = false; }
+        };
+        const stop = row.querySelector('[data-stop]');
+        if (stop) stop.onclick = async () => {
+          if (!(await App.confirm('Arrêter ce bot ? Il sera hors ligne sur tous ses serveurs.'))) return;
+          stop.disabled = true;
+          try { await App.api(`/bots/${b.id}/stop`, { method: 'POST' }); App.toast('⏹ Bot arrêté.'); renderBody(); }
+          catch (e) { App.toast(e.message, 'error'); stop.disabled = false; }
+        };
+        const restart = row.querySelector('[data-restart]');
+        if (restart) restart.onclick = () => doRestart(restart);
+        tb.appendChild(row);
+      });
     }
   };
 
-  await render();
+  // ─────────────────── Journal de sécurité ───────────────────
+  const renderAudit = async () => {
+    const filter = App.ADMIN_AUDIT_FILTER = App.ADMIN_AUDIT_FILTER || '';
+    const actionLabels = {
+      unlink_discord: '🔗 Discord délié',
+      ban_user: '⛔ Compte banni',
+      unban_user: '✅ Compte débanni',
+      delete_user: '🗑 Compte supprimé',
+    };
+    bodyEl.innerHTML = `
+      <div class="card">
+        <h3>🛡️ Journal de sécurité</h3>
+        <div class="card-sub">Historique des actions sensibles réalisées dans l'administration globale.</div>
+        <div class="admin-toolbar">
+          <select class="dash-select" id="a-audit-filter" style="max-width:240px">
+            <option value="">— Toutes les actions —</option>
+            ${Object.entries(actionLabels).map(([k, v]) => `<option value="${k}" ${filter === k ? 'selected' : ''}>${v}</option>`).join('')}
+          </select>
+        </div>
+        <div id="a-audit"><div class="spinner" style="margin:20px auto"></div></div>
+      </div>`;
+    const res = await App.api('/admin/audit' + (filter ? '?action=' + encodeURIComponent(filter) : ''));
+    const auditEl = bodyEl.querySelector('#a-audit');
+    const audit = res.audit || [];
+    if (!audit.length) {
+      auditEl.innerHTML = `<div class="empty-state">Aucune action sensible enregistrée.</div>`;
+    } else {
+      auditEl.innerHTML = `<div style="overflow-x:auto"><table class="leaderboard-table"><thead><tr><th>Date</th><th>Action</th><th>Par</th><th>Cible</th><th>Détail</th></tr></thead><tbody>${audit.slice(0, 50).map((entry) => `<tr><td>${App.escapeHtml(String(entry.created_at || '').slice(0, 16))}</td><td>${App.escapeHtml(actionLabels[entry.action] || entry.action)}</td><td>${App.escapeHtml(entry.actor || '')}</td><td>${App.escapeHtml(entry.target || '')}</td><td style="max-width:260px">${App.escapeHtml(entry.details || '')}</td></tr>`).join('')}</tbody></table></div>`;
+    }
+    bodyEl.querySelector('#a-audit-filter').onchange = (e) => { App.ADMIN_AUDIT_FILTER = e.target.value; renderBody(); };
+  };
+
+  // ─────────────────── Réglages plateforme ───────────────────
+  const renderSettings = async () => {
+    const cfg = await App.api('/admin/settings');
+    bodyEl.innerHTML = `
+      <div class="card">
+        <h3>⚙️ Réglages plateforme</h3>
+        <div class="card-sub">Ces réglages sont appliqués partout : liens de transcription, bannière du profil, sauvegardes.</div>
+        <label class="dash-label">🌐 URL publique du site</label>
+        <input class="dash-input" id="a-public-url" placeholder="https://hoxera.onrender.com" value="${App.escapeHtml(cfg.public_url || '')}" style="max-width:420px" />
+        <div style="font-size:12px;color:var(--text-dim);margin-top:6px">Utilisée pour les liens de transcription envoyés en message privé. Laisse vide pour le défaut.</div>
+        <label class="dash-label" style="margin-top:16px">🖼️ Bannière du profil du bot (MP de fermeture des tickets)</label>
+        <input class="dash-input" id="a-banner-url" placeholder="https://…" value="${App.escapeHtml(cfg.profile_banner_url || '')}" style="max-width:420px" />
+        <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
+          <button class="btn btn-sm" id="a-settings-save">💾 Enregistrer</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>💾 Sauvegardes</h3>
+        <div class="card-sub">La base de données est sauvegardée sur GitHub automatiquement (si configuré).</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span class="chip" style="color:${cfg.backup_enabled ? '#57F287' : '#ff8a8d'};border-color:${cfg.backup_enabled ? 'rgba(87,242,135,.4)' : 'rgba(237,66,69,.45)'}">${cfg.backup_enabled ? '✅ Sauvegarde configurée' : '⚠️ Non configurée'}</span>
+          ${cfg.backup_repo ? `<span class="chip">📦 ${App.escapeHtml(cfg.backup_repo)}</span>` : ''}
+          <span class="chip">💾 Dernière : ${cfg.last_backup ? App.escapeHtml(String(cfg.last_backup).slice(0, 16)) : 'jamais'}</span>
+        </div>
+        <div style="margin-top:12px"><button class="btn btn-sm" id="a-backup">💾 Sauvegarder maintenant</button></div>
+      </div>`;
+    bodyEl.querySelector('#a-settings-save').onclick = async () => {
+      try {
+        await App.api('/admin/settings', { method: 'PUT', body: {
+          public_url: bodyEl.querySelector('#a-public-url').value.trim(),
+          profile_banner_url: bodyEl.querySelector('#a-banner-url').value.trim(),
+        }});
+        App.toast('Réglages enregistrés !');
+      } catch (e) { App.toast(e.message, 'error'); }
+    };
+    bodyEl.querySelector('#a-backup').onclick = async () => {
+      const b = bodyEl.querySelector('#a-backup');
+      b.disabled = true; b.textContent = '⏳ Sauvegarde…';
+      try {
+        const r = await App.api('/backup/now', { method: 'POST' });
+        App.toast(r.ok ? '✅ Sauvegarde terminée !' : (r.error || 'Erreur'));
+      } catch (e) { App.toast(e.message, 'error'); }
+      finally { b.disabled = false; b.textContent = '💾 Sauvegarder maintenant'; renderBody(); }
+    };
+  };
+
+  renderTabs();
+  await renderBody();
 };
 
 // ---------------------- Démarrage ----------------------

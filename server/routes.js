@@ -2701,18 +2701,43 @@ router.get('/admin/stats', requireAuth, requireAdmin, (req, res) => {
   const bots = store.db.prepare('SELECT COUNT(*) AS n FROM bots').get().n;
   const online = store.db.prepare('SELECT COUNT(*) AS n FROM bots WHERE enabled = 1').get().n;
   const live = botManager.platformStats();
-  res.json({ users, linked, banned, bots, online, ...live });
+  // Stats globales complémentaires (v199 — Hub fondateur)
+  let tickets = 0, messages24h = 0, openTickets = 0, suggestions = 0;
+  try { tickets = store.db.prepare('SELECT COUNT(*) AS n FROM closed_tickets').get().n; } catch {}
+  try { openTickets = store.db.prepare('SELECT COUNT(*) AS n FROM open_tickets').get().n; } catch {}
+  try { suggestions = store.db.prepare('SELECT COUNT(*) AS n FROM suggestions').get().n; } catch {}
+  try {
+    const since = new Date(Date.now() - 24 * 3600000).toISOString().slice(0, 10);
+    messages24h = store.db.prepare('SELECT COUNT(*) AS n FROM message_stats WHERE day = ?').get(since).n;
+  } catch {}
+  const lastBackup = store.settings.get('last_backup') || '';
+  res.json({ users, linked, banned, bots, online, ...live, tickets, openTickets, suggestions, messages24h, lastBackup });
 });
 
 router.get('/admin/users', requireAuth, requireAdmin, (req, res) => {
-  const rows = store.db.prepare(`
-    SELECT u.id, u.email, u.discord_id, u.discord_username, u.discord_avatar,
-      u.discord_guilds, u.created_at,
-      (SELECT COUNT(*) FROM bots b WHERE b.user_id = u.id) AS bots_count,
-      (pb.user_id IS NOT NULL) AS banned,
-      pb.reason AS ban_reason, pb.created_at AS banned_at
-    FROM users u LEFT JOIN platform_bans pb ON pb.user_id = u.id
-    ORDER BY u.created_at DESC LIMIT 200`).all();
+  const q = String(req.query.q || '').trim();
+  let rows;
+  if (q) {
+    const like = `%${q}%`;
+    rows = store.db.prepare(`
+      SELECT u.id, u.email, u.discord_id, u.discord_username, u.discord_avatar,
+        u.discord_guilds, u.created_at,
+        (SELECT COUNT(*) FROM bots b WHERE b.user_id = u.id) AS bots_count,
+        (pb.user_id IS NOT NULL) AS banned,
+        pb.reason AS ban_reason, pb.created_at AS banned_at
+      FROM users u LEFT JOIN platform_bans pb ON pb.user_id = u.id
+      WHERE u.email LIKE ? OR u.discord_username LIKE ? OR u.discord_id LIKE ?
+      ORDER BY u.created_at DESC LIMIT 200`).all(like, like, like);
+  } else {
+    rows = store.db.prepare(`
+      SELECT u.id, u.email, u.discord_id, u.discord_username, u.discord_avatar,
+        u.discord_guilds, u.created_at,
+        (SELECT COUNT(*) FROM bots b WHERE b.user_id = u.id) AS bots_count,
+        (pb.user_id IS NOT NULL) AS banned,
+        pb.reason AS ban_reason, pb.created_at AS banned_at
+      FROM users u LEFT JOIN platform_bans pb ON pb.user_id = u.id
+      ORDER BY u.created_at DESC LIMIT 200`).all();
+  }
   const users = rows.map((u) => {
     const guilds = parseAdminGuilds(u.discord_guilds);
     return {
@@ -2735,14 +2760,25 @@ router.get('/admin/users', requireAuth, requireAdmin, (req, res) => {
 });
 
 router.get('/admin/audit', requireAuth, requireAdmin, (req, res) => {
-  const rows = store.db.prepare(`
-    SELECT a.id, a.actor_user_id, a.target_user_id, a.action, a.details, a.created_at,
-      au.discord_username AS actor_discord_username,
-      tu.discord_username AS target_discord_username
-    FROM platform_audit_log a
-    LEFT JOIN users au ON au.id = a.actor_user_id
-    LEFT JOIN users tu ON tu.id = a.target_user_id
-    ORDER BY a.id DESC LIMIT 100`).all();
+  const actionFilter = String(req.query.action || '').trim();
+  const rows = actionFilter
+    ? store.db.prepare(`
+      SELECT a.id, a.actor_user_id, a.target_user_id, a.action, a.details, a.created_at,
+        au.discord_username AS actor_discord_username,
+        tu.discord_username AS target_discord_username
+      FROM platform_audit_log a
+      LEFT JOIN users au ON au.id = a.actor_user_id
+      LEFT JOIN users tu ON tu.id = a.target_user_id
+      WHERE a.action = ?
+      ORDER BY a.id DESC LIMIT 100`).all(actionFilter)
+    : store.db.prepare(`
+      SELECT a.id, a.actor_user_id, a.target_user_id, a.action, a.details, a.created_at,
+        au.discord_username AS actor_discord_username,
+        tu.discord_username AS target_discord_username
+      FROM platform_audit_log a
+      LEFT JOIN users au ON au.id = a.actor_user_id
+      LEFT JOIN users tu ON tu.id = a.target_user_id
+      ORDER BY a.id DESC LIMIT 100`).all();
   res.json({ audit: rows.map((row) => ({
     id: row.id,
     actor_user_id: row.actor_user_id,
@@ -2753,6 +2789,65 @@ router.get('/admin/audit', requireAuth, requireAdmin, (req, res) => {
     details: row.details || '',
     created_at: row.created_at,
   })) });
+});
+
+// 🌍 Activité globale récente (tous serveurs, tous bots) — Hub fondateur v199
+router.get('/admin/activity', requireAuth, requireAdmin, (req, res) => {
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 100);
+  const rows = store.db.prepare('SELECT emoji, text, bot_id, guild_id, created_at FROM activity ORDER BY id DESC LIMIT ?').all(limit);
+  // Noms des serveurs : map guildId -> nom (depuis les clients connectés)
+  const guildNames = new Map();
+  for (const entry of botManager.clients.values()) {
+    if (!entry.client.isReady()) continue;
+    for (const g of entry.client.guilds.cache.values()) guildNames.set(String(g.id), g.name);
+  }
+  const botNames = new Map();
+  for (const b of store.db.prepare('SELECT id, name FROM bots').all()) botNames.set(b.id, b.name || `Bot #${b.id}`);
+  res.json({ items: rows.map((r) => ({
+    emoji: r.emoji || '',
+    text: r.text || '',
+    guild_id: r.guild_id,
+    guild_name: guildNames.get(String(r.guild_id)) || '',
+    bot_name: botNames.get(r.bot_id) || '',
+    created_at: r.created_at,
+  })) });
+});
+
+// ⚙️ Réglages plateforme (fondateur) — v199
+router.get('/admin/settings', requireAuth, requireAdmin, (req, res) => {
+  res.json({
+    public_url: store.settings.get('public_url') || '',
+    profile_banner_url: store.settings.get('profile_banner_url') || '',
+    last_backup: store.settings.get('last_backup') || '',
+    backup_enabled: (() => { try { return require('./backup').enabled(); } catch { return false; } })(),
+    backup_repo: (() => { try { return require('./backup').repo(); } catch { return ''; } })(),
+  });
+});
+router.put('/admin/settings', requireAuth, requireAdmin, platformMutationRateLimit, (req, res) => {
+  const b = req.body || {};
+  if (b.public_url !== undefined) {
+    const v = String(b.public_url || '').trim().slice(0, 200);
+    if (v && !/^https?:\/\//.test(v)) return res.status(400).json({ error: 'URL publique invalide (doit commencer par http:// ou https://).' });
+    store.settings.set('public_url', v);
+  }
+  if (b.profile_banner_url !== undefined) {
+    const v = String(b.profile_banner_url || '').trim().slice(0, 500);
+    if (v && !/^https?:\/\//.test(v)) return res.status(400).json({ error: 'URL d\'image invalide (doit commencer par http:// ou https://).' });
+    store.settings.set('profile_banner_url', v);
+  }
+  res.json({ ok: true });
+});
+
+// 🩺 Santé système (fondateur) — v199
+router.get('/admin/system', requireAuth, requireAdmin, (req, res) => {
+  let health = {};
+  try { health = require('./health').snapshot(); } catch {}
+  res.json({
+    uptimeMs: process.uptime() * 1000,
+    memory: (health && health.memory) || {},
+    lastBackup: store.settings.get('last_backup') || '',
+    backupEnabled: (() => { try { return require('./backup').enabled(); } catch { return false; } })(),
+  });
 });
 
 router.get('/admin/bots', requireAuth, requireAdmin, (req, res) => {
