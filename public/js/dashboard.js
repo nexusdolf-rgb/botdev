@@ -223,8 +223,14 @@ Dashboard.dropdownMenu = ({ trigger, getOptions, onSelect, searchable = false, m
     const list = App.el('<div class="dd-list"></div>');
     if (!opts.length) list.appendChild(App.el('<div class="dd-empty">Aucun résultat</div>'));
     opts.forEach((o) => {
-      const row = App.el(`<div class="dd-option${o.selected ? ' is-selected' : ''}${o.disabled ? ' is-disabled' : ''}" role="option" aria-selected="${o.selected ? 'true' : 'false'}" data-value="${App.escapeHtml(String(o.value))}">
-        <span class="dd-opt-ico">${o.img ? `<img src="${App.escapeHtml(o.img)}" alt="" />` : (o.icon ? App.escapeHtml(String(o.icon)) : (o.fallback ? `<span class="dd-opt-fallback">${App.escapeHtml(String(o.fallback))}</span>` : ''))}</span>
+      // La pastille d'icône n'est créée que si l'option en a une (img, emoji
+      // ou lettre) : jamais de case vide en tête de ligne — un placeholder
+      // « — Choisir… — » reste propre, sans trou.
+      const icoContent = o.img
+        ? `<img src="${App.escapeHtml(o.img)}" alt="" />`
+        : (o.icon ? App.escapeHtml(String(o.icon)) : (o.fallback ? `<span class="dd-opt-fallback">${App.escapeHtml(String(o.fallback))}</span>` : ''));
+      const row = App.el(`<div class="dd-option${o.selected ? ' is-selected' : ''}${o.disabled ? ' is-disabled' : ''}${icoContent ? '' : ' no-ico'}" role="option" aria-selected="${o.selected ? 'true' : 'false'}" data-value="${App.escapeHtml(String(o.value))}">
+        ${icoContent ? `<span class="dd-opt-ico">${icoContent}</span>` : ''}
         <span class="dd-opt-txt"><b>${App.escapeHtml(String(o.label))}</b>${o.hint ? `<small>${App.escapeHtml(String(o.hint))}</small>` : ''}</span>
         ${o.selected ? '<span class="dd-check" aria-hidden="true">✓</span>' : ''}
       </div>`);
@@ -313,12 +319,24 @@ Dashboard.enhanceSelect = (select) => {
   Dashboard.dropdownMenu({
     trigger,
     searchable: () => select.options.length > 7,
-    getOptions: () => Array.from(select.options).map((o) => ({
-      value: o.value,
-      label: o.textContent.trim(),
-      disabled: o.disabled,
-      selected: o.value === select.value,
-    })),
+    getOptions: () => Array.from(select.options).map((o) => {
+      // 🏷️ Chaque option porte son icône (💬 salon, 🛡️ rôle, 📁 catégorie,
+      // ⚠️ référence introuvable…) : la pastille de gauche n'est plus jamais
+      // une case vide. L'emoji de tête quitte le label (pas de doublon).
+      const raw = String(o.textContent || '').trim();
+      let label = raw;
+      let icon = '';
+      const em = raw.match(/^((?:\p{Extended_Pictographic}\uFE0F?)+)(?:\s+|$)([\s\S]*)$/u);
+      if (em) { icon = em[1]; label = (em[2] || '').trim() || raw; }
+      else if (/^#/.test(raw)) icon = '💬';
+      return {
+        value: o.value,
+        label,
+        icon,
+        disabled: o.disabled,
+        selected: o.value === select.value,
+      };
+    }),
     onSelect: (value) => {
       select.value = value;
       select.dispatchEvent(new Event('change', { bubbles: true }));
@@ -484,7 +502,7 @@ Dashboard.openServerPicker = () => {
               ${g.canManage ? '' : '<span class="sp-ro">Lecture seule</span>'}
             </span>
             <span class="sp-body">
-              <span class="sp-ico">${g.icon ? `<img src="${App.escapeHtml(g.icon)}" alt="" />` : `<span>${App.escapeHtml(initialOf(g.name))}</span>`}</span>
+              <span class="sp-ico">${g.icon ? `<img src="${App.escapeHtml(g.icon)}" alt="" data-fb-text="${App.escapeHtml(g.name)}" />` : `<span>${App.escapeHtml(initialOf(g.name))}</span>`}</span>
               <span class="sp-txt">
                 <b title="${App.escapeHtml(g.name)}">${App.escapeHtml(g.name)}</b>
                 <small>${g.hasBot ? (g.members ? `${App.escapeHtml(String(g.members))} membres` : 'Optimus Prime présent') : 'Optimus Prime absent — inviter'}</small>
@@ -529,7 +547,7 @@ Dashboard.serverPicker = () => {
   const pick = App.el(`
     <div class="dash-server-card" title="Changer de serveur" role="button" tabindex="0">
       ${cur && cur.icon
-        ? `<img src="${App.escapeHtml(cur.icon)}" alt="" />`
+        ? `<img src="${App.escapeHtml(cur.icon)}" alt="" data-fb-text="${App.escapeHtml(cur.name || 'S')}" />`
         : `<span class="srv-fallback">${App.escapeHtml(initial)}</span>`}
       <div class="srv-txt">
         <span class="srv-label">Serveur</span>
@@ -874,7 +892,7 @@ Dashboard.renderServerGrid = (content) => {
     const initial = (g.name || '?').trim()[0].toUpperCase();
     const card = App.el(`
       <button class="srv-card ${g.hasBot ? '' : 'no-bot'}">
-        ${g.icon ? `<img src="${App.escapeHtml(g.icon)}" alt="" />` : `<span class="srv-card-fallback">${App.escapeHtml(initial)}</span>`}
+        ${g.icon ? `<img src="${App.escapeHtml(g.icon)}" alt="" data-fb-text="${App.escapeHtml(g.name)}" />` : `<span class="srv-card-fallback">${App.escapeHtml(initial)}</span>`}
         <b title="${App.escapeHtml(g.name)}">${App.escapeHtml(g.name)}</b>
         ${g.hasBot
           ? (g.canManage ? '<span class="srv-badge ok">✅ Configurer</span>' : '<span class="srv-badge">🔒 Lecture seule</span>')
@@ -939,7 +957,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
     <div class="dash-mobile-bar" aria-label="Navigation mobile">
       <button class="dash-mobile-navbtn" id="d-mobile-menu" type="button" aria-label="Ouvrir le menu principal" aria-expanded="false">☰</button>
       <div class="dash-mobile-brand">
-        ${bot.avatar_url ? `<img src="${App.escapeHtml(bot.avatar_url)}" alt="" />` : '<img src="/icons/nexora-robot-mark.svg" alt="Logo Optimus Prime" />'}
+        ${bot.avatar_url ? `<img src="${App.escapeHtml(bot.avatar_url)}" alt="" data-fb-text="${App.escapeHtml(bot.name || 'Optimus Prime')}" />` : '<img src="/icons/nexora-robot-mark.svg" alt="Logo Optimus Prime" />'}
         <b>${App.escapeHtml(bot.name || 'Optimus Prime')}</b>
       </div>
       <button class="dash-mobile-navbtn" id="d-mobile-modules" type="button" aria-label="Ouvrir les serveurs et modules" aria-expanded="false">▦</button>
@@ -1047,7 +1065,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
     moduleRail.innerHTML = '';
     (discordGuilds || []).forEach((guild) => {
       const initial = String(guild.name || '?').trim().slice(0, 1).toUpperCase() || '?';
-      const item = App.el(`<button type="button" class="dash-mobile-server-item ${guild.id === Dashboard.state.guildId ? 'active' : ''}" data-mobile-guild="${App.escapeHtml(guild.id)}" title="${App.escapeHtml(guild.name)}">${guild.icon ? `<img src="${App.escapeHtml(guild.icon)}" alt="" />` : `<span>${App.escapeHtml(initial)}</span>`}</button>`);
+      const item = App.el(`<button type="button" class="dash-mobile-server-item ${guild.id === Dashboard.state.guildId ? 'active' : ''}" data-mobile-guild="${App.escapeHtml(guild.id)}" title="${App.escapeHtml(guild.name)}">${guild.icon ? `<img src="${App.escapeHtml(guild.icon)}" alt="" data-fb-text="${App.escapeHtml(guild.name)}" />` : `<span>${App.escapeHtml(initial)}</span>`}</button>`);
       item.onclick = async () => {
         if (!guild.hasBot) { App.openInvite(Dashboard.state.bot.invite_url); return; }
         if (!guild.canManage) { App.toast('Lecture seule : permission Administrateur requise.', 'error'); return; }
@@ -1389,7 +1407,7 @@ Dashboard.renderers.overview = async (content, data) => {
       ${serverBanner ? `<span class="ov-hero-bg" style="background-image:url('${App.escapeHtml(serverBanner)}')" aria-hidden="true"></span>` : ''}
       <div class="ov-intro-server">
         ${serverIcon
-          ? `<img class="ov-server-avatar" src="${App.escapeHtml(serverIcon)}" alt="" />`
+          ? `<img class="ov-server-avatar" src="${App.escapeHtml(serverIcon)}" alt="" data-fb-text="${App.escapeHtml(g.name || 'S')}" />`
           : `<span class="ov-server-avatar fallback">${App.escapeHtml(serverInitial)}</span>`}
         <div class="ov-intro-copy">
           <span class="ov-eyebrow">${greeting}, administrateur</span>

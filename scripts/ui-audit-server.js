@@ -165,6 +165,79 @@ function makeGuild(id, name, { big = false } = {}) {
 }
 
 // ------------------------------------------------------------
+// Guild mockée « 🟠Communauté-CODM 🟠 » — reproduit le serveur réel
+// du user (43 membres, ~56 salons, 47 rôles, créé en juillet 2026)
+// pour auditer le rendu mobile réel (vue d'ensemble, tickets, salons).
+// ------------------------------------------------------------
+function makeCodmGuild() {
+  const channels = new Map();
+  const roles = new Map();
+  const members = new Map();
+
+  const roleBase = [
+    ['72001', 'Administrateur', 30], ['72002', 'Fondateur', 29], ['72003', 'Co-fondateur', 28],
+    ['72004', 'Modération - Équipe CODM', 25], ['72005', 'Staff Candidatures', 24],
+    ['72006', 'Membre VIP · Accès aux salons exclusifs', 22], ['72007', 'Boosteur Niveau 3 — Merci !', 20],
+    ['72008', 'Joueur Confirmé', 15], ['72009', 'Nouveau Membre', 5], ['72010', '@everyone', 0],
+  ];
+  for (let i = 0; i < 37; i++) roleBase.push([String(73000 + i), 'Rôle personnalisé #' + (i + 1), 10]);
+  for (const [rid, rname, rpos] of roleBase) roles.set(lid(rid), role(rid, rname, rpos));
+
+  const txt = [
+    ['71101', '📢-annonces', 0], ['71102', '📢-annonces-evenements', 0], ['71103', 'annonces-live', 0], ['71104', 'annonces-partenariats', 0],
+    ['71105', '💬-discussion-générale', 0], ['71106', 'bienvenue', 0], ['71107', '👋-présentations', 0],
+    ['71108', 'questions', 0], ['71109', 'aide-commandes', 0], ['71110', '🤖-bots-et-commandes', 0],
+    ['71111', '1v1', 0], ['71112', 'matchmaking', 0], ['71113', '🎮-parties-et-scrims', 0], ['71114', 'tournois', 0],
+    ['71115', 'giveaways', 0], ['71116', 'anniversaires', 0], ['71117', 'evenements', 0], ['71118', '🎉-concours', 0],
+    ['71119', '📸-screenshots-clips', 0], ['71120', 'montages', 0], ['71121', '🎵-musique', 0],
+    ['71122', 'choix-du-rank', 0], ['71123', '🎯-objectifs-rank', 0], ['71124', 'charges-classes', 0],
+    ['71125', '🛠️-remontees-de-bugs', 0], ['71126', 'suggestions', 0], ['71127', 'idees-fonctionnalites', 0],
+    ['71128', '🎟️-tickets-support', 0], ['71129', 'tickets-achats', 0], ['71130', 'logs-staff', 0],
+    ['71131', 'recrutement-staff', 0], ['71132', 'candidatures', 0], ['71133', 'membres-vip', 0],
+    ['71134', 'chat-vocal-texte', 0], ['71135', 'defis-amis', 0], ['71136', 'zone-libre', 0],
+    ['71137', 'memes', 0], ['71138', 'debat-rank', 0], ['71139', 'classement-global', 0], ['71140', 'replays', 0],
+    ['71141', 'loadouts-pro', 0], ['71142', 'config-souris', 0], ['71143', 'petites-annonces', 0], ['71144', 'recrutement-equipe', 0],
+    ['71145', 'scrims-5v5', 0], ['71146', 'warzone', 0], ['71147', 'zone-dete', 0],
+  ];
+  const voice = [
+    ['71201', '🔊 Général', 2], ['71202', 'Vocal Scrims & Rank', 2], ['71203', 'Vocal Chill & Musique', 2], ['71204', 'Vocal Tournois', 2],
+  ];
+  const cats = [
+    ['71301', 'INFORMATIONS', 4], ['71302', 'COMMUNAUTÉ', 4], ['71303', 'COMPÉTITION', 4], ['71304', 'SUPPORT & STAFF', 4], ['71305', 'VOCAUX', 4],
+  ];
+  for (const [cid, cname, ctype] of [...txt, ...voice, ...cats]) channels.set(lid(cid), chan(cid, cname, ctype));
+
+  const names = [
+    'ZedZed_KarachoLeGrandChef', 'AlexandraDuSudOuest', 'Jean-Michel Le Sans-Faute Officiel', 'ミクサ_サポートロボ',
+    'Maxime RP - Membre Fondateur Historique', '𝒮𝓉𝓎𝓁𝒾𝓈𝓉𝓊𝒹𝒾ℴ', 'SansPseudonyme1', 'UnMembreAvecUnTrèsTrèsLongPseudonyme',
+    'Gamer_Pro_2287', 'Élise Été 2026 (vacances)', 'Staff-Asistant#001', 'Le Candidat Numéro Un Officiel',
+    'KillJoy_19', 'Shadow_Assassin', 'NeoMatrix', 'PixelWarrior', 'LaRageDu84', 'Top1Mondial', 'Snip3r_Fr',
+    'Boomerangue', 'TchoupiPower', 'LégendeDuNord', 'MissCODM', 'Headshot_Master', 'CampeurPro', 'FraggerDu62',
+    'Zerator_Clone', 'ProGamerX', 'NoScope_Fr', 'TricheurNon', 'MW3_Legend', 'Rezilient', 'YasuoMain', 'SweatDu33',
+    'CasualEnjoyer', 'RankPush', 'EmpereurDuRank', 'SniperDeGénie', 'CampeurDeLégende', 'LeVraiOptimus', 'BotNeuf', 'Invité42', 'RookieDuJour',
+  ];
+  for (let i = 0; i < names.length; i++) members.set(lid(60000 + i), member(String(60000 + i), names[i], { roles: { cache: roles } }, 30 + i, i < 3 ? ['72001'] : i < 8 ? ['72006'] : ['72009']));
+
+  return {
+    id: '1527070627314405387',
+    name: '🟠Communauté-CODM 🟠 — call of duty mobile fr',
+    icon: '',
+    banner: null,
+    memberCount: members.size,
+    premiumSubscriptionCount: 3,
+    createdAt: new Date('2026-07-05T10:00:00Z'),
+    createdTimestamp: new Date('2026-07-05T10:00:00Z').getTime(),
+    channels: { cache: channels },
+    roles: { cache: roles },
+    members: { cache: members },
+    bannerURL: () => '',
+    iconURL: () => '',
+    fetch: async () => ({ ...this, members: { cache: members } }),
+    toString: () => name,
+  };
+}
+
+// ------------------------------------------------------------
 // Faux client Discord (interface minimale lue par les routes)
 // ------------------------------------------------------------
 function makeClient(guilds) {
@@ -202,7 +275,7 @@ if (bot) {
   const guildB = makeGuild('1539668540787925052', 'Support Officiel Optimus Prime & Hoxera', { big: false });
   const guildC = makeGuild('1539226855004053626', 'Support Hoxera — assistance et aide rapide', { big: false });
   const guildD = makeGuild('1510643183728595035', '[ ONE | ONE ] CHEAT', { big: false });
-  const guildE = makeGuild('1527070627314405387', '🟠Communauté-CODM 🟠 — call of duty mobile fr', { big: false });
+  const guildE = makeCodmGuild();
   const client = makeClient([guildA, guildB, guildC, guildD, guildE]);
   botManager.clients.set(bot.id, { client });
   // Seconde copie : le sélecteur de serveurs liste les 51 guildes du user ;

@@ -28,9 +28,9 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
 
   // ================= 1. Cache-buster v197 =================
   console.log('\n1️⃣  Version v197');
-  check('index.html : ?v=205 référencé 7 fois', (index.match(/\?v=205/g) || []).length === 7);
+  check('index.html : ?v=206 référencé 7 fois', (index.match(/\?v=206/g) || []).length === 7);
   check('index.html : plus aucune ?v=196', !index.includes('?v=196'));
-  check('sw.js : cache botdev-v205', sw.includes("const CACHE = 'botdev-v205';"));
+  check('sw.js : cache botdev-v206', sw.includes("const CACHE = 'botdev-v206';"));
   check('sw.js : plus de botdev-v196', !sw.includes('botdev-v196'));
 
   // ================= 2. Couche CSS dashboard (Audit UI v197) =================

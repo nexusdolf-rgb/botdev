@@ -678,3 +678,64 @@ App.renderAdminPage = async () => {
 window.addEventListener('hashchange', () => App.router.run());
 window.addEventListener('DOMContentLoaded', () => App.router.run());
 if (document.readyState !== 'loading') App.router.run();
+
+// ============================================================
+// 🖼️ Anti-images cassées (global, capture) — v206
+// ------------------------------------------------------------
+// Toute <img> qui échoue à charger (CDN Discord injoignable, avatar ou
+// icône supprimé, URL devenue invalide…) est remplacée SUR PLACE par une
+// pastille de secours propre (initiale sur fond doux). L'icône « image
+// cassée » du navigateur ne doit JAMAIS apparaître — ni dans le dashboard,
+// ni dans les menus déroulants, ni sur les pages publiques.
+// Les images qui ont déjà leur propre onerror (logo public ⚡, etc.)
+// restent gérées par leur code local : on ne les touche pas.
+App.imgFallbackText = (img) => {
+  if (!img) return '?';
+  const named = img.dataset && (img.dataset.fbText || img.dataset.name);
+  if (named && String(named).trim()) return [...String(named).trim()][0].toUpperCase();
+  const alt = String(img.getAttribute && (img.getAttribute('alt') || '') || '').trim();
+  if (alt && !/^(logo|avatar|ic[oô]ne|image|banni[eè]re|photo)/i.test(alt) && alt !== 'Logo Optimus Prime') return [...alt][0].toUpperCase();
+  const title = String(img.title || '').trim();
+  if (title) return [...title][0].toUpperCase();
+  // Contexte : carte de serveur (le <b> voisin porte le nom), option de
+  // menu déroulant (.dd-opt-txt b), pastille de membre…
+  const host = img.closest('.sp-card, .srv-card, .dash-server-card, .dash-mobile-server-item, .ov-intro-server, .dd-option, .ov-top-member, .dash-mobile-drawer-account');
+  if (host) {
+    const nameEl = host.querySelector('b, .srv-txt b, .sp-txt b, .dd-opt-txt b, .ov-qa-txt b');
+    const nm = (nameEl && nameEl.textContent || '').trim().replace(/^#/, '');
+    if (nm) return [...nm][0].toUpperCase();
+  }
+  return '⚡';
+};
+
+App.imgFailed = (img) => {
+  if (!img || !img.isConnected || (img.dataset && img.dataset.fbSafe)) return;
+  img.dataset.fbSafe = '1';
+  try {
+    const cs = window.getComputedStyle(img);
+    const rect = img.getBoundingClientRect();
+    const w = Math.max(1, Math.round(rect.width || parseFloat(cs.width) || 40));
+    const h = Math.max(1, Math.round(rect.height || parseFloat(cs.height) || 40));
+    const round = /50%|100%/.test(cs.borderRadius) || img.classList.contains('round');
+    const fb = document.createElement('span');
+    fb.className = 'img-fb' + (round ? ' is-round' : '');
+    fb.style.width = w + 'px';
+    fb.style.height = h + 'px';
+    fb.style.fontSize = Math.max(10, Math.min(20, Math.round(Math.min(w, h) * 0.42))) + 'px';
+    fb.setAttribute('aria-hidden', 'true');
+    fb.textContent = App.imgFallbackText(img);
+    img.replaceWith(fb);
+  } catch { /* ne jamais bloquer le rendu */ }
+};
+
+if (typeof document !== 'undefined' && !window.__hxImgFallback) {
+  window.__hxImgFallback = true;
+  // phase CAPTURE : « error » sur une image ne remonte pas (pas de bulle),
+  // seule la descente depuis document permet de l'intercepter partout.
+  document.addEventListener('error', (e) => {
+    const img = e && e.target;
+    if (!img || img.tagName !== 'IMG' || img.dataset.fbSafe) return;
+    if (img.onerror) return; // onerror local déjà prévu → il s'en charge
+    App.imgFailed(img);
+  }, true);
+}

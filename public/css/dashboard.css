@@ -5473,3 +5473,43 @@ html.hx-light .activity-item { background: #fff; border-color: #e3e3ea; }
   vertical-align: baseline; white-space: nowrap;
 }
 html.hx-light .dc-mention { color: #3d4fdb; background: #5865F229; }
+
+/* ════════════════════════════════════════════════════════════════
+   🔧 v206 — anti-images cassées + sélecteurs lisibles
+   ════════════════════════════════════════════════════════════════ */
+
+/* 🖼️ Avatar de secours : remplace proprement toute image qui n'a pas pu
+   charger (CDN Discord injoignable, avatar supprimé, URL invalide…) —
+   l'icône « image cassée » du navigateur ne doit jamais apparaître. */
+.img-fb {
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0; vertical-align: middle; overflow: hidden;
+  background: linear-gradient(135deg, #3b3f5c, #23252f);
+  color: #e8eaf3; font-weight: 800; font-size: 15px; line-height: 1;
+  border-radius: 8px; user-select: none;
+}
+html.hx-light .img-fb { background: linear-gradient(135deg, #e8e9f0, #d5d8e4); color: #3c4154; }
+.img-fb.is-round { border-radius: 50%; }
+.img-fb img-fb-t { display: block; }
+
+/* Sélection visible dans les menus déroulants (contraste renforcé) */
+.dd-option.is-selected {
+  background: rgba(var(--d-accent-rgb), .24);
+  box-shadow: inset 0 0 0 1.5px rgba(var(--d-accent-rgb), .5);
+}
+.dd-option.is-selected .dd-opt-txt b { color: var(--d-text); }
+.dd-option.is-selected .dd-check {
+  background: rgba(var(--d-accent-rgb), .22); border-radius: 6px;
+  padding: 1px 5px; margin-right: -2px;
+}
+html.hx-light .dd-option.is-selected { background: rgba(224, 122, 95, .16); box-shadow: inset 0 0 0 1.5px rgba(224, 122, 95, .55); }
+html.hx-light .dd-option.is-selected .dd-check { background: #e07a5f; color: #fff; border-radius: 6px; }
+
+/* Icônes d'options du menu déroulant : les emojis (💬 salon, 🛡️ rôle,
+   📁 catégorie…) sont centrés dans leur pastille, sans case vide. */
+.dd-opt-ico .dd-emoji { font-size: 15px; line-height: 1; }
+.dd-opt-ico .dd-letter { font-size: 12px; font-weight: 800; color: var(--d-text); }
+/* Lignes sans icône (placeholder « — Choisir… — »…) : le texte reste aligné
+   sous les libellés des options à icône (28px pastille + 10px d'écart). */
+.dd-option.no-ico .dd-opt-txt { margin-left: 38px; }
+.dd-option.no-ico .dd-opt-txt b { color: var(--d-dim); font-weight: 600; }
