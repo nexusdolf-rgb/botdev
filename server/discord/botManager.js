@@ -660,16 +660,21 @@ function publicBotInfo(botId) {
   const entry = clients.get(botId);
   const online = !!(entry && entry.client.isReady());
   let servers = 0, members = 0, ping = 0, uptime = 0;
+  let liveAvatar = '';
   if (online) {
     for (const g of entry.client.guilds.cache.values()) { servers++; members += g.memberCount || 0; }
     ping = entry.client.ws.ping;
     uptime = entry.startedAt ? Math.floor((Date.now() - entry.startedAt) / 1000) : 0;
+    try {
+      const cu = entry.client.user;
+      if (cu && typeof cu.displayAvatarURL === 'function') liveAvatar = cu.displayAvatarURL({ size: 256, format: 'png' });
+    } catch { liveAvatar = ''; }
   }
   return {
     id: record.id,
     name: record.name,
     username: record.bot_username || '',
-    avatar_url: record.avatar_url || '',
+    avatar_url: liveAvatar || record.avatar_url || '',
     client_id: record.client_id || '',
     online,
     servers,

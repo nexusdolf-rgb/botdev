@@ -410,6 +410,14 @@ function botDetail(bot) {
   const { token, ...safeBot } = bot || {};
   const entry = botManager.clients.get(bot.id);
   const online = botManager.isOnline(bot.id);
+  // 🖼️ Photo de profil VIVANTE du bot : lue depuis le client Discord connecté
+  // (toujours à jour), jamais une URL stockée qui peut devenir invalide quand
+  // l'avatar change. Si le client est hors ligne, on garde l'URL enregistrée.
+  let liveAvatar = '';
+  try {
+    const cu = entry && entry.client && entry.client.user;
+    if (cu && typeof cu.displayAvatarURL === 'function') liveAvatar = cu.displayAvatarURL({ size: 256, format: 'png' });
+  } catch { liveAvatar = ''; }
   let guilds = [];
   if (entry && online) {
     guilds = [...entry.client.guilds.cache.values()].map(g => ({
@@ -419,6 +427,7 @@ function botDetail(bot) {
   return {
     ...safeBot,
     online,
+    avatar_url: liveAvatar || safeBot.avatar_url || '',
     guilds,
     commands_count: store.commands.all(bot.id).length,
     modules: store.modules.all(bot.id),

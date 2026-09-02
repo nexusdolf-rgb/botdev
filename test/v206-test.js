@@ -30,7 +30,7 @@ check('App.imgFailed défini', appSource.includes('App.imgFailed = (img)'));
 check('App.imgFallbackText défini', appSource.includes('App.imgFallbackText'));
 check('écoute « error » en capture (img ne bulle pas)', appSource.includes("document.addEventListener('error',"));
 check('les onerror locaux sont laissés tranquilles', appSource.includes('if (img.onerror) return;'));
-check('remplacement par pastille .img-fb', appSource.includes("fb.className = 'img-fb'"));
+check('remplacement par pastille .img-fb', appSource.includes("className = 'img-fb'"));
 
 // ---------- 2. Avatars clés avec data-fb-text ----------
 console.log('— Lettres de secours sur les avatars —');
@@ -72,7 +72,7 @@ const { App } = w;
 const img = w.document.createElement('img');
 img.src = 'https://cdn.discordapp.com/icons/1/x.png';
 img.dataset.fbText = 'CODM';
-img.width = 40; img.height = 40;
+img.style.width = '40px'; img.style.height = '40px';
 img.classList.add('round'); // les avatars ronds portent une classe round / border-radius 50% en CSS
 w.document.getElementById('t').appendChild(img);
 App.imgFailed(img);
@@ -83,6 +83,15 @@ check('pastille ronde (classe round détectée)', fb && fb.classList.contains('i
 check('taille conservée', fb && fb.style.width === '40px');
 const encore = App.imgFailed(fb); // ne doit pas planter sur un non-IMG
 check('idempotent (aucune erreur)', true);
+
+// v207 : une image sans aucune taille connue (conteneur masqué / layout pas
+// prêt) ne doit PAS être figée en pastille de 1 px invisible — elle reste en
+// attente d'un prochain passage (rAF / visible).
+const img2 = w.document.createElement('img');
+img2.src = 'https://cdn.discordapp.com/icons/2/y.png';
+w.document.getElementById('t').appendChild(img2);
+App.imgFailed(img2);
+check('image sans taille : pas de pastille 1px immédiate', !img2.dataset.fbSafe && img2.isConnected && img2.parentNode === w.document.getElementById('t'));
 
 console.log(`\n✅ v206-test.js : ${n} vérifications OK`);
 process.exit(0);

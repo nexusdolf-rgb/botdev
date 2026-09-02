@@ -680,7 +680,7 @@ window.addEventListener('DOMContentLoaded', () => App.router.run());
 if (document.readyState !== 'loading') App.router.run();
 
 // ============================================================
-// 🖼️ Anti-images cassées (global, capture) — v206
+// 🖼️ Anti-images cassées (global, capture) — v206, robuste v207
 // ------------------------------------------------------------
 // Toute <img> qui échoue à charger (CDN Discord injoignable, avatar ou
 // icône supprimé, URL devenue invalide…) est remplacée SUR PLACE par une
@@ -689,6 +689,11 @@ if (document.readyState !== 'loading') App.router.run();
 // ni dans les menus déroulants, ni sur les pages publiques.
 // Les images qui ont déjà leur propre onerror (logo public ⚡, etc.)
 // restent gérées par leur code local : on ne les touche pas.
+// ⚠️ Règle d'or v207 : une pastille de secours DOIT rester visible.
+//   - Si l'image échoue avant que son conteneur ait une taille (layout pas
+//     encore fait, conteneur masqué…), on NE fige PAS une pastille de 1 px :
+//     on réessaie au frame suivant, puis on attend que l'élément devienne
+//     visible (IntersectionObserver) pour le remplacer avec sa vraie taille.
 App.imgFallbackText = (img) => {
   if (!img) return '?';
   const named = img.dataset && (img.dataset.fbText || img.dataset.name);
@@ -699,33 +704,88 @@ App.imgFallbackText = (img) => {
   if (title) return [...title][0].toUpperCase();
   // Contexte : carte de serveur (le <b> voisin porte le nom), option de
   // menu déroulant (.dd-opt-txt b), pastille de membre…
-  const host = img.closest('.sp-card, .srv-card, .dash-server-card, .dash-mobile-server-item, .ov-intro-server, .dd-option, .ov-top-member, .dash-mobile-drawer-account');
+  const host = img.closest('.sp-card, .srv-card, .dash-server-card, .dash-mobile-server-item, .ov-intro-server, .dd-option, .ov-top-member, .dash-bot-chip, .dash-mobile-drawer-account, .module-header-meta');
   if (host) {
-    const nameEl = host.querySelector('b, .srv-txt b, .sp-txt b, .dd-opt-txt b, .ov-qa-txt b');
+    const nameEl = host.querySelector('b, .chip-txt b, .srv-txt b, .sp-txt b, .dd-opt-txt b, .ov-qa-txt b');
     const nm = (nameEl && nameEl.textContent || '').trim().replace(/^#/, '');
     if (nm) return [...nm][0].toUpperCase();
   }
   return '⚡';
 };
 
-App.imgFailed = (img) => {
-  if (!img || !img.isConnected || (img.dataset && img.dataset.fbSafe)) return;
-  img.dataset.fbSafe = '1';
+// Mesure la taille CSS effective d'une image (layout + styles calculés).
+App.imgSizeOf = (img) => {
   try {
     const cs = window.getComputedStyle(img);
     const rect = img.getBoundingClientRect();
-    const w = Math.max(1, Math.round(rect.width || parseFloat(cs.width) || 40));
-    const h = Math.max(1, Math.round(rect.height || parseFloat(cs.height) || 40));
-    const round = /50%|100%/.test(cs.borderRadius) || img.classList.contains('round');
-    const fb = document.createElement('span');
-    fb.className = 'img-fb' + (round ? ' is-round' : '');
-    fb.style.width = w + 'px';
-    fb.style.height = h + 'px';
-    fb.style.fontSize = Math.max(10, Math.min(20, Math.round(Math.min(w, h) * 0.42))) + 'px';
-    fb.setAttribute('aria-hidden', 'true');
-    fb.textContent = App.imgFallbackText(img);
-    img.replaceWith(fb);
-  } catch { /* ne jamais bloquer le rendu */ }
+    let w = Math.round(rect.width);
+    let h = Math.round(rect.height);
+    if (!w || !h) {
+      const cw = parseFloat(cs.width), ch = parseFloat(cs.height);
+      if (!w && cw) w = Math.round(cw);
+      if (!h && ch) h = Math.round(ch);
+    }
+    return { w: w || 0, h: h || 0, cs };
+  } catch { return { w: 0, h: 0, cs: null }; }
+};
+
+let __fbObserver = null;
+function __fbObserveWhenVisible(img) {
+  // L'élément est masqué ou pas encore dimensionné : on attend qu'il entre
+  // dans le viewport (ou que son conteneur s'affiche) pour le remplacer.
+  if (typeof IntersectionObserver === 'undefined') return;
+  if (!__fbObserver) {
+    __fbObserver = new IntersectionObserver((entries) => {
+      for (const en of entries) {
+        if (!en.isIntersecting) continue;
+        const target = en.target;
+        __fbObserver.unobserve(target);
+        if (target.tagName === 'IMG') App.imgFailed(target);
+      }
+    }, { rootMargin: '200px' });
+  }
+  __fbObserver.observe(img);
+}
+
+App.imgFailed = (img) => {
+  if (!img || !img.isConnected || (img.dataset && img.dataset.fbSafe)) return;
+  img.dataset.fbSafe = '1';
+  const replace = () => {
+    if (!img.isConnected) return;
+    try {
+      const { w, h, cs } = App.imgSizeOf(img);
+      // 1) Pas encore de taille (layout en cours) : on retente au prochain
+      //    frame — quelques ms plus tard le conteneur est dimensionné.
+      const tries = parseInt(img.dataset.fbTries || '0', 10) || 0;
+      if ((w < 4 || h < 4) && tries < 12) {
+        img.dataset.fbTries = String(tries + 1);
+        img.dataset.fbSafe = '';
+        requestAnimationFrame(() => App.imgFailed(img));
+        return;
+      }
+      // 2) Toujours aucune taille (conteneur masqué : drawer fermé, onglet
+      //    inactif…) : on remplacera dès que l'élément sera visible — jamais
+      //    une pastille de 1 px invisible.
+      if (w < 4 || h < 4) {
+        img.dataset.fbSafe = '';
+        __fbObserveWhenVisible(img);
+        return;
+      }
+      // 3) Taille connue : pastille propre et visible.
+      const round = (cs && /50%|100%/.test(cs.borderRadius)) || img.classList.contains('round');
+      const fb = document.createElement('span');
+      // On garde les classes de l'image : les styles qui ciblaient sa classe
+      // (taille, bordure…) s'appliquent aussi à la pastille.
+      fb.className = 'img-fb' + (round ? ' is-round' : '') + (img.className ? ' ' + String(img.className) : '');
+      fb.style.width = w + 'px';
+      fb.style.height = h + 'px';
+      fb.style.fontSize = Math.max(10, Math.min(22, Math.round(Math.min(w, h) * 0.44))) + 'px';
+      fb.setAttribute('aria-hidden', 'true');
+      fb.textContent = App.imgFallbackText(img);
+      img.replaceWith(fb);
+    } catch { /* ne jamais bloquer le rendu */ }
+  };
+  replace();
 };
 
 if (typeof document !== 'undefined' && !window.__hxImgFallback) {

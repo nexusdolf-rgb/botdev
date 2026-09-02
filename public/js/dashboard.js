@@ -623,7 +623,7 @@ Dashboard.renderSide = (aside) => {
   }
   aside.appendChild(App.el(`<div class="dash-side-foot">
     <div style="display:flex;align-items:center;gap:10px">
-      ${Dashboard.state.bot.avatar_url ? `<img src="${App.escapeHtml(Dashboard.state.bot.avatar_url)}" style="width:34px;height:34px;border-radius:50%;box-shadow:0 0 0 2px rgba(var(--d-accent-rgb,224,122,95),.45)" alt=""/>` : '<span style="font-size:22px">⚡</span>'}
+      ${Dashboard.state.bot.avatar_url ? `<img src="${App.escapeHtml(Dashboard.state.bot.avatar_url)}" alt="" data-fb-text="${App.escapeHtml(Dashboard.state.bot.name || 'Optimus Prime')}" style="width:34px;height:34px;border-radius:50%;box-shadow:0 0 0 2px rgba(var(--d-accent-rgb,224,122,95),.45)"/>` : '<span style="font-size:22px">⚡</span>'}
       <div>
         <b style="color:var(--d-text)">${App.escapeHtml(Dashboard.state.bot.name)}</b><br/>
         <span style="font-size:11px">Synchronisé en temps réel</span>
@@ -981,7 +981,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
       </div>
       ${needsInvite ? `<button class="dash-btn" id="d-invite2" aria-label="Ajouter le bot au serveur">➕ Ajouter le bot</button>` : ''}
       <div class="dash-bot-chip" title="${App.escapeHtml(bot.bot_username || bot.name)}" aria-label="${App.escapeHtml(bot.name)}">
-        ${bot.avatar_url ? `<img src="${App.escapeHtml(bot.avatar_url)}" alt="Avatar de ${App.escapeHtml(bot.name)}" />` : '<span class="chip-fallback" aria-hidden="true">🤖</span>'}
+        ${bot.avatar_url ? `<img src="${App.escapeHtml(bot.avatar_url)}" alt="Avatar de ${App.escapeHtml(bot.name)}" data-fb-text="${App.escapeHtml(bot.name || 'Optimus Prime')}" />` : '<span class="chip-fallback" aria-hidden="true">🤖</span>'}
         <div class="chip-txt">
           <b>${App.escapeHtml(bot.name)}</b>
           <span class="${bot.online ? 'on' : 'off'}">${bot.online ? '● En ligne' : '● Hors ligne'}</span>
