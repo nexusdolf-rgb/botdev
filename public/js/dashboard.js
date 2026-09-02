@@ -1024,7 +1024,9 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
           ${mobileUser.is_admin ? '<button type="button" data-mobile-admin><span>♛</span>Administration globale</button>' : ''}
         </nav>
         <div class="dash-mobile-drawer-account">
-          <span class="dash-mobile-account-avatar">${App.escapeHtml(String(mobileUserName).slice(0, 1).toUpperCase())}</span>
+          ${mobileUser.discord_avatar
+            ? `<img class="dash-mobile-account-avatar" src="/api/img?u=${encodeURIComponent(`https://cdn.discordapp.com/avatars/${mobileUser.discord_id}/${mobileUser.discord_avatar}.png?size=64`)}" alt="" data-fb-text="${App.escapeHtml(String(mobileUserName).slice(0, 1).toUpperCase())}" />`
+            : `<span class="dash-mobile-account-avatar">${App.escapeHtml(String(mobileUserName).slice(0, 1).toUpperCase())}</span>`}
           <div><b>${App.escapeHtml(mobileUserName)}</b><small>Compte connecté</small></div>
           <button type="button" data-mobile-logout aria-label="Déconnexion">⏻</button>
         </div>

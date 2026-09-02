@@ -8,6 +8,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const store = require('./db');
 const botManager = require('./discord/botManager');
+const imgproxy = require('./imgproxy');
 const { oauthGuildCanConfigure, accessKind } = require('./discord/permissions');
 const security = require('./security');
 const { AsyncTTLCache, TTLCache } = require('./cache');
@@ -35,6 +36,7 @@ const guildCatalogCache = new TTLCache({ ttlMs: 30000, max: 500 });
 const membersCache = new AsyncTTLCache({ ttlMs: 30000, max: 2000 });
 const statsCache = new AsyncTTLCache({ ttlMs: 15000, max: 500 });
 const publicAvatarCache = new TTLCache({ ttlMs: 10 * 60000, max: 2 });
+const imgCache = new TTLCache({ ttlMs: 60 * 60000, max: 200 });
 
 function setSessionCookie(req, res, token) {
   res.cookie(COOKIE, token, security.secureCookieOptions(req, 30 * 86400000));
@@ -363,7 +365,7 @@ router.get('/discord/guilds', requireAuth, async (req, res) => {
       canManage: oauthGuildCanConfigure(g),
       canConfigure: oauthGuildCanConfigure(g),
       access: accessKind(g),
-      icon: g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png` : '',
+      icon: imgproxy.imgProxy(g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png` : ''),
       hasBot: botGuilds.has(g.id),
       banner: info ? info.banner : '',
       members: info ? info.members : 0,
@@ -421,13 +423,13 @@ function botDetail(bot) {
   let guilds = [];
   if (entry && online) {
     guilds = [...entry.client.guilds.cache.values()].map(g => ({
-      id: g.id, name: g.name, icon: g.iconURL({ size: 64 }) || null, members: g.memberCount,
+      id: g.id, name: g.name, icon: imgproxy.imgProxy(g.iconURL({ size: 64 }) || '') || null, members: g.memberCount,
     }));
   }
   return {
     ...safeBot,
     online,
-    avatar_url: liveAvatar || safeBot.avatar_url || '',
+    avatar_url: imgproxy.imgProxy(liveAvatar || safeBot.avatar_url || ''),
     guilds,
     commands_count: store.commands.all(bot.id).length,
     modules: store.modules.all(bot.id),
@@ -714,9 +716,9 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
     guild: {
       id: guildId,
       name: dGuild.name,
-      icon: dGuild.iconURL({ size: 128 }) || '',
+      icon: imgproxy.imgProxy(dGuild.iconURL({ size: 128 }) || ''),
       // 🖼️ Bannière + stats riches pour la page d'accueil du serveur
-      banner: (typeof dGuild.bannerURL === 'function' ? dGuild.bannerURL({ size: 1024 }) : '') || '',
+      banner: (typeof dGuild.bannerURL === 'function' ? imgproxy.imgProxy(dGuild.bannerURL({ size: 1024 }) || '') : ''),
       members: dGuild.memberCount || 0,
       boosts: dGuild.premiumSubscriptionCount || 0,
       channelsCount: dGuild.channels ? dGuild.channels.cache.size : 0,
@@ -2043,7 +2045,7 @@ router.get('/bots/:id/guilds/:guildId/members', requireAuth, async (req, res) =>
         id: m.id,
         tag,
         username: m.user.username,
-        avatar: m.user.displayAvatarURL({ size: 64 }) || '',
+        avatar: imgproxy.imgProxy(m.user.displayAvatarURL({ size: 64 }) || ''),
         roles: m.roles.cache.filter((r) => r.name !== '@everyone').map((r) => ({ id: r.id, name: r.name, color: r.hexColor })).slice(0, 8),
         coins: eco ? eco.coins : 0,
         xp: xpRow ? xpRow.xp : 0,
@@ -2135,7 +2137,7 @@ router.get('/bots/:id/guilds/:guildId/stats', requireAuth, async (req, res) => {
       const guild = entry.client.guilds.cache.get(guildId);
       topActive = topRaw.map((t) => {
         const m = guild.members.cache.get(t.user_id);
-        return { user_id: t.user_id, messages: t.n, tag: m ? m.user.tag : t.user_id, avatar: m ? m.user.displayAvatarURL({ size: 64 }) : '' };
+        return { user_id: t.user_id, messages: t.n, tag: m ? m.user.tag : t.user_id, avatar: m ? imgproxy.imgProxy(m.user.displayAvatarURL({ size: 64 }) || '') : '' };
       }).filter((t) => !t.tag.includes('Bot'));
     } else {
       topActive = topRaw.map((t) => ({ user_id: t.user_id, messages: t.n, tag: t.user_id, avatar: '' }));
@@ -2612,6 +2614,25 @@ router.get('/public/bot-avatar', async (req, res) => {
     }
   } catch {}
   return res.sendFile(fallback);
+});
+
+router.get('/img', async (req, res) => {
+  const url = typeof req.query.u === 'string' ? req.query.u.slice(0, 500) : '';
+  if (!imgproxy.isDiscordImageUrl(url)) return res.status(400).json({ error: "URL d'image non autorisée." });
+  const key = 'img:' + url;
+  const cached = imgCache.get(key);
+  if (cached) {
+    res.set('Content-Type', cached.type);
+    res.set('Cache-Control', 'public, max-age=86400');
+    return res.send(cached.buffer);
+  }
+  const img = await imgproxy.fetchDiscordImage(url);
+  if (!img) return res.status(404).json({ error: 'Image introuvable.' });
+  imgCache.set(key, img);
+  res.set('Content-Type', img.type);
+  res.set('Cache-Control', 'public, max-age=86400');
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.send(img.buffer);
 });
 
 router.get('/public/bots/:id', (req, res) => {

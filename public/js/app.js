@@ -268,12 +268,12 @@ App.renderNavbar = () => {
     : '<span class="logo">⚡</span>';
   const nav = App.el(`
     <div class="navbar">
-      <div class="logo-row" style="cursor:pointer" id="nav-logo">${brand} Hoxera</div>
+      <div class="logo-row" style="cursor:pointer" id="nav-logo">${brand} ${App.escapeHtml((bot && bot.name) || 'Hoxera')}</div>
       <div class="navbar-right">
         ${user.is_admin ? `<button class="btn btn-ghost btn-sm" id="nav-admin">👑 Admin</button>` : ''}
         <div class="user-pill">
           ${user.discord_avatar
-            ? `<img class="user-avatar" style="border-radius:50%" src="https://cdn.discordapp.com/avatars/${App.escapeHtml(user.discord_id)}/${App.escapeHtml(user.discord_avatar)}.png" alt="" />`
+            ? `<img class="user-avatar" style="border-radius:50%" src="/api/img?u=${encodeURIComponent(`https://cdn.discordapp.com/avatars/${user.discord_id}/${user.discord_avatar}.png?size=64`)}" alt="" data-fb-text="${App.escapeHtml((user.discord_username || user.email || '?').trim().slice(0, 1).toUpperCase())}" />`
             : `<div class="user-avatar">${App.escapeHtml((user.email[0] || '?').toUpperCase())}</div>`}
           <span>${App.escapeHtml(user.discord_username || user.email)}</span>
           <span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">🔗</span>

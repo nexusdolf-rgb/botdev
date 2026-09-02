@@ -251,7 +251,7 @@ function makeClient(guilds) {
     discriminator: '2500',
     bot: true,
     avatar: '',
-    displayAvatarURL: (o) => 'https://cdn.discordapp.com/avatars/1/a.png',
+    displayAvatarURL: (o) => 'https://cdn.discordapp.com/avatars/1537443352281088000/6dff30dc9e5abf146aae3e48d759522f.png',
     fetch: async () => user,
   };
   return {
@@ -292,6 +292,21 @@ const app = express();
 app.use(security.securityHeaders);
 app.use(express.json({ limit: '250kb' }));
 app.use(cookieParser());
+
+// 🔓 Mode démo (serveur d'aperçu uniquement) : aucune vraie connexion OAuth
+// Discord n'est possible ici — on connecte automatiquement le compte de
+// démonstration pour que le dashboard soit consultable dans le navigateur.
+app.use((req, res, next) => {
+  const token = req.cookies.botdev_session;
+  if (!token || !store.sessions.find(token)) {
+    const demo = store.sessions.find('audit-session-v205');
+    if (demo) {
+      res.cookie('botdev_session', 'audit-session-v205', { httpOnly: true, sameSite: 'lax', maxAge: 24 * 3600 * 1000 });
+    }
+  }
+  next();
+});
+
 app.use((req, res, next) => next());
 app.use('/api', security.originGuard, routes);
 app.get('/ping', (req, res) => res.type('text').send('pong'));

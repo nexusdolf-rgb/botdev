@@ -34,8 +34,8 @@ check('contexte .dash-bot-chip pour la lettre', appSource.includes('.dash-bot-ch
 // ---------- 2. Photo du bot vivante (serveur) ----------
 console.log('— Photo de profil vivante du bot —');
 check('routes.js : botDetail lit displayAvatarURL du client', routesSource.includes("cu.displayAvatarURL({ size: 256, format: 'png' })"));
-check('routes.js : avatar_url = vivant en priorité', routesSource.includes('avatar_url: liveAvatar || safeBot.avatar_url ||'));
-check('botManager : publicBotInfo lit l’avatar vivant', managerSource.includes('liveAvatar || record.avatar_url ||'));
+check('routes.js : avatar_url = vivant en priorité', routesSource.includes('liveAvatar || safeBot.avatar_url'));
+check('botManager : publicBotInfo lit l’avatar vivant', managerSource.includes('liveAvatar || record.avatar_url'));
 check('le token Discord n’est toujours pas exposé', routesSource.includes('const { token, ...safeBot }'));
 
 // ---------- 3. Comportement jsdom ----------

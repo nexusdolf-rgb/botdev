@@ -3,6 +3,7 @@
 // ============================================================
 const { Client, GatewayIntentBits, Partials, PermissionsBitField } = require('discord.js');
 const store = require('../db');
+const imgproxy = require('../imgproxy');
 
 const INTENTS = [
   GatewayIntentBits.Guilds,
@@ -674,7 +675,7 @@ function publicBotInfo(botId) {
     id: record.id,
     name: record.name,
     username: record.bot_username || '',
-    avatar_url: liveAvatar || record.avatar_url || '',
+    avatar_url: imgproxy.imgProxy(liveAvatar || record.avatar_url || ''),
     client_id: record.client_id || '',
     online,
     servers,
