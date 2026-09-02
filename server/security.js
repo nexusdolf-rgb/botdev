@@ -84,6 +84,12 @@ function securityHeaders(req, res, next) {
   res.set('X-Content-Type-Options', 'nosniff');
   res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  // CSP : les scripts/styles externes inconnus sont bloqués ; les polices
+  // Google Fonts et les images (avatars Discord, bannières) restent permises.
+  // Le front n'appelle jamais d'API externe → connect-src 'self'.
+  res.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'");
+  res.set('X-Frame-Options', 'SAMEORIGIN');
+  res.set('Cross-Origin-Opener-Policy', 'same-origin');
   // Pas de Cross-Origin-Resource-Policy ici : Discord doit pouvoir charger
   // les bannières et images publiques envoyées dans les embeds.
   if (req.path.startsWith('/api')) res.set('Cache-Control', 'no-store');

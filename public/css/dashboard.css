@@ -5465,3 +5465,11 @@ html.hx-light .admin-tab.active { background: rgba(224,122,95,.12); border-color
 html.hx-light .activity-item { background: #fff; border-color: #e3e3ea; }
 /* Boutons de la page admin : cohérence avec le style public */
 .admin-platform-page .btn { min-height: 38px; }
+
+/* 🔗 Puces de salon dans l'aperçu Discord (style Discord) */
+.dc-mention {
+  display: inline-block; background: #5865F23D; color: #dee0fc;
+  border-radius: 4px; padding: 0 4px; font-weight: 600; font-size: 12.5px;
+  vertical-align: baseline; white-space: nowrap;
+}
+html.hx-light .dc-mention { color: #3d4fdb; background: #5865F229; }

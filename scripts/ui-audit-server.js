@@ -18,26 +18,32 @@ const security = require('../server/security');
 const routes = require('../server/routes');
 const botManager = require('../server/discord/botManager');
 
+// Convertit un ID court du mock en vrai ID Discord (19 chiffres) : le rendu
+// des mentions <#id> côté dashboard exige des IDs de 15 à 21 chiffres, comme
+// en production. Sans cela, l'audit ne reproduit pas le chemin réel.
+const lid = (n) => '9'.repeat(3) + String(n).padStart(16, '0');
+
 // ------------------------------------------------------------
 // Fabrique un faux salon Discord
 // ------------------------------------------------------------
 function chan(id, name, type) {
-  return { id: String(id), name, type, parentId: type === 0 ? 'cat1' : null, position: 0 };
+  return { id: lid(id), name, type, parentId: type === 0 ? 'cat1' : null, position: 0 };
 }
 
 // ------------------------------------------------------------
 // Fabrique un faux rôle Discord
 // ------------------------------------------------------------
 function role(id, name, position, color = 0) {
-  return { id: String(id), name, position, color, hexColor: '#' + color.toString(16).padStart(6, '0') };
+  return { id: lid(id), name, position, color, hexColor: '#' + color.toString(16).padStart(6, '0') };
 }
 
 // ------------------------------------------------------------
 // Fabrique un faux membre
 // ------------------------------------------------------------
 function member(id, username, guild, joinedDaysAgo = 100, roleIds = []) {
+  const longUserId = lid(id);
   const user = {
-    id: String(id),
+    id: longUserId,
     username,
     globalName: username,
     displayName: username,
@@ -49,18 +55,19 @@ function member(id, username, guild, joinedDaysAgo = 100, roleIds = []) {
   };
   const roles = new Map();
   for (const r of roleIds) {
-    if (guild.roles.cache.has(String(r))) roles.set(String(r), guild.roles.cache.get(String(r)));
+    const longRoleId = lid(r);
+    if (guild.roles.cache.has(longRoleId)) roles.set(longRoleId, guild.roles.cache.get(longRoleId));
   }
   const highest = [...roles.values()].sort((a, b) => b.position - a.position)[0] || { id: '0', name: '@everyone', position: 0, hexColor: '#99AAB5' };
   return {
-    id: String(id),
+    id: longUserId,
     user,
     displayName: username,
     nickname: null,
     joinedAt: new Date(Date.now() - joinedDaysAgo * 86400000),
     roles: { cache: roles, highest },
     displayAvatarURL: (o) => user.displayAvatarURL(o),
-    toString: () => `<@${id}>`,
+    toString: () => `<@${longUserId}>`,
   };
 }
 
@@ -82,7 +89,7 @@ function makeGuild(id, name, { big = false } = {}) {
     ['1006', 'Joueur Confirmé (ancien combattant)', 5],
     ['1007', 'Nouveau Membre', 1],
   ];
-  for (const [rid, rname, rpos] of roleDefs) roles.set(String(rid), role(rid, rname, rpos));
+  for (const [rid, rname, rpos] of roleDefs) roles.set(lid(rid), role(rid, rname, rpos));
 
   // Salons : textes, vocaux, catégories, avec de longs noms
   const textChans = big ? [
@@ -116,7 +123,7 @@ function makeGuild(id, name, { big = false } = {}) {
     ['4002', 'COMMUNAUTÉ & DISCUSSION', 4],
     ['4003', 'VOCAUX', 4],
   ];
-  for (const [cid, cname, ctype] of [...textChans, ...voiceChans, ...categoryChans]) channels.set(String(cid), chan(cid, cname, ctype));
+  for (const [cid, cname, ctype] of [...textChans, ...voiceChans, ...categoryChans]) channels.set(lid(cid), chan(cid, cname, ctype));
 
   // Membres : noms variés (longs, accents, emojis, Unicode)
   const memberDefs = big ? [
@@ -138,7 +145,7 @@ function makeGuild(id, name, { big = false } = {}) {
     ['5003', 'Max', 90, ['1006']],
     ['5004', 'BotTest', 5, ['1007']],
   ];
-  for (const [mid, mname, days, rids] of memberDefs) members.set(String(mid), member(mid, mname, { roles: { cache: roles } }, days, rids));
+  for (const [mid, mname, days, rids] of memberDefs) members.set(lid(mid), member(mid, mname, { roles: { cache: roles } }, days, rids));
 
   return {
     id: String(id),
@@ -210,7 +217,7 @@ if (bot) {
 // ------------------------------------------------------------
 const app = express();
 app.use(security.securityHeaders);
-app.use(express.json({ limit: '15mb' }));
+app.use(express.json({ limit: '250kb' }));
 app.use(cookieParser());
 app.use((req, res, next) => next());
 app.use('/api', security.originGuard, routes);

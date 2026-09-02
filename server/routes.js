@@ -12,7 +12,7 @@ const { oauthGuildCanConfigure, accessKind } = require('./discord/permissions');
 const security = require('./security');
 const { AsyncTTLCache, TTLCache } = require('./cache');
 const { MODULES, CMD_DEFS, enabledModules, enabledCommandNames } = require('./discord/premade');
-const { EVENT_DEFS, eventsState } = require('./discord/events');
+const { EVENT_DEFS, eventsState, sanitizeEventConfig } = require('./discord/events');
 
 const router = express.Router();
 const COOKIE = 'botdev_session';
@@ -21,6 +21,11 @@ const platformMutationRateLimit = security.rateLimit({
   name: 'platform-admin', windowMs: 60000, max: 30,
   key: (req) => req.userId || req.ip,
 });
+// Envois réels de messages de test (bienvenue/départ) : limités pour éviter
+// qu'un compte compromis ne spamme les serveurs.
+const eventsTestRateLimit = security.rateLimit({ name: 'events-test', windowMs: 60000, max: 10 });
+// Sauvegardes de config d'événements : limitées, config assainie côté serveur.
+const eventsSaveRateLimit = security.rateLimit({ name: 'events-save', windowMs: 60000, max: 120 });
 
 // Les listes relisibles de Discord sont mises en cache brièvement pour
 // absorber les ouvertures simultanées du dashboard sans relire la même
@@ -1174,7 +1179,7 @@ router.post('/bots/:id/guilds/:guildId/livesocials', requireAuth, async (req, re
 });
 // 🧪 Test RÉEL de la bienvenue / du départ : le bot envoie le vrai message
 // dans le vrai salon, avec TOI comme membre — sans quitter le serveur.
-router.post('/bots/:id/guilds/:guildId/events/:type/test', requireAuth, async (req, res) => {
+router.post('/bots/:id/guilds/:guildId/events/:type/test', requireAuth, eventsTestRateLimit, async (req, res) => {
   const bot = getAnyBot(req, res);
   if (!bot) return;
   const guildId = req.params.guildId;
@@ -1647,13 +1652,17 @@ router.put('/bots/:id/guilds/:guildId/settings', requireAuth, async (req, res) =
   res.json({ ok: true });
 });
 
-router.put('/bots/:id/guilds/:guildId/events/:type', requireAuth, async (req, res) => {
+router.put('/bots/:id/guilds/:guildId/events/:type', requireAuth, eventsSaveRateLimit, async (req, res) => {
   const bot = getAnyBot(req, res);
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   if (!EVENT_DEFS[req.params.type]) return res.status(404).json({ error: 'Événement introuvable' });
-  store.events.set(bot.id, guildId, req.params.type, !!req.body.enabled, req.body.config || {});
+  // 🧹 La config est assainie côté serveur (types, longueurs, forme
+  // channelsmulti) : une config invalide ou abusive ne peut ni entrer en
+  // base, ni casser l'envoi du bot.
+  const config = sanitizeEventConfig(req.params.type, req.body.config);
+  store.events.set(bot.id, guildId, req.params.type, !!req.body.enabled, config);
   res.json({ ok: true });
 });
 

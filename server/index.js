@@ -73,7 +73,7 @@ async function main() {
   app.disable('x-powered-by');
   app.set('trust proxy', 1);
   app.use(security.securityHeaders);
-  app.use(express.json({ limit: '15mb' }));
+  app.use(express.json({ limit: '250kb' }));
   app.use(cookieParser());
 
   // Capture automatique de l'URL publique (première visite) :

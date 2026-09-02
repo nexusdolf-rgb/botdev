@@ -2301,6 +2301,12 @@ Dashboard.renderers.welcome = async (content, data) => {
         const get = (k) => { const el = cfgZone.querySelector(`[data-k="${k}"]`); return el ? (el.type === 'checkbox' ? el.checked : el.value) : ''; };
         const serverName = (data.guild && data.guild.name) || 'Ton serveur';
         const memberCount = String((data.guild && data.guild.members) || '?');
+        // nom de salon (normalisé) → ID, pour afficher de VRAIS pings <#id>
+        // dans l'aperçu (comme sur Discord).
+        const chanIdByName = new Map();
+        (data.channels || []).forEach((ch) => {
+          if (ch && ch.id && ch.name && !chanIdByName.has(ch.name.toLowerCase())) chanIdByName.set(ch.name.toLowerCase(), ch.id);
+        });
         let channelsPv = '';
         try {
           const cm = cfgZone.querySelector('[data-channelsmulti]');
@@ -2310,9 +2316,10 @@ Dashboard.renderers.welcome = async (content, data) => {
               let line = lbl.value.trim();
               const chName = String(lbl.dataset.cmLabel || '').replace(/^#/, '');
               if (!chName) return;
-              if (line.includes('{salon}')) line = line.split('{salon}').join('#' + chName);
-              else if (line) line += ' → #' + chName;
-              else line = '#' + chName;
+              const mention = chanIdByName.has(chName.toLowerCase()) ? `<#${chanIdByName.get(chName.toLowerCase())}>` : '#' + chName;
+              if (line.includes('{salon}')) line = line.split('{salon}').join(mention);
+              else if (line) line += ' → ' + mention;
+              else line = mention;
               sel.push(line);
             });
             channelsPv = sel.join('\n');
@@ -2320,7 +2327,26 @@ Dashboard.renderers.welcome = async (content, data) => {
         } catch {}
         let txt = String(get('message') || 'Bienvenue {user} !').replace('{user}', '@NouveauMembre').replace('{server}', serverName).replace('{count}', memberCount);
         if (txt.includes('{channels}')) txt = txt.replace('{channels}', channelsPv || '(aucun salon sélectionné)');
-        const pvLines = (txt.split('\n') || []).map((l) => App.escapeHtml(l)).join('<br/>');
+        // Auto-mention côté aperçu : les noms de salons collés depuis Discord
+        // (« #nom » ou « ⁠nom ») deviennent des pings <#id>, comme l'envoi réel.
+        if (chanIdByName.size) {
+          txt = txt.replace(/(?<![<\w])((?:#|[\u200B-\u200D\u2060\uFEFF])?)([^\s#<>{}|*_`~]+)/g, (full, prefix, token) => {
+            const id = chanIdByName.get(token.toLowerCase());
+            if (!id) return full;
+            const forced = !!prefix && (prefix === '#' || /[\u200B-\u200D\u2060\uFEFF]/.test(prefix));
+            const hasNonLetter = /[^a-zà-ÿœæ]/.test(token.toLowerCase());
+            if (!forced && !hasNonLetter) return full;
+            return `<#${id}>`;
+          });
+        }
+        // Rendu des pings en puces cliquables (style Discord) dans l'aperçu.
+        const chanNameById = new Map();
+        (data.channels || []).forEach((ch) => { if (ch && ch.id && ch.name) chanNameById.set(ch.id, ch.name); });
+        let pvLines = (txt.split('\n') || []).map((l) => App.escapeHtml(l)).join('<br/>');
+        pvLines = pvLines.replace(/&lt;#(\d{15,21})&gt;/g, (m, id) => {
+          const name = chanNameById.get(id) || id;
+          return `<span class="dc-mention">#${App.escapeHtml(name)}</span>`;
+        });
         const color = get('color') || '#57F287';
         const isEmbed = !!get('embed');
         const hasCard = !!get('card');
