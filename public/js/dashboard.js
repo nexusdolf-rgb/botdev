@@ -1324,6 +1324,11 @@ Dashboard.layoutSettingRows = (root) => {
     }
     const next = label.nextElementSibling;
     if (!next) return;
+    // Le sélecteur « salons à détailler » (channelsmulti) est un éditeur
+    // multi-lignes plein largeur : il reste en bloc sous son libellé, il
+    // ne doit JAMAIS être compressé en colonne « libellé → contrôle »
+    // (sinon lignes empilées à l'horizontale + débordement).
+    if (next.classList && next.classList.contains('dash-channelsmulti')) return;
     const isControl = next.matches(Dashboard.SETTING_ROW_CONTROLS)
       || (next.tagName === 'DIV' && next.querySelector('input[type="color"]'))
       || (next.tagName === 'DIV' && next.querySelector('.discord-multi-picker'))
@@ -2223,17 +2228,26 @@ Dashboard.renderers.welcome = async (content, data) => {
           box.querySelectorAll('.cm-row').forEach((r) => r.remove());
           if (addRow) {
             const taken = new Set(order);
-            addRow.querySelector('[data-cm-add]').innerHTML = ['<option value="">— Ajouter un salon —</option>']
+            // L'option « — Ajouter un salon — » est un simple intitulé, PAS un
+            // vrai salon : désactivée pour qu'elle ne soit pas cliquable dans
+            // le menu déroulant custom (sinon clic = rien ne se passe).
+            addRow.querySelector('[data-cm-add]').innerHTML = ['<option value="" disabled>— Ajouter un salon —</option>']
               .concat(textChannels.filter((ch) => !taken.has('#' + ch.name)).map((ch) => `<option value="${App.escapeHtml('#' + ch.name)}">💬 #${App.escapeHtml(ch.name)}</option>`))
               .join('');
           }
           order.forEach((ref) => {
             const row = App.el(`
-            <div class="cm-row" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed var(--d-border)">
-              <span style="flex:0 1 auto;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--d-text)">💬 <b>#${App.escapeHtml(String(ref).replace(/^#/, ''))}</b></span>
-              <input class="dash-input" data-cm-label="${App.escapeHtml(ref)}" placeholder="Phrase (ex : je vous invite à prendre connaissance de {salon})" value="${App.escapeHtml(labels.get(ref) || '')}" style="flex:1 1 180px;min-width:0;height:34px;padding:4px 10px" />
-              <button class="dash-btn" type="button" data-cm-remove="${App.escapeHtml(ref)}" title="Retirer ce salon" style="padding:7px 12px">✖</button>
+            <div class="cm-row">
+              <span class="cm-name">💬 <b>#${App.escapeHtml(String(ref).replace(/^#/, ''))}</b></span>
+              <input class="dash-input cm-label" data-cm-label="${App.escapeHtml(ref)}" placeholder="Phrase (ex : je vous invite à prendre connaissance de {salon})" value="${App.escapeHtml(labels.get(ref) || '')}" />
+              <button class="dash-btn cm-remove" type="button" data-cm-remove="${App.escapeHtml(ref)}" title="Retirer ce salon">✖</button>
             </div>`);
+            // La phrase tapée est mémorisée en direct : si on ajoute ou retire
+            // un autre salon ensuite (refresh), elle ne disparaît pas.
+            row.querySelector('[data-cm-label]').addEventListener('input', (e) => {
+              labels.set(ref, e.target.value);
+              box.dispatchEvent(new Event('change', { bubbles: true }));
+            });
             row.querySelector('[data-cm-remove]').onclick = () => {
               labels.delete(ref);
               const i = order.indexOf(ref);
@@ -2247,8 +2261,8 @@ Dashboard.renderers.welcome = async (content, data) => {
         if (!textChannels.length) {
           box.appendChild(App.el(Dashboard.noDiscordChoice('Aucun salon texte reçu de Discord')));
         } else {
-          addRow = App.el(`<div style="display:flex;gap:8px;margin-top:8px">
-            <select class="dash-select" data-cm-add style="flex:1;min-width:0"></select>
+          addRow = App.el(`<div class="cm-add-row">
+            <select class="dash-select" data-cm-add></select>
             <button class="dash-btn" type="button" data-cm-addbtn>➕ Ajouter</button>
           </div>`);
           box.appendChild(addRow);
