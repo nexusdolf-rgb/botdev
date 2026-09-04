@@ -107,7 +107,7 @@ async function sweep(botId, entry) {
       if (member && role && member.roles.cache.has(role.id)) {
         await member.roles.remove(role).catch(() => {});
         await logging.log(botId, guild, {
-          title: '⏳ Rôle temporaire expiré', color: '#5865F2',
+          title: '⏳ Rôle temporaire expiré', color: '#e07a5f',
           fields: [
             { name: '👤 Membre', value: `${member.user.tag}`, inline: true },
             { name: '🏷️ Rôle', value: role.name, inline: true },

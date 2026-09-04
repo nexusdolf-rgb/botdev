@@ -7,12 +7,12 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 const COLORS = Object.freeze({
-  brand: '#5865F2',
-  info: '#5865F2',
+  brand: '#e07a5f',
+  info: '#e07a5f',
   success: '#57F287',
   warning: '#FEE75C',
   danger: '#ED4245',
-  ticket: '#5865F2',
+  ticket: '#e07a5f',
   live: '#FE2C55',
   economy: '#F1C40F',
 });

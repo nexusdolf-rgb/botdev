@@ -700,7 +700,7 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
     xp_enabled: 1, xp_min: 10, xp_max: 25, xp_cooldown: 60, xp_message: '', xp_channel: '',
     am_enabled: 0, am_links: 1, am_caps: 1, am_mentions: 5, am_spam: 5,
     am_mode: 'enforce', am_rule_actions: '{}', am_blacklist_rules: '{}', am_blacklist_thresholds: '{}', am_blacklist_duration_min: 0, am_blacklist_channel: '',
-    am_blacklist_title: '🚫 Membre ajouté à la blacklist', am_blacklist_color: '#ED4245', am_blacklist_footer: 'Blacklist du serveur · Optimus Prime',
+    am_blacklist_title: '🚫 Membre ajouté à la blacklist', am_blacklist_color: '#ED4245', am_blacklist_footer: 'Blacklist du serveur · Hoxera',
     am_native_enabled: 1, am_native_alert_channel: '',
     am_exempt_roles: '[]', am_exempt_channels: '[]', am_exempt_users: '[]',
     am_warn_limit: 2, am_warn_action: 'timeout', am_warn_timeout_min: 10,
@@ -734,7 +734,7 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
     events: { defs: EVENT_DEFS, state: eventsState(bot.id, guildId) },
     role_menus: store.roleMenus.all(bot.id, guildId),
     xp_roles: store.xpRoles.all(bot.id, guildId),
-    profile: store.botProfiles.get(bot.id, guildId) || { name: '', avatar_url: '', banner_url: '', bio: '', color: '#5865F2' },
+    profile: store.botProfiles.get(bot.id, guildId) || { name: '', avatar_url: '', banner_url: '', bio: '', color: '#e07a5f' },
     blacklist: store.blacklist.all(bot.id, guildId),
     automod_blacklist: store.memberBlacklist.active(bot.id, guildId, 100),
     voicetemp: store.voicetemp.get(bot.id, guildId) || { creator_channel: '', category: '', name_template: '' },
@@ -1046,7 +1046,7 @@ router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) =>
   if (body.blacklist_channel !== undefined) advancedFields.am_blacklist_channel = String(body.blacklist_channel || '').slice(0, 100);
   if (body.blacklist_title !== undefined) advancedFields.am_blacklist_title = String(body.blacklist_title || '🚫 Membre ajouté à la blacklist').slice(0, 120);
   if (body.blacklist_color !== undefined) advancedFields.am_blacklist_color = /^#[0-9a-fA-F]{6}$/.test(String(body.blacklist_color || '')) ? String(body.blacklist_color) : '#ED4245';
-  if (body.blacklist_footer !== undefined) advancedFields.am_blacklist_footer = String(body.blacklist_footer || 'Blacklist du serveur · Optimus Prime').slice(0, 200);
+  if (body.blacklist_footer !== undefined) advancedFields.am_blacklist_footer = String(body.blacklist_footer || 'Blacklist du serveur · Hoxera').slice(0, 200);
   if (body.native_enabled !== undefined) advancedFields.am_native_enabled = body.native_enabled ? 1 : 0;
   if (body.native_alert_channel !== undefined) advancedFields.am_native_alert_channel = String(body.native_alert_channel || '').slice(0, 100);
   if (body.exempt_roles !== undefined) advancedFields.am_exempt_roles = JSON.stringify(normalizeAutomodList(body.exempt_roles, 50, 30));
@@ -1896,7 +1896,7 @@ router.put('/bots/:id/guilds/:guildId/advanced-tickets', requireAuth, async (req
         .filter(Boolean)
         .slice(0, 5),
       category: String(t.category || '').trim().slice(0, 100),
-      color: /^#[0-9a-fA-F]{6}$/.test(String(t.color || '')) ? String(t.color) : '#5865F2',
+      color: /^#[0-9a-fA-F]{6}$/.test(String(t.color || '')) ? String(t.color) : '#e07a5f',
       button_style: ['1', '2', '3', '4'].includes(String(t.button_style)) ? String(t.button_style) : '1',
       staff_roles: roles,
     };
@@ -2250,7 +2250,7 @@ router.get('/bots/:id/guilds/:guildId/announcements/custom', requireAuth, async 
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   res.json({ config: store.customAnnouncements.get(bot.id, guildId) || {
     id: null, bot_id: bot.id, guild_id: guildId, name: 'Annonce personnalisée', title: '', message: '',
-    color: '#5865F2', image_url: '', footer: '', channels: [], ping_roles: [],
+    color: '#e07a5f', image_url: '', footer: '', channels: [], ping_roles: [],
   } });
 });
 

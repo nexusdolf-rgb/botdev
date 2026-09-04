@@ -5513,3 +5513,24 @@ html.hx-light .dd-option.is-selected .dd-check { background: #e07a5f; color: #ff
    sous les libellés des options à icône (28px pastille + 10px d'écart). */
 .dd-option.no-ico .dd-opt-txt { margin-left: 38px; }
 .dd-option.no-ico .dd-opt-txt b { color: var(--d-dim); font-weight: 600; }
+
+/* ============================================================
+   🎨 v209 — Finitions : tokens d'arrondis + une seule « surface
+   Discord » pour TOUS les aperçus (.dc-preview, .embed-box,
+   .adv-discord-preview, .ca-discord-preview, .eb-discord).
+   Avant : chaque module avait son rayon (6 à 13 px) → aperçus
+   incohérents d'un module à l'autre. Maintenant : --r-sm partout.
+   ============================================================ */
+:root {
+  --r-xs: 8px;
+  --r-sm: 10px;   /* champs, petites cartes */
+  --r-md: 14px;   /* cartes principales */
+  --r-lg: 18px;   /* modales / grandes feuilles */
+  --r-pill: 999px;
+  --dc-shell: #313338;   /* fond « salon Discord » */
+  --dc-border: #1e1f22;
+}
+:is(.dc-preview, .embed-box, .adv-discord-preview, .ca-discord-preview, .eb-discord) {
+  border-radius: var(--r-sm);
+  border-color: var(--dc-border);
+}

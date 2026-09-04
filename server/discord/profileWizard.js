@@ -27,7 +27,7 @@ const STEPS = [
 ];
 
 const COLORS = [
-  { label: 'Bleu (défaut)', emoji: '🔵', hex: '#5865F2' },
+  { label: 'Argile (défaut)', emoji: '🔸', hex: '#e07a5f' },
   { label: 'Violet', emoji: '🟣', hex: '#8B5CF6' },
   { label: 'Rouge', emoji: '🔴', hex: '#ED4245' },
   { label: 'Vert', emoji: '🟢', hex: '#57F287' },
@@ -63,7 +63,7 @@ function embedFor(state) {
     return `${i < state.step ? '✅' : i === state.step ? '➡️' : '⏳'} **${s.emoji} ${s.label}** : ${shown}`;
   });
   const embed = new EmbedBuilder()
-    .setColor(v.color && /^#[0-9a-fA-F]{6}$/.test(v.color) ? v.color : '#5865F2')
+    .setColor(v.color && /^#[0-9a-fA-F]{6}$/.test(v.color) ? v.color : '#e07a5f')
     .setTitle(`🤖 Personnalisation du bot — Étape ${state.step + 1}/${STEPS.length}`)
     .setDescription(`**${step.emoji} ${step.label}**\n${step.q}`);
   embed.addFields({ name: '📋 Récapitulatif', value: recap.join('\n') });
@@ -199,7 +199,7 @@ async function finalize(state) {
   store.botProfiles.set(state.botId, state.guildId, {
     name: state.values.name || existing.name || (botRecord ? botRecord.name : ''),
     bio: state.values.bio || existing.bio || '',
-    color: state.values.color || existing.color || '#5865F2',
+    color: state.values.color || existing.color || '#e07a5f',
     avatar_url: state.values.avatar || existing.avatar_url,
     banner_url: state.values.banner || existing.banner_url,
   });
@@ -226,7 +226,7 @@ async function startProfileWizard(botId, interaction) {
     values: {
       name: existing.name || (botRecord ? botRecord.name : ''),
       bio: existing.bio || '',
-      color: existing.color || '#5865F2',
+      color: existing.color || '#e07a5f',
       avatar: existing.avatar_url || '',
       banner: existing.banner_url || '',
     },
@@ -255,7 +255,7 @@ async function handleProfileWizardInteraction(botId, interaction) {
     const v = interaction.values[0];
     if (v === '__custom__') {
       state.modal = 'hex';
-      return interaction.showModal(textModal(botId, uid, '🎨 Couleur personnalisée', 'Code hexadécimal', '#5865F2', false, true, ''));
+      return interaction.showModal(textModal(botId, uid, '🎨 Couleur personnalisée', 'Code hexadécimal', '#e07a5f', false, true, ''));
     }
     state.values.color = v;
     return interaction.update(renderPayload(state));
@@ -289,7 +289,7 @@ async function handleProfileWizardInteraction(botId, interaction) {
       return;
     }
     if (mode === 'hex') {
-      if (!/^#[0-9a-fA-F]{6}$/.test(val)) return interaction.reply({ content: '❌ Format attendu : #5865F2', ephemeral: true });
+      if (!/^#[0-9a-fA-F]{6}$/.test(val)) return interaction.reply({ content: '❌ Format attendu : #e07a5f', ephemeral: true });
       state.values.color = val;
       await showState(`✅ Couleur ${val} enregistrée !`);
       return;

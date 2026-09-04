@@ -58,7 +58,7 @@ function summaryEmbed(state) {
     ? v.options.map((o, i) => `${i + 1}. ${o.emoji ? o.emoji + ' ' : ''}**${o.label}** → @${o.role}`).join('\n').slice(0, 1024)
     : '*aucun rôle pour l\'instant*';
   return new EmbedBuilder()
-    .setColor('#8B5CF6')
+    .setColor('#e07a5f')
     .setTitle(state.editId ? '✏️ Modifier le panneau de rôles' : '📋 Assistant des rôles')
     .setDescription('Récapitulatif en direct — choisis une action ci-dessous.')
     .addFields(

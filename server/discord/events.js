@@ -435,7 +435,7 @@ function sanitizeEventConfig(type, raw) {
       }
       case 'color': {
         const str = String(v).trim();
-        out[f.key] = /^#[0-9a-fA-F]{6}$/.test(str) ? str : '#5865F2';
+        out[f.key] = /^#[0-9a-fA-F]{6}$/.test(str) ? str : '#e07a5f';
         break;
       }
       case 'rolesmulti': {

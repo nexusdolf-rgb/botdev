@@ -180,7 +180,7 @@ function welcomeCardSvg(username, serverName, memberCount) {
       <stop offset="100%" stop-color="#2b1e46"/>
     </linearGradient>
     <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#5865F2"/>
+      <stop offset="0%" stop-color="#e07a5f"/>
       <stop offset="100%" stop-color="#EB459E"/>
     </linearGradient>
   </defs>

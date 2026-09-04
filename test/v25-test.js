@@ -42,7 +42,7 @@ const { buildSlashPayloads } = require('../server/discord/premade');
   };
   let lastReply;
   await giveaway.startGiveaway(1, interaction, 3600000, '🎁 Clé du jeu', 1);
-  assert(sentMessage && sentMessage.embeds[0].data.title.includes('GIVEAWAY'));
+  assert(sentMessage && sentMessage.embeds[0].data.title.includes('Giveaway'), 'titre du giveaway (v209, plus de MAJUSCULES)');
   assert(reaction === '🎉', 'réaction 🎉 ajoutée');
   const g = store.giveaways.active(1, 'G1')[0];
   assert(g && g.prize === '🎁 Clé du jeu' && g.winners === 1);

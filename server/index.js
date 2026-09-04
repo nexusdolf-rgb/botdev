@@ -104,7 +104,7 @@ async function main() {
     res.send(`<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Transcription — ${esc(t.channel_name)}</title></head>
 <body style="margin:0;background:#0d0d14;color:#e8e8f0;font-family:system-ui,Segoe UI,sans-serif">
 <div style="max-width:760px;margin:0 auto;padding:26px 18px 60px">
-  <div style="background:linear-gradient(135deg,#5865F2,#8B5CF6);border-radius:14px;padding:20px 22px;margin-bottom:18px">
+  <div style="background:linear-gradient(135deg,#e07a5f,#8B5CF6);border-radius:14px;padding:20px 22px;margin-bottom:18px">
     <div style="font-size:20px;font-weight:800">🎫 Transcription de ticket</div>
     <div style="opacity:.9;font-size:13px;margin-top:5px">Serveur : <b>${esc(t.server_name)}</b>${t.type_label ? ' · Type : <b>' + esc(t.type_label) + '</b>' : ''} · Salon : <b>#${esc(t.channel_name)}</b></div>
     <div style="opacity:.75;font-size:12px;margin-top:5px">Fermé le ${esc(String(t.created_at).replace('T', ' ').slice(0, 16))} (UTC) · Propulsé par Hoxera</div>

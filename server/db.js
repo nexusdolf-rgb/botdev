@@ -198,7 +198,7 @@ CREATE TABLE IF NOT EXISTS bot_profiles (
   avatar_url TEXT DEFAULT '',
   banner_url TEXT DEFAULT '',
   bio TEXT DEFAULT '',
-  color TEXT DEFAULT '#5865F2',
+  color TEXT DEFAULT '#e07a5f',
   PRIMARY KEY (bot_id, guild_id)
 );
 
@@ -495,7 +495,7 @@ CREATE TABLE IF NOT EXISTS custom_announcements (
   name TEXT DEFAULT 'Annonce personnalisée',
   title TEXT DEFAULT '',
   message TEXT DEFAULT '',
-  color TEXT DEFAULT '#5865F2',
+  color TEXT DEFAULT '#e07a5f',
   image_url TEXT DEFAULT '',
   footer TEXT DEFAULT '',
   channels TEXT DEFAULT '[]',
@@ -609,7 +609,7 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_duration_min I
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_channel TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_title TEXT DEFAULT '🚫 Membre ajouté à la blacklist'"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_color TEXT DEFAULT '#ED4245'"); } catch (e) {}
-try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_footer TEXT DEFAULT 'Blacklist du serveur · Optimus Prime'"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_footer TEXT DEFAULT 'Blacklist du serveur · Hoxera'"); } catch (e) {}
 // v6 — miroir passif des règles Auto-Mod officielles de Discord.
 // Il utilise uniquement des alertes natives pour éviter les doubles sanctions.
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_native_enabled INTEGER DEFAULT 1"); } catch (e) {}
@@ -1026,7 +1026,7 @@ const guildSettings = {
       am_blacklist_channel: String(next.am_blacklist_channel || '').slice(0, 100),
       am_blacklist_title: String(next.am_blacklist_title || '🚫 Membre ajouté à la blacklist').slice(0, 120),
       am_blacklist_color: /^#[0-9a-fA-F]{6}$/.test(String(next.am_blacklist_color || '')) ? String(next.am_blacklist_color) : '#ED4245',
-      am_blacklist_footer: String(next.am_blacklist_footer || 'Blacklist du serveur · Optimus Prime').slice(0, 200),
+      am_blacklist_footer: String(next.am_blacklist_footer || 'Blacklist du serveur · Hoxera').slice(0, 200),
       am_native_enabled: next.am_native_enabled === 0 || next.am_native_enabled === false ? 0 : 1,
       am_native_alert_channel: String(next.am_native_alert_channel || '').slice(0, 100),
       am_exempt_roles: typeof next.am_exempt_roles === 'string'
@@ -1270,7 +1270,7 @@ const advancedTickets = {
       panel_id = excluded.panel_id, type_id = excluded.type_id, type_label = excluded.type_label,
       staff_roles = excluded.staff_roles, color = excluded.color`).run(
       String(channelId), botId, String(guildId), panelId, String(typeId || ''), String(typeLabel || '').slice(0, 100),
-      JSON.stringify(Array.isArray(staffRoles) ? staffRoles.slice(0, 10) : []), /^#[0-9a-fA-F]{6}$/.test(String(color || '')) ? color : '#5865F2'),
+      JSON.stringify(Array.isArray(staffRoles) ? staffRoles.slice(0, 10) : []), /^#[0-9a-fA-F]{6}$/.test(String(color || '')) ? color : '#e07a5f'),
   byChannel: (channelId) => {
     const row = db.prepare('SELECT * FROM advanced_ticket_channels WHERE channel_id = ?').get(String(channelId));
     if (!row) return null;
@@ -1304,7 +1304,7 @@ const botProfiles = {
         avatar_url: String(fields.avatar_url || '').slice(0, 500),
         banner_url: String(fields.banner_url || '').slice(0, 500),
         bio: String(fields.bio || '').slice(0, 1900),
-        color: /^#[0-9a-fA-F]{6}$/.test(String(fields.color || '')) ? fields.color : '#5865F2',
+        color: /^#[0-9a-fA-F]{6}$/.test(String(fields.color || '')) ? fields.color : '#e07a5f',
       }),
   remove: (botId, guildId) => db.prepare('DELETE FROM bot_profiles WHERE bot_id = ? AND guild_id = ?').run(botId, guildId),
 };
@@ -1814,7 +1814,7 @@ const customAnnouncements = {
         name: String(cfg.name || 'Annonce personnalisée').trim().slice(0, 80),
         title: String(cfg.title || '').trim().slice(0, 256),
         message: String(cfg.message || '').slice(0, 4000),
-        color: /^#[0-9a-fA-F]{6}$/.test(String(cfg.color || '')) ? String(cfg.color) : '#5865F2',
+        color: /^#[0-9a-fA-F]{6}$/.test(String(cfg.color || '')) ? String(cfg.color) : '#e07a5f',
         image_url: /^https:\/\//i.test(String(cfg.image_url || '').trim()) ? String(cfg.image_url).trim().slice(0, 500) : '',
         footer: String(cfg.footer || '').trim().slice(0, 200),
         channels: JSON.stringify(jsonArray(cfg.channels, 20, 100)),
@@ -1940,7 +1940,7 @@ try { db.exec(`CREATE TABLE IF NOT EXISTS advanced_ticket_channels (
   channel_id TEXT PRIMARY KEY,
   bot_id INTEGER NOT NULL, guild_id TEXT NOT NULL,
   panel_id INTEGER NOT NULL, type_id TEXT DEFAULT '', type_label TEXT DEFAULT '',
-  staff_roles TEXT DEFAULT '[]', color TEXT DEFAULT '#5865F2',
+  staff_roles TEXT DEFAULT '[]', color TEXT DEFAULT '#e07a5f',
   created_at TEXT DEFAULT (datetime('now'))
 )`); } catch (e) {}
 try { db.exec("CREATE INDEX IF NOT EXISTS idx_advanced_ticket_channels_guild ON advanced_ticket_channels (bot_id, guild_id)"); } catch (e) {}

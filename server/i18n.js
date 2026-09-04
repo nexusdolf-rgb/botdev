@@ -94,7 +94,7 @@ const STRINGS = {
     guard_not_ready: '⏳ Cette commande n\'est pas encore prête sur ce serveur — la synchronisation se fait automatiquement (retente dans 5 à 10 minutes).',
     guard_error: '⚠️ Une erreur est survenue en traitant cette action — elle a été enregistrée, réessaie dans un instant.',
     guard_slow: '⏳ Cette action prend trop de temps… réessaie dans un instant.',
-    guard_busy: '😅 Optimus Prime est très sollicité en ce moment — réessaie dans une minute !',
+    guard_busy: '😅 Hoxera est très sollicité en ce moment — réessaie dans une minute !',
     // Commande /lang
     lang_set: '🌍 Langue du serveur définie sur : **Français** 🇫🇷',
     lang_usage: '❓ Utilisation : `/lang fr` ou `/lang en`.',
@@ -189,7 +189,7 @@ const STRINGS = {
     guard_not_ready: '⏳ This command is not ready yet on this server — it syncs automatically (try again in 5–10 minutes).',
     guard_error: '⚠️ Something went wrong while handling this action — it was logged, please try again in a moment.',
     guard_slow: '⏳ This action is taking too long… please try again in a moment.',
-    guard_busy: '😅 Optimus Prime is very busy right now — try again in a minute!',
+    guard_busy: '😅 Hoxera is very busy right now — try again in a minute!',
     lang_set: '🌍 Server language set to: **English** 🇬🇧',
     lang_usage: '❓ Usage: `/lang fr` or `/lang en`.',
     help_title: '📚 Help center — {bot}',

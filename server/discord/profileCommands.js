@@ -50,7 +50,7 @@ async function handleProfileCommand(botId, interaction) {
       if (name) p.name = name;
       if (bio) p.bio = bio;
       if (color) {
-        if (!/^#[0-9a-fA-F]{6}$/.test(color)) return interaction.reply({ content: '❌ Couleur au format hexadécimal : #5865F2', ephemeral: true });
+        if (!/^#[0-9a-fA-F]{6}$/.test(color)) return interaction.reply({ content: '❌ Couleur au format hexadécimal : #e07a5f', ephemeral: true });
         p.color = color;
       }
       store.botProfiles.set(botId, guild.id, p);

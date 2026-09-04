@@ -15,7 +15,7 @@ function logChannel(botId, guild) {
   return guild.channels.cache.find((c) => c && c.name && c.name.toLowerCase() === name && c.isTextBased && c.isTextBased()) || null;
 }
 
-// Événement de log. color: '#ED4245' (mod), '#57F287' (ok), '#FEE75C' (info), '#5865F2' (tickets)
+// Événement de log. color: '#ED4245' (mod), '#57F287' (ok), '#FEE75C' (info), '#e07a5f' (tickets)
 // type (optionnel) : tickets | mod | automod | joinleave | other — filtré par le réglage log_events du serveur
 function classifyType(title, explicit) {
   if (explicit) return explicit;
@@ -39,7 +39,7 @@ function eventEnabled(gs, type) {
   } catch { return true; }
 }
 
-async function log(botId, guild, { title, description = '', color = '#5865F2', fields = [], footer = '', type = '' }) {
+async function log(botId, guild, { title, description = '', color = '#e07a5f', fields = [], footer = '', type = '' }) {
   try {
     const gs = store.guildSettings.get(botId, guild.id) || {};
     const evType = classifyType(title, type);

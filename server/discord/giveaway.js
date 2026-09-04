@@ -22,18 +22,19 @@ function formatEnds(endsAt) {
 function buildEmbed(g, settings = {}) {
   const customMsg = String((settings && settings.message) || '').trim();
   const color = /^#[0-9a-fA-F]{6}$/.test(String((settings && settings.color) || '')) ? settings.color : '#FEE75C';
-  const lines = [
-    `**${g.prize}**`,
-    '',
-    customMsg || 'Réagis avec 🎉 pour participer !',
-    `🏆 Gagnants : **${g.winners}**`,
-    `⏰ Fin ${formatEnds(g.ends_at)}`,
-  ];
   return new EmbedBuilder()
     .setColor(color)
-    .setTitle('🎁 GIVEAWAY')
-    .setDescription(lines.join('\n'))
-    .setFooter({ text: 'Giveaway propulsé par Hoxera' })
+    .setTitle('🎁 Giveaway')
+    .setDescription([
+      `**${g.prize}**`,
+      '',
+      customMsg || 'Réagis avec 🎉 pour participer !',
+    ].join('\n'))
+    .addFields(
+      { name: '🏆 Nombre de gagnants', value: String(g.winners || 1), inline: true },
+      { name: '⏰ Fin du tirage', value: formatEnds(g.ends_at), inline: true },
+    )
+    .setFooter({ text: 'Hoxera · Giveaway' })
     .setTimestamp();
 }
 
@@ -109,19 +110,28 @@ async function drawWinners(client, g) {
 async function announceWinners(client, g, winners, reroll = false) {
   const { channel, message } = await drawWinnersRaw(client, g);
   if (message) {
-    const embed = buildEmbed(g);
-    embed.setTitle(reroll ? '🎁 GIVEAWAY (nouveau tirage)' : '🎁 GIVEAWAY TERMINÉ')
+    const mentions = winners.map((u) => u.toString()).join(' ');
+    const finalEmbed = new EmbedBuilder()
       .setColor(reroll ? '#FEE75C' : '#57F287')
+      .setTitle(reroll ? '🎁 Giveaway — nouveau tirage' : '🎁 Giveaway terminé')
       .setDescription([
         `**${g.prize}**`,
         '',
         winners.length
-          ? `🏆 Gagnant(s) : ${winners.map((u) => u.toString()).join(' ')}`
+          ? `🏆 Gagnant(s) : ${mentions}`
           : '😢 Aucun participant — pas de gagnant.',
         '',
-        'Merci à tous d\'avoir participé !',
-      ].join('\n'));
-    await message.edit({ embeds: [embed] }).catch(() => {});
+        'Merci à tous d\'avoir participé ! 🎉',
+      ].join('\n'))
+      .addFields(
+        { name: '🏆 Gagnants', value: String(winners.length), inline: true },
+        { name: '⏰ Statut', value: reroll ? 'Nouveau tirage' : 'Terminé', inline: true },
+      )
+      .setFooter({ text: 'Hoxera · Giveaway' })
+      .setTimestamp();
+    await message.edit({ embeds: [finalEmbed] }).catch(() => {});
+  }
+  if (channel) {
   }
   if (channel) {
     const winnerMentions = winners.map((u) => u.toString()).join(' ');

@@ -55,8 +55,8 @@ const check = (label, cond) => {
   // 🎨 Nouveau panneau visuel « Optimus Prime » (référence)
   const panelEmbed = sent[0].embeds[0].toJSON();
   const fields = panelEmbed.fields || [];
-  check('panneau : titre « 👑 Support | Optimus Prime »', String(panelEmbed.title).includes('Support | Optimus Prime'));
-  check('panneau : « Bienvenue sur le support officiel de Optimus Prime »', String(panelEmbed.description).includes('Bienvenue sur le support officiel de Optimus Prime'));
+  check('panneau : titre « 👑 Support | Optimus Prime »', String(panelEmbed.title).includes('Support | Hoxera'));
+  check('panneau : « Bienvenue sur le support officiel de Optimus Prime »', String(panelEmbed.description).includes('Bienvenue sur le support officiel de Hoxera'));
   check('panneau : description « sélectionnez la catégorie… »', String(panelEmbed.description).includes('sélectionnez la catégorie correspondante'));
   check('panneau : « ⓘ Informations importantes : » souligné', fields.some((f) => String(f.name).includes('Informations importantes') && String(f.name).includes('__')));
   const rulesVal = String((fields.find((f) => String(f.name).includes('Informations')) || {}).value || '');

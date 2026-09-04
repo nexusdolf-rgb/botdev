@@ -257,7 +257,7 @@ function buildSlashPayloads(botId) {
       { name: 'set', description: 'Définir le nom, la bio et la couleur', type: ApplicationCommandOptionType.Subcommand, options: [
         { name: 'nom', description: 'Nom affiché par le bot sur ce serveur', type: ApplicationCommandOptionType.String, required: false },
         { name: 'bio', description: 'Bio affichée sur le profil', type: ApplicationCommandOptionType.String, required: false },
-        { name: 'couleur', description: 'Couleur du profil (ex : #5865F2)', type: ApplicationCommandOptionType.String, required: false },
+        { name: 'couleur', description: 'Couleur du profil (ex : #e07a5f)', type: ApplicationCommandOptionType.String, required: false },
       ]},
       { name: 'avatar', description: 'Choisir un avatar depuis ta galerie', type: ApplicationCommandOptionType.Subcommand, options: [
         { name: 'image', description: '📱 La galerie s\'ouvre automatiquement — choisis ta photo (3 Mo max)', type: ApplicationCommandOptionType.Attachment, required: true },
@@ -446,7 +446,7 @@ async function execute(botId, entry, cmd, src) {
     case 'avatar': {
       const target = getUserArg() || author;
       const embed = new EmbedBuilder()
-        .setColor('#5865F2')
+        .setColor('#e07a5f')
         .setAuthor({ name: `Avatar de ${target.tag || target.username}` })
         .setImage(target.displayAvatarURL({ size: 512, dynamic: true }));
       await replyEmbed(embed);
@@ -456,7 +456,7 @@ async function execute(botId, entry, cmd, src) {
       const target = getUserArg() || author;
       const tMember = target.id ? guild.members.cache.get(target.id) : null;
       const embed = new EmbedBuilder()
-        .setColor('#5865F2')
+        .setColor('#e07a5f')
         .setAuthor({ name: target.tag, iconURL: target.displayAvatarURL({ dynamic: true }) })
         .setThumbnail(target.displayAvatarURL({ dynamic: true }))
         .addFields(
@@ -469,7 +469,7 @@ async function execute(botId, entry, cmd, src) {
     }
     case 'serverinfo': {
       const embed = new EmbedBuilder()
-        .setColor('#5865F2')
+        .setColor('#e07a5f')
         .setAuthor({ name: guild.name, iconURL: guild.iconURL({ dynamic: true }) })
         .setThumbnail(guild.iconURL({ dynamic: true }))
         .addFields(
@@ -485,7 +485,7 @@ async function execute(botId, entry, cmd, src) {
     }
     case 'botinfo': {
       const embed = new EmbedBuilder()
-        .setColor('#5865F2')
+        .setColor('#e07a5f')
         .setAuthor({ name: client.user.tag, iconURL: client.user.displayAvatarURL({ dynamic: true }) })
         .addFields(
           { name: '🌍 Serveurs', value: String(client.guilds.cache.size), inline: true },
@@ -515,15 +515,17 @@ async function execute(botId, entry, cmd, src) {
       const bar = '▰'.repeat(Math.round(pct * bars)) + '▱'.repeat(bars - Math.round(pct * bars));
       const pos = store.xp.rankOf(botId, guild.id, target.id);
       const embed = new EmbedBuilder()
-        .setColor('#5865F2')
-        .setAuthor({ name: `Niveau de ${target.username}`, iconURL: target.displayAvatarURL({ dynamic: true }) })
+        .setColor('#e07a5f')
+        .setTitle(`📈 Niveau de ${target.username}`)
         .setThumbnail(target.displayAvatarURL({ dynamic: true }))
         .addFields(
           { name: '📈 Niveau', value: String(level), inline: true },
           { name: '🏆 Rang', value: `#${pos}`, inline: true },
           { name: '✨ XP', value: `${row.xp} / ${next}`, inline: true },
           { name: 'Progression', value: `${bar} ${Math.round(pct * 100)}%` },
-        );
+        )
+        .setFooter({ text: `Hoxera · ${guild.name}` })
+        .setTimestamp();
       await replyEmbed(embed);
       break;
     }
@@ -532,9 +534,11 @@ async function execute(botId, entry, cmd, src) {
       if (!top.length) return reply('📈 Personne n\'a encore gagné d\'XP sur ce serveur. Discute pour monter de niveau !');
       const medal = ['🥇', '🥈', '🥉'];
       const embed = new EmbedBuilder()
-        .setColor('#5865F2')
+        .setColor('#e07a5f')
         .setTitle('📈 Classement des niveaux')
-        .setDescription(top.map((r, i) => `${medal[i] || `**${i + 1}.**`} <@${r.user_id}> — niveau **${r.level}** (${r.xp} XP)`).join('\n'));
+        .setDescription(`**Top 10 — les membres les plus actifs**\n\n${top.map((r, i) => `${medal[i] || `**${i + 1}.**`} <@${r.user_id}> — niveau **${r.level}** · ${r.xp} XP`).join('\n')}`)
+        .setFooter({ text: `Hoxera · ${guild.name}` })
+        .setTimestamp();
       await replyEmbed(embed);
       break;
     }
@@ -568,11 +572,12 @@ async function execute(botId, entry, cmd, src) {
       if (topRole) fields.push({ name: '🛡️ Rôle principal', value: topRole.name.slice(0, 100), inline: true });
       fields.push({ name: '📅 Membre depuis', value: joinedStr, inline: true });
       const embed = new EmbedBuilder()
-        .setColor('#5865F2')
-        .setAuthor({ name: `Profil de ${target.username}`, iconURL: target.displayAvatarURL({ dynamic: true }) })
+        .setColor('#e07a5f')
+        .setTitle(`🪪 Profil de ${target.username}`)
         .setThumbnail(target.displayAvatarURL({ dynamic: true }))
         .addFields(fields)
-        .setFooter({ text: `Optimus Prime · ${guild.name}` });
+        .setFooter({ text: `Hoxera · ${guild.name}` })
+        .setTimestamp();
       await replyEmbed(embed);
       break;
     }
@@ -788,7 +793,7 @@ async function execute(botId, entry, cmd, src) {
         const url = data && data.url && typeof data.url === 'string' ? data.url : null;
         if (!url) throw new Error('Aucune image dans la réponse');
         const sub = data && data.subreddit ? `r/${String(data.subreddit).slice(0, 100)}` : 'meme-api.com';
-        const embed = new EmbedBuilder().setColor('#5865F2').setTitle(title).setImage(url).setFooter({ text: sub });
+        const embed = new EmbedBuilder().setColor('#e07a5f').setTitle(title).setImage(url).setFooter({ text: sub });
         await replyEmbed(embed);
       } catch (e) {
         if (e && e.name === 'AbortError') {
@@ -991,7 +996,7 @@ async function execute(botId, entry, cmd, src) {
       const deleted = await channel.bulkDelete(n, true).catch(() => null);
       const count = deleted ? deleted.size : 0;
       await logging.log(botId, guild, {
-        title: '🧹 Purge de messages', color: '#5865F2',
+        title: '🧹 Purge de messages', color: '#e07a5f',
         fields: [
           { name: '📨 Salon', value: `<#${channel.id}>`, inline: true },
           { name: '🔢 Messages', value: String(count), inline: true },
@@ -1142,7 +1147,7 @@ function buildHelpEmbed(botId, record, client, guild, requested) {
     const available = ['ticket', 'roles', 'botprofile', 'modlogs', 'blacklist'].includes(key) || enabled.includes(key) || !!HELP_EXTRA[key] || !!HELP_EVENTS[key];
     if (detail && available) {
       const embed = new EmbedBuilder()
-        .setColor('#5865F2')
+        .setColor('#e07a5f')
         .setTitle(`${detail[0]} · ${key}`)
         .setDescription(detail[1]);
       embed.addFields({ name: '📖 Utilisation', value: detail[2] });
@@ -1158,7 +1163,7 @@ function buildHelpEmbed(botId, record, client, guild, requested) {
 
   // --- Aide générale complète ---
   const embed = new EmbedBuilder()
-    .setColor('#5865F2')
+    .setColor('#e07a5f')
     .setTitle(`📚 Centre d'aide — ${client.user.username}`)
     .setDescription(helpDescription())
     .setThumbnail(client.user.displayAvatarURL({ dynamic: true }));

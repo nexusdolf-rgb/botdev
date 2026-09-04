@@ -498,10 +498,10 @@ async function handleSlash(botId, entry, interaction) {
       const choices = [correct, ...wrongs].sort(() => Math.random() - 0.5);
       const correctIdx = choices.indexOf(correct);
       const embed = new EmbedBuilder()
-        .setColor(0x5865F2)
+        .setColor(0xe07a5f)
         .setTitle('🧠 Quiz')
         .setDescription(`**${question}**\n\n⚡ Réponds vite : **+${bonus} points bonus** si tu réponds en moins de **${bonusWindow} secondes** !`)
-        .setFooter({ text: `Hoxera · ${guild.name} · Bonne réponse : +${pts} pts (+${bonus} si rapide)` })
+        .setFooter({ text: `Hoxera · ${guild.name} · Quiz` })
         .setTimestamp();
       const row = new ActionRowBuilder().addComponents(
         ['🇦', '🇧', '🇨'].map((e, i) => new ButtonBuilder()
@@ -604,7 +604,7 @@ async function handleSlash(botId, entry, interaction) {
       if (!s) return interaction.reply({ content: '🕵️ Aucun message supprimé récemment dans ce salon.', ephemeral: true });
       const minutes = Math.max(1, Math.floor((Date.now() - s.ts) / 60000));
       const embed = new EmbedBuilder()
-        .setColor('#5865F2')
+        .setColor('#e07a5f')
         .setAuthor(s.avatar ? { name: s.tag, iconURL: s.avatar } : { name: s.tag })
         .setDescription(s.content || (s.attachments ? `*${s.attachments} pièce(s) jointe(s)*` : '*Message vide*'))
         .setFooter({ text: `Supprimé il y a ~${minutes} min` });
@@ -621,10 +621,16 @@ async function handleSlash(botId, entry, interaction) {
         ? top.map((r, idx) => `${medals[idx] || `**${idx + 1}.**`} <@${r.inviter_id}> — **${r.n}** invitation(s)`).join('\n')
         : '*Aucune invitation traquée pour l\'instant. (Le bot doit avoir la permission « Gérer le serveur » pour voir les invitations.)*';
       const embed = new EmbedBuilder()
-        .setColor('#5865F2')
+        .setColor('#e07a5f')
         .setTitle('📨 Invitations')
-        .setDescription(`👤 **${target.username}** a invité **${count}** membre(s)${whoMe ? `\n🎟️ Invité(e) par <@${whoMe.inviter_id}>` : ''}\n\n**🏆 Top des recruteurs**\n${lines}`)
-        .setFooter({ text: guild.name });
+        .setDescription(whoMe
+          ? `👤 **${target.username}** a invité **${count}** membre(s) — 🎟️ invité(e) par <@${whoMe.inviter_id}>.`
+          : `👤 **${target.username}** a invité **${count}** membre(s) sur le serveur.`)
+        .addFields(
+          { name: '🏆 Top des recruteurs', value: lines, inline: false },
+        )
+        .setFooter({ text: `Hoxera · ${guild.name}` })
+        .setTimestamp();
       return interaction.reply({ embeds: [embed] });
     }
     // ---------------- Économie enrichie ----------------
@@ -1123,7 +1129,7 @@ async function handleModal(botId, entry, interaction) {
 
   const authorAvatar = interaction.user.displayAvatarURL ? interaction.user.displayAvatarURL({ size: 128 }) : '';
   const embed = new EmbedBuilder()
-    .setColor('#5865F2')
+    .setColor('#e07a5f')
     .setTitle(cfg.title || '📝 Candidature')
     .setAuthor(authorAvatar ? { name: interaction.user.tag, iconURL: authorAvatar } : { name: interaction.user.tag })
     .setFooter({ text: `ID : ${interaction.user.id}` });
@@ -1192,7 +1198,7 @@ function pollEmbed(question, choices, votes) {
     return `${['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'][i]} **${c}**\n${bar} **${pct}%** (${counts[i]} vote${counts[i] > 1 ? 's' : ''})`;
   });
   return new EmbedBuilder()
-    .setColor('#5865F2')
+    .setColor('#e07a5f')
     .setTitle(`🗳️ ${question}`)
     .setDescription(lines.join('\n\n'))
     .setFooter({ text: `${votes.size} vote(s) — clique sur un bouton pour voter (re-clique pour annuler)` });

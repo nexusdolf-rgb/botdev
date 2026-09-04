@@ -1017,7 +1017,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
     <div class="dash-mobile-layer" data-dash-mobile-layer="true">
       <div class="dash-mobile-backdrop" id="dash-mobile-backdrop" hidden></div>
       <aside class="dash-mobile-drawer dash-mobile-site-drawer" id="dash-mobile-site-drawer" hidden aria-label="Menu principal">
-        <div class="dash-mobile-drawer-head"><b>Menu Optimus Prime</b><button class="dash-mobile-close" id="d-mobile-site-close" type="button" aria-label="Fermer le menu">×</button></div>
+        <div class="dash-mobile-drawer-head"><b>Menu ${(Dashboard.state.bot && Dashboard.state.bot.name) ? Dashboard.state.bot.name : 'Hoxera'}</b><button class="dash-mobile-close" id="d-mobile-site-close" type="button" aria-label="Fermer le menu">×</button></div>
         <nav class="dash-mobile-site-links">
           <button type="button" data-mobile-home><span>⌂</span>Accueil</button>
           <button type="button" data-mobile-open-modules><span>▦</span>Serveurs et modules</button>
@@ -2259,7 +2259,7 @@ Dashboard.renderers.welcome = async (content, data) => {
             const row = App.el(`
             <div class="cm-row">
               <span class="cm-name">💬 <b>#${App.escapeHtml(String(ref).replace(/^#/, ''))}</b></span>
-              <input class="dash-input cm-label" data-cm-label="${App.escapeHtml(ref)}" placeholder="Phrase (ex : je vous invite à prendre connaissance de {salon})" value="${App.escapeHtml(labels.get(ref) || '')}" />
+              <input class="dash-input cm-label" data-cm-label="${App.escapeHtml(ref)}" placeholder="Phrase (ex : découvre {salon}, les règles y sont)" value="${App.escapeHtml(labels.get(ref) || '')}" />
               <button class="dash-btn cm-remove" type="button" data-cm-remove="${App.escapeHtml(ref)}" title="Retirer ce salon">✖</button>
             </div>`);
             // La phrase tapée est mémorisée en direct : si on ajoute ou retire
@@ -2310,8 +2310,8 @@ Dashboard.renderers.welcome = async (content, data) => {
         const msgEl = cfgZone.querySelector('[data-k="message"]');
         if (!msgEl) return;
         msgEl.value = (key === 'member_join')
-          ? "👋 Bienvenue {user} sur {server} !\nTu es le membre n°{count} 🎉\n\nPour bien commencer, je vous invite à prendre connaissance de :\n{channels}\n\nPassez un bon moment parmi nous — l'équipe est là pour vous aider ! 🚀"
-          : "👋 Au revoir {user} !\nMerci d'avoir fait partie de {server}.\nBonne continuation — vous restez le bienvenu si vous revenez ! 💛";
+          ? "👋 Bienvenue {user} sur {server} !\nTu es le membre n°{count} 🎉\n\nPour bien commencer, découvre les salons utiles :\n{channels}\n\nPasse un bon moment parmi nous — l'équipe est là pour t'aider ! 🚀"
+          : "👋 Au revoir {user} !\nMerci d'avoir fait partie de {server}.\nBonne continuation — la porte reste ouverte si tu reviens ! 💛";
         msgEl.dispatchEvent(new Event('input', { bubbles: true }));
       };
       cfgZone.appendChild(tmplBtn);

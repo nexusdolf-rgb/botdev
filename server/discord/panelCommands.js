@@ -146,7 +146,7 @@ function stepComponents(state) {
 function wizardEmbed(state) {
   const step = STEPS[state.step];
   const embed = new EmbedBuilder()
-    .setColor('#5865F2')
+    .setColor('#e07a5f')
     .setTitle(`🎫 Assistant de configuration — Étape ${state.step + 1}/${STEPS.length}`)
     .setDescription(`**${step.emoji} ${step.label}**\n${step.question}`);
   const lines = STEPS.map((s, i) => {
@@ -419,7 +419,7 @@ async function handleTicket(botId, sub, group, interaction, guild) {
       return interaction.reply({ content: '🗂️ Aucun type pour l\'instant. Ajoute-en avec `/ticket types add`.', ephemeral: true });
     }
     const embed = new EmbedBuilder()
-      .setColor('#5865F2')
+      .setColor('#e07a5f')
       .setTitle('🗂️ Types de tickets')
       .setDescription(types.map((t) => {
         const roles = Array.isArray(t.staff_roles) ? t.staff_roles : (t.staff_role ? [t.staff_role] : []);
@@ -470,7 +470,7 @@ async function handleTicket(botId, sub, group, interaction, guild) {
     }
     case 'config': {
       const embed = new EmbedBuilder()
-        .setColor('#5865F2')
+        .setColor('#e07a5f')
         .setTitle('🎫 Configuration des tickets')
         .addFields(
           { name: '📛 Nom du panel', value: cfg.name || '—', inline: true },
@@ -592,7 +592,7 @@ async function handleRoles(botId, sub, interaction, guild) {
         });
       }
       const embed = new EmbedBuilder()
-        .setColor('#8B5CF6')
+        .setColor('#e07a5f')
         .setTitle('📋 Menus de rôles')
         .setDescription(menus.map((m, i) => `**${i + 1}.** ${m.name} — ${m.options.length} rôle(s)${m.channel ? ` · salon ${m.channel}` : ''}`).join('\n'))
         .setFooter({ text: 'Envoie un menu avec /roles send <numéro>' });

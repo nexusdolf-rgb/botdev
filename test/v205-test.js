@@ -122,7 +122,7 @@ function mkGuild(channelsList) {
   });
   check('message plafonné à 2000', s1.message.length === 2000);
   check('channel plafonné à 200', s1.channel.length === 200);
-  check('couleur invalide → #5865F2', s1.color === '#5865F2');
+  check('couleur invalide → #e07a5f (marque)', s1.color === '#e07a5f');
   check('checkbox → booléen', s1.card === true);
   const s1Chans = JSON.parse(s1.channels);
   check('channelsmulti ≤ 50 lignes', s1Chans.length === 50);

@@ -39,8 +39,8 @@ const check = (label, cond) => {
   const embed = sent[0].embeds[0].toJSON();
   const select = sent[0].components[0].components[0].toJSON();
   check('panneau : UN SEUL menu déroulant', sent[0].components[0].components.length === 1);
-  check('panneau : titre exact', embed.title === '👑 Support | Optimus Prime');
-  check('panneau : bienvenue exacte', embed.description.startsWith('Bienvenue sur le support officiel de Optimus Prime'));
+  check('panneau : titre exact', embed.title === '👑 Support | Hoxera');
+  check('panneau : bienvenue exacte', embed.description.startsWith('Bienvenue sur le support officiel de Hoxera'));
   check('panneau : description exacte présente', embed.description.includes('sélectionnez la catégorie correspondante à votre besoin via le menu ci-dessous'));
   check('panneau : bannière après le texte (image)', embed.image && embed.image.url.includes('/api/tickets/panel-banner/G1.'));
   check('menu : custom_id INTACT', select.custom_id === `bd-ttype:${BOT}`);
@@ -61,7 +61,7 @@ const check = (label, cond) => {
   const oldChannel = {
     id: 'C2', name: 'support',
     messages: { fetch: async () => ({ values: () => [
-      mkMsg('m1', '👑 Support | Optimus Prime', [{ components: [{ customId: 'bd-ttype:1' }] }]),
+      mkMsg('m1', '👑 Support | Hoxera', [{ components: [{ customId: 'bd-ttype:1' }] }]),
       mkMsg('m2', 'Un message normal'),
       mkMsg('m3', '👑 Support | Carré RP'),
     ] }) },

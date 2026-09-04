@@ -50,7 +50,7 @@ async function trigger(botId, guild, { count, window, action, unlockMin, byTag }
   const act = action || cfg.action || DEFAULT_ACTION;
   let locked = 0;
   if (act === 'lockdown') {
-    const r = await lockdown.on(botId, guild, byTag || '🛡️ Optimus Prime — anti-raid automatique');
+    const r = await lockdown.on(botId, guild, byTag || '🛡️ Hoxera — anti-raid automatique');
     locked = r.channels || 0;
   }
   const unlockAt = (unlockMin ?? cfg.unlockMin ?? DEFAULT_UNLOCK_MIN) > 0
@@ -123,7 +123,7 @@ async function sweep(botId, entry, now = new Date()) {
       if (!guild) { setRaidState(guildId, null); continue; }
       const lang = i18n.langForGuild(guildId);
       const minutes = Math.round((nowMs - st.triggeredAt) / 60000);
-      await lockdown.off(botId, guild, '🛡️ Optimus Prime — fin du verrouillage automatique');
+      await lockdown.off(botId, guild, '🛡️ Hoxera — fin du verrouillage automatique');
       setRaidState(guildId, null);
       try {
         await logging.log(botId, guild, {
@@ -139,7 +139,7 @@ async function sweep(botId, entry, now = new Date()) {
 
 // Réouverture manuelle (bouton du dashboard)
 async function unlockNow(botId, guild) {
-  await lockdown.off(botId, guild, '🛡️ Optimus Prime — réouverture manuelle');
+  await lockdown.off(botId, guild, '🛡️ Hoxera — réouverture manuelle');
   setRaidState(guild.id, null);
   return { reopened: true };
 }

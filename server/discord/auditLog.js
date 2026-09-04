@@ -124,7 +124,7 @@ function onGuildMemberUpdate(botId, oldMember, newMember) {
       fields.push({ name: '✏️ Pseudo', value: `\`${snippet(oldMember.nickname, 40) || '—'}\` → \`${snippet(newMember.nickname, 40) || '—'}\`` });
     }
     logging.log(botId, newMember.guild, {
-      title: '🏷️ Membre modifié (rôles / pseudo)', color: '#5865F2', type: TYPE_ROLES, fields,
+      title: '🏷️ Membre modifié (rôles / pseudo)', color: '#e07a5f', type: TYPE_ROLES, fields,
     }).catch(() => {});
   } catch (e) { console.error('[Hoxera] audit guildMemberUpdate:', e.message); }
 }
@@ -285,7 +285,7 @@ function onVoiceState(botId, oldState, newState) {
     let color = '#57F287';
     let desc = `${memberTag(member)} a rejoint le salon vocal ${newCh ? `\`${newCh.name}\`` : ''}.`;
     if (oldCh && !newCh) { title = '🔇 Déconnexion vocale'; color = '#ED4245'; desc = `${memberTag(member)} a quitté le salon vocal \`${oldCh.name}\`.`; }
-    if (oldCh && newCh) { title = '🔀 Déplacement vocal'; color = '#5865F2'; desc = `${memberTag(member)} : \`${oldCh.name}\` → \`${newCh.name}\`.`; }
+    if (oldCh && newCh) { title = '🔀 Déplacement vocal'; color = '#e07a5f'; desc = `${memberTag(member)} : \`${oldCh.name}\` → \`${newCh.name}\`.`; }
     logging.log(botId, guild, { title, color, type: TYPE_VOICE, description: desc }).catch(() => {});
   } catch (e) { console.error('[Hoxera] audit voice:', e.message); }
 }

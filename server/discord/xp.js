@@ -3,6 +3,7 @@
 // rôles de récompense, tout est configurable par serveur.
 // ============================================================
 const store = require('../db');
+const { EmbedBuilder } = require('discord.js');
 
 // Progression : niveau N nécessite 100*N² XP
 function xpForLevel(level) {
@@ -68,20 +69,55 @@ async function onMessage(botId, message) {
 }
 
 async function announce(botId, message, level, gs) {
-  const template = (gs.xp_message || '').trim() || '{user} vient d\'atteindre le **niveau {level}** ! 🎉';
+  const template = String(gs.xp_message || '').trim() || '{user} vient d\'atteindre le **niveau {level}** ! 🎉';
   const text = template
     .replace(/\{user\}/g, `<@${message.author.id}>`)
     .replace(/\{level\}/g, String(level))
-    .replace(/\{server\}/g, message.guild.name);
+    .replace(/\{server\}/g, message.guild.name)
+    .slice(0, 4096);
   let channel = null;
   // ⚠️ resolveChannel est ASYNCHRONE : sans await, on recevait une promesse
   // (sans .send) → l'annonce partait toujours dans le salon du message.
   if (gs.xp_channel) channel = await resolveChannel(message.guild, gs.xp_channel);
   channel = channel || message.channel;
-  if (channel && channel.send) {
-    const identity = require('./identity');
-    await identity.sendAsProfile(message.client, botId, message.guild, channel, { content: text }).catch(() => {});
-  }
+  if (!channel || typeof channel.send !== 'function') return;
+
+  // 🎉 Annonce de niveau en EMBED soigné (v209) : ton texte personnalisé
+  // reste la description ({user}, {level}, {server}…), on y ajoute la
+  // progression, le rang et la récompense de rôle débloquée.
+  const row = store.xp.get(botId, message.guild.id, message.author.id) || { xp: 0 };
+  const cur = xpForLevel(level);
+  const next = xpForLevel(level + 1);
+  const pct = next > cur ? Math.max(0, Math.min(1, (row.xp - cur) / (next - cur))) : 0;
+  const bars = 12;
+  const bar = '▰'.repeat(Math.round(pct * bars)) + '▱'.repeat(bars - Math.round(pct * bars));
+  let pos = 0;
+  try { pos = store.xp.rankOf(botId, message.guild.id, message.author.id) || 0; } catch {}
+  let reward = '';
+  try {
+    const rewardAtLevel = (store.xpRoles.all(botId, message.guild.id) || []).find((r) => Number(r.level) === level);
+    if (rewardAtLevel) {
+      const role = resolveRole(message.guild, rewardAtLevel.role);
+      if (role) reward = role.toString();
+    }
+  } catch {}
+
+  const user = message.author || {};
+  const embed = new EmbedBuilder()
+    .setColor('#e07a5f')
+    .setAuthor({ name: `${user.username || user.tag || 'Membre'} — niveau ${level} 🎉` })
+    .setDescription(text)
+    .addFields(
+      { name: '📈 Niveau', value: `**${level}**`, inline: true },
+      { name: '🏆 Rang', value: pos ? `#${pos}` : '—', inline: true },
+      { name: '✨ XP', value: `${Math.max(row.xp || 0, cur)} / ${next}`, inline: true },
+      ...(reward ? [{ name: '🎁 Rôle débloqué', value: reward, inline: true }] : []),
+      { name: 'Progression', value: `${bar} ${Math.round(pct * 100)}%` },
+    )
+    .setFooter({ text: `Hoxera · ${message.guild.name}` })
+    .setTimestamp();
+  const identity = require('./identity');
+  await identity.sendAsProfile(message.client, botId, message.guild, channel, { embeds: [embed] }).catch(() => {});
 }
 
 async function applyRewards(botId, message, level) {

@@ -65,7 +65,7 @@ const check = (label, cond) => {
   const chC = { id: 'C1', name: 'support', send: async (p) => { sentC.push(p); return {}; } };
   await panels.sendTicketPanel(BOT, 'G3', null, chC);
   const embedC = sentC[0].embeds[0].toJSON();
-  check('repli : titre « 👑 Support | Optimus Prime »', embedC.title === '👑 Support | Optimus Prime');
+  check('repli : titre « 👑 Support | Hoxera »', embedC.title === '👑 Support | Hoxera');
   check('repli : bannière statique rapide (nom inconnu)', embedC.image.url.includes('/api/tickets/panel-banner/G3.png'));
 
   // ---------- 5. Logique intacte : menu et sélection ----------

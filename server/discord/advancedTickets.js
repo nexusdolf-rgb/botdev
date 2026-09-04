@@ -18,7 +18,7 @@ const {
 } = require('discord.js');
 const store = require('../db');
 
-const DEFAULT_COLOR = '#5865F2';
+const DEFAULT_COLOR = '#e07a5f';
 const DEFAULT_IMAGE = 'https://hoxera.is-a.dev/icons/support-banner.png';
 const BUTTON_STYLES = {
   '1': ButtonStyle.Primary,

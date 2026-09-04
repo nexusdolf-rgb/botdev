@@ -357,7 +357,7 @@ function defaultPanelDescription(buttonLabel, hasTypes) {
 //  - Textes dans la langue du serveur (/lang fr|en)
 // ============================================================
 const i18n = require('../i18n');
-const PANEL_DEFAULT_NAME = 'Optimus Prime';
+const PANEL_DEFAULT_NAME = 'Hoxera';
 
 function panelBannerUrl(guildId, name) {
   const site = store.settings.get('public_url') || 'https://hoxera.is-a.dev';
@@ -871,7 +871,7 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
       store.advancedTickets.bindChannel(
         channel.id, botId, guild.id, configOverride.advanced_panel_id,
         configOverride.advanced_type_id || '', chosen ? chosen.label : '',
-        chosen && chosen.staff_roles ? chosen.staff_roles : [], chosen && chosen.color ? chosen.color : '#5865F2',
+        chosen && chosen.staff_roles ? chosen.staff_roles : [], chosen && chosen.color ? chosen.color : '#e07a5f',
       );
     } catch (e) { console.error('[Hoxera] mapping ticket personnalisé :', e.message); }
   }
@@ -952,7 +952,7 @@ Notre équipe va te répondre dans le salon privé prévu pour toi.`,
     }).catch(() => {});
 
     await logging.log(botId, guild, {
-      title: '🎫 Ticket ouvert', color: '#5865F2',
+      title: '🎫 Ticket ouvert', color: '#e07a5f',
       fields: [
         { name: '👤 Créateur', value: `<@${member.id}>`, inline: true },
         { name: '📨 Salon', value: `<#${channel.id}>`, inline: true },
@@ -1218,7 +1218,7 @@ async function sendTranscriptDm(clientOrInteraction, guild, channelName, { text,
   // 🖼️ La bannière du PROFIL du bot (le robot) est affichée dans le MP,
   // avec l'URL toujours à jour (mise à jour automatique au démarrage).
   // Repli : copie locale de la bannière servie par le site.
-  const serverName = String(guild.name || 'Optimus Prime').slice(0, 100);
+  const serverName = String(guild.name || 'Hoxera').slice(0, 100);
   // 🌍 Transcription dans la langue du serveur (ou message personnalisé v198)
   const lang = i18n.langForGuild(guild.id);
   const siteUrl = store.settings.get('public_url') || 'https://hoxera.is-a.dev';
@@ -1237,7 +1237,7 @@ async function sendTranscriptDm(clientOrInteraction, guild, channelName, { text,
     .setTitle(customMsg ? serverName + ' · ' + i18n.t(lang, 'transcript_title') : i18n.t(lang, 'transcript_title'))
     .setDescription(desc)
     .setImage(customImg || profileBanner)
-    .setFooter({ text: 'Optimus Prime · ' + i18n.t(lang, 'footer_tickets') });
+    .setFooter({ text: 'Hoxera · ' + i18n.t(lang, 'footer_tickets') });
   try {
     await user.send({
       embeds: [embed],
@@ -1292,7 +1292,7 @@ async function sendTicketRecap(botId, interaction, { row, meta, closeReason, tra
     } catch {}
 
     const embed = new EmbedBuilder()
-      .setColor('#5865F2')
+      .setColor('#e07a5f')
       .setTitle(`📔 Récapitulatif — Ticket #${number}${row && row.type_label ? ` · ${row.type_label}` : ''}`)
       .addFields(
         { name: '👤 Ouvert par', value: openerId ? `<@${openerId}>\n\`${openerTag}\`` : `\`${openerTag}\``, inline: true },
@@ -1708,7 +1708,7 @@ function safeEmoji(s) {
 function typesPickEmbed(state) {
   const types = typesList(state.botId, state.guildId);
   return new EmbedBuilder()
-    .setColor('#5865F2')
+    .setColor('#e07a5f')
     .setTitle('🗂️ Assistant des types de tickets')
     .setDescription('Choisis un type à modifier, créé-en un nouveau, ou termine.')
     .addFields({
@@ -1748,7 +1748,7 @@ function typesEditEmbed(state) {
   const t = currentType(state);
   const qs = Array.isArray(t.questions) ? t.questions.filter(Boolean) : [];
   return new EmbedBuilder()
-    .setColor('#8B5CF6')
+    .setColor('#e07a5f')
     .setTitle(`${t.emoji || '🎫'} ${t.label}`)
     .setDescription('Choisis une action :')
     .addFields(
@@ -1818,7 +1818,7 @@ function typesAddRoleComponents(state) {
 function typesAddRoleEmbed(state) {
   const t = currentType(state);
   return new EmbedBuilder()
-    .setColor('#5865F2')
+    .setColor('#e07a5f')
     .setTitle(`🛡️ Rôles staff de « ${t.label} »`)
     .setDescription('Sélectionne **autant de rôles que tu veux** : chacun pourra gérer les tickets de ce type (fermer, réouvrir, supprimer).')
     .addFields({
@@ -1860,7 +1860,7 @@ function typesQuestionsEmbed(state) {
   const t = currentType(state);
   const qs = (t.questions || []).filter(Boolean);
   return new EmbedBuilder()
-    .setColor('#5865F2')
+    .setColor('#e07a5f')
     .setTitle(`❓ Questionnaire de « ${t.label} »`)
     .setDescription('Les membres qui ouvrent ce type de ticket devront répondre **obligatoirement** à ces questions (une fenêtre s\'ouvre avant la création du ticket).\n\n*Par défaut : aucune question (seule la raison est demandée).*')
     .addFields({
@@ -2027,7 +2027,7 @@ async function handleTypesWizardInteraction(botId, interaction) {
       if (v === 'category') {
         state.step = 'category';
         return upd({
-          embeds: [new EmbedBuilder().setColor('#5865F2').setTitle('🗂️ Catégorie du type')
+          embeds: [new EmbedBuilder().setColor('#e07a5f').setTitle('🗂️ Catégorie du type')
             .setDescription(`Choisis la catégorie pour **${state.current}** (ou écris-en une nouvelle).`)],
           components: typesCategoryComponents(state),
         });

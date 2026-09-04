@@ -49,7 +49,7 @@ const check = (label, cond) => {
   check('MP : invite à rouvrir un ticket', String(emb.description).includes('Rouvre simplement un ticket'));
   // 🖼️ Bannière du PROFIL du bot (repli local si l'URL Discord n'est pas encore connue)
   check('MP : bannière du profil du bot en image', emb.image && emb.image.url.includes('/icons/nexora-profile-banner.png'));
-  check('MP : footer Optimus Prime', String(emb.footer.text).includes('Optimus Prime'));
+  check('MP : footer signé Hoxera', String(emb.footer.text).includes('Hoxera'));
   // 📄 Fichier .txt joint
   check('MP : fichier transcription .txt joint', payload.files && payload.files.length === 1 && String(payload.files[0].name).includes('question-bob') && payload.files[0].name.endsWith('.txt'));
   check('MP : contenu du fichier correct', String(payload.files[0].attachment.toString()).includes('Bonjour !'));

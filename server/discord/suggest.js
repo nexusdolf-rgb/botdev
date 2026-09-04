@@ -19,7 +19,7 @@ const STATUS_EMOJI = { pending: '⏳ En attente', approved: '✅ Approuvée', de
 function buildEmbed(s, authorTag, settings = {}) {
   const customColor = /^#[0-9a-fA-F]{6}$/.test(String((settings && settings.suggestion_color) || '')) ? settings.suggestion_color : '';
   return new EmbedBuilder()
-    .setColor(customColor || (s.status === 'approved' ? '#57F287' : s.status === 'denied' ? '#ED4245' : '#5865F2'))
+    .setColor(customColor || (s.status === 'approved' ? '#57F287' : s.status === 'denied' ? '#ED4245' : '#e07a5f'))
     .setAuthor({ name: `Suggestion #${s.id} — ${authorTag || 'membre'}` })
     .setDescription(String(s.text || '').slice(0, 1500))
     .addFields(
@@ -27,7 +27,7 @@ function buildEmbed(s, authorTag, settings = {}) {
       { name: '👍 Votes', value: String(s.upvotes), inline: true },
       { name: '👎 Votes', value: String(s.downvotes), inline: true },
     )
-    .setFooter({ text: `Hoxera · Suggestion #${s.id} · Vote avec les boutons` })
+    .setFooter({ text: 'Hoxera · Vote avec les boutons' })
     .setTimestamp();
 }
 

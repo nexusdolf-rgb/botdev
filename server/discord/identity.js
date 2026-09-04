@@ -23,7 +23,7 @@ function absoluteUrl(path) {
 function buildProfileEmbed(botId, guildId, botRecord) {
   const p = profile(botId, guildId);
   const embed = new EmbedBuilder()
-    .setColor(p && p.color ? p.color : '#5865F2')
+    .setColor(p && p.color ? p.color : '#e07a5f')
     .setAuthor({ name: 'Hoxera · Identité personnalisée' })
     .setTitle(`${p && p.name ? p.name : botRecord.name} — identité de ce serveur`)
     .setDescription(p && p.bio ? p.bio : 'Aucune bio définie pour ce serveur.')

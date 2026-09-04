@@ -114,7 +114,7 @@ async function runBlock(block, ctx) {
       const embed = new EmbedBuilder()
         .setTitle(resolveVariables(p.title || '', ctx) || null)
         .setDescription(resolveVariables(p.description || '', ctx) || null)
-        .setColor(p.color || '#5865F2');
+        .setColor(p.color || '#e07a5f');
       if (p.footer) embed.setFooter({ text: resolveVariables(p.footer, ctx) });
       if (p.image) embed.setImage(p.image.trim());
       if (p.thumbnail) embed.setThumbnail(p.thumbnail.trim());

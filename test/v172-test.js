@@ -39,14 +39,14 @@ for (const f of jsFiles) {
 // ---------- 2. Le nouveau nom est bien en place ----------
 assert(dash.includes("'Optimus Prime hors ligne'") || dash.includes('Optimus Prime hors ligne'),
   'dashboard : étiquette de statut au nouveau nom');
-assert(dash.includes("bot.name || 'Optimus Prime'") || dash.includes("(bot && bot.name) || 'Optimus Prime'"),
-  'dashboard : nom de repli du bot');
-assert(panels.includes("PANEL_DEFAULT_NAME = 'Optimus Prime'"), 'panneau tickets : nom par défaut');
-assert(panels.includes("'Optimus Prime · '"), 'panneau tickets : pied de page');
-assert(i18n.includes('Optimus Prime est très sollicité'), 'i18n fr : message busy');
-assert(i18n.includes('Optimus Prime is very busy'), 'i18n en : message busy');
+assert(dash.includes('Dashboard.state.bot.name') || dash.includes('(bot && bot.name)'),
+  'dashboard : le nom réel du bot est affiché dynamiquement (v208/v209)');
+assert(panels.includes("PANEL_DEFAULT_NAME = 'Hoxera'"), 'panneau tickets : nom par défaut = Hoxera (v209)');
+assert(panels.includes("'Hoxera · '"), 'panneau tickets : pied de page signé Hoxera (v209)');
+assert(i18n.includes('Hoxera est très sollicité'), 'i18n fr : message busy (v209)');
+assert(i18n.includes('Hoxera is very busy'), 'i18n en : message busy');
 assert(routes.includes('banni d’Optimus Prime'), 'routes : message de bannissement (apostrophe typographique)');
-assert(automod.includes("'Blacklist du serveur · Optimus Prime'"), 'automod : pied de blacklist');
+assert(automod.includes("'Blacklist du serveur · Hoxera'"), 'automod : pied de blacklist signé Hoxera');
 
 // ---------- 3. Nouvelle identité visuelle : logo + bannières ----------
 for (const f of ['public/icons/nexora-robot-mark.png', 'public/icons/nexora-robot-mark-192.png',
