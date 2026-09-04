@@ -2906,6 +2906,7 @@ Dashboard.renderers.moderation = async (content, data) => {
       exempt_channels: [...selectedExemptChannels],
       exempt_users: [...selectedExemptUsers],
       blacklist: blacklistData.map((word) => word.word),
+      escalation: collectEscalationForm(),
     };
   };
   const saveAutomodDraft = () => {
@@ -2932,6 +2933,186 @@ Dashboard.renderers.moderation = async (content, data) => {
     try { localStorage.removeItem(draftKey); } catch {}
     App.toast('Configuration publiée restaurée.');
     Dashboard.renderers.moderation(content, data);
+  };
+
+  // 📈 v213 — Barème progressif des sanctions (échelle par règle).
+  // Chaque règle peut monter seule : avertir → muet → ban temporaire →
+  // ban définitif + blacklist (avec durée). Fenêtre glissante par règle.
+  const escRules = [
+    { key: 'links', emoji: '🔗', label: 'Liens et invitations' },
+    { key: 'caps', emoji: '🔠', label: 'Majuscules' },
+    { key: 'mentions', emoji: '📣', label: 'Mentions excessives' },
+    { key: 'words', emoji: '🚫', label: 'Mots interdits' },
+    { key: 'spam', emoji: '💥', label: 'Anti-spam' },
+  ];
+  const escActionMeta = { delete: '🗑️ Supprimer', warn: '⚠️ Avertir', timeout: '⏱️ Muet', kick: '👢 Expulser', ban: '🔨 Bannir' };
+  const escDurNames = { 10: '10 min', 30: '30 min', 60: '1 h', 360: '6 h', 1440: '1 jour', 4320: '3 jours', 10080: '7 jours', 43200: '30 jours', 525600: '1 an' };
+  const MUTE_MIN = [10, 30, 60, 360, 1440, 4320, 10080, 43200];
+  const BAN_MIN = [0, 60, 360, 1440, 4320, 10080, 43200, 525600];
+  const BL_MIN = [0, 60, 360, 1440, 4320, 10080, 43200, 525600];
+  const durOpts = (selected, zeroLabel, list) => {
+    const val = Number(selected) || 0;
+    const has = list.some((v) => v === val);
+    const opts = list.map((v) => `<option value="${v}" ${val === v ? 'selected' : ''}>${v === 0 ? zeroLabel : (escDurNames[v] || v + ' min')}</option>`).join('');
+    return (has ? '' : `<option value="${val}" selected>Personnalisée : ${val === 0 ? zeroLabel : ((escDurNames[val] || val) + ' min')}</option>`) + opts;
+  };
+  const escWindows = [[60, '1 h'], [360, '6 h'], [1440, '24 h'], [4320, '3 jours'], [10080, '7 jours']];
+  const defaultEscSteps = () => [
+    { after: 1, action: 'warn', minutes: 0, blacklist: false, blacklistMin: 0 },
+    { after: 2, action: 'timeout', minutes: 60, blacklist: false, blacklistMin: 0 },
+    { after: 3, action: 'ban', minutes: 10080, blacklist: false, blacklistMin: 0 },
+    { after: 4, action: 'ban', minutes: 0, blacklist: true, blacklistMin: 0 },
+  ];
+  const escStored = (() => {
+    try {
+      const src = automodDraft && automodDraft.escalation
+        ? automodDraft.escalation
+        : (typeof serverSettings.am_escalation === 'string' ? JSON.parse(serverSettings.am_escalation || '{}') : (serverSettings.am_escalation || {}));
+      return (src && src.rules) ? src : { rules: {} };
+    } catch { return { rules: {} }; }
+  })();
+  const escModel = {};
+  escRules.forEach((r) => {
+    const ent = (escStored.rules || {})[r.key] || {};
+    escModel[r.key] = {
+      enabled: !!ent.enabled,
+      windowMin: Math.min(Math.max(parseInt(ent.windowMin, 10) || 1440, 1), 525600),
+      steps: (Array.isArray(ent.steps) && ent.steps.length)
+        ? ent.steps.map((st) => ({ after: Math.min(Math.max(parseInt(st.after, 10) || 1, 1), 200), action: escActionMeta[st.action] ? st.action : 'warn', minutes: Math.min(Math.max(parseInt(st.minutes, 10) || 0, 0), 525600), blacklist: !!st.blacklist, blacklistMin: Math.min(Math.max(parseInt(st.blacklistMin, 10) || 0, 0), 525600) }))
+        : defaultEscSteps(),
+    };
+  });
+
+  const escWindowOptions = (selected) => escWindows
+    .map(([v, label]) => `<option value="${v}" ${Number(selected) === v ? 'selected' : ''}>${label}</option>`).join('');
+  const ce = Dashboard.card(root, '📈 Barème progressif des sanctions', 'Par règle, le bot monte seul d’un cran à chaque récidive dans une fenêtre glissante (ex : 3 infractions en 24 h → palier 3). Chaque palier a sa sanction et sa durée ; un palier peut aussi « 🚫 blacklister » le membre — tant que la blacklist est active, un retour est re-banni automatiquement. Barème désactivé = l’action simple de la règle s’applique (comportement actuel).');
+  ce.appendChild(App.el(`<div data-esc-box></div>`));
+  const escBox = ce.querySelector('[data-esc-box]');
+  const renderEsc = () => {
+    escBox.innerHTML = escRules.map((r) => {
+      const m = escModel[r.key];
+      const on = m.enabled;
+      const last = m.steps.length ? m.steps[m.steps.length - 1].after : 1;
+      return `
+      <div style="border:1px solid var(--d-border);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:var(--d-card2)">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:16px">${r.emoji}</span><b style="flex:1;min-width:150px">${r.label}</b>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--d-dim)">Barème actif
+            <label class="switch"><input type="checkbox" data-esc-on="${r.key}" ${on ? 'checked' : ''} /><span class="slider"></span></label>
+          </label>
+        </div>
+        ${on ? `
+        <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <label class="dash-label" style="margin:0">🕐 Récidives comptées sur</label>
+          <select class="dash-select" data-esc-win="${r.key}" style="max-width:220px">${(escWindows.some(([v]) => v === m.windowMin) ? '' : `<option value="${m.windowMin}" selected>Personnalisée (${m.windowMin} min)</option>`) + escWindowOptions(m.windowMin)}</select>
+        </div>
+        <div data-esc-steps="${r.key}" style="margin-top:8px;display:flex;flex-direction:column;gap:6px"></div>
+        <button class="dash-btn dash-btn-sm" data-esc-add="${r.key}" style="margin-top:6px">＋ Ajouter un palier</button>
+        <div style="font-size:11px;color:var(--d-dim);margin-top:6px">Enchaînement actuel : ${m.steps.map((st, i) => (i ? ' → ' : '') + st.after + (i === 0 ? 're' : 'e') + ' fois : ' + (escActionMeta[st.action] || st.action) + (st.minutes > 0 ? ' ' + (escDurNames[st.minutes] || st.minutes + ' min') : (st.action === 'ban' ? ' définitif' : '')) + (st.blacklist ? ' + 🚫' : '')).join('')}</div>
+        ` : ''}
+      </div>`;
+    }).join('');
+    // Étape par palier
+    escRules.forEach((r) => {
+      const m = escModel[r.key];
+      if (!m.enabled) return;
+      const stepsEl = escBox.querySelector(`[data-esc-steps="${r.key}"]`);
+      stepsEl.innerHTML = m.steps.map((st, i) => `
+        <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;border:1px dashed var(--d-border);border-radius:10px;padding:8px 10px">
+          <span style="color:var(--d-dim);font-size:12px">après</span>
+          <input class="dash-input" type="number" min="1" max="200" data-esc-after="${r.key}" data-i="${i}" value="${st.after}" style="max-width:66px" />
+          <span style="color:var(--d-dim);font-size:12px">infraction(s) →</span>
+          <select class="dash-select" data-esc-action="${r.key}" data-i="${i}" style="max-width:170px">${Object.entries(escActionMeta).map(([v, label]) => `<option value="${v}" ${st.action === v ? 'selected' : ''}>${label}</option>`).join('')}</select>
+          <span data-esc-dur-wrap="${r.key}" data-i="${i}" ${['timeout', 'ban'].includes(st.action) ? '' : 'style="display:none"'}>
+            <select class="dash-select" data-esc-minutes="${r.key}" data-i="${i}" style="max-width:150px">${durOpts(st.minutes, '♾️ Définitif', st.action === 'ban' ? BAN_MIN : MUTE_MIN)}</select>
+          </span>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;color:var(--d-dim)"><input type="checkbox" data-esc-bl="${r.key}" data-i="${i}" ${st.blacklist ? 'checked' : ''} /> 🚫 Blacklist</label>
+          <span data-esc-blmin-wrap="${r.key}" data-i="${i}" ${st.blacklist ? '' : 'style="display:none"'}>
+            <select class="dash-select" data-esc-blmin="${r.key}" data-i="${i}" style="max-width:160px">${durOpts(st.blacklistMin, '♾️ Permanente', BL_MIN)}</select>
+          </span>
+          <button class="dash-btn dash-btn-danger dash-btn-sm" data-esc-del="${r.key}" data-i="${i}" title="Retirer ce palier">🗑</button>
+        </div>`).join('');
+    });
+    // Listeners
+    escBox.querySelectorAll('[data-esc-on]').forEach((input) => {
+      input.onchange = () => {
+        const key = input.dataset.escOn;
+        escModel[key].enabled = input.checked;
+        if (input.checked && (!escModel[key].steps.length || escModel[key].steps.length === 0)) escModel[key].steps = defaultEscSteps();
+        renderEsc();
+      };
+    });
+    escBox.querySelectorAll('[data-esc-win]').forEach((sel) => {
+      sel.onchange = () => { escModel[sel.dataset.escWin].windowMin = parseInt(sel.value, 10) || 1440; };
+    });
+    escBox.querySelectorAll('[data-esc-add]').forEach((btn) => {
+      btn.onclick = () => {
+        const m = escModel[btn.dataset.escAdd];
+        const maxA = m.steps.length ? Math.max(...m.steps.map((x) => x.after)) : 0;
+        m.steps.push({ after: maxA + 1, action: 'warn', minutes: 0, blacklist: false, blacklistMin: 0 });
+        m.steps.sort((a, b) => a.after - b.after);
+        renderEsc();
+      };
+    });
+    escBox.querySelectorAll('[data-esc-after]').forEach((input) => {
+      input.oninput = () => {
+        const m = escModel[input.dataset.escAfter];
+        if (m.steps[Number(input.dataset.i)]) m.steps[Number(input.dataset.i)].after = Math.min(Math.max(parseInt(input.value, 10) || 1, 1), 200);
+      };
+    });
+    escBox.querySelectorAll('[data-esc-action]').forEach((sel) => {
+      sel.onchange = () => {
+        const key = sel.dataset.escAction;
+        const i = Number(sel.dataset.i);
+        escModel[key].steps[i].action = sel.value;
+        if (!['timeout', 'ban'].includes(sel.value)) escModel[key].steps[i].minutes = 0;
+        if (sel.value === 'timeout' && escModel[key].steps[i].minutes <= 0) escModel[key].steps[i].minutes = 60;
+        renderEsc();
+      };
+    });
+    escBox.querySelectorAll('[data-esc-minutes]').forEach((sel) => {
+      sel.onchange = () => {
+        const key = sel.dataset.escMinutes;
+        escModel[key].steps[Number(sel.dataset.i)].minutes = parseInt(sel.value, 10) || 0;
+      };
+    });
+    escBox.querySelectorAll('[data-esc-bl]').forEach((input) => {
+      input.onchange = () => {
+        const key = input.dataset.escBl;
+        const i = Number(input.dataset.i);
+        escModel[key].steps[i].blacklist = input.checked;
+        if (!escModel[key].steps[i].blacklistMin) escModel[key].steps[i].blacklistMin = 0;
+        renderEsc();
+      };
+    });
+    escBox.querySelectorAll('[data-esc-blmin]').forEach((sel) => {
+      sel.onchange = () => {
+        const key = sel.dataset.escBlmin;
+        escModel[key].steps[Number(sel.dataset.i)].blacklistMin = parseInt(sel.value, 10) || 0;
+      };
+    });
+    escBox.querySelectorAll('[data-esc-del]').forEach((btn) => {
+      btn.onclick = () => {
+        const key = btn.dataset.escDel;
+        escModel[key].steps.splice(Number(btn.dataset.i), 1);
+        if (!escModel[key].steps.length) escModel[key].steps = defaultEscSteps();
+        renderEsc();
+      };
+    });
+  };
+  renderEsc();
+  const collectEscalationForm = () => {
+    const rules = {};
+    escRules.forEach((r) => {
+      const m = escModel[r.key];
+      if (!m.enabled) return;
+      rules[r.key] = {
+        enabled: true,
+        windowMin: m.windowMin,
+        steps: [...m.steps].sort((a, b) => a.after - b.after).map((st) => ({ after: st.after, action: st.action, minutes: st.minutes, blacklist: st.blacklist, blacklistMin: st.blacklistMin })),
+      };
+    });
+    return { rules };
   };
 
   // ☁️ Miroir officiel Discord : les règles natives restent en alerte

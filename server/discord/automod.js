@@ -37,6 +37,89 @@ function markAutomodded(messageId) {
 const AUTOMOD_RULE_ACTIONS = ['inherit', 'log', 'delete', 'warn', 'timeout', 'kick', 'ban'];
 const AUTOMOD_BLACKLIST_RULES = ['links', 'caps', 'mentions', 'words', 'spam'];
 
+// ============================================================
+// 📈 Barème progressif des sanctions (v213)
+// Par règle Auto-Mod, une échelle de paliers : à chaque récidive
+// (N ième infraction dans une fenêtre glissante), l'action du palier
+// s'applique automatiquement (avertir → muet → ban temporaire →
+// ban définitif + blacklist…). Chaque palier a sa sanction, sa durée,
+// et peut déclencher la blacklist du serveur (avec re-ban au retour).
+// Laissé désactivé par défaut : le comportement actuel est conservé.
+// ============================================================
+const AUTOMOD_ESC_RULES = ['links', 'caps', 'mentions', 'words', 'spam'];
+const AUTOMOD_ESC_ACTIONS = ['delete', 'warn', 'timeout', 'kick', 'ban'];
+// Durée max : timeout 28 jours (limite Discord), ban 1 an, blacklist 1 an.
+const ESC_MINUTES_MAX = { timeout: 40320, ban: 525600, blacklist: 525600 };
+const ESC_DEFAULT_WINDOW_MIN = 1440; // 24 h
+
+// Échelle par défaut, pré-remplie quand l'admin active le barème d'une règle.
+// 1re fois → avertissement · 2e → muet 1 h · 3e → ban 7 jours ·
+// 4e (dans la fenêtre) → ban définitif + blacklist permanente du serveur.
+function defaultEscalationSteps() {
+  return [
+    { after: 1, action: 'warn', minutes: 0, blacklist: false, blacklistMin: 0 },
+    { after: 2, action: 'timeout', minutes: 60, blacklist: false, blacklistMin: 0 },
+    { after: 3, action: 'ban', minutes: 10080, blacklist: false, blacklistMin: 0 },
+    { after: 4, action: 'ban', minutes: 0, blacklist: true, blacklistMin: 0 },
+  ];
+}
+
+function parseEscalationJson(raw) {
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) return raw;
+  try { const p = JSON.parse(String(raw || '{}')); return p && typeof p === 'object' && !Array.isArray(p) ? p : {}; } catch { return {}; }
+}
+
+// Lit + normalise la config du barème pour une règle. Retourne null si la
+// règle est inconnue ; { enabled:false } si le barème n'est pas actif.
+function escalationForRule(gs, rule) {
+  if (!AUTOMOD_ESC_RULES.includes(String(rule || ''))) return null;
+  const cfg = parseEscalationJson(gs && gs.am_escalation);
+  const rules = (cfg && cfg.rules) || {};
+  const entry = (rules && typeof rules === 'object') ? rules[rule] || null : null;
+  if (!entry || !entry.enabled) return { enabled: false, rule, windowMin: ESC_DEFAULT_WINDOW_MIN, steps: [] };
+  const windowMin = Math.min(Math.max(parseInt(entry.windowMin, 10) || ESC_DEFAULT_WINDOW_MIN, 1), 525600);
+  const steps = (Array.isArray(entry.steps) ? entry.steps : [])
+    .map((step) => ({
+      after: Math.min(Math.max(parseInt(step && step.after, 10) || 0, 0), 200),
+      action: AUTOMOD_ESC_ACTIONS.includes(String(step && step.action)) ? String(step.action) : 'warn',
+      minutes: Math.min(Math.max(parseInt(step && step.minutes, 10) || 0, 0), ESC_MINUTES_MAX[String(step && step.action)] || 525600),
+      blacklist: !!(step && step.blacklist),
+      blacklistMin: Math.min(Math.max(parseInt(step && step.blacklistMin, 10) || 0, 0), 525600),
+    }))
+    .filter((step) => step.after >= 1)
+    .map((step) => (step.action === 'timeout' && step.minutes < 1 ? { ...step, minutes: 60 } : step))
+    .sort((a, b) => a.after - b.after);
+  return { enabled: true, rule, windowMin, steps };
+}
+
+// Palier actif pour un nombre de récidives donné (dernier palier ≤ count).
+function pickEscalationStep(steps, count) {
+  const list = Array.isArray(steps) ? steps : [];
+  const n = Math.min(Math.max(parseInt(count, 10) || 0, 0), 200);
+  let chosen = null;
+  for (const step of list) if (n >= step.after) chosen = step;
+  return chosen;
+}
+
+// Ajoute un événement de récidive (fenêtre glissante). En mode test forcé la
+// lecture est non destructive : on simule « le prochain message » sans écrire.
+function strikeCountFor(botId, guildId, userId, rule, windowMin, force) {
+  try {
+    if (force) {
+      const cur = store.automodStrikes.get(botId, guildId, userId, rule);
+      const now = Date.now();
+      const win = Math.min(Math.max(parseInt(windowMin, 10) || 0, 0), 525600) * 60000;
+      const cutoff = win > 0 ? now - win : 0;
+      const valid = (cur.events || []).filter((t) => Number(t) > cutoff).length;
+      return valid + 1;
+    }
+    return store.automodStrikes.touch(botId, guildId, userId, rule, windowMin).count;
+  } catch (e) {
+    return 1;
+  }
+}
+
+
 function parseList(value) {
   if (Array.isArray(value)) return value;
   if (typeof value !== 'string') return [];
@@ -521,6 +604,133 @@ function analyzeContent(botId, guildId, content, opts = {}) {
   };
 }
 
+// 📈 v213 — Barème progressif : applique le palier correspondant au nombre
+// de récidives de la règle dans la fenêtre configurée (glissante).
+async function applyEscalation(botId, message, detection, opts, gs, lang, serverName, messages, esc) {
+  const force = !!opts.force;
+  const rule = detection.rule;
+  const guild = message.guild;
+  const author = message.author;
+  if (!guild || !author) return null;
+  const count = strikeCountFor(botId, guild.id, author.id, rule, esc.windowMin, force);
+  const step = pickEscalationStep(esc.steps, count) || null;
+  const stepAction = step ? step.action : 'delete';
+  const lastAfter = esc.steps.length ? esc.steps[esc.steps.length - 1].after : 0;
+
+  // 1) Suppression des messages fautifs (sauf observation, déjà exclue)
+  let deletedCount = 0;
+  const list = (messages && messages.length) ? messages : [message];
+  for (const current of list) {
+    try {
+      if (current && current.deletable && typeof current.delete === 'function') {
+        markAutomodded(current.id);
+        await current.delete();
+        deletedCount++;
+      }
+    } catch {}
+  }
+
+  // 2) Avertissement + sanction du palier
+  const needsWarn = ['warn', 'timeout', 'kick', 'ban'].includes(stepAction);
+  let warning = { count: 0, sanction: null, saved: false, id: 0 };
+  if (needsWarn && !force) {
+    warning = registerAutomodWarning(botId, message, detection.reason, opts, {
+      ...gs, warn_limit: 0, warn_timeout_limit: 0, am_warn_limit: 0,
+    });
+  }
+  const sanction = step && ['timeout', 'kick', 'ban'].includes(step.action)
+    ? { action: step.action, minutes: step.minutes || 0 }
+    : null;
+  if (sanction) warning.sanction = sanction;
+  let sanctionResult = { applied: false, action: '', minutes: 0, error: '' };
+  if (sanction && !force) {
+    sanctionResult = await applyAutoSanction(message, sanction, detection.reason, count);
+    if (warning.id && sanctionResult.applied) {
+      try {
+        store.warnings.setAction(warning.id, sanctionResult.action);
+        store.warnings.resetActive(botId, guild.id, author.id);
+      } catch {}
+    }
+    // ⏱️ Ban temporaire : on programme la levée automatique du ban.
+    if (sanction.action === 'ban' && sanctionResult.applied && sanction.minutes > 0) {
+      try {
+        const until = Date.now() + Math.min(sanction.minutes, 525600) * 60000;
+        store.automodTempBans.add(botId, guild.id, author.id, author.tag || author.username || '', until, `Auto-Mod · ${rule} · ban ${sanction.minutes} min`);
+        await logging.log(botId, guild, {
+          title: '⏱️ Ban temporaire programmé', color: '#FEE75C',
+          fields: [
+            { name: '👤 Membre', value: `<@${author.id}>`, inline: true },
+            { name: '⏳ Levée du ban', value: new Date(until).toLocaleString('fr-FR'), inline: true },
+            { name: '📋 Règle', value: rule, inline: true },
+          ],
+        });
+      } catch {}
+    }
+  }
+  const actionApplied = stepAction === 'delete'
+    ? deletedCount > 0
+    : stepAction === 'warn'
+      ? warning.saved
+      : sanctionResult.applied;
+
+  // 3) Blacklist du serveur si le palier le prévoit (durée propre au palier)
+  let blacklistResult = { blacklisted: false, panelSent: false, reason: 'not_configured' };
+  if (step && step.blacklist && !force && actionApplied) {
+    const overlay = {
+      ...gs,
+      am_blacklist_rules: JSON.stringify({ [rule]: true }),
+      am_blacklist_duration_min: step.blacklistMin || 0,
+    };
+    blacklistResult = await applyMemberBlacklist(botId, message, detection, {
+      gs: overlay,
+      action: sanctionResult.applied ? sanctionResult.action : stepAction,
+      actionApplied,
+      deletedCount,
+      sanctionResult,
+      force: false,
+    });
+  }
+
+  // 4) Traces + journal
+  recordAction(botId, message, detection.reason, { rule, action: stepAction, observed: 0 });
+  try {
+    await logging.log(botId, guild, {
+      title: `🛡️ Auto-modération · ${rule}`,
+      description: `Barème progressif · récidive ${count}${esc.windowMin ? ` dans ${esc.windowMin} min` : ''} (${detection.reason})`,
+      color: stepAction === 'warn' ? '#FEE75C' : '#ED4245', type: 'automod',
+      fields: [
+        { name: '👤 Auteur', value: `<@${author.id}>`, inline: true },
+        { name: '📈 Palier', value: step ? `${step.after}/${lastAfter || step.after}` : '—', inline: true },
+        { name: '⚙️ Action', value: stepAction, inline: true },
+        { name: '💬 Message', value: String(message.content || '').slice(0, 500) || '—' },
+      ],
+    });
+  } catch {}
+
+  // 5) Avertissement public + MP (jamais silencieux, sauf test forcé)
+  let publicWarning = { sent: false, error: '' };
+  if (!force && (warning.count || deletedCount)) {
+    try {
+      publicWarning = await sendPublicWarning(botId, message, lang, detection.reason, count,
+        { ...gs, am_warn_limit: lastAfter || count }, warning.sanction || sanction, sanctionResult, deletedCount > 0);
+    } catch (e) { publicWarning = { sent: false, error: String(e.message || e).slice(0, 180) }; }
+  }
+  if (!force && !opts.noDm && needsWarn) {
+    let text = deletedCount > 0
+      ? warnText(gs, lang, serverName, detection.reason)
+      : i18n.t(lang, 'am_dm_no_perm', { server: serverName, reason: detection.reason });
+    if (warning.count) text += `\n${i18n.t(lang, 'am_dm_warning_count', { server: serverName, count, limit: lastAfter > 0 ? '/' + lastAfter : '' })}`;
+    if (sanction) text += `\n${sanctionPublicText(lang, sanction, sanctionResult)}`;
+    await sendWarn(botId, message, gs, lang, text);
+  }
+  return {
+    acted: true, observed: false, rule, action: stepAction, reason: detection.reason,
+    escalated: true, tier: step ? step.after : 0, count,
+    deleted: deletedCount > 0, deletedCount, warningCount: warning.count,
+    publicWarning: publicWarning.sent, sanction: sanctionResult, blacklist: blacklistResult,
+  };
+}
+
 // Applique une action choisie dans le Control Center. Quand aucune action
 // personnalisée n'est enregistrée, runAutomod conserve son chemin historique.
 async function applyConfiguredAction(botId, message, detection, opts, gs, lang, serverName, messages = [message]) {
@@ -537,6 +747,13 @@ async function applyConfiguredAction(botId, message, detection, opts, gs, lang, 
       });
     } catch {}
     return { acted: true, observed: true, rule: detection.rule, action: 'observe', reason: detection.reason, deleted: false, deletedCount: 0, warningCount: 0, publicWarning: false, sanction: { applied: false, action: '', minutes: 0, error: '' } };
+  }
+
+  // 📈 v213 — Barème progressif : un barème activé sur cette règle remplace
+  // l'action simple. Il gère lui-même suppression, palier, durée et blacklist.
+  const escalation = escalationForRule(gs, detection.rule);
+  if (escalation && escalation.enabled) {
+    return applyEscalation(botId, message, detection, opts, gs, lang, serverName, messages, escalation);
   }
 
   const deleteMessages = action !== 'log';
@@ -866,5 +1083,10 @@ module.exports = {
   blacklistWordMatch,
   wasAutomodded,
   markAutomodded,
-  _test: { spamTracker, registerAutomodWarning, applyAutoSanction, sendPublicWarning },
+  defaultEscalationSteps,
+  escalationForRule,
+  pickEscalationStep,
+  parseEscalationJson,
+  strikeCountFor,
+  _test: { spamTracker, registerAutomodWarning, applyAutoSanction, sendPublicWarning, applyEscalation },
 };

@@ -630,6 +630,7 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_color TEXT DEF
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_footer TEXT DEFAULT 'Blacklist du serveur · Hoxera'"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN xp_card INTEGER DEFAULT 1"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN ticket_room TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_escalation TEXT DEFAULT ''"); } catch (e) {}
 // v6 — miroir passif des règles Auto-Mod officielles de Discord.
 // Il utilise uniquement des alertes natives pour éviter les doubles sanctions.
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_native_enabled INTEGER DEFAULT 1"); } catch (e) {}
@@ -639,6 +640,9 @@ try { db.exec("ALTER TABLE automod_member_blacklist ADD COLUMN trigger_type TEXT
 try { db.exec("ALTER TABLE automod_member_blacklist ADD COLUMN trigger_count INTEGER NOT NULL DEFAULT 1"); } catch (e) {}
 try { db.exec("ALTER TABLE automod_member_blacklist ADD COLUMN threshold INTEGER NOT NULL DEFAULT 0"); } catch (e) {}
 try { db.exec("CREATE TABLE IF NOT EXISTS automod_blacklist_counters (bot_id INTEGER NOT NULL, guild_id TEXT NOT NULL, user_id TEXT NOT NULL, rule TEXT NOT NULL, action TEXT NOT NULL, count INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT (datetime('now')), PRIMARY KEY (bot_id, guild_id, user_id, rule, action))"); } catch (e) {}
+try { db.exec(`CREATE TABLE IF NOT EXISTS automod_strikes (bot_id INTEGER NOT NULL, guild_id TEXT NOT NULL, user_id TEXT NOT NULL, rule TEXT NOT NULL, events TEXT NOT NULL DEFAULT '[]', updated_at TEXT NOT NULL DEFAULT (datetime('now')), PRIMARY KEY (bot_id, guild_id, user_id, rule))`); } catch (e) {}
+try { db.exec(`CREATE TABLE IF NOT EXISTS automod_temp_bans (id INTEGER PRIMARY KEY AUTOINCREMENT, bot_id INTEGER NOT NULL, guild_id TEXT NOT NULL, user_id TEXT NOT NULL, user_tag TEXT DEFAULT '', until INTEGER NOT NULL DEFAULT 0, reason TEXT DEFAULT '', created_at TEXT NOT NULL DEFAULT (datetime('now')))`); } catch (e) {}
+try { db.exec(`CREATE INDEX IF NOT EXISTS idx_automod_temp_bans_due ON automod_temp_bans (bot_id, until)`); } catch (e) {}
 try { db.exec("CREATE INDEX IF NOT EXISTS idx_automod_blacklist_counters_user ON automod_blacklist_counters (bot_id, guild_id, user_id, updated_at DESC)"); } catch (e) {}
 try { db.exec("CREATE INDEX IF NOT EXISTS idx_automod_member_blacklist_user ON automod_member_blacklist (bot_id, guild_id, user_id, active)"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_exempt_roles TEXT DEFAULT '[]'"); } catch (e) {}
@@ -1003,7 +1007,7 @@ const guildSettings = {
   set: (botId, guildId, fields) => {
     const cur = guildSettings.get(botId, guildId) || { prefix: '', warn_limit: 0, warn_action: 'none' };
     const next = { ...cur, ...fields };
-    const cols = ['prefix', 'warn_limit', 'warn_action', 'warn_timeout_limit', 'warn_timeout_min', 'starboard_channel', 'starboard_min', 'live_channel', 'live_ping', 'ticket_log_channel', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'xp_card', 'ticket_room', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_mode', 'am_rule_actions', 'am_blacklist_rules', 'am_blacklist_thresholds', 'am_blacklist_duration_min', 'am_blacklist_channel', 'am_blacklist_title', 'am_blacklist_color', 'am_blacklist_footer', 'am_native_enabled', 'am_native_alert_channel', 'am_exempt_roles', 'am_exempt_channels', 'am_exempt_users', 'am_warn_text', 'am_timeout_min', 'am_warn_limit', 'am_warn_action', 'am_warn_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'modmail_enabled', 'modmail_channel', 'lang', 'timezone',
+    const cols = ['prefix', 'warn_limit', 'warn_action', 'warn_timeout_limit', 'warn_timeout_min', 'starboard_channel', 'starboard_min', 'live_channel', 'live_ping', 'ticket_log_channel', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'xp_card', 'ticket_room', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_mode', 'am_rule_actions', 'am_blacklist_rules', 'am_blacklist_thresholds', 'am_blacklist_duration_min', 'am_blacklist_channel', 'am_blacklist_title', 'am_blacklist_color', 'am_blacklist_footer', 'am_escalation', 'am_native_enabled', 'am_native_alert_channel', 'am_exempt_roles', 'am_exempt_channels', 'am_exempt_users', 'am_warn_text', 'am_timeout_min', 'am_warn_limit', 'am_warn_action', 'am_warn_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'modmail_enabled', 'modmail_channel', 'lang', 'timezone',
     'giveaway_channel', 'giveaway_default_duration', 'giveaway_default_winners', 'giveaway_ping_role', 'giveaway_color', 'giveaway_message',
     'suggestion_color', 'suggestion_ping_role', 'suggestion_downvotes', 'suggestion_approve_channel',
     'close_dm_message', 'close_dm_image',
@@ -1051,6 +1055,9 @@ const guildSettings = {
       am_blacklist_title: String(next.am_blacklist_title || '🚫 Membre ajouté à la blacklist').slice(0, 120),
       am_blacklist_color: /^#[0-9a-fA-F]{6}$/.test(String(next.am_blacklist_color || '')) ? String(next.am_blacklist_color) : '#ED4245',
       am_blacklist_footer: String(next.am_blacklist_footer || 'Blacklist du serveur · Hoxera').slice(0, 200),
+      am_escalation: (next.am_escalation && typeof next.am_escalation === 'object')
+        ? JSON.stringify(next.am_escalation).slice(0, 16000)
+        : String(next.am_escalation || '').slice(0, 16000),
       am_native_enabled: next.am_native_enabled === 0 || next.am_native_enabled === false ? 0 : 1,
       am_native_alert_channel: String(next.am_native_alert_channel || '').slice(0, 100),
       am_exempt_roles: typeof next.am_exempt_roles === 'string'
@@ -1437,6 +1444,53 @@ const memberBlacklistCounters = {
   resetUser: (botId, guildId, userId) => db.prepare(`DELETE FROM automod_blacklist_counters
     WHERE bot_id = ? AND guild_id = ? AND user_id = ?`)
     .run(botId, String(guildId), String(userId)),
+};
+
+// Compteurs de récidive du BARÈME progressif (v213) : une fenêtre glissante
+// par membre et par règle. Les événements plus vieux que windowMin sont retirés.
+const automodStrikes = {
+  get: (botId, guildId, userId, rule) => {
+    const row = db.prepare(`SELECT * FROM automod_strikes WHERE bot_id = ? AND guild_id = ? AND user_id = ? AND rule = ?`)
+      .get(botId, String(guildId), String(userId), String(rule)) || null;
+    let events = [];
+    try { events = JSON.parse(row.events || '[]'); } catch {}
+    return { count: events.length, events: Array.isArray(events) ? events : [] };
+  },
+  touch: (botId, guildId, userId, rule, windowMin) => {
+    const now = Date.now();
+    const win = Math.min(Math.max(parseInt(windowMin, 10) || 0, 0), 525600) * 60000;
+    const row = db.prepare(`SELECT events FROM automod_strikes WHERE bot_id = ? AND guild_id = ? AND user_id = ? AND rule = ?`)
+      .get(botId, String(guildId), String(userId), String(rule)) || null;
+    let events = [];
+    try { events = JSON.parse(row && row.events || '[]'); } catch {}
+    if (!Array.isArray(events)) events = [];
+    const cutoff = win > 0 ? now - win : 0;
+    events = events.filter((t) => Number(t) > cutoff);
+    events.push(now);
+    if (events.length > 400) events = events.slice(-400);
+    db.prepare(`INSERT INTO automod_strikes (bot_id, guild_id, user_id, rule, events, updated_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now'))
+      ON CONFLICT(bot_id, guild_id, user_id, rule) DO UPDATE SET events = excluded.events, updated_at = datetime('now')`)
+      .run(botId, String(guildId), String(userId), String(rule), JSON.stringify(events));
+    return { count: events.length, windowMin: parseInt(windowMin, 10) || 0, events };
+  },
+  resetUser: (botId, guildId, userId) => db.prepare(`DELETE FROM automod_strikes WHERE bot_id = ? AND guild_id = ? AND user_id = ?`)
+    .run(botId, String(guildId), String(userId)),
+  resetRule: (botId, guildId, userId, rule) => db.prepare(`DELETE FROM automod_strikes WHERE bot_id = ? AND guild_id = ? AND user_id = ? AND rule = ?`)
+    .run(botId, String(guildId), String(userId), String(rule)),
+};
+
+// Bans temporaires du barème (v213) : un ban à durée est enregistré ici et
+// levé automatiquement par le balayage périodique (tasks.sweep).
+const automodTempBans = {
+  add: (botId, guildId, userId, userTag, until, reason) => db.prepare(`INSERT INTO automod_temp_bans
+    (bot_id, guild_id, user_id, user_tag, until, reason, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`)
+    .run(botId, String(guildId), String(userId), String(userTag || '').slice(0, 100), Math.min(Math.max(parseInt(until, 10) || 0, 0), 4102444800000), String(reason || '').slice(0, 300)),
+  due: (botId, now) => db.prepare(`SELECT * FROM automod_temp_bans WHERE bot_id = ? AND until > 0 AND until <= ? ORDER BY until ASC LIMIT 100`).all(botId, Number(now)),
+  remove: (id) => db.prepare(`DELETE FROM automod_temp_bans WHERE id = ?`).run(Number(id)),
+  active: (botId, guildId, userId) => db.prepare(`SELECT * FROM automod_temp_bans WHERE bot_id = ? AND guild_id = ? AND user_id = ? AND until > ? ORDER BY until DESC LIMIT 1`)
+    .get(botId, String(guildId), String(userId), Date.now()) || null,
 };
 
 // ---------------------- Règles Auto-Mod officielles Discord ----------------------
@@ -2051,4 +2105,4 @@ const liveSocials = {
   count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM live_socials WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
 };
 
-module.exports = { db, embedTemplates, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, modmail, closedTickets, botProfiles, profileAliases, profileState, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, afk, guildEvents, quizScores, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories, quizSets };
+module.exports = { db, embedTemplates, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, modmail, closedTickets, botProfiles, profileAliases, profileState, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodStrikes, automodTempBans, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, afk, guildEvents, quizScores, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories, quizSets };

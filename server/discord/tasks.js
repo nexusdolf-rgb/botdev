@@ -117,6 +117,25 @@ async function sweep(botId, entry) {
     } catch (e) { console.error('[BotDev] temprole sweep:', e.message); }
     store.tempRoles.remove(t.id);
   }
+
+  // ⏱️ Bans temporaires du barème Auto-Mod (v213) : levée automatique à échéance
+  const dueBans = store.automodTempBans.due(botId, Date.now());
+  for (const ban of dueBans) {
+    try {
+      const guild = entry.client.guilds.cache.get(ban.guild_id);
+      if (guild && typeof guild.bans.remove === 'function') {
+        await guild.bans.remove(ban.user_id, ban.reason || 'Fin du ban temporaire Auto-Mod');
+        await logging.log(botId, guild, {
+          title: '⏱️ Ban temporaire levé', color: '#57F287',
+          fields: [
+            { name: '👤 Membre', value: `\`${ban.user_tag || ban.user_id}\``, inline: true },
+            { name: '📋 Raison initiale', value: String(ban.reason || '—').slice(0, 200), inline: true },
+          ],
+        });
+      }
+    } catch (e) { console.error('[Hoxera] temp-ban sweep:', e.message); }
+    try { store.automodTempBans.remove(ban.id); } catch {}
+  }
 }
 
 module.exports = { parseRoleDuration, formatDuration, giveTempRole, sweepAutomodWarningMessages, sweep };

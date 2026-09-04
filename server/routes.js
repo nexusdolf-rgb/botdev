@@ -1110,6 +1110,40 @@ function normalizeAutomodBlacklistThresholds(value) {
   return out;
 }
 
+const AUTOMOD_ESC_RULES = ['links', 'caps', 'mentions', 'words', 'spam'];
+const AUTOMOD_ESC_ACTIONS = ['delete', 'warn', 'timeout', 'kick', 'ban'];
+const AUTOMOD_ESC_MAX_MIN = { timeout: 40320, ban: 525600 };
+
+// v213 — Barème progressif : ne conserve que les règles réellement activées,
+// avec fenêtre glissante et paliers assainis (action, durée, blacklist).
+function normalizeAutomodEscalation(value) {
+  let source = value;
+  if (typeof source === 'string') {
+    try { source = JSON.parse(source); } catch { source = {}; }
+  }
+  const rules = (source && typeof source === 'object' && !Array.isArray(source)
+    && source.rules && typeof source.rules === 'object' && !Array.isArray(source.rules)) ? source.rules : {};
+  const out = { rules: {} };
+  for (const rule of AUTOMOD_ESC_RULES) {
+    const entry = rules[rule];
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry) || !entry.enabled) continue;
+    const windowMin = Math.min(Math.max(parseInt(entry.windowMin, 10) || 1440, 1), 525600);
+    const steps = (Array.isArray(entry.steps) ? entry.steps : [])
+      .map((st) => ({
+        after: Math.min(Math.max(parseInt(st && st.after, 10) || 0, 0), 200),
+        action: AUTOMOD_ESC_ACTIONS.includes(String(st && st.action)) ? String(st.action) : 'warn',
+        minutes: Math.min(Math.max(parseInt(st && st.minutes, 10) || 0, 0), AUTOMOD_ESC_MAX_MIN[String(st && st.action)] || 0),
+        blacklist: !!(st && st.blacklist),
+        blacklistMin: Math.min(Math.max(parseInt(st && st.blacklistMin, 10) || 0, 0), 525600),
+      }))
+      .filter((st) => st.after >= 1)
+      .map((st) => (st.action === 'timeout' && st.minutes < 1 ? { ...st, minutes: 60 } : st))
+      .sort((a, b) => a.after - b.after);
+    if (steps.length) out.rules[rule] = { enabled: true, windowMin, steps };
+  }
+  return out;
+}
+
 router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
   if (!bot) return;
@@ -1121,6 +1155,7 @@ router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) =>
   if (body.mode !== undefined) advancedFields.am_mode = body.mode === 'observe' ? 'observe' : 'enforce';
   if (body.rule_actions !== undefined) advancedFields.am_rule_actions = JSON.stringify(normalizeAutomodRuleActions(body.rule_actions));
   if (body.blacklist_rules !== undefined) advancedFields.am_blacklist_rules = JSON.stringify(normalizeAutomodBlacklistRules(body.blacklist_rules));
+  if (body.escalation !== undefined) advancedFields.am_escalation = JSON.stringify(normalizeAutomodEscalation(body.escalation));
   if (body.blacklist_thresholds !== undefined) advancedFields.am_blacklist_thresholds = JSON.stringify(normalizeAutomodBlacklistThresholds(body.blacklist_thresholds));
   if (body.blacklist_duration_min !== undefined) advancedFields.am_blacklist_duration_min = Math.min(Math.max(parseInt(body.blacklist_duration_min, 10) || 0, 0), 525600);
   if (body.blacklist_channel !== undefined) advancedFields.am_blacklist_channel = String(body.blacklist_channel || '').slice(0, 100);

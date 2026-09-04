@@ -440,6 +440,16 @@ function attachListeners(botId, entry) {
   });
 
   client.on('guildMemberAdd', (member) => {
+    // 🚫 v213 — Re-ban automatique : un membre encore en blacklist ACTIVE du
+    // serveur (barème Auto-Mod) est re-banni immédiatement à son retour.
+    try {
+      const bl = store.memberBlacklist.get(botId, member.guild.id, member.id);
+      if (bl && Number(bl.active) === 1) {
+        const why = `Blacklist Auto-Mod active · ${String(bl.rule || bl.reason || 'règle Auto-Mod').slice(0, 200)}`;
+        member.ban({ reason: why }).catch(() => {});
+        return;
+      }
+    } catch { /* le re-ban ne doit jamais casser l'arrivée normale */ }
     // 📨 Attribution de l'invitation AVANT tout (le relevé doit être frais)
     const community = require('./community');
     community.onMemberJoinInvites(botId, member).catch(() => {});

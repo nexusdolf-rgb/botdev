@@ -10,7 +10,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const DATA_DIR = path.join(os.tmpdir(), `botdev-v212-${Date.now()}`);
+const DATA_DIR = path.join(os.tmpdir(), `botdev-v213-${Date.now()}`);
 fs.mkdirSync(DATA_DIR, { recursive: true });
 process.env.BOTDEV_DATA_DIR = DATA_DIR;
 
@@ -81,8 +81,8 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('sauvegarde du choix → /profile-active', dash.includes('`/bots/${bot.id}/guilds/${guildId}/profile-active`'));
 
   // ---------- 5. Versions ----------
-  check('index : version v211', index.includes('?v=212'));
-  check('service worker : cache v211', sw.includes('botdev-v212'));
+  check('index : version v211', index.includes('?v=213'));
+  check('service worker : cache v211', sw.includes('botdev-v213'));
 
   console.log(`\n✅ v211-test.js : ${n} vérifications OK`);
   process.exit(0);
