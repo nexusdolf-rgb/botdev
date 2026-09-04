@@ -1125,6 +1125,7 @@ const xp = {
   top: (botId, guildId, limit = 10) => db.prepare('SELECT * FROM xp WHERE bot_id = ? AND guild_id = ? ORDER BY xp DESC LIMIT ?').all(botId, guildId, limit),
   count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM xp WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
   rankOf: (botId, guildId, userId) => db.prepare('SELECT COUNT(*) AS n FROM xp WHERE bot_id = ? AND guild_id = ? AND xp > (SELECT COALESCE((SELECT xp FROM xp WHERE bot_id = ? AND guild_id = ? AND user_id = ?), 0))').get(botId, guildId, botId, guildId, userId).n + 1,
+  rows: (botId, guildId) => db.prepare('SELECT user_id, level, xp FROM xp WHERE bot_id = ? AND guild_id = ? ORDER BY level DESC, xp DESC').all(botId, guildId),
 };
 
 // ---------------------- Rôles de récompense XP ----------------------

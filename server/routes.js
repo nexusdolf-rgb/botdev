@@ -1033,12 +1033,52 @@ router.put('/bots/:id/guilds/:guildId/xp', requireAuth, async (req, res) => {
     xp_card: (card === false || card === 0) ? 0 : 1,
   });
   if (Array.isArray(roles)) {
-    store.xpRoles.replace(bot.id, guildId, roles
-      .slice(0, 25)
-      .map((r) => ({ level: Math.max(1, parseInt(r.level, 10) || 1), role: String(r.role || '').slice(0, 100) }))
-      .filter((r) => r.role));
+    // v214 — échelle de rôles : un seul rôle par niveau (le dernier écrase),
+    // trié par niveau, limité à 60 paliers.
+    const seen = new Map();
+    for (const r of roles) {
+      const level = Math.max(1, parseInt(r && r.level, 10) || 1);
+      const roleName = String(r && r.role || '').trim().slice(0, 100);
+      if (level >= 1 && roleName) seen.set(level, roleName);
+    }
+    store.xpRoles.replace(bot.id, guildId, [...seen.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .slice(0, 60)
+      .map(([level, role]) => ({ level, role })));
   }
   res.json({ ok: true });
+});
+
+// 🔄 v214 — Synchroniser les rôles de niveau : donne (ou corrige) le rôle du
+// rang à chaque membre ayant déjà l'XP nécessaire, et retire les anciens rôles
+// de palier. Traitement borné par lot pour rester fluide ; relançable.
+router.post('/bots/:id/guilds/:guildId/xp/sync', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const rewards = store.xpRoles.all(bot.id, guildId);
+  if (!rewards.length) return res.json({ ok: true, configured: 0, message: 'Aucun rôle de niveau configuré — ajoute des récompenses puis réessaie.' });
+  const entry = botManager.clients.get(bot.id);
+  const guild = entry && entry.client.isReady() ? entry.client.guilds.cache.get(guildId) : null;
+  if (!guild) return res.status(400).json({ error: 'Le bot est hors ligne ou absent de ce serveur.' });
+  const xp = require('./discord/xp');
+  const rows = (store.xp.rows(bot.id, guildId) || []).filter((r) => Number(r.level) >= 1);
+  const limit = Math.min(Math.max(parseInt((req.body || {}).limit, 10) || 250, 1), 400);
+  let present = 0, added = 0, removed = 0, processed = 0, failed = 0;
+  for (const row of rows) {
+    if (processed >= limit) break;
+    processed += 1;
+    const member = await guild.members.fetch(String(row.user_id)).catch(() => null);
+    if (!member || (member.user && member.user.bot)) { failed += 1; continue; }
+    present += 1;
+    try {
+      const out = await xp.applyRankToMember(bot.id, guild, member, Number(row.level), rewards);
+      added += out.added;
+      removed += out.removed;
+    } catch (e) { failed += 1; }
+  }
+  res.json({ ok: true, configured: rewards.length, rows: rows.length, present, processed, added, removed, remaining: Math.max(0, rows.length - processed) });
 });
 
 // Auto-modération par serveur

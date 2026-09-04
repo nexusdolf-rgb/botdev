@@ -37,6 +37,64 @@ function resolveChannel(guild, query) {
   return guild.channels.cache.find((c) => c.name && c.name.toLowerCase() === name && c.isTextBased && c.isTextBased()) || null;
 }
 
+// ============================================================
+// v214 — Rôles de niveau « en échelle » : chaque niveau configuré
+// possède son rôle. Atteindre un palier donne SON rôle et RETIRE les
+// rôles des paliers inférieurs : le membre ne porte que son rang actuel.
+// ============================================================
+
+// Calcule l'objectif de rôle pour un niveau donné : le rôle du dernier
+// palier atteint + les rôles de palier inférieurs qui doivent être retirés.
+function computeRankGoal(rewards, level) {
+  const list = (Array.isArray(rewards) ? rewards : [])
+    .filter((r) => r && String(r.role || '').trim())
+    .map((r) => ({ level: Math.max(1, parseInt(r.level, 10) || 1), role: String(r.role).trim() }))
+    .sort((a, b) => a.level - b.level);
+  let target = null;
+  for (const r of list) if (r.level <= Number(level)) target = r;
+  return {
+    add: target ? target.role : null,
+    remove: target ? list.filter((r) => r.level < target.level).map((r) => r.role) : [],
+    targetLevel: target ? target.level : 0,
+  };
+}
+
+// Applique le rôle de rang à un membre (ajout + retraits), en respectant la
+// hiérarchie Discord. Renvoie les compteurs d'actions réellement effectuées.
+async function applyRankToMember(botId, guild, member, level, rewards) {
+  const out = { added: 0, removed: 0, changed: false };
+  try {
+    const roles = Array.isArray(rewards) ? rewards : store.xpRoles.all(botId, guild.id);
+    if (!roles.length || !member || member.user && member.user.bot) return out;
+    if (!member.roles || !member.roles.cache) return out;
+    const goal = computeRankGoal(roles, Number(level) || 0);
+    if (!goal.add) return out;
+    const me = guild.members && guild.members.me ? guild.members.me : null;
+    const target = resolveRole(guild, goal.add);
+    if (!target) return out;
+    if (me && me.roles && me.roles.highest && target.position >= me.roles.highest.position) return out;
+    if (!member.roles.cache.has(target.id)) {
+      await member.roles.add(target).catch(() => {});
+      out.added = 1;
+      out.changed = true;
+    }
+    for (const name of goal.remove) {
+      if (name === goal.add) continue;
+      const lower = resolveRole(guild, name);
+      if (!lower || lower.id === target.id) continue;
+      if (me && me.roles && me.roles.highest && lower.position >= me.roles.highest.position) continue;
+      if (member.roles.cache.has(lower.id)) {
+        await member.roles.remove(lower).catch(() => {});
+        out.removed += 1;
+        out.changed = true;
+      }
+    }
+  } catch (e) {
+    console.error('[Hoxera] rôle de niveau :', e.message);
+  }
+  return out;
+}
+
 // Appelé à chaque message. Retourne true si de l'XP a été gagnée.
 async function onMessage(botId, message) {
   if (!message || message.author.bot || !message.guild) return false;
@@ -62,13 +120,13 @@ async function onMessage(botId, message) {
 
   if (newLevel > oldLevel) {
     store.xp.setLevel(botId, message.guild.id, message.author.id, newLevel);
-    await announce(botId, message, newLevel, gs);
+    await announce(botId, message, newLevel, gs, oldLevel);
     await applyRewards(botId, message, newLevel);
   }
   return true;
 }
 
-async function announce(botId, message, level, gs) {
+async function announce(botId, message, level, gs, oldLevel = 0) {
   const template = String(gs.xp_message || '').trim() || '{user} vient d\'atteindre le **niveau {level}** ! 🎉';
   const text = template
     .replace(/\{user\}/g, `<@${message.author.id}>`)
@@ -95,9 +153,15 @@ async function announce(botId, message, level, gs) {
   try { pos = store.xp.rankOf(botId, message.guild.id, message.author.id) || 0; } catch {}
   let reward = '';
   try {
-    const rewardAtLevel = (store.xpRoles.all(botId, message.guild.id) || []).find((r) => Number(r.level) === level);
-    if (rewardAtLevel) {
-      const role = resolveRole(message.guild, rewardAtLevel.role);
+    // v214 : le rôle annoncé est celui du palier FRANCHI (même en sautant
+    // plusieurs niveaux d'un coup : ex 3 → 6 avec un palier à 5).
+    const rewards = store.xpRoles.all(botId, message.guild.id) || [];
+    let crossed = null;
+    for (const r of rewards) {
+      if (Number(r.level) > Number(oldLevel) && Number(r.level) <= Number(level)) crossed = r;
+    }
+    if (crossed) {
+      const role = resolveRole(message.guild, crossed.role);
       if (role) reward = role.toString();
     }
   } catch {}
@@ -141,18 +205,9 @@ async function announce(botId, message, level, gs) {
 }
 
 async function applyRewards(botId, message, level) {
-  const roles = store.xpRoles.all(botId, message.guild.id);
-  if (!roles.length || !message.member) return;
-  const me = message.guild.members && message.guild.members.me ? message.guild.members.me : null;
-  for (const r of roles) {
-    if (r.level > level) continue;
-    const role = resolveRole(message.guild, r.role);
-    if (!role) continue;
-    if (me && role.position >= me.roles.highest.position) continue;
-    if (message.member.roles && message.member.roles.cache && !message.member.roles.cache.has(role.id)) {
-      await message.member.roles.add(role).catch(() => {});
-    }
-  }
+  const member = message.member;
+  if (!member || !member.guild) return;
+  await applyRankToMember(botId, message.guild, member, level, store.xpRoles.all(botId, message.guild.id));
 }
 
-module.exports = { xpForLevel, levelFromXp, onMessage };
+module.exports = { xpForLevel, levelFromXp, onMessage, computeRankGoal, applyRankToMember, resolveRole };

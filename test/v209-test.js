@@ -88,8 +88,8 @@ check('CSS : tokens d’arrondis v209', files.css.includes('--r-sm: 10px'));
 check('CSS : toutes les surfaces Discord aux mêmes arrondis', files.css.includes('.ca-discord-preview, .eb-discord') && files.css.includes('border-radius: var(--r-sm)'));
 check('dashboard : modèle d’accueil au tutoiement (plus de « je vous invite »)', !files.dashJs.includes('je vous invite à prendre connaissance'));
 check('dashboard : modèle de départ au tutoiement', files.dashJs.includes('la porte reste ouverte si tu reviens'));
-check('index : version v209', files.indexHtml.includes('?v=213'));
-check('service worker : cache v209', files.sw.includes('botdev-v213'));
+check('index : version v209', files.indexHtml.includes('?v=214'));
+check('service worker : cache v209', files.sw.includes('botdev-v214'));
 check('menu mobile : nom du bot dynamique', files.dashJs.includes('Dashboard.state.bot.name'));
 
 // ---------- 7. Invitations (extra) : champ + footer ----------

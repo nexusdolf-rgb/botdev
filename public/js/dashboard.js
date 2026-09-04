@@ -2561,36 +2561,84 @@ Dashboard.renderers.levels = async (content, data) => {
     </select>
     <button class="dash-btn dash-btn-primary" style="margin-top:14px" id="xp-save">💾 Enregistrer</button>`;
 
-  const c2 = Dashboard.card(root, '🏆 Récompenses de niveau', 'Rôle donné automatiquement quand le membre atteint le niveau.');
+  // 🏆 v214 — Rôles par niveau « en échelle » : un rôle par palier, le rôle du
+  // palier atteint REMPLACE ceux des paliers inférieurs. Automatique à la
+  // montée, et synchronisable pour les membres déjà avancés.
+  const c2 = Dashboard.card(root, '🏆 Rôles par niveau', 'Chaque niveau peut avoir son rôle : quand le membre atteint le palier, il reçoit ce rôle et le bot lui RETIRE le rôle du palier précédent — il ne porte que son rang actuel. Rien de configuré pour un niveau = il garde le rôle de son dernier palier atteint.');
+  c2.appendChild(App.el(`<div data-xp-ladder style="background:var(--d-card2);border:1px solid var(--d-border);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--d-dim);margin-bottom:12px"></div>`));
   c2.appendChild(App.el(`<div id="xp-roles"></div>`));
-  c2.appendChild(App.el(`<button class="dash-btn dash-btn-sm" id="xp-add" style="margin-top:8px">＋ Ajouter une récompense</button>`));
+  c2.appendChild(App.el(`<button class="dash-btn dash-btn-sm" id="xp-add" style="margin-top:8px">＋ Ajouter un niveau</button>`));
   const xpRoleChoices = (data.roles || []).filter((role) => role.name !== '@everyone');
 
+  const sortRoles = () => { rolesData.sort((a, b) => (parseInt(a.level, 10) || 1) - (parseInt(b.level, 10) || 1)); };
+  const renderLadder = () => {
+    const box = c2.querySelector('[data-xp-ladder]');
+    if (!box) return;
+    sortRoles();
+    if (!rolesData.length) { box.innerHTML = 'Aucun palier configuré — ajoute des niveaux avec leur rôle.'; return; }
+    box.innerHTML = '<b style="color:var(--d-text)">📊 Échelle actuelle</b><div style="margin-top:6px">'
+      + rolesData.map((r, i) => {
+        const prev = i > 0 ? rolesData[i - 1] : null;
+        const roleName = String(r.role || '—');
+        return `<div style="margin:2px 0">Niveau <b>${r.level}</b> → ${App.escapeHtml(roleName)}${prev ? ` <span style="opacity:.7">(retire le rôle du niveau ${prev.level})</span>` : ''}</div>`;
+      }).join('') + '</div>';
+  };
   const renderRoles = () => {
+    sortRoles();
     const el = c2.querySelector('#xp-roles');
     el.innerHTML = '';
-    if (!rolesData.length) el.appendChild(App.el(`<div class="dash-empty">Aucune récompense.</div>`));
+    if (!rolesData.length) el.appendChild(App.el(`<div class="dash-empty">Aucun palier — ajoute un niveau et choisis son rôle.</div>`));
     rolesData.forEach((r, i) => {
       const options = [xpRoleChoices.length ? '<option value="">— Choisir un rôle —</option>' : Dashboard.noDiscordChoice('Aucun rôle reçu de Discord')]
         .concat(xpRoleChoices.map((role) => `<option value="${App.escapeHtml(role.name)}" ${Dashboard.discordRefMatches(r.role, role) ? 'selected' : ''}>🛡️ ${App.escapeHtml(role.name)}</option>`));
       if (r.role && !xpRoleChoices.some((role) => Dashboard.discordRefMatches(r.role, role))) options.push(`<option value="${App.escapeHtml(r.role)}" selected>⚠️ ${App.escapeHtml(r.role)} (configuration actuelle — rôle introuvable)</option>`);
       const roleControl = `<select class="dash-select" data-k="role">${options.join('')}</select>`;
       const row = App.el(`
-        <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
-          <input class="dash-input" data-k="level" type="number" value="${r.level}" style="max-width:100px" />
+        <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center">
+          <span style="font-size:12px;color:var(--d-dim)">Niveau</span>
+          <input class="dash-input" data-k="level" type="number" min="1" value="${r.level}" style="max-width:86px" />
           ${roleControl}
+          ${i > 0 ? `<span style="font-size:11px;color:var(--d-dim)">remplace le rôle du niveau ${rolesData[i - 1].level}</span>` : ''}
           <button class="dash-btn dash-btn-danger dash-btn-sm" data-del>🗑</button>
         </div>`);
       row.querySelectorAll('[data-k]').forEach((inp) => {
         const event = inp.tagName === 'SELECT' ? 'change' : 'input';
         inp.addEventListener(event, () => { r[inp.dataset.k] = inp.dataset.k === 'level' ? (parseInt(inp.value, 10) || 1) : inp.value; });
       });
-      row.querySelector('[data-del]').onclick = () => { rolesData.splice(i, 1); renderRoles(); };
+      row.querySelector('[data-del]').onclick = () => { rolesData.splice(i, 1); renderRoles(); renderLadder(); };
       el.appendChild(row);
     });
+    renderLadder();
   };
   renderRoles();
-  c2.querySelector('#xp-add').onclick = () => { rolesData.push({ level: 5, role: '' }); renderRoles(); };
+  c2.querySelector('#xp-add').onclick = () => {
+    sortRoles();
+    const nextLevel = rolesData.length ? (parseInt(rolesData[rolesData.length - 1].level, 10) || 0) + 1 : 1;
+    rolesData.push({ level: nextLevel, role: '' });
+    renderRoles();
+  };
+
+  // 🔄 v214 — Synchronisation des membres déjà avancés (rôles mérités donnés
+  // immédiatement, anciens paliers retirés).
+  const syncRow = App.el(`<div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <button class="dash-btn" id="xp-sync">🔄 Synchroniser les membres</button>
+      <span id="xp-sync-status" style="font-size:12px;color:var(--d-dim)">Donne leur rôle aux membres déjà au niveau, sans attendre la prochaine montée.</span>
+    </div>`);
+  c2.appendChild(syncRow);
+  c2.querySelector('#xp-sync').onclick = async () => {
+    const btn = c2.querySelector('#xp-sync');
+    const status = c2.querySelector('#xp-sync-status');
+    btn.disabled = true;
+    status.textContent = '⏳ Synchronisation en cours…';
+    try {
+      const out = await App.api(`/bots/${bot.id}/guilds/${guildId}/xp/sync`, { method: 'POST', body: { limit: 250 } });
+      status.textContent = out.message
+        || `✅ Terminé : ${out.present} membre(s) à jour · ${out.added} rôle(s) ajouté(s) · ${out.removed} ancien(s) retiré(s)${out.remaining ? ` — ${out.remaining} restant(s), relance pour finir.` : ''}`;
+    } catch (e) {
+      status.textContent = '⚠️ ' + (e.message || 'Synchronisation impossible.');
+    }
+    btn.disabled = false;
+  };
 
   c.querySelector('#xp-save').onclick = async () => {
     try {
@@ -2602,9 +2650,13 @@ Dashboard.renderers.levels = async (content, data) => {
         cooldown: parseInt(c.querySelector('#xp-cd').value, 10) || 60,
         message: c.querySelector('#xp-msg').value,
         channel: c.querySelector('#xp-channel').value.trim(),
-        roles: rolesData.filter((r) => String(r.role).trim()),
+        roles: rolesData
+          .filter((r) => String(r.role || '').trim())
+          .map((r) => ({ level: parseInt(r.level, 10) || 1, role: String(r.role).trim() }))
+          .sort((a, b) => a.level - b.level),
       }});
       App.toast('Niveaux enregistrés !');
+      renderLadder();
     } catch (e) { App.toast(e.message, 'error'); }
   };
 };
