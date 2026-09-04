@@ -610,6 +610,7 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_channel TEXT D
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_title TEXT DEFAULT '🚫 Membre ajouté à la blacklist'"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_color TEXT DEFAULT '#ED4245'"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_footer TEXT DEFAULT 'Blacklist du serveur · Hoxera'"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN xp_card INTEGER DEFAULT 1"); } catch (e) {}
 // v6 — miroir passif des règles Auto-Mod officielles de Discord.
 // Il utilise uniquement des alertes natives pour éviter les doubles sanctions.
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_native_enabled INTEGER DEFAULT 1"); } catch (e) {}
@@ -983,7 +984,7 @@ const guildSettings = {
   set: (botId, guildId, fields) => {
     const cur = guildSettings.get(botId, guildId) || { prefix: '', warn_limit: 0, warn_action: 'none' };
     const next = { ...cur, ...fields };
-    const cols = ['prefix', 'warn_limit', 'warn_action', 'warn_timeout_limit', 'warn_timeout_min', 'starboard_channel', 'starboard_min', 'live_channel', 'live_ping', 'ticket_log_channel', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_mode', 'am_rule_actions', 'am_blacklist_rules', 'am_blacklist_thresholds', 'am_blacklist_duration_min', 'am_blacklist_channel', 'am_blacklist_title', 'am_blacklist_color', 'am_blacklist_footer', 'am_native_enabled', 'am_native_alert_channel', 'am_exempt_roles', 'am_exempt_channels', 'am_exempt_users', 'am_warn_text', 'am_timeout_min', 'am_warn_limit', 'am_warn_action', 'am_warn_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'modmail_enabled', 'modmail_channel', 'lang', 'timezone',
+    const cols = ['prefix', 'warn_limit', 'warn_action', 'warn_timeout_limit', 'warn_timeout_min', 'starboard_channel', 'starboard_min', 'live_channel', 'live_ping', 'ticket_log_channel', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'xp_card', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_mode', 'am_rule_actions', 'am_blacklist_rules', 'am_blacklist_thresholds', 'am_blacklist_duration_min', 'am_blacklist_channel', 'am_blacklist_title', 'am_blacklist_color', 'am_blacklist_footer', 'am_native_enabled', 'am_native_alert_channel', 'am_exempt_roles', 'am_exempt_channels', 'am_exempt_users', 'am_warn_text', 'am_timeout_min', 'am_warn_limit', 'am_warn_action', 'am_warn_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'modmail_enabled', 'modmail_channel', 'lang', 'timezone',
     'giveaway_channel', 'giveaway_default_duration', 'giveaway_default_winners', 'giveaway_ping_role', 'giveaway_color', 'giveaway_message',
     'suggestion_color', 'suggestion_ping_role', 'suggestion_downvotes', 'suggestion_approve_channel',
     'close_dm_message', 'close_dm_image',
@@ -1006,6 +1007,7 @@ const guildSettings = {
       xp_cooldown: Math.max(parseInt(next.xp_cooldown, 10) || 60, 0),
       xp_message: String(next.xp_message || '').slice(0, 500),
       xp_channel: String(next.xp_channel || '').slice(0, 100),
+      xp_card: (next.xp_card === 0 || next.xp_card === false) ? 0 : 1,
       am_enabled: next.am_enabled ? 1 : 0,
       am_links: (next.am_links === 0 || next.am_links === false) ? 0 : 1,
       am_caps: (next.am_caps === 0 || next.am_caps === false) ? 0 : 1,

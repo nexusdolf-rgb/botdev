@@ -11,7 +11,7 @@ const os = require('os');
 const path = require('path');
 const assert = require('assert');
 
-const DATA_DIR = path.join(os.tmpdir(), `botdev-v209-${Date.now()}`);
+const DATA_DIR = path.join(os.tmpdir(), `botdev-v210-${Date.now()}`);
 fs.mkdirSync(DATA_DIR, { recursive: true });
 process.env.BOTDEV_DATA_DIR = DATA_DIR;
 
@@ -37,9 +37,9 @@ const check = (label, ok) => {
   check('app.js : aide « HOXERA_TOKEN »', read('public/js/app.js').includes('<b>HOXERA_TOKEN</b>'));
   const indexHtml = read('public/index.html');
   const swSource = read('public/sw.js');
-  check('index.html : version v193 référencée 7 fois', (indexHtml.match(/\?v=209/g) || []).length === 7);
+  check('index.html : version v193 référencée 7 fois', (indexHtml.match(/\?v=210/g) || []).length === 7);
   check('index.html : plus aucune référence v192', !indexHtml.includes('?v=192'));
-  check('sw.js : cache v193', swSource.includes("const CACHE = 'botdev-v209';"));
+  check('sw.js : cache v193', swSource.includes("const CACHE = 'botdev-v210';"));
 
   // ================= 2. /say protégé =================
   console.log('\n2️⃣  /say : réservé aux administrateurs');

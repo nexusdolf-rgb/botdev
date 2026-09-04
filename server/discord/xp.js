@@ -116,8 +116,28 @@ async function announce(botId, message, level, gs) {
     )
     .setFooter({ text: `Hoxera · ${message.guild.name}` })
     .setTimestamp();
+  // 🖼️ Carte de montée de niveau (v210) : image avatar + niveau + barre de
+  // progression, option activée par défaut — jamais bloquante : si la
+  // génération échoue (ou option désactivée), l'embed part seul.
+  let files = [];
+  const cardEnabled = !(gs.xp_card === 0 || gs.xp_card === false);
+  if (cardEnabled) {
+    try {
+      const avatarUrl = (typeof user.displayAvatarURL === 'function')
+        ? user.displayAvatarURL({ extension: 'png', size: 256 }) : '';
+      const community = require('./community');
+      const buf = await community.levelUpCard({
+        avatarUrl, name: user.username || user.tag || 'Membre',
+        server: message.guild.name, level, pct,
+      });
+      if (buf && buf.length) {
+        files = [{ attachment: buf, name: 'levelup.png' }];
+        embed.setImage('attachment://levelup.png');
+      }
+    } catch (e) { console.error('[Hoxera] carte de niveau :', e.message); }
+  }
   const identity = require('./identity');
-  await identity.sendAsProfile(message.client, botId, message.guild, channel, { embeds: [embed] }).catch(() => {});
+  await identity.sendAsProfile(message.client, botId, message.guild, channel, { embeds: [embed], files }).catch(() => {});
 }
 
 async function applyRewards(botId, message, level) {

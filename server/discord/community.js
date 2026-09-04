@@ -219,9 +219,63 @@ async function welcomeCard(member) {
   return await base.toBuffer();
 }
 
+// ------------------------------------------------------------
+// 🖼️ Carte de montée de niveau (image générée avec sharp — même
+// recette que la carte de bienvenue). v210.
+// ------------------------------------------------------------
+function levelUpCardSvg({ name, server, level, pct } = {}) {
+  const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const uname = esc(String(name || 'Membre').slice(0, 24));
+  const srv = esc(String(server || '').toUpperCase().slice(0, 28));
+  const lvl = parseInt(level, 10) || 1;
+  const p = Math.max(0, Math.min(100, Math.round((Number(pct) || 0) * 100)));
+  const barW = Math.round(520 * p / 100);
+  return `<svg width="880" height="280" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1b1e2e"/>
+      <stop offset="55%" stop-color="#232746"/>
+      <stop offset="100%" stop-color="#2b1e46"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#e07a5f"/>
+      <stop offset="100%" stop-color="#EB459E"/>
+    </linearGradient>
+  </defs>
+  <rect width="880" height="280" rx="24" fill="url(#bg)"/>
+  <rect x="0" y="268" width="880" height="12" rx="6" fill="url(#accent)"/>
+  <circle cx="140" cy="140" r="86" fill="none" stroke="url(#accent)" stroke-width="6"/>
+  <text x="260" y="96" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#8f93a8">${srv}</text>
+  <text x="260" y="148" font-family="Arial, Helvetica, sans-serif" font-size="50" font-weight="bold" fill="#ffffff">Niveau ${lvl}</text>
+  <text x="260" y="196" font-family="Arial, Helvetica, sans-serif" font-size="26" fill="#b8bccf">${uname} monte de niveau !</text>
+  <rect x="260" y="224" width="520" height="14" rx="7" fill="#1a1c28"/>
+  <rect x="260" y="224" width="${Math.max(barW, 14)}" height="14" rx="7" fill="url(#accent)"/>
+  <text x="790" y="212" font-family="Arial, Helvetica, sans-serif" font-size="17" text-anchor="end" fill="#b8bccf">${p}%</text>
+</svg>`;
+}
+
+async function levelUpCard({ avatarUrl = '', name, server, level, pct } = {}) {
+  const sharp = require('sharp');
+  const svg = levelUpCardSvg({ name, server, level, pct });
+  const base = sharp(Buffer.from(svg)).png();
+  try {
+    if (avatarUrl) {
+      const res = await fetch(String(avatarUrl));
+      if (res.ok) {
+        const buf = Buffer.from(await res.arrayBuffer());
+        const size = 160;
+        const circle = Buffer.from(`<svg width="${size}" height="${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${size / 2}" fill="#fff"/></svg>`);
+        const avatar = await require('sharp')(buf).resize(size, size).composite([{ input: circle, blend: 'dest-in' }]).png().toBuffer();
+        return await base.composite([{ input: avatar, left: 60, top: 60 }]).toBuffer();
+      }
+    }
+  } catch { /* avatar indisponible → carte sans avatar */ }
+  return await base.toBuffer();
+}
+
 module.exports = {
   sanctionForWarns, autoModSanctionForWarning,
   starboardDecision, onReaction,
   detectInviteUsed, cacheInvites, onMemberJoinInvites,
-  welcomeCardSvg, welcomeCard,
+  welcomeCardSvg, welcomeCard, levelUpCardSvg, levelUpCard,
 };

@@ -2456,8 +2456,10 @@ Dashboard.renderers.levels = async (content, data) => {
   const root = Dashboard.header(content, '📈', 'Niveaux (XP)', 'Les membres gagnent de l\'XP en discutant, montent en niveau, et reçoivent des rôles en récompense.');
 
   const c = Dashboard.card(root, 'Gain d\'XP', '');
-  const toggleRow = App.el(`<div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0 4px"><label class="dash-label" style="margin:0">Activer les niveaux</label><label class="switch"><input type="checkbox" ${s.xp_enabled ? 'checked' : ''} /><span class="slider"></span></label></div>`);
+  const toggleRow = App.el(`<div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0 4px"><label class="dash-label" style="margin:0">Activer les niveaux</label><label class="switch"><input type="checkbox" id="xp-enabled" ${s.xp_enabled ? 'checked' : ''} /><span class="slider"></span></label></div>`);
+  const cardRow = App.el(`<div style="display:flex;align-items:center;justify-content:space-between;margin:2px 0 4px"><label class="dash-label" style="margin:0">🖼️ Carte de montée de niveau (avatar + niveau en image)</label><label class="switch"><input type="checkbox" id="xp-card" ${s.xp_card === 0 || s.xp_card === false ? '' : 'checked'} /><span class="slider"></span></label></div>`);
   c.appendChild(toggleRow);
+  c.appendChild(cardRow);
   c.innerHTML += `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:10px">
       <div><label class="dash-label">XP min / message</label><input class="dash-input" id="xp-min" type="number" value="${s.xp_min ?? 10}" /></div>
@@ -2508,7 +2510,8 @@ Dashboard.renderers.levels = async (content, data) => {
   c.querySelector('#xp-save').onclick = async () => {
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/xp`, { method: 'PUT', body: {
-        enabled: c.querySelector('input[type=checkbox]').checked,
+        enabled: c.querySelector('#xp-enabled').checked,
+        card: c.querySelector('#xp-card').checked,
         min: parseInt(c.querySelector('#xp-min').value, 10) || 10,
         max: parseInt(c.querySelector('#xp-max').value, 10) || 25,
         cooldown: parseInt(c.querySelector('#xp-cd').value, 10) || 60,

@@ -943,7 +943,7 @@ router.put('/bots/:id/guilds/:guildId/xp', requireAuth, async (req, res) => {
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
-  const { enabled, min, max, cooldown, message, channel, roles } = req.body || {};
+  const { enabled, min, max, cooldown, message, channel, roles, card } = req.body || {};
   store.guildSettings.set(bot.id, guildId, {
     xp_enabled: (enabled === false || enabled === 0) ? 0 : 1,
     xp_min: Math.min(Math.max(parseInt(min, 10) || 10, 1), 1000),
@@ -951,6 +951,7 @@ router.put('/bots/:id/guilds/:guildId/xp', requireAuth, async (req, res) => {
     xp_cooldown: Math.max(parseInt(cooldown, 10) || 60, 0),
     xp_message: String(message || '').slice(0, 500),
     xp_channel: String(channel || '').slice(0, 100),
+    xp_card: (card === false || card === 0) ? 0 : 1,
   });
   if (Array.isArray(roles)) {
     store.xpRoles.replace(bot.id, guildId, roles
