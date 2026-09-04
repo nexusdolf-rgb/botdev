@@ -79,11 +79,11 @@ const check = (label, cond) => {
   const chosen = { label: 'Ticket contre admin', emoji: '🤝', description: 'Signale un abus du staff, en toute confidentialité.', staff_roles: [] };
   const embed = panels.ticketWelcomeEmbed(member, chosen, '<@&R1>', 'Un modo me harcèle', '');
   const embJson = JSON.stringify(embed.toJSON());
-  check('salon : titre professionnel', embJson.includes('Ticket ouvert — prise en charge en cours'));
+  check('salon : titre professionnel', embJson.includes('🎫 Ticket ouvert'));
   check('salon : type avec emoji', embJson.includes('🤝 **Ticket contre admin**'));
   check('salon : description du type rappelée', embJson.includes('À propos de ce type') && embJson.includes('Signale un abus'));
   check('salon : équipe en charge', embJson.includes('Équipe en charge'));
-  check('salon : déroulement en étapes', embJson.includes('Déroulement de la prise en charge') && embJson.includes('transcription complète'));
+  check('salon : déroulement en étapes', embJson.includes('Déroulement de la prise en charge') && embJson.includes('transcription'));
   check('salon : vouvoyé (« votre demande »)', embJson.includes('Votre demande'));
 
   // ---------- 5. Assistant : action Description ----------

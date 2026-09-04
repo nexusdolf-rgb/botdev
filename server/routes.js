@@ -893,6 +893,24 @@ router.delete('/bots/:id/guilds/:guildId/temproles/:rid', requireAuth, async (re
   res.json({ ok: true });
 });
 
+// v212 — Panneau du salon privé de ticket (textes + couleur modifiables).
+// Les champs vides gardent le message par défaut du bot (concis).
+router.put('/bots/:id/guilds/:guildId/ticket-room', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const { color, title, welcome, steps } = req.body || {};
+  const cur = (() => { try { return JSON.parse(String((store.guildSettings.get(bot.id, guildId) || {}).ticket_room || '{}')); } catch { return {}; } })();
+  const next = { ...cur };
+  if (color !== undefined) next.color = /^#[0-9a-fA-F]{6}$/.test(String(color)) ? String(color) : '';
+  if (title !== undefined) next.title = String(title || '').trim().slice(0, 100);
+  if (welcome !== undefined) next.welcome = String(welcome || '').trim().slice(0, 1500);
+  if (steps !== undefined) next.steps = String(steps || '').trim().slice(0, 1200);
+  store.guildSettings.set(bot.id, guildId, { ticket_room: next });
+  res.json({ ok: true });
+});
+
 // v211 — Profils d'envoi multiples : créer un alias (nom + avatar image)
 const ALIAS_LIMIT = 10;
 async function saveAvatar(avatar_b64) {

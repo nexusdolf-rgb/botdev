@@ -201,6 +201,19 @@ async function dispatchPanels(botId, interaction) {
       return true;
     }
 
+    // ⚙️ v212 — Menu « Actions du staff » du salon privé (valeurs : actions)
+    if (interaction.isStringSelectMenu() && cid === `bd-troom:${botId}`) {
+      const action = interaction.values && interaction.values[0];
+      const actions = {
+        claim: handleTicketClaim, hold: handleTicketHold, close: handleTicketClose,
+        reopen: handleTicketReopen, addmember: handleTicketAddAsk, delete: handleTicketDeleteAsk,
+      };
+      const handler = actions[action];
+      if (handler) await handler(botId, interaction);
+      else await ackReply(interaction, { content: '⚠️ Action inconnue.', ephemeral: true });
+      return true;
+    }
+
     // 💡 Boutons de suggestions (votes + statut staff)
     if (interaction.isButton() && cid.startsWith(`bd-sugg:${botId}`)) {
       const { handleSuggestionButton } = require('./suggest');
@@ -580,7 +593,23 @@ async function ackReply(interaction, payload) {
 // Embed de bienvenue du salon de ticket : textes professionnels,
 // type + description, équipe en charge, déroulement de la prise en charge,
 // et les réponses du questionnaire personnalisé (si le type en a un).
-function ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning = '', answers = [], lang = 'fr', meta = {}) {
+// v212 — Réglage « Panneau du salon privé » (dashboard) : textes + couleur.
+// Champs vides → valeurs par défaut concises (i18n).
+function readRoomCfg(botId, guildId) {
+  try {
+    const row = store.guildSettings.get(botId, guildId) || {};
+    const parsed = JSON.parse(String(row.ticket_room || '{}'));
+    return {
+      color: /^#[0-9a-fA-F]{6}$/.test(String(parsed.color || '')) ? parsed.color : '',
+      title: String(parsed.title || '').trim().slice(0, 100),
+      welcome: String(parsed.welcome || '').trim().slice(0, 1500),
+      steps: String(parsed.steps || '').trim().slice(0, 1200),
+    };
+  } catch { return { color: '', title: '', welcome: '', steps: '' }; }
+}
+const ROOM_DEFAULTS = { color: '', title: '', welcome: '', steps: '' };
+
+function ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning = '', answers = [], lang = 'fr', meta = {}, room = ROOM_DEFAULTS) {
   const typeFields = [
     { name: i18n.t(lang, 'ticket_type'), value: chosen ? `${chosen.emoji ? chosen.emoji + ' ' : ''}**${chosen.label}**` : '**Ticket simple**', inline: true },
     { name: i18n.t(lang, 'ticket_opened_at'), value: meta.openedAt ? meta.openedAt.replace('T', ' ').slice(0, 16) + ' UTC' : new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC', inline: true },
@@ -599,23 +628,36 @@ function ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning = ''
       inline: false,
     });
   }
+  // v212 : si un texte « déroulement » personnalisé existe, il remplace les étapes.
+  const stepsText = room.steps
+    ? room.steps.slice(0, 1200)
+    : [i18n.t(lang, 'ticket_step1'), i18n.t(lang, 'ticket_step2'), i18n.t(lang, 'ticket_step3')].join('\n');
   fields.push(
     { name: i18n.t(lang, 'ticket_team'), value: staffMention || i18n.t(lang, 'ticket_team_default'), inline: true },
     { name: i18n.t(lang, 'ticket_previous'), value: meta.prevCount ? `${meta.prevCount}` : i18n.t(lang, 'ticket_previous_none'), inline: true },
     { name: i18n.t(lang, 'ticket_reason'), value: reason ? reason.slice(0, 1024) : '—', inline: false },
-    { name: i18n.t(lang, 'ticket_steps'), value: [
-      i18n.t(lang, 'ticket_step1'),
-      i18n.t(lang, 'ticket_step2'),
-      i18n.t(lang, 'ticket_step3'),
-    ].join('\n') },
+    { name: i18n.t(lang, 'ticket_steps'), value: stepsText },
     { name: i18n.t(lang, 'ticket_buttons'), value: i18n.t(lang, 'ticket_buttons_desc') + dmWarning },
   );
   const avatar = member.user.displayAvatarURL ? member.user.displayAvatarURL({ dynamic: true }) : '';
+  const chosenColor = /^#[0-9a-fA-F]{6}$/.test(String(chosen && chosen.color || '')) ? chosen.color : '';
+  const finalColor = room.color || chosenColor || '#57F287';
+  // Variables disponibles dans le titre / message personnalisé.
+  const resolveRoomVars = (tpl) => String(tpl || '')
+    .replace(/{member}/g, `${member}`)
+    .replace(/{user}/g, member.user ? (member.user.username || '') : '')
+    .replace(/{server}/g, member.guild ? member.guild.name : 'serveur')
+    .replace(/{type}/g, chosen ? (chosen.label || '') : 'ticket')
+    .replace(/{number}/g, String(meta.number || ''));
+  const title = room.title ? resolveRoomVars(room.title) : i18n.t(lang, 'ticket_title');
+  const desc = room.welcome
+    ? resolveRoomVars(room.welcome)
+    : i18n.t(lang, 'ticket_welcome_desc', { member: `${member}` });
   const welcome = new EmbedBuilder()
-    .setColor(/^#[0-9a-fA-F]{6}$/.test(String(chosen && chosen.color || '')) ? chosen.color : '#57F287')
+    .setColor(finalColor)
     .setAuthor(avatar ? { name: `Ticket de ${member.user.username}${meta.number ? ` · #${meta.number}` : ''}`, iconURL: avatar } : { name: `Ticket de ${member.user.username}${meta.number ? ` · #${meta.number}` : ''}` })
-    .setTitle(i18n.t(lang, 'ticket_title'))
-    .setDescription(i18n.t(lang, 'ticket_welcome_desc', { member: `${member}` }))
+    .setTitle(title)
+    .setDescription(desc)
     .addFields(...fields)
     .setTimestamp();
   const site = store.settings.get('public_url');
@@ -888,19 +930,23 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
   bumpTicketStats(guild.id, 1, 1);
   store.activity.add(botId, guild.id, '🎫', `Ticket #${ticketNumber} ouvert par ${member.user.tag || member.user.username}${chosen ? ' · ' + chosen.label : ''}`);
 
-  // Boutons (staff uniquement) : deux rangées propres et ordonnées
-  // Rangée 1 — suivi du ticket : prise en charge → attente → fermer → réouvrir
-  const row1 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:claim`).setLabel('🖐️ Prendre en charge').setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:hold`).setLabel('⏸ En attente').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:close`).setLabel('🔒 Fermer').setStyle(ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:reopen`).setLabel('🔓 Réouvrir').setStyle(ButtonStyle.Secondary),
-  );
-  // Rangée 2 — gestion du salon : ajouter un membre → supprimer définitivement
-  const row2 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:addmember`).setLabel('➕ Ajouter un membre').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(`bd-tmenu:${botId}:delete`).setLabel('🗑 Supprimer définitivement').setStyle(ButtonStyle.Danger),
-  );
+  // ⚙️ v212 — Actions du staff en MENU DÉROULANT (plus de rangées de
+  // boutons qui allongent le salon) : le staff choisit l'action dans le
+  // sélecteur ; chaque action vérifie le rôle staff au moment de l'usage.
+  const staffMenu = new StringSelectMenuBuilder()
+    .setCustomId(`bd-troom:${botId}`)
+    .setPlaceholder('⚙️ Actions du staff — gérer ce ticket…')
+    .setMinValues(1)
+    .setMaxValues(1)
+    .addOptions(
+      new StringSelectMenuOptionBuilder().setLabel('🖐️ Prendre en charge').setDescription("S'attribuer le ticket").setValue('claim'),
+      new StringSelectMenuOptionBuilder().setLabel('⏸ Mettre en attente').setDescription('Passer le ticket en lecture seule').setValue('hold'),
+      new StringSelectMenuOptionBuilder().setLabel('🔒 Fermer').setDescription('Verrouiller le ticket (réouvrable)').setValue('close'),
+      new StringSelectMenuOptionBuilder().setLabel('🔓 Réouvrir').setDescription('Rouvrir un ticket fermé').setValue('reopen'),
+      new StringSelectMenuOptionBuilder().setLabel('➕ Ajouter un membre').setDescription("Inviter quelqu'un dans le salon").setValue('addmember'),
+      new StringSelectMenuOptionBuilder().setLabel('🗑 Supprimer définitivement').setDescription('Fermeture finale + transcription en MP').setValue('delete'),
+    );
+  const row1 = new ActionRowBuilder().addComponents(staffMenu);
 
   // Vérification MP dès l'ouverture : si les MP du membre sont fermés,
   // on l'avertit tout de suite qu'il ne pourra pas recevoir la transcription.
@@ -940,7 +986,8 @@ Notre équipe va te répondre dans le salon privé prévu pour toi.`,
     const lang = i18n.langForGuild(guild.id);
     const staffMention = supportRoles.length ? supportRoles.map((r) => r.toString()).join(' ') : '';
     const openRow = store.openTickets.getByChannel(channel.id);
-    const welcome = ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning, answers, lang, { number: ticketNumber, prevCount, openedAt: openRow ? openRow.opened_at : new Date().toISOString() });
+    const room = readRoomCfg(botId, guild.id);
+    const welcome = ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning, answers, lang, { number: ticketNumber, prevCount, openedAt: openRow ? openRow.opened_at : new Date().toISOString() }, room);
     const identity = require('./identity');
     // 🎫 La PREMIÈRE LIGNE du salon annonce le type + le créateur : le staff
     // voit d'un coup d'œil de quel type de ticket il s'agit et qui l'a ouvert.
@@ -948,7 +995,7 @@ Notre équipe va te répondre dans le salon privé prévu pour toi.`,
     await identity.sendAsProfile(interaction.client, botId, guild, channel, {
       content: i18n.t(lang, 'ticket_first_line', { type: typeTitle, member: `${member}` }) + (staffMention ? ' · ' + staffMention : ''),
       embeds: [welcome],
-      components: [row1, row2],
+      components: [row1],
     }).catch(() => {});
 
     await logging.log(botId, guild, {
@@ -2538,7 +2585,7 @@ module.exports = {
   resolveRole, roleKey, uniqueRoleRefs, staffRoleRefsForConfig, parseTypes, isStaff, staffForTicket, openTicket, safeEmoji,
   parentIdOf, panelParentOf, panelChannelOf, repairTicketChannel,
   startTypesWizard, handleTypesWizardInteraction,
-  handleTicketDeleteAsk, ticketMetaFor, ticketWelcomeEmbed, typeOptionDescription, normalizeTypes,
+  handleTicketDeleteAsk, ticketMetaFor, ticketWelcomeEmbed, readRoomCfg, typeOptionDescription, normalizeTypes,
   sendTranscriptDm, sweepInactiveTickets, buildTranscriptFromChannel, sendRatingDm,
   __testPanelBannerUrl: panelBannerUrl,
 };

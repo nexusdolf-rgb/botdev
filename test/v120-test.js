@@ -31,7 +31,7 @@ assert.ok(styles.includes('prefers-reduced-motion'));
 
 // Le cache frontend est invalidé avec une nouvelle version sur toutes les
 // ressources versionnées.
-assert.strictEqual((index.match(/\?v=211/g) || []).length, 7);
-assert.ok(sw.includes("const CACHE = 'botdev-v211';"));
+assert.strictEqual((index.match(/\?v=212/g) || []).length, 7);
+assert.ok(sw.includes("const CACHE = 'botdev-v212';"));
 
 console.log('✅ v3.17 : dashboard premium, aperçu en deux colonnes, cartes types et mobile');

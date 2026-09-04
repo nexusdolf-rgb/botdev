@@ -1733,6 +1733,91 @@ Dashboard.renderers.tickets = async (content, data) => {
     } catch (e) { App.toast(e.message, 'error'); }
   };
 
+  // 🏠 v212 — Embed du SALON PRIVÉ du ticket : textes + couleur modifiables.
+  // Posté à l'ouverture du ticket (visible membre + staff). Vide = texte court
+  // automatique du bot. Le menu déroulant des actions du staff reste sous l'embed.
+  let roomCfg = {};
+  try { roomCfg = JSON.parse(String((data.settings || {}).ticket_room || '{}')) || {}; } catch {}
+  const roomHexOk = (v) => /^#[0-9a-fA-F]{6}$/.test(String(v || '').trim());
+  const croom = Dashboard.card(root, '🏠 Embed du salon privé (à l’ouverture du ticket)', 'Personnalise le message affiché dans le salon privé quand un ticket s’ouvre — ce que voient le membre ET le staff. Champs vides = texte court automatique. La couleur s’applique à l’embed.');
+  croom.innerHTML += `
+    <label class="dash-label">🎨 Couleur de l’embed</label>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <input type="color" id="tr-color" value="${roomHexOk(roomCfg.color) ? App.escapeHtml(roomCfg.color) : '#57F287'}" style="width:52px;height:36px;border-radius:8px;border:1px solid var(--d-border);background:transparent;padding:2px;cursor:pointer" />
+      <input class="dash-input" id="tr-color-hex" value="${roomHexOk(roomCfg.color) ? App.escapeHtml(roomCfg.color) : ''}" placeholder="#57F287 — vide = couleur du type" style="max-width:240px" />
+      <span id="tr-color-note" style="font-size:12px;color:var(--d-dim)"></span>
+    </div>
+    <label class="dash-label">Titre (vide = « 🎫 Ticket ouvert »)</label>
+    <input class="dash-input" id="tr-title" maxlength="100" value="${App.escapeHtml(roomCfg.title || '')}" placeholder="🎫 Ticket ouvert" />
+    <label class="dash-label">Message d’accueil</label>
+    <textarea class="dash-input" id="tr-welcome" rows="3" maxlength="1500" placeholder="Bienvenue {member} ! Un membre de l’équipe va te répondre ici même…">${App.escapeHtml(roomCfg.welcome || '')}</textarea>
+    <label class="dash-label">Étapes du ticket (remplace le champ « Comment ça se passe ? »)</label>
+    <textarea class="dash-input" id="tr-steps" rows="2" maxlength="1200" placeholder="Vide = 3 étapes automatiques : décris ta demande → réponse de l’équipe ici → transcription en MP à la fermeture.">${App.escapeHtml(roomCfg.steps || '')}</textarea>
+    <div style="font-size:12px;color:var(--d-dim);margin-top:4px">💡 Variables acceptées : <b>{member}</b> (mention), <b>{user}</b> (pseudo), <b>{server}</b>, <b>{type}</b>, <b>{number}</b>. L’embed garde automatiquement un en-tête propre (pseudo + numéro), les champs équipe / raisons / transcription, et le ⚙️ menu réservé au staff.</div>
+    <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap;align-items:center">
+      <button class="dash-btn dash-btn-primary" id="tr-save">💾 Enregistrer</button>
+      <button class="dash-btn" id="tr-default">↩️ Restaurer les valeurs par défaut</button>
+    </div>
+    <div data-room-preview style="margin-top:14px"></div>`;
+  const autoWelcome = () => 'Bienvenue {member} ! Un membre de l’équipe va te répondre ici même.\n\n✍️ Décris ta demande : texte, captures d’écran ou fichiers.';
+  const autoSteps = () => '1️⃣ Décris ta demande ici (texte, captures, fichiers).\n2️⃣ Un membre de l’équipe te répond dans ce salon privé.\n3️⃣ À la fermeture définitive, la transcription t’est envoyée en MP.';
+  const roomPreview = () => {
+    const hexIn = croom.querySelector('#tr-color-hex');
+    const colorIn = croom.querySelector('#tr-color');
+    const hv = hexIn.value.trim();
+    if (roomHexOk(hv)) colorIn.value = hv;
+    const color = colorIn.value;
+    croom.querySelector('#tr-color-note').textContent = hv ? 'Couleur personnalisée enregistrée.' : 'Vide → couleur du type de ticket (ou vert par défaut).';
+    const fill = (s) => String(s || '').replace(/\{member\}/g, '@pseudo').replace(/\{user\}/g, 'pseudo').replace(/\{server\}/g, 'Mon serveur').replace(/\{type\}/g, 'Support').replace(/\{number\}/g, '12');
+    const title = fill(croom.querySelector('#tr-title').value.trim()) || '🎫 Ticket ouvert';
+    const welcome = fill(croom.querySelector('#tr-welcome').value.trim()) || autoWelcome().replace(/\{member\}/g, '@pseudo');
+    const steps = fill(croom.querySelector('#tr-steps').value.trim()) || autoSteps();
+    const box = croom.querySelector('[data-room-preview]');
+    box.innerHTML = `
+      <div class="dash-label" style="margin:0 0 8px">👀 Aperçu de l’embed du salon privé</div>
+      <div style="background:#313338;border-radius:10px;overflow:hidden;color:#DBDEE1;font-size:13px">
+        <div style="height:4px;background:${color}"></div>
+        <div style="padding:12px 15px">
+          <div style="font-size:11px;color:#949BA4;margin-bottom:6px">🎫 Ticket de @pseudo · #12</div>
+          <div style="font-weight:700;margin-bottom:8px">${App.escapeHtml(title)}</div>
+          <div style="white-space:pre-wrap">${App.escapeHtml(welcome)}</div>
+          <div style="margin-top:10px;border-top:1px solid #1E1F22;padding:8px 0 2px">
+            <div style="font-weight:600;margin-bottom:3px">Comment ça se passe ?</div>
+            <div style="white-space:pre-wrap;color:#C9CCD1">${App.escapeHtml(steps)}</div>
+          </div>
+          <div style="margin-top:10px;border-top:1px solid #1E1F22;padding:8px 0 0;color:#A8ABAF;font-size:11.5px">⚙️ Menu « Actions du staff » — réservé au staff du serveur.</div>
+        </div>
+      </div>`;
+  };
+  croom.querySelector('#tr-color').addEventListener('input', () => {
+    croom.querySelector('#tr-color-hex').value = croom.querySelector('#tr-color').value;
+    roomPreview();
+  });
+  croom.querySelector('#tr-color-hex').addEventListener('input', roomPreview);
+  croom.querySelector('#tr-title').addEventListener('input', roomPreview);
+  croom.querySelector('#tr-welcome').addEventListener('input', roomPreview);
+  croom.querySelector('#tr-steps').addEventListener('input', roomPreview);
+  roomPreview();
+  croom.querySelector('#tr-save').onclick = async () => {
+    try {
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/ticket-room`, { method: 'PUT', body: {
+        color: croom.querySelector('#tr-color-hex').value.trim(),
+        title: croom.querySelector('#tr-title').value.trim(),
+        welcome: croom.querySelector('#tr-welcome').value,
+        steps: croom.querySelector('#tr-steps').value,
+      }});
+      App.toast('Embed du salon privé enregistré !');
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+  croom.querySelector('#tr-default').onclick = () => {
+    croom.querySelector('#tr-title').value = '';
+    croom.querySelector('#tr-welcome').value = '';
+    croom.querySelector('#tr-steps').value = '';
+    croom.querySelector('#tr-color-hex').value = '';
+    croom.querySelector('#tr-color').value = '#57F287';
+    roomPreview();
+  };
+
   // Rafraîchit l'état affiché (re-query : innerHTML += a recréé le DOM)
   const renderStatus = () => {
     const zone = c.querySelector('[data-status]');

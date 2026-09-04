@@ -65,7 +65,7 @@ const check = (label, cond) => {
   const member = { id: 'u2', user: { id: 'u2', username: 'Bob', displayAvatarURL: () => '' }, toString: () => '<@u2>' };
   const chosen = { label: 'Question', emoji: '❓', description: '', staff_roles: [] };
   const embTicketEn = panels.ticketWelcomeEmbed(member, chosen, '<@&R1>', 'hello', '', [], 'en').toJSON();
-  check('ticket EN : titre traduit', embTicketEn.title === '🎫 Ticket opened — being handled');
+  check('ticket EN : titre traduit', embTicketEn.title === '🎫 Ticket opened');
   check('ticket EN : champs traduits', JSON.stringify(embTicketEn.fields).includes('Ticket type') && JSON.stringify(embTicketEn.fields).includes('Team in charge'));
   const embTicketFr = panels.ticketWelcomeEmbed(member, chosen, '<@&R1>', 'bonjour', '', [], 'fr').toJSON();
   check('ticket FR : champs français', JSON.stringify(embTicketFr.fields).includes('Type de ticket'));
