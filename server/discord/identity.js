@@ -12,6 +12,23 @@ function profile(botId, guildId) {
   return store.botProfiles.get(botId, guildId) || null;
 }
 
+// v211 — Profil d'envoi EFFECTIF : si un alias est actif (choisi dans les
+// profils d'envoi), c'est lui qui signe les messages ; sinon le profil
+// principal personnalisé ; sinon null (→ identité globale du bot).
+function effectiveProfile(botId, guildId) {
+  const principal = profile(botId, guildId);
+  const activeId = store.profileState.getActive(botId, guildId);
+  if (activeId) {
+    const alias = store.profileAliases.get(activeId);
+    if (alias && alias.name) {
+      // Avatar : celui de l'alias, sinon celui du profil principal, sinon
+      // l'avatar global du bot (pas d'URL) — jamais cassant.
+      return { name: alias.name, avatar_url: alias.avatar_url || (principal && principal.avatar_url) || '' };
+    }
+  }
+  return principal;
+}
+
 function absoluteUrl(path) {
   if (!path) return '';
   if (/^https?:\/\//.test(path)) return path;
@@ -69,7 +86,7 @@ async function webhookFor(client, botId, guild, channel) {
 // jamais dépasser les limites de débit de Discord.
 async function sendAsProfile(client, botId, guild, channel, payload) {
   const queue = require('../queue');
-  const p = profile(botId, guild.id);
+  const p = effectiveProfile(botId, guild.id);
   if (!p || !p.name) {
     return queue.send(channel, payload);
   }
@@ -90,4 +107,4 @@ async function sendAsProfile(client, botId, guild, channel, payload) {
   }, key);
 }
 
-module.exports = { profile, buildProfileEmbed, sendAsProfile, absoluteUrl };
+module.exports = { profile, effectiveProfile, buildProfileEmbed, sendAsProfile, absoluteUrl };

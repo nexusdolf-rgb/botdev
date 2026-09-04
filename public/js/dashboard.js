@@ -5124,6 +5124,76 @@ Dashboard.renderers.botprofile = async (content, data) => {
       await Dashboard.renderContent(content);
     } catch (e) { App.toast(e.message, 'error'); }
   };
+
+  // 👥 v211 — Profils d'envoi multiples : choisir QUI signe les messages
+  const aliases = data.profiles_extra || [];
+  const activeId = Number(data.profile_active || 0);
+  const principalName = (profile.name || '').trim() || 'Identité globale du bot';
+  const card2 = Dashboard.card(root, '👥 Profils d’envoi (qui signe les messages)', 'Choisis l’identité utilisée quand le bot envoie un message (bienvenue, tickets, annonces, niveaux…). Le « profil principal » est celui modifié ci-dessus.');
+  const choices = [{ id: 0, name: `Profil principal — ${principalName}`, isPrincipal: true }]
+    .concat(aliases.map((a) => ({ id: a.id, name: a.name, avatar: a.avatar_url || '' })));
+  choices.forEach((c) => {
+    const row = App.el(`
+      <div style="display:flex;align-items:center;gap:12px;border:1px solid var(--d-border);border-radius:10px;padding:9px 12px;margin-bottom:8px;background:${c.id === activeId ? 'rgba(var(--d-accent-rgb),.07)' : 'transparent'}">
+        <input type="radio" name="bp-active" value="${c.id}" ${c.id === activeId ? 'checked' : ''} aria-label="Signer avec ${App.escapeHtml(c.name)}" style="accent-color:var(--d-accent)" />
+        ${c.isPrincipal
+          ? `<span style="width:36px;height:36px;border-radius:50%;background:var(--d-card2);display:inline-flex;align-items:center;justify-content:center;font-weight:800">${App.escapeHtml(String(c.name).slice(0,1).toUpperCase())}</span>`
+          : `<img src="${App.escapeHtml(c.avatar)}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover" data-fb-text="${App.escapeHtml(String(c.name).slice(0,1).toUpperCase())}" />`}
+        <div style="flex:1;min-width:0">
+          <b>${App.escapeHtml(c.name)}</b>
+          <div style="font-size:11.5px;color:var(--d-dim)">${c.isPrincipal ? 'Personnalisé pour ce serveur' : 'Profil d’envoi additionnel'}${c.id === activeId ? ' · ✅ utilisé pour les envois' : ''}</div>
+        </div>
+        ${c.isPrincipal ? '' : `<button class="dash-btn dash-btn-danger dash-btn-sm" data-del-alias="${c.id}" aria-label="Supprimer ce profil">🗑</button>`}
+      </div>`);
+    const radio = row.querySelector('input[type=radio]');
+    radio.onchange = async () => {
+      try {
+        await App.api(`/bots/${bot.id}/guilds/${guildId}/profile-active`, { method: 'PUT', body: { alias_id: Number(radio.value) } });
+        App.toast(c.id === 0 ? 'Messages signés par le profil principal.' : 'Messages signés par « ' + c.name + ' ».');
+        await Dashboard.renderContent(content);
+      } catch (e) { App.toast(e.message, 'error'); }
+    };
+    const del = row.querySelector('[data-del-alias]');
+    if (del) del.onclick = async (ev) => {
+      ev.stopPropagation();
+      if (!(await App.confirm('Supprimer ce profil d’envoi ?'))) return;
+      try {
+        await App.api(`/bots/${bot.id}/guilds/${guildId}/profiles/${del.dataset.delAlias}`, { method: 'DELETE' });
+        App.toast('Profil supprimé.');
+        await Dashboard.renderContent(content);
+      } catch (e) { App.toast(e.message, 'error'); }
+    };
+    card2.appendChild(row);
+  });
+  // Formulaire « ajouter un profil »
+  const addZone = App.el(`<div style="margin-top:12px;border-top:1px dashed var(--d-border);padding-top:12px">
+    <label class="dash-label">＋ Ajouter un profil d’envoi</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <input class="dash-input" id="bp-alias-name" placeholder="Nom du profil (ex : Support, Événements…)" maxlength="80" style="max-width:260px" />
+      <input class="dash-input" id="bp-alias-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" style="max-width:230px" />
+      <button class="dash-btn dash-btn-primary" id="bp-alias-add">Créer</button>
+    </div>
+    <div class="desc" style="margin-top:5px">${aliases.length >= 10 ? 'Limite de 10 profils atteinte.' : 'Jusqu’à 10 profils. Sans image, l’avatar du profil principal est utilisé.'}</div>
+  </div>`);
+  card2.appendChild(addZone);
+  card2.querySelector('#bp-alias-add').onclick = async () => {
+    const nameInput = card2.querySelector('#bp-alias-name');
+    const fileInput = card2.querySelector('#bp-alias-file');
+    const name = nameInput.value.trim();
+    if (!name) { App.toast('Donne un nom au profil.', 'error'); return; }
+    try {
+      const body = { name };
+      const file = fileInput.files && fileInput.files[0];
+      if (file) {
+        if (!String(file.type || '').startsWith('image/')) throw new Error('Choisis un fichier image.');
+        if (file.size > 3 * 1024 * 1024) throw new Error('Image trop lourde : 3 Mo maximum.');
+        body.avatar_b64 = await fileAsDataUrl(file);
+      }
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/profiles`, { method: 'PUT', body });
+      App.toast('Profil d’envoi créé !');
+      await Dashboard.renderContent(content);
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
 };
 
 // ---------- Commandes (niveau bot) ----------

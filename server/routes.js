@@ -735,6 +735,8 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
     role_menus: store.roleMenus.all(bot.id, guildId),
     xp_roles: store.xpRoles.all(bot.id, guildId),
     profile: store.botProfiles.get(bot.id, guildId) || { name: '', avatar_url: '', banner_url: '', bio: '', color: '#e07a5f' },
+    profiles_extra: store.profileAliases.list(bot.id, guildId),
+    profile_active: store.profileState.getActive(bot.id, guildId),
     blacklist: store.blacklist.all(bot.id, guildId),
     automod_blacklist: store.memberBlacklist.active(bot.id, guildId, 100),
     voicetemp: store.voicetemp.get(bot.id, guildId) || { creator_channel: '', category: '', name_template: '' },
@@ -889,6 +891,65 @@ router.delete('/bots/:id/guilds/:guildId/temproles/:rid', requireAuth, async (re
   if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   store.tempRoles.remove(Number(req.params.rid));
   res.json({ ok: true });
+});
+
+// v211 — Profils d'envoi multiples : créer un alias (nom + avatar image)
+const ALIAS_LIMIT = 10;
+async function saveAvatar(avatar_b64) {
+  if (typeof avatar_b64 !== 'string' || !avatar_b64.startsWith('data:')) return '';
+  const m = avatar_b64.match(/^data:([^;]+);base64,(.+)$/);
+  if (!m) return '';
+  const buf = Buffer.from(m[2], 'base64');
+  if (buf.length > 3 * 1024 * 1024) throw new Error('Image trop lourde (3 Mo max).');
+  const assets = require('./assets');
+  return `/assets/${await assets.put(buf, m[1])}`;
+}
+router.put('/bots/:id/guilds/:guildId/profiles', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  if (store.profileAliases.count(bot.id, guildId) >= ALIAS_LIMIT) return res.status(400).json({ error: `Maximum ${ALIAS_LIMIT} profils d'envoi par serveur.` });
+  const { name, avatar_b64 } = req.body || {};
+  const trimmed = String(name || '').trim().slice(0, 80);
+  if (!trimmed) return res.status(400).json({ error: 'Le nom est obligatoire.' });
+  try {
+    const avatar_url = await saveAvatar(avatar_b64);
+    const id = store.profileAliases.create(bot.id, guildId, { name: trimmed, avatar_url });
+    return res.json({ ok: true, alias: store.profileAliases.get(id) });
+  } catch (e) {
+    return res.status(400).json({ error: e.message.slice(0, 150) });
+  }
+});
+// v211 — Modifier un alias (avatar) ou le supprimer
+router.delete('/bots/:id/guilds/:guildId/profiles/:aliasId', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const alias = store.profileAliases.get(Number(req.params.aliasId));
+  if (!alias || String(alias.bot_id) !== String(bot.id) || alias.guild_id !== guildId) {
+    return res.status(404).json({ error: 'Profil introuvable.' });
+  }
+  if (store.profileState.getActive(bot.id, guildId) === alias.id) store.profileState.setActive(bot.id, guildId, 0);
+  store.profileAliases.remove(alias.id);
+  return res.json({ ok: true, profile_active: store.profileState.getActive(bot.id, guildId) });
+});
+// v211 — Choisir quel profil signe les messages (alias_id, 0 = principal/bot)
+router.put('/bots/:id/guilds/:guildId/profile-active', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const aliasId = parseInt((req.body || {}).alias_id, 10) || 0;
+  if (aliasId !== 0) {
+    const alias = store.profileAliases.get(aliasId);
+    if (!alias || String(alias.bot_id) !== String(bot.id) || alias.guild_id !== guildId) {
+      return res.status(404).json({ error: 'Profil introuvable.' });
+    }
+  }
+  store.profileState.setActive(bot.id, guildId, aliasId);
+  return res.json({ ok: true, profile_active: aliasId });
 });
 
 // Identité du bot sur un serveur (nom, bio, couleur + images en base64)

@@ -202,6 +202,24 @@ CREATE TABLE IF NOT EXISTS bot_profiles (
   PRIMARY KEY (bot_id, guild_id)
 );
 
+-- v211 : profils d'envoi multiples par serveur (identités additionnelles).
+-- Le profil principal reste bot_profiles ; ces alias sont réutilisables et
+-- l'un d'eux peut être choisi comme identité d'envoi des messages.
+CREATE TABLE IF NOT EXISTS bot_profile_aliases (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  name TEXT DEFAULT '',
+  avatar_url TEXT DEFAULT '',
+  created_ts INTEGER DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS bot_profile_state (
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  active_alias_id INTEGER DEFAULT 0,
+  PRIMARY KEY (bot_id, guild_id)
+);
+
 CREATE TABLE IF NOT EXISTS shop_items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   bot_id INTEGER NOT NULL,
@@ -1311,6 +1329,25 @@ const botProfiles = {
   remove: (botId, guildId) => db.prepare('DELETE FROM bot_profiles WHERE bot_id = ? AND guild_id = ?').run(botId, guildId),
 };
 
+// v211 — Alias d'identité (profils d'envoi multiples par serveur)
+const profileAliases = {
+  list: (botId, guildId) => db.prepare('SELECT * FROM bot_profile_aliases WHERE bot_id = ? AND guild_id = ? ORDER BY id ASC').all(botId, guildId),
+  get: (id) => db.prepare('SELECT * FROM bot_profile_aliases WHERE id = ?').get(Number(id)) || null,
+  create: (botId, guildId, { name = '', avatar_url = '' } = {}) => db.prepare('INSERT INTO bot_profile_aliases (bot_id, guild_id, name, avatar_url, created_ts) VALUES (?, ?, ?, ?, ?)')
+    .run(botId, guildId, String(name).slice(0, 80), String(avatar_url).slice(0, 500), Date.now()).lastInsertRowid,
+  remove: (id) => db.prepare('DELETE FROM bot_profile_aliases WHERE id = ?').run(Number(id)),
+  setAvatar: (id, avatar_url) => db.prepare('UPDATE bot_profile_aliases SET avatar_url = ? WHERE id = ?').run(String(avatar_url).slice(0, 500), Number(id)),
+  rename: (id, name) => db.prepare('UPDATE bot_profile_aliases SET name = ? WHERE id = ?').run(String(name).slice(0, 80), Number(id)),
+  count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM bot_profile_aliases WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
+};
+
+// État : quel alias est actif pour les envois (0 = profil principal / bot)
+const profileState = {
+  getActive: (botId, guildId) => (db.prepare('SELECT active_alias_id FROM bot_profile_state WHERE bot_id = ? AND guild_id = ?').get(botId, guildId) || { active_alias_id: 0 }).active_alias_id || 0,
+  setActive: (botId, guildId, aliasId) => db.prepare('INSERT INTO bot_profile_state (bot_id, guild_id, active_alias_id) VALUES (?, ?, ?) ON CONFLICT(bot_id, guild_id) DO UPDATE SET active_alias_id = excluded.active_alias_id')
+    .run(botId, guildId, Math.max(0, parseInt(aliasId, 10) || 0)),
+};
+
 // ---------------------- Liste noire de mots ----------------------
 const blacklist = {
   all: (botId, guildId) => db.prepare('SELECT word FROM blacklist_words WHERE bot_id = ? AND guild_id = ? ORDER BY word').all(botId, guildId).map((r) => r.word),
@@ -2010,4 +2047,4 @@ const liveSocials = {
   count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM live_socials WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
 };
 
-module.exports = { db, embedTemplates, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, modmail, closedTickets, botProfiles, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, afk, guildEvents, quizScores, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories, quizSets };
+module.exports = { db, embedTemplates, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, modmail, closedTickets, botProfiles, profileAliases, profileState, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, afk, guildEvents, quizScores, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories, quizSets };
