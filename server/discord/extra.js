@@ -360,6 +360,8 @@ async function handleSlash(botId, entry, interaction) {
       const proposal = ui.panel({
         variant: 'live',
         title: '💍 Une demande en mariage !',
+        // Message COURT interactif : pas de trait plaqué entre 2 phrases.
+        sections: false,
         description: `**${target}**, ${user} te demande en mariage !\n\nUne belle histoire commence peut-être. Choisis ta réponse ci-dessous.`,
         fields: [
           { name: '💌 Demandeur', value: `${user}`, inline: true },
@@ -436,6 +438,8 @@ async function handleSlash(botId, entry, interaction) {
       const penduPanel = ui.panel({
         variant: 'brand',
         title: '🪢 Pendu',
+        // Partie interactive : pas de trait entre l'invite et la grille.
+        sections: false,
         description: `${user}, devine le mot caché !\n\n${shown}`,
         fields: [{ name: '❤️ Vies restantes', value: '❤️'.repeat(8), inline: true }, { name: '🧭 Règle', value: 'Choisis une lettre par bouton.', inline: true }],
         footer: `Hoxera · Partie de ${user.username}`,
@@ -454,6 +458,8 @@ async function handleSlash(botId, entry, interaction) {
       const morpionPanel = ui.panel({
         variant: 'brand',
         title: '⭕❌ Morpion',
+        // Partie interactive : pas de trait entre les deux courtes lignes.
+        sections: false,
         description: `${user} (❌) contre ${target} (⭕)\n\nAu tour de ${user} !`,
         fields: [{ name: '🎯 Objectif', value: 'Aligne trois symboles pour gagner.', inline: true }, { name: '🔁 Tour', value: `${user}`, inline: true }],
         footer: `Hoxera · Partie de ${user.username}`,
@@ -977,6 +983,9 @@ async function handleButton(botId, entry, interaction) {
       await interaction.update(ui.panel({
         variant: over && won ? 'success' : over ? 'danger' : 'brand',
         title: over ? (won ? '🪢 Pendu · gagné !' : '🪢 Pendu · terminé') : '🪢 Pendu',
+        // Mise à jour LIVE à chaque lettre : garder le texte simple,
+        // sans traits qui sautent à chaque tour.
+        sections: false,
         description: content,
         footer: `Hoxera · Partie de ${state.playerId}`,
       }, over ? [] : letterRows(guild.id)));
@@ -1005,6 +1014,8 @@ async function handleButton(botId, entry, interaction) {
       await interaction.update(ui.panel({
         variant: winner ? 'success' : state.over ? 'warning' : 'brand',
         title: state.over ? '⭕❌ Morpion · partie terminée' : '⭕❌ Morpion',
+        // Mise à jour LIVE : pas de trait entre les courtes lignes.
+        sections: false,
         description: content,
         footer: `Hoxera · Tour de ${state.over ? 'fin de partie' : state.turn}`,
       }, state.over ? boardRows(guild.id, state, true) : boardRows(guild.id, state)));

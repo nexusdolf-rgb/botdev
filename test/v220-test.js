@@ -151,6 +151,12 @@ check('mono-section 4096 max non touchée', ui.embed({ description: 'x'.repeat(4
   // Messages d'accueil/confirmation COURTS (salon privé du ticket + DMs) :
   // ils gardent leurs sauts de paragraphe naturels, SANS trait plaqué entre
   // deux petites phrases — le trait est réservé aux grands panneaux à sections.
+  // Messages COURTS / interactifs : le trait est réservé aux grands textes
+  // structurés — mariage, pendu, morpion (et leurs mises à jour LIVE) gardent
+  // leurs sauts de ligne naturels via sections:false.
+  const exSrc = src('extra.js');
+  check('jeux & demandes courts : sections:false (pas de trait orphelin)',
+    (exSrc.match(/sections: false/g) || []).length >= 5);
   const pSrc = src('panels.js');
   check('salon privé : accueil = texte naturel (ui.text, pas de trait)',
     pSrc.includes('.setDescription(ui.text(desc, 4096))'));
