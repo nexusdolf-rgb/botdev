@@ -67,6 +67,15 @@ check('mono-section 4096 max non touchée', ui.embed({ description: 'x'.repeat(4
   const gDesc = embG.data.description;
   check('giveaway : trait entre prix et message', gDesc.includes('**Nitro Boost**') && gDesc.includes(ui.SEPARATOR) && gDesc.includes('Réagis avec 🎉'));
   check('giveaway : paragraphes du message structurés', (gDesc.match(new RegExp(ui.SEPARATOR.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length === 2);
+  // Giveaway TERMINÉ : message permanent édité dans le salon — le prix, le
+  // résultat et le remerciement forment des sections reliées par le trait.
+  const embEnd = giveaway.buildEndedEmbed({ prize: 'Nitro Boost' }, [{ toString: () => '<@u1>' }, { toString: () => '<@u2>' }], false);
+  const endDesc = embEnd.data.description;
+  const sepRe = new RegExp(ui.SEPARATOR.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+  check('giveaway terminé : 3 sections (prix / gagnants / merci)', endDesc.includes('**Nitro Boost**') && endDesc.includes('🏆 Gagnant(s)') && endDesc.includes('Merci à tous'));
+  check('giveaway terminé : 2 traits entre les 3 sections', (endDesc.match(sepRe) || []).length === 2);
+  const embNoWin = giveaway.buildEndedEmbed({ prize: 'Nitro Boost' }, [], false);
+  check('giveaway terminé sans gagnant : mention « aucun participant »', embNoWin.data.description.includes('Aucun participant'));
 
   // Suggestions : texte libre multi-paragraphes dans l'embed publié.
   const suggest = require('../server/discord/suggest');

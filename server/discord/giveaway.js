@@ -107,31 +107,35 @@ async function drawWinners(client, g) {
   return { winners, message, channel };
 }
 
+// 🏁 Embed final du giveaway (tirage effectué ou relancé) — message permanent
+// affiché dans le salon : mêmes grandes sections séparées par le trait pro que
+// l'embed de lancement (prix / résultat / remerciement), via buildEndedEmbed.
+function buildEndedEmbed(g, winners = [], reroll = false) {
+  const mentions = winners.map((u) => u.toString()).join(' ');
+  return new EmbedBuilder()
+    .setColor(reroll ? '#FEE75C' : '#57F287')
+    .setTitle(reroll ? '🎁 Giveaway — nouveau tirage' : '🎁 Giveaway terminé')
+    .setDescription(ui.sectionize([
+      `**${g.prize}**`,
+      '',
+      winners.length
+        ? `🏆 Gagnant(s) : ${mentions}`
+        : '😢 Aucun participant — pas de gagnant.',
+      '',
+      'Merci à tous d\'avoir participé ! 🎉',
+    ].join('\n')))
+    .addFields(
+      { name: '🏆 Gagnants', value: String(winners.length), inline: true },
+      { name: '⏰ Statut', value: reroll ? 'Nouveau tirage' : 'Terminé', inline: true },
+    )
+    .setFooter({ text: 'Hoxera · Giveaway' })
+    .setTimestamp();
+}
+
 async function announceWinners(client, g, winners, reroll = false) {
   const { channel, message } = await drawWinnersRaw(client, g);
   if (message) {
-    const mentions = winners.map((u) => u.toString()).join(' ');
-    const finalEmbed = new EmbedBuilder()
-      .setColor(reroll ? '#FEE75C' : '#57F287')
-      .setTitle(reroll ? '🎁 Giveaway — nouveau tirage' : '🎁 Giveaway terminé')
-      .setDescription([
-        `**${g.prize}**`,
-        '',
-        winners.length
-          ? `🏆 Gagnant(s) : ${mentions}`
-          : '😢 Aucun participant — pas de gagnant.',
-        '',
-        'Merci à tous d\'avoir participé ! 🎉',
-      ].join('\n'))
-      .addFields(
-        { name: '🏆 Gagnants', value: String(winners.length), inline: true },
-        { name: '⏰ Statut', value: reroll ? 'Nouveau tirage' : 'Terminé', inline: true },
-      )
-      .setFooter({ text: 'Hoxera · Giveaway' })
-      .setTimestamp();
-    await message.edit({ embeds: [finalEmbed] }).catch(() => {});
-  }
-  if (channel) {
+    await message.edit({ embeds: [buildEndedEmbed(g, winners, reroll)] }).catch(() => {});
   }
   if (channel) {
     const winnerMentions = winners.map((u) => u.toString()).join(' ');
@@ -184,4 +188,4 @@ async function sweep(botId, entry) {
   }
 }
 
-module.exports = { parseDuration, buildEmbed, pingMention, startGiveaway, startGiveawayDashboard, endGiveaway, sweep };
+module.exports = { parseDuration, buildEmbed, buildEndedEmbed, pingMention, startGiveaway, startGiveawayDashboard, endGiveaway, sweep };
