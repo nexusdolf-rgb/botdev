@@ -139,6 +139,20 @@ check('mono-section 4096 max non touchée', ui.embed({ description: 'x'.repeat(4
     .filter((f) => /TextDisplayBuilder|ContainerBuilder/.test(src(f)));
   check('garde-fou V2 : aucun ━ texte dans les panneaux natifs',
     v2Files.every((f) => !/━{2,}/.test(src(f).replace(/^\/\/.*$/gm, ''))));
+  // Messages d'accueil/confirmation COURTS (salon privé du ticket + DMs) :
+  // ils gardent leurs sauts de paragraphe naturels, SANS trait plaqué entre
+  // deux petites phrases — le trait est réservé aux grands panneaux à sections.
+  const pSrc = src('panels.js');
+  check('salon privé : accueil = texte naturel (ui.text, pas de trait)',
+    pSrc.includes('.setDescription(ui.text(desc, 4096))'));
+  check('DM « ton ticket est ouvert » : sections désactivées',
+    pSrc.includes('sections: false,') && pSrc.includes("title: '🎫 Ton ticket est ouvert'"));
+  check('DM de transcription : texte naturel (ui.text, pas de trait)',
+    pSrc.includes('.setDescription(ui.text(desc, 4096))'));
+  const memberW = { id: 'u1', user: { username: 'Alice', displayAvatarURL: () => '' }, toString: () => '@Alice', guild: { name: 'S' } };
+  const wDesc = panels.ticketWelcomeEmbed(memberW, { label: 'Support', emoji: '🎫', staff_roles: [] }, '', '', '', [], 'fr', { number: 1 }, {}).data.description;
+  check('salon privé (runtime) : description d accueil sans ━, sauts conservés',
+    !wDesc.includes('━') && wDesc.includes('\n\n'));
 
   console.log(failures ? `\n❌ ${failures} échec(s)` : '\n🎉 Tous les tests v220 passent');
   process.exit(failures ? 1 : 0);

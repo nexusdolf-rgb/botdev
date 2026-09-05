@@ -663,7 +663,10 @@ function ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning = ''
     .setColor(finalColor)
     .setAuthor(avatar ? { name: `Ticket de ${member.user.username}${meta.number ? ` · #${meta.number}` : ''}`, iconURL: avatar } : { name: `Ticket de ${member.user.username}${meta.number ? ` · #${meta.number}` : ''}` })
     .setTitle(title)
-    .setDescription(ui.sectionize(desc))
+    // Message d'accueil COURS : pas de trait plaqué entre deux phrases —
+    // il garde ses sauts de paragraphe naturels (le trait structure les
+    // GRANDS panneaux à sections, pas ce petit message de bienvenue).
+    .setDescription(ui.text(desc, 4096))
     .addFields(...fields)
     .setTimestamp();
   const site = store.settings.get('public_url');
@@ -965,6 +968,9 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
       const dmEmbed = ui.embed({
         color: chosen && chosen.color ? chosen.color : ui.COLORS.ticket,
         title: '🎫 Ton ticket est ouvert',
+        // DM de confirmation COURS : pas de trait plaqué entre les phrases —
+        // il garde ses sauts de paragraphe naturels.
+        sections: false,
         description: `Ta demande sur **${guild.name}** a bien été créée.
 
 Notre équipe va te répondre dans le salon privé prévu pour toi.`,
@@ -1288,7 +1294,8 @@ async function sendTranscriptDm(clientOrInteraction, guild, channelName, { text,
   const embed = new EmbedBuilder()
     .setColor('#ED4245')
     .setTitle(customMsg ? serverName + ' · ' + i18n.t(lang, 'transcript_title') : i18n.t(lang, 'transcript_title'))
-    .setDescription(ui.sectionize(desc))
+    // DM de transcription COURS : pas de trait plaqué — respiration naturelle.
+    .setDescription(ui.text(desc, 4096))
     .setImage(customImg || profileBanner)
     .setFooter({ text: 'Hoxera · ' + i18n.t(lang, 'footer_tickets') });
   try {
