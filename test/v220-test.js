@@ -111,6 +111,8 @@ check('mono-section 4096 max non touchée', ui.embed({ description: 'x'.repeat(4
   const advSrc = src('advancedTickets.js');
   check('tickets personnalisés : message libre structuré (sectionize)', advSrc.includes('ui.sectionize(cfg.message'));
   check('tickets personnalisés : types en menu séparés par le trait', advSrc.includes('const typeSections = ui.sectionize('));
+  check('tickets personnalisés : trait sous chaque bloc bouton',
+    advSrc.includes('addTextDisplayComponents(new TextDisplayBuilder().setContent(ui.SEPARATOR))'));
 
   console.log(failures ? `\n❌ ${failures} échec(s)` : '\n🎉 Tous les tests v220 passent');
   process.exit(failures ? 1 : 0);

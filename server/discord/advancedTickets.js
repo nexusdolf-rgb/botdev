@@ -151,7 +151,10 @@ function buildPanelPayload(config) {
     }
     container.addActionRowComponents(new ActionRowBuilder().addComponents(select));
   } else {
-    for (const type of cfg.types) {
+    // Mode boutons : un bloc par type (texte + bouton à droite). Chaque bloc
+    // est séparé du suivant par le long trait discret (v220) — on retrouve la
+    // même grammaire que dans les embeds : les types s'empilent proprement.
+    cfg.types.forEach((type, index) => {
       const button = new ButtonBuilder()
         .setCustomId(`hx2-btn:${cfg.bot_id}:${cfg.id}:${type.id}`)
         .setLabel(buttonLabelFor(type).slice(0, 80))
@@ -166,7 +169,12 @@ function buildPanelPayload(config) {
         ))
         .setButtonAccessory(button);
       container.addSectionComponents(section);
-    }
+      // Trait EN DESSOUS du bloc bouton — jamais après le dernier : le
+      // séparateur natif + le pied du panneau ferment déjà le panneau.
+      if (index < cfg.types.length - 1) {
+        container.addTextDisplayComponents(new TextDisplayBuilder().setContent(ui.SEPARATOR));
+      }
+    });
   }
   container
     .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
