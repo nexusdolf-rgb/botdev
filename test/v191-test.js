@@ -55,7 +55,7 @@ assert(dbSrc.includes('CREATE TABLE IF NOT EXISTS quiz_scores ('),
   'la table quiz_scores doit rester');
 assert(dbSrc.includes('quizScores,'), 'l’accesseur quizScores doit rester exporté');
 assert(exSrc.includes("name: 'quiz'"), 'la commande /quiz doit rester');
-assert(exSrc.includes('hxquiz:'), 'les boutons hxquiz doivent rester');
+assert(exSrc.includes('hx:quiz:'), 'les boutons hxquiz doivent rester');
 assert(routesSrc.includes("router.get('/bots/:id/guilds/:guildId/quiz/top'"),
   'la route dashboard quiz/top doit rester');
 assert(dashSrc.includes("['quiz', '🧠', 'Quiz']"),

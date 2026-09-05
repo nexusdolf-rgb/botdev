@@ -62,7 +62,7 @@ assert(dbSrc.includes('ORDER BY score DESC, answers ASC'),
 assert(exSrc.includes("name: 'quiz'"), 'la commande /quiz manque');
 assert(exSrc.includes("value: 'jouer'") && exSrc.includes("value: 'top'"),
   'les actions jouer/top manquent');
-assert(exSrc.includes("hxquiz:"), 'les boutons hxquiz manquent');
+assert(exSrc.includes("hx:quiz:"), 'les boutons hxquiz manquent');
 assert(exSrc.includes('QUIZ_BANK'), 'la banque de questions manque');
 assert(exSrc.includes('bonus rapidité'), 'le bonus rapidité manque');
 assert(exSrc.includes('quizState,'), 'quizState non exposé pour les tests');

@@ -506,12 +506,15 @@ async function handleSlash(botId, entry, interaction) {
       const embed = new EmbedBuilder()
         .setColor(0xe07a5f)
         .setTitle('🧠 Quiz')
-        .setDescription(`**${question}**\n\n⚡ Réponds vite : **+${bonus} points bonus** si tu réponds en moins de **${bonusWindow} secondes** !`)
+        // Les 3 réponses sont TOUJOURS affichées sous la question (A/B/C) —
+        // sinon le joueur ne peut pas choisir en connaissance de cause.
+        .setDescription(`**${question}**\n\n🇦 **${choices[0]}**\n🇧 **${choices[1]}**\n🇨 **${choices[2]}**\n\n⚡ Réponds vite : **+${bonus} points bonus** si tu réponds en moins de **${bonusWindow} secondes** !`)
         .setFooter({ text: `Hoxera · ${guild.name} · Quiz` })
         .setTimestamp();
+      // Préfixe `hx:quiz:` → routé par handleButton (comme hx:poll, hx:pendu…).
       const row = new ActionRowBuilder().addComponents(
         ['🇦', '🇧', '🇨'].map((e, i) => new ButtonBuilder()
-          .setCustomId(`hxquiz:${guild.id}:${i}`)
+          .setCustomId(`hx:quiz:${guild.id}:${i}`)
           .setLabel(e)
           .setStyle(ButtonStyle.Primary)),
       );
@@ -1036,7 +1039,7 @@ async function handleButton(botId, entry, interaction) {
       const emojis = ['🇦', '🇧', '🇨'];
       const row = new ActionRowBuilder().addComponents(
         [0, 1, 2].map((i) => new ButtonBuilder()
-          .setCustomId(`hxquiz:${guild.id}:${i}`)
+          .setCustomId(`hx:quiz:${guild.id}:${i}`)
           .setLabel(emojis[i])
           .setStyle(i === st.correctIdx ? ButtonStyle.Success : ButtonStyle.Danger)
           .setDisabled(true)),
