@@ -39,7 +39,8 @@ assert.ok(panelsSource.includes('ui.v2panel({') && !panelsSource.includes('ui.em
 assert.ok(panelsSource.includes('ui.linkRow(\'📜 Ouvrir la transcription\''));
 assert.ok(panelsSource.includes('bd-tmenu:${botId}:claim'));
 assert.ok(extraSource.includes("const ui = require('./ui')"));
-assert.ok(extraSource.includes('ui.panel({') && giveawaySource.includes("const ui = require('./ui')"));
+// v235 — extra.js est entièrement passé en Components V2 (0 ui.panel, 0 ui.embed).
+assert.ok(extraSource.includes('ui.v2panel({') && !extraSource.includes('ui.panel({') && giveawaySource.includes("const ui = require('./ui')"));
 assert.ok(automodSource.includes('embeds: [ui.embed({'));
 
 console.log('✅ v3.20 : Design System Discord, panneaux ticket, boutons et MP professionnels');

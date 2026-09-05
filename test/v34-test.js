@@ -10,6 +10,8 @@ process.env.NODE_ENV = 'test';
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+// v235 — extra.js est passé en Components V2 : lecteur partagé.
+const v2 = require('./helpers/v2');
 process.env.BOTDEV_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'hoxera-v34-'));
 
 let failures = 0;
@@ -200,7 +202,9 @@ const okReply = (i) => {
   await runCmd('/couple : célibataire → message', 'couple', {});
   for (const a of ['hug', 'kiss', 'slap', 'pat', 'punch']) await runCmd(`/${a} : répond`, a, { user: u2 });
   await runCmd('/rps : répond', 'rps', { str: { choix: 'pierre' } });
-  await runCmd('/pendu : partie lancée', 'pendu', {}, (x) => x.replies[0][1].components.length === 2);
+  // v235 — en Components V2 les 2 rangées de lettres sont DANS le conteneur :
+  // payload.components ne contient plus que le conteneur lui-même.
+  await runCmd('/pendu : partie lancée', 'pendu', {}, (x) => v2.rows(x.replies[0][1]).length === 2);
   await runCmd('/morpion : partie lancée', 'morpion', { user: u2 });
   await runCmd('/birthday set : enregistré', 'birthday', { str: { action: 'set' }, int: { jour: 14, mois: 7 } });
   check('/birthday : stocké', !!store.birthdays.get(BOT, 'G1', 'u1'));

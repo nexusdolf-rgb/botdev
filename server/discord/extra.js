@@ -366,7 +366,7 @@ async function handleSlash(botId, entry, interaction) {
         new ButtonBuilder().setCustomId(`hx:marry:${guild.id}:a:${user.id}:${target.id}`).setLabel('💍 Accepter').setStyle(ButtonStyle.Success),
         new ButtonBuilder().setCustomId(`hx:marry:${guild.id}:r:${user.id}:${target.id}`).setLabel('❌ Refuser').setStyle(ButtonStyle.Danger),
       );
-      const proposal = ui.panel({
+      const proposal = ui.v2panel({
         variant: 'live',
         title: '💍 Une demande en mariage !',
         // Message COURT interactif : pas de trait plaqué entre 2 phrases.
@@ -386,7 +386,7 @@ async function handleSlash(botId, entry, interaction) {
       if (!cur) return interaction.reply({ content: '💔 Tu n\'es pas marié(e) sur ce serveur.', ephemeral: true });
       const other = cur.user_a === user.id ? cur.user_b : cur.user_a;
       store.marriages.remove(botId, guild.id, cur.user_a, cur.user_b);
-      return interaction.reply(ui.panel({
+      return interaction.reply(ui.v2panel({
         variant: 'danger',
         title: '💔 Divorce enregistré',
         description: `${user} et <@${other}> ont divorcé… le serveur verse une petite larme.`,
@@ -402,7 +402,7 @@ async function handleSlash(botId, entry, interaction) {
       const other = cur.user_a === target.id ? cur.user_b : cur.user_a;
       const d = cur.date ? new Date(cur.date.replace(' ', 'T') + 'Z') : null;
       const dateStr = d && !isNaN(d) ? d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : 'récemment';
-      return interaction.reply(ui.panel({
+      return interaction.reply(ui.v2panel({
         variant: 'social',
         title: `💍 Couple de ${target.username}`,
         description: `${target} ❤️ <@${other}>`,
@@ -414,7 +414,7 @@ async function handleSlash(botId, entry, interaction) {
       const target = interaction.options.getUser('membre');
       if (!target || target.id === user.id) return interaction.reply({ content: '❓ Mentionne un membre (autre que toi).', ephemeral: true });
       const text = rand(ACTION_TEXTS[cmd]).replace('{a}', `<@${user.id}>`).replace('{b}', `<@${target.id}>`);
-      return interaction.reply(ui.panel({
+      return interaction.reply(ui.v2panel({
         variant: 'live',
         title: `${cmd === 'hug' ? '🤗 Câlin' : cmd === 'kiss' ? '😘 Bisou' : cmd === 'slap' ? '👋 Petite claque' : cmd === 'pat' ? '🐶 Caresse' : '👊 Duel amical'}`,
         description: text,
@@ -429,7 +429,7 @@ async function handleSlash(botId, entry, interaction) {
       if (move === botMove) result = `Égalité ! ${RPS_EMOJI[move]} contre ${RPS_EMOJI[botMove]} — on refait ?`;
       else if (RPS_WINS[move] === botMove) result = `Tu gagnes ! ${RPS_EMOJI[move]} bat ${RPS_EMOJI[botMove]} 🏆`;
       else result = `Je gagne ! ${RPS_EMOJI[botMove]} bat ${RPS_EMOJI[move]} 😎`;
-      return interaction.reply(ui.panel({
+      return interaction.reply(ui.v2panel({
         variant: result.startsWith('Tu gagnes') ? 'success' : result.startsWith('Je gagne') ? 'danger' : 'warning',
         title: '🪨🍃✂️ Pierre · Feuille · Ciseaux',
         description: result,
@@ -444,7 +444,7 @@ async function handleSlash(botId, entry, interaction) {
       const word = rand(PENDU_WORDS);
       const shown = word.split('').map(() => '⬜').join(' ');
       const state = { word, guessed: new Set(), lives: 8, playerId: user.id };
-      const penduPanel = ui.panel({
+      const penduPanel = ui.v2panel({
         variant: 'brand',
         title: '🪢 Pendu',
         // Partie interactive : pas de trait entre l'invite et la grille.
@@ -464,7 +464,7 @@ async function handleSlash(botId, entry, interaction) {
       const state = { board: Array(9).fill(null), turn: user.id, p1: user.id, p2: target.id, over: false, symbols: { } };
       state.symbols[user.id] = '❌';
       state.symbols[target.id] = '⭕';
-      const morpionPanel = ui.panel({
+      const morpionPanel = ui.v2panel({
         variant: 'brand',
         title: '⭕❌ Morpion',
         // Partie interactive : pas de trait entre les deux courtes lignes.
@@ -488,10 +488,12 @@ async function handleSlash(botId, entry, interaction) {
           const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '`' + (i + 1) + '.`';
           return `${medal} <@${r.user_id}> — ${r.score} pts (${r.answers} réponse(s))`;
         });
-        return interaction.reply({
-          ...ui.panel({ variant: 'brand', title: '🧠 Classement Quiz', description: lines.join('\n'), footer: `Hoxera · ${guild.name} · Quiz` }),
-          ephemeral: true,
-        });
+        // v235 — `ephemeral: true` APRÈS le spread ÉCRASAIT le champ `flags` et
+        // faisait perdre IsComponentsV2 : il est passé DANS les options.
+        return interaction.reply(ui.v2panel({
+          variant: 'brand', title: '🧠 Classement Quiz', description: lines.join('\n'),
+          footer: `Hoxera · ${guild.name} · Quiz`, ephemeral: true,
+        }));
       }
       // Jouer : choisir une question au hasard (quiz personnalisés du serveur
       // s'il y en a, sinon la banque par défaut), répartir les 3 choix.
@@ -592,15 +594,14 @@ async function handleSlash(botId, entry, interaction) {
         return { ...b, next: d };
       }).sort((a, b) => a.next - b.next).slice(0, 10);
       const lines = sorted.map((b, i) => `${i === 0 ? '🎂' : '📅'} <@${b.user_id}> — le **${String(b.day).padStart(2, '0')}/${String(b.month).padStart(2, '0')}**${i === 0 ? ' *(le prochain !)*' : ''}`);
-      return interaction.reply({
-        ...ui.panel({
-          variant: 'warning',
-          title: '🎂 Anniversaires du serveur',
-          description: lines.join('\n') || 'Aucun',
-          footer: `Hoxera · ${guild.name} · Anniversaires`,
-        }),
+      // v235 — `ephemeral` DANS les options, sinon le spread écrase `flags`.
+      return interaction.reply(ui.v2panel({
+        variant: 'warning',
+        title: '🎂 Anniversaires du serveur',
+        description: lines.join('\n') || 'Aucun',
+        footer: `Hoxera · ${guild.name} · Anniversaires`,
         ephemeral: true,
-      });
+      }));
     }
     case 'remind': {
       const duree = interaction.options.getString('duree') || '';
@@ -690,7 +691,7 @@ async function handleSlash(botId, entry, interaction) {
       store.economy.ensure(botId, guild.id, user.id);
       store.economy.add(botId, guild.id, user.id, gain);
       store.settings.set(key, String(Date.now()));
-      return interaction.reply(ui.panel({
+      return interaction.reply(ui.v2panel({
         variant: 'economy',
         title: '💼 Travail terminé',
         description: `${job[0]} ${job[1]} !`,
@@ -707,7 +708,7 @@ async function handleSlash(botId, entry, interaction) {
       const win = Math.random() < 0.5;
       if (win) {
         store.economy.add(botId, guild.id, user.id, amount);
-        return interaction.reply(ui.panel({
+        return interaction.reply(ui.v2panel({
           variant: 'economy',
           title: '🎰 JACKPOT !',
           description: `Tu doubles ta mise : **+${amount} coins** !`,
@@ -716,7 +717,7 @@ async function handleSlash(botId, entry, interaction) {
         }));
       }
       store.economy.add(botId, guild.id, user.id, -amount);
-      return interaction.reply(ui.panel({
+      return interaction.reply(ui.v2panel({
         variant: 'danger',
         title: '🎰 Pari perdu',
         description: `Tu perds **${amount} coins**.`,
@@ -744,7 +745,7 @@ async function handleSlash(botId, entry, interaction) {
         const stolen = Math.floor(victim.coins * (0.1 + Math.random() * 0.1));
         store.economy.add(botId, guild.id, target.id, -stolen);
         store.economy.add(botId, guild.id, user.id, stolen);
-        return interaction.reply(ui.panel({
+        return interaction.reply(ui.v2panel({
           variant: 'economy',
           title: '🦹 Vol réussi !',
           description: `Tu voles **${stolen} coins** à ${target} 😈`,
@@ -755,7 +756,7 @@ async function handleSlash(botId, entry, interaction) {
       const fine = Math.max(10, Math.floor(me.coins * 0.15));
       store.economy.add(botId, guild.id, user.id, -fine);
       store.economy.add(botId, guild.id, target.id, fine);
-      return interaction.reply(ui.panel({
+      return interaction.reply(ui.v2panel({
         variant: 'danger',
         title: '🚓 Vol échoué',
         description: `${target} t'a surpris et te réclame **${fine} coins** de dédommagement…`,
@@ -771,7 +772,7 @@ async function handleSlash(botId, entry, interaction) {
       if (action === 'on') {
         const res = await lockdown.on(botId, guild, member.user.tag);
         if (res.already) return interaction.reply({ content: '🔒 Le serveur est déjà verrouillé. `/lockdown off` pour rouvrir.', ephemeral: true });
-        return interaction.reply(ui.panel({
+        return interaction.reply(ui.v2panel({
           variant: 'danger',
           title: '🚨 Serveur verrouillé',
           description: `${res.channels} salon(s) sont maintenant en lecture seule.`,
@@ -781,7 +782,7 @@ async function handleSlash(botId, entry, interaction) {
       }
       const res = await lockdown.off(botId, guild, member.user.tag);
       if (!res.reopened) return interaction.reply({ content: '🔓 Le serveur n\'est pas verrouillé.', ephemeral: true });
-      return interaction.reply(ui.panel({
+      return interaction.reply(ui.v2panel({
         variant: 'success',
         title: '🔓 Serveur rouvert',
         description: `${res.reopened} salon(s) sont de nouveau ouverts.`,
@@ -829,10 +830,15 @@ async function handleSlash(botId, entry, interaction) {
         return interaction.reply({ content: `✅ Question ajoutée (${questions.length}/5) : « ${texte.trim().slice(0, 45)} »`, ephemeral: true });
       }
       if (action === 'view') {
-        return interaction.reply({
-          content: ui.sectionize(`📝 **Candidatures**\nSalon : ${cfg.channel ? `<#${cfg.channel}>` : '❌ non défini'}\nQuestions (${questions.length}/5) :\n${questions.map((q, i) => `${i + 1}. ${q}`).join('\n') || '*aucune*'}\n\nEnvoie le panneau avec \`/apply panel\``, 2000),
+        // v235 — ce résumé passait par ui.sectionize() dans le `content` du
+        // message : le trait texte ━ ne touchait pas les bords. Il devient la
+        // description du conteneur → séparateur NATIF pleine largeur entre les
+        // 2 paragraphes. `footer: false` : l'original n'avait pas de pied.
+        return interaction.reply(ui.v2panel({
+          description: `📝 **Candidatures**\nSalon : ${cfg.channel ? `<#${cfg.channel}>` : '❌ non défini'}\nQuestions (${questions.length}/5) :\n${questions.map((q, i) => `${i + 1}. ${q}`).join('\n') || '*aucune*'}\n\nEnvoie le panneau avec \`/apply panel\``,
+          footer: false,
           ephemeral: true,
-        });
+        }));
       }
       if (action === 'off') {
         store.applications.set(botId, guild.id, { ...cfg, enabled: 0 });
@@ -844,7 +850,7 @@ async function handleSlash(botId, entry, interaction) {
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId(`hx:apply:${guild.id}`).setLabel('📝 Faire une candidature').setStyle(ButtonStyle.Primary),
       );
-      await interaction.reply(ui.panel({
+      await interaction.reply(ui.v2panel({
         variant: 'brand',
         title: cfg.title || '📝 Candidature',
         description: `Clique sur le bouton pour candidater : tu répondras à **${questions.length} question(s)** dans une fenêtre privée.`,
@@ -969,7 +975,7 @@ async function handleButton(botId, entry, interaction) {
       );
       if (choice === 'a') {
         store.marriages.set(botId, guild.id, from, to);
-        await interaction.update(ui.panel({
+        await interaction.update(ui.v2panel({
           variant: 'success',
           title: '💍 Mariage accepté !',
           description: `Félicitations ${user} et <@${from}> ! Vous êtes désormais mariés sur ce serveur 💍❤️`,
@@ -977,7 +983,7 @@ async function handleButton(botId, entry, interaction) {
           footer: `Hoxera · ${guild.name} · Vie sociale`,
         }, [row]));
       } else {
-        await interaction.update(ui.panel({
+        await interaction.update(ui.v2panel({
           variant: 'danger',
           title: '💔 Demande refusée',
           description: `${user} a refusé la demande de <@${from}>… ce n'est que partie remise !`,
@@ -1014,7 +1020,7 @@ async function handleButton(botId, entry, interaction) {
         content = `🪢 **Pendu** — ${user}, devine le mot !\n\n${shown}\n\nVies : ${'❤️'.repeat(state.lives)}${'🖤'.repeat(8 - state.lives)}\n\n${correct ? '✅ Bonne lettre !' : '❌ Raté…'}\n*Lettres essayées : ${lettersTried}*`;
       }
       if (over) penduGames.delete(key);
-      await interaction.update(ui.panel({
+      await interaction.update(ui.v2panel({
         variant: over && won ? 'success' : over ? 'danger' : 'brand',
         title: over ? (won ? '🪢 Pendu · gagné !' : '🪢 Pendu · terminé') : '🪢 Pendu',
         // Mise à jour LIVE à chaque lettre : garder le texte simple,
@@ -1045,7 +1051,7 @@ async function handleButton(botId, entry, interaction) {
         content = `⭕❌ **Morpion** : <@${state.p1}> (❌) contre <@${state.p2}> (⭕)\n\nAu tour de <@${state.turn}> !`;
       }
       if (state.over) morpionGames.delete(key);
-      await interaction.update(ui.panel({
+      await interaction.update(ui.v2panel({
         variant: winner ? 'success' : state.over ? 'warning' : 'brand',
         title: state.over ? '⭕❌ Morpion · partie terminée' : '⭕❌ Morpion',
         // Mise à jour LIVE : pas de trait entre les courtes lignes.
@@ -1134,7 +1140,7 @@ async function handleButton(botId, entry, interaction) {
         });
         try {
           const applicant = await guild.members.fetch(applicantId);
-          await applicant.send(ui.panel({
+          await applicant.send(ui.v2panel({
             variant: 'success',
             title: '🎉 Candidature acceptée',
             description: `Bonne nouvelle ! Ta candidature sur **${guild.name}** a été acceptée par ${user.tag}.`,
@@ -1149,7 +1155,7 @@ async function handleButton(botId, entry, interaction) {
         });
         try {
           const applicant = await guild.members.fetch(applicantId);
-          await applicant.send(ui.panel({
+          await applicant.send(ui.v2panel({
             variant: 'danger',
             title: '😔 Candidature refusée',
             description: `Ta candidature sur **${guild.name}** a été refusée. Tu pourras retenter plus tard.`,
@@ -1345,7 +1351,7 @@ async function onVoiceState(botId, entry, oldState, newState) {
       mine = mine.filter((id) => guild.channels.cache.has(id));
       if (mine.length >= 10) {
         try {
-          await newState.member.send(ui.panel({
+          await newState.member.send(ui.v2panel({
             variant: 'warning',
             title: '🔊 Limite de salons vocaux',
             description: 'Tu as atteint la limite de 10 salons vocaux temporaires ouverts.',
@@ -1402,18 +1408,27 @@ async function sweepReminders(botId, entry) {
   for (const r of due) {
     try {
       const user = await entry.client.users.fetch(r.user_id).catch(() => null);
-      const reminderPanel = ui.panel({
+      // v235 — options factorisées : le même panneau sert au MP et au repli en
+      // salon. En V2 il n'y a plus de `reminderPanel.embeds` à réinjecter, et le
+      // ping ne peut plus être dans `content` (interdit) → il devient un
+      // TextDisplay en tête de conteneur, d'où la 2e construction.
+      const reminderOptions = {
         variant: 'warning',
         title: '⏰ Ton rappel',
         description: String(r.text || 'Rappel sans texte').slice(0, 4000),
         fields: [{ name: '🧭 Serveur', value: entry.client.guilds.cache.get(r.guild_id)?.name || 'Ton serveur', inline: true }],
         footer: 'Hoxera · Rappel personnel',
-      });
-      const sent = user && await user.send(reminderPanel).then(() => true).catch(() => false);
+      };
+      const sent = user && await user.send(ui.v2panel(reminderOptions)).then(() => true).catch(() => false);
       if (!sent) {
         const guild = entry.client.guilds.cache.get(r.guild_id);
         const channel = guild && r.channel_id ? guild.channels.cache.get(r.channel_id) : null;
-        if (channel) await channel.send({ content: `<@${r.user_id}>`, embeds: reminderPanel.embeds, allowedMentions: { users: [String(r.user_id)] } }).catch(() => {});
+        if (channel) {
+          await channel.send({
+            ...ui.v2panel({ ...reminderOptions, content: `<@${r.user_id}>` }),
+            allowedMentions: { users: [String(r.user_id)] },
+          }).catch(() => {});
+        }
       }
     } catch (e) { console.error('[Hoxera] reminder error:', e.message); }
     // 🔁 Rappel récurrent : on le reprogramme à la prochaine échéance
@@ -1445,14 +1460,20 @@ function sweepScheduled(botId, entry, now = new Date()) {
     const channel = guild ? guild.channels.cache.get(s.channel_id) : null;
     if (!channel) continue;                 // salon introuvable → on réessaiera au prochain balayage
     const localTime = `${String(s.hour).padStart(2, '0')}:${String(s.minute).padStart(2, '0')}`;
-    const scheduledPanel = ui.panel({
+    // v235 — le message programmé (s.text) ne peut plus être dans le `content`
+    // du message : Components V2 l'interdit. Il devient un TextDisplay en tête
+    // de conteneur (même position visuelle qu'avant : au-dessus du titre, ce
+    // que le champ « affiché juste au-dessus » décrit). Les allowedMentions
+    // restent au niveau du message et continuent de notifier.
+    const scheduledOptions = {
       variant: 'brand',
       title: '📅 Annonce programmée',
+      content: s.text,
       description: '',
       fields: [{ name: '🕘 Horaire', value: `${localTime} · ${tz}`, inline: true }, { name: '💬 Message programmé', value: 'Le message personnalisé est affiché juste au-dessus.', inline: false }],
       footer: `Hoxera · ${guild.name} · Annonce automatique`,
-    });
-    const visualPayload = { ...scheduledPanel, content: s.text, allowedMentions: { parse: ['everyone', 'roles', 'users'] } };
+    };
+    const visualPayload = { ...ui.v2panel(scheduledOptions), allowedMentions: { parse: ['everyone', 'roles', 'users'] } };
     channel.send(visualPayload)
       .then(() => {
         store.scheduled.update(s.id, { last_sent: p.ymd });
@@ -1461,7 +1482,7 @@ function sweepScheduled(botId, entry, now = new Date()) {
       .catch((err) => {
         if (err && err.code === 50013) {
           // Mentions (@everyone/@here) interdites par les permissions → on retente sans les activer
-          channel.send({ ...scheduledPanel, content: s.text, allowedMentions: { parse: [] } })
+          channel.send({ ...ui.v2panel(scheduledOptions), allowedMentions: { parse: [] } })
             .then(() => {
               store.scheduled.update(s.id, { last_sent: p.ymd });
               console.log(`[Hoxera] ✅ Annonce envoyée sans mentions (permission manquante) — ${p.ymd} ${localTime} ${tz}`);
@@ -1508,15 +1529,17 @@ async function sweepBirthdays(botId, entry, now = new Date()) {
       if (!member) continue;
       const channel = gs.birthday_channel ? (guild.channels.cache.get(gs.birthday_channel) || guild.channels.cache.find((c) => c.name.toLowerCase() === String(gs.birthday_channel).replace(/^#/, '').toLowerCase())) : null;
       if (channel) {
+        // v235 — le ping devient un TextDisplay en tête de conteneur (`content`
+        // interdit en V2) ; allowedMentions reste appliqué et notifie toujours.
         await channel.send({
-          content: `<@${member.id}>`,
-          embeds: [ui.embed({
+          ...ui.v2panel({
+            content: `<@${member.id}>`,
             variant: 'warning',
             title: '🎂 Joyeux anniversaire !',
             description: `Toute la communauté souhaite une superbe journée à ${member} ! 🥳🎁`,
             fields: [{ name: '🎉 Message du serveur', value: 'Profite bien de cette journée spéciale !' }],
             footer: `Hoxera · ${guild.name} · Anniversaires`,
-          })],
+          }),
           allowedMentions: { users: [String(member.id)] },
         }).catch(() => {});
       }

@@ -200,7 +200,63 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   'tag') ») : un message supprimé **partiel** (pas en cache) n'a pas d'auteur →
   `trackDeleted` (/snipe, `extra.js`) plantait ; idem `tasks.js` (`member.user.tag`).
   Gardes ajoutées, test `test/v228-test.js`, docs remises à jour (v194 → v228).
-- **v234 (ACTUELLE, 05/09)** : **SÉPARATEURS NATIFS PLEINE LARGEUR — lot n°4 :
+- **v235 (ACTUELLE, 05/09)** : **SÉPARATEURS NATIFS PLEINE LARGEUR — lot n°5 :
+  `extra.js` (le plus gros fichier de commandes).** **26 `ui.panel(` →
+  `ui.v2panel(`**, le dernier `ui.embed(` (anniversaire du jour) et le dernier
+  `ui.sectionize(` actif (`/apply view`). Il reste **0 `ui.panel(`**, **0
+  `ui.embed(`** et **0 `ui.sectionize(` actif** (les 2 occurrences restantes sont
+  dans des commentaires). **32 emplacements V2** dans le fichier.
+  🚨 **PIÈGE n°1 — `{...ui.v2panel(…), ephemeral: true}`** (2 sites : `/quiz top`
+  et `/birthday list`). Accoler `ephemeral` **APRÈS** le spread **écrase le champ
+  `flags`** et fait perdre `IsComponentsV2` → le message serait parti en
+  composant classique, illisible. `ephemeral` est passé **DANS** les options, qui
+  combinent les deux flags. (Même piège qu'en v233 sur `/event list`.)
+  🚨 **PIÈGE n°2 — `content` au niveau du message** (3 sites : annonce
+  programmée `s.text`, anniversaire du jour `<@membre>`, rappel en repli salon).
+  Interdit en V2 → le texte devient un **TextDisplay en tête de conteneur** (même
+  position visuelle). **`allowedMentions` reste au niveau du message** et les
+  mentions continuent de notifier.
+  🚨 **PIÈGE n°3 — `reminderPanel.embeds`.** Le repli en salon du rappel faisait
+  `channel.send({ content: <ping>, embeds: reminderPanel.embeds, … })`. Sur un
+  payload V2, **`.embeds` vaut `undefined`** → **le message serait parti VIDE**
+  (bug silencieux, visible seulement quand le membre a ses MP fermés). Les
+  options sont **factorisées** dans `reminderOptions` et le panneau est
+  reconstruit avec le ping.
+  🔗 **Chaînes d'édition migrées ENTIÈRES** (Discord interdit de sortir du V2 à
+  l'édition) : mariage (`proposal` → 2 × `interaction.update`), pendu
+  (`penduPanel` → update live à chaque lettre), morpion (`morpionPanel` → update
+  live à chaque case). **4 `interaction.update(ui.v2panel(…))`**. Les jeux
+  gardent **`sections: false`** (2 phrases courtes + mise à jour live → un
+  séparateur sauterait à chaque tour ; critère v229 inchangé).
+  ✅ **`applyd` n'était PAS un vrai bloqueur.** Le « bloqueur extra.js:1128 »
+  identifié en v232 disparaît de lui-même : le **message de candidature**
+  (`handleModal`) est un `EmbedBuilder` avec **uniquement des champs** (une ligne
+  par question) et **AUCUNE description** → il ne produit **AUCUN trait**. Il
+  reste donc en embed classique, et `applyd` peut continuer à relire
+  `interaction.message.embeds[0]` pour le recolorer. **Les 2 MP de décision**
+  (acceptée / refusée), eux, sont migrés.
+  ⛔ **NON migré (volontaire)** : `/poll` (`pollEmbed` — v230 l'a passé en champs
+  d'embed, séparation déjà native, **aucun trait**), `/top` (`renderTop` —
+  description en `\n` simples, **aucun trait**, pagination éditée en place),
+  `/snipe` et `/invites` (EmbedBuilder bruts, aucune description
+  multi-paragraphes).
+  🧪 **4 tests existants mis à jour** (v34, v80, v124, v229) :
+  • v34 vérifiait `payload.components.length === 2` pour les 2 rangées de lettres
+    du pendu → `v2.rows(payload).length === 2` (les rangées sont DANS le
+    conteneur) ;
+  • v80 lisait `sent[0].content` (annonce programmée) et `bdayMsgs[0].content`
+    (anniversaire) → lecture via `test/helpers/v2.js` ;
+  • v124 vérifiait `extraSource.includes('ui.panel({')` → `ui.v2panel({` +
+    assertion que `ui.panel(` a bien disparu ;
+  • v229 avait `/apply view` dans sa liste des « 10 messages qui passent par
+    `ui.sectionize` » → needle mis à jour **et** contrôle de rendu remplacé :
+    1 **séparateur natif** entre les 2 paragraphes, **0 trait texte**, et
+    `footer: false` respecté (l'original n'avait pas de pied).
+  📌 **RÈGLE ENCORE ÉTENDUE** : après un remplacement global `ui.panel(` →
+  `ui.v2panel(`, un **`grep -n "\.embeds"` sur le fichier migré est OBLIGATOIRE**
+  (réinjection d'un payload V2 dans un message classique) — ainsi qu'un grep sur
+  `content:` accolé au payload.
+- **v234 (05/09)** : **SÉPARATEURS NATIFS PLEINE LARGEUR — lot n°4 :
   les tickets.** 🎫 **`panels.js` — TOUT le fichier passe en V2 (11
   emplacements)** : le panneau de tickets principal, le menu de rôles, les 4
   annonces de salon (fermé / réouvert / pris en charge / en attente), les 3
@@ -636,32 +692,40 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 
 ## 📌 ÉTAT AU 05/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v234** — voir la section v234 ci-dessus. **161 tests verts**.
+- Dernière version : **v235** — voir la section v235 ci-dessus. **162 tests verts**.
   ⚠️ **Chantier en cours (v231 →)** : migration des traits texte `━` vers les
   séparateurs **NATIFS pleine largeur** (Components V2).
   • **Migré** : `/quiz` (v231) · `premade.js` 13 messages dont `replyPanel` ×11
     et `/levels` · `suggest.js` 5 emplacements (v232) · `giveaway.js`
     5 emplacements · `guildEvents.js` 7 emplacements (v233) · **`panels.js`
-    11 emplacements, TOUT le fichier** (v234). **Total : 42 emplacements.**
+    11 emplacements, TOUT le fichier** (v234) · **`extra.js` 32 emplacements,
+    TOUT le design system du fichier** (v235). **Total : 74 emplacements.**
   • **Exclu, documenté** : `xp.js` (webhook + pièce jointe → 400 en V2, piège n°10).
   • **Reporté, documenté** : le **wizard « assistant types »** de `panels.js`
     (6 étapes éditées en place — il faut migrer les 6 d'un coup) et le
     **récapitulatif de ticket** (aucune description donc **aucun trait** ;
     `updateRecapRating` relit `msg.embeds[0].fields`).
-  • **Reste** : `extra.js` (29), `panelCommands.js` (2), `events.js` (2),
-    `automod.js` (2), `profileCommands.js` (2), puis `logging`, `liveWatch`,
-    `roleWizard`, `profileWizard`, `engine`, `community`, `announcements`,
-    `tasks` (1 chacun).
+  • **Reporté, documenté (v235)** : dans `extra.js` — `/poll` (champs d'embed
+    depuis v230, aucun trait), `/top` (`renderTop`, `\n` simples, aucun trait,
+    pagination éditée), `/snipe` et `/invites` (EmbedBuilder bruts), le
+    **message de candidature** + `applyd` (aucune description donc aucun trait).
+  • **Reste** : `panelCommands.js` (2), `events.js` (2), `automod.js` (2),
+    `profileCommands.js` (2), puis `logging`, `liveWatch`, `roleWizard`,
+    `profileWizard`, `engine`, `community`, `announcements`, `tasks` (1 chacun)
+    + le **wizard « assistant types »** de `panels.js` (6 étapes d'un coup).
   • ⚠️ **Avant de migrer un message, vérifier** : (1) s'il passe par
     `sendAsProfile` **avec** des `files` → exclu (sans `files`, c'est bon :
     webhook application-owned) ; (2) si du code relit `msg.embeds[0]` plus tard →
-    **reste `extra.js:1128` (`applyd`)** ; `panels.js:426` corrigé par
-    `panelTitleOf`, `panels.js:1396` = le récap reporté ; (3) s'il est **édité**
+    **plus aucun cas bloquant** (`panels.js:426` corrigé par `panelTitleOf`,
+    `extra.js:1128` = `applyd` dont le message n'a aucun trait et reste
+    classique, `panels.js:1396` = le récap reporté) ; (3) s'il est **édité**
     ensuite → l'édition doit migrer en même temps **et** vider
     `content`/`embeds`/`attachments` ; (4) si c'est une **étape de wizard** →
     migrer TOUTES les étapes d'un coup ; (5) chercher dans `test/` **et**
     `scripts/` les motifs `embeds[0]`, `.setFooter(`, `.setImage(`, `ui.panel(`,
-    `ui.embed(`. Utiliser **`test/helpers/v2.js`** pour relire un payload V2.
+    `ui.embed(` ; **puis `grep -n "\.embeds"` sur le fichier migré** (une
+    réinjection `embeds: monPanel.embeds` vaut `undefined` en V2 → message vide).
+    Utiliser **`test/helpers/v2.js`** pour relire un payload V2.
 - Prod : https://hoxera.is-a.dev, bot « Optimus Prime » en ligne,
   **8 serveurs / 189 membres**, **0 erreur 24 h**, sauvegardes GitHub OK
   toutes les 10 min, CI verte, service Render « hoxera » non suspendu (Oregon).
@@ -676,9 +740,9 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   et les tokens, puis livré **v229** (traits ━ sur 10 messages + critère officiel)
   **v230** (`/poll` en champs d'embed + correctif d'un bug latent de
   dépassement de la limite Discord de 4 096 caractères), puis **v231**,
-  **v232**, **v233** et **v234** : migration des traits texte vers les
+  **v232**, **v233**, **v234** et **v235** : migration des traits texte vers les
   séparateurs **NATIFS pleine largeur** (Components V2) — API `ui.v2panel` +
-  **42 messages migrés**, `queue.js` corrigé, `xp.js` exclu et documenté,
+  **74 messages migrés**, `queue.js` corrigé, `xp.js` exclu et documenté,
   `test/helpers/v2.js` créé.
 - 31 commandes slash globales (5 « premade » à sous-commandes + 25 « extra » +
   `/event`) + ~36 commandes de modules (kick, ban, ping, meme, daily, rank,

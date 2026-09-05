@@ -17,6 +17,8 @@ process.env.NODE_ENV = 'test';
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+// v235 — extra.js est passé en Components V2 : lecteur partagé.
+const v2 = require('./helpers/v2');
 process.env.BOTDEV_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'hoxera-v80-'));
 
 let failures = 0;
@@ -60,7 +62,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const aid = store.scheduled.add(BOT, G, { channel_id: 'C1', hour: 7, minute: 0, days: [1, 2, 3, 4, 5, 6, 7], text: 'Bonjour !' });
   extra.sweepScheduled(BOT, entry, new Date('2026-08-20T05:00:00Z')); // 7h Paris
   await sleep(60);
-  check('annonce : envoyée à 7h PARIS (05:00 UTC)', sent.length === 1 && sent[0].content === 'Bonjour !');
+  // v235 — l'annonce programmée est en Components V2 : le texte programmé ne
+  // peut plus être dans le `content` du message (interdit), il devient un
+  // TextDisplay en tête de conteneur. L'INTENTION (le bon texte, à la bonne
+  // heure) est inchangée.
+  check('annonce : envoyée à 7h PARIS (05:00 UTC)', sent.length === 1 && v2.isV2(sent[0]) && v2.texts(sent[0]).includes('Bonjour !'));
+  check('annonce : plus de `content` au niveau du message (interdit en V2)', sent[0].content === undefined);
   check('annonce : last_sent = date locale', store.scheduled.get(aid).last_sent === '2026-08-20');
   check('annonce : mentions activées par défaut', Array.isArray(sent[0].allowedMentions.parse) && sent[0].allowedMentions.parse.includes('everyone'));
 
@@ -143,11 +150,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   store.birthdays.set(BOT, G, 'u2', 21, 8);
 
   await extra.sweepBirthdays(BOT, bdayEntry, new Date('2026-08-20T05:00:00Z')); // 7h Paris le 20 août
-  check('anniversaire : u1 fêté le 20 août (heure Paris)', bdayMsgs.length === 1 && bdayMsgs[0].content.includes('<@u1>'));
+  check('anniversaire : u1 fêté le 20 août (heure Paris)', bdayMsgs.length === 1 && v2.texts(bdayMsgs[0]).some((t) => t.includes('<@u1>')));
 
   store.settings.set('bday_done_1', ''); // simule un nouveau jour
   await extra.sweepBirthdays(BOT, bdayEntry, new Date('2026-08-20T22:30:00Z')); // 0h30 Paris le 21 août
-  check('anniversaire : à 0h30 Paris le 21, seul u2 est fêté', bdayMsgs.length === 2 && bdayMsgs[1].content.includes('<@u2>') && !bdayMsgs[1].content.includes('<@u1>'));
+  check('anniversaire : à 0h30 Paris le 21, seul u2 est fêté', bdayMsgs.length === 2 && v2.json(bdayMsgs[1]).includes('<@u2>') && !v2.json(bdayMsgs[1]).includes('<@u1>'));
 
   console.log(failures ? `\n❌ ${failures} échec(s)` : '\n🎉 Tous les tests v80 passent');
   process.exit(failures ? 1 : 0);

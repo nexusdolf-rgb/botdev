@@ -64,7 +64,9 @@ check('sectionize : troncature sans demi-trait final', !/━{1,19}$/.test(ui.sec
 // ------------------------------------------------------------
 console.log('\n2) Les 10 messages cibles passent par ui.sectionize');
 const TARGETS = [
-  { f: 'server/discord/extra.js',           needle: 'content: ui.sectionize(`📝 **Candidatures**',              label: '/apply view — récapitulatif des candidatures' },
+  // v235 — /apply view est passé en Components V2 : le `content: ui.sectionize(…)`
+  // est devenu la `description` du conteneur (séparateur NATIF pleine largeur).
+  { f: 'server/discord/extra.js',           needle: 'description: `📝 **Candidatures**',                        label: '/apply view — récapitulatif des candidatures (v235 : V2)' },
   { f: 'server/discord/panelCommands.js',   needle: 'content: ui.sectionize(`✅ Type «',                        label: '/ticket types — accusés de réception (add + maj)' },
   { f: 'server/discord/panels.js',          needle: ".setDescription(ui.sectionize('Les membres qui ouvrent",   label: 'assistant types — étape Questionnaire' },
   // v232 — /levels est passé en Components V2 (séparateurs natifs pleine
@@ -109,8 +111,19 @@ check('le quiz n’est plus marqué comme exclusion', !/le quiz est un JEU INTER
 
 // ------------------------------------------------------------
 console.log('\n4) Rendu réel : nombre de traits par message');
-const applyView = ui.sectionize('📝 **Candidatures**\nSalon : <#C1>\nQuestions (2/5) :\n1. Quel âge as-tu ?\n2. Pourquoi nous ?\n\nEnvoie le panneau avec `/apply panel`', 2000);
-check('/apply view : 1 trait (récap → instruction finale)', count(applyView) === 1);
+// v235 — /apply view est en Components V2 : le trait texte est remplacé par un
+// séparateur NATIF pleine largeur entre les 2 paragraphes (récap → instruction).
+const applyView = ui.v2panel({
+  description: '📝 **Candidatures**\nSalon : <#C1>\nQuestions (2/5) :\n1. Quel âge as-tu ?\n2. Pourquoi nous ?\n\nEnvoie le panneau avec `/apply panel`',
+  footer: false,
+  ephemeral: true,
+});
+const applyJson = JSON.stringify(applyView.components[0].toJSON());
+check('/apply view : 1 séparateur NATIF (récap → instruction finale), 0 trait texte',
+  applyView.components[0].toJSON().components.filter((k) => k.type === 14 && k.divider === true).length === 1
+  && !applyJson.includes(SEP));
+check('/apply view : `footer: false` respected → aucun pied ajouté',
+  !applyView.components[0].toJSON().components.some((k) => k.type === 10 && String(k.content || '').startsWith('-# ')));
 
 const typeAdded = ui.sectionize('✅ Type « 🎫 Support » ajouté !\nTypes actuels : Support\n\n📨 Re-envoie le panneau avec `/ticket panel` pour afficher le menu de sélection.', 2000);
 check('/ticket types add : 1 trait', count(typeAdded) === 1);
@@ -213,9 +226,9 @@ const touched = ['server/discord/extra.js', 'server/discord/panelCommands.js', '
   'public/index.html', 'public/sw.js'];
 check('aucun token en dur dans les fichiers modifiés',
   !touched.some((f) => /(ghp_|github_pat_|xox[baprs]-)[A-Za-z0-9_]{15,}/.test(src(f))));
-check('index.html : 7 références ?v=234', (src('public/index.html').match(/\?v=234/g) || []).length === 7);
+check('index.html : 7 références ?v=235', (src('public/index.html').match(/\?v=235/g) || []).length === 7);
 check('index.html : plus aucune référence ?v=228', !src('public/index.html').includes('?v=228'));
-check('sw.js : cache botdev-v234', src('public/sw.js').includes("const CACHE = 'botdev-v234';"));
+check('sw.js : cache botdev-v235', src('public/sw.js').includes("const CACHE = 'botdev-v235';"));
 
 console.log(failures === 0
   ? '\n✅ V229 — Traits ━ étendus aux 10 messages multi-blocs (dont le quiz), exclusions verrouillées, garde-fous v220 intacts.'
