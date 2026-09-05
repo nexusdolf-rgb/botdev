@@ -131,6 +131,14 @@ check('mono-section 4096 max non touchée', ui.embed({ description: 'x'.repeat(4
   check('tickets personnalisés (runtime) : séparateurs natifs présents', nativeSeps >= 3);
   check('tickets personnalisés (runtime) : aucun texte ne contient de ━',
     !advComps.some((x) => x && typeof x.content === 'string' && x.content.includes('━')));
+  // Garde-fou global : AUCUN panneau natif V2 (Container/TextDisplay) du bot
+  // ne doit insérer le trait texte ━ (qui ne va pas jusqu'au fond) — les
+  // séparations y sont toujours des séparateurs NATIFS pleine largeur.
+  const v2Files = fs.readdirSync(path.join(__dirname, '..', 'server', 'discord'))
+    .filter((f) => f.endsWith('.js'))
+    .filter((f) => /TextDisplayBuilder|ContainerBuilder/.test(src(f)));
+  check('garde-fou V2 : aucun ━ texte dans les panneaux natifs',
+    v2Files.every((f) => !/━{2,}/.test(src(f).replace(/^\/\/.*$/gm, ''))));
 
   console.log(failures ? `\n❌ ${failures} échec(s)` : '\n🎉 Tous les tests v220 passent');
   process.exit(failures ? 1 : 0);
