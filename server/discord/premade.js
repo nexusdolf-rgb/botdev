@@ -59,7 +59,10 @@ const CMD_DEFS = {
   unban: { label: 'unban', desc: 'Débannit un utilisateur', perms: [PermissionsBitField.Flags.BanMembers] },
   timeout: { label: 'timeout', desc: 'Met un membre en timeout', perms: [PermissionsBitField.Flags.ModerateMembers] },
   warn: { label: 'warn', desc: 'Avertit un membre', perms: [PermissionsBitField.Flags.ModerateMembers] },
-  warns: { label: 'warns', desc: 'Liste les avertissements d\'un membre' },
+  // 🔐 /warns liste les avertissements de N'IMPORTE QUEL membre : c'est une
+  // lecture réservée au staff (même permission que /warn). Sans cette
+  // restriction, n'importe qui pourrait consulter le casier de tout le monde.
+  warns: { label: 'warns', desc: 'Liste les avertissements d\'un membre (staff)', perms: [PermissionsBitField.Flags.ModerateMembers] },
   clear: { label: 'clear', desc: 'Supprime des messages', perms: [PermissionsBitField.Flags.ManageMessages] },
   daily: { label: 'daily', desc: 'Récupère tes coins quotidiens' },
   balance: { label: 'balance', desc: 'Affiche ton solde de coins' },
@@ -77,6 +80,82 @@ const CMD_DEFS = {
   temprole: { label: 'temprole', desc: 'Donner un rôle temporaire', perms: [PermissionsBitField.Flags.ManageRoles] },
   sanction: { label: 'sanction', desc: 'Appliquer une sanction prédéfinie', perms: [PermissionsBitField.Flags.ModerateMembers] },
 };
+
+// ============================================================
+// 🗂️ Visibilité des commandes (v226) — tri par public visé.
+//
+// Chaque commande appartient à UNE classe :
+//   - 'public' : visible par tous, aucune restriction à l'enregistrement ;
+//   - 'staff'  : modération — le membre doit avoir la permission Discord
+//                « métier » du module (KickMembers, BanMembers,
+//                ModerateMembers, ManageMessages, ManageRoles) ;
+//   - 'admin'  : configuration — propriétaire du serveur ou permission
+//                Administrateur (règle centrale `canConfigureGuild`).
+//
+// Cette classification alimente à la fois l'enregistrement Discord
+// (`default_member_permissions`) et l'affichage du centre d'aide /help,
+// pour que les commandes staff restent invisibles aux non-staff partout.
+// ============================================================
+
+// Commandes de configuration enregistrées hors CMD_DEFS (payloads dédiés)
+const ADMIN_COMMAND_NAMES = new Set([
+  'ticket', 'botprofile', 'modlogs', 'blacklist', 'roles',
+  'lockdown', 'voicetemp', 'apply', 'event',
+]);
+
+function defaultPermissionBitsFor(def) {
+  const perms = (def && def.perms) || [];
+  if (!perms.length) return null;
+  const flags = perms.map((p) => BigInt(p));
+  const admin = BigInt(PermissionsBitField.Flags.Administrator);
+  if (flags.includes(admin)) return admin; // commande de configuration → Administrateur
+  return flags.reduce((a, b) => a | b, 0n); // permission « métier » exacte
+}
+
+function commandKind(name) {
+  const def = CMD_DEFS[name];
+  if (def) {
+    if (def.perms && def.perms.length) {
+      return def.perms.some((p) => String(p) === String(PermissionsBitField.Flags.Administrator)) ? 'admin' : 'staff';
+    }
+    return 'public';
+  }
+  return ADMIN_COMMAND_NAMES.has(name) ? 'admin' : 'public';
+}
+
+// Un membre peut-il utiliser cette commande ? (miroir exact de la garde
+// d'exécution : même classe, mêmes permissions que hasPremadeCommandPermission.)
+function canViewCommandName(name, guild, member) {
+  // Sans contexte serveur/membre (aperçus internes, dashboard), on affiche
+  // tout : impossible de filtrer, mieux vaut montrer le catalogue complet.
+  if (!guild || !member) return true;
+  const kind = commandKind(name);
+  if (kind === 'public') return true;
+  if (kind === 'admin') return canConfigureGuild(guild, member, member && member.id);
+  return hasPremadeCommandPermission(CMD_DEFS[name], guild, member);
+}
+
+// Blocs du centre d'aide, dans l'ordre : tout le monde → staff → admins.
+const HELP_BLOCKS = [
+  // --- Tout le monde ---
+  { title: '🧰 Utilitaires', names: ['ping', 'avatar', 'userinfo', 'serverinfo', 'botinfo', 'help', 'invite'] },
+  { title: '🎉 Fun & divertissement', names: ['8ball', 'meme', 'coinflip', 'roll', 'reverse'] },
+  { title: '💍 Social & interactions', names: ['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch'] },
+  { title: '🕹️ Jeux dans le chat', names: ['rps', 'pendu', 'morpion', 'quiz'] },
+  { title: '🗓️ Organisation & pratique', names: ['birthday', 'remind', 'afk', 'poll', 'snipe', 'top', 'invites'] },
+  { title: '📈 Niveaux & XP', names: ['rank', 'levels', 'profile'] },
+  { title: '💰 Économie & boutique', names: ['daily', 'balance', 'leaderboard', 'work', 'gamble', 'rob', 'pay', 'shop', 'buy'] },
+  { title: '💡 Communauté', names: ['suggest'] },
+  // --- Modération (permissions métier) ---
+  { title: '🛡️ Modération & sanctions (staff)', kind: 'staff', names: ['kick', 'ban', 'unban', 'timeout', 'warn', 'warns', 'clear', 'sanction', 'temprole'] },
+  // --- Administration (propriétaire / Administrateur) ---
+  { title: '🎫 Tickets & menus de rôles', kind: 'admin', names: ['ticket', 'roles'] },
+  { title: '🤖 Personnalisation du serveur', kind: 'admin', names: ['botprofile', 'modlogs', 'blacklist'] },
+  // Aide historique : « 🎮 Événements & tournois (admins) » — le bloc actuel
+  // regroupe aussi la sécurité (lockdown) et les vocaux temporaires.
+  { title: '🚨 Sécurité & événements', kind: 'admin', names: ['lockdown', 'voicetemp', 'apply', 'event'] },
+  { title: '⚙️ Configuration avancée', kind: 'admin', names: ['giveaway', 'suggestions', 'lang', 'say'] },
+];
 
 function enabledModules(botId) {
   const m = store.modules.all(botId);
@@ -168,13 +247,16 @@ function buildSlashPayloads(botId) {
       options.push({ name: 'salon', description: 'Salon des suggestions', type: ApplicationCommandOptionType.Channel, required: false });
     }
     const payload = { name, description: def.desc, options };
-    // Commandes de modération : visibles uniquement par les administrateurs
-    // (et par ceux qui ont la permission spécifique correspondante)
-    if (def.perms && def.perms.length) {
-      let bits = BigInt(PermissionsBitField.Flags.Administrator);
-      for (const p of def.perms) bits |= BigInt(p);
-      payload.default_member_permissions = bits.toString();
-    }
+    // Commandes réservées : visibles uniquement par les membres autorisés.
+    // ⚠️ Discord évalue `default_member_permissions` sur le bitfield COMBINÉ
+    // du membre : exiger « Administrateur + KickMembers » masquerait /kick à
+    // un modérateur qui a KickMembers mais pas Administrateur (pourtant
+    // autorisé par la garde d'exécution). On enregistre donc la permission
+    // « métier » exacte — les Administrateurs et le propriétaire passent de
+    // toute façon côté Discord. Les commandes de configuration (Administrateur
+    // dans leurs perms) restent en '8'.
+    const bits = defaultPermissionBitsFor(def);
+    if (bits !== null) payload.default_member_permissions = bits.toString();
     payloads.push(payload);
   }
 
@@ -553,7 +635,7 @@ async function execute(botId, entry, cmd, src) {
       let requested = null;
       if (isInt) requested = src.interaction.options.getString('commande') || null;
       else requested = String(src.args || '').trim().split(/\s+/)[0] || null;
-      const embed = buildHelpEmbed(botId, record, client, guild, requested);
+      const embed = buildHelpEmbed(botId, record, client, guild, requested, member);
       await replyEmbed(embed);
       break;
     }
@@ -1217,7 +1299,7 @@ function helpDescription() {
   return d;
 }
 
-function buildHelpEmbed(botId, record, client, guild, requested) {
+function buildHelpEmbed(botId, record, client, guild, requested, member) {
   const enabled = enabledCommandNames(botId);
   const { HELP_EXTRA } = require('./extra');
   const { HELP_EVENTS } = require('./guildEvents');
@@ -1229,6 +1311,13 @@ function buildHelpEmbed(botId, record, client, guild, requested) {
     const detail = DETAILS[key];
     const available = ['ticket', 'roles', 'botprofile', 'modlogs', 'blacklist'].includes(key) || enabled.includes(key) || !!HELP_EXTRA[key] || !!HELP_EVENTS[key];
     if (detail && available) {
+      // 🔒 Le détail d'une commande staff n'est pas divulgué aux non-staff.
+      if (guild && member && !canViewCommandName(key, guild, member)) {
+        return new EmbedBuilder()
+          .setColor('#ED4245')
+          .setTitle('🔒 Commande réservée au staff')
+          .setDescription(`« ${requested} » est réservée au **staff** de ce serveur (modération, administration ou configuration).\nSi tu penses que tu devrais y avoir accès, demande à un administrateur de t'accorder le rôle ou la permission correspondante.`);
+      }
       const embed = new EmbedBuilder()
         .setColor('#e07a5f')
         .setTitle(`${detail[0]} · ${key}`)
@@ -1244,100 +1333,33 @@ function buildHelpEmbed(botId, record, client, guild, requested) {
       .setDescription(`Je ne connais pas la commande « ${requested} ».\nTape \`/help\` pour voir la liste complète.`);
   }
 
-  // --- Aide générale complète ---
-  const embed = new EmbedBuilder()
-    .setColor('#e07a5f')
-    .setTitle(`📚 Centre d'aide — ${client.user.username}`)
-    .setDescription(helpDescription())
-    .setThumbnail(client.user.displayAvatarURL({ dynamic: true }));
+  // --- Aide générale complète, organisée par public visé ---
+  // Un membre ne voit que les blocs (et commandes) auxquels il a accès :
+  // les commandes staff & administration sont invisibles pour les autres.
+  const isFiltered = !!(guild && member);
+  const fields = [];
 
-  embed.addFields({
-    name: '🎫 Système de tickets — configuration',
-    value: [
-      '`/ticket setup` — **Assistant avec menus de sélection** : nom → catégorie → salon → rôle staff (rien à écrire)',
-      '`/ticket types setup` — **Assistant des types** : renommer, emoji, catégorie, **plusieurs rôles staff**, suppression',
-      '`/ticket panel` — Envoyer le panneau · `/ticket config` — Voir la configuration',
-      '`/ticket close` — Verrouiller · `/ticket delete` — Supprimer (transcription en MP) · `/ticket add|remove @membre`',
-      '*🔒 Configuration réservée au propriétaire du serveur ou aux membres ayant la permission Administrateur · gestion réservée aux rôles staff (plusieurs par type possibles)*',
-    ].join('\n'),
-  });
+  const fmtChips = (names) => {
+    const chips = names.map((n) => `\`/${n}\``);
+    const lines = [];
+    for (let i = 0; i < chips.length; i += 6) lines.push(chips.slice(i, i + 6).join(' · '));
+    return lines.join('\n');
+  };
 
-  embed.addFields({
-    name: '📋 Menus de rôles',
-    value: [
-      '`/roles list` — Voir les menus de ce serveur',
-      '`/roles send 1` — Envoyer le menu n°1 dans un salon',
-      '*Les menus se créent dans le dashboard Hoxera (onglet Rôles)*',
-    ].join('\n'),
-  });
-
-  if (enabled.includes('kick')) {
-    embed.addFields({
-      name: '🛡️ Modération (administrateurs)',
-      value: '`/kick @membre` · `/ban @membre` · `/unban ID` · `/timeout @membre 10` · `/warn @membre raison` · `/warns @membre` · `/clear 20`',
-    });
+  for (const block of HELP_BLOCKS) {
+    // 1) Noms réellement enregistrés : les modules éteints sont omis,
+    //    les commandes dédiées (tickets, jeux…) sont toujours actives.
+    const names = block.names.filter((name) => !CMD_DEFS[name] || enabled.includes(name));
+    // 2) Filtrage par la visibilité du membre qui consulte l'aide.
+    const visible = names.filter((name) => canViewCommandName(name, guild, member));
+    if (!visible.length) continue;
+    fields.push({ name: block.title, value: fmtChips(visible) });
   }
 
-  if (enabled.includes('ping')) {
-    embed.addFields({
-      name: '🔧 Utilitaires',
-      value: '`/ping` · `/avatar @membre` · `/userinfo` · `/serverinfo` · `/botinfo` · `/help`',
-    });
-  }
-
-  if (enabled.includes('8ball')) {
-    embed.addFields({
-      name: '🎉 Fun',
-      value: '`/8ball question` · `/meme` · `/coinflip` · `/roll 100` · `/say texte` · `/reverse texte`',
-    });
-  }
-
-  if (enabled.includes('daily')) {
-    embed.addFields({
-      name: '💰 Économie',
-      value: '`/daily` — 100 coins par jour · `/balance` — ton solde · `/leaderboard` — le classement',
-    });
-  }
-
-  if (enabled.includes('rank')) {
-    embed.addFields({
-      name: '📈 Niveaux (XP)',
-      value: '`/rank` — ton niveau · `/levels` — le classement\n*Gagne de l\'XP en discutant !*',
-    });
-  }
-
-  embed.addFields({
-    name: '🤖 Personnalisation du serveur (propriétaire / admins)',
-    value: '`/botprofile` — identité du bot sur ce serveur (nom, avatar, bannière, bio)\n`/modlogs` — salon des journaux · `/blacklist` — mots interdits',
-  });
-
-  embed.addFields({
-    name: '🎉 Communauté & animation',
-    value: '`/shop` — boutique · `/buy article` — acheter · `/pay @membre montant` — transférer des coins\n`/giveaway` — tirages automatiques · `/suggest` — suggestions · `/temprole` — rôles temporaires · `/sanction` — sanctions prédéfinies',
-  });
-
-  embed.addFields({
-    name: '🧩 Hoxera 2.0 — jeux, social & organisation',
-    value: [
-      '💍 `/marry @membre` · `/divorce` · `/couple` — mariages sur le serveur',
-      '🤗 `/hug` · `/kiss` · `/slap` · `/pat` · `/punch` — actions entre membres',
-      '🕹️ `/rps` · `/pendu` · `/morpion @membre` — jeux dans le chat',
-      '🎂 `/birthday set jour mois` — anniversaires (souhaités automatiquement)',
-      '⏰ `/remind 2h texte` · 🗳️ `/poll question choix1 | choix2` · 🕵️ `/snipe`',
-      '💰 `/work` · `/gamble montant` · `/rob @membre` — économie enrichie',
-      '🚨 `/lockdown` (admin) · 🔊 `/voicetemp` (admin) · 📝 `/apply` (admin)',
-      '*Détails : `/help nom_de_la_commande` (ex : `/help mariage` → `/help marry`)*',
-    ].join('\n'),
-  });
-
-  embed.addFields({
-    name: '🎮 Événements & tournois (admins)',
-    value: '`/event create titre=… quand=25/08 20:00` — créer (description, salon, rôle en option) · `/event list` · `/event delete`\n*Les membres s\'inscrivent avec le bouton « 🎮 Participer », rappels automatiques 24 h et 1 h avant. Gestion aussi dans le dashboard → Événements.*',
-  });
-
+  // Commandes personnalisées du serveur (toujours publiques, si activées)
   const custom = store.commands.all(botId).filter(c => c.enabled);
   if (custom.length) {
-    embed.addFields({
+    fields.push({
       name: '🧩 Commandes personnalisées',
       value: custom.map((c) => {
         const trig = c.trigger_type === 'slash' ? `/${c.name}` : c.trigger_type === 'keyword' ? `mot-clé « ${c.trigger_value} »` : `${record.prefix}${c.trigger_value || c.name}`;
@@ -1346,10 +1368,27 @@ function buildHelpEmbed(botId, record, client, guild, requested) {
     });
   }
 
+  const embed = new EmbedBuilder()
+    .setColor('#e07a5f')
+    .setTitle(`📚 Centre d'aide — ${client.user.username}`)
+    .setDescription(helpDescription())
+    .setThumbnail(client.user.displayAvatarURL({ dynamic: true }));
+
+  for (const f of fields) embed.addFields(f);
+
+  // Légende discrète quand l'aide a été filtrée pour un membre précis :
+  // elle n'apparaît que si des commandes de cette classe existent VRAIMENT
+  // sur ce serveur (mais restent invisibles pour le membre qui consulte).
+  const hiddenExists = (kindSel) => HELP_BLOCKS.some((b) => b.kind === kindSel && b.names.some((name) => (!CMD_DEFS[name] || enabled.includes(name)) && !canViewCommandName(name, guild, member)));
+  const legend = [];
+  if (isFiltered && hiddenExists('staff')) legend.push('🛡️ Les commandes de **modération** sont réservées au staff — elles ne sont pas affichées ici.');
+  if (isFiltered && hiddenExists('admin')) legend.push('⚙️ Les commandes d\'**administration** sont réservées au propriétaire du serveur et aux Administrateurs.');
+  if (legend.length) embed.addFields({ name: '🔒 Commandes invisibles pour toi', value: legend.join('\n') });
+
   embed.setFooter({
-    text: `Préfixe : ${record.prefix} · Toutes les commandes fonctionnent automatiquement sur chaque serveur où le bot est présent — aucun compte requis.`,
+    text: `Préfixe : ${record.prefix} · /help nom_de_la_commande pour le détail · Toutes les commandes fonctionnent automatiquement sur chaque serveur où le bot est présent — aucun compte requis.`,
   });
   return embed;
 }
 
-module.exports = { MODULES, CMD_DEFS, enabledModules, enabledCommandNames, buildSlashPayloads, handlePremadePrefix, handlePremadeSlash, buildHelpEmbed, fetchRandomMeme, fetchMemeJson, MEME_FR_SOURCES, MEME_API };
+module.exports = { MODULES, CMD_DEFS, ADMIN_COMMAND_NAMES, HELP_BLOCKS, defaultPermissionBitsFor, commandKind, canViewCommandName, enabledModules, enabledCommandNames, buildSlashPayloads, handlePremadePrefix, handlePremadeSlash, buildHelpEmbed, fetchRandomMeme, fetchMemeJson, MEME_FR_SOURCES, MEME_API };
