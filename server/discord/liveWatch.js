@@ -12,6 +12,7 @@
 // ============================================================
 const store = require('../db');
 const health = require('../health');
+const ui = require('./ui');
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36';
 const OFFLINE_CONFIRMATIONS = 2;
@@ -377,7 +378,7 @@ async function announce(botId, guild, channel, social, result, gs) {
     .setColor(p.color)
     .setAuthor({ name: `${result.name} est en live !`, iconURL: result.avatar || undefined, url })
     .setTitle(`${p.emoji} 🔴 LIVE sur ${p.label}`)
-    .setDescription(`**${result.name}** vient de lancer un live sur **${p.label}** !\n\n✨ Rejoins-le maintenant, il t'attend :`)
+    .setDescription(ui.sectionize(`**${result.name}** vient de lancer un live sur **${p.label}** !\n\n✨ Rejoins-le maintenant, il t'attend :`))
     .addFields(
       { name: `${p.emoji} Pseudo`, value: `[@${social.handle}](${url})`, inline: true },
       { name: '👤 Membre', value: social.user_id ? `<@${social.user_id}>` : '—', inline: true },

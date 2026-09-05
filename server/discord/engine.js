@@ -3,6 +3,7 @@
 // ============================================================
 const { EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ApplicationCommandOptionType } = require('discord.js');
 const store = require('../db');
+const ui = require('./ui');
 
 // ---------------------- Variables ----------------------
 function resolveVariables(template, ctx) {
@@ -111,9 +112,12 @@ async function runBlock(block, ctx) {
     }
 
     case 'send_embed': {
+      // La description d'un embed builder passe par la grammaire des
+      // sections (v220) : le contenu libre de l'utilisateur est structuré.
+      const embedBody = ui.sectionize(resolveVariables(p.description || '', ctx) || '');
       const embed = new EmbedBuilder()
         .setTitle(resolveVariables(p.title || '', ctx) || null)
-        .setDescription(resolveVariables(p.description || '', ctx) || null)
+        .setDescription(embedBody || null)
         .setColor(p.color || '#e07a5f');
       if (p.footer) embed.setFooter({ text: resolveVariables(p.footer, ctx) });
       if (p.image) embed.setImage(p.image.trim());

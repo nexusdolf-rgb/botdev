@@ -4,6 +4,7 @@
 // ============================================================
 const { EmbedBuilder } = require('discord.js');
 const store = require('../db');
+const ui = require('./ui');
 
 function logChannel(botId, guild) {
   const gs = store.guildSettings.get(botId, guild.id) || {};
@@ -52,7 +53,7 @@ async function log(botId, guild, { title, description = '', color = '#e07a5f', f
       .setTitle(title.slice(0, 256))
       .setFooter({ text: String(footer || 'Journal automatique · Hoxera').slice(0, 2048) })
       .setTimestamp();
-    if (description) embed.setDescription(String(description).slice(0, 1024));
+    if (description) embed.setDescription(ui.sectionize(String(description), 1024));
     for (const f of fields.slice(0, 8)) {
       embed.addFields({ name: String(f.name).slice(0, 256), value: String(f.value).slice(0, 1024), inline: !!f.inline });
     }

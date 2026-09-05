@@ -95,6 +95,19 @@ check('mono-section 4096 max non touchée', ui.embed({ description: 'x'.repeat(4
   check('tickets : règles toujours en champ (pas de trait dans le champ)',
     embT.data.fields.some((f) => f.value.includes('🔴➡️')) && !embT.data.fields.some((f) => f.value.includes(ui.SEPARATOR)));
 
+  console.log('\n4️⃣  Couverture des autres panneaux');
+  const src = (f) => fs.readFileSync(path.join(__dirname, '..', 'server', 'discord', f), 'utf8');
+  const countOf = (f, needle) => src(f).split(needle).length - 1;
+  // Bienvenue premium ET départ assorti (events.js) : 2 × sectionize(text, 4096).
+  check('bienvenue + départ premium : sectionize sur les deux', countOf('events.js', 'ui.sectionize(text, 4096)') === 2);
+  check('logs (logging.js) : description passée par sectionize', src('logging.js').includes('ui.sectionize(String(description), 1024)'));
+  check('embed builder (engine.js send_embed) : description structurée', src('engine.js').includes('const embedBody = ui.sectionize('));
+  check('annonce de live (liveWatch.js) : description structurée', src('liveWatch.js').includes('ui.sectionize(`**${result.name}**'));
+  const evSrc = src('events.js');
+  check('départ : panneau premium = message utilisateur structuré', evSrc.includes("s'en va…") && evSrc.includes('ui.sectionize(text, 4096)'));
+  check('automod : avertissements via ui.embed (couverture auto)',
+    src('automod.js').includes("const ui = require('./ui')") && src('automod.js').includes('ui.embed({'));
+
   console.log(failures ? `\n❌ ${failures} échec(s)` : '\n🎉 Tous les tests v220 passent');
   process.exit(failures ? 1 : 0);
 })().catch((e) => { console.error('❌ Erreur :', e); process.exit(1); });

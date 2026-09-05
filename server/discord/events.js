@@ -186,8 +186,11 @@ async function runLeaveEvent(botId, member, opts = {}) {
   if (!channel) return;
   const channelsMention = await channelMentions(member.guild, cfg.channels, resolveChannel);
   const text = autoMentionChannels(member.guild, render(member, botRecord, cfg.message, { channelsMention }));
-  const finalText = text.length > 4096 ? text.slice(0, 4096) : text;
-  const finalContent = text.length > 2000 ? text.slice(0, 2000) : text;
+      // Le panneau de départ suit la même grammaire que l'arrivée : les
+      // paragraphes du message (séparés par une ligne vide) deviennent des
+      // sections reliées par le long trait (v220).
+      const finalText = ui.sectionize(text, 4096);
+      const finalContent = text.length > 2000 ? text.slice(0, 2000) : text;
   if (!cfg.plain) {
     // 🏆 Panneau de départ assorti (premium par défaut) au panneau de bienvenue (membre partiel
     // possible : chaque info est optionnelle, rien ne casse).
