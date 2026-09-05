@@ -260,7 +260,10 @@ console.log('\n5️⃣  Couverture — tout panels.js est en V2');
   // v237 — +3 emplacements : le récapitulatif du journal des tickets, le
   // panneau de confirmation de la note, et le message du salon privé
   // (ticketWelcomePanel). 11 (v234) + 3 (v237) = 14.
-  check('14 emplacements passés en ui.v2panel( (11 en v234 + 3 en v237)', count('ui.v2panel(') === 14);
+  // v238 — +5 emplacements : les 4 panneaux du nouveau système « Ajouter un
+  // membre » (confirmation, introuvable, homonymes, refus de Discord) et la
+  // réponse « réservé au staff ». 14 + 5 = 19.
+  check('19 emplacements passés en ui.v2panel( (11 v234 + 3 v237 + 5 v238)', count('ui.v2panel(') === 19);
   check('plus aucune duplication « Panel.content = i18n.t(...) »', count('Panel.content = i18n.t') === 0);
   check('plus aucune référence à buildTicketPanelEmbed', count('buildTicketPanelEmbed') === 0);
   // v237 — il ne reste QU'UNE lecture de .embeds[0] dans le code exécuté :

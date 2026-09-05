@@ -201,6 +201,12 @@ async function dispatchPanels(botId, interaction) {
       return true;
     }
 
+    // v238 — Choix d'un membre dans le menu « plusieurs membres correspondent ».
+    if (interaction.isStringSelectMenu() && cid.startsWith(`bd-taddpick:${botId}`)) {
+      await submitAddMemberPick(botId, interaction);
+      return true;
+    }
+
     // ⚙️ v212 — Menu « Actions du staff » du salon privé (valeurs : actions)
     if (interaction.isStringSelectMenu() && cid === `bd-troom:${botId}`) {
       const action = interaction.values && interaction.values[0];
@@ -233,6 +239,9 @@ async function dispatchPanels(botId, interaction) {
       if (cid === `bd-tmenu:${botId}:hold`) { await handleTicketHold(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:claim`) { await handleTicketClaim(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:addmember`) { await handleTicketAddAsk(botId, interaction); return true; }
+      // v238 — « 🔁 Réessayer » du panneau « membre introuvable » : rouvre la
+      // fenêtre à remplir (une interaction de bouton a le droit d'ouvrir une modale).
+      if (cid.startsWith(`bd-taddretry:${botId}`)) { await handleTicketAddAsk(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:delete`) { await handleTicketDeleteAsk(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:delconfirm`) { await handleTicketDeleteConfirm(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:delcancel`) { await handleTicketDeleteCancel(interaction); return true; }
@@ -686,8 +695,11 @@ function ticketWelcomePanel(member, chosen, staffMention, reason, dmWarning = ''
   const desc = room.welcome
     ? resolveRoomVars(room.welcome)
     : i18n.t(lang, 'ticket_welcome_desc', { member: `${member}` });
-  const site = store.settings.get('public_url');
-  const footerSite = site || 'hoxera.is-a.dev';
+  // v238 — le lien du dashboard (`public_url`) et l'horodatage sont RETIRÉS du
+  // pied de page du salon privé, à la demande de l'utilisateur : c'est un espace
+  // de travail entre le membre et le staff, pas une vitrine. La signature
+  // « Hoxera · Ticket #N » suffit. (`public_url` reste utilisé ailleurs :
+  // bannière du panneau public, lien de transcription.)
   // v237 — le message du salon PRIVÉ passe en Components V2, comme le panneau
   // public : les paragraphes du message d'accueil ET chaque bloc (type, équipe,
   // à propos, réponses au questionnaire, raison, déroulement) sont séparés par
@@ -709,8 +721,10 @@ function ticketWelcomePanel(member, chosen, staffMention, reason, dmWarning = ''
     description: desc,
     fields,
     thumbnail: avatar,
-    footer: `Hoxera · Ticket${meta.number ? ` #${meta.number}` : ''} · ${footerSite}`,
-    timestamp: new Date(),
+    footer: `Hoxera · Ticket${meta.number ? ` #${meta.number}` : ''}`,
+    // ⚠️ ui.v2container ajoute l'heure PAR DÉFAUT (`options.timestamp !== false`) :
+    // il faut l'éteindre explicitement, sinon le pied reste « … · 05/09 22:11 ».
+    timestamp: false,
   }, extra.rows || []);
 }
 
@@ -1589,6 +1603,167 @@ async function handleTicketClaim(botId, interaction) {
 }
 
 // ➕ Ajouter un membre : le staff invite une autre personne dans le salon privé
+// ============================================================
+// ➕ Ajouter un membre au ticket (v238 — refonte « pro »)
+//
+// Avant : une fenêtre à remplir, une recherche limitée au pseudo EXACT, et deux
+// réponses en texte brut (« ✅ ajouté » / « ❌ introuvable »).
+// Après : la même fenêtre (choix de l'utilisateur), mais
+//   • une recherche tolérante : @mention → identifiant → pseudo d'affichage /
+//     surnom / pseudo / tag EXACT → début de pseudo → pseudo contenu ;
+//   • si plusieurs membres correspondent, un MENU DE CHOIX au lieu d'un échec ;
+//   • des réponses en panneaux Components V2 (succès / introuvable / ambigu),
+//     toutes visibles par le staff seul (éphémères, choix de l'utilisateur) ;
+//   • un bouton « 🔁 Réessayer » qui rouvre la fenêtre.
+// ============================================================
+
+// Tous les libellés sous lesquels un membre peut être cherché, en minuscules.
+function memberSearchLabels(member) {
+  const user = (member && member.user) || {};
+  const out = [];
+  const push = (v) => { const t = String(v == null ? '' : v).trim(); if (t) out.push(t.toLowerCase()); };
+  push(member && member.nickname);
+  if (typeof (member && member.displayName) === 'string') push(member.displayName);
+  push(user.globalName);
+  push(user.username);
+  push(user.tag);
+  return out;
+}
+
+// Liste des membres du serveur : fetch (jusqu'à 1000) puis repli sur le cache.
+// Ne lève jamais : un serveur injoignable doit produire « introuvable », pas un crash.
+async function listGuildMembers(guild) {
+  try {
+    const fetched = await guild.members.fetch({ limit: 1000 });
+    if (fetched && typeof fetched.values === 'function') return Array.from(fetched.values());
+  } catch {}
+  try { return Array.from(guild.members.cache.values()); } catch { return []; }
+}
+
+// Résout ce que le staff a tapé. Renvoie :
+//   { member }   → un seul candidat sûr, on peut l'ajouter directement ;
+//   { matches }  → plusieurs candidats, il faut les départager ;
+//   { }          → rien trouvé.
+async function resolveTicketMember(guild, rawQuery) {
+  const q = String(rawQuery || '').trim();
+  if (!q || !guild) return {};
+
+  // 1) @mention : <@123> ou <@!123> (ce que Discord colle quand on tape @)
+  const mention = q.match(/^<@!?(\d{15,21})>$/);
+  if (mention) {
+    const m = await guild.members.fetch(mention[1]).catch(() => null);
+    if (m) return { member: m };
+  }
+  // 2) Identifiant brut — toléré même entouré de texte (« id 123456… »)
+  const idMatch = q.match(/(\d{15,21})/);
+  if (idMatch) {
+    const m = await guild.members.fetch(idMatch[1]).catch(() => null);
+    if (m) return { member: m };
+  }
+
+  // 3) + 4) Recherche textuelle, du plus strict au plus large. À chaque niveau,
+  // un seul résultat → on le prend ; plusieurs → on les propose au staff.
+  const list = await listGuildMembers(guild);
+  const needle = q.toLowerCase();
+  const levels = [
+    (labels) => labels.includes(needle),
+    (labels) => labels.some((l) => l.startsWith(needle)),
+    (labels) => labels.some((l) => l.includes(needle)),
+  ];
+  for (const test of levels) {
+    const hits = list.filter((m) => {
+      if (!m || m.id === undefined) return false;
+      try { return test(memberSearchLabels(m)); } catch { return false; }
+    });
+    if (hits.length === 1) return { member: hits[0] };
+    if (hits.length > 1) return { matches: hits.slice(0, 25) };   // plafond Discord : 25 options
+  }
+  return {};
+}
+
+// Libellé lisible d'un membre pour les panneaux et le menu de choix.
+function memberLabel(member) {
+  const user = (member && member.user) || {};
+  const name = member && typeof member.displayName === 'string' && member.displayName
+    ? member.displayName
+    : (member && member.nickname) || user.globalName || user.username || 'Membre';
+  return String(name);
+}
+
+async function grantTicketAccess(channel, member) {
+  if (!channel || !member) return false;
+  const ok = await channel.permissionOverwrites
+    .edit(member.id, { ViewChannel: true, SendMessages: true, ReadMessageHistory: true })
+    .then(() => true).catch(() => false);
+  return ok;
+}
+
+// Panneau de confirmation (éphémère : seul le staff qui agit le voit).
+function addMemberOkPanel(lang, guild, member, staffId) {
+  const user = (member && member.user) || {};
+  const tag = user.tag || (user.username ? `@${user.username}` : member.id);
+  return ui.v2panel({
+    variant: 'success',
+    title: i18n.t(lang, 'ticket_add_ok_title'),
+    description: i18n.t(lang, 'ticket_add_ok_desc', { name: memberLabel(member) }),
+    fields: [
+      { name: i18n.t(lang, 'ticket_add_account'), value: `<@${member.id}>\n\`${String(tag).slice(0, 90)}\``, inline: true },
+      { name: i18n.t(lang, 'ticket_add_id'), value: `\`${member.id}\``, inline: true },
+      { name: i18n.t(lang, 'ticket_add_by'), value: `<@${staffId}>`, inline: true },
+      { name: i18n.t(lang, 'ticket_add_access'), value: i18n.t(lang, 'ticket_add_access_value') },
+    ],
+    thumbnail: user.displayAvatarURL ? (user.displayAvatarURL({ size: 128 }) || '') : '',
+    footer: `Hoxera · ${String(guild && guild.name || '').slice(0, 120)}`,
+    ephemeral: true,
+  });
+}
+
+// Panneau « introuvable » : il explique ce qui est accepté au lieu de juste rater.
+function addMemberErrPanel(botId, lang, guild, query) {
+  return ui.v2panel({
+    variant: 'danger',
+    title: i18n.t(lang, 'ticket_add_err_title'),
+    description: i18n.t(lang, 'ticket_add_err_desc', {
+      server: String(guild && guild.name || 'ce serveur').slice(0, 120),
+      query: String(query || '').slice(0, 120),
+    }),
+    fields: [
+      { name: i18n.t(lang, 'ticket_add_accepted'), value: i18n.t(lang, 'ticket_add_accepted_value') },
+      { name: i18n.t(lang, 'ticket_add_tip'), value: i18n.t(lang, 'ticket_add_tip_value') },
+    ],
+    footer: false,
+    ephemeral: true,
+  }, [new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`bd-taddretry:${botId}`).setLabel(i18n.t(lang, 'ticket_add_retry')).setStyle(ButtonStyle.Primary)
+  )]);
+}
+
+// Panneau « plusieurs membres correspondent » + son menu de choix.
+function addMemberAmbPanel(botId, lang, guild, query, matches) {
+  const select = new StringSelectMenuBuilder()
+    .setCustomId(`bd-taddpick:${botId}`)
+    .setPlaceholder(String(query || '').slice(0, 90) || 'Choisis le membre à ajouter…')
+    .setMinValues(1).setMaxValues(1);
+  matches.forEach((m) => {
+    const user = m.user || {};
+    select.addOptions(new StringSelectMenuOptionBuilder()
+      .setLabel(memberLabel(m).slice(0, 95))
+      .setDescription(String(user.tag || (user.username ? '@' + user.username : '')).slice(0, 90))
+      .setValue(String(m.id)));
+  });
+  return ui.v2panel({
+    variant: 'info',
+    title: i18n.t(lang, 'ticket_add_amb_title'),
+    description: i18n.t(lang, 'ticket_add_amb_desc', {
+      query: String(query || '').slice(0, 120),
+      count: matches.length,
+      server: String(guild && guild.name || 'ce serveur').slice(0, 120),
+    }),
+    footer: false,
+    ephemeral: true,
+  }, [new ActionRowBuilder().addComponents(select)]);
+}
+
 async function handleTicketAddAsk(botId, interaction) {
   if (!isStaff(botId, interaction)) return staffDeny(interaction);
   pendingAdds.set(interaction.user.id, { botId, ts: Date.now() });
@@ -1601,6 +1776,8 @@ async function handleTicketAddAsk(botId, interaction) {
         .setCustomId('value')
         .setLabel(i18n.t(lang, 'ticket_add_modal_label'))
         .setPlaceholder(i18n.t(lang, 'ticket_add_modal_ph'))
+        // v238 — un exemple concret sous le champ : le staff sait immédiatement
+        // ce qui est accepté, au lieu de deviner puis de se faire recaler.
         .setStyle(TextInputStyle.Short)
         .setRequired(true)
     )));
@@ -1610,26 +1787,64 @@ async function submitAddMember(botId, interaction) {
   const pending = pendingAdds.get(interaction.user.id);
   pendingAdds.delete(interaction.user.id);
   if (!pending || pending.botId !== botId || Date.now() - (pending.ts || 0) > WIZARD_TTL) {
-    return interaction.reply({ content: '⏰ L\'ajout a expiré, réessaie.', ephemeral: true });
+    return interaction.reply({ content: i18n.t(i18n.langForGuild(interaction.guild ? interaction.guild.id : ''), 'ticket_add_expired'), ephemeral: true });
   }
   if (!isStaff(botId, interaction)) return staffDeny(interaction);
   const guild = interaction.guild;
-  const channel = interaction.channel;
   const lang = i18n.langForGuild(guild.id);
   const q = (interaction.fields.getTextInputValue('value') || '').trim();
-  let member = null;
-  const idMatch = q.match(/(\d{15,21})/);
-  if (idMatch) member = await guild.members.fetch(idMatch[1]).catch(() => null);
-  if (!member) {
-    member = guild.members.cache.find((m) => {
-      const name = (m.user && m.user.username ? m.user.username : '').toLowerCase();
-      const nick = (m.nickname || '').toLowerCase();
-      return name === q.toLowerCase() || nick === q.toLowerCase();
-    }) || null;
+
+  const found = await resolveTicketMember(guild, q);
+
+  // Plusieurs candidats → on ne devine JAMAIS : le staff tranche.
+  if (!found.member && found.matches && found.matches.length) {
+    return interaction.reply(addMemberAmbPanel(botId, lang, guild, q, found.matches));
   }
+  if (!found.member) {
+    return interaction.reply(addMemberErrPanel(botId, lang, guild, q));
+  }
+
+  const granted = await grantTicketAccess(interaction.channel, found.member);
+  if (!granted) {
+    // Le membre est trouvé mais Discord refuse l'accès (rôle hiérarchiquement
+    // supérieur, salon non modifiable…) : on le dit au lieu de faire croire que
+    // ça a marché.
+    return interaction.reply(ui.v2panel({
+      variant: 'danger',
+      title: i18n.t(lang, 'ticket_add_err_title'),
+      description: `**${memberLabel(found.member)}** a bien été trouvé, mais Discord refuse de modifier les accès de ce salon (rôle du bot trop bas, ou salon non modifiable).`,
+      fields: [{ name: i18n.t(lang, 'ticket_add_tip'), value: 'Vérifie que le rôle du bot est **au-dessus** de celui du membre, et que la catégorie du ticket autorise la modification des permissions.' }],
+      footer: false,
+      ephemeral: true,
+    }));
+  }
+  return interaction.reply(addMemberOkPanel(lang, guild, found.member, interaction.user.id));
+}
+
+// Choix dans le menu « plusieurs membres correspondent ».
+async function submitAddMemberPick(botId, interaction) {
+  if (!isStaff(botId, interaction)) return staffDeny(interaction);
+  const guild = interaction.guild;
+  const lang = i18n.langForGuild(guild.id);
+  const id = String((interaction.values && interaction.values[0]) || '');
+  if (!/^\d{15,21}$/.test(id)) {
+    return interaction.reply({ content: i18n.t(lang, 'ticket_add_err'), ephemeral: true });
+  }
+  let member = null;
+  try { member = await guild.members.fetch(id); } catch { member = guild.members.cache.get(id) || null; }
   if (!member) return interaction.reply({ content: i18n.t(lang, 'ticket_add_err'), ephemeral: true });
-  await channel.permissionOverwrites.edit(member.id, { ViewChannel: true, SendMessages: true, ReadMessageHistory: true }).catch(() => {});
-  await interaction.reply({ content: i18n.t(lang, 'ticket_add_ok', { member: `${member}` }) });
+
+  const granted = await grantTicketAccess(interaction.channel, member);
+  // Le message de choix est un conteneur Components V2 éphémère : on le
+  // REMPLACE par le panneau de confirmation (jamais de `content`, interdit en V2).
+  const payload = granted
+    ? addMemberOkPanel(lang, guild, member, interaction.user.id)
+    : ui.v2panel({
+      variant: 'danger', title: i18n.t(lang, 'ticket_add_err_title'),
+      description: `**${memberLabel(member)}** a bien été trouvé, mais Discord refuse de modifier les accès de ce salon.`,
+      footer: false, ephemeral: true,
+    });
+  try { await interaction.update(payload); } catch { await interaction.reply(payload).catch(() => {}); }
 }
 
 // 🔒 Fermeture par le CRÉATEUR (rangée dédiée, cliquable uniquement par lui)
@@ -2758,6 +2973,11 @@ module.exports = {
   // relecture de `msg.embeds[0]`) ; `handleRating` doit lui aussi rester en V2,
   // sinon le panneau d'évaluation reste affiché après le clic.
   __testSendTicketRecap: sendTicketRecap,
+  // v238 — exposé pour les tests : la résolution d'un membre depuis une
+  // @mention, un identifiant, un pseudo exact/partiel, et le départage.
+  __testResolveTicketMember: resolveTicketMember,
+  __testSubmitAddMember: submitAddMember,
+  __testSubmitAddMemberPick: submitAddMemberPick,
   __testUpdateRecapRating: updateRecapRating,
   __testHandleRating: handleRating,
 };

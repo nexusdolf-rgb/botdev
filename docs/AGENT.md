@@ -200,7 +200,66 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   'tag') ») : un message supprimé **partiel** (pas en cache) n'a pas d'auteur →
   `trackDeleted` (/snipe, `extra.js`) plantait ; idem `tasks.js` (`member.user.tag`).
   Gardes ajoutées, test `test/v228-test.js`, docs remises à jour (v194 → v228).
-- **v237 (ACTUELLE, 05/09)** : **3 corrections tickets signalées par
+- **v238 (ACTUELLE, 06/09)** : **2 demandes utilisateur sur les tickets.**
+  Tout est dans `panels.js` + `i18n.js`. Périmètre strict : **rien d'autre**
+  (« que ce système pas autre chose »).
+  **1️⃣ Pied de page du panneau du SALON PRIVÉ allégé.** Il affichait
+  `Hoxera · Ticket #N · hoxera.is-a.dev · 05/09 22:03`. Retirés le lien du
+  dashboard (`public_url`) et l'horodatage → il ne reste que
+  **`Hoxera · Ticket #N`**. Le lien continue d'être utilisé là où il sert :
+  la bannière du panneau public et le lien de transcription envoyé en MP.
+  🚨 **PIÈGE n°15 — `ui.v2container` ajoute l'heure PAR DÉFAUT**
+  (`options.timestamp !== false`, ui.js:327). Supprimer `timestamp: new Date()`
+  des options **ne suffit pas** : le pied de page affiche encore `· 05/09 22:11`.
+  Il faut passer explicitement **`timestamp: false`**.
+  **2️⃣ Système « ➕ Ajouter un membre » rendu professionnel.** La fenêtre à
+  remplir est **conservée** (choix utilisateur), tout le reste est refait.
+  • **`resolveTicketMember(guild, q)`** — recherche tolérante, dans l'ordre :
+    `@mention` (`<@!?id>`) → identifiant brut (même noyé dans du texte) →
+    correspondance EXACTE (surnom / `displayName` / `globalName` / `username` /
+    tag) → commence par → contient. Retourne `{ member }` (unique),
+    `{ matches: [...] }` (plusieurs, **max 25** = limite d'un menu Discord) ou
+    `{}` (rien). Insensible à la casse et aux espaces.
+  • **`listGuildMembers(guild)`** — `guild.members.fetch({ limit: 1000 })`, puis
+    repli sur `guild.members.cache.values()`. **Ne lève jamais** : un serveur
+    lent ou un échec de fetch ne doit pas faire planter l'interaction.
+  • **Plusieurs candidats → MENU DE CHOIX** (`addMemberAmbPanel` +
+    `StringSelectMenu` `bd-taddpick:{botId}`) au lieu d'un échec. Chaque option
+    montre le surnom, le pseudo et l'identifiant pour lever le doute.
+    `submitAddMemberPick` utilise **`interaction.update()`** : le menu est
+    **remplacé** par la confirmation, pas empilé dessous.
+  • **4 panneaux V2, tous éphémères** (le staff seul les voit, le salon du
+    membre reste propre) : `addMemberOkPanel` (succès, vignette avatar, 4 champs
+    compte / identifiant / ajouté par / accès), `addMemberErrPanel` (introuvable
+    + aide + bouton « 🔁 Réessayer » `bd-taddretry:{botId}` qui rouvre la
+    fenêtre), `addMemberAmbPanel` (homonymes), et un panneau danger **honnête**
+    quand Discord refuse l'accès.
+  • **`grantTicketAccess(channel, member)` → booléen.** Avant, le succès était
+    annoncé **même si Discord refusait** la permission. Maintenant l'échec est
+    attrapé et dit clairement.
+  • i18n : **15 nouvelles clés** fr + en (`ticket_add_ok_title/err_title/
+    amb_title/account/id/by/access/accepted/tip/retry/expired`) et placeholder
+    amélioré : **`@mention, identifiant ou pseudo`**.
+  • `ui.v2panel(` dans panels.js : **14 → 19** (compteur épinglé du test v234
+    mis à jour).
+  🚨 **PIÈGE n°16 — un Proxy ne survit pas à un spread.** `{ ...proxy }` ne
+  copie que les clés réellement présentes et **perd le piège `get`**. Les mocks
+  d'interaction doivent donc être construits D'ABORD puis enveloppés
+  (`withPredicates(obj, which)` dans `test/v238-test.js`), avec un repli
+  `() => false` pour tout `is*` inconnu — sinon `dispatchPanels` plante sur le
+  premier prédicat discord.js absent du mock.
+  🚨 **PIÈGE n°17 — `pendingAdds` est indexée par `user.id`.** Dans les tests,
+  un cas précédent qui a ré-armé la demande pour le même utilisateur fait que le
+  cas « expiré » trouve une demande valide. Il faut la **consommer** avant
+  (soumission à vide) ou utiliser un autre identifiant.
+  🧪 **Nouveau `test/v238-test.js`** (9 sections : pied de page, les 6 formes de
+  saisie, succès + permissions réellement posées, homonymes + menu, introuvable,
+  expiration / accès refusé / sécurité, garde-fous source, secrets, version
+  épinglée). Suite : **165 tests**.
+  🎨 **`scripts/gen-apercu-v238.js`** + **`scripts/lib/discord-preview.js`**
+  (rendu « façon Discord » d'un payload V2, désormais partagé) →
+  `/home/user/apercu-v238.html` : les 6 écrans réels du nouveau système.
+- **v237 (05/09)** : **3 corrections tickets signalées par
   l'utilisateur.** Tout est dans `panels.js`.
   **1️⃣ Le récapitulatif du journal des tickets n'avait AUCUN séparateur.**
   `sendTicketRecap` construisait un `new EmbedBuilder()` à la main : il n'est
@@ -828,9 +887,9 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 4. Vérifie les tokens (GitHub 200, Render 200, Discord `users/@me` avec curl)
 5. Fais-moi un point de situation clair, puis attends mes instructions
 
-## 📌 ÉTAT AU 05/09/2026 (dernière mise à jour de ce document)
+## 📌 ÉTAT AU 06/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v237** — voir la section v237 ci-dessus. **164 tests verts**.
+- Dernière version : **v238** — voir la section v238 ci-dessus. **165 tests verts**.
   ⚠️ **Chantier en cours (v231 →)** : migration des traits texte `━` vers les
   séparateurs **NATIFS pleine largeur** (Components V2).
   • **Migré** : `/quiz` (v231) · `premade.js` 13 messages dont `replyPanel` ×11
@@ -858,6 +917,14 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
     main, jamais vu par la migration), le **bug du MP d'évaluation qui restait
     affiché**, et le **menu staff du salon privé** (dehors → dedans).
     `panels.js` compte désormais **14 `ui.v2panel(`**.
+  • **v238 — 2 demandes utilisateur sur les tickets** (périmètre strict, rien
+    d'autre) : le **pied de page du salon privé** ne garde que
+    `Hoxera · Ticket #N` (plus de lien dashboard, plus d'heure — ⚠️ il faut
+    `timestamp: false`, piège n°15), et le système **« ➕ Ajouter un membre »**
+    est refait : recherche tolérante (@mention / identifiant / pseudo exact /
+    début / contenu), **menu de choix en cas d'homonymes**, 4 panneaux V2
+    éphémères, bouton « 🔁 Réessayer », et un échec de permission **enfin dit
+    honnêtement**. `panels.js` compte désormais **19 `ui.v2panel(`**.
   • **Reste (reporté, non bloquant)** : le **wizard « assistant types »** de
     `panels.js` (6 étapes éditées en place → à migrer d'un coup) et les **3
     `ui.sectionize(` volontaires** (`events.js` branche carte image, `panels.js`
