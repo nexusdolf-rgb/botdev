@@ -16,7 +16,8 @@ assert.ok(ev.includes("u.tag || u.username || 'un membre'"), 'repli de pseudo pr
 console.log('✅ membre partiel au départ : aucun crash possible');
 
 // 3. Panneau de bienvenue PREMIUM : tous les éléments pro
-for (const marker of ['setAuthor', 'Bienvenue sur ${member.guild.name}', '👥 Tu es le membre', '📅 Compte créé', '🎟️ Invité par', 'setThumbnail(avatarUrl)', 'setFooter', 'setTimestamp']) {
+for (const marker of ['setAuthor', 'Bienvenue sur ${member.guild.name}', '👥 Tu es le membre', '📅 Compte créé', '🎟️ Invité par', // v236 — la branche V2 porte la vignette via l'option `thumbnail:` du conteneur.
+  'thumbnail: !cfg.image && avatarUrl', 'setFooter', 'setTimestamp']) {
   assert.ok(ev.includes(marker), `bienvenue premium : ${marker}`);
 }
 console.log('✅ panneau bienvenue : avatar, n° membre, âge du compte, recruteur, pied de page, horodatage');

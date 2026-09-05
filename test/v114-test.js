@@ -1,5 +1,7 @@
 // Test v3.8 — sessions live fiables : reprise, anti-doublon et diagnostic
 const assert = require('assert');
+// v236 — lecteur de payload Components V2
+const v2 = require('./helpers/v2');
 const fs = require('fs');
 const dir = '/tmp/v38test-' + Date.now();
 fs.mkdirSync(dir, { recursive: true });
@@ -112,8 +114,13 @@ const live = require('../server/discord/liveWatch');
     live.CHECKERS.tiktok = originalChecker;
   }
   assert.strictEqual(sent.length, 2, 'room:a puis room:b doivent produire deux annonces');
-  assert.strictEqual(sent[0].embeds.length, 1);
+  // v236 — l'annonce de live est en Components V2 : plus d'embed, le conteneur
+  // reste le seul composant racine (et la ligne de boutons est DEDANS).
+  assert.ok(v2.isV2(sent[0]), 'l\'annonce de live doit être en Components V2');
   assert.strictEqual(sent[0].components.length, 1);
+  assert.ok(v2.title(sent[0]).includes('LIVE sur'), 'titre de l\'annonce : ' + JSON.stringify(v2.title(sent[0])));
+  assert.ok(v2.dividers(sent[0]) >= 2, 'séparateurs natifs entre les paragraphes');
+  assert.strictEqual(v2.rows(sent[0]).length, 1, 'la ligne de boutons est DANS le conteneur');
   const row = store.liveSocials.all(botId, guildId)[0];
   assert.strictEqual(row.last_status, 'live');
   assert.strictEqual(row.live_key, 'room:b');

@@ -14,6 +14,8 @@
 process.env.NODE_ENV = 'test';
 const fs = require('fs');
 const path = require('path');
+// v236 — lecteur de payload Components V2
+const v2 = require('./helpers/v2');
 const os = require('os');
 process.env.BOTDEV_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'hoxera-v84-'));
 
@@ -84,33 +86,33 @@ const check = (label, cond) => {
   const mLink = makeMsg('viens https://discord.gg/hack');
   const rLink = await runAutomod(BOT, mLink);
   check('link : supprimé + MP envoyé', rLink.acted === true && mLink.deleted === true && mLink._dms.length === 1);
-  check('link : le MP contient la raison « lien »', mLink._dms[0].content.includes('lien'));
+  check('link : le MP contient la raison « lien »', v2.allText(mLink._dms[0]).includes('lien'));
 
   resetSpam();
   const mCaps = makeMsg('CE MESSAGE EST EN MAJUSCULES');
   const rCaps = await runAutomod(BOT, mCaps);
-  check('caps : supprimé + MP avec « majuscules »', rCaps.acted === true && mCaps.deleted && mCaps._dms[0].content.includes('majuscules'));
+  check('caps : supprimé + MP avec « majuscules »', rCaps.acted === true && mCaps.deleted && v2.allText(mCaps._dms[0]).includes('majuscules'));
 
   resetSpam();
   const mMen = makeMsg('<@1> <@2> <@3> <@4> <@5> <@6>');
   const rMen = await runAutomod(BOT, mMen);
-  check('mentions : supprimé + MP avec « mentions »', rMen.acted === true && mMen.deleted && mMen._dms[0].content.includes('mentions'));
+  check('mentions : supprimé + MP avec « mentions »', rMen.acted === true && mMen.deleted && v2.allText(mMen._dms[0]).includes('mentions'));
 
   resetSpam();
   store.blacklist.add(BOT, G, 'salut');
   const mWord = makeMsg('salut');
   const rWord = await runAutomod(BOT, mWord);
-  check('mot interdit : supprimé + MP avec le mot', rWord.acted === true && mWord.deleted && mWord._dms[0].content.includes('salut'));
+  check('mot interdit : supprimé + MP avec le mot', rWord.acted === true && mWord.deleted && v2.allText(mWord._dms[0]).includes('salut'));
   store.blacklist.remove(BOT, G, 'salut');
 
-  check('MP : contient le nom du serveur', mLink._dms[0].content.includes('Serveur Test'));
+  check('MP : contient le nom du serveur', v2.allText(mLink._dms[0]).includes('Serveur Test'));
 
   // ---------- 2. Traduction EN ----------
   resetSpam();
   store.guildSettings.set(BOT, G, { lang: 'en' });
   const mEn = makeMsg('check https://discord.gg/en');
   const rEn = await runAutomod(BOT, mEn);
-  check('EN : le MP est en anglais (« Reason »)', rEn.acted === true && mEn._dms[0].content.includes('Reason') && mEn._dms[0].content.includes('link'));
+  check('EN : le MP est en anglais (« Reason »)', rEn.acted === true && v2.allText(mEn._dms[0]).includes('Reason') && v2.allText(mEn._dms[0]).includes('link'));
   store.guildSettings.set(BOT, G, { lang: 'fr' });
 
   // ---------- 3. Texte personnalisé ----------
@@ -118,7 +120,7 @@ const check = (label, cond) => {
   store.guildSettings.set(BOT, G, { am_warn_text: '⚠️ Serveur {server} : message supprimé ({reason}).' });
   const mCust = makeMsg('https://custom.test');
   const rCust = await runAutomod(BOT, mCust);
-  check('personnalisé : variables {reason} et {server} remplacées', rCust.acted === true && mCust._dms[0].content.startsWith('⚠️ Serveur Serveur Test : message supprimé (lien non autorisé).') && mCust._dms[0].content.includes('Avertissement'));
+  check('personnalisé : variables {reason} et {server} remplacées', rCust.acted === true && v2.allText(mCust._dms[0]).startsWith('⚠️ Serveur Serveur Test : message supprimé (lien non autorisé).') && v2.allText(mCust._dms[0]).includes('Avertissement'));
   store.guildSettings.set(BOT, G, { am_warn_text: '' });
 
   // ---------- 4. MP fermés → repli journal + historique ----------
@@ -143,7 +145,7 @@ const check = (label, cond) => {
   const mNoDel = makeMsg('https://nodelete.test', { deletable: false });
   const rNoDel = await runAutomod(BOT, mNoDel);
   check('non supprimable : toujours « acted »', rNoDel.acted === true && rNoDel.deleted === false);
-  check('non supprimable : MP explique le problème de permission', mNoDel._dms[0].content.includes('permission'));
+  check('non supprimable : MP explique le problème de permission', v2.allText(mNoDel._dms[0]).includes('permission'));
 
   // ---------- 6. Anti-spam complet ----------
   resetSpam();
@@ -158,7 +160,7 @@ const check = (label, cond) => {
   check('spam : déclenché au 3e message', rS.acted === true && rS.reason === 'spam');
   check('spam : les messages du spammeur sont supprimés', s1.deleted === true && s2.deleted === true && s3.deleted === true);
   check('spam : timeout appliqué', s3.timedOut === true);
-  check('spam : MP avec la durée réglée (10 min)', s3._dms[0].content.includes('10'));
+  check('spam : MP avec la durée réglée (10 min)', v2.allText(s3._dms[0]).includes('10'));
   store.guildSettings.set(BOT, G, { am_spam: 0, am_timeout_min: 5 });
 
   // ---------- 7. Mode test forcé ----------

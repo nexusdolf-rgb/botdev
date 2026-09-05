@@ -88,21 +88,25 @@ async function onReaction(botId, reaction) {
     const decision = starboardDecision(stars, gs.starboard_min, !!existing);
     if (decision === 'none') return;
 
-    const { EmbedBuilder } = require('discord.js');
     const ui = require('./ui');
     const author = msg.author || {};
-    const embed = new EmbedBuilder()
-      .setColor('#FEE75C')
-      .setAuthor({ name: author.tag || author.username || 'Membre', iconURL: author.displayAvatarURL ? author.displayAvatarURL({ size: 64 }) : undefined })
-      .setDescription(msg.content ? ui.sectionize(String(msg.content).slice(0, 2000)) : '*—*')
-      .addFields({ name: '\u200b', value: `[Aller au message](${msg.url})` })
-      .setFooter({ text: `⭐ ${stars} · #${msg.channel.name}` })
-      .setTimestamp(msg.createdAt || new Date());
     const img = msg.attachments && msg.attachments.first ? msg.attachments.first() : null;
-    if (img && img.contentType && img.contentType.startsWith('image/')) embed.setImage(img.url);
+    // v236 — starboard en Components V2. Le compteur d'étoiles ne peut plus être
+    // dans le `content` du message → TextDisplay en tête de conteneur. Le champ
+    // « espaceur invisible » U+200B ne rend plus d'intitulé vide (v234).
+    const starOptions = {
+      color: '#FEE75C',
+      author: { name: author.tag || author.username || 'Membre', iconURL: author.displayAvatarURL ? author.displayAvatarURL({ size: 64 }) : undefined },
+      content: `⭐ **${stars}**`,
+      description: msg.content ? String(msg.content).slice(0, 2000) : '*—*',
+      fields: [{ name: '\u200b', value: `[Aller au message](${msg.url})` }],
+      footer: `⭐ ${stars} · #${msg.channel.name}`,
+      timestamp: msg.createdAt || new Date(),
+    };
+    if (img && img.contentType && img.contentType.startsWith('image/')) starOptions.image = img.url;
 
     if (decision === 'post') {
-      const sent = await board.send({ content: `⭐ **${stars}**`, embeds: [embed] }).catch(() => null);
+      const sent = await board.send(ui.v2panel(starOptions)).catch(() => null);
       if (sent) store.starboard.set(botId, guild.id, msg.id, sent.id, stars);
       if (sent) store.activity.add(botId, guild.id, '⭐', `Message de ${author.tag || author.username || 'un membre'} épinglé au starboard (${stars} étoiles)`);
     } else {
@@ -113,7 +117,11 @@ async function onReaction(botId, reaction) {
         await starMsg.delete().catch(() => {});
         store.starboard.remove(botId, guild.id, msg.id);
       } else {
-        await starMsg.edit({ content: `⭐ **${stars}**`, embeds: [embed] }).catch(() => {});
+        // v236 — ce message a pu être envoyé en embed classique (avant cette
+        // version). Discord exige content/embeds/attachments explicitement vidés
+        // pour basculer un message existant en Components V2, et interdit d'en
+        // ressortir : les DEUX bouts (post + edit) sont donc migrés ensemble.
+        await starMsg.edit({ ...ui.v2panel(starOptions), content: null, embeds: [], attachments: [] }).catch(() => {});
         store.starboard.set(botId, guild.id, msg.id, existing.star_message_id, stars);
       }
     }

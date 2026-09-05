@@ -54,27 +54,32 @@ async function rolesFor(guild, refs) {
   return roles.filter((role, index, all) => all.findIndex((item) => item.id === role.id) === index);
 }
 
-function buildEmbed(config, guild) {
+// v236 — retourne un PAYLOAD Components V2 (et non plus un embed classique) :
+// les paragraphes de l'annonce rédigée dans le dashboard sont séparés par des
+// séparateurs NATIFS pleine largeur. `roleIds` devient un paramètre car le ping
+// des rôles ne peut plus être dans le `content` du message (interdit en V2) : il
+// devient un TextDisplay en tête de conteneur.
+function buildPanel(config, guild, roleIds = []) {
   const cfg = normalizeConfig(config);
   const title = cfg.title || cfg.name || '📣 Annonce';
-  const e = ui.embed({
+  return ui.v2panel({
     color: cfg.color,
     author: { name: `Hoxera · ${guild && guild.name ? String(guild.name).slice(0, 170) : 'Annonce'}` },
     title,
+    content: roleIds.length ? roleIds.map((id) => `<@&${id}>`).join(' ') : '',
     description: cfg.message || 'Écris ton annonce depuis le dashboard.',
     footer: cfg.footer || DEFAULT_FOOTER,
     image: cfg.image_url || '',
   });
-  return e;
 }
 
 function buildPayload(config, guild, roleIds = []) {
-  const payload = {
-    embeds: [buildEmbed(config, guild)],
+  return {
+    ...buildPanel(config, guild, roleIds),
+    // allowedMentions reste au niveau du message : les rôles pingés sont
+    // toujours notifiés même si la mention est rendue dans un TextDisplay.
     allowedMentions: { roles: roleIds.map(String), users: [], parse: [] },
   };
-  if (roleIds.length) payload.content = roleIds.map((id) => `<@&${id}>`).join(' ');
-  return payload;
 }
 
 async function sendAnnouncement(botId, guildId, client) {
@@ -102,4 +107,4 @@ async function sendAnnouncement(botId, guildId, client) {
   return { sent, channels: channels.map((channel) => channel.id), missingChannels, missingRoles };
 }
 
-module.exports = { normalizeConfig, buildEmbed, buildPayload, sendAnnouncement };
+module.exports = { normalizeConfig, buildPanel, buildPayload, sendAnnouncement };

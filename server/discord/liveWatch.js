@@ -365,7 +365,8 @@ async function sweep(botManager) {
 }
 
 async function announce(botId, guild, channel, social, result, gs) {
-  const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+  // v236 — EmbedBuilder retiré : l'annonce de live est en Components V2.
+  const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
   const permissionIssue = channelPermissionIssue(guild, channel);
   if (permissionIssue) throw new Error(permissionIssue);
   if (!channel || typeof channel.send !== 'function') throw new Error('salon non envoyable');
@@ -374,27 +375,32 @@ async function announce(botId, guild, channel, social, result, gs) {
   const url = p.url(social.handle);
   const ping = gs.live_ping === 'none' ? '' : gs.live_ping === 'here' ? '@here' : '@everyone';
 
-  const embed = new EmbedBuilder()
-    .setColor(p.color)
-    .setAuthor({ name: `${result.name} est en live !`, iconURL: result.avatar || undefined, url })
-    .setTitle(`${p.emoji} 🔴 LIVE sur ${p.label}`)
-    .setDescription(ui.sectionize(`**${result.name}** vient de lancer un live sur **${p.label}** !\n\n✨ Rejoins-le maintenant, il t'attend :`))
-    .addFields(
-      { name: `${p.emoji} Pseudo`, value: `[@${social.handle}](${url})`, inline: true },
-      { name: '👤 Membre', value: social.user_id ? `<@${social.user_id}>` : '—', inline: true },
-    )
-    .setFooter({ text: `${guild.name} · Annonces de live`, iconURL: guild.iconURL ? (guild.iconURL({ size: 64 }) || undefined) : undefined })
-    .setTimestamp();
-  if (result.avatar) embed.setThumbnail(result.avatar);
-
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(`▶️ Regarder le live ${p.label}`).setURL(url)
   );
 
+  // v236 — annonce de live en Components V2 : séparateurs NATIFS pleine largeur
+  // entre les 2 paragraphes. Trois adaptations imposées par le format :
+  //   • le ping (@here/@everyone) ne peut plus être dans le `content` du message
+  //     → TextDisplay en tête de conteneur. allowedMentions reste au niveau du
+  //     message et la mention notifie toujours ;
+  //   • l'`url` de l'author d'embed n'existe pas en V2 → le lien est déjà porté
+  //     par le bouton « ▶️ Regarder le live » ET par le champ Pseudo ;
+  //   • l'`iconURL` du pied d'embed n'existe pas en V2 (pied en texte discret).
   await channel.send({
-    content: ping || undefined,
-    embeds: [embed],
-    components: [row],
+    ...ui.v2panel({
+      color: p.color,
+      author: { name: `${result.name} est en live !` },
+      title: `${p.emoji} 🔴 LIVE sur ${p.label}`,
+      content: ping || '',
+      description: `**${result.name}** vient de lancer un live sur **${p.label}** !\n\n✨ Rejoins-le maintenant, il t'attend :`,
+      fields: [
+        { name: `${p.emoji} Pseudo`, value: `[@${social.handle}](${url})`, inline: true },
+        { name: '👤 Membre', value: social.user_id ? `<@${social.user_id}>` : '—', inline: true },
+      ],
+      thumbnail: result.avatar || '',
+      footer: `${guild.name} · Annonces de live`,
+    }, [row]),
     allowedMentions: { parse: ping ? ['everyone'] : [] },
   });
   store.activity.add(botId, guild.id, '🔴', `${result.name} (@${social.handle}) en live sur ${p.label} — annoncé dans #${channel.name}`);

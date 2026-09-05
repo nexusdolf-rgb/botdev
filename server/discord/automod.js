@@ -276,7 +276,9 @@ async function applyMemberBlacklist(botId, message, detection, options = {}) {
     const triggerText = triggerType === 'threshold' ? `${triggerCount}/${thresholdValue} sanctions identiques` : 'Blacklist immédiate après sanction';
     let thumbnail = '';
     try { if (typeof message.author.displayAvatarURL === 'function') thumbnail = message.author.displayAvatarURL({ extension: 'png', size: 128 }); } catch {}
-    const embed = ui.embed({
+    // v236 — options factorisées : le même panneau sert au salon et à sa
+    // version pingée. Plus de `ui.embed` (embed classique) dans ce fichier.
+    const blacklistOptions = {
       color,
       title,
       description: `Le membre <@${userId}> a été ajouté à la blacklist de **${String(message.guild.name || 'ce serveur').slice(0, 180)}** après une action Auto-Mod.`,
@@ -294,11 +296,13 @@ async function applyMemberBlacklist(botId, message, detection, options = {}) {
       ],
       footer,
       timestamp: new Date(),
-    });
+    };
     try {
+      // v236 — le ping ne peut plus être dans le `content` du message (interdit
+      // en Components V2) : il devient un TextDisplay en tête de conteneur.
+      // allowedMentions reste au niveau du message et notifie toujours.
       const sent = await panelChannel.send({
-        content: `<@${userId}>`,
-        embeds: [embed],
+        ...ui.v2panel({ ...blacklistOptions, content: `<@${userId}>` }),
         allowedMentions: { users: [userId] },
       });
       panelSent = true;
@@ -407,16 +411,17 @@ async function sendWarn(botId, message, gs, lang, text) {
   let dmOk = false;
   try {
     if (message.author && typeof message.author.send === 'function') {
-      await message.author.send({
+      // v236 — le détail de l'avertissement (`text`) ne peut plus être dans le
+      // `content` du message : il devient un TextDisplay en tête de conteneur,
+      // au-dessus du panneau (même position visuelle qu'avant).
+      await message.author.send(ui.v2panel({
         content: text,
-        embeds: [ui.embed({
-          variant: 'danger',
-          title: '🛡️ Avertissement Auto-Mod',
-          description: 'Ton message a été pris en compte par la protection du serveur. Les détails sont indiqués dans le message ci-dessus.',
-          fields: [{ name: '🧭 Conseil', value: 'Respecte les règles du serveur pour éviter une prochaine sanction.' }],
-          footer: 'Hoxera · Protection du serveur',
-        })],
-      });
+        variant: 'danger',
+        title: '🛡️ Avertissement Auto-Mod',
+        description: 'Ton message a été pris en compte par la protection du serveur. Les détails sont indiqués dans le message ci-dessus.',
+        fields: [{ name: '🧭 Conseil', value: 'Respecte les règles du serveur pour éviter une prochaine sanction.' }],
+        footer: 'Hoxera · Protection du serveur',
+      }));
       dmOk = true;
     }
   } catch { /* MP fermés */ }

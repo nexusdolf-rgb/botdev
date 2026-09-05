@@ -401,10 +401,16 @@ async function handleTicket(botId, sub, group, interaction, guild) {
         others.push({ label: nom.slice(0, 100), emoji: emoji.slice(0, 100), description: description.slice(0, 100), category: categorie.slice(0, 100), staff_roles: staffRoles });
       }
       store.tickets.set(botId, guild.id, { ...cfg, types: JSON.stringify(others) });
-      return interaction.reply({
-        content: ui.sectionize(`✅ Type « ${emoji || '🎫'} **${nom}** » mis à jour !${staffRoles.length ? `\n🛡️ Staff de ce type : ${staffRoles.join(', ')}` : ''}\n\n💡 Ajoute **plusieurs rôles staff** avec \`/ticket types setup\` → « ➕ Ajouter un rôle staff ».\n\nTypes actuels : ${others.map((t) => t.label).join(', ') || 'aucun'}\n\n📨 Re-envoie le panneau avec \`/ticket panel\` pour mettre à jour le menu déroulant.`, 2000),
-        ephemeral: true,
-      });
+      return interaction.reply(
+        // v236 — accusé de réception en Components V2 : les paragraphes sont
+        // séparés par des séparateurs NATIFS pleine largeur (avant : trait texte ━
+        // via ui.sectionize, qui s'arrêtait avant les bords arrondis).
+        // `footer: false` : ces messages courts n'avaient pas de pied.
+        ui.v2panel({
+          description: `✅ Type « ${emoji || '🎫'} **${nom}** » mis à jour !${staffRoles.length ? `\n🛡️ Staff de ce type : ${staffRoles.join(', ')}` : ''}\n\n💡 Ajoute **plusieurs rôles staff** avec \`/ticket types setup\` → « ➕ Ajouter un rôle staff ».\n\nTypes actuels : ${others.map((t) => t.label).join(', ') || 'aucun'}\n\n📨 Re-envoie le panneau avec \`/ticket panel\` pour mettre à jour le menu déroulant.`,
+          footer: false,
+          ephemeral: true,
+        }));
     }
     if (action === 'remove') {
       const nom = (interaction.options.getString('nom') || '').trim();
@@ -563,10 +569,16 @@ async function handleTicket(botId, sub, group, interaction, guild) {
       const types = parseTypes(cfg).filter((t) => t.label.toLowerCase() !== nom.toLowerCase());
       types.push({ label: nom.slice(0, 100), emoji: emoji.slice(0, 100), category: categorie.slice(0, 100) });
       store.tickets.set(botId, guild.id, { ...cfg, types: JSON.stringify(types) });
-      return interaction.reply({
-        content: ui.sectionize(`✅ Type « ${emoji || '🎫'} ${nom} » ajouté !\nTypes actuels : ${types.map((t) => t.label).join(', ') || 'aucun'}\n\n📨 Re-envoie le panneau avec \`/ticket panel\` pour afficher le menu de sélection.`, 2000),
-        ephemeral: true,
-      });
+      return interaction.reply(
+        // v236 — accusé de réception en Components V2 : les paragraphes sont
+        // séparés par des séparateurs NATIFS pleine largeur (avant : trait texte ━
+        // via ui.sectionize, qui s'arrêtait avant les bords arrondis).
+        // `footer: false` : ces messages courts n'avaient pas de pied.
+        ui.v2panel({
+          description: `✅ Type « ${emoji || '🎫'} ${nom} » ajouté !\nTypes actuels : ${types.map((t) => t.label).join(', ') || 'aucun'}\n\n📨 Re-envoie le panneau avec \`/ticket panel\` pour afficher le menu de sélection.`,
+          footer: false,
+          ephemeral: true,
+        }));
     }
     default:
       return interaction.reply({ content: '❓ Sous-commande inconnue.', ephemeral: true });

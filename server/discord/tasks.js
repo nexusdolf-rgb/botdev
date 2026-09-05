@@ -38,19 +38,20 @@ async function giveTempRole(botId, interaction, member, role, durationMs) {
       { name: '⏱ Durée', value: formatDuration(durationMs), inline: true },
     ],
   });
-  return interaction.reply({
-    ...ui.panel({
-      variant: 'success',
-      title: '🏷️ Rôle temporaire attribué',
-      description: `${member} reçoit le rôle **${role.name}**.`,
-      fields: [
-        { name: '⏱️ Durée', value: formatDuration(durationMs), inline: true },
-        { name: '🔄 Retrait', value: 'Automatique à la fin de la durée.', inline: true },
-      ],
-      footer: `Hoxera · ${interaction.guild.name} · Rôles temporaires`,
-    }),
+  // v236 — Components V2. ⚠️ `ephemeral: true` APRÈS le spread écrasait le
+  // champ `flags` et faisait perdre IsComponentsV2 : il est passé DANS les
+  // options, qui combinent les deux flags (même piège qu'en v233/v235).
+  return interaction.reply(ui.v2panel({
+    variant: 'success',
+    title: '🏷️ Rôle temporaire attribué',
+    description: `${member} reçoit le rôle **${role.name}**.`,
+    fields: [
+      { name: '⏱️ Durée', value: formatDuration(durationMs), inline: true },
+      { name: '🔄 Retrait', value: 'Automatique à la fin de la durée.', inline: true },
+    ],
+    footer: `Hoxera · ${interaction.guild.name} · Rôles temporaires`,
     ephemeral: true,
-  });
+  }));
 }
 
 // Supprime les avertissements publics arrivés à 24 h. La référence est

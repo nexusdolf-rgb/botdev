@@ -121,6 +121,9 @@ function thumbnailUrls(payload) {
     if (!json) return;
     if (Number(json.type) === TYPE.THUMBNAIL && json.media && json.media.url) out.push(String(json.media.url));
     for (const child of json.components || []) walk(child);
+    // v236 — quand l'en-tête porte une vignette, ui.v2panel l'imbrique dans une
+    // SECTION dont la vignette est l'`accessory` (et non un enfant `components`).
+    if (json.accessory) walk(json.accessory);
   };
   walk(container(payload));
   return out;
@@ -150,6 +153,24 @@ function controlByPrefix(payload, prefix) {
   return controls(payload).find((c) => String(c.custom_id || '').startsWith(prefix)) || null;
 }
 
+// Tout le texte visible d'un payload : `content` du message (format classique)
+// OU les TextDisplay du conteneur (format V2). Permet de conserver telles
+// quelles les assertions du type `reponse.content.includes('…')` après une
+// migration, en remplaçant seulement `reponse.content` par `v2.allText(reponse)`.
+function allText(payload) {
+  if (!payload) return '';
+  const parts = [];
+  if (typeof payload.content === 'string' && payload.content) parts.push(payload.content);
+  parts.push(...texts(payload));
+  return parts.join('\n');
+}
+
+// Couleur d'accent du conteneur (équivalent V2 de embed.color), en entier.
+function accentColor(payload) {
+  const c = container(payload);
+  return c ? c.accent_color : undefined;
+}
+
 // Est-ce bien un payload Components V2 (flag posé ET plus d'embeds) ?
 function isV2(payload) {
   return !!payload && (Number(payload.flags) & Number(IS_V2)) !== 0 && payload.embeds === undefined;
@@ -175,5 +196,5 @@ module.exports = {
   TYPE, IS_V2,
   plain, container, texts, title, author, footer,
   dividers, mediaUrls, thumbnailUrls, rows, controls, controlByPrefix,
-  isV2, json, componentCount,
+  isV2, json, componentCount, allText, accentColor,
 };

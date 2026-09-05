@@ -110,29 +110,57 @@ async function runJoinEvent(botId, member, opts = {}) {
           const ij = store.inviteJoins.whoInvited(botId, member.guild.id, member.id);
           if (ij && ij.inviter_id) invitedBy = `<@${ij.inviter_id}>`;
         } catch {}
-        const embed = new EmbedBuilder()
-          .setColor(cfg.color || '#57F287')
-          // 👤 Un seul avatar : porté par le visuel (carte, image ou thumbnail), pas en author.
-          .setAuthor({ name: `${user.tag || user.username || 'Nouveau membre'} vient d'arriver !` })
-          .setTitle(`👋 Bienvenue sur ${member.guild.name} !`)
-          .setDescription(finalText)
-          .addFields(
-            { name: '👥 Tu es le membre', value: `**n°${member.guild.memberCount || '?'}**`, inline: true },
-            ...(createdTs ? [{ name: '📅 Compte créé', value: `<t:${createdTs}:R>`, inline: true }] : []),
-            ...(invitedBy ? [{ name: '🎟️ Invité par', value: invitedBy, inline: true }] : []),
-          )
-          .setFooter({ text: member.guild.name, iconURL: member.guild.iconURL ? (member.guild.iconURL({ size: 64 }) || undefined) : undefined })
-          .setTimestamp();
+        // 👤 Un seul avatar : porté par le visuel (carte, image ou vignette),
+        // jamais en author. Les 3 compteurs sont partagés par les 2 rendus.
+        const welcomeFields = [
+          { name: '👥 Tu es le membre', value: `**n°${member.guild.memberCount || '?'}**`, inline: true },
+          ...(createdTs ? [{ name: '📅 Compte créé', value: `<t:${createdTs}:R>`, inline: true }] : []),
+          ...(invitedBy ? [{ name: '🎟️ Invité par', value: invitedBy, inline: true }] : []),
+        ];
+        // v236 — 🚨 La carte de bienvenue est une PIÈCE JOINTE envoyée par
+        // webhook (identity.sendAsProfile). Or **Components V2 + webhook +
+        // files = 400 BAD REQUEST** (documentation officielle Discord, ressource
+        // Webhook : « When the flag IS_COMPONENTS_V2 is set, the webhook message
+        // can only contain components. Providing content, embeds, files[n] or
+        // poll will fail »). C'est exactement le piège n°10 qui a fait exclure
+        // xp.js en v232.
+        // → Le panneau reste en embed classique QUAND la carte image est
+        //   activée, et passe en Components V2 SANS carte (réglage par défaut :
+        //   `card` vaut false). Ses paragraphes sont alors séparés par un
+        //   séparateur NATIF pleine largeur au lieu du trait texte ━.
+        let welcomePayload;
         if (files.length) {
-          // 🎴 La carte image contient déjà l'avatar + pseudo en grand : pas de thumbnail en plus.
-          embed.setImage('attachment://bienvenue.png'); // la carte remplit le panneau
-        } else if (cfg.image) {
-          // 🖼️ Image configurée = visuel principal (l'avatar n'est pas répété).
-          embed.setImage(String(cfg.image).trim());
-        } else if (avatarUrl) {
-          embed.setThumbnail(avatarUrl);
+          const embed = new EmbedBuilder()
+            .setColor(cfg.color || '#57F287')
+            .setAuthor({ name: `${user.tag || user.username || 'Nouveau membre'} vient d'arriver !` })
+            .setTitle(`👋 Bienvenue sur ${member.guild.name} !`)
+            .setDescription(finalText)
+            .addFields(...welcomeFields)
+            .setFooter({ text: member.guild.name, iconURL: member.guild.iconURL ? (member.guild.iconURL({ size: 64 }) || undefined) : undefined })
+            .setTimestamp()
+            // 🎴 La carte contient déjà l'avatar + le pseudo en grand : elle
+            // remplit le panneau, pas de vignette en plus.
+            .setImage('attachment://bienvenue.png');
+          welcomePayload = { embeds: [embed], files };
+        } else {
+          welcomePayload = ui.v2panel({
+            color: cfg.color || '#57F287',
+            author: { name: `${user.tag || user.username || 'Nouveau membre'} vient d'arriver !` },
+            title: `👋 Bienvenue sur ${member.guild.name} !`,
+            // `text` brut : ui.v2panel découpe lui-même les paragraphes et pose
+            // les séparateurs natifs (plus besoin de ui.sectionize).
+            description: text,
+            fields: welcomeFields,
+            // 🖼️ Image configurée = visuel principal (l'avatar n'est pas répété),
+            // sinon l'avatar en vignette. Les deux sont des URL HTTP, donc
+            // compatibles MediaGallery / Thumbnail (aucune pièce jointe).
+            image: cfg.image ? String(cfg.image).trim() : '',
+            thumbnail: !cfg.image && avatarUrl ? avatarUrl : '',
+            // L'iconURL du pied d'embed n'existe pas en V2 (pied en texte discret).
+            footer: member.guild.name,
+          });
         }
-        const ok = await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { embeds: [embed], files }).then(() => true).catch((e) => { trace('envoi panneau ÉCHOUÉ : ' + e.message); return false; });
+        const ok = await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, welcomePayload).then(() => true).catch((e) => { trace('envoi panneau ÉCHOUÉ : ' + e.message); return false; });
         trace(ok ? 'panneau premium envoyé ✅' : 'panneau premium NON envoyé ❌ (permissions ?)');
       } else {
         const ok = await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { content: finalContent, files }).then(() => true).catch((e) => { trace('envoi texte ÉCHOUÉ : ' + e.message); return false; });
@@ -186,10 +214,11 @@ async function runLeaveEvent(botId, member, opts = {}) {
   if (!channel) return;
   const channelsMention = await channelMentions(member.guild, cfg.channels, resolveChannel);
   const text = autoMentionChannels(member.guild, render(member, botRecord, cfg.message, { channelsMention }));
-      // Le panneau de départ suit la même grammaire que l'arrivée : les
-      // paragraphes du message (séparés par une ligne vide) deviennent des
-      // sections reliées par le long trait (v220).
-      const finalText = ui.sectionize(text, 4096);
+      // v236 — le panneau de départ est en Components V2 : ui.v2panel découpe
+      // lui-même les paragraphes et pose des séparateurs NATIFS pleine largeur.
+      // `finalText` (ui.sectionize) n'a donc plus d'usage ici et a été retiré.
+      // `finalContent` reste pour le mode « texte simple » (cfg.plain), qui
+      // n'applique aucun séparateur.
       const finalContent = text.length > 2000 ? text.slice(0, 2000) : text;
   if (!cfg.plain) {
     // 🏆 Panneau de départ assorti (premium par défaut) au panneau de bienvenue (membre partiel
@@ -197,24 +226,24 @@ async function runLeaveEvent(botId, member, opts = {}) {
     const user = member.user || {};
     const avatarUrl = user.displayAvatarURL ? user.displayAvatarURL({ size: 256 }) : '';
     const joinedTs = member.joinedTimestamp ? Math.floor(member.joinedTimestamp / 1000) : 0;
-    const embed = new EmbedBuilder()
-      .setColor(cfg.color || '#ED4245')
-      // 👤 Un seul avatar : porté par l'image ou la thumbnail, pas en author.
-      .setAuthor({ name: `${user.tag || user.username || 'Un membre'} s'en va…` })
-      .setDescription(finalText)
-      .addFields(
+    // v236 — panneau de départ en Components V2 : séparateurs NATIFS pleine
+    // largeur entre les paragraphes. Contrairement à la bienvenue, le départ
+    // n'envoie JAMAIS de pièce jointe (pas de carte image) → le webhook + V2 est
+    // toujours valable ici, aucun branchement nécessaire.
+    const ok = await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, ui.v2panel({
+      color: cfg.color || '#ED4245',
+      // 👤 Un seul avatar : porté par l'image ou la vignette, pas en author.
+      author: { name: `${user.tag || user.username || 'Un membre'} s'en va…` },
+      description: text,
+      fields: [
         { name: '👥 Membres restants', value: `**${member.guild.memberCount || '?'}**`, inline: true },
         ...(joinedTs ? [{ name: '🕐 Était membre depuis', value: `<t:${joinedTs}:R>`, inline: true }] : []),
-      )
-      .setFooter({ text: member.guild.name, iconURL: member.guild.iconURL ? (member.guild.iconURL({ size: 64 }) || undefined) : undefined })
-      .setTimestamp();
-    if (cfg.image) {
-      // 🖼️ L'image configurée est le visuel ; pas de thumbnail en double.
-      embed.setImage(String(cfg.image).trim());
-    } else if (avatarUrl) {
-      embed.setThumbnail(avatarUrl);
-    }
-    const ok = await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { embeds: [embed] }).then(() => true).catch((e) => { trace('envoi ÉCHOUÉ : ' + e.message); return false; });
+      ],
+      // 🖼️ L'image configurée est le visuel ; pas de vignette en double.
+      image: cfg.image ? String(cfg.image).trim() : '',
+      thumbnail: !cfg.image && avatarUrl ? avatarUrl : '',
+      footer: member.guild.name,
+    })).then(() => true).catch((e) => { trace('envoi ÉCHOUÉ : ' + e.message); return false; });
     trace(ok ? 'panneau de départ envoyé ✅' : 'panneau NON envoyé ❌ (permissions ?)');
   } else {
     await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { content: finalContent }).catch(() => {});

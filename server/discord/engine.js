@@ -1,7 +1,8 @@
 // ============================================================
 // BotDev - Moteur d'exécution : variables, blocs, déclencheurs
 // ============================================================
-const { EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ApplicationCommandOptionType } = require('discord.js');
+// v236 — EmbedBuilder retiré : l'action send_embed est en Components V2.
+const { ButtonBuilder, ActionRowBuilder, ButtonStyle, ApplicationCommandOptionType } = require('discord.js');
 const store = require('../db');
 const ui = require('./ui');
 
@@ -112,26 +113,30 @@ async function runBlock(block, ctx) {
     }
 
     case 'send_embed': {
-      // La description d'un embed builder passe par la grammaire des
-      // sections (v220) : le contenu libre de l'utilisateur est structuré.
-      const embedBody = ui.sectionize(resolveVariables(p.description || '', ctx) || '');
-      const embed = new EmbedBuilder()
-        .setTitle(resolveVariables(p.title || '', ctx) || null)
-        .setDescription(embedBody || null)
-        .setColor(p.color || '#e07a5f');
-      if (p.footer) embed.setFooter({ text: resolveVariables(p.footer, ctx) });
-      if (p.image) embed.setImage(p.image.trim());
-      if (p.thumbnail) embed.setThumbnail(p.thumbnail.trim());
-      (p.fields || []).forEach(f => {
-        embed.addFields({ name: resolveVariables(f.name || '\u200b', ctx), value: resolveVariables(f.value || '\u200b', ctx), inline: !!f.inline });
-      });
+      // v236 — le contenu libre de l'utilisateur passe en Components V2 : les
+      // paragraphes sont séparés par des séparateurs NATIFS pleine largeur
+      // (avant : ui.sectionize(), un trait texte qui s'arrêtait avant les bords).
+      const embedOptions = {
+        title: resolveVariables(p.title || '', ctx) || '',
+        description: resolveVariables(p.description || '', ctx) || '',
+        color: p.color || '#e07a5f',
+        footer: p.footer ? resolveVariables(p.footer, ctx) : false,
+        image: p.image ? p.image.trim() : '',
+        thumbnail: p.thumbnail ? p.thumbnail.trim() : '',
+        fields: (p.fields || []).map((f) => ({
+          name: resolveVariables(f.name || '\u200b', ctx),
+          value: resolveVariables(f.value || '\u200b', ctx),
+          inline: !!f.inline,
+        })),
+      };
+      const embedPayload = ui.v2panel(embedOptions);
       if (ctx.isInteraction && !ctx.replied) {
-        await ctx.source.reply({ embeds: [embed] });
+        await ctx.source.reply(embedPayload);
         ctx.replied = true;
       } else if (ctx.source.channel) {
-        await ctx.source.channel.send({ embeds: [embed] });
+        await ctx.source.channel.send(embedPayload);
       } else if (ctx.source.followUp && ctx.replied) {
-        await ctx.source.followUp({ embeds: [embed] });
+        await ctx.source.followUp(embedPayload);
       }
       break;
     }

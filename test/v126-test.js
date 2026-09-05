@@ -1,5 +1,7 @@
 // Test v3.22 — annonces personnalisées : multi-salons, rôles ping et panneau
 const assert = require('assert');
+// v236 — lecteur de payload Components V2
+const v2 = require('./helpers/v2');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -31,9 +33,13 @@ function collection(map) {
   assert.deepStrictEqual(cfg.channels, ['C1', 'C2']);
   assert.deepStrictEqual(cfg.ping_roles, ['R1']);
   const payload = announcements.buildPayload(cfg, { name: 'Serveur test' }, ['R1']);
-  assert.strictEqual(payload.embeds[0].data.title, '📣 Grande nouvelle');
-  assert.ok(payload.embeds[0].data.description.includes('serveur ouvre'));
-  assert.strictEqual(payload.content, '<@&R1>');
+  // v236 — l'annonce est en Components V2 : titre/description/image dans le
+  // conteneur, ping des rôles en TextDisplay de tête (plus dans `content`).
+  assert.ok(v2.isV2(payload), 'buildPayload doit produire un payload V2');
+  assert.strictEqual(v2.title(payload), '📣 Grande nouvelle');
+  assert.ok(v2.allText(payload).includes('serveur ouvre'));
+  assert.strictEqual(v2.allText(payload).split('\n')[0], '<@&R1>');
+  assert.strictEqual(payload.content, undefined, 'plus de content au niveau message');
   assert.deepStrictEqual(payload.allowedMentions.roles, ['R1']);
   assert.deepStrictEqual(payload.allowedMentions.parse, []);
   console.log('✅ configuration : message complet, couleur et rôle ping persistés');
@@ -46,8 +52,14 @@ function collection(map) {
   const result = await announcements.sendAnnouncement(botId, 'G1', { guilds: { cache: new Map([['G1', guild]]) } });
   assert.strictEqual(result.sent, 2);
   assert.strictEqual(sent.length, 2);
-  assert.ok(sent.every((item) => item.p.content === '<@&R1>'));
-  assert.ok(sent.every((item) => item.p.embeds[0].data.description.includes('serveur ouvre')));
+  // v236 — l'annonce part en Components V2 : le ping des rôles est un
+  // TextDisplay en tête de conteneur (plus dans `content`), et `allowedMentions`
+  // reste au niveau du message pour que le rôle soit réellement notifié.
+  assert.ok(sent.every((item) => v2.isV2(item.p)), 'chaque envoi doit être en V2');
+  assert.ok(sent.every((item) => v2.allText(item.p).split('\n')[0] === '<@&R1>'));
+  assert.ok(sent.every((item) => item.p.content === undefined), 'plus de content au niveau message');
+  assert.ok(sent.every((item) => v2.allText(item.p).includes('serveur ouvre')));
+  assert.ok(sent.every((item) => item.p.allowedMentions.roles[0] === 'R1'));
   console.log('✅ publication : une même annonce envoyée dans plusieurs salons avec le ping contrôlé');
 
   assert.ok(routes.includes('/announcements/custom') && routes.includes('customAnnouncements'));

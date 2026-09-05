@@ -67,15 +67,17 @@ const TARGETS = [
   // v235 — /apply view est passé en Components V2 : le `content: ui.sectionize(…)`
   // est devenu la `description` du conteneur (séparateur NATIF pleine largeur).
   { f: 'server/discord/extra.js',           needle: 'description: `📝 **Candidatures**',                        label: '/apply view — récapitulatif des candidatures (v235 : V2)' },
-  { f: 'server/discord/panelCommands.js',   needle: 'content: ui.sectionize(`✅ Type «',                        label: '/ticket types — accusés de réception (add + maj)' },
+  // v236 — ces accusés de réception sont en Components V2 : le
+  // `content: ui.sectionize(…)` est devenu la `description` du conteneur.
+  { f: 'server/discord/panelCommands.js',   needle: 'description: `✅ Type «',                                 label: '/ticket types — accusés de réception (add + maj) (v236 : V2)' },
   { f: 'server/discord/panels.js',          needle: ".setDescription(ui.sectionize('Les membres qui ouvrent",   label: 'assistant types — étape Questionnaire' },
   // v232 — /levels est passé en Components V2 (séparateurs natifs pleine
   // largeur) via le helper replyPanel de premade.js.
   { f: 'server/discord/premade.js',         needle: "title: '📈 Classement des niveaux',",                     label: '/levels — classement des niveaux (v232 : V2)' },
   { f: 'server/discord/premade.js',         needle: 'send(ui.v2panel(options, components))',                   label: 'premade.js — replyPanel convertit 11 messages (v232)' },
-  { f: 'server/discord/profileCommands.js', needle: "content: ui.sectionize('✅ Identité mise à jour !",        label: '/botprofile — identité mise à jour' },
-  { f: 'server/discord/profileCommands.js', needle: 'content: ui.sectionize(`✅ ${sub ===',                     label: '/botprofile — avatar / bannière enregistré' },
-  { f: 'server/discord/profileWizard.js',   needle: 'content: ui.sectionize(`📱 **Pour ouvrir ta galerie :**',  label: '/botprofile setup — mode d’emploi galerie' },
+  { f: 'server/discord/profileCommands.js', needle: "description: '✅ Identité mise à jour !",                 label: '/botprofile — identité mise à jour (v236 : V2)' },
+  { f: 'server/discord/profileCommands.js', needle: 'description: `✅ ${sub ===',                              label: '/botprofile — avatar / bannière enregistré (v236 : V2)' },
+  { f: 'server/discord/profileWizard.js',   needle: 'description: `📱 **Pour ouvrir ta galerie :**',           label: '/botprofile setup — mode d’emploi galerie (v236 : V2)' },
   // v231 — le quiz est passé en Components V2 (séparateurs natifs pleine
   // largeur) : il ne passe plus par ui.sectionize().
   { f: 'server/discord/extra.js',           needle: 'const quizOptions = {',                                     label: '/quiz — lancement (v231 : options du conteneur V2)' },
@@ -83,8 +85,9 @@ const TARGETS = [
   { f: 'server/discord/extra.js',           needle: 'const resultPayload = ui.v2panel({',                        label: '/quiz — résultat après réponse (v231 : V2)' },
 ];
 for (const t of TARGETS) check(t.label, src(t.f).includes(t.needle));
-check('panelCommands.js : les 2 accusés de réception sont branchés',
-  (src('server/discord/panelCommands.js').match(/content: ui\.sectionize\(`✅ Type «/g) || []).length === 2);
+// v236 — les 2 accusés de réception sont en V2 (`description:` du conteneur).
+check('panelCommands.js : les 2 accusés de réception sont branchés en V2',
+  (src('server/discord/panelCommands.js').match(/description: `✅ Type «/g) || []).length === 2);
 
 // ------------------------------------------------------------
 console.log('\n3) Les exclusions volontaires sont préservées ET documentées');
@@ -226,9 +229,9 @@ const touched = ['server/discord/extra.js', 'server/discord/panelCommands.js', '
   'public/index.html', 'public/sw.js'];
 check('aucun token en dur dans les fichiers modifiés',
   !touched.some((f) => /(ghp_|github_pat_|xox[baprs]-)[A-Za-z0-9_]{15,}/.test(src(f))));
-check('index.html : 7 références ?v=235', (src('public/index.html').match(/\?v=235/g) || []).length === 7);
-check('index.html : plus aucune référence ?v=228', !src('public/index.html').includes('?v=228'));
-check('sw.js : cache botdev-v235', src('public/sw.js').includes("const CACHE = 'botdev-v235';"));
+check('index.html : 7 références ?v=236', (src('public/index.html').match(/\?v=236/g) || []).length === 7);
+check('index.html : plus aucune référence ?v=235', !src('public/index.html').includes('?v=235'));
+check('sw.js : cache botdev-v236', src('public/sw.js').includes("const CACHE = 'botdev-v236';"));
 
 console.log(failures === 0
   ? '\n✅ V229 — Traits ━ étendus aux 10 messages multi-blocs (dont le quiz), exclusions verrouillées, garde-fous v220 intacts.'

@@ -1,5 +1,7 @@
 // Test v5.2 — durée et seuil de blacklist des membres par serveur
 const assert = require('assert');
+// v236 — lecteur de payload Components V2
+const v2 = require('./helpers/v2');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -110,10 +112,15 @@ function makeMessage(content = 'viens ici https://example.com', userId = '123456
   assert.strictEqual(active[0].panel_channel_id, 'C-BLACKLIST');
   assert.strictEqual(active[0].panel_message_id, 'PANEL-1');
   assert.strictEqual(sentPanels.length, 1);
-  assert.strictEqual(sentPanels[0].content, '<@123456789012345678>');
-  assert.strictEqual(sentPanels[0].embeds[0].data.title, '🚫 Alerte sécurité');
-  assert.strictEqual(sentPanels[0].embeds[0].data.color, 0xAA1122);
-  assert(sentPanels[0].embeds[0].data.fields.some((field) => field.name.includes('Comportement')));
+  // v236 — le panneau de blacklist est en Components V2 : le ping est un
+  // TextDisplay de tête, titre/champs/couleur dans le conteneur.
+  assert.ok(v2.isV2(sentPanels[0]), 'le panneau de blacklist doit être en V2');
+  assert.strictEqual(v2.allText(sentPanels[0]).split('\n')[0], '<@123456789012345678>');
+  assert.strictEqual(sentPanels[0].content, undefined, 'plus de content au niveau message');
+  assert.strictEqual(v2.title(sentPanels[0]), '🚫 Alerte sécurité');
+  assert.strictEqual(v2.accentColor(sentPanels[0]), 0xAA1122);
+  assert.ok(v2.allText(sentPanels[0]).includes('Comportement'), 'champ « Comportement » présent');
+  assert.deepStrictEqual(sentPanels[0].allowedMentions, { users: ['123456789012345678'] });
   assert.strictEqual(store.memberBlacklist.active(BOT, 'OTHER-SERVER').length, 0, 'blacklist isolée par serveur');
   console.log('✅ action Auto-Mod → sanction → blacklist serveur → panneau personnalisé dans le salon dédié');
 
@@ -157,7 +164,10 @@ function makeMessage(content = 'viens ici https://example.com', userId = '123456
   assert(thresholdRow.expires_at > Date.now(), 'expiration future');
   assert.strictEqual(store.memberBlacklistCounters.get(BOT, GUILD, '123456789012345680', 'links', 'delete'), null, 'compteur remis à zéro');
   const thresholdPanel = sentPanels[sentPanels.length - 1];
-  assert(thresholdPanel.embeds[0].data.fields.some((field) => field.name.includes('Déclenchement') && field.value.includes('3/3')));
+  // v236 — les champs d'embed deviennent des paires « libellé / valeur » dans
+  // des TextDisplay du conteneur.
+  assert.ok(v2.allText(thresholdPanel).includes('Déclenchement') && v2.allText(thresholdPanel).includes('3/3'),
+    'champ « Déclenchement » avec le seuil 3/3');
   console.log('✅ seuil progressif : 3 sanctions identiques → blacklist 1 heure → compteur réinitialisé');
   store.db.prepare('UPDATE automod_member_blacklist SET expires_at = ? WHERE bot_id = ? AND guild_id = ? AND user_id = ?').run(Date.now() - 1, BOT, GUILD, '123456789012345680');
   assert.strictEqual(store.memberBlacklist.active(BOT, GUILD).length, 0, 'expiration automatique');

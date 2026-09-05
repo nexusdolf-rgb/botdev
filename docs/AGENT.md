@@ -200,7 +200,83 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   'tag') ») : un message supprimé **partiel** (pas en cache) n'a pas d'auteur →
   `trackDeleted` (/snipe, `extra.js`) plantait ; idem `tasks.js` (`member.user.tag`).
   Gardes ajoutées, test `test/v228-test.js`, docs remises à jour (v194 → v228).
-- **v235 (ACTUELLE, 05/09)** : **SÉPARATEURS NATIFS PLEINE LARGEUR — lot n°5 :
+- **v236 (ACTUELLE, 05/09)** : **SÉPARATEURS NATIFS PLEINE LARGEUR — lot n°6,
+  le DERNIER : 16 emplacements sur 12 fichiers.** `logging` (journal de
+  modération) · `liveWatch` (annonce de live) · `community` (starboard :
+  publication **et** édition) · `engine` (action `send_embed` du dashboard) ·
+  `roleWizard` (accusé de réception) · `panelCommands` ×2 · `profileCommands` ×2
+  · `profileWizard` · `automod` ×2 (panneau de blacklist + avertissement MP) ·
+  `announcements` (`buildEmbed` **renommé** `buildPanel`) · `tasks` · `events` ×2
+  (bienvenue + départ).
+  ✅ **BILAN DE LA MIGRATION (v231 → v236) : 90 emplacements.** Il reste
+  **0 `ui.panel(`** et **0 `ui.embed(`** dans TOUT `server/`, et seulement
+  **3 `ui.sectionize(` actifs**, tous volontaires (voir plus bas).
+  🚨 **PIÈGE n°11 — `components: []` sur un accusé de réception V2.**
+  `roleWizard.js` terminait par `interaction.editReply({ embeds: [embed],
+  components: [] })` pour effacer les boutons de l'assistant. En V2 **le
+  conteneur EST le composant du message** : ajouter `components: []` aurait
+  **effacé tout l'affichage**. L'accusé passe à
+  `{ ...ui.v2panel({…}), content: null, embeds: [] }` — **sans** `components`.
+  ⚠️ Les autres `components: []` du fichier sont **légitimes** : ce sont les
+  étapes de l'assistant, qui restent en messages classiques à boutons.
+  🚨 **PIÈGE n°12 — `events.js` : V2 + webhook + pièce jointe = 400.** La carte
+  de bienvenue (`cfg.card`) est une **image générée envoyée en `files`** via
+  `identity.sendAsProfile` (webhook). Or la doc officielle Discord (ressource
+  *Webhook*) est explicite : « When the flag IS_COMPONENTS_V2 is set, the webhook
+  message can only contain components. Providing content, embeds, **files[n]** or
+  poll will fail with a 400 BAD REQUEST ». D'où le **branchement** :
+  `if (files.length) { embed classique } else { ui.v2panel(…) }`.
+  • `cfg.card` vaut **false par défaut** → le panneau de bienvenue est **en V2
+    dans le cas nominal** ; l'embed classique ne sert que si l'admin active la
+    carte image. Les 3 compteurs sont **factorisés** dans `welcomeFields` et
+    partagés par les 2 rendus (aucune divergence possible).
+  • Le panneau de **départ** n'envoie **jamais** de pièce jointe → **toujours
+    V2**, aucun branchement.
+  🚨 **PIÈGE n°13 — `v2.rows()` renvoie un TABLEAU.** `assert.ok(v2.rows(p) >= 1)`
+  compare un tableau à un nombre → coercion en `NaN` → **toujours faux**. Écrire
+  `v2.rows(p).length`. (`v2.dividers()` renvoie bien un nombre, lui.)
+  🔧 **`test/helpers/v2.js` enrichi** : `allText(payload)` (concatène `content`
+  du message **et** les TextDisplay du conteneur — permet de conserver les
+  assertions `reponse.content.includes('…')` en remplaçant seulement
+  `reponse.content` par `v2.allText(reponse)`), `accentColor(payload)`
+  (équivalent V2 de `embed.color`), et `thumbnailUrls()` descend désormais dans
+  **`accessory`** (la vignette d'en-tête est l'accessoire d'une `Section`, pas un
+  enfant `components`).
+  🔗 **Chaîne d'édition migrée ENTIÈRE** : le **starboard** (`community.js`)
+  publie puis **édite** le même message quand le compteur d'étoiles change → les
+  2 appels partagent `starOptions`, et l'édition vide
+  `content`/`embeds`/`attachments`.
+  📣 **`announcements.js` : API renommée.** `buildEmbed` → **`buildPanel`** (elle
+  renvoie désormais un **payload**, plus un embed). `buildPayload` = spread du
+  panneau + `allowedMentions`. Le **ping des rôles** devient un TextDisplay en
+  tête de conteneur (`content` du conteneur), `allowedMentions` restant au niveau
+  du message → **les rôles sont toujours réellement notifiés**. Seul appelant
+  externe : `test/v126-test.js`.
+  🧪 **11 tests existants mis à jour** (v18, v21, v84, v107, v114, v124, v126,
+  v143, v217, v220, v229) — presque tous pour la même raison : ils lisaient
+  `reponse.content` ou `reponse.embeds[0].data.*` sur des messages passés en V2.
+  • v18/v21/v84 : lectures de texte → `v2.allText(…)` (le MP d'avertissement
+    Auto-Mod porte désormais son détail dans le conteneur) ;
+  • v114 : `sent[0].embeds.length` → `v2.isV2` + titre + séparateurs + ligne de
+    boutons **dans** le conteneur ;
+  • v126/v143 : `payload.embeds[0].data.title/color/fields` et `payload.content`
+    → `v2.title` / `v2.accentColor` / `v2.allText`, et vérification que
+    **`payload.content` est bien `undefined`** (interdit en V2) ;
+  • v107/v217 : marqueurs de source `setThumbnail(avatarUrl)` /
+    `.setAuthor({…})` / `if (cfg.image) {…}` → options V2 `thumbnail:` /
+    `author:` / `image:` ;
+  • v124 : `automodSource.includes('embeds: [ui.embed({')` → `ui.v2panel({` +
+    assertion que `ui.embed({` a disparu ;
+  • v220 (section « Couverture des autres panneaux ») et v229 (aiguilles des
+    « 10 messages cibles ») : réécrits pour la v236.
+  ⛔ **Les 3 `ui.sectionize(` restants sont VOLONTAIRES et vérifiés par
+  `test/v236-test.js`** :
+  • `events.js` — la **branche « carte image »** uniquement (pièce jointe +
+    webhook, piège n°12) ;
+  • `panels.js` — le **wizard « assistant types »** (6 étapes éditées en place,
+    reporté depuis la v234) ;
+  • `xp.js` — la **carte de niveau** (pièce jointe + webhook, piège n°10).
+- **v235 (05/09)** : **SÉPARATEURS NATIFS PLEINE LARGEUR — lot n°5 :
   `extra.js` (le plus gros fichier de commandes).** **26 `ui.panel(` →
   `ui.v2panel(`**, le dernier `ui.embed(` (anniversaire du jour) et le dernier
   `ui.sectionize(` actif (`/apply view`). Il reste **0 `ui.panel(`**, **0
@@ -692,14 +768,15 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 
 ## 📌 ÉTAT AU 05/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v235** — voir la section v235 ci-dessus. **162 tests verts**.
+- Dernière version : **v236** — voir la section v236 ci-dessus. **163 tests verts**.
   ⚠️ **Chantier en cours (v231 →)** : migration des traits texte `━` vers les
   séparateurs **NATIFS pleine largeur** (Components V2).
   • **Migré** : `/quiz` (v231) · `premade.js` 13 messages dont `replyPanel` ×11
     et `/levels` · `suggest.js` 5 emplacements (v232) · `giveaway.js`
     5 emplacements · `guildEvents.js` 7 emplacements (v233) · **`panels.js`
     11 emplacements, TOUT le fichier** (v234) · **`extra.js` 32 emplacements,
-    TOUT le design system du fichier** (v235). **Total : 74 emplacements.**
+    TOUT le design system du fichier** (v235) · **16 emplacements sur 12
+    fichiers, LOT FINAL** (v236). **Total : 90 emplacements.**
   • **Exclu, documenté** : `xp.js` (webhook + pièce jointe → 400 en V2, piège n°10).
   • **Reporté, documenté** : le **wizard « assistant types »** de `panels.js`
     (6 étapes éditées en place — il faut migrer les 6 d'un coup) et le
@@ -709,10 +786,16 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
     depuis v230, aucun trait), `/top` (`renderTop`, `\n` simples, aucun trait,
     pagination éditée), `/snipe` et `/invites` (EmbedBuilder bruts), le
     **message de candidature** + `applyd` (aucune description donc aucun trait).
-  • **Reste** : `panelCommands.js` (2), `events.js` (2), `automod.js` (2),
-    `profileCommands.js` (2), puis `logging`, `liveWatch`, `roleWizard`,
-    `profileWizard`, `engine`, `community`, `announcements`, `tasks` (1 chacun)
-    + le **wizard « assistant types »** de `panels.js` (6 étapes d'un coup).
+  • **v236 — LOT FINAL FAIT** : `logging`, `liveWatch`, `community`, `engine`,
+    `roleWizard`, `panelCommands` ×2, `profileCommands` ×2, `profileWizard`,
+    `automod` ×2, `announcements`, `tasks`, `events` ×2 → **16 emplacements**.
+    **Total cumulé : 90 emplacements.** **0 `ui.panel(` / 0 `ui.embed(` dans tout
+    `server/`.**
+  • **Reste (reporté, non bloquant)** : le **wizard « assistant types »** de
+    `panels.js` (6 étapes éditées en place → à migrer d'un coup) et les **3
+    `ui.sectionize(` volontaires** (`events.js` branche carte image, `panels.js`
+    wizard, `xp.js` carte de niveau — tous liés à une pièce jointe envoyée par
+    webhook, ou à un assistant multi-étapes).
   • ⚠️ **Avant de migrer un message, vérifier** : (1) s'il passe par
     `sendAsProfile` **avec** des `files` → exclu (sans `files`, c'est bon :
     webhook application-owned) ; (2) si du code relit `msg.embeds[0]` plus tard →

@@ -5,6 +5,8 @@ const os = require('os');
 const path = require('path');
 const http = require('http');
 const assert = require('assert');
+// v236 — lecteur de payload Components V2
+const v2 = require('./helpers/v2');
 
 const DATA_DIR = path.join(os.tmpdir(), `botdev-v21-${Date.now()}`);
 fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -80,7 +82,8 @@ const imgServer = http.createServer((req, res) => {
 
   // ---------- 2. /botprofile avatar (galerie native) appliqué à l'assistant ----------
   await handleProfileCommand(1, profileCmd('avatar', { url: imgUrl, contentType: 'image/png', size: PNG.length }));
-  assert(lastReply.content.includes('appliquée'), 'photo appliquée à l\'assistant : ' + lastReply.content);
+  // v236 — accusés de réception en Components V2 : v2.allText lit le conteneur.
+  assert(v2.allText(lastReply).includes('appliquée'), 'photo appliquée à l\'assistant : ' + v2.allText(lastReply));
   assert(lastEdit && lastEdit.embeds[0].data.title.includes('Étape 5/5'), 'avancé à la bannière');
   assert(lastEdit.embeds[0].data.fields[0].value.includes('✅ image'), 'avatar dans le récap');
   console.log('2️⃣  /botprofile avatar (galerie) → appliqué à l\'assistant → étape bannière ✅');
@@ -94,7 +97,7 @@ const imgServer = http.createServer((req, res) => {
 
   // ---------- 4. Sans assistant → enregistrement direct ----------
   await handleProfileCommand(1, profileCmd('avatar', { url: imgUrl, contentType: 'image/png', size: PNG.length }));
-  assert(lastReply.content.includes('enregistré'), 'enregistrement direct : ' + lastReply.content);
+  assert(v2.allText(lastReply).includes('enregistré'), 'enregistrement direct : ' + v2.allText(lastReply));
   console.log('4️⃣  Sans assistant → enregistrement direct ✅');
 
   imgServer.close();

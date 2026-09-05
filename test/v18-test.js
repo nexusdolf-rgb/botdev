@@ -3,6 +3,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const assert = require('assert');
+// v236 — lecteur de payload Components V2
+const v2 = require('./helpers/v2');
 
 const DATA_DIR = path.join(os.tmpdir(), `botdev-v18-${Date.now()}`);
 fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -74,8 +76,10 @@ const logging = require('../server/discord/logging');
   });
   let cmdReply;
   await handleProfileCommand(1, cmd('set'));
-  assert(cmdReply.content.includes('Identité mise à jour'), 'set OK');
-  assert(cmdReply.content.includes('MonBot'));
+  // v236 — l'accusé de réception est en Components V2 : le texte est dans le
+  // conteneur, plus dans `content`. v2.allText lit les deux formats.
+  assert(v2.allText(cmdReply).includes('Identité mise à jour'), 'set OK');
+  assert(v2.allText(cmdReply).includes('MonBot'));
   await handleProfileCommand(1, cmd('set', { userId: 'STRANGER' }));
   assert(cmdReply.content.includes('propriétaire'), 'non-propriétaire refusé');
   await handleProfileCommand(1, cmd('view'));
@@ -128,7 +132,9 @@ const logging = require('../server/discord/logging');
   store.guildSettings.set(1, 'G1', { log_channel: '#logs', am_enabled: 1 });
   const r = await runAutomod(1, msg);
   assert(r.acted && r.reason.includes('arnaque') && deleted, 'mot interdit supprimé');
-  assert(logSent && logSent.embeds[0].data.title.includes('Auto-modération'), 'log envoyé');
+  // v236 — le journal (logging.js) est en Components V2 : le titre est porté
+  // par le conteneur, plus par un embed.
+  assert(logSent && v2.isV2(logSent) && v2.title(logSent).includes('Auto-modération'), 'log envoyé en V2');
   console.log('8️⃣  Liste noire : suppression + log ✅');
 
   // ---------- 9. Logging : /warn trace dans le salon ----------

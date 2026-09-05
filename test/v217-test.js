@@ -70,9 +70,17 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   // ---------- 6. Bienvenue / départ : un seul avatar par embed ----------
   console.log('— Bienvenue / départ premium —');
   check('events : author bienvenue sans icône (avatar porté par le visuel)', events.includes(".setAuthor({ name: `${user.tag || user.username || 'Nouveau membre'} vient d'arriver !` })") && !events.includes("iconURL: avatarUrl || undefined })\n          .setTitle(`👋 Bienvenue"));
-  check('events : author départ sans icône', events.includes(".setAuthor({ name: `${user.tag || user.username || 'Un membre'} s'en va…` })"));
-  check('events : thumbnail seulement quand ni carte ni image (bienvenue)', events.includes("} else if (avatarUrl) {\n          embed.setThumbnail(avatarUrl);"));
-  check('events : départ — image OU thumbnail, pas les deux', events.includes("if (cfg.image) {\n      // 🖼️ L'image configurée est le visuel ; pas de thumbnail en double.\n      embed.setImage(String(cfg.image).trim());\n    } else if (avatarUrl) {\n      embed.setThumbnail(avatarUrl);\n    }"));
+  // v236 — le panneau de départ est en Components V2 : l'auteur devient
+  // l'option `author:` du conteneur, l'image/vignette les options `image:` /
+  // `thumbnail:` (toujours l'une OU l'autre, jamais les deux).
+  check('events : author départ sans icône (v236 : V2)',
+    events.includes("author: { name: `${user.tag || user.username || 'Un membre'} s'en va…` }"));
+  check('events : thumbnail seulement quand ni carte ni image (bienvenue)',
+    events.includes("thumbnail: !cfg.image && avatarUrl ? avatarUrl : ''"));
+  check('events : départ — image OU thumbnail, pas les deux',
+    events.includes("image: cfg.image ? String(cfg.image).trim() : '',\n      thumbnail: !cfg.image && avatarUrl ? avatarUrl : '',"));
+  check('events : un seul avatar, jamais répété en author (v236)',
+    !events.includes("author: { name: `${user.tag || user.username || 'Nouveau membre'} vient d'arriver !`, iconURL"));
 
   // ---------- 7. Charte « social » ----------
   console.log('— Vie sociale chartée —');
@@ -80,8 +88,8 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('plus de rose littéral hors charte dans extra', !extra.includes("color: '#EB459E'"));
 
   // ---------- 8. Version ----------
-  check('index : bump v217', fs.readFileSync('public/index.html', 'utf8').includes('?v=235'));
-  check('sw : bump botdev-v235', fs.readFileSync('public/sw.js', 'utf8').includes('botdev-v235'));
+  check('index : bump v217', fs.readFileSync('public/index.html', 'utf8').includes('?v=236'));
+  check('sw : bump botdev-v236', fs.readFileSync('public/sw.js', 'utf8').includes('botdev-v236'));
 
   console.log(`  ✅ v217 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });

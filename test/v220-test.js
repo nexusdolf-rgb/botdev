@@ -173,15 +173,26 @@ check('mono-section 4096 max non touchée', ui.embed({ description: 'x'.repeat(4
   console.log('\n4️⃣  Couverture des autres panneaux');
   const src = (f) => fs.readFileSync(path.join(__dirname, '..', 'server', 'discord', f), 'utf8');
   const countOf = (f, needle) => src(f).split(needle).length - 1;
-  // Bienvenue premium ET départ assorti (events.js) : 2 × sectionize(text, 4096).
-  check('bienvenue + départ premium : sectionize sur les deux', countOf('events.js', 'ui.sectionize(text, 4096)') === 2);
-  check('logs (logging.js) : description passée par sectionize', src('logging.js').includes('ui.sectionize(String(description), 1024)'));
-  check('embed builder (engine.js send_embed) : description structurée', src('engine.js').includes('const embedBody = ui.sectionize('));
-  check('annonce de live (liveWatch.js) : description structurée', src('liveWatch.js').includes('ui.sectionize(`**${result.name}**'));
+  // v236 — bienvenue, départ, journal, action send_embed, annonce de live et
+  // automod sont passés en Components V2 : leurs paragraphes sont séparés par
+  // des séparateurs NATIFS pleine largeur au lieu du trait texte ui.sectionize.
+  check('bienvenue premium : panneau V2 quand aucune pièce jointe (v236)',
+    src('events.js').includes('welcomePayload = ui.v2panel({'));
+  check('bienvenue premium : embed classique conservé quand la carte image est jointe (v236)',
+    src('events.js').includes("welcomePayload = { embeds: [embed], files };")
+    && countOf('events.js', 'ui.sectionize(text, 4096)') === 1);
+  check('journal (logging.js) : description en V2 (v236)',
+    src('logging.js').includes('ui.v2panel({'));
+  check('action send_embed (engine.js) : description structurée en V2 (v236)',
+    src('engine.js').includes('ui.v2panel('));
+  check('annonce de live (liveWatch.js) : description structurée en V2 (v236)',
+    src('liveWatch.js').includes('ui.v2panel({'));
   const evSrc = src('events.js');
-  check('départ : panneau premium = message utilisateur structuré', evSrc.includes("s'en va…") && evSrc.includes('ui.sectionize(text, 4096)'));
-  check('automod : avertissements via ui.embed (couverture auto)',
-    src('automod.js').includes("const ui = require('./ui')") && src('automod.js').includes('ui.embed({'));
+  check('départ : panneau premium = message utilisateur structuré en V2 (v236)',
+    evSrc.includes("s'en va…") && evSrc.includes('ui.v2panel({'));
+  check('automod : avertissements en Components V2 (v236)',
+    src('automod.js').includes("const ui = require('./ui')") && src('automod.js').includes('ui.v2panel({')
+    && !src('automod.js').includes('ui.embed({'));
   // Système de tickets personnalisés (advancedTickets, panneau Container V2) :
   // les séparations passent par des SÉPARATEURS NATIFS pleine largeur (type 14),
   // jamais par un trait-texte court qui ne va pas jusqu'au fond du panneau.

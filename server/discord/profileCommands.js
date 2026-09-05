@@ -56,10 +56,16 @@ async function handleProfileCommand(botId, interaction) {
         p.color = color;
       }
       store.botProfiles.set(botId, guild.id, p);
-      return interaction.reply({
-        content: ui.sectionize('✅ Identité mise à jour !\n\n📛 Nom : **' + (p.name || botRecord.name) + '**\n🎨 Couleur : ' + p.color + '\n📝 Bio : ' + (p.bio ? 'définie' : 'aucune') + '\n\nContinue avec `/botprofile avatar` et `/botprofile banner` pour les images.', 2000),
-        ephemeral: true,
-      });
+      return interaction.reply(
+        // v236 — accusé de réception en Components V2 : les paragraphes sont
+        // séparés par des séparateurs NATIFS pleine largeur (avant : trait texte ━
+        // via ui.sectionize, qui s'arrêtait avant les bords arrondis).
+        // `footer: false` : ces messages courts n'avaient pas de pied.
+        ui.v2panel({
+          description: '✅ Identité mise à jour !\n\n📛 Nom : **' + (p.name || botRecord.name) + '**\n🎨 Couleur : ' + p.color + '\n📝 Bio : ' + (p.bio ? 'définie' : 'aucune') + '\n\nContinue avec `/botprofile avatar` et `/botprofile banner` pour les images.',
+          footer: false,
+          ephemeral: true,
+        }));
     }
 
     if (sub === 'avatar' || sub === 'banner') {
@@ -88,8 +94,14 @@ async function handleProfileCommand(botId, interaction) {
         if (sub === 'avatar') p.avatar_url = `/assets/${key}`;
         else p.banner_url = `/assets/${key}`;
         store.botProfiles.set(botId, guild.id, p);
+        // v236 — Components V2 : séparateur NATIF pleine largeur entre les 2
+        // paragraphes. `content: null` car le message édité pouvait en porter un.
         return interaction.editReply({
-          content: ui.sectionize(`✅ ${sub === 'avatar' ? 'Avatar' : 'Bannière'} enregistré ! Le bot utilisera cette identité sur ce serveur.\n\nVérifie avec \`/botprofile view\`.`, 2000),
+          ...ui.v2panel({
+            description: `✅ ${sub === 'avatar' ? 'Avatar' : 'Bannière'} enregistré ! Le bot utilisera cette identité sur ce serveur.\n\nVérifie avec \`/botprofile view\`.`,
+            footer: false,
+          }),
+          content: null, embeds: [],
         });
       } catch (e) {
         return interaction.editReply({ content: `⚠️ Impossible de récupérer l\'image : ${e.message.slice(0, 120)}` });

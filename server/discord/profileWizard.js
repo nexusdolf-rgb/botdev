@@ -315,10 +315,16 @@ async function handleProfileWizardInteraction(botId, interaction) {
     if (action === 'import') {
       const step = STEPS[state.step];
       const cmdName = step.key === 'banner' ? 'banner' : 'avatar';
-      return interaction.reply({
-        content: ui.sectionize(`📱 **Pour ouvrir ta galerie :**\n\n1️⃣ Tape \`/botprofile ${cmdName}\` puis touche l\'option « image » → **ta galerie s\'ouvre automatiquement** (la photo s\'appliquera directement à cette étape).\n\n2️⃣ Ou touche le **bouton ➕** de la barre de message, choisis ta photo et envoie-la ici — je la récupère automatiquement.`, 2000),
-        ephemeral: true,
-      });
+      return interaction.reply(
+        // v236 — accusé de réception en Components V2 : les paragraphes sont
+        // séparés par des séparateurs NATIFS pleine largeur (avant : trait texte ━
+        // via ui.sectionize, qui s'arrêtait avant les bords arrondis).
+        // `footer: false` : ces messages courts n'avaient pas de pied.
+        ui.v2panel({
+          description: `📱 **Pour ouvrir ta galerie :**\n\n1️⃣ Tape \`/botprofile ${cmdName}\` puis touche l\'option « image » → **ta galerie s\'ouvre automatiquement** (la photo s\'appliquera directement à cette étape).\n\n2️⃣ Ou touche le **bouton ➕** de la barre de message, choisis ta photo et envoie-la ici — je la récupère automatiquement.`,
+          footer: false,
+          ephemeral: true,
+        }));
     }
     if (action === 'skip') {
       const fin = await advance(state);

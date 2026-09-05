@@ -2,7 +2,7 @@
 // BotDev - Journal de modération par serveur (log_channel)
 // Trace : actions de modération, tickets, auto-mod, arrivées/départs.
 // ============================================================
-const { EmbedBuilder } = require('discord.js');
+// v236 — EmbedBuilder retiré : le journal est entièrement en Components V2.
 const store = require('../db');
 const ui = require('./ui');
 
@@ -47,18 +47,22 @@ async function log(botId, guild, { title, description = '', color = '#e07a5f', f
     if (!eventEnabled(gs, evType)) return;
     const channel = logChannel(botId, guild);
     if (!channel || !channel.send) return;
-    const embed = new EmbedBuilder()
-      .setColor(color)
-      .setAuthor({ name: `Hoxera · ${String(guild.name || 'Journal du serveur').slice(0, 180)}` })
-      .setTitle(title.slice(0, 256))
-      .setFooter({ text: String(footer || 'Journal automatique · Hoxera').slice(0, 2048) })
-      .setTimestamp();
-    if (description) embed.setDescription(ui.sectionize(String(description), 1024));
-    for (const f of fields.slice(0, 8)) {
-      embed.addFields({ name: String(f.name).slice(0, 256), value: String(f.value).slice(0, 1024), inline: !!f.inline });
-    }
-    if (footer) embed.setFooter({ text: String(footer).slice(0, 256) });
-    await channel.send({ embeds: [embed] });
+    // v236 — journal du serveur en Components V2 : les paragraphes de la
+    // description sont séparés par des séparateurs NATIFS pleine largeur (avant
+    // c'était ui.sectionize(), un trait texte qui s'arrêtait avant les bords).
+    // Toutes les troncatures Discord sont conservées à l'identique.
+    await channel.send(ui.v2panel({
+      color,
+      author: { name: `Hoxera · ${String(guild.name || 'Journal du serveur').slice(0, 180)}` },
+      title: title.slice(0, 256),
+      description: description ? String(description).slice(0, 1024) : '',
+      fields: fields.slice(0, 8).map((f) => ({
+        name: String(f.name).slice(0, 256),
+        value: String(f.value).slice(0, 1024),
+        inline: !!f.inline,
+      })),
+      footer: String(footer || 'Journal automatique · Hoxera').slice(0, 256),
+    }));
   } catch (e) {
     console.error('[BotDev] log:', e.message);
   }

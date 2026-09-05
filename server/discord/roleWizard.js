@@ -274,12 +274,20 @@ async function finish(botId, state, interaction) {
     sentMsg = `⚠️ Panneau enregistré mais envoi impossible : ${e.message.slice(0, 120)}`;
   }
 
-  const embed = new EmbedBuilder()
-    .setColor('#57F287')
-    .setTitle(state.editId ? '✅ Panneau mis à jour !' : '✅ Panneau de rôles créé !')
-    .setDescription(ui.sectionize(`${sentMsg}\n\n**${payload.name}** — ${payload.options.length} rôle(s), style ${payload.mode === 'buttons' ? '🔘 boutons' : '📋 menu déroulant'}.\n\nLes membres peuvent maintenant choisir leurs rôles !`))
-    .setFooter({ text: 'Modifie-le à tout moment avec /roles edit.' });
-  return interaction.editReply({ embeds: [embed], components: [] }).catch(() => {});
+  // v236 — accusé de réception en Components V2 : les 3 paragraphes sont
+  // séparés par des séparateurs NATIFS pleine largeur (avant : ui.sectionize(),
+  // un trait texte qui s'arrêtait avant les bords arrondis).
+  // ⚠️ Ne PAS ajouter `components: []` comme avant : en V2 le conteneur EST le
+  // composant du message, le vider supprimerait tout l'affichage.
+  return interaction.editReply({
+    ...ui.v2panel({
+      color: '#57F287',
+      title: state.editId ? '✅ Panneau mis à jour !' : '✅ Panneau de rôles créé !',
+      description: `${sentMsg}\n\n**${payload.name}** — ${payload.options.length} rôle(s), style ${payload.mode === 'buttons' ? '🔘 boutons' : '📋 menu déroulant'}.\n\nLes membres peuvent maintenant choisir leurs rôles !`,
+      footer: 'Modifie-le à tout moment avec /roles edit.',
+    }),
+    content: null, embeds: [],
+  }).catch(() => {});
 }
 
 // ---------- Gestion des interactions de l'assistant ----------
