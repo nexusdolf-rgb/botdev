@@ -200,7 +200,66 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   'tag') ») : un message supprimé **partiel** (pas en cache) n'a pas d'auteur →
   `trackDeleted` (/snipe, `extra.js`) plantait ; idem `tasks.js` (`member.user.tag`).
   Gardes ajoutées, test `test/v228-test.js`, docs remises à jour (v194 → v228).
-- **v230 (ACTUELLE, 05/09)** : **`/poll` passe en CHAMPS D'EMBED** (un champ par
+- **v231 (ACTUELLE, 05/09)** : **SÉPARATEURS NATIFS PLEINE LARGEUR — lot n°1**
+  (Components V2). Demande utilisateur : *« le trait du quiz et le panneau du
+  Système de tickets personnalisés ne sont pas à la même longueur ; ma
+  préférence c'est le trait du ticket personnalisé […] tu vas corriger tout ce
+  qui a le même trait que le quiz en trait ticket personnalisé. »*
+  📏 **LE PROBLÈME, vérifié et non supposé** : un trait fait de caractères `━`
+  est du **TEXTE**. Discord applique un padding interne à tout contenu d'embed →
+  le trait s'arrête **avant** le bord arrondi, et sa longueur visible dépend du
+  nombre de caractères (20 × `━` ici). Les panneaux du bot n'avaient donc PAS
+  tous la même longueur de trait. **Allonger le trait n'est pas une solution** :
+  il ne touche jamais l'arrondi et finit par passer à la ligne sur mobile, où
+  l'embed est plus étroit.
+  ✅ **LA SEULE SOLUTION** : le `Separator` de Components V2, composant de
+  **LAYOUT** que Discord dessine bord à bord jusqu'aux arrondis. C'est ce que
+  faisait déjà `advancedTickets.js` (v220) — dont le commentaire disait déjà
+  « pas un trait de texte qui ne va pas jusqu'au bord du panneau ».
+  🧰 **`ui.js` reçoit une API V2 complète** : `v2container`, `v2panel`,
+  `v2contentPanel`, `v2status`, `v2edit`, `colorInt`, `V2_TEXT_BUDGET` (4 000),
+  `V2_COMPONENT_CAP` (40). **Même grammaire d'options que `embed()`/`panel()`**
+  (`title`, `description`, `content`, `fields`, `footer`, `timestamp`,
+  `sections:false`, `variant`/`color`) pour que la migration d'un message soit
+  **mécanique** : `ui.panel(...)` → `ui.v2panel(...)`. Réutilise `paragraphs()`,
+  déjà partagé avec `advancedTickets.js`.
+  📐 **Grammaire calquée sur le panneau de référence** : titre en `## …` **sans**
+  séparateur juste après (le heading est déjà détaché), un séparateur natif
+  **entre** chaque bloc du corps, un séparateur avant le pied, pied en `-# …`
+  avec l'heure reportée (V2 n'a pas de champ `timestamp`).
+  ⚠️ **CONTRAINTES OFFICIELLES** (doc discord.js « Display Components »,
+  vérifiées dans `node_modules/discord.js/typings/index.d.ts`) :
+    • avec le flag `IsComponentsV2` on ne peut envoyer **ni `content`, ni
+      `embeds`, ni `poll`, ni `stickers`** ;
+    • **40 composants max, imbriqués compris** (le conteneur compte) ;
+    • **4 000 caractères max CUMULÉS** sur tous les TextDisplay ;
+    • **impossible de revenir** à un message classique en éditant → un message
+      mis à jour (`interaction.update`) doit **rester** en V2 ;
+    • on **peut** passer en V2 à l'édition en mettant explicitement `content`,
+      `embeds`, `poll`, `stickers` à null → c'est le rôle de `ui.v2edit()`.
+  🧠 **/quiz migré (lancement ET résultat)** : même grammaire aux deux bouts
+  puisque Discord interdit d'en sortir à l'édition. `interaction.update()`
+  accepte le flag : `InteractionUpdateOptions extends MessageEditOptions`, qui
+  autorise `flags: SuppressEmbeds | IsComponentsV2`.
+  🐛 **BUG ATTRAPÉ PAR LES TESTS** : `colorFor()` ne reconnaît que les variantes
+  nommées et les chaînes `#rrggbb`. Une couleur **numérique** (`0x57f287`)
+  retombait donc silencieusement sur `COLORS.info`. Sans le correctif
+  (`colorInt` accepte désormais les nombres), **le vert d'un quiz réussi et le
+  rouge d'un quiz raté se seraient affichés en orange**.
+  🔒 **Garde-fous** : les deux plafonds Discord sont suivis pendant la
+  construction (`v2state`/`v2room`/`v2text`/`v2separator`) → un panneau très
+  long **se tronque** au lieu de faire rejeter le message par l'API.
+  🧪 `test/v229-test.js` (4 assertions) et `test/v230-test.js` (2 assertions)
+  mis à jour : ils vérifiaient que le quiz passait par `sectionize()`. Le
+  garde-fou « aucun ━ dans les panneaux natifs » exclut désormais `ui.js`
+  (module de design system qui définit les DEUX API) et est **renforcé** par un
+  contrôle **fonctionnel** du payload réel.
+  **158 tests verts** (`test/v231-test.js`, 101 assertions). Bump cache v231.
+  🚧 **MIGRATION EN COURS** : 24 emplacements produisaient un trait texte,
+  47 messages passent par `ui.panel/embed/status`. Ce lot ne couvre que le
+  quiz. **Les lots suivants sont à poursuivre** (mode prudent validé par
+  l'utilisateur : un lot = une version, tests + aperçu, feu vert avant push).
+- **v230 (05/09)** : **`/poll` passe en CHAMPS D'EMBED** (un champ par
   option) — la demande utilisateur faisait suite à l'aperçu comparatif des 3
   rendus (actuel / avec 9 traits / champs d'embed).
   • Rendu : la séparation devient NATIVE (Discord espace les champs), donc ni
@@ -354,10 +413,23 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
    (`syncBotRoleName`) mais ça ne marche que si le bot possède un rôle AU-DESSUS du sien
    — sinon 403. Seul remède : le renommer à la main par serveur (Paramètres → Rôles)
 5. **Environnement sandbox de l'agent** (effacé entre les sessions) : `npm install`
-   requis avant `check.sh` ; `git config user.name/email` + remote à restaurer
-   (token GitHub dans `/home/user/agent-config.sh` s'il persiste, sinon l'utilisateur
-   fournit) ; `/tmp` vidé ; tesseract via `apt-get install tesseract-ocr` ;
-   le token du bot se récupère via l'API Render (env vars du service)
+   requis avant `check.sh` ; `/tmp` vidé ; tesseract via `apt-get install tesseract-ocr` ;
+   le token du bot se récupère via l'API Render (env vars du service).
+   ⚠️ **`.git/config` EST EFFACÉ ENTRE LES TOURS** (chemin sensible exclu des
+   sauvegardes du workspace) : `git config user.name/email` **et** l'URL du
+   remote `origin` disparaissent, même s'ils ont été posés avec succès plus tôt
+   dans la même conversation. Symptômes vécus le 05/09 : `git commit` →
+   « Author identity unknown », puis `git push` → « 'origin' does not appear to
+   be a git repository ». **Rien n'est perdu** (l'index et les fichiers sont
+   intacts, `git log` fonctionne) — ne PAS re-cloner.
+   ✅ **La parade qui marche** : ne rien écrire dans la config, tout passer en
+   arguments —
+   `git -c user.name="…" -c user.email="…" commit -F -` puis
+   `git push https://x-access-token:<TOKEN>@github.com/nexusdolf-rgb/botdev.git main:main`.
+   Même chose pour `node_modules` (exclu des sauvegardes) : `npm install` à
+   refaire à chaque reprise, sinon `Cannot find module 'discord.js'`.
+   ⚠️ Un script Node placé HORS du dépôt (`/home/user/…`) ne résout pas
+   `node_modules` : lancer avec `NODE_PATH=/home/user/botdev/node_modules`.
 6. **Token GitHub fine-grained expire ~7 jours** : si push refusé, demander un nouveau
    à l'utilisateur (droits : Contents RW + Workflows RW sur botdev ET botdev-data)
 7. **Commandes slash** : GLOBALES uniquement. **Jamais 2 services actifs** avec le même
@@ -389,7 +461,10 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 
 ## 📌 ÉTAT AU 05/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v230** — voir la section v230 ci-dessus. **157 tests verts**.
+- Dernière version : **v231** — voir la section v231 ci-dessus. **158 tests verts**.
+  ⚠️ **v231 ouvre un chantier en plusieurs lots** : la migration des traits
+  texte `━` vers les séparateurs NATIFS pleine largeur (Components V2).
+  Seul **/quiz** est migré. Reste : ~47 messages (voir la section v231).
 - Prod : https://hoxera.is-a.dev, bot « Optimus Prime » en ligne,
   **8 serveurs / 189 membres**, **0 erreur 24 h**, sauvegardes GitHub OK
   toutes les 10 min, CI verte, service Render « hoxera » non suspendu (Oregon).
@@ -402,8 +477,10 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - Passation : l’agent v228 a été arrêté par une **limite de contexte**. Le nouvel
   agent a : cloné les 2 dépôts, `npm install`, `check.sh` 🟢 (155), vérifié la prod
   et les tokens, puis livré **v229** (traits ━ sur 10 messages + critère officiel)
-  et **v230** (`/poll` en champs d'embed + correctif d'un bug latent de
-  dépassement de la limite Discord de 4 096 caractères).
+  **v230** (`/poll` en champs d'embed + correctif d'un bug latent de
+  dépassement de la limite Discord de 4 096 caractères) et **v231** (API
+  Components V2 dans `ui.js` + `/quiz` migré en séparateurs natifs pleine
+  largeur — lot n°1 d'une migration en plusieurs lots).
 - 31 commandes slash globales (5 « premade » à sous-commandes + 25 « extra » +
   `/event`) + ~36 commandes de modules (kick, ban, ping, meme, daily, rank,
   giveaway…) — total loin de la limite Discord de 100.

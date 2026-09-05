@@ -71,8 +71,11 @@ const TARGETS = [
   { f: 'server/discord/profileCommands.js', needle: "content: ui.sectionize('✅ Identité mise à jour !",        label: '/botprofile — identité mise à jour' },
   { f: 'server/discord/profileCommands.js', needle: 'content: ui.sectionize(`✅ ${sub ===',                     label: '/botprofile — avatar / bannière enregistré' },
   { f: 'server/discord/profileWizard.js',   needle: 'content: ui.sectionize(`📱 **Pour ouvrir ta galerie :**',  label: '/botprofile setup — mode d’emploi galerie' },
-  { f: 'server/discord/extra.js',           needle: '.setDescription(ui.sectionize(`**${question}**',           label: '/quiz — lancement (3 blocs substantiels)' },
-  { f: 'server/discord/extra.js',           needle: '.setDescription(ui.sectionize(`${correctPick ?',           label: '/quiz — résultat après réponse' },
+  // v231 — le quiz est passé en Components V2 (séparateurs natifs pleine
+  // largeur) : il ne passe plus par ui.sectionize().
+  { f: 'server/discord/extra.js',           needle: 'const quizOptions = {',                                     label: '/quiz — lancement (v231 : options du conteneur V2)' },
+  { f: 'server/discord/extra.js',           needle: 'ui.v2panel(quizOptions, [row])',                            label: '/quiz — lancement envoyé en v2panel' },
+  { f: 'server/discord/extra.js',           needle: 'const resultPayload = ui.v2panel({',                        label: '/quiz — résultat après réponse (v231 : V2)' },
 ];
 for (const t of TARGETS) check(t.label, src(t.f).includes(t.needle));
 check('panelCommands.js : les 2 accusés de réception sont branchés',
@@ -94,8 +97,11 @@ check('/shop : description courte non sectionizée',
 check('/shop : exclusion documentée + référence au trait orphelin', pm.includes(EXCL) && pm.includes('trait orphelin'));
 check('mariage / pendu / morpion : toujours >= 5 « sections: false » (garde-fou v220)',
   (ex.match(/sections: false/g) || []).length >= 5);
-check('le CRITÈRE v229 est écrit dans le code (aux 2 emplacements du quiz)',
-  (ex.match(/jamais de trait entre deux COURTES phrases/g) || []).length === 2);
+// v231 — le critère était dupliqué aux 2 emplacements du quiz ; il est
+// maintenant écrit UNE fois, au lancement (le résultat y renvoie). Le
+// critère lui-même est inchangé et reste la référence du bot.
+check('le CRITÈRE v229 est écrit dans le code',
+  (ex.match(/jamais de trait entre deux COURTES phrases/g) || []).length >= 1);
 check('le quiz n’est plus marqué comme exclusion', !/le quiz est un JEU INTERACTIF/.test(ex));
 
 // ------------------------------------------------------------
@@ -121,12 +127,21 @@ check('/levels : 1 trait (en-tête → classement)', count(levels) === 1);
 const questions = ui.sectionize('Les membres qui ouvrent ce type de ticket devront répondre **obligatoirement** à ces questions.\n\n*Par défaut : aucune question (seule la raison est demandée).*', 4096);
 check('assistant Questionnaire : 1 trait', count(questions) === 1);
 
-const quizGo = ui.sectionize('**Quelle est la capitale de la France ?**\n\n🇦 **Paris**\n🇧 **Lyon**\n🇨 **Lille**\n\n⚡ Réponds vite : **+5 points bonus** si tu réponds en moins de **8 secondes** !', 4096);
-check('/quiz lancement : 2 traits (question / réponses / bonus)', count(quizGo) === 2);
-const quizOk = ui.sectionize('✅ **Bonne réponse !**\n\n**Quelle est la capitale de la France ?**\n\nLa bonne réponse était : **Paris**\n\n✨ +15 points (bonus rapidité ⚡)', 4096);
-check('/quiz résultat (bonne réponse) : 3 traits', count(quizOk) === 3);
-const quizKo = ui.sectionize('❌ **Mauvaise réponse…**\n\n**Quelle est la capitale de la France ?**\n\nLa bonne réponse était : **Paris**', 4096);
-check('/quiz résultat (mauvaise réponse) : 2 traits', count(quizKo) === 2);
+// v231 — le quiz est en Components V2 : on compte les SÉPARATEURS NATIFS
+// produits par le payload réel (divider:true), plus aucun trait texte.
+// Barème : n paragraphes → (n-1) séparateurs entre blocs + 1 avant le pied.
+const quizV2 = (desc) => {
+  const j = JSON.stringify(ui.v2panel({ title: '🧠 Quiz', description: desc, footer: 'F' }).components[0].toJSON());
+  return (j.match(/"divider":true/g) || []).length;
+};
+check('/quiz lancement : 3 séparateurs natifs (2 entre blocs + 1 pied)',
+  quizV2('**Quelle est la capitale de la France ?**\n\n🇦 **Paris**\n🇧 **Lyon**\n🇨 **Lille**\n\n⚡ Réponds vite : **+5 points bonus** si tu réponds en moins de **8 secondes** !') === 3);
+check('/quiz résultat (bonne réponse) : 4 séparateurs natifs',
+  quizV2('✅ **Bonne réponse !**\n\n**Quelle est la capitale de la France ?**\n\nLa bonne réponse était : **Paris**\n\n✨ +15 points (bonus rapidité ⚡)') === 4);
+check('/quiz résultat (mauvaise réponse) : 3 séparateurs natifs',
+  quizV2('❌ **Mauvaise réponse…**\n\n**Quelle est la capitale de la France ?**\n\nLa bonne réponse était : **Paris**') === 3);
+check('/quiz : le payload V2 ne contient AUCUN trait texte ━',
+  !JSON.stringify(ui.v2panel({ title: '🧠 Quiz', description: 'A\n\nB', footer: 'F' })).includes(SEP));
 
 // Exclusions : ZÉRO trait.
 const extra = require('../server/discord/extra');
@@ -158,7 +173,13 @@ check('ui.panel : sections:false conserve le texte brut', (() => {
 const nativeFiles = fs.readdirSync(path.join(__dirname, '..', 'server', 'discord'))
   .filter((f) => f.endsWith('.js'))
   .map((f) => `server/discord/${f}`)
-  .filter((f) => /TextDisplayBuilder|ContainerBuilder/.test(src(f)));
+  // v231 — ui.js est le MODULE DE DESIGN SYSTEM : il définit à la fois le
+  // trait texte (pour les messages pas encore migrés) et les conteneurs V2.
+  // Le scan de source porte donc sur les fichiers qui CONSTRUISENT des
+  // panneaux, et il est complété ci-dessous par un garde-fou FONCTIONNEL sur
+  // le payload réel — bien plus fort qu'une recherche de caractère.
+  .filter((f) => /TextDisplayBuilder|ContainerBuilder/.test(src(f)))
+  .filter((f) => !f.endsWith('discord/ui.js'));
 check('panneaux natifs V2 détectés pour le contrôle', nativeFiles.length >= 1);
 const badNative = nativeFiles.filter((f) => src(f).split('\n')
   .some((line) => line.includes('━') && !line.trim().startsWith('//') && !line.trim().startsWith('*')));
@@ -183,9 +204,9 @@ const touched = ['server/discord/extra.js', 'server/discord/panelCommands.js', '
   'public/index.html', 'public/sw.js'];
 check('aucun token en dur dans les fichiers modifiés',
   !touched.some((f) => /(ghp_|github_pat_|xox[baprs]-)[A-Za-z0-9_]{15,}/.test(src(f))));
-check('index.html : 7 références ?v=230', (src('public/index.html').match(/\?v=230/g) || []).length === 7);
+check('index.html : 7 références ?v=231', (src('public/index.html').match(/\?v=231/g) || []).length === 7);
 check('index.html : plus aucune référence ?v=228', !src('public/index.html').includes('?v=228'));
-check('sw.js : cache botdev-v230', src('public/sw.js').includes("const CACHE = 'botdev-v230';"));
+check('sw.js : cache botdev-v231', src('public/sw.js').includes("const CACHE = 'botdev-v231';"));
 
 console.log(failures === 0
   ? '\n✅ V229 — Traits ━ étendus aux 10 messages multi-blocs (dont le quiz), exclusions verrouillées, garde-fous v220 intacts.'

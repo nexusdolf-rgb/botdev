@@ -512,21 +512,35 @@ async function handleSlash(botId, entry, interaction) {
       }
       const choices = [correct, ...wrongs].sort(() => Math.random() - 0.5);
       const correctIdx = choices.indexOf(correct);
-      // v229 — GRAMMAIRE DES SECTIONS APPLIQUÉE au quiz.
-      // Le critère retenu n'est PAS « jeu = pas de trait » mais, comme en v220,
-      // « jamais de trait entre deux COURTES phrases ». Le quiz affiche ici
-      // 3 blocs substantiels (question / 3 réponses A-B-C / bonus de rapidité)
-      // → le trait les sépare utilement. Mariage, pendu et morpion restent en
-      // sections:false : 2 phrases courtes chacun + mises à jour live à chaque
-      // tour, le trait y produirait l'effet « orphelin » corrigé en v220.
-      const embed = new EmbedBuilder()
-        .setColor(0xe07a5f)
-        .setTitle('🧠 Quiz')
-        // Les 3 réponses sont TOUJOURS affichées sous la question (A/B/C) —
-        // sinon le joueur ne peut pas choisir en connaissance de cause.
-        .setDescription(ui.sectionize(`**${question}**\n\n🇦 **${choices[0]}**\n🇧 **${choices[1]}**\n🇨 **${choices[2]}**\n\n⚡ Réponds vite : **+${bonus} points bonus** si tu réponds en moins de **${bonusWindow} secondes** !`, 4096))
-        .setFooter({ text: `Hoxera · ${guild.name} · Quiz` })
-        .setTimestamp();
+      // v231 — SÉPARATEURS NATIFS PLEINE LARGEUR (Components V2).
+      //
+      // POURQUOI : le trait texte ━ s'arrêtait AVANT le bord arrondi de
+      // l'embed — Discord applique un padding interne à tout contenu d'embed
+      // — et sa longueur visible dépendait du nombre de caractères. Résultat :
+      // des traits de longueurs différentes d'un panneau à l'autre. Le
+      // Separator de Components V2 est un composant de LAYOUT : Discord le
+      // dessine bord à bord, jusqu'aux arrondis. C'est la grammaire déjà
+      // utilisée par le panneau de tickets personnalisés (v220), qui sert de
+      // référence à tout le bot.
+      //
+      // Le lancement ET le résultat du quiz partagent cette grammaire :
+      // Discord interdit de revenir à un message classique en éditant un
+      // message V2 (doc « Display Components »).
+      //
+      // Le critère de section v229 reste valable : « jamais de trait entre deux COURTES phrases ».
+      // Le quiz affiche 3 blocs substantiels
+      // (question / 3 réponses A-B-C / bonus de rapidité) → les séparateurs
+      // sont utiles. Mariage, pendu et morpion restent en sections:false :
+      // 2 phrases courtes chacun + mises à jour live à chaque tour.
+      //
+      // Les 3 réponses sont TOUJOURS affichées sous la question (A/B/C) —
+      // sinon le joueur ne peut pas choisir en connaissance de cause.
+      const quizOptions = {
+        color: 0xe07a5f,
+        title: '🧠 Quiz',
+        description: `**${question}**\n\n🇦 **${choices[0]}**\n🇧 **${choices[1]}**\n🇨 **${choices[2]}**\n\n⚡ Réponds vite : **+${bonus} points bonus** si tu réponds en moins de **${bonusWindow} secondes** !`,
+        footer: `Hoxera · ${guild.name} · Quiz`,
+      };
       // Préfixe `hx:quiz:` → routé par handleButton (comme hx:poll, hx:pendu…).
       const row = new ActionRowBuilder().addComponents(
         ['🇦', '🇧', '🇨'].map((e, i) => new ButtonBuilder()
@@ -544,9 +558,10 @@ async function handleSlash(botId, entry, interaction) {
           || guild.channels.cache.find((c) => c && c.name && c.name.toLowerCase() === chanRef.replace(/^#/, '').toLowerCase() && c.isTextBased && c.isTextBased());
         if (found && typeof found.send === 'function') { target = found; ephemeralSend = true; }
       }
+      const quizPayload = ui.v2panel(quizOptions, [row]);
       const msg = ephemeralSend
-        ? await target.send({ embeds: [embed], components: [row] })
-        : await interaction.reply({ embeds: [embed], components: [row], fetchReply: true });
+        ? await target.send(quizPayload)
+        : await interaction.reply({ ...quizPayload, fetchReply: true });
       quizState.set(`${guild.id}:${msg.id}`, { q: question, correct, correctIdx, answered: false, ts: Date.now(), points: pts, bonus, window: bonusWindow });
       capMap(quizState, 200);
       if (ephemeralSend) await interaction.reply({ content: `🧠 Question envoyée dans ${target} !`, ephemeral: true }).catch(() => {});
@@ -1060,20 +1075,17 @@ async function handleButton(botId, entry, interaction) {
           .setStyle(i === st.correctIdx ? ButtonStyle.Success : ButtonStyle.Danger)
           .setDisabled(true)),
       );
-      // v229 — GRAMMAIRE DES SECTIONS APPLIQUÉE au quiz.
-      // Le critère retenu n'est PAS « jeu = pas de trait » mais, comme en v220,
-      // « jamais de trait entre deux COURTES phrases ». Le quiz affiche ici
-      // 3 blocs substantiels (question / 3 réponses A-B-C / bonus de rapidité)
-      // → le trait les sépare utilement. Mariage, pendu et morpion restent en
-      // sections:false : 2 phrases courtes chacun + mises à jour live à chaque
-      // tour, le trait y produirait l'effet « orphelin » corrigé en v220.
-      const embed = new EmbedBuilder()
-        .setColor(correctPick ? 0x57f287 : 0xed4245)
-        .setTitle('🧠 Quiz')
-        .setDescription(ui.sectionize(`${correctPick ? '✅ **Bonne réponse !**' : '❌ **Mauvaise réponse…**'}\n\n**${st.q}**\n\nLa bonne réponse était : **${st.correct}**${correctPick ? `\n\n✨ +${gained} points${fast ? ' (bonus rapidité ⚡)' : ''}` : ''}`, 4096))
-        .setFooter({ text: `Hoxera · ${guild.name} · Quiz` })
-        .setTimestamp();
-      await interaction.update({ embeds: [embed], components: [row] });
+      // v231 — même grammaire V2 qu'au lancement : le message d'origine est
+      // déjà en Components V2 et Discord interdit d'en sortir à l'édition.
+      // Le flag IsComponentsV2 est accepté par interaction.update()
+      // (InteractionUpdateOptions étend MessageEditOptions, qui l'autorise).
+      const resultPayload = ui.v2panel({
+        color: correctPick ? 0x57f287 : 0xed4245,
+        title: '🧠 Quiz',
+        description: `${correctPick ? '✅ **Bonne réponse !**' : '❌ **Mauvaise réponse…**'}\n\n**${st.q}**\n\nLa bonne réponse était : **${st.correct}**${correctPick ? `\n\n✨ +${gained} points${fast ? ' (bonus rapidité ⚡)' : ''}` : ''}`,
+        footer: `Hoxera · ${guild.name} · Quiz`,
+      }, [row]);
+      await interaction.update(resultPayload);
       return true;
     }
     case 'poll': {

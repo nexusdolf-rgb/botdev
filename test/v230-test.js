@@ -162,12 +162,17 @@ check('un bouton par choix, dans l’ordre', ids.map((id) => id.split(':').pop()
 // ------------------------------------------------------------
 console.log('\n10) Garde-fous v229 / v220 toujours debout');
 const ex = read('server/discord/extra.js');
-check('le quiz garde le trait (lancement + résultat)',
-  (ex.match(/setDescription\(ui\.sectionize\(/g) || []).length >= 2);
+// v231 — le quiz est passé en séparateurs NATIFS pleine largeur : il ne doit
+// plus produire de trait texte, et son payload doit être en Components V2.
+check('le quiz n’utilise plus ui.sectionize (migré en V2 par v231)',
+  !/setDescription\(ui\.sectionize\(`\*\*\$\{question\}/.test(ex)
+  && !/setDescription\(ui\.sectionize\(`\$\{correctPick/.test(ex));
+check('le quiz est bien en ui.v2panel (lancement + résultat)',
+  (ex.match(/ui\.v2panel\(/g) || []).length >= 2);
 check('mariage / pendu / morpion : toujours >= 5 « sections: false »',
   (ex.match(/sections: false/g) || []).length >= 5);
 check('le critère v229 est toujours écrit dans le code',
-  (ex.match(/jamais de trait entre deux COURTES phrases/g) || []).length === 2);
+  (ex.match(/jamais de trait entre deux COURTES phrases/g) || []).length >= 1);
 check('/shop : exclusion volontaire toujours en place',
   read('server/discord/premade.js').includes('EXCLUSION VOLONTAIRE'));
 check('panneaux natifs V2 : séparateurs SeparatorBuilder toujours >= 3',
@@ -177,9 +182,9 @@ check('panneaux natifs V2 : séparateurs SeparatorBuilder toujours >= 3',
 console.log('\n11) Aucun secret ajouté + versionnage front v230');
 check('aucun token en dur dans extra.js',
   !/(ghp_|github_pat_|xox[baprs]-)[A-Za-z0-9_]{15,}/.test(ex));
-check('index.html : 7 références ?v=230', (read('public/index.html').match(/\?v=230/g) || []).length === 7);
+check('index.html : 7 références ?v=231', (read('public/index.html').match(/\?v=231/g) || []).length === 7);
 check('index.html : plus aucune référence ?v=229', !read('public/index.html').includes('?v=229'));
-check('sw.js : cache botdev-v230', read('public/sw.js').includes("const CACHE = 'botdev-v230';"));
+check('sw.js : cache botdev-v231', read('public/sw.js').includes("const CACHE = 'botdev-v231';"));
 
 console.log(failures === 0
   ? '\n✅ V230 — /poll en champs d’embed : rendu net, limites Discord respectées, bug de dépassement corrigé.'
