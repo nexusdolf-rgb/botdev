@@ -250,9 +250,14 @@ check('mono-section 4096 max non touchée', ui.embed({ description: 'x'.repeat(4
   check('DM de transcription : texte naturel (ui.text, pas de trait)',
     pSrc.includes('.setDescription(ui.text(desc, 4096))'));
   const memberW = { id: 'u1', user: { username: 'Alice', displayAvatarURL: () => '' }, toString: () => '@Alice', guild: { name: 'S' } };
-  const wDesc = panels.ticketWelcomeEmbed(memberW, { label: 'Support', emoji: '🎫', staff_roles: [] }, '', '', '', [], 'fr', { number: 1 }, {}).data.description;
-  check('salon privé (runtime) : description d accueil sans ━, sauts conservés',
-    !wDesc.includes('━') && wDesc.includes('\n\n'));
+  // v237 — le message du salon privé est passé en Components V2 : les
+  // paragraphes de l'accueil deviennent des blocs séparés par des séparateurs
+  // NATIFS pleine largeur (plus de sauts de ligne « bruts » à la place).
+  const wPanel = panels.ticketWelcomePanel(memberW, { label: 'Support', emoji: '🎫', staff_roles: [] }, '', '', '', [], 'fr', { number: 1 }, {});
+  check('salon privé (runtime) : payload Components V2',
+    (wPanel.flags & IS_V2) !== 0 && wPanel.embeds === undefined);
+  check('salon privé (runtime) : séparateurs natifs, aucun trait texte ━',
+    v2div(wPanel) >= 2 && !v2json(wPanel).includes(ui.SEPARATOR));
 
   console.log(failures ? `\n❌ ${failures} échec(s)` : '\n🎉 Tous les tests v220 passent');
   process.exit(failures ? 1 : 0);

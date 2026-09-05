@@ -83,15 +83,19 @@ const check = (label, cond) => {
   // ---------- 4. Embed de bienvenue du salon privé ----------
   const member = { id: 'u1', user: { id: 'u1', username: 'Alice', displayAvatarURL: () => '' }, toString: () => '<@u1>' };
   const chosen = { label: 'Ticket contre admin', emoji: '🤝', description: 'Signale un abus du staff, en toute confidentialité.', staff_roles: [] };
-  const embed = panels.ticketWelcomeEmbed(member, chosen, '<@&R1>', 'Un modo me harcèle', '');
-  const embJson = JSON.stringify(embed.toJSON());
+  // v237 — le message du salon privé est un payload Components V2 : on inspecte
+  // son JSON (conteneur + TextDisplay) au lieu de celui d'un embed.
+  const embed = panels.ticketWelcomePanel(member, chosen, '<@&R1>', 'Un modo me harcèle', '');
+  const embJson = v2.json(embed);
+  check('salon : payload Components V2 (plus d\'embed)', v2.isV2(embed));
+  check('salon : séparateurs natifs pleine largeur entre les blocs', v2.dividers(embed) >= 2);
   check('salon : titre professionnel', embJson.includes('🎫 Ticket ouvert'));
   check('salon : type avec emoji', embJson.includes('🤝 **Ticket contre admin**'));
   check('salon : description du type rappelée', embJson.includes('À propos de ce type') && embJson.includes('Signale un abus'));
   check('salon : équipe en charge', embJson.includes('Équipe en charge'));
   check('salon : transcription annoncée (note discrète)', embJson.includes('transcription'));
   check('salon : vouvoyé (« votre demande »)', embJson.includes('Votre demande'));
-  // 🧹 v220 : l'embed du salon privé a été allégé — plus de détail inutile.
+  // 🧹 v220 : le panneau du salon privé a été allégé — plus de détail inutile.
   check('salon : allégé — pas de date brute, tickets précédents, étapes ni mode d emploi staff',
     !embJson.includes('Ouvert le') && !embJson.includes('Tickets précédents')
     && !embJson.includes('Déroulement de la prise en charge') && !embJson.includes('Actions réservées au staff'));

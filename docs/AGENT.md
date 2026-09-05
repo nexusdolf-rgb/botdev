@@ -200,7 +200,69 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   'tag') ») : un message supprimé **partiel** (pas en cache) n'a pas d'auteur →
   `trackDeleted` (/snipe, `extra.js`) plantait ; idem `tasks.js` (`member.user.tag`).
   Gardes ajoutées, test `test/v228-test.js`, docs remises à jour (v194 → v228).
-- **v236 (ACTUELLE, 05/09)** : **SÉPARATEURS NATIFS PLEINE LARGEUR — lot n°6,
+- **v237 (ACTUELLE, 05/09)** : **3 corrections tickets signalées par
+  l'utilisateur.** Tout est dans `panels.js`.
+  **1️⃣ Le récapitulatif du journal des tickets n'avait AUCUN séparateur.**
+  `sendTicketRecap` construisait un `new EmbedBuilder()` à la main : il n'est
+  jamais passé par le système de panneaux, donc la migration v231→v236 ne l'a
+  pas touché. → `ui.v2panel(…)`, séparateurs natifs pleine largeur entre les
+  8 blocs, et le bouton « 📜 Voir la transcription » rentre DANS le conteneur.
+  🚨 **PIÈGE n°14 — `updateRecapRating` relisait `msg.embeds[0].fields`.** Sur un
+  conteneur V2 il n'y a plus d'embed : la note ⭐ aurait **silencieusement cessé
+  de s'afficher**. Solution : le bloc « ⭐ Évaluation » devient un champ **hors
+  ligne** (donc un TextDisplay **isolé**, repérable par son préfixe
+  `**⭐ Évaluation**`), et la fonction **sérialise l'arborescence du conteneur**
+  (`msg.components.map(c => c.toJSON())`), patche ce seul TextDisplay, puis
+  `msg.edit({ components: raw, flags: MessageFlags.IsComponentsV2, content: null,
+  embeds: [], attachments: [] })`.
+  ✅ **Vérifié** : discord.js accepte les **objets JSON bruts** dans `components`
+  — `MessagePayload` les passe à `client.options.jsonTransformer` (=
+  `toSnakeCase`), qui conserve l'arborescence à l'identique. Pas besoin de
+  reconstruire des builders. Les constantes `RECAP_RATING_LABEL` /
+  `RECAP_RATING_PENDING` sont centralisées car l'édition doit retrouver le bloc
+  au caractère près.
+  **2️⃣ 🐛 BUG UTILISATEUR — « l'embed d'évaluation reste affiché ».** Le MP
+  d'évaluation est en V2 depuis la v234, mais `handleRating` faisait
+  `interaction.update({ content: '…', embeds: [], components: [] })`. Or
+  **Discord interdit de retirer le flag IsComponentsV2 à l'édition** et un
+  message V2 ne peut porter ni `content` ni `embeds` → l'update était **REJETÉ**,
+  le bot basculait sur sa réponse éphémère de secours et **le panneau restait
+  affiché avec ses 5 boutons étoiles**. → helper `ratingConfirmPanel(text)`
+  (`ui.v2panel({ variant:'success', description, footer:false, sections:false })`)
+  sur les **2 branches** (« merci » + « déjà noté »). Le test vérifie que le
+  repli éphémère n'est **jamais** atteint.
+  ⚠️ **`handleTicketDeleteCancel` fait encore `update({ content: … })` mais
+  c'est une ROUTE MORTE** : son customId `bd-tmenu:{botId}:delcancel` n'est
+  envoyé **nulle part** (l'ancien bouton de confirmation a été remplacé par une
+  modale). Aucun message V2 ne peut l'atteindre — laissé tel quel, et un
+  garde-fou de test verrouille `(pSrc.match(/delcancel/g)||[]).length === 1`.
+  **3️⃣ Le salon privé du ticket partait en 3 morceaux.**
+  `sendAsProfile(…, { content: premièreLigne, embeds: [welcome], components:
+  [row1] })` : le menu « ⚙️ Actions du staff » traînait **en dessous** du
+  panneau, alors que sur le panneau public le sélecteur est **dedans**.
+  → `ticketWelcomeEmbed` **renommé `ticketWelcomePanel`**, renvoie un payload V2
+  unique, et prend un **10ᵉ paramètre `extra = { content, rows }`** :
+  • la première ligne (type + créateur + ping staff) devient le `content` du
+    **conteneur** (TextDisplay en tête) — le ping `<@&rôle>` notifie toujours ;
+  • `row1` (le menu staff) est passé en `rows` → **dans** le conteneur ;
+  • **`sections` activé** (demande explicite de l'utilisateur) : les paragraphes
+    de l'accueil et chaque bloc sont séparés nativement. L'ancien commentaire
+    « message d'accueil COURT, pas de trait » ne tenait plus : ce panneau porte
+    jusqu'à 7 blocs, dont les réponses au questionnaire ;
+  • l'avatar n'est plus répété en `author.iconURL` (la vignette suffit).
+  🧪 **Nouveau `test/v237-test.js`** (runtime : récap envoyé → note éditée →
+  MP évalué 2× → salon privé). **4 tests existants mis à jour** : v48 (lisait
+  `firstMsg.content` / `.embeds[0]`), v212 (`components: [row1]` → `rows:
+  [row1]`), v234 (comptage `ui.v2panel(` **11 → 14** ; garde-fou `.embeds[0]`
+  **4 → 5** occurrences dont 4 commentaires, `EmbedBuilder.from(msg.embeds[0])`
+  disparu), v36 + v79 + v220 (`ticketWelcomeEmbed` → `ticketWelcomePanel`,
+  lecture via `test/helpers/v2.js`).
+  🔧 **3 fonctions exposées pour les tests** (convention `__test*` déjà en place) :
+  `__testSendTicketRecap`, `__testUpdateRecapRating`, `__testHandleRating`.
+  🎨 **`scripts/gen-apercu-v237.js`** : génère `/home/user/apercu-v237.html`, un
+  aperçu Discord sombre **AVANT / APRÈS** des 3 panneaux, dessiné à partir des
+  **vrais payloads** (pas d'une maquette).
+- **v236 (05/09)** : **SÉPARATEURS NATIFS PLEINE LARGEUR — lot n°6,
   le DERNIER : 16 emplacements sur 12 fichiers.** `logging` (journal de
   modération) · `liveWatch` (annonce de live) · `community` (starboard :
   publication **et** édition) · `engine` (action `send_embed` du dashboard) ·
@@ -768,7 +830,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 
 ## 📌 ÉTAT AU 05/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v236** — voir la section v236 ci-dessus. **163 tests verts**.
+- Dernière version : **v237** — voir la section v237 ci-dessus. **164 tests verts**.
   ⚠️ **Chantier en cours (v231 →)** : migration des traits texte `━` vers les
   séparateurs **NATIFS pleine largeur** (Components V2).
   • **Migré** : `/quiz` (v231) · `premade.js` 13 messages dont `replyPanel` ×11
@@ -791,6 +853,11 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
     `automod` ×2, `announcements`, `tasks`, `events` ×2 → **16 emplacements**.
     **Total cumulé : 90 emplacements.** **0 `ui.panel(` / 0 `ui.embed(` dans tout
     `server/`.**
+  • **v237 — les 3 derniers oublis signalés par l'utilisateur sont corrigés** :
+    le **récapitulatif du journal des tickets** (EmbedBuilder construit à la
+    main, jamais vu par la migration), le **bug du MP d'évaluation qui restait
+    affiché**, et le **menu staff du salon privé** (dehors → dedans).
+    `panels.js` compte désormais **14 `ui.v2panel(`**.
   • **Reste (reporté, non bloquant)** : le **wizard « assistant types »** de
     `panels.js` (6 étapes éditées en place → à migrer d'un coup) et les **3
     `ui.sectionize(` volontaires** (`events.js` branche carte image, `panels.js`

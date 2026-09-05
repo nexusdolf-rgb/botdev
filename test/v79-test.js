@@ -67,11 +67,13 @@ const check = (label, cond) => {
   // ---------- 4. Embed de bienvenue du ticket ----------
   const member = { id: 'u2', user: { id: 'u2', username: 'Bob', displayAvatarURL: () => '' }, toString: () => '<@u2>' };
   const chosen = { label: 'Question', emoji: '❓', description: '', staff_roles: [] };
-  const embTicketEn = panels.ticketWelcomeEmbed(member, chosen, '<@&R1>', 'hello', '', [], 'en').toJSON();
-  check('ticket EN : titre traduit', embTicketEn.title === '🎫 Ticket opened');
-  check('ticket EN : champs traduits', JSON.stringify(embTicketEn.fields).includes('Ticket type') && JSON.stringify(embTicketEn.fields).includes('Team in charge'));
-  const embTicketFr = panels.ticketWelcomeEmbed(member, chosen, '<@&R1>', 'bonjour', '', [], 'fr').toJSON();
-  check('ticket FR : champs français', JSON.stringify(embTicketFr.fields).includes('Type de ticket'));
+  // v237 — payload Components V2 : le titre est porté par le conteneur et les
+  // libellés de champs sont rendus dans des TextDisplay.
+  const embTicketEn = panels.ticketWelcomePanel(member, chosen, '<@&R1>', 'hello', '', [], 'en');
+  check('ticket EN : titre traduit', v2.title(embTicketEn) === '🎫 Ticket opened');
+  check('ticket EN : champs traduits', v2.json(embTicketEn).includes('Ticket type') && v2.json(embTicketEn).includes('Team in charge'));
+  const embTicketFr = panels.ticketWelcomePanel(member, chosen, '<@&R1>', 'bonjour', '', [], 'fr');
+  check('ticket FR : champs français', v2.json(embTicketFr).includes('Type de ticket'));
 
   // ---------- 5. Transcription en MP traduite ----------
   const dms = [];

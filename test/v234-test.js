@@ -257,19 +257,22 @@ console.log('\n5️⃣  Couverture — tout panels.js est en V2');
   const count = (needle) => src.split(needle).length - 1;
   check('plus aucun ui.panel( dans panels.js', count('ui.panel(') === 0);
   check('plus aucun ui.embed( dans panels.js', count('ui.embed(') === 0);
-  check('11 emplacements passés en ui.v2panel(', count('ui.v2panel(') === 11);
+  // v237 — +3 emplacements : le récapitulatif du journal des tickets, le
+  // panneau de confirmation de la note, et le message du salon privé
+  // (ticketWelcomePanel). 11 (v234) + 3 (v237) = 14.
+  check('14 emplacements passés en ui.v2panel( (11 en v234 + 3 en v237)', count('ui.v2panel(') === 14);
   check('plus aucune duplication « Panel.content = i18n.t(...) »', count('Panel.content = i18n.t') === 0);
   check('plus aucune référence à buildTicketPanelEmbed', count('buildTicketPanelEmbed') === 0);
-  // Il RESTE deux lectures de .embeds[0], toutes deux volontaires :
+  // v237 — il ne reste QU'UNE lecture de .embeds[0] dans le code exécuté :
   //   • panelTitleOf — rétro-compatibilité : les panneaux déjà en place dans les
-  //     salons sont des embeds classiques et doivent quand même être nettoyés ;
-  //   • updateRecapRating — le récapitulatif du journal, non migré (voir en-tête).
-  // (4 occurrences : 1 dans un commentaire + 1 code dans panelTitleOf, 2 dans
-  // updateRecapRating.)
-  check('plus aucune extraction .embeds[0] hors panelTitleOf et updateRecapRating',
-    count('embeds[0]') === 4
+  //     salons sont des embeds classiques et doivent quand même être nettoyés.
+  // `updateRecapRating` ne relit plus l'embed : le récapitulatif du journal est
+  // passé en Components V2 et la note s'écrit en patchant le TextDisplay du
+  // conteneur. (5 occurrences : 4 dans des commentaires explicatifs + 1 code.)
+  check('plus aucune extraction .embeds[0] hors panelTitleOf (updateRecapRating migrée en v237)',
+    count('embeds[0]') === 5
     && /const emb = msg && msg\.embeds && msg\.embeds\[0\];/.test(src)
-    && /const embed = EmbedBuilder\.from\(msg\.embeds\[0\]\);/.test(src));
+    && !/EmbedBuilder\.from\(msg\.embeds\[0\]\)/.test(src));
   check('panelTitleOf lit AUSSI le conteneur V2 (type 17 → TextDisplay « ## »)',
     src.includes('Number(json.type) !== 17') && src.includes(".replace(/^##\\s*/, '')"));
 

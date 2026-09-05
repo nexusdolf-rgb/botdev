@@ -10,7 +10,7 @@ const {
   ActionRowBuilder, ButtonBuilder, ButtonStyle,
   StringSelectMenuBuilder, StringSelectMenuOptionBuilder,
   ModalBuilder, TextInputBuilder, TextInputStyle,
-  ChannelType, PermissionFlagsBits, EmbedBuilder,
+  ChannelType, PermissionFlagsBits, EmbedBuilder, MessageFlags,
 } = require('discord.js');
 const store = require('../db');
 const crypto = require('crypto');
@@ -636,8 +636,8 @@ function readRoomCfg(botId, guildId) {
 }
 const ROOM_DEFAULTS = { color: '', title: '', welcome: '', steps: '' };
 
-function ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning = '', answers = [], lang = 'fr', meta = {}, room = ROOM_DEFAULTS) {
-  // 🧹 v220 : embed de bienvenue ALLÉGÉ — l'essentiel sans le bruit.
+function ticketWelcomePanel(member, chosen, staffMention, reason, dmWarning = '', answers = [], lang = 'fr', meta = {}, room = ROOM_DEFAULTS, extra = {}) {
+  // 🧹 v220 : panneau de bienvenue ALLÉGÉ — l'essentiel sans le bruit.
   // On garde : type, équipe, à propos, demande (raison), réponses au
   // questionnaire. On ne remonte plus la date brute (l'horodatage du pied
   // l'affiche), ni le compteur « tickets précédents », ni le long mode
@@ -686,21 +686,32 @@ function ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning = ''
   const desc = room.welcome
     ? resolveRoomVars(room.welcome)
     : i18n.t(lang, 'ticket_welcome_desc', { member: `${member}` });
-  const welcome = new EmbedBuilder()
-    .setColor(finalColor)
-    .setAuthor(avatar ? { name: `Ticket de ${member.user.username}${meta.number ? ` · #${meta.number}` : ''}`, iconURL: avatar } : { name: `Ticket de ${member.user.username}${meta.number ? ` · #${meta.number}` : ''}` })
-    .setTitle(title)
-    // Message d'accueil COURS : pas de trait plaqué entre deux phrases —
-    // il garde ses sauts de paragraphe naturels (le trait structure les
-    // GRANDS panneaux à sections, pas ce petit message de bienvenue).
-    .setDescription(ui.text(desc, 4096))
-    .addFields(...fields)
-    .setTimestamp();
   const site = store.settings.get('public_url');
   const footerSite = site || 'hoxera.is-a.dev';
-  welcome.setFooter({ text: `Hoxera · Ticket${meta.number ? ` #${meta.number}` : ''} · ${footerSite}` });
-  if (avatar) welcome.setThumbnail(avatar);
-  return welcome;
+  // v237 — le message du salon PRIVÉ passe en Components V2, comme le panneau
+  // public : les paragraphes du message d'accueil ET chaque bloc (type, équipe,
+  // à propos, réponses au questionnaire, raison, déroulement) sont séparés par
+  // des séparateurs NATIFS pleine largeur. (Avant : aucun séparateur — le
+  // message était volontairement « court », mais il porte en réalité jusqu'à
+  // 7 blocs, dont les réponses au questionnaire.)
+  // • `extra.content` : la première ligne du salon (type + créateur + ping
+  //   staff). En V2 le `content` du message est interdit → il devient un
+  //   TextDisplay en tête de conteneur (même position visuelle). Le ping
+  //   `<@&rôle>` continue de notifier.
+  // • `extra.rows` : le menu « ⚙️ Actions du staff » entre DANS le conteneur,
+  //   au lieu de traîner en dessous du panneau.
+  // • L'avatar n'est plus répété en `author.iconURL` : la vignette suffit.
+  return ui.v2panel({
+    color: finalColor,
+    author: { name: `Ticket de ${member.user.username}${meta.number ? ` · #${meta.number}` : ''}` },
+    title,
+    content: extra.content || '',
+    description: desc,
+    fields,
+    thumbnail: avatar,
+    footer: `Hoxera · Ticket${meta.number ? ` #${meta.number}` : ''} · ${footerSite}`,
+    timestamp: new Date(),
+  }, extra.rows || []);
 }
 
 // 🧲 Normalisation d'un nom décoré : on ne garde que lettres et chiffres.
@@ -1027,16 +1038,24 @@ Notre équipe va te répondre dans le salon privé prévu pour toi.`,
     const staffMention = supportRoles.length ? supportRoles.map((r) => r.toString()).join(' ') : '';
     const openRow = store.openTickets.getByChannel(channel.id);
     const room = readRoomCfg(botId, guild.id);
-    const welcome = ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning, answers, lang, { number: ticketNumber, prevCount, openedAt: openRow ? openRow.opened_at : new Date().toISOString() }, room);
     const identity = require('./identity');
     // 🎫 La PREMIÈRE LIGNE du salon annonce le type + le créateur : le staff
     // voit d'un coup d'œil de quel type de ticket il s'agit et qui l'a ouvert.
     const typeTitle = chosen ? `${chosen.emoji ? chosen.emoji + ' ' : ''}**${chosen.label}**` : '**Ticket**';
-    await identity.sendAsProfile(interaction.client, botId, guild, channel, {
-      content: i18n.t(lang, 'ticket_first_line', { type: typeTitle, member: `${member}` }) + (staffMention ? ' · ' + staffMention : ''),
-      embeds: [welcome],
-      components: [row1],
-    }).catch(() => {});
+    // v237 — un SEUL payload Components V2 : la première ligne devient le
+    // `content` du conteneur et le menu staff (`row1`) une rangée À L'INTÉRIEUR
+    // du conteneur. Plus aucun `embeds` / `components` au niveau du message.
+    // Aucune pièce jointe ici → webhook + V2 est autorisé (piège n°12).
+    const welcome = ticketWelcomePanel(
+      member, chosen, staffMention, reason, dmWarning, answers, lang,
+      { number: ticketNumber, prevCount, openedAt: openRow ? openRow.opened_at : new Date().toISOString() },
+      room,
+      {
+        content: i18n.t(lang, 'ticket_first_line', { type: typeTitle, member: `${member}` }) + (staffMention ? ' · ' + staffMention : ''),
+        rows: [row1],
+      },
+    );
+    await identity.sendAsProfile(interaction.client, botId, guild, channel, welcome).catch(() => {});
 
     await logging.log(botId, guild, {
       title: '🎫 Ticket ouvert', color: '#e07a5f',
@@ -1379,10 +1398,26 @@ async function sendTicketRecap(botId, interaction, { row, meta, closeReason, tra
       }
     } catch {}
 
-    const embed = new EmbedBuilder()
-      .setColor('#e07a5f')
-      .setTitle(`📔 Récapitulatif — Ticket #${number}${row && row.type_label ? ` · ${row.type_label}` : ''}`)
-      .addFields(
+    // v237 — 🐛 le récapitulatif du journal des tickets était un EmbedBuilder
+    // construit à la main : il n'est jamais passé par le système de panneaux et
+    // n'avait donc AUCUN séparateur. Il passe en Components V2 : chaque bloc
+    // (raison d'ouverture, raison de fermeture, évaluation…) est séparé par un
+    // séparateur NATIF pleine largeur, comme le reste du bot.
+    // ⚠️ « ⭐ Évaluation » devient un bloc HORS LIGNE (le sien tout seul) :
+    // c'est ce qui permet à updateRecapRating de le retrouver et de le
+    // remplacer dans le conteneur, puisqu'il ne peut plus relire
+    // `msg.embeds[0].fields` (il n'y a plus d'embed).
+    const rows = [];
+    if (transcript.url) {
+      rows.push(new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel('📜 Voir la transcription complète').setURL(transcript.url)
+      ));
+    }
+
+    const sent = await board.send(ui.v2panel({
+      color: '#e07a5f',
+      title: `📔 Récapitulatif — Ticket #${number}${row && row.type_label ? ` · ${row.type_label}` : ''}`,
+      fields: [
         { name: '👤 Ouvert par', value: openerId ? `<@${openerId}>\n\`${openerTag}\`` : `\`${openerTag}\``, inline: true },
         { name: '🖐️ Pris en charge par', value: row && row.claimed_by ? `<@${row.claimed_by}>\n\`${row.claimed_tag}\`` : '— personne', inline: true },
         { name: '🔒 Fermé par', value: `<@${interaction.user.id}>\n\`${interaction.user.tag}\``, inline: true },
@@ -1390,25 +1425,24 @@ async function sendTicketRecap(botId, interaction, { row, meta, closeReason, tra
         { name: '🔐 Raison de fermeture', value: (closeReason || '—').slice(0, 1000), inline: false },
         { name: '⏱️ Durée', value: row ? formatDuration(row.opened_at) : '—', inline: true },
         { name: '💬 Messages', value: String(transcript.msgCount || 0), inline: true },
-        { name: '⭐ Évaluation', value: 'En attente de la note du membre…', inline: true },
-      )
-      .setFooter({ text: `${guild.name} · Journal des tickets`, iconURL: guild.iconURL ? (guild.iconURL({ size: 64 }) || undefined) : undefined })
-      .setTimestamp();
-    if (openerAvatar) embed.setThumbnail(openerAvatar);
-
-    const components = [];
-    if (transcript.url) {
-      components.push(new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel('📜 Voir la transcription complète').setURL(transcript.url)
-      ));
-    }
-
-    const sent = await board.send({ embeds: [embed], components }).catch(() => null);
+        { name: RECAP_RATING_LABEL, value: RECAP_RATING_PENDING, inline: false },
+      ],
+      // L'avatar du créateur en vignette (l'iconURL de pied d'embed n'existe
+      // pas en V2 : l'icône du serveur disparaît du pied, comme ailleurs).
+      thumbnail: openerAvatar,
+      footer: `${guild.name} · Journal des tickets`,
+      timestamp: new Date(),
+    }, rows)).catch(() => null);
     if (sent && number) store.ticketLogMsgs.set(botId, guild.id, number, board.id, sent.id);
   } catch (e) {
     console.error('[Hoxera] récap ticket :', e.message);
   }
 }
+
+// Libellé/valeur du bloc d'évaluation dans le récapitulatif. Centralisés car
+// updateRecapRating doit retrouver EXACTEMENT ce bloc dans le conteneur V2.
+const RECAP_RATING_LABEL = '⭐ Évaluation';
+const RECAP_RATING_PENDING = 'En attente de la note du membre…';
 
 // ⭐ Quand le membre note son ticket, le panneau du journal est mis à jour.
 async function updateRecapRating(botId, client, guildId, number, stars) {
@@ -1420,13 +1454,33 @@ async function updateRecapRating(botId, client, guildId, number, stars) {
     const channel = guild.channels.cache.get(ref.channel_id);
     if (!channel) return;
     const msg = await channel.messages.fetch(ref.message_id).catch(() => null);
-    if (!msg || !msg.embeds || !msg.embeds.length) return;
-    const embed = EmbedBuilder.from(msg.embeds[0]);
-    const fields = (msg.embeds[0].fields || []).map((f) =>
-      f.name === '⭐ Évaluation' ? { name: f.name, value: `${'⭐'.repeat(stars)} (${stars}/5)`, inline: true } : f
-    );
-    embed.setFields(fields);
-    await msg.edit({ embeds: [embed] }).catch(() => {});
+    if (!msg || !msg.components || !msg.components.length) return;
+    // v237 — le récapitulatif est désormais un conteneur Components V2 : on ne
+    // peut plus relire `msg.embeds[0].fields`. On sérialise l'arborescence, on
+    // remplace le TextDisplay « ⭐ Évaluation » et on renvoie le tout à
+    // l'identique. discord.js accepte les objets JSON bruts dans `components`
+    // (MessagePayload les passe à son jsonTransformer) et le flag
+    // IsComponentsV2 est re-posé explicitement : on ne peut pas sortir du V2.
+    const raw = JSON.parse(JSON.stringify(
+      msg.components.map((c) => (c && typeof c.toJSON === 'function' ? c.toJSON() : c))
+    ));
+    const mark = `**${RECAP_RATING_LABEL}**`;
+    let patched = false;
+    const walk = (node) => {
+      if (!node || typeof node !== 'object') return;
+      if (node.type === 10 && typeof node.content === 'string' && node.content.startsWith(mark)) {
+        node.content = `${mark}\n${'⭐'.repeat(stars)} (${stars}/5)`;
+        patched = true;
+        return;
+      }
+      for (const child of node.components || []) walk(child);
+    };
+    raw.forEach(walk);
+    if (!patched) return;
+    await msg.edit({
+      components: raw, flags: MessageFlags.IsComponentsV2,
+      content: null, embeds: [], attachments: [],
+    }).catch(() => {});
   } catch { /* jamais bloquant */ }
 }
 
@@ -1618,14 +1672,27 @@ async function handleRating(botId, interaction) {
   const lang = i18n.normalize(parts[4]);
   if (!guildId || !number || !stars) return;
   if (store.ticketRatings.has(botId, guildId, number)) {
-    try { await interaction.update({ content: i18n.t(lang, 'ticket_rating_already'), embeds: [], components: [] }); } catch { await interaction.reply({ content: i18n.t(lang, 'ticket_rating_already'), ephemeral: true }).catch(() => {}); }
+    try { await interaction.update(ratingConfirmPanel(i18n.t(lang, 'ticket_rating_already'))); } catch { await interaction.reply({ content: i18n.t(lang, 'ticket_rating_already'), ephemeral: true }).catch(() => {}); }
     return;
   }
   store.ticketRatings.add(botId, guildId, { number, opener_id: interaction.user.id, rating: stars });
   // 📔 Le panneau du journal des tickets affiche désormais la note
   updateRecapRating(botId, interaction.client, guildId, number, stars).catch(() => {});
-  try { await interaction.update({ content: i18n.t(lang, 'ticket_rating_done', { stars }), embeds: [], components: [] }); }
+  try { await interaction.update(ratingConfirmPanel(i18n.t(lang, 'ticket_rating_done', { stars }))); }
   catch { try { await interaction.reply({ content: i18n.t(lang, 'ticket_rating_done', { stars }), ephemeral: true }); } catch {} }
+}
+
+// v237 — 🐛 BUG CORRIGÉ : « l'embed d'évaluation reste affiché après le clic ».
+// Le MP d'évaluation est un message Components V2 (v234). Or Discord **interdit
+// de retirer ce flag à l'édition**, et un message V2 ne peut porter ni `content`
+// ni `embeds`. L'ancien
+//     interaction.update({ content: '…', embeds: [], components: [] })
+// était donc **REJETÉ** : le bot basculait sur la réponse éphémère de secours et
+// le panneau d'évaluation restait affiché avec ses 5 boutons étoiles.
+// On remplace maintenant le conteneur par un petit panneau de confirmation.
+// `sections: false` : une seule phrase, aucun séparateur ne serait justifié.
+function ratingConfirmPanel(text) {
+  return ui.v2panel({ variant: 'success', description: text, footer: false, sections: false });
 }
 
 async function handleTicketHold(botId, interaction) {
@@ -2679,10 +2746,18 @@ module.exports = {
   resolveRole, roleKey, uniqueRoleRefs, staffRoleRefsForConfig, parseTypes, isStaff, staffForTicket, openTicket, safeEmoji,
   parentIdOf, panelParentOf, panelChannelOf, repairTicketChannel,
   startTypesWizard, handleTypesWizardInteraction,
-  handleTicketDeleteAsk, ticketMetaFor, ticketWelcomeEmbed, readRoomCfg, typeOptionDescription, normalizeTypes,
+  handleTicketDeleteAsk, ticketMetaFor, ticketWelcomePanel, readRoomCfg, typeOptionDescription, normalizeTypes,
   sendTranscriptDm, sweepInactiveTickets, buildTranscriptFromChannel, sendRatingDm,
   __testPanelBannerUrl: panelBannerUrl,
   // v234 — exposé pour les tests : pruneOldPanels doit reconnaître les panneaux
   // classiques ET les conteneurs Components V2, sinon les doublons s'accumulent.
   __testPanelTitleOf: panelTitleOf,
+
+  // v237 — exposés pour les tests : le récapitulatif du journal des tickets est
+  // passé en Components V2 et sa note s'édite en patchant le conteneur (plus de
+  // relecture de `msg.embeds[0]`) ; `handleRating` doit lui aussi rester en V2,
+  // sinon le panneau d'évaluation reste affiché après le clic.
+  __testSendTicketRecap: sendTicketRecap,
+  __testUpdateRecapRating: updateRecapRating,
+  __testHandleRating: handleRating,
 };

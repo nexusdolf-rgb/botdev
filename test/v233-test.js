@@ -212,9 +212,9 @@ console.log('\n8) Aucun secret ajouté + versionnage front v233');
   check(`aucun token en dur dans ${path.basename(f)}`,
     !/(ghp_|github_pat_|rnd_|xox[baprs]-)[A-Za-z0-9_-]{15,}/.test(read(f)));
 });
-check('index.html : 7 références ?v=236', (read('public/index.html').match(/\?v=236/g) || []).length === 7);
+check('index.html : 7 références ?v=237', (read('public/index.html').match(/\?v=237/g) || []).length === 7);
 check('index.html : plus aucune référence ?v=232', !read('public/index.html').includes('?v=232'));
-check('sw.js : cache botdev-v236', read('public/sw.js').includes("const CACHE = 'botdev-v236';"));
+check('sw.js : cache botdev-v237', read('public/sw.js').includes("const CACHE = 'botdev-v237';"));
 
 console.log(failures === 0
   ? '\n✅ V233 — Lot n°3 : giveaways (5) et événements (7) en séparateurs natifs pleine largeur, édition de fin de tirage comprise.'

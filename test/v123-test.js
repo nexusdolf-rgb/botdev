@@ -16,7 +16,7 @@ assert.ok(styles.includes('appearance: none'));
 assert.ok(styles.includes('background-image: url("data:image/svg+xml'));
 assert.ok(styles.includes('prefers-reduced-motion'));
 assert.ok(styles.includes('@media (max-width: 900px)'));
-assert.strictEqual((index.match(/\?v=236/g) || []).length, 7);
-assert.ok(sw.includes("const CACHE = 'botdev-v236';"));
+assert.strictEqual((index.match(/\?v=237/g) || []).length, 7);
+assert.ok(sw.includes("const CACHE = 'botdev-v237';"));
 
 console.log('✅ v3.19 : design system du dashboard, sélecteurs premium, boutons et responsive');

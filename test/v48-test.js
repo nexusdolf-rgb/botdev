@@ -152,9 +152,14 @@ const check = (label, cond) => {
   const firstMsg = tSends[0] || {};
   check('type : le salon est nommé « reclamation-bob » (type + créateur)', String(channelsCreated[0].name) === 'reclamation-bob');
   check('type : le topic contient « Réclamation »', String(channelsCreated[0].topic).includes('Réclamation'));
-  check('type : la PREMIÈRE LIGNE du salon annonce « **Réclamation** — ticket de »', String(firstMsg.content || '').includes('**Réclamation**') && String(firstMsg.content || '').includes('ticket de'));
-  const tEmb = firstMsg.embeds && firstMsg.embeds[0] ? JSON.stringify(firstMsg.embeds[0].toJSON()) : '';
-  check('type : l\'embed de bienvenue affiche « Réclamation »', tEmb.includes('Réclamation'));
+  // v237 — le message du salon privé est un payload Components V2 UNIQUE : la
+  // première ligne (type + créateur + ping staff) est un TextDisplay en tête de
+  // conteneur, plus le `content` du message, et il n'y a plus d'embed.
+  check('type : le salon privé est envoyé en Components V2 (un seul payload)', v2.isV2(firstMsg));
+  const tEmb = v2.json(firstMsg);
+  check('type : la PREMIÈRE LIGNE du salon annonce « **Réclamation** — ticket de »', tEmb.includes('**Réclamation**') && tEmb.includes('ticket de'));
+  check('type : le panneau de bienvenue affiche « Réclamation »', tEmb.includes('Réclamation'));
+  check('type : le menu staff est DANS le conteneur', tEmb.includes('bd-troom:'));
   const lastReply = wAns.replies[wAns.replies.length - 1];
   check('logique : confirmation privée avec le lien', lastReply && String(lastReply[1].content).includes('Ton ticket') && String(lastReply[1].content).includes('a été créé') && String(lastReply[1].content).includes('#reclamation-bob'));
   check('type : la confirmation privée mentionne le type', lastReply && String(lastReply[1].content).includes('Réclamation'));

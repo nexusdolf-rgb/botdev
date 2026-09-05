@@ -69,7 +69,11 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('panels : customId du menu bd-troom:{botId}', panels.includes('bd-troom:${botId}'));
   check('panels : 6 options couvrent claim/hold/close/reopen/addmember/delete', ['claim', 'hold', 'close', 'reopen', 'addmember', 'delete'].every((v) => panels.includes(`setValue('${v}')`)));
   check('panels : le composant du salon n’a plus 2 rangées', !panels.includes('components: [row1, row2]'));
-  check('panels : le salon n’envoie plus qu’une seule ActionRow', panels.includes('components: [row1],'));
+  // v237 — la rangée du menu staff est passée DANS le conteneur V2 : elle est
+  // fournie via `rows:` de ticketWelcomePanel, plus via `components:` du message.
+  check('panels : le salon n’envoie plus qu’une seule ActionRow', panels.includes('rows: [row1],'));
+  check('panels : le menu staff est DANS le conteneur (plus d’embeds/components au niveau message)',
+    !panels.includes('components: [row1]') && !panels.includes('embeds: [welcome]'));
   check('panels : le dispatcher route le menu vers les handlers', panels.includes('const actions = {') && panels.includes('claim: handleTicketClaim'));
   check('panels : garde-fou staff à l’usage (handler vérifie isStaff)', (panels.match(/async function handleTicketClaim\(botId, interaction\) \{[\s\S]*?if \(!isStaff/g) || []).length >= 1);
 
@@ -83,8 +87,8 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('dash : bouton restaurer les valeurs par défaut', dash.includes('id="tr-default"'));
 
   // ---------- 6. Version ----------
-  check('site : bump v212 (index)', index.includes('?v=236'));
-  check('site : bump v212 (sw cache)', sw.includes('botdev-v236'));
+  check('site : bump v212 (index)', index.includes('?v=237'));
+  check('site : bump v212 (sw cache)', sw.includes('botdev-v237'));
 
   console.log(`  ✅ v212 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });
