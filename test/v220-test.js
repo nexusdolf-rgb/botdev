@@ -157,6 +157,14 @@ check('mono-section 4096 max non touchée', ui.embed({ description: 'x'.repeat(4
   const exSrc = src('extra.js');
   check('jeux & demandes courts : sections:false (pas de trait orphelin)',
     (exSrc.match(/sections: false/g) || []).length >= 5);
+  // /meme : sources FRANCOPHONES en priorité (titres en français), jamais NSFW.
+  const pmSrc = src('premade.js');
+  check('meme : sources francophones (memesfr, frenchmemes, rance)',
+    pmSrc.includes("const MEME_FR_SOURCES = ['memesfr', 'frenchmemes', 'rance']"));
+  check('meme : filtrage NSFW/spoiler actif',
+    pmSrc.includes('!data.nsfw && !data.spoiler'));
+  check('meme : la commande passe par la sélection française',
+    pmSrc.includes('const data = await fetchRandomMeme()'));
   const pSrc = src('panels.js');
   check('salon privé : accueil = texte naturel (ui.text, pas de trait)',
     pSrc.includes('.setDescription(ui.text(desc, 4096))'));

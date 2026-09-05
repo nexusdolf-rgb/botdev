@@ -384,6 +384,54 @@ async function handlePremadeSlash(botId, entry, interaction) {
   }
 }
 
+// ============================================================
+// 🎭 Mèmes aléatoires (v221) : sources FRANCOPHONES en priorité.
+// L'API externe (meme-api.com) renvoie les posts d'un sous-reddit : on
+// pioche dans des sous-reddits de mèmes français pour que les titres soient
+// en français. Repli automatique si une source est vide/privée/hors-ligne.
+// ============================================================
+const MEME_API = 'https://meme-api.com/gimme';
+const MEME_FR_SOURCES = ['memesfr', 'frenchmemes', 'rance'];
+const MEME_FETCH_TIMEOUT_MS = 8000;
+const MEME_PASSES = 3;
+
+async function fetchMemeJson(url) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), MEME_FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json().catch(() => null);
+    if (!data || typeof data.title !== 'string' || typeof data.url !== 'string') throw new Error('Réponse invalide');
+    return data;
+  } finally { clearTimeout(timer); }
+}
+
+// Sélectionne un mème SÛR (jamais NSFW/spoiler) : sources françaises d'abord,
+// puis repli général — plusieurs passages pour qu'une panne d'une source ne
+// bloque jamais la commande. Si TOUTES les sources expirent (timeout), l'erreur
+// remonte en AbortError pour afficher le bon message (« ⏱️ » vs « 😢 »).
+async function fetchRandomMeme() {
+  const attempts = [];
+  for (let pass = 0; pass < MEME_PASSES; pass++) {
+    for (const sub of MEME_FR_SOURCES) attempts.push(sub);
+    attempts.push(''); // source générale (dernier recours)
+  }
+  let sawAbort = false;
+  for (const sub of attempts) {
+    const url = sub ? `${MEME_API}/${sub}` : MEME_API;
+    try {
+      const data = await fetchMemeJson(url);
+      if (data && data.url && !data.nsfw && !data.spoiler) return data;
+    } catch (e) {
+      if (e && e.name === 'AbortError') sawAbort = true;
+    }
+  }
+  const err = new Error(sawAbort ? 'L\'API de mèmes est injoignable (timeout)' : 'Aucune source de mème disponible');
+  if (sawAbort) err.name = 'AbortError';
+  throw err;
+}
+
 async function execute(botId, entry, cmd, src) {
   const { client } = entry;
   const record = store.bots.get(botId);
@@ -817,28 +865,25 @@ async function execute(botId, entry, cmd, src) {
       break;
     }
     case 'meme': {
-      // 🛡️ API externe (meme-api.com) : timeout, erreurs réseau/HTTP et
-      // données invalides gérés proprement — le bot ne reste jamais bloqué.
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 8000);
+      // 🎭 Mèmes aléatoires : sources FRANCOPHONES en priorité (r/MemesFR,
+      // r/FrenchMemes, r/rance) → titres en français ; repli auto sinon.
       try {
-        const res = await fetch('https://meme-api.com/gimme', { signal: controller.signal });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const data = await res.json().catch(() => null);
-        const title = data && data.title ? String(data.title).slice(0, 256) : 'Meme';
-        const url = data && data.url && typeof data.url === 'string' ? data.url : null;
-        if (!url) throw new Error('Aucune image dans la réponse');
-        const sub = data && data.subreddit ? `r/${String(data.subreddit).slice(0, 100)}` : 'meme-api.com';
-        const embed = new EmbedBuilder().setColor('#e07a5f').setTitle(title).setImage(url).setFooter({ text: sub });
+        const data = await fetchRandomMeme();
+        const title = String(data.title || 'Meme').slice(0, 256);
+        const url = data.url;
+        const sub = data.subreddit ? `r/${String(data.subreddit).slice(0, 100)}` : 'meme-api.com';
+        const embed = new EmbedBuilder()
+          .setColor('#e07a5f')
+          .setTitle(title)
+          .setImage(url)
+          .setFooter({ text: `🎭 ${sub} · Hoxera` });
         await replyEmbed(embed);
       } catch (e) {
         if (e && e.name === 'AbortError') {
-          await reply('⏱️ L\'API de memes ne répond pas pour le moment. Réessaie dans quelques instants.');
+          await reply('⏱️ L\'API de mèmes ne répond pas pour le moment. Réessaie dans quelques instants.');
         } else {
-          await reply('😢 Impossible de récupérer un meme pour le moment. Réessaie dans quelques secondes.');
+          await reply('😢 Impossible de récupérer un mème pour le moment. Réessaie dans quelques secondes.');
         }
-      } finally {
-        clearTimeout(timer);
       }
       break;
     }
@@ -1307,4 +1352,4 @@ function buildHelpEmbed(botId, record, client, guild, requested) {
   return embed;
 }
 
-module.exports = { MODULES, CMD_DEFS, enabledModules, enabledCommandNames, buildSlashPayloads, handlePremadePrefix, handlePremadeSlash, buildHelpEmbed };
+module.exports = { MODULES, CMD_DEFS, enabledModules, enabledCommandNames, buildSlashPayloads, handlePremadePrefix, handlePremadeSlash, buildHelpEmbed, fetchRandomMeme, fetchMemeJson, MEME_FR_SOURCES, MEME_API };
