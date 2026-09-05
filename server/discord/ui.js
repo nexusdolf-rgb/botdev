@@ -8,7 +8,7 @@ const {
   EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle,
   ContainerBuilder, TextDisplayBuilder, SeparatorBuilder,
   MediaGalleryBuilder, MediaGalleryItemBuilder, MessageFlags,
-  SectionBuilder, ThumbnailBuilder,
+  SectionBuilder, ThumbnailBuilder, FileBuilder,
 } = require('discord.js');
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -254,6 +254,7 @@ function v2separator(container, state) {
 //   content     → TextDisplay en tête (l'équivalent du content: classique)
 //   fields      → un TextDisplay « **nom**\nvaleur » par champ + séparateurs
 //   image       → MediaGallery pleine largeur
+//   files       → un composant File (type 13) par pièce jointe uploadée
 //   footer      → TextDisplay « -# … » (texte discret Discord) en pied
 //   sections:false → aucun séparateur, texte brut
 function v2container(options = {}) {
@@ -319,6 +320,25 @@ function v2container(options = {}) {
     state.components += 1;
   }
 
+  // 4b) files : en Components V2, une pièce jointe uploadée n'apparaît PAS
+  //     toute seule — il faut la référencer dans un composant. Pour un fichier
+  //     non-image (transcription .txt, .pdf, .zip…), c'est le composant File
+  //     (type 13) qui s'y colle ; il ne sait afficher QUE de l'`attachment://`.
+  //     ⚠️ L'appelant doit TOUJOURS passer le vrai tableau `files` au niveau du
+  //     message : ici on ne pose que la référence visuelle.
+  //     ⚠️ Interdit par webhook (piège n°10 : V2 + webhook + files = 400).
+  //     Réservé aux envois en message classique (MP, channel.send).
+  const fileRefs = (Array.isArray(options.files) ? options.files : [])
+    .map((f) => String((f && f.name) || f || '').trim())
+    .filter(Boolean)
+    .map((n) => (n.startsWith('attachment://') ? n : `attachment://${n}`));
+  fileRefs.slice(0, 10).forEach((ref, i) => {
+    if (!v2room(state)) return;
+    if (i === 0 && (bodyBlocks.length || headTexts.length || options.image)) v2separator(container, state);
+    container.addFileComponents(new FileBuilder().setURL(ref));
+    state.components += 1;
+  });
+
   // 5) Pied de panneau : texte discret précédé d'un séparateur natif.
   //    Components V2 n'a pas de champ « timestamp » : l'heure est reportée
   //    dans le pied pour ne pas perdre l'information.
@@ -333,7 +353,7 @@ function v2container(options = {}) {
       }
     }
     const footer = text(`${options.footer || DEFAULT_FOOTER}${stamp}`, V2_FOOTER_MAX);
-    if (footer && v2room(state, 2) && (hasContent || headTexts.length || bodyBlocks.length || options.image)) {
+    if (footer && v2room(state, 2) && (hasContent || headTexts.length || bodyBlocks.length || options.image || fileRefs.length)) {
       v2separator(container, state);
       v2text(container, `-# ${footer}`, state);
     }
@@ -423,7 +443,13 @@ function v2bodyBlocks(options, useSections) {
 function v2panel(options = {}, rows = []) {
   // discord.js 14 expose MessageFlags en Number (pas BigInt) : pas de mélange.
   const flags = MessageFlags.IsComponentsV2 | (options.ephemeral ? MessageFlags.Ephemeral : 0);
-  return { flags, components: [v2container({ ...options, rows })] };
+  // ⚠️ v239 — `{ ...options, rows }` ÉCRASAIT `options.rows` avec le `[]` par
+  // défaut du 2ᵉ paramètre : passer ses boutons via `rows:` DANS les options
+  // les faisait disparaître en silence (aucune erreur, juste pas de bouton).
+  // Le 2ᵉ argument reste prioritaire ; `options.rows` sert maintenant de repli.
+  const finalRows = (Array.isArray(rows) && rows.length) ? rows
+    : (Array.isArray(options.rows) ? options.rows : []);
+  return { flags, components: [v2container({ ...options, rows: finalRows })] };
 }
 
 // Équivalent V2 de contentPanel().

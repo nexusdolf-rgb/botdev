@@ -82,8 +82,9 @@ const check = (label, cond) => {
   const interaction = { client: { users: { fetch: async () => opener } } };
   store.guildSettings.set(BOT, G, { lang: 'en' });
   await panels.sendTranscriptDm(interaction, guild, 'question-bob', { text: 'x', url: 'https://example.com/abc', openerId: 'u2' });
-  const dmEn = dms[0].embeds[0].toJSON();
-  check('transcription EN : titre traduit', dmEn.title === '🎫 Your ticket has been closed');
+  // v239 — le MP est en Components V2 : plus d'embeds[0], on relit le conteneur.
+  const dmEn = { title: v2.title(dms[0]), description: v2.texts(dms[0]).join('\n') };
+  check('transcription EN : titre traduit', dmEn.title === '🎫 Your ticket has been closed', dmEn.title);
   check('transcription EN : texte traduit', String(dmEn.description).includes('Thank you for contacting'));
   store.guildSettings.set(BOT, G, { lang: 'fr' });
 

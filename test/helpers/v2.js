@@ -3,7 +3,8 @@
 // Pourquoi ce fichier existe (v234) :
 //   Depuis la migration vers Components V2, un message n'a plus de champ
 //   `embeds` : tout est dans `components[0]`, un CONTENEUR (type 17) qui
-//   imbrique TextDisplay (10), Separator (14), MediaGallery (12), Section (18)
+//   imbrique TextDisplay (10), Separator (14), MediaGallery (12), Section (9),
+//   Thumbnail (11) et File (13)
 //   et ActionRow (1). Les tests qui faisaient `payload.embeds[0].toJSON()`
 //   lèvent donc « Cannot read properties of undefined ».
 //
@@ -28,14 +29,20 @@ const { MessageFlags } = require('discord.js');
 const IS_V2 = MessageFlags.IsComponentsV2;
 
 // Types de composants Components V2 (Discord API).
+// ⚠️ v239 — SECTION valait 18, ce qui est FAUX : discord.js expose
+// ComponentType.Section = 9 (le 18 n'existe pas dans l'API). La constante
+// n'était lue nulle part, donc aucun test ne cassait — mais 21 fichiers
+// importent ce helper : la prochaine assertion sur une Section aurait échoué
+// en silence. Valeurs recopiées de `require('discord.js').ComponentType`.
 const TYPE = {
   ACTION_ROW: 1,
+  SECTION: 9,
   TEXT_DISPLAY: 10,
   THUMBNAIL: 11,
   MEDIA_GALLERY: 12,
+  FILE: 13,
   SEPARATOR: 14,
   CONTAINER: 17,
-  SECTION: 18,
 };
 
 // Normalise en JSON : accepte un builder discord.js ou du JSON brut.

@@ -2451,24 +2451,77 @@ Dashboard.renderers.welcome = async (content, data) => {
         // Rendu des pings en puces cliquables (style Discord) dans l'aperçu.
         const chanNameById = new Map();
         (data.channels || []).forEach((ch) => { if (ch && ch.id && ch.name) chanNameById.set(ch.id, ch.name); });
-        let pvLines = (txt.split('\n') || []).map((l) => App.escapeHtml(l)).join('<br/>');
-        pvLines = pvLines.replace(/&lt;#(\d{15,21})&gt;/g, (m, id) => {
-          const name = chanNameById.get(id) || id;
-          return `<span class="dc-mention">#${App.escapeHtml(name)}</span>`;
-        });
-        const color = get('color') || '#57F287';
-        const isEmbed = !!get('embed');
-        const hasCard = !!get('card');
-        msgEl.innerHTML = `
-          <div style="display:flex;gap:10px">
-            <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#5865F2,#8B5CF6);flex-shrink:0"></div>
-            <div style="min-width:0;flex:1">
-              <div style="font-size:13px"><b style="color:#f2f3f5">${App.escapeHtml(Dashboard.state.bot.name)}</b> <span style="background:#5865F2;color:#fff;font-size:9px;padding:1px 5px;border-radius:4px;vertical-align:middle">✓ APP</span></div>
-              ${isEmbed
-                ? `<div style="border-left:4px solid ${App.escapeHtml(color)};background:#2B2D31;border-radius:4px;padding:10px 12px;margin-top:4px;font-size:13px;color:#dbdee1">${pvLines}${hasCard ? '<div style="margin-top:8px;height:74px;border-radius:8px;background:linear-gradient(135deg,#1b1e2e,#2b1e46);display:flex;align-items:center;justify-content:center;color:#8f93a8;font-size:12px">🖼️ Carte de bienvenue (avatar + pseudo)</div>' : ''}</div>`
-                : `<div style="font-size:13.5px;color:#dbdee1;margin-top:2px">${pvLines}</div>${hasCard ? '<div style="margin-top:6px;height:74px;max-width:340px;border-radius:8px;background:linear-gradient(135deg,#1b1e2e,#2b1e46);display:flex;align-items:center;justify-content:center;color:#8f93a8;font-size:12px">🖼️ Carte de bienvenue (avatar + pseudo)</div>' : ''}`}
-            </div>
-          </div>`;
+        // v239 — 🚨 DOUBLE BUG de cet aperçu, corrigé :
+        //  (1) Il lisait la clé `embed`, qui N'EXISTE PAS dans EVENT_DEFS.
+        //      La vraie clé est `plain` (« 📝 Mode texte simple ») et sa logique
+        //      est INVERSÉE. Donc `isEmbed` valait toujours false → l'aperçu
+        //      retombait en permanence sur le rendu « texte simple », sans
+        //      panneau ni séparateur, alors que Discord affiche bien le panneau.
+        //      C'est ce que l'utilisateur voyait avec le modèle « ✨ bienvenue
+        //      pro » : aucun trait à l'écran.
+        //  (2) Même dans sa branche « embed », il dessinait un EMBED CLASSIQUE
+        //      (barre de couleur à gauche, texte d'un bloc). Or depuis la v236
+        //      le bot envoie du Components V2 : conteneur, en-tête en section +
+        //      vignette, et un séparateur NATIF pleine largeur ENTRE chaque
+        //      paragraphe. L'aperçu ne ressemblait donc à rien de réel.
+        // → On dessine maintenant le V2 fidèlement, paragraphe par paragraphe.
+        const E = App.escapeHtml;
+        const inline = (raw) => E(raw)
+          .replace(/&lt;#(\d{15,21})&gt;/g, (m, id) => `<span class="dc-mention">#${E(chanNameById.get(id) || id)}</span>`)
+          .replace(/@NouveauMembre/g, '<span class="dc-mention">@NouveauMembre</span>');
+
+        const isJoin = key === 'member_join';
+        const color = get('color') || (isJoin ? '#57F287' : '#ED4245');
+        const isPlain = !!get('plain');
+        const hasCard = isJoin && !!get('card');
+        const imgUrl = String(get('image') || '').trim();
+
+        const botLine = `<div style="font-size:13px"><b style="color:#f2f3f5">${E(Dashboard.state.bot.name)}</b> <span style="background:#5865F2;color:#fff;font-size:9px;padding:1px 5px;border-radius:4px;vertical-align:middle">✓ APP</span></div>`;
+        const avatarBox = '<div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#5865F2,#8B5CF6);flex-shrink:0"></div>';
+        const cardBox = `<div style="margin-top:8px;height:74px;border-radius:8px;background:linear-gradient(135deg,#1b1e2e,#2b1e46);display:flex;align-items:center;justify-content:center;color:#8f93a8;font-size:12px">🖼️ Carte de bienvenue (avatar + pseudo)</div>`;
+        const shell = (inner) => `<div style="display:flex;gap:10px">${avatarBox}<div style="min-width:0;flex:1">${botLine}${inner}</div></div>`;
+
+        // 📝 Mode texte simple : le bot n'envoie AUCUN panneau → aucun trait.
+        if (isPlain) {
+          msgEl.innerHTML = shell(`<div style="font-size:13.5px;color:#dbdee1;margin-top:2px;white-space:pre-wrap">${inline(txt)}</div>${hasCard ? cardBox : ''}`);
+          return;
+        }
+
+        // Séparateur NATIF pleine largeur : il déborde le padding du conteneur,
+        // exactement comme sur Discord (c'est ce que le trait texte ━ ne savait
+        // pas faire).
+        const sep = '<hr style="border:0;border-top:1px solid #3f4147;margin:9px -12px;width:calc(100% + 24px)">';
+        const thumb = imgUrl ? '' : '<div style="width:40px;height:40px;border-radius:6px;flex-shrink:0;background:linear-gradient(135deg,#5865F2,#8B5CF6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px">👤</div>';
+
+        // Le bot découpe les paragraphes sur les LIGNES VIDES et pose un
+        // séparateur ENTRE chaque bloc — jamais juste après l'en-tête (le
+        // « ## titre » est déjà visuellement détaché). ui.v2container fait
+        // exactement ça : `if (index > 0) v2separator(...)`. L'aperçu doit
+        // avoir le même compte de traits que le vrai panneau, au séparateur
+        // près, sinon il ment.
+        const paras = String(txt).split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean);
+        const body = paras.map((x) => `<div style="font-size:13px;color:#dbdee1;line-height:1.45;white-space:pre-wrap">${inline(x)}</div>`).join(sep);
+
+        const head = `<div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12.5px;font-weight:600;color:#f2f3f5">${E(isJoin ? 'NouveauMembre#0001 vient d\u2019arriver !' : 'NouveauMembre#0001 s\u2019en va\u2026')}</div>
+              ${isJoin ? `<div style="font-size:16px;font-weight:800;color:#f2f3f5;line-height:1.3;margin-top:3px">👋 Bienvenue sur ${E(serverName)} !</div>` : ''}
+            </div>${thumb}</div>`;
+
+        const fields = isJoin
+          ? `<b style="color:#f2f3f5">👥 Tu es le membre</b> <b style="color:#f2f3f5">n°${E(memberCount)}</b> · <b style="color:#f2f3f5">📅 Compte créé</b> il y a 3 jours`
+          : `<b style="color:#f2f3f5">👥 Membres restants</b> <b style="color:#f2f3f5">${E(memberCount)}</b> · <b style="color:#f2f3f5">🕐 Était membre depuis</b> il y a 2 mois`;
+
+        const img = imgUrl
+          ? `${sep}<div style="height:96px;border-radius:6px;background:#1e1f22;border:1px dashed #3f4147;display:flex;align-items:center;justify-content:center;color:#949ba4;font-size:12px">🖼️ ${E(imgUrl.length > 34 ? imgUrl.slice(0, 34) + '…' : imgUrl)}</div>`
+          : (hasCard ? sep + cardBox : '');
+
+        msgEl.innerHTML = shell(`
+          <div style="background:#2b2d31;border:1px solid #1e1f22;border-left:4px solid ${E(color)};border-radius:8px;padding:10px 12px;margin-top:4px">
+            ${head}${body}${sep}
+            <div style="font-size:12.5px;color:#dbdee1">${fields}</div>${img}${sep}
+            <div style="font-size:11.5px;color:#949ba4">${E(serverName)} · ${new Date().toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</div>
+          </div>`);
       };
       cfgZone.addEventListener('input', renderPv);
       cfgZone.addEventListener('change', renderPv);

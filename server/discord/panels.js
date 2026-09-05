@@ -1352,23 +1352,64 @@ async function sendTranscriptDm(clientOrInteraction, guild, channelName, { text,
     : (url
         ? i18n.t(lang, 'transcript_desc', { server: serverName, url })
         : i18n.t(lang, 'transcript_desc_file', { server: serverName }));
-  const embed = new EmbedBuilder()
-    .setColor('#ED4245')
-    .setTitle(customMsg ? serverName + ' · ' + i18n.t(lang, 'transcript_title') : i18n.t(lang, 'transcript_title'))
-    // DM de transcription COURS : pas de trait plaqué — respiration naturelle.
-    .setDescription(ui.text(desc, 4096))
-    .setImage(customImg || profileBanner)
-    .setFooter({ text: 'Hoxera · ' + i18n.t(lang, 'footer_tickets') });
+  // v239 — 🚨 Ce MP était le DERNIER panneau construit à la main avec un
+  // `new EmbedBuilder()` : il n'est jamais passé par le système de panneaux,
+  // donc la migration v231→v236 ne l'a pas vu. Résultat : aucun séparateur
+  // natif, un rendu différent de tous les autres panneaux du bot.
+  //
+  // ✅ Autorisé ici : `user.send()` est un MESSAGE CLASSIQUE (canal de MP du
+  //    bot), pas un webhook. La doc Discord n'interdit `files[n]` avec le flag
+  //    IS_COMPONENTS_V2 que pour **Execute Webhook** — pour Create Message, la
+  //    liste interdite est « content, embeds, sticker_ids, poll,
+  //    shared_client_theme ». Le .txt peut donc rester joint, à condition
+  //    d'être référencé par un composant File (type 13) — en V2 une pièce
+  //    jointe n'apparaît plus toute seule.
+  const fileName = `transcription-${channelName}.txt`;
+  const payload = ui.v2panel({
+    color: '#ED4245',
+    title: customMsg ? serverName + ' · ' + i18n.t(lang, 'transcript_title') : i18n.t(lang, 'transcript_title'),
+    // Texte brut : v2panel découpe lui-même les paragraphes et pose les
+    // séparateurs NATIFS pleine largeur entre eux.
+    description: ui.text(desc, 4096),
+    // Bannière du profil bot (ou image personnalisée) : URL HTTP → MediaGallery.
+    image: customImg || profileBanner,
+    // La transcription .txt : composant File à l'intérieur du conteneur.
+    files: [fileName],
+    footer: 'Hoxera · ' + i18n.t(lang, 'footer_tickets'),
+    // Même pied que le panneau du salon privé (v238) : signature seule, pas
+    // d'heure — ui.v2container l'ajoute PAR DÉFAUT, il faut l'éteindre.
+    timestamp: false,
+    // Le bouton lien rentre DANS le conteneur (V2 refuse les components au
+    // niveau du message). ⚠️ Il passe en 2ᵉ ARGUMENT de v2panel : dans les
+    // options, il était avalé (voir le correctif ui.js v239).
+  }, url ? [ui.linkRow('📜 Ouvrir la transcription', url)] : []);
   try {
     await user.send({
-      embeds: [embed],
-      components: url ? [ui.linkRow('📜 Ouvrir la transcription', url)] : [],
-      files: [{ attachment: Buffer.from(text || 'Transcription indisponible.', 'utf-8'), name: `transcription-${channelName}.txt` }],
+      ...payload,
+      files: [{ attachment: Buffer.from(text || 'Transcription indisponible.', 'utf-8'), name: fileName }],
     });
     return true;
   } catch (e) {
     console.log('[BotDev] DM transcription impossible:', e.message);
-    return false;
+    // Repli : si le MP en V2 était refusé pour une raison quelconque, on
+    // renvoie l'ancienne version classique — perdre le style vaut mieux que
+    // perdre la transcription du membre.
+    try {
+      await user.send({
+        embeds: [new EmbedBuilder()
+          .setColor('#ED4245')
+          .setTitle(customMsg ? serverName + ' · ' + i18n.t(lang, 'transcript_title') : i18n.t(lang, 'transcript_title'))
+          .setDescription(ui.text(desc, 4096))
+          .setImage(customImg || profileBanner)
+          .setFooter({ text: 'Hoxera · ' + i18n.t(lang, 'footer_tickets') })],
+        components: url ? [ui.linkRow('📜 Ouvrir la transcription', url)] : [],
+        files: [{ attachment: Buffer.from(text || 'Transcription indisponible.', 'utf-8'), name: fileName }],
+      });
+      return true;
+    } catch (e2) {
+      console.log('[BotDev] DM transcription (repli classique) impossible:', e2.message);
+      return false;
+    }
   }
 }
 

@@ -200,7 +200,68 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   'tag') ») : un message supprimé **partiel** (pas en cache) n'a pas d'auteur →
   `trackDeleted` (/snipe, `extra.js`) plantait ; idem `tasks.js` (`member.user.tag`).
   Gardes ajoutées, test `test/v228-test.js`, docs remises à jour (v194 → v228).
-- **v238 (ACTUELLE, 06/09)** : **2 demandes utilisateur sur les tickets.**
+- **v239 (ACTUELLE, 06/09)** : **2 bugs signalés par l'utilisateur après la v238.**
+  **1️⃣ Le MP de TRANSCRIPTION n'avait aucun séparateur.** Envoyé au créateur du
+  ticket après la fermeture (`sendTranscriptDm`, `panels.js`). C'était le dernier
+  panneau **autonome** du bot construit à la main avec un `new EmbedBuilder()` :
+  jamais passé par le système de panneaux, donc **invisible** pour la migration
+  v231→v236. → `ui.v2panel()` : séparateurs natifs pleine largeur, bannière en
+  `MediaGallery`, bouton lien DANS le conteneur, pied `Hoxera · …` sans heure
+  (`timestamp: false`, piège n°15), et **repli classique** si le V2 est refusé
+  (perdre le style vaut mieux que perdre la transcription du membre).
+  ✅ **Vérifié dans la doc officielle Discord** : pour **Create Message**, la
+  liste interdite avec `IS_COMPONENTS_V2` est « content, embeds, sticker_ids,
+  poll, shared_client_theme » — **`files[n]` n'en fait PAS partie**.
+  L'interdiction des `files` ne vaut que pour **Execute Webhook** (piège n°10).
+  `user.send()` est un message classique de MP → le `.txt` peut rester joint.
+  🚨 **PIÈGE n°18 — en V2 une pièce jointe n'apparaît PLUS toute seule.** Il faut
+  la référencer dans un composant : `Thumbnail` (11) / `MediaGallery` (12) pour
+  une image, **`File` (13)** pour tout le reste. Nouvelle option
+  **`ui.v2container({ files: ['nom.txt'] })`** → un `FileBuilder` par fichier
+  (préfixe `attachment://` ajouté si absent, **max 10**, budget 40 respecté).
+  L'appelant doit TOUJOURS passer le vrai tableau `files` au niveau du message.
+  🚨 **PIÈGE n°19 — `ui.v2panel(options, rows)` faisait `{ ...options, rows }`.**
+  Le `[]` par défaut du 2ᵉ paramètre **écrasait** `options.rows` : passer ses
+  boutons via `rows:` DANS les options les faisait **disparaître en silence**
+  (aucune erreur, juste pas de bouton). Corrigé : le 2ᵉ argument reste
+  prioritaire, `options.rows` sert de repli (`finalRows`).
+  **2️⃣ L'aperçu « 👀 Aperçu sur Discord » du modèle « ✨ bienvenue pro »**
+  (dashboard → Bienvenue) ne dessinait **jamais** de panneau, donc jamais aucun
+  trait. **Double cause :**
+  • Il lisait `!!get('embed')` — or la clé **`embed` N'EXISTE PAS** dans
+    `EVENT_DEFS.member_join` / `member_leave`. La vraie clé est **`plain`**
+    (« 📝 Mode texte simple ») et sa logique est **INVERSÉE** (`if (!cfg.plain)`
+    côté serveur). Donc `isEmbed` valait **toujours false** → l'aperçu retombait
+    en permanence sur le rendu « texte simple ».
+  • Même dans sa branche « embed », il dessinait un **embed CLASSIQUE** (barre de
+    couleur à gauche, texte d'un bloc) alors que le bot envoie du V2 depuis la
+    v236.
+  → Réécrit fidèlement : conteneur V2, en-tête en section + vignette, paragraphes
+  découpés sur les lignes vides avec un séparateur **entre** chaque bloc (jamais
+  juste après l'en-tête, comme `v2container`), champs, pied discret, carte de
+  bienvenue, image d'embed, mode texte simple, et arrivée ≠ départ.
+  🚨 **PIÈGE n°20 — `Section` vaut 9, pas 18.** `test/helpers/v2.js` déclarait
+  `SECTION: 18`, valeur inexistante dans l'API. Jamais lue → aucun test ne
+  cassait, mais **21 fichiers** importent ce helper : la prochaine assertion sur
+  une Section aurait échoué en silence. Corrigé, `FILE: 13` ajouté, et une
+  assertion recoupe désormais les 8 constantes contre
+  `require('discord.js').ComponentType`.
+  🧪 **Nouveau `test/v239-test.js`** (10 sections) + **`test/helpers/
+  dashboard-preview.js`** : exécute le **VRAI** `renderPv()` de `dashboard.js`
+  dans **jsdom** et vérifie que l'aperçu a le **même nombre de traits** que le
+  panneau réellement envoyé. `test/v72` et `test/v79` relisaient `embeds[0]` du
+  MP → adaptés via un helper `readDm()`. Compteur v234 : **19 → 20
+  `ui.v2panel(`**. Suite : **166 tests**.
+  🎨 **`scripts/gen-apercu-v239.js`** → `/home/user/apercu-v239.html` : le MP
+  avant/après, l'aperçu dashboard avant/après, et la comparaison côte à côte
+  « dans le dashboard » vs « sur Discord ».
+  ℹ️ **Ce qui reste en `new EmbedBuilder()` (43 occurrences, toutes assumées)** :
+  le **wizard « assistant types »** de `panels.js` (6 étapes éditées en place —
+  reporté, voir plus bas), la **carte de bienvenue** (`events.js`, pièce jointe +
+  webhook), `xp.js` (piège n°10), `identity.js`, `ui.js` (chemin classique
+  `embed()` conservé en rétro-compatibilité) et divers messages volontairement
+  classiques (`premade.js`, `extra.js`, `automod.js`, `panelCommands.js`).
+- **v238 (06/09)** : **2 demandes utilisateur sur les tickets.**
   Tout est dans `panels.js` + `i18n.js`. Périmètre strict : **rien d'autre**
   (« que ce système pas autre chose »).
   **1️⃣ Pied de page du panneau du SALON PRIVÉ allégé.** Il affichait
@@ -889,7 +950,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 
 ## 📌 ÉTAT AU 06/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v238** — voir la section v238 ci-dessus. **165 tests verts**.
+- Dernière version : **v239** — voir la section v239 ci-dessus. **166 tests verts**.
   ⚠️ **Chantier en cours (v231 →)** : migration des traits texte `━` vers les
   séparateurs **NATIFS pleine largeur** (Components V2).
   • **Migré** : `/quiz` (v231) · `premade.js` 13 messages dont `replyPanel` ×11
@@ -925,6 +986,12 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
     début / contenu), **menu de choix en cas d'homonymes**, 4 panneaux V2
     éphémères, bouton « 🔁 Réessayer », et un échec de permission **enfin dit
     honnêtement**. `panels.js` compte désormais **19 `ui.v2panel(`**.
+  • **v239 — les 2 bugs signalés après la v238** : le **MP de transcription**
+    (dernier panneau autonome construit à la main → Components V2, composant
+    `File` pour le `.txt`, repli classique en secours) et **l'aperçu
+    « 👀 Aperçu sur Discord »** du dashboard, qui lisait la clé fantôme `embed`
+    au lieu de `plain` et ne dessinait donc jamais le panneau. `panels.js`
+    compte désormais **20 `ui.v2panel(`**.
   • **Reste (reporté, non bloquant)** : le **wizard « assistant types »** de
     `panels.js` (6 étapes éditées en place → à migrer d'un coup) et les **3
     `ui.sectionize(` volontaires** (`events.js` branche carte image, `panels.js`

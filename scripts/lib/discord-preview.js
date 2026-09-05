@@ -83,6 +83,18 @@ function drawComponent(node) {
     return `<div style="display:flex;gap:12px;align-items:flex-start;margin:3px 0"><div style="flex:1 1 auto;min-width:0">${texts}</div>${acc}</div>`;
   }
   if (t === 1) return `<div style="display:flex;flex-wrap:wrap;gap:8px;margin:9px 0 2px">${(node.components || []).map(drawControl).join('')}</div>`;
+  // Composant File (type 13) : pièce jointe non-image référencée dans le
+  // conteneur. En V2 un fichier uploadé n'apparaît QUE s'il est référencé ici.
+  if (t === 13) {
+    const url = String((node.file && node.file.url) || '');
+    const name = url.replace(/^attachment:\/\//, '');
+    const ext = (name.split('.').pop() || '').toUpperCase();
+    return `<div style="display:flex;align-items:center;gap:10px;background:#232428;border:1px solid #1e1f22;border-radius:4px;padding:9px 11px;margin:6px 0;max-width:420px">
+      <div style="width:34px;height:40px;border-radius:3px;background:#3f4147;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;color:#dbdee1">${esc(ext || 'FILE')}</div>
+      <div style="min-width:0;flex:1"><div style="font-size:13.5px;color:#00a8fc;word-break:break-all">${esc(name)}</div>
+      <div style="font-size:11.5px;color:#949ba4">${esc(node.size ? Math.round(node.size / 1024) + ' Ko' : 'Pièce jointe')}</div></div>
+      <div style="color:#949ba4;font-size:17px">⬇</div></div>`;
+  }
   if (t === 12) { // MediaGallery
     const items = (node.items || []).map(() => `<div style="height:150px;border-radius:6px;background:#1e1f22;border:1px dashed #3f4147;display:flex;align-items:center;justify-content:center;color:#949ba4;font-size:12px">🖼️ image</div>`).join('');
     return `<div style="display:grid;grid-template-columns:1fr;gap:4px;margin:6px 0">${items}</div>`;
