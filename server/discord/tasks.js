@@ -33,7 +33,7 @@ async function giveTempRole(botId, interaction, member, role, durationMs) {
   await logging.log(botId, interaction.guild, {
     title: '⏳ Rôle temporaire', color: '#FEE75C',
     fields: [
-      { name: '👤 Membre', value: `${member.user.tag}`, inline: true },
+      { name: '👤 Membre', value: `${(member.user && (member.user.tag || member.user.username)) || member.id}`, inline: true },
       { name: '🏷️ Rôle', value: role.name, inline: true },
       { name: '⏱ Durée', value: formatDuration(durationMs), inline: true },
     ],
@@ -109,7 +109,7 @@ async function sweep(botId, entry) {
         await logging.log(botId, guild, {
           title: '⏳ Rôle temporaire expiré', color: '#e07a5f',
           fields: [
-            { name: '👤 Membre', value: `${member.user.tag}`, inline: true },
+            { name: '👤 Membre', value: `${(member.user && (member.user.tag || member.user.username)) || member.id}`, inline: true },
             { name: '🏷️ Rôle', value: role.name, inline: true },
           ],
         });

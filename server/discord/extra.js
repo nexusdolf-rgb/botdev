@@ -67,12 +67,21 @@ function capMap(map, max) {
 const snipeCache = new Map();   // `${guildId}:${channelId}` -> { tag, avatar, content, attachments, ts }
 
 function trackDeleted(botId, message) {
-  if (!message || !message.guild || message.author?.bot) return;
+  if (!message || !message.guild || !message.channel) return;
+  // 🧩 v228 : message « partiel » (supprimé sans avoir été mis en cache,
+  // ex. envoyé avant le démarrage du bot) → Discord ne fournit ni auteur ni
+  // contenu. Rien d'exploitable pour /snipe : on ignore, sans planter.
+  // (Avant : `message.author.tag` sur un auteur null → promesse non gérée
+  // signalée dans la santé du bot.)
+  const author = message.author;
+  if (!author || author.bot) return;
   const key = `${message.guild.id}:${message.channel.id}`;
-  const attachments = message.attachments ? message.attachments.size : 0;
+  const attachments = message.attachments && typeof message.attachments.size === 'number' ? message.attachments.size : 0;
+  let avatar = '';
+  try { avatar = typeof author.displayAvatarURL === 'function' ? (author.displayAvatarURL({ size: 64 }) || '') : ''; } catch { avatar = ''; }
   snipeCache.set(key, {
-    tag: message.author.tag || message.author.username,
-    avatar: message.author.displayAvatarURL({ size: 64 }) || '',
+    tag: author.tag || author.username || 'Membre',
+    avatar,
     content: message.content || '',
     attachments,
     ts: Date.now(),

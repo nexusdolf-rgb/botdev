@@ -12,7 +12,7 @@ const os = require('os');
 const path = require('path');
 const assert = require('assert');
 
-const DATA_DIR = path.join(os.tmpdir(), `botdev-v227-${Date.now()}`);
+const DATA_DIR = path.join(os.tmpdir(), `botdev-v228-${Date.now()}`);
 fs.mkdirSync(DATA_DIR, { recursive: true });
 process.env.BOTDEV_DATA_DIR = DATA_DIR;
 
@@ -89,8 +89,8 @@ const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
   // Versionnage front cohérent (v227)
   const indexHtml = read('public/index.html');
   const swSource = read('public/sw.js');
-  check('index.html : 7 références ?v=227', (indexHtml.match(/\?v=227/g) || []).length === 7);
-  check('sw.js : cache v227', swSource.includes("const CACHE = 'botdev-v227';"));
+  check('index.html : 7 références ?v=228', (indexHtml.match(/\?v=228/g) || []).length === 7);
+  check('sw.js : cache v227', swSource.includes("const CACHE = 'botdev-v228';"));
 
   console.log(failures === 0 ? '\n✅ V227 — Identité par serveur isolée, jamais globale ; dashboard cohérent. 🎉' : `\n❌ ${failures} vérification(s) en échec`);
   process.exit(failures === 0 ? 0 : 1);

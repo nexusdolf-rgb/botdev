@@ -70,8 +70,8 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
 
   // ---------- 8. Version ----------
   console.log('— Bump de version —');
-  check('index : bump v216', fs.readFileSync('public/index.html', 'utf8').includes('?v=227'));
-  check('sw : bump botdev-v227', fs.readFileSync('public/sw.js', 'utf8').includes('botdev-v227'));
+  check('index : bump v216', fs.readFileSync('public/index.html', 'utf8').includes('?v=228'));
+  check('sw : bump botdev-v228', fs.readFileSync('public/sw.js', 'utf8').includes('botdev-v228'));
 
   console.log(`  ✅ v216 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });

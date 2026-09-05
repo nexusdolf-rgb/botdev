@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v194**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v228**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -61,15 +61,17 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   `automod.js`, `antiraid.js`, `xp.js`, `logging.js`, `i18n.js`, `nativeAutomod.js`
 - `public/` : SPA vanilla JS — `js/dashboard.js` (modules), `js/app.js`, `js/public.js`
   (landing), `css/dashboard.css` (bloc « mode clair » en fin de fichier)
-- `test/` : **112 tests**. `bash scripts/check.sh` = syntaxe + secrets + suite (OBLIGATOIRE)
+- `test/` : **155 tests**. `bash scripts/check.sh` = syntaxe + secrets + suite (OBLIGATOIRE, ~2,5 min)
 - `docs/AGENT.md` : ce document — **le mettre à jour à chaque grande étape**
 
 ## 🔁 RECETTE DE LIVRAISON (à connaître par cœur)
 
 1. Modifier le code → `bash scripts/check.sh` → tout vert
 2. **Bump de version** : `public/index.html` `?v=NNN` **×7** + `public/sw.js` `botdev-vNNN`
-   + les 6 « pinneurs » (`test/v120/121/123/128/142/147-test.js`) + nouveau
-   `test/vNNN-test.js` (reprend les pins de version, on les retire du test précédent)
+   + TOUS les tests qui épinglent la version (commande magique, depuis la racine :
+   `grep -rl "v=ANCIEN\|botdev-vANCIEN'" test/ public/ | xargs sed -i 's/?v=ANCIEN/?v=NOUVEAU/g; s/botdev-vANCIEN/botdev-vNOUVEAU/g'`
+   — attention à ne pas toucher les `botdev-vNNN-${Date.now()}` des DATA_DIR, ils
+   sont hors motif) + nouveau `test/vNNN-test.js` qui vérifie lui aussi les pins
 3. Commit FR détaillé → `git push origin main` → CI verte → Render déploie
 4. Vérifier prod : `?v=NNN` dans l'HTML, `/api/health/bot` (0 erreur), CI success
 
@@ -164,6 +166,40 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   9) Notifications annoncées aux lecteurs d'écran (`aria-live="polite"`),
   scroll doux respectant reduced-motion.
   126 tests verts (`test/v194-test.js`). Bump cache v194.
+- **v195 → v199 (01/09)** : Phase 3 — Home Ultra Pro (v195), **Modmail**,
+  `/profile`, recherche de transcriptions, aide intégrée (v196), audit UI 0 problème
+  26 modules (v197), « tout est configurable » : giveaways, suggestions, image des
+  panneaux tickets, MP de fermeture, quiz personnalisés (v198), **Hub Fondateur**
+  5 onglets (v199).
+- **v200 → v204 (01-02/09)** : bienvenue pro — salons cliquables `{channels}` /
+  `{salon}` par phrase, modèle prêt à l'emploi, correctif `<#undefined>`, sélecteur
+  de salons, audit UI (polices, accès rapides, sélecteur de serveurs compact).
+- **v205 → v208 (02/09)** : pings salons fiables + sécurité renforcée, anti-images
+  cassées global, avatar du bot toujours visible, **photos Discord servies via notre
+  proxy** (`server/imgproxy.js`, route `/api/img`).
+- **v209 → v211 (04/09)** : messages Discord à l'identité Hoxera « façon bots pro »
+  (`server/discord/ui.js`), **carte image de montée de niveau** (sharp), **profils
+  d'envoi multiples par serveur** (`bot_profile_aliases`, qui signe les messages).
+- **v212 → v214 (04/09)** : tickets — embed du salon privé propre & personnalisable,
+  actions staff en menu déroulant ; Auto-Mod — **barème progressif** des sanctions
+  (`automod_strikes`, récidives par règle) ; XP — **rôles par niveau en échelle de rangs**.
+- **v215 → v217 (05/09)** : XP affichage « niveau » chiffre seul, panneaux `/rank`
+  `/levels` façon DraftBot, finition visuelle des panneaux (grammaire couleurs & signatures).
+- **v218 → v219** : dashboard — resynchronisation rôles/salons via l'API Discord,
+  **menus de rôles modifiables** en place (`PUT /role-menus/:id`).
+- **v220 (série de 10 commits)** : traits de séparation « pro » (━) entre les
+  sections des panneaux, séparateurs NATIFS dans le panneau tickets personnalisés,
+  **garde-fou anti-régression : aucun trait texte dans les panneaux natifs V2**,
+  embed du salon de ticket allégé, plus de trait orphelin sur les messages courts.
+  + `/meme` pioche d'abord dans des sources FRANÇAISES ; fix quiz (réponses A/B/C).
+- **v226** : commandes triées par public visé (`commandKind` : public / staff / admin)
+  → `default_member_permissions` à l'enregistrement + `/help` filtré (`HELP_BLOCKS`).
+- **v227** : identité par serveur — aperçu dashboard unifié photo/bannière/nom.
+- **v228 (ACTUELLE, 05/09 — reprise par un nouvel agent)** : correctif de la seule
+  erreur visible dans `/api/health/bot` (« Cannot read properties of null (reading
+  'tag') ») : un message supprimé **partiel** (pas en cache) n'a pas d'auteur →
+  `trackDeleted` (/snipe, `extra.js`) plantait ; idem `tasks.js` (`member.user.tag`).
+  Gardes ajoutées, test `test/v228-test.js`, docs remises à jour (v194 → v228).
 - **v192** : **CORRECTIF aperçu des annonces de live**. L'aperçu de la
   carte « Annonces de live » affichait un pseudo d'exemple codé en dur
   (« 93_vlz est en live ! ») sur TOUS les serveurs — confondu avec un compte
@@ -295,7 +331,25 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 4. Vérifie les tokens (GitHub 200, Render 200, Discord `users/@me` avec curl)
 5. Fais-moi un point de situation clair, puis attends mes instructions
 
-## 📌 ÉTAT AU 01/09/2026 (dernière mise à jour de ce document)
+## 📌 ÉTAT AU 05/09/2026 (dernière mise à jour de ce document)
+
+- Dernière version : **v228** — voir la section v228 ci-dessus. **155 tests verts**.
+- Prod : https://hoxera.is-a.dev en **v228**, bot « Optimus Prime » en ligne,
+  **8 serveurs / 188 membres**, sauvegardes GitHub OK toutes les 10 min, CI verte.
+- Passation : l'agent précédent a été arrêté par une **limite de contexte** (fil
+  trop long). Le nouvel agent a : cloné, `npm install`, `check.sh` 🟢 (154 → 155),
+  vérifié la prod, corrigé la seule erreur de santé, livré v228.
+- 31 commandes slash globales (5 « premade » à sous-commandes + 25 « extra » +
+  `/event`) + ~36 commandes de modules (kick, ban, ping, meme, daily, rank,
+  giveaway…) — total loin de la limite Discord de 100.
+- Dashboard : 22 modules serveur + 5 modules bot (`Dashboard.MODULES` /
+  `Dashboard.BOT_MODULES` dans `public/js/dashboard.js`), 142 routes API.
+- ⚠️ Token GitHub fine-grained fourni le 05/09 : expire le **04/12/2026**.
+- ⏳ Toujours en attente utilisateur : renommer le rôle « Nexora » à la main sur les
+  serveurs concernés (piège n°4).
+
+### État précédent (01/09/2026) — conservé pour mémoire
+
 
 - Dernière version : **v194** — Dashboard Ultra Pro (Phase 2) : couche UX
   additive (design tokens --dp-*, focus visible partout, hover lift des
