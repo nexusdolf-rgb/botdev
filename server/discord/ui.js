@@ -14,22 +14,21 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const SEPARATOR = '━'.repeat(20);
 
-// Découpe un texte en sections : chaque paragraphe délimité par une
-// ligne vide (2+ sauts de ligne) devient une section, puis les sections
-// sont rejointes par le trait. Garde-fous :
-//   • un texte à section unique repart STRICTEMENT inchangé ;
-//   • les blocs de code (``` ou ~~~) ne sont jamais coupés : une ligne
-//     vide À L'INTÉRIEUR d'une clôture appartient au bloc ;
-//   • le reste du texte (liens, markdown, émojis…) n'est pas touché.
-function sectionize(input, max = Infinity) {
-  if (input == null) return '';
+// Découpe un texte en paragraphes (sections) : chaque paragraphe délimité par
+// une ligne vide devient un élément du tableau. Les blocs de code (``` ou ~~~)
+// ne sont jamais coupés : une ligne vide À L'INTÉRIEUR d'une clôture appartient
+// au bloc. Utilisé par sectionize() (qui les rejoint par SEPARATOR en texte)
+// et par les panneaux natifs (Container V2) qui placent un séparateur pleine
+// largeur entre chaque paragraphe.
+function paragraphs(input) {
+  if (input == null) return [];
   const src = String(input).replace(/\r\n?/g, '\n');
   const lines = src.split('\n');
-  const sections = [];
+  const out = [];
   let cur = [];
   let fence = null;
   const flush = () => {
-    if (cur.length) sections.push(cur.join('\n'));
+    if (cur.length) out.push(cur.join('\n'));
     cur = [];
   };
   for (const line of lines) {
@@ -52,6 +51,17 @@ function sectionize(input, max = Infinity) {
     cur.push(line);
   }
   flush();
+  return out;
+}
+
+// Découpe un texte en sections puis les rejoint par le long trait. Garde-fous :
+//   • un texte à section unique repart STRICTEMENT inchangé ;
+//   • les blocs de code ne sont jamais coupés (voir paragraphs) ;
+//   • le reste du texte (liens, markdown, émojis…) n'est pas touché.
+function sectionize(input, max = Infinity) {
+  if (input == null) return '';
+  const src = String(input).replace(/\r\n?/g, '\n');
+  const sections = paragraphs(src);
   let out = sections.length > 1 ? sections.join('\n' + SEPARATOR + '\n') : src;
   if (Number.isFinite(max) && out.length > max) {
     // On tronque, puis on retire un éventuel trait coupé en plein vol
@@ -158,4 +168,4 @@ function status(options = {}, components = []) {
   }, components);
 }
 
-module.exports = { COLORS, DEFAULT_FOOTER, colorFor, embed, panel, contentPanel, row, linkRow, status, text, SEPARATOR, sectionize };
+module.exports = { COLORS, DEFAULT_FOOTER, colorFor, embed, panel, contentPanel, row, linkRow, status, text, SEPARATOR, sectionize, paragraphs };

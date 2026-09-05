@@ -120,20 +120,32 @@ function buildPanelPayload(config) {
     );
   }
   container
-    .addTextDisplayComponents(new TextDisplayBuilder().setContent(`## ${cfg.name}`))
-    // Contenu libre du serveur : structuré en sections comme partout (v220).
-    .addTextDisplayComponents(new TextDisplayBuilder().setContent(ui.sectionize(cfg.message || 'Choisis le type de ticket qui correspond à ta demande :', 1900)))
-    .addSeparatorComponents(new SeparatorBuilder().setDivider(true));
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(`## ${cfg.name}`));
+  // Contenu libre du serveur : chaque paragraphe devient un bloc texte séparé
+  // par un séparateur natif PLEINE LARGEUR (v220) — pas un trait de texte qui
+  // ne va pas jusqu'au bord du panneau.
+  // cfg.message est déjà borné à 1900 caractères (normalizeConfig).
+  ui.paragraphs(cfg.message || 'Choisis le type de ticket qui correspond à ta demande :')
+    .forEach((part, index, all) => {
+      container.addTextDisplayComponents(new TextDisplayBuilder().setContent(part));
+      if (index < all.length - 1) container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
+    });
+  container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
 
   if (cfg.mode === 'menu') {
     // En mode menu, les descriptions restent visibles dans le panneau et le
-    // sélecteur unique se trouve à la fin du conteneur. Chaque type devient
-    // une section séparée par le long trait (v220), comme dans les embeds.
-    const typeSections = ui.sectionize(
-      cfg.types.map((type) => `${colorSymbol(type)} ${type.emoji || '🎫'} **${type.label}**\n${descriptionFor(type)}`).join('\n\n'),
-      3900,
-    );
-    container.addTextDisplayComponents(new TextDisplayBuilder().setContent(typeSections));
+    // sélecteur unique se trouve à la fin du conteneur. Chaque type est un
+    // bloc affiché l'un sous l'autre, séparé par le séparateur natif PLEINE
+    // LARGEUR (v220) — même grammaire que le mode boutons et que le reste du
+    // panneau : les lignes vont jusqu'au bord, pas un trait de texte court.
+    const typeDisplay = (type) =>
+      `${colorSymbol(type)} ${type.emoji || '🎫'} **${type.label}**\n${descriptionFor(type)}`;
+    cfg.types.forEach((type, index) => {
+      container.addTextDisplayComponents(new TextDisplayBuilder().setContent(typeDisplay(type)));
+      if (index < cfg.types.length - 1) {
+        container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
+      }
+    });
     const select = new StringSelectMenuBuilder()
       .setCustomId(`hx2-menu:${cfg.bot_id}:${cfg.id}`)
       .setPlaceholder('🗂️ Choisis un type de ticket…')
@@ -169,10 +181,12 @@ function buildPanelPayload(config) {
         ))
         .setButtonAccessory(button);
       container.addSectionComponents(section);
-      // Trait EN DESSOUS du bloc bouton — jamais après le dernier : le
-      // séparateur natif + le pied du panneau ferment déjà le panneau.
+      // Séparateur natif PLEINE LARGEUR EN DESSOUS du bloc bouton (v220) —
+      // jamais après le dernier : le séparateur natif + le pied du panneau
+      // ferment déjà le panneau. Les lignes vont jusqu'au fond du panneau,
+      // comme les séparateurs déjà présents (titre/message et pied).
       if (index < cfg.types.length - 1) {
-        container.addTextDisplayComponents(new TextDisplayBuilder().setContent(ui.SEPARATOR));
+        container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
       }
     });
   }

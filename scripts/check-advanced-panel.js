@@ -1,9 +1,10 @@
 // Vérification rapide du panneau « tickets personnalisés » — modes menu ET boutons.
+// Depuis v220 : chaque bloc (type) est séparé par un SÉPARATEUR NATIF pleine
+// largeur (type 14, divider:true), pas par un trait de texte court.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 process.env.BOTDEV_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'hx-adv-'));
-const ui = require('../server/discord/ui');
 const adv = require('../server/discord/advancedTickets');
 
 const base = {
@@ -16,51 +17,69 @@ const base = {
   ],
 };
 
-function textsInOrder(payload) {
-  // Série le payload puis parcourt les nœuds : les contenus textes sortent
-  // dans l'ORDRE du document (titre → message → sections → …).
-  const out = [];
-  (function walk(node) {
-    if (!node || typeof node !== 'object') return;
-    if (typeof node.content === 'string') out.push(node.content);
-    for (const k of Object.keys(node)) {
-      const v = node[k];
-      if (Array.isArray(v)) v.forEach(walk);
-      else if (v && typeof v === 'object') walk(v);
-    }
-  })(JSON.parse(JSON.stringify(payload)));
-  return out;
-}
-
-const isTrait = (s) => s === ui.SEPARATOR;
 let ok = true;
 const expect = (label, cond) => {
   console.log(`  ${cond ? '✅' : '❌'} ${label}`);
   if (!cond) ok = false;
 };
 
-// ---- MENU ----
-console.log('1) Mode MENU');
-let texts = textsInOrder(adv.buildPanelPayload({ ...base, mode: 'menu' }));
-expect('traits présents dans le texte des types', texts.some((t) => t.split(ui.SEPARATOR).length - 1 >= 2));
+function containerComponents(payload) {
+  // payload.components[0] = ContainerBuilder → sérialisé : { type:17, components:[...] }
+  const c = JSON.parse(JSON.stringify(payload)).components[0];
+  return c && Array.isArray(c.components) ? c.components : [];
+}
+const isText = (x) => x && x.type === 10 && typeof x.content === 'string';
+const isSection = (x) => x && x.type === 9;
+const isNativeSep = (x) => x && x.type === 14;
 
 // ---- BOUTONS ----
-console.log('\n2) Mode BOUTONS — un trait EN DESSOUS de chaque bloc bouton');
-texts = textsInOrder(adv.buildPanelPayload({ ...base, mode: 'buttons' }));
-const traits = texts.filter(isTrait);
-expect(`3 types → 2 traits (pas après le dernier)`, traits.length === 2);
-// Ordre : bloc Support → trait → bloc Plainte → trait → bloc Recrutement.
-const idxSupport = texts.findIndex((t) => t.includes('### 🎫 Support'));
-const idxPlainte = texts.findIndex((t) => t.includes('### ⚖️ Plainte'));
-const idxRecrut = texts.findIndex((t) => t.includes('### 📝 Recrutement'));
-expect('trait entre Support et Plainte', idxSupport !== -1 && idxPlainte > idxSupport && isTrait(texts[idxPlainte - 1]));
-expect('trait entre Plainte et Recrutement', idxRecrut > idxPlainte && isTrait(texts[idxRecrut - 1]));
-expect('pas de trait orphelin après le dernier bloc', texts.slice(idxRecrut + 1).filter(isTrait).length === 0);
-console.log('  (aperçu ordre : ' + ['…', '…', '…'].map((x, i) => {
-  const names = texts.filter((t) => t.startsWith('### ')).map((t) => t.slice(4).split('\n')[0]);
-  return names[i];
-}).join(' | ') + ')');
+console.log('1) Mode BOUTONS — séparateur natif pleine largeur sous chaque bloc');
+let comps = containerComponents(adv.buildPanelPayload({ ...base, mode: 'buttons' }));
+const sectionsIdx = [];
+comps.forEach((x, i) => { if (isSection(x)) sectionsIdx.push(i); });
+expect('3 sections de type présentes', sectionsIdx.length === 3);
+let nativeBetween = 0;
+for (let i = 0; i < sectionsIdx.length - 1; i++) {
+  const between = comps.slice(sectionsIdx[i] + 1, sectionsIdx[i + 1]);
+  const hasSep = between.length === 1 && isNativeSep(between[0]);
+  if (hasSep) nativeBetween++;
+  expect(`séparateur natif entre bloc ${i + 1} et ${i + 2}`, hasSep);
+}
+expect('2 séparateurs natifs entre les 3 blocs', nativeBetween === 2);
+const trailingText = comps.slice(sectionsIdx[sectionsIdx.length - 1] + 1);
+expect('plus aucun trait-texte court (20×━) dans le panneau', !comps.some((x) => isText(x) && /━{10,}/.test(x.content)));
 
-console.log(ok ? '\n🎉 Mode boutons : trait après chaque bloc ✅' : '\n❌ à corriger');
+// ---- MENU ----
+console.log('\n2) Mode MENU — mêmes séparateurs natifs pleine largeur');
+comps = containerComponents(adv.buildPanelPayload({ ...base, mode: 'menu' }));
+const typeTextsIdx = [];
+comps.forEach((x, i) => { if (isText(x) && /^\S+ 🎫|^\S+ ⚖️|^\S+ 📝/.test(x.content)) typeTextsIdx.push(i); });
+expect('3 blocs texte de types présents', typeTextsIdx.length === 3);
+let nativeMenu = 0;
+for (let i = 0; i < typeTextsIdx.length - 1; i++) {
+  const between = comps.slice(typeTextsIdx[i] + 1, typeTextsIdx[i + 1]);
+  if (between.length === 1 && isNativeSep(between[0])) nativeMenu++;
+}
+expect('2 séparateurs natifs entre les types en menu', nativeMenu === 2);
+expect('pas de trait-texte court en mode menu non plus', !comps.some((x) => isText(x) && /━{10,}/.test(x.content)));
+
+// ---- Intro multi-paragraphes (mode boutons) ----
+console.log('\n3) Intro multi-paragraphes — séparateurs natifs entre paragraphes');
+const cfgIntro = { ...base, mode: 'buttons', message: 'Premier paragraphe d’accueil.\n\nSecond paragraphe avec une consigne.\n\nTroisième paragraphe.' };
+comps = containerComponents(adv.buildPanelPayload(cfgIntro));
+const introTexts = comps.filter((x) => isText(x) && /paragraphe/.test(x.content));
+expect('3 paragraphes d’intro affichés séparément', introTexts.length === 3);
+// Entre les paragraphes (indices) il faut des séparateurs natifs.
+const idxs = [];
+comps.forEach((x, i) => { if (isText(x) && /paragraphe/.test(x.content)) idxs.push(i); });
+let sepIntro = 0;
+for (let i = 0; i < idxs.length - 1; i++) {
+  const between = comps.slice(idxs[i] + 1, idxs[i + 1]);
+  if (between.length === 1 && isNativeSep(between[0])) sepIntro++;
+}
+expect('séparateurs natifs entre chaque paragraphe d’intro', sepIntro === 2);
+expect('aucun trait-texte court dans l’intro', !comps.some((x) => isText(x) && /━{10,}/.test(x.content)));
+
+console.log(ok ? '\n🎉 Séparateurs natifs pleine largeur OK (menu + boutons + intro)' : '\n❌ à corriger');
 try { fs.rmSync(process.env.BOTDEV_DATA_DIR, { recursive: true, force: true }); } catch {}
 process.exit(ok ? 0 : 1);

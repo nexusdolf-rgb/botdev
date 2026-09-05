@@ -107,12 +107,30 @@ check('mono-section 4096 max non touchée', ui.embed({ description: 'x'.repeat(4
   check('départ : panneau premium = message utilisateur structuré', evSrc.includes("s'en va…") && evSrc.includes('ui.sectionize(text, 4096)'));
   check('automod : avertissements via ui.embed (couverture auto)',
     src('automod.js').includes("const ui = require('./ui')") && src('automod.js').includes('ui.embed({'));
-  // Système de tickets personnalisés (advancedTickets, panneau Container V2).
+  // Système de tickets personnalisés (advancedTickets, panneau Container V2) :
+  // les séparations passent par des SÉPARATEURS NATIFS pleine largeur (type 14),
+  // jamais par un trait-texte court qui ne va pas jusqu'au fond du panneau.
   const advSrc = src('advancedTickets.js');
-  check('tickets personnalisés : message libre structuré (sectionize)', advSrc.includes('ui.sectionize(cfg.message'));
-  check('tickets personnalisés : types en menu séparés par le trait', advSrc.includes('const typeSections = ui.sectionize('));
-  check('tickets personnalisés : trait sous chaque bloc bouton',
-    advSrc.includes('addTextDisplayComponents(new TextDisplayBuilder().setContent(ui.SEPARATOR))'));
+  check('tickets personnalisés : intro découpée en paragraphes', advSrc.includes('ui.paragraphs(cfg.message'));
+  check('tickets personnalisés : séparateurs natifs entre paragraphes/blocs',
+    countOf('advancedTickets.js', 'addSeparatorComponents(new SeparatorBuilder().setDivider(true))') >= 3);
+  check('tickets personnalisés : aucun trait-texte court (━) dans le panneau',
+    !advSrc.includes('.setContent(ui.SEPARATOR)'));
+  const adv = require('../server/discord/advancedTickets');
+  const advCfg = {
+    id: 'P', bot_id: BOT, guild_id: 'G220', mode: 'buttons', name: 'Centre d’aide', channel: 'C',
+    message: 'Premier paragraphe.\n\nSecond paragraphe.', color: '#e07a5f',
+    types: [
+      { id: 't1', label: 'Support', emoji: '🎫', description: 'Question ?', button_style: '1', questions: [] },
+      { id: 't2', label: 'Plainte', emoji: '⚖️', description: 'Abus ?', button_style: '4', questions: [] },
+      { id: 't3', label: 'Recrutement', emoji: '📝', description: 'Postuler', button_style: '3', questions: [] },
+    ],
+  };
+  const advComps = JSON.parse(JSON.stringify(adv.buildPanelPayload(advCfg))).components[0].components || [];
+  const nativeSeps = advComps.filter((x) => x && x.type === 14).length;
+  check('tickets personnalisés (runtime) : séparateurs natifs présents', nativeSeps >= 3);
+  check('tickets personnalisés (runtime) : aucun texte ne contient de ━',
+    !advComps.some((x) => x && typeof x.content === 'string' && x.content.includes('━')));
 
   console.log(failures ? `\n❌ ${failures} échec(s)` : '\n🎉 Tous les tests v220 passent');
   process.exit(failures ? 1 : 0);
