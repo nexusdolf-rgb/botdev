@@ -5366,33 +5366,48 @@ Dashboard.renderers.server = async (content, data) => {
 };
 
 // ---------- Identité du bot par serveur ----------
+// La page montre UNE carte d'aperçu vivante (photo + bannière + nom + bio),
+// mise à jour instantanément pendant l'édition — identique à /botprofile view.
+// ⚠️ Règle Discord : l'identité est PAR SERVEUR, appliquée aux messages du bot
+// (bienvenue, tickets, niveaux, panneaux) via webhooks. Le bot global (nom,
+// avatar, bannière) n'est JAMAIS modifié, sur aucun autre serveur.
 Dashboard.renderers.botprofile = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const profile = data.profile || {};
   const serverName = data.guild && data.guild.name ? data.guild.name : 'ce serveur';
   const root = Dashboard.header(content, '🤖', 'Identité du bot', `Personnalise Optimus Prime uniquement sur ${serverName}.`);
+  // URL absolue : la base de données stocke /assets/… (chemin relatif du site).
+  const abs = (u) => {
+    if (!u) return '';
+    if (/^https?:\/\//i.test(u) || u.startsWith('data:') || u.startsWith('blob:')) return u;
+    return (window.location.origin || '') + u;
+  };
+  const avatarOf = (pr) => pr.avatar_url || bot.avatar_url || '';
+  const bannerOf = (pr) => pr.banner_url || '';
+  const letterTile = (nm) => App.escapeHtml(String(nm || '?').trim().slice(0, 1).toUpperCase() || '?');
+
   const card = Dashboard.card(root, '🤖 Profil d’Optimus Prime sur ce serveur', 'Cette identité est indépendante des autres serveurs et ne modifie jamais le bot global.');
-  const avatar = profile.avatar_url || bot.avatar_url || '';
-  const banner = profile.banner_url || '';
-  card.innerHTML += `
+  // 🔎 Aperçu vivant (photo + bannière + nom + bio ensemble)
+  card.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:14px;border:1px solid rgba(88,101,242,.28);border-radius:10px;background:rgba(88,101,242,.07)">
-      <span style="font-size:20px">🔒</span><div><b>Configuration limitée à ce serveur</b><div class="desc" style="margin:2px 0 0">Les autres serveurs conservent leur propre nom et leurs propres images.</div></div>
+      <span style="font-size:20px">🔒</span><div><b>Configuration limitée à ${App.escapeHtml(serverName)}</b><div class="desc" style="margin:2px 0 0">Le nom, la photo et la bannière ci-dessous ne s’appliquent qu’à CE serveur. Les autres serveurs et le bot global ne changent jamais.</div></div>
     </div>
+    <div id="bp-live" style="margin-bottom:14px"></div>
     <label class="dash-label">Nom affiché par Optimus Prime sur ce serveur</label>
     <input class="dash-input" id="bp-name" maxlength="80" value="${App.escapeHtml(profile.name || '')}" placeholder="Hoxera" />
-    <div class="desc" style="margin-top:5px">Le nom personnalisé apparaît dans les messages envoyés par Optimus Prime sur ce serveur. L’application bot globale n’est pas renommée.</div>
+    <div class="desc" style="margin-top:5px">Apparaît dans les messages envoyés par le bot sur ce serveur. L’application bot globale n’est pas renommée.</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:16px">
       <div>
         <label class="dash-label">🖼️ Photo du bot sur ce serveur</label>
         <input class="dash-input" id="bp-avatar" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
-        <div class="desc" style="margin-top:5px">Image maximum : 3 Mo. Sans image personnalisée, l’avatar global est utilisé.</div>
-        <div id="bp-avatar-preview" style="margin-top:10px">${avatar ? `<img src="${App.escapeHtml(avatar)}" alt="Avatar actuel" style="width:88px;height:88px;border-radius:50%;object-fit:cover;border:3px solid rgba(88,101,242,.45)" />` : '<div class="dash-empty" style="padding:12px">Avatar global utilisé</div>'}</div>
+        <div class="desc" style="margin-top:5px">Image maximum : 3 Mo. Sans image personnalisée, l’avatar global est utilisé (affiché à droite en aperçu).</div>
+        <div id="bp-avatar-preview" style="margin-top:10px"></div>
       </div>
       <div>
         <label class="dash-label">🎴 Bannière du bot sur ce serveur</label>
         <input class="dash-input" id="bp-banner" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
-        <div class="desc" style="margin-top:5px">Image maximum : 3 Mo. Elle apparaît dans le profil et les embeds d’identité.</div>
-        <div id="bp-banner-preview" style="margin-top:10px">${banner ? `<img src="${App.escapeHtml(banner)}" alt="Bannière actuelle" style="display:block;width:100%;max-width:390px;height:120px;border-radius:10px;object-fit:cover;border:1px solid rgba(88,101,242,.35)" />` : '<div class="dash-empty" style="padding:12px">Aucune bannière personnalisée</div>'}</div>
+        <div class="desc" style="margin-top:5px">Image maximum : 3 Mo. Aucune bannière = l’aperçu garde un dégradé.</div>
+        <div id="bp-banner-preview" style="margin-top:10px"></div>
       </div>
     </div>
     <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:18px">
@@ -5400,6 +5415,40 @@ Dashboard.renderers.botprofile = async (content, data) => {
       <button class="dash-btn dash-btn-danger" id="bp-reset">♻️ Reprendre l’identité globale</button>
     </div>
     <div class="desc" id="bp-status" style="margin-top:10px"></div>`;
+
+  const current = { name: profile.name || '', avatar: avatarOf(profile), banner: bannerOf(profile), bio: profile.bio || '' };
+  const drawTile = (where, url, shape, border) => {
+    const el = card.querySelector(where);
+    el.innerHTML = url
+      ? `<img src="${App.escapeHtml(url)}" alt="Aperçu" style="display:block;width:${shape === 'round' ? '88px' : '100%'};max-width:390px;height:${shape === 'round' ? '88px' : '120px'};border-radius:${shape === 'round' ? '50%' : '10px'};object-fit:cover;border:${border}" />`
+      : `<div class="dash-empty" style="padding:12px">${shape === 'round' ? 'Avatar global utilisé' : 'Aucune bannière personnalisée'}</div>`;
+  };
+  const renderLive = () => {
+    const name = (current.name || '').trim() || 'Identité globale du bot';
+    const bUrl = current.banner ? abs(current.banner) : '';
+    const aUrl = current.avatar ? abs(current.avatar) : '';
+    const cardLive = card.querySelector('#bp-live');
+    // Une seule carte « profil », avec bannière, photo, nom, bio (comme /botprofile view).
+    cardLive.innerHTML = `
+      <div style="border:1px solid rgba(88,101,242,.35);border-radius:14px;overflow:hidden;background:#151522">
+        ${bUrl
+          ? `<div style="height:120px;background:url('${App.escapeHtml(bUrl)}') center/cover no-repeat"></div>`
+          : `<div style="height:120px;background:linear-gradient(120deg,#e07a5f33,#8b5cf633,#5865f233)"></div>`}
+        <div style="display:flex;gap:14px;padding:0 16px 14px;margin-top:-34px;align-items:flex-end">
+          ${aUrl
+            ? `<img src="${App.escapeHtml(aUrl)}" alt="Photo" style="width:78px;height:78px;border-radius:50%;object-fit:cover;border:4px solid #151522" />`
+            : `<span style="width:78px;height:78px;border-radius:50%;background:#5865F2;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;border:4px solid #151522">${letterTile(name)}</span>`}
+          <div style="flex:1;min-width:0;padding-bottom:2px">
+            <b style="font-size:17px">${App.escapeHtml(name)}</b>
+            <div style="font-size:12px;color:var(--d-dim);margin-top:2px">${App.escapeHtml(current.bio || 'Aucune bio définie.')}</div>
+          </div>
+        </div>
+        <div style="font-size:11.5px;color:var(--d-dim);padding:0 16px 12px">🔒 Affiché par le bot sur <b>${App.escapeHtml(serverName)}</b> uniquement — jamais ailleurs.</div>
+      </div>`;
+  };
+  renderLive();
+  drawTile('#bp-avatar-preview', current.avatar ? abs(current.avatar) : '', 'round', '3px solid rgba(88,101,242,.45)');
+  drawTile('#bp-banner-preview', current.banner ? abs(current.banner) : '', 'wide', '1px solid rgba(88,101,242,.35)');
 
   const fileAsDataUrl = (file) => new Promise((resolve, reject) => {
     if (!file) return resolve('');
@@ -5410,7 +5459,7 @@ Dashboard.renderers.botprofile = async (content, data) => {
     reader.onerror = () => reject(new Error('Lecture de l’image impossible.'));
     reader.readAsDataURL(file);
   });
-  const previewFile = (input, target, kind) => {
+  const pickFile = (input, kind) => {
     const file = input.files && input.files[0];
     if (!file) return;
     if (!String(file.type || '').startsWith('image/') || file.size > 3 * 1024 * 1024) {
@@ -5419,23 +5468,34 @@ Dashboard.renderers.botprofile = async (content, data) => {
       return;
     }
     const url = URL.createObjectURL(file);
-    target.innerHTML = `<img src="${url}" alt="Aperçu" style="display:block;width:${kind === 'Photo' ? '88px' : '100%'};max-width:390px;height:${kind === 'Photo' ? '88px' : '120px'};border-radius:${kind === 'Photo' ? '50%' : '10px'};object-fit:cover;border:2px solid rgba(88,101,242,.45)" />`;
+    if (kind === 'Photo') { current.avatar = url; }
+    else { current.banner = url; }
+    renderLive();
+    drawTile('#bp-avatar-preview', current.avatar ? current.avatar : '', 'round', '3px solid rgba(88,101,242,.45)');
+    drawTile('#bp-banner-preview', current.banner ? current.banner : '', 'wide', '1px solid rgba(88,101,242,.35)');
   };
+  const nameInput = card.querySelector('#bp-name');
   const avatarInput = card.querySelector('#bp-avatar');
   const bannerInput = card.querySelector('#bp-banner');
-  avatarInput.onchange = () => previewFile(avatarInput, card.querySelector('#bp-avatar-preview'), 'Photo');
-  bannerInput.onchange = () => previewFile(bannerInput, card.querySelector('#bp-banner-preview'), 'Bannière');
+  nameInput.oninput = () => { current.name = nameInput.value; renderLive(); };
+  avatarInput.onchange = () => pickFile(avatarInput, 'Photo');
+  bannerInput.onchange = () => pickFile(bannerInput, 'Bannière');
 
   card.querySelector('#bp-save').onclick = async () => {
     const button = card.querySelector('#bp-save');
     const status = card.querySelector('#bp-status');
     button.disabled = true; button.textContent = '⏳ Enregistrement…';
     try {
-      const body = { name: card.querySelector('#bp-name').value.trim() };
-      if (avatarInput.files && avatarInput.files[0]) body.avatar_b64 = await fileAsDataUrl(avatarInput.files[0]);
-      if (bannerInput.files && bannerInput.files[0]) body.banner_b64 = await fileAsDataUrl(bannerInput.files[0]);
+      // On lit la valeur du champ au moment de l'enregistrement (fiable
+      // même sans événement input : autofill, tests, etc.).
+      current.name = nameInput.value;
+      const body = { name: current.name.trim() };
+      const aFile = avatarInput.files && avatarInput.files[0];
+      const bFile = bannerInput.files && bannerInput.files[0];
+      if (aFile) body.avatar_b64 = await fileAsDataUrl(aFile);
+      if (bFile) body.banner_b64 = await fileAsDataUrl(bFile);
       await App.api(`/bots/${bot.id}/guilds/${guildId}/profile`, { method: 'PUT', body });
-      status.textContent = '✅ Identité enregistrée uniquement pour ce serveur.';
+      status.textContent = `✅ Identité enregistrée pour ${serverName} uniquement — les autres serveurs et le bot global ne changent pas.`;
       App.toast('Identité d’Optimus Prime enregistrée pour ce serveur !');
       await Dashboard.renderContent(content);
     } catch (e) {
@@ -5445,7 +5505,7 @@ Dashboard.renderers.botprofile = async (content, data) => {
     button.disabled = false; button.textContent = '💾 Enregistrer l’identité';
   };
   card.querySelector('#bp-reset').onclick = async () => {
-    if (!(await App.confirm(`Reprendre l’identité globale d’Optimus Prime sur ${serverName} ?`))) return;
+    if (!(await App.confirm(`Reprendre l’identité globale d’Optimus Prime sur ${serverName} ? Le bot global n’est jamais modifié.`))) return;
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/profile`, { method: 'DELETE' });
       App.toast('Identité globale reprise sur ce serveur.');
@@ -5453,20 +5513,22 @@ Dashboard.renderers.botprofile = async (content, data) => {
     } catch (e) { App.toast(e.message, 'error'); }
   };
 
-  // 👥 v211 — Profils d'envoi multiples : choisir QUI signe les messages
+  // 👥 v211 — Profils d'envoi multiples : choisir QUI signe les messages.
+  // La rangée « Profil principal » affiche maintenant sa PHOTO (si définie),
+  // comme les profils d'envoi — plus de pastille lettre trompeuse.
   const aliases = data.profiles_extra || [];
   const activeId = Number(data.profile_active || 0);
   const principalName = (profile.name || '').trim() || 'Identité globale du bot';
-  const card2 = Dashboard.card(root, '👥 Profils d’envoi (qui signe les messages)', 'Choisis l’identité utilisée quand le bot envoie un message (bienvenue, tickets, annonces, niveaux…). Le « profil principal » est celui modifié ci-dessus.');
-  const choices = [{ id: 0, name: `Profil principal — ${principalName}`, isPrincipal: true }]
+  const card2 = Dashboard.card(root, '👥 Profils d’envoi (qui signe les messages)', `Choisis l’identité utilisée quand le bot envoie un message sur ${serverName} (bienvenue, tickets, annonces, niveaux…). Le « profil principal » est celui modifié ci-dessus.`);
+  const choices = [{ id: 0, name: principalName, avatar: avatarOf(profile), isPrincipal: true }]
     .concat(aliases.map((a) => ({ id: a.id, name: a.name, avatar: a.avatar_url || '' })));
   choices.forEach((c) => {
     const row = App.el(`
       <div style="display:flex;align-items:center;gap:12px;border:1px solid var(--d-border);border-radius:10px;padding:9px 12px;margin-bottom:8px;background:${c.id === activeId ? 'rgba(var(--d-accent-rgb),.07)' : 'transparent'}">
         <input type="radio" name="bp-active" value="${c.id}" ${c.id === activeId ? 'checked' : ''} aria-label="Signer avec ${App.escapeHtml(c.name)}" style="accent-color:var(--d-accent)" />
-        ${c.isPrincipal
-          ? `<span style="width:36px;height:36px;border-radius:50%;background:var(--d-card2);display:inline-flex;align-items:center;justify-content:center;font-weight:800">${App.escapeHtml(String(c.name).slice(0,1).toUpperCase())}</span>`
-          : `<img src="${App.escapeHtml(c.avatar)}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover" data-fb-text="${App.escapeHtml(String(c.name).slice(0,1).toUpperCase())}" />`}
+        ${c.avatar
+          ? `<img src="${App.escapeHtml(abs(c.avatar))}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover" onerror="this.style.display='none'" />`
+          : `<span style="width:36px;height:36px;border-radius:50%;background:var(--d-card2);display:inline-flex;align-items:center;justify-content:center;font-weight:800">${letterTile(c.name)}</span>`}
         <div style="flex:1;min-width:0">
           <b>${App.escapeHtml(c.name)}</b>
           <div style="font-size:11.5px;color:var(--d-dim)">${c.isPrincipal ? 'Personnalisé pour ce serveur' : 'Profil d’envoi additionnel'}${c.id === activeId ? ' · ✅ utilisé pour les envois' : ''}</div>
@@ -5505,9 +5567,9 @@ Dashboard.renderers.botprofile = async (content, data) => {
   </div>`);
   card2.appendChild(addZone);
   card2.querySelector('#bp-alias-add').onclick = async () => {
-    const nameInput = card2.querySelector('#bp-alias-name');
+    const nameInput2 = card2.querySelector('#bp-alias-name');
     const fileInput = card2.querySelector('#bp-alias-file');
-    const name = nameInput.value.trim();
+    const name = nameInput2.value.trim();
     if (!name) { App.toast('Donne un nom au profil.', 'error'); return; }
     try {
       const body = { name };
