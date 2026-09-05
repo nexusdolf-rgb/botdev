@@ -448,7 +448,9 @@ async function execute(botId, entry, cmd, src) {
       const embed = new EmbedBuilder()
         .setColor('#e07a5f')
         .setAuthor({ name: `Avatar de ${target.tag || target.username}` })
-        .setImage(target.displayAvatarURL({ size: 512, dynamic: true }));
+        .setImage(target.displayAvatarURL({ size: 512, dynamic: true }))
+        .setFooter({ text: `Hoxera · ${guild.name}` })
+        .setTimestamp();
       await replyEmbed(embed);
       break;
     }
@@ -458,12 +460,12 @@ async function execute(botId, entry, cmd, src) {
       const embed = new EmbedBuilder()
         .setColor('#e07a5f')
         .setAuthor({ name: target.tag, iconURL: target.displayAvatarURL({ dynamic: true }) })
-        .setThumbnail(target.displayAvatarURL({ dynamic: true }))
         .addFields(
           { name: '🆔 ID', value: target.id, inline: true },
           { name: '📅 Compte créé le', value: `<t:${Math.floor(target.createdTimestamp / 1000)}:d>`, inline: true },
         );
       if (tMember) embed.addFields({ name: '🚪 A rejoint le', value: `<t:${Math.floor(tMember.joinedTimestamp / 1000)}:d>`, inline: true });
+      embed.setFooter({ text: `Hoxera · ${guild.name}` }).setTimestamp();
       await replyEmbed(embed);
       break;
     }
@@ -471,7 +473,6 @@ async function execute(botId, entry, cmd, src) {
       const embed = new EmbedBuilder()
         .setColor('#e07a5f')
         .setAuthor({ name: guild.name, iconURL: guild.iconURL({ dynamic: true }) })
-        .setThumbnail(guild.iconURL({ dynamic: true }))
         .addFields(
           { name: '👑 Propriétaire', value: `<@${guild.ownerId}>`, inline: true },
           { name: '👥 Membres', value: String(guild.memberCount), inline: true },
@@ -479,7 +480,9 @@ async function execute(botId, entry, cmd, src) {
           { name: '🔐 Rôles', value: String(guild.roles.cache.size), inline: true },
           { name: '📅 Créé le', value: `<t:${Math.floor(guild.createdTimestamp / 1000)}:d>`, inline: true },
           { name: '🆔 ID', value: guild.id, inline: true },
-        );
+        )
+        .setFooter({ text: `Hoxera · ${guild.name}` })
+        .setTimestamp();
       await replyEmbed(embed);
       break;
     }
@@ -492,7 +495,9 @@ async function execute(botId, entry, cmd, src) {
           { name: '👥 Utilisateurs', value: String(client.guilds.cache.reduce((a, g) => a + g.memberCount, 0)), inline: true },
           { name: '⚡ Latence', value: `${client.ws.ping} ms`, inline: true },
           { name: '🤖 Créé avec amour', value: 'Hoxera ✨', inline: true },
-        );
+        )
+        .setFooter({ text: `Hoxera · ${guild.name}` })
+        .setTimestamp();
       await replyEmbed(embed);
       break;
     }
@@ -638,11 +643,13 @@ async function execute(botId, entry, cmd, src) {
       if (!items.length) {
         return reply('🛒 La boutique est vide. Les administrateurs peuvent ajouter des articles depuis le **dashboard Hoxera** (onglet Boutique).');
       }
+      const solde = (store.economy.get(botId, guild.id, author.id) || {}).coins || 0;
       const embed = new EmbedBuilder()
-        .setColor('#FEE75C')
+        .setColor('#F1C40F')
         .setTitle('🛒 Boutique du serveur')
-        .setDescription('Achète un article avec tes coins : `/buy article`')
-        .setFooter({ text: `Solde : ${(store.economy.get(botId, guild.id, author.id) || {}).coins || 0} coins` });
+        .setDescription(`Achète un article avec tes coins : \`/buy article\`\n\n💰 **Ton solde : ${solde} coins**`)
+        .setFooter({ text: `Hoxera · ${guild.name} · Boutique` })
+        .setTimestamp();
       for (const it of items) {
         embed.addFields({ name: `${it.emoji} ${it.name} — ${it.price} coins`, value: it.description || 'Aucune description' });
       }
@@ -674,7 +681,7 @@ async function execute(botId, entry, cmd, src) {
         ],
       });
       await replyPanel({
-        variant: 'success',
+        variant: 'economy',
         title: '🛒 Achat réussi !',
         description: `Tu reçois **${role.toString()}**.`,
         fields: [{ name: '💰 Prix', value: `${item.price} coins`, inline: true }, { name: '🏷️ Rôle', value: role.name, inline: true }],
@@ -694,7 +701,7 @@ async function execute(botId, entry, cmd, src) {
       store.economy.add(botId, guild.id, author.id, -amount);
       store.economy.add(botId, guild.id, target.id, amount);
       await replyPanel({
-        variant: 'success',
+        variant: 'economy',
         title: '💸 Transfert effectué',
         description: `${author} a envoyé des coins à ${target}.`,
         fields: [{ name: '🪙 Montant', value: `${amount} coins`, inline: true }, { name: '👤 Destinataire', value: `${target}`, inline: true }],
@@ -1065,7 +1072,7 @@ async function execute(botId, entry, cmd, src) {
       store.economy.setDailyStreak(botId, guild.id, author.id, streak);
       const after = store.economy.get(botId, guild.id, author.id);
       await replyPanel({
-        variant: 'success',
+        variant: 'economy',
         title: '🎁 Récompense quotidienne',
         description: streak > 1 ? `Série de **${streak} jours** 🔥 continue !` : 'Tu as récupéré ta récompense du jour.',
         fields: [
@@ -1095,9 +1102,11 @@ async function execute(botId, entry, cmd, src) {
       if (!top.length) return reply('🏆 Le classement est vide pour le moment.');
       const medal = ['🥇', '🥈', '🥉'];
       const embed = new EmbedBuilder()
-        .setColor('#FEE75C')
+        .setColor('#F1C40F')
         .setTitle('🏆 Classement des coins')
-        .setDescription(top.map((r, i) => `${medal[i] || `**${i + 1}.**`} <@${r.user_id}> — **${r.coins}** coins`).join('\n'));
+        .setDescription(top.map((r, i) => `${medal[i] || `**${i + 1}.**`} <@${r.user_id}> — **${r.coins}** coins`).join('\n'))
+        .setFooter({ text: `Hoxera · ${guild.name} · Économie` })
+        .setTimestamp();
       await replyEmbed(embed);
       break;
     }

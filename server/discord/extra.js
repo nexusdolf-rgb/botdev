@@ -392,7 +392,7 @@ async function handleSlash(botId, entry, interaction) {
       const d = cur.date ? new Date(cur.date.replace(' ', 'T') + 'Z') : null;
       const dateStr = d && !isNaN(d) ? d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : 'récemment';
       return interaction.reply(ui.panel({
-        color: '#EB459E',
+        variant: 'social',
         title: `💍 Couple de ${target.username}`,
         description: `${target} ❤️ <@${other}>`,
         fields: [{ name: '📅 Depuis', value: dateStr, inline: true }],
@@ -651,7 +651,7 @@ async function handleSlash(botId, entry, interaction) {
       store.economy.add(botId, guild.id, user.id, gain);
       store.settings.set(key, String(Date.now()));
       return interaction.reply(ui.panel({
-        variant: 'success',
+        variant: 'economy',
         title: '💼 Travail terminé',
         description: `${job[0]} ${job[1]} !`,
         fields: [{ name: '🪙 Récompense', value: `+${gain} coins`, inline: true }],
@@ -668,7 +668,7 @@ async function handleSlash(botId, entry, interaction) {
       if (win) {
         store.economy.add(botId, guild.id, user.id, amount);
         return interaction.reply(ui.panel({
-          variant: 'success',
+          variant: 'economy',
           title: '🎰 JACKPOT !',
           description: `Tu doubles ta mise : **+${amount} coins** !`,
           fields: [{ name: '💰 Nouveau solde', value: `${row.coins + amount} coins`, inline: true }],
@@ -705,7 +705,7 @@ async function handleSlash(botId, entry, interaction) {
         store.economy.add(botId, guild.id, target.id, -stolen);
         store.economy.add(botId, guild.id, user.id, stolen);
         return interaction.reply(ui.panel({
-          variant: 'success',
+          variant: 'economy',
           title: '🦹 Vol réussi !',
           description: `Tu voles **${stolen} coins** à ${target} 😈`,
           fields: [{ name: '🎯 Cible', value: `${target}`, inline: true }],
@@ -716,7 +716,7 @@ async function handleSlash(botId, entry, interaction) {
       store.economy.add(botId, guild.id, user.id, -fine);
       store.economy.add(botId, guild.id, target.id, fine);
       return interaction.reply(ui.panel({
-        variant: 'warning',
+        variant: 'danger',
         title: '🚓 Vol échoué',
         description: `${target} t'a surpris et te réclame **${fine} coins** de dédommagement…`,
         fields: [{ name: '💸 Amende', value: `${fine} coins`, inline: true }],
@@ -854,7 +854,7 @@ async function renderTop(botId, entry, interaction, guild, type, page, message =
     else lines.push(`${medal} **${name}** — ✨ Niv. ${r.level} (${r.xp} XP)`);
   }
   const embed = new EmbedBuilder()
-    .setColor(type === 'coins' ? 0xf1c40f : 0x57f287)
+    .setColor(type === 'coins' ? 0xf1c40f : 0xe07a5f)
     .setTitle(type === 'coins' ? '🪙 Classement Coins' : '✨ Classement XP')
     .setDescription(lines.join('\n'))
     .setFooter({ text: `Hoxera · ${guild.name} · Page ${page + 1}/${maxPage + 1} · ${total} membre(s) classé(s)` })

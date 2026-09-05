@@ -108,7 +108,8 @@ async function runJoinEvent(botId, member, opts = {}) {
         } catch {}
         const embed = new EmbedBuilder()
           .setColor(cfg.color || '#57F287')
-          .setAuthor({ name: `${user.tag || user.username || 'Nouveau membre'} vient d'arriver !`, iconURL: avatarUrl || undefined })
+          // 👤 Un seul avatar : porté par le visuel (carte, image ou thumbnail), pas en author.
+          .setAuthor({ name: `${user.tag || user.username || 'Nouveau membre'} vient d'arriver !` })
           .setTitle(`👋 Bienvenue sur ${member.guild.name} !`)
           .setDescription(finalText)
           .addFields(
@@ -119,11 +120,11 @@ async function runJoinEvent(botId, member, opts = {}) {
           .setFooter({ text: member.guild.name, iconURL: member.guild.iconURL ? (member.guild.iconURL({ size: 64 }) || undefined) : undefined })
           .setTimestamp();
         if (files.length) {
+          // 🎴 La carte image contient déjà l'avatar + pseudo en grand : pas de thumbnail en plus.
           embed.setImage('attachment://bienvenue.png'); // la carte remplit le panneau
-          if (avatarUrl) embed.setThumbnail(avatarUrl);
         } else if (cfg.image) {
+          // 🖼️ Image configurée = visuel principal (l'avatar n'est pas répété).
           embed.setImage(String(cfg.image).trim());
-          if (avatarUrl) embed.setThumbnail(avatarUrl);
         } else if (avatarUrl) {
           embed.setThumbnail(avatarUrl);
         }
@@ -191,7 +192,8 @@ async function runLeaveEvent(botId, member, opts = {}) {
     const joinedTs = member.joinedTimestamp ? Math.floor(member.joinedTimestamp / 1000) : 0;
     const embed = new EmbedBuilder()
       .setColor(cfg.color || '#ED4245')
-      .setAuthor({ name: `${user.tag || user.username || 'Un membre'} s'en va…`, iconURL: avatarUrl || undefined })
+      // 👤 Un seul avatar : porté par l'image ou la thumbnail, pas en author.
+      .setAuthor({ name: `${user.tag || user.username || 'Un membre'} s'en va…` })
       .setDescription(finalText)
       .addFields(
         { name: '👥 Membres restants', value: `**${member.guild.memberCount || '?'}**`, inline: true },
@@ -199,8 +201,12 @@ async function runLeaveEvent(botId, member, opts = {}) {
       )
       .setFooter({ text: member.guild.name, iconURL: member.guild.iconURL ? (member.guild.iconURL({ size: 64 }) || undefined) : undefined })
       .setTimestamp();
-    if (avatarUrl) embed.setThumbnail(avatarUrl);
-    if (cfg.image) embed.setImage(String(cfg.image).trim());
+    if (cfg.image) {
+      // 🖼️ L'image configurée est le visuel ; pas de thumbnail en double.
+      embed.setImage(String(cfg.image).trim());
+    } else if (avatarUrl) {
+      embed.setThumbnail(avatarUrl);
+    }
     const ok = await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { embeds: [embed] }).then(() => true).catch((e) => { trace('envoi ÉCHOUÉ : ' + e.message); return false; });
     trace(ok ? 'panneau de départ envoyé ✅' : 'panneau NON envoyé ❌ (permissions ?)');
   } else {

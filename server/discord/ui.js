@@ -14,7 +14,8 @@ const COLORS = Object.freeze({
   danger: '#ED4245',
   ticket: '#e07a5f',
   live: '#FE2C55',
-  economy: '#F1C40F',
+  social: '#EB459E',   // vie sociale : couple, mariage, affection
+  economy: '#F1C40F',  // or de l'économie : gains, solde, boutique, classements coins
 });
 
 const DEFAULT_FOOTER = 'Hoxera · Assistant de ton serveur';
