@@ -1,10 +1,65 @@
 // ============================================================
-// Hoxera — Design System Discord (v3.20)
+// Hoxera — Design System Discord (v3.21)
 // Une seule grammaire visuelle pour les panneaux, les salons privés
 // et les messages privés. Les composants Discord restent natifs et
 // compatibles avec les anciens custom_id.
 // ============================================================
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Traits de séparation (v220) — rendu « pro » des grands panneaux.
+// Chaque grande section textuelle d'un panneau est séparée de la
+// suivante par un long trait discret (20 × U+2501), à la place des
+// simples sauts de ligne. Rendu 100 % texte, aucune couleur ajoutée.
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const SEPARATOR = '━'.repeat(20);
+
+// Découpe un texte en sections : chaque paragraphe délimité par une
+// ligne vide (2+ sauts de ligne) devient une section, puis les sections
+// sont rejointes par le trait. Garde-fous :
+//   • un texte à section unique repart STRICTEMENT inchangé ;
+//   • les blocs de code (``` ou ~~~) ne sont jamais coupés : une ligne
+//     vide À L'INTÉRIEUR d'une clôture appartient au bloc ;
+//   • le reste du texte (liens, markdown, émojis…) n'est pas touché.
+function sectionize(input, max = Infinity) {
+  if (input == null) return '';
+  const src = String(input).replace(/\r\n?/g, '\n');
+  const lines = src.split('\n');
+  const sections = [];
+  let cur = [];
+  let fence = null;
+  const flush = () => {
+    if (cur.length) sections.push(cur.join('\n'));
+    cur = [];
+  };
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const fenceMark = /^(```+|~~~+)/.exec(trimmed);
+    if (fence) {
+      cur.push(line);
+      if (fenceMark) fence = null;
+      continue;
+    }
+    if (fenceMark) {
+      fence = fenceMark[1];
+      cur.push(line);
+      continue;
+    }
+    if (trimmed === '') {
+      flush();
+      continue;
+    }
+    cur.push(line);
+  }
+  flush();
+  let out = sections.length > 1 ? sections.join('\n' + SEPARATOR + '\n') : src;
+  if (Number.isFinite(max) && out.length > max) {
+    // On tronque, puis on retire un éventuel trait coupé en plein vol
+    // (jamais de demi-trait visible en bas du panneau).
+    out = out.slice(0, max).replace(/━+$/, '');
+  }
+  return out;
+}
 
 const COLORS = Object.freeze({
   brand: '#e07a5f',
@@ -33,7 +88,15 @@ function embed(options = {}) {
   const e = new EmbedBuilder()
     .setColor(colorFor(options.color || options.variant || 'info'));
   if (options.title) e.setTitle(text(options.title, 256));
-  if (options.description) e.setDescription(text(options.description, 4096));
+  if (options.description) {
+    // La description passe par la grammaire des sections (v220) : les
+    // paragraphes séparés par une ligne vide deviennent des sections
+    // séparées par le long trait. Option « sections: false » = texte brut.
+    const desc = options.sections === false
+      ? text(options.description, 4096)
+      : sectionize(options.description, 4096);
+    e.setDescription(desc);
+  }
   if (options.author && options.author.name) e.setAuthor({
     name: text(options.author.name, 256),
     ...(options.author.iconURL ? { iconURL: options.author.iconURL } : {}),
@@ -95,4 +158,4 @@ function status(options = {}, components = []) {
   }, components);
 }
 
-module.exports = { COLORS, DEFAULT_FOOTER, colorFor, embed, panel, contentPanel, row, linkRow, status, text };
+module.exports = { COLORS, DEFAULT_FOOTER, colorFor, embed, panel, contentPanel, row, linkRow, status, text, SEPARATOR, sectionize };

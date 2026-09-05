@@ -2,6 +2,7 @@
 // BotDev - Suggestions : /suggest + votes 👍👎 + statut staff
 // ============================================================
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const ui = require('./ui');
 const store = require('../db');
 
 function suggestionChannel(botId, guild) {
@@ -21,7 +22,7 @@ function buildEmbed(s, authorTag, settings = {}) {
   return new EmbedBuilder()
     .setColor(customColor || (s.status === 'approved' ? '#57F287' : s.status === 'denied' ? '#ED4245' : '#e07a5f'))
     .setAuthor({ name: `Suggestion #${s.id} — ${authorTag || 'membre'}` })
-    .setDescription(String(s.text || '').slice(0, 1500))
+    .setDescription(ui.sectionize(String(s.text || '').slice(0, 1500)))
     .addFields(
       { name: '📊 Statut', value: STATUS_EMOJI[s.status] || 'En attente', inline: true },
       { name: '👍 Votes', value: String(s.upvotes), inline: true },
@@ -120,7 +121,7 @@ async function handleSuggestionButton(botId, interaction) {
           embeds: [new EmbedBuilder()
             .setColor('#57F287')
             .setAuthor({ name: '✅ Suggestion approuvée' })
-            .setDescription(`**${String(fresh.text || '').slice(0, 1500)}**\n\n💡 Suggestion de <@${fresh.author_id}> — **approuvée par le staff** !`)
+            .setDescription(ui.sectionize(`**${String(fresh.text || '').slice(0, 1500)}**\n\n💡 Suggestion de <@${fresh.author_id}> — **approuvée par le staff** !`))
             .setFooter({ text: `Hoxera · Suggestion #${fresh.id}` })
             .setTimestamp()],
         }).catch(() => {});

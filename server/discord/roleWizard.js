@@ -15,6 +15,7 @@ const {
   ModalBuilder, TextInputBuilder, TextInputStyle, ChannelType,
 } = require('discord.js');
 const store = require('../db');
+const ui = require('./ui');
 const panels = require('./panels');
 const { canConfigureGuild } = require('./permissions');
 
@@ -276,7 +277,7 @@ async function finish(botId, state, interaction) {
   const embed = new EmbedBuilder()
     .setColor('#57F287')
     .setTitle(state.editId ? '✅ Panneau mis à jour !' : '✅ Panneau de rôles créé !')
-    .setDescription(`${sentMsg}\n\n**${payload.name}** — ${payload.options.length} rôle(s), style ${payload.mode === 'buttons' ? '🔘 boutons' : '📋 menu déroulant'}.\n\nLes membres peuvent maintenant choisir leurs rôles !`)
+    .setDescription(ui.sectionize(`${sentMsg}\n\n**${payload.name}** — ${payload.options.length} rôle(s), style ${payload.mode === 'buttons' ? '🔘 boutons' : '📋 menu déroulant'}.\n\nLes membres peuvent maintenant choisir leurs rôles !`))
     .setFooter({ text: 'Modifie-le à tout moment avec /roles edit.' });
   return interaction.editReply({ embeds: [embed], components: [] }).catch(() => {});
 }

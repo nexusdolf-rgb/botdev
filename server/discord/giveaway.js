@@ -25,11 +25,11 @@ function buildEmbed(g, settings = {}) {
   return new EmbedBuilder()
     .setColor(color)
     .setTitle('🎁 Giveaway')
-    .setDescription([
+    .setDescription(ui.sectionize([
       `**${g.prize}**`,
       '',
       customMsg || 'Réagis avec 🎉 pour participer !',
-    ].join('\n'))
+    ].join('\n')))
     .addFields(
       { name: '🏆 Nombre de gagnants', value: String(g.winners || 1), inline: true },
       { name: '⏰ Fin du tirage', value: formatEnds(g.ends_at), inline: true },

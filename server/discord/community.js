@@ -89,11 +89,12 @@ async function onReaction(botId, reaction) {
     if (decision === 'none') return;
 
     const { EmbedBuilder } = require('discord.js');
+    const ui = require('./ui');
     const author = msg.author || {};
     const embed = new EmbedBuilder()
       .setColor('#FEE75C')
       .setAuthor({ name: author.tag || author.username || 'Membre', iconURL: author.displayAvatarURL ? author.displayAvatarURL({ size: 64 }) : undefined })
-      .setDescription(msg.content ? String(msg.content).slice(0, 2000) : '*—*')
+      .setDescription(msg.content ? ui.sectionize(String(msg.content).slice(0, 2000)) : '*—*')
       .addFields({ name: '\u200b', value: `[Aller au message](${msg.url})` })
       .setFooter({ text: `⭐ ${stars} · #${msg.channel.name}` })
       .setTimestamp(msg.createdAt || new Date());

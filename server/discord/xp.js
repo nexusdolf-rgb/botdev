@@ -4,6 +4,7 @@
 // ============================================================
 const store = require('../db');
 const { EmbedBuilder } = require('discord.js');
+const ui = require('./ui');
 
 // Progression : niveau N nécessite 100*N² XP
 function xpForLevel(level) {
@@ -175,7 +176,7 @@ async function announce(botId, message, level, gs, oldLevel = 0) {
   const embed = new EmbedBuilder()
     .setColor('#e07a5f')
     .setAuthor(authorOpts)
-    .setDescription(text)
+    .setDescription(ui.sectionize(text))
     .addFields(
       { name: '✨ XP', value: `${Math.max(row.xp || 0, cur)} / ${next}`, inline: true },
       { name: '🏆 Rang', value: pos ? `#${pos}` : '—', inline: true },

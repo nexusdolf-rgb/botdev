@@ -2,6 +2,7 @@
 // BotDev - Événements (bienvenue, départ, auto-rôle)
 // ============================================================
 const { EmbedBuilder } = require('discord.js');
+const ui = require('./ui');
 const store = require('../db');
 const { resolveVariables } = require('./engine');
 const identity = require('./identity');
@@ -83,7 +84,10 @@ async function runJoinEvent(botId, member, opts = {}) {
       const channelsMention = await channelMentions(member.guild, cfg.channels, resolveChannel);
       const text = autoMentionChannels(member.guild, render(member, botRecord, cfg.message, { channelsMention }));
       // Limites Discord : description d'embed 4096, contenu texte 2000.
-      const finalText = text.length > 4096 ? text.slice(0, 4096) : text;
+      // La description passe par la grammaire des sections (v220) : les
+      // paragraphes du message de bienvenue (séparés par une ligne vide)
+      // deviennent des sections reliées par le long trait.
+      const finalText = ui.sectionize(text, 4096);
       const finalContent = text.length > 2000 ? text.slice(0, 2000) : text;
       // 🖼️ Carte de bienvenue en image (avatar + pseudo) — jamais bloquante :
       // si la génération échoue, le message part sans image.

@@ -395,7 +395,7 @@ function buildTicketPanelEmbed(cfg, client, types, serverName = '', guildId = ''
     .setColor('#ED4245')
     .setAuthor({ name: `${name} · Centre d'assistance` })
     .setTitle(P.title(name))
-    .setDescription(`${P.welcome(name)}\n\n${paragraph}`)
+    .setDescription(ui.sectionize(`${P.welcome(name)}\n\n${paragraph}`))
     .addFields(
       { name: P.infoTitle, value: P.rules.join('\n') },
       { name: '\u200b', value: P.patience },
@@ -657,7 +657,7 @@ function ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning = ''
     .setColor(finalColor)
     .setAuthor(avatar ? { name: `Ticket de ${member.user.username}${meta.number ? ` · #${meta.number}` : ''}`, iconURL: avatar } : { name: `Ticket de ${member.user.username}${meta.number ? ` · #${meta.number}` : ''}` })
     .setTitle(title)
-    .setDescription(desc)
+    .setDescription(ui.sectionize(desc))
     .addFields(...fields)
     .setTimestamp();
   const site = store.settings.get('public_url');
@@ -1282,7 +1282,7 @@ async function sendTranscriptDm(clientOrInteraction, guild, channelName, { text,
   const embed = new EmbedBuilder()
     .setColor('#ED4245')
     .setTitle(customMsg ? serverName + ' · ' + i18n.t(lang, 'transcript_title') : i18n.t(lang, 'transcript_title'))
-    .setDescription(desc)
+    .setDescription(ui.sectionize(desc))
     .setImage(customImg || profileBanner)
     .setFooter({ text: 'Hoxera · ' + i18n.t(lang, 'footer_tickets') });
   try {
@@ -2624,6 +2624,7 @@ async function buildTranscriptFromChannel(botId, channel, guild, extraLines = []
 module.exports = {
   normDecorName, findCategoryFuzzy, findCategoryRef,
   dispatchPanels, sendTicketPanel, sendRoleMenu, roleMenuPayload, findChannel, findChannelInGuild, bumpTicketStats,
+  buildTicketPanelEmbed,
   resolveRole, roleKey, uniqueRoleRefs, staffRoleRefsForConfig, parseTypes, isStaff, staffForTicket, openTicket, safeEmoji,
   parentIdOf, panelParentOf, panelChannelOf, repairTicketChannel,
   startTypesWizard, handleTypesWizardInteraction,
