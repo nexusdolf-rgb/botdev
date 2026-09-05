@@ -167,14 +167,18 @@ async function announce(botId, message, level, gs, oldLevel = 0) {
   } catch {}
 
   const user = message.author || {};
+  const avatarUrl = (typeof user.displayAvatarURL === 'function')
+    ? user.displayAvatarURL({ extension: 'png', size: 256 }) : '';
+  const authorName = `${user.username || user.tag || 'Membre'} 🎉`;
+  const authorOpts = { name: authorName };
+  if (avatarUrl) authorOpts.iconURL = avatarUrl;
   const embed = new EmbedBuilder()
     .setColor('#e07a5f')
-    .setAuthor({ name: `${user.username || user.tag || 'Membre'} 🎉` })
+    .setAuthor(authorOpts)
     .setDescription(text)
     .addFields(
-      { name: '📈', value: `**${level}**`, inline: true },
-      { name: '🏆 Rang', value: pos ? `#${pos}` : '—', inline: true },
       { name: '✨ XP', value: `${Math.max(row.xp || 0, cur)} / ${next}`, inline: true },
+      { name: '🏆 Rang', value: pos ? `#${pos}` : '—', inline: true },
       ...(reward ? [{ name: '🎁 Rôle débloqué', value: reward, inline: true }] : []),
       { name: 'Progression', value: `${bar} ${Math.round(pct * 100)}%` },
     )
@@ -187,8 +191,6 @@ async function announce(botId, message, level, gs, oldLevel = 0) {
   const cardEnabled = !(gs.xp_card === 0 || gs.xp_card === false);
   if (cardEnabled) {
     try {
-      const avatarUrl = (typeof user.displayAvatarURL === 'function')
-        ? user.displayAvatarURL({ extension: 'png', size: 256 }) : '';
       const community = require('./community');
       const buf = await community.levelUpCard({
         avatarUrl, name: user.username || user.tag || 'Membre',

@@ -10,7 +10,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const DATA_DIR = path.join(os.tmpdir(), `botdev-v215-${Date.now()}`);
+const DATA_DIR = path.join(os.tmpdir(), `botdev-v216-${Date.now()}`);
 fs.mkdirSync(DATA_DIR, { recursive: true });
 process.env.BOTDEV_DATA_DIR = DATA_DIR;
 
@@ -83,8 +83,8 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('dash : bouton restaurer les valeurs par défaut', dash.includes('id="tr-default"'));
 
   // ---------- 6. Version ----------
-  check('site : bump v212 (index)', index.includes('?v=215'));
-  check('site : bump v212 (sw cache)', sw.includes('botdev-v215'));
+  check('site : bump v212 (index)', index.includes('?v=216'));
+  check('site : bump v212 (sw cache)', sw.includes('botdev-v216'));
 
   console.log(`  ✅ v212 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });

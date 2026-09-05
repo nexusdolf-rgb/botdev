@@ -2,7 +2,7 @@
 // BotDev - Commandes pré-faites (modules activables en 1 clic)
 // ============================================================
 const { EmbedBuilder, ApplicationCommandOptionType, PermissionsBitField } = require('discord.js');
-const { xpForLevel, levelFromXp } = require('./xp');
+const { xpForLevel, levelFromXp, resolveRole } = require('./xp');
 const logging = require('./logging');
 const suggestEngine = require('./suggest');
 const giveawayEngine = require('./giveaway');
@@ -505,38 +505,67 @@ async function execute(botId, entry, cmd, src) {
       break;
     }
     case 'rank': {
+      // 🎴 v216 — Carte de niveau « façon DraftBot » : avatar, grand niveau,
+      // progression vers le niveau suivant, rang et prochain palier à débloquer.
       const target = getUserArg() || author;
       const row = store.xp.get(botId, guild.id, target.id) || { xp: 0, level: 0 };
       const level = row.level || 0;
       const cur = xpForLevel(level);
       const next = xpForLevel(level + 1);
-      const pct = Math.max(0, Math.min(1, (row.xp - cur) / (next - cur)));
+      const need = Math.max(1, next - cur);
+      const within = Math.max(0, row.xp - cur);
+      const pct = Math.max(0, Math.min(1, within / need));
       const bars = 10;
       const bar = '▰'.repeat(Math.round(pct * bars)) + '▱'.repeat(bars - Math.round(pct * bars));
       const pos = store.xp.rankOf(botId, guild.id, target.id);
+      const xpMembers = store.xp.count(botId, guild.id) || 0;
+      const remaining = Math.max(0, need - within);
       const embed = new EmbedBuilder()
         .setColor('#e07a5f')
-        .setTitle(`📈 ${target.username}`)
-        .setThumbnail(target.displayAvatarURL({ dynamic: true }))
+        .setAuthor({ name: target.username || target.tag || 'Membre', iconURL: target.displayAvatarURL({ dynamic: true }) })
+        .setTitle(`Niveau ${level}`)
+        .setDescription(`${bar} ${Math.round(pct * 100)}%`)
         .addFields(
-          { name: '📈', value: String(level), inline: true },
-          { name: '🏆 Rang', value: `#${pos}`, inline: true },
-          { name: '✨ XP', value: `${row.xp} / ${next}`, inline: true },
-          { name: 'Progression', value: `${bar} ${Math.round(pct * 100)}%` },
-        )
-        .setFooter({ text: `Hoxera · ${guild.name}` })
-        .setTimestamp();
+          { name: '✨ XP', value: `${within} / ${need}`, inline: true },
+          { name: '🏆 Rang', value: `#${pos}${xpMembers ? ` sur ${xpMembers}` : ''}`, inline: true },
+          { name: '🎯 Encore', value: `${remaining} XP avant le niveau ${level + 1}`, inline: false },
+        );
+      // 🎁 Prochain palier (rôle de niveau) si configuré au-dessus du niveau actuel
+      try {
+        const rewards = store.xpRoles.all(botId, guild.id) || [];
+        const nextReward = rewards.find((r) => Number(r.level) > level);
+        if (nextReward) {
+          const roleRef = resolveRole(guild, nextReward.role);
+          const roleLabel = roleRef ? roleRef.toString() : String(nextReward.role).slice(0, 100);
+          const toReward = Math.max(0, xpForLevel(Number(nextReward.level)) - row.xp);
+          embed.addFields({ name: '🎁 Prochain palier', value: `Niveau ${nextReward.level} → ${roleLabel}${toReward ? ` (encore ${toReward} XP)` : ''}`, inline: false });
+        }
+      } catch {}
+      embed.setFooter({ text: `Hoxera · ${guild.name}` }).setTimestamp();
       await replyEmbed(embed);
       break;
     }
     case 'levels': {
-      const top = store.xp.top(botId, guild.id, 10);
+      // 🏆 v216 — Classement façon DraftBot : top + ta position toujours visible
+      const LIMIT = 10;
+      const top = store.xp.top(botId, guild.id, LIMIT);
       if (!top.length) return reply('📈 Personne n\'a encore gagné d\'XP sur ce serveur. Discute pour monter de niveau !');
       const medal = ['🥇', '🥈', '🥉'];
+      const lines = top.map((r, i) => `${medal[i] || `**${i + 1}.**`} <@${r.user_id}> — **${r.level}** · ${r.xp} XP`);
+      // 👤 Si l'auteur n'est pas dans le top affiché, on ajoute sa position.
+      const inTop = top.some((r) => String(r.user_id) === String(author.id));
+      let own = '';
+      if (!inTop && author) {
+        const myRow = store.xp.get(botId, guild.id, author.id);
+        if (myRow && Number(myRow.xp) > 0) {
+          const myPos = store.xp.rankOf(botId, guild.id, author.id);
+          own = `\n…\n**${myPos}.** <@${author.id}> — **${myRow.level || 0}** · ${myRow.xp} XP ⬅️ toi`;
+        }
+      }
       const embed = new EmbedBuilder()
         .setColor('#e07a5f')
         .setTitle('📈 Classement des niveaux')
-        .setDescription(`**Top 10 — les membres les plus actifs**\n\n${top.map((r, i) => `${medal[i] || `**${i + 1}.**`} <@${r.user_id}> — **${r.level}** · ${r.xp} XP`).join('\n')}`)
+        .setDescription(`**Top ${LIMIT} — les membres les plus actifs**\n\n${lines.join('\n')}${own}`)
         .setFooter({ text: `Hoxera · ${guild.name}` })
         .setTimestamp();
       await replyEmbed(embed);
@@ -1107,7 +1136,7 @@ const HELP_DETAILS = {
   daily: ['💰 Économie', 'Récupère 100 coins, une fois par jour.', '`/daily`', '`/daily` → 🎁 +100 coins !'],
   balance: ['💰 Économie', 'Affiche ton solde de coins.', '`/balance @membre`'],
   leaderboard: ['💰 Économie', 'Le classement des coins du serveur.', '`/leaderboard`'],
-  rank: ['📈 Niveaux', 'Ton niveau, ton XP et ton rang sur ce serveur. Gagne de l\'XP en discutant !', '`/rank @membre`', '`/rank` → 📈 3 · ✨ 950/1600 XP · 🏆 #2'],
+  rank: ['📈 Niveaux', 'Ton niveau, ton XP et ton rang sur ce serveur. Gagne de l\'XP en discutant !', '`/rank @membre`', '`/rank` → carte « Niveau 3 » · ✨ XP · 🏆 rang · 🎁 prochain palier'],
   levels: ['📈 Niveaux', 'Le classement des niveaux du serveur.', '`/levels`'],
   invite: ['🔧 Utilitaire', 'Le lien pour inviter le bot sur un autre serveur.', '`/invite`'],
   lang: ['🌍 Langue', 'Choisis la langue du bot sur CE serveur : fr, en, es, de, pt ou it. Tous les messages publics (panneau de tickets, bienvenue, transcriptions…) suivent.', '`/lang fr` · `/lang en` · `/lang es` · `/lang de` · `/lang pt` · `/lang it`', '`/lang it` → 🌍 Lingua del bot impostata su italiano in questo server. 🇮🇹'],

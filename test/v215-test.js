@@ -25,8 +25,8 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
 
   // ---------- 2. /rank ----------
   console.log('— Commande /rank —');
-  check('rank : titre sans le mot « Niveau de »', premade.includes('.setTitle(`📈 ${target.username}`)'));
-  check('rank : champ niveau = emoji + chiffre (📈 3)', premade.includes("{ name: '📈', value: String(level), inline: true },"));
+  check('rank : plus de titre « Niveau de X » (pseudo dans l’auteur)', !premade.includes('Niveau de ${target.username}'));
+  check('rank : carte niveau — avatar auteur + grand « Niveau N » (v216)', premade.includes('.setTitle(`Niveau ${level}`)') && premade.includes('.setAuthor({ name: target.username'));
   check('rank : garde rang & XP lisibles', premade.includes("name: '🏆 Rang'") && premade.includes("name: '✨ XP'"));
 
   // ---------- 3. /profile ----------
@@ -37,8 +37,8 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   // ---------- 4. Annonce de montée de niveau ----------
   console.log('— Annonce de niveau (embed) —');
   check('annonce : auteur sans « — niveau X » en double', !xp.includes("} — niveau ${level} 🎉"));
-  check('annonce : champ niveau compact (📈 + chiffre)', xp.includes("{ name: '📈', value: `**${level}**`, inline: true },"));
-  check('annonce : progression/XP conservées', xp.includes("name: 'Progression'") && xp.includes("name: '✨ XP'"));
+  check('annonce : avatar en auteur + champs rang/XP (v216)', xp.includes("const authorName = `${user.username") && xp.includes("name: '🏆 Rang'") && xp.includes("name: '✨ XP'"));
+  check('annonce : progression conservée', xp.includes("name: 'Progression'"));
 
   // ---------- 5. Dashboard (échelle des rôles) ----------
   console.log('— Dashboard : échelle des rôles compacte —');
@@ -53,8 +53,8 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('le mot reste dans les phrases/descriptions (clarté)', premade.includes('Ton niveau, ton XP et ton rang'));
 
   // ---------- 7. Version ----------
-  check('site : bump v215 (index)', index.includes('?v=215'));
-  check('site : bump v215 (sw)', sw.includes('botdev-v215'));
+  check('site : bump v215 (index)', index.includes('?v=216'));
+  check('site : bump v215 (sw)', sw.includes('botdev-v216'));
 
   console.log(`  ✅ v215 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });
