@@ -32,7 +32,7 @@ const eventsSaveRateLimit = security.rateLimit({ name: 'events-save', windowMs: 
 // absorber les ouvertures simultanées du dashboard sans relire la même
 // Collection 1 000 fois. La base reste la source de vérité.
 const discordRefreshCache = new AsyncTTLCache({ ttlMs: 60000, max: 2000 });
-const guildCatalogCache = new TTLCache({ ttlMs: 30000, max: 500 });
+const guildCatalogCache = new TTLCache({ ttlMs: 10000, max: 500 });
 const membersCache = new AsyncTTLCache({ ttlMs: 30000, max: 2000 });
 const statsCache = new AsyncTTLCache({ ttlMs: 15000, max: 500 });
 const publicAvatarCache = new TTLCache({ ttlMs: 10 * 60000, max: 2 });
@@ -638,10 +638,22 @@ function guildChecklist(payload) {
   return items;
 }
 
-function guildCatalog(dGuild) {
+// Catalogue relisible des salons/rôles d'un serveur. Le cache applicatif (10 s)
+// absorbe les ouvertures simultanées du dashboard, mais il ne doit PAS servir un
+// cache Discord périmé : quand il expire, on resynchronise d'abord rôles et
+// salons depuis l'API Discord (rôles.fetch / channels.fetch) pour que tout rôle
+// ou salon créé à l'instant apparaisse — même si le bot a raté l'événement
+// (redémarrage, déploiement, coupure) ou que son cache local est incomplet.
+async function guildCatalog(dGuild) {
   const key = String(dGuild && dGuild.id || 'unknown');
   const cached = guildCatalogCache.get(key);
   if (cached) return cached;
+  // 🔄 Resynchronisation REST avant reconstruction (≤ 1× / 10 s par serveur,
+  // grâce au TTL) — silencieuse en cas d'échec (on retombe sur le cache local).
+  if (dGuild) {
+    try { if (dGuild.roles && typeof dGuild.roles.fetch === 'function') await dGuild.roles.fetch(); } catch (e) { console.error('[Hoxera] resync rôles :', e.message); }
+    try { if (dGuild.channels && typeof dGuild.channels.fetch === 'function') await dGuild.channels.fetch(); } catch (e) { console.error('[Hoxera] resync salons :', e.message); }
+  }
   const channels = [];
   const roles = [];
   if (dGuild && dGuild.channels && dGuild.channels.cache) {
@@ -672,8 +684,10 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
   const dGuild = entry && entry.client.isReady() ? entry.client.guilds.cache.get(guildId) : null;
   if (!dGuild) return res.status(400).json({ error: 'Le bot n\'est pas sur ce serveur (ou il est hors ligne).' });
   // Salons et rôles du serveur : catalogue Discord relisible mis en cache
-  // brièvement pour absorber les ouvertures simultanées du dashboard.
-  const { channels, roles } = guildCatalog(dGuild);
+  // brièvement pour absorber les ouvertures simultanées du dashboard. À chaque
+  // expiration du cache, rôles/salons sont resynchronisés depuis l'API Discord
+  // (un rôle ou salon créé à l'instant apparaît même si le bot a raté l'événement).
+  const { channels, roles } = await guildCatalog(dGuild);
 
   const cfg = store.tickets.get(bot.id, guildId);
   const parsedTypes = (() => {
