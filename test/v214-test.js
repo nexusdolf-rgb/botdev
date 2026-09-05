@@ -8,7 +8,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const DATA_DIR = path.join(os.tmpdir(), `botdev-v217-${Date.now()}`);
+const DATA_DIR = path.join(os.tmpdir(), `botdev-v219-${Date.now()}`);
 fs.mkdirSync(DATA_DIR, { recursive: true });
 process.env.BOTDEV_DATA_DIR = DATA_DIR;
 
@@ -67,8 +67,8 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('dash : sauvegarde triée par niveau', dash.includes('.sort((a, b) => a.level - b.level)'));
 
   // ---------- 5. Version ----------
-  check('site : bump v214 (index)', index.includes('?v=217'));
-  check('site : bump v214 (sw)', sw.includes('botdev-v217'));
+  check('site : bump v214 (index)', index.includes('?v=219'));
+  check('site : bump v214 (sw)', sw.includes('botdev-v219'));
 
   console.log(`  ✅ v214 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });

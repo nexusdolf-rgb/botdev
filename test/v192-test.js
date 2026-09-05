@@ -15,9 +15,9 @@ const sw = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
 const dashSrc = fs.readFileSync(path.join(root, 'public/js/dashboard.js'), 'utf8');
 
 // ---------- 1. Pins de version ----------
-assert.strictEqual((index.match(/\?v=217/g) || []).length, 7,
+assert.strictEqual((index.match(/\?v=219/g) || []).length, 7,
   'index.html doit référencer v192 7 fois');
-assert(sw.includes('botdev-v217'), 'le cache du service worker n’est pas en v192');
+assert(sw.includes('botdev-v219'), 'le cache du service worker n’est pas en v192');
 assert(!index.includes('?v=191'), 'index.html référence encore v191');
 
 // ---------- 2. Le pseudo d'exemple codé en dur a disparu ----------

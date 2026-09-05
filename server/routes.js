@@ -2175,8 +2175,10 @@ router.post('/role-menus/:id/send', requireAuth, async (req, res) => {
   try {
     const channel = panels.findChannelInGuild(guild, menu.channel);
     if (!channel) return res.status(400).json({ error: 'Salon introuvable. Vérifie le salon (mention #salon ou nom).' });
-    await panels.sendRoleMenu(bot.id, entry.client, menu, channel);
-    res.json({ ok: true });
+    // v219 : si ce menu a déjà été envoyé, le message Discord est mis à jour
+    // en place (plus de doublon) ; sinon un nouveau panneau est envoyé.
+    const r = await panels.sendRoleMenu(bot.id, entry.client, menu, channel);
+    res.json({ ok: true, updated: !!r.updated, message_id: r.message && r.message.id ? String(r.message.id) : '' });
   } catch (e) {
     res.status(400).json({ error: e.message.slice(0, 200) });
   }

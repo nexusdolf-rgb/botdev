@@ -773,6 +773,11 @@ try { migrateLogCategories(db); } catch (e) {}
 // Hoxera 2.0 : colonnes ajoutées
 try { db.exec("ALTER TABLE tickets ADD COLUMN max_one INTEGER DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE role_menus ADD COLUMN mode TEXT DEFAULT 'menu'"); } catch (e) {}
+// v219 — le dashboard mémorise le message Discord déjà envoyé pour chaque
+// menu de rôles : « Modifier » puis « Envoyer » met à jour le message en
+// place (plus de doublons), au lieu d'en poster un nouveau à chaque fois.
+try { db.exec("ALTER TABLE role_menus ADD COLUMN message_id TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE role_menus ADD COLUMN message_channel TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN log_events TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN birthday_channel TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN birthday_role TEXT DEFAULT ''"); } catch (e) {}
@@ -1231,6 +1236,9 @@ const roleMenus = {
     db.prepare(`UPDATE role_menus SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
   },
   remove: (id) => db.prepare('DELETE FROM role_menus WHERE id = ?').run(id),
+  // v219 — message Discord effectivement envoyé pour ce menu (mis à jour en
+  // place par « Envoyer » / « Modifier » du dashboard).
+  setMessage: (id, messageId, channelId) => db.prepare('UPDATE role_menus SET message_id = ?, message_channel = ? WHERE id = ?').run(String(messageId || ''), String(channelId || ''), id),
 };
 
 // ---------------------- Configuration des tickets (par serveur) ----------------------

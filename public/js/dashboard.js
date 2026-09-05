@@ -3582,25 +3582,34 @@ Dashboard.renderers.moderation = async (content, data) => {
 Dashboard.renderers.roles = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const root = Dashboard.header(content, '📋', 'Menus & boutons de rôles', 'Deux styles au choix : menu déroulant (plusieurs rôles d\'un coup) ou boutons (un clic = un rôle, re-clic = retiré).');
-  const c = Dashboard.card(root, 'Panneaux', 'Envoie-les sur Discord avec /roles send (ou le bouton ci-dessous).');
+  const c = Dashboard.card(root, 'Panneaux', 'Envoie-les sur Discord avec /roles send, ou utilise ✏️ pour modifier — si le panneau est déjà posté, le message Discord se met à jour en place (aucun doublon).');
   const menus = data.role_menus || [];
   if (!menus.length) c.appendChild(App.el(`<div class="dash-empty"><div class="big">📋</div>Aucun panneau pour l\'instant.</div>`));
   const list = App.el(`<div></div>`);
   menus.forEach((m) => {
     const modeLabel = m.mode === 'buttons' ? '🔘 Boutons' : '📋 Menu déroulant';
+    const sent = !!m.message_id;
+    const status = sent
+      ? '<span style="color:var(--d-success,#57F287)">● déjà envoyé — se met à jour sur place</span>'
+      : '<span style="color:var(--d-dim)">pas encore envoyé</span>';
     const row = App.el(`
       <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--d-border);border-radius:10px;padding:10px 14px;margin-bottom:8px">
-        <div style="flex:1"><b>${App.escapeHtml(m.name)}</b><div style="color:var(--d-dim);font-size:12px">${m.options.length} rôle(s) · ${modeLabel}</div></div>
-        <button class="dash-btn dash-btn-sm" data-send="${m.id}">📨 Envoyer</button>
+        <div style="flex:1"><b>${App.escapeHtml(m.name)}</b><div style="color:var(--d-dim);font-size:12px">${m.options.length} rôle(s) · ${modeLabel} · ${status}</div></div>
+        <button class="dash-btn dash-btn-sm" data-edit="${m.id}">✏️ Modifier</button>
+        <button class="dash-btn dash-btn-sm" data-send="${m.id}">${sent ? '🔄 Mettre à jour' : '📨 Envoyer'}</button>
         <button class="dash-btn dash-btn-danger dash-btn-sm" data-del="${m.id}">🗑</button>
       </div>`);
+    row.querySelector('[data-edit]').onclick = () => BotViews.openRoleMenuModal(bot, guildId, m);
     row.querySelector('[data-send]').onclick = async () => {
-      try { await App.api(`/role-menus/${m.id}/send`, { method: 'POST' }); App.toast('Panneau envoyé !'); }
-      catch (e) { App.toast(e.message, 'error'); }
+      try {
+        const r = await App.api(`/role-menus/${m.id}/send`, { method: 'POST' });
+        App.toast(r && r.updated ? 'Panneau mis à jour sur Discord ✓' : 'Panneau envoyé !');
+        Dashboard.refresh();
+      } catch (e) { App.toast(e.message, 'error'); }
     };
     row.querySelector('[data-del]').onclick = async () => {
       if (!(await App.confirm(`Supprimer le panneau « ${m.name} » ?`))) return;
-      try { await App.api(`/role-menus/${m.id}`, { method: 'DELETE' }); App.toast('Panneau supprimé.'); Dashboard.renderers.roles(content, data); }
+      try { await App.api(`/role-menus/${m.id}`, { method: 'DELETE' }); App.toast('Panneau supprimé.'); Dashboard.refresh(); }
       catch (e) { App.toast(e.message, 'error'); }
     };
     list.appendChild(row);

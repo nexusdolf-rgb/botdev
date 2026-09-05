@@ -2230,10 +2230,11 @@ async function handleTypesWizardInteraction(botId, interaction) {
 // ============================================================
 // Menus de rôles
 // ============================================================
-async function sendRoleMenu(botId, client, menu, channel) {
-  if (!menu.options || !menu.options.length) throw new Error('Ce menu n\'a aucune option.');
-  // 🔘 Mode boutons : un bouton par rôle (clic = activer/désactiver)
-  const panelOptions = menu.options.slice(0, 25);
+// 📋 Construit le message Discord d'un menu de rôles (embed + composants).
+// Le rendu visuel ne change pas : un menu de rôles garde la même signature
+// Hoxera qu'il soit neuf, modifié ou ré-envoyé.
+function roleMenuPayload(botId, menu) {
+  const panelOptions = (menu.options || []).slice(0, 25);
   const rolePanel = (components) => {
     const payload = ui.panel({
       variant: 'brand',
@@ -2245,13 +2246,11 @@ async function sendRoleMenu(botId, client, menu, channel) {
     payload.components = components;
     return payload;
   };
-  // 🔘 Mode boutons : un bouton par rôle (clic = activer/désactiver)
   if (menu.mode === 'buttons') {
     const rows = [];
-    const opts = panelOptions;
-    for (let i = 0; i < opts.length; i += 5) {
+    for (let i = 0; i < panelOptions.length; i += 5) {
       const row = new ActionRowBuilder();
-      opts.slice(i, i + 5).forEach((o) => {
+      panelOptions.slice(i, i + 5).forEach((o) => {
         const btn = new ButtonBuilder()
           .setCustomId(`bd-rmbtn:${botId}:${menu.id}:${String(o.role || '').slice(0, 80)}`)
           .setLabel(String(o.label || o.role || 'Rôle').slice(0, 80))
@@ -2261,16 +2260,15 @@ async function sendRoleMenu(botId, client, menu, channel) {
       });
       rows.push(row);
     }
-    await require('../queue').send(channel, rolePanel(rows));
-    return;
+    return rolePanel(rows);
   }
   const row = new ActionRowBuilder();
   const select = new StringSelectMenuBuilder()
     .setCustomId(`bd-menu:${botId}:${menu.id}`)
     .setPlaceholder((menu.placeholder || 'Choisis tes rôles…').slice(0, 150))
     .setMinValues(0)
-    .setMaxValues(Math.max(menu.options.length, 1));
-  for (const o of menu.options) {
+    .setMaxValues(Math.max(panelOptions.length, 1));
+  for (const o of panelOptions) {
     const opt = new StringSelectMenuOptionBuilder()
       .setLabel(String(o.label || 'Rôle').slice(0, 100))
       .setValue(String(o.role || '').slice(0, 100));
@@ -2278,7 +2276,51 @@ async function sendRoleMenu(botId, client, menu, channel) {
     select.addOptions(opt);
   }
   row.addComponents(select);
-  await require('../queue').send(channel, rolePanel([row]));
+  return rolePanel([row]);
+}
+
+// 🔎 Retrouve le message Discord déjà envoyé pour ce menu (s'il existe).
+// Ne renvoie que si on peut réellement l'éditer ; sinon null → nouvel envoi.
+async function findSentRoleMessage(client, menu) {
+  if (!client || !menu || !menu.message_id || !menu.message_channel) return null;
+  try {
+    let channel = null;
+    const guild = client.guilds && client.guilds.cache ? client.guilds.cache.get(String(menu.guild_id)) : null;
+    if (guild && guild.channels && guild.channels.cache) channel = guild.channels.cache.get(String(menu.message_channel));
+    if (!channel && client.channels && typeof client.channels.fetch === 'function') {
+      channel = await client.channels.fetch(String(menu.message_channel)).catch(() => null);
+    }
+    if (!channel || !channel.messages || typeof channel.messages.fetch !== 'function') return null;
+    const message = await channel.messages.fetch(String(menu.message_id)).catch(() => null);
+    return message && typeof message.edit === 'function' ? message : null;
+  } catch { return null; }
+}
+
+// 📨 Envoie le menu de rôles sur Discord — ou, s'il a déjà été envoyé, MET À
+// JOUR le message existant en place (embed + composants remplacés, position
+// conservée, plus aucun doublon en ré-éditant un panneau).
+async function sendRoleMenu(botId, client, menu, channel) {
+  if (!menu.options || !menu.options.length) throw new Error('Ce menu n\'a aucune option.');
+  const payload = roleMenuPayload(botId, menu);
+  // 🔄 Déjà envoyé ? On édite ce message au lieu d'en poster un nouveau.
+  const existing = await findSentRoleMessage(client, menu);
+  if (existing) {
+    try {
+      const edited = await existing.edit(payload);
+      if (edited && edited.id) {
+        store.roleMenus.setMessage(menu.id, edited.id, edited.channel ? edited.channel.id : menu.message_channel);
+      }
+      return { message: edited, updated: true };
+    } catch (e) {
+      // Message supprimé ou permissions perdues : on retombe sur un nouvel
+      // envoi (le bloc ci-dessous ré-enregistre le nouveau message).
+      if (!/Unknown Message|10008|10003|Missing Access|50001|Missing Permissions|50013/i.test(String((e && e.message) || e))) throw e;
+    }
+  }
+  if (!channel || typeof channel.send !== 'function') throw new Error('Salon introuvable. Vérifie le salon (mention #salon ou nom).');
+  const sent = await channel.send(payload);
+  if (sent && sent.id) store.roleMenus.setMessage(menu.id, sent.id, channel.id);
+  return { message: sent, updated: false };
 }
 
 // 🔘 Mode boutons : un clic = activation/désactivation d'un seul rôle
@@ -2581,7 +2623,7 @@ async function buildTranscriptFromChannel(botId, channel, guild, extraLines = []
 
 module.exports = {
   normDecorName, findCategoryFuzzy, findCategoryRef,
-  dispatchPanels, sendTicketPanel, sendRoleMenu, findChannel, findChannelInGuild, bumpTicketStats,
+  dispatchPanels, sendTicketPanel, sendRoleMenu, roleMenuPayload, findChannel, findChannelInGuild, bumpTicketStats,
   resolveRole, roleKey, uniqueRoleRefs, staffRoleRefsForConfig, parseTypes, isStaff, staffForTicket, openTicket, safeEmoji,
   parentIdOf, panelParentOf, panelChannelOf, repairTicketChannel,
   startTypesWizard, handleTypesWizardInteraction,

@@ -122,8 +122,24 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
     try {
       if (isEdit) await App.api(`/role-menus/${menu.id}`, { method: 'PUT', body: payload });
       else await App.api(`/bots/${bot.id}/role-menus`, { method: 'POST', body: payload });
+      // v219 : modifier un panneau DÉJÀ envoyé synchronise immédiatement le
+      // message Discord en place (via /send qui édite au lieu de dupliquer).
+      let synced = false, syncError = '';
+      if (isEdit && menu.message_id) {
+        try {
+          const r = await App.api(`/role-menus/${menu.id}/send`, { method: 'POST' });
+          synced = true;
+          if (typeof Dashboard !== 'undefined' && Dashboard.state) {
+            const target = (Dashboard.state.guildData && Dashboard.state.guildData.role_menus || []).find((x) => String(x.id) === String(menu.id));
+            if (target && r) { target.message_id = r.message_id || target.message_id; target.message_channel = menu.message_channel; }
+          }
+        } catch (e) { syncError = (e && e.message) || 'impossible de joindre Discord'; }
+      }
       App.closeModal();
-      App.toast(isEdit ? 'Menu mis à jour !' : 'Menu créé !');
+      if (isEdit && menu.message_id) {
+        if (synced) App.toast('Menu modifié et mis à jour sur Discord ✓');
+        else App.toast('Menu modifié — mise à jour Discord impossible (' + syncError + ').', 'error');
+      } else App.toast(isEdit ? 'Menu mis à jour !' : 'Menu créé !');
       if (typeof Dashboard !== 'undefined' && Dashboard.refresh) Dashboard.refresh();
     } catch (e) { App.toast(e.message, 'error'); }
   };
