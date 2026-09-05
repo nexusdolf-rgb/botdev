@@ -44,7 +44,11 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   // ---------- 4. Classements XP/coins cohérents ----------
   console.log('— Classements cohérents —');
   check('/top : XP = terracotta brand, coins = or', extra.includes("type === 'coins' ? 0xf1c40f : 0xe07a5f"));
-  check('/levels reste en terracotta (v216)', premade.includes(".setColor('#e07a5f')") && premade.includes("setTitle('📈 Classement des niveaux')"));
+  // v232 — /levels est passé en Components V2 (séparateurs natifs pleine
+  // largeur) : la couleur n'est plus `.setColor()` mais `color:` dans les
+  // options de ui.v2panel. L'INTENTION vérifiée ici est inchangée :
+  // /levels reste en terracotta brand.
+  check('/levels reste en terracotta (v216)', premade.includes("color: '#e07a5f',") && premade.includes("title: '📈 Classement des niveaux',"));
 
   // ---------- 5. Commandes utilitaires : signées + un seul avatar ----------
   console.log('— Utilitaires —');
@@ -76,8 +80,8 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('plus de rose littéral hors charte dans extra', !extra.includes("color: '#EB459E'"));
 
   // ---------- 8. Version ----------
-  check('index : bump v217', fs.readFileSync('public/index.html', 'utf8').includes('?v=231'));
-  check('sw : bump botdev-v231', fs.readFileSync('public/sw.js', 'utf8').includes('botdev-v231'));
+  check('index : bump v217', fs.readFileSync('public/index.html', 'utf8').includes('?v=232'));
+  check('sw : bump botdev-v232', fs.readFileSync('public/sw.js', 'utf8').includes('botdev-v232'));
 
   console.log(`  ✅ v217 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });

@@ -67,7 +67,10 @@ const TARGETS = [
   { f: 'server/discord/extra.js',           needle: 'content: ui.sectionize(`📝 **Candidatures**',              label: '/apply view — récapitulatif des candidatures' },
   { f: 'server/discord/panelCommands.js',   needle: 'content: ui.sectionize(`✅ Type «',                        label: '/ticket types — accusés de réception (add + maj)' },
   { f: 'server/discord/panels.js',          needle: ".setDescription(ui.sectionize('Les membres qui ouvrent",   label: 'assistant types — étape Questionnaire' },
-  { f: 'server/discord/premade.js',         needle: '.setDescription(ui.sectionize(`**Top ${LIMIT}',            label: '/levels — classement des niveaux' },
+  // v232 — /levels est passé en Components V2 (séparateurs natifs pleine
+  // largeur) via le helper replyPanel de premade.js.
+  { f: 'server/discord/premade.js',         needle: "title: '📈 Classement des niveaux',",                     label: '/levels — classement des niveaux (v232 : V2)' },
+  { f: 'server/discord/premade.js',         needle: 'send(ui.v2panel(options, components))',                   label: 'premade.js — replyPanel convertit 11 messages (v232)' },
   { f: 'server/discord/profileCommands.js', needle: "content: ui.sectionize('✅ Identité mise à jour !",        label: '/botprofile — identité mise à jour' },
   { f: 'server/discord/profileCommands.js', needle: 'content: ui.sectionize(`✅ ${sub ===',                     label: '/botprofile — avatar / bannière enregistré' },
   { f: 'server/discord/profileWizard.js',   needle: 'content: ui.sectionize(`📱 **Pour ouvrir ta galerie :**',  label: '/botprofile setup — mode d’emploi galerie' },
@@ -121,8 +124,14 @@ check('/botprofile (maj) : 2 traits', count(identity) === 2);
 const gallery = ui.sectionize('📱 **Pour ouvrir ta galerie :**\n\n1️⃣ Tape `/botprofile avatar` puis touche l\'option « image ».\n\n2️⃣ Ou touche le **bouton ➕** de la barre de message.', 2000);
 check('/botprofile setup galerie : 2 traits', count(gallery) === 2);
 
-const levels = ui.sectionize('**Top 10 — les membres les plus actifs**\n\n**1.** <@U1> — **12** · 4500 XP\n**2.** <@U2> — **9** · 3100 XP', 4096);
-check('/levels : 1 trait (en-tête → classement)', count(levels) === 1);
+// v232 — /levels est en Components V2 : on vérifie le séparateur NATIF du
+// payload réel, plus le trait texte. 2 paragraphes → 1 séparateur entre eux
+// + 1 avant le pied = 2.
+const levelsV2 = ui.v2panel({ title: '📈 Classement des niveaux', description: '**Top 10 — les membres les plus actifs**\n\n**1.** <@U1> — **12** · 4500 XP\n**2.** <@U2> — **9** · 3100 XP', footer: 'Hoxera · Serveur' }).components[0].toJSON();
+check('/levels : 2 séparateurs natifs (1 entre blocs + 1 pied)',
+  levelsV2.components.filter((k) => k.type === 14 && k.divider === true).length === 2);
+check('/levels : aucun trait texte ━',
+  !JSON.stringify(levelsV2.components).includes(SEP));
 
 const questions = ui.sectionize('Les membres qui ouvrent ce type de ticket devront répondre **obligatoirement** à ces questions.\n\n*Par défaut : aucune question (seule la raison est demandée).*', 4096);
 check('assistant Questionnaire : 1 trait', count(questions) === 1);
@@ -204,9 +213,9 @@ const touched = ['server/discord/extra.js', 'server/discord/panelCommands.js', '
   'public/index.html', 'public/sw.js'];
 check('aucun token en dur dans les fichiers modifiés',
   !touched.some((f) => /(ghp_|github_pat_|xox[baprs]-)[A-Za-z0-9_]{15,}/.test(src(f))));
-check('index.html : 7 références ?v=231', (src('public/index.html').match(/\?v=231/g) || []).length === 7);
+check('index.html : 7 références ?v=232', (src('public/index.html').match(/\?v=232/g) || []).length === 7);
 check('index.html : plus aucune référence ?v=228', !src('public/index.html').includes('?v=228'));
-check('sw.js : cache botdev-v231', src('public/sw.js').includes("const CACHE = 'botdev-v231';"));
+check('sw.js : cache botdev-v232', src('public/sw.js').includes("const CACHE = 'botdev-v232';"));
 
 console.log(failures === 0
   ? '\n✅ V229 — Traits ━ étendus aux 10 messages multi-blocs (dont le quiz), exclusions verrouillées, garde-fous v220 intacts.'

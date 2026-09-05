@@ -173,6 +173,29 @@ async function announce(botId, message, level, gs, oldLevel = 0) {
   const authorName = `${user.username || user.tag || 'Membre'} 🎉`;
   const authorOpts = { name: authorName };
   if (avatarUrl) authorOpts.iconURL = avatarUrl;
+  // ⛔ EXCLUSION VOLONTAIRE de la migration Components V2 (v232) — et elle est
+  // DOCUMENTÉE, pas oubliée.
+  //
+  // Ce message est envoyé par identity.sendAsProfile(), qui passe par un
+  // WEBHOOK (pour afficher le nom et l'avatar personnalisés du bot). Or la doc
+  // officielle Discord (Webhook Resource, Execute Webhook) est explicite :
+  //   « When the flag IS_COMPONENTS_V2 is set, the webhook message can only
+  //    contain components. Providing content, embeds, files[n] or poll will
+  //    fail with a 400 BAD REQUEST response »
+  // Ce message transporte la CARTE DE NIVEAU en pièce jointe
+  // (attachment://levelup.png). En V2 via webhook → 400 BAD REQUEST, puis
+  // repli silencieux sur channel.send() : le message partirait, mais SANS le
+  // nom et l'avatar personnalisés. On perdrait donc une fonctionnalité produit
+  // pour un détail cosmétique.
+  //
+  // Un webhook « application-owned » (créé par le bot, ce qui est le cas ici
+  // via channel.createWebhook) accepte bien les composants V2 — mais pas avec
+  // des fichiers. Les messages V2 SANS pièce jointe qui passent par
+  // sendAsProfile restent donc migrables.
+  //
+  // Le trait reste ici un trait TEXTE. Pour le rendre pleine largeur il
+  // faudrait soit renoncer à la carte de niveau, soit renoncer à l'identité
+  // personnalisée : les deux sont des décisions produit, pas techniques.
   const embed = new EmbedBuilder()
     .setColor('#e07a5f')
     .setAuthor(authorOpts)

@@ -77,12 +77,24 @@ check('mono-section 4096 max non touchée', ui.embed({ description: 'x'.repeat(4
   const embNoWin = giveaway.buildEndedEmbed({ prize: 'Nitro Boost' }, [], false);
   check('giveaway terminé sans gagnant : mention « aucun participant »', embNoWin.data.description.includes('Aucun participant'));
 
-  // Suggestions : texte libre multi-paragraphes dans l'embed publié.
+  // Suggestions : texte libre multi-paragraphes dans le message publié.
+  // v232 — les suggestions sont en Components V2 : la séparation n'est plus un
+  // trait TEXTE (qui s'arrêtait avant le bord arrondi) mais un Separator NATIF
+  // pleine largeur, comme dans le panneau de tickets personnalisés.
   const suggest = require('../server/discord/suggest');
-  const embS = suggest.buildEmbed({ id: 1, status: 'pending', upvotes: 0, downvotes: 0, bot_id: BOT, text: 'Ajouter un salon musique.\n\nEt un salon cinéma.' }, 'Toto', {});
-  check('suggest : contenu multi-paragraphes structuré', embS.data.description.includes(ui.SEPARATOR));
-  const embS1 = suggest.buildEmbed({ id: 2, status: 'pending', upvotes: 0, downvotes: 0, bot_id: BOT, text: 'Suggestion en une seule partie.' }, 'Toto', {});
-  check('suggest : mono-paragraphe sans trait', !embS1.data.description.includes(ui.SEPARATOR));
+  const sugCont = (o) => suggest.buildPanel(o, 'Toto', {}).components[0].toJSON();
+  const nDiv = (c) => c.components.filter((k) => k.type === 14 && k.divider === true).length;
+  const embS = sugCont({ id: 1, status: 'pending', upvotes: 0, downvotes: 0, bot_id: BOT, text: 'Ajouter un salon musique.\n\nEt un salon cinéma.' });
+  // 2 paragraphes + 1 bloc de compteurs = 3 blocs → 2 séparateurs, + 1 avant
+  // le pied = 3.
+  check('suggest : contenu multi-paragraphes → 3 séparateurs natifs', nDiv(embS) === 3);
+  check('suggest : aucun trait texte ━ (v232)',
+    !JSON.stringify(embS.components).includes(ui.SEPARATOR));
+  const embS1 = sugCont({ id: 2, status: 'pending', upvotes: 0, downvotes: 0, bot_id: BOT, text: 'Suggestion en une seule partie.' });
+  // 1 paragraphe + 1 bloc de compteurs = 2 blocs → 1 séparateur, + 1 pied = 2.
+  check('suggest : mono-paragraphe → 2 séparateurs (pas de découpe inutile)', nDiv(embS1) === 2);
+  check('suggest : les 3 compteurs inline restent groupés sur une ligne',
+    embS.components.filter((k) => k.type === 10).some((k) => /\*\*📊 Statut\*\* .* · \*\*👍 Votes\*\* /.test(k.content)));
 
   // Menu de rôles (ui.panel, v219) : contenu personnalisé structuré.
   const panels = require('../server/discord/panels');

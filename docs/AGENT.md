@@ -200,7 +200,59 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   'tag') ») : un message supprimé **partiel** (pas en cache) n'a pas d'auteur →
   `trackDeleted` (/snipe, `extra.js`) plantait ; idem `tasks.js` (`member.user.tag`).
   Gardes ajoutées, test `test/v228-test.js`, docs remises à jour (v194 → v228).
-- **v231 (ACTUELLE, 05/09)** : **SÉPARATEURS NATIFS PLEINE LARGEUR — lot n°1**
+- **v232 (ACTUELLE, 05/09)** : **SÉPARATEURS NATIFS PLEINE LARGEUR — lot n°2.**
+  🧰 **`ui.v2container` complété** — sans ça la migration aurait **DÉGRADÉ** le
+  rendu. Components V2 n'a **ni champs `inline`** (la grille 3 colonnes des
+  embeds), **ni champ `author`**, **ni `thumbnail`**, **ni `image`** d'embed :
+    • champs `inline:true` **consécutifs regroupés par 3** dans un seul
+      TextDisplay, séparés par ` · ` (comme la grille Discord qui passe à la
+      ligne tous les 3) ; au-delà de `V2_INLINE_LINE` (150) ils sont empilés
+      dans le même bloc — jamais de ligne coupée ;
+    • `author` + `iconURL` → **`SectionBuilder` avec `ThumbnailBuilder` en
+      accessoire** (l'avatar est conservé) ; `author` sans icône → simple
+      TextDisplay ;
+    • `thumbnail` → accessoire de la Section du titre ;
+    • `image` → **`MediaGallery` pleine largeur, en BAS** (même place que
+      `setImage()` sur un embed classique) ;
+    • **ordre des blocs calqué sur l'embed classique** : content → author/titre
+      → description → champs → image → pied.
+  📦 **`premade.js` — 13 messages.** Le helper `replyPanel` est converti en un
+  seul point : **11 messages d'un coup** (`invite`, `buy`, `pay`, `kick`, `ban`,
+  `unban`, `timeout`, `warn`, `clear`, `daily`, `balance`). Ce sont des réponses
+  **TRANSITOIRES**, jamais relues ni éditées → aucune ne dépend de `msg.embeds`.
+  Plus `/levels` et la sanction envoyée en MP. **0 `ui.sectionize` restant.**
+  💡 **`suggest.js` — 5 emplacements.** `buildEmbed` → **`buildPanel`** (usage
+  strictement interne, vérifié). Les 3 compteurs de votes étaient en
+  `inline:true` → regroupés sur une ligne. Les **deux `interaction.update()`**
+  de vote passent en V2 (Discord interdit d'en sortir à l'édition).
+  ⚠️ **Le ping `@everyone`/rôle** : en V2 le champ `content` du message est
+  **INTERDIT**. Il devient un TextDisplay en tête de conteneur — les mentions y
+  **notifient bien** (doc officielle) et `allowedMentions` reste appliqué.
+  🐛 **`queue.js` — clé de dédoublonnage corrigée.** Elle distinguait
+  `payload.embeds ? 'embed' : 'msg'`. Un payload V2 n'a **pas** de champ
+  `embeds` : tous les panneaux V2 seraient tombés dans la clé `'msg'` et
+  amalgamés avec les messages texte. Désormais 3 familles : `embed` / `v2` /
+  `msg`. **Ce bug serait apparu dès le lot n°3.**
+  ⛔ **`xp.js` — EXCLUSION VOLONTAIRE ET DOCUMENTÉE** (25 lignes de
+  commentaire dans le fichier). La carte de montée de niveau est envoyée par
+  `identity.sendAsProfile()` → **WEBHOOK** avec la carte en **pièce jointe**
+  (`attachment://levelup.png`). Or la doc officielle Discord (*Webhook
+  Resource → Execute Webhook*) dit : *« When the flag IS_COMPONENTS_V2 is set,
+  the webhook message can only contain components. Providing content, embeds,
+  **files[n]** or poll will fail with a **400 BAD REQUEST** response »*. Le
+  repli sur `channel.send()` ferait partir le message **sans le nom ni
+  l'avatar personnalisés** → on perdrait une fonctionnalité produit pour un
+  détail cosmétique. Le webhook étant `application-owned` (créé par
+  `channel.createWebhook`), **les messages V2 SANS pièce jointe qui passent par
+  `sendAsProfile` restent migrables** (`events.js:217` et `:220`).
+  🧪 **4 tests existants mis à jour** (ils suivaient l'ancien rendu) :
+  `test/v198-test.js` et `test/v220-test.js` appelaient `suggest.buildEmbed`
+  (2 assertions) ; `test/v229-test.js` suivait `/levels` en `sectionize`
+  (3 assertions) ; `test/v217-test.js` vérifiait la couleur terracotta de
+  `/levels` via `.setColor()` (1 assertion — **l'intention est conservée**,
+  seule la forme change : `color:` au lieu de `.setColor()`).
+  **159 tests verts** (`test/v232-test.js`, 85 assertions). Bump cache v232.
+- **v231 (05/09)** : **SÉPARATEURS NATIFS PLEINE LARGEUR — lot n°1**
   (Components V2). Demande utilisateur : *« le trait du quiz et le panneau du
   Système de tickets personnalisés ne sont pas à la même longueur ; ma
   préférence c'est le trait du ticket personnalisé […] tu vas corriger tout ce
@@ -436,6 +488,29 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
    token. IP Render free peut être bloquée par Discord → migrer de région via l'API
 8. Détection de secrets dans check.sh : **jamais de token en dur** (le dépôt est public)
 9. Ancien token PAT dans les vieux scripts : INVALIDE — toujours tester `api.github.com/user`
+10. **⛔ Components V2 + WEBHOOK + PIÈCE JOINTE = 400 BAD REQUEST.** Doc
+    officielle Discord (*Webhook Resource → Execute Webhook*) : *« When the flag
+    IS_COMPONENTS_V2 is set, the webhook message can only contain components.
+    Providing content, embeds, **files[n]** or poll will fail with a 400 BAD
+    REQUEST response »*. Conséquence pour ce projet : tout message envoyé par
+    `identity.sendAsProfile()` (qui passe par un webhook pour afficher le nom et
+    l'avatar personnalisés du bot) **ET** qui transporte une pièce jointe ne peut
+    PAS passer en V2. C'est le cas de la carte de montée de niveau (`xp.js`,
+    `attachment://levelup.png`) → **exclusion documentée dans le fichier**.
+    Le webhook étant `application-owned` (créé par `channel.createWebhook`), les
+    messages V2 **sans** pièce jointe y fonctionnent. Ne PAS migrer aveuglément
+    un message qui passe par `sendAsProfile` : vérifier d'abord s'il a des
+    `files`.
+11. **Components V2 n'a ni `content`, ni `embeds`, ni champs `inline`, ni
+    `author`, ni `thumbnail`, ni `timestamp`.** Tout doit être reconstruit en
+    TextDisplay / Section / MediaGallery, et les plafonds changent : **40
+    composants (imbriqués compris)** et **4 000 caractères CUMULÉS** sur tous les
+    TextDisplay (contre 4 096 par description). `ui.v2panel()` gère tout ça —
+    **ne pas construire de conteneur V2 à la main**. Un message V2 ne peut plus
+    redevenir classique à l'édition → les `interaction.update()` doivent suivre.
+    Un payload V2 n'a pas de champ `embeds` : **tout code qui relit
+    `msg.embeds[0]` casse** (4 emplacements identifiés : `extra.js:1128`,
+    `panels.js:426`, `panels.js:1396`, `queue.js`) — vérifier avant de migrer.
 
 ## 🔑 MES ACCÈS (à remplacer avant d'envoyer)
 
@@ -461,10 +536,17 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 
 ## 📌 ÉTAT AU 05/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v231** — voir la section v231 ci-dessus. **158 tests verts**.
-  ⚠️ **v231 ouvre un chantier en plusieurs lots** : la migration des traits
-  texte `━` vers les séparateurs NATIFS pleine largeur (Components V2).
-  Seul **/quiz** est migré. Reste : ~47 messages (voir la section v231).
+- Dernière version : **v232** — voir la section v232 ci-dessus. **159 tests verts**.
+  ⚠️ **Chantier en cours (v231 →)** : migration des traits texte `━` vers les
+  séparateurs **NATIFS pleine largeur** (Components V2).
+  • **Migré** : `/quiz` (v231) · `premade.js` 13 messages dont `replyPanel`
+    ×11 et `/levels` · `suggest.js` 5 emplacements (v232).
+  • **Exclu, documenté** : `xp.js` (webhook + pièce jointe → 400 en V2).
+  • **Reste** : `panels.js` (12), `extra.js` (29), `giveaway.js` (3),
+    `guildEvents.js` (3), `panelCommands.js` (2), `events.js` (2),
+    `automod.js` (2), `profileCommands.js` (2), puis `logging`, `liveWatch`,
+    `roleWizard`, `profileWizard`, `engine`, `community`, `announcements`,
+    `tasks` (1 chacun).
 - Prod : https://hoxera.is-a.dev, bot « Optimus Prime » en ligne,
   **8 serveurs / 189 membres**, **0 erreur 24 h**, sauvegardes GitHub OK
   toutes les 10 min, CI verte, service Render « hoxera » non suspendu (Oregon).
@@ -478,9 +560,10 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   agent a : cloné les 2 dépôts, `npm install`, `check.sh` 🟢 (155), vérifié la prod
   et les tokens, puis livré **v229** (traits ━ sur 10 messages + critère officiel)
   **v230** (`/poll` en champs d'embed + correctif d'un bug latent de
-  dépassement de la limite Discord de 4 096 caractères) et **v231** (API
-  Components V2 dans `ui.js` + `/quiz` migré en séparateurs natifs pleine
-  largeur — lot n°1 d'une migration en plusieurs lots).
+  dépassement de la limite Discord de 4 096 caractères), **v231** (API
+  Components V2 dans `ui.js` + `/quiz` migré) et **v232** (lot n°2 :
+  `premade.js` 13 messages + `suggest.js` 5 emplacements, `queue.js` corrigé,
+  `xp.js` exclu et documenté).
 - 31 commandes slash globales (5 « premade » à sous-commandes + 25 « extra » +
   `/event`) + ~36 commandes de modules (kick, ban, ping, meme, daily, rank,
   giveaway…) — total loin de la limite Discord de 100.

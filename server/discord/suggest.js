@@ -1,7 +1,8 @@
 // ============================================================
 // BotDev - Suggestions : /suggest + votes 👍👎 + statut staff
 // ============================================================
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+// v232 — EmbedBuilder retiré : les suggestions sont en Components V2 (ui.v2panel).
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const ui = require('./ui');
 const store = require('../db');
 
@@ -17,19 +18,31 @@ function suggestionChannel(botId, guild) {
 
 const STATUS_EMOJI = { pending: '⏳ En attente', approved: '✅ Approuvée', denied: '❌ Refusée' };
 
-function buildEmbed(s, authorTag, settings = {}) {
+// v232 — SÉPARATEURS NATIFS PLEINE LARGEUR (Components V2).
+// Le trait texte ━ s'arrêtait avant le bord arrondi de l'embed ; le Separator
+// V2 est un composant de layout que Discord dessine bord à bord, comme dans le
+// panneau de tickets personnalisés qui sert de référence au bot.
+// `ping` : en Components V2 le champ `content` du message est INTERDIT. Le
+// ping @everyone / rôle devient donc un TextDisplay en tête de conteneur — les
+// mentions y notifient bien (doc officielle) et allowedMentions reste appliqué.
+function buildPanel(s, authorTag, settings = {}, ping = '') {
   const customColor = /^#[0-9a-fA-F]{6}$/.test(String((settings && settings.suggestion_color) || '')) ? settings.suggestion_color : '';
-  return new EmbedBuilder()
-    .setColor(customColor || (s.status === 'approved' ? '#57F287' : s.status === 'denied' ? '#ED4245' : '#e07a5f'))
-    .setAuthor({ name: `Suggestion #${s.id} — ${authorTag || 'membre'}` })
-    .setDescription(ui.sectionize(String(s.text || '').slice(0, 1500)))
-    .addFields(
+  return ui.v2panel({
+    ...(ping ? { content: ping } : {}),
+    color: customColor || (s.status === 'approved' ? '#57F287' : s.status === 'denied' ? '#ED4245' : '#e07a5f'),
+    author: { name: `Suggestion #${s.id} — ${authorTag || 'membre'}` },
+    description: String(s.text || '').slice(0, 1500),
+    // Les 3 compteurs étaient en inline:true (grille 3 colonnes des embeds).
+    // Components V2 n'a pas de champs inline : ui.v2panel les regroupe par 3
+    // dans un seul bloc séparé par « · » → le rendu reste compact, sur une
+    // ligne, sans dégrader l'information.
+    fields: [
       { name: '📊 Statut', value: STATUS_EMOJI[s.status] || 'En attente', inline: true },
       { name: '👍 Votes', value: String(s.upvotes), inline: true },
       { name: '👎 Votes', value: String(s.downvotes), inline: true },
-    )
-    .setFooter({ text: 'Hoxera · Vote avec les boutons' })
-    .setTimestamp();
+    ],
+    footer: 'Hoxera · Vote avec les boutons',
+  }, buildComponents(s, settings));
 }
 
 function buildComponents(s, settings = {}) {
@@ -66,9 +79,7 @@ async function submitSuggestion(botId, interaction, text) {
     if (role) pingContent = `<@&${role.id}>`;
   }
   const msg = await channel.send({
-    content: pingContent || undefined,
-    embeds: [buildEmbed(s, interaction.user.tag, settings)],
-    components: buildComponents(s, settings),
+    ...buildPanel(s, interaction.user.tag, settings, pingContent),
     allowedMentions: pingContent === '@everyone' ? { everyone: true } : (pingContent ? { roles: [pingContent.replace(/<@&|>/g, '')] } : {}),
   });
   store.db.prepare('UPDATE suggestions SET message_id = ? WHERE id = ?').run(msg.id, id);
@@ -90,7 +101,9 @@ async function handleSuggestionButton(botId, interaction) {
     }
     const res = store.suggestions.vote(sid, interaction.user.id, action);
     const fresh = store.suggestions.get(sid);
-    await interaction.update({ embeds: [buildEmbed(fresh, '', settings)], components: buildComponents(fresh, settings) });
+    // v232 — le message d'origine est en Components V2 : Discord interdit d'en
+    // sortir à l'édition, donc la mise à jour des votes reste en V2.
+    await interaction.update(buildPanel(fresh, '', settings));
     return;
   }
 
@@ -107,7 +120,7 @@ async function handleSuggestionButton(botId, interaction) {
 
   store.suggestions.setStatus(sid, action === 'approve' ? 'approved' : 'denied');
   const fresh = store.suggestions.get(sid);
-  await interaction.update({ embeds: [buildEmbed(fresh, '', settings)], components: buildComponents(fresh, settings) });
+  await interaction.update(buildPanel(fresh, '', settings));   // v232 — reste en V2
   // 📢 Salon des approuvées : annonce publique quand une suggestion est validée
   if (action === 'approve' && settings.suggestion_approve_channel) {
     try {
@@ -117,18 +130,17 @@ async function handleSuggestionButton(botId, interaction) {
       const chan = idMatch ? interaction.guild.channels.cache.get(idMatch[1]) : null
         || interaction.guild.channels.cache.find((c) => c && c.name && c.name.toLowerCase() === targetRef.replace(/^#/, '').toLowerCase() && c.isTextBased && c.isTextBased());
       if (chan && typeof chan.send === 'function') {
-        await chan.send({
-          embeds: [new EmbedBuilder()
-            .setColor('#57F287')
-            .setAuthor({ name: '✅ Suggestion approuvée' })
-            .setDescription(ui.sectionize(`**${String(fresh.text || '').slice(0, 1500)}**\n\n💡 Suggestion de <@${fresh.author_id}> — **approuvée par le staff** !`))
-            .setFooter({ text: `Hoxera · Suggestion #${fresh.id}` })
-            .setTimestamp()],
-        }).catch(() => {});
+        // v232 — séparateurs natifs pleine largeur.
+        await chan.send(ui.v2panel({
+          color: '#57F287',
+          author: { name: '✅ Suggestion approuvée' },
+          description: `**${String(fresh.text || '').slice(0, 1500)}**\n\n💡 Suggestion de <@${fresh.author_id}> — **approuvée par le staff** !`,
+          footer: `Hoxera · Suggestion #${fresh.id}`,
+        })).catch(() => {});
       }
     } catch (e) {}
   }
   return;
 }
 
-module.exports = { submitSuggestion, handleSuggestionButton, suggestionChannel, buildEmbed, buildComponents };
+module.exports = { submitSuggestion, handleSuggestionButton, suggestionChannel, buildPanel, buildComponents };

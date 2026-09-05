@@ -153,11 +153,15 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
   check('giveaway buildEmbed : couleur par défaut', embDefault.data.color === 0xFEE75C);
   check('giveaway buildEmbed : texte par défaut', embDefault.data.description.includes('Réagis avec 🎉'));
 
-  // suggest : buildEmbed couleur + buildComponents 👎
+  // suggest : buildPanel couleur + buildComponents 👎
+  // v232 — les suggestions sont passées en Components V2 (séparateurs natifs
+  // pleine largeur) : buildEmbed est devenu buildPanel, et la couleur d'embed
+  // est devenue la couleur d'accent du conteneur.
   const suggest = require('../server/discord/suggest');
   const sRow = store.suggestions.create({ bot_id: BOT, guild_id: 'G198', author_id: 'U1', text: 'Test suggestion', message_id: '', channel_id: 'C1' });
-  const embSug = suggest.buildEmbed(store.suggestions.get(sRow), 'Toto', { suggestion_color: '#123456' });
-  check('suggest buildEmbed : couleur configurée', embSug.data.color === 0x123456);
+  const panelSug = suggest.buildPanel(store.suggestions.get(sRow), 'Toto', { suggestion_color: '#123456' });
+  check('suggest buildPanel : couleur configurée (accent du conteneur V2)',
+    panelSug.components[0].toJSON().accent_color === 0x123456);
   const compsOff = suggest.buildComponents(store.suggestions.get(sRow), { suggestion_downvotes: 0 });
   check('suggest buildComponents : 👎 masqué', !JSON.stringify(compsOff).includes('down'));
   const compsOn = suggest.buildComponents(store.suggestions.get(sRow), { suggestion_downvotes: 1 });

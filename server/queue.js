@@ -104,7 +104,15 @@ function configure({ maxQueue: mq } = {}) {
 // Envoie un message Discord à travers la file (helper standard).
 async function send(target, payload) {
   if (!target || typeof target.send !== 'function') return false;
-  const key = (target.id ? String(target.id).slice(0, 20) : 'salon') + '/' + (payload && payload.embeds ? 'embed' : 'msg');
+  // v232 — un payload Components V2 n'a PAS de champ `embeds` (interdit par le
+  // flag IsComponentsV2) : sans ce correctif, tous les panneaux V2 tombaient
+  // dans la clé 'msg' et le dédoublonnage les amalgamait avec les messages
+  // texte simples. Trois familles distinctes : embed classique / panneau V2 /
+  // message texte.
+  const kind = (payload && Array.isArray(payload.embeds) && payload.embeds.length) ? 'embed'
+    : (payload && Array.isArray(payload.components) && payload.components.length) ? 'v2'
+      : 'msg';
+  const key = (target.id ? String(target.id).slice(0, 20) : 'salon') + '/' + kind;
   return enqueue(() => target.send(payload).then(() => true), key);
 }
 

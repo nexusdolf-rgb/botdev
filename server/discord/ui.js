@@ -8,6 +8,7 @@ const {
   EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle,
   ContainerBuilder, TextDisplayBuilder, SeparatorBuilder,
   MediaGalleryBuilder, MediaGalleryItemBuilder, MessageFlags,
+  SectionBuilder, ThumbnailBuilder,
 } = require('discord.js');
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -260,55 +261,68 @@ function v2container(options = {}) {
   const state = v2state();
   const useSections = options.sections !== false;
 
-  if (options.image) {
-    if (v2room(state)) {
-      container.addMediaGalleryComponents(
-        new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(String(options.image)))
-      );
-      state.components += 1;
-    }
-  }
-
-  // GRAMMAIRE CALQUÉE SUR LE PANNEAU DE TICKETS PERSONNALISÉS (v220), qui est
-  // la référence visuelle retenue : titre, puis corps, avec un séparateur
-  // natif ENTRE chaque bloc du corps — mais AUCUN séparateur juste après le
-  // titre (le « ## » est déjà visuellement détaché), et un séparateur avant
-  // le pied.
-  const body = [];
-  if (options.description) {
-    const desc = String(options.description);
-    if (useSections) body.push(...paragraphs(desc).map((p) => text(p, V2_TEXT_BUDGET)));
-    else body.push(text(desc, V2_TEXT_BUDGET));
-  }
-  if (Array.isArray(options.fields)) {
-    options.fields.slice(0, 25).forEach((field) => {
-      const name = text(field.name || '', 256);
-      const value = text(field.value || '—', 1024);
-      body.push(name ? `**${name}**\n${value}` : value);
-    });
-  }
+  // ORDRE CALQUÉ SUR L'EMBED CLASSIQUE : content (texte du message, au-dessus
+  // de l'embed) → author/titre/vignette → description → champs → image →
+  // pied. Components V2 n'a pas d'ordre implicite : tout est explicite.
 
   // 1) content: l'équivalent du « content » d'un message classique. En V2 il
   //    est interdit au niveau du message → il devient un bloc en tête, suivi
   //    d'un séparateur s'il y a quelque chose derrière.
   const hasContent = !!options.content;
+  const bodyBlocks = v2bodyBlocks(options, useSections);
+  const authorName = options.author && options.author.name ? text(options.author.name, 256) : '';
+  const hasFooter = options.footer !== false;
   if (hasContent) {
     v2text(container, text(options.content, 2000), state);
-    if (options.title || body.length || options.footer !== false) v2separator(container, state);
+    if (authorName || options.title || bodyBlocks.length || hasFooter) v2separator(container, state);
   }
-  // 2) titre : jamais suivi d'un séparateur.
-  if (options.title) v2text(container, `## ${text(options.title, V2_TITLE_MAX)}`, state);
-  // 3) corps : un séparateur ENTRE chaque bloc.
-  body.forEach((block, index) => {
+
+  // 2) En-tête : author + titre + vignette. Components V2 n'a ni champ
+  //    « author » ni champ « thumbnail » d'embed : on les regroupe dans une
+  //    SECTION dont la vignette est l'accessoire (jusqu'à 3 TextDisplay).
+  //    Sans vignette, de simples TextDisplay suffisent.
+  const thumbUrl = options.thumbnail ? String(options.thumbnail)
+    : (options.author && options.author.iconURL ? String(options.author.iconURL) : '');
+  const headTexts = [];
+  if (authorName) headTexts.push(`**${authorName}**`);
+  if (options.title) headTexts.push(`## ${text(options.title, V2_TITLE_MAX)}`);
+  if (headTexts.length) {
+    const usable = headTexts.slice(0, 3);
+    // Section(1) + Thumbnail(1) + n TextDisplay : les composants imbriqués
+    // comptent dans le plafond de 40.
+    if (thumbUrl && v2room(state, 2 + usable.length)) {
+      const section = new SectionBuilder();
+      usable.forEach((t) => section.addTextDisplayComponents(new TextDisplayBuilder().setContent(t)));
+      section.setThumbnailAccessory(new ThumbnailBuilder().setURL(thumbUrl));
+      container.addSectionComponents(section);
+      state.components += 2 + usable.length;
+      state.chars += usable.reduce((a, t) => a + t.length, 0);
+    } else {
+      usable.forEach((t) => v2text(container, t, state));
+    }
+  }
+
+  // 3) Corps : un séparateur natif ENTRE chaque bloc — mais AUCUN juste après
+  //    l'en-tête (le « ## » est déjà visuellement détaché), comme dans le
+  //    panneau de tickets personnalisés qui sert de référence.
+  bodyBlocks.forEach((block, index) => {
     if (index > 0) v2separator(container, state);
     v2text(container, block, state);
   });
 
-  // Pied de panneau : texte discret, précédé d'un séparateur natif — la même
-  // grammaire que le panneau de tickets personnalisés. Components V2 n'a pas
-  // de champ « timestamp » : l'heure est reportée dans le pied pour ne pas
-  // perdre l'information qu'affichait l'embed classique.
-  if (options.footer !== false) {
+  // 4) image : MediaGallery pleine largeur (en bas, comme setImage()).
+  if (options.image && v2room(state)) {
+    if (bodyBlocks.length || headTexts.length) v2separator(container, state);
+    container.addMediaGalleryComponents(
+      new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(String(options.image)))
+    );
+    state.components += 1;
+  }
+
+  // 5) Pied de panneau : texte discret précédé d'un séparateur natif.
+  //    Components V2 n'a pas de champ « timestamp » : l'heure est reportée
+  //    dans le pied pour ne pas perdre l'information.
+  if (hasFooter) {
     let stamp = '';
     if (options.timestamp !== false) {
       // new Date(undefined) donne « Invalid Date » : il faut new Date() sans
@@ -319,19 +333,70 @@ function v2container(options = {}) {
       }
     }
     const footer = text(`${options.footer || DEFAULT_FOOTER}${stamp}`, V2_FOOTER_MAX);
-    if (footer && v2room(state, 2)) {
+    if (footer && v2room(state, 2) && (hasContent || headTexts.length || bodyBlocks.length || options.image)) {
       v2separator(container, state);
       v2text(container, `-# ${footer}`, state);
     }
   }
 
-  // Les lignes de boutons/menus vont DANS le conteneur (V2 n'a pas de
-  // components au niveau du message quand le flag est posé).
+  // 6) Les lignes de boutons/menus vont DANS le conteneur (V2 n'accepte pas
+  //    de components au niveau du message quand le flag est posé).
   const rows = Array.isArray(options.rows) ? options.rows : [];
   rows.slice(0, 5).forEach((row) => {
     if (row && v2room(state)) { container.addActionRowComponents(row); state.components += 1; }
   });
   return container;
+}
+
+// Construit la liste des blocs de corps (description + champs), sans rien
+// poser dans le conteneur : v2container décide où mettre les séparateurs.
+//
+// ⚠️ COMPONENTS V2 N'A PAS DE CHAMPS INLINE. La grille 3 colonnes des embeds
+// classiques n'existe pas : chaque TextDisplay occupe toute la largeur. Pour
+// ne pas dégrader le rendu, les champs inline CONSÉCUTIFS sont regroupés par
+// 3 (comme la grille Discord) dans un seul bloc, séparés par « · ». Si la
+// ligne dépasse V2_INLINE_LINE, on repasse à un champ par ligne.
+const V2_INLINE_LINE = 150;
+const V2_INLINE_GROUP = 3;
+
+function v2fieldLine(field) {
+  const name = text(field.name || '', 256);
+  const value = text(field.value || '—', 1024);
+  return name ? `**${name}** ${value}` : value;
+}
+
+function v2bodyBlocks(options, useSections) {
+  const body = [];
+  if (options.description) {
+    const desc = String(options.description);
+    if (useSections) body.push(...paragraphs(desc).map((p) => text(p, V2_TEXT_BUDGET)));
+    else body.push(text(desc, V2_TEXT_BUDGET));
+  }
+  if (Array.isArray(options.fields) && options.fields.length) {
+    let group = [];
+    const flush = () => {
+      if (!group.length) return;
+      const lines = group.map(v2fieldLine);
+      const joined = lines.join(' · ');
+      // Regroupe par 3 comme la grille inline de Discord ; si c'est trop long
+      // pour une ligne, on empile dans le MÊME bloc (pas de séparateur entre
+      // les champs d'un même groupe : ce sont des colonnes, pas des sections).
+      if (joined.length <= V2_INLINE_LINE) body.push(joined);
+      else body.push(lines.join('\n'));
+      group = [];
+    };
+    options.fields.slice(0, 25).forEach((field, index, all) => {
+      if (field && field.inline) {
+        group.push(field);
+        if (group.length >= V2_INLINE_GROUP) flush();
+      } else {
+        flush();
+        body.push(field ? `**${text(field.name || '', 256)}**\n${text(field.value || '—', 1024)}` : '—');
+      }
+      if (index === all.length - 1) flush();
+    });
+  }
+  return body;
 }
 
 // Équivalent V2 de panel() : même signature, même grammaire d'options.

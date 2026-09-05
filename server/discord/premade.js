@@ -539,7 +539,12 @@ async function execute(botId, entry, cmd, src) {
   };
   const reply = async (content) => send({ content });
   const replyEmbed = async (embed) => send({ embeds: [embed] });
-  const replyPanel = async (options, components = []) => send(ui.panel(options, components));
+  // v232 — SÉPARATEURS NATIFS PLEINE LARGEUR. Les 11 panneaux qui passent par
+  // ce helper (invite, buy, pay, kick, ban, unban, timeout, warn, clear,
+  // daily, balance) sont des réponses TRANSITOIRES : jamais relues ni éditées
+  // après envoi, donc aucune ne dépend de `msg.embeds`. Le passage en
+  // Components V2 est sûr et se fait ici, en un seul point.
+  const replyPanel = async (options, components = []) => send(ui.v2panel(options, components));
 
   // 🌍 Commandes globales : en message privé, seules les commandes
   // universelles fonctionnent. Les autres répondent poliment.
@@ -697,13 +702,14 @@ async function execute(botId, entry, cmd, src) {
           own = `\n…\n**${myPos}.** <@${author.id}> — **${myRow.level || 0}** · ${myRow.xp} XP ⬅️ toi`;
         }
       }
-      const embed = new EmbedBuilder()
-        .setColor('#e07a5f')
-        .setTitle('📈 Classement des niveaux')
-        .setDescription(ui.sectionize(`**Top ${LIMIT} — les membres les plus actifs**\n\n${lines.join('\n')}${own}`, 4096))
-        .setFooter({ text: `Hoxera · ${guild.name}` })
-        .setTimestamp();
-      await replyEmbed(embed);
+      // v232 — séparateurs NATIFS pleine largeur (Components V2) : le trait
+      // texte s'arrêtait avant le bord arrondi de l'embed.
+      await replyPanel({
+        color: '#e07a5f',
+        title: '📈 Classement des niveaux',
+        description: `**Top ${LIMIT} — les membres les plus actifs**\n\n${lines.join('\n')}${own}`,
+        footer: `Hoxera · ${guild.name}`,
+      });
       break;
     }
     case 'profile': {
@@ -908,7 +914,7 @@ async function execute(botId, entry, cmd, src) {
       }
       const reason = s.message || 'Sanction prédéfinie';
       try {
-        await target.send(ui.panel({
+        await target.send(ui.v2panel({   // v232 — séparateurs natifs pleine largeur
           variant: 'danger',
           title: '⚠️ Sanction appliquée',
           description: `Tu as été sanctionné sur **${guild.name}**.`,
