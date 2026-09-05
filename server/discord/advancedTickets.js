@@ -17,6 +17,7 @@ const {
   MessageFlags,
 } = require('discord.js');
 const store = require('../db');
+const ui = require('./ui');
 
 const DEFAULT_COLOR = '#e07a5f';
 const DEFAULT_IMAGE = 'https://hoxera.is-a.dev/icons/support-banner.png';
@@ -120,15 +121,19 @@ function buildPanelPayload(config) {
   }
   container
     .addTextDisplayComponents(new TextDisplayBuilder().setContent(`## ${cfg.name}`))
-    .addTextDisplayComponents(new TextDisplayBuilder().setContent(cfg.message || 'Choisis le type de ticket qui correspond à ta demande :'))
+    // Contenu libre du serveur : structuré en sections comme partout (v220).
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(ui.sectionize(cfg.message || 'Choisis le type de ticket qui correspond à ta demande :', 1900)))
     .addSeparatorComponents(new SeparatorBuilder().setDivider(true));
 
   if (cfg.mode === 'menu') {
     // En mode menu, les descriptions restent visibles dans le panneau et le
-    // sélecteur unique se trouve à la fin du conteneur.
-    container.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-      cfg.types.map((type) => `${colorSymbol(type)} ${type.emoji || '🎫'} **${type.label}**\n${descriptionFor(type)}`).join('\n\n').slice(0, 3900)
-    ));
+    // sélecteur unique se trouve à la fin du conteneur. Chaque type devient
+    // une section séparée par le long trait (v220), comme dans les embeds.
+    const typeSections = ui.sectionize(
+      cfg.types.map((type) => `${colorSymbol(type)} ${type.emoji || '🎫'} **${type.label}**\n${descriptionFor(type)}`).join('\n\n'),
+      3900,
+    );
+    container.addTextDisplayComponents(new TextDisplayBuilder().setContent(typeSections));
     const select = new StringSelectMenuBuilder()
       .setCustomId(`hx2-menu:${cfg.bot_id}:${cfg.id}`)
       .setPlaceholder('🗂️ Choisis un type de ticket…')

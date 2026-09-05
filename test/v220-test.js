@@ -107,6 +107,10 @@ check('mono-section 4096 max non touchée', ui.embed({ description: 'x'.repeat(4
   check('départ : panneau premium = message utilisateur structuré', evSrc.includes("s'en va…") && evSrc.includes('ui.sectionize(text, 4096)'));
   check('automod : avertissements via ui.embed (couverture auto)',
     src('automod.js').includes("const ui = require('./ui')") && src('automod.js').includes('ui.embed({'));
+  // Système de tickets personnalisés (advancedTickets, panneau Container V2).
+  const advSrc = src('advancedTickets.js');
+  check('tickets personnalisés : message libre structuré (sectionize)', advSrc.includes('ui.sectionize(cfg.message'));
+  check('tickets personnalisés : types en menu séparés par le trait', advSrc.includes('const typeSections = ui.sectionize('));
 
   console.log(failures ? `\n❌ ${failures} échec(s)` : '\n🎉 Tous les tests v220 passent');
   process.exit(failures ? 1 : 0);
