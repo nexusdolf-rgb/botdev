@@ -200,7 +200,26 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   'tag') ») : un message supprimé **partiel** (pas en cache) n'a pas d'auteur →
   `trackDeleted` (/snipe, `extra.js`) plantait ; idem `tasks.js` (`member.user.tag`).
   Gardes ajoutées, test `test/v228-test.js`, docs remises à jour (v194 → v228).
-- **v229 (ACTUELLE, 05/09)** : **le système de traits ━ (v220) est mené à son
+- **v230 (ACTUELLE, 05/09)** : **`/poll` passe en CHAMPS D'EMBED** (un champ par
+  option) — la demande utilisateur faisait suite à l'aperçu comparatif des 3
+  rendus (actuel / avec 9 traits / champs d'embed).
+  • Rendu : la séparation devient NATIVE (Discord espace les champs), donc ni
+    lignes vides ni traits ━ ; pourcentage et barre alignés sur leur ligne.
+  • Le critère v229 est respecté : une LISTE D'OPTIONS n'est pas une suite de
+    sections → `sectionize()` ne s'applique toujours pas (9 traits pour 10 choix).
+  • 🐛 **BUG LATENT CORRIGÉ AU PASSAGE** : les choix de `/poll` arrivaient dans
+    `pollEmbed()` sans AUCUNE limite de longueur (`raw.split('|')`), et l'ancien
+    rendu les empilait dans `setDescription()` SANS troncature. 10 choix de 400
+    caractères → 4 367 caractères > limite Discord de 4 096 → **le sondage
+    échouait à s'envoyer**. Désormais : libellés tronqués à 100 caractères AVANT
+    la mise en gras (markdown `**` toujours apparié), `.slice(0, 25)` (limite
+    Discord de 25 champs), barre bornée à 10 segments. Même cas : 1 931 octets.
+  • État vide (0 vote) : description « *Aucun vote pour l'instant — choisis un
+    numéro ci-dessous 👇* » (cohérent avec les états vides du dashboard, v194).
+  • `pollEmbed` et `pollRows` sont désormais **exportées** pour être testables.
+  • `test/v229-test.js` mis à jour (2 assertions /poll suivaient l'ancien rendu).
+  157 tests verts (`test/v230-test.js`, 57 assertions). Bump cache v230.
+- **v229 (05/09)** : **le système de traits ━ (v220) est mené à son
   terme.** Audit exhaustif des messages Discord construits HORS design system
   (13 candidats trouvés, 1 faux positif : `guildEvents.js` passe déjà par
   `ui.panel`, donc `sectionize` s'y applique déjà tout seul).
@@ -227,9 +246,8 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   **EXCLUSIONS VOLONTAIRES verrouillées** (commentaire `EXCLUSION VOLONTAIRE`
   dans le code + assertions du test — ne JAMAIS les « corriger ») :
   • **`/poll`** : chaque paragraphe EST une option de vote → 10 choix feraient
-    **9 traits** et hacheraient le vote. (Alternative propre si un jour on veut
-    aérer : un **champ d'embed par choix**, comme `/shop` — la limite Discord
-    est de 25 champs, le sondage plafonne à 10 choix, donc aucun risque.)
+    **9 traits** et hacheraient le vote. → **Tranché en v230** : le sondage est
+    passé en champs d'embed (un champ par option), la question est donc réglée.
   • **`/shop`** : 2 phrases courtes → **trait orphelin** (bug corrigé en v220).
   • **mariage, pendu, morpion** : 2 phrases courtes chacun + mises à jour live à
     chaque tour → `sections: false` (héritage v220, inchangé).
@@ -371,7 +389,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 
 ## 📌 ÉTAT AU 05/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v229** — voir la section v229 ci-dessus. **156 tests verts**.
+- Dernière version : **v230** — voir la section v230 ci-dessus. **157 tests verts**.
 - Prod : https://hoxera.is-a.dev, bot « Optimus Prime » en ligne,
   **8 serveurs / 189 membres**, **0 erreur 24 h**, sauvegardes GitHub OK
   toutes les 10 min, CI verte, service Render « hoxera » non suspendu (Oregon).
@@ -383,7 +401,9 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   révoqué (401). **Vérifier ces 3 variables avant tout diagnostic de connexion.**
 - Passation : l’agent v228 a été arrêté par une **limite de contexte**. Le nouvel
   agent a : cloné les 2 dépôts, `npm install`, `check.sh` 🟢 (155), vérifié la prod
-  et les tokens, puis livré v229.
+  et les tokens, puis livré **v229** (traits ━ sur 10 messages + critère officiel)
+  et **v230** (`/poll` en champs d'embed + correctif d'un bug latent de
+  dépassement de la limite Discord de 4 096 caractères).
 - 31 commandes slash globales (5 « premade » à sous-commandes + 25 « extra » +
   `/event`) + ~36 commandes de modules (kick, ban, ping, meme, daily, rank,
   giveaway…) — total loin de la limite Discord de 100.

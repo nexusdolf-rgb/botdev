@@ -1225,24 +1225,57 @@ function checkMorpionWin(board) {
   return false;
 }
 
+// v230 — Le sondage passe en CHAMPS D'EMBED : un champ par option.
+// La séparation devient NATIVE (Discord dessine l'espace entre les champs),
+// donc plus besoin de lignes vides ni de traits ━. Le pourcentage et la barre
+// de progression sont alignés sur leur propre ligne, ce qui rend la lecture
+// des résultats nettement plus rapide qu'avec 10 blocs de texte empilés.
+//
+// ⚖️ Le critère v229 reste respecté : une LISTE D'OPTIONS n'est pas une suite
+// de sections → ui.sectionize() ne s'applique toujours pas ici (il dessinerait
+// 9 traits pour 10 choix). C'est la raison d'être de cette version : aérer le
+// sondage SANS passer par le trait.
+//
+// Garde-fous :
+//   • Discord limite un embed à 25 champs — /poll plafonne à 10 choix, la
+//     marge est large mais la borne est posée (.slice(0, 25)).
+//   • Chaque libellé est tronqué à 100 caractères AVANT d'être mis en gras :
+//     les choix de /poll arrivaient ici sans AUCUNE limite de longueur
+//     (`raw.split('|')`), et la troncature Discord aurait coupé le `**` final
+//     → markdown déséquilibré. Pire : avec l'ancien rendu en description,
+//     10 choix longs dépassaient la limite de 4096 caractères et **le sondage
+//     échouait à s'envoyer**. Bug latent corrigé au passage.
+//   • `votes.size || 1` évite toute division par zéro (hérité de l'ancien code).
+//   • La barre est bornée à 10 segments (arrondi de pourcentage > 100 impossible).
 function pollEmbed(question, choices, votes) {
   const total = votes.size || 1;
   const counts = choices.map(() => 0);
   for (const idx of votes.values()) counts[idx] = (counts[idx] || 0) + 1;
-  const lines = choices.map((c, i) => {
+  const emojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
+  // Troncature PROPRE : on coupe le texte nu, puis on ajoute le gras — ainsi
+  // les marqueurs ** restent toujours appariés.
+  const shortLabel = (v, n) => {
+    const t = String(v == null ? '' : v).trim();
+    return t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t;
+  };
+  const fields = choices.slice(0, 25).map((c, i) => {
     const pct = Math.round((counts[i] / total) * 100);
-    const bar = '█'.repeat(Math.round(pct / 10)) + '░'.repeat(10 - Math.round(pct / 10));
-    return `${['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'][i]} **${c}**\n${bar} **${pct}%** (${counts[i]} vote${counts[i] > 1 ? 's' : ''})`;
+    const filled = Math.min(10, Math.max(0, Math.round(pct / 10)));
+    const bar = '█'.repeat(filled) + '░'.repeat(10 - filled);
+    return {
+      name: ui.text(`${emojis[i] || '•'} **${shortLabel(c, 100)}**`, 256),
+      value: ui.text(`${bar} **${pct}%** (${counts[i]} vote${counts[i] > 1 ? 's' : ''})`, 1024),
+      inline: false,
+    };
   });
-  // v229 — EXCLUSION VOLONTAIRE de la grammaire des sections (traits ━) :
-  // ici chaque paragraphe est une OPTION du sondage (jusqu'à 10). Passer par
-  // ui.sectionize() dessinerait 9 traits et noierait le vote. Les sauts de
-  // ligne doubles restent le bon rendu pour une liste de choix.
-  return new EmbedBuilder()
+  const embed = new EmbedBuilder()
     .setColor('#e07a5f')
     .setTitle(`🗳️ ${question}`)
-    .setDescription(lines.join('\n\n'))
+    .addFields(fields)
     .setFooter({ text: `${votes.size} vote(s) — clique sur un bouton pour voter (re-clique pour annuler)` });
+  // État vide : aucun vote pour l'instant (comme les états vides du dashboard).
+  if (!votes.size) embed.setDescription('*Aucun vote pour l\'instant — choisis un numéro ci-dessous 👇*');
+  return embed;
 }
 
 function pollRows(guildId, choices) {
@@ -1507,6 +1540,9 @@ module.exports = {
   formatDuration,
   nextRepeatTs,
   HELP_EXTRA,
+  // v230 : builders du sondage exposés pour les tests (rendu en champs d'embed)
+  pollEmbed,
+  pollRows,
   // 🧪 États internes exposés pour les tests (anti-fuite mémoire)
   _test: { penduGames, morpionGames, pollState, quizState, capMap },
 };

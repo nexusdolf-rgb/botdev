@@ -53,8 +53,8 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('le mot reste dans les phrases/descriptions (clarté)', premade.includes('Ton niveau, ton XP et ton rang'));
 
   // ---------- 7. Version ----------
-  check('site : bump v215 (index)', index.includes('?v=229'));
-  check('site : bump v215 (sw)', sw.includes('botdev-v229'));
+  check('site : bump v215 (index)', index.includes('?v=230'));
+  check('site : bump v215 (sw)', sw.includes('botdev-v230'));
 
   console.log(`  ✅ v215 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });

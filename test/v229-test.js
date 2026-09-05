@@ -83,9 +83,12 @@ console.log('\n3) Les exclusions volontaires sont préservées ET documentées')
 const ex = src('server/discord/extra.js');
 const pm = src('server/discord/premade.js');
 const EXCL = 'EXCLUSION VOLONTAIRE';
-check('/poll : les choix restent joints par des sauts de ligne (pas de sectionize)',
-  ex.includes(".setDescription(lines.join('\\n\\n'))") && !ex.includes('.setDescription(ui.sectionize(lines.join'));
-check('/poll : exclusion documentée + conséquence chiffrée', ex.includes(EXCL) && ex.includes('9 traits'));
+// v230 : /poll est passé en CHAMPS D'EMBED (un champ par option). Il reste
+// exclu de la grammaire des sections — voir test/v230-test.js pour le détail.
+check('/poll : toujours AUCUN sectionize (liste d’options ≠ sections)',
+  !ex.includes('.setDescription(ui.sectionize(lines.join'));
+check('/poll : rendu en champs d’embed documenté (v230)',
+  ex.includes('.addFields(fields)') && ex.includes('9 traits'));
 check('/shop : description courte non sectionizée',
   pm.includes('.setDescription(`Achète un article avec tes coins') && !pm.includes('ui.sectionize(`Achète un article'));
 check('/shop : exclusion documentée + référence au trait orphelin', pm.includes(EXCL) && pm.includes('trait orphelin'));
@@ -126,9 +129,10 @@ const quizKo = ui.sectionize('❌ **Mauvaise réponse…**\n\n**Quelle est la ca
 check('/quiz résultat (mauvaise réponse) : 2 traits', count(quizKo) === 2);
 
 // Exclusions : ZÉRO trait.
-const pollChoices = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
-  .map((c, i) => `${i + 1}️⃣ **${c}**\n░░░░░░░░░░ **0%** (0 vote)`);
-check('/poll (10 choix) : 0 trait — la liste reste lisible', count(pollChoices.join('\n\n')) === 0);
+const extra = require('../server/discord/extra');
+const pollJson = extra.pollEmbed('Question ?', ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'], new Map()).toJSON();
+check('/poll (10 choix) : 0 trait — la liste reste lisible',
+  !JSON.stringify(pollJson).includes(SEP));
 check('/shop : 0 trait — deux phrases courtes, pas de trait orphelin',
   count('Achète un article avec tes coins : `/buy article`\n\n💰 **Ton solde : 120 coins**') === 0);
 
@@ -179,9 +183,9 @@ const touched = ['server/discord/extra.js', 'server/discord/panelCommands.js', '
   'public/index.html', 'public/sw.js'];
 check('aucun token en dur dans les fichiers modifiés',
   !touched.some((f) => /(ghp_|github_pat_|xox[baprs]-)[A-Za-z0-9_]{15,}/.test(src(f))));
-check('index.html : 7 références ?v=229', (src('public/index.html').match(/\?v=229/g) || []).length === 7);
+check('index.html : 7 références ?v=230', (src('public/index.html').match(/\?v=230/g) || []).length === 7);
 check('index.html : plus aucune référence ?v=228', !src('public/index.html').includes('?v=228'));
-check('sw.js : cache botdev-v229', src('public/sw.js').includes("const CACHE = 'botdev-v229';"));
+check('sw.js : cache botdev-v230', src('public/sw.js').includes("const CACHE = 'botdev-v230';"));
 
 console.log(failures === 0
   ? '\n✅ V229 — Traits ━ étendus aux 10 messages multi-blocs (dont le quiz), exclusions verrouillées, garde-fous v220 intacts.'
