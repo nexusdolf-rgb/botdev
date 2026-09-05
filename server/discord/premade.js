@@ -516,10 +516,10 @@ async function execute(botId, entry, cmd, src) {
       const pos = store.xp.rankOf(botId, guild.id, target.id);
       const embed = new EmbedBuilder()
         .setColor('#e07a5f')
-        .setTitle(`📈 Niveau de ${target.username}`)
+        .setTitle(`📈 ${target.username}`)
         .setThumbnail(target.displayAvatarURL({ dynamic: true }))
         .addFields(
-          { name: '📈 Niveau', value: String(level), inline: true },
+          { name: '📈', value: String(level), inline: true },
           { name: '🏆 Rang', value: `#${pos}`, inline: true },
           { name: '✨ XP', value: `${row.xp} / ${next}`, inline: true },
           { name: 'Progression', value: `${bar} ${Math.round(pct * 100)}%` },
@@ -536,7 +536,7 @@ async function execute(botId, entry, cmd, src) {
       const embed = new EmbedBuilder()
         .setColor('#e07a5f')
         .setTitle('📈 Classement des niveaux')
-        .setDescription(`**Top 10 — les membres les plus actifs**\n\n${top.map((r, i) => `${medal[i] || `**${i + 1}.**`} <@${r.user_id}> — niveau **${r.level}** · ${r.xp} XP`).join('\n')}`)
+        .setDescription(`**Top 10 — les membres les plus actifs**\n\n${top.map((r, i) => `${medal[i] || `**${i + 1}.**`} <@${r.user_id}> — **${r.level}** · ${r.xp} XP`).join('\n')}`)
         .setFooter({ text: `Hoxera · ${guild.name}` })
         .setTimestamp();
       await replyEmbed(embed);
@@ -564,7 +564,7 @@ async function execute(botId, entry, cmd, src) {
         ? joined.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
         : 'inconnue';
       const fields = [
-        { name: '📈 Niveau', value: String(level), inline: true },
+        { name: '📈', value: String(level), inline: true },
         { name: '🏆 Rang', value: `#${pos}`, inline: true },
         { name: '💰 Coins', value: String(coins), inline: true },
         { name: 'Progression', value: `${bar} ${Math.round(pct * 100)}%` },
@@ -1107,7 +1107,7 @@ const HELP_DETAILS = {
   daily: ['💰 Économie', 'Récupère 100 coins, une fois par jour.', '`/daily`', '`/daily` → 🎁 +100 coins !'],
   balance: ['💰 Économie', 'Affiche ton solde de coins.', '`/balance @membre`'],
   leaderboard: ['💰 Économie', 'Le classement des coins du serveur.', '`/leaderboard`'],
-  rank: ['📈 Niveaux', 'Ton niveau, ton XP et ton rang sur ce serveur. Gagne de l\'XP en discutant !', '`/rank @membre`', '`/rank` → 📈 Niveau 3 · ✨ 950/1600 XP · 🏆 #2'],
+  rank: ['📈 Niveaux', 'Ton niveau, ton XP et ton rang sur ce serveur. Gagne de l\'XP en discutant !', '`/rank @membre`', '`/rank` → 📈 3 · ✨ 950/1600 XP · 🏆 #2'],
   levels: ['📈 Niveaux', 'Le classement des niveaux du serveur.', '`/levels`'],
   invite: ['🔧 Utilitaire', 'Le lien pour inviter le bot sur un autre serveur.', '`/invite`'],
   lang: ['🌍 Langue', 'Choisis la langue du bot sur CE serveur : fr, en, es, de, pt ou it. Tous les messages publics (panneau de tickets, bienvenue, transcriptions…) suivent.', '`/lang fr` · `/lang en` · `/lang es` · `/lang de` · `/lang pt` · `/lang it`', '`/lang it` → 🌍 Lingua del bot impostata su italiano in questo server. 🇮🇹'],

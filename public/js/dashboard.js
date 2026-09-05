@@ -2576,12 +2576,9 @@ Dashboard.renderers.levels = async (content, data) => {
     if (!box) return;
     sortRoles();
     if (!rolesData.length) { box.innerHTML = 'Aucun palier configuré — ajoute des niveaux avec leur rôle.'; return; }
-    box.innerHTML = '<b style="color:var(--d-text)">📊 Échelle actuelle</b><div style="margin-top:6px">'
-      + rolesData.map((r, i) => {
-        const prev = i > 0 ? rolesData[i - 1] : null;
-        const roleName = String(r.role || '—');
-        return `<div style="margin:2px 0">Niveau <b>${r.level}</b> → ${App.escapeHtml(roleName)}${prev ? ` <span style="opacity:.7">(retire le rôle du niveau ${prev.level})</span>` : ''}</div>`;
-      }).join('') + '</div>';
+    box.innerHTML = '<b style="color:var(--d-text)">📊 Échelle actuelle</b><div style="opacity:.75;margin-top:2px">Le chiffre = le niveau · chaque rôle remplace celui du palier précédent.</div><div style="margin-top:6px">'
+      + rolesData.map((r) => `<div style="margin:2px 0"><b>${r.level}</b> → ${App.escapeHtml(String(r.role || '—'))}</div>`).join('')
+      + '</div>';
   };
   const renderRoles = () => {
     sortRoles();

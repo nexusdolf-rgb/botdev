@@ -169,10 +169,10 @@ async function announce(botId, message, level, gs, oldLevel = 0) {
   const user = message.author || {};
   const embed = new EmbedBuilder()
     .setColor('#e07a5f')
-    .setAuthor({ name: `${user.username || user.tag || 'Membre'} — niveau ${level} 🎉` })
+    .setAuthor({ name: `${user.username || user.tag || 'Membre'} 🎉` })
     .setDescription(text)
     .addFields(
-      { name: '📈 Niveau', value: `**${level}**`, inline: true },
+      { name: '📈', value: `**${level}**`, inline: true },
       { name: '🏆 Rang', value: pos ? `#${pos}` : '—', inline: true },
       { name: '✨ XP', value: `${Math.max(row.xp || 0, cur)} / ${next}`, inline: true },
       ...(reward ? [{ name: '🎁 Rôle débloqué', value: reward, inline: true }] : []),
