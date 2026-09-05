@@ -181,7 +181,9 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
 
   // panels : code source contient les personnalisations
   const panelsSrc = read('server/discord/panels.js');
-  check('panels : image personnalisée prioritaire', panelsSrc.includes("setImage(String(cfg.image_url || '').trim() || panelBannerUrl(guildId, name))"));
+  // v234 — l'image passe par l'option `image:` de ui.v2panel (MediaGallery)
+  // au lieu de .setImage() ; la priorité image importée > bannière est intacte.
+  check('panels : image personnalisée prioritaire', panelsSrc.includes("image: String(cfg.image_url || '').trim() || panelBannerUrl(guildId, name),"));
   check('panels : close_dm_message utilisé', panelsSrc.includes('close_dm_message'));
   check('panels : close_dm_image utilisé', panelsSrc.includes('close_dm_image'));
 

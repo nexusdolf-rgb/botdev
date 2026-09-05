@@ -359,10 +359,29 @@ function v2container(options = {}) {
 const V2_INLINE_LINE = 150;
 const V2_INLINE_GROUP = 3;
 
+// v234 — un nom de champ composé uniquement de caractères invisibles (espace
+// sans largeur U+200B, ZWJ, BOM, espaces) est un ESPACEUR hérité des embeds
+// classiques, pas un intitulé. En V2 il faut n'afficher QUE la valeur, sinon
+// le rendu montre un « **⁠** » vide au-dessus du texte.
+const BLANK_FIELD_NAME = /^[\u200B-\u200F\u2060\uFEFF\s]*$/;
+
+function v2fieldName(name) {
+  const n = String(name == null ? '' : name);
+  return BLANK_FIELD_NAME.test(n) ? '' : text(n, 256);
+}
+
+// Champ en ligne : intitulé + valeur sur la même ligne (colonnes « · »).
 function v2fieldLine(field) {
-  const name = text(field.name || '', 256);
+  const name = v2fieldName(field.name);
   const value = text(field.value || '—', 1024);
   return name ? `**${name}** ${value}` : value;
+}
+
+// Champ hors ligne : intitulé seul sur sa ligne, valeur dessous.
+function v2fieldBlock(field) {
+  const name = v2fieldName(field.name);
+  const value = text(field.value || '—', 1024);
+  return name ? `**${name}**\n${value}` : value;
 }
 
 function v2bodyBlocks(options, useSections) {
@@ -391,7 +410,7 @@ function v2bodyBlocks(options, useSections) {
         if (group.length >= V2_INLINE_GROUP) flush();
       } else {
         flush();
-        body.push(field ? `**${text(field.name || '', 256)}**\n${text(field.value || '—', 1024)}` : '—');
+        body.push(field ? v2fieldBlock(field) : '—');   // v234 — même règle sur les espaceurs
       }
       if (index === all.length - 1) flush();
     });

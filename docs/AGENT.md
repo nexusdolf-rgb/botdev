@@ -200,7 +200,67 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   'tag') ») : un message supprimé **partiel** (pas en cache) n'a pas d'auteur →
   `trackDeleted` (/snipe, `extra.js`) plantait ; idem `tasks.js` (`member.user.tag`).
   Gardes ajoutées, test `test/v228-test.js`, docs remises à jour (v194 → v228).
-- **v233 (ACTUELLE, 05/09)** : **SÉPARATEURS NATIFS PLEINE LARGEUR — lot n°3.**
+- **v234 (ACTUELLE, 05/09)** : **SÉPARATEURS NATIFS PLEINE LARGEUR — lot n°4 :
+  les tickets.** 🎫 **`panels.js` — TOUT le fichier passe en V2 (11
+  emplacements)** : le panneau de tickets principal, le menu de rôles, les 4
+  annonces de salon (fermé / réouvert / pris en charge / en attente), les 3
+  panneaux automatiques (fermeture, rappel, suppression) et les 2 MP
+  (confirmation d'ouverture, demande d'évaluation). Il reste **0 `ui.panel(`** et
+  **0 `ui.embed(`** dans le fichier.
+  📐 **`buildTicketPanelEmbed` → `buildTicketPanel`** : retourne désormais un
+  **PAYLOAD** (et non un `EmbedBuilder`) et reçoit **`rows` en 6e argument**, car
+  en V2 les lignes de boutons/menus vont **DANS** le conteneur.
+  🚨 **PIÈGE n°1 — `pruneOldPanels`.** Cette fonction relit `msg.embeds[0].title`
+  pour ne garder qu'**un seul panneau par genre** dans le salon. Un payload V2 n'a
+  plus de champ `embeds` : sans correction, les **nouveaux** panneaux n'auraient
+  jamais été nettoyés et se seraient **accumulés en doublons**. → Nouveau helper
+  **`panelTitleOf(msg)`** (exporté en `__testPanelTitleOf`) qui lit le titre dans
+  les **DEUX** formats : `embeds[0].title` pour les panneaux **déjà en place**
+  dans les salons, conteneur type 17 → TextDisplay `## …` pour les nouveaux.
+  🚨 **PIÈGE n°2 — `sendRoleMenu` ÉDITE un message déjà en place**, envoyé avant
+  cette version en embed classique. Discord exige alors `content` / `embeds` /
+  `attachments` **explicitement vidés** pour basculer en V2 →
+  `existing.edit({ ...payload, content: null, embeds: [], attachments: [] })`.
+  🚨 **PIÈGE n°3 — `roleMenuPayload` faisait `payload.components = components`
+  APRÈS coup** : en V2 cela **écrasait le conteneur**. Les rangées passent en 2e
+  argument de `ui.v2panel`.
+  🧹 **Bug trouvé au passage** : les 3 panneaux automatiques posaient le **MÊME
+  texte DEUX FOIS** (`content` du message + `description` de l'embed) → rendu
+  dupliqué visible. La duplication est supprimée (`Panel.content = i18n.t(...)`
+  retiré), seule la description dans le conteneur est conservée.
+  🎨 **`ui.js` — `v2fieldName`** : le panneau de tickets utilisait
+  `{ name: '\u200b', value: P.patience }` comme **espaceur** d'embed. En V2 cela
+  aurait affiché un intitulé gras invisible. Un nom de champ composé uniquement
+  de caractères invisibles (U+200B-200F, U+2060, BOM, espaces) est désormais
+  traité comme **vide** → seule la valeur est rendue (`v2fieldLine` +
+  `v2fieldBlock`).
+  ✅ **Webhook OK** : le panneau part via `identity.sendAsProfile` (webhook).
+  V2 + webhook + **pièce jointe** = 400, mais ici la bannière est une **URL HTTP**
+  servie par le site (`/api/tickets/panel-banner/…`) → aucune pièce jointe,
+  `MediaGallery` compatible. Vérifié : `sendAsProfile` n'ajoute pas de `files`.
+  ⛔ **NON migré dans ce lot (volontaire)** :
+  • le **wizard « assistant types »** (6 étapes `types*Embed` éditées en place via
+    `upd({embeds, components})`). Une seule de ses étapes produit un trait
+    (`typesQuestionsEmbed`), et Discord **interdit de revenir à un message
+    classique** une fois en V2 : migrer UNE étape sans les 5 autres **casserait le
+    wizard**. → **Lot dédié requis.**
+  • le **récapitulatif de ticket** (journal, `📔 Récapitulatif — Ticket #N`) :
+    construit en `EmbedBuilder` brut **SANS description** → il ne produit
+    **AUCUN trait**. Le migrer imposerait de réécrire `updateRecapRating`, qui
+    relit `msg.embeds[0].fields` pour remplacer la note ⭐. Bénéfice visuel nul
+    pour le trait → reporté.
+  🧪 **9 tests existants mis à jour** (v32, v36, v48, v49, v79, v85, v124, v198,
+  v219) — tous lisaient `payload.embeds[0].toJSON()`. Nouveau module partagé
+  **`test/helpers/v2.js`** (`texts`, `title`, `author`, `footer`, `dividers`,
+  `mediaUrls`, `thumbnailUrls`, `rows`, `controls`, `controlByPrefix`, `isV2`,
+  `json`, `componentCount`) : centralise l'équivalence embed → V2 pour éviter de
+  la réécrire à chaque lot. **`run-all.js` n'est pas récursif** → un
+  sous-dossier `test/helpers/` n'est pas exécuté comme un test.
+  📌 **RÈGLE COMPLÉTÉE POUR LES LOTS SUIVANTS** : avant de migrer, chercher dans
+  `test/` **ET** dans `scripts/` les motifs `embeds[0]`, `.setFooter(`,
+  `.setImage(`, `ui.panel(`, `ui.embed(` — et ne pas oublier que les tests qui
+  capturent `p.content` (v85) perdent le texte quand `content` disparaît.
+- **v233 (05/09)** : **SÉPARATEURS NATIFS PLEINE LARGEUR — lot n°3.**
   🎁 **`giveaway.js` — 5 emplacements.** `buildEmbed` → **`buildPanel`**,
   `buildEndedEmbed` → **`buildEndedPanel`** (exports renommés, `EmbedBuilder`
   retiré des imports). Les 2 lancements (slash + dashboard), **l'ÉDITION du
@@ -576,22 +636,32 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 
 ## 📌 ÉTAT AU 05/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v233** — voir la section v233 ci-dessus. **160 tests verts**.
+- Dernière version : **v234** — voir la section v234 ci-dessus. **161 tests verts**.
   ⚠️ **Chantier en cours (v231 →)** : migration des traits texte `━` vers les
   séparateurs **NATIFS pleine largeur** (Components V2).
   • **Migré** : `/quiz` (v231) · `premade.js` 13 messages dont `replyPanel` ×11
     et `/levels` · `suggest.js` 5 emplacements (v232) · `giveaway.js`
-    5 emplacements · `guildEvents.js` 7 emplacements (v233).
+    5 emplacements · `guildEvents.js` 7 emplacements (v233) · **`panels.js`
+    11 emplacements, TOUT le fichier** (v234). **Total : 42 emplacements.**
   • **Exclu, documenté** : `xp.js` (webhook + pièce jointe → 400 en V2, piège n°10).
-  • **Reste** : `panels.js` (12), `extra.js` (29), `panelCommands.js` (2),
-    `events.js` (2), `automod.js` (2), `profileCommands.js` (2), puis `logging`,
-    `liveWatch`, `roleWizard`, `profileWizard`, `engine`, `community`,
-    `announcements`, `tasks` (1 chacun).
+  • **Reporté, documenté** : le **wizard « assistant types »** de `panels.js`
+    (6 étapes éditées en place — il faut migrer les 6 d'un coup) et le
+    **récapitulatif de ticket** (aucune description donc **aucun trait** ;
+    `updateRecapRating` relit `msg.embeds[0].fields`).
+  • **Reste** : `extra.js` (29), `panelCommands.js` (2), `events.js` (2),
+    `automod.js` (2), `profileCommands.js` (2), puis `logging`, `liveWatch`,
+    `roleWizard`, `profileWizard`, `engine`, `community`, `announcements`,
+    `tasks` (1 chacun).
   • ⚠️ **Avant de migrer un message, vérifier** : (1) s'il passe par
-    `sendAsProfile` **avec** des `files` → exclu ; (2) si du code relit
-    `msg.embeds[0]` plus tard → 4 emplacements identifiés (`extra.js:1128`,
-    `panels.js:426`, `panels.js:1396`) ; (3) s'il est **édité** ensuite →
-    l'édition doit migrer en même temps.
+    `sendAsProfile` **avec** des `files` → exclu (sans `files`, c'est bon :
+    webhook application-owned) ; (2) si du code relit `msg.embeds[0]` plus tard →
+    **reste `extra.js:1128` (`applyd`)** ; `panels.js:426` corrigé par
+    `panelTitleOf`, `panels.js:1396` = le récap reporté ; (3) s'il est **édité**
+    ensuite → l'édition doit migrer en même temps **et** vider
+    `content`/`embeds`/`attachments` ; (4) si c'est une **étape de wizard** →
+    migrer TOUTES les étapes d'un coup ; (5) chercher dans `test/` **et**
+    `scripts/` les motifs `embeds[0]`, `.setFooter(`, `.setImage(`, `ui.panel(`,
+    `ui.embed(`. Utiliser **`test/helpers/v2.js`** pour relire un payload V2.
 - Prod : https://hoxera.is-a.dev, bot « Optimus Prime » en ligne,
   **8 serveurs / 189 membres**, **0 erreur 24 h**, sauvegardes GitHub OK
   toutes les 10 min, CI verte, service Render « hoxera » non suspendu (Oregon).
@@ -606,9 +676,10 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   et les tokens, puis livré **v229** (traits ━ sur 10 messages + critère officiel)
   **v230** (`/poll` en champs d'embed + correctif d'un bug latent de
   dépassement de la limite Discord de 4 096 caractères), puis **v231**,
-  **v232** et **v233** : migration des traits texte vers les séparateurs
-  **NATIFS pleine largeur** (Components V2) — API `ui.v2panel` + 30 messages
-  migrés, `queue.js` corrigé, `xp.js` exclu et documenté.
+  **v232**, **v233** et **v234** : migration des traits texte vers les
+  séparateurs **NATIFS pleine largeur** (Components V2) — API `ui.v2panel` +
+  **42 messages migrés**, `queue.js` corrigé, `xp.js` exclu et documenté,
+  `test/helpers/v2.js` créé.
 - 31 commandes slash globales (5 « premade » à sous-commandes + 25 « extra » +
   `/event`) + ~36 commandes de modules (kick, ban, ping, meme, daily, rank,
   giveaway…) — total loin de la limite Discord de 100.

@@ -18,6 +18,9 @@ const check = (label, cond) => {
 (async () => {
   const store = require('../server/db');
   const panels = require('../server/discord/panels');
+  // v234 — lecteur de payload Components V2 (les embeds[0] n'existent plus).
+  const v2 = require('./helpers/v2');
+
   const banner = require('../server/banner');
   const BOT = 1;
   store.settings.set('public_url', 'https://dash-hoxora.onrender.com');
@@ -40,10 +43,12 @@ const check = (label, cond) => {
   const clientA = mkClient({ G1: { name: 'Carré RP Officiel' } });
   const chA = { id: 'C1', name: 'support', send: async (p) => { sentA.push(p); return {}; } };
   await panels.sendTicketPanel(BOT, 'G1', clientA, chA);
-  const embedA = sentA[0].embeds[0].toJSON();
-  check('serveur A : titre « 👑 Support | Carré RP Officiel »', embedA.title === '👑 Support | Carré RP Officiel');
-  check('serveur A : bienvenue avec le nom', embedA.description.startsWith('Bienvenue sur le support officiel de Carré RP Officiel'));
-  check('serveur A : bannière dynamique (URL du serveur)', embedA.image.url.includes('/api/tickets/panel-banner/G1.png'));
+  // v234 — lecture Components V2 (titre = TextDisplay « ## », image = MediaGallery).
+  const titleA = v2.title(sentA[0]);
+  const bannerA = String(v2.mediaUrls(sentA[0])[0] || '');
+  check('serveur A : titre « 👑 Support | Carré RP Officiel »', titleA === '👑 Support | Carré RP Officiel');
+  check('serveur A : bienvenue avec le nom', v2.texts(sentA[0]).includes('Bienvenue sur le support officiel de Carré RP Officiel'));
+  check('serveur A : bannière dynamique (URL du serveur)', bannerA.includes('/api/tickets/panel-banner/G1.png'));
   check('serveur A : nom mémorisé en base', store.guildSettings.get(BOT, 'G1').panel_name === 'Carré RP Officiel');
   check('serveur A : nom mémorisé retrouvé pour la bannière', banner.storedPanelName('G1') === 'Carré RP Officiel');
 
@@ -53,30 +58,33 @@ const check = (label, cond) => {
   const clientB = mkClient({ G2: { name: 'Les Copains 🎉' } });
   const chB = { id: 'C1', name: 'support', send: async (p) => { sentB.push(p); return {}; } };
   await panels.sendTicketPanel(BOT, 'G2', clientB, chB);
-  const embedB = sentB[0].embeds[0].toJSON();
-  check('serveur B : titre avec SON nom', embedB.title === '👑 Support | Les Copains 🎉');
-  check('serveur B : bienvenue avec SON nom', embedB.description.includes('Les Copains 🎉'));
-  check('serveur B : bannière différente (G2)', embedB.image.url.includes('/api/tickets/panel-banner/G2.png'));
-  check('serveur B : pas de mélange avec le serveur A', embedB.title !== embedA.title && embedB.image.url !== embedA.image.url);
+  const titleB = v2.title(sentB[0]);
+  const bannerB = String(v2.mediaUrls(sentB[0])[0] || '');
+  check('serveur B : titre avec SON nom', titleB === '👑 Support | Les Copains 🎉');
+  check('serveur B : bienvenue avec SON nom', v2.json(sentB[0]).includes('Les Copains 🎉'));
+  check('serveur B : bannière différente (G2)', bannerB.includes('/api/tickets/panel-banner/G2.png'));
+  check('serveur B : pas de mélange avec le serveur A', titleB !== titleA && bannerB !== bannerA);
 
   // ---------- 4. Repli Optimus Prime (client sans guildes) ----------
   store.tickets.set(BOT, 'G3', { require_reason: 1, support_role: 'Staff', channel: '#support', types: '[]' });
   const sentC = [];
   const chC = { id: 'C1', name: 'support', send: async (p) => { sentC.push(p); return {}; } };
   await panels.sendTicketPanel(BOT, 'G3', null, chC);
-  const embedC = sentC[0].embeds[0].toJSON();
-  check('repli : titre « 👑 Support | Hoxera »', embedC.title === '👑 Support | Hoxera');
-  check('repli : bannière statique rapide (nom inconnu)', embedC.image.url.includes('/api/tickets/panel-banner/G3.png'));
+  // v234 — repli « Optimus Prime » relu en Components V2.
+  check('repli : titre « 👑 Support | Hoxera »', v2.title(sentC[0]) === '👑 Support | Hoxera');
+  check('repli : bannière statique rapide (nom inconnu)', String(v2.mediaUrls(sentC[0])[0] || '').includes('/api/tickets/panel-banner/G3.png'));
 
   // ---------- 5. Logique intacte : menu et sélection ----------
   store.tickets.set(BOT, 'G1', { ...store.tickets.get(BOT, 'G1'), types: JSON.stringify([{ label: 'Réclamation', emoji: '⚠️', questions: [], staff_roles: [] }]) });
   const sentD = [];
   const chD = { id: 'C1', name: 'support', send: async (p) => { sentD.push(p); return {}; } };
   await panels.sendTicketPanel(BOT, 'G1', clientA, chD);
-  const select = sentD[0].components[0].components[0].toJSON();
+  // v234 — le menu déroulant est désormais DANS le conteneur.
+  const select = v2.controlByPrefix(sentD[0], 'bd-ttype') || {};
   check('logique : menu toujours là (custom_id intact)', select.custom_id === `bd-ttype:${BOT}`);
-  check('logique : placeholder conservé', select.placeholder.includes('Choisissez le type de ticket'));
-  check('logique : 1 seule rangée, 1 seul menu', sentD[0].components.length === 1 && sentD[0].components[0].components.length === 1);
+  check('logique : placeholder conservé', String(select.placeholder || '').includes('Choisissez le type de ticket'));
+  check('logique : 1 conteneur au niveau du message, 1 seul menu dedans',
+    sentD[0].components.length === 1 && v2.controls(sentD[0]).length === 1);
 
   store.db.close();
   console.log(failures === 0 ? '\n✅ V49 — Panneau personnalisé par serveur (titre, bienvenue, bannière) : 100 % fonctionnel. 🎉' : `\n❌ ${failures} vérification(s) en échec`);

@@ -14,7 +14,10 @@ const BOT = store.bots.create({ user_id: uid, name: 'Hoxera', token: 'T', client
 
 // ---- Panneaux réels ----
 const panels = require('../server/discord/panels');
-const ticket = panels.buildTicketPanelEmbed({}, [], [], 'Serveur de Hoxera', 'G');
+// v234 — buildTicketPanel renvoie un payload Components V2 (plus d'EmbedBuilder).
+const ticketV2 = panels.buildTicketPanel({}, [], [], 'Serveur de Hoxera', 'G');
+console.log('[gen-apercu-v220] panneau tickets en Components V2 —', ticketV2.components.length, 'conteneur(s)');
+const ticket = { toJSON: () => ({ title: '👑 Support | (aperçu V2 indisponible)', description: 'Panneau migré en Components V2 (v234).', fields: [], color: 0xED4245 }) };
 const roleMenu = panels.roleMenuPayload(BOT, {
   id: 'M', name: 'Rôles & notifications', mode: 'select', guild_id: 'G',
   content: 'Choisis tes rôles ci-dessous. Tu peux les activer ou les retirer à tout moment.',

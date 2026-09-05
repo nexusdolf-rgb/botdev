@@ -27,6 +27,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 (async () => {
   const store = require('../server/db');
   const panels = require('../server/discord/panels');
+  // v234 — lecteur de payload Components V2 (les embeds[0] n'existent plus).
+  const v2 = require('./helpers/v2');
+
   const i18n = require('../server/i18n');
   const BOT = 1, G = 'G1', G2 = 'G2';
 
@@ -59,7 +62,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const channel = {
     id: 'CT1', name: 'ticket-u2',
     permissionOverwrites: { edit: async () => {} },
-    send: async (p) => { sent.push(p.content); return {}; },
+    // v234 — les panneaux automatiques sont en Components V2 : le champ
+    // `content` du message n'existe plus (et le texte n'y était de toute façon
+    // dupliqué avec la description). On capture les TextDisplay du conteneur.
+    send: async (p) => { sent.push(p.content); if (v2.isV2(p)) sent.push(...v2.texts(p)); return {}; },
     delete: async () => { channel.deleted = true; },
     messages: { fetch: async () => new Map() },
   };

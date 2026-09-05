@@ -11,6 +11,9 @@ process.env.BOTDEV_DATA_DIR = DATA_DIR;
 
 const store = require('../server/db');
 const panels = require('../server/discord/panels');
+// v234 — lecteur de payload Components V2 (les embeds[0] n'existent plus).
+const v2 = require('./helpers/v2');
+
 
 (async () => {
   // ---------- 1. Bot en ligne simulé avec salons + rôles ----------
@@ -87,8 +90,10 @@ const panels = require('../server/discord/panels');
   // ---------- 4. Le panneau utilise la couleur choisie ----------
   let sent = null;
   await panels.sendTicketPanel(1, 'G1', { user: { displayAvatarURL: () => 'https://x/a.png' } }, { send: async (p) => { sent = p; } });
-  const btn = sent.components[0].components[0];
-  assert(btn.data.style === 3, 'style du bouton = 3 (vert), obtenu ' + btn.data.style);
+  // v234 — en Components V2 le bouton est DANS le conteneur, plus au niveau du
+  // message : sent.components[0] est désormais le conteneur (type 17).
+  const btn = v2.controls(sent)[0];
+  assert(btn && btn.style === 3, 'style du bouton = 3 (vert), obtenu ' + (btn && btn.style));
   console.log('3️⃣  Panneau : bouton VERT appliqué ✅');
 
   // ---------- 5. Questionnaire désactivé → ouverture directe sans modale ----------

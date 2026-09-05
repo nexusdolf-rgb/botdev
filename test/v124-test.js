@@ -32,7 +32,10 @@ assert.strictEqual(ui.linkRow('Ouvrir', 'https://example.com').components[0].dat
 // Les panneaux importants utilisent la brique commune et gardent les anciens
 // custom_id des boutons de ticket.
 assert.ok(panelsSource.includes("const ui = require('./ui')"));
-assert.ok(panelsSource.includes('ui.embed({') && panelsSource.includes('ui.panel({'));
+// v234 — panels.js est entièrement passé en Components V2 : ui.embed/ui.panel
+// y ont été remplacés par ui.v2panel. L'intention (brique commune du design
+// system) est inchangée.
+assert.ok(panelsSource.includes('ui.v2panel({') && !panelsSource.includes('ui.embed({') && !panelsSource.includes('ui.panel({'));
 assert.ok(panelsSource.includes('ui.linkRow(\'📜 Ouvrir la transcription\''));
 assert.ok(panelsSource.includes('bd-tmenu:${botId}:claim'));
 assert.ok(extraSource.includes("const ui = require('./ui')"));

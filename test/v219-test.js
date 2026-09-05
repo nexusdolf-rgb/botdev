@@ -26,6 +26,9 @@ process.env.BOTDEV_DATA_DIR = DATA_DIR;
 
 const store = require('../server/db');
 const panels = require('../server/discord/panels');
+// v234 — lecteur de payload Components V2 (les embeds[0] n'existent plus).
+const v2 = require('./helpers/v2');
+
 const { roleMenuPayload, sendRoleMenu } = panels;
 let n = 0;
 const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.log(`  ✅ ${label}`); };
@@ -38,7 +41,10 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
   console.log('— Correctif présent —');
   const panelsSrc = read('server/discord/panels.js');
   check('panels : rôleMenuPayload extrait (rendu inchangé)', /function roleMenuPayload\(botId, menu\)/.test(panelsSrc));
-  check('panels : envoi = update-or-send (message.edit quand déjà envoyé)', /const existing = await findSentRoleMessage\(client, menu\)/.test(panelsSrc) && /existing\.edit\(payload\)/.test(panelsSrc));
+  // v234 — l'édition vide en plus content/embeds/attachments : le message déjà
+  // en place a pu être envoyé en embed classique avant la migration, et Discord
+  // exige ces champs explicitement vidés pour basculer en Components V2.
+  check('panels : envoi = update-or-send (message.edit quand déjà envoyé)', /const existing = await findSentRoleMessage\(client, menu\)/.test(panelsSrc) && /existing\.edit\(\{ \.\.\.payload, content: null, embeds: \[\], attachments: \[\] \}\)/.test(panelsSrc));
   check('panels : message supprimé → nouvel envoi propre', /Unknown Message\|10008\|10003\|Missing Access\|50001\|Missing Permissions\|50013/.test(panelsSrc));
   check('panels : message_id mémorisé après envoi', /store\.roleMenus\.setMessage\(menu\.id,/.test(panelsSrc));
   const dbSrc = read('server/db.js');
@@ -70,11 +76,12 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
   console.log('— Construction du message (rendu inchangé) —');
   const payload = roleMenuPayload(BOT, menu);
   check('payload menu : composant présent (select)', Array.isArray(payload.components) && payload.components.length === 1);
-  const first = payload.components[0];
-  const selectData = first.toJSON ? first.toJSON() : first;
-  const customId = (selectData.components && selectData.components[0] && selectData.components[0].custom_id) || (selectData.custom_id) || '';
+  // v234 — components[0] est le CONTENEUR : le select est imbriqué dans une
+  // ActionRow à l'intérieur, plus directement au niveau du message.
+  const selectData = v2.controlByPrefix(payload, 'bd-menu:') || {};
+  const customId = selectData.custom_id || '';
   check('select porte le customId bd-menu:<bot>:<menu>', String(customId).startsWith(`bd-menu:${BOT}:${menuId}`));
-  const optsJson = (selectData.components && selectData.components[0] && selectData.components[0].options) || [];
+  const optsJson = selectData.options || [];
   check('options du menu conservées', optsJson.length === 2);
 
   // ---------- 4. sendRoleMenu : 3 scénarios ----------
@@ -125,8 +132,9 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
   store.roleMenus.update(menuId, { mode: 'buttons' });
   const mBtn = store.roleMenus.get(menuId);
   const btnPayload = roleMenuPayload(BOT, mBtn);
-  const row = btnPayload.components[0];
-  const rowJson = row.toJSON ? row.toJSON() : row;
+  // v234 — components[0] est désormais le CONTENEUR : la rangée de boutons est
+  // imbriquée dedans.
+  const rowJson = v2.rows(btnPayload)[0] || {};
   const btnCustomId = rowJson.components && rowJson.components[0] && rowJson.components[0].custom_id;
   check('4d : bouton porte bd-rmbtn:<bot>:<menu>:<rôle>', String(btnCustomId).startsWith(`bd-rmbtn:${BOT}:${menuId}:News`));
 

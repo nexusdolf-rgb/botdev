@@ -60,10 +60,16 @@ function card(e, caption, badge) {
 }
 const cardFrom = (embed, caption) => card(embed.toJSON ? embed.toJSON() : embed, caption);
 
-const embTicket = panels.buildTicketPanelEmbed({ message: '' }, {}, [
+// v234 — buildTicketPanel renvoie un payload Components V2 (plus d'EmbedBuilder).
+// Cet aperçu statique dessinait des embeds classiques : il est obsolète tant que
+// la galerie n'a pas de rendu V2. Carte de remplacement pour ne pas casser le
+// script (non exécuté par scripts/check.sh).
+const ticketV2 = panels.buildTicketPanel({ message: '' }, {}, [
   { emoji: '🎫', label: 'Support', questions: [] },
   { emoji: '📝', label: 'Candidature staff', questions: [{}] },
 ], 'Serveur de Hoxera', 'G220');
+console.log('[gen-apercu-galerie] panneau tickets en Components V2 —', ticketV2.components.length, 'conteneur(s)');
+const embTicket = { toJSON: () => ({ title: '👑 Support | (aperçu V2 indisponible)', description: 'Panneau migré en Components V2 (v234).', fields: [], color: 0xED4245 }) };
 
 const rolePayload = panels.roleMenuPayload(BOT, {
   id: 'M1', name: 'Rôles & notifications', mode: 'select', guild_id: 'G220',

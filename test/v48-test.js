@@ -19,6 +19,9 @@ const check = (label, cond) => {
 (async () => {
   const store = require('../server/db');
   const panels = require('../server/discord/panels');
+  // v234 — lecteur de payload Components V2 (les embeds[0] n'existent plus).
+  const v2 = require('./helpers/v2');
+
   const BOT = 1, G = 'G1';
   store.settings.set('public_url', 'https://dash-hoxora.onrender.com');
   store.tickets.set(BOT, G, {
@@ -34,15 +37,17 @@ const check = (label, cond) => {
   const fakeChannel = { id: 'C1', name: 'support', send: async (p) => { sent.push(p); return {}; } };
   await panels.sendTicketPanel(BOT, G, null, fakeChannel);
   check('panneau : 1 seul message envoyé', sent.length === 1);
-  check('panneau : 1 seul embed', sent[0].embeds.length === 1);
-  check('panneau : 1 seule rangée de composants (le menu)', sent[0].components.length === 1);
-  const embed = sent[0].embeds[0].toJSON();
-  const select = sent[0].components[0].components[0].toJSON();
-  check('panneau : UN SEUL menu déroulant', sent[0].components[0].components.length === 1);
-  check('panneau : titre exact', embed.title === '👑 Support | Hoxera');
-  check('panneau : bienvenue exacte', embed.description.startsWith('Bienvenue sur le support officiel de Hoxera'));
-  check('panneau : description exacte présente', embed.description.includes('sélectionnez la catégorie correspondante à votre besoin via le menu ci-dessous'));
-  check('panneau : bannière après le texte (image)', embed.image && embed.image.url.includes('/api/tickets/panel-banner/G1.'));
+  // v234 — payload Components V2 : 1 conteneur au niveau du message, tout le
+  // reste (textes, séparateurs, bannière, menu) est DEDANS.
+  check('panneau : 1 conteneur Components V2 (plus d’embed)', v2.isV2(sent[0]));
+  check('panneau : 1 seul composant au niveau du message (le conteneur)', sent[0].components.length === 1);
+  const panelTexts = v2.texts(sent[0]);
+  const select = v2.controlByPrefix(sent[0], 'bd-ttype');
+  check('panneau : UN SEUL menu déroulant', v2.controls(sent[0]).length === 1);
+  check('panneau : titre exact', v2.title(sent[0]) === '👑 Support | Hoxera');
+  check('panneau : bienvenue exacte', panelTexts.includes('Bienvenue sur le support officiel de Hoxera'));
+  check('panneau : description exacte présente', panelTexts.some((t) => t.includes('sélectionnez la catégorie correspondante à votre besoin via le menu ci-dessous')));
+  check('panneau : bannière après le texte (MediaGallery)', String(v2.mediaUrls(sent[0])[0] || '').includes('/api/tickets/panel-banner/G1.'));
   check('menu : custom_id INTACT', select.custom_id === `bd-ttype:${BOT}`);
   check('menu : placeholder conservé', select.placeholder.includes('Choisissez le type de ticket'));
   check('menu : 2 options (les types existants)', select.options.length === 2);
@@ -52,7 +57,7 @@ const check = (label, cond) => {
   sent.length = 0;
   store.tickets.set(BOT, G, { ...store.tickets.get(BOT, G), message: 'Message perso du serveur' });
   await panels.sendTicketPanel(BOT, G, null, fakeChannel);
-  check('message perso : toujours utilisé', sent[0].embeds[0].toJSON().description.includes('Message perso du serveur'));
+  check('message perso : toujours utilisé', v2.texts(sent[0]).some((t) => t.includes('Message perso du serveur')));
   store.tickets.set(BOT, G, { ...store.tickets.get(BOT, G), message: '' });
 
   // ---------- 2bis. Nettoyage : un seul panneau à la fois ----------

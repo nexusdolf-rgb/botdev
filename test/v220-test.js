@@ -105,25 +105,70 @@ check('mono-section 4096 max non touchée', ui.embed({ description: 'x'.repeat(4
   check('suggest : les 3 compteurs inline restent groupés sur une ligne',
     embS.components.filter((k) => k.type === 10).some((k) => /\*\*📊 Statut\*\* .* · \*\*👍 Votes\*\* /.test(k.content)));
 
-  // Menu de rôles (ui.panel, v219) : contenu personnalisé structuré.
+  // v234 — le menu de rôles et le panneau tickets sont passés en Components V2 :
+  // un payload V2 n'a plus de champ `embeds`, on lit les TextDisplay du
+  // conteneur. Helpers de lecture (récursifs : Section > TextDisplay).
+  const { MessageFlags } = require('discord.js');
+  const IS_V2 = MessageFlags.IsComponentsV2;
+  const v2texts = (p) => {
+    const out = [];
+    const walk = (c) => { for (const k of (c && c.components) || []) { if (Number(k.type) === 10) out.push(String(k.content || '')); else walk(k); } };
+    walk(p.components[0].toJSON());
+    return out;
+  };
+  const v2div = (p) => p.components[0].toJSON().components.filter((k) => Number(k.type) === 14 && k.divider === true).length;
+  const v2json = (p) => JSON.stringify(p.components[0].toJSON());
+  const p2types = (p) => p.components[0].toJSON().components.map((k) => Number(k.type));
+
+  // Menu de rôles (v219 → v234 V2) : contenu personnalisé structuré.
   const panels = require('../server/discord/panels');
   const payload = panels.roleMenuPayload(BOT, {
     id: 'M1', name: 'Rôles & notifications', mode: 'select', guild_id: 'G220',
     content: 'Choisis tes rôles ci-dessous.\n\nTu peux les activer ou les retirer à tout moment.',
     options: [{ label: '🎮 Gamer', role: 'R1' }, { label: '🎨 Créatif', role: 'R2' }, { label: '🎧 Music', role: 'R3' }],
   });
-  const rmDesc = payload.embeds[0].data.description;
-  check('menu de rôles : contenu structuré', rmDesc.includes(ui.SEPARATOR) && rmDesc.includes('Choisis tes rôles ci-dessous.'));
+  const rmT = v2texts(payload);
+  check('menu de rôles : payload Components V2 (plus d’embed)',
+    (payload.flags & IS_V2) !== 0 && payload.embeds === undefined);
+  check('menu de rôles : les 2 paragraphes du contenu personnalisé sont séparés',
+    rmT.includes('Choisis tes rôles ci-dessous.') && rmT.includes('Tu peux les activer ou les retirer à tout moment.') && v2div(payload) >= 1);
+  check('menu de rôles : aucun trait texte ━ (v234)', !v2json(payload).includes(ui.SEPARATOR));
   check('menu de rôles : option « Comment ça marche » intacte',
-    payload.embeds[0].data.fields.some((f) => f.name === '🧭 Comment ça marche ?'));
+    rmT.some((t) => t.startsWith('**🧭 Comment ça marche ?**')));
+  check('menu de rôles : le menu déroulant est DANS le conteneur (V2)',
+    v2json(payload).includes('bd-menu:') && payload.components.length === 1
+    && p2types(payload).includes(1));   // 1 = ActionRow, imbriqué dans le conteneur
 
-  // Panneau tickets (i18n) : bienvenue | explication, règles en champ intact.
-  const embT = panels.buildTicketPanelEmbed({}, {}, [], 'Serveur de Hoxera', 'G220');
-  const tDesc = embT.data.description;
-  check('tickets : trait entre bienvenue et explication', tDesc.includes(ui.SEPARATOR));
-  check('tickets : texte i18n conservé', tDesc.includes('Bienvenue sur le support officiel de Serveur de Hoxera'));
-  check('tickets : règles toujours en champ (pas de trait dans le champ)',
-    embT.data.fields.some((f) => f.value.includes('🔴➡️')) && !embT.data.fields.some((f) => f.value.includes(ui.SEPARATOR)));
+  // Panneau tickets (i18n) : bienvenue | explication, règles en bloc intact.
+  const tPayload = panels.buildTicketPanel({}, {}, [], 'Serveur de Hoxera', 'G220');
+  const tT = v2texts(tPayload);
+  check('tickets : payload Components V2 (plus d’embed)',
+    (tPayload.flags & IS_V2) !== 0 && tPayload.embeds === undefined);
+  check('tickets : séparateur natif entre bienvenue et explication',
+    tT.some((t) => t.includes('Bienvenue sur le support officiel de Serveur de Hoxera')) && v2div(tPayload) >= 1);
+  check('tickets : aucun trait texte ━ (v234)', !v2json(tPayload).includes(ui.SEPARATOR));
+  check('tickets : règles toujours dans leur propre bloc (pas de trait dedans)',
+    tT.some((t) => t.includes('🔴➡️') && !t.includes(ui.SEPARATOR)));
+  check('tickets : l’espaceur invisible U+200B n’apparaît plus comme intitulé',
+    !tT.some((t) => /\*\*[\u200B-\u200F\u2060\uFEFF\s]+\*\*/.test(t)));
+  check('tickets : bannière conservée en MediaGallery pleine largeur',
+    v2json(tPayload).includes('/api/tickets/panel-banner/'));
+  const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+  const fakeRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('ROW_TEST').setLabel('test').setStyle(ButtonStyle.Primary));
+  const withRows = panels.buildTicketPanel({}, {}, [], 'S', 'G', [fakeRow]);
+  check('tickets : les boutons/menus sont DANS le conteneur (rows en 6e argument)',
+    withRows.components.length === 1 && v2json(withRows).includes('ROW_TEST')
+    && p2types(withRows).includes(1));
+
+  // Le nettoyage des anciens panneaux doit reconnaître les DEUX formats, sinon
+  // les panneaux V2 ne seraient jamais remplacés et s'accumuleraient.
+  const panelsSrc = fs.readFileSync(path.join(__dirname, '..', 'server', 'discord', 'panels.js'), 'utf8');
+  check('pruneOldPanels : lecture du titre compatible V2 (panelTitleOf)',
+    /function panelTitleOf\(msg\)/.test(panelsSrc) && /const title = panelTitleOf\(msg\);/.test(panelsSrc)
+    && !/const emb = msg\.embeds && msg\.embeds\[0\];/.test(panelsSrc));
+  check('sendRoleMenu : édition d’un ancien message classique → champs vidés',
+    /existing\.edit\(\{ \.\.\.payload, content: null, embeds: \[\], attachments: \[\] \}\)/.test(panelsSrc));
 
   console.log('\n4️⃣  Couverture des autres panneaux');
   const src = (f) => fs.readFileSync(path.join(__dirname, '..', 'server', 'discord', f), 'utf8');

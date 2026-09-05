@@ -381,7 +381,11 @@ function panelBannerUrl(guildId, name) {
   return `${site}/api/tickets/panel-banner/${encodeURIComponent(guildId || '0')}.png?v=4&n=${encodeURIComponent(String(name || '').slice(0, 60))}`;
 }
 
-function buildTicketPanelEmbed(cfg, client, types, serverName = '', guildId = '') {
+// v234 — retourne désormais un PAYLOAD Components V2 (et non plus un
+// EmbedBuilder) : les traits deviennent des séparateurs natifs pleine largeur.
+// `rows` doit être passé ICI car en V2 les lignes de boutons/menus vont DANS le
+// conteneur, pas au niveau du message.
+function buildTicketPanel(cfg, client, types, serverName = '', guildId = '', rows = []) {
   const name = String(serverName || '').trim().slice(0, 100) || PANEL_DEFAULT_NAME;
   // 🌍 Textes dans la langue du serveur
   const lang = i18n.langForGuild(guildId);
@@ -391,40 +395,62 @@ function buildTicketPanelEmbed(cfg, client, types, serverName = '', guildId = ''
   const customMsg = isDefaultMessage(cfg.message) ? '' : String(cfg.message);
   const paragraph = customMsg || P.desc;
 
-  const embed = new EmbedBuilder()
-    .setColor('#ED4245')
-    .setAuthor({ name: `${name} · Centre d'assistance` })
-    .setTitle(P.title(name))
-    .setDescription(ui.sectionize(`${P.welcome(name)}\n\n${paragraph}`))
-    .addFields(
-      { name: P.infoTitle, value: P.rules.join('\n') },
-      { name: '\u200b', value: P.patience },
-    )
-    // 🖼️ Image du panneau : image importée par l'utilisateur (v198) si présente,
-    // sinon bannière « SUPPORT - {nom du serveur} » générée par le site.
-    .setImage(String(cfg.image_url || '').trim() || panelBannerUrl(guildId, name))
-    .setFooter({ text: `Hoxera · ${name} · Sélectionne une option pour commencer` })
-    .setTimestamp();
+  const fields = [
+    { name: P.infoTitle, value: P.rules.join('\n') },
+    // Espaceur hérité des embeds : ui.v2panel n'affiche que la valeur (v234).
+    { name: '\u200b', value: P.patience },
+  ];
   if (types && types.length) {
-    embed.addFields({
+    fields.push({
       name: '🗂️ Types disponibles',
       value: types.slice(0, 25).map((t) => `${t.emoji || '🎫'} **${t.label}**${t.questions && t.questions.length ? ` · ❓ ${t.questions.length}` : ''}`).join('\n').slice(0, 1024),
       inline: false,
     });
   }
-  return embed;
+  return ui.v2panel({
+    color: '#ED4245',
+    author: { name: `${name} · Centre d'assistance` },
+    title: P.title(name),
+    // sectionize() n'est plus appelé : v2panel découpe lui-même les paragraphes
+    // et pose des séparateurs NATIFS entre eux.
+    description: `${P.welcome(name)}\n\n${paragraph}`,
+    fields,
+    // 🖼️ Image du panneau : image importée par l'utilisateur (v198) si
+    // présente, sinon bannière « SUPPORT - {nom} » générée par le site.
+    // C'est une URL HTTP (pas une pièce jointe) → MediaGallery compatible.
+    image: String(cfg.image_url || '').trim() || panelBannerUrl(guildId, name),
+    footer: `Hoxera · ${name} · Sélectionne une option pour commencer`,
+  }, rows);
 }
 
 // 🧹 Nettoie les anciens panneaux de tickets du salon (titre « 👑 Support | »)
 // pour qu'il n'y ait TOUJOURS qu'un seul panneau : le plus récent.
+// v234 — Titre d'un message de panneau, quel que soit son format.
+// Les panneaux DÉJÀ en place dans les salons sont des embeds classiques
+// (msg.embeds[0].title) ; ceux envoyés depuis la v234 sont des conteneurs
+// Components V2 dont le titre est un TextDisplay « ## … ». Sans cette double
+// lecture, le nettoyage ne verrait plus les nouveaux panneaux et ils
+// s'accumuleraient en doublons.
+function panelTitleOf(msg) {
+  try {
+    const emb = msg && msg.embeds && msg.embeds[0];
+    if (emb && emb.title) return String(emb.title);
+    const top = msg && msg.components && msg.components[0];
+    if (!top) return '';
+    const json = typeof top.toJSON === 'function' ? top.toJSON() : top;
+    if (!json || Number(json.type) !== 17) return '';
+    const t = (json.components || []).find((k) => Number(k.type) === 10 && String(k.content || '').startsWith('## '));
+    return t ? String(t.content).replace(/^##\s*/, '') : '';
+  } catch { return ''; }
+}
+
 async function pruneOldPanels(channel, kind = '') {
   try {
     if (!channel || !channel.messages || typeof channel.messages.fetch !== 'function') return;
     const fetched = await channel.messages.fetch({ limit: 25 });
     for (const msg of fetched.values()) {
       try {
-        const emb = msg.embeds && msg.embeds[0];
-        const title = emb && emb.title;
+        const title = panelTitleOf(msg);
         if (!title || !String(title).startsWith('👑 Support |') || typeof msg.delete !== 'function') continue;
         // 🎛️ On ne supprime que les panneaux du MÊME genre : le panneau
         // bouton et le panneau menu peuvent vivre côte à côte.
@@ -495,7 +521,8 @@ async function sendTicketPanel(botId, guildId, client, channel, mode = 'auto') {
 
   // 🖼️ Envoi immédiat : la bannière STATIQUE est générée par la route
   // (~1 s, mise en cache) — aucune attente, aucune charge ici.
-  const payload = { embeds: [buildTicketPanelEmbed(cfgForEmbed, client, types, serverName, guildId)], components: rows };
+  // v234 — rows est passé au constructeur : en V2 les boutons vont DANS le conteneur.
+  const payload = buildTicketPanel(cfgForEmbed, client, types, serverName, guildId, rows);
   if (guild) {
     await identity.sendAsProfile(client, botId, guild, channel, payload);
   } else {
@@ -965,11 +992,16 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
       const openerUser = await interaction.client.users.fetch(member.id);
       const lang = i18n.langForGuild(guild.id);
       const ticketTitle = chosen ? `${chosen.emoji ? chosen.emoji + ' ' : ''}${chosen.label}` : 'Support';
-      const dmEmbed = ui.embed({
+      const ticketLink = new ButtonBuilder()
+        .setStyle(ButtonStyle.Link)
+        .setLabel('🎫 Ouvrir mon ticket')
+        .setURL(`https://discord.com/channels/${guild.id}/${channel.id}`);
+      // v234 — payload Components V2 : le bouton-lien va DANS le conteneur.
+      const dmPayload = ui.v2panel({
         color: chosen && chosen.color ? chosen.color : ui.COLORS.ticket,
         title: '🎫 Ton ticket est ouvert',
-        // DM de confirmation COURS : pas de trait plaqué entre les phrases —
-        // il garde ses sauts de paragraphe naturels.
+        // DM de confirmation COURT : pas de séparateur plaqué entre les
+        // phrases — il garde ses sauts de paragraphe naturels.
         sections: false,
         description: `Ta demande sur **${guild.name}** a bien été créée.
 
@@ -982,12 +1014,8 @@ Notre équipe va te répondre dans le salon privé prévu pour toi.`,
         ],
         footer: `Hoxera · ${guild.name} · ${i18n.t(lang, 'footer_tickets')}`,
         thumbnail: interaction.client.user && interaction.client.user.displayAvatarURL ? interaction.client.user.displayAvatarURL({ size: 128 }) : '',
-      });
-      const ticketLink = new ButtonBuilder()
-        .setStyle(ButtonStyle.Link)
-        .setLabel('🎫 Ouvrir mon ticket')
-        .setURL(`https://discord.com/channels/${guild.id}/${channel.id}`);
-      await openerUser.send({ embeds: [dmEmbed], components: [new ActionRowBuilder().addComponents(ticketLink)] });
+      }, [new ActionRowBuilder().addComponents(ticketLink)]);
+      await openerUser.send(dmPayload);
     }
   } catch {
     dmWarning = '\n⚠️ **Mes messages privés ne t\'atteignent pas** : active « Autoriser les messages privés des membres du serveur » (Réglages Discord → Confidentialité) si tu veux recevoir la transcription à la fermeture.';
@@ -1418,7 +1446,7 @@ async function handleTicketClose(botId, interaction) {
   store.closedTickets.add(channel.id, botId, guild.id);
   store.openTickets.update(channel.id, { closed_at: new Date().toISOString() });
   bumpTicketStats(guild.id, 0, -1);
-  await channel.send(ui.panel({
+  await channel.send(ui.v2panel({
     variant: 'danger',
     title: '🔒 Ticket fermé',
     description: 'Le ticket est maintenant verrouillé. Le créateur ne peut plus écrire, mais le staff peut encore le réouvrir.',
@@ -1454,7 +1482,7 @@ async function handleTicketReopen(botId, interaction) {
   if (openerId) {
     await channel.permissionOverwrites.edit(openerId, { ViewChannel: true, SendMessages: true }).catch(() => {});
   }
-  await channel.send(ui.panel({
+  await channel.send(ui.v2panel({
     variant: 'success',
     title: '🔓 Ticket réouvert',
     description: 'Le créateur peut de nouveau répondre. Le staff peut reprendre le traitement du ticket.',
@@ -1484,7 +1512,7 @@ async function handleTicketClaim(botId, interaction) {
     claimed_at: new Date().toISOString(),
   });
   store.activity.add(botId, guild.id, '🖐️', `Ticket #${row.number} pris en charge par ${interaction.user.tag}`);
-  await channel.send(ui.panel({
+  await channel.send(ui.v2panel({
     variant: 'success',
     title: '🖐️ Ticket pris en charge',
     description: i18n.t(lang, 'ticket_claim_msg', { staff: `${interaction.user}` }),
@@ -1567,17 +1595,15 @@ async function sendRatingDm(client, guild, openerId, number, lang) {
       .setStyle(n >= 4 ? ButtonStyle.Success : ButtonStyle.Secondary))
   );
   try {
-    await user.send({
-      embeds: [ui.embed({
-        variant: 'warning',
-        title: `⭐ ${i18n.t(lang, 'ticket_rating_title')}`,
-        description: i18n.t(lang, 'ticket_rating_desc', { number, server: guild.name }),
-        fields: [{ name: '🧭 Comment noter ?', value: 'Choisis une note ci-dessous. Ton avis aide le staff à améliorer le support.' }],
-        footer: `Hoxera · Ticket #${number} · Évaluation du support`,
-        thumbnail: client && client.user && client.user.displayAvatarURL ? client.user.displayAvatarURL({ size: 128 }) : '',
-      })],
-      components: [row],
-    });
+    // v234 — payload V2 : la rangée d'étoiles 1-5 va DANS le conteneur.
+    await user.send(ui.v2panel({
+      variant: 'warning',
+      title: `⭐ ${i18n.t(lang, 'ticket_rating_title')}`,
+      description: i18n.t(lang, 'ticket_rating_desc', { number, server: guild.name }),
+      fields: [{ name: '🧭 Comment noter ?', value: 'Choisis une note ci-dessous. Ton avis aide le staff à améliorer le support.' }],
+      footer: `Hoxera · Ticket #${number} · Évaluation du support`,
+      thumbnail: client && client.user && client.user.displayAvatarURL ? client.user.displayAvatarURL({ size: 128 }) : '',
+    }, [row]));
     return true;
   } catch { return false; }
 }
@@ -1611,7 +1637,7 @@ async function handleTicketHold(botId, interaction) {
   if (openerId) {
     await channel.permissionOverwrites.edit(openerId, { ViewChannel: true, SendMessages: false }).catch(() => {});
   }
-  await channel.send(ui.panel({
+  await channel.send(ui.v2panel({
     variant: 'warning',
     title: '⏸ Ticket mis en attente',
     description: 'Le ticket est temporairement en pause. Le créateur ne peut plus écrire jusqu’à la reprise du traitement.',
@@ -2249,15 +2275,18 @@ async function handleTypesWizardInteraction(botId, interaction) {
 function roleMenuPayload(botId, menu) {
   const panelOptions = (menu.options || []).slice(0, 25);
   const rolePanel = (components) => {
-    const payload = ui.panel({
+    // v234 — les boutons/menus passent en 2e argument : `payload.components =
+    // components` APRÈS coup écrasait le conteneur en V2 (les lignes doivent
+    // être DEDANS).
+    return ui.v2panel({
       variant: 'brand',
       title: `📋 ${menu.name || 'Rôles du serveur'}`,
+      // sections par défaut : le contenu personnalisé peut comporter des
+      // paragraphes → séparateurs natifs pleine largeur.
       description: menu.content || 'Choisis tes rôles ci-dessous. Tu peux les activer ou les retirer à tout moment.',
       fields: [{ name: '🧭 Comment ça marche ?', value: menu.mode === 'buttons' ? 'Clique sur un bouton pour recevoir ou retirer le rôle correspondant.' : 'Sélectionne un ou plusieurs rôles dans le menu déroulant.' }],
       footer: `Hoxera · ${panelOptions.length} rôle(s) disponible(s)`,
-    });
-    payload.components = components;
-    return payload;
+    }, components);
   };
   if (menu.mode === 'buttons') {
     const rows = [];
@@ -2319,7 +2348,10 @@ async function sendRoleMenu(botId, client, menu, channel) {
   const existing = await findSentRoleMessage(client, menu);
   if (existing) {
     try {
-      const edited = await existing.edit(payload);
+      // v234 — le message déjà en place a pu être envoyé en embed classique
+      // (avant cette version). Discord exige alors content/embeds/attachments
+      // explicitement vidés pour basculer un message existant en Components V2.
+      const edited = await existing.edit({ ...payload, content: null, embeds: [], attachments: [] });
       if (edited && edited.id) {
         store.roleMenus.setMessage(menu.id, edited.id, edited.channel ? edited.channel.id : menu.message_channel);
       }
@@ -2519,14 +2551,16 @@ async function sweepInactiveTickets(botId, entry, now = new Date()) {
             store.closedTickets.add(channel.id, botId, row.guild_id);
             store.openTickets.update(channel.id, { closed_at: now.toISOString(), warned_inactive: 0 });
             bumpTicketStats(row.guild_id, 0, -1);
-            const autoClosedPanel = ui.panel({
+            // v234 — payload V2. Le texte était posé DEUX FOIS (content du
+            // message + description de l'embed) : duplication supprimée, seule
+            // la description dans le conteneur est conservée.
+            const autoClosedPanel = ui.v2panel({
               variant: 'danger',
               title: '⏰ Ticket fermé automatiquement',
               description: i18n.t(lang, 'ticket_auto_closed'),
               fields: [{ name: '⌛ Motif', value: 'Aucune activité pendant 2 heures.', inline: true }, { name: '📄 Suite', value: 'Le ticket pourra être supprimé automatiquement après le délai prévu.', inline: true }],
               footer: `Hoxera · Ticket #${row.number} · Fermeture automatique`,
             });
-            autoClosedPanel.content = i18n.t(lang, 'ticket_auto_closed');
             await channel.send(autoClosedPanel).catch(() => {});
             try {
               await logging.log(botId, guild, {
@@ -2540,14 +2574,16 @@ async function sweepInactiveTickets(botId, entry, now = new Date()) {
           } else if (inactiveMin >= INACTIVE_CLOSE_MIN - INACTIVE_WARN_BEFORE_MIN && !row.warned_inactive) {
             // Rappel 10 min avant la fermeture
             store.openTickets.update(channel.id, { warned_inactive: 1 });
-            const autoWarnPanel = ui.panel({
+            // v234 — payload V2. Le texte était posé DEUX FOIS (content du
+            // message + description de l'embed) : duplication supprimée, seule
+            // la description dans le conteneur est conservée.
+            const autoWarnPanel = ui.v2panel({
               variant: 'warning',
               title: '⚠️ Ticket bientôt fermé',
               description: i18n.t(lang, 'ticket_auto_warn'),
               fields: [{ name: '⏳ Inactivité', value: 'Le ticket sera fermé si aucune réponse n’arrive.', inline: true }, { name: '💬 Action', value: 'Un nouveau message remet le délai à zéro.', inline: true }],
               footer: `Hoxera · Ticket #${row.number} · Rappel automatique`,
             });
-            autoWarnPanel.content = i18n.t(lang, 'ticket_auto_warn');
             await channel.send(autoWarnPanel).catch(() => {});
           }
         } else {
@@ -2560,14 +2596,16 @@ async function sweepInactiveTickets(botId, entry, now = new Date()) {
             await sendTranscriptDm(entry.client, guild, channel.name || '', t, botId);
             store.openTickets.remove(channel.id);
             try { store.advancedTickets.unbindChannel(channel.id); } catch {}
-            const autoDeletedPanel = ui.panel({
+            // v234 — payload V2. Le texte était posé DEUX FOIS (content du
+            // message + description de l'embed) : duplication supprimée, seule
+            // la description dans le conteneur est conservée.
+            const autoDeletedPanel = ui.v2panel({
               variant: 'danger',
               title: '🗑️ Ticket supprimé automatiquement',
               description: i18n.t(lang, 'ticket_auto_deleted'),
               fields: [{ name: '📄 Transcription', value: 'Elle a été préparée et envoyée au créateur si ses MP sont ouverts.', inline: true }],
               footer: `Hoxera · Ticket #${row.number} · Suppression automatique`,
             });
-            autoDeletedPanel.content = i18n.t(lang, 'ticket_auto_deleted');
             await channel.send(autoDeletedPanel).catch(() => {});
             setTimeout(() => { channel.delete('Ticket fermé depuis plus de 24 h').catch(() => {}); }, 1500);
             try {
@@ -2637,11 +2675,14 @@ async function buildTranscriptFromChannel(botId, channel, guild, extraLines = []
 module.exports = {
   normDecorName, findCategoryFuzzy, findCategoryRef,
   dispatchPanels, sendTicketPanel, sendRoleMenu, roleMenuPayload, findChannel, findChannelInGuild, bumpTicketStats,
-  buildTicketPanelEmbed,
+  buildTicketPanel,
   resolveRole, roleKey, uniqueRoleRefs, staffRoleRefsForConfig, parseTypes, isStaff, staffForTicket, openTicket, safeEmoji,
   parentIdOf, panelParentOf, panelChannelOf, repairTicketChannel,
   startTypesWizard, handleTypesWizardInteraction,
   handleTicketDeleteAsk, ticketMetaFor, ticketWelcomeEmbed, readRoomCfg, typeOptionDescription, normalizeTypes,
   sendTranscriptDm, sweepInactiveTickets, buildTranscriptFromChannel, sendRatingDm,
   __testPanelBannerUrl: panelBannerUrl,
+  // v234 — exposé pour les tests : pruneOldPanels doit reconnaître les panneaux
+  // classiques ET les conteneurs Components V2, sinon les doublons s'accumulent.
+  __testPanelTitleOf: panelTitleOf,
 };

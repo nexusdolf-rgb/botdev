@@ -24,6 +24,9 @@ const check = (label, cond) => {
   const store = require('../server/db');
   const i18n = require('../server/i18n');
   const panels = require('../server/discord/panels');
+  // v234 — lecteur de payload Components V2 (les embeds[0] n'existent plus).
+  const v2 = require('./helpers/v2');
+
   const BOT = 1, G = 'G1';
   store.settings.set('public_url', 'https://dash-hoxora.onrender.com');
   store.tickets.set(BOT, G, { require_reason: 1, support_role: 'Staff', channel: '#support', types: '[]' });
@@ -51,15 +54,15 @@ const check = (label, cond) => {
   const client = { guilds: { cache: { get: () => ({ name: 'Carré RP' }) } } };
   store.guildSettings.set(BOT, G, { lang: 'en' });
   await panels.sendTicketPanel(BOT, G, client, fakeChannel);
-  const embedEn = sent[0].embeds[0].toJSON();
-  check('panneau EN : titre traduit', embedEn.title === '👑 Support | Carré RP');
-  check('panneau EN : bienvenue traduite', embedEn.description.startsWith('Welcome to the official support of Carré RP'));
-  check('panneau EN : règle traduite', JSON.stringify(embedEn.fields).includes('Be clear and precise'));
-  check('panneau EN : patience traduite', JSON.stringify(embedEn.fields).includes('Thank you for your patience'));
+  // v234 — lecture Components V2.
+  const textsEn = v2.texts(sent[0]);
+  check('panneau EN : titre traduit', v2.title(sent[0]) === '👑 Support | Carré RP');
+  check('panneau EN : bienvenue traduite', textsEn.includes('Welcome to the official support of Carré RP'));
+  check('panneau EN : règle traduite', textsEn.some((t) => t.includes('Be clear and precise')));
+  check('panneau EN : patience traduite', textsEn.some((t) => t.includes('Thank you for your patience')));
   store.guildSettings.set(BOT, G, { lang: 'fr' });
   await panels.sendTicketPanel(BOT, G, client, fakeChannel);
-  const embedFr = sent[1].embeds[0].toJSON();
-  check('panneau FR : bienvenue française', embedFr.description.startsWith('Bienvenue sur le support officiel'));
+  check('panneau FR : bienvenue française', v2.texts(sent[1]).some((t) => t.startsWith('Bienvenue sur le support officiel')));
 
   // ---------- 4. Embed de bienvenue du ticket ----------
   const member = { id: 'u2', user: { id: 'u2', username: 'Bob', displayAvatarURL: () => '' }, toString: () => '<@u2>' };

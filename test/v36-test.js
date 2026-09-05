@@ -22,6 +22,9 @@ const check = (label, cond) => {
 (async () => {
   const store = require('../server/db');
   const panels = require('../server/discord/panels');
+  // v234 — lecteur de payload Components V2 (les embeds[0] n'existent plus).
+  const v2 = require('./helpers/v2');
+
   const botManager = require('../server/discord/botManager');
   const BOT = 1, G = 'G1';
 
@@ -53,23 +56,26 @@ const check = (label, cond) => {
   check('panneau : emojis des types dans le menu', payloadJson.includes('🤝') && payloadJson.includes('⚔️'));
   check('panneau : texte court et professionnel', payloadJson.includes('type de ticket') && !payloadJson.includes('Tu as une question, un problème'));
   // 🎨 Nouveau panneau visuel « Optimus Prime » (référence)
-  const panelEmbed = sent[0].embeds[0].toJSON();
-  const fields = panelEmbed.fields || [];
-  check('panneau : titre « 👑 Support | Optimus Prime »', String(panelEmbed.title).includes('Support | Hoxera'));
-  check('panneau : « Bienvenue sur le support officiel de Optimus Prime »', String(panelEmbed.description).includes('Bienvenue sur le support officiel de Hoxera'));
-  check('panneau : description « sélectionnez la catégorie… »', String(panelEmbed.description).includes('sélectionnez la catégorie correspondante'));
-  check('panneau : « ⓘ Informations importantes : » souligné', fields.some((f) => String(f.name).includes('Informations importantes') && String(f.name).includes('__')));
-  const rulesVal = String((fields.find((f) => String(f.name).includes('Informations')) || {}).value || '');
+  // v234 — payload Components V2 : plus de champ `embeds`, chaque bloc est un
+  // TextDisplay du conteneur. L'INTENTION des assertions est inchangée.
+  const panelTexts = v2.texts(sent[0]);
+  check('panneau : titre « 👑 Support | Optimus Prime »', v2.title(sent[0]).includes('Support | Hoxera'));
+  check('panneau : « Bienvenue sur le support officiel de Optimus Prime »', panelTexts.some((t) => t.includes('Bienvenue sur le support officiel de Hoxera')));
+  check('panneau : description « sélectionnez la catégorie… »', panelTexts.some((t) => t.includes('sélectionnez la catégorie correspondante')));
+  check('panneau : « ⓘ Informations importantes : » souligné', panelTexts.some((t) => t.includes('Informations importantes') && t.includes('__')));
+  const rulesVal = panelTexts.find((t) => t.includes('Informations importantes')) || '';
   check('panneau : règle 1 (clair et précis)', rulesVal.includes('Soyez clair et précis'));
   check('panneau : règle 2 (respect du staff)', rulesVal.includes('manque de respect'));
   check('panneau : règle 3 (mentions)', rulesVal.includes('mentions inutiles'));
   check('panneau : règle 4 (tickets inactifs 2 h)', rulesVal.includes('inactifs pendant 2 heures'));
   check('panneau : flèches rouges 🔴➡️ sur les règles', (rulesVal.match(/🔴➡️/g) || []).length === 4);
-  const patienceVal = String((fields.find((f) => String(f.value).includes('patience')) || {}).value || '');
+  // v234 — le champ « espaceur invisible » U+200B ne produit plus d'intitulé :
+  // le bloc ne contient QUE la valeur, d'où le startsWith toujours valable.
+  const patienceVal = panelTexts.find((t) => t.includes('patience')) || '';
   check('panneau : message de patience en italique', patienceVal.startsWith('*⏳ Merci de votre patience'));
-  check('panneau : bannière en image (route dynamique)', String(panelEmbed.image && panelEmbed.image.url).includes('/api/tickets/panel-banner/G1.'));
+  check('panneau : bannière en MediaGallery (route dynamique)', String(v2.mediaUrls(sent[0])[0] || '').includes('/api/tickets/panel-banner/G1.'));
   // 🧹 Menu déroulant épuré : emoji + nom uniquement, AUCUNE description dessous
-  const select = sent[0].components[0].components[0].toJSON();
+  const select = v2.controlByPrefix(sent[0], 'bd-ttype');
   check('menu : un seul menu, options sans description', select.options.length === 2 && select.options.every((o) => !o.description));
   check('menu : custom_id intact', String(select.custom_id) === `bd-ttype:${BOT}`);
   check('menu : emojis conservés', select.options[0].emoji && select.options[1].emoji);
