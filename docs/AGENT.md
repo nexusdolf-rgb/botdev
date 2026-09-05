@@ -195,11 +195,49 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **v226** : commandes triées par public visé (`commandKind` : public / staff / admin)
   → `default_member_permissions` à l'enregistrement + `/help` filtré (`HELP_BLOCKS`).
 - **v227** : identité par serveur — aperçu dashboard unifié photo/bannière/nom.
-- **v228 (ACTUELLE, 05/09 — reprise par un nouvel agent)** : correctif de la seule
+- **v228 (05/09 — reprise par un nouvel agent)** : correctif de la seule
   erreur visible dans `/api/health/bot` (« Cannot read properties of null (reading
   'tag') ») : un message supprimé **partiel** (pas en cache) n'a pas d'auteur →
   `trackDeleted` (/snipe, `extra.js`) plantait ; idem `tasks.js` (`member.user.tag`).
   Gardes ajoutées, test `test/v228-test.js`, docs remises à jour (v194 → v228).
+- **v229 (ACTUELLE, 05/09)** : **le système de traits ━ (v220) est mené à son
+  terme.** Audit exhaustif des messages Discord construits HORS design system
+  (13 candidats trouvés, 1 faux positif : `guildEvents.js` passe déjà par
+  `ui.panel`, donc `sectionize` s'y applique déjà tout seul).
+  ⚖️ **CRITÈRE OFFICIEL (v220 précisé par v229 — à ne jamais perdre de vue) :**
+  ce n'est PAS « jeu interactif = pas de trait », mais **« jamais de trait entre
+  deux COURTES phrases »**. Le trait s'applique dès qu'il y a **≥ 3 blocs
+  substantiels**, ou 2 blocs dont au moins un est dense.
+  **10 messages reçoivent le trait** :
+  1) `/apply view` (`extra.js`, `content:`) — récapitulatif → instruction finale ;
+  2) `/ticket types` type mis à jour (`panelCommands.js`, 3 traits) ;
+  3) `/ticket types` type ajouté (`panelCommands.js`) ;
+  4) assistant types, étape « Questionnaire » (`panels.js`) ;
+  5) `/levels` classement des niveaux (`premade.js`) — en-tête → liste ;
+  6) `/botprofile` identité mise à jour (`profileCommands.js`, 2 traits) ;
+  7) `/botprofile` avatar/bannière enregistré (`profileCommands.js`) ;
+  8) `/botprofile setup` mode d'emploi de la galerie (`profileWizard.js`, 2 traits) ;
+  9) `/quiz` **lancement** (`extra.js`, 2 traits) — question / réponses A-B-C /
+     bonus de rapidité = 3 blocs substantiels ;
+  10) `/quiz` **résultat** (`extra.js`, 2 à 3 traits) — ⚠️ les DEUX messages du
+     quiz doivent être traités ensemble : le résultat remplace le lancement via
+     `interaction.update()`, sinon le message « saute » visuellement au clic.
+  → `panelCommands.js`, `profileCommands.js` et `profileWizard.js` **importent
+  désormais `ui.js`** (ils ne le faisaient pas).
+  **EXCLUSIONS VOLONTAIRES verrouillées** (commentaire `EXCLUSION VOLONTAIRE`
+  dans le code + assertions du test — ne JAMAIS les « corriger ») :
+  • **`/poll`** : chaque paragraphe EST une option de vote → 10 choix feraient
+    **9 traits** et hacheraient le vote. (Alternative propre si un jour on veut
+    aérer : un **champ d'embed par choix**, comme `/shop` — la limite Discord
+    est de 25 champs, le sondage plafonne à 10 choix, donc aucun risque.)
+  • **`/shop`** : 2 phrases courtes → **trait orphelin** (bug corrigé en v220).
+  • **mariage, pendu, morpion** : 2 phrases courtes chacun + mises à jour live à
+    chaque tour → `sections: false` (héritage v220, inchangé).
+  Garde-fous v220 revérifiés : `extra.js` garde ses 5 `sections: false`, aucun
+  ━ texte dans les panneaux natifs Container V2 (`SeparatorBuilder` ≥ 3).
+  156 tests verts (`test/v229-test.js`, 47 assertions). Bump cache v229
+  (`?v=229` ×7 + `botdev-v229`) ; les 7 `DATA_DIR` `botdev-v228-${Date.now()}`
+  des tests sont laissés intacts volontairement.
 - **v192** : **CORRECTIF aperçu des annonces de live**. L'aperçu de la
   carte « Annonces de live » affichait un pseudo d'exemple codé en dur
   (« 93_vlz est en live ! ») sur TOUS les serveurs — confondu avec un compte
@@ -333,20 +371,55 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 
 ## 📌 ÉTAT AU 05/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v228** — voir la section v228 ci-dessus. **155 tests verts**.
-- Prod : https://hoxera.is-a.dev en **v228**, bot « Optimus Prime » en ligne,
-  **8 serveurs / 188 membres**, sauvegardes GitHub OK toutes les 10 min, CI verte.
-- Passation : l'agent précédent a été arrêté par une **limite de contexte** (fil
-  trop long). Le nouvel agent a : cloné, `npm install`, `check.sh` 🟢 (154 → 155),
-  vérifié la prod, corrigé la seule erreur de santé, livré v228.
+- Dernière version : **v229** — voir la section v229 ci-dessus. **156 tests verts**.
+- Prod : https://hoxera.is-a.dev, bot « Optimus Prime » en ligne,
+  **8 serveurs / 189 membres**, **0 erreur 24 h**, sauvegardes GitHub OK
+  toutes les 10 min, CI verte, service Render « hoxera » non suspendu (Oregon).
+- 🔑 **Rotation des secrets faite par l’utilisateur le 05/09 ~12h00** : token du
+  bot Discord, `DISCORD_CLIENT_SECRET` et `BOTDEV_GH_TOKEN` ont été changés puis
+  reportés dans les variables Render par l’utilisateur lui-même → Render a
+  redémarré à **12h01** et le bot s’est reconnecté avec le nouveau token
+  (`/api/health/bot` : `ready: true`). L’ancien token GitHub fine-grained est
+  révoqué (401). **Vérifier ces 3 variables avant tout diagnostic de connexion.**
+- Passation : l’agent v228 a été arrêté par une **limite de contexte**. Le nouvel
+  agent a : cloné les 2 dépôts, `npm install`, `check.sh` 🟢 (155), vérifié la prod
+  et les tokens, puis livré v229.
 - 31 commandes slash globales (5 « premade » à sous-commandes + 25 « extra » +
   `/event`) + ~36 commandes de modules (kick, ban, ping, meme, daily, rank,
   giveaway…) — total loin de la limite Discord de 100.
 - Dashboard : 22 modules serveur + 5 modules bot (`Dashboard.MODULES` /
   `Dashboard.BOT_MODULES` dans `public/js/dashboard.js`), 142 routes API.
 - ⚠️ Token GitHub fine-grained fourni le 05/09 : expire le **04/12/2026**.
-- ⏳ Toujours en attente utilisateur : renommer le rôle « Nexora » à la main sur les
-  serveurs concernés (piège n°4).
+- ⏳ Toujours en attente utilisateur : renommer le rôle « Nexora » à la main sur
+  les serveurs concernés (piège n°4).
+
+### ⚠️ Avant de lancer une copie locale du projet (vérifié le 05/09)
+
+Piège n°7 : **jamais 2 services actifs avec le même token**. Trois garde-fous :
+1. **Le token du bot est stocké DANS la base** (`bots.token`), pas seulement en
+   variable d’environnement. Une copie locale démarrée sur une base restaurée de
+   prod se connecterait à Discord avec le token réel → **Discord déconnecte le bot
+   de production**. Neutraliser d’abord : `UPDATE bots SET token=''`.
+2. Sans `BOTDEV_GH_TOKEN` / `BOTDEV_DATA_REPO`, `backup.enabled()` est faux → la
+   copie locale **ne peut ni restaurer ni écraser** les sauvegardes de prod.
+   Ne jamais renseigner ces deux variables en local.
+3. `app.listen(PORT, '0.0.0.0')` → choisir un `PORT` libre.
+- Le dashboard **exige une connexion Discord live** pour charger un serveur
+  (`GET /api/bots/:id/guilds/:guildId` → « Le bot n’est pas sur ce serveur »), mais
+  la **liste** des serveurs vient du cache base (`users.discord_guilds`) donc
+  `/api/discord/guilds` répond sans connexion. Pour un aperçu local complet,
+  suivre le patron des tests : `botManager.clients.set(1, { client: {…}, startedAt })`
+  (voir `test/v128-test.js`, `test/v218-test.js`).
+- Connexion OAuth **impossible depuis un aperçu sandbox** : l’URI de redirection
+  Discord pointe vers la prod. Injecter plutôt une session (`INSERT INTO sessions`
+  + cookie `botdev_session`).
+- `scripts/gen-apercu-galerie.js` génère une galerie HTML de tous les panneaux
+  (rendu réel depuis les builders) → **l’outil de référence pour tout travail
+  visuel sur les messages Discord** (utilisé pour l’audit v229).
+
+### État précédent (v228, 05/09) — conservé pour mémoire
+
+- Dernière version : **v228** — **155 tests verts**.
 
 ### État précédent (01/09/2026) — conservé pour mémoire
 

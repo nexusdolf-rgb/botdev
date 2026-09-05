@@ -512,12 +512,19 @@ async function handleSlash(botId, entry, interaction) {
       }
       const choices = [correct, ...wrongs].sort(() => Math.random() - 0.5);
       const correctIdx = choices.indexOf(correct);
+      // v229 — GRAMMAIRE DES SECTIONS APPLIQUÉE au quiz.
+      // Le critère retenu n'est PAS « jeu = pas de trait » mais, comme en v220,
+      // « jamais de trait entre deux COURTES phrases ». Le quiz affiche ici
+      // 3 blocs substantiels (question / 3 réponses A-B-C / bonus de rapidité)
+      // → le trait les sépare utilement. Mariage, pendu et morpion restent en
+      // sections:false : 2 phrases courtes chacun + mises à jour live à chaque
+      // tour, le trait y produirait l'effet « orphelin » corrigé en v220.
       const embed = new EmbedBuilder()
         .setColor(0xe07a5f)
         .setTitle('🧠 Quiz')
         // Les 3 réponses sont TOUJOURS affichées sous la question (A/B/C) —
         // sinon le joueur ne peut pas choisir en connaissance de cause.
-        .setDescription(`**${question}**\n\n🇦 **${choices[0]}**\n🇧 **${choices[1]}**\n🇨 **${choices[2]}**\n\n⚡ Réponds vite : **+${bonus} points bonus** si tu réponds en moins de **${bonusWindow} secondes** !`)
+        .setDescription(ui.sectionize(`**${question}**\n\n🇦 **${choices[0]}**\n🇧 **${choices[1]}**\n🇨 **${choices[2]}**\n\n⚡ Réponds vite : **+${bonus} points bonus** si tu réponds en moins de **${bonusWindow} secondes** !`, 4096))
         .setFooter({ text: `Hoxera · ${guild.name} · Quiz` })
         .setTimestamp();
       // Préfixe `hx:quiz:` → routé par handleButton (comme hx:poll, hx:pendu…).
@@ -808,7 +815,7 @@ async function handleSlash(botId, entry, interaction) {
       }
       if (action === 'view') {
         return interaction.reply({
-          content: `📝 **Candidatures**\nSalon : ${cfg.channel ? `<#${cfg.channel}>` : '❌ non défini'}\nQuestions (${questions.length}/5) :\n${questions.map((q, i) => `${i + 1}. ${q}`).join('\n') || '*aucune*'}\n\nEnvoie le panneau avec \`/apply panel\``,
+          content: ui.sectionize(`📝 **Candidatures**\nSalon : ${cfg.channel ? `<#${cfg.channel}>` : '❌ non défini'}\nQuestions (${questions.length}/5) :\n${questions.map((q, i) => `${i + 1}. ${q}`).join('\n') || '*aucune*'}\n\nEnvoie le panneau avec \`/apply panel\``, 2000),
           ephemeral: true,
         });
       }
@@ -1053,10 +1060,17 @@ async function handleButton(botId, entry, interaction) {
           .setStyle(i === st.correctIdx ? ButtonStyle.Success : ButtonStyle.Danger)
           .setDisabled(true)),
       );
+      // v229 — GRAMMAIRE DES SECTIONS APPLIQUÉE au quiz.
+      // Le critère retenu n'est PAS « jeu = pas de trait » mais, comme en v220,
+      // « jamais de trait entre deux COURTES phrases ». Le quiz affiche ici
+      // 3 blocs substantiels (question / 3 réponses A-B-C / bonus de rapidité)
+      // → le trait les sépare utilement. Mariage, pendu et morpion restent en
+      // sections:false : 2 phrases courtes chacun + mises à jour live à chaque
+      // tour, le trait y produirait l'effet « orphelin » corrigé en v220.
       const embed = new EmbedBuilder()
         .setColor(correctPick ? 0x57f287 : 0xed4245)
         .setTitle('🧠 Quiz')
-        .setDescription(`${correctPick ? '✅ **Bonne réponse !**' : '❌ **Mauvaise réponse…**'}\n\n**${st.q}**\n\nLa bonne réponse était : **${st.correct}**${correctPick ? `\n\n✨ +${gained} points${fast ? ' (bonus rapidité ⚡)' : ''}` : ''}`)
+        .setDescription(ui.sectionize(`${correctPick ? '✅ **Bonne réponse !**' : '❌ **Mauvaise réponse…**'}\n\n**${st.q}**\n\nLa bonne réponse était : **${st.correct}**${correctPick ? `\n\n✨ +${gained} points${fast ? ' (bonus rapidité ⚡)' : ''}` : ''}`, 4096))
         .setFooter({ text: `Hoxera · ${guild.name} · Quiz` })
         .setTimestamp();
       await interaction.update({ embeds: [embed], components: [row] });
@@ -1220,6 +1234,10 @@ function pollEmbed(question, choices, votes) {
     const bar = '█'.repeat(Math.round(pct / 10)) + '░'.repeat(10 - Math.round(pct / 10));
     return `${['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'][i]} **${c}**\n${bar} **${pct}%** (${counts[i]} vote${counts[i] > 1 ? 's' : ''})`;
   });
+  // v229 — EXCLUSION VOLONTAIRE de la grammaire des sections (traits ━) :
+  // ici chaque paragraphe est une OPTION du sondage (jusqu'à 10). Passer par
+  // ui.sectionize() dessinerait 9 traits et noierait le vote. Les sauts de
+  // ligne doubles restent le bon rendu pour une liste de choix.
   return new EmbedBuilder()
     .setColor('#e07a5f')
     .setTitle(`🗳️ ${question}`)

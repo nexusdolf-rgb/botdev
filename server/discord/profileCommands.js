@@ -10,6 +10,8 @@ const store = require('../db');
 const assets = require('../assets');
 const identity = require('./identity');
 const { canConfigureGuild } = require('./permissions');
+// v229 : grammaire des sections (traits ━) pour les accusés de réception texte.
+const ui = require('./ui');
 
 function isOwner(interaction) {
   return interaction.guild.ownerId === interaction.user.id;
@@ -55,7 +57,7 @@ async function handleProfileCommand(botId, interaction) {
       }
       store.botProfiles.set(botId, guild.id, p);
       return interaction.reply({
-        content: '✅ Identité mise à jour !\n\n📛 Nom : **' + (p.name || botRecord.name) + '**\n🎨 Couleur : ' + p.color + '\n📝 Bio : ' + (p.bio ? 'définie' : 'aucune') + '\n\nContinue avec `/botprofile avatar` et `/botprofile banner` pour les images.',
+        content: ui.sectionize('✅ Identité mise à jour !\n\n📛 Nom : **' + (p.name || botRecord.name) + '**\n🎨 Couleur : ' + p.color + '\n📝 Bio : ' + (p.bio ? 'définie' : 'aucune') + '\n\nContinue avec `/botprofile avatar` et `/botprofile banner` pour les images.', 2000),
         ephemeral: true,
       });
     }
@@ -87,7 +89,7 @@ async function handleProfileCommand(botId, interaction) {
         else p.banner_url = `/assets/${key}`;
         store.botProfiles.set(botId, guild.id, p);
         return interaction.editReply({
-          content: `✅ ${sub === 'avatar' ? 'Avatar' : 'Bannière'} enregistré ! Le bot utilisera cette identité sur ce serveur.\n\nVérifie avec \`/botprofile view\`.`,
+          content: ui.sectionize(`✅ ${sub === 'avatar' ? 'Avatar' : 'Bannière'} enregistré ! Le bot utilisera cette identité sur ce serveur.\n\nVérifie avec \`/botprofile view\`.`, 2000),
         });
       } catch (e) {
         return interaction.editReply({ content: `⚠️ Impossible de récupérer l\'image : ${e.message.slice(0, 120)}` });

@@ -10,6 +10,8 @@ const {
   ModalBuilder, TextInputBuilder, TextInputStyle,
 } = require('discord.js');
 const store = require('../db');
+// v229 : grammaire des sections (traits ━) pour les messages texte de l'assistant.
+const ui = require('./ui');
 const assets = require('../assets');
 const identity = require('./identity');
 const { canConfigureGuild } = require('./permissions');
@@ -314,7 +316,7 @@ async function handleProfileWizardInteraction(botId, interaction) {
       const step = STEPS[state.step];
       const cmdName = step.key === 'banner' ? 'banner' : 'avatar';
       return interaction.reply({
-        content: `📱 **Pour ouvrir ta galerie :**\n\n1️⃣ Tape \`/botprofile ${cmdName}\` puis touche l\'option « image » → **ta galerie s\'ouvre automatiquement** (la photo s\'appliquera directement à cette étape).\n\n2️⃣ Ou touche le **bouton ➕** de la barre de message, choisis ta photo et envoie-la ici — je la récupère automatiquement.`,
+        content: ui.sectionize(`📱 **Pour ouvrir ta galerie :**\n\n1️⃣ Tape \`/botprofile ${cmdName}\` puis touche l\'option « image » → **ta galerie s\'ouvre automatiquement** (la photo s\'appliquera directement à cette étape).\n\n2️⃣ Ou touche le **bouton ➕** de la barre de message, choisis ta photo et envoie-la ici — je la récupère automatiquement.`, 2000),
         ephemeral: true,
       });
     }

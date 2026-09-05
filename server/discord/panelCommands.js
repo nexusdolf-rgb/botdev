@@ -18,6 +18,8 @@ const store = require('../db');
 const { sendTicketPanel, sendRoleMenu, findChannelInGuild, resolveRole, parseTypes, staffForTicket, startTypesWizard, handleTicketDeleteAsk, safeEmoji } = require('./panels');
 const logging = require('./logging');
 const { canConfigureGuild } = require('./permissions');
+// v229 : grammaire des sections (traits ━) pour les accusés de réception texte.
+const ui = require('./ui');
 
 const DEFAULT_CFG = {
   name: '',
@@ -400,7 +402,7 @@ async function handleTicket(botId, sub, group, interaction, guild) {
       }
       store.tickets.set(botId, guild.id, { ...cfg, types: JSON.stringify(others) });
       return interaction.reply({
-        content: `✅ Type « ${emoji || '🎫'} **${nom}** » mis à jour !${staffRoles.length ? `\n🛡️ Staff de ce type : ${staffRoles.join(', ')}` : ''}\n\n💡 Ajoute **plusieurs rôles staff** avec \`/ticket types setup\` → « ➕ Ajouter un rôle staff ».\n\nTypes actuels : ${others.map((t) => t.label).join(', ') || 'aucun'}\n\n📨 Re-envoie le panneau avec \`/ticket panel\` pour mettre à jour le menu déroulant.`,
+        content: ui.sectionize(`✅ Type « ${emoji || '🎫'} **${nom}** » mis à jour !${staffRoles.length ? `\n🛡️ Staff de ce type : ${staffRoles.join(', ')}` : ''}\n\n💡 Ajoute **plusieurs rôles staff** avec \`/ticket types setup\` → « ➕ Ajouter un rôle staff ».\n\nTypes actuels : ${others.map((t) => t.label).join(', ') || 'aucun'}\n\n📨 Re-envoie le panneau avec \`/ticket panel\` pour mettre à jour le menu déroulant.`, 2000),
         ephemeral: true,
       });
     }
@@ -562,7 +564,7 @@ async function handleTicket(botId, sub, group, interaction, guild) {
       types.push({ label: nom.slice(0, 100), emoji: emoji.slice(0, 100), category: categorie.slice(0, 100) });
       store.tickets.set(botId, guild.id, { ...cfg, types: JSON.stringify(types) });
       return interaction.reply({
-        content: `✅ Type « ${emoji || '🎫'} ${nom} » ajouté !\nTypes actuels : ${types.map((t) => t.label).join(', ') || 'aucun'}\n\n📨 Re-envoie le panneau avec \`/ticket panel\` pour afficher le menu de sélection.`,
+        content: ui.sectionize(`✅ Type « ${emoji || '🎫'} ${nom} » ajouté !\nTypes actuels : ${types.map((t) => t.label).join(', ') || 'aucun'}\n\n📨 Re-envoie le panneau avec \`/ticket panel\` pour afficher le menu de sélection.`, 2000),
         ephemeral: true,
       });
     }

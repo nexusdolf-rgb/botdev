@@ -700,7 +700,7 @@ async function execute(botId, entry, cmd, src) {
       const embed = new EmbedBuilder()
         .setColor('#e07a5f')
         .setTitle('📈 Classement des niveaux')
-        .setDescription(`**Top ${LIMIT} — les membres les plus actifs**\n\n${lines.join('\n')}${own}`)
+        .setDescription(ui.sectionize(`**Top ${LIMIT} — les membres les plus actifs**\n\n${lines.join('\n')}${own}`, 4096))
         .setFooter({ text: `Hoxera · ${guild.name}` })
         .setTimestamp();
       await replyEmbed(embed);
@@ -774,6 +774,9 @@ async function execute(botId, entry, cmd, src) {
         return reply('🛒 La boutique est vide. Les administrateurs peuvent ajouter des articles depuis le **dashboard Hoxera** (onglet Boutique).');
       }
       const solde = (store.economy.get(botId, guild.id, author.id) || {}).coins || 0;
+      // v229 — EXCLUSION VOLONTAIRE de la grammaire des sections (traits ━) :
+      // deux phrases très courtes → un trait produirait l'effet « trait orphelin »
+      // corrigé en v220. Les articles sont déjà séparés par des champs d'embed.
       const embed = new EmbedBuilder()
         .setColor('#F1C40F')
         .setTitle('🛒 Boutique du serveur')

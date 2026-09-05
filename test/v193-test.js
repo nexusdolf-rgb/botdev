@@ -37,9 +37,9 @@ const check = (label, ok) => {
   check('app.js : aide « HOXERA_TOKEN »', read('public/js/app.js').includes('<b>HOXERA_TOKEN</b>'));
   const indexHtml = read('public/index.html');
   const swSource = read('public/sw.js');
-  check('index.html : version v193 référencée 7 fois', (indexHtml.match(/\?v=228/g) || []).length === 7);
+  check('index.html : version v193 référencée 7 fois', (indexHtml.match(/\?v=229/g) || []).length === 7);
   check('index.html : plus aucune référence v192', !indexHtml.includes('?v=192'));
-  check('sw.js : cache v193', swSource.includes("const CACHE = 'botdev-v228';"));
+  check('sw.js : cache v193', swSource.includes("const CACHE = 'botdev-v229';"));
 
   // ================= 2. /say protégé =================
   console.log('\n2️⃣  /say : réservé aux administrateurs');

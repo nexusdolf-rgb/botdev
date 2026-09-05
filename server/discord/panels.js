@@ -1922,7 +1922,7 @@ function typesQuestionsEmbed(state) {
   return new EmbedBuilder()
     .setColor('#e07a5f')
     .setTitle(`❓ Questionnaire de « ${t.label} »`)
-    .setDescription('Les membres qui ouvrent ce type de ticket devront répondre **obligatoirement** à ces questions (une fenêtre s\'ouvre avant la création du ticket).\n\n*Par défaut : aucune question (seule la raison est demandée).*')
+      .setDescription(ui.sectionize('Les membres qui ouvrent ce type de ticket devront répondre **obligatoirement** à ces questions (une fenêtre s\'ouvre avant la création du ticket).\n\n*Par défaut : aucune question (seule la raison est demandée).*', 4096))
     .addFields({
       name: `📋 Questions actuelles (${qs.length}/5)`,
       value: qs.length ? qs.map((q, i) => `**${i + 1}.** ${q}`).join('\n') : 'aucune',
