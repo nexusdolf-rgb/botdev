@@ -42,11 +42,20 @@ const { buildSlashPayloads } = require('../server/discord/premade');
   };
   let lastReply;
   await giveaway.startGiveaway(1, interaction, 3600000, '🎁 Clé du jeu', 1);
-  assert(sentMessage && sentMessage.embeds[0].data.title.includes('Giveaway'), 'titre du giveaway (v209, plus de MAJUSCULES)');
-  assert(reaction === '🎉', 'réaction 🎉 ajoutée');
+  // v233 — les giveaways sont en Components V2 (séparateurs natifs pleine
+  // largeur) : le payload n'a plus de champ `embeds` (interdit par le flag
+  // IsComponentsV2). Le titre est dans le premier TextDisplay du conteneur.
+  const { MessageFlags } = require('discord.js');
+  assert(sentMessage && (sentMessage.flags & MessageFlags.IsComponentsV2) === MessageFlags.IsComponentsV2,
+    'payload du giveaway en Components V2 (v233)');
+  const gwCont = sentMessage && sentMessage.components && sentMessage.components[0].toJSON();
+  const gwTitle = gwCont && (gwCont.components || []).filter((k) => k.type === 10)[0];
+  assert(gwTitle && gwTitle.content.includes('Giveaway'), 'titre du giveaway (v209, plus de MAJUSCULES)');
+  assert(!gwTitle.content.includes('GIVEAWAY'), 'titre du giveaway sans MAJUSCULES (v209)');
+  assert(reaction === '🎉', 'réaction 🎉 ajoutée (indépendante des composants V2)');
   const g = store.giveaways.active(1, 'G1')[0];
   assert(g && g.prize === '🎁 Clé du jeu' && g.winners === 1);
-  console.log('3️⃣  Giveaway créé ✅ (embed + réaction 🎉 + enregistré)');
+  console.log('3️⃣  Giveaway créé ✅ (conteneur V2 + réaction 🎉 + enregistré)');
 
   // ---------- 3. Suggestions : soumission + votes + statut ----------
   store.guildSettings.set(1, 'G1', { suggestion_channel: '#suggestions' });

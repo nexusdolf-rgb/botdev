@@ -74,7 +74,12 @@ check('xp.js : footer signé Hoxera', files.xp.includes('Hoxera · ${message.gui
 console.log('— Giveaway : panneau structuré —');
 check('giveaway : titre « Giveaway » (pas de MAJUSCULES)', !files.giveaway.includes('GIVEAWAY'));
 check('giveaway : infos en champs', files.giveaway.includes("name: '🏆 Nombre de gagnants'"));
-check('giveaway : footer signé Hoxera', /\.setFooter\(\{ text: 'Hoxera \u00B7 Giveaway' \}\)/.test(files.giveaway));
+// v233 — les giveaways sont en Components V2 : le pied n'est plus
+// `.setFooter({ text: … })` mais l'option `footer:` de ui.v2panel, qui le rend
+// en texte discret « -# … ». L'INTENTION vérifiée ici est inchangée : la
+// signature Hoxera est toujours présente.
+check('giveaway : footer signé Hoxera', /footer: 'Hoxera \u00B7 Giveaway',/.test(files.giveaway));
+check('giveaway : plus de .setFooter (migré en V2)', !files.giveaway.includes('.setFooter('));
 check('giveaway : état final sans MAJUSCULES', !files.giveaway.includes('GIVEAWAY TERMINÉ'));
 
 // ---------- 5. Rank / profile : avatar unique ----------
@@ -88,8 +93,8 @@ check('CSS : tokens d’arrondis v209', files.css.includes('--r-sm: 10px'));
 check('CSS : toutes les surfaces Discord aux mêmes arrondis', files.css.includes('.ca-discord-preview, .eb-discord') && files.css.includes('border-radius: var(--r-sm)'));
 check('dashboard : modèle d’accueil au tutoiement (plus de « je vous invite »)', !files.dashJs.includes('je vous invite à prendre connaissance'));
 check('dashboard : modèle de départ au tutoiement', files.dashJs.includes('la porte reste ouverte si tu reviens'));
-check('index : version v209', files.indexHtml.includes('?v=232'));
-check('service worker : cache v209', files.sw.includes('botdev-v232'));
+check('index : version v209', files.indexHtml.includes('?v=233'));
+check('service worker : cache v209', files.sw.includes('botdev-v233'));
 check('menu mobile : nom du bot dynamique', files.dashJs.includes('Dashboard.state.bot.name'));
 
 // ---------- 7. Invitations (extra) : champ + footer ----------

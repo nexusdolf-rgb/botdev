@@ -200,7 +200,47 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   'tag') ») : un message supprimé **partiel** (pas en cache) n'a pas d'auteur →
   `trackDeleted` (/snipe, `extra.js`) plantait ; idem `tasks.js` (`member.user.tag`).
   Gardes ajoutées, test `test/v228-test.js`, docs remises à jour (v194 → v228).
-- **v232 (ACTUELLE, 05/09)** : **SÉPARATEURS NATIFS PLEINE LARGEUR — lot n°2.**
+- **v233 (ACTUELLE, 05/09)** : **SÉPARATEURS NATIFS PLEINE LARGEUR — lot n°3.**
+  🎁 **`giveaway.js` — 5 emplacements.** `buildEmbed` → **`buildPanel`**,
+  `buildEndedEmbed` → **`buildEndedPanel`** (exports renommés, `EmbedBuilder`
+  retiré des imports). Les 2 lancements (slash + dashboard), **l'ÉDITION du
+  message en fin de tirage** et l'annonce des gagnants.
+  ⚠️ **Point de risque principal** : le giveaway est un message **PERMANENT**
+  édité à la fin du tirage. Discord interdisant de sortir du V2 à l'édition,
+  **les deux bouts devaient migrer ensemble** — un lancement V2 avec une fin en
+  embed classique aurait été rejeté par l'API.
+  ✅ **La réaction 🎉 continue de fonctionner** : les réactions sont
+  indépendantes des composants d'un message.
+  Le ping `@everyone`/rôle devient un TextDisplay en tête (`content` interdit en
+  V2) et `allowedMentions` reste appliqué. Les 2 compteurs (`🏆 Nombre de
+  gagnants`, `⏰ Fin du tirage`) étaient en `inline:true` → regroupés sur une
+  ligne ; le compte à rebours reste un timestamp Discord `<t:…:R>` natif.
+  🎮 **`guildEvents.js` — 7 emplacements.** `eventPanel(entry, guildId, ev)`
+  devient **`eventPanel(entry, guildId, ev, rows = [], content = '')`** :
+    • `rows` — en V2 les lignes de boutons vont **DANS le conteneur**, pas au
+      niveau du message. Les 4 appelants qui faisaient
+      `{ embeds: eventPanel(...).embeds, components: eventButtons(ev) }`
+      **cassaient à coup sûr** (`.embeds` vaut `undefined` sur un payload V2) :
+      tous convertis.
+    • `content` — le texte des rappels 24 h / 1 h devient un TextDisplay.
+  Couverts : création, **mise à jour des inscrits** (`interaction.update`),
+  rappels 24 h et 1 h, `/event list`, `/event delete`.
+  🐛 **Piège évité au passage** : `/event list` et `/event delete` faisaient
+  `interaction.reply({ ...ui.panel({...}), ephemeral: true })`. Avec un payload
+  V2, accoler `ephemeral: true` **après** le spread peut écraser le champ
+  `flags` et faire perdre `IsComponentsV2`. `ephemeral` est désormais passé
+  **dans les options** de `ui.v2panel`, qui combine les deux flags.
+  🧪 **4 tests existants mis à jour** : `test/v198-test.js` (4 assertions) et
+  `test/v220-test.js` (6 assertions) appelaient `giveaway.buildEmbed` /
+  `buildEndedEmbed` ; `test/v25-test.js` lisait `sentMessage.embeds[0].data.title`
+  (un payload V2 n'a plus de champ `embeds`) ; `test/v209-test.js` vérifiait la
+  signature Hoxera via `.setFooter({...})` — **l'intention est conservée**, seule
+  la forme change (`footer:` dans les options de `ui.v2panel`).
+  📌 **RÈGLE POUR LES LOTS SUIVANTS** : un test qui lit `payload.embeds[0]`
+  casse systématiquement après migration. Chercher `embeds[0]` et `.setFooter(`
+  dans `test/` avant chaque lot.
+  **160 tests verts** (`test/v233-test.js`, 74 assertions). Bump cache v233.
+- **v232 (05/09)** : **SÉPARATEURS NATIFS PLEINE LARGEUR — lot n°2.**
   🧰 **`ui.v2container` complété** — sans ça la migration aurait **DÉGRADÉ** le
   rendu. Components V2 n'a **ni champs `inline`** (la grille 3 colonnes des
   embeds), **ni champ `author`**, **ni `thumbnail`**, **ni `image`** d'embed :
@@ -536,17 +576,22 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 
 ## 📌 ÉTAT AU 05/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v232** — voir la section v232 ci-dessus. **159 tests verts**.
+- Dernière version : **v233** — voir la section v233 ci-dessus. **160 tests verts**.
   ⚠️ **Chantier en cours (v231 →)** : migration des traits texte `━` vers les
   séparateurs **NATIFS pleine largeur** (Components V2).
-  • **Migré** : `/quiz` (v231) · `premade.js` 13 messages dont `replyPanel`
-    ×11 et `/levels` · `suggest.js` 5 emplacements (v232).
-  • **Exclu, documenté** : `xp.js` (webhook + pièce jointe → 400 en V2).
-  • **Reste** : `panels.js` (12), `extra.js` (29), `giveaway.js` (3),
-    `guildEvents.js` (3), `panelCommands.js` (2), `events.js` (2),
-    `automod.js` (2), `profileCommands.js` (2), puis `logging`, `liveWatch`,
-    `roleWizard`, `profileWizard`, `engine`, `community`, `announcements`,
-    `tasks` (1 chacun).
+  • **Migré** : `/quiz` (v231) · `premade.js` 13 messages dont `replyPanel` ×11
+    et `/levels` · `suggest.js` 5 emplacements (v232) · `giveaway.js`
+    5 emplacements · `guildEvents.js` 7 emplacements (v233).
+  • **Exclu, documenté** : `xp.js` (webhook + pièce jointe → 400 en V2, piège n°10).
+  • **Reste** : `panels.js` (12), `extra.js` (29), `panelCommands.js` (2),
+    `events.js` (2), `automod.js` (2), `profileCommands.js` (2), puis `logging`,
+    `liveWatch`, `roleWizard`, `profileWizard`, `engine`, `community`,
+    `announcements`, `tasks` (1 chacun).
+  • ⚠️ **Avant de migrer un message, vérifier** : (1) s'il passe par
+    `sendAsProfile` **avec** des `files` → exclu ; (2) si du code relit
+    `msg.embeds[0]` plus tard → 4 emplacements identifiés (`extra.js:1128`,
+    `panels.js:426`, `panels.js:1396`) ; (3) s'il est **édité** ensuite →
+    l'édition doit migrer en même temps.
 - Prod : https://hoxera.is-a.dev, bot « Optimus Prime » en ligne,
   **8 serveurs / 189 membres**, **0 erreur 24 h**, sauvegardes GitHub OK
   toutes les 10 min, CI verte, service Render « hoxera » non suspendu (Oregon).
@@ -560,10 +605,10 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   agent a : cloné les 2 dépôts, `npm install`, `check.sh` 🟢 (155), vérifié la prod
   et les tokens, puis livré **v229** (traits ━ sur 10 messages + critère officiel)
   **v230** (`/poll` en champs d'embed + correctif d'un bug latent de
-  dépassement de la limite Discord de 4 096 caractères), **v231** (API
-  Components V2 dans `ui.js` + `/quiz` migré) et **v232** (lot n°2 :
-  `premade.js` 13 messages + `suggest.js` 5 emplacements, `queue.js` corrigé,
-  `xp.js` exclu et documenté).
+  dépassement de la limite Discord de 4 096 caractères), puis **v231**,
+  **v232** et **v233** : migration des traits texte vers les séparateurs
+  **NATIFS pleine largeur** (Components V2) — API `ui.v2panel` + 30 messages
+  migrés, `queue.js` corrigé, `xp.js` exclu et documenté.
 - 31 commandes slash globales (5 « premade » à sous-commandes + 25 « extra » +
   `/event`) + ~36 commandes de modules (kick, ban, ping, meme, daily, rank,
   giveaway…) — total loin de la limite Discord de 100.

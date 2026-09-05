@@ -2,7 +2,7 @@
 // BotDev - Giveaways : réaction 🎉 → tirage au sort automatique
 // /giveaway create durée prix gagnants | end | reroll
 // ============================================================
-const { EmbedBuilder } = require('discord.js');
+// v233 — EmbedBuilder retiré : les giveaways sont en Components V2 (ui.v2panel).
 const store = require('../db');
 const ui = require('./ui');
 
@@ -19,23 +19,35 @@ function formatEnds(endsAt) {
   return `<t:${Math.floor(endsAt / 1000)}:R>`;
 }
 
-function buildEmbed(g, settings = {}) {
+// v233 — SÉPARATEURS NATIFS PLEINE LARGEUR (Components V2).
+// Le trait texte ━ s'arrêtait avant le bord arrondi de l'embed ; le Separator
+// V2 est un composant de layout que Discord dessine bord à bord, comme dans le
+// panneau de tickets personnalisés qui sert de référence au bot.
+// `ping` : en Components V2 le champ `content` du message est INTERDIT — la
+// mention @everyone/rôle devient un TextDisplay en tête de conteneur. Les
+// mentions y notifient bien (doc officielle) et allowedMentions reste appliqué.
+// La réaction 🎉 continue de fonctionner : les réactions sont indépendantes
+// des composants d'un message.
+function buildPanel(g, settings = {}, ping = '') {
   const customMsg = String((settings && settings.message) || '').trim();
   const color = /^#[0-9a-fA-F]{6}$/.test(String((settings && settings.color) || '')) ? settings.color : '#FEE75C';
-  return new EmbedBuilder()
-    .setColor(color)
-    .setTitle('🎁 Giveaway')
-    .setDescription(ui.sectionize([
+  return ui.v2panel({
+    ...(ping ? { content: ping } : {}),
+    color,
+    title: '🎁 Giveaway',
+    description: [
       `**${g.prize}**`,
       '',
       customMsg || 'Réagis avec 🎉 pour participer !',
-    ].join('\n')))
-    .addFields(
+    ].join('\n'),
+    // Les 2 compteurs étaient en inline:true (grille 3 colonnes) : ui.v2panel
+    // les regroupe sur une ligne, séparés par « · ».
+    fields: [
       { name: '🏆 Nombre de gagnants', value: String(g.winners || 1), inline: true },
       { name: '⏰ Fin du tirage', value: formatEnds(g.ends_at), inline: true },
-    )
-    .setFooter({ text: 'Hoxera · Giveaway' })
-    .setTimestamp();
+    ],
+    footer: 'Hoxera · Giveaway',
+  });
 }
 
 // Rôle à mentionner au lancement : '@everyone' ou nom de rôle → mention Discord
@@ -59,8 +71,7 @@ async function startGiveaway(botId, interaction, durationMs, prize, winners) {
   const ping = pingMention(interaction.guild, settings.giveaway_ping_role || '');
   const endsAt = Date.now() + Math.min(Math.max(durationMs, 15000), 30 * 86400000);
   const msg = await channel.send({
-    content: ping || undefined,
-    embeds: [buildEmbed({ prize, winners, ends_at: endsAt }, { color, message })],
+    ...buildPanel({ prize, winners, ends_at: endsAt }, { color, message }, ping),
     allowedMentions: { roles: ping ? [String(ping).replace(/<@&|>/g, '')] : [], everyone: ping === '@everyone' },
   });
   await msg.react('🎉').catch(() => {});
@@ -81,8 +92,7 @@ async function startGiveawayDashboard(botId, guild, channel, opts) {
   const endsAt = Date.now() + Math.min(Math.max(parseInt(durationMin, 10) * 60000 || 3600000, 15000), 30 * 86400000);
   const ping = pingMention(guild, pingRole);
   const msg = await channel.send({
-    content: ping || undefined,
-    embeds: [buildEmbed({ prize, winners, ends_at: endsAt }, { color, message })],
+    ...buildPanel({ prize, winners, ends_at: endsAt }, { color, message }, ping),
     allowedMentions: { roles: ping ? [String(ping).replace(/<@&|>/g, '')] : [], everyone: ping === '@everyone' },
   });
   await msg.react('🎉').catch(() => {});
@@ -107,15 +117,17 @@ async function drawWinners(client, g) {
   return { winners, message, channel };
 }
 
-// 🏁 Embed final du giveaway (tirage effectué ou relancé) — message permanent
-// affiché dans le salon : mêmes grandes sections séparées par le trait pro que
-// l'embed de lancement (prix / résultat / remerciement), via buildEndedEmbed.
-function buildEndedEmbed(g, winners = [], reroll = false) {
+// 🏁 Panneau final du giveaway (tirage effectué ou relancé) — message permanent
+// affiché dans le salon : mêmes grandes sections que le panneau de lancement
+// (prix / résultat / remerciement), séparées par des séparateurs NATIFS pleine
+// largeur (v233). Le message d'origine étant en Components V2, Discord interdit
+// d'en sortir à l'édition : ce panneau est donc V2 lui aussi.
+function buildEndedPanel(g, winners = [], reroll = false) {
   const mentions = winners.map((u) => u.toString()).join(' ');
-  return new EmbedBuilder()
-    .setColor(reroll ? '#FEE75C' : '#57F287')
-    .setTitle(reroll ? '🎁 Giveaway — nouveau tirage' : '🎁 Giveaway terminé')
-    .setDescription(ui.sectionize([
+  return ui.v2panel({
+    color: reroll ? '#FEE75C' : '#57F287',
+    title: reroll ? '🎁 Giveaway — nouveau tirage' : '🎁 Giveaway terminé',
+    description: [
       `**${g.prize}**`,
       '',
       winners.length
@@ -123,25 +135,29 @@ function buildEndedEmbed(g, winners = [], reroll = false) {
         : '😢 Aucun participant — pas de gagnant.',
       '',
       'Merci à tous d\'avoir participé ! 🎉',
-    ].join('\n')))
-    .addFields(
+    ].join('\n'),
+    fields: [
       { name: '🏆 Gagnants', value: String(winners.length), inline: true },
       { name: '⏰ Statut', value: reroll ? 'Nouveau tirage' : 'Terminé', inline: true },
-    )
-    .setFooter({ text: 'Hoxera · Giveaway' })
-    .setTimestamp();
+    ],
+    footer: 'Hoxera · Giveaway',
+  });
 }
 
 async function announceWinners(client, g, winners, reroll = false) {
   const { channel, message } = await drawWinnersRaw(client, g);
   if (message) {
-    await message.edit({ embeds: [buildEndedEmbed(g, winners, reroll)] }).catch(() => {});
+    // v233 — le message d'origine est en Components V2 : l'édition reste en V2.
+    await message.edit(buildEndedPanel(g, winners, reroll)).catch(() => {});
   }
   if (channel) {
     const winnerMentions = winners.map((u) => u.toString()).join(' ');
+    // v233 — séparateurs natifs pleine largeur. Les mentions des gagnants
+    // deviennent un TextDisplay en tête (le champ content est interdit en V2) :
+    // elles notifient toujours, et allowedMentions reste appliqué.
     await channel.send({
-      content: winnerMentions || undefined,
-      embeds: [ui.embed({
+      ...ui.v2panel({
+        content: winnerMentions || undefined,
         variant: winners.length ? 'success' : 'warning',
         title: winners.length ? '🎉 Giveaway terminé !' : '🎁 Giveaway sans gagnant',
         description: winners.length
@@ -149,7 +165,7 @@ async function announceWinners(client, g, winners, reroll = false) {
           : `Le giveaway « ${g.prize} » n'a eu aucun participant.`,
         fields: [{ name: '🏆 Résultat', value: winners.length ? `${winners.length} gagnant(s)` : 'Aucun participant', inline: true }],
         footer: 'Hoxera · Giveaways',
-      })],
+      }),
       allowedMentions: { users: winners.map((u) => String(u.id)) },
     }).catch(() => {});
   }
@@ -188,4 +204,4 @@ async function sweep(botId, entry) {
   }
 }
 
-module.exports = { parseDuration, buildEmbed, buildEndedEmbed, pingMention, startGiveaway, startGiveawayDashboard, endGiveaway, sweep };
+module.exports = { parseDuration, buildPanel, buildEndedPanel, pingMention, startGiveaway, startGiveawayDashboard, endGiveaway, sweep };

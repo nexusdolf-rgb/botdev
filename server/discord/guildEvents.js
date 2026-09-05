@@ -96,7 +96,13 @@ function roleMention(guild, configured) {
 // ------------------------------------------------------------
 // 📣 Panneau d'un événement (annonce + rappels)
 // ------------------------------------------------------------
-function eventPanel(entry, guildId, ev) {
+// v233 — SÉPARATEURS NATIFS PLEINE LARGEUR (Components V2).
+// `rows` : en V2 les lignes de boutons vont DANS le conteneur, pas au niveau
+//   du message — d'où ce paramètre au lieu de `{ embeds, components }`.
+// `content` : le texte des rappels (24 h / 1 h) devient un TextDisplay en tête
+//   de conteneur, le champ `content` du message étant INTERDIT en V2. Les
+//   mentions y notifient toujours.
+function eventPanel(entry, guildId, ev, rows = [], content = '') {
   const guild = entry.client.guilds.cache.get(guildId);
   const tz = (store.guildSettings.get(ev.bot_id, guildId) || {}).timezone || tzUtil.DEFAULT_TZ;
   const participants = store.guildEvents.participants(ev.id);
@@ -110,13 +116,16 @@ function eventPanel(entry, guildId, ev) {
   ];
   if (ev.description) fields.push({ name: '📝 Détails', value: String(ev.description).slice(0, 1024), inline: false });
   if (names.length) fields.push({ name: '📋 Liste', value: names.join(', ').slice(0, 1024), inline: false });
-  return ui.panel({
+  return ui.v2panel({
+    ...(content ? { content } : {}),
     variant: 'brand',
     title: `🎮 ${ev.title}`,
     description: participants.length ? undefined : 'Personne n\'est inscrit pour le moment — sois le premier !',
+    // Les 2 premiers champs étaient en inline:true : ui.v2panel les regroupe
+    // sur une ligne, séparés par « · » (la grille 3 colonnes n'existe pas en V2).
     fields,
     footer: `Hoxera · Événements · ID ${ev.id}`,
-  });
+  }, rows);
 }
 
 function eventButtons(ev) {
@@ -141,7 +150,10 @@ async function handleInteraction(botId, entry, interaction) {
     }
     const { joined, participants } = store.guildEvents.toggleParticipant(evId, interaction.user.id);
     store.guildEvents.update(evId, { participants: JSON.stringify(participants) });
-    const payload = { embeds: eventPanel(entry, ev.guild_id, { ...ev, participants }).embeds, components: eventButtons(ev) };
+    // v233 — le message d'origine est en Components V2 : Discord interdit d'en
+    // sortir à l'édition, donc la mise à jour des inscrits reste en V2. Les
+    // boutons sont DANS le conteneur.
+    const payload = eventPanel(entry, ev.guild_id, { ...ev, participants }, eventButtons(ev));
     await interaction.update(payload).catch(async () => {
       await interaction.reply({ content: joined ? '🎮 Tu es inscrit !' : '❌ Tu t\'es désinscrit.', ephemeral: true }).catch(() => {});
     });
@@ -172,7 +184,7 @@ async function handleInteraction(botId, entry, interaction) {
     const ev = store.guildEvents.get(id);
     const channel = guild.channels.cache.get(channelId);
     if (channel && typeof channel.send === 'function') {
-      await channel.send({ embeds: eventPanel(entry, guild.id, ev).embeds, components: eventButtons(ev) }).catch(() => {});
+      await channel.send(eventPanel(entry, guild.id, ev, eventButtons(ev))).catch(() => {});
     }
     return interaction.reply({ content: `✅ Événement **${titre}** créé (ID ${id}) — **${formatWhen(startsAt, tz)}**. Les rappels automatiques partiront 24 h et 1 h avant.`, ephemeral: true }).catch(() => {});
   }
@@ -184,23 +196,26 @@ async function handleInteraction(botId, entry, interaction) {
       const n = store.guildEvents.participants(ev.id).length;
       return `**#${ev.id}** · ${ev.title} — 🕒 ${formatWhen(ev.starts_at, tz)} · 👥 ${n} inscrit(s)`;
     }).join('\n');
-    return interaction.reply({
-      ...ui.panel({ variant: 'brand', title: '🎮 Événements à venir', description: lines, footer: `Hoxera · ${guild.name} · Événements` }),
-      ephemeral: true,
-    }).catch(() => {});
+    // v233 — en Components V2 le flag Éphémère doit être COMBINÉ au flag
+    // IsComponentsV2 : on le passe dans les options au lieu de l'accoler à un
+    // spread, qui aurait pu écraser le champ `flags` du payload.
+    return interaction.reply(
+      ui.v2panel({ variant: 'brand', title: '🎮 Événements à venir', description: lines, footer: `Hoxera · ${guild.name} · Événements`, ephemeral: true })
+    ).catch(() => {});
   }
 
   if (action === 'delete') {
     const all = store.guildEvents.all(botId, guild.id);
     if (!all.length) return interaction.reply({ content: '📭 Aucun événement à supprimer.', ephemeral: true }).catch(() => {});
     const lines = all.map((ev) => `**#${ev.id}** · ${ev.title} — ${formatWhen(ev.starts_at, tz)}`).join('\n');
-    const prompt = ui.panel({
+    const prompt = ui.v2panel({
       variant: 'danger',
       title: '🗑️ Supprimer un événement',
       description: `Voici les événements du serveur — pour en supprimer un, note son **ID**.\n\n${lines}\n\n*(La suppression se fait depuis le dashboard → Événements, ou par un admin via l\'interface.)*`,
       footer: `Hoxera · ${guild.name} · Événements`,
+      ephemeral: true,
     });
-    return interaction.reply({ ...prompt, ephemeral: true }).catch(() => {});
+    return interaction.reply(prompt).catch(() => {});
   }
 
   return false;
@@ -225,14 +240,14 @@ async function sweepGuildEvents(botId, entry) {
       store.guildEvents.update(ev.id, { reminded_24h: 1 });
       const n = store.guildEvents.participants(ev.id).length;
       const content = `${mention || '📣'} **${ev.title}** commence dans **24 h**${mention ? '' : ' !'} ${n ? `— ${n} inscrit(s).` : ''}`.trim();
-      await channel.send({ content, embeds: eventPanel(entry, ev.guild_id, ev).embeds, components: eventButtons(ev) }).catch(() => {});
+      await channel.send(eventPanel(entry, ev.guild_id, ev, eventButtons(ev), content)).catch(() => {});
     }
     // Rappel 1 h
     if (!ev.reminded_1h && delta > 0 && delta <= 3600000) {
       store.guildEvents.update(ev.id, { reminded_1h: 1 });
       const n = store.guildEvents.participants(ev.id).length;
       const content = `${mention || '🚨'} **${ev.title}** commence dans **1 heure**${mention ? '' : ' !'} ${n ? `— ${n} inscrit(s).` : ''}`.trim();
-      await channel.send({ content, embeds: eventPanel(entry, ev.guild_id, ev).embeds, components: eventButtons(ev) }).catch(() => {});
+      await channel.send(eventPanel(entry, ev.guild_id, ev, eventButtons(ev), content)).catch(() => {});
     }
     // Démarrage
     if (delta <= 0) {

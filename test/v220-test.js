@@ -62,20 +62,29 @@ check('mono-section 4096 max non touchée', ui.embed({ description: 'x'.repeat(4
 
   // Giveaway : prix | message, et contenu utilisateur multi-paragraphes structuré.
   const giveaway = require('../server/discord/giveaway');
-  const embG = giveaway.buildEmbed({ prize: 'Nitro Boost', winners: 1, ends_at: Date.now() + 60000 },
+  // v233 — les giveaways sont en Components V2 : la séparation n'est plus un
+  // trait TEXTE (qui s'arrêtait avant le bord arrondi de l'embed) mais un
+  // Separator NATIF pleine largeur, comme dans le panneau de tickets
+  // personnalisés. L'INTENTION v220 est conservée : chaque paragraphe du
+  // contenu utilisateur forme bien une section visuellement distincte.
+  const gwCont = (p) => p.components[0].toJSON();
+  const gwTexts = (p) => gwCont(p).components.filter((k) => k.type === 10).map((k) => k.content).join('\n');
+  const gwDiv = (p) => gwCont(p).components.filter((k) => k.type === 14 && k.divider === true).length;
+  const embG = giveaway.buildPanel({ prize: 'Nitro Boost', winners: 1, ends_at: Date.now() + 60000 },
     { message: 'Réagis avec 🎉 pour participer !\n\nSeuls les membres du serveur sont éligibles.' });
-  const gDesc = embG.data.description;
-  check('giveaway : trait entre prix et message', gDesc.includes('**Nitro Boost**') && gDesc.includes(ui.SEPARATOR) && gDesc.includes('Réagis avec 🎉'));
-  check('giveaway : paragraphes du message structurés', (gDesc.match(new RegExp(ui.SEPARATOR.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length === 2);
+  check('giveaway : séparation entre prix et message', gwTexts(embG).includes('**Nitro Boost**') && gwTexts(embG).includes('Réagis avec 🎉'));
+  check('giveaway : AUCUN trait texte ━ (séparateurs natifs)', !JSON.stringify(embG).includes(ui.SEPARATOR));
+  // 3 paragraphes + 1 bloc de compteurs = 4 blocs → 3 séparateurs, + 1 pied = 4.
+  check('giveaway : paragraphes du message structurés (4 séparateurs natifs)', gwDiv(embG) === 4);
   // Giveaway TERMINÉ : message permanent édité dans le salon — le prix, le
-  // résultat et le remerciement forment des sections reliées par le trait.
-  const embEnd = giveaway.buildEndedEmbed({ prize: 'Nitro Boost' }, [{ toString: () => '<@u1>' }, { toString: () => '<@u2>' }], false);
-  const endDesc = embEnd.data.description;
-  const sepRe = new RegExp(ui.SEPARATOR.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-  check('giveaway terminé : 3 sections (prix / gagnants / merci)', endDesc.includes('**Nitro Boost**') && endDesc.includes('🏆 Gagnant(s)') && endDesc.includes('Merci à tous'));
-  check('giveaway terminé : 2 traits entre les 3 sections', (endDesc.match(sepRe) || []).length === 2);
-  const embNoWin = giveaway.buildEndedEmbed({ prize: 'Nitro Boost' }, [], false);
-  check('giveaway terminé sans gagnant : mention « aucun participant »', embNoWin.data.description.includes('Aucun participant'));
+  // résultat et le remerciement forment des sections séparées en natif.
+  const embEnd = giveaway.buildEndedPanel({ prize: 'Nitro Boost' }, [{ toString: () => '<@u1>' }, { toString: () => '<@u2>' }], false);
+  check('giveaway terminé : 3 sections (prix / gagnants / merci)',
+    gwTexts(embEnd).includes('**Nitro Boost**') && gwTexts(embEnd).includes('🏆 Gagnant(s)') && gwTexts(embEnd).includes('Merci à tous'));
+  check('giveaway terminé : 4 séparateurs natifs (3 entre sections + 1 pied)', gwDiv(embEnd) === 4);
+  check('giveaway terminé : aucun trait texte ━', !JSON.stringify(embEnd).includes(ui.SEPARATOR));
+  const embNoWin = giveaway.buildEndedPanel({ prize: 'Nitro Boost' }, [], false);
+  check('giveaway terminé sans gagnant : mention « aucun participant »', gwTexts(embNoWin).includes('Aucun participant'));
 
   // Suggestions : texte libre multi-paragraphes dans le message publié.
   // v232 — les suggestions sont en Components V2 : la séparation n'est plus un

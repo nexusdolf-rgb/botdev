@@ -145,13 +145,20 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
   console.log('\n5️⃣  Bot — giveaways / suggestions / quiz / panneaux');
   const giveaway = require('../server/discord/giveaway');
   const { EmbedBuilder } = require('discord.js');
-  // buildEmbed : couleur + message personnalisés, défaut sinon
-  const embCustom = giveaway.buildEmbed({ prize: 'Test', winners: 1, ends_at: Date.now() + 60000 }, { color: '#FF00FF', message: 'Custom message' });
-  check('giveaway buildEmbed : couleur personnalisée', embCustom.data.color === 0xFF00FF);
-  check('giveaway buildEmbed : message personnalisé', embCustom.data.description.includes('Custom message'));
-  const embDefault = giveaway.buildEmbed({ prize: 'Test', winners: 1, ends_at: Date.now() + 60000 }, {});
-  check('giveaway buildEmbed : couleur par défaut', embDefault.data.color === 0xFEE75C);
-  check('giveaway buildEmbed : texte par défaut', embDefault.data.description.includes('Réagis avec 🎉'));
+  // buildPanel : couleur + message personnalisés, défaut sinon.
+  // v233 — les giveaways sont en Components V2 (séparateurs natifs pleine
+  // largeur) : buildEmbed est devenu buildPanel, la couleur d'embed est
+  // devenue la couleur d'accent du conteneur, et la description est éclatée
+  // en TextDisplay séparés par des Separator natifs.
+  const gwTexts = (payload) => payload.components[0].toJSON().components
+    .filter((k) => k.type === 10).map((k) => k.content).join('\n');
+  const embCustom = giveaway.buildPanel({ prize: 'Test', winners: 1, ends_at: Date.now() + 60000 }, { color: '#FF00FF', message: 'Custom message' });
+  check('giveaway buildPanel : couleur personnalisée (accent V2)',
+    embCustom.components[0].toJSON().accent_color === 0xFF00FF);
+  check('giveaway buildPanel : message personnalisé', gwTexts(embCustom).includes('Custom message'));
+  const embDefault = giveaway.buildPanel({ prize: 'Test', winners: 1, ends_at: Date.now() + 60000 }, {});
+  check('giveaway buildPanel : couleur par défaut', embDefault.components[0].toJSON().accent_color === 0xFEE75C);
+  check('giveaway buildPanel : texte par défaut', gwTexts(embDefault).includes('Réagis avec 🎉'));
 
   // suggest : buildPanel couleur + buildComponents 👎
   // v232 — les suggestions sont passées en Components V2 (séparateurs natifs
