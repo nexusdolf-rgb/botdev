@@ -1751,8 +1751,8 @@ Dashboard.renderers.tickets = async (content, data) => {
     <input class="dash-input" id="tr-title" maxlength="100" value="${App.escapeHtml(roomCfg.title || '')}" placeholder="🎫 Ticket ouvert" />
     <label class="dash-label">Message d’accueil</label>
     <textarea class="dash-input" id="tr-welcome" rows="3" maxlength="1500" placeholder="Bienvenue {member} ! Un membre de l’équipe va te répondre ici même…">${App.escapeHtml(roomCfg.welcome || '')}</textarea>
-    <label class="dash-label">Étapes du ticket (remplace le champ « Comment ça se passe ? »)</label>
-    <textarea class="dash-input" id="tr-steps" rows="2" maxlength="1200" placeholder="Vide = 3 étapes automatiques : décris ta demande → réponse de l’équipe ici → transcription en MP à la fermeture.">${App.escapeHtml(roomCfg.steps || '')}</textarea>
+    <label class="dash-label">📋 Déroulement personnalisé (facultatif)</label>
+    <textarea class="dash-input" id="tr-steps" rows="2" maxlength="1200" placeholder="Vide = pas de déroulement détaillé — une ligne discrète annonce la transcription en MP.">${App.escapeHtml(roomCfg.steps || '')}</textarea>
     <div style="font-size:12px;color:var(--d-dim);margin-top:4px">💡 Variables acceptées : <b>{member}</b> (mention), <b>{user}</b> (pseudo), <b>{server}</b>, <b>{type}</b>, <b>{number}</b>. L’embed garde automatiquement un en-tête propre (pseudo + numéro), les champs équipe / raisons / transcription, et le ⚙️ menu réservé au staff.</div>
     <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap;align-items:center">
       <button class="dash-btn dash-btn-primary" id="tr-save">💾 Enregistrer</button>
@@ -1760,7 +1760,8 @@ Dashboard.renderers.tickets = async (content, data) => {
     </div>
     <div data-room-preview style="margin-top:14px"></div>`;
   const autoWelcome = () => 'Bienvenue {member} ! Un membre de l’équipe va te répondre ici même.\n\n✍️ Décris ta demande : texte, captures d’écran ou fichiers.';
-  const autoSteps = () => '1️⃣ Décris ta demande ici (texte, captures, fichiers).\n2️⃣ Un membre de l’équipe te répond dans ce salon privé.\n3️⃣ À la fermeture définitive, la transcription t’est envoyée en MP.';
+  // v220 : plus d'« étapes » par défaut — le panneau réel n'affiche qu'une
+  // ligne discrète de transcription quand aucun déroulement n'est configuré.
   const roomPreview = () => {
     const hexIn = croom.querySelector('#tr-color-hex');
     const colorIn = croom.querySelector('#tr-color');
@@ -1771,8 +1772,14 @@ Dashboard.renderers.tickets = async (content, data) => {
     const fill = (s) => String(s || '').replace(/\{member\}/g, '@pseudo').replace(/\{user\}/g, 'pseudo').replace(/\{server\}/g, 'Mon serveur').replace(/\{type\}/g, 'Support').replace(/\{number\}/g, '12');
     const title = fill(croom.querySelector('#tr-title').value.trim()) || '🎫 Ticket ouvert';
     const welcome = fill(croom.querySelector('#tr-welcome').value.trim()) || autoWelcome().replace(/\{member\}/g, '@pseudo');
-    const steps = fill(croom.querySelector('#tr-steps').value.trim()) || autoSteps();
+    const steps = fill(croom.querySelector('#tr-steps').value.trim());
     const box = croom.querySelector('[data-room-preview]');
+    const stepsPreview = steps
+      ? `<div style="margin-top:10px;border-top:1px solid #1E1F22;padding:8px 0 2px">
+          <div style="font-weight:600;margin-bottom:3px">📋 Déroulement de la prise en charge</div>
+          <div style="white-space:pre-wrap;color:#C9CCD1">${App.escapeHtml(steps)}</div>
+        </div>`
+      : `<div style="margin-top:10px;border-top:1px solid #1E1F22;padding:8px 0 2px;color:#A8ABAF;font-size:12px">📄 À la fermeture définitive, la transcription t’est envoyée en MP.</div>`;
     box.innerHTML = `
       <div class="dash-label" style="margin:0 0 8px">👀 Aperçu de l’embed du salon privé</div>
       <div style="background:#313338;border-radius:10px;overflow:hidden;color:#DBDEE1;font-size:13px">
@@ -1781,10 +1788,7 @@ Dashboard.renderers.tickets = async (content, data) => {
           <div style="font-size:11px;color:#949BA4;margin-bottom:6px">🎫 Ticket de @pseudo · #12</div>
           <div style="font-weight:700;margin-bottom:8px">${App.escapeHtml(title)}</div>
           <div style="white-space:pre-wrap">${App.escapeHtml(welcome)}</div>
-          <div style="margin-top:10px;border-top:1px solid #1E1F22;padding:8px 0 2px">
-            <div style="font-weight:600;margin-bottom:3px">Comment ça se passe ?</div>
-            <div style="white-space:pre-wrap;color:#C9CCD1">${App.escapeHtml(steps)}</div>
-          </div>
+          ${stepsPreview}
           <div style="margin-top:10px;border-top:1px solid #1E1F22;padding:8px 0 0;color:#A8ABAF;font-size:11.5px">⚙️ Menu « Actions du staff » — réservé au staff du serveur.</div>
         </div>
       </div>`;

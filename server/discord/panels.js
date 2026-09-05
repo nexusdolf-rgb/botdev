@@ -610,14 +610,20 @@ function readRoomCfg(botId, guildId) {
 const ROOM_DEFAULTS = { color: '', title: '', welcome: '', steps: '' };
 
 function ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning = '', answers = [], lang = 'fr', meta = {}, room = ROOM_DEFAULTS) {
-  const typeFields = [
+  // 🧹 v220 : embed de bienvenue ALLÉGÉ — l'essentiel sans le bruit.
+  // On garde : type, équipe, à propos, demande (raison), réponses au
+  // questionnaire. On ne remonte plus la date brute (l'horodatage du pied
+  // l'affiche), ni le compteur « tickets précédents », ni le long mode
+  // d'emploi du menu staff (le menu est réservé au staff). Le déroulement
+  // détaillé n'apparaît que si le serveur en a configuré un ; sinon une
+  // ligne discrète annonce la transcription en MP.
+  const fields = [
     { name: i18n.t(lang, 'ticket_type'), value: chosen ? `${chosen.emoji ? chosen.emoji + ' ' : ''}**${chosen.label}**` : '**Ticket simple**', inline: true },
-    { name: i18n.t(lang, 'ticket_opened_at'), value: meta.openedAt ? meta.openedAt.replace('T', ' ').slice(0, 16) + ' UTC' : new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC', inline: true },
+    { name: i18n.t(lang, 'ticket_team'), value: staffMention || i18n.t(lang, 'ticket_team_default'), inline: true },
   ];
   if (chosen && chosen.description) {
-    typeFields.push({ name: i18n.t(lang, 'ticket_about'), value: chosen.description.slice(0, 1024), inline: true });
+    fields.push({ name: i18n.t(lang, 'ticket_about'), value: chosen.description.slice(0, 1024), inline: true });
   }
-  const fields = [...typeFields];
   if (Array.isArray(answers) && answers.length) {
     fields.push({
       name: i18n.t(lang, 'ticket_answers'),
@@ -628,17 +634,17 @@ function ticketWelcomeEmbed(member, chosen, staffMention, reason, dmWarning = ''
       inline: false,
     });
   }
-  // v212 : si un texte « déroulement » personnalisé existe, il remplace les étapes.
-  const stepsText = room.steps
-    ? room.steps.slice(0, 1200)
-    : [i18n.t(lang, 'ticket_step1'), i18n.t(lang, 'ticket_step2'), i18n.t(lang, 'ticket_step3')].join('\n');
-  fields.push(
-    { name: i18n.t(lang, 'ticket_team'), value: staffMention || i18n.t(lang, 'ticket_team_default'), inline: true },
-    { name: i18n.t(lang, 'ticket_previous'), value: meta.prevCount ? `${meta.prevCount}` : i18n.t(lang, 'ticket_previous_none'), inline: true },
-    { name: i18n.t(lang, 'ticket_reason'), value: reason ? reason.slice(0, 1024) : '—', inline: false },
-    { name: i18n.t(lang, 'ticket_steps'), value: stepsText },
-    { name: i18n.t(lang, 'ticket_buttons'), value: i18n.t(lang, 'ticket_buttons_desc') + dmWarning },
-  );
+  if (reason) fields.push({ name: i18n.t(lang, 'ticket_reason'), value: reason.slice(0, 1024), inline: false });
+  if (room.steps) {
+    // « Déroulement » personnalisé (dashboard) → toujours respecté.
+    fields.push({ name: i18n.t(lang, 'ticket_steps'), value: room.steps.slice(0, 1200), inline: false });
+  } else {
+    // Note de fin discrète : transcription en MP à la fermeture définitive.
+    fields.push({ name: '\u200b', value: i18n.t(lang, 'ticket_step3'), inline: false });
+  }
+  if (dmWarning) {
+    fields.push({ name: '⚠️', value: String(dmWarning).replace(/^\n+/, '').slice(0, 1024), inline: false });
+  }
   const avatar = member.user.displayAvatarURL ? member.user.displayAvatarURL({ dynamic: true }) : '';
   const chosenColor = /^#[0-9a-fA-F]{6}$/.test(String(chosen && chosen.color || '')) ? chosen.color : '';
   const finalColor = room.color || chosenColor || '#57F287';

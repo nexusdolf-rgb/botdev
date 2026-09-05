@@ -83,8 +83,12 @@ const check = (label, cond) => {
   check('salon : type avec emoji', embJson.includes('🤝 **Ticket contre admin**'));
   check('salon : description du type rappelée', embJson.includes('À propos de ce type') && embJson.includes('Signale un abus'));
   check('salon : équipe en charge', embJson.includes('Équipe en charge'));
-  check('salon : déroulement en étapes', embJson.includes('Déroulement de la prise en charge') && embJson.includes('transcription'));
+  check('salon : transcription annoncée (note discrète)', embJson.includes('transcription'));
   check('salon : vouvoyé (« votre demande »)', embJson.includes('Votre demande'));
+  // 🧹 v220 : l'embed du salon privé a été allégé — plus de détail inutile.
+  check('salon : allégé — pas de date brute, tickets précédents, étapes ni mode d emploi staff',
+    !embJson.includes('Ouvert le') && !embJson.includes('Tickets précédents')
+    && !embJson.includes('Déroulement de la prise en charge') && !embJson.includes('Actions réservées au staff'));
 
   // ---------- 5. Assistant : action Description ----------
   const extra = require('../server/discord/extra');
