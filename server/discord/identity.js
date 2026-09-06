@@ -58,7 +58,7 @@ function buildProfileEmbed(botId, guildId, botRecord) {
     { name: '🖼️ Avatar', value: p && p.avatar_url ? '✅ personnalisé' : 'avatar global', inline: true },
     { name: '🎴 Bannière', value: p && p.banner_url ? '✅ personnalisée' : 'aucune', inline: true },
   );
-  embed.setFooter({ text: 'Personnalise avec /botprofile set · avatar · banner · reset' });
+  embed.setFooter({ text: 'Personnalisez avec /botprofile set · avatar · banner · reset' });
   return embed;
 }
 

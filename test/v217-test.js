@@ -28,7 +28,7 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('leaderboard : or #F1C40F + footer signé + timestamp',
     premade.includes("setColor('#F1C40F')") && premade.includes(".setTitle('🏆 Classement des coins')") && premade.includes('.setFooter({ text: `Hoxera · ${guild.name} · Économie` })') && premade.includes(".setTimestamp();\n      await replyEmbed(embed);\n      break;\n    }\n  }"));
   check('shop : or + footer « Boutique » + timestamp + solde en description',
-    premade.includes(".setColor('#F1C40F')") && premade.includes('`Hoxera · ${guild.name} · Boutique`') && premade.includes('Ton solde : ${solde} coins'));
+    premade.includes(".setColor('#F1C40F')") && premade.includes('`Hoxera · ${guild.name} · Boutique`') && premade.includes('Votre solde : ${solde} coins'));
   check('buy : achat en or (economy)', premade.includes("variant: 'economy',\n        title: '🛒 Achat réussi !'"));
   check('pay : transfert en or (economy)', premade.includes("variant: 'economy',\n        title: '💸 Transfert effectué'"));
   check('plus de jaune warning sur le classement des coins', !premade.includes("setColor('#FEE75C')\n        .setTitle('🏆 Classement des coins')"));
@@ -88,8 +88,8 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('plus de rose littéral hors charte dans extra', !extra.includes("color: '#EB459E'"));
 
   // ---------- 8. Version ----------
-  check('index : bump v217', fs.readFileSync('public/index.html', 'utf8').includes('?v=239'));
-  check('sw : bump botdev-v239', fs.readFileSync('public/sw.js', 'utf8').includes('botdev-v239'));
+  check('index : bump v217', fs.readFileSync('public/index.html', 'utf8').includes('?v=241'));
+  check('sw : bump botdev-v241', fs.readFileSync('public/sw.js', 'utf8').includes('botdev-v241'));
 
   console.log(`  ✅ v217 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });

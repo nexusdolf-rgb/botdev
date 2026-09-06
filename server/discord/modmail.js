@@ -61,7 +61,7 @@ async function relayUserToStaff(botId, m, guild) {
       user_tag: userTag, thread_id: created.id, channel_id: channel.id,
     });
     thread = store.modmail.openByUser(botId, guild.id, m.author.id);
-    await created.send(`💬 **Nouvelle conversation** avec **${userTag}** — réponds ici, il recevra ta réponse en message privé.`).catch(() => {});
+    await created.send(`💬 **Nouvelle conversation** avec **${userTag}** — répondez ici, il recevra votre réponse en message privé.`).catch(() => {});
     store.activity.add(botId, guild.id, '💬', `Modmail : nouvelle conversation avec ${userTag}`);
   }
 
@@ -72,7 +72,7 @@ async function relayUserToStaff(botId, m, guild) {
     return relayUserToStaff(botId, m, guild);
   }
   await parent.send(`**${userTag} :** ${m.content || '(message sans texte)'}`).catch(() => {});
-  await m.author.send(`✅ Message envoyé à l'équipe de **${guild.name}**. Tu recevras sa réponse ici.`).catch(() => {});
+  await m.author.send(`✅ Message envoyé à l'équipe de **${guild.name}**. Vous recevrez sa réponse ici.`).catch(() => {});
 }
 
 // Réponse du staff dans le fil → relais en MP vers le membre
@@ -125,7 +125,7 @@ async function onMessage(botId, m) {
         }
         // Mauvaise réponse → on re-propose la liste
         const list = guilds.map((g, i) => `${i + 1}) ${g.name}`).join('\n');
-        return m.author.send(`Je ne comprends pas. Écris le numéro du serveur auquel tu veux écrire :\n${list}`).catch(() => {});
+        return m.author.send(`Je ne comprends pas. Écrivez le numéro du serveur auquel vous voulez écrire :\n${list}`).catch(() => {});
       }
 
       const guilds = modmailGuilds(botId, client, m.author.id);
@@ -139,7 +139,7 @@ async function onMessage(botId, m) {
       // Plusieurs serveurs → on demande le choix
       pendingChoice.set(m.author.id, { guildIds: guilds.map((g) => g.id), expires: Date.now() + 60000 });
       const list = guilds.map((g, i) => `${i + 1}) ${g.name}`).join('\n');
-      return m.author.send(`Tu es membre de plusieurs serveurs avec un support par message privé. Écris le numéro du serveur auquel tu veux écrire :\n${list}`).catch(() => {});
+      return m.author.send(`Vous êtes membre de plusieurs serveurs avec un support par message privé. Écrivez le numéro du serveur auquel vous voulez écrire :\n${list}`).catch(() => {});
     }
 
     // ── Message dans un fil modmail (staff) → vers le membre ──

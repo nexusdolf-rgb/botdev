@@ -398,8 +398,8 @@ Dashboard.mount = async (shell, bot) => {
   if (needLink) {
     content.innerHTML = `
       <div class="dash-card" style="max-width:560px;margin:20px auto">
-        <h3>🔗 Lie ton compte Discord</h3>
-        <div class="desc">Pour configurer tes serveurs depuis le dashboard (comme DraftBot), connecte ton compte Discord. On vérifiera automatiquement tes serveurs et ta permission Discord « Administrateur ».</div>
+        <h3>🔗 Liez votre compte Discord</h3>
+        <div class="desc">Pour configurer vos serveurs depuis le dashboard (comme DraftBot), connectez votre compte Discord. On vérifiera automatiquement vos serveurs et votre permission Discord « Administrateur ».</div>
         <button class="dash-btn dash-btn-primary" id="d-link">🎮 Lier mon compte Discord</button>
       </div>`;
     content.querySelector('#d-link').onclick = async () => {
@@ -425,7 +425,7 @@ Dashboard.mount = async (shell, bot) => {
     content.innerHTML = `
       <div class="dash-card" style="max-width:560px;margin:20px auto">
         <h3>🌍 Aucun serveur à configurer</h3>
-        <div class="desc">Ajoute ${App.escapeHtml(bot.name)} à l'un de tes serveurs Discord (bouton « ➕ Ajouter le bot »), puis reviens ici pour tout configurer.</div>
+        <div class="desc">Ajoutez ${App.escapeHtml(bot.name)} à l'un de vos serveurs Discord (bouton « ➕ Ajouter le bot »), puis revenez ici pour tout configurer.</div>
         <button class="dash-btn dash-btn-primary" id="d-invite">➕ Ajouter le bot</button>
       </div>`;
     content.querySelector('#d-invite').onclick = () => App.openInvite(bot.invite_url);
@@ -487,7 +487,7 @@ Dashboard.openServerPicker = () => {
     <div class="sp-picker" id="sp-picker">
       <div class="sp-head">
         <div class="sp-head-copy">
-          <h2>Choisis un serveur</h2>
+          <h2>Choisissez un serveur</h2>
           <p>${guilds.length} serveur${guilds.length > 1 ? 's' : ''} · ${guilds.filter((g) => g.hasBot).length} avec Optimus Prime</p>
         </div>
         ${wantSearch ? '<input type="text" class="sp-search" placeholder="🔍 Rechercher un serveur…" aria-label="Rechercher un serveur" />' : ''}
@@ -531,8 +531,8 @@ Dashboard.openServerPicker = () => {
     card.onclick = async () => {
       const g = guilds.find((x) => x.id === card.dataset.gid);
       if (!g) return;
-      if (!g.hasBot) { App.openInvite(Dashboard.state.bot.invite_url); App.toast('Ajoute le bot sur ce serveur pour le configurer !'); return; }
-      if (!g.canManage) { App.toast('Lecture seule : il te faut la permission Discord « Administrateur » ou être propriétaire du serveur.', 'error'); return; }
+      if (!g.hasBot) { App.openInvite(Dashboard.state.bot.invite_url); App.toast('Ajoutez le bot sur ce serveur pour le configurer !'); return; }
+      if (!g.canManage) { App.toast('Lecture seule : il vous faut la permission Discord « Administrateur » ou être propriétaire du serveur.', 'error'); return; }
       App.closeModal();
       await Dashboard.selectGuild(g.id);
     };
@@ -882,8 +882,8 @@ Dashboard.renderServerGrid = (content) => {
   const wrap = App.el(`
     <div class="srv-grid-page">
       <div class="srv-grid-head">
-        <h2>🌍 Choisis un serveur</h2>
-        <p>Sélectionne le serveur à configurer — ou invite ${App.escapeHtml(Dashboard.state.bot.name)} sur un nouveau.</p>
+        <h2>🌍 Choisissez un serveur</h2>
+        <p>Sélectionnez le serveur à configurer — ou invite ${App.escapeHtml(Dashboard.state.bot.name)} sur un nouveau.</p>
       </div>
       <div class="srv-grid"></div>
     </div>`);
@@ -899,8 +899,8 @@ Dashboard.renderServerGrid = (content) => {
           : '<span class="srv-badge invite">➕ Inviter le bot</span>'}
       </button>`);
     card.onclick = () => {
-      if (!g.hasBot) { App.openInvite(Dashboard.state.bot.invite_url); App.toast('Ajoute le bot puis reviens — le serveur sera configurable !'); return; }
-      if (!g.canManage) { App.toast('Il te faut la permission Discord « Administrateur » ou être propriétaire du serveur.', 'error'); return; }
+      if (!g.hasBot) { App.openInvite(Dashboard.state.bot.invite_url); App.toast('Ajoutez le bot puis revenez — le serveur sera configurable !'); return; }
+      if (!g.canManage) { App.toast('Il vous faut la permission Discord « Administrateur » ou être propriétaire du serveur.', 'error'); return; }
       Dashboard.selectGuild(g.id);
     };
     grid.appendChild(card);
@@ -1076,9 +1076,9 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
       };
       moduleRail.appendChild(item);
     });
-    moduleList.innerHTML = `<div class="dash-mobile-current-server"><small>Serveur sélectionné</small><b>${App.escapeHtml(currentGuild ? currentGuild.name : 'Choisis un serveur')}</b></div>`;
+    moduleList.innerHTML = `<div class="dash-mobile-current-server"><small>Serveur sélectionné</small><b>${App.escapeHtml(currentGuild ? currentGuild.name : 'Choisissez un serveur')}</b></div>`;
     if (!currentGuild) {
-      moduleList.appendChild(App.el('<div class="dash-mobile-module-empty">Sélectionne un serveur à gauche.</div>'));
+      moduleList.appendChild(App.el('<div class="dash-mobile-module-empty">Sélectionnez un serveur à gauche.</div>'));
       return;
     }
     const groups = [['Gestion du serveur', Dashboard.MODULES], ...(mobileUser.is_admin ? [['Administration du bot', Dashboard.BOT_MODULES]] : [])];
@@ -1413,7 +1413,7 @@ Dashboard.renderers.overview = async (content, data) => {
           : `<span class="ov-server-avatar fallback">${App.escapeHtml(serverInitial)}</span>`}
         <div class="ov-intro-copy">
           <span class="ov-eyebrow">${greeting}, administrateur</span>
-          <h2>Bienvenue dans ton espace de gestion</h2>
+          <h2>Bienvenue dans votre espace de gestion</h2>
           <p>${App.escapeHtml(g.name)}${g.description ? ` · ${App.escapeHtml(g.description)}` : ` · ${App.escapeHtml(String(g.members || 0))} membres · tous les réglages d’Optimus Prime au même endroit.`}</p>
         </div>
       </div>
@@ -1451,7 +1451,7 @@ Dashboard.renderers.overview = async (content, data) => {
     <section class="ov-config-panel ov-checklist-card">
       <div class="ov-section-heading"><b>Configuration du serveur</b><span>${doneCount} étape(s) terminée(s) sur ${checklist.length || 0}</span></div>
       <div class="ov-progress-head">
-        <div class="ov-progress-copy"><b>${pct === 100 ? 'Serveur prêt' : 'Progression de la configuration'}</b><span>Les éléments importants de ton installation Optimus Prime</span></div>
+        <div class="ov-progress-copy"><b>${pct === 100 ? 'Serveur prêt' : 'Progression de la configuration'}</b><span>Les éléments importants de votre installation Optimus Prime</span></div>
         <strong>${pct}%</strong>
       </div>
       <div class="ov-progress-track" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Progression de la configuration"><div class="ov-progress-value" style="width:${pct}%"></div></div>
@@ -1476,7 +1476,7 @@ Dashboard.renderers.overview = async (content, data) => {
       <section class="dash-hero ov-onboarding">
         <div class="hero-badge">Premiers réglages</div>
         <h2>Mettons ${App.escapeHtml(g.name)} en place</h2>
-        <p>Ton bot est prêt. Commence par le support, l'accueil et la sécurité.</p>
+        <p>Votre bot est prêt. Commencez par le support, l'accueil et la sécurité.</p>
         <div class="hero-steps">
           <button class="hero-step" data-go="tickets"><span class="hs-num">1</span><span class="hs-emoji">🎫</span><b>Support</b><span>Tickets et catégories</span></button>
           <button class="hero-step" data-go="welcome"><span class="hs-num">2</span><span class="hs-emoji">👋</span><b>Accueil</b><span>Bienvenue et auto-rôles</span></button>
@@ -1529,7 +1529,7 @@ Dashboard.renderers.overview = async (content, data) => {
   if (Dashboard.state.feedTimer) clearInterval(Dashboard.state.feedTimer);
   Dashboard.state.feedTimer = setInterval(loadFeed, 30000);
 
-  const briefSection = App.el('<section class="ov-home-side-section ov-home-brief"><div class="ov-side-heading"><b>Ton serveur en bref</b><span>7 derniers jours</span></div><div class="ov-brief-content"><span class="ov-feed-empty">Chargement des statistiques…</span></div></section>');
+  const briefSection = App.el('<section class="ov-home-side-section ov-home-brief"><div class="ov-side-heading"><b>Votre serveur en bref</b><span>7 derniers jours</span></div><div class="ov-brief-content"><span class="ov-feed-empty">Chargement des statistiques…</span></div></section>');
   sideColumn.appendChild(briefSection);
   try {
     const st = await App.api(`/bots/${bot.id}/guilds/${guildId}/stats`);
@@ -1547,7 +1547,7 @@ Dashboard.renderers.overview = async (content, data) => {
   }
 
   workspace.appendChild(columns);
-  const moduleSection = App.el('<section class="ov-module-section"><div class="ov-section-heading"><b>Modules du serveur</b><span>Choisis une fonctionnalité à configurer</span></div><div class="dash-grid ov-module-grid"></div></section>');
+  const moduleSection = App.el('<section class="ov-module-section"><div class="ov-section-heading"><b>Modules du serveur</b><span>Choisissez une fonctionnalité à configurer</span></div><div class="dash-grid ov-module-grid"></div></section>');
   const grid = moduleSection.querySelector('.ov-module-grid');
   const modules = [
     ['tickets', '🎫', 'Tickets', 'Types personnalisés et support privé'],
@@ -1685,7 +1685,7 @@ Dashboard.renderers.tickets = async (content, data) => {
       ${categories.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(t.menu_category, ch) ? 'selected' : ''}>📁 ${App.escapeHtml(ch.name)}</option>`).join('')}
       ${Dashboard.currentDiscordOption(t.menu_category, categories, '⚠️', 'configuration actuelle — catégorie introuvable')}
     </select>
-    <div style="font-size:12px;color:var(--d-dim);margin-top:4px">✅ Si tu choisis une catégorie ici, TOUS les tickets ouverts via le menu iront dedans — priorité absolue, zéro ambiguïté.</div>
+    <div style="font-size:12px;color:var(--d-dim);margin-top:4px">✅ Si vous choisissez une catégorie ici, TOUS les tickets ouverts via le menu iront dedans — priorité absolue, zéro ambiguïté.</div>
     <label class="dash-label">Message du panneau menu (vide = même message que le panneau bouton)</label>
     <textarea class="dash-input" id="tm-msg" rows="3">${App.escapeHtml(t.menu_message || '')}</textarea>
     <div style="font-size:12px;color:var(--d-dim);margin-top:6px">🗂️ Les types affichés dans le menu se gèrent dans la carte « Types de tickets ». Les deux panneaux peuvent cohabiter, même dans le même salon.</div>
@@ -1711,18 +1711,18 @@ Dashboard.renderers.tickets = async (content, data) => {
 
   // 🖼️ Image personnalisée du panneau principal (vide = bannière générée par défaut)
   let panelImage = String(t.image_url || '');
-  c.querySelector('[data-panel-img]').appendChild(Dashboard.imageField('🖼️ Image du panneau (importée)', panelImage, (v) => { panelImage = v; }, 'Vide = bannière « SUPPORT » générée automatiquement. Importe une image (PNG/JPG/GIF/WebP) pour l\'afficher en bas du panneau.'));
+  c.querySelector('[data-panel-img]').appendChild(Dashboard.imageField('🖼️ Image du panneau (importée)', panelImage, (v) => { panelImage = v; }, 'Vide = bannière « SUPPORT » générée automatiquement. Importez une image (PNG/JPG/GIF/WebP) pour l\'afficher en bas du panneau.'));
 
   // 💬 Message privé après fermeture (v198) — personnalisable, vide = défaut
-  const cdm = Dashboard.card(root, '💬 Message privé après fermeture', 'Envoyé au créateur quand son ticket est fermé, avec la transcription. Laisse vide pour garder le message automatique du bot.');
+  const cdm = Dashboard.card(root, '💬 Message privé après fermeture', 'Envoyé au créateur quand son ticket est fermé, avec la transcription. Laissez vide pour garder le message automatique du bot.');
   let dmImage = String((data.settings || {}).close_dm_image || '');
   cdm.innerHTML += `
     <label class="dash-label">Message personnalisé (vide = message automatique)</label>
-    <textarea class="dash-input" id="tdm-msg" rows="4" placeholder="${App.escapeHtml('Ex : Merci d\'avoir contacté le support ! Ta demande #12 est traitée.')}">${App.escapeHtml((data.settings || {}).close_dm_message || '')}</textarea>
-    <div style="font-size:12px;color:var(--d-dim);margin-top:6px">💡 Tu peux utiliser <b>{server}</b> (nom du serveur) et <b>{url}</b> (lien de la transcription).</div>
+    <textarea class="dash-input" id="tdm-msg" rows="4" placeholder="${App.escapeHtml('Ex : Merci d\'avoir contacté le support ! Votre demande #12 est traitée.')}">${App.escapeHtml((data.settings || {}).close_dm_message || '')}</textarea>
+    <div style="font-size:12px;color:var(--d-dim);margin-top:6px">💡 Vous pouvez utiliser <b>{server}</b> (nom du serveur) et <b>{url}</b> (lien de la transcription).</div>
     <div style="margin-top:12px" data-dm-img></div>
     <div style="margin-top:14px"><button class="dash-btn dash-btn-primary" id="tdm-save">💾 Enregistrer</button></div>`;
-  cdm.querySelector('[data-dm-img]').appendChild(Dashboard.imageField('🖼️ Image du message privé', dmImage, (v) => { dmImage = v; }, 'Vide = image par défaut du bot. Importe la tienne pour personnaliser le message de fermeture.'));
+  cdm.querySelector('[data-dm-img]').appendChild(Dashboard.imageField('🖼️ Image du message privé', dmImage, (v) => { dmImage = v; }, 'Vide = image par défaut du bot. Importez la vôtre pour personnaliser le message de fermeture.'));
   cdm.querySelector('#tdm-save').onclick = async () => {
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/tickets/dm`, { method: 'PUT', body: {
@@ -1739,7 +1739,7 @@ Dashboard.renderers.tickets = async (content, data) => {
   let roomCfg = {};
   try { roomCfg = JSON.parse(String((data.settings || {}).ticket_room || '{}')) || {}; } catch {}
   const roomHexOk = (v) => /^#[0-9a-fA-F]{6}$/.test(String(v || '').trim());
-  const croom = Dashboard.card(root, '🏠 Embed du salon privé (à l’ouverture du ticket)', 'Personnalise le message affiché dans le salon privé quand un ticket s’ouvre — ce que voient le membre ET le staff. Champs vides = texte court automatique. La couleur s’applique à l’embed.');
+  const croom = Dashboard.card(root, '🏠 Embed du salon privé (à l’ouverture du ticket)', 'Personnalisez le message affiché dans le salon privé quand un ticket s’ouvre — ce que voient le membre ET le staff. Champs vides = texte court automatique. La couleur s’applique à l’embed.');
   croom.innerHTML += `
     <label class="dash-label">🎨 Couleur de l’embed</label>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -1750,7 +1750,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     <label class="dash-label">Titre (vide = « 🎫 Ticket ouvert »)</label>
     <input class="dash-input" id="tr-title" maxlength="100" value="${App.escapeHtml(roomCfg.title || '')}" placeholder="🎫 Ticket ouvert" />
     <label class="dash-label">Message d’accueil</label>
-    <textarea class="dash-input" id="tr-welcome" rows="3" maxlength="1500" placeholder="Bienvenue {member} ! Un membre de l’équipe va te répondre ici même…">${App.escapeHtml(roomCfg.welcome || '')}</textarea>
+    <textarea class="dash-input" id="tr-welcome" rows="3" maxlength="1500" placeholder="Bienvenue {member} ! Un membre de l’équipe va vous répondre ici même…">${App.escapeHtml(roomCfg.welcome || '')}</textarea>
     <label class="dash-label">📋 Déroulement personnalisé (facultatif)</label>
     <textarea class="dash-input" id="tr-steps" rows="2" maxlength="1200" placeholder="Vide = pas de déroulement détaillé — une ligne discrète annonce la transcription en MP.">${App.escapeHtml(roomCfg.steps || '')}</textarea>
     <div style="font-size:12px;color:var(--d-dim);margin-top:4px">💡 Variables acceptées : <b>{member}</b> (mention), <b>{user}</b> (pseudo), <b>{server}</b>, <b>{type}</b>, <b>{number}</b>. L’embed garde automatiquement un en-tête propre (pseudo + numéro), les champs équipe / raisons / transcription, et le ⚙️ menu réservé au staff.</div>
@@ -1759,7 +1759,7 @@ Dashboard.renderers.tickets = async (content, data) => {
       <button class="dash-btn" id="tr-default">↩️ Restaurer les valeurs par défaut</button>
     </div>
     <div data-room-preview style="margin-top:14px"></div>`;
-  const autoWelcome = () => 'Bienvenue {member} ! Un membre de l’équipe va te répondre ici même.\n\n✍️ Décris ta demande : texte, captures d’écran ou fichiers.';
+  const autoWelcome = () => 'Bienvenue {member} ! Un membre de l’équipe va vous répondre ici même.\n\n✍️ Décrivez votre demande : texte, captures d’écran ou fichiers.';
   // v220 : plus d'« étapes » par défaut — le panneau réel n'affiche qu'une
   // ligne discrète de transcription quand aucun déroulement n'est configuré.
   const roomPreview = () => {
@@ -1779,7 +1779,7 @@ Dashboard.renderers.tickets = async (content, data) => {
           <div style="font-weight:600;margin-bottom:3px">📋 Déroulement de la prise en charge</div>
           <div style="white-space:pre-wrap;color:#C9CCD1">${App.escapeHtml(steps)}</div>
         </div>`
-      : `<div style="margin-top:10px;border-top:1px solid #1E1F22;padding:8px 0 2px;color:#A8ABAF;font-size:12px">📄 À la fermeture définitive, la transcription t’est envoyée en MP.</div>`;
+      : `<div style="margin-top:10px;border-top:1px solid #1E1F22;padding:8px 0 2px;color:#A8ABAF;font-size:12px">📄 À la fermeture définitive, la transcription vous est envoyée en MP.</div>`;
     box.innerHTML = `
       <div class="dash-label" style="margin:0 0 8px">👀 Aperçu de l’embed du salon privé</div>
       <div style="background:#313338;border-radius:10px;overflow:hidden;color:#DBDEE1;font-size:13px">
@@ -1831,7 +1831,7 @@ Dashboard.renderers.tickets = async (content, data) => {
       ? `<span class="dash-badge ok">📨 Panneau configuré dans #${App.escapeHtml(selectedChannel.name)} — salon trouvé ✅</span>`
       : (selected
           ? `<span class="dash-badge warn">⚠️ Le salon enregistré n'est plus disponible dans Discord</span>`
-          : `<span class="dash-badge warn">⚠️ Aucun salon défini — choisis-en un puis « Envoyer le panneau »</span>`);
+          : `<span class="dash-badge warn">⚠️ Aucun salon défini — choisissez-en un puis « Envoyer le panneau »</span>`);
   };
   renderStatus();
   c.querySelector('#t-channel').onchange = renderStatus;
@@ -1884,7 +1884,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     preview.innerHTML = `
       <div class="dash-label" style="margin:0 0 8px">👀 Aperçu du panneau sur Discord</div>
       <div style="background:#313338;border-radius:10px;padding:14px;color:#DBDEE1;font-size:13px">
-        <div style="margin-bottom:10px">🎫 ${App.escapeHtml(t.message || 'Besoin d\'aide ? Ouvre un ticket !')}</div>
+        <div style="margin-bottom:10px">🎫 ${App.escapeHtml(t.message || 'Besoin d\'aide ? Ouvrez un ticket !')}</div>
         <span style="display:inline-flex;align-items:center;gap:6px;background:${color};color:#fff;font-weight:700;padding:7px 16px;border-radius:6px">${App.escapeHtml(label)}</span>
         ${typesCount
           ? `<div style="margin-top:12px;border:1px solid #1E1F22;border-radius:6px;padding:9px 12px;color:#A8ABAF;text-align:left">${typesData.filter((x) => x.label).map((x) => `<div style="padding:4px 0">${App.escapeHtml(x.emoji || '🎫')} <b style="color:#DBDEE1">${App.escapeHtml(x.label)}</b>${(x.questions || []).length ? ` <span style="font-size:10px;background:rgba(88,101,242,.2);color:#aab1ff;padding:1px 7px;border-radius:8px">❓ ${x.questions.length} question(s)</span>` : ''}${x.description ? `<div style="font-size:11px;margin-left:20px;color:#949BA4">${App.escapeHtml(x.description.slice(0, 70))}${x.description.length > 70 ? '…' : ''}</div>` : ''}</div>`).join('')}</div>`
@@ -1896,7 +1896,7 @@ Dashboard.renderers.tickets = async (content, data) => {
   c.querySelector('#t-msg').addEventListener('input', renderPreview);
   renderPreview();
 
-  const c2 = Dashboard.card(root, '🗂️ Types de tickets', 'Chaque type : emoji, catégorie et PLUSIEURS rôles staff — choisis dans des listes, comme sur Discord.');
+  const c2 = Dashboard.card(root, '🗂️ Types de tickets', 'Chaque type : emoji, catégorie et PLUSIEURS rôles staff — choisissez dans des listes, comme sur Discord.');
   c2.appendChild(App.el(`<div id="t-types"></div>`));
   const addBtn = App.el(`<button class="dash-btn dash-btn-sm" id="t-add">＋ Ajouter un type</button>`);
   c2.appendChild(addBtn);
@@ -1915,7 +1915,7 @@ Dashboard.renderers.tickets = async (content, data) => {
           </div>
           <div data-emojierr style="color:#ff8a8d;font-size:11.5px;margin-top:3px;display:none">⚠️ Emoji invalide — utilise un vrai emoji (ex : 🤝)</div>
           <label class="dash-label">📝 Description (affichée sous le type dans le menu)</label>
-          <input class="dash-input" data-k="description" maxlength="100" value="${App.escapeHtml(x.description)}" placeholder="Ex : signale un abus du staff, en toute confidentialité" />
+          <input class="dash-input" data-k="description" maxlength="100" value="${App.escapeHtml(x.description)}" placeholder="Ex : signalez un abus du staff, en toute confidentialité" />
           <div style="color:var(--d-dim);font-size:10.5px;margin-top:2px">${String(x.description || '').length}/100 — si vide, une description professionnelle est générée automatiquement.</div>
           <label class="dash-label">🗂️ Catégorie</label>
           <select class="dash-select" data-k="categorySel">
@@ -2053,7 +2053,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     <label class="dash-label">Image en haut du panneau (URL https, optionnelle)</label>
     <input class="dash-input" id="adv-image" value="${App.escapeHtml(advancedData.image_url)}" placeholder="https://.../image.png" />
     <label class="dash-label">Message au-dessus du panneau (optionnel)</label>
-    <textarea class="dash-input" id="adv-message" rows="2" maxlength="1900" placeholder="Choisis le service dont tu as besoin…">${App.escapeHtml(advancedData.message)}</textarea>
+    <textarea class="dash-input" id="adv-message" rows="2" maxlength="1900" placeholder="Choisissez le service dont vous avez besoin…">${App.escapeHtml(advancedData.message)}</textarea>
     <label class="adv-check-row"><input type="checkbox" id="adv-reason" ${advancedData.require_reason ? 'checked' : ''} /><span><b>Demander une raison avant de créer le ticket</b><small>La raison sera ajoutée au questionnaire si Discord a encore un champ disponible.</small></span></label>
     <div class="adv-placement-notice"><span>📁</span><div><b>Placement simple et prévisible</b><small>Chaque type doit avoir une catégorie existante. Le même salon privé sera visible uniquement par son créateur et le staff autorisé à ce type.</small></div></div>
     <div class="adv-builder-grid">
@@ -2085,8 +2085,8 @@ Dashboard.renderers.tickets = async (content, data) => {
       ? `<span style="display:inline-block;margin-left:6px;font-size:10px;background:rgba(88,101,242,.2);color:#AAB1FF;padding:1px 6px;border-radius:8px">❓ ${x.questions.length}</span>`
       : '';
     const body = mode === 'menu'
-      ? `<div style="border:1px solid #1E1F22;border-radius:8px;padding:10px 12px;color:#A8ABAF">📋 Choisis un type…<div style="margin-top:8px">${validTypes.map((x) => `<div style="padding:6px 8px;border-top:1px solid #3f4147"><span style="color:${x.color}">●</span> ${App.escapeHtml(x.emoji || '🎫')} <b style="color:#DBDEE1">${App.escapeHtml(x.label)}</b>${questionBadge(x)}<small style="display:block;margin-left:22px;color:#949BA4">${App.escapeHtml(x.description || 'Ouvrir un ticket en privé.')}</small></div>`).join('')}</div></div>`
-      : `<div style="display:flex;flex-direction:column;gap:8px">${validTypes.map((x) => `<div style="padding:9px 10px;border-left:4px solid ${x.color};border-top:1px solid #3f4147"><b style="display:block;color:#DBDEE1">${App.escapeHtml(x.emoji || '🎫')} ${App.escapeHtml(x.label)}${questionBadge(x)}</b><small style="display:block;color:#949BA4;margin:3px 0 7px">${App.escapeHtml(x.description || 'Ouvrir un ticket en privé.')}</small><span style="display:inline-flex;background:${advColorToStyle[x.button_style] || '#5865F2'};color:#fff;font-weight:700;padding:6px 10px;border-radius:6px">${App.escapeHtml(x.emoji || '🎫')} ${App.escapeHtml(x.button_label || ('Envoyer un ticket ' + x.label.toLowerCase()))}</span></div>`).join('') || '<span style="color:var(--d-dim)">Ajoute un type pour voir l’aperçu.</span>'}</div>`;
+      ? `<div style="border:1px solid #1E1F22;border-radius:8px;padding:10px 12px;color:#A8ABAF">📋 Choisissez un type…<div style="margin-top:8px">${validTypes.map((x) => `<div style="padding:6px 8px;border-top:1px solid #3f4147"><span style="color:${x.color}">●</span> ${App.escapeHtml(x.emoji || '🎫')} <b style="color:#DBDEE1">${App.escapeHtml(x.label)}</b>${questionBadge(x)}<small style="display:block;margin-left:22px;color:#949BA4">${App.escapeHtml(x.description || 'Ouvrir un ticket en privé.')}</small></div>`).join('')}</div></div>`
+      : `<div style="display:flex;flex-direction:column;gap:8px">${validTypes.map((x) => `<div style="padding:9px 10px;border-left:4px solid ${x.color};border-top:1px solid #3f4147"><b style="display:block;color:#DBDEE1">${App.escapeHtml(x.emoji || '🎫')} ${App.escapeHtml(x.label)}${questionBadge(x)}</b><small style="display:block;color:#949BA4;margin:3px 0 7px">${App.escapeHtml(x.description || 'Ouvrir un ticket en privé.')}</small><span style="display:inline-flex;background:${advColorToStyle[x.button_style] || '#5865F2'};color:#fff;font-weight:700;padding:6px 10px;border-radius:6px">${App.escapeHtml(x.emoji || '🎫')} ${App.escapeHtml(x.button_label || ('Envoyer un ticket ' + x.label.toLowerCase()))}</span></div>`).join('') || '<span style="color:var(--d-dim)">Ajoutez un type pour voir l’aperçu.</span>'}</div>`;
     c3.querySelector('#adv-preview').innerHTML = `<div class="adv-preview-title">👀 Aperçu Discord <span>Mis à jour en direct</span></div><div class="adv-discord-preview">${imagePreview}<div class="adv-discord-title">🎨 ${App.escapeHtml(c3.querySelector('#adv-name').value || 'Créer un ticket')}</div>${body}</div>`;
   };
   const advRenderTypes = () => {
@@ -2155,7 +2155,7 @@ Dashboard.renderers.tickets = async (content, data) => {
           const questionRow = App.el(`
             <div class="adv-question-row">
               <span style="font-size:11px;color:var(--d-dim);min-width:17px">${questionIndex + 1}.</span>
-              <input class="dash-input" value="${App.escapeHtml(question)}" placeholder="Ex : Quel est ton pseudo ?" maxlength="45" style="flex:1" />
+              <input class="dash-input" value="${App.escapeHtml(question)}" placeholder="Ex : Quel est votre pseudo ?" maxlength="45" style="flex:1" />
               <button class="dash-btn dash-btn-danger dash-btn-sm">🗑</button>
             </div>`);
           questionRow.querySelector('input').addEventListener('input', (event) => {
@@ -2200,9 +2200,9 @@ Dashboard.renderers.tickets = async (content, data) => {
   };
   c3.querySelector('#adv-save').onclick = async () => {
     const validTypes = advancedData.types.filter((x) => x.label.trim());
-    if (!validTypes.length) return App.toast('Ajoute au moins un type de ticket.', 'error');
+    if (!validTypes.length) return App.toast('Ajoutez au moins un type de ticket.', 'error');
     const missingCategory = validTypes.find((type) => !String(type.category || '').trim());
-    if (missingCategory) return App.toast(`Choisis une catégorie Discord pour le type « ${missingCategory.label} ».`, 'error');
+    if (missingCategory) return App.toast(`Choisissez une catégorie Discord pour le type « ${missingCategory.label} ».`, 'error');
     try {
       const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/advanced-tickets`, { method: 'PUT', body: {
         name: c3.querySelector('#adv-name').value.trim(), mode: c3.querySelector('#adv-mode').value,
@@ -2211,7 +2211,7 @@ Dashboard.renderers.tickets = async (content, data) => {
         require_reason: c3.querySelector('#adv-reason').checked ? 1 : 0, types: validTypes,
       }});
       advancedData.id = r.config && r.config.id;
-      c3.querySelector('#adv-status').textContent = '✅ Nouveau système enregistré. Tu peux maintenant envoyer son panneau.';
+      c3.querySelector('#adv-status').textContent = '✅ Nouveau système enregistré. Vous pouvez maintenant envoyer son panneau.';
       App.toast('Nouveau système de tickets enregistré !');
     } catch (e) { App.toast(e.message, 'error'); }
   };
@@ -2227,7 +2227,7 @@ Dashboard.renderers.tickets = async (content, data) => {
 // ---------- Bienvenue ----------
 Dashboard.renderers.welcome = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '👋', 'Bienvenue & auto-rôles', 'Accueille les nouveaux membres et donne des rôles automatiquement.');
+  const root = Dashboard.header(content, '👋', 'Bienvenue & auto-rôles', 'Accueille les nouveaux membres et donnez des rôles automatiquement.');
   const defs = data.events.defs;
   const state = data.events.state || {};
   const textChannels = (data.channels || []).filter((c) => !c.category && !c.voice);
@@ -2331,7 +2331,7 @@ Dashboard.renderers.welcome = async (content, data) => {
         cfgZone.appendChild(App.el(`<label class="dash-label" style="margin-top:8px">${f.label}</label>`));
         const box = App.el(`<div class="dash-channelsmulti" data-k="${f.key}" data-channelsmulti="1"></div>`);
         cfgZone.appendChild(box);
-        cfgZone.appendChild(App.el(`<div style="font-size:12px;color:var(--d-dim);margin-top:6px;line-height:1.6">💡 <b>Comment ça marche :</b><br/>• Dans le message, écris <b>{channels}</b> à l'endroit où les salons doivent apparaître.<br/>• Pour chaque salon ajouté, écris une phrase avec <b>{salon}</b> : la mention cliquable du salon est insérée à la place.<br/>• Exemple : « 📜 Je vous invite à prendre connaissance de {salon} » → « 📜 Je vous invite à prendre connaissance de #regles »</div>`));
+        cfgZone.appendChild(App.el(`<div style="font-size:12px;color:var(--d-dim);margin-top:6px;line-height:1.6">💡 <b>Comment ça marche :</b><br/>• Dans le message, écrivez <b>{channels}</b> à l'endroit où les salons doivent apparaître.<br/>• Pour chaque salon ajouté, écrivez une phrase avec <b>{salon}</b> : la mention cliquable du salon est insérée à la place.<br/>• Exemple : « 📜 Je vous invite à prendre connaissance de {salon} » → « 📜 Je vous invite à prendre connaissance de #regles »</div>`));
         let addRow = null;
         const refresh = () => {
           box.querySelectorAll('.cm-row').forEach((r) => r.remove());
@@ -2348,7 +2348,7 @@ Dashboard.renderers.welcome = async (content, data) => {
             const row = App.el(`
             <div class="cm-row">
               <span class="cm-name">💬 <b>#${App.escapeHtml(String(ref).replace(/^#/, ''))}</b></span>
-              <input class="dash-input cm-label" data-cm-label="${App.escapeHtml(ref)}" placeholder="Phrase (ex : découvre {salon}, les règles y sont)" value="${App.escapeHtml(labels.get(ref) || '')}" />
+              <input class="dash-input cm-label" data-cm-label="${App.escapeHtml(ref)}" placeholder="Phrase (ex : découvrez {salon}, les règles y sont)" value="${App.escapeHtml(labels.get(ref) || '')}" />
               <button class="dash-btn cm-remove" type="button" data-cm-remove="${App.escapeHtml(ref)}" title="Retirer ce salon">✖</button>
             </div>`);
             // La phrase tapée est mémorisée en direct : si on ajoute ou retire
@@ -2377,7 +2377,7 @@ Dashboard.renderers.welcome = async (content, data) => {
           box.appendChild(addRow);
           addRow.querySelector('[data-cm-addbtn]').onclick = () => {
             const ref = addRow.querySelector('[data-cm-add]').value;
-            if (!ref) { App.toast('Choisis d\u0027abord un salon dans la liste.', 'error'); return; }
+            if (!ref) { App.toast('Choisissez d\u0027abord un salon dans la liste.', 'error'); return; }
             if (!labels.has(ref)) { order.push(ref); labels.set(ref, ''); }
             refresh();
             box.dispatchEvent(new Event('change', { bubbles: true }));
@@ -2398,9 +2398,15 @@ Dashboard.renderers.welcome = async (content, data) => {
       tmplBtn.onclick = () => {
         const msgEl = cfgZone.querySelector('[data-k="message"]');
         if (!msgEl) return;
+        // v241 — le titre du panneau dit déjà « 👋 Bienvenue sur {serveur} ! »,
+        // l'en-tête porte le pseudo, et la rubrique « 👥 Membre n° » porte le
+        // compteur : le modèle ne les répète plus.
+        // `{channels}` est sur sa propre ligne, précédée de son introduction :
+        // si aucun salon n'est détaillé, engine.js retire les DEUX lignes
+        // (sinon la phrase restait suspendue sur ses deux points).
         msgEl.value = (key === 'member_join')
-          ? "👋 Bienvenue {user} sur {server} !\nTu es le membre n°{count} 🎉\n\nPour bien commencer, découvre les salons utiles :\n{channels}\n\nPasse un bon moment parmi nous — l'équipe est là pour t'aider ! 🚀"
-          : "👋 Au revoir {user} !\nMerci d'avoir fait partie de {server}.\nBonne continuation — la porte reste ouverte si tu reviens ! 💛";
+          ? "Pour bien commencer, découvrez les salons utiles :\n{channels}\n\nPassez un bon moment parmi nous — l'équipe est là pour vous aider ! 🚀"
+          : "Merci d'avoir fait partie de {server}.\nBonne continuation — la porte reste ouverte si vous revenez ! 💛";
         msgEl.dispatchEvent(new Event('input', { bubbles: true }));
       };
       cfgZone.appendChild(tmplBtn);
@@ -2408,7 +2414,7 @@ Dashboard.renderers.welcome = async (content, data) => {
       const renderPv = () => {
         const msgEl = pv.querySelector('.dc-msg');
         const get = (k) => { const el = cfgZone.querySelector(`[data-k="${k}"]`); return el ? (el.type === 'checkbox' ? el.checked : el.value) : ''; };
-        const serverName = (data.guild && data.guild.name) || 'Ton serveur';
+        const serverName = (data.guild && data.guild.name) || 'Votre serveur';
         const memberCount = String((data.guild && data.guild.members) || '?');
         // nom de salon (normalisé) → ID, pour afficher de VRAIS pings <#id>
         // dans l'aperçu (comme sur Discord).
@@ -2509,7 +2515,7 @@ Dashboard.renderers.welcome = async (content, data) => {
             </div>${thumb}</div>`;
 
         const fields = isJoin
-          ? `<b style="color:#f2f3f5">👥 Tu es le membre</b> <b style="color:#f2f3f5">n°${E(memberCount)}</b> · <b style="color:#f2f3f5">📅 Compte créé</b> il y a 3 jours`
+          ? `<b style="color:#f2f3f5">👥 Vous êtes le membre</b> <b style="color:#f2f3f5">n°${E(memberCount)}</b> · <b style="color:#f2f3f5">📅 Compte créé</b> il y a 3 jours`
           : `<b style="color:#f2f3f5">👥 Membres restants</b> <b style="color:#f2f3f5">${E(memberCount)}</b> · <b style="color:#f2f3f5">🕐 Était membre depuis</b> il y a 2 mois`;
 
         const img = imgUrl
@@ -2539,7 +2545,7 @@ Dashboard.renderers.welcome = async (content, data) => {
         testBtn.disabled = true; testBtn.textContent = '⏳ Envoi…';
         try {
           await App.api(`/bots/${bot.id}/guilds/${guildId}/events/${key}/test`, { method: 'POST' });
-          App.toast('🧪 Message de test envoyé — va voir le salon ! (Pense à 💾 Enregistrer d\'abord si tu viens de modifier.)');
+          App.toast('🧪 Message de test envoyé — allez voir le salon ! (Pensez à 💾 Enregistrer d\'abord si vous venez de modifier.)');
         } catch (e) { App.toast(e.message, 'error'); }
         testBtn.disabled = false; testBtn.textContent = `🧪 Tester ${key === 'member_join' ? 'l\'arrivée' : 'le départ'}`;
       };
@@ -2632,7 +2638,7 @@ Dashboard.renderers.levels = async (content, data) => {
     const box = c2.querySelector('[data-xp-ladder]');
     if (!box) return;
     sortRoles();
-    if (!rolesData.length) { box.innerHTML = 'Aucun palier configuré — ajoute des niveaux avec leur rôle.'; return; }
+    if (!rolesData.length) { box.innerHTML = 'Aucun palier configuré — ajoutez des niveaux avec leur rôle.'; return; }
     box.innerHTML = '<b style="color:var(--d-text)">📊 Échelle actuelle</b><div style="opacity:.75;margin-top:2px">Le chiffre = le niveau · chaque rôle remplace celui du palier précédent.</div><div style="margin-top:6px">'
       + rolesData.map((r) => `<div style="margin:2px 0"><b>${r.level}</b> → ${App.escapeHtml(String(r.role || '—'))}</div>`).join('')
       + '</div>';
@@ -2641,7 +2647,7 @@ Dashboard.renderers.levels = async (content, data) => {
     sortRoles();
     const el = c2.querySelector('#xp-roles');
     el.innerHTML = '';
-    if (!rolesData.length) el.appendChild(App.el(`<div class="dash-empty">Aucun palier — ajoute un niveau et choisis son rôle.</div>`));
+    if (!rolesData.length) el.appendChild(App.el(`<div class="dash-empty">Aucun palier — ajoutez un niveau et choisissez son rôle.</div>`));
     rolesData.forEach((r, i) => {
       const options = [xpRoleChoices.length ? '<option value="">— Choisir un rôle —</option>' : Dashboard.noDiscordChoice('Aucun rôle reçu de Discord')]
         .concat(xpRoleChoices.map((role) => `<option value="${App.escapeHtml(role.name)}" ${Dashboard.discordRefMatches(r.role, role) ? 'selected' : ''}>🛡️ ${App.escapeHtml(role.name)}</option>`));
@@ -2676,7 +2682,7 @@ Dashboard.renderers.levels = async (content, data) => {
   // immédiatement, anciens paliers retirés).
   const syncRow = App.el(`<div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
       <button class="dash-btn" id="xp-sync">🔄 Synchroniser les membres</button>
-      <span id="xp-sync-status" style="font-size:12px;color:var(--d-dim)">Donne leur rôle aux membres déjà au niveau, sans attendre la prochaine montée.</span>
+      <span id="xp-sync-status" style="font-size:12px;color:var(--d-dim)">Donnez leur rôle aux membres déjà au niveau, sans attendre la prochaine montée.</span>
     </div>`);
   c2.appendChild(syncRow);
   c2.querySelector('#xp-sync').onclick = async () => {
@@ -2687,7 +2693,7 @@ Dashboard.renderers.levels = async (content, data) => {
     try {
       const out = await App.api(`/bots/${bot.id}/guilds/${guildId}/xp/sync`, { method: 'POST', body: { limit: 250 } });
       status.textContent = out.message
-        || `✅ Terminé : ${out.present} membre(s) à jour · ${out.added} rôle(s) ajouté(s) · ${out.removed} ancien(s) retiré(s)${out.remaining ? ` — ${out.remaining} restant(s), relance pour finir.` : ''}`;
+        || `✅ Terminé : ${out.present} membre(s) à jour · ${out.added} rôle(s) ajouté(s) · ${out.removed} ancien(s) retiré(s)${out.remaining ? ` — ${out.remaining} restant(s), relancez pour finir.` : ''}`;
     } catch (e) {
       status.textContent = '⚠️ ' + (e.message || 'Synchronisation impossible.');
     }
@@ -2739,7 +2745,7 @@ Dashboard.renderers.economy = async (content, data) => {
 // ---------- Boutique ----------
 Dashboard.renderers.shop = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '🛒', 'Boutique', 'Les membres achètent des rôles avec leurs coins (/shop, /buy). Tu gères les articles ici.');
+  const root = Dashboard.header(content, '🛒', 'Boutique', 'Les membres achètent des rôles avec leurs coins (/shop, /buy). Vous gérez les articles ici.');
   const { items } = await App.api(`/bots/${bot.id}/guilds/${guildId}/shop`);
   const itemsData = items.map((i) => ({ id: i.id, name: i.name, description: i.description, price: i.price, role: i.role, emoji: i.emoji }));
   const roleChoices = (data && data.roles || []).filter((role) => role.name !== '@everyone');
@@ -2894,7 +2900,7 @@ Dashboard.renderers.moderation = async (content, data) => {
       <div class="am-rule-card" data-am-rule-card="links">
         <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">🔗</span><div><b>Liens et invitations</b><small>Bloque les URL et invitations Discord.</small></div></div><input type="checkbox" id="am-links" ${s.am_links ? 'checked' : ''} /></div>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-links" data-am-action="links">${actionOptions('links')}</select></label>
-        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-links" data-am-blacklist-rule="links" ${blacklistAfter('links') ? 'checked' : ''} /><span><b>🚫 Blacklist après sanction</b><small>Ajoute le membre au registre du serveur et envoie le panneau dédié.</small></span></label>
+        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-links" data-am-blacklist-rule="links" ${blacklistAfter('links') ? 'checked' : ''} /><span><b>🚫 Blacklist après sanction</b><small>Ajoutez le membre au registre du serveur et envoyez le panneau dédié.</small></span></label>
         <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><input class="dash-input" type="number" min="0" max="50" data-am-threshold="links" value="${blacklistThresholdFor('links')}" /><span>sanction(s) identique(s)</span></div><small>0 = désactivé. La sanction choisie ci-dessus doit être appliquée.</small></div>
       </div>
       <div class="am-rule-card" data-am-rule-card="caps">
@@ -2907,7 +2913,7 @@ Dashboard.renderers.moderation = async (content, data) => {
         <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">📣</span><div><b>Mentions excessives</b><small>Bloque les rafales de mentions dans un message.</small></div></div></div>
         <label class="am-rule-setting">Mentions maximum <input class="dash-input" id="am-men" type="number" min="0" max="100" value="${s.am_mentions ?? 5}" /><small>0 = illimité</small></label>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-mentions" data-am-action="mentions">${actionOptions('mentions')}</select></label>
-        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-mentions" data-am-blacklist-rule="mentions" ${blacklistAfter('mentions') ? 'checked' : ''} /><span><b>🚫 Blacklist après sanction</b><small>Ajoute le membre seulement après une action réellement appliquée.</small></span></label>
+        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-mentions" data-am-blacklist-rule="mentions" ${blacklistAfter('mentions') ? 'checked' : ''} /><span><b>🚫 Blacklist après sanction</b><small>Ajoutez le membre seulement après une action réellement appliquée.</small></span></label>
         <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><input class="dash-input" type="number" min="0" max="50" data-am-threshold="mentions" value="${blacklistThresholdFor('mentions')}" /><span>sanction(s) identique(s)</span></div><small>0 = désactivé. La sanction choisie ci-dessus doit être appliquée.</small></div>
       </div>
       <div class="am-rule-card" data-am-rule-card="words">
@@ -3226,8 +3232,8 @@ Dashboard.renderers.moderation = async (content, data) => {
   const cNative = Dashboard.card(root, '☁️ Auto-Mod officiel Discord', 'Optimus Prime peut synchroniser des règles Auto-Mod officielles pour obtenir le badge « Uses AutoMod » quand Discord atteint son seuil. Aucun doublon de sanction : les règles natives sont en mode alerte.');
   cNative.classList.add('am-native-card');
   cNative.innerHTML += `
-    <div class="am-native-hero"><div class="am-native-copy"><span class="am-native-icon">☁️</span><div><b>Miroir officiel actif</b><small>Discord reçoit de vraies règles liées à ta configuration, sans remplacer le système Optimus Prime.</small></div></div><label class="am-native-toggle"><span>Activer</span><input type="checkbox" id="am-native-on" ${s.am_native_enabled !== 0 ? 'checked' : ''} /><i></i></label></div>
-    <div class="am-native-grid"><div><label class="dash-label">Salon des alertes Auto-Mod officielles</label><select class="dash-select" id="am-native-channel">${nativeChannelOptions.join('')}</select><small class="am-help">Choisis un salon ou laisse Optimus Prime utiliser le salon de logs/blacklist. Les alertes natives ne sanctionnent pas deux fois.</small></div><div class="am-native-status" id="am-native-status"><span class="am-native-status-dot"></span><div><b>Lecture des règles Discord…</b><small>Vérification en cours</small></div></div></div>
+    <div class="am-native-hero"><div class="am-native-copy"><span class="am-native-icon">☁️</span><div><b>Miroir officiel actif</b><small>Discord reçoit de vraies règles liées à votre configuration, sans remplacer le système Optimus Prime.</small></div></div><label class="am-native-toggle"><span>Activer</span><input type="checkbox" id="am-native-on" ${s.am_native_enabled !== 0 ? 'checked' : ''} /><i></i></label></div>
+    <div class="am-native-grid"><div><label class="dash-label">Salon des alertes Auto-Mod officielles</label><select class="dash-select" id="am-native-channel">${nativeChannelOptions.join('')}</select><small class="am-help">Choisissez un salon ou laissez Optimus Prime utiliser le salon de logs/blacklist. Les alertes natives ne sanctionnent pas deux fois.</small></div><div class="am-native-status" id="am-native-status"><span class="am-native-status-dot"></span><div><b>Lecture des règles Discord…</b><small>Vérification en cours</small></div></div></div>
     <div class="am-native-actions"><span class="am-help">Le badge officiel apparaît uniquement selon les règles et le seuil définis par Discord.</span><button class="dash-btn dash-btn-primary" id="am-native-sync">☁️ Synchroniser avec Discord</button></div>`;
   const nativeStatusBox = cNative.querySelector('#am-native-status');
   const renderNativeStatus = async () => {
@@ -3236,7 +3242,7 @@ Dashboard.renderers.moderation = async (content, data) => {
       const count = Number(nativeStatus.nativeRules) || 0;
       nativeStatusBox.innerHTML = nativeStatus.badgeEligible
         ? `<span class="am-native-status-dot is-ok"></span><div><b>✅ Seuil Auto-Mod atteint</b><small>${count} règle(s) native(s) détectée(s) par Discord.</small></div>`
-        : `<span class="am-native-status-dot ${nativeStatus.ok ? '' : 'is-warn'}"></span><div><b>${nativeStatus.ok ? `☁️ ${count} règle(s) native(s) active(s)` : '⚠️ Synchronisation à vérifier'}</b><small>${nativeStatus.ok ? `${Math.max(0, 100 - count)} règle(s) native(s) manquante(s) pour le seuil indicatif.` : App.escapeHtml(nativeStatus.error || 'Choisis un salon d’alerte et synchronise.')}</small></div>`;
+        : `<span class="am-native-status-dot ${nativeStatus.ok ? '' : 'is-warn'}"></span><div><b>${nativeStatus.ok ? `☁️ ${count} règle(s) native(s) active(s)` : '⚠️ Synchronisation à vérifier'}</b><small>${nativeStatus.ok ? `${Math.max(0, 100 - count)} règle(s) native(s) manquante(s) pour le seuil indicatif.` : App.escapeHtml(nativeStatus.error || 'Choisissez un salon d’alerte et synchronisez.')}</small></div>`;
     } catch (e) {
       nativeStatusBox.innerHTML = `<span class="am-native-status-dot is-warn"></span><div><b>⚠️ API Discord indisponible</b><small>${App.escapeHtml(e.message)}</small></div>`;
     }
@@ -3302,7 +3308,7 @@ Dashboard.renderers.moderation = async (content, data) => {
   renderMemberBlacklist();
 
   // 🚧 Exceptions configurables (rôles, salons et membres)
-  const cExceptions = Dashboard.card(root, '🚧 Exceptions et zones de confiance', 'Choisis qui et où l’auto-mod doit ignorer. Les exceptions personnalisées s’ajoutent à l’option « Ignorer le staff ».');
+  const cExceptions = Dashboard.card(root, '🚧 Exceptions et zones de confiance', 'Choisissez qui et où l’auto-mod doit ignorer. Les exceptions personnalisées s’ajoutent à l’option « Ignorer le staff ».');
   cExceptions.classList.add('am-exceptions-card');
   cExceptions.innerHTML += `
     <div class="am-exception-grid">
@@ -3354,17 +3360,17 @@ Dashboard.renderers.moderation = async (content, data) => {
   })();
 
   // 🧪 Simulation sans risque : aucun message Discord n'est envoyé.
-  const cSim = Dashboard.card(root, '🧪 Simulateur sans risque', 'Teste une phrase avec les vraies règles du serveur. Cette simulation ne supprime rien, ne crée aucun avertissement et ne sanctionne personne.');
+  const cSim = Dashboard.card(root, '🧪 Simulateur sans risque', 'Testez une phrase avec les vraies règles du serveur. Cette simulation ne supprime rien, ne crée aucun avertissement et ne sanctionne personne.');
   cSim.classList.add('am-simulator-card');
   cSim.innerHTML += `
-    <textarea class="dash-input am-sim-text" id="am-sim-content" rows="3" maxlength="2000" placeholder="Écris ici un message à analyser… Ex : https://exemple.com"></textarea>
+    <textarea class="dash-input am-sim-text" id="am-sim-content" rows="3" maxlength="2000" placeholder="Écrivez ici un message à analyser… Ex : https://exemple.com"></textarea>
     <div class="am-sim-controls"><select class="dash-select" id="am-sim-channel"><option value="">— Aucun salon spécifique —</option>${channelList.map((channel) => `<option value="${App.escapeHtml(channel.id)}">💬 #${App.escapeHtml(channel.name)}</option>`).join('')}</select><input class="dash-input" id="am-sim-spam" type="number" min="0" max="100" value="0" placeholder="Rafale (0 = non)" title="Nombre de messages simulés en 5 secondes" /><button class="dash-btn dash-btn-primary" id="am-sim-go">🧪 Analyser</button></div>
     <div id="am-sim-result" class="am-sim-result"></div>`;
   cSim.querySelector('#am-sim-go').onclick = async () => {
     const contentValue = cSim.querySelector('#am-sim-content').value.trim();
     const resultBox = cSim.querySelector('#am-sim-result');
     const button = cSim.querySelector('#am-sim-go');
-    if (!contentValue) { resultBox.innerHTML = '<div class="am-result neutral">Écris un message avant de lancer l’analyse.</div>'; return; }
+    if (!contentValue) { resultBox.innerHTML = '<div class="am-result neutral">Écrivez un message avant de lancer l’analyse.</div>'; return; }
     button.disabled = true; button.textContent = '⏳ Analyse…';
     try {
       const channelId = cSim.querySelector('#am-sim-channel').value;
@@ -3410,7 +3416,7 @@ Dashboard.renderers.moderation = async (content, data) => {
 
   // 🧪 Test réel de l'auto-mod
   const textChannelsAm = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
-  const cTest = Dashboard.card(root, '🧪 Tester l\'auto-mod', 'Envoie un vrai message piégé dans un salon : le bot doit le supprimer. Le résultat s\'affiche ici.');
+  const cTest = Dashboard.card(root, '🧪 Tester l\'auto-mod', 'Envoyez un vrai message piégé dans un salon : le bot doit le supprimer. Le résultat s\'affiche ici.');
   cTest.innerHTML += `
     <label class="dash-label">Salon du test</label>
     <select class="dash-select" id="am-test-ch">${textChannelsAm.map((ch) => `<option value="${ch.id}">💬 #${App.escapeHtml(ch.name)}</option>`).join('')}</select>
@@ -3429,7 +3435,7 @@ Dashboard.renderers.moderation = async (content, data) => {
   cTest.querySelector('#am-test-go').onclick = async () => {
     const resBox = cTest.querySelector('#am-test-result');
     const go = cTest.querySelector('#am-test-go');
-    resBox.innerHTML = `<div class="desc">🧪 Test en cours… regarde le salon <#${cTest.querySelector('#am-test-ch').value}> !</div>`;
+    resBox.innerHTML = `<div class="desc">🧪 Test en cours… regardez le salon <#${cTest.querySelector('#am-test-ch').value}> !</div>`;
     go.disabled = true;
     try {
       const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/automod/test`, { method: 'POST', body: {
@@ -3437,7 +3443,7 @@ Dashboard.renderers.moderation = async (content, data) => {
         type: cTest.querySelector('#am-test-type').value,
       }});
       if (r.hint === 'mentions_off') resBox.innerHTML = `<div class="desc">ℹ️ La limite de mentions est à 0 (illimité) — rien à tester pour ce filtre.</div>`;
-      else if (r.hint === 'no_words') resBox.innerHTML = `<div class="desc">ℹ️ Ajoute d'abord un mot dans la liste noire, puis relance le test.</div>`;
+      else if (r.hint === 'no_words') resBox.innerHTML = `<div class="desc">ℹ️ Ajoutez d'abord un mot dans la liste noire, puis relancez le test.</div>`;
       else if (r.observed) resBox.innerHTML = `<div style="padding:12px;border:1px solid rgba(254,231,92,.4);border-radius:10px;background:rgba(254,231,92,.08)">👀 <b>Mode observation actif.</b> La règle a été détectée, mais aucun message n'a été supprimé et aucune sanction n'a été appliquée.</div>`;
       else if (r.acted && r.deleted) resBox.innerHTML = `<div style="padding:12px;border:1px solid rgba(59,165,93,.4);border-radius:10px;background:rgba(59,165,93,.08)">✅ <b>L'auto-mod fonctionne !</b> Le message a été supprimé (raison : ${App.escapeHtml(r.reason || '—')}).</div>`;
       else if (r.acted) resBox.innerHTML = `<div style="padding:12px;border:1px solid rgba(254,231,92,.4);border-radius:10px;background:rgba(254,231,92,.08)">⚠️ <b>Détecté mais pas supprimé.</b> Vérifie la carte « Permissions du bot » ci-dessus : il lui faut « Supprimer les messages ».</div>`;
@@ -3639,7 +3645,7 @@ Dashboard.renderers.moderation = async (content, data) => {
 Dashboard.renderers.roles = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const root = Dashboard.header(content, '📋', 'Menus & boutons de rôles', 'Deux styles au choix : menu déroulant (plusieurs rôles d\'un coup) ou boutons (un clic = un rôle, re-clic = retiré).');
-  const c = Dashboard.card(root, 'Panneaux', 'Envoie-les sur Discord avec /roles send, ou utilise ✏️ pour modifier — si le panneau est déjà posté, le message Discord se met à jour en place (aucun doublon).');
+  const c = Dashboard.card(root, 'Panneaux', 'Envoyez-les sur Discord avec /roles send, ou utilisez ✏️ pour modifier — si le panneau est déjà posté, le message Discord se met à jour en place (aucun doublon).');
   const menus = data.role_menus || [];
   if (!menus.length) c.appendChild(App.el(`<div class="dash-empty"><div class="big">📋</div>Aucun panneau pour l\'instant.</div>`));
   const list = App.el(`<div></div>`);
@@ -3732,7 +3738,7 @@ Dashboard.renderers.suggestions = async (content, data) => {
   };
 
   const { suggestions } = await App.api(`/bots/${bot.id}/guilds/${guildId}/suggestions`);
-  const c2 = Dashboard.card(root, 'Liste', 'Change le statut (synchronisé avec Discord) ou supprime une suggestion.');
+  const c2 = Dashboard.card(root, 'Liste', 'Changez le statut (synchronisé avec Discord) ou supprimez une suggestion.');
   if (!suggestions.length) c2.appendChild(App.el(`<div class="dash-empty">Aucune suggestion.</div>`));
   const table = App.el(`<table class="dash-table"><thead><tr><th>#</th><th>Texte</th><th>Votes</th><th>Statut</th><th></th></tr></thead><tbody></tbody></table>`);
   const tb = table.querySelector('tbody');
@@ -3803,7 +3809,7 @@ Dashboard.imageField = (label, value, onChange, hint = '') => {
   }
   wrap.querySelector('[data-upload]').onclick = async () => {
     const f = fileInput.files[0];
-    if (!f) return App.toast('Choisis d\'abord une image (PNG, JPG, GIF, WebP).');
+    if (!f) return App.toast('Choisissez d\'abord une image (PNG, JPG, GIF, WebP).');
     const btn = wrap.querySelector('[data-upload]');
     btn.disabled = true; btn.textContent = '⏳ Import…';
     try {
@@ -3813,7 +3819,7 @@ Dashboard.imageField = (label, value, onChange, hint = '') => {
       img.onload = () => { preview.innerHTML = ''; img.style.cssText = 'width:100%;height:100%;object-fit:cover'; preview.appendChild(img); };
       img.src = url;
       wrap.querySelector('[data-remove]').disabled = false;
-      App.toast('✅ Image importée ! Clique sur 💾 Enregistrer pour l\'appliquer.');
+      App.toast('✅ Image importée ! Cliquez sur 💾 Enregistrer pour l\'appliquer.');
       onChange(url);
     } catch (e) {
       App.toast('Erreur : ' + (e.message || 'image refusée'), 'error');
@@ -3870,7 +3876,7 @@ Dashboard.renderers.giveaways = async (content) => {
       <label class="dash-label">🎨 Couleur de l\'annonce</label>
       <input class="dash-input" id="gw-color" type="color" value="${/^#[0-9a-fA-F]{6}$/.test(String(s.giveaway_color)) ? s.giveaway_color : '#FEE75C'}" style="width:64px;height:38px;padding:2px" />
     </div>
-    <label class="dash-label">Message personnalisé (vide = « Réagis avec 🎉 pour participer ! »)</label>
+    <label class="dash-label">Message personnalisé (vide = « Réagissez avec 🎉 pour participer ! »)</label>
     <textarea class="dash-input" id="gw-msg" rows="2">${App.escapeHtml(s.giveaway_message || '')}</textarea>
     <div style="margin-top:12px"><button class="dash-btn dash-btn-primary" id="gw-save">💾 Enregistrer la configuration</button></div>`;
   c.querySelector('#gw-save').onclick = async () => {
@@ -3917,7 +3923,7 @@ Dashboard.renderers.giveaways = async (content) => {
     <div style="margin-top:12px"><button class="dash-btn dash-btn-primary" id="gw-create">🚀 Lancer le giveaway</button></div>`;
   c3.querySelector('#gw-create').onclick = async () => {
     const prize = c3.querySelector('#gw-new-prize').value.trim();
-    if (!prize) return App.toast('Indique le prix à gagner !', 'error');
+    if (!prize) return App.toast('Indiquez le prix à gagner !', 'error');
     const btn = c3.querySelector('#gw-create');
     btn.disabled = true; btn.textContent = '⏳ Envoi…';
     try {
@@ -3973,10 +3979,10 @@ Dashboard.embedDraft = Dashboard.embedDraft || null;
 
 Dashboard.renderers.embeds = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '🧱', 'Embed Builder', 'Construis visuellement les messages de ton bot : aperçu Discord en direct, envoi immédiat dans un salon et modèles réutilisables.');
+  const root = Dashboard.header(content, '🧱', 'Embed Builder', 'Construisez visuellement les messages de votre bot : aperçu Discord en direct, envoi immédiat dans un salon et modèles réutilisables.');
   const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
   const g = data.guild || {};
-  const serverName = g.name || 'ton serveur';
+  const serverName = g.name || 'votre serveur';
   const memberCount = g.members || '?';
   const botName = (bot && bot.name) || 'Optimus Prime';
 
@@ -3996,7 +4002,7 @@ Dashboard.renderers.embeds = async (content, data) => {
   wrap.append(leftCol, rightCol);
 
   // ---------- Carte 1 : le message ----------
-  const cMsg = Dashboard.card(leftCol, '✍️ Ton message', 'Le texte au-dessus de l\'embed (optionnel) et l\'embed lui-même.');
+  const cMsg = Dashboard.card(leftCol, '✍️ Votre message', 'Le texte au-dessus de l\'embed (optionnel) et l\'embed lui-même.');
   cMsg.innerHTML += `
     <div class="eb-vars">
       <span class="eb-vars-lbl">Variables :</span>
@@ -4014,7 +4020,7 @@ Dashboard.renderers.embeds = async (content, data) => {
         <input class="dash-input" id="eb-title" maxlength="256" placeholder="📣 Grande nouvelle" /></div>
     </div>
     <label class="dash-label">Description</label>
-    <textarea class="dash-input" id="eb-description" rows="5" maxlength="4096" placeholder="Écris ton texte ici… **gras**, *italique*, \`code\`"></textarea>
+    <textarea class="dash-input" id="eb-description" rows="5" maxlength="4096" placeholder="Écrivez votre texte ici… **gras**, *italique*, \`code\`"></textarea>
     <div class="eb-grid2">
       <div>
         <label class="dash-label">Couleur de la barre</label>
@@ -4039,7 +4045,7 @@ Dashboard.renderers.embeds = async (content, data) => {
   cBtns.innerHTML += `<div id="eb-btn-list"></div><button type="button" class="btn btn-sm eb-btn-add" id="eb-btn-add">➕ Ajouter un bouton</button>`;
 
   // ---------- Carte 3 : les modèles ----------
-  const cTpl = Dashboard.card(leftCol, '💾 Modèles', 'Sauvegarde tes constructions pour les réutiliser plus tard.');
+  const cTpl = Dashboard.card(leftCol, '💾 Modèles', 'Sauvegardez vos constructions pour les réutiliser plus tard.');
   cTpl.innerHTML += `
     <div class="eb-tpl-save">
       <input class="dash-input" id="eb-tpl-name" maxlength="80" placeholder="Nom du modèle (ex : Règlement)" />
@@ -4063,7 +4069,7 @@ Dashboard.renderers.embeds = async (content, data) => {
       </div>
     </div>
     <div class="dash-card eb-preview-card">
-      <div class="card-head"><div class="card-heading"><h3>👀 Aperçu en direct</h3><div class="desc">Exactement comme tes membres le verront sur Discord.</div></div></div>
+      <div class="card-head"><div class="card-heading"><h3>👀 Aperçu en direct</h3><div class="desc">Exactement comme vos membres le verront sur Discord.</div></div></div>
       <div id="eb-preview"></div>
     </div>
   `;
@@ -4188,7 +4194,7 @@ Dashboard.renderers.embeds = async (content, data) => {
   };
   rightCol.querySelector('#eb-send').onclick = async () => {
     const channel = rightCol.querySelector('#eb-channel').value;
-    if (!channel) return App.toast('Choisis d\'abord un salon.', 'error');
+    if (!channel) return App.toast('Choisissez d\'abord un salon.', 'error');
     const btn = rightCol.querySelector('#eb-send');
     btn.disabled = true; btn.textContent = '⏳ Envoi…';
     try {
@@ -4252,7 +4258,7 @@ Dashboard.renderers.embeds = async (content, data) => {
   };
   cTpl.querySelector('#eb-tpl-save').onclick = async () => {
     const name = cTpl.querySelector('#eb-tpl-name').value.trim();
-    if (!name) return App.toast('Donne un nom à ton modèle.', 'error');
+    if (!name) return App.toast('Donnez un nom à votre modèle.', 'error');
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/embed-templates`, { method: 'POST', body: { name, ...getPayload() } });
       App.toast(`💾 Modèle « ${name} » sauvegardé !`);
@@ -4461,7 +4467,7 @@ const ANNOUNCEMENT_TZ_LABEL = Object.fromEntries(ANNOUNCEMENT_TZ_OPTIONS.map(([t
 
 Dashboard.renderers.announcements = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '📅', 'Annonces programmées', 'Des messages envoyés automatiquement aux jours et heures choisis (ex : le lundi à 18 h).');
+  const root = Dashboard.header(content, '📅', 'Annonces programmées', 'Des messages envoyés automatiquement aux jours et heures choisissez (ex : le lundi à 18 h).');
   const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
   const rolesList = (data.roles || []).filter((role) => role.name !== '@everyone');
   const [scheduledResult, customResult] = await Promise.all([
@@ -4473,7 +4479,7 @@ Dashboard.renderers.announcements = async (content, data) => {
   const currentTz = ((data.settings || {}).timezone) || 'Europe/Paris';
 
   // 📣 Le nouveau composeur est indépendant des annonces programmées.
-  const cCustom = Dashboard.card(root, '📣 Annonce personnalisée', 'Compose un panneau complet, choisis plusieurs salons et les rôles à mentionner, puis publie-le immédiatement. Les annonces programmées historiques restent conservées en dessous.');
+  const cCustom = Dashboard.card(root, '📣 Annonce personnalisée', 'Composez un panneau complet, choisissez plusieurs salons et les rôles à mentionner, puis publie-le immédiatement. Les annonces programmées historiques restent conservées en dessous.');
   cCustom.classList.add('custom-announcement-card');
   const customData = {
     ...customAnnouncement,
@@ -4519,8 +4525,8 @@ Dashboard.renderers.announcements = async (content, data) => {
     </div>
     <label class="dash-label">Message complet</label>
     <div class="ca-toolbar" role="toolbar" aria-label="Formatage du message">${announcementMarks.map(([label,,, title], index) => `<button type="button" class="ca-mark" data-mark="${index}" title="${title}">${label}</button>`).join('')}</div>
-    <textarea class="dash-input ca-message" id="ca-message" rows="9" maxlength="4000" placeholder="Écris ton annonce ici…">${App.escapeHtml(customData.message)}</textarea>
-    <div class="ca-editor-help">Sélectionne un texte puis clique sur un bouton, ou clique sans sélectionner pour insérer un modèle. Les mentions de rôles seront ajoutées automatiquement en haut du panneau.</div>
+    <textarea class="dash-input ca-message" id="ca-message" rows="9" maxlength="4000" placeholder="Écrivez votre annonce ici…">${App.escapeHtml(customData.message)}</textarea>
+    <div class="ca-editor-help">Sélectionnez un texte puis cliquez sur un bouton, ou cliquez sans sélectionner pour insérer un modèle. Les mentions de rôles seront ajoutées automatiquement en haut du panneau.</div>
     <label class="dash-label">Footer de l'annonce (optionnel)</label>
     <input class="dash-input" id="ca-footer" value="${App.escapeHtml(customData.footer)}" maxlength="200" placeholder="Hoxera · Informations du serveur" />
     <div class="ca-preview-wrap" id="ca-preview"></div>
@@ -4547,7 +4553,7 @@ Dashboard.renderers.announcements = async (content, data) => {
     const color = /^#[0-9a-fA-F]{6}$/.test(cCustom.querySelector('#ca-color').value) ? cCustom.querySelector('#ca-color').value : '#5865F2';
     const roleNames = [...selectedAnnRoles].map((ref) => rolesList.find((role) => String(role.id) === ref || String(role.name) === ref)).filter(Boolean).map((role) => `<span class="ca-role-mention">@${App.escapeHtml(role.name)}</span>`).join(' ');
     const image = cCustom.querySelector('#ca-image').value.trim();
-    caPreview.innerHTML = `<div class="ca-preview-label">👀 Aperçu Discord <span>Actualisé en direct</span></div><div class="ca-discord-preview"><div class="ca-discord-author"><span class="ca-bot-avatar">⚡</span><b>Hoxera</b><span>APP</span></div>${roleNames ? `<div class="ca-preview-pings">${roleNames}</div>` : ''}<div class="ca-embed-preview" style="border-left-color:${color}">${cCustom.querySelector('#ca-title').value.trim() ? `<div class="ca-embed-title">${App.escapeHtml(cCustom.querySelector('#ca-title').value.trim())}</div>` : ''}<div class="ca-embed-body">${markdownPreview(caMessage.value) || '<span class="ca-placeholder">Ton message apparaîtra ici…</span>'}</div>${image && /^https:\/\//i.test(image) ? `<img src="${App.escapeHtml(image)}" alt="" />` : ''}<div class="ca-embed-footer">${App.escapeHtml(cCustom.querySelector('#ca-footer').value.trim() || 'Hoxera · Annonce du serveur')}</div></div></div>`;
+    caPreview.innerHTML = `<div class="ca-preview-label">👀 Aperçu Discord <span>Actualisé en direct</span></div><div class="ca-discord-preview"><div class="ca-discord-author"><span class="ca-bot-avatar">⚡</span><b>Hoxera</b><span>APP</span></div>${roleNames ? `<div class="ca-preview-pings">${roleNames}</div>` : ''}<div class="ca-embed-preview" style="border-left-color:${color}">${cCustom.querySelector('#ca-title').value.trim() ? `<div class="ca-embed-title">${App.escapeHtml(cCustom.querySelector('#ca-title').value.trim())}</div>` : ''}<div class="ca-embed-body">${markdownPreview(caMessage.value) || '<span class="ca-placeholder">Votre message apparaîtra ici…</span>'}</div>${image && /^https:\/\//i.test(image) ? `<img src="${App.escapeHtml(image)}" alt="" />` : ''}<div class="ca-embed-footer">${App.escapeHtml(cCustom.querySelector('#ca-footer').value.trim() || 'Hoxera · Annonce du serveur')}</div></div></div>`;
   };
   Dashboard.renderDiscordMultiSelect(cCustom.querySelector('#ca-channels'), {
     items: textChannels,
@@ -4572,7 +4578,7 @@ Dashboard.renderers.announcements = async (content, data) => {
     const start = caMessage.selectionStart;
     const end = caMessage.selectionEnd;
     const selected = caMessage.value.slice(start, end);
-    const value = selected || (before === '> ' || before === '- ' ? 'ton texte' : before === '[' ? 'texte' : 'texte');
+    const value = selected || (before === '> ' || before === '- ' ? 'votre texte' : before === '[' ? 'texte' : 'texte');
     caMessage.value = `${caMessage.value.slice(0, start)}${before}${value}${after}${caMessage.value.slice(end)}`;
     const cursor = start + before.length + value.length + after.length;
     caMessage.focus();
@@ -4599,8 +4605,8 @@ Dashboard.renderers.announcements = async (content, data) => {
   });
   const saveCustomAnnouncement = async (silent = false) => {
     const payload = collectCustomAnnouncement();
-    if (!payload.message.trim()) throw new Error('Écris le contenu de ton annonce.');
-    if (!payload.channels.length) throw new Error('Choisis au moins un salon de publication.');
+    if (!payload.message.trim()) throw new Error('Écrivez le contenu de votre annonce.');
+    if (!payload.channels.length) throw new Error('Choisissez au moins un salon de publication.');
     const result = await App.api(`/bots/${bot.id}/guilds/${guildId}/announcements/custom`, { method: 'PUT', body: payload });
     if (caStatus) caStatus.textContent = silent ? '✅ Brouillon enregistré, publication en cours…' : '🟡 Brouillon enregistré. Il sera publié uniquement après le bouton « Publier maintenant ».'.replace('uniquement', silent ? 'ensuite' : 'uniquement');
     if (!silent) App.toast('Brouillon d’annonce enregistré !');
@@ -4678,7 +4684,7 @@ Dashboard.renderers.announcements = async (content, data) => {
   c2.querySelector('#a-add').onclick = async () => {
     const days = [...c2.querySelectorAll('[data-day]')].filter((x) => x.checked).map((x) => Number(x.dataset.day));
     const text = c2.querySelector('#a-text').value.trim();
-    if (!days.length || !text) return App.toast('Choisis au moins un jour et écris le message.', 'error');
+    if (!days.length || !text) return App.toast('Choisissez au moins un jour et écrivez le message.', 'error');
     try {
       const chosenTz = c2.querySelector('#a-tz').value;
       if (chosenTz !== currentTz) {
@@ -4703,8 +4709,8 @@ Dashboard.renderers.logs = async (content, data) => {
   const s = data.settings;
   const ev = data.log_events || {};
   const textChannels = (data.channels || []).filter((channel) => !channel.category && !channel.voice);
-  const root = Dashboard.header(content, '📜', 'Journaux de modération', 'Un salon où le bot trace ce que TU choisis.');
-  const c = Dashboard.card(root, 'Configuration', 'Active avec /modlogs set #salon ou ici.');
+  const root = Dashboard.header(content, '📜', 'Journaux de modération', 'Un salon où le bot trace ce que VOUS choisissez.');
+  const c = Dashboard.card(root, 'Configuration', 'Activez avec /modlogs set #salon ou ici.');
   c.innerHTML += `
     <label class="dash-label">Salon des journaux</label>
     <select class="dash-select" id="l-channel">
@@ -4712,7 +4718,7 @@ Dashboard.renderers.logs = async (content, data) => {
       ${textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.log_channel, channel) ? 'selected' : ''}>📜 #${App.escapeHtml(channel.name)}</option>`).join('')}
       ${Dashboard.currentDiscordOption(s.log_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable')}
     </select>
-    <label class="dash-label" style="margin-top:12px">📂 Que dois-je tracer ?</label>
+    <label class="dash-label" style="margin-top:12px">📂 Que devez-je tracer ?</label>
     <div class="dash-filter-grid">
       ${[
         ['tickets', '🎫 Tickets', 'ouverture, fermeture, suppression'],
@@ -4765,7 +4771,7 @@ Dashboard.renderers.logs = async (content, data) => {
 // ---------- 🎮 Événements & tournois (v189) ----------
 Dashboard.renderers.quiz = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '🧠', 'Quiz', 'Crée tes propres quiz, choisis le salon, règle les points. Les membres répondent avec /quiz.');
+  const root = Dashboard.header(content, '🧠', 'Quiz', 'Créez vos propres quiz, sélectionnez le salon, réglez les points. Les membres répondent avec /quiz.');
   const s = data.settings || {};
   const textChannels = (data.channels || []).filter((channel) => !channel.category && !channel.voice);
   const setsData = await App.api(`/bots/${bot.id}/guilds/${guildId}/quiz/sets`);
@@ -4804,9 +4810,9 @@ Dashboard.renderers.quiz = async (content, data) => {
   };
 
   // 📚 Mes quiz
-  const list = Dashboard.card(root, '📚 Mes quiz', 'Tes banques de questions. Désactive un quiz pour qu\'il ne sorte plus dans /quiz (les questions restent).');
+  const list = Dashboard.card(root, '📚 Mes quiz', 'Vos banques de questions. Désactivez un quiz pour qu\'il ne sorte plus dans /quiz (les questions restent).');
   const sets = setsData.sets || [];
-  if (!sets.length) list.appendChild(App.el(`<div class="dash-empty"><div class="big">🧠</div>Tu n\'as pas encore créé de quiz — utilise le formulaire « ➕ Créer un quiz » ci-dessous.<br/><span style="font-size:12px;color:var(--d-dim)">Sans quiz personnalisé, /quiz utilise la banque de questions par défaut.</span></div>`));
+  if (!sets.length) list.appendChild(App.el(`<div class="dash-empty"><div class="big">🧠</div>Vous n\'avez pas encore créé de quiz — utilisez le formulaire « ➕ Créer un quiz » ci-dessous.<br/><span style="font-size:12px;color:var(--d-dim)">Sans quiz personnalisé, /quiz utilise la banque de questions par défaut.</span></div>`));
   sets.forEach((set) => {
     const qCount = (set.questions || []).length;
     const row = App.el(`
@@ -4835,7 +4841,7 @@ Dashboard.renderers.quiz = async (content, data) => {
   });
 
   // ➕ Créer / ✏️ Modifier un quiz
-  const editor = Dashboard.card(root, '➕ Créer un quiz', 'Ajoute autant de questions que tu veux : une question + la bonne réponse + deux mauvaises réponses.');
+  const editor = Dashboard.card(root, '➕ Créer un quiz', 'Ajoutez autant de questions que vous voulez : une question + la bonne réponse + deux mauvaises réponses.');
   let editingId = null;
   const editorName = App.el(`<input class="dash-input" id="qze-name" placeholder="Nom du quiz (ex : Culture générale, Jeux vidéo…)" style="max-width:420px" />`);
   const editorChan = App.el(`<select class="dash-select" id="qze-channel">${chanOpts.join('')}</select>`);
@@ -4905,8 +4911,8 @@ Dashboard.renderers.quiz = async (content, data) => {
   saveB.onclick = async () => {
     const name = editorName.value.trim();
     const questions = collect();
-    if (!name) return App.toast('Donne un nom à ton quiz !', 'error');
-    if (!questions.length) return App.toast('Ajoute au moins une question complète (question + bonne réponse).', 'error');
+    if (!name) return App.toast('Donnez un nom à votre quiz !', 'error');
+    if (!questions.length) return App.toast('Ajoutez au moins une question complète (question + bonne réponse).', 'error');
     const body = { name: name.slice(0, 80), channel: editorChan.value.trim(), questions };
     try {
       if (editingId) {
@@ -4923,7 +4929,7 @@ Dashboard.renderers.quiz = async (content, data) => {
   // 🏆 Classement
   const { top } = await App.api(`/bots/${bot.id}/guilds/${guildId}/quiz/top`);
   const c2 = Dashboard.card(root, '🏆 Classement Quiz', 'Les 25 meilleurs joueurs de ce serveur.');
-  if (!top.length) c2.appendChild(App.el(`<div class="dash-empty"><div class="big">🧠</div>Personne n\'a encore joué au quiz — lance <b>/quiz</b> sur le serveur !</div>`));
+  if (!top.length) c2.appendChild(App.el(`<div class="dash-empty"><div class="big">🧠</div>Personne n\'a encore joué au quiz — lancez <b>/quiz</b> sur le serveur !</div>`));
   else {
     const table = App.el(`<table class="dash-table"><thead><tr><th>#</th><th>Membre</th><th>Points</th><th>Réponses</th></tr></thead><tbody></tbody></table>`);
     const tb = table.querySelector('tbody');
@@ -4963,7 +4969,7 @@ Dashboard.renderers.events = async (content, data) => {
     } catch (e) { listEl.appendChild(App.el(`<div class="dash-empty">${App.escapeHtml(e.message)}</div>`)); return; }
     const upcoming = events.filter((e) => e.starts_at > Date.now()).sort((a, b) => a.starts_at - b.starts_at);
     if (!upcoming.length) {
-      listEl.appendChild(App.el('<div class="dash-empty">Aucun événement à venir. Crée ton premier tournoi ci-dessous ! 🎮</div>'));
+      listEl.appendChild(App.el('<div class="dash-empty">Aucun événement à venir. Créez votre premier tournoi ci-dessous ! 🎮</div>'));
       return;
     }
     upcoming.forEach((ev) => {
@@ -5055,7 +5061,7 @@ Dashboard.renderers.community = async (content, data) => {
   const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
 
   // ---- 🔴 Carte Annonces de live ----
-  const cl = Dashboard.card(root, '🔴 Annonces de live', 'Enregistre le lien TikTok / Twitch / YouTube / Kick d\'un membre : dès qu\'il lance un live, le bot l\'annonce automatiquement (pseudo + photo de profil + bouton Regarder) dans le salon choisi.');
+  const cl = Dashboard.card(root, '🔴 Annonces de live', 'Enregistrez le lien TikTok / Twitch / YouTube / Kick d\'un membre : dès qu\'il lance un live, le bot l\'annonce automatiquement (pseudo + photo de profil + bouton Regarder) dans le salon choisi.');
   const liveChanOpts = ['<option value="">— Désactivé (choisir un salon pour activer) —</option>']
     .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(s.live_channel, ch) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`));
   if (s.live_channel && !textChannels.some((ch) => Dashboard.discordRefMatches(s.live_channel, ch))) {
@@ -5064,7 +5070,7 @@ Dashboard.renderers.community = async (content, data) => {
   cl.innerHTML += `
     <div id="lv-status" style="margin-bottom:10px">${s.live_channel
       ? `<span class="dash-badge ok">✅ Annonces ACTIVES dans ${App.escapeHtml(s.live_channel)}</span>`
-      : `<span class="dash-badge warn">⚠️ AUCUN salon choisi — les annonces sont DÉSACTIVÉES ! Choisis un salon ci-dessous.</span>`}</div>
+      : `<span class="dash-badge warn">⚠️ AUCUN salon choisi — les annonces sont DÉSACTIVÉES ! Choisissez un salon ci-dessous.</span>`}</div>
     <label class="dash-label">Salon des annonces de live</label>
     <select class="dash-select" id="lv-chan" style="max-width:320px">${liveChanOpts.join('')}</select>
     <label class="dash-label">Mention envoyée avec l'annonce</label>
@@ -5112,20 +5118,20 @@ Dashboard.renderers.community = async (content, data) => {
 
   const PLAT = { tiktok: ['🎵', 'TikTok'], twitch: ['🟣', 'Twitch'], youtube: ['▶️', 'YouTube'], kick: ['🟢', 'Kick'] };
   // 👀 Aperçu DYNAMIQUE de l'annonce : le premier compte suivi du serveur,
-  // ou un exemple neutre (« ton_streamer ») s'il n'y en a aucun. Plus jamais
+  // ou un exemple neutre (« votre_streamer ») s'il n'y en a aucun. Plus jamais
   // de pseudo réel affiché par erreur sur un autre serveur (v192).
   const renderPreview = (socials) => {
     const pv = cl.querySelector('#lv-preview');
     if (!pv) return;
     const s = (socials || [])[0];
-    const handle = s ? `@${s.handle}` : '@ton_streamer';
+    const handle = s ? `@${s.handle}` : '@votre_streamer';
     const [emo, lab] = s ? (PLAT[s.platform] || ['🌐', s.platform]) : ['🎵', 'TikTok'];
     pv.innerHTML = `
       <div style="font-size:12.5px;color:#dbdee1;margin-bottom:6px">@everyone</div>
       <div style="border-left:4px solid #FE2C55;background:#2B2D31;border-radius:4px;padding:12px 14px;max-width:430px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#FE2C55,#8B5CF6);display:inline-block"></span><b style="font-size:13px;color:#f2f3f5">${App.escapeHtml(handle)} est en live !</b></div>
         <div style="font-weight:700;font-size:14px;color:#fff">${emo} 🔴 LIVE sur ${lab}</div>
-        <div style="font-size:12.5px;color:#b5bac1;margin:6px 0">✨ Rejoins-le maintenant, il t'attend…</div>
+        <div style="font-size:12.5px;color:#b5bac1;margin:6px 0">✨ Rejoignez-le maintenant, il vous attend…</div>
         <div style="display:inline-block;background:#4E5058;color:#fff;font-size:12px;font-weight:600;padding:7px 14px;border-radius:6px">▶️ Regarder le live ${lab}</div>
       </div>`;
   };
@@ -5189,7 +5195,7 @@ Dashboard.renderers.community = async (content, data) => {
         user_id: cl.querySelector('#lv-member').value,
       }});
       const chanOk = !!cl.querySelector('#lv-chan').value;
-      App.toast(`Compte @${r.handle} (${r.platform}) suivi !${chanOk ? '' : ' ⚠️ Choisis aussi un salon d\'annonces !'}`, chanOk ? undefined : 'error');
+      App.toast(`Compte @${r.handle} (${r.platform}) suivi !${chanOk ? '' : ' ⚠️ Choisissez aussi un salon d\'annonces !'}`, chanOk ? undefined : 'error');
       cl.querySelector('#lv-link').value = '';
       renderSocials();
     } catch (e) { App.toast(e.message, 'error'); }
@@ -5203,7 +5209,7 @@ Dashboard.renderers.community = async (content, data) => {
   }).catch(() => {});
 
   // ---- Carte Starboard ----
-  const c1 = Dashboard.card(root, '⭐ Starboard', 'Quand un message reçoit assez d\'étoiles (réaction ⭐), il est épinglé dans le salon choisi — le mur de la gloire de ton serveur.');
+  const c1 = Dashboard.card(root, '⭐ Starboard', 'Quand un message reçoit assez d\'étoiles (réaction ⭐), il est épinglé dans le salon choisi — le mur de la gloire de votre serveur.');
   const chanOpts = ['<option value="">— Désactivé (choisir un salon pour activer) —</option>']
     .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(s.starboard_channel, ch) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`));
   if (s.starboard_channel && !textChannels.some((ch) => Dashboard.discordRefMatches(s.starboard_channel, ch))) {
@@ -5428,7 +5434,7 @@ Dashboard.renderers.botprofile = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const profile = data.profile || {};
   const serverName = data.guild && data.guild.name ? data.guild.name : 'ce serveur';
-  const root = Dashboard.header(content, '🤖', 'Identité du bot', `Personnalise Optimus Prime uniquement sur ${serverName}.`);
+  const root = Dashboard.header(content, '🤖', 'Identité du bot', `Personnalisez Optimus Prime uniquement sur ${serverName}.`);
   // URL absolue : la base de données stocke /assets/… (chemin relatif du site).
   const abs = (u) => {
     if (!u) return '';
@@ -5505,7 +5511,7 @@ Dashboard.renderers.botprofile = async (content, data) => {
 
   const fileAsDataUrl = (file) => new Promise((resolve, reject) => {
     if (!file) return resolve('');
-    if (!String(file.type || '').startsWith('image/')) return reject(new Error('Choisis un fichier image.'));
+    if (!String(file.type || '').startsWith('image/')) return reject(new Error('Choisissez un fichier image.'));
     if (file.size > 3 * 1024 * 1024) return reject(new Error('Image trop lourde : 3 Mo maximum.'));
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result || ''));
@@ -5572,7 +5578,7 @@ Dashboard.renderers.botprofile = async (content, data) => {
   const aliases = data.profiles_extra || [];
   const activeId = Number(data.profile_active || 0);
   const principalName = (profile.name || '').trim() || 'Identité globale du bot';
-  const card2 = Dashboard.card(root, '👥 Profils d’envoi (qui signe les messages)', `Choisis l’identité utilisée quand le bot envoie un message sur ${serverName} (bienvenue, tickets, annonces, niveaux…). Le « profil principal » est celui modifié ci-dessus.`);
+  const card2 = Dashboard.card(root, '👥 Profils d’envoi (qui signe les messages)', `Choisissez l’identité utilisée quand le bot envoie un message sur ${serverName} (bienvenue, tickets, annonces, niveaux…). Le « profil principal » est celui modifié ci-dessus.`);
   const choices = [{ id: 0, name: principalName, avatar: avatarOf(profile), isPrincipal: true }]
     .concat(aliases.map((a) => ({ id: a.id, name: a.name, avatar: a.avatar_url || '' })));
   choices.forEach((c) => {
@@ -5623,12 +5629,12 @@ Dashboard.renderers.botprofile = async (content, data) => {
     const nameInput2 = card2.querySelector('#bp-alias-name');
     const fileInput = card2.querySelector('#bp-alias-file');
     const name = nameInput2.value.trim();
-    if (!name) { App.toast('Donne un nom au profil.', 'error'); return; }
+    if (!name) { App.toast('Donnez un nom au profil.', 'error'); return; }
     try {
       const body = { name };
       const file = fileInput.files && fileInput.files[0];
       if (file) {
-        if (!String(file.type || '').startsWith('image/')) throw new Error('Choisis un fichier image.');
+        if (!String(file.type || '').startsWith('image/')) throw new Error('Choisissez un fichier image.');
         if (file.size > 3 * 1024 * 1024) throw new Error('Image trop lourde : 3 Mo maximum.');
         body.avatar_b64 = await fileAsDataUrl(file);
       }
@@ -5642,7 +5648,7 @@ Dashboard.renderers.botprofile = async (content, data) => {
 // ---------- Commandes (niveau bot) ----------
 Dashboard.renderers.commands = async (content) => {
   const bot = Dashboard.state.bot;
-  const root = Dashboard.header(content, '🧩', 'Commandes personnalisées', 'Construis tes propres commandes avec l\'éditeur de blocs (glisser-déposer).');
+  const root = Dashboard.header(content, '🧩', 'Commandes personnalisées', 'Construisez vos propres commandes avec l\'éditeur de blocs (glisser-déposer).');
   const { commands } = await App.api(`/bots/${bot.id}/commands`);
   const c = Dashboard.card(root, 'Mes commandes', '');
   if (!commands.length) c.appendChild(App.el(`<div class="dash-empty"><div class="big">🧩</div>Aucune commande personnalisée.</div>`));
@@ -5675,7 +5681,7 @@ Dashboard.renderers.commands = async (content) => {
 // ---------- Modules (niveau bot) ----------
 Dashboard.renderers.modules = async (content) => {
   const bot = Dashboard.state.bot;
-  const root = Dashboard.header(content, '📦', 'Modules pré-faits', 'Active des commandes en un clic — elles s\'enregistrent automatiquement sur tous les serveurs du bot.');
+  const root = Dashboard.header(content, '📦', 'Modules pré-faits', 'Activez des commandes en un clic — elles s\'enregistrent automatiquement sur tous les serveurs du bot.');
   const { modules } = await App.api(`/bots/${bot.id}/modules`);
   const grid = App.el(`<div class="dash-grid"></div>`);
   modules.forEach((m) => {
@@ -5854,7 +5860,7 @@ Dashboard.renderers.botsettings = async (content) => {
     const lastStr = last && !isNaN(last) ? last.toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : 'jamais';
     c2.appendChild(App.el(`<div class="desc" style="margin:0 0 10px">${s.enabled
       ? `✅ <b>Active</b> — dépôt <code>${App.escapeHtml(s.repo)}</code> · sauvegarde toutes les 10 minutes + restauration au démarrage.`
-      : '⚠️ Désactivée — configure BOTDEV_GH_TOKEN et BOTDEV_DATA_REPO sur Render.'}</div>`));
+      : '⚠️ Désactivée — configurez BOTDEV_GH_TOKEN et BOTDEV_DATA_REPO sur Render.'}</div>`));
     c2.appendChild(App.el(`<div class="dash-badge ${s.enabled ? 'ok' : 'warn'}" style="margin-bottom:10px">🕐 Dernière sauvegarde : ${lastStr}</div>`));
     const nowBtn = App.el(`<button class="dash-btn dash-btn-primary">💾 Sauvegarder maintenant</button>`);
     nowBtn.onclick = async () => {
@@ -5876,7 +5882,7 @@ Dashboard.renderers.transcripts = async (content, data) => {
   const searchCard = App.el(`
     <div class="dash-card">
       <div class="card-head">
-        <div><h3>🔎 Rechercher</h3><div class="desc">Tape un mot-clé (salon, membre, contenu…) puis appuie sur Entrée — sans mot-clé, les 100 dernières transcriptions.</div></div>
+        <div><h3>🔎 Rechercher</h3><div class="desc">Tapez un mot-clé (salon, membre, contenu…) puis appuyez sur Entrée — sans mot-clé, les 100 dernières transcriptions.</div></div>
       </div>
       <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
         <input class="dash-input" id="tr-search" placeholder="Ex : support, Bob, remboursement…" style="flex:1;min-width:220px" />
@@ -5884,7 +5890,7 @@ Dashboard.renderers.transcripts = async (content, data) => {
       </div>
     </div>`);
   root.appendChild(searchCard);
-  const listEl = App.el(`<div id="tr-list" style="margin-top:16px"><div class="dash-empty"><div class="big">🔎</div><p>Lance une recherche pour voir les transcriptions du serveur.</p></div></div>`);
+  const listEl = App.el(`<div id="tr-list" style="margin-top:16px"><div class="dash-empty"><div class="big">🔎</div><p>Lancez une recherche pour voir les transcriptions du serveur.</p></div></div>`);
   root.appendChild(listEl);
   const run = async (q) => {
     listEl.innerHTML = '<div class="spinner"></div>';
@@ -5920,7 +5926,7 @@ Dashboard.renderers.transcripts = async (content, data) => {
 // 💬 Modmail : configuration + conversations
 Dashboard.renderers.modmail = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '💬', 'Modmail', 'Tes membres t\'écrivent en message privé : chaque conversation arrive dans un fil du salon choisi. Le staff répond dans le fil, le membre reçoit en MP.');
+  const root = Dashboard.header(content, '💬', 'Modmail', 'Vos membres vous écrivent en message privé : chaque conversation arrive dans un fil du salon choisi. Le staff répond dans le fil, le membre reçoit en MP.');
   const textChannels = (data.channels || []).filter((c) => !c.category && !c.voice);
 
   const load = async () => {
@@ -5933,7 +5939,7 @@ Dashboard.renderers.modmail = async (content, data) => {
     const cfgCard = App.el(`
       <div class="dash-card" data-mm>
         <div class="card-head">
-          <div><h3>⚙️ Configuration</h3><div class="desc">Active le modmail et choisis le salon où les conversations apparaîtront.</div></div>
+          <div><h3>⚙️ Configuration</h3><div class="desc">Activez le modmail et choisissez le salon où les conversations apparaîtront.</div></div>
           <label class="switch" aria-label="Activer le modmail"><input type="checkbox" id="mm-enabled" ${m.enabled ? 'checked' : ''} /><span class="slider"></span></label>
         </div>
         <div style="margin-top:12px">
@@ -5966,7 +5972,7 @@ Dashboard.renderers.modmail = async (content, data) => {
     const openCard = App.el(`
       <div class="dash-card" data-mm style="margin-top:16px">
         <h3>💬 Conversations ouvertes (${open.length})</h3>
-        <div class="desc">Réponds directement dans le fil Discord du salon modmail — le membre recevra ta réponse en MP.</div>
+        <div class="desc">Répondez directement dans le fil Discord du salon modmail — le membre recevra votre réponse en MP.</div>
         ${open.length ? `<div style="overflow-x:auto;margin-top:8px"><table class="dash-table"><thead><tr><th>Membre</th><th>Ouverte le</th><th></th></tr></thead><tbody></tbody></table></div>` : `<div class="dash-empty" style="margin-top:10px"><div class="big">📭</div><p>Aucune conversation ouverte.</p></div>`}
       </div>`);
     root.appendChild(openCard);
@@ -5996,15 +6002,15 @@ Dashboard.renderers.modmail = async (content, data) => {
 Dashboard.renderers.help = async (content) => {
   const root = Dashboard.header(content, '❓', 'Aide & Guide', 'Bien démarrer, configurer, se faire aider — tout est ici.');
   const bot = Dashboard.state.bot || {};
-  const serverName = (Dashboard.state.guildData && Dashboard.state.guildData.name) || 'ton serveur';
+  const serverName = (Dashboard.state.guildData && Dashboard.state.guildData.name) || 'votre serveur';
 
   const block = (icon, title, desc) => `<div class="dash-card" style="margin-bottom:16px"><h3>${icon} ${title}</h3><div class="desc">${desc}</div></div>`;
 
   root.appendChild(App.el(block('🚀', 'Bien démarrer en 3 étapes', `
     <ol style="margin:0;padding-left:20px;line-height:1.9">
-      <li><b>Ajoute ${App.escapeHtml(bot.name || 'Hoxera')}</b> à ${App.escapeHtml(serverName)} (bouton « Ajouter le bot » en haut à droite).</li>
-      <li><b>Choisis ton serveur</b> dans le sélecteur en haut, puis ouvre un module depuis le menu de gauche.</li>
-      <li><b>Enregistre tes réglages</b> : chaque module a son bouton « Enregistrer » — une barre de sauvegarde apparaît en bas dès qu'un réglage change.</li>
+      <li><b>Ajoutez ${App.escapeHtml(bot.name || 'Hoxera')}</b> à ${App.escapeHtml(serverName)} (bouton « Ajouter le bot » en haut à droite).</li>
+      <li><b>Choisissez votre serveur</b> dans le sélecteur en haut, puis ouvrez un module depuis le menu de gauche.</li>
+      <li><b>Enregistrez vos réglages</b> : chaque module a son bouton « Enregistrer » — une barre de sauvegarde apparaît en bas dès qu'un réglage change.</li>
     </ol>`)));
 
   root.appendChild(App.el(block('🧩', 'Les modules en un coup d\'œil', `
@@ -6014,19 +6020,19 @@ Dashboard.renderers.help = async (content) => {
       <div class="dash-badge" style="display:flex;gap:8px;padding:10px">📈 Niveaux : XP, rangs, récompenses de rôles, /profile</div>
       <div class="dash-badge" style="display:flex;gap:8px;padding:10px">💰 Économie : coins, boutique, giveaways, classement</div>
       <div class="dash-badge" style="display:flex;gap:8px;padding:10px">🛡️ Modération : sanctions, blacklist, anti-raid, journaux</div>
-      <div class="dash-badge" style="display:flex;gap:8px;padding:10px">💬 Modmail : tes membres t'écrivent en MP, tu réponds ici</div>
+      <div class="dash-badge" style="display:flex;gap:8px;padding:10px">💬 Modmail : vos membres vous écrivent en MP, vous répondez ici</div>
     </div>`)));
 
   root.appendChild(App.el(block('⚡', 'Astuces', `
     <ul style="margin:0;padding-left:20px;line-height:1.9">
-      <li><b>Recherche rapide</b> : touche <kbd>Ctrl</kbd>+<kbd>K</kbd> (ou l'icône 🔍) pour sauter d'un module à l'autre.</li>
-      <li><b>Mode clair / sombre</b> : bouton 🌓 en haut à droite, mémorisé sur ton appareil.</li>
-      <li><b>Couleur du dashboard</b> : bouton 🎨 pour choisir ta teinte préférée.</li>
+      <li><b>Recherche rapide</b> : touchez <kbd>Ctrl</kbd>+<kbd>K</kbd> (ou l'icône 🔍) pour sauter d'un module à l'autre.</li>
+      <li><b>Mode clair / sombre</b> : bouton 🌓 en haut à droite, mémorisé sur votre appareil.</li>
+      <li><b>Couleur du dashboard</b> : bouton 🎨 pour choisir votre teinte préférée.</li>
       <li><b>Chaque serveur a ses réglages</b> : change de serveur dans le sélecteur en haut.</li>
       <li><b>Mobile</b> : navigation en bas d'écran (Accueil, Tickets, Membres, Stats + « Plus »).</li>
     </ul>`)));
 
   root.appendChild(App.el(block('🆘', 'Besoin d\'aide ?', `
-    <p style="margin:0 0 12px;color:var(--d-dim);line-height:1.6">Rejoins le serveur support officiel : l'équipe et la communauté répondent en français.</p>
+    <p style="margin:0 0 12px;color:var(--d-dim);line-height:1.6">Rejoignez le serveur support officiel : l'équipe et la communauté répondent en français.</p>
     <a class="dash-btn" target="_blank" rel="noopener" href="https://discord.gg/X9hTdr9N3" style="text-decoration:none">🆘 Rejoindre le support</a>`)));
 };

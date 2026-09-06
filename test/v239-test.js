@@ -72,7 +72,7 @@ const FILE_COMPONENTS = (payload) => collect(payload, 13);
 const GUILD_ID = 'G239';
 // Le texte inséré par le bouton « ✨ Modèle bienvenue pro » du dashboard, avec
 // {user}/{server}/{count}/{channels} déjà remplacés comme le fait le serveur.
-const PRO_TEXT = "👋 Bienvenue @NouveauMembre sur Mon serveur !\nTu es le membre n°42 🎉\n\nPour bien commencer, découvre les salons utiles :\n📜 <#111111111111111111> · règlement\n💬 <#222222222222222222> · support\n\nPasse un bon moment parmi nous — l'équipe est là pour t'aider ! 🚀";
+const PRO_TEXT = "👋 Bienvenue @NouveauMembre sur Mon serveur !\nVous êtes le membre n°42 🎉\n\nPour bien commencer, découvrez les salons utiles :\n📜 <#111111111111111111> · règlement\n💬 <#222222222222222222> · support\n\nPassez un bon moment parmi nous — l'équipe est là pour vous aider ! 🚀";
 // Ce que le bot envoie VRAIMENT sur Discord (mêmes options que events.js,
 // branche sans carte) — sert de référence à l'aperçu du dashboard.
 const welcomeV2Server = () => require('../server/discord/ui').v2panel({
@@ -326,7 +326,7 @@ async function main() {
   console.log('\n6) Aperçu « Bienvenue » rendu dans un vrai DOM (jsdom)');
   const { buildDom } = require('./helpers/dashboard-preview');
   const pvCfg = {
-    message: "👋 Bienvenue {user} sur {server} !\nTu es le membre n°{count} 🎉\n\nPour bien commencer, découvre les salons utiles :\n{channels}\n\nPasse un bon moment parmi nous — l'équipe est là pour t'aider ! 🚀",
+    message: "👋 Bienvenue {user} sur {server} !\nVous êtes le membre n°{count} 🎉\n\nPour bien commencer, découvrez les salons utiles :\n{channels}\n\nPassez un bon moment parmi nous — l'équipe est là pour vous aider ! 🚀",
     plain: false, card: false, color: '#57F287', image: '',
     _channelRows: [['règlement', 'Lis le règlement'], ['support', 'Ouvre un ticket']],
   };
@@ -386,14 +386,16 @@ async function main() {
   check('l\u2019en-tête est une Section (type 9) avec vignette en accessoire',
     collect(welcomeV2, 9).some((n) => n.accessory && Number(n.accessory.type) === 11));
 
-  // La branche « carte image » reste en embed classique : V2 + webhook + files
-  // = 400 (piège n°10). Ce branchement doit être toujours là.
+  // v240 — la carte image passe en V2 + MediaGallery SAUF quand un profil
+  // d'envoi impose un webhook : V2 + webhook + files = 400 (piège n°10).
+  // L'embed classique ne reste donc que pour ce dernier cas.
   const branchStart = evSrc.indexOf('if (!cfg.plain) {');
   // ⚠️ Le premier `} else {` après ce point est celui de la branche CARTE —
   // il tombe AVANT le ui.v2panel. On découpe jusqu'à l'envoi effectif.
   const cardBranch = evSrc.slice(branchStart, evSrc.indexOf('const ok = await identity.sendAsProfile', branchStart));
-  check('branche carte image : toujours un EmbedBuilder (V2 + webhook + files = 400)',
-    /if \(files\.length\)/.test(cardBranch) && /new EmbedBuilder\(\)/.test(cardBranch));
+  check('branche carte image + webhook : EmbedBuilder conservé (V2 + webhook + files = 400)',
+    /const carteV2 = files\.length && !viaWebhook;/.test(cardBranch)
+    && /new EmbedBuilder\(\)/.test(cardBranch));
   check('branche sans carte : toujours ui.v2panel (pas de régression)',
     /ui\.v2panel\(\{/.test(cardBranch));
 
@@ -461,9 +463,9 @@ async function main() {
   console.log('\n10) Version épinglée v239');
   const index = src('public/index.html');
   const sw = src('public/sw.js');
-  check('index.html : ?v=239 référencé 7 fois', (index.match(/\?v=239/g) || []).length === 7,
-    `trouvé ${(index.match(/\?v=239/g) || []).length}`);
-  check("sw.js : cache 'botdev-v239'", sw.includes("const CACHE = 'botdev-v239';"));
+  check('index.html : ?v=241 référencé 7 fois', (index.match(/\?v=241/g) || []).length === 7,
+    `trouvé ${(index.match(/\?v=241/g) || []).length}`);
+  check("sw.js : cache 'botdev-v241'", sw.includes("const CACHE = 'botdev-v241';"));
   check('index.html : plus aucun ?v=238', !/\?v=238/.test(index));
 }
 

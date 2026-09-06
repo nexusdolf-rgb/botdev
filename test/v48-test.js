@@ -161,7 +161,7 @@ const check = (label, cond) => {
   check('type : le panneau de bienvenue affiche « Réclamation »', tEmb.includes('Réclamation'));
   check('type : le menu staff est DANS le conteneur', tEmb.includes('bd-troom:'));
   const lastReply = wAns.replies[wAns.replies.length - 1];
-  check('logique : confirmation privée avec le lien', lastReply && String(lastReply[1].content).includes('Ton ticket') && String(lastReply[1].content).includes('a été créé') && String(lastReply[1].content).includes('#reclamation-bob'));
+  check('logique : confirmation privée avec le lien', lastReply && String(lastReply[1].content).includes('Votre ticket') && String(lastReply[1].content).includes('a été créé') && String(lastReply[1].content).includes('#reclamation-bob'));
   check('type : la confirmation privée mentionne le type', lastReply && String(lastReply[1].content).includes('Réclamation'));
 
   // 3c. fermeture par le staff : bouton INTACT

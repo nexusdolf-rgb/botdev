@@ -6,7 +6,7 @@
 // avatar + grand « Niveau N » + barre + ✨ XP actuel/requis + 🏆 Rang + 🎯
 // Encore X XP + 🎁 prochain palier (si configuré) ; ② annonce : avatar en
 // auteur, XP/rang/rôle débloqué, carte image conservée ; ③ /levels : lignes
-// courtes + ta position « toi » si hors du top affiché. Tickets intacts.
+// courtes + votre position « vous » si hors du top affiché. Tickets intacts.
 const assert = require('assert');
 const fs = require('fs');
 const premade = fs.readFileSync('server/discord/premade.js', 'utf8');
@@ -40,11 +40,11 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('annonce : 🎁 Rôle débloqué quand palier franchi', xp.includes("name: '🎁 Rôle débloqué'"));
   check('annonce : carte image (avatar + niveau) conservée', xp.includes('community.levelUpCard({') && xp.includes("name: 'levelup.png'") && xp.includes("embed.setImage('attachment://levelup.png')"));
 
-  // ---------- 3. /levels : ta position « toi » ----------
+  // ---------- 3. /levels : votre position « vous » ----------
   console.log('— /levels : classement + ta position —');
   check('levels : lignes courtes conservées', premade.includes('— **${r.level}** · ${r.xp} XP'));
-  check('levels : ajoute « … » + « ⬅️ toi » si hors du top', premade.includes("own = `\\n…\\n**${myPos}.** <@${author.id}>") && premade.includes('⬅️ toi'));
-  check('levels : ne marque « toi » que si hors du top', premade.includes('const inTop = top.some((r) => String(r.user_id) === String(author.id));'));
+  check('levels : ajoute « … » + « ⬅️ vous » si hors du top', premade.includes("own = `\\n…\\n**${myPos}.** <@${author.id}>") && premade.includes('⬅️ vous'));
+  check('levels : ne marque « vous » que si hors du top', premade.includes('const inTop = top.some((r) => String(r.user_id) === String(author.id));'));
 
   // ---------- 4. /profile : chiffre compact conservé ----------
   console.log('— /profile —');
@@ -70,8 +70,8 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
 
   // ---------- 8. Version ----------
   console.log('— Bump de version —');
-  check('index : bump v216', fs.readFileSync('public/index.html', 'utf8').includes('?v=239'));
-  check('sw : bump botdev-v239', fs.readFileSync('public/sw.js', 'utf8').includes('botdev-v239'));
+  check('index : bump v216', fs.readFileSync('public/index.html', 'utf8').includes('?v=241'));
+  check('sw : bump botdev-v241', fs.readFileSync('public/sw.js', 'utf8').includes('botdev-v241'));
 
   console.log(`  ✅ v216 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });

@@ -295,7 +295,6 @@ async function applyMemberBlacklist(botId, message, detection, options = {}) {
         { name: '💬 Contenu détecté', value: String(message.content || '—').slice(0, 900) || '—' },
       ],
       footer,
-      timestamp: new Date(),
     };
     try {
       // v236 — le ping ne peut plus être dans le `content` du message (interdit
@@ -418,8 +417,11 @@ async function sendWarn(botId, message, gs, lang, text) {
         content: text,
         variant: 'danger',
         title: '🛡️ Avertissement Auto-Mod',
-        description: 'Ton message a été pris en compte par la protection du serveur. Les détails sont indiqués dans le message ci-dessus.',
-        fields: [{ name: '🧭 Conseil', value: 'Respecte les règles du serveur pour éviter une prochaine sanction.' }],
+        // v241 — « a été pris en compte » disait l'inverse de la réalité : le
+        // message vient d'être SUPPRIMÉ. La rubrique « 🧭 Conseil » est retirée :
+        // elle était moralisatrice et le membre a déjà reçu l'avertissement
+        // visible dans le salon.
+        description: 'Votre message a été **supprimé** automatiquement par la protection du serveur. La règle déclenchée est indiquée dans le salon.',
         footer: 'Hoxera · Protection du serveur',
       }));
       dmOk = true;

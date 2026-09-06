@@ -278,7 +278,7 @@ async function dispatchPanels(botId, interaction) {
 // ============================================================
 // Tickets (avec types personnalisables)
 // ============================================================
-const LEGACY_DEFAULT_MESSAGE = '🎫 Besoin d\'aide ? Clique sur le bouton pour ouvrir un ticket !';
+const LEGACY_DEFAULT_MESSAGE = '🎫 Besoin d\'aide ? Cliquez sur le bouton pour ouvrir un ticket !';
 
 function parseTypes(cfg) {
   try {
@@ -355,16 +355,6 @@ function isDefaultMessage(msg) {
   return s === LEGACY_DEFAULT_MESSAGE;
 }
 
-function defaultPanelDescription(buttonLabel, hasTypes) {
-  return [
-    '**Une question, un problème ou une suggestion ?**',
-    hasTypes
-      ? 'Sélectionnez le **type de ticket** correspondant à votre demande dans le menu ci-dessous.'
-      : `Cliquez sur **${buttonLabel}** ci-dessous.`,
-    'Un **salon privé** s\'ouvre immédiatement : notre équipe vous répond au plus vite.',
-  ].join('\n');
-}
-
 // ============================================================
 // 🎨 PANNEAU VISUEL « NEXORA » (référence)
 // Changement d'APPARENCE UNIQUEMENT : titre, textes, règles,
@@ -409,16 +399,14 @@ function buildTicketPanel(cfg, client, types, serverName = '', guildId = '', row
     // Espaceur hérité des embeds : ui.v2panel n'affiche que la valeur (v234).
     { name: '\u200b', value: P.patience },
   ];
-  if (types && types.length) {
-    fields.push({
-      name: '🗂️ Types disponibles',
-      value: types.slice(0, 25).map((t) => `${t.emoji || '🎫'} **${t.label}**${t.questions && t.questions.length ? ` · ❓ ${t.questions.length}` : ''}`).join('\n').slice(0, 1024),
-      inline: false,
-    });
-  }
+  // Demande utilisateur (06/09) — la liste « 🗂️ Types disponibles » est retirée
+  // du panneau : les types sont déjà visibles dans le menu déroulant juste en
+  // dessous, la liste les répétait. Le paramètre `types` reste dans la signature
+  // pour ne casser aucun appelant.
   return ui.v2panel({
     color: '#ED4245',
-    author: { name: `${name} · Centre d'assistance` },
+    // Demande utilisateur (06/09) — l'auteur « {serveur} · Centre d'assistance »
+    // est retiré : il répétait le titre (« 👑 Support | {serveur} »).
     title: P.title(name),
     // sectionize() n'est plus appelé : v2panel découpe lui-même les paragraphes
     // et pose des séparateurs NATIFS entre eux.
@@ -428,7 +416,10 @@ function buildTicketPanel(cfg, client, types, serverName = '', guildId = '', row
     // présente, sinon bannière « SUPPORT - {nom} » générée par le site.
     // C'est une URL HTTP (pas une pièce jointe) → MediaGallery compatible.
     image: String(cfg.image_url || '').trim() || panelBannerUrl(guildId, name),
-    footer: `Hoxera · ${name} · Sélectionne une option pour commencer`,
+    // Demande utilisateur (06/09) — « Sélectionnez une option pour commencer »
+    // est retiré : le menu déroulant est juste en dessous, la consigne était
+    // superflue. Le pied garde la signature + le nom du serveur.
+    footer: `Hoxera · ${name}`,
   }, rows);
 }
 
@@ -854,7 +845,7 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
     const mention = (existingOpen && typeof existingOpen.toString === 'function' && existingOpen.id)
       ? existingOpen.toString()
       : (existingOpen && existingOpen.name ? `#${existingOpen.name}` : '');
-    return ackReply(interaction, { content: `Tu as déjà un ticket ouvert : ${mention}`, ephemeral: true });
+    return ackReply(interaction, { content: `Vous avez déjà un ticket ouvert : ${mention}`, ephemeral: true });
   }
 
   // Suffixe de sécurité (-2, -3…) si un salon porte encore le nom
@@ -911,10 +902,10 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
     parent = legacyCategory || findCategoryRef(guild, catName);
   }
   if (categoryRequired && !catName) {
-    return ackReply(interaction, { content: '⚠️ Aucune catégorie de tickets n’est configurée pour ce type. Choisis une catégorie Discord existante dans le dashboard.', ephemeral: true });
+    return ackReply(interaction, { content: '⚠️ Aucune catégorie de tickets n’est configurée pour ce type. Choisissez une catégorie Discord existante dans le dashboard.', ephemeral: true });
   }
   if (categoryRequired && !parent) {
-    return ackReply(interaction, { content: '⚠️ La catégorie configurée pour ce type de ticket est introuvable. Aucun salon n’a été créé : corrige la catégorie dans le dashboard.', ephemeral: true });
+    return ackReply(interaction, { content: '⚠️ La catégorie configurée pour ce type de ticket est introuvable. Aucun salon n’a été créé : corrigez la catégorie dans le dashboard.', ephemeral: true });
   }
   let placeRule = parent ? `catégorie configurée « ${parent.name} »` : '';
   if (!categoryRequired) {
@@ -1024,18 +1015,18 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
       // v234 — payload Components V2 : le bouton-lien va DANS le conteneur.
       const dmPayload = ui.v2panel({
         color: chosen && chosen.color ? chosen.color : ui.COLORS.ticket,
-        title: '🎫 Ton ticket est ouvert',
+        title: '🎫 Votre ticket est ouvert',
         // DM de confirmation COURT : pas de séparateur plaqué entre les
         // phrases — il garde ses sauts de paragraphe naturels.
         sections: false,
-        description: `Ta demande sur **${guild.name}** a bien été créée.
+        description: `Votre demande sur **${guild.name}** a bien été créée.
 
-Notre équipe va te répondre dans le salon privé prévu pour toi.`,
+Notre équipe va vous répondre dans le salon privé prévu pour vous.`,
         fields: [
           { name: '🗂️ Type', value: ticketTitle, inline: true },
           { name: '🔢 Numéro', value: `#${ticketNumber}`, inline: true },
-          { name: '📌 Prochaine étape', value: 'Ouvre ton ticket et réponds aux messages du staff.', inline: false },
-          { name: '🔗 Accès direct', value: `Rejoins-le ici : ${channel}`, inline: false },
+          { name: '📌 Prochaine étape', value: 'Ouvrez votre ticket et répondez aux messages du staff.', inline: false },
+          { name: '🔗 Accès direct', value: `Rejoignez-le ici : ${channel}`, inline: false },
         ],
         footer: `Hoxera · ${guild.name} · ${i18n.t(lang, 'footer_tickets')}`,
         thumbnail: interaction.client.user && interaction.client.user.displayAvatarURL ? interaction.client.user.displayAvatarURL({ size: 128 }) : '',
@@ -1043,7 +1034,7 @@ Notre équipe va te répondre dans le salon privé prévu pour toi.`,
       await openerUser.send(dmPayload);
     }
   } catch {
-    dmWarning = '\n⚠️ **Mes messages privés ne t\'atteignent pas** : active « Autoriser les messages privés des membres du serveur » (Réglages Discord → Confidentialité) si tu veux recevoir la transcription à la fermeture.';
+    dmWarning = '\n⚠️ **Mes messages privés ne vous atteignent pas** : activez « Autoriser les messages privés des membres du serveur » (Réglages Discord → Confidentialité) si vous voulez recevoir la transcription à la fermeture.';
   }
 
   // Bienvenue + journaux : ces étapes ne doivent JAMAIS empêcher la confirmation.
@@ -1171,7 +1162,7 @@ function combinedModal(botId, type, questions) {
   modal.addComponents(new ActionRowBuilder().addComponents(
     new TextInputBuilder()
       .setCustomId('reason')
-      .setLabel('📝 Pourquoi ouvres-tu ce ticket ?')
+      .setLabel('📝 Pourquoi ouvrez-vous ce ticket ?')
       .setStyle(TextInputStyle.Paragraph)
       .setRequired(true)
       .setMaxLength(1000),
@@ -1205,9 +1196,9 @@ async function askReason(botId, interaction, type, answers = [], skipQuestionnai
     await interaction.showModal(reasonModal(
       botId,
       `bd-treason:${botId}`,
-      '📝 Ouvre ton ticket',
-      'Raison de ta demande',
-      'Explique brièvement pourquoi tu ouvres ce ticket…'
+      '📝 Ouvrez votre ticket',
+      'Raison de votre demande',
+      'Expliquez brièvement pourquoi vous ouvrez ce ticket…'
     ));
     return;
   }
@@ -1220,7 +1211,7 @@ async function submitCombined(botId, interaction) {
   const pending = pendingCombined.get(interaction.user.id);
   pendingCombined.delete(interaction.user.id);
   if (!pending || pending.botId !== botId || Date.now() - (pending.ts || 0) > WIZARD_TTL) {
-    return interaction.reply({ content: '⏰ Ta demande a expiré, réessaie.', ephemeral: true });
+    return interaction.reply({ content: '⏰ Votre demande a expiré, réessayez.', ephemeral: true });
   }
   const answers = pending.questions.map((q, i) => ({
     q: String(q).slice(0, 45),
@@ -1236,7 +1227,7 @@ async function submitQuestionnaire(botId, interaction) {
   const pending = pendingQuestionnaires.get(interaction.user.id);
   pendingQuestionnaires.delete(interaction.user.id);
   if (!pending || pending.botId !== botId || Date.now() - (pending.ts || 0) > WIZARD_TTL) {
-    return interaction.reply({ content: '⏰ Ta demande a expiré, réessaie.', ephemeral: true });
+    return interaction.reply({ content: '⏰ Votre demande a expiré, réessayez.', ephemeral: true });
   }
   const questions = (pending.type.questions || []);
   const answers = questions.map((q, i) => ({
@@ -1253,7 +1244,7 @@ async function submitReason(botId, interaction) {
   const pending = pendingReasons.get(interaction.user.id);
   pendingReasons.delete(interaction.user.id);
   if (!pending || pending.botId !== botId || Date.now() - (pending.ts || 0) > WIZARD_TTL) {
-    return interaction.reply({ content: '⏰ Ta demande a expiré, réessaie.', ephemeral: true });
+    return interaction.reply({ content: '⏰ Votre demande a expiré, réessayez.', ephemeral: true });
   }
   const reason = (interaction.fields.getTextInputValue('value') || '').trim();
   // Réponse différée : l'ouverture du salon peut prendre quelques secondes,
@@ -1486,7 +1477,6 @@ async function sendTicketRecap(botId, interaction, { row, meta, closeReason, tra
       // pas en V2 : l'icône du serveur disparaît du pied, comme ailleurs).
       thumbnail: openerAvatar,
       footer: `${guild.name} · Journal des tickets`,
-      timestamp: new Date(),
     }, rows)).catch(() => null);
     if (sent && number) store.ticketLogMsgs.set(botId, guild.id, number, board.id, sent.id);
   } catch (e) {
@@ -1783,7 +1773,7 @@ function addMemberErrPanel(botId, lang, guild, query) {
 function addMemberAmbPanel(botId, lang, guild, query, matches) {
   const select = new StringSelectMenuBuilder()
     .setCustomId(`bd-taddpick:${botId}`)
-    .setPlaceholder(String(query || '').slice(0, 90) || 'Choisis le membre à ajouter…')
+    .setPlaceholder(String(query || '').slice(0, 90) || 'Choisissez le membre à ajouter…')
     .setMinValues(1).setMaxValues(1);
   matches.forEach((m) => {
     const user = m.user || {};
@@ -1910,7 +1900,7 @@ async function sendRatingDm(client, guild, openerId, number, lang) {
       variant: 'warning',
       title: `⭐ ${i18n.t(lang, 'ticket_rating_title')}`,
       description: i18n.t(lang, 'ticket_rating_desc', { number, server: guild.name }),
-      fields: [{ name: '🧭 Comment noter ?', value: 'Choisis une note ci-dessous. Ton avis aide le staff à améliorer le support.' }],
+      fields: [{ name: '🧭 Comment noter ?', value: 'Choisissez une note ci-dessous. Votre avis aide le staff à améliorer le support.' }],
       footer: `Hoxera · Ticket #${number} · Évaluation du support`,
       thumbnail: client && client.user && client.user.displayAvatarURL ? client.user.displayAvatarURL({ size: 128 }) : '',
     }, [row]));
@@ -1986,7 +1976,7 @@ async function submitDeleteReason(botId, interaction) {
   const pending = pendingDeletes.get(interaction.user.id);
   pendingDeletes.delete(interaction.user.id);
   if (!pending || pending.botId !== botId || Date.now() - (pending.ts || 0) > WIZARD_TTL) {
-    return interaction.reply({ content: '⏰ La suppression a expiré, réessaie.', ephemeral: true });
+    return interaction.reply({ content: '⏰ La suppression a expiré, réessayez.', ephemeral: true });
   }
   if (!isStaff(botId, interaction)) return staffDeny(interaction);
   const chName = interaction.channel ? interaction.channel.name || '' : '';
@@ -2119,7 +2109,7 @@ function typesPickEmbed(state) {
   return new EmbedBuilder()
     .setColor('#e07a5f')
     .setTitle('🗂️ Assistant des types de tickets')
-    .setDescription('Choisis un type à modifier, créé-en un nouveau, ou termine.')
+    .setDescription('Choisissez un type à modifier, créez-en un nouveau, ou terminez.')
     .addFields({
       name: '📋 Types actuels',
       value: types.length
@@ -2140,7 +2130,7 @@ function typesPickComponents(state) {
   return [new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId(`bdw-ts:${state.botId}:${state.userId}`)
-      .setPlaceholder('Choisis un type…')
+      .setPlaceholder('Choisissez un type…')
       .setMinValues(1).setMaxValues(1)
       .addOptions(opts.map((o) => typeOption(o.label, o.emoji, o.value)))
   )];
@@ -2159,11 +2149,11 @@ function typesEditEmbed(state) {
   return new EmbedBuilder()
     .setColor('#e07a5f')
     .setTitle(`${t.emoji || '🎫'} ${t.label}`)
-    .setDescription('Choisis une action :')
+    .setDescription('Choisissez une action :')
     .addFields(
       { name: '😀 Emoji', value: t.emoji || 'aucun', inline: true },
       { name: '🗂️ Catégorie', value: t.category || 'par défaut', inline: true },
-      { name: '📝 Description', value: t.description || '*aucune — ajoute une explication professionnelle affichée dans le centre d\'assistance*', inline: false },
+      { name: '📝 Description', value: t.description || '*aucune — ajoutez une explication professionnelle affichée dans le centre d\'assistance*', inline: false },
       { name: '❓ Questionnaire (' + qs.length + '/5)', value: qs.length ? qs.map((q, i) => `${i + 1}. ${q}`).join('\n') : '*aucun — par défaut, seule la raison est demandée*', inline: false },
       { name: '🛡️ Rôles staff (' + (t.staff_roles || []).length + ')', value: (t.staff_roles || []).length ? t.staff_roles.join('\n') : 'aucun', inline: true },
     );
@@ -2200,7 +2190,7 @@ function typesCategoryComponents(state) {
   return [new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId(`bdw-ts:${state.botId}:${state.userId}`)
-      .setPlaceholder('Choisis une catégorie…')
+      .setPlaceholder('Choisissez une catégorie…')
       .setMinValues(1).setMaxValues(1)
       .addOptions(opts.map((o) => typeOption(o.label, o.emoji || '', o.value)))
   )];
@@ -2214,7 +2204,7 @@ function typesAddRoleComponents(state) {
     new ActionRowBuilder().addComponents(
       new (require('discord.js').RoleSelectMenuBuilder)()
         .setCustomId(`bdw-tr:${state.botId}:${state.userId}`)
-        .setPlaceholder(`🛡️ Choisis un rôle à ajouter (${used} sélectionné(s))…`)
+        .setPlaceholder(`🛡️ Choisissez un rôle à ajouter (${used} sélectionné(s))…`)
         .setMinValues(1).setMaxValues(1)
     ),
     new ActionRowBuilder().addComponents(
@@ -2229,7 +2219,7 @@ function typesAddRoleEmbed(state) {
   return new EmbedBuilder()
     .setColor('#e07a5f')
     .setTitle(`🛡️ Rôles staff de « ${t.label} »`)
-    .setDescription('Sélectionne **autant de rôles que tu veux** : chacun pourra gérer les tickets de ce type (fermer, réouvrir, supprimer).')
+    .setDescription('Sélectionnez **autant de rôles que vous voulez** : chacun pourra gérer les tickets de ce type (fermer, réouvrir, supprimer).')
     .addFields({
       name: `📋 Rôles actuels (${(t.staff_roles || []).length})`,
       value: (t.staff_roles || []).length ? t.staff_roles.join('\n') : 'aucun',
@@ -2245,7 +2235,7 @@ function typesRemoveRoleComponents(state) {
     new ActionRowBuilder().addComponents(
       new StringSelectMenuBuilder()
         .setCustomId(`bdw-ts:${state.botId}:${state.userId}`)
-        .setPlaceholder('Choisis un rôle à retirer…')
+        .setPlaceholder('Choisissez un rôle à retirer…')
         .setMinValues(1).setMaxValues(1)
         .addOptions(opts.map((o) => typeOption(o.label, o.emoji, o.value)))
     ),
@@ -2261,7 +2251,7 @@ function typesRemoveRoleEmbed(state) {
   return new EmbedBuilder()
     .setColor('#ED4245')
     .setTitle(`🛡️ Retirer un rôle de « ${t.label} »`)
-    .setDescription('Sélectionne un rôle pour le retirer de la gestion de ce type de ticket.');
+    .setDescription('Sélectionnez un rôle pour le retirer de la gestion de ce type de ticket.');
 }
 
 // ❓ Étape « Questionnaire » : questions obligatoires du type (ajout/retrait répétables)
@@ -2290,7 +2280,7 @@ function typesQuestionsComponents(state) {
   return [new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId(`bdw-ts:${state.botId}:${state.userId}`)
-      .setPlaceholder('Gère le questionnaire…')
+      .setPlaceholder('Gérez le questionnaire…')
       .setMinValues(1).setMaxValues(1)
       .addOptions(opts.map((o) => typeOption(o.label, o.emoji, o.value)))
   )];
@@ -2301,7 +2291,7 @@ function typesRemoveQuestionEmbed(state) {
   return new EmbedBuilder()
     .setColor('#ED4245')
     .setTitle(`❓ Retirer une question de « ${t.label} »`)
-    .setDescription('Sélectionne la question à retirer du questionnaire.');
+    .setDescription('Sélectionnez la question à retirer du questionnaire.');
 }
 
 function typesRemoveQuestionComponents(state) {
@@ -2311,7 +2301,7 @@ function typesRemoveQuestionComponents(state) {
   return [new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId(`bdw-ts:${state.botId}:${state.userId}`)
-      .setPlaceholder('Choisis une question à retirer…')
+      .setPlaceholder('Choisissez une question à retirer…')
       .setMinValues(1).setMaxValues(1)
       .addOptions(opts.map((o) => typeOption(o.label, o.emoji, o.value)))
   )];
@@ -2361,7 +2351,7 @@ async function startTypesWizard(botId, interaction) {
     console.error('[BotDev] types wizard start:', e.message);
     try {
       await interaction.reply({
-        content: '⚠️ Un élément de la liste des types est invalide (probablement un emoji). Corrige les types dans le **dashboard** (onglet Tickets) puis relance `/ticket types setup`.',
+        content: '⚠️ Un élément de la liste des types est invalide (probablement un emoji). Corrigez les types dans le **dashboard** (onglet Tickets) puis relancez `/ticket types setup`.',
         ephemeral: true,
       });
     } catch {}
@@ -2370,17 +2360,17 @@ async function startTypesWizard(botId, interaction) {
 
 async function handleTypesWizardInteraction(botId, interaction) {
   if (!canConfigureGuild(interaction.guild, interaction.member, interaction.user && interaction.user.id)) {
-    return interaction.reply({ content: '⛔ Ton accès de configuration a été retiré. Seul le propriétaire ou un membre ayant la permission Discord « Administrateur » peut continuer.', ephemeral: true });
+    return interaction.reply({ content: '⛔ Votre accès de configuration a été retiré. Seul le propriétaire ou un membre ayant la permission Discord « Administrateur » peut continuer.', ephemeral: true });
   }
   const parts = String(interaction.customId || '').split(':');
   const uid = parts[2];
   if (!uid || uid !== interaction.user.id) return;
   const key = typesWizardKey(botId, interaction.guild.id, uid);
   const state = typesWizards.get(key);
-  if (!state) return interaction.reply({ content: '⏰ Assistant expiré. Relance `/ticket types setup`.', ephemeral: true });
+  if (!state) return interaction.reply({ content: '⏰ Assistant expiré. Relancez `/ticket types setup`.', ephemeral: true });
   if (Date.now() - state.startedAt > WIZARD_TTL) {
     typesWizards.delete(key);
-    return upd({ content: '⏰ Assistant expiré. Relance `/ticket types setup`.', embeds: [], components: [] });
+    return upd({ content: '⏰ Assistant expiré. Relancez `/ticket types setup`.', embeds: [], components: [] });
   }
 
   // ⚡ Accusé de réception IMMÉDIAT avant tout travail : même si le
@@ -2412,7 +2402,7 @@ async function handleTypesWizardInteraction(botId, interaction) {
         typesWizards.delete(key);
         return upd({
           embeds: [new EmbedBuilder().setColor('#57F287').setTitle('✅ Terminé !')
-            .setDescription('📨 Envoie le panneau avec `/ticket panel` pour afficher ton menu déroulant.')],
+            .setDescription('📨 Envoyez le panneau avec `/ticket panel` pour afficher votre menu déroulant.')],
           components: [],
         });
       }
@@ -2428,7 +2418,7 @@ async function handleTypesWizardInteraction(botId, interaction) {
       if (v === 'back') return upd(backToPick());
       if (v === 'rename') { state.modal = 'rename'; return interaction.showModal(textModal(botId, uid, '✏️ Renommer', 'Nouveau nom', state.current, true, 100)); }
       if (v === 'emoji') { state.modal = 'emoji'; return interaction.showModal(textModal(botId, uid, '😀 Emoji', 'Emoji', '🤝', false, 10)); }
-      if (v === 'desc') { state.modal = 'desc'; return interaction.showModal(textModal(botId, uid, '📝 Description du type', 'Description affichée sous le type', 'Ex : signale un abus du staff, en toute confidentialité', false, 100)); }
+      if (v === 'desc') { state.modal = 'desc'; return interaction.showModal(textModal(botId, uid, '📝 Description du type', 'Description affichée sous le type', 'Ex : signalez un abus du staff, en toute confidentialité', false, 100)); }
       if (v === 'questions') {
         state.step = 'questions';
         return upd({ embeds: [typesQuestionsEmbed(state)], components: typesQuestionsComponents(state) });
@@ -2437,7 +2427,7 @@ async function handleTypesWizardInteraction(botId, interaction) {
         state.step = 'category';
         return upd({
           embeds: [new EmbedBuilder().setColor('#e07a5f').setTitle('🗂️ Catégorie du type')
-            .setDescription(`Choisis la catégorie pour **${state.current}** (ou écris-en une nouvelle).`)],
+            .setDescription(`Choisissez la catégorie pour **${state.current}** (ou écrivez-en une nouvelle).`)],
           components: typesCategoryComponents(state),
         });
       }
@@ -2471,7 +2461,7 @@ async function handleTypesWizardInteraction(botId, interaction) {
     if (state.step === 'questions') {
       if (v === '__addq__') {
         state.modal = 'addquestion';
-        return interaction.showModal(textModal(botId, uid, '➕ Question du questionnaire', 'La question (obligatoire)', 'Ex : Quel est ton âge ?', true, 45));
+        return interaction.showModal(textModal(botId, uid, '➕ Question du questionnaire', 'La question (obligatoire)', 'Ex : Quel est votre âge ?', true, 45));
       }
       if (v === '__remq__') {
         state.step = 'removeq';
@@ -2539,7 +2529,7 @@ async function handleTypesWizardInteraction(botId, interaction) {
         state.step = 'edit';
       }
       try { await state.msg.edit(backToEdit()); } catch {}
-      return ackReply({ content: `✅ Type « ${val} » prêt — choisis son emoji, sa catégorie et son rôle staff dans le menu.`, ephemeral: true });
+      return ackReply({ content: `✅ Type « ${val} » prêt — choisissez son emoji, sa catégorie et son rôle staff dans le menu.`, ephemeral: true });
     }
     if (mode === 'rename') {
       if (!val) return ackReply({ content: '❌ Nom vide — annulé.', ephemeral: true });
@@ -2552,7 +2542,7 @@ async function handleTypesWizardInteraction(botId, interaction) {
       if (val && !safeEmoji(val)) {
         state.modal = 'emoji';
         try { await state.msg.edit(backToEdit()); } catch {}
-        return ackReply({ content: '❌ Emoji invalide — utilise un vrai emoji (ex : 🤝) ou un emoji personnalisé du serveur.', ephemeral: true });
+        return ackReply({ content: '❌ Emoji invalide — utilisez un vrai emoji (ex : 🤝) ou un emoji personnalisé du serveur.', ephemeral: true });
       }
       updateType(botId, state.guildId, state.current, { emoji: val.slice(0, 100) });
       try { await state.msg.edit(backToEdit()); } catch {}
@@ -2606,8 +2596,8 @@ function roleMenuPayload(botId, menu) {
       title: `📋 ${menu.name || 'Rôles du serveur'}`,
       // sections par défaut : le contenu personnalisé peut comporter des
       // paragraphes → séparateurs natifs pleine largeur.
-      description: menu.content || 'Choisis tes rôles ci-dessous. Tu peux les activer ou les retirer à tout moment.',
-      fields: [{ name: '🧭 Comment ça marche ?', value: menu.mode === 'buttons' ? 'Clique sur un bouton pour recevoir ou retirer le rôle correspondant.' : 'Sélectionne un ou plusieurs rôles dans le menu déroulant.' }],
+      description: menu.content || 'Choisissez vos rôles ci-dessous. Vous pouvez les activer ou les retirer à tout moment.',
+      fields: [{ name: '🧭 Comment ça marche ?', value: menu.mode === 'buttons' ? 'Cliquez sur un bouton pour recevoir ou retirer le rôle correspondant.' : 'Sélectionnez un ou plusieurs rôles dans le menu déroulant.' }],
       footer: `Hoxera · ${panelOptions.length} rôle(s) disponible(s)`,
     }, components);
   };
@@ -2630,7 +2620,7 @@ function roleMenuPayload(botId, menu) {
   const row = new ActionRowBuilder();
   const select = new StringSelectMenuBuilder()
     .setCustomId(`bd-menu:${botId}:${menu.id}`)
-    .setPlaceholder((menu.placeholder || 'Choisis tes rôles…').slice(0, 150))
+    .setPlaceholder((menu.placeholder || 'Choisissez vos rôles…').slice(0, 150))
     .setMinValues(0)
     .setMaxValues(Math.max(panelOptions.length, 1));
   for (const o of panelOptions) {
@@ -2708,7 +2698,7 @@ async function handleRoleMenuButton(botId, interaction, menuId, roleRef) {
       return interaction.reply({ content: `➖ Rôle **${role.name}** retiré.`, ephemeral: true });
     }
     await member.roles.add(role);
-    return interaction.reply({ content: `✅ Tu as reçu le rôle **${role.name}** !`, ephemeral: true });
+    return interaction.reply({ content: `✅ Vous avez reçu le rôle **${role.name}** !`, ephemeral: true });
   } catch {
     return interaction.reply({ content: '⚠️ Je n\'ai pas la permission de modifier ce rôle.', ephemeral: true });
   }
@@ -2732,7 +2722,7 @@ async function handleRoleMenu(botId, interaction, menuId) {
     } catch {}
   }
   await interaction.reply({
-    content: changed ? '✅ Tes rôles ont été mis à jour !' : '👍 Aucun changement.',
+    content: changed ? '✅ Vos rôles ont été mis à jour !' : '👍 Aucun changement.',
     ephemeral: true,
   });
 }

@@ -198,7 +198,7 @@ function welcomeCardSvg(username, serverName, memberCount) {
   <circle cx="140" cy="140" r="86" fill="none" stroke="url(#accent)" stroke-width="6"/>
   <text x="260" y="118" font-family="Arial, Helvetica, sans-serif" font-size="26" fill="#b8bccf">Bienvenue sur ${server}</text>
   <text x="260" y="170" font-family="Arial, Helvetica, sans-serif" font-size="44" font-weight="bold" fill="#ffffff">${name}</text>
-  <text x="260" y="216" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#8f93a8">Tu es le membre n°${parseInt(memberCount, 10) || 1} 🎉</text>
+  <text x="260" y="216" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#8f93a8">Vous êtes le membre n°${parseInt(memberCount, 10) || 1} 🎉</text>
 </svg>`;
 }
 

@@ -118,7 +118,10 @@ const live = require('../server/discord/liveWatch');
   // reste le seul composant racine (et la ligne de boutons est DEDANS).
   assert.ok(v2.isV2(sent[0]), 'l\'annonce de live doit être en Components V2');
   assert.strictEqual(sent[0].components.length, 1);
-  assert.ok(v2.title(sent[0]).includes('LIVE sur'), 'titre de l\'annonce : ' + JSON.stringify(v2.title(sent[0])));
+  // v241 — le titre portait « 🔴 LIVE sur TikTok » et le corps répétait
+  // « vient de lancer un live sur **TikTok** ». Tout est regroupé dans le
+  // titre, qui nomme aussi le streamer : le corps ne fait plus qu'inviter.
+  assert.ok(v2.title(sent[0]).includes('en live sur'), 'titre de l\'annonce : ' + JSON.stringify(v2.title(sent[0])));
   assert.ok(v2.dividers(sent[0]) >= 2, 'séparateurs natifs entre les paragraphes');
   assert.strictEqual(v2.rows(sent[0]).length, 1, 'la ligne de boutons est DANS le conteneur');
   const row = store.liveSocials.all(botId, guildId)[0];

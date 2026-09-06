@@ -8,7 +8,7 @@ const BotViews = {};
 // Éditeur de menu de rôles (modale) — utilisé par le module « Rôles »
 BotViews.openRoleMenuModal = (bot, guildId, menu) => {
   const isEdit = !!menu;
-  const data = menu ? JSON.parse(JSON.stringify(menu)) : { name: '', content: '', placeholder: 'Choisis tes rôles…', channel: '', options: [{ label: 'Notifications', emoji: '🔔', role: '' }] };
+  const data = menu ? JSON.parse(JSON.stringify(menu)) : { name: '', content: '', placeholder: 'Choisissez vos rôles…', channel: '', options: [{ label: 'Notifications', emoji: '🔔', role: '' }] };
 
   App.modal(`
     <div class="modal-header"><h3>${isEdit ? '✏️ Modifier le menu' : '📋 Nouveau menu de rôles'}</h3><button class="x-btn" data-close>×</button></div>
@@ -25,7 +25,7 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
         <option value="buttons" ${data.mode === 'buttons' ? 'selected' : ''}>🔘 Boutons (un clic = un rôle, re-clic = retiré)</option>
       </select>
       <label class="field-label">Message au-dessus du panneau (optionnel)</label>
-      <textarea class="input" id="rm-content" rows="2" placeholder="Choisis tes rôles !">${App.escapeHtml(data.content)}</textarea>
+      <textarea class="input" id="rm-content" rows="2" placeholder="Choisissez vos rôles !">${App.escapeHtml(data.content)}</textarea>
       <label class="field-label">Texte d'attente du menu déroulant</label>
       <input class="input" id="rm-placeholder" maxlength="150" value="${App.escapeHtml(data.placeholder)}" />
       <label class="field-label">Salon où envoyer le panneau</label>
@@ -114,11 +114,11 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
       name: document.querySelector('#rm-name').value.trim() || 'Menu de rôles',
       mode: document.querySelector('#rm-mode').value === 'buttons' ? 'buttons' : 'menu',
       content: document.querySelector('#rm-content').value,
-      placeholder: document.querySelector('#rm-placeholder').value.trim() || 'Choisis tes rôles…',
+      placeholder: document.querySelector('#rm-placeholder').value.trim() || 'Choisissez vos rôles…',
       channel: document.querySelector('#rm-channel').value.trim(),
       options: data.options.filter(o => String(o.role).trim()),
     };
-    if (!payload.options.length) return App.toast('Renseigne au moins un nom de rôle.', 'error');
+    if (!payload.options.length) return App.toast('Renseignez au moins un nom de rôle.', 'error');
     try {
       if (isEdit) await App.api(`/role-menus/${menu.id}`, { method: 'PUT', body: payload });
       else await App.api(`/bots/${bot.id}/role-menus`, { method: 'POST', body: payload });

@@ -23,7 +23,7 @@ console.log('✅ centre de notifications : salons perdus, permissions manquantes
 
 // 3. Connexion théâtralisée + état de chargement
 assert.ok(app.includes('auth-glass') && app.includes('auth-bot-ava'), 'carte en verre + avatar animé');
-assert.ok(app.includes('jamais</b> ton mot de passe'), 'réassurance sécurité');
+assert.ok(app.includes('jamais</b> votre mot de passe'), 'réassurance sécurité');
 assert.ok(app.includes('Connexion à Discord…') && app.includes('btn-spin'), 'état de chargement du bouton');
 assert.ok(app.includes('Se connecter avec Discord'), 'texte intact (tests fumée)');
 console.log('✅ page de connexion : verre dépoli, avatar flottant, réassurance, bouton avec spinner');

@@ -68,7 +68,10 @@ const check = (label, cond) => {
   check('panneau : règle 2 (respect du staff)', rulesVal.includes('manque de respect'));
   check('panneau : règle 3 (mentions)', rulesVal.includes('mentions inutiles'));
   check('panneau : règle 4 (tickets inactifs 2 h)', rulesVal.includes('inactifs pendant 2 heures'));
-  check('panneau : flèches rouges 🔴➡️ sur les règles', (rulesVal.match(/🔴➡️/g) || []).length === 4);
+  // v241 (demande utilisateur du 06/09) — les flèches décoratives 🔴➡️ sont
+  // remplacées par des puces « • ». Les 4 règles et leurs textes sont inchangés.
+  check('panneau : puces « • » sur les 4 règles (fin des 🔴➡️)',
+    (rulesVal.match(/^•\s/gm) || []).length === 4 && !rulesVal.includes('🔴➡️'));
   // v234 — le champ « espaceur invisible » U+200B ne produit plus d'intitulé :
   // le bloc ne contient QUE la valeur, d'où le startsWith toujours valable.
   const patienceVal = panelTexts.find((t) => t.includes('patience')) || '';

@@ -38,7 +38,7 @@ function buildPanel(g, settings = {}, ping = '') {
     description: [
       `**${g.prize}**`,
       '',
-      customMsg || 'Réagis avec 🎉 pour participer !',
+      customMsg || 'Réagissez avec 🎉 pour participer !',
     ].join('\n'),
     // Les 2 compteurs étaient en inline:true (grille 3 colonnes) : ui.v2panel
     // les regroupe sur une ligne, séparés par « · ».

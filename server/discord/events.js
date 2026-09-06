@@ -15,12 +15,15 @@ const EVENT_DEFS = {
     description: 'Envoie un message quand un membre rejoint le serveur.',
     config: [
       { key: 'channel', label: 'Salon d\'accueil', type: 'channel', placeholder: '#bienvenue' },
-      { key: 'message', label: 'Message ({user}, {server}, {count}…)', type: 'multiline', default: 'Bienvenue {user} sur {server} ! Tu es le membre n°{count} 🎉' },
+      // v241 — le titre du panneau dit déjà « 👋 Bienvenue sur {serveur} ! » et
+      // la rubrique « 👥 Membre n° » porte déjà le compteur : le corps n'a plus
+      // à les répéter. Il ne reste que la phrase chaleureuse.
+      { key: 'message', label: 'Message ({user}, {server}, {count}…)', type: 'multiline', default: "Passez un bon moment parmi nous — l'équipe est là pour vous aider ! 🚀" },
       { key: 'card', label: '🖼️ Carte de bienvenue en image (avatar + pseudo)', type: 'checkbox', default: false },
       { key: 'plain', label: '📝 Mode texte simple (désactive le panneau premium)', type: 'checkbox', default: false },
       { key: 'color', label: 'Couleur de l\'embed', type: 'color', default: '#57F287' },
       { key: 'image', label: 'Image de l\'embed (URL, optionnel)', type: 'text', placeholder: 'https://…' },
-      { key: 'channels', label: '📌 Salons à détailler (règles, tickets, chat général…) — une phrase par salon, utilise {channels} dans le message', type: 'channelsmulti', default: '' },
+      { key: 'channels', label: '📌 Salons à détailler (règles, tickets, chat général…) — une phrase par salon, utilisez {channels} dans le message', type: 'channelsmulti', default: '' },
     ],
   },
   member_leave: {
@@ -29,11 +32,12 @@ const EVENT_DEFS = {
     description: 'Envoie un message quand un membre quitte le serveur.',
     config: [
       { key: 'channel', label: 'Salon des départs', type: 'channel', placeholder: '#au-revoir' },
-      { key: 'message', label: 'Message', type: 'multiline', default: '{user} a quitté {server} 😢' },
+      // v241 — l'en-tête dit déjà « {pseudo} s'en va… » : le corps ne le répète pas.
+      { key: 'message', label: 'Message', type: 'multiline', default: 'Merci d\'avoir fait partie de {server} 💛' },
       { key: 'plain', label: '📝 Mode texte simple (désactive le panneau premium)', type: 'checkbox', default: false },
       { key: 'color', label: 'Couleur de l\'embed', type: 'color', default: '#ED4245' },
       { key: 'image', label: 'Image de l\'embed (URL, optionnel)', type: 'text', placeholder: 'https://…' },
-      { key: 'channels', label: '📌 Salons à mentionner — utilise {channels} dans le message', type: 'channelsmulti', default: '' },
+      { key: 'channels', label: '📌 Salons à mentionner — utilisez {channels} dans le message', type: 'channelsmulti', default: '' },
     ],
   },
   autorole: {
@@ -84,10 +88,14 @@ async function runJoinEvent(botId, member, opts = {}) {
       const channelsMention = await channelMentions(member.guild, cfg.channels, resolveChannel);
       const text = autoMentionChannels(member.guild, render(member, botRecord, cfg.message, { channelsMention }));
       // Limites Discord : description d'embed 4096, contenu texte 2000.
-      // La description passe par la grammaire des sections (v220) : les
-      // paragraphes du message de bienvenue (séparés par une ligne vide)
-      // deviennent des sections reliées par le long trait.
-      const finalText = ui.sectionize(text, 4096);
+      // v240 — 🚨 `ui.sectionize()` est SUPPRIMÉ d'ici. Il collait des traits
+      // TEXTE « ━ » de 20 caractères entre les paragraphes : sur Discord un
+      // trait texte s'arrête avant les bords arrondis du panneau, donc il
+      // paraît COURT à côté des séparateurs natifs pleine largeur de tous les
+      // autres panneaux (migration v231→v236). C'est exactement le bug signalé
+      // sur le modèle « ✨ bienvenue pro » — il n'apparaissait QUE quand la
+      // carte de bienvenue était activée, parce que cette branche retombait sur
+      // un embed classique.
       const finalContent = text.length > 2000 ? text.slice(0, 2000) : text;
       // 🖼️ Carte de bienvenue en image (avatar + pseudo) — jamais bloquante :
       // si la génération échoue, le message part sans image.
@@ -112,8 +120,14 @@ async function runJoinEvent(botId, member, opts = {}) {
         } catch {}
         // 👤 Un seul avatar : porté par le visuel (carte, image ou vignette),
         // jamais en author. Les 3 compteurs sont partagés par les 2 rendus.
+        // v241 — le compteur de membres était écrit DEUX fois : dans le corps
+        // (« Vous êtes le membre n°1287 ») et dans cette rubrique. On ne garde
+        // la rubrique que si le message configuré ne contient pas déjà {count}.
+        // L'intitulé est raccourci : « Vous êtes le membre » + « n°1287 » se
+        // lisait comme une phrase coupée en deux.
+        const compteDansTexte = String(cfg.message || '').includes('{count}');
         const welcomeFields = [
-          { name: '👥 Tu es le membre', value: `**n°${member.guild.memberCount || '?'}**`, inline: true },
+          ...(compteDansTexte ? [] : [{ name: '👥 Membre n°', value: `**${member.guild.memberCount || '?'}**`, inline: true }]),
           ...(createdTs ? [{ name: '📅 Compte créé', value: `<t:${createdTs}:R>`, inline: true }] : []),
           ...(invitedBy ? [{ name: '🎟️ Invité par', value: invitedBy, inline: true }] : []),
         ];
@@ -128,37 +142,60 @@ async function runJoinEvent(botId, member, opts = {}) {
         //   activée, et passe en Components V2 SANS carte (réglage par défaut :
         //   `card` vaut false). Ses paragraphes sont alors séparés par un
         //   séparateur NATIF pleine largeur au lieu du trait texte ━.
+        // v240 — UNE SEULE branche V2 au lieu de deux rendus différents.
+        //
+        // La seule contrainte : la carte de bienvenue est une PIÈCE JOINTE, et
+        // **V2 + webhook + files = 400 BAD REQUEST** (piège n°10, doc officielle
+        // Discord ressource Webhook). `identity.sendAsProfile()` passe par un
+        // webhook dès qu'un profil d'envoi personnalisé est réglé sur ce
+        // serveur, et par `channel.send()` sinon.
+        //   • pas de carte            → V2, toujours (webhook ou non : pas de file)
+        //   • carte + pas de webhook  → V2 + MediaGallery en `attachment://`
+        //   • carte + webhook         → embed classique, seul cas restant
+        // Dans ce dernier cas on n'ajoute AUCUN trait : un séparateur natif y
+        // est impossible et un trait texte serait court et cassé. Les
+        // paragraphes respirent par des lignes vides, comme partout ailleurs en
+        // mode classique.
+        const viaWebhook = !!((identity.effectiveProfile(botId, member.guild.id) || {}).name);
+        const carteV2 = files.length && !viaWebhook;
         let welcomePayload;
-        if (files.length) {
+        if (!files.length || carteV2) {
+          welcomePayload = {
+            ...ui.v2panel({
+              color: cfg.color || '#57F287',
+              author: { name: `${user.tag || user.username || 'Nouveau membre'} vient d'arriver !` },
+              title: `👋 Bienvenue sur ${member.guild.name} !`,
+              // `text` brut : ui.v2panel découpe lui-même les paragraphes et
+              // pose les séparateurs NATIFS pleine largeur entre eux.
+              description: text,
+              fields: welcomeFields,
+              // 🎴 La carte générée est une pièce jointe → MediaGallery en
+              //    `attachment://` (en V2 une pièce jointe n'apparaît que si un
+              //    composant la référence, piège n°18). Elle contient déjà
+              //    l'avatar et le pseudo en grand : pas de vignette en plus.
+              // 🖼️ Sinon : l'image configurée (URL HTTP), ou l'avatar en vignette.
+              image: carteV2 ? 'attachment://bienvenue.png' : (cfg.image ? String(cfg.image).trim() : ''),
+              thumbnail: !carteV2 && !cfg.image && avatarUrl ? avatarUrl : '',
+              // L'iconURL du pied d'embed n'existe pas en V2 (pied en texte discret).
+              footer: `Hoxera · ${member.guild.name}`,
+            }),
+            ...(carteV2 ? { files } : {}),
+          };
+        } else {
           const embed = new EmbedBuilder()
             .setColor(cfg.color || '#57F287')
             .setAuthor({ name: `${user.tag || user.username || 'Nouveau membre'} vient d'arriver !` })
             .setTitle(`👋 Bienvenue sur ${member.guild.name} !`)
-            .setDescription(finalText)
+            // Pas de ui.sectionize() : les paragraphes respirent par des lignes
+            // vides. Un trait texte serait court (20 caractères) et s'arrêterait
+            // avant les bords arrondis — exactement le bug corrigé en v240.
+            .setDescription(ui.text(text, 4096))
             .addFields(...welcomeFields)
-            .setFooter({ text: member.guild.name, iconURL: member.guild.iconURL ? (member.guild.iconURL({ size: 64 }) || undefined) : undefined })
-            .setTimestamp()
-            // 🎴 La carte contient déjà l'avatar + le pseudo en grand : elle
-            // remplit le panneau, pas de vignette en plus.
+            // v241 — aligné sur le panneau premium : pied signé « Hoxera · … »
+            // et PLUS d'horodatage (Discord affiche déjà l'heure du message).
+            .setFooter({ text: `Hoxera · ${member.guild.name}`, iconURL: member.guild.iconURL ? (member.guild.iconURL({ size: 64 }) || undefined) : undefined })
             .setImage('attachment://bienvenue.png');
           welcomePayload = { embeds: [embed], files };
-        } else {
-          welcomePayload = ui.v2panel({
-            color: cfg.color || '#57F287',
-            author: { name: `${user.tag || user.username || 'Nouveau membre'} vient d'arriver !` },
-            title: `👋 Bienvenue sur ${member.guild.name} !`,
-            // `text` brut : ui.v2panel découpe lui-même les paragraphes et pose
-            // les séparateurs natifs (plus besoin de ui.sectionize).
-            description: text,
-            fields: welcomeFields,
-            // 🖼️ Image configurée = visuel principal (l'avatar n'est pas répété),
-            // sinon l'avatar en vignette. Les deux sont des URL HTTP, donc
-            // compatibles MediaGallery / Thumbnail (aucune pièce jointe).
-            image: cfg.image ? String(cfg.image).trim() : '',
-            thumbnail: !cfg.image && avatarUrl ? avatarUrl : '',
-            // L'iconURL du pied d'embed n'existe pas en V2 (pied en texte discret).
-            footer: member.guild.name,
-          });
         }
         const ok = await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, welcomePayload).then(() => true).catch((e) => { trace('envoi panneau ÉCHOUÉ : ' + e.message); return false; });
         trace(ok ? 'panneau premium envoyé ✅' : 'panneau premium NON envoyé ❌ (permissions ?)');
@@ -237,12 +274,17 @@ async function runLeaveEvent(botId, member, opts = {}) {
       description: text,
       fields: [
         { name: '👥 Membres restants', value: `**${member.guild.memberCount || '?'}**`, inline: true },
-        ...(joinedTs ? [{ name: '🕐 Était membre depuis', value: `<t:${joinedTs}:R>`, inline: true }] : []),
+        // v241 — `<t:…:R>` rend « il y a 1 jour », ce qui donnait la phrase
+        // cassée « Était membre depuis il y a 1 jour ». On affiche une DURÉE.
+        // ⚠️ `joinedTs` est en SECONDES (divisé par 1000 ci-dessus) alors que
+        // `dureeDepuis` attend des millisecondes : sans cette conversion la
+        // durée affichait « 56 ans » (Date.now() - secondes ≈ Date.now()).
+        ...(joinedTs ? [{ name: '🕐 Membre pendant', value: dureeDepuis(joinedTs * 1000), inline: true }] : []),
       ],
       // 🖼️ L'image configurée est le visuel ; pas de vignette en double.
       image: cfg.image ? String(cfg.image).trim() : '',
       thumbnail: !cfg.image && avatarUrl ? avatarUrl : '',
-      footer: member.guild.name,
+      footer: `Hoxera · ${member.guild.name}`,
     })).then(() => true).catch((e) => { trace('envoi ÉCHOUÉ : ' + e.message); return false; });
     trace(ok ? 'panneau de départ envoyé ✅' : 'panneau NON envoyé ❌ (permissions ?)');
   } else {
@@ -254,6 +296,30 @@ async function runLeaveEvent(botId, member, opts = {}) {
     description: `${(member.user && (member.user.tag || member.user.username)) || 'Un membre'} a quitté le serveur`,
     color: '#ED4245',
   });
+}
+
+/**
+ * v241 — durée écoulée depuis un horodatage, en français court.
+ * Remplace le `<t:…:R>` du panneau de départ, qui produisait la phrase cassée
+ * « Était membre depuis il y a 1 jour ».
+ * @param {number} depuisMs horodatage en MILLISECONDES (pas en secondes :
+ *   `member.joinedTimestamp / 1000` doit être re-multiplié par l'appelant).
+ */
+function dureeDepuis(depuisMs) {
+  const ms = Number(depuisMs);
+  if (!Number.isFinite(ms) || ms <= 0) return '—';
+  // Garde-fou : une valeur en secondes donnerait une durée > 40 ans.
+  if (Date.now() - ms > 100 * 365 * 86400000) return '—';
+  let min = Math.max(1, Math.round((Date.now() - ms) / 60000));
+  const a = Math.floor(min / 525600); min -= a * 525600;   // années
+  const j = Math.floor(min / 1440); min -= j * 1440;
+  const h = Math.floor(min / 60); min -= h * 60;
+  const morceaux = [];
+  if (a) morceaux.push(`${a} an${a > 1 ? 's' : ''}`);
+  if (j) morceaux.push(`${j} j`);
+  if (!a && h) morceaux.push(`${h} h`);
+  if (!a && !j) morceaux.push(`${min} min`);
+  return morceaux.length ? morceaux.slice(0, 2).join(' ') : 'moins d\'une minute';
 }
 
 function render(member, botRecord, template, extraVars = {}) {

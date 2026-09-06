@@ -19,7 +19,7 @@ assert(routes.includes('createdTimestamp'), 'date de création non exposée');
 
 // 2. Grille de sélection de serveurs (modale)
 assert(js.includes('Dashboard.openServerPicker'), 'grille de sélection manquante');
-assert(js.includes('Choisis un serveur'), 'titre de la grille manquant');
+assert(js.includes('Choisissez un serveur'), 'titre de la grille manquant');
 assert(js.includes('Rechercher un serveur'), 'recherche de la grille manquante');
 assert(js.includes("data-name="), 'filtrage des cartes par nom manquant');
 assert(css.includes('.sp-card {') || css.includes('.sp-card,'), 'styles des cartes serveurs manquants');

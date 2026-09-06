@@ -3,7 +3,7 @@
 //  1. Pins de version v191 (cache front invalidé)
 //  2. Les pages publiques serveur (#/g/<id>) et statut (#/status)
 //     sont SUPPRIMÉES (aucune trace dans le code)
-//  3. Le reste du LOT 4 reste intact : 6 langues, quiz, série,
+//  3. Le reste du LOT 4 reste intact : langues (fr+en depuis v240), quiz, série,
 //     export CSV, événements (/event), table quiz_scores
 // ══════════════════════════════════════════════════════════════
 const fs = require('fs');
@@ -44,12 +44,16 @@ assert(!pubJs.includes('Serveurs publics'), 'la mention « Serveurs publics » d
 // Les pages publiques existantes restent (page du bot + landing) : rien à retirer là.
 
 // ---------- 3. Le reste du LOT 4 reste INTACT ----------
-// 3a. 6 langues
-assert(i18nSrc.includes("es: 'es'") && i18nSrc.includes("de: 'de'")
-  && i18nSrc.includes("pt: 'pt'") && i18nSrc.includes("it: 'it'"),
-  'les 6 langues doivent rester dans i18n');
-assert(premadeSrc.includes("['fr', 'en', 'es', 'de', 'pt', 'it']"),
-  '/lang doit continuer d’accepter les 6 langues');
+// 3a. Langues — v240 ramène le périmètre à fr + en (es/de/pt/it étaient
+//     incomplets : 48 clés sur 105). Ce test vérifiait leur PRÉSENCE ;
+//     il vérifie désormais leur ABSENCE, sinon il contredit test/v240.
+assert(i18nSrc.includes("fr: 'fr'") && i18nSrc.includes("en: 'en'"),
+  'fr et en doivent rester dans i18n');
+assert(!i18nSrc.includes("es: 'es'") && !i18nSrc.includes("de: 'de'")
+  && !i18nSrc.includes("pt: 'pt'") && !i18nSrc.includes("it: 'it'"),
+  'es/de/pt/it ne doivent plus être dans i18n (v240)');
+assert(premadeSrc.includes("['fr', 'en']") && !premadeSrc.includes("'es', 'de'"),
+  '/lang doit accepter fr + en seulement (v240)');
 // 3b. Quiz
 assert(dbSrc.includes('CREATE TABLE IF NOT EXISTS quiz_scores ('),
   'la table quiz_scores doit rester');

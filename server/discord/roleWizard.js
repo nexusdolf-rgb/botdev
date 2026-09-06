@@ -61,13 +61,13 @@ function summaryEmbed(state) {
   return new EmbedBuilder()
     .setColor('#e07a5f')
     .setTitle(state.editId ? '✏️ Modifier le panneau de rôles' : '📋 Assistant des rôles')
-    .setDescription('Récapitulatif en direct — choisis une action ci-dessous.')
+    .setDescription('Récapitulatif en direct — choisissez une action ci-dessous.')
     .addFields(
       { name: '📛 Nom', value: v.name || '*non défini*', inline: true },
       { name: '📨 Salon', value: v.channel ? `<#${v.channel}>` : '*salon actuel*', inline: true },
       { name: '🎨 Style', value: v.mode === 'buttons' ? '🔘 Boutons' : '📋 Menu déroulant', inline: true },
       { name: '📝 Texte au-dessus du panneau', value: v.content ? v.content.slice(0, 300) : '*aucun*', inline: false },
-      { name: '🔽 Texte du menu', value: v.placeholder || 'Choisis tes rôles…', inline: false },
+      { name: '🔽 Texte du menu', value: v.placeholder || 'Choisissez vos rôles…', inline: false },
       { name: `🏷️ Rôles (${v.options.length}/${MAX_OPTIONS})`, value: roles, inline: false },
     )
     .setFooter({ text: '✅ Terminer et envoyer quand tout est prêt.' });
@@ -105,7 +105,7 @@ function addRoleComponents(state) {
     new ActionRowBuilder().addComponents(
       new RoleSelectMenuBuilder()
         .setCustomId(`rls:role:${state.botId}:${state.userId}`)
-        .setPlaceholder(`🛡️ Sélectionne un rôle à ajouter (${state.values.options.length}/${MAX_OPTIONS})…`)
+        .setPlaceholder(`🛡️ Sélectionnez un rôle à ajouter (${state.values.options.length}/${MAX_OPTIONS})…`)
         .setMinValues(1).setMaxValues(1),
     ),
     new ActionRowBuilder().addComponents(
@@ -121,7 +121,7 @@ function removeRoleComponents(state) {
     new ActionRowBuilder().addComponents(
       new StringSelectMenuBuilder()
         .setCustomId(`rls:sel:${state.botId}:${state.userId}`)
-        .setPlaceholder('Choisis un rôle à retirer…')
+        .setPlaceholder('Choisissez un rôle à retirer…')
         .setMinValues(1).setMaxValues(1)
         .addOptions(opts.map((o, i) => {
           const b = new StringSelectMenuOptionBuilder().setLabel(String(o.label).slice(0, 80)).setValue(String(i));
@@ -141,7 +141,7 @@ function channelComponents(state) {
     new ActionRowBuilder().addComponents(
       new ChannelSelectMenuBuilder()
         .setCustomId(`rls:chan:${state.botId}:${state.userId}`)
-        .setPlaceholder('📨 Sélectionne le salon du panneau…')
+        .setPlaceholder('📨 Sélectionnez le salon du panneau…')
         .setMinValues(1).setMaxValues(1)
         .setChannelTypes([ChannelType.GuildText]),
     ),
@@ -182,7 +182,7 @@ async function start(botId, interaction, editId) {
           .setValue(String(m.id))
           .setDescription(`${m.options.length} rôle(s) · ${m.mode === 'buttons' ? 'boutons' : 'menu déroulant'}`.slice(0, 100)))),
     );
-    const msg = await interaction.reply({ content: '✏️ Quel panneau veux-tu modifier ?', components: [row], fetchReply: true });
+    const msg = await interaction.reply({ content: '✏️ Quel panneau voulez-vous modifier ?', components: [row], fetchReply: true });
     wizards.set(wizardKey(botId, guild.id, uid), { botId, guildId: guild.id, userId: uid, step: 'pick', editId: null, values: null, msg, startedAt: Date.now() });
     return;
   }
@@ -194,7 +194,7 @@ async function start(botId, interaction, editId) {
   // Création : on commence par le nom
   wizards.set(wizardKey(botId, guild.id, uid), {
     botId, guildId: guild.id, userId: uid, step: 'name', modal: 'name', editId: null,
-    values: { name: '', content: '', placeholder: 'Choisis tes rôles…', channel: '', options: [], mode: 'menu' },
+    values: { name: '', content: '', placeholder: 'Choisissez vos rôles…', channel: '', options: [], mode: 'menu' },
     msg: null, startedAt: Date.now(),
   });
   await interaction.showModal(textModal(botId, uid, '📋 Nouveau panneau', 'Nom du panneau', 'Rôles du serveur', true, 50));
@@ -222,14 +222,14 @@ async function startEdit(botId, interaction, menuId) {
 async function finish(botId, state, interaction) {
   const v = state.values;
   if (!v.options.length) {
-    return interaction.editReply({ content: '⚠️ Ajoute au moins **un rôle** avant de terminer.', components: [] }).catch(() => {});
+    return interaction.editReply({ content: '⚠️ Ajoutez au moins **un rôle** avant de terminer.', components: [] }).catch(() => {});
   }
   if (!v.name.trim()) v.name = 'Panneau de rôles';
 
   const payload = {
     name: v.name.slice(0, 50),
     content: v.content.slice(0, 1900),
-    placeholder: v.placeholder.slice(0, 150) || 'Choisis tes rôles…',
+    placeholder: v.placeholder.slice(0, 150) || 'Choisissez vos rôles…',
     channel: v.channel || '',
     mode: v.mode === 'buttons' ? 'buttons' : 'menu',
     options: v.options.slice(0, 25).map((o) => ({
@@ -264,7 +264,7 @@ async function finish(botId, state, interaction) {
   let channel = null;
   if (v.channel) channel = guild.channels.cache.get(String(v.channel).replace(/[<#>]/g, '')) || panels.findChannelInGuild(guild, v.channel);
   if (!channel || (typeof channel.isTextBased === 'function' && !channel.isTextBased())) channel = interaction.channel;
-  let sentMsg = '📨 Envoie-le ensuite avec `/roles send ' + (store.roleMenus.all(botId, state.guildId).length) + '`.';
+  let sentMsg = '📨 Envoyez-le ensuite avec `/roles send ' + (store.roleMenus.all(botId, state.guildId).length) + '`.';
   try {
     if (channel && typeof channel.send === 'function') {
       await panels.sendRoleMenu(botId, interaction.client, menu, channel);
@@ -284,7 +284,7 @@ async function finish(botId, state, interaction) {
       color: '#57F287',
       title: state.editId ? '✅ Panneau mis à jour !' : '✅ Panneau de rôles créé !',
       description: `${sentMsg}\n\n**${payload.name}** — ${payload.options.length} rôle(s), style ${payload.mode === 'buttons' ? '🔘 boutons' : '📋 menu déroulant'}.\n\nLes membres peuvent maintenant choisir leurs rôles !`,
-      footer: 'Modifie-le à tout moment avec /roles edit.',
+      footer: 'Modifiez-le à tout moment avec /roles edit.',
     }),
     content: null, embeds: [],
   }).catch(() => {});
@@ -295,19 +295,19 @@ async function handleWizardInteraction(botId, interaction) {
   const cid = String(interaction.customId || '');
   if (!cid.startsWith('rls:')) return false;
   if (!canConfigureGuild(interaction.guild, interaction.member, interaction.user && interaction.user.id)) {
-    return interaction.reply({ content: '⛔ Ton accès de configuration a été retiré. Seul le propriétaire ou un membre ayant la permission Discord « Administrateur » peut continuer.', ephemeral: true });
+    return interaction.reply({ content: '⛔ Votre accès de configuration a été retiré. Seul le propriétaire ou un membre ayant la permission Discord « Administrateur » peut continuer.', ephemeral: true });
   }
   const parts = cid.split(':');
   const uid = parts[3];
   if (!uid || uid !== interaction.user.id) {
-    return interaction.reply({ content: '🔒 Ce panneau de configuration ne t\'appartient pas.', ephemeral: true });
+    return interaction.reply({ content: '🔒 Ce panneau de configuration ne vous appartient pas.', ephemeral: true });
   }
   const key = wizardKey(botId, interaction.guild.id, uid);
   const state = wizards.get(key);
-  if (!state) return interaction.reply({ content: '⏰ Assistant expiré. Relance `/roles setup` ou `/roles edit`.', ephemeral: true });
+  if (!state) return interaction.reply({ content: '⏰ Assistant expiré. Relancez `/roles setup` ou `/roles edit`.', ephemeral: true });
   if (Date.now() - state.startedAt > WIZARD_TTL) {
     wizards.delete(key);
-    return interaction.reply({ content: '⏰ Assistant expiré. Relance `/roles setup` ou `/roles edit`.', ephemeral: true });
+    return interaction.reply({ content: '⏰ Assistant expiré. Relancez `/roles setup` ou `/roles edit`.', ephemeral: true });
   }
 
   // --- Choix du panneau à modifier (/roles edit avec plusieurs panneaux) ---
@@ -402,8 +402,8 @@ async function handleWizardInteraction(botId, interaction) {
     }
     // Actions ouvrant une modale : PAS de defer avant showModal (interdit par Discord)
     if (v === 'name') { state.modal = 'name'; return interaction.showModal(textModal(botId, uid, '✏️ Nom du panneau', 'Nom', state.values.name || 'Rôles du serveur', true, 50)); }
-    if (v === 'content') { state.modal = 'content'; return interaction.showModal(textModal(botId, uid, '📝 Texte au-dessus', 'Texte affiché au-dessus du menu', 'Choisis tes rôles !', false, 1900)); }
-    if (v === 'placeholder') { state.modal = 'placeholder'; return interaction.showModal(textModal(botId, uid, '🔽 Texte du menu', 'Texte gris d\'attente du menu', 'Choisis tes rôles…', false, 150)); }
+    if (v === 'content') { state.modal = 'content'; return interaction.showModal(textModal(botId, uid, '📝 Texte au-dessus', 'Texte affiché au-dessus du menu', 'Choisissez vos rôles !', false, 1900)); }
+    if (v === 'placeholder') { state.modal = 'placeholder'; return interaction.showModal(textModal(botId, uid, '🔽 Texte du menu', 'Texte gris d\'attente du menu', 'Choisissez vos rôles…', false, 150)); }
     // Actions de navigation : accusé de réception puis mise à jour
     await ackDeferUpdate(interaction);
     if (v === 'channel') { state.step = 'channel'; return interaction.editReply({ embeds: [summaryEmbed(state)], components: channelComponents(state) }).catch(() => {}); }

@@ -166,7 +166,7 @@ CREATE TABLE IF NOT EXISTS role_menus (
   guild_id TEXT NOT NULL DEFAULT '',
   name TEXT DEFAULT '',
   content TEXT DEFAULT '',
-  placeholder TEXT DEFAULT 'Choisis tes rôles…',
+  placeholder TEXT DEFAULT 'Choisissez vos rôles…',
   channel TEXT DEFAULT '',
   options TEXT DEFAULT '[]'
 );
@@ -176,7 +176,7 @@ CREATE TABLE IF NOT EXISTS tickets (
   guild_id TEXT NOT NULL,
   name TEXT DEFAULT '',
   channel TEXT DEFAULT '',
-  message TEXT DEFAULT '🎫 Besoin d''aide ? Clique sur le bouton pour ouvrir un ticket !',
+  message TEXT DEFAULT '🎫 Besoin d''aide ? Cliquez sur le bouton pour ouvrir un ticket !',
   button_label TEXT DEFAULT '🎫 Ouvrir un ticket',
   button_style TEXT DEFAULT '1',
   support_role TEXT DEFAULT '',
@@ -1096,7 +1096,11 @@ const guildSettings = {
       panel_name: String(next.panel_name || '').slice(0, 100),
       modmail_enabled: next.modmail_enabled ? 1 : 0,
       modmail_channel: String(next.modmail_channel || '').slice(0, 100),
-      lang: ['fr', 'en', 'es', 'de', 'pt', 'it'].includes(String(next.lang || '')) ? String(next.lang) : 'fr',
+      // v240 — liste alignée sur i18n.LANG_CODES : es/de/pt/it n'étaient
+      // traduits qu'à 45 % (48 clés sur 105). Un serveur qui avait « es » en
+      // base repasse en français au prochain enregistrement ; i18n.normalize()
+      // le repliait déjà en français à la lecture.
+      lang: ['fr', 'en'].includes(String(next.lang || '')) ? String(next.lang) : 'fr',
       timezone: tzUtil.safeTz(next.timezone),
       giveaway_channel: String(next.giveaway_channel || '').slice(0, 100),
       giveaway_default_duration: Math.min(Math.max(parseInt(next.giveaway_default_duration, 10) || 0, 0), 720),
@@ -1226,7 +1230,7 @@ const roleMenus = {
     const r = db.prepare('SELECT * FROM role_menus WHERE id = ?').get(id);
     return r ? { ...r, options: JSON.parse(r.options || '[]'), mode: r.mode || 'menu' } : null;
   },
-  create: (data) => db.prepare('INSERT INTO role_menus (bot_id, guild_id, name, content, placeholder, channel, options, mode) VALUES (@bot_id, @guild_id, @name, @content, @placeholder, @channel, @options, @mode)').run({ mode: 'menu', name: '', content: '', placeholder: 'Choisis tes rôles…', channel: '', options: '[]', ...data }).lastInsertRowid,
+  create: (data) => db.prepare('INSERT INTO role_menus (bot_id, guild_id, name, content, placeholder, channel, options, mode) VALUES (@bot_id, @guild_id, @name, @content, @placeholder, @channel, @options, @mode)').run({ mode: 'menu', name: '', content: '', placeholder: 'Choisissez vos rôles…', channel: '', options: '[]', ...data }).lastInsertRowid,
   update: (id, fields) => {
     const allowed = ['name', 'content', 'placeholder', 'channel', 'options', 'mode'];
     const sets = [], vals = [];
@@ -2068,6 +2072,23 @@ try { db.exec(`CREATE TABLE IF NOT EXISTS activity (
   emoji TEXT DEFAULT '', text TEXT NOT NULL,
   created_at TEXT DEFAULT (datetime('now')));
 CREATE INDEX IF NOT EXISTS idx_activity_guild ON activity (bot_id, guild_id, id)`); } catch (e) {}
+
+// v240 — migration de DONNÉES : passage du tutoiement au vouvoiement.
+// ⚠️ Un `DEFAULT` dans `CREATE TABLE IF NOT EXISTS` ne change RIEN à une base
+//    déjà créée : les panneaux de tickets et menus de rôles existants gardaient
+//    leur ancien texte. La base étant restaurée depuis la sauvegarde GitHub au
+//    démarrage (piège n°2), ces lignes existent réellement en production.
+//    Chaque UPDATE est idempotent : il ne matche que l'ANCIENNE valeur exacte,
+//    donc un texte personnalisé par l'utilisateur n'est jamais écrasé.
+for (const [sql, params] of [
+  [`UPDATE role_menus SET placeholder = ? WHERE placeholder = ?`,
+    ['Choisissez vos rôles…', 'Choisis tes rôles…']],
+  [`UPDATE tickets SET message = ? WHERE message = ?`,
+    ["🎫 Besoin d'aide ? Cliquez sur le bouton pour ouvrir un ticket !",
+     "🎫 Besoin d'aide ? Clique sur le bouton pour ouvrir un ticket !"]],
+]) {
+  try { db.prepare(sql).run(...params); } catch (e) {}
+}
 
 // ---------------------- 📰 Flux d'activité ----------------------
 // Chaque action marquante du bot laisse une trace lisible pour le dashboard.

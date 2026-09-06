@@ -510,8 +510,8 @@ router.post('/bots/:id/stop', requireAuth, async (req, res) => {
 
 function friendlyErr(err) {
   const msg = String(err.message || err);
-  if (msg.toLowerCase().includes('token') || msg.toLowerCase().includes('invalid')) return 'Token invalide. Vérifie-le dans le portail développeur Discord.';
-  if (msg.includes('intents')) return 'Active les intents "MESSAGE CONTENT" et "SERVER MEMBERS" dans le portail développeur Discord.';
+  if (msg.toLowerCase().includes('token') || msg.toLowerCase().includes('invalid')) return 'Token invalide. Vérifiez-le dans le portail développeur Discord.';
+  if (msg.includes('intents')) return 'Activez les intents "MESSAGE CONTENT" et "SERVER MEMBERS" dans le portail développeur Discord.';
   return msg.slice(0, 300);
 }
 
@@ -678,7 +678,7 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) {
-    return res.status(403).json({ error: 'Tu dois être propriétaire du serveur ou avoir la permission Discord « Administrateur ».' });
+    return res.status(403).json({ error: 'Vous devez être propriétaire du serveur ou avoir la permission Discord « Administrateur ».' });
   }
   const entry = botManager.clients.get(bot.id);
   const dGuild = entry && entry.client.isReady() ? entry.client.guilds.cache.get(guildId) : null;
@@ -864,7 +864,7 @@ router.post('/bots/:id/guilds/:guildId/giveaways', requireAuth, async (req, res)
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   const b = req.body || {};
   const prize = String(b.prize || '').trim().slice(0, 200);
-  if (!prize) return res.status(400).json({ error: 'Indique le prix à gagner.' });
+  if (!prize) return res.status(400).json({ error: 'Indiquez le prix à gagner.' });
   const winners = Math.min(Math.max(parseInt(b.winners, 10) || 1, 1), 50);
   const durationMin = Math.min(Math.max(parseInt(b.duration_min, 10) || 60, 1), 43200);
   if (!botManager.isOnline(bot.id)) return res.status(400).json({ error: 'Le bot doit être en ligne pour lancer un giveaway.' });
@@ -875,7 +875,7 @@ router.post('/bots/:id/guilds/:guildId/giveaways', requireAuth, async (req, res)
   const chanRef = String(b.channel || '').trim();
   const settings = store.guildSettings.get(bot.id, guildId) || {};
   const targetRef = chanRef || settings.giveaway_channel || '';
-  if (!targetRef) return res.status(400).json({ error: 'Choisis un salon (ou configure le salon par défaut).' });
+  if (!targetRef) return res.status(400).json({ error: 'Choisissez un salon (ou configurez le salon par défaut).' });
   const channel = panels.findChannelInGuild(guild, targetRef);
   if (!channel) return res.status(400).json({ error: 'Salon introuvable. Vérifie le salon choisi.' });
   try {
@@ -1072,7 +1072,7 @@ router.post('/bots/:id/guilds/:guildId/xp/sync', requireAuth, async (req, res) =
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   const rewards = store.xpRoles.all(bot.id, guildId);
-  if (!rewards.length) return res.json({ ok: true, configured: 0, message: 'Aucun rôle de niveau configuré — ajoute des récompenses puis réessaie.' });
+  if (!rewards.length) return res.json({ ok: true, configured: 0, message: 'Aucun rôle de niveau configuré — ajoutez des récompenses puis réessayez.' });
   const entry = botManager.clients.get(bot.id);
   const guild = entry && entry.client.isReady() ? entry.client.guilds.cache.get(guildId) : null;
   if (!guild) return res.status(400).json({ error: 'Le bot est hors ligne ou absent de ce serveur.' });
@@ -1352,7 +1352,7 @@ router.post('/bots/:id/guilds/:guildId/livesocials', requireAuth, async (req, re
   const { link, platform, user_id } = req.body || {};
   const { parseSocial } = require('./discord/liveWatch');
   const parsed = parseSocial(link, platform);
-  if (!parsed) return res.status(400).json({ error: 'Lien ou pseudo invalide. Colle un lien complet (tiktok.com/@pseudo, twitch.tv/pseudo…) ou un @pseudo + la plateforme.' });
+  if (!parsed) return res.status(400).json({ error: 'Lien ou pseudo invalide. Collez un lien complet (tiktok.com/@pseudo, twitch.tv/pseudo…) ou un @pseudo + la plateforme.' });
   if (store.liveSocials.count(bot.id, req.params.guildId) >= 20) return res.status(400).json({ error: 'Limite atteinte : 20 comptes suivis par serveur.' });
   store.liveSocials.add(bot.id, req.params.guildId, String(user_id || '').slice(0, 30), parsed.platform, parsed.handle);
   res.json({ ok: true, platform: parsed.platform, handle: parsed.handle });
@@ -1373,7 +1373,7 @@ router.post('/bots/:id/guilds/:guildId/events/:type/test', requireAuth, eventsTe
   const me = store.users.get(req.userId);
   if (!me || !me.discord_id) return res.status(400).json({ error: 'Compte Discord non lié.' });
   const member = await guild.members.fetch(me.discord_id).catch(() => null);
-  if (!member) return res.status(404).json({ error: 'Tu n\'es pas membre de ce serveur.' });
+  if (!member) return res.status(404).json({ error: 'Vous n\'êtes pas membre de ce serveur.' });
   try {
     const events = require('./discord/events');
     if (type === 'member_join') await events.runJoinEvent(bot.id, member, { test: true });
@@ -1439,7 +1439,7 @@ router.get('/bots/:id/guilds/:guildId/notifications', requireAuth, async (req, r
     if (gs.am_warn_limit > 0 && gs.am_warn_action === 'kick' && !has(PermissionFlagsBits.KickMembers)) warnings.push({ icon: '👢', text: 'Sanction auto-mod réglée sur expulsion mais permission « Expulser des membres » manquante.' });
     if (gs.am_warn_limit > 0 && gs.am_warn_action === 'ban' && !has(PermissionFlagsBits.BanMembers)) warnings.push({ icon: '🔨', text: 'Sanction auto-mod réglée sur bannissement mais permission « Bannir des membres » manquante.' });
     if (store.liveSocials.count(bot.id, guildId) > 0 && !gs.live_channel) warnings.push({ icon: '🔴', text: 'Comptes live suivis mais AUCUN salon d\'annonces configuré !' });
-    if (store.inviteJoins.top(bot.id, guildId, 1).length === 0 && !has(PermissionFlagsBits.ManageGuild)) infos.push({ icon: '📨', text: 'Traqueur d\'invitations : donne « Gérer le serveur » au bot pour l\'activer.' });
+    if (store.inviteJoins.top(bot.id, guildId, 1).length === 0 && !has(PermissionFlagsBits.ManageGuild)) infos.push({ icon: '📨', text: 'Traqueur d\'invitations : donnez « Gérer le serveur » au bot pour l\'activer.' });
 
     // Infos du jour
     const today = new Date().toISOString().slice(0, 10);
@@ -1758,7 +1758,7 @@ router.post('/bots/:id/guilds/:guildId/automod/test', requireAuth, async (req, r
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   const { channel_id, type } = req.body || {};
-  if (!channel_id) return res.status(400).json({ error: 'Choisis un salon pour le test.' });
+  if (!channel_id) return res.status(400).json({ error: 'Choisissez un salon pour le test.' });
   const types = ['link', 'caps', 'mentions', 'word', 'spam'];
   if (!types.includes(type)) return res.status(400).json({ error: 'Type de test inconnu.' });
   const entry = botManager.clients.get(bot.id);
@@ -1768,7 +1768,7 @@ router.post('/bots/:id/guilds/:guildId/automod/test', requireAuth, async (req, r
   const channel = guild.channels.cache.get(String(channel_id));
   if (!channel || typeof channel.send !== 'function') return res.status(404).json({ error: 'Salon introuvable.' });
   const gs = store.guildSettings.get(bot.id, guildId) || {};
-  if (gs.am_enabled !== 1) return res.status(400).json({ error: 'Active d\'abord l\'auto-modération, puis relance le test.' });
+  if (gs.am_enabled !== 1) return res.status(400).json({ error: 'Activez d\'abord l\'auto-modération, puis relancez le test.' });
   const { runAutomod } = require('./discord/automod');
   const results = [];
 
@@ -1813,7 +1813,8 @@ router.put('/bots/:id/guilds/:guildId/settings', requireAuth, async (req, res) =
   const { prefix, lang, warn_limit, warn_action, warn_timeout_limit, warn_timeout_min, starboard_channel, starboard_min, live_channel, live_ping, ticket_log_channel, log_channel, birthday_channel, birthday_role, log_events, timezone } = req.body || {};
   store.guildSettings.set(bot.id, guildId, {
     prefix: String(prefix || '').slice(0, 5),
-    ...(lang !== undefined ? { lang: ['fr', 'en', 'es', 'de', 'pt', 'it'].includes(String(lang)) ? String(lang) : 'fr' } : {}),
+    // v240 — fr|en uniquement (voir server/i18n.js LANG_CODES).
+    ...(lang !== undefined ? { lang: ['fr', 'en'].includes(String(lang)) ? String(lang) : 'fr' } : {}),
     warn_limit: Math.max(0, parseInt(warn_limit, 10) || 0),
     warn_action: ['none', 'timeout', 'kick', 'ban'].includes(warn_action) ? warn_action : 'none',
     ...(warn_timeout_limit !== undefined ? { warn_timeout_limit: Math.max(0, parseInt(warn_timeout_limit, 10) || 0) } : {}),
@@ -1927,7 +1928,7 @@ router.get('/bots/:id/panels', requireAuth, async (req, res) => {
   const cfg = store.tickets.get(bot.id, guild_id);
   res.json({
     tickets: cfg || {
-      name: '', channel: '', message: '🎫 Besoin d\'aide ? Clique sur le bouton pour ouvrir un ticket !',
+      name: '', channel: '', message: '🎫 Besoin d\'aide ? Cliquez sur le bouton pour ouvrir un ticket !',
       button_label: '🎫 Ouvrir un ticket', support_role: '', category: 'Tickets',
     },
     role_menus: store.roleMenus.all(bot.id, guild_id),
@@ -1992,7 +1993,7 @@ router.post('/bots/:id/tickets/send', requireAuth, async (req, res) => {
   const cfg = store.tickets.get(bot.id, guild_id);
   const panelMode = ['button', 'menu'].includes(mode) ? mode : 'auto';
   const chanCfg = panelMode === 'menu' ? (cfg && (cfg.menu_channel || cfg.channel)) : (cfg && cfg.channel);
-  if (!cfg || !chanCfg) return res.status(400).json({ error: 'Configure d\'abord le salon du panneau.' });
+  if (!cfg || !chanCfg) return res.status(400).json({ error: 'Configurez d\'abord le salon du panneau.' });
   const entry = botManager.clients.get(bot.id);
   const guild = entry.client.guilds.cache.get(guild_id);
   if (!guild) return res.status(400).json({ error: 'Le bot n\'est pas sur ce serveur.' });
@@ -2108,13 +2109,13 @@ router.post('/bots/:id/role-menus', requireAuth, async (req, res) => {
   const { guild_id, name, content, placeholder, channel, options, mode } = req.body || {};
   if (!guild_id) return res.status(400).json({ error: 'guild_id requis' });
   if (!(await userCanManageGuild(req, guild_id))) return res.status(403).json({ error: 'Permission refusée.' });
-  if (!Array.isArray(options) || !options.length) return res.status(400).json({ error: 'Ajoute au moins un rôle au menu.' });
+  if (!Array.isArray(options) || !options.length) return res.status(400).json({ error: 'Ajoutez au moins un rôle au menu.' });
   const id = store.roleMenus.create({
     bot_id: bot.id,
     guild_id,
     name: String(name || 'Menu de rôles').slice(0, 50),
     content: String(content || '').slice(0, 1900),
-    placeholder: String(placeholder || 'Choisis tes rôles…').slice(0, 150),
+    placeholder: String(placeholder || 'Choisissez vos rôles…').slice(0, 150),
     channel: String(channel || '').slice(0, 100),
     mode: mode === 'buttons' ? 'buttons' : 'menu',
     options: JSON.stringify(options.map(o => ({
@@ -2140,7 +2141,7 @@ router.put('/role-menus/:id', requireAuth, async (req, res) => {
   if (channel !== undefined) fields.channel = String(channel).slice(0, 100);
   if (mode !== undefined) fields.mode = mode === 'buttons' ? 'buttons' : 'menu';
   if (options !== undefined) {
-    if (!Array.isArray(options) || !options.length) return res.status(400).json({ error: 'Ajoute au moins un rôle au menu.' });
+    if (!Array.isArray(options) || !options.length) return res.status(400).json({ error: 'Ajoutez au moins un rôle au menu.' });
     fields.options = JSON.stringify(options.map(o => ({
       label: String(o.label || 'Rôle').slice(0, 100),
       emoji: safeEmojiWeb(o.emoji).slice(0, 100),
@@ -2168,7 +2169,7 @@ router.post('/role-menus/:id/send', requireAuth, async (req, res) => {
   if (!bot) return res.status(404).json({ error: 'Menu introuvable' });
   if (!(await userCanManageGuild(req, menu.guild_id))) return res.status(403).json({ error: 'Permission refusée.' });
   if (!botManager.isOnline(bot.id)) return res.status(400).json({ error: 'Démarre le bot avant d\'envoyer un menu.' });
-  if (!menu.channel) return res.status(400).json({ error: 'Renseigne d\'abord le salon du menu.' });
+  if (!menu.channel) return res.status(400).json({ error: 'Renseignez d\'abord le salon du menu.' });
   const entry = botManager.clients.get(bot.id);
   const guild = entry.client.guilds.cache.get(menu.guild_id);
   if (!guild) return res.status(400).json({ error: 'Le bot n\'est pas sur ce serveur.' });
@@ -2439,8 +2440,8 @@ router.put('/bots/:id/guilds/:guildId/announcements/custom', requireAuth, async 
     channels: body.channels !== undefined ? body.channels : current.channels,
     ping_roles: body.ping_roles !== undefined ? body.ping_roles : current.ping_roles,
   });
-  if (!config.message.trim()) return res.status(400).json({ error: 'Écris le contenu de ton annonce.' });
-  if (!config.channels.length) return res.status(400).json({ error: 'Choisis au moins un salon de publication.' });
+  if (!config.message.trim()) return res.status(400).json({ error: 'Écrivez le contenu de votre annonce.' });
+  if (!config.channels.length) return res.status(400).json({ error: 'Choisissez au moins un salon de publication.' });
   store.customAnnouncements.set(bot.id, guildId, config);
   res.json({ ok: true, config: store.customAnnouncements.get(bot.id, guildId) });
 });
@@ -2889,7 +2890,7 @@ function adminTarget(req, res) {
     return null;
   }
   if (targetId === req.userId) {
-    res.status(400).json({ error: 'Tu ne peux pas modifier ton propre compte administrateur.' });
+    res.status(400).json({ error: 'Vous ne pouvez pas modifier votre propre compte administrateur.' });
     return null;
   }
   const target = store.users.findById(targetId);

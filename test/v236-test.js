@@ -67,10 +67,10 @@ for (const f of FICHIERS) {
 const RESTANTS = FICHIERS.concat(['xp.js', 'panels.js', 'extra.js', 'premade.js'])
   .map((f) => ({ f, n: (codeOnly(f).match(/ui\.sectionize\(/g) || []).length }))
   .filter((x) => x.n > 0);
-check('seuls events.js (branche « carte image »), panels.js (assistant) et xp.js (carte de niveau) gardent ui.sectionize',
-  RESTANTS.map((x) => `${x.f}:${x.n}`).sort().join(' ') === 'events.js:1 panels.js:1 xp.js:1',
+check('seuls panels.js (assistant) et xp.js (carte de niveau) gardent ui.sectionize — events.js n’en a plus (v240)',
+  RESTANTS.map((x) => `${x.f}:${x.n}`).sort().join(' ') === 'panels.js:1 xp.js:1',
   JSON.stringify(RESTANTS));
-console.log('✅ inventaire : 0 ui.panel / 0 ui.embed / 3 ui.sectionize documentés');
+console.log('✅ inventaire : 0 ui.panel / 0 ui.embed / 2 ui.sectionize documentés (events.js nettoyé en v240)');
 
 // ═══════════════════════════════════════════════════════════════════════════
 console.log('\n2) Annonce personnalisée (announcements.js) — buildPanel / buildPayload');
@@ -192,8 +192,11 @@ check('arrivée sans carte : Components V2', welcome && v2.isV2(welcome));
 check('arrivée sans carte : les 2 paragraphes séparés nativement',
   welcome && v2.texts(welcome).includes('Bienvenue Alice !') && v2.texts(welcome).includes('Lis le règlement.')
   && v2.dividers(welcome) >= 1);
+// v241 — l'intitulé « Vous êtes le membre » + la valeur « n°42 » formaient une
+// phrase coupée en deux. Devenu « Membre n° » + « 42 ». La rubrique est en outre
+// SUPPRIMÉE si le message configuré contient déjà {count} (fin du doublon).
 check('arrivée sans carte : les compteurs (n° membre + âge du compte) sont rendus',
-  welcome && v2.json(welcome).includes('👥 Tu es le membre') && v2.json(welcome).includes('n°42')
+  welcome && v2.json(welcome).includes('👥 Membre n°') && v2.json(welcome).includes('**42**')
   && v2.json(welcome).includes('📅 Compte créé'));
 check('arrivée sans carte : l\'avatar est porté par la vignette, jamais répété',
   welcome && v2.thumbnailUrls(welcome).includes('https://cdn.discordapp.com/a.png')
@@ -208,16 +211,17 @@ check('arrivée sans carte : la ligne de journal est, elle aussi, en V2',
 // Générer une vraie carte exigerait sharp + une image de fond ; on vérifie le
 // garde-fou au niveau du code : c'est lui qui évite le 400 BAD REQUEST.
 const evSrc = src('events.js');
-check('arrivée AVEC carte : l\'embed classique est conservé (V2 + webhook + files = 400)',
+check('arrivée AVEC carte + webhook : l\'embed classique est conservé (V2 + webhook + files = 400)',
   evSrc.includes('welcomePayload = { embeds: [embed], files };'));
-check('arrivée AVEC carte : le branchement se déclenche sur files.length',
-  evSrc.includes('if (files.length) {'));
+check('arrivée AVEC carte : le branchement dépend de la carte ET du webhook (v240)',
+  evSrc.includes('const carteV2 = files.length && !viaWebhook;')
+  && evSrc.includes('if (!files.length || carteV2) {'));
 check('arrivée AVEC carte : le piège est documenté dans le code',
   evSrc.includes('files = 400 BAD REQUEST'));
 check('arrivée : les 3 compteurs sont partagés par les 2 rendus (welcomeFields)',
   evSrc.includes('const welcomeFields = [') && evSrc.includes('.addFields(...welcomeFields)')
   && evSrc.includes('fields: welcomeFields,'));
-console.log('✅ arrivée/départ : V2 par défaut, embed classique uniquement avec la carte image');
+console.log('✅ arrivée/départ : V2 par défaut, embed classique uniquement si carte image + webhook');
 
 // ═══════════════════════════════════════════════════════════════════════════
 console.log('\n5) Garde-fous sur les pièges déjà rencontrés');

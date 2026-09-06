@@ -45,14 +45,14 @@ const CMD_DEFS = {
   serverinfo: { label: 'serverinfo', desc: 'Informations sur le serveur' },
   botinfo: { label: 'botinfo', desc: 'Informations sur le bot' },
   help: { label: 'help', desc: 'Liste des commandes activées' },
-  '8ball': { label: '8ball', desc: 'La boule magique répond à ta question' },
+  '8ball': { label: '8ball', desc: 'La boule magique répond à votre question' },
   meme: { label: 'meme', desc: 'Un meme aléatoire' },
   coinflip: { label: 'coinflip', desc: 'Pile ou face' },
-  roll: { label: 'roll', desc: 'Lance un dé' },
+  roll: { label: 'roll', desc: 'Lancez un dé' },
   // 🔐 /say fait parler le bot : réservé au propriétaire / administrateurs
   // (défini à l'enregistrement + vérifié à l'exécution + message de refus propre)
-  say: { label: 'say', desc: 'Répète ton message (réservé aux admins)', perms: [PermissionsBitField.Flags.Administrator] },
-  reverse: { label: 'reverse', desc: 'Inverse ton texte' },
+  say: { label: 'say', desc: 'Répète votre message (réservé aux admins)', perms: [PermissionsBitField.Flags.Administrator] },
+  reverse: { label: 'reverse', desc: 'Inverse votre texte' },
   profile: { label: 'profile', desc: 'Carte de profil d\'un membre' },
   kick: { label: 'kick', desc: 'Expulse un membre', perms: [PermissionsBitField.Flags.KickMembers] },
   ban: { label: 'ban', desc: 'Bannit un membre', perms: [PermissionsBitField.Flags.BanMembers] },
@@ -64,18 +64,18 @@ const CMD_DEFS = {
   // restriction, n'importe qui pourrait consulter le casier de tout le monde.
   warns: { label: 'warns', desc: 'Liste les avertissements d\'un membre (staff)', perms: [PermissionsBitField.Flags.ModerateMembers] },
   clear: { label: 'clear', desc: 'Supprime des messages', perms: [PermissionsBitField.Flags.ManageMessages] },
-  daily: { label: 'daily', desc: 'Récupère tes coins quotidiens' },
-  balance: { label: 'balance', desc: 'Affiche ton solde de coins' },
+  daily: { label: 'daily', desc: 'Récupère vos coins quotidiens' },
+  balance: { label: 'balance', desc: 'Affiche votre solde de coins' },
   leaderboard: { label: 'leaderboard', desc: 'Classement des coins' },
-  rank: { label: 'rank', desc: 'Ton niveau, ton XP et ton rang' },
+  rank: { label: 'rank', desc: 'Votre niveau, votre XP et votre rang' },
   levels: { label: 'levels', desc: 'Le classement des niveaux du serveur' },
   invite: { label: 'invite', desc: 'Le lien pour inviter le bot' },
-  lang: { label: 'lang', desc: 'Choisis la langue du bot sur ce serveur (fr, en, es, de, pt, it)', perms: [PermissionsBitField.Flags.Administrator] },
+  lang: { label: 'lang', desc: 'Choisissez la langue du bot sur ce serveur (fr, en, êtes, de, pt, it)', perms: [PermissionsBitField.Flags.Administrator] },
   giveaway: { label: 'giveaway', desc: 'Lancer un giveaway avec tirage automatique', perms: [PermissionsBitField.Flags.Administrator] },
   suggest: { label: 'suggest', desc: 'Proposer une suggestion (votes 👍👎)' },
   suggestions: { label: 'suggestions', desc: 'Configurer le salon des suggestions', perms: [PermissionsBitField.Flags.Administrator] },
   shop: { label: 'shop', desc: 'Voir la boutique du serveur' },
-  buy: { label: 'buy', desc: 'Acheter un article avec tes coins' },
+  buy: { label: 'buy', desc: 'Acheter un article avec vos coins' },
   pay: { label: 'pay', desc: 'Transférer des coins à un membre' },
   temprole: { label: 'temprole', desc: 'Donner un rôle temporaire', perms: [PermissionsBitField.Flags.ManageRoles] },
   sanction: { label: 'sanction', desc: 'Appliquer une sanction prédéfinie', perms: [PermissionsBitField.Flags.ModerateMembers] },
@@ -175,13 +175,13 @@ function buildSlashPayloads(botId) {
     const def = CMD_DEFS[name];
     const options = [];
     if (name === 'lang') {
-      options.push({ name: 'langue', description: 'fr · en · es · de · pt · it', type: ApplicationCommandOptionType.String, required: true, choices: [
+      // v240 — es/de/pt/it retirés du choix : leurs blocs de traduction
+      // n'avaient que 48 clés sur 105, donc un serveur qui les choisissait
+      // voyait un mélange espagnol/français. Deux langues complètes valent
+      // mieux que six approximatives (le dashboard ne proposait déjà que fr+en).
+      options.push({ name: 'langue', description: 'fr · en', type: ApplicationCommandOptionType.String, required: true, choices: [
         { name: '🇫🇷 Français', value: 'fr' },
         { name: '🇬🇧 English', value: 'en' },
-        { name: '🇪🇸 Español', value: 'es' },
-        { name: '🇩🇪 Deutsch', value: 'de' },
-        { name: '🇵🇹 Português', value: 'pt' },
-        { name: '🇮🇹 Italiano', value: 'it' },
       ]});
     }
     if (['avatar', 'userinfo', 'kick', 'ban', 'timeout', 'warn', 'warns', 'balance', 'rank', 'profile'].includes(name)) {
@@ -195,7 +195,7 @@ function buildSlashPayloads(botId) {
       options.push({ name: 'raison', description: 'La raison', type: ApplicationCommandOptionType.String, required: false });
     }
     if (['8ball', 'say', 'reverse'].includes(name)) {
-      options.push({ name: 'texte', description: 'Ton texte / question', type: ApplicationCommandOptionType.String, required: true });
+      options.push({ name: 'texte', description: 'Votre texte / question', type: ApplicationCommandOptionType.String, required: true });
     }
     if (['clear'].includes(name)) {
       options.push({ name: 'nombre', description: 'Nombre de messages (1-100)', type: ApplicationCommandOptionType.Integer, required: true });
@@ -210,10 +210,10 @@ function buildSlashPayloads(botId) {
       options.push({ name: 'commande', description: 'Nom de la commande à détailler (ex : ticket)', type: ApplicationCommandOptionType.String, required: false });
     }
     if (['suggest'].includes(name)) {
-      options.push({ name: 'texte', description: 'Ta suggestion', type: ApplicationCommandOptionType.String, required: true });
+      options.push({ name: 'texte', description: 'Votre suggestion', type: ApplicationCommandOptionType.String, required: true });
     }
     if (['shop'].includes(name)) {
-      options.push({ name: 'article', description: 'Nom de l\'article à acheter (optionnel : pour voir la boutique, laisse vide)', type: ApplicationCommandOptionType.String, required: false });
+      options.push({ name: 'article', description: 'Nom de l\'article à acheter (optionnel : pour voir la boutique, laissez vide)', type: ApplicationCommandOptionType.String, required: false });
     }
     if (['buy'].includes(name)) {
       options.push({ name: 'article', description: 'Nom de l\'article', type: ApplicationCommandOptionType.String, required: true });
@@ -291,7 +291,7 @@ function buildSlashPayloads(botId) {
           { name: 'emoji', description: 'Emoji affiché dans le menu', type: ApplicationCommandOptionType.String, required: false },
           { name: 'description', description: 'Explication affichée sous le type dans le menu', type: ApplicationCommandOptionType.String, required: false },
           { name: 'categorie', description: 'Catégorie dédiée (optionnel)', type: ApplicationCommandOptionType.String, required: false },
-          { name: 'staffrole', description: 'Ajoute un rôle staff (pour EN ajouter plusieurs : /ticket types setup)', type: ApplicationCommandOptionType.String, required: false },
+          { name: 'staffrole', description: 'Ajoutez un rôle staff (pour EN ajouter plusieurs : /ticket types setup)', type: ApplicationCommandOptionType.String, required: false },
         ]},
         { name: 'remove', description: 'Supprimer un type de ticket', type: ApplicationCommandOptionType.Subcommand, options: [
           { name: 'nom', description: 'Nom du type à supprimer', type: ApplicationCommandOptionType.String, required: true },
@@ -341,11 +341,11 @@ function buildSlashPayloads(botId) {
         { name: 'bio', description: 'Bio affichée sur le profil', type: ApplicationCommandOptionType.String, required: false },
         { name: 'couleur', description: 'Couleur du profil (ex : #e07a5f)', type: ApplicationCommandOptionType.String, required: false },
       ]},
-      { name: 'avatar', description: 'Choisir un avatar depuis ta galerie', type: ApplicationCommandOptionType.Subcommand, options: [
-        { name: 'image', description: '📱 La galerie s\'ouvre automatiquement — choisis ta photo (3 Mo max)', type: ApplicationCommandOptionType.Attachment, required: true },
+      { name: 'avatar', description: 'Choisir un avatar depuis votre galerie', type: ApplicationCommandOptionType.Subcommand, options: [
+        { name: 'image', description: '📱 La galerie s\'ouvre automatiquement — choisissez votre photo (3 Mo max)', type: ApplicationCommandOptionType.Attachment, required: true },
       ]},
-      { name: 'banner', description: 'Choisir une bannière depuis ta galerie', type: ApplicationCommandOptionType.Subcommand, options: [
-        { name: 'image', description: '📱 La galerie s\'ouvre automatiquement — choisis ta photo (3 Mo max)', type: ApplicationCommandOptionType.Attachment, required: true },
+      { name: 'banner', description: 'Choisir une bannière depuis votre galerie', type: ApplicationCommandOptionType.Subcommand, options: [
+        { name: 'image', description: '📱 La galerie s\'ouvre automatiquement — choisissez votre photo (3 Mo max)', type: ApplicationCommandOptionType.Attachment, required: true },
       ]},
       { name: 'reset', description: 'Retirer l\'identité personnalisée de ce serveur', type: ApplicationCommandOptionType.Subcommand },
     ],
@@ -460,7 +460,7 @@ async function handlePremadeSlash(botId, entry, interaction) {
     console.error('[BotDev] commande slash :', (e && e.message) || e);
     try {
       if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: '⚠️ Oups, une erreur est survenue — elle a été enregistrée, réessaie.', ephemeral: true }).catch(() => {});
+        await interaction.reply({ content: '⚠️ Oups, une erreur est survenue — elle a été enregistrée, réessayez.', ephemeral: true }).catch(() => {});
       }
     } catch {}
   }
@@ -550,7 +550,7 @@ async function execute(botId, entry, cmd, src) {
   // universelles fonctionnent. Les autres répondent poliment.
   const DM_SAFE = ['ping', 'invite', 'botinfo', 'help', '8ball', 'meme', 'coinflip', 'roll', 'say', 'reverse', 'avatar'];
   if (!guild && isInt && !DM_SAFE.includes(cmd)) {
-    return reply('🌍 Cette commande fonctionne sur un **serveur Discord**. Ajoute-moi à ton serveur avec `/invite` !');
+    return reply('🌍 Cette commande fonctionne sur un **serveur Discord**. Ajoutez-moi à votre serveur avec `/invite` !');
   }
 
   const getUserArg = (name = 'utilisateur') => {
@@ -699,7 +699,7 @@ async function execute(botId, entry, cmd, src) {
         const myRow = store.xp.get(botId, guild.id, author.id);
         if (myRow && Number(myRow.xp) > 0) {
           const myPos = store.xp.rankOf(botId, guild.id, author.id);
-          own = `\n…\n**${myPos}.** <@${author.id}> — **${myRow.level || 0}** · ${myRow.xp} XP ⬅️ toi`;
+          own = `\n…\n**${myPos}.** <@${author.id}> — **${myRow.level || 0}** · ${myRow.xp} XP ⬅️ vous`;
         }
       }
       // v232 — séparateurs NATIFS pleine largeur (Components V2) : le trait
@@ -756,7 +756,7 @@ async function execute(botId, entry, cmd, src) {
       await replyPanel({
         variant: 'brand',
         title: '🔗 Ajouter Hoxera à un serveur',
-        description: 'Utilise le bouton ou le lien ci-dessous pour inviter le bot.',
+        description: 'Utilisez le bouton ou le lien ci-dessous pour inviter le bot.',
         fields: [{ name: '🌐 Lien d’invitation', value: `https://discord.com/oauth2/authorize?client_id=${record.client_id}&permissions=8&scope=bot%20applications.commands` }],
         footer: 'Hoxera · Invitation officielle',
       }, [ui.linkRow('➕ Inviter le bot', `https://discord.com/oauth2/authorize?client_id=${record.client_id}&permissions=8&scope=bot%20applications.commands`)]);
@@ -765,11 +765,15 @@ async function execute(botId, entry, cmd, src) {
     case 'lang': {
       if (!guild) return reply('🌍 Cette commande se configure sur un serveur.');
       const wanted = isInt ? (src.interaction.options.getString('langue') || '') : (src.args || '').trim();
-      if (!['fr', 'en', 'es', 'de', 'pt', 'it'].includes(wanted)) {
-        return reply('❓ Utilisation : `/lang fr|en|es|de|pt|it`.');
+      const i18n = require('../i18n');
+      // v240 — plus que fr et en. Avant : 6 langues proposées alors que 4
+      // n'étaient traduites qu'à 45 % (48 clés sur 105) → le serveur voyait un
+      // mélange. Le message d'usage vient maintenant de i18n (clé `lang_usage`,
+      // qui était définie mais jamais appelée) au lieu d'être codé en dur.
+      if (!['fr', 'en'].includes(wanted)) {
+        return reply(i18n.t(i18n.langForGuild(guild.id), 'lang_usage'));
       }
       store.guildSettings.set(botId, guild.id, { lang: wanted });
-      const i18n = require('../i18n');
       await reply(i18n.t(wanted, 'lang_set'));
       break;
     }
@@ -786,7 +790,7 @@ async function execute(botId, entry, cmd, src) {
       const embed = new EmbedBuilder()
         .setColor('#F1C40F')
         .setTitle('🛒 Boutique du serveur')
-        .setDescription(`Achète un article avec tes coins : \`/buy article\`\n\n💰 **Ton solde : ${solde} coins**`)
+        .setDescription(`Achetez un article avec vos coins : \`/buy article\`\n\n💰 **Votre solde : ${solde} coins**`)
         .setFooter({ text: `Hoxera · ${guild.name} · Boutique` })
         .setTimestamp();
       for (const it of items) {
@@ -798,10 +802,10 @@ async function execute(botId, entry, cmd, src) {
     case 'buy': {
       const name = isInt ? (src.interaction.options.getString('article') || '') : (src.args || '').trim();
       const item = store.shop.all(botId, guild.id).find((i) => i.name.toLowerCase() === name.toLowerCase());
-      if (!item) return reply('❓ Article introuvable. Vois la boutique avec `/shop`.');
+      if (!item) return reply('❓ Article introuvable. Consultez la boutique avec `/shop`.');
       store.economy.ensure(botId, guild.id, author.id);
       const row = store.economy.get(botId, guild.id, author.id);
-      if (row.coins < item.price) return reply(`❌ Il te manque **${item.price - row.coins}** coins (article à ${item.price}).`);
+      if (row.coins < item.price) return reply(`❌ Il vous manque **${item.price - row.coins}** coins (article à ${item.price}).`);
       store.economy.add(botId, guild.id, author.id, -item.price);
       store.shopPurchases.add(botId, guild.id, author.id, item.name, item.price);
       const role = guild.roles.cache.find((r) => r.name.toLowerCase() === item.role.toLowerCase());
@@ -822,7 +826,7 @@ async function execute(botId, entry, cmd, src) {
       await replyPanel({
         variant: 'economy',
         title: '🛒 Achat réussi !',
-        description: `Tu reçois **${role.toString()}**.`,
+        description: `Vous recevez **${role.toString()}**.`,
         fields: [{ name: '💰 Prix', value: `${item.price} coins`, inline: true }, { name: '🏷️ Rôle', value: role.name, inline: true }],
         footer: `Hoxera · ${guild.name} · Boutique`,
       });
@@ -832,7 +836,7 @@ async function execute(botId, entry, cmd, src) {
       const target = isInt ? (src.interaction.options.getUser('membre') || null) : null;
       const amount = isInt ? (src.interaction.options.getInteger('montant') || 0) : parseInt((src.args || '').split(/\s+/)[1], 10);
       if (!target || !amount || amount <= 0) return reply('❓ Utilisation : `/pay @membre montant`.');
-      if (target.id === author.id) return reply('❌ Tu ne peux pas te payer toi-même.');
+      if (target.id === author.id) return reply('❌ Vous ne pouvez pas vous payer vous-même.');
       store.economy.ensure(botId, guild.id, author.id);
       store.economy.ensure(botId, guild.id, target.id);
       const from = store.economy.get(botId, guild.id, author.id);
@@ -849,9 +853,9 @@ async function execute(botId, entry, cmd, src) {
       break;
     }
     case 'suggest': {
-      if (!isInt) return reply('💡 Utilise la commande slash `/suggest` pour envoyer une suggestion.');
+      if (!isInt) return reply('💡 Utilisez la commande slash `/suggest` pour envoyer une suggestion.');
       const text = src.interaction.options.getString('texte') || '';
-      if (!text.trim()) return reply('❓ Écris ta suggestion : `/suggest ton idée`.');
+      if (!text.trim()) return reply('❓ Écrivez votre suggestion : `/suggest votre idée`.');
       return suggestEngine.submitSuggestion(botId, src.interaction, text);
     }
     case 'suggestions': {
@@ -869,10 +873,10 @@ async function execute(botId, entry, cmd, src) {
       const gs = store.guildSettings.get(botId, guild.id) || {};
       return reply(gs.suggestion_channel
         ? `💡 Salon des suggestions : **${gs.suggestion_channel}**\nVotes avec 👍👎, statut par le staff (✅ Approuver / ❌ Refuser).`
-        : '💡 Aucun salon configuré. Utilise `/suggestions set #salon`.');
+        : '💡 Aucun salon configuré. Utilisez `/suggestions set #salon`.');
     }
     case 'giveaway': {
-      if (!isInt) return reply('🎁 Utilise la commande slash `/giveaway` pour lancer un tirage.');
+      if (!isInt) return reply('🎁 Utilisez la commande slash `/giveaway` pour lancer un tirage.');
       const action = src.interaction.options.getString('action') || 'create';
       const duree = src.interaction.options.getString('duree') || '1h';
       const prix = src.interaction.options.getString('prix') || '🎁 Lot surprise';
@@ -892,7 +896,7 @@ async function execute(botId, entry, cmd, src) {
       return giveawayEngine.startGiveaway(botId, src.interaction, ms, prix, gagnants);
     }
     case 'temprole': {
-      if (!isInt) return reply('⏳ Utilise la commande slash `/temprole`.');
+      if (!isInt) return reply('⏳ Utilisez la commande slash `/temprole`.');
       const target = src.interaction.options.getMember('membre') || null;
       const role = src.interaction.options.getRole('role') || null;
       const duree = src.interaction.options.getString('duree') || '';
@@ -910,14 +914,14 @@ async function execute(botId, entry, cmd, src) {
         const list = store.sanctions.all(botId, guild.id);
         return reply(list.length
           ? `❓ Sanction introuvable. Disponibles : ${list.map((x) => x.name).join(', ')}`
-          : '❓ Aucune sanction prédéfinie. Ajoute-les depuis le **dashboard Hoxera** (onglet Modération).');
+          : '❓ Aucune sanction prédéfinie. Ajoutez-les depuis le **dashboard Hoxera** (onglet Modération).');
       }
       const reason = s.message || 'Sanction prédéfinie';
       try {
         await target.send(ui.v2panel({   // v232 — séparateurs natifs pleine largeur
           variant: 'danger',
           title: '⚠️ Sanction appliquée',
-          description: `Tu as été sanctionné sur **${guild.name}**.`,
+          description: `Vous avez été sanctionné sur **${guild.name}**.`,
           fields: [
             { name: '⚖️ Type', value: s.name, inline: true },
             { name: '📝 Motif', value: reason, inline: false },
@@ -950,7 +954,7 @@ async function execute(botId, entry, cmd, src) {
       break;
     }
     case '8ball': {
-      const answers = ['Oui, absolument.', 'C\'est certain.', 'Sans aucun doute.', 'Oui, définitivement.', 'Tu peux compter dessus.', 'Essaie encore plus tard.', 'Ne compte pas dessus.', 'Ma réponse est non.', 'Mes sources disent non.', 'Très incertain.'];
+      const answers = ['Oui, absolument.', 'C\'est certain.', 'Sans aucun doute.', 'Oui, définitivement.', 'Vous pouvez compter dessus.', 'Essayez encore plus tard.', 'Ne compte pas dessus.', 'Ma réponse est non.', 'Mes sources disent non.', 'Très incertain.'];
       const q = isInt ? (src.interaction.options.getString('texte') || '') : (src.args || '');
       await reply(`🎱 **${q || '...'}**\n${answers[Math.floor(Math.random() * answers.length)]}`);
       break;
@@ -971,9 +975,9 @@ async function execute(botId, entry, cmd, src) {
         await replyEmbed(embed);
       } catch (e) {
         if (e && e.name === 'AbortError') {
-          await reply('⏱️ L\'API de mèmes ne répond pas pour le moment. Réessaie dans quelques instants.');
+          await reply('⏱️ L\'API de mèmes ne répond pas pour le moment. Réessayez dans quelques instants.');
         } else {
-          await reply('😢 Impossible de récupérer un mème pour le moment. Réessaie dans quelques secondes.');
+          await reply('😢 Impossible de récupérer un mème pour le moment. Réessayez dans quelques secondes.');
         }
       }
       break;
@@ -987,7 +991,7 @@ async function execute(botId, entry, cmd, src) {
       if (isInt) max = src.interaction.options.getInteger('max') || 6;
       else { const n = parseInt(src.args, 10); if (n) max = n; }
       max = Math.min(Math.max(max, 2), 1000000);
-      await reply(`🎲 Tu as lancé un dé et obtenu : **${Math.floor(Math.random() * max) + 1}** (1-${max})`);
+      await reply(`🎲 Vous avez lancé un dé et obtenu : **${Math.floor(Math.random() * max) + 1}** (1-${max})`);
       break;
     }
     case 'say': {
@@ -1192,8 +1196,8 @@ async function execute(botId, entry, cmd, src) {
       if (row && row.last_daily === today) {
         const streak = Number(row.daily_streak) || 0;
         return reply(streak > 1
-          ? `⏳ Tu as déjà récupéré tes coins aujourd'hui (série : ${streak} jours 🔥). Reviens demain pour continuer !`
-          : `⏳ Tu as déjà récupéré tes coins aujourd'hui. Reviens demain !`);
+          ? `⏳ Vous avez déjà récupéré vos coins aujourd'hui (série : ${streak} jours 🔥). Revenez demain pour continuer !`
+          : `⏳ Vous avez déjà récupéré vos coins aujourd'hui. Revenez demain !`);
       }
       // 🔥 Série de connexion (v190) : un jour consécutif → +1, sinon reset
       let streak = 0;
@@ -1210,7 +1214,7 @@ async function execute(botId, entry, cmd, src) {
       await replyPanel({
         variant: 'economy',
         title: '🎁 Récompense quotidienne',
-        description: streak > 1 ? `Série de **${streak} jours** 🔥 continue !` : 'Tu as récupéré ta récompense du jour.',
+        description: streak > 1 ? `Série de **${streak} jours** 🔥 continuez !` : 'Vous avez récupéré votre récompense du jour.',
         fields: [
           { name: '🪙 Récompense', value: `+${reward} coins${bonus > 0 ? ` (dont +${bonus} de bonus série 🔥)` : ''}`, inline: true },
           { name: '💰 Nouveau solde', value: `${after.coins} coins`, inline: true },
@@ -1259,7 +1263,7 @@ function argsMatch(str, regex) {
 // ============================================================
 const HELP_DETAILS = {
   ticket: ['🎫 Tickets', 'Le système de tickets complet : un bouton dans un salon, chaque clic crée un salon privé réservé au membre et au staff.',
-    '`/ticket types setup` — **Assistant interactif des types** : choisis un type, renomme-le, choisis son emoji, sa catégorie, **ajoute AUTANT de rôles staff que tu veux** (sélecteur de rôle, répétable) ou retire-les, supprime-le avec confirmation\n`/ticket types add Nom` — Ajouter/renommer un **type de ticket** (option `staffrole` pour un rôle — pour en mettre plusieurs : setup) (emoji, catégorie et rôle staff dédiés en options) — le panneau affiche un menu déroulant de types\n`/ticket types remove Nom` — Supprimer un type\n`/ticket types list` — Voir les types\n`/ticket setup` — **Assistant avec menus de sélection** : nom → catégorie → salon → rôle staff\n`/ticket panel` — Envoyer le panneau\n`/ticket channel #salon` — Changer le salon\n`/ticket role @Staff` — Changer le rôle staff\n`/ticket category Nom` — Changer la catégorie\n`/ticket button Texte` — Changer le texte du bouton\n`/ticket message Texte` — Changer le message\n`/ticket config` — Voir la configuration\n`/ticket close` — **Verrouiller** un ticket (staff, réouvrable avec 🔓)\n`/ticket delete` — **Supprimer** un ticket (staff) — 📄 la **transcription** est envoyée en MP au créateur à ce moment\n`/ticket add @membre` / `/ticket remove @membre` — Gérer l\'accès au ticket (staff)\n\n🔒 Configuration réservée au **propriétaire du serveur** ou aux membres ayant la permission **Administrateur** · gestion réservée au **staff**\n📄 La transcription part à la **suppression** (pas à la fermeture).\n\n🗂️ Exemples de types : Candidature staff, Ticket contre admin, Signaler un bug, Partenariat…'],
+    '`/ticket types setup` — **Assistant interactif des types** : choisissez un type, renommez-le, choisissez son emoji, sa catégorie, **ajoutez AUTANT de rôles staff que vous voulez** (sélecteur de rôle, répétable) ou retirez-les, supprimez-le avec confirmation\n`/ticket types add Nom` — Ajouter/renommer un **type de ticket** (option `staffrole` pour un rôle — pour en mettre plusieurs : setup) (emoji, catégorie et rôle staff dédiés en options) — le panneau affiche un menu déroulant de types\n`/ticket types remove Nom` — Supprimer un type\n`/ticket types list` — Voir les types\n`/ticket setup` — **Assistant avec menus de sélection** : nom → catégorie → salon → rôle staff\n`/ticket panel` — Envoyer le panneau\n`/ticket channel #salon` — Changer le salon\n`/ticket role @Staff` — Changer le rôle staff\n`/ticket category Nom` — Changer la catégorie\n`/ticket button Texte` — Changer le texte du bouton\n`/ticket message Texte` — Changer le message\n`/ticket config` — Voir la configuration\n`/ticket close` — **Verrouiller** un ticket (staff, réouvrable avec 🔓)\n`/ticket delete` — **Supprimer** un ticket (staff) — 📄 la **transcription** est envoyée en MP au créateur à ce moment\n`/ticket add @membre` / `/ticket remove @membre` — Gérer l\'accès au ticket (staff)\n\n🔒 Configuration réservée au **propriétaire du serveur** ou aux membres ayant la permission **Administrateur** · gestion réservée au **staff**\n📄 La transcription part à la **suppression** (pas à la fermeture).\n\n🗂️ Exemples de types : Candidature staff, Ticket contre admin, Signaler un bug, Partenariat…'],
   ping: ['🔧 Utilitaire', 'Affiche la latence du bot.', '`/ping`', '`/ping` → 🏓 Pong ! Latence : 42 ms'],
   avatar: ['🔧 Utilitaire', 'Affiche l\'avatar d\'un membre.', '`/avatar @membre`', '`/avatar @Hoxera`'],
   userinfo: ['🔧 Utilitaire', 'Informations sur un membre (ID, date de création, arrivée).', '`/userinfo @membre`', '`/userinfo`'],
@@ -1274,27 +1278,27 @@ const HELP_DETAILS = {
   clear: ['🛡️ Modération', 'Supprime un nombre de messages du salon.', '`/clear nombre`', '`/clear 20`'],
   '8ball': ['🎉 Fun', 'Pose une question, la boule magique répond.', '`/8ball question`', '`/8ball BotDev est-il génial ?`'],
   meme: ['🎉 Fun', 'Envoie un meme aléatoire.', '`/meme`'],
-  coinflip: ['🎉 Fun', 'Lance une pièce : pile ou face.', '`/coinflip`', '`/coinflip` → 🪙 Face !'],
-  roll: ['🎉 Fun', 'Lance un dé (jusqu\'à la valeur choisie, défaut 6).', '`/roll max`', '`/roll 100` → 🎲 73'],
-  say: ['🎉 Fun', 'Le bot répète ton message.', '`/say texte`', '`/say Coucou !`'],
-  reverse: ['🎉 Fun', 'Inverse ton texte.', '`/reverse texte`', '`/reverse bonjour` → ruojnob'],
+  coinflip: ['🎉 Fun', 'Lancez une pièce : pile ou face.', '`/coinflip`', '`/coinflip` → 🪙 Face !'],
+  roll: ['🎉 Fun', 'Lancez un dé (jusqu\'à la valeur choisie, défaut 6).', '`/roll max`', '`/roll 100` → 🎲 73'],
+  say: ['🎉 Fun', 'Le bot répète votre message.', '`/say texte`', '`/say Coucou !`'],
+  reverse: ['🎉 Fun', 'Inverse votre texte.', '`/reverse texte`', '`/reverse bonjour` → ruojnob'],
   daily: ['💰 Économie', 'Récupère 100 coins, une fois par jour.', '`/daily`', '`/daily` → 🎁 +100 coins !'],
-  balance: ['💰 Économie', 'Affiche ton solde de coins.', '`/balance @membre`'],
+  balance: ['💰 Économie', 'Affiche votre solde de coins.', '`/balance @membre`'],
   leaderboard: ['💰 Économie', 'Le classement des coins du serveur.', '`/leaderboard`'],
-  rank: ['📈 Niveaux', 'Ton niveau, ton XP et ton rang sur ce serveur. Gagne de l\'XP en discutant !', '`/rank @membre`', '`/rank` → carte « Niveau 3 » · ✨ XP · 🏆 rang · 🎁 prochain palier'],
+  rank: ['📈 Niveaux', 'Votre niveau, votre XP et votre rang sur ce serveur. Gagne de l\'XP en discutant !', '`/rank @membre`', '`/rank` → carte « Niveau 3 » · ✨ XP · 🏆 rang · 🎁 prochain palier'],
   levels: ['📈 Niveaux', 'Le classement des niveaux du serveur.', '`/levels`'],
   invite: ['🔧 Utilitaire', 'Le lien pour inviter le bot sur un autre serveur.', '`/invite`'],
-  lang: ['🌍 Langue', 'Choisis la langue du bot sur CE serveur : fr, en, es, de, pt ou it. Tous les messages publics (panneau de tickets, bienvenue, transcriptions…) suivent.', '`/lang fr` · `/lang en` · `/lang es` · `/lang de` · `/lang pt` · `/lang it`', '`/lang it` → 🌍 Lingua del bot impostata su italiano in questo server. 🇮🇹'],
-  shop: ['🛒 Boutique', 'La boutique du serveur : achète des rôles avec tes coins.', '`/shop` (voir) · `buy` est `/buy article`'],
-  buy: ['🛒 Boutique', 'Achète un article de la boutique (rôle donné automatiquement).', '`/buy article`', '`/buy vip` → ✅ Tu reçois @VIP pour 500 coins'],
+  lang: ['🌍 Langue', 'Choisissez la langue du bot sur CE serveur : français ou anglais. Tous les messages publics (panneau de tickets, bienvenue, transcriptions…) suivent.', '`/lang fr` · `/lang en` · `/lang êtes` · `/lang de` · `/lang pt` · `/lang it`', '`/lang it` → 🌍 Lingua del bot impostata su italiano in questo server. 🇮🇹'],
+  shop: ['🛒 Boutique', 'La boutique du serveur : achetez des rôles avec vos coins.', '`/shop` (voir) · `buy` est `/buy article`'],
+  buy: ['🛒 Boutique', 'Achetez un article de la boutique (rôle donné automatiquement).', '`/buy article`', '`/buy vip` → ✅ Vous recevez @VIP pour 500 coins'],
   pay: ['💰 Économie', 'Transfère des coins à un membre.', '`/pay @membre montant`'],
-  suggest: ['💡 Suggestions', 'Propose une idée : les membres votent (👍👎), le staff tranche.', '`/suggest ton idée`'],
-  suggestions: ['💡 Suggestions', 'Configure le salon des suggestions (propriétaire/admin).', '`/suggestions set #salon` · `/suggestions off` · `/suggestions view`'],
-  giveaway: ['🎁 Giveaways', 'Lance un giveaway : les membres réagissent 🎉, le tirage est automatique.', '`/giveaway create 2h Prix 3` · `/giveaway end` · `/giveaway reroll`', '`/giveaway create 1d 🎁 Clé du jeu 1`'],
-  temprole: ['⏳ Rôles temporaires', 'Donne un rôle pour une durée limitée — retiré automatiquement.', '`/temprole @membre @rôle 2h`', '`/temprole @Membre @VIP 1d`'],
+  suggest: ['💡 Suggestions', 'Propose une idée : les membres votent (👍👎), le staff tranche.', '`/suggest votre idée`'],
+  suggestions: ['💡 Suggestions', 'Configurez le salon des suggestions (propriétaire/admin).', '`/suggestions set #salon` · `/suggestions off` · `/suggestions view`'],
+  giveaway: ['🎁 Giveaways', 'Lancez un giveaway : les membres réagissent 🎉, le tirage est automatique.', '`/giveaway create 2h Prix 3` · `/giveaway end` · `/giveaway reroll`', '`/giveaway create 1d 🎁 Clé du jeu 1`'],
+  temprole: ['⏳ Rôles temporaires', 'Donnez un rôle pour une durée limitée — retiré automatiquement.', '`/temprole @membre @rôle 2h`', '`/temprole @Membre @VIP 1d`'],
   sanction: ['⚖️ Sanctions', 'Applique une sanction prédéfinie (configurée dans le dashboard).', '`/sanction @membre nom_de_la_sanction`'],
-  botprofile: ['🤖 Identité du bot', 'Personnalise le bot sur CE serveur : nom, avatar, bannière (depuis ta galerie), bio et couleur. Le bot s\'exprime avec cette identité dans ses messages ici.',
-    '`/botprofile setup` — **Assistant pas à pas** : nom → bio → **sélecteur de couleurs** → avatar (**📱 ta galerie s\'ouvre directement**, envoie la photo) → bannière (galerie aussi) → ✅ Enregistrer (boutons Suivant/Retour/Annuler)\n`/botprofile view` — voir le profil\n`/botprofile set nom|bio|couleur` — nom, bio, couleur\n`/botprofile avatar` — 📱 la galerie s\'ouvre automatiquement\n`/botprofile banner` — 📱 galerie aussi\n`/botprofile reset` — revenir à l\'identité globale\n\n🔒 Réservé au **propriétaire du serveur** ou à un membre ayant la permission **Administrateur**'],
+  botprofile: ['🤖 Identité du bot', 'Personnalisez le bot sur CE serveur : nom, avatar, bannière (depuis votre galerie), bio et couleur. Le bot s\'exprime avec cette identité dans ses messages ici.',
+    '`/botprofile setup` — **Assistant pas à pas** : nom → bio → **sélecteur de couleurs** → avatar (**📱 votre galerie s\'ouvre directement**, envoyez la photo) → bannière (galerie aussi) → ✅ Enregistrer (boutons Suivant/Retour/Annuler)\n`/botprofile view` — voir le profil\n`/botprofile set nom|bio|couleur` — nom, bio, couleur\n`/botprofile avatar` — 📱 la galerie s\'ouvre automatiquement\n`/botprofile banner` — 📱 galerie aussi\n`/botprofile reset` — revenir à l\'identité globale\n\n🔒 Réservé au **propriétaire du serveur** ou à un membre ayant la permission **Administrateur**'],
   modlogs: ['📋 Journaux', 'Un salon où le bot trace tout : modération, tickets, auto-mod, arrivées et départs.',
     '`/modlogs set #salon` — activer\n`/modlogs view` — voir\n`/modlogs off` — désactiver'],
   blacklist: ['🔇 Liste noire', 'Des mots interdits : les messages qui les contiennent sont supprimés automatiquement.',
@@ -1302,7 +1306,7 @@ const HELP_DETAILS = {
 };
 
 function helpDescription() {
-  let d = 'Voici **tout ce que je sais faire**. Tape `/help commande` pour le détail d\'une commande (ex : `/help ticket`).';
+  let d = 'Voici **tout ce que je sais faire**. Tapez `/help commande` pour le détail d\'une commande (ex : `/help ticket`).';
   const site = store.settings.get('public_url');
   if (site) d += `\n🌐 **Dashboard** : ${site}`;
   return d;
@@ -1325,7 +1329,7 @@ function buildHelpEmbed(botId, record, client, guild, requested, member) {
         return new EmbedBuilder()
           .setColor('#ED4245')
           .setTitle('🔒 Commande réservée au staff')
-          .setDescription(`« ${requested} » est réservée au **staff** de ce serveur (modération, administration ou configuration).\nSi tu penses que tu devrais y avoir accès, demande à un administrateur de t'accorder le rôle ou la permission correspondante.`);
+          .setDescription(`« ${requested} » est réservée au **staff** de ce serveur (modération, administration ou configuration).\nSi vous pensez que vous devriez y avoir accès, demandez à un administrateur de vous accorder le rôle ou la permission correspondante.`);
       }
       const embed = new EmbedBuilder()
         .setColor('#e07a5f')
@@ -1339,7 +1343,7 @@ function buildHelpEmbed(botId, record, client, guild, requested, member) {
     return new EmbedBuilder()
       .setColor('#ED4245')
       .setTitle('❓ Commande introuvable')
-      .setDescription(`Je ne connais pas la commande « ${requested} ».\nTape \`/help\` pour voir la liste complète.`);
+      .setDescription(`Je ne connais pas la commande « ${requested} ».\nTapez \`/help\` pour voir la liste complète.`);
   }
 
   // --- Aide générale complète, organisée par public visé ---
@@ -1392,7 +1396,7 @@ function buildHelpEmbed(botId, record, client, guild, requested, member) {
   const legend = [];
   if (isFiltered && hiddenExists('staff')) legend.push('🛡️ Les commandes de **modération** sont réservées au staff — elles ne sont pas affichées ici.');
   if (isFiltered && hiddenExists('admin')) legend.push('⚙️ Les commandes d\'**administration** sont réservées au propriétaire du serveur et aux Administrateurs.');
-  if (legend.length) embed.addFields({ name: '🔒 Commandes invisibles pour toi', value: legend.join('\n') });
+  if (legend.length) embed.addFields({ name: '🔒 Commandes invisibles pour vous', value: legend.join('\n') });
 
   embed.setFooter({
     text: `Préfixe : ${record.prefix} · /help nom_de_la_commande pour le détail · Toutes les commandes fonctionnent automatiquement sur chaque serveur où le bot est présent — aucun compte requis.`,

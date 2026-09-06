@@ -135,7 +135,7 @@ const check = (label, cond) => {
       out.overview = {
         checklist: c.querySelectorAll('.check-item').length,
         progress: c.textContent.includes('%'),
-        brief: c.textContent.includes('Ton serveur en bref'),
+        brief: c.textContent.includes('Votre serveur en bref'),
         msgs: c.textContent.includes('20 messages'),
         top: c.textContent.includes('Alice'),
         jump: c.querySelector('.check-item') ? c.querySelector('.check-item').textContent.includes('Configurer') : false,

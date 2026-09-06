@@ -24,7 +24,7 @@ const ui = require('./ui');
 const DEFAULT_CFG = {
   name: '',
   channel: '',
-  message: '🎫 Besoin d\'aide ? Clique sur le bouton pour ouvrir un ticket !',
+  message: '🎫 Besoin d\'aide ? Cliquez sur le bouton pour ouvrir un ticket !',
   button_label: '🎫 Ouvrir un ticket',
   button_style: '1',
   support_role: '',
@@ -58,13 +58,13 @@ const WIZARD_TTL = 10 * 60000; // 10 minutes
 
 const STEPS = [
   { key: 'name', type: 'string', emoji: '📛', label: 'Nom du panel',
-    question: 'Donne un nom à ton système de tickets. **Sélectionne** un nom rapide ou écris le tien.' },
+    question: 'Donnez un nom à votre système de tickets. **Sélectionnez** un nom rapide ou écrivez le vôtre.' },
   { key: 'category', type: 'string', emoji: '🗂️', label: 'Catégorie',
-    question: 'Dans quelle catégorie les salons de tickets seront-ils créés ? **Sélectionne** une catégorie existante ou crées-en une.' },
+    question: 'Dans quelle catégorie les salons de tickets seront-ils créés ? **Sélectionnez** une catégorie existante ou créez-en une.' },
   { key: 'channel', type: 'channel', emoji: '📨', label: 'Salon du panneau',
-    question: 'Dans quel salon veux-tu envoyer le panneau avec le bouton ? **Sélectionne** le salon dans le menu.' },
+    question: 'Dans quel salon voulez-vous envoyer le panneau avec le bouton ? **Sélectionnez** le salon dans le menu.' },
   { key: 'role', type: 'role', emoji: '🛡️', label: 'Rôle du staff',
-    question: 'Quel rôle peut voir tous les tickets ? **Sélectionne** le rôle dans le menu (ou clique « Terminer » pour aucun).' },
+    question: 'Quel rôle peut voir tous les tickets ? **Sélectionnez** le rôle dans le menu (ou cliquez « Terminer » pour aucun).' },
 ];
 
 const NAME_PRESETS = [
@@ -109,13 +109,13 @@ function stepComponents(state) {
   if (step.type === 'channel') {
     first.addComponents(new ChannelSelectMenuBuilder()
       .setCustomId(`bdw-sel:${state.botId}:${uid}`)
-      .setPlaceholder('📨 Sélectionne le salon du panneau…')
+      .setPlaceholder('📨 Sélectionnez le salon du panneau…')
       .setMinValues(1).setMaxValues(1)
       .setChannelTypes([ChannelType.GuildText]));
   } else if (step.type === 'role') {
     first.addComponents(new RoleSelectMenuBuilder()
       .setCustomId(`bdw-sel:${state.botId}:${uid}`)
-      .setPlaceholder('🛡️ Sélectionne le rôle du staff…')
+      .setPlaceholder('🛡️ Sélectionnez le rôle du staff…')
       .setMinValues(1).setMaxValues(1));
   } else {
     const opts = selectOptionsFor(state).map(o => {
@@ -128,7 +128,7 @@ function stepComponents(state) {
     });
     first.addComponents(new StringSelectMenuBuilder()
       .setCustomId(`bdw-sel:${state.botId}:${uid}`)
-      .setPlaceholder(`Choisis : ${step.label}`)
+      .setPlaceholder(`Choisissez : ${step.label}`)
       .setMinValues(1).setMaxValues(1)
       .addOptions(opts));
   }
@@ -158,7 +158,7 @@ function wizardEmbed(state) {
     return `${mark} **${s.label}** : ${shown}`;
   });
   embed.addFields({ name: '📋 Récapitulatif', value: lines.join('\n') });
-  embed.setFooter({ text: 'Sélectionne dans le menu déroulant ci-dessus, ou clique « Suivant » pour garder la valeur actuelle.' });
+  embed.setFooter({ text: 'Sélectionnez dans le menu déroulant ci-dessus, ou cliquez « Suivant » pour garder la valeur actuelle.' });
   return embed;
 }
 
@@ -189,7 +189,7 @@ async function startWizard(botId, interaction) {
 // Appelé depuis dispatchPanels pour les boutons, modales et menus de l'assistant
 async function handleWizardInteraction(botId, interaction) {
   if (!canConfigureGuild(interaction.guild, interaction.member, interaction.user && interaction.user.id)) {
-    return interaction.reply({ content: '⛔ Ton accès de configuration a été retiré. Seul le propriétaire ou un membre ayant la permission Discord « Administrateur » peut continuer.', ephemeral: true });
+    return interaction.reply({ content: '⛔ Votre accès de configuration a été retiré. Seul le propriétaire ou un membre ayant la permission Discord « Administrateur » peut continuer.', ephemeral: true });
   }
   // --- Menus de sélection (chaîne / salon / rôle) ---
   if (interaction.isStringSelectMenu() || interaction.isChannelSelectMenu() || interaction.isRoleSelectMenu()) {
@@ -199,7 +199,7 @@ async function handleWizardInteraction(botId, interaction) {
     if (uid !== interaction.user.id) return;
     const key = wizardKey(botId, interaction.guild.id, uid);
     const state = wizards.get(key);
-    if (!state) return interaction.reply({ content: '⏰ Cet assistant a expiré. Relance `/ticket setup`.', ephemeral: true });
+    if (!state) return interaction.reply({ content: '⏰ Cet assistant a expiré. Relancez `/ticket setup`.', ephemeral: true });
 
     const step = STEPS[state.step];
     if (interaction.isStringSelectMenu()) {
@@ -230,10 +230,10 @@ async function handleWizardInteraction(botId, interaction) {
     if (uid !== interaction.user.id) return;
     const key = wizardKey(botId, interaction.guild.id, uid);
     const state = wizards.get(key);
-    if (!state) return interaction.reply({ content: '⏰ Cet assistant a expiré. Relance `/ticket setup`.', ephemeral: true });
+    if (!state) return interaction.reply({ content: '⏰ Cet assistant a expiré. Relancez `/ticket setup`.', ephemeral: true });
     if (Date.now() - state.startedAt > WIZARD_TTL) {
       wizards.delete(key);
-      return interaction.update({ content: '⏰ Assistant expiré. Relance `/ticket setup`.', embeds: [], components: [] });
+      return interaction.update({ content: '⏰ Assistant expiré. Relancez `/ticket setup`.', embeds: [], components: [] });
     }
     if (action === 'cancel') {
       wizards.delete(key);
@@ -261,7 +261,7 @@ async function handleWizardInteraction(botId, interaction) {
     if (v) state.values[step.key] = v;
     state.startedAt = Date.now();
     try { await state.msg.edit({ embeds: [wizardEmbed(state)], components: stepComponents(state) }); } catch {}
-    return interaction.reply({ content: `✅ « ${step.label} » enregistré ! Sélectionne puis clique sur « Suivant » pour continuer.`, ephemeral: true });
+    return interaction.reply({ content: `✅ « ${step.label} » enregistré ! Sélectionnez puis cliquez sur « Suivant » pour continuer.`, ephemeral: true });
   }
 }
 
@@ -304,20 +304,20 @@ async function finalizeWizard(state, interaction) {
       sent = true;
     } catch (e) { warn = e.message.slice(0, 150); }
   } else {
-    warn = 'Salon introuvable — envoie le panneau avec `/ticket panel`.';
+    warn = 'Salon introuvable — envoyez le panneau avec `/ticket panel`.';
   }
 
   const embed = new EmbedBuilder()
     .setColor('#57F287')
     .setTitle('✅ Système de tickets configuré !')
-    .setDescription(sent ? `Le panneau a été envoyé dans ${channel} — tes membres peuvent maintenant ouvrir des tickets.` : `⚠️ ${warn}`)
+    .setDescription(sent ? `Le panneau a été envoyé dans ${channel} — vos membres peuvent maintenant ouvrir des tickets.` : `⚠️ ${warn}`)
     .addFields(
       { name: '📛 Nom', value: cfg.name, inline: true },
       { name: '🗂️ Catégorie', value: cfg.category, inline: true },
       { name: '📨 Salon', value: cfg.channel || 'non défini', inline: true },
       { name: '🛡️ Rôle staff', value: cfg.support_role || 'aucun', inline: true },
     )
-    .setFooter({ text: 'Modifie tout à tout moment avec /ticket channel, /ticket role, /ticket category…' });
+    .setFooter({ text: 'Modifiez tout à tout moment avec /ticket channel, /ticket role, /ticket category…' });
 
   wizards.delete(wizardKey(state.botId, guild.id, state.userId));
   await interaction.editReply({ embeds: [embed], components: [] }).catch(() => {});
@@ -329,7 +329,7 @@ async function finalizeWizard(state, interaction) {
 async function handlePanelCommand(botId, interaction) {
   // 🌍 Commandes globales : en message privé, on répond poliment.
   if (!interaction.guild) {
-    return interaction.reply({ content: '🌍 Cette commande se configure sur un **serveur Discord**. Ajoute-moi à ton serveur avec `/invite` !', ephemeral: true });
+    return interaction.reply({ content: '🌍 Cette commande se configure sur un **serveur Discord**. Ajoutez-moi à votre serveur avec `/invite` !', ephemeral: true });
   }
   const member = interaction.member;
   const guild = interaction.guild;
@@ -378,10 +378,10 @@ async function handleTicket(botId, sub, group, interaction, guild) {
     }
     if (action === 'add') {
       const nom = (interaction.options.getString('nom') || '').trim();
-      if (!nom) return interaction.reply({ content: '❌ Donne un nom au type de ticket.', ephemeral: true });
+      if (!nom) return interaction.reply({ content: '❌ Donnez un nom au type de ticket.', ephemeral: true });
       const emojiRaw = (interaction.options.getString('emoji') || '').trim();
       const emoji = safeEmoji(emojiRaw);
-      if (emojiRaw && !emoji) return interaction.reply({ content: '❌ Emoji invalide — utilise un vrai emoji (ex : 🤝).', ephemeral: true });
+      if (emojiRaw && !emoji) return interaction.reply({ content: '❌ Emoji invalide — utilisez un vrai emoji (ex : 🤝).', ephemeral: true });
       const categorie = (interaction.options.getString('categorie') || '').trim();
       const description = (interaction.options.getString('description') || '').trim();
       const staffrole = (interaction.options.getString('staffrole') || '').trim();
@@ -407,24 +407,24 @@ async function handleTicket(botId, sub, group, interaction, guild) {
         // via ui.sectionize, qui s'arrêtait avant les bords arrondis).
         // `footer: false` : ces messages courts n'avaient pas de pied.
         ui.v2panel({
-          description: `✅ Type « ${emoji || '🎫'} **${nom}** » mis à jour !${staffRoles.length ? `\n🛡️ Staff de ce type : ${staffRoles.join(', ')}` : ''}\n\n💡 Ajoute **plusieurs rôles staff** avec \`/ticket types setup\` → « ➕ Ajouter un rôle staff ».\n\nTypes actuels : ${others.map((t) => t.label).join(', ') || 'aucun'}\n\n📨 Re-envoie le panneau avec \`/ticket panel\` pour mettre à jour le menu déroulant.`,
+          description: `✅ Type « ${emoji || '🎫'} **${nom}** » mis à jour !${staffRoles.length ? `\n🛡️ Staff de ce type : ${staffRoles.join(', ')}` : ''}\n\n💡 Ajoutez **plusieurs rôles staff** avec \`/ticket types setup\` → « ➕ Ajouter un rôle staff ».\n\nTypes actuels : ${others.map((t) => t.label).join(', ') || 'aucun'}\n\n📨 Re-envoyez le panneau avec \`/ticket panel\` pour mettre à jour le menu déroulant.`,
           footer: false,
           ephemeral: true,
         }));
     }
     if (action === 'remove') {
       const nom = (interaction.options.getString('nom') || '').trim();
-      if (!nom) return interaction.reply({ content: '❌ Donne le nom du type à supprimer.', ephemeral: true });
+      if (!nom) return interaction.reply({ content: '❌ Donnez le nom du type à supprimer.', ephemeral: true });
       const others = types.filter((t) => t.label.toLowerCase() !== nom.toLowerCase());
       if (others.length === types.length) {
-        return interaction.reply({ content: `❌ Type « ${nom} » introuvable. Utilise \`/ticket types list\`.`, ephemeral: true });
+        return interaction.reply({ content: `❌ Type « ${nom} » introuvable. Utilisez \`/ticket types list\`.`, ephemeral: true });
       }
       store.tickets.set(botId, guild.id, { ...cfg, types: JSON.stringify(others) });
       return interaction.reply({ content: `✅ Type « ${nom} » supprimé.\nTypes restants : ${others.map((t) => t.label).join(', ') || 'aucun'}`, ephemeral: true });
     }
     // list
     if (!types.length) {
-      return interaction.reply({ content: '🗂️ Aucun type pour l\'instant. Ajoute-en avec `/ticket types add`.', ephemeral: true });
+      return interaction.reply({ content: '🗂️ Aucun type pour l\'instant. Ajoutez-en avec `/ticket types add`.', ephemeral: true });
     }
     const embed = new EmbedBuilder()
       .setColor('#e07a5f')
@@ -433,7 +433,7 @@ async function handleTicket(botId, sub, group, interaction, guild) {
         const roles = Array.isArray(t.staff_roles) ? t.staff_roles : (t.staff_role ? [t.staff_role] : []);
         return `${t.emoji || '🎫'} **${t.label}**${t.category ? ` → catégorie « ${t.category} »` : ''}${roles.length ? `\n    🛡️ Staff : ${roles.join(', ')}` : ''}`;
       }).join('\n'))
-      .setFooter({ text: 'Ajoute : /ticket types add · Supprime : /ticket types remove · Le panneau (/ticket panel) affiche le menu déroulant.' });
+      .setFooter({ text: 'Ajoutez : /ticket types add · Supprimez : /ticket types remove · Le panneau (/ticket panel) affiche le menu déroulant.' });
     return interaction.reply({ embeds: [embed], ephemeral: true });
   }
 
@@ -465,7 +465,7 @@ async function handleTicket(botId, sub, group, interaction, guild) {
       let channel = interaction.options.getChannel('salon') || null;
       if (!channel && cfg.channel) channel = findChannelInGuild(guild, cfg.channel);
       if (!channel) channel = interaction.channel;
-      if (!channel || !channel.isTextBased()) return interaction.reply({ content: '❌ Salon introuvable. Configure-le avec `/ticket setup` ou précise un salon.', ephemeral: true });
+      if (!channel || !channel.isTextBased()) return interaction.reply({ content: '❌ Salon introuvable. Configurez-le avec `/ticket setup` ou précisez un salon.', ephemeral: true });
       // ⏱️ Accusé de réception IMMÉDIAT : Discord n'affichera jamais
       // « l'application ne répond pas », même si l'envoi prend du temps.
       try { await interaction.deferReply({ ephemeral: true }); } catch {}
@@ -482,7 +482,7 @@ async function handleTicket(botId, sub, group, interaction, guild) {
         .setTitle('🎫 Configuration des tickets')
         .addFields(
           { name: '📛 Nom du panel', value: cfg.name || '—', inline: true },
-          { name: '📨 Salon du panneau', value: cfg.channel || 'non défini (utilise `/ticket setup`)', inline: true },
+          { name: '📨 Salon du panneau', value: cfg.channel || 'non défini (utilisez `/ticket setup`)', inline: true },
           { name: '🗂️ Catégorie', value: cfg.category || 'aucune', inline: true },
           { name: '🛡️ Rôle staff global', value: cfg.support_role || 'aucun (les types peuvent avoir les leurs)', inline: true },
           { name: '🔘 Bouton', value: `${cfg.button_label} (${['bleu', 'gris', 'vert', 'rouge'][Number(cfg.button_style) - 1] || 'bleu'})`, inline: true },
@@ -490,10 +490,10 @@ async function handleTicket(botId, sub, group, interaction, guild) {
           { name: '🗂️ Types de tickets', value: parseTypes(cfg).map((t) => {
             const roles = Array.isArray(t.staff_roles) ? t.staff_roles : (t.staff_role ? [t.staff_role] : []);
             return `${t.emoji || '🎫'} **${t.label}**${t.category ? ' (→ ' + t.category + ')' : ''}${roles.length ? `\n    🛡️ Staff : ${roles.join(', ')}` : ''}`;
-          }).join('\n').slice(0, 1024) || 'aucun (ajoute avec /ticket types add)' },
+          }).join('\n').slice(0, 1024) || 'aucun (ajoutez avec /ticket types add)' },
           { name: '💬 Message', value: cfg.message.slice(0, 200), inline: false },
         )
-        .setFooter({ text: 'Modifie tout avec /ticket setup ou /ticket types setup (assistants) et les sous-commandes rapides' });
+        .setFooter({ text: 'Modifiez tout avec /ticket setup ou /ticket types setup (assistants) et les sous-commandes rapides' });
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
     case 'close': {
@@ -538,7 +538,7 @@ async function handleTicket(botId, sub, group, interaction, guild) {
     case 'add': {
       const ch = interaction.channel;
       if (!ch || !ch.name.startsWith('ticket-')) {
-        return interaction.reply({ content: '❌ Utilise cette commande dans un salon de ticket.', ephemeral: true });
+        return interaction.reply({ content: '❌ Utilisez cette commande dans un salon de ticket.', ephemeral: true });
       }
       if (!ticketStaff(botId, interaction)) {
         return interaction.reply({ content: '🔒 Seul le **staff** peut gérer les tickets.', ephemeral: true });
@@ -550,7 +550,7 @@ async function handleTicket(botId, sub, group, interaction, guild) {
     case 'remove': {
       const ch = interaction.channel;
       if (!ch || !ch.name.startsWith('ticket-')) {
-        return interaction.reply({ content: '❌ Utilise cette commande dans un salon de ticket.', ephemeral: true });
+        return interaction.reply({ content: '❌ Utilisez cette commande dans un salon de ticket.', ephemeral: true });
       }
       if (!ticketStaff(botId, interaction)) {
         return interaction.reply({ content: '🔒 Seul le **staff** peut gérer les tickets.', ephemeral: true });
@@ -561,10 +561,10 @@ async function handleTicket(botId, sub, group, interaction, guild) {
     }
     case 'type': {
       const nom = (interaction.options.getString('nom') || '').trim();
-      if (!nom) return interaction.reply({ content: '❌ Donne un nom au type de ticket.', ephemeral: true });
+      if (!nom) return interaction.reply({ content: '❌ Donnez un nom au type de ticket.', ephemeral: true });
       const emojiRaw = (interaction.options.getString('emoji') || '').trim();
       const emoji = safeEmoji(emojiRaw);
-      if (emojiRaw && !emoji) return interaction.reply({ content: '❌ Emoji invalide — utilise un vrai emoji (ex : 🤝).', ephemeral: true });
+      if (emojiRaw && !emoji) return interaction.reply({ content: '❌ Emoji invalide — utilisez un vrai emoji (ex : 🤝).', ephemeral: true });
       const categorie = (interaction.options.getString('categorie') || '').trim();
       const types = parseTypes(cfg).filter((t) => t.label.toLowerCase() !== nom.toLowerCase());
       types.push({ label: nom.slice(0, 100), emoji: emoji.slice(0, 100), category: categorie.slice(0, 100) });
@@ -575,7 +575,7 @@ async function handleTicket(botId, sub, group, interaction, guild) {
         // via ui.sectionize, qui s'arrêtait avant les bords arrondis).
         // `footer: false` : ces messages courts n'avaient pas de pied.
         ui.v2panel({
-          description: `✅ Type « ${emoji || '🎫'} ${nom} » ajouté !\nTypes actuels : ${types.map((t) => t.label).join(', ') || 'aucun'}\n\n📨 Re-envoie le panneau avec \`/ticket panel\` pour afficher le menu de sélection.`,
+          description: `✅ Type « ${emoji || '🎫'} ${nom} » ajouté !\nTypes actuels : ${types.map((t) => t.label).join(', ') || 'aucun'}\n\n📨 Re-envoyez le panneau avec \`/ticket panel\` pour afficher le menu de sélection.`,
           footer: false,
           ephemeral: true,
         }));
@@ -609,14 +609,14 @@ async function handleRoles(botId, sub, interaction, guild) {
         .setColor('#e07a5f')
         .setTitle('📋 Menus de rôles')
         .setDescription(menus.map((m, i) => `**${i + 1}.** ${m.name} — ${m.options.length} rôle(s)${m.channel ? ` · salon ${m.channel}` : ''}`).join('\n'))
-        .setFooter({ text: 'Envoie un menu avec /roles send <numéro>' });
+        .setFooter({ text: 'Envoyez un menu avec /roles send <numéro>' });
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
     case 'send': {
       const n = interaction.options.getInteger('numero');
       const menus = store.roleMenus.all(botId, guild.id);
       const menu = menus[n - 1];
-      if (!menu) return interaction.reply({ content: '❌ Menu introuvable. Utilise `/roles list` pour voir les numéros.', ephemeral: true });
+      if (!menu) return interaction.reply({ content: '❌ Menu introuvable. Utilisez `/roles list` pour voir les numéros.', ephemeral: true });
       let channel = interaction.options.getChannel('salon') || null;
       if (!channel && menu.channel) channel = findChannelInGuild(guild, menu.channel);
       if (!channel) channel = interaction.channel;

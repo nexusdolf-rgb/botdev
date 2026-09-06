@@ -41,7 +41,11 @@ function buildPanel(s, authorTag, settings = {}, ping = '') {
       { name: '👍 Votes', value: String(s.upvotes), inline: true },
       { name: '👎 Votes', value: String(s.downvotes), inline: true },
     ],
-    footer: 'Hoxera · Vote avec les boutons',
+    // v241 — « Votez avec les boutons » expliquait l'évidence : les boutons sont
+    // juste en dessous. Le pied ne garde que la signature produit, alignée sur le
+    // panneau de tickets (`Hoxera · Support`) : le numéro de suggestion figure
+    // déjà dans le titre, et une information ne s'écrit qu'une fois par panneau.
+    footer: 'Hoxera · Suggestions',
   }, buildComponents(s, settings));
 }
 

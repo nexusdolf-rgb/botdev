@@ -44,7 +44,7 @@ App.api = async (path, options = {}) => {
   let data = {};
   try { data = await res.json(); } catch {}
   if (!res.ok) {
-    if (res.status === 401) throw new Error('Session expirée — reconnecte-toi avec Discord.');
+    if (res.status === 401) throw new Error('Session expirée — reconnectez-vous avec Discord.');
     throw new Error(data.error || 'Une erreur est survenue');
   }
   return data;
@@ -103,8 +103,8 @@ App.closeModal = () => { document.getElementById('modal-root').innerHTML = ''; }
 App.openInvite = (url) => {
   try { window.open(url, '_blank', 'noopener'); } catch {}
   navigator.clipboard.writeText(url)
-    .then(() => App.toast('Fenêtre Discord ouverte : choisis ton serveur dans le sélecteur ! (lien aussi copié)'))
-    .catch(() => App.toast('Choisis ton serveur dans la fenêtre Discord !'));
+    .then(() => App.toast('Fenêtre Discord ouverte : choisissez votre serveur dans le sélecteur ! (lien aussi copié)'))
+    .catch(() => App.toast('Choisissez votre serveur dans la fenêtre Discord !'));
 };
 
 App.fmtNumber = (n) => (n >= 1000 ? Math.round(n / 1000) + 'k' : String(n));
@@ -208,7 +208,7 @@ App.loadPublicBotAvatar = (root) => {
   });
 };
 
-// ---------------------- Page « Connecte-toi avec Discord » ----------------------
+// ---------------------- Page « Connectez-vous avec Discord » ----------------------
 App.renderConnect = () => {
   const root = document.getElementById('app');
   root.innerHTML = '';
@@ -216,8 +216,8 @@ App.renderConnect = () => {
     <div class="auth-wrap" id="connect-card">
       <div class="auth-left">
         <div class="logo-row"><img class="logo" data-brand-logo src="/api/public/bot-avatar" alt="Avatar d’Optimus Prime" style="border-radius:50%;object-fit:cover" /> Hoxera</div>
-        <h1 style="margin-top:52px">Configure ton serveur<br/><span>en quelques clics</span></h1>
-        <p class="tagline">Tickets automatiques, niveaux, boutique, giveaways, bienvenue… Tout se règle ici, sans mot de passe : on vérifie simplement avec ton compte Discord.</p>
+        <h1 style="margin-top:52px">Configurez votre serveur<br/><span>en quelques clics</span></h1>
+        <p class="tagline">Tickets automatiques, niveaux, boutique, giveaways, bienvenue… Tout se règle ici, sans mot de passe : on vérifie simplement avec votre compte Discord.</p>
         <ul class="auth-features">
           <li><span class="f-ico">🎫</span> Tickets avec types personnalisés & transcriptions</li>
           <li><span class="f-ico">📈</span> Niveaux XP et récompenses de rôles</li>
@@ -229,12 +229,12 @@ App.renderConnect = () => {
       <div class="auth-right">
         <div class="auth-card auth-glass" style="text-align:center">
           <div class="auth-bot-ava">🤖</div>
-          <h2>Connecte-toi avec Discord</h2>
-          <p class="sub" style="margin:8px 0 20px">Aucun compte à créer, aucun mot de passe.<br/>Discord vérifie automatiquement tes serveurs et tes permissions.</p>
+          <h2>Connectez-vous avec Discord</h2>
+          <p class="sub" style="margin:8px 0 20px">Aucun compte à créer, aucun mot de passe.<br/>Discord vérifie automatiquement vos serveurs et vos permissions.</p>
           <button class="btn btn-discord" id="connect-discord" style="padding:13px;font-size:15px">🎮 Se connecter avec Discord</button>
           <div class="auth-trust">
-            <span>🔒 Connexion sécurisée OAuth2 — nous ne voyons <b>jamais</b> ton mot de passe</span>
-            <span>👁️ Accès demandé : ton pseudo, ton avatar et ta liste de serveurs. Rien d'autre.</span>
+            <span>🔒 Connexion sécurisée OAuth2 — nous ne voyons <b>jamais</b> votre mot de passe</span>
+            <span>👁️ Accès demandé : votre pseudo, votre avatar et votre liste de serveurs. Rien d'autre.</span>
             <span>🛡️ Seuls les <b>admins</b> des serveurs peuvent configurer.</span>
           </div>
           <a href="#/" style="font-size:12.5px">← Retour à l'accueil</a>
@@ -459,7 +459,7 @@ App.renderAdminPage = async () => {
     bodyEl.innerHTML = `
       <div class="card">
         <h3>👥 Comptes Optimus Prime liés à Discord</h3>
-        <div class="card-sub">Délier Discord, bannir ou supprimer un compte. Ton propre compte est toujours protégé.</div>
+        <div class="card-sub">Délier Discord, bannir ou supprimer un compte. Votre propre compte est toujours protégé.</div>
         <div class="admin-toolbar">
           <input class="dash-input" id="a-search" placeholder="🔎 Rechercher (nom, ID Discord, email)…" value="${App.escapeHtml(query)}" style="max-width:340px" />
           <button class="btn btn-sm" id="a-search-go">Rechercher</button>

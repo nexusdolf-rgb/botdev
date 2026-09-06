@@ -102,7 +102,7 @@ const check = (label, cond) => {
     return Object.assign(i, over);
   };
 
-  const polite = (i) => i.replied && JSON.stringify(i.replies).includes('Ajoute-moi à ton serveur');
+  const polite = (i) => i.replied && JSON.stringify(i.replies).includes('Ajoutez-moi à votre serveur');
 
   // extra (marry en MP)
   const extra = require('../server/discord/extra');

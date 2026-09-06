@@ -24,7 +24,7 @@ function isAdmin(interaction) {
 async function handleProfileCommand(botId, interaction) {
   // 🌍 Commandes globales : en message privé, on répond poliment.
   if (!interaction.guild) {
-    return interaction.reply({ content: '🌍 Cette commande se configure sur un **serveur Discord**. Ajoute-moi à ton serveur avec `/invite` !', ephemeral: true });
+    return interaction.reply({ content: '🌍 Cette commande se configure sur un **serveur Discord**. Ajoutez-moi à votre serveur avec `/invite` !', ephemeral: true });
   }
   const guild = interaction.guild;
   const sub = interaction.options.getSubcommand();
@@ -48,7 +48,7 @@ async function handleProfileCommand(botId, interaction) {
       const name = interaction.options.getString('nom');
       const bio = interaction.options.getString('bio');
       const color = interaction.options.getString('couleur');
-      if (!name && !bio && !color) return interaction.reply({ content: '❌ Précise au moins un élément (nom, bio ou couleur).', ephemeral: true });
+      if (!name && !bio && !color) return interaction.reply({ content: '❌ Précisez au moins un élément (nom, bio ou couleur).', ephemeral: true });
       if (name) p.name = name;
       if (bio) p.bio = bio;
       if (color) {
@@ -70,7 +70,7 @@ async function handleProfileCommand(botId, interaction) {
 
     if (sub === 'avatar' || sub === 'banner') {
       const file = interaction.options.getAttachment('image');
-      if (!file) return interaction.reply({ content: '❌ Joins une image : touche l\'option « image », ta galerie s\'ouvre automatiquement.', ephemeral: true });
+      if (!file) return interaction.reply({ content: '❌ Joignez une image : touchez l\'option « image », votre galerie s\'ouvre automatiquement.', ephemeral: true });
       if (file.size > 3 * 1024 * 1024) return interaction.reply({ content: '❌ Image trop lourde (3 Mo max).', ephemeral: true });
       // 📥 On répond immédiatement « en cours » : le téléchargement peut prendre
       // quelques secondes, sinon Discord affiche « l\'application ne répond plus ».
@@ -80,7 +80,7 @@ async function handleProfileCommand(botId, interaction) {
         const { applyAttachmentToWizard } = require('./profileWizard');
         const applied = await applyAttachmentToWizard(botId, guild.id, interaction.user.id, sub, file.url, file.contentType || 'image/png', file.size || 0);
         if (applied) {
-          return interaction.editReply({ content: `✅ Photo appliquée à l\'assistant ! Continue avec « Suivant ➡️ » ou envoie la suite.` });
+          return interaction.editReply({ content: `✅ Photo appliquée à l\'assistant ! Continuez avec « Suivant ➡️ » ou envoyez la suite.` });
         }
       } catch (e) {
         return interaction.editReply({ content: `⚠️ ${e.message.slice(0, 120)}` });
@@ -134,8 +134,8 @@ async function handleProfileCommand(botId, interaction) {
     const gs = store.guildSettings.get(botId, guild.id) || {};
     return interaction.reply({
       content: gs.log_channel
-        ? `📋 Salon des journaux : **${gs.log_channel}**\nModifie : \`/modlogs set #salon\` · Désactive : \`/modlogs off\``
-        : '📋 Aucun salon de journaux.\nActive : `/modlogs set #salon`',
+        ? `📋 Salon des journaux : **${gs.log_channel}**\nModifiez : \`/modlogs set #salon\` · Désactivez : \`/modlogs off\``
+        : '📋 Aucun salon de journaux.\nActivez : `/modlogs set #salon`',
       ephemeral: true,
     });
   }

@@ -200,7 +200,84 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   'tag') ») : un message supprimé **partiel** (pas en cache) n'a pas d'auteur →
   `trackDeleted` (/snipe, `extra.js`) plantait ; idem `tasks.js` (`member.user.tag`).
   Gardes ajoutées, test `test/v228-test.js`, docs remises à jour (v194 → v228).
-- **v239 (ACTUELLE, 06/09)** : **2 bugs signalés par l'utilisateur après la v238.**
+- **v240 (ACTUELLE, 06/09)** : **audit complet demandé par l'utilisateur** —
+  « analyse tous les panneaux, les messages du bot, les traits et tout ce que
+  t'as créé. Tu corriges si tu trouves des bugs… tu peux modifier les textes si
+  tu veux les rendre plus professionnels ». Trois décisions utilisateur cadrant
+  le chantier : **(1)** langues ramenées à fr + en, **(2)** tout unifier au
+  **vous**, **(3)** corriger le bug « les traits sont courts » sur le modèle
+  « bienvenue pro ».
+  **1️⃣ LANGUES : fr + en uniquement.** Les blocs es/de/pt/it ne couvraient que
+  **48 clés sur 105** : `/lang es` répondait « Langue définie sur espagnol »
+  puis le bot continuait **en français**. Un menu qui ment vaut pire qu'un menu
+  plus court → 208 lignes retirées d'`i18n.js`, `LANG_CODES = { fr, en }`,
+  `/lang` (choices + handler), whitelist `db.js`, whitelist `routes.js`.
+  `normalize('es')` retombe sur `'fr'` proprement.
+  **2️⃣ TUTOIEMENT → VOUSVOIEMENT : 25 clés i18n + ~340 textes codés en dur**
+  (20 fichiers de `server/discord/` + `public/js/dashboard.js` + titre de
+  `index.html`). Outillage : `scripts/v240-passage-vous.js` (passe automatique,
+  règles bornées) puis `scripts/v240-imperatifs.js` (38 remplacements **curatés
+  à la main** pour les verbes ambigus). Voir les pièges n°19 à n°24 — c'est là
+  qu'est tout le contenu utile de ce chantier.
+  **3️⃣ BUG « les traits sont courts » (bienvenue pro).** Cause : `events.js`
+  passait le texte par `ui.sectionize()`, qui insère des traits **TEXTE** de
+  **20 caractères** (`━` × 20). Dans un embed classique ces traits s'arrêtent
+  bien avant les bords arrondis → aspect cassé. La branche V2, elle, était
+  correcte. Correctif : **une seule branche V2** (séparateurs natifs pleine
+  largeur) + `MediaGallery` en `attachment://bienvenue.png` pour la carte.
+  L'embed classique ne subsiste que dans le **seul** cas où Discord l'impose :
+  carte image (pièce jointe) **ET** profil d'envoi personnalisé (webhook), car
+  V2 + webhook + files = 400 (piège n°10). Détection du webhook via
+  `identity.effectiveProfile(botId, guildId)`. Dans ce dernier cas on ne met
+  **AUCUN** trait : les paragraphes respirent par des lignes vides.
+  `ui.sectionize()` a donc **disparu d'`events.js`**. Il ne reste que 2 appels
+  assumés : `xp.js:202` (carte de niveau, webhook + pièce jointe) et
+  `panels.js:2274` (assistant « types », 6 étapes éditées en place).
+  🧪 **`test/v240-test.js`** (6 sections) : périmètre des langues + repli,
+  parité fr/en, absence de tutoiement (bot **et** dashboard), identifiants de
+  commandes intacts, garde-fous de concordance, et **rendu réel** de la
+  bienvenue dans les 3 configurations (sans carte / carte sans webhook /
+  carte + webhook) avec comptage des séparateurs natifs et absence de `━`.
+  **4️⃣ 2ᵉ PASSE — 4 fichiers que la 1ʳᵉ conversion n'a jamais couverts.**
+  `scripts/v240-passage-vous.js` ne balayait que `server/discord/*` et
+  `public/js/dashboard.js`. Restaient en « tu », bien visibles :
+  • **`server/routes.js`** — les messages d'erreur de l'API, affichés en
+    **toast** dans le dashboard (« **Tu dois** être propriétaire du serveur »,
+    « Choisis un salon », « Ajoute au moins un rôle au menu ») : **19 textes**.
+  • **`public/js/app.js`** — la page de **CONNEXION OAuth** : H1 « Configure
+    **ton** serveur », H2 « **Connecte-toi** avec Discord », « Accès demandé :
+    **ton** pseudo, **ton** avatar et **ta** liste de serveurs ».
+  • **`public/js/views.js`** + **`public/js/editor.js`** — menus de rôles et
+    éditeur de commandes.
+  • **`server/db.js`** — les `DEFAULT` des `CREATE TABLE`.
+  → `scripts/v240-complements.js` (55 chaînes curatées, rejouable : il distingue
+  « appliqué » / « déjà fait » / « vraiment introuvable »).
+  **5️⃣ LANDING PAGE (`public/js/public.js`) — accord utilisateur explicite.**
+  Zone marquée « **FINALE, ne plus retoucher** » (v167). Cette interdiction
+  porte sur le **DESIGN et la STRUCTURE** (le clone DraftBot ne doit pas
+  revenir), pas sur les mots — mais l'accord a été redemandé, parce qu'il y
+  avait désormais une **incohérence visible** : `index.html` disait « Le bot de
+  **votre** serveur Discord » pendant que le titre géant rendu par `public.js`
+  disait encore « **ton** serveur Discord ». → `scripts/v240-landing.js`
+  (20 chaînes). **Structure vérifiée identique avant/après** : 461 lignes,
+  572 balises, 188 `class=`, 22 `id=`, 151 `<div`, 14 `<button`, 55 `${` —
+  **aucun chiffre n'a bougé**, seuls des mots ont changé. Ces 6 compteurs sont
+  désormais **verrouillés par `test/v240-test.js`**.
+  **6️⃣ MIGRATION DE DONNÉES (piège n°28).** Un `DEFAULT` dans
+  `CREATE TABLE IF NOT EXISTS` ne change **rien** à une base déjà créée. La
+  base de production — restaurée depuis la sauvegarde GitHub au boot — contenait
+  réellement **3 `role_menus` et 2 `tickets`** avec l'ancien texte. Ajout d'un
+  bloc `UPDATE … WHERE valeur = <ancien texte exact>` dans `db.js` : idempotent,
+  et **un texte personnalisé par l'utilisateur n'est jamais écrasé** (seule la
+  valeur par défaut exacte est matchée). Testé en **conditions réelles** dans
+  `test/v240-test.js` §5b : un sous-processus écrit l'ancien texte, un second
+  recharge `db.js` et la migration s'applique.
+  📉 **17 tests cassés par le changement de texte, tous mis à jour** — dont
+  `v190`/`v191` dont les assertions **vérifiaient la présence** des 6 langues :
+  elles vérifient désormais leur **absence** (sinon elles contredisent v240).
+  `v220`/`v236`/`v239` décrivaient l'architecture v236 de la bienvenue →
+  réécrites pour encoder le contrat v240. Suite : **167 tests**.
+- **v239 (06/09)** : **2 bugs signalés par l'utilisateur après la v238.**
   **1️⃣ Le MP de TRANSCRIPTION n'avait aucun séparateur.** Envoyé au créateur du
   ticket après la fermeture (`sendTranscriptDm`, `panels.js`). C'était le dernier
   panneau **autonome** du bot construit à la main avec un `new EmbedBuilder()` :
@@ -851,6 +928,69 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   Crops site inchangés : profile = `crop(0,2,1632,654)→1500×600` ;
   support = `resize(1696×682)→crop(0,29,1696,653)`.
 
+- **v229-v236** : migration « trait texte `━` » → **Components V2** (séparateurs natifs
+  pleine largeur). Ordre : v231 quiz · v232 premade · v233 suggest/giveaway ·
+  v234 guildEvents/panels · v235 extra.js · v236 les 16 derniers emplacements.
+  **Exception définitive** : `xp.js` reste en embed classique (webhook + pièce jointe
+  = erreur 400 en V2, piège n°10)
+- **v237/v238/v239** : confirmations éphémères ; pied de ticket privé =
+  `Hoxera · Ticket #N` seul ; portée strictement limitée aux bugs signalés
+- **v240** : « tu → vous » généralisé (fr + en uniquement) + **migration des données
+  existantes** en base. Le bloc de migration de `db.js` est une **ZONE PROTÉGÉE** :
+  `scripts/v240-complements.js` le découpe (`decoupe()`) et n'y touche jamais —
+  un `split/join` naïf avait transformé la migration en opération vide
+- **v241 — TEXTES AFFICHÉS SUR DISCORD (décisions à ne pas défaire)** :
+  - **Horodatage retiré de tous les panneaux.** `ui.v2panel()` n'ajoute une date que
+    si `options.timestamp instanceof Date` ; `timestamp: true` ne fait plus rien.
+    **Annule la décision v231** (piège n°33). Seule exception : le starboard, qui
+    date le message **épinglé**
+  - ⚠️ **LE PANNEAU DE TICKETS (menu déroulant) : périmètre STRICT.**
+    J'avais proposé de le réécrire entièrement (titre générique
+    `👑 Centre d'assistance`, accroche refaite, 4 règles → 2, patience retirée,
+    pied réduit, étapes numérotées). **L'utilisateur a refusé le 06/09** :
+    « tu le laisses comme il était avant, on va juste modifier certaines choses
+    dedans ». Il a ensuite demandé **exactement 4 retraits, et rien d'autre** :
+    1. l'**auteur** « {serveur} · Centre d'assistance » (il répétait le titre)
+    2. les flèches **🔴➡️ → puces « • »** (les 4 règles et leurs textes inchangés)
+    3. **« Sélectionnez une option pour commencer »** dans le pied → pied =
+       `Hoxera · {serveur}`
+    4. la liste **« 🗂️ Types disponibles »** (les types sont déjà dans le menu
+       déroulant juste en dessous)
+    **TOUT LE RESTE DOIT DEMEURER TEL QUEL** : titre `👑 Support | {serveur}`,
+    « Bienvenue sur le support officiel de {serveur} », la description
+    « Pour ouvrir un ticket, sélectionnez la catégorie… », la rubrique
+    `__ⓘ Informations importantes :__` **avec son soulignement**, le message de
+    patience `*⏳ Merci de votre patience…*`, l'espaceur U+200B, la bannière, la
+    couleur `#ED4245`, le menu déroulant (`bd-ttype:`, « 🗂️ Choisissez le type
+    de ticket… »). `pruneOldPanels` garde son **préfixe unique** `👑 Support |`.
+    🚫 **NE PAS réappliquer la réécriture globale** (titre générique, étapes
+    numérotées, accroche, suppression de la patience, réduction des règles).
+    `test/v241-test.js` section 2 est un garde-fou à double sens : il échoue si
+    un des 4 retraits est annulé **ou** si un élément conservé disparaît.
+    Seule entorse assumée : l'**horodatage** n'est plus dans le pied (décision
+    globale ci-dessus, validée séparément).
+  - **Règle « une information = UNE occurrence » appliquée aux AUTRES panneaux**
+    (bienvenue, départ, live, suggestion). L'utilisateur ne l'a PAS retenue pour
+    le panneau de tickets : ne pas l'y généraliser.
+  - **Bug `{channels}` corrigé à la racine** dans `resolveVariables` : une ligne
+    composée uniquement de variables qui se résolvent en vide est retirée, **avec**
+    son introduction en suspens (finissant par `:`). Vaut pour tous les modèles
+  - Bienvenue : rubrique `👥 Membre n°` (au lieu de « Vous êtes le membre » + « n°42 »,
+    phrase coupée en deux), **supprimée** si le corps contient déjà `{count}`
+  - Départ : `🕐 Membre pendant` + **vraie durée** (le `<t:…:R>` donnait la phrase
+    cassée « Était membre depuis il y a 1 jour », piège n°29)
+  - Avertissement auto-mod : « a été pris en compte » → **« a été supprimé »**
+    (le texte disait l'inverse de la réalité) ; live : plateforme nommée 1 fois ;
+    suggestion : pied `Hoxera · Suggestions` — le n° figure déjà dans le titre
+  - **Le menu déroulant** (`🗂️ Choisissez le type de ticket…`, ses options, son
+    `custom_id` `bd-ttype:`) n'a jamais été modifié non plus — il est construit
+    par `sendTicketPanel`, pas par `buildTicketPanel`
+  - **Non touché** (demande explicite) : couleurs, séparateurs, bannières, boutons,
+    mise en page, et les messages **personnalisés** de l'utilisateur — seuls les
+    textes **par défaut** ont été réécrits. Textes du dashboard hors périmètre
+  - Outil : `node scripts/audit-textes-discord.js` rend les vrais panneaux et extrait
+    le texte **tel que Discord l'affiche** (piège n°31)
+
 ## 🎨 IDENTITÉ VISUELLE (pipeline pro)
 
 - **Avatar Discord** = logo argent/noir de l'utilisateur (1024×1024) + même image pour
@@ -926,6 +1066,152 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
     `msg.embeds[0]` casse** (4 emplacements identifiés : `extra.js:1128`,
     `panels.js:426`, `panels.js:1396`, `queue.js`) — vérifier avant de migrer.
 
+### v240 — le chantier « tu → vous » (pièges n°21 à n°26)
+
+Une conversion de tonalité sur **~340 textes** dans **20 fichiers** ne se fait
+**pas** avec un `sed`. Six pièges ont réellement produit du code corrompu ; ils
+sont tous couverts par `test/v240-test.js` ou par un garde-fou dans
+`scripts/v240-imperatifs.js`. **À relire avant toute conversion de masse.**
+
+21. **🚨 PIÈGE n°21 — `\b` ne gère pas les accents.** En JavaScript, `\b` est
+    défini sur `\w` = `[A-Za-z0-9_]` : **é, à, ç, œ sont des non-mots**. Donc
+    `/\btu\b/` ne matche PAS le « tu » de `« dût u… »`, et surtout `/\bton\b/`
+    échoue dans `'ton serveur'` précédé d'un accent. Remède imposé partout :
+    `(?<!\p{L})…(?![\p{L}\p{N}])` avec le flag `u`. **Sans le `u`, `\p{L}` est
+    une syntaxe invalide.**
+22. **🚨 PIÈGE n°22 — un renommage au niveau de la LIGNE détruit les
+    identifiants Discord.** `name: 'configure'`, `custom_id: 'ton_ticket'`,
+    `value: 'fr'`… La première itération du script a renommé des
+    **sous-commandes slash** → le bot enregistrait des commandes que le handler
+    ne reconnaissait plus (aucun plantage, juste des commandes mortes). Remède :
+    **tokeniseur de littéraux** (`segments()` dans
+    `scripts/v240-passage-vous.js`) qui ne touche QUE l'intérieur des chaînes,
+    + regex `IDENTIFIANT` qui saute les valeurs d'un seul mot en
+    `kebab/snake_case`. Vérification : **173 identifiants techniques** figés
+    dans `/tmp/idents-avant.json` et re-comparés après chaque écriture.
+23. **🚨 PIÈGE n°23 — les verbes réfléchis et la 1ʳᵉ personne.** `configure →
+    configurez` transformait « le panneau se configure ici » en « se
+    configurez ». Idem `sais → savez` sur « je sais ». Remède : lookbehind
+    **NOREF** (`(?<!se )(?<!je )(?<!s')…`) + garde de personne. Deuxième piège
+    dans le même ordre d'idée : **les `SKIP_LINE` sur `^\*`** sautaient les
+    chaînes Markdown en gras (`**Choisis**…`) — les retirer, le gras est du
+    texte comme un autre.
+24. **🚨 PIÈGE n°24 — `\n` dans une chaîne à apostrophes casse la frontière.**
+    `'\nTu vas…'` : le `\` et le `n` sont **2 caractères littéraux**, donc le
+    `n` est un `\p{L}` et `(?<!\p{L})Tu` **échoue en silence** (le test passe,
+    la conversion ne se fait pas). Remède : remplacer `\\[ntr]` par `\u0000`
+    AVANT les règles, restaurer APRÈS.
+25. **🚨 PIÈGE n°25 — les littéraux IMBRIQUÉS dans `${…}`.** Dans
+    `` `${cond ? `Choisis un serveur` : ''}` `` le backtick interne fermait le
+    scanneur externe → désynchronisation silencieuse du reste du fichier (le
+    dashboard perdait des `querySelector`). Remède : `finInterpolation()`
+    récursif + `transformeInterpolation()` (v7 du script). Contrôle à refaire à
+    chaque écriture : `querySelector` **536 → 536**, lignes **6032 → 6032**.
+26. **🚨 PIÈGE n°26 — les formes verbales AMBIGUËS : jamais de règle générique.**
+    Trois corruptions réelles produites par des règles trop larges :
+    • `quitte → quittez` : « un membre **quitte** le serveur » (3ᵉ personne de
+      l'indicatif) est devenu « un membre **quittez** » — le mot est à la fois
+      impératif 2sg ET indicatif 3sg.
+    • `continue` générique : « le bot **continue** de tourner » corrompu.
+    • pronoms sans verbe : « Si **vous rates**, vous lui **payes** » — le script
+      a changé le pronom sans conjuguer (règle `tu→vous` appliquée, règle
+      verbale absente).
+    Remède : **supprimer** ces règles génériques et passer par
+    `scripts/v240-imperatifs.js`, une liste **curatée à la main** de 38
+    remplacements avec contexte complet, appliqués sur 4 variantes d'échappement
+    (`'`, `\'`, `` ` ``, `` \` ``). Toujours en dry-run d'abord : **38/38
+    trouvés** avant écriture.
+    ⚠️ Le pronom **`te`** était absent du détecteur initial : deux clés i18n
+    (« l'équipe **te** répond », « je **te** propose la liste ») sont passées à
+    travers la première conversion. Détecteur corrigé :
+    `tu|ton|ta|tes|toi|te|t'`, **en excluant le contenu des `${…}`** (sinon
+    `.replace('T', ' ')` fait matcher `t'`).
+28. **🚨 PIÈGE n°28 — un `DEFAULT` de `CREATE TABLE IF NOT EXISTS` ne migre
+    RIEN.** Changer `'Choisis tes rôles…'` en `'Choisissez vos rôles…'` dans le
+    schéma de `db.js` n'a **aucun effet** sur une base existante : la table est
+    déjà créée, donc le `CREATE` est ignoré et les **lignes existantes** gardent
+    l'ancien texte. Pire ici : la base est **restaurée depuis la sauvegarde
+    GitHub au boot** (piège n°2), donc les anciennes valeurs reviennent à chaque
+    démarrage. Il faut un vrai `UPDATE`. Deux règles :
+    • matcher la **valeur exacte** de l'ancien défaut (`WHERE placeholder = ?`),
+      jamais un `LIKE` : un texte **personnalisé** par l'utilisateur doit
+      survivre ;
+    • garder l'ancienne chaîne **littérale** dans le code — elle est la clé du
+      `WHERE`. `test/v240-test.js` la liste explicitement dans
+      `CLES_MIGRATION`, sinon le garde-fou « aucun tutoiement » la signale à tort.
+    ⚠️ Au passage : la variable d'environnement du chemin de base est
+    **`BOTDEV_DATA_DIR`** (`server/paths.js`), PAS `DATA_DIR`. Se tromper fait
+    écrire les tests dans `botdev/botdev.db` en silence.
+
+27. **🚨 PIÈGE n°27 — les traits TEXTE `━` ne sont pas des séparateurs.**
+    `ui.SEPARATOR` = `'━'.repeat(20)` : dans un embed classique, 20 caractères
+    **n'atteignent pas** les bords arrondis → rendu « cassé » (c'était le bug
+    signalé par l'utilisateur sur le modèle « bienvenue pro »). Un panneau V2
+    utilise `ui.v2panel()` et des `Separator` **natifs pleine largeur**
+    (`divider: true`). **Ne jamais mélanger** : un conteneur V2 ne doit
+    contenir AUCUN `━`. Là où Discord impose l'embed classique (pièce jointe +
+    webhook, piège n°10), on ne met **aucun** trait : des lignes vides suffisent.
+
+### v241 — les textes affichés sur Discord (pièges n°29 à n°33)
+
+Objectif utilisateur : « rends les textes plus pro comme les autres bots pro,
+retire les textes inutiles des panneaux […] **tous les textes affichés sur
+Discord**, pas ceux du dashboard ». Sept panneaux réécrits + horodatage retiré.
+
+29. **🚨 PIÈGE n°29 — `joinedTimestamp` est en SECONDES dans `events.js`.**
+    Ligne 264 : `const joinedTs = Math.floor(member.joinedTimestamp / 1000)`.
+    Toute fonction de durée qui attend des **millisecondes** doit recevoir
+    `joinedTs * 1000`, sinon `Date.now() - secondes ≈ Date.now()` et le panneau
+    affiche « 56 ans ». **Un garde-fou a été ajouté** dans `dureeDepuis()` :
+    toute durée > 100 ans renvoie `'—'`. Le bug n'a été visible **qu'en rendant
+    le panneau** — aucun test unitaire ne l'aurait attrapé.
+
+30. **🚨 PIÈGE n°30 — un test qui PLANTE masque tous les échecs suivants.**
+    v234 appelait `i18n.panelTexts('fr').welcome(...)` : la clé ayant été
+    supprimée en v241, le test levait une `TypeError` et **s'arrêtait là**. Le
+    compte-rendu n'affichait qu'UN seul ❌ alors que 6 assertions étaient
+    cassées. **Quand on retire une clé d'API, il faut grep­per les tests**, pas
+    seulement lire le rapport.
+
+31. **🚨 PIÈGE n°31 — un outil d'audit ne doit JAMAIS recopier les textes.**
+    `scripts/audit-textes-discord.js` relit les modèles **depuis le code source**
+    (`litLitteraux(fichier, ancre, n)`), sinon il affiche un texte qui n'existe
+    plus et valide à tort. Extraction par **ancres + lecture de littéral**, pas
+    par regex : ces chaînes contiennent des apostrophes droites **et**
+    typographiques et des `\n` échappés — toute classe de caractères devient
+    illisible (3 tentatives ratées avant la bonne).
+
+32. **🚨 PIÈGE n°32 — tester le COMPORTEMENT, pas la forme du code source.**
+    v234 vérifiait `/startsWith\('👑 Support \|'\)/.test(src)` : un simple
+    refactor (liste de préfixes) cassait le test alors que le comportement
+    restait bon. Remplacé par `panels.__testIsTicketPanelTitle(...)`, qui teste
+    la vraie reconnaissance des anciens panneaux.
+
+33. **🚨 PIÈGE n°33 — la décision v231 « l'heure dans le pied » est ANNULÉE.**
+    v231 reportait l'heure dans le pied « parce que Components V2 n'a pas de
+    champ timestamp ». **Faux besoin** : Discord affiche déjà l'heure de chaque
+    message. Depuis v241, `ui.v2panel()` n'ajoute une date **que** si
+    `options.timestamp instanceof Date` — un `timestamp: true` ne fait plus
+    rien. La seule Date légitime : le starboard (`community.js`), qui date le
+    message **épinglé**, pas « maintenant ». Le garde-fou « jamais
+    `Invalid Date` » de v231 reste vérifié.
+
+**Règle de fond appliquée aux panneaux concernés** : une information ne s'écrit
+qu'UNE fois, et les consignes évidentes (« cliquez sur le bouton », « votez avec
+les boutons ») sont supprimées — l'interface les montre déjà.
+
+⚠️ **Le panneau de tickets est un cas à part** (voir l'historique v241) :
+l'utilisateur a refusé la réécriture globale et n'a retenu que 4 retraits ciblés.
+Il y garde donc des éléments que cette règle ferait normalement sauter :
+le nom du serveur dans le titre **et** dans le pied, la rubrique soulignée
+`__ⓘ Informations importantes :__`, et le message « merci de votre patience ».
+**Ne pas « nettoyer » ce panneau au nom de la règle générale** : c'est un choix
+assumé de l'utilisateur, pas un oubli. Alléger ne veut pas dire appauvrir.
+
+**Ce qui n'a PAS bougé** (demande explicite) : couleurs, séparateurs natifs,
+bannières, boutons, mise en page, et les messages **personnalisés** saisis par
+l'utilisateur — seuls les textes **par défaut** ont été réécrits.
+
 ## 🔑 MES ACCÈS (à remplacer avant d'envoyer)
 
 - ⚠️ **Aucun secret dans ce dépôt (public !)**. L'utilisateur (nexusdolf-rgb) fournira
@@ -944,14 +1230,18 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 
 1. Clone `https://github.com/nexusdolf-rgb/botdev`, `npm install`, lis le dernier commit
 2. Vérifie l'état : `https://hoxera.is-a.dev/api/health/bot` (bot en ligne ? erreurs ?)
-3. `bash scripts/check.sh` → doit être 🟢 (126 tests, ~2,5 min)
+3. `bash scripts/check.sh` → doit être 🟢 (167 tests, ~2,8 min)
 4. Vérifie les tokens (GitHub 200, Render 200, Discord `users/@me` avec curl)
 5. Fais-moi un point de situation clair, puis attends mes instructions
 
 ## 📌 ÉTAT AU 06/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v239** — voir la section v239 ci-dessus. **166 tests verts**.
-  ⚠️ **Chantier en cours (v231 →)** : migration des traits texte `━` vers les
+- Dernière version : **v241** — textes affichés sur Discord rendus professionnels
+  et allégés (voir la section v241 et l'historique ci-dessus). **168 tests verts**
+  (suite complète 🟢 le 06/09, dont `test/v241-test.js` : 60 vérifications).
+  ⚠️ **RIEN N'EST ENCORE POUSSÉ** : v229 → v241 sont terminés et verts, en attente
+  de l'accord de l'utilisateur pour le push.
+  ✅ **Chantier TERMINÉ (v231 → v236)** : migration des traits texte `━` vers les
   séparateurs **NATIFS pleine largeur** (Components V2).
   • **Migré** : `/quiz` (v231) · `premade.js` 13 messages dont `replyPanel` ×11
     et `/levels` · `suggest.js` 5 emplacements (v232) · `giveaway.js`

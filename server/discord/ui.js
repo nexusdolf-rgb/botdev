@@ -88,7 +88,7 @@ const COLORS = Object.freeze({
   economy: '#F1C40F',  // or de l'économie : gains, solde, boutique, classements coins
 });
 
-const DEFAULT_FOOTER = 'Hoxera · Assistant de ton serveur';
+const DEFAULT_FOOTER = 'Hoxera · Assistant de votre serveur';
 
 function colorFor(variantOrColor) {
   const value = String(variantOrColor || 'info');
@@ -127,7 +127,9 @@ function embed(options = {}) {
   if (options.thumbnail) e.setThumbnail(String(options.thumbnail));
   if (options.image) e.setImage(String(options.image));
   if (options.footer !== false) e.setFooter({ text: text(options.footer || DEFAULT_FOOTER, 2048) });
-  if (options.timestamp !== false) e.setTimestamp(options.timestamp instanceof Date ? options.timestamp : undefined);
+  // v241 — même règle qu'en V2 : l'heure n'est plus posée par défaut, seule
+  // une Date explicite (information ≠ « maintenant ») l'est.
+  if (options.timestamp instanceof Date && !Number.isNaN(options.timestamp.getTime())) e.setTimestamp(options.timestamp);
   return e;
 }
 
@@ -340,17 +342,18 @@ function v2container(options = {}) {
   });
 
   // 5) Pied de panneau : texte discret précédé d'un séparateur natif.
-  //    Components V2 n'a pas de champ « timestamp » : l'heure est reportée
-  //    dans le pied pour ne pas perdre l'information.
+  //    v241 — L'HEURE N'EST PLUS AJOUTÉE PAR DÉFAUT. Discord affiche déjà
+  //    l'horodatage de chaque message : le répéter en pied de panneau était une
+  //    duplication systématique (~70 panneaux concernés), et l'utilisateur avait
+  //    déjà demandé son retrait pour le ticket privé en v238.
+  //    Une Date EXPLICITE reste honorée : elle porte alors une information qui
+  //    n'est pas « maintenant » (ex. starboard → la date du message épinglé,
+  //    `community.js`). Un `timestamp: true` seul ne suffit plus.
   if (hasFooter) {
     let stamp = '';
-    if (options.timestamp !== false) {
-      // new Date(undefined) donne « Invalid Date » : il faut new Date() sans
-      // argument pour l'heure courante.
-      const when = options.timestamp instanceof Date ? options.timestamp : new Date();
-      if (!Number.isNaN(when.getTime())) {
-        stamp = ` · ${when.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`;
-      }
+    const when = options.timestamp instanceof Date ? options.timestamp : null;
+    if (when && !Number.isNaN(when.getTime())) {
+      stamp = ` · ${when.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`;
     }
     const footer = text(`${options.footer || DEFAULT_FOOTER}${stamp}`, V2_FOOTER_MAX);
     if (footer && v2room(state, 2) && (hasContent || headTexts.length || bodyBlocks.length || options.image || fileRefs.length)) {

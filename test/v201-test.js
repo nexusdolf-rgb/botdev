@@ -80,8 +80,13 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
   check('channelsmulti toujours présent (départ)', leaveCfg.some((f) => f.type === 'channelsmulti'));
   const dash = read('public/js/dashboard.js');
   check('bouton ✨ Modèle présent', dash.includes('✨ Modèle'));
-  check('modèle bienvenue : {user} + {channels}', dash.includes('Bienvenue {user} sur {server}') && dash.includes('{channels}'));
-  check('modèle départ : {user}', dash.includes('Au revoir {user}'));
+  // v241 — `{user}` n'est PLUS dans les modèles : l'en-tête du panneau affiche
+  // déjà le pseudo (et le titre dit déjà « Bienvenue sur {serveur} ! »), donc le
+  // corps le répétait. Les variables utiles restent : `{channels}` et `{server}`.
+  check('modèle bienvenue : {channels} présent, {user} retiré (v241)',
+    dash.includes('{channels}') && !dash.includes('Bienvenue {user} sur {server}'));
+  check('modèle départ : {server} présent, {user} retiré (v241)',
+    dash.includes("Merci d'avoir fait partie de {server}") && !dash.includes('Au revoir {user}'));
   check('placeholder phrase avec {salon}', dash.includes('prendre connaissance de {salon}'));
   check('aperçu remplace {salon}', dash.includes("line.split('{salon}').join"));
   const engineSrc = read('server/discord/engine.js');

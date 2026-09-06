@@ -391,9 +391,11 @@ async function announce(botId, guild, channel, social, result, gs) {
     ...ui.v2panel({
       color: p.color,
       author: { name: `${result.name} est en live !` },
-      title: `${p.emoji} 🔴 LIVE sur ${p.label}`,
+      // v241 — la plateforme était nommée 2 fois (titre + corps) et le corps
+      // répétait le nom du streamer. Tout est regroupé dans le titre.
+      title: `${p.emoji} 🔴 ${result.name} est en live sur ${p.label}`,
       content: ping || '',
-      description: `**${result.name}** vient de lancer un live sur **${p.label}** !\n\n✨ Rejoins-le maintenant, il t'attend :`,
+      description: 'Rejoignez-le maintenant :',
       fields: [
         { name: `${p.emoji} Pseudo`, value: `[@${social.handle}](${url})`, inline: true },
         { name: '👤 Membre', value: social.user_id ? `<@${social.user_id}>` : '—', inline: true },

@@ -147,8 +147,9 @@ check('mono-section 4096 max non touchée', ui.embed({ description: 'x'.repeat(4
   check('tickets : séparateur natif entre bienvenue et explication',
     tT.some((t) => t.includes('Bienvenue sur le support officiel de Serveur de Hoxera')) && v2div(tPayload) >= 1);
   check('tickets : aucun trait texte ━ (v234)', !v2json(tPayload).includes(ui.SEPARATOR));
+  // v241 (demande utilisateur) — puces « • » au lieu des flèches 🔴➡️.
   check('tickets : règles toujours dans leur propre bloc (pas de trait dedans)',
-    tT.some((t) => t.includes('🔴➡️') && !t.includes(ui.SEPARATOR)));
+    tT.some((t) => t.includes('•') && !t.includes(ui.SEPARATOR)));
   check('tickets : l’espaceur invisible U+200B n’apparaît plus comme intitulé',
     !tT.some((t) => /\*\*[\u200B-\u200F\u2060\uFEFF\s]+\*\*/.test(t)));
   check('tickets : bannière conservée en MediaGallery pleine largeur',
@@ -176,11 +177,32 @@ check('mono-section 4096 max non touchée', ui.embed({ description: 'x'.repeat(4
   // v236 — bienvenue, départ, journal, action send_embed, annonce de live et
   // automod sont passés en Components V2 : leurs paragraphes sont séparés par
   // des séparateurs NATIFS pleine largeur au lieu du trait texte ui.sectionize.
-  check('bienvenue premium : panneau V2 quand aucune pièce jointe (v236)',
-    src('events.js').includes('welcomePayload = ui.v2panel({'));
-  check('bienvenue premium : embed classique conservé quand la carte image est jointe (v236)',
-    src('events.js').includes("welcomePayload = { embeds: [embed], files };")
-    && countOf('events.js', 'ui.sectionize(text, 4096)') === 1);
+  // v240 — la bienvenue « pro » n'a plus qu'UNE seule branche V2. Le rendu
+  // classique ne subsiste que dans le seul cas où Discord l'impose :
+  // carte image (pièce jointe) + profil d'envoi personnalisé (webhook), car
+  // V2 + webhook + files = 400. Et dans ce cas on ne met AUCUN trait texte :
+  // c'était exactement le bug « les traits sont courts » remonté par le user.
+  const ev = src('events.js');
+  check('bienvenue premium : branche V2 unique (v240)',
+    ev.includes('...ui.v2panel({') && ev.includes('const carteV2 = files.length && !viaWebhook;'));
+  check('bienvenue premium : le webhook est détecté via le profil d’envoi (v240)',
+    ev.includes('identity.effectiveProfile(botId, member.guild.id)'));
+  check('bienvenue premium : la carte passe en MediaGallery attachment:// (v240)',
+    ev.includes("image: carteV2 ? 'attachment://bienvenue.png'"));
+  check('bienvenue premium : embed classique UNIQUEMENT si carte + webhook (v240)',
+    ev.includes('welcomePayload = { embeds: [embed], files };')
+    && ev.includes('if (!files.length || carteV2) {'));
+  // LE BUG v240 : ui.sectionize() produisait des traits texte de 20 caractères
+  // (━ x20) qui s'arrêtaient avant les bords arrondis de l'embed.
+  // On ne compte que les APPELS hors commentaire : events.js documente le bug
+  // en expliquant pourquoi ui.sectionize() a été retiré, et cette explication
+  // ne doit pas faire échouer le test.
+  const appelsSectionize = ev.split('\n')
+    .filter((l) => !/^\s*(?:\/\/|\*|\/\*)/.test(l) && l.includes('ui.sectionize(')).length;
+  check('bienvenue premium : PLUS AUCUN appel ui.sectionize hors commentaire (bug v240)',
+    appelsSectionize === 0);
+  check('bienvenue premium : le rendu classique utilise ui.text (paragraphes, pas de trait)',
+    ev.includes('.setDescription(ui.text(text, 4096))'));
   check('journal (logging.js) : description en V2 (v236)',
     src('logging.js').includes('ui.v2panel({'));
   check('action send_embed (engine.js) : description structurée en V2 (v236)',
@@ -245,8 +267,8 @@ check('mono-section 4096 max non touchée', ui.embed({ description: 'x'.repeat(4
   const pSrc = src('panels.js');
   check('salon privé : accueil = texte naturel (ui.text, pas de trait)',
     pSrc.includes('.setDescription(ui.text(desc, 4096))'));
-  check('DM « ton ticket est ouvert » : sections désactivées',
-    pSrc.includes('sections: false,') && pSrc.includes("title: '🎫 Ton ticket est ouvert'"));
+  check('DM « votre ticket est ouvert » : sections désactivées',
+    pSrc.includes('sections: false,') && pSrc.includes("title: '🎫 Votre ticket est ouvert'"));
   check('DM de transcription : texte naturel (ui.text, pas de trait)',
     pSrc.includes('.setDescription(ui.text(desc, 4096))'));
   const memberW = { id: 'u1', user: { username: 'Alice', displayAvatarURL: () => '' }, toString: () => '@Alice', guild: { name: 'S' } };

@@ -7,11 +7,41 @@ const store = require('../db');
 const ui = require('./ui');
 
 // ---------------------- Variables ----------------------
+/**
+ * v241 — Une variable qui se résout en chaîne VIDE laissait des phrases
+ * suspendues. Cas réel signalé par l'audit : le modèle « bienvenue pro » écrit
+ *
+ *     Pour bien commencer, découvrez les salons utiles :
+ *     {channels}
+ *
+ * et `{channels}` vaut '' dès qu'aucun salon n'est détaillé — c'est-à-dire dans
+ * la configuration PAR DÉFAUT. Le panneau affichait alors une phrase terminée
+ * par deux points, suivie d'un séparateur et d'un bloc vide.
+ *
+ * Règle appliquée (volontairement étroite, pour ne jamais manger de texte) :
+ *   1. une ligne composée UNIQUEMENT de variables (+ espaces) qui se résolvent
+ *      toutes en vide est supprimée ;
+ *   2. si la ligne précédente se terminait par « : », elle part aussi — c'est
+ *      l'introduction de la ligne supprimée ;
+ *   3. les lignes vides consécutives sont repliées.
+ * Un `{user}` ou `{server}` résolu n'est jamais vide : le texte normal ne bouge pas.
+ */
+function nettoieLignesVides(resolu) {
+  const lignes = String(resolu).split('\n');
+  const garde = [];
+  for (let i = 0; i < lignes.length; i++) {
+    const l = lignes[i];
+    if (l.trim() === '' && garde.length && garde[garde.length - 1].trim() === '') continue; // (3)
+    garde.push(l);
+  }
+  return garde.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
 function resolveVariables(template, ctx) {
   if (template === null || template === undefined) return template;
   if (typeof template !== 'string') return template;
   const v = ctx.vars || {};
-  return template
+  const substitue = (ligne) => ligne
     .replace(/\{user\.mention\}/g, v.userMention || '')
     .replace(/\{user\.tag\}/g, v.userTag || '')
     .replace(/\{user\.name\}/g, v.userName || '')
@@ -33,6 +63,22 @@ function resolveVariables(template, ctx) {
     .replace(/\{channels\}/g, v.channelsMention || '')
     .replace(/\{random\.user\}/g, v.randomUser || '')
     .replace(/\{bot\}/g, v.botMention || '');
+
+  // (1) + (2) : on repère les lignes « 100 % variables » devenues vides.
+  const VAR_SEULE = /^\s*(?:\{[a-z0-9_.]+\}\s*)+$/i;
+  const lignes = String(template).split('\n');
+  const aVider = new Set();
+  lignes.forEach((ligne, i) => {
+    if (!VAR_SEULE.test(ligne)) return;
+    if (substitue(ligne).trim() === '') {
+      aVider.add(i);
+      const prec = lignes[i - 1];
+      if (prec !== undefined && /:\s*$/.test(prec)) aVider.add(i - 1);
+    }
+  });
+  if (!aVider.size) return substitue(template);
+  const reste = lignes.filter((_, i) => !aVider.has(i)).map(substitue).join('\n');
+  return nettoieLignesVides(reste);
 }
 
 // ---------------------- Contexte ----------------------
@@ -364,7 +410,7 @@ async function runInteractionHandler(botId, entry, interaction) {
     const custom = cmds.find(c => c.name.toLowerCase() === interaction.commandName.toLowerCase());
     if (custom) {
       if (!checkCooldown(botId, custom.id, interaction.user.id, custom.cooldown)) {
-        return interaction.reply({ content: '⏳ Attends un peu avant de réutiliser cette commande.', ephemeral: true });
+        return interaction.reply({ content: '⏳ Attendez un peu avant de réutiliser cette commande.', ephemeral: true });
       }
       const args = interaction.options?.data?.map(o => (o.member || o.user) ? `<@${(o.member || o.user).id}>` : String(o.value)).join(' ') || '';
       await runCommandBlocks(entry, custom, { interaction, args });
@@ -384,7 +430,7 @@ async function runInteractionHandler(botId, entry, interaction) {
       return interaction.reply({ content: 'Cette commande n\'existe plus.', ephemeral: true });
     }
     if (!checkCooldown(botId, command.id, interaction.user.id, command.cooldown)) {
-      return interaction.reply({ content: '⏳ Attends un peu avant de réutiliser cette commande.', ephemeral: true });
+      return interaction.reply({ content: '⏳ Attendez un peu avant de réutiliser cette commande.', ephemeral: true });
     }
     await runCommandBlocks(entry, command, { interaction, args: '' });
   }

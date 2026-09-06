@@ -142,14 +142,14 @@ function buildExtraPayloads() {
   return [
     // ---------- Social ----------
     {
-      name: 'marry', description: '💍 Demande un membre en mariage (il/elle doit accepter !)',
-      options: [{ name: 'membre', description: 'L\'élu(e) de ton cœur', type: ApplicationCommandOptionType.User, required: true }],
+      name: 'marry', description: '💍 Demander un membre en mariage (il/elle doit accepter !)',
+      options: [{ name: 'membre', description: 'L\'élu(e) de votre cœur', type: ApplicationCommandOptionType.User, required: true }],
     },
     {
-      name: 'divorce', description: '💔 Divorcer de ton époux/épouse actuel(le)',
+      name: 'divorce', description: '💔 Divorcer de votre époux/épouse actuel(le)',
     },
     {
-      name: 'couple', description: '💑 Voir le couple d\'un membre (ou le tien)',
+      name: 'couple', description: '💑 Voir le couple d\'un membre (ou le vôtre)',
       options: [{ name: 'membre', description: 'Le membre (optionnel)', type: ApplicationCommandOptionType.User, required: false }],
     },
     {
@@ -175,26 +175,26 @@ function buildExtraPayloads() {
     // ---------- Jeux ----------
     {
       name: 'rps', description: '🪨 Pierre-feuille-ciseaux contre moi !',
-      options: [{ name: 'choix', description: 'Ton coup', type: ApplicationCommandOptionType.String, required: true, choices: [
+      options: [{ name: 'choix', description: 'Votre coup', type: ApplicationCommandOptionType.String, required: true, choices: [
         { name: '🪨 Pierre', value: 'pierre' }, { name: '🍃 Feuille', value: 'feuille' }, { name: '✂️ Ciseaux', value: 'ciseaux' },
       ]}],
     },
     {
-      name: 'pendu', description: '🪢 Joue au pendu : devine le mot caché !',
+      name: 'pendu', description: '🪢 Jouez au pendu : devinez le mot caché !',
     },
     {
-      name: 'morpion', description: '⭕ Joue au morpion contre un membre',
-      options: [{ name: 'adversaire', description: 'Ton adversaire', type: ApplicationCommandOptionType.User, required: true }],
+      name: 'morpion', description: '⭕ Jouez au morpion contre un membre',
+      options: [{ name: 'adversaire', description: 'Votre adversaire', type: ApplicationCommandOptionType.User, required: true }],
     },
     {
-      name: 'quiz', description: '🧠 Quiz : gagne des points, monte au classement !',
+      name: 'quiz', description: '🧠 Quiz : gagnez des points, montez au classement !',
       options: [{ name: 'action', description: 'Jouer ou voir le classement', type: ApplicationCommandOptionType.String, required: false, choices: [
         { name: 'jouer — lancer une question', value: 'jouer' }, { name: 'top — classement du serveur', value: 'top' },
       ]}],
     },
     // ---------- Communauté ----------
     {
-      name: 'birthday', description: '🎂 Gère ton anniversaire (le bot te souhaite le jour J !)',
+      name: 'birthday', description: '🎂 Gérez votre anniversaire (le bot vous souhaite le jour J !)',
       options: [
         { name: 'action', description: 'Que faire ?', type: ApplicationCommandOptionType.String, required: true, choices: [
           { name: 'set', value: 'set' }, { name: 'remove', value: 'remove' }, { name: 'list', value: 'list' },
@@ -204,7 +204,7 @@ function buildExtraPayloads() {
       ],
     },
     {
-      name: 'remind', description: '⏰ Le bot t\'envoie un rappel en message privé (répétable)',
+      name: 'remind', description: '⏰ Le bot vous envoie un rappel en message privé (répétable)',
       options: [
         { name: 'duree', description: 'Dans combien de temps ? (ex : 10m, 2h, 1d)', type: ApplicationCommandOptionType.String, required: true },
         { name: 'texte', description: 'Le message du rappel', type: ApplicationCommandOptionType.String, required: true },
@@ -217,8 +217,8 @@ function buildExtraPayloads() {
       ],
     },
     {
-      name: 'afk', description: '🌙 Passe AFK : on prévient les autres quand ils te mentionnent',
-      options: [{ name: 'raison', description: 'Pourquoi es-tu AFK ? (optionnel)', type: ApplicationCommandOptionType.String, required: false }],
+      name: 'afk', description: '🌙 Passez AFK : on prévient les autres quand ils vous mentionnent',
+      options: [{ name: 'raison', description: 'Pourquoi êtes-vous AFK ? (optionnel)', type: ApplicationCommandOptionType.String, required: false }],
     },
     {
       name: 'top', description: '🏆 Classement du serveur : XP ou coins, avec navigation par pages',
@@ -227,7 +227,7 @@ function buildExtraPayloads() {
       ]}],
     },
     {
-      name: 'poll', description: '🗳️ Crée un sondage avec des boutons de vote',
+      name: 'poll', description: '🗳️ Créez un sondage avec des boutons de vote',
       options: [
         { name: 'question', description: 'La question', type: ApplicationCommandOptionType.String, required: true },
         { name: 'choix', description: 'Les choix séparés par | (ex : Oui | Non | Peut-être)', type: ApplicationCommandOptionType.String, required: true },
@@ -237,7 +237,7 @@ function buildExtraPayloads() {
       name: 'snipe', description: '🕵️ Affiche le dernier message supprimé de ce salon',
     },
     {
-      name: 'invites', description: '📨 Tes invitations + le top des recruteurs du serveur',
+      name: 'invites', description: '📨 Vos invitations + le top des recruteurs du serveur',
       options: [{ name: 'membre', description: 'Voir les invitations d\'un autre membre (optionnel)', type: ApplicationCommandOptionType.User, required: false }],
     },
     // ---------- Économie enrichie ----------
@@ -245,11 +245,11 @@ function buildExtraPayloads() {
       name: 'work', description: '💼 Travaille pour gagner des coins (1 fois par heure)',
     },
     {
-      name: 'gamble', description: '🎰 Parie tes coins : double ou rien !',
+      name: 'gamble', description: '🎰 Pariez vos coins : double ou rien !',
       options: [{ name: 'montant', description: 'Combien de coins miser ?', type: ApplicationCommandOptionType.Integer, required: true }],
     },
     {
-      name: 'rob', description: '🦹 Tente de voler des coins à un membre (risqué !)',
+      name: 'rob', description: '🦹 Tentez de voler des coins à un membre (risqué !)',
       options: [{ name: 'membre', description: 'La cible du vol', type: ApplicationCommandOptionType.User, required: true }],
     },
     // ---------- Modération / organisation ----------
@@ -272,7 +272,7 @@ function buildExtraPayloads() {
       ],
     },
     {
-      name: 'apply', description: '📝 Candidatures : les membres répondent à TES questions',
+      name: 'apply', description: '📝 Candidatures : les membres répondent à VOS questions',
       default_member_permissions: admin,
       options: [
         { name: 'action', description: 'Action', type: ApplicationCommandOptionType.String, required: true, choices: [
@@ -287,30 +287,30 @@ function buildExtraPayloads() {
 
 // ---------------------- Aide ----------------------
 const HELP_EXTRA = {
-  marry: ['💍 Mariage', 'Demande un membre en mariage : il/elle reçoit une demande avec des boutons **Accepter / Refuser**. Une fois mariés, `/couple` affiche votre couple. Divorce possible à tout moment.', '`/marry @membre`', '`/marry @Léa` → demande envoyée 💍'],
-  divorce: ['💔 Divorce', 'Rompt ton mariage actuel sur ce serveur.', '`/divorce`'],
-  couple: ['💑 Couple', 'Affiche le couple d\'un membre (ou le tien si tu ne précises personne).', '`/couple @membre`', '`/couple @Léo` → 💍 Marié à @Léa depuis le 12/03/2026'],
-  hug: ['🤗 Câlin', 'Fais un câlin à un membre (message aléatoire).', '`/hug @membre`'],
-  kiss: ['😘 Bisou', 'Fais un bisou à un membre.', '`/kiss @membre`'],
+  marry: ['💍 Mariage', 'Demander un membre en mariage : il/elle reçoit une demande avec des boutons **Accepter / Refuser**. Une fois mariés, `/couple` affiche votre couple. Divorce possible à tout moment.', '`/marry @membre`', '`/marry @Léa` → demande envoyée 💍'],
+  divorce: ['💔 Divorce', 'Rompt votre mariage actuel sur ce serveur.', '`/divorce`'],
+  couple: ['💑 Couple', 'Affiche le couple d\'un membre (ou le vôtre si vous ne précisez personne).', '`/couple @membre`', '`/couple @Léo` → 💍 Marié à @Léa depuis le 12/03/2026'],
+  hug: ['🤗 Câlin', 'Faites un câlin à un membre (message aléatoire).', '`/hug @membre`'],
+  kiss: ['😘 Bisou', 'Faites un bisou à un membre.', '`/kiss @membre`'],
   slap: ['👋 Claque', 'Gifle un membre (pour rire !).', '`/slap @membre`'],
   pat: ['🐶 Tape-tête', 'Tapote gentiment la tête d\'un membre.', '`/pat @membre`'],
   punch: ['👊 Coup de poing', 'Met un coup de poing à un membre (pour rire !).', '`/punch @membre`'],
-  rps: ['🪨 Pierre-feuille-ciseaux', 'Joue contre moi : choisis pierre, feuille ou ciseaux !', '`/rps choix`', '`/rps pierre` → 🪨 vs 🍃 … je gagne !'],
+  rps: ['🪨 Pierre-feuille-ciseaux', 'Jouez contre moi : choisissez pierre, feuille ou ciseaux !', '`/rps choix`', '`/rps pierre` → 🪨 vs 🍃 … je gagne !'],
   pendu: ['🪢 Pendu', 'Devine le mot caché lettre par lettre (8 vies).', '`/pendu`'],
-  morpion: ['⭕ Morpion', 'Joue au morpion (tic-tac-toe) contre un membre, à tour de rôle sur une grille à boutons.', '`/morpion @membre`'],
-  birthday: ['🎂 Anniversaire', 'Enregistre ta date : le jour J, le bot te souhaite un joyeux anniversaire dans le salon configuré (et te donne le rôle anniversaire s\'il est défini).', '`/birthday set jour mois` · `/birthday remove` · `/birthday list`', '`/birthday set 14 7` → 🎂 Enregistré ! (14 juillet)'],
-  remind: ['⏰ Rappel', 'Le bot t\'envoie un message privé à l\'heure dite. Tu peux aussi le **répéter** toutes les heures, tous les jours ou toutes les semaines.', '`/remind durée texte` (durée : 10m, 2h, 1d) · `/remind durée texte repeat: quotidien|hebdo|horaire`', '`/remind 2h sortir le poulet` → MP dans 2 h · `/remind 1d check-up daily` → MP chaque jour'],
-  poll: ['🗳️ Sondage', 'Crée un sondage : les membres votent avec des boutons, les résultats s\'affichent en direct.', '`/poll question choix1 | choix2 | …`', '`/poll Pizza ou burger ? Pizza | Burger | Sushi`'],
+  morpion: ['⭕ Morpion', 'Jouez au morpion (tic-tac-toe) contre un membre, à tour de rôle sur une grille à boutons.', '`/morpion @membre`'],
+  birthday: ['🎂 Anniversaire', 'Enregistrez votre date : le jour J, le bot vous souhaite un joyeux anniversaire dans le salon configuré (et vous donnez le rôle anniversaire s\'il est défini).', '`/birthday set jour mois` · `/birthday remove` · `/birthday list`', '`/birthday set 14 7` → 🎂 Enregistré ! (14 juillet)'],
+  remind: ['⏰ Rappel', 'Le bot vous envoie un message privé à l\'heure dite. Vous pouvez aussi le **répéter** toutes les heures, tous les jours ou toutes les semaines.', '`/remind durée texte` (durée : 10m, 2h, 1d) · `/remind durée texte repeat: quotidien|hebdo|horaire`', '`/remind 2h sortir le poulet` → MP dans 2 h · `/remind 1d check-up daily` → MP chaque jour'],
+  poll: ['🗳️ Sondage', 'Créez un sondage : les membres votent avec des boutons, les résultats s\'affichent en direct.', '`/poll question choix1 | choix2 | …`', '`/poll Pizza ou burger ? Pizza | Burger | Sushi`'],
   snipe: ['🕵️ Snipe', 'Affiche le dernier message supprimé de ce salon.', '`/snipe`'],
-  work: ['💼 Travail', 'Travaille pour gagner des coins (entre 50 et 150, 1 fois par heure).', '`/work`', '`/work` → 🧑‍🍳 Tu as cuisiné : +120 coins !'],
-  gamble: ['🎰 Pari', 'Parie des coins : 50 % de chances de doubler, 50 % de tout perdre.', '`/gamble montant`', '`/gamble 100` → 🎰 JACKPOT ! +100 coins !'],
-  rob: ['🦹 Vol', 'Tente de voler un membre : 40 % de réussite (10-20 % de ses coins). Si tu rates, tu lui payes une amende !', '`/rob @membre`', '`/rob @Millionnaire` → 🚓 Raté ! Tu lui dois 15 % de ton solde.'],
+  work: ['💼 Travail', 'Travaille pour gagner des coins (entre 50 et 150, 1 fois par heure).', '`/work`', '`/work` → 🧑‍🍳 Vous avez cuisiné : +120 coins !'],
+  gamble: ['🎰 Pari', 'Pariez des coins : 50 % de chances de doubler, 50 % de tout perdre.', '`/gamble montant`', '`/gamble 100` → 🎰 JACKPOT ! +100 coins !'],
+  rob: ['🦹 Vol', 'Tentez de voler un membre : 40 % de réussite (10-20 % de ses coins). Si vous ratez, vous lui payez une amende !', '`/rob @membre`', '`/rob @Millionnaire` → 🚓 Raté ! Vous lui devez 15 % de votre solde.'],
   lockdown: ['🚨 Anti-raid', 'Verrouille tous les salons texte en 1 clic (personne ne peut écrire sauf les admins) puis rouvre tout. Idéal contre un raid.', '`/lockdown on` · `/lockdown off`', '`/lockdown on` → 🔒 12 salons verrouillés'],
   voicetemp: ['🔊 Salons vocaux temporaires', 'Un salon « ➕ Créer un vocal » : dès qu\'un membre le rejoint, un salon à son nom est créé, et il est supprimé automatiquement quand il est vide.', '`/voicetemp set` (avec salon + catégorie) · `/voicetemp view` · `/voicetemp off`'],
-  apply: ['📝 Candidatures', 'Les membres cliquent sur un bouton, répondent à TES questions dans une fenêtre, et leurs réponses arrivent dans un salon avec des boutons Accepter/Refuser pour le staff.', '`/apply set #salon` · `/apply question ta question` (max 5) · `/apply panel` · `/apply view` · `/apply off`', '`/apply set #candidatures` puis `/apply question Quel âge as-tu ?` puis `/apply panel`'],
-  afk: ['🌙 AFK', 'Tu passes AFK : si quelqu\'un te mentionne, le bot le prévient. Ton statut se retire tout seul dès que tu écris à nouveau.', '`/afk` · `/afk raison`', '`/afk je mange` → 🔕 @X est AFK : je mange (depuis 2 min)'],
+  apply: ['📝 Candidatures', 'Les membres cliquent sur un bouton, répondent à VOS questions dans une fenêtre, et leurs réponses arrivent dans un salon avec des boutons Accepter/Refuser pour le staff.', '`/apply set #salon` · `/apply question votre question` (max 5) · `/apply panel` · `/apply view` · `/apply off`', '`/apply set #candidatures` puis `/apply question Quel âge avez-vous ?` puis `/apply panel`'],
+  afk: ['🌙 AFK', 'Vous passes AFK : si quelqu\'un vous mentionnez, le bot le prévient. Votre statut se retire tout seul dès que vous écrivez à nouveau.', '`/afk` · `/afk raison`', '`/afk je mange` → 🔕 @X est AFK : je mange (depuis 2 min)'],
   top: ['🏆 Classement', 'Affiche le classement du serveur (XP ou coins) en pages de 10, navigables avec les boutons ◀ ▶.', '`/top` (XP) · `/top type:coins`', '`/top` → 🥇 @Léa — ✨ Niv. 12 (3 250 XP)'],
-  quiz: ['🧠 Quiz', 'Réponds aux questions à choix multiples : +10 points par bonne réponse, +5 si tu réponds vite. Ton score monte au classement du serveur.', '`/quiz` · `/quiz action:top`', '`/quiz` → 🧠 Quelle est la capitale du Japon ? → 🇯🇵 Tokyo → +10 points !'],
+  quiz: ['🧠 Quiz', 'Répondez aux questions à choix multiples : +10 points par bonne réponse, +5 si vous répondez vite. Votre score monte au classement du serveur.', '`/quiz` · `/quiz action:top`', '`/quiz` → 🧠 Quelle est la capitale du Japon ? → 🇯🇵 Tokyo → +10 points !'],
 };
 
 // ============================================================
@@ -325,7 +325,7 @@ async function handleInteraction(botId, entry, interaction) {
     console.error('[Hoxera] extra interaction error:', e.message);
     try {
       if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: '⚠️ Une erreur est survenue, réessaie.', ephemeral: true });
+        await interaction.reply({ content: '⚠️ Une erreur est survenue, réessayez.', ephemeral: true });
       }
     } catch {}
   }
@@ -342,7 +342,7 @@ async function handleSlash(botId, entry, interaction) {
   // Ici on répond poliment et on invite à ajouter le bot sur un serveur.
   if (!interaction.guild) {
     return interaction.reply({
-      content: '🌍 Cette commande fonctionne sur un **serveur Discord**. Ajoute-moi à ton serveur avec `/invite` pour l\'utiliser !',
+      content: '🌍 Cette commande fonctionne sur un **serveur Discord**. Ajoutez-moi à votre serveur avec `/invite` pour l\'utiliser !',
       ephemeral: true,
     });
   }
@@ -355,10 +355,10 @@ async function handleSlash(botId, entry, interaction) {
     case 'marry': {
       const target = interaction.options.getUser('membre');
       if (!target || target.bot || target.id === user.id) {
-        return interaction.reply({ content: target && target.id === user.id ? '💍 Tu ne peux pas te marier avec toi-même… même si tu t\'aimes beaucoup 😅' : '❓ Mentionne un membre valide.', ephemeral: true });
+        return interaction.reply({ content: target && target.id === user.id ? '💍 Vous ne pouvez pas vous marier avec vous-même… même si vous vous aimez beaucoup 😅' : '❓ Mentionnez un membre valide.', ephemeral: true });
       }
       const cur = store.marriages.get(botId, guild.id, user.id);
-      if (cur) return interaction.reply({ content: `💍 Tu es déjà marié(e) avec <@${cur.user_a === user.id ? cur.user_b : cur.user_a}> ! Divorce d\'abord si tu veux changer.`, ephemeral: true });
+      if (cur) return interaction.reply({ content: `💍 Vous êtes déjà marié(e) avec <@${cur.user_a === user.id ? cur.user_b : cur.user_a}> ! Divorcez d\'abord si vous voulez changer.`, ephemeral: true });
       const targetCur = store.marriages.get(botId, guild.id, target.id);
       if (targetCur) return interaction.reply({ content: `💍 ${target} est déjà marié(e)… dommage !`, ephemeral: true });
 
@@ -371,7 +371,7 @@ async function handleSlash(botId, entry, interaction) {
         title: '💍 Une demande en mariage !',
         // Message COURT interactif : pas de trait plaqué entre 2 phrases.
         sections: false,
-        description: `**${target}**, ${user} te demande en mariage !\n\nUne belle histoire commence peut-être. Choisis ta réponse ci-dessous.`,
+        description: `**${target}**, ${user} vous demande en mariage !\n\nUne belle histoire commence peut-être. Choisissez votre réponse ci-dessous.`,
         fields: [
           { name: '💌 Demandeur', value: `${user}`, inline: true },
           { name: '💑 Destinataire', value: `${target}`, inline: true },
@@ -383,7 +383,7 @@ async function handleSlash(botId, entry, interaction) {
     }
     case 'divorce': {
       const cur = store.marriages.get(botId, guild.id, user.id);
-      if (!cur) return interaction.reply({ content: '💔 Tu n\'es pas marié(e) sur ce serveur.', ephemeral: true });
+      if (!cur) return interaction.reply({ content: '💔 Vous n\'êtes pas marié(e) sur ce serveur.', ephemeral: true });
       const other = cur.user_a === user.id ? cur.user_b : cur.user_a;
       store.marriages.remove(botId, guild.id, cur.user_a, cur.user_b);
       return interaction.reply(ui.v2panel({
@@ -397,7 +397,7 @@ async function handleSlash(botId, entry, interaction) {
       const target = interaction.options.getUser('membre') || user;
       const cur = store.marriages.get(botId, guild.id, target.id);
       if (!cur) {
-        return interaction.reply({ content: target.id === user.id ? '💑 Tu es célibataire ! Demande quelqu\'un en mariage avec `/marry @membre` 💍' : `💑 ${target} est célibataire.` });
+        return interaction.reply({ content: target.id === user.id ? '💑 Vous êtes célibataire ! Demandez quelqu’un en mariage avec `/marry @membre` 💍' : `💑 ${target} est célibataire.` });
       }
       const other = cur.user_a === target.id ? cur.user_b : cur.user_a;
       const d = cur.date ? new Date(cur.date.replace(' ', 'T') + 'Z') : null;
@@ -412,7 +412,7 @@ async function handleSlash(botId, entry, interaction) {
     }
     case 'hug': case 'kiss': case 'slap': case 'pat': case 'punch': {
       const target = interaction.options.getUser('membre');
-      if (!target || target.id === user.id) return interaction.reply({ content: '❓ Mentionne un membre (autre que toi).', ephemeral: true });
+      if (!target || target.id === user.id) return interaction.reply({ content: '❓ Mentionnez un membre (autre que vous).', ephemeral: true });
       const text = rand(ACTION_TEXTS[cmd]).replace('{a}', `<@${user.id}>`).replace('{b}', `<@${target.id}>`);
       return interaction.reply(ui.v2panel({
         variant: 'live',
@@ -427,14 +427,14 @@ async function handleSlash(botId, entry, interaction) {
       const botMove = rand(RPS_MOVES);
       let result;
       if (move === botMove) result = `Égalité ! ${RPS_EMOJI[move]} contre ${RPS_EMOJI[botMove]} — on refait ?`;
-      else if (RPS_WINS[move] === botMove) result = `Tu gagnes ! ${RPS_EMOJI[move]} bat ${RPS_EMOJI[botMove]} 🏆`;
+      else if (RPS_WINS[move] === botMove) result = `Vous gagnes ! ${RPS_EMOJI[move]} bat ${RPS_EMOJI[botMove]} 🏆`;
       else result = `Je gagne ! ${RPS_EMOJI[botMove]} bat ${RPS_EMOJI[move]} 😎`;
       return interaction.reply(ui.v2panel({
-        variant: result.startsWith('Tu gagnes') ? 'success' : result.startsWith('Je gagne') ? 'danger' : 'warning',
+        variant: result.startsWith('Vous gagnes') ? 'success' : result.startsWith('Je gagne') ? 'danger' : 'warning',
         title: '🪨🍃✂️ Pierre · Feuille · Ciseaux',
         description: result,
         fields: [
-          { name: '🎮 Ton choix', value: `${RPS_EMOJI[move]} ${move}`, inline: true },
+          { name: '🎮 Votre choix', value: `${RPS_EMOJI[move]} ${move}`, inline: true },
           { name: '🤖 Mon choix', value: `${RPS_EMOJI[botMove]} ${botMove}`, inline: true },
         ],
         footer: `Hoxera · Duel de ${user.username}`,
@@ -450,7 +450,7 @@ async function handleSlash(botId, entry, interaction) {
         // Partie interactive : pas de trait entre l'invite et la grille.
         sections: false,
         description: `${user}, devine le mot caché !\n\n${shown}`,
-        fields: [{ name: '❤️ Vies restantes', value: '❤️'.repeat(8), inline: true }, { name: '🧭 Règle', value: 'Choisis une lettre par bouton.', inline: true }],
+        fields: [{ name: '❤️ Vies restantes', value: '❤️'.repeat(8), inline: true }, { name: '🧭 Règle', value: 'Choisissez une lettre par bouton.', inline: true }],
         footer: `Hoxera · Partie de ${user.username}`,
       }, letterRows(guild.id));
       const msg = await interaction.reply({ ...penduPanel, fetchReply: true });
@@ -460,7 +460,7 @@ async function handleSlash(botId, entry, interaction) {
     }
     case 'morpion': {
       const target = interaction.options.getUser('adversaire');
-      if (!target || target.bot || target.id === user.id) return interaction.reply({ content: '❓ Mentionne un membre (autre que toi) comme adversaire.', ephemeral: true });
+      if (!target || target.bot || target.id === user.id) return interaction.reply({ content: '❓ Mentionnez un membre (autre que vous) comme adversaire.', ephemeral: true });
       const state = { board: Array(9).fill(null), turn: user.id, p1: user.id, p2: target.id, over: false, symbols: { } };
       state.symbols[user.id] = '❌';
       state.symbols[target.id] = '⭕';
@@ -483,7 +483,7 @@ async function handleSlash(botId, entry, interaction) {
       const action = interaction.options.getString('action') || 'jouer';
       if (action === 'top') {
         const top = store.quizScores.top(botId, guild.id, 10);
-        if (!top.length) return interaction.reply({ content: '🧠 Personne n\'a encore joué au quiz sur ce serveur — lance `/quiz` !', ephemeral: true });
+        if (!top.length) return interaction.reply({ content: '🧠 Personne n\'a encore joué au quiz sur ce serveur — lancez `/quiz` !', ephemeral: true });
         const lines = top.map((r, i) => {
           const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '`' + (i + 1) + '.`';
           return `${medal} <@${r.user_id}> — ${r.score} pts (${r.answers} réponse(s))`;
@@ -540,7 +540,7 @@ async function handleSlash(botId, entry, interaction) {
       const quizOptions = {
         color: 0xe07a5f,
         title: '🧠 Quiz',
-        description: `**${question}**\n\n🇦 **${choices[0]}**\n🇧 **${choices[1]}**\n🇨 **${choices[2]}**\n\n⚡ Réponds vite : **+${bonus} points bonus** si tu réponds en moins de **${bonusWindow} secondes** !`,
+        description: `**${question}**\n\n🇦 **${choices[0]}**\n🇧 **${choices[1]}**\n🇨 **${choices[2]}**\n\n⚡ Répondez vite : **+${bonus} points bonus** si vous répondez en moins de **${bonusWindow} secondes** !`,
         footer: `Hoxera · ${guild.name} · Quiz`,
       };
       // Préfixe `hx:quiz:` → routé par handleButton (comme hx:poll, hx:pendu…).
@@ -579,14 +579,14 @@ async function handleSlash(botId, entry, interaction) {
           return interaction.reply({ content: '❓ Utilisation : `/birthday set jour mois` — ex : `/birthday set 14 7` pour le 14 juillet.', ephemeral: true });
         }
         store.birthdays.set(botId, guild.id, user.id, day, month);
-        return interaction.reply({ content: `🎂 Enregistré ! Je te souhaiterai ton anniversaire le **${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}** 🎉` });
+        return interaction.reply({ content: `🎂 Enregistré ! Je vous souhaiterai votre anniversaire le **${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}** 🎉` });
       }
       if (action === 'remove') {
         store.birthdays.remove(botId, guild.id, user.id);
-        return interaction.reply({ content: '🗑️ Ton anniversaire a été retiré de ma liste.', ephemeral: true });
+        return interaction.reply({ content: '🗑️ Votre anniversaire a été retiré de ma liste.', ephemeral: true });
       }
       const list = store.birthdays.all(botId, guild.id);
-      if (!list.length) return interaction.reply({ content: '🎂 Personne n\'a encore enregistré son anniversaire ! Fais-le avec `/birthday set jour mois`.', ephemeral: true });
+      if (!list.length) return interaction.reply({ content: '🎂 Personne n\'a encore enregistré son anniversaire ! Faites-le avec `/birthday set jour mois`.', ephemeral: true });
       const now = new Date();
       const sorted = list.map((b) => {
         let d = new Date(Date.UTC(now.getUTCFullYear(), b.month - 1, b.day));
@@ -610,15 +610,15 @@ async function handleSlash(botId, entry, interaction) {
       const ms = parseDuration(duree);
       if (!ms) return interaction.reply({ content: '❓ Durée invalide. Exemples : `10m` (minutes), `2h` (heures), `1d` (jours).', ephemeral: true });
       if (ms > 30 * 86400000) return interaction.reply({ content: '⏰ Max 30 jours pour un rappel.', ephemeral: true });
-      if (store.reminders.userCount(user.id) >= 10) return interaction.reply({ content: '⏰ Tu as déjà 10 rappels en attente, attends qu\'ils partent.', ephemeral: true });
+      if (store.reminders.userCount(user.id) >= 10) return interaction.reply({ content: '⏰ Vous avez déjà 10 rappels en attente, attendez qu\'ils partent.', ephemeral: true });
       store.reminders.add(botId, guild.id, interaction.channel.id, user.id, Date.now() + ms, texte.slice(0, 300), repeat);
       const repeatLabel = { once: '', hourly: ' (répété toutes les heures)', daily: ' (répété chaque jour)', weekly: ' (répété chaque semaine)' }[repeat] || '';
-      return interaction.reply({ content: `⏰ C\'est noté ! Je te rappellerai **${formatDuration(ms)}** en message privé${repeatLabel}.`, ephemeral: true });
+      return interaction.reply({ content: `⏰ C\'est noté ! Je vous rappellerai **${formatDuration(ms)}** en message privé${repeatLabel}.`, ephemeral: true });
     }
     case 'afk': {
       const raison = interaction.options.getString('raison') || '';
       store.afk.set(botId, guild.id, user.id, raison);
-      return interaction.reply({ content: `🌙 Tu es maintenant AFK${raison ? ` : **${raison}**` : ''}. Je préviendrai les autres qui te mentionnent, et ton statut se retirera tout seul dès que tu écriras.`, ephemeral: true });
+      return interaction.reply({ content: `🌙 Vous êtes maintenant AFK${raison ? ` : **${raison}**` : ''}. Je préviendrai les autres qui vous mentionnent, et votre statut se retirera tout seul dès que vous écriras.`, ephemeral: true });
     }
     case 'top': {
       const type = interaction.options.getString('type') || 'xp';
@@ -681,11 +681,11 @@ async function handleSlash(botId, entry, interaction) {
       const cooldown = 3600000;
       if (Date.now() - last < cooldown) {
         const wait = Math.ceil((cooldown - (Date.now() - last)) / 60000);
-        return interaction.reply({ content: `💼 Tu es fatigué ! Reviens dans **${wait} min** pour retravailler.`, ephemeral: true });
+        return interaction.reply({ content: `💼 Vous êtes fatigué ! Revenez dans **${wait} min** pour retravailler.`, ephemeral: true });
       }
       const job = rand([
-        ['🧑‍🍳', 'tu as cuisiné un festin'], ['👨‍💻', 'tu as codé un site web'], ['🧹', 'tu as nettoyé tout le salon'],
-        ['🎨', 'tu as peint un chef-d\'œuvre'], ['🚚', 'tu as livré des colis'], ['🎤', 'tu as chanté au karaoké'],
+        ['🧑‍🍳', 'vous avez cuisiné un festin'], ['👨‍💻', 'vous avez codé un site web'], ['🧹', 'vous avez nettoyé tout le salon'],
+        ['🎨', 'vous avez peint un chef-d\'œuvre'], ['🚚', 'vous avez livré des colis'], ['🎤', 'vous avez chanté au karaoké'],
       ]);
       const gain = 50 + Math.floor(Math.random() * 101);
       store.economy.ensure(botId, guild.id, user.id);
@@ -701,17 +701,17 @@ async function handleSlash(botId, entry, interaction) {
     }
     case 'gamble': {
       const amount = interaction.options.getInteger('montant');
-      if (!amount || amount <= 0) return interaction.reply({ content: '❓ Mise un montant positif : `/gamble 100`.', ephemeral: true });
+      if (!amount || amount <= 0) return interaction.reply({ content: '❓ Misez un montant positif : `/gamble 100`.', ephemeral: true });
       store.economy.ensure(botId, guild.id, user.id);
       const row = store.economy.get(botId, guild.id, user.id);
-      if (row.coins < amount) return interaction.reply({ content: `❌ Il te manque **${amount - row.coins}** coins (tu as ${row.coins}).`, ephemeral: true });
+      if (row.coins < amount) return interaction.reply({ content: `❌ Il vous manque **${amount - row.coins}** coins (vous avez ${row.coins}).`, ephemeral: true });
       const win = Math.random() < 0.5;
       if (win) {
         store.economy.add(botId, guild.id, user.id, amount);
         return interaction.reply(ui.v2panel({
           variant: 'economy',
           title: '🎰 JACKPOT !',
-          description: `Tu doubles ta mise : **+${amount} coins** !`,
+          description: `Vous doublez votre mise : **+${amount} coins** !`,
           fields: [{ name: '💰 Nouveau solde', value: `${row.coins + amount} coins`, inline: true }],
           footer: `Hoxera · ${guild.name} · Économie`,
         }));
@@ -720,19 +720,19 @@ async function handleSlash(botId, entry, interaction) {
       return interaction.reply(ui.v2panel({
         variant: 'danger',
         title: '🎰 Pari perdu',
-        description: `Tu perds **${amount} coins**.`,
+        description: `Vous perdez **${amount} coins**.`,
         fields: [{ name: '💰 Solde restant', value: `${row.coins - amount} coins`, inline: true }],
         footer: `Hoxera · ${guild.name} · Économie`,
       }));
     }
     case 'rob': {
       const target = interaction.options.getUser('membre');
-      if (!target || target.id === user.id) return interaction.reply({ content: '❓ Choisis une cible (autre que toi).', ephemeral: true });
+      if (!target || target.id === user.id) return interaction.reply({ content: '❓ Choisissez une cible (autre que vous).', ephemeral: true });
       const key = `rob_${guild.id}_${user.id}`;
       const last = Number(store.settings.get(key)) || 0;
       if (Date.now() - last < 600000) {
         const wait = Math.ceil((600000 - (Date.now() - last)) / 60000);
-        return interaction.reply({ content: `🦹 La police te cherche encore… attends **${wait} min**.`, ephemeral: true });
+        return interaction.reply({ content: `🦹 La police vous cherche encore… attendez **${wait} min**.`, ephemeral: true });
       }
       store.settings.set(key, String(Date.now()));
       store.economy.ensure(botId, guild.id, user.id);
@@ -748,7 +748,7 @@ async function handleSlash(botId, entry, interaction) {
         return interaction.reply(ui.v2panel({
           variant: 'economy',
           title: '🦹 Vol réussi !',
-          description: `Tu voles **${stolen} coins** à ${target} 😈`,
+          description: `Vous volez **${stolen} coins** à ${target} 😈`,
           fields: [{ name: '🎯 Cible', value: `${target}`, inline: true }],
           footer: `Hoxera · ${guild.name} · Économie`,
         }));
@@ -759,7 +759,7 @@ async function handleSlash(botId, entry, interaction) {
       return interaction.reply(ui.v2panel({
         variant: 'danger',
         title: '🚓 Vol échoué',
-        description: `${target} t'a surpris et te réclame **${fine} coins** de dédommagement…`,
+        description: `${target} vous a surpris et vous réclame **${fine} coins** de dédommagement…`,
         fields: [{ name: '💸 Amende', value: `${fine} coins`, inline: true }],
         footer: `Hoxera · ${guild.name} · Économie`,
       }));
@@ -776,7 +776,7 @@ async function handleSlash(botId, entry, interaction) {
           variant: 'danger',
           title: '🚨 Serveur verrouillé',
           description: `${res.channels} salon(s) sont maintenant en lecture seule.`,
-          fields: [{ name: '🔓 Pour rouvrir', value: 'Utilise `/lockdown off` quand la situation est maîtrisée.' }],
+          fields: [{ name: '🔓 Pour rouvrir', value: 'Utilisez `/lockdown off` quand la situation est maîtrisée.' }],
           footer: `Hoxera · ${guild.name} · Sécurité`,
         }));
       }
@@ -798,12 +798,12 @@ async function handleSlash(botId, entry, interaction) {
       }
       if (action === 'view') {
         const cfg = store.voicetemp.get(botId, guild.id);
-        if (!cfg || !cfg.creator_channel) return interaction.reply({ content: '🔊 Non configuré. Utilise `/voicetemp set` avec le salon de création et la catégorie.', ephemeral: true });
+        if (!cfg || !cfg.creator_channel) return interaction.reply({ content: '🔊 Non configuré. Utilisez `/voicetemp set` avec le salon de création et la catégorie.', ephemeral: true });
         return interaction.reply({ content: `🔊 **Configuration actuelle**\nSalon de création : <#${cfg.creator_channel}>\nCatégorie : <#${cfg.category || 'aucune'}>\nNom : \`${cfg.name_template || '🔊 {name}'}\``, ephemeral: true });
       }
       const salon = interaction.options.getChannel('salon');
       const categorie = interaction.options.getChannel('categorie');
-      if (!salon || salon.type !== ChannelType.GuildVoice) return interaction.reply({ content: '❓ Choisis un **salon vocal** comme salon « ➕ Créer un vocal » : `/voicetemp set #vocal #catégorie`.', ephemeral: true });
+      if (!salon || salon.type !== ChannelType.GuildVoice) return interaction.reply({ content: '❓ Choisissez un **salon vocal** comme salon « ➕ Créer un vocal » : `/voicetemp set #vocal #catégorie`.', ephemeral: true });
       store.voicetemp.set(botId, guild.id, {
         creator_channel: salon.id,
         category: categorie ? categorie.id : (salon.parentId || ''),
@@ -817,13 +817,13 @@ async function handleSlash(botId, entry, interaction) {
       const questions = (() => { try { return JSON.parse(cfg.questions || '[]'); } catch { return []; } })();
       if (action === 'set') {
         const salon = interaction.options.getChannel('salon');
-        if (!salon || !salon.isTextBased()) return interaction.reply({ content: '❓ Choisis le **salon texte** où arriveront les candidatures.', ephemeral: true });
+        if (!salon || !salon.isTextBased()) return interaction.reply({ content: '❓ Choisissez le **salon texte** où arriveront les candidatures.', ephemeral: true });
         store.applications.set(botId, guild.id, { ...cfg, channel: salon.id, questions: cfg.questions, enabled: 1 });
-        return interaction.reply({ content: `📝 **Candidatures activées !** Les réponses arriveront dans ${salon}.\nAjoute tes questions avec \`/apply question\` puis envoie le panneau avec \`/apply panel\`.` });
+        return interaction.reply({ content: `📝 **Candidatures activées !** Les réponses arriveront dans ${salon}.\nAjoutez vos questions avec \`/apply question\` puis envoyez le panneau avec \`/apply panel\`.` });
       }
       if (action === 'question') {
         const texte = interaction.options.getString('texte');
-        if (!texte || !texte.trim()) return interaction.reply({ content: '❓ Écris la question : `/apply question Quel âge as-tu ?`', ephemeral: true });
+        if (!texte || !texte.trim()) return interaction.reply({ content: '❓ Écrivez la question : `/apply question Quel âge avez-vous ?`', ephemeral: true });
         if (questions.length >= 5) return interaction.reply({ content: '❌ Maximum 5 questions.', ephemeral: true });
         questions.push(texte.trim().slice(0, 45));
         store.applications.set(botId, guild.id, { ...cfg, questions: JSON.stringify(questions) });
@@ -835,7 +835,7 @@ async function handleSlash(botId, entry, interaction) {
         // description du conteneur → séparateur NATIF pleine largeur entre les
         // 2 paragraphes. `footer: false` : l'original n'avait pas de pied.
         return interaction.reply(ui.v2panel({
-          description: `📝 **Candidatures**\nSalon : ${cfg.channel ? `<#${cfg.channel}>` : '❌ non défini'}\nQuestions (${questions.length}/5) :\n${questions.map((q, i) => `${i + 1}. ${q}`).join('\n') || '*aucune*'}\n\nEnvoie le panneau avec \`/apply panel\``,
+          description: `📝 **Candidatures**\nSalon : ${cfg.channel ? `<#${cfg.channel}>` : '❌ non défini'}\nQuestions (${questions.length}/5) :\n${questions.map((q, i) => `${i + 1}. ${q}`).join('\n') || '*aucune*'}\n\nEnvoyez le panneau avec \`/apply panel\``,
           footer: false,
           ephemeral: true,
         }));
@@ -846,15 +846,15 @@ async function handleSlash(botId, entry, interaction) {
       }
       // panel
       if (!cfg.channel) return interaction.reply({ content: '❓ Définis d\'abord le salon : `/apply set #salon`.', ephemeral: true });
-      if (!questions.length) return interaction.reply({ content: '❓ Ajoute au moins une question : `/apply question ta question`.', ephemeral: true });
+      if (!questions.length) return interaction.reply({ content: '❓ Ajoutez au moins une question : `/apply question votre question`.', ephemeral: true });
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId(`hx:apply:${guild.id}`).setLabel('📝 Faire une candidature').setStyle(ButtonStyle.Primary),
       );
       await interaction.reply(ui.v2panel({
         variant: 'brand',
         title: cfg.title || '📝 Candidature',
-        description: `Clique sur le bouton pour candidater : tu répondras à **${questions.length} question(s)** dans une fenêtre privée.`,
-        fields: [{ name: '🔒 Confidentialité', value: 'Seul le staff verra tes réponses.' }],
+        description: `Cliquez sur le bouton pour candidater : vous répondrez à **${questions.length} question(s)** dans une fenêtre privée.`,
+        fields: [{ name: '🔒 Confidentialité', value: 'Seul le staff verra vos réponses.' }],
         footer: `Hoxera · ${guild.name} · Candidatures`,
       }, [row]));
       return true;
@@ -926,7 +926,7 @@ async function onMessage(botId, m) {
   const own = store.afk.get(botId, guildId, uid);
   if (own) {
     store.afk.remove(botId, guildId, uid);
-    await m.reply({ content: '👋 Bienvenue ! Tu n\'es plus AFK.' }).catch(() => {});
+    await m.reply({ content: '👋 Bienvenue ! Vous n\'êtes plus AFK.' }).catch(() => {});
     return;
   }
   // 2) On mentionne un membre AFK → on prévient (sans boucle de mentions).
@@ -966,7 +966,7 @@ async function handleButton(botId, entry, interaction) {
       const gid = parts[2], choice = parts[3], from = parts[4], to = parts[5];
       if (gid !== guild.id) return true;
       if (user.id !== to) {
-        return interaction.reply({ content: '💍 Cette demande ne t\'est pas adressée !', ephemeral: true });
+        return interaction.reply({ content: '💍 Cette demande ne vous est pas adressée !', ephemeral: true });
       }
       const cur = store.marriages.get(botId, guild.id, from) || store.marriages.get(botId, guild.id, to);
       if (cur) return interaction.reply({ content: '💍 L\'un de vous est déjà marié…', ephemeral: true });
@@ -998,8 +998,8 @@ async function handleButton(botId, entry, interaction) {
       const key = `${gid}:${interaction.message.id}`;
       const state = penduGames.get(key);
       if (!state) return interaction.reply({ content: '🪢 Cette partie est terminée.', ephemeral: true });
-      if (user.id !== state.playerId) return interaction.reply({ content: '🪢 Ce n\'est pas ta partie ! Lance la tienne avec `/pendu`.', ephemeral: true });
-      if (state.guessed.has(letter)) return interaction.reply({ content: `Tu as déjà essayé « ${letter.toUpperCase()} » !`, ephemeral: true });
+      if (user.id !== state.playerId) return interaction.reply({ content: '🪢 Ce n\'est pas votre partie ! Lancez la vôtre avec `/pendu`.', ephemeral: true });
+      if (state.guessed.has(letter)) return interaction.reply({ content: `Vous avez déjà essayé « ${letter.toUpperCase()} » !`, ephemeral: true });
       state.guessed.add(letter);
       let over = false, won = false;
       if (!state.word.includes(letter)) {
@@ -1036,7 +1036,7 @@ async function handleButton(botId, entry, interaction) {
       const key = `${gid}:${interaction.message.id}`;
       const state = morpionGames.get(key);
       if (!state || state.over) return interaction.reply({ content: '⭕ Cette partie est terminée.', ephemeral: true });
-      if (user.id !== state.turn) return interaction.reply({ content: '⏳ Ce n\'est pas ton tour !', ephemeral: true });
+      if (user.id !== state.turn) return interaction.reply({ content: '⏳ Ce n\'est pas votre tour !', ephemeral: true });
       if (state.board[cell] !== null) return interaction.reply({ content: '❌ Cette case est déjà prise.', ephemeral: true });
       state.board[cell] = state.symbols[user.id];
       const winner = checkMorpionWin(state.board);
@@ -1143,8 +1143,8 @@ async function handleButton(botId, entry, interaction) {
           await applicant.send(ui.v2panel({
             variant: 'success',
             title: '🎉 Candidature acceptée',
-            description: `Bonne nouvelle ! Ta candidature sur **${guild.name}** a été acceptée par ${user.tag}.`,
-            fields: [{ name: '✅ Prochaine étape', value: 'Le staff va maintenant te transmettre les informations nécessaires.' }],
+            description: `Bonne nouvelle ! Votre candidature sur **${guild.name}** a été acceptée par ${user.tag}.`,
+            fields: [{ name: '✅ Prochaine étape', value: 'Le staff va maintenant vous transmettre les informations nécessaires.' }],
             footer: `Hoxera · ${guild.name} · Candidatures`,
           })).catch(() => {});
         } catch {}
@@ -1158,8 +1158,8 @@ async function handleButton(botId, entry, interaction) {
           await applicant.send(ui.v2panel({
             variant: 'danger',
             title: '😔 Candidature refusée',
-            description: `Ta candidature sur **${guild.name}** a été refusée. Tu pourras retenter plus tard.`,
-            fields: [{ name: '💡 Conseil', value: 'N’hésite pas à améliorer ta candidature avant une nouvelle demande.' }],
+            description: `Votre candidature sur **${guild.name}** a été refusée. Vous pourrez retenter plus tard.`,
+            fields: [{ name: '💡 Conseil', value: 'N’hésitez pas à améliorer votre candidature avant une nouvelle demande.' }],
             footer: `Hoxera · ${guild.name} · Candidatures`,
           })).catch(() => {});
         } catch {}
@@ -1180,7 +1180,7 @@ async function handleModal(botId, entry, interaction) {
   if (!cfg || !cfg.channel) return interaction.reply({ content: '📝 Les candidatures sont fermées.', ephemeral: true });
   const questions = (() => { try { return JSON.parse(cfg.questions || '[]'); } catch { return []; } })();
   const channel = guild.channels.cache.get(cfg.channel);
-  if (!channel) return interaction.reply({ content: '📝 Le salon des candidatures a été supprimé. Préviens un admin !', ephemeral: true });
+  if (!channel) return interaction.reply({ content: '📝 Le salon des candidatures a été supprimé. Prévenez un admin !', ephemeral: true });
 
   const authorAvatar = interaction.user.displayAvatarURL ? interaction.user.displayAvatarURL({ size: 128 }) : '';
   const embed = new EmbedBuilder()
@@ -1290,9 +1290,9 @@ function pollEmbed(question, choices, votes) {
     .setColor('#e07a5f')
     .setTitle(`🗳️ ${question}`)
     .addFields(fields)
-    .setFooter({ text: `${votes.size} vote(s) — clique sur un bouton pour voter (re-clique pour annuler)` });
+    .setFooter({ text: `${votes.size} vote(s) — cliquez sur un bouton pour voter (re-cliquez pour annuler)` });
   // État vide : aucun vote pour l'instant (comme les états vides du dashboard).
-  if (!votes.size) embed.setDescription('*Aucun vote pour l\'instant — choisis un numéro ci-dessous 👇*');
+  if (!votes.size) embed.setDescription('*Aucun vote pour l\'instant — choisissez un numéro ci-dessous 👇*');
   return embed;
 }
 
@@ -1354,8 +1354,8 @@ async function onVoiceState(botId, entry, oldState, newState) {
           await newState.member.send(ui.v2panel({
             variant: 'warning',
             title: '🔊 Limite de salons vocaux',
-            description: 'Tu as atteint la limite de 10 salons vocaux temporaires ouverts.',
-            fields: [{ name: '💡 Que faire ?', value: 'Rejoins un salon existant ou quitte un salon temporaire avant d’en créer un nouveau.' }],
+            description: 'Vous avez atteint la limite de 10 salons vocaux temporaires ouverts.',
+            fields: [{ name: '💡 Que faire ?', value: 'Rejoignez un salon existant ou quittez un salon temporaire avant d’en créer un nouveau.' }],
             footer: 'Hoxera · Salons vocaux temporaires',
           })).catch(() => {});
         } catch {}
@@ -1414,9 +1414,9 @@ async function sweepReminders(botId, entry) {
       // TextDisplay en tête de conteneur, d'où la 2e construction.
       const reminderOptions = {
         variant: 'warning',
-        title: '⏰ Ton rappel',
+        title: '⏰ Votre rappel',
         description: String(r.text || 'Rappel sans texte').slice(0, 4000),
-        fields: [{ name: '🧭 Serveur', value: entry.client.guilds.cache.get(r.guild_id)?.name || 'Ton serveur', inline: true }],
+        fields: [{ name: '🧭 Serveur', value: entry.client.guilds.cache.get(r.guild_id)?.name || 'Votre serveur', inline: true }],
         footer: 'Hoxera · Rappel personnel',
       };
       const sent = user && await user.send(ui.v2panel(reminderOptions)).then(() => true).catch(() => false);

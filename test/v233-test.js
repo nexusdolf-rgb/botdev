@@ -75,16 +75,16 @@ check('couleur par défaut conservée (or FEE75C)', cont(pDef).accent_color === 
 const pPink = giveaway.buildPanel(G, { color: '#FF00FF', message: 'Message perso' });
 check('couleur personnalisée conservée', cont(pPink).accent_color === 0xFF00FF);
 check('message personnalisé conservé', allText(pPink).includes('Message perso'));
-check('texte par défaut conservé', allText(pDef).includes('Réagis avec 🎉'));
+check('texte par défaut conservé', allText(pDef).includes('Réagissez avec 🎉'));
 check('titre en « ## 🎁 Giveaway »', txts(pDef)[0] === '## 🎁 Giveaway');
 check('tous les Separator en divider:true (pleine largeur)',
   cont(pDef).components.filter((k) => k.type === 14).every((k) => k.divider === true));
 // 2 paragraphes (prix + message) + 1 bloc de compteurs = 3 blocs → 2 + 1 pied = 3.
 check('3 séparateurs natifs (2 entre blocs + 1 pied)', nDiv(pDef) === 3);
-const p2par = giveaway.buildPanel(G, { message: 'Réagis avec 🎉 pour participer !\n\nSeuls les membres du serveur sont éligibles.' });
+const p2par = giveaway.buildPanel(G, { message: 'Réagissez avec 🎉 pour participer !\n\nSeuls les membres du serveur sont éligibles.' });
 check('message utilisateur à 2 paragraphes → 4 séparateurs', nDiv(p2par) === 4);
 check('les 2 paragraphes du message utilisateur sont conservés distincts',
-  allText(p2par).includes('Réagis avec 🎉 pour participer !') && allText(p2par).includes('Seuls les membres du serveur sont éligibles.'));
+  allText(p2par).includes('Réagissez avec 🎉 pour participer !') && allText(p2par).includes('Seuls les membres du serveur sont éligibles.'));
 
 // ------------------------------------------------------------
 console.log('\n2) giveaway — compteurs inline regroupés, jamais perdus');
@@ -212,9 +212,9 @@ console.log('\n8) Aucun secret ajouté + versionnage front v233');
   check(`aucun token en dur dans ${path.basename(f)}`,
     !/(ghp_|github_pat_|rnd_|xox[baprs]-)[A-Za-z0-9_-]{15,}/.test(read(f)));
 });
-check('index.html : 7 références ?v=239', (read('public/index.html').match(/\?v=239/g) || []).length === 7);
+check('index.html : 7 références ?v=241', (read('public/index.html').match(/\?v=241/g) || []).length === 7);
 check('index.html : plus aucune référence ?v=232', !read('public/index.html').includes('?v=232'));
-check('sw.js : cache botdev-v239', read('public/sw.js').includes("const CACHE = 'botdev-v239';"));
+check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'botdev-v241';"));
 
 console.log(failures === 0
   ? '\n✅ V233 — Lot n°3 : giveaways (5) et événements (7) en séparateurs natifs pleine largeur, édition de fin de tirage comprise.'

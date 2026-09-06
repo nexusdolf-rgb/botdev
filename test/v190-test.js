@@ -1,6 +1,6 @@
 // ══════════════════════════════════════════════════════════════
 // TEST v190 — LOT 4 « International & fun » :
-//  1. Multi-langues : 6 langues (fr/en/es/de/pt/it) + repli français
+//  1. Langues : fr + en uniquement depuis v240 (es/de/pt/it retirés) + repli fr
 //  2. Quiz compétitif : /quiz, boutons 🇦🇧🇨, scores, classement
 //  3. Série de connexion /daily (streak + bonus plafonné)
 //  4. Export CSV (dashboard)
@@ -25,24 +25,28 @@ const appJs = fs.readFileSync(path.join(root, 'public/js/app.js'), 'utf8');
 const pubJs = fs.readFileSync(path.join(root, 'public/js/public.js'), 'utf8');
 const dashSrc = fs.readFileSync(path.join(root, 'public/js/dashboard.js'), 'utf8');
 
-// ---------- 2. Multi-langues (i18n 6 langues + repli fr) ----------
-assert(i18nSrc.includes("fr: 'fr'") && i18nSrc.includes("en: 'en'")
-  && i18nSrc.includes("es: 'es'") && i18nSrc.includes("de: 'de'")
-  && i18nSrc.includes("pt: 'pt'") && i18nSrc.includes("it: 'it'"),
-  'LANG_CODES doit contenir les 6 langues');
-assert(i18nSrc.includes("es: {") && i18nSrc.includes("de: {")
-  && i18nSrc.includes("pt: {") && i18nSrc.includes("it: {"),
-  'les blocs ES/DE/PT/IT manquent dans i18n.js');
-// /lang accepte les 6 codes
-assert(premadeSrc.includes("['fr', 'en', 'es', 'de', 'pt', 'it']"),
-  '/lang doit accepter les 6 langues (premade.js)');
+// ---------- 2. Langues : périmètre v240 = fr + en uniquement ----------
+// Les blocs es/de/pt/it ne couvraient que 48 clés sur 105 : le bot répondait
+// donc en français dans ces langues. Plutôt que de laisser un menu qui ment,
+// v240 ramène le périmètre à fr + en (décision utilisateur).
+assert(i18nSrc.includes("fr: 'fr'") && i18nSrc.includes("en: 'en'"),
+  'LANG_CODES doit contenir fr et en');
+assert(!i18nSrc.includes("es: 'es'") && !i18nSrc.includes("de: 'de'")
+  && !i18nSrc.includes("pt: 'pt'") && !i18nSrc.includes("it: 'it'"),
+  'LANG_CODES ne doit PLUS contenir es/de/pt/it');
+assert(!i18nSrc.includes("es: {") && !i18nSrc.includes("de: {")
+  && !i18nSrc.includes("pt: {") && !i18nSrc.includes("it: {"),
+  'les blocs ES/DE/PT/IT doivent avoir été retirés d’i18n.js');
+// /lang n'accepte plus que 2 codes
+assert(premadeSrc.includes("['fr', 'en']") && !premadeSrc.includes("'es', 'de'"),
+  '/lang doit accepter fr + en seulement (premade.js)');
 assert(premadeSrc.includes("i18n.t(wanted, 'lang_set')"),
   '/lang doit répondre dans la langue choisie');
-// db.js + routes.js ne limitent plus la langue à fr/en
-assert(dbSrc.includes("['fr', 'en', 'es', 'de', 'pt', 'it'].includes"),
-  'db.js doit accepter les 6 langues');
-assert(routesSrc.includes("['fr', 'en', 'es', 'de', 'pt', 'it'].includes"),
-  'routes.js doit accepter les 6 langues');
+// db.js + routes.js bornés au même périmètre
+assert(dbSrc.includes("['fr', 'en'].includes"),
+  'db.js doit borner la langue à fr + en');
+assert(routesSrc.includes("['fr', 'en'].includes"),
+  'routes.js doit borner la langue à fr + en');
 
 // ---------- 3. Série de connexion (/daily) ----------
 assert(dbSrc.includes('daily_streak INTEGER DEFAULT 0'),
@@ -89,12 +93,17 @@ const store = require(path.join(root, 'server/db'));
 const i18n = require(path.join(root, 'server/i18n'));
 const extra = require(path.join(root, 'server/discord/extra'));
 
-// 6a. i18n : les 6 langues répondent, les clés manquantes replient sur le français
+// 6a. i18n — v240 : fr + en répondent ; les langues RETIRÉES replient sur fr.
+// Avant v240 es/de/pt/it n'avaient que 48 clés sur 105 : le bot affirmait
+// « langue définie sur espagnol » puis répondait en français.
 const frSet = i18n.t('fr', 'lang_set');
 assert(frSet && frSet.length > 3, 'lang_set(fr) invalide');
-for (const l of ['en', 'es', 'de', 'pt', 'it']) {
-  const s = i18n.t(l, 'lang_set');
-  assert(s && s.length > 3 && s !== frSet, `lang_set(${l}) invalide ou identique au français`);
+const enSet = i18n.t('en', 'lang_set');
+assert(enSet && enSet.length > 3 && enSet !== frSet,
+  'lang_set(en) invalide ou identique au français');
+for (const l of ['es', 'de', 'pt', 'it']) {
+  assert.strictEqual(i18n.t(l, 'lang_set'), frSet,
+    `lang_set(${l}) doit replier sur le français (langue retirée en v240)`);
 }
 assert.strictEqual(i18n.t('es', 'cle_qui_nexiste_pas'), i18n.t('fr', 'cle_qui_nexiste_pas'),
   'une clé manquante doit replier sur le français');

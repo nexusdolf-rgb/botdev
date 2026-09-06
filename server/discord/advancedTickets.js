@@ -108,7 +108,7 @@ function buttonLabelFor(type) {
 function buildPanelPayload(config) {
   const cfg = normalizeConfig(config);
   if (!cfg.id) throw new Error('Le panneau personnalisé n\'est pas encore enregistré.');
-  if (!cfg.types.length) throw new Error('Ajoute au moins un type de ticket personnalisé.');
+  if (!cfg.types.length) throw new Error('Ajoutez au moins un type de ticket personnalisé.');
 
   // Components V2 permet de placer chaque bouton à droite de son type,
   // comme dans le modèle visuel fourni : description puis bouton, verticalement.
@@ -125,7 +125,7 @@ function buildPanelPayload(config) {
   // par un séparateur natif PLEINE LARGEUR (v220) — pas un trait de texte qui
   // ne va pas jusqu'au bord du panneau.
   // cfg.message est déjà borné à 1900 caractères (normalizeConfig).
-  ui.paragraphs(cfg.message || 'Choisis le type de ticket qui correspond à ta demande :')
+  ui.paragraphs(cfg.message || 'Choisissez le type de ticket qui correspond à votre demande :')
     .forEach((part, index, all) => {
       container.addTextDisplayComponents(new TextDisplayBuilder().setContent(part));
       if (index < all.length - 1) container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
@@ -148,7 +148,7 @@ function buildPanelPayload(config) {
     });
     const select = new StringSelectMenuBuilder()
       .setCustomId(`hx2-menu:${cfg.bot_id}:${cfg.id}`)
-      .setPlaceholder('🗂️ Choisis un type de ticket…')
+      .setPlaceholder('🗂️ Choisissez un type de ticket…')
       .setMinValues(1)
       .setMaxValues(1);
     for (const type of cfg.types) {
@@ -192,7 +192,7 @@ function buildPanelPayload(config) {
   }
   container
     .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
-    .addTextDisplayComponents(new TextDisplayBuilder().setContent('-# Hoxera · Support privé · Choisis une option pour commencer'));
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent('-# Hoxera · Support privé · Choisissez une option pour commencer'));
   return { flags: MessageFlags.IsComponentsV2, components: [container] };
 }
 
@@ -206,9 +206,9 @@ async function deletePreviousPanel(guild, config) {
 
 async function sendPanel(botId, guildId, client) {
   const stored = getConfig(botId, guildId);
-  if (!stored) throw new Error('Configure d\'abord le nouveau système de tickets personnalisés.');
-  if (!stored.channel) throw new Error('Choisis le salon du nouveau panneau.');
-  if (!stored.types.length) throw new Error('Ajoute au moins un type de ticket personnalisé.');
+  if (!stored) throw new Error('Configurez d\'abord le nouveau système de tickets personnalisés.');
+  if (!stored.channel) throw new Error('Choisissez le salon du nouveau panneau.');
+  if (!stored.types.length) throw new Error('Ajoutez au moins un type de ticket personnalisé.');
   const guild = client && client.guilds && client.guilds.cache.get(String(guildId));
   if (!guild) throw new Error('Le bot n\'est pas présent sur ce serveur.');
   const panels = require('./panels');
@@ -277,7 +277,7 @@ function fieldValue(interaction, customId) {
 }
 
 function expiredReply(interaction) {
-  return interaction.reply({ content: '⏰ Ta demande a expiré, réessaie depuis le panneau.', ephemeral: true }).catch(() => {});
+  return interaction.reply({ content: '⏰ Votre demande a expiré, réessayez depuis le panneau.', ephemeral: true }).catch(() => {});
 }
 
 function reasonModal(botId, panelId, type) {
@@ -287,8 +287,8 @@ function reasonModal(botId, panelId, type) {
     .addComponents(new ActionRowBuilder().addComponents(
       new TextInputBuilder()
         .setCustomId('reason')
-        .setLabel('Pourquoi ouvres-tu ce ticket ?')
-        .setPlaceholder('Explique brièvement ta demande…')
+        .setLabel('Pourquoi ouvrez-vous ce ticket ?')
+        .setPlaceholder('Expliquez brièvement votre demande…')
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true)
         .setMaxLength(1000),
@@ -304,7 +304,7 @@ function questionnaireModal(botId, panelId, type, questions) {
       new TextInputBuilder()
         .setCustomId(`q${index}`)
         .setLabel(question)
-        .setPlaceholder('Écris ta réponse…')
+        .setPlaceholder('Écrivez votre réponse…')
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true)
         .setMaxLength(500),
@@ -322,7 +322,7 @@ function combinedModal(botId, panelId, type, questions) {
       new TextInputBuilder()
         .setCustomId(`q${index}`)
         .setLabel(question)
-        .setPlaceholder('Écris ta réponse…')
+        .setPlaceholder('Écrivez votre réponse…')
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true)
         .setMaxLength(500),
@@ -331,8 +331,8 @@ function combinedModal(botId, panelId, type, questions) {
   modal.addComponents(new ActionRowBuilder().addComponents(
     new TextInputBuilder()
       .setCustomId('reason')
-      .setLabel('📝 Pourquoi ouvres-tu ce ticket ?')
-      .setPlaceholder('Explique brièvement ta demande…')
+      .setLabel('📝 Pourquoi ouvrez-vous ce ticket ?')
+      .setPlaceholder('Expliquez brièvement votre demande…')
       .setStyle(TextInputStyle.Paragraph)
       .setRequired(true)
       .setMaxLength(1000),
@@ -354,7 +354,7 @@ async function startTypeInteraction(botId, interaction, panelId, typeId) {
   const guild = interaction.guild;
   const config = guild ? getConfig(botId, guild.id) : null;
   if (!config || Number(config.id) !== Number(panelId)) {
-    await interaction.reply({ content: '⚠️ Ce panneau de tickets n\'est plus à jour. Demande au staff de le renvoyer.', ephemeral: true }).catch(() => {});
+    await interaction.reply({ content: '⚠️ Ce panneau de tickets n\'est plus à jour. Demandez au staff de le renvoyer.', ephemeral: true }).catch(() => {});
     return;
   }
   const type = typeById(config, typeId);

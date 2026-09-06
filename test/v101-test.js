@@ -37,7 +37,7 @@ console.log('✅ placement best-effort : jamais bloquant');
 // 5. Créateur : bouton-lien direct + mention + MP conservé
 assert.ok(src.includes("setLabel('🎫 Ouvrir mon ticket')"), 'bouton-lien direct dans la confirmation');
 assert.ok(src.includes('https://discord.com/channels/${guild.id}/${channel.id}'), 'URL directe du salon');
-assert.ok(src.includes('Rejoins-le ici : ${channel}'), 'MP au créateur avec le lien conservé');
+assert.ok(src.includes('Rejoignez-le ici : ${channel}'), 'MP au créateur avec le lien conservé');
 assert.ok(src.includes('ephemeral: true'), 'confirmation privée (éphémère)');
 console.log('✅ créateur : bouton « Ouvrir mon ticket » + mention éphémère + MP avec lien');
 

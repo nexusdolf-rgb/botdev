@@ -168,7 +168,7 @@ async function syncGuild(botId, guild, options = {}) {
     return { ...result, managed: managedRows(botId, guild.id).length, reason: 'disabled' };
   }
   if (!alertChannel) {
-    result.skipped.push('Choisis un salon d’alerte officiel ou configure un salon de logs.');
+    result.skipped.push('Choisissez un salon d’alerte officiel ou configurez un salon de logs.');
     result.disabled = await disableManaged(botId, guild.id, rules, options.client, 'Aucun salon d’alerte configuré');
     return { ...result, ok: false, managed: managedRows(botId, guild.id).length, error: 'Aucun salon d’alerte envoyable pour les règles natives.' };
   }

@@ -2,7 +2,7 @@
 // Test Hoxera v72 — MP de transcription amélioré
 // Le membre reçoit en MP un embed soigné (même style que le panneau
 // de tickets) avec :
-//  - le titre « 🎫 Ton ticket a été clôturé »
+//  - le titre « 🎫 Votre ticket a été clôturé »
 //  - le nom du serveur dans le texte de remerciement
 //  - la bannière « SUPPORT - {nom du serveur} » générée automatiquement
 //  - le lien vers la transcription + le fichier .txt joint
@@ -57,10 +57,10 @@ const check = (label, cond) => {
   check('MP : payload Components V2 (plus d\'embed classique)', readDm(payload).isV2);
   check('MP : des séparateurs natifs pleine largeur', readDm(payload).separators >= 3, `${readDm(payload).separators}`);
   const emb = readDm(payload);
-  check('MP : titre « 🎫 Ton ticket a été clôturé »', emb.title === '🎫 Ton ticket a été clôturé');
+  check('MP : titre « 🎫 Votre ticket a été clôturé »', emb.title === '🎫 Votre ticket a été clôturé');
   check('MP : nom du serveur dans le remerciement', String(emb.description).includes('Carré RP Officiel'));
   check('MP : lien de la transcription', String(emb.description).includes('https://dash-hoxora.onrender.com/transcript/abc123'));
-  check('MP : invite à rouvrir un ticket', String(emb.description).includes('Rouvre simplement un ticket'));
+  check('MP : invite à rouvrir un ticket', String(emb.description).includes('Rouvrez simplement un ticket'));
   // 🖼️ Bannière du PROFIL du bot (repli local si l'URL Discord n'est pas encore connue)
   check('MP : bannière du profil du bot en MediaGallery', String(emb.image).includes('/icons/nexora-profile-banner.png'), String(emb.image));
   check('MP : footer signé Hoxera', String(emb.footer).includes('Hoxera'));

@@ -67,7 +67,7 @@ function buildPanel(config, guild, roleIds = []) {
     author: { name: `Hoxera · ${guild && guild.name ? String(guild.name).slice(0, 170) : 'Annonce'}` },
     title,
     content: roleIds.length ? roleIds.map((id) => `<@&${id}>`).join(' ') : '',
-    description: cfg.message || 'Écris ton annonce depuis le dashboard.',
+    description: cfg.message || 'Écrivez votre annonce depuis le dashboard.',
     footer: cfg.footer || DEFAULT_FOOTER,
     image: cfg.image_url || '',
   });
@@ -84,10 +84,10 @@ function buildPayload(config, guild, roleIds = []) {
 
 async function sendAnnouncement(botId, guildId, client) {
   const row = store.customAnnouncements.get(botId, guildId);
-  if (!row) throw new Error('Configure d’abord ton annonce personnalisée.');
+  if (!row) throw new Error('Configurez d’abord votre annonce personnalisée.');
   const config = normalizeConfig(row);
-  if (!config.message.trim()) throw new Error('Écris le contenu de ton annonce.');
-  if (!config.channels.length) throw new Error('Choisis au moins un salon de publication.');
+  if (!config.message.trim()) throw new Error('Écrivez le contenu de votre annonce.');
+  if (!config.channels.length) throw new Error('Choisissez au moins un salon de publication.');
   const guild = client && client.guilds && client.guilds.cache.get(String(guildId));
   if (!guild) throw new Error('Le bot n’est pas présent sur ce serveur.');
 
@@ -103,7 +103,7 @@ async function sendAnnouncement(botId, guildId, client) {
     const message = await channel.send(payload);
     if (message) sent++;
   }
-  if (!sent) throw new Error('L’annonce n’a pas pu être envoyée. Vérifie les permissions du bot.');
+  if (!sent) throw new Error('L’annonce n’a pas pu être envoyée. Vérifiez les permissions du bot.');
   return { sent, channels: channels.map((channel) => channel.id), missingChannels, missingRoles };
 }
 

@@ -84,11 +84,11 @@ App.renderPublicLanding = () => {
       <div class="pub-hero">
         <div class="pub-blob b1"></div><div class="pub-blob b2"></div><div class="pub-blob b3"></div>
         <div class="pub-hero-badge shimmer">⚡ Hoxera — synchronisé en direct avec Discord</div>
-        <h1 class="hero-title">Le bot qui anime<br/><span class="grad grad-anim">ton serveur Discord</span></h1>
+        <h1 class="hero-title">Le bot qui anime<br/><span class="grad grad-anim">votre serveur Discord</span></h1>
         <p class="pub-tagline">Tickets automatiques avec transcriptions, niveaux XP, boutique, giveaways, bienvenue et modération.
-        Ajoute Hoxera à ton serveur, puis configure tout depuis le dashboard avec ton compte Discord.</p>
+        Ajoutez Hoxera à votre serveur, puis configurez tout depuis le dashboard avec votre compte Discord.</p>
         <div class="pub-hero-actions">
-          <button class="btn btn-primary" id="pub-invite-hero" style="padding:13px 22px;font-size:15px">➕ Ajouter Hoxera à ton serveur</button>
+          <button class="btn btn-primary" id="pub-invite-hero" style="padding:13px 22px;font-size:15px">➕ Ajouter Hoxera à votre serveur</button>
           ${user && user.discord_id
             ? `<button class="btn" id="pub-dash-hero" style="padding:13px 22px;font-size:15px">📊 Ouvrir mon dashboard</button>`
             : `<button class="btn btn-discord" id="pub-connect-hero" style="padding:13px 22px;font-size:15px;width:auto">🎮 Se connecter avec Discord</button>`}
@@ -105,12 +105,12 @@ App.renderPublicLanding = () => {
       <div class="pub-section reveal hp-section" id="hp-about">
         <div class="hp-kicker">Hoxera en bref</div>
         <h2>Le robot d'animation, pensé comme un produit</h2>
-        <p class="pub-sub">Pas juste une liste de commandes : une expérience complète, du premier message d'accueil au journal d'audit, en passant par un dashboard qui te fait gagner du temps.</p>
+        <p class="pub-sub">Pas juste une liste de commandes : une expérience complète, du premier message d'accueil au journal d'audit, en passant par un dashboard qui vous fait gagner du temps.</p>
         <div class="hp-about-grid">
           <div class="hp-about-card">
             <div class="hp-robot" aria-hidden="true"><span>🤖</span></div>
             <div>
-              <h3>Optimus Prime, ton nouveau membre</h3>
+              <h3>Optimus Prime, votre nouveau membre</h3>
               <p>Hoxera est le bot officiel « Optimus Prime » : une seule identité, un seul dashboard, et toutes les fonctions dont un serveur Discord a besoin — sans abonnement.</p>
             </div>
           </div>
@@ -122,9 +122,9 @@ App.renderPublicLanding = () => {
           </div>
         </div>
         <div class="hp-steps">
-          <div class="hp-step"><span class="hp-step-n">1</span><b>Ajoute le bot</b><p>Un clic sur « Ajouter Hoxera », choisis ton serveur.</p></div>
-          <div class="hp-step"><span class="hp-step-n">2</span><b>Connecte-toi</b><p>Identifie-toi avec Discord pour accéder à ton dashboard.</p></div>
-          <div class="hp-step"><span class="hp-step-n">3</span><b>Configure</b><p>Active les modules et personnalise ton serveur en direct.</p></div>
+          <div class="hp-step"><span class="hp-step-n">1</span><b>Ajoutez le bot</b><p>Un clic sur « Ajouter Hoxera », choisissez votre serveur.</p></div>
+          <div class="hp-step"><span class="hp-step-n">2</span><b>Connectez-vous</b><p>Identifiez-vous avec Discord pour accéder à votre dashboard.</p></div>
+          <div class="hp-step"><span class="hp-step-n">3</span><b>Configurez</b><p>Activez les modules et personnalisez votre serveur en direct.</p></div>
         </div>
       </div>
 
@@ -139,9 +139,9 @@ App.renderPublicLanding = () => {
           <div class="pub-feature reveal"><div class="f-ico">🕹️</div><b>Jeux & fun</b><p>Pendu, morpion, pierre-feuille-ciseaux, mariages et actions entre membres.</p></div>
           <div class="pub-feature reveal"><div class="f-ico">🎂</div><b>Anniversaires & rappels</b><p>Le bot souhaite les anniversaires et envoie des rappels en message privé.</p></div>
           <div class="pub-feature reveal"><div class="f-ico">🗳️</div><b>Sondages & suggestions</b><p>Votes en direct avec boutons, suggestions approuvées depuis le dashboard.</p></div>
-          <div class="pub-feature reveal"><div class="f-ico">🔊</div><b>Salons vocaux temporaires</b><p>Un clic pour créer ton vocal, supprimé automatiquement quand il est vide.</p></div>
+          <div class="pub-feature reveal"><div class="f-ico">🔊</div><b>Salons vocaux temporaires</b><p>Un clic pour créer votre vocal, supprimé automatiquement quand il est vide.</p></div>
           <div class="pub-feature reveal"><div class="f-ico">📅</div><b>Annonces programmées</b><p>Messages automatiques aux jours et heures choisis, configurés depuis le dashboard.</p></div>
-          <div class="pub-feature reveal"><div class="f-ico">👥</div><b>Dashboard complet</b><p>Membres gérables, statistiques, coins, rôles et kick — tout depuis ton téléphone.</p></div>
+          <div class="pub-feature reveal"><div class="f-ico">👥</div><b>Dashboard complet</b><p>Membres gérables, statistiques, coins, rôles et kick — tout depuis votre téléphone.</p></div>
         </div>
       </div>
 
@@ -154,7 +154,7 @@ App.renderPublicLanding = () => {
       <div class="pub-section reveal hp-section" id="hp-preview">
         <span class="hp-kicker">Aperçu</span>
         <h2>📊 Un dashboard digne des plus grands</h2>
-        <p class="pub-sub">Configure tout depuis ton téléphone ou ton PC — design pro, sauvegarde intelligente, flux d'activité en direct.</p>
+        <p class="pub-sub">Configurez tout depuis votre téléphone ou votre PC — design pro, sauvegarde intelligente, flux d'activité en direct.</p>
         <div class="pub-mock">
           <div class="mock-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="mock-url">hoxera.is-a.dev</span></div>
           <div class="mock-body">
@@ -178,15 +178,15 @@ App.renderPublicLanding = () => {
         <div class="hp-faq">
           <details class="hp-faq-item" open>
             <summary>Est-ce que Hoxera est gratuit ?</summary>
-            <p>Oui. Hoxera est gratuit et le reste : toutes les fonctions sont incluses, sans abonnement ni compte payant. Tu ne paies que si tu veux un jour soutenir le projet (une option future, jamais obligatoire).</p>
+            <p>Oui. Hoxera est gratuit et le reste : toutes les fonctions sont incluses, sans abonnement ni compte payant. Vous ne payez que si vous voulez un jour soutenir le projet (une option future, jamais obligatoire).</p>
           </details>
           <details class="hp-faq-item">
             <summary>Quelles permissions Discord sont nécessaires ?</summary>
-            <p>Le bot demande les permissions « Administrateur » lors de l'ajout pour pouvoir créer des salons (tickets), gérer les rôles (auto-rôles, giveaways) et modérer (kick, ban, timeout). Tu peux les ajuster ensuite dans les réglages de ton serveur.</p>
+            <p>Le bot demande les permissions « Administrateur » lors de l'ajout pour pouvoir créer des salons (tickets), gérer les rôles (auto-rôles, giveaways) et modérer (kick, ban, timeout). Vous pouvez les ajuster ensuite dans les réglages de votre serveur.</p>
           </details>
           <details class="hp-faq-item">
             <summary>Comment fonctionne la connexion au dashboard ?</summary>
-            <p>Uniquement avec ton compte Discord (OAuth2). Aucun mot de passe à retenir : tu te connectes, on vérifie tes serveurs et ta permission, et tu configures tes serveurs en quelques clics.</p>
+            <p>Uniquement avec votre compte Discord (OAuth2). Aucun mot de passe à retenir : vous vous connectez, on vérifie vos serveurs et votre permission, et vous configurez vos serveurs en quelques clics.</p>
           </details>
           <details class="hp-faq-item">
             <summary>Le bot fonctionne-t-il sur mobile ?</summary>
@@ -206,10 +206,10 @@ App.renderPublicLanding = () => {
       <!-- 🚀 CTA final -->
       <div class="hp-cta reveal">
         <div class="hp-cta-inner">
-          <h2>Prêt à donner vie à ton serveur ?</h2>
-          <p>Ajoute Hoxera maintenant — c'est gratuit, configuré en quelques minutes, et il t'accompagne pas à pas.</p>
+          <h2>Prêt à donner vie à votre serveur ?</h2>
+          <p>Ajoutez Hoxera maintenant — c'est gratuit, configuré en quelques minutes, et il vous accompagne pas à pas.</p>
           <div class="hp-cta-actions">
-            <button class="btn btn-primary" id="pub-invite-cta" style="padding:13px 22px;font-size:15px">➕ Ajouter Hoxera à ton serveur</button>
+            <button class="btn btn-primary" id="pub-invite-cta" style="padding:13px 22px;font-size:15px">➕ Ajouter Hoxera à votre serveur</button>
             ${user && user.discord_id
               ? `<button class="btn" id="pub-dash-cta" style="padding:13px 22px;font-size:15px">📊 Ouvrir mon dashboard</button>`
               : `<button class="btn btn-discord" id="pub-connect-cta" style="padding:13px 22px;font-size:15px;width:auto">🎮 Se connecter avec Discord</button>`}
@@ -220,7 +220,7 @@ App.renderPublicLanding = () => {
       <div class="pub-footer hp-footer">
         <div class="hp-footer-cols">
           <div class="hp-footer-col">
-            <div class="hp-footer-brand"><b>⚡ Hoxera</b><p>Le bot d'animation tout-en-un pour ton serveur Discord.</p></div>
+            <div class="hp-footer-brand"><b>⚡ Hoxera</b><p>Le bot d'animation tout-en-un pour votre serveur Discord.</p></div>
           </div>
           <div class="hp-footer-col">
             <b>Produit</b>
@@ -411,7 +411,7 @@ App.renderPublicBot = async (id) => {
           </div>
         </div>
         <div class="pub-bot-actions">
-          <button class="btn btn-primary" id="pub-invite" ${b.invite_url ? '' : 'disabled'}>➕ Ajouter à ton serveur</button>
+          <button class="btn btn-primary" id="pub-invite" ${b.invite_url ? '' : 'disabled'}>➕ Ajouter à votre serveur</button>
           <button class="btn" id="pub-refresh">🔄 Actualiser</button>
         </div>
       </div>
@@ -443,10 +443,10 @@ App.renderPublicBot = async (id) => {
           </div>
         ` : ''}
         ${!b.categories.length && !b.custom.length ? `<div class="empty-state">Aucune commande activée pour le moment.</div>` : ''}
-        <div style="margin-top:14px;color:var(--text-dim);font-size:12px">💡 Une fois le bot sur ton serveur, tape <b>/help</b> pour le guide complet, et <b>/ticket setup</b> pour installer les tickets.</div>
+        <div style="margin-top:14px;color:var(--text-dim);font-size:12px">💡 Une fois le bot sur votre serveur, tapez <b>/help</b> pour le guide complet, et <b>/ticket setup</b> pour installer les tickets.</div>
       </div>
 
-      <div class="pub-footer" style="text-align:left"><b>⚡ Hoxera</b> — ajoute-le à ton serveur, puis configure-le avec ton compte Discord.</div>
+      <div class="pub-footer" style="text-align:left"><b>⚡ Hoxera</b> — ajoutez-le à votre serveur, puis configurez-le avec votre compte Discord.</div>
     `;
     shell.querySelector('#pub-back').onclick = () => App.router.go(App.state.user && App.state.user.discord_id ? '/dashboard' : '/');
     shell.querySelector('#pub-invite').onclick = () => { if (b.invite_url) App.openInvite(b.invite_url); };

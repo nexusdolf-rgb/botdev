@@ -206,9 +206,23 @@ const footDefault = texts({ title: 'T', description: 'A', footer: 'Hoxera · Mon
 check('pied rendu en texte discret', footDefault.startsWith('-# Hoxera · Mon serveur'));
 check('AUCUN « Invalid Date » dans le pied', !footDefault.includes('Invalid Date'));
 check('AUCUN « Invalid Date » nulle part dans le payload', !JSON.stringify(ui.v2panel(quizOptions)).includes('Invalid Date'));
-check('heure reportée dans le pied (V2 n’a pas de champ timestamp)', /\d{2}\/\d{2} \d{2}:\d{2}/.test(footDefault));
+// v241 — RETOURNEMENT assumé de la décision v231. À l'époque, l'heure était
+// reportée dans le pied « parce que Components V2 n'a pas de champ timestamp ».
+// Mais Discord affiche DÉJÀ l'heure de chaque message dans l'interface : la
+// répéter dans ~70 panneaux était une duplication systématique, et l'utilisateur
+// en avait déjà demandé le retrait pour le ticket privé en v238.
+// Le garde-fou que v231 visait vraiment — jamais « Invalid Date » — est conservé
+// ci-dessus (lignes 207-208) et reste vérifié pour la Date explicite ci-dessous.
+check('v241 : PLUS d’heure dans le pied par défaut', !/\d{2}\/\d{2} \d{2}:\d{2}/.test(footDefault));
+check('v241 : une Date EXPLICITE est toujours honorée (cas starboard)',
+  /\d{2}\/\d{2} \d{2}:\d{2}/.test(texts({ title: 'T', description: 'A', footer: 'F', timestamp: new Date(2024, 0, 5, 14, 30) }).slice(-1)[0]));
+check('v241 : une Date explicite ne produit JAMAIS « Invalid Date »',
+  !texts({ title: 'T', description: 'A', footer: 'F', timestamp: new Date('invalide') }).slice(-1)[0].includes('Invalid Date'));
 const footOff = texts({ title: 'T', description: 'A', footer: 'F', timestamp: false }).slice(-1)[0];
 check('timestamp:false → pas d’heure dans le pied', !/\d{2}:\d{2}/.test(footOff));
+// v241 — `timestamp: true` seul ne suffit plus : il faut une vraie Date.
+check('v241 : timestamp:true seul n’ajoute PLUS d’heure',
+  !/\d{2}\/\d{2} \d{2}:\d{2}/.test(texts({ title: 'T', description: 'A', footer: 'F', timestamp: true }).slice(-1)[0]));
 const footNone = ui.v2panel({ title: 'T', description: 'A', footer: false });
 check('footer:false → aucun bloc de pied', !texts({ title: 'T', description: 'A', footer: false }).some((t) => t.startsWith('-# ')));
 check('footer:false → pas de séparateur final orphelin',
@@ -277,9 +291,9 @@ check('aucun token en dur dans ui.js',
   !/(ghp_|github_pat_|xox[baprs]-)[A-Za-z0-9_]{15,}/.test(read('server/discord/ui.js')));
 check('aucun token en dur dans extra.js',
   !/(ghp_|github_pat_|xox[baprs]-)[A-Za-z0-9_]{15,}/.test(ex));
-check('index.html : 7 références ?v=239', (read('public/index.html').match(/\?v=239/g) || []).length === 7);
+check('index.html : 7 références ?v=241', (read('public/index.html').match(/\?v=241/g) || []).length === 7);
 check('index.html : plus aucune référence ?v=230', !read('public/index.html').includes('?v=230'));
-check('sw.js : cache botdev-v239', read('public/sw.js').includes("const CACHE = 'botdev-v239';"));
+check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'botdev-v241';"));
 
 console.log(failures === 0
   ? '\n✅ V231 — Séparateurs natifs pleine largeur : API V2 en place, /quiz migré, zéro trait texte, grammaire alignée sur le panneau de référence.'

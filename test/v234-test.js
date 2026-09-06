@@ -145,23 +145,33 @@ console.log('\n2️⃣  buildTicketPanel — le panneau de tickets en Components
   check('retourne un PAYLOAD Components V2 (plus d’EmbedBuilder)', isV2(payload));
   check('un seul composant au niveau du message : le conteneur', payload.components.length === 1);
   check('le titre i18n est rendu en « ## »', t.includes(`## ${P.title('Serveur de Hoxera')}`));
-  check('l’auteur est conservé', t.some((x) => x === "**Serveur de Hoxera · Centre d'assistance**"));
+  // v241 (demande utilisateur du 06/09) — l'auteur est retiré : il répétait le
+  // titre « 👑 Support | {serveur} » juste au-dessus.
+  check('l’auteur est RETIRÉ (v241)', !t.some((x) => x.includes("· Centre d'assistance")));
   check('la bienvenue i18n est conservée', t.some((x) => x.includes(P.welcome('Serveur de Hoxera'))));
   check('bienvenue et explication sont DEUX blocs distincts',
     t.includes(P.welcome('Serveur de Hoxera')) && t.some((x) => x.startsWith(P.desc.slice(0, 30))));
   check('un séparateur NATIF les divise (pas un trait texte)', v2div(payload) >= 1);
   check('aucun trait texte ━ dans tout le panneau', !v2json(payload).includes(ui.SEPARATOR));
+  // v241 (demande utilisateur) — puces « • » au lieu des flèches 🔴➡️.
   check('les règles restent dans leur propre bloc, sans trait dedans',
-    t.some((x) => x.includes('🔴➡️') && !x.includes(ui.SEPARATOR)));
+    t.some((x) => x.includes('•') && !x.includes(ui.SEPARATOR)));
   check('le message de patience est présent (espaceur retiré)',
     t.some((x) => x.includes('Merci de votre patience')));
-  check('la liste des types est présente avec le compteur de questions',
-    t.some((x) => x.includes('🗂️ Types disponibles') && x.includes('Candidature staff') && x.includes('❓ 1')));
+  // v241 (demande utilisateur) — la liste « 🗂️ Types disponibles » est retirée :
+  // les types sont déjà dans le menu déroulant juste en dessous.
+  check('la liste « 🗂️ Types disponibles » est RETIRÉE (v241)',
+    !v2json(payload).includes('Types disponibles'));
   check('la bannière est rendue en MediaGallery (type 12)', v2top(payload).includes(12));
   check('l’URL de la bannière générée par le site est conservée',
     v2json(payload).includes('/api/tickets/panel-banner/G234.png'));
+  // v241 (demande utilisateur) — « Sélectionnez une option pour commencer » est
+  // retiré : le menu déroulant est juste en dessous, la consigne était superflue.
   check('le pied de panneau est en texte discret « -# »',
-    t.some((x) => x.startsWith('-# Hoxera · Serveur de Hoxera · Sélectionne une option')));
+    t.some((x) => x === '-# Hoxera · Serveur de Hoxera'));
+  // v241 — décision GLOBALE (indépendante du texte du panneau) : l'heure n'est
+  // plus ajoutée, Discord affichant déjà celle du message.
+  check('le pied ne contient plus d’heure (v241)', !/\d{2}\/\d{2} \d{2}:\d{2}/.test(t.find((x) => x.startsWith('-# ')) || ''));
   check('les boutons sont DANS le conteneur (ActionRow type 1 imbriqué)',
     v2top(payload).includes(1) && v2json(payload).includes('bd-ticket:BOT'));
   check('plafond de 40 composants imbriqués respecté',
@@ -243,7 +253,7 @@ console.log('\n4️⃣  roleMenuPayload + sendRoleMenu — menu de rôles en V2'
   check('mode boutons : payload V2 avec les boutons DANS le conteneur',
     isV2(pb) && v2top(pb).includes(1) && v2json(pb).includes('bd-rmbtn:'));
   check('mode boutons : le texte d’aide correspond au mode',
-    v2texts(pb).some((x) => x.includes('Clique sur un bouton pour recevoir ou retirer le rôle')));
+    v2texts(pb).some((x) => x.includes('Cliquez sur un bouton pour recevoir ou retirer le rôle')));
 
   // sendRoleMenu édite un message DÉJÀ envoyé (avant la v234 : embed classique).
   check('édition d’un ancien message classique : content/embeds/attachments vidés',

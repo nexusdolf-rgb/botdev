@@ -96,7 +96,7 @@ function interactionFor() {
   console.log('✅ catégorie supprimée : erreur claire, aucun salon créé au mauvais endroit');
 
   assert(dashboard.includes('Catégorie de création du ticket'));
-  assert(dashboard.includes('Choisis une catégorie Discord pour le type'));
+  assert(dashboard.includes('Choisissez une catégorie Discord pour le type'));
   assert(dashboard.includes('Le salon privé sera créé directement ici'));
   assert(dashboard.includes('type.category') && dashboard.includes('missingCategory'));
   assert(fs.readFileSync(path.join(__dirname, '..', 'server/discord/panels.js'), 'utf8').includes('const typeCategory = chosen'));

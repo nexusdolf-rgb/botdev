@@ -158,7 +158,7 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
   check('giveaway buildPanel : message personnalisé', gwTexts(embCustom).includes('Custom message'));
   const embDefault = giveaway.buildPanel({ prize: 'Test', winners: 1, ends_at: Date.now() + 60000 }, {});
   check('giveaway buildPanel : couleur par défaut', embDefault.components[0].toJSON().accent_color === 0xFEE75C);
-  check('giveaway buildPanel : texte par défaut', gwTexts(embDefault).includes('Réagis avec 🎉'));
+  check('giveaway buildPanel : texte par défaut', gwTexts(embDefault).includes('Réagissez avec 🎉'));
 
   // suggest : buildPanel couleur + buildComponents 👎
   // v232 — les suggestions sont passées en Components V2 (séparateurs natifs

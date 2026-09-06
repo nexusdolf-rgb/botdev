@@ -150,7 +150,7 @@ async function main() {
   async function provisionHoxera() {
     const token = process.env.HOXERA_TOKEN;
     if (!token) {
-      console.log('[BotDev] ⚠️ HOXERA_TOKEN absent — Hoxera n\'est pas branché (ajoute la variable sur Render).');
+      console.log('[BotDev] ⚠️ HOXERA_TOKEN absent — Hoxera n\'est pas branché (ajoutez la variable sur Render).');
       return null;
     }
     const clientId = process.env.HOXERA_CLIENT_ID || process.env.DISCORD_CLIENT_ID || '';

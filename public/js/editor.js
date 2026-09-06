@@ -202,7 +202,7 @@ Editor.open = async (bot, command = null, existingCommands = []) => {
     const name = settings.querySelector('#c-name').value.trim();
     const trigger_type = triggerSelect.value;
     const trigger_value = settings.querySelector('#c-trigger-value').value.trim();
-    if (!name) return App.toast('Donne un nom à ta commande.', 'error');
+    if (!name) return App.toast('Donnez un nom à votre commande.', 'error');
     if (trigger_type === 'slash' && !/^[a-z0-9\-_]{1,32}$/.test(name.toLowerCase())) return App.toast('Nom slash invalide : minuscules, chiffres, tirets, underscores, 32 caractères max.', 'error');
     if (!trigger_value && trigger_type !== 'button') return App.toast('Précise la valeur du déclencheur.', 'error');
     const payload = {

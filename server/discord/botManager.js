@@ -78,7 +78,7 @@ async function loginBot(botId) {
     if (String(err.message || err).toLowerCase().includes('intent')) {
       try {
         return await connect(botId, record, [GatewayIntentBits.Guilds],
-          '⚠️ Intents à activer : dans le portail développeur Discord (onglet Bot), active « SERVER MEMBERS INTENT » et « MESSAGE CONTENT INTENT », puis redémarre ce bot. Sans eux, les commandes et événements ne fonctionnent pas.');
+          '⚠️ Intents à activer : dans le portail développeur Discord (onglet Bot), activez « SERVER MEMBERS INTENT » et « MESSAGE CONTENT INTENT », puis redémarrez ce bot. Sans eux, les commandes et événements ne fonctionnent pas.');
       } catch (err2) {
         throw err2;
       }
@@ -623,7 +623,7 @@ const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3'; // Serveur support officiel 
 
 function aboutText() {
   return [
-    '🤖 Optimus Prime — le bot qui anime ton serveur !',
+    '🤖 Optimus Prime — le bot qui anime votre serveur !',
     '🎫 Tickets · 📈 XP · 💰 Coins · 🕹️ Jeux · ❓ /help',
     `🌐 Dashboard : ${OFFICIAL_URL}`,
     `🆘 Support : ${SUPPORT_URL}`,

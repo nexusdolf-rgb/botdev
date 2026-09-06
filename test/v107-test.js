@@ -16,14 +16,18 @@ assert.ok(ev.includes("u.tag || u.username || 'un membre'"), 'repli de pseudo pr
 console.log('✅ membre partiel au départ : aucun crash possible');
 
 // 3. Panneau de bienvenue PREMIUM : tous les éléments pro
-for (const marker of ['setAuthor', 'Bienvenue sur ${member.guild.name}', '👥 Tu es le membre', '📅 Compte créé', '🎟️ Invité par', // v236 — la branche V2 porte la vignette via l'option `thumbnail:` du conteneur.
-  'thumbnail: !cfg.image && avatarUrl', 'setFooter', 'setTimestamp']) {
+for (const marker of ['setAuthor', 'Bienvenue sur ${member.guild.name}', '👥 Membre n°', '📅 Compte créé', '🎟️ Invité par', // v236 — la branche V2 porte la vignette via l'option `thumbnail:` du conteneur.
+  'thumbnail: !cfg.image && avatarUrl', 'setFooter']) {
   assert.ok(ev.includes(marker), `bienvenue premium : ${marker}`);
 }
-console.log('✅ panneau bienvenue : avatar, n° membre, âge du compte, recruteur, pied de page, horodatage');
+// v241 — l'horodatage est retiré de TOUS les panneaux (Discord affiche déjà
+// l'heure du message) : il ne doit plus rester de setTimestamp dans events.js.
+assert.ok(!ev.includes('setTimestamp'), 'v241 : plus de setTimestamp dans events.js');
+assert.ok(ev.includes('Hoxera · ${member.guild.name}'), 'v241 : pied signé « Hoxera · … »');
+console.log('✅ panneau bienvenue : avatar, n° membre, âge du compte, recruteur, pied signé, SANS horodatage');
 
 // 4. Panneau de départ assorti
-for (const marker of ["s'en va", '👥 Membres restants', '🕐 Était membre depuis']) {
+for (const marker of ["s'en va", '👥 Membres restants', '🕐 Membre pendant']) {
   assert.ok(ev.includes(marker), `départ premium : ${marker}`);
 }
 console.log('✅ panneau de départ assorti (membres restants + ancienneté)');

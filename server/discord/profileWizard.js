@@ -21,11 +21,11 @@ const wizards = new Map();
 const wKey = (botId, guildId, userId) => `${botId}:${guildId}:${userId}`;
 
 const STEPS = [
-  { key: 'name', emoji: '📛', label: 'Nom du bot', q: 'Comment veux-tu que le bot s\'appelle sur **ce serveur** ?' },
-  { key: 'bio', emoji: '📝', label: 'Bio du bot', q: 'Écris la **bio** affichée sur le profil du bot.' },
-  { key: 'color', emoji: '🎨', label: 'Couleur', q: 'Choisis la **couleur** du profil dans le sélecteur.' },
-  { key: 'avatar', emoji: '🖼️', label: 'Avatar', q: '**Ouvre ta galerie** :\n📱 **Option 1** : tape `/botprofile avatar` — l\'option « image » **ouvre ta galerie automatiquement**.\n📎 **Option 2** : touche le bouton ➕ de la barre de message et envoie la photo ici (récupérée automatiquement, 60 s).' },
-  { key: 'banner', emoji: '🎴', label: 'Bannière', q: '**Ouvre ta galerie** :\n📱 **Option 1** : tape `/botprofile banner` — l\'option « image » **ouvre ta galerie automatiquement**.\n📎 **Option 2** : touche le bouton ➕ et envoie la photo ici (récupérée automatiquement, 60 s).' },
+  { key: 'name', emoji: '📛', label: 'Nom du bot', q: 'Comment voulez-vous que le bot s\'appelle sur **ce serveur** ?' },
+  { key: 'bio', emoji: '📝', label: 'Bio du bot', q: 'Écrivez la **bio** affichée sur le profil du bot.' },
+  { key: 'color', emoji: '🎨', label: 'Couleur', q: 'Choisissez la **couleur** du profil dans le sélecteur.' },
+  { key: 'avatar', emoji: '🖼️', label: 'Avatar', q: '**Ouvrez votre galerie** :\n📱 **Option 1** : tapez `/botprofile avatar` — l\'option « image » **ouvre votre galerie automatiquement**.\n📎 **Option 2** : touchez le bouton ➕ de la barre de message et envoyez la photo ici (récupérée automatiquement, 60 s).' },
+  { key: 'banner', emoji: '🎴', label: 'Bannière', q: '**Ouvrez votre galerie** :\n📱 **Option 1** : tapez `/botprofile banner` — l\'option « image » **ouvre votre galerie automatiquement**.\n📎 **Option 2** : touchez le bouton ➕ et envoyez la photo ici (récupérée automatiquement, 60 s).' },
 ];
 
 const COLORS = [
@@ -94,7 +94,7 @@ function componentsFor(state) {
   if (step.key === 'color') {
     const sel = new StringSelectMenuBuilder()
       .setCustomId(`bpw-sel:${state.botId}:${uid}`)
-      .setPlaceholder('🎨 Choisis une couleur…')
+      .setPlaceholder('🎨 Choisissez une couleur…')
       .setMinValues(1).setMaxValues(1);
     for (const c of COLORS) {
       const opt = new StringSelectMenuOptionBuilder().setLabel(c.label.slice(0, 100)).setValue(c.hex);
@@ -242,13 +242,13 @@ async function handleProfileWizardInteraction(botId, interaction) {
   const uid = parts[2];
   if (!uid || uid !== interaction.user.id) return;
   const state = wizards.get(wKey(botId, interaction.guild.id, uid));
-  if (!state) return interaction.reply({ content: '⏰ Assistant expiré. Relance `/botprofile setup`.', ephemeral: true });
+  if (!state) return interaction.reply({ content: '⏰ Assistant expiré. Relancez `/botprofile setup`.', ephemeral: true });
   if (!canConfigureGuild(interaction.guild, interaction.member, interaction.user && interaction.user.id)) {
-    return interaction.reply({ content: '⛔ Ton accès de configuration a été retiré. Seul le propriétaire ou un membre ayant la permission Discord « Administrateur » peut continuer.', ephemeral: true });
+    return interaction.reply({ content: '⛔ Votre accès de configuration a été retiré. Seul le propriétaire ou un membre ayant la permission Discord « Administrateur » peut continuer.', ephemeral: true });
   }
   if (Date.now() - state.startedAt > WIZARD_TTL) {
     wizards.delete(wKey(botId, interaction.guild.id, uid));
-    return interaction.update({ content: '⏰ Assistant expiré. Relance `/botprofile setup`.', embeds: [], components: [] });
+    return interaction.update({ content: '⏰ Assistant expiré. Relancez `/botprofile setup`.', embeds: [], components: [] });
   }
   state.channel = interaction.channel || state.channel;
 
@@ -282,12 +282,12 @@ async function handleProfileWizardInteraction(botId, interaction) {
 
     if (mode === 'name') {
       if (val) state.values.name = val.slice(0, 80);
-      await showState('✅ Nom enregistré ! Clique sur « Suivant ➡️ » pour la bio.');
+      await showState('✅ Nom enregistré ! Cliquez sur « Suivant ➡️ » pour la bio.');
       return;
     }
     if (mode === 'bio') {
       if (val) state.values.bio = val.slice(0, 1900);
-      await showState('✅ Bio enregistrée ! Clique sur « Suivant ➡️ » pour la couleur.');
+      await showState('✅ Bio enregistrée ! Cliquez sur « Suivant ➡️ » pour la couleur.');
       return;
     }
     if (mode === 'hex') {
@@ -321,7 +321,7 @@ async function handleProfileWizardInteraction(botId, interaction) {
         // via ui.sectionize, qui s'arrêtait avant les bords arrondis).
         // `footer: false` : ces messages courts n'avaient pas de pied.
         ui.v2panel({
-          description: `📱 **Pour ouvrir ta galerie :**\n\n1️⃣ Tape \`/botprofile ${cmdName}\` puis touche l\'option « image » → **ta galerie s\'ouvre automatiquement** (la photo s\'appliquera directement à cette étape).\n\n2️⃣ Ou touche le **bouton ➕** de la barre de message, choisis ta photo et envoie-la ici — je la récupère automatiquement.`,
+          description: `📱 **Pour ouvrir votre galerie :**\n\n1️⃣ Tapez \`/botprofile ${cmdName}\` puis touchez l\'option « image » → **votre galerie s\'ouvre automatiquement** (la photo s\'appliquera directement à cette étape).\n\n2️⃣ Ou touchez le **bouton ➕** de la barre de message, choisissez votre photo et envoyez-la ici — je la récupère automatiquement.`,
           footer: false,
           ephemeral: true,
         }));

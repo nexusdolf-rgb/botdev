@@ -19,7 +19,7 @@ const ADMIN = PermissionsBitField.Flags.Administrator.toString();
 // 🧭 Aide
 // ------------------------------------------------------------
 const HELP_EVENTS = {
-  event: ['🎮 Événements & tournois', 'Crée des événements datés (tournois, events, soirées…). Les membres cliquent « Participer », le bot rappelle 24 h et 1 h avant.', '`/event create titre=… quand=…` · `/event list` · `/event delete`', '`/event create titre=Tournoi CODM quand=25/08 20:00` → message avec bouton 🎮 Participer'],
+  event: ['🎮 Événements & tournois', 'Créez des événements datés (tournois, events, soirées…). Les membres cliquent « Participer », le bot rappelle 24 h et 1 h avant.', '`/event create titre=… quand=…` · `/event list` · `/event delete`', '`/event create titre=Tournoi CODM quand=25/08 20:00` → message avec bouton 🎮 Participer'],
 };
 
 // ------------------------------------------------------------
@@ -155,7 +155,7 @@ async function handleInteraction(botId, entry, interaction) {
     // boutons sont DANS le conteneur.
     const payload = eventPanel(entry, ev.guild_id, { ...ev, participants }, eventButtons(ev));
     await interaction.update(payload).catch(async () => {
-      await interaction.reply({ content: joined ? '🎮 Tu es inscrit !' : '❌ Tu t\'es désinscrit.', ephemeral: true }).catch(() => {});
+      await interaction.reply({ content: joined ? '🎮 Vous êtes inscrit !' : '❌ Vous vous êtes désinscrit.', ephemeral: true }).catch(() => {});
     });
     return true;
   }
@@ -176,7 +176,7 @@ async function handleInteraction(botId, entry, interaction) {
     const quand = interaction.options.getString('quand') || '';
     const startsAt = parseWhen(quand, tz);
     if (!startsAt) return interaction.reply({ content: '❓ Date invalide. Format : `JJ/MM HH:MM` (ex : `25/08 20:00`), heure du serveur.', ephemeral: true }).catch(() => {});
-    if (startsAt < Date.now()) return interaction.reply({ content: '⏰ La date est déjà passée — choisis une date future.', ephemeral: true }).catch(() => {});
+    if (startsAt < Date.now()) return interaction.reply({ content: '⏰ La date est déjà passée — choisissez une date future.', ephemeral: true }).catch(() => {});
     const salonOpt = interaction.options.getChannel('salon');
     const channelId = salonOpt ? salonOpt.id : interaction.channel.id;
     const role = (interaction.options.getString('role') || 'none').trim();
@@ -211,7 +211,7 @@ async function handleInteraction(botId, entry, interaction) {
     const prompt = ui.v2panel({
       variant: 'danger',
       title: '🗑️ Supprimer un événement',
-      description: `Voici les événements du serveur — pour en supprimer un, note son **ID**.\n\n${lines}\n\n*(La suppression se fait depuis le dashboard → Événements, ou par un admin via l\'interface.)*`,
+      description: `Voici les événements du serveur — pour en supprimer un, notez son **ID**.\n\n${lines}\n\n*(La suppression se fait depuis le dashboard → Événements, ou par un admin via l\'interface.)*`,
       footer: `Hoxera · ${guild.name} · Événements`,
       ephemeral: true,
     });
