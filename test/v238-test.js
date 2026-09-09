@@ -334,9 +334,9 @@ async function main() {
     const root = path.join(__dirname, '..');
     const index = fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8');
     const sw = fs.readFileSync(path.join(root, 'public', 'sw.js'), 'utf8');
-    check('index.html : ?v=255 référencé 7 fois', (index.match(/\?v=255/g) || []).length === 7,
-      `trouvé ${(index.match(/\?v=255/g) || []).length}`);
-    check("sw.js : cache 'botdev-v255'", sw.includes("const CACHE = 'botdev-v255';"));
+    check('index.html : ?v=256 référencé 7 fois', (index.match(/\?v=256/g) || []).length === 7,
+      `trouvé ${(index.match(/\?v=256/g) || []).length}`);
+    check("sw.js : cache 'botdev-v256'", sw.includes("const CACHE = 'botdev-v256';"));
     check('index.html : plus aucun ?v=237', !/\?v=237/.test(index));
   }
 }

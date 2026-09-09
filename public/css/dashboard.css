@@ -6000,6 +6000,167 @@ html.hx-os-pc .dashboard-shell-host .dash-topbar-actions { width: auto; justify-
 html.hx-os-pc .dashboard-shell-host .dash-iconbtn { width: 36px; height: 36px; border-radius: 4px; box-shadow: none; }
 html.hx-os-pc .dashboard-shell-host .dash-bot-chip { min-height: 36px; padding: 3px 8px 3px 5px !important; border-radius: 4px !important; box-shadow: none; }
 
+/* --- v256 : sur OS de bureau, l'INTÉRIEUR des panneaux revient au visage v241 ---
+   De la v244 à la v248, la coquille PC était devenue un « espace de
+   configuration » : cartes aplaties en sections séparées d'un trait,
+   titres géants soulignés, saisies et boutons façon Discord sombre.
+   L'utilisateur veut le visage v241 : chaque composant ci-dessous
+   reprend EXACTEMENT ses valeurs v241 (variables de thème, donc aussi
+   justes en clair qu'en sombre), uniquement sous la classe hx-os-pc.
+   Le mobile garde le visage actuel. */
+html.hx-os-pc .dashboard-shell-host .dash-module-header {
+  display: flex; min-height: 0; padding: 0; border-bottom: 0;
+}
+html.hx-os-pc .dashboard-shell-host .dash-module-header::after {
+  content: ''; position: absolute; left: 0; bottom: -1px; width: 120px; height: 2px;
+  background: linear-gradient(90deg, var(--d-accent), var(--d-accent2), transparent);
+  border-radius: 2px;
+}
+html.hx-os-pc .dashboard-shell-host .dash-module-header .m-icon {
+  width: 46px; height: 46px; border-radius: 13px; display: flex; align-items: center;
+  justify-content: center; font-size: 22px;
+  background: linear-gradient(135deg, rgba(var(--d-accent-rgb), .22), rgba(139,92,246,.18));
+  border: 1px solid rgba(var(--d-accent-rgb), .3);
+}
+html.hx-os-pc .dashboard-shell-host .module-header-copy h1 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap; font-size: 22px; letter-spacing: -.3px;
+}
+html.hx-os-pc .dashboard-shell-host .module-header-copy .sub {
+  max-width: 760px; font-size: 12.5px;
+}
+html.hx-os-pc .dashboard-shell-host .module-header-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+html.hx-os-pc .dashboard-shell-host .module-scope {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 6px 10px;
+  border: 1px solid var(--d-border-soft);
+  border-radius: 999px;
+  color: #a7b5c9;
+  background: rgba(255,255,255,.035);
+  font-size: 10.5px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+html.hx-os-pc .dashboard-shell-host #dash-content > .dash-card[data-dash-card],
+html.hx-os-pc .dashboard-shell-host .ov-activity-grid > .dash-card[data-dash-card],
+html.hx-os-pc .dashboard-shell-host .am-control-card,
+html.hx-os-pc .dashboard-shell-host .adv-builder-card,
+html.hx-os-pc .dashboard-shell-host .custom-announcement-card {
+  background: var(--d-card); border: 1px solid var(--d-border); border-radius: 14px;
+  padding: 20px 22px; transition: .15s; margin-bottom: 0; background: var(--d-card) !important; box-shadow: none !important;
+}
+html.hx-os-pc .dashboard-shell-host #dash-content > .dash-card[data-dash-card]:hover,
+html.hx-os-pc .dashboard-shell-host .ov-activity-grid > .dash-card[data-dash-card]:hover {
+  border-color: #343850;
+}
+html.hx-os-pc .dashboard-shell-host .dash-card[data-dash-card] .card-head {
+  min-height: 34px;
+  padding-bottom: 11px;
+  margin-bottom: 15px;
+  border-bottom: 1px solid rgba(49,65,88,.62);
+}
+html.hx-os-pc .dashboard-shell-host .dash-card[data-dash-card] .card-heading h3,
+html.hx-os-pc .dashboard-shell-host .dash-card h3 {
+  font-size: 15px; display: flex; align-items: center; gap: 9px; margin-bottom: 4px;
+}
+html.hx-os-pc .dashboard-shell-host .dash-card[data-dash-card] .card-heading .desc,
+html.hx-os-pc .dashboard-shell-host .dash-card .desc {
+  color: var(--d-dim); font-size: 12.5px; line-height: 1.55; margin-bottom: 14px; margin-top: 0; max-width: none;
+}
+html.hx-os-pc .dashboard-shell-host .ov-intro {
+  align-items: stretch; flex-direction: column; gap: 13px; padding: 16px; border-radius: 17px; background: var(--d-card) !important; border: 1px solid var(--d-border) !important;
+}
+html.hx-os-pc .dashboard-shell-host .ov-checklist-card {
+  overflow: visible !important; background: var(--d-card) !important; border: 1px solid var(--d-border) !important;
+}
+html.hx-os-pc .dashboard-shell-host .ov-module-card,
+html.hx-os-pc .dashboard-shell-host .ov-feed-card,
+html.hx-os-pc .dashboard-shell-host .ov-brief-card {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 11px;
+  row-gap: 13px;
+  min-height: 157px;
+  padding: 17px 17px 15px !important;
+  cursor: pointer; background: var(--d-card) !important; border: 1px solid var(--d-border) !important; border-radius: 14px !important; padding: 20px 22px !important; margin-bottom: 0 !important;
+}
+html.hx-os-pc .dashboard-shell-host .ov-module-card h3,
+html.hx-os-pc .dashboard-shell-host .ov-feed-card h3,
+html.hx-os-pc .dashboard-shell-host .ov-brief-card h3 {
+  font-size: 15px; display: flex; align-items: center; gap: 9px; margin-bottom: 4px;
+}
+html.hx-os-pc .dashboard-shell-host .ov-module-card .desc,
+html.hx-os-pc .dashboard-shell-host .ov-feed-card .desc,
+html.hx-os-pc .dashboard-shell-host .ov-brief-card .desc {
+  color: var(--d-dim); font-size: 12.5px; line-height: 1.55; margin-bottom: 14px;
+}
+html.hx-os-pc .dashboard-shell-host .dash-label {
+  display: block; font-size: 11px; font-weight: 700; color: var(--d-dim);
+  text-transform: uppercase; letter-spacing: .5px; margin: 12px 0 5px;
+}
+html.hx-os-pc .dashboard-shell-host .dash-input,
+html.hx-os-pc .dashboard-shell-host .dash-select,
+html.hx-os-pc .dashboard-shell-host textarea.dash-input {
+  font-size: 16px; padding: 11px 12px; min-height: 0; border: 1px solid var(--d-border) !important; border-radius: 10px !important; background: var(--d-card2) !important; color: var(--d-text) !important; box-shadow: none !important;
+}
+html.hx-os-pc .dashboard-shell-host .dash-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 42px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23979db8' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"), linear-gradient(180deg, rgba(255,255,255,.035), transparent 65%);
+  background-repeat: no-repeat, no-repeat;
+  background-position: right 14px center, 0 0;
+  background-size: 14px, auto;
+}
+html.hx-os-pc .dashboard-shell-host .dash-input:focus,
+html.hx-os-pc .dashboard-shell-host .dash-select:focus,
+html.hx-os-pc .dashboard-shell-host textarea.dash-input:focus {
+  border-color: var(--d-accent); border-color: var(--d-accent) !important;
+}
+html.hx-os-pc .dashboard-shell-host .dash-btn {
+  display: inline-flex; align-items: center; gap: 7px; background: var(--d-card2);
+  color: var(--d-text); border: 1px solid var(--d-border); border-radius: 9px;
+  padding: 8px 15px; cursor: pointer; font-size: 13px; font-weight: 700; font-family: inherit;
+  transition: .12s; min-height: 0;
+}
+html.hx-os-pc .dashboard-shell-host .dash-btn:hover {
+  border-color: var(--d-accent); transform: translateY(-1px); transform: translateY(-1px) !important;
+}
+html.hx-os-pc .dashboard-shell-host .dash-btn-primary {
+  background: linear-gradient(135deg, var(--d-accent), var(--d-accent2));
+  border: none; color: #fff; box-shadow: 0 3px 14px rgba(var(--d-accent-rgb), .35);
+}
+html.hx-os-pc .dashboard-shell-host .dash-btn-primary:hover {
+  filter: brightness(1.1); box-shadow: 0 5px 18px rgba(var(--d-accent-rgb), .45);
+}
+html.hx-os-pc .dashboard-shell-host .dash-btn-danger {
+  background: rgba(237,66,69,.12); color: #ff8a8d; border-color: rgba(237,66,69,.4);
+}
+html.hx-os-pc .dashboard-shell-host .dash-stat {
+  background: var(--d-card); border: 1px solid var(--d-border); border-radius: 14px;
+  padding: 16px 18px; background: var(--d-card) !important;
+}
+html.hx-os-pc .dashboard-shell-host .dash-table th {
+  text-align: left; color: var(--d-dim); font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .6px; padding: 8px 10px;
+  border-bottom: 1px solid var(--d-border);
+}
+html.hx-os-pc .dashboard-shell-host .dash-table tbody tr:hover td {
+  background: rgba(var(--d-accent-rgb), .05);
+}
+
 /* --- Palier B : 481-900 px, rail d'icônes de 64 px --- */
 @media (min-width: 481px) and (max-width: 900px) {
   html.hx-os-pc .dashboard-shell-host .dash-side { width: 64px; flex: 0 0 64px; }
