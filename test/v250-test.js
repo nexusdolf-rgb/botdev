@@ -31,8 +31,8 @@ const js = racine('public/js/dashboard.js');
 const style = racine('public/css/style.css');
 
 const MQ = '(max-width: 800px), '
-  + '(max-width: 900px) and (hover: none) and (pointer: coarse), '
-  + '(hover: none) and (pointer: coarse) and (max-height: 800px)';
+  + '(max-width: 900px) and (hover: none) and (pointer: coarse) and (any-pointer: coarse), '
+  + '(hover: none) and (pointer: coarse) and (max-height: 800px) and (any-pointer: coarse)';
 
 console.log('— 1. La règle elle-même —');
 check('la constante JS porte la nouvelle règle', js.includes(`Dashboard.MQ_ECRAN_ETROIT = '${MQ}';`),
@@ -41,7 +41,7 @@ check('…elle commence par le plancher « tout le monde en mobile » sous 800 p
   MQ.startsWith('(max-width: 800px)'));
 check('…entre 800 et 900 px, la bascule exige un appareil TACTILE',
   MQ.includes('(max-width: 900px) and (hover: none) and (pointer: coarse)'));
-check('…une tablette tactile en paysage reste en mobile (hauteur ≤ 800 px)',
+check('…une tablette SANS souris en paysage reste en mobile (hauteur ≤ 800 px)',
   MQ.includes('(hover: none) and (pointer: coarse) and (max-height: 800px)'));
 check('le repli sans matchMedia suit le même plancher',
   js.includes('window.innerWidth <= 800;'));
@@ -95,9 +95,9 @@ check('…et le repli automatique des cartes passe par ecranEtroit',
 console.log('— 5. Version —');
 const index = racine('public/index.html');
 const sw = racine('public/sw.js');
-check('index.html : ?v=250 référencé 7 fois', (index.match(/\?v=250/g) || []).length === 7,
-  String((index.match(/\?v=250/g) || []).length));
-check('sw.js : cache « botdev-v250 »', sw.includes("const CACHE = 'botdev-v250';"));
+check('index.html : ?v=251 référencé 7 fois', (index.match(/\?v=251/g) || []).length === 7,
+  String((index.match(/\?v=251/g) || []).length));
+check('sw.js : cache « botdev-v251 »', sw.includes("const CACHE = 'botdev-v251';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v250 — ${ok} vérifications OK : un PC reste un PC, un mobile reste un mobile.`);
