@@ -29,8 +29,11 @@ const css = racine('public/css/dashboard.css');
 const index = racine('public/index.html');
 
 const deb = css.indexOf("/* --- v256 : sur OS de bureau, l'INTÉRIEUR des panneaux");
-const finBrut = css.indexOf("/* --- Palier B : 481-900 px, rail d'icônes de 64 px --- */");
-const fin = finBrut > 0 ? finBrut : css.length;   // le palier B a été retiré en v257
+// Le bloc v256 s'arrête avant le bloc suivant (palier B retiré en v257,
+// bloc v258 ajouté en fin de fichier) : on coupe au premier des deux.
+const finB = css.indexOf("/* --- Palier B : 481-900 px, rail d'icônes de 64 px --- */");
+const finV258 = css.indexOf('/* --- v258');
+const fin = Math.min(finB > 0 ? finB : Infinity, finV258 > 0 ? finV258 : Infinity, css.length);
 check('le bloc v256 existe', deb > 0 && deb < fin);
 const zone = css.slice(deb, fin);
 
@@ -68,9 +71,9 @@ check('la classe hx-os-pc vient toujours du système (v253)',
   index.includes("classList.add('hx-os-pc')"));
 
 console.log('— 5. Version —');
-check('index.html : ?v=257 référencé 7 fois', (index.match(/\?v=257/g) || []).length === 7,
-  String((index.match(/\?v=257/g) || []).length));
-check('sw.js : cache « botdev-v257 »', racine('public/sw.js').includes("const CACHE = 'botdev-v257';"));
+check('index.html : ?v=258 référencé 7 fois', (index.match(/\?v=258/g) || []).length === 7,
+  String((index.match(/\?v=258/g) || []).length));
+check('sw.js : cache « botdev-v258 »', racine('public/sw.js').includes("const CACHE = 'botdev-v258';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v256 — ${ok} vérifications OK : l'intérieur des panneaux PC est redevenu celui de la v241.`);

@@ -6162,3 +6162,30 @@ html.hx-os-pc .dashboard-shell-host .dash-table th {
 html.hx-os-pc .dashboard-shell-host .dash-table tbody tr:hover td {
   background: rgba(var(--d-accent-rgb), .05);
 }
+
+/* --- v258 (aperçu) : barre d'actions et badge compte sur PC ---
+   Le bloc mobile masquait la barre d'actions en !important : sur un PC
+   tombant dans ses clauses, le thème 🌓, la couleur 🎨, la cloche, le
+   rafraîchissement et le badge du bot disparaissaient. Sur OS de bureau,
+   on la rend — et le badge du compte connecté (photo, pseudo, bouton de
+   déconnexion) y prend place, comme dans le souvenir de la v241. */
+html.hx-os-pc .dashboard-shell-host .dash-topbar-actions {
+  display: flex !important; width: auto; flex-wrap: wrap; justify-content: flex-end;
+}
+.dash-account-chip {
+  display: flex; align-items: center; gap: 8px; padding: 4px 6px;
+  border: 1px solid var(--d-border); border-radius: 10px; background: var(--d-card);
+}
+.dash-account-chip img,
+.dash-account-chip .acc-fallback { width: 28px; height: 28px; flex: 0 0 28px; border-radius: 50%; object-fit: cover; }
+.dash-account-chip .acc-fallback {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--d-card2); color: var(--d-text); font-weight: 800; font-size: 13px;
+}
+.dash-account-chip .chip-txt { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.dash-account-chip .chip-txt b {
+  font-size: 12.5px; color: var(--d-text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;
+}
+.dash-account-chip .chip-txt small { font-size: 10.5px; color: var(--d-dim); }
+.dash-account-chip .dash-iconbtn { width: 30px; height: 30px; }

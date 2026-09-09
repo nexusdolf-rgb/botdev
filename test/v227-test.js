@@ -89,8 +89,8 @@ const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
   // Versionnage front cohérent (v227)
   const indexHtml = read('public/index.html');
   const swSource = read('public/sw.js');
-  check('index.html : 7 références ?v=257', (indexHtml.match(/\?v=257/g) || []).length === 7);
-  check('sw.js : cache v227', swSource.includes("const CACHE = 'botdev-v257';"));
+  check('index.html : 7 références ?v=258', (indexHtml.match(/\?v=258/g) || []).length === 7);
+  check('sw.js : cache v227', swSource.includes("const CACHE = 'botdev-v258';"));
 
   console.log(failures === 0 ? '\n✅ V227 — Identité par serveur isolée, jamais globale ; dashboard cohérent. 🎉' : `\n❌ ${failures} vérification(s) en échec`);
   process.exit(failures === 0 ? 0 : 1);

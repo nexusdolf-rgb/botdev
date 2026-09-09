@@ -1033,6 +1033,11 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
   const needsInvite = discordGuilds.some((g) => g.canManage && !g.hasBot);
   const all = [...Dashboard.MODULES, ...Dashboard.BOT_MODULES];
   const mod = all.find(([id]) => id === Dashboard.state.module) || ['', '📊', 'Vue d\'ensemble'];
+  const acct = App.state.user || {};
+  const acctName = acct.discord_username || acct.email || 'Compte Discord';
+  const acctAvatar = acct.discord_avatar
+    ? `<img src="/api/img?u=${encodeURIComponent(`https://cdn.discordapp.com/avatars/${acct.discord_id}/${acct.discord_avatar}.png?size=64`)}" alt="" />`
+    : `<span class="acc-fallback">${App.escapeHtml(String(acctName).slice(0, 1).toUpperCase())}</span>`;
   topbar.innerHTML = `
     <div class="dash-mobile-bar" aria-label="Navigation mobile">
       <button class="dash-mobile-navbtn" id="d-mobile-menu" type="button" aria-label="Ouvrir le menu principal" aria-expanded="false">☰</button>
@@ -1067,8 +1072,23 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
           <span class="${bot.online ? 'on' : 'off'}">${bot.online ? '● En ligne' : '● Hors ligne'}</span>
         </div>
       </div>
+      <div class="dash-account-chip" title="Compte connecté au tableau de bord">
+        ${acctAvatar}
+        <div class="chip-txt"><b>${App.escapeHtml(acctName)}</b><small>Compte Discord</small></div>
+        <button class="dash-iconbtn" id="d-logout" data-tip="Déconnexion" aria-label="Déconnexion">⏻</button>
+      </div>
     </div>
   `;
+  // 🖥️ v258 : badge du compte connecté (photo, pseudo, déconnexion) dans la
+  // barre d'actions — sur PC elle reste visible ; sur mobile le tiroir garde
+  // son propre bloc compte.
+  const logoutBtn = topbar.querySelector('#d-logout');
+  if (logoutBtn) logoutBtn.onclick = async () => {
+    await App.api('/auth/logout', { method: 'POST' }).catch(() => {});
+    location.hash = '#/';
+    location.reload();
+  };
+
   // 📱 Sur mobile la sidebar est masquée : le sélecteur de serveur vit ici
   const mobilePick = Dashboard.serverPicker();
   mobilePick.classList.add('topbar-pick');
