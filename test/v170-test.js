@@ -16,7 +16,12 @@ const sw = read('sw.js');
 const MQ = '(hover: none) and (pointer: coarse) and (max-height: 800px)';
 const nb = (css.match(new RegExp(MQ.replace(/[()]/g, '\\$&'), 'g')) || []).length;
 assert(nb >= 20, `la condition tactile-paysage doit étendre les 20+ blocs mobiles (trouvé : ${nb})`);
-assert(dashJs.includes("'(max-width: 900px), " + MQ + "'"), 'positionTopbarPopover doit reconnaître le tactile-paysage');
+// v250 : le popover ne recopie plus la requête en dur, il lit la constante
+// Dashboard.MQ_ECRAN_ETROIT — qui doit donc contenir la clause tactile-paysage.
+assert(dashJs.includes('matchMedia(Dashboard.MQ_ECRAN_ETROIT)'),
+  'positionTopbarPopover doit lire Dashboard.MQ_ECRAN_ETROIT');
+assert(dashJs.includes(`Dashboard.MQ_ECRAN_ETROIT = '(max-width: 800px), (max-width: 900px) and (hover: none) and (pointer: coarse), ${MQ}'`),
+  'la constante doit porter le tactile-paysage');
 
 // ---------- 2. Indicateur « la suite continue en dessous » ----------
 assert(dashJs.includes('Dashboard.mountScrollHint ='), 'mountScrollHint manquant');

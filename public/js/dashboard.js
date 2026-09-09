@@ -1013,8 +1013,8 @@ Dashboard.positionTopbarPopover = (popover, button) => {
   // 📱 Interface compacte : écran étroit OU appareil tactile en paysage
   // (téléphone tourné : la sidebar desktop y coupe la liste des modules)
   const isMobile = window.matchMedia
-    ? window.matchMedia('(max-width: 900px), (hover: none) and (pointer: coarse) and (max-height: 800px)').matches
-    : window.innerWidth <= 900;
+    ? window.matchMedia(Dashboard.MQ_ECRAN_ETROIT).matches
+    : window.innerWidth <= 800;
   if (isMobile) {
     ['top', 'right', 'bottom', 'left'].forEach((property) => popover.style.removeProperty(property));
     return;
@@ -1566,7 +1566,7 @@ Dashboard.HAUTEUR_MAX_PREMIERE = 1500;
 // `.dash-side { display: none }`) : la mise en page et le repli basculent donc
 // au même moment, et on ne peut pas se retrouver avec une disposition de
 // bureau mais des cartes pliées, ni l'inverse.
-Dashboard.MQ_ECRAN_ETROIT = '(max-width: 900px), (hover: none) and (pointer: coarse) and (max-height: 800px)';
+Dashboard.MQ_ECRAN_ETROIT = '(max-width: 800px), (max-width: 900px) and (hover: none) and (pointer: coarse), (hover: none) and (pointer: coarse) and (max-height: 800px)';
 
 Dashboard.ecranEtroit = () => {
   // matchMedia peut manquer (environnements de test, très vieux navigateurs) :
