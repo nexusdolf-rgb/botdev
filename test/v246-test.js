@@ -149,18 +149,18 @@ const onglet = (module, hauteurs) => {
   // v250 : la bascule ne doit plus dépendre de la SEULE largeur. Un PC dont la
   // fenêtre est étroite (ou dont l'échelle d'affichage Windows réduit la largeur
   // CSS) doit rester en disposition PC ; seul un appareil tactile passe en
-  // mobile entre 800 et 900 px. On vérifie donc que la constante JS est bien la
+  // mobile entre 700 et 900 px. On vérifie donc que la constante JS est bien la
   // chaîne réellement écrite dans le CSS, ET qu'elle porte la condition tactile.
   const cssShell = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'dashboard.css'), 'utf8');
   check('la requête média est celle du CSS (même bascule que .dash-side)',
     cssShell.includes('@media ' + Dashboard.MQ_ECRAN_ETROIT), Dashboard.MQ_ECRAN_ETROIT);
-  check('…entre 800 et 900 px, seul un appareil TACTILE passe en mobile',
+  check('…entre 700 et 900 px, seul un appareil TACTILE passe en mobile',
     /\(max-width: 900px\) and \(hover: none\) and \(pointer: coarse\)/.test(Dashboard.MQ_ECRAN_ETROIT));
   check('…plus aucune bascule à 900 px sur la seule largeur (sinon un PC étroit redevient mobile)',
     !/\(max-width: ?900px\),/.test(Dashboard.MQ_ECRAN_ETROIT)
     && !/@media \(max-width: ?900px\), /.test(cssShell));
-  check('…sous 800 px tout le monde reste en mobile (fenêtre minuscule comprise)',
-    Dashboard.MQ_ECRAN_ETROIT.startsWith('(max-width: 800px)'));
+  check('…sous 700 px tout le monde reste en mobile (fenêtre minuscule comprise)',
+    Dashboard.MQ_ECRAN_ETROIT.startsWith('(max-width: 700px)'));
   check('…et elle est bien celle réellement passée à matchMedia',
     (ecranEtroitSimule = true, Dashboard.ecranEtroit(), derniereRequete === Dashboard.MQ_ECRAN_ETROIT), derniereRequete);
   check('écran étroit détecté', Dashboard.ecranEtroit() === true);
@@ -386,11 +386,11 @@ const onglet = (module, hauteurs) => {
   const indexHtml = racine('public/index.html');
   const swSource = racine('public/sw.js');
   const versions = [...indexHtml.matchAll(/\?v=(\d+)/g)].map((m) => `?v=${m[1]}`);
-  check('index.html : ?v=251 référencé 7 fois', versions.length === 7 && versions.every((v) => v === '?v=251'),
+  check('index.html : ?v=252 référencé 7 fois', versions.length === 7 && versions.every((v) => v === '?v=252'),
     `${versions.length} refs : ${[...new Set(versions)].join(',')}`);
-  check('sw.js : cache « botdev-v251 »', swSource.includes("const CACHE = 'botdev-v251';"));
+  check('sw.js : cache « botdev-v252 »', swSource.includes("const CACHE = 'botdev-v252';"));
   check('index.html et sw.js portent la même version',
-    swSource.includes("botdev-v251") && versions.every((v) => v === '?v=251'));
+    swSource.includes("botdev-v252") && versions.every((v) => v === '?v=252'));
 
   console.log('');
   if (echecs) { console.log(`❌ v246 — ${echecs} échec(s)`); process.exit(1); }

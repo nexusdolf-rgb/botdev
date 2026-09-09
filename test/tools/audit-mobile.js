@@ -624,9 +624,15 @@ function repondre(url) {
   const totPliables = resultats.reduce((a, r) => a + (r.nbPliables || 0), 0);
   const totPliees = resultats.reduce((a, r) => a + (r.nbPliees || 0), 0);
   if (dispo) {
-    const sideOk = attenduMobile ? (dispo.side === 'none') : (dispo.side === 'flex' && dispo.sideW > 200);
+    // v252 : entre 701 et 900 px avec un pointeur fin, la disposition PC garde
+    // une barre latérale EN RAIL D'ICÔNES (64 px) — c'est voulu, pas un repli
+    // mobile. Le banc doit l'accepter comme disposition PC légitime.
+    const railEtroit = !attenduMobile && !TACTILE && LARGEUR >= 701 && LARGEUR <= 900;
+    const sideOk = attenduMobile ? (dispo.side === 'none')
+      : railEtroit ? (dispo.side === 'flex' && dispo.sideW === 64)
+      : (dispo.side === 'flex' && dispo.sideW > 200);
     const shellOk = dispo.shell === 'flex';
-    console.log(`  disposition : shell ${dispo.shell}${shellOk ? ' ✅' : ' ❌'} | sidebar ${dispo.side} ${dispo.sideW}px${sideOk ? ' ✅' : ' ❌ attendu ' + (attenduMobile ? 'none' : 'flex >200px')} | nav basse ${dispo.bnav} | contenu ${dispo.main}px`);
+    console.log(`  disposition : shell ${dispo.shell}${shellOk ? ' ✅' : ' ❌'} | sidebar ${dispo.side} ${dispo.sideW}px${sideOk ? ' ✅' : ' ❌ attendu ' + (attenduMobile ? 'none' : railEtroit ? 'flex 64px (rail)' : 'flex >200px')} | nav basse ${dispo.bnav} | contenu ${dispo.main}px`);
     if (!shellOk || !sideOk) process.exitCode = 1;
   } else {
     console.log('  disposition : ❌ non mesurée (aucun module rendu)');

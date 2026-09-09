@@ -7,7 +7,7 @@
 // réduisent. Un PC tout à fait normal pouvait donc tomber sous les 900 px et
 // hériter de la mise en page téléphone.
 //
-// Remède : entre 800 et 900 px, seule la nature de l'appareil décide —
+// Remède : entre 700 et 900 px, seule la nature de l'appareil décide —
 // tactile = mobile, souris = PC. Sous 800 px tout le monde reste en mobile
 // (une fenêtre de 600 px n'a pas la place d'une barre latérale). Au-delà de
 // 900 px, rien ne change.
@@ -30,21 +30,21 @@ const css = racine('public/css/dashboard.css');
 const js = racine('public/js/dashboard.js');
 const style = racine('public/css/style.css');
 
-const MQ = '(max-width: 800px), '
+const MQ = '(max-width: 700px), '
   + '(max-width: 900px) and (hover: none) and (pointer: coarse) and (any-pointer: coarse), '
   + '(hover: none) and (pointer: coarse) and (max-height: 800px) and (any-pointer: coarse)';
 
 console.log('— 1. La règle elle-même —');
 check('la constante JS porte la nouvelle règle', js.includes(`Dashboard.MQ_ECRAN_ETROIT = '${MQ}';`),
   (js.match(/Dashboard\.MQ_ECRAN_ETROIT = '[^']*/) || [])[0]);
-check('…elle commence par le plancher « tout le monde en mobile » sous 800 px',
-  MQ.startsWith('(max-width: 800px)'));
-check('…entre 800 et 900 px, la bascule exige un appareil TACTILE',
+check('…elle commence par le plancher « tout le monde en mobile » sous 700 px',
+  MQ.startsWith('(max-width: 700px)'));
+check('…entre 700 et 900 px, la bascule exige un appareil TACTILE',
   MQ.includes('(max-width: 900px) and (hover: none) and (pointer: coarse)'));
 check('…une tablette SANS souris en paysage reste en mobile (hauteur ≤ 800 px)',
   MQ.includes('(hover: none) and (pointer: coarse) and (max-height: 800px)'));
-check('le repli sans matchMedia suit le même plancher',
-  js.includes('window.innerWidth <= 800;'));
+check('le repli sans matchMedia suit le même plancher (700 px)',
+  js.includes('window.innerWidth <= 700;'));
 
 console.log('— 2. Le CSS applique exactement la même règle —');
 const nb = (css.match(new RegExp(MQ.replace(/[().,]/g, (c) => '\\' + c), 'g')) || []).length;
@@ -60,7 +60,7 @@ check('la règle de densité à 900 px (champs empilés) est conservée',
   /@media \(max-width: 900px\) \{/.test(css));
 
 console.log("— 3. Le mobile n'a pas bougé —");
-// Un téléphone (360-430 px) et une tablette (768 px) sont sous 800 px ou
+// Un téléphone (360-430 px) et une tablette (768 px) sont sous 700 px ou
 // tactiles : les trois clauses les couvrent exactement comme avant.
 check('un téléphone tactile ≤ 800 px tombe dans la première clause', true);
 check('les pages PUBLIQUES gardent leur seuil largeur (non touchées par ce correctif)',
@@ -95,9 +95,9 @@ check('…et le repli automatique des cartes passe par ecranEtroit',
 console.log('— 5. Version —');
 const index = racine('public/index.html');
 const sw = racine('public/sw.js');
-check('index.html : ?v=251 référencé 7 fois', (index.match(/\?v=251/g) || []).length === 7,
-  String((index.match(/\?v=251/g) || []).length));
-check('sw.js : cache « botdev-v251 »', sw.includes("const CACHE = 'botdev-v251';"));
+check('index.html : ?v=252 référencé 7 fois', (index.match(/\?v=252/g) || []).length === 7,
+  String((index.match(/\?v=252/g) || []).length));
+check('sw.js : cache « botdev-v252 »', sw.includes("const CACHE = 'botdev-v252';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v250 — ${ok} vérifications OK : un PC reste un PC, un mobile reste un mobile.`);

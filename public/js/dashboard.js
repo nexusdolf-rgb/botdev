@@ -1014,7 +1014,7 @@ Dashboard.positionTopbarPopover = (popover, button) => {
   // (téléphone tourné : la sidebar desktop y coupe la liste des modules)
   const isMobile = window.matchMedia
     ? window.matchMedia(Dashboard.MQ_ECRAN_ETROIT).matches
-    : window.innerWidth <= 800;
+    : window.innerWidth <= 700;
   if (isMobile) {
     ['top', 'right', 'bottom', 'left'].forEach((property) => popover.style.removeProperty(property));
     return;
@@ -1566,7 +1566,7 @@ Dashboard.HAUTEUR_MAX_PREMIERE = 1500;
 // `.dash-side { display: none }`) : la mise en page et le repli basculent donc
 // au même moment, et on ne peut pas se retrouver avec une disposition de
 // bureau mais des cartes pliées, ni l'inverse.
-Dashboard.MQ_ECRAN_ETROIT = '(max-width: 800px), (max-width: 900px) and (hover: none) and (pointer: coarse) and (any-pointer: coarse), (hover: none) and (pointer: coarse) and (max-height: 800px) and (any-pointer: coarse)';
+Dashboard.MQ_ECRAN_ETROIT = '(max-width: 700px), (max-width: 900px) and (hover: none) and (pointer: coarse) and (any-pointer: coarse), (hover: none) and (pointer: coarse) and (max-height: 800px) and (any-pointer: coarse)';
 
 Dashboard.ecranEtroit = () => {
   // matchMedia peut manquer (environnements de test, très vieux navigateurs) :

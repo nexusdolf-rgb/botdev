@@ -20,7 +20,7 @@ assert(nb >= 20, `la condition tactile-paysage doit étendre les 20+ blocs mobil
 // Dashboard.MQ_ECRAN_ETROIT — qui doit donc contenir la clause tactile-paysage.
 assert(dashJs.includes('matchMedia(Dashboard.MQ_ECRAN_ETROIT)'),
   'positionTopbarPopover doit lire Dashboard.MQ_ECRAN_ETROIT');
-assert(dashJs.includes(`Dashboard.MQ_ECRAN_ETROIT = '(max-width: 800px), (max-width: 900px) and (hover: none) and (pointer: coarse) and (any-pointer: coarse), ${MQ} and (any-pointer: coarse)'`),
+assert(dashJs.includes(`Dashboard.MQ_ECRAN_ETROIT = '(max-width: 700px), (max-width: 900px) and (hover: none) and (pointer: coarse) and (any-pointer: coarse), ${MQ} and (any-pointer: coarse)'`),
   'la constante doit porter le tactile-paysage');
 
 // ---------- 2. Indicateur « la suite continue en dessous » ----------
