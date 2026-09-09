@@ -5929,6 +5929,8 @@ html.hx-light .card-fold:hover { color: #b3543d; }
   /* Le fil d'ariane du haut, masqué par le bloc mobile à toutes largeurs. */
   html.hx-os-pc .dashboard-shell-host .dash-crumb { display: flex; }
   html.hx-os-pc .dashboard-shell-host .dash-side-brand { display: flex; }
+  html.hx-os-pc .dashboard-shell-host .dash-side-brand-copy { display: flex; }
+  html.hx-os-pc .dashboard-shell-host .dash-server-card .srv-txt { display: flex; }
   html.hx-os-pc .dashboard-shell-host .dash-side-section { display: block; }
   html.hx-os-pc .dashboard-shell-host .dash-side-foot { display: block; }
   /* Le chrome exclusivement mobile n'existe pas sur OS de bureau. */
@@ -5948,7 +5950,7 @@ html.hx-light .card-fold:hover { color: #b3543d; }
    clair/sombre actuel, qui les gère correctement (la première version de
    ce bloc recopiait la palette sombre de la v241 et cassait le thème
    clair : texte sombre sur fond sombre). */
-html.hx-os-pc .dashboard-shell-host .dash-side { width: 278px; padding: 20px 0 12px; }
+html.hx-os-pc .dashboard-shell-host .dash-side { width: 278px; flex: 0 0 auto; padding: 20px 0 12px; }
 @media (max-width: 1200px) {
   html.hx-os-pc .dashboard-shell-host .dash-side { width: 258px; }
 }
@@ -6159,20 +6161,4 @@ html.hx-os-pc .dashboard-shell-host .dash-table th {
 }
 html.hx-os-pc .dashboard-shell-host .dash-table tbody tr:hover td {
   background: rgba(var(--d-accent-rgb), .05);
-}
-
-/* --- Palier B : 481-900 px, rail d'icônes de 64 px --- */
-@media (min-width: 481px) and (max-width: 900px) {
-  html.hx-os-pc .dashboard-shell-host .dash-side { width: 64px; flex: 0 0 64px; }
-  html.hx-os-pc .dashboard-shell-host .dash-side-item {
-    font-size: 0; gap: 0; justify-content: center;
-    padding: 6px 0; margin: 2px 7px; width: calc(100% - 14px);
-  }
-  html.hx-os-pc .dashboard-shell-host .dash-side-item .ico { font-size: 16px; }
-  html.hx-os-pc .dashboard-shell-host .dash-side-brand { justify-content: center; margin: 6px 0 10px; padding: 0; border-bottom: none; }
-  html.hx-os-pc .dashboard-shell-host .dash-server-card { justify-content: center; padding: 6px 0; margin: 0 6px 8px; }
-  html.hx-os-pc .dashboard-shell-host .dash-side-brand-copy,
-  html.hx-os-pc .dashboard-shell-host .dash-side-section,
-  html.hx-os-pc .dashboard-shell-host .dash-server-card .srv-txt,
-  html.hx-os-pc .dashboard-shell-host .dash-side-foot { display: none !important; }
 }

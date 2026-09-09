@@ -652,12 +652,12 @@ function repondre(url) {
     // Un rail de 64 px est la disposition PC légitime entre 481 et 900 px,
     // y compris sur PC tactile (v254) : seul le rendu Android attendu mobile
     // est exclu, via attenduMobile.
-    const railEtroit = !attenduMobile && LARGEUR >= 481 && LARGEUR <= 900;
+    // v257 : plus de rail sur PC — un OS de bureau montre la barre latérale
+    // pleine (textes inclus) à toutes les largeurs ≥ 481 px, comme la v241.
     const sideOk = attenduMobile ? (dispo.side === 'none')
-      : railEtroit ? (dispo.side === 'flex' && dispo.sideW === 64)
       : (dispo.side === 'flex' && dispo.sideW > 200);
     const shellOk = dispo.shell === 'flex';
-    console.log(`  disposition : shell ${dispo.shell}${shellOk ? ' ✅' : ' ❌'} | sidebar ${dispo.side} ${dispo.sideW}px${sideOk ? ' ✅' : ' ❌ attendu ' + (attenduMobile ? 'none' : railEtroit ? 'flex 64px (rail)' : 'flex >200px')} | nav basse ${dispo.bnav} | contenu ${dispo.main}px`);
+    console.log(`  disposition : shell ${dispo.shell}${shellOk ? ' ✅' : ' ❌'} | sidebar ${dispo.side} ${dispo.sideW}px${sideOk ? ' ✅' : ' ❌ attendu ' + (attenduMobile ? 'none' : 'flex >200px')} | nav basse ${dispo.bnav} | contenu ${dispo.main}px`);
     if (!shellOk || !sideOk) process.exitCode = 1;
   } else {
     console.log('  disposition : ❌ non mesurée (aucun module rendu)');

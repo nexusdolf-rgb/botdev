@@ -53,15 +53,18 @@ check('…hamburger, barre basse, tiroirs, fond noir ET indice de défilement ma
 check('…fil d\'ariane du haut rendu (le bloc mobile le cache à toutes largeurs)',
   corpsA.includes('.dash-crumb { display: flex; }'));
 
-console.log('— 3. Palier B : rail d\'icônes 481-900 px —');
-check('le palier B existe', css.includes('@media (min-width: 481px) and (max-width: 900px) {'));
-const zoneB = css.slice(css.indexOf('@media (min-width: 481px) and (max-width: 900px) {'));
-const corpsB = zoneB.slice(0, zoneB.indexOf('\n}'));
-check('…rail de 64 px, icônes seules', corpsB.includes('width: 64px; flex: 0 0 64px;') && corpsB.includes('font-size: 0;'));
+console.log('— 3. v257 : plus de rail, la sidebar pleine à toutes les largeurs PC —');
+check('le palier rail préfixé hx-os-pc a disparu',
+  !css.includes("html.hx-os-pc .dashboard-shell-host .dash-side { width: 64px"));
+check('…la sidebar PC reprend sa base flex face au vieux bloc rail v252',
+  css.includes('html.hx-os-pc .dashboard-shell-host .dash-side { width: 278px; flex: 0 0 auto;'));
+check('…textes de la marque et du carton serveur rendus au palier A',
+  css.includes('html.hx-os-pc .dashboard-shell-host .dash-side-brand-copy { display: flex; }')
+  && css.includes('html.hx-os-pc .dashboard-shell-host .dash-server-card .srv-txt { display: flex; }'));
 
 console.log('— 4. Au-delà de 900 px : le visage v241 restauré (v255) —');
 check('la barre latérale reprend ses largeurs v241 (278 px, 258 sous 1200 px)',
-  css.includes('html.hx-os-pc .dashboard-shell-host .dash-side { width: 278px; padding: 20px 0 12px; }')
+  css.includes('html.hx-os-pc .dashboard-shell-host .dash-side { width: 278px; flex: 0 0 auto; padding: 20px 0 12px; }')
   && css.includes('html.hx-os-pc .dashboard-shell-host .dash-side { width: 258px; }'));
 check('…sections, pied ET marque centrée rendus (le bloc mobile les cachait à toutes largeurs)',
   corpsA.includes('.dash-side-section { display: block; }')
@@ -75,8 +78,8 @@ check('drapeau --pc-tactile : user-agent Windows + pointeur tactile',
   banc.includes("'--pc-tactile'") && banc.includes('Windows NT 10.0; Win64; x64'));
 check('…le pointeur tactile est activé sans passer en mode mobile',
   banc.includes('hasTouch: TACTILE || PCTACTILE') && banc.includes('isMobile: TACTILE,'));
-check('…un rail de 64 px y est accepté comme disposition PC',
-  banc.includes('const railEtroit = !attenduMobile && LARGEUR >= 481 && LARGEUR <= 900;'));
+check("…le banc n'accepte plus de rail : barre pleine > 200 px exigée sur PC",
+  !banc.includes('railEtroit') && banc.includes("(dispo.side === 'flex' && dispo.sideW > 200)"));
 
 console.log('— 6. Les garde-fous des v250-v253 restent en place —');
 check('la classe hx-os-pc est toujours posée d\'après le système',
@@ -85,9 +88,9 @@ check('ecranEtroit garde son verrou « OS de bureau »',
   racine('public/js/dashboard.js').includes("classList.contains('hx-os-pc')"));
 
 console.log('— 7. Version —');
-check('index.html : ?v=256 référencé 7 fois', (index.match(/\?v=256/g) || []).length === 7,
-  String((index.match(/\?v=256/g) || []).length));
-check('sw.js : cache « botdev-v256 »', racine('public/sw.js').includes("const CACHE = 'botdev-v256';"));
+check('index.html : ?v=257 référencé 7 fois', (index.match(/\?v=257/g) || []).length === 7,
+  String((index.match(/\?v=257/g) || []).length));
+check('sw.js : cache « botdev-v257 »', racine('public/sw.js').includes("const CACHE = 'botdev-v257';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v254 — ${ok} vérifications OK : plus aucune largeur où un PC bascule en mobile.`);

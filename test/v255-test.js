@@ -35,13 +35,14 @@ const js = racine('public/js/dashboard.js');
 const index = racine('public/index.html');
 
 const deb = css.indexOf('/* --- v255 : sur OS de bureau, le VISAGE v241');
-const fin = css.indexOf("/* --- Palier B : 481-900 px, rail d'icônes de 64 px --- */");
-check('le bloc de restauration v241 existe, placé avant le rail', deb > 0 && deb < fin);
+const finBrut = css.indexOf("/* --- Palier B : 481-900 px, rail d'icônes de 64 px --- */");
+const fin = finBrut > 0 ? finBrut : css.length;   // palier B retiré en v257
+check('le bloc de restauration v241 existe', deb > 0 && deb < fin);
 const restaure = css.slice(deb, fin);
 
 console.log('— 1. La géométrie v241 est restaurée sur PC —');
 check('sidebar 278 px, et 258 px sous 1200 px (comme v241)',
-  restaure.includes('.dash-side { width: 278px; padding: 20px 0 12px; }')
+  restaure.includes('.dash-side { width: 278px; flex: 0 0 auto; padding: 20px 0 12px; }')
   && restaure.includes('.dash-side { width: 258px; }'));
 check('marque centrée en colonne, avatar rond de 82 px',
   restaure.includes('flex-direction: column; align-items: center;')
@@ -73,17 +74,17 @@ check('…le pliage reste disponible sur mobile (les fonctions existent toujours
   && js.includes('Dashboard.rendreCartesPliables = (root) =>'));
 
 console.log('— 4. Le mobile et le rail ne bougent pas —');
-check('le rail 481-900 px suit la restauration (placé après, il garde le dernier mot)',
-  css.indexOf("html.hx-os-pc .dashboard-shell-host .dash-side { width: 64px; flex: 0 0 64px; }") > deb);
+check('v257 : plus de rail — la barre pleine couvre toutes les largeurs ≥ 481 px',
+  !css.includes("html.hx-os-pc .dashboard-shell-host .dash-side { width: 64px"));
 check('les 21 requêtes médias mobiles sont intactes',
   (css.match(/@media \(max-width: 700px\), \(max-width: 900px\) and \(hover: none\)/g) || []).length === 21);
 check('la classe hx-os-pc vient toujours du système (v253)',
   index.includes("classList.add('hx-os-pc')"));
 
 console.log('— 5. Version —');
-check('index.html : ?v=256 référencé 7 fois', (index.match(/\?v=256/g) || []).length === 7,
-  String((index.match(/\?v=256/g) || []).length));
-check('sw.js : cache « botdev-v256 »', racine('public/sw.js').includes("const CACHE = 'botdev-v256';"));
+check('index.html : ?v=257 référencé 7 fois', (index.match(/\?v=257/g) || []).length === 7,
+  String((index.match(/\?v=257/g) || []).length));
+check('sw.js : cache « botdev-v257 »', racine('public/sw.js').includes("const CACHE = 'botdev-v257';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v255 — ${ok} vérifications OK : le PC retrouve son visage v241, le mobile garde le sien.`);
