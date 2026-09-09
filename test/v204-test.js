@@ -31,14 +31,26 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
   console.log('\n1️⃣  Version v204');
   const index = read('public/index.html');
   const sw = read('public/sw.js');
-  check('index.html : ?v=247 référencé 7 fois', (index.match(/\?v=247/g) || []).length === 7);
+  check('index.html : ?v=248 référencé 7 fois', (index.match(/\?v=248/g) || []).length === 7);
   check('index.html : plus aucune ?v=203', !index.includes('?v=203'));
-  check('sw.js : cache botdev-v241', sw.includes("const CACHE = 'botdev-v247';"));
+  check('sw.js : cache botdev-v241', sw.includes("const CACHE = 'botdev-v248';"));
   check('sw.js : plus de botdev-v203', !sw.includes('botdev-v203'));
 
   // ================= 2. Layout plein largeur (bug 1) =================
   console.log('\n2️⃣  Débordement du champ corrigé');
-  check('layoutSettingRows ignore le champ channelsmulti', dash.includes("if (next.classList && next.classList.contains('dash-channelsmulti')) return;"));
+  // v248 : l'exclusion n'est plus codée en dur sur une seule classe. Elle passe
+  // par une liste partagée, Dashboard.SETTING_ROW_PLEINE_LARGEUR, que
+  // layoutSettingRows consulte avec .matches(). On vérifie les deux bouts : la
+  // présence dans la liste ET son utilisation effective — vérifier la ligne de
+  // code exacte (l'ancienne assertion) cassait à chaque réécriture.
+  const liste = (dash.match(/Dashboard\.SETTING_ROW_PLEINE_LARGEUR = '([^']*)'/) || [])[1] || '';
+  check('channelsmulti figure dans la liste des conteneurs pleine largeur',
+    liste.split(',').map((x) => x.trim()).includes('.dash-channelsmulti'), liste || 'liste introuvable');
+  check('layoutSettingRows consulte bien cette liste',
+    dash.includes('next.matches(Dashboard.SETTING_ROW_PLEINE_LARGEUR)'));
+  check('…et la liste est déclarée AVANT la fonction qui s\'en sert',
+    dash.indexOf('Dashboard.SETTING_ROW_PLEINE_LARGEUR =') < dash.indexOf('Dashboard.layoutSettingRows ='),
+    'ordre de déclaration inversé');
   check('CSS : .dash-channelsmulti en bloc pleine largeur', css.includes('.dash-channelsmulti {\n  display: block; width: 100%; min-width: 0; margin-top: 4px;'));
   check('CSS : lignes de salons empilées (flex-wrap)', css.includes('.cm-row {\n  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;'));
   check('CSS : phrase plein largeur sur mobile', css.includes('@media (max-width: 640px) {\n  .cm-row > .cm-label { flex-basis: 100%; }'));

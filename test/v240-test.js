@@ -535,9 +535,9 @@ async function main() {
 
   const index = src('public/index.html');
   const sw = src('public/sw.js');
-  check('index.html : ?v=247 référencé 7 fois', (index.match(/\?v=247/g) || []).length === 7,
-    `trouvé ${(index.match(/\?v=247/g) || []).length}`);
-  check("sw.js : cache 'botdev-v247'", sw.includes("const CACHE = 'botdev-v247';"));
+  check('index.html : ?v=248 référencé 7 fois', (index.match(/\?v=248/g) || []).length === 7,
+    `trouvé ${(index.match(/\?v=248/g) || []).length}`);
+  check("sw.js : cache 'botdev-v248'", sw.includes("const CACHE = 'botdev-v248';"));
   check('index.html : plus aucun ?v=239', !/\?v=239/.test(index));
 }
 

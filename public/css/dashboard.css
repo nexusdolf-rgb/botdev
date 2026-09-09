@@ -5567,6 +5567,34 @@ html.hx-light .dd-option.is-selected .dd-check { background: #e07a5f; color: #ff
    écran de 360 px les deux cases numériques prenaient ~180 px et il ne
    restait que ~140 px pour le libellé et son texte d'aide.
    ============================================================ */
+/* ============================================================
+   v248 — Grille de petits champs « libellé + contrôle ».
+
+   Remplace des grilles écrites en STYLE INLINE, donc figées : un style inline
+   ne peut être surchargé par aucune media query, exactement le piège déjà
+   rencontré pour .nk-limit.
+
+   Le plancher de colonne doit tenir compte de ce que fabrique
+   Dashboard.layoutSettingRows : il transforme chaque cellule
+   « <label class="dash-label"> + <input|select> » en .setting-row, qui met le
+   libellé et le contrôle CÔTE À CÔTE. Or le champ a un min-width de 84 px.
+
+   Avec l'ancien plancher inline de 140 px, mesuré à 901 px de large (contenu
+   réel 581 px une fois la barre latérale déduite) : auto-fit posait 3 colonnes
+   de 187 px, chacune pour 204 px de contenu réel — soit 17 px de débordement
+   par colonne. Un plancher à 210 px fait passer auto-fit à 2 colonnes de 285 px
+   et le débordement disparaît.
+   ============================================================ */
+.dashboard-shell-host .dash-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+}
+/* Téléphone : une seule colonne, plus rien n'est compressé. */
+@media (max-width: 520px) {
+  .dashboard-shell-host .dash-fields-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
 .dashboard-shell-host .nk-limit-list { display: grid; gap: 8px; }
 .dashboard-shell-host .nk-group-title { margin-top: 14px; }
 .dashboard-shell-host .nk-group-title:first-child { margin-top: 0; }

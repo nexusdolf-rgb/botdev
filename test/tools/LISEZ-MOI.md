@@ -39,6 +39,8 @@ pas. **Vérifier toujours les deux modes.**
 | `--tout-ouvert` | force toutes les cartes ouvertes |
 | `--tout-plier` | force toutes les cartes pliées |
 | `--clic` | teste un vrai clic sur une carte pliable |
+| `--inspect=SÉLECTEUR` | dump des boîtes réelles (diagnostic de débordement) |
+| `--module=onglet` | onglet à inspecter avec `--inspect` (défaut `antinuke`) |
 | `--tactile` | émule un écran tactile |
 | `--textes` | détail des blocs de texte |
 | `--repartition` | répartition de la hauteur par famille |
@@ -57,12 +59,66 @@ node test/tools/comparer-repli.js
 Mesure à 360 px, onglet par onglet : avant (tout ouvert) / nouveau défaut /
 tout replié, avec le pourcentage de gain.
 
+## Diagnostiquer un débordement
+
+```bash
+node test/tools/audit-mobile.js 901 --inspect=.nk-limit-list --module=antinuke
+```
+
+Affiche pour chaque élément : position gauche/droite, largeur rendue,
+`scrollWidth` contre `clientWidth` (un `scrollWidth` supérieur trahit un contenu
+plus large que sa boîte), la grille CSS réellement appliquée, `min-width` et
+`flex`. C'est ce qui a révélé en v248 une colonne de libellé réduite à `0px` et
+une liste enfermée dans 300 px alors qu'il lui en fallait 392.
+
+Le rapport standard se termine par deux lignes de contrôle :
+
+    disposition : shell flex ✅ | sidebar flex 300px ✅ | nav basse none | contenu 1140px
+    repli cartes : 0/71 pliées — doit être INACTIF (écran large) ✅
+
+La disposition attendue est déduite de la media query du produit elle-même, pas
+d'une supposition sur la largeur : en mode tactile un viewport de 1 440 × 780
+bascule en mobile à cause du `max-height: 800px`.
+
 ## Fidélité du banc
+
+Le banc construit la structure RÉELLE du shell, celle de `Dashboard.mount`
+(`public/js/dashboard.js`) :
+
+    .dashboard-shell-host > .dash-shell
+      ├── aside.dash-side
+      ├── main.dash-main > .dash-topbar + #dash-content
+      └── nav.dash-bnav
+
+Il se contentait auparavant d'un `<div class="dash-content">` isolé. Deux
+conséquences mesurées : aucune règle CSS portant sur `#dash-content`,
+`.dash-side` ou `.dash-main` ne s'appliquait, et la bascule bureau/mobile
+n'était jamais vérifiée — ce qui a laissé passer le repli automatique appliqué à
+tort sur ordinateur (v246) et 45 débordements entre 901 et 1 350 px (v244).
+Une fois fidèle, la hauteur mesurée sur PC est passée de 30 à 51 écrans : le
+banc était 40 % trop optimiste sur ordinateur.
 
 Le banc rejoue la même chaîne que le produit réel : `layoutSettingRows`,
 `plierTextesLongs`, puis `rendreCartesPliables`. Les hauteurs sont mesurées sur
 un DOM frais, **avant** l'application de tout repli, sinon le repli se
 nourrirait de sa propre mesure.
+
+⚠️ `Dashboard` et `App` sont des `const` de portée script : ils ne sont **pas**
+sur `window`. Dans un `page.evaluate`, il faut les référencer nus
+(`Dashboard.state`), jamais `window.Dashboard` — qui vaut `undefined` et fait
+court-circuiter silencieusement les gardes.
+
+## Démarrer le serveur
+
+Le banc attend un serveur sur `http://127.0.0.1:3000` :
+
+```bash
+BOTDEV_DATA_DIR=/tmp/botdev-audit HOXERA_TOKEN= PORT=3000 node server/index.js
+```
+
+`HOXERA_TOKEN=` vide et un dossier de données isolé : le serveur sert les
+fichiers sans se connecter à Discord. **Ne jamais lancer deux services avec le
+même token de bot** — l'instance de production tourne déjà sur Render.
 
 Les données sont des maquettes : leurs formes doivent correspondre exactement à
 l'API réelle (`tickets.types` est un tableau, `sanctions` renvoie

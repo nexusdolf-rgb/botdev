@@ -596,6 +596,53 @@ function repondre(url) {
   const repliOk = attenduMobile ? totPliees > 0 || totPliables === 0 : totPliees === 0;
   console.log(`  repli cartes : ${totPliees}/${totPliables} pliées — doit être ${repliAttendu} ${repliOk ? '✅' : '❌'}`);
   if (!repliOk) process.exitCode = 1;
+  // --inspect=SÉLECTEUR : dump des boîtes réelles pour diagnostiquer un
+  // débordement. Affiche largeur du contenu disponible, largeur rendue, largeur
+  // de scroll (ce que l'élément veut vraiment) et la grille CSS appliquée.
+  // C'est ce qui a permis de voir que .nk-limit débordait entre 901 et 1 350 px.
+  const argInspect = (process.argv.find((a) => a.startsWith('--inspect=')) || '').slice(10);
+  if (argInspect) {
+    const cible = (process.argv.find((a) => a.startsWith('--module=')) || '--module=antinuke').slice(9);
+    const data = await page.evaluate(async ([sel, mod]) => {
+      const c = document.querySelector('#dash-content');
+      if (!c) return null;
+      c.innerHTML = '';
+      Dashboard.state.module = mod;
+      await Dashboard.renderContent(c);
+      await new Promise((r) => setTimeout(r, 350));
+      if (typeof Dashboard.layoutSettingRows === 'function') Dashboard.layoutSettingRows(c);
+      if (typeof Dashboard.plierTextesLongs === 'function') Dashboard.plierTextesLongs(c);
+      if (typeof Dashboard.rendreCartesPliables === 'function') Dashboard.rendreCartesPliables(c);
+      const dispo = Math.round(c.getBoundingClientRect().width);
+      const els = [...c.querySelectorAll(sel)].slice(0, 6);
+      return {
+        module: mod, sel, contenuDispo: dispo,
+        els: els.map((e) => {
+          const cs = getComputedStyle(e);
+          const r = e.getBoundingClientRect();
+          return {
+            tag: e.tagName.toLowerCase() + '.' + (e.className || '').toString().split(' ').filter(Boolean).slice(0, 3).join('.'),
+            texte: (e.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 32),
+            gauche: Math.round(r.left), droite: Math.round(r.right),
+            largeur: Math.round(r.width), scroll: e.scrollWidth, client: e.clientWidth,
+            grille: cs.gridTemplateColumns !== 'none' ? cs.gridTemplateColumns : '',
+            display: cs.display, minWidth: cs.minWidth, flex: cs.flex,
+          };
+        }),
+      };
+    }, [argInspect, cible]);
+    console.log(`\n  ═══ INSPECTION « ${argInspect} » · module ${cible} · contenu disponible ${data.contenuDispo} px ═══`);
+    data.els.forEach((e) => {
+      const depasse = e.droite - (data.contenuDispo + e.gauche - e.gauche);
+      console.log(`    ${e.tag}`);
+      console.log(`      texte    « ${e.texte} »`);
+      console.log(`      boîte    gauche ${e.gauche} → droite ${e.droite} · largeur ${e.largeur} px`);
+      console.log(`      scroll/client ${e.scroll}/${e.client}${e.scroll > e.client ? '  ⚠️ contenu plus large que la boîte' : ''}`);
+      if (e.grille) console.log(`      grille   ${e.grille}`);
+      if (e.minWidth && e.minWidth !== '0px' && e.minWidth !== 'auto') console.log(`      min-width ${e.minWidth} · flex ${e.flex}`);
+    });
+  }
+
   if (process.argv.includes('--pliables')) {
     console.log('\n  ═══ cartes PLIABLES par module ═══');
     console.log('  MODULE              cartes  pliables  h. totale  h. 1re  reste à plier');

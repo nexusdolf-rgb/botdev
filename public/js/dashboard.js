@@ -1642,6 +1642,31 @@ Dashboard.rendreCartesPliables = (root) => {
 // ============================================================
 Dashboard.SETTING_ROW_CONTROLS = 'select.dash-select, input.dash-input, textarea.dash-input, label.switch, .dash-roles-multi, .discord-multi-host, .dd-host';
 
+// Conteneurs qui doivent rester en BLOC pleine largeur sous leur libellé, et
+// ne jamais être compressés en colonne « libellé → contrôle ».
+//
+// Chacun a été ajouté après un débordement MESURÉ :
+//
+//   .dash-channelsmulti — éditeur multi-lignes « salons à détailler ». Compressé
+//     en colonne, ses lignes s'empilaient à l'horizontale et débordaient.
+//
+//   .nk-limit-list — liste des limites anti-nuke par type d'action (v244). C'est
+//     une GRILLE à quatre colonnes dont le plancher est de 392 px
+//     (3 champs × 112 px + 3 gouttières de 10 px + rembourrage + bordure).
+//     Or le rendeur émet `<div class="dash-label nk-group-title">` suivi de
+//     `<div class="nk-limit-list">` : le critère « DIV contenant un
+//     select.dash-select » ci-dessous la prenait donc pour un simple contrôle et
+//     l'enfermait dans une colonne de 300 px. Résultat mesuré entre 901 et
+//     ~1 350 px de large : 44 débordements horizontaux, le libellé de la
+//     première colonne réduit à 0 px.
+//
+//     Invisible jusqu'ici parce que la bascule CSS de cette grille se fait sur
+//     `max-width: 900px` — le VIEWPORT — alors qu'entre 901 et 1 350 px la
+//     barre latérale (260 à 300 px) et les marges ne laissent que 581 à 1 050 px
+//     au contenu. Le banc d'audit ne construisait pas la sidebar : il mesurait
+//     un contenu pleine largeur et ne voyait rien.
+Dashboard.SETTING_ROW_PLEINE_LARGEUR = '.dash-channelsmulti, .nk-limit-list';
+
 Dashboard.layoutSettingRows = (root) => {
   if (!root || !root.querySelectorAll) return;
   // 1) Lignes « libellé → contrôle »
@@ -1656,11 +1681,9 @@ Dashboard.layoutSettingRows = (root) => {
     }
     const next = label.nextElementSibling;
     if (!next) return;
-    // Le sélecteur « salons à détailler » (channelsmulti) est un éditeur
-    // multi-lignes plein largeur : il reste en bloc sous son libellé, il
-    // ne doit JAMAIS être compressé en colonne « libellé → contrôle »
-    // (sinon lignes empilées à l'horizontale + débordement).
-    if (next.classList && next.classList.contains('dash-channelsmulti')) return;
+    // Conteneurs PLEINE LARGEUR à ne jamais compresser en colonne
+    // « libellé → contrôle ». Voir Dashboard.SETTING_ROW_PLEINE_LARGEUR.
+    if (next.matches(Dashboard.SETTING_ROW_PLEINE_LARGEUR)) return;
     const isControl = next.matches(Dashboard.SETTING_ROW_CONTROLS)
       || (next.tagName === 'DIV' && next.querySelector('input[type="color"]'))
       || (next.tagName === 'DIV' && next.querySelector('.discord-multi-picker'))
@@ -2415,7 +2438,7 @@ Dashboard.renderers.tickets = async (content, data) => {
             <input class="dash-input" data-k="color" type="color" value="${type.color}" title="Couleur de l'embed" style="width:48px;height:38px;padding:3px" />
             <button class="dash-btn dash-btn-danger dash-btn-sm" data-del>🗑</button>
           </div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:9px">
+          <div class="dash-fields-grid" style="gap:8px;margin-top:9px">
             <div><label class="dash-label">Style du bouton</label><select class="dash-select" data-k="button_style">
               <option value="1" ${type.button_style === '1' ? 'selected' : ''}>🔵 Bleu</option>
               <option value="2" ${type.button_style === '2' ? 'selected' : ''}>⚪ Gris</option>
@@ -2921,7 +2944,7 @@ Dashboard.renderers.levels = async (content, data) => {
   c.appendChild(toggleRow);
   c.appendChild(cardRow);
   c.innerHTML += `
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:10px">
+    <div class="dash-fields-grid" style="margin-top:10px">
       <div><label class="dash-label">XP min / message</label><input class="dash-input" id="xp-min" type="number" value="${s.xp_min ?? 10}" /></div>
       <div><label class="dash-label">XP max / message</label><input class="dash-input" id="xp-max" type="number" value="${s.xp_max ?? 25}" /></div>
       <div><label class="dash-label">Pause (secondes)</label><input class="dash-input" id="xp-cd" type="number" value="${s.xp_cooldown ?? 60}" /></div>
@@ -3853,7 +3876,7 @@ Dashboard.renderers.moderation = async (content, data) => {
       raidBox.innerHTML = `
         <label class="dash-label">Armer le bouclier</label>
         <label class="switch"><input type="checkbox" id="raid-on" ${cfg.enabled ? 'checked' : ''} /><span class="slider"></span></label>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:10px">
+        <div class="dash-fields-grid" style="margin-top:10px">
           <div><label class="dash-label">Seuil (arrivées)</label><input class="dash-input" id="raid-th" type="number" min="2" max="100" value="${cfg.threshold ?? 10}" /></div>
           <div><label class="dash-label">Fenêtre</label><select class="dash-select" id="raid-win">${Dashboard.presetOptions(Dashboard.PRESETS_SEC, cfg.window ?? 30, Dashboard.labelSecondes)}</select></div>
           <div><label class="dash-label">Action</label><select class="dash-select" id="raid-act">
@@ -4104,7 +4127,7 @@ Dashboard.renderers.antinuke = async (content, data) => {
     cfgBox.innerHTML = `
       <label class="dash-label">Activer l’anti-nuke</label>
       <label class="switch"><input type="checkbox" id="nk-on" ${cfg.enabled ? 'checked' : ''} /><span class="slider"></span></label>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:12px">
+      <div class="dash-fields-grid" style="margin-top:12px">
         <div>
           <label class="dash-label">Réaction</label>
           <select class="dash-select" id="nk-act">
