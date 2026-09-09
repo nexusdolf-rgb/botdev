@@ -82,6 +82,23 @@ Dashboard.labelSecondes = (v) => {
 // Paliers de répétition (avertissements, blacklist automatique).
 Dashboard.PRESETS_PALIER = [[0, 'Désactivé'], [1, '1 fois'], [2, '2 fois'], [3, '3 fois'],
   [4, '4 fois'], [5, '5 fois'], [10, '10 fois'], [20, '20 fois']];
+// v249 — XP vocale. Trois jeux de préréglages plutôt que des cases numériques
+// libres, conformément à la décision v244 : une durée ou un taux se choisit dans
+// une liste de valeurs sensées, on ne la saisit pas. Chaque liste porte la
+// valeur recommandée, et le réglage conseillé est celui du marché (10 XP/min,
+// versement toutes les 3 min — Arcane et PeakBot).
+Dashboard.PRESETS_XP_MIN = [[0, 'Aucun gain'], [5, '5 XP / min'], [10, '10 XP / min · conseillé'],
+  [15, '15 XP / min'], [20, '20 XP / min'], [25, '25 XP / min'], [50, '50 XP / min']];
+Dashboard.PRESETS_VERSEMENT = [[1, 'toutes les minutes'], [2, 'toutes les 2 min'],
+  [3, 'toutes les 3 min · conseillé'], [5, 'toutes les 5 min'], [10, 'toutes les 10 min'],
+  [15, 'toutes les 15 min'], [30, 'toutes les 30 min']];
+Dashboard.PRESETS_MEMBRES = [[1, '1 · même seul'], [2, '2 membres · conseillé'], [3, '3 membres'],
+  [4, '4 membres'], [5, '5 membres'], [10, '10 membres']];
+// Étiquette de repli si la valeur enregistrée sort des préréglages.
+Dashboard.labelXpParMinute = (v) => `${parseInt(v, 10) || 0} XP / min`;
+Dashboard.labelVersement = (v) => `toutes les ${parseInt(v, 10) || 1} min`;
+Dashboard.labelMembres = (v) => `${parseInt(v, 10) || 1} membre(s)`;
+
 // Durées exprimées en HEURES (giveaways).
 Dashboard.PRESETS_HEURES = [[1, '1 h'], [2, '2 h'], [6, '6 h'], [12, '12 h'], [24, '1 jour'],
   [48, '2 jours'], [72, '3 jours'], [168, '7 jours']];
@@ -2959,6 +2976,55 @@ Dashboard.renderers.levels = async (content, data) => {
     </select>
     <button class="dash-btn dash-btn-primary" style="margin-top:14px" id="xp-save">💾 Enregistrer</button>`;
 
+  // ------------------------------------------------------------
+  // 🎙️ v249 — XP vocale. Mêmes réglages que l'XP texte, même niveau, même
+  // classement : seule la source change. Les libellés annoncent le résultat
+  // concret (« 30 XP toutes les 3 minutes ») plutôt que deux nombres séparés,
+  // parce que c'est ce que l'administrateur veut savoir.
+  // ------------------------------------------------------------
+  const vRate = Number(s.voice_xp_rate ?? 10);
+  const vIntervalle = Number(s.voice_xp_interval ?? 3);
+  const cVoix = Dashboard.card(root, '🎙️ XP vocale',
+    'Les membres gagnent aussi de l\'XP en restant dans un salon vocal. Elle alimente le même niveau et le même classement que les messages.');
+  const voixActive = App.el(`<div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0 4px"><label class="dash-label" style="margin:0">Activer l'XP vocale</label><label class="switch"><input type="checkbox" id="vxp-enabled" ${s.voice_xp_enabled ? 'checked' : ''}><span class="slider"></span></label></div>`);
+  cVoix.appendChild(voixActive);
+  cVoix.innerHTML += `
+    <!-- Une ligne pleine largeur par réglage, pas une grille trois colonnes :
+         le pipeline layoutSettingRows transforme chaque paire « étiquette +
+         sélecteur » en ligne « libellé → contrôle », et dans une colonne de
+         378 px le libellé se cassait sur quatre lignes pendant que le texte de
+         l'option choisie était rogné. Sur toute la largeur, tout tient. -->
+    <div style="margin-top:10px"><label class="dash-label">Gain</label><select class="dash-select" id="vxp-rate">${Dashboard.presetOptions(Dashboard.PRESETS_XP_MIN, vRate, Dashboard.labelXpParMinute)}</select></div>
+    <div><label class="dash-label">Versement</label><select class="dash-select" id="vxp-interval">${Dashboard.presetOptions(Dashboard.PRESETS_VERSEMENT, vIntervalle, Dashboard.labelVersement)}</select></div>
+    <div><label class="dash-label">Membres minimum dans le salon</label><select class="dash-select" id="vxp-min">${Dashboard.presetOptions(Dashboard.PRESETS_MEMBRES, Number(s.voice_xp_min_members ?? 2), Dashboard.labelMembres)}</select></div>
+    <div class="desc" data-vxp-apercu style="margin:10px 0 4px"></div>
+    <div class="dash-label" style="margin-top:6px">Anti-triche</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:4px 0"><label class="dash-label" style="margin:0">🔇 Ignorer les membres muets ou sourds</label><label class="switch"><input type="checkbox" id="vxp-muted" ${s.voice_xp_ignore_muted === 0 ? '' : 'checked'}><span class="slider"></span></label></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:4px 0"><label class="dash-label" style="margin:0">💤 Ignorer le salon AFK du serveur</label><label class="switch"><input type="checkbox" id="vxp-afk" ${s.voice_xp_ignore_afk === 0 ? '' : 'checked'}><span class="slider"></span></label></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:4px 0"><label class="dash-label" style="margin:0">🕐 Réduire après 4 h d'affilée</label><label class="switch"><input type="checkbox" id="vxp-taper" ${s.voice_xp_taper === 0 ? '' : 'checked'}><span class="slider"></span></label></div>
+    <div class="desc">Le bot n'entre jamais dans le salon vocal : il lit l'état de présence fourni par Discord. Réduire après 4 h empêche de laisser un salon ouvert toute la nuit pour farmer — moitié jusqu'à 8 h, plus rien au-delà.</div>
+    <button class="dash-btn dash-btn-primary" style="margin-top:14px" id="vxp-save">💾 Enregistrer</button>`;
+
+  // Aperçu vivant : « 30 XP toutes les 3 minutes ». Recalculé à la frappe pour
+  // que l'administrateur voie l'effet de ses deux nombres avant d'enregistrer.
+  const apercuVoix = () => {
+    const zone = cVoix.querySelector('[data-vxp-apercu]');
+    if (!zone) return;
+    const rate = Math.max(0, Math.min(100, parseInt(cVoix.querySelector('#vxp-rate').value, 10) || 0));
+    const inter = Math.max(1, Math.min(60, parseInt(cVoix.querySelector('#vxp-interval').value, 10) || 1));
+    const gain = Math.floor(rate * inter);
+    zone.textContent = gain > 0
+      ? `➡️ ${gain} XP toutes les ${inter} minute${inter > 1 ? 's' : ''} de présence active.`
+      : '➡️ Aucun gain : le taux est à 0.';
+  };
+  ['#vxp-rate', '#vxp-interval'].forEach((sel) => {
+    const champ = cVoix.querySelector(sel);
+    // Un <select> déclenche « change » ; « input » est aussi écouté pour rester
+    // compatible si le champ redevient une saisie libre un jour.
+    if (champ) { champ.addEventListener('change', apercuVoix); champ.addEventListener('input', apercuVoix); }
+  });
+  apercuVoix();
+
   // 🏆 v214 — Rôles par niveau « en échelle » : un rôle par palier, le rôle du
   // palier atteint REMPLACE ceux des paliers inférieurs. Automatique à la
   // montée, et synchronisable pour les membres déjà avancés.
@@ -3052,6 +3118,25 @@ Dashboard.renderers.levels = async (content, data) => {
       }});
       App.toast('Niveaux enregistrés !');
       renderLadder();
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+
+  // 🎙️ v249 — Enregistrement séparé de l'XP vocale : les deux cartes ont
+  // chacune leur bouton, comme le reste du tableau de bord. La route est la
+  // même (PUT /xp) ; les champs vocaux sont ignorés s'ils sont absents.
+  const btnVoix = cVoix.querySelector('#vxp-save');
+  if (btnVoix) btnVoix.onclick = async () => {
+    try {
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/xp`, { method: 'PUT', body: {
+        voice_enabled: cVoix.querySelector('#vxp-enabled').checked,
+        voice_rate: Math.max(0, Math.min(100, parseInt(cVoix.querySelector('#vxp-rate').value, 10) || 10)),
+        voice_interval: Math.max(1, Math.min(60, parseInt(cVoix.querySelector('#vxp-interval').value, 10) || 3)),
+        voice_min_members: Math.max(1, Math.min(50, parseInt(cVoix.querySelector('#vxp-min').value, 10) || 2)),
+        voice_ignore_muted: cVoix.querySelector('#vxp-muted').checked,
+        voice_ignore_afk: cVoix.querySelector('#vxp-afk').checked,
+        voice_taper: cVoix.querySelector('#vxp-taper').checked,
+      }});
+      App.toast('XP vocale enregistrée !');
     } catch (e) { App.toast(e.message, 'error'); }
   };
 };

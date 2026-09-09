@@ -66,6 +66,7 @@ async function loginBot(botId) {
     if (!existing.client.isReady() && Date.now() - (existing.startedAt || 0) > 360000) {
       try { existing.client.destroy(); } catch {}
       clients.delete(botId);
+      try { require('./xp').oublierBot(botId); } catch {}   // v249
     } else {
       return { already: true };
     }
@@ -281,6 +282,9 @@ async function logoutBot(botId) {
   if (!entry) return;
   try { entry.client.destroy(); } catch {}
   clients.delete(botId);
+  // v249 — purger les sessions vocales de ce bot : le client est détruit, ses
+  // objets guild/membres deviennent inutilisables.
+  try { require('./xp').oublierBot(botId); } catch {}
   store.bots.update(botId, { enabled: 0, last_error: '' });
 }
 
@@ -292,6 +296,7 @@ async function reconnectBot(botId) {
   if (existing) {
     try { existing.client.destroy(); } catch {}
     clients.delete(botId);
+    try { require('./xp').oublierBot(botId); } catch {}   // v249
   }
   store.bots.update(botId, { enabled: 1 });
   return loginBot(botId);
@@ -303,6 +308,7 @@ async function stopAll() {
   for (const [id, entry] of clients) {
     try { entry.client.destroy(); } catch {}
     clients.delete(id);
+    try { require('./xp').oublierBot(id); } catch {}   // v249
   }
 }
 
@@ -477,6 +483,10 @@ function attachListeners(botId, entry) {
     onVoiceState(botId, entry, oldState, newState);
     // 📋 Journal d'audit : connexions / déconnexions / déplacements vocaux
     try { require('./auditLog').onVoiceState(botId, oldState, newState); } catch (e) { console.error('[BotDev] audit voice:', e.message); }
+    // 🎙️ v249 XP vocale : ouvre / ferme / déplace la session de présence.
+    // Le versement lui-même est fait par un battement périodique dans xp.js —
+    // un membre peut rester connecté des heures sans déclencher cet événement.
+    try { require('./xp').onVoiceState(botId, oldState, newState); } catch (e) { console.error('[BotDev] xp vocale:', e.message); }
   });
 
   client.on('interactionCreate', (i) => {

@@ -146,9 +146,18 @@ function repondre(url) {
   // Indispensable pour vérifier les planchers tactiles : sans ça, un iPad en
   // mode paysage passait pour un poste à souris.
   const TACTILE = process.argv.includes('--tactile');
+  // --capture=<dossier> : enregistre une image de chaque module rendu. C'est un
+  // outil de revue visuelle, pas une assertion — il ne change aucune mesure. Le
+  // rendu est doublé (deviceScaleFactor 2) uniquement dans ce mode, pour que le
+  // texte reste lisible ; cela n'influe pas sur la mise en page dans Chromium.
+  const CAPTURE = (process.argv.find((a) => a.startsWith('--capture=')) || '').split('=')[1] || '';
+  // --capture-carte=<sous-chaîne> : ne capture que la carte dont le titre
+  // contient ce texte (sinon l'image fait toute la hauteur de l'onglet).
+  const CAPTURE_CARTE = (process.argv.find((a) => a.startsWith('--capture-carte=')) || '').split('=')[1] || '';
+  if (CAPTURE) require('fs').mkdirSync(CAPTURE, { recursive: true });
   const page = await browser.newPage({
     viewport: { width: LARGEUR, height: 780 },
-    deviceScaleFactor: 1,
+    deviceScaleFactor: CAPTURE ? 2 : 1,
     hasTouch: TACTILE,
     isMobile: TACTILE,
   });
@@ -458,6 +467,37 @@ function repondre(url) {
         tactiles: tactiles.slice(0, 4), nbTactiles: tactiles.length, tronques, listeTronques: listeTronques.slice(0, 10),
         paves };
     }, mod);
+
+    if (CAPTURE) {
+      // On ne capture que ce qui a effectivement rendu (r.erreur = module cassé,
+      // une image ne servirait à rien).
+      if (!r.erreur) {
+        let cible = await page.$('#dash-content');
+        let nom = mod;
+        if (CAPTURE_CARTE) {
+          cible = await page.evaluateHandle((txt) => {
+            const cartes = [...document.querySelectorAll('#dash-content .dash-section-card, #dash-content .dash-card')];
+            return cartes.find((c) => (c.innerText || '').includes(txt)) || null;
+          }, CAPTURE_CARTE);
+          const el = cible.asElement();
+          if (!el) { console.log(`  (carte « ${CAPTURE_CARTE} » introuvable dans ${mod})`); cible = null; }
+          else {
+            // Une carte peut être pliée par le repli automatique : on l'ouvre
+            // pour la capture, sinon l'image serait tronquée.
+            await page.evaluate((txt) => {
+              const cartes = [...document.querySelectorAll('#dash-content .dash-section-card, #dash-content .dash-card')];
+              const c = cartes.find((x) => (x.innerText || '').includes(txt));
+              if (c && c.classList.contains('is-folded')) { const b = c.querySelector('.card-fold'); if (b) b.click(); }
+            }, CAPTURE_CARTE);
+            cible = el;
+            nom = `${mod}-${CAPTURE_CARTE.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+          }
+        }
+        if (cible) await cible.screenshot({ path: `${CAPTURE}/${nom}-${LARGEUR}px.png` });
+      } else {
+        console.log(`  (capture ignorée : ${mod} en erreur)`);
+      }
+    }
 
     resultats.push({ mod, ...r, erreurs: erreurs.slice(0, 2) });
   }

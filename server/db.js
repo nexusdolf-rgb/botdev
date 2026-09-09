@@ -635,6 +635,27 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_title TEXT DEF
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_color TEXT DEFAULT '#ED4245'"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_blacklist_footer TEXT DEFAULT 'Blacklist du serveur · Hoxera'"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN xp_card INTEGER DEFAULT 1"); } catch (e) {}
+
+// ------------------------------------------------------------
+// v249 — XP vocale : gagner de l'XP en restant dans un salon vocal.
+//
+// Désactivée par défaut (0) : c'est une fonction nouvelle, aucun serveur déjà
+// équipé ne doit voir son rythme de montée en niveau changer sans l'avoir
+// demandé. L'XP gagnée alimente la MÊME table `xp` que l'XP des messages — un
+// seul niveau, un seul classement.
+//
+// Réglages alignés sur ce que font Arcane et PeakBot (vérifié dans leur
+// documentation) : cadence en XP par minute, versement toutes les N minutes,
+// nombre minimum de membres dans le salon, exclusion des muets/sourds, du salon
+// AFK, et réduction progressive après plusieurs heures (anti-AFK).
+// ------------------------------------------------------------
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN voice_xp_enabled INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN voice_xp_rate INTEGER DEFAULT 10"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN voice_xp_interval INTEGER DEFAULT 3"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN voice_xp_min_members INTEGER DEFAULT 2"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN voice_xp_ignore_muted INTEGER DEFAULT 1"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN voice_xp_ignore_afk INTEGER DEFAULT 1"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN voice_xp_taper INTEGER DEFAULT 1"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN ticket_room TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_escalation TEXT DEFAULT ''"); } catch (e) {}
 // v6 — miroir passif des règles Auto-Mod officielles de Discord.
@@ -1071,7 +1092,12 @@ const guildSettings = {
     'quiz_channel', 'quiz_points', 'quiz_bonus', 'quiz_bonus_window',
     'antinuke_enabled', 'antinuke_threshold', 'antinuke_window', 'antinuke_action',
     'antinuke_whitelist', 'antinuke_alert_channel', 'antinuke_limits', 'antinuke_punish_bots',
-    'antinuke_actions'];
+    'antinuke_actions',
+    // v249 — XP vocale. Chaque nom DOIT avoir une clé dans vals ci-dessous,
+    // sinon better-sqlite3 lève « Missing named parameter » et AUCUN réglage du
+    // serveur ne peut plus être enregistré.
+    'voice_xp_enabled', 'voice_xp_rate', 'voice_xp_interval', 'voice_xp_min_members',
+    'voice_xp_ignore_muted', 'voice_xp_ignore_afk', 'voice_xp_taper'];
     const vals = {
       bot_id: botId, guild_id: guildId,
       prefix: String(next.prefix || '').slice(0, 5),
@@ -1091,6 +1117,27 @@ const guildSettings = {
       xp_message: String(next.xp_message || '').slice(0, 500),
       xp_channel: String(next.xp_channel || '').slice(0, 100),
       xp_card: (next.xp_card === 0 || next.xp_card === false) ? 0 : 1,
+      // v249 — XP vocale. Les booléens suivent le schéma de xp_enabled : une
+      // valeur absente retombe sur son DÉFAUT, pas sur 0. Sans ça, enregistrer
+      // n'importe quel autre réglage du serveur éteindrait l'XP vocale au
+      // passage.
+      voice_xp_enabled: (next.voice_xp_enabled === undefined || next.voice_xp_enabled === null)
+        ? 0 : (next.voice_xp_enabled ? 1 : 0),
+      // XP par minute de présence active. Plancher 0, plafond 100 : au-delà, une
+      // heure en vocal ferait sauter plusieurs niveaux (la courbe est 100*N²,
+      // donc niveau 10 = 10 000 XP) et viderait le classement de son sens.
+      voice_xp_rate: Math.min(Math.max(parseInt(next.voice_xp_rate, 10) || 10, 0), 100),
+      // Versement toutes les N minutes. Minimum 1 : verser à chaque battement du
+      // suivi (30 s) multiplierait les écritures en base et les annonces.
+      voice_xp_interval: Math.min(Math.max(parseInt(next.voice_xp_interval, 10) || 3, 1), 60),
+      // Membres minimum dans le salon, hors bots. 1 = on peut gagner seul.
+      voice_xp_min_members: Math.min(Math.max(parseInt(next.voice_xp_min_members, 10) || 2, 1), 50),
+      voice_xp_ignore_muted: (next.voice_xp_ignore_muted === undefined || next.voice_xp_ignore_muted === null)
+        ? 1 : (next.voice_xp_ignore_muted ? 1 : 0),
+      voice_xp_ignore_afk: (next.voice_xp_ignore_afk === undefined || next.voice_xp_ignore_afk === null)
+        ? 1 : (next.voice_xp_ignore_afk ? 1 : 0),
+      voice_xp_taper: (next.voice_xp_taper === undefined || next.voice_xp_taper === null)
+        ? 1 : (next.voice_xp_taper ? 1 : 0),
       ticket_room: (next.ticket_room && typeof next.ticket_room === 'object')
         ? JSON.stringify(next.ticket_room).slice(0, 4000)
         : String(next.ticket_room || '').slice(0, 4000),

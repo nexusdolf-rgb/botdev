@@ -36,7 +36,19 @@ console.log('— Réglage xp_card —');
 check('db : colonne xp_card (migration ALTER)', db.includes('ADD COLUMN xp_card INTEGER DEFAULT 1'));
 check('db : xp_card dans la liste des colonnes', db.includes("'xp_card',"));
 check('db : défaut activé (1) sauf si 0/false', db.includes('xp_card: (next.xp_card === 0 || next.xp_card === false) ? 0 : 1,'));
-check('routes : accepte « card » du dashboard', routes.includes('roles, card } = req.body') && routes.includes('xp_card: (card === false || card === 0) ? 0 : 1,'));
+// v249 : la route est devenue conditionnelle — deux boutons d'enregistrement
+// (XP texte et XP vocale) partagent PUT /xp, et un champ absent ne doit plus
+// écraser la valeur stockée. L'ancienne assertion vérifiait la ligne exacte
+// `xp_card: (card === false || card === 0) ? 0 : 1,`, disparue avec cette
+// réécriture. On vérifie désormais l'intention : le champ est bien accepté,
+// déstructuré, et converti en 0/1 uniquement s'il est fourni.
+check('routes : déstructure « card » depuis le corps de la requête', /\bcard,/.test(routes));
+check('routes : xp_card n\'est écrit que si « card » est fourni',
+  /if \(fourni\(card\)\) paquet\.xp_card =/.test(routes));
+check('routes : …et il est bien normalisé en 0/1',
+  /paquet\.xp_card = booleen\(card, 1\)/.test(routes));
+check('routes : la base normalise toujours xp_card (dernier rempart)',
+  db.includes('xp_card: (next.xp_card === 0 || next.xp_card === false) ? 0 : 1,'));
 
 // ---------- 3. Annonce : carte branchée (non bloquante) ----------
 console.log('— Annonce de niveau avec carte —');
@@ -54,8 +66,8 @@ check('dashboard : toggle des niveaux ciblé par id (plus de sélecteur généri
 check('dashboard : carte activée par défaut', dash.includes("s.xp_card === 0 || s.xp_card === false ? '' : 'checked'"));
 
 // ---------- 5. Versions ----------
-check('index : version v210', index.includes('?v=248'));
-check('service worker : cache v210', sw.includes('botdev-v248'));
+check('index : version v210', index.includes('?v=249'));
+check('service worker : cache v210', sw.includes('botdev-v249'));
 
 console.log(`\n✅ v210-test.js : ${n} vérifications OK`);
 process.exit(0);

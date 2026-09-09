@@ -712,6 +712,12 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
   const DEFAULT_GS = {
     prefix: '', warn_limit: 0, warn_action: 'none',
     xp_enabled: 1, xp_min: 10, xp_max: 25, xp_cooldown: 60, xp_message: '', xp_channel: '',
+    // v249 — XP vocale, désactivée par défaut. Ces valeurs doivent rester
+    // identiques aux DEFAULT des colonnes dans server/db.js : sinon un serveur
+    // neuf afficherait dans le tableau de bord des réglages différents de ceux
+    // que le bot applique réellement.
+    voice_xp_enabled: 0, voice_xp_rate: 10, voice_xp_interval: 3, voice_xp_min_members: 2,
+    voice_xp_ignore_muted: 1, voice_xp_ignore_afk: 1, voice_xp_taper: 1,
     am_enabled: 0, am_phishing: 1, am_phishing_allow: '', am_links: 1, am_caps: 1, am_mentions: 5, am_spam: 5,
     am_mode: 'enforce', am_rule_actions: '{}', am_blacklist_rules: '{}', am_blacklist_thresholds: '{}', am_blacklist_duration_min: 0, am_blacklist_channel: '',
     am_blacklist_title: '🚫 Membre ajouté à la blacklist', am_blacklist_color: '#ED4245', am_blacklist_footer: 'Blacklist du serveur · Hoxera',
@@ -1036,16 +1042,56 @@ router.put('/bots/:id/guilds/:guildId/xp', requireAuth, async (req, res) => {
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
-  const { enabled, min, max, cooldown, message, channel, roles, card } = req.body || {};
-  store.guildSettings.set(bot.id, guildId, {
-    xp_enabled: (enabled === false || enabled === 0) ? 0 : 1,
-    xp_min: Math.min(Math.max(parseInt(min, 10) || 10, 1), 1000),
-    xp_max: Math.max(parseInt(max, 10) || 25, 1),
-    xp_cooldown: Math.max(parseInt(cooldown, 10) || 60, 0),
-    xp_message: String(message || '').slice(0, 500),
-    xp_channel: String(channel || '').slice(0, 100),
-    xp_card: (card === false || card === 0) ? 0 : 1,
-  });
+  const { enabled, min, max, cooldown, message, channel, roles, card,
+    voice_enabled, voice_rate, voice_interval, voice_min_members,
+    voice_ignore_muted, voice_ignore_afk, voice_taper } = req.body || {};
+
+  // v249 — CHAQUE réglage n'est écrit que s'il est fourni.
+  //
+  // Ce n'est pas une précaution de style : le tableau de bord a maintenant deux
+  // boutons d'enregistrement sur le même onglet (« Gain d'XP » et « XP vocale »)
+  // qui appellent la même route. Si les champs absents retombaient sur une
+  // valeur par défaut, enregistrer l'XP vocale aurait remis xp_enabled à 1 et
+  // vidé le message de niveau et le salon d'annonce configurés — et inversement.
+  //
+  // store.guildSettings.set fusionne avec la ligne existante : une clé absente
+  // du paquet laisse donc la valeur actuelle intacte.
+  //
+  // Les bornes sont les mêmes que dans server/db.js (défense en profondeur :
+  // cette route est exposée, la normalisation en base est le dernier rempart).
+  const fourni = (v) => v !== undefined && v !== null;
+  const paquet = {};
+  const entier = (v, defaut, mini, maxi) => Math.min(Math.max(parseInt(v, 10) || defaut, mini), maxi);
+  const booleen = (v, defaut) => {
+    if (v === false || v === 0 || v === '0' || v === 'false') return 0;
+    if (v === true || v === 1 || v === '1' || v === 'true') return 1;
+    return defaut;
+  };
+
+  if (fourni(enabled)) paquet.xp_enabled = booleen(enabled, 1);
+  if (fourni(min)) paquet.xp_min = entier(min, 10, 1, 1000);
+  // ⚠️ Bornes volontairement IDENTIQUES à celles d'avant la v249 pour xp_max et
+  // xp_cooldown : `Math.max(parseInt(max,10)||25, 1)` et
+  // `Math.max(parseInt(cooldown,10)||60, 0)`, donc sans plafond. Ajouter un
+  // plafond ici aurait fait qu'un serveur ayant déjà réglé xp_max à 5 000 se le
+  // verrait ramener à 1 000 au prochain enregistrement — un changement de
+  // comportement non demandé. La normalisation en base (server/db.js) reste le
+  // seul plafond, inchangé.
+  if (fourni(max)) paquet.xp_max = Math.max(parseInt(max, 10) || 25, 1);
+  if (fourni(cooldown)) paquet.xp_cooldown = Math.max(parseInt(cooldown, 10) || 60, 0);
+  if (fourni(message)) paquet.xp_message = String(message || '').slice(0, 500);
+  if (fourni(channel)) paquet.xp_channel = String(channel || '').slice(0, 100);
+  if (fourni(card)) paquet.xp_card = booleen(card, 1);
+
+  if (fourni(voice_enabled)) paquet.voice_xp_enabled = booleen(voice_enabled, 0);
+  if (fourni(voice_rate)) paquet.voice_xp_rate = entier(voice_rate, 10, 0, 100);
+  if (fourni(voice_interval)) paquet.voice_xp_interval = entier(voice_interval, 3, 1, 60);
+  if (fourni(voice_min_members)) paquet.voice_xp_min_members = entier(voice_min_members, 2, 1, 50);
+  if (fourni(voice_ignore_muted)) paquet.voice_xp_ignore_muted = booleen(voice_ignore_muted, 1);
+  if (fourni(voice_ignore_afk)) paquet.voice_xp_ignore_afk = booleen(voice_ignore_afk, 1);
+  if (fourni(voice_taper)) paquet.voice_xp_taper = booleen(voice_taper, 1);
+
+  if (Object.keys(paquet).length) store.guildSettings.set(bot.id, guildId, paquet);
   if (Array.isArray(roles)) {
     // v214 — échelle de rôles : un seul rôle par niveau (le dernier écrase),
     // trié par niveau, limité à 60 paliers.
