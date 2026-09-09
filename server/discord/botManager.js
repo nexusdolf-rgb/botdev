@@ -390,10 +390,15 @@ function attachListeners(botId, entry) {
 
   client.on('channelCreate', (c) => {
     try { require('./auditLog').onChannelCreate(botId, c); } catch (e) { console.error('[BotDev] audit chCreate:', e.message); }
+    // 🛡️ v242 anti-nuke : création de salon en série (un script de nuke en
+    // recrée souvent des dizaines pour y coller des liens d'arnaque).
+    try { require('./antinuke').note(botId, c.guild, 'channel_create', `#${c.name}`, c); } catch (e) { console.error('[BotDev] antinuke chCreate:', e.message); }
   });
 
   client.on('channelDelete', (c) => {
     try { require('./auditLog').onChannelDelete(botId, c); } catch (e) { console.error('[BotDev] audit chDelete:', e.message); }
+    // 🛡️ v242 anti-nuke : suppression de salon
+    try { require('./antinuke').note(botId, c.guild, 'channel_delete', `#${c.name}`, c); } catch (e) { console.error('[BotDev] antinuke chDelete:', e.message); }
   });
 
   client.on('channelUpdate', (oldC, newC) => {
@@ -410,14 +415,51 @@ function attachListeners(botId, entry) {
 
   client.on('roleCreate', (r) => {
     try { require('./auditLog').onRoleCreate(botId, r); } catch (e) { console.error('[BotDev] audit roleCreate:', e.message); }
+    // 🛡️ v242 anti-nuke : création de rôles en série
+    try { require('./antinuke').note(botId, r.guild, 'role_create', `@${r.name}`); } catch (e) { console.error('[BotDev] antinuke roleCreate:', e.message); }
   });
 
   client.on('roleDelete', (r) => {
     try { require('./auditLog').onRoleDelete(botId, r); } catch (e) { console.error('[BotDev] audit roleDelete:', e.message); }
+    // 🛡️ v242 anti-nuke : suppression de rôle
+    try { require('./antinuke').note(botId, r.guild, 'role_delete', `@${r.name}`); } catch (e) { console.error('[BotDev] antinuke roleDelete:', e.message); }
   });
 
   client.on('roleUpdate', (oldR, newR) => {
     try { require('./auditLog').onRoleUpdate(botId, oldR, newR); } catch (e) { console.error('[BotDev] audit roleUpdate:', e.message); }
+    // 🛡️ v242 anti-nuke : seule l'élévation de privilèges est surveillée.
+    // Un changement de couleur ou de nom ne doit pas déclencher la protection.
+    try {
+      const had = !!(oldR && oldR.permissions && oldR.permissions.has('Administrator'));
+      const has = !!(newR && newR.permissions && newR.permissions.has('Administrator'));
+      if (has && !had) require('./antinuke').note(botId, newR.guild, 'role_update', `@${newR.name} → Administrateur`);
+    } catch (e) { console.error('[BotDev] antinuke roleUpdate:', e.message); }
+  });
+
+  // 🛡️ v242 anti-nuke : permissions de salon modifiées en série. C'est par là
+  // qu'un nuke rend les salons invisibles à tout le monde. Wick surveille ces
+  // « channel permission overrides » explicitement.
+  client.on('channelUpdate', (oldC, newC) => {
+    try {
+      if (!oldC || !newC || !newC.guild) return;
+      const a = oldC.permissionOverwrites && oldC.permissionOverwrites.cache;
+      const b = newC.permissionOverwrites && newC.permissionOverwrites.cache;
+      if (!a || !b) return;
+      let changed = a.size !== b.size;
+      if (!changed) {
+        for (const [id, ov] of b) {
+          const prev = a.get(id);
+          if (!prev || String(prev.allow) !== String(ov.allow) || String(prev.deny) !== String(ov.deny)) { changed = true; break; }
+        }
+      }
+      if (changed) require('./antinuke').note(botId, newC.guild, 'overwrite', `#${newC.name}`);
+    } catch (e) { console.error('[BotDev] antinuke overwrite:', e.message); }
+  });
+
+  // 🛡️ v242 anti-nuke : suppression d'emojis en série (Firewall a f.setemojiq)
+  client.on('emojiDelete', (emoji) => {
+    try { if (emoji && emoji.guild) require('./antinuke').note(botId, emoji.guild, 'emoji', `:${emoji.name}:`); }
+    catch (e) { console.error('[BotDev] antinuke emoji:', e.message); }
   });
 
   client.on('guildUpdate', (oldG, newG) => {
@@ -426,6 +468,8 @@ function attachListeners(botId, entry) {
 
   client.on('webhooksUpdate', (c) => {
     try { require('./auditLog').onWebhooksUpdate(botId, c); } catch (e) { console.error('[BotDev] audit webhooks:', e.message); }
+    // 🛡️ v242 anti-nuke : spam de webhooks
+    try { if (c && c.guild) require('./antinuke').note(botId, c.guild, 'webhook', `#${c.name}`); } catch (e) { console.error('[BotDev] antinuke webhook:', e.message); }
   });
 
   client.on('voiceStateUpdate', (oldState, newState) => {
@@ -440,6 +484,14 @@ function attachListeners(botId, entry) {
   });
 
   client.on('guildMemberAdd', (member) => {
+    // 🛡️ v242 anti-nuke : ajout d'un bot. Wick surveille « les bots ajoutés par
+    // des membres du staff non autorisés » : le bot n'est pas le coupable, c'est
+    // celui qui l'a invité. L'auteur est lu dans le journal d'audit (type BotAdd).
+    try {
+      if (member && member.user && member.user.bot) {
+        require('./antinuke').note(botId, member.guild, 'bot_add', member.user.tag || '');
+      }
+    } catch (e) { console.error('[BotDev] antinuke botAdd:', e.message); }
     // 🚫 v213 — Re-ban automatique : un membre encore en blacklist ACTIVE du
     // serveur (barème Auto-Mod) est re-banni immédiatement à son retour.
     try {
@@ -460,6 +512,15 @@ function attachListeners(botId, entry) {
   client.on('guildMemberRemove', (member) => {
     const { runLeaveEvent } = require('./events');
     runLeaveEvent(botId, member).catch(e => console.error('[BotDev] leave event error:', e.message));
+    // 🛡️ v242 anti-nuke : expulsion de masse. Cet événement se déclenche aussi
+    // pour les départs volontaires ; seul le journal d'audit distingue les deux,
+    // et un départ normal ne produit aucune entrée « kick » donc aucun comptage.
+    try { require('./antinuke').note(botId, member.guild, 'kick', member.user ? member.user.tag : ''); } catch (e) { console.error('[BotDev] antinuke kick:', e.message); }
+  });
+
+  // 🛡️ v242 anti-nuke : bannissement de masse (événement ajouté en v242)
+  client.on('guildBanAdd', (guild, user) => {
+    try { require('./antinuke').note(botId, guild, 'ban', user ? user.tag : ''); } catch (e) { console.error('[BotDev] antinuke ban:', e.message); }
   });
 
   // Nouveau serveur : synchronise les commandes avec retries automatiques

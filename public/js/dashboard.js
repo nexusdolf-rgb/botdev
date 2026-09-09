@@ -452,6 +452,7 @@ Dashboard.MODULES = [
   ['economy', '💰', 'Économie'],
   ['shop', '🛒', 'Boutique'],
   ['moderation', '🛡️', 'Modération'],
+  ['antinuke', '🚨', 'Anti-nuke'],
   ['roles', '📋', 'Rôles'],
   ['suggestions', '💡', 'Suggestions'],
   ['giveaways', '🎁', 'Giveaways'],
@@ -3642,6 +3643,274 @@ Dashboard.renderers.moderation = async (content, data) => {
 };
 
 // ---------- Rôles (menus) ----------
+// 🛡️ v242 — Anti-nuke : onglet dédié.
+// L'anti-raid (dans Modération) protège contre un afflux de membres venant de
+// l'extérieur. L'anti-nuke protège contre les actions destructrices venant de
+// l'intérieur : compte admin volé, staff malveillant, erreur de manipulation.
+//
+// Le principe de détection est le même que Wick, Security Bot, Firewall et
+// VaultCord : des limites PAR TYPE d'action, chacune avec son propre seuil et
+// sa propre fenêtre. Un nuke est rapide et répété sur un seul type ; la
+// modération humaine est lente et variée. Un compteur global unique confondait
+// les deux et bannissait des admins légitimes.
+Dashboard.renderers.antinuke = async (content, data) => {
+  const { bot, guildId } = Dashboard.state;
+  const root = Dashboard.header(content, '🚨', 'Anti-nuke',
+    'Protège le serveur contre les actions destructrices venant de l’intérieur : suppressions en série, bans de masse, élévation de privilèges.');
+
+  const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
+  const chanOpts = (sel) => `<option value="">— Journal par défaut —</option>`
+    + textChannels.map((ch) => `<option value="${App.escapeHtml(ch.id)}" ${String(sel || '') === String(ch.id) ? 'selected' : ''}>#${App.escapeHtml(ch.name)}</option>`).join('');
+
+  // Les 11 types surveillés, groupés pour rester lisibles.
+  const GROUPES = [
+    ['📁 Salons', [
+      ['channel_delete', 'Suppression de salon', 'Un nuke vide le serveur en quelques secondes.'],
+      ['channel_create', 'Création de salon', 'Les scripts recréent des salons pleins de liens d’arnaque.'],
+      ['overwrite', 'Permissions de salon modifiées', 'Rendre les salons invisibles à tout le monde.'],
+    ]],
+    ['🏷️ Rôles et permissions', [
+      ['role_delete', 'Suppression de rôle', 'Purge de la hiérarchie des rôles.'],
+      ['role_create', 'Création de rôle', 'Création de rôles Administrateur en série.'],
+      ['role_update', 'Rôle qui reçoit « Administrateur »', '⚡ Se déclenche sur UNE seule action : élever un rôle est rarement anodin.'],
+    ]],
+    ['👥 Membres', [
+      ['ban', 'Bannissement', 'Fenêtre longue : bannir plusieurs raiders à la suite est normal.'],
+      ['kick', 'Expulsion', 'Fenêtre longue, même raison.'],
+    ]],
+    ['🧩 Autres', [
+      ['webhook', 'Création de webhook', 'Contourner les salons verrouillés.'],
+      ['emoji', 'Suppression d’emoji', 'Effacer l’identité du serveur.'],
+      ['bot_add', 'Ajout d’un bot', '⚡ Se déclenche sur UNE seule action : c’est le vecteur classique d’un nuke.'],
+    ]],
+  ];
+
+  // ------------------------------------------------------------
+  // 1. Comment Hoxera fait la différence
+  // ------------------------------------------------------------
+  const cHow = Dashboard.card(root, '🧠 Comment Hoxera distingue un nuke d’une modération normale',
+    'Deux signaux opposés, mesurés séparément pour chaque type d’action.');
+  cHow.appendChild(App.el(`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;font-size:13px">
+    <div style="padding:10px 12px;border:1px solid rgba(237,66,69,.4);border-radius:10px;background:rgba(237,66,69,.08)">
+      <b>💥 Un nuke</b><br />
+      Rapide et <b>répété sur un seul type</b> : 10 à 20 salons supprimés en 2 secondes, par dizaines, à vitesse machine.
+    </div>
+    <div style="padding:10px 12px;border:1px solid rgba(87,186,120,.4);border-radius:10px;background:rgba(87,186,120,.08)">
+      <b>🧑‍⚖️ Une modération normale</b><br />
+      Lente et <b>variée</b> : un ban par-ci, un vieux salon supprimé par-là, un rôle ajusté, étalés sur plusieurs minutes.
+    </div>
+  </div>
+  <div class="desc" style="margin-top:10px">Chaque type a donc son propre compteur. Deux bans de raiders <b>plus</b> un salon supprimé ne forment plus un tout suspect : ce sont deux compteurs distincts, et aucun n’atteint son seuil.</div>
+  <div class="desc" style="margin-top:4px">Les suppressions ont une fenêtre courte (10 s) ; les bans et expulsions une fenêtre longue (60 s), parce que nettoyer un raid en bannissant plusieurs comptes d’affilée est un usage normal.</div>`));
+
+  // ------------------------------------------------------------
+  // 2. Protections permanentes
+  // ------------------------------------------------------------
+  const cRails = Dashboard.card(root, '🔐 Protections permanentes',
+    'Ces règles ne sont pas réglables : elles empêchent Hoxera de punir un innocent.');
+  cRails.appendChild(App.el(`<div style="display:grid;gap:6px;font-size:13px">
+    <div class="desc" style="margin:0">👑 Le <b>propriétaire du serveur</b> n’est jamais sanctionné, quoi qu’il fasse.</div>
+    <div class="desc" style="margin:0">🤖 <b>Hoxera lui-même</b> est exclu (suppressions de tickets et de vocaux temporaires ignorées).</div>
+    <div class="desc" style="margin:0">🧩 <b>Les autres bots</b> ne sont pas sanctionnés par défaut — punir un bot de tickets casserait le serveur. Une alerte est envoyée à la place.</div>
+    <div class="desc" style="margin:0">✅ Les membres de la <b>liste blanche</b> ne sont jamais sanctionnés.</div>
+    <div class="desc" style="margin:0">❓ Sans <b>identification certaine</b> de l’auteur par le journal d’audit, Hoxera alerte mais ne punit pas.</div>
+  </div>`));
+
+  // ------------------------------------------------------------
+  // 3. Configuration générale
+  // ------------------------------------------------------------
+  const cCfg = Dashboard.card(root, '⚙️ Réaction et portée', 'Désactivé par défaut. Activez-le seulement après avoir réglé la liste blanche.');
+  const cfgBox = App.el(`<div class="desc">Chargement…</div>`);
+  cCfg.appendChild(cfgBox);
+
+  // ------------------------------------------------------------
+  // 4. Limites par type
+  // ------------------------------------------------------------
+  const cLim = Dashboard.card(root, '🎚️ Limites par type d’action',
+    'Le réglage qui compte vraiment : « au-delà de N actions de ce type en T secondes, Hoxera réagit ».');
+  const limBox = App.el(`<div class="desc">Chargement…</div>`);
+  cLim.appendChild(limBox);
+
+  // ------------------------------------------------------------
+  // 5. Historique
+  // ------------------------------------------------------------
+  const cHist = Dashboard.card(root, '📜 Historique des réactions', 'Chaque réaction est tracée, y compris celles refusées par une protection.');
+  const histBox = App.el(`<div class="desc">Chargement…</div>`);
+  cHist.appendChild(histBox);
+
+  const load = async () => {
+    let st;
+    try {
+      st = await App.api(`/bots/${bot.id}/guilds/${guildId}/antinuke/state`);
+    } catch (e) {
+      cfgBox.innerHTML = `<div class="desc">Anti-nuke indisponible : ${App.escapeHtml(e.message)}</div>`;
+      limBox.innerHTML = '';
+      histBox.innerHTML = '';
+      return;
+    }
+    const cfg = st.config || {};
+    const limits = cfg.limits || {};
+
+    // --- Alerte sur la permission d'audit : sans elle, aucune sanction. ---
+    const auditBanner = st.audit && st.audit.ok
+      ? `<div class="desc" style="margin:10px 0 0">✅ Journal d’audit lisible — Hoxera peut identifier les auteurs.</div>`
+      : `<div style="margin:10px 0 0;padding:10px 12px;border:1px solid rgba(254,231,92,.4);border-radius:10px;background:rgba(254,231,92,.08);font-size:13px">
+          ⚠️ <b>Journal d’audit illisible</b> (${App.escapeHtml((st.audit && st.audit.reason) || 'bot hors ligne')}).<br />
+          Donnez à Hoxera la permission <b>« Voir le journal d’audit »</b> dans Paramètres du serveur → Rôles.
+          Sans elle, Hoxera <b>alerte mais ne sanctionne jamais</b> : il ne peut pas prouver qui a agi.
+        </div>`;
+
+    // --- Avertissement propre à chaque réaction choisie. ---
+    const notes = {
+      ban: `⛔ <b>Action la plus agressive, et elle ne s’annule pas facilement.</b> Security Bot le dit explicitement : le ban est le plus sûr mais difficile à révoquer. C’est pour ça que Hoxera est réglé sur la <b>quarantaine</b> par défaut. Ne passez au ban que si vous savez pourquoi.`,
+      quarantine: `🔒 <b>Réglage par défaut, recommandé par Wick et Security Bot.</b> Tous les rôles sont retirés et remplacés par un rôle sans aucune permission. Le membre reste sur le serveur, vous pouvez enquêter puis restaurer ses rôles. Les rôles d’origine sont conservés dans l’historique ci-dessous.`,
+      demote: `🔻 Seule la permission Administrateur est retirée. Hoxera doit être au-dessus du membre dans la hiérarchie des rôles.`,
+      lockdown: `🔒 Les salons sont verrouillés pour stopper l’hémorragie. Réouverture depuis Modération → Bouclier anti-raid.`,
+      alert: `🔔 Mode le plus sûr : Hoxera signale, vous décidez. Idéal pour les premiers jours, le temps de voir si vos seuils sont bons.`,
+    };
+    const dangerNote = `<div style="margin-top:10px;padding:10px 12px;border:1px solid ${cfg.action === 'ban' ? 'rgba(237,66,69,.4)' : 'rgba(255,255,255,.14)'};border-radius:10px;background:${cfg.action === 'ban' ? 'rgba(237,66,69,.08)' : 'rgba(255,255,255,.04)'};font-size:13px">${notes[cfg.action] || notes.alert}</div>`;
+
+    cfgBox.innerHTML = `
+      <label class="dash-label">Activer l’anti-nuke</label>
+      <label class="switch"><input type="checkbox" id="nk-on" ${cfg.enabled ? 'checked' : ''} /><span class="slider"></span></label>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:12px">
+        <div>
+          <label class="dash-label">Réaction</label>
+          <select class="dash-select" id="nk-act">
+            <option value="alert" ${cfg.action === 'alert' ? 'selected' : ''}>🔔 Alerter seulement (le plus sûr)</option>
+            <option value="quarantine" ${cfg.action === 'quarantine' ? 'selected' : ''}>🔒 Quarantaine (réglage par défaut — réversible)</option>
+            <option value="demote" ${cfg.action === 'demote' ? 'selected' : ''}>🔻 Retirer Administrateur</option>
+            <option value="lockdown" ${cfg.action === 'lockdown' ? 'selected' : ''}>🔐 Verrouiller les salons</option>
+            <option value="ban" ${cfg.action === 'ban' ? 'selected' : ''}>⛔ Bannir l’auteur (agressif, irréversible)</option>
+          </select>
+        </div>
+        <div>
+          <label class="dash-label">Salon d’alerte</label>
+          <select class="dash-select" id="nk-chan">${chanOpts(cfg.alertChannel)}</select>
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <label class="dash-label">Liste blanche (identifiants Discord, séparés par des virgules)</label>
+        <input class="dash-input" id="nk-wl" type="text" value="${App.escapeHtml((cfg.whitelist || []).join(', '))}" placeholder="123456789012345678, 234567890123456789" />
+        <div class="desc" style="margin-top:4px">Ces membres ne seront jamais sanctionnés. <b>Mettez-y vos administrateurs de confiance</b> — c’est la première chose que recommandent Wick et Security Bot.</div>
+      </div>
+      <label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-size:13px;cursor:pointer">
+        <input type="checkbox" id="nk-bots" ${cfg.punishBots ? 'checked' : ''} />
+        <span>Sanctionner aussi les <b>autres bots</b> du serveur (déconseillé : un bot de tickets se ferait punir en ouvrant trois tickets)</span>
+      </label>
+      ${dangerNote}
+      ${auditBanner}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+        <button class="dash-btn dash-btn-primary" id="nk-save" style="flex:1">💾 Enregistrer</button>
+        <button class="dash-btn" id="nk-reset">↩️ Seuils recommandés</button>
+        <button class="dash-btn" id="nk-sim" style="flex:1">🧪 Simuler une alerte</button>
+      </div>
+      <div class="desc" style="margin-top:8px">La simulation envoie une alerte de démonstration. Elle ne sanctionne <b>jamais</b> personne.</div>
+      <div class="desc" style="margin-top:4px">Réactions déjà déclenchées sur ce serveur : <b>${st.totalActions || 0}</b></div>`;
+
+    // --- Tableau des limites par type ---
+    limBox.innerHTML = GROUPES.map(([titre, lignes]) => `
+      <div class="dash-label" style="margin-top:14px">${titre}</div>
+      <div style="display:grid;gap:8px">
+        ${lignes.map(([kind, libelle, aide]) => {
+          const l = limits[kind] || { count: 3, window: 60 };
+          const instant = l.count === 1;
+          return `<div data-kind="${kind}" style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:8px 10px;border:1px solid rgba(255,255,255,.10);border-radius:10px">
+            <div>
+              <div style="font-size:13px">${libelle}</div>
+              <div class="desc" style="margin:2px 0 0;font-size:12px">${aide}</div>
+            </div>
+            <div style="text-align:center">
+              <div class="desc" style="margin:0 0 2px;font-size:11px">actions</div>
+              <input class="dash-input nk-count" type="number" min="1" max="50" value="${l.count}" style="width:74px" aria-label="Seuil pour ${libelle}" />
+            </div>
+            <div style="text-align:center">
+              <div class="desc" style="margin:0 0 2px;font-size:11px">secondes</div>
+              <input class="dash-input nk-window" type="number" min="5" max="600" value="${l.window}" style="width:84px" aria-label="Fenêtre pour ${libelle}" />
+            </div>
+          </div>${instant ? '' : ''}`;
+        }).join('')}
+      </div>`).join('');
+
+    const collect = () => {
+      const out = {};
+      limBox.querySelectorAll('[data-kind]').forEach((row) => {
+        out[row.dataset.kind] = {
+          count: parseInt(row.querySelector('.nk-count').value, 10) || 1,
+          window: parseInt(row.querySelector('.nk-window').value, 10) || 10,
+        };
+      });
+      return out;
+    };
+
+    const save = async () => {
+      try {
+        await App.api(`/bots/${bot.id}/guilds/${guildId}/antinuke`, {
+          method: 'PUT',
+          body: {
+            enabled: cCfg.querySelector('#nk-on').checked,
+            action: cCfg.querySelector('#nk-act').value,
+            whitelist: cCfg.querySelector('#nk-wl').value,
+            alert_channel: cCfg.querySelector('#nk-chan').value,
+            punish_bots: cCfg.querySelector('#nk-bots').checked,
+            limits: collect(),
+          },
+        });
+        App.toast('Anti-nuke enregistré !');
+        load();
+      } catch (e) { App.toast(e.message, 'error'); }
+    };
+
+    cCfg.querySelector('#nk-save').onclick = save;
+    cCfg.querySelector('#nk-sim').onclick = async () => {
+      try {
+        App.toast('🧪 Simulation : aucune sanction ne sera appliquée…');
+        const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/antinuke/simulate`, { method: 'POST' });
+        App.toast(r.sent ? `Alerte de test envoyée (${r.channel}) !` : 'Simulation terminée (salon d’alerte introuvable).');
+        load();
+      } catch (e) { App.toast(e.message, 'error'); }
+    };
+    cCfg.querySelector('#nk-reset').onclick = () => {
+      // Seuils recommandés, identiques à LIMITS_DEFAULT côté serveur.
+      const RECO = {
+        channel_delete: [2, 10], channel_create: [3, 10], role_delete: [2, 10], role_create: [3, 10],
+        role_update: [1, 10], overwrite: [4, 10], ban: [3, 60], kick: [3, 60],
+        webhook: [2, 10], emoji: [2, 10], bot_add: [1, 10],
+      };
+      limBox.querySelectorAll('[data-kind]').forEach((row) => {
+        const r = RECO[row.dataset.kind];
+        if (!r) return;
+        row.querySelector('.nk-count').value = r[0];
+        row.querySelector('.nk-window').value = r[1];
+      });
+      App.toast('Seuils recommandés rétablis — pensez à enregistrer.');
+    };
+
+    // --- Historique ---
+    const rows = st.recent || [];
+    if (!rows.length) {
+      histBox.innerHTML = `<div class="dash-empty">Aucune réaction pour l’instant.</div>`;
+      return;
+    }
+    const label = {
+      ban: '⛔ banni', quarantine: '🔒 quarantaine', demote: '🔻 rétrogradé',
+      lockdown: '🔐 confinement', alert: '🔔 alerte', simulation: '🧪 simulation', 'échec': '⚠️ échec',
+    };
+    histBox.innerHTML = `<div style="overflow-x:auto"><table class="dash-table" style="width:100%;font-size:13px">
+      <thead><tr><th>Date</th><th>Auteur</th><th>Déclencheur</th><th>Réaction</th><th>Détail</th></tr></thead>
+      <tbody>${rows.map((r) => `<tr>
+        <td>${App.escapeHtml(new Date(Number(r.created_at)).toLocaleString('fr-FR'))}</td>
+        <td>${App.escapeHtml(r.actor_tag || r.actor_id || '—')}</td>
+        <td>${App.escapeHtml(r.kind || '—')}</td>
+        <td>${App.escapeHtml(label[r.action_taken] || r.action_taken || '—')}</td>
+        <td>${App.escapeHtml(r.detail || r.reason || '—')}</td>
+      </tr>`).join('')}</tbody></table></div>
+      <div class="desc" style="margin-top:8px">La colonne Détail conserve les rôles qu’un membre avait avant une quarantaine ou une rétrogradation : ils peuvent être rendus à la main.</div>`;
+  };
+
+  await load();
+};
+
 Dashboard.renderers.roles = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const root = Dashboard.header(content, '📋', 'Menus & boutons de rôles', 'Deux styles au choix : menu déroulant (plusieurs rôles d\'un coup) ou boutons (un clic = un rôle, re-clic = retiré).');

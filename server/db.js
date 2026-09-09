@@ -748,6 +748,45 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN antiraid_window INTEGER DEF
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN antiraid_action TEXT DEFAULT 'lockdown'"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN antiraid_unlock_min INTEGER DEFAULT 0"); } catch (e) {}
 
+// v242 : anti-nuke. Contrairement à l'anti-raid (afflux de membres venant de
+// l'extérieur), l'anti-nuke cible les actions destructrices venant de
+// l'intérieur : suppression de salons/rôles en série, bans ou kicks de masse,
+// spam de webhooks, élévation de privilèges. Désactivé par défaut : aucun
+// serveur n'est affecté avant activation explicite dans le dashboard.
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN antinuke_enabled INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN antinuke_threshold INTEGER DEFAULT 3"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN antinuke_window INTEGER DEFAULT 60"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN antinuke_action TEXT DEFAULT 'quarantine'"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN antinuke_whitelist TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN antinuke_alert_channel TEXT DEFAULT ''"); } catch (e) {}
+// v242 (améliorations post-recherche) : limites PAR TYPE d'action, comme Wick,
+// Security Bot, Firewall et VaultCord. Un compteur global unique confondait un
+// nuke avec de la modération ordinaire (ex. 2 bans de raiders + 1 vieux salon
+// supprimé = 3 actions = bannissement d'un admin légitime). Chaque type a son
+// propre seuil ET sa propre fenêtre : un nuke est rapide et répété sur UN type,
+// la modération humaine est lente et variée.
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN antinuke_limits TEXT DEFAULT ''"); } catch (e) {}
+// Les autres bots (tickets, musique…) ne sont pas sanctionnés par défaut : les
+// punir casse le serveur. Wick et Security Bot exigent de les mettre en liste
+// blanche ; Hoxera les exclut d'office et alerte à la place.
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN antinuke_punish_bots INTEGER DEFAULT 0"); } catch (e) {}
+
+// Journal des réactions anti-nuke : chaque action déclenchée est tracée ici
+// pour permettre le diagnostic d'un faux positif et le débannissement manuel.
+try { db.exec(`CREATE TABLE IF NOT EXISTS antinuke_actions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id TEXT NOT NULL DEFAULT '',
+  guild_id TEXT NOT NULL,
+  actor_id TEXT NOT NULL DEFAULT '',
+  actor_tag TEXT NOT NULL DEFAULT '',
+  reason TEXT NOT NULL DEFAULT '',
+  kind TEXT NOT NULL DEFAULT '',
+  action_taken TEXT NOT NULL DEFAULT '',
+  detail TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL DEFAULT 0
+)`); } catch (e) {}
+try { db.exec("CREATE INDEX IF NOT EXISTS idx_antinuke_actions ON antinuke_actions (bot_id, guild_id, created_at)"); } catch (e) {}
+
 // v88 : nouvelles catégories de journaux (messages, rôles, salons, serveur,
 // vocal, sécurité) activées par défaut sur les configurations existantes.
 function migrateLogCategories(targetDb) {
@@ -1016,7 +1055,9 @@ const guildSettings = {
     'giveaway_channel', 'giveaway_default_duration', 'giveaway_default_winners', 'giveaway_ping_role', 'giveaway_color', 'giveaway_message',
     'suggestion_color', 'suggestion_ping_role', 'suggestion_downvotes', 'suggestion_approve_channel',
     'close_dm_message', 'close_dm_image',
-    'quiz_channel', 'quiz_points', 'quiz_bonus', 'quiz_bonus_window'];
+    'quiz_channel', 'quiz_points', 'quiz_bonus', 'quiz_bonus_window',
+    'antinuke_enabled', 'antinuke_threshold', 'antinuke_window', 'antinuke_action',
+    'antinuke_whitelist', 'antinuke_alert_channel', 'antinuke_limits', 'antinuke_punish_bots'];
     const vals = {
       bot_id: botId, guild_id: guildId,
       prefix: String(next.prefix || '').slice(0, 5),
@@ -1084,6 +1125,16 @@ const guildSettings = {
       antiraid_window: Math.min(Math.max(parseInt(next.antiraid_window, 10) || 30, 5), 600),
       antiraid_action: ['lockdown', 'alert'].includes(String(next.antiraid_action)) ? String(next.antiraid_action) : 'lockdown',
       antiraid_unlock_min: Math.min(Math.max(parseInt(next.antiraid_unlock_min, 10) || 0, 0), 1440),
+      antinuke_enabled: next.antinuke_enabled ? 1 : 0,
+      // Seuil minimal = 1 : l'élévation de privilèges et l'ajout de bot se
+      // déclenchent sur une seule action, comme chez Wick.
+      antinuke_threshold: Math.min(Math.max(parseInt(next.antinuke_threshold, 10) || 3, 1), 50),
+      antinuke_window: Math.min(Math.max(parseInt(next.antinuke_window, 10) || 60, 5), 600),
+      antinuke_action: ['ban', 'quarantine', 'demote', 'lockdown', 'alert'].includes(String(next.antinuke_action)) ? String(next.antinuke_action) : 'quarantine',
+      antinuke_whitelist: String(next.antinuke_whitelist || '').slice(0, 1000),
+      antinuke_alert_channel: String(next.antinuke_alert_channel || '').slice(0, 100),
+      antinuke_limits: String(next.antinuke_limits || '').slice(0, 4000),
+      antinuke_punish_bots: next.antinuke_punish_bots ? 1 : 0,
       log_channel: String(next.log_channel || '').slice(0, 100),
       suggestion_channel: String(next.suggestion_channel || '').slice(0, 100),
       log_events: String(next.log_events || '').slice(0, 1000),
@@ -2135,4 +2186,44 @@ const liveSocials = {
   count: (botId, guildId) => db.prepare('SELECT COUNT(*) AS n FROM live_socials WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n,
 };
 
-module.exports = { db, embedTemplates, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, modmail, closedTickets, botProfiles, profileAliases, profileState, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodStrikes, automodTempBans, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, afk, guildEvents, quizScores, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories, quizSets };
+// ============================================================
+// v242 — Anti-nuke : journal des réactions déclenchées.
+// Chaque sanction est tracée pour permettre le diagnostic d'un
+// faux positif et le débannissement manuel par le propriétaire.
+// ============================================================
+const antinuke = {
+  log: (botId, guildId, fields = {}) => {
+    const inserted = db.prepare(`INSERT INTO antinuke_actions
+      (bot_id, guild_id, actor_id, actor_tag, reason, kind, action_taken, detail, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+        String(botId || ''), String(guildId || ''),
+        String(fields.actor_id || '').slice(0, 40),
+        String(fields.actor_tag || '').slice(0, 100),
+        String(fields.reason || '').slice(0, 300),
+        String(fields.kind || '').slice(0, 300),
+        String(fields.action_taken || '').slice(0, 40),
+        String(fields.detail || '').slice(0, 1000),
+        Number(fields.created_at || Date.now()));
+    return { lastInsertRowid: inserted.lastInsertRowid, changes: inserted.changes };
+  },
+
+  // Historique récent, pour l'affichage dans le dashboard.
+  recent: (botId, guildId, limit = 20) => {
+    try {
+      return db.prepare(`SELECT * FROM antinuke_actions
+        WHERE bot_id = ? AND guild_id = ?
+        ORDER BY created_at DESC, id DESC LIMIT ?`).all(String(botId || ''), String(guildId || ''), Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100));
+    } catch (e) { return []; }
+  },
+
+  // Nombre total de réactions : sert à afficher l'état de la protection.
+  count: (botId, guildId) => {
+    try {
+      const r = db.prepare('SELECT COUNT(*) AS n FROM antinuke_actions WHERE bot_id = ? AND guild_id = ?')
+        .get(String(botId || ''), String(guildId || ''));
+      return r ? Number(r.n) : 0;
+    } catch (e) { return 0; }
+  },
+};
+
+module.exports = { db, antinuke, embedTemplates, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, modmail, closedTickets, botProfiles, profileAliases, profileState, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodStrikes, automodTempBans, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, afk, guildEvents, quizScores, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories, quizSets };

@@ -1675,6 +1675,117 @@ router.post('/bots/:id/guilds/:guildId/antiraid/unlock', requireAuth, async (req
   res.json({ ok: true });
 });
 
+// 🛡️ v242 Anti-nuke : configuration
+router.put('/bots/:id/guilds/:guildId/antinuke', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const { enabled, threshold, window, action, whitelist, alert_channel, limits, punish_bots } = req.body || {};
+  const antinuke = require('./discord/antinuke');
+  // La liste blanche n'accepte que des identifiants Discord numériques.
+  const wl = String(whitelist || '').split(',').map((x) => x.trim())
+    .filter((x) => /^\d{15,25}$/.test(x)).slice(0, 50).join(',');
+  // Limites PAR TYPE d'action : chacune est bornée côté serveur, un JSON
+  // envoyé par le navigateur ne peut pas imposer un seuil de 0 ou de 9999.
+  const norm = antinuke.normalizeLimits(limits && typeof limits === 'object' ? limits : {});
+  store.guildSettings.set(bot.id, req.params.guildId, {
+    antinuke_enabled: enabled ? 1 : 0,
+    antinuke_threshold: Math.min(Math.max(parseInt(threshold, 10) || 3, 1), 50),
+    antinuke_window: Math.min(Math.max(parseInt(window, 10) || 60, 5), 600),
+    antinuke_action: antinuke.ACTIONS.includes(action) ? action : 'quarantine',
+    antinuke_whitelist: wl,
+    antinuke_alert_channel: String(alert_channel || '').slice(0, 100),
+    antinuke_limits: JSON.stringify(norm),
+    antinuke_punish_bots: punish_bots ? 1 : 0,
+  });
+  res.json({ ok: true, whitelist: wl, limits: norm });
+});
+
+// 🛡️ v242 Anti-nuke : état, historique et lisibilité du journal d'audit
+router.get('/bots/:id/guilds/:guildId/antinuke/state', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const antinuke = require('./discord/antinuke');
+  const guildId = req.params.guildId;
+  const entry = botManager.clients.get(bot.id);
+  const guild = entry && entry.client.guilds.cache.get(guildId);
+  // Vérification réelle de la permission « Voir le journal d'audit » : sans elle,
+  // Hoxera ne peut pas identifier les auteurs et ne sanctionne jamais.
+  let audit = { ok: false, reason: 'bot hors ligne' };
+  if (guild) {
+    try {
+      await guild.fetchAuditLog({ limit: 1 });
+      audit = { ok: true };
+    } catch (e) {
+      audit = { ok: false, reason: (e && e.message) || 'lecture impossible' };
+    }
+  }
+  res.json({
+    config: antinuke.config(bot.id, guildId),
+    audit,
+    totalActions: store.antinuke.count(bot.id, guildId),
+    recent: store.antinuke.recent(bot.id, guildId, 15),
+  });
+});
+
+// 🛡️ v242 Anti-nuke : SIMULATION. Envoie uniquement l'alerte, ne punit
+// jamais personne. Contrairement au test anti-raid, il n'existe aucune
+// version « réelle » de ce test : bannir un membre innocent pour tester
+// serait inacceptable.
+router.post('/bots/:id/guilds/:guildId/antinuke/simulate', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const entry = botManager.clients.get(bot.id);
+  if (!entry || !entry.client.isReady()) return res.status(503).json({ error: 'Le bot est hors ligne — impossible de simuler.' });
+  const guild = entry.client.guilds.cache.get(guildId);
+  if (!guild) return res.status(404).json({ error: 'Serveur introuvable pour le bot.' });
+  const antinuke = require('./discord/antinuke');
+  const i18n = require('./i18n');
+  const cfg = antinuke.config(bot.id, guildId);
+  const lang = i18n.langForGuild(guildId);
+  const fakeHits = [{ kind: 'channel_delete' }, { kind: 'role_delete' }, { kind: 'ban' }]
+    .slice(0, Math.max(1, cfg.threshold));
+  const detailHits = fakeHits.map((h) => `1× ${antinuke.kindLabel(lang, h.kind)}`).join(', ');
+  // L'auteur est le demandeur lui-même : la simulation ne vise jamais un tiers.
+  const actorTag = `${(req.currentUser && (req.currentUser.email || req.currentUser.username)) || req.userId || 'vous'} (simulation)`;
+  const desc = i18n.t(lang, 'nuke_alert_hits', { count: fakeHits.length, window: cfg.window, actor: actorTag })
+    + '\n🧪 **Simulation** — aucune sanction appliquée.';
+  try {
+    store.antinuke.log(bot.id, guildId, {
+      actor_id: String(req.userId || ''), actor_tag: actorTag,
+      reason: 'simulation dashboard', kind: detailHits, action_taken: 'simulation',
+      detail: `action configurée : ${cfg.action}`,
+    });
+  } catch { /* non bloquant */ }
+  if (cfg.alertChannel) {
+    try {
+      const chan = await guild.channels.fetch(cfg.alertChannel).catch(() => null);
+      if (chan && chan.send) {
+        const { EmbedBuilder } = require('discord.js');
+        const eb = new EmbedBuilder()
+          .setTitle(i18n.t(lang, 'nuke_alert_title', { server: guild.name }))
+          .setDescription(desc).setColor(0xED4245)
+          .addFields({ name: i18n.t(lang, 'nuke_field_action'), value: `🧪 simulation (${cfg.action} ignoré)`, inline: true });
+        await chan.send({ embeds: [eb] });
+        return res.json({ ok: true, sent: true, channel: cfg.alertChannel });
+      }
+    } catch { /* on retombe sur le journal */ }
+  }
+  try {
+    await require('./discord/logging').log(bot.id, guild, {
+      title: i18n.t(lang, 'nuke_alert_title', { server: guild.name }),
+      description: desc, color: '#ED4245', type: 'security',
+      fields: [{ name: i18n.t(lang, 'nuke_field_action'), value: `🧪 simulation (${cfg.action} ignoré)` }],
+    });
+    res.json({ ok: true, sent: true, channel: 'journal' });
+  } catch (e) {
+    res.json({ ok: true, sent: false, error: e.message });
+  }
+});
+
 // Historique des actions d'auto-modération (visible dans le dashboard)
 router.get('/bots/:id/guilds/:guildId/automod/logs', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);

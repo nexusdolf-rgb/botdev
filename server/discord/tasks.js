@@ -99,6 +99,10 @@ async function sweep(botId, entry) {
   try { const antiraid = require('./antiraid'); await antiraid.sweep(botId, entry); }
   catch (e) { console.error('[Hoxera] anti-raid sweep:', e.message); }
 
+  // 🛡️ v242 Anti-nuke : purge des compteurs par auteur
+  try { require('./antinuke').sweep(); }
+  catch (e) { console.error('[Hoxera] anti-nuke sweep:', e.message); }
+
   const due = store.tempRoles.due().filter((t) => t.bot_id === botId);
   for (const t of due) {
     try {
