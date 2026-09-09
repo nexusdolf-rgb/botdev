@@ -5877,3 +5877,48 @@ html.hx-light .card-fold:hover { color: #b3543d; }
   .dashboard-shell-host .dash-side-item { font-size: 0; gap: 0; justify-content: center; padding: 6px 0; margin: 2px 7px; width: calc(100% - 14px); }
   .dashboard-shell-host .dash-side-item .ico { font-size: 16px; }
 }
+
+/* ---------- v253 — OS de bureau : disposition PC garantie (481-900 px) ----------
+   Ultime filet, après trois correctifs fondés sur des mesures (largeur, tactile,
+   hauteur) que certains PC fauxent — échelle d'affichage Windows, écran tactile
+   déclaré comme pointeur principal… Ici on ne mesure plus : si le système est
+   un OS de bureau (classe hx-os-pc posée par index.html), la coquille MOBILE
+   (hamburger, tiroirs, barre basse) est neutralisée entre 481 et 900 px et la
+   barre latérale revient en rail d'icônes. Au-delà de 900 px ce bloc ne fait
+   rien (le PC y est déjà en PC) ; sous 481 px même un PC passe en mobile, une
+   fenêtre si petite n'ayant pas la place d'une barre latérale.
+   Android / iPhone / iPad n'ont pas la classe : strictement inchangés. */
+@media (min-width: 481px) and (max-width: 900px) {
+  /* Sous 700 px le bloc mobile fait de la coquille une COLONNE (onglets
+     horizontaux en haut, contenu dessous). On remet la coquille en ligne et
+     la barre latérale en colonne verticale, sinon le rail partirait en
+     bandeau horizontal — exactement le bug vu en capture. */
+  html.hx-os-pc .dashboard-shell-host .dash-shell { flex-direction: row; }
+  html.hx-os-pc .dashboard-shell-host .dash-side {
+    display: flex; width: 64px; flex: 0 0 64px; flex-direction: column;
+    overflow-x: hidden; overflow-y: auto;
+    position: sticky; top: 56px; height: calc(100vh - 56px); transform: none;
+    border-right: 1px solid var(--d-border); border-bottom: none;
+  }
+  html.hx-os-pc .dashboard-shell-host .dash-side-item {
+    flex: 0 0 auto; min-height: 0; white-space: normal; border-bottom: none;
+  }
+  html.hx-os-pc .dashboard-shell-host .dash-main { padding: 18px 16px 60px; }
+  html.hx-os-pc .dashboard-shell-host .dash-topbar { margin: 0; padding: 10px 14px; }
+  html.hx-os-pc .dashboard-shell-host .dash-mobile-bar,
+  html.hx-os-pc .dashboard-shell-host .dash-bnav,
+  html.hx-os-pc .dashboard-shell-host .dash-mobile-drawer,
+  html.hx-os-pc .dashboard-shell-host .dash-mobile-backdrop,
+  html.hx-os-pc .dashboard-shell-host .dash-side-brand-copy,
+  html.hx-os-pc .dashboard-shell-host .dash-side-section,
+  html.hx-os-pc .dashboard-shell-host .dash-server-card .srv-txt,
+  html.hx-os-pc .dashboard-shell-host .dash-side .scroll-hint,
+  html.hx-os-pc .dashboard-shell-host .dash-side-foot { display: none !important; }
+  html.hx-os-pc .dashboard-shell-host .dash-crumb { display: flex; }
+  html.hx-os-pc .dashboard-shell-host .dash-topbar { display: flex; flex-direction: row; align-items: center; gap: 10px; }
+  html.hx-os-pc .dashboard-shell-host .dash-topbar-actions { margin-left: auto; display: flex; align-items: center; }
+  html.hx-os-pc .dashboard-shell-host .dash-side-item { font-size: 0; gap: 0; justify-content: center; padding: 6px 0; margin: 2px 7px; width: calc(100% - 14px); }
+  html.hx-os-pc .dashboard-shell-host .dash-side-item .ico { font-size: 16px; }
+  html.hx-os-pc .dashboard-shell-host .dash-side-brand { justify-content: center; margin: 6px 0 10px; padding: 0; }
+  html.hx-os-pc .dashboard-shell-host .dash-server-card { justify-content: center; padding: 6px 0; margin: 0 6px 8px; }
+}

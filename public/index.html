@@ -11,8 +11,8 @@
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="apple-touch-icon" href="/icons/nexora-robot-mark-192.png" />
   <link rel="icon" href="/icons/nexora-robot-mark.png" />
-  <link rel="stylesheet" href="/css/style.css?v=252" />
-  <link rel="stylesheet" href="/css/dashboard.css?v=252" />
+  <link rel="stylesheet" href="/css/style.css?v=253" />
+  <link rel="stylesheet" href="/css/dashboard.css?v=253" />
 </head>
 <body>
   <div id="app"></div>
@@ -20,6 +20,21 @@
   <div id="toasts" aria-live="polite"></div>
   <div id="modal-root"></div>
 
+  <script>
+    // 🖥️ v253 : « PC ou mobile » décidé par le SYSTÈME D'EXPLOITATION, pas par des
+    // mesures que le navigateur peut fausser (échelle d'affichage Windows,
+    // écran tactile déclaré pointeur principal…). Un Windows / Mac / Linux de
+    // bureau porte la classe hx-os-pc et garde la disposition PC ; un Android,
+    // iPhone, iPad (y compris déguisé en Mac) reste en mobile. Appliqué avant
+    // le premier rendu pour ne pas flasher une mauvaise mise en page.
+    try {
+      const ua = navigator.userAgent;
+      const osMobile = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini|Silk/.test(ua);
+      const ipadEnMac = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+      const osPc = /Windows NT|Macintosh|X11|Linux|CrOS/.test(ua) && !osMobile && !ipadEnMac;
+      if (osPc) document.documentElement.classList.add('hx-os-pc');
+    } catch {}
+  </script>
   <script>
     // ☀️/🌙 Thème appliqué AVANT le rendu (pas de flash) : choix mémorisé, sinon réglage système
     try {
@@ -29,11 +44,11 @@
       }
     } catch {}
   </script>
-  <script src="/js/app.js?v=252"></script>
-  <script src="/js/editor.js?v=252"></script>
-  <script src="/js/views.js?v=252"></script>
-  <script src="/js/public.js?v=252"></script>
-  <script src="/js/dashboard.js?v=252"></script>
+  <script src="/js/app.js?v=253"></script>
+  <script src="/js/editor.js?v=253"></script>
+  <script src="/js/views.js?v=253"></script>
+  <script src="/js/public.js?v=253"></script>
+  <script src="/js/dashboard.js?v=253"></script>
   <script>
     // Mode app installable (PWA) + MISE À JOUR AUTOMATIQUE :
     // dès qu'une nouvelle version du site est installée, la page se

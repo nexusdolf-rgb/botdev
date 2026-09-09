@@ -76,7 +76,9 @@ console.log('— 4. Le JS qui plie les cartes suit la même règle —');
 // La constante est déclarée AVANT la fonction : on découpe donc une fenêtre
 // autour de la définition, pas entre les deux.
 const debEcranEtroit = js.indexOf('Dashboard.ecranEtroit = ');
-const corpsEcranEtroit = js.slice(debEcranEtroit, debEcranEtroit + 500);
+// v253 : le garde « OS de bureau » allonge le corps de la fonction ;
+// 900 caractères couvrent garde + lecture de la constante.
+const corpsEcranEtroit = js.slice(debEcranEtroit, debEcranEtroit + 900);
 check('ecranEtroit lit la constante (une seule source de vérité)',
   corpsEcranEtroit.includes('matchMedia(Dashboard.MQ_ECRAN_ETROIT)'));
 // Le placement des popovers décidait LUI AUSSI « mobile ou pas » avec sa
@@ -95,9 +97,9 @@ check('…et le repli automatique des cartes passe par ecranEtroit',
 console.log('— 5. Version —');
 const index = racine('public/index.html');
 const sw = racine('public/sw.js');
-check('index.html : ?v=252 référencé 7 fois', (index.match(/\?v=252/g) || []).length === 7,
-  String((index.match(/\?v=252/g) || []).length));
-check('sw.js : cache « botdev-v252 »', sw.includes("const CACHE = 'botdev-v252';"));
+check('index.html : ?v=253 référencé 7 fois', (index.match(/\?v=253/g) || []).length === 7,
+  String((index.match(/\?v=253/g) || []).length));
+check('sw.js : cache « botdev-v253 »', sw.includes("const CACHE = 'botdev-v253';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v250 — ${ok} vérifications OK : un PC reste un PC, un mobile reste un mobile.`);

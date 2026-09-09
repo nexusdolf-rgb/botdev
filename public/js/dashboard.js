@@ -1569,6 +1569,12 @@ Dashboard.HAUTEUR_MAX_PREMIERE = 1500;
 Dashboard.MQ_ECRAN_ETROIT = '(max-width: 700px), (max-width: 900px) and (hover: none) and (pointer: coarse) and (any-pointer: coarse), (hover: none) and (pointer: coarse) and (max-height: 800px) and (any-pointer: coarse)';
 
 Dashboard.ecranEtroit = () => {
+  // v253 : un OS de bureau n'est JAMAIS « écran étroit » au-delà de 480 px,
+  // quelles que soient les mesures — sinon le repli mobile des cartes
+  // reviendrait hanter les PC à largeur réduite.
+  if (typeof document !== 'undefined' && document.documentElement
+    && document.documentElement.classList.contains('hx-os-pc')
+    && typeof window !== 'undefined' && window.innerWidth > 480) return false;
   // matchMedia peut manquer (environnements de test, très vieux navigateurs) :
   // dans ce cas on suppose un écran large, c'est-à-dire le comportement le
   // plus sûr — rien n'est caché.

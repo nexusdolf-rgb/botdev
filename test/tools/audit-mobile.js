@@ -155,11 +155,18 @@ function repondre(url) {
   // contient ce texte (sinon l'image fait toute la hauteur de l'onglet).
   const CAPTURE_CARTE = (process.argv.find((a) => a.startsWith('--capture-carte=')) || '').split('=')[1] || '';
   if (CAPTURE) require('fs').mkdirSync(CAPTURE, { recursive: true });
+  // v253 : en mode tactile, on émule AUSSI un user-agent Android. Sans ça, le
+  // Chromium du banc garde son UA de bureau, index.html pose la classe
+  // hx-os-pc, et le banc mesurerait un « téléphone » que le produit traite
+  // comme un PC — l'inverse exact de la réalité.
   const page = await browser.newPage({
     viewport: { width: LARGEUR, height: 780 },
     deviceScaleFactor: CAPTURE ? 2 : 1,
     hasTouch: TACTILE,
     isMobile: TACTILE,
+    userAgent: TACTILE
+      ? 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36'
+      : undefined,
   });
 
   const erreurs = [];
@@ -457,7 +464,11 @@ function repondre(url) {
           const mq = Dashboard.MQ_ECRAN_ETROIT;
           if (typeof mq === 'string' && mq) etroit = !!window.matchMedia(mq).matches;
         } catch { etroit = null; }
-        return { shell: d('.dash-shell'), side: d('.dash-side'), sideW: w('.dash-side'), bnav: d('.dash-bnav'), main: w('.dash-main'), etroit };
+        // v253 : un OS de bureau (classe hx-os-pc) n'est JAMAIS mobile au-delà
+        // de 480 px, même si une media query le dirait — c'est tout l'objet du
+        // correctif. Le banc doit juger avec la même règle que le produit.
+        const osPc = document.documentElement.classList.contains('hx-os-pc');
+        return { shell: d('.dash-shell'), side: d('.dash-side'), sideW: w('.dash-side'), bnav: d('.dash-bnav'), main: w('.dash-main'), etroit, osPc };
       })();
 
       return { largeurDoc, erreur, plies, candidatsNonPlies: candidats, repartition, nbCartes, hCartes, cartes,
@@ -620,14 +631,16 @@ function repondre(url) {
   const dispo = (resultats.find((r) => r.disposition) || {}).disposition;
   // Priorité à la media query réelle ; repli sur la largeur si elle n'est pas
   // disponible (module en erreur avant la mesure).
-  const attenduMobile = dispo && dispo.etroit !== null ? !!dispo.etroit : LARGEUR <= 900;
+  const attenduMobile = dispo && dispo.etroit !== null
+    ? (!!dispo.etroit && !(dispo.osPc && LARGEUR > 480))
+    : LARGEUR <= 900;
   const totPliables = resultats.reduce((a, r) => a + (r.nbPliables || 0), 0);
   const totPliees = resultats.reduce((a, r) => a + (r.nbPliees || 0), 0);
   if (dispo) {
     // v252 : entre 701 et 900 px avec un pointeur fin, la disposition PC garde
     // une barre latérale EN RAIL D'ICÔNES (64 px) — c'est voulu, pas un repli
     // mobile. Le banc doit l'accepter comme disposition PC légitime.
-    const railEtroit = !attenduMobile && !TACTILE && LARGEUR >= 701 && LARGEUR <= 900;
+    const railEtroit = !attenduMobile && !TACTILE && LARGEUR >= 481 && LARGEUR <= 900;
     const sideOk = attenduMobile ? (dispo.side === 'none')
       : railEtroit ? (dispo.side === 'flex' && dispo.sideW === 64)
       : (dispo.side === 'flex' && dispo.sideW > 200);
