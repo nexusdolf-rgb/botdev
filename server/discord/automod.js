@@ -35,6 +35,26 @@ function markAutomodded(messageId) {
 }
 
 const AUTOMOD_RULE_ACTIONS = ['inherit', 'log', 'delete', 'warn', 'timeout', 'kick', 'ban'];
+
+// 🎣 v243 — Détection de phishing / faux Nitro (voir discord/phishing.js).
+const phishing = require('./phishing');
+
+// Règle « phishing » : certitude HAUTE (liste noire, typosquat, propagation)
+// ou MOYENNE (domaine-appât, expression d'arnaque). En certitude moyenne on
+// supprime et on avertit, mais on ne bannit JAMAIS : ce ne sont pas des preuves.
+const PHISHING_HARD_ACTIONS = new Set(['ban', 'kick', 'timeout']);
+
+function capPhishingAction(action, detection) {
+  if (!detection || detection.rule !== 'phishing') return action;
+  if (detection.confidence === 'high') return action;
+  return PHISHING_HARD_ACTIONS.has(action) ? 'warn' : action;
+}
+
+// Un barème progressif (v213) peut monter jusqu'au ban : il est donc désactivé
+// en certitude moyenne, pour la même raison.
+function phishingEscalationAllowed(detection) {
+  return !(detection && detection.rule === 'phishing' && detection.confidence !== 'high');
+}
 const AUTOMOD_BLACKLIST_RULES = ['links', 'caps', 'mentions', 'words', 'spam'];
 
 // ============================================================
@@ -46,7 +66,7 @@ const AUTOMOD_BLACKLIST_RULES = ['links', 'caps', 'mentions', 'words', 'spam'];
 // et peut déclencher la blacklist du serveur (avec re-ban au retour).
 // Laissé désactivé par défaut : le comportement actuel est conservé.
 // ============================================================
-const AUTOMOD_ESC_RULES = ['links', 'caps', 'mentions', 'words', 'spam'];
+const AUTOMOD_ESC_RULES = ['phishing', 'links', 'caps', 'mentions', 'words', 'spam'];
 const AUTOMOD_ESC_ACTIONS = ['delete', 'warn', 'timeout', 'kick', 'ban'];
 // Durée max : timeout 28 jours (limite Discord), ban 1 an, blacklist 1 an.
 const ESC_MINUTES_MAX = { timeout: 40320, ban: 525600, blacklist: 525600 };
@@ -355,10 +375,31 @@ function isAutomodExempt(message, gs) {
 
 // Détection sans effet de bord : le simulateur et le traitement réel utilisent
 // exactement les mêmes règles et le même ordre de priorité.
-function detectContent(botId, guildId, content, gsOverride = null) {
+function detectContent(botId, guildId, content, gsOverride = null, extra = {}) {
   const gs = gsOverride || store.guildSettings.get(botId, guildId) || {};
   const lang = i18n.langForGuild(guildId);
   const text = String(content || '');
+  // 🎣 v243 — Phishing testé EN PREMIER : c'est plus précis que la règle
+  // « links », qui bloque indistinctement tous les liens. Un serveur peut donc
+  // laisser passer les liens ordinaires tout en stoppant les arnaques.
+  if (gs.am_phishing === 1) {
+    const allow = parseList(gs.am_phishing_allow);
+    const hit = phishing.analyze(text, { spread: extra.spread || null, allow });
+    if (hit) {
+      const reasonKey = hit.confidence === 'high' ? 'am_reason_phishing' : 'am_reason_phishing_suspect';
+      // Le domaine n'est ajouté que s'il existe : le signal D (expression
+      // d'arnaque) n'a pas de domaine à afficher, et « () » ferait désordre.
+      const hostSuffix = hit.host ? ` (${hit.host})` : '';
+      return {
+        rule: 'phishing',
+        reasonKey,
+        reason: i18n.t(lang, reasonKey) + hostSuffix,
+        confidence: hit.confidence,
+        signal: hit.signal,
+        host: hit.host || '',
+      };
+    }
+  }
   if (gs.am_links === 1 && /(discord\.gg\/|discordapp\.com\/invite\/|discord\.com\/invite\/|https?:\/\/)/i.test(text)) {
     const reasonKey = 'am_reason_link';
     return { rule: 'links', reasonKey, reason: i18n.t(lang, reasonKey) };
@@ -590,14 +631,14 @@ function analyzeContent(botId, guildId, content, opts = {}) {
     member: null,
   };
   if (isAutomodExempt(fakeMessage, gs)) return { ...result, exempt: true };
-  let detection = detectContent(botId, guildId, content, gs);
+  let detection = detectContent(botId, guildId, content, gs, { spread: opts.spread || null });
   // Le spam nécessite un nombre de messages : le simulateur peut fournir ce
   // compteur sans envoyer de rafale réelle sur Discord.
   if (!detection && Number(opts.spamCount) > 0 && Number(gs.am_spam) > 0 && Number(opts.spamCount) >= Number(gs.am_spam)) {
     detection = { rule: 'spam', reasonKey: 'am_reason_spam', reason: i18n.t(i18n.langForGuild(guildId), 'am_reason_spam') };
   }
   if (!detection) return result;
-  const configuredAction = ruleActionFor(gs, detection.rule);
+  const configuredAction = capPhishingAction(ruleActionFor(gs, detection.rule), detection);
   const action = result.mode === 'observe' ? 'observe' : (configuredAction || 'legacy');
   return {
     ...result,
@@ -605,6 +646,8 @@ function analyzeContent(botId, guildId, content, opts = {}) {
     rule: detection.rule,
     reason: detection.reason,
     reasonKey: detection.reasonKey,
+    confidence: detection.confidence || '',
+    signal: detection.signal || '',
     action,
     wouldDelete: result.mode !== 'observe' && action !== 'log',
     wouldWarn: result.mode !== 'observe' && ['legacy', 'warn', 'timeout', 'kick', 'ban'].includes(action),
@@ -741,8 +784,10 @@ async function applyEscalation(botId, message, detection, opts, gs, lang, server
 // Applique une action choisie dans le Control Center. Quand aucune action
 // personnalisée n'est enregistrée, runAutomod conserve son chemin historique.
 async function applyConfiguredAction(botId, message, detection, opts, gs, lang, serverName, messages = [message]) {
-  const action = ruleActionFor(gs, detection.rule);
-  if (!action) return null;
+  const rawAction = ruleActionFor(gs, detection.rule);
+  if (!rawAction) return null;
+  // v243 — certitude moyenne : pas de ban/kick/mute.
+  const action = capPhishingAction(rawAction, detection);
   if (gs.am_mode === 'observe') {
     recordAction(botId, message, detection.reason, { rule: detection.rule, action: 'observe', observed: 1 });
     try {
@@ -759,7 +804,7 @@ async function applyConfiguredAction(botId, message, detection, opts, gs, lang, 
   // 📈 v213 — Barème progressif : un barème activé sur cette règle remplace
   // l'action simple. Il gère lui-même suppression, palier, durée et blacklist.
   const escalation = escalationForRule(gs, detection.rule);
-  if (escalation && escalation.enabled) {
+  if (escalation && escalation.enabled && phishingEscalationAllowed(detection)) {
     return applyEscalation(botId, message, detection, opts, gs, lang, serverName, messages, escalation);
   }
 
@@ -866,7 +911,21 @@ async function runAutomod(botId, message, opts = {}) {
   if (!opts.force && isAutomodExempt(message, gs)) return { acted: false, exempt: true, exemption: 'custom' };
 
   const content = message.content || '';
-  const detection = detectContent(botId, message.guild.id, content, gs);
+  // 🎣 v243 — Signal E : le même contenu, avec un lien, posté dans plusieurs
+  // salons différents en quelques secondes est la signature documentée d'un
+  // compte piraté en pleine propagation.
+  // La présence d'un lien est exigée : sans elle, trois « ok » envoyés dans
+  // trois salons suffiraient à déclencher la règle.
+  let spread = null;
+  if (gs.am_phishing === 1 && content) {
+    try {
+      if (phishing.extractUrls(content).length > 0) {
+        spread = phishing.noteSpread(botId, message.guild.id, message.author.id, content,
+          message.channel && message.channel.id);
+      }
+    } catch { spread = null; }
+  }
+  const detection = detectContent(botId, message.guild.id, content, gs, { spread });
   const reason = detection && detection.reason;
 
   if (reason) {
@@ -894,6 +953,12 @@ async function runAutomod(botId, message, opts = {}) {
     // premier reste un avertissement public ; le deuxième atteint par défaut
     // le palier « timeout 10 min » (réglable dans le dashboard).
     const warning = registerAutomodWarning(botId, message, reason, opts, gs);
+    // v243 — certitude moyenne (domaine-appât ou expression d'arnaque) :
+    // on supprime et on avertit, mais aucune sanction dure n'est appliquée.
+    if (warning.sanction && detection && detection.rule === 'phishing'
+      && detection.confidence !== 'high' && PHISHING_HARD_ACTIONS.has(warning.sanction.action)) {
+      warning.sanction = null;
+    }
     let sanctionResult = { applied: false, action: '', minutes: 0, error: '' };
     if (!opts.force && warning.sanction) {
       sanctionResult = await applyAutoSanction(message, warning.sanction, reason, warning.count);

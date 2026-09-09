@@ -53,6 +53,12 @@ const STRINGS = {
     am_reason_mentions: 'trop de mentions',
     am_reason_word: 'mot interdit (« {word} »)',
     am_reason_spam: 'spam / trop de messages',
+    // v243 — Phishing / faux Nitro. Deux niveaux : la certitude haute vient
+    // d'un domaine connu, d'un typosquat ou d'une propagation multi-salons ;
+    // la certitude moyenne d'un domaine-appât ou d'une expression d'arnaque.
+    am_reason_phishing: 'lien de phishing / faux Nitro',
+    am_reason_phishing_suspect: 'lien suspect : arnaque possible',
+    am_dm_phishing: '🎣 Votre message contenait un lien d’arnaque connu (faux Nitro, faux cadeau Steam, vol de compte).\nIl a été supprimé sur **{server}**.\n\nSi vous avez cliqué sur ce lien et saisi votre mot de passe, **changez-le immédiatement** et activez l’authentification à deux facteurs.\nSi vous ne l’avez pas envoyé vous-même, votre compte est peut-être compromis.',
     am_public_warn_title: '⚠️ Avertissement automatique',
     am_public_warn_desc: '<@{userId}>, votre message a été supprimé dans <#{channelId}>.',
     am_public_detected_desc: '<@{userId}>, votre message a été détecté dans <#{channelId}> mais le bot ne pouvait pas le supprimer.',
@@ -199,6 +205,10 @@ const STRINGS = {
     am_reason_mentions: 'too many mentions',
     am_reason_word: 'forbidden word ("{word}")',
     am_reason_spam: 'spam / too many messages',
+    // v243 — Phishing / fake Nitro.
+    am_reason_phishing: 'phishing / fake Nitro link',
+    am_reason_phishing_suspect: 'suspicious link: possible scam',
+    am_dm_phishing: '🎣 Your message contained a known scam link (fake Nitro, fake Steam gift, account theft).\nIt was deleted on **{server}**.\n\nIf you clicked that link and entered your password, **change it immediately** and enable two-factor authentication.\nIf you did not send it yourself, your account may be compromised.',
     am_public_warn_title: '⚠️ Automatic warning',
     am_public_warn_desc: '<@{userId}>, your message was deleted in <#{channelId}>.',
     am_public_detected_desc: '<@{userId}>, your message was detected in <#{channelId}> but the bot could not delete it.',

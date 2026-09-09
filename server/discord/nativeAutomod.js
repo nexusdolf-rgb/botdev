@@ -59,9 +59,34 @@ function alertChannelFor(guild, settings) {
 }
 
 function nativeRuleName(key) {
-  const labels = { links: 'Liens', words: 'Mots interdits', spam: 'Spam', mentions: 'Mentions' };
+  const labels = { links: 'Liens', words: 'Mots interdits', spam: 'Spam', mentions: 'Mentions', phishing: 'Phishing' };
   return `${RULE_PREFIX}${labels[key] || key}`.slice(0, 100);
 }
+
+// 🎣 v243 — Reflet de l'anti-phishing dans l'AutoMod natif de Discord.
+//
+// Discord limite `regex_patterns` à 10 motifs de 256 caractères, et son moteur
+// (Rust regex) ne gère PAS les lookahead : impossible d'y exprimer « ressemble
+// à discord mais n'est pas discord », et impossible d'y miroiter les 21 857
+// domaines de la liste embarquée.
+//
+// On y met donc uniquement les motifs à très haute précision. L'intérêt est
+// réel : l'AutoMod natif bloque le message AVANT qu'il soit visible, ce que la
+// détection côté bot ne peut pas faire. Les signaux plus fins (liste noire,
+// domaines-appâts, expressions d'arnaque liées à un lien suspect, propagation
+// multi-salons) restent traités côté Hoxera.
+//
+// Les expressions d'arnaque seules (« free nitro ») sont volontairement
+// EXCLUES d'ici : côté bot elles ne comptent que si un lien hors liste blanche
+// est présent, condition que l'AutoMod natif ne peut pas vérifier. Les mettre
+// ici ferait bloquer des phrases innocentes sans recours possible.
+const NATIVE_PHISHING_REGEX = [
+  // « disc0rd » doit rester littéral : sans lookahead (absent du moteur Rust de
+  // Discord), « disc[o0]rd » bloquerait aussi le vrai mot « discord ».
+  'dlsc[o0]rd', 'd1sc[o0]rd', 'dics[o0]rd', 'discr[o0]d', 'disc[o0]rb', 'disc0rd',
+  'nitro[-_\\s.]?generator', 'nitro[-_\\s.]?(?:glitch|hack)',
+  'discord[-_\\s.]?airdrop', 'nitro[-_\\s.]?airdrop',
+];
 
 function keywordFilterFor(key, settings) {
   if (key === 'links') return ['http://', 'https://', 'discord.gg/', 'discord.com/invite/'];
@@ -83,6 +108,10 @@ function ruleSpecs(settings, alertChannel) {
     exemptChannels,
   };
   const specs = [];
+  if (settings.am_phishing === 1) {
+    specs.push({ key: 'phishing', name: nativeRuleName('phishing'), triggerType: AutoModerationRuleTriggerType.Keyword,
+      triggerMetadata: { regexPatterns: NATIVE_PHISHING_REGEX }, ...common });
+  }
   if (settings.am_links === 1) {
     specs.push({ key: 'links', name: nativeRuleName('links'), triggerType: AutoModerationRuleTriggerType.Keyword,
       triggerMetadata: { keywordFilter: keywordFilterFor('links', settings) }, ...common });
@@ -107,6 +136,10 @@ function sameTrigger(rule, spec) {
   if (!rule || rule.triggerType !== spec.triggerType) return false;
   const actual = rule.triggerMetadata || {};
   const expected = spec.triggerMetadata || {};
+  if (spec.key === 'phishing') {
+    return JSON.stringify([...(actual.regexPatterns || [])].map(String).sort())
+      === JSON.stringify([...(expected.regexPatterns || [])].map(String).sort());
+  }
   if (spec.key === 'links' || spec.key === 'words') {
     return JSON.stringify([...(actual.keywordFilter || [])].map(String).sort())
       === JSON.stringify([...(expected.keywordFilter || [])].map(String).sort());

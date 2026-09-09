@@ -103,6 +103,10 @@ async function sweep(botId, entry) {
   try { require('./antinuke').sweep(); }
   catch (e) { console.error('[Hoxera] anti-nuke sweep:', e.message); }
 
+  // 🎣 v243 Anti-phishing : purge du traqueur de propagation multi-salons
+  try { require('./phishing').sweepSpread(); }
+  catch (e) { console.error('[Hoxera] anti-phishing sweep:', e.message); }
+
   const due = store.tempRoles.due().filter((t) => t.bot_id === botId);
   for (const t of due) {
     try {

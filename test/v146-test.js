@@ -72,33 +72,35 @@ const client = { user: { id: 'BOT-USER' } };
     am_caps: 1,
     am_mentions: 5,
     am_spam: 5,
+    // v243 : déclaré explicitement plutôt que de dépendre du défaut en base.
+    am_phishing: 1,
   });
   const first = await native.syncGuild(BOT, guild, { client });
   assert.strictEqual(first.ok, true);
-  assert.strictEqual(first.created, 4, 'liens, mots, spam et mentions');
+  assert.strictEqual(first.created, 5, 'phishing, liens, mots, spam et mentions');
   assert.strictEqual(first.updated, 0);
-  assert.strictEqual(rules.size, 4);
+  assert.strictEqual(rules.size, 5);
   for (const rule of rules.values()) {
     assert.strictEqual(rule.enabled, true);
     assert.strictEqual(rule.eventType, AutoModerationRuleEventType.MessageSend);
     assert.strictEqual(rule.actions[0].type, AutoModerationActionType.SendAlertMessage);
     assert.strictEqual(rule.actions[0].metadata.channel, ALERT);
   }
-  assert.strictEqual(store.nativeAutomodRules.all(BOT, 'G1').length, 4);
-  console.log('✅ synchronisation : 4 vraies règles Discord créées en alertes, sans double sanction');
+  assert.strictEqual(store.nativeAutomodRules.all(BOT, 'G1').length, 5);
+  console.log('✅ synchronisation : 5 vraies règles Discord créées en alertes, sans double sanction');
 
   const second = await native.syncGuild(BOT, guild, { client });
   assert.strictEqual(second.created, 0, 'pas de doublons');
-  assert.strictEqual(second.updated, 4, 'règles réutilisées');
+  assert.strictEqual(second.updated, 5, 'règles réutilisées');
   const status = await native.status(BOT, guild, client);
-  assert.strictEqual(status.nativeRules, 4);
-  assert.strictEqual(status.managed, 4);
+  assert.strictEqual(status.nativeRules, 5);
+  assert.strictEqual(status.managed, 5);
   assert.strictEqual(status.badgeEligible, false);
   console.log('✅ idempotence : aucune duplication et statut lisible');
 
   store.guildSettings.set(BOT, 'G1', { am_native_enabled: 0 });
   const disabled = await native.syncGuild(BOT, guild, { client });
-  assert.strictEqual(disabled.disabled, 4);
+  assert.strictEqual(disabled.disabled, 5);
   assert([...rules.values()].every((rule) => rule.enabled === false));
   console.log('✅ désactivation : les règles Optimus Prime sont désactivées sans toucher aux règles externes');
 

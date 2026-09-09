@@ -2898,6 +2898,14 @@ Dashboard.renderers.moderation = async (content, data) => {
     </div>
     <div class="am-rule-heading"><div><b>Règles de protection</b><small>Chaque règle peut avoir sa propre action. « Comportement actuel » conserve la logique historique.</small></div><span class="dash-badge ok">⚡ Temps réel</span></div>
     <div class="am-rule-grid">
+      <div class="am-rule-card" data-am-rule-card="phishing">
+        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">🎣</span><div><b>Phishing / faux Nitro</b><small>Détecte les liens d'arnaque : faux Nitro, faux cadeaux Steam, imitations de discord.com, vol de compte.</small></div></div><input type="checkbox" id="am-phishing" ${s.am_phishing === 0 ? '' : 'checked'} /></div>
+        <label class="am-rule-action">Action<select class="dash-select" id="am-action-phishing" data-am-action="phishing">${actionOptions('phishing')}</select></label>
+        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-phishing" data-am-blacklist-rule="phishing" ${blacklistAfter('phishing') ? 'checked' : ''} /><span><b>🚫 Blacklist après sanction</b><small>Utile : un compte qui relaie une arnaque est souvent déjà compromis.</small></span></label>
+        <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><input class="dash-input" type="number" min="0" max="50" data-am-threshold="phishing" value="${blacklistThresholdFor('phishing')}" /><small>0 = désactivé</small></div></div>
+        <div class="am-threshold-box"><label>Domaines autorisés en plus</label><div class="am-threshold-controls" style="flex-direction:column;align-items:stretch"><input class="dash-input" id="am-phishing-allow" type="text" value="${App.escapeHtml(s.am_phishing_allow || '')}" placeholder="partenaire.com, monsite.fr" /><small>Séparés par des virgules. discord.com, discord.gg, discord.gift et steamcommunity.com sont déjà autorisés d'office.</small></div></div>
+        <div class="am-threshold-box" style="border-color:rgba(254,231,92,.35);background:rgba(254,231,92,.06)"><label>⚠️ Deux niveaux de certitude</label><div class="am-threshold-controls" style="flex-direction:column;align-items:stretch"><small><b>Certitude haute</b> — domaine d'arnaque connu, imitation de discord.com (dlscord, disc0rd), ou même lien posté dans 3 salons en 15 s : l'action choisie s'applique.<br /><b>Certitude moyenne</b> — domaine mêlant marque et mot-appât, ou expression d'arnaque à côté d'un lien inconnu : le message est supprimé et un avertissement envoyé, <b>mais jamais de ban, kick ou muet</b>. Ce ne sont pas des preuves.</small></div></div>
+      </div>
       <div class="am-rule-card" data-am-rule-card="links">
         <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">🔗</span><div><b>Liens et invitations</b><small>Bloque les URL et invitations Discord.</small></div></div><input type="checkbox" id="am-links" ${s.am_links ? 'checked' : ''} /></div>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-links" data-am-action="links">${actionOptions('links')}</select></label>
@@ -2996,6 +3004,8 @@ Dashboard.renderers.moderation = async (content, data) => {
     return {      enabled: c.querySelector('#am-on').checked,
       mode: c.querySelector('#am-mode').value,
       links: c.querySelector('#am-links').checked,
+      phishing: c.querySelector('#am-phishing').checked,
+      phishing_allow: c.querySelector('#am-phishing-allow').value,
       caps: c.querySelector('#am-caps').checked,
       mentions: parseInt(c.querySelector('#am-men').value, 10) || 0,
       spam: parseInt(c.querySelector('#am-spam').value, 10) || 0,

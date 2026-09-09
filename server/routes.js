@@ -712,7 +712,7 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
   const DEFAULT_GS = {
     prefix: '', warn_limit: 0, warn_action: 'none',
     xp_enabled: 1, xp_min: 10, xp_max: 25, xp_cooldown: 60, xp_message: '', xp_channel: '',
-    am_enabled: 0, am_links: 1, am_caps: 1, am_mentions: 5, am_spam: 5,
+    am_enabled: 0, am_phishing: 1, am_phishing_allow: '', am_links: 1, am_caps: 1, am_mentions: 5, am_spam: 5,
     am_mode: 'enforce', am_rule_actions: '{}', am_blacklist_rules: '{}', am_blacklist_thresholds: '{}', am_blacklist_duration_min: 0, am_blacklist_channel: '',
     am_blacklist_title: '🚫 Membre ajouté à la blacklist', am_blacklist_color: '#ED4245', am_blacklist_footer: 'Blacklist du serveur · Hoxera',
     am_native_enabled: 1, am_native_alert_channel: '',
@@ -1096,7 +1096,7 @@ router.post('/bots/:id/guilds/:guildId/xp/sync', requireAuth, async (req, res) =
 });
 
 // Auto-modération par serveur
-const AUTOMOD_RULES = ['links', 'caps', 'mentions', 'words', 'spam'];
+const AUTOMOD_RULES = ['phishing', 'links', 'caps', 'mentions', 'words', 'spam'];
 const AUTOMOD_RULE_ACTIONS = ['inherit', 'log', 'delete', 'warn', 'timeout', 'kick', 'ban'];
 const AUTOMOD_BLACKLIST_RULES = AUTOMOD_RULES;
 
@@ -1164,7 +1164,7 @@ function normalizeAutomodBlacklistThresholds(value) {
   return out;
 }
 
-const AUTOMOD_ESC_RULES = ['links', 'caps', 'mentions', 'words', 'spam'];
+const AUTOMOD_ESC_RULES = ['phishing', 'links', 'caps', 'mentions', 'words', 'spam'];
 const AUTOMOD_ESC_ACTIONS = ['delete', 'warn', 'timeout', 'kick', 'ban'];
 const AUTOMOD_ESC_MAX_MIN = { timeout: 40320, ban: 525600 };
 
@@ -1204,7 +1204,7 @@ router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) =>
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   const body = req.body || {};
-  const { enabled, links, caps, mentions, spam, ignore_staff, warn_text, timeout_min, warn_limit, warn_action, warn_timeout_min, blacklist } = body;
+  const { enabled, links, caps, mentions, spam, ignore_staff, warn_text, timeout_min, warn_limit, warn_action, warn_timeout_min, blacklist, phishing, phishing_allow } = body;
   const advancedFields = {};
   if (body.mode !== undefined) advancedFields.am_mode = body.mode === 'observe' ? 'observe' : 'enforce';
   if (body.rule_actions !== undefined) advancedFields.am_rule_actions = JSON.stringify(normalizeAutomodRuleActions(body.rule_actions));
@@ -1223,6 +1223,8 @@ router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) =>
   if (body.exempt_users !== undefined) advancedFields.am_exempt_users = JSON.stringify(normalizeAutomodUsers(body.exempt_users));
   store.guildSettings.set(bot.id, guildId, {
     am_enabled: enabled ? 1 : 0,
+    ...(phishing !== undefined ? { am_phishing: (phishing === false || phishing === 0) ? 0 : 1 } : {}),
+    ...(phishing_allow !== undefined ? { am_phishing_allow: String(phishing_allow || '').slice(0, 1000) } : {}),
     am_links: (links === false || links === 0) ? 0 : 1,
     am_caps: (caps === false || caps === 0) ? 0 : 1,
     am_mentions: Math.max(parseInt(mentions, 10) || 0, 0),

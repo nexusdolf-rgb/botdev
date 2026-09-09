@@ -616,6 +616,12 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_caps INTEGER DEFAULT 1")
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_mentions INTEGER DEFAULT 5"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_spam INTEGER DEFAULT 5"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_ignore_staff INTEGER DEFAULT 1"); } catch (e) {}
+// v243 — Détection de phishing / faux Nitro. Activée par défaut quand
+// l'auto-modération l'est, comme les autres règles am_* : elle ne bloque que
+// les arnaques, pas les liens ordinaires (contrairement à am_links).
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_phishing INTEGER DEFAULT 1"); } catch (e) {}
+// Domaines supplémentaires autorisés par le serveur, séparés par des virgules.
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_phishing_allow TEXT DEFAULT ''"); } catch (e) {}
 // v3.18 — Auto-Mod Control Center : observation, actions par règle et exceptions.
 // Les valeurs par défaut gardent exactement le comportement historique.
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN am_mode TEXT DEFAULT 'enforce'"); } catch (e) {}
@@ -1051,7 +1057,7 @@ const guildSettings = {
   set: (botId, guildId, fields) => {
     const cur = guildSettings.get(botId, guildId) || { prefix: '', warn_limit: 0, warn_action: 'none' };
     const next = { ...cur, ...fields };
-    const cols = ['prefix', 'warn_limit', 'warn_action', 'warn_timeout_limit', 'warn_timeout_min', 'starboard_channel', 'starboard_min', 'live_channel', 'live_ping', 'ticket_log_channel', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'xp_card', 'ticket_room', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_mode', 'am_rule_actions', 'am_blacklist_rules', 'am_blacklist_thresholds', 'am_blacklist_duration_min', 'am_blacklist_channel', 'am_blacklist_title', 'am_blacklist_color', 'am_blacklist_footer', 'am_escalation', 'am_native_enabled', 'am_native_alert_channel', 'am_exempt_roles', 'am_exempt_channels', 'am_exempt_users', 'am_warn_text', 'am_timeout_min', 'am_warn_limit', 'am_warn_action', 'am_warn_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'modmail_enabled', 'modmail_channel', 'lang', 'timezone',
+    const cols = ['prefix', 'warn_limit', 'warn_action', 'warn_timeout_limit', 'warn_timeout_min', 'starboard_channel', 'starboard_min', 'live_channel', 'live_ping', 'ticket_log_channel', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'xp_card', 'ticket_room', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_mode', 'am_rule_actions', 'am_blacklist_rules', 'am_blacklist_thresholds', 'am_blacklist_duration_min', 'am_blacklist_channel', 'am_blacklist_title', 'am_blacklist_color', 'am_blacklist_footer', 'am_escalation', 'am_native_enabled', 'am_native_alert_channel', 'am_exempt_roles', 'am_exempt_channels', 'am_phishing', 'am_phishing_allow', 'am_exempt_users', 'am_warn_text', 'am_timeout_min', 'am_warn_limit', 'am_warn_action', 'am_warn_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'modmail_enabled', 'modmail_channel', 'lang', 'timezone',
     'giveaway_channel', 'giveaway_default_duration', 'giveaway_default_winners', 'giveaway_ping_role', 'giveaway_color', 'giveaway_message',
     'suggestion_color', 'suggestion_ping_role', 'suggestion_downvotes', 'suggestion_approve_channel',
     'close_dm_message', 'close_dm_image',
@@ -1085,6 +1091,8 @@ const guildSettings = {
       am_caps: (next.am_caps === 0 || next.am_caps === false) ? 0 : 1,
       am_mentions: Math.max(parseInt(next.am_mentions, 10) || 0, 0),
       am_spam: Math.max(parseInt(next.am_spam, 10) || 0, 0),
+      am_phishing: (next.am_phishing === 0 || next.am_phishing === false) ? 0 : 1,
+      am_phishing_allow: String(next.am_phishing_allow || '').slice(0, 1000),
       am_ignore_staff: (next.am_ignore_staff === 0 || next.am_ignore_staff === false) ? 0 : 1,
       am_mode: String(next.am_mode || 'enforce') === 'observe' ? 'observe' : 'enforce',
       am_rule_actions: typeof next.am_rule_actions === 'string'

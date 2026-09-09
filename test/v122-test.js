@@ -41,7 +41,8 @@ const data = {
   const content = w.document.createElement('div');
   await Dashboard.renderers.moderation(content, data);
   assert.ok(content.querySelector('.am-control-card'));
-  assert.strictEqual(content.querySelectorAll('.am-rule-card').length, 5);
+  // v243 : 6 cartes — la règle « phishing / faux Nitro » s'est ajoutée.
+  assert.strictEqual(content.querySelectorAll('.am-rule-card').length, 6);
   assert.ok(content.querySelector('#am-mode'));
   assert.ok(content.querySelector('#am-draft'));
   assert.ok(content.querySelector('#am-save'));
