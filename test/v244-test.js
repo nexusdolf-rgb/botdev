@@ -580,10 +580,10 @@ const GUILD = 'G244';
   // à diagnostiquer qui soit.
   const versions = [...new Set(html.match(/\?v=\d+/g) || [])];
   check('index.html : les 7 références pointent la MÊME version', versions.length === 1, versions.join(', '));
-  check('cette version est bien la v244', versions[0] === '?v=258', String(versions[0]));
+  check('cette version est bien la v244', versions[0] === '?v=259', String(versions[0]));
 
   check('sw.js : nom de cache présent', /const CACHE = 'botdev-v\d+'/.test(sw), (sw.match(/const CACHE = '[^']*'/) || ['?'])[0]);
-  // « ?v=258 » dans index.html doit correspondre à « botdev-v258 » dans sw.js.
+  // « ?v=259 » dans index.html doit correspondre à « botdev-v259 » dans sw.js.
   const cacheAttendu = `'botdev-${versions[0].replace('?v=', 'v')}'`;
   check('sw.js : cache aligné sur index.html', sw.includes(cacheAttendu),
     `${cacheAttendu} attendu, ${(sw.match(/const CACHE = '[^']*'/) || ['?'])[0]} trouvé`);

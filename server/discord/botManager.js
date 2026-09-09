@@ -224,6 +224,12 @@ async function guardInteraction(botId, entry, i, timeoutMs = 15000) {
           store.cmdStats.bump(botId, i.guild ? i.guild.id : 'dm', i.commandName, new Date().toISOString().slice(0, 10));
         }
       } catch { /* jamais bloquant */ }
+      // 🖱️ v259 — menus contextuels (clic droit) et modale de raison :
+      // traités AVANT tous les autres gestionnaires, aucun ne les connaît.
+      try {
+        const ctxm = require('./contextmenus');
+        if (await ctxm.handleInteraction(botId, entry, i)) return;
+      } catch (e) { console.error('[BotDev] context menus:', (e && e.message) || e); }
       const extra = require('./extra');
       // ⚠️ Bug historique corrigé (introduit en v1.50 le 17/08) : l'appel
       // passait (botId, i) alors que la fonction attend (botId, entry, i) —
@@ -647,7 +653,10 @@ async function syncGlobalCommands(botId) {
   const { buildSlashPayloads } = require('./premade');
   const { buildExtraPayloads } = require('./extra');
   const { buildEventPayloads } = require('./guildEvents');
-  const all = [...buildSlashPayloads(botId), ...buildExtraPayloads(), ...buildEventPayloads()];
+  // 🖱️ v259 — les menus contextuels (type 2/3) sont placés EN TÊTE : le
+  // plafond de sécurité de 90 commandes ne pourra jamais les évincer.
+  const { buildContextMenuPayloads } = require('./contextmenus');
+  const all = [...buildContextMenuPayloads(), ...buildSlashPayloads(botId), ...buildExtraPayloads(), ...buildEventPayloads()];
   if (!all.length) return;
 
   const global = all.slice(0, 90).map(p => ({ ...p, dm_permission: false })); // plafond de sécurité (limite Discord : 100) + commandes réservées aux serveurs

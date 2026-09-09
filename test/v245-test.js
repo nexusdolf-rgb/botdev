@@ -457,7 +457,7 @@ const carte = (titre, contenu, classe = 'dash-card') => App.el(
   const versions = [...new Set(html.match(/\?v=\d+/g) || [])];
   check('index.html : 7 références, toutes identiques',
     (html.match(/\?v=\d+/g) || []).length === 7 && versions.length === 1, versions.join(','));
-  check('cette version est la v245', versions[0] === '?v=258', String(versions[0]));
+  check('cette version est la v245', versions[0] === '?v=259', String(versions[0]));
   const cacheAttendu = `'botdev-${versions[0].replace('?v=', 'v')}'`;
   check('sw.js : cache aligné sur index.html', sw.includes(cacheAttendu),
     `${cacheAttendu} attendu, ${(sw.match(/const CACHE = '[^']*'/) || ['?'])[0]} trouvé`);

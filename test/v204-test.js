@@ -31,9 +31,9 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
   console.log('\n1️⃣  Version v204');
   const index = read('public/index.html');
   const sw = read('public/sw.js');
-  check('index.html : ?v=258 référencé 7 fois', (index.match(/\?v=258/g) || []).length === 7);
+  check('index.html : ?v=259 référencé 7 fois', (index.match(/\?v=259/g) || []).length === 7);
   check('index.html : plus aucune ?v=203', !index.includes('?v=203'));
-  check('sw.js : cache botdev-v241', sw.includes("const CACHE = 'botdev-v258';"));
+  check('sw.js : cache botdev-v241', sw.includes("const CACHE = 'botdev-v259';"));
   check('sw.js : plus de botdev-v203', !sw.includes('botdev-v203'));
 
   // ================= 2. Layout plein largeur (bug 1) =================

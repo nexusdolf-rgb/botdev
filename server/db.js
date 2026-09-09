@@ -160,6 +160,19 @@ CREATE TABLE IF NOT EXISTS warnings (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS reports (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  reporter_id TEXT NOT NULL,
+  message_id TEXT DEFAULT '',
+  message_author_id TEXT DEFAULT '',
+  channel_id TEXT DEFAULT '',
+  reason TEXT DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_reports_guild ON reports (bot_id, guild_id);
+
 CREATE TABLE IF NOT EXISTS role_menus (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   bot_id INTEGER NOT NULL,
@@ -1282,6 +1295,23 @@ const economy = {
 };
 
 // ---------------------- Avertissements ----------------------
+// v259 — signalements de messages via le menu contextuel « Signaler ».
+const reports = {
+  add: (botId, guildId, reporterId, info = {}) => {
+    const r = db.prepare(`INSERT INTO reports
+      (bot_id, guild_id, reporter_id, message_id, message_author_id, channel_id, reason)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(Number(botId), String(guildId), String(reporterId), String(info.messageId || ''),
+        String(info.messageAuthorId || ''), String(info.channelId || ''), String(info.reason || '').slice(0, 500));
+    return { id: Number(r.lastInsertRowid) };
+  },
+  count: (botId, guildId, reporterId) => {
+    const row = db.prepare('SELECT COUNT(*) AS n FROM reports WHERE bot_id = ? AND guild_id = ? AND reporter_id = ?')
+      .get(Number(botId), String(guildId), String(reporterId));
+    return row ? Number(row.n) : 0;
+  },
+};
+
 const warnings = {
   add: (botId, guildId, userId, reason, modId, meta = {}) => {
     const uid = String(userId || '');
@@ -2292,4 +2322,4 @@ const antinuke = {
   },
 };
 
-module.exports = { db, antinuke, embedTemplates, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, modmail, closedTickets, botProfiles, profileAliases, profileState, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodStrikes, automodTempBans, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, afk, guildEvents, quizScores, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories, quizSets };
+module.exports = { db, antinuke, embedTemplates, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, reports, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, modmail, closedTickets, botProfiles, profileAliases, profileState, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodStrikes, automodTempBans, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, afk, guildEvents, quizScores, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories, quizSets };
