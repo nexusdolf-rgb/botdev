@@ -66,7 +66,7 @@ assert.strictEqual((pubJs.match(/App\.renderPublicLanding = /g) || []).length, 1
 assert(styleCss.includes('--accent: #e07a5f;'), 'accent principal pas en Argile');
 
 // 6. Version courante
-assert((index.match(/\?v=246/g) || []).length === 7, 'index.html doit référencer v195 7 fois');
-assert(sw.includes('botdev-v246'), 'cache du service worker pas en v195');
+assert((index.match(/\?v=247/g) || []).length === 7, 'index.html doit référencer v195 7 fois');
+assert(sw.includes('botdev-v247'), 'cache du service worker pas en v195');
 
 console.log('✅ v167 (v195) : Home Ultra Pro — ancienne identité conservée, clone DraftBot absent, nouvelles sections en place');

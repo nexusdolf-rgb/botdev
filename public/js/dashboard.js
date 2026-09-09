@@ -1537,9 +1537,42 @@ Dashboard.cleCarte = (carte) => {
 // d'un coup d'œil ; au-dessus, elle noie l'arrivée sur l'onglet.
 Dashboard.HAUTEUR_MAX_PREMIERE = 1500;
 
-// État par défaut d'une carte : la première reste ouverte, les autres sont
-// pliées — sauf si la première est elle-même trop haute.
-Dashboard.carteOuverteParDefaut = (index, hauteur) => index === 0 && hauteur <= Dashboard.HAUTEUR_MAX_PREMIERE;
+// Le repli AUTOMATIQUE ne concerne que les écrans étroits.
+//
+// Erreur de la v246 : la règle s'appliquait à toutes les largeurs. Sur un
+// ordinateur, où la place ne manque pas, tout plier cachait les réglages et
+// donnait au tableau de bord l'aspect d'une liste de barres fermées — le même
+// rendu que sur mobile. Mesuré à 1 440 px : Modération passait de 8,4 écrans à
+// 1,9, sans aucun bénéfice puisqu'il n'y a pas de problème de scroll à régler.
+//
+// Les critères sont EXACTEMENT ceux du CSS (dashboard.css, règle de bascule
+// `.dash-side { display: none }`) : la mise en page et le repli basculent donc
+// au même moment, et on ne peut pas se retrouver avec une disposition de
+// bureau mais des cartes pliées, ni l'inverse.
+Dashboard.MQ_ECRAN_ETROIT = '(max-width: 900px), (hover: none) and (pointer: coarse) and (max-height: 800px)';
+
+Dashboard.ecranEtroit = () => {
+  // matchMedia peut manquer (environnements de test, très vieux navigateurs) :
+  // dans ce cas on suppose un écran large, c'est-à-dire le comportement le
+  // plus sûr — rien n'est caché.
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+  try {
+    return !!window.matchMedia(Dashboard.MQ_ECRAN_ETROIT).matches;
+  } catch {
+    return false;                       // requête invalide : idem, on n'isole rien
+  }
+};
+
+// État par défaut d'une carte.
+//   • écran large (ordinateur) → tout ouvert, comme avant la v246 ;
+//   • écran étroit ou tactile  → la première carte ouverte, les autres pliées,
+//     sauf si la première est elle-même trop haute.
+// Le chevron reste injecté dans les deux cas : plier une carte sur ordinateur
+// reste possible, c'est seulement le défaut qui change.
+Dashboard.carteOuverteParDefaut = (index, hauteur) => {
+  if (!Dashboard.ecranEtroit()) return true;
+  return index === 0 && hauteur <= Dashboard.HAUTEUR_MAX_PREMIERE;
+};
 
 Dashboard.rendreCartesPliables = (root) => {
   if (!root || !root.querySelectorAll) return 0;

@@ -174,8 +174,29 @@ function repondre(url) {
 
   // Le shell d'authentification n'est pas atteint : on construit nous-mêmes la
   // zone de rendu, avec le vrai CSS déjà chargé par la page.
+  //
+  // ⚠️ Il faut reproduire la structure RÉELLE de Dashboard.mount
+  // (public/js/dashboard.js, ligne ~413) : .dash-shell > aside.dash-side +
+  // main.dash-main > .dash-topbar + #dash-content, plus nav.dash-bnav.
+  //
+  // Le banc se contentait auparavant d'un <div class="dash-content"> isolé.
+  // Deux conséquences mesurables :
+  //   1. aucune règle CSS portant sur #dash-content (il y en a, ex. les
+  //      animations d'apparition) ni sur .dash-side / .dash-main ne s'appliquait
+  //      — le banc mesurait donc une page que personne ne voit ;
+  //   2. la bascule bureau/mobile de la mise en page n'était JAMAIS vérifiée.
+  //      Un repli automatique appliqué à tort sur ordinateur est passé inaperçu
+  //      pendant toute la v246.
   await page.evaluate(() => {
-    document.body.innerHTML = '<div class="dashboard-shell-host"><div class="dash-content" id="audit"></div></div>';
+    document.body.innerHTML = `
+      <div class="dashboard-shell-host"><div class="dash-shell">
+        <aside class="dash-side" id="dash-side"><div class="dash-side-item">Navigation</div></aside>
+        <main class="dash-main">
+          <div class="dash-topbar" id="dash-topbar"></div>
+          <div id="dash-content"><div class="spinner"></div></div>
+        </main>
+        <nav class="dash-bnav" id="dash-bnav"></nav>
+      </div></div>`;
   });
 
   await page.evaluate(([guild, sante, antiNuke]) => {
@@ -223,7 +244,7 @@ function repondre(url) {
   for (const mod of MODULES) {
     erreurs.length = 0;
     const r = await page.evaluate(async (m) => {
-      const c = document.querySelector('#audit');
+      const c = document.querySelector('#dash-content');
       c.innerHTML = '';
       Dashboard.state.module = m;
       if (window.__toutOuvert || window.__toutPlier) {
@@ -406,9 +427,33 @@ function repondre(url) {
       const nbPliables = pliables.length;
       const hPliables = pliables.reduce((a, el) => a + Math.round(el.getBoundingClientRect().height), 0);
       const hPremiere = pliables.length ? Math.round(pliables[0].getBoundingClientRect().height) : 0;
+      // État de repli RÉEL après application du défaut. Sur ordinateur ce
+      // compteur doit rester à 0 : le repli automatique est réservé aux écrans
+      // étroits (v247). C'est exactement ce que le banc ne pouvait pas voir
+      // avant de construire le vrai shell.
+      const nbPliees = pliables.filter((el) => el.classList.contains('is-folded')).length;
+      const disposition = (() => {
+        const d = (sel) => { const e = document.querySelector(sel); return e ? getComputedStyle(e).display : 'absent'; };
+        const w = (sel) => { const e = document.querySelector(sel); return e ? Math.round(e.getBoundingClientRect().width) : -1; };
+        // `etroit` reprend la media query du produit : c'est elle qui décide à
+        // la fois de cacher la barre latérale (CSS) et de replier les cartes
+        // (JS). La recalculer ici garantit que le banc compare deux choses qui
+        // doivent être d'accord, au lieu de supposer « largeur <= 900 ».
+        // ⚠️ `Dashboard` est un const de portée script : il N'EST PAS sur
+        // window (window.Dashboard === undefined). Il faut le référencer nu,
+        // dans un try/catch. Tester window.Dashboard court-circuitait la
+        // détection et faisait croire à un écran large en mode tactile.
+        let etroit = null;
+        try {
+          const mq = Dashboard.MQ_ECRAN_ETROIT;
+          if (typeof mq === 'string' && mq) etroit = !!window.matchMedia(mq).matches;
+        } catch { etroit = null; }
+        return { shell: d('.dash-shell'), side: d('.dash-side'), sideW: w('.dash-side'), bnav: d('.dash-bnav'), main: w('.dash-main'), etroit };
+      })();
 
       return { largeurDoc, erreur, plies, candidatsNonPlies: candidats, repartition, nbCartes, hCartes, cartes,
-        nbPliables, hPliables, hPremiere, debordements: debordements.slice(0, 6), nbDebordements: debordements.length,
+        nbPliables, hPliables, hPremiere, nbPliees, disposition,
+        debordements: debordements.slice(0, 6), nbDebordements: debordements.length,
         texte, blocs, hauteur, ecrans, minuscules: minuscules.slice(0, 4), nbMinuscules: minuscules.length,
         tactiles: tactiles.slice(0, 4), nbTactiles: tactiles.length, tronques, listeTronques: listeTronques.slice(0, 10),
         paves };
@@ -420,7 +465,7 @@ function repondre(url) {
   // ---------- Mode --clic : vérifie le repli de bout en bout ----------
   if (process.argv.includes('--clic')) {
     const r = await page.evaluate(async () => {
-      const c = document.querySelector('#audit');
+      const c = document.querySelector('#dash-content');
       c.innerHTML = '';
       Dashboard.state.module = 'moderation';
       Object.keys(Dashboard.etatCartes).forEach((k) => delete Dashboard.etatCartes[k]);
@@ -526,6 +571,31 @@ function repondre(url) {
   console.log('-'.repeat(104));
   console.log(`  débordements ${totalDeb} | hauteur cumulée ${Math.round(totalEcrans)} écrans | polices < 12 px ${totalMin} | cibles tactiles < 40 px ${totalTac} | modules en erreur ${modulesCasses}`);
   console.log(`  v245 repli : ${totalPlies} blocs pliés | ${totalRestes} candidat(s) encore déplié(s) — doit rester à 0`);
+
+  // ── Disposition : la bascule bureau/mobile est-elle correcte ? ────────────
+  // Ajouté après l'incident v246. Le banc ne construisait pas la vraie structure
+  // du shell : il ne pouvait donc PAS voir que la mise en page basculait mal, ni
+  // que le repli automatique s'appliquait à tort sur ordinateur. Ces deux
+  // contrôles ferment cette lacune.
+  const dispo = (resultats.find((r) => r.disposition) || {}).disposition;
+  // Priorité à la media query réelle ; repli sur la largeur si elle n'est pas
+  // disponible (module en erreur avant la mesure).
+  const attenduMobile = dispo && dispo.etroit !== null ? !!dispo.etroit : LARGEUR <= 900;
+  const totPliables = resultats.reduce((a, r) => a + (r.nbPliables || 0), 0);
+  const totPliees = resultats.reduce((a, r) => a + (r.nbPliees || 0), 0);
+  if (dispo) {
+    const sideOk = attenduMobile ? (dispo.side === 'none') : (dispo.side === 'flex' && dispo.sideW > 200);
+    const shellOk = dispo.shell === 'flex';
+    console.log(`  disposition : shell ${dispo.shell}${shellOk ? ' ✅' : ' ❌'} | sidebar ${dispo.side} ${dispo.sideW}px${sideOk ? ' ✅' : ' ❌ attendu ' + (attenduMobile ? 'none' : 'flex >200px')} | nav basse ${dispo.bnav} | contenu ${dispo.main}px`);
+    if (!shellOk || !sideOk) process.exitCode = 1;
+  } else {
+    console.log('  disposition : ❌ non mesurée (aucun module rendu)');
+    process.exitCode = 1;
+  }
+  const repliAttendu = attenduMobile ? 'actif' : 'INACTIF (écran large)';
+  const repliOk = attenduMobile ? totPliees > 0 || totPliables === 0 : totPliees === 0;
+  console.log(`  repli cartes : ${totPliees}/${totPliables} pliées — doit être ${repliAttendu} ${repliOk ? '✅' : '❌'}`);
+  if (!repliOk) process.exitCode = 1;
   if (process.argv.includes('--pliables')) {
     console.log('\n  ═══ cartes PLIABLES par module ═══');
     console.log('  MODULE              cartes  pliables  h. totale  h. 1re  reste à plier');

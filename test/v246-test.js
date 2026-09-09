@@ -7,8 +7,26 @@
 // L'utilisateur, à qui trois variantes étaient proposées, a répondu « je sais
 // plus quoi faire de mieux » et a laissé trancher.
 //
-// Décision retenue (variante « fine ») : la PREMIÈRE carte d'un onglet reste
-// ouverte, sauf si elle dépasse 1 500 px ; toutes les suivantes sont pliées.
+// Décision retenue (variante « fine ») : sur ÉCRAN ÉTROIT, la première carte
+// d'un onglet reste ouverte, sauf si elle dépasse 1 500 px ; toutes les
+// suivantes sont pliées.
+//
+// ⚠️ CORRECTION APPORTÉE APRÈS RETOUR DU PROPRIÉTAIRE. La règle s'appliquait
+// d'abord à toutes les largeurs. Sur ordinateur, où la place ne manque pas,
+// tout plier cachait les réglages et donnait au tableau de bord l'aspect d'une
+// liste de barres fermées — le même rendu que sur mobile. Mesuré à 1 440 px :
+// Modération passait de 8,4 écrans à 1,9, sans aucun bénéfice.
+//
+// Le repli automatique est désormais limité aux écrans étroits, avec EXACTEMENT
+// les mêmes critères que la bascule mobile du CSS (`.dash-side { display: none }`
+// à 900 px, ou écran tactile) : mise en page et repli basculent ensemble. Sur
+// ordinateur tout est ouvert, mais le chevron reste cliquable.
+//
+// Vérifié au passage : la mise en page n'a jamais été cassée. Testée avec la
+// structure RÉELLE du shell (`.dash-shell > aside.dash-side + main.dash-main
+// + nav.dash-bnav`) de 1 920 à 360 px : sidebar présente dès 901 px, nav basse
+// cachée. Le banc d'audit ne construisait qu'un `.dash-content` sans sidebar et
+// ne pouvait donc pas le voir.
 //
 // Pourquoi ce seuil et pas simplement « la première toujours ouverte » :
 // l'onglet Modération ouvre sur « 🛡️ Auto-modération », qui mesure 4 997 px,
@@ -76,6 +94,22 @@ global.App = {
 };
 global.Dashboard = { renderers: {}, state: { module: 'moderation' } };
 
+// jsdom n'évalue PAS les media queries : son matchMedia renvoie toujours
+// matches:false. On le pilote à la main pour tester les deux comportements —
+// écran étroit (le repli automatique s'applique) et écran large (il ne
+// s'applique pas). Sans ce stub, toute la branche « écran étroit » serait
+// silencieusement non testée.
+let ecranEtroitSimule = true;
+let derniereRequete = null;
+dom.window.matchMedia = (requete) => {
+  derniereRequete = requete;
+  return {
+    matches: ecranEtroitSimule, media: requete, onchange: null,
+    addEventListener() {}, removeEventListener() {},
+    addListener() {}, removeListener() {}, dispatchEvent() { return false; },
+  };
+};
+
 const src = racine('public/js/dashboard.js');
 const i0 = src.indexOf('Dashboard.PLIABLE_CLASSES =');
 const i1 = src.indexOf('Dashboard.SETTING_ROW_CONTROLS =');
@@ -110,7 +144,39 @@ const onglet = (module, hauteurs) => {
     String(Dashboard.HAUTEUR_MAX_PREMIERE));
   check('carteOuverteParDefaut est bien exposée', typeof Dashboard.carteOuverteParDefaut === 'function');
 
+  // --- A1. Détection de l'écran étroit -------------------------------------
+  check('ecranEtroit est exposée', typeof Dashboard.ecranEtroit === 'function');
+  check('la requête média est celle du CSS (même bascule que .dash-side)',
+    Dashboard.MQ_ECRAN_ETROIT === '(max-width: 900px), (hover: none) and (pointer: coarse) and (max-height: 800px)',
+    Dashboard.MQ_ECRAN_ETROIT);
+  check('…et elle est bien celle réellement passée à matchMedia',
+    (ecranEtroitSimule = true, Dashboard.ecranEtroit(), derniereRequete === Dashboard.MQ_ECRAN_ETROIT), derniereRequete);
+  check('écran étroit détecté', Dashboard.ecranEtroit() === true);
+  ecranEtroitSimule = false;
+  check('écran large détecté', Dashboard.ecranEtroit() === false);
+
+  // Sans matchMedia (vieux navigateur, SSR) : ne doit pas lever, et doit
+  // supposer un écran large — donc rien cacher.
+  const mm = dom.window.matchMedia;
+  dom.window.matchMedia = undefined;
+  let leve = null; let repli = null;
+  try { repli = Dashboard.ecranEtroit(); } catch (e) { leve = e; }
+  dom.window.matchMedia = mm;
+  check('matchMedia absent → ne lève pas', leve === null, leve && String(leve.message));
+  check('…et suppose un écran large (rien n\'est caché)', repli === false, String(repli));
+
+  // matchMedia qui lève (requête refusée) : pareil.
+  dom.window.matchMedia = () => { throw new Error('requête invalide'); };
+  leve = null;
+  try { repli = Dashboard.ecranEtroit(); } catch (e) { leve = e; }
+  dom.window.matchMedia = mm;
+  check('matchMedia qui lève → ne propage pas', leve === null, leve && String(leve.message));
+  check('…et retombe sur écran large', repli === false, String(repli));
+
+  // --- A2. Écran ÉTROIT : le repli automatique s'applique ------------------
+  ecranEtroitSimule = true;
   const S = Dashboard.HAUTEUR_MAX_PREMIERE;
+  console.log('    · écran étroit (mobile / tactile)');
   check('1re carte de 800 px → ouverte', Dashboard.carteOuverteParDefaut(0, 800) === true);
   check(`1re carte exactement au seuil (${S} px) → ouverte`,
     Dashboard.carteOuverteParDefaut(0, S) === true);
@@ -124,6 +190,19 @@ const onglet = (module, hauteurs) => {
   check('hauteur non numérique (NaN) → pliée, sans lever',
     Dashboard.carteOuverteParDefaut(0, NaN) === false);
   check('index négatif → pliée', Dashboard.carteOuverteParDefaut(-1, 100) === false);
+
+  // --- A3. Écran LARGE : rien n'est replié automatiquement ------------------
+  // C'est la correction demandée par le propriétaire : sur ordinateur, la v246
+  // pliait tout et le tableau de bord ressemblait à la version mobile.
+  ecranEtroitSimule = false;
+  console.log('    · écran large (ordinateur)');
+  check('1re carte → ouverte', Dashboard.carteOuverteParDefaut(0, 800) === true);
+  check('1re carte immense → ouverte quand même (il y a la place)',
+    Dashboard.carteOuverteParDefaut(0, 4997) === true);
+  check('2e carte → ouverte', Dashboard.carteOuverteParDefaut(1, 100) === true);
+  check('13e carte → ouverte', Dashboard.carteOuverteParDefaut(12, 50) === true);
+  check('hauteur inconnue → ouverte', Dashboard.carteOuverteParDefaut(0, undefined) === true);
+  ecranEtroitSimule = true;
 
   // ==========================================================================
   console.log('\n── B. Règle appliquée à un onglet réel ──');
@@ -153,6 +232,52 @@ const onglet = (module, hauteurs) => {
   const posApplique = zone.indexOf('appliquer(ouverte)');
   check('les hauteurs sont mesurées avant tout repli', posMesure > 0 && posMesure < posApplique,
     `mesure @${posMesure} · application @${posApplique}`);
+
+  // Les hauteurs doivent être mesurées AVANT l'application du repli, sinon la
+  // carte pliée ne renvoie plus que son en-tête et la décision se fausse.
+
+  // ==========================================================================
+  console.log('\n── B2. Même onglet sur écran large (ordinateur) ──');
+  // ==========================================================================
+
+  // Correction demandée par le propriétaire : sur PC, la v246 pliait toutes les
+  // cartes et le tableau de bord ressemblait à la version mobile. Mesuré à
+  // 1 440 px, Modération passait de 8,4 écrans à 1,9 — sans bénéfice, puisqu'il
+  // n'y a pas de problème de scroll à régler sur un grand écran.
+  ecranEtroitSimule = false;
+
+  etat = onglet('tickets', [600, 900, 400]);
+  check('3 cartes → TOUTES ouvertes sur ordinateur',
+    etat.join(',') === 'ouverte,ouverte,ouverte', etat.join(','));
+
+  etat = onglet('moderation', [4997, 900, 400]);
+  check('1re carte immense → ouverte quand même',
+    etat.join(',') === 'ouverte,ouverte,ouverte', etat.join(','));
+
+  // Le chevron doit rester présent : plier soi-même une carte sur ordinateur
+  // doit toujours être possible, seul le défaut change.
+  const chevrons = c.querySelectorAll('.card-fold').length;
+  check('le chevron reste disponible sur ordinateur', chevrons === 3, String(chevrons));
+  check('…et il est repliable à la main', (() => {
+    const premiere = c.querySelectorAll('.dash-card')[0];
+    premiere.querySelector('.card-fold').click();
+    const plie = premiere.classList.contains('is-folded');
+    premiere.querySelector('.card-fold').click();
+    return plie && !premiere.classList.contains('is-folded');
+  })());
+  check('…et le choix manuel survit au retour sur l\'onglet', (() => {
+    const premiere = c.querySelectorAll('.dash-card')[0];
+    premiere.querySelector('.card-fold').click();               // on plie à la main
+    const cle = Dashboard.cleCarte(premiere);
+    Dashboard.state.module = 'health';
+    Dashboard.state.module = 'moderation';
+    Dashboard.rendreCartesPliables(c);
+    const ok = Dashboard.etatCartes[cle] === false;
+    premiere.querySelector('.card-fold').click();               // on remet ouvert
+    return ok;
+  })());
+
+  ecranEtroitSimule = true;
 
   // ==========================================================================
   console.log('\n── C. Le choix explicite l\'emporte sur le défaut ──');
@@ -249,13 +374,13 @@ const onglet = (module, hauteurs) => {
   const indexHtml = racine('public/index.html');
   const swSource = racine('public/sw.js');
   const versions = [...indexHtml.matchAll(/\?v=(\d+)/g)].map((m) => `?v=${m[1]}`);
-  check('index.html : ?v=246 référencé 7 fois', versions.length === 7 && versions.every((v) => v === '?v=246'),
+  check('index.html : ?v=247 référencé 7 fois', versions.length === 7 && versions.every((v) => v === '?v=247'),
     `${versions.length} refs : ${[...new Set(versions)].join(',')}`);
-  check('sw.js : cache « botdev-v246 »', swSource.includes("const CACHE = 'botdev-v246';"));
+  check('sw.js : cache « botdev-v247 »', swSource.includes("const CACHE = 'botdev-v247';"));
   check('index.html et sw.js portent la même version',
-    swSource.includes("botdev-v246") && versions.every((v) => v === '?v=246'));
+    swSource.includes("botdev-v247") && versions.every((v) => v === '?v=247'));
 
   console.log('');
   if (echecs) { console.log(`❌ v246 — ${echecs} échec(s)`); process.exit(1); }
-  console.log('🎉 Tous les tests v246 passent — défaut d\'affichage : 77 → 39 écrans, rien de supprimé.');
+  console.log('🎉 Tous les tests v246 passent — repli auto sur écran étroit seulement, tout ouvert sur PC.');
 })();

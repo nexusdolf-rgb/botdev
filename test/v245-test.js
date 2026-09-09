@@ -75,6 +75,17 @@ global.App = {
 };
 global.Dashboard = { renderers: {}, state: { module: 'moderation' } };
 
+// Depuis la v247, le repli AUTOMATIQUE ne s'applique que sur écran étroit
+// (sinon le tableau de bord sur ordinateur ressemblait à la version mobile).
+// jsdom n'évalue pas les media queries et renvoie toujours matches:false,
+// c'est-à-dire « écran large ». Sans ce stub, toutes les assertions de repli
+// ci-dessous échoueraient alors qu'elles décrivent le cas mobile.
+dom.window.matchMedia = (requete) => ({
+  matches: true, media: requete, onchange: null,
+  addEventListener() {}, removeEventListener() {},
+  addListener() {}, removeListener() {}, dispatchEvent() { return false; },
+});
+
 const src = racine('public/js/dashboard.js');
 const i0 = src.indexOf('Dashboard.PLIABLE_CLASSES =');
 const i1 = src.indexOf('Dashboard.SETTING_ROW_CONTROLS =');
@@ -446,7 +457,7 @@ const carte = (titre, contenu, classe = 'dash-card') => App.el(
   const versions = [...new Set(html.match(/\?v=\d+/g) || [])];
   check('index.html : 7 références, toutes identiques',
     (html.match(/\?v=\d+/g) || []).length === 7 && versions.length === 1, versions.join(','));
-  check('cette version est la v245', versions[0] === '?v=246', String(versions[0]));
+  check('cette version est la v245', versions[0] === '?v=247', String(versions[0]));
   const cacheAttendu = `'botdev-${versions[0].replace('?v=', 'v')}'`;
   check('sw.js : cache aligné sur index.html', sw.includes(cacheAttendu),
     `${cacheAttendu} attendu, ${(sw.match(/const CACHE = '[^']*'/) || ['?'])[0]} trouvé`);
