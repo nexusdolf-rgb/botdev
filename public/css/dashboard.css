@@ -4390,12 +4390,18 @@ html.hx-light { color-scheme: light; }
   font-size: 13.5px; font-weight: 650; color: var(--d-text);
   overflow-wrap: anywhere;
 }
-.setting-row > .dash-select, .setting-row > input.dash-input { width: 300px; flex: 0 1 300px; }
+/* v245 — min-width: 0 est indispensable. Un élément flex a par défaut
+   min-width: auto, c'est-à-dire la largeur de son contenu : il refuse donc de
+   rétrécir sous cette taille. Un <select> dont la plus longue option fait
+   300 px ne se compressait pas et faisait déborder la ligne. Mesuré à 768 px :
+   +57 px de débordement sur le barème de Modération, +43 px sur un champ de
+   l'onglet Bot. Sans min-width: 0, flex-shrink ne sert à rien. */
+.setting-row > .dash-select, .setting-row > input.dash-input { width: 300px; flex: 0 1 300px; min-width: 0; }
 /* Les champs numériques peuvent rétrécir davantage (ils restent utilisables) */
 .setting-row > input.dash-input[type="number"] { min-width: 84px; }
 .setting-row > textarea.dash-input { flex: 1 1 100%; min-height: 90px; }
 .setting-row > label.switch { flex-shrink: 0; }
-.setting-row > .dash-roles-multi, .setting-row > .discord-multi-host, .setting-row > .dd-host { flex: 0 1 340px; max-width: 340px; }
+.setting-row > .dash-roles-multi, .setting-row > .discord-multi-host, .setting-row > .dd-host { flex: 0 1 340px; max-width: 340px; min-width: 0; }
 .setting-row > div { flex: 0 1 300px; display: flex; gap: 8px; align-items: center; min-width: 0; }
 
 /* 📌 Sélecteur « salons à détailler » (bienvenue/départ) — éditeur multi-lignes.
@@ -4439,7 +4445,13 @@ html.hx-light { color-scheme: light; }
   padding-top: 14px; margin-top: 10px;
   border-top: 1px solid rgba(255,255,255,.055);
 }
-.card-actions .dash-btn { min-height: 38px; }
+/* v245 — 40 px, comme tout .dash-btn (règle générale ligne ~924).
+   À 38 px, ce sélecteur plus spécifique écrasait la hauteur normale et les
+   boutons de pied de carte étaient PLUS PETITS que les autres. Or
+   layoutSettingRows déplace automatiquement les boutons en fin de carte dans
+   .card-actions : 47 boutons du tableau de bord se retrouvaient donc à 38 px,
+   sous les 40 px retenus en v244. Mesuré dans Chromium à 360 px. */
+.card-actions .dash-btn { min-height: 40px; }
 
 /* 📱 Mobile : chaque ligne se replie en pile (libellé puis contrôle) */
 @media (max-width: 700px) {
@@ -5691,4 +5703,126 @@ html.hx-light .dd-option.is-selected .dd-check { background: #e07a5f; color: #ff
   /* Même famille : le <small> de ces boutons était à 10 px. */
   .dashboard-shell-host .ov-access-bar .ov-quick-action small,
   .dashboard-shell-host .ov-quick-action small { font-size: 11px; }
+}
+
+/* ============================================================
+   v245 — « En savoir plus » : textes d'explication repliés.
+
+   <details>/<summary> natif : pas de JavaScript pour ouvrir/fermer,
+   accessible au clavier (Entrée et Espace), annoncé correctement par
+   les lecteurs d'écran, et le texte replié reste indexable par la
+   recherche dans la page (Ctrl+F).
+
+   Le repli est appliqué par Dashboard.plierTextesLongs sur une LISTE
+   BLANCHE de classes d'explication, à partir de 120 caractères. Les
+   avertissements, les libellés de formulaire, les aperçus et les
+   conteneurs de champs ne sont jamais repliés.
+   ============================================================ */
+.dash-details { margin: 0 0 14px; }
+/* Le texte replié portait déjà sa propre marge basse (.dash-card .desc).
+   Une fois à l'intérieur du <details>, cette marge ne compte plus quand
+   c'est fermé : c'est le <details> qui reprend l'espacement. */
+.dash-details > .desc,
+.dash-details > .sub { margin-bottom: 0; }
+.dash-details[open] { padding-bottom: 2px; }
+
+.dash-details > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 0;
+  color: var(--d-accent);
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  list-style: none;
+  -webkit-user-select: none;
+  user-select: none;
+  border-radius: 7px;
+  transition: color .15s ease;
+}
+.dash-details > summary::-webkit-details-marker { display: none; }
+.dash-details > summary::before {
+  content: '▸';
+  display: inline-block;
+  font-size: 10px;
+  transition: transform .16s ease;
+}
+.dash-details[open] > summary::before { transform: rotate(90deg); }
+.dash-details > summary:hover { color: var(--d-accent2, var(--d-accent)); text-decoration: underline; }
+.dash-details > summary:focus-visible {
+  outline: 2px solid rgba(var(--d-accent-rgb), .6);
+  outline-offset: 2px;
+}
+/* Une fois ouvert, le texte reprend sa couleur normale d'explication. */
+.dash-details[open] > .desc,
+.dash-details[open] > .sub { margin-top: 8px; }
+
+html.hx-light .dash-details > summary { color: #b3543d; }
+html.hx-light .dash-details > summary:hover { color: #8f3f2c; }
+
+/* Écran tactile : la cible doit rester confortable, MAIS un « En savoir plus »
+   de 40 px de haut annule le gain du repli — mesuré : replier 90 blocs ne
+   faisait alors gagner qu'un seul écran sur 77, parce que chaque lien replié
+   coûtait presque autant que le texte qu'il cachait. 32 px garde une cible
+   correcte (la largeur, elle, reste grande : tout le libellé est cliquable). */
+@media (max-width: 700px), (hover: none) and (pointer: coarse) {
+  .dash-details > summary { min-height: 32px; padding: 7px 0; }
+}
+
+/* ============================================================
+   v245 — Cartes pliables.
+
+   Aucune restructuration du DOM : on ajoute une classe sur la carte et on
+   masque par CSS. Six règles existantes ciblent les enfants DIRECTS d'une
+   carte (.dash-card > .card-actions, .dash-card[data-dash-card] > .dash-input…)
+   ; emballer le contenu dans un conteneur les aurait toutes cassées.
+
+   Tout est ouvert par défaut (choix utilisateur). Le repli est mémorisé le
+   temps de la session.
+   ============================================================ */
+.card-head-pliable { cursor: pointer; position: relative; }
+.card-head-pliable:hover .card-fold { opacity: 1; border-color: rgba(var(--d-accent-rgb), .55); }
+
+.card-fold {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  padding: 0;
+  color: var(--d-dim);
+  background: rgba(255, 255, 255, .04);
+  border: 1px solid var(--d-border);
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: .72;
+  transition: opacity .15s ease, transform .18s ease, border-color .15s ease, color .15s ease;
+}
+.card-fold:hover { color: var(--d-accent); }
+.card-fold:focus-visible { outline: 2px solid rgba(var(--d-accent-rgb), .6); outline-offset: 2px; opacity: 1; }
+.card-fold span { display: block; transition: transform .18s ease; }
+
+/* Carte repliée : on masque tout SAUF l'en-tête. `!important` parce que des
+   règles existantes imposent display sur certains enfants (.card-actions,
+   grilles, flex) et passeraient sinon après celle-ci. */
+.dash-card.is-folded > *:not(.card-head) { display: none !important; }
+.dash-card.is-folded > .card-head { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+.dash-card.is-folded .card-fold span { transform: rotate(-90deg); }
+/* En-tête replié : le titre seul suffit, la description suivrait sinon. */
+.dash-card.is-folded .card-head .desc { display: none; }
+.dash-card.is-folded { padding-bottom: 14px; }
+
+html.hx-light .card-fold { background: #fff; border-color: #d7e0ee; color: #6b7a92; }
+html.hx-light .card-fold:hover { color: #b3543d; }
+
+/* Écran tactile : le chevron est une cible comme une autre, donc 40 px — le
+   plancher retenu en v244. À 32 px, l'audit mesurait 57 cibles trop petites
+   (une par carte). Toute la barre de titre reste cliquable en plus. */
+@media (max-width: 700px), (hover: none) and (pointer: coarse) {
+  .card-fold { width: 40px; height: 40px; opacity: 1; }
 }

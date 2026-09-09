@@ -443,7 +443,17 @@ Dashboard.mount = async (shell, bot) => {
   // y compris ceux rendus plus tard en asynchrone.
   [content, document.querySelector('#modal-root')].filter(Boolean).forEach((zone) => {
     Dashboard.enhanceSelects(zone);
-    const ddObserver = new MutationObserver(() => Dashboard.enhanceSelects(zone));
+    Dashboard.plierTextesLongs(zone);
+    Dashboard.rendreCartesPliables(zone);
+    // v245 — ces post-traitements modifient le DOM, ce qui rappelle cet
+    // observateur. Ils sont idempotents (gardes data-pliable, data-carte-pliable
+    // et closest('details')), donc la seconde passe ne change plus rien et la
+    // boucle s'arrête d'elle-même.
+    const ddObserver = new MutationObserver(() => {
+      Dashboard.enhanceSelects(zone);
+      Dashboard.plierTextesLongs(zone);
+      Dashboard.rendreCartesPliables(zone);
+    });
     ddObserver.observe(zone, { childList: true, subtree: true });
   });
 
@@ -1323,6 +1333,12 @@ Dashboard.renderContent = async (content) => {
       await fn(content, data);
       // 🧷 Mise en page des réglages en lignes (libellé à gauche, contrôle à droite)
       Dashboard.layoutSettingRows(content);
+      // 📖 v245 — Repli des longs textes d'explication. APRES la mise en rows :
+      // celle-ci déplace des éléments, il faut donc plier sur le DOM final.
+      Dashboard.plierTextesLongs(content);
+      // 🗂️ v245 — Cartes pliables, en dernier : la mise en rows crée
+      // .card-actions, et le repli des textes ajoute des <details>.
+      Dashboard.rendreCartesPliables(content);
     }
     else content.innerHTML = `<div class="dash-empty">Module introuvable.</div>`;
   } catch (e) {
@@ -1377,6 +1393,166 @@ Dashboard.renderers = {};
 
 // ============================================================
 // 🧷 Mise en page des réglages façon Discord/DraftBot (v159)
+// ============================================================
+// 📖 v245 — Textes longs repliés dans « En savoir plus ».
+//
+// Constat mesuré dans Chromium à 360 px (banc test/tools/audit-mobile.js,
+// mode --textes) : 115 blocs d'explication de plus de 70 caractères,
+// 12 864 caractères, soit 5 914 px de hauteur = 7,6 écrans de scroll sur
+// mobile. Modération (26 blocs) et Tickets (20) concentraient l'essentiel.
+//
+// Rien n'est supprimé ni raccourci : le texte reste dans le DOM, simplement
+// replié derrière un <details> natif. Il reste donc accessible au clavier,
+// aux lecteurs d'écran et à la recherche dans la page.
+//
+// ⚠️ LISTE BLANCHE, pas liste noire. L'audit a montré que plusieurs textes
+// longs ne doivent JAMAIS être repliés, et une liste noire les aurait ratés :
+//   • .dash-badge           → « ⚠️ AUCUN salon choisi — les annonces sont
+//                              DÉSACTIVÉES » : un avertissement critique.
+//   • .dash-label           → les libellés de formulaire.
+//   • .am-threshold-controls→ un conteneur de CONTRÔLES : le replier
+//                              masquerait des champs de saisie.
+//   • .dash-card            → des cartes entières.
+//   • .dash-empty           → les états vides, qui expliquent quoi faire.
+//   • l'aperçu du message Discord → l'utilisateur doit voir ce qu'il envoie.
+// On ne replie donc que les classes dont le rôle EST l'explication.
+// ============================================================
+
+// Classes dont le rôle est d'expliquer, et rien d'autre.
+Dashboard.PLIABLE_CLASSES = ['.desc', '.sub', '.am-help', '.ca-editor-help', '.adv-category-help'];
+
+// Zones où même une classe de la liste blanche doit rester visible :
+// aperçus (ce que l'utilisateur est en train de composer) et modales.
+Dashboard.PLIABLE_EXCLUS = '.ca-preview, .eb-preview, .discord-preview, .dash-preview, [data-apercu], .card-head, .card-heading';
+
+// Longueur à partir de laquelle un texte mérite d'être replié. En dessous,
+// une ou deux lignes se lisent d'un coup d'œil : les replier ferait cliquer
+// pour rien. Choix validé par l'utilisateur : 120 caractères.
+Dashboard.PLIABLE_SEUIL = 120;
+
+// Un texte qui alerte d'un problème ne se replie pas, même s'il est long et
+// même s'il porte une classe d'explication : le masquer pourrait faire rater
+// une désactivation ou un réglage manquant.
+Dashboard.PLIABLE_ALERTE = /⚠️|🚨|❌|🔴|désactivé|désactivée|aucun salon|erreur|échec/i;
+
+Dashboard.plierTextesLongs = (root, seuil) => {
+  if (!root || !root.querySelectorAll) return 0;
+  const limite = Number.isFinite(seuil) ? seuil : Dashboard.PLIABLE_SEUIL;
+  let plies = 0;
+  root.querySelectorAll(Dashboard.PLIABLE_CLASSES.join(',')).forEach((el) => {
+    // Garde d'idempotence : ce post-traitement est rappelé par un
+    // MutationObserver, et il modifie lui-même le DOM. Sans ces deux gardes il
+    // se relancerait indéfiniment.
+    if (el.dataset.pliable === 'oui') return;
+    if (el.closest('details')) return;
+    if (Dashboard.PLIABLE_EXCLUS && el.closest(Dashboard.PLIABLE_EXCLUS)) return;
+    // Un texte porteur de contrôle (champ, bouton, lien d'action) n'est pas
+    // une simple explication : le replier pourrait masquer un élément utile.
+    if (el.querySelector('input, select, textarea, button')) return;
+
+    const texte = (el.textContent || '').replace(/\s+/g, ' ').trim();
+    el.dataset.pliable = 'oui';
+    if (texte.length < limite) return;
+    if (Dashboard.PLIABLE_ALERTE.test(texte)) return;
+
+    const bloc = document.createElement('details');
+    bloc.className = 'dash-details';
+    const titre = document.createElement('summary');
+    titre.textContent = 'En savoir plus';
+    bloc.appendChild(titre);
+    el.parentNode.insertBefore(bloc, el);
+    bloc.appendChild(el);
+    plies++;
+  });
+  return plies;
+};
+
+// ============================================================
+// 🗂️ v245 — Cartes pliables.
+//
+// Les textes d'explication ne pèsent que 21 % de la hauteur d'un onglet
+// (mesuré : 12 905 px sur 62 282 px). Les CARTES en pèsent 82 % : 98 cartes
+// pour 50 768 px. La plus grosse seule — « 🛡️ Auto-modération » — fait
+// 5 004 px, soit 6,4 écrans de scroll sur mobile. C'est donc le vrai levier.
+//
+// Choix validé par l'utilisateur : TOUT reste ouvert par défaut, on plie ce
+// qui gêne, et le choix est mémorisé le temps de la session.
+//
+// ⚠️ Aucune restructuration du DOM. Emballer le contenu dans un <div>
+// « card-body » aurait cassé six règles CSS existantes qui ciblent les
+// enfants DIRECTS d'une carte (.dash-card > .card-actions, .dash-card
+// [data-dash-card] > .dash-input, etc.). On se contente d'ajouter une classe
+// et de masquer par CSS : les sélecteurs en place continuent de fonctionner.
+// ============================================================
+
+// Mémoire de session : onglet + titre de la carte. sessionStorage et non
+// localStorage, pour qu'un repli ne survive pas à une fermeture du
+// navigateur — l'utilisateur ne doit pas retrouver un tableau de bord
+// partiellement masqué des jours plus tard sans savoir pourquoi.
+Dashboard.cartesPliees = (() => {
+  try {
+    return new Set(JSON.parse(sessionStorage.getItem('hoxera-cartes-pliees') || '[]'));
+  } catch { return new Set(); }
+})();
+
+Dashboard.enregistrerCartesPliees = () => {
+  try {
+    sessionStorage.setItem('hoxera-cartes-pliees', JSON.stringify([...Dashboard.cartesPliees]));
+  } catch { /* navigation privée, quota : le repli reste alors temporaire */ }
+};
+
+Dashboard.cleCarte = (carte) => {
+  const head = carte.querySelector(':scope > .card-head');
+  const titre = head ? (head.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 60) : '';
+  return `${Dashboard.state.module || '?'}::${titre}`;
+};
+
+Dashboard.rendreCartesPliables = (root) => {
+  if (!root || !root.querySelectorAll) return 0;
+  let pliees = 0;
+  root.querySelectorAll('.dash-card').forEach((carte) => {
+    if (carte.dataset.cartePliable === 'oui') return;       // garde d'idempotence
+    const head = carte.querySelector(':scope > .card-head');
+    if (!head) return;                                      // pas d'en-tête : rien à plier
+    // Un en-tête qui contient déjà un contrôle n'est pas un simple titre.
+    if (head.querySelector('input, select, textarea, button, a')) return;
+
+    carte.dataset.cartePliable = 'oui';
+    const cle = Dashboard.cleCarte(carte);
+
+    const bouton = document.createElement('button');
+    bouton.type = 'button';
+    bouton.className = 'card-fold';
+    bouton.setAttribute('aria-label', 'Replier ou déplier cette section');
+    bouton.innerHTML = '<span aria-hidden="true">▾</span>';
+    head.appendChild(bouton);
+
+    const appliquer = () => {
+      const pliee = Dashboard.cartesPliees.has(cle);
+      carte.classList.toggle('is-folded', pliee);
+      bouton.setAttribute('aria-expanded', pliee ? 'false' : 'true');
+      head.setAttribute('aria-expanded', pliee ? 'false' : 'true');
+    };
+    const basculer = () => {
+      if (Dashboard.cartesPliees.has(cle)) Dashboard.cartesPliees.delete(cle);
+      else Dashboard.cartesPliees.add(cle);
+      Dashboard.enregistrerCartesPliees();
+      appliquer();
+    };
+
+    bouton.addEventListener('click', (e) => { e.stopPropagation(); basculer(); });
+    // Toute la barre de titre est cliquable, comme sur un accordéon classique.
+    head.addEventListener('click', (e) => {
+      if (e.target.closest('button, a, input, select, textarea')) return;
+      basculer();
+    });
+    head.classList.add('card-head-pliable');
+    appliquer();
+    if (Dashboard.cartesPliees.has(cle)) pliees++;
+  });
+  return pliees;
+};
+
 // Après le rendu d'un module, chaque couple « libellé + contrôle »
 // devient une ligne : texte à gauche, contrôle à droite. Les boutons
 // en fin de carte sont regroupés dans un pied de carte aligné à droite.

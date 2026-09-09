@@ -14,8 +14,11 @@ const { chromium } = require('playwright-core');
 const BASE = 'http://127.0.0.1:3000';
 const LARGEUR = Number(process.argv[2] || 360);
 
-const MODULES = process.argv[3]
-  ? process.argv[3].split(',')
+// Les drapeaux (--textes) ne sont pas des noms de module : sans ce filtre,
+// « node audit-mobile.js 360 --textes » cherchait un rendeur nommé --textes.
+const ARGS = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const MODULES = ARGS[1]
+  ? ARGS[1].split(',')
   : ['overview', 'tickets', 'welcome', 'levels', 'economy', 'shop', 'moderation', 'antinuke',
     'roles', 'suggestions', 'giveaways', 'events', 'quiz', 'community', 'announcements',
     'embeds', 'members', 'stats', 'logs', 'transcripts', 'modmail', 'server', 'botprofile',
@@ -144,6 +147,16 @@ function repondre(url) {
   page.on('pageerror', (e) => erreurs.push(String(e.message).slice(0, 160)));
 
   await page.goto(BASE + '/', { waitUntil: 'networkidle' }).catch(() => {});
+  const SANS_REPLI = process.argv.includes('--sans-repli');
+  const argSeuil = (process.argv.find((a) => a.startsWith('--seuil=')) || '').split('=')[1];
+  const argClasses = (process.argv.find((a) => a.startsWith('--classes=')) || '').split('=')[1];
+  const TOUT_PLIER = process.argv.includes('--tout-plier');
+  await page.evaluate(([sr, se, cl, tp]) => {
+    window.__sansRepli = sr;
+    if (se) Dashboard.PLIABLE_SEUIL = Number(se);
+    if (cl) Dashboard.PLIABLE_CLASSES = cl.split(',').map((x) => '.' + x.trim());
+    window.__toutPlier = tp;
+  }, [SANS_REPLI, argSeuil, argClasses, TOUT_PLIER]);
 
   // Le shell d'authentification n'est pas atteint : on construit nous-mêmes la
   // zone de rendu, avec le vrai CSS déjà chargé par la page.
@@ -202,6 +215,25 @@ function repondre(url) {
       let erreur = '';
       try {
         await Dashboard.renderers[m](c, window.__guild || null);
+        // ⚠️ Fidélité au pipeline RÉEL. Dashboard.renderContent ne se contente
+        // pas d'appeler le rendeur : il enchaîne sur layoutSettingRows puis
+        // plierTextesLongs. Sans ces deux appels le banc mesurait une page que
+        // personne ne voit. --sans-repli permet de mesurer l'avant/après v245.
+        Dashboard.layoutSettingRows(c);
+        if (!window.__sansRepli) Dashboard.plierTextesLongs(c, Dashboard.PLIABLE_SEUIL);
+        Dashboard.rendreCartesPliables(c);
+        // --tout-plier : mesure le gain maximal si l'utilisateur replie tout.
+        if (window.__toutPlier) {
+          c.querySelectorAll('.dash-card[data-carte-pliable="oui"]').forEach((carte) => {
+            Dashboard.cartesPliees.add(Dashboard.cleCarte(carte));
+          });
+          Dashboard.rendreCartesPliables.call(null, c);
+          c.querySelectorAll('.dash-card[data-carte-pliable="oui"]').forEach((carte) => {
+            carte.classList.add('is-folded');
+            const b = carte.querySelector('.card-fold');
+            if (b) b.setAttribute('aria-expanded', 'false');
+          });
+        }
       } catch (e) {
         // La pile est indispensable : sans elle on ne sait pas quel champ
         // manque dans les données simulées.
@@ -283,29 +315,229 @@ function repondre(url) {
       });
       const tronques = listeTronques.length;
 
-      return { largeurDoc, erreur, debordements: debordements.slice(0, 6), nbDebordements: debordements.length,
+      // v245 — Pavés d'explication. On ne retient que du TEXTE en prose :
+      // une phrase courte n'est pas un pavé, et le contenu d'un champ de
+      // saisie (textarea, input) n'a pas à être replié.
+      const paves = [];
+      c.querySelectorAll('*').forEach((el) => {
+        if (el.children.length || !visible(el)) return;
+        if (el.closest('textarea, input, select, code, pre')) return;
+        const tag = el.tagName.toLowerCase();
+        if (tag === 'option' || tag === 'title') return;
+        const t = (el.textContent || '').replace(/\s+/g, ' ').trim();
+        if (t.length < 70) return;
+        let cls = '';
+        let a = el;
+        for (let k = 0; k < 4 && a; k++) {
+          if (a.className && typeof a.className === 'string' && a.className.trim()) { cls = a.className.trim().split(/\s+/)[0]; break; }
+          a = a.parentElement;
+        }
+        paves.push({ t, cls: cls || tag, h: Math.round(el.getBoundingClientRect().height) });
+      });
+
+      // v245 — efficacité du repli : combien de blocs ont été pliés, et
+      // combien de blocs d'explication restent visibles malgré tout.
+      const plies = c.querySelectorAll('details.dash-details').length;
+      const candidats = [...c.querySelectorAll(Dashboard.PLIABLE_CLASSES.join(','))].filter((el) => {
+        if (el.closest('details')) return false;
+        if (Dashboard.PLIABLE_EXCLUS && el.closest(Dashboard.PLIABLE_EXCLUS)) return false;
+        if (el.querySelector('input, select, textarea, button')) return false;
+        const st = getComputedStyle(el);
+        if (st.display === 'none' || st.visibility === 'hidden') return false;
+        const t = (el.textContent || '').replace(/\s+/g, ' ').trim();
+        return t.length >= Dashboard.PLIABLE_SEUIL && !Dashboard.PLIABLE_ALERTE.test(t);
+      }).length;
+
+      // Répartition de la hauteur par nature d'élément : permet de savoir si
+      // ce sont les textes d'explication ou les CONTRÔLES qui allongent la page.
+      const repartition = { cartes: 0, controles: 0, textes: 0, tableaux: 0, autre: 0 };
+      c.querySelectorAll(':scope > * , .dash-card').forEach(() => {});
+      const deja = new Set();
+      const ajoute = (el, cle) => {
+        if (deja.has(el)) return;
+        deja.add(el);
+        repartition[cle] += el.getBoundingClientRect().height;
+      };
+      c.querySelectorAll('input, select, textarea, .switch, .dd-host, button, .discord-multi-host').forEach((el) => {
+        const st = getComputedStyle(el);
+        if (st.display === 'none' || el.getBoundingClientRect().height === 0) return;
+        ajoute(el, 'controles');
+      });
+      c.querySelectorAll('table, .dash-table').forEach((el) => ajoute(el, 'tableaux'));
+      c.querySelectorAll(Dashboard.PLIABLE_CLASSES.join(',')).forEach((el) => {
+        const st = getComputedStyle(el);
+        if (st.display === 'none') return;
+        ajoute(el, 'textes');
+      });
+      const total = c.getBoundingClientRect().height;
+      repartition.autre = Math.max(0, Math.round(total - repartition.controles - repartition.tableaux - repartition.textes));
+      ['cartes', 'controles', 'tableaux', 'textes', 'autre'].forEach((k) => repartition[k] = Math.round(repartition[k]));
+
+      // Cartes : c'est le vrai levier de hauteur (50 % de la page est du
+      // « chrome » : cartes, titres, espacements). On mesure leur répartition
+      // pour savoir ce que rapporterait un repli par SECTION.
+      const cartes = [...c.querySelectorAll('.dash-card')].map((el) => {
+        const b = el.getBoundingClientRect();
+        const t = el.querySelector('.card-head, .dash-card-title, h2, h3, b');
+        return { h: Math.round(b.height), titre: t ? (t.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 40) : '(sans titre)' };
+      }).filter((x) => x.h > 0);
+      const nbCartes = cartes.length;
+      const hCartes = cartes.reduce((a, x) => a + x.h, 0);
+
+      return { largeurDoc, erreur, plies, candidatsNonPlies: candidats, repartition, nbCartes, hCartes, cartes, debordements: debordements.slice(0, 6), nbDebordements: debordements.length,
         texte, blocs, hauteur, ecrans, minuscules: minuscules.slice(0, 4), nbMinuscules: minuscules.length,
-        tactiles: tactiles.slice(0, 4), nbTactiles: tactiles.length, tronques, listeTronques: listeTronques.slice(0, 10) };
+        tactiles: tactiles.slice(0, 4), nbTactiles: tactiles.length, tronques, listeTronques: listeTronques.slice(0, 10),
+        paves };
     }, mod);
 
     resultats.push({ mod, ...r, erreurs: erreurs.slice(0, 2) });
   }
 
+  // ---------- Mode --clic : vérifie le repli de bout en bout ----------
+  if (process.argv.includes('--clic')) {
+    const r = await page.evaluate(async () => {
+      const c = document.querySelector('#audit');
+      c.innerHTML = '';
+      Dashboard.state.module = 'moderation';
+      Dashboard.cartesPliees.clear();
+      await Dashboard.renderers.moderation(c, window.__guild || null);
+      await new Promise((x) => setTimeout(x, 300));
+      Dashboard.layoutSettingRows(c);
+      Dashboard.plierTextesLongs(c);
+      Dashboard.rendreCartesPliables(c);
+      const cartes = [...c.querySelectorAll('.dash-card[data-carte-pliable="oui"]')];
+      if (!cartes.length) return { erreur: 'aucune carte rendue pliable' };
+      const carte = cartes[0];
+      const cle = Dashboard.cleCarte(carte);
+      const h = () => Math.round(carte.getBoundingClientRect().height);
+      const etapes = [];
+      etapes.push({ q: 'carte ouverte au départ', v: h(), classe: carte.className, cle });
+      carte.querySelector('.card-head').click();
+      await new Promise((x) => setTimeout(x, 60));
+      etapes.push({ q: 'après 1 clic sur le titre', v: h(), classe: carte.className });
+      const mem = JSON.parse(sessionStorage.getItem('hoxera-cartes-pliees') || '[]');
+      etapes.push({ q: 'mémorisé dans sessionStorage', v: mem.length, contient: mem.includes(cle) });
+      carte.querySelector('.card-fold').click();
+      await new Promise((x) => setTimeout(x, 60));
+      etapes.push({ q: 'après clic sur le chevron', v: h(), classe: carte.className });
+      etapes.push({ q: 'aria-expanded remis à true', v: carte.querySelector('.card-fold').getAttribute('aria-expanded') });
+      // Un clic sur un contrôle à l'intérieur ne doit PAS replier.
+      const controle = carte.querySelector('input, select, .switch');
+      etapes.push({ q: 'contrôle trouvé dans la carte', v: !!controle });
+      const nbTotal = c.querySelectorAll('.dash-card').length;
+      const nbPliables = cartes.length;
+      return { etapes, nbTotal, nbPliables, cle };
+    });
+    console.log('\n═══ TEST DE CLIC RÉEL (module moderation) ═══');
+    if (r.erreur) console.log('  ❌ ' + r.erreur);
+    else {
+      console.log(`  cartes dans le module : ${r.nbTotal} · rendues pliables : ${r.nbPliables}`);
+      console.log(`  clé de mémorisation   : « ${r.cle.slice(0, 58)} »`);
+      r.etapes.forEach((e) => console.log('  · ' + e.q.padEnd(34) + JSON.stringify(e.v) + (e.classe ? '   [' + e.classe + ']' : '') + (e.contient !== undefined ? '   contient la clé : ' + e.contient : '')));
+    }
+    await browser.close();
+    return;
+  }
+
+  // ---------- Rapport « textes » (préparation v245) ----------
+  if (process.argv.includes('--textes')) {
+    const tout = [];
+    resultats.forEach((r) => (r.paves || []).forEach((b) => tout.push({ mod: r.mod, ...b })));
+    const parMod = {};
+    tout.forEach((b) => { (parMod[b.mod] = parMod[b.mod] || []).push(b); });
+    const ordre = Object.entries(parMod)
+      .sort((a, b) => b[1].reduce((s, x) => s + x.h, 0) - a[1].reduce((s, x) => s + x.h, 0));
+    console.log(`\n═══ PAVÉS D'EXPLICATION — viewport ${LARGEUR} px ═══\n`);
+    console.log('  MODULE            pavés  caractères  hauteur  écrans');
+    console.log('  ' + '─'.repeat(56));
+    let tp = 0, tc = 0, th = 0;
+    for (const [m, bs] of ordre) {
+      const c2 = bs.reduce((s, x) => s + x.t.length, 0), h = bs.reduce((s, x) => s + x.h, 0);
+      tp += bs.length; tc += c2; th += h;
+      console.log('  ' + m.padEnd(18) + String(bs.length).padStart(5) + String(c2).padStart(11)
+        + (h + ' px').padStart(10) + (Math.round((h / 780) * 10) / 10).toFixed(1).padStart(7));
+    }
+    console.log('  ' + '─'.repeat(56));
+    console.log('  TOTAL'.padEnd(19) + String(tp).padStart(5) + String(tc).padStart(11)
+      + (th + ' px').padStart(10) + (Math.round((th / 780) * 10) / 10).toFixed(1).padStart(7));
+    // Répartition par classe : sert à décider quoi EXCLURE du repli
+    // (aperçus Discord, états vides, messages d'erreur…).
+    const parClasse = {};
+    tout.forEach((x) => { const k = x.cls; (parClasse[k] = parClasse[k] || []).push(x); });
+    console.log('\n  ═══ répartition par classe ═══');
+    Object.entries(parClasse).sort((a, b) => b[1].length - a[1].length).forEach(([k, v]) => {
+      console.log('  ' + String(v.length).padStart(4) + ' ×  .' + k.padEnd(24)
+        + String(v.reduce((s2, x) => s2 + x.h, 0)).padStart(6) + ' px   ex. « '
+        + v[0].t.slice(0, 46) + '… »');
+    });
+
+    console.log('\n  ═══ 25 pavés les plus hauts (candidats au repli) ═══');
+    tout.sort((a, b) => b.h - a.h).slice(0, 25).forEach((b, i) => {
+      console.log('  ' + String(i + 1).padStart(2) + '. ' + String(b.h).padStart(4) + ' px  '
+        + b.mod.padEnd(13) + '.' + b.cls.padEnd(21)
+        + '« ' + b.t.slice(0, 58) + (b.t.length > 58 ? '…' : '') + ' » (' + b.t.length + ' c)');
+    });
+    await browser.close();
+    return;
+  }
+
   // ---------- Rapport ----------
   console.log(`\n═══ AUDIT MOBILE — viewport ${LARGEUR} px ═══\n`);
-  console.log('ONGLET'.padEnd(14), 'DÉBORD'.padStart(7), 'ÉCRANS'.padStart(7), 'TEXTE'.padStart(7), 'desc'.padStart(5), '<12px'.padStart(6), 'tactile'.padStart(8), 'tronq'.padStart(6), '  ERREUR');
+  console.log('ONGLET'.padEnd(14), 'DÉBORD'.padStart(7), 'ÉCRANS'.padStart(7), 'TEXTE'.padStart(7), 'desc'.padStart(5), '<12px'.padStart(6), 'tactile'.padStart(8), 'tronq'.padStart(6), 'pliés'.padStart(6), 'restés'.padStart(7), '  ERREUR');
   console.log('-'.repeat(104));
-  let totalDeb = 0, modulesCasses = 0, totalEcrans = 0, totalMin = 0, totalTac = 0;
+  let totalDeb = 0, modulesCasses = 0, totalEcrans = 0, totalMin = 0, totalTac = 0, totalPlies = 0, totalRestes = 0;
   for (const r of resultats) {
     totalDeb += r.nbDebordements; totalEcrans += r.ecrans; totalMin += r.nbMinuscules; totalTac += r.nbTactiles;
+    totalPlies += (r.plies || 0); totalRestes += (r.candidatsNonPlies || 0);
     if (r.erreur || r.erreurs.length) modulesCasses++;
     const drapeau = r.nbDebordements > 0 ? '🔴' : (r.ecrans > 12 ? '🟠' : '  ');
     console.log(drapeau + r.mod.padEnd(12), String(r.nbDebordements).padStart(7), String(r.ecrans).padStart(7),
       String(r.texte).padStart(7), String(r.blocs).padStart(5), String(r.nbMinuscules).padStart(6),
-      String(r.nbTactiles).padStart(8), String(r.tronques).padStart(6), '  ' + (r.erreur || r.erreurs[0] || '').slice(0, 46));
+      String(r.nbTactiles).padStart(8), String(r.tronques).padStart(6),
+      String(r.plies || 0).padStart(6), String(r.candidatsNonPlies || 0).padStart(7),
+      '  ' + (r.erreur || r.erreurs[0] || '').slice(0, 46));
   }
   console.log('-'.repeat(104));
   console.log(`  débordements ${totalDeb} | hauteur cumulée ${Math.round(totalEcrans)} écrans | polices < 12 px ${totalMin} | cibles tactiles < 40 px ${totalTac} | modules en erreur ${modulesCasses}`);
+  console.log(`  v245 repli : ${totalPlies} blocs pliés | ${totalRestes} candidat(s) encore déplié(s) — doit rester à 0`);
+  if (process.argv.includes('--cartes')) {
+    const toutes = [];
+    resultats.forEach((r) => (r.cartes || []).forEach((c2) => toutes.push({ mod: r.mod, ...c2 })));
+    console.log('\n  ═══ CARTES par module (le vrai levier de hauteur) ═══');
+    console.log('  MODULE             cartes  hauteur   % du module');
+    resultats.forEach((r) => {
+      if (!r.nbCartes) return;
+      console.log('  ' + r.mod.padEnd(19) + String(r.nbCartes).padStart(5) + (r.hCartes + ' px').padStart(10)
+        + (Math.round((r.hCartes / Math.max(1, r.hauteur)) * 100) + ' %').padStart(11));
+    });
+    console.log('  ' + '─'.repeat(48));
+    console.log('  TOTAL'.padEnd(20) + String(toutes.length).padStart(5)
+      + (toutes.reduce((a, x) => a + x.h, 0) + ' px').padStart(10));
+    console.log('\n  ═══ 20 cartes les plus hautes ═══');
+    toutes.sort((a, b) => b.h - a.h).slice(0, 20).forEach((x, i) => {
+      console.log('  ' + String(i + 1).padStart(2) + '. ' + String(x.h).padStart(5) + ' px  ' + x.mod.padEnd(14) + '« ' + x.titre + ' »');
+    });
+  }
+
+  if (process.argv.includes('--repartition')) {
+    console.log('\n  ═══ de quoi est faite la hauteur (360 px) ═══');
+    console.log('  MODULE            contrôles  textes  tableaux   autre    total');
+    const tot = { controles: 0, textes: 0, tableaux: 0, autre: 0 };
+    resultats.forEach((r) => {
+      const p = r.repartition || {};
+      ['controles', 'textes', 'tableaux', 'autre'].forEach((k) => { tot[k] += (p[k] || 0); });
+      const tt = (p.controles || 0) + (p.textes || 0) + (p.tableaux || 0) + (p.autre || 0);
+      console.log('  ' + r.mod.padEnd(18) + String(p.controles || 0).padStart(9) + String(p.textes || 0).padStart(8)
+        + String(p.tableaux || 0).padStart(9) + String(p.autre || 0).padStart(8) + (tt + ' px').padStart(9));
+    });
+    const gt = tot.controles + tot.textes + tot.tableaux + tot.autre;
+    console.log('  ' + '─'.repeat(60));
+    console.log('  TOTAL'.padEnd(19) + String(tot.controles).padStart(9) + String(tot.textes).padStart(8)
+      + String(tot.tableaux).padStart(9) + String(tot.autre).padStart(8) + (gt + ' px').padStart(9));
+    console.log('  en %'.padEnd(19) + (Math.round(tot.controles / gt * 100) + ' %').padStart(9)
+      + (Math.round(tot.textes / gt * 100) + ' %').padStart(8) + (Math.round(tot.tableaux / gt * 100) + ' %').padStart(9)
+      + (Math.round(tot.autre / gt * 100) + ' %').padStart(8));
+  }
 
   console.log('\n═══ DÉTAIL DES DÉBORDEMENTS ═══');
   let aucuns = true;

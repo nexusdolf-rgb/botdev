@@ -14,7 +14,16 @@ assert(js.includes('Dashboard.dropdownMenu'), 'composant dropdownMenu manquant')
 assert(js.includes('Dashboard.enhanceSelect'), 'amélioration automatique des <select> manquante');
 assert(js.includes('Dashboard.enhanceSelects'), 'enhanceSelects manquant');
 assert(js.includes("select.dash-select:not([data-dd])"), 'le sélecteur de ciblage des <select> a changé');
-assert(js.includes('MutationObserver(() => Dashboard.enhanceSelects(zone))'), 'observation du DOM manquante (sélecteurs ajoutés en asynchrone)');
+// L'observateur doit rappeler enhanceSelects sur la zone dès qu'un <select>
+// apparaît en asynchrone. On vérifie l'INVARIANT (un MutationObserver dont le
+// rappel contient enhanceSelects(zone)), pas la syntaxe exacte : la v245 a
+// transformé ce rappel en bloc pour y ajouter le repli des textes et des
+// cartes, et une assertion textuelle cassait à tort.
+assert(
+  /new MutationObserver\(\(\) => (?:\{[\s\S]{0,300}?)?Dashboard\.enhanceSelects\(zone\)/.test(js),
+  'observation du DOM manquante (sélecteurs ajoutés en asynchrone)');
+assert(/ddObserver\.observe\(zone, \{ childList: true, subtree: true \}\)/.test(js),
+  "l'observateur n'écoute plus les ajouts d'enfants en profondeur");
 
 // 2. Le sélecteur de serveur et le multi-sélecteur utilisent le dropdown custom
 assert(!js.includes('<select aria-label="Changer de serveur">'), "l'ancien select invisible du sélecteur de serveur est encore là");
