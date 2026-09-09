@@ -194,28 +194,41 @@ const carte = (titre, contenu, classe = 'dash-card') => App.el(
   console.log('\n── B. Cartes pliables ──');
   // ==========================================================================
 
+  // jsdom ne calcule pas la mise en page : getBoundingClientRect().height vaut
+  // toujours 0. La règle de hauteur se teste donc comme fonction pure, et le
+  // comportement DOM se teste sur la hauteur mesurée à 0 (cas « carte courte »).
+  check('règle de défaut : hauteur max de la première carte = 1500 px',
+    Dashboard.HAUTEUR_MAX_PREMIERE === 1500, String(Dashboard.HAUTEUR_MAX_PREMIERE));
+  check('première carte courte → ouverte', Dashboard.carteOuverteParDefaut(0, 800) === true);
+  check('première carte à la limite exacte → ouverte',
+    Dashboard.carteOuverteParDefaut(0, Dashboard.HAUTEUR_MAX_PREMIERE) === true);
+  check('première carte trop haute → pliée (cas « Auto-modération », 4 997 px)',
+    Dashboard.carteOuverteParDefaut(0, 4997) === false);
+  check('deuxième carte → pliée même si courte', Dashboard.carteOuverteParDefaut(1, 100) === false);
+  check('carte suivante → pliée', Dashboard.carteOuverteParDefaut(7, 50) === false);
+  check('hauteur aberrante (NaN) ne lève pas et replie',
+    Dashboard.carteOuverteParDefaut(0, NaN) === false);
+
   c.innerHTML = '';
   const k1 = carte('🛡️ Auto-modération', `<div class="desc">${LONG}</div><input class="dash-input" value="x">`);
   c.appendChild(k1);
   Dashboard.state.module = 'moderation';
-  const n2 = Dashboard.rendreCartesPliables(c);
+  Dashboard.rendreCartesPliables(c);
   check('carte marquée pliable', k1.dataset.cartePliable === 'oui');
-  check('un chevron est ajouté', !!k1.querySelector('.card-fold'), String(n2));
-  check('…avec un type="button" (sinon soumet le formulaire)',
+  check('un chevron est ajouté', !!k1.querySelector('.card-fold'));
+  check('…avec un type="button" (sinon il soumettrait le formulaire)',
     k1.querySelector('.card-fold').type === 'button', k1.querySelector('.card-fold').getAttribute('type'));
   check('…avec une aria-label', (k1.querySelector('.card-fold').getAttribute('aria-label') || '').length > 5);
   check('…et un span décoratif masqué aux lecteurs d\'écran',
     k1.querySelector('.card-fold span').getAttribute('aria-hidden') === 'true');
-  check('ouverte par défaut (choix utilisateur)', !k1.classList.contains('is-folded'));
+  check('première carte ouverte par défaut (hauteur 0 en jsdom)', !k1.classList.contains('is-folded'), k1.className);
   check('aria-expanded = true à l\'ouverture',
     k1.querySelector('.card-fold').getAttribute('aria-expanded') === 'true');
   check('en-tête marqué cliquable', k1.querySelector('.card-head').classList.contains('card-head-pliable'));
 
-  // AUCUNE restructuration du DOM : six règles CSS ciblent les enfants
-  // directs d'une carte et casseraient si le contenu était emballé.
-  // La fixture a 3 enfants : card-head, .desc et le champ. Si le contenu était
-  // emballé, on verrait apparaître un conteneur supplémentaire.
-  const nbEnfantsAttendu = 3;
+  // AUCUNE restructuration du DOM : six règles CSS ciblent les enfants DIRECTS
+  // d'une carte et casseraient si le contenu était emballé dans un conteneur.
+  const nbEnfantsAttendu = 3;   // card-head, .desc, le champ
   check('le contenu n\'est PAS emballé dans un conteneur',
     !k1.querySelector('.card-body') && k1.children.length === nbEnfantsAttendu,
     `${k1.children.length} enfants : ${[...k1.children].map((x) => x.className || x.tagName).join(', ')}`);
@@ -224,20 +237,35 @@ const carte = (titre, contenu, classe = 'dash-card') => App.el(
   check('le champ reste enfant direct (sélecteurs CSS > préservés)',
     k1.querySelector(':scope > input.dash-input') !== null);
 
+  // Non-régression : la clé ne doit PAS dépendre du chevron injecté.
+  // Bug réel trouvé en écrivant ce test — la clé valait « …Auto-modération »
+  // avant injection et « …Auto-modération ▾ » après, donc l'état mémorisé
+  // devenait introuvable et le choix de l'utilisateur était perdu.
+  const cleAvant = 'moderation::' + '🛡️ Auto-modération';
+  check('clé stable APRÈS injection du chevron', Dashboard.cleCarte(k1) === cleAvant, Dashboard.cleCarte(k1));
+  check('…et ne contient pas le glyphe du chevron', !Dashboard.cleCarte(k1).includes('▾'), Dashboard.cleCarte(k1));
+  const kSansHead = App.el('<div class="dash-card"><p>x</p></div>');
+  check('clé d\'une carte sans en-tête ne lève pas',
+    typeof Dashboard.cleCarte(kSansHead) === 'string' && Dashboard.cleCarte(kSansHead).endsWith('::'),
+    Dashboard.cleCarte(kSansHead));
+
   // Bascule par clic sur le titre.
   k1.querySelector('.card-head').click();
   check('clic sur le titre → repliée', k1.classList.contains('is-folded'), k1.className);
   check('…aria-expanded passe à false', k1.querySelector('.card-fold').getAttribute('aria-expanded') === 'false');
-  check('…et c\'est mémorisé en session', Dashboard.cartesPliees.size === 1, String(Dashboard.cartesPliees.size));
-  const brut = JSON.parse(sessionStorage.getItem('hoxera-cartes-pliees') || '[]');
-  check('…dans sessionStorage (pas localStorage)', brut.length === 1, JSON.stringify(brut));
-  check('clé = onglet + titre de la carte', brut[0].startsWith('moderation::'), brut[0]);
+  check('…et le choix explicite est mémorisé',
+    Dashboard.etatCartes[Dashboard.cleCarte(k1)] === false, JSON.stringify(Dashboard.etatCartes));
+  const brut = JSON.parse(sessionStorage.getItem(Dashboard.ETAT_CARTES_CLE) || '{}');
+  check('…dans sessionStorage (pas localStorage)', Object.keys(brut).length === 1, JSON.stringify(brut));
+  check('clé = onglet + titre de la carte',
+    Object.keys(brut)[0].startsWith('moderation::'), Object.keys(brut)[0]);
 
-  // Bascule par le chevron.
+  // Clic pour rouvrir : le choix EXPLICITE doit être conservé, sinon une carte
+  // repliée par défaut reviendrait pliée au prochain passage sur l'onglet.
   k1.querySelector('.card-fold').click();
   check('clic sur le chevron → rouverte', !k1.classList.contains('is-folded'), k1.className);
-  check('…mémoire vidée', Dashboard.cartesPliees.size === 0);
-  check('…sessionStorage remis à jour', JSON.parse(sessionStorage.getItem('hoxera-cartes-pliees') || '[]').length === 0);
+  check('…le choix explicite « ouverte » est mémorisé',
+    Dashboard.etatCartes[Dashboard.cleCarte(k1)] === true, JSON.stringify(Dashboard.etatCartes));
 
   // Double bascule impossible : le chevron est DANS l'en-tête, son clic
   // remonterait et basculerait deux fois sans stopPropagation.
@@ -253,17 +281,19 @@ const carte = (titre, contenu, classe = 'dash-card') => App.el(
   c.innerHTML = '';
   const sansHead = App.el(`<div class="dash-card"><p>${LONG}</p></div>`);
   c.appendChild(sansHead);
-  check('carte sans en-tête ignorée', Dashboard.rendreCartesPliables(c) === 0 && sansHead.dataset.cartePliable === undefined);
+  Dashboard.rendreCartesPliables(c);
+  check('carte sans en-tête ignorée (tuiles de la Vue d\'ensemble)',
+    sansHead.dataset.cartePliable === undefined);
 
   c.innerHTML = '';
-  const headInteractif = App.el(`<div class="dash-card"><div class="card-head"><h3>T</h3><button>Action</button></div><p>x</p></div>`);
+  const headInteractif = App.el(`<div class="dash-card"><div class="card-head"><h3>T</h3><label class="switch"><input type="checkbox"></label></div><p>x</p></div>`);
   c.appendChild(headInteractif);
   Dashboard.rendreCartesPliables(c);
-  check('carte dont l\'en-tête contient un bouton ignorée', headInteractif.dataset.cartePliable === undefined);
-  check('…et son bouton d\'origine n\'est pas dupliqué', headInteractif.querySelectorAll('button').length === 1,
-    String(headInteractif.querySelectorAll('button').length));
+  check('carte dont l\'en-tête porte un interrupteur ignorée (onglet Modules)',
+    headInteractif.dataset.cartePliable === undefined);
+  check('…et aucun chevron n\'y est injecté', headInteractif.querySelectorAll('.card-fold').length === 0);
 
-  // Idempotence.
+  // Idempotence : ces post-traitements sont rappelés par un MutationObserver.
   c.innerHTML = ''; c.appendChild(carte('Titre', '<p>x</p>'));
   Dashboard.rendreCartesPliables(c);
   const html1 = c.innerHTML;
@@ -273,52 +303,61 @@ const carte = (titre, contenu, classe = 'dash-card') => App.el(
   check('…et n\'ajoute pas deux chevrons', c.querySelectorAll('.card-fold').length === 1,
     String(c.querySelectorAll('.card-fold').length));
 
-  // La mémoire de session est relue au chargement suivant.
-  Dashboard.cartesPliees.clear();
-  Dashboard.cartesPliees.add('moderation::🛡️ Auto-modération');
-  Dashboard.enregistrerCartesPliees();
+  // Le choix mémorisé est relue au passage suivant sur l'onglet.
+  Object.keys(Dashboard.etatCartes).forEach((k) => delete Dashboard.etatCartes[k]);
+  Dashboard.etatCartes['moderation::🛡️ Auto-modération'] = false;
+  Dashboard.enregistrerEtatCartes();
   c.innerHTML = '';
   const k2 = carte('🛡️ Auto-modération', `<p>${LONG}</p>`);
   c.appendChild(k2);
   Dashboard.state.module = 'moderation';
   Dashboard.rendreCartesPliables(c);
-  check('une carte mémorisée pliée se rouvre pliée', k2.classList.contains('is-folded'), k2.className);
+  check('une carte mémorisée pliée se retrouve pliée', k2.classList.contains('is-folded'), k2.className);
   check('…et annonce aria-expanded=false', k2.querySelector('.card-fold').getAttribute('aria-expanded') === 'false');
 
-  // Un autre onglet ne doit pas hériter du repli.
+  // Un choix explicite « ouverte » doit l'emporter sur le défaut « pliée ».
+  Object.keys(Dashboard.etatCartes).forEach((k) => delete Dashboard.etatCartes[k]);
+  Dashboard.etatCartes['tickets::Configuration'] = true;
+  c.innerHTML = '';
+  c.appendChild(carte('Autre', '<p>x</p>'));
+  c.appendChild(carte('Configuration', '<p>y</p>'));
+  Dashboard.state.module = 'tickets';
+  Dashboard.rendreCartesPliables(c);
+  const kOuv = c.querySelectorAll('.dash-card')[1];
+  check('choix explicite « ouverte » respecté sur une carte non-première',
+    !kOuv.classList.contains('is-folded'), kOuv.className);
+
+  // Le repli ne doit pas fuiter d'un onglet à l'autre.
   c.innerHTML = '';
   const k3 = carte('🛡️ Auto-modération', '<p>x</p>');
   c.appendChild(k3);
-  Dashboard.state.module = 'tickets';
+  Dashboard.state.module = 'health';
   Dashboard.rendreCartesPliables(c);
   check('le repli ne fuit pas vers un autre onglet', !k3.classList.contains('is-folded'), k3.className);
-  Dashboard.cartesPliees.clear(); Dashboard.enregistrerCartesPliees();
-  Dashboard.state.module = 'moderation';
 
   // Mémoire indisponible ou corrompue : quota plein, navigation privée,
-  // sessionStorage bloqué par le navigateur, JSON invalide. Rien ne doit lever,
-  // sinon le tableau de bord entier resterait blanc.
-  const zoneV245 = src.slice(i0 - 3000, i1);
+  // sessionStorage bloqué, JSON invalide. Rien ne doit lever, sinon le tableau
+  // de bord entier resterait blanc.
+  const zoneV245 = src.slice(Math.max(0, i0 - 4000), i1);
   check('la lecture de la mémoire est protégée par try/catch',
-    /cartesPliees = \(\(\) => \{[\s\S]{0,260}?try \{[\s\S]{0,260}?\} catch/.test(zoneV245),
-    'garde absente à la lecture');
+    /etatCartes = \(\(\) => \{[\s\S]{0,400}?try \{[\s\S]{0,400}?\} catch/.test(zoneV245), 'garde absente à la lecture');
   check('l\'écriture de la mémoire est protégée par try/catch',
-    /enregistrerCartesPliees = \(\) => \{[\s\S]{0,260}?try \{[\s\S]{0,260}?\} catch/.test(zoneV245),
-    'garde absente à l\'écriture');
+    /enregistrerEtatCartes = \(\) => \{[\s\S]{0,300}?try \{[\s\S]{0,300}?\} catch/.test(zoneV245), 'garde absente à l\'écriture');
+  check('une valeur non booléenne en mémoire est écartée',
+    /typeof brut\[k\] === 'boolean'/.test(zoneV245), 'filtrage absent');
 
-  // Preuve par le comportement : on retire sessionStorage, puis on rappelle
-  // l'enregistrement. Sans la garde, cela lèverait.
   const sauvegarde = global.sessionStorage;
-  const memo = Dashboard.cartesPliees;
   let leve = null;
   try {
     Object.defineProperty(dom.window, 'sessionStorage', { value: undefined, configurable: true });
-    Dashboard.enregistrerCartesPliees();
+    Dashboard.enregistrerEtatCartes();
   } catch (e) { leve = e; }
   finally { Object.defineProperty(dom.window, 'sessionStorage', { value: sauvegarde, configurable: true }); }
   check('écrire sans sessionStorage disponible ne lève pas', leve === null, leve && String(leve.message));
-  Dashboard.cartesPliees = memo;
-  sessionStorage.removeItem('hoxera-cartes-pliees');
+
+  Object.keys(Dashboard.etatCartes).forEach((k) => delete Dashboard.etatCartes[k]);
+  Dashboard.enregistrerEtatCartes();
+  Dashboard.state.module = 'moderation';
 
   // ==========================================================================
   console.log('\n── C. Branchements ──');
@@ -407,7 +446,7 @@ const carte = (titre, contenu, classe = 'dash-card') => App.el(
   const versions = [...new Set(html.match(/\?v=\d+/g) || [])];
   check('index.html : 7 références, toutes identiques',
     (html.match(/\?v=\d+/g) || []).length === 7 && versions.length === 1, versions.join(','));
-  check('cette version est la v245', versions[0] === '?v=245', String(versions[0]));
+  check('cette version est la v245', versions[0] === '?v=246', String(versions[0]));
   const cacheAttendu = `'botdev-${versions[0].replace('?v=', 'v')}'`;
   check('sw.js : cache aligné sur index.html', sw.includes(cacheAttendu),
     `${cacheAttendu} attendu, ${(sw.match(/const CACHE = '[^']*'/) || ['?'])[0]} trouvé`);

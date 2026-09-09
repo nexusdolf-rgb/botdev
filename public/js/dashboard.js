@@ -1485,40 +1485,86 @@ Dashboard.plierTextesLongs = (root, seuil) => {
 // et de masquer par CSS : les sélecteurs en place continuent de fonctionner.
 // ============================================================
 
-// Mémoire de session : onglet + titre de la carte. sessionStorage et non
-// localStorage, pour qu'un repli ne survive pas à une fermeture du
-// navigateur — l'utilisateur ne doit pas retrouver un tableau de bord
-// partiellement masqué des jours plus tard sans savoir pourquoi.
-Dashboard.cartesPliees = (() => {
+// Mémoire de session, par carte : onglet + titre.
+//
+// On stocke les choix EXPLICITES de l'utilisateur (ouverte / pliée), et non un
+// simple ensemble de cartes pliées. Depuis la v245 l'état par défaut n'est plus
+// « tout ouvert » : sans cette distinction, ouvrir une carte repliée par défaut
+// aurait été oublié au changement d'onglet.
+//
+// sessionStorage et non localStorage : un repli ne doit pas survivre à une
+// fermeture du navigateur. L'utilisateur ne doit jamais retrouver un tableau de
+// bord partiellement masqué des jours plus tard sans savoir pourquoi.
+Dashboard.ETAT_CARTES_CLE = 'hoxera-cartes-etat';
+Dashboard.etatCartes = (() => {
   try {
-    return new Set(JSON.parse(sessionStorage.getItem('hoxera-cartes-pliees') || '[]'));
-  } catch { return new Set(); }
+    const brut = JSON.parse(sessionStorage.getItem(Dashboard.ETAT_CARTES_CLE) || '{}');
+    // On ne garde que des booléens : une valeur corrompue ne doit pas pouvoir
+    // imposer un état.
+    const propre = {};
+    Object.keys(brut || {}).forEach((k) => { if (typeof brut[k] === 'boolean') propre[k] = brut[k]; });
+    return propre;
+  } catch { return {}; }
 })();
 
-Dashboard.enregistrerCartesPliees = () => {
+Dashboard.enregistrerEtatCartes = () => {
   try {
-    sessionStorage.setItem('hoxera-cartes-pliees', JSON.stringify([...Dashboard.cartesPliees]));
-  } catch { /* navigation privée, quota : le repli reste alors temporaire */ }
+    sessionStorage.setItem(Dashboard.ETAT_CARTES_CLE, JSON.stringify(Dashboard.etatCartes));
+  } catch { /* navigation privée, quota : les choix restent alors temporaires */ }
 };
 
+// Clé de mémorisation : onglet + titre de la carte.
+//
+// ⚠️ Le chevron injecté doit être EXCLU du titre. Sans ça, la clé dépendait du
+// moment de l'appel : calculée avant l'injection elle valait « …Auto-modération »,
+// et après « …Auto-modération ▾ ». L'état mémorisé sous la première clé devenait
+// alors introuvable, et le choix de l'utilisateur était perdu.
 Dashboard.cleCarte = (carte) => {
   const head = carte.querySelector(':scope > .card-head');
-  const titre = head ? (head.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 60) : '';
+  if (!head) return `${Dashboard.state.module || '?'}::`;
+  const copie = head.cloneNode(true);
+  copie.querySelectorAll('.card-fold').forEach((b) => b.remove());
+  const titre = (copie.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 60);
   return `${Dashboard.state.module || '?'}::${titre}`;
 };
 
+// Hauteur au-delà de laquelle même la PREMIÈRE carte est repliée par défaut.
+//
+// Mesuré : la première carte de Modération (« 🛡️ Auto-modération ») fait
+// 4 997 px, soit 6,4 écrans de scroll mobile à elle seule. La laisser ouverte
+// parce qu'elle est première ne réglait donc rien pour l'onglet le plus long.
+// 1 500 px ≈ 2 écrans : en dessous, une première carte ouverte reste lisible
+// d'un coup d'œil ; au-dessus, elle noie l'arrivée sur l'onglet.
+Dashboard.HAUTEUR_MAX_PREMIERE = 1500;
+
+// État par défaut d'une carte : la première reste ouverte, les autres sont
+// pliées — sauf si la première est elle-même trop haute.
+Dashboard.carteOuverteParDefaut = (index, hauteur) => index === 0 && hauteur <= Dashboard.HAUTEUR_MAX_PREMIERE;
+
 Dashboard.rendreCartesPliables = (root) => {
   if (!root || !root.querySelectorAll) return 0;
-  let pliees = 0;
-  root.querySelectorAll('.dash-card').forEach((carte) => {
-    if (carte.dataset.cartePliable === 'oui') return;       // garde d'idempotence
-    const head = carte.querySelector(':scope > .card-head');
-    if (!head) return;                                      // pas d'en-tête : rien à plier
-    // Un en-tête qui contient déjà un contrôle n'est pas un simple titre.
-    if (head.querySelector('input, select, textarea, button, a')) return;
+  const pliables = [...root.querySelectorAll('.dash-card')]
+    .filter((carte) => carte.dataset.cartePliable !== 'oui')
+    .filter((carte) => {
+      const head = carte.querySelector(':scope > .card-head');
+      if (!head) return false;                                  // pas d'en-tête : rien à plier
+      // Un en-tête qui contient déjà un contrôle n'est pas un simple titre :
+      // c'est le cas de l'onglet Modules, dont chaque carte porte un
+      // interrupteur. Les tuiles de navigation de la Vue d'ensemble n'ont pas
+      // de .card-head du tout et sont donc exclues elles aussi.
+      return !head.querySelector('input, select, textarea, button, a');
+    });
+  if (!pliables.length) return 0;
 
+  // ⚠️ Mesurer les hauteurs AVANT d'appliquer le moindre repli : une carte
+  // déjà pliée ne mesure plus que son en-tête, et la décision serait faussée.
+  const hauteurs = pliables.map((carte) => carte.getBoundingClientRect().height);
+  const dejaPliees = root.querySelectorAll('.dash-card.is-folded').length;
+
+  pliables.forEach((carte, index) => {
     carte.dataset.cartePliable = 'oui';
     const cle = Dashboard.cleCarte(carte);
+    const head = carte.querySelector(':scope > .card-head');
 
     const bouton = document.createElement('button');
     bouton.type = 'button';
@@ -1527,17 +1573,21 @@ Dashboard.rendreCartesPliables = (root) => {
     bouton.innerHTML = '<span aria-hidden="true">▾</span>';
     head.appendChild(bouton);
 
-    const appliquer = () => {
-      const pliee = Dashboard.cartesPliees.has(cle);
-      carte.classList.toggle('is-folded', pliee);
-      bouton.setAttribute('aria-expanded', pliee ? 'false' : 'true');
-      head.setAttribute('aria-expanded', pliee ? 'false' : 'true');
+    // Le choix explicite de l'utilisateur l'emporte toujours sur le défaut.
+    const ouverte = Object.prototype.hasOwnProperty.call(Dashboard.etatCartes, cle)
+      ? Dashboard.etatCartes[cle]
+      : Dashboard.carteOuverteParDefaut(index, hauteurs[index]);
+
+    const appliquer = (etat) => {
+      carte.classList.toggle('is-folded', !etat);
+      bouton.setAttribute('aria-expanded', etat ? 'true' : 'false');
+      head.setAttribute('aria-expanded', etat ? 'true' : 'false');
     };
     const basculer = () => {
-      if (Dashboard.cartesPliees.has(cle)) Dashboard.cartesPliees.delete(cle);
-      else Dashboard.cartesPliees.add(cle);
-      Dashboard.enregistrerCartesPliees();
-      appliquer();
+      const suivante = carte.classList.contains('is-folded');   // pliée → on ouvre
+      Dashboard.etatCartes[cle] = suivante;
+      Dashboard.enregistrerEtatCartes();
+      appliquer(suivante);
     };
 
     bouton.addEventListener('click', (e) => { e.stopPropagation(); basculer(); });
@@ -1547,10 +1597,10 @@ Dashboard.rendreCartesPliables = (root) => {
       basculer();
     });
     head.classList.add('card-head-pliable');
-    appliquer();
-    if (Dashboard.cartesPliees.has(cle)) pliees++;
+    appliquer(ouverte);
   });
-  return pliees;
+
+  return root.querySelectorAll('.dash-card.is-folded').length - dejaPliees;
 };
 
 // Après le rendu d'un module, chaque couple « libellé + contrôle »

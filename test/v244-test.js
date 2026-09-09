@@ -544,7 +544,16 @@ const GUILD = 'G244';
   // dans test/tools/, hors de portée de run-all.js.
 
   check('banc d\'audit présent', fs.existsSync(path.join(__dirname, 'tools', 'audit-mobile.js')));
-  check('variante tactile présente', fs.existsSync(path.join(__dirname, 'tools', 'audit-mobile-tactile.js')));
+  // L'émulation tactile était un FICHIER dupliqué (audit-mobile-tactile.js) :
+  // il avait fini par diverger du banc principal et mesurait du code périmé.
+  // C'est désormais un drapeau du banc unique.
+  const banc = fs.readFileSync(path.join(__dirname, 'tools', 'audit-mobile.js'), 'utf8');
+  check('émulation tactile disponible via --tactile', banc.includes("--tactile"));
+  check('…elle active bien hasTouch (sinon les media queries pointer:coarse ne s\'appliquent pas)',
+    /hasTouch:\s*TACTILE/.test(banc));
+  check('…et isMobile', /isMobile:\s*TACTILE/.test(banc));
+  check('le fichier dupliqué a bien disparu',
+    !fs.existsSync(path.join(__dirname, 'tools', 'audit-mobile-tactile.js')));
   check('validation du détecteur présente', fs.existsSync(path.join(__dirname, 'tools', 'test-detecteur-debordement.js')));
   check('bancs documentés (LISEZ-MOI.md)', fs.existsSync(path.join(__dirname, 'tools', 'LISEZ-MOI.md')));
   check('aucun banc provisoire laissé dans test/ (exécuté par erreur)',
@@ -571,10 +580,10 @@ const GUILD = 'G244';
   // à diagnostiquer qui soit.
   const versions = [...new Set(html.match(/\?v=\d+/g) || [])];
   check('index.html : les 7 références pointent la MÊME version', versions.length === 1, versions.join(', '));
-  check('cette version est bien la v244', versions[0] === '?v=245', String(versions[0]));
+  check('cette version est bien la v244', versions[0] === '?v=246', String(versions[0]));
 
   check('sw.js : nom de cache présent', /const CACHE = 'botdev-v\d+'/.test(sw), (sw.match(/const CACHE = '[^']*'/) || ['?'])[0]);
-  // « ?v=245 » dans index.html doit correspondre à « botdev-v245 » dans sw.js.
+  // « ?v=246 » dans index.html doit correspondre à « botdev-v246 » dans sw.js.
   const cacheAttendu = `'botdev-${versions[0].replace('?v=', 'v')}'`;
   check('sw.js : cache aligné sur index.html', sw.includes(cacheAttendu),
     `${cacheAttendu} attendu, ${(sw.match(/const CACHE = '[^']*'/) || ['?'])[0]} trouvé`);

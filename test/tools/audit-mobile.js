@@ -141,7 +141,17 @@ function repondre(url) {
 
 (async () => {
   const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: { width: LARGEUR, height: 780 }, deviceScaleFactor: 1 });
+  // --tactile : émule un écran tactile (hasTouch + isMobile), ce qui active
+  // dans Chromium les media queries (hover: none) and (pointer: coarse).
+  // Indispensable pour vérifier les planchers tactiles : sans ça, un iPad en
+  // mode paysage passait pour un poste à souris.
+  const TACTILE = process.argv.includes('--tactile');
+  const page = await browser.newPage({
+    viewport: { width: LARGEUR, height: 780 },
+    deviceScaleFactor: 1,
+    hasTouch: TACTILE,
+    isMobile: TACTILE,
+  });
 
   const erreurs = [];
   page.on('pageerror', (e) => erreurs.push(String(e.message).slice(0, 160)));
@@ -150,13 +160,17 @@ function repondre(url) {
   const SANS_REPLI = process.argv.includes('--sans-repli');
   const argSeuil = (process.argv.find((a) => a.startsWith('--seuil=')) || '').split('=')[1];
   const argClasses = (process.argv.find((a) => a.startsWith('--classes=')) || '').split('=')[1];
+  // Le comportement PRODUIT est désormais « première carte ouverte, sauf si
+  // elle dépasse 1 500 px ». Ces deux drapeaux servent à mesurer les extrêmes.
   const TOUT_PLIER = process.argv.includes('--tout-plier');
-  await page.evaluate(([sr, se, cl, tp]) => {
+  const TOUT_OUVERT = process.argv.includes('--tout-ouvert');
+  await page.evaluate(([sr, se, cl, tp, to]) => {
     window.__sansRepli = sr;
     if (se) Dashboard.PLIABLE_SEUIL = Number(se);
     if (cl) Dashboard.PLIABLE_CLASSES = cl.split(',').map((x) => '.' + x.trim());
     window.__toutPlier = tp;
-  }, [SANS_REPLI, argSeuil, argClasses, TOUT_PLIER]);
+    window.__toutOuvert = to;
+  }, [SANS_REPLI, argSeuil, argClasses, TOUT_PLIER, TOUT_OUVERT]);
 
   // Le shell d'authentification n'est pas atteint : on construit nous-mêmes la
   // zone de rendu, avec le vrai CSS déjà chargé par la page.
@@ -212,6 +226,10 @@ function repondre(url) {
       const c = document.querySelector('#audit');
       c.innerHTML = '';
       Dashboard.state.module = m;
+      if (window.__toutOuvert || window.__toutPlier) {
+        Object.keys(Dashboard.etatCartes).forEach((k) => delete Dashboard.etatCartes[k]);
+        sessionStorage.removeItem('hoxera-cartes-pliees');
+      }
       let erreur = '';
       try {
         await Dashboard.renderers[m](c, window.__guild || null);
@@ -222,16 +240,13 @@ function repondre(url) {
         Dashboard.layoutSettingRows(c);
         if (!window.__sansRepli) Dashboard.plierTextesLongs(c, Dashboard.PLIABLE_SEUIL);
         Dashboard.rendreCartesPliables(c);
-        // --tout-plier : mesure le gain maximal si l'utilisateur replie tout.
-        if (window.__toutPlier) {
+        // Mesure des deux extrêmes, pour situer le comportement produit.
+        if (window.__toutOuvert || window.__toutPlier) {
+          const ouvert = !!window.__toutOuvert;
           c.querySelectorAll('.dash-card[data-carte-pliable="oui"]').forEach((carte) => {
-            Dashboard.cartesPliees.add(Dashboard.cleCarte(carte));
-          });
-          Dashboard.rendreCartesPliables.call(null, c);
-          c.querySelectorAll('.dash-card[data-carte-pliable="oui"]').forEach((carte) => {
-            carte.classList.add('is-folded');
+            carte.classList.toggle('is-folded', !ouvert);
             const b = carte.querySelector('.card-fold');
-            if (b) b.setAttribute('aria-expanded', 'false');
+            if (b) b.setAttribute('aria-expanded', ouvert ? 'true' : 'false');
           });
         }
       } catch (e) {
@@ -383,8 +398,17 @@ function repondre(url) {
       }).filter((x) => x.h > 0);
       const nbCartes = cartes.length;
       const hCartes = cartes.reduce((a, x) => a + x.h, 0);
+      // Combien sont réellement devenues pliables, et quelle part de hauteur
+      // représente la PREMIÈRE (celle qui reste ouverte dans la variante
+      // « première carte ouverte »). Un module à 0 % de gain s'explique ici :
+      // soit aucune carte pliable, soit la première carte fait presque tout.
+      const pliables = [...c.querySelectorAll('.dash-card[data-carte-pliable="oui"]')];
+      const nbPliables = pliables.length;
+      const hPliables = pliables.reduce((a, el) => a + Math.round(el.getBoundingClientRect().height), 0);
+      const hPremiere = pliables.length ? Math.round(pliables[0].getBoundingClientRect().height) : 0;
 
-      return { largeurDoc, erreur, plies, candidatsNonPlies: candidats, repartition, nbCartes, hCartes, cartes, debordements: debordements.slice(0, 6), nbDebordements: debordements.length,
+      return { largeurDoc, erreur, plies, candidatsNonPlies: candidats, repartition, nbCartes, hCartes, cartes,
+        nbPliables, hPliables, hPremiere, debordements: debordements.slice(0, 6), nbDebordements: debordements.length,
         texte, blocs, hauteur, ecrans, minuscules: minuscules.slice(0, 4), nbMinuscules: minuscules.length,
         tactiles: tactiles.slice(0, 4), nbTactiles: tactiles.length, tronques, listeTronques: listeTronques.slice(0, 10),
         paves };
@@ -399,7 +423,7 @@ function repondre(url) {
       const c = document.querySelector('#audit');
       c.innerHTML = '';
       Dashboard.state.module = 'moderation';
-      Dashboard.cartesPliees.clear();
+      Object.keys(Dashboard.etatCartes).forEach((k) => delete Dashboard.etatCartes[k]);
       await Dashboard.renderers.moderation(c, window.__guild || null);
       await new Promise((x) => setTimeout(x, 300));
       Dashboard.layoutSettingRows(c);
@@ -411,16 +435,18 @@ function repondre(url) {
       const cle = Dashboard.cleCarte(carte);
       const h = () => Math.round(carte.getBoundingClientRect().height);
       const etapes = [];
-      etapes.push({ q: 'carte ouverte au départ', v: h(), classe: carte.className, cle });
+      // Depuis la v245 la première carte n'est ouverte que si elle ne dépasse
+      // pas 1 500 px. Ici elle en fait ~5 000 : elle démarre DONC pliée.
+      etapes.push({ q: 'état initial (1re carte, 4 997 px)', v: h(), classe: carte.className, cle });
       carte.querySelector('.card-head').click();
       await new Promise((x) => setTimeout(x, 60));
       etapes.push({ q: 'après 1 clic sur le titre', v: h(), classe: carte.className });
-      const mem = JSON.parse(sessionStorage.getItem('hoxera-cartes-pliees') || '[]');
-      etapes.push({ q: 'mémorisé dans sessionStorage', v: mem.length, contient: mem.includes(cle) });
+      const mem = JSON.parse(sessionStorage.getItem(Dashboard.ETAT_CARTES_CLE) || '{}');
+      etapes.push({ q: 'mémorisé dans sessionStorage', v: Object.keys(mem).length, contient: mem[cle] });
       carte.querySelector('.card-fold').click();
       await new Promise((x) => setTimeout(x, 60));
       etapes.push({ q: 'après clic sur le chevron', v: h(), classe: carte.className });
-      etapes.push({ q: 'aria-expanded remis à true', v: carte.querySelector('.card-fold').getAttribute('aria-expanded') });
+      etapes.push({ q: 'aria-expanded après 2e clic', v: carte.querySelector('.card-fold').getAttribute('aria-expanded') });
       // Un clic sur un contrôle à l'intérieur ne doit PAS replier.
       const controle = carte.querySelector('input, select, .switch');
       etapes.push({ q: 'contrôle trouvé dans la carte', v: !!controle });
@@ -482,7 +508,7 @@ function repondre(url) {
   }
 
   // ---------- Rapport ----------
-  console.log(`\n═══ AUDIT MOBILE — viewport ${LARGEUR} px ═══\n`);
+  console.log(`\n═══ AUDIT MOBILE — viewport ${LARGEUR} px${TACTILE ? ' · ÉMULATION TACTILE' : ' · souris'} ═══\n`);
   console.log('ONGLET'.padEnd(14), 'DÉBORD'.padStart(7), 'ÉCRANS'.padStart(7), 'TEXTE'.padStart(7), 'desc'.padStart(5), '<12px'.padStart(6), 'tactile'.padStart(8), 'tronq'.padStart(6), 'pliés'.padStart(6), 'restés'.padStart(7), '  ERREUR');
   console.log('-'.repeat(104));
   let totalDeb = 0, modulesCasses = 0, totalEcrans = 0, totalMin = 0, totalTac = 0, totalPlies = 0, totalRestes = 0;
@@ -500,6 +526,18 @@ function repondre(url) {
   console.log('-'.repeat(104));
   console.log(`  débordements ${totalDeb} | hauteur cumulée ${Math.round(totalEcrans)} écrans | polices < 12 px ${totalMin} | cibles tactiles < 40 px ${totalTac} | modules en erreur ${modulesCasses}`);
   console.log(`  v245 repli : ${totalPlies} blocs pliés | ${totalRestes} candidat(s) encore déplié(s) — doit rester à 0`);
+  if (process.argv.includes('--pliables')) {
+    console.log('\n  ═══ cartes PLIABLES par module ═══');
+    console.log('  MODULE              cartes  pliables  h. totale  h. 1re  reste à plier');
+    resultats.forEach((r) => {
+      if (!r.nbCartes) return;
+      const reste = (r.hPliables || 0) - (r.hPremiere || 0);
+      console.log('  ' + r.mod.padEnd(20) + String(r.nbCartes).padStart(5) + String(r.nbPliables).padStart(9)
+        + (r.hPliables + ' px').padStart(11) + (r.hPremiere + ' px').padStart(9)
+        + (reste + ' px').padStart(14) + (reste < 200 ? '   ← rien à gagner' : ''));
+    });
+  }
+
   if (process.argv.includes('--cartes')) {
     const toutes = [];
     resultats.forEach((r) => (r.cartes || []).forEach((c2) => toutes.push({ mod: r.mod, ...c2 })));
