@@ -1454,6 +1454,11 @@ Dashboard.PLIABLE_ALERTE = /⚠️|🚨|❌|🔴|désactivé|désactivée|aucun 
 
 Dashboard.plierTextesLongs = (root, seuil) => {
   if (!root || !root.querySelectorAll) return 0;
+  // v255 : sur OS de bureau, le tableau de bord garde son visage v241 —
+  // TOUT ouvert, sans flèches de pliage ni « En savoir plus ». Le pliage
+  // reste disponible sur mobile, où il a été demandé.
+  if (typeof document !== 'undefined' && document.documentElement
+    && document.documentElement.classList.contains('hx-os-pc')) return 0;
   const limite = Number.isFinite(seuil) ? seuil : Dashboard.PLIABLE_SEUIL;
   let plies = 0;
   root.querySelectorAll(Dashboard.PLIABLE_CLASSES.join(',')).forEach((el) => {
@@ -1599,6 +1604,11 @@ Dashboard.carteOuverteParDefaut = (index, hauteur) => {
 
 Dashboard.rendreCartesPliables = (root) => {
   if (!root || !root.querySelectorAll) return 0;
+  // v255 : sur OS de bureau, le tableau de bord garde son visage v241 —
+  // TOUT ouvert, sans flèches de pliage ni « En savoir plus ». Le pliage
+  // reste disponible sur mobile, où il a été demandé.
+  if (typeof document !== 'undefined' && document.documentElement
+    && document.documentElement.classList.contains('hx-os-pc')) return 0;
   const pliables = [...root.querySelectorAll('.dash-card')]
     .filter((carte) => carte.dataset.cartePliable !== 'oui')
     .filter((carte) => {

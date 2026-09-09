@@ -5928,6 +5928,9 @@ html.hx-light .card-fold:hover { color: #b3543d; }
   html.hx-os-pc .dashboard-shell-host .dash-topbar-actions { margin-left: auto; display: flex; align-items: center; }
   /* Le fil d'ariane du haut, masqué par le bloc mobile à toutes largeurs. */
   html.hx-os-pc .dashboard-shell-host .dash-crumb { display: flex; }
+  html.hx-os-pc .dashboard-shell-host .dash-side-brand { display: flex; }
+  html.hx-os-pc .dashboard-shell-host .dash-side-section { display: block; }
+  html.hx-os-pc .dashboard-shell-host .dash-side-foot { display: block; }
   /* Le chrome exclusivement mobile n'existe pas sur OS de bureau. */
   html.hx-os-pc .dashboard-shell-host .dash-mobile-bar,
   html.hx-os-pc .dashboard-shell-host .dash-bnav,
@@ -5935,6 +5938,67 @@ html.hx-light .card-fold:hover { color: #b3543d; }
   html.hx-os-pc .dashboard-shell-host .dash-mobile-backdrop,
   html.hx-os-pc .dashboard-shell-host .scroll-hint { display: none !important; }
 }
+
+/* --- v255 : sur OS de bureau, le VISAGE v241 du tableau de bord ---
+   L'utilisateur compare toujours son souvenir de la v241 : sidebar de
+   278 px (258 sous 1200 px) à marque centrée et avatar 82 px, entrées de
+   menu 13,5 px paddées 24 px, fil d'ariane visible, barre d'outils de
+   48 px soulignée d'un trait, zone de travail paddée 24/42 px.
+   On ne restaure QUE la GÉOMÉTRIE : les couleurs restent celles du thème
+   clair/sombre actuel, qui les gère correctement (la première version de
+   ce bloc recopiait la palette sombre de la v241 et cassait le thème
+   clair : texte sombre sur fond sombre). */
+html.hx-os-pc .dashboard-shell-host .dash-side { width: 278px; padding: 20px 0 12px; }
+@media (max-width: 1200px) {
+  html.hx-os-pc .dashboard-shell-host .dash-side { width: 258px; }
+}
+html.hx-os-pc .dashboard-shell-host .dash-side-brand {
+  position: relative; flex-direction: column; align-items: center; gap: 9px;
+  margin: 0 22px 18px; padding: 0 0 18px; text-align: center;
+  border-bottom: 1px solid var(--d-border);
+}
+html.hx-os-pc .dashboard-shell-host .dash-side-brand-avatar,
+html.hx-os-pc .dashboard-shell-host .dash-side-brand-avatar.fallback {
+  width: 82px; height: 82px; flex-basis: 82px; border-radius: 50%;
+  border: 2px solid #e07a5f; box-shadow: none;
+}
+html.hx-os-pc .dashboard-shell-host .dash-side-brand-avatar.fallback { font-size: 30px; }
+html.hx-os-pc .dashboard-shell-host .dash-side-brand-copy { align-items: center; max-width: 100%; }
+html.hx-os-pc .dashboard-shell-host .dash-side-brand-copy b { font-size: 17px; }
+html.hx-os-pc .dashboard-shell-host .dash-side-brand-copy span { margin-top: 2px; font-size: 11px; }
+html.hx-os-pc .dashboard-shell-host .dash-side-brand-status {
+  position: absolute; top: 66px; right: calc(50% - 42px);
+  width: 11px; height: 11px; margin: 0; border: 2px solid var(--d-side, #2b2d31);
+  box-shadow: none;
+}
+html.hx-os-pc .dashboard-shell-host .dash-side-section { padding: 14px 24px 7px; font-size: 10px; letter-spacing: .7px; }
+html.hx-os-pc .dashboard-shell-host .dash-side-item {
+  width: 100%; min-height: 43px; margin: 0; padding: 9px 24px;
+  border: 0; border-left: 3px solid transparent; border-radius: 0;
+  box-shadow: none; transform: none; font-size: 13.5px; font-weight: 600;
+}
+html.hx-os-pc .dashboard-shell-host .dash-side-item .ico {
+  width: 24px; height: 24px; border-radius: 0; font-size: 17px;
+}
+html.hx-os-pc .dashboard-shell-host .dash-side-item:hover { transform: none; }
+html.hx-os-pc .dashboard-shell-host .dash-side-item:hover .ico { transform: none; }
+html.hx-os-pc .dashboard-shell-host .dash-side-foot { margin: auto 20px 0; padding: 15px 4px 2px; border-top: 1px solid var(--d-border); }
+html.hx-os-pc .dashboard-shell-host .dash-main { min-width: 0; padding: 24px 42px 72px; }
+html.hx-os-pc .dashboard-shell-host #dash-content { max-width: var(--d-content-max); margin: 0 auto; }
+html.hx-os-pc .dashboard-shell-host .dash-topbar {
+  min-height: 48px; margin: 0 auto 24px; padding: 0 0 12px;
+  border: 0; border-bottom: 1px solid var(--d-border); border-radius: 0;
+  box-shadow: none;
+}
+html.hx-os-pc .dashboard-shell-host .dash-crumb { gap: 10px; }
+html.hx-os-pc .dashboard-shell-host .dash-crumb .crumb-ico {
+  width: 32px; height: 32px; border-radius: 4px; font-size: 16px; box-shadow: none;
+}
+html.hx-os-pc .dashboard-shell-host .dash-crumb .crumb-txt b { font-size: 14px; }
+html.hx-os-pc .dashboard-shell-host .dash-crumb .crumb-txt span { font-size: 11px; }
+html.hx-os-pc .dashboard-shell-host .dash-topbar-actions { width: auto; justify-content: flex-start; gap: 6px; }
+html.hx-os-pc .dashboard-shell-host .dash-iconbtn { width: 36px; height: 36px; border-radius: 4px; box-shadow: none; }
+html.hx-os-pc .dashboard-shell-host .dash-bot-chip { min-height: 36px; padding: 3px 8px 3px 5px !important; border-radius: 4px !important; box-shadow: none; }
 
 /* --- Palier B : 481-900 px, rail d'icônes de 64 px --- */
 @media (min-width: 481px) and (max-width: 900px) {
@@ -5950,18 +6014,4 @@ html.hx-light .card-fold:hover { color: #b3543d; }
   html.hx-os-pc .dashboard-shell-host .dash-side-section,
   html.hx-os-pc .dashboard-shell-host .dash-server-card .srv-txt,
   html.hx-os-pc .dashboard-shell-host .dash-side-foot { display: none !important; }
-}
-
-/* --- Palier C : au-delà de 900 px, barre latérale complète --- */
-@media (min-width: 901px) {
-  html.hx-os-pc .dashboard-shell-host .dash-side { width: 300px; flex: 0 0 300px; }
-  html.hx-os-pc .dashboard-shell-host .dash-side-item {
-    font-size: 13px; gap: 11px; justify-content: flex-start;
-    padding: 7px 10px; margin: 2px 8px; width: calc(100% - 16px);
-  }
-  /* Le bloc mobile cachait sections, pied et textes : on les rend. */
-  html.hx-os-pc .dashboard-shell-host .dash-side-section { display: block; }
-  html.hx-os-pc .dashboard-shell-host .dash-side-foot { display: block; }
-  html.hx-os-pc .dashboard-shell-host .dash-side-brand { justify-content: flex-start; margin: 1px 5px 17px; padding: 4px 5px 15px; }
-  html.hx-os-pc .dashboard-shell-host .dash-server-card { justify-content: flex-start; padding: 11px 12px; margin: 14px 12px 6px; }
 }

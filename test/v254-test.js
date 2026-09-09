@@ -59,16 +59,16 @@ const zoneB = css.slice(css.indexOf('@media (min-width: 481px) and (max-width: 9
 const corpsB = zoneB.slice(0, zoneB.indexOf('\n}'));
 check('…rail de 64 px, icônes seules', corpsB.includes('width: 64px; flex: 0 0 64px;') && corpsB.includes('font-size: 0;'));
 
-console.log('— 4. Palier C : barre complète au-delà de 900 px —');
-check('le palier C existe', css.includes('@media (min-width: 901px) {'));
-const zoneC = css.slice(css.indexOf('@media (min-width: 901px) {'));
-const corpsC = zoneC.slice(0, zoneC.indexOf('\n}'));
-check('…barre latérale de 300 px (largeur desktop du produit)',
-  corpsC.includes('width: 300px; flex: 0 0 300px;'));
-check('…sections, pied et textes rendus (le bloc mobile les cachait partout)',
-  corpsC.includes('.dash-side-section { display: block; }') && corpsC.includes('.dash-side-foot { display: block; }'));
-check('…entrées de menu avec leur texte (police 13 px, pas 0)',
-  corpsC.includes('font-size: 13px;'));
+console.log('— 4. Au-delà de 900 px : le visage v241 restauré (v255) —');
+check('la barre latérale reprend ses largeurs v241 (278 px, 258 sous 1200 px)',
+  css.includes('html.hx-os-pc .dashboard-shell-host .dash-side { width: 278px; padding: 20px 0 12px; }')
+  && css.includes('html.hx-os-pc .dashboard-shell-host .dash-side { width: 258px; }'));
+check('…sections, pied ET marque centrée rendus (le bloc mobile les cachait à toutes largeurs)',
+  corpsA.includes('.dash-side-section { display: block; }')
+  && corpsA.includes('.dash-side-foot { display: block; }')
+  && corpsA.includes('.dash-side-brand { display: flex; }'));
+check('…plus de palier C isolé : la géométrie v241 couvre toutes les largeurs ≥ 481 px',
+  !css.includes('@media (min-width: 901px) {'));
 
 console.log('— 5. Le banc sait émuler LA machine de l\'utilisateur —');
 check('drapeau --pc-tactile : user-agent Windows + pointeur tactile',
@@ -85,9 +85,9 @@ check('ecranEtroit garde son verrou « OS de bureau »',
   racine('public/js/dashboard.js').includes("classList.contains('hx-os-pc')"));
 
 console.log('— 7. Version —');
-check('index.html : ?v=254 référencé 7 fois', (index.match(/\?v=254/g) || []).length === 7,
-  String((index.match(/\?v=254/g) || []).length));
-check('sw.js : cache « botdev-v254 »', racine('public/sw.js').includes("const CACHE = 'botdev-v254';"));
+check('index.html : ?v=255 référencé 7 fois', (index.match(/\?v=255/g) || []).length === 7,
+  String((index.match(/\?v=255/g) || []).length));
+check('sw.js : cache « botdev-v255 »', racine('public/sw.js').includes("const CACHE = 'botdev-v255';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v254 — ${ok} vérifications OK : plus aucune largeur où un PC bascule en mobile.`);
