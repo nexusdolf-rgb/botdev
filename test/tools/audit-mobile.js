@@ -146,6 +146,13 @@ function repondre(url) {
   // Indispensable pour vérifier les planchers tactiles : sans ça, un iPad en
   // mode paysage passait pour un poste à souris.
   const TACTILE = process.argv.includes('--tactile');
+  // --pc-tactile (v254) : LE cas de l'utilisateur — un PC Windows à écran
+  // TACTILE, dont la hauteur utile tombe sous 800 px (portable 1366×768, ou
+  // 1080p à 150 %). Alors la clause mobile « hover none + pointer coarse +
+  // max-height 800 » — SANS limite de largeur — bascule toute la page en
+  // mobile, même à 1 920 px. User-agent Windows (classe hx-os-pc) + pointeur
+  // tactile : le banc doit voir la coquille PC à toutes les largeurs.
+  const PCTACTILE = process.argv.includes('--pc-tactile');
   // --capture=<dossier> : enregistre une image de chaque module rendu. C'est un
   // outil de revue visuelle, pas une assertion — il ne change aucune mesure. Le
   // rendu est doublé (deviceScaleFactor 2) uniquement dans ce mode, pour que le
@@ -162,11 +169,13 @@ function repondre(url) {
   const page = await browser.newPage({
     viewport: { width: LARGEUR, height: 780 },
     deviceScaleFactor: CAPTURE ? 2 : 1,
-    hasTouch: TACTILE,
+    hasTouch: TACTILE || PCTACTILE,
     isMobile: TACTILE,
     userAgent: TACTILE
       ? 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36'
-      : undefined,
+      : PCTACTILE
+        ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+        : undefined,
   });
 
   const erreurs = [];
@@ -604,7 +613,7 @@ function repondre(url) {
   }
 
   // ---------- Rapport ----------
-  console.log(`\n═══ AUDIT MOBILE — viewport ${LARGEUR} px${TACTILE ? ' · ÉMULATION TACTILE' : ' · souris'} ═══\n`);
+  console.log(`\n═══ AUDIT MOBILE — viewport ${LARGEUR} px${TACTILE ? ' · ÉMULATION TACTILE' : PCTACTILE ? ' · PC TACTILE (cas utilisateur)' : ' · souris'} ═══\n`);
   console.log('ONGLET'.padEnd(14), 'DÉBORD'.padStart(7), 'ÉCRANS'.padStart(7), 'TEXTE'.padStart(7), 'desc'.padStart(5), '<12px'.padStart(6), 'tactile'.padStart(8), 'tronq'.padStart(6), 'pliés'.padStart(6), 'restés'.padStart(7), '  ERREUR');
   console.log('-'.repeat(104));
   let totalDeb = 0, modulesCasses = 0, totalEcrans = 0, totalMin = 0, totalTac = 0, totalPlies = 0, totalRestes = 0;
@@ -640,7 +649,10 @@ function repondre(url) {
     // v252 : entre 701 et 900 px avec un pointeur fin, la disposition PC garde
     // une barre latérale EN RAIL D'ICÔNES (64 px) — c'est voulu, pas un repli
     // mobile. Le banc doit l'accepter comme disposition PC légitime.
-    const railEtroit = !attenduMobile && !TACTILE && LARGEUR >= 481 && LARGEUR <= 900;
+    // Un rail de 64 px est la disposition PC légitime entre 481 et 900 px,
+    // y compris sur PC tactile (v254) : seul le rendu Android attendu mobile
+    // est exclu, via attenduMobile.
+    const railEtroit = !attenduMobile && LARGEUR >= 481 && LARGEUR <= 900;
     const sideOk = attenduMobile ? (dispo.side === 'none')
       : railEtroit ? (dispo.side === 'flex' && dispo.sideW === 64)
       : (dispo.side === 'flex' && dispo.sideW > 200);

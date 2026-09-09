@@ -45,9 +45,12 @@ check('…une exception ne laisse jamais un navigateur sans décision (try/catch
   /try \{[\s\S]{0,400}hx-os-pc[\s\S]{0,80}\} catch \{\}/.test(index));
 
 console.log('— 2. Le bloc CSS neutralise la coquille mobile sur OS de bureau —');
+// v254 : le correctif a été restructuré en trois paliers (socle ≥ 481 px,
+// rail 481-900, barre complète ≥ 901). Les vérifications v253 portent sur le
+// socle commun, qui commence au premier palier.
 const BLOC = '@media (min-width: 481px) and (max-width: 900px) {';
-check('le bloc existe, borné 481-900 px', css.includes(BLOC));
-const zone = css.slice(css.indexOf(BLOC));
+check('le palier rail existe, borné 481-900 px', css.includes(BLOC));
+const zone = css.slice(css.indexOf('@media (min-width: 481px) {'));
 check('…il remet la coquille EN LIGNE et le rail EN COLONNE (le bug du bandeau horizontal)',
   zone.includes('html.hx-os-pc .dashboard-shell-host .dash-shell { flex-direction: row; }')
   && zone.includes('flex-direction: column;'));
@@ -77,9 +80,9 @@ check('le rail « pointeur fin » 701-900 px existe toujours',
   css.includes('@media (pointer: fine) and (min-width: 701px) and (max-width: 900px)'));
 
 console.log('— 5. Version —');
-check('index.html : ?v=253 référencé 7 fois', (index.match(/\?v=253/g) || []).length === 7,
-  String((index.match(/\?v=253/g) || []).length));
-check('sw.js : cache « botdev-v253 »', racine('public/sw.js').includes("const CACHE = 'botdev-v253';"));
+check('index.html : ?v=254 référencé 7 fois', (index.match(/\?v=254/g) || []).length === 7,
+  String((index.match(/\?v=254/g) || []).length));
+check('sw.js : cache « botdev-v254 »', racine('public/sw.js').includes("const CACHE = 'botdev-v254';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v253 — ${ok} vérifications OK : un PC est un PC, un mobile est un mobile, sans mesure.`);

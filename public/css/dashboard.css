@@ -5888,37 +5888,80 @@ html.hx-light .card-fold:hover { color: #b3543d; }
    rien (le PC y est déjà en PC) ; sous 481 px même un PC passe en mobile, une
    fenêtre si petite n'ayant pas la place d'une barre latérale.
    Android / iPhone / iPad n'ont pas la classe : strictement inchangés. */
-@media (min-width: 481px) and (max-width: 900px) {
-  /* Sous 700 px le bloc mobile fait de la coquille une COLONNE (onglets
-     horizontaux en haut, contenu dessous). On remet la coquille en ligne et
-     la barre latérale en colonne verticale, sinon le rail partirait en
-     bandeau horizontal — exactement le bug vu en capture. */
+/* ================================================================
+   v254 — UN OS DE BUREAU = COQUILLE PC À TOUTES LES LARGEURS ≥ 481 px
+   ----------------------------------------------------------------
+   Le bloc mobile (21 requêtes médias) contient une clause SANS limite
+   de largeur : « (hover: none) and (pointer: coarse) and (max-height:
+   800px) and (any-pointer: coarse) ». Sur un PC portable tactile dont
+   la hauteur utile tombe sous 800 px (1366×768, ou 1080p à 150 %),
+   cette clause fait basculer TOUTE la page en mobile, même plein écran
+   à 1 920 px — c'est le cas que les v250→v253 ne couvraient pas, leurs
+   correctifs s'arrêtant à 900 px.
+   Donc : dès 481 px, sur un OS de bureau (classe hx-os-pc posée par
+   index.html d'après le user-agent), on neutralise la coquille mobile
+   à TOUTES les largeurs, puis on choisit le calibre de la barre
+   latérale — rail d'icônes 481-900 px, barre complète au-delà.
+   Sans la classe hx-os-pc (Android, iPhone, iPad) : rien ne change.
+   ================================================================ */
+
+/* --- Palier A : socle commun, toutes largeurs ≥ 481 px --- */
+@media (min-width: 481px) {
+  /* Le bloc mobile empile la coquille en colonne (onglets horizontaux) :
+     on la remet en ligne, et la barre latérale debout. */
   html.hx-os-pc .dashboard-shell-host .dash-shell { flex-direction: row; }
   html.hx-os-pc .dashboard-shell-host .dash-side {
-    display: flex; width: 64px; flex: 0 0 64px; flex-direction: column;
+    display: flex; flex-shrink: 0; flex-direction: column;
     overflow-x: hidden; overflow-y: auto;
     position: sticky; top: 56px; height: calc(100vh - 56px); transform: none;
     border-right: 1px solid var(--d-border); border-bottom: none;
   }
+  /* Restes du bandeau d'onglets mobile sur les entrées de menu. */
   html.hx-os-pc .dashboard-shell-host .dash-side-item {
     flex: 0 0 auto; min-height: 0; white-space: normal; border-bottom: none;
   }
-  html.hx-os-pc .dashboard-shell-host .dash-main { padding: 18px 16px 60px; }
-  html.hx-os-pc .dashboard-shell-host .dash-topbar { margin: 0; padding: 10px 14px; }
+  html.hx-os-pc .dashboard-shell-host .dash-main { padding: 22px 26px 60px; }
+  html.hx-os-pc .dashboard-shell-host .dash-topbar {
+    margin: 0; padding: 10px 14px;
+    display: flex; flex-direction: row; align-items: center; gap: 10px;
+  }
+  html.hx-os-pc .dashboard-shell-host .dash-topbar-actions { margin-left: auto; display: flex; align-items: center; }
+  /* Le fil d'ariane du haut, masqué par le bloc mobile à toutes largeurs. */
+  html.hx-os-pc .dashboard-shell-host .dash-crumb { display: flex; }
+  /* Le chrome exclusivement mobile n'existe pas sur OS de bureau. */
   html.hx-os-pc .dashboard-shell-host .dash-mobile-bar,
   html.hx-os-pc .dashboard-shell-host .dash-bnav,
   html.hx-os-pc .dashboard-shell-host .dash-mobile-drawer,
   html.hx-os-pc .dashboard-shell-host .dash-mobile-backdrop,
+  html.hx-os-pc .dashboard-shell-host .scroll-hint { display: none !important; }
+}
+
+/* --- Palier B : 481-900 px, rail d'icônes de 64 px --- */
+@media (min-width: 481px) and (max-width: 900px) {
+  html.hx-os-pc .dashboard-shell-host .dash-side { width: 64px; flex: 0 0 64px; }
+  html.hx-os-pc .dashboard-shell-host .dash-side-item {
+    font-size: 0; gap: 0; justify-content: center;
+    padding: 6px 0; margin: 2px 7px; width: calc(100% - 14px);
+  }
+  html.hx-os-pc .dashboard-shell-host .dash-side-item .ico { font-size: 16px; }
+  html.hx-os-pc .dashboard-shell-host .dash-side-brand { justify-content: center; margin: 6px 0 10px; padding: 0; border-bottom: none; }
+  html.hx-os-pc .dashboard-shell-host .dash-server-card { justify-content: center; padding: 6px 0; margin: 0 6px 8px; }
   html.hx-os-pc .dashboard-shell-host .dash-side-brand-copy,
   html.hx-os-pc .dashboard-shell-host .dash-side-section,
   html.hx-os-pc .dashboard-shell-host .dash-server-card .srv-txt,
-  html.hx-os-pc .dashboard-shell-host .dash-side .scroll-hint,
   html.hx-os-pc .dashboard-shell-host .dash-side-foot { display: none !important; }
-  html.hx-os-pc .dashboard-shell-host .dash-crumb { display: flex; }
-  html.hx-os-pc .dashboard-shell-host .dash-topbar { display: flex; flex-direction: row; align-items: center; gap: 10px; }
-  html.hx-os-pc .dashboard-shell-host .dash-topbar-actions { margin-left: auto; display: flex; align-items: center; }
-  html.hx-os-pc .dashboard-shell-host .dash-side-item { font-size: 0; gap: 0; justify-content: center; padding: 6px 0; margin: 2px 7px; width: calc(100% - 14px); }
-  html.hx-os-pc .dashboard-shell-host .dash-side-item .ico { font-size: 16px; }
-  html.hx-os-pc .dashboard-shell-host .dash-side-brand { justify-content: center; margin: 6px 0 10px; padding: 0; }
-  html.hx-os-pc .dashboard-shell-host .dash-server-card { justify-content: center; padding: 6px 0; margin: 0 6px 8px; }
+}
+
+/* --- Palier C : au-delà de 900 px, barre latérale complète --- */
+@media (min-width: 901px) {
+  html.hx-os-pc .dashboard-shell-host .dash-side { width: 300px; flex: 0 0 300px; }
+  html.hx-os-pc .dashboard-shell-host .dash-side-item {
+    font-size: 13px; gap: 11px; justify-content: flex-start;
+    padding: 7px 10px; margin: 2px 8px; width: calc(100% - 16px);
+  }
+  /* Le bloc mobile cachait sections, pied et textes : on les rend. */
+  html.hx-os-pc .dashboard-shell-host .dash-side-section { display: block; }
+  html.hx-os-pc .dashboard-shell-host .dash-side-foot { display: block; }
+  html.hx-os-pc .dashboard-shell-host .dash-side-brand { justify-content: flex-start; margin: 1px 5px 17px; padding: 4px 5px 15px; }
+  html.hx-os-pc .dashboard-shell-host .dash-server-card { justify-content: flex-start; padding: 11px 12px; margin: 14px 12px 6px; }
 }
