@@ -1256,7 +1256,9 @@ html.hx-light .adv-check-row { background: rgba(var(--d-accent-rgb), .055); }
 .am-rule-state { flex: 0 0 auto; color: var(--d-dim); font-size: 10.5px; white-space: nowrap; }
 .am-rule-action, .am-rule-setting { display: flex; flex-direction: column; gap: 5px; margin-top: 12px; color: var(--d-dim); font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .35px; }
 .am-rule-action .dash-select { margin-top: 0; font-size: 12px; text-transform: none; letter-spacing: 0; }
-.am-rule-setting .dash-input { margin-top: 0; font-size: 13px; }
+/* v244 : étendu aux sélecteurs — les cases numériques de l'auto-mod sont
+   devenues des listes à préréglages. */
+.am-rule-setting .dash-input, .am-rule-setting .dash-select { margin-top: 0; font-size: 13px; }
 .am-rule-setting small { font-size: 10.5px; font-weight: 500; letter-spacing: 0; text-transform: none; }
 .am-policy-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(190px, 250px); gap: 14px; align-items: end; margin-top: 13px; padding: 12px 14px; border: 1px solid var(--d-border); border-radius: 13px; background: rgba(255,255,255,.014); }
 .am-inline-toggle { display: flex; align-items: flex-start; gap: 9px; cursor: pointer; }
@@ -2588,7 +2590,12 @@ html.hx-light .am-blacklist-badge, html.hx-light .am-blacklist-count { color: #b
   text-transform: uppercase;
 }
 .am-threshold-controls { display: flex; align-items: center; gap: 8px; }
+/* v244 : étendu aux sélecteurs, et largeur portée de 86 px à 118 px.
+   Un <select> réserve 42 px à droite pour sa flèche : à 86 px il ne restait
+   qu'une trentaine de pixels au texte, et « Désactivé » était tronqué.
+   Le texte repasse à gauche — centré sous une flèche à droite, il paraît décalé. */
 .am-threshold-controls .dash-input { width: 86px; min-height: 38px; flex: 0 0 86px; font-size: 14px; font-weight: 800; text-align: center; }
+.am-threshold-controls .dash-select { width: 118px; min-height: 38px; flex: 0 0 118px; font-size: 13px; font-weight: 700; text-align: left; padding-right: 34px; }
 .am-threshold-controls span { color: var(--d-dim); font-size: 10.5px; line-height: 1.3; }
 .am-threshold-box > small { display: block; margin-top: 6px; color: var(--d-dim); font-size: 10px; line-height: 1.35; }
 .am-blacklist-duration {
@@ -4546,7 +4553,10 @@ html.hx-light { color-scheme: light; }
 }
 .ov-hero-chip span { font-size: 14px; }
 .ov-hero-chip b { font-weight: 800; }
-.ov-hero-chip small { color: var(--d-dim); font-weight: 550; }
+/* v244 — Taille explicite. Sans elle, le navigateur appliquait le 80 % par
+   défaut de <small> sur un parent à 12 px, soit 9,583 px : du texte illisible
+   obtenu par accident, pas par choix. */
+.ov-hero-chip small { color: var(--d-dim); font-weight: 550; font-size: 11px; }
 
 /* 📱 Mobile : une seule colonne de cartes, recherche pleine largeur */
 @media (max-width: 700px) {
@@ -5533,4 +5543,152 @@ html.hx-light .dd-option.is-selected .dd-check { background: #e07a5f; color: #ff
 :is(.dc-preview, .embed-box, .adv-discord-preview, .ca-discord-preview, .eb-discord) {
   border-radius: var(--r-sm);
   border-color: var(--dc-border);
+}
+
+/* ============================================================
+   v244 — Anti-nuke : limites par type d'action.
+   Trois sélecteurs (seuil, fenêtre, sanction) par type surveillé.
+
+   Pourquoi des classes et pas des styles inline : un style inline ne
+   peut PAS être surchargé par une media query. L'ancienne ligne était
+   en `style="grid-template-columns:1fr auto auto"`, donc figée : sur un
+   écran de 360 px les deux cases numériques prenaient ~180 px et il ne
+   restait que ~140 px pour le libellé et son texte d'aide.
+   ============================================================ */
+.dashboard-shell-host .nk-limit-list { display: grid; gap: 8px; }
+.dashboard-shell-host .nk-group-title { margin-top: 14px; }
+.dashboard-shell-host .nk-group-title:first-child { margin-top: 0; }
+
+.dashboard-shell-host .nk-limit {
+  display: grid;
+  /* Le libellé prend le reste ; les trois champs ont une largeur plancher
+     assez large pour que « Quarantaine » et « 10 actions » ne soient pas
+     tronqués. minmax(0,…) évite le débordement classique des grilles CSS. */
+  grid-template-columns: minmax(0, 1.7fr) repeat(3, minmax(112px, 0.9fr));
+  gap: 10px;
+  align-items: end;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, .10);
+  border-radius: 10px;
+}
+
+.dashboard-shell-host .nk-limit-label { display: grid; gap: 2px; min-width: 0; }
+.dashboard-shell-host .nk-limit-name { font-size: 13px; line-height: 1.35; }
+.dashboard-shell-host .nk-limit-help { margin: 0; font-size: 12px; line-height: 1.45; }
+
+.dashboard-shell-host .nk-limit-field { display: grid; gap: 3px; min-width: 0; }
+.dashboard-shell-host .nk-limit-field > .desc { margin: 0; font-size: 11px; line-height: 1.2; }
+.dashboard-shell-host .nk-limit-field .dash-select {
+  width: 100%; min-width: 0; margin: 0;
+  font-size: 12px; text-transform: none; letter-spacing: 0;
+}
+
+/* Tablette / petit écran : le libellé passe sur toute la largeur, les trois
+   champs se répartissent dessous. */
+@media (max-width: 900px) {
+  .dashboard-shell-host .nk-limit { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .dashboard-shell-host .nk-limit-label { grid-column: 1 / -1; }
+}
+
+/* Téléphone : une seule colonne, plus rien n'est compressé. */
+@media (max-width: 520px) {
+  .dashboard-shell-host .nk-limit { grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 10px; }
+  .dashboard-shell-host .nk-limit-help { font-size: 11.5px; }
+}
+
+/* v244 — Grille de statistiques dense, utilisée DANS une carte.
+   `.dash-stats` seule est déjà responsive (auto-fit + surcharge mobile en
+   2 colonnes), mais elle porte une marge basse pensée pour un début de page.
+   La variante dense reprend exactement le même comportement sans la marge.
+   Remplace un `grid-template-columns:repeat(3,1fr)` inline qui, lui, ne
+   pouvait pas être corrigé sur mobile et faisait déborder le libellé
+   « Refusées (file pleine) ». */
+.dashboard-shell-host .dash-stats-dense { margin-bottom: 0; gap: 8px; }
+.dashboard-shell-host .dash-stats-dense .dash-stat { padding: 10px; border-radius: 10px; }
+.dashboard-shell-host .dash-stats-dense .dash-stat .val { font-size: 19px; }
+.dashboard-shell-host .dash-stats-dense .dash-stat .lbl { font-size: 11.5px; line-height: 1.3; }
+
+/* Le sélecteur de sanction par type peut porter un libellé long
+   (« Global — Quarantaine ») : on l'empêche de déborder de sa cellule. */
+.dashboard-shell-host .nk-limit-field .dash-select {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Téléphone : les libellés d'aide passent à 11,5 px pour rester lisibles
+   sans occuper trois lignes. Aucune règle mobile ne le faisait avant. */
+@media (max-width: 520px) {
+  .dashboard-shell-host .am-threshold-controls .dash-input,
+  .dashboard-shell-host .am-threshold-controls .dash-select { width: 100%; flex: 1 1 100%; }
+  .dashboard-shell-host .am-threshold-controls { width: 100%; }
+}
+
+/* ============================================================
+   v244 — Plancher de lisibilité sur mobile.
+
+   Audit mesuré dans Chromium à 360 px : plusieurs textes porteurs
+   de PHRASES tombaient entre 9,58 px et 10,5 px. Sur un téléphone
+   c'est en dessous du seuil de confort (Apple et Google indiquent
+   11 px minimum pour du texte secondaire).
+
+   Le plancher ne s'applique QUE sous 700 px : le rendu sur grand
+   écran n'est pas modifié. Les libellés en majuscules (.dash-label,
+   11 px) et les badges imitant Discord (8 px) sont volontairement
+   exclus — ce sont des choix de design assumés, pas des accidents.
+   ============================================================ */
+@media (max-width: 700px) {
+  .dashboard-shell-host .ov-intro-health small,
+  .dashboard-shell-host .ov-eyebrow,
+  .dashboard-shell-host .ov-side-heading span,
+  .dashboard-shell-host .ov-quick-label,
+  .dashboard-shell-host .ov-access-bar .ov-quick-label,
+  .dashboard-shell-host .ov-progress-copy span,
+  .dashboard-shell-host .ov-home-feed .feed-time,
+  .dashboard-shell-host .module-scope,
+  .dashboard-shell-host .module-status,
+  .dashboard-shell-host .am-threshold-box > small,
+  .dashboard-shell-host .am-threshold-controls span,
+  .dashboard-shell-host .am-rule-setting small,
+  .dashboard-shell-host .am-rule-state,
+  .dashboard-shell-host .adv-category-help {
+    font-size: 11px;
+  }
+}
+
+/* Téléphone — cibles tactiles.
+   Mesuré dans Chromium à 360 px : les filtres de Modération (.am-filter,
+   « Tous / 🤖 Auto-Mod / 🛡️ Staff / 🕘 24 h ») tombaient à 34 px de haut et
+   les boutons de formatage des Annonces (.ca-mark, « B / I / U / S ») à 38 px.
+   Apple et Google recommandent 44 px ; on monte à 40 px, ce qui reste
+   compatible avec l'alignement horizontal existant.
+
+   Le second membre de la media query vise les ÉCRANS TACTILES quelle que
+   soit leur largeur (tablette en mode paysage, par exemple) : à 768 px les
+   13 cibles trop petites réapparaissaient sinon. Le même idiome
+   (hover: none) and (pointer: coarse) est déjà utilisé plus haut dans ce
+   fichier. Un poste à souris n'est pas concerné : le rendu desktop reste
+   strictement inchangé. */
+@media (max-width: 700px), (hover: none) and (pointer: coarse) {
+  .dashboard-shell-host .am-filter { min-height: 40px; }
+  .dashboard-shell-host .ca-mark { min-height: 40px; min-width: 40px; }
+}
+
+/* ------------------------------------------------------------
+   v244 — Conflit de spécificité sur la barre d'accès rapides.
+
+   L'élément porte DEUX classes : class="ov-quick-actions ov-access-bar".
+   Deux règles visaient donc le même élément, à spécificité identique :
+     • L3996  @media (max-width: 520px)  .ov-access-bar     → 1 colonne
+     • L4368  @media (max-width: 700px)  .ov-quick-actions  → 2 colonnes
+   Comme L4368 vient APRÈS dans le fichier et que les deux media queries
+   sont vraies à 360 px, c'est elle qui gagnait. Résultat mesuré :
+   grid-template-columns: 169px 169px, et « Identité du bot » rogné de 9 px.
+
+   Le sélecteur composé ci-dessous monte la spécificité (0,3,1) et est placé
+   en fin de fichier : la colonne unique voulue sur téléphone est rétablie.
+   ------------------------------------------------------------ */
+@media (max-width: 520px) {
+  .dashboard-shell-host .ov-quick-actions.ov-access-bar { grid-template-columns: 1fr; }
+  /* Même famille : le <small> de ces boutons était à 10 px. */
+  .dashboard-shell-host .ov-access-bar .ov-quick-action small,
+  .dashboard-shell-host .ov-quick-action small { font-size: 11px; }
 }

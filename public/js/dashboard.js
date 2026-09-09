@@ -43,6 +43,58 @@ Dashboard.currentDiscordOption = (current, items, icon = '⚠️', label = 'conf
 
 Dashboard.noDiscordChoice = (label) => `<option value="" disabled>— ${App.escapeHtml(label)} —</option>`;
 
+// 🎚️ v244 — Sélecteur à préréglages.
+//
+// Remplace les cases numériques libres partout où la valeur est en réalité un
+// CHOIX et non une mesure : une durée, un palier. « 1440 » dans une case ne
+// parle à personne ; « 1 jour » dans une liste si. C'est aussi ce que font
+// Dyno et Security Bot, qui affichent des valeurs par défaut explicites.
+//
+// Une valeur déjà enregistrée qui ne figure pas dans les préréglages est
+// ajoutée comme option supplémentaire ET reste sélectionnée : aucun réglage
+// existant n'est modifié à l'insu de l'utilisateur. Sans cette précaution,
+// ouvrir la page puis enregistrer aurait écrasé une valeur personnelle.
+Dashboard.presetOptions = (presets, current, fallbackLabel) => {
+  const paires = presets.map(([v, l]) => [String(v), l]);
+  const cur = String(current === undefined || current === null ? '' : current);
+  if (!paires.some(([v]) => v === cur)) {
+    paires.push([cur, fallbackLabel ? String(fallbackLabel(current)) : (cur || '—')]);
+  }
+  return paires.map(([v, l]) => `<option value="${App.escapeHtml(v)}"${v === cur ? ' selected' : ''}>${App.escapeHtml(l)}</option>`).join('');
+};
+
+// Durées exprimées en MINUTES. 0 = désactivé quand le réglage le permet.
+Dashboard.PRESETS_MIN = [[5, '5 min'], [10, '10 min'], [15, '15 min'], [30, '30 min'], [60, '1 h'],
+  [120, '2 h'], [360, '6 h'], [720, '12 h'], [1440, '1 jour'], [4320, '3 jours'], [10080, '7 jours']];
+Dashboard.PRESETS_MIN_0 = [[0, 'Désactivé'], ...Dashboard.PRESETS_MIN];
+// Durées exprimées en SECONDES (fenêtres de détection).
+Dashboard.PRESETS_SEC = [[5, '5 s'], [10, '10 s'], [15, '15 s'], [30, '30 s'], [60, '1 min'],
+  [120, '2 min'], [300, '5 min'], [600, '10 min']];
+// Fenêtres courtes (bonus de quiz, réactions).
+Dashboard.PRESETS_SEC_COURTES = [[3, '3 s'], [5, '5 s'], [8, '8 s'], [10, '10 s'], [15, '15 s'],
+  [20, '20 s'], [30, '30 s'], [60, '1 min']];
+// Étiquette de repli pour une durée en secondes hors préréglages.
+Dashboard.labelSecondes = (v) => {
+  const x = parseInt(v, 10);
+  if (!Number.isFinite(x)) return String(v);
+  return x < 60 ? `${x} s` : `${Math.round((x / 60) * 10) / 10} min`;
+};
+// Paliers de répétition (avertissements, blacklist automatique).
+Dashboard.PRESETS_PALIER = [[0, 'Désactivé'], [1, '1 fois'], [2, '2 fois'], [3, '3 fois'],
+  [4, '4 fois'], [5, '5 fois'], [10, '10 fois'], [20, '20 fois']];
+// Durées exprimées en HEURES (giveaways).
+Dashboard.PRESETS_HEURES = [[1, '1 h'], [2, '2 h'], [6, '6 h'], [12, '12 h'], [24, '1 jour'],
+  [48, '2 jours'], [72, '3 jours'], [168, '7 jours']];
+// Étiquette de repli pour une durée en minutes hors préréglages.
+Dashboard.labelMinutes = (v) => {
+  const n = parseInt(v, 10);
+  if (!Number.isFinite(n)) return String(v);
+  if (n === 0) return 'Désactivé';
+  if (n < 60) return `${n} min`;
+  if (n < 1440) return `${Math.round((n / 60) * 10) / 10} h`;
+  return `${Math.round((n / 1440) * 10) / 10} j`;
+};
+
 // Sélecteur multi-valeurs commun aux réglages Discord.
 // Un bouton « ＋ Ajouter » ouvre le menu déroulant custom (avec recherche
 // dès que la liste est longue), puis chaque choix apparaît avec un bouton
@@ -2902,7 +2954,7 @@ Dashboard.renderers.moderation = async (content, data) => {
         <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">🎣</span><div><b>Phishing / faux Nitro</b><small>Détecte les liens d'arnaque : faux Nitro, faux cadeaux Steam, imitations de discord.com, vol de compte.</small></div></div><input type="checkbox" id="am-phishing" ${s.am_phishing === 0 ? '' : 'checked'} /></div>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-phishing" data-am-action="phishing">${actionOptions('phishing')}</select></label>
         <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-phishing" data-am-blacklist-rule="phishing" ${blacklistAfter('phishing') ? 'checked' : ''} /><span><b>🚫 Blacklist après sanction</b><small>Utile : un compte qui relaie une arnaque est souvent déjà compromis.</small></span></label>
-        <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><input class="dash-input" type="number" min="0" max="50" data-am-threshold="phishing" value="${blacklistThresholdFor('phishing')}" /><small>0 = désactivé</small></div></div>
+        <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><select class="dash-select" data-am-threshold="phishing">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, blacklistThresholdFor('phishing'))}</select><small>0 = désactivé</small></div></div>
         <div class="am-threshold-box"><label>Domaines autorisés en plus</label><div class="am-threshold-controls" style="flex-direction:column;align-items:stretch"><input class="dash-input" id="am-phishing-allow" type="text" value="${App.escapeHtml(s.am_phishing_allow || '')}" placeholder="partenaire.com, monsite.fr" /><small>Séparés par des virgules. discord.com, discord.gg, discord.gift et steamcommunity.com sont déjà autorisés d'office.</small></div></div>
         <div class="am-threshold-box" style="border-color:rgba(254,231,92,.35);background:rgba(254,231,92,.06)"><label>⚠️ Deux niveaux de certitude</label><div class="am-threshold-controls" style="flex-direction:column;align-items:stretch"><small><b>Certitude haute</b> — domaine d'arnaque connu, imitation de discord.com (dlscord, disc0rd), ou même lien posté dans 3 salons en 15 s : l'action choisie s'applique.<br /><b>Certitude moyenne</b> — domaine mêlant marque et mot-appât, ou expression d'arnaque à côté d'un lien inconnu : le message est supprimé et un avertissement envoyé, <b>mais jamais de ban, kick ou muet</b>. Ce ne sont pas des preuves.</small></div></div>
       </div>
@@ -2910,52 +2962,52 @@ Dashboard.renderers.moderation = async (content, data) => {
         <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">🔗</span><div><b>Liens et invitations</b><small>Bloque les URL et invitations Discord.</small></div></div><input type="checkbox" id="am-links" ${s.am_links ? 'checked' : ''} /></div>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-links" data-am-action="links">${actionOptions('links')}</select></label>
         <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-links" data-am-blacklist-rule="links" ${blacklistAfter('links') ? 'checked' : ''} /><span><b>🚫 Blacklist après sanction</b><small>Ajoutez le membre au registre du serveur et envoyez le panneau dédié.</small></span></label>
-        <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><input class="dash-input" type="number" min="0" max="50" data-am-threshold="links" value="${blacklistThresholdFor('links')}" /><span>sanction(s) identique(s)</span></div><small>0 = désactivé. La sanction choisie ci-dessus doit être appliquée.</small></div>
+        <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><select class="dash-select" data-am-threshold="links">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, blacklistThresholdFor('links'))}</select><span>sanction(s) identique(s)</span></div><small>0 = désactivé. La sanction choisie ci-dessus doit être appliquée.</small></div>
       </div>
       <div class="am-rule-card" data-am-rule-card="caps">
         <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">🔠</span><div><b>Majuscules</b><small>Détecte les messages écrits presque entièrement en majuscules.</small></div></div><input type="checkbox" id="am-caps" ${s.am_caps ? 'checked' : ''} /></div>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-caps" data-am-action="caps">${actionOptions('caps')}</select></label>
         <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-caps" data-am-blacklist-rule="caps" ${blacklistAfter('caps') ? 'checked' : ''} /><span><b>🚫 Blacklist après sanction</b><small>Conserve le membre dans la blacklist de ce serveur.</small></span></label>
-        <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><input class="dash-input" type="number" min="0" max="50" data-am-threshold="caps" value="${blacklistThresholdFor('caps')}" /><span>sanction(s) identique(s)</span></div><small>0 = désactivé. La sanction choisie ci-dessus doit être appliquée.</small></div>
+        <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><select class="dash-select" data-am-threshold="caps">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, blacklistThresholdFor('caps'))}</select><span>sanction(s) identique(s)</span></div><small>0 = désactivé. La sanction choisie ci-dessus doit être appliquée.</small></div>
       </div>
       <div class="am-rule-card" data-am-rule-card="mentions">
         <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">📣</span><div><b>Mentions excessives</b><small>Bloque les rafales de mentions dans un message.</small></div></div></div>
-        <label class="am-rule-setting">Mentions maximum <input class="dash-input" id="am-men" type="number" min="0" max="100" value="${s.am_mentions ?? 5}" /><small>0 = illimité</small></label>
+        <label class="am-rule-setting">Mentions maximum <select class="dash-select" id="am-men">${Dashboard.presetOptions([[0, 'Illimité'], [3, '3'], [5, '5'], [8, '8'], [10, '10'], [15, '15'], [20, '20'], [25, '25'], [50, '50']], s.am_mentions ?? 5)}</select></label>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-mentions" data-am-action="mentions">${actionOptions('mentions')}</select></label>
         <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-mentions" data-am-blacklist-rule="mentions" ${blacklistAfter('mentions') ? 'checked' : ''} /><span><b>🚫 Blacklist après sanction</b><small>Ajoutez le membre seulement après une action réellement appliquée.</small></span></label>
-        <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><input class="dash-input" type="number" min="0" max="50" data-am-threshold="mentions" value="${blacklistThresholdFor('mentions')}" /><span>sanction(s) identique(s)</span></div><small>0 = désactivé. La sanction choisie ci-dessus doit être appliquée.</small></div>
+        <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><select class="dash-select" data-am-threshold="mentions">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, blacklistThresholdFor('mentions'))}</select><span>sanction(s) identique(s)</span></div><small>0 = désactivé. La sanction choisie ci-dessus doit être appliquée.</small></div>
       </div>
       <div class="am-rule-card" data-am-rule-card="words">
         <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">🚫</span><div><b>Mots interdits</b><small>Utilise la liste noire configurée plus bas.</small></div></div><span class="am-rule-state">${blacklist.length ? '🟢 Actif' : '⚪ En attente'}</span></div>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-words" data-am-action="words">${actionOptions('words')}</select></label>
         <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-words" data-am-blacklist-rule="words" ${blacklistAfter('words') ? 'checked' : ''} /><span><b>🚫 Blacklist après sanction</b><small>Le mot interdit déclenche aussi la blacklist du membre.</small></span></label>
-        <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><input class="dash-input" type="number" min="0" max="50" data-am-threshold="words" value="${blacklistThresholdFor('words')}" /><span>sanction(s) identique(s)</span></div><small>0 = désactivé. La sanction choisie ci-dessus doit être appliquée.</small></div>
+        <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><select class="dash-select" data-am-threshold="words">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, blacklistThresholdFor('words'))}</select><span>sanction(s) identique(s)</span></div><small>0 = désactivé. La sanction choisie ci-dessus doit être appliquée.</small></div>
       </div>
       <div class="am-rule-card" data-am-rule-card="spam">
         <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">💥</span><div><b>Anti-spam</b><small>Détecte plusieurs messages envoyés en peu de temps.</small></div></div></div>
-        <label class="am-rule-setting">Messages en 5 secondes <input class="dash-input" id="am-spam" type="number" min="0" max="50" value="${s.am_spam ?? 5}" /><small>0 = désactivé</small></label>
+        <label class="am-rule-setting">Messages en 5 secondes <select class="dash-select" id="am-spam">${Dashboard.presetOptions([[0, 'Désactivé'], [3, '3 messages'], [4, '4 messages'], [5, '5 messages'], [6, '6 messages'], [8, '8 messages'], [10, '10 messages']], s.am_spam ?? 5)}</select></label>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-spam" data-am-action="spam">${actionOptions('spam')}</select></label>
         <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-spam" data-am-blacklist-rule="spam" ${blacklistAfter('spam') ? 'checked' : ''} /><span><b>🚫 Blacklist après sanction</b><small>Classe le membre après la détection de spam confirmée.</small></span></label>
-        <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><input class="dash-input" type="number" min="0" max="50" data-am-threshold="spam" value="${blacklistThresholdFor('spam')}" /><span>sanction(s) identique(s)</span></div><small>0 = désactivé. La sanction choisie ci-dessus doit être appliquée.</small></div>
+        <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><select class="dash-select" data-am-threshold="spam">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, blacklistThresholdFor('spam'))}</select><span>sanction(s) identique(s)</span></div><small>0 = désactivé. La sanction choisie ci-dessus doit être appliquée.</small></div>
       </div>
     </div>
     <div class="am-policy-row">
       <label class="am-inline-toggle"><input type="checkbox" id="am-staff" ${s.am_ignore_staff !== 0 ? 'checked' : ''} /><span><b>Ignorer les administrateurs et modérateurs</b><small>Recommandé pour éviter de filtrer le staff.</small></span></label>
-      <div class="am-policy-time"><label class="dash-label">Durée du timeout par règle (minutes)</label><input class="dash-input" id="am-timeout" type="number" min="1" max="1440" value="${s.am_timeout_min ?? 5}" /></div>
+      <div class="am-policy-time"><label class="dash-label">Durée du timeout</label><select class="dash-select" id="am-timeout">${Dashboard.presetOptions(Dashboard.PRESETS_MIN, s.am_timeout_min ?? 5, Dashboard.labelMinutes)}</select></div>
     </div>
     <label class="dash-label">Message privé d'avertissement (vide = message standard)</label>
     <input class="dash-input" id="am-warn" value="${App.escapeHtml(s.am_warn_text || '')}" placeholder="Variables disponibles : {reason} et {server}." />
     <div class="am-warning-panel">
       <div class="am-panel-title"><div><b>⚠️ Avertissements progressifs</b><small>Le compteur actif est séparé de l'historique et repart à zéro après une sanction réussie.</small></div><span>1 → 2 → action</span></div>
       <div class="am-warning-grid">
-        <div><label class="dash-label">Sanction après X avertissements</label><input class="dash-input" id="am-warn-limit" type="number" min="0" max="50" value="${s.am_warn_limit ?? 2}" /><small class="am-help">0 = désactivé</small></div>
+        <div><label class="dash-label">Sanction après X avertissements</label><select class="dash-select" id="am-warn-limit">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, s.am_warn_limit ?? 2)}</select><small class="am-help">0 = désactivé</small></div>
         <div><label class="dash-label">Action automatique</label><select class="dash-select" id="am-warn-action">
           <option value="none" ${s.am_warn_action === 'none' ? 'selected' : ''}>🔕 Journal seulement</option>
           <option value="timeout" ${(s.am_warn_action || 'timeout') === 'timeout' ? 'selected' : ''}>⏱️ Timeout</option>
           <option value="kick" ${s.am_warn_action === 'kick' ? 'selected' : ''}>👢 Expulser</option>
           <option value="ban" ${s.am_warn_action === 'ban' ? 'selected' : ''}>🔨 Bannir</option>
         </select></div>
-        <div><label class="dash-label">Durée du timeout (minutes)</label><input class="dash-input" id="am-warn-timeout" type="number" min="1" max="1440" value="${s.am_warn_timeout_min ?? 10}" /></div>
+        <div><label class="dash-label">Durée du timeout</label><select class="dash-select" id="am-warn-timeout">${Dashboard.presetOptions(Dashboard.PRESETS_MIN, s.am_warn_timeout_min ?? 10, Dashboard.labelMinutes)}</select></div>
       </div>
     </div>
     <div class="am-blacklist-config">
@@ -3544,12 +3596,12 @@ Dashboard.renderers.moderation = async (content, data) => {
         <label class="switch"><input type="checkbox" id="raid-on" ${cfg.enabled ? 'checked' : ''} /><span class="slider"></span></label>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:10px">
           <div><label class="dash-label">Seuil (arrivées)</label><input class="dash-input" id="raid-th" type="number" min="2" max="100" value="${cfg.threshold ?? 10}" /></div>
-          <div><label class="dash-label">Fenêtre (secondes)</label><input class="dash-input" id="raid-win" type="number" min="5" max="600" value="${cfg.window ?? 30}" /></div>
+          <div><label class="dash-label">Fenêtre</label><select class="dash-select" id="raid-win">${Dashboard.presetOptions(Dashboard.PRESETS_SEC, cfg.window ?? 30, Dashboard.labelSecondes)}</select></div>
           <div><label class="dash-label">Action</label><select class="dash-select" id="raid-act">
             <option value="lockdown" ${cfg.action === 'lockdown' ? 'selected' : ''}>🔒 Verrouiller les salons</option>
             <option value="alert" ${cfg.action === 'alert' ? 'selected' : ''}>🔔 Alerter seulement</option>
           </select></div>
-          <div><label class="dash-label">Réouverture auto (min, 0 = manuel)</label><input class="dash-input" id="raid-unlock" type="number" min="0" max="1440" value="${cfg.unlockMin ?? 0}" /></div>
+          <div><label class="dash-label">Réouverture auto</label><select class="dash-select" id="raid-unlock">${Dashboard.presetOptions([[0, 'Manuelle'], ...Dashboard.PRESETS_MIN], cfg.unlockMin ?? 0, Dashboard.labelMinutes)}</select></div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
           <button class="dash-btn dash-btn-primary" id="raid-save" style="flex:1">💾 Enregistrer</button>
@@ -3631,11 +3683,21 @@ Dashboard.renderers.moderation = async (content, data) => {
           <select class="dash-select" data-k="action" style="max-width:130px">
             ${['warn','timeout','kick','ban'].map((a) => `<option value="${a}" ${x.action === a ? 'selected' : ''}>${a}</option>`).join('')}
           </select>
-          <input class="dash-input" data-k="duration" type="number" value="${x.duration || 0}" placeholder="Minutes (timeout)" style="max-width:110px" />
+          <select class="dash-select" data-k="duration" style="max-width:110px" aria-label="Durée du timeout">${Dashboard.presetOptions([[0, '—'], ...Dashboard.PRESETS_MIN], x.duration || 0, Dashboard.labelMinutes)}</select>
           <input class="dash-input" data-k="message" value="${App.escapeHtml(x.message)}" placeholder="Message (envoyé en MP)" style="flex:1;min-width:140px" />
           <button class="dash-btn dash-btn-danger dash-btn-sm" data-del>🗑</button>
         </div>`);
-      row.querySelectorAll('[data-k]').forEach((inp) => inp.addEventListener('input', () => { x[inp.dataset.k] = inp.dataset.k === 'duration' ? (parseInt(inp.value, 10) || 0) : inp.value; }));
+      // ⚠️ BUG PRÉEXISTANT CORRIGÉ (v244) : seul l'événement « input » était
+      // écouté. Or Dashboard.enhanceSelect remplace le <select> natif par une
+      // liste personnalisée qui ne déclenche QUE « change » (voir la fonction :
+      // dispatchEvent(new Event('change'))). Résultat : choisir une autre
+      // sanction dans le barème ne mettait pas à jour la donnée, et le réglage
+      // partait à l'enregistrement suivant. On écoute donc les deux.
+      row.querySelectorAll('[data-k]').forEach((inp) => {
+        const maj = () => { x[inp.dataset.k] = inp.dataset.k === 'duration' ? (parseInt(inp.value, 10) || 0) : inp.value; };
+        inp.addEventListener('input', maj);
+        inp.addEventListener('change', maj);
+      });
       row.querySelector('[data-del]').onclick = () => { sanctionsData.splice(i, 1); renderSanc(); };
       el.appendChild(row);
     });
@@ -3819,26 +3881,63 @@ Dashboard.renderers.antinuke = async (content, data) => {
       <div class="desc" style="margin-top:4px">Réactions déjà déclenchées sur ce serveur : <b>${st.totalActions || 0}</b></div>`;
 
     // --- Tableau des limites par type ---
+    //
+    // v244 : trois SÉLECTEURS par type (seuil, fenêtre, sanction) au lieu de
+    // deux cases numériques libres. Un seuil ou une fenêtre tapée à la main
+    // n'a aucun repère — « 600 secondes » ne parle à personne — et la sanction
+    // était globale, donc impossible de bannir pour un bot ajouté et seulement
+    // alerter pour un emoji supprimé. C'est ce que fait Security Bot.
+    //
+    // La mise en page passe par une CLASSE (.nk-limit) et non plus par un style
+    // inline : un style inline ne peut pas être surchargé par une media query,
+    // ce qui rendait cette ligne inutilisable sur mobile.
+    const SEUILS = [[1, '1 action'], [2, '2 actions'], [3, '3 actions'], [4, '4 actions'], [5, '5 actions'],
+      [6, '6 actions'], [8, '8 actions'], [10, '10 actions'], [15, '15 actions'], [20, '20 actions']];
+    const FENETRES = [[5, '5 s'], [10, '10 s'], [15, '15 s'], [30, '30 s'], [60, '1 min'],
+      [120, '2 min'], [300, '5 min'], [600, '10 min']];
+    const SANCTIONS = [['alert', '🔔 Alerter'], ['quarantine', '🔒 Quarantaine'], ['demote', '🔻 Retirer Admin'],
+      ['lockdown', '🔐 Verrouiller'], ['ban', '⛔ Bannir']];
+
+    // Une valeur déjà enregistrée qui ne figure pas dans les préréglages est
+    // ajoutée comme option supplémentaire : aucun réglage existant n'est
+    // modifié à l'insu de l'utilisateur.
+    const optionsPour = (liste, courant, etiqueter) => {
+      const paires = liste.slice();
+      if (!paires.some(([v]) => String(v) === String(courant))) {
+        paires.push([courant, etiqueter ? etiqueter(courant) : String(courant)]);
+      }
+      return paires.map(([v, l]) => `<option value="${v}" ${String(v) === String(courant) ? 'selected' : ''}>${l}</option>`).join('');
+    };
+    const labelSanction = (a) => (SANCTIONS.find(([v]) => v === a) || [, a])[1];
+    const optionsSanction = (courant) => {
+      const globale = `<option value="" ${!courant ? 'selected' : ''}>Global — ${labelSanction(cfg.action)}</option>`;
+      return globale + SANCTIONS.map(([v, l]) => `<option value="${v}" ${courant === v ? 'selected' : ''}>${l}</option>`).join('');
+    };
+
     limBox.innerHTML = GROUPES.map(([titre, lignes]) => `
-      <div class="dash-label" style="margin-top:14px">${titre}</div>
-      <div style="display:grid;gap:8px">
+      <div class="dash-label nk-group-title">${titre}</div>
+      <div class="nk-limit-list">
         ${lignes.map(([kind, libelle, aide]) => {
           const l = limits[kind] || { count: 3, window: 60 };
-          const instant = l.count === 1;
-          return `<div data-kind="${kind}" style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:8px 10px;border:1px solid rgba(255,255,255,.10);border-radius:10px">
-            <div>
-              <div style="font-size:13px">${libelle}</div>
-              <div class="desc" style="margin:2px 0 0;font-size:12px">${aide}</div>
+          const a = (cfg.actions || {})[kind] || '';
+          return `<div class="nk-limit" data-kind="${kind}">
+            <div class="nk-limit-label">
+              <span class="nk-limit-name">${libelle}</span>
+              <span class="desc nk-limit-help">${aide}</span>
             </div>
-            <div style="text-align:center">
-              <div class="desc" style="margin:0 0 2px;font-size:11px">actions</div>
-              <input class="dash-input nk-count" type="number" min="1" max="50" value="${l.count}" style="width:74px" aria-label="Seuil pour ${libelle}" />
-            </div>
-            <div style="text-align:center">
-              <div class="desc" style="margin:0 0 2px;font-size:11px">secondes</div>
-              <input class="dash-input nk-window" type="number" min="5" max="600" value="${l.window}" style="width:84px" aria-label="Fenêtre pour ${libelle}" />
-            </div>
-          </div>${instant ? '' : ''}`;
+            <label class="nk-limit-field">
+              <span class="desc">Seuil</span>
+              <select class="dash-select nk-count" aria-label="Seuil pour ${libelle}">${optionsPour(SEUILS, l.count)}</select>
+            </label>
+            <label class="nk-limit-field">
+              <span class="desc">Fenêtre</span>
+              <select class="dash-select nk-window" aria-label="Fenêtre pour ${libelle}">${optionsPour(FENETRES, l.window, (v) => `${v} s`)}</select>
+            </label>
+            <label class="nk-limit-field">
+              <span class="desc">Sanction</span>
+              <select class="dash-select nk-action" aria-label="Sanction pour ${libelle}">${optionsSanction(a)}</select>
+            </label>
+          </div>`;
         }).join('')}
       </div>`).join('');
 
@@ -3849,6 +3948,17 @@ Dashboard.renderers.antinuke = async (content, data) => {
           count: parseInt(row.querySelector('.nk-count').value, 10) || 1,
           window: parseInt(row.querySelector('.nk-window').value, 10) || 10,
         };
+      });
+      return out;
+    };
+    // v244 — Sanction par type. Une valeur vide signifie « suivre le réglage
+    // global » : on ne l'envoie pas, pour que le global reste la seule source
+    // de vérité tant que l'administrateur n'a pas choisi autre chose.
+    const collectActions = () => {
+      const out = {};
+      limBox.querySelectorAll('[data-kind]').forEach((row) => {
+        const v = row.querySelector('.nk-action').value;
+        if (v) out[row.dataset.kind] = v;
       });
       return out;
     };
@@ -3864,6 +3974,7 @@ Dashboard.renderers.antinuke = async (content, data) => {
             alert_channel: cCfg.querySelector('#nk-chan').value,
             punish_bots: cCfg.querySelector('#nk-bots').checked,
             limits: collect(),
+            actions: collectActions(),
           },
         });
         App.toast('Anti-nuke enregistré !');
@@ -3892,6 +4003,9 @@ Dashboard.renderers.antinuke = async (content, data) => {
         if (!r) return;
         row.querySelector('.nk-count').value = r[0];
         row.querySelector('.nk-window').value = r[1];
+        // Les sanctions par type reviennent sur le réglage global : c'était le
+        // comportement avant la v244, et le bouton doit rester prévisible.
+        row.querySelector('.nk-action').value = '';
       });
       App.toast('Seuils recommandés rétablis — pensez à enregistrer.');
     };
@@ -4143,7 +4257,7 @@ Dashboard.renderers.giveaways = async (content) => {
     </div>
     <div class="setting-row" style="flex-wrap:wrap">
       <label class="dash-label">Durée par défaut (heures)</label>
-      <input class="dash-input" id="gw-duration" type="number" min="0" max="720" value="${parseInt(s.giveaway_default_duration, 10) || 0}" style="max-width:140px" />
+      <select class="dash-select" id="gw-duration">${Dashboard.presetOptions(Dashboard.PRESETS_HEURES, parseInt(s.giveaway_default_duration, 10) || 0, (v) => `${v} h`)}</select>
       <label class="dash-label" style="margin-top:10px">Gagnants par défaut</label>
       <input class="dash-input" id="gw-winners" type="number" min="1" max="50" value="${parseInt(s.giveaway_default_winners, 10) || 1}" style="max-width:140px" />
     </div>
@@ -4187,7 +4301,7 @@ Dashboard.renderers.giveaways = async (content) => {
     </div>
     <div class="setting-row" style="flex-wrap:wrap">
       <label class="dash-label">Durée (minutes)</label>
-      <input class="dash-input" id="gw-new-duration" type="number" min="1" max="43200" value="${(parseInt(s.giveaway_default_duration, 10) || 0) * 60 || 60}" style="max-width:140px" />
+      <select class="dash-select" id="gw-new-duration">${Dashboard.presetOptions(Dashboard.PRESETS_MIN, (parseInt(s.giveaway_default_duration, 10) || 0) * 60 || 60, Dashboard.labelMinutes)}</select>
       <label class="dash-label" style="margin-top:10px">Gagnants</label>
       <input class="dash-input" id="gw-new-winners" type="number" min="1" max="50" value="${parseInt(s.giveaway_default_winners, 10) || 1}" style="max-width:140px" />
     </div>
@@ -4586,7 +4700,7 @@ Dashboard.renderers.members = async (content, data) => {
           <div class="m-info">
             <b>${App.escapeHtml(m.username)}</b>${m.is_owner ? ' 👑' : ''}
             <div class="m-roles">${rolesHtml}</div>
-            <div class="m-meta">🪙 ${m.coins} coins · ✨ ${m.level} (${m.xp} XP)</div>
+            <div class="m-meta">🪙 ${Number(m.coins) || 0} coins · ✨ ${Number(m.level) || 0} (${Number(m.xp) || 0} XP)</div>
           </div>
           <div class="m-actions">
             <button class="dash-btn dash-btn-sm" data-coins>🪙 Coins</button>
@@ -4949,8 +5063,8 @@ Dashboard.renderers.announcements = async (content, data) => {
     <label class="dash-label" style="margin-top:10px">Salon</label>
     <select class="dash-select" id="a-channel">${textChannels.map((ch) => `<option value="${ch.id}">💬 #${App.escapeHtml(ch.name)}</option>`).join('')}</select>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
-      <div style="flex:1;min-width:110px"><label class="dash-label">Heure (0-23)</label><input class="dash-input" id="a-hour" type="number" min="0" max="23" value="18" /></div>
-      <div style="flex:1;min-width:110px"><label class="dash-label">Minute (0-59)</label><input class="dash-input" id="a-minute" type="number" min="0" max="59" value="0" /></div>
+      <div style="flex:1;min-width:96px"><label class="dash-label">Heure</label><select class="dash-select" id="a-hour">${Dashboard.presetOptions(Array.from({ length: 24 }, (_, h) => [h, String(h).padStart(2, '0') + ' h']), 18)}</select></div>
+      <div style="flex:1;min-width:96px"><label class="dash-label">Minute</label><select class="dash-select" id="a-minute">${Dashboard.presetOptions(Array.from({ length: 12 }, (_, m) => [m * 5, String(m * 5).padStart(2, '0')]), 0)}</select></div>
     </div>
     <label class="dash-label" style="margin-top:10px">Jours</label>
     <div class="dash-filter-grid" style="grid-template-columns:repeat(auto-fit,minmax(125px,1fr))">
@@ -5073,7 +5187,7 @@ Dashboard.renderers.quiz = async (content, data) => {
       <label class="dash-label" style="margin-top:10px">Points bonus (réponse rapide)</label>
       <input class="dash-input" id="qz-bonus" type="number" min="0" max="500" value="${parseInt(s.quiz_bonus, 10) || 5}" style="max-width:130px" />
       <label class="dash-label" style="margin-top:10px">Fenêtre bonus (secondes)</label>
-      <input class="dash-input" id="qz-window" type="number" min="1" max="120" value="${parseInt(s.quiz_bonus_window, 10) || 8}" style="max-width:130px" />
+      <select class="dash-select" id="qz-window" style="max-width:130px">${Dashboard.presetOptions(Dashboard.PRESETS_SEC_COURTES, parseInt(s.quiz_bonus_window, 10) || 8, Dashboard.labelSecondes)}</select>
     </div>
     <div style="margin-top:12px"><button class="dash-btn dash-btn-primary" id="qz-save">💾 Enregistrer</button></div>`;
   c.querySelector('#qz-save').onclick = async () => {
@@ -5567,11 +5681,11 @@ Dashboard.renderers.server = async (content, data) => {
       <div style="font-size:12.5px;color:var(--d-dim);margin-bottom:6px">Exemple pro : 3 avertissements → timeout, 5 → expulsion. La sanction la plus sévère atteinte s'applique.</div>
       <label class="dash-label">Palier 1 — timeout après X avertissements (0 = désactivé)</label>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <input class="dash-input" id="g-warn-t1" type="number" min="0" value="${s.warn_timeout_limit || 0}" style="max-width:140px" />
-        <div style="display:flex;align-items:center;gap:8px"><input class="dash-input" id="g-warn-t1min" type="number" min="1" max="10080" value="${s.warn_timeout_min || 60}" style="max-width:120px" /><span style="font-size:13px;color:var(--d-dim)">minutes de timeout</span></div>
+        <select class="dash-select" id="g-warn-t1" style="max-width:140px">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, s.warn_timeout_limit || 0)}</select>
+        <div style="display:flex;align-items:center;gap:8px"><select class="dash-select" id="g-warn-t1min" style="max-width:120px">${Dashboard.presetOptions(Dashboard.PRESETS_MIN, s.warn_timeout_min || 60, Dashboard.labelMinutes)}</select><span style="font-size:13px;color:var(--d-dim)">minutes de timeout</span></div>
       </div>
       <label class="dash-label">Palier 2 — sanction finale après X avertissements (0 = désactivé)</label>
-      <input class="dash-input" id="g-warn" type="number" min="0" value="${s.warn_limit || 0}" style="max-width:140px" />
+      <select class="dash-select" id="g-warn" style="max-width:140px">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, s.warn_limit || 0)}</select>
       <label class="dash-label">Action du palier 2</label>
       <select class="dash-select" id="g-action" style="max-width:220px">
         <option value="none" ${s.warn_action === 'none' ? 'selected' : ''}>Aucune</option>
@@ -6083,7 +6197,7 @@ Dashboard.renderers.health = async (content) => {
     const q = h.queue || { waiting: 0, active: 0, processed: 0, failed: 0, refused: 0 };
     const cQueue = App.el(`<div class="dash-card"><h3>🚦 File d'attente</h3>
       <div class="desc">Tous les envois vers Discord passent par ici : les rafales sont lissées pour ne jamais dépasser les limites.</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+      <div class="dash-stats dash-stats-dense">
         <div class="dash-stat" style="padding:10px"><div class="val">${q.waiting}</div><div class="lbl">En attente</div></div>
         <div class="dash-stat" style="padding:10px"><div class="val">${q.active}</div><div class="lbl">En cours</div></div>
         <div class="dash-stat" style="padding:10px"><div class="val">${q.processed}</div><div class="lbl">Traitées</div></div>

@@ -148,10 +148,43 @@ function normalizeLimits(input) {
   return out;
 }
 
+// v244 — Sanction par type d'action (Security Bot fait pareil).
+// Seuls les types surveillés et les sanctions connues sont conservés : une
+// valeur invalide est simplement ignorée, et le type retombe sur la sanction
+// globale. Rien n'est donc jamais appliqué à partir d'une donnée corrompue.
+function normalizeActions(input) {
+  const out = {};
+  const src = input && typeof input === 'object' && !Array.isArray(input) ? input : {};
+  for (const kind of Object.keys(LIMITS_DEFAULT)) {
+    const a = String(src[kind] || '');
+    if (ACTIONS.includes(a)) out[kind] = a;
+  }
+  return out;
+}
+
+// Sanction effective pour un type : la valeur par type si elle existe, sinon
+// la sanction globale. C'est le seul point de décision, pour que l'alerte, la
+// trace en base et la sanction réelle ne puissent jamais diverger.
+//
+// INVARIANT : cette fonction ne renvoie JAMAIS autre chose qu'une sanction de
+// ACTIONS. Elle décide d'un bannissement, donc une valeur inattendue ne peut
+// pas simplement « ne rien faire » plus loin : il faut trancher ici.
+// (Avant ce durcissement, actionForKind({}, 'kick') renvoyait undefined et
+//  actionForKind({ action: 'x' }, 'kick') renvoyait 'x' — une sanction
+//  inventée, dès lors que la configuration ne venait pas de config().)
+function actionForKind(conf, kind) {
+  const per = conf && conf.actions ? conf.actions[kind] : '';
+  if (ACTIONS.includes(per)) return per;
+  const globale = conf ? conf.action : '';
+  return ACTIONS.includes(globale) ? globale : DEFAULT_ACTION;
+}
+
 function config(botId, guildId) {
   const gs = store.guildSettings.get(botId, guildId) || {};
   let limits = {};
   try { limits = JSON.parse(String(gs.antinuke_limits || '') || '{}'); } catch { limits = {}; }
+  let actions = {};
+  try { actions = JSON.parse(String(gs.antinuke_actions || '') || '{}'); } catch { actions = {}; }
   return {
     enabled: gs.antinuke_enabled === 1,
     // Seuil et fenêtre globaux conservés : ils servent de repli pour un type
@@ -162,6 +195,7 @@ function config(botId, guildId) {
     whitelist: String(gs.antinuke_whitelist || '').split(',').map((s) => s.trim()).filter(Boolean),
     alertChannel: String(gs.antinuke_alert_channel || '').trim(),
     limits: normalizeLimits(limits),
+    actions: normalizeActions(actions),
     punishBots: gs.antinuke_punish_bots === 1,
   };
 }
@@ -361,7 +395,8 @@ async function trigger(botId, guild, { actorId, kind, hits, limit, actorIsBot, c
   const lang = i18n.langForGuild(guild.id);
   const conf = cfg || config(botId, guild.id);
   const clientUserId = guild.client && guild.client.user ? guild.client.user.id : '';
-  const wanted = conf.action;
+  // v244 : la sanction dépend du TYPE d'action, pas seulement du réglage global.
+  const wanted = actionForKind(conf, kind);
 
   let actorTag = `<@${actorId}>`;
   let member = null;
@@ -548,5 +583,9 @@ module.exports = {
   isSelfManagedChannel, normalizeLimits, clampLimit,
   WATCHED, LIMITS_DEFAULT, ACTIONS, QUARANTINE_ROLE,
   DEFAULTS: { threshold: 3, window: 60, action: DEFAULT_ACTION, limits: LIMITS_DEFAULT },
+  // v244 — sanction par type, pour les routes, le tableau de bord et les tests.
+  // (ACTIONS et WATCHED sont déjà exportés ci-dessus : ne pas les répéter,
+  //  une clé dupliquée dans un objet est silencieusement écrasée.)
+  actionForKind, normalizeActions,
   _test: { pending, counts, lastAct, auditWarned, lastFetch, AUDIT_DELAY_MS, ACTOR_COOLDOWN_MS, AUDIT_MIN_INTERVAL_MS },
 };

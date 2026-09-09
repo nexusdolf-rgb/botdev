@@ -1682,7 +1682,7 @@ router.put('/bots/:id/guilds/:guildId/antinuke', requireAuth, async (req, res) =
   const bot = getAnyBot(req, res);
   if (!bot) return;
   if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
-  const { enabled, threshold, window, action, whitelist, alert_channel, limits, punish_bots } = req.body || {};
+  const { enabled, threshold, window, action, whitelist, alert_channel, limits, punish_bots, actions } = req.body || {};
   const antinuke = require('./discord/antinuke');
   // La liste blanche n'accepte que des identifiants Discord numériques.
   const wl = String(whitelist || '').split(',').map((x) => x.trim())
@@ -1690,6 +1690,10 @@ router.put('/bots/:id/guilds/:guildId/antinuke', requireAuth, async (req, res) =
   // Limites PAR TYPE d'action : chacune est bornée côté serveur, un JSON
   // envoyé par le navigateur ne peut pas imposer un seuil de 0 ou de 9999.
   const norm = antinuke.normalizeLimits(limits && typeof limits === 'object' ? limits : {});
+  // v244 — Sanction PAR TYPE : même principe, la normalisation rejette tout
+  // type inconnu et toute sanction hors liste. Un JSON envoyé par le navigateur
+  // ne peut pas imposer une sanction inventée.
+  const normActions = antinuke.normalizeActions(actions && typeof actions === 'object' ? actions : {});
   store.guildSettings.set(bot.id, req.params.guildId, {
     antinuke_enabled: enabled ? 1 : 0,
     antinuke_threshold: Math.min(Math.max(parseInt(threshold, 10) || 3, 1), 50),
@@ -1698,9 +1702,10 @@ router.put('/bots/:id/guilds/:guildId/antinuke', requireAuth, async (req, res) =
     antinuke_whitelist: wl,
     antinuke_alert_channel: String(alert_channel || '').slice(0, 100),
     antinuke_limits: JSON.stringify(norm),
+    antinuke_actions: JSON.stringify(normActions),
     antinuke_punish_bots: punish_bots ? 1 : 0,
   });
-  res.json({ ok: true, whitelist: wl, limits: norm });
+  res.json({ ok: true, whitelist: wl, limits: norm, actions: normActions });
 });
 
 // 🛡️ v242 Anti-nuke : état, historique et lisibilité du journal d'audit

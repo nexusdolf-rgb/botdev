@@ -776,6 +776,13 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN antinuke_limits TEXT DEFAUL
 // punir casse le serveur. Wick et Security Bot exigent de les mettre en liste
 // blanche ; Hoxera les exclut d'office et alerte à la place.
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN antinuke_punish_bots INTEGER DEFAULT 0"); } catch (e) {}
+// v244 — Sanction PAR TYPE d'action, comme Security Bot (« Adjust the
+// Maximum/Punishment values for each action »). Jusqu'ici une seule sanction
+// globale s'appliquait aux 11 types : impossible de bannir pour un bot ajouté
+// et seulement alerter pour un emoji supprimé.
+// JSON { kind: action }. Un type absent retombe sur antinuke_action (global),
+// donc les serveurs déjà configurés ne changent pas de comportement.
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN antinuke_actions TEXT DEFAULT ''"); } catch (e) {}
 
 // Journal des réactions anti-nuke : chaque action déclenchée est tracée ici
 // pour permettre le diagnostic d'un faux positif et le débannissement manuel.
@@ -1063,7 +1070,8 @@ const guildSettings = {
     'close_dm_message', 'close_dm_image',
     'quiz_channel', 'quiz_points', 'quiz_bonus', 'quiz_bonus_window',
     'antinuke_enabled', 'antinuke_threshold', 'antinuke_window', 'antinuke_action',
-    'antinuke_whitelist', 'antinuke_alert_channel', 'antinuke_limits', 'antinuke_punish_bots'];
+    'antinuke_whitelist', 'antinuke_alert_channel', 'antinuke_limits', 'antinuke_punish_bots',
+    'antinuke_actions'];
     const vals = {
       bot_id: botId, guild_id: guildId,
       prefix: String(next.prefix || '').slice(0, 5),
@@ -1143,6 +1151,9 @@ const guildSettings = {
       antinuke_alert_channel: String(next.antinuke_alert_channel || '').slice(0, 100),
       antinuke_limits: String(next.antinuke_limits || '').slice(0, 4000),
       antinuke_punish_bots: next.antinuke_punish_bots ? 1 : 0,
+      // Sanction par type : JSON borné, relu par antinuke.js qui valide chaque
+      // valeur contre la liste des sanctions connues.
+      antinuke_actions: String(next.antinuke_actions || '').slice(0, 2000),
       log_channel: String(next.log_channel || '').slice(0, 100),
       suggestion_channel: String(next.suggestion_channel || '').slice(0, 100),
       log_events: String(next.log_events || '').slice(0, 1000),
