@@ -278,6 +278,15 @@ async function main() {
   setTimeout(runStatSweep, 20000);
   setInterval(runStatSweep, 120000);
 
+  // 🚀 v265 — rattrapage des fins de boost survenues bot éteint (10 min).
+  const runBoostSweep = () => {
+    try {
+      require('./discord/boostRewards').sweep(botManager).catch((e) => console.error('[Hoxera] boost sweep :', e.message));
+    } catch (e) { console.error('[Hoxera] boostRewards indisponible :', e.message); }
+  };
+  setTimeout(runBoostSweep, 30000);
+  setInterval(runBoostSweep, 600000);
+
   // 🎮 Événements & tournois : rappels 24 h / 1 h avant + nettoyage du passé
   const runGuildEventSweep = () => {
     try {

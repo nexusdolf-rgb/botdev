@@ -666,6 +666,10 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN voice_xp_enabled INTEGER DE
 // 📊 v264 — compteurs en salons vocaux : catégorie + IDs des salons créés.
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN stat_category TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN stat_ids TEXT DEFAULT ''"); } catch (e) {}
+// 🚀 v265 — récompenses boosters Nitro.
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN boost_role TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN boost_channel TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN boost_message TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN voice_xp_rate INTEGER DEFAULT 10"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN voice_xp_interval INTEGER DEFAULT 3"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN voice_xp_min_members INTEGER DEFAULT 2"); } catch (e) {}
@@ -1115,7 +1119,9 @@ const guildSettings = {
     'voice_xp_enabled', 'voice_xp_rate', 'voice_xp_interval', 'voice_xp_min_members',
     'voice_xp_ignore_muted', 'voice_xp_ignore_afk', 'voice_xp_taper',
     // 📊 v264 — compteurs en salons vocaux.
-    'stat_category', 'stat_ids'];
+    'stat_category', 'stat_ids',
+    // 🚀 v265 — récompenses boosters Nitro.
+    'boost_role', 'boost_channel', 'boost_message'];
     const vals = {
       bot_id: botId, guild_id: guildId,
       prefix: String(next.prefix || '').slice(0, 5),
@@ -1158,6 +1164,9 @@ const guildSettings = {
         ? 1 : (next.voice_xp_taper ? 1 : 0),
       stat_category: String(next.stat_category || '').slice(0, 64),
       stat_ids: String(next.stat_ids || '').slice(0, 512),
+      boost_role: String(next.boost_role || '').slice(0, 64),
+      boost_channel: String(next.boost_channel || '').slice(0, 64),
+      boost_message: String(next.boost_message || '').slice(0, 500),
       ticket_room: (next.ticket_room && typeof next.ticket_room === 'object')
         ? JSON.stringify(next.ticket_room).slice(0, 4000)
         : String(next.ticket_room || '').slice(0, 4000),

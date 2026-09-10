@@ -404,6 +404,8 @@ function attachListeners(botId, entry) {
 
   client.on('guildMemberUpdate', (oldMember, newMember) => {
     try { require('./auditLog').onGuildMemberUpdate(botId, oldMember, newMember); } catch (e) { console.error('[BotDev] audit memberUpdate:', e.message); }
+    // 🚀 v265 — récompenses boosters Nitro : rôle donné/retiré + remerciement.
+    try { require('./boostRewards').onMemberUpdate(botId, oldMember, newMember).catch((e) => console.error('[Hoxera] boost update :', e.message)); } catch (e) { console.error('[BotDev] boostRewards :', e.message); }
   });
 
   client.on('channelCreate', (c) => {

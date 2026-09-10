@@ -34,7 +34,7 @@ const MODULES = {
   },
   community: {
     label: 'Communauté', emoji: '🎉', description: 'Giveaways, suggestions, boutique, rôles temporaires, sanctions…',
-    commands: ['giveaway', 'suggest', 'suggestions', 'shop', 'buy', 'pay', 'temprole', 'sanction'],
+    commands: ['giveaway', 'suggest', 'suggestions', 'shop', 'buy', 'pay', 'temprole', 'sanction', 'boostrewards'],
   },
   // 📊 v264 — compteurs en salons vocaux : module à part, activable/coupable
   // depuis le dashboard comme les autres.
@@ -81,6 +81,7 @@ const CMD_DEFS = {
   suggest: { label: 'suggest', desc: 'Proposer une suggestion (votes 👍👎)' },
   suggestions: { label: 'suggestions', desc: 'Configurer le salon des suggestions', perms: [PermissionsBitField.Flags.Administrator] },
   statchannels: { label: 'statchannels', desc: 'Compteurs en salons vocaux (membres, en ligne, boosts)', perms: [PermissionsBitField.Flags.Administrator] },
+  boostrewards: { label: 'boostrewards', desc: 'Récompenser les boosters Nitro (rôle + remerciement)', perms: [PermissionsBitField.Flags.Administrator] },
   shop: { label: 'shop', desc: 'Voir la boutique du serveur' },
   buy: { label: 'buy', desc: 'Acheter un article avec vos coins' },
   pay: { label: 'pay', desc: 'Transférer des coins à un membre' },
@@ -107,7 +108,7 @@ const CMD_DEFS = {
 // Commandes de configuration enregistrées hors CMD_DEFS (payloads dédiés)
 const ADMIN_COMMAND_NAMES = new Set([
   'ticket', 'botprofile', 'modlogs', 'blacklist', 'roles',
-  'lockdown', 'voicetemp', 'apply', 'event', 'statchannels',
+  'lockdown', 'voicetemp', 'apply', 'event', 'statchannels', 'boostrewards',
 ]);
 
 function defaultPermissionBitsFor(def) {
@@ -152,7 +153,7 @@ const HELP_BLOCKS = [
   { title: '🗓️ Organisation & pratique', names: ['birthday', 'remind', 'afk', 'poll', 'snipe', 'top', 'invites'] },
   { title: '📈 Niveaux & XP', names: ['rank', 'levels', 'profile'] },
   { title: '💰 Économie & boutique', names: ['daily', 'balance', 'leaderboard', 'work', 'gamble', 'rob', 'pay', 'shop', 'buy'] },
-  { title: '💡 Communauté', names: ['suggest'] },
+  { title: '💡 Communauté', names: ['suggest', 'boostrewards'] },
   // --- Modération (permissions métier) ---
   { title: '🛡️ Modération & sanctions (staff)', kind: 'staff', names: ['kick', 'ban', 'unban', 'timeout', 'warn', 'warns', 'clear', 'sanction', 'temprole'] },
   // --- Administration (propriétaire / Administrateur) ---
@@ -216,6 +217,17 @@ function buildSlashPayloads(botId) {
     }
     if (['help'].includes(name)) {
       options.push({ name: 'commande', description: 'Nom de la commande à détailler (ex : ticket)', type: ApplicationCommandOptionType.String, required: false });
+    }
+    if (['boostrewards'].includes(name)) {
+      options.push({ name: 'action', description: 'setup · sync · off · view', type: ApplicationCommandOptionType.String, required: false, choices: [
+        { name: '🏗️ Activer (rôle + salon de remerciement)', value: 'setup' },
+        { name: '🎁 Donner le rôle aux boosteurs actuels', value: 'sync' },
+        { name: '🧹 Désactiver', value: 'off' },
+        { name: "👁️ Voir l'état actuel", value: 'view' },
+      ]});
+      options.push({ name: 'role', description: 'Le rôle de récompense à donner aux boosters', type: ApplicationCommandOptionType.Role, required: false });
+      options.push({ name: 'salon', description: 'Le salon du message de remerciement (optionnel)', type: ApplicationCommandOptionType.Channel, required: false });
+      options.push({ name: 'message', description: 'Message personnalisé ({membre} = mention)', type: ApplicationCommandOptionType.String, required: false });
     }
     if (['statchannels'].includes(name)) {
       options.push({ name: 'action', description: 'setup · off · view', type: ApplicationCommandOptionType.String, required: false, choices: [
@@ -677,6 +689,59 @@ async function execute(botId, entry, cmd, src) {
         }
       }
       break;
+    }
+    case 'boostrewards': {
+      // 🚀 v265 — récompenses boosters Nitro : rôle automatique + remerciement.
+      const br = require('./boostRewards');
+      const action = isInt
+        ? (src.interaction.options.getString('action') || 'view')
+        : (String(src.args || '').trim().split(/\s+/)[0] || 'view');
+      if (!guild) return reply('⛔ Cette commande fonctionne uniquement sur un serveur.');
+      if (action === 'setup') {
+        const role = isInt ? src.interaction.options.getRole('role') : null;
+        if (!role) return reply('⛔ Indique le rôle de récompense : `/boostrewards action:setup role:@Rôle`.');
+        const channel = isInt ? src.interaction.options.getChannel('salon') : null;
+        const message = isInt ? (src.interaction.options.getString('message') || '') : '';
+        store.guildSettings.set(botId, guild.id, { boost_role: role.id, boost_channel: channel ? channel.id : '', boost_message: message });
+        return replyPanel({
+          color: '#FF73FA',
+          title: '🚀 Récompenses boosters activées',
+          description: `Désormais, chaque membre qui booste le serveur reçoit ${role} automatiquement.${channel ? `\nUn message de remerciement partira dans <#${channel.id}>.` : '\nAucun salon de remerciement choisi (rôle seulement).'}\n💡 Utilise \`/boostrewards action:sync\` pour offrir le rôle aux boosteurs actuels.`,
+          footer: `Hoxera · ${guild.name}`,
+        });
+      }
+      if (action === 'sync') {
+        const gs0 = store.guildSettings.get(botId, guild.id) || {};
+        if (!String(gs0.boost_role || '')) return reply("⛔ Active d'abord les récompenses : `/boostrewards action:setup role:@Rôle`.");
+        const given = await br.syncCurrentBoosters(botId, guild, gs0);
+        return replyPanel({
+          color: '#FF73FA',
+          title: '🎁 Boosteurs actuels synchronisés',
+          description: given ? `Rôle de récompense donné à ${given} boosteur${given > 1 ? 's' : ''} actuel${given > 1 ? 's' : ''}.` : 'Tous les boosteurs actuels avaient déjà le rôle.',
+          footer: `Hoxera · ${guild.name}`,
+        });
+      }
+      if (action === 'off') {
+        store.guildSettings.set(botId, guild.id, { boost_role: '', boost_channel: '', boost_message: '' });
+        return replyPanel({
+          color: '#FF73FA',
+          title: '🚀 Récompenses boosters désactivées',
+          description: 'Les rôles déjà donnés restent en place ; plus aucun rôle ne sera donné ou retiré automatiquement.',
+          footer: `Hoxera · ${guild.name}`,
+        });
+      }
+      const gs = store.guildSettings.get(botId, guild.id) || {};
+      const active = !!String(gs.boost_role || '');
+      const boosters = guild.members && guild.members.cache && typeof guild.members.cache.filter === 'function'
+        ? guild.members.cache.filter((m) => m.premiumSince).size : 0;
+      return replyPanel({
+        color: '#FF73FA',
+        title: '🚀 Récompenses boosters Nitro',
+        description: active
+          ? `**Activées** : rôle ${guild.roles.cache.get ? (guild.roles.cache.get(gs.boost_role) || { toString: () => `<@&${gs.boost_role}>` }).toString() : `<@&${gs.boost_role}>`} · remerciements ${gs.boost_channel ? `dans <#${gs.boost_channel}>` : 'désactivés'} · ${boosters} boosteur${boosters > 1 ? 's' : ''} actuel${boosters > 1 ? 's' : ''}.`
+          : '**Désactivées** sur ce serveur. Utilisez `/boostrewards action:setup role:@Rôle` pour récompenser automatiquement vos boosters Nitro.',
+        footer: `Hoxera · ${guild.name}`,
+      });
     }
     case 'statchannels': {
       // 📊 v264 — compteurs en salons vocaux : catégorie verrouillée dont les
@@ -1373,6 +1438,8 @@ const HELP_DETAILS = {
     '`/botprofile setup` — **Assistant pas à pas** : nom → bio → **sélecteur de couleurs** → avatar (**📱 votre galerie s\'ouvre directement**, envoyez la photo) → bannière (galerie aussi) → ✅ Enregistrer (boutons Suivant/Retour/Annuler)\n`/botprofile view` — voir le profil\n`/botprofile set nom|bio|couleur` — nom, bio, couleur\n`/botprofile avatar` — 📱 la galerie s\'ouvre automatiquement\n`/botprofile banner` — 📱 galerie aussi\n`/botprofile reset` — revenir à l\'identité globale\n\n🔒 Réservé au **propriétaire du serveur** ou à un membre ayant la permission **Administrateur**'],
   modlogs: ['📋 Journaux', 'Un salon où le bot trace tout : modération, tickets, auto-mod, arrivées et départs.',
     '`/modlogs set #salon` — activer\n`/modlogs view` — voir\n`/modlogs off` — désactiver'],
+  boostrewards: ['🚀 Récompenses boosters', "Chaque membre qui booste le serveur avec Nitro reçoit automatiquement un rôle de remerciement, et un message de remerciement part dans le salon choisi. Quand le boost s'arrête, le rôle est retiré tout seul.",
+    "`/boostrewards action:setup role:@Rôle salon:#salon message:Texte` — activer ({membre} = mention dans le message)\n`/boostrewards action:sync` — donner le rôle aux boosteurs actuels\n`/boostrewards action:view` — voir l'état\n`/boostrewards action:off` — désactiver\n\n🔒 Réservé au **propriétaire du serveur** ou aux membres ayant la permission **Administrateur**"],
   statchannels: ['📊 Compteurs vocaux', 'Une catégorie verrouillée avec trois salons vocaux impossibles à rejoindre dont les noms affichent les statistiques en direct : membres, membres en ligne, boosts. Mise à jour automatique dès que le chiffre change.',
     "`/statchannels action:setup` — créer la catégorie et les salons\n`/statchannels action:view` — voir l'état et les chiffres actuels\n`/statchannels action:off` — supprimer la catégorie et les salons\n\n🔒 Réservé au **propriétaire du serveur** ou aux membres ayant la permission **Administrateur**"],
   blacklist: ['🔇 Liste noire', 'Des mots interdits : les messages qui les contiennent sont supprimés automatiquement.',

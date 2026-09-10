@@ -291,9 +291,9 @@ check('aucun token en dur dans ui.js',
   !/(ghp_|github_pat_|xox[baprs]-)[A-Za-z0-9_]{15,}/.test(read('server/discord/ui.js')));
 check('aucun token en dur dans extra.js',
   !/(ghp_|github_pat_|xox[baprs]-)[A-Za-z0-9_]{15,}/.test(ex));
-check('index.html : 7 références ?v=264', (read('public/index.html').match(/\?v=264/g) || []).length === 7);
+check('index.html : 7 références ?v=265', (read('public/index.html').match(/\?v=265/g) || []).length === 7);
 check('index.html : plus aucune référence ?v=230', !read('public/index.html').includes('?v=230'));
-check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'botdev-v264';"));
+check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'botdev-v265';"));
 
 console.log(failures === 0
   ? '\n✅ V231 — Séparateurs natifs pleine largeur : API V2 en place, /quiz migré, zéro trait texte, grammaire alignée sur le panneau de référence.'
