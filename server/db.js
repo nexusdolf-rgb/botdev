@@ -1359,6 +1359,16 @@ const warnings = {
     const row = db.prepare('SELECT active_count FROM warning_counters WHERE bot_id = ? AND guild_id = ? AND user_id = ?').get(botId, guildId, uid);
     return row ? Number(row.active_count) || 0 : db.prepare('SELECT COUNT(*) AS n FROM warnings WHERE bot_id = ? AND guild_id = ? AND user_id = ?').get(botId, guildId, uid).n;
   },
+  // 📄 v266 — historique COMPLET (borné à 5000 lignes) pour l'export des
+  // sanctions : recent() plafonne à 200 pour l'affichage, l'export a besoin
+  // de tout.
+  history: (botId, guildId, userId = '') => {
+    const uid = String(userId || '');
+    if (uid) {
+      return db.prepare('SELECT * FROM warnings WHERE bot_id = ? AND guild_id = ? AND user_id = ? ORDER BY id ASC LIMIT 5000').all(botId, guildId, uid);
+    }
+    return db.prepare('SELECT * FROM warnings WHERE bot_id = ? AND guild_id = ? ORDER BY id ASC LIMIT 5000').all(botId, guildId);
+  },
   recent: (botId, guildId, limit = 50) => db.prepare('SELECT * FROM warnings WHERE bot_id = ? AND guild_id = ? ORDER BY id DESC LIMIT ?').all(botId, guildId, Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200)),
   summary: (botId, guildId, limit = 50) => db.prepare(`SELECT w.user_id, COALESCE(c.active_count, 0) AS count, COUNT(w.id) AS history_count, MAX(w.id) AS last_id, MAX(w.created_at) AS last_at
     FROM warnings w LEFT JOIN warning_counters c ON c.bot_id = w.bot_id AND c.guild_id = w.guild_id AND c.user_id = w.user_id

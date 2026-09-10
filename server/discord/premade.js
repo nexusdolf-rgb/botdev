@@ -14,7 +14,7 @@ const { canConfigureGuild } = require('./permissions');
 const MODULES = {
   moderation: {
     label: 'Modération', emoji: '🛡️', description: 'Kick, ban, warn, timeout, clear…',
-    commands: ['kick', 'ban', 'unban', 'timeout', 'warn', 'warns', 'clear'],
+    commands: ['kick', 'ban', 'unban', 'timeout', 'warn', 'warns', 'clear', 'modexport'],
   },
   utility: {
     label: 'Utilitaires', emoji: '🔧', description: 'Ping, avatar, infos serveur et utilisateur…',
@@ -82,6 +82,7 @@ const CMD_DEFS = {
   suggestions: { label: 'suggestions', desc: 'Configurer le salon des suggestions', perms: [PermissionsBitField.Flags.Administrator] },
   statchannels: { label: 'statchannels', desc: 'Compteurs en salons vocaux (membres, en ligne, boosts)', perms: [PermissionsBitField.Flags.Administrator] },
   boostrewards: { label: 'boostrewards', desc: 'Récompenser les boosters Nitro (rôle + remerciement)', perms: [PermissionsBitField.Flags.Administrator] },
+  modexport: { label: 'modexport', desc: "Exporter l'historique des sanctions (CSV ou HTML)", perms: [PermissionsBitField.Flags.Administrator] },
   shop: { label: 'shop', desc: 'Voir la boutique du serveur' },
   buy: { label: 'buy', desc: 'Acheter un article avec vos coins' },
   pay: { label: 'pay', desc: 'Transférer des coins à un membre' },
@@ -108,7 +109,7 @@ const CMD_DEFS = {
 // Commandes de configuration enregistrées hors CMD_DEFS (payloads dédiés)
 const ADMIN_COMMAND_NAMES = new Set([
   'ticket', 'botprofile', 'modlogs', 'blacklist', 'roles',
-  'lockdown', 'voicetemp', 'apply', 'event', 'statchannels', 'boostrewards',
+  'lockdown', 'voicetemp', 'apply', 'event', 'statchannels', 'boostrewards', 'modexport',
 ]);
 
 function defaultPermissionBitsFor(def) {
@@ -156,6 +157,7 @@ const HELP_BLOCKS = [
   { title: '💡 Communauté', names: ['suggest', 'boostrewards'] },
   // --- Modération (permissions métier) ---
   { title: '🛡️ Modération & sanctions (staff)', kind: 'staff', names: ['kick', 'ban', 'unban', 'timeout', 'warn', 'warns', 'clear', 'sanction', 'temprole'] },
+  { title: '📄 Audits & exports (admins)', kind: 'admin', names: ['modexport'] },
   // --- Administration (propriétaire / Administrateur) ---
   { title: '🎫 Tickets & menus de rôles', kind: 'admin', names: ['ticket', 'roles'] },
   { title: '🤖 Personnalisation du serveur', kind: 'admin', names: ['botprofile', 'modlogs', 'blacklist'] },
@@ -217,6 +219,13 @@ function buildSlashPayloads(botId) {
     }
     if (['help'].includes(name)) {
       options.push({ name: 'commande', description: 'Nom de la commande à détailler (ex : ticket)', type: ApplicationCommandOptionType.String, required: false });
+    }
+    if (['modexport'].includes(name)) {
+      options.push({ name: 'format', description: 'csv (Excel) ou html (navigateur)', type: ApplicationCommandOptionType.String, required: false, choices: [
+        { name: '📊 CSV — Excel / tableur', value: 'csv' },
+        { name: '🌐 HTML — navigateur', value: 'html' },
+      ]});
+      options.push({ name: 'membre', description: 'Exporter uniquement ce membre (optionnel)', type: ApplicationCommandOptionType.User, required: false });
     }
     if (['boostrewards'].includes(name)) {
       options.push({ name: 'action', description: 'setup · sync · off · view', type: ApplicationCommandOptionType.String, required: false, choices: [
@@ -688,6 +697,38 @@ async function execute(botId, entry, cmd, src) {
           setTimeout(() => { msg.delete().catch(() => {}); }, HELP_AUTODELETE_MS);
         }
       }
+      break;
+    }
+    case 'modexport': {
+      // 📄 v266 — export des sanctions : fichier CSV ou HTML remis en main
+      // propre (réponse éphémère), export tracé au journal du serveur.
+      const me = require('./modExport');
+      if (!guild) return reply('⛔ Cette commande fonctionne uniquement sur un serveur.');
+      const format = isInt ? (src.interaction.options.getString('format') || 'csv') : 'csv';
+      const target = isInt ? src.interaction.options.getUser('membre') : null;
+      const pack = me.prepareExport(botId, guild.id, format, target ? target.id : '', guild.name, client.user.username);
+      if (!pack.rows) {
+        return replyPanel({
+          color: '#e07a5f',
+          title: '📄 Export des sanctions',
+          description: target ? `Aucune sanction enregistrée pour <@${target.id}> sur ce serveur.` : 'Aucune sanction enregistrée sur ce serveur pour le moment.',
+        });
+      }
+      try {
+        const logging = require('./logging');
+        await logging.log(botId, guild, { title: '📄 Export des sanctions', description: `${author ? `<@${author.id}>` : "Quelqu'un"} a exporté l'historique (${pack.rows} ligne${pack.rows > 1 ? 's' : ''}, format ${pack.format.toUpperCase()})${target ? ` pour <@${target.id}>` : ''}.`, color: '#e07a5f' });
+      } catch {}
+      const payload = ui.v2panel({
+        color: '#e07a5f',
+        title: '📄 Export des sanctions',
+        description: `**${pack.rows}** sanction${pack.rows > 1 ? 's' : ''} exportée${pack.rows > 1 ? 's' : ''} au format **${pack.format.toUpperCase()}**${target ? ` pour <@${target.id}>` : ''}.\nLe fichier ci-joint ne sera visible que de vous.`,
+        files: [pack.name],
+        footer: `Hoxera · ${guild.name}`,
+      });
+      const { MessageFlags } = require('discord.js');
+      payload.flags = (payload.flags || 0) | MessageFlags.Ephemeral;
+      payload.files = [{ name: pack.name, attachment: Buffer.from(pack.content, 'utf8') }];
+      await send(payload);
       break;
     }
     case 'boostrewards': {
@@ -1438,6 +1479,8 @@ const HELP_DETAILS = {
     '`/botprofile setup` — **Assistant pas à pas** : nom → bio → **sélecteur de couleurs** → avatar (**📱 votre galerie s\'ouvre directement**, envoyez la photo) → bannière (galerie aussi) → ✅ Enregistrer (boutons Suivant/Retour/Annuler)\n`/botprofile view` — voir le profil\n`/botprofile set nom|bio|couleur` — nom, bio, couleur\n`/botprofile avatar` — 📱 la galerie s\'ouvre automatiquement\n`/botprofile banner` — 📱 galerie aussi\n`/botprofile reset` — revenir à l\'identité globale\n\n🔒 Réservé au **propriétaire du serveur** ou à un membre ayant la permission **Administrateur**'],
   modlogs: ['📋 Journaux', 'Un salon où le bot trace tout : modération, tickets, auto-mod, arrivées et départs.',
     '`/modlogs set #salon` — activer\n`/modlogs view` — voir\n`/modlogs off` — désactiver'],
+  modexport: ['📄 Export des sanctions', "Tout l'historique de modération (date, membre, modérateur, origine, action, raison) exporté en un fichier : CSV pour Excel (accents conservés) ou HTML pour le navigateur. Utile pour un passage de staff, un recours ou un audit. Le fichier est remis en main propre (message éphémère).",
+    '`/modexport format:csv` — export tableur\n`/modexport format:html membre:@X` — export navigateur pour un membre\n\n🔒 Réservé au **propriétaire du serveur** ou aux membres ayant la permission **Administrateur**'],
   boostrewards: ['🚀 Récompenses boosters', "Chaque membre qui booste le serveur avec Nitro reçoit automatiquement un rôle de remerciement, et un message de remerciement part dans le salon choisi. Quand le boost s'arrête, le rôle est retiré tout seul.",
     "`/boostrewards action:setup role:@Rôle salon:#salon message:Texte` — activer ({membre} = mention dans le message)\n`/boostrewards action:sync` — donner le rôle aux boosteurs actuels\n`/boostrewards action:view` — voir l'état\n`/boostrewards action:off` — désactiver\n\n🔒 Réservé au **propriétaire du serveur** ou aux membres ayant la permission **Administrateur**"],
   statchannels: ['📊 Compteurs vocaux', 'Une catégorie verrouillée avec trois salons vocaux impossibles à rejoindre dont les noms affichent les statistiques en direct : membres, membres en ligne, boosts. Mise à jour automatique dès que le chiffre change.',
