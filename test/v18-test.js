@@ -15,7 +15,7 @@ const assets = require('../server/assets');
 const identity = require('../server/discord/identity');
 const { runAutomod } = require('../server/discord/automod');
 const { handleProfileCommand } = require('../server/discord/profileCommands');
-const { buildSlashPayloads, buildHelpEmbed } = require('../server/discord/premade');
+const { buildSlashPayloads, buildHelpPanel } = require('../server/discord/premade');
 const logging = require('../server/discord/logging');
 
 (async () => {
@@ -148,10 +148,11 @@ const logging = require('../server/discord/logging');
   assert(bp.options.find((o) => o.name === 'avatar').options[0].type === 11, 'pièce jointe attendue');
   store.modules.set(1, 'utility', true);
   const clientUser = { user: { username: 'T', displayAvatarURL: () => 'https://cdn.discordapp.com/avatars/1/a.png' } };
-  const help = buildHelpEmbed(1, { prefix: '!' }, clientUser, null, null);
-  assert(help.data.fields.some((f) => f.name.includes('Personnalisation du serveur')));
-  const helpProfile = buildHelpEmbed(1, { prefix: '!' }, clientUser, null, 'botprofile');
-  assert(helpProfile.data.fields[0].value.includes('botprofile avatar'));
+  // v262 — le centre d'aide est un panneau Components V2 (plus d'embed).
+  const help = buildHelpPanel(1, { prefix: '!' }, clientUser, null, null);
+  assert(JSON.stringify(help).includes('Personnalisation du serveur'));
+  const helpProfile = buildHelpPanel(1, { prefix: '!' }, clientUser, null, 'botprofile');
+  assert(JSON.stringify(helpProfile).includes('botprofile avatar'));
   console.log('🔟  Payloads (pièce jointe = galerie) + /help ✅');
 
   // ---------- 11. Admin API (simulation via fonctions) ----------

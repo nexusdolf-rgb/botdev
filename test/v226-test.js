@@ -118,8 +118,9 @@ const helpCtx = { prefix: '!' };
 
   // ---------- 3. /help filtre par le role du membre ----------
   console.log('\n3) Centre aide : staff invisible pour les non-staff');
-  const fieldsOf = (embed) => embed.data.fields.map((f) => f.name);
-  const hasField = (embed, part) => fieldsOf(embed).some((n) => n.includes(part));
+  // v262 — le centre d'aide est un panneau Components V2 : on cherche les
+  // libellés dans le payload sérialisé (même intention qu'avant).
+  const hasField = (payload, part) => JSON.stringify(payload).includes(part);
 
   const normal = mkMember([]);
   const mod = mkMember([F.KickMembers, F.ModerateMembers]);
@@ -127,46 +128,46 @@ const helpCtx = { prefix: '!' };
   const owner = mkMember([], 'OWNER');
 
   // Vue complete (sans contexte membre) : conserve l'ancienne semantique
-  const full = premade.buildHelpEmbed(BOT, helpCtx, { user: clientUser }, null, null, null);
+  const full = premade.buildHelpPanel(BOT, helpCtx, { user: clientUser }, null, null, null);
   check('sans contexte : Personnalisation du serveur presente', hasField(full, 'Personnalisation du serveur'));
   check('sans contexte : bloc moderation present', hasField(full, 'Modération & sanctions'));
   check('sans contexte : bloc tickets present', hasField(full, 'Tickets & menus'));
 
   // Membre lambda : aucune commande staff/admin, legende explicite
-  const gNormal = premade.buildHelpEmbed(BOT, helpCtx, { user: clientUser }, guild, null, normal);
+  const gNormal = premade.buildHelpPanel(BOT, helpCtx, { user: clientUser }, guild, null, normal);
   check('membre lambda : pas de bloc moderation', !hasField(gNormal, 'Modération & sanctions'));
   check('membre lambda : pas de Personnalisation du serveur', !hasField(gNormal, 'Personnalisation du serveur'));
   check('membre lambda : pas de bloc tickets', !hasField(gNormal, 'Tickets & menus'));
-  check('membre lambda : pas de /kick dans les champs', !JSON.stringify(gNormal.data.fields).includes('/kick'));
+  check('membre lambda : pas de /kick dans le panneau', !JSON.stringify(gNormal).includes('/kick'));
   check('membre lambda : legende Commandes invisibles', hasField(gNormal, 'Commandes invisibles'));
   check('membre lambda : les blocs publics restent', hasField(gNormal, 'Utilitaires') && hasField(gNormal, 'Social & interactions'));
 
   // Moderateur (KickMembers + ModerateMembers) : la moderation apparait,
   // l'administration reste masquee
-  const gMod = premade.buildHelpEmbed(BOT, helpCtx, { user: clientUser }, guild, null, mod);
+  const gMod = premade.buildHelpPanel(BOT, helpCtx, { user: clientUser }, guild, null, mod);
   check('moderateur : bloc moderation visible', hasField(gMod, 'Modération & sanctions'));
-  check('moderateur : /warns visible dans le bloc', JSON.stringify(gMod.data.fields).includes('/warns'));
+  check('moderateur : /warns visible dans le panneau', JSON.stringify(gMod).includes('/warns'));
   check('moderateur : pas de configuration admin', !hasField(gMod, 'Personnalisation du serveur'));
   check('moderateur : legende administration presente', hasField(gMod, 'Commandes invisibles'));
 
   // Administrateur : tout est visible
-  const gAdmin = premade.buildHelpEmbed(BOT, helpCtx, { user: clientUser }, guild, null, admin);
+  const gAdmin = premade.buildHelpPanel(BOT, helpCtx, { user: clientUser }, guild, null, admin);
   check('administrateur : bloc moderation visible', hasField(gAdmin, 'Modération & sanctions'));
   check('administrateur : Personnalisation du serveur visible', hasField(gAdmin, 'Personnalisation du serveur'));
   check('administrateur : bloc tickets visible', hasField(gAdmin, 'Tickets & menus'));
   check("administrateur : pas de legende d'invisibilite", !hasField(gAdmin, 'Commandes invisibles'));
 
   // Proprietaire du serveur : tout est visible sans permission speciale
-  const gOwner = premade.buildHelpEmbed(BOT, helpCtx, { user: clientUser }, guild, null, owner);
+  const gOwner = premade.buildHelpPanel(BOT, helpCtx, { user: clientUser }, guild, null, owner);
   check('proprietaire : bloc admin visible', hasField(gOwner, 'Personnalisation du serveur') && hasField(gOwner, 'Tickets & menus'));
 
   // Detail d'une commande staff : non divulgue au membre lambda
-  const detailNormal = premade.buildHelpEmbed(BOT, helpCtx, { user: clientUser }, guild, 'kick', normal);
-  check('/help kick (lambda) -> reservee au staff', JSON.stringify(detailNormal.data).includes('réservée au staff'));
-  const detailMod = premade.buildHelpEmbed(BOT, helpCtx, { user: clientUser }, guild, 'kick', mod);
-  check('/help kick (moderateur) -> detail fourni', !JSON.stringify(detailMod.data).includes('réservée au staff') && JSON.stringify(detailMod.data.title || '').includes('kick'));
-  const detailBotprofileAdmin = premade.buildHelpEmbed(BOT, helpCtx, { user: clientUser }, guild, 'botprofile', admin);
-  check('/help botprofile (admin) -> detail fourni', JSON.stringify(detailBotprofileAdmin.data).includes('botprofile avatar'));
+  const detailNormal = premade.buildHelpPanel(BOT, helpCtx, { user: clientUser }, guild, 'kick', normal);
+  check('/help kick (lambda) -> reservee au staff', JSON.stringify(detailNormal).includes('réservée au staff'));
+  const detailMod = premade.buildHelpPanel(BOT, helpCtx, { user: clientUser }, guild, 'kick', mod);
+  check('/help kick (moderateur) -> detail fourni', !JSON.stringify(detailMod).includes('réservée au staff') && JSON.stringify(detailMod).includes('/kick'));
+  const detailBotprofileAdmin = premade.buildHelpPanel(BOT, helpCtx, { user: clientUser }, guild, 'botprofile', admin);
+  check('/help botprofile (admin) -> detail fourni', JSON.stringify(detailBotprofileAdmin).includes('botprofile avatar'));
 
   // ---------- 4. Sanity : commandes enregistrees toujours bien routees ----------
   console.log('\n4) Sanity final');

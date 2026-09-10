@@ -238,9 +238,9 @@ console.log('\n12) Aucun secret ajouté + versionnage front v232');
   check(`aucun token en dur dans ${path.basename(f)}`,
     !/(ghp_|github_pat_|rnd_|xox[baprs]-)[A-Za-z0-9_-]{15,}/.test(read(f)));
 });
-check('index.html : 7 références ?v=261', (read('public/index.html').match(/\?v=261/g) || []).length === 7);
+check('index.html : 7 références ?v=262', (read('public/index.html').match(/\?v=262/g) || []).length === 7);
 check('index.html : plus aucune référence ?v=231', !read('public/index.html').includes('?v=231'));
-check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'botdev-v261';"));
+check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'botdev-v262';"));
 
 console.log(failures === 0
   ? '\n✅ V232 — Lot n°2 : 18 emplacements migrés (premade ×13, suggest ×5), queue.js corrigé, xp.js exclu et documenté.'

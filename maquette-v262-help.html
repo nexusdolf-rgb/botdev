@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#1e1f22; font-family:'gg sans','Noto Sans',Arial,sans-serif; padding:26px; display:flex; gap:26px; align-items:flex-start; }
+  .col { width:392px; }
+  .etq { color:#f2f3f5; font-size:16px; font-weight:800; margin-bottom:3px; }
+  .sous { color:#949ba4; font-size:12px; margin-bottom:12px; line-height:1.4; }
+  .tel { background:#313338; border-radius:18px; padding:16px 12px; border:1px solid #26272b; }
+  .head { display:flex; align-items:center; gap:9px; margin-bottom:8px; }
+  .av { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,#5865f2,#eb459e); display:flex; align-items:center; justify-content:center; font-size:15px; }
+  .nom { color:#f2f3f5; font-size:14px; font-weight:700; }
+  .tag { background:#5865f2; color:#fff; font-size:9px; font-weight:700; padding:1.5px 4px; border-radius:4px; margin-left:4px; }
+  .heure { color:#949ba4; font-size:10.5px; margin-left:4px; }
+  .pan { background:#2b2d31; border-radius:8px; border-left:4px solid #e07a5f; padding:13px 13px 13px 11px; }
+  .titre { color:#f2f3f5; font-size:19px; font-weight:800; margin-bottom:6px; }
+  .titre2 { color:#f2f3f5; font-size:17px; font-weight:800; margin-bottom:6px; }
+  .desc { color:#dbdee1; font-size:13.5px; line-height:1.45; margin-bottom:4px; }
+  .sep { height:1px; background:#3f4147; margin:10px -13px 10px -11px; }
+  .fname { color:#f2f3f5; font-size:13px; font-weight:700; margin-bottom:2px; }
+  .fval { color:#b5bac1; font-size:12.5px; line-height:1.5; }
+  .cmd { color:#dbdee1; font-size:12.8px; line-height:1.65; }
+  .cmd b { color:#f2f3f5; }
+  .pied { color:#949ba4; font-size:11px; }
+  /* menu déroulant fermé */
+  .sel { background:#1e1f22; border:1px solid #151617; border-radius:4px; padding:9px 10px; color:#b5bac1; font-size:13px; display:flex; justify-content:space-between; align-items:center; margin-top:12px; }
+  .chev { color:#b5bac1; font-size:10px; }
+  /* menu ouvert (overlay) */
+  .overlay { position:relative; margin-top:10px; background:#151617; border-radius:8px; padding:6px; box-shadow:0 8px 24px rgba(0,0,0,.5); }
+  .rech { background:#1e1f22; border-radius:4px; color:#6d7178; font-size:12px; padding:7px 9px; margin-bottom:5px; }
+  .opt { display:flex; align-items:center; gap:8px; border-radius:4px; padding:7px 8px; color:#dbdee1; font-size:13px; }
+  .opt.hov { background:#5865f2; color:#fff; }
+  .opt .d { color:#949ba4; font-size:11px; margin-left:auto; }
+  .opt.hov .d { color:#e0e3ff; }
+  .ok { color:#23a55a; font-weight:800; }
+  .puce { color:#dbdee1; font-size:12px; line-height:1.5; margin-bottom:3px; }
+</style>
+</head>
+<body>
+
+<div class="col">
+  <div class="etq">1 · /help — le sommaire</div>
+  <div class="sous">Panneau V2 : chaque catégorie annonce son nombre de commandes, puis la liste en une ligne aérée.</div>
+  <div class="tel">
+    <div class="head"><div class="av">🤖</div><div><span class="nom">Hoxera</span><span class="tag">APP</span><span class="heure">aujourd'hui à 21:12</span></div></div>
+    <div class="pan">
+      <div class="titre">📚 Centre d'aide — Hoxera</div>
+      <div class="desc">Voici <b>tout ce que je sais faire</b>. Tapez <code>/help commande</code> pour le détail.<br>📂 Utilisez le menu ci-dessous pour détailler une catégorie.</div>
+      <div class="sep"></div>
+      <div class="fname">🧰 Utilitaires · 7 commandes</div>
+      <div class="fval">/ping · /avatar · /userinfo · /serverinfo · /botinfo · /help · /invite</div>
+      <div class="sep"></div>
+      <div class="fname">🎉 Fun & divertissement · 5 commandes</div>
+      <div class="fval">/8ball · /meme · /coinflip · /roll · /reverse</div>
+      <div class="sep"></div>
+      <div class="fname">🛡️ Modération & sanctions (staff) · 9 commandes</div>
+      <div class="fval">/kick · /ban · /unban · /timeout · /warn · /warns · /clear · /sanction · /temprole</div>
+      <div class="sep"></div>
+      <div class="pied">Préfixe : ! · /help commande pour le détail · Bot : Hoxera</div>
+      <div class="sel"><span>📂 Naviguer dans les catégories…</span><span class="chev">▼</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="col">
+  <div class="etq">2 · le menu déroulant s'ouvre</div>
+  <div class="sous">Un vrai menu Discord : Sommaire + chaque catégorie avec son nombre de commandes.</div>
+  <div class="tel">
+    <div class="head"><div class="av">🤖</div><div><span class="nom">Hoxera</span><span class="tag">APP</span></div></div>
+    <div class="pan" style="opacity:.55">
+      <div class="titre">📚 Centre d'aide — Hoxera</div>
+      <div class="desc">Voici <b>tout ce que je sais faire</b>…</div>
+    </div>
+    <div class="overlay">
+      <div class="rech">Rechercher…</div>
+      <div class="opt">🏠 Sommaire <span class="d">vous êtes ici</span></div>
+      <div class="opt">🧰 Utilitaires <span class="d">7 commandes</span></div>
+      <div class="opt">🎉 Fun & divertissement <span class="d">5 commandes</span></div>
+      <div class="opt">💍 Social & interactions <span class="d">8 commandes</span></div>
+      <div class="opt">🕹️ Jeux dans le chat <span class="d">4 commandes</span></div>
+      <div class="opt hov">🛡️ Modération & sanctions (staff) <span class="d">9 cmd</span></div>
+      <div class="opt">🎫 Tickets & menus de rôles <span class="d">2 commandes</span></div>
+      <div class="opt">🧩 Commandes personnalisées <span class="d">1 commande</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="col">
+  <div class="etq">3 · la catégorie, détaillée</div>
+  <div class="sous">Une ligne par commande : nom en gras + description courte. Le panneau se met à jour sur place.</div>
+  <div class="tel">
+    <div class="head"><div class="av">🤖</div><div><span class="nom">Hoxera</span><span class="tag">APP</span><span class="heure">aujourd'hui à 21:12</span></div></div>
+    <div class="pan">
+      <div class="titre2">🛡️ Modération & sanctions (staff)</div>
+      <div class="desc">9 commandes · <code>/help commande</code> pour l'utilisation et un exemple.</div>
+      <div class="sep"></div>
+      <div class="cmd"><b>/kick</b> — Expulse un membre du serveur (il peut revenir avec une invitation).<br>
+      <b>/ban</b> — Bannit un membre définitivement.<br>
+      <b>/unban</b> — Débannit un utilisateur avec son identifiant.<br>
+      <b>/timeout</b> — Empêche un membre d'écrire pendant X minutes.<br>
+      <b>/warn</b> — Avertit un membre (les avertissements sont comptés).<br>
+      <b>/warns</b> — Liste les avertissements d'un membre.<br>
+      <b>/clear</b> — Supprime un nombre de messages du salon.</div>
+      <div class="sep"></div>
+      <div class="pied">Préfixe : ! · /help commande pour le détail · Bot : Hoxera</div>
+      <div class="sel"><span>🛡️ Modération & sanctions (staff) · 9</span><span class="chev">▼</span></div>
+    </div>
+    <div style="height:12px"></div>
+    <div class="puce"><span class="ok">✔</span> Filtrage conservé : un membre lambda ne voit ni cette catégorie, ni le détail staff</div>
+    <div class="puce"><span class="ok">✔</span> `/help ticket` garde sa fiche complète (utilisation + exemples)</div>
+  </div>
+</div>
+
+</body>
+</html>

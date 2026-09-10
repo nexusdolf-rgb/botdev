@@ -640,8 +640,8 @@ async function execute(botId, entry, cmd, src) {
       let requested = null;
       if (isInt) requested = src.interaction.options.getString('commande') || null;
       else requested = String(src.args || '').trim().split(/\s+/)[0] || null;
-      const embed = buildHelpEmbed(botId, record, client, guild, requested, member);
-      await replyEmbed(embed);
+      // 📚 v262 — centre d'aide « pro » : panneau V2 + menu déroulant.
+      await send(buildHelpPanel(botId, record, client, guild, requested, member, 'home'));
       break;
     }
     case 'rank': {
@@ -1312,96 +1312,186 @@ function helpDescription() {
   return d;
 }
 
-function buildHelpEmbed(botId, record, client, guild, requested, member) {
-  const enabled = enabledCommandNames(botId);
+// ============================================================
+// 📚 v262 — Centre d'aide « pro » : panneau Components V2 avec
+// MENU DÉROULANT de navigation (sommaire → catégorie → détail),
+// à la façon des gros bots (Dyno, MEE6). Comportements conservés :
+// filtrage par membre, légende des commandes invisibles, verrou
+// staff sur le détail, commandes personnalisées.
+// ============================================================
+const HELP_SELECT_ID = (botId) => `hx-help:${botId}`;
+
+function helpDetailsAll() {
   const { HELP_EXTRA } = require('./extra');
   const { HELP_EVENTS } = require('./guildEvents');
-  const DETAILS = { ...HELP_DETAILS, ...HELP_EXTRA, ...HELP_EVENTS };
+  return { ...HELP_DETAILS, ...HELP_EXTRA, ...HELP_EVENTS };
+}
+
+function helpShortDesc(name) {
+  const d = helpDetailsAll()[name];
+  if (d && d[1]) return String(d[1]);
+  if (CMD_DEFS[name] && CMD_DEFS[name].desc) return String(CMD_DEFS[name].desc);
+  return '';
+}
+
+// Blocs visibles pour un membre donné (filtrage + modules éteints).
+function helpVisibleBlocks(botId, guild, member) {
+  const enabled = enabledCommandNames(botId);
+  const out = [];
+  HELP_BLOCKS.forEach((block, index) => {
+    const names = block.names.filter((name) => !CMD_DEFS[name] || enabled.includes(name));
+    const visible = names.filter((name) => canViewCommandName(name, guild, member));
+    if (visible.length) out.push({ key: `c${index}`, title: block.title, kind: block.kind, names: visible });
+  });
+  return out;
+}
+
+function helpSelectRow(botId, blocks, hasCustom, current) {
+  const { ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
+  const options = [{
+    label: '🏠 Sommaire',
+    value: 'home',
+    description: current === 'home' ? 'Vous êtes ici' : "Toutes les catégories en un coup d'œil",
+  }];
+  for (const b of blocks) {
+    options.push({
+      label: b.title.slice(0, 90),
+      value: b.key,
+      description: `${b.names.length} commande${b.names.length > 1 ? 's' : ''}${current === b.key ? ' — vous êtes ici' : ''}`.slice(0, 95),
+    });
+  }
+  if (hasCustom) {
+    options.push({
+      label: '🧩 Commandes personnalisées',
+      value: 'custom',
+      description: current === 'custom' ? 'Vous êtes ici' : 'Les commandes propres au serveur',
+    });
+  }
+  return new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(HELP_SELECT_ID(botId))
+      .setPlaceholder('📂 Naviguer dans les catégories…')
+      .setMinValues(1)
+      .setMaxValues(1)
+      .addOptions(options.slice(0, 25)),
+  );
+}
+
+function helpFooter(record, client) {
+  return `Préfixe : ${record.prefix} · /help commande pour le détail · Bot : ${client.user.username}`;
+}
+
+function buildHelpPanel(botId, record, client, guild, requested, member, view = 'home') {
+  const ui = require('./ui');
+  const COLOR = '#e07a5f';
+  const DETAILS = helpDetailsAll();
 
   // --- Détail d'une commande précise ---
   if (requested) {
     const key = requested.toLowerCase().replace(/^\//, '');
     const detail = DETAILS[key];
-    const available = ['ticket', 'roles', 'botprofile', 'modlogs', 'blacklist'].includes(key) || enabled.includes(key) || !!HELP_EXTRA[key] || !!HELP_EVENTS[key];
+    const available = ['ticket', 'roles', 'botprofile', 'modlogs', 'blacklist'].includes(key) || enabledCommandNames(botId).includes(key) || !!DETAILS[key];
     if (detail && available) {
       // 🔒 Le détail d'une commande staff n'est pas divulgué aux non-staff.
       if (guild && member && !canViewCommandName(key, guild, member)) {
-        return new EmbedBuilder()
-          .setColor('#ED4245')
-          .setTitle('🔒 Commande réservée au staff')
-          .setDescription(`« ${requested} » est réservée au **staff** de ce serveur (modération, administration ou configuration).\nSi vous pensez que vous devriez y avoir accès, demandez à un administrateur de vous accorder le rôle ou la permission correspondante.`);
+        return ui.v2panel({
+          color: '#ED4245',
+          title: '🔒 Commande réservée au staff',
+          description: `« ${requested} » est réservée au **staff** de ce serveur (modération, administration ou configuration).\nSi vous pensez que vous devriez y avoir accès, demandez à un administrateur de vous accorder le rôle ou la permission correspondante.`,
+        });
       }
-      const embed = new EmbedBuilder()
-        .setColor('#e07a5f')
-        .setTitle(`${detail[0]} · ${key}`)
-        .setDescription(detail[1]);
-      embed.addFields({ name: '📖 Utilisation', value: detail[2] });
-      if (detail[3]) embed.addFields({ name: '✨ Exemple', value: detail[3] });
-      embed.setFooter({ text: `Bot : ${client.user.username} · /help pour la liste complète` });
-      return embed;
+      const fields = [{ name: '📖 Utilisation', value: detail[2] }];
+      if (detail[3]) fields.push({ name: '✨ Exemple', value: detail[3] });
+      return ui.v2panel({
+        color: COLOR,
+        title: `${detail[0]} · /${key}`,
+        description: detail[1],
+        fields,
+        footer: `Bot : ${client.user.username} · /help pour le sommaire`,
+      });
     }
-    return new EmbedBuilder()
-      .setColor('#ED4245')
-      .setTitle('❓ Commande introuvable')
-      .setDescription(`Je ne connais pas la commande « ${requested} ».\nTapez \`/help\` pour voir la liste complète.`);
-  }
-
-  // --- Aide générale complète, organisée par public visé ---
-  // Un membre ne voit que les blocs (et commandes) auxquels il a accès :
-  // les commandes staff & administration sont invisibles pour les autres.
-  const isFiltered = !!(guild && member);
-  const fields = [];
-
-  const fmtChips = (names) => {
-    const chips = names.map((n) => `\`/${n}\``);
-    const lines = [];
-    for (let i = 0; i < chips.length; i += 6) lines.push(chips.slice(i, i + 6).join(' · '));
-    return lines.join('\n');
-  };
-
-  for (const block of HELP_BLOCKS) {
-    // 1) Noms réellement enregistrés : les modules éteints sont omis,
-    //    les commandes dédiées (tickets, jeux…) sont toujours actives.
-    const names = block.names.filter((name) => !CMD_DEFS[name] || enabled.includes(name));
-    // 2) Filtrage par la visibilité du membre qui consulte l'aide.
-    const visible = names.filter((name) => canViewCommandName(name, guild, member));
-    if (!visible.length) continue;
-    fields.push({ name: block.title, value: fmtChips(visible) });
-  }
-
-  // Commandes personnalisées du serveur (toujours publiques, si activées)
-  const custom = store.commands.all(botId).filter(c => c.enabled);
-  if (custom.length) {
-    fields.push({
-      name: '🧩 Commandes personnalisées',
-      value: custom.map((c) => {
-        const trig = c.trigger_type === 'slash' ? `/${c.name}` : c.trigger_type === 'keyword' ? `mot-clé « ${c.trigger_value} »` : `${record.prefix}${c.trigger_value || c.name}`;
-        return `\`${trig}\` — ${c.description || 'aucune description'}`;
-      }).join('\n').slice(0, 1024),
+    return ui.v2panel({
+      color: '#ED4245',
+      title: '❓ Commande introuvable',
+      description: `Je ne connais pas la commande « ${requested} ».\nTapez \`/help\` pour voir le sommaire.`,
     });
   }
 
-  const embed = new EmbedBuilder()
-    .setColor('#e07a5f')
-    .setTitle(`📚 Centre d'aide — ${client.user.username}`)
-    .setDescription(helpDescription())
-    .setThumbnail(client.user.displayAvatarURL({ dynamic: true }));
+  const blocks = helpVisibleBlocks(botId, guild, member);
+  const custom = store.commands.all(botId).filter((c) => c.enabled);
+  const hasCustom = custom.length > 0;
+  const isFiltered = !!(guild && member);
 
-  for (const f of fields) embed.addFields(f);
-
-  // Légende discrète quand l'aide a été filtrée pour un membre précis :
-  // elle n'apparaît que si des commandes de cette classe existent VRAIMENT
-  // sur ce serveur (mais restent invisibles pour le membre qui consulte).
-  const hiddenExists = (kindSel) => HELP_BLOCKS.some((b) => b.kind === kindSel && b.names.some((name) => (!CMD_DEFS[name] || enabled.includes(name)) && !canViewCommandName(name, guild, member)));
+  // Légende discrète quand l'aide a été filtrée pour un membre précis.
   const legend = [];
-  if (isFiltered && hiddenExists('staff')) legend.push('🛡️ Les commandes de **modération** sont réservées au staff — elles ne sont pas affichées ici.');
-  if (isFiltered && hiddenExists('admin')) legend.push('⚙️ Les commandes d\'**administration** sont réservées au propriétaire du serveur et aux Administrateurs.');
-  if (legend.length) embed.addFields({ name: '🔒 Commandes invisibles pour vous', value: legend.join('\n') });
+  if (isFiltered) {
+    const enabled = enabledCommandNames(botId);
+    const hiddenExists = (kindSel) => HELP_BLOCKS.some((b) => b.kind === kindSel && b.names.some((name) => (!CMD_DEFS[name] || enabled.includes(name)) && !canViewCommandName(name, guild, member)));
+    if (hiddenExists('staff')) legend.push('🛡️ Les commandes de **modération** sont réservées au staff — elles ne sont pas affichées ici.');
+    if (hiddenExists('admin')) legend.push('⚙️ Les commandes d\'**administration** sont réservées au propriétaire du serveur et aux Administrateurs.');
+  }
 
-  embed.setFooter({
-    text: `Préfixe : ${record.prefix} · /help nom_de_la_commande pour le détail · Toutes les commandes fonctionnent automatiquement sur chaque serveur où le bot est présent — aucun compte requis.`,
-  });
-  return embed;
+  // --- Vue catégorie (choisie dans le menu déroulant) ---
+  if (view === 'custom' && hasCustom) {
+    const lines = custom.map((c) => {
+      const trig = c.trigger_type === 'slash' ? `/${c.name}` : c.trigger_type === 'keyword' ? `mot-clé « ${c.trigger_value} »` : `${record.prefix}${c.trigger_value || c.name}`;
+      return `**${trig}** — ${c.description || 'aucune description'}`;
+    });
+    return ui.v2panel({
+      color: COLOR,
+      title: '🧩 Commandes personnalisées',
+      description: `Les commandes créées pour CE serveur · \`/help commande\` pour le détail.`,
+      fields: [{ name: `🧩 Commandes personnalisées · ${custom.length}`, value: lines.join('\n').slice(0, 3500) }],
+      footer: helpFooter(record, client),
+    }, [helpSelectRow(botId, blocks, hasCustom, 'custom')]);
+  }
+  if (view !== 'home') {
+    const block = blocks.find((b) => b.key === view);
+    if (block) {
+      const lines = block.names.map((n) => `**/${n}** — ${helpShortDesc(n) || 'pas de description.'}`);
+      return ui.v2panel({
+        color: COLOR,
+        title: block.title,
+        description: `${block.names.length} commande${block.names.length > 1 ? 's' : ''} · \`/help commande\` pour l'utilisation et un exemple.`,
+        fields: [{ name: `${block.title} · ${block.names.length}`, value: lines.join('\n').slice(0, 3500) }],
+        footer: helpFooter(record, client),
+      }, [helpSelectRow(botId, blocks, hasCustom, block.key)]);
+    }
+    view = 'home'; // vue inconnue ou permission perdue → sommaire
+  }
+
+  // --- Sommaire ---
+  const fields = blocks.map((b) => ({
+    name: `${b.title} · ${b.names.length} commande${b.names.length > 1 ? 's' : ''}`,
+    value: b.names.map((n) => `/${n}`).join(' · '),
+  }));
+  if (hasCustom) {
+    fields.push({
+      name: `🧩 Commandes personnalisées · ${custom.length}`,
+      value: custom.map((c) => (c.trigger_type === 'slash' ? `/${c.name}` : c.trigger_type === 'keyword' ? `mot-clé « ${c.trigger_value} »` : `${record.prefix}${c.trigger_value || c.name}`)).join(' · ').slice(0, 1024),
+    });
+  }
+  if (legend.length) fields.push({ name: '🔒 Commandes invisibles pour vous', value: legend.join('\n') });
+
+  return ui.v2panel({
+    color: COLOR,
+    title: `📚 Centre d'aide — ${client.user.username}`,
+    description: `${helpDescription()}\n📂 Utilisez le menu ci-dessous pour détailler une catégorie.`,
+    thumbnail: client.user.displayAvatarURL({ dynamic: true }),
+    fields,
+    footer: helpFooter(record, client),
+  }, [helpSelectRow(botId, blocks, hasCustom, 'home')]);
 }
 
-module.exports = { MODULES, CMD_DEFS, ADMIN_COMMAND_NAMES, HELP_BLOCKS, defaultPermissionBitsFor, commandKind, canViewCommandName, enabledModules, enabledCommandNames, buildSlashPayloads, handlePremadePrefix, handlePremadeSlash, buildHelpEmbed, fetchRandomMeme, fetchMemeJson, MEME_FR_SOURCES, MEME_API };
+// 📂 Interaction du menu déroulant : met à jour le panneau sur place.
+async function handleHelpSelect(botId, entry, i) {
+  if (!i.isStringSelectMenu || !i.isStringSelectMenu()) return false;
+  if (String(i.customId || '') !== HELP_SELECT_ID(botId)) return false;
+  const view = String((i.values && i.values[0]) || 'home');
+  const record = store.bots.get(botId) || { prefix: '!' };
+  const payload = buildHelpPanel(botId, record, entry && entry.client, i.guild, null, i.member, view);
+  await i.update(payload);
+  return true;
+}
+
+module.exports = { MODULES, CMD_DEFS, ADMIN_COMMAND_NAMES, HELP_BLOCKS, defaultPermissionBitsFor, commandKind, canViewCommandName, enabledModules, enabledCommandNames, buildSlashPayloads, handlePremadePrefix, handlePremadeSlash, buildHelpPanel, handleHelpSelect, HELP_SELECT_ID, fetchRandomMeme, fetchMemeJson, MEME_FR_SOURCES, MEME_API };

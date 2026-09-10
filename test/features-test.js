@@ -11,7 +11,7 @@ process.env.BOTDEV_DATA_DIR = DATA_DIR;
 const store = require('../server/db');
 const xpEngine = require('../server/discord/xp');
 const { runAutomod } = require('../server/discord/automod');
-const { buildSlashPayloads, buildHelpEmbed } = require('../server/discord/premade');
+const { buildSlashPayloads, buildHelpPanel } = require('../server/discord/premade');
 
 // ---------------------- XP math ----------------------
 assert(xpEngine.xpForLevel(0) === 0);
@@ -162,10 +162,11 @@ console.log('1️⃣  Maths XP validées ✅');
   console.log('1️⃣4️⃣  /rank, /levels, /invite enregistrés dans les payloads ✅');
 
   const client = { user: { username: 'TestBot', displayAvatarURL: () => 'https://cdn.discordapp.com/avatars/1/a.png' } };
-  const help = buildHelpEmbed(1, { prefix: '!' }, client, null, null);
-  assert(help.data.fields.some((f) => f.name.includes('Niveaux')));
-  const helpRank = buildHelpEmbed(1, { prefix: '!' }, client, null, 'rank');
-  assert(helpRank.data.fields[0].value.includes('/rank'));
+  // v262 — le centre d'aide est un panneau Components V2 (plus d'embed).
+  const help = buildHelpPanel(1, { prefix: '!' }, client, null, null);
+  assert(JSON.stringify(help).includes('Niveaux'));
+  const helpRank = buildHelpPanel(1, { prefix: '!' }, client, null, 'rank');
+  assert(JSON.stringify(helpRank).includes('/rank'));
   console.log('1️⃣5️⃣  /help contient les niveaux + détail /help rank ✅');
 
   console.log('\n🎉 Tous les tests des nouvelles fonctionnalités passent !');

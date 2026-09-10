@@ -230,6 +230,12 @@ async function guardInteraction(botId, entry, i, timeoutMs = 15000) {
         const ctxm = require('./contextmenus');
         if (await ctxm.handleInteraction(botId, entry, i)) return;
       } catch (e) { console.error('[BotDev] context menus:', (e && e.message) || e); }
+      // 📚 v262 — menu déroulant du centre d'aide : la sélection met à jour
+      // le panneau sur place (i.update), aucun autre gestionnaire ne la connaît.
+      try {
+        const premade = require('./premade');
+        if (await premade.handleHelpSelect(botId, entry, i)) return;
+      } catch (e) { console.error('[BotDev] help select:', (e && e.message) || e); }
       const extra = require('./extra');
       // ⚠️ Bug historique corrigé (introduit en v1.50 le 17/08) : l'appel
       // passait (botId, i) alors que la fonction attend (botId, entry, i) —

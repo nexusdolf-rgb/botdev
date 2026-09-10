@@ -229,9 +229,9 @@ const touched = ['server/discord/extra.js', 'server/discord/panelCommands.js', '
   'public/index.html', 'public/sw.js'];
 check('aucun token en dur dans les fichiers modifiés',
   !touched.some((f) => /(ghp_|github_pat_|xox[baprs]-)[A-Za-z0-9_]{15,}/.test(src(f))));
-check('index.html : 7 références ?v=261', (src('public/index.html').match(/\?v=261/g) || []).length === 7);
+check('index.html : 7 références ?v=262', (src('public/index.html').match(/\?v=262/g) || []).length === 7);
 check('index.html : plus aucune référence ?v=236', !src('public/index.html').includes('?v=236'));
-check('sw.js : cache botdev-v241', src('public/sw.js').includes("const CACHE = 'botdev-v261';"));
+check('sw.js : cache botdev-v241', src('public/sw.js').includes("const CACHE = 'botdev-v262';"));
 
 console.log(failures === 0
   ? '\n✅ V229 — Traits ━ étendus aux 10 messages multi-blocs (dont le quiz), exclusions verrouillées, garde-fous v220 intacts.'
