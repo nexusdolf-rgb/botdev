@@ -644,6 +644,27 @@ function guildChecklist(payload) {
 // salons depuis l'API Discord (rôles.fetch / channels.fetch) pour que tout rôle
 // ou salon créé à l'instant apparaisse — même si le bot a raté l'événement
 // (redémarrage, déploiement, coupure) ou que son cache local est incomplet.
+// v271 — Tri DANS L'ORDRE DU SERVEUR DISCORD, partout dans le dashboard :
+//   • catégories par position ;
+//   • salons (textuels et vocaux) groupés par catégorie parente (sans
+//     catégorie d'abord), puis par position — exactement comme à l'écran ;
+//   • rôles du plus haut au plus bas de la hiérarchie (comme le sélecteur
+//     de rôles de Discord), au lieu d'un tri alphabétique « mélangé ».
+function sortGuildCatalog(channels, roles) {
+  const catPos = new Map();
+  for (const c of channels) if (c.category) catPos.set(c.id, c.position || 0);
+  const key = (c) => (c.category
+    ? [0, c.position || 0, 0, c.name]
+    : [1, catPos.has(c.parent) ? catPos.get(c.parent) : -1, c.position || 0, c.name]);
+  channels.sort((a, b) => {
+    const ka = key(a); const kb = key(b);
+    for (let i = 0; i < 3; i++) if (ka[i] !== kb[i]) return ka[i] - kb[i];
+    return ka[3].localeCompare(kb[3], 'fr');
+  });
+  roles.sort((a, b) => (b.position || 0) - (a.position || 0) || a.name.localeCompare(b.name, 'fr'));
+  return { channels, roles };
+}
+
 async function guildCatalog(dGuild) {
   const key = String(dGuild && dGuild.id || 'unknown');
   const cached = guildCatalogCache.get(key);
@@ -658,18 +679,19 @@ async function guildCatalog(dGuild) {
   const roles = [];
   if (dGuild && dGuild.channels && dGuild.channels.cache) {
     for (const ch of dGuild.channels.cache.values()) {
-      if (ch && ch.type === 0 && ch.name) channels.push({ id: ch.id, name: ch.name });
-      if (ch && ch.type === 2 && ch.name) channels.push({ id: ch.id, name: ch.name, voice: true });
-      if (ch && ch.type === 4 && ch.name) channels.push({ id: ch.id, name: ch.name, category: true });
+      // v271 — position + catégorie parente : permet de trier DANS L'ORDRE
+      // DISCORD (le cache, lui, arrive dans l'ordre des événements).
+      if (ch && ch.type === 0 && ch.name) channels.push({ id: ch.id, name: ch.name, position: ch.position || 0, parent: ch.parentId || '' });
+      if (ch && ch.type === 2 && ch.name) channels.push({ id: ch.id, name: ch.name, voice: true, position: ch.position || 0, parent: ch.parentId || '' });
+      if (ch && ch.type === 4 && ch.name) channels.push({ id: ch.id, name: ch.name, category: true, position: ch.position || 0 });
     }
   }
   if (dGuild && dGuild.roles && dGuild.roles.cache) {
     for (const r of dGuild.roles.cache.values()) {
-      if (r && r.name && r.name !== '@everyone') roles.push({ id: r.id, name: r.name });
+      if (r && r.name && r.name !== '@everyone') roles.push({ id: r.id, name: r.name, position: r.position || 0 });
     }
   }
-  channels.sort((a, b) => (b.category ? 1 : 0) - (a.category ? 1 : 0) || a.name.localeCompare(b.name));
-  roles.sort((a, b) => a.name.localeCompare(b.name));
+  sortGuildCatalog(channels, roles);
   return guildCatalogCache.set(key, { channels, roles });
 }
 
@@ -3335,3 +3357,4 @@ router.use((err, req, res, next) => {
 
 module.exports = router;
 module.exports.guildChecklist = guildChecklist;
+module.exports.sortGuildCatalog = sortGuildCatalog;

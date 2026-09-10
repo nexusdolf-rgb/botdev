@@ -121,9 +121,9 @@ const check = (nom, cond, detail) => {
   console.log('— 5. Version —');
   const index = fs.readFileSync(require('path').join(__dirname, '..', 'public/index.html'), 'utf8');
   const sw = fs.readFileSync(require('path').join(__dirname, '..', 'public/sw.js'), 'utf8');
-  check('index.html : ?v=270 référencé 7 fois', (index.match(/\?v=270/g) || []).length === 7,
-    String((index.match(/\?v=270/g) || []).length));
-  check('sw.js : cache « botdev-v270 »', sw.includes("const CACHE = 'botdev-v270';"));
+  check('index.html : ?v=271 référencé 7 fois', (index.match(/\?v=271/g) || []).length === 7,
+    String((index.match(/\?v=271/g) || []).length));
+  check('sw.js : cache « botdev-v271 »', sw.includes("const CACHE = 'botdev-v271';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v260 — ${ok} vérifications OK : la fin du live est annoncée automatiquement.`);
