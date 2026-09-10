@@ -35,18 +35,20 @@ const check = (nom, cond, detail) => {
 
   console.log('— 1. La légende, comme chez TempVoice —');
   const txt = v2.texts(extra.buildVtPanel(botId, null)).join('\n');
-  check('ligne 1 : NOM LIMITE PRIVÉ PUBLIC RÉCUPÉRER', txt.includes('✏️ NOM   👥 LIMITE   🔒 PRIVÉ   🔓 PUBLIC   🔑 RÉCUPÉRER'));
-  check('ligne 2 : AJOUTER RETIRER EXPULSER TRANSFÉRER SUPPRIMER', txt.includes('➕ AJOUTER   ➖ RETIRER   👢 EXPULSER   🤝 TRANSFÉRER   🗑️ SUPPRIMER'));
+  check('ligne 1 : NOM LIMITE PRIVÉ PUBLIC', txt.includes('✏️ NOM   👥 LIMITE   🔒 PRIVÉ   🔓 PUBLIC'));
+  check('ligne 2 : RÉCUPÉRER AJOUTER RETIRER EXPULSER', txt.includes('🔑 RÉCUPÉRER   ➕ AJOUTER   ➖ RETIRER   👢 EXPULSER'));
+  check('ligne 3 : TRANSFÉRER SUPPRIMER', txt.includes('🤝 TRANSFÉRER   🗑️ SUPPRIMER'));
   
   check("phrase d'invitation en gras", txt.includes("**Appuyez sur les boutons ci-dessous pour utiliser l'interface.**"));
 
   console.log('— 2. Boutons carrés, émojis seuls —');
   const rows = v2.rows(extra.buildVtPanel(botId, null));
-  const btn = rows[0].components;
-  check('5 boutons sans aucun libellé', btn.length === 5 && btn.every((b) => !b.label && b.emoji));
-  check("…nos émojis de repli dans l'ordre", btn.map((b) => b.emoji.name).join('') === '✏️👥🔒🔓🔑');
-  check('suppression : bouton rouge sans libellé', !rows[1].components[4].label && rows[1].components[4].style === 4 && rows[1].components[4].emoji.name === '🗑️');
-  check('2 rangées de 5 boutons seulement', rows.length === 2 && rows[0].components.length === 5 && rows[1].components.length === 5);
+  const btn = rows.flatMap((r) => r.components || []).filter((c) => c.type === 2);
+  check('10 boutons sans aucun libellé', btn.length === 10 && btn.every((b) => !b.label && b.emoji));
+  check("…nos émojis de repli dans l'ordre", btn.map((b) => b.emoji.name).join('') === "✏️👥🔒🔓🔑➕➖👢🤝🗑️");
+  check('suppression : bouton rouge sans libellé', !rows[2].components[1].label && rows[2].components[1].style === 4 && rows[2].components[1].emoji.name === '🗑️');
+  check('légende en petit texte « -# » (panneau compact)', txt.includes('-# ✏️ NOM'));
+  check('grille rangée 4/4/2 (mobile propre)', rows.length === 3 && rows[0].components.length === 4 && rows[1].components.length === 4 && rows[2].components.length === 2);
 
   console.log('— 3. Avec nos émojis installés : la légende les affiche —');
   let seq = 0;
@@ -66,8 +68,8 @@ const check = (nom, cond, detail) => {
   console.log('— 4. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=272 référencé 7 fois', (index.match(/\?v=272/g) || []).length === 7);
-  check('sw.js : cache « botdev-v272 »', sw.includes("const CACHE = 'botdev-v272';"));
+  check('index.html : ?v=273 référencé 7 fois', (index.match(/\?v=273/g) || []).length === 7);
+  check('sw.js : cache « botdev-v273 »', sw.includes("const CACHE = 'botdev-v273';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v272 — ${ok} vérifications OK : présentation TempVoice, émojis Hoxera.`);

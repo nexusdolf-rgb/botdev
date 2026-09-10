@@ -1522,10 +1522,13 @@ function buildVtPanel(botId, guild) {
     const e = emo(key);
     return /^\d+$/.test(String(e)) ? `<:hox_${key}:${e}> ${label}` : `${e} ${label}`;
   };
+  // v273 — légende en PETIT TEXTE (« -# ») : chez TempVoice la légende est
+  // minuscule ; c'est elle (et le titre « ## ») qui agrandissait notre panneau.
   const legende = [
-    [tag('nom', 'NOM'), tag('limite', 'LIMITE'), tag('prive', 'PRIVÉ'), tag('public', 'PUBLIC'), tag('recup', 'RÉCUPÉRER')].join('   '),
-    [tag('ajouter', 'AJOUTER'), tag('retirer', 'RETIRER'), tag('expulser', 'EXPULSER'), tag('transfer', 'TRANSFÉRER'), tag('suppr', 'SUPPRIMER')].join('   '),
-  ].join('\n');
+    [tag('nom', 'NOM'), tag('limite', 'LIMITE'), tag('prive', 'PRIVÉ'), tag('public', 'PUBLIC')].join('   '),
+    [tag('recup', 'RÉCUPÉRER'), tag('ajouter', 'AJOUTER'), tag('retirer', 'RETIRER'), tag('expulser', 'EXPULSER')].join('   '),
+    [tag('transfer', 'TRANSFÉRER'), tag('suppr', 'SUPPRIMER')].join('   '),
+  ].map((l) => `-# ${l}`).join('\n');
   // Rangée 1 : les 5 boutons du salon, carrés, émojis seuls (style TempVoice).
   const row1 = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(id('rename')).setEmoji(emo('nom')).setStyle(ButtonStyle.Secondary),
@@ -1537,18 +1540,26 @@ function buildVtPanel(botId, guild) {
   // v272 — AJOUTER / RETIRER / EXPULSER / TRANSFÉRER sont des BOUTONS-ÉMOJIS
   // (comme TempVoice) : un appui ouvre un petit panneau PERSONNEL avec le
   // menu « utilisateur » pour choisir le membre en 2 clics.
+  // v273 — rangées de 4 boutons maxi : 5 ne tenaient pas sur mobile et le
+  // 5ᵉ retombait tout seul sur une ligne (panneau « pas rangé »). 4/4/2 =
+  // même disposition partout, téléphone compris.
+  const row1b = new ActionRowBuilder().addComponents(row1.components.slice(0, 4));
   const row2 = new ActionRowBuilder().addComponents(
+    row1.components[4],
     new ButtonBuilder().setCustomId(id('add')).setEmoji(emo('ajouter')).setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId(id('rem')).setEmoji(emo('retirer')).setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId(id('kick')).setEmoji(emo('expulser')).setStyle(ButtonStyle.Secondary),
+  );
+  const row3 = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(id('transfer')).setEmoji(emo('transfer')).setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId(id('del')).setEmoji(emo('suppr')).setStyle(ButtonStyle.Danger),
   );
   return ui.v2panel({
     color: '#e07a5f',
+    titleLevel: 3,
     title: '🎙️ Interface Hoxera — vocaux temporaires',
-    description: `Cette interface sert à gérer **votre salon vocal temporaire** (créé en rejoignant « ➕ Créer un vocal »). Chaque réponse est **personnelle**.\n\n${legende}\n\n**Appuyez sur les boutons ci-dessous pour utiliser l'interface.**`,
-  }, [row1, row2]);
+    description: `Gérez **votre salon vocal temporaire** — chaque réponse est **personnelle**.\n${legende}\n\n**Appuyez sur les boutons ci-dessous pour utiliser l'interface.**`,
+  }, [row1b, row2, row3]);
 }
 
 // Envoie (ou remplace) le panneau dans le salon textuel configuré.

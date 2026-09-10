@@ -61,16 +61,15 @@ const mkGuild = (channels) => ({
   check('panneau Components V2', v2.isV2(panel));
   check('titre clair', v2.title(panel).includes('Interface Hoxera — vocaux temporaires'), v2.title(panel));
   const rows = v2.rows(panel);
-  check('2 rangées de 5 boutons-émojis (grille TempVoice)', rows.length === 2);
+  check('3 rangées rangées 4/4/2 (tiennent sur mobile)', rows.length === 3 && rows[0].components.length === 4 && rows[1].components.length === 4 && rows[2].components.length === 2);
   const comps = rows.map((r) => r.components || []);
-  const btns = comps[0].filter((c) => c.type === 2);
-  check('rangée 1 : nom / limite / privé / public / récupérer', btns.length === 5
-    && btns[0].custom_id === `vt:${botId}:rename` && btns[1].custom_id === `vt:${botId}:limit`
-    && btns[2].custom_id === `vt:${botId}:lock` && btns[3].custom_id === `vt:${botId}:unlock`
-    && btns[4].custom_id === `vt:${botId}:claim`);
-  check('rangée 2 : ajouter / retirer / expulser / transférer / supprimer',
-    comps[1].filter((c) => c.type === 2).map((c) => c.custom_id.split(':').pop()).join('|') === 'add|rem|kick|transfer|del');
-  check('…suppression en rouge', comps[1][4].custom_id === `vt:${botId}:del` && comps[1][4].style === 4);
+  const btns = comps.flat().filter((c) => c.type === 2);
+  check('10 boutons : nom limite privé public récupérer ajouter retirer expulser transférer supprimer',
+    btns.map((b) => b.custom_id.split(':').pop()).join('|') === 'rename|limit|lock|unlock|claim|add|rem|kick|transfer|del');
+  check('rangées 1-2 : nom limite privé public / récupérer ajouter retirer expulser',
+    comps[0].map((c) => c.custom_id.split(':').pop()).join('|') === 'rename|limit|lock|unlock'
+    && comps[1].map((c) => c.custom_id.split(':').pop()).join('|') === 'claim|add|rem|kick');
+  check('rangée 3 : transférer + suppression en rouge', comps[2][0].custom_id === `vt:${botId}:transfer` && comps[2][1].custom_id === `vt:${botId}:del` && comps[2][1].style === 4);
   check('légende des contrôles présente dans le message', v2.texts(panel).join(' ').includes('NOM') && v2.texts(panel).join(' ').includes('SUPPRIMER'));
 
   console.log('— 2. Propriété du salon —');
@@ -153,9 +152,9 @@ const mkGuild = (channels) => ({
   console.log('— 6. Version —');
   const index = fs.readFileSync(require('path').join(__dirname, '..', 'public/index.html'), 'utf8');
   const sw = fs.readFileSync(require('path').join(__dirname, '..', 'public/sw.js'), 'utf8');
-  check('index.html : ?v=272 référencé 7 fois', (index.match(/\?v=272/g) || []).length === 7,
-    String((index.match(/\?v=272/g) || []).length));
-  check('sw.js : cache « botdev-v272 »', sw.includes("const CACHE = 'botdev-v272';"));
+  check('index.html : ?v=273 référencé 7 fois', (index.match(/\?v=273/g) || []).length === 7,
+    String((index.match(/\?v=273/g) || []).length));
+  check('sw.js : cache « botdev-v273 »', sw.includes("const CACHE = 'botdev-v273';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v267 — ${ok} vérifications OK : chaque membre administre son salon vocal.`);

@@ -49,14 +49,13 @@ const mkChannel = (id, name) => {
   console.log('— 1. Le nouveau panneau : style TempVoice, labels majuscules —');
   const panel = extra.buildVtPanel(botId, null);
   const rows = v2.rows(panel);
-  const btn = rows[0].components;
-  check('rangée 1 : 5 boutons carrés (nom/limite/privé/public/récupérer)',
-    btn.map((b) => b.custom_id.split(':').pop()).join('|') === 'rename|limit|lock|unlock|claim');
+  const btn = rows.flatMap((r) => r.components || []).filter((c) => c.type === 2);
+  check("10 boutons carrés dans l'ordre", btn.map((b) => b.custom_id.split(':').pop()).join('|') === 'rename|limit|lock|unlock|claim|add|rem|kick|transfer|del');
   check('…émojis seuls, SANS libellé (style TempVoice)', btn.every((b) => !b.label) && btn[0].emoji.name === '✏️' && btn[1].emoji.name === '👥' && btn[4].emoji.name === '🔑');
-  check('rangée 2 finit par suppression rouge, émoji seul', !rows[1].components[4].label && rows[1].components[4].style === 4);
+  check('rangée 3 finit par suppression rouge, émoji seul', !rows[2].components[1].label && rows[2].components[1].style === 4);
   check('légende émoji+nom dans le message', v2.texts(panel).join(' ').includes('NOM') && v2.texts(panel).join(' ').includes('Appuyez sur les boutons'));
-  check('rangée 2 : les 4 boutons membre en émojis seuls',
-    rows[1].components.slice(0, 4).every((c) => c.type === 2 && !c.label && c.emoji));
+  check('boutons membre en émojis seuls (ajouter/retirer/expulser/transférer)',
+    [rows[1].components[1], rows[1].components[2], rows[1].components[3], rows[2].components[0]].every((c) => c.type === 2 && !c.label && c.emoji));
   check('3 rubriques d\'aide (accès, membres, salon)', v2.texts(panel).length >= 4);
 
   console.log('— 2. NOS émojis : pack, installation, utilisation —');
@@ -136,8 +135,8 @@ const mkChannel = (id, name) => {
   console.log('— 6. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=272 référencé 7 fois', (index.match(/\?v=272/g) || []).length === 7);
-  check('sw.js : cache « botdev-v272 »', sw.includes("const CACHE = 'botdev-v272';"));
+  check('index.html : ?v=273 référencé 7 fois', (index.match(/\?v=273/g) || []).length === 7);
+  check('sw.js : cache « botdev-v273 »', sw.includes("const CACHE = 'botdev-v273';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v268 — ${ok} vérifications OK : notre interface pro, avec nos émojis.`);
