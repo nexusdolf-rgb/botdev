@@ -251,7 +251,8 @@ function v2separator(container, state) {
 
 // Construit le conteneur V2. Accepte la MÊME grammaire que embed()/panel()
 // pour que la migration d'un message soit mécanique :
-//   title       → TextDisplay « ## titre »
+//   title       → TextDisplay « ## titre » (ou « ### titre » avec titleLevel: 3,
+//                 v261 — titre plus petit, demandé pour les annonces de live)
 //   description → paragraphs() → un TextDisplay par paragraphe + séparateurs
 //   content     → TextDisplay en tête (l'équivalent du content: classique)
 //   fields      → un TextDisplay « **nom**\nvaleur » par champ + séparateurs
@@ -288,7 +289,12 @@ function v2container(options = {}) {
     : (options.author && options.author.iconURL ? String(options.author.iconURL) : '');
   const headTexts = [];
   if (authorName) headTexts.push(`**${authorName}**`);
-  if (options.title) headTexts.push(`## ${text(options.title, V2_TITLE_MAX)}`);
+  if (options.title) {
+    // v261 — titleLevel: 3 rend un titre « ### » plus discret : sur mobile,
+    // le « ## » par défaut occupait trop de place dans l'annonce de live.
+    const hashes = Number(options.titleLevel) === 3 ? '###' : '##';
+    headTexts.push(`${hashes} ${text(options.title, V2_TITLE_MAX)}`);
+  }
   if (headTexts.length) {
     const usable = headTexts.slice(0, 3);
     // Section(1) + Thumbnail(1) + n TextDisplay : les composants imbriqués

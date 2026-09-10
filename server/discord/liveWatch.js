@@ -132,7 +132,9 @@ function parseTikTokResponse(payload, handle) {
   return {
     live,
     name: u.nickname || handle,
-    avatar: u.avatarThumb || u.avatarMedium || u.avatarLarger || '',
+    // v261 — la plus grande résolution d'abord : la vignette du panneau est
+    // plus nette (Discord fixe sa taille d'affichage, pas sa résolution).
+    avatar: u.avatarLarger || u.avatarMedium || u.avatarThumb || '',
     liveKey,
   };
 }
@@ -150,7 +152,7 @@ async function checkTwitch(handle) {
   const r = await fetch('https://gql.twitch.tv/gql', {
     method: 'POST',
     headers: { 'Client-ID': 'kimne78kx3ncx6brgo4mv6wki5h1ko', 'Content-Type': 'application/json', 'User-Agent': UA },
-    body: JSON.stringify({ query: `query { user(login: "${handle.replace(/[^\w\-]/g, '')}") { displayName profileImageURL(width: 150) stream { id } } }` }),
+    body: JSON.stringify({ query: `query { user(login: "${handle.replace(/[^\w\-]/g, '')}") { displayName profileImageURL(width: 300) stream { id } } }` }),
     signal: AbortSignal.timeout(10000),
   });
   if (!r.ok) return null;
@@ -401,15 +403,19 @@ async function announce(botId, guild, channel, social, result, gs) {
       author: { name: `${result.name} est en live !` },
       // v241 — la plateforme était nommée 2 fois (titre + corps) et le corps
       // répétait le nom du streamer. Tout est regroupé dans le titre.
-      title: `${p.emoji} 🔴 ${result.name} est en live sur ${p.label}`,
+      // v261 — demande du maître : émoji de plateforme retiré du titre,
+      // titre en « ### » (le « ## » était trop gros sur mobile), et plus de
+      // pied « {serveur} · Annonces de live ».
+      title: `🔴 ${result.name} est en live sur ${p.label}`,
+      titleLevel: 3,
       content: ping || '',
       description: 'Rejoignez-le maintenant :',
       fields: [
-        { name: `${p.emoji} Pseudo`, value: `[@${social.handle}](${url})`, inline: true },
+        { name: 'Pseudo', value: `[@${social.handle}](${url})`, inline: true },
         { name: '👤 Membre', value: social.user_id ? `<@${social.user_id}>` : '—', inline: true },
       ],
       thumbnail: result.avatar || '',
-      footer: `${guild.name} · Annonces de live`,
+      footer: false,
     }, [row]),
     allowedMentions: { parse: ping ? ['everyone'] : [] },
   });
@@ -447,7 +453,7 @@ async function announceEnd(botId, guild, channel, social, result, gs, startedTs 
   const duree = formatDuration(startedTs > 0 ? endedTs - startedTs : 0);
 
   const fields = [
-    { name: `${p.emoji} Pseudo`, value: `[@${social.handle}](${url})`, inline: true },
+    { name: 'Pseudo', value: `[@${social.handle}](${url})`, inline: true },
     { name: '👤 Membre', value: social.user_id ? `<@${social.user_id}>` : '—', inline: true },
   ];
   if (duree) fields.push({ name: '⏱️ Durée du live', value: duree, inline: true });
@@ -460,10 +466,11 @@ async function announceEnd(botId, guild, channel, social, result, gs, startedTs 
     ...ui.v2panel({
       color: p.color,
       title: `⏹️ ${name} a terminé son live sur ${p.label}`,
+      titleLevel: 3,
       description: 'Merci d\'avoir suivi ! Le replay est peut-être déjà disponible.',
       fields,
       thumbnail: (result && result.avatar) || '',
-      footer: `${guild.name} · Annonces de live`,
+      footer: false,
     }, [row]),
     allowedMentions: { parse: [] },
   });

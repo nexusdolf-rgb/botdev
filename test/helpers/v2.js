@@ -75,15 +75,16 @@ function texts(payload) {
 
 // Titre : le TextDisplay « ## … » posé par ui.v2panel pour options.title.
 function title(payload) {
-  const found = texts(payload).find((t) => t.startsWith('## '));
-  return found ? found.replace(/^##\s*/, '') : '';
+  // v261 — les titres « ### » (titleLevel: 3) sont reconnus comme les « ## ».
+  const found = texts(payload).find((t) => /^#{2,3} /.test(t));
+  return found ? found.replace(/^#{2,3}\s*/, '') : '';
 }
 
 // Auteur : le TextDisplay « **…** » qui précède le titre (ui.v2panel rend
 // options.author.name en gras, juste au-dessus du « ## »).
 function author(payload) {
   const all = texts(payload);
-  const i = all.findIndex((t) => t.startsWith('## '));
+  const i = all.findIndex((t) => /^#{2,3} /.test(t));
   if (i > 0 && /^\*\*.*\*\*$/.test(all[i - 1])) return all[i - 1].slice(2, -2);
   return '';
 }

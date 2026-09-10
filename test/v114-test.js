@@ -122,7 +122,9 @@ const live = require('../server/discord/liveWatch');
   // « vient de lancer un live sur **TikTok** ». Tout est regroupé dans le
   // titre, qui nomme aussi le streamer : le corps ne fait plus qu'inviter.
   assert.ok(v2.title(sent[0]).includes('en live sur'), 'titre de l\'annonce : ' + JSON.stringify(v2.title(sent[0])));
-  assert.ok(v2.dividers(sent[0]) >= 2, 'séparateurs natifs entre les paragraphes');
+  // v261 — le pied « {serveur} · Annonces de live » a été retiré sur demande
+  // du maître : il reste le séparateur natif entre les paragraphes du corps.
+  assert.ok(v2.dividers(sent[0]) >= 1, 'séparateurs natifs entre les paragraphes');
   assert.strictEqual(v2.rows(sent[0]).length, 1, 'la ligne de boutons est DANS le conteneur');
   const row = store.liveSocials.all(botId, guildId)[0];
   assert.strictEqual(row.last_status, 'live');
