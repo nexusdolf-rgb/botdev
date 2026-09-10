@@ -6071,7 +6071,7 @@ Dashboard.renderers.voicetemp = async (content, data) => {
   // 🔊 Salons vocaux temporaires
   const vt = data.voicetemp || { creator_channel: '', category: '', name_template: '', panel_channel: '' };
   const voiceChannels = (data.channels || []).filter((ch) => ch.voice);
-  const vtTextChannels = (data.channels || []).filter((ch) => ch.text && !ch.voice);
+  const vtTextChannels = (data.channels || []).filter((ch) => !ch.voice && !ch.category);
   const c4 = Dashboard.card(root, '🔊 Salons vocaux temporaires', 'Un salon « ➕ Créer un vocal » : le bot crée un vocal au nom du membre et le supprime quand il est vide.');
   c4.innerHTML += `
     <label class="dash-label">Salon de création (vocal)</label>
