@@ -2735,13 +2735,39 @@ router.put('/bots/:id/guilds/:guildId/voicetemp', requireAuth, async (req, res) 
   const bot = getAnyBot(req, res);
   if (!bot) return;
   if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
-  const { creator_channel, category, name_template } = req.body || {};
+  const { creator_channel, category, name_template, panel_channel } = req.body || {};
+  // 🎙️ v267 — préserve les colonnes non fournies (panneau déjà envoyé…).
+  const prevVt = store.voicetemp.get(bot.id, req.params.guildId) || {};
   store.voicetemp.set(bot.id, req.params.guildId, {
+    ...prevVt,
     creator_channel: String(creator_channel || '').slice(0, 100),
     category: String(category || '').slice(0, 100),
     name_template: String(name_template || '').slice(0, 50),
+    panel_channel: panel_channel === undefined ? (prevVt.panel_channel || '') : String(panel_channel || '').slice(0, 100),
   });
   res.json({ ok: true });
+});
+
+// 🎙️ v267 — (re)envoie le panneau de contrôle des vocaux temporaires.
+router.post('/bots/:id/guilds/:guildId/voicetemp/panel', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const channelId = String((req.body || {}).channel || '');
+  if (!channelId) return res.status(400).json({ error: 'Salon textuel manquant.' });
+  try {
+    const botManager = require('./discord/botManager');
+    const entry = botManager.clients.get(bot.id);
+    if (!entry || !entry.client.isReady()) return res.status(503).json({ error: 'Bot hors ligne, réessayez dans une minute.' });
+    const guild = entry.client.guilds.cache.get(req.params.guildId);
+    if (!guild) return res.status(404).json({ error: 'Serveur introuvable pour ce bot.' });
+    const cfg = store.voicetemp.get(bot.id, req.params.guildId) || {};
+    store.voicetemp.set(bot.id, req.params.guildId, { ...cfg, panel_channel: channelId });
+    const messageId = await require('./discord/extra').sendVtPanel(bot.id, guild, channelId);
+    res.json({ ok: true, message: messageId });
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e).slice(0, 200) });
+  }
 });
 
 router.delete('/bots/:id/guilds/:guildId/voicetemp', requireAuth, async (req, res) => {

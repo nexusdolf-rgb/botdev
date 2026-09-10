@@ -670,6 +670,9 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN stat_ids TEXT DEFAULT ''");
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN boost_role TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN boost_channel TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN boost_message TEXT DEFAULT ''"); } catch (e) {}
+// 🎙️ v267 — vocaux temporaires + : salon textuel du panneau de contrôle.
+try { db.exec("ALTER TABLE voicetemp ADD COLUMN panel_channel TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE voicetemp ADD COLUMN panel_message TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN voice_xp_rate INTEGER DEFAULT 10"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN voice_xp_interval INTEGER DEFAULT 3"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN voice_xp_min_members INTEGER DEFAULT 2"); } catch (e) {}
@@ -2161,7 +2164,7 @@ const applications = {
 // ---------------------- Salons vocaux temporaires ----------------------
 const voicetemp = {
   get: (botId, guildId) => db.prepare('SELECT * FROM voicetemp WHERE bot_id = ? AND guild_id = ?').get(botId, guildId) || null,
-  set: (botId, guildId, cfg) => db.prepare('INSERT INTO voicetemp (bot_id, guild_id, creator_channel, category, name_template) VALUES (@bot_id, @guild_id, @creator_channel, @category, @name_template) ON CONFLICT(bot_id, guild_id) DO UPDATE SET creator_channel = excluded.creator_channel, category = excluded.category, name_template = excluded.name_template').run({ bot_id: botId, guild_id: guildId, creator_channel: '', category: '', name_template: '', ...cfg }),
+  set: (botId, guildId, cfg) => db.prepare('INSERT INTO voicetemp (bot_id, guild_id, creator_channel, category, name_template, panel_channel, panel_message) VALUES (@bot_id, @guild_id, @creator_channel, @category, @name_template, @panel_channel, @panel_message) ON CONFLICT(bot_id, guild_id) DO UPDATE SET creator_channel = excluded.creator_channel, category = excluded.category, name_template = excluded.name_template, panel_channel = excluded.panel_channel, panel_message = excluded.panel_message').run({ bot_id: botId, guild_id: guildId, creator_channel: '', category: '', name_template: '', panel_channel: '', panel_message: '', ...cfg }),
   remove: (botId, guildId) => db.prepare('DELETE FROM voicetemp WHERE bot_id = ? AND guild_id = ?').run(botId, guildId),
 };
 

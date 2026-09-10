@@ -87,9 +87,9 @@ const check = (nom, cond, detail) => {
   console.log('— 7. Version —');
   const index = fs.readFileSync(require('path').join(__dirname, '..', 'public/index.html'), 'utf8');
   const sw = fs.readFileSync(require('path').join(__dirname, '..', 'public/sw.js'), 'utf8');
-  check('index.html : ?v=266 référencé 7 fois', (index.match(/\?v=266/g) || []).length === 7,
-    String((index.match(/\?v=266/g) || []).length));
-  check('sw.js : cache « botdev-v266 »', sw.includes("const CACHE = 'botdev-v266';"));
+  check('index.html : ?v=267 référencé 7 fois', (index.match(/\?v=267/g) || []).length === 7,
+    String((index.match(/\?v=267/g) || []).length));
+  check('sw.js : cache « botdev-v267 »', sw.includes("const CACHE = 'botdev-v267';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v266 — ${ok} vérifications OK : l'historique de modération s'exporte.`);
