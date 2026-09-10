@@ -5857,7 +5857,7 @@ Dashboard.renderers.community = async (content, data) => {
   const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
 
   // ---- 🔴 Carte Annonces de live ----
-  const cl = Dashboard.card(root, '🔴 Annonces de live', 'Enregistrez le lien TikTok / Twitch / YouTube / Kick d\'un membre : dès qu\'il lance un live, le bot l\'annonce automatiquement (pseudo + photo de profil + bouton Regarder) dans le salon choisi.');
+  const cl = Dashboard.card(root, '🔴 Annonces de live', 'Enregistrez le lien TikTok / Twitch / YouTube / Kick d\'un membre : dès qu\'il lance un live, le bot l\'annonce automatiquement (pseudo + photo de profil + bouton Regarder) dans le salon choisi — et annonce aussi la fin du live (avec sa durée).');
   const liveChanOpts = ['<option value="">— Désactivé (choisir un salon pour activer) —</option>']
     .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(s.live_channel, ch) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`));
   if (s.live_channel && !textChannels.some((ch) => Dashboard.discordRefMatches(s.live_channel, ch))) {
@@ -5893,7 +5893,7 @@ Dashboard.renderers.community = async (content, data) => {
       <div id="lv-preview">…</div>
     </div>
     <div id="lv-list" style="margin-top:14px"></div>
-    <div style="font-size:12px;color:var(--d-dim);margin-top:8px">💡 Vérification automatique toutes les 60 secondes · 20 comptes max · une annonce par session live (les faux hors-ligne sont confirmés).</div>`;
+    <div style="font-size:12px;color:var(--d-dim);margin-top:8px">💡 Vérification automatique toutes les 60 secondes · 20 comptes max · une annonce par session live (les faux hors-ligne sont confirmés) · annonce de fin automatique.</div>`;
 
   // 💾 Enregistrement des réglages live (partagé : bouton 💾 ET ajout de compte)
   const saveLiveSettings = async () => {

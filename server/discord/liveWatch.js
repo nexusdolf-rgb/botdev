@@ -97,7 +97,10 @@ function liveTransition(previous = {}, observation = {}, nowTs = Date.now()) {
   const streak = Math.min(previousStreak + 1, OFFLINE_CONFIRMATIONS);
   const confirmedOffline = streak >= OFFLINE_CONFIRMATIONS;
   return {
-    action: 'none',
+    // v260 — la sortie confirmée déclenche l'annonce de FIN de live. Elle ne
+    // peut se produire qu'une fois : après cela, le statut repasse à « off »
+    // et les balayages suivants renvoient « none ».
+    action: confirmedOffline ? 'ended' : 'none',
     status: confirmedOffline ? 'off' : 'live',
     liveKey: confirmedOffline ? '' : previousKey,
     offlineStreak: confirmedOffline ? 0 : streak,
@@ -323,9 +326,14 @@ async function sweep(botManager) {
 
           clearDiagnostic(`${botId}:${guild.id}:${row.id}:check`);
           const transition = liveTransition(row, { live: result.live === true, liveKey: result.liveKey }, checkedAt);
-          if (transition.action === 'announce') {
+          if (transition.action === 'announce' || transition.action === 'ended') {
             try {
-              await announce(botId, guild, channel, row, result, gs);
+              if (transition.action === 'announce') {
+                await announce(botId, guild, channel, row, result, gs);
+              } else {
+                // v260 — fin de live confirmée : on annonce la fin.
+                await announceEnd(botId, guild, channel, row, result, gs, parseInt(row.last_announce_ts, 10) || 0, checkedAt);
+              }
               store.liveSocials.saveState(botId, guild.id, row.id, {
                 status: transition.status,
                 liveKey: transition.liveKey,
@@ -334,7 +342,7 @@ async function sweep(botManager) {
                 lastCheckedAt: checkedAt,
                 lastError: '',
               });
-              console.log(`[Hoxera] 🔴 nouvelle session ${row.platform}@${row.handle} annoncée dans #${channel.name}`);
+              console.log(`[Hoxera] 🔴 ${transition.action === 'ended' ? 'fin de live' : 'nouvelle session'} ${row.platform}@${row.handle} annoncée dans #${channel.name}`);
             } catch (e) {
               const message = `envoi impossible dans #${channel.name} pour ${row.platform}@${row.handle} : ${String(e.message || e).slice(0, 220)}`;
               saveErrorState(botId, guild.id, row, checkedAt, message);
@@ -412,6 +420,60 @@ async function announce(botId, guild, channel, social, result, gs) {
   } catch {}
 }
 
+// ------------------------------------------------------------
+// ⏹️ v260 — Annonce de FIN de live
+// Même canal, même style V2 que l'annonce de départ, mais sans ping :
+// on ne dérange pas tout le serveur pour une fin. La durée est calculée
+// depuis la date de la dernière annonce de départ.
+// ------------------------------------------------------------
+function formatDuration(ms) {
+  if (!Number.isFinite(ms) || ms < 60000) return '';
+  const min = Math.floor(ms / 60000);
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (h <= 0) return `${m} min`;
+  return m > 0 ? `${h} h ${String(m).padStart(2, '0')}` : `${h} h`;
+}
+
+async function announceEnd(botId, guild, channel, social, result, gs, startedTs = 0, endedTs = Date.now()) {
+  const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+  const permissionIssue = channelPermissionIssue(guild, channel);
+  if (permissionIssue) throw new Error(permissionIssue);
+  if (!channel || typeof channel.send !== 'function') throw new Error('salon non envoyable');
+  const p = PLATFORMS[social.platform];
+  if (!p) throw new Error(`plateforme inconnue : ${social.platform}`);
+  const url = p.url(social.handle);
+  const name = (result && result.name) || social.handle;
+  const duree = formatDuration(startedTs > 0 ? endedTs - startedTs : 0);
+
+  const fields = [
+    { name: `${p.emoji} Pseudo`, value: `[@${social.handle}](${url})`, inline: true },
+    { name: '👤 Membre', value: social.user_id ? `<@${social.user_id}>` : '—', inline: true },
+  ];
+  if (duree) fields.push({ name: '⏱️ Durée du live', value: duree, inline: true });
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(`Voir la chaîne ${p.label}`).setURL(url)
+  );
+
+  await channel.send({
+    ...ui.v2panel({
+      color: p.color,
+      title: `⏹️ ${name} a terminé son live sur ${p.label}`,
+      description: 'Merci d\'avoir suivi ! Le replay est peut-être déjà disponible.',
+      fields,
+      thumbnail: (result && result.avatar) || '',
+      footer: `${guild.name} · Annonces de live`,
+    }, [row]),
+    allowedMentions: { parse: [] },
+  });
+  store.activity.add(botId, guild.id, '⏹️', `${name} (@${social.handle}) a terminé son live ${p.label}${duree ? ` (${duree})` : ''} — annoncé dans #${channel.name}`);
+  try {
+    const logging = require('./logging');
+    await logging.log(botId, guild, { title: '⏹️ Fin de live', description: `${name} (@${social.handle} · ${p.label}) a terminé son live${duree ? ` après ${duree}` : ''} — annoncé dans #${channel.name}`, color: '#808080' });
+  } catch {}
+}
+
 module.exports = {
   PLATFORMS,
   OFFLINE_CONFIRMATIONS,
@@ -424,4 +486,6 @@ module.exports = {
   channelPermissionIssue,
   sweep,
   announce,
+  announceEnd,
+  formatDuration,
 };

@@ -385,12 +385,17 @@ const onglet = (module, hauteurs) => {
 
   const indexHtml = racine('public/index.html');
   const swSource = racine('public/sw.js');
+  // v260 — contrôles désormais SANS numéro codé en dur : ils lisent la
+  // version dans les fichiers et vérifient leur cohérence. Plus aucun
+  // rebump ne peut casser ce test.
   const versions = [...indexHtml.matchAll(/\?v=(\d+)/g)].map((m) => `?v=${m[1]}`);
-  check('index.html : ?v=259 référencé 7 fois', versions.length === 7 && versions.every((v) => v === '?v=259'),
+  const cacheVersion = (swSource.match(/const CACHE = 'botdev-v(\d+)';/) || [])[1] || '';
+  check('index.html : ?v=NNN référencé 7 fois, toutes identiques',
+    versions.length === 7 && versions.every((v) => v === versions[0]),
     `${versions.length} refs : ${[...new Set(versions)].join(',')}`);
-  check('sw.js : cache « botdev-v259 »', swSource.includes("const CACHE = 'botdev-v259';"));
+  check('sw.js : cache « botdev-vNNN » bien formé', /^\d+$/.test(cacheVersion), cacheVersion);
   check('index.html et sw.js portent la même version',
-    swSource.includes("botdev-v259") && versions.every((v) => v === '?v=259'));
+    cacheVersion === (versions[0] || '').replace('?v=', ''), `${cacheVersion} vs ${versions[0]}`);
 
   console.log('');
   if (echecs) { console.log(`❌ v246 — ${echecs} échec(s)`); process.exit(1); }
