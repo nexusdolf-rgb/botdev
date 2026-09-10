@@ -147,9 +147,9 @@ console.log('— 3. Voir le profil (interaction simulée) —');
     dbSrc.includes('CREATE TABLE IF NOT EXISTS reports (') && !!store.reports);
 
   console.log('— 7. Version —');
-  check('index.html : ?v=273 référencé 7 fois', (index.match(/\?v=273/g) || []).length === 7,
-    String((index.match(/\?v=273/g) || []).length));
-  check('sw.js : cache « botdev-v273 »', racine('public/sw.js').includes("const CACHE = 'botdev-v273';"));
+  check('index.html : ?v=274 référencé 7 fois', (index.match(/\?v=274/g) || []).length === 7,
+    String((index.match(/\?v=274/g) || []).length));
+  check('sw.js : cache « botdev-v274 »', racine('public/sw.js').includes("const CACHE = 'botdev-v274';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v259 — ${ok} vérifications OK : le clic droit arrive dans Hoxera.`);

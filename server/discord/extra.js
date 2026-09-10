@@ -261,6 +261,15 @@ function buildExtraPayloads() {
       ]}],
     },
     {
+      name: 'emotes', description: "🎨 Installe le pack d'émojis Hoxera (icônes des modules) sur le serveur",
+      default_member_permissions: admin,
+      options: [
+        { name: 'action', description: 'Action', type: ApplicationCommandOptionType.String, required: true, choices: [
+          { name: 'install', value: 'install' }, { name: 'view', value: 'view' },
+        ]},
+      ],
+    },
+    {
       name: 'voicetemp', description: '🔊 Salons vocaux temporaires (création auto + suppression quand vides)',
       default_member_permissions: admin,
       options: [
@@ -307,6 +316,7 @@ const HELP_EXTRA = {
   gamble: ['🎰 Pari', 'Pariez des coins : 50 % de chances de doubler, 50 % de tout perdre.', '`/gamble montant`', '`/gamble 100` → 🎰 JACKPOT ! +100 coins !'],
   rob: ['🦹 Vol', 'Tentez de voler un membre : 40 % de réussite (10-20 % de ses coins). Si vous ratez, vous lui payez une amende !', '`/rob @membre`', '`/rob @Millionnaire` → 🚓 Raté ! Vous lui devez 15 % de votre solde.'],
   lockdown: ['🚨 Anti-raid', 'Verrouille tous les salons texte en 1 clic (personne ne peut écrire sauf les admins) puis rouvre tout. Idéal contre un raid.', '`/lockdown on` · `/lockdown off`', '`/lockdown on` → 🔒 12 salons verrouillés'],
+  emotes: ["🎨 Émojis Hoxera", "Un pack d'émojis dessinés pour Hoxera, un par module (tickets, modération, niveaux…). `/emotes install` les ajoute au serveur : tout le monde peut les utiliser, et le dashboard affiche les mêmes icônes en PNG.", "`/emotes install` · `/emotes view`"],
   voicetemp: ['🔊 Salons vocaux temporaires +', 'Un salon « ➕ Créer un vocal » : dès qu\'un membre le rejoint, un salon à son nom est créé, et il est supprimé automatiquement quand il est vide. Le propriétaire gère SON salon depuis le panneau de contrôle (style TempVoice, en mieux) : NOM, LIMITE, PRIVÉ, PUBLIC, RÉCUPÉRER, ajout/retrait/expulsion de membres, TRANSFÉRER la propriété, SUPPRIMER — chaque réponse est personnelle. `/voicetemp emotes` installe les émojis Hoxera du panneau.', '`/voicetemp set` (salon + catégorie + panneau) · `/voicetemp emotes` · `/voicetemp view` · `/voicetemp off`'],
   apply: ['📝 Candidatures', 'Les membres cliquent sur un bouton, répondent à VOS questions dans une fenêtre, et leurs réponses arrivent dans un salon avec des boutons Accepter/Refuser pour le staff.', '`/apply set #salon` · `/apply question votre question` (max 5) · `/apply panel` · `/apply view` · `/apply off`', '`/apply set #candidatures` puis `/apply question Quel âge avez-vous ?` puis `/apply panel`'],
   afk: ['🌙 AFK', 'Vous passes AFK : si quelqu\'un vous mentionnez, le bot le prévient. Votre statut se retire tout seul dès que vous écrivez à nouveau.', '`/afk` · `/afk raison`', '`/afk je mange` → 🔕 @X est AFK : je mange (depuis 2 min)'],
@@ -342,7 +352,7 @@ async function handleInteraction(botId, entry, interaction) {
 }
 
 // ---------------------- Commandes slash ----------------------
-const EXTRA_CMDS = new Set(['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch', 'rps', 'pendu', 'morpion', 'birthday', 'remind', 'poll', 'snipe', 'work', 'gamble', 'rob', 'lockdown', 'voicetemp', 'apply', 'invites', 'afk', 'top', 'quiz']);
+const EXTRA_CMDS = new Set(['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch', 'rps', 'pendu', 'morpion', 'birthday', 'remind', 'poll', 'snipe', 'work', 'gamble', 'rob', 'lockdown', 'voicetemp', 'emotes', 'apply', 'invites', 'afk', 'top', 'quiz']);
 
 async function handleSlash(botId, entry, interaction) {
   const cmd = interaction.commandName.toLowerCase();
@@ -797,6 +807,19 @@ async function handleSlash(botId, entry, interaction) {
         description: `${res.reopened} salon(s) sont de nouveau ouverts.`,
         footer: `Hoxera · ${guild.name} · Sécurité`,
       }));
+    }
+    case 'emotes': {
+      if (!isAdmin(member)) return interaction.reply({ content: '⛔ Réservé aux administrateurs.', ephemeral: true });
+      const action = interaction.options.getString('action');
+      if (action === 'install') {
+        try {
+          const created = await installHoxEmotes(botId, guild);
+          return interaction.reply({ ...hoxEmotesPanel(botId, guild, created), ephemeral: true });
+        } catch (e) {
+          return interaction.reply({ content: `⚠️ Installation impossible : ${String(e.message || e).slice(0, 160)}\nLe bot a besoin de la permission « Gérer les expressions ».`, ephemeral: true });
+        }
+      }
+      return interaction.reply({ ...hoxEmotesPanel(botId, guild, null), ephemeral: true });
     }
     case 'voicetemp': {
       if (!isAdmin(member)) return interaction.reply({ content: '⛔ Réservé aux administrateurs.', ephemeral: true });
@@ -1460,6 +1483,50 @@ function vtNoChannelPanel() {
   });
 }
 
+// v274 — Pack « signatures » : UN émoji Hoxera par module du bot, dessiné
+// pour nous (server/assets/emotes). /emotes l'installe sur le serveur :
+// les membres le voient et peuvent l'utiliser ; le dashboard, lui, affiche
+// ces PNG directement comme icônes de modules.
+const HOX_SIG_EMOTES = ['vue', 'ticket', 'bienvenue', 'niveaux', 'eco', 'boutique', 'mod', 'antinuke', 'roles', 'suggestion', 'cadeau', 'events', 'quiz', 'vocal', 'communaute', 'annonce', 'embed', 'membres', 'stats', 'journal', 'transcript', 'modmail', 'reglages', 'bot', 'aide'];
+const HOX_SIG_FALLBACK = { vue: '📊', ticket: '🎫', bienvenue: '👋', niveaux: '📈', eco: '💰', boutique: '🛒', mod: '🛡️', antinuke: '🚨', roles: '📋', suggestion: '💡', cadeau: '🎁', events: '🎮', quiz: '🧠', vocal: '🎙️', communaute: '⭐', annonce: '📅', embed: '🧱', membres: '👥', stats: '📈', journal: '📜', transcript: '🔎', modmail: '💬', reglages: '⚙️', bot: '🤖', aide: '❓' };
+function hoxSigMap(guild) { try { return JSON.parse(store.settings.get(`hox_emotes:${guild.id}`) || '{}'); } catch { return {}; } }
+async function installHoxEmotes(botId, guild) {
+  const fs = require('fs'); const path = require('path');
+  const map = hoxSigMap(guild);
+  const created = [];
+  for (const key of HOX_SIG_EMOTES) {
+    const name = 'hox_' + key;
+    const existing = guild.emojis && guild.emojis.cache ? guild.emojis.cache.find((e) => e.name === name) : null;
+    if (existing) { map[key] = existing.id; continue; }
+    const file = path.join(__dirname, '..', 'assets', 'emotes', name + '.png');
+    if (!fs.existsSync(file)) continue;
+    const em = await guild.emojis.create({ attachment: fs.readFileSync(file), name });
+    map[key] = em.id; created.push(name);
+  }
+  store.settings.set(`hox_emotes:${guild.id}`, JSON.stringify(map));
+  return created;
+}
+function hoxEmotesPanel(botId, guild, created) {
+  const map = hoxSigMap(guild);
+  const lines = HOX_SIG_EMOTES.map((key) => {
+    const id = map[key];
+    const emo = guild && guild.emojis && guild.emojis.cache ? guild.emojis.cache.get(String(id)) : null;
+    return emo ? `${emo} ${key}` : `${HOX_SIG_FALLBACK[key]} ${key}`;
+  });
+  return ui.v2panel({
+    color: '#e07a5f',
+    titleLevel: 3,
+    title: '🎨 Émojis Hoxera du serveur',
+    description: created && created.length
+      ? `**${created.length} émojis installés** : ils sont maintenant utilisables par tout le monde sur ce serveur.`
+      : 'Le pack est déjà installé : chaque émoji ci-dessous est utilisable par tout le monde sur ce serveur.',
+    fields: [
+      { name: 'Le pack signatures', value: lines.join(' · ') },
+      { name: 'À savoir', value: 'Les émojis vocaux (panneau de contrôle) s\'installent avec `/voicetemp emotes`. Le dashboard affiche ces mêmes icônes, en PNG Hoxera.' },
+    ],
+  });
+}
+
 // v268 — Pack d'émojis Hoxera (générés pour nous, rangés dans server/assets/
 // voicetemp). Installés sur le serveur par /voicetemp emotes ou le dashboard :
 // le panneau affiche NOS émojis ; sinon repli sur les émojis unicode.
@@ -1891,4 +1958,5 @@ module.exports = {
   _test: { penduGames, morpionGames, pollState, quizState, capMap },
   buildVtPanel, sendVtPanel, handleVtInteraction, vtSetOwner, vtGetOwner, vtClearOwner, vtChannelOf,
   installVtEmotes, vtClaimableChannel, vtEmoji, VT_EMOTES, VT_EMOTE_FALLBACK,
+  installHoxEmotes, hoxEmotesPanel, HOX_SIG_EMOTES, HOX_SIG_FALLBACK,
 };

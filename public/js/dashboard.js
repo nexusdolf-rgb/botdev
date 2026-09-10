@@ -7,6 +7,12 @@ const Dashboard = {
 };
 
 Dashboard.moduleIds = () => [...Dashboard.MODULES, ...Dashboard.BOT_MODULES].map(([id]) => id);
+// v274 — NOS émojis Hoxera comme icônes du dashboard : le bot sert les PNG
+// (dossier public/emotes) ; sans image, repli automatique sur l'émoji texte.
+Dashboard.HOX_EMOTES = { overview: 'vue', tickets: 'ticket', welcome: 'bienvenue', levels: 'niveaux', economy: 'eco', shop: 'boutique', moderation: 'mod', antinuke: 'antinuke', roles: 'roles', suggestions: 'suggestion', giveaways: 'cadeau', events: 'events', quiz: 'quiz', voicetemp: 'vocal', community: 'communaute', announcements: 'annonce', embeds: 'embed', members: 'membres', stats: 'stats', logs: 'journal', transcripts: 'transcript', modmail: 'modmail', server: 'reglages', botprofile: 'bot', help: 'aide' };
+Dashboard.moduleIcon = (id, ico) => (Dashboard.HOX_EMOTES[id]
+  ? `<img class="hox-ico" src="/emotes/hox_${Dashboard.HOX_EMOTES[id]}.png" alt="${ico}" onerror="this.replaceWith(document.createTextNode(this.alt))" />`
+  : ico);
 Dashboard.persistedModule = () => {
   try {
     const saved = localStorage.getItem('hx-module');
@@ -684,7 +690,7 @@ Dashboard.renderSide = (aside) => {
 
   aside.appendChild(App.el(`<div class="dash-side-section">Gestion du serveur</div>`));
   Dashboard.MODULES.forEach(([id, ico, label]) => {
-    const b = App.el(`<button class="dash-side-item ${Dashboard.state.module === id ? 'active' : ''}" data-m="${id}"><span class="ico">${ico}</span>${label}</button>`);
+    const b = App.el(`<button class="dash-side-item ${Dashboard.state.module === id ? 'active' : ''}" data-m="${id}"><span class="ico">${Dashboard.moduleIcon(id, ico)}</span>${label}</button>`);
     b.onclick = () => Dashboard.setModule(id);
     aside.appendChild(b);
   });
@@ -697,7 +703,7 @@ Dashboard.renderSide = (aside) => {
 
     aside.appendChild(App.el(`<div class="dash-side-section">Administration du bot</div>`));
     Dashboard.BOT_MODULES.forEach(([id, ico, label]) => {
-      const b = App.el(`<button class="dash-side-item ${Dashboard.state.module === id ? 'active' : ''}" data-m="${id}"><span class="ico">${ico}</span>${label}</button>`);
+      const b = App.el(`<button class="dash-side-item ${Dashboard.state.module === id ? 'active' : ''}" data-m="${id}"><span class="ico">${Dashboard.moduleIcon(id, ico)}</span>${label}</button>`);
       b.onclick = () => Dashboard.setModule(id);
       aside.appendChild(b);
     });
@@ -757,7 +763,7 @@ Dashboard.renderBottomNav = (nav) => {
   Dashboard.BNav.forEach(([id, ico, label]) => {
     const b = App.el(`
       <button class="bnav-item ${cur === id ? 'active' : ''}" data-bnav="${id}" aria-label="${label}" ${cur === id ? 'aria-current="page"' : ''}>
-        <span class="bnav-ico" aria-hidden="true">${ico}</span>
+        <span class="bnav-ico" aria-hidden="true">${Dashboard.moduleIcon(id, ico)}</span>
         <span class="bnav-label">${label}</span>
       </button>`);
     b.onclick = () => Dashboard.setModule(id);
@@ -786,7 +792,7 @@ Dashboard.openMoreSheet = () => {
       <div class="sheet-grid">
         ${Dashboard.MODULES.map(([id, ico, label]) => `
           <button class="sheet-item ${Dashboard.state.module === id ? 'active' : ''}" data-sheet="${id}">
-            <span class="sheet-ico">${ico}</span><span>${label}</span>
+            <span class="sheet-ico">${Dashboard.moduleIcon(id, ico)}</span><span>${label}</span>
           </button>`).join('')}
       </div>
       ${isAdmin ? `
@@ -794,7 +800,7 @@ Dashboard.openMoreSheet = () => {
         <div class="sheet-grid">
           ${Dashboard.BOT_MODULES.map(([id, ico, label]) => `
             <button class="sheet-item ${Dashboard.state.module === id ? 'active' : ''}" data-sheet="${id}">
-              <span class="sheet-ico">${ico}</span><span>${label}</span>
+              <span class="sheet-ico">${Dashboard.moduleIcon(id, ico)}</span><span>${label}</span>
             </button>`).join('')}
         </div>` : ''}
     </div>
@@ -857,7 +863,7 @@ Dashboard.openPalette = () => {
     list.innerHTML = '';
     if (!shown.length) { list.appendChild(App.el(`<div class="dp-empty">Aucun résultat</div>`)); return; }
     shown.forEach((e, i) => {
-      const row = App.el(`<button class="dp-item ${i === sel ? 'sel' : ''}"><span class="dp-ico">${e.ico}</span><span class="dp-label">${App.escapeHtml(e.label)}</span><span class="dp-sub">${e.sub}</span></button>`);
+      const row = App.el(`<button class="dp-item ${i === sel ? 'sel' : ''}"><span class="dp-ico">${Dashboard.moduleIcon(e.id, e.ico)}</span><span class="dp-label">${App.escapeHtml(e.label)}</span><span class="dp-sub">${e.sub}</span></button>`);
       row.onclick = () => go(e);
       row.onmouseenter = () => { sel = i; renderList(); };
       list.appendChild(row);
@@ -1186,7 +1192,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
     groups.forEach(([label, entries]) => {
       moduleList.appendChild(App.el(`<div class="dash-mobile-module-group">${App.escapeHtml(label)}</div>`));
       entries.forEach(([id, icon, name]) => {
-        const button = App.el(`<button type="button" class="dash-mobile-module-item ${Dashboard.state.module === id ? 'active' : ''}" data-mobile-module="${App.escapeHtml(id)}"><span>${icon}</span><b>${App.escapeHtml(name)}</b><i>›</i></button>`);
+        const button = App.el(`<button type="button" class="dash-mobile-module-item ${Dashboard.state.module === id ? 'active' : ''}" data-mobile-module="${App.escapeHtml(id)}"><span>${Dashboard.moduleIcon(id, icon)}</span><b>${App.escapeHtml(name)}</b><i>›</i></button>`);
         button.onclick = () => { closeMobileDrawers(); Dashboard.setModule(id); };
         moduleList.appendChild(button);
       });

@@ -6189,3 +6189,7 @@ html.hx-os-pc .dashboard-shell-host .dash-topbar-actions {
 }
 .dash-account-chip .chip-txt small { font-size: 10.5px; color: var(--d-dim); }
 .dash-account-chip .dash-iconbtn { width: 30px; height: 30px; }
+
+/* v274 — icônes PNG Hoxera (pack d'émojis maison) */
+.hox-ico { width: 20px; height: 20px; border-radius: 6px; object-fit: contain; vertical-align: -4px; }
+.dash-mobile-module-item .hox-ico { width: 22px; height: 22px; }
