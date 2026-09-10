@@ -531,7 +531,10 @@ async function execute(botId, entry, cmd, src) {
         if (!src._replied) { await src.interaction.reply(payload); src._replied = true; }
         else await src.interaction.followUp(payload);
       } else {
-        await channel.send(payload);
+        // v263 — on renvoie le message envoyé (préfixe) : l'appelant peut
+        // programmer son effacement (aide !help). Les autres appels ignorent
+        // simplement ce retour.
+        return await channel.send(payload);
       }
     } catch (e) {
       console.error('[BotDev] send:', (e && e.message) || e);
@@ -641,7 +644,23 @@ async function execute(botId, entry, cmd, src) {
       if (isInt) requested = src.interaction.options.getString('commande') || null;
       else requested = String(src.args || '').trim().split(/\s+/)[0] || null;
       // 📚 v262 — centre d'aide « pro » : panneau V2 + menu déroulant.
-      await send(buildHelpPanel(botId, record, client, guild, requested, member, 'home'));
+      // 🧹 v263 — demande du maître : l'aide ne doit pas rester affichée dans
+      // le salon. En slash, le panneau devient ÉPHÉMÈRE (seule la personne qui
+      // tape /help le voit) ; le bouton « 🗑️ Effacer » le fait disparaître
+      // aussi de chez elle. En préfixe (!help), l'éphémère n'existe pas :
+      // le bouton reste, réservé à la personne qui a tapé la commande.
+      const panel = buildHelpPanel(botId, record, client, guild, requested, member, 'home', author ? author.id : '');
+      if (isInt) {
+        const { MessageFlags } = require('discord.js');
+        panel.flags = (panel.flags || 0) | MessageFlags.Ephemeral;
+        await send(panel);
+      } else {
+        // 🧹 v263 — préfixe : message public → auto-effacement après 5 min.
+        const msg = await send(panel);
+        if (msg && typeof msg.delete === 'function') {
+          setTimeout(() => { msg.delete().catch(() => {}); }, HELP_AUTODELETE_MS);
+        }
+      }
       break;
     }
     case 'rank': {
@@ -1320,6 +1339,9 @@ function helpDescription() {
 // staff sur le détail, commandes personnalisées.
 // ============================================================
 const HELP_SELECT_ID = (botId) => `hx-help:${botId}`;
+// 🧹 v263 — le !help (préfixe, message public) s'efface tout seul après
+// 5 minutes en plus du bouton 🗑️. Au mieux : un redémarrage annule le délai.
+const HELP_AUTODELETE_MS = 5 * 60 * 1000;
 
 function helpDetailsAll() {
   const { HELP_EXTRA } = require('./extra');
@@ -1344,6 +1366,13 @@ function helpVisibleBlocks(botId, guild, member) {
     if (visible.length) out.push({ key: `c${index}`, title: block.title, kind: block.kind, names: visible });
   });
   return out;
+}
+
+// Ligne de navigation + (v263) bouton d'effacement quand on sait qui demande.
+function helpRows(botId, blocks, hasCustom, current, authorId = '') {
+  const rows = [helpSelectRow(botId, blocks, hasCustom, current)];
+  if (authorId) rows.push(helpDeleteRow(botId, authorId));
+  return rows;
 }
 
 function helpSelectRow(botId, blocks, hasCustom, current) {
@@ -1377,11 +1406,23 @@ function helpSelectRow(botId, blocks, hasCustom, current) {
   );
 }
 
+// 🧹 v263 — bouton d'effacement : seule la personne qui a demandé l'aide
+// peut le presser (son identifiant est porté par l'identifiant du bouton).
+function helpDeleteRow(botId, authorId) {
+  const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`hx-helpdel:${botId}:${authorId}`)
+      .setLabel('🗑️ Effacer ce message')
+      .setStyle(ButtonStyle.Secondary),
+  );
+}
+
 function helpFooter(record, client) {
   return `Préfixe : ${record.prefix} · /help commande pour le détail · Bot : ${client.user.username}`;
 }
 
-function buildHelpPanel(botId, record, client, guild, requested, member, view = 'home') {
+function buildHelpPanel(botId, record, client, guild, requested, member, view = 'home', authorId = '') {
   const ui = require('./ui');
   const COLOR = '#e07a5f';
   const DETAILS = helpDetailsAll();
@@ -1398,7 +1439,7 @@ function buildHelpPanel(botId, record, client, guild, requested, member, view = 
           color: '#ED4245',
           title: '🔒 Commande réservée au staff',
           description: `« ${requested} » est réservée au **staff** de ce serveur (modération, administration ou configuration).\nSi vous pensez que vous devriez y avoir accès, demandez à un administrateur de vous accorder le rôle ou la permission correspondante.`,
-        });
+        }, authorId ? [helpDeleteRow(botId, authorId)] : []);
       }
       const fields = [{ name: '📖 Utilisation', value: detail[2] }];
       if (detail[3]) fields.push({ name: '✨ Exemple', value: detail[3] });
@@ -1408,13 +1449,13 @@ function buildHelpPanel(botId, record, client, guild, requested, member, view = 
         description: detail[1],
         fields,
         footer: `Bot : ${client.user.username} · /help pour le sommaire`,
-      });
+      }, authorId ? [helpDeleteRow(botId, authorId)] : []);
     }
     return ui.v2panel({
       color: '#ED4245',
       title: '❓ Commande introuvable',
       description: `Je ne connais pas la commande « ${requested} ».\nTapez \`/help\` pour voir le sommaire.`,
-    });
+    }, authorId ? [helpDeleteRow(botId, authorId)] : []);
   }
 
   const blocks = helpVisibleBlocks(botId, guild, member);
@@ -1443,7 +1484,7 @@ function buildHelpPanel(botId, record, client, guild, requested, member, view = 
       description: `Les commandes créées pour CE serveur · \`/help commande\` pour le détail.`,
       fields: [{ name: `🧩 Commandes personnalisées · ${custom.length}`, value: lines.join('\n').slice(0, 3500) }],
       footer: helpFooter(record, client),
-    }, [helpSelectRow(botId, blocks, hasCustom, 'custom')]);
+    }, helpRows(botId, blocks, hasCustom, 'custom', authorId));
   }
   if (view !== 'home') {
     const block = blocks.find((b) => b.key === view);
@@ -1455,7 +1496,7 @@ function buildHelpPanel(botId, record, client, guild, requested, member, view = 
         description: `${block.names.length} commande${block.names.length > 1 ? 's' : ''} · \`/help commande\` pour l'utilisation et un exemple.`,
         fields: [{ name: `${block.title} · ${block.names.length}`, value: lines.join('\n').slice(0, 3500) }],
         footer: helpFooter(record, client),
-      }, [helpSelectRow(botId, blocks, hasCustom, block.key)]);
+      }, helpRows(botId, blocks, hasCustom, block.key, authorId));
     }
     view = 'home'; // vue inconnue ou permission perdue → sommaire
   }
@@ -1480,11 +1521,26 @@ function buildHelpPanel(botId, record, client, guild, requested, member, view = 
     thumbnail: client.user.displayAvatarURL({ dynamic: true }),
     fields,
     footer: helpFooter(record, client),
-  }, [helpSelectRow(botId, blocks, hasCustom, 'home')]);
+  }, helpRows(botId, blocks, hasCustom, 'home', authorId));
 }
 
 // 📂 Interaction du menu déroulant : met à jour le panneau sur place.
 async function handleHelpSelect(botId, entry, i) {
+  // 🧹 v263 — bouton « 🗑️ Effacer ce message » : réservé à la personne qui a
+  // demandé l'aide (son identifiant est dans l'identifiant du bouton).
+  if (i.isButton && i.isButton()) {
+    const cid = String(i.customId || '');
+    const prefixId = `hx-helpdel:${botId}:`;
+    if (!cid.startsWith(prefixId)) return false;
+    const who = cid.slice(prefixId.length);
+    if (String((i.user && i.user.id) || '') !== who) {
+      await i.reply({ content: "⛔ Seule la personne qui a demandé l'aide peut effacer ce panneau.", ephemeral: true }).catch(() => {});
+      return true;
+    }
+    await i.deferUpdate().catch(() => {});
+    try { await i.deleteReply(); } catch { try { await i.message.delete(); } catch {} }
+    return true;
+  }
   if (!i.isStringSelectMenu || !i.isStringSelectMenu()) return false;
   if (String(i.customId || '') !== HELP_SELECT_ID(botId)) return false;
   const view = String((i.values && i.values[0]) || 'home');
@@ -1494,4 +1550,4 @@ async function handleHelpSelect(botId, entry, i) {
   return true;
 }
 
-module.exports = { MODULES, CMD_DEFS, ADMIN_COMMAND_NAMES, HELP_BLOCKS, defaultPermissionBitsFor, commandKind, canViewCommandName, enabledModules, enabledCommandNames, buildSlashPayloads, handlePremadePrefix, handlePremadeSlash, buildHelpPanel, handleHelpSelect, HELP_SELECT_ID, fetchRandomMeme, fetchMemeJson, MEME_FR_SOURCES, MEME_API };
+module.exports = { MODULES, CMD_DEFS, ADMIN_COMMAND_NAMES, HELP_BLOCKS, defaultPermissionBitsFor, commandKind, canViewCommandName, enabledModules, enabledCommandNames, buildSlashPayloads, handlePremadePrefix, handlePremadeSlash, buildHelpPanel, handleHelpSelect, HELP_SELECT_ID, HELP_AUTODELETE_MS, helpDeleteRow, fetchRandomMeme, fetchMemeJson, MEME_FR_SOURCES, MEME_API };
