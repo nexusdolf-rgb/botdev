@@ -2785,6 +2785,9 @@ router.post('/bots/:id/guilds/:guildId/voicetemp/panel', requireAuth, async (req
     if (!guild) return res.status(404).json({ error: 'Serveur introuvable pour ce bot.' });
     const cfg = store.voicetemp.get(bot.id, req.params.guildId) || {};
     store.voicetemp.set(bot.id, req.params.guildId, { ...cfg, panel_channel: channelId });
+    // v275 — on (ré)installe nos émojis vocaux avant d'envoyer le panneau :
+    // s'ils ont changé de style, les anciens sont remplacés automatiquement.
+    try { await require('./discord/extra').installVtEmotes(bot.id, guild); } catch {}
     const messageId = await require('./discord/extra').sendVtPanel(bot.id, guild, channelId);
     res.json({ ok: true, message: messageId });
   } catch (e) {

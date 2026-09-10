@@ -831,7 +831,14 @@ async function handleSlash(botId, entry, interaction) {
       if (action === 'emotes') {
         try {
           const created = await installVtEmotes(botId, guild);
-          return interaction.reply({ content: created.length ? `🎨 **${created.length} émojis Hoxera installés** : le panneau de contrôle vocal les affichera automatiquement.` : '🎨 Les émojis Hoxera sont déjà installés sur ce serveur.', ephemeral: true });
+          let note = '';
+          if (created.length) {
+            const cfg = store.voicetemp.get(botId, guild.id);
+            if (cfg && cfg.panel_channel) {
+              try { await sendVtPanel(botId, guild, cfg.panel_channel); note = "\n🎙️ Le **panneau de contrôle** a été mis à jour avec les nouveaux émojis."; } catch {}
+            }
+          }
+          return interaction.reply({ content: created.length ? `🎨 **${created.length} émojis Hoxera installés** : le panneau de contrôle vocal les affichera automatiquement.${note}` : '🎨 Les émojis Hoxera sont déjà installés sur ce serveur.', ephemeral: true });
         } catch (e) {
           return interaction.reply({ content: `⚠️ Installation impossible : ${String(e.message || e).slice(0, 160)}\nLe bot a besoin de la permission « Gérer les expressions ».`, ephemeral: true });
         }
@@ -1545,18 +1552,34 @@ function vtEmoji(guild, key) {
 }
 async function installVtEmotes(botId, guild) {
   const fs = require('fs'); const path = require('path');
+  const crypto = require('crypto');
+  // v275 — REMPLACEMENT : si nos fichiers d'émojis changent (ex. passage en
+  // style premium), on supprime les anciens et on recrée ; si rien n'a
+  // changé, on ne touche à rien (idempotent).
+  const dir = path.join(__dirname, '..', 'assets', 'voicetemp');
+  const blobs = {};
+  const hash = crypto.createHash('sha256');
+  for (const key of VT_EMOTES) {
+    const file = path.join(dir, 'hox_' + key + '.png');
+    const buf = fs.existsSync(file) ? fs.readFileSync(file) : Buffer.alloc(0);
+    blobs[key] = buf;
+    hash.update(buf);
+  }
+  const ver = hash.digest('hex').slice(0, 16);
+  const savedVer = store.settings.get(`vt_emotes_ver:${guild.id}`);
   const map = vtEmotesOf(guild);
   const created = [];
   for (const key of VT_EMOTES) {
     const name = 'hox_' + key;
     const existing = guild.emojis && guild.emojis.cache ? guild.emojis.cache.find((e) => e.name === name) : null;
-    if (existing) { map[key] = existing.id; continue; }
-    const file = path.join(__dirname, '..', 'assets', 'voicetemp', name + '.png');
-    if (!fs.existsSync(file)) continue;
-    const em = await guild.emojis.create({ attachment: fs.readFileSync(file), name });
+    if (existing && savedVer === ver) { map[key] = existing.id; continue; }
+    if (existing) { try { await existing.delete(); } catch {} }
+    if (!blobs[key].length) continue;
+    const em = await guild.emojis.create({ attachment: blobs[key], name });
     map[key] = em.id; created.push(name);
   }
   store.settings.set(`vt_emotes:${guild.id}`, JSON.stringify(map));
+  store.settings.set(`vt_emotes_ver:${guild.id}`, ver);
   return created;
 }
 

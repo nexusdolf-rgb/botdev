@@ -44,16 +44,12 @@ const KEYS = ['vue', 'ticket', 'bienvenue', 'niveaux', 'eco', 'boutique', 'mod',
   check('…tous sous la limite Discord (256 Ko)', KEYS.every((k) => fs.statSync(path.join(assets, 'hox_' + k + '.png')).size < 256000));
   check('liste officielle du pack', JSON.stringify(extra.HOX_SIG_EMOTES.slice().sort()) === JSON.stringify(KEYS.slice().sort()));
 
-  console.log('— 2. Dashboard : nos PNG comme icônes de modules —');
+  console.log("— 2. Dashboard laissé intact (icônes d'origine) —");
   const dash = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'dashboard.js'), 'utf8');
   const carte = (dash.match(/Dashboard\.HOX_EMOTES = \{([^}]*)\}/) || [0, ''])[1];
-  check('carte module → émoji (25 entrées)', (carte.match(/:/g) || []).length >= 25);
-  check('helper moduleIcon avec repli texte', dash.includes('Dashboard.moduleIcon = (id, ico) =>') && dash.includes('onerror="this.replaceWith(document.createTextNode(this.alt))"'));
-  check('…utilisé dans la nav, la grille, la recherche et le mobile', (dash.match(/Dashboard\.moduleIcon\(/g) || []).length >= 7);
-  check('css .hox-ico présent', fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'dashboard.css'), 'utf8').includes('.hox-ico {'));
-
-  console.log('— 3. Discord : /emotes install & view —');
-  const cmd = extra.buildExtraPayloads(BOT).find((p) => p.name === 'emotes');
+  check('dashboard REVENUs aux icônes d origine (sans nos PNG)', !dash.includes('moduleIcon') && !dash.includes('HOX_EMOTES'));
+  check('css dashboard sans .hox-ico', !fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'dashboard.css'), 'utf8').includes('.hox-ico'));
+  const cmd = extra.buildExtraPayloads().find((c) => c && c.name === 'emotes');
   check('commande /emotes (install / view)', !!cmd && JSON.stringify(cmd.options).includes('install') && JSON.stringify(cmd.options).includes('view'));
   let seq = 0;
   const made = [];
@@ -73,8 +69,8 @@ const KEYS = ['vue', 'ticket', 'bienvenue', 'niveaux', 'eco', 'boutique', 'mod',
   console.log('— 4. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=274 référencé 7 fois', (index.match(/\?v=274/g) || []).length === 7);
-  check('sw.js : cache « botdev-v274 »', sw.includes("const CACHE = 'botdev-v274';"));
+  check('index.html : ?v=275 référencé 7 fois', (index.match(/\?v=275/g) || []).length === 7);
+  check('sw.js : cache « botdev-v275 »', sw.includes("const CACHE = 'botdev-v275';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v274 — ${ok} vérifications OK : nos émojis Hoxera partout.`);
