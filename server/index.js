@@ -268,6 +268,16 @@ async function main() {
   setTimeout(runLiveSweep, 10000);
   setInterval(runLiveSweep, 60000);
 
+  // 📊 v264 — Compteurs en salons vocaux : balayage toutes les 2 minutes.
+  // Le module ne renomme que si le chiffre a changé (limite Discord respectée).
+  const runStatSweep = () => {
+    try {
+      require('./discord/statChannels').sweep(botManager).catch((e) => console.error('[Hoxera] stat sweep :', e.message));
+    } catch (e) { console.error('[Hoxera] statChannels indisponible :', e.message); }
+  };
+  setTimeout(runStatSweep, 20000);
+  setInterval(runStatSweep, 120000);
+
   // 🎮 Événements & tournois : rappels 24 h / 1 h avant + nettoyage du passé
   const runGuildEventSweep = () => {
     try {

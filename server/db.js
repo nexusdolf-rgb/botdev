@@ -663,6 +663,9 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN xp_card INTEGER DEFAULT 1")
 // AFK, et réduction progressive après plusieurs heures (anti-AFK).
 // ------------------------------------------------------------
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN voice_xp_enabled INTEGER DEFAULT 0"); } catch (e) {}
+// 📊 v264 — compteurs en salons vocaux : catégorie + IDs des salons créés.
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN stat_category TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN stat_ids TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN voice_xp_rate INTEGER DEFAULT 10"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN voice_xp_interval INTEGER DEFAULT 3"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN voice_xp_min_members INTEGER DEFAULT 2"); } catch (e) {}
@@ -1110,7 +1113,9 @@ const guildSettings = {
     // sinon better-sqlite3 lève « Missing named parameter » et AUCUN réglage du
     // serveur ne peut plus être enregistré.
     'voice_xp_enabled', 'voice_xp_rate', 'voice_xp_interval', 'voice_xp_min_members',
-    'voice_xp_ignore_muted', 'voice_xp_ignore_afk', 'voice_xp_taper'];
+    'voice_xp_ignore_muted', 'voice_xp_ignore_afk', 'voice_xp_taper',
+    // 📊 v264 — compteurs en salons vocaux.
+    'stat_category', 'stat_ids'];
     const vals = {
       bot_id: botId, guild_id: guildId,
       prefix: String(next.prefix || '').slice(0, 5),
@@ -1151,6 +1156,8 @@ const guildSettings = {
         ? 1 : (next.voice_xp_ignore_afk ? 1 : 0),
       voice_xp_taper: (next.voice_xp_taper === undefined || next.voice_xp_taper === null)
         ? 1 : (next.voice_xp_taper ? 1 : 0),
+      stat_category: String(next.stat_category || '').slice(0, 64),
+      stat_ids: String(next.stat_ids || '').slice(0, 512),
       ticket_room: (next.ticket_room && typeof next.ticket_room === 'object')
         ? JSON.stringify(next.ticket_room).slice(0, 4000)
         : String(next.ticket_room || '').slice(0, 4000),

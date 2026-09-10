@@ -36,6 +36,12 @@ const MODULES = {
     label: 'Communauté', emoji: '🎉', description: 'Giveaways, suggestions, boutique, rôles temporaires, sanctions…',
     commands: ['giveaway', 'suggest', 'suggestions', 'shop', 'buy', 'pay', 'temprole', 'sanction'],
   },
+  // 📊 v264 — compteurs en salons vocaux : module à part, activable/coupable
+  // depuis le dashboard comme les autres.
+  stats: {
+    label: 'Statistiques', emoji: '📊', description: 'Compteurs en salons vocaux (membres, en ligne, boosts)…',
+    commands: ['statchannels'],
+  },
 };
 
 const CMD_DEFS = {
@@ -74,6 +80,7 @@ const CMD_DEFS = {
   giveaway: { label: 'giveaway', desc: 'Lancer un giveaway avec tirage automatique', perms: [PermissionsBitField.Flags.Administrator] },
   suggest: { label: 'suggest', desc: 'Proposer une suggestion (votes 👍👎)' },
   suggestions: { label: 'suggestions', desc: 'Configurer le salon des suggestions', perms: [PermissionsBitField.Flags.Administrator] },
+  statchannels: { label: 'statchannels', desc: 'Compteurs en salons vocaux (membres, en ligne, boosts)', perms: [PermissionsBitField.Flags.Administrator] },
   shop: { label: 'shop', desc: 'Voir la boutique du serveur' },
   buy: { label: 'buy', desc: 'Acheter un article avec vos coins' },
   pay: { label: 'pay', desc: 'Transférer des coins à un membre' },
@@ -100,7 +107,7 @@ const CMD_DEFS = {
 // Commandes de configuration enregistrées hors CMD_DEFS (payloads dédiés)
 const ADMIN_COMMAND_NAMES = new Set([
   'ticket', 'botprofile', 'modlogs', 'blacklist', 'roles',
-  'lockdown', 'voicetemp', 'apply', 'event',
+  'lockdown', 'voicetemp', 'apply', 'event', 'statchannels',
 ]);
 
 function defaultPermissionBitsFor(def) {
@@ -155,6 +162,7 @@ const HELP_BLOCKS = [
   // regroupe aussi la sécurité (lockdown) et les vocaux temporaires.
   { title: '🚨 Sécurité & événements', kind: 'admin', names: ['lockdown', 'voicetemp', 'apply', 'event'] },
   { title: '⚙️ Configuration avancée', kind: 'admin', names: ['giveaway', 'suggestions', 'lang', 'say'] },
+  { title: '📊 Statistiques en salons vocaux', kind: 'admin', names: ['statchannels'] },
 ];
 
 function enabledModules(botId) {
@@ -208,6 +216,13 @@ function buildSlashPayloads(botId) {
     }
     if (['help'].includes(name)) {
       options.push({ name: 'commande', description: 'Nom de la commande à détailler (ex : ticket)', type: ApplicationCommandOptionType.String, required: false });
+    }
+    if (['statchannels'].includes(name)) {
+      options.push({ name: 'action', description: 'setup · off · view', type: ApplicationCommandOptionType.String, required: false, choices: [
+        { name: '🏗️ Activer (crée la catégorie verrouillée)', value: 'setup' },
+        { name: '🧹 Désactiver (supprime category et salons)', value: 'off' },
+        { name: "👁️ Voir l'état actuel", value: 'view' },
+      ]});
     }
     if (['suggest'].includes(name)) {
       options.push({ name: 'texte', description: 'Votre suggestion', type: ApplicationCommandOptionType.String, required: true });
@@ -662,6 +677,44 @@ async function execute(botId, entry, cmd, src) {
         }
       }
       break;
+    }
+    case 'statchannels': {
+      // 📊 v264 — compteurs en salons vocaux : catégorie verrouillée dont les
+      // noms de salons sont des statistiques en direct.
+      const sc = require('./statChannels');
+      const action = isInt
+        ? (src.interaction.options.getString('action') || 'view')
+        : (String(src.args || '').trim().split(/\s+/)[0] || 'view');
+      if (!guild) return reply('⛔ Cette commande fonctionne uniquement sur un serveur.');
+      if (action === 'setup') {
+        await sc.setupGuild(botId, guild);
+        return replyPanel({
+          color: '#e07a5f',
+          title: '📊 Compteurs activés',
+          description: 'La catégorie verrouillée « 📊 Statistiques du serveur » a été créée avec trois salons :\n**👥 Membres** · **🟢 En ligne** · **🚀 Boosts**\nPersonne ne peut les rejoindre ; les noms se mettent à jour tout seuls dès que le chiffre change.',
+          footer: `Hoxera · ${guild.name}`,
+        });
+      }
+      if (action === 'off') {
+        const removed = await sc.offGuild(botId, guild);
+        return replyPanel({
+          color: '#e07a5f',
+          title: '📊 Compteurs désactivés',
+          description: removed ? `Catégorie et salons de statistiques supprimés (${removed} élément${removed > 1 ? 's' : ''}).` : "Les compteurs n'étaient pas activés sur ce serveur.",
+          footer: `Hoxera · ${guild.name}`,
+        });
+      }
+      const gs = store.guildSettings.get(botId, guild.id) || {};
+      const stats = sc.computeStats(guild);
+      const active = !!String(gs.stat_ids || '');
+      return replyPanel({
+        color: '#e07a5f',
+        title: '📊 Compteurs en salons vocaux',
+        description: active
+          ? `**Activés** dans la catégorie <#${gs.stat_category}>.\n${sc.statName('members', stats.members)} · ${sc.statName('online', stats.online)} · ${sc.statName('boosts', stats.boosts)}`
+          : '**Désactivés** sur ce serveur. Utilisez `/statchannels action:setup` pour créer la catégorie verrouillée et ses trois salons.',
+        footer: `Hoxera · ${guild.name}`,
+      });
     }
     case 'rank': {
       // 🎴 v216 — Carte de niveau « façon DraftBot » : avatar, grand niveau,
@@ -1320,6 +1373,8 @@ const HELP_DETAILS = {
     '`/botprofile setup` — **Assistant pas à pas** : nom → bio → **sélecteur de couleurs** → avatar (**📱 votre galerie s\'ouvre directement**, envoyez la photo) → bannière (galerie aussi) → ✅ Enregistrer (boutons Suivant/Retour/Annuler)\n`/botprofile view` — voir le profil\n`/botprofile set nom|bio|couleur` — nom, bio, couleur\n`/botprofile avatar` — 📱 la galerie s\'ouvre automatiquement\n`/botprofile banner` — 📱 galerie aussi\n`/botprofile reset` — revenir à l\'identité globale\n\n🔒 Réservé au **propriétaire du serveur** ou à un membre ayant la permission **Administrateur**'],
   modlogs: ['📋 Journaux', 'Un salon où le bot trace tout : modération, tickets, auto-mod, arrivées et départs.',
     '`/modlogs set #salon` — activer\n`/modlogs view` — voir\n`/modlogs off` — désactiver'],
+  statchannels: ['📊 Compteurs vocaux', 'Une catégorie verrouillée avec trois salons vocaux impossibles à rejoindre dont les noms affichent les statistiques en direct : membres, membres en ligne, boosts. Mise à jour automatique dès que le chiffre change.',
+    "`/statchannels action:setup` — créer la catégorie et les salons\n`/statchannels action:view` — voir l'état et les chiffres actuels\n`/statchannels action:off` — supprimer la catégorie et les salons\n\n🔒 Réservé au **propriétaire du serveur** ou aux membres ayant la permission **Administrateur**"],
   blacklist: ['🔇 Liste noire', 'Des mots interdits : les messages qui les contiennent sont supprimés automatiquement.',
     '`/blacklist add mot` · `/blacklist remove mot` · `/blacklist list`'],
 };
