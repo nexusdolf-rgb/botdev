@@ -1511,38 +1511,44 @@ function vtClaimableChannel(botId, guild, userId) {
 }
 
 // Le panneau de contrôle, envoyé dans le salon textuel choisi.
+// v272 — présentation façon TempVoice (la référence pro) : une LÉGENDE
+// émoji + nom dans le message, une phrase d'invitation, puis des boutons
+// CARRÉS SANS TEXTE (juste nos émojis Hoxera) alignés par rangées de 5.
 function buildVtPanel(botId, guild) {
   const { ActionRowBuilder, ButtonBuilder, ButtonStyle, UserSelectMenuBuilder } = require('discord.js');
   const id = (act) => `vt:${botId}:${act}`;
   const emo = (key) => vtEmoji(guild, key);
-  // Rangée 1 : les 5 boutons du salon, façon TempVoice mais en émojis Hoxera.
+  const tag = (key, label) => {
+    const e = emo(key);
+    return /^\d+$/.test(String(e)) ? `<:hox_${key}:${e}> ${label}` : `${e} ${label}`;
+  };
+  const legende = [
+    [tag('nom', 'NOM'), tag('limite', 'LIMITE'), tag('prive', 'PRIVÉ'), tag('public', 'PUBLIC'), tag('recup', 'RÉCUPÉRER')].join('   '),
+    [tag('ajouter', 'AJOUTER'), tag('retirer', 'RETIRER'), tag('expulser', 'EXPULSER'), tag('transfer', 'TRANSFÉRER'), tag('suppr', 'SUPPRIMER')].join('   '),
+  ].join('\n');
+  // Rangée 1 : les 5 boutons du salon, carrés, émojis seuls (style TempVoice).
   const row1 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(id('rename')).setEmoji(emo('nom')).setLabel('NOM').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(id('limit')).setEmoji(emo('limite')).setLabel('LIMITE').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(id('lock')).setEmoji(emo('prive')).setLabel('PRIVÉ').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(id('unlock')).setEmoji(emo('public')).setLabel('PUBLIC').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(id('claim')).setEmoji(emo('recup')).setLabel('RÉCUPÉRER').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(id('rename')).setEmoji(emo('nom')).setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(id('limit')).setEmoji(emo('limite')).setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(id('lock')).setEmoji(emo('prive')).setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(id('unlock')).setEmoji(emo('public')).setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(id('claim')).setEmoji(emo('recup')).setStyle(ButtonStyle.Secondary),
   );
-  const sel = (act, key, ph) => new ActionRowBuilder().addComponents(
-    new UserSelectMenuBuilder().setCustomId(id(act)).setPlaceholder(`${VT_EMOTE_FALLBACK[key]} ${ph}`).setMinValues(1).setMaxValues(1),
-  );
-  const row2 = sel('add', 'ajouter', 'AJOUTER UN MEMBRE…');
-  const row3 = sel('rem', 'retirer', 'RETIRER / EXPULSER UN MEMBRE…');
-  const row4 = sel('transfer', 'transfer', 'TRANSFÉRER LA PROPRIÉTÉ…');
-  // 5 rangées maximum par message Discord : la suppression prend la dernière.
-  const row5 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(id('del')).setEmoji(emo('suppr')).setLabel('SUPPRIMER').setStyle(ButtonStyle.Danger),
+  // v272 — AJOUTER / RETIRER / EXPULSER / TRANSFÉRER sont des BOUTONS-ÉMOJIS
+  // (comme TempVoice) : un appui ouvre un petit panneau PERSONNEL avec le
+  // menu « utilisateur » pour choisir le membre en 2 clics.
+  const row2 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(id('add')).setEmoji(emo('ajouter')).setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(id('rem')).setEmoji(emo('retirer')).setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(id('kick')).setEmoji(emo('expulser')).setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(id('transfer')).setEmoji(emo('transfer')).setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(id('del')).setEmoji(emo('suppr')).setStyle(ButtonStyle.Danger),
   );
   return ui.v2panel({
     color: '#e07a5f',
-    title: '🎙️ Panneau de contrôle de votre salon vocal',
-    description: 'Rejoignez le salon vocal **« ➕ Créer un vocal »** : un salon **à votre nom** se crée et vous y êtes déplacé automatiquement.\nVous êtes **administrateur de votre salon** : accès, membres, nom, places, suppression.\n👀 Chaque réponse est **personnelle** : personne ne voit ce que vous cliquez.',
-    fields: [
-      { name: '🔒 🔓 🔑 ACCÈS', value: "PRIVÉ = personne n'entre, sauf vos invités. PUBLIC = tout le serveur. RÉCUPÉRER = reprendre un salon dont le propriétaire est parti." },
-      { name: '➕ ➖ 👢 MEMBRES', value: 'Ajoutez un membre, ou retirez-le (s\'il est dans le salon, il en est expulsé), en le choisissant dans les menus.' },
-      { name: '✏️ 👥 🗑️ SALON', value: 'Renommez, fixez une limite de places (0 = illimité), ou supprimez le salon (automatique une fois vide).' },
-    ],
-  }, [row1, row2, row3, row4, row5]);
+    title: '🎙️ Interface Hoxera — vocaux temporaires',
+    description: `Cette interface sert à gérer **votre salon vocal temporaire** (créé en rejoignant « ➕ Créer un vocal »). Chaque réponse est **personnelle**.\n\n${legende}\n\n**Appuyez sur les boutons ci-dessous pour utiliser l'interface.**`,
+  }, [row1, row2]);
 }
 
 // Envoie (ou remplace) le panneau dans le salon textuel configuré.
@@ -1639,15 +1645,28 @@ async function handleVtInteraction(botId, entry, i) {
     }
     if (act === 'add' || act === 'rem' || act === 'kick' || act === 'transfer') {
       const target = String((i.values && i.values[0]) || '');
-      if (!target) return true;
+      if (!target) {
+        // Bouton-émoji appuyé : petit panneau personnel avec le menu membre.
+        const { ActionRowBuilder, UserSelectMenuBuilder } = require('discord.js');
+        const cfg = {
+          add: ['➕ AJOUTER UN MEMBRE', 'Choisissez le membre à autoriser dans votre salon (même privé).'],
+          rem: ["➖ RETIRER UN MEMBRE", "Choisissez le membre à qui couper l'accès (s'il est dedans, il y reste jusqu'à sa sortie)."],
+          kick: ['👢 EXPULSER UN MEMBRE', 'Choisissez le membre à sortir du vocal ET à empêcher de revenir.'],
+          transfer: ['🤝 TRANSFÉRER LA PROPRIÉTÉ', 'Choisissez le membre qui deviendra propriétaire de votre salon.'],
+        }[act];
+        await i.reply({
+          ...ui.v2panel({ color: '#e07a5f', title: cfg[0], description: cfg[1] }),
+          components: [new ActionRowBuilder().addComponents(new UserSelectMenuBuilder().setCustomId(`vt:${botId}:${act}`).setPlaceholder('Choisissez un membre…').setMinValues(1).setMaxValues(1))],
+          ephemeral: true,
+        }).catch(() => {});
+        return true;
+      }
       if (act === 'add') {
         await channel.permissionOverwrites.edit(target, { ViewChannel: true, Connect: true, Speak: true });
         await say('➕ Membre invité', `<@${target}> peut rejoindre **${channel.name}** — même si votre salon est privé, il fait désormais partie de vos invités.`);
       } else if (act === 'rem') {
-        const inside = channel.members && channel.members.get ? channel.members.get(target) : null;
-        if (inside && inside.voice && typeof inside.voice.setChannel === 'function') await inside.voice.setChannel(null);
         await channel.permissionOverwrites.edit(target, { Connect: false });
-        await say(inside ? '👢 Membre expulsé' : '➖ Membre retiré', inside ? `<@${target}> a été sorti de **${channel.name}** et ne peut plus y entrer.` : `<@${target}> ne peut plus entrer dans **${channel.name}**.`);
+        await say('➖ Membre retiré', `<@${target}> ne peut plus entrer dans **${channel.name}**.`);
       } else if (act === 'kick') {
         const m = channel.members && channel.members.get ? channel.members.get(target) : null;
         if (m && m.voice && typeof m.voice.setChannel === 'function') await m.voice.setChannel(null);

@@ -50,13 +50,13 @@ const mkChannel = (id, name) => {
   const panel = extra.buildVtPanel(botId, null);
   const rows = v2.rows(panel);
   const btn = rows[0].components;
-  check('rangée 1 : 5 boutons NOM LIMITE PRIVÉ PUBLIC RÉCUPÉRER',
-    btn.map((b) => b.label).join('|') === 'NOM|LIMITE|PRIVÉ|PUBLIC|RÉCUPÉRER', btn.map((b) => b.label).join('|'));
-  check('…avec les émojis unicode de repli', btn[0].emoji.name === '✏️' && btn[1].emoji.name === '👥' && btn[4].emoji.name === '🔑');
-  check('rangée 5 : SUPPRIMER en rouge', rows[4].components[0].label === 'SUPPRIMER' && rows[4].components[0].style === 4);
-  const phs = [1, 2, 3].map((i) => rows[i].components[0].placeholder);
-  check('3 menus utilisateur : ajouter / retirer-expulser / transférer',
-    phs[0].includes('AJOUTER') && phs[1].includes('RETIRER') && phs[2].includes('TRANSFÉRER'), phs.join(' / '));
+  check('rangée 1 : 5 boutons carrés (nom/limite/privé/public/récupérer)',
+    btn.map((b) => b.custom_id.split(':').pop()).join('|') === 'rename|limit|lock|unlock|claim');
+  check('…émojis seuls, SANS libellé (style TempVoice)', btn.every((b) => !b.label) && btn[0].emoji.name === '✏️' && btn[1].emoji.name === '👥' && btn[4].emoji.name === '🔑');
+  check('rangée 2 finit par suppression rouge, émoji seul', !rows[1].components[4].label && rows[1].components[4].style === 4);
+  check('légende émoji+nom dans le message', v2.texts(panel).join(' ').includes('NOM') && v2.texts(panel).join(' ').includes('Appuyez sur les boutons'));
+  check('rangée 2 : les 4 boutons membre en émojis seuls',
+    rows[1].components.slice(0, 4).every((c) => c.type === 2 && !c.label && c.emoji));
   check('3 rubriques d\'aide (accès, membres, salon)', v2.texts(panel).length >= 4);
 
   console.log('— 2. NOS émojis : pack, installation, utilisation —');
@@ -99,8 +99,15 @@ const mkChannel = (id, name) => {
   check('…150 demandé : borné à 99 places', ch.limits.length === 1 && ch.limits[0] === 99 && rep && rep.ephemeral === true);
   rep = await replyOf({ ...base('limit'), isModalSubmit: () => true, customId: `vtlimit:${botId}`, fields: { getTextInputValue: () => '0' } });
   check('…0 : illimité', ch.limits[1] === 0);
+  rep = await replyOf(base('kick', { isButton: () => false, isUserSelectMenu: () => true, values: ['U9'] }));
+  check('👢 EXPULSER : sorti du vocal ET accès coupé', kicked.out === true && ch.edits.some(([t, o]) => t === 'U9' && o.Connect === false) && rep.ephemeral === true);
+  ch.edits.length = 0; kicked.out = false;
   rep = await replyOf(base('rem', { isButton: () => false, isUserSelectMenu: () => true, values: ['U9'] }));
-  check('➖👢 RETIRER un membre présent : expulsé du vocal ET accès coupé', kicked.out === true && ch.edits.some(([t, o]) => t === 'U9' && o.Connect === false) && rep.ephemeral === true);
+  check('➖ RETIRER : accès coupé sans expulsion', kicked.out === false && ch.edits.some(([t, o]) => t === 'U9' && o.Connect === false) && rep.ephemeral === true);
+  let pick = null;
+  rep = await replyOf(base('add'));
+  pick = JSON.stringify(rep);
+  check('➕ bouton : panneau personnel avec menu membre', rep.ephemeral === true && pick.includes(`vt:${botId}:add`) && pick.includes('Choisissez un membre'));
   rep = await replyOf(base('transfer', { isButton: () => false, isUserSelectMenu: () => true, values: ['U7'] }));
   check('🤝 TRANSFÉRER : nouveau propriétaire enregistré', extra.vtGetOwner('g1', 'V1') === 'U7' && rep.ephemeral === true);
 
@@ -129,8 +136,8 @@ const mkChannel = (id, name) => {
   console.log('— 6. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=271 référencé 7 fois', (index.match(/\?v=271/g) || []).length === 7);
-  check('sw.js : cache « botdev-v271 »', sw.includes("const CACHE = 'botdev-v271';"));
+  check('index.html : ?v=272 référencé 7 fois', (index.match(/\?v=272/g) || []).length === 7);
+  check('sw.js : cache « botdev-v272 »', sw.includes("const CACHE = 'botdev-v272';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v268 — ${ok} vérifications OK : notre interface pro, avec nos émojis.`);

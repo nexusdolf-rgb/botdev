@@ -59,19 +59,19 @@ const mkGuild = (channels) => ({
   console.log('— 1. Le panneau de contrôle : pro, organisé, complet —');
   const panel = extra.buildVtPanel(botId);
   check('panneau Components V2', v2.isV2(panel));
-  check('titre clair', v2.title(panel).includes('Panneau de contrôle de votre salon vocal'), v2.title(panel));
+  check('titre clair', v2.title(panel).includes('Interface Hoxera — vocaux temporaires'), v2.title(panel));
   const rows = v2.rows(panel);
-  check('5 rangées : boutons, 3 menus, suppression', rows.length === 5);
+  check('2 rangées de 5 boutons-émojis (grille TempVoice)', rows.length === 2);
   const comps = rows.map((r) => r.components || []);
   const btns = comps[0].filter((c) => c.type === 2);
   check('rangée 1 : nom / limite / privé / public / récupérer', btns.length === 5
     && btns[0].custom_id === `vt:${botId}:rename` && btns[1].custom_id === `vt:${botId}:limit`
     && btns[2].custom_id === `vt:${botId}:lock` && btns[3].custom_id === `vt:${botId}:unlock`
     && btns[4].custom_id === `vt:${botId}:claim`);
-  check('rangées 2-4 : menus « utilisateur » (ajouter, retirer, transférer)',
-    comps[1][0].type === 5 && comps[2][0].type === 5 && comps[3][0].type === 5);
-  check('rangée 5 : bouton danger « SUPPRIMER »', comps[4][0].type === 2 && comps[4][0].custom_id === `vt:${botId}:del` && comps[4][0].style === 4);
-  check('explications en 3 rubriques (privé, invités, règles)', v2.texts(panel).length >= 4);
+  check('rangée 2 : ajouter / retirer / expulser / transférer / supprimer',
+    comps[1].filter((c) => c.type === 2).map((c) => c.custom_id.split(':').pop()).join('|') === 'add|rem|kick|transfer|del');
+  check('…suppression en rouge', comps[1][4].custom_id === `vt:${botId}:del` && comps[1][4].style === 4);
+  check('légende des contrôles présente dans le message', v2.texts(panel).join(' ').includes('NOM') && v2.texts(panel).join(' ').includes('SUPPRIMER'));
 
   console.log('— 2. Propriété du salon —');
   store.voicetemp.set(botId, 'g1', { creator_channel: 'HUB', category: '', panel_channel: '' });
@@ -153,9 +153,9 @@ const mkGuild = (channels) => ({
   console.log('— 6. Version —');
   const index = fs.readFileSync(require('path').join(__dirname, '..', 'public/index.html'), 'utf8');
   const sw = fs.readFileSync(require('path').join(__dirname, '..', 'public/sw.js'), 'utf8');
-  check('index.html : ?v=271 référencé 7 fois', (index.match(/\?v=271/g) || []).length === 7,
-    String((index.match(/\?v=271/g) || []).length));
-  check('sw.js : cache « botdev-v271 »', sw.includes("const CACHE = 'botdev-v271';"));
+  check('index.html : ?v=272 référencé 7 fois', (index.match(/\?v=272/g) || []).length === 7,
+    String((index.match(/\?v=272/g) || []).length));
+  check('sw.js : cache « botdev-v272 »', sw.includes("const CACHE = 'botdev-v272';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v267 — ${ok} vérifications OK : chaque membre administre son salon vocal.`);
