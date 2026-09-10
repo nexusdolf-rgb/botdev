@@ -265,7 +265,7 @@ function buildExtraPayloads() {
       default_member_permissions: admin,
       options: [
         { name: 'action', description: 'Action', type: ApplicationCommandOptionType.String, required: true, choices: [
-          { name: 'set', value: 'set' }, { name: 'off', value: 'off' }, { name: 'view', value: 'view' },
+          { name: 'set', value: 'set' }, { name: 'off', value: 'off' }, { name: 'view', value: 'view' }, { name: 'emotes', value: 'emotes' },
         ]},
         { name: 'salon', description: 'Le salon « ➕ Créer un vocal » (pour set)', type: ApplicationCommandOptionType.Channel, required: false },
         { name: 'categorie', description: 'La catégorie des salons créés (pour set)', type: ApplicationCommandOptionType.Channel, required: false },
@@ -307,7 +307,7 @@ const HELP_EXTRA = {
   gamble: ['🎰 Pari', 'Pariez des coins : 50 % de chances de doubler, 50 % de tout perdre.', '`/gamble montant`', '`/gamble 100` → 🎰 JACKPOT ! +100 coins !'],
   rob: ['🦹 Vol', 'Tentez de voler un membre : 40 % de réussite (10-20 % de ses coins). Si vous ratez, vous lui payez une amende !', '`/rob @membre`', '`/rob @Millionnaire` → 🚓 Raté ! Vous lui devez 15 % de votre solde.'],
   lockdown: ['🚨 Anti-raid', 'Verrouille tous les salons texte en 1 clic (personne ne peut écrire sauf les admins) puis rouvre tout. Idéal contre un raid.', '`/lockdown on` · `/lockdown off`', '`/lockdown on` → 🔒 12 salons verrouillés'],
-  voicetemp: ['🔊 Salons vocaux temporaires +', 'Un salon « ➕ Créer un vocal » : dès qu\'un membre le rejoint, un salon à son nom est créé, et il est supprimé automatiquement quand il est vide. Le propriétaire gère SON salon depuis le panneau de contrôle dans le salon textuel choisi : privé/public, invités, renommage, suppression — chaque réponse est personnelle.', '`/voicetemp set` (avec salon + catégorie) · `/voicetemp view` · `/voicetemp off`'],
+  voicetemp: ['🔊 Salons vocaux temporaires +', 'Un salon « ➕ Créer un vocal » : dès qu\'un membre le rejoint, un salon à son nom est créé, et il est supprimé automatiquement quand il est vide. Le propriétaire gère SON salon depuis le panneau de contrôle (style TempVoice, en mieux) : NOM, LIMITE, PRIVÉ, PUBLIC, RÉCUPÉRER, ajout/retrait/expulsion de membres, TRANSFÉRER la propriété, SUPPRIMER — chaque réponse est personnelle. `/voicetemp emotes` installe les émojis Hoxera du panneau.', '`/voicetemp set` (salon + catégorie + panneau) · `/voicetemp emotes` · `/voicetemp view` · `/voicetemp off`'],
   apply: ['📝 Candidatures', 'Les membres cliquent sur un bouton, répondent à VOS questions dans une fenêtre, et leurs réponses arrivent dans un salon avec des boutons Accepter/Refuser pour le staff.', '`/apply set #salon` · `/apply question votre question` (max 5) · `/apply panel` · `/apply view` · `/apply off`', '`/apply set #candidatures` puis `/apply question Quel âge avez-vous ?` puis `/apply panel`'],
   afk: ['🌙 AFK', 'Vous passes AFK : si quelqu\'un vous mentionnez, le bot le prévient. Votre statut se retire tout seul dès que vous écrivez à nouveau.', '`/afk` · `/afk raison`', '`/afk je mange` → 🔕 @X est AFK : je mange (depuis 2 min)'],
   top: ['🏆 Classement', 'Affiche le classement du serveur (XP ou coins) en pages de 10, navigables avec les boutons ◀ ▶.', '`/top` (XP) · `/top type:coins`', '`/top` → 🥇 @Léa — ✨ Niv. 12 (3 250 XP)'],
@@ -804,6 +804,14 @@ async function handleSlash(botId, entry, interaction) {
       if (action === 'off') {
         store.voicetemp.remove(botId, guild.id);
         return interaction.reply({ content: '🔊 Salons vocaux temporaires désactivés.', ephemeral: true });
+      }
+      if (action === 'emotes') {
+        try {
+          const created = await installVtEmotes(botId, guild);
+          return interaction.reply({ content: created.length ? `🎨 **${created.length} émojis Hoxera installés** : le panneau de contrôle vocal les affichera automatiquement.` : '🎨 Les émojis Hoxera sont déjà installés sur ce serveur.', ephemeral: true });
+        } catch (e) {
+          return interaction.reply({ content: `⚠️ Installation impossible : ${String(e.message || e).slice(0, 160)}\nLe bot a besoin de la permission « Gérer les expressions ».`, ephemeral: true });
+        }
       }
       if (action === 'view') {
         const cfg = store.voicetemp.get(botId, guild.id);
@@ -1452,34 +1460,89 @@ function vtNoChannelPanel() {
   });
 }
 
+// v268 — Pack d'émojis Hoxera (générés pour nous, rangés dans server/assets/
+// voicetemp). Installés sur le serveur par /voicetemp emotes ou le dashboard :
+// le panneau affiche NOS émojis ; sinon repli sur les émojis unicode.
+const VT_EMOTES = ['nom', 'limite', 'prive', 'public', 'suppr', 'ajouter', 'retirer', 'expulser', 'recup', 'transfer'];
+const VT_EMOTE_FALLBACK = { nom: '✏️', limite: '👥', prive: '🔒', public: '🔓', suppr: '🗑️', ajouter: '➕', retirer: '➖', expulser: '👢', recup: '🔑', transfer: '🤝' };
+function vtEmotesOf(guild) { try { return JSON.parse(store.settings.get(`vt_emotes:${guild.id}`) || '{}'); } catch { return {}; } }
+function vtEmoji(guild, key) {
+  try {
+    const id = vtEmotesOf(guild)[key];
+    if (guild && id && guild.emojis && guild.emojis.cache) {
+      const e = guild.emojis.cache.get(String(id));
+      if (e) return e.id;
+    }
+  } catch {}
+  return VT_EMOTE_FALLBACK[key];
+}
+async function installVtEmotes(botId, guild) {
+  const fs = require('fs'); const path = require('path');
+  const map = vtEmotesOf(guild);
+  const created = [];
+  for (const key of VT_EMOTES) {
+    const name = 'hox_' + key;
+    const existing = guild.emojis && guild.emojis.cache ? guild.emojis.cache.find((e) => e.name === name) : null;
+    if (existing) { map[key] = existing.id; continue; }
+    const file = path.join(__dirname, '..', 'assets', 'voicetemp', name + '.png');
+    if (!fs.existsSync(file)) continue;
+    const em = await guild.emojis.create({ attachment: fs.readFileSync(file), name });
+    map[key] = em.id; created.push(name);
+  }
+  store.settings.set(`vt_emotes:${guild.id}`, JSON.stringify(map));
+  return created;
+}
+
+// Salon temporaire récupérable : la personne est DEDANS et le propriétaire
+// n'y est plus (parti ou déconnecté).
+function vtClaimableChannel(botId, guild, userId) {
+  const cfg = store.voicetemp.get(botId, guild.id);
+  if (!cfg) return null;
+  let ids = [];
+  try { ids = JSON.parse(store.settings.get(`vt_channels_${guild.id}`) || '[]'); } catch {}
+  for (const id of ids) {
+    const ch = guild.channels.cache.get ? guild.channels.cache.get(id) : null;
+    if (!ch || !ch.members || !ch.members.has) continue;
+    const owner = vtGetOwner(guild.id, id);
+    if (owner && ch.members.has(String(owner))) continue;
+    if (ch.members.has(String(userId))) return ch;
+  }
+  return null;
+}
+
 // Le panneau de contrôle, envoyé dans le salon textuel choisi.
-function buildVtPanel(botId) {
+function buildVtPanel(botId, guild) {
   const { ActionRowBuilder, ButtonBuilder, ButtonStyle, UserSelectMenuBuilder } = require('discord.js');
   const id = (act) => `vt:${botId}:${act}`;
+  const emo = (key) => vtEmoji(guild, key);
+  // Rangée 1 : les 5 boutons du salon, façon TempVoice mais en émojis Hoxera.
   const row1 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(id('lock')).setEmoji('🔒').setLabel('Rendre privé').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(id('unlock')).setEmoji('🔓').setLabel('Rendre public').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(id('rename')).setEmoji('✏️').setLabel('Renommer').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(id('rename')).setEmoji(emo('nom')).setLabel('NOM').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(id('limit')).setEmoji(emo('limite')).setLabel('LIMITE').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(id('lock')).setEmoji(emo('prive')).setLabel('PRIVÉ').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(id('unlock')).setEmoji(emo('public')).setLabel('PUBLIC').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(id('claim')).setEmoji(emo('recup')).setLabel('RÉCUPÉRER').setStyle(ButtonStyle.Secondary),
   );
-  const row2 = new ActionRowBuilder().addComponents(
-    new UserSelectMenuBuilder().setCustomId(id('add')).setPlaceholder('➕ Ajouter un membre à mon salon…').setMinValues(1).setMaxValues(1),
+  const sel = (act, key, ph) => new ActionRowBuilder().addComponents(
+    new UserSelectMenuBuilder().setCustomId(id(act)).setPlaceholder(`${VT_EMOTE_FALLBACK[key]} ${ph}`).setMinValues(1).setMaxValues(1),
   );
-  const row3 = new ActionRowBuilder().addComponents(
-    new UserSelectMenuBuilder().setCustomId(id('rem')).setPlaceholder('➖ Retirer un membre de mon salon…').setMinValues(1).setMaxValues(1),
-  );
-  const row4 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(id('del')).setEmoji('🗑️').setLabel('Supprimer mon salon').setStyle(ButtonStyle.Danger),
+  const row2 = sel('add', 'ajouter', 'AJOUTER UN MEMBRE…');
+  const row3 = sel('rem', 'retirer', 'RETIRER / EXPULSER UN MEMBRE…');
+  const row4 = sel('transfer', 'transfer', 'TRANSFÉRER LA PROPRIÉTÉ…');
+  // 5 rangées maximum par message Discord : la suppression prend la dernière.
+  const row5 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(id('del')).setEmoji(emo('suppr')).setLabel('SUPPRIMER').setStyle(ButtonStyle.Danger),
   );
   return ui.v2panel({
     color: '#e07a5f',
     title: '🎙️ Panneau de contrôle de votre salon vocal',
-    description: 'Rejoignez le salon vocal **« ➕ Créer un vocal »** : un salon **à votre nom** se crée et vous y êtes déplacé automatiquement.\nIci, vous êtes **administrateur de votre salon** : privé ou public, invités, nom, suppression.\n👀 Chaque réponse est **personnelle** : personne ne voit ce que vous cliquez.',
+    description: 'Rejoignez le salon vocal **« ➕ Créer un vocal »** : un salon **à votre nom** se crée et vous y êtes déplacé automatiquement.\nVous êtes **administrateur de votre salon** : accès, membres, nom, places, suppression.\n👀 Chaque réponse est **personnelle** : personne ne voit ce que vous cliquez.',
     fields: [
-      { name: '🔒 Privé / 🔓 Public', value: 'Privé = personne ne peut entrer, sauf les membres que vous ajoutez. Public = tout le serveur peut vous rejoindre.' },
-      { name: '➕ ➖ Invités', value: 'Ajoute ou retire des membres un par un avec les menus ci-dessous.' },
-      { name: '✏️ ️ Votre salon, vos règles', value: 'Renommez-le comme vous voulez, ou supprimez-le quand vous avez terminé (il se supprime aussi tout seul une fois vide).' },
+      { name: '🔒 🔓 🔑 ACCÈS', value: "PRIVÉ = personne n'entre, sauf vos invités. PUBLIC = tout le serveur. RÉCUPÉRER = reprendre un salon dont le propriétaire est parti." },
+      { name: '➕ ➖ 👢 MEMBRES', value: 'Ajoutez un membre, ou retirez-le (s\'il est dans le salon, il en est expulsé), en le choisissant dans les menus.' },
+      { name: '✏️ 👥 🗑️ SALON', value: 'Renommez, fixez une limite de places (0 = illimité), ou supprimez le salon (automatique une fois vide).' },
     ],
-  }, [row1, row2, row3, row4]);
+  }, [row1, row2, row3, row4, row5]);
 }
 
 // Envoie (ou remplace) le panneau dans le salon textuel configuré.
@@ -1493,7 +1556,7 @@ async function sendVtPanel(botId, guild, channelId) {
       if (old) await old.delete();
     } catch {}
   }
-  const msg = await channel.send(buildVtPanel(botId));
+  const msg = await channel.send(buildVtPanel(botId, guild));
   store.voicetemp.set(botId, guild.id, { ...cfg, panel_message: msg.id });
   return msg.id;
 }
@@ -1502,12 +1565,23 @@ async function sendVtPanel(botId, guild, channelId) {
 // de la personne qui clique.
 async function handleVtInteraction(botId, entry, i) {
   const cid = String(i.customId || '');
-  const isVtModal = i.isModalSubmit && i.isModalSubmit() && cid.startsWith(`vtrename:${botId}`);
+  const isVtModal = i.isModalSubmit && i.isModalSubmit() && (cid.startsWith(`vtrename:${botId}`) || cid.startsWith(`vtlimit:${botId}`));
   const isVtComp = !isVtModal && cid.startsWith(`vt:${botId}:`);
   if (!isVtModal && !isVtComp) return false;
   const guild = i.guild;
   if (!guild) return false;
-  const act = isVtModal ? 'rename' : cid.slice(`vt:${botId}:`.length);
+  const act = isVtModal ? (cid.startsWith(`vtrename:${botId}`) ? 'rename' : 'limit') : cid.slice(`vt:${botId}:`.length);
+  if (act === 'claim') {
+    const ch = vtClaimableChannel(botId, guild, i.user.id);
+    if (!ch) {
+      await i.reply({ ...ui.v2panel({ color: '#e07a5f', title: '🔑 Rien à récupérer', description: 'Pour récupérer un salon, soyez **dedans** alors que son propriétaire n\'y est plus (parti ou déconnecté).' }), ephemeral: true }).catch(() => {});
+      return true;
+    }
+    vtSetOwner(guild.id, ch.id, i.user.id);
+    await ch.permissionOverwrites.edit(i.user.id, { Connect: true, ViewChannel: true, Speak: true }).catch(() => {});
+    await i.reply({ ...ui.v2panel({ color: '#e07a5f', title: '🔑 Salon récupéré', description: `Vous êtes maintenant propriétaire de **${ch.name}** : le panneau agit sur ce salon.` }), ephemeral: true }).catch(() => {});
+    return true;
+  }
   const channel = vtChannelOf(botId, guild, i.user.id);
   if (!channel) {
     await i.reply({ ...vtNoChannelPanel(), ephemeral: true }).catch(() => {});
@@ -1547,15 +1621,42 @@ async function handleVtInteraction(botId, entry, i) {
       await i.showModal(modal);
       return true;
     }
-    if (act === 'add' || act === 'rem') {
+    if (act === 'limit') {
+      if (isVtModal) {
+        const raw = String(i.fields.getTextInputValue('limit') || '').trim();
+        const n = Math.max(0, Math.min(99, parseInt(raw, 10) || 0));
+        await channel.setUserLimit(n);
+        await say('👥 Limite fixée', n === 0 ? `**${channel.name}** accepte un nombre illimité de personnes.` : `**${channel.name}** est limité à **${n}** place(s).`);
+        return true;
+      }
+      const { ModalBuilder, ActionRowBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+      const modal = new ModalBuilder().setCustomId(`vtlimit:${botId}`).setTitle('👥 Limite de votre salon vocal');
+      modal.addComponents(new ActionRowBuilder().addComponents(
+        new TextInputBuilder().setCustomId('limit').setLabel('Nombre de places (0 = illimité, 99 max)').setStyle(TextInputStyle.Short).setMaxLength(2).setRequired(true),
+      ));
+      await i.showModal(modal);
+      return true;
+    }
+    if (act === 'add' || act === 'rem' || act === 'kick' || act === 'transfer') {
       const target = String((i.values && i.values[0]) || '');
       if (!target) return true;
       if (act === 'add') {
         await channel.permissionOverwrites.edit(target, { ViewChannel: true, Connect: true, Speak: true });
         await say('➕ Membre invité', `<@${target}> peut rejoindre **${channel.name}** — même si votre salon est privé, il fait désormais partie de vos invités.`);
-      } else {
+      } else if (act === 'rem') {
+        const inside = channel.members && channel.members.get ? channel.members.get(target) : null;
+        if (inside && inside.voice && typeof inside.voice.setChannel === 'function') await inside.voice.setChannel(null);
         await channel.permissionOverwrites.edit(target, { Connect: false });
-        await say('➖ Membre retiré', `<@${target}> ne peut plus entrer dans **${channel.name}**.`);
+        await say(inside ? '👢 Membre expulsé' : '➖ Membre retiré', inside ? `<@${target}> a été sorti de **${channel.name}** et ne peut plus y entrer.` : `<@${target}> ne peut plus entrer dans **${channel.name}**.`);
+      } else if (act === 'kick') {
+        const m = channel.members && channel.members.get ? channel.members.get(target) : null;
+        if (m && m.voice && typeof m.voice.setChannel === 'function') await m.voice.setChannel(null);
+        await channel.permissionOverwrites.edit(target, { Connect: false });
+        await say('👢 Membre expulsé', `<@${target}> a été sorti de **${channel.name}** et ne peut plus y entrer (➕ pour le réinviter).`);
+      } else {
+        vtSetOwner(guild.id, channel.id, target);
+        await channel.permissionOverwrites.edit(target, { ViewChannel: true, Connect: true, Speak: true });
+        await say('🤝 Propriété transférée', `<@${target}> est maintenant propriétaire de **${channel.name}** : c'est lui qui le gère.`);
       }
       return true;
     }
@@ -1567,7 +1668,7 @@ async function handleVtInteraction(botId, entry, i) {
       return true;
     }
   } catch (e) {
-    await say('⚠️ Action impossible', `Discord a refusé l'action : ${String(e.message || e).slice(0, 180)}\nVérifie que le bot a bien les permissions de gérer les salons.`, '#ED4245');
+    await say('⚠️ Action impossible', `Discord a refusé l'action : ${String(e.message || e).slice(0, 180)}\nVérifiez que le bot a bien les permissions de gérer les salons.`, '#ED4245');
     return true;
   }
   return false;
@@ -1759,4 +1860,5 @@ module.exports = {
   // 🧪 États internes exposés pour les tests (anti-fuite mémoire)
   _test: { penduGames, morpionGames, pollState, quizState, capMap },
   buildVtPanel, sendVtPanel, handleVtInteraction, vtSetOwner, vtGetOwner, vtClearOwner, vtChannelOf,
+  installVtEmotes, vtClaimableChannel, vtEmoji, VT_EMOTES, VT_EMOTE_FALLBACK,
 };

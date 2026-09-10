@@ -6177,7 +6177,7 @@ Dashboard.renderers.server = async (content, data) => {
       ${vtTextChannels.map((ch) => `<option value="${ch.id}" ${String(vt.panel_channel || '') === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('')}
     </select>
     <div style="font-size:12px;color:var(--d-dim);margin-top:8px">🎙️ Dans ce salon, un panneau permet à chaque propriétaire d'un vocal temporaire de gérer SON salon : 🔒 privé / 🔓 public, ➕ ➖ invités, ✏️ renommer, 🗑️ supprimer. Chaque réponse ne se voit que chez lui.</div>
-    <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap"><button class="dash-btn dash-btn-primary" id="vt-save">💾 Enregistrer</button><button class="dash-btn" id="vt-panel-send">🎙️ Envoyer / mettre à jour le panneau</button></div>`;
+    <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap"><button class="dash-btn dash-btn-primary" id="vt-save">💾 Enregistrer</button><button class="dash-btn" id="vt-panel-send">🎙️ Envoyer / mettre à jour le panneau</button><button class="dash-btn" id="vt-emotes" title="Installe les 10 émojis Hoxera du panneau vocal sur ce serveur">🎨 Installer les émojis Hoxera</button></div>`;
   c4.querySelector('#vt-save').onclick = async () => {
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/voicetemp`, { method: 'PUT', body: {
@@ -6187,6 +6187,12 @@ Dashboard.renderers.server = async (content, data) => {
         panel_channel: c4.querySelector('#vt-panel').value,
       }});
       App.toast('Salons vocaux enregistrés !');
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+  c4.querySelector('#vt-emotes').onclick = async () => {
+    try {
+      const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/voicetemp/emotes`, { method: 'POST', body: {} });
+      App.toast(r.created && r.created.length ? `🎨 ${r.created.length} émojis Hoxera installés !` : '🎨 Émojis déjà installés.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
   c4.querySelector('#vt-panel-send').onclick = async () => {

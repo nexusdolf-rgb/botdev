@@ -87,8 +87,8 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('dash : bouton restaurer les valeurs par défaut', dash.includes('id="tr-default"'));
 
   // ---------- 6. Version ----------
-  check('site : bump v212 (index)', index.includes('?v=267'));
-  check('site : bump v212 (sw cache)', sw.includes('botdev-v267'));
+  check('site : bump v212 (index)', index.includes('?v=268'));
+  check('site : bump v212 (sw cache)', sw.includes('botdev-v268'));
 
   console.log(`  ✅ v212 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });

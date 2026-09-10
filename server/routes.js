@@ -2770,6 +2770,24 @@ router.post('/bots/:id/guilds/:guildId/voicetemp/panel', requireAuth, async (req
   }
 });
 
+// v268 — installe le pack d'émojis Hoxera du panneau vocal sur le serveur.
+router.post('/bots/:id/guilds/:guildId/voicetemp/emotes', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  try {
+    const botManager = require('./discord/botManager');
+    const entry = botManager.clients.get(bot.id);
+    if (!entry || !entry.client.isReady()) return res.status(503).json({ error: 'Bot hors ligne, réessayez dans une minute.' });
+    const guild = entry.client.guilds.cache.get(req.params.guildId);
+    if (!guild) return res.status(404).json({ error: 'Serveur introuvable pour ce bot.' });
+    const created = await require('./discord/extra').installVtEmotes(bot.id, guild);
+    res.json({ ok: true, created });
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e).slice(0, 200) });
+  }
+});
+
 router.delete('/bots/:id/guilds/:guildId/voicetemp', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
   if (!bot) return;

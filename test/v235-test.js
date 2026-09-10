@@ -74,9 +74,9 @@ const check = (label, ok) => {
   console.log('\n1️⃣  Couverture source — extra.js entièrement en V2');
   check('plus aucun ui.panel(', count('ui.panel(') === 0);
   check('plus aucun ui.embed(', count('ui.embed(') === 0);
-  // v267 — +3 sites : panneau vocaux temporaires (vtNoChannelPanel,
-  // buildVtPanel, réponse éphémère say).
-  check('35 emplacements en ui.v2panel(', count('ui.v2panel(') === 35);
+  // v267 +3 sites (panneau vocaux temporaires), v268 +2 sites (réponses
+  // éphémères de RÉCUPÉRER).
+  check('37 emplacements en ui.v2panel(', count('ui.v2panel(') === 37);
   // Les 2 occurrences restantes de « ui.sectionize( » sont dans des
   // COMMENTAIRES (la note v230 sur /poll et la note v235 sur /apply view).
   check('plus aucun ui.sectionize( ACTIF (2 occurrences, toutes en commentaire)',
