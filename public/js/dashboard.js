@@ -537,6 +537,7 @@ Dashboard.MODULES = [
   ['giveaways', '🎁', 'Giveaways'],
   ['events', '🎮', 'Événements'],
   ['quiz', '🧠', 'Quiz'],
+  ['voicetemp', '🎙️', 'Vocal'],
   ['community', '⭐', 'Communauté & Lives'],
   ['announcements', '📅', 'Annonces'],
   ['embeds', '🧱', 'Embed Builder'],
@@ -6061,11 +6062,76 @@ Dashboard.renderers.community = async (content, data) => {
 };
 
 // ---------- Réglages serveur ----------
+// 🎙️ v269 — module Vocal dédié : la carte des vocaux temporaires a son propre
+// onglet dans la liste des modules (elle était cachée dans Réglages serveur).
+Dashboard.renderers.voicetemp = async (content, data) => {
+  const { bot, guildId } = Dashboard.state;
+  const root = Dashboard.header(content, '🎙️', 'Vocal', 'Salons vocaux temporaires, panneau de contrôle et émojis Hoxera.');
+  const categories = (data.channels || []).filter((ch) => ch.category);
+  // 🔊 Salons vocaux temporaires
+  const vt = data.voicetemp || { creator_channel: '', category: '', name_template: '', panel_channel: '' };
+  const voiceChannels = (data.channels || []).filter((ch) => ch.voice);
+  const vtTextChannels = (data.channels || []).filter((ch) => ch.text && !ch.voice);
+  const c4 = Dashboard.card(root, '🔊 Salons vocaux temporaires', 'Un salon « ➕ Créer un vocal » : le bot crée un vocal au nom du membre et le supprime quand il est vide.');
+  c4.innerHTML += `
+    <label class="dash-label">Salon de création (vocal)</label>
+    <select class="dash-select" id="vt-channel">
+      <option value="">— Désactivé —</option>
+      ${voiceChannels.map((ch) => `<option value="${ch.id}" ${String(vt.creator_channel || '') === ch.id ? 'selected' : ''}>🔊 ${App.escapeHtml(ch.name)}</option>`).join('')}
+    </select>
+    <label class="dash-label">Catégorie des vocaux créés</label>
+    <select class="dash-select" id="vt-cat">
+      <option value="">— Catégorie du salon de création —</option>
+      ${categories.map((ch) => `<option value="${ch.id}" ${String(vt.category || '') === ch.id ? 'selected' : ''}>📁 ${App.escapeHtml(ch.name)}</option>`).join('')}
+    </select>
+    <label class="dash-label">Nom des salons (optionnel)</label>
+    <input class="dash-input" id="vt-name" value="${App.escapeHtml(vt.name_template || '')}" placeholder="🔊 {name}" style="max-width:300px" />
+    <label class="dash-label">🎙️ Salon textuel du panneau de contrôle</label>
+    <select class="dash-select" id="vt-panel">
+      <option value="">— Aucun panneau —</option>
+      ${vtTextChannels.map((ch) => `<option value="${ch.id}" ${String(vt.panel_channel || '') === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('')}
+    </select>
+    <div style="font-size:12px;color:var(--d-dim);margin-top:8px">🎙️ Dans ce salon, un panneau permet à chaque propriétaire d'un vocal temporaire de gérer SON salon : 🔒 privé / 🔓 public, ➕ ➖ invités, ✏️ renommer, 🗑️ supprimer. Chaque réponse ne se voit que chez lui.</div>
+    <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap"><button class="dash-btn dash-btn-primary" id="vt-save">💾 Enregistrer</button><button class="dash-btn" id="vt-panel-send">🎙️ Envoyer / mettre à jour le panneau</button><button class="dash-btn" id="vt-emotes" title="Installe les 10 émojis Hoxera du panneau vocal sur ce serveur">🎨 Installer les émojis Hoxera</button></div>`;
+  c4.querySelector('#vt-save').onclick = async () => {
+    try {
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/voicetemp`, { method: 'PUT', body: {
+        creator_channel: c4.querySelector('#vt-channel').value,
+        category: c4.querySelector('#vt-cat').value,
+        name_template: c4.querySelector('#vt-name').value.trim() || '🔊 {name}',
+        panel_channel: c4.querySelector('#vt-panel').value,
+      }});
+      App.toast('Salons vocaux enregistrés !');
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+  c4.querySelector('#vt-emotes').onclick = async () => {
+    try {
+      const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/voicetemp/emotes`, { method: 'POST', body: {} });
+      App.toast(r.created && r.created.length ? `🎨 ${r.created.length} émojis Hoxera installés !` : '🎨 Émojis déjà installés.');
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+  c4.querySelector('#vt-panel-send').onclick = async () => {
+    const channelId = c4.querySelector('#vt-panel').value;
+    if (!channelId) { App.toast("Choisissez d'abord un salon textuel pour le panneau.", 'error'); return; }
+    try {
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/voicetemp`, { method: 'PUT', body: {
+        creator_channel: c4.querySelector('#vt-channel').value,
+        category: c4.querySelector('#vt-cat').value,
+        name_template: c4.querySelector('#vt-name').value.trim() || '🔊 {name}',
+        panel_channel: channelId,
+      }});
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/voicetemp/panel`, { method: 'POST', body: { channel: channelId } });
+      App.toast('🎙️ Panneau de contrôle envoyé !');
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+
+};
+
 Dashboard.renderers.server = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const s = data.settings;
   const currentLanguage = ['fr', 'en'].includes(String(s.lang || 'fr')) ? String(s.lang || 'fr') : 'fr';
-  const root = Dashboard.header(content, '⚙️', 'Réglages du serveur', 'Préfixe, langue, anniversaires, salons vocaux temporaires et plus.');
+  const root = Dashboard.header(content, '⚙️', 'Réglages du serveur', 'Préfixe, langue, anniversaires, anti-raid et plus.');
   const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
   const categories = (data.channels || []).filter((ch) => ch.category);
   const rolesList = data.roles || [];
@@ -6150,63 +6216,6 @@ Dashboard.renderers.server = async (content, data) => {
         birthday_role: c3.querySelector('#bd-role').value,
       }});
       App.toast('Anniversaires enregistrés !');
-    } catch (e) { App.toast(e.message, 'error'); }
-  };
-
-  // 🔊 Salons vocaux temporaires
-  const vt = data.voicetemp || { creator_channel: '', category: '', name_template: '', panel_channel: '' };
-  const voiceChannels = (data.channels || []).filter((ch) => ch.voice);
-  const vtTextChannels = (data.channels || []).filter((ch) => ch.text && !ch.voice);
-  const c4 = Dashboard.card(root, '🔊 Salons vocaux temporaires', 'Un salon « ➕ Créer un vocal » : le bot crée un vocal au nom du membre et le supprime quand il est vide.');
-  c4.innerHTML += `
-    <label class="dash-label">Salon de création (vocal)</label>
-    <select class="dash-select" id="vt-channel">
-      <option value="">— Désactivé —</option>
-      ${voiceChannels.map((ch) => `<option value="${ch.id}" ${String(vt.creator_channel || '') === ch.id ? 'selected' : ''}>🔊 ${App.escapeHtml(ch.name)}</option>`).join('')}
-    </select>
-    <label class="dash-label">Catégorie des vocaux créés</label>
-    <select class="dash-select" id="vt-cat">
-      <option value="">— Catégorie du salon de création —</option>
-      ${categories.map((ch) => `<option value="${ch.id}" ${String(vt.category || '') === ch.id ? 'selected' : ''}>📁 ${App.escapeHtml(ch.name)}</option>`).join('')}
-    </select>
-    <label class="dash-label">Nom des salons (optionnel)</label>
-    <input class="dash-input" id="vt-name" value="${App.escapeHtml(vt.name_template || '')}" placeholder="🔊 {name}" style="max-width:300px" />
-    <label class="dash-label">🎙️ Salon textuel du panneau de contrôle</label>
-    <select class="dash-select" id="vt-panel">
-      <option value="">— Aucun panneau —</option>
-      ${vtTextChannels.map((ch) => `<option value="${ch.id}" ${String(vt.panel_channel || '') === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('')}
-    </select>
-    <div style="font-size:12px;color:var(--d-dim);margin-top:8px">🎙️ Dans ce salon, un panneau permet à chaque propriétaire d'un vocal temporaire de gérer SON salon : 🔒 privé / 🔓 public, ➕ ➖ invités, ✏️ renommer, 🗑️ supprimer. Chaque réponse ne se voit que chez lui.</div>
-    <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap"><button class="dash-btn dash-btn-primary" id="vt-save">💾 Enregistrer</button><button class="dash-btn" id="vt-panel-send">🎙️ Envoyer / mettre à jour le panneau</button><button class="dash-btn" id="vt-emotes" title="Installe les 10 émojis Hoxera du panneau vocal sur ce serveur">🎨 Installer les émojis Hoxera</button></div>`;
-  c4.querySelector('#vt-save').onclick = async () => {
-    try {
-      await App.api(`/bots/${bot.id}/guilds/${guildId}/voicetemp`, { method: 'PUT', body: {
-        creator_channel: c4.querySelector('#vt-channel').value,
-        category: c4.querySelector('#vt-cat').value,
-        name_template: c4.querySelector('#vt-name').value.trim() || '🔊 {name}',
-        panel_channel: c4.querySelector('#vt-panel').value,
-      }});
-      App.toast('Salons vocaux enregistrés !');
-    } catch (e) { App.toast(e.message, 'error'); }
-  };
-  c4.querySelector('#vt-emotes').onclick = async () => {
-    try {
-      const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/voicetemp/emotes`, { method: 'POST', body: {} });
-      App.toast(r.created && r.created.length ? `🎨 ${r.created.length} émojis Hoxera installés !` : '🎨 Émojis déjà installés.');
-    } catch (e) { App.toast(e.message, 'error'); }
-  };
-  c4.querySelector('#vt-panel-send').onclick = async () => {
-    const channelId = c4.querySelector('#vt-panel').value;
-    if (!channelId) { App.toast("Choisissez d'abord un salon textuel pour le panneau.", 'error'); return; }
-    try {
-      await App.api(`/bots/${bot.id}/guilds/${guildId}/voicetemp`, { method: 'PUT', body: {
-        creator_channel: c4.querySelector('#vt-channel').value,
-        category: c4.querySelector('#vt-cat').value,
-        name_template: c4.querySelector('#vt-name').value.trim() || '🔊 {name}',
-        panel_channel: channelId,
-      }});
-      await App.api(`/bots/${bot.id}/guilds/${guildId}/voicetemp/panel`, { method: 'POST', body: { channel: channelId } });
-      App.toast('🎙️ Panneau de contrôle envoyé !');
     } catch (e) { App.toast(e.message, 'error'); }
   };
 

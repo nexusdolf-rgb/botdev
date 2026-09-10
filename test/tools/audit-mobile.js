@@ -21,7 +21,7 @@ const MODULES = ARGS[1]
   ? ARGS[1].split(',')
   : ['overview', 'tickets', 'welcome', 'levels', 'economy', 'shop', 'moderation', 'antinuke',
     'roles', 'suggestions', 'giveaways', 'events', 'quiz', 'community', 'announcements',
-    'embeds', 'members', 'stats', 'logs', 'transcripts', 'modmail', 'server', 'botprofile',
+    'embeds', 'members', 'stats', 'logs', 'transcripts', 'modmail', 'server', 'botprofile', 'voicetemp',
     'commands', 'modules', 'health', 'botsettings', 'help'];
 
 // ---------- Données simulées réalistes ----------
