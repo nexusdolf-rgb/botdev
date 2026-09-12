@@ -538,6 +538,7 @@ Dashboard.MODULES = [
   ['events', '🎮', 'Événements'],
   ['quiz', '🧠', 'Quiz'],
   ['voicetemp', '🎙️', 'Vocal'],
+  ['ai', '🤖', 'Hoxera AI'],
   ['community', '⭐', 'Communauté & Lives'],
   ['announcements', '📅', 'Annonces'],
   ['embeds', '🧱', 'Embed Builder'],
@@ -6945,4 +6946,134 @@ Dashboard.renderers.help = async (content) => {
   root.appendChild(App.el(block('🆘', 'Besoin d\'aide ?', `
     <p style="margin:0 0 12px;color:var(--d-dim);line-height:1.6">Rejoignez le serveur support officiel : l'équipe et la communauté répondent en français.</p>
     <a class="dash-btn" target="_blank" rel="noopener" href="https://discord.gg/X9hTdr9N3" style="text-decoration:none">🆘 Rejoindre le support</a>`)));
+};
+
+// ============================================================
+// 🤖 Hoxera AI (v278) — section dashboard du moteur IA centralisé
+// ============================================================
+Dashboard.renderers.ai = async (content, data) => {
+  const { bot, guildId } = Dashboard.state;
+  const ai = data.ai || { cfg: {}, status: { standby: true }, stats: {} };
+  const cfg = ai.cfg || {};
+  const st = ai.status || {};
+  const mods = cfg.modules || {};
+  const root = Dashboard.header(content, '🤖', 'Hoxera AI', "Moteur IA centralisé : conversation, tickets, modération, FAQ, images, staff, stats et anti-spam — réglables par serveur, sur plan gratuit.");
+
+  const banner = st.standby
+    ? '<div style="padding:10px 12px;border-radius:10px;background:rgba(224,122,95,.12);border:1px solid rgba(224,122,95,.4);margin-bottom:14px">😴 <b>IA en veille</b> — collez une clé API gratuite (Groq, sans carte bancaire) ci-dessous pour réveiller Hoxera AI. Aucun coût, aucune donnée envoyée tant que la clé est absente.</div>'
+    : (cfg.enabled ? '<div style="padding:10px 12px;border-radius:10px;background:rgba(80,200,120,.12);border:1px solid rgba(80,200,120,.4);margin-bottom:14px">✅ <b>IA active</b> sur ce serveur.</div>'
+                   : '<div style="padding:10px 12px;border-radius:10px;background:rgba(150,150,150,.12);border:1px solid rgba(150,150,150,.4);margin-bottom:14px">⏸️ <b>IA désactivée</b> sur ce serveur (clé présente).</div>');
+
+  const cKey = Dashboard.card(root, '🔑 Clé API & test', 'La clé est stockée par bot, jamais renvoyée au navigateur en clair.');
+  cKey.innerHTML += banner + `
+    <label class="dash-label">Clé API (Groq recommandé : console.groq.com → gratuite, sans carte)</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input class="dash-input" id="ai-key" type="password" placeholder="gsk_… ou AIza… (laisser vide pour ne pas changer)" style="max-width:420px" autocomplete="off" />
+      <button class="dash-btn dash-btn-primary" id="ai-key-save">💾 Enregistrer la clé</button>
+      <button class="dash-btn" id="ai-test">🧪 Tester l'IA</button>
+    </div>
+    <div id="ai-test-out" style="margin-top:10px;font-size:12.5px;color:var(--d-dim);white-space:pre-wrap"></div>`;
+
+  const cEng = Dashboard.card(root, '⚙️ Moteur', 'Fournisseur, modèle, débit et niveau de modération.');
+  cEng.innerHTML += `
+    <label style="display:flex;gap:8px;align-items:center;margin-bottom:10px"><input type="checkbox" id="ai-enabled" ${cfg.enabled ? 'checked' : ''} /> Activer Hoxera AI sur ce serveur</label>
+    <label class="dash-label">Fournisseur IA</label>
+    <select class="dash-select" id="ai-provider">
+      <option value="groq" ${cfg.provider === 'groq' ? 'selected' : ''}>Groq — plan gratuit (recommandé)</option>
+      <option value="gemini" ${cfg.provider === 'gemini' ? 'selected' : ''}>Google Gemini — plan gratuit</option>
+      <option value="openrouter" ${cfg.provider === 'openrouter' ? 'selected' : ''}>OpenRouter — modèles gratuits</option>
+      <option value="openai" ${cfg.provider === 'openai' ? 'selected' : ''}>OpenAI — payant (secours)</option>
+    </select>
+    <label class="dash-label">Modèle</label>
+    <select class="dash-select" id="ai-model"></select>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px">
+      <div><label class="dash-label">Limite de requêtes / heure / serveur</label><select class="dash-select" id="ai-limit" style="max-width:140px">${[5, 10, 20, 30, 50, 100, 200].map((n) => `<option value="${n}" ${(cfg.limit_per_hour || 20) === n ? 'selected' : ''}>${n} / heure</option>`).join('')}</select></div>
+      <div><label class="dash-label">Niveau de modération IA</label><select class="dash-select" id="ai-modlevel">
+        <option value="low" ${cfg.mod_level === 'low' ? 'selected' : ''}>Souple</option>
+        <option value="medium" ${cfg.mod_level === 'medium' ? 'selected' : ''}>Moyen</option>
+        <option value="high" ${cfg.mod_level === 'high' ? 'selected' : ''}>Strict</option>
+      </select></div>
+    </div>
+    <label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="ai-mention" ${cfg.mention_only ? 'checked' : ''} /> Répondre uniquement quand le bot est mentionné (@Hoxera)</label>`;
+
+  const MODES = [['chat', 'IA conversationnelle', true], ['tickets', 'IA pour les tickets', false], ['mod', 'IA de modération', false], ['docs', 'IA règlement / FAQ', false], ['images', "Génération d'images", false], ['staff', 'Assistant IA du staff', false], ['stats', "Analyse de l'activité", false], ['antispam', 'Détection spam & abus', false]];
+  const cMod = Dashboard.card(root, '🧩 Modules IA', 'Activez module par module. Les modules marqués 🔜 arrivent dans les prochaines versions.');
+  cMod.innerHTML += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px">` + MODES.map(([id, label, live]) => `
+    <label style="display:flex;gap:8px;align-items:center;padding:9px 10px;border:1px solid var(--d-line);border-radius:10px;background:var(--d-card2,#ffffff08)">
+      <input type="checkbox" data-aimod="${id}" ${(mods[id] && live) ? 'checked' : ''} ${live ? '' : 'disabled'} />
+      <span style="font-size:13px">${App.escapeHtml(label)} ${live ? '<span style="color:#50c878;font-size:11px">● live</span>' : '<span style="color:var(--d-dim);font-size:11px">🔜 bientôt</span>'}</span>
+    </label>`).join('') + `</div>`;
+
+  const cScope = Dashboard.card(root, '📺 Salons & rôles autorisés', 'Vide = tous les salons / tout le monde.');
+  const textCh = (data.channels || []).filter((ch) => !ch.voice && !ch.category);
+  cScope.innerHTML += `
+    <label class="dash-label">Salons autorisés (Ctrl+clic pour plusieurs)</label>
+    <select class="dash-select" id="ai-channels" multiple size="6">${textCh.map((ch) => `<option value="${ch.id}" ${(cfg.channels || []).includes(ch.id) ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('')}</select>
+    <label class="dash-label">Rôles autorisés (vide = tout le monde)</label>
+    <select class="dash-select" id="ai-roles" multiple size="6">${(data.roles || []).map((r) => `<option value="${r.id}" ${(cfg.roles || []).includes(r.id) ? 'selected' : ''}>@ ${App.escapeHtml(r.name)}</option>`).join('')}</select>`;
+
+  const cSrc = Dashboard.card(root, '📚 Sources (règlement, FAQ, documentation)', 'Une source par ligne : l\'IA FAQ (version suivante) répondra uniquement à partir de ces textes.');
+  cSrc.innerHTML += `<textarea class="dash-input" id="ai-sources" rows="5" style="width:100%;font-size:12.5px" placeholder="Le règlement interdit la publicité…&#10;Pour ouvrir un ticket : /ticket…">${App.escapeHtml((cfg.sources || []).join('\n'))}</textarea>`;
+
+  const cLog = Dashboard.card(root, '📜 Journal & statistiques', 'Derniers appels IA du serveur et compteurs.');
+  cLog.innerHTML += `<div id="ai-stats" style="font-size:12.5px;color:var(--d-dim);margin-bottom:10px"></div><div id="ai-logs" style="font-size:12px;color:var(--d-dim);display:flex;flex-direction:column;gap:4px"></div><div style="margin-top:10px"><button class="dash-btn" id="ai-logs-refresh">🔄 Rafraîchir</button></div>`;
+
+  const MODELS = {
+    groq: [['llama-3.3-70b-versatile', 'Llama 3.3 70B — gratuit, classe pro'], ['llama-3.1-8b-instant', 'Llama 3.1 8B — gratuit, ultra rapide']],
+    gemini: [['gemini-2.5-flash', 'Gemini 2.5 Flash — gratuit'], ['gemini-2.5-flash-lite', 'Gemini 2.5 Flash-Lite — gratuit, éco']],
+    openrouter: [['meta-llama/llama-3.3-70b-instruct:free', 'Llama 3.3 70B (free)'], ['deepseek/deepseek-chat-v3-0324:free', 'DeepSeek V3 (free)']],
+    openai: [['gpt-4o-mini', 'GPT-4o mini — payant, très économique']],
+  };
+  const fillModels = () => {
+    const sel = cEng.querySelector('#ai-model');
+    const list = MODELS[cEng.querySelector('#ai-provider').value] || MODELS.groq;
+    sel.innerHTML = list.map(([v, l]) => `<option value="${v}" ${v === cfg.model ? 'selected' : ''}>${l}</option>`).join('');
+    if (!list.some(([v]) => v === cfg.model)) sel.value = list[0][0];
+  };
+  fillModels();
+  cEng.querySelector('#ai-provider').onchange = fillModels;
+
+  const collect = () => ({
+    enabled: cEng.querySelector('#ai-enabled').checked,
+    modules: Object.fromEntries(MODES.map(([id]) => [id, id === 'chat' ? cMod.querySelector('[data-aimod="chat"]').checked : !!mods[id]])),
+    channels: Array.from(cScope.querySelector('#ai-channels').selectedOptions).map((o) => o.value),
+    roles: Array.from(cScope.querySelector('#ai-roles').selectedOptions).map((o) => o.value),
+    mention_only: cEng.querySelector('#ai-mention').checked,
+    limit_per_hour: Number(cEng.querySelector('#ai-limit').value) || 20,
+    provider: cEng.querySelector('#ai-provider').value,
+    model: cEng.querySelector('#ai-model').value,
+    mod_level: cEng.querySelector('#ai-modlevel').value,
+    sources: cSrc.querySelector('#ai-sources').value.split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 10),
+  });
+
+  const saveBar = document.createElement('div');
+  saveBar.style.cssText = 'margin-top:14px;display:flex;gap:9px;flex-wrap:wrap';
+  saveBar.innerHTML = '<button class="dash-btn dash-btn-primary" id="ai-save">💾 Enregistrer la configuration IA</button>';
+  root.appendChild(saveBar);
+  saveBar.querySelector('#ai-save').onclick = async () => {
+    const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/ai`, { method: 'PUT', body: collect() });
+    App.toast(r.ok ? '🤖 Configuration Hoxera AI enregistrée.' : '⚠️ Enregistrement impossible.');
+    Dashboard.loadGuild().then((d) => Dashboard.renderers.ai(content, d));
+  };
+  cKey.querySelector('#ai-key-save').onclick = async () => {
+    const key = cKey.querySelector('#ai-key').value.trim();
+    if (!key) return App.toast('⚠️ Collez d\'abord une clé.');
+    const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/ai/key`, { method: 'PUT', body: { key } });
+    App.toast(r.ok ? '🔑 Clé enregistrée (masquée).' : '⚠️ Enregistrement impossible.');
+    Dashboard.loadGuild().then((d) => Dashboard.renderers.ai(content, d));
+  };
+  cKey.querySelector('#ai-test').onclick = async () => {
+    const out = cKey.querySelector('#ai-test-out');
+    out.textContent = '⏳ Interrogation de Hoxera AI…';
+    const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/ai/test`, { method: 'POST', body: { question: 'Bonjour ! Présentez-vous en une phrase.' } });
+    out.textContent = r.ok ? `🤖 ${r.reply}` : `⚠️ ${r.error || r.code}`;
+  };
+  const loadLogs = async () => {
+    const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/ai/logs`);
+    const s = r.stats || {};
+    cLog.querySelector('#ai-stats').innerHTML = `Appels : <b>${s.calls || 0}</b> · réussis : <b>${s.ok || 0}</b> · échecs : <b>${s.err || 0}</b> · tokens : <b>${s.tokens || 0}</b>`;
+    cLog.querySelector('#ai-logs').innerHTML = (r.logs || []).slice(0, 20).map((l) => `<div>${new Date(l.t).toLocaleString('fr-FR')} · ${l.ok ? '✅' : '❌'} ${App.escapeHtml(l.module)} · ${App.escapeHtml(l.q || '')}${l.err ? ' (' + App.escapeHtml(l.err) + ')' : ''}</div>`).join('') || '<div>Aucun appel IA pour le moment.</div>';
+  };
+  cLog.querySelector('#ai-logs-refresh').onclick = loadLogs;
+  loadLogs();
 };

@@ -796,6 +796,61 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
 });
 
 // ============================================================
+// 🤖 Hoxera AI (v278) — config, clé, test, journal
+// ============================================================
+router.put('/bots/:id/guilds/:guildId/ai', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const ai = require('./ai/engine');
+  const b = req.body || {};
+  const patch = {};
+  if (typeof b.enabled === 'boolean') patch.enabled = b.enabled;
+  if (b.modules && typeof b.modules === 'object') patch.modules = Object.fromEntries(ai.MODULES.map((m) => [m, !!b.modules[m]]));
+  if (Array.isArray(b.channels)) patch.channels = b.channels.map(String).slice(0, 50);
+  if (Array.isArray(b.roles)) patch.roles = b.roles.map(String).slice(0, 50);
+  if (typeof b.mention_only === 'boolean') patch.mention_only = b.mention_only;
+  if (b.limit_per_hour !== undefined) patch.limit_per_hour = Math.max(1, Math.min(200, Number(b.limit_per_hour) || 20));
+  if (b.provider && ai.PROVIDERS[b.provider]) patch.provider = b.provider;
+  if (typeof b.model === 'string' && b.model) patch.model = b.model.slice(0, 80);
+  if (['low', 'medium', 'high'].includes(b.mod_level)) patch.mod_level = b.mod_level;
+  if (Array.isArray(b.sources)) patch.sources = b.sources.map((x) => String(x).slice(0, 2000)).slice(0, 10);
+  const cfg = ai.saveCfg(req.params.guildId, patch);
+  res.json({ ok: true, cfg: { ...cfg, key: '' }, status: ai.status(bot.id, req.params.guildId) });
+});
+
+router.put('/bots/:id/guilds/:guildId/ai/key', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const ai = require('./ai/engine');
+  ai.saveKey(bot.id, String((req.body || {}).key || ''));
+  res.json({ ok: true, status: ai.status(bot.id, req.params.guildId) });
+});
+
+router.post('/bots/:id/guilds/:guildId/ai/test', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const ai = require('./ai/engine');
+  const q = String((req.body || {}).question || 'Bonjour, présentez-vous en une phrase.');
+  try {
+    const { text } = await ai.ask(bot.id, req.params.guildId, 'chat', q);
+    res.json({ ok: true, reply: text });
+  } catch (e) {
+    res.json({ ok: false, code: e.code || 'AI_ERR', error: e.message });
+  }
+});
+
+router.get('/bots/:id/guilds/:guildId/ai/logs', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const ai = require('./ai/engine');
+  res.json({ logs: ai.logsOf(req.params.guildId), stats: ai.statsOf(req.params.guildId) });
+});
+
+// ============================================================
 // 🎭 v277 — rôles par réaction emoji
 // ============================================================
 router.put('/bots/:id/guilds/:guildId/reaction_roles', requireAuth, async (req, res) => {

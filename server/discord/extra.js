@@ -264,6 +264,12 @@ function buildExtraPayloads() {
       name: 'sticky', description: '📌 État du message épinglé en bas de salon (v276)',
     },
     {
+      name: 'ai', description: '🤖 Hoxera AI : posez une question à l IA conversationnelle du serveur',
+      options: [
+        { name: 'question', description: 'Votre question', type: ApplicationCommandOptionType.String, required: true },
+      ],
+    },
+    {
       name: 'emotes', description: "🎨 Installe le pack d'émojis Hoxera (icônes des modules) sur le serveur",
       default_member_permissions: admin,
       options: [
@@ -320,6 +326,7 @@ const HELP_EXTRA = {
   rob: ['🦹 Vol', 'Tentez de voler un membre : 40 % de réussite (10-20 % de ses coins). Si vous ratez, vous lui payez une amende !', '`/rob @membre`', '`/rob @Millionnaire` → 🚓 Raté ! Vous lui devez 15 % de votre solde.'],
   lockdown: ['🚨 Anti-raid', 'Verrouille tous les salons texte en 1 clic (personne ne peut écrire sauf les admins) puis rouvre tout. Idéal contre un raid.', '`/lockdown on` · `/lockdown off`', '`/lockdown on` → 🔒 12 salons verrouillés'],
   sticky: 'Message épinglé en bas de salon (sticky) : état et salon configuré. Réglage complet dans le dashboard → Annonces.',
+    ai: 'Hoxera AI — IA conversationnelle branchée sur le moteur central du serveur (clé gratuite, limites, salons autorisés configurables au dashboard).',
     emotes: ["🎨 Émojis Hoxera", "Un pack d'émojis dessinés pour Hoxera, un par module (tickets, modération, niveaux…). `/emotes install` les ajoute au serveur : tout le monde peut les utiliser, et le dashboard affiche les mêmes icônes en PNG.", "`/emotes install` · `/emotes view`"],
   voicetemp: ['🔊 Salons vocaux temporaires +', 'Un salon « ➕ Créer un vocal » : dès qu\'un membre le rejoint, un salon à son nom est créé, et il est supprimé automatiquement quand il est vide. Le propriétaire gère SON salon depuis le panneau de contrôle (style TempVoice, en mieux) : NOM, LIMITE, PRIVÉ, PUBLIC, RÉCUPÉRER, ajout/retrait/expulsion de membres, TRANSFÉRER la propriété, SUPPRIMER — chaque réponse est personnelle. `/voicetemp emotes` installe les émojis Hoxera du panneau.', '`/voicetemp set` (salon + catégorie + panneau) · `/voicetemp emotes` · `/voicetemp view` · `/voicetemp off`'],
   apply: ['📝 Candidatures', 'Les membres cliquent sur un bouton, répondent à VOS questions dans une fenêtre, et leurs réponses arrivent dans un salon avec des boutons Accepter/Refuser pour le staff.', '`/apply set #salon` · `/apply question votre question` (max 5) · `/apply panel` · `/apply view` · `/apply off`', '`/apply set #candidatures` puis `/apply question Quel âge avez-vous ?` puis `/apply panel`'],
@@ -356,7 +363,7 @@ async function handleInteraction(botId, entry, interaction) {
 }
 
 // ---------------------- Commandes slash ----------------------
-const EXTRA_CMDS = new Set(['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch', 'rps', 'pendu', 'morpion', 'birthday', 'remind', 'poll', 'snipe', 'work', 'gamble', 'rob', 'lockdown', 'voicetemp', 'emotes', 'sticky', 'apply', 'invites', 'afk', 'top', 'quiz']);
+const EXTRA_CMDS = new Set(['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch', 'rps', 'pendu', 'morpion', 'birthday', 'remind', 'poll', 'snipe', 'work', 'gamble', 'rob', 'lockdown', 'voicetemp', 'emotes', 'ai', 'sticky', 'apply', 'invites', 'afk', 'top', 'quiz']);
 
 async function handleSlash(botId, entry, interaction) {
   const cmd = interaction.commandName.toLowerCase();
@@ -830,6 +837,26 @@ async function handleSlash(botId, entry, interaction) {
       const st = require('./sticky').cfgOf(guild.id);
       const last = require('./sticky').lastIdOf(guild.id);
       return interaction.reply({ content: st.enabled && st.channel ? `📌 Sticky **actif** dans <#${st.channel}> : republication toutes les ${st.every} messages.${last ? `\nDernier message épinglé : [voir](https://discord.com/channels/${guild.id}/${st.channel}/${last})` : '\nAucun sticky publié pour le moment.'}` : '📌 Sticky **désactivé** sur ce serveur. Réglez-le dans le dashboard → Annonces → « Message épinglé en bas ».', ephemeral: true });
+    }
+    case 'ai': {
+      const question = interaction.options.getString('question');
+      if (!question) return interaction.reply({ content: '❓ Posez une question : `/ai question:...`', ephemeral: true });
+      const ai = require('../ai/engine');
+      const cfg = ai.cfgOf(guild.id);
+      if (cfg.roles.length && member && member.roles && !(member.roles.cache && member.roles.cache.some((r) => cfg.roles.includes(r.id)))) {
+        return interaction.reply({ content: '⛔ Hoxera AI est réservée à certains rôles sur ce serveur.', ephemeral: true });
+      }
+      await interaction.deferReply();
+      try {
+        const { text } = await ai.ask(botId, guild.id, 'chat', question);
+        return interaction.editReply({ content: `🤖 **Hoxera AI**\n${text}`, allowedMentions: { users: [] } });
+      } catch (e) {
+        const msg = e.code === 'AI_NO_KEY' ? '🤖 Hoxera AI est **en veille** sur ce serveur : le propriétaire doit ajouter une clé gratuite dans le dashboard (section Hoxera AI).'
+          : e.code === 'AI_DISABLED' ? '🤖 Hoxera AI est désactivée sur ce serveur (dashboard → Hoxera AI).'
+          : e.code === 'AI_QUOTA' || e.code === 'AI_BUSY' ? `🤖 ${e.message}`
+          : `⚠️ Hoxera AI indisponible pour le moment (${e.code || 'erreur'}).`;
+        return interaction.editReply({ content: msg });
+      }
     }
     case 'voicetemp': {
       if (!isAdmin(member)) return interaction.reply({ content: '⛔ Réservé aux administrateurs.', ephemeral: true });

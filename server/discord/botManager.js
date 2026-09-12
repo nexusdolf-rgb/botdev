@@ -383,6 +383,8 @@ function attachListeners(botId, entry) {
     extra.onMessage(botId, m).catch(() => {});
     // 📌 Sticky (v276) : message épinglé qui remonte en bas du salon
     require('./sticky').onMessage(botId, m).catch(() => {});
+    // 🤖 Hoxera AI (v278) : IA conversationnelle — isolée, ne casse jamais le flux
+    require('../ai/engine').onMessage(botId, m).catch(() => {});
     // 💬 Modmail (v196) : messages privés → serveur, réponses staff → MP
     require('./modmail').onMessage(botId, m).catch((e) => console.error('[BotDev] modmail:', (e && e.message) || e));
     const { runMessageHandler } = require('./engine');

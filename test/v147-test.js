@@ -56,7 +56,7 @@ console.log('2️⃣  Navigation : historique, bouton Retour et comportement mob
 
 const versions = index.match(/\?v=(\d+)/g) || [];
 assert.strictEqual(versions.length, 7);
-assert(versions.every((version) => version === '?v=277'));
-assert(sw.includes("const CACHE = 'botdev-v277';"));
+assert(versions.every((version) => version === '?v=278'));
+assert(sw.includes("const CACHE = 'botdev-v278';"));
 console.log('3️⃣  Cache frontend : assets et service worker synchronisés en v180 ✅');
 console.log('\n🎉 Tous les tests v8 passent !');
