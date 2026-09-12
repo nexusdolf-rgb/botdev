@@ -236,6 +236,12 @@ async function guardInteraction(botId, entry, i, timeoutMs = 15000) {
           if (await require('./verification').handleButton(botId, i)) return;
         }
       } catch (e) { console.error('[BotDev] verification:', (e && e.message) || e); }
+      // 🎁 v292 — bouton « 👥 Participants » des giveaways
+      try {
+        if (i.isButton && i.isButton() && String(i.customId || '').startsWith('hxgw:')) {
+          if (await require('./giveaway').handleParticipants(botId, i)) return;
+        }
+      } catch (e) { console.error('[BotDev] giveaway participants:', (e && e.message) || e); }
       // 📚 v262 — menu déroulant du centre d'aide : la sélection met à jour
       // le panneau sur place (i.update), aucun autre gestionnaire ne la connaît.
       try {
@@ -568,6 +574,8 @@ function attachListeners(botId, entry) {
     community.onReaction(botId, reaction).catch(() => {});
     // 🎭 v277 — rôles par réaction (ignore les messages non déclarés)
     require('./reactionroles').onReaction(botId, reaction, user, 'add').catch(() => {});
+    // 🎁 v292 — conditions de participation aux giveaways (rôle / niveau requis)
+    require('./giveaway').onReaction(botId, reaction, user).catch(() => {});
   });
   client.on('messageReactionRemove', (reaction, user) => {
     const community = require('./community');

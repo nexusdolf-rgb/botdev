@@ -1064,6 +1064,9 @@ router.put('/bots/:id/guilds/:guildId/giveaways/config', requireAuth, async (req
     giveaway_ping_role: String(b.ping_role || '').slice(0, 100),
     giveaway_color: /^#[0-9a-fA-F]{6}$/.test(String(b.color || '')) ? String(b.color) : '',
     giveaway_message: String(b.message || '').slice(0, 1500),
+    giveaway_req_role: String(b.req_role || '').slice(0, 100),
+    giveaway_req_level: Math.min(Math.max(parseInt(b.req_level, 10) || 0, 0), 200),
+    giveaway_reminder: b.reminder ? 1 : 0,
   });
   res.json({ ok: true });
 });

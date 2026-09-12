@@ -82,9 +82,9 @@ check('le rail « pointeur fin » 701-900 px existe toujours',
   css.includes('@media (pointer: fine) and (min-width: 701px) and (max-width: 900px)'));
 
 console.log('— 5. Version —');
-check('index.html : ?v=291 référencé 7 fois', (index.match(/\?v=291/g) || []).length === 7,
-  String((index.match(/\?v=291/g) || []).length));
-check('sw.js : cache « botdev-v291 »', racine('public/sw.js').includes("const CACHE = 'botdev-v291';"));
+check('index.html : ?v=292 référencé 7 fois', (index.match(/\?v=292/g) || []).length === 7,
+  String((index.match(/\?v=292/g) || []).length));
+check('sw.js : cache « botdev-v292 »', racine('public/sw.js').includes("const CACHE = 'botdev-v292';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v253 — ${ok} vérifications OK : un PC est un PC, un mobile est un mobile, sans mesure.`);

@@ -946,6 +946,11 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN giveaway_default_winners IN
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN giveaway_ping_role TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN giveaway_color TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN giveaway_message TEXT DEFAULT ''"); } catch (e) {}
+// v292 — 🎁 conditions de participation (rôle / niveau) + rappel avant la fin
+try { db.exec("ALTER TABLE giveaways ADD COLUMN reminded INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN giveaway_req_role TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN giveaway_req_level INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN giveaway_reminder INTEGER DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN suggestion_color TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN suggestion_ping_role TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN suggestion_downvotes INTEGER DEFAULT 1"); } catch (e) {}
@@ -1112,7 +1117,7 @@ const guildSettings = {
     const cur = guildSettings.get(botId, guildId) || { prefix: '', warn_limit: 0, warn_action: 'none' };
     const next = { ...cur, ...fields };
     const cols = ['prefix', 'warn_limit', 'warn_action', 'warn_timeout_limit', 'warn_timeout_min', 'starboard_channel', 'starboard_min', 'live_channel', 'live_ping', 'ticket_log_channel', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'xp_card', 'ticket_room', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_mode', 'am_rule_actions', 'am_blacklist_rules', 'am_blacklist_thresholds', 'am_blacklist_duration_min', 'am_blacklist_channel', 'am_blacklist_title', 'am_blacklist_color', 'am_blacklist_footer', 'am_escalation', 'am_native_enabled', 'am_native_alert_channel', 'am_exempt_roles', 'am_exempt_channels', 'am_phishing', 'am_phishing_allow', 'am_exempt_users', 'am_warn_text', 'am_timeout_min', 'am_warn_limit', 'am_warn_action', 'am_warn_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'modmail_enabled', 'modmail_channel', 'lang', 'timezone',
-    'giveaway_channel', 'giveaway_default_duration', 'giveaway_default_winners', 'giveaway_ping_role', 'giveaway_color', 'giveaway_message',
+    'giveaway_channel', 'giveaway_default_duration', 'giveaway_default_winners', 'giveaway_ping_role', 'giveaway_color', 'giveaway_message', 'giveaway_req_role', 'giveaway_req_level', 'giveaway_reminder',
     'suggestion_color', 'suggestion_ping_role', 'suggestion_downvotes', 'suggestion_approve_channel',
     'close_dm_message', 'close_dm_image',
     'quiz_channel', 'quiz_points', 'quiz_bonus', 'quiz_bonus_window',
@@ -1260,6 +1265,9 @@ const guildSettings = {
       giveaway_ping_role: String(next.giveaway_ping_role || '').slice(0, 100),
       giveaway_color: /^#[0-9a-fA-F]{6}$/.test(String(next.giveaway_color || '')) ? String(next.giveaway_color) : '',
       giveaway_message: String(next.giveaway_message || '').slice(0, 1500),
+      giveaway_req_role: String(next.giveaway_req_role || '').slice(0, 100),
+      giveaway_req_level: Math.min(Math.max(parseInt(next.giveaway_req_level, 10) || 0, 0), 200),
+      giveaway_reminder: (next.giveaway_reminder === 1 || next.giveaway_reminder === true || next.giveaway_reminder === '1') ? 1 : 0,
       suggestion_color: /^#[0-9a-fA-F]{6}$/.test(String(next.suggestion_color || '')) ? String(next.suggestion_color) : '',
       suggestion_ping_role: String(next.suggestion_ping_role || '').slice(0, 100),
       suggestion_downvotes: (next.suggestion_downvotes === 0 || next.suggestion_downvotes === false) ? 0 : 1,
@@ -1798,6 +1806,10 @@ const giveaways = {
   markDrawn: (id) => db.prepare('UPDATE giveaways SET drawn = 1 WHERE id = ?').run(id),
   remove: (id) => db.prepare('DELETE FROM giveaways WHERE id = ?').run(id),
   due: () => db.prepare('SELECT * FROM giveaways WHERE drawn = 0 AND ends_at <= ?').all(Date.now()),
+  // v292 — conditions + rappel : recherche par message, rappel unique, fenêtre 5 min
+  byMessage: (botId, guildId, messageId) => db.prepare('SELECT * FROM giveaways WHERE bot_id = ? AND guild_id = ? AND message_id = ? ORDER BY id DESC LIMIT 1').get(botId, guildId, String(messageId)) || null,
+  markReminded: (id) => db.prepare('UPDATE giveaways SET reminded = 1 WHERE id = ?').run(id),
+  dueForReminder: (botId, now) => db.prepare('SELECT * FROM giveaways WHERE bot_id = ? AND drawn = 0 AND reminded = 0 AND ends_at > ? AND ends_at <= ?').all(botId, now, now + 300000),
 };
 
 // ---------------------- Suggestions ----------------------

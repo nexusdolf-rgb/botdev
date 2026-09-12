@@ -103,8 +103,9 @@ check('payload sans champ content au niveau message (interdit en V2)', pPing.con
 check('séparateur entre le ping et le panneau', cont(pPing).components[1].type === 14);
 check('allowedMentions toujours passé au send (lancement slash)',
   /allowedMentions: \{ roles: ping \? \[String\(ping\)\.replace\(\/<@&\|>\/g, ''\)\] : \[\], everyone: ping === '@everyone' \}/.test(gwSrc));
+// v292 : la signature s'est élargie — buildPanel(…, { conditions… }, ping, { botId, lang })
 check('les 2 lancements passent par buildPanel(…, ping)',
-  (gwSrc.match(/buildPanel\(\{ prize, winners, ends_at: endsAt \}, \{ color, message \}, ping\)/g) || []).length === 2);
+  (gwSrc.match(/buildPanel\(\{ prize, winners, ends_at: endsAt \}, \{ color, message, giveaway_req_role[^)]*?\}, ping, \{ botId, lang: i18n\.langForGuild\([^)]*\) \}\)/g) || []).length === 2);
 
 // ------------------------------------------------------------
 console.log('\n4) giveaway — édition de fin de tirage en V2');
@@ -212,9 +213,9 @@ console.log('\n8) Aucun secret ajouté + versionnage front v233');
   check(`aucun token en dur dans ${path.basename(f)}`,
     !/(ghp_|github_pat_|rnd_|xox[baprs]-)[A-Za-z0-9_-]{15,}/.test(read(f)));
 });
-check('index.html : 7 références ?v=291', (read('public/index.html').match(/\?v=291/g) || []).length === 7);
+check('index.html : 7 références ?v=292', (read('public/index.html').match(/\?v=292/g) || []).length === 7);
 check('index.html : plus aucune référence ?v=232', !read('public/index.html').includes('?v=232'));
-check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'botdev-v291';"));
+check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'botdev-v292';"));
 
 console.log(failures === 0
   ? '\n✅ V233 — Lot n°3 : giveaways (5) et événements (7) en séparateurs natifs pleine largeur, édition de fin de tirage comprise.'

@@ -4703,6 +4703,13 @@ Dashboard.renderers.giveaways = async (content) => {
   }
   const pingOpts = ['<option value="">— Aucun (ne pas mentionner) —</option>', `<option value="@everyone" ${s.giveaway_ping_role === '@everyone' ? 'selected' : ''}>📣 @everyone (tout le monde)</option>`]
     .concat(rolesList.map((r) => `<option value="${App.escapeHtml(r.name)}" ${s.giveaway_ping_role === r.name || s.giveaway_ping_role === r.id ? 'selected' : ''}>@${App.escapeHtml(r.name)}</option>`));
+  // v292 — conditions de participation : rôle requis (par identifiant) + niveau minimum + rappel
+  const reqRoleOpts = ['<option value="">— Aucun rôle requis —</option>']
+    .concat(rolesList.map((r) => `<option value="${r.id}" ${String(s.giveaway_req_role || '') === String(r.id) ? 'selected' : ''}>@${App.escapeHtml(r.name)}</option>`));
+  if (s.giveaway_req_role && !rolesList.some((r) => String(r.id) === String(s.giveaway_req_role))) {
+    reqRoleOpts.push(`<option value="${App.escapeHtml(String(s.giveaway_req_role))}" selected>⚠️ configuration actuelle — rôle introuvable</option>`);
+  }
+  const reqLevelOpts = Dashboard.presetOptions([[0, 'Désactivé'], [2, 'Niveau 2+'], [3, 'Niveau 3+'], [5, 'Niveau 5+'], [10, 'Niveau 10+'], [15, 'Niveau 15+'], [20, 'Niveau 20+'], [25, 'Niveau 25+'], [30, 'Niveau 30+'], [40, 'Niveau 40+'], [50, 'Niveau 50+']], parseInt(s.giveaway_req_level, 10) || 0);
 
   c.innerHTML += `
     <div class="setting-row">
@@ -4719,6 +4726,14 @@ Dashboard.renderers.giveaways = async (content) => {
       <label class="dash-label">Rôle à mentionner au lancement</label>
       <select class="dash-select" id="gw-ping">${pingOpts.join('')}</select>
     </div>
+    <div class="setting-row" style="flex-wrap:wrap">
+      <label class="dash-label">🔒 Rôle requis pour participer</label>
+      <select class="dash-select" id="gw-req-role">${reqRoleOpts.join('')}</select>
+      <label class="dash-label" style="margin-top:10px">📶 Niveau minimum requis</label>
+      <select class="dash-select" id="gw-req-level">${reqLevelOpts}</select>
+    </div>
+    <div style="font-size:12px;color:var(--d-dim);margin:4px 0 0">Les membres qui ne remplissent pas les conditions voient leur réaction 🎉 retirée (explication envoyée en MP) et ne peuvent pas gagner au tirage.</div>
+    <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="gw-reminder" ${parseInt(s.giveaway_reminder, 10) ? 'checked' : ''} /> ⏰ Rappel automatique dans le salon 5 minutes avant la fin</label>
     <div class="setting-row">
       <label class="dash-label">🎨 Couleur de l\'annonce</label>
       <input class="dash-input" id="gw-color" type="color" value="${/^#[0-9a-fA-F]{6}$/.test(String(s.giveaway_color)) ? s.giveaway_color : '#FEE75C'}" style="width:64px;height:38px;padding:2px" />
@@ -4735,6 +4750,9 @@ Dashboard.renderers.giveaways = async (content) => {
         ping_role: c.querySelector('#gw-ping').value.trim(),
         color: c.querySelector('#gw-color').value,
         message: c.querySelector('#gw-msg').value,
+        req_role: c.querySelector('#gw-req-role').value,
+        req_level: parseInt(c.querySelector('#gw-req-level').value, 10) || 0,
+        reminder: c.querySelector('#gw-reminder').checked,
       }});
       App.toast('Configuration des giveaways enregistrée !');
     } catch (e) { App.toast(e.message, 'error'); }
