@@ -551,7 +551,6 @@ Dashboard.MODULES = [
   ['botprofile', '🤖', 'Identité du bot'],
 ];
 Dashboard.BOT_MODULES = [
-  ['admin', '🛡️', 'Admin global'],
   ['commands', '🧩', 'Commandes'],
   ['modules', '📦', 'Modules'],
   ['health', '🩺', 'Santé du bot'],
@@ -1363,7 +1362,7 @@ Dashboard.renderContent = async (content) => {
     Dashboard.state.feedTimer = null;
   }
 
-  const botLevel = ['admin', 'commands', 'modules', 'health', 'botsettings', 'help'].includes(module);
+  const botLevel = ['commands', 'modules', 'health', 'botsettings', 'help'].includes(module);
   if (!botLevel && !guildId) return;
 
   try {
@@ -1398,7 +1397,7 @@ Dashboard.renderContent = async (content) => {
 // ============================================================
 Dashboard.header = (content, icon, title, sub) => {
   content.innerHTML = '';
-  const isBotScope = ['admin', 'commands', 'modules', 'health', 'botsettings', 'help'].includes(Dashboard.state.module);
+  const isBotScope = ['commands', 'modules', 'health', 'botsettings', 'help'].includes(Dashboard.state.module);
   const isGuildScope = Boolean(Dashboard.state.guildId) && !isBotScope;
   const bot = Dashboard.state.bot || {};
   const statusLabel = bot.online === false ? 'Optimus Prime hors ligne' : 'Optimus Prime en ligne';
@@ -6792,13 +6791,9 @@ Dashboard.renderers.health = async (content) => {
 };
 
 // ---------- Réglages du bot ----------
-// ============================================================
-// 🛡️ v280 — ESPACE ADMIN GLOBAL (fondateur) : IA plateforme,
-// sauvegardes plateforme, compteurs — tout au même endroit.
-// ============================================================
-Dashboard.renderers.admin = async (content) => {
+Dashboard.renderers.botsettings = async (content) => {
   const bot = Dashboard.state.bot;
-  const root = Dashboard.header(content, '🛡️', 'Admin global', 'Tout ce qui pilote la plateforme Hoxera au niveau fondateur : IA de tous les serveurs, sauvegardes, état — rien de spécifique à un serveur ici.');
+  const root = Dashboard.header(content, '🤖', 'Réglages du bot', 'Préfixe global, statut, identité et sauvegarde.');
   // 🤖 v279 — couche plateforme Hoxera AI (fondateur) : une seule clé pour TOUS les serveurs
   const cAI = Dashboard.card(root, '🤖 Hoxera AI — plateforme (fondateur)', 'Votre clé fournisseur unique, entrée une fois ici, alimente automatiquement l IA de tous les serveurs. Les utilisateurs n ont rien à configurer.');
   cAI.innerHTML += `<div id="aip-state" style="font-size:12.5px;color:var(--d-dim);margin-bottom:10px">⏳ Chargement…</div>
@@ -6831,33 +6826,6 @@ Dashboard.renderers.admin = async (content) => {
     } });
     App.toast(r.ok ? '🤖 Réglages plateforme enregistrés : tous les serveurs sont concernés.' : '⚠️ Enregistrement impossible.');
     loadAI();
-  const c2 = Dashboard.card(root, '💾 Sauvegarde automatique', 'Toutes les données (comptes, bots, configs) sont sauvegardées et restaurées à chaque mise à jour.');
-  try {
-    const s = await App.api('/backup/status');
-    const last = s.last_backup ? new Date(s.last_backup) : null;
-    const lastStr = last && !isNaN(last) ? last.toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : 'jamais';
-    c2.appendChild(App.el(`<div class="desc" style="margin:0 0 10px">${s.enabled
-      ? `✅ <b>Active</b> — dépôt <code>${App.escapeHtml(s.repo)}</code> · sauvegarde toutes les 10 minutes + restauration au démarrage.`
-      : '⚠️ Désactivée — configurez BOTDEV_GH_TOKEN et BOTDEV_DATA_REPO sur Render.'}</div>`));
-    c2.appendChild(App.el(`<div class="dash-badge ${s.enabled ? 'ok' : 'warn'}" style="margin-bottom:10px">🕐 Dernière sauvegarde : ${lastStr}</div>`));
-    const nowBtn = App.el(`<button class="dash-btn dash-btn-primary">💾 Sauvegarder maintenant</button>`);
-    nowBtn.onclick = async () => {
-      try { await App.api('/backup/now', { method: 'POST' }); App.toast('Sauvegarde faite ! 🎉'); Dashboard.renderers.admin(content); }
-      catch (e) { App.toast(e.message, 'error'); }
-    };
-    c2.appendChild(nowBtn);
-  } catch {}
-  const c3 = Dashboard.card(root, ' Où régler quoi ?', 'Pour éviter toute confusion : cet espace pilote la PLATEFORME ; les réglages d un serveur précis (tickets, niveaux, vocaux, IA du serveur…) vivent dans ce serveur, une fois sélectionné.');
-  c3.innerHTML += `<div style="font-size:12.5px;color:var(--d-dim);line-height:1.7">
-    · <b>Admin global</b> : clé IA plateforme, quota & plafond budget, sauvegardes plateforme.<br>
-    · <b>Réglages du bot</b> : préfixe global, statut affiché, identité du bot.<br>
-    · <b>Un serveur sélectionné</b> : tous les réglages de CE serveur (dont son module 🤖 Hoxera AI côté serveur).</div>`;
-};
-
-Dashboard.renderers.botsettings = async (content) => {
-  const bot = Dashboard.state.bot;
-  const root = Dashboard.header(content, '🤖', 'Réglages du bot', 'Préfixe global, statut affiché et identité du bot. (L IA plateforme et les sauvegardes sont dans 🛡️ Admin global.)');
-
   };
   loadAI();
   const c = Dashboard.card(root, 'Général', '');
@@ -6874,7 +6842,22 @@ Dashboard.renderers.botsettings = async (content) => {
     } catch (e) { App.toast(e.message, 'error'); }
   };
 
-
+  const c2 = Dashboard.card(root, '💾 Sauvegarde automatique', 'Toutes les données (comptes, bots, configs) sont sauvegardées et restaurées à chaque mise à jour.');
+  try {
+    const s = await App.api('/backup/status');
+    const last = s.last_backup ? new Date(s.last_backup) : null;
+    const lastStr = last && !isNaN(last) ? last.toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : 'jamais';
+    c2.appendChild(App.el(`<div class="desc" style="margin:0 0 10px">${s.enabled
+      ? `✅ <b>Active</b> — dépôt <code>${App.escapeHtml(s.repo)}</code> · sauvegarde toutes les 10 minutes + restauration au démarrage.`
+      : '⚠️ Désactivée — configurez BOTDEV_GH_TOKEN et BOTDEV_DATA_REPO sur Render.'}</div>`));
+    c2.appendChild(App.el(`<div class="dash-badge ${s.enabled ? 'ok' : 'warn'}" style="margin-bottom:10px">🕐 Dernière sauvegarde : ${lastStr}</div>`));
+    const nowBtn = App.el(`<button class="dash-btn dash-btn-primary">💾 Sauvegarder maintenant</button>`);
+    nowBtn.onclick = async () => {
+      try { await App.api('/backup/now', { method: 'POST' }); App.toast('Sauvegarde faite ! 🎉'); Dashboard.renderers.botsettings(content); }
+      catch (e) { App.toast(e.message, 'error'); }
+    };
+    c2.appendChild(nowBtn);
+  } catch {}
 };
 
 // ============================================================

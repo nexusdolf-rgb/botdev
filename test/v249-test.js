@@ -571,10 +571,10 @@ const raz = () => { xp.sessionsVocales.clear(); xp.oublierBot(BOT); };
   const indexHtml = racine('public/index.html');
   const swSource = racine('public/sw.js');
   const versions = [...indexHtml.matchAll(/\?v=(\d+)/g)].map((m) => `?v=${m[1]}`);
-  check('index.html : ?v=280 référencé 7 fois',
-    versions.length === 7 && versions.every((v) => v === '?v=280'),
+  check('index.html : ?v=281 référencé 7 fois',
+    versions.length === 7 && versions.every((v) => v === '?v=281'),
     `${versions.length} refs : ${[...new Set(versions)].join(',')}`);
-  check('sw.js : cache « botdev-v280 »', swSource.includes("const CACHE = 'botdev-v280';"));
+  check('sw.js : cache « botdev-v281 »', swSource.includes("const CACHE = 'botdev-v281';"));
 
   raz();
   console.log('');

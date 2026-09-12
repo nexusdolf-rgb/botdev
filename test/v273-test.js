@@ -48,8 +48,8 @@ const check = (nom, cond, detail) => {
   console.log('— 3. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=280 référencé 7 fois', (index.match(/\?v=280/g) || []).length === 7);
-  check('sw.js : cache « botdev-v280 »', sw.includes("const CACHE = 'botdev-v280';"));
+  check('index.html : ?v=281 référencé 7 fois', (index.match(/\?v=281/g) || []).length === 7);
+  check('sw.js : cache « botdev-v281 »', sw.includes("const CACHE = 'botdev-v281';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v273 — ${ok} vérifications OK : panneau compact et rangé.`);
