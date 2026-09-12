@@ -7076,7 +7076,7 @@ Dashboard.renderers.ai = async (content, data) => {
     </div>
     <label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="ai-mention" ${cfg.mention_only ? 'checked' : ''} /> Répondre uniquement quand le bot est mentionné (@Hoxera)</label>`;
 
-  const MODES = [['chat', 'IA conversationnelle', true], ['tickets', 'IA pour les tickets', true], ['mod', 'IA de modération', true], ['docs', 'IA règlement / FAQ', true], ['images', "Génération d'images", true], ['staff', 'Assistant IA du staff', false], ['stats', "Analyse de l'activité", false], ['antispam', 'Détection spam & abus', true]];
+  const MODES = [['chat', 'IA conversationnelle', true], ['tickets', 'IA pour les tickets', true], ['mod', 'IA de modération', true], ['docs', 'IA règlement / FAQ', true], ['images', "Génération d'images", true], ['staff', 'Assistant IA du staff', true], ['stats', "Analyse de l'activité", true], ['antispam', 'Détection spam & abus', true]];
   // v283 — modules regroupés par usage (comme les dashboards pro) : chaque
   // case live explique en une phrase ce qu'elle fait concrètement.
   const MODE_HELP = {
@@ -7086,12 +7086,14 @@ Dashboard.renderers.ai = async (content, data) => {
     mod: '/verifier : second avis IA sur un message douteux (réservé au staff).',
     antispam: 'Après une détection de l auto-modération, un avis IA part dans vos logs (max 1/heure/membre).',
     images: '/image prompt: génère une illustration dans le salon (mode sûr, 6/heure/serveur).',
+    staff: '/resume : résumé IA des derniers messages d un salon pour rattraper le fil (staff).',
+    stats: '/activite : bulletin IA du serveur (modération, tickets, conseil au staff).',
   };
   const MODE_GROUPS = [
     ['💬 Conversation & support', ['chat', 'tickets', 'docs']],
     ['🛡️ Sécurité & modération', ['mod', 'antispam']],
     ['🎨 Création', ['images']],
-    ['🔜 Prochaines versions', ['staff', 'stats']],
+    ['👥 Staff & analyse', ['staff', 'stats']],
   ];
   const cMod = Dashboard.card(root, '🧩 Modules IA', 'Activez module par module. Tout fonctionne avec la clé plateforme : rien d autre à configurer.');
   cMod.innerHTML += MODE_GROUPS.map(([title, ids]) => `
@@ -7114,7 +7116,9 @@ Dashboard.renderers.ai = async (content, data) => {
     <label class="dash-label">Salons autorisés (Ctrl+clic pour plusieurs)</label>
     <select class="dash-select" id="ai-channels" multiple size="6">${textCh.map((ch) => `<option value="${ch.id}" ${(cfg.channels || []).includes(ch.id) ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('')}</select>
     <label class="dash-label">Rôles autorisés (vide = tout le monde)</label>
-    <select class="dash-select" id="ai-roles" multiple size="6">${(data.roles || []).map((r) => `<option value="${r.id}" ${(cfg.roles || []).includes(r.id) ? 'selected' : ''}>@ ${App.escapeHtml(r.name)}</option>`).join('')}</select>`;
+    <select class="dash-select" id="ai-roles" multiple size="6">${(data.roles || []).map((r) => `<option value="${r.id}" ${(cfg.roles || []).includes(r.id) ? 'selected' : ''}>@ ${App.escapeHtml(r.name)}</option>`).join('')}</select>
+    <label class="dash-label">🎨 Salons dédiés aux images — /image (vide = autorisé partout)</label>
+    <select class="dash-select" id="ai-image-channels" multiple size="4">${textCh.map((ch) => `<option value="${ch.id}" ${(cfg.image_channels || []).includes(ch.id) ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('')}</select>`;
 
   const cSrc = Dashboard.card(root, '📚 Sources (règlement, FAQ, documentation)', 'Une source par ligne : la commande /faq répond uniquement à partir de ces textes.');
   cSrc.innerHTML += `<textarea class="dash-input" id="ai-sources" rows="5" style="width:100%;font-size:12.5px" placeholder="Le règlement interdit la publicité…&#10;Pour ouvrir un ticket : /ticket…">${App.escapeHtml((cfg.sources || []).join('\n'))}</textarea>`;
@@ -7142,6 +7146,7 @@ Dashboard.renderers.ai = async (content, data) => {
     modules: Object.fromEntries(MODES.map(([id, , live]) => [id, live ? !!((cMod.querySelector(`[data-aimod="${id}"]`) || {}).checked) : false])),
     channels: Array.from(cScope.querySelector('#ai-channels').selectedOptions).map((o) => o.value),
     roles: Array.from(cScope.querySelector('#ai-roles').selectedOptions).map((o) => o.value),
+    image_channels: Array.from(cScope.querySelector('#ai-image-channels').selectedOptions).map((o) => o.value),
     mention_only: cEng.querySelector('#ai-mention').checked,
     limit_per_hour: Number(cEng.querySelector('#ai-limit').value) || 20,
     provider: cEng.querySelector('#ai-provider').value,

@@ -125,9 +125,9 @@ const mkGuild = (members, sent) => ({
   console.log('— 7. Version —');
   const index = fs.readFileSync(require('path').join(__dirname, '..', 'public/index.html'), 'utf8');
   const sw = fs.readFileSync(require('path').join(__dirname, '..', 'public/sw.js'), 'utf8');
-  check('index.html : ?v=284 référencé 7 fois', (index.match(/\?v=284/g) || []).length === 7,
-    String((index.match(/\?v=284/g) || []).length));
-  check('sw.js : cache « botdev-v284 »', sw.includes("const CACHE = 'botdev-v284';"));
+  check('index.html : ?v=285 référencé 7 fois', (index.match(/\?v=285/g) || []).length === 7,
+    String((index.match(/\?v=285/g) || []).length));
+  check('sw.js : cache « botdev-v285 »', sw.includes("const CACHE = 'botdev-v285';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v265 — ${ok} vérifications OK : tes boosters sont récompensés automatiquement.`);

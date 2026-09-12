@@ -61,13 +61,14 @@ const MODULE_LABELS = {
   antispam: 'Détection spam & abus',
 };
 // Modules déjà câblés dans le bot (les autres sont réservées aux versions suivantes)
-const LIVE_MODULES = ['chat', 'tickets', 'docs', 'mod', 'antispam', 'images'];
+const LIVE_MODULES = ['chat', 'tickets', 'docs', 'mod', 'antispam', 'images', 'staff', 'stats'];
 
 const DEFAULT_CFG = {
   enabled: true, // bot public : l'IA est active par défaut, la plateforme garde la main
   modules: { chat: true, tickets: false, mod: false, docs: false, images: false, staff: false, stats: false, antispam: false },
   channels: [],        // vide = tous les salons autorisés
   roles: [],           // vide = tout le monde
+  image_channels: [],  // v285 — vide = /image autorisé partout
   mention_only: true,  // répond seulement quand on mentionne le bot
   limit_per_hour: 0, // 0 = « pas choisi » : la limite plateforme s'applique
   provider: 'groq',
@@ -83,6 +84,7 @@ function cfgOf(guildId) {
   cfg.modules = { ...DEFAULT_CFG.modules, ...(raw.modules || {}) };
   cfg.channels = Array.isArray(cfg.channels) ? cfg.channels : [];
   cfg.roles = Array.isArray(cfg.roles) ? cfg.roles : [];
+  cfg.image_channels = Array.isArray(cfg.image_channels) ? cfg.image_channels.map(String) : [];
   cfg.sources = Array.isArray(cfg.sources) ? cfg.sources : [];
   cfg.limit_per_hour = Math.max(1, Math.min(200, Number(raw.limit_per_hour) || platformOf().default_limit));
   if (!PROVIDERS[cfg.provider]) cfg.provider = 'groq';
