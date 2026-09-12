@@ -813,6 +813,7 @@ router.put('/bots/:id/guilds/:guildId/verification', requireAuth, async (req, re
   if (b.gate_days !== undefined) patch.gate_days = Number(b.gate_days) || 0;
   if (typeof b.bot_filter === 'boolean') patch.bot_filter = b.bot_filter;
   if (Array.isArray(b.approved_bots)) patch.approved_bots = b.approved_bots;
+  if (typeof b.isolate === 'boolean') patch.isolate = b.isolate;
   res.json({ ok: true, cfg: ver.saveCfg(req.params.guildId, patch) });
 });
 
@@ -844,6 +845,49 @@ router.put('/bots/:id/guilds/:guildId/invite-rewards', requireAuth, async (req, 
     res.json({ ok: true, cfg: require('./discord/invites').cfgOf(req.params.guildId) });
   } catch (e) {
     res.status(400).json({ ok: false, error: e.message || 'Enregistrement impossible.' });
+  }
+});
+
+// 🔒 v293 — vérification : isolation des non-vérifiés (masquer/rendre visible)
+router.post('/bots/:id/guilds/:guildId/verification/isolate', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const entry = botManager.clients.get(bot.id);
+  if (!entry || !entry.client.isReady()) return res.status(503).json({ ok: false, error: 'Bot hors ligne, réessayez dans une minute.' });
+  const guild = entry.client.guilds.cache.get(req.params.guildId);
+  if (!guild) return res.status(404).json({ ok: false, error: 'Serveur introuvable pour ce bot.' });
+  const ver = require('./discord/verification');
+  const on = !!(req.body || {}).on;
+  try {
+    if (on) {
+      ver.assertIsolationReady(guild); // erreurs immédiates (salon/rôle/permission)
+      ver.applyIsolation(bot.id, guild).catch(() => {}); // long travail en arrière-plan
+    } else {
+      ver.removeIsolation(bot.id, guild).catch(() => {});
+    }
+    res.json({ ok: true, started: true });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: e.message || 'Application impossible.' });
+  }
+});
+
+// 👥 v293 — vérification : donner le rôle vérifié à tous les membres actuels
+router.post('/bots/:id/guilds/:guildId/verification/grant-role', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const entry = botManager.clients.get(bot.id);
+  if (!entry || !entry.client.isReady()) return res.status(503).json({ ok: false, error: 'Bot hors ligne, réessayez dans une minute.' });
+  const guild = entry.client.guilds.cache.get(req.params.guildId);
+  if (!guild) return res.status(404).json({ ok: false, error: 'Serveur introuvable pour ce bot.' });
+  const ver = require('./discord/verification');
+  try {
+    ver.assertGrantReady(guild);
+    ver.grantRoleToAll(bot.id, guild).catch(() => {});
+    res.json({ ok: true, started: true });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: e.message || 'Distribution impossible.' });
   }
 });
 

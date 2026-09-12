@@ -425,6 +425,8 @@ function attachListeners(botId, entry) {
 
   client.on('channelCreate', (c) => {
     try { require('./auditLog').onChannelCreate(botId, c); } catch (e) { console.error('[BotDev] audit chCreate:', e.message); }
+    // 🔒 v293 — vérification : un salon créé pendant l'isolation est masqué aux non-vérifiés
+    try { require('./verification').onChannelCreate(botId, c).catch(() => {}); } catch (e) { console.error('[BotDev] verif chCreate:', e.message); }
     // 🛡️ v242 anti-nuke : création de salon en série (un script de nuke en
     // recrée souvent des dizaines pour y coller des liens d'arnaque).
     try { require('./antinuke').note(botId, c.guild, 'channel_create', `#${c.name}`, c); } catch (e) { console.error('[BotDev] antinuke chCreate:', e.message); }
