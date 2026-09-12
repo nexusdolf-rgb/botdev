@@ -86,8 +86,8 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('dash : relecture brouillon (draft.escalation)', dash.includes('automodDraft.escalation'));
 
   // ---------- 6. Version ----------
-  check('site : bump v213 (index)', index.includes('?v=281'));
-  check('site : bump v213 (sw)', sw.includes('botdev-v281'));
+  check('site : bump v213 (index)', index.includes('?v=282'));
+  check('site : bump v213 (sw)', sw.includes('botdev-v282'));
 
   console.log(`  ✅ v213 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });

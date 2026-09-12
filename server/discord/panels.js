@@ -1061,6 +1061,15 @@ Notre équipe va vous répondre dans le salon privé prévu pour vous.`,
       },
     );
     await identity.sendAsProfile(interaction.client, botId, guild, channel, welcome).catch(() => {});
+    // 🤖 v282 — IA tickets : accueil + questions de clarification (si le module est coché)
+    try {
+      const ai = require('./ai/engine');
+      if (ai.cfgOf(guild.id).modules.tickets) {
+        ai.ticketIntro(botId, guild.id, { type: chosen ? chosen.label : '', reason, user: member.user.tag })
+          .then((t) => { if (t) return channel.send({ content: t, allowedMentions: { users: [] } }).catch(() => {}); })
+          .catch(() => {});
+      }
+    } catch { /* l'IA ne doit jamais empêcher un ticket de s'ouvrir */ }
 
     await logging.log(botId, guild, {
       title: '🎫 Ticket ouvert', color: '#e07a5f',

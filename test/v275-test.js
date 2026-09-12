@@ -66,8 +66,8 @@ function check(label, cond, extraInfo) {
   console.log('— 5. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=281 référencé 7 fois', (index.match(/\?v=281/g) || []).length === 7);
-  check('sw.js : cache « botdev-v281 »', sw.includes("const CACHE = 'botdev-v281';"));
+  check('index.html : ?v=282 référencé 7 fois', (index.match(/\?v=282/g) || []).length === 7);
+  check('sw.js : cache « botdev-v282 »', sw.includes("const CACHE = 'botdev-v282';"));
 
   console.log(`\n🎉 v275 — ${ok} vérifications OK : premium UNIQUEMENT sur les émojis vocaux, modules intacts.`);
 })().catch((e) => { console.error(e); process.exit(1); });

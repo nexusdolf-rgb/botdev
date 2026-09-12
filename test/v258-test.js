@@ -60,9 +60,9 @@ check('…la barre d' + 'actions reste masquée sur coquille mobile (règle d' +
   css.includes('.dashboard-shell-host .dash-topbar-actions,\n  .dashboard-shell-host .dash-topbar .topbar-pick { display: none !important; }'));
 
 console.log('— 4. Version —');
-check('index.html : ?v=281 référencé 7 fois', (index.match(/\?v=281/g) || []).length === 7,
-  String((index.match(/\?v=281/g) || []).length));
-check('sw.js : cache « botdev-v281 »', racine('public/sw.js').includes("const CACHE = 'botdev-v281';"));
+check('index.html : ?v=282 référencé 7 fois', (index.match(/\?v=282/g) || []).length === 7,
+  String((index.match(/\?v=282/g) || []).length));
+check('sw.js : cache « botdev-v282 »', racine('public/sw.js').includes("const CACHE = 'botdev-v282';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v258 — ${ok} vérifications OK : thème, couleur et compte connecté retrouvent leur place en haut du dashboard PC.`);

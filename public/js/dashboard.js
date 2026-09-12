@@ -7076,7 +7076,7 @@ Dashboard.renderers.ai = async (content, data) => {
     </div>
     <label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="ai-mention" ${cfg.mention_only ? 'checked' : ''} /> Répondre uniquement quand le bot est mentionné (@Hoxera)</label>`;
 
-  const MODES = [['chat', 'IA conversationnelle', true], ['tickets', 'IA pour les tickets', false], ['mod', 'IA de modération', false], ['docs', 'IA règlement / FAQ', false], ['images', "Génération d'images", false], ['staff', 'Assistant IA du staff', false], ['stats', "Analyse de l'activité", false], ['antispam', 'Détection spam & abus', false]];
+  const MODES = [['chat', 'IA conversationnelle', true], ['tickets', 'IA pour les tickets', true], ['mod', 'IA de modération', false], ['docs', 'IA règlement / FAQ', true], ['images', "Génération d'images", false], ['staff', 'Assistant IA du staff', false], ['stats', "Analyse de l'activité", false], ['antispam', 'Détection spam & abus', false]];
   const cMod = Dashboard.card(root, '🧩 Modules IA', 'Activez module par module. Les modules marqués 🔜 arrivent dans les prochaines versions.');
   cMod.innerHTML += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px">` + MODES.map(([id, label, live]) => `
     <label style="display:flex;gap:8px;align-items:center;padding:9px 10px;border:1px solid var(--d-line);border-radius:10px;background:var(--d-card2,#ffffff08)">

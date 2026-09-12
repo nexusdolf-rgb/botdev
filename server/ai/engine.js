@@ -61,7 +61,7 @@ const MODULE_LABELS = {
   antispam: 'Détection spam & abus',
 };
 // Modules déjà câblés dans le bot (les autres sont réservées aux versions suivantes)
-const LIVE_MODULES = ['chat'];
+const LIVE_MODULES = ['chat', 'tickets', 'docs'];
 
 const DEFAULT_CFG = {
   enabled: true, // bot public : l'IA est active par défaut, la plateforme garde la main
@@ -257,6 +257,7 @@ async function ask(botId, guildId, module, userText, opts) {
   if (!MODULES.includes(module)) module = 'chat';
   if (!cfg.modules[module]) { const e = new Error(`Le module IA « ${MODULE_LABELS[module]} » est désactivé.`); e.code = 'AI_MODULE_OFF'; throw e; }
   if (!LIVE_MODULES.includes(module)) { const e = new Error('Ce module IA arrive dans une prochaine version.'); e.code = 'AI_SOON'; throw e; }
+  if (module === 'docs' && !(cfg.sources || []).length) { const e = new Error('Aucune source (règlement/FAQ) fournie : ajoutez-les dans le dashboard → Hoxera AI → Sources.'); e.code = 'AI_NO_SOURCES'; throw e; }
   const plat = platformOf();
   if (!plat.on) { const e = new Error('Hoxera AI est momentanément désactivée par la plateforme.'); e.code = 'AI_PLATFORM_OFF'; throw e; }
   if (!hasKey(botId, cfg)) { const e = new Error('IA en veille : la plateforme n a pas encore activé de clé fournisseur.'); e.code = 'AI_NO_KEY'; throw e; }
@@ -303,9 +304,16 @@ async function onMessage(botId, m) {
   } catch { /* l'IA ne doit JAMAIS casser la réception des messages */ }
 }
 
+// 🎫 v282 — message d'accueil IA dans un ticket nouveau-né.
+async function ticketIntro(botId, guildId, info) {
+  const prompt = `Un membre (${info.user || 'un membre'}) vient d'ouvrir un ticket de type « ${info.type || 'général'} ».${info.reason ? ` Motif indiqué : ${info.reason}.` : ''} Accueille-le, pose une ou deux questions de clarification utiles au staff, en 3 lignes maximum.`;
+  const { text } = await ask(botId, guildId, 'tickets', prompt);
+  return `🤖 ${text}`;
+}
+
 module.exports = {
   PROVIDERS, MODULES, MODULE_LABELS, LIVE_MODULES, DEFAULT_CFG,
   platformOf, savePlatform, platformKeyOf, savePlatformKey, dailyCount,
   cfgOf, saveCfg, keyOf, saveKey, hasKey, status,
-  ask, onMessage, log, logsOf, statsOf, bumpStats, quotaCheck,
+  ask, onMessage, log, logsOf, statsOf, bumpStats, quotaCheck, ticketIntro,
 };
