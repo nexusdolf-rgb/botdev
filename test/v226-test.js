@@ -56,8 +56,9 @@ const helpCtx = { prefix: '!' };
   // ---------- 1. Classification ----------
   console.log('\n1) Classification public / staff / admin');
   const ADMIN_NAMES = ['ticket', 'botprofile', 'modlogs', 'blacklist', 'roles', 'lockdown', 'voicetemp', 'apply', 'event', 'lang', 'say', 'giveaway', 'suggestions'];
-  const STAFF_NAMES = ['kick', 'ban', 'unban', 'timeout', 'warn', 'warns', 'clear', 'sanction', 'temprole'];
-  const PUBLIC_NAMES = ['ping', '8ball', 'meme', 'marry', 'quiz', 'daily', 'suggest', 'help'];
+  // v295 : /suggest (et /poll) rejoignent le staff — plus visibles aux membres
+  const STAFF_NAMES = ['kick', 'ban', 'unban', 'timeout', 'warn', 'warns', 'clear', 'sanction', 'temprole', 'suggest', 'poll'];
+  const PUBLIC_NAMES = ['ping', '8ball', 'meme', 'marry', 'quiz', 'daily', 'help'];
   for (const n of ADMIN_NAMES) check(`${n} -> admin`, premade.commandKind(n) === 'admin');
   for (const n of STAFF_NAMES) check(`${n} -> staff`, premade.commandKind(n) === 'staff');
   for (const n of PUBLIC_NAMES) check(`${n} -> public`, premade.commandKind(n) === 'public');

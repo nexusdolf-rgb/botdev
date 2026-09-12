@@ -228,7 +228,10 @@ function buildExtraPayloads() {
       ]}],
     },
     {
-      name: 'poll', description: '🗳️ Créez un sondage avec des boutons de vote',
+      name: 'poll', description: '🗳️ Créez un sondage avec des boutons de vote (staff)',
+      // v295 — réservé au staff : Discord masque /poll aux membres sans
+      // « Gérer les messages » (les administrateurs le gardent automatiquement).
+      default_member_permissions: PermissionsBitField.Flags.ManageMessages.toString(),
       options: [
         { name: 'question', description: 'La question', type: ApplicationCommandOptionType.String, required: true },
         { name: 'choix', description: 'Les choix séparés par | (ex : Oui | Non | Peut-être)', type: ApplicationCommandOptionType.String, required: true },
@@ -649,6 +652,13 @@ async function handleSlash(botId, entry, interaction) {
       return renderTop(botId, entry, interaction, guild, type, 0);
     }
     case 'poll': {
+      // v295 — /poll réservé au staff (permission « Gérer les messages » ; les
+      // administrateurs passent automatiquement). Le BOUTON de vote, lui,
+      // reste public : tout le monde peut voter sur un sondage créé.
+      if (!interaction.member || !interaction.member.permissions || typeof interaction.member.permissions.has !== 'function'
+        || !interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
+        return interaction.reply({ content: '⛔ /poll est réservé au staff (permission « Gérer les messages »).', ephemeral: true });
+      }
       const question = (interaction.options.getString('question') || '').slice(0, 250);
       const raw = interaction.options.getString('choix') || '';
       const choices = raw.split('|').map((c) => c.trim()).filter(Boolean).slice(0, 10);

@@ -78,7 +78,7 @@ const CMD_DEFS = {
   invite: { label: 'invite', desc: 'Le lien pour inviter le bot' },
   lang: { label: 'lang', desc: 'Choisissez la langue du bot sur ce serveur (fr, en, êtes, de, pt, it)', perms: [PermissionsBitField.Flags.Administrator] },
   giveaway: { label: 'giveaway', desc: 'Lancer un giveaway avec tirage automatique', perms: [PermissionsBitField.Flags.Administrator] },
-  suggest: { label: 'suggest', desc: 'Proposer une suggestion (votes 👍👎)' },
+  suggest: { label: 'suggest', desc: 'Créer une suggestion (staff — votes 👍👎)', perms: [PermissionsBitField.Flags.ManageMessages] },
   suggestions: { label: 'suggestions', desc: 'Configurer le salon des suggestions', perms: [PermissionsBitField.Flags.Administrator] },
   statchannels: { label: 'statchannels', desc: 'Compteurs en salons vocaux (membres, en ligne, boosts)', perms: [PermissionsBitField.Flags.Administrator] },
   boostrewards: { label: 'boostrewards', desc: 'Récompenser les boosters Nitro (rôle + remerciement)', perms: [PermissionsBitField.Flags.Administrator] },
@@ -121,6 +121,9 @@ function defaultPermissionBitsFor(def) {
   return flags.reduce((a, b) => a | b, 0n); // permission « métier » exacte
 }
 
+// v295 — commandes « extra » (hors CMD_DEFS) réservées au staff : /poll
+const EXTRA_STAFF_NAMES = new Set(['poll']);
+
 function commandKind(name) {
   const def = CMD_DEFS[name];
   if (def) {
@@ -129,6 +132,7 @@ function commandKind(name) {
     }
     return 'public';
   }
+  if (EXTRA_STAFF_NAMES.has(name)) return 'staff';
   return ADMIN_COMMAND_NAMES.has(name) ? 'admin' : 'public';
 }
 
@@ -141,6 +145,11 @@ function canViewCommandName(name, guild, member) {
   const kind = commandKind(name);
   if (kind === 'public') return true;
   if (kind === 'admin') return canConfigureGuild(guild, member, member && member.id);
+  // v295 — commande extra réservée au staff (pas de def CMD_DEFS) : « Gérer les messages »
+  if (!CMD_DEFS[name]) {
+    return !!(member && member.permissions && typeof member.permissions.has === 'function'
+      && member.permissions.has(PermissionsBitField.Flags.ManageMessages));
+  }
   return hasPremadeCommandPermission(CMD_DEFS[name], guild, member);
 }
 
@@ -151,10 +160,10 @@ const HELP_BLOCKS = [
   { title: '🎉 Fun & divertissement', names: ['8ball', 'meme', 'coinflip', 'roll', 'reverse'] },
   { title: '💍 Social & interactions', names: ['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch'] },
   { title: '🕹️ Jeux dans le chat', names: ['rps', 'pendu', 'morpion', 'quiz'] },
-  { title: '🗓️ Organisation & pratique', names: ['birthday', 'remind', 'afk', 'poll', 'snipe', 'top', 'invites'] },
+  { title: '🗓️ Organisation & pratique', names: ['birthday', 'remind', 'afk', 'snipe', 'top', 'invites'] },
   { title: '📈 Niveaux & XP', names: ['rank', 'levels', 'profile'] },
   { title: '💰 Économie & boutique', names: ['daily', 'balance', 'leaderboard', 'work', 'gamble', 'rob', 'pay', 'shop', 'buy'] },
-  { title: '💡 Communauté', names: ['suggest', 'boostrewards'] },
+  { title: '💡 Communauté', names: ['boostrewards'] },
   // --- Modération (permissions métier) ---
   { title: '🛡️ Modération & sanctions (staff)', kind: 'staff', names: ['kick', 'ban', 'unban', 'timeout', 'warn', 'warns', 'clear', 'sanction', 'temprole'] },
   { title: '📄 Audits & exports (admins)', kind: 'admin', names: ['modexport'] },
@@ -166,6 +175,10 @@ const HELP_BLOCKS = [
   { title: '🚨 Sécurité & événements', kind: 'admin', names: ['lockdown', 'voicetemp', 'apply', 'event'] },
   { title: '⚙️ Configuration avancée', kind: 'admin', names: ['giveaway', 'suggestions', 'lang', 'say'] },
   { title: '📊 Statistiques en salons vocaux', kind: 'admin', names: ['statchannels'] },
+  // v295 — /suggest et /poll rejoignent le côté staff : invisibles aux membres.
+  // Placé en FIN de liste pour ne pas décaler les identifiants « cN » des
+  // catégories existantes (le centre d'aide et ses tests les référencent).
+  { title: '📣 Suggestions & sondages (staff)', kind: 'staff', names: ['suggest', 'poll'] },
 ];
 
 function enabledModules(botId) {
@@ -1715,4 +1728,4 @@ async function handleHelpSelect(botId, entry, i) {
   return true;
 }
 
-module.exports = { MODULES, CMD_DEFS, ADMIN_COMMAND_NAMES, HELP_BLOCKS, defaultPermissionBitsFor, commandKind, canViewCommandName, enabledModules, enabledCommandNames, buildSlashPayloads, handlePremadePrefix, handlePremadeSlash, buildHelpPanel, handleHelpSelect, HELP_SELECT_ID, HELP_AUTODELETE_MS, helpDeleteRow, fetchRandomMeme, fetchMemeJson, MEME_FR_SOURCES, MEME_API };
+module.exports = { MODULES, CMD_DEFS, ADMIN_COMMAND_NAMES, EXTRA_STAFF_NAMES, HELP_BLOCKS, defaultPermissionBitsFor, commandKind, canViewCommandName, enabledModules, enabledCommandNames, buildSlashPayloads, handlePremadePrefix, handlePremadeSlash, buildHelpPanel, handleHelpSelect, HELP_SELECT_ID, HELP_AUTODELETE_MS, helpDeleteRow, fetchRandomMeme, fetchMemeJson, MEME_FR_SOURCES, MEME_API };
