@@ -264,6 +264,12 @@ function buildExtraPayloads() {
       name: 'sticky', description: '📌 État du message épinglé en bas de salon (v276)',
     },
     {
+      name: 'image', description: '🎨 Hoxera AI : génère une image à partir d un texte (mode sûr, 6/heure/serveur)',
+      options: [
+        { name: 'prompt', description: 'Description de l image (en anglais pour un meilleur résultat)', type: ApplicationCommandOptionType.String, required: true },
+      ],
+    },
+    {
       name: 'verifier', description: '🤖 Hoxera AI : second avis de modération sur un message (réservé au staff)',
       options: [
         { name: 'message', description: 'Le texte du message à analyser', type: ApplicationCommandOptionType.String, required: true },
@@ -338,6 +344,7 @@ const HELP_EXTRA = {
   rob: ['🦹 Vol', 'Tentez de voler un membre : 40 % de réussite (10-20 % de ses coins). Si vous ratez, vous lui payez une amende !', '`/rob @membre`', '`/rob @Millionnaire` → 🚓 Raté ! Vous lui devez 15 % de votre solde.'],
   lockdown: ['🚨 Anti-raid', 'Verrouille tous les salons texte en 1 clic (personne ne peut écrire sauf les admins) puis rouvre tout. Idéal contre un raid.', '`/lockdown on` · `/lockdown off`', '`/lockdown on` → 🔒 12 salons verrouillés'],
   sticky: 'Message épinglé en bas de salon (sticky) : état et salon configuré. Réglage complet dans le dashboard → Annonces.',
+    image: 'Génère une image à partir d un texte (mode sûr activé, 6 images/heure/serveur).',
     verifier: 'Second avis IA de modération sur un message (réservé au staff, réponse visible par vous seul).',
     faq: 'Règlement & FAQ : l IA répond UNIQUEMENT à partir des sources fournies par le staff dans le dashboard.',
     ai: 'Hoxera AI — IA conversationnelle branchée sur le moteur central du serveur (clé gratuite, limites, salons autorisés configurables au dashboard).',
@@ -377,7 +384,7 @@ async function handleInteraction(botId, entry, interaction) {
 }
 
 // ---------------------- Commandes slash ----------------------
-const EXTRA_CMDS = new Set(['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch', 'rps', 'pendu', 'morpion', 'birthday', 'remind', 'poll', 'snipe', 'work', 'gamble', 'rob', 'lockdown', 'voicetemp', 'emotes', 'ai', 'faq', 'verifier', 'sticky', 'apply', 'invites', 'afk', 'top', 'quiz']);
+const EXTRA_CMDS = new Set(['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch', 'rps', 'pendu', 'morpion', 'birthday', 'remind', 'poll', 'snipe', 'work', 'gamble', 'rob', 'lockdown', 'voicetemp', 'emotes', 'ai', 'faq', 'verifier', 'image', 'sticky', 'apply', 'invites', 'afk', 'top', 'quiz']);
 
 async function handleSlash(botId, entry, interaction) {
   const cmd = interaction.commandName.toLowerCase();
@@ -851,6 +858,27 @@ async function handleSlash(botId, entry, interaction) {
       const st = require('./sticky').cfgOf(guild.id);
       const last = require('./sticky').lastIdOf(guild.id);
       return interaction.reply({ content: st.enabled && st.channel ? `📌 Sticky **actif** dans <#${st.channel}> : republication toutes les ${st.every} messages.${last ? `\nDernier message épinglé : [voir](https://discord.com/channels/${guild.id}/${st.channel}/${last})` : '\nAucun sticky publié pour le moment.'}` : '📌 Sticky **désactivé** sur ce serveur. Réglez-le dans le dashboard → Annonces → « Message épinglé en bas ».', ephemeral: true });
+    }
+    case 'image': {
+      const promptI = interaction.options.getString('prompt');
+      if (!promptI || !String(promptI).trim()) return interaction.reply({ content: '❓ Décrivez une image : `/image prompt:un chat astronaute dans l espace`', ephemeral: true });
+      const aiI = require('../ai/engine');
+      if (!aiI.cfgOf(guild.id).modules.images) {
+        return interaction.reply({ content: '🎨 Le module « Génération d images » est désactivé sur ce serveur : activez-le dans le dashboard → Hoxera AI → Modules IA → Création.', ephemeral: true });
+      }
+      await interaction.deferReply();
+      try {
+        const bufI = await require('../ai/images').generateImage(guild.id, user.id, promptI);
+        const { AttachmentBuilder } = require('discord.js');
+        const fileI = new AttachmentBuilder(bufI, { name: 'hoxera-ia.png' });
+        return interaction.editReply({ content: `🎨 **${String(promptI).slice(0, 200)}**\nImage générée par Hoxera AI — ${require('../ai/images').LIMIT_PER_HOUR} images max par heure et par serveur.`, files: [fileI] });
+      } catch (e) {
+        const msg = e.code === 'IMG_COOLDOWN' ? `⏳ ${e.message}`
+          : e.code === 'IMG_QUOTA' ? `🎨 ${e.message}`
+          : e.code === 'IMG_EMPTY' ? '❓ Décrivez une image : `/image prompt:...`'
+          : '⚠️ La génération d image a échoué : le service est peut-être occupé, réessayez dans quelques instants.';
+        return interaction.editReply({ content: msg });
+      }
     }
     case 'verifier': {
       const contentV = interaction.options.getString('message');

@@ -7076,7 +7076,7 @@ Dashboard.renderers.ai = async (content, data) => {
     </div>
     <label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="ai-mention" ${cfg.mention_only ? 'checked' : ''} /> Répondre uniquement quand le bot est mentionné (@Hoxera)</label>`;
 
-  const MODES = [['chat', 'IA conversationnelle', true], ['tickets', 'IA pour les tickets', true], ['mod', 'IA de modération', true], ['docs', 'IA règlement / FAQ', true], ['images', "Génération d'images", false], ['staff', 'Assistant IA du staff', false], ['stats', "Analyse de l'activité", false], ['antispam', 'Détection spam & abus', true]];
+  const MODES = [['chat', 'IA conversationnelle', true], ['tickets', 'IA pour les tickets', true], ['mod', 'IA de modération', true], ['docs', 'IA règlement / FAQ', true], ['images', "Génération d'images", true], ['staff', 'Assistant IA du staff', false], ['stats', "Analyse de l'activité", false], ['antispam', 'Détection spam & abus', true]];
   // v283 — modules regroupés par usage (comme les dashboards pro) : chaque
   // case live explique en une phrase ce qu'elle fait concrètement.
   const MODE_HELP = {
@@ -7085,11 +7085,13 @@ Dashboard.renderers.ai = async (content, data) => {
     docs: 'Répond UNIQUEMENT à partir de vos sources ci-dessous, via /faq.',
     mod: '/verifier : second avis IA sur un message douteux (réservé au staff).',
     antispam: 'Après une détection de l auto-modération, un avis IA part dans vos logs (max 1/heure/membre).',
+    images: '/image prompt: génère une illustration dans le salon (mode sûr, 6/heure/serveur).',
   };
   const MODE_GROUPS = [
     ['💬 Conversation & support', ['chat', 'tickets', 'docs']],
     ['🛡️ Sécurité & modération', ['mod', 'antispam']],
-    ['🔜 Prochaines versions', ['images', 'staff', 'stats']],
+    ['🎨 Création', ['images']],
+    ['🔜 Prochaines versions', ['staff', 'stats']],
   ];
   const cMod = Dashboard.card(root, '🧩 Modules IA', 'Activez module par module. Tout fonctionne avec la clé plateforme : rien d autre à configurer.');
   cMod.innerHTML += MODE_GROUPS.map(([title, ids]) => `

@@ -91,7 +91,7 @@ function check(label, cond, info) {
   console.log('— 4. Dashboard : organisation & bug de sauvegarde corrigé —');
   const dash = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'dashboard.js'), 'utf8');
   const modesLine = (dash.match(/const MODES = \[.*?\];/) || [''])[0];
-  check('5 cases live (chat, tickets, docs, mod, antispam) et 3 🔜', (modesLine.match(/, true\]/g) || []).length === 5 && (modesLine.match(/, false\]/g) || []).length === 3);
+  check('cases mod & antispam live (6 live au total depuis v284, 2 🔜)', (modesLine.match(/, true\]/g) || []).length === 6 && (modesLine.match(/, false\]/g) || []).length === 2);
   check('modules regroupés par usage (Conversation & support / Sécurité & modération / Prochaines versions)', dash.includes('💬 Conversation & support') && dash.includes('🛡️ Sécurité & modération') && dash.includes('🔜 Prochaines versions'));
   check('chaque case live a une phrase d explication', dash.includes('const MODE_HELP = {') && dash.includes("antispam: 'Après une détection"));
   check('BUG corrigé : TOUTES les cases live sont sauvegardées (plus seulement chat)', dash.includes('modules: Object.fromEntries(MODES.map(([id, , live]) => [id, live ?') && !dash.includes("id === 'chat' ? cMod.querySelector"));
@@ -100,8 +100,8 @@ function check(label, cond, info) {
   console.log('— 5. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=283 référencé 7 fois', (index.match(/\?v=283/g) || []).length === 7);
-  check('sw.js : cache « botdev-v283 »', sw.includes("const CACHE = 'botdev-v283';"));
+  check('index.html : ?v=284 référencé 7 fois', (index.match(/\?v=284/g) || []).length === 7);
+  check('sw.js : cache « botdev-v284 »', sw.includes("const CACHE = 'botdev-v284';"));
 
   console.log(`\n🎉 v283 — ${ok} vérifications OK : IA modération + spam/abus en second avis, dashboard réorganisé.`);
 })().catch((e) => { console.error(e); process.exit(1); });
