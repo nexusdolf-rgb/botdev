@@ -795,6 +795,28 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
   res.json(payload);
 });
 
+// 🤖 v279 — couche PLATEFORME Hoxera AI (fondateur) : une clé pour tous
+router.get('/bots/:id/ai-platform', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const ai = require('./ai/engine');
+  res.json({ platform: ai.platformOf(), hasKey: ai.platformKeyOf(bot.id).length > 10, today: ai.dailyCount(false).n });
+});
+
+router.put('/bots/:id/ai-platform', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const ai = require('./ai/engine');
+  const b = req.body || {};
+  const patch = {};
+  if (typeof b.on === 'boolean') patch.on = b.on;
+  if (b.default_limit !== undefined) patch.default_limit = Number(b.default_limit);
+  if (b.daily_cap !== undefined) patch.daily_cap = Number(b.daily_cap);
+  const platform = ai.savePlatform(patch);
+  if (typeof b.key === 'string' && b.key.trim()) ai.savePlatformKey(bot.id, b.key.trim());
+  res.json({ ok: true, platform, hasKey: ai.platformKeyOf(bot.id).length > 10, today: ai.dailyCount(false).n });
+});
+
 // ============================================================
 // 🤖 Hoxera AI (v278) — config, clé, test, journal
 // ============================================================

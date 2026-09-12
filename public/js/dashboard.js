@@ -6750,6 +6750,40 @@ Dashboard.renderers.health = async (content) => {
 Dashboard.renderers.botsettings = async (content) => {
   const bot = Dashboard.state.bot;
   const root = Dashboard.header(content, '🤖', 'Réglages du bot', 'Préfixe global, statut, identité et sauvegarde.');
+  // 🤖 v279 — couche plateforme Hoxera AI (fondateur) : une seule clé pour TOUS les serveurs
+  const cAI = Dashboard.card(root, '🤖 Hoxera AI — plateforme (fondateur)', 'Votre clé fournisseur unique, entrée une fois ici, alimente automatiquement l IA de tous les serveurs. Les utilisateurs n ont rien à configurer.');
+  cAI.innerHTML += `<div id="aip-state" style="font-size:12.5px;color:var(--d-dim);margin-bottom:10px">⏳ Chargement…</div>
+    <label style="display:flex;gap:8px;align-items:center;margin-bottom:10px"><input type="checkbox" id="aip-on" /> IA activée sur toute la plateforme</label>
+    <div style="display:flex;gap:14px;flex-wrap:wrap">
+      <div><label class="dash-label">Quota par serveur (par heure)</label><select class="dash-select" id="aip-limit" style="max-width:140px">${[5, 10, 20, 30, 50].map((n) => `<option value="${n}">${n} / heure</option>`).join('')}</select></div>
+      <div><label class="dash-label">Plafond journalier TOTAL (budget)</label><select class="dash-select" id="aip-cap" style="max-width:170px">${[200, 500, 800, 1500, 3000, 0].map((n) => `<option value="${n}">${n ? n + ' appels / jour' : 'illimité (déconseillé)'}</option>`).join('')}</select></div>
+    </div>
+    <label class="dash-label">Clé fournisseur plateforme (Groq recommandé, sans carte bancaire)</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input class="dash-input" id="aip-key" type="password" placeholder="gsk_… (laisser vide pour ne pas changer)" style="max-width:420px" autocomplete="off" />
+      <button class="dash-btn dash-btn-primary" id="aip-save">💾 Enregistrer les réglages plateforme</button>
+    </div>
+    <div style="font-size:12px;color:var(--d-dim);margin-top:8px">🔒 La clé est masquée, jamais renvoyée au navigateur. Sans clé : tous les serveurs voient « IA en veille », aucun coût.</div>`;
+  const loadAI = async () => {
+    const r = await App.api(`/bots/${bot.id}/ai-platform`);
+    cAI.querySelector('#aip-state').innerHTML = r.hasKey
+      ? `✨ Clé plateforme <b>active</b> · appels aujourd hui : <b>${r.today}</b>${r.platform.daily_cap ? ' / ' + r.platform.daily_cap : ''} · interrupteur global : <b>${r.platform.on ? 'activé' : 'coupé'}</b>`
+      : '😴 Aucune clé plateforme pour l instant : tous les serveurs sont en veille (zéro coût).';
+    cAI.querySelector('#aip-on').checked = !!r.platform.on;
+    cAI.querySelector('#aip-limit').value = String(r.platform.default_limit);
+    cAI.querySelector('#aip-cap').value = String(r.platform.daily_cap);
+  };
+  cAI.querySelector('#aip-save').onclick = async () => {
+    const r = await App.api(`/bots/${bot.id}/ai-platform`, { method: 'PUT', body: {
+      on: cAI.querySelector('#aip-on').checked,
+      default_limit: Number(cAI.querySelector('#aip-limit').value),
+      daily_cap: Number(cAI.querySelector('#aip-cap').value),
+      key: cAI.querySelector('#aip-key').value.trim(),
+    } });
+    App.toast(r.ok ? '🤖 Réglages plateforme enregistrés : tous les serveurs sont concernés.' : '⚠️ Enregistrement impossible.');
+    loadAI();
+  };
+  loadAI();
   const c = Dashboard.card(root, 'Général', '');
   c.innerHTML += `
     <label class="dash-label">Préfixe global</label>
@@ -6960,13 +6994,15 @@ Dashboard.renderers.ai = async (content, data) => {
   const root = Dashboard.header(content, '🤖', 'Hoxera AI', "Moteur IA centralisé : conversation, tickets, modération, FAQ, images, staff, stats et anti-spam — réglables par serveur, sur plan gratuit.");
 
   const banner = st.standby
-    ? '<div style="padding:10px 12px;border-radius:10px;background:rgba(224,122,95,.12);border:1px solid rgba(224,122,95,.4);margin-bottom:14px">😴 <b>IA en veille</b> — collez une clé API gratuite (Groq, sans carte bancaire) ci-dessous pour réveiller Hoxera AI. Aucun coût, aucune donnée envoyée tant que la clé est absente.</div>'
-    : (cfg.enabled ? '<div style="padding:10px 12px;border-radius:10px;background:rgba(80,200,120,.12);border:1px solid rgba(80,200,120,.4);margin-bottom:14px">✅ <b>IA active</b> sur ce serveur.</div>'
-                   : '<div style="padding:10px 12px;border-radius:10px;background:rgba(150,150,150,.12);border:1px solid rgba(150,150,150,.4);margin-bottom:14px">⏸️ <b>IA désactivée</b> sur ce serveur (clé présente).</div>');
+    ? '<div style="padding:10px 12px;border-radius:10px;background:rgba(224,122,95,.12);border:1px solid rgba(224,122,95,.4);margin-bottom:14px">😴 <b>IA en veille</b> : la plateforme Hoxera n a pas encore activé de clé fournisseur. Rien à faire de votre côté — tout s activera automatiquement.</div>'
+    : (st.mode === 'platform'
+      ? '<div style="padding:10px 12px;border-radius:10px;background:rgba(80,200,120,.12);border:1px solid rgba(80,200,120,.4);margin-bottom:14px">✨ <b>IA fournie par Hoxera</b> — aucune clé à gérer, ça marche déjà. Réglez simplement vos salons et limites ci-dessous.</div>'
+      : (cfg.enabled ? '<div style="padding:10px 12px;border-radius:10px;background:rgba(80,200,120,.12);border:1px solid rgba(80,200,120,.4);margin-bottom:14px">✅ <b>IA active</b> sur ce serveur (clé propre au serveur).</div>'
+                     : '<div style="padding:10px 12px;border-radius:10px;background:rgba(150,150,150,.12);border:1px solid rgba(150,150,150,.4);margin-bottom:14px">⏸️ <b>IA désactivée</b> sur ce serveur.</div>'));
 
-  const cKey = Dashboard.card(root, '🔑 Clé API & test', 'La clé est stockée par bot, jamais renvoyée au navigateur en clair.');
+  const cKey = Dashboard.card(root, '🔑 Votre propre clé (optionnel) & test', 'Inutile en temps normal : Hoxera fournit l IA à tous les serveurs. Une clé personnelle sert uniquement aux très gros serveurs qui veulent leur quota privé.');
   cKey.innerHTML += banner + `
-    <label class="dash-label">Clé API (Groq recommandé : console.groq.com → gratuite, sans carte)</label>
+    <label class="dash-label">Clé personnelle du serveur (optionnel — Groq : console.groq.com)</label>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <input class="dash-input" id="ai-key" type="password" placeholder="gsk_… ou AIza… (laisser vide pour ne pas changer)" style="max-width:420px" autocomplete="off" />
       <button class="dash-btn dash-btn-primary" id="ai-key-save">💾 Enregistrer la clé</button>

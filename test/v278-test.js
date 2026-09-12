@@ -30,7 +30,7 @@ function check(label, cond, info) {
   check('fournisseurs gratuits présents (groq, gemini, openrouter)', !!ai.PROVIDERS.groq && !!ai.PROVIDERS.gemini && !!ai.PROVIDERS.openrouter);
   check('modèle gratuit pro par défaut (Llama 3.3 70B)', ai.DEFAULT_CFG.provider === 'groq' && ai.DEFAULT_CFG.model === 'llama-3.3-70b-versatile');
   check('8 modules IA déclarés', ai.MODULES.length === 8);
-  check('config par serveur : désactivée par défaut', ai.cfgOf(G).enabled === false);
+  check('config par serveur : activée par défaut (bot public)', ai.cfgOf(G).enabled === true);
 
   console.log('— 2. Mode veille : sans clé, rien ne part —');
   check('statut « en veille » sans clé', ai.status(BOT, G).standby === true);
@@ -89,8 +89,8 @@ function check(label, cond, info) {
   console.log('— 7. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=278 référencé 7 fois', (index.match(/\?v=278/g) || []).length === 7);
-  check('sw.js : cache « botdev-v278 »', sw.includes("const CACHE = 'botdev-v278';"));
+  check('index.html : ?v=279 référencé 7 fois', (index.match(/\?v=279/g) || []).length === 7);
+  check('sw.js : cache « botdev-v279 »', sw.includes("const CACHE = 'botdev-v279';"));
 
   console.log(`\n🎉 v278 — ${ok} vérifications OK : Hoxera AI centralisée, plan gratuit, veille sans clé.`);
 })().catch((e) => { console.error(e); process.exit(1); });

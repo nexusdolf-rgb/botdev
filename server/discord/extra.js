@@ -851,7 +851,9 @@ async function handleSlash(botId, entry, interaction) {
         const { text } = await ai.ask(botId, guild.id, 'chat', question);
         return interaction.editReply({ content: `🤖 **Hoxera AI**\n${text}`, allowedMentions: { users: [] } });
       } catch (e) {
-        const msg = e.code === 'AI_NO_KEY' ? '🤖 Hoxera AI est **en veille** sur ce serveur : le propriétaire doit ajouter une clé gratuite dans le dashboard (section Hoxera AI).'
+        const msg = e.code === 'AI_PLATFORM_OFF' ? '🤖 Hoxera AI est momentanément désactivée par la plateforme.'
+          : e.code === 'AI_BUDGET' ? '🤖 Le quota IA quotidien de la plateforme est atteint, réessayez demain.'
+          : e.code === 'AI_NO_KEY' ? '🤖 Hoxera AI est **en veille** : la plateforme n a pas encore activé de clé fournisseur.'
           : e.code === 'AI_DISABLED' ? '🤖 Hoxera AI est désactivée sur ce serveur (dashboard → Hoxera AI).'
           : e.code === 'AI_QUOTA' || e.code === 'AI_BUSY' ? `🤖 ${e.message}`
           : `⚠️ Hoxera AI indisponible pour le moment (${e.code || 'erreur'}).`;

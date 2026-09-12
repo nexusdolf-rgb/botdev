@@ -64,12 +64,12 @@ const MODULE_LABELS = {
 const LIVE_MODULES = ['chat'];
 
 const DEFAULT_CFG = {
-  enabled: false,
+  enabled: true, // bot public : l'IA est active par défaut, la plateforme garde la main
   modules: { chat: true, tickets: false, mod: false, docs: false, images: false, staff: false, stats: false, antispam: false },
   channels: [],        // vide = tous les salons autorisés
   roles: [],           // vide = tout le monde
   mention_only: true,  // répond seulement quand on mentionne le bot
-  limit_per_hour: 20,
+  limit_per_hour: 0, // 0 = « pas choisi » : la limite plateforme s'applique
   provider: 'groq',
   model: 'llama-3.3-70b-versatile',
   mod_level: 'medium',
@@ -84,7 +84,7 @@ function cfgOf(guildId) {
   cfg.channels = Array.isArray(cfg.channels) ? cfg.channels : [];
   cfg.roles = Array.isArray(cfg.roles) ? cfg.roles : [];
   cfg.sources = Array.isArray(cfg.sources) ? cfg.sources : [];
-  cfg.limit_per_hour = Math.max(1, Math.min(200, Number(cfg.limit_per_hour) || 20));
+  cfg.limit_per_hour = Math.max(1, Math.min(200, Number(raw.limit_per_hour) || platformOf().default_limit));
   if (!PROVIDERS[cfg.provider]) cfg.provider = 'groq';
   return cfg;
 }
@@ -98,9 +98,38 @@ function saveCfg(guildId, patch) {
   return next;
 }
 
-// ---------- Clé API : par serveur, par bot, ou variable serveur ----------
+// ---------- Couche PLATEFORME (fondateur) : une clé pour tous les serveurs ----------
+function platformOf() {
+  let p = { on: true, default_limit: 10, daily_cap: 800 };
+  try { p = { ...p, ...(JSON.parse(store.settings.get('ai_platform') || '{}') || {}) }; } catch {}
+  p.default_limit = Math.max(1, Math.min(200, Number(p.default_limit) || 10));
+  p.daily_cap = Math.max(0, Math.min(100000, Number(p.daily_cap) || 0));
+  return p;
+}
+function savePlatform(patch) {
+  const next = { ...platformOf(), ...(patch || {}) };
+  next.on = !!next.on;
+  next.default_limit = Math.max(1, Math.min(200, Number(next.default_limit) || 10));
+  next.daily_cap = Math.max(0, Math.min(100000, Number(next.daily_cap) || 0));
+  store.settings.set('ai_platform', JSON.stringify(next));
+  return next;
+}
+function platformKeyOf(botId) {
+  return String(store.settings.get(`ai_platform_key:${botId}`) || process.env.HOXERA_AI_KEY || '');
+}
+function savePlatformKey(botId, key) { store.settings.set(`ai_platform_key:${botId}`, String(key || '')); }
+function dailyCount(bump) {
+  const day = new Date().toISOString().slice(0, 10);
+  let d = { day, n: 0 };
+  try { d = JSON.parse(store.settings.get('ai_daily') || '') || d; } catch {}
+  if (d.day !== day) d = { day, n: 0 };
+  if (bump) { d.n += 1; store.settings.set('ai_daily', JSON.stringify(d)); }
+  return d;
+}
+
+// ---------- Clé API : serveur (optionnel) puis plateforme (fondateur) ----------
 function keyOf(botId, cfg) {
-  return String((cfg && cfg.key) || store.settings.get(`ai_key:${botId}`) || process.env.HOXERA_AI_KEY || '');
+  return String((cfg && cfg.key) || store.settings.get(`ai_key:${botId}`) || platformKeyOf(botId));
 }
 function saveKey(botId, key) {
   store.settings.set(`ai_key:${botId}`, String(key || ''));
@@ -110,9 +139,11 @@ function hasKey(botId, cfg) { return keyOf(botId, cfg).length > 10; }
 function status(botId, guildId) {
   const cfg = cfgOf(guildId);
   const key = hasKey(botId, cfg);
+  const mode = (cfg.key || store.settings.get(`ai_key:${botId}`)) ? 'server' : (platformKeyOf(botId) ? 'platform' : 'standby');
   return {
     enabled: !!cfg.enabled,
     hasKey: key,
+    mode,
     standby: !key,
     provider: cfg.provider,
     model: cfg.model,
@@ -226,11 +257,16 @@ async function ask(botId, guildId, module, userText, opts) {
   if (!MODULES.includes(module)) module = 'chat';
   if (!cfg.modules[module]) { const e = new Error(`Le module IA « ${MODULE_LABELS[module]} » est désactivé.`); e.code = 'AI_MODULE_OFF'; throw e; }
   if (!LIVE_MODULES.includes(module)) { const e = new Error('Ce module IA arrive dans une prochaine version.'); e.code = 'AI_SOON'; throw e; }
-  if (!hasKey(botId, cfg)) { const e = new Error('IA en veille : aucune clé API gratuite configurée.'); e.code = 'AI_NO_KEY'; throw e; }
+  const plat = platformOf();
+  if (!plat.on) { const e = new Error('Hoxera AI est momentanément désactivée par la plateforme.'); e.code = 'AI_PLATFORM_OFF'; throw e; }
+  if (!hasKey(botId, cfg)) { const e = new Error('IA en veille : la plateforme n a pas encore activé de clé fournisseur.'); e.code = 'AI_NO_KEY'; throw e; }
+  const day = dailyCount(false);
+  if (plat.daily_cap > 0 && day.n >= plat.daily_cap) { const e = new Error('Le quota IA quotidien de la plateforme est atteint, réessayez demain.'); e.code = 'AI_BUDGET'; throw e; }
   quotaCheck(guildId, cfg);
   await takeSlot(cfg.provider);
   try {
     const { text, tokens } = await callProvider(botId, cfg, module, userText, opts && opts.history);
+    dailyCount(true);
     log(guildId, { module, ok: true, q: String(userText).slice(0, 80) });
     bumpStats(guildId, module, true, tokens);
     return { text, cfg };
@@ -269,6 +305,7 @@ async function onMessage(botId, m) {
 
 module.exports = {
   PROVIDERS, MODULES, MODULE_LABELS, LIVE_MODULES, DEFAULT_CFG,
+  platformOf, savePlatform, platformKeyOf, savePlatformKey, dailyCount,
   cfgOf, saveCfg, keyOf, saveKey, hasKey, status,
   ask, onMessage, log, logsOf, statsOf, bumpStats, quotaCheck,
 };
