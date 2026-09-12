@@ -911,6 +911,69 @@ router.post('/bots/:id/guilds/:guildId/reaction_roles/send', requireAuth, async 
   }
 });
 
+// ============================================================
+// 💾 v280 — sauvegarde de la structure du serveur
+// ============================================================
+router.get('/bots/:id/guilds/:guildId/backups', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const bk = require('./discord/backup');
+  res.json({ backups: bk.listOf(req.params.guildId).map(({ id, t, data }) => ({ id, t, name: data?.name || '', counts: data?.counts || {} })) });
+});
+
+router.post('/bots/:id/guilds/:guildId/backups', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const entry = botManager.clients.get(bot.id);
+  if (!entry || !entry.client.isReady()) return res.status(503).json({ error: 'Bot hors ligne, réessayez dans une minute.' });
+  const guild = entry.client.guilds.cache.get(req.params.guildId);
+  if (!guild) return res.status(404).json({ error: 'Serveur introuvable pour ce bot.' });
+  const bk = require('./discord/backup');
+  const snap = bk.create(req.params.guildId, guild);
+  res.json({ ok: true, id: snap.id, counts: snap.data.counts });
+});
+
+router.post('/bots/:id/guilds/:guildId/backups/:bid/restore', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const entry = botManager.clients.get(bot.id);
+  if (!entry || !entry.client.isReady()) return res.status(503).json({ error: 'Bot hors ligne, réessayez dans une minute.' });
+  const guild = entry.client.guilds.cache.get(req.params.guildId);
+  if (!guild) return res.status(404).json({ error: 'Serveur introuvable pour ce bot.' });
+  const bk = require('./discord/backup');
+  const backup = bk.get(req.params.guildId, req.params.bid);
+  if (!backup) return res.status(404).json({ error: 'Sauvegarde introuvable.' });
+  try {
+    const made = await bk.restore(guild, backup);
+    res.json({ ok: true, made });
+  } catch (e) {
+    res.status(400).json({ error: e.message || 'Restauration impossible.' });
+  }
+});
+
+router.get('/bots/:id/guilds/:guildId/backups/:bid/export', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const bk = require('./discord/backup');
+  const backup = bk.get(req.params.guildId, req.params.bid);
+  if (!backup) return res.status(404).json({ error: 'Sauvegarde introuvable.' });
+  res.setHeader('Content-Disposition', `attachment; filename="hoxera-backup-${req.params.guildId}-${backup.id}.json"`);
+  res.json(backup);
+});
+
+router.delete('/bots/:id/guilds/:guildId/backups/:bid', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const bk = require('./discord/backup');
+  bk.remove(req.params.guildId, req.params.bid);
+  res.json({ ok: true });
+});
+
 router.delete('/bots/:id/guilds/:guildId/reaction_roles/:rid', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
   if (!bot) return;

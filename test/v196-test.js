@@ -72,7 +72,7 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
   check('module serveur « Modmail »', dashSrc && dashSrc[1].includes("['modmail'"));
   const botSrc = dash.match(/Dashboard\.BOT_MODULES = \[([\s\S]*?)\];/);
   check('module bot « Aide & Guide »', botSrc && botSrc[1].includes("['help'"));
-  check('help traité comme module bot (botLevel)', (dash.match(/\['commands', 'modules', 'health', 'botsettings', 'help'\]/g) || []).length === 2);
+  check('help traité comme module bot (botLevel)', (dash.match(/\['admin', 'commands', 'modules', 'health', 'botsettings', 'help'\]/g) || []).length === 2);
 
   // ================= 5. Routes API =================
   console.log('\n5️⃣  Routes API (transcripts + modmail)');

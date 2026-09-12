@@ -551,6 +551,7 @@ Dashboard.MODULES = [
   ['botprofile', '🤖', 'Identité du bot'],
 ];
 Dashboard.BOT_MODULES = [
+  ['admin', '🛡️', 'Admin global'],
   ['commands', '🧩', 'Commandes'],
   ['modules', '📦', 'Modules'],
   ['health', '🩺', 'Santé du bot'],
@@ -1362,7 +1363,7 @@ Dashboard.renderContent = async (content) => {
     Dashboard.state.feedTimer = null;
   }
 
-  const botLevel = ['commands', 'modules', 'health', 'botsettings', 'help'].includes(module);
+  const botLevel = ['admin', 'commands', 'modules', 'health', 'botsettings', 'help'].includes(module);
   if (!botLevel && !guildId) return;
 
   try {
@@ -1397,7 +1398,7 @@ Dashboard.renderContent = async (content) => {
 // ============================================================
 Dashboard.header = (content, icon, title, sub) => {
   content.innerHTML = '';
-  const isBotScope = ['commands', 'modules', 'health', 'botsettings', 'help'].includes(Dashboard.state.module);
+  const isBotScope = ['admin', 'commands', 'modules', 'health', 'botsettings', 'help'].includes(Dashboard.state.module);
   const isGuildScope = Boolean(Dashboard.state.guildId) && !isBotScope;
   const bot = Dashboard.state.bot || {};
   const statusLabel = bot.online === false ? 'Optimus Prime hors ligne' : 'Optimus Prime en ligne';
@@ -6212,6 +6213,50 @@ Dashboard.renderers.server = async (content, data) => {
   const root = Dashboard.header(content, '⚙️', 'Réglages du serveur', 'Préfixe, langue, anniversaires, anti-raid et plus.');
   const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
   const categories = (data.channels || []).filter((ch) => ch.category);
+  // 💾 v280 — sauvegarde de la structure du serveur
+  const cBk = Dashboard.card(root, '💾 Sauvegarde de la structure', 'Photographie rôles + catégories + salons. La restauration ne recrée QUE ce qui manque : rien n est jamais supprimé.');
+  cBk.innerHTML += `<div id="bk-list" style="margin-bottom:12px"><div style="font-size:12.5px;color:var(--d-dim)">⏳ Chargement…</div></div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap"><button class="dash-btn dash-btn-primary" id="bk-create">📸 Créer une sauvegarde maintenant</button></div>
+    <div style="font-size:12px;color:var(--d-dim);margin-top:8px">5 sauvegardes maximum par serveur (les plus récentes d'abord). Export JSON téléchargeable pour vos archives.</div>`;
+  const loadBk = async () => {
+    const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/backups`);
+    const host = cBk.querySelector('#bk-list');
+    const items = r.backups || [];
+    if (!items.length) { host.innerHTML = '<div style="font-size:12.5px;color:var(--d-dim)">Aucune sauvegarde pour l instant : créez la première, c est votre filet de sécurité.</div>'; return; }
+    host.innerHTML = items.map((b) => `<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;padding:9px 10px;border:1px solid var(--d-line);border-radius:10px;margin-bottom:6px;background:var(--d-card2,#ffffff08)">
+      <div style="font-size:12.5px">📸 ${new Date(b.t).toLocaleString('fr-FR')} · <b>${b.counts.roles || 0}</b> rôles · <b>${b.counts.channels || 0}</b> salons/catégories</div>
+      <div style="display:flex;gap:6px">
+        <button class="dash-btn" data-bk-restore="${b.id}" style="padding:4px 9px" title="Recrée uniquement ce qui manque">♻️ Restaurer</button>
+        <button class="dash-btn" data-bk-export="${b.id}" style="padding:4px 9px" title="Télécharger le JSON">⬇️</button>
+        <button class="dash-btn" data-bk-del="${b.id}" style="padding:4px 9px" title="Supprimer cette sauvegarde">🗑️</button>
+      </div></div>`).join('');
+    host.querySelectorAll('[data-bk-restore]').forEach((btn) => { btn.onclick = async () => {
+      if (!confirm('Restaurer cette sauvegarde ? Seuls les rôles et salons MANQUANTS seront recréés ; rien ne sera supprimé.')) return;
+      const rr2 = await App.api(`/bots/${bot.id}/guilds/${guildId}/backups/${btn.dataset.bkRestore}/restore`, { method: 'POST', body: {} });
+      App.toast(rr2.ok ? `♻️ Restauration terminée : ${rr2.made.roles} rôle(s) et ${rr2.made.channels} salon(s) recréés.` : `⚠️ ${rr2.error || 'Restauration impossible.'}`);
+    }; });
+    host.querySelectorAll('[data-bk-export]').forEach((btn) => { btn.onclick = async () => {
+      const token = App.state && App.state.token ? App.state.token : (localStorage.getItem('hx-token') || '');
+      const url = `/api/bots/${bot.id}/guilds/${guildId}/backups/${btn.dataset.bkExport}/export`;
+      const resp = await fetch(url, { headers: token ? { authorization: 'Bearer ' + token } : {} });
+      const blob = await resp.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'hoxera-backup.json';
+      a.click();
+    }; });
+    host.querySelectorAll('[data-bk-del]').forEach((btn) => { btn.onclick = async () => {
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/backups/${btn.dataset.bkDel}`, { method: 'DELETE' });
+      App.toast('🗑️ Sauvegarde supprimée.');
+      loadBk();
+    }; });
+  };
+  cBk.querySelector('#bk-create').onclick = async () => {
+    const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/backups`, { method: 'POST', body: {} });
+    App.toast(r.ok ? `📸 Sauvegarde créée : ${r.counts.roles} rôles, ${r.counts.channels} salons/catégories.` : `⚠️ ${r.error || 'Création impossible.'}`);
+    loadBk();
+  };
+  loadBk();
   const rolesList = data.roles || [];
   const c = Dashboard.card(root, 'Général', '');
   c.innerHTML += `
@@ -6747,9 +6792,13 @@ Dashboard.renderers.health = async (content) => {
 };
 
 // ---------- Réglages du bot ----------
-Dashboard.renderers.botsettings = async (content) => {
+// ============================================================
+// 🛡️ v280 — ESPACE ADMIN GLOBAL (fondateur) : IA plateforme,
+// sauvegardes plateforme, compteurs — tout au même endroit.
+// ============================================================
+Dashboard.renderers.admin = async (content) => {
   const bot = Dashboard.state.bot;
-  const root = Dashboard.header(content, '🤖', 'Réglages du bot', 'Préfixe global, statut, identité et sauvegarde.');
+  const root = Dashboard.header(content, '🛡️', 'Admin global', 'Tout ce qui pilote la plateforme Hoxera au niveau fondateur : IA de tous les serveurs, sauvegardes, état — rien de spécifique à un serveur ici.');
   // 🤖 v279 — couche plateforme Hoxera AI (fondateur) : une seule clé pour TOUS les serveurs
   const cAI = Dashboard.card(root, '🤖 Hoxera AI — plateforme (fondateur)', 'Votre clé fournisseur unique, entrée une fois ici, alimente automatiquement l IA de tous les serveurs. Les utilisateurs n ont rien à configurer.');
   cAI.innerHTML += `<div id="aip-state" style="font-size:12.5px;color:var(--d-dim);margin-bottom:10px">⏳ Chargement…</div>
@@ -6782,6 +6831,33 @@ Dashboard.renderers.botsettings = async (content) => {
     } });
     App.toast(r.ok ? '🤖 Réglages plateforme enregistrés : tous les serveurs sont concernés.' : '⚠️ Enregistrement impossible.');
     loadAI();
+  const c2 = Dashboard.card(root, '💾 Sauvegarde automatique', 'Toutes les données (comptes, bots, configs) sont sauvegardées et restaurées à chaque mise à jour.');
+  try {
+    const s = await App.api('/backup/status');
+    const last = s.last_backup ? new Date(s.last_backup) : null;
+    const lastStr = last && !isNaN(last) ? last.toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : 'jamais';
+    c2.appendChild(App.el(`<div class="desc" style="margin:0 0 10px">${s.enabled
+      ? `✅ <b>Active</b> — dépôt <code>${App.escapeHtml(s.repo)}</code> · sauvegarde toutes les 10 minutes + restauration au démarrage.`
+      : '⚠️ Désactivée — configurez BOTDEV_GH_TOKEN et BOTDEV_DATA_REPO sur Render.'}</div>`));
+    c2.appendChild(App.el(`<div class="dash-badge ${s.enabled ? 'ok' : 'warn'}" style="margin-bottom:10px">🕐 Dernière sauvegarde : ${lastStr}</div>`));
+    const nowBtn = App.el(`<button class="dash-btn dash-btn-primary">💾 Sauvegarder maintenant</button>`);
+    nowBtn.onclick = async () => {
+      try { await App.api('/backup/now', { method: 'POST' }); App.toast('Sauvegarde faite ! 🎉'); Dashboard.renderers.admin(content); }
+      catch (e) { App.toast(e.message, 'error'); }
+    };
+    c2.appendChild(nowBtn);
+  } catch {}
+  const c3 = Dashboard.card(root, ' Où régler quoi ?', 'Pour éviter toute confusion : cet espace pilote la PLATEFORME ; les réglages d un serveur précis (tickets, niveaux, vocaux, IA du serveur…) vivent dans ce serveur, une fois sélectionné.');
+  c3.innerHTML += `<div style="font-size:12.5px;color:var(--d-dim);line-height:1.7">
+    · <b>Admin global</b> : clé IA plateforme, quota & plafond budget, sauvegardes plateforme.<br>
+    · <b>Réglages du bot</b> : préfixe global, statut affiché, identité du bot.<br>
+    · <b>Un serveur sélectionné</b> : tous les réglages de CE serveur (dont son module 🤖 Hoxera AI côté serveur).</div>`;
+};
+
+Dashboard.renderers.botsettings = async (content) => {
+  const bot = Dashboard.state.bot;
+  const root = Dashboard.header(content, '🤖', 'Réglages du bot', 'Préfixe global, statut affiché et identité du bot. (L IA plateforme et les sauvegardes sont dans 🛡️ Admin global.)');
+
   };
   loadAI();
   const c = Dashboard.card(root, 'Général', '');
@@ -6798,22 +6874,7 @@ Dashboard.renderers.botsettings = async (content) => {
     } catch (e) { App.toast(e.message, 'error'); }
   };
 
-  const c2 = Dashboard.card(root, '💾 Sauvegarde automatique', 'Toutes les données (comptes, bots, configs) sont sauvegardées et restaurées à chaque mise à jour.');
-  try {
-    const s = await App.api('/backup/status');
-    const last = s.last_backup ? new Date(s.last_backup) : null;
-    const lastStr = last && !isNaN(last) ? last.toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : 'jamais';
-    c2.appendChild(App.el(`<div class="desc" style="margin:0 0 10px">${s.enabled
-      ? `✅ <b>Active</b> — dépôt <code>${App.escapeHtml(s.repo)}</code> · sauvegarde toutes les 10 minutes + restauration au démarrage.`
-      : '⚠️ Désactivée — configurez BOTDEV_GH_TOKEN et BOTDEV_DATA_REPO sur Render.'}</div>`));
-    c2.appendChild(App.el(`<div class="dash-badge ${s.enabled ? 'ok' : 'warn'}" style="margin-bottom:10px">🕐 Dernière sauvegarde : ${lastStr}</div>`));
-    const nowBtn = App.el(`<button class="dash-btn dash-btn-primary">💾 Sauvegarder maintenant</button>`);
-    nowBtn.onclick = async () => {
-      try { await App.api('/backup/now', { method: 'POST' }); App.toast('Sauvegarde faite ! 🎉'); Dashboard.renderers.botsettings(content); }
-      catch (e) { App.toast(e.message, 'error'); }
-    };
-    c2.appendChild(nowBtn);
-  } catch {}
+
 };
 
 // ============================================================
