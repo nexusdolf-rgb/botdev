@@ -4442,7 +4442,55 @@ Dashboard.renderers.antinuke = async (content, data) => {
 Dashboard.renderers.roles = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const root = Dashboard.header(content, '📋', 'Menus & boutons de rôles', 'Deux styles au choix : menu déroulant (plusieurs rôles d\'un coup) ou boutons (un clic = un rôle, re-clic = retiré).');
-  const c = Dashboard.card(root, 'Panneaux', 'Envoyez-les sur Discord avec /roles send, ou utilisez ✏️ pour modifier — si le panneau est déjà posté, le message Discord se met à jour en place (aucun doublon).');
+    // 🎭 v277 — rôles par réaction emoji (comme les grands bots)
+  const rrList = (data.reaction_roles || []).map((x) => ({ ...x }));
+  const cRR = Dashboard.card(root, '🎭 Rôles par réaction emoji', 'Réagir au message donne le rôle, retirer la réaction le retire (mode toggle) — modifiable à volonté, comme chez les autres bots.');
+  const chanName = (id) => { const ch = (data.channels || []).find((c) => c.id === id); return ch ? ch.name : id; };
+  const paintRR = () => {
+    const host = cRR.querySelector('#rr-list');
+    if (!rrList.length) { host.innerHTML = '<div style="font-size:12.5px;color:var(--d-dim)">Aucun message de rôles pour l\'instant : créez-le ci-dessous.</div>'; return; }
+    host.innerHTML = rrList.map((st) => `<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;padding:9px 10px;border:1px solid var(--d-line);border-radius:10px;margin-bottom:6px;background:var(--d-card2,#ffffff08)">
+      <div style="font-size:12.5px"># ${App.escapeHtml(chanName(st.channel))} · ${st.mappings.length} réaction(s) · mode ${st.mode === 'add-only' ? '➕ don seulement' : '🔁 toggle'}${st.message_id ? ` · <a href="https://discord.com/channels/${guildId}/${st.channel}/${st.message_id}" target="_blank" rel="noopener" style="color:var(--d-accent,#e07a5f)">voir le message</a>` : ' · 📤 pas encore envoyé'}</div>
+      <button class="dash-btn" data-rr-del="${st.id}" style="padding:4px 9px">🗑️</button></div>`).join('');
+    host.querySelectorAll('[data-rr-del]').forEach((b) => { b.onclick = async () => {
+      const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/reaction_roles/${b.dataset.rrDel}`, { method: 'DELETE' });
+      if (r.ok) { App.toast('🎭 Message de rôles supprimé.'); Dashboard.loadGuild().then((d) => Dashboard.renderers.roles(content, d)); }
+    }; });
+  };
+  cRR.innerHTML += `<div id="rr-list" style="margin-bottom:12px"></div>
+    <label class="dash-label">Salon du message de rôles</label>
+    <select class="dash-select" id="rr-channel">${(data.channels || []).filter((ch) => !ch.voice && !ch.category).map((ch) => `<option value="${ch.id}"># ${App.escapeHtml(ch.name)}</option>`).join('')}</select>
+    <label class="dash-label">Texte d'introduction (optionnel)</label>
+    <input class="dash-input" id="rr-content" placeholder="Choisissez vos rôles ci-dessous !" style="max-width:420px" />
+    <label class="dash-label">Comportement</label>
+    <select class="dash-select" id="rr-mode" style="max-width:300px"><option value="toggle">🔁 Toggle : réagir = recevoir, retirer = perdre</option><option value="add-only">➕ Don seulement (jamais retiré)</option></select>
+    <label class="dash-label">Réactions → rôles</label>
+    <div id="rr-maps" style="display:flex;flex-direction:column;gap:6px"></div>
+    <div style="margin-top:8px;display:flex;gap:9px;flex-wrap:wrap"><button class="dash-btn" id="rr-addmap">➕ Ajouter une réaction</button></div>
+    <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap"><button class="dash-btn dash-btn-primary" id="rr-send">📤 Enregistrer et envoyer sur Discord</button></div>`;
+  const mapsHost = cRR.querySelector('#rr-maps');
+  const addMapRow = () => {
+    const row = App.el('<div style="display:flex;gap:6px;flex-wrap:wrap"></div>');
+    row.innerHTML = `<input class="dash-input rr-emoji" placeholder="🎮" style="width:70px" /><select class="dash-select rr-role" style="max-width:220px">${(data.roles || []).filter((r) => r.name !== '@everyone').map((r) => `<option value="${r.id}">@ ${App.escapeHtml(r.name)}</option>`).join('')}</select><input class="dash-input rr-label" placeholder="description (optionnel)" style="max-width:200px" /><button class="dash-btn rr-rm" style="padding:4px 9px">➖</button>`;
+    row.querySelector('.rr-rm').onclick = () => row.remove();
+    mapsHost.appendChild(row);
+  };
+  addMapRow();
+  cRR.querySelector('#rr-addmap').onclick = addMapRow;
+  paintRR();
+  cRR.querySelector('#rr-send').onclick = async () => {
+    const maps = Array.from(mapsHost.children).map((row) => ({
+      emoji: row.querySelector('.rr-emoji').value.trim(),
+      role: row.querySelector('.rr-role').value,
+      label: row.querySelector('.rr-label').value.trim(),
+    })).filter((m) => m.emoji && m.role);
+    if (!maps.length) return App.toast('⚠️ Ajoutez au moins une réaction avec un rôle.');
+    const setup = { id: 'rr' + Date.now(), channel: cRR.querySelector('#rr-channel').value, content: cRR.querySelector('#rr-content').value, mode: cRR.querySelector('#rr-mode').value, mappings: maps };
+    const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/reaction_roles/send`, { method: 'POST', body: { setup } });
+    App.toast(r.ok ? '🎭 Message de rôles envoyé : les réactions sont posées.' : `⚠️ ${r.error || 'Envoi impossible.'}`);
+    if (r.ok) Dashboard.loadGuild().then((d) => Dashboard.renderers.roles(content, d));
+  };
+const c = Dashboard.card(root, 'Panneaux', 'Envoyez-les sur Discord avec /roles send, ou utilisez ✏️ pour modifier — si le panneau est déjà posté, le message Discord se met à jour en place (aucun doublon).');
   const menus = data.role_menus || [];
   if (!menus.length) c.appendChild(App.el(`<div class="dash-empty"><div class="big">📋</div>Aucun panneau pour l\'instant.</div>`));
   const list = App.el(`<div></div>`);

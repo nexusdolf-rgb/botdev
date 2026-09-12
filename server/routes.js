@@ -787,11 +787,61 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
     shop_items: store.shop.all(bot.id, guildId),
     log_events: logEvents,
     sticky: (() => { const st = require('./discord/sticky'); return { ...st.cfgOf(guildId), last_id: st.lastIdOf(guildId) }; })(),
+    reaction_roles: require('./discord/reactionroles').allOf(guildId),
   };
   // ✅ Checklist de configuration + 🚨 état du verrouillage anti-raid
   payload.checklist = guildChecklist(payload);
   try { payload.lockdown = require('./discord/lockdown').state(bot.id, dGuild); } catch { payload.lockdown = { locked: false, channels: [] }; }
   res.json(payload);
+});
+
+// ============================================================
+// 🎭 v277 — rôles par réaction emoji
+// ============================================================
+router.put('/bots/:id/guilds/:guildId/reaction_roles', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const rr = require('./discord/reactionroles');
+  const list = rr.saveAll(req.params.guildId, Array.isArray((req.body || {}).setups) ? req.body.setups : []);
+  res.json({ ok: true, reaction_roles: list });
+});
+
+router.post('/bots/:id/guilds/:guildId/reaction_roles/send', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const rr = require('./discord/reactionroles');
+  const entry = botManager.clients.get(bot.id);
+  if (!entry || !entry.client.isReady()) return res.status(503).json({ error: 'Bot hors ligne, réessayez dans une minute.' });
+  const guild = entry.client.guilds.cache.get(req.params.guildId);
+  if (!guild) return res.status(404).json({ error: 'Serveur introuvable pour ce bot.' });
+  let list = rr.allOf(req.params.guildId);
+  const id = String((req.body || {}).id || '');
+  let setup = list.find((s) => s.id === id);
+  if (!setup && (req.body || {}).setup) { // création + envoi en un geste
+    list = rr.saveAll(req.params.guildId, list.concat([{ id: 'rr' + Date.now(), ...(req.body.setup || {}) }]));
+    setup = list[list.length - 1];
+  }
+  if (!setup) return res.status(404).json({ error: 'Configuration introuvable.' });
+  try {
+    const messageId = await rr.sendSetup(bot.id, guild, setup);
+    list = list.map((s) => (s.id === setup.id ? { ...s, message_id: messageId } : s));
+    rr.saveAll(req.params.guildId, list);
+    res.json({ ok: true, message_id: messageId });
+  } catch (e) {
+    res.status(400).json({ error: e.message || 'Envoi impossible.' });
+  }
+});
+
+router.delete('/bots/:id/guilds/:guildId/reaction_roles/:rid', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const rr = require('./discord/reactionroles');
+  const list = rr.allOf(req.params.guildId).filter((s) => s.id !== req.params.rid);
+  rr.saveAll(req.params.guildId, list);
+  res.json({ ok: true, reaction_roles: list });
 });
 
 // 📌 v276 — message épinglé en bas de salon (sticky)

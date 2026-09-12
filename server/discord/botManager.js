@@ -553,13 +553,16 @@ function attachListeners(botId, entry) {
   // Nouveau serveur : synchronise les commandes avec retries automatiques
   // (les commandes slash apparaissent ainsi dès l'ajout du bot)
   // ⭐ Starboard : réactions étoile ajoutées/retirées
-  client.on('messageReactionAdd', (reaction) => {
+  client.on('messageReactionAdd', (reaction, user) => {
     const community = require('./community');
     community.onReaction(botId, reaction).catch(() => {});
+    // 🎭 v277 — rôles par réaction (ignore les messages non déclarés)
+    require('./reactionroles').onReaction(botId, reaction, user, 'add').catch(() => {});
   });
-  client.on('messageReactionRemove', (reaction) => {
+  client.on('messageReactionRemove', (reaction, user) => {
     const community = require('./community');
     community.onReaction(botId, reaction).catch(() => {});
+    require('./reactionroles').onReaction(botId, reaction, user, 'remove').catch(() => {});
   });
 
   // 📨 Traqueur d'invitations : cache tenu à jour en continu
