@@ -6924,29 +6924,37 @@ Dashboard.renderers.verification = async (content, data) => {
     <label class="dash-label">Identifiants des bots approuvés (un par ligne)</label>
     <textarea class="dash-input" id="ver-approved" rows="3" style="width:100%;font-size:12.5px" placeholder="123456789012345678">${App.escapeHtml((cfg.approved_bots || []).join('\n'))}</textarea>
     <div style="height:1px;background:var(--d-border);margin:16px 0"></div>
-    <label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" id="ver-isolate" ${cfg.isolate ? 'checked' : ''} /> 🔒 Masquer tous les salons aux membres non vérifiés</label>
-    <div style="font-size:12px;color:var(--d-dim);margin:2px 0 8px">Les nouveaux arrivants ne voient QUE le salon de vérification. Dès qu'ils cliquent sur « Je suis humain » et reçoivent le rôle, ils voient tout le serveur. Les salons créés pendant l'isolation sont masqués automatiquement.</div>
+    <label class="dash-label">🔒 Isolation des salons pour les membres non vérifiés</label>
+    <select class="dash-select" id="ver-isolate-sel" style="max-width:460px">
+      <option value="off" ${cfg.isolate ? '' : 'selected'}>Désactivée — tous les salons restent visibles</option>
+      <option value="on" ${cfg.isolate ? 'selected' : ''}>Activée — les non-vérifiés ne voient que le salon de vérification</option>
+    </select>
+    <div style="font-size:12px;color:var(--d-dim);margin:4px 0 8px">Le changement s'applique tout de suite : Hoxera masque (ou rouvre) les salons lui-même. Les nouveaux arrivants ne voient QUE le salon de vérification ; dès leur clic sur « Je suis humain », ils voient tout le serveur. Les salons créés pendant l'isolation sont masqués automatiquement.</div>
     ${cfg.isolate ? `<div style="margin-bottom:8px"><span class="dash-badge ok">🔒 Isolation ACTIVE — ${(cfg.isolated_channels || []).length} salon(s) masqué(s)</span></div>` : ''}
-    <div style="background:rgba(237,66,69,0.08);border:1px solid rgba(237,66,69,0.35);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--d-dim);margin-bottom:10px">⚠️ Sur un serveur existant, les membres actuels sans le rôle vérifié ne verront plus que le salon de vérification. Juste après l'activation, cliquez sur « Donner le rôle aux membres actuels » pour ne bloquer personne.</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">
-      <button class="dash-btn" id="ver-iso-on">🔒 Appliquer l'isolation</button>
-      <button class="dash-btn" id="ver-iso-off">🔓 Tout rendre visible</button>
-      <button class="dash-btn" id="ver-grant">👥 Donner le rôle aux membres actuels</button>
-    </div>
+    <div style="background:rgba(237,66,69,0.08);border:1px solid rgba(237,66,69,0.35);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--d-dim);margin-bottom:10px">⚠️ Sur un serveur existant, les membres actuels sans le rôle vérifié ne verront plus que le salon de vérification. Juste après l'activation, cochez la case ci-dessous pour ne bloquer personne.</div>
+    <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="ver-grant-case" /> 👥 Donner le rôle vérifié à tous les membres actuels (juste après l'activation)</label>
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
       <button class="dash-btn dash-btn-primary" id="ver-save">💾 Enregistrer</button>
       <button class="dash-btn" id="ver-send">📤 Envoyer le panneau dans le salon</button>
     </div>`;
-  c1.querySelector('#ver-iso-on').onclick = async () => {
-    const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/verification/isolate`, { method: 'POST', body: { on: true } });
-    App.toast(r.ok ? '🔒 Isolation en cours d\'application — cela peut prendre quelques instants. Rechargez la page dans une minute.' : `⚠️ ${r.error || 'Application impossible.'}`);
+  // v294 — les 3 boutons deviennent un sélecteur + une case : le changement de
+  // sélecteur applique/annule l'isolation, la case lance la distribution du rôle
+  // puis se décoche toute seule. En cas d'erreur, le sélecteur revient en arrière.
+  c1.querySelector('#ver-isolate-sel').onchange = async (e) => {
+    const sel = e.target;
+    const on = sel.value === 'on';
+    sel.disabled = true;
+    const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/verification/isolate`, { method: 'POST', body: { on } });
+    sel.disabled = false;
+    if (!r.ok) { sel.value = on ? 'off' : 'on'; App.toast(`⚠️ ${r.error || 'Changement impossible.'}`); return; }
+    App.toast(on ? '🔒 Isolation en cours d\'application — cela peut prendre quelques instants. Rechargez la page dans une minute.' : '🔓 Salons en cours de réouverture — rechargez la page dans un instant.');
   };
-  c1.querySelector('#ver-iso-off').onclick = async () => {
-    const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/verification/isolate`, { method: 'POST', body: { on: false } });
-    App.toast(r.ok ? '🔓 Salons en cours de réouverture — rechargez la page dans un instant.' : `⚠️ ${r.error || 'Réouverture impossible.'}`);
-  };
-  c1.querySelector('#ver-grant').onclick = async () => {
+  c1.querySelector('#ver-grant-case').onchange = async (e) => {
+    if (!e.target.checked) return;
+    e.target.disabled = true;
     const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/verification/grant-role`, { method: 'POST', body: {} });
+    e.target.disabled = false;
+    e.target.checked = false; // action ponctuelle : la case se recoche à chaque demande
     App.toast(r.ok ? '👥 Distribution du rôle en cours — cela peut prendre quelques minutes sur un gros serveur.' : `⚠️ ${r.error || 'Distribution impossible.'}`);
   };
   c1.querySelector('#ver-save').onclick = async () => {
@@ -6956,7 +6964,7 @@ Dashboard.renderers.verification = async (content, data) => {
       role: c1.querySelector('#ver-role').value,
       gate_days: Number(c1.querySelector('#ver-gate').value) || 0,
       bot_filter: c1.querySelector('#ver-botfilter').checked,
-      isolate: c1.querySelector('#ver-isolate').checked,
+      isolate: c1.querySelector('#ver-isolate-sel').value === 'on',
       approved_bots: c1.querySelector('#ver-approved').value.split('\n').map((x) => x.trim()).filter(Boolean),
     };
     const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/verification`, { method: 'PUT', body });

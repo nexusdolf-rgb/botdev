@@ -161,16 +161,18 @@ function mkGuild(G, opts = {}) {
   const dash = racine('public/js/dashboard.js');
   const iVer = dash.indexOf('Dashboard.renderers.verification');
   const chunk = dash.slice(iVer, iVer + 14000);
-  check('case « Masquer tous les salons » + badge actif', chunk.includes('ver-isolate') && chunk.includes('Isolation ACTIVE'));
-  check('3 boutons : appliquer / rendre visible / donner le rôle', chunk.includes('ver-iso-on') && chunk.includes('ver-iso-off') && chunk.includes('ver-grant'));
-  check('avertissement membres existants', chunk.includes('Donner le rôle aux membres actuels'));
-  check('isolate envoyé avec la sauvegarde', chunk.includes("isolate: c1.querySelector('#ver-isolate').checked"));
+  // v294 : les 3 boutons sont devenus un sélecteur + une case (mêmes routes)
+  check('sélecteur d\'isolation (2 choix) + badge actif', chunk.includes('ver-isolate-sel') && chunk.includes('Isolation ACTIVE') && chunk.includes('Désactivée — tous les salons restent visibles'));
+  check('case « Donner le rôle aux membres actuels »', chunk.includes('ver-grant-case') && chunk.includes('Donner le rôle vérifié à tous les membres actuels'));
+  check('les 3 boutons ont disparu', !chunk.includes('ver-iso-on') && !chunk.includes('ver-iso-off') && !chunk.includes('ver-grant\''));
+  check('isolate envoyé avec la sauvegarde (depuis le sélecteur)', chunk.includes("isolate: c1.querySelector('#ver-isolate-sel').value === 'on'"));
+
 
   console.log('— 10. Bump v293 —');
   const index = racine('public/index.html');
-  check('index.html : ?v=293 référencé 7 fois', (index.match(/\?v=293/g) || []).length === 7,
-    String((index.match(/\?v=293/g) || []).length));
-  check('sw.js : cache « botdev-v293 »', racine('public/sw.js').includes("const CACHE = 'botdev-v293';"));
+  check('index.html : ?v=294 référencé 7 fois', (index.match(/\?v=294/g) || []).length === 7,
+    String((index.match(/\?v=294/g) || []).length));
+  check('sw.js : cache « botdev-v294 »', racine('public/sw.js').includes("const CACHE = 'botdev-v294';"));
 
   console.log(`\n🎉 v293 : ${ok} vérifications passées`);
   process.exit(0);

@@ -135,8 +135,8 @@ const mkChannel = (id, name) => {
   console.log('— 6. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=293 référencé 7 fois', (index.match(/\?v=293/g) || []).length === 7);
-  check('sw.js : cache « botdev-v293 »', sw.includes("const CACHE = 'botdev-v293';"));
+  check('index.html : ?v=294 référencé 7 fois', (index.match(/\?v=294/g) || []).length === 7);
+  check('sw.js : cache « botdev-v294 »', sw.includes("const CACHE = 'botdev-v294';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v268 — ${ok} vérifications OK : notre interface pro, avec nos émojis.`);
