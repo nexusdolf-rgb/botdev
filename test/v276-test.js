@@ -93,8 +93,8 @@ function makeMsg(guildId, channelId, opts) {
   console.log('— 6. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=290 référencé 7 fois', (index.match(/\?v=290/g) || []).length === 7);
-  check('sw.js : cache « botdev-v290 »', sw.includes("const CACHE = 'botdev-v290';"));
+  check('index.html : ?v=291 référencé 7 fois', (index.match(/\?v=291/g) || []).length === 7);
+  check('sw.js : cache « botdev-v291 »', sw.includes("const CACHE = 'botdev-v291';"));
 
   console.log(`\n🎉 v276 — ${ok} vérifications OK : sticky propre, discret, jamais dans les messages des membres.`);
 })().catch((e) => { console.error(e); process.exit(1); });

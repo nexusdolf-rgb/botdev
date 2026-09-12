@@ -170,6 +170,8 @@ async function onMemberJoinInvites(botId, member) {
     store.inviteUses.replaceAll(botId, guild.id, after);
     if (used && used.inviter_id) {
       store.inviteJoins.add(botId, guild.id, member.id, used.inviter_id, used.code);
+      // v291 — récompense d'invitation : palier atteint ?
+      try { require('./invites').onInviteCounted(botId, guild, used.inviter_id).catch(() => {}); } catch (e) {}
     }
   } catch { /* silencieux */ }
 }

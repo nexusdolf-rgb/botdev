@@ -774,6 +774,7 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
     tickets: { name: '', channel: '', message: '', button_label: '🎫 Ouvrir un ticket', button_style: '1', require_reason: 1, support_role: '', category: 'Tickets', types: [], ...(cfg || {}), types: parsedTypes },
     tickets_stats: ticketsStats,
     verification: require('./discord/verification').cfgOf(guildId),
+    invite_rewards: require('./discord/invites').cfgOf(guildId),
     events: { defs: EVENT_DEFS, state: eventsState(bot.id, guildId) },
     role_menus: store.roleMenus.all(bot.id, guildId),
     xp_roles: store.xpRoles.all(bot.id, guildId),
@@ -828,6 +829,21 @@ router.post('/bots/:id/guilds/:guildId/verification/panel', requireAuth, async (
     res.json({ ok: true });
   } catch (e) {
     res.status(400).json({ ok: false, error: e.message || 'Envoi impossible.' });
+  }
+});
+
+// ============================================================
+// 📨 v291 — récompenses d'invitations (paliers + anti fausses invitations)
+// ============================================================
+router.put('/bots/:id/guilds/:guildId/invite-rewards', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  try {
+    await require('./discord/invites').saveCfg(bot.id, req.params.guildId, req.body || {});
+    res.json({ ok: true, cfg: require('./discord/invites').cfgOf(req.params.guildId) });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: e.message || 'Enregistrement impossible.' });
   }
 });
 

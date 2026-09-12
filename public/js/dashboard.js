@@ -5936,6 +5936,58 @@ Dashboard.renderers.community = async (content, data) => {
   const root = Dashboard.header(content, '⭐', 'Communauté & Lives', 'Starboard, classement des recruteurs et annonces automatiques de live.');
   const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
 
+  // ---- 📨 v291 : Récompenses d'invitations ----
+  const irc = Object.assign({ enabled: false, min_hours: 24, channel: '', rewards: [] }, data.invite_rewards || {});
+  const ci = Dashboard.card(root, '📨 Récompenses d\'invitations', 'Récompensez les membres qui font grandir le serveur : un rôle automatique à chaque palier d\'invitations VALIDES. Un invité qui repart avant le délai choisi ne compte pas (anti fausses invitations).');
+  let ircRows = (irc.rewards || []).map((rw) => ({ invites: Number(rw.invites) || 5, role: String(rw.role || '') }));
+  const ircRoleOpts = (sel) => ['<option value="">— Choisir un rôle —</option>']
+    .concat((data.roles || []).map((r) => `<option value="${r.id}" ${String(sel) === String(r.id) ? 'selected' : ''}>@ ${App.escapeHtml(r.name)}</option>`)).join('');
+  const ircDraw = () => {
+    const box = ci.querySelector('#irc-rows');
+    if (!ircRows.length) { box.innerHTML = '<div style="font-size:12.5px;color:var(--d-dim)">Aucun palier — ajoutez-en un (ex. 5 invitations → rôle Fan, 25 → rôle Ambassadeur).</div>'; return; }
+    box.innerHTML = ircRows.map((rw, i) => `
+      <div class="irc-row" data-i="${i}" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+        <input type="number" class="dash-input irc-inv" min="1" max="100000" value="${rw.invites}" style="width:110px" title="Nombre d'invitations valides" />
+        <span style="color:var(--d-dim);font-size:12.5px">invitation(s) →</span>
+        <select class="dash-select irc-role" style="max-width:240px">${ircRoleOpts(rw.role)}</select>
+        <button class="dash-btn irc-del" title="Supprimer ce palier">🗑️</button>
+      </div>`).join('');
+    box.querySelectorAll('.irc-row').forEach((row) => {
+      const i = Number(row.dataset.i);
+      row.querySelector('.irc-inv').oninput = (e) => { ircRows[i].invites = Math.max(1, Number(e.target.value) || 1); };
+      row.querySelector('.irc-role').onchange = (e) => { ircRows[i].role = e.target.value; };
+      row.querySelector('.irc-del').onclick = () => { ircRows.splice(i, 1); ircDraw(); };
+    });
+  };
+  ci.innerHTML += `
+    <label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" id="irc-enabled" ${irc.enabled ? 'checked' : ''} /> Activer les récompenses d'invitations</label>
+    <label class="dash-label">🕵️ Anti fausses invitations — un invité qui part avant ce délai ne compte pas</label>
+    <select class="dash-select" id="irc-minh" style="max-width:320px">${[[0, 'Désactivé — tous les invités comptent'], [6, '6 heures'], [24, '24 heures (recommandé)'], [72, '3 jours'], [168, '7 jours']].map(([v, l]) => `<option value="${v}" ${Number(irc.min_hours) === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    <label class="dash-label">📣 Salon d'annonce des paliers atteints</label>
+    <select class="dash-select" id="irc-chan" style="max-width:320px">${['<option value="">— Aucune annonce —</option>'].concat(textChannels.map((ch) => `<option value="${ch.id}" ${irc.channel === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`)).join('')}</select>
+    <label class="dash-label">🏆 Paliers (invitations valides → rôle donné à l'inviteur)</label>
+    <div id="irc-rows"></div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      <button class="dash-btn" id="irc-add">➕ Ajouter un palier</button>
+      <button class="dash-btn dash-btn-primary" id="irc-save">💾 Enregistrer</button>
+    </div>`;
+  ircDraw();
+  ci.querySelector('#irc-add').onclick = () => {
+    if (ircRows.length >= 10) { App.toast('⚠️ 10 paliers maximum.'); return; }
+    ircRows.push({ invites: 5, role: '' });
+    ircDraw();
+  };
+  ci.querySelector('#irc-save').onclick = async () => {
+    const body = {
+      enabled: ci.querySelector('#irc-enabled').checked,
+      min_hours: Number(ci.querySelector('#irc-minh').value) || 0,
+      channel: ci.querySelector('#irc-chan').value,
+      rewards: ircRows,
+    };
+    const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/invite-rewards`, { method: 'PUT', body });
+    App.toast(r.ok ? '✅ Récompenses d\'invitations enregistrées.' : `⚠️ ${r.error || 'Enregistrement impossible.'}`);
+  };
+
   // ---- 🔴 Carte Annonces de live ----
   const cl = Dashboard.card(root, '🔴 Annonces de live', 'Enregistrez le lien TikTok / Twitch / YouTube / Kick d\'un membre : dès qu\'il lance un live, le bot l\'annonce automatiquement (pseudo + photo de profil + bouton Regarder) dans le salon choisi — et annonce aussi la fin du live (avec sa durée).');
   const liveChanOpts = ['<option value="">— Désactivé (choisir un salon pour activer) —</option>']

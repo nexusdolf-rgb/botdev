@@ -91,6 +91,7 @@ const STRINGS = {
     verif_too_young: '🚧 Votre compte est trop récent pour ce serveur (minimum {days} jour(s)).',
     verif_fail: '⚠️ Impossible de vous donner le rôle : mon rôle doit être AU-DESSUS du rôle vérifié dans la hiérarchie. Réessayez ensuite.',
     verif_kick_dm: '🚧 Bonjour, votre compte a moins de {days} jour(s) : le serveur « {serveur} » exige un compte plus ancien pour entrer (protection anti-raid). Vous pourrez revenir plus tard.',
+    invite_reward_msg: '🎉 **{inviter}** vient d\'atteindre **{count} invitations valides** ! Rôle {role} débloqué.',
     ticket_add_modal_title: '➕ Ajouter un membre au ticket',
     ticket_add_modal_label: 'Membre à ajouter',
     // v238 — système « ajouter un membre » rendu professionnel : la fenêtre à
@@ -265,6 +266,7 @@ const STRINGS = {
     verif_too_young: '🚧 Your account is too new for this server (minimum {days} day(s)).',
     verif_fail: '⚠️ I could not give you the role: my role must be ABOVE the verified role in the hierarchy. Please try again.',
     verif_kick_dm: '🚧 Hello, your account is less than {days} day(s) old: the server "{serveur}" requires an older account to join (anti-raid protection). You can come back later.',
+    invite_reward_msg: '🎉 **{inviter}** just reached **{count} valid invites**! Role {role} unlocked.',
     ticket_add_modal_title: '➕ Add a member to the ticket',
     ticket_add_modal_label: 'Member to add',
     // v238 — professional "add a member" flow: the modal explains what is

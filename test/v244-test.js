@@ -527,7 +527,8 @@ const GUILD = 'G244';
   // ==========================================================================
 
   const champsLibres = (jsCode.match(/type="number"/g) || []).length;
-  check('champs numériques libres restants = 13 (vraies mesures)', champsLibres === 13, String(champsLibres));
+  // v291 : +1 champ — le nombre d'invitations d'un palier de récompense (vraie mesure, pas une durée)
+  check('champs numériques libres restants = 14 (vraies mesures)', champsLibres === 14, String(champsLibres));
   check('presetOptions est effectivement utilisé', (jsCode.match(/presetOptions\(/g) || []).length >= 20,
     String((jsCode.match(/presetOptions\(/g) || []).length));
   // Les 13 restants doivent être des mesures, pas des durées.
@@ -580,10 +581,10 @@ const GUILD = 'G244';
   // à diagnostiquer qui soit.
   const versions = [...new Set(html.match(/\?v=\d+/g) || [])];
   check('index.html : les 7 références pointent la MÊME version', versions.length === 1, versions.join(', '));
-  check('cette version est bien la v244', versions[0] === '?v=290', String(versions[0]));
+  check('cette version est bien la v244', versions[0] === '?v=291', String(versions[0]));
 
   check('sw.js : nom de cache présent', /const CACHE = 'botdev-v\d+'/.test(sw), (sw.match(/const CACHE = '[^']*'/) || ['?'])[0]);
-  // « ?v=290 » dans index.html doit correspondre à « botdev-v260 » dans sw.js.
+  // « ?v=291 » dans index.html doit correspondre à « botdev-v260 » dans sw.js.
   const cacheAttendu = `'botdev-${versions[0].replace('?v=', 'v')}'`;
   check('sw.js : cache aligné sur index.html', sw.includes(cacheAttendu),
     `${cacheAttendu} attendu, ${(sw.match(/const CACHE = '[^']*'/) || ['?'])[0]} trouvé`);

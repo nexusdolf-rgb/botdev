@@ -908,6 +908,9 @@ try { db.exec(`CREATE TABLE IF NOT EXISTS invite_joins (
   joined_at TEXT DEFAULT (datetime('now')),
   PRIMARY KEY (bot_id, guild_id, user_id))`); } catch (e) {}
 
+// v291 — 📨 anti fausses invitations : une invite peut être invalidée si l'invité part trop tôt
+try { db.exec("ALTER TABLE invite_joins ADD COLUMN valid INTEGER DEFAULT 1"); } catch (e) {}
+
 // v2.1 — 🔴 Annonces de live + auto-rôle multiple
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN live_channel TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN live_ping TEXT DEFAULT 'everyone'"); } catch (e) {}
@@ -2191,9 +2194,11 @@ const inviteUses = {
 };
 const inviteJoins = {
   add: (botId, guildId, userId, inviterId, code) => db.prepare('INSERT INTO invite_joins (bot_id, guild_id, user_id, inviter_id, code) VALUES (?, ?, ?, ?, ?) ON CONFLICT(bot_id, guild_id, user_id) DO UPDATE SET inviter_id = excluded.inviter_id, code = excluded.code').run(botId, guildId, String(userId), String(inviterId), String(code || '')),
-  countBy: (botId, guildId, inviterId) => db.prepare('SELECT COUNT(*) AS n FROM invite_joins WHERE bot_id = ? AND guild_id = ? AND inviter_id = ?').get(botId, guildId, String(inviterId)).n,
-  top: (botId, guildId, limit = 10) => db.prepare('SELECT inviter_id, COUNT(*) AS n FROM invite_joins WHERE bot_id = ? AND guild_id = ? GROUP BY inviter_id ORDER BY n DESC LIMIT ?').all(botId, guildId, Math.min(Math.max(parseInt(limit, 10) || 10, 1), 30)),
+  countBy: (botId, guildId, inviterId) => db.prepare('SELECT COUNT(*) AS n FROM invite_joins WHERE bot_id = ? AND guild_id = ? AND inviter_id = ? AND valid = 1').get(botId, guildId, String(inviterId)).n,
+  top: (botId, guildId, limit = 10) => db.prepare('SELECT inviter_id, COUNT(*) AS n FROM invite_joins WHERE bot_id = ? AND guild_id = ? AND valid = 1 GROUP BY inviter_id ORDER BY n DESC LIMIT ?').all(botId, guildId, Math.min(Math.max(parseInt(limit, 10) || 10, 1), 30)),
   whoInvited: (botId, guildId, userId) => db.prepare('SELECT * FROM invite_joins WHERE bot_id = ? AND guild_id = ? AND user_id = ?').get(botId, guildId, String(userId)) || null,
+  // v291 — invalide l'invite d'un membre parti avant le délai (fenêtre en heures) ; renvoie le nb de lignes touchées
+  invalidateRecent: (botId, guildId, userId, hours) => db.prepare("UPDATE invite_joins SET valid = 0 WHERE bot_id = ? AND guild_id = ? AND user_id = ? AND valid = 1 AND (strftime('%s','now') - strftime('%s', joined_at)) < ? * 3600").run(botId, guildId, String(userId), Math.max(0, parseInt(hours, 10) || 0)).changes,
 };
 
 // v2.3 — 📔 Journal des tickets (récap staff à la fermeture)

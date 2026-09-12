@@ -551,6 +551,8 @@ function attachListeners(botId, entry) {
     // pour les départs volontaires ; seul le journal d'audit distingue les deux,
     // et un départ normal ne produit aucune entrée « kick » donc aucun comptage.
     try { require('./antinuke').note(botId, member.guild, 'kick', member.user ? member.user.tag : ''); } catch (e) { console.error('[BotDev] antinuke kick:', e.message); }
+    // 📨 v291 : anti fausses invitations — l'invite ne compte plus si le membre part trop tôt
+    try { require('./invites').onMemberLeave(botId, member.guild, member).catch(() => {}); } catch (e) { console.error('[BotDev] invites leave:', e.message); }
   });
 
   // 🛡️ v242 anti-nuke : bannissement de masse (événement ajouté en v242)
