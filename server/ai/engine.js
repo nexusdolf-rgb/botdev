@@ -61,7 +61,7 @@ const MODULE_LABELS = {
   antispam: 'Détection spam & abus',
 };
 // Modules déjà câblés dans le bot (les autres sont réservées aux versions suivantes)
-const LIVE_MODULES = ['chat', 'tickets', 'docs'];
+const LIVE_MODULES = ['chat', 'tickets', 'docs', 'mod', 'antispam'];
 
 const DEFAULT_CFG = {
   enabled: true, // bot public : l'IA est active par défaut, la plateforme garde la main

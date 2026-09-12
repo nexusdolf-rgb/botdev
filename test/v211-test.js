@@ -81,8 +81,8 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('sauvegarde du choix → /profile-active', dash.includes('`/bots/${bot.id}/guilds/${guildId}/profile-active`'));
 
   // ---------- 5. Versions ----------
-  check('index : version v211', index.includes('?v=282'));
-  check('service worker : cache v211', sw.includes('botdev-v282'));
+  check('index : version v211', index.includes('?v=283'));
+  check('service worker : cache v211', sw.includes('botdev-v283'));
 
   console.log(`\n✅ v211-test.js : ${n} vérifications OK`);
   process.exit(0);

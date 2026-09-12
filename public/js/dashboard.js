@@ -7076,13 +7076,35 @@ Dashboard.renderers.ai = async (content, data) => {
     </div>
     <label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="ai-mention" ${cfg.mention_only ? 'checked' : ''} /> Répondre uniquement quand le bot est mentionné (@Hoxera)</label>`;
 
-  const MODES = [['chat', 'IA conversationnelle', true], ['tickets', 'IA pour les tickets', true], ['mod', 'IA de modération', false], ['docs', 'IA règlement / FAQ', true], ['images', "Génération d'images", false], ['staff', 'Assistant IA du staff', false], ['stats', "Analyse de l'activité", false], ['antispam', 'Détection spam & abus', false]];
-  const cMod = Dashboard.card(root, '🧩 Modules IA', 'Activez module par module. Les modules marqués 🔜 arrivent dans les prochaines versions.');
-  cMod.innerHTML += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px">` + MODES.map(([id, label, live]) => `
-    <label style="display:flex;gap:8px;align-items:center;padding:9px 10px;border:1px solid var(--d-line);border-radius:10px;background:var(--d-card2,#ffffff08)">
-      <input type="checkbox" data-aimod="${id}" ${(mods[id] && live) ? 'checked' : ''} ${live ? '' : 'disabled'} />
-      <span style="font-size:13px">${App.escapeHtml(label)} ${live ? '<span style="color:#50c878;font-size:11px">● live</span>' : '<span style="color:var(--d-dim);font-size:11px">🔜 bientôt</span>'}</span>
-    </label>`).join('') + `</div>`;
+  const MODES = [['chat', 'IA conversationnelle', true], ['tickets', 'IA pour les tickets', true], ['mod', 'IA de modération', true], ['docs', 'IA règlement / FAQ', true], ['images', "Génération d'images", false], ['staff', 'Assistant IA du staff', false], ['stats', "Analyse de l'activité", false], ['antispam', 'Détection spam & abus', true]];
+  // v283 — modules regroupés par usage (comme les dashboards pro) : chaque
+  // case live explique en une phrase ce qu'elle fait concrètement.
+  const MODE_HELP = {
+    chat: 'Répond aux membres quand on la mentionne, et via /ai.',
+    tickets: 'Accueille le membre à l ouverture du ticket et prépare le travail du staff.',
+    docs: 'Répond UNIQUEMENT à partir de vos sources ci-dessous, via /faq.',
+    mod: '/verifier : second avis IA sur un message douteux (réservé au staff).',
+    antispam: 'Après une détection de l auto-modération, un avis IA part dans vos logs (max 1/heure/membre).',
+  };
+  const MODE_GROUPS = [
+    ['💬 Conversation & support', ['chat', 'tickets', 'docs']],
+    ['🛡️ Sécurité & modération', ['mod', 'antispam']],
+    ['🔜 Prochaines versions', ['images', 'staff', 'stats']],
+  ];
+  const cMod = Dashboard.card(root, '🧩 Modules IA', 'Activez module par module. Tout fonctionne avec la clé plateforme : rien d autre à configurer.');
+  cMod.innerHTML += MODE_GROUPS.map(([title, ids]) => `
+    <div style="margin-top:12px">
+      <div style="font-size:12px;font-weight:700;color:var(--d-dim);margin-bottom:6px">${title}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px">` + ids.map((id) => {
+        const found = MODES.find(([x]) => x === id) || [id, id, false];
+        const label = found[1]; const live = found[2];
+        return `
+        <label style="display:flex;gap:8px;align-items:flex-start;padding:9px 10px;border:1px solid var(--d-line);border-radius:10px;background:var(--d-card2,#ffffff08)">
+          <input type="checkbox" data-aimod="${id}" style="margin-top:2px" ${(mods[id] && live) ? 'checked' : ''} ${live ? '' : 'disabled'} />
+          <span style="font-size:13px">${App.escapeHtml(label)} ${live ? '<span style="color:#50c878;font-size:11px">● live</span>' : '<span style="color:var(--d-dim);font-size:11px">🔜 bientôt</span>'}${live && MODE_HELP[id] ? `<span style="display:block;font-size:11.5px;color:var(--d-dim);margin-top:3px">${App.escapeHtml(MODE_HELP[id])}</span>` : ''}</span>
+        </label>`;
+      }).join('') + `</div>
+    </div>`).join('');
 
   const cScope = Dashboard.card(root, '📺 Salons & rôles autorisés', 'Vide = tous les salons / tout le monde.');
   const textCh = (data.channels || []).filter((ch) => !ch.voice && !ch.category);
@@ -7092,7 +7114,7 @@ Dashboard.renderers.ai = async (content, data) => {
     <label class="dash-label">Rôles autorisés (vide = tout le monde)</label>
     <select class="dash-select" id="ai-roles" multiple size="6">${(data.roles || []).map((r) => `<option value="${r.id}" ${(cfg.roles || []).includes(r.id) ? 'selected' : ''}>@ ${App.escapeHtml(r.name)}</option>`).join('')}</select>`;
 
-  const cSrc = Dashboard.card(root, '📚 Sources (règlement, FAQ, documentation)', 'Une source par ligne : l\'IA FAQ (version suivante) répondra uniquement à partir de ces textes.');
+  const cSrc = Dashboard.card(root, '📚 Sources (règlement, FAQ, documentation)', 'Une source par ligne : la commande /faq répond uniquement à partir de ces textes.');
   cSrc.innerHTML += `<textarea class="dash-input" id="ai-sources" rows="5" style="width:100%;font-size:12.5px" placeholder="Le règlement interdit la publicité…&#10;Pour ouvrir un ticket : /ticket…">${App.escapeHtml((cfg.sources || []).join('\n'))}</textarea>`;
 
   const cLog = Dashboard.card(root, '📜 Journal & statistiques', 'Derniers appels IA du serveur et compteurs.');
@@ -7115,7 +7137,7 @@ Dashboard.renderers.ai = async (content, data) => {
 
   const collect = () => ({
     enabled: cEng.querySelector('#ai-enabled').checked,
-    modules: Object.fromEntries(MODES.map(([id]) => [id, id === 'chat' ? cMod.querySelector('[data-aimod="chat"]').checked : !!mods[id]])),
+    modules: Object.fromEntries(MODES.map(([id, , live]) => [id, live ? !!((cMod.querySelector(`[data-aimod="${id}"]`) || {}).checked) : false])),
     channels: Array.from(cScope.querySelector('#ai-channels').selectedOptions).map((o) => o.value),
     roles: Array.from(cScope.querySelector('#ai-roles').selectedOptions).map((o) => o.value),
     mention_only: cEng.querySelector('#ai-mention').checked,

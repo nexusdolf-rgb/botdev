@@ -78,13 +78,13 @@ function check(label, cond, info) {
   check('case « IA pour les tickets » active', dash.includes("['tickets', 'IA pour les tickets', true]"));
   check('case « IA règlement / FAQ » active', dash.includes("['docs', 'IA règlement / FAQ', true]"));
   const modesLine = (dash.match(/const MODES = \[.*?\];/) || [''])[0];
-  check('3 cases live (chat, tickets, docs) et 5 encore 🔜', (modesLine.match(/, true\]/g) || []).length === 3 && (modesLine.match(/, false\]/g) || []).length === 5);
+  check('cases tickets & docs live (5 live au total depuis v283, 3 🔜)', (modesLine.match(/, true\]/g) || []).length === 5 && (modesLine.match(/, false\]/g) || []).length === 3);
 
   console.log('— 6. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=282 référencé 7 fois', (index.match(/\?v=282/g) || []).length === 7);
-  check('sw.js : cache « botdev-v282 »', sw.includes("const CACHE = 'botdev-v282';"));
+  check('index.html : ?v=283 référencé 7 fois', (index.match(/\?v=283/g) || []).length === 7);
+  check('sw.js : cache « botdev-v283 »', sw.includes("const CACHE = 'botdev-v283';"));
 
   console.log(`\n🎉 v282 — ${ok} vérifications OK : IA tickets + IA règlement/FAQ opérationnelles.`);
 })().catch((e) => { console.error(e); process.exit(1); });

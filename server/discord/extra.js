@@ -264,6 +264,12 @@ function buildExtraPayloads() {
       name: 'sticky', description: '📌 État du message épinglé en bas de salon (v276)',
     },
     {
+      name: 'verifier', description: '🤖 Hoxera AI : second avis de modération sur un message (réservé au staff)',
+      options: [
+        { name: 'message', description: 'Le texte du message à analyser', type: ApplicationCommandOptionType.String, required: true },
+      ],
+    },
+    {
       name: 'faq', description: '📚 Hoxera AI : réponse UNIQUEMENT à partir du règlement / FAQ du serveur',
       options: [
         { name: 'question', description: 'Votre question', type: ApplicationCommandOptionType.String, required: true },
@@ -332,6 +338,7 @@ const HELP_EXTRA = {
   rob: ['🦹 Vol', 'Tentez de voler un membre : 40 % de réussite (10-20 % de ses coins). Si vous ratez, vous lui payez une amende !', '`/rob @membre`', '`/rob @Millionnaire` → 🚓 Raté ! Vous lui devez 15 % de votre solde.'],
   lockdown: ['🚨 Anti-raid', 'Verrouille tous les salons texte en 1 clic (personne ne peut écrire sauf les admins) puis rouvre tout. Idéal contre un raid.', '`/lockdown on` · `/lockdown off`', '`/lockdown on` → 🔒 12 salons verrouillés'],
   sticky: 'Message épinglé en bas de salon (sticky) : état et salon configuré. Réglage complet dans le dashboard → Annonces.',
+    verifier: 'Second avis IA de modération sur un message (réservé au staff, réponse visible par vous seul).',
     faq: 'Règlement & FAQ : l IA répond UNIQUEMENT à partir des sources fournies par le staff dans le dashboard.',
     ai: 'Hoxera AI — IA conversationnelle branchée sur le moteur central du serveur (clé gratuite, limites, salons autorisés configurables au dashboard).',
     emotes: ["🎨 Émojis Hoxera", "Un pack d'émojis dessinés pour Hoxera, un par module (tickets, modération, niveaux…). `/emotes install` les ajoute au serveur : tout le monde peut les utiliser, et le dashboard affiche les mêmes icônes en PNG.", "`/emotes install` · `/emotes view`"],
@@ -370,7 +377,7 @@ async function handleInteraction(botId, entry, interaction) {
 }
 
 // ---------------------- Commandes slash ----------------------
-const EXTRA_CMDS = new Set(['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch', 'rps', 'pendu', 'morpion', 'birthday', 'remind', 'poll', 'snipe', 'work', 'gamble', 'rob', 'lockdown', 'voicetemp', 'emotes', 'ai', 'faq', 'sticky', 'apply', 'invites', 'afk', 'top', 'quiz']);
+const EXTRA_CMDS = new Set(['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch', 'rps', 'pendu', 'morpion', 'birthday', 'remind', 'poll', 'snipe', 'work', 'gamble', 'rob', 'lockdown', 'voicetemp', 'emotes', 'ai', 'faq', 'verifier', 'sticky', 'apply', 'invites', 'afk', 'top', 'quiz']);
 
 async function handleSlash(botId, entry, interaction) {
   const cmd = interaction.commandName.toLowerCase();
@@ -844,6 +851,32 @@ async function handleSlash(botId, entry, interaction) {
       const st = require('./sticky').cfgOf(guild.id);
       const last = require('./sticky').lastIdOf(guild.id);
       return interaction.reply({ content: st.enabled && st.channel ? `📌 Sticky **actif** dans <#${st.channel}> : republication toutes les ${st.every} messages.${last ? `\nDernier message épinglé : [voir](https://discord.com/channels/${guild.id}/${st.channel}/${last})` : '\nAucun sticky publié pour le moment.'}` : '📌 Sticky **désactivé** sur ce serveur. Réglez-le dans le dashboard → Annonces → « Message épinglé en bas ».', ephemeral: true });
+    }
+    case 'verifier': {
+      const contentV = interaction.options.getString('message');
+      if (!contentV) return interaction.reply({ content: '❓ Précisez le message à analyser : `/verifier message:...`', ephemeral: true });
+      const permsV = interaction.memberPermissions;
+      if (!(permsV && permsV.has && permsV.has('ManageMessages'))) {
+        return interaction.reply({ content: '🔒 `/verifier` est réservé au staff (permission « Gérer les messages »).', ephemeral: true });
+      }
+      const aiV = require('../ai/engine');
+      const cfgV = aiV.cfgOf(guild.id);
+      if (!cfgV.modules.mod) {
+        return interaction.reply({ content: '🛡️ Le module « IA de modération » est désactivé sur ce serveur : activez-le dans le dashboard → Hoxera AI → Modules IA → Sécurité & modération.', ephemeral: true });
+      }
+      await interaction.deferReply({ ephemeral: true });
+      try {
+        const { text } = await aiV.ask(botId, guild.id, 'mod', `Analysez ce message publié sur Discord. Donnez en 3 lignes maximum : 1) un verdict clair (spam, publicité, harcèlement, contenu choquant, ou rien à signaler), 2) pourquoi, 3) la sanction recommandée (aucune, avertissement, mute, ban). Message :\n« ${String(contentV).slice(0, 1500)} »`);
+        return interaction.editReply({ content: `🤖 **Second avis IA — modération**\n${text}` });
+      } catch (e) {
+        const msg = e.code === 'AI_PLATFORM_OFF' ? '🤖 Hoxera AI est momentanément désactivée par la plateforme.'
+          : e.code === 'AI_BUDGET' ? '🤖 Le quota IA quotidien de la plateforme est atteint, réessayez demain.'
+          : e.code === 'AI_QUOTA' ? '🤖 Le quota horaire IA de ce serveur est atteint, réessayez dans quelques minutes.'
+          : e.code === 'AI_NO_KEY' ? '🤖 Hoxera AI est **en veille** : la plateforme n a pas encore activé de clé fournisseur.'
+          : e.code === 'AI_DISABLED' ? '🤖 Hoxera AI est désactivée sur ce serveur (dashboard → Hoxera AI).'
+          : `⚠️ Hoxera AI indisponible pour le moment (${e.code || 'erreur'}).`;
+        return interaction.editReply({ content: msg });
+      }
     }
     case 'faq': {
       const questionF = interaction.options.getString('question');

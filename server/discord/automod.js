@@ -496,6 +496,8 @@ function recordAction(botId, message, reason, meta = {}) {
       observed: meta.observed ? 1 : 0,
     });
   } catch { }
+  // 🤖 v283 — deuxième avis IA (consultatif, dans le journal, jamais bloquant)
+  try { require('./aisafety').review(botId, message, meta); } catch { }
 }
 
 // Ajoute une entrée à l'historique unifié des avertissements. Les tests
