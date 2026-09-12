@@ -71,9 +71,9 @@ check('la classe hx-os-pc vient toujours du système (v253)',
   index.includes("classList.add('hx-os-pc')"));
 
 console.log('— 5. Version —');
-check('index.html : ?v=286 référencé 7 fois', (index.match(/\?v=286/g) || []).length === 7,
-  String((index.match(/\?v=286/g) || []).length));
-check('sw.js : cache « botdev-v286 »', racine('public/sw.js').includes("const CACHE = 'botdev-v286';"));
+check('index.html : ?v=287 référencé 7 fois', (index.match(/\?v=287/g) || []).length === 7,
+  String((index.match(/\?v=287/g) || []).length));
+check('sw.js : cache « botdev-v287 »', racine('public/sw.js').includes("const CACHE = 'botdev-v287';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v256 — ${ok} vérifications OK : l'intérieur des panneaux PC est redevenu celui de la v241.`);

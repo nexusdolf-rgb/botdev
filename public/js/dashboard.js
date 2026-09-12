@@ -7128,7 +7128,7 @@ Dashboard.renderers.ai = async (content, data) => {
   cLog.innerHTML += `<div id="ai-stats" style="font-size:12.5px;color:var(--d-dim);margin-bottom:10px"></div><div id="ai-logs" style="font-size:12px;color:var(--d-dim);display:flex;flex-direction:column;gap:4px"></div><div style="margin-top:10px"><button class="dash-btn" id="ai-logs-refresh">🔄 Rafraîchir</button></div>`;
 
   const MODELS = {
-    groq: [['llama-3.3-70b-versatile', 'Llama 3.3 70B — gratuit, classe pro'], ['llama-3.1-8b-instant', 'Llama 3.1 8B — gratuit, ultra rapide']],
+    groq: [['openai/gpt-oss-120b', 'GPT-OSS 120B — gratuit, classe pro'], ['openai/gpt-oss-20b', 'GPT-OSS 20B — gratuit, ultra rapide'], ['qwen/qwen3-32b', 'Qwen3 32B — gratuit, équilibré'], ['meta-llama/llama-4-scout-17b-16e-instruct', 'Llama 4 Scout 17B — gratuit']],
     gemini: [['gemini-2.5-flash', 'Gemini 2.5 Flash — gratuit'], ['gemini-2.5-flash-lite', 'Gemini 2.5 Flash-Lite — gratuit, éco']],
     openrouter: [['meta-llama/llama-3.3-70b-instruct:free', 'Llama 3.3 70B (free)'], ['deepseek/deepseek-chat-v3-0324:free', 'DeepSeek V3 (free)']],
     openai: [['gpt-4o-mini', 'GPT-4o mini — payant, très économique']],

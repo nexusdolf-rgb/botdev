@@ -463,9 +463,9 @@ async function main() {
   console.log('\n10) Version épinglée v239');
   const index = src('public/index.html');
   const sw = src('public/sw.js');
-  check('index.html : ?v=286 référencé 7 fois', (index.match(/\?v=286/g) || []).length === 7,
-    `trouvé ${(index.match(/\?v=286/g) || []).length}`);
-  check("sw.js : cache 'botdev-v286'", sw.includes("const CACHE = 'botdev-v286';"));
+  check('index.html : ?v=287 référencé 7 fois', (index.match(/\?v=287/g) || []).length === 7,
+    `trouvé ${(index.match(/\?v=287/g) || []).length}`);
+  check("sw.js : cache 'botdev-v287'", sw.includes("const CACHE = 'botdev-v287';"));
   check('index.html : plus aucun ?v=238', !/\?v=238/.test(index));
 }
 

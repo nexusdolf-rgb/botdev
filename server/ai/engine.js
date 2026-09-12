@@ -16,8 +16,10 @@ const PROVIDERS = {
     url: 'https://api.groq.com/openai/v1/chat/completions',
     rpm: 25, // marge sous les 30 req/min du plan gratuit
     models: [
-      ['llama-3.3-70b-versatile', 'Llama 3.3 70B — gratuit, classe pro'],
-      ['llama-3.1-8b-instant', 'Llama 3.1 8B — gratuit, ultra rapide'],
+      ['openai/gpt-oss-120b', 'GPT-OSS 120B — gratuit, classe pro'],
+      ['openai/gpt-oss-20b', 'GPT-OSS 20B — gratuit, ultra rapide'],
+      ['qwen/qwen3-32b', 'Qwen3 32B — gratuit, équilibré'],
+      ['meta-llama/llama-4-scout-17b-16e-instruct', 'Llama 4 Scout 17B — gratuit'],
     ],
   },
   gemini: {
@@ -63,6 +65,18 @@ const MODULE_LABELS = {
 // Modules déjà câblés dans le bot (les autres sont réservées aux versions suivantes)
 const LIVE_MODULES = ['chat', 'tickets', 'docs', 'mod', 'antispam', 'images', 'staff', 'stats'];
 
+// v287 — Groq a retiré les modèles Llama le 16/08/2026 : toute config qui
+// en référence encore est basculée automatiquement sur le remplacement
+// officiel recommandé par Groq. C'était la cause du « je n'arrive pas à
+// joindre le service IA » avec une clé pourtant valide.
+const DEPRECATED_MODELS = {
+  'llama-3.3-70b-versatile': 'openai/gpt-oss-120b',
+  'llama-3.1-8b-instant': 'openai/gpt-oss-20b',
+  'llama3-70b-8192': 'openai/gpt-oss-120b',
+  'llama3-8b-8192': 'openai/gpt-oss-20b',
+};
+const FALLBACK_MODEL = 'openai/gpt-oss-120b';
+
 const DEFAULT_CFG = {
   enabled: true, // bot public : l'IA est active par défaut, la plateforme garde la main
   modules: { chat: true, tickets: false, mod: false, docs: false, images: false, staff: false, stats: false, antispam: false },
@@ -73,7 +87,7 @@ const DEFAULT_CFG = {
   mention_only: true,  // répond seulement quand on mentionne le bot
   limit_per_hour: 0, // 0 = « pas choisi » : la limite plateforme s'applique
   provider: 'groq',
-  model: 'llama-3.3-70b-versatile',
+  model: 'openai/gpt-oss-120b',
   mod_level: 'medium',
   sources: [],         // textes règlement/FAQ fournis par le serveur
 };
@@ -87,6 +101,7 @@ function cfgOf(guildId) {
   cfg.roles = Array.isArray(cfg.roles) ? cfg.roles : [];
   cfg.image_channels = Array.isArray(cfg.image_channels) ? cfg.image_channels.map(String) : [];
   cfg.answer_questions = !!cfg.answer_questions;
+  if (DEPRECATED_MODELS[cfg.model]) cfg.model = DEPRECATED_MODELS[cfg.model];
   cfg.sources = Array.isArray(cfg.sources) ? cfg.sources : [];
   cfg.limit_per_hour = Math.max(1, Math.min(200, Number(raw.limit_per_hour) || platformOf().default_limit));
   if (!PROVIDERS[cfg.provider]) cfg.provider = 'groq';
@@ -234,7 +249,17 @@ async function callProvider(botId, cfg, module, userText, history) {
         headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
         body: JSON.stringify({ model: cfg.model, messages, max_tokens: 700, temperature: 0.6 }),
       });
-      if (!res.ok) { const e = new Error(`Fournisseur IA : ${res.status}`); e.code = 'AI_HTTP'; throw e; }
+      if (!res.ok) {
+        let detail = '';
+        try { const jb = await res.json(); detail = String((jb.error && (jb.error.message || jb.error.code)) || '').slice(0, 200); } catch {}
+        const e = new Error(detail || `Fournisseur IA : ${res.status}`);
+        e.code = res.status === 401 || res.status === 403 ? 'AI_BAD_KEY'
+          : res.status === 429 ? 'AI_LIMIT'
+          : res.status === 404 || res.status === 400 || res.status === 422 ? 'AI_MODEL'
+          : 'AI_HTTP';
+        e.status = res.status;
+        throw e;
+      }
       const j = await res.json();
       text = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
       tokens = (j.usage && (j.usage.total_tokens || 0)) || 0;
@@ -244,7 +269,17 @@ async function callProvider(botId, cfg, module, userText, history) {
         headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
         body: JSON.stringify({ contents: messages.filter((m) => m.role !== 'system').map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })), systemInstruction: { parts: [{ text: messages[0].content }] }, generationConfig: { maxOutputTokens: 700, temperature: 0.6 } }),
       });
-      if (!res.ok) { const e = new Error(`Fournisseur IA : ${res.status}`); e.code = 'AI_HTTP'; throw e; }
+      if (!res.ok) {
+        let detail = '';
+        try { const jb = await res.json(); detail = String((jb.error && (jb.error.message || jb.error.code)) || '').slice(0, 200); } catch {}
+        const e = new Error(detail || `Fournisseur IA : ${res.status}`);
+        e.code = res.status === 401 || res.status === 403 ? 'AI_BAD_KEY'
+          : res.status === 429 ? 'AI_LIMIT'
+          : res.status === 404 || res.status === 400 || res.status === 422 ? 'AI_MODEL'
+          : 'AI_HTTP';
+        e.status = res.status;
+        throw e;
+      }
       const j = await res.json();
       text = (j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts || []).map((x) => x.text || '').join('');
       tokens = (j.usageMetadata && j.usageMetadata.totalTokenCount) || 0;
@@ -270,7 +305,17 @@ async function ask(botId, guildId, module, userText, opts) {
   quotaCheck(guildId, cfg);
   await takeSlot(cfg.provider);
   try {
-    const { text, tokens } = await callProvider(botId, cfg, module, userText, opts && opts.history);
+    let outP;
+    try {
+      outP = await callProvider(botId, cfg, module, userText, opts && opts.history);
+    } catch (errM) {
+      // v287 — le fournisseur rejette le modèle choisi (retiré/renommé) :
+      // on réessaie UNE fois avec le modèle recommandé, sans rien demander.
+      if (errM.code === 'AI_MODEL' && cfg.provider === 'groq' && cfg.model !== FALLBACK_MODEL) {
+        outP = await callProvider(botId, { ...cfg, model: FALLBACK_MODEL }, module, userText, opts && opts.history);
+      } else throw errM;
+    }
+    const { text, tokens } = outP;
     dailyCount(true);
     log(guildId, { module, ok: true, q: String(userText).slice(0, 80) });
     bumpStats(guildId, module, true, tokens);
@@ -329,6 +374,9 @@ async function onMessage(botId, m) {
         : e.code === 'AI_NO_KEY' ? 'Hoxera AI est **en veille** : la clé plateforme n est pas encore activée (Dashboard → Réglages du bot → carte Hoxera AI — plateforme).'
         : e.code === 'AI_PLATFORM_OFF' ? 'Hoxera AI est momentanément désactivée par la plateforme.'
         : e.code === 'AI_DISABLED' ? 'Hoxera AI est désactivée sur ce serveur (dashboard → Hoxera AI).'
+        : e.code === 'AI_BAD_KEY' ? 'la clé IA a été **refusée par le fournisseur** : vérifiez-la dans Dashboard → Réglages du bot → carte Hoxera AI — plateforme.'
+        : e.code === 'AI_LIMIT' ? 'la **limite gratuite du fournisseur** est atteinte pour le moment, réessayez dans quelques minutes.'
+        : e.code === 'AI_MODEL' ? 'le **modèle IA choisi n existe plus** chez le fournisseur : choisissez-en un autre dans Dashboard → Hoxera AI → Moteur.'
         : 'je n arrive pas à joindre le service IA pour le moment, réessayez dans quelques instants.';
       await m.reply({ content: `🤖 ${why}`, allowedMentions: { repliedUser: false } }).catch(() => {});
       void memberId;
@@ -352,6 +400,7 @@ async function ticketSummary(botId, guildId, transcript) {
 }
 
 module.exports = {
+  DEPRECATED_MODELS, FALLBACK_MODEL,
   PROVIDERS, MODULES, MODULE_LABELS, LIVE_MODULES, DEFAULT_CFG,
   platformOf, savePlatform, platformKeyOf, savePlatformKey, dailyCount,
   cfgOf, saveCfg, keyOf, saveKey, hasKey, status,

@@ -111,6 +111,9 @@ function aiErrMsg(e) {
     : e.code === 'AI_QUOTA' ? '🤖 Le quota horaire IA de ce serveur est atteint, réessayez dans quelques minutes.'
     : e.code === 'AI_NO_KEY' ? '🤖 Hoxera AI est **en veille** : la plateforme n a pas encore activé de clé fournisseur.'
     : e.code === 'AI_DISABLED' ? '🤖 Hoxera AI est désactivée sur ce serveur (dashboard → Hoxera AI).'
+    : e.code === 'AI_BAD_KEY' ? '🔑 La clé IA a été refusée par le fournisseur : vérifiez-la dans Dashboard → Réglages du bot.'
+    : e.code === 'AI_LIMIT' ? '⏳ La limite gratuite du fournisseur IA est atteinte, réessayez dans quelques minutes.'
+    : e.code === 'AI_MODEL' ? '🧩 Le modèle IA choisi n existe plus chez le fournisseur : changez-le dans Dashboard → Hoxera AI → Moteur.'
     : `⚠️ Hoxera AI indisponible pour le moment (${e.code || 'erreur'}).`;
 }
 
@@ -979,6 +982,9 @@ async function handleSlash(botId, entry, interaction) {
           : e.code === 'AI_QUOTA' ? '🤖 Le quota horaire IA de ce serveur est atteint, réessayez dans quelques minutes.'
           : e.code === 'AI_NO_KEY' ? '🤖 Hoxera AI est **en veille** : la plateforme n a pas encore activé de clé fournisseur.'
           : e.code === 'AI_DISABLED' ? '🤖 Hoxera AI est désactivée sur ce serveur (dashboard → Hoxera AI).'
+          : e.code === 'AI_BAD_KEY' ? '🔑 La clé IA a été refusée par le fournisseur (Dashboard → Réglages du bot).'
+          : e.code === 'AI_LIMIT' ? '⏳ La limite gratuite du fournisseur est atteinte, réessayez dans quelques minutes.'
+          : e.code === 'AI_MODEL' ? '🧩 Le modèle IA choisi n existe plus chez le fournisseur (Dashboard → Hoxera AI → Moteur).'
           : `⚠️ Hoxera AI indisponible pour le moment (${e.code || 'erreur'}).`;
         return interaction.editReply({ content: msg });
       }
@@ -1000,6 +1006,9 @@ async function handleSlash(botId, entry, interaction) {
           : e.code === 'AI_BUDGET' ? '🤖 Le quota IA quotidien de la plateforme est atteint, réessayez demain.'
           : e.code === 'AI_NO_KEY' ? '🤖 Hoxera AI est **en veille** : la plateforme n a pas encore activé de clé fournisseur.'
           : e.code === 'AI_DISABLED' ? '🤖 Hoxera AI est désactivée sur ce serveur (dashboard → Hoxera AI).'
+          : e.code === 'AI_BAD_KEY' ? '🔑 La clé IA a été refusée par le fournisseur (Dashboard → Réglages du bot).'
+          : e.code === 'AI_LIMIT' ? '⏳ La limite gratuite du fournisseur est atteinte, réessayez dans quelques minutes.'
+          : e.code === 'AI_MODEL' ? '🧩 Le modèle IA choisi n existe plus chez le fournisseur (Dashboard → Hoxera AI → Moteur).'
           : `⚠️ Hoxera AI indisponible pour le moment (${e.code || 'erreur'}).`;
         return interaction.editReply({ content: msg });
       }

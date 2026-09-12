@@ -28,7 +28,7 @@ function check(label, cond, info) {
 
   console.log('— 1. Moteur & plans gratuits —');
   check('fournisseurs gratuits présents (groq, gemini, openrouter)', !!ai.PROVIDERS.groq && !!ai.PROVIDERS.gemini && !!ai.PROVIDERS.openrouter);
-  check('modèle gratuit pro par défaut (Llama 3.3 70B)', ai.DEFAULT_CFG.provider === 'groq' && ai.DEFAULT_CFG.model === 'llama-3.3-70b-versatile');
+  check('modèle gratuit pro par défaut (GPT-OSS 120B depuis v287)', ai.DEFAULT_CFG.provider === 'groq' && ai.DEFAULT_CFG.model === 'openai/gpt-oss-120b');
   check('8 modules IA déclarés', ai.MODULES.length === 8);
   check('config par serveur : activée par défaut (bot public)', ai.cfgOf(G).enabled === true);
 
@@ -89,8 +89,8 @@ function check(label, cond, info) {
   console.log('— 7. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=286 référencé 7 fois', (index.match(/\?v=286/g) || []).length === 7);
-  check('sw.js : cache « botdev-v286 »', sw.includes("const CACHE = 'botdev-v286';"));
+  check('index.html : ?v=287 référencé 7 fois', (index.match(/\?v=287/g) || []).length === 7);
+  check('sw.js : cache « botdev-v287 »', sw.includes("const CACHE = 'botdev-v287';"));
 
   console.log(`\n🎉 v278 — ${ok} vérifications OK : Hoxera AI centralisée, plan gratuit, veille sans clé.`);
 })().catch((e) => { console.error(e); process.exit(1); });
