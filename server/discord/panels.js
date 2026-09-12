@@ -1061,16 +1061,6 @@ Notre équipe va vous répondre dans le salon privé prévu pour vous.`,
       },
     );
     await identity.sendAsProfile(interaction.client, botId, guild, channel, welcome).catch(() => {});
-    // 🤖 v282 — IA tickets : accueil + questions de clarification (si le module est coché)
-    try {
-      const ai = require('./ai/engine');
-      if (ai.cfgOf(guild.id).modules.tickets) {
-        ai.ticketIntro(botId, guild.id, { type: chosen ? chosen.label : '', reason, user: member.user.tag })
-          .then((t) => { if (t) return channel.send({ content: t, allowedMentions: { users: [] } }).catch(() => {}); })
-          .catch(() => {});
-      }
-    } catch { /* l'IA ne doit jamais empêcher un ticket de s'ouvrir */ }
-
     await logging.log(botId, guild, {
       title: '🎫 Ticket ouvert', color: '#e07a5f',
       fields: [
@@ -1630,24 +1620,6 @@ async function handleTicketClaim(botId, interaction) {
     ],
     footer: `Hoxera · Ticket #${row.number} · Suivi du support`,
   })).catch(() => {});
-  // 🤝 v286 — l'IA résume le ticket pour le staff qui le prend en charge,
-  // puis elle se tait : le staff prend le relais (jamais bloquant).
-  try {
-    const aiC = require('../ai/engine');
-    if (aiC.cfgOf(guild.id).modules.tickets) {
-      channel.messages.fetch({ limit: 30 }).then((msgs) => {
-        const lines = [...msgs.values()].reverse()
-          .filter((mm) => mm && mm.content && (!mm.author || !mm.author.bot))
-          .slice(-25)
-          .map((mm) => `${mm.author.username || mm.author.tag || 'membre'} : ${String(mm.content).slice(0, 200)}`)
-          .join('\n');
-        if (!lines) return null;
-        return aiC.ticketSummary(botId, guild.id, lines);
-      }).then((t) => {
-        if (t) return channel.send({ content: t, allowedMentions: { users: [] } }).catch(() => {});
-      }).catch(() => {});
-    }
-  } catch { /* l'IA ne doit jamais gêner la prise en charge */ }
   try {
     await logging.log(botId, guild, {
       title: '🖐️ Ticket pris en charge', color: '#57F287',

@@ -240,12 +240,12 @@ const essai = (htmlConteneur) => {
   const indexHtml = racine('public/index.html');
   const swSource = racine('public/sw.js');
   const versions = [...indexHtml.matchAll(/\?v=(\d+)/g)].map((m) => `?v=${m[1]}`);
-  check('index.html : ?v=288 référencé 7 fois',
-    versions.length === 7 && versions.every((v) => v === '?v=288'),
+  check('index.html : ?v=289 référencé 7 fois',
+    versions.length === 7 && versions.every((v) => v === '?v=289'),
     `${versions.length} refs : ${[...new Set(versions)].join(',')}`);
-  check('sw.js : cache « botdev-v288 »', swSource.includes("const CACHE = 'botdev-v288';"));
+  check('sw.js : cache « botdev-v289 »', swSource.includes("const CACHE = 'botdev-v289';"));
   check('index.html et sw.js portent la même version',
-    swSource.includes('botdev-v288') && versions.every((v) => v === '?v=288'));
+    swSource.includes('botdev-v289') && versions.every((v) => v === '?v=289'));
 
   console.log('');
   if (echecs) { console.log(`❌ v248 — ${echecs} échec(s)`); process.exit(1); }

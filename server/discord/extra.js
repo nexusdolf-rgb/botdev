@@ -104,18 +104,6 @@ function isAdmin(member) {
   return canConfigureGuild(member && member.guild, member, member && member.id);
 }
 
-// v285 — libellés d'erreur communs à toutes les commandes IA
-function aiErrMsg(e) {
-  return e.code === 'AI_PLATFORM_OFF' ? '🤖 Hoxera AI est momentanément désactivée par la plateforme.'
-    : e.code === 'AI_BUDGET' ? '🤖 Le quota IA quotidien de la plateforme est atteint, réessayez demain.'
-    : e.code === 'AI_QUOTA' ? '🤖 Le quota horaire IA de ce serveur est atteint, réessayez dans quelques minutes.'
-    : e.code === 'AI_NO_KEY' ? '🤖 Hoxera AI est **en veille** : la plateforme n a pas encore activé de clé fournisseur.'
-    : e.code === 'AI_DISABLED' ? '🤖 Hoxera AI est désactivée sur ce serveur (dashboard → Hoxera AI).'
-    : e.code === 'AI_BAD_KEY' ? '🔑 La clé IA a été refusée par le fournisseur : vérifiez-la dans Dashboard → Réglages du bot.'
-    : e.code === 'AI_LIMIT' ? '⏳ La limite gratuite du fournisseur IA est atteinte, réessayez dans quelques minutes.'
-    : e.code === 'AI_MODEL' ? '🧩 Le modèle IA choisi n existe plus chez le fournisseur : changez-le dans Dashboard → Hoxera AI → Moteur.'
-    : `⚠️ Hoxera AI indisponible pour le moment (${e.code || 'erreur'}).`;
-}
 
 function dayKey() {
   return new Date().toISOString().slice(0,10);
@@ -277,52 +265,6 @@ function buildExtraPayloads() {
       name: 'sticky', description: '📌 État du message épinglé en bas de salon (v276)',
     },
     {
-      name: 'traduire', description: '🌍 Hoxera AI : traduit un message (réponse visible par vous seul)',
-      options: [
-        { name: 'message', description: 'Le texte à traduire', type: ApplicationCommandOptionType.String, required: true },
-        { name: 'langue', description: 'Langue cible (défaut : français)', type: ApplicationCommandOptionType.String, required: false },
-      ],
-    },
-    {
-      name: 'annonce', description: '✍️ Hoxera AI : rédige une annonce prête à publier à partir de vos points clés',
-      options: [
-        { name: 'points', description: 'Vos points clés, en vrac', type: ApplicationCommandOptionType.String, required: true },
-      ],
-    },
-    {
-      name: 'resume', description: '📝 Hoxera AI : résumé des derniers messages d un salon (réservé au staff, réponse privée)',
-      options: [
-        { name: 'salon', description: 'Salon à résumer (défaut : salon actuel)', type: ApplicationCommandOptionType.Channel, required: false },
-      ],
-    },
-    {
-      name: 'activite', description: '📊 Hoxera AI : bulletin d activité du serveur (réservé au staff, réponse privée)',
-    },
-    {
-      name: 'image', description: '🎨 Hoxera AI : génère une image à partir d un texte (mode sûr, 6/heure/serveur)',
-      options: [
-        { name: 'prompt', description: 'Description de l image (en anglais pour un meilleur résultat)', type: ApplicationCommandOptionType.String, required: true },
-      ],
-    },
-    {
-      name: 'verifier', description: '🤖 Hoxera AI : second avis de modération sur un message (réservé au staff)',
-      options: [
-        { name: 'message', description: 'Le texte du message à analyser', type: ApplicationCommandOptionType.String, required: true },
-      ],
-    },
-    {
-      name: 'faq', description: '📚 Hoxera AI : réponse UNIQUEMENT à partir du règlement / FAQ du serveur',
-      options: [
-        { name: 'question', description: 'Votre question', type: ApplicationCommandOptionType.String, required: true },
-      ],
-    },
-    {
-      name: 'ai', description: '🤖 Hoxera AI : posez une question à l IA conversationnelle du serveur',
-      options: [
-        { name: 'question', description: 'Votre question', type: ApplicationCommandOptionType.String, required: true },
-      ],
-    },
-    {
       name: 'emotes', description: "🎨 Installe le pack d'émojis Hoxera (icônes des modules) sur le serveur",
       default_member_permissions: admin,
       options: [
@@ -379,14 +321,6 @@ const HELP_EXTRA = {
   rob: ['🦹 Vol', 'Tentez de voler un membre : 40 % de réussite (10-20 % de ses coins). Si vous ratez, vous lui payez une amende !', '`/rob @membre`', '`/rob @Millionnaire` → 🚓 Raté ! Vous lui devez 15 % de votre solde.'],
   lockdown: ['🚨 Anti-raid', 'Verrouille tous les salons texte en 1 clic (personne ne peut écrire sauf les admins) puis rouvre tout. Idéal contre un raid.', '`/lockdown on` · `/lockdown off`', '`/lockdown on` → 🔒 12 salons verrouillés'],
   sticky: 'Message épinglé en bas de salon (sticky) : état et salon configuré. Réglage complet dans le dashboard → Annonces.',
-    traduire: 'Traduit un message dans la langue de votre choix (réponse privée).',
-    annonce: 'Rédige une annonce prête à publier à partir de vos points clés (brouillon privé).',
-    resume: 'Résumé IA des 40 derniers messages d un salon pour rattraper le fil (staff, réponse privée).',
-    activite: 'Bulletin d activité IA du serveur : modération, tickets, conseil au staff (staff, réponse privée).',
-    image: 'Génère une image à partir d un texte (mode sûr activé, 6 images/heure/serveur).',
-    verifier: 'Second avis IA de modération sur un message (réservé au staff, réponse visible par vous seul).',
-    faq: 'Règlement & FAQ : l IA répond UNIQUEMENT à partir des sources fournies par le staff dans le dashboard.',
-    ai: 'Hoxera AI — IA conversationnelle branchée sur le moteur central du serveur (clé gratuite, limites, salons autorisés configurables au dashboard).',
     emotes: ["🎨 Émojis Hoxera", "Un pack d'émojis dessinés pour Hoxera, un par module (tickets, modération, niveaux…). `/emotes install` les ajoute au serveur : tout le monde peut les utiliser, et le dashboard affiche les mêmes icônes en PNG.", "`/emotes install` · `/emotes view`"],
   voicetemp: ['🔊 Salons vocaux temporaires +', 'Un salon « ➕ Créer un vocal » : dès qu\'un membre le rejoint, un salon à son nom est créé, et il est supprimé automatiquement quand il est vide. Le propriétaire gère SON salon depuis le panneau de contrôle (style TempVoice, en mieux) : NOM, LIMITE, PRIVÉ, PUBLIC, RÉCUPÉRER, ajout/retrait/expulsion de membres, TRANSFÉRER la propriété, SUPPRIMER — chaque réponse est personnelle. `/voicetemp emotes` installe les émojis Hoxera du panneau.', '`/voicetemp set` (salon + catégorie + panneau) · `/voicetemp emotes` · `/voicetemp view` · `/voicetemp off`'],
   apply: ['📝 Candidatures', 'Les membres cliquent sur un bouton, répondent à VOS questions dans une fenêtre, et leurs réponses arrivent dans un salon avec des boutons Accepter/Refuser pour le staff.', '`/apply set #salon` · `/apply question votre question` (max 5) · `/apply panel` · `/apply view` · `/apply off`', '`/apply set #candidatures` puis `/apply question Quel âge avez-vous ?` puis `/apply panel`'],
@@ -423,7 +357,7 @@ async function handleInteraction(botId, entry, interaction) {
 }
 
 // ---------------------- Commandes slash ----------------------
-const EXTRA_CMDS = new Set(['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch', 'rps', 'pendu', 'morpion', 'birthday', 'remind', 'poll', 'snipe', 'work', 'gamble', 'rob', 'lockdown', 'voicetemp', 'emotes', 'ai', 'faq', 'verifier', 'image', 'resume', 'activite', 'traduire', 'annonce', 'sticky', 'apply', 'invites', 'afk', 'top', 'quiz']);
+const EXTRA_CMDS = new Set(['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch', 'rps', 'pendu', 'morpion', 'birthday', 'remind', 'poll', 'snipe', 'work', 'gamble', 'rob', 'lockdown', 'voicetemp', 'emotes', 'sticky', 'apply', 'invites', 'afk', 'top', 'quiz']);
 
 async function handleSlash(botId, entry, interaction) {
   const cmd = interaction.commandName.toLowerCase();
@@ -897,189 +831,6 @@ async function handleSlash(botId, entry, interaction) {
       const st = require('./sticky').cfgOf(guild.id);
       const last = require('./sticky').lastIdOf(guild.id);
       return interaction.reply({ content: st.enabled && st.channel ? `📌 Sticky **actif** dans <#${st.channel}> : republication toutes les ${st.every} messages.${last ? `\nDernier message épinglé : [voir](https://discord.com/channels/${guild.id}/${st.channel}/${last})` : '\nAucun sticky publié pour le moment.'}` : '📌 Sticky **désactivé** sur ce serveur. Réglez-le dans le dashboard → Annonces → « Message épinglé en bas ».', ephemeral: true });
-    }
-    case 'traduire': {
-      const srcT = interaction.options.getString('message');
-      if (!srcT || !String(srcT).trim()) return interaction.reply({ content: '❓ Précisez le texte : `/traduire message:...`', ephemeral: true });
-      const aiT = require('../ai/engine');
-      if (!aiT.cfgOf(guild.id).modules.chat) {
-        return interaction.reply({ content: '🌍 Le module « IA conversationnelle » est désactivé sur ce serveur (dashboard → Hoxera AI).', ephemeral: true });
-      }
-      const langT = (interaction.options.getString('langue') || 'français').slice(0, 40);
-      await interaction.deferReply({ ephemeral: true });
-      try {
-        const { text } = await aiT.ask(botId, guild.id, 'chat', `Traduisez le message suivant en ${langT}. Ne répondez qu'avec la traduction, sans commentaire.\n${String(srcT).slice(0, 1800)}`, { channelId: interaction.channelId });
-        return interaction.editReply({ content: `🌍 **Traduction (${langT})**\n${text}` });
-      } catch (e) {
-        return interaction.editReply({ content: aiErrMsg(e) });
-      }
-    }
-    case 'annonce': {
-      const pointsA = interaction.options.getString('points');
-      if (!pointsA || !String(pointsA).trim()) return interaction.reply({ content: '❓ Donnez vos points clés : `/annonce points:...`', ephemeral: true });
-      const aiAn = require('../ai/engine');
-      if (!aiAn.cfgOf(guild.id).modules.staff) {
-        return interaction.reply({ content: '✍️ Le module « Assistant IA du staff » est désactivé sur ce serveur (dashboard → Hoxera AI).', ephemeral: true });
-      }
-      await interaction.deferReply({ ephemeral: true });
-      try {
-        const { text } = await aiAn.ask(botId, guild.id, 'staff', `Rédige une annonce Discord prête à publier à partir de ces points clés. Format : un titre avec émoji, 3 à 6 lignes claires, un appel à l'action final. N'ajoute aucune information inventée.\nPoints clés : ${String(pointsA).slice(0, 1500)}`);
-        return interaction.editReply({ content: `✍️ **Brouillon d annonce** (visible par vous seul — copiez-collez, puis publiez avec /say ou dans le salon)\n${text}` });
-      } catch (e) {
-        return interaction.editReply({ content: aiErrMsg(e) });
-      }
-    }
-    case 'resume': {
-      const permsR = interaction.memberPermissions;
-      if (!(permsR && permsR.has && permsR.has('ManageMessages'))) {
-        return interaction.reply({ content: '🔒 `/resume` est réservé au staff (permission « Gérer les messages »).', ephemeral: true });
-      }
-      const aiR = require('../ai/engine');
-      if (!aiR.cfgOf(guild.id).modules.staff) {
-        return interaction.reply({ content: '📝 Le module « Assistant IA du staff » est désactivé sur ce serveur : activez-le dans le dashboard → Hoxera AI → Modules IA → Staff & analyse.', ephemeral: true });
-      }
-      const chanR = interaction.options.getChannel('salon') || interaction.channel;
-      if (!chanR || !chanR.messages || typeof chanR.messages.fetch !== 'function') {
-        return interaction.reply({ content: '❓ Je n arrive pas à lire ce salon (salon texte uniquement).', ephemeral: true });
-      }
-      await interaction.deferReply({ ephemeral: true });
-      try {
-        const msgsR = await chanR.messages.fetch({ limit: 50 });
-        const linesR = [...msgsR.values()].reverse()
-          .filter((m) => m && m.author && !m.author.bot && m.content)
-          .slice(-40)
-          .map((m) => `${m.author.username || m.author.tag || 'membre'} : ${String(m.content).slice(0, 200)}`)
-          .join('\n');
-        if (!linesR) return interaction.editReply({ content: '📭 Pas assez de messages récents de membres à résumer dans ce salon.' });
-        const { text } = await aiR.ask(botId, guild.id, 'staff', `Résume en 5 puces maximum les derniers échanges de ce salon Discord, puis termine par une ligne « À suivre : » listant ce qui attend une réponse du staff.\n${linesR.slice(0, 6000)}`);
-        return interaction.editReply({ content: `📝 **Résumé IA — #${chanR.name || 'salon'}** (visible par vous seul)\n${text}` });
-      } catch (e) {
-        return interaction.editReply({ content: aiErrMsg(e) });
-      }
-    }
-    case 'activite': {
-      const permsA = interaction.memberPermissions;
-      if (!(permsA && permsA.has && permsA.has('ManageMessages'))) {
-        return interaction.reply({ content: '🔒 `/activite` est réservé au staff (permission « Gérer les messages »).', ephemeral: true });
-      }
-      const aiA = require('../ai/engine');
-      if (!aiA.cfgOf(guild.id).modules.stats) {
-        return interaction.reply({ content: '📊 Le module « Analyse de l activité » est désactivé sur ce serveur : activez-le dans le dashboard → Hoxera AI → Modules IA → Staff & analyse.', ephemeral: true });
-      }
-      await interaction.deferReply({ ephemeral: true });
-      try {
-        const dataA = {};
-        try { dataA.membres = guild.memberCount; } catch {}
-        try { dataA.salons = guild.channels && guild.channels.cache ? guild.channels.cache.size : undefined; } catch {}
-        try { dataA.roles = guild.roles && guild.roles.cache ? guild.roles.cache.size : undefined; } catch {}
-        try { dataA.automod = store.automodLogs.summary(botId, guild.id); } catch {}
-        try { dataA.tickets_ouverts = store.openTickets.allForGuild(botId, guild.id).length; } catch {}
-        const { text } = await aiA.ask(botId, guild.id, 'stats', `Voici les chiffres du serveur Discord « ${guild.name || ''} » au format JSON :\n${JSON.stringify(dataA).slice(0, 2000)}\nRédige un court bulletin d activité (6 lignes maximum) : 1) état général, 2) point modération, 3) point tickets, 4) un conseil actionnable pour le staff.`);
-        return interaction.editReply({ content: `📊 **Bulletin d activité IA** (visible par vous seul)\n${text}` });
-      } catch (e) {
-        return interaction.editReply({ content: aiErrMsg(e) });
-      }
-    }
-    case 'image': {
-      const promptI = interaction.options.getString('prompt');
-      if (!promptI || !String(promptI).trim()) return interaction.reply({ content: '❓ Décrivez une image : `/image prompt:un chat astronaute dans l espace`', ephemeral: true });
-      const aiI = require('../ai/engine');
-      const cfgI = aiI.cfgOf(guild.id);
-      if (!cfgI.modules.images) {
-        return interaction.reply({ content: '🎨 Le module « Génération d images » est désactivé sur ce serveur : activez-le dans le dashboard → Hoxera AI → Modules IA → Création.', ephemeral: true });
-      }
-      // v285 — salons dédiés aux images (vide = autorisé partout)
-      if ((cfgI.image_channels || []).length && !(cfgI.image_channels || []).includes(String(interaction.channelId || ''))) {
-        return interaction.reply({ content: '🎨 La génération d images est réservée aux **salons dédiés** sur ce serveur (choisis par le staff dans le dashboard → Hoxera AI).', ephemeral: true });
-      }
-      await interaction.deferReply();
-      try {
-        const bufI = await require('../ai/images').generateImage(guild.id, user.id, promptI);
-        const { AttachmentBuilder } = require('discord.js');
-        const fileI = new AttachmentBuilder(bufI, { name: 'hoxera-ia.png' });
-        return interaction.editReply({ content: `🎨 **${String(promptI).slice(0, 200)}**\nImage générée par Hoxera AI — ${require('../ai/images').LIMIT_PER_HOUR} images max par heure et par serveur.`, files: [fileI] });
-      } catch (e) {
-        const msg = e.code === 'IMG_COOLDOWN' ? `⏳ ${e.message}`
-          : e.code === 'IMG_QUOTA' ? `🎨 ${e.message}`
-          : e.code === 'IMG_EMPTY' ? '❓ Décrivez une image : `/image prompt:...`'
-          : '⚠️ La génération d image a échoué : le service est peut-être occupé, réessayez dans quelques instants.';
-        return interaction.editReply({ content: msg });
-      }
-    }
-    case 'verifier': {
-      const contentV = interaction.options.getString('message');
-      if (!contentV) return interaction.reply({ content: '❓ Précisez le message à analyser : `/verifier message:...`', ephemeral: true });
-      const permsV = interaction.memberPermissions;
-      if (!(permsV && permsV.has && permsV.has('ManageMessages'))) {
-        return interaction.reply({ content: '🔒 `/verifier` est réservé au staff (permission « Gérer les messages »).', ephemeral: true });
-      }
-      const aiV = require('../ai/engine');
-      const cfgV = aiV.cfgOf(guild.id);
-      if (!cfgV.modules.mod) {
-        return interaction.reply({ content: '🛡️ Le module « IA de modération » est désactivé sur ce serveur : activez-le dans le dashboard → Hoxera AI → Modules IA → Sécurité & modération.', ephemeral: true });
-      }
-      await interaction.deferReply({ ephemeral: true });
-      try {
-        const { text } = await aiV.ask(botId, guild.id, 'mod', `Analysez ce message publié sur Discord. Donnez en 3 lignes maximum : 1) un verdict clair (spam, publicité, harcèlement, contenu choquant, ou rien à signaler), 2) pourquoi, 3) la sanction recommandée (aucune, avertissement, mute, ban). Message :\n« ${String(contentV).slice(0, 1500)} »`);
-        return interaction.editReply({ content: `🤖 **Second avis IA — modération**\n${text}` });
-      } catch (e) {
-        const msg = e.code === 'AI_PLATFORM_OFF' ? '🤖 Hoxera AI est momentanément désactivée par la plateforme.'
-          : e.code === 'AI_BUDGET' ? '🤖 Le quota IA quotidien de la plateforme est atteint, réessayez demain.'
-          : e.code === 'AI_QUOTA' ? '🤖 Le quota horaire IA de ce serveur est atteint, réessayez dans quelques minutes.'
-          : e.code === 'AI_NO_KEY' ? '🤖 Hoxera AI est **en veille** : la plateforme n a pas encore activé de clé fournisseur.'
-          : e.code === 'AI_DISABLED' ? '🤖 Hoxera AI est désactivée sur ce serveur (dashboard → Hoxera AI).'
-          : e.code === 'AI_BAD_KEY' ? '🔑 La clé IA a été refusée par le fournisseur (Dashboard → Réglages du bot).'
-          : e.code === 'AI_LIMIT' ? '⏳ La limite gratuite du fournisseur est atteinte, réessayez dans quelques minutes.'
-          : e.code === 'AI_MODEL' ? '🧩 Le modèle IA choisi n existe plus chez le fournisseur (Dashboard → Hoxera AI → Moteur).'
-          : `⚠️ Hoxera AI indisponible pour le moment (${e.code || 'erreur'}).`;
-        return interaction.editReply({ content: msg });
-      }
-    }
-    case 'faq': {
-      const questionF = interaction.options.getString('question');
-      if (!questionF) return interaction.reply({ content: '❓ Posez une question : `/faq question:...`', ephemeral: true });
-      const aiF = require('../ai/engine');
-      const cfgF = aiF.cfgOf(guild.id);
-      if (!(cfgF.sources || []).length) {
-        return interaction.reply({ content: '📚 Aucune source (règlement/FAQ) n est encore fournie sur ce serveur : le staff peut les ajouter dans le dashboard → Hoxera AI → Sources.', ephemeral: true });
-      }
-      await interaction.deferReply();
-      try {
-        const { text } = await aiF.ask(botId, guild.id, 'docs', questionF);
-        return interaction.editReply({ content: `📚 **Hoxera AI — règlement & FAQ**\n${text}`, allowedMentions: { users: [] } });
-      } catch (e) {
-        const msg = e.code === 'AI_PLATFORM_OFF' ? '🤖 Hoxera AI est momentanément désactivée par la plateforme.'
-          : e.code === 'AI_BUDGET' ? '🤖 Le quota IA quotidien de la plateforme est atteint, réessayez demain.'
-          : e.code === 'AI_NO_KEY' ? '🤖 Hoxera AI est **en veille** : la plateforme n a pas encore activé de clé fournisseur.'
-          : e.code === 'AI_DISABLED' ? '🤖 Hoxera AI est désactivée sur ce serveur (dashboard → Hoxera AI).'
-          : e.code === 'AI_BAD_KEY' ? '🔑 La clé IA a été refusée par le fournisseur (Dashboard → Réglages du bot).'
-          : e.code === 'AI_LIMIT' ? '⏳ La limite gratuite du fournisseur est atteinte, réessayez dans quelques minutes.'
-          : e.code === 'AI_MODEL' ? '🧩 Le modèle IA choisi n existe plus chez le fournisseur (Dashboard → Hoxera AI → Moteur).'
-          : `⚠️ Hoxera AI indisponible pour le moment (${e.code || 'erreur'}).`;
-        return interaction.editReply({ content: msg });
-      }
-    }
-    case 'ai': {
-      const question = interaction.options.getString('question');
-      if (!question) return interaction.reply({ content: '❓ Posez une question : `/ai question:...`', ephemeral: true });
-      const ai = require('../ai/engine');
-      const cfg = ai.cfgOf(guild.id);
-      if (cfg.roles.length && member && member.roles && !(member.roles.cache && member.roles.cache.some((r) => cfg.roles.includes(r.id)))) {
-        return interaction.reply({ content: '⛔ Hoxera AI est réservée à certains rôles sur ce serveur.', ephemeral: true });
-      }
-      await interaction.deferReply();
-      try {
-        const { text } = await ai.ask(botId, guild.id, 'chat', question);
-        return interaction.editReply({ content: `🤖 **Hoxera AI**\n${text}`, allowedMentions: { users: [] } });
-      } catch (e) {
-        const msg = e.code === 'AI_PLATFORM_OFF' ? '🤖 Hoxera AI est momentanément désactivée par la plateforme.'
-          : e.code === 'AI_BUDGET' ? '🤖 Le quota IA quotidien de la plateforme est atteint, réessayez demain.'
-          : e.code === 'AI_NO_KEY' ? '🤖 Hoxera AI est **en veille** : la plateforme n a pas encore activé de clé fournisseur.'
-          : e.code === 'AI_DISABLED' ? '🤖 Hoxera AI est désactivée sur ce serveur (dashboard → Hoxera AI).'
-          : e.code === 'AI_QUOTA' || e.code === 'AI_BUSY' ? `🤖 ${e.message}`
-          : `⚠️ Hoxera AI indisponible pour le moment (${e.code || 'erreur'}).`;
-        return interaction.editReply({ content: msg });
-      }
     }
     case 'voicetemp': {
       if (!isAdmin(member)) return interaction.reply({ content: '⛔ Réservé aux administrateurs.', ephemeral: true });

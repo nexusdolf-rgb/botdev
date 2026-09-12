@@ -26,20 +26,20 @@ console.log('— 2. Tout le réglage bot dans « Réglages du bot » —');
 const iBs = dash.indexOf('Dashboard.renderers.botsettings');
 const iFin = dash.indexOf('// Phase 3 (v196)', iBs);
 const bs = dash.slice(iBs, iFin);
-check('carte IA plateforme (fondateur) dans Réglages du bot', bs.includes('Hoxera AI — plateforme (fondateur)') && bs.includes('aip-key'));
+check('carte IA plateforme RETIRÉE des Réglages du bot (v289)', !bs.includes('aip-key') && !bs.includes('Hoxera AI'));
 check('carte sauvegarde plateforme dans Réglages du bot', bs.includes('Sauvegarde automatique') && bs.includes('/backup/now'));
 check('carte Général (préfixe, statut) toujours là', bs.includes("Dashboard.card(root, 'Général'"));
-check('botsettings cohérent : loadAI défini avant usage, rien entre le titre et la carte IA', bs.includes('const loadAI = async () => {') && bs.indexOf('const loadAI') < bs.indexOf('loadAI();') && !bs.slice(bs.indexOf('Dashboard.header'), bs.indexOf('const cAI')).includes('loadAI'));
+check('botsettings sain : plus aucune trace de loadAI / cAI', !bs.includes('loadAI') && !bs.includes('const cAI'));
 
 console.log('— 3. Rien d autre n a bougé —');
 check('sauvegarde de structure v280 conservée (module serveur)', dash.includes('bk-create') && dash.includes('Sauvegarde de la structure'));
 check('rôles par réaction v277 conservés', dash.includes('rr-send'));
-check('module Hoxera AI serveur conservé', dash.includes("['ai', '🤖', 'Hoxera AI']"));
+check('module Hoxera AI RETIRÉ de la navigation (v289)', !dash.includes("['ai', '🤖', 'Hoxera AI']"));
 
 console.log('— 4. Version —');
 const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-check('index.html : ?v=288 référencé 7 fois', (index.match(/\?v=288/g) || []).length === 7);
-check('sw.js : cache « botdev-v288 »', sw.includes("const CACHE = 'botdev-v288';"));
+check('index.html : ?v=289 référencé 7 fois', (index.match(/\?v=289/g) || []).length === 7);
+check('sw.js : cache « botdev-v289 »', sw.includes("const CACHE = 'botdev-v289';"));
 
 console.log(`\n🎉 v281 — ${ok} vérifications OK : un seul espace de réglages du bot, clair et sain.`);

@@ -88,8 +88,8 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('plus de rose littéral hors charte dans extra', !extra.includes("color: '#EB459E'"));
 
   // ---------- 8. Version ----------
-  check('index : bump v217', fs.readFileSync('public/index.html', 'utf8').includes('?v=288'));
-  check('sw : bump botdev-v241', fs.readFileSync('public/sw.js', 'utf8').includes('botdev-v288'));
+  check('index : bump v217', fs.readFileSync('public/index.html', 'utf8').includes('?v=289'));
+  check('sw : bump botdev-v241', fs.readFileSync('public/sw.js', 'utf8').includes('botdev-v289'));
 
   console.log(`  ✅ v217 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });
