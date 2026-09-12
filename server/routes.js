@@ -834,6 +834,17 @@ router.put('/bots/:id/guilds/:guildId/ai', requireAuth, async (req, res) => {
   if (Array.isArray(b.image_channels)) patch.image_channels = b.image_channels.map(String).slice(0, 50);
   if (typeof b.mention_only === 'boolean') patch.mention_only = b.mention_only;
   if (typeof b.answer_questions === 'boolean') patch.answer_questions = b.answer_questions;
+  if (b.personas && typeof b.personas === 'object' && !Array.isArray(b.personas)) {
+    patch.personas = Object.fromEntries(Object.entries(b.personas).slice(0, 25).map(([k, v]) => [String(k).slice(0, 30), String(v || '').slice(0, 300)]));
+  }
+  if (b.auto_bulletin && typeof b.auto_bulletin === 'object') {
+    patch.auto_bulletin = {
+      on: !!b.auto_bulletin.on,
+      channel: String(b.auto_bulletin.channel || '').slice(0, 30),
+      day: Math.min(6, Math.max(0, Number(b.auto_bulletin.day) || 0)),
+      hour: Math.min(23, Math.max(0, Number(b.auto_bulletin.hour) || 0)),
+    };
+  }
   if (b.limit_per_hour !== undefined) patch.limit_per_hour = Math.max(1, Math.min(200, Number(b.limit_per_hour) || 20));
   if (b.provider && ai.PROVIDERS[b.provider]) patch.provider = b.provider;
   if (typeof b.model === 'string' && b.model) patch.model = b.model.slice(0, 80);

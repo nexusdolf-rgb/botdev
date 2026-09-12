@@ -85,6 +85,9 @@ async function sweep(botId, entry) {
   try { await sweepAutomodWarningMessages(botId, entry); } catch (e) { console.error('[Hoxera] expiration avertissements:', e.message); }
   try { await giveaway.sweep(botId, entry); } catch (e) { console.error('[BotDev] giveaway sweep:', e.message); }
 
+  // 📊 v288 — bulletin d'activité hebdomadaire automatique (Hoxera AI)
+  try { await require('../ai/engine').bulletinSweep(botId, entry); } catch (e) { console.error('[Hoxera] bulletin IA:', e.message); }
+
   // Hoxera 2.0 : rappels, messages programmés, anniversaires
   const extra = require('./extra');
   try { await extra.sweepReminders(botId, entry); } catch (e) { console.error('[Hoxera] reminders sweep:', e.message); }

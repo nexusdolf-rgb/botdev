@@ -39,7 +39,7 @@ check('module Hoxera AI serveur conservé', dash.includes("['ai', '🤖', 'Hoxer
 console.log('— 4. Version —');
 const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-check('index.html : ?v=287 référencé 7 fois', (index.match(/\?v=287/g) || []).length === 7);
-check('sw.js : cache « botdev-v287 »', sw.includes("const CACHE = 'botdev-v287';"));
+check('index.html : ?v=288 référencé 7 fois', (index.match(/\?v=288/g) || []).length === 7);
+check('sw.js : cache « botdev-v288 »', sw.includes("const CACHE = 'botdev-v288';"));
 
 console.log(`\n🎉 v281 — ${ok} vérifications OK : un seul espace de réglages du bot, clair et sain.`);

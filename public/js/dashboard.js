@@ -7124,6 +7124,45 @@ Dashboard.renderers.ai = async (content, data) => {
   const cSrc = Dashboard.card(root, '📚 Sources (règlement, FAQ, documentation)', 'Une source par ligne : la commande /faq répond uniquement à partir de ces textes.');
   cSrc.innerHTML += `<textarea class="dash-input" id="ai-sources" rows="5" style="width:100%;font-size:12.5px" placeholder="Le règlement interdit la publicité…&#10;Pour ouvrir un ticket : /ticket…">${App.escapeHtml((cfg.sources || []).join('\n'))}</textarea>`;
 
+  const cPers = Dashboard.card(root, '🎭 Personnalités par salon', 'Un style différent par salon (ex : pro sur #support, fun sur #général). Vide = style par défaut.');
+  cPers.innerHTML += `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <select class="dash-select" id="ai-persona-chan" style="min-width:180px">${textCh.map((ch) => `<option value="${ch.id}"># ${App.escapeHtml(ch.name)}</option>`).join('')}</select>
+      <input class="dash-input" id="ai-persona-text" style="flex:1;min-width:200px" maxlength="300" placeholder="Ex : Toujours enthousiaste, phrases courtes, émojis 🎉" />
+      <button class="dash-btn" id="ai-persona-add">➕ Ajouter</button>
+    </div>
+    <div id="ai-persona-list" style="margin-top:8px;display:flex;flex-direction:column;gap:4px"></div>`;
+  const personaMap = Object.assign({}, cfg.personas || {});
+  const renderPersonas = () => {
+    const listEl = cPers.querySelector('#ai-persona-list');
+    const ids = Object.keys(personaMap);
+    listEl.innerHTML = ids.length ? ids.map((cid) => `
+      <div style="display:flex;gap:8px;align-items:center;font-size:12.5px;border:1px solid var(--d-line);border-radius:8px;padding:6px 8px">
+        <span style="color:var(--d-dim)"># ${App.escapeHtml(((textCh.find((c) => c.id === cid) || {}).name) || cid)}</span>
+        <span style="flex:1">${App.escapeHtml(personaMap[cid])}</span>
+        <button class="dash-btn" data-pers-del="${cid}">✖</button>
+      </div>`).join('') : '<div style="font-size:12.5px;color:var(--d-dim)">Aucune personnalité personnalisée — l IA garde son style par défaut partout.</div>';
+    listEl.querySelectorAll('[data-pers-del]').forEach((b) => { b.onclick = () => { delete personaMap[b.getAttribute('data-pers-del')]; renderPersonas(); }; });
+  };
+  renderPersonas();
+  cPers.querySelector('#ai-persona-add').onclick = () => {
+    const cid = cPers.querySelector('#ai-persona-chan').value;
+    const txt = cPers.querySelector('#ai-persona-text').value.trim().slice(0, 300);
+    if (!cid || !txt) return;
+    personaMap[cid] = txt;
+    cPers.querySelector('#ai-persona-text').value = '';
+    renderPersonas();
+  };
+
+  const cBul = Dashboard.card(root, '📅 Bulletin hebdomadaire automatique', 'L IA poste un résumé d activité chaque semaine dans le salon choisi (jour et heure de Paris). Nécessite la case « Analyse de l activité » cochée.');
+  cBul.innerHTML += `
+    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="ai-bulletin-on" ${cfg.auto_bulletin && cfg.auto_bulletin.on ? 'checked' : ''} /> Activer le bulletin automatique</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center">
+      <select class="dash-select" id="ai-bulletin-chan" style="min-width:180px">${textCh.map((ch) => `<option value="${ch.id}" ${cfg.auto_bulletin && cfg.auto_bulletin.channel === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('')}</select>
+      <select class="dash-select" id="ai-bulletin-day" style="min-width:130px">${[['1', 'Lundi'], ['2', 'Mardi'], ['3', 'Mercredi'], ['4', 'Jeudi'], ['5', 'Vendredi'], ['6', 'Samedi'], ['0', 'Dimanche']].map(([v, l]) => `<option value="${v}" ${String(cfg.auto_bulletin ? cfg.auto_bulletin.day : 1) === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      <select class="dash-select" id="ai-bulletin-hour" style="min-width:90px">${Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${Number(cfg.auto_bulletin ? cfg.auto_bulletin.hour : 9) === h ? 'selected' : ''}>${String(h).padStart(2, '0')} h</option>`).join('')}</select>
+    </div>`;
+
   const cLog = Dashboard.card(root, '📜 Journal & statistiques', 'Derniers appels IA du serveur et compteurs.');
   cLog.innerHTML += `<div id="ai-stats" style="font-size:12.5px;color:var(--d-dim);margin-bottom:10px"></div><div id="ai-logs" style="font-size:12px;color:var(--d-dim);display:flex;flex-direction:column;gap:4px"></div><div style="margin-top:10px"><button class="dash-btn" id="ai-logs-refresh">🔄 Rafraîchir</button></div>`;
 
@@ -7150,6 +7189,13 @@ Dashboard.renderers.ai = async (content, data) => {
     image_channels: Array.from(cScope.querySelector('#ai-image-channels').selectedOptions).map((o) => o.value),
     mention_only: cEng.querySelector('#ai-mention').checked,
     answer_questions: cEng.querySelector('#ai-answerq').checked,
+    personas: personaMap,
+    auto_bulletin: {
+      on: cBul.querySelector('#ai-bulletin-on').checked,
+      channel: cBul.querySelector('#ai-bulletin-chan').value || '',
+      day: Number(cBul.querySelector('#ai-bulletin-day').value) || 0,
+      hour: Number(cBul.querySelector('#ai-bulletin-hour').value) || 0,
+    },
     limit_per_hour: Number(cEng.querySelector('#ai-limit').value) || 20,
     provider: cEng.querySelector('#ai-provider').value,
     model: cEng.querySelector('#ai-model').value,

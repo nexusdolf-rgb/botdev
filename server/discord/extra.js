@@ -277,6 +277,19 @@ function buildExtraPayloads() {
       name: 'sticky', description: '📌 État du message épinglé en bas de salon (v276)',
     },
     {
+      name: 'traduire', description: '🌍 Hoxera AI : traduit un message (réponse visible par vous seul)',
+      options: [
+        { name: 'message', description: 'Le texte à traduire', type: ApplicationCommandOptionType.String, required: true },
+        { name: 'langue', description: 'Langue cible (défaut : français)', type: ApplicationCommandOptionType.String, required: false },
+      ],
+    },
+    {
+      name: 'annonce', description: '✍️ Hoxera AI : rédige une annonce prête à publier à partir de vos points clés',
+      options: [
+        { name: 'points', description: 'Vos points clés, en vrac', type: ApplicationCommandOptionType.String, required: true },
+      ],
+    },
+    {
       name: 'resume', description: '📝 Hoxera AI : résumé des derniers messages d un salon (réservé au staff, réponse privée)',
       options: [
         { name: 'salon', description: 'Salon à résumer (défaut : salon actuel)', type: ApplicationCommandOptionType.Channel, required: false },
@@ -366,6 +379,8 @@ const HELP_EXTRA = {
   rob: ['🦹 Vol', 'Tentez de voler un membre : 40 % de réussite (10-20 % de ses coins). Si vous ratez, vous lui payez une amende !', '`/rob @membre`', '`/rob @Millionnaire` → 🚓 Raté ! Vous lui devez 15 % de votre solde.'],
   lockdown: ['🚨 Anti-raid', 'Verrouille tous les salons texte en 1 clic (personne ne peut écrire sauf les admins) puis rouvre tout. Idéal contre un raid.', '`/lockdown on` · `/lockdown off`', '`/lockdown on` → 🔒 12 salons verrouillés'],
   sticky: 'Message épinglé en bas de salon (sticky) : état et salon configuré. Réglage complet dans le dashboard → Annonces.',
+    traduire: 'Traduit un message dans la langue de votre choix (réponse privée).',
+    annonce: 'Rédige une annonce prête à publier à partir de vos points clés (brouillon privé).',
     resume: 'Résumé IA des 40 derniers messages d un salon pour rattraper le fil (staff, réponse privée).',
     activite: 'Bulletin d activité IA du serveur : modération, tickets, conseil au staff (staff, réponse privée).',
     image: 'Génère une image à partir d un texte (mode sûr activé, 6 images/heure/serveur).',
@@ -408,7 +423,7 @@ async function handleInteraction(botId, entry, interaction) {
 }
 
 // ---------------------- Commandes slash ----------------------
-const EXTRA_CMDS = new Set(['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch', 'rps', 'pendu', 'morpion', 'birthday', 'remind', 'poll', 'snipe', 'work', 'gamble', 'rob', 'lockdown', 'voicetemp', 'emotes', 'ai', 'faq', 'verifier', 'image', 'resume', 'activite', 'sticky', 'apply', 'invites', 'afk', 'top', 'quiz']);
+const EXTRA_CMDS = new Set(['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch', 'rps', 'pendu', 'morpion', 'birthday', 'remind', 'poll', 'snipe', 'work', 'gamble', 'rob', 'lockdown', 'voicetemp', 'emotes', 'ai', 'faq', 'verifier', 'image', 'resume', 'activite', 'traduire', 'annonce', 'sticky', 'apply', 'invites', 'afk', 'top', 'quiz']);
 
 async function handleSlash(botId, entry, interaction) {
   const cmd = interaction.commandName.toLowerCase();
@@ -882,6 +897,37 @@ async function handleSlash(botId, entry, interaction) {
       const st = require('./sticky').cfgOf(guild.id);
       const last = require('./sticky').lastIdOf(guild.id);
       return interaction.reply({ content: st.enabled && st.channel ? `📌 Sticky **actif** dans <#${st.channel}> : republication toutes les ${st.every} messages.${last ? `\nDernier message épinglé : [voir](https://discord.com/channels/${guild.id}/${st.channel}/${last})` : '\nAucun sticky publié pour le moment.'}` : '📌 Sticky **désactivé** sur ce serveur. Réglez-le dans le dashboard → Annonces → « Message épinglé en bas ».', ephemeral: true });
+    }
+    case 'traduire': {
+      const srcT = interaction.options.getString('message');
+      if (!srcT || !String(srcT).trim()) return interaction.reply({ content: '❓ Précisez le texte : `/traduire message:...`', ephemeral: true });
+      const aiT = require('../ai/engine');
+      if (!aiT.cfgOf(guild.id).modules.chat) {
+        return interaction.reply({ content: '🌍 Le module « IA conversationnelle » est désactivé sur ce serveur (dashboard → Hoxera AI).', ephemeral: true });
+      }
+      const langT = (interaction.options.getString('langue') || 'français').slice(0, 40);
+      await interaction.deferReply({ ephemeral: true });
+      try {
+        const { text } = await aiT.ask(botId, guild.id, 'chat', `Traduisez le message suivant en ${langT}. Ne répondez qu'avec la traduction, sans commentaire.\n${String(srcT).slice(0, 1800)}`, { channelId: interaction.channelId });
+        return interaction.editReply({ content: `🌍 **Traduction (${langT})**\n${text}` });
+      } catch (e) {
+        return interaction.editReply({ content: aiErrMsg(e) });
+      }
+    }
+    case 'annonce': {
+      const pointsA = interaction.options.getString('points');
+      if (!pointsA || !String(pointsA).trim()) return interaction.reply({ content: '❓ Donnez vos points clés : `/annonce points:...`', ephemeral: true });
+      const aiAn = require('../ai/engine');
+      if (!aiAn.cfgOf(guild.id).modules.staff) {
+        return interaction.reply({ content: '✍️ Le module « Assistant IA du staff » est désactivé sur ce serveur (dashboard → Hoxera AI).', ephemeral: true });
+      }
+      await interaction.deferReply({ ephemeral: true });
+      try {
+        const { text } = await aiAn.ask(botId, guild.id, 'staff', `Rédige une annonce Discord prête à publier à partir de ces points clés. Format : un titre avec émoji, 3 à 6 lignes claires, un appel à l'action final. N'ajoute aucune information inventée.\nPoints clés : ${String(pointsA).slice(0, 1500)}`);
+        return interaction.editReply({ content: `✍️ **Brouillon d annonce** (visible par vous seul — copiez-collez, puis publiez avec /say ou dans le salon)\n${text}` });
+      } catch (e) {
+        return interaction.editReply({ content: aiErrMsg(e) });
+      }
     }
     case 'resume': {
       const permsR = interaction.memberPermissions;

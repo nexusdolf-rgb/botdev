@@ -221,12 +221,12 @@ const onglet = (module, hauteurs) => {
   const indexHtml = racine('public/index.html');
   const swSource = racine('public/sw.js');
   const versions = [...indexHtml.matchAll(/\?v=(\d+)/g)].map((m) => `?v=${m[1]}`);
-  check('index.html : ?v=287 référencé 7 fois',
-    versions.length === 7 && versions.every((v) => v === '?v=287'),
+  check('index.html : ?v=288 référencé 7 fois',
+    versions.length === 7 && versions.every((v) => v === '?v=288'),
     `${versions.length} refs : ${[...new Set(versions)].join(',')}`);
-  check('sw.js : cache « botdev-v287 »', swSource.includes("const CACHE = 'botdev-v287';"));
+  check('sw.js : cache « botdev-v288 »', swSource.includes("const CACHE = 'botdev-v288';"));
   check('index.html et sw.js portent la même version',
-    swSource.includes('botdev-v287') && versions.every((v) => v === '?v=287'));
+    swSource.includes('botdev-v288') && versions.every((v) => v === '?v=288'));
 
   console.log('');
   if (echecs) { console.log(`❌ v247 — ${echecs} échec(s)`); process.exit(1); }

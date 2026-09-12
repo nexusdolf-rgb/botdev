@@ -105,8 +105,8 @@ function check(label, cond, info) {
   check('liste Groq du dashboard à jour (GPT-OSS 120B en tête)', dash.includes("groq: [['openai/gpt-oss-120b'") && !dash.includes('llama-3.3-70b-versatile'));
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=287 référencé 7 fois', (index.match(/\?v=287/g) || []).length === 7);
-  check('sw.js : cache « botdev-v287 »', sw.includes("const CACHE = 'botdev-v287';"));
+  check('index.html : ?v=288 référencé 7 fois', (index.match(/\?v=288/g) || []).length === 7);
+  check('sw.js : cache « botdev-v288 »', sw.includes("const CACHE = 'botdev-v288';"));
 
   console.log(`\n🎉 v287 — ${ok} vérifications OK : IA de nouveau joignable avec une clé valide.`);
 })().catch((e) => { console.error(e); process.exit(1); });
