@@ -381,6 +381,8 @@ function attachListeners(botId, entry) {
     extra.trackMessage(botId, m);
     // 🌙 Statut AFK (v188) : sort l'auteur de l'AFK + prévient les mentions
     extra.onMessage(botId, m).catch(() => {});
+    // 📌 Sticky (v276) : message épinglé qui remonte en bas du salon
+    require('./sticky').onMessage(botId, m).catch(() => {});
     // 💬 Modmail (v196) : messages privés → serveur, réponses staff → MP
     require('./modmail').onMessage(botId, m).catch((e) => console.error('[BotDev] modmail:', (e && e.message) || e));
     const { runMessageHandler } = require('./engine');
@@ -392,6 +394,7 @@ function attachListeners(botId, entry) {
     trackDeleted(botId, m);
     // 📋 Journal d'audit : messages supprimés (sauf ceux de l'auto-mod, déjà tracés)
     try { require('./auditLog').onMessageDelete(botId, m); } catch (e) { console.error('[BotDev] audit msgDelete:', e.message); }
+    try { require('./sticky').onMessageDelete(botId, m); } catch {}
   });
 
   client.on('messageDeleteBulk', (msgs) => {

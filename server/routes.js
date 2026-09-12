@@ -786,11 +786,30 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
     scheduled: store.scheduled.all(bot.id, guildId),
     shop_items: store.shop.all(bot.id, guildId),
     log_events: logEvents,
+    sticky: (() => { const st = require('./discord/sticky'); return { ...st.cfgOf(guildId), last_id: st.lastIdOf(guildId) }; })(),
   };
   // ✅ Checklist de configuration + 🚨 état du verrouillage anti-raid
   payload.checklist = guildChecklist(payload);
   try { payload.lockdown = require('./discord/lockdown').state(bot.id, dGuild); } catch { payload.lockdown = { locked: false, channels: [] }; }
   res.json(payload);
+});
+
+// 📌 v276 — message épinglé en bas de salon (sticky)
+router.put('/bots/:id/guilds/:guildId/sticky', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const st = require('./discord/sticky');
+  const b = req.body || {};
+  const patch = {};
+  if (typeof b.enabled === 'boolean') patch.enabled = b.enabled;
+  if (typeof b.channel === 'string') patch.channel = b.channel;
+  if (b.every !== undefined) patch.every = Number(b.every);
+  if (typeof b.content === 'string') patch.content = b.content;
+  if (typeof b.embed === 'boolean') patch.embed = b.embed;
+  const cfg = st.saveCfg(req.params.guildId, patch);
+  if (!cfg.enabled) st.setLastId(req.params.guildId, '');
+  res.json({ ok: true, sticky: { ...cfg, last_id: st.lastIdOf(req.params.guildId) } });
 });
 
 // ---------------------- Communauté (façon DraftBot) ----------------------

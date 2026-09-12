@@ -261,6 +261,9 @@ function buildExtraPayloads() {
       ]}],
     },
     {
+      name: 'sticky', description: '📌 État du message épinglé en bas de salon (v276)',
+    },
+    {
       name: 'emotes', description: "🎨 Installe le pack d'émojis Hoxera (icônes des modules) sur le serveur",
       default_member_permissions: admin,
       options: [
@@ -316,7 +319,8 @@ const HELP_EXTRA = {
   gamble: ['🎰 Pari', 'Pariez des coins : 50 % de chances de doubler, 50 % de tout perdre.', '`/gamble montant`', '`/gamble 100` → 🎰 JACKPOT ! +100 coins !'],
   rob: ['🦹 Vol', 'Tentez de voler un membre : 40 % de réussite (10-20 % de ses coins). Si vous ratez, vous lui payez une amende !', '`/rob @membre`', '`/rob @Millionnaire` → 🚓 Raté ! Vous lui devez 15 % de votre solde.'],
   lockdown: ['🚨 Anti-raid', 'Verrouille tous les salons texte en 1 clic (personne ne peut écrire sauf les admins) puis rouvre tout. Idéal contre un raid.', '`/lockdown on` · `/lockdown off`', '`/lockdown on` → 🔒 12 salons verrouillés'],
-  emotes: ["🎨 Émojis Hoxera", "Un pack d'émojis dessinés pour Hoxera, un par module (tickets, modération, niveaux…). `/emotes install` les ajoute au serveur : tout le monde peut les utiliser, et le dashboard affiche les mêmes icônes en PNG.", "`/emotes install` · `/emotes view`"],
+  sticky: 'Message épinglé en bas de salon (sticky) : état et salon configuré. Réglage complet dans le dashboard → Annonces.',
+    emotes: ["🎨 Émojis Hoxera", "Un pack d'émojis dessinés pour Hoxera, un par module (tickets, modération, niveaux…). `/emotes install` les ajoute au serveur : tout le monde peut les utiliser, et le dashboard affiche les mêmes icônes en PNG.", "`/emotes install` · `/emotes view`"],
   voicetemp: ['🔊 Salons vocaux temporaires +', 'Un salon « ➕ Créer un vocal » : dès qu\'un membre le rejoint, un salon à son nom est créé, et il est supprimé automatiquement quand il est vide. Le propriétaire gère SON salon depuis le panneau de contrôle (style TempVoice, en mieux) : NOM, LIMITE, PRIVÉ, PUBLIC, RÉCUPÉRER, ajout/retrait/expulsion de membres, TRANSFÉRER la propriété, SUPPRIMER — chaque réponse est personnelle. `/voicetemp emotes` installe les émojis Hoxera du panneau.', '`/voicetemp set` (salon + catégorie + panneau) · `/voicetemp emotes` · `/voicetemp view` · `/voicetemp off`'],
   apply: ['📝 Candidatures', 'Les membres cliquent sur un bouton, répondent à VOS questions dans une fenêtre, et leurs réponses arrivent dans un salon avec des boutons Accepter/Refuser pour le staff.', '`/apply set #salon` · `/apply question votre question` (max 5) · `/apply panel` · `/apply view` · `/apply off`', '`/apply set #candidatures` puis `/apply question Quel âge avez-vous ?` puis `/apply panel`'],
   afk: ['🌙 AFK', 'Vous passes AFK : si quelqu\'un vous mentionnez, le bot le prévient. Votre statut se retire tout seul dès que vous écrivez à nouveau.', '`/afk` · `/afk raison`', '`/afk je mange` → 🔕 @X est AFK : je mange (depuis 2 min)'],
@@ -352,7 +356,7 @@ async function handleInteraction(botId, entry, interaction) {
 }
 
 // ---------------------- Commandes slash ----------------------
-const EXTRA_CMDS = new Set(['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch', 'rps', 'pendu', 'morpion', 'birthday', 'remind', 'poll', 'snipe', 'work', 'gamble', 'rob', 'lockdown', 'voicetemp', 'emotes', 'apply', 'invites', 'afk', 'top', 'quiz']);
+const EXTRA_CMDS = new Set(['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch', 'rps', 'pendu', 'morpion', 'birthday', 'remind', 'poll', 'snipe', 'work', 'gamble', 'rob', 'lockdown', 'voicetemp', 'emotes', 'sticky', 'apply', 'invites', 'afk', 'top', 'quiz']);
 
 async function handleSlash(botId, entry, interaction) {
   const cmd = interaction.commandName.toLowerCase();
@@ -820,6 +824,12 @@ async function handleSlash(botId, entry, interaction) {
         }
       }
       return interaction.reply({ ...hoxEmotesPanel(botId, guild, null), ephemeral: true });
+    }
+    case 'sticky': {
+      if (!isAdmin(member)) return interaction.reply({ content: '⛔ Réservé aux administrateurs.', ephemeral: true });
+      const st = require('./sticky').cfgOf(guild.id);
+      const last = require('./sticky').lastIdOf(guild.id);
+      return interaction.reply({ content: st.enabled && st.channel ? `📌 Sticky **actif** dans <#${st.channel}> : republication toutes les ${st.every} messages.${last ? `\nDernier message épinglé : [voir](https://discord.com/channels/${guild.id}/${st.channel}/${last})` : '\nAucun sticky publié pour le moment.'}` : '📌 Sticky **désactivé** sur ce serveur. Réglez-le dans le dashboard → Annonces → « Message épinglé en bas ».', ephemeral: true });
     }
     case 'voicetemp': {
       if (!isAdmin(member)) return interaction.reply({ content: '⛔ Réservé aux administrateurs.', ephemeral: true });

@@ -5267,6 +5267,35 @@ Dashboard.renderers.announcements = async (content, data) => {
   const root = Dashboard.header(content, '📅', 'Annonces programmées', 'Des messages envoyés automatiquement aux jours et heures choisissez (ex : le lundi à 18 h).');
   const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
   const rolesList = (data.roles || []).filter((role) => role.name !== '@everyone');
+  // 📌 v276 — message épinglé en bas de salon (sticky)
+  const stk = data.sticky || { enabled: false, channel: '', every: 10, content: '', embed: true };
+  const cStk = Dashboard.card(root, '📌 Message épinglé en bas (sticky)', 'Un message important qui remonte toujours tout en bas du salon : règlement, événement, lien utile…');
+  cStk.innerHTML += `
+    <label style="display:flex;gap:8px;align-items:center;margin-bottom:10px"><input type="checkbox" id="stk-enabled" ${stk.enabled ? 'checked' : ''} /> Activer le sticky sur ce serveur</label>
+    <label class="dash-label">Salon concerné</label>
+    <select class="dash-select" id="stk-channel">
+      <option value="">— Aucun salon —</option>
+      ${textChannels.map((ch) => `<option value="${ch.id}" ${stk.channel === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('')}
+    </select>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px">
+      <div><label class="dash-label">Republication</label><select class="dash-select" id="stk-every" style="max-width:190px">${[5, 10, 20, 50].map((n) => `<option value="${n}" ${Number(stk.every) === n ? 'selected' : ''}>tous les ${n} messages</option>`).join('')}</select></div>
+      <div><label class="dash-label">Présentation</label><select class="dash-select" id="stk-embed" style="max-width:190px"><option value="1" ${stk.embed ? 'selected' : ''}>Joli encadré (embed)</option><option value="0" ${stk.embed ? '' : 'selected'}>Texte simple</option></select></div>
+    </div>
+    <label class="dash-label">Contenu du message</label>
+    <textarea class="dash-input" id="stk-content" rows="4" style="width:100%;font-size:12.5px" placeholder="Règlement : merci de rester respectueux…&#10;Événement vendredi 20 h !">${App.escapeHtml(stk.content || '')}</textarea>
+    <div style="font-size:12px;color:var(--d-dim);margin-top:8px">📌 Le bot supprime uniquement SON ancien message épinglé puis le republie tout en bas : les messages des membres ne sont jamais touchés.</div>
+    <div style="margin-top:12px"><button class="dash-btn dash-btn-primary" id="stk-save">💾 Enregistrer le sticky</button></div>`;
+  cStk.querySelector('#stk-save').onclick = async () => {
+    const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/sticky`, { method: 'PUT', body: {
+      enabled: cStk.querySelector('#stk-enabled').checked,
+      channel: cStk.querySelector('#stk-channel').value,
+      every: Number(cStk.querySelector('#stk-every').value),
+      embed: cStk.querySelector('#stk-embed').value === '1',
+      content: cStk.querySelector('#stk-content').value,
+    } });
+    App.toast(r.ok ? '📌 Sticky enregistré.' : '⚠️ Enregistrement impossible.');
+    Dashboard.loadGuild().then((d) => Dashboard.renderers.announcements(content, d));
+  };
   const [scheduledResult, customResult] = await Promise.all([
     App.api(`/bots/${bot.id}/guilds/${guildId}/scheduled`),
     App.api(`/bots/${bot.id}/guilds/${guildId}/announcements/custom`).catch(() => ({ config: null })),
