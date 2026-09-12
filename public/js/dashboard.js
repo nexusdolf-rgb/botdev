@@ -527,6 +527,7 @@ Dashboard.MODULES = [
   ['overview', '📊', 'Vue d\'ensemble'],
   ['tickets', '🎫', 'Tickets'],
   ['welcome', '👋', 'Bienvenue'],
+  ['verification', '✅', 'Vérification'],
   ['levels', '📈', 'Niveaux'],
   ['economy', '💰', 'Économie'],
   ['shop', '🛒', 'Boutique'],
@@ -1941,6 +1942,7 @@ Dashboard.renderers.overview = async (content, data) => {
   const modules = [
     ['tickets', '🎫', 'Tickets', 'Types personnalisés et support privé'],
     ['welcome', '👋', 'Bienvenue', 'Accueil, départ et auto-rôles'],
+    ['verification', '✅', 'Vérification', 'Bouton humain, Join Gate, filtre anti-bots'],
     ['levels', '📈', 'Niveaux', 'XP et récompenses des membres'],
     ['shop', '🛒', 'Boutique', 'Articles et rôles à acheter'],
     ['moderation', '🛡️', 'Modération', 'Auto-Mod, blacklist et anti-raid'],
@@ -6830,6 +6832,49 @@ Dashboard.renderers.botsettings = async (content) => {
 // ============================================================
 
 // 🔎 Recherche de transcriptions
+// ============================================================
+// ✅ v290 — Vérification humaine + Join Gate
+// ============================================================
+Dashboard.renderers.verification = async (content, data) => {
+  const { bot, guildId } = Dashboard.state;
+  const root = Dashboard.header(content, '✅', 'Vérification', 'Bouton « Je suis humain », Join Gate (comptes trop récents) et filtre anti-bots.');
+  const cfg = Object.assign({ enabled: false, channel: '', role: '', gate_days: 0, bot_filter: false, approved_bots: [] }, data.verification || {});
+  const textCh = (data.channels || []).filter((ch) => !ch.voice && !ch.category);
+  const c1 = Dashboard.card(root, '🛡️ Réglages de la vérification', 'Le nouveau membre clique sur « Je suis humain » dans le salon de vérification, puis reçoit le rôle vérifié. Astuce pro : dans vos salons, n\'autorisez la vue qu\'au rôle vérifié — les non-vérifiés ne verront que le salon de vérification.');
+  c1.innerHTML += `
+    <label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" id="ver-enabled" ${cfg.enabled ? 'checked' : ''} /> Activer la vérification sur ce serveur</label>
+    <label class="dash-label">Salon du panneau de vérification</label>
+    <select class="dash-select" id="ver-channel">${textCh.map((ch) => `<option value="${ch.id}" ${cfg.channel === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('')}</select>
+    <label class="dash-label">Rôle « vérifié » donné après le clic</label>
+    <select class="dash-select" id="ver-role">${(data.roles || []).map((r) => `<option value="${r.id}" ${cfg.role === r.id ? 'selected' : ''}>@ ${App.escapeHtml(r.name)}</option>`).join('')}</select>
+    <label class="dash-label">🚧 Join Gate — âge minimum du compte Discord</label>
+    <select class="dash-select" id="ver-gate" style="max-width:220px">${[[0, 'Désactivé'], [1, '1 jour minimum'], [7, '7 jours minimum'], [30, '30 jours minimum']].map(([v, l]) => `<option value="${v}" ${Number(cfg.gate_days) === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    <div style="font-size:12px;color:var(--d-dim);margin-top:4px">Les comptes plus récents sont refusés à l\'arrivée : explication envoyée en MP, puis expulsion (protection anti-raid, comme Wick).</div>
+    <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="ver-botfilter" ${cfg.bot_filter ? 'checked' : ''} /> 🤖 Expulser les bots non approuvés qui rejoignent le serveur</label>
+    <label class="dash-label">Identifiants des bots approuvés (un par ligne)</label>
+    <textarea class="dash-input" id="ver-approved" rows="3" style="width:100%;font-size:12.5px" placeholder="123456789012345678">${App.escapeHtml((cfg.approved_bots || []).join('\n'))}</textarea>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      <button class="dash-btn dash-btn-primary" id="ver-save">💾 Enregistrer</button>
+      <button class="dash-btn" id="ver-send">📤 Envoyer le panneau dans le salon</button>
+    </div>`;
+  c1.querySelector('#ver-save').onclick = async () => {
+    const body = {
+      enabled: c1.querySelector('#ver-enabled').checked,
+      channel: c1.querySelector('#ver-channel').value,
+      role: c1.querySelector('#ver-role').value,
+      gate_days: Number(c1.querySelector('#ver-gate').value) || 0,
+      bot_filter: c1.querySelector('#ver-botfilter').checked,
+      approved_bots: c1.querySelector('#ver-approved').value.split('\n').map((x) => x.trim()).filter(Boolean),
+    };
+    const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/verification`, { method: 'PUT', body });
+    App.toast(r.ok ? '✅ Vérification enregistrée.' : '⚠️ Enregistrement impossible.');
+  };
+  c1.querySelector('#ver-send').onclick = async () => {
+    const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/verification/panel`, { method: 'POST', body: { channel: c1.querySelector('#ver-channel').value } });
+    App.toast(r.ok ? '📤 Panneau de vérification envoyé !' : `⚠️ ${r.error || 'Envoi impossible (bot hors ligne ?).'}`);
+  };
+};
+
 Dashboard.renderers.transcripts = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const root = Dashboard.header(content, '🔎', 'Recherche de transcriptions', 'Retrouve un ticket fermé par salon, serveur, ouvreur, type ou contenu.');

@@ -69,8 +69,8 @@ const KEYS = ['vue', 'ticket', 'bienvenue', 'niveaux', 'eco', 'boutique', 'mod',
   console.log('— 4. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=289 référencé 7 fois', (index.match(/\?v=289/g) || []).length === 7);
-  check('sw.js : cache « botdev-v289 »', sw.includes("const CACHE = 'botdev-v289';"));
+  check('index.html : ?v=290 référencé 7 fois', (index.match(/\?v=290/g) || []).length === 7);
+  check('sw.js : cache « botdev-v290 »', sw.includes("const CACHE = 'botdev-v290';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v274 — ${ok} vérifications OK : nos émojis Hoxera partout.`);

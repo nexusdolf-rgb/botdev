@@ -773,6 +773,7 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
     settings: { ...DEFAULT_GS, ...(store.guildSettings.get(bot.id, guildId) || {}) },
     tickets: { name: '', channel: '', message: '', button_label: '🎫 Ouvrir un ticket', button_style: '1', require_reason: 1, support_role: '', category: 'Tickets', types: [], ...(cfg || {}), types: parsedTypes },
     tickets_stats: ticketsStats,
+    verification: require('./discord/verification').cfgOf(guildId),
     events: { defs: EVENT_DEFS, state: eventsState(bot.id, guildId) },
     role_menus: store.roleMenus.all(bot.id, guildId),
     xp_roles: store.xpRoles.all(bot.id, guildId),
@@ -793,6 +794,41 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
   payload.checklist = guildChecklist(payload);
   try { payload.lockdown = require('./discord/lockdown').state(bot.id, dGuild); } catch { payload.lockdown = { locked: false, channels: [] }; }
   res.json(payload);
+});
+
+// ============================================================
+// ✅ v290 — vérification humaine + Join Gate
+// ============================================================
+router.put('/bots/:id/guilds/:guildId/verification', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const ver = require('./discord/verification');
+  const b = req.body || {};
+  const patch = {};
+  if (typeof b.enabled === 'boolean') patch.enabled = b.enabled;
+  if (b.channel !== undefined) patch.channel = String(b.channel || '').slice(0, 30);
+  if (b.role !== undefined) patch.role = String(b.role || '').slice(0, 30);
+  if (b.gate_days !== undefined) patch.gate_days = Number(b.gate_days) || 0;
+  if (typeof b.bot_filter === 'boolean') patch.bot_filter = b.bot_filter;
+  if (Array.isArray(b.approved_bots)) patch.approved_bots = b.approved_bots;
+  res.json({ ok: true, cfg: ver.saveCfg(req.params.guildId, patch) });
+});
+
+router.post('/bots/:id/guilds/:guildId/verification/panel', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const entry = botManager.clients.get(bot.id);
+  if (!entry || !entry.client.isReady()) return res.status(503).json({ ok: false, error: 'Bot hors ligne, réessayez dans une minute.' });
+  const guild = entry.client.guilds.cache.get(req.params.guildId);
+  if (!guild) return res.status(404).json({ ok: false, error: 'Serveur introuvable pour ce bot.' });
+  try {
+    await require('./discord/verification').sendPanel(bot.id, guild, (req.body || {}).channel);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: e.message || 'Envoi impossible.' });
+  }
 });
 
 // ============================================================

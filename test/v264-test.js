@@ -128,9 +128,9 @@ const mkGuild = (id, stats, channels) => ({
   console.log('— 8. Version —');
   const index = fs.readFileSync(require('path').join(__dirname, '..', 'public/index.html'), 'utf8');
   const sw = fs.readFileSync(require('path').join(__dirname, '..', 'public/sw.js'), 'utf8');
-  check('index.html : ?v=289 référencé 7 fois', (index.match(/\?v=289/g) || []).length === 7,
-    String((index.match(/\?v=289/g) || []).length));
-  check('sw.js : cache « botdev-v289 »', sw.includes("const CACHE = 'botdev-v289';"));
+  check('index.html : ?v=290 référencé 7 fois', (index.match(/\?v=290/g) || []).length === 7,
+    String((index.match(/\?v=290/g) || []).length));
+  check('sw.js : cache « botdev-v290 »', sw.includes("const CACHE = 'botdev-v290';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v264 — ${ok} vérifications OK : les compteurs vivent dans tes salons vocaux.`);

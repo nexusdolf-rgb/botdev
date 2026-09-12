@@ -230,6 +230,12 @@ async function guardInteraction(botId, entry, i, timeoutMs = 15000) {
         const ctxm = require('./contextmenus');
         if (await ctxm.handleInteraction(botId, entry, i)) return;
       } catch (e) { console.error('[BotDev] context menus:', (e && e.message) || e); }
+      // ✅ v290 — bouton « Je suis humain » du panneau de vérification
+      try {
+        if (i.isButton && i.isButton() && String(i.customId || '').startsWith('hxver:')) {
+          if (await require('./verification').handleButton(botId, i)) return;
+        }
+      } catch (e) { console.error('[BotDev] verification:', (e && e.message) || e); }
       // 📚 v262 — menu déroulant du centre d'aide : la sélection met à jour
       // le panneau sur place (i.update), aucun autre gestionnaire ne la connaît.
       try {
@@ -534,6 +540,8 @@ function attachListeners(botId, entry) {
     community.onMemberJoinInvites(botId, member).catch(() => {});
     const { runJoinEvent } = require('./events');
     runJoinEvent(botId, member).catch(e => console.error('[BotDev] join event error:', e.message));
+    // ✅ v290 — Join Gate + filtre anti-bots (isolé, jamais bloquant)
+    try { require('./verification').onJoin(botId, member).catch(() => {}); } catch { }
   });
 
   client.on('guildMemberRemove', (member) => {
