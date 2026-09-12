@@ -69,6 +69,7 @@ const DEFAULT_CFG = {
   channels: [],        // vide = tous les salons autorisés
   roles: [],           // vide = tout le monde
   image_channels: [],  // v285 — vide = /image autorisé partout
+  answer_questions: false, // v286 — répondre aux questions posées SANS mention (cooldown par salon)
   mention_only: true,  // répond seulement quand on mentionne le bot
   limit_per_hour: 0, // 0 = « pas choisi » : la limite plateforme s'applique
   provider: 'groq',
@@ -85,6 +86,7 @@ function cfgOf(guildId) {
   cfg.channels = Array.isArray(cfg.channels) ? cfg.channels : [];
   cfg.roles = Array.isArray(cfg.roles) ? cfg.roles : [];
   cfg.image_channels = Array.isArray(cfg.image_channels) ? cfg.image_channels.map(String) : [];
+  cfg.answer_questions = !!cfg.answer_questions;
   cfg.sources = Array.isArray(cfg.sources) ? cfg.sources : [];
   cfg.limit_per_hour = Math.max(1, Math.min(200, Number(raw.limit_per_hour) || platformOf().default_limit));
   if (!PROVIDERS[cfg.provider]) cfg.provider = 'groq';
@@ -281,6 +283,19 @@ async function ask(botId, guildId, module, userText, opts) {
 }
 
 // ---------- IA conversationnelle : messages Discord ----------
+// v286 — détection de question (fr + en) pour le mode « sans mention ».
+// Heuristique volontairement prudente : point d'interrogation OU mot
+// interrogatif en début de message. Tout le reste = on ne répond pas.
+const QUESTION_STARTS = ['est-ce', "qu'est", 'pourquoi', 'comment', 'qui ', 'qui?', 'où', 'ou est', 'quand', 'combien', 'quel ', 'quelle', 'quels', 'quelles', 'peut-on', 'puis-je', 'dois-je', 'y a-t-il', 'what', 'why', 'how', 'who', 'where', 'when', 'which', 'can i', 'can you', 'is it', 'is there', 'does ', 'do i', 'should'];
+function isQuestion(text) {
+  const t = String(text || '').trim().toLowerCase();
+  if (!t || t.length < 6 || t.length > 400) return t.includes('?') && t.length >= 3;
+  if (t.includes('?')) return true;
+  return QUESTION_STARTS.some((w) => t.startsWith(w));
+}
+const QUESTION_COOLDOWN_MS = 120000; // 1 réponse auto / 2 min / salon
+const qCooldown = new Map();
+
 async function onMessage(botId, m) {
   try {
     if (!m || !m.guild || m.author?.bot) return;
@@ -289,7 +304,16 @@ async function onMessage(botId, m) {
     if (!cfg.enabled || !cfg.modules.chat) return;
     if (cfg.channels.length && !cfg.channels.includes(m.channel.id)) return;
     const mentioned = m.mentions?.users?.has ? m.mentions.users.has(m.client?.user?.id || '') : false;
-    if (cfg.mention_only && !mentioned) return;
+    if (!mentioned) {
+      // v286 — mode « questions sans mention » : optionnel, une seule réponse
+      // par salon toutes les 2 minutes pour ne jamais flooder ni vider le quota.
+      if (!cfg.answer_questions || !isQuestion(m.content || '')) return;
+      const ck = `${guildId}:${m.channel.id}`;
+      const nowQ = Date.now();
+      if ((qCooldown.get(ck) || 0) > nowQ - QUESTION_COOLDOWN_MS) return;
+      qCooldown.set(ck, nowQ);
+      if (qCooldown.size > 5000) qCooldown.clear();
+    }
     const memberId = m.member?.user?.id || m.author?.id;
     if (cfg.roles.length && m.member && m.member.roles && !(m.member.roles.cache && m.member.roles.cache.some((r) => cfg.roles.includes(r.id)))) return;
     const question = mentioned ? m.content.replace(/<@!?\d+>/g, '').trim() : m.content.trim();
@@ -299,8 +323,14 @@ async function onMessage(botId, m) {
       const { text } = await ask(botId, guildId, 'chat', question);
       await m.reply({ content: `🤖 ${text}`, allowedMentions: { repliedUser: false } });
     } catch (e) {
-      if (e.code === 'AI_QUOTA' || e.code === 'AI_BUSY') await m.reply({ content: `🤖 ${e.message}`, allowedMentions: { repliedUser: false } });
-      // veille / désactivé module : silence (déjà visible dans le dashboard)
+      // v286 — PLUS JAMAIS de silence après « est en train d'écrire… » :
+      // le bot explique toujours pourquoi il ne peut pas répondre.
+      const why = e.code === 'AI_QUOTA' || e.code === 'AI_BUSY' ? e.message
+        : e.code === 'AI_NO_KEY' ? 'Hoxera AI est **en veille** : la clé plateforme n est pas encore activée (Dashboard → Réglages du bot → carte Hoxera AI — plateforme).'
+        : e.code === 'AI_PLATFORM_OFF' ? 'Hoxera AI est momentanément désactivée par la plateforme.'
+        : e.code === 'AI_DISABLED' ? 'Hoxera AI est désactivée sur ce serveur (dashboard → Hoxera AI).'
+        : 'je n arrive pas à joindre le service IA pour le moment, réessayez dans quelques instants.';
+      await m.reply({ content: `🤖 ${why}`, allowedMentions: { repliedUser: false } }).catch(() => {});
       void memberId;
     }
   } catch { /* l'IA ne doit JAMAIS casser la réception des messages */ }
@@ -308,14 +338,23 @@ async function onMessage(botId, m) {
 
 // 🎫 v282 — message d'accueil IA dans un ticket nouveau-né.
 async function ticketIntro(botId, guildId, info) {
-  const prompt = `Un membre (${info.user || 'un membre'}) vient d'ouvrir un ticket de type « ${info.type || 'général'} ».${info.reason ? ` Motif indiqué : ${info.reason}.` : ''} Accueille-le, pose une ou deux questions de clarification utiles au staff, en 3 lignes maximum.`;
+  const prompt = `Un membre (${info.user || 'un membre'}) vient d'ouvrir un ticket de type « ${info.type || 'général'} ».${info.reason ? ` Motif indiqué : ${info.reason}.` : ''} Accueille-le chaleureusement en une ligne, puis pose DEUX OU TROIS questions de clarification utiles au staff, en 4 lignes maximum au total.`;
   const { text } = await ask(botId, guildId, 'tickets', prompt);
   return `🤖 ${text}`;
+}
+
+// 🤝 v286 — résumé du ticket pour le staff qui vient de le prendre en charge.
+// Ensuite l'IA se tait : le staff prend le relais.
+async function ticketSummary(botId, guildId, transcript) {
+  const prompt = `Voici le début d'un ticket de support sur Discord (échange entre le membre et le bot) :\n${String(transcript).slice(0, 4000)}\nUn membre du staff vient de prendre ce ticket en charge. Fais-lui un résumé en 3 lignes maximum : 1) ce que veut le membre, 2) les informations déjà obtenues, 3) ce qu'il reste à demander ou à faire.`;
+  const { text } = await ask(botId, guildId, 'tickets', prompt);
+  return `🤖 **Résumé pour le staff** — ensuite je vous laisse la main :\n${text}`;
 }
 
 module.exports = {
   PROVIDERS, MODULES, MODULE_LABELS, LIVE_MODULES, DEFAULT_CFG,
   platformOf, savePlatform, platformKeyOf, savePlatformKey, dailyCount,
   cfgOf, saveCfg, keyOf, saveKey, hasKey, status,
-  ask, onMessage, log, logsOf, statsOf, bumpStats, quotaCheck, ticketIntro,
+  ask, onMessage, log, logsOf, statsOf, bumpStats, quotaCheck, ticketIntro, ticketSummary, isQuestion,
+  _test: { qCooldown, QUESTION_COOLDOWN_MS },
 };

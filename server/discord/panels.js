@@ -1630,6 +1630,24 @@ async function handleTicketClaim(botId, interaction) {
     ],
     footer: `Hoxera · Ticket #${row.number} · Suivi du support`,
   })).catch(() => {});
+  // 🤝 v286 — l'IA résume le ticket pour le staff qui le prend en charge,
+  // puis elle se tait : le staff prend le relais (jamais bloquant).
+  try {
+    const aiC = require('../ai/engine');
+    if (aiC.cfgOf(guild.id).modules.tickets) {
+      channel.messages.fetch({ limit: 30 }).then((msgs) => {
+        const lines = [...msgs.values()].reverse()
+          .filter((mm) => mm && mm.content && (!mm.author || !mm.author.bot))
+          .slice(-25)
+          .map((mm) => `${mm.author.username || mm.author.tag || 'membre'} : ${String(mm.content).slice(0, 200)}`)
+          .join('\n');
+        if (!lines) return null;
+        return aiC.ticketSummary(botId, guild.id, lines);
+      }).then((t) => {
+        if (t) return channel.send({ content: t, allowedMentions: { users: [] } }).catch(() => {});
+      }).catch(() => {});
+    }
+  } catch { /* l'IA ne doit jamais gêner la prise en charge */ }
   try {
     await logging.log(botId, guild, {
       title: '🖐️ Ticket pris en charge', color: '#57F287',

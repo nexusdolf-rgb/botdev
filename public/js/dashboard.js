@@ -7074,7 +7074,8 @@ Dashboard.renderers.ai = async (content, data) => {
         <option value="high" ${cfg.mod_level === 'high' ? 'selected' : ''}>Strict</option>
       </select></div>
     </div>
-    <label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="ai-mention" ${cfg.mention_only ? 'checked' : ''} /> Répondre uniquement quand le bot est mentionné (@Hoxera)</label>`;
+    <label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="ai-mention" ${cfg.mention_only ? 'checked' : ''} /> Répondre quand le bot est mentionné (@Hoxera)</label>
+    <label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" id="ai-answerq" ${cfg.answer_questions ? 'checked' : ''} /> 🆕 Répondre aussi aux questions posées SANS mention (1 réponse max toutes les 2 minutes par salon)</label>`;
 
   const MODES = [['chat', 'IA conversationnelle', true], ['tickets', 'IA pour les tickets', true], ['mod', 'IA de modération', true], ['docs', 'IA règlement / FAQ', true], ['images', "Génération d'images", true], ['staff', 'Assistant IA du staff', true], ['stats', "Analyse de l'activité", true], ['antispam', 'Détection spam & abus', true]];
   // v283 — modules regroupés par usage (comme les dashboards pro) : chaque
@@ -7148,6 +7149,7 @@ Dashboard.renderers.ai = async (content, data) => {
     roles: Array.from(cScope.querySelector('#ai-roles').selectedOptions).map((o) => o.value),
     image_channels: Array.from(cScope.querySelector('#ai-image-channels').selectedOptions).map((o) => o.value),
     mention_only: cEng.querySelector('#ai-mention').checked,
+    answer_questions: cEng.querySelector('#ai-answerq').checked,
     limit_per_hour: Number(cEng.querySelector('#ai-limit').value) || 20,
     provider: cEng.querySelector('#ai-provider').value,
     model: cEng.querySelector('#ai-model').value,
