@@ -19,7 +19,7 @@ console.log('✅ l\'API renvoie les types COMPLETS (label, emoji, catégorie, de
 // 2. Cohérence aller-retour : tout champ accepté par le PUT est renvoyé par le GET
 //    (sinon le cycle chargement → enregistrement détruit des données)
 const putStart = src.indexOf("router.put('/bots/:id/tickets'");
-const putBlock = src.slice(putStart, putStart + 4000);
+const putBlock = src.slice(putStart, putStart + 5500); // v297 : fenêtre élargie (bloc menu_panel_texts ajouté avant le mapping des types)
 for (const field of ['label', 'emoji', 'description', 'category', 'questions', 'staff_roles']) {
   assert.ok(putBlock.includes(field), `PUT accepte « ${field} »`);
   assert.ok(block.includes(field), `GET renvoie « ${field} »`);

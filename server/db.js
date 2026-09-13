@@ -1437,8 +1437,8 @@ const tickets = {
   get: (botId, guildId) => db.prepare('SELECT * FROM tickets WHERE bot_id = ? AND guild_id = ?').get(botId, guildId) || null,
   set: (botId, guildId, cfg) => {
     const types = typeof cfg.types === 'string' ? cfg.types : JSON.stringify(Array.isArray(cfg.types) ? cfg.types : []);
-    return db.prepare(`INSERT INTO tickets (bot_id, guild_id, name, channel, message, button_label, button_style, support_role, category, types, require_reason, max_one, menu_channel, menu_message, menu_category, image_url, panel_texts)
-      VALUES (@bot_id, @guild_id, @name, @channel, @message, @button_label, @button_style, @support_role, @category, @types, @require_reason, @max_one, @menu_channel, @menu_message, @menu_category, @image_url, @panel_texts)
+    return db.prepare(`INSERT INTO tickets (bot_id, guild_id, name, channel, message, button_label, button_style, support_role, category, types, require_reason, max_one, menu_channel, menu_message, menu_category, image_url, panel_texts, menu_panel_texts)
+      VALUES (@bot_id, @guild_id, @name, @channel, @message, @button_label, @button_style, @support_role, @category, @types, @require_reason, @max_one, @menu_channel, @menu_message, @menu_category, @image_url, @panel_texts, @menu_panel_texts)
       ON CONFLICT(bot_id, guild_id) DO UPDATE SET
         name = excluded.name,
         channel = excluded.channel,
@@ -1454,8 +1454,9 @@ const tickets = {
         menu_message = excluded.menu_message,
         menu_category = excluded.menu_category,
         image_url = excluded.image_url,
-        panel_texts = excluded.panel_texts`).run({
-          bot_id: botId, guild_id: guildId, name: '', channel: '', message: '', button_label: '', button_style: '1', support_role: '', category: '', require_reason: 1, max_one: 0, menu_channel: '', menu_message: '', menu_category: '', image_url: '', panel_texts: '', ...cfg,
+        panel_texts = excluded.panel_texts,
+        menu_panel_texts = excluded.menu_panel_texts`).run({
+          bot_id: botId, guild_id: guildId, name: '', channel: '', message: '', button_label: '', button_style: '1', support_role: '', category: '', require_reason: 1, max_one: 0, menu_channel: '', menu_message: '', menu_category: '', image_url: '', panel_texts: '', menu_panel_texts: '', ...cfg,
           button_style: String(['1','2','3','4'].includes(String(cfg.button_style)) ? cfg.button_style : '1'),
           require_reason: (cfg.require_reason === 0 || cfg.require_reason === false) ? 0 : 1,
           max_one: cfg.max_one ? 1 : 0,
@@ -1463,6 +1464,8 @@ const tickets = {
           image_url: String(cfg.image_url !== undefined ? cfg.image_url : ((tickets.get(botId, guildId) || {}).image_url || '')).slice(0, 500),
           // ✏️ v296 — textes des panneaux : préservés si non envoyés
           panel_texts: String(cfg.panel_texts !== undefined ? cfg.panel_texts : ((tickets.get(botId, guildId) || {}).panel_texts || '')).slice(0, 4000),
+          // ✏️ v297 — textes du panneau MENU (séparés du bouton) : préservés si non envoyés
+          menu_panel_texts: String(cfg.menu_panel_texts !== undefined ? cfg.menu_panel_texts : ((tickets.get(botId, guildId) || {}).menu_panel_texts || '')).slice(0, 4000),
           types,
         });
   },
@@ -2226,6 +2229,19 @@ try { db.exec("ALTER TABLE tickets ADD COLUMN menu_message TEXT DEFAULT ''"); } 
 try { db.exec("ALTER TABLE tickets ADD COLUMN menu_category TEXT DEFAULT ''"); } catch (e) {}
 // v296 — ✏️ Textes personnalisés des panneaux de tickets (JSON, vide = textes par défaut)
 try { db.exec("ALTER TABLE tickets ADD COLUMN panel_texts TEXT DEFAULT ''"); } catch (e) {}
+// ✏️ v297 — le panneau BOUTON et le panneau MENU déroulant ont désormais
+// CHACUN leurs textes. Avant cette version les deux partageaient panel_texts :
+// la migration copie les textes existants côté menu pour que les panneaux
+// déjà envoyés ne changent pas d'apparence.
+try { db.exec("ALTER TABLE tickets ADD COLUMN menu_panel_texts TEXT DEFAULT ''"); } catch (e) {}
+// Migration (idempotente) : avant v297 les deux panneaux partageaient
+// panel_texts. On copie les textes existants côté menu pour que le panneau
+// menu déjà en place garde exactement la même apparence.
+try {
+  db.exec(`UPDATE tickets SET menu_panel_texts = panel_texts
+    WHERE (menu_panel_texts IS NULL OR menu_panel_texts = '')
+      AND panel_texts IS NOT NULL AND panel_texts != ''`);
+} catch (e) {}
 try { db.exec("ALTER TABLE open_tickets ADD COLUMN open_reason TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec(`CREATE TABLE IF NOT EXISTS ticket_log_msgs (
   bot_id INTEGER NOT NULL, guild_id TEXT NOT NULL, number INTEGER NOT NULL,

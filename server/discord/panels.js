@@ -436,6 +436,16 @@ function buildTicketPanel(cfg, client, types, serverName = '', guildId = '', row
   }, rows);
 }
 
+// ✏️ v297 — le panneau BOUTON et le panneau MENU déroulant ont CHACUN leurs
+// textes. Le panneau menu utilise `menu_panel_texts` s'il est défini ; sinon
+// il retombe sur l'ancien texte partagé (migration des configs d'avant v297).
+function effectiveTextsRaw(cfg, isMenuPanel) {
+  const base = String((cfg && cfg.panel_texts) || '');
+  if (!isMenuPanel) return base;
+  const menu = String((cfg && cfg.menu_panel_texts) || '').trim();
+  return menu || base;
+}
+
 // 🧹 Nettoie les anciens panneaux de tickets du salon (titre « 👑 Support | »)
 // pour qu'il n'y ait TOUJOURS qu'un seul panneau : le plus récent.
 // v234 — Titre d'un message de panneau, quel que soit son format.
@@ -492,11 +502,13 @@ async function sendTicketPanel(botId, guildId, client, channel, mode = 'auto') {
   if (mode === 'button') types = [];
   if (mode === 'menu' && !types.length) throw new Error('Crée d\'abord des types de tickets (le menu déroulant en a besoin).');
   const useMenuMsg = mode === 'menu' && String(cfg.menu_message || '').trim();
-  const cfgForEmbed = useMenuMsg ? { ...cfg, message: cfg.menu_message } : cfg;
+  // ✏️ v297 — textes du panneau choisi (bouton OU menu) : chacun sa colonne.
+  const effTexts = effectiveTextsRaw(cfg, types.length > 0);
+  const cfgForEmbed = { ...cfg, panel_texts: effTexts, ...(useMenuMsg ? { message: cfg.menu_message } : {}) };
   const rows = [];
   // ✏️ v296 — textes personnalisés du panneau (placeholder du menu, titre pour le nettoyage)
   let PTs = {};
-  try { PTs = JSON.parse(cfg.panel_texts || '{}') || {}; } catch {}
+  try { PTs = JSON.parse(effTexts || '{}') || {}; } catch {}
   if (types.length) {
     // Des types existent : seul le menu déroulant est affiché (pas de bouton en dessous).
     // Menu épuré : emoji + nom uniquement. Les détails de chaque type sont
@@ -3005,7 +3017,7 @@ async function buildTranscriptFromChannel(botId, channel, guild, extraLines = []
 module.exports = {
   normDecorName, findCategoryFuzzy, findCategoryRef,
   dispatchPanels, sendTicketPanel, sendRoleMenu, roleMenuPayload, findChannel, findChannelInGuild, bumpTicketStats,
-  buildTicketPanel, pruneOldPanels,
+  buildTicketPanel, pruneOldPanels, effectiveTextsRaw,
   resolveRole, roleKey, uniqueRoleRefs, staffRoleRefsForConfig, parseTypes, isStaff, staffForTicket, openTicket, safeEmoji,
   parentIdOf, panelParentOf, panelChannelOf, repairTicketChannel,
   startTypesWizard, handleTypesWizardInteraction,

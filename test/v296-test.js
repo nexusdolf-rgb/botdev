@@ -105,7 +105,7 @@ const json = (x) => JSON.stringify(x.components.map((c) => (c.toJSON ? c.toJSON(
 
   console.log('— 6. Routes —');
   const routes = racine('server/routes.js');
-  check('PUT tickets accepte panel_texts', routes.includes('panel_texts } = req.body') && routes.includes('panel_texts: (() => {'));
+  check('PUT tickets accepte panel_texts', routes.includes('image_url, panel_texts') && routes.includes('panel_texts: (() => {')); // v297 : menu_panel_texts ajouté dans la déstructure
   check('panel_texts borné (titres 100, règles 1000…)', routes.includes("rules: String(o.rules || '').slice(0, 1000)") && routes.includes("title: String(o.title || '').slice(0, 100)"));
   check('PUT advanced-tickets accepte les 2 textes', routes.includes('menu_placeholder: body.menu_placeholder !== undefined') && routes.includes('footer_text: body.footer_text !== undefined'));
 
@@ -113,17 +113,17 @@ const json = (x) => JSON.stringify(x.components.map((c) => (c.toJSON ? c.toJSON(
   const dash = racine('public/js/dashboard.js');
   const iT = dash.indexOf('Dashboard.renderers.tickets');
   const chunk = dash.slice(iT, iT + 40000);
-  check('carte « Textes des panneaux (optionnel) »', chunk.includes("✏️ Textes des panneaux (optionnel)") && chunk.includes('tp-save'));
-  check('6 champs : titre, bienvenue, menu, infos, règles, patience', ['tp-title', 'tp-welcome', 'tp-placeholder', 'tp-info', 'tp-rules', 'tp-patience'].every((id) => chunk.includes(id)));
+  check('carte « Textes du panneau BOUTON (optionnel) »', chunk.includes("✏️ Textes du panneau BOUTON (optionnel)") && chunk.includes('tp-save')); // v297 : séparée en 2 cartes
+  check('5 champs bouton : titre, bienvenue, infos, règles, patience', ['tp-title', 'tp-welcome', 'tp-info', 'tp-rules', 'tp-patience'].every((id) => chunk.includes(id))); // v297 : le placeholder vit dans la carte menu (mp-placeholder)
   check('bouton « Revenir aux textes par défaut »', chunk.includes('tp-reset') && chunk.includes('Revenir aux textes par défaut'));
   check('les placeholders montrent les textes par défaut', chunk.includes('placeholder="👑 Support | {server}"') && chunk.includes('Soyez clair et précis dans votre demande.'));
   check('tickets personnalisés : 2 champs ajoutés + envoyés', dash.includes('adv-placeholder') && dash.includes('adv-footer') && dash.includes('menu_placeholder: c3.querySelector'));
 
   console.log('— 8. Bump v296 —');
   const index = racine('public/index.html');
-  check('index.html : ?v=296 référencé 7 fois', (index.match(/\?v=296/g) || []).length === 7,
-    String((index.match(/\?v=296/g) || []).length));
-  check('sw.js : cache « botdev-v296 »', racine('public/sw.js').includes("const CACHE = 'botdev-v296';"));
+  check('index.html : ?v=297 référencé 7 fois', (index.match(/\?v=297/g) || []).length === 7,
+    String((index.match(/\?v=297/g) || []).length));
+  check('sw.js : cache « botdev-v297 »', racine('public/sw.js').includes("const CACHE = 'botdev-v297';"));
 
   console.log(`\n🎉 v296 : ${ok} vérifications passées`);
   process.exit(0);

@@ -2355,7 +2355,7 @@ router.get('/bots/:id/panels', requireAuth, async (req, res) => {
 router.put('/bots/:id/tickets', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
   if (!bot) return;
-  const { guild_id, name, channel, message, button_label, button_style, require_reason, support_role, category, types, menu_channel, menu_message, menu_category, image_url, panel_texts } = req.body || {};
+  const { guild_id, name, channel, message, button_label, button_style, require_reason, support_role, category, types, menu_channel, menu_message, menu_category, image_url, panel_texts, menu_panel_texts } = req.body || {};
   if (!guild_id) return res.status(400).json({ error: 'guild_id requis' });
   if (!(await userCanManageGuild(req, guild_id))) return res.status(403).json({ error: 'Permission refusée.' });
   const current = store.tickets.get(bot.id, guild_id) || {};
@@ -2376,6 +2376,20 @@ router.put('/bots/:id/tickets', requireAuth, async (req, res) => {
     panel_texts: (() => {
       let raw = panel_texts;
       if (raw === undefined) { try { raw = JSON.parse(current.panel_texts || '{}'); } catch { raw = {}; } }
+      const o = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+      return JSON.stringify({
+        title: String(o.title || '').slice(0, 100),
+        welcome: String(o.welcome || '').slice(0, 200),
+        menu_placeholder: String(o.menu_placeholder || '').slice(0, 100),
+        info_title: String(o.info_title || '').slice(0, 100),
+        rules: String(o.rules || '').slice(0, 1000),
+        patience: String(o.patience || '').slice(0, 300),
+      });
+    })(),
+    // ✏️ v297 — textes du panneau MENU déroulant (séparés du panneau bouton)
+    menu_panel_texts: (() => {
+      let raw = menu_panel_texts;
+      if (raw === undefined) { try { raw = JSON.parse(current.menu_panel_texts || '{}'); } catch { raw = {}; } }
       const o = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
       return JSON.stringify({
         title: String(o.title || '').slice(0, 100),
