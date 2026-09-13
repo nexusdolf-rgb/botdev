@@ -260,6 +260,8 @@ function buildSlashPayloads(botId) {
     }
     if (['suggest'].includes(name)) {
       options.push({ name: 'texte', description: 'Votre suggestion', type: ApplicationCommandOptionType.String, required: true });
+      // 💡 v299 — anonymat optionnel (refusé poliment si le serveur ne l'a pas activé)
+      options.push({ name: 'anonyme', description: '🕶️ Masquer votre pseudo (si activé par le serveur)', type: ApplicationCommandOptionType.Boolean, required: false });
     }
     if (['shop'].includes(name)) {
       options.push({ name: 'article', description: 'Nom de l\'article à acheter (optionnel : pour voir la boutique, laissez vide)', type: ApplicationCommandOptionType.String, required: false });
@@ -1047,7 +1049,10 @@ async function execute(botId, entry, cmd, src) {
       if (!isInt) return reply('💡 Utilisez la commande slash `/suggest` pour envoyer une suggestion.');
       const text = src.interaction.options.getString('texte') || '';
       if (!text.trim()) return reply('❓ Écrivez votre suggestion : `/suggest votre idée`.');
-      return suggestEngine.submitSuggestion(botId, src.interaction, text);
+      // 💡 v299 — option « anonyme » (booléen facultatif ; défensif : tous les
+      // environnements de test ne fournissent pas getBoolean).
+      const anon = typeof src.interaction.options.getBoolean === 'function' && src.interaction.options.getBoolean('anonyme') === true;
+      return suggestEngine.submitSuggestion(botId, src.interaction, text, anon);
     }
     case 'suggestions': {
       const action = isInt ? (src.interaction.options.getString('action') || 'view') : 'view';
@@ -1063,7 +1068,7 @@ async function execute(botId, entry, cmd, src) {
       }
       const gs = store.guildSettings.get(botId, guild.id) || {};
       return reply(gs.suggestion_channel
-        ? `💡 Salon des suggestions : **${gs.suggestion_channel}**\nVotes avec 👍👎, statut par le staff (✅ Approuver / ❌ Refuser).`
+        ? `💡 Salon des suggestions : **${gs.suggestion_channel}**\nVotes avec 👍👎, statut par le staff (✅ Approuver / ❌ Refuser avec motif / 💬 En discussion).`
         : '💡 Aucun salon configuré. Utilisez `/suggestions set #salon`.');
     }
     case 'giveaway': {

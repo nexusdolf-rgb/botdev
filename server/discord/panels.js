@@ -163,6 +163,8 @@ async function dispatchPanels(botId, interaction) {
       if (cid.startsWith(`bd-treason:${botId}`)) { await submitReason(botId, interaction); return true; }
       if (cid.startsWith(`bd-tdel:${botId}`)) { await submitDeleteReason(botId, interaction); return true; }
       if (cid.startsWith(`bd-taddm:${botId}`)) { await submitAddMember(botId, interaction); return true; }
+      // 💡 v299 — motif du refus d'une suggestion (modale staff obligatoire)
+      if (cid.startsWith(`bd-suggdeny:${botId}`)) { const { submitDenyReason } = require('./suggest'); await submitDenyReason(botId, interaction); return true; }
     }
 
     // 🧱 Embed Builder : boutons décoratifs (aucune action, réponse discrète)

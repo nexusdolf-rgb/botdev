@@ -593,6 +593,12 @@ try { db.exec('CREATE INDEX IF NOT EXISTS idx_bots_user_id ON bots (user_id)'); 
 try { db.exec('CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions (user_id)'); } catch (e) {}
 try { db.exec('CREATE INDEX IF NOT EXISTS idx_platform_audit_target ON platform_audit_log (target_user_id, id DESC)'); } catch (e) {}
 try { db.exec('CREATE INDEX IF NOT EXISTS idx_suggestions_guild_created ON suggestions (bot_id, guild_id, created_at DESC)'); } catch (e) {}
+// 💡 v299 — suggestions : anonymat, motif de refus, pseudo mémorisé.
+// `author_tag` est nécessaire car le message est RÉÉDITÉ à chaque vote/statut :
+// sans lui, l'auteur affiché retombe sur « membre » dès la première édition.
+try { db.exec("ALTER TABLE suggestions ADD COLUMN author_tag TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec('ALTER TABLE suggestions ADD COLUMN anonymous INTEGER DEFAULT 0'); } catch (e) {}
+try { db.exec("ALTER TABLE suggestions ADD COLUMN status_reason TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec('CREATE INDEX IF NOT EXISTS idx_scheduled_guild ON scheduled_messages (bot_id, guild_id, enabled, hour, minute)'); } catch (e) {}
 
 // Migrations légères (les colonnes ajoutées après coup)
@@ -957,6 +963,8 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN suggestion_color TEXT DEFAU
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN suggestion_ping_role TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN suggestion_downvotes INTEGER DEFAULT 1"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN suggestion_approve_channel TEXT DEFAULT ''"); } catch (e) {}
+// 💡 v299 — autoriser les suggestions anonymes sur ce serveur
+try { db.exec('ALTER TABLE guild_settings ADD COLUMN suggestion_anon INTEGER DEFAULT 0'); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN close_dm_message TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN close_dm_image TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN quiz_channel TEXT DEFAULT ''"); } catch (e) {}
@@ -1120,7 +1128,7 @@ const guildSettings = {
     const next = { ...cur, ...fields };
     const cols = ['prefix', 'warn_limit', 'warn_action', 'warn_timeout_limit', 'warn_timeout_min', 'starboard_channel', 'starboard_min', 'live_channel', 'live_ping', 'ticket_log_channel', 'xp_enabled', 'xp_min', 'xp_max', 'xp_cooldown', 'xp_message', 'xp_channel', 'xp_card', 'ticket_room', 'am_enabled', 'am_links', 'am_caps', 'am_mentions', 'am_spam', 'am_ignore_staff', 'am_mode', 'am_rule_actions', 'am_blacklist_rules', 'am_blacklist_thresholds', 'am_blacklist_duration_min', 'am_blacklist_channel', 'am_blacklist_title', 'am_blacklist_color', 'am_blacklist_footer', 'am_escalation', 'am_native_enabled', 'am_native_alert_channel', 'am_exempt_roles', 'am_exempt_channels', 'am_phishing', 'am_phishing_allow', 'am_exempt_users', 'am_warn_text', 'am_timeout_min', 'am_warn_limit', 'am_warn_action', 'am_warn_timeout_min', 'antiraid_enabled', 'antiraid_threshold', 'antiraid_window', 'antiraid_action', 'antiraid_unlock_min', 'log_channel', 'suggestion_channel', 'log_events', 'birthday_channel', 'birthday_role', 'lockdown_channels', 'voicetemp_channel', 'voicetemp_category', 'voicetemp_name', 'panel_name', 'modmail_enabled', 'modmail_channel', 'lang', 'timezone',
     'giveaway_channel', 'giveaway_default_duration', 'giveaway_default_winners', 'giveaway_ping_role', 'giveaway_color', 'giveaway_message', 'giveaway_req_role', 'giveaway_req_level', 'giveaway_reminder',
-    'suggestion_color', 'suggestion_ping_role', 'suggestion_downvotes', 'suggestion_approve_channel',
+    'suggestion_color', 'suggestion_ping_role', 'suggestion_downvotes', 'suggestion_approve_channel', 'suggestion_anon',
     'close_dm_message', 'close_dm_image',
     'quiz_channel', 'quiz_points', 'quiz_bonus', 'quiz_bonus_window',
     'antinuke_enabled', 'antinuke_threshold', 'antinuke_window', 'antinuke_action',
@@ -1274,6 +1282,7 @@ const guildSettings = {
       suggestion_ping_role: String(next.suggestion_ping_role || '').slice(0, 100),
       suggestion_downvotes: (next.suggestion_downvotes === 0 || next.suggestion_downvotes === false) ? 0 : 1,
       suggestion_approve_channel: String(next.suggestion_approve_channel || '').slice(0, 100),
+      suggestion_anon: (next.suggestion_anon === 1 || next.suggestion_anon === true || next.suggestion_anon === '1') ? 1 : 0,
       close_dm_message: String(next.close_dm_message || '').slice(0, 1500),
       close_dm_image: String(next.close_dm_image || '').slice(0, 500),
       quiz_channel: String(next.quiz_channel || '').slice(0, 100),
@@ -1826,9 +1835,15 @@ const giveaways = {
 const suggestions = {
   all: (botId, guildId) => db.prepare('SELECT * FROM suggestions WHERE bot_id = ? AND guild_id = ? ORDER BY id DESC LIMIT 100').all(botId, guildId),
   get: (id) => db.prepare('SELECT * FROM suggestions WHERE id = ?').get(id) || null,
-  create: (s) => db.prepare('INSERT INTO suggestions (bot_id, guild_id, author_id, text, message_id, channel_id) VALUES (?, ?, ?, ?, ?, ?)')
-    .run(s.bot_id, s.guild_id, s.author_id, String(s.text || '').slice(0, 1500), s.message_id || '', s.channel_id || '').lastInsertRowid,
-  setStatus: (id, status) => db.prepare('UPDATE suggestions SET status = ? WHERE id = ?').run(['pending', 'approved', 'denied'].includes(status) ? status : 'pending', id),
+  create: (s) => db.prepare('INSERT INTO suggestions (bot_id, guild_id, author_id, text, message_id, channel_id, author_tag, anonymous) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(s.bot_id, s.guild_id, s.author_id, String(s.text || '').slice(0, 1500), s.message_id || '', s.channel_id || '',
+      String(s.author_tag || '').slice(0, 100), s.anonymous ? 1 : 0).lastInsertRowid,
+  // 💡 v299 — statuts : pending, approved, denied + `discussion` (💬 En discussion).
+  // Une valeur inconnue retombe sur `pending` au lieu d'écrire n'importe quoi.
+  setStatus: (id, status) => db.prepare('UPDATE suggestions SET status = ? WHERE id = ?').run(['pending', 'approved', 'denied', 'discussion'].includes(status) ? status : 'pending', id),
+  // 💡 v299 — motif de refus (écrit en même temps que le passage à `denied`).
+  setStatusWithReason: (id, status, reason) => db.prepare('UPDATE suggestions SET status = ?, status_reason = ? WHERE id = ?')
+    .run(['pending', 'approved', 'denied', 'discussion'].includes(status) ? status : 'pending', String(reason || '').slice(0, 500), id),
   remove: (id) => db.prepare('DELETE FROM suggestions WHERE id = ?').run(id),
   vote: (id, authorId, direction) => {
     const row = suggestions.get(id);

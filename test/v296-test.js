@@ -121,9 +121,9 @@ const json = (x) => JSON.stringify(x.components.map((c) => (c.toJSON ? c.toJSON(
 
   console.log('— 8. Bump v296 —');
   const index = racine('public/index.html');
-  check('index.html : ?v=298 référencé 7 fois', (index.match(/\?v=298/g) || []).length === 7,
-    String((index.match(/\?v=298/g) || []).length));
-  check('sw.js : cache « botdev-v298 »', racine('public/sw.js').includes("const CACHE = 'botdev-v298';"));
+  check('index.html : ?v=299 référencé 7 fois', (index.match(/\?v=299/g) || []).length === 7,
+    String((index.match(/\?v=299/g) || []).length));
+  check('sw.js : cache « botdev-v299 »', racine('public/sw.js').includes("const CACHE = 'botdev-v299';"));
 
   console.log(`\n🎉 v296 : ${ok} vérifications passées`);
   process.exit(0);

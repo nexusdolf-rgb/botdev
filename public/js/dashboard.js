@@ -4657,6 +4657,10 @@ Dashboard.renderers.suggestions = async (content, data) => {
       <label class="dash-label">👎 Autoriser les votes négatifs</label>
       <label class="switch"><input type="checkbox" id="s-downvotes" ${s.suggestion_downvotes !== 0 && s.suggestion_downvotes !== false ? 'checked' : ''} /><span class="slider"></span></label>
     </div>
+    <div class="setting-row" style="flex-wrap:wrap">
+      <label class="dash-label">🕶️ Autoriser les suggestions anonymes (option « anonyme » de /suggest)</label>
+      <label class="switch"><input type="checkbox" id="s-anon" ${s.suggestion_anon === 1 || s.suggestion_anon === true ? 'checked' : ''} /><span class="slider"></span></label>
+    </div>
     <div class="setting-row">
       <label class="dash-label">📢 Salon des approuvées (annonce publique quand une suggestion est validée)</label>
       <select class="dash-select" id="s-approve">
@@ -4665,7 +4669,7 @@ Dashboard.renderers.suggestions = async (content, data) => {
         ${Dashboard.currentDiscordOption(s.suggestion_approve_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable')}
       </select>
     </div>
-    <div style="font-size:12px;color:var(--d-dim);margin-top:6px">💡 Vide = système par défaut. Rien à modifier ici pour les membres : les suggestions sont postées dans le salon choisi avec les boutons 👍/👎.</div>
+    <div style="font-size:12px;color:var(--d-dim);margin-top:6px">💡 Vide = système par défaut. Les suggestions sont postées dans le salon choisi avec les boutons 👍/👎. Le staff tranche avec ✅ Approuver, ❌ Refuser (une fenêtre demande le motif, affiché sous la suggestion) et 💬 En discussion.</div>
     <button class="dash-btn dash-btn-primary" style="margin-top:12px" id="s-save">💾 Enregistrer</button>`;
   c.querySelector('#s-save').onclick = async () => {
     try {
@@ -4674,6 +4678,7 @@ Dashboard.renderers.suggestions = async (content, data) => {
         color: c.querySelector('#s-color').value,
         ping_role: c.querySelector('#s-ping').value.trim(),
         downvotes: c.querySelector('#s-downvotes').checked ? 1 : 0,
+        anon: c.querySelector('#s-anon').checked ? 1 : 0,
         approve_channel: c.querySelector('#s-approve').value.trim(),
       }});
       App.toast('Configuration des suggestions enregistrée !');

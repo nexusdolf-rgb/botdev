@@ -2816,6 +2816,7 @@ router.put('/bots/:id/guilds/:guildId/suggestions/config', requireAuth, async (r
     suggestion_ping_role: String(b.ping_role || '').slice(0, 100),
     suggestion_downvotes: (b.downvotes === 0 || b.downvotes === false) ? 0 : 1,
     suggestion_approve_channel: String(b.approve_channel || '').slice(0, 100),
+    suggestion_anon: (b.anon === 1 || b.anon === true || b.anon === '1') ? 1 : 0,
   });
   res.json({ ok: true });
 });

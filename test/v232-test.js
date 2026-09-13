@@ -165,9 +165,9 @@ check('PLUS AUCUN ui.sectionize dans suggest.js', !sg.includes('ui.sectionize'))
 check('EmbedBuilder retiré des imports', !/require\('discord\.js'\)[\s\S]{0,200}EmbedBuilder/.test(sg.split('\n')[3] || '')
   && !sg.split('\n').some((l) => l.includes('EmbedBuilder') && !l.trim().startsWith('//')));
 check('plus aucun new EmbedBuilder dans suggest.js', !sg.includes('new EmbedBuilder'));
-check('les 2 interaction.update passent par buildPanel',
-  (sg.match(/interaction\.update\(buildPanel\(/g) || []).length === 2);
-check('l’annonce d’approbation est en v2panel', sg.includes("await chan.send(ui.v2panel({"));
+check('les 3 interaction.update passent par buildPanel', // v299 : votes + statut + modale de refus
+  (sg.match(/interaction\.update\(buildPanel\(/g) || []).length === 3);
+check('l’annonce d’approbation est en v2panel', sg.includes('await chan.send(buildApprovedAnnouncement(fresh))') && sg.includes('function buildApprovedAnnouncement(s) {') && sg.includes('ui.v2panel({')); // v299 : extraite + anonymat
 
 const row = { id: 7, status: 'pending', upvotes: 3, downvotes: 1, bot_id: 'B', text: 'Ajouter un salon musique.\n\nEt un salon cinéma.' };
 const pSug = suggest.buildPanel(row, 'Toto', {});
@@ -238,9 +238,9 @@ console.log('\n12) Aucun secret ajouté + versionnage front v232');
   check(`aucun token en dur dans ${path.basename(f)}`,
     !/(ghp_|github_pat_|rnd_|xox[baprs]-)[A-Za-z0-9_-]{15,}/.test(read(f)));
 });
-check('index.html : 7 références ?v=298', (read('public/index.html').match(/\?v=298/g) || []).length === 7);
+check('index.html : 7 références ?v=299', (read('public/index.html').match(/\?v=299/g) || []).length === 7);
 check('index.html : plus aucune référence ?v=231', !read('public/index.html').includes('?v=231'));
-check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'botdev-v298';"));
+check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'botdev-v299';"));
 
 console.log(failures === 0
   ? '\n✅ V232 — Lot n°2 : 18 emplacements migrés (premade ×13, suggest ×5), queue.js corrigé, xp.js exclu et documenté.'
