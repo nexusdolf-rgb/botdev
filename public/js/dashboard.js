@@ -2100,6 +2100,47 @@ Dashboard.renderers.tickets = async (content, data) => {
     catch (e) { App.toast(e.message, 'error'); }
   };
 
+  // ---- ✏️ v296 : Textes des panneaux (optionnel — vide = textes par défaut) ----
+  let pt = {};
+  try { pt = JSON.parse(t.panel_texts || '{}') || {}; } catch {}
+  const ctp = Dashboard.card(root, '✏️ Textes des panneaux (optionnel)', 'Personnalisez les textes des panneaux BOUTON et MENU déroulant. Chaque champ laissé vide garde le texte par défaut actuel. Le mot {server} est remplacé par le nom du serveur. Après enregistrement, renvoyez le panneau pour voir le résultat.');
+  ctp.innerHTML += `
+    <label class="dash-label">Titre du panneau</label>
+    <input class="dash-input" id="tp-title" maxlength="100" placeholder="👑 Support | {server}" value="${App.escapeHtml(pt.title || '')}" />
+    <label class="dash-label">Phrase de bienvenue</label>
+    <input class="dash-input" id="tp-welcome" maxlength="200" placeholder="Bienvenue sur le support officiel de {server}" value="${App.escapeHtml(pt.welcome || '')}" />
+    <label class="dash-label">Texte du menu déroulant (l'invitation à choisir)</label>
+    <input class="dash-input" id="tp-placeholder" maxlength="100" placeholder="🗂️ Choisissez le type de ticket…" value="${App.escapeHtml(pt.menu_placeholder || '')}" />
+    <label class="dash-label">Titre du bloc d'informations</label>
+    <input class="dash-input" id="tp-info" maxlength="100" placeholder="__ⓘ Informations importantes :__" value="${App.escapeHtml(pt.info_title || '')}" />
+    <label class="dash-label">Informations importantes (une ligne = une puce)</label>
+    <textarea class="dash-input" id="tp-rules" rows="4" maxlength="1000" placeholder="• Soyez clair et précis dans votre demande.&#10;• Le manque de respect envers le staff est strictement interdit.&#10;• Évitez les mentions inutiles.&#10;• Les tickets inactifs pendant 2 heures seront automatiquement fermés puis supprimés.">${App.escapeHtml(pt.rules || '')}</textarea>
+    <label class="dash-label">Message de patience (pied du panneau)</label>
+    <input class="dash-input" id="tp-patience" maxlength="300" placeholder="*⏳ Merci de votre patience, un membre du staff prendra votre ticket en charge dès que possible.*" value="${App.escapeHtml(pt.patience || '')}" />
+    <div style="font-size:12px;color:var(--d-dim);margin-top:6px">ℹ️ Le paragraphe d'explication du panneau se personnalise avec les champs « Message » des cartes panneau bouton / panneau menu. Ces textes s'appliquent aux DEUX panneaux.</div>
+    <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
+      <button class="dash-btn dash-btn-primary" id="tp-save">💾 Enregistrer les textes</button>
+      <button class="dash-btn" id="tp-reset">↩️ Revenir aux textes par défaut</button>
+    </div>`;
+  const tpSave = async (obj) => {
+    try {
+      await App.api(`/bots/${bot.id}/tickets`, { method: 'PUT', body: { guild_id: guildId, panel_texts: obj } });
+      App.toast('Textes des panneaux enregistrés ! Renvoyez le panneau pour voir le résultat.');
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+  ctp.querySelector('#tp-save').onclick = () => tpSave({
+    title: ctp.querySelector('#tp-title').value,
+    welcome: ctp.querySelector('#tp-welcome').value,
+    menu_placeholder: ctp.querySelector('#tp-placeholder').value,
+    info_title: ctp.querySelector('#tp-info').value,
+    rules: ctp.querySelector('#tp-rules').value,
+    patience: ctp.querySelector('#tp-patience').value,
+  });
+  ctp.querySelector('#tp-reset').onclick = async () => {
+    ['tp-title', 'tp-welcome', 'tp-placeholder', 'tp-info', 'tp-rules', 'tp-patience'].forEach((id) => { ctp.querySelector('#' + id).value = ''; });
+    await tpSave({});
+  };
+
   // 🖼️ Image personnalisée du panneau principal (vide = bannière générée par défaut)
   let panelImage = String(t.image_url || '');
   c.querySelector('[data-panel-img]').appendChild(Dashboard.imageField('🖼️ Image du panneau (importée)', panelImage, (v) => { panelImage = v; }, 'Vide = bannière « SUPPORT » générée automatiquement. Importez une image (PNG/JPG/GIF/WebP) pour l\'afficher en bas du panneau.'));
@@ -2445,6 +2486,10 @@ Dashboard.renderers.tickets = async (content, data) => {
     <input class="dash-input" id="adv-image" value="${App.escapeHtml(advancedData.image_url)}" placeholder="https://.../image.png" />
     <label class="dash-label">Message au-dessus du panneau (optionnel)</label>
     <textarea class="dash-input" id="adv-message" rows="2" maxlength="1900" placeholder="Choisissez le service dont vous avez besoin…">${App.escapeHtml(advancedData.message)}</textarea>
+    <label class="dash-label">Texte du menu déroulant (vide = « 🗂️ Choisissez un type de ticket… »)</label>
+    <input class="dash-input" id="adv-placeholder" value="${App.escapeHtml(advancedData.menu_placeholder || '')}" placeholder="🗂️ Choisissez un type de ticket…" maxlength="100" />
+    <label class="dash-label">Ligne de pied du panneau (vide = texte par défaut)</label>
+    <input class="dash-input" id="adv-footer" value="${App.escapeHtml(advancedData.footer_text || '')}" placeholder="Hoxera · Support privé · Choisissez une option pour commencer" maxlength="200" />
     <label class="adv-check-row"><input type="checkbox" id="adv-reason" ${advancedData.require_reason ? 'checked' : ''} /><span><b>Demander une raison avant de créer le ticket</b><small>La raison sera ajoutée au questionnaire si Discord a encore un champ disponible.</small></span></label>
     <div class="adv-placement-notice"><span>📁</span><div><b>Placement simple et prévisible</b><small>Chaque type doit avoir une catégorie existante. Le même salon privé sera visible uniquement par son créateur et le staff autorisé à ce type.</small></div></div>
     <div class="adv-builder-grid">
@@ -2599,6 +2644,7 @@ Dashboard.renderers.tickets = async (content, data) => {
         name: c3.querySelector('#adv-name').value.trim(), mode: c3.querySelector('#adv-mode').value,
         channel: c3.querySelector('#adv-channel').value, message: c3.querySelector('#adv-message').value,
         image_url: c3.querySelector('#adv-image').value.trim(),
+        menu_placeholder: c3.querySelector('#adv-placeholder').value, footer_text: c3.querySelector('#adv-footer').value,
         require_reason: c3.querySelector('#adv-reason').checked ? 1 : 0, types: validTypes,
       }});
       advancedData.id = r.config && r.config.id;

@@ -389,15 +389,28 @@ function buildTicketPanel(cfg, client, types, serverName = '', guildId = '', row
   // 🌍 Textes dans la langue du serveur
   const lang = i18n.langForGuild(guildId);
   const P = i18n.panelTexts(lang);
+  // ✏️ v296 — textes personnalisés (carte « Textes des panneaux » du dashboard) :
+  // chaque champ laissé VIDE retombe sur le texte par défaut actuel.
+  // {server} est remplacé par le nom du serveur.
+  let PT = {};
+  try { PT = JSON.parse(cfg.panel_texts || '{}') || {}; } catch {}
+  const pickText = (val, dflt) => { const s2 = String(val === undefined || val === null ? '' : val).trim(); return s2 || dflt; };
+  const withServer = (str) => String(str).split('{server}').join(name);
+  const panelTitle = String(PT.title || '').trim() ? withServer(String(PT.title).trim().slice(0, 100)) : P.title(name);
+  const welcomeText = String(PT.welcome || '').trim() ? withServer(String(PT.welcome).trim().slice(0, 200)) : P.welcome(name);
+  const infoTitle = pickText(PT.info_title, P.infoTitle);
+  const rulesCustom = String(PT.rules || '').trim();
+  const rules = rulesCustom ? rulesCustom.split('\n').map((l) => l.trim()).filter(Boolean).slice(0, 15) : P.rules;
+  const patience = pickText(PT.patience, P.patience);
   // Le message personnalisé (configuré dans le dashboard) reste respecté :
   // s'il existe, il remplace le paragraphe d'explication standard.
   const customMsg = isDefaultMessage(cfg.message) ? '' : String(cfg.message);
   const paragraph = customMsg || P.desc;
 
   const fields = [
-    { name: P.infoTitle, value: P.rules.join('\n') },
+    { name: infoTitle, value: rules.join('\n') },
     // Espaceur hérité des embeds : ui.v2panel n'affiche que la valeur (v234).
-    { name: '\u200b', value: P.patience },
+    { name: '\u200b', value: patience },
   ];
   // Demande utilisateur (06/09) — la liste « 🗂️ Types disponibles » est retirée
   // du panneau : les types sont déjà visibles dans le menu déroulant juste en
@@ -407,10 +420,10 @@ function buildTicketPanel(cfg, client, types, serverName = '', guildId = '', row
     color: '#ED4245',
     // Demande utilisateur (06/09) — l'auteur « {serveur} · Centre d'assistance »
     // est retiré : il répétait le titre (« 👑 Support | {serveur} »).
-    title: P.title(name),
+    title: panelTitle,
     // sectionize() n'est plus appelé : v2panel découpe lui-même les paragraphes
     // et pose des séparateurs NATIFS entre eux.
-    description: `${P.welcome(name)}\n\n${paragraph}`,
+    description: `${welcomeText}\n\n${paragraph}`,
     fields,
     // 🖼️ Image du panneau : image importée par l'utilisateur (v198) si
     // présente, sinon bannière « SUPPORT - {nom} » générée par le site.
@@ -444,14 +457,16 @@ function panelTitleOf(msg) {
   } catch { return ''; }
 }
 
-async function pruneOldPanels(channel, kind = '') {
+async function pruneOldPanels(channel, kind = '', customPrefix = '') {
   try {
     if (!channel || !channel.messages || typeof channel.messages.fetch !== 'function') return;
     const fetched = await channel.messages.fetch({ limit: 25 });
     for (const msg of fetched.values()) {
       try {
         const title = panelTitleOf(msg);
-        if (!title || !String(title).startsWith('👑 Support |') || typeof msg.delete !== 'function') continue;
+        // v296 — titre personnalisé : les panneaux envoyés avec sont aussi reconnus
+        const known = String(title).startsWith('👑 Support |') || (customPrefix && String(title).startsWith(customPrefix));
+        if (!title || !known || typeof msg.delete !== 'function') continue;
         // 🎛️ On ne supprime que les panneaux du MÊME genre : le panneau
         // bouton et le panneau menu peuvent vivre côte à côte.
         if (kind) {
@@ -479,13 +494,16 @@ async function sendTicketPanel(botId, guildId, client, channel, mode = 'auto') {
   const useMenuMsg = mode === 'menu' && String(cfg.menu_message || '').trim();
   const cfgForEmbed = useMenuMsg ? { ...cfg, message: cfg.menu_message } : cfg;
   const rows = [];
+  // ✏️ v296 — textes personnalisés du panneau (placeholder du menu, titre pour le nettoyage)
+  let PTs = {};
+  try { PTs = JSON.parse(cfg.panel_texts || '{}') || {}; } catch {}
   if (types.length) {
     // Des types existent : seul le menu déroulant est affiché (pas de bouton en dessous).
     // Menu épuré : emoji + nom uniquement. Les détails de chaque type sont
     // déjà présentés dans l'embed « Centre d'assistance » (champ dédié par type).
     const select = new StringSelectMenuBuilder()
       .setCustomId(`bd-ttype:${botId}`)
-      .setPlaceholder('🗂️ Choisissez le type de ticket…')
+      .setPlaceholder((String(PTs.menu_placeholder || '').trim() || '🗂️ Choisissez le type de ticket…').slice(0, 100))
       .setMinValues(1).setMaxValues(1);
     for (const t of types.slice(0, 25)) {
       const opt = new StringSelectMenuOptionBuilder()
@@ -517,7 +535,7 @@ async function sendTicketPanel(botId, guildId, client, channel, mode = 'auto') {
   }
   // 🧹 Un seul panneau DU MÊME TYPE à la fois : le panneau bouton et le
   // panneau menu peuvent cohabiter (même dans le même salon).
-  try { await pruneOldPanels(channel, types.length ? 'menu' : 'button'); } catch {}
+  try { await pruneOldPanels(channel, types.length ? 'menu' : 'button', String(PTs.title || '').trim().split('{server}')[0]); } catch {}
 
   // 🖼️ Envoi immédiat : la bannière STATIQUE est générée par la route
   // (~1 s, mise en cache) — aucune attente, aucune charge ici.
@@ -2987,7 +3005,7 @@ async function buildTranscriptFromChannel(botId, channel, guild, extraLines = []
 module.exports = {
   normDecorName, findCategoryFuzzy, findCategoryRef,
   dispatchPanels, sendTicketPanel, sendRoleMenu, roleMenuPayload, findChannel, findChannelInGuild, bumpTicketStats,
-  buildTicketPanel,
+  buildTicketPanel, pruneOldPanels,
   resolveRole, roleKey, uniqueRoleRefs, staffRoleRefsForConfig, parseTypes, isStaff, staffForTicket, openTicket, safeEmoji,
   parentIdOf, panelParentOf, panelChannelOf, repairTicketChannel,
   startTypesWizard, handleTypesWizardInteraction,

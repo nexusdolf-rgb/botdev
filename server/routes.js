@@ -2355,7 +2355,7 @@ router.get('/bots/:id/panels', requireAuth, async (req, res) => {
 router.put('/bots/:id/tickets', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
   if (!bot) return;
-  const { guild_id, name, channel, message, button_label, button_style, require_reason, support_role, category, types, menu_channel, menu_message, menu_category, image_url } = req.body || {};
+  const { guild_id, name, channel, message, button_label, button_style, require_reason, support_role, category, types, menu_channel, menu_message, menu_category, image_url, panel_texts } = req.body || {};
   if (!guild_id) return res.status(400).json({ error: 'guild_id requis' });
   if (!(await userCanManageGuild(req, guild_id))) return res.status(403).json({ error: 'Permission refusée.' });
   const current = store.tickets.get(bot.id, guild_id) || {};
@@ -2372,6 +2372,20 @@ router.put('/bots/:id/tickets', requireAuth, async (req, res) => {
     menu_message: String(menu_message !== undefined ? menu_message : (current.menu_message || '')).slice(0, 1900),
     menu_category: String(menu_category !== undefined ? menu_category : (current.menu_category || '')).slice(0, 100),
     image_url: String(image_url !== undefined ? image_url : (current.image_url || '')).slice(0, 500),
+    // ✏️ v296 — textes des panneaux (JSON borné ; vide = textes par défaut)
+    panel_texts: (() => {
+      let raw = panel_texts;
+      if (raw === undefined) { try { raw = JSON.parse(current.panel_texts || '{}'); } catch { raw = {}; } }
+      const o = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+      return JSON.stringify({
+        title: String(o.title || '').slice(0, 100),
+        welcome: String(o.welcome || '').slice(0, 200),
+        menu_placeholder: String(o.menu_placeholder || '').slice(0, 100),
+        info_title: String(o.info_title || '').slice(0, 100),
+        rules: String(o.rules || '').slice(0, 1000),
+        patience: String(o.patience || '').slice(0, 300),
+      });
+    })(),
   };
   if (types !== undefined) {
     payload.types = JSON.stringify((Array.isArray(types) ? types : [])
@@ -2499,6 +2513,8 @@ router.put('/bots/:id/guilds/:guildId/advanced-tickets', requireAuth, async (req
     require_reason: body.require_reason !== undefined
       ? ((body.require_reason === 0 || body.require_reason === false) ? 0 : 1)
       : (current.require_reason === 0 ? 0 : 1),
+    menu_placeholder: body.menu_placeholder !== undefined ? String(body.menu_placeholder).slice(0, 100) : (current.menu_placeholder || ''),
+    footer_text: body.footer_text !== undefined ? String(body.footer_text).slice(0, 200) : (current.footer_text || ''),
     types,
   });
   res.json({ ok: true, config: store.advancedTickets.get(bot.id, guildId) });

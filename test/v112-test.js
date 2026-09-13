@@ -27,7 +27,7 @@ assert.ok(panels.includes('cfg.menu_message'), 'message dédié du menu utilisé
 console.log('✅ envoi : mode bouton (toujours un bouton), mode menu (types requis), message dédié');
 
 // 3. Cohabitation : le nettoyage ne supprime QUE les panneaux du même genre
-assert.ok(panels.includes("pruneOldPanels(channel, types.length ? 'menu' : 'button')"), 'nettoyage ciblé');
+assert.ok(panels.includes("pruneOldPanels(channel, types.length ? 'menu' : 'button',"), 'nettoyage ciblé'); // v296 : + préfixe de titre personnalisé
 assert.ok(panels.includes("ids.includes('bd-ttype')"), 'distinction bouton/menu par composants');
 console.log('✅ cohabitation : envoyer le panneau menu ne détruit plus le panneau bouton (et inversement)');
 

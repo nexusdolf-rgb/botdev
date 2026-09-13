@@ -78,6 +78,9 @@ function normalizeConfig(row = {}) {
     name: String(row.name || 'Créer un ticket').slice(0, 80),
     channel: String(row.channel || '').slice(0, 100),
     message: String(row.message || '').slice(0, 1900),
+    // ✏️ v296 — placeholder du menu et pied du panneau (vide = textes par défaut)
+    menu_placeholder: String(row.menu_placeholder || '').slice(0, 100),
+    footer_text: String(row.footer_text || '').slice(0, 200),
     image_url: safeImage(row.image_url || DEFAULT_IMAGE),
     require_reason: (row.require_reason === 0 || row.require_reason === false) ? 0 : 1,
     types: (Array.isArray(types) ? types : []).map((t, i) => normalizeType(t, i)).filter((t) => t.label).slice(0, 25),
@@ -148,7 +151,7 @@ function buildPanelPayload(config) {
     });
     const select = new StringSelectMenuBuilder()
       .setCustomId(`hx2-menu:${cfg.bot_id}:${cfg.id}`)
-      .setPlaceholder('🗂️ Choisissez un type de ticket…')
+      .setPlaceholder((String(cfg.menu_placeholder || '').trim() || '🗂️ Choisissez un type de ticket…').slice(0, 100))
       .setMinValues(1)
       .setMaxValues(1);
     for (const type of cfg.types) {
@@ -192,7 +195,7 @@ function buildPanelPayload(config) {
   }
   container
     .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
-    .addTextDisplayComponents(new TextDisplayBuilder().setContent('-# Hoxera · Support privé · Choisissez une option pour commencer'));
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${String(cfg.footer_text || '').trim() || 'Hoxera · Support privé · Choisissez une option pour commencer'}`));
   return { flags: MessageFlags.IsComponentsV2, components: [container] };
 }
 

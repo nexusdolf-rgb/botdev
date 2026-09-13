@@ -1437,8 +1437,8 @@ const tickets = {
   get: (botId, guildId) => db.prepare('SELECT * FROM tickets WHERE bot_id = ? AND guild_id = ?').get(botId, guildId) || null,
   set: (botId, guildId, cfg) => {
     const types = typeof cfg.types === 'string' ? cfg.types : JSON.stringify(Array.isArray(cfg.types) ? cfg.types : []);
-    return db.prepare(`INSERT INTO tickets (bot_id, guild_id, name, channel, message, button_label, button_style, support_role, category, types, require_reason, max_one, menu_channel, menu_message, menu_category, image_url)
-      VALUES (@bot_id, @guild_id, @name, @channel, @message, @button_label, @button_style, @support_role, @category, @types, @require_reason, @max_one, @menu_channel, @menu_message, @menu_category, @image_url)
+    return db.prepare(`INSERT INTO tickets (bot_id, guild_id, name, channel, message, button_label, button_style, support_role, category, types, require_reason, max_one, menu_channel, menu_message, menu_category, image_url, panel_texts)
+      VALUES (@bot_id, @guild_id, @name, @channel, @message, @button_label, @button_style, @support_role, @category, @types, @require_reason, @max_one, @menu_channel, @menu_message, @menu_category, @image_url, @panel_texts)
       ON CONFLICT(bot_id, guild_id) DO UPDATE SET
         name = excluded.name,
         channel = excluded.channel,
@@ -1453,13 +1453,16 @@ const tickets = {
         menu_channel = excluded.menu_channel,
         menu_message = excluded.menu_message,
         menu_category = excluded.menu_category,
-        image_url = excluded.image_url`).run({
-          bot_id: botId, guild_id: guildId, name: '', channel: '', message: '', button_label: '', button_style: '1', support_role: '', category: '', require_reason: 1, max_one: 0, menu_channel: '', menu_message: '', menu_category: '', image_url: '', ...cfg,
+        image_url = excluded.image_url,
+        panel_texts = excluded.panel_texts`).run({
+          bot_id: botId, guild_id: guildId, name: '', channel: '', message: '', button_label: '', button_style: '1', support_role: '', category: '', require_reason: 1, max_one: 0, menu_channel: '', menu_message: '', menu_category: '', image_url: '', panel_texts: '', ...cfg,
           button_style: String(['1','2','3','4'].includes(String(cfg.button_style)) ? cfg.button_style : '1'),
           require_reason: (cfg.require_reason === 0 || cfg.require_reason === false) ? 0 : 1,
           max_one: cfg.max_one ? 1 : 0,
           // 🖼️ Image du panneau : préservée si non envoyée (vide = bannière par défaut)
           image_url: String(cfg.image_url !== undefined ? cfg.image_url : ((tickets.get(botId, guildId) || {}).image_url || '')).slice(0, 500),
+          // ✏️ v296 — textes des panneaux : préservés si non envoyés
+          panel_texts: String(cfg.panel_texts !== undefined ? cfg.panel_texts : ((tickets.get(botId, guildId) || {}).panel_texts || '')).slice(0, 4000),
           types,
         });
   },
@@ -1475,12 +1478,12 @@ const advancedTickets = {
     return { ...row, types: Array.isArray(types) ? types : [] };
   },
   set: (botId, guildId, cfg) => db.prepare(`INSERT INTO advanced_ticket_panels
-    (bot_id, guild_id, name, mode, channel, message, image_url, require_reason, types, updated_at)
-    VALUES (@bot_id, @guild_id, @name, @mode, @channel, @message, @image_url, @require_reason, @types, datetime('now'))
+    (bot_id, guild_id, name, mode, channel, message, image_url, require_reason, types, menu_placeholder, footer_text, updated_at)
+    VALUES (@bot_id, @guild_id, @name, @mode, @channel, @message, @image_url, @require_reason, @types, @menu_placeholder, @footer_text, datetime('now'))
     ON CONFLICT(bot_id, guild_id) DO UPDATE SET
       name = excluded.name, mode = excluded.mode, channel = excluded.channel,
       message = excluded.message, image_url = excluded.image_url, require_reason = excluded.require_reason,
-      types = excluded.types, updated_at = datetime('now')`).run({
+      types = excluded.types, menu_placeholder = excluded.menu_placeholder, footer_text = excluded.footer_text, updated_at = datetime('now')`).run({
         bot_id: botId, guild_id: guildId,
         name: String(cfg.name || 'Créer un ticket').slice(0, 80),
         mode: cfg.mode === 'menu' ? 'menu' : 'buttons',
@@ -1489,6 +1492,8 @@ const advancedTickets = {
         image_url: String(cfg.image_url || '').slice(0, 500),
         require_reason: (cfg.require_reason === 0 || cfg.require_reason === false) ? 0 : 1,
         types: typeof cfg.types === 'string' ? cfg.types : JSON.stringify(Array.isArray(cfg.types) ? cfg.types : []),
+        menu_placeholder: String(cfg.menu_placeholder !== undefined ? cfg.menu_placeholder : ((advancedTickets.get(botId, guildId) || {}).menu_placeholder || '')).slice(0, 100),
+        footer_text: String(cfg.footer_text !== undefined ? cfg.footer_text : ((advancedTickets.get(botId, guildId) || {}).footer_text || '')).slice(0, 200),
       }),
   setPanelMessage: (botId, guildId, messageId, channelId) => db.prepare(`UPDATE advanced_ticket_panels
     SET panel_message_id = ?, panel_channel = ?, updated_at = datetime('now') WHERE bot_id = ? AND guild_id = ?`).run(String(messageId || ''), String(channelId || ''), botId, guildId),
@@ -2219,6 +2224,8 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN ticket_log_channel TEXT DEF
 try { db.exec("ALTER TABLE tickets ADD COLUMN menu_channel TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE tickets ADD COLUMN menu_message TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE tickets ADD COLUMN menu_category TEXT DEFAULT ''"); } catch (e) {}
+// v296 — ✏️ Textes personnalisés des panneaux de tickets (JSON, vide = textes par défaut)
+try { db.exec("ALTER TABLE tickets ADD COLUMN panel_texts TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE open_tickets ADD COLUMN open_reason TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec(`CREATE TABLE IF NOT EXISTS ticket_log_msgs (
   bot_id INTEGER NOT NULL, guild_id TEXT NOT NULL, number INTEGER NOT NULL,
@@ -2239,6 +2246,9 @@ try { db.exec(`CREATE TABLE IF NOT EXISTS advanced_ticket_panels (
   created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')),
   UNIQUE (bot_id, guild_id)
 )`); } catch (e) {}
+// v296 — ✏️ Textes personnalisés du panneau « Système de tickets personnalisés »
+try { db.exec("ALTER TABLE advanced_ticket_panels ADD COLUMN menu_placeholder TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE advanced_ticket_panels ADD COLUMN footer_text TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec(`CREATE TABLE IF NOT EXISTS advanced_ticket_channels (
   channel_id TEXT PRIMARY KEY,
   bot_id INTEGER NOT NULL, guild_id TEXT NOT NULL,

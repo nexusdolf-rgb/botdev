@@ -123,7 +123,8 @@ const P = i18n.panelTexts('fr');
   check('menu déroulant : identifiant « bd-ttype:${botId} » intact',
     srcPanels.includes('setCustomId(`bd-ttype:${botId}`)'));
   check('menu déroulant : intitulé « 🗂️ Choisissez le type de ticket… » intact',
-    srcPanels.includes("setPlaceholder('🗂️ Choisissez le type de ticket…')"));
+    srcPanels.includes("setPlaceholder((String(PTs.menu_placeholder || '').trim() || '🗂️ Choisissez le type de ticket…').slice(0, 100))")); // v296 : modifiable, défaut conservé
+
   check('menu déroulant : 1 valeur min/max, 25 options max',
     srcPanels.includes('setMinValues(1).setMaxValues(1)') && srcPanels.includes('types.slice(0, 25)'));
 
@@ -340,10 +341,10 @@ const membre = () => ({
   }
   {
     const html = racine('public/index.html');
-    check('index.html : ?v=295 référencé 7 fois', (html.match(/\?v=295/g) || []).length === 7,
-      String((html.match(/\?v=295/g) || []).length));
+    check('index.html : ?v=296 référencé 7 fois', (html.match(/\?v=296/g) || []).length === 7,
+      String((html.match(/\?v=296/g) || []).length));
     check('index.html : plus aucun ?v=240', !html.includes('?v=240'));
-    check('sw.js : cache « botdev-v241 »', racine('public/sw.js').includes("'botdev-v295'"));
+    check('sw.js : cache « botdev-v241 »', racine('public/sw.js').includes("'botdev-v296'"));
   }
 
   // ==========================================================================
