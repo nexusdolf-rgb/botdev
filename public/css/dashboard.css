@@ -213,6 +213,14 @@
 }
 .dash-member:last-child { border-bottom: none; }
 .m-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--d-card2); flex-shrink: 0; }
+/* 🎨 v298 — décoration d'avatar Discord : image superposée autour de l'avatar
+   (le trou central fait 80 % du canvas de la décoration → taille 125 %). */
+.deco-wrap { position: relative; display: inline-flex; flex-shrink: 0; line-height: 0; }
+.deco-wrap img.deco-img {
+  position: absolute; left: 50%; top: 50%; width: 125%; height: 125%;
+  transform: translate(-50%, -50%); pointer-events: none; z-index: 2;
+  border-radius: 0; background: none; object-fit: contain; flex: none;
+}
 .m-info { flex: 1; min-width: 0; }
 .m-info b { font-size: 14px; display: block; }
 .m-roles { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }

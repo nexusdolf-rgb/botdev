@@ -9,6 +9,17 @@ const crypto = require('crypto');
 const store = require('./db');
 const botManager = require('./discord/botManager');
 const imgproxy = require('./imgproxy');
+
+// 🎨 v298 — URL de la décoration d'avatar Discord (image séparée à superposer).
+// `avatarDecorationURL` renvoie null quand le membre n'a aucune décoration.
+// On demande une taille généreuse : la décoration déborde de l'avatar.
+function avatarDecoUrl(memberOrUser) {
+  try {
+    const u = (memberOrUser && memberOrUser.user) ? memberOrUser.user : memberOrUser;
+    if (!u || typeof u.avatarDecorationURL !== 'function') return '';
+    return imgproxy.imgProxy(u.avatarDecorationURL({ size: 160 }) || '');
+  } catch { return ''; }
+}
 const { oauthGuildCanConfigure, accessKind } = require('./discord/permissions');
 const security = require('./security');
 const { AsyncTTLCache, TTLCache } = require('./cache');
@@ -269,6 +280,7 @@ router.get('/auth/discord/callback', oauthRateLimit, async (req, res) => {
           discord_id: me.id,
           discord_username: me.username,
           discord_avatar: me.avatar || '',
+          discord_deco: (me.avatar_decoration_data && me.avatar_decoration_data.asset) || '',
         });
         user = { id: userId };
       }
@@ -278,6 +290,7 @@ router.get('/auth/discord/callback', oauthRateLimit, async (req, res) => {
       discord_id: me.id,
       discord_username: me.username,
       discord_avatar: me.avatar || '',
+      discord_deco: (me.avatar_decoration_data && me.avatar_decoration_data.asset) || '',
       discord_guilds: JSON.stringify(guilds.map((g) => ({ id: g.id, name: g.name, icon: g.icon || '', owner: !!g.owner, permissions: g.permissions || '0' }))),
     });
     store.discordTokens.set(user.id, {
@@ -322,6 +335,7 @@ async function refreshDiscordData(userId) {
     store.users.updateDiscord(userId, {
       discord_username: me.username,
       discord_avatar: me.avatar || '',
+      discord_deco: (me.avatar_decoration_data && me.avatar_decoration_data.asset) || '',
       discord_guilds: JSON.stringify(guilds.map((g) => ({ id: g.id, name: g.name, icon: g.icon || '', owner: !!g.owner, permissions: g.permissions || '0' }))),
     });
     return true;
@@ -2665,6 +2679,9 @@ router.get('/bots/:id/guilds/:guildId/members', requireAuth, async (req, res) =>
         tag,
         username: m.user.username,
         avatar: imgproxy.imgProxy(m.user.displayAvatarURL({ size: 64 }) || ''),
+        // 🎨 v298 — décoration d'avatar Discord (anneau Nitro, cadre d'événement…) :
+        // c'est une image SÉPARÉE de l'avatar, à superposer. Vide = pas de décoration.
+        deco: avatarDecoUrl(m),
         roles: m.roles.cache.filter((r) => r.name !== '@everyone').map((r) => ({ id: r.id, name: r.name, color: r.hexColor })).slice(0, 8),
         coins: eco ? eco.coins : 0,
         xp: xpRow ? xpRow.xp : 0,
@@ -2756,10 +2773,10 @@ router.get('/bots/:id/guilds/:guildId/stats', requireAuth, async (req, res) => {
       const guild = entry.client.guilds.cache.get(guildId);
       topActive = topRaw.map((t) => {
         const m = guild.members.cache.get(t.user_id);
-        return { user_id: t.user_id, messages: t.n, tag: m ? m.user.tag : t.user_id, avatar: m ? imgproxy.imgProxy(m.user.displayAvatarURL({ size: 64 }) || '') : '' };
+        return { user_id: t.user_id, messages: t.n, tag: m ? m.user.tag : t.user_id, avatar: m ? imgproxy.imgProxy(m.user.displayAvatarURL({ size: 64 }) || '') : '', deco: avatarDecoUrl(m) };
       }).filter((t) => !t.tag.includes('Bot'));
     } else {
-      topActive = topRaw.map((t) => ({ user_id: t.user_id, messages: t.n, tag: t.user_id, avatar: '' }));
+      topActive = topRaw.map((t) => ({ user_id: t.user_id, messages: t.n, tag: t.user_id, avatar: '', deco: '' }));
     }
     return { activity, joins, top_active: topActive };
   });

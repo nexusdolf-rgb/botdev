@@ -608,6 +608,8 @@ try { db.exec("ALTER TABLE role_menus ADD COLUMN guild_id TEXT DEFAULT ''"); } c
 try { db.exec("ALTER TABLE users ADD COLUMN discord_id TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN discord_username TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN discord_avatar TEXT DEFAULT ''"); } catch (e) {}
+// 🎨 v298 — décoration d'avatar Discord du compte dashboard (asset, vide = aucune)
+try { db.exec("ALTER TABLE users ADD COLUMN discord_deco TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN discord_guilds TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_discord ON users(discord_id) WHERE discord_id != ''"); } catch (e) {}
 
@@ -993,15 +995,15 @@ if (!eventsCols.includes('guild_id')) {
 // ---------------------- Utilisateurs & sessions ----------------------
 const users = {
   findByEmail: (email) => db.prepare('SELECT * FROM users WHERE email = ?').get(String(email).toLowerCase().trim()),
-  findById: (id) => db.prepare('SELECT id, email, discord_id, discord_username, discord_avatar, created_at FROM users WHERE id = ?').get(id),
+  findById: (id) => db.prepare('SELECT id, email, discord_id, discord_username, discord_avatar, discord_deco, created_at FROM users WHERE id = ?').get(id),
   findByDiscordId: (discordId) => db.prepare('SELECT * FROM users WHERE discord_id = ?').get(String(discordId)),
   create: (email, hash, extra = {}) => {
-    const r = db.prepare('INSERT INTO users (email, password_hash, discord_id, discord_username, discord_avatar) VALUES (?, ?, ?, ?, ?)')
-      .run(email, hash, extra.discord_id || '', extra.discord_username || '', extra.discord_avatar || '');
+    const r = db.prepare('INSERT INTO users (email, password_hash, discord_id, discord_username, discord_avatar, discord_deco) VALUES (?, ?, ?, ?, ?, ?)')
+      .run(email, hash, extra.discord_id || '', extra.discord_username || '', extra.discord_avatar || '', extra.discord_deco || '');
     return r.lastInsertRowid;
   },
   updateDiscord: (id, fields) => {
-    const allowed = ['discord_id', 'discord_username', 'discord_avatar', 'discord_guilds'];
+    const allowed = ['discord_id', 'discord_username', 'discord_avatar', 'discord_deco', 'discord_guilds'];
     const sets = [], vals = [];
     for (const k of allowed) if (k in fields) { sets.push(`${k} = ?`); vals.push(fields[k]); }
     if (!sets.length) return;

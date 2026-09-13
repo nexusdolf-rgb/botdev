@@ -1038,7 +1038,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
   const acct = App.state.user || {};
   const acctName = acct.discord_username || acct.email || 'Compte Discord';
   const acctAvatar = acct.discord_avatar
-    ? `<img src="/api/img?u=${encodeURIComponent(`https://cdn.discordapp.com/avatars/${acct.discord_id}/${acct.discord_avatar}.png?size=64`)}" alt="" />`
+    ? Dashboard.decoWrap(`<img src="/api/img?u=${encodeURIComponent(`https://cdn.discordapp.com/avatars/${acct.discord_id}/${acct.discord_avatar}.png?size=64`)}" alt="" />`, Dashboard.userDecoUrl(acct.discord_deco))
     : `<span class="acc-fallback">${App.escapeHtml(String(acctName).slice(0, 1).toUpperCase())}</span>`;
   topbar.innerHTML = `
     <div class="dash-mobile-bar" aria-label="Navigation mobile">
@@ -1127,7 +1127,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
         </nav>
         <div class="dash-mobile-drawer-account">
           ${mobileUser.discord_avatar
-            ? `<img class="dash-mobile-account-avatar" src="/api/img?u=${encodeURIComponent(`https://cdn.discordapp.com/avatars/${mobileUser.discord_id}/${mobileUser.discord_avatar}.png?size=64`)}" alt="" data-fb-text="${App.escapeHtml(String(mobileUserName).slice(0, 1).toUpperCase())}" />`
+            ? Dashboard.decoWrap(`<img class="dash-mobile-account-avatar" src="/api/img?u=${encodeURIComponent(`https://cdn.discordapp.com/avatars/${mobileUser.discord_id}/${mobileUser.discord_avatar}.png?size=64`)}" alt="" data-fb-text="${App.escapeHtml(String(mobileUserName).slice(0, 1).toUpperCase())}" />`, Dashboard.userDecoUrl(mobileUser.discord_deco))
             : `<span class="dash-mobile-account-avatar">${App.escapeHtml(String(mobileUserName).slice(0, 1).toUpperCase())}</span>`}
           <div><b>${App.escapeHtml(mobileUserName)}</b><small>Compte connecté</small></div>
           <button type="button" data-mobile-logout aria-label="Déconnexion">⏻</button>
@@ -1427,6 +1427,18 @@ Dashboard.card = (content, title, desc, inner = '') => {
   content.appendChild(c);
   return c;
 };
+
+// 🎨 v298 — Décorations d'avatar Discord (anneau Nitro, cadres d'événement…).
+// La décoration est une image SÉPARÉE avec un trou central : on la superpose
+// à l'avatar, exactement comme sur Discord. Vide = aucun changement de rendu.
+Dashboard.decoWrap = (avatarHtml, deco) => (String(deco || '').trim()
+  ? `<span class="deco-wrap">${avatarHtml}<img class="deco-img" src="${App.escapeHtml(deco)}" alt="" loading="lazy" /></span>`
+  : avatarHtml);
+// Le compte dashboard connaît l'ASSET de la décoration (stocké à la connexion) :
+// on reconstruit l'URL CDN (servie via notre proxy /api/img).
+Dashboard.userDecoUrl = (asset) => (String(asset || '').trim()
+  ? `/api/img?u=${encodeURIComponent(`https://cdn.discordapp.com/avatar-decoration-presets/${String(asset).slice(0, 100)}.png?size=160`)}`
+  : '');
 
 Dashboard.renderers = {};
 
@@ -5252,7 +5264,7 @@ Dashboard.renderers.members = async (content, data) => {
         : '<span style="color:var(--d-dim);font-size:11px">aucun rôle</span>';
       const row = App.el(`
         <div class="dash-member">
-          <img class="m-avatar" src="${App.escapeHtml(m.avatar)}" alt="" loading="lazy" />
+          ${Dashboard.decoWrap(`<img class="m-avatar" src="${App.escapeHtml(m.avatar)}" alt="" loading="lazy" />`, m.deco)}
           <div class="m-info">
             <b>${App.escapeHtml(m.username)}</b>${m.is_owner ? ' 👑' : ''}
             <div class="m-roles">${rolesHtml}</div>
@@ -5364,7 +5376,7 @@ Dashboard.renderers.stats = async (content) => {
     s.top_active.forEach((t, i) => {
       c3.appendChild(App.el(`
         <div class="dash-member" style="border:none;padding:7px 2px">
-          <img class="m-avatar" src="${App.escapeHtml(t.avatar)}" alt="" loading="lazy" />
+          ${Dashboard.decoWrap(`<img class="m-avatar" src="${App.escapeHtml(t.avatar)}" alt="" loading="lazy" />`, t.deco)}
           <div class="m-info"><b>${App.escapeHtml(t.tag)}</b><div class="m-meta">💬 ${t.messages} messages</div></div>
           <div class="m-actions"><span class="dash-badge ${i === 0 ? 'ok' : ''}">${['🥇','🥈','🥉'][i] || `#${i + 1}`}</span></div>
         </div>`));
@@ -6279,7 +6291,7 @@ Dashboard.renderers.community = async (content, data) => {
       invitesTop.forEach((r, idx) => {
         const m = byId.get(String(r.inviter_id));
         const name = m ? (m.displayName || m.username || m.tag || r.inviter_id) : r.inviter_id;
-        const avatar = m && m.avatar ? `<img src="${App.escapeHtml(m.avatar)}" style="width:28px;height:28px;border-radius:50%" alt=""/>` : '<span style="width:28px;height:28px;border-radius:50%;background:var(--d-border);display:inline-block"></span>';
+        const avatar = m && m.avatar ? Dashboard.decoWrap(`<img src="${App.escapeHtml(m.avatar)}" style="width:28px;height:28px;border-radius:50%" alt=""/>`, m.deco) : '<span style="width:28px;height:28px;border-radius:50%;background:var(--d-border);display:inline-block"></span>';
         c2.appendChild(App.el(`
           <div style="display:flex;align-items:center;gap:12px;padding:9px 4px;border-bottom:1px solid var(--d-border)">
             <span style="width:34px;text-align:center;font-size:${idx < 3 ? '20px' : '14px'}">${medals[idx] || (idx + 1) + '.'}</span>
