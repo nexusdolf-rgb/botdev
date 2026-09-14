@@ -962,6 +962,19 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v306 (14/09 — FINITIONS VISUELLES)** : deux demandes du fondateur en
+  regardant son panneau de tickets : (a) « la ligne coloriée en rouge à côté
+  du panneau » — l'accent `#ED4245` du panneau de tickets donnait un air
+  « en erreur » → remplacé par la couleur Hoxera standard `#e07a5f` ;
+  (b) « retire la signature en dessous des panneaux » → le moteur
+  `ui.v2container` n'affiche plus AUCUN pied commençant par « Hoxera · »
+  (pied par défaut compris, ~77 appels rendus inertes sans toucher aux
+  appelants). Survivent : une Date explicite (`timestamp: new Date`, ex.
+  starboard) et un pied réellement personnalisé par l'admin (tickets avancés
+  `footer_text`). Les panneaux déjà postés gardent leur ancienne apparence :
+  renvoyer le panneau depuis le dashboard applique le nouveau style.
+  Tests épinglés mis à jour pour la nouvelle sémantique : v229 (1 séparateur
+  au lieu de 2), v231, v234, v238, v241, v292, v296. Test v306 : 20 vérif.
 - **v305 (14/09 — SALONS VOCAUX TEMPORAIRES : le bug du panneau)** : le
   fondateur configure le vocal temporaire via le dashboard ; en rejoignant le
   salon de création, son salon se crée MAIS (a) les boutons du panneau
@@ -1356,11 +1369,14 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 14/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v305** — salons vocaux temporaires : les boutons du
-  panneau fonctionnent même si la liste interne est perdue (preuve par la
-  position vocale + le registre propriétaire), le balayage de sécurité ne
-  détruit plus rien sur incident réseau, et tout repli de catégorie est
-  journalisé dans `/api/health/bot`. `test/v305-test.js` (26 vérifications).
+- Dernière version : **v306** — finitions visuelles demandées par le
+  fondateur : (1) le panneau de tickets n'a plus la ligne rouge sur le côté
+  (accent `#e07a5f` comme les autres panneaux) ; (2) la signature
+  « Hoxera · … » est retirée de SOUS tous les panneaux (le moteur
+  `ui.v2container` n'affiche plus aucun pied commençant par « Hoxera · » ;
+  une Date explicite et les pieds réellement personnalisés survivent).
+  `test/v306-test.js` (20 vérifications). Les panneaux déjà envoyés gardent
+  leur ancienne apparence — renvoyer un panneau applique le nouveau style.
 - ✅ **Incident du 14/09 CLÔTURÉ** : `BOTDEV_GH_TOKEN` révoqué → boot sur base
   vide. Rétabli à 15h56 : nouveau PAT reporté dans Render via l'API
   (`PUT /v1/services/srv-da5i2h2jobas73epvos0/env-vars/BOTDEV_GH_TOKEN` avec

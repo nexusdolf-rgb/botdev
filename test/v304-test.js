@@ -202,8 +202,8 @@ async function runOne(name, opts, { expectSilentOk = false } = {}) {
 (async () => {
   console.log('— 1. Pins de version v304 —');
   const html = racine('public/index.html');
-  check('index.html : ?v=305 ×7', (html.match(/\?v=305/g) || []).length === 7);
-  check('sw.js : cache botdev-v305', racine('public/sw.js').includes("const CACHE = 'botdev-v305';"));
+  check('index.html : ?v=306 ×7', (html.match(/\?v=306/g) || []).length === 7);
+  check('sw.js : cache botdev-v306', racine('public/sw.js').includes("const CACHE = 'botdev-v306';"));
 
   console.log('— 2. ui.v2Audit détecte chaque classe de violation —');
   // Les builders discord.js refusent eux-mêmes les objets hors limites :

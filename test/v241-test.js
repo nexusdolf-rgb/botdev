@@ -138,11 +138,13 @@ const P = i18n.panelTexts('fr');
     P.infoTitle === '__ⓘ Informations importantes :__');
   check('message de patience conservé, en italique',
     P.patience.startsWith('*⏳ Merci de votre patience') && textes.some((t) => t.includes('Merci de votre patience')));
-  check('pied conservé : « Hoxera · {serveur} »',
-    v2.footer(payload) === `Hoxera · ${SERVEUR}`, v2.footer(payload));
+  // v306 — la signature « Hoxera · {serveur} » est retirée du pied (demande
+  // du fondateur : plus aucune signature sous les panneaux).
+  check('signature retirée du pied (v306)', v2.footer(payload) === '', v2.footer(payload));
   check('bannière conservée (MediaGallery)', brut.includes('/api/tickets/panel-banner/'));
-  // #ED4245 = 15548997 en décimal : c'est la valeur sérialisée dans le conteneur.
-  check('couleur d’accent conservée (#ED4245 = 15548997)', brut.includes('15548997'));
+  // v306 — le rouge #ED4245 (15548997) est remplacé par la couleur Hoxera
+  // standard #e07a5f (14711391) : le panneau n'a plus l'air « en erreur ».
+  check('couleur d’accent Hoxera (#e07a5f = 14711391)', brut.includes('14711391') && !brut.includes('15548997'));
   check('pied toujours SANS heure (décision globale v241)',
     !/\d{2}\/\d{2} \d{2}:\d{2}/.test(v2.footer(payload)));
 
@@ -250,8 +252,9 @@ const membre = () => ({
     sansCount && v2.json(sansCount).includes('👥 Membre n°') && v2.json(sansCount).includes('**42**'));
   check('arrivée : l’intitulé n’est plus la phrase coupée « Vous êtes le membre »',
     sansCount && !v2.json(sansCount).includes('Vous êtes le membre'));
-  check('arrivée : pied de page signé « Hoxera · … »',
-    sansCount && v2.footer(sansCount) === `Hoxera · ${SERVEUR}`, sansCount ? v2.footer(sansCount) : '');
+  // v306 — signature retirée de tous les panneaux (demande du fondateur).
+  check('arrivée : signature du pied retirée (v306)',
+    sansCount && v2.footer(sansCount) === '', sansCount ? v2.footer(sansCount) : 'payload introuvable');
   check('arrivée : aucune heure dans le pied', sansCount && !/\d{2}\/\d{2} \d{2}:\d{2}/.test(v2.footer(sansCount)));
 
   // --- 5c. Départ : durée réelle, plus de « il y a ». ---
@@ -272,7 +275,8 @@ const membre = () => ({
   check('départ : AUCUNE durée aberrante (> 40 ans = secondes prises pour des ms)',
     depart && !/\d{2,} ans/.test(v2.json(depart)));
   check('départ : « 👥 Membres restants » conservé', depart && v2.json(depart).includes('👥 Membres restants'));
-  check('départ : pied de page signé « Hoxera · … »', depart && v2.footer(depart) === `Hoxera · ${SERVEUR}`);
+  // v306 — signature retirée de tous les panneaux (demande du fondateur).
+  check('départ : signature du pied retirée (v306)', depart && v2.footer(depart) === '');
 
   // --- 5d. Textes par défaut du formulaire (EVENT_DEFS). ---
   const defs = events.EVENT_DEFS || events.DEFS || null;
@@ -319,7 +323,9 @@ const membre = () => ({
       suggest.includes("footer: 'Hoxera · Suggestions'"));
     const panneau = require('../server/discord/suggest').buildPanel(
       { id: 7, text: 'Ajouter un salon vocal', upvotes: 3, downvotes: 1, bot_id: BOT_ID }, 'Alice', {}, '');
-    check('suggestion : rendu réel du pied', v2.footer(panneau) === 'Hoxera · Suggestions', v2.footer(panneau));
+    // v306 — la signature est retirée au RENDU (le `footer:` du code est
+    // conservé mais le moteur ne l'affiche plus).
+    check('suggestion : signature du pied retirée au rendu (v306)', v2.footer(panneau) === '', v2.footer(panneau));
     check('suggestion : le n° reste visible UNE fois, dans le titre',
       (v2.json(panneau).split('#7').length - 1) === 1, `${v2.json(panneau).split('#7').length - 1} fois`);
     check('suggestion : aucune heure dans le pied', !/\d{2}\/\d{2} \d{2}:\d{2}/.test(v2.footer(panneau)));
@@ -341,10 +347,10 @@ const membre = () => ({
   }
   {
     const html = racine('public/index.html');
-    check('index.html : ?v=305 référencé 7 fois', (html.match(/\?v=305/g) || []).length === 7,
-      String((html.match(/\?v=305/g) || []).length));
+    check('index.html : ?v=306 référencé 7 fois', (html.match(/\?v=306/g) || []).length === 7,
+      String((html.match(/\?v=306/g) || []).length));
     check('index.html : plus aucun ?v=240', !html.includes('?v=240'));
-    check('sw.js : cache « botdev-v241 »', racine('public/sw.js').includes("'botdev-v305'"));
+    check('sw.js : cache « botdev-v241 »', racine('public/sw.js').includes("'botdev-v306'"));
   }
 
   // ==========================================================================

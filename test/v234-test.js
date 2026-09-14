@@ -167,8 +167,10 @@ console.log('\n2️⃣  buildTicketPanel — le panneau de tickets en Components
     v2json(payload).includes('/api/tickets/panel-banner/G234.png'));
   // v241 (demande utilisateur) — « Sélectionnez une option pour commencer » est
   // retiré : le menu déroulant est juste en dessous, la consigne était superflue.
-  check('le pied de panneau est en texte discret « -# »',
-    t.some((x) => x === '-# Hoxera · Serveur de Hoxera'));
+  // v306 — la signature « Hoxera · {serveur} » est retirée du pied des
+  // panneaux à la demande du fondateur.
+  check('signature retirée du pied (v306) : aucun texte « -# Hoxera »',
+    !t.some((x) => x.startsWith('-# Hoxera')));
   // v241 — décision GLOBALE (indépendante du texte du panneau) : l'heure n'est
   // plus ajoutée, Discord affichant déjà celle du message.
   check('le pied ne contient plus d’heure (v241)', !/\d{2}\/\d{2} \d{2}:\d{2}/.test(t.find((x) => x.startsWith('-# ')) || ''));
@@ -243,7 +245,9 @@ console.log('\n4️⃣  roleMenuPayload + sendRoleMenu — menu de rôles en V2'
   check('séparateur natif entre eux', v2div(p) >= 1);
   check('aucun trait texte ━', !v2json(p).includes(ui.SEPARATOR));
   check('« Comment ça marche ? » conservé', t.some((x) => x.startsWith('**🧭 Comment ça marche ?**')));
-  check('le pied indique le nombre de rôles', t.some((x) => x.startsWith('-# Hoxera · 2 rôle(s) disponible(s)')));
+  // v306 — le pied signé « Hoxera · N rôle(s)… » est retiré avec toutes les
+  // signatures (demande du fondateur).
+  check('signature retirée du pied rôles (v306)', !t.some((x) => x.startsWith('-# Hoxera')));
   check('le menu déroulant est DANS le conteneur', v2top(p).includes(1) && v2json(p).includes('bd-menu:'));
   check('plus de « payload.components = components » après coup',
     !/payload\.components = components;/.test(src));

@@ -419,7 +419,10 @@ function buildTicketPanel(cfg, client, types, serverName = '', guildId = '', row
   // dessous, la liste les répétait. Le paramètre `types` reste dans la signature
   // pour ne casser aucun appelant.
   return ui.v2panel({
-    color: '#ED4245',
+    // v306 (demande du fondateur) — le rouge #ED4245 est retiré : le côté du
+    // panneau avait l'air « en erreur ». Couleur Hoxera standard, comme les
+    // autres panneaux du bot.
+    color: '#e07a5f',
     // Demande utilisateur (06/09) — l'auteur « {serveur} · Centre d'assistance »
     // est retiré : il répétait le titre (« 👑 Support | {serveur} »).
     title: panelTitle,
@@ -433,8 +436,10 @@ function buildTicketPanel(cfg, client, types, serverName = '', guildId = '', row
     image: String(cfg.image_url || '').trim() || panelBannerUrl(guildId, name),
     // Demande utilisateur (06/09) — « Sélectionnez une option pour commencer »
     // est retiré : le menu déroulant est juste en dessous, la consigne était
-    // superflue. Le pied garde la signature + le nom du serveur.
-    footer: `Hoxera · ${name}`,
+    // superflue.
+    // v306 — la signature « Hoxera · {serveur} » est retirée du pied, à la
+    // demande du fondateur : plus aucune signature sous les panneaux.
+    footer: false,
   }, rows);
 }
 

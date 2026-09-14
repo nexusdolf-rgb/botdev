@@ -63,7 +63,8 @@ const check = (label, cond) => {
   check('MP : invite à rouvrir un ticket', String(emb.description).includes('Rouvrez simplement un ticket'));
   // 🖼️ Bannière du PROFIL du bot (repli local si l'URL Discord n'est pas encore connue)
   check('MP : bannière du profil du bot en MediaGallery', String(emb.image).includes('/icons/nexora-profile-banner.png'), String(emb.image));
-  check('MP : footer signé Hoxera', String(emb.footer).includes('Hoxera'));
+  // v306 — la signature « Hoxera · … » est retirée de sous tous les panneaux.
+  check('MP : signature du pied retirée (v306)', String(emb.footer || '') === '');
   // 📄 Fichier .txt joint
   check('MP : fichier transcription .txt joint', payload.files && payload.files.length === 1 && String(payload.files[0].name).includes('question-bob') && payload.files[0].name.endsWith('.txt'));
   check('MP : contenu du fichier correct', String(payload.files[0].attachment.toString()).includes('Bonjour !'));

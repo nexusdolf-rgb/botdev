@@ -96,7 +96,9 @@ const json = (x) => JSON.stringify(x.components.map((c) => (c.toJSON ? c.toJSON(
   const cfgAdv = (over = {}) => adv.normalizeConfig({ id: 7, bot_id: B, guild_id: G, name: 'Tickets', mode: 'menu', channel: '#c', message: '', image_url: '', require_reason: 1, types: [{ label: 'Aide', id: 't1' }], ...over });
   const jAdv = json(adv.buildPanelPayload(cfgAdv()));
   check('placeholder par défaut', jAdv.includes('Choisissez un type de ticket…'));
-  check('pied par défaut', jAdv.includes('Hoxera · Support privé · Choisissez une option pour commencer'));
+  // v306 — la signature « Hoxera · Support privé… » est retirée du rendu
+  // (demande du fondateur) ; un pied personnalisé reste affiché (ci-dessous).
+  check('pied signature retiré par défaut (v306)', !jAdv.includes('Hoxera · Support privé'));
   const jAdv2 = json(adv.buildPanelPayload(cfgAdv({ menu_placeholder: 'Choisis !', footer_text: 'Support de MonServeur' })));
   check('placeholder personnalisé', jAdv2.includes('Choisis !') && !jAdv2.includes('Choisissez un type de ticket…'));
   check('pied personnalisé (petit texte conservé)', jAdv2.includes('-# Support de MonServeur') && !jAdv2.includes('Support privé'));
@@ -121,9 +123,9 @@ const json = (x) => JSON.stringify(x.components.map((c) => (c.toJSON ? c.toJSON(
 
   console.log('— 8. Bump v296 —');
   const index = racine('public/index.html');
-  check('index.html : ?v=305 référencé 7 fois', (index.match(/\?v=305/g) || []).length === 7,
-    String((index.match(/\?v=305/g) || []).length));
-  check('sw.js : cache « botdev-v305 »', racine('public/sw.js').includes("const CACHE = 'botdev-v305';"));
+  check('index.html : ?v=306 référencé 7 fois', (index.match(/\?v=306/g) || []).length === 7,
+    String((index.match(/\?v=306/g) || []).length));
+  check('sw.js : cache « botdev-v306 »', racine('public/sw.js').includes("const CACHE = 'botdev-v306';"));
 
   console.log(`\n🎉 v296 : ${ok} vérifications passées`);
   process.exit(0);

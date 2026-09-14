@@ -244,9 +244,10 @@ async function main() {
   check('salon privé : l\'avatar n\'est PAS répété (vignette seule)',
     v2.thumbnailUrls(welcome).includes('https://cdn.discordapp.com/alice.png')
     && (v2.json(welcome).match(/alice\.png/g) || []).length === 1);
-  check('salon privé : titre + pied + couleur conservés',
+  // v306 — la signature « Hoxera · Ticket #12 » est retirée du pied.
+  check('salon privé : titre + couleur conservés, signature du pied retirée (v306)',
     (v2.title(welcome) || '').includes('🎫') && v2.json(welcome).includes('Journal') === false
-    && v2.accentColor(welcome) === 0x5865F2 && v2.footer(welcome).includes('Ticket #12'));
+    && v2.accentColor(welcome) === 0x5865F2 && v2.footer(welcome) === '');
   check('salon privé : plafond de 40 composants respecté', v2.componentCount(welcome) <= 40,
     `${v2.componentCount(welcome)} composants`);
 

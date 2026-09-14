@@ -74,8 +74,8 @@ const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
   console.log('— 7. Version —');
   const index = read('public/index.html');
   const sw = read('public/sw.js');
-  check('index.html : ?v=305 référencé 7 fois', (index.match(/\?v=305/g) || []).length === 7);
-  check('sw.js : cache « botdev-v305 »', sw.includes("const CACHE = 'botdev-v305';"));
+  check('index.html : ?v=306 référencé 7 fois', (index.match(/\?v=306/g) || []).length === 7);
+  check('sw.js : cache « botdev-v306 »', sw.includes("const CACHE = 'botdev-v306';"));
 
   console.log(`\n🎉 v289 — ${ok} vérifications OK : système IA retiré partout, bot intact.`);
 })().catch((e) => { console.error(e); process.exit(1); });

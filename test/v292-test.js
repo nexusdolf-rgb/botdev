@@ -73,7 +73,10 @@ const racine = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
   const flat = JSON.stringify(panel.components ? panel.components.map((c) => (c.toJSON ? c.toJSON() : c)) : panel);
   check('panneau avec conditions : ligne 📋 affichée', flat.includes('Conditions de participation') && flat.includes('rVIP'));
   check('bouton 👥 Participants avec customId hxgw:', flat.includes(`hxgw:${B}:participants`) && flat.includes('Participants'));
-  check('panneau toujours en Components V2 (footer Hoxera)', flat.includes('Hoxera · Giveaway'));
+  // v306 — la signature « Hoxera · Giveaway » est retirée du pied (demande du
+  // fondateur) ; le panneau reste bien en Components V2 (conteneur type 17).
+  check('panneau toujours en Components V2, signature retirée (v306)',
+    flat.includes('"type":17') && !flat.includes('Hoxera · Giveaway'));
   store.guildSettings.set(B, G, { giveaway_req_role: '', giveaway_req_level: 0 });
 
   console.log('— 5. Vérification des conditions (checkConditions) —');
@@ -189,9 +192,9 @@ const racine = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 
   console.log('— 12. Bump v292 —');
   const index = racine('public/index.html');
-  check('index.html : ?v=305 référencé 7 fois', (index.match(/\?v=305/g) || []).length === 7,
-    String((index.match(/\?v=305/g) || []).length));
-  check('sw.js : cache « botdev-v305 »', racine('public/sw.js').includes("const CACHE = 'botdev-v305';"));
+  check('index.html : ?v=306 référencé 7 fois', (index.match(/\?v=306/g) || []).length === 7,
+    String((index.match(/\?v=306/g) || []).length));
+  check('sw.js : cache « botdev-v306 »', racine('public/sw.js').includes("const CACHE = 'botdev-v306';"));
 
   console.log(`\n🎉 v292 : ${ok} vérifications passées`);
   process.exit(0);

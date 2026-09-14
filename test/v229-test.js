@@ -141,11 +141,12 @@ const gallery = ui.sectionize('📱 **Pour ouvrir ta galerie :**\n\n1️⃣ Tape
 check('/botprofile setup galerie : 2 traits', count(gallery) === 2);
 
 // v232 — /levels est en Components V2 : on vérifie le séparateur NATIF du
-// payload réel, plus le trait texte. 2 paragraphes → 1 séparateur entre eux
-// + 1 avant le pied = 2.
+// payload réel, plus le trait texte. 2 paragraphes → 1 séparateur entre eux.
+// v306 — la signature « Hoxera · … » a été retirée de tous les panneaux à la
+// demande du fondateur : le séparateur du pied disparaît avec elle (2 → 1).
 const levelsV2 = ui.v2panel({ title: '📈 Classement des niveaux', description: '**Top 10 — les membres les plus actifs**\n\n**1.** <@U1> — **12** · 4500 XP\n**2.** <@U2> — **9** · 3100 XP', footer: 'Hoxera · Serveur' }).components[0].toJSON();
-check('/levels : 2 séparateurs natifs (1 entre blocs + 1 pied)',
-  levelsV2.components.filter((k) => k.type === 14 && k.divider === true).length === 2);
+check('/levels : 1 séparateur natif entre blocs (pied signature retiré en v306)',
+  levelsV2.components.filter((k) => k.type === 14 && k.divider === true).length === 1);
 check('/levels : aucun trait texte ━',
   !JSON.stringify(levelsV2.components).includes(SEP));
 
@@ -229,9 +230,9 @@ const touched = ['server/discord/extra.js', 'server/discord/panelCommands.js', '
   'public/index.html', 'public/sw.js'];
 check('aucun token en dur dans les fichiers modifiés',
   !touched.some((f) => /(ghp_|github_pat_|xox[baprs]-)[A-Za-z0-9_]{15,}/.test(src(f))));
-check('index.html : 7 références ?v=305', (src('public/index.html').match(/\?v=305/g) || []).length === 7);
+check('index.html : 7 références ?v=306', (src('public/index.html').match(/\?v=306/g) || []).length === 7);
 check('index.html : plus aucune référence ?v=236', !src('public/index.html').includes('?v=236'));
-check('sw.js : cache botdev-v241', src('public/sw.js').includes("const CACHE = 'botdev-v305';"));
+check('sw.js : cache botdev-v241', src('public/sw.js').includes("const CACHE = 'botdev-v306';"));
 
 console.log(failures === 0
   ? '\n✅ V229 — Traits ━ étendus aux 10 messages multi-blocs (dont le quiz), exclusions verrouillées, garde-fous v220 intacts.'

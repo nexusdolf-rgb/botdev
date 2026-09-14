@@ -114,12 +114,14 @@ const json = (x) => JSON.stringify(x.components.map((c) => (c.toJSON ? c.toJSON(
   const jAdv = json(adv.buildPanelPayload(cfgAdv({ menu_placeholder: 'Choisis !', footer_text: 'Pied perso' })));
   check('panneau personnalisé : placeholder + pied personnalisés', jAdv.includes('Choisis !') && jAdv.includes('-# Pied perso'));
   const jAdvDef = json(adv.buildPanelPayload(cfgAdv()));
-  check('panneau personnalisé : défauts conservés', jAdvDef.includes('🗂️ Choisissez un type de ticket…') && jAdvDef.includes('Hoxera · Support privé'));
+  // v306 — le placeholder par défaut reste ; la signature du pied est retirée.
+  check('panneau personnalisé : placeholder par défaut conservé, signature retirée (v306)',
+    jAdvDef.includes('🗂️ Choisissez un type de ticket…') && !jAdvDef.includes('Hoxera · Support privé'));
 
   console.log('— 9. Bump v297 —');
   const index = racine('public/index.html');
-  check('index.html : ?v=305 référencé 7 fois', (index.match(/\?v=305/g) || []).length === 7, String((index.match(/\?v=305/g) || []).length));
-  check('sw.js : cache « botdev-v305 »', racine('public/sw.js').includes("const CACHE = 'botdev-v305';"));
+  check('index.html : ?v=306 référencé 7 fois', (index.match(/\?v=306/g) || []).length === 7, String((index.match(/\?v=306/g) || []).length));
+  check('sw.js : cache « botdev-v306 »', racine('public/sw.js').includes("const CACHE = 'botdev-v306';"));
 
   console.log(`\n🎉 v297 : ${ok} vérifications passées`);
   process.exit(0);

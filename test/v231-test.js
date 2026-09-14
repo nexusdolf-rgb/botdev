@@ -110,19 +110,21 @@ console.log('\n4) Grammaire identique au panneau de référence (advancedTickets
 // AUCUN séparateur juste après le titre, séparateur avant le pied.
 check('quiz : 3 paragraphes de description',
   ui.paragraphs(quizDesc).length === 3);
-// 3 blocs de corps → 2 séparateurs entre eux + 1 avant le pied = 3.
-check('quiz lancement : 3 séparateurs natifs (2 entre blocs + 1 pied)', nSep(quizOptions) === 3);
-check('quiz lancement : 5 TextDisplay (titre + 3 blocs + pied)', nText(quizOptions) === 5);
+// 3 blocs de corps → 2 séparateurs entre eux.
+// v306 : la signature du pied est retirée → son séparateur disparaît.
+check('quiz lancement : 2 séparateurs natifs entre blocs (pied retiré en v306)', nSep(quizOptions) === 2);
+check('quiz lancement : 4 TextDisplay (titre + 3 blocs, pied retiré en v306)', nText(quizOptions) === 4);
 check('AUCUN séparateur juste après le titre',
   !(types(quizOptions)[0] === 10 && types(quizOptions)[1] === 14));
 check('le titre est le premier TextDisplay, en « ## »', texts(quizOptions)[0] === '## 🧠 Quiz');
 check('séparateur avant le pied', types(quizOptions).slice(-2).join(',') === '14,10');
-check('le pied est en texte discret « -# »', texts(quizOptions).slice(-1)[0].startsWith('-# '));
+// v306 — plus aucun pied signature.
+check('pied signature retiré (v306)', !texts(quizOptions).some((t) => t.startsWith('-# ')));
 
 const resOk = { ...quizOptions, color: 0x57f287, description: '✅ **Bonne réponse !**\n\n**Quelle est la capitale de la France ?**\n\nLa bonne réponse était : **Paris**\n\n✨ +15 points (bonus rapidité ⚡)' };
 const resKo = { ...quizOptions, color: 0xed4245, description: '❌ **Mauvaise réponse…**\n\n**Quelle est la capitale de la France ?**\n\nLa bonne réponse était : **Paris**' };
-check('quiz résultat (bonne réponse, 4 blocs) : 4 séparateurs', nSep(resOk) === 4);
-check('quiz résultat (mauvaise réponse, 3 blocs) : 3 séparateurs', nSep(resKo) === 3);
+check('quiz résultat (bonne réponse, 4 blocs) : 3 séparateurs (pied retiré en v306)', nSep(resOk) === 3);
+check('quiz résultat (mauvaise réponse, 3 blocs) : 2 séparateurs (pied retiré en v306)', nSep(resKo) === 2);
 check('couleur du résultat (succès) reprise', cont(resOk).accent_color === 0x57f287);
 check('couleur du résultat (échec) reprise', cont(resKo).accent_color === 0xed4245);
 
@@ -136,9 +138,9 @@ check('payload sans champ content au niveau message', withContent.content === un
 // découpé en paragraphes) : c'est le rendu le plus fidèle à l'existant.
 check('le content devient le premier TextDisplay, conservé intégralement',
   wcJson.components.filter((k) => k.type === 10)[0].content === '📝 **Candidatures**\nSalon : <#1>\n\nEnvoie le panneau avec `/apply panel`');
-// content + titre + 2 blocs de corps + pied par défaut = 5 TextDisplay.
-check('le content n’est PAS découpé en paragraphes (5 blocs au total)',
-  wcJson.components.filter((k) => k.type === 10).length === 5);
+// content + titre + 2 blocs de corps = 4 TextDisplay (pied retiré en v306).
+check('le content n’est PAS découpé en paragraphes (4 blocs au total)',
+  wcJson.components.filter((k) => k.type === 10).length === 4);
 check('séparateur après le bloc content', wcJson.components[1].type === 14);
 check('aucun caractère ━', !JSON.stringify(withContent).includes('━'));
 
@@ -202,9 +204,12 @@ check('le panneau existe toujours', !!raw);
 
 // ------------------------------------------------------------
 console.log('\n10) Pied de panneau — heure reportée, jamais « Invalid Date »');
-const footDefault = texts({ title: 'T', description: 'A', footer: 'Hoxera · Mon serveur' }).slice(-1)[0];
-check('pied rendu en texte discret', footDefault.startsWith('-# Hoxera · Mon serveur'));
-check('AUCUN « Invalid Date » dans le pied', !footDefault.includes('Invalid Date'));
+// v306 — la signature « Hoxera · … » est retirée de tous les panneaux à la
+// demande du fondateur : plus aucun texte discret « -# Hoxera » en pied.
+const footDefaultPanel = ui.v2panel({ title: 'T', description: 'A', footer: 'Hoxera · Mon serveur' });
+const footTexts = texts({ title: 'T', description: 'A', footer: 'Hoxera · Mon serveur' });
+check('signature retirée : aucun pied « -# Hoxera · … » (v306)', !footTexts.some((t) => t.startsWith('-# ')));
+check('AUCUN « Invalid Date » dans le payload', !JSON.stringify(footDefaultPanel).includes('Invalid Date'));
 check('AUCUN « Invalid Date » nulle part dans le payload', !JSON.stringify(ui.v2panel(quizOptions)).includes('Invalid Date'));
 // v241 — RETOURNEMENT assumé de la décision v231. À l'époque, l'heure était
 // reportée dans le pied « parce que Components V2 n'a pas de champ timestamp ».
@@ -213,7 +218,7 @@ check('AUCUN « Invalid Date » nulle part dans le payload', !JSON.stringify(ui.
 // en avait déjà demandé le retrait pour le ticket privé en v238.
 // Le garde-fou que v231 visait vraiment — jamais « Invalid Date » — est conservé
 // ci-dessus (lignes 207-208) et reste vérifié pour la Date explicite ci-dessous.
-check('v241 : PLUS d’heure dans le pied par défaut', !/\d{2}\/\d{2} \d{2}:\d{2}/.test(footDefault));
+check('v241 : PLUS d’heure dans le pied par défaut', !/\d{2}\/\d{2} \d{2}:\d{2}/.test(JSON.stringify(footDefaultPanel)));
 check('v241 : une Date EXPLICITE est toujours honorée (cas starboard)',
   /\d{2}\/\d{2} \d{2}:\d{2}/.test(texts({ title: 'T', description: 'A', footer: 'F', timestamp: new Date(2024, 0, 5, 14, 30) }).slice(-1)[0]));
 check('v241 : une Date explicite ne produit JAMAIS « Invalid Date »',
@@ -291,9 +296,9 @@ check('aucun token en dur dans ui.js',
   !/(ghp_|github_pat_|xox[baprs]-)[A-Za-z0-9_]{15,}/.test(read('server/discord/ui.js')));
 check('aucun token en dur dans extra.js',
   !/(ghp_|github_pat_|xox[baprs]-)[A-Za-z0-9_]{15,}/.test(ex));
-check('index.html : 7 références ?v=305', (read('public/index.html').match(/\?v=305/g) || []).length === 7);
+check('index.html : 7 références ?v=306', (read('public/index.html').match(/\?v=306/g) || []).length === 7);
 check('index.html : plus aucune référence ?v=230', !read('public/index.html').includes('?v=230'));
-check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'botdev-v305';"));
+check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'botdev-v306';"));
 
 console.log(failures === 0
   ? '\n✅ V231 — Séparateurs natifs pleine largeur : API V2 en place, /quiz migré, zéro trait texte, grammaire alignée sur le panneau de référence.'

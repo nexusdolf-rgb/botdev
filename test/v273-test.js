@@ -37,7 +37,8 @@ const check = (nom, cond, detail) => {
 
   console.log('— 1. Tailles calibrées sur TempVoice —');
   check('titre en « ### » (petit titre, pas « ## »)', txt.includes('### 🎙️ Interface Hoxera'));
-  check('légende entière en petit texte « -# » (3 lignes + pied)', (txt.match(/-# /g) || []).length === 4);
+  // v306 — la signature du pied est retirée : il reste les 3 lignes de légende.
+  check('légende entière en petit texte « -# » (3 lignes)', (txt.match(/-# /g) || []).length === 3);
   check('description tenue en une phrase', txt.includes('Gérez **votre salon vocal temporaire** — chaque réponse est **personnelle**.'));
   check("pas de gros paragraphe d'intro", !txt.includes('Cette interface sert à gérer'));
 
@@ -48,8 +49,8 @@ const check = (nom, cond, detail) => {
   console.log('— 3. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=305 référencé 7 fois', (index.match(/\?v=305/g) || []).length === 7);
-  check('sw.js : cache « botdev-v305 »', sw.includes("const CACHE = 'botdev-v305';"));
+  check('index.html : ?v=306 référencé 7 fois', (index.match(/\?v=306/g) || []).length === 7);
+  check('sw.js : cache « botdev-v306 »', sw.includes("const CACHE = 'botdev-v306';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v273 — ${ok} vérifications OK : panneau compact et rangé.`);

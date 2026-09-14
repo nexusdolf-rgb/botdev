@@ -173,8 +173,9 @@ const row = { id: 7, status: 'pending', upvotes: 3, downvotes: 1, bot_id: 'B', t
 const pSug = suggest.buildPanel(row, 'Toto', {});
 check('payload en Components V2', (pSug.flags & MessageFlags.IsComponentsV2) === MessageFlags.IsComponentsV2);
 check('aucun trait texte ━', !JSON.stringify(pSug).includes(SEP));
-check('2 paragraphes → 3 séparateurs natifs (2 entre blocs + 1 pied)',
-  pSug.components[0].toJSON().components.filter((k) => k.type === 14 && k.divider === true).length === 3);
+// v306 : la signature du pied est retirée → son séparateur disparaît (3 → 2).
+check('2 paragraphes → 2 séparateurs natifs entre blocs (pied retiré en v306)',
+  pSug.components[0].toJSON().components.filter((k) => k.type === 14 && k.divider === true).length === 2);
 check('les 3 compteurs inline groupés sur une ligne',
   pSug.components[0].toJSON().components.filter((k) => k.type === 10)
     .some((k) => /^\*\*📊 Statut\*\* .* · \*\*👍 Votes\*\* 3 · \*\*👎 Votes\*\* 1$/.test(k.content)));
@@ -238,9 +239,9 @@ console.log('\n12) Aucun secret ajouté + versionnage front v232');
   check(`aucun token en dur dans ${path.basename(f)}`,
     !/(ghp_|github_pat_|rnd_|xox[baprs]-)[A-Za-z0-9_-]{15,}/.test(read(f)));
 });
-check('index.html : 7 références ?v=305', (read('public/index.html').match(/\?v=305/g) || []).length === 7);
+check('index.html : 7 références ?v=306', (read('public/index.html').match(/\?v=306/g) || []).length === 7);
 check('index.html : plus aucune référence ?v=231', !read('public/index.html').includes('?v=231'));
-check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'botdev-v305';"));
+check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'botdev-v306';"));
 
 console.log(failures === 0
   ? '\n✅ V232 — Lot n°2 : 18 emplacements migrés (premade ×13, suggest ×5), queue.js corrigé, xp.js exclu et documenté.'

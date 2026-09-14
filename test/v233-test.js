@@ -79,10 +79,11 @@ check('texte par défaut conservé', allText(pDef).includes('Réagissez avec �
 check('titre en « ## 🎁 Giveaway »', txts(pDef)[0] === '## 🎁 Giveaway');
 check('tous les Separator en divider:true (pleine largeur)',
   cont(pDef).components.filter((k) => k.type === 14).every((k) => k.divider === true));
-// 2 paragraphes (prix + message) + 1 bloc de compteurs = 3 blocs → 2 + 1 pied = 3.
-check('3 séparateurs natifs (2 entre blocs + 1 pied)', nDiv(pDef) === 3);
+// 2 paragraphes (prix + message) + 1 bloc de compteurs = 3 blocs → 2 séparateurs
+// (v306 : pied signature retiré).
+check('2 séparateurs natifs entre blocs (pied retiré en v306)', nDiv(pDef) === 2);
 const p2par = giveaway.buildPanel(G, { message: 'Réagissez avec 🎉 pour participer !\n\nSeuls les membres du serveur sont éligibles.' });
-check('message utilisateur à 2 paragraphes → 4 séparateurs', nDiv(p2par) === 4);
+check('message utilisateur à 2 paragraphes → 3 séparateurs (pied retiré en v306)', nDiv(p2par) === 3);
 check('les 2 paragraphes du message utilisateur sont conservés distincts',
   allText(p2par).includes('Réagissez avec 🎉 pour participer !') && allText(p2par).includes('Seuls les membres du serveur sont éligibles.'));
 
@@ -118,8 +119,8 @@ check('couleur or (nouveau tirage)', cont(pReroll).accent_color === 0xFEE75C);
 check('titre « nouveau tirage » pour un reroll', txts(pReroll)[0].includes('nouveau tirage'));
 check('3 sections conservées (prix / gagnants / merci)',
   ['**Nitro Boost**', '🏆 Gagnant(s) : <@u1> <@u2>', "Merci à tous d'avoir participé"].every((x) => allText(pEnd).includes(x)));
-// 3 paragraphes + 1 bloc de compteurs = 4 blocs → 3 + 1 pied = 4.
-check('4 séparateurs natifs sur le panneau final', nDiv(pEnd) === 4);
+// 3 paragraphes + 1 bloc de compteurs = 4 blocs → 3 séparateurs (pied retiré en v306).
+check('3 séparateurs natifs sur le panneau final', nDiv(pEnd) === 3);
 const pNoWin = giveaway.buildEndedPanel({ prize: 'X' }, [], false);
 check('sans gagnant : mention « Aucun participant »', allText(pNoWin).includes('Aucun participant'));
 check('message.edit reçoit le payload V2 (pas { embeds: [...] })',
@@ -161,7 +162,9 @@ check('le nombre d’inscrits est correct', allText(pEv).includes('2 inscrit(s)'
 check('le champ Détails (non inline) a son propre bloc',
   txts(pEv).some((t) => t.startsWith('**📝 Détails**\n')));
 check('le champ Liste des inscrits est présent', allText(pEv).includes('**📋 Liste**'));
-check('pied avec l’ID de l’événement', txts(pEv).slice(-1)[0].includes(`ID ${ev.id}`));
+// v306 — la signature du pied (qui portait l'ID) est retirée ; l'ID reste
+// visible dans la réponse texte et dans /event list & delete (**#id**).
+check('signature du pied retirée (v306)', !txts(pEv).some((t) => t.startsWith('-# Hoxera')));
 
 const pReminder = guildEvents.eventPanel(fakeEntry, 'G233', ev, [fakeRow], '📣 **Soirée jeux** commence dans **24 h**');
 check('le texte de rappel devient le premier TextDisplay',
@@ -213,9 +216,9 @@ console.log('\n8) Aucun secret ajouté + versionnage front v233');
   check(`aucun token en dur dans ${path.basename(f)}`,
     !/(ghp_|github_pat_|rnd_|xox[baprs]-)[A-Za-z0-9_-]{15,}/.test(read(f)));
 });
-check('index.html : 7 références ?v=305', (read('public/index.html').match(/\?v=305/g) || []).length === 7);
+check('index.html : 7 références ?v=306', (read('public/index.html').match(/\?v=306/g) || []).length === 7);
 check('index.html : plus aucune référence ?v=232', !read('public/index.html').includes('?v=232'));
-check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'botdev-v305';"));
+check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'botdev-v306';"));
 
 console.log(failures === 0
   ? '\n✅ V233 — Lot n°3 : giveaways (5) et événements (7) en séparateurs natifs pleine largeur, édition de fin de tirage comprise.'
