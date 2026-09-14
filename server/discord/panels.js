@@ -710,8 +710,11 @@ function ticketWelcomePanel(member, chosen, staffMention, reason, dmWarning = ''
     fields.push({ name: '⚠️', value: String(dmWarning).replace(/^\n+/, '').slice(0, 1024), inline: false });
   }
   const avatar = member.user.displayAvatarURL ? member.user.displayAvatarURL({ dynamic: true }) : '';
-  const chosenColor = /^#[0-9a-fA-F]{6}$/.test(String(chosen && chosen.color || '')) ? chosen.color : '';
-  const finalColor = room.color || chosenColor || '#57F287';
+  // v308 (demande du fondateur) — la petite ligne verticale du panneau du
+  // salon privé est unifiée : même couleur Hoxera standard pour TOUS les
+  // tickets, quelle que soit la couleur du type (les couleurs des types
+  // restent disponibles pour les boutons staff via le mapping privé).
+  const finalColor = '#e07a5f';
   // Variables disponibles dans le titre / message personnalisé.
   const resolveRoomVars = (tpl) => String(tpl || '')
     .replace(/{member}/g, `${member}`)
@@ -1582,7 +1585,9 @@ async function handleTicketClose(botId, interaction) {
   store.openTickets.update(channel.id, { closed_at: new Date().toISOString() });
   bumpTicketStats(guild.id, 0, -1);
   await channel.send(ui.v2panel({
-    variant: 'danger',
+    // v308 — ligne verticale unifiée (couleur Hoxera standard), comme tous
+    // les panneaux du système de tickets (avant : rouge « danger »).
+    color: '#e07a5f',
     title: '🔒 Ticket fermé',
     description: 'Le ticket est maintenant verrouillé. Le créateur ne peut plus écrire, mais le staff peut encore le réouvrir.',
     fields: [
@@ -1618,7 +1623,9 @@ async function handleTicketReopen(botId, interaction) {
     await channel.permissionOverwrites.edit(openerId, { ViewChannel: true, SendMessages: true }).catch(() => {});
   }
   await channel.send(ui.v2panel({
-    variant: 'success',
+    // v308 — ligne verticale unifiée (couleur Hoxera standard), comme tous
+    // les panneaux du système de tickets (avant : verte « succès »).
+    color: '#e07a5f',
     title: '🔓 Ticket réouvert',
     description: 'Le créateur peut de nouveau répondre. Le staff peut reprendre le traitement du ticket.',
     fields: [{ name: '🛡️ Réouvert par', value: `${interaction.user}`, inline: true }],
@@ -1648,7 +1655,9 @@ async function handleTicketClaim(botId, interaction) {
   });
   store.activity.add(botId, guild.id, '🖐️', `Ticket #${row.number} pris en charge par ${interaction.user.tag}`);
   await channel.send(ui.v2panel({
-    variant: 'success',
+    // v308 — ligne verticale unifiée (couleur Hoxera standard), comme tous
+    // les panneaux du système de tickets (avant : verte « succès »).
+    color: '#e07a5f',
     title: '🖐️ Ticket pris en charge',
     description: i18n.t(lang, 'ticket_claim_msg', { staff: `${interaction.user}` }),
     fields: [
@@ -1987,7 +1996,9 @@ async function handleTicketHold(botId, interaction) {
     await channel.permissionOverwrites.edit(openerId, { ViewChannel: true, SendMessages: false }).catch(() => {});
   }
   await channel.send(ui.v2panel({
-    variant: 'warning',
+    // v308 — ligne verticale unifiée (couleur Hoxera standard), comme tous
+    // les panneaux du système de tickets (avant : orange « attention »).
+    color: '#e07a5f',
     title: '⏸ Ticket mis en attente',
     description: 'Le ticket est temporairement en pause. Le créateur ne peut plus écrire jusqu’à la reprise du traitement.',
     fields: [{ name: '🛡️ Mis en attente par', value: `${interaction.user}`, inline: true }],

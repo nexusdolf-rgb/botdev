@@ -962,6 +962,20 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v308 (14/09 — LIGNE VERTICALE DES PANNEAUX TICKETS UNIFIÉE)** : le
+  fondateur re-précise — il parle de la PETITE LIGNE VERTICALE à côté des
+  panneaux (l'accent du conteneur Components V2), PAS des boutons. Sur son
+  serveur, le panneau de tickets personnalisés prenait la couleur du 1er
+  type de ticket (#f37059 = rouge) et le salon privé celle du type : il
+  voyait donc des lignes rouges/orangées un peu partout dans le système de
+  tickets. Désormais, TOUS les panneaux du système de tickets portent la
+  même ligne en couleur Hoxera standard #e07a5f :
+    * advancedTickets.buildPanelPayload → accent fixé à #e07a5f ;
+    * panels.ticketWelcomePanel → finalColor fixé à #e07a5f ;
+    * panneaux « fermé » / « réouvert » / « pris en charge » / « mis en
+      attente » → color #e07a5f (avant : variants danger/success/warning).
+  Les boutons (styles, couleurs des types) et le reste des panneaux ne
+  changent PAS. Test v308 : 12 vérifications.
 - **v307 (14/09 — RECTIFICATION DE PORTÉE)** : le fondateur précise —
   « je te dis d'enlever que celui du panneau ticket, pas les autres
   panneaux ». La suppression GLOBALE de la signature (moteur ui.v2container)
@@ -1381,13 +1395,14 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 14/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v307** — rectification de portée de la v306 : la
-  signature « Hoxera · … » n'est retirée QUE du panneau de tickets (le seul
-  visé par le fondateur) ; elle est RÉTABLIE sur tous les autres panneaux.
-  Le panneau tickets garde aussi sa couleur Hoxera standard `#e07a5f` (plus
-  de ligne rouge). `test/v307-test.js` (13 vérifications). Les panneaux déjà
-  envoyés gardent leur ancienne apparence : renvoyer le panneau depuis le
-  dashboard applique le nouveau style.
+- Dernière version : **v308** — la petite ligne verticale (accent) de TOUS
+  les panneaux du système de tickets est unifiée en couleur Hoxera standard
+  `#e07a5f` : panneau public classique, panneau personnalisé (avant : couleur
+  du 1er type, rouge chez le fondateur), accueil du salon privé (avant :
+  couleur du type), fermé/réouvert/pris en charge/mis en attente (avant :
+  rouge/vert/vert/orange). Les boutons et couleurs de types ne changent pas.
+  `test/v308-test.js` (12 vérifications). Les panneaux déjà postés gardent
+  leur apparence : renvoyer un panneau applique le nouveau style.
 - ✅ **Incident du 14/09 CLÔTURÉ** : `BOTDEV_GH_TOKEN` révoqué → boot sur base
   vide. Rétabli à 15h56 : nouveau PAT reporté dans Render via l'API
   (`PUT /v1/services/srv-da5i2h2jobas73epvos0/env-vars/BOTDEV_GH_TOKEN` avec

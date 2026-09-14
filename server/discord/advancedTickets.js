@@ -115,8 +115,12 @@ function buildPanelPayload(config) {
 
   // Components V2 permet de placer chaque bouton à droite de son type,
   // comme dans le modèle visuel fourni : description puis bouton, verticalement.
+  // v308 (demande du fondateur) — la petite ligne verticale du panneau
+  // (accent) ne prend plus la couleur du 1er type de ticket (rouge chez
+  // l'utilisateur) : TOUS les panneaux du système de tickets portent la même
+  // couleur Hoxera standard. Les boutons, eux, ne changent pas.
   const container = new ContainerBuilder()
-    .setAccentColor(colorInt(cfg.types[0].color));
+    .setAccentColor(colorInt('#e07a5f'));
   if (cfg.image_url) {
     container.addMediaGalleryComponents(
       new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(cfg.image_url))

@@ -60,7 +60,9 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('panels : readRoomCfg exporté', /readRoomCfg, typeOptionDescription/.test(panels));
   check('panels : le welcome reçoit la config (param room)', panels.includes('room = ROOM_DEFAULTS'));
   check('panels : titre perso via {variables}', /resolveRoomVars/.test(panels));
-  check('panels : couleur finale = réglage > type > #57F287', panels.includes("const finalColor = room.color || chosenColor || '#57F287';"));
+  // v308 — la petite ligne verticale des panneaux tickets est unifiée sur la
+  // couleur Hoxera standard (avant : réglage > type > #57F287).
+  check('panels : couleur finale unifiée #e07a5f (v308)', panels.includes("const finalColor = '#e07a5f';"));
   check('panels : openTicket charge la config du salon', panels.includes('const room = readRoomCfg(botId, guild.id);'));
 
   // ---------- 4. Actions staff en MENU DÉROULANT ----------
@@ -87,8 +89,8 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('dash : bouton restaurer les valeurs par défaut', dash.includes('id="tr-default"'));
 
   // ---------- 6. Version ----------
-  check('site : bump v212 (index)', index.includes('?v=307'));
-  check('site : bump v212 (sw cache)', sw.includes('botdev-v307'));
+  check('site : bump v212 (index)', index.includes('?v=308'));
+  check('site : bump v212 (sw cache)', sw.includes('botdev-v308'));
 
   console.log(`  ✅ v212 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });
