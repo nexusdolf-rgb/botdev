@@ -59,6 +59,22 @@ function isValidSqlite(buf) {
   return buf && buf.length >= 16 && buf.subarray(0, 16).toString('utf8') === 'SQLite format 3\u0000';
 }
 
+// 🛟 v302 — Validation d'une sauvegarde téléchargée : SQLite lisible ET au
+// moins un bot dedans (une base sans bot est le symptôme exact de la base
+// fraîche qu'il ne faut JAMAIS restaurer ni ré-écrire par-dessus la bonne).
+function countBotsIn(buf) {
+  const tmp = paths.dbPath + '.incoming';
+  try {
+    fs.writeFileSync(tmp, buf);
+    const Database = require('better-sqlite3');
+    const check = new Database(tmp, { readonly: true });
+    const n = check.prepare('SELECT COUNT(*) AS n FROM bots').get().n || 0;
+    check.close();
+    return n;
+  } catch { return 0; }
+  finally { try { fs.rmSync(tmp, { force: true }); } catch {} }
+}
+
 // Télécharge la sauvegarde distante. Retourne un Buffer ou null.
 // (L'API GitHub peut mettre 1-2 s à propager un fichier fraîchement écrit :
 // on retente donc quelques fois en cas de 404.)
@@ -131,22 +147,8 @@ async function restore() {
     // 🛟 VALIDATION ANTI-CATASTROPHE : on ne restaure JAMAIS une sauvegarde
     // sans bot (base vide). C'est ce qui a détruit les données : une base
     // vide avait écrasé la bonne, puis tout le monde la restaurait.
-    let valid = false;
-    let n = 0;
-    try {
-      const Database = require('better-sqlite3');
-      const tmp = paths.dbPath + '.incoming';
-      fs.writeFileSync(tmp, buf);
-      const check = new Database(tmp, { readonly: true });
-      n = check.prepare('SELECT COUNT(*) AS n FROM bots').get().n || 0;
-      check.close();
-      fs.rmSync(tmp, { force: true });
-      valid = n > 0;
-    } catch (e) {
-      lastRestoreInfo = 'validation impossible: ' + String(e.message || e).slice(0, 80);
-      valid = false;
-    }
-    if (!valid) {
+    const n = countBotsIn(buf);
+    if (!(n > 0)) {
       if (!lastRestoreInfo.startsWith('validation')) lastRestoreInfo = 'sauvegarde distante SANS bot — ignoree (taille ' + buf.length + ')';
       console.log('🛟 Sauvegarde distante SANS bot — ignorée. (taille reçue : ' + buf.length + ' octets)');
       return false;
@@ -211,6 +213,18 @@ async function upload(db) {
     console.log('🛟 Sauvegarde ANNULÉE : la base locale n\'a aucun bot (base vide ?) — la bonne sauvegarde distante est préservée.');
     return false;
   }
+  // 🛟 v302 — GARDE-FOU « BASE FRAÎCHE » : une instance qui vient de démarrer
+  // sans réussir sa restauration (token GitHub mort, panne réseau…) se
+  // retrouve avec 1 bot provisionné mais AUCUN réglage de serveur. Si elle
+  // poussait sa base, la sauvegarde distante (qui contient tout le travail :
+  // réglages, tickets, transcriptions…) serait écrasée par 4 Ko vides.
+  // Une vraie base en service a toujours au moins un réglage de serveur.
+  let guildCfgCount = 0;
+  try { guildCfgCount = db.prepare('SELECT COUNT(*) AS n FROM guild_settings').get().n || 0; } catch {}
+  if (guildCfgCount === 0 && sha) {
+    console.log('🛟 Sauvegarde ANNULÉE : la base locale n\'a aucun réglage de serveur (instance fraîche / restauration ratée ?) — la bonne sauvegarde distante est préservée.');
+    return false;
+  }
   const body = {
     message: `💾 botdev.db (${new Date().toISOString()})`,
     content: buf.toString('base64'),
@@ -232,4 +246,58 @@ async function upload(db) {
   return false;
 }
 
-module.exports = { enabled, repo, branch, download, restore, upload, ghJson, snapshot, getLastRestoreInfo: () => lastRestoreInfo, MAX_BACKUP_BYTES };
+// ============================================================
+// 🚑 v302 — Restauration différée auto-réparante.
+// Incident réel du 14/09 : token GitHub révoqué → la restauration au boot
+// échoue (« Bad credentials ») → le service démarre sur une base VIDE
+// (plus aucun réglage, tickets, vérification…) et il n'existe alors plus
+// aucun moyen de récupérer les données sans intervention humaine.
+// Ce boucle réessaie toutes les 5 min TANT QUE la base locale est fraîche
+// (aucun réglage de serveur : rien à perdre). Dès que la sauvegarde
+// distante redevient téléchargeable ET valide, on redémarre proprement :
+// Render relance le service et le restore au boot charge les vraies données.
+// On ne redémarre JAMAIS si la base locale contient déjà des réglages :
+// des données réelles auraient été accumulées depuis le boot.
+// ============================================================
+let restoreRetryTimer = null;
+const RESTORE_RETRY_INTERVAL_MS = 5 * 60000;
+
+// Un cycle de tentative (exposé pour les tests automatiques). Retourne :
+//  'stopped'  — la base locale n'est plus fraîche, les tentatives s'arrêtent
+//  'wait'     — la sauvegarde distante est encore inaccessible
+//  'restart'  — la sauvegarde est accessible : redémarrage demandé
+async function retryRestoreOnce(getDb) {
+  const db = typeof getDb === 'function' ? getDb() : null;
+  if (!db) return 'wait';
+  // La base locale n'est plus fraîche → des données réelles existent,
+  // un redémarrage les perdrait : on arrête définitivement les tentatives.
+  let settingsCount = 0;
+  try { settingsCount = db.prepare('SELECT COUNT(*) AS n FROM guild_settings').get().n || 0; } catch {}
+  if (settingsCount > 0) {
+    if (restoreRetryTimer) { clearInterval(restoreRetryTimer); restoreRetryTimer = null; }
+    console.log('[BotDev] 💾 Base locale non fraîche — arrêt des tentatives de restauration différée.');
+    return 'stopped';
+  }
+  const buf = await module.exports.download();
+  if (!buf) return 'wait'; // encore inaccessible — on retentera dans 5 min
+  if (!(countBotsIn(buf) > 0)) return 'wait'; // sauvegarde suspecte, on n'y touche pas
+  console.log('[BotDev] 💾 La sauvegarde distante est de nouveau accessible — redémarrage pour restaurer les données…');
+  try { db.close(); } catch {}
+  lastRestoreInfo = 'redémarrage différé : sauvegarde de nouveau accessible';
+  process.exit(0); // Render relance le service → restore() réussit au boot
+  return 'restart';
+}
+
+function startRestoreRetries(getDb) {
+  if (restoreRetryTimer) return;
+  if (!enabled()) return;
+  restoreRetryTimer = setInterval(() => {
+    module.exports._retryRestoreOnce(getDb).catch(() => { /* prochain cycle dans 5 min */ });
+  }, RESTORE_RETRY_INTERVAL_MS);
+}
+
+function stopRestoreRetries() {
+  if (restoreRetryTimer) { clearInterval(restoreRetryTimer); restoreRetryTimer = null; }
+}
+
+module.exports = { enabled, repo, branch, download, restore, upload, ghJson, snapshot, getLastRestoreInfo: () => lastRestoreInfo, startRestoreRetries, stopRestoreRetries, _retryRestoreOnce: retryRestoreOnce, countBotsIn, MAX_BACKUP_BYTES, RESTORE_RETRY_INTERVAL_MS };

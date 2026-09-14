@@ -34,6 +34,15 @@ async function main() {
   const botManager = require('./discord/botManager');
   store.settings.set('boot_restore', restoreStatus);
 
+  // 🚑 v302 — restauration différée auto-réparante : si le boot n'a pas pu
+  // restaurer la sauvegarde (token GitHub mort, réseau…), on retente toutes
+  // les 5 min tant que la base locale est fraîche ; dès que la sauvegarde est
+  // de nouveau accessible, le service redémarre proprement et repart avec les
+  // vraies données (voir backup.startRestoreRetries).
+  if (!String(restoreStatus).startsWith('ok')) {
+    try { backup.startRestoreRetries(() => store.db); } catch (e) { console.error('[BotDev] restauration différée :', e.message); }
+  }
+
   // 🧪 Contrôle d'intégrité de la base au démarrage : si la base est
   // corrompue, on le sait tout de suite (au lieu de découvertes en cascade).
   try {

@@ -269,6 +269,10 @@ async function guardInteraction(botId, entry, i, timeoutMs = 15000) {
       // synchronisée, nom inconnu…), on répond quand même pour éviter le
       // « L'application ne répond pas » de Discord.
       if (i.isChatInputCommand() && !i.replied && !i.deferred) {
+        // 🛡️ v302 — chaque occurrence devient VISIBLE dans /api/health/bot :
+        // avant, ce garde-fou se déclenchait en silence et le diagnostic
+        // dépendait uniquement du signalement des utilisateurs.
+        try { require('../health').recordError('commande-sans-reponse', `/${i.commandName || '?'} (guilde ${i.guildId || 'MP'})`); } catch {}
         await i.reply({
           content: t('guard_not_ready'),
           ephemeral: true,

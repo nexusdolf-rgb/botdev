@@ -939,6 +939,42 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   existantes** en base. Le bloc de migration de `db.js` est une **ZONE PROTÉGÉE** :
   `scripts/v240-complements.js` le découpe (`decoupe()`) et n'y touche jamais —
   un `split/join` naïf avait transformé la migration en opération vide
+- **v302 (14/09 — INCIDENT MAJEUR « BASE VIDE » + correctifs)** : le token GitHub
+  fin-grained de sauvegarde (`BOTDEV_GH_TOKEN` sur Render) a été révoqué quand
+  l'utilisateur a généré son nouveau PAT. Conséquence : au redémarrage de
+  15h08, `restore()` échoue (« Bad credentials ») → **le service repart sur une
+  base VIDE** (4 Ko : 1 bot provisionné, zéro réglage, zéro ticket, zéro
+  vérification — toute la config des 8 serveurs existe encore dans
+  `botdev-data` mais n'est plus chargée). Les signalements « /help répond
+  toujours *pas encore prête* » et « tout le monde voit les salons de tickets »
+  viennent de là : sans données, la réparation v301 (`repairPrivateChannels`,
+  qui lit `open_tickets`) ne trouve rien à réparer, et les commandes tournent
+  sur une config fantôme. **Rétablissement = mettre le nouveau PAT dans
+  `BOTDEV_GH_TOKEN` sur Render puis redémarrer** (le boot restaure la bonne
+  base ; jamais deux services actifs avec le même token, piège n°7).
+  Correctifs livrés : **1)** `backup.upload` — nouveau garde-fou « base
+  fraîche » : une instance sans AUCUN `guild_settings` (restauration ratée)
+  n'écrase JAMAIS la bonne sauvegarde distante, même avec 1 bot provisionné
+  (l'ancien garde `botCount === 0` laissait passer ce cas). **2)**
+  `backup.startRestoreRetries` / `_retryRestoreOnce` : si le boot n'a pas
+  restauré, nouvelle tentative toutes les 5 min TANT QUE la base locale est
+  fraîche ; dès que la sauvegarde redevient accessible ET contient un bot →
+  `process.exit(0)` (Render relance, le boot restaure) ; si des réglages
+  existent en local, les tentatives s'arrêtent définitivement (on ne perd
+  jamais de données accumulées). **3)** `verification.repairPrivateChannels` —
+  repli INDÉPENDANT de la base : un salon de ticket se reconnaît aussi à son
+  sujet `Ticket #N de …` (posé à la création), donc les salons fuités restent
+  réparés même si leurs fiches `open_tickets` ont été perdues ; un salon
+  ordinaire n'est JAMAIS touché par ce repli. **4)** `premade.execute/send` —
+  un échec d'envoi Discord n'est plus avalé en silence : erreur visible dans
+  `/api/health/bot` (source `envoi-commande`) + réponse texte de secours à la
+  place du trompeur « pas encore prête, retente dans 5 à 10 minutes ».
+  **5)** le garde-fou « commande sans réponse » (`botManager.guardInteraction`)
+  journalise chaque occurrence (source `commande-sans-reponse`) pour que le
+  diagnostic ne dépende plus uniquement des signalements. Test v302 :
+  26 vérifications. ⚠️ **Leçons** : vérifier `bootRestore` dans
+  `/api/health/bot` APRÈS chaque redémarrage/déploiement ; toute rotation de
+  token GitHub doit être reportée dans Render AVANT de révoquer l'ancien.
 - **v241 — TEXTES AFFICHÉS SUR DISCORD (décisions à ne pas défaire)** :
   - **Horodatage retiré de tous les panneaux.** `ui.v2panel()` n'ajoute une date que
     si `options.timestamp instanceof Date` ; `timestamp: true` ne fait plus rien.

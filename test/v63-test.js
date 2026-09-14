@@ -93,7 +93,22 @@ const check = (label, cond) => {
   };
   const r4 = await backup.upload(store.db);
   backup.ghJson = origGhJson;
-  check('upload : base avec bot → sauvegarde effectuée', r4 === true && putCalls === 1);
+  // v302 — une base qui n'a qu'un bot provisionné et AUCUN réglage de serveur
+  // est une « base fraîche » (restauration ratée) : elle ne doit PAS écraser
+  // la bonne sauvegarde distante. Le cas sain = bot + au moins un réglage.
+  check('upload v302 : base fraîchement provisionnée (0 réglage) → refusée', r4 === false && putCalls === 0);
+  store.guildSettings.set(1, 'guilde-test', {});
+  backup.ghJson = async (route, opts = {}) => {
+    if (String(route).includes('/contents/')) {
+      if (opts.method !== 'PUT') return { sha: 'abc123' };
+      putCalls++;
+      return { ok: true };
+    }
+    return {};
+  };
+  const r4b = await backup.upload(store.db);
+  backup.ghJson = origGhJson;
+  check('upload : base avec bot + réglages → sauvegarde effectuée', r4b === true && putCalls === 1);
 
   store.db.close();
   console.log(failures === 0 ? '\n✅ V63 — Garde-fous anti-catastrophe : une base vide ne peut plus rien détruire. 🎉' : `\n❌ ${failures} vérification(s) en échec`);

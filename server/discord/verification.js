@@ -235,6 +235,17 @@ async function repairPrivateChannels(botId, entry) {
         const rows = store.db.prepare('SELECT channel_id FROM advanced_ticket_channels WHERE bot_id = ? AND guild_id = ?').all(botId, guild.id);
         for (const r of rows) privateIds.add(String(r.channel_id));
       } catch {}
+      // 🛡️ v302 — Repli qui ne dépend PAS de la base : si les fiches des
+      // tickets ont été perdues (base restaurée vide après une panne du token
+      // de sauvegarde, incident du 14/09), les salons de ticket restent
+      // reconnaissables à leur sujet « Ticket #N de … » posé à la création.
+      // Sans ce repli, les salons déjà fuités ne seraient JAMAIS réparés.
+      try {
+        for (const ch of guild.channels.cache.values()) {
+          if (!ch || ch.type === 4) continue;
+          if (String(ch.topic || '').startsWith('Ticket #')) privateIds.add(String(ch.id));
+        }
+      } catch {}
       if (!privateIds.size) continue;
       let fixed = 0;
       for (const id of privateIds) {

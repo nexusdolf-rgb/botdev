@@ -606,6 +606,19 @@ async function execute(botId, entry, cmd, src) {
       }
     } catch (e) {
       console.error('[BotDev] send:', (e && e.message) || e);
+      // 🛡️ v302 — un échec d'envoi ne doit PLUS rester invisible : avant,
+      // l'erreur était avalée ici puis le garde-fou d'interaction répondait
+      // « commande pas encore prête, retente dans 5 à 10 minutes » — un
+      // message qui mentait (la commande était prête, c'est l'ENVOI du
+      // panneau qui avait été refusé). L'erreur remonte désormais dans
+      // /api/health/bot, et une réponse texte simple est tentée en secours.
+      try { require('../health').recordError('envoi-commande', `${cmd}: ${(e && e.message) || e}`); } catch {}
+      if (isInt && !src._replied) {
+        try {
+          await src.interaction.reply({ content: '⚠️ Impossible d\'afficher le panneau (erreur côté Discord) — l\'erreur a été enregistrée, réessayez.', ephemeral: true });
+          src._replied = true;
+        } catch {}
+      }
     }
   };
   const reply = async (content) => send({ content });
