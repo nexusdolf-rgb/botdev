@@ -962,6 +962,39 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v304 (14/09 — AUDIT GÉNÉRAL + FILETS DE SÉCURITÉ PERMANENTS)** : demande
+  du fondateur : « analyse toutes les commandes, corrige tout ce qui est
+  cassé, mets en place des systèmes de sécurité pour empêcher d'autres
+  problèmes ». Quatre couches mises en place, chacune testée :
+  1. `ui.v2Audit(payload)` — validateur pur qui vérifie n'importe quel
+     payload Components V2 contre les vraies limites Discord (≤ 40 composants
+     imbriqués compris, ≤ 4000 caractères par TextDisplay et au total,
+     ≤ 5 boutons par rangée, rangée de select exclusive, ≤ 25 options,
+     ≤ 10 éléments de galerie).
+  2. `ui.v2panel` s'auto-audite à la construction : tout écart est journalisé
+     (`health.recordError('panneau-invalide')`) → visible dans
+     `/api/health/bot` au lieu de disparaître dans les logs.
+  3. `premade.send()` BLOQUE dur : un panneau V2 invalide n'est jamais envoyé
+     à Discord ; l'utilisateur reçoit une réponse texte polie et l'incident
+     est journalisé (`panneau-bloque`).
+  4. `botManager.wrapInteractionAudit()` — le filet GLOBAL : appliqué dans
+     `guardInteraction`, il enveloppe `reply/update/editReply/followUp` de
+     chaque interaction (premade, extra, panels, commandes personnalisées,
+     giveaways, événements, contextmenus). Un payload V2 hors limites est
+     remplacé AVANT l'appel Discord : réponse texte éphémère pour
+     reply/followUp, panneau V2 « avertissement » pour update/editReply (un
+     message V2 ne pouvant pas repasser en contenu simple).
+  **Audit d'exécution** : `test/v304-test.js` joue les 66 commandes slash
+  (38 premade + 5 panneaux + 27 extra + /event + help détaillé) via la vraie
+  chaîne de dispatch (contextmenus → help → extra → events → panels →
+  engine) avec un serveur simulé complet, et exige pour chacune : réponse
+  présente, zéro exception, et chaque payload envoyé validé par `v2Audit`.
+  Résultat au 14/09 : **66/66 commandes fonctionnelles, 0 payload invalide**.
+  📌 **RÈGLE** : toute nouvelle commande passe par ce harnais (ajouter son
+  entrée dans `test/v304-test.js`) ; tout payload qui contourne `v2panel`
+  doit être audité. Ce harnais est la défense contre le retour du bug /help
+  (v303) : un panneau trop lourd ne peut plus ni être envoyé, ni passer
+  inaperçu.
 - **v302 (14/09 — INCIDENT MAJEUR « BASE VIDE » + correctifs)** : le token GitHub
   fin-grained de sauvegarde (`BOTDEV_GH_TOKEN` sur Render) a été révoqué quand
   l'utilisateur a généré son nouveau PAT. Conséquence : au redémarrage de
@@ -1295,9 +1328,12 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 14/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v303** — incident « base vide » résolu + vrai bug /help corrigé (voir les sections
-  v302 dans l'historique). **220 tests verts** (`test/v302-test.js` :
-  26 vérifications).
+- Dernière version : **v304** — audit général des 66 commandes (toutes
+  fonctionnelles) + 4 couches de sécurité permanentes contre les panneaux
+  invalides : `ui.v2Audit`, auto-audit `v2panel`, blocage dur dans
+  `premade.send()`, et filet global `wrapInteractionAudit` sur toutes les
+  réponses Discord. Harnais `test/v304-test.js` (84 vérifications).
+  **222 tests verts.**
 - ✅ **Incident du 14/09 CLÔTURÉ** : `BOTDEV_GH_TOKEN` révoqué → boot sur base
   vide. Rétabli à 15h56 : nouveau PAT reporté dans Render via l'API
   (`PUT /v1/services/srv-da5i2h2jobas73epvos0/env-vars/BOTDEV_GH_TOKEN` avec

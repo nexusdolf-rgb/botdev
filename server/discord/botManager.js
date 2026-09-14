@@ -197,7 +197,49 @@ function friendlyError(err) {
 //  - trop lent (15 s) → réponse « patiente un instant » + le traitement
 //    continue en arrière-plan (plus jamais d'action « calée » sans réponse)
 //  - aucun gestionnaire (commande pas encore synchronisée…) → réponse d'attente
+// 🛡️ v304 — AUDIT GLOBAL DES RÉPONSES V2 : TOUT reply/update/editReply/
+// followUp portant un panneau Components V2 est validé contre les vraies
+// limites Discord AVANT l'envoi. En cas de violation, le payload est
+// remplacé par une réponse saine et l'erreur est journalisée dans
+// /api/health/bot. Un seul point de passage protège TOUS les modules
+// (commandes, tickets, giveaways, événements, jeux…) — la classe de bug
+// « COMPONENT_MAX_TOTAL_COMPONENTS_EXCEEDED » (incident /help du 14/09)
+// ne peut plus atteindre Discord, et chaque cas devient diagnostiquable.
+// Exporté pour les tests automatiques.
+function wrapInteractionAudit(i) {
+  try {
+    const uiMod = require('./ui');
+    const FLAG_V2 = 1 << 15; // MessageFlags.IsComponentsV2
+    const auditArgs = (method, args) => {
+      try {
+        const p = args && args.length ? args[0] : null;
+        if (!p || typeof p !== 'object' || !Array.isArray(p.components) || !p.components.length) return args;
+        if (!(Number(p.flags || 0) & FLAG_V2)) return args;
+        const violations = uiMod.v2Audit(p);
+        if (!violations.length) return args;
+        const qui = String(i.commandName || i.customId || '?').slice(0, 60);
+        console.error(`[BotDev] 🛡️ Réponse V2 hors limites remplacée (${qui}) : ${violations.join(' · ').slice(0, 180)}`);
+        try { require('../health').recordError('panneau-invalide', `${qui}: ${violations[0]}`.slice(0, 200)); } catch {}
+        const excuse = '⚠️ Cette réponse dépassait les limites d\'affichage de Discord — le problème a été enregistré. Réessayez.';
+        // update/editReply modifient un message EXISTANT : s'il était en V2,
+        // Discord interdit d'en sortir → la réponse de repli reste un panneau V2.
+        if (method === 'update' || method === 'editReply') {
+          return [uiMod.v2panel({ variant: 'warning', description: excuse, footer: false, sections: false })];
+        }
+        return [{ content: excuse, ephemeral: true }];
+      } catch { return args; }
+    };
+    for (const method of ['reply', 'update', 'editReply', 'followUp']) {
+      if (typeof i[method] !== 'function') continue;
+      const orig = i[method].bind(i);
+      i[method] = (...args) => orig(...auditArgs(method, args));
+    }
+  } catch {}
+  return i;
+}
+
 async function guardInteraction(botId, entry, i, timeoutMs = 15000) {
+  wrapInteractionAudit(i);
   // 🌍 Messages dans la langue du serveur
   const lang = (() => {
     try {
@@ -842,4 +884,4 @@ function platformStats() {
   return { onlineBots, servers, members };
 }
 
-module.exports = { clients, getClient, isOnline, getGuildPerms, loginBot, reconnectBot, logoutBot, stopAll, syncSlashCommands, syncGlobalCommands, globalSyncDecision, gatewayPauseMs, applyPresence, applyBotAbout, aboutText, publicBotInfo, platformStats, guardInteraction };
+module.exports = { clients, getClient, isOnline, getGuildPerms, loginBot, reconnectBot, logoutBot, stopAll, syncSlashCommands, syncGlobalCommands, globalSyncDecision, gatewayPauseMs, applyPresence, applyBotAbout, aboutText, publicBotInfo, platformStats, guardInteraction, wrapInteractionAudit };

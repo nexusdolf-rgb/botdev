@@ -592,6 +592,27 @@ async function execute(botId, entry, cmd, src) {
   const member = src.message ? src.message.member : src.interaction.member;
 
   const send = async (payload) => {
+    // 🛡️ v304 — PRÉ-VALIDATION : un panneau Components V2 est audité contre
+    // les vraies limites Discord AVANT l'envoi. S'il est hors limites, on ne
+    // l'envoie PAS (Discord le rejetterait) : on journalise et on répond en
+    // texte simple. C'est le filet qui rend le bug /help du 14/09 impossible
+    // à reproduire pour TOUTES les commandes, pas seulement l'aide.
+    try {
+      const isV2 = payload && Array.isArray(payload.components) && payload.components.length
+        && Number(payload.flags || 0) && (Number(payload.flags) & (1 << 15));
+      if (isV2) {
+        const violations = ui.v2Audit(payload);
+        if (violations.length) {
+          const detail = `${cmd}: ${violations[0]}`;
+          console.error(`[BotDev] 🛡️ panneau hors limites, envoi annulé (${detail})`);
+          try { require('../health').recordError('panneau-invalide', detail.slice(0, 200)); } catch {}
+          const excuse = { content: '⚠️ Le panneau de cette réponse dépasse les limites de Discord — il a été signalé et sera corrigé. Réessayez.', ephemeral: true };
+          if (isInt) { if (!src._replied) { await src.interaction.reply(excuse).catch(() => {}); src._replied = true; } }
+          else if (channel && channel.send) await channel.send({ content: excuse.content }).catch(() => {});
+          return null;
+        }
+      }
+    } catch {}
     // 🛡️ L'envoi ne doit JAMAIS faire tomber une commande : en cas d'échec
     // (limite Discord, message trop long…), on journalise et on continue.
     try {

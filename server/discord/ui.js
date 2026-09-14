@@ -465,7 +465,76 @@ function v2panel(options = {}, rows = []) {
   // Le 2ᵉ argument reste prioritaire ; `options.rows` sert maintenant de repli.
   const finalRows = (Array.isArray(rows) && rows.length) ? rows
     : (Array.isArray(options.rows) ? options.rows : []);
-  return { flags, components: [v2container({ ...options, rows: finalRows })] };
+  const payload = { flags, components: [v2container({ ...options, rows: finalRows })] };
+  // 🛡️ v304 — filet de sécurité : tout panneau construit est audité contre
+  // les vraies limites Discord. Une violation est journalisée (console +
+  // /api/health/bot) pour être corrigée — avant, on la découvrait en prod
+  // quand Discord rejetait le message (incident /help du 14/09).
+  try {
+    const violations = v2Audit(payload);
+    if (violations.length) {
+      const detail = violations.slice(0, 3).join(' · ').slice(0, 180);
+      console.error(`[Hoxera] 🛡️ Panneau V2 hors limites Discord (titre « ${String((options && options.title) || '').slice(0, 40)} ») : ${detail}`);
+      try { require('../health').recordError('panneau-invalide', detail); } catch {}
+    }
+  } catch {}
+  return payload;
+}
+
+// ============================================================
+// 🛡️ v304 — v2Audit : valide un payload Components V2 contre les
+// VRAIES limites de l'API Discord. Retourne [] si le payload est
+// envoyable, sinon la liste des violations. C'est le garde-fou
+// permanent contre la classe de bug « COMPONENT_MAX_TOTAL_COMPONENTS
+// _EXCEEDED » (incident /help du 14/09). Accepte builders ou JSON.
+// Limites vérifiées (doc officielle « Components Reference ») :
+//   • 40 composants maximum au total — IMBRIQUÉS COMPRIS, et les
+//     composants À L'INTÉRIEUR des ActionRow comptent aussi ;
+//   • 4 000 caractères CUMULÉS sur tous les TextDisplay ;
+//   • 4 000 caractères par TextDisplay individuel ;
+//   • 5 boutons maximum par ActionRow ;
+//   • 1 seul menu de sélection par ActionRow (exclusif des boutons) ;
+//   • 25 options maximum par menu de sélection ;
+//   • 10 éléments maximum par MediaGallery.
+// ============================================================
+function v2Audit(payload) {
+  const violations = [];
+  let components = [];
+  try { components = JSON.parse(JSON.stringify((payload && payload.components) || [])); } catch { return ['payload illisible']; }
+  let total = 0;
+  let textChars = 0;
+  const walk = (list, where) => {
+    for (const c of list || []) {
+      if (!c || typeof c !== 'object') continue;
+      total += 1;
+      const type = Number(c.type);
+      if (type === 10) { // TextDisplay
+        const len = String(c.content || '').length;
+        if (len > V2_TEXT_BUDGET) violations.push(`${where}: TextDisplay de ${len} caractères (max ${V2_TEXT_BUDGET})`);
+        textChars += len;
+      }
+      if (type === 1) { // ActionRow
+        const kids = Array.isArray(c.components) ? c.components : [];
+        if (kids.length > 5) violations.push(`${where}: ActionRow de ${kids.length} composants (max 5)`);
+        const hasSelect = kids.some((k) => [3, 5, 6, 7, 8].includes(Number(k && k.type)));
+        if (hasSelect && kids.length > 1) violations.push(`${where}: menu de sélection partagé avec d'autres composants dans la même ActionRow`);
+      }
+      if (type === 3) { // StringSelect
+        const opts = Array.isArray(c.options) ? c.options.length : 0;
+        if (opts > 25) violations.push(`${where}: menu de sélection à ${opts} options (max 25)`);
+      }
+      if (type === 12) { // MediaGallery
+        const items = Array.isArray(c.items) ? c.items.length : 0;
+        if (items > 10) violations.push(`${where}: galerie de ${items} éléments (max 10)`);
+      }
+      if (c.accessory) total += 1; // vignette d'une Section
+      if (Array.isArray(c.components) && c.components.length) walk(c.components, where);
+    }
+  };
+  walk(components, 'message');
+  if (total > V2_COMPONENT_CAP) violations.push(`message: ${total} composants au total (max ${V2_COMPONENT_CAP})`);
+  if (textChars > V2_TEXT_BUDGET) violations.push(`message: ${textChars} caractères cumulés dans les TextDisplay (max ${V2_TEXT_BUDGET})`);
+  return violations;
 }
 
 // Équivalent V2 de contentPanel().
@@ -497,5 +566,5 @@ function v2edit(options = {}, rows = []) {
 module.exports = {
   COLORS, DEFAULT_FOOTER, colorFor, colorInt, embed, panel, contentPanel, row, linkRow, status,
   text, SEPARATOR, sectionize, paragraphs,
-  V2_TEXT_BUDGET, V2_COMPONENT_CAP, v2container, v2panel, v2contentPanel, v2status, v2edit,
+  V2_TEXT_BUDGET, V2_COMPONENT_CAP, v2container, v2panel, v2contentPanel, v2status, v2edit, v2Audit,
 };
