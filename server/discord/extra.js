@@ -1460,24 +1460,42 @@ async function onVoiceState(botId, entry, oldState, newState) {
       store.settings.set(creatingKey, String(Date.now()));
       try {
         const name = (cfg.name_template || '🔊 {name}').replace('{name}', newState.member.displayName || newState.member.user.username);
-        // 🛡️ v300 — catégorie cible : la catégorie configurée SI elle existe
-        // toujours, sinon celle du salon de création, sinon aucune. Avant :
-        // catégorie vide (option par défaut du dashboard) ou supprimée →
-        // salon créé à la racine, voire PAS créé du tout (échec silencieux).
-        let parentId = String(cfg.category || '').trim();
-        if (parentId && !(guild.channels.cache.has ? guild.channels.cache.has(parentId) : false)) parentId = '';
-        if (!parentId) {
-          const creator = guild.channels.cache.get ? guild.channels.cache.get(cfg.creator_channel) : null;
-          parentId = String((creator && creator.parentId) || '');
-        }
+        // 🛡️ v300+v305 — catégorie cible : la catégorie configurée SI elle
+        // existe toujours ET que c'est bien une catégorie. En cas de refus de
+        // Discord on retente dans la catégorie du salon de création, puis à
+        // la racine — et CHAQUE repli est journalisé dans /api/health/bot
+        // (avant : repli SILENCIEUX à la racine → le fondateur ne comprenait
+        // pas pourquoi ses salons n'arrivaient pas dans la catégorie choisie).
+        let catObj = null;
+        try {
+          const raw = String(cfg.category || '').trim();
+          catObj = raw && guild.channels.cache.get ? guild.channels.cache.get(raw) : null;
+          if (catObj && catObj.type !== ChannelType.GuildCategory) catObj = null;
+        } catch {}
+        const creator0 = guild.channels.cache.get ? guild.channels.cache.get(cfg.creator_channel) : null;
         const baseOpts = { name: name.slice(0, 100), type: ChannelType.GuildVoice };
-        let channel = await guild.channels.create(parentId ? { ...baseOpts, parent: parentId } : baseOpts).catch(() => null);
-        // Catégorie refusée par Discord (droits, invalide…) : on réessaie SANS
-        // catégorie — un salon à la racine vaut mieux qu'aucun salon.
-        if (!channel && parentId) channel = await guild.channels.create(baseOpts).catch(() => null);
+        let channel = null, usedFallback = '';
+        if (catObj) channel = await guild.channels.create({ ...baseOpts, parent: catObj.id }).catch((e) => { usedFallback = `catégorie refusée par Discord (${String((e && e.message) || e).slice(0, 120)})`; return null; });
+        if (!channel && creator0 && creator0.parentId) {
+          channel = await guild.channels.create({ ...baseOpts, parent: creator0.parentId }).catch((e) => { usedFallback = (usedFallback ? usedFallback + ' puis ' : '') + `catégorie du salon de création refusée (${String((e && e.message) || e).slice(0, 120)})`; return null; });
+          if (channel && usedFallback) usedFallback = usedFallback + ' → créé dans la catégorie du salon de création';
+        }
+        if (!channel) {
+          channel = await guild.channels.create(baseOpts).catch(() => null);
+          if (channel) usedFallback = (usedFallback ? usedFallback + ' puis ' : 'pas de catégorie disponible → ') + 'créé à la racine du serveur';
+        }
+        if (usedFallback) {
+          try { require('../health').recordError('voicetemp-categorie', `Serveur ${guild.id} : ${usedFallback}`); } catch {}
+        }
         if (channel) {
-          if (!mine.includes(channel.id)) mine.push(channel.id);
-          store.settings.set(mineKey, JSON.stringify(mine.slice(-40)));
+          // 🛡️ v305 — relecture FRAÎCHE de la liste juste avant l'écriture :
+          // une suppression parallèle (membre qui quitte son ancien salon au
+          // même moment) ne peut plus écraser l'entrée du salon tout neuf.
+          let fresh = [];
+          try { fresh = JSON.parse(store.settings.get(mineKey) || '[]'); } catch {}
+          if (!Array.isArray(fresh)) fresh = [];
+          if (!fresh.includes(channel.id)) fresh.push(channel.id);
+          store.settings.set(mineKey, JSON.stringify(fresh.slice(-40)));
           // 🎙️ v267 — on mémorise le PROPRIÉTAIRE du salon : c'est lui (et
           // seulement lui) qui pourra le gérer via le panneau de contrôle.
           vtSetOwner(guild.id, channel.id, newState.member.id);
@@ -1516,42 +1534,58 @@ function vtGetOwner(guildId, channelId) { try { return String(store.settings.get
 function vtClearOwner(guildId, channelId) { try { store.settings.set(vtOwnerKey(guildId, channelId), ''); } catch {} }
 
 // Le salon temporaire actuel d'un membre (s'il en possède un encore existant).
+// 🛡️ v305 — la PREUVE n°1 est la position vocale du membre + le registre de
+// propriété. Avant, il fallait que la LISTE des salons soit intacte (elle
+// peut se vider lors d'une course création/suppression ou d'un balayage
+// réseau) → le panneau disait « rejoignez un salon vocal » à quelqu'un déjà
+// assis dans SON salon (bug fondateur du 14/09). Désormais :
+//  1. le membre est dans un salon ET le registre dit qu'il en est le
+//     propriétaire → c'est son salon, point final ;
+//  2. sinon, salon listé ou dans la catégorie configurée ET sans
+//     propriétaire → il le récupère (esprit 🔑 Récupérer) ;
+//  3. un salon « ordinaire » (ni listé, ni dans la catégorie, propriétaire
+//     inconnu) n'est JAMAIS réclamé par erreur.
 function vtChannelOf(botId, guild, userId) {
   const cfg = store.voicetemp.get(botId, guild.id);
   if (!cfg) return null;
   const mineKey = `vt_channels_${guild.id}`;
   let mine = [];
   try { mine = JSON.parse(store.settings.get(mineKey) || '[]'); } catch {}
+  if (!Array.isArray(mine)) mine = [];
+  try {
+    const memberRow = guild.members && guild.members.cache && guild.members.cache.get
+      ? guild.members.cache.get(String(userId)) : null;
+    const cur = memberRow && memberRow.voice ? memberRow.voice.channel : null;
+    if (cur && String(cur.id) !== String(cfg.creator_channel)) {
+      const owner = vtGetOwner(guild.id, cur.id);
+      if (owner === String(userId)) {
+        if (!mine.includes(cur.id)) { // auto-réparation de la liste au passage
+          mine.push(cur.id);
+          try { store.settings.set(mineKey, JSON.stringify(mine.slice(-40))); } catch {}
+        }
+        return cur; // registre de propriété : incontestable
+      }
+      const inList = mine.includes(cur.id);
+      const inCat = !!(String(cfg.category || '').trim() && cur.parentId && String(cur.parentId) === String(cfg.category));
+      // Salon temporaire reconnu, SANS propriétaire → le membre le récupère
+      // (esprit 🔑 Récupérer). Avec un autre propriétaire : on n'y touche pas.
+      if ((inList || inCat) && !owner) {
+        vtSetOwner(guild.id, cur.id, String(userId));
+        if (!inList) {
+          mine.push(cur.id);
+          store.settings.set(mineKey, JSON.stringify(mine.slice(-40)));
+        }
+        return cur;
+      }
+    }
+  } catch {}
+  // Repli historique : le membre n'est pas résolvable depuis le cache —
+  // on cherche dans la liste un salon à lui encore existant.
   for (const id of mine) {
     if (vtGetOwner(guild.id, id) !== String(userId)) continue;
     const channel = guild.channels.cache.get ? guild.channels.cache.get(id) : null;
     if (channel) return channel;
   }
-  // 🛡️ v300 — AUTO-RÉPARATION : le membre est DEDANS un salon temporaire
-  // (liste perdue, salon créé avant la v267, clé propriétaire effacée…) :
-  //  - propriétaire = lui → le salon est retrouvé même hors liste ;
-  //  - aucun propriétaire → il le récupère (même esprit que 🔑 Récupérer).
-  // Résultat : le panneau ne dit plus « rejoignez un salon vocal » à quelqu'un
-  // qui est déjà dans SON salon.
-  try {
-    const memberRow = guild.members && guild.members.cache && guild.members.cache.get
-      ? guild.members.cache.get(String(userId)) : null;
-    const cur = memberRow && memberRow.voice ? memberRow.voice.channel : null;
-    if (cur && cur.id !== cfg.creator_channel) {
-      const inList = Array.isArray(mine) && mine.includes(cur.id);
-      const inCat = !!(String(cfg.category || '').trim() && cur.parentId && String(cur.parentId) === String(cfg.category));
-      if (inList || inCat) {
-        if (inCat && !inList) {
-          mine = Array.isArray(mine) ? mine : [];
-          mine.push(cur.id);
-          store.settings.set(mineKey, JSON.stringify(mine.slice(-40)));
-        }
-        const owner = vtGetOwner(guild.id, cur.id);
-        if (owner === String(userId)) return cur;
-        if (!owner) { vtSetOwner(guild.id, cur.id, String(userId)); return cur; }
-      }
-    }
-  } catch {}
   return null;
 }
 
@@ -1679,10 +1713,27 @@ async function sweepVoicetemp(botId, entry) {
       let changed = false;
       for (const id of mine) {
         let ch = guild.channels.cache && guild.channels.cache.get ? guild.channels.cache.get(id) : null;
+        let uncertain = false;
+        // 🛡️ v305 — si le salon n'est pas dans le cache, on interroge
+        // Discord. Avant, TOUT échec (rate-limit, coupure réseau…) était
+        // traité comme « salon supprimé » → le propriétaire était effacé et
+        // le salon retiré de la liste alors qu'il était plein de monde :
+        // le panneau disait ensuite « rejoignez un salon vocal ». Désormais
+        // on ne retire que sur preuve de disparition (erreur 10003/10004) ;
+        // sur incident réseau on GARDE l'entrée et on retente au prochain
+        // balayage.
         if (!ch && typeof guild.channels.fetch === 'function') {
-          ch = await guild.channels.fetch(id).catch(() => null);
+          try { ch = await guild.channels.fetch(id); }
+          catch (e) {
+            const code = e && (e.code !== undefined ? e.code : null);
+            if (code === 10003 || code === 10004) ch = null;
+            else { ch = null; uncertain = true; }
+          }
         }
-        if (!ch) { changed = true; vtClearOwner(guild.id, id); continue; } // salon disparu
+        if (!ch) {
+          if (uncertain) { next.push(id); continue; } // incident réseau : on ne punit pas un salon vivant
+          changed = true; vtClearOwner(guild.id, id); continue; // salon vraiment disparu
+        }
         next.push(id);
         if (id === cfg.creator_channel) continue; // jamais toucher au salon « ➕ »
         const members = ch.members;
@@ -1815,6 +1866,19 @@ async function handleVtInteraction(botId, entry, i) {
   }
   const channel = vtChannelOf(botId, guild, i.user.id);
   if (!channel) {
+    // 🛡️ v305 — diagnostic : si le membre est DANS un salon vocal mais que
+    // rien ne correspond (ni propriétaire, ni liste, ni catégorie), on
+    // journalise l'état exact dans /api/health/bot pour comprendre pourquoi.
+    try {
+      const memberRow = guild.members && guild.members.cache && guild.members.cache.get
+        ? guild.members.cache.get(String(i.user.id)) : null;
+      const cur = memberRow && memberRow.voice ? memberRow.voice.channel : null;
+      const cfgNow = store.voicetemp.get(botId, guild.id) || {};
+      if (cur && String(cur.id) !== String(cfgNow.creator_channel || '')) {
+        require('../health').recordError('voicetemp-introuvable',
+          `serveur ${guild.id} : membre ${i.user.id} dans ${cur.id} (cat=${cur.parentId || 'aucune'}), cfg cat=${cfgNow.category || 'aucune'}, liste=${(store.settings.get(`vt_channels_${guild.id}`) || '[]').slice(0, 120)}`);
+      }
+    } catch {}
     await i.reply({ ...vtNoChannelPanel(), ephemeral: true }).catch(() => {});
     return true;
   }
@@ -1908,6 +1972,16 @@ async function handleVtInteraction(botId, entry, i) {
       const name = channel.name;
       await channel.delete('Salon vocal temporaire supprimé par son propriétaire');
       vtClearOwner(guild.id, channel.id);
+      // 🛡️ v305 — retrait IMMÉDIAT de la liste (avant, on attendait le
+      // balayage de sécurité : fenêtre pendant laquelle la liste mentait).
+      try {
+        const k = `vt_channels_${guild.id}`;
+        let lst = [];
+        try { lst = JSON.parse(store.settings.get(k) || '[]'); } catch {}
+        if (Array.isArray(lst) && lst.includes(channel.id)) {
+          store.settings.set(k, JSON.stringify(lst.filter((x) => x !== channel.id).slice(-40)));
+        }
+      } catch {}
       await say('🗑️ Salon supprimé', `**${name}** a été supprimé. Merci d'avoir utilisé les vocaux temporaires !`);
       return true;
     }

@@ -962,6 +962,34 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v305 (14/09 — SALONS VOCAUX TEMPORAIRES : le bug du panneau)** : le
+  fondateur configure le vocal temporaire via le dashboard ; en rejoignant le
+  salon de création, son salon se crée MAIS (a) les boutons du panneau
+  répondaient « rejoignez un salon vocal » alors qu'il était dedans, et
+  (b) le salon se créait hors de la catégorie configurée. Causes et
+  corrections :
+  1. `vtChannelOf` exigeait la LISTE des salons intacte ; vidée (course
+     création/suppression, balayage sur incident réseau), le panneau était
+     perdu. → la preuve n°1 est maintenant la position vocale du membre +
+     le registre propriétaire (`vt_owner:`) : « dedans + propriétaire =
+     c'est son salon, point final » ; la liste s'auto-répare à chaque clic ;
+     un salon ordinaire (ni listé, ni dans la catégorie, propriétaire
+     inconnu) n'est jamais réclamé par erreur.
+  2. Le balayage de sécurité traitait TOUT échec de `guild.channels.fetch`
+     comme « salon supprimé » → propriétaire effacé + salon retiré de la
+     liste en plein usage. → on ne retire que sur preuve de disparition
+     (erreur Discord 10003/10004) ; sur incident réseau (rate-limit…) on
+     GARDE l'entrée et on retente au balayage suivant.
+  3. Création : si Discord refusait la catégorie configurée, repli SILENCIEUX
+     à la racine. → repli en cascade (catégorie configurée → catégorie du
+     salon de création → racine) et CHAQUE repli est journalisé dans
+     `/api/health/bot` (source `voicetemp-categorie`).
+  4. L'action SUPPRIMER retire le salon de la liste immédiatement (plus
+     d'attente du balayage).
+  5. Un refus du panneau alors que le membre EST dans un salon vocal est
+     journalisé avec l'état exact (source `voicetemp-introuvable`).
+  Test v305 : 26 vérifications, dont la reproduction exacte du scénario du
+  fondateur (liste vidée → les boutons fonctionnent toujours).
 - **v304 (14/09 — AUDIT GÉNÉRAL + FILETS DE SÉCURITÉ PERMANENTS)** : demande
   du fondateur : « analyse toutes les commandes, corrige tout ce qui est
   cassé, mets en place des systèmes de sécurité pour empêcher d'autres
@@ -1328,12 +1356,11 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 14/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v304** — audit général des 66 commandes (toutes
-  fonctionnelles) + 4 couches de sécurité permanentes contre les panneaux
-  invalides : `ui.v2Audit`, auto-audit `v2panel`, blocage dur dans
-  `premade.send()`, et filet global `wrapInteractionAudit` sur toutes les
-  réponses Discord. Harnais `test/v304-test.js` (84 vérifications).
-  **222 tests verts.**
+- Dernière version : **v305** — salons vocaux temporaires : les boutons du
+  panneau fonctionnent même si la liste interne est perdue (preuve par la
+  position vocale + le registre propriétaire), le balayage de sécurité ne
+  détruit plus rien sur incident réseau, et tout repli de catégorie est
+  journalisé dans `/api/health/bot`. `test/v305-test.js` (26 vérifications).
 - ✅ **Incident du 14/09 CLÔTURÉ** : `BOTDEV_GH_TOKEN` révoqué → boot sur base
   vide. Rétabli à 15h56 : nouveau PAT reporté dans Render via l'API
   (`PUT /v1/services/srv-da5i2h2jobas73epvos0/env-vars/BOTDEV_GH_TOKEN` avec

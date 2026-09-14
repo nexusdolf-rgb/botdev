@@ -170,9 +170,9 @@ function mkGuild(G, opts = {}) {
 
   console.log('— 10. Bump v293 —');
   const index = racine('public/index.html');
-  check('index.html : ?v=304 référencé 7 fois', (index.match(/\?v=304/g) || []).length === 7,
-    String((index.match(/\?v=304/g) || []).length));
-  check('sw.js : cache « botdev-v304 »', racine('public/sw.js').includes("const CACHE = 'botdev-v304';"));
+  check('index.html : ?v=305 référencé 7 fois', (index.match(/\?v=305/g) || []).length === 7,
+    String((index.match(/\?v=305/g) || []).length));
+  check('sw.js : cache « botdev-v305 »', racine('public/sw.js').includes("const CACHE = 'botdev-v305';"));
 
   console.log(`\n🎉 v293 : ${ok} vérifications passées`);
   process.exit(0);

@@ -38,7 +38,7 @@ const racine = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 let createdCalls = [];
 function mkChannel(id, name, over = {}) {
   return {
-    id, name, parentId: over.parentId || null, deleted: false,
+    id, name, type: over.type === undefined ? 2 : over.type, parentId: over.parentId || null, deleted: false,
     members: over.members || new Map(),
     delete: async function () { this.deleted = true; return this; },
     setName: async function (n) { this.name = n; },
@@ -102,7 +102,7 @@ function mkMember(id, name, channel) {
   console.log('— 2. Vocaux : création dans la bonne catégorie —');
   const G1 = 'g300a';
   store.voicetemp.set(B, G1, { creator_channel: 'HUB', category: 'CAT', name_template: '🔊 {name}', panel_channel: '' });
-  const cat = mkChannel('CAT', 'Vocaux'); const hub = mkChannel('HUB', '➕ Créer un vocal', { parentId: 'CAT' });
+  const cat = mkChannel('CAT', 'Vocaux', { type: 4 }); const hub = mkChannel('HUB', '➕ Créer un vocal', { parentId: 'CAT' });
   const g1 = mkGuild(G1, [cat, hub]);
   const m1 = mkMember('U1', 'Léo');
   createdCalls = [];
@@ -113,7 +113,7 @@ function mkMember(id, name, channel) {
   const G2 = 'g300b';
   store.voicetemp.set(B, G2, { creator_channel: 'HUB2', category: '', name_template: '', panel_channel: '' });
   const hub2 = mkChannel('HUB2', '➕ Créer un vocal', { parentId: 'CAT2' });
-  const g2 = mkGuild(G2, [hub2, mkChannel('CAT2', 'Vocal')]);
+  const g2 = mkGuild(G2, [hub2, mkChannel('CAT2', 'Vocal', { type: 4 })]);
   createdCalls = [];
   await extra.onVoiceState(B, {}, {}, { channelId: 'HUB2', member: mkMember('U2', 'Zoé'), guild: g2 });
   check('catégorie vide → repli sur la catégorie du salon de création (avant : racine)', createdCalls.length === 1 && createdCalls[0].parent === 'CAT2');
@@ -128,7 +128,7 @@ function mkMember(id, name, channel) {
   // Catégorie refusée par Discord → réessai sans catégorie
   const G4 = 'g300d';
   store.voicetemp.set(B, G4, { creator_channel: 'HUB4', category: 'BADCAT', name_template: '', panel_channel: '' });
-  const g4 = mkGuild(G4, [mkChannel('HUB4', '➕'), mkChannel('BADCAT', 'C')], { rejectParents: ['BADCAT'] });
+  const g4 = mkGuild(G4, [mkChannel('HUB4', '➕'), mkChannel('BADCAT', 'C', { type: 4 })], { rejectParents: ['BADCAT'] });
   // BADCAT est dans le cache (valide en apparence) mais Discord refuse → réessai sans parent
   createdCalls = [];
   await extra.onVoiceState(B, {}, {}, { channelId: 'HUB4', member: mkMember('U4', 'Bob'), guild: g4 });
@@ -159,7 +159,7 @@ function mkMember(id, name, channel) {
   const G7 = 'g300g';
   store.voicetemp.set(B, G7, { creator_channel: 'HUB7', category: 'CAT7', name_template: '', panel_channel: '' });
   const temp = mkChannel('TEMP1', '🔊 Vieux salon'); temp.parentId = 'CAT7';
-  const g7 = mkGuild(G7, [mkChannel('HUB7', '➕'), mkChannel('CAT7', 'V'), temp]);
+  const g7 = mkGuild(G7, [mkChannel('HUB7', '➕'), mkChannel('CAT7', 'V', { type: 4 }), temp]);
   const mem7 = mkMember('U7', 'Max', temp);
   g7.members = { cache: new Map([['U7', mem7]]) };
   store.settings.set('vt_channels_g300g', JSON.stringify(['TEMP1'])); // dans la liste…
@@ -221,8 +221,8 @@ function mkMember(id, name, channel) {
 
   console.log('— 7. Bump v300 —');
   const index = racine('public/index.html');
-  check('index.html : ?v=304 référencé 7 fois', (index.match(/\?v=304/g) || []).length === 7, String((index.match(/\?v=304/g) || []).length));
-  check('sw.js : cache « botdev-v304 »', racine('public/sw.js').includes("const CACHE = 'botdev-v304';"));
+  check('index.html : ?v=305 référencé 7 fois', (index.match(/\?v=305/g) || []).length === 7, String((index.match(/\?v=305/g) || []).length));
+  check('sw.js : cache « botdev-v305 »', racine('public/sw.js').includes("const CACHE = 'botdev-v305';"));
 
   console.log(`\n🎉 v300 : ${ok} vérifications passées`);
   process.exit(0);
