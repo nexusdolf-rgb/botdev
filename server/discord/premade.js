@@ -183,6 +183,10 @@ const HELP_BLOCKS = [
 
 function enabledModules(botId) {
   const m = store.modules.all(botId);
+  // 🛡️ v300 — aucune ligne en base (vieux bot, migration incomplète) :
+  // TOUT est activé par défaut. Avant, une table vide désactivait silencieusement
+  // toutes les commandes (/help répondait « pas encore prête »).
+  if (!Object.keys(m).length) return Object.keys(MODULES);
   return Object.keys(MODULES).filter(k => m[k]);
 }
 
@@ -499,8 +503,21 @@ async function handlePremadeSlash(botId, entry, interaction) {
   try {
     const enabled = enabledCommandNames(botId);
     const cmd = interaction.commandName.toLowerCase();
-    if (!enabled.includes(cmd)) return;
+    if (!enabled.includes(cmd)) {
+      // 🛡️ v300 — module désactivé : réponse CLAIRE au lieu d'un silence qui
+      // retombait sur « pas encore prête, retente dans 5 à 10 minutes » (trompeur :
+      // la commande peut rester visible jusqu'à 1 h chez Discord après désactivation).
+      if (CMD_DEFS[cmd]) {
+        return interaction.reply({ content: '⛔ Cette commande fait partie d\'un module **désactivé** sur ce bot. Réactivez-le dans le dashboard (🧩 Modules) pour l\'utiliser.', ephemeral: true }).catch(() => {});
+      }
+      return;
+    }
     const def = CMD_DEFS[cmd];
+    // 🛡️ v300 — commande inconnue (registre désynchronisé) : message clair au
+    // lieu du silence qui retombait sur « pas encore prête, retentez ».
+    if (!def) {
+      return interaction.reply({ content: '⚠️ Cette commande n\'existe plus sur ce bot. Les commandes se resynchronisent automatiquement : réessayez dans quelques minutes.', ephemeral: true }).catch(() => {});
+    }
     if (!hasPremadeCommandPermission(def, interaction.guild, interaction.member)) {
       // permissions manquantes → refus propre
       return interaction.reply({ content: '⛔ Cette commande est réservée au propriétaire du serveur ou à un membre ayant la permission Discord « Administrateur ».', ephemeral: true });

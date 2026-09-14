@@ -363,8 +363,15 @@ async function handleInteraction(botId, entry, interaction) {
 const EXTRA_CMDS = new Set(['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch', 'rps', 'pendu', 'morpion', 'birthday', 'remind', 'poll', 'snipe', 'work', 'gamble', 'rob', 'lockdown', 'voicetemp', 'emotes', 'sticky', 'apply', 'invites', 'afk', 'top', 'quiz']);
 
 async function handleSlash(botId, entry, interaction) {
-  const cmd = interaction.commandName.toLowerCase();
-  if (!EXTRA_CMDS.has(cmd)) return false;
+  const cmd = String(interaction.commandName || '').toLowerCase();
+  if (!cmd || !EXTRA_CMDS.has(cmd)) return false;
+  // 🛡️ v300 — garde-fou : un objet d'options incomplet (bot tiers, ancien
+  // payload, interaction dégradée) faisait planter la commande en silence.
+  if (!interaction.options || typeof interaction.options.getString !== 'function') {
+    try {
+      return await interaction.reply({ content: '⚠️ Impossible de lire les options de cette commande. Réessayez, et si ça persiste renvoyez le panneau (`/voicetemp set`, `/apply set`…).', ephemeral: true });
+    } catch { return false; }
+  }
   // 🌍 Commandes globales : elles existent aussi en message privé.
   // Ici on répond poliment et on invite à ajouter le bot sur un serveur.
   if (!interaction.guild) {
@@ -1422,14 +1429,23 @@ async function onVoiceState(botId, entry, oldState, newState) {
 
     // Création : quelqu'un rejoint le salon « ➕ Créer un vocal »
     if (newState.channelId === cfg.creator_channel && newState.member) {
+      // 🛡️ v300 — le drapeau « création en cours » est horodaté : avant, un
+      // redémarrage du serveur au milieu d'une création laissait le drapeau
+      // bloqué EN BASE pour toujours → plus aucun salon ne se créait.
       const creatingKey = `vt_creating_${guild.id}`;
-      if (store.settings.get(creatingKey)) return; // déjà en cours
+      const creatingSince = Number(store.settings.get(creatingKey) || 0);
+      if (creatingSince && Date.now() - creatingSince < 15000) return; // création déjà en cours
       // Limite : 10 salons temporaires max
       const mineKey = `vt_channels_${guild.id}`;
       let mine = [];
       try { mine = JSON.parse(store.settings.get(mineKey) || '[]'); } catch {}
-      mine = mine.filter((id) => guild.channels.cache.has(id));
-      if (mine.length >= 10) {
+      if (!Array.isArray(mine)) mine = [];
+      // 🛡️ v300 — la liste n'est plus « nettoyée » d'après le cache : au
+      // démarrage à froid, ce nettoyage effaçait des salons BIEN VIVANTS de la
+      // liste → salons orphelins (jamais supprimés, invisibles pour le panneau).
+      // Le ménage fiable est fait par le balayeur (sweepVoicetemp, 30 s).
+      const alive = mine.filter((id) => guild.channels.cache.has(id));
+      if (alive.length >= 10) {
         try {
           await newState.member.send(ui.v2panel({
             variant: 'warning',
@@ -1441,17 +1457,27 @@ async function onVoiceState(botId, entry, oldState, newState) {
         } catch {}
         return;
       }
-      store.settings.set(creatingKey, '1');
+      store.settings.set(creatingKey, String(Date.now()));
       try {
         const name = (cfg.name_template || '🔊 {name}').replace('{name}', newState.member.displayName || newState.member.user.username);
-        const channel = await guild.channels.create({
-          name: name.slice(0, 100),
-          type: ChannelType.GuildVoice,
-          parent: cfg.category || undefined,
-        }).catch(() => null);
+        // 🛡️ v300 — catégorie cible : la catégorie configurée SI elle existe
+        // toujours, sinon celle du salon de création, sinon aucune. Avant :
+        // catégorie vide (option par défaut du dashboard) ou supprimée →
+        // salon créé à la racine, voire PAS créé du tout (échec silencieux).
+        let parentId = String(cfg.category || '').trim();
+        if (parentId && !(guild.channels.cache.has ? guild.channels.cache.has(parentId) : false)) parentId = '';
+        if (!parentId) {
+          const creator = guild.channels.cache.get ? guild.channels.cache.get(cfg.creator_channel) : null;
+          parentId = String((creator && creator.parentId) || '');
+        }
+        const baseOpts = { name: name.slice(0, 100), type: ChannelType.GuildVoice };
+        let channel = await guild.channels.create(parentId ? { ...baseOpts, parent: parentId } : baseOpts).catch(() => null);
+        // Catégorie refusée par Discord (droits, invalide…) : on réessaie SANS
+        // catégorie — un salon à la racine vaut mieux qu'aucun salon.
+        if (!channel && parentId) channel = await guild.channels.create(baseOpts).catch(() => null);
         if (channel) {
-          mine.push(channel.id);
-          store.settings.set(mineKey, JSON.stringify(mine));
+          if (!mine.includes(channel.id)) mine.push(channel.id);
+          store.settings.set(mineKey, JSON.stringify(mine.slice(-40)));
           // 🎙️ v267 — on mémorise le PROPRIÉTAIRE du salon : c'est lui (et
           // seulement lui) qui pourra le gérer via le panneau de contrôle.
           vtSetOwner(guild.id, channel.id, newState.member.id);
@@ -1493,13 +1519,39 @@ function vtClearOwner(guildId, channelId) { try { store.settings.set(vtOwnerKey(
 function vtChannelOf(botId, guild, userId) {
   const cfg = store.voicetemp.get(botId, guild.id);
   if (!cfg) return null;
+  const mineKey = `vt_channels_${guild.id}`;
   let mine = [];
-  try { mine = JSON.parse(store.settings.get(`vt_channels_${guild.id}`) || '[]'); } catch {}
+  try { mine = JSON.parse(store.settings.get(mineKey) || '[]'); } catch {}
   for (const id of mine) {
     if (vtGetOwner(guild.id, id) !== String(userId)) continue;
     const channel = guild.channels.cache.get ? guild.channels.cache.get(id) : null;
     if (channel) return channel;
   }
+  // 🛡️ v300 — AUTO-RÉPARATION : le membre est DEDANS un salon temporaire
+  // (liste perdue, salon créé avant la v267, clé propriétaire effacée…) :
+  //  - propriétaire = lui → le salon est retrouvé même hors liste ;
+  //  - aucun propriétaire → il le récupère (même esprit que 🔑 Récupérer).
+  // Résultat : le panneau ne dit plus « rejoignez un salon vocal » à quelqu'un
+  // qui est déjà dans SON salon.
+  try {
+    const memberRow = guild.members && guild.members.cache && guild.members.cache.get
+      ? guild.members.cache.get(String(userId)) : null;
+    const cur = memberRow && memberRow.voice ? memberRow.voice.channel : null;
+    if (cur && cur.id !== cfg.creator_channel) {
+      const inList = Array.isArray(mine) && mine.includes(cur.id);
+      const inCat = !!(String(cfg.category || '').trim() && cur.parentId && String(cur.parentId) === String(cfg.category));
+      if (inList || inCat) {
+        if (inCat && !inList) {
+          mine = Array.isArray(mine) ? mine : [];
+          mine.push(cur.id);
+          store.settings.set(mineKey, JSON.stringify(mine.slice(-40)));
+        }
+        const owner = vtGetOwner(guild.id, cur.id);
+        if (owner === String(userId)) return cur;
+        if (!owner) { vtSetOwner(guild.id, cur.id, String(userId)); return cur; }
+      }
+    }
+  } catch {}
   return null;
 }
 
@@ -1602,6 +1654,57 @@ async function installVtEmotes(botId, guild) {
   store.settings.set(`vt_emotes:${guild.id}`, JSON.stringify(map));
   store.settings.set(`vt_emotes_ver:${guild.id}`, ver);
   return created;
+}
+
+// 🛡️ v300 — Balayeur des vocaux temporaires (appelé toutes les 30 s par
+// tasks.sweep). Il répare TOUT ce que les événements Discord peuvent rater
+// (redémarrage du bot, coupure réseau, permissions…) :
+//  1. un salon temporaire VIDE encore présent → supprimé (avant : il restait
+//     pour toujours si le dernier membre partait pendant un redémarrage) ;
+//  2. une référence de salon disparu → retirée de la liste ;
+//  3. un salon temporaire OCCUPÉ sans propriétaire → le premier membre dedans
+//     redevient propriétaire (panneau de contrôle réparé).
+async function sweepVoicetemp(botId, entry) {
+  const client = entry && entry.client;
+  if (!client || !client.guilds || !client.guilds.cache) return;
+  for (const guild of client.guilds.cache.values()) {
+    try {
+      const cfg = store.voicetemp.get(botId, guild.id);
+      if (!cfg || !cfg.creator_channel) continue;
+      const mineKey = `vt_channels_${guild.id}`;
+      let mine = [];
+      try { mine = JSON.parse(store.settings.get(mineKey) || '[]'); } catch {}
+      if (!Array.isArray(mine) || !mine.length) continue;
+      const next = [];
+      let changed = false;
+      for (const id of mine) {
+        let ch = guild.channels.cache && guild.channels.cache.get ? guild.channels.cache.get(id) : null;
+        if (!ch && typeof guild.channels.fetch === 'function') {
+          ch = await guild.channels.fetch(id).catch(() => null);
+        }
+        if (!ch) { changed = true; vtClearOwner(guild.id, id); continue; } // salon disparu
+        next.push(id);
+        if (id === cfg.creator_channel) continue; // jamais toucher au salon « ➕ »
+        const members = ch.members;
+        const size = members ? (typeof members.size === 'number' ? members.size : (members.length || 0)) : 1;
+        if (size === 0) {
+          const deleted = typeof ch.delete === 'function'
+            ? await ch.delete('Salon vocal temporaire vide (balayage de sécurité)').then(() => true).catch(() => false)
+            : false;
+          if (deleted) { changed = true; next.pop(); vtClearOwner(guild.id, id); }
+        } else if (!vtGetOwner(guild.id, id)) {
+          let first = null;
+          if (members) {
+            if (typeof members.first === 'function') first = members.first();
+            else if (Array.isArray(members)) first = members[0];
+            else if (typeof members.values === 'function') first = members.values().next().value;
+          }
+          if (first && first.id) { vtSetOwner(guild.id, id, String(first.id)); changed = true; }
+        }
+      }
+      if (changed || next.length !== mine.length) store.settings.set(mineKey, JSON.stringify(next.slice(-40)));
+    } catch {}
+  }
 }
 
 // Salon temporaire récupérable : la personne est DEDANS et le propriétaire
@@ -1987,7 +2090,7 @@ module.exports = {
   trackDeleted,
   trackMessage,
   onMessage,
-  onVoiceState,
+  onVoiceState, sweepVoicetemp,
   sweepReminders,
   sweepScheduled,
   sweepBirthdays,

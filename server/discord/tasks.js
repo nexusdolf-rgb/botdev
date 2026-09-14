@@ -90,6 +90,9 @@ async function sweep(botId, entry) {
   try { await extra.sweepReminders(botId, entry); } catch (e) { console.error('[Hoxera] reminders sweep:', e.message); }
   try { extra.sweepScheduled(botId, entry); } catch (e) { console.error('[Hoxera] scheduled sweep:', e.message); }
   try { await extra.sweepBirthdays(botId, entry); } catch (e) { console.error('[Hoxera] birthdays sweep:', e.message); }
+  // 🛡️ v300 — vocaux temporaires : salons vides oubliés supprimés, références
+  // mortes nettoyées, propriétaires perdus réparés (filet anti-redémarrage).
+  try { await extra.sweepVoicetemp(botId, entry); } catch (e) { console.error('[Hoxera] voicetemp sweep:', e.message); }
 
   // 🎫 Fermeture automatique des tickets inactifs (promis sur le panneau)
   try { const panels = require('./panels'); await panels.sweepInactiveTickets(botId, entry); }
