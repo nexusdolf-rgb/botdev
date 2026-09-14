@@ -201,12 +201,64 @@ async function onChannelCreate(botId, channel) {
     if (!cfg.enabled || !cfg.isolate || !cfg.role) return;
     if (String(channel.id) === String(cfg.channel)) return;
     const everyone = guild.roles.everyone.id;
+    // 🛡️ v301 — un salon créé avec « @everyone : voir le salon = refusé »
+    // (tickets, salons staff, modmail…) est VOLONTAIREMENT privé : lui ajouter
+    // le rôle vérifié en autorisation le dévoilait à tout le serveur. C'était
+    // le bug « tous les membres voient le salon du ticket ». Privé = on n'y
+    // touche pas du tout.
+    const ow = channel.permissionOverwrites && channel.permissionOverwrites.cache ? channel.permissionOverwrites.cache.get(everyone) : null;
+    const alreadyHidden = !!(ow && ow.deny && typeof ow.deny.has === 'function' && ow.deny.has(PermissionsBitField.Flags.ViewChannel));
+    if (alreadyHidden) return;
     await channel.permissionOverwrites.edit(everyone, { ViewChannel: false }, { reason: 'v293 vérification : nouveau salon masqué aux non-vérifiés' });
     await channel.permissionOverwrites.edit(cfg.role, { ViewChannel: true }, { reason: 'v293 vérification : nouveau salon visible pour les vérifiés' });
     const set = new Set(cfg.isolated_channels);
     set.add(String(channel.id));
     saveCfg(guild.id, { isolated_channels: [...set] });
   } catch (e) { /* jamais bloquant */ }
+}
+
+// 🛡️ v301 — Répare les fuites déjà installées par l'ancien onChannelCreate :
+// les salons de tickets ouverts (système classique + système personnalisé) où
+// le rôle vérifié a reçu « voir le salon » retrouvent leur confidentialité.
+// Appelé par le balayage de 30 s : ne fait des appels Discord que s'il y a
+// réellement une fuite à corriger.
+async function repairPrivateChannels(botId, entry) {
+  const client = entry && entry.client;
+  if (!client || !client.guilds || !client.guilds.cache) return;
+  for (const guild of client.guilds.cache.values()) {
+    try {
+      const cfg = cfgOf(guild.id);
+      if (!cfg.enabled || !cfg.isolate || !cfg.role) continue;
+      const privateIds = new Set();
+      try { for (const t of store.openTickets.allForGuild(botId, guild.id)) privateIds.add(String(t.channel_id)); } catch {}
+      try {
+        const rows = store.db.prepare('SELECT channel_id FROM advanced_ticket_channels WHERE bot_id = ? AND guild_id = ?').all(botId, guild.id);
+        for (const r of rows) privateIds.add(String(r.channel_id));
+      } catch {}
+      if (!privateIds.size) continue;
+      let fixed = 0;
+      for (const id of privateIds) {
+        const ch = guild.channels.cache.get(id);
+        if (!ch || !ch.permissionOverwrites || !ch.permissionOverwrites.cache) continue;
+        const owRole = ch.permissionOverwrites.cache.get(String(cfg.role));
+        const leaks = !!(owRole && owRole.allow && typeof owRole.allow.has === 'function' && owRole.allow.has(PermissionsBitField.Flags.ViewChannel));
+        if (!leaks) continue;
+        const done = await ch.permissionOverwrites
+          .edit(String(cfg.role), { ViewChannel: null }, { reason: 'v301 vérification : salon de ticket privé — visibilité du rôle vérifié retirée' })
+          .then(() => true).catch(() => false);
+        if (!done) continue;
+        fixed++;
+        // Le salon n'aurait jamais dû être noté « isolé » : on le retire de la
+        // liste pour que la désactivation de l'isolation ne le touche pas.
+        const set = new Set(cfg.isolated_channels);
+        if (set.delete(id)) saveCfg(guild.id, { isolated_channels: [...set] });
+      }
+      if (fixed) {
+        console.log(`[Hoxera] 🛡️ vérification : ${fixed} salon(s) de ticket re-privatisé(s) sur ${guild.id}`);
+        try { logging.log(botId, guild, { title: '🛡️ Confidentialité des tickets réparée', description: `${fixed} salon(s) privé(s) n'étaient plus masqués au rôle vérifié — c'est corrigé.`, color: '#57F287' }).catch(() => {}); } catch {}
+      }
+    } catch {}
+  }
 }
 
 // Distribue le rôle vérifié à tous les membres actuels (évite de bloquer
@@ -240,4 +292,4 @@ async function grantRoleToAll(botId, guild) {
   return { added, errors };
 }
 
-module.exports = { cfgOf, saveCfg, sendPanel, handleButton, onJoin, GATE_CHOICES, assertIsolationReady, applyIsolation, removeIsolation, onChannelCreate, assertGrantReady, grantRoleToAll, _test: { DEFAULTS } };
+module.exports = { cfgOf, saveCfg, sendPanel, handleButton, onJoin, GATE_CHOICES, assertIsolationReady, applyIsolation, removeIsolation, onChannelCreate, repairPrivateChannels, assertGrantReady, grantRoleToAll, _test: { DEFAULTS } };

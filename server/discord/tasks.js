@@ -93,6 +93,9 @@ async function sweep(botId, entry) {
   // 🛡️ v300 — vocaux temporaires : salons vides oubliés supprimés, références
   // mortes nettoyées, propriétaires perdus réparés (filet anti-redémarrage).
   try { await extra.sweepVoicetemp(botId, entry); } catch (e) { console.error('[Hoxera] voicetemp sweep:', e.message); }
+  // 🛡️ v301 — confidentialité : les salons de tickets ne doivent JAMAIS être
+  // visibles du rôle vérifié (fuite de l'ancien onChannelCreate) → réparation.
+  try { await require('./verification').repairPrivateChannels(botId, entry); } catch (e) { console.error('[Hoxera] réparation tickets/vérification:', e.message); }
 
   // 🎫 Fermeture automatique des tickets inactifs (promis sur le panneau)
   try { const panels = require('./panels'); await panels.sweepInactiveTickets(botId, entry); }

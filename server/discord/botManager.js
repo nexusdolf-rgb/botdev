@@ -17,7 +17,9 @@ const INTENTS = [
   GatewayIntentBits.DirectMessages,        // 💬 modmail (messages privés → serveur)
 ];
 
-const clients = new Map(); // botId -> { client, record }
+const clients = new Map();
+// 🛡️ v301 — throttle du resync déclenché par le garde-fou (botId -> horodatage)
+const guardResync = new Map(); // botId -> { client, record }
 
 function getClient(botId) {
   return clients.get(botId) || null;
@@ -271,6 +273,20 @@ async function guardInteraction(botId, entry, i, timeoutMs = 15000) {
           content: t('guard_not_ready'),
           ephemeral: true,
         }).catch(() => {});
+        // 🛡️ v301 — auto-réparation immédiate : une commande sans réponse
+        // = commandes probablement pas (ou mal) synchronisées. On relance un
+        // resync global + celui du serveur tout de suite (au lieu d'attendre
+        // le cycle de 10 min), avec un throttle de 60 s par bot pour ne jamais
+        // mitrailler l'API Discord.
+        try {
+          const now = Date.now();
+          const last = guardResync.get(botId) || 0;
+          if (now - last > 60000) {
+            guardResync.set(botId, now);
+            syncGlobalCommands(botId).catch(() => {});
+            if (i.guildId) syncSlashCommands(botId, i.guildId, true).catch(() => {});
+          }
+        } catch {}
       }
     } catch (e) {
       console.error('[BotDev] interaction error:', (e && e.message) || e);
