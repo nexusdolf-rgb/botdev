@@ -873,10 +873,10 @@ async function rafale(guild, kinds) {
   // --------------------------------------------------------------------------
   {
     const html = racine('public/index.html');
-    check('index.html : ?v=308 référencé 7 fois', (html.match(/\?v=308/g) || []).length === 7,
-      String((html.match(/\?v=308/g) || []).length));
+    check('index.html : ?v=309 référencé 7 fois', (html.match(/\?v=309/g) || []).length === 7,
+      String((html.match(/\?v=309/g) || []).length));
     check('index.html : plus aucun ?v=241', !html.includes('?v=241'));
-    check('sw.js : cache « botdev-v242 »', racine('public/sw.js').includes("'botdev-v308'"));
+    check('sw.js : cache « botdev-v242 »', racine('public/sw.js').includes("'botdev-v309'"));
   }
 
   console.log(`\n${echecs === 0

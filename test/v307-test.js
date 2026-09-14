@@ -34,8 +34,8 @@ const brut = (p) => JSON.stringify(p.components ? p.components.map((c) => (c && 
 
 console.log('— 1. Pins de version v307 —');
 const html = racine('public/index.html');
-check('index.html : ?v=308 ×7', (html.match(/\?v=308/g) || []).length === 7);
-check('sw.js : cache botdev-v308', racine('public/sw.js').includes("const CACHE = 'botdev-v308';"));
+check('index.html : ?v=309 ×7', (html.match(/\?v=309/g) || []).length === 7);
+check('sw.js : cache botdev-v309', racine('public/sw.js').includes("const CACHE = 'botdev-v309';"));
 
 console.log('— 2. Panneau tickets : plus de rouge, plus de signature —');
 const SERVEUR = 'Serveur de Test';
@@ -43,7 +43,8 @@ store.bots.create({ user_id: 1, name: 'B', token: 'x', client_id: 'c', prefix: '
 const payload = panels.buildTicketPanel({ message: '' }, {}, [], SERVEUR, 'G307');
 const jsonTicket = brut(payload);
 check('le rouge #ED4245 a disparu du panneau tickets', !jsonTicket.includes('15548997'));
-check('couleur Hoxera standard #e07a5f appliquée', jsonTicket.includes('14711391'));
+// v309 — plus AUCUNE ligne colorée sur les panneaux tickets (bordure neutre).
+check('aucune ligne colorée sur le panneau tickets (v309)', !jsonTicket.includes('accent_color'));
 check('AUCUNE signature sous le panneau tickets', v2.footer(payload) === '' && !jsonTicket.includes('-# Hoxera'), v2.footer(payload));
 check('le panneau reste valide (audit Discord)', ui.v2Audit(payload).length === 0, ui.v2Audit(payload).join(' · '));
 const textes = v2.texts(payload);

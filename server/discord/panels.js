@@ -419,10 +419,9 @@ function buildTicketPanel(cfg, client, types, serverName = '', guildId = '', row
   // dessous, la liste les répétait. Le paramètre `types` reste dans la signature
   // pour ne casser aucun appelant.
   return ui.v2panel({
-    // v306 (demande du fondateur) — le rouge #ED4245 est retiré : le côté du
-    // panneau avait l'air « en erreur ». Couleur Hoxera standard, comme les
-    // autres panneaux du bot.
-    color: '#e07a5f',
+    // v306/v309 (demande du fondateur) — aucune ligne verticale colorée sur
+    // les panneaux du système de tickets : bordure neutre par défaut.
+    accent: false,
     // Demande utilisateur (06/09) — l'auteur « {serveur} · Centre d'assistance »
     // est retiré : il répétait le titre (« 👑 Support | {serveur} »).
     title: panelTitle,
@@ -710,11 +709,10 @@ function ticketWelcomePanel(member, chosen, staffMention, reason, dmWarning = ''
     fields.push({ name: '⚠️', value: String(dmWarning).replace(/^\n+/, '').slice(0, 1024), inline: false });
   }
   const avatar = member.user.displayAvatarURL ? member.user.displayAvatarURL({ dynamic: true }) : '';
-  // v308 (demande du fondateur) — la petite ligne verticale du panneau du
-  // salon privé est unifiée : même couleur Hoxera standard pour TOUS les
-  // tickets, quelle que soit la couleur du type (les couleurs des types
-  // restent disponibles pour les boutons staff via le mapping privé).
-  const finalColor = '#e07a5f';
+  // v308/v309 (demande du fondateur) — aucune ligne verticale colorée sur
+  // les panneaux du système de tickets : bordure neutre par défaut, quelle
+  // que soit la couleur du type (les couleurs des types restent disponibles
+  // pour les boutons staff via le mapping privé).
   // Variables disponibles dans le titre / message personnalisé.
   const resolveRoomVars = (tpl) => String(tpl || '')
     .replace(/{member}/g, `${member}`)
@@ -745,7 +743,7 @@ function ticketWelcomePanel(member, chosen, staffMention, reason, dmWarning = ''
   //   au lieu de traîner en dessous du panneau.
   // • L'avatar n'est plus répété en `author.iconURL` : la vignette suffit.
   return ui.v2panel({
-    color: finalColor,
+    accent: false,
     author: { name: `Ticket de ${member.user.username}${meta.number ? ` · #${meta.number}` : ''}` },
     title,
     content: extra.content || '',
@@ -1396,7 +1394,8 @@ async function sendTranscriptDm(clientOrInteraction, guild, channelName, { text,
   //    jointe n'apparaît plus toute seule.
   const fileName = `transcription-${channelName}.txt`;
   const payload = ui.v2panel({
-    color: '#ED4245',
+    // v309 — aucune ligne colorée sur les panneaux du système de tickets.
+    accent: false,
     title: customMsg ? serverName + ' · ' + i18n.t(lang, 'transcript_title') : i18n.t(lang, 'transcript_title'),
     // Texte brut : v2panel découpe lui-même les paragraphes et pose les
     // séparateurs NATIFS pleine largeur entre eux.
@@ -1500,7 +1499,8 @@ async function sendTicketRecap(botId, interaction, { row, meta, closeReason, tra
     }
 
     const sent = await board.send(ui.v2panel({
-      color: '#e07a5f',
+      // v309 — aucune ligne colorée sur les panneaux du système de tickets.
+      accent: false,
       title: `📔 Récapitulatif — Ticket #${number}${row && row.type_label ? ` · ${row.type_label}` : ''}`,
       fields: [
         { name: '👤 Ouvert par', value: openerId ? `<@${openerId}>\n\`${openerTag}\`` : `\`${openerTag}\``, inline: true },
@@ -1585,9 +1585,8 @@ async function handleTicketClose(botId, interaction) {
   store.openTickets.update(channel.id, { closed_at: new Date().toISOString() });
   bumpTicketStats(guild.id, 0, -1);
   await channel.send(ui.v2panel({
-    // v308 — ligne verticale unifiée (couleur Hoxera standard), comme tous
-    // les panneaux du système de tickets (avant : rouge « danger »).
-    color: '#e07a5f',
+    // v308/v309 — aucune ligne colorée sur les panneaux tickets.
+    accent: false,
     title: '🔒 Ticket fermé',
     description: 'Le ticket est maintenant verrouillé. Le créateur ne peut plus écrire, mais le staff peut encore le réouvrir.',
     fields: [
@@ -1623,9 +1622,8 @@ async function handleTicketReopen(botId, interaction) {
     await channel.permissionOverwrites.edit(openerId, { ViewChannel: true, SendMessages: true }).catch(() => {});
   }
   await channel.send(ui.v2panel({
-    // v308 — ligne verticale unifiée (couleur Hoxera standard), comme tous
-    // les panneaux du système de tickets (avant : verte « succès »).
-    color: '#e07a5f',
+    // v308/v309 — aucune ligne colorée sur les panneaux tickets.
+    accent: false,
     title: '🔓 Ticket réouvert',
     description: 'Le créateur peut de nouveau répondre. Le staff peut reprendre le traitement du ticket.',
     fields: [{ name: '🛡️ Réouvert par', value: `${interaction.user}`, inline: true }],
@@ -1655,9 +1653,8 @@ async function handleTicketClaim(botId, interaction) {
   });
   store.activity.add(botId, guild.id, '🖐️', `Ticket #${row.number} pris en charge par ${interaction.user.tag}`);
   await channel.send(ui.v2panel({
-    // v308 — ligne verticale unifiée (couleur Hoxera standard), comme tous
-    // les panneaux du système de tickets (avant : verte « succès »).
-    color: '#e07a5f',
+    // v308/v309 — aucune ligne colorée sur les panneaux tickets.
+    accent: false,
     title: '🖐️ Ticket pris en charge',
     description: i18n.t(lang, 'ticket_claim_msg', { staff: `${interaction.user}` }),
     fields: [
@@ -1942,7 +1939,8 @@ async function sendRatingDm(client, guild, openerId, number, lang) {
   try {
     // v234 — payload V2 : la rangée d'étoiles 1-5 va DANS le conteneur.
     await user.send(ui.v2panel({
-      variant: 'warning',
+      // v309 — aucune ligne colorée sur les panneaux du système de tickets.
+      accent: false,
       title: `⭐ ${i18n.t(lang, 'ticket_rating_title')}`,
       description: i18n.t(lang, 'ticket_rating_desc', { number, server: guild.name }),
       fields: [{ name: '🧭 Comment noter ?', value: 'Choisissez une note ci-dessous. Votre avis aide le staff à améliorer le support.' }],
@@ -1996,9 +1994,8 @@ async function handleTicketHold(botId, interaction) {
     await channel.permissionOverwrites.edit(openerId, { ViewChannel: true, SendMessages: false }).catch(() => {});
   }
   await channel.send(ui.v2panel({
-    // v308 — ligne verticale unifiée (couleur Hoxera standard), comme tous
-    // les panneaux du système de tickets (avant : orange « attention »).
-    color: '#e07a5f',
+    // v308/v309 — aucune ligne colorée sur les panneaux tickets.
+    accent: false,
     title: '⏸ Ticket mis en attente',
     description: 'Le ticket est temporairement en pause. Le créateur ne peut plus écrire jusqu’à la reprise du traitement.',
     fields: [{ name: '🛡️ Mis en attente par', value: `${interaction.user}`, inline: true }],
@@ -2915,7 +2912,8 @@ async function sweepInactiveTickets(botId, entry, now = new Date()) {
             // message + description de l'embed) : duplication supprimée, seule
             // la description dans le conteneur est conservée.
             const autoClosedPanel = ui.v2panel({
-              variant: 'danger',
+              // v309 — aucune ligne colorée sur les panneaux du système de tickets.
+              accent: false,
               title: '⏰ Ticket fermé automatiquement',
               description: i18n.t(lang, 'ticket_auto_closed'),
               fields: [{ name: '⌛ Motif', value: 'Aucune activité pendant 2 heures.', inline: true }, { name: '📄 Suite', value: 'Le ticket pourra être supprimé automatiquement après le délai prévu.', inline: true }],

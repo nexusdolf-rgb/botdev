@@ -38,8 +38,8 @@ const HOXERA = 0xE07A5F;
 
 console.log('— 1. Pins de version v308 —');
 const html = racine('public/index.html');
-check('index.html : ?v=308 ×7', (html.match(/\?v=308/g) || []).length === 7);
-check('sw.js : cache botdev-v308', racine('public/sw.js').includes("const CACHE = 'botdev-v308';"));
+check('index.html : ?v=309 ×7', (html.match(/\?v=309/g) || []).length === 7);
+check('sw.js : cache botdev-v309', racine('public/sw.js').includes("const CACHE = 'botdev-v309';"));
 
 console.log('— 2. La petite ligne verticale est PARTOUT #e07a5f —');
 store.bots.create({ user_id: 1, name: 'B', token: 'x', client_id: 'c', prefix: '!' });
@@ -47,7 +47,8 @@ store.bots.create({ user_id: 1, name: 'B', token: 'x', client_id: 'c', prefix: '
 // Panneau public classique
 {
   const payload = panels.buildTicketPanel({ message: '' }, {}, [], 'Serveur', 'G308');
-  check('panneau public classique : ligne #e07a5f', v2.accentColor(payload) === HOXERA, String(v2.accentColor(payload)));
+  // v309 — plus AUCUNE ligne colorée : bordure neutre (accent absent).
+  check('panneau public classique : aucune ligne colorée (v309)', v2.accentColor(payload) === undefined, String(v2.accentColor(payload)));
 }
 
 // Panneau public personnalisé — le type a une couleur ROUGE configurée :
@@ -63,7 +64,7 @@ store.bots.create({ user_id: 1, name: 'B', token: 'x', client_id: 'c', prefix: '
   });
   const p = adv.buildPanelPayload(cfg);
   check('panneau personnalisé : la ligne n’est PLUS la couleur du 1er type (rouge)', v2.accentColor(p) !== 0xF37059);
-  check('panneau personnalisé : ligne #e07a5f', v2.accentColor(p) === HOXERA, String(v2.accentColor(p)));
+  check('panneau personnalisé : aucune ligne colorée (v309)', v2.accentColor(p) === undefined, String(v2.accentColor(p)));
   // Les boutons personnalisés, eux, ne bougent pas. En mode « boutons » ils
   // sont dans des Sections (accessoire), pas dans des ActionRow classiques :
   // on les cherche donc dans tout le JSON du conteneur.
@@ -84,7 +85,7 @@ store.bots.create({ user_id: 1, name: 'B', token: 'x', client_id: 'c', prefix: '
   const member = { id: 'u1', user: { id: 'u1', username: 'Alice', displayAvatarURL: () => 'https://cdn/a.png' }, toString: () => '@Alice', guild: { name: 'Serveur' } };
   const chosen = { label: 'ticket contre admin', emoji: '🎫', description: '', staff_roles: [], color: '#f37059' };
   const welcome = panels.ticketWelcomePanel(member, chosen, '<@&R1>', 'Ma demande', '', [], 'fr', { number: 3 }, {}, { content: '' });
-  check('salon privé : ligne #e07a5f malgré la couleur rouge du type', v2.accentColor(welcome) === HOXERA, String(v2.accentColor(welcome)));
+  check('salon privé : aucune ligne colorée malgré la couleur rouge du type (v309)', v2.accentColor(welcome) === undefined, String(v2.accentColor(welcome)));
   check('salon privé : tout le reste intact (titre + pied)', (v2.title(welcome) || '').includes('🎫') && v2.footer(welcome).includes('Ticket #3'));
 }
 
@@ -101,12 +102,12 @@ store.bots.create({ user_id: 1, name: 'B', token: 'x', client_id: 'c', prefix: '
     ['⏸ Ticket mis en attente', 'variant: \'warning\''],
   ]) {
     const b = bloc(titre);
-    check(`panneau « ${titre} » : ligne #e07a5f (avant : ${ancienne})`,
-      b.includes("color: '#e07a5f'") && !b.includes(ancienne), b.slice(-120));
+    check(`panneau « ${titre} » : aucune ligne colorée (v309)`,
+      b.includes('accent: false') && !b.includes(ancienne), b.slice(-120));
   }
   const claim = src.indexOf('ticket_claim_msg');
-  check('panneau « 🖐️ Ticket pris en charge » : ligne #e07a5f',
-    claim >= 0 && src.slice(Math.max(0, claim - 320), claim).includes("color: '#e07a5f'"));
+  check('panneau « 🖐️ Ticket pris en charge » : aucune ligne colorée (v309)',
+    claim >= 0 && src.slice(Math.max(0, claim - 320), claim).includes('accent: false'));
 }
 
 console.log(`\nRésultat : ${ok} ✅ / ${ko} ❌ sur ${ok + ko} vérifications`);

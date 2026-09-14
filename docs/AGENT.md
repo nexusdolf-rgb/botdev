@@ -962,6 +962,19 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v309 (14/09 — LIGNE VERTICALE RETIRÉE, CAPTURE À L'APPUI)** : le
+  fondateur annote une capture : côté 1 = la ligne verticale colorée du
+  panneau (à retirer « définitif »), côté 2 = le bord neutre du message (le
+  résultat voulu). La v308 l'avait UNIFIÉE en #e07a5f — mais lui veut AUCUNE
+  couleur. `ui.v2container` accepte désormais `accent: false` (le conteneur
+  ne reçoit pas d'accent_color → bordure neutre Discord), et TOUS les
+  panneaux du système de tickets passent dessus : public classique,
+  personnalisé (advancedTickets), accueil du salon privé, fermé / réouvert /
+  pris en charge / mis en attente / fermeture auto, DM transcription, DM
+  évaluation, récap du journal. Portée STRICTE : les autres panneaux (help,
+  giveaways, vocaux, warnings…) gardent leur ligne. Rien d'autre ne change
+  (boutons, signatures déjà réglés). Test v309 : 16 vérifications ; v212,
+  v237, v241, v307, v308 alignés.
 - **v308 (14/09 — LIGNE VERTICALE DES PANNEAUX TICKETS UNIFIÉE)** : le
   fondateur re-précise — il parle de la PETITE LIGNE VERTICALE à côté des
   panneaux (l'accent du conteneur Components V2), PAS des boutons. Sur son
@@ -1395,14 +1408,14 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 14/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v308** — la petite ligne verticale (accent) de TOUS
-  les panneaux du système de tickets est unifiée en couleur Hoxera standard
-  `#e07a5f` : panneau public classique, panneau personnalisé (avant : couleur
-  du 1er type, rouge chez le fondateur), accueil du salon privé (avant :
-  couleur du type), fermé/réouvert/pris en charge/mis en attente (avant :
-  rouge/vert/vert/orange). Les boutons et couleurs de types ne changent pas.
-  `test/v308-test.js` (12 vérifications). Les panneaux déjà postés gardent
-  leur apparence : renvoyer un panneau applique le nouveau style.
+- Dernière version : **v309** — la petite ligne verticale colorée (accent du
+  conteneur) est RETIRÉE de TOUS les panneaux du système de tickets
+  (bordure neutre, comme le bord droit du message — voir la capture annotée
+  du fondateur : côté 1 = ligne à retirer, côté 2 = résultat voulu). Portée
+  stricte aux tickets : les autres panneaux gardent leur ligne. Boutons et
+  signatures inchangés. `test/v309-test.js` (16 vérifications). Les panneaux
+  déjà postés gardent leur apparence : renvoyer un panneau applique le
+  nouveau style.
 - ✅ **Incident du 14/09 CLÔTURÉ** : `BOTDEV_GH_TOKEN` révoqué → boot sur base
   vide. Rétabli à 15h56 : nouveau PAT reporté dans Render via l'API
   (`PUT /v1/services/srv-da5i2h2jobas73epvos0/env-vars/BOTDEV_GH_TOKEN` avec

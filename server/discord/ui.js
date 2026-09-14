@@ -261,7 +261,12 @@ function v2separator(container, state) {
 //   footer      → TextDisplay « -# … » (texte discret Discord) en pied
 //   sections:false → aucun séparateur, texte brut
 function v2container(options = {}) {
-  const container = new ContainerBuilder().setAccentColor(colorInt(options.color || options.variant || 'info'));
+  const container = new ContainerBuilder();
+  // v309 — `accent: false` retire la petite ligne verticale colorée du panneau
+  // (le conteneur garde sa bordure neutre par défaut, comme le bord droit).
+  // Demande du fondateur : les panneaux du système de tickets ne doivent
+  // porter AUCUNE ligne colorée.
+  if (options.accent !== false) container.setAccentColor(colorInt(options.color || options.variant || 'info'));
   const state = v2state();
   const useSections = options.sections !== false;
 

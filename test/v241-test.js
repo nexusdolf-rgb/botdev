@@ -142,9 +142,9 @@ const P = i18n.panelTexts('fr');
   // du fondateur : plus aucune signature sous les panneaux).
   check('signature retirée du pied (v306)', v2.footer(payload) === '', v2.footer(payload));
   check('bannière conservée (MediaGallery)', brut.includes('/api/tickets/panel-banner/'));
-  // v306 — le rouge #ED4245 (15548997) est remplacé par la couleur Hoxera
-  // standard #e07a5f (14711391) : le panneau n'a plus l'air « en erreur ».
-  check('couleur d’accent Hoxera (#e07a5f = 14711391)', brut.includes('14711391') && !brut.includes('15548997'));
+  // v306/v309 — plus de rouge #ED4245 (15548997) puis plus AUCUNE ligne
+  // colorée (v309) sur le panneau de tickets : bordure neutre.
+  check('aucune ligne colorée sur le panneau tickets (v309)', !brut.includes('15548997') && !brut.includes('14711391') && !brut.includes('accent_color'));
   check('pied toujours SANS heure (décision globale v241)',
     !/\d{2}\/\d{2} \d{2}:\d{2}/.test(v2.footer(payload)));
 
@@ -343,10 +343,10 @@ const membre = () => ({
   }
   {
     const html = racine('public/index.html');
-    check('index.html : ?v=308 référencé 7 fois', (html.match(/\?v=308/g) || []).length === 7,
-      String((html.match(/\?v=308/g) || []).length));
+    check('index.html : ?v=309 référencé 7 fois', (html.match(/\?v=309/g) || []).length === 7,
+      String((html.match(/\?v=309/g) || []).length));
     check('index.html : plus aucun ?v=240', !html.includes('?v=240'));
-    check('sw.js : cache « botdev-v241 »', racine('public/sw.js').includes("'botdev-v308'"));
+    check('sw.js : cache « botdev-v241 »', racine('public/sw.js').includes("'botdev-v309'"));
   }
 
   // ==========================================================================

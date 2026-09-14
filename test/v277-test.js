@@ -93,8 +93,8 @@ const reactionOf = (msgId, emoji, guild) => ({ message: { id: msgId, guild: guil
   console.log('— 6. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=308 référencé 7 fois', (index.match(/\?v=308/g) || []).length === 7);
-  check('sw.js : cache « botdev-v308 »', sw.includes("const CACHE = 'botdev-v308';"));
+  check('index.html : ?v=309 référencé 7 fois', (index.match(/\?v=309/g) || []).length === 7);
+  check('sw.js : cache « botdev-v309 »', sw.includes("const CACHE = 'botdev-v309';"));
 
   console.log(`\n🎉 v277 — ${ok} vérifications OK : rôles par réaction modifiables, façon grands bots.`);
 })().catch((e) => { console.error(e); process.exit(1); });
