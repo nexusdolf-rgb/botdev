@@ -343,10 +343,10 @@ const membre = () => ({
   }
   {
     const html = racine('public/index.html');
-    check('index.html : ?v=309 référencé 7 fois', (html.match(/\?v=309/g) || []).length === 7,
-      String((html.match(/\?v=309/g) || []).length));
+    check('index.html : ?v=310 référencé 7 fois', (html.match(/\?v=310/g) || []).length === 7,
+      String((html.match(/\?v=310/g) || []).length));
     check('index.html : plus aucun ?v=240', !html.includes('?v=240'));
-    check('sw.js : cache « botdev-v241 »', racine('public/sw.js').includes("'botdev-v309'"));
+    check('sw.js : cache « botdev-v241 »', racine('public/sw.js').includes("'botdev-v310'"));
   }
 
   // ==========================================================================

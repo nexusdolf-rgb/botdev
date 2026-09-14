@@ -962,6 +962,14 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v310 (14/09 — LE DERNIER PANNEAU OUBLIÉ)** : le fondateur signale le
+  MP « 🎫 Votre ticket est ouvert » reçu après la création : c'était le
+  seul panneau du système de tickets qui portait encore une ligne colorée
+  (la couleur du type). Il passe en `accent: false`, ainsi que le rappel
+  « ⚠️ Ticket bientôt fermé ». Inventaire désormais COMPLET des panneaux
+  tickets en bordure neutre : public classique, personnalisé, accueil salon
+  privé, DM créateur, DM transcription, DM évaluation, fermé, réouvert,
+  pris en charge, attente, fermeture auto, rappel auto, récap journal.
 - **v309 (14/09 — LIGNE VERTICALE RETIRÉE, CAPTURE À L'APPUI)** : le
   fondateur annote une capture : côté 1 = la ligne verticale colorée du
   panneau (à retirer « définitif »), côté 2 = le bord neutre du message (le
@@ -1408,14 +1416,11 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 14/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v309** — la petite ligne verticale colorée (accent du
-  conteneur) est RETIRÉE de TOUS les panneaux du système de tickets
-  (bordure neutre, comme le bord droit du message — voir la capture annotée
-  du fondateur : côté 1 = ligne à retirer, côté 2 = résultat voulu). Portée
-  stricte aux tickets : les autres panneaux gardent leur ligne. Boutons et
-  signatures inchangés. `test/v309-test.js` (16 vérifications). Les panneaux
-  déjà postés gardent leur apparence : renvoyer un panneau applique le
-  nouveau style.
+- Dernière version : **v310** — la v309 étendue au dernier oublié : le MP
+  de confirmation « 🎫 Votre ticket est ouvert » envoyé au créateur juste
+  après la création (il portait la couleur du type, rouge chez le fondateur)
+  et le rappel « ⚠️ Ticket bientôt fermé » passent aussi en bordure neutre.
+  `test/v309-test.js` (18 vérifications).
 - ✅ **Incident du 14/09 CLÔTURÉ** : `BOTDEV_GH_TOKEN` révoqué → boot sur base
   vide. Rétabli à 15h56 : nouveau PAT reporté dans Render via l'API
   (`PUT /v1/services/srv-da5i2h2jobas73epvos0/env-vars/BOTDEV_GH_TOKEN` avec

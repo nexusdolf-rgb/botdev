@@ -1052,7 +1052,10 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
         .setURL(`https://discord.com/channels/${guild.id}/${channel.id}`);
       // v234 — payload Components V2 : le bouton-lien va DANS le conteneur.
       const dmPayload = ui.v2panel({
-        color: chosen && chosen.color ? chosen.color : ui.COLORS.ticket,
+        // v309/v310 — aucune ligne verticale colorée sur les panneaux du
+        // système de tickets (celui-ci est le MP de confirmation envoyé au
+        // créateur juste après la création) : bordure neutre.
+        accent: false,
         title: '🎫 Votre ticket est ouvert',
         // DM de confirmation COURT : pas de séparateur plaqué entre les
         // phrases — il garde ses sauts de paragraphe naturels.
@@ -2936,7 +2939,8 @@ async function sweepInactiveTickets(botId, entry, now = new Date()) {
             // message + description de l'embed) : duplication supprimée, seule
             // la description dans le conteneur est conservée.
             const autoWarnPanel = ui.v2panel({
-              variant: 'warning',
+              // v309/v310 — aucune ligne colorée sur les panneaux du système de tickets.
+              accent: false,
               title: '⚠️ Ticket bientôt fermé',
               description: i18n.t(lang, 'ticket_auto_warn'),
               fields: [{ name: '⏳ Inactivité', value: 'Le ticket sera fermé si aucune réponse n’arrive.', inline: true }, { name: '💬 Action', value: 'Un nouveau message remet le délai à zéro.', inline: true }],
