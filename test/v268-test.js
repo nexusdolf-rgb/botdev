@@ -56,8 +56,7 @@ const mkChannel = (id, name) => {
   check('légende émoji+nom dans le message', v2.texts(panel).join(' ').includes('NOM') && v2.texts(panel).join(' ').includes('Appuyez sur les boutons'));
   check('boutons membre en émojis seuls (ajouter/retirer/expulser/transférer)',
     [rows[1].components[1], rows[1].components[2], rows[1].components[3], rows[2].components[0]].every((c) => c.type === 2 && !c.label && c.emoji));
-  // v306 — le pied signature n'est plus compté dans les textes du panneau.
-  check('3 rubriques d\'aide (accès, membres, salon)', v2.texts(panel).length >= 3);
+  check('3 rubriques d\'aide (accès, membres, salon)', v2.texts(panel).length >= 4);
 
   console.log('— 2. NOS émojis : pack, installation, utilisation —');
   const assets = fs.readdirSync(path.join(__dirname, '..', 'server', 'assets', 'voicetemp'));
@@ -136,8 +135,8 @@ const mkChannel = (id, name) => {
   console.log('— 6. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=306 référencé 7 fois', (index.match(/\?v=306/g) || []).length === 7);
-  check('sw.js : cache « botdev-v306 »', sw.includes("const CACHE = 'botdev-v306';"));
+  check('index.html : ?v=307 référencé 7 fois', (index.match(/\?v=307/g) || []).length === 7);
+  check('sw.js : cache « botdev-v307 »', sw.includes("const CACHE = 'botdev-v307';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v268 — ${ok} vérifications OK : notre interface pro, avec nos émojis.`);

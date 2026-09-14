@@ -347,14 +347,7 @@ function v2container(options = {}) {
     state.components += 1;
   });
 
-  // 5) Pied de panneau.
-  //    v306 (demande du fondateur, 14/09) — LA SIGNATURE « Hoxera · … » EST
-  //    RETIRÉE de tous les panneaux : elle alourdissait visuellement chaque
-  //    panneau (« la ligne en bas »). Tout pied commençant par « Hoxera · »
-  //    disparaît du rendu ; une DATE explicite (timestamp: new Date) survit
-  //    seule — elle porte une vraie information (ex. starboard : la date du
-  //    message épinglé) ; un pied réellement personnalisé (configuré par
-  //    l'admin, ne commençant pas par « Hoxera · ») est conservé tel quel.
+  // 5) Pied de panneau : texte discret précédé d'un séparateur natif.
   //    v241 — L'HEURE N'EST PLUS AJOUTÉE PAR DÉFAUT. Discord affiche déjà
   //    l'horodatage de chaque message : le répéter en pied de panneau était une
   //    duplication systématique (~70 panneaux concernés), et l'utilisateur avait
@@ -366,12 +359,9 @@ function v2container(options = {}) {
     let stamp = '';
     const when = options.timestamp instanceof Date ? options.timestamp : null;
     if (when && !Number.isNaN(when.getTime())) {
-      stamp = when.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      stamp = ` · ${when.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`;
     }
-    const rawFooter = String(options.footer || DEFAULT_FOOTER);
-    const isSignature = rawFooter.startsWith('Hoxera ·') || rawFooter.startsWith('Hoxera·');
-    const body = isSignature ? '' : rawFooter;
-    const footer = text((body ? `${body}${stamp ? ' · ' + stamp : ''}` : stamp), V2_FOOTER_MAX);
+    const footer = text(`${options.footer || DEFAULT_FOOTER}${stamp}`, V2_FOOTER_MAX);
     if (footer && v2room(state, 2) && (hasContent || headTexts.length || bodyBlocks.length || options.image || fileRefs.length)) {
       v2separator(container, state);
       v2text(container, `-# ${footer}`, state);

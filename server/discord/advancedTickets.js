@@ -193,15 +193,9 @@ function buildPanelPayload(config) {
       }
     });
   }
-  // v306 (demande du fondateur) — la signature « Hoxera · Support privé… » est
-  // retirée du pied des panneaux. Un pied PERSONNALISÉ par l'admin
-  // (footer_text) reste affiché, sauf s'il reproduit lui-même la signature.
-  const footerText = String(cfg.footer_text || '').trim();
-  if (footerText && !footerText.startsWith('Hoxera ·') && !footerText.startsWith('Hoxera·')) {
-    container
-      .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
-      .addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${footerText}`));
-  }
+  container
+    .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${String(cfg.footer_text || '').trim() || 'Hoxera · Support privé · Choisissez une option pour commencer'}`));
   return { flags: MessageFlags.IsComponentsV2, components: [container] };
 }
 

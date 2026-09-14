@@ -962,6 +962,18 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v307 (14/09 — RECTIFICATION DE PORTÉE)** : le fondateur précise —
+  « je te dis d'enlever que celui du panneau ticket, pas les autres
+  panneaux ». La suppression GLOBALE de la signature (moteur ui.v2container)
+  est ANNULÉE : ui.js et advancedTickets.js retrouvent leur comportement
+  historique, et les tests épinglés modifiés en v306 sont restaurés à
+  l'identique. Seule différence finale par rapport à la v305 : le panneau
+  tickets public passe `footer: false` (plus de « Hoxera · {serveur} ») et
+  son accent rouge `#ED4245` devient la couleur Hoxera `#e07a5f`. Les tests
+  v241 du panneau tickets restent sur cette nouvelle sémantique.
+  `test/v306-test.js` est remplacé par `test/v307-test.js` (13 vérif).
+  📌 **LEÇON** : quand le fondateur montre UN panneau, la demande porte sur
+  CE panneau — ne jamais globaliser une retouche visuelle sans confirmation.
 - **v306 (14/09 — FINITIONS VISUELLES)** : deux demandes du fondateur en
   regardant son panneau de tickets : (a) « la ligne coloriée en rouge à côté
   du panneau » — l'accent `#ED4245` du panneau de tickets donnait un air
@@ -1369,14 +1381,13 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 14/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v306** — finitions visuelles demandées par le
-  fondateur : (1) le panneau de tickets n'a plus la ligne rouge sur le côté
-  (accent `#e07a5f` comme les autres panneaux) ; (2) la signature
-  « Hoxera · … » est retirée de SOUS tous les panneaux (le moteur
-  `ui.v2container` n'affiche plus aucun pied commençant par « Hoxera · » ;
-  une Date explicite et les pieds réellement personnalisés survivent).
-  `test/v306-test.js` (20 vérifications). Les panneaux déjà envoyés gardent
-  leur ancienne apparence — renvoyer un panneau applique le nouveau style.
+- Dernière version : **v307** — rectification de portée de la v306 : la
+  signature « Hoxera · … » n'est retirée QUE du panneau de tickets (le seul
+  visé par le fondateur) ; elle est RÉTABLIE sur tous les autres panneaux.
+  Le panneau tickets garde aussi sa couleur Hoxera standard `#e07a5f` (plus
+  de ligne rouge). `test/v307-test.js` (13 vérifications). Les panneaux déjà
+  envoyés gardent leur ancienne apparence : renvoyer le panneau depuis le
+  dashboard applique le nouveau style.
 - ✅ **Incident du 14/09 CLÔTURÉ** : `BOTDEV_GH_TOKEN` révoqué → boot sur base
   vide. Rétabli à 15h56 : nouveau PAT reporté dans Render via l'API
   (`PUT /v1/services/srv-da5i2h2jobas73epvos0/env-vars/BOTDEV_GH_TOKEN` avec
