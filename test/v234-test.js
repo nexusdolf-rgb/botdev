@@ -245,7 +245,9 @@ console.log('\n4️⃣  roleMenuPayload + sendRoleMenu — menu de rôles en V2'
   check('séparateur natif entre eux', v2div(p) >= 1);
   check('aucun trait texte ━', !v2json(p).includes(ui.SEPARATOR));
   check('« Comment ça marche ? » conservé', t.some((x) => x.startsWith('**🧭 Comment ça marche ?**')));
-  check('le pied indique le nombre de rôles', t.some((x) => x.startsWith('-# Hoxera · 2 rôle(s) disponible(s)')));
+  // v311 (demande du fondateur) — signature « Hoxera · N rôle(s)… » retirée
+  // du panneau de menu des rôles.
+  check('signature retirée du pied du panneau rôles (v311)', !t.some((x) => x.startsWith('-# Hoxera')));
   check('le menu déroulant est DANS le conteneur', v2top(p).includes(1) && v2json(p).includes('bd-menu:'));
   check('plus de « payload.components = components » après coup',
     !/payload\.components = components;/.test(src));

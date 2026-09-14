@@ -1820,10 +1820,15 @@ function buildVtPanel(botId, guild) {
     new ButtonBuilder().setCustomId(id('del')).setEmoji(emo('suppr')).setStyle(ButtonStyle.Danger),
   );
   return ui.v2panel({
-    color: '#e07a5f',
+    // v311 (demande du fondateur) — ni ligne colorée ni signature sur le
+    // panneau de l'interface vocaux temporaires.
+    accent: false,
     titleLevel: 3,
     title: '🎙️ Interface Hoxera — vocaux temporaires',
     description: `Gérez **votre salon vocal temporaire** — chaque réponse est **personnelle**.\n${legende}\n\n**Appuyez sur les boutons ci-dessous pour utiliser l'interface.**`,
+    // v311 (demande du fondateur) — la signature « Hoxera · … » est retirée
+    // du panneau de l'interface vocaux temporaires.
+    footer: false,
   }, [row1b, row2, row3]);
 }
 

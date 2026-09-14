@@ -2639,13 +2639,17 @@ function roleMenuPayload(botId, menu) {
     // components` APRÈS coup écrasait le conteneur en V2 (les lignes doivent
     // être DEDANS).
     return ui.v2panel({
-      variant: 'brand',
+      // v311 (demande du fondateur) — ni ligne colorée ni signature sur le
+      // panneau de menu des rôles.
+      accent: false,
       title: `📋 ${menu.name || 'Rôles du serveur'}`,
       // sections par défaut : le contenu personnalisé peut comporter des
       // paragraphes → séparateurs natifs pleine largeur.
       description: menu.content || 'Choisissez vos rôles ci-dessous. Vous pouvez les activer ou les retirer à tout moment.',
       fields: [{ name: '🧭 Comment ça marche ?', value: menu.mode === 'buttons' ? 'Cliquez sur un bouton pour recevoir ou retirer le rôle correspondant.' : 'Sélectionnez un ou plusieurs rôles dans le menu déroulant.' }],
-      footer: `Hoxera · ${panelOptions.length} rôle(s) disponible(s)`,
+      // v311 (demande du fondateur) — la signature « Hoxera · N rôle(s)
+      // disponible(s) » est retirée du panneau de menu des rôles.
+      footer: false,
     }, components);
   };
   if (menu.mode === 'buttons') {

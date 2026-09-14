@@ -962,6 +962,13 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v311 (14/09 — RÔLES + VOCAUX TEMPORAIRES ÉPURÉS)** : le fondateur
+  étend sa demande à deux panneaux : (1) menu des rôles — retrait du pied
+  « Hoxera · N rôle(s) disponible(s) » et de la ligne colorée (variant
+  brand → accent:false) ; (2) interface vocaux temporaires — retrait de la
+  signature par défaut et de la ligne colorée (#e07a5f → accent:false).
+  Tout le reste (boutons, légende émojis, contenus) est intact. Tests
+  épinglés alignés : v234, v268, v273. test/v311-test.js : 11 vérifications.
 - **v310 (14/09 — LE DERNIER PANNEAU OUBLIÉ)** : le fondateur signale le
   MP « 🎫 Votre ticket est ouvert » reçu après la création : c'était le
   seul panneau du système de tickets qui portait encore une ligne colorée
@@ -1416,11 +1423,13 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 14/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v310** — la v309 étendue au dernier oublié : le MP
-  de confirmation « 🎫 Votre ticket est ouvert » envoyé au créateur juste
-  après la création (il portait la couleur du type, rouge chez le fondateur)
-  et le rappel « ⚠️ Ticket bientôt fermé » passent aussi en bordure neutre.
-  `test/v309-test.js` (18 vérifications).
+- Dernière version : **v311** — même traitement demandé pour deux autres
+  panneaux : le panneau de MENU DES RÔLES et le panneau « 🎙️ Interface
+  Hoxera — vocaux temporaires » perdent leur signature (« Hoxera · N rôle(s)
+  disponible(s) » / signature par défaut) ET leur ligne verticale colorée
+  (`accent: false`). Contenus, boutons et légendes intacts. `test/v311-test.js`
+  (11 vérifications). Les panneaux déjà postés gardent leur apparence : les
+  renvoyer depuis le dashboard applique le nouveau style.
 - ✅ **Incident du 14/09 CLÔTURÉ** : `BOTDEV_GH_TOKEN` révoqué → boot sur base
   vide. Rétabli à 15h56 : nouveau PAT reporté dans Render via l'API
   (`PUT /v1/services/srv-da5i2h2jobas73epvos0/env-vars/BOTDEV_GH_TOKEN` avec
