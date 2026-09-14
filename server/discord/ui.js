@@ -370,9 +370,16 @@ function v2container(options = {}) {
 
   // 6) Les lignes de boutons/menus vont DANS le conteneur (V2 n'accepte pas
   //    de components au niveau du message quand le flag est posé).
+  // ⚠️ v303 — Discord compte AUSSI les composants interactifs à l'intérieur
+  //    de chaque ActionRow (boutons, menus) dans le plafond des 40. Avant,
+  //    seul l'ActionRow était compté : le centre d'aide admin atteignait en
+  //    réalité 44 composants → rejet silencieux de TOUT le panneau
+  //    (« COMPONENT_MAX_TOTAL_COMPONENTS_EXCEEDED », incident /help du 14/09).
   const rows = Array.isArray(options.rows) ? options.rows : [];
   rows.slice(0, 5).forEach((row) => {
-    if (row && v2room(state)) { container.addActionRowComponents(row); state.components += 1; }
+    if (!row) return;
+    const children = Array.isArray(row.components) ? row.components.length : 0;
+    if (v2room(state, 1 + children)) { container.addActionRowComponents(row); state.components += 1 + children; }
   });
   return container;
 }

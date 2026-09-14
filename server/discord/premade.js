@@ -1686,6 +1686,9 @@ function buildHelpPanel(botId, record, client, guild, requested, member, view = 
   }
 
   // --- Vue catégorie (choisie dans le menu déroulant) ---
+  // ⚠️ v303 — la liste passe dans la DESCRIPTION, plus dans un champ : les
+  //    valeurs de champ sont tronquées à 1024 caractères par le moteur V2,
+  //    alors que la description dispose du budget de 4000.
   if (view === 'custom' && hasCustom) {
     const lines = custom.map((c) => {
       const trig = c.trigger_type === 'slash' ? `/${c.name}` : c.trigger_type === 'keyword' ? `mot-clé « ${c.trigger_value} »` : `${record.prefix}${c.trigger_value || c.name}`;
@@ -1694,8 +1697,7 @@ function buildHelpPanel(botId, record, client, guild, requested, member, view = 
     return ui.v2panel({
       color: COLOR,
       title: '🧩 Commandes personnalisées',
-      description: `Les commandes créées pour CE serveur · \`/help commande\` pour le détail.`,
-      fields: [{ name: `🧩 Commandes personnalisées · ${custom.length}`, value: lines.join('\n').slice(0, 3500) }],
+      description: `Les commandes créées pour CE serveur · \`/help commande\` pour le détail.\n\n**🧩 Commandes personnalisées · ${custom.length}**\n${lines.join('\n').slice(0, 3500)}`,
       footer: helpFooter(record, client),
     }, helpRows(botId, blocks, hasCustom, 'custom', authorId));
   }
@@ -1706,8 +1708,7 @@ function buildHelpPanel(botId, record, client, guild, requested, member, view = 
       return ui.v2panel({
         color: COLOR,
         title: block.title,
-        description: `${block.names.length} commande${block.names.length > 1 ? 's' : ''} · \`/help commande\` pour l'utilisation et un exemple.`,
-        fields: [{ name: `${block.title} · ${block.names.length}`, value: lines.join('\n').slice(0, 3500) }],
+        description: `${block.names.length} commande${block.names.length > 1 ? 's' : ''} · \`/help commande\` pour l'utilisation et un exemple.\n\n**${block.title} · ${block.names.length}**\n${lines.join('\n').slice(0, 3500)}`,
         footer: helpFooter(record, client),
       }, helpRows(botId, blocks, hasCustom, block.key, authorId));
     }
@@ -1715,10 +1716,27 @@ function buildHelpPanel(botId, record, client, guild, requested, member, view = 
   }
 
   // --- Sommaire ---
-  const fields = blocks.map((b) => ({
-    name: `${b.title} · ${b.names.length} commande${b.names.length > 1 ? 's' : ''}`,
-    value: b.names.map((n) => `/${n}`).join(' · '),
-  }));
+  // ⚠️ v303 — le sommaire ADMIN affichait 16 champs séparés chacun d'un
+  //    séparateur natif : avec les rangées (comptées honnêtement depuis la
+  //    v303), le panneau atteignait 44 composants → refusé par Discord
+  //    (max 40), et le fondateur voyait l'erreur au lieu de l'aide.
+  //    Correctif : les catégories sont regroupées DEUX PAR DEUX dans le même
+  //    bloc de texte (un séparateur entre chaque paire) : le rendu garde son
+  //    rythme et le panneau retombe autour de 30 composants, avec de la marge
+  //    pour les champs légende / commandes personnalisées.
+  const fields = [];
+  let pair = [];
+  const flushPair = () => {
+    if (!pair.length) return;
+    // Nom invisible (U+200B) : le moteur ne rend que la valeur (v234).
+    fields.push({ name: '\u200b', value: pair.join('\n\n') });
+    pair = [];
+  };
+  blocks.forEach((b) => {
+    pair.push(`**${b.title} · ${b.names.length} commande${b.names.length > 1 ? 's' : ''}**\n${b.names.map((n) => `/${n}`).join(' · ')}`);
+    if (pair.length >= 2) flushPair();
+  });
+  flushPair();
   if (hasCustom) {
     fields.push({
       name: `🧩 Commandes personnalisées · ${custom.length}`,

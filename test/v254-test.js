@@ -88,9 +88,9 @@ check('ecranEtroit garde son verrou « OS de bureau »',
   racine('public/js/dashboard.js').includes("classList.contains('hx-os-pc')"));
 
 console.log('— 7. Version —');
-check('index.html : ?v=302 référencé 7 fois', (index.match(/\?v=302/g) || []).length === 7,
-  String((index.match(/\?v=302/g) || []).length));
-check('sw.js : cache « botdev-v302 »', racine('public/sw.js').includes("const CACHE = 'botdev-v302';"));
+check('index.html : ?v=303 référencé 7 fois', (index.match(/\?v=303/g) || []).length === 7,
+  String((index.match(/\?v=303/g) || []).length));
+check('sw.js : cache « botdev-v303 »', racine('public/sw.js').includes("const CACHE = 'botdev-v303';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v254 — ${ok} vérifications OK : plus aucune largeur où un PC bascule en mobile.`);

@@ -939,6 +939,29 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   existantes** en base. Le bloc de migration de `db.js` est une **ZONE PROTÉGÉE** :
   `scripts/v240-complements.js` le découpe (`decoupe()`) et n'y touche jamais —
   un `split/join` naïf avait transformé la migration en opération vide
+- **v303 (14/09 — LE VRAI BUG /help)** : grâce à la visibilité ajoutée en v302,
+  `/api/health/bot` a immédiatement livré le coupable :
+  `COMPONENT_MAX_TOTAL_COMPONENTS_EXCEEDED: Total number of components cannot
+  exceed 40`. **Double cause.** 1) `ui.v2container` comptait chaque ActionRow
+  pour 1 composant SANS ses enfants — Discord compte aussi les boutons/menus
+  À L'INTÉRIEUR de la rangée : le budget interne mentait de 1-2 par rangée.
+  2) Le sommaire du centre d'aide côté ADMIN affichait 16 champs (un par
+  catégorie) séparés chacun d'un séparateur natif : **44 composants réels**
+  → le panneau entier était REJETÉ par Discord. Comme l'échec était avalé
+  par `send()`, le fondateur voyait le trompeur « pas encore prête » (pré-v302)
+  puis « Impossible d'afficher le panneau » (post-v302). **Correctifs :**
+  comptage honnête dans `ui.js` (`state.components += 1 + children` par
+  rangée) et sommaire regroupé **deux catégories par bloc de texte**
+  (`flushPair` dans `buildHelpPanel`, nom de champ U+200B → seul le contenu
+  est rendu) : 44 → **27 composants**, toutes les catégories présentes, menu
+  et bouton « Effacer » conservés. **Bonus** : les vues « catégorie » et
+  « commandes personnalisées » passaient leur liste dans un champ dont la
+  valeur est tronquée à **1024 caractères** par le moteur V2 — la liste passe
+  dans la description (budget 4000) : plus jamais de liste coupée. Vérifié :
+  admin 27 / modérateur 23 / membre 21 / MP 27 composants, commandes perso +
+  légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
+  panneau doit être compté « à la Discord » (composants imbriqués compris,
+  enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
 - **v302 (14/09 — INCIDENT MAJEUR « BASE VIDE » + correctifs)** : le token GitHub
   fin-grained de sauvegarde (`BOTDEV_GH_TOKEN` sur Render) a été révoqué quand
   l'utilisateur a généré son nouveau PAT. Conséquence : au redémarrage de
@@ -1272,7 +1295,7 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 14/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v302** — incident « base vide » résolu (voir la section
+- Dernière version : **v303** — incident « base vide » résolu + vrai bug /help corrigé (voir les sections
   v302 dans l'historique). **220 tests verts** (`test/v302-test.js` :
   26 vérifications).
 - ✅ **Incident du 14/09 CLÔTURÉ** : `BOTDEV_GH_TOKEN` révoqué → boot sur base
