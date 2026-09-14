@@ -1270,7 +1270,31 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 4. Vérifie les tokens (GitHub 200, Render 200, Discord `users/@me` avec curl)
 5. Fais-moi un point de situation clair, puis attends mes instructions
 
-## 📌 ÉTAT AU 06/09/2026 (dernière mise à jour de ce document)
+## 📌 ÉTAT AU 14/09/2026 (dernière mise à jour de ce document)
+
+- Dernière version : **v302** — incident « base vide » résolu (voir la section
+  v302 dans l'historique). **220 tests verts** (`test/v302-test.js` :
+  26 vérifications).
+- ✅ **Incident du 14/09 CLÔTURÉ** : `BOTDEV_GH_TOKEN` révoqué → boot sur base
+  vide. Rétabli à 15h56 : nouveau PAT reporté dans Render via l'API
+  (`PUT /v1/services/srv-da5i2h2jobas73epvos0/env-vars/BOTDEV_GH_TOKEN` avec
+  la clé Render `rnd_…` fournie par l'utilisateur), redéploiement,
+  `bootRestore: ok (745472 octets)`, 8 serveurs / 199 membres, 0 erreur.
+  Les deux signalements du fondateur (« /help répond *pas encore prête* » et
+  « tout le monde voit les salons de tickets ») étaient des conséquences de
+  la base vide + de l'isolation v293 ; la v301 (garde + réparation) et la v302
+  (réparation sans base, repli « sujet du salon ») couvrent le code.
+  **À vérifier sur Discord par le fondateur** : `/help` répond normalement,
+  les nouveaux tickets sont privés, le bouton « Je suis humain » fonctionne.
+- ⚠️ **Règle d'or ajoutée** : après CHAQUE redémarrage/déploiement, lire
+  `bootRestore` dans `/api/health/bot` — toute valeur autre que `ok (…)` est
+  une urgence. Et lors d'une rotation de token GitHub : reporter le nouveau
+  dans Render AVANT de révoquer l'ancien.
+- 🔑 Token GitHub fine-grained actif (fourni le 14/09) : lecture + écriture
+  vérifiées sur `botdev-data`. Clé API Render fournie le 14/09 (accès env-vars
+  + déploiements confirmés).
+
+## 📌 ÉTAT AU 06/09/2026 (conservé pour mémoire)
 
 - Dernière version : **v241** — textes affichés sur Discord rendus professionnels
   et allégés (voir la section v241 et l'historique ci-dessus). **168 tests verts**
@@ -1359,7 +1383,7 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
   giveaway…) — total loin de la limite Discord de 100.
 - Dashboard : 22 modules serveur + 5 modules bot (`Dashboard.MODULES` /
   `Dashboard.BOT_MODULES` dans `public/js/dashboard.js`), 142 routes API.
-- ⚠️ Token GitHub fine-grained fourni le 05/09 : expire le **04/12/2026**.
+- ⚠️ Token GitHub fine-grained fourni le 14/09 (remplace celui du 05/09, révoqué le 14/09 à tort AVANT report dans Render → incident « base vide »).
 - ⏳ Toujours en attente utilisateur : renommer le rôle « Nexora » à la main sur
   les serveurs concernés (piège n°4).
 
