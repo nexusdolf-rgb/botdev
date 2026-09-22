@@ -42,10 +42,12 @@ const check = (label, cond) => {
   const logCount = () => logged.length;
 
   // ---------- 1. cmd_stats ----------
-  store.cmdStats.bump(BOT, G, 'help', '2026-08-22');
-  store.cmdStats.bump(BOT, G, 'help', '2026-08-22');
-  store.cmdStats.bump(BOT, G, 'ping', '2026-08-22');
-  store.cmdStats.bump(BOT, G, 'ping', '2026-08-21');
+  const d0 = new Date(Date.now() - 1 * 86400000).toISOString().slice(0, 10);
+  const d1 = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
+  store.cmdStats.bump(BOT, G, 'help', d0);
+  store.cmdStats.bump(BOT, G, 'help', d0);
+  store.cmdStats.bump(BOT, G, 'ping', d0);
+  store.cmdStats.bump(BOT, G, 'ping', d1);
   check('stats : total = 4', store.cmdStats.total(BOT, G) === 4);
   const top = store.cmdStats.top(BOT, G, 5);
   check('stats : top commandes trié', top[0].command === 'help' && top[0].n === 2 && top[1].command === 'ping');

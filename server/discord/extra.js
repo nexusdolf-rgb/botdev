@@ -410,7 +410,7 @@ async function handleSlash(botId, entry, interaction) {
           { name: '💌 Demandeur', value: `${user}`, inline: true },
           { name: '💑 Destinataire', value: `${target}`, inline: true },
         ],
-        footer: `Hoxera · ${guild.name} · Réponse réservée à ${target.username}`,
+        footer: false,
       }, [row]);
       await interaction.reply({ ...proposal, fetchReply: true });
       return true;
@@ -424,7 +424,7 @@ async function handleSlash(botId, entry, interaction) {
         variant: 'danger',
         title: '💔 Divorce enregistré',
         description: `${user} et <@${other}> ont divorcé… le serveur verse une petite larme.`,
-        footer: `Hoxera · ${guild.name} · Vie sociale`,
+        footer: false,
       }));
     }
     case 'couple': {
@@ -441,7 +441,7 @@ async function handleSlash(botId, entry, interaction) {
         title: `💍 Couple de ${target.username}`,
         description: `${target} ❤️ <@${other}>`,
         fields: [{ name: '📅 Depuis', value: dateStr, inline: true }],
-        footer: `Hoxera · ${guild.name} · Vie sociale`,
+        footer: false,
       }));
     }
     case 'hug': case 'kiss': case 'slap': case 'pat': case 'punch': {
@@ -452,7 +452,7 @@ async function handleSlash(botId, entry, interaction) {
         variant: 'live',
         title: `${cmd === 'hug' ? '🤗 Câlin' : cmd === 'kiss' ? '😘 Bisou' : cmd === 'slap' ? '👋 Petite claque' : cmd === 'pat' ? '🐶 Caresse' : '👊 Duel amical'}`,
         description: text,
-        footer: `Hoxera · ${guild.name} · Vie sociale`,
+        footer: false,
       }));
     }
     // ---------------- Jeux ----------------
@@ -471,7 +471,7 @@ async function handleSlash(botId, entry, interaction) {
           { name: '🎮 Votre choix', value: `${RPS_EMOJI[move]} ${move}`, inline: true },
           { name: '🤖 Mon choix', value: `${RPS_EMOJI[botMove]} ${botMove}`, inline: true },
         ],
-        footer: `Hoxera · Duel de ${user.username}`,
+        footer: false,
       }));
     }
     case 'pendu': {
@@ -485,7 +485,7 @@ async function handleSlash(botId, entry, interaction) {
         sections: false,
         description: `${user}, devine le mot caché !\n\n${shown}`,
         fields: [{ name: '❤️ Vies restantes', value: '❤️'.repeat(8), inline: true }, { name: '🧭 Règle', value: 'Choisissez une lettre par bouton.', inline: true }],
-        footer: `Hoxera · Partie de ${user.username}`,
+        footer: false,
       }, letterRows(guild.id));
       const msg = await interaction.reply({ ...penduPanel, fetchReply: true });
       penduGames.set(`${guild.id}:${msg.id}`, state);
@@ -505,7 +505,7 @@ async function handleSlash(botId, entry, interaction) {
         sections: false,
         description: `${user} (❌) contre ${target} (⭕)\n\nAu tour de ${user} !`,
         fields: [{ name: '🎯 Objectif', value: 'Aligne trois symboles pour gagner.', inline: true }, { name: '🔁 Tour', value: `${user}`, inline: true }],
-        footer: `Hoxera · Partie de ${user.username}`,
+        footer: false,
       }, boardRows(guild.id, state));
       const msg = await interaction.reply({ ...morpionPanel, fetchReply: true });
       morpionGames.set(`${guild.id}:${msg.id}`, state);
@@ -526,7 +526,7 @@ async function handleSlash(botId, entry, interaction) {
         // faisait perdre IsComponentsV2 : il est passé DANS les options.
         return interaction.reply(ui.v2panel({
           variant: 'brand', title: '🧠 Classement Quiz', description: lines.join('\n'),
-          footer: `Hoxera · ${guild.name} · Quiz`, ephemeral: true,
+          footer: false, ephemeral: true,
         }));
       }
       // Jouer : choisir une question au hasard (quiz personnalisés du serveur
@@ -575,7 +575,7 @@ async function handleSlash(botId, entry, interaction) {
         color: 0xe07a5f,
         title: '🧠 Quiz',
         description: `**${question}**\n\n🇦 **${choices[0]}**\n🇧 **${choices[1]}**\n🇨 **${choices[2]}**\n\n⚡ Répondez vite : **+${bonus} points bonus** si vous répondez en moins de **${bonusWindow} secondes** !`,
-        footer: `Hoxera · ${guild.name} · Quiz`,
+        footer: false,
       };
       // Préfixe `hx:quiz:` → routé par handleButton (comme hx:poll, hx:pendu…).
       const row = new ActionRowBuilder().addComponents(
@@ -633,7 +633,7 @@ async function handleSlash(botId, entry, interaction) {
         variant: 'warning',
         title: '🎂 Anniversaires du serveur',
         description: lines.join('\n') || 'Aucun',
-        footer: `Hoxera · ${guild.name} · Anniversaires`,
+        footer: false,
         ephemeral: true,
       }));
     }
@@ -711,7 +711,7 @@ async function handleSlash(botId, entry, interaction) {
         .addFields(
           { name: '🏆 Top des recruteurs', value: lines, inline: false },
         )
-        .setFooter({ text: `Hoxera · ${guild.name}` })
+        
         .setTimestamp();
       return interaction.reply({ embeds: [embed] });
     }
@@ -737,7 +737,7 @@ async function handleSlash(botId, entry, interaction) {
         title: '💼 Travail terminé',
         description: `${job[0]} ${job[1]} !`,
         fields: [{ name: '🪙 Récompense', value: `+${gain} coins`, inline: true }],
-        footer: `Hoxera · ${guild.name} · Économie`,
+        footer: false,
       }));
     }
     case 'gamble': {
@@ -754,7 +754,7 @@ async function handleSlash(botId, entry, interaction) {
           title: '🎰 JACKPOT !',
           description: `Vous doublez votre mise : **+${amount} coins** !`,
           fields: [{ name: '💰 Nouveau solde', value: `${row.coins + amount} coins`, inline: true }],
-          footer: `Hoxera · ${guild.name} · Économie`,
+          footer: false,
         }));
       }
       store.economy.add(botId, guild.id, user.id, -amount);
@@ -763,7 +763,7 @@ async function handleSlash(botId, entry, interaction) {
         title: '🎰 Pari perdu',
         description: `Vous perdez **${amount} coins**.`,
         fields: [{ name: '💰 Solde restant', value: `${row.coins - amount} coins`, inline: true }],
-        footer: `Hoxera · ${guild.name} · Économie`,
+        footer: false,
       }));
     }
     case 'rob': {
@@ -791,7 +791,7 @@ async function handleSlash(botId, entry, interaction) {
           title: '🦹 Vol réussi !',
           description: `Vous volez **${stolen} coins** à ${target} 😈`,
           fields: [{ name: '🎯 Cible', value: `${target}`, inline: true }],
-          footer: `Hoxera · ${guild.name} · Économie`,
+          footer: false,
         }));
       }
       const fine = Math.max(10, Math.floor(me.coins * 0.15));
@@ -802,7 +802,7 @@ async function handleSlash(botId, entry, interaction) {
         title: '🚓 Vol échoué',
         description: `${target} vous a surpris et vous réclame **${fine} coins** de dédommagement…`,
         fields: [{ name: '💸 Amende', value: `${fine} coins`, inline: true }],
-        footer: `Hoxera · ${guild.name} · Économie`,
+        footer: false,
       }));
     }
     // ---------------- Modération / organisation ----------------
@@ -818,7 +818,7 @@ async function handleSlash(botId, entry, interaction) {
           title: '🚨 Serveur verrouillé',
           description: `${res.channels} salon(s) sont maintenant en lecture seule.`,
           fields: [{ name: '🔓 Pour rouvrir', value: 'Utilisez `/lockdown off` quand la situation est maîtrisée.' }],
-          footer: `Hoxera · ${guild.name} · Sécurité`,
+          footer: false,
         }));
       }
       const res = await lockdown.off(botId, guild, member.user.tag);
@@ -827,7 +827,7 @@ async function handleSlash(botId, entry, interaction) {
         variant: 'success',
         title: '🔓 Serveur rouvert',
         description: `${res.reopened} salon(s) sont de nouveau ouverts.`,
-        footer: `Hoxera · ${guild.name} · Sécurité`,
+        footer: false,
       }));
     }
     case 'emotes': {
@@ -942,7 +942,7 @@ async function handleSlash(botId, entry, interaction) {
         title: cfg.title || '📝 Candidature',
         description: `Cliquez sur le bouton pour candidater : vous répondrez à **${questions.length} question(s)** dans une fenêtre privée.`,
         fields: [{ name: '🔒 Confidentialité', value: 'Seul le staff verra vos réponses.' }],
-        footer: `Hoxera · ${guild.name} · Candidatures`,
+        footer: false,
       }, [row]));
       return true;
     }
@@ -990,7 +990,7 @@ async function renderTop(botId, entry, interaction, guild, type, page, message =
     .setColor(type === 'coins' ? 0xf1c40f : 0xe07a5f)
     .setTitle(type === 'coins' ? '🪙 Classement Coins' : '✨ Classement XP')
     .setDescription(lines.join('\n'))
-    .setFooter({ text: `Hoxera · ${guild.name} · Page ${page + 1}/${maxPage + 1} · ${total} membre(s) classé(s)` })
+    .setFooter({ text: `Page ${page + 1}/${maxPage + 1} · ${total} membre(s) classé(s)` })
     .setTimestamp();
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`hxtop:${guild.id}:${type}:${page - 1}`).setLabel('◀').setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
@@ -1067,14 +1067,14 @@ async function handleButton(botId, entry, interaction) {
           title: '💍 Mariage accepté !',
           description: `Félicitations ${user} et <@${from}> ! Vous êtes désormais mariés sur ce serveur 💍❤️`,
           fields: [{ name: '✨ Ambiance', value: `${rand(MARRIED_POINTS)} ${guild.name} compte ${store.marriages.count(botId, guild.id)} couple(s)` }],
-          footer: `Hoxera · ${guild.name} · Vie sociale`,
+          footer: false,
         }, [row]));
       } else {
         await interaction.update(ui.v2panel({
           variant: 'danger',
           title: '💔 Demande refusée',
           description: `${user} a refusé la demande de <@${from}>… ce n'est que partie remise !`,
-          footer: `Hoxera · ${guild.name} · Vie sociale`,
+          footer: false,
         }, [row]));
       }
       return true;
@@ -1114,7 +1114,7 @@ async function handleButton(botId, entry, interaction) {
         // sans traits qui sautent à chaque tour.
         sections: false,
         description: content,
-        footer: `Hoxera · Partie de ${state.playerId}`,
+        footer: false,
       }, over ? [] : letterRows(guild.id)));
       return true;
     }
@@ -1144,7 +1144,7 @@ async function handleButton(botId, entry, interaction) {
         // Mise à jour LIVE : pas de trait entre les courtes lignes.
         sections: false,
         description: content,
-        footer: `Hoxera · Tour de ${state.over ? 'fin de partie' : state.turn}`,
+        footer: false,
       }, state.over ? boardRows(guild.id, state, true) : boardRows(guild.id, state)));
       return true;
     }
@@ -1176,7 +1176,7 @@ async function handleButton(botId, entry, interaction) {
         color: correctPick ? 0x57f287 : 0xed4245,
         title: '🧠 Quiz',
         description: `${correctPick ? '✅ **Bonne réponse !**' : '❌ **Mauvaise réponse…**'}\n\n**${st.q}**\n\nLa bonne réponse était : **${st.correct}**${correctPick ? `\n\n✨ +${gained} points${fast ? ' (bonus rapidité ⚡)' : ''}` : ''}`,
-        footer: `Hoxera · ${guild.name} · Quiz`,
+        footer: false,
       }, [row]);
       await interaction.update(resultPayload);
       return true;
@@ -1232,7 +1232,7 @@ async function handleButton(botId, entry, interaction) {
             title: '🎉 Candidature acceptée',
             description: `Bonne nouvelle ! Votre candidature sur **${guild.name}** a été acceptée par ${user.tag}.`,
             fields: [{ name: '✅ Prochaine étape', value: 'Le staff va maintenant vous transmettre les informations nécessaires.' }],
-            footer: `Hoxera · ${guild.name} · Candidatures`,
+            footer: false,
           })).catch(() => {});
         } catch {}
       } else {
@@ -1247,7 +1247,7 @@ async function handleButton(botId, entry, interaction) {
             title: '😔 Candidature refusée',
             description: `Votre candidature sur **${guild.name}** a été refusée. Vous pourrez retenter plus tard.`,
             fields: [{ name: '💡 Conseil', value: 'N’hésitez pas à améliorer votre candidature avant une nouvelle demande.' }],
-            footer: `Hoxera · ${guild.name} · Candidatures`,
+            footer: false,
           })).catch(() => {});
         } catch {}
       }
@@ -1452,7 +1452,7 @@ async function onVoiceState(botId, entry, oldState, newState) {
             title: '🔊 Limite de salons vocaux',
             description: 'Vous avez atteint la limite de 10 salons vocaux temporaires ouverts.',
             fields: [{ name: '💡 Que faire ?', value: 'Rejoignez un salon existant ou quittez un salon temporaire avant d’en créer un nouveau.' }],
-            footer: 'Hoxera · Salons vocaux temporaires',
+            footer: false,
           })).catch(() => {});
         } catch {}
         return;
@@ -2019,7 +2019,7 @@ async function sweepReminders(botId, entry) {
         title: '⏰ Votre rappel',
         description: String(r.text || 'Rappel sans texte').slice(0, 4000),
         fields: [{ name: '🧭 Serveur', value: entry.client.guilds.cache.get(r.guild_id)?.name || 'Votre serveur', inline: true }],
-        footer: 'Hoxera · Rappel personnel',
+        footer: false,
       };
       const sent = user && await user.send(ui.v2panel(reminderOptions)).then(() => true).catch(() => false);
       if (!sent) {
@@ -2073,7 +2073,7 @@ function sweepScheduled(botId, entry, now = new Date()) {
       content: s.text,
       description: '',
       fields: [{ name: '🕘 Horaire', value: `${localTime} · ${tz}`, inline: true }, { name: '💬 Message programmé', value: 'Le message personnalisé est affiché juste au-dessus.', inline: false }],
-      footer: `Hoxera · ${guild.name} · Annonce automatique`,
+      footer: false,
     };
     const visualPayload = { ...ui.v2panel(scheduledOptions), allowedMentions: { parse: ['everyone', 'roles', 'users'] } };
     channel.send(visualPayload)
@@ -2140,7 +2140,7 @@ async function sweepBirthdays(botId, entry, now = new Date()) {
             title: '🎂 Joyeux anniversaire !',
             description: `Toute la communauté souhaite une superbe journée à ${member} ! 🥳🎁`,
             fields: [{ name: '🎉 Message du serveur', value: 'Profite bien de cette journée spéciale !' }],
-            footer: `Hoxera · ${guild.name} · Anniversaires`,
+            footer: false,
           }),
           allowedMentions: { users: [String(member.id)] },
         }).catch(() => {});

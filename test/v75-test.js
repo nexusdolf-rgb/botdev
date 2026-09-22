@@ -24,17 +24,24 @@ const check = (label, cond) => {
 
   // ---------- Données de test : anciennes + récentes ----------
   const db = store.db;
+  // Dates RELATIVES : les « récentes » du 19/08/2026 sont sorties de la
+  // fenêtre de 30 jours le 22/09/2026 et faisaient échouer le test toutes
+  // seules. On ancre désormais sur Date.now().
+  const recentDay = new Date(Date.now() - 5 * 86400000).toISOString().slice(0, 10);
+  const recentTs = new Date(Date.now() - 5 * 86400000).toISOString().slice(0, 19).replace('T', ' ');
+  const oldDay = '2026-01-01';
+  const oldTs = '2026-01-01 00:00:00';
   // anciennes (à purger)
-  db.prepare('INSERT INTO message_stats (bot_id, guild_id, user_id, day, count) VALUES (?,?,?,?,?)').run(BOT, G, 'u1', '2026-01-01', 5);
-  db.prepare('INSERT INTO message_stats (bot_id, guild_id, user_id, day, count) VALUES (?,?,?,?,?)').run(BOT, G, 'u2', '2026-08-19', 5);
-  db.prepare('INSERT INTO join_stats (bot_id, guild_id, day, count) VALUES (?,?,?,?)').run(BOT, G, '2026-01-01', 1);
-  db.prepare('INSERT INTO suggestions (bot_id, guild_id, author_id, text, created_at) VALUES (?,?,?,?,?)').run(BOT, G, 'u1', 'ancienne', '2026-01-01 00:00:00');
-  db.prepare('INSERT INTO suggestions (bot_id, guild_id, author_id, text, created_at) VALUES (?,?,?,?,?)').run(BOT, G, 'u2', 'récente', '2026-08-19 00:00:00');
-  db.prepare('INSERT INTO warnings (bot_id, guild_id, user_id, reason, mod_id, created_at) VALUES (?,?,?,?,?,?)').run(BOT, G, 'u1', 'ancien', 'u9', '2026-01-01 00:00:00');
-  db.prepare('INSERT INTO transcripts (token, bot_id, guild_id, channel_name, opener_id, messages, created_at) VALUES (?,?,?,?,?,?,?)').run('tk-ancien', BOT, G, 'ticket-x', 'u1', 'vieux texte', '2026-01-01 00:00:00');
-  db.prepare('INSERT INTO transcripts (token, bot_id, guild_id, channel_name, opener_id, messages, created_at) VALUES (?,?,?,?,?,?,?)').run('tk-recent', BOT, G, 'ticket-y', 'u2', 'texte récent', '2026-08-19 00:00:00');
-  db.prepare('INSERT INTO shop_purchases (bot_id, guild_id, user_id, item, price, ts) VALUES (?,?,?,?,?,?)').run(BOT, G, 'u1', 'VIP', 500, '2026-01-01 00:00:00');
-  db.prepare('INSERT INTO shop_purchases (bot_id, guild_id, user_id, item, price, ts) VALUES (?,?,?,?,?,?)').run(BOT, G, 'u2', 'VIP', 500, '2026-08-19 00:00:00');
+  db.prepare('INSERT INTO message_stats (bot_id, guild_id, user_id, day, count) VALUES (?,?,?,?,?)').run(BOT, G, 'u1', oldDay, 5);
+  db.prepare('INSERT INTO message_stats (bot_id, guild_id, user_id, day, count) VALUES (?,?,?,?,?)').run(BOT, G, 'u2', recentDay, 5);
+  db.prepare('INSERT INTO join_stats (bot_id, guild_id, day, count) VALUES (?,?,?,?)').run(BOT, G, oldDay, 1);
+  db.prepare('INSERT INTO suggestions (bot_id, guild_id, author_id, text, created_at) VALUES (?,?,?,?,?)').run(BOT, G, 'u1', 'ancienne', oldTs);
+  db.prepare('INSERT INTO suggestions (bot_id, guild_id, author_id, text, created_at) VALUES (?,?,?,?,?)').run(BOT, G, 'u2', 'récente', recentTs);
+  db.prepare('INSERT INTO warnings (bot_id, guild_id, user_id, reason, mod_id, created_at) VALUES (?,?,?,?,?,?)').run(BOT, G, 'u1', 'ancien', 'u9', oldTs);
+  db.prepare('INSERT INTO transcripts (token, bot_id, guild_id, channel_name, opener_id, messages, created_at) VALUES (?,?,?,?,?,?,?)').run('tk-ancien', BOT, G, 'ticket-x', 'u1', 'vieux texte', oldTs);
+  db.prepare('INSERT INTO transcripts (token, bot_id, guild_id, channel_name, opener_id, messages, created_at) VALUES (?,?,?,?,?,?,?)').run('tk-recent', BOT, G, 'ticket-y', 'u2', 'texte récent', recentTs);
+  db.prepare('INSERT INTO shop_purchases (bot_id, guild_id, user_id, item, price, ts) VALUES (?,?,?,?,?,?)').run(BOT, G, 'u1', 'VIP', 500, oldTs);
+  db.prepare('INSERT INTO shop_purchases (bot_id, guild_id, user_id, item, price, ts) VALUES (?,?,?,?,?,?)').run(BOT, G, 'u2', 'VIP', 500, recentTs);
   // giveaway terminé depuis longtemps (ends_at en ms, ancien)
   db.prepare('INSERT INTO giveaways (bot_id, guild_id, channel_id, message_id, prize, winners, ends_at, drawn) VALUES (?,?,?,?,?,?,?,1)').run(BOT, G, 'C1', 'm1', 'Prix', 1, Date.now() - 60 * 86400000);
   // rappel expiré il y a 2 jours (oublié par un bug hypothétique)

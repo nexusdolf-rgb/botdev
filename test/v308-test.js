@@ -38,8 +38,8 @@ const HOXERA = 0xE07A5F;
 
 console.log('— 1. Pins de version v308 —');
 const html = racine('public/index.html');
-check('index.html : ?v=311 ×7', (html.match(/\?v=311/g) || []).length === 7);
-check('sw.js : cache botdev-v311', racine('public/sw.js').includes("const CACHE = 'botdev-v311';"));
+check('index.html : ?v=312 ×7', (html.match(/\?v=312/g) || []).length === 7);
+check('sw.js : cache botdev-v312', racine('public/sw.js').includes("const CACHE = 'botdev-v312';"));
 
 console.log('— 2. La petite ligne verticale est PARTOUT #e07a5f —');
 store.bots.create({ user_id: 1, name: 'B', token: 'x', client_id: 'c', prefix: '!' });
@@ -86,7 +86,7 @@ store.bots.create({ user_id: 1, name: 'B', token: 'x', client_id: 'c', prefix: '
   const chosen = { label: 'ticket contre admin', emoji: '🎫', description: '', staff_roles: [], color: '#f37059' };
   const welcome = panels.ticketWelcomePanel(member, chosen, '<@&R1>', 'Ma demande', '', [], 'fr', { number: 3 }, {}, { content: '' });
   check('salon privé : aucune ligne colorée malgré la couleur rouge du type (v309)', v2.accentColor(welcome) === undefined, String(v2.accentColor(welcome)));
-  check('salon privé : tout le reste intact (titre + pied)', (v2.title(welcome) || '').includes('🎫') && v2.footer(welcome).includes('Ticket #3'));
+  check('salon privé : titre intact, plus de signature (v312)', (v2.title(welcome) || '').includes('🎫') && !String(v2.footer(welcome)).includes('Hoxera'));
 }
 
 // Panneaux de cycle de vie : fermé / réouvert / pris en charge / attente

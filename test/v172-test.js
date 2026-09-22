@@ -42,11 +42,11 @@ assert(dash.includes("'Optimus Prime hors ligne'") || dash.includes('Optimus Pri
 assert(dash.includes('Dashboard.state.bot.name') || dash.includes('(bot && bot.name)'),
   'dashboard : le nom réel du bot est affiché dynamiquement (v208/v209)');
 assert(panels.includes("PANEL_DEFAULT_NAME = 'Hoxera'"), 'panneau tickets : nom par défaut = Hoxera (v209)');
-assert(panels.includes("'Hoxera · '"), 'panneau tickets : pied de page signé Hoxera (v209)');
+assert(!/footer:\s*[`'"]Hoxera ·/.test(panels), 'v312 : plus de signature Hoxera sous les panneaux tickets');
 assert(i18n.includes('Hoxera est très sollicité'), 'i18n fr : message busy (v209)');
 assert(i18n.includes('Hoxera is very busy'), 'i18n en : message busy');
 assert(routes.includes('banni d’Optimus Prime'), 'routes : message de bannissement (apostrophe typographique)');
-assert(automod.includes("'Blacklist du serveur · Hoxera'"), 'automod : pied de blacklist signé Hoxera');
+assert(!automod.includes("'Blacklist du serveur · Hoxera'"), 'v312 : plus de pied blacklist signé Hoxera par défaut');
 
 // ---------- 3. Nouvelle identité visuelle : logo + bannières ----------
 for (const f of ['public/icons/nexora-robot-mark.png', 'public/icons/nexora-robot-mark-192.png',

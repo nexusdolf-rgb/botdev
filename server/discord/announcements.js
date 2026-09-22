@@ -68,7 +68,7 @@ function buildPanel(config, guild, roleIds = []) {
     title,
     content: roleIds.length ? roleIds.map((id) => `<@&${id}>`).join(' ') : '',
     description: cfg.message || 'Écrivez votre annonce depuis le dashboard.',
-    footer: cfg.footer || DEFAULT_FOOTER,
+    footer: cfg.footer || false,
     image: cfg.image_url || '',
   });
 }

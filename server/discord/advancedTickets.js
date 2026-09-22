@@ -195,9 +195,14 @@ function buildPanelPayload(config) {
       }
     });
   }
-  container
-    .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
-    .addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${String(cfg.footer_text || '').trim() || 'Hoxera · Support privé · Choisissez une option pour commencer'}`));
+  // v312 — plus de signature par défaut. Un pied n'est ajouté que si
+  // l'admin a saisi un texte personnalisé (footer_text).
+  const customFooter = String(cfg.footer_text || '').trim();
+  if (customFooter) {
+    container
+      .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
+      .addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${customFooter}`));
+  }
   return { flags: MessageFlags.IsComponentsV2, components: [container] };
 }
 

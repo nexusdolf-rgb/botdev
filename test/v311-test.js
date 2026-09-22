@@ -29,8 +29,8 @@ const racine = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 
 console.log('— 1. Pins de version v311 —');
 const html = racine('public/index.html');
-check('index.html : ?v=311 ×7', (html.match(/\?v=311/g) || []).length === 7);
-check('sw.js : cache botdev-v311', racine('public/sw.js').includes("const CACHE = 'botdev-v311';"));
+check('index.html : ?v=312 ×7', (html.match(/\?v=312/g) || []).length === 7);
+check('sw.js : cache botdev-v312', racine('public/sw.js').includes("const CACHE = 'botdev-v312';"));
 
 console.log('— 2. Panneau menu des rôles —');
 store.bots.create({ user_id: 1, name: 'B', token: 'x', client_id: 'c', prefix: '!' });
@@ -63,7 +63,7 @@ console.log('— 4. Portée stricte : les autres panneaux ne changent pas —');
   check('panneaux tickets : toujours sans ligne ni signature publique',
     src.includes('accent: false'));
   const d = require('../server/discord/ui').v2panel({ title: 'T', description: 'A' });
-  check('panneau ordinaire : signature toujours présente ailleurs', v2.footer(d).includes('Hoxera'));
+  check('panneau ordinaire : plus de signature par défaut (v312)', !v2.footer(d).includes('Hoxera'));
 }
 
 console.log(`\nRésultat : ${ok} ✅ / ${ko} ❌ sur ${ok + ko} vérifications`);

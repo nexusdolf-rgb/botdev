@@ -962,6 +962,14 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v312 (demande globale — PLUS AUCUNE SIGNATURE SOUS LES PANNEAUX)** :
+  le fondateur élargit enfin la demande : « retire toutes les signatures
+  sous les panneaux, tous les panneaux qui en contiennent encore ». Le
+  moteur ne pose plus `DEFAULT_FOOTER` ; chaque `footer: 'Hoxera · …'`
+  (tickets, rôles, vocaux, giveaways, suggestions, bienvenue, vérification,
+  économie, quiz, etc.) passe à `footer: false`. Un pied personnalisé par
+  l'admin reste honoré. Tests épinglés alignés (v107, v172, v209, v217,
+  v237-v241, v292, v296, v297, v307, v308, v311). test/v312-test.js.
 - **v311 (14/09 — RÔLES + VOCAUX TEMPORAIRES ÉPURÉS)** : le fondateur
   étend sa demande à deux panneaux : (1) menu des rôles — retrait du pied
   « Hoxera · N rôle(s) disponible(s) » et de la ligne colorée (variant
@@ -1423,13 +1431,14 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 14/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v311** — même traitement demandé pour deux autres
-  panneaux : le panneau de MENU DES RÔLES et le panneau « 🎙️ Interface
-  Hoxera — vocaux temporaires » perdent leur signature (« Hoxera · N rôle(s)
-  disponible(s) » / signature par défaut) ET leur ligne verticale colorée
-  (`accent: false`). Contenus, boutons et légendes intacts. `test/v311-test.js`
-  (11 vérifications). Les panneaux déjà postés gardent leur apparence : les
-  renvoyer depuis le dashboard applique le nouveau style.
+- Dernière version : **v312** — le fondateur demande désormais de retirer
+  TOUTES les signatures « Hoxera · … » sous TOUS les panneaux. Le moteur
+  `ui.v2container` / `ui.embed` n'ajoute plus de pied par défaut ; tous les
+  `footer: 'Hoxera · …'` explicites sont retirés. Survivent : un pied saisi
+  par l'admin (annonces, tickets avancés `footer_text`) et les pieds utiles
+  (⭐ starboard, pagination /top, /help). `test/v312-test.js`. Les panneaux
+  déjà postés gardent leur apparence : les renvoyer depuis le dashboard
+  applique le nouveau style.
 - ✅ **Incident du 14/09 CLÔTURÉ** : `BOTDEV_GH_TOKEN` révoqué → boot sur base
   vide. Rétabli à 15h56 : nouveau PAT reporté dans Render via l'API
   (`PUT /v1/services/srv-da5i2h2jobas73epvos0/env-vars/BOTDEV_GH_TOKEN` avec

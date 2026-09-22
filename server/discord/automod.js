@@ -289,7 +289,7 @@ async function applyMemberBlacklist(botId, message, detection, options = {}) {
   } else {
     const color = /^#[0-9a-fA-F]{6}$/.test(String(gs.am_blacklist_color || '')) ? String(gs.am_blacklist_color) : '#ED4245';
     const title = String(gs.am_blacklist_title || '🚫 Membre ajouté à la blacklist').trim().slice(0, 256) || '🚫 Membre ajouté à la blacklist';
-    const footer = String(gs.am_blacklist_footer || 'Blacklist du serveur · Hoxera').trim().slice(0, 200) || 'Blacklist du serveur · Hoxera';
+    const footer = String(gs.am_blacklist_footer || '').trim().slice(0, 200);
     const sourceChannel = message.channel && message.channel.id ? `<#${message.channel.id}>` : 'Salon inconnu';
     const sourceMessage = message.url && /^https?:\/\//.test(String(message.url)) ? `[Ouvrir le message](${String(message.url).slice(0, 500)})` : 'Lien indisponible';
     const expirationText = expiresAt ? new Date(expiresAt).toLocaleString('fr-FR') : 'Permanente';
@@ -314,7 +314,7 @@ async function applyMemberBlacklist(botId, message, detection, options = {}) {
         { name: '🚫 Statut', value: 'Blacklist active sur ce serveur', inline: true },
         { name: '💬 Contenu détecté', value: String(message.content || '—').slice(0, 900) || '—' },
       ],
-      footer,
+      footer: footer || false,
     };
     try {
       // v236 — le ping ne peut plus être dans le `content` du message (interdit
@@ -463,7 +463,7 @@ async function sendWarn(botId, message, gs, lang, text) {
         // elle était moralisatrice et le membre a déjà reçu l'avertissement
         // visible dans le salon.
         description: 'Votre message a été **supprimé** automatiquement par la protection du serveur. La règle déclenchée est indiquée dans le salon.',
-        footer: 'Hoxera · Protection du serveur',
+        footer: false,
       }));
       dmOk = true;
     }

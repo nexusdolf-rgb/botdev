@@ -248,7 +248,7 @@ async function main() {
   // tickets, quelle que soit la couleur du type : bordure neutre.
   check('salon privé : titre + pied conservés, aucune ligne colorée (v308/v309)',
     (v2.title(welcome) || '').includes('🎫') && v2.json(welcome).includes('Journal') === false
-    && v2.accentColor(welcome) === undefined && v2.footer(welcome).includes('Ticket #12'));
+    && v2.accentColor(welcome) === undefined && v2.footer(welcome) === '');
   check('salon privé : plafond de 40 composants respecté', v2.componentCount(welcome) <= 40,
     `${v2.componentCount(welcome)} composants`);
 

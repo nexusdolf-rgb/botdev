@@ -59,7 +59,7 @@ function buildPanel(s, authorTag, settings = {}, ping = '') {
     // juste en dessous. Le pied ne garde que la signature produit, alignée sur le
     // panneau de tickets (`Hoxera · Support`) : le numéro de suggestion figure
     // déjà dans le titre, et une information ne s'écrit qu'une fois par panneau.
-    footer: 'Hoxera · Suggestions',
+    footer: false,
   }, buildComponents(s, settings));
 }
 
@@ -113,7 +113,7 @@ function buildApprovedAnnouncement(s) {
     color: '#57F287',
     author: { name: '✅ Suggestion approuvée' },
     description: `**${String(s.text || '').slice(0, 1500)}**\n\n💡 ${who} — **approuvée par le staff** !`,
-    footer: `Hoxera · Suggestion #${s.id}`,
+    footer: false,
   });
 }
 

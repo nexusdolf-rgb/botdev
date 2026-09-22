@@ -41,7 +41,6 @@ function buildPayload(cfg) {
       title: '📌 Message épinglé',
       description: text,
       color: 0xe07a5f,
-      footer: { text: 'Hoxera · message automatique' },
     }],
   };
 }

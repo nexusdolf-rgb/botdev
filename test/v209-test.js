@@ -45,10 +45,10 @@ console.log('▶ v209-test.js');
 // ---------- 1. Identité : Hoxera signe les messages ----------
 console.log('— Identité : Hoxera signe les messages Discord —');
 check('design system : brand = terracotta #e07a5f', COLORS.brand === '#e07a5f');
-check('design system : footer par défaut = Hoxera', (ui.DEFAULT_FOOTER || '').includes('Hoxera'));
-check('premade /profile & /rank & /levels signés Hoxera', files.premade.includes(".setFooter({ text: `Hoxera · ${guild.name}` })"));
-check('anti-raid signé Hoxera', files.antiraid.includes('Hoxera — anti-raid automatique'));
-check('blacklist automod signée Hoxera', files.automod.includes('Blacklist du serveur · Hoxera'));
+check('design system : constante historique DEFAULT_FOOTER toujours exportée', (ui.DEFAULT_FOOTER || '').includes('Hoxera'));
+check('v312 : plus de setFooter « Hoxera · ${guild.name} » dans premade', !files.premade.includes(".setFooter({ text: `Hoxera · ${guild.name}` })"));
+check('anti-raid signé Hoxera (journal, pas un pied de panneau)', files.antiraid.includes('Hoxera — anti-raid automatique'));
+check('v312 : plus de pied blacklist signé Hoxera par défaut', !files.automod.includes('Blacklist du serveur · Hoxera'));
 check('panels : repli du panneau = Hoxera', files.panels.includes("PANEL_DEFAULT_NAME = 'Hoxera'"));
 check('i18n : message « très sollicité » signé Hoxera', files.i18n.includes('Hoxera est très sollicité'));
 check('plus aucune signature « Optimus Prime · » dans les messages', !files.premade.includes('Optimus Prime · ${guild.name}'));
@@ -68,7 +68,7 @@ check('xp.js : importe EmbedBuilder', files.xp.includes("require('discord.js')")
 check('xp.js : annonce en embed', files.xp.includes('new EmbedBuilder()'));
 check('xp.js : mention de la progression', files.xp.includes("name: 'Progression'"));
 check('xp.js : champ XP', files.xp.includes("name: '✨ XP'"));
-check('xp.js : footer signé Hoxera', files.xp.includes('Hoxera · ${message.guild.name}'));
+check('v312 : xp.js n\'a plus de pied signé Hoxera', !files.xp.includes('Hoxera · ${message.guild.name}'));
 
 // ---------- 4. Giveaway : structuré, sans MAJUSCULES ----------
 console.log('— Giveaway : panneau structuré —');
@@ -78,7 +78,7 @@ check('giveaway : infos en champs', files.giveaway.includes("name: '🏆 Nombre 
 // `.setFooter({ text: … })` mais l'option `footer:` de ui.v2panel, qui le rend
 // en texte discret « -# … ». L'INTENTION vérifiée ici est inchangée : la
 // signature Hoxera est toujours présente.
-check('giveaway : footer signé Hoxera', /footer: 'Hoxera \u00B7 Giveaway',/.test(files.giveaway));
+check('v312 : giveaway n\'a plus de pied signé Hoxera', !/footer: 'Hoxera \u00B7 Giveaway'/.test(files.giveaway));
 check('giveaway : plus de .setFooter (migré en V2)', !files.giveaway.includes('.setFooter('));
 check('giveaway : état final sans MAJUSCULES', !files.giveaway.includes('GIVEAWAY TERMINÉ'));
 
@@ -94,14 +94,14 @@ check('CSS : toutes les surfaces Discord aux mêmes arrondis', files.css.include
 check('dashboard : modèle d’accueil au tutoiement (plus de « je vous invite »)', !files.dashJs.includes('je vous invite à prendre connaissance'));
 // v240 — tout le produit est passé au vouvoiement : le modèle de départ aussi.
 check('dashboard : modèle de départ au vouvoiement', files.dashJs.includes('la porte reste ouverte si vous revenez'));
-check('index : version v209', files.indexHtml.includes('?v=311'));
-check('service worker : cache v209', files.sw.includes('botdev-v311'));
+check('index : version v209', files.indexHtml.includes('?v=312'));
+check('service worker : cache v209', files.sw.includes('botdev-v312'));
 check('menu mobile : nom du bot dynamique', files.dashJs.includes('Dashboard.state.bot.name'));
 
 // ---------- 7. Invitations (extra) : champ + footer ----------
 console.log('— Invitations : rangées propres —');
 check('extra /invites : top recruteurs en champ', files.extra.includes("name: '🏆 Top des recruteurs'"));
-check('extra /invites : footer signé Hoxera', /Hoxera \u00B7 \$\{guild\.name\}/.test(files.extra));
+check('v312 : extra /invites n\'a plus de pied signé Hoxera', !/Hoxera \u00B7 \$\{guild\.name\}/.test(files.extra));
 
 console.log(`\n✅ v209-test.js : ${n} vérifications OK`);
 process.exit(0);

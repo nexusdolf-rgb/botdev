@@ -206,7 +206,7 @@ async function announce(botId, message, level, gs, oldLevel = 0) {
       ...(reward ? [{ name: '🎁 Rôle débloqué', value: reward, inline: true }] : []),
       { name: 'Progression', value: `${bar} ${Math.round(pct * 100)}%` },
     )
-    .setFooter({ text: `Hoxera · ${message.guild.name}` })
+    
     .setTimestamp();
   // 🖼️ Carte de montée de niveau (v210) : image avatar + niveau + barre de
   // progression, option activée par défaut — jamais bloquante : si la

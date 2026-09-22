@@ -75,7 +75,7 @@ function buildPanel(g, settings = {}, ping = '', opts = {}) {
       customMsg || 'Réagissez avec 🎉 pour participer !',
     ].join('\n'),
     fields,
-    footer: 'Hoxera · Giveaway',
+    footer: false,
   }, rows);
 }
 
@@ -244,7 +244,7 @@ function buildEndedPanel(g, winners = [], reroll = false) {
       { name: '🏆 Gagnants', value: String(winners.length), inline: true },
       { name: '⏰ Statut', value: reroll ? 'Nouveau tirage' : 'Terminé', inline: true },
     ],
-    footer: 'Hoxera · Giveaway',
+    footer: false,
   });
 }
 
@@ -268,7 +268,7 @@ async function announceWinners(client, g, winners, reroll = false) {
           ? `Félicitations ${winnerMentions} ! Vous remportez **${g.prize}** !`
           : `Le giveaway « ${g.prize} » n'a eu aucun participant.`,
         fields: [{ name: '🏆 Résultat', value: winners.length ? `${winners.length} gagnant(s)` : 'Aucun participant', inline: true }],
-        footer: 'Hoxera · Giveaways',
+        footer: false,
       }),
       allowedMentions: { users: winners.map((u) => String(u.id)) },
     }).catch(() => {});

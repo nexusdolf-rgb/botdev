@@ -81,7 +81,6 @@ async function sendSetup(botId, guild, setup) {
       title: '🎭 Choisissez vos rôles',
       description: `${setup.content ? setup.content + '\n\n' : ''}Réagissez pour recevoir ou retirer un rôle :\n${lines}`,
       color: 0xe07a5f,
-      footer: { text: 'Hoxera · rôles par réaction' },
     }],
   });
   for (const m of setup.mappings) {

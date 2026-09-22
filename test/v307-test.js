@@ -34,8 +34,8 @@ const brut = (p) => JSON.stringify(p.components ? p.components.map((c) => (c && 
 
 console.log('— 1. Pins de version v307 —');
 const html = racine('public/index.html');
-check('index.html : ?v=311 ×7', (html.match(/\?v=311/g) || []).length === 7);
-check('sw.js : cache botdev-v311', racine('public/sw.js').includes("const CACHE = 'botdev-v311';"));
+check('index.html : ?v=312 ×7', (html.match(/\?v=312/g) || []).length === 7);
+check('sw.js : cache botdev-v312', racine('public/sw.js').includes("const CACHE = 'botdev-v312';"));
 
 console.log('— 2. Panneau tickets : plus de rouge, plus de signature —');
 const SERVEUR = 'Serveur de Test';
@@ -52,23 +52,22 @@ check('titre conservé', v2.title(payload).includes(SERVEUR), v2.title(payload))
 check('bienvenue conservée', textes.some((t) => t.includes(`Bienvenue sur le support officiel de ${SERVEUR}`)));
 check('patience conservée', textes.some((t) => t.includes('Merci de votre patience')));
 
-console.log('— 3. AILLEURS : les signatures sont RÉTABLIES —');
-check('pied par défaut des panneaux : signature de retour',
-  v2.footer(ui.v2panel({ title: 'T', description: 'A' })).includes('Hoxera'), v2.footer(ui.v2panel({ title: 'T', description: 'A' })));
+console.log('— 3. v312 : plus AUCUNE signature sous les panneaux —');
+check('pied par défaut des panneaux : plus de signature',
+  !v2.footer(ui.v2panel({ title: 'T', description: 'A' })).includes('Hoxera'), v2.footer(ui.v2panel({ title: 'T', description: 'A' })));
 {
   const pSug = suggest.buildPanel({ id: 3, status: 'pending', upvotes: 0, downvotes: 0, bot_id: 1, text: 'Idée' }, 'Toto', {});
-  check('suggestions : signature « Hoxera · Suggestions » conservée', v2.footer(pSug) === 'Hoxera · Suggestions', v2.footer(pSug));
+  check('suggestions : plus de signature', !String(v2.footer(pSug)).includes('Hoxera'), v2.footer(pSug));
 }
 {
   const cfg = adv.normalizeConfig({ id: 9, bot_id: 1, guild_id: 'G307', name: 'Tickets', mode: 'menu', channel: '#c', message: '', image_url: '', require_reason: 1, types: [{ label: 'Aide', id: 't1' }] });
-  check('tickets avancés : pied par défaut « Hoxera · Support privé… » conservé',
-    brut(adv.buildPanelPayload(cfg)).includes('Hoxera · Support privé'));
+  check('tickets avancés : plus de pied par défaut Hoxera',
+    !brut(adv.buildPanelPayload(cfg)).includes('Hoxera · Support privé'));
 }
 {
-  // Salon privé : la signature « Hoxera · Ticket #N » reste (décision v238).
   const member = { id: 'u1', user: { id: 'u1', username: 'Alice', displayAvatarURL: () => 'https://cdn/a.png' }, toString: () => '@Alice', guild: { name: SERVEUR } };
   const welcome = panels.ticketWelcomePanel(member, { label: 'Support', emoji: '🎫', staff_roles: [], color: '#5865F2' }, '<@&R1>', 'Ma demande', '', [], 'fr', { number: 7 }, {}, { content: '' });
-  check('salon privé : signature « Hoxera · Ticket #7 » conservée', v2.footer(welcome) === 'Hoxera · Ticket #7', v2.footer(welcome));
+  check('salon privé : plus de signature « Hoxera · Ticket #7 »', !String(v2.footer(welcome)).includes('Hoxera'), v2.footer(welcome));
 }
 
 console.log(`\nRésultat : ${ok} ✅ / ${ko} ❌ sur ${ok + ko} vérifications`);

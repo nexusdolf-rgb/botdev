@@ -186,7 +186,7 @@ await events.runJoinEvent(BOT, member(false), { test: true });
 // et le salon mocké est le même pour les deux : on isole donc le panneau de
 // bienvenue parmi les payloads capturés.
 const welcome = sentPayloads.find((p) => v2.json(p).includes('Bienvenue sur'));
-const journal = sentPayloads.find((p) => v2.json(p).includes('Journa'));
+const journal = sentPayloads.find((p) => v2.json(p).includes('👋 Nouveau membre'));
 check('arrivée sans carte : le panneau de bienvenue est envoyé', !!welcome);
 check('arrivée sans carte : Components V2', welcome && v2.isV2(welcome));
 check('arrivée sans carte : les 2 paragraphes séparés nativement',

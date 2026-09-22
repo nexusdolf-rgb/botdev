@@ -750,7 +750,7 @@ function ticketWelcomePanel(member, chosen, staffMention, reason, dmWarning = ''
     description: desc,
     fields,
     thumbnail: avatar,
-    footer: `Hoxera · Ticket${meta.number ? ` #${meta.number}` : ''}`,
+    footer: false,
     // ⚠️ ui.v2container ajoute l'heure PAR DÉFAUT (`options.timestamp !== false`) :
     // il faut l'éteindre explicitement, sinon le pied reste « … · 05/09 22:11 ».
     timestamp: false,
@@ -1069,7 +1069,7 @@ Notre équipe va vous répondre dans le salon privé prévu pour vous.`,
           { name: '📌 Prochaine étape', value: 'Ouvrez votre ticket et répondez aux messages du staff.', inline: false },
           { name: '🔗 Accès direct', value: `Rejoignez-le ici : ${channel}`, inline: false },
         ],
-        footer: `Hoxera · ${guild.name} · ${i18n.t(lang, 'footer_tickets')}`,
+        footer: false,
         thumbnail: interaction.client.user && interaction.client.user.displayAvatarURL ? interaction.client.user.displayAvatarURL({ size: 128 }) : '',
       }, [new ActionRowBuilder().addComponents(ticketLink)]);
       await openerUser.send(dmPayload);
@@ -1407,7 +1407,7 @@ async function sendTranscriptDm(clientOrInteraction, guild, channelName, { text,
     image: customImg || profileBanner,
     // La transcription .txt : composant File à l'intérieur du conteneur.
     files: [fileName],
-    footer: 'Hoxera · ' + i18n.t(lang, 'footer_tickets'),
+    footer: false,
     // Même pied que le panneau du salon privé (v238) : signature seule, pas
     // d'heure — ui.v2container l'ajoute PAR DÉFAUT, il faut l'éteindre.
     timestamp: false,
@@ -1433,7 +1433,7 @@ async function sendTranscriptDm(clientOrInteraction, guild, channelName, { text,
           .setTitle(customMsg ? serverName + ' · ' + i18n.t(lang, 'transcript_title') : i18n.t(lang, 'transcript_title'))
           .setDescription(ui.text(desc, 4096))
           .setImage(customImg || profileBanner)
-          .setFooter({ text: 'Hoxera · ' + i18n.t(lang, 'footer_tickets') })],
+          ],
         components: url ? [ui.linkRow('📜 Ouvrir la transcription', url)] : [],
         files: [{ attachment: Buffer.from(text || 'Transcription indisponible.', 'utf-8'), name: fileName }],
       });
@@ -1596,7 +1596,7 @@ async function handleTicketClose(botId, interaction) {
       { name: '🛡️ Fermé par', value: `${interaction.user}`, inline: true },
       { name: '📄 Transcription', value: 'Elle sera envoyée à la suppression définitive.', inline: true },
     ],
-    footer: 'Hoxera · Ticket verrouillé',
+    footer: false,
   })).catch(() => {});
   await logging.log(botId, guild, {
     title: '🔒 Ticket fermé', color: '#ED4245',
@@ -1630,7 +1630,7 @@ async function handleTicketReopen(botId, interaction) {
     title: '🔓 Ticket réouvert',
     description: 'Le créateur peut de nouveau répondre. Le staff peut reprendre le traitement du ticket.',
     fields: [{ name: '🛡️ Réouvert par', value: `${interaction.user}`, inline: true }],
-    footer: 'Hoxera · Ticket actif',
+    footer: false,
   })).catch(() => {});
   await ackReply(interaction, { content: '🔓 Ticket réouvert !', ephemeral: true });
 }
@@ -1664,7 +1664,7 @@ async function handleTicketClaim(botId, interaction) {
       { name: '🛡️ Staff responsable', value: `${interaction.user}`, inline: true },
       { name: '🔢 Ticket', value: `#${row.number}`, inline: true },
     ],
-    footer: `Hoxera · Ticket #${row.number} · Suivi du support`,
+    footer: false,
   })).catch(() => {});
   try {
     await logging.log(botId, guild, {
@@ -1789,7 +1789,7 @@ function addMemberOkPanel(lang, guild, member, staffId) {
       { name: i18n.t(lang, 'ticket_add_access'), value: i18n.t(lang, 'ticket_add_access_value') },
     ],
     thumbnail: user.displayAvatarURL ? (user.displayAvatarURL({ size: 128 }) || '') : '',
-    footer: `Hoxera · ${String(guild && guild.name || '').slice(0, 120)}`,
+    footer: false,
     ephemeral: true,
   });
 }
@@ -1947,7 +1947,7 @@ async function sendRatingDm(client, guild, openerId, number, lang) {
       title: `⭐ ${i18n.t(lang, 'ticket_rating_title')}`,
       description: i18n.t(lang, 'ticket_rating_desc', { number, server: guild.name }),
       fields: [{ name: '🧭 Comment noter ?', value: 'Choisissez une note ci-dessous. Votre avis aide le staff à améliorer le support.' }],
-      footer: `Hoxera · Ticket #${number} · Évaluation du support`,
+      footer: false,
       thumbnail: client && client.user && client.user.displayAvatarURL ? client.user.displayAvatarURL({ size: 128 }) : '',
     }, [row]));
     return true;
@@ -2002,7 +2002,7 @@ async function handleTicketHold(botId, interaction) {
     title: '⏸ Ticket mis en attente',
     description: 'Le ticket est temporairement en pause. Le créateur ne peut plus écrire jusqu’à la reprise du traitement.',
     fields: [{ name: '🛡️ Mis en attente par', value: `${interaction.user}`, inline: true }],
-    footer: 'Hoxera · Ticket en attente',
+    footer: false,
   })).catch(() => {});
   await ackReply(interaction, { content: '⏸ Ticket mis en attente (le créateur ne peut plus écrire).', ephemeral: true });
 }
@@ -2924,7 +2924,7 @@ async function sweepInactiveTickets(botId, entry, now = new Date()) {
               title: '⏰ Ticket fermé automatiquement',
               description: i18n.t(lang, 'ticket_auto_closed'),
               fields: [{ name: '⌛ Motif', value: 'Aucune activité pendant 2 heures.', inline: true }, { name: '📄 Suite', value: 'Le ticket pourra être supprimé automatiquement après le délai prévu.', inline: true }],
-              footer: `Hoxera · Ticket #${row.number} · Fermeture automatique`,
+              footer: false,
             });
             await channel.send(autoClosedPanel).catch(() => {});
             try {
@@ -2948,7 +2948,7 @@ async function sweepInactiveTickets(botId, entry, now = new Date()) {
               title: '⚠️ Ticket bientôt fermé',
               description: i18n.t(lang, 'ticket_auto_warn'),
               fields: [{ name: '⏳ Inactivité', value: 'Le ticket sera fermé si aucune réponse n’arrive.', inline: true }, { name: '💬 Action', value: 'Un nouveau message remet le délai à zéro.', inline: true }],
-              footer: `Hoxera · Ticket #${row.number} · Rappel automatique`,
+              footer: false,
             });
             await channel.send(autoWarnPanel).catch(() => {});
           }
@@ -2970,7 +2970,7 @@ async function sweepInactiveTickets(botId, entry, now = new Date()) {
               title: '🗑️ Ticket supprimé automatiquement',
               description: i18n.t(lang, 'ticket_auto_deleted'),
               fields: [{ name: '📄 Transcription', value: 'Elle a été préparée et envoyée au créateur si ses MP sont ouverts.', inline: true }],
-              footer: `Hoxera · Ticket #${row.number} · Suppression automatique`,
+              footer: false,
             });
             await channel.send(autoDeletedPanel).catch(() => {});
             setTimeout(() => { channel.delete('Ticket fermé depuis plus de 24 h').catch(() => {}); }, 1500);

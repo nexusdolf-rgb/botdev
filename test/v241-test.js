@@ -252,8 +252,8 @@ const membre = () => ({
     sansCount && v2.json(sansCount).includes('👥 Membre n°') && v2.json(sansCount).includes('**42**'));
   check('arrivée : l’intitulé n’est plus la phrase coupée « Vous êtes le membre »',
     sansCount && !v2.json(sansCount).includes('Vous êtes le membre'));
-  check('arrivée : pied de page signé « Hoxera · … »',
-    sansCount && v2.footer(sansCount) === `Hoxera · ${SERVEUR}`, sansCount ? v2.footer(sansCount) : '');
+  check('arrivée : plus de signature « Hoxera · … » (v312)',
+    sansCount && !String(v2.footer(sansCount)).includes('Hoxera'), sansCount ? v2.footer(sansCount) : '');
   check('arrivée : aucune heure dans le pied', sansCount && !/\d{2}\/\d{2} \d{2}:\d{2}/.test(v2.footer(sansCount)));
 
   // --- 5c. Départ : durée réelle, plus de « il y a ». ---
@@ -274,7 +274,7 @@ const membre = () => ({
   check('départ : AUCUNE durée aberrante (> 40 ans = secondes prises pour des ms)',
     depart && !/\d{2,} ans/.test(v2.json(depart)));
   check('départ : « 👥 Membres restants » conservé', depart && v2.json(depart).includes('👥 Membres restants'));
-  check('départ : pied de page signé « Hoxera · … »', depart && v2.footer(depart) === `Hoxera · ${SERVEUR}`);
+  check('départ : plus de signature « Hoxera · … » (v312)', depart && !String(v2.footer(depart)).includes('Hoxera'));
 
   // --- 5d. Textes par défaut du formulaire (EVENT_DEFS). ---
   const defs = events.EVENT_DEFS || events.DEFS || null;
@@ -297,8 +297,8 @@ const membre = () => ({
     check('avertissement : dit bien « supprimé »', automod.includes('a été **supprimé**'));
     check('avertissement : la rubrique moralisatrice « 🧭 Conseil » est retirée',
       !automod.includes("'🧭 Conseil'"));
-    check('avertissement : pied signé « Hoxera · Protection du serveur »',
-      automod.includes("footer: 'Hoxera · Protection du serveur'"));
+    check('avertissement : plus de pied signé (v312)',
+      !automod.includes("footer: 'Hoxera · Protection du serveur'"));
   }
   {
     const live = code('server/discord/liveWatch.js');
@@ -317,11 +317,11 @@ const membre = () => ({
       !suggest.includes('Votez avec les boutons'));
     // Le n° de suggestion figure déjà dans le TITRE : le pied ne garde que la
     // signature, alignée sur `Hoxera · Support` du panneau de tickets.
-    check('suggestion : pied « Hoxera · Suggestions » (aligné sur les tickets)',
-      suggest.includes("footer: 'Hoxera · Suggestions'"));
+    check('suggestion : plus de pied « Hoxera · Suggestions » (v312)',
+      !suggest.includes("footer: 'Hoxera · Suggestions'"));
     const panneau = require('../server/discord/suggest').buildPanel(
       { id: 7, text: 'Ajouter un salon vocal', upvotes: 3, downvotes: 1, bot_id: BOT_ID }, 'Alice', {}, '');
-    check('suggestion : rendu réel du pied', v2.footer(panneau) === 'Hoxera · Suggestions', v2.footer(panneau));
+    check('suggestion : rendu réel sans signature (v312)', !String(v2.footer(panneau)).includes('Hoxera'), v2.footer(panneau));
     check('suggestion : le n° reste visible UNE fois, dans le titre',
       (v2.json(panneau).split('#7').length - 1) === 1, `${v2.json(panneau).split('#7').length - 1} fois`);
     check('suggestion : aucune heure dans le pied', !/\d{2}\/\d{2} \d{2}:\d{2}/.test(v2.footer(panneau)));
@@ -343,10 +343,10 @@ const membre = () => ({
   }
   {
     const html = racine('public/index.html');
-    check('index.html : ?v=311 référencé 7 fois', (html.match(/\?v=311/g) || []).length === 7,
-      String((html.match(/\?v=311/g) || []).length));
+    check('index.html : ?v=312 référencé 7 fois', (html.match(/\?v=312/g) || []).length === 7,
+      String((html.match(/\?v=312/g) || []).length));
     check('index.html : plus aucun ?v=240', !html.includes('?v=240'));
-    check('sw.js : cache « botdev-v241 »', racine('public/sw.js').includes("'botdev-v311'"));
+    check('sw.js : cache « botdev-v241 »', racine('public/sw.js').includes("'botdev-v312'"));
   }
 
   // ==========================================================================

@@ -689,7 +689,7 @@ async function execute(botId, entry, cmd, src) {
         .setColor('#e07a5f')
         .setAuthor({ name: `Avatar de ${target.tag || target.username}` })
         .setImage(target.displayAvatarURL({ size: 512, dynamic: true }))
-        .setFooter({ text: `Hoxera · ${guild.name}` })
+        
         .setTimestamp();
       await replyEmbed(embed);
       break;
@@ -705,7 +705,7 @@ async function execute(botId, entry, cmd, src) {
           { name: '📅 Compte créé le', value: `<t:${Math.floor(target.createdTimestamp / 1000)}:d>`, inline: true },
         );
       if (tMember) embed.addFields({ name: '🚪 A rejoint le', value: `<t:${Math.floor(tMember.joinedTimestamp / 1000)}:d>`, inline: true });
-      embed.setFooter({ text: `Hoxera · ${guild.name}` }).setTimestamp();
+      embed.setTimestamp();
       await replyEmbed(embed);
       break;
     }
@@ -721,7 +721,7 @@ async function execute(botId, entry, cmd, src) {
           { name: '📅 Créé le', value: `<t:${Math.floor(guild.createdTimestamp / 1000)}:d>`, inline: true },
           { name: '🆔 ID', value: guild.id, inline: true },
         )
-        .setFooter({ text: `Hoxera · ${guild.name}` })
+        
         .setTimestamp();
       await replyEmbed(embed);
       break;
@@ -736,7 +736,7 @@ async function execute(botId, entry, cmd, src) {
           { name: '⚡ Latence', value: `${client.ws.ping} ms`, inline: true },
           { name: '🤖 Créé avec amour', value: 'Hoxera ✨', inline: true },
         )
-        .setFooter({ text: `Hoxera · ${guild.name}` })
+        
         .setTimestamp();
       await replyEmbed(embed);
       break;
@@ -789,7 +789,7 @@ async function execute(botId, entry, cmd, src) {
         title: '📄 Export des sanctions',
         description: `**${pack.rows}** sanction${pack.rows > 1 ? 's' : ''} exportée${pack.rows > 1 ? 's' : ''} au format **${pack.format.toUpperCase()}**${target ? ` pour <@${target.id}>` : ''}.\nLe fichier ci-joint ne sera visible que de vous.`,
         files: [pack.name],
-        footer: `Hoxera · ${guild.name}`,
+        footer: false,
       });
       const { MessageFlags } = require('discord.js');
       payload.flags = (payload.flags || 0) | MessageFlags.Ephemeral;
@@ -814,7 +814,7 @@ async function execute(botId, entry, cmd, src) {
           color: '#FF73FA',
           title: '🚀 Récompenses boosters activées',
           description: `Désormais, chaque membre qui booste le serveur reçoit ${role} automatiquement.${channel ? `\nUn message de remerciement partira dans <#${channel.id}>.` : '\nAucun salon de remerciement choisi (rôle seulement).'}\n💡 Utilise \`/boostrewards action:sync\` pour offrir le rôle aux boosteurs actuels.`,
-          footer: `Hoxera · ${guild.name}`,
+          footer: false,
         });
       }
       if (action === 'sync') {
@@ -825,7 +825,7 @@ async function execute(botId, entry, cmd, src) {
           color: '#FF73FA',
           title: '🎁 Boosteurs actuels synchronisés',
           description: given ? `Rôle de récompense donné à ${given} boosteur${given > 1 ? 's' : ''} actuel${given > 1 ? 's' : ''}.` : 'Tous les boosteurs actuels avaient déjà le rôle.',
-          footer: `Hoxera · ${guild.name}`,
+          footer: false,
         });
       }
       if (action === 'off') {
@@ -834,7 +834,7 @@ async function execute(botId, entry, cmd, src) {
           color: '#FF73FA',
           title: '🚀 Récompenses boosters désactivées',
           description: 'Les rôles déjà donnés restent en place ; plus aucun rôle ne sera donné ou retiré automatiquement.',
-          footer: `Hoxera · ${guild.name}`,
+          footer: false,
         });
       }
       const gs = store.guildSettings.get(botId, guild.id) || {};
@@ -847,7 +847,7 @@ async function execute(botId, entry, cmd, src) {
         description: active
           ? `**Activées** : rôle ${guild.roles.cache.get ? (guild.roles.cache.get(gs.boost_role) || { toString: () => `<@&${gs.boost_role}>` }).toString() : `<@&${gs.boost_role}>`} · remerciements ${gs.boost_channel ? `dans <#${gs.boost_channel}>` : 'désactivés'} · ${boosters} boosteur${boosters > 1 ? 's' : ''} actuel${boosters > 1 ? 's' : ''}.`
           : '**Désactivées** sur ce serveur. Utilisez `/boostrewards action:setup role:@Rôle` pour récompenser automatiquement vos boosters Nitro.',
-        footer: `Hoxera · ${guild.name}`,
+        footer: false,
       });
     }
     case 'statchannels': {
@@ -864,7 +864,7 @@ async function execute(botId, entry, cmd, src) {
           color: '#e07a5f',
           title: '📊 Compteurs activés',
           description: 'La catégorie verrouillée « 📊 Statistiques du serveur » a été créée avec trois salons :\n**👥 Membres** · **🟢 En ligne** · **🚀 Boosts**\nPersonne ne peut les rejoindre ; les noms se mettent à jour tout seuls dès que le chiffre change.',
-          footer: `Hoxera · ${guild.name}`,
+          footer: false,
         });
       }
       if (action === 'off') {
@@ -873,7 +873,7 @@ async function execute(botId, entry, cmd, src) {
           color: '#e07a5f',
           title: '📊 Compteurs désactivés',
           description: removed ? `Catégorie et salons de statistiques supprimés (${removed} élément${removed > 1 ? 's' : ''}).` : "Les compteurs n'étaient pas activés sur ce serveur.",
-          footer: `Hoxera · ${guild.name}`,
+          footer: false,
         });
       }
       const gs = store.guildSettings.get(botId, guild.id) || {};
@@ -885,7 +885,7 @@ async function execute(botId, entry, cmd, src) {
         description: active
           ? `**Activés** dans la catégorie <#${gs.stat_category}>.\n${sc.statName('members', stats.members)} · ${sc.statName('online', stats.online)} · ${sc.statName('boosts', stats.boosts)}`
           : '**Désactivés** sur ce serveur. Utilisez `/statchannels action:setup` pour créer la catégorie verrouillée et ses trois salons.',
-        footer: `Hoxera · ${guild.name}`,
+        footer: false,
       });
     }
     case 'rank': {
@@ -925,7 +925,7 @@ async function execute(botId, entry, cmd, src) {
           embed.addFields({ name: '🎁 Prochain palier', value: `Niveau ${nextReward.level} → ${roleLabel}${toReward ? ` (encore ${toReward} XP)` : ''}`, inline: false });
         }
       } catch {}
-      embed.setFooter({ text: `Hoxera · ${guild.name}` }).setTimestamp();
+      embed.setTimestamp();
       await replyEmbed(embed);
       break;
     }
@@ -952,7 +952,7 @@ async function execute(botId, entry, cmd, src) {
         color: '#e07a5f',
         title: '📈 Classement des niveaux',
         description: `**Top ${LIMIT} — les membres les plus actifs**\n\n${lines.join('\n')}${own}`,
-        footer: `Hoxera · ${guild.name}`,
+        footer: false,
       });
       break;
     }
@@ -990,7 +990,7 @@ async function execute(botId, entry, cmd, src) {
         .setTitle(`🪪 Profil de ${target.username}`)
         .setThumbnail(target.displayAvatarURL({ dynamic: true }))
         .addFields(fields)
-        .setFooter({ text: `Hoxera · ${guild.name}` })
+        
         .setTimestamp();
       await replyEmbed(embed);
       break;
@@ -1002,7 +1002,7 @@ async function execute(botId, entry, cmd, src) {
         title: '🔗 Ajouter Hoxera à un serveur',
         description: 'Utilisez le bouton ou le lien ci-dessous pour inviter le bot.',
         fields: [{ name: '🌐 Lien d’invitation', value: `https://discord.com/oauth2/authorize?client_id=${record.client_id}&permissions=8&scope=bot%20applications.commands` }],
-        footer: 'Hoxera · Invitation officielle',
+        footer: false,
       }, [ui.linkRow('➕ Inviter le bot', `https://discord.com/oauth2/authorize?client_id=${record.client_id}&permissions=8&scope=bot%20applications.commands`)]);
       break;
     }
@@ -1035,7 +1035,7 @@ async function execute(botId, entry, cmd, src) {
         .setColor('#F1C40F')
         .setTitle('🛒 Boutique du serveur')
         .setDescription(`Achetez un article avec vos coins : \`/buy article\`\n\n💰 **Votre solde : ${solde} coins**`)
-        .setFooter({ text: `Hoxera · ${guild.name} · Boutique` })
+        
         .setTimestamp();
       for (const it of items) {
         embed.addFields({ name: `${it.emoji} ${it.name} — ${it.price} coins`, value: it.description || 'Aucune description' });
@@ -1072,7 +1072,7 @@ async function execute(botId, entry, cmd, src) {
         title: '🛒 Achat réussi !',
         description: `Vous recevez **${role.toString()}**.`,
         fields: [{ name: '💰 Prix', value: `${item.price} coins`, inline: true }, { name: '🏷️ Rôle', value: role.name, inline: true }],
-        footer: `Hoxera · ${guild.name} · Boutique`,
+        footer: false,
       });
       break;
     }
@@ -1092,7 +1092,7 @@ async function execute(botId, entry, cmd, src) {
         title: '💸 Transfert effectué',
         description: `${author} a envoyé des coins à ${target}.`,
         fields: [{ name: '🪙 Montant', value: `${amount} coins`, inline: true }, { name: '👤 Destinataire', value: `${target}`, inline: true }],
-        footer: `Hoxera · ${guild.name} · Économie`,
+        footer: false,
       });
       break;
     }
@@ -1173,7 +1173,7 @@ async function execute(botId, entry, cmd, src) {
             { name: '⚖️ Type', value: s.name, inline: true },
             { name: '📝 Motif', value: reason, inline: false },
           ],
-          footer: `Hoxera · ${guild.name} · Modération`,
+          footer: false,
         }));
       } catch {}
       if (s.action === 'warn') {
@@ -1218,7 +1218,7 @@ async function execute(botId, entry, cmd, src) {
           .setColor('#e07a5f')
           .setTitle(title)
           .setImage(url)
-          .setFooter({ text: `🎭 ${sub} · Hoxera` });
+          .setFooter({ text: `🎭 ${sub}` });
         await replyEmbed(embed);
       } catch (e) {
         if (e && e.name === 'AbortError') {
@@ -1271,7 +1271,7 @@ async function execute(botId, entry, cmd, src) {
         title: '👢 Expulsion effectuée',
         description: `**${target.tag || target.username}** a été expulsé du serveur.`,
         fields: [{ name: '📝 Raison', value: reason || 'Aucune', inline: true }],
-        footer: `Hoxera · ${guild.name} · Modération`,
+        footer: false,
       });
       break;
     }
@@ -1295,7 +1295,7 @@ async function execute(botId, entry, cmd, src) {
         title: '🔨 Bannissement effectué',
         description: `**${target.tag || target.username}** a été banni du serveur.`,
         fields: [{ name: '📝 Raison', value: reason || 'Aucune', inline: true }],
-        footer: `Hoxera · ${guild.name} · Modération`,
+        footer: false,
       });
       break;
     }
@@ -1315,7 +1315,7 @@ async function execute(botId, entry, cmd, src) {
         title: '🔓 Débannissement effectué',
         description: `L'utilisateur ${id} a été débanni.`,
         fields: [{ name: '🆔 Identifiant', value: id, inline: true }],
-        footer: `Hoxera · ${guild.name} · Modération`,
+        footer: false,
       });
       break;
     }
@@ -1339,7 +1339,7 @@ async function execute(botId, entry, cmd, src) {
         title: '⏳ Timeout appliqué',
         description: `**${target.tag || target.username}** ne peut plus écrire temporairement.`,
         fields: [{ name: '⏱ Durée', value: `${minutes} minute(s)`, inline: true }],
-        footer: `Hoxera · ${guild.name} · Modération`,
+        footer: false,
       });
       break;
     }
@@ -1398,7 +1398,7 @@ async function execute(botId, entry, cmd, src) {
           { name: '🔢 Total actif', value: `${n} avertissement(s)`, inline: true },
           ...(extra ? [{ name: '⚖️ Suite', value: extra.replace(/^\n/, '') }] : []),
         ],
-        footer: `Hoxera · ${guild.name} · Modération`,
+        footer: false,
       });
       break;
     }
@@ -1431,7 +1431,7 @@ async function execute(botId, entry, cmd, src) {
         title: '🧹 Nettoyage terminé',
         description: `${count} message(s) ont été supprimé(s) dans ce salon.`,
         fields: [{ name: '🛡️ Action effectuée par', value: `${author.tag || author.username}`, inline: true }],
-        footer: `Hoxera · ${guild.name} · Modération`,
+        footer: false,
       });
       break;
     }
@@ -1466,7 +1466,7 @@ async function execute(botId, entry, cmd, src) {
           { name: '🪙 Récompense', value: `+${reward} coins${bonus > 0 ? ` (dont +${bonus} de bonus série 🔥)` : ''}`, inline: true },
           { name: '💰 Nouveau solde', value: `${after.coins} coins`, inline: true },
         ],
-        footer: `Hoxera · ${guild.name} · Économie`,
+        footer: false,
       });
       break;
     }
@@ -1479,7 +1479,7 @@ async function execute(botId, entry, cmd, src) {
         title: '💰 Solde de coins',
         description: `**${target.tag || target.username}** possède des coins sur ce serveur.`,
         fields: [{ name: '🪙 Solde actuel', value: `${row ? row.coins : 0} coins`, inline: true }],
-        footer: `Hoxera · ${guild.name} · Économie`,
+        footer: false,
       });
       break;
     }
@@ -1492,7 +1492,7 @@ async function execute(botId, entry, cmd, src) {
         .setColor('#F1C40F')
         .setTitle('🏆 Classement des coins')
         .setDescription(top.map((r, i) => `${medal[i] || `**${i + 1}.**`} <@${r.user_id}> — **${r.coins}** coins`).join('\n'))
-        .setFooter({ text: `Hoxera · ${guild.name} · Économie` })
+        
         .setTimestamp();
       await replyEmbed(embed);
       break;

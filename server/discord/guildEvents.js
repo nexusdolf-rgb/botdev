@@ -124,7 +124,7 @@ function eventPanel(entry, guildId, ev, rows = [], content = '') {
     // Les 2 premiers champs étaient en inline:true : ui.v2panel les regroupe
     // sur une ligne, séparés par « · » (la grille 3 colonnes n'existe pas en V2).
     fields,
-    footer: `Hoxera · Événements · ID ${ev.id}`,
+    footer: false,
   }, rows);
 }
 
@@ -200,7 +200,7 @@ async function handleInteraction(botId, entry, interaction) {
     // IsComponentsV2 : on le passe dans les options au lieu de l'accoler à un
     // spread, qui aurait pu écraser le champ `flags` du payload.
     return interaction.reply(
-      ui.v2panel({ variant: 'brand', title: '🎮 Événements à venir', description: lines, footer: `Hoxera · ${guild.name} · Événements`, ephemeral: true })
+      ui.v2panel({ variant: 'brand', title: '🎮 Événements à venir', description: lines, footer: false, ephemeral: true })
     ).catch(() => {});
   }
 
@@ -212,7 +212,7 @@ async function handleInteraction(botId, entry, interaction) {
       variant: 'danger',
       title: '🗑️ Supprimer un événement',
       description: `Voici les événements du serveur — pour en supprimer un, notez son **ID**.\n\n${lines}\n\n*(La suppression se fait depuis le dashboard → Événements, ou par un admin via l\'interface.)*`,
-      footer: `Hoxera · ${guild.name} · Événements`,
+      footer: false,
       ephemeral: true,
     });
     return interaction.reply(prompt).catch(() => {});

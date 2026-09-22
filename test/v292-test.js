@@ -73,7 +73,7 @@ const racine = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
   const flat = JSON.stringify(panel.components ? panel.components.map((c) => (c.toJSON ? c.toJSON() : c)) : panel);
   check('panneau avec conditions : ligne 📋 affichée', flat.includes('Conditions de participation') && flat.includes('rVIP'));
   check('bouton 👥 Participants avec customId hxgw:', flat.includes(`hxgw:${B}:participants`) && flat.includes('Participants'));
-  check('panneau toujours en Components V2 (footer Hoxera)', flat.includes('Hoxera · Giveaway'));
+  check('panneau toujours en Components V2, plus de signature (v312)', !flat.includes('Hoxera · Giveaway') && /"type":\s*17/.test(flat));
   store.guildSettings.set(B, G, { giveaway_req_role: '', giveaway_req_level: 0 });
 
   console.log('— 5. Vérification des conditions (checkConditions) —');
@@ -189,9 +189,9 @@ const racine = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 
   console.log('— 12. Bump v292 —');
   const index = racine('public/index.html');
-  check('index.html : ?v=311 référencé 7 fois', (index.match(/\?v=311/g) || []).length === 7,
-    String((index.match(/\?v=311/g) || []).length));
-  check('sw.js : cache « botdev-v311 »', racine('public/sw.js').includes("const CACHE = 'botdev-v311';"));
+  check('index.html : ?v=312 référencé 7 fois', (index.match(/\?v=312/g) || []).length === 7,
+    String((index.match(/\?v=312/g) || []).length));
+  check('sw.js : cache « botdev-v312 »', racine('public/sw.js').includes("const CACHE = 'botdev-v312';"));
 
   console.log(`\n🎉 v292 : ${ok} vérifications passées`);
   process.exit(0);

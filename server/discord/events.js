@@ -177,7 +177,7 @@ async function runJoinEvent(botId, member, opts = {}) {
               image: carteV2 ? 'attachment://bienvenue.png' : (cfg.image ? String(cfg.image).trim() : ''),
               thumbnail: !carteV2 && !cfg.image && avatarUrl ? avatarUrl : '',
               // L'iconURL du pied d'embed n'existe pas en V2 (pied en texte discret).
-              footer: `Hoxera · ${member.guild.name}`,
+              footer: false,
             }),
             ...(carteV2 ? { files } : {}),
           };
@@ -193,7 +193,7 @@ async function runJoinEvent(botId, member, opts = {}) {
             .addFields(...welcomeFields)
             // v241 — aligné sur le panneau premium : pied signé « Hoxera · … »
             // et PLUS d'horodatage (Discord affiche déjà l'heure du message).
-            .setFooter({ text: `Hoxera · ${member.guild.name}`, iconURL: member.guild.iconURL ? (member.guild.iconURL({ size: 64 }) || undefined) : undefined })
+            
             .setImage('attachment://bienvenue.png');
           welcomePayload = { embeds: [embed], files };
         }
@@ -284,7 +284,7 @@ async function runLeaveEvent(botId, member, opts = {}) {
       // 🖼️ L'image configurée est le visuel ; pas de vignette en double.
       image: cfg.image ? String(cfg.image).trim() : '',
       thumbnail: !cfg.image && avatarUrl ? avatarUrl : '',
-      footer: `Hoxera · ${member.guild.name}`,
+      footer: false,
     })).then(() => true).catch((e) => { trace('envoi ÉCHOUÉ : ' + e.message); return false; });
     trace(ok ? 'panneau de départ envoyé ✅' : 'panneau NON envoyé ❌ (permissions ?)');
   } else {

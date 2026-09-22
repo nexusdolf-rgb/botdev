@@ -66,7 +66,7 @@ console.log('1️⃣  Maths XP validées ✅');
   const annText = ann ? String(ann.description || '') : String((sent && sent.content) || sent || '');
   assert(annText.includes('niveau 1'), 'annonce attendue (embed de niveau)');
   assert(ann && ann.color === 0xe07a5f, 'annonce : couleur de marque Hoxera (#e07a5f)');
-  assert(ann && ann.footer && ann.footer.text.includes('Hoxera'), 'annonce : footer signé Hoxera');
+  assert(!(ann && ann.footer && String(ann.footer.text || '').includes('Hoxera')), 'v312 : annonce XP sans signature Hoxera');
   console.log('4️⃣  Montée de niveau + annonce en embed ✅ («', annText.slice(0, 40), '… »)');
 
   // XP désactivé → aucun gain

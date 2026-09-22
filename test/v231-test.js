@@ -136,9 +136,10 @@ check('payload sans champ content au niveau message', withContent.content === un
 // découpé en paragraphes) : c'est le rendu le plus fidèle à l'existant.
 check('le content devient le premier TextDisplay, conservé intégralement',
   wcJson.components.filter((k) => k.type === 10)[0].content === '📝 **Candidatures**\nSalon : <#1>\n\nEnvoie le panneau avec `/apply panel`');
-// content + titre + 2 blocs de corps + pied par défaut = 5 TextDisplay.
-check('le content n’est PAS découpé en paragraphes (5 blocs au total)',
-  wcJson.components.filter((k) => k.type === 10).length === 5);
+// v312 — plus de pied par défaut : content + titre + 2 blocs de corps = 4 TextDisplay.
+// L'intention historique reste : le content n'est PAS découpé en paragraphes.
+check('le content n’est PAS découpé en paragraphes (4 blocs au total, plus de pied par défaut)',
+  wcJson.components.filter((k) => k.type === 10).length === 4);
 check('séparateur après le bloc content', wcJson.components[1].type === 14);
 check('aucun caractère ━', !JSON.stringify(withContent).includes('━'));
 
@@ -291,9 +292,9 @@ check('aucun token en dur dans ui.js',
   !/(ghp_|github_pat_|xox[baprs]-)[A-Za-z0-9_]{15,}/.test(read('server/discord/ui.js')));
 check('aucun token en dur dans extra.js',
   !/(ghp_|github_pat_|xox[baprs]-)[A-Za-z0-9_]{15,}/.test(ex));
-check('index.html : 7 références ?v=311', (read('public/index.html').match(/\?v=311/g) || []).length === 7);
+check('index.html : 7 références ?v=312', (read('public/index.html').match(/\?v=312/g) || []).length === 7);
 check('index.html : plus aucune référence ?v=230', !read('public/index.html').includes('?v=230'));
-check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'botdev-v311';"));
+check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'botdev-v312';"));
 
 console.log(failures === 0
   ? '\n✅ V231 — Séparateurs natifs pleine largeur : API V2 en place, /quiz migré, zéro trait texte, grammaire alignée sur le panneau de référence.'

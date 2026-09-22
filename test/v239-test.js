@@ -228,7 +228,7 @@ async function main() {
 
   // Pied de page : signature seule, pas d'heure (aligné sur la v238).
   const foot = v2.footer(p);
-  check('le pied de page est présent', !!foot, JSON.stringify(foot));
+  check('le pied de page signature est retiré (v312)', !String(foot).includes('Hoxera'), JSON.stringify(foot));
   check('le pied de page ne contient PAS d\u2019heure', !/\d{2}:\d{2}/.test(String(foot)), String(foot));
   check('le pied de page ne contient PAS de lien', !/hoxera\.is-a\.dev/.test(String(foot)), String(foot));
 
@@ -463,9 +463,9 @@ async function main() {
   console.log('\n10) Version épinglée v239');
   const index = src('public/index.html');
   const sw = src('public/sw.js');
-  check('index.html : ?v=311 référencé 7 fois', (index.match(/\?v=311/g) || []).length === 7,
-    `trouvé ${(index.match(/\?v=311/g) || []).length}`);
-  check("sw.js : cache 'botdev-v311'", sw.includes("const CACHE = 'botdev-v311';"));
+  check('index.html : ?v=312 référencé 7 fois', (index.match(/\?v=312/g) || []).length === 7,
+    `trouvé ${(index.match(/\?v=312/g) || []).length}`);
+  check("sw.js : cache 'botdev-v312'", sw.includes("const CACHE = 'botdev-v312';"));
   check('index.html : plus aucun ?v=238', !/\?v=238/.test(index));
 }
 

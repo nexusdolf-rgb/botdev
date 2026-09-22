@@ -126,7 +126,12 @@ function embed(options = {}) {
   }
   if (options.thumbnail) e.setThumbnail(String(options.thumbnail));
   if (options.image) e.setImage(String(options.image));
-  if (options.footer !== false) e.setFooter({ text: text(options.footer || DEFAULT_FOOTER, 2048) });
+  // v312 — plus de signature par défaut. Un pied n'est posé que s'il est
+  // fourni explicitement (texte non vide). `footer: false` reste honoré.
+  if (options.footer && options.footer !== false) {
+    const ft = text(options.footer, 2048).trim();
+    if (ft) e.setFooter({ text: ft });
+  }
   // v241 — même règle qu'en V2 : l'heure n'est plus posée par défaut, seule
   // une Date explicite (information ≠ « maintenant ») l'est.
   if (options.timestamp instanceof Date && !Number.isNaN(options.timestamp.getTime())) e.setTimestamp(options.timestamp);
@@ -280,7 +285,12 @@ function v2container(options = {}) {
   const hasContent = !!options.content;
   const bodyBlocks = v2bodyBlocks(options, useSections);
   const authorName = options.author && options.author.name ? text(options.author.name, 256) : '';
-  const hasFooter = options.footer !== false;
+  // v312 — plus de signature par défaut (« Hoxera · Assistant… »). Un pied
+  // n'est rendu que s'il est fourni explicitement (texte non vide).
+  const footerText = (options.footer && options.footer !== false)
+    ? text(String(options.footer), V2_FOOTER_MAX).trim()
+    : '';
+  const hasFooter = !!footerText;
   if (hasContent) {
     v2text(container, text(options.content, 2000), state);
     if (authorName || options.title || bodyBlocks.length || hasFooter) v2separator(container, state);
@@ -366,7 +376,7 @@ function v2container(options = {}) {
     if (when && !Number.isNaN(when.getTime())) {
       stamp = ` · ${when.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`;
     }
-    const footer = text(`${options.footer || DEFAULT_FOOTER}${stamp}`, V2_FOOTER_MAX);
+    const footer = text(`${footerText}${stamp}`, V2_FOOTER_MAX);
     if (footer && v2room(state, 2) && (hasContent || headTexts.length || bodyBlocks.length || options.image || fileRefs.length)) {
       v2separator(container, state);
       v2text(container, `-# ${footer}`, state);

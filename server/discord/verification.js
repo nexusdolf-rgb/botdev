@@ -58,7 +58,7 @@ async function sendPanel(botId, guild, channelId) {
     color: '#57F287',
     title: i18n.t(lang, 'verif_panel_title'),
     description: i18n.t(lang, 'verif_panel_desc', { role: cfg.role ? `<@&${cfg.role}>` : '—' }),
-    footer: 'Hoxera · Vérification',
+    footer: false,
   }, [row]);
   return channel.send(payload);
 }

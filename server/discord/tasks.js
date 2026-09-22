@@ -49,7 +49,7 @@ async function giveTempRole(botId, interaction, member, role, durationMs) {
       { name: '⏱️ Durée', value: formatDuration(durationMs), inline: true },
       { name: '🔄 Retrait', value: 'Automatique à la fin de la durée.', inline: true },
     ],
-    footer: `Hoxera · ${interaction.guild.name} · Rôles temporaires`,
+    footer: false,
     ephemeral: true,
   }));
 }

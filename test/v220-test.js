@@ -74,14 +74,14 @@ check('mono-section 4096 max non touchée', ui.embed({ description: 'x'.repeat(4
     { message: 'Réagis avec 🎉 pour participer !\n\nSeuls les membres du serveur sont éligibles.' });
   check('giveaway : séparation entre prix et message', gwTexts(embG).includes('**Nitro Boost**') && gwTexts(embG).includes('Réagis avec 🎉'));
   check('giveaway : AUCUN trait texte ━ (séparateurs natifs)', !JSON.stringify(embG).includes(ui.SEPARATOR));
-  // 3 paragraphes + 1 bloc de compteurs = 4 blocs → 3 séparateurs, + 1 pied = 4.
-  check('giveaway : paragraphes du message structurés (4 séparateurs natifs)', gwDiv(embG) === 4);
+  // v312 — plus de pied : 3 paragraphes + 1 bloc de compteurs = 4 blocs → 3 séparateurs.
+  check('giveaway : paragraphes du message structurés (3 séparateurs natifs)', gwDiv(embG) === 3);
   // Giveaway TERMINÉ : message permanent édité dans le salon — le prix, le
   // résultat et le remerciement forment des sections séparées en natif.
   const embEnd = giveaway.buildEndedPanel({ prize: 'Nitro Boost' }, [{ toString: () => '<@u1>' }, { toString: () => '<@u2>' }], false);
   check('giveaway terminé : 3 sections (prix / gagnants / merci)',
     gwTexts(embEnd).includes('**Nitro Boost**') && gwTexts(embEnd).includes('🏆 Gagnant(s)') && gwTexts(embEnd).includes('Merci à tous'));
-  check('giveaway terminé : 4 séparateurs natifs (3 entre sections + 1 pied)', gwDiv(embEnd) === 4);
+  check('giveaway terminé : 3 séparateurs natifs (plus de pied v312)', gwDiv(embEnd) === 3);
   check('giveaway terminé : aucun trait texte ━', !JSON.stringify(embEnd).includes(ui.SEPARATOR));
   const embNoWin = giveaway.buildEndedPanel({ prize: 'Nitro Boost' }, [], false);
   check('giveaway terminé sans gagnant : mention « aucun participant »', gwTexts(embNoWin).includes('Aucun participant'));
@@ -94,14 +94,13 @@ check('mono-section 4096 max non touchée', ui.embed({ description: 'x'.repeat(4
   const sugCont = (o) => suggest.buildPanel(o, 'Toto', {}).components[0].toJSON();
   const nDiv = (c) => c.components.filter((k) => k.type === 14 && k.divider === true).length;
   const embS = sugCont({ id: 1, status: 'pending', upvotes: 0, downvotes: 0, bot_id: BOT, text: 'Ajouter un salon musique.\n\nEt un salon cinéma.' });
-  // 2 paragraphes + 1 bloc de compteurs = 3 blocs → 2 séparateurs, + 1 avant
-  // le pied = 3.
-  check('suggest : contenu multi-paragraphes → 3 séparateurs natifs', nDiv(embS) === 3);
+  // v312 — plus de pied : 2 paragraphes + 1 bloc de compteurs = 3 blocs → 2 séparateurs.
+  check('suggest : contenu multi-paragraphes → 2 séparateurs natifs', nDiv(embS) === 2);
   check('suggest : aucun trait texte ━ (v232)',
     !JSON.stringify(embS.components).includes(ui.SEPARATOR));
   const embS1 = sugCont({ id: 2, status: 'pending', upvotes: 0, downvotes: 0, bot_id: BOT, text: 'Suggestion en une seule partie.' });
-  // 1 paragraphe + 1 bloc de compteurs = 2 blocs → 1 séparateur, + 1 pied = 2.
-  check('suggest : mono-paragraphe → 2 séparateurs (pas de découpe inutile)', nDiv(embS1) === 2);
+  // v312 — plus de pied : 1 paragraphe + 1 bloc de compteurs = 2 blocs → 1 séparateur.
+  check('suggest : mono-paragraphe → 1 séparateur (pas de découpe inutile)', nDiv(embS1) === 1);
   check('suggest : les 3 compteurs inline restent groupés sur une ligne',
     embS.components.filter((k) => k.type === 10).some((k) => /\*\*📊 Statut\*\* .* · \*\*👍 Votes\*\* /.test(k.content)));
 

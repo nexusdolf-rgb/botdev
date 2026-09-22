@@ -25,10 +25,10 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   console.log('— Économie (premade) —');
   check('daily : récompense en or (economy)', premade.includes("variant: 'economy',\n        title: '🎁 Récompense quotidienne'"));
   check('balance : solde en or (economy)', premade.includes("variant: 'economy',\n        title: '💰 Solde de coins'"));
-  check('leaderboard : or #F1C40F + footer signé + timestamp',
-    premade.includes("setColor('#F1C40F')") && premade.includes(".setTitle('🏆 Classement des coins')") && premade.includes('.setFooter({ text: `Hoxera · ${guild.name} · Économie` })') && premade.includes(".setTimestamp();\n      await replyEmbed(embed);\n      break;\n    }\n  }"));
-  check('shop : or + footer « Boutique » + timestamp + solde en description',
-    premade.includes(".setColor('#F1C40F')") && premade.includes('`Hoxera · ${guild.name} · Boutique`') && premade.includes('Votre solde : ${solde} coins'));
+  check('leaderboard : or #F1C40F + timestamp (plus de signature v312)',
+    premade.includes("setColor('#F1C40F')") && premade.includes(".setTitle('🏆 Classement des coins')") && !premade.includes('.setFooter({ text: `Hoxera · ${guild.name} · Économie` })') && premade.includes(".setTimestamp();\n      await replyEmbed(embed);\n      break;\n    }\n  }"));
+  check('shop : or + solde en description (plus de signature v312)',
+    premade.includes(".setColor('#F1C40F')") && !premade.includes('`Hoxera · ${guild.name} · Boutique`') && premade.includes('Votre solde : ${solde} coins'));
   check('buy : achat en or (economy)', premade.includes("variant: 'economy',\n        title: '🛒 Achat réussi !'"));
   check('pay : transfert en or (economy)', premade.includes("variant: 'economy',\n        title: '💸 Transfert effectué'"));
   check('plus de jaune warning sur le classement des coins', !premade.includes("setColor('#FEE75C')\n        .setTitle('🏆 Classement des coins')"));
@@ -52,20 +52,21 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
 
   // ---------- 5. Commandes utilitaires : signées + un seul avatar ----------
   console.log('— Utilitaires —');
-  check('avatar : footer signé + timestamp', premade.includes("name: `Avatar de ${target.tag || target.username}`") && premade.includes('.setFooter({ text: `Hoxera · ${guild.name}` })'));
-  check('userinfo : un seul avatar (author) + footer signé',
+  check('avatar : timestamp conservé, plus de signature (v312)', premade.includes("name: `Avatar de ${target.tag || target.username}`") && !premade.includes('.setFooter({ text: `Hoxera · ${guild.name}` })'));
+  check('userinfo : un seul avatar (author), plus de signature (v312)',
     premade.includes("setAuthor({ name: target.tag, iconURL: target.displayAvatarURL({ dynamic: true }) })\n        .addFields(")
     && !premade.includes("setAuthor({ name: target.tag, iconURL: target.displayAvatarURL({ dynamic: true }) })\n        .setThumbnail(target.displayAvatarURL({ dynamic: true }))")
     && premade.includes("if (tMember) embed.addFields({ name: '🚪 A rejoint le'")
-    && premade.includes('embed.setFooter({ text: `Hoxera · ${guild.name}` }).setTimestamp();'));
-  check('serverinfo : un seul visuel (author) + footer signé',
+    && !premade.includes('embed.setFooter({ text: `Hoxera · ${guild.name}` }).setTimestamp();'));
+  check('serverinfo : un seul visuel (author), plus de signature (v312)',
     premade.includes("setAuthor({ name: guild.name, iconURL: guild.iconURL({ dynamic: true }) })\n        .addFields(")
     && !premade.includes('.setThumbnail(guild.iconURL({ dynamic: true }))')
-    && premade.includes('.setFooter({ text: `Hoxera · ${guild.name}` })\n        .setTimestamp();'));
-  check('avatar : image pleine + footer signé (pas d’auteur avatar)',
+    && !premade.includes('.setFooter({ text: `Hoxera · ${guild.name}` })\n        .setTimestamp();'));
+  check('avatar : image pleine (pas d’auteur avatar), plus de signature (v312)',
     premade.includes('.setAuthor({ name: `Avatar de ${target.tag || target.username}` })')
-    && premade.includes('.setImage(target.displayAvatarURL({ size: 512, dynamic: true }))\n        .setFooter({ text: `Hoxera · ${guild.name}` })'));
-  check('botinfo : author bot + footer signé', premade.includes("name: '🤖 Créé avec amour'") && premade.includes('.setFooter({ text: `Hoxera · ${guild.name}` })\n        .setTimestamp();'));
+    && premade.includes('.setImage(target.displayAvatarURL({ size: 512, dynamic: true }))')
+    && !premade.includes('.setFooter({ text: `Hoxera · ${guild.name}` })'));
+  check('botinfo : author bot, plus de signature (v312)', premade.includes("name: '🤖 Créé avec amour'") && !premade.includes('.setFooter({ text: `Hoxera · ${guild.name}` })\n        .setTimestamp();'));
 
   // ---------- 6. Bienvenue / départ : un seul avatar par embed ----------
   console.log('— Bienvenue / départ premium —');
@@ -88,8 +89,8 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('plus de rose littéral hors charte dans extra', !extra.includes("color: '#EB459E'"));
 
   // ---------- 8. Version ----------
-  check('index : bump v217', fs.readFileSync('public/index.html', 'utf8').includes('?v=311'));
-  check('sw : bump botdev-v241', fs.readFileSync('public/sw.js', 'utf8').includes('botdev-v311'));
+  check('index : bump v217', fs.readFileSync('public/index.html', 'utf8').includes('?v=312'));
+  check('sw : bump botdev-v241', fs.readFileSync('public/sw.js', 'utf8').includes('botdev-v312'));
 
   console.log(`  ✅ v217 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });

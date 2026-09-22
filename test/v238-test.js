@@ -115,7 +115,7 @@ async function main() {
   const welcome = panels.ticketWelcomePanel(member, chosen, '<@&R1>', 'Ma demande', '', [], 'fr', { number: 12 }, {},
     { content: '🎫 **Support** · @Alice' });
   const footer = v2.footer(welcome);
-  check('pied de page : signature conservée « Hoxera · Ticket #12 »', footer === 'Hoxera · Ticket #12', JSON.stringify(footer));
+  check('pied de page : signature retirée (v312)', footer === '' || !String(footer).includes('Hoxera'), JSON.stringify(footer));
   check('pied de page : le lien du dashboard a disparu',
     !footer.includes('hoxera.is-a.dev') && !v2.json(welcome).includes('hoxera.is-a.dev'));
   check('pied de page : l\'horodatage a disparu', !/\d{2}\/\d{2}\s+\d{2}:\d{2}/.test(footer));
@@ -334,9 +334,9 @@ async function main() {
     const root = path.join(__dirname, '..');
     const index = fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8');
     const sw = fs.readFileSync(path.join(root, 'public', 'sw.js'), 'utf8');
-    check('index.html : ?v=311 référencé 7 fois', (index.match(/\?v=311/g) || []).length === 7,
-      `trouvé ${(index.match(/\?v=311/g) || []).length}`);
-    check("sw.js : cache 'botdev-v311'", sw.includes("const CACHE = 'botdev-v311';"));
+    check('index.html : ?v=312 référencé 7 fois', (index.match(/\?v=312/g) || []).length === 7,
+      `trouvé ${(index.match(/\?v=312/g) || []).length}`);
+    check("sw.js : cache 'botdev-v312'", sw.includes("const CACHE = 'botdev-v312';"));
     check('index.html : plus aucun ?v=237', !/\?v=237/.test(index));
   }
 }

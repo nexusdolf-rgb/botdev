@@ -61,7 +61,7 @@ async function log(botId, guild, { title, description = '', color = '#e07a5f', f
         value: String(f.value).slice(0, 1024),
         inline: !!f.inline,
       })),
-      footer: String(footer || 'Journal automatique · Hoxera').slice(0, 256),
+      footer: footer ? String(footer).slice(0, 256) : false,
     }));
   } catch (e) {
     console.error('[BotDev] log:', e.message);
