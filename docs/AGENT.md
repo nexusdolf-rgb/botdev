@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v314**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v315**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -962,6 +962,16 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v315 (23/09 — PHOTO D’OPTIMUS SUR L’ACCUEIL)** : à côté du texte
+  « Optimus Prime, votre nouveau membre », l’emoji 🤖 (tête de robot) est
+  remplacé par la vraie photo d’Optimus (casque coloré de la bannière).
+  Cadre `.hp-robot` inchangé. Compteur v240 `balises` 572 → 571. test/v315-test.js.
+- **v314 (23/09 — LISTE NOIRE : LA SUPPRESSION PREND VRAIMENT)** : le
+  fondateur ajoutait un mot, enregistrait, puis le retirait à la corbeille :
+  au rafraîchissement le mot revenait et le bot continuait de sanctionner.
+  Cause : la corbeille ne faisait que modifier l’écran. Correctifs :
+  `store.blacklist.replace`, `PUT /automod/words`, corbeille qui enregistre
+  tout de suite. test/v314-test.js.
 - **v313 (23/09 — SÉLECTEURS DES MODULES FAÇON DRAFTBOT)** : après le
   choix du serveur, les sélecteurs des modules (taille, position, menu
   au clic) s'alignent sur DraftBot : libellé AU-DESSUS, barre pleine
@@ -1440,9 +1450,10 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 23/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v314** — liste noire de mots : supprimer un mot
-  l'enregistre tout de suite (plus de retour au rafraîchissement, plus de
-  sanction fantôme). `test/v314-test.js`.
+- Dernière version : **v315** — accueil : photo d’Optimus à côté de
+  « Optimus Prime, votre nouveau membre » (plus l’emoji 🤖). `test/v315-test.js`.
+- **v314** — liste noire de mots : supprimer un mot l’enregistre tout de suite
+  (plus de retour au rafraîchissement, plus de sanction fantôme). `test/v314-test.js`.
 - **v313** — sélecteurs des modules (après choix du serveur) façon DraftBot :
   libellé au-dessus, barre pleine largeur, menu aussi large que le champ.
   `test/v313-test.js`. Les signatures sous les panneaux restent retirées (v312).

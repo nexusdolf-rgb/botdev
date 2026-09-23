@@ -34,8 +34,8 @@ const brut = (p) => JSON.stringify(p.components ? p.components.map((c) => (c && 
 
 console.log('— 1. Pins de version v312 —');
 const html = racine('public/index.html');
-check('index.html : ?v=314 ×7', (html.match(/\?v=314/g) || []).length === 7);
-check('sw.js : cache botdev-v314', racine('public/sw.js').includes("const CACHE = 'botdev-v314';"));
+check('index.html : ?v=315 ×7', (html.match(/\?v=315/g) || []).length === 7);
+check('sw.js : cache botdev-v315', racine('public/sw.js').includes("const CACHE = 'botdev-v315';"));
 
 console.log('— 2. Moteur : plus de signature par défaut —');
 {

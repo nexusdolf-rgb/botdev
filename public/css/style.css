@@ -868,8 +868,13 @@ html.hx-light .navbar-links a:hover { background: rgba(20,22,40,.07); color: #1c
 .hp-robot {
   width: 76px; height: 76px; border-radius: 20px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center; font-size: 38px;
+  overflow: hidden;
   background: linear-gradient(135deg, var(--accent), var(--accent2));
   box-shadow: 0 14px 30px -12px rgba(224,122,95,.55);
+}
+.hp-robot img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  border-radius: 20px;
 }
 .hp-pillars { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .hp-pillar {

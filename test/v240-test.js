@@ -313,7 +313,7 @@ async function main() {
     boutons: (t.match(/<button/g) || []).length,
     interpolations: (t.match(/\$\{/g) || []).length,
   });
-  const attenduPub = { balises: 572, classes: 188, ids: 22, divs: 151, boutons: 14, interpolations: 55 };
+  const attenduPub = { balises: 571, classes: 188, ids: 22, divs: 151, boutons: 14, interpolations: 55 };
   const reelPub = compteBalises(pubSrc);
   for (const cle of Object.keys(attenduPub)) {
     check(`landing : structure intacte (${cle} = ${attenduPub[cle]})`,
@@ -535,9 +535,9 @@ async function main() {
 
   const index = src('public/index.html');
   const sw = src('public/sw.js');
-  check('index.html : ?v=314 référencé 7 fois', (index.match(/\?v=314/g) || []).length === 7,
-    `trouvé ${(index.match(/\?v=314/g) || []).length}`);
-  check("sw.js : cache 'botdev-v314'", sw.includes("const CACHE = 'botdev-v314';"));
+  check('index.html : ?v=315 référencé 7 fois', (index.match(/\?v=315/g) || []).length === 7,
+    `trouvé ${(index.match(/\?v=315/g) || []).length}`);
+  check("sw.js : cache 'botdev-v315'", sw.includes("const CACHE = 'botdev-v315';"));
   check('index.html : plus aucun ?v=239', !/\?v=239/.test(index));
 }
 
