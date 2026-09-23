@@ -1550,12 +1550,7 @@ router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) =>
     ...(warn_timeout_min !== undefined ? { am_warn_timeout_min: Math.min(Math.max(parseInt(warn_timeout_min, 10) || 10, 1), 1440) } : {}),
     ...advancedFields,
   });
-  if (Array.isArray(blacklist)) {
-    const words = blacklist.map((w) => String(w).trim().toLowerCase()).filter((w) => w.length >= 2).slice(0, 100);
-    const existing = store.blacklist.all(bot.id, guildId);
-    for (const w of existing) if (!words.includes(w)) store.blacklist.remove(bot.id, guildId, w);
-    for (const w of words) store.blacklist.add(bot.id, guildId, w);
-  }
+  if (Array.isArray(blacklist)) store.blacklist.replace(bot.id, guildId, blacklist);
   let native = null;
   if (body.native_enabled !== undefined || body.native_alert_channel !== undefined) {
     try {
@@ -1567,6 +1562,28 @@ router.put('/bots/:id/guilds/:guildId/automod', requireAuth, async (req, res) =>
     } catch (e) { native = { ok: false, error: String(e.message || e).slice(0, 180) }; }
   }
   res.json({ ok: true, native });
+});
+
+// v314 — enregistrement DÉDIÉ de la liste noire de mots.
+// La corbeille du dashboard doit vraiment retirer le mot (sinon il
+// revient au rafraîchissement et le bot continue de sanctionner).
+// On ne touche PAS aux autres réglages Auto-Mod.
+router.put('/bots/:id/guilds/:guildId/automod/words', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const body = req.body || {};
+  const incoming = Array.isArray(body.words) ? body.words : body.blacklist;
+  if (!Array.isArray(incoming)) return res.status(400).json({ error: 'Envoyez la liste des mots.' });
+  const words = store.blacklist.replace(bot.id, guildId, incoming);
+  let native = null;
+  try {
+    const entry = botManager.clients.get(bot.id);
+    const guild = entry && entry.client.isReady() ? entry.client.guilds.cache.get(guildId) : null;
+    if (guild) native = await require('./discord/nativeAutomod').syncGuild(bot.id, guild, { client: entry.client });
+  } catch (e) { native = { ok: false, error: String(e.message || e).slice(0, 180) }; }
+  res.json({ ok: true, words, native });
 });
 
 // 📊 Centre de contrôle Auto-Mod : statistiques agrégées pour le dashboard.

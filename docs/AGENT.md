@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v313**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v314**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -1440,11 +1440,12 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 23/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v313** — sélecteurs des modules (après choix du
-  serveur) façon DraftBot : libellé au-dessus, barre pleine largeur, menu
-  aussi large que le champ, multi en barre de puces. Mobile + PC sans
-  débordement. `test/v313-test.js`. Les signatures sous les panneaux restent
-  retirées (v312).
+- Dernière version : **v314** — liste noire de mots : supprimer un mot
+  l'enregistre tout de suite (plus de retour au rafraîchissement, plus de
+  sanction fantôme). `test/v314-test.js`.
+- **v313** — sélecteurs des modules (après choix du serveur) façon DraftBot :
+  libellé au-dessus, barre pleine largeur, menu aussi large que le champ.
+  `test/v313-test.js`. Les signatures sous les panneaux restent retirées (v312).
 - **v312** — PLUS AUCUNE SIGNATURE « Hoxera · … » sous les panneaux. Le
   moteur n'ajoute plus de pied par défaut ; les `footer: 'Hoxera · …'`
   explicites sont retirés. Survivent : un pied saisi par l'admin et les
@@ -1626,6 +1627,12 @@ Piège n°7 : **jamais 2 services actifs avec le même token**. Trois garde-fous
   recherche transcriptions. Musique écartée.
 me, bio 4 lignes, icône d'application
 - ⏳ En attente utilisateur : renommer le rôle « Nexora » à la main sur 6 serveurs
+  (Discord ne le permet pas automatiquement — voir piège n°4)
+- Roadmap : LOT 1 ✅ (v188), LOT 2 ✅ (v189), LOT 4 ✅ (v190, puis v191 :
+  retrait des pages publiques serveur/statut à la demande — il reste 6 langues,
+  quiz, série de connexion, export CSV). LOT 3 (backlog) = modmail, /profile,
+  recherche transcriptions. Musique écartée.
+enommer le rôle « Nexora » à la main sur 6 serveurs
   (Discord ne le permet pas automatiquement — voir piège n°4)
 - Roadmap : LOT 1 ✅ (v188), LOT 2 ✅ (v189), LOT 4 ✅ (v190, puis v191 :
   retrait des pages publiques serveur/statut à la demande — il reste 6 langues,

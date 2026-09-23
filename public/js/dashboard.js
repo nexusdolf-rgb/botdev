@@ -3374,7 +3374,9 @@ Dashboard.renderers.moderation = async (content, data) => {
     if (storedDraft) automodDraft = JSON.parse(storedDraft);
   } catch {}
   const s = { ...serverSettings, ...(automodDraft && typeof automodDraft === 'object' ? automodDraft : {}) };
-  const blacklist = automodDraft && Array.isArray(automodDraft.blacklist) ? automodDraft.blacklist : (data.blacklist || []);
+  // v314 — les mots viennent TOUJOURS du serveur. Un brouillon local
+  // ne doit plus ressusciter un mot déjà supprimé.
+  const blacklist = data.blacklist || [];
   const [{ sanctions }, memberResult] = await Promise.all([
     App.api(`/bots/${bot.id}/guilds/${guildId}/sanctions`),
     App.api(`/bots/${bot.id}/guilds/${guildId}/members`).catch(() => ({ members: [] })),
@@ -4155,9 +4157,28 @@ Dashboard.renderers.moderation = async (content, data) => {
     } catch (e) { raidBox.innerHTML = `<div class="desc">Bouclier indisponible : ${App.escapeHtml(e.message)}</div>`; }
   })();
 
-  const c2 = Dashboard.card(root, '🔇 Liste noire', 'Les messages contenant ces mots sont supprimés automatiquement.');
+  const c2 = Dashboard.card(root, '🔇 Liste noire', 'Les messages contenant ces mots sont supprimés automatiquement. La corbeille enregistre tout de suite : le mot ne revient plus et ne sanctionne plus.');
   c2.appendChild(App.el(`<div id="bl-list"></div>`));
-  c2.appendChild(App.el(`<button class="dash-btn dash-btn-sm" id="bl-add" style="margin-top:8px">＋ Ajouter un mot</button>`));
+  c2.appendChild(App.el(`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center"><button class="dash-btn dash-btn-sm" id="bl-add">＋ Ajouter un mot</button><button class="dash-btn dash-btn-primary dash-btn-sm" id="bl-save">💾 Enregistrer la liste noire</button></div>`));
+  const persistBlacklistWords = async () => {
+    const words = blacklistData.map((row) => String(row.word || '').trim()).filter((w) => w.length >= 2);
+    const result = await App.api(`/bots/${bot.id}/guilds/${guildId}/automod/words`, { method: 'PUT', body: { words } });
+    const saved = Array.isArray(result && result.words) ? result.words : words.map((w) => w.toLowerCase());
+    blacklistData.length = 0;
+    saved.forEach((word) => blacklistData.push({ word }));
+    data.blacklist = saved.slice();
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          parsed.blacklist = saved.slice();
+          localStorage.setItem(draftKey, JSON.stringify(parsed));
+        }
+      }
+    } catch {}
+    return saved;
+  };
   const renderBl = () => {
     const el = c2.querySelector('#bl-list');
     el.innerHTML = '';
@@ -4165,14 +4186,32 @@ Dashboard.renderers.moderation = async (content, data) => {
     blacklistData.forEach((w, i) => {
       const row = App.el(`<div style="display:flex;gap:8px;margin-bottom:8px">
         <input class="dash-input" value="${App.escapeHtml(w.word)}" placeholder="mot interdit" />
-        <button class="dash-btn dash-btn-danger dash-btn-sm">🗑</button></div>`);
+        <button class="dash-btn dash-btn-danger dash-btn-sm" type="button" aria-label="Retirer ce mot">🗑</button></div>`);
       row.querySelector('input').addEventListener('input', (e) => { w.word = e.target.value; });
-      row.querySelector('button').onclick = () => { blacklistData.splice(i, 1); renderBl(); };
+      row.querySelector('button').onclick = async () => {
+        const removed = blacklistData.splice(i, 1)[0];
+        renderBl();
+        try {
+          await persistBlacklistWords();
+          App.toast('Mot retiré. Il ne sera plus sanctionné.');
+        } catch (e) {
+          blacklistData.splice(i, 0, removed);
+          renderBl();
+          App.toast(e.message, 'error');
+        }
+      };
       el.appendChild(row);
     });
   };
   renderBl();
   c2.querySelector('#bl-add').onclick = () => { blacklistData.push({ word: '' }); renderBl(); };
+  c2.querySelector('#bl-save').onclick = async () => {
+    try {
+      await persistBlacklistWords();
+      renderBl();
+      App.toast('Liste noire enregistrée.');
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
 
   const sanctionsData = sanctions.map((x) => ({ name: x.name, action: x.action, duration: x.duration, message: x.message }));
   const c3 = Dashboard.card(root, '⚖️ Sanctions prédéfinies', 'Applique-les sur Discord avec /sanction @membre nom.');

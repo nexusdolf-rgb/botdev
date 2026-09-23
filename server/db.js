@@ -1583,6 +1583,18 @@ const blacklist = {
   all: (botId, guildId) => db.prepare('SELECT word FROM blacklist_words WHERE bot_id = ? AND guild_id = ? ORDER BY word').all(botId, guildId).map((r) => r.word),
   add: (botId, guildId, word) => db.prepare('INSERT OR IGNORE INTO blacklist_words (bot_id, guild_id, word) VALUES (?, ?, ?)').run(botId, guildId, String(word).toLowerCase().slice(0, 50)),
   remove: (botId, guildId, word) => db.prepare('DELETE FROM blacklist_words WHERE bot_id = ? AND guild_id = ? AND word = ?').run(botId, guildId, String(word).toLowerCase()),
+  // v314 — remplace TOUTE la liste (y compris une liste vide). Sans ça, une
+  // suppression dans le dashboard pouvait rester locale : le mot revenait
+  // au rafraîchissement et le bot continuait de sanctionner.
+  replace: (botId, guildId, list) => {
+    const words = [...new Set((Array.isArray(list) ? list : [])
+      .map((w) => String(w == null ? '' : w).trim().toLowerCase())
+      .filter((w) => w.length >= 2))].slice(0, 100);
+    const existing = blacklist.all(botId, guildId);
+    for (const w of existing) if (!words.includes(w)) blacklist.remove(botId, guildId, w);
+    for (const w of words) blacklist.add(botId, guildId, w);
+    return blacklist.all(botId, guildId);
+  },
 };
 
 // ---------------------- Blacklist des membres (par serveur) ----------------------
