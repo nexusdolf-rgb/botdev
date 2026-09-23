@@ -6197,3 +6197,109 @@ html.hx-os-pc .dashboard-shell-host .dash-topbar-actions {
 }
 .dash-account-chip .chip-txt small { font-size: 10.5px; color: var(--d-dim); }
 .dash-account-chip .dash-iconbtn { width: 30px; height: 30px; }
+
+/* ============================================================
+   v313 — Sélecteurs des modules (après choix du serveur)
+   Libellé au-dessus, barre pleine largeur (~44 px), menu aussi
+   large que le champ. Interrupteurs inchangés. Mobile + PC :
+   aucun débordement (max-width 100 %, min-width 0).
+   ============================================================ */
+.dashboard-shell-host #dash-content,
+.dashboard-shell-host .dash-card,
+.dashboard-shell-host .setting-row {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.dashboard-shell-host .setting-row:not(:has(> label.switch)) {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.dashboard-shell-host .setting-row:not(:has(> label.switch)) > .dash-label {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.dashboard-shell-host .setting-row:not(:has(> label.switch)) > .dash-select,
+.dashboard-shell-host .setting-row:not(:has(> label.switch)) > input.dash-input,
+.dashboard-shell-host .setting-row:not(:has(> label.switch)) > textarea.dash-input,
+.dashboard-shell-host .setting-row:not(:has(> label.switch)) > .dash-roles-multi,
+.dashboard-shell-host .setting-row:not(:has(> label.switch)) > .discord-multi-host,
+.dashboard-shell-host .setting-row:not(:has(> label.switch)) > .dd-host,
+.dashboard-shell-host .setting-row:not(:has(> label.switch)) > div {
+  width: 100%;
+  flex: 1 1 auto;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.dashboard-shell-host .dd-host,
+.dashboard-shell-host .discord-multi-host {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.dashboard-shell-host .dd-trigger {
+  min-height: 44px;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.dashboard-shell-host .dd-panel {
+  max-width: calc(100vw - 20px);
+  box-sizing: border-box;
+}
+
+/* Multi : puces + bouton « ＋ » DANS la même barre (DraftBot). */
+.dashboard-shell-host .discord-multi-picker {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 8px;
+  border: 1px solid var(--d-border-soft, var(--d-border));
+  border-radius: var(--d-radius-control, 10px);
+  background: linear-gradient(180deg, rgba(255,255,255,.035), transparent 65%), var(--d-card2);
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.dashboard-shell-host .discord-multi-picker .discord-multi-values {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+.dashboard-shell-host .discord-multi-picker .dd-add-btn {
+  width: auto;
+  flex: 0 0 auto;
+  min-height: 32px;
+  min-width: 32px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  justify-content: center;
+}
+.dashboard-shell-host .discord-multi-picker .discord-multi-empty {
+  padding: 0;
+}
+
+@media (max-width: 700px) {
+  .dashboard-shell-host .dd-trigger {
+    min-height: 48px;
+    font-size: 16px;
+  }
+  .dashboard-shell-host .discord-multi-picker {
+    min-height: 48px;
+  }
+}

@@ -147,7 +147,7 @@ Dashboard.renderDiscordMultiSelect = (host, {
 
   host.innerHTML = '';
   host.classList.add('discord-multi-host');
-  const picker = App.el(`<div class="discord-multi-picker"><button type="button" class="dd-add-btn" aria-label="${App.escapeHtml(placeholder)}">＋ ${App.escapeHtml(placeholder)}</button><div class="discord-multi-values" aria-live="polite"></div></div>`);
+  const picker = App.el(`<div class="discord-multi-picker"><div class="discord-multi-values" aria-live="polite"></div><button type="button" class="dd-add-btn" aria-label="${App.escapeHtml(placeholder)}">＋ ${App.escapeHtml(placeholder)}</button></div>`);
   const addBtn = picker.querySelector('.dd-add-btn');
   const values = picker.querySelector('.discord-multi-values');
 
@@ -252,8 +252,12 @@ Dashboard.dropdownMenu = ({ trigger, getOptions, onSelect, searchable = false, m
       return;
     }
     panel.classList.remove('is-sheet');
+    // v313 — le menu a la MÊME largeur que le sélecteur (DraftBot).
+    // L'ancien plafond de 360 px laissait un petit menu sous un champ
+    // pleine largeur. On ne bride plus que par la fenêtre (10 px de marge).
     const width = Math.max(minPanelWidth || 0, r.width, 236);
-    const clamped = Math.min(width, 360);
+    const maxW = Math.max(236, (window.innerWidth || 1200) - 20);
+    const clamped = Math.min(width, maxW);
     const spaceBelow = window.innerHeight - r.bottom;
     const est = Math.min(panel.offsetHeight || 300, 336);
     const up = spaceBelow < Math.min(est + 10, 240) && r.top > spaceBelow;

@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v228**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v313**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -962,6 +962,15 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v313 (23/09 — SÉLECTEURS DES MODULES FAÇON DRAFTBOT)** : après le
+  choix du serveur, les sélecteurs des modules (taille, position, menu
+  au clic) s'alignent sur DraftBot : libellé AU-DESSUS, barre pleine
+  largeur (~44 px), menu aussi large que le champ (plus de plafond 360
+  px — seulement la fenêtre − 20 px). Multi : puces + bouton « ＋ »
+  dans la même barre. Interrupteurs inchangés. Mobile + PC : max-width
+  100 %, min-width 0, feuille mobile conservée. Ne touche PAS aux pieds
+  Discord (v312) ni à SETTING_ROW_PLEINE_LARGEUR (v248). Couche CSS en
+  fin de dashboard.css (gagne contre hx-os-pc). test/v313-test.js.
 - **v312 (demande globale — PLUS AUCUNE SIGNATURE SOUS LES PANNEAUX)** :
   le fondateur élargit enfin la demande : « retire toutes les signatures
   sous les panneaux, tous les panneaux qui en contiennent encore ». Le
@@ -1429,16 +1438,19 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 4. Vérifie les tokens (GitHub 200, Render 200, Discord `users/@me` avec curl)
 5. Fais-moi un point de situation clair, puis attends mes instructions
 
-## 📌 ÉTAT AU 14/09/2026 (dernière mise à jour de ce document)
+## 📌 ÉTAT AU 23/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v312** — le fondateur demande désormais de retirer
-  TOUTES les signatures « Hoxera · … » sous TOUS les panneaux. Le moteur
-  `ui.v2container` / `ui.embed` n'ajoute plus de pied par défaut ; tous les
-  `footer: 'Hoxera · …'` explicites sont retirés. Survivent : un pied saisi
-  par l'admin (annonces, tickets avancés `footer_text`) et les pieds utiles
-  (⭐ starboard, pagination /top, /help). `test/v312-test.js`. Les panneaux
-  déjà postés gardent leur apparence : les renvoyer depuis le dashboard
-  applique le nouveau style.
+- Dernière version : **v313** — sélecteurs des modules (après choix du
+  serveur) façon DraftBot : libellé au-dessus, barre pleine largeur, menu
+  aussi large que le champ, multi en barre de puces. Mobile + PC sans
+  débordement. `test/v313-test.js`. Les signatures sous les panneaux restent
+  retirées (v312).
+- **v312** — PLUS AUCUNE SIGNATURE « Hoxera · … » sous les panneaux. Le
+  moteur n'ajoute plus de pied par défaut ; les `footer: 'Hoxera · …'`
+  explicites sont retirés. Survivent : un pied saisi par l'admin et les
+  pieds utiles (⭐ starboard, pagination /top, /help). `test/v312-test.js`.
+  Les panneaux déjà postés gardent leur apparence : les renvoyer depuis le
+  dashboard applique le nouveau style.
 - ✅ **Incident du 14/09 CLÔTURÉ** : `BOTDEV_GH_TOKEN` révoqué → boot sur base
   vide. Rétabli à 15h56 : nouveau PAT reporté dans Render via l'API
   (`PUT /v1/services/srv-da5i2h2jobas73epvos0/env-vars/BOTDEV_GH_TOKEN` avec
@@ -1606,6 +1618,13 @@ Piège n°7 : **jamais 2 services actifs avec le même token**. Trois garde-fous
 - Bot « Optimus Prime » en ligne, 7 serveurs, 0 erreur 24h, 120 tests verts
 - Identité Discord à jour : avatar (logo argent), bannière (v185 = v177 robot cinéma),
   username, bio 4 lignes, icône d'application
+- ⏳ En attente utilisateur : renommer le rôle « Nexora » à la main sur 6 serveurs
+  (Discord ne le permet pas automatiquement — voir piège n°4)
+- Roadmap : LOT 1 ✅ (v188), LOT 2 ✅ (v189), LOT 4 ✅ (v190, puis v191 :
+  retrait des pages publiques serveur/statut à la demande — il reste 6 langues,
+  quiz, série de connexion, export CSV). LOT 3 (backlog) = modmail, /profile,
+  recherche transcriptions. Musique écartée.
+me, bio 4 lignes, icône d'application
 - ⏳ En attente utilisateur : renommer le rôle « Nexora » à la main sur 6 serveurs
   (Discord ne le permet pas automatiquement — voir piège n°4)
 - Roadmap : LOT 1 ✅ (v188), LOT 2 ✅ (v189), LOT 4 ✅ (v190, puis v191 :
