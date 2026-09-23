@@ -108,7 +108,7 @@ App.renderPublicLanding = () => {
         <p class="pub-sub">Pas juste une liste de commandes : une expérience complète, du premier message d'accueil au journal d'audit, en passant par un dashboard qui vous fait gagner du temps.</p>
         <div class="hp-about-grid">
           <div class="hp-about-card">
-            <div class="hp-robot" aria-hidden="true"><img src="/icons/optimus-photo.png" alt="Optimus Prime" /></div>
+            <div class="hp-robot" aria-hidden="true"><img src="/api/public/bot-avatar" alt="Optimus Prime" /></div>
             <div>
               <h3>Optimus Prime, votre nouveau membre</h3>
               <p>Hoxera est le bot officiel « Optimus Prime » : une seule identité, un seul dashboard, et toutes les fonctions dont un serveur Discord a besoin — sans abonnement.</p>

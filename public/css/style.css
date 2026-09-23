@@ -873,8 +873,9 @@ html.hx-light .navbar-links a:hover { background: rgba(20,22,40,.07); color: #1c
   box-shadow: 0 14px 30px -12px rgba(224,122,95,.55);
 }
 .hp-robot img {
-  width: 100%; height: 100%; object-fit: cover; display: block;
-  border-radius: 20px;
+  /* v316 : photo de PROFIL Discord (pas la bannière) */
+  width: 100%; height: 100%; object-fit: cover; object-position: center;
+  display: block; border-radius: 20px;
 }
 .hp-pillars { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .hp-pillar {
