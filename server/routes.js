@@ -762,6 +762,7 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
     am_warn_limit: 2, am_warn_action: 'timeout', am_warn_timeout_min: 10,
     log_channel: '',
     birthday_channel: '', birthday_role: '', log_events: '',
+    autoclean_enabled: 0, autoclean_channels: '[]', autoclean_interval: 10,
   };
   let logEvents = {};
   try { logEvents = JSON.parse((store.guildSettings.get(bot.id, guildId) || {}).log_events || '{}') || {}; } catch {}
@@ -2279,6 +2280,25 @@ router.put('/bots/:id/guilds/:guildId/settings', requireAuth, async (req, res) =
     ...(timezone !== undefined ? { timezone: String(timezone).slice(0, 64) } : {}),
   });
   res.json({ ok: true });
+});
+
+// v317 — Nettoyage auto : salons + rythme (secondes), un message à la fois.
+router.put('/bots/:id/guilds/:guildId/autoclean', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const guildId = req.params.guildId;
+  if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const autoclean = require('./discord/autoclean');
+  const b = req.body || {};
+  const channels = autoclean.sanitizeChannels(b.channels);
+  const interval = autoclean.clampInterval(b.interval);
+  const enabled = b.enabled === true || b.enabled === 1 || b.enabled === '1';
+  store.guildSettings.set(bot.id, guildId, {
+    autoclean_enabled: enabled ? 1 : 0,
+    autoclean_channels: JSON.stringify(channels),
+    autoclean_interval: interval,
+  });
+  res.json({ ok: true, enabled: enabled ? 1 : 0, channels, interval });
 });
 
 router.put('/bots/:id/guilds/:guildId/events/:type', requireAuth, eventsSaveRateLimit, async (req, res) => {

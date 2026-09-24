@@ -549,6 +549,7 @@ Dashboard.MODULES = [
   ['members', '👥', 'Membres'],
   ['stats', '📈', 'Statistiques'],
   ['logs', '📜', 'Journaux'],
+  ['autoclean', '🧹', 'Nettoyage auto'],
   ['transcripts', '🔎', 'Transcriptions'],
   ['modmail', '💬', 'Modmail'],
   ['server', '⚙️', 'Réglages serveur'],
@@ -1968,6 +1969,7 @@ Dashboard.renderers.overview = async (content, data) => {
     ['members', '👥', 'Membres', 'Liste et actions rapides'],
     ['stats', '📊', 'Statistiques', 'Activité du serveur'],
     ['logs', '📜', 'Journaux', 'Événements enregistrés'],
+    ['autoclean', '🧹', 'Nettoyage auto', 'Vider les salons, un message à la fois'],
     ['roles', '📋', 'Rôles', 'Menus et boutons'],
   ];
   modules.forEach(([id, icon, label, description]) => {
@@ -5806,6 +5808,57 @@ Dashboard.renderers.logs = async (content, data) => {
   })();
 };
 
+
+// ---------- 🧹 Nettoyage auto (v317) ----------
+Dashboard.renderers.autoclean = async (content, data) => {
+  const { bot, guildId } = Dashboard.state;
+  const s = data.settings || {};
+  const textChannels = (data.channels || []).filter((channel) => !channel.category && !channel.voice);
+  const enabled = !!(s.autoclean_enabled);
+  let selected = [];
+  try { selected = JSON.parse(s.autoclean_channels || '[]'); } catch { selected = []; }
+  if (!Array.isArray(selected)) selected = [];
+  const interval = s.autoclean_interval || 10;
+  const root = Dashboard.header(content, '🧹', 'Nettoyage auto', 'Le bot retire les messages des salons choisis, un par un, toutes les X secondes — jamais tout d’un coup. Les messages épinglés restent.');
+  const c = Dashboard.card(root, 'Configuration', 'Choisissez les salons et le rythme, puis enregistrez. Le bot a besoin de la permission « Gérer les messages ».');
+  const presets = [[2, '2 s'], [5, '5 s'], [10, '10 s · conseillé'], [15, '15 s'], [30, '30 s'], [60, '1 min'], [120, '2 min'], [300, '5 min'], [600, '10 min'], [1800, '30 min'], [3600, '1 h']];
+  c.innerHTML += `
+    <label class="dash-label">Activer le nettoyage</label>
+    <label class="switch"><input type="checkbox" id="ac-on" ${enabled ? 'checked' : ''} /><span class="slider"></span></label>
+    <label class="dash-label">Salons à nettoyer</label>
+    <div id="ac-channels" class="discord-multi-host"></div>
+    <label class="dash-label">Rythme</label>
+    <select class="dash-select" id="ac-interval">
+      ${Dashboard.presetOptions(presets, interval, Dashboard.labelSecondes)}
+    </select>
+    <p class="desc">À chaque tick, <b>un seul</b> message (le plus ancien parmi les récents) est retiré dans chaque salon. Le salon se vide petit à petit, sans tout effacer d’un coup.</p>
+    <button class="dash-btn dash-btn-primary" style="margin-top:14px" id="ac-save">💾 Enregistrer</button>`;
+  const chosen = new Set(selected.map(String).filter(Boolean));
+  Dashboard.renderDiscordMultiSelect(c.querySelector('#ac-channels'), {
+    items: textChannels,
+    selected: chosen,
+    icon: '💬',
+    placeholder: 'Ajouter un salon',
+    emptyText: 'Aucun salon texte reçu de Discord.',
+    selectedEmptyText: 'Aucun salon sélectionné.',
+    getValue: (ch) => ch.id,
+    getLabel: (ch) => `#${ch.name}`,
+  });
+  c.querySelector('#ac-save').onclick = async () => {
+    try {
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/autoclean`, {
+        method: 'PUT',
+        body: {
+          enabled: c.querySelector('#ac-on').checked,
+          channels: [...chosen],
+          interval: parseInt(c.querySelector('#ac-interval').value, 10),
+        },
+      });
+      App.toast('Nettoyage auto enregistré !');
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+};
+
 // ---------- 🎮 Événements & tournois (v189) ----------
 Dashboard.renderers.quiz = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
@@ -7264,6 +7317,7 @@ Dashboard.renderers.help = async (content) => {
       <div class="dash-badge" style="display:flex;gap:8px;padding:10px">📈 Niveaux : XP, rangs, récompenses de rôles, /profile</div>
       <div class="dash-badge" style="display:flex;gap:8px;padding:10px">💰 Économie : coins, boutique, giveaways, classement</div>
       <div class="dash-badge" style="display:flex;gap:8px;padding:10px">🛡️ Modération : sanctions, blacklist, anti-raid, journaux</div>
+      <div class="dash-badge" style="display:flex;gap:8px;padding:10px">🧹 Nettoyage auto : vider des salons, un message toutes les X secondes</div>
       <div class="dash-badge" style="display:flex;gap:8px;padding:10px">💬 Modmail : vos membres vous écrivent en MP, vous répondez ici</div>
     </div>`)));
 

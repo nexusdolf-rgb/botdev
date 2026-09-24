@@ -678,6 +678,9 @@ try { db.exec("ALTER TABLE guild_settings ADD COLUMN stat_ids TEXT DEFAULT ''");
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN boost_role TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN boost_channel TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN boost_message TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN autoclean_enabled INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN autoclean_channels TEXT DEFAULT '[]'"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN autoclean_interval INTEGER DEFAULT 10"); } catch (e) {}
 // 🎙️ v267 — vocaux temporaires + : salon textuel du panneau de contrôle.
 try { db.exec("ALTER TABLE voicetemp ADD COLUMN panel_channel TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE voicetemp ADD COLUMN panel_message TEXT DEFAULT ''"); } catch (e) {}
@@ -1142,7 +1145,9 @@ const guildSettings = {
     // 📊 v264 — compteurs en salons vocaux.
     'stat_category', 'stat_ids',
     // 🚀 v265 — récompenses boosters Nitro.
-    'boost_role', 'boost_channel', 'boost_message'];
+    'boost_role', 'boost_channel', 'boost_message',
+    // v317 — nettoyage auto (salons vidés un message à la fois).
+    'autoclean_enabled', 'autoclean_channels', 'autoclean_interval'];
     const vals = {
       bot_id: botId, guild_id: guildId,
       prefix: String(next.prefix || '').slice(0, 5),
@@ -1188,6 +1193,11 @@ const guildSettings = {
       boost_role: String(next.boost_role || '').slice(0, 64),
       boost_channel: String(next.boost_channel || '').slice(0, 64),
       boost_message: String(next.boost_message || '').slice(0, 500),
+      autoclean_enabled: next.autoclean_enabled ? 1 : 0,
+      autoclean_channels: typeof next.autoclean_channels === 'string'
+        ? next.autoclean_channels.slice(0, 4000)
+        : JSON.stringify(Array.isArray(next.autoclean_channels) ? next.autoclean_channels : []).slice(0, 4000),
+      autoclean_interval: Math.min(Math.max(parseInt(next.autoclean_interval, 10) || 10, 2), 3600),
       ticket_room: (next.ticket_room && typeof next.ticket_room === 'object')
         ? JSON.stringify(next.ticket_room).slice(0, 4000)
         : String(next.ticket_room || '').slice(0, 4000),

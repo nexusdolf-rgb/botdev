@@ -317,6 +317,20 @@ async function main() {
     }
   }, 30000);
 
+  // v317 — Nettoyage auto : 1 message / salon / X secondes (pas tout d'un coup).
+  let autocleanBusy = false;
+  setInterval(async () => {
+    if (autocleanBusy) return;
+    autocleanBusy = true;
+    try {
+      const autoclean = require('./discord/autoclean');
+      for (const [botId, entry] of botManager.clients) {
+        if (!entry.client.isReady()) continue;
+        try { await autoclean.sweep(botId, entry); } catch (e) { console.error('[Hoxera] autoclean :', e.message); }
+      }
+    } finally { autocleanBusy = false; }
+  }, 1000);
+
   // Réparation automatique : toutes les 10 minutes, on re-synchronise les
   // commandes slash (par serveur + le lot global du badge /) et la bio.
   setInterval(async () => {
