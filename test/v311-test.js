@@ -29,8 +29,8 @@ const racine = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 
 console.log('— 1. Pins de version v311 —');
 const html = racine('public/index.html');
-check('index.html : ?v=317 ×7', (html.match(/\?v=317/g) || []).length === 7);
-check('sw.js : cache botdev-v317', racine('public/sw.js').includes("const CACHE = 'botdev-v317';"));
+check('index.html : ?v=318 ×7', (html.match(/\?v=318/g) || []).length === 7);
+check('sw.js : cache botdev-v318', racine('public/sw.js').includes("const CACHE = 'botdev-v318';"));
 
 console.log('— 2. Panneau menu des rôles —');
 store.bots.create({ user_id: 1, name: 'B', token: 'x', client_id: 'c', prefix: '!' });

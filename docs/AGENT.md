@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v317**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v318**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -962,6 +962,10 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v318 (23/09 — NETTOYAGE AUTO : DES PLUS ANCIENS VERS LES PLUS RÉCENTS)** :
+  dès que c’est activé, ça part tout de suite (pas besoin d’attendre un
+  nouveau message). On remonte l’historique et on retire du plus ancien
+  vers le plus récent, un message toutes les X secondes. test/v318-test.js.
 - **v317 (23/09 — MODULE NETTOYAGE AUTO)** : nouveau module dashboard
   « Nettoyage auto ». On choisit un ou plusieurs salons et un rythme en
   secondes : le bot retire **un** message à la fois (le plus ancien parmi
@@ -1459,8 +1463,9 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 23/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v317** — module « Nettoyage auto » : salons choisis,
-  un message toutes les X secondes (pas tout d’un coup). `test/v317-test.js`.
+- Dernière version : **v318** — nettoyage auto : dès l’activation, du plus
+  ancien au plus récent, sans attendre un nouveau message. `test/v318-test.js`.
+- **v317** — module « Nettoyage auto ». `test/v317-test.js`.
 - **v316** — photo de profil Optimus Prime à côté de « Optimus Prime,
   votre nouveau membre » (pas la bannière). `test/v316-test.js`.
 - **v315** — accueil : photo à la place de l’emoji 🤖. `test/v315-test.js`.

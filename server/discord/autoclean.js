@@ -1,8 +1,9 @@
 // ============================================================
-// Hoxera v317 — Nettoyage auto
-// Salons choisis : un message (le plus ancien parmi les récents)
-// est retiré toutes les X secondes. Jamais tout d’un coup.
-// Les messages épinglés restent.
+// Hoxera v318 — Nettoyage auto
+// Dès que c’est activé : on commence tout de suite, sans attendre
+// qu’un nouveau message arrive. On part des PLUS ANCIENS vers les
+// plus récents, un message toutes les X secondes. Jamais tout d’un
+// coup. Les messages épinglés restent.
 // ============================================================
 'use strict';
 const store = require('../db');
@@ -12,9 +13,11 @@ const MIN_INTERVAL = 2;
 const MAX_INTERVAL = 3600;
 const DEFAULT_INTERVAL = 10;
 const MAX_CHANNELS = 20;
-const FETCH_LIMIT = 50;
+const PAGE_SIZE = 100;
+const MAX_PAGES = 80;
 
 const lastTick = new Map(); // `${botId}:${guildId}:${channelId}` → timestamp ms
+const oldestPage = new Map(); // key → messages triés du plus ancien au plus récent
 
 function clampInterval(value) {
   const n = parseInt(value, 10);
@@ -83,6 +86,42 @@ function tickKey(botId, guildId, channelId) {
 
 function resetTicks() {
   lastTick.clear();
+  oldestPage.clear();
+}
+
+function sortOldestFirst(list) {
+  return asMessageList(list).sort((a, b) => (a.createdTimestamp || 0) - (b.createdTimestamp || 0));
+}
+
+// Remonte l’historique jusqu’au début du salon (les vrais plus anciens),
+// sans s’arrêter aux messages récents.
+async function fetchOldestWindow(channel) {
+  let before;
+  let last = [];
+  for (let i = 0; i < MAX_PAGES; i++) {
+    const opts = { limit: PAGE_SIZE };
+    if (before) opts.before = before;
+    let fetched;
+    try {
+      fetched = await channel.messages.fetch(opts);
+    } catch {
+      return last;
+    }
+    const list = sortOldestFirst(fetched);
+    if (!list.length) return last;
+    last = list;
+    if (list.length < PAGE_SIZE) return list;
+    before = list[0].id;
+  }
+  return last;
+}
+
+async function loadOldestPage(channel, key) {
+  const cached = oldestPage.get(key);
+  if (cached && cached.length) return cached;
+  const list = await fetchOldestWindow(channel);
+  oldestPage.set(key, list);
+  return list;
 }
 
 async function sweepChannel(botId, guild, channel, intervalSec, now) {
@@ -91,18 +130,18 @@ async function sweepChannel(botId, guild, channel, intervalSec, now) {
   if (now - (lastTick.get(key) || 0) < intervalSec * 1000) return { skipped: true };
   lastTick.set(key, now);
 
-  let fetched;
-  try {
-    fetched = await channel.messages.fetch({ limit: FETCH_LIMIT });
-  } catch {
-    return { error: 'fetch' };
+  const page = await loadOldestPage(channel, key);
+  const target = pickOldestDeletable(page);
+  if (!target || typeof target.delete !== 'function') {
+    oldestPage.delete(key);
+    return { deleted: 0 };
   }
-  const target = pickOldestDeletable(fetched);
-  if (!target || typeof target.delete !== 'function') return { deleted: 0 };
   try {
     await target.delete();
+    oldestPage.set(key, asMessageList(page).filter((m) => m && m.id !== target.id));
     return { deleted: 1, messageId: target.id };
   } catch {
+    oldestPage.set(key, asMessageList(page).filter((m) => m && m.id !== target.id));
     return { error: 'delete' };
   }
 }
@@ -137,11 +176,13 @@ module.exports = {
   MAX_INTERVAL,
   DEFAULT_INTERVAL,
   MAX_CHANNELS,
+  PAGE_SIZE,
   clampInterval,
   sanitizeChannels,
   parseChannelsField,
   parseConfig,
   pickOldestDeletable,
+  fetchOldestWindow,
   sweep,
   resetTicks,
 };

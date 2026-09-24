@@ -5809,7 +5809,7 @@ Dashboard.renderers.logs = async (content, data) => {
 };
 
 
-// ---------- 🧹 Nettoyage auto (v317) ----------
+// ---------- 🧹 Nettoyage auto (v318) ----------
 Dashboard.renderers.autoclean = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const s = data.settings || {};
@@ -5819,7 +5819,7 @@ Dashboard.renderers.autoclean = async (content, data) => {
   try { selected = JSON.parse(s.autoclean_channels || '[]'); } catch { selected = []; }
   if (!Array.isArray(selected)) selected = [];
   const interval = s.autoclean_interval || 10;
-  const root = Dashboard.header(content, '🧹', 'Nettoyage auto', 'Le bot retire les messages des salons choisis, un par un, toutes les X secondes — jamais tout d’un coup. Les messages épinglés restent.');
+  const root = Dashboard.header(content, '🧹', 'Nettoyage auto', 'Dès que c’est activé, le bot commence tout de suite : d’abord les plus anciens messages, puis vers les plus récents. Pas besoin d’attendre un nouveau message. Un message toutes les X secondes. Les épinglés restent.');
   const c = Dashboard.card(root, 'Configuration', 'Choisissez les salons et le rythme, puis enregistrez. Le bot a besoin de la permission « Gérer les messages ».');
   const presets = [[2, '2 s'], [5, '5 s'], [10, '10 s · conseillé'], [15, '15 s'], [30, '30 s'], [60, '1 min'], [120, '2 min'], [300, '5 min'], [600, '10 min'], [1800, '30 min'], [3600, '1 h']];
   c.innerHTML += `
@@ -5831,7 +5831,7 @@ Dashboard.renderers.autoclean = async (content, data) => {
     <select class="dash-select" id="ac-interval">
       ${Dashboard.presetOptions(presets, interval, Dashboard.labelSecondes)}
     </select>
-    <p class="desc">À chaque tick, <b>un seul</b> message (le plus ancien parmi les récents) est retiré dans chaque salon. Le salon se vide petit à petit, sans tout effacer d’un coup.</p>
+    <p class="desc">Rien à envoyer pour lancer le nettoyage : s’il est activé, ça part tout de suite. Ordre : <b>du plus ancien au plus récent</b>, <b>un seul</b> message à chaque rythme choisi. Les épinglés restent.</p>
     <button class="dash-btn dash-btn-primary" style="margin-top:14px" id="ac-save">💾 Enregistrer</button>`;
   const chosen = new Set(selected.map(String).filter(Boolean));
   Dashboard.renderDiscordMultiSelect(c.querySelector('#ac-channels'), {
