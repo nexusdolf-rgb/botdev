@@ -2006,7 +2006,7 @@ Dashboard.renderers.tickets = async (content, data) => {
   let advancedConfig = null;
   try { advancedConfig = (await App.api(`/bots/${bot.id}/guilds/${guildId}/advanced-tickets`)).config || null; } catch {}
   const typesData = (t.types || []).map((x) => ({ label: x.label, emoji: x.emoji || '', description: x.description || '', category: x.category || '', questions: (Array.isArray(x.questions) && x.questions.length) ? [...x.questions] : [], staff_roles: (x.staff_roles && x.staff_roles.length) ? [...x.staff_roles] : [] }));
-  const root = Dashboard.header(content, '🎫', 'Système de tickets', 'Bouton ou menu déroulant → salon privé automatique. Le tout est aussi configurable sur Discord avec /ticket.');
+  const root = Dashboard.header(content, '🎫', 'Système de tickets', 'Deux panneaux classiques (bouton ou liste), plus un système avancé à part. Aussi configurable avec /ticket.');
   const ts = data.tickets_stats || { total: 0, open: 0 };
   root.appendChild(App.el(`
     <div class="dash-stats" style="margin-bottom:14px">
@@ -2032,8 +2032,8 @@ Dashboard.renderers.tickets = async (content, data) => {
   const curStyle = String(t.button_style || '1');
   const reqReason = !(t.require_reason === 0 || t.require_reason === false);
 
-  const c = Dashboard.card(root, 'Configuration', '');
-  c.querySelector('.desc').outerHTML = `<div class="desc">💡 Sur Discord : <b>/ticket setup</b> (assistant) et <b>/ticket types setup</b> (types + rôles staff). Tout est synchronisé avec ce formulaire.</div>`;
+  const c = Dashboard.card(root, '🔘 Panneau à un bouton', 'Le membre voit UN bouton. Un clic ouvre un ticket. Ce n’est pas le menu, ni le système avancé du bas.');
+  c.querySelector('.desc').outerHTML = `<div class="desc">Le membre voit UN bouton. Un clic ouvre un ticket. Ce n’est pas le menu, ni le système avancé du bas.<br/>💡 Sur Discord : <b>/ticket setup</b> et <b>/ticket types setup</b> — synchronisé avec ce formulaire.</div>`;
 
   // 📊 État actuel (data-status pour le retrouver après innerHTML +=)
   c.appendChild(App.el(`<div data-status style="margin-bottom:12px"></div>`));
@@ -2091,13 +2091,13 @@ Dashboard.renderers.tickets = async (content, data) => {
 
     <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
       <button class="dash-btn dash-btn-primary" id="t-save">💾 Enregistrer</button>
-      <button class="dash-btn" id="t-send">📨 Envoyer le panneau BOUTON</button>
+      <button class="dash-btn" id="t-send">📨 Envoyer ce panneau (bouton)</button>
     </div>
-    <div style="font-size:12px;color:var(--d-dim);margin-top:8px">🔘 Le panneau BOUTON = un simple bouton (ouvre un ticket du premier type). Le panneau MENU déroulant se configure dans la carte dédiée en dessous.</div>`;
+    <div style="font-size:12px;color:var(--d-dim);margin-top:8px">Ceci est le panneau à UN bouton. Le panneau avec liste (menu) est plus bas. Le système avancé est tout en bas — ce n’est pas la même chose.</div>`;
 
   // 🗂️ Carte PANNEAU MENU DÉROULANT — indépendante du panneau bouton :
   // son salon, son message, son 💾 et son 📨.
-  const cm = Dashboard.card(root, '🗂️ Panneau MENU déroulant', 'Le panneau avec la liste des types de tickets (menu déroulant). Indépendant du panneau bouton : chacun son salon, son message, ses boutons.');
+  const cm = Dashboard.card(root, '📋 Panneau avec menu (liste)', 'Le membre choisit le type dans une liste (Support, Plaintes…). Ce n’est PAS le système avancé du bas. Indépendant du panneau à un bouton : chacun a son salon et son message.');
   const menuChanOpts = ['<option value="">— Même salon que le panneau bouton —</option>']
     .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(t.menu_channel, ch) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`));
   if (t.menu_channel && !textChannels.some((ch) => Dashboard.discordRefMatches(t.menu_channel, ch))) {
@@ -2115,10 +2115,10 @@ Dashboard.renderers.tickets = async (content, data) => {
     <div style="font-size:12px;color:var(--d-dim);margin-top:4px">✅ Si vous choisissez une catégorie ici, TOUS les tickets ouverts via le menu iront dedans — priorité absolue, zéro ambiguïté.</div>
     <label class="dash-label">Message du panneau menu (vide = même message que le panneau bouton)</label>
     <textarea class="dash-input" id="tm-msg" rows="3">${App.escapeHtml(t.menu_message || '')}</textarea>
-    <div style="font-size:12px;color:var(--d-dim);margin-top:6px">🗂️ Les types affichés dans le menu se gèrent dans la carte « Types de tickets ». Les deux panneaux peuvent cohabiter, même dans le même salon.</div>
+    <div style="font-size:12px;color:var(--d-dim);margin-top:6px">Les types de cette liste se règlent dans la carte « Types de tickets (bouton et menu) ». Les deux panneaux classiques peuvent cohabiter, même dans le même salon.</div>
     <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
       <button class="dash-btn dash-btn-primary" id="tm-save">💾 Enregistrer</button>
-      <button class="dash-btn" id="tm-send">📨 Envoyer le panneau MENU</button>
+      <button class="dash-btn" id="tm-send">📨 Envoyer ce panneau (menu)</button>
     </div>`;
   cm.querySelector('#tm-save').onclick = async () => {
     try {
@@ -2132,14 +2132,14 @@ Dashboard.renderers.tickets = async (content, data) => {
     } catch (e) { App.toast(e.message, 'error'); }
   };
   cm.querySelector('#tm-send').onclick = async () => {
-    try { await App.api(`/bots/${bot.id}/tickets/send`, { method: 'POST', body: { guild_id: guildId, mode: 'menu' } }); App.toast('Panneau MENU envoyé !'); }
+    try { await App.api(`/bots/${bot.id}/tickets/send`, { method: 'POST', body: { guild_id: guildId, mode: 'menu' } }); App.toast('Panneau avec menu envoyé !'); }
     catch (e) { App.toast(e.message, 'error'); }
   };
 
   // ---- ✏️ v297 : textes SÉPARÉS — une carte pour le panneau bouton, une carte pour le panneau menu ----
   let pt = {};
   try { pt = JSON.parse(t.panel_texts || '{}') || {}; } catch {}
-  const ctp = Dashboard.card(root, '✏️ Textes du panneau BOUTON (optionnel)', 'Personnalisez les textes du panneau BOUTON uniquement (le panneau menu déroulant a sa propre carte plus bas). Chaque champ laissé vide garde le texte par défaut actuel. Le mot {server} est remplacé par le nom du serveur. Après enregistrement, renvoyez le panneau pour voir le résultat.');
+  const ctp = Dashboard.card(root, '✏️ Textes du panneau à un bouton', 'Uniquement pour le panneau à un bouton (pas le menu, pas le système avancé). Champ vide = texte par défaut. {server} = nom du serveur. Après enregistrement, renvoyez le panneau.');
   ctp.innerHTML += `
     <label class="dash-label">Titre du panneau</label>
     <input class="dash-input" id="tp-title" maxlength="100" placeholder="👑 Support | {server}" value="${App.escapeHtml(pt.title || '')}" />
@@ -2177,7 +2177,7 @@ Dashboard.renderers.tickets = async (content, data) => {
   // ---- ✏️ v297 : Textes du panneau MENU déroulant (indépendants du panneau bouton) ----
   let mpt = {};
   try { mpt = JSON.parse(String(t.menu_panel_texts || '').trim() || String(t.panel_texts || '') || '{}') || {}; } catch {}
-  const ctmenu = Dashboard.card(root, '✏️ Textes du panneau MENU déroulant (optionnel)', 'Personnalisez les textes du panneau MENU déroulant uniquement — totalement indépendants du panneau bouton. Chaque champ laissé vide garde le texte par défaut actuel. Après enregistrement, renvoyez le panneau menu pour voir le résultat.');
+  const ctmenu = Dashboard.card(root, '✏️ Textes du panneau avec menu', 'Uniquement pour le panneau avec liste. Indépendant du panneau à un bouton. Champ vide = texte par défaut. Après enregistrement, renvoyez le panneau menu.');
   ctmenu.innerHTML += `
     <label class="dash-label">Titre du panneau menu</label>
     <input class="dash-input" id="mp-title" maxlength="100" placeholder="👑 Support | {server}" value="${App.escapeHtml(mpt.title || '')}" />
@@ -2374,7 +2374,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     } catch (e) { App.toast(e.message, 'error'); }
   };
   c.querySelector('#t-send').onclick = async () => {
-    try { await App.api(`/bots/${bot.id}/tickets/send`, { method: 'POST', body: { guild_id: guildId, mode: 'button' } }); App.toast('Panneau BOUTON envoyé !'); }
+    try { await App.api(`/bots/${bot.id}/tickets/send`, { method: 'POST', body: { guild_id: guildId, mode: 'button' } }); App.toast('Panneau à un bouton envoyé !'); }
     catch (e) { App.toast(e.message, 'error'); }
   };
 
@@ -2402,7 +2402,7 @@ Dashboard.renderers.tickets = async (content, data) => {
   c.querySelector('#t-msg').addEventListener('input', renderPreview);
   renderPreview();
 
-  const c2 = Dashboard.card(root, '🗂️ Types de tickets', 'Chaque type : emoji, catégorie et PLUSIEURS rôles staff — choisissez dans des listes, comme sur Discord.');
+  const c2 = Dashboard.card(root, '🗂️ Types de tickets (bouton et menu)', 'Pour les deux panneaux classiques uniquement (bouton + liste). Emoji, catégorie et rôles staff. Le système avancé du bas a ses propres types.');
   c2.appendChild(App.el(`<div id="t-types"></div>`));
   const addBtn = App.el(`<button class="dash-btn dash-btn-sm" id="t-add">＋ Ajouter un type</button>`);
   c2.appendChild(addBtn);
@@ -2535,7 +2535,7 @@ Dashboard.renderers.tickets = async (content, data) => {
       staff_roles: Array.isArray(x.staff_roles) ? [...x.staff_roles] : [],
     })),
   };
-  const c3 = Dashboard.card(root, '🎨 Système de tickets personnalisés', 'Nouveau système indépendant : un salon privé par ticket, placé dans la catégorie choisie pour son type. L’ancien système au-dessus ne sera jamais modifié.');
+  const c3 = Dashboard.card(root, '🎨 Autre système : tickets avancés', 'ATTENTION : ce n’est PAS le panneau avec menu ci-dessus. C’est un 2ᵉ système, indépendant. Un salon privé par ticket. Les panneaux classiques (bouton et menu) ne sont pas modifiés.');
   c3.classList.add('adv-builder-card');
   const advChannelOptions = ['<option value="">— Choisir un salon —</option>']
     .concat(textChannels.map((ch) => {
@@ -2576,7 +2576,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     </div>
     <div class="adv-builder-actions">
       <button class="dash-btn dash-btn-primary" id="adv-save">💾 Enregistrer le nouveau système</button>
-      <button class="dash-btn" id="adv-send">📨 Envoyer le nouveau panneau</button>
+      <button class="dash-btn" id="adv-send">📨 Envoyer le panneau avancé</button>
     </div>
     <div id="adv-status" class="desc adv-status-line"></div>`;
 
@@ -2729,10 +2729,38 @@ Dashboard.renderers.tickets = async (content, data) => {
   c3.querySelector('#adv-send').onclick = async () => {
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/advanced-tickets/send`, { method: 'POST' });
-      c3.querySelector('#adv-status').textContent = '✅ Nouveau panneau envoyé dans le salon choisi. L’ancien panneau n’a pas été touché.';
-      App.toast('Nouveau panneau personnalisé envoyé !');
+      c3.querySelector('#adv-status').textContent = '✅ Panneau avancé envoyé dans le salon choisi. Les panneaux classiques n’ont pas été touchés.';
+      App.toast('Panneau avancé envoyé ! L’autre système n’a pas été touché.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
+
+  // v322 — guide + ordre lisible (bouton, ses textes, menu, ses textes, types, puis l’autre système).
+  const ticketGuide = App.el(`<div class="dash-card ticket-guide" data-dash-card>
+      <div class="card-head"><div class="card-heading">
+        <h3>🧭 Par où commencer ?</h3>
+        <div class="desc">Il y a 2 systèmes différents. Ce n’est pas la même chose. Commencez par un seul.</div>
+      </div></div>
+      <div class="tg-sys">
+        <div class="tg-box">
+          <b>1. Tickets classiques</b>
+          <small>Les cartes juste en dessous.</small>
+          <ul>
+            <li><b>Panneau à un bouton</b> — un seul bouton « Ouvrir un ticket ».</li>
+            <li><b>Panneau avec menu</b> — une liste de types à choisir.</li>
+          </ul>
+          <p>Les deux partagent les mêmes types (Support, Plaintes…).</p>
+        </div>
+        <div class="tg-box tg-box-alt">
+          <b>2. Tickets avancés</b>
+          <small>Tout en bas de la page.</small>
+          <p>Un <b>autre</b> panneau, complètement séparé. Ce n’est <b>pas</b> le menu du système classique. L’autre système n’est pas modifié.</p>
+        </div>
+      </div>
+    </div>`);
+  [c, ctp, cm, ctmenu, c2, cdm, croom, c3].forEach((el) => root.appendChild(el));
+  const ticketStats = root.querySelector('.dash-stats');
+  if (ticketStats) ticketStats.insertAdjacentElement('afterend', ticketGuide);
+  else root.insertBefore(ticketGuide, c);
 };
 
 // ---------- Bienvenue ----------

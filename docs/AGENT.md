@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v321**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v322**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -962,6 +962,11 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v322 (24/09 — TICKETS : NOMS CLAIRS + GUIDE)** :
+  la page Tickets ne mélange plus bouton, menu et « personnalisés ».
+  Guide en haut, cartes renommées, ordre : bouton → ses textes → menu →
+  ses textes → types → messages → système avancé (autre système, pas le
+  menu). IDs et APIs inchangés. test/v322-test.js.
 - **v321 (24/09 — MENU : GROS MODULES DÉCOUPÉS)** :
   Communauté & Lives devient Starboard / Invitations / Lives. Liste noire
   et Anti-raid sortent de Modération (anti-raid = bouclier + lockdown,
@@ -1479,7 +1484,10 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 23/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v321** — menu dashboard : Starboard, Invitations,
+- Dernière version : **v322** — page Tickets : noms clairs + guide
+  « par où commencer » (bouton / menu / système avancé). APIs inchangées.
+  `test/v322-test.js`.
+- **v321** — menu dashboard : Starboard, Invitations,
   Lives, Liste noire, Anti-raid, Auto-rôles, Anniversaires, Sticky.
   Les APIs et sauvegardes ne changent pas. `test/v321-test.js`.
 - **v320** — vérification : texte du panneau modifiable

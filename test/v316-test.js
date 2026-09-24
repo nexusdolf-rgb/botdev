@@ -18,8 +18,8 @@ const pub = racine('public/js/public.js');
 const css = racine('public/css/style.css');
 
 console.log('— 1. Pins de version v316 —');
-check('index.html : ?v=321 ×7', (html.match(/\?v=321/g) || []).length === 7);
-check('sw.js : cache botdev-v321', sw.includes("const CACHE = 'botdev-v321';"));
+check('index.html : ?v=322 ×7', (html.match(/\?v=322/g) || []).length === 7);
+check('sw.js : cache botdev-v322', sw.includes("const CACHE = 'botdev-v322';"));
 check('index.html : plus aucune ?v=315', !html.includes('?v=315'));
 
 console.log('— 2. Profil Discord, pas la bannière —');

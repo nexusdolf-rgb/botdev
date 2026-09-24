@@ -92,7 +92,7 @@ const dashSource = fs.readFileSync(path.join(__dirname, '..', 'public/js/dashboa
 
   // 6. Dashboard et routes : la carte est bien sous l'ancien renderer, avec
   // enregistrement et envoi séparés.
-  assert.ok(dashSource.includes('Système de tickets personnalisés'));
+  assert.ok(dashSource.includes('Autre système : tickets avancés'));
   assert.ok(dashSource.includes('adv-mode') && dashSource.includes('adv-save') && dashSource.includes('adv-send'));
   assert.ok(routesSource.includes('advanced-tickets') && routesSource.includes('advanced.sendPanel'));
   console.log('✅ dashboard : carte nouvelle indépendante, mode boutons/menu, sauvegarde et envoi');

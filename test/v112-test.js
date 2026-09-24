@@ -40,7 +40,7 @@ console.log('✅ API : mode validé, salon du menu avec repli, mise à jour part
 // 5. Dashboard : deux cartes, chacune 💾 + 📨
 assert.ok(dash.includes('tm-save') && dash.includes('tm-send'), 'boutons dédiés du panneau menu');
 assert.ok(dash.includes("mode: 'button'") && dash.includes("mode: 'menu'"), 'chaque 📨 envoie SON panneau');
-assert.ok(dash.includes('Panneau MENU déroulant'), 'carte dédiée visible');
-console.log('✅ dashboard : carte « Panneau MENU déroulant » avec ses propres 💾 Enregistrer et 📨 Envoyer');
+assert.ok(dash.includes('Panneau avec menu (liste)'), 'carte dédiée visible');
+console.log('✅ dashboard : carte « Panneau avec menu (liste) » avec ses propres 💾 Enregistrer et 📨 Envoyer');
 
 console.log('\n🎉 Tous les tests v3.5 passent');

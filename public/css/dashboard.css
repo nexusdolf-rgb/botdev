@@ -980,6 +980,31 @@ html.hx-light .sk-ico, html.hx-light .sk-line, html.hx-light .sk-stat {
 .dash-card:hover { border-color: rgba(var(--d-accent-rgb), .42); }
 .dash-card .card-head { padding-bottom: 2px; }
 
+/* v322 — Guide tickets : 2 systèmes, noms clairs */
+.ticket-guide .tg-sys {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 4px;
+}
+.ticket-guide .tg-box {
+  border: 1px solid var(--d-border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: var(--d-card2, rgba(255,255,255,.03));
+}
+.ticket-guide .tg-box b { display: block; font-size: 14px; margin-bottom: 2px; }
+.ticket-guide .tg-box small { display: block; color: var(--d-dim); font-size: 11.5px; margin-bottom: 8px; }
+.ticket-guide .tg-box ul { margin: 0 0 8px; padding-left: 18px; line-height: 1.55; font-size: 13px; }
+.ticket-guide .tg-box p { margin: 0; font-size: 12.5px; color: var(--d-dim); line-height: 1.5; }
+.ticket-guide .tg-box-alt {
+  border-color: rgba(var(--d-accent-rgb), .42);
+  background: rgba(var(--d-accent-rgb), .07);
+}
+@media (max-width: 720px) {
+  .ticket-guide .tg-sys { grid-template-columns: 1fr; }
+}
+
 /* Constructeur du nouveau système de tickets */
 .adv-builder-card {
   border-color: rgba(var(--d-accent-rgb), .42);

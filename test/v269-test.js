@@ -51,8 +51,8 @@ check('audit-mobile audite le module voicetemp par défaut', banc.includes("'voi
 console.log('— 5. Version —');
 const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-check('index.html : ?v=321 référencé 7 fois', (index.match(/\?v=321/g) || []).length === 7);
-check('sw.js : cache « botdev-v321 »', sw.includes("const CACHE = 'botdev-v321';"));
+check('index.html : ?v=322 référencé 7 fois', (index.match(/\?v=322/g) || []).length === 7);
+check('sw.js : cache « botdev-v322 »', sw.includes("const CACHE = 'botdev-v322';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v269 — ${ok} vérifications OK : le module Vocal a son onglet.`);
