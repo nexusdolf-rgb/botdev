@@ -20,8 +20,8 @@ const html = racine('public/index.html');
 const sw = racine('public/sw.js');
 
 console.log('— 1. Pins de version v313 —');
-check('index.html : ?v=318 ×7', (html.match(/\?v=318/g) || []).length === 7, String((html.match(/\?v=\d+/g) || []).slice(0, 8)));
-check('sw.js : cache botdev-v318', sw.includes("const CACHE = 'botdev-v318';"));
+check('index.html : ?v=319 ×7', (html.match(/\?v=319/g) || []).length === 7, String((html.match(/\?v=\d+/g) || []).slice(0, 8)));
+check('sw.js : cache botdev-v319', sw.includes("const CACHE = 'botdev-v319';"));
 check('index.html : plus aucune ?v=312', !html.includes('?v=312'));
 check('sw.js : plus de botdev-v312', !sw.includes('botdev-v312'));
 

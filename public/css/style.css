@@ -661,10 +661,16 @@ body { font-family: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, sans-
 }
 .auth-bot-ava {
   width: 76px; height: 76px; margin: 0 auto 14px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center; font-size: 36px;
-  background: linear-gradient(135deg, #e07a5f, #c95b49);
+  display: flex; align-items: center; justify-content: center; font-size: 0;
+  overflow: hidden;
+  background: #0b0d12;
   box-shadow: 0 0 0 4px rgba(224,122,95,.25), 0 14px 30px -10px rgba(224,122,95,.6);
   animation: avaFloat 3.4s ease-in-out infinite;
+}
+.auth-bot-ava img {
+  /* v319 : photo de PROFIL Optimus (pas la bannière, pas l’emoji 🤖 orange) */
+  width: 100%; height: 100%; object-fit: cover; object-position: center;
+  display: block; border-radius: 50%;
 }
 @keyframes avaFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
 .auth-trust { display: flex; flex-direction: column; gap: 7px; margin: 18px 0 14px; text-align: left; }

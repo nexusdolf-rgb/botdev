@@ -52,8 +52,8 @@ check('les options # proviennent bien de vtTextChannels', body.includes('vtTextC
 console.log('— 4. Version —');
 const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-check('index.html : ?v=318 référencé 7 fois', (index.match(/\?v=318/g) || []).length === 7);
-check('sw.js : cache « botdev-v318 »', sw.includes("const CACHE = 'botdev-v318';"));
+check('index.html : ?v=319 référencé 7 fois', (index.match(/\?v=319/g) || []).length === 7);
+check('sw.js : cache « botdev-v319 »', sw.includes("const CACHE = 'botdev-v319';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v270 — ${ok} vérifications OK : le sélecteur de salon textuel revit.`);

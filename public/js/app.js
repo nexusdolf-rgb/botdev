@@ -228,7 +228,7 @@ App.renderConnect = () => {
       </div>
       <div class="auth-right">
         <div class="auth-card auth-glass" style="text-align:center">
-          <div class="auth-bot-ava">🤖</div>
+          <div class="auth-bot-ava"><img src="/api/public/bot-avatar" alt="Optimus Prime" /></div>
           <h2>Connectez-vous avec Discord</h2>
           <p class="sub" style="margin:8px 0 20px">Aucun compte à créer, aucun mot de passe.<br/>Discord vérifie automatiquement vos serveurs et vos permissions.</p>
           <button class="btn btn-discord" id="connect-discord" style="padding:13px;font-size:15px">🎮 Se connecter avec Discord</button>

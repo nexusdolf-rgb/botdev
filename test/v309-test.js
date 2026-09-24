@@ -33,8 +33,8 @@ const racine = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 
 console.log('— 1. Pins de version v309 —');
 const html = racine('public/index.html');
-check('index.html : ?v=318 ×7', (html.match(/\?v=318/g) || []).length === 7);
-check('sw.js : cache botdev-v318', racine('public/sw.js').includes("const CACHE = 'botdev-v318';"));
+check('index.html : ?v=319 ×7', (html.match(/\?v=319/g) || []).length === 7);
+check('sw.js : cache botdev-v319', racine('public/sw.js').includes("const CACHE = 'botdev-v319';"));
 
 console.log('— 2. Panneaux tickets : plus AUCUNE ligne colorée —');
 store.bots.create({ user_id: 1, name: 'B', token: 'x', client_id: 'c', prefix: '!' });
