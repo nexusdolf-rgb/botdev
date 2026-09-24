@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v320**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v321**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -962,6 +962,13 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v321 (24/09 — MENU : GROS MODULES DÉCOUPÉS)** :
+  Communauté & Lives devient Starboard / Invitations / Lives. Liste noire
+  et Anti-raid sortent de Modération (anti-raid = bouclier + lockdown,
+  distinct de l’anti-nuke). Auto-rôles quitte Bienvenue. Anniversaires
+  quitte Réglages serveur. Sticky quitte Annonces. Les cartes et les
+  APIs restent les mêmes (wrappers keep/hide). Alias `community` →
+  `invites`. test/v321-test.js.
 - **v320 (23/09 — VÉRIFICATION : TEXTE MODIFIABLE + FILTRES PRO)** :
   le texte du panneau (titre, message, bouton, couleur) se règle dans le
   dashboard, avec aperçu. Filtres en plus : photo de profil obligatoire,
@@ -1472,7 +1479,10 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 23/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v320** — vérification : texte du panneau modifiable
+- Dernière version : **v321** — menu dashboard : Starboard, Invitations,
+  Lives, Liste noire, Anti-raid, Auto-rôles, Anniversaires, Sticky.
+  Les APIs et sauvegardes ne changent pas. `test/v321-test.js`.
+- **v320** — vérification : texte du panneau modifiable
   + filtres pro (avatar, spammeur Discord). `test/v320-test.js`.
 - **v319** — page de connexion : photo de profil Optimus. `test/v319-test.js`.
 - **v318** — nettoyage auto : du plus ancien au plus récent. `test/v318-test.js`.

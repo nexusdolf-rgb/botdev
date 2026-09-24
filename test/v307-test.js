@@ -34,8 +34,8 @@ const brut = (p) => JSON.stringify(p.components ? p.components.map((c) => (c && 
 
 console.log('— 1. Pins de version v307 —');
 const html = racine('public/index.html');
-check('index.html : ?v=320 ×7', (html.match(/\?v=320/g) || []).length === 7);
-check('sw.js : cache botdev-v320', racine('public/sw.js').includes("const CACHE = 'botdev-v320';"));
+check('index.html : ?v=321 ×7', (html.match(/\?v=321/g) || []).length === 7);
+check('sw.js : cache botdev-v321', racine('public/sw.js').includes("const CACHE = 'botdev-v321';"));
 
 console.log('— 2. Panneau tickets : plus de rouge, plus de signature —');
 const SERVEUR = 'Serveur de Test';

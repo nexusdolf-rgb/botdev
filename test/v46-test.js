@@ -88,6 +88,8 @@ const check = (label, cond) => {
     const resp = (body) => ({ ok: true, status: 200, json: async () => body });
     if (p.endsWith('/guilds/G1/stats')) return resp({ activity: [{ day: '2026-08-11', messages: 5 }, { day: '2026-08-17', messages: 15 }], joins: [{ day: '2026-08-17', members: 2 }], top_active: [{ user_id: 'u1', messages: 15, tag: 'Alice#0001', avatar: '' }] });
     if (p.endsWith('/guilds/G1/temproles')) return resp({ roles: [] });
+    if (p.endsWith('/guilds/G1/sanctions')) return resp({ sanctions: [] });
+    if (p.endsWith('/guilds/G1/members')) return resp({ members: [] });
     if (p.endsWith('/guilds/G1')) {
       const payload = {
         guild: { id: 'G1', name: 'Serveur Test', members: 18 },
@@ -154,10 +156,10 @@ const check = (label, cond) => {
       };
     } catch (e) { out.welcome = { error: e.message }; }
 
-    // Réglages serveur : carte anti-raid
+    // Anti-raid : bouclier + verrouillage (v321 : plus dans Réglages serveur)
     try {
       const c = document.createElement('div');
-      await Dashboard.renderers.server(c, gdata);
+      await Dashboard.renderers.antiraid(c, gdata);
       await new Promise((r) => setTimeout(r, 300));
       out.server = {
         lockdownCard: c.textContent.includes('Anti-raid'),

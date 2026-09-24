@@ -108,14 +108,14 @@ const data = {
   console.log('2️⃣  Annonces : salons de publication et rôles à mentionner utilisent des sélecteurs ✅');
 
   const welcome = w.document.createElement('div');
-  Dashboard.state.module = 'welcome';
-  await Dashboard.renderers.welcome(welcome, data);
+  Dashboard.state.module = 'autoroles';
+  await Dashboard.renderers.autoroles(welcome, data);
   const autorole = welcome.querySelector('[data-k="roles"]');
   assert(autorole);
   assert.strictEqual(autorole.querySelector('.dd-add-btn')?.tagName, 'BUTTON');
   assert.strictEqual(autorole.querySelectorAll('input[type="checkbox"]').length, 0);
   assert.strictEqual(autorole.__discordSelected.has('Staff'), true, 'la compatibilité des noms de rôles est conservée pour l’auto-rôle');
-  console.log('3️⃣  Bienvenue / auto-rôle : la liste de rôles utilise un sélecteur ✅');
+  console.log('3️⃣  Auto-rôles : la liste de rôles utilise un sélecteur ✅');
 
   const source = fs.readFileSync('public/js/dashboard.js', 'utf8');
   const css = fs.readFileSync('public/css/dashboard.css', 'utf8');

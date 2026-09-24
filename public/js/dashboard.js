@@ -7,9 +7,11 @@ const Dashboard = {
 };
 
 Dashboard.moduleIds = () => [...Dashboard.MODULES, ...Dashboard.BOT_MODULES].map(([id]) => id);
+Dashboard.MODULE_ALIASES = { community: 'invites' };
 Dashboard.persistedModule = () => {
   try {
-    const saved = localStorage.getItem('hx-module');
+    let saved = localStorage.getItem('hx-module');
+    saved = Dashboard.MODULE_ALIASES[saved] || saved;
     if (!Dashboard.moduleIds().includes(saved)) return 'overview';
     if (Dashboard.BOT_MODULES.some(([id]) => id === saved) && !(App.state.user && App.state.user.is_admin)) return 'overview';
     return saved;
@@ -531,11 +533,14 @@ Dashboard.MODULES = [
   ['overview', '📊', 'Vue d\'ensemble'],
   ['tickets', '🎫', 'Tickets'],
   ['welcome', '👋', 'Bienvenue'],
+  ['autoroles', '🏷️', 'Auto-rôles'],
   ['verification', '✅', 'Vérification'],
   ['levels', '📈', 'Niveaux'],
   ['economy', '💰', 'Économie'],
   ['shop', '🛒', 'Boutique'],
   ['moderation', '🛡️', 'Modération'],
+  ['blacklist', '🔇', 'Liste noire'],
+  ['antiraid', '🚧', 'Anti-raid'],
   ['antinuke', '🚨', 'Anti-nuke'],
   ['roles', '📋', 'Rôles'],
   ['suggestions', '💡', 'Suggestions'],
@@ -543,8 +548,12 @@ Dashboard.MODULES = [
   ['events', '🎮', 'Événements'],
   ['quiz', '🧠', 'Quiz'],
   ['voicetemp', '🎙️', 'Vocal'],
-  ['community', '⭐', 'Communauté & Lives'],
+  ['starboard', '⭐', 'Starboard'],
+  ['invites', '📨', 'Invitations'],
+  ['lives', '🔴', 'Lives'],
   ['announcements', '📅', 'Annonces'],
+  ['sticky', '📌', 'Message épinglé'],
+  ['birthdays', '🎂', 'Anniversaires'],
   ['embeds', '🧱', 'Embed Builder'],
   ['members', '👥', 'Membres'],
   ['stats', '📈', 'Statistiques'],
@@ -721,7 +730,8 @@ Dashboard.renderSide = (aside) => {
 };
 
 Dashboard.setModule = (id, options = {}) => {
-  const next = String(id || 'overview');
+  let next = String(id || 'overview');
+  next = Dashboard.MODULE_ALIASES[next] || next;
   const current = String(Dashboard.state.module || 'overview');
   if (next === current) return;
   if (!options.fromBack) {
@@ -1962,10 +1972,18 @@ Dashboard.renderers.overview = async (content, data) => {
     ['verification', '✅', 'Vérification', 'Bouton humain, Join Gate, filtre anti-bots'],
     ['levels', '📈', 'Niveaux', 'XP et récompenses des membres'],
     ['shop', '🛒', 'Boutique', 'Articles et rôles à acheter'],
-    ['moderation', '🛡️', 'Modération', 'Auto-Mod, blacklist et anti-raid'],
+    ['moderation', '🛡️', 'Modération', 'Auto-Mod et sanctions'],
+    ['blacklist', '🔇', 'Liste noire', 'Mots interdits'],
+    ['antiraid', '🚧', 'Anti-raid', 'Arrivées trop rapides'],
     ['suggestions', '💡', 'Suggestions', 'Propositions et votes'],
     ['giveaways', '🎁', 'Giveaways', 'Tirages automatiques'],
     ['announcements', '📅', 'Annonces', 'Messages programmés'],
+    ['sticky', '📌', 'Message épinglé', 'Reste en bas du salon'],
+    ['invites', '📨', 'Invitations', 'Récompenses et classement'],
+    ['starboard', '⭐', 'Starboard', 'Messages avec des étoiles'],
+    ['lives', '🔴', 'Lives', 'TikTok, Twitch, YouTube, Kick'],
+    ['autoroles', '🏷️', 'Auto-rôles', 'Rôle automatique à l’arrivée'],
+    ['birthdays', '🎂', 'Anniversaires', 'Vœux le jour J'],
     ['members', '👥', 'Membres', 'Liste et actions rapides'],
     ['stats', '📊', 'Statistiques', 'Activité du serveur'],
     ['logs', '📜', 'Journaux', 'Événements enregistrés'],
@@ -3617,7 +3635,7 @@ Dashboard.renderers.moderation = async (content, data) => {
   if (clearDraft) clearDraft.onclick = () => {
     try { localStorage.removeItem(draftKey); } catch {}
     App.toast('Configuration publiée restaurée.');
-    Dashboard.renderers.moderation(content, data);
+    (Dashboard.renderers[Dashboard.state.module] || Dashboard.renderers.moderation)(content, data);
   };
 
   // 📈 v213 — Barème progressif des sanctions (échelle par règle).
@@ -4123,13 +4141,13 @@ Dashboard.renderers.moderation = async (content, data) => {
         const when = new Date(st.raid.triggeredAt).toLocaleString('fr-FR');
         statusEl.innerHTML = `<div style="padding:10px 12px;border:1px solid rgba(237,66,69,.4);border-radius:10px;background:rgba(237,66,69,.08);font-size:13px">🚨 <b>Raid détecté</b> le ${when} — ${st.raid.count} arrivées en ${st.raid.window}s (${st.raid.action === 'lockdown' ? st.raid.locked + ' salon(s) verrouillé(s)' : 'alerte'})${st.raid.unlockAt ? ' · réouverture auto programmée' : ''}<br/><button class="dash-btn dash-btn-sm" id="raid-unlock-now" style="margin-top:8px">🔓 Réouvrir maintenant</button></div>`;
         cRaid.querySelector('#raid-unlock-now').onclick = async () => {
-          try { await App.api(`/bots/${bot.id}/guilds/${guildId}/antiraid/unlock`, { method: 'POST' }); App.toast('Serveur réouvert !'); Dashboard.renderers.moderation(content, data); }
+          try { await App.api(`/bots/${bot.id}/guilds/${guildId}/antiraid/unlock`, { method: 'POST' }); App.toast('Serveur réouvert !'); (Dashboard.renderers[Dashboard.state.module] || Dashboard.renderers.moderation)(content, data); }
           catch (e) { App.toast(e.message, 'error'); }
         };
       } else if (st.lockdown && st.lockdown.locked) {
         statusEl.innerHTML = `<div style="padding:10px 12px;border:1px solid rgba(254,231,92,.4);border-radius:10px;background:rgba(254,231,92,.08);font-size:13px">🔒 Le serveur est verrouillé (${st.lockdown.channels.length} salon(s)). <button class="dash-btn dash-btn-sm" id="raid-unlock-now" style="margin-top:8px">🔓 Réouvrir</button></div>`;
         cRaid.querySelector('#raid-unlock-now').onclick = async () => {
-          try { await App.api(`/bots/${bot.id}/guilds/${guildId}/antiraid/unlock`, { method: 'POST' }); App.toast('Serveur réouvert !'); Dashboard.renderers.moderation(content, data); }
+          try { await App.api(`/bots/${bot.id}/guilds/${guildId}/antiraid/unlock`, { method: 'POST' }); App.toast('Serveur réouvert !'); (Dashboard.renderers[Dashboard.state.module] || Dashboard.renderers.moderation)(content, data); }
           catch (e) { App.toast(e.message, 'error'); }
         };
       } else {
@@ -4145,7 +4163,7 @@ Dashboard.renderers.moderation = async (content, data) => {
             unlock_min: parseInt(cRaid.querySelector('#raid-unlock').value, 10) || 0,
           }});
           App.toast('Bouclier anti-raid enregistré !');
-          Dashboard.renderers.moderation(content, data);
+          (Dashboard.renderers[Dashboard.state.module] || Dashboard.renderers.moderation)(content, data);
         } catch (e) { App.toast(e.message, 'error'); }
       };
       cRaid.querySelector('#raid-test').onclick = async () => {
@@ -4153,7 +4171,7 @@ Dashboard.renderers.moderation = async (content, data) => {
           App.toast('🧪 Raid simulé : le serveur se verrouille 1 minute…');
           const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/antiraid/test`, { method: 'POST' });
           App.toast(r.action === 'lockdown' ? `🚨 ${r.locked} salon(s) verrouillé(s) — réouverture auto dans 1 min !` : '🔔 Alerte de raid envoyée !');
-          Dashboard.renderers.moderation(content, data);
+          (Dashboard.renderers[Dashboard.state.module] || Dashboard.renderers.moderation)(content, data);
         } catch (e) { App.toast(e.message, 'error'); }
       };
     } catch (e) { raidBox.innerHTML = `<div class="desc">Bouclier indisponible : ${App.escapeHtml(e.message)}</div>`; }
@@ -5508,7 +5526,7 @@ Dashboard.renderers.announcements = async (content, data) => {
       content: cStk.querySelector('#stk-content').value,
     } });
     App.toast(r.ok ? '📌 Sticky enregistré.' : '⚠️ Enregistrement impossible.');
-    Dashboard.loadGuild().then((d) => Dashboard.renderers.announcements(content, d));
+    Dashboard.loadGuild().then((d) => (Dashboard.renderers[Dashboard.state.module] || Dashboard.renderers.announcements)(content, d));
   };
   const [scheduledResult, customResult] = await Promise.all([
     App.api(`/bots/${bot.id}/guilds/${guildId}/scheduled`),
@@ -7355,7 +7373,7 @@ Dashboard.renderers.help = async (content) => {
       <div class="dash-badge" style="display:flex;gap:8px;padding:10px">👋 Bienvenue : message d'accueil + rôles automatiques</div>
       <div class="dash-badge" style="display:flex;gap:8px;padding:10px">📈 Niveaux : XP, rangs, récompenses de rôles, /profile</div>
       <div class="dash-badge" style="display:flex;gap:8px;padding:10px">💰 Économie : coins, boutique, giveaways, classement</div>
-      <div class="dash-badge" style="display:flex;gap:8px;padding:10px">🛡️ Modération : sanctions, blacklist, anti-raid, journaux</div>
+      <div class="dash-badge" style="display:flex;gap:8px;padding:10px">🛡️ Modération : Auto-Mod et sanctions</div>
       <div class="dash-badge" style="display:flex;gap:8px;padding:10px">🧹 Nettoyage auto : vider des salons, un message toutes les X secondes</div>
       <div class="dash-badge" style="display:flex;gap:8px;padding:10px">💬 Modmail : vos membres vous écrivent en MP, vous répondez ici</div>
     </div>`)));
@@ -7374,3 +7392,124 @@ Dashboard.renderers.help = async (content) => {
     <a class="dash-btn" target="_blank" rel="noopener" href="https://discord.gg/X9hTdr9N3" style="text-decoration:none">🆘 Rejoindre le support</a>`)));
 };
 
+// ============================================================
+// v321 — Découpe des gros modules en pages dédiées.
+// On réutilise les cartes déjà codées (sauvegardes inchangées) :
+// le module plein s’affiche, puis on garde / cache les cartes.
+// ============================================================
+Dashboard.cardTitle = (card) => {
+  const h = card && card.querySelector && card.querySelector('h3');
+  return h ? String(h.textContent || '') : '';
+};
+Dashboard.topCards = (root) => [...(root && root.children ? root.children : [])]
+  .filter((el) => el.classList && el.classList.contains('dash-card'));
+Dashboard.keepCards = (root, needles) => {
+  const list = Array.isArray(needles) ? needles : [needles];
+  Dashboard.topCards(root).forEach((card) => {
+    const title = Dashboard.cardTitle(card);
+    if (!list.some((n) => title.includes(n))) card.remove();
+  });
+};
+Dashboard.hideCards = (root, needles) => {
+  const list = Array.isArray(needles) ? needles : [needles];
+  Dashboard.topCards(root).forEach((card) => {
+    const title = Dashboard.cardTitle(card);
+    if (list.some((n) => title.includes(n))) card.remove();
+  });
+};
+Dashboard.retitle = (content, icon, title, sub) => {
+  const iconEl = content.querySelector('.m-icon');
+  const h1 = content.querySelector('.module-header-copy h1');
+  const subEl = content.querySelector('.module-header-copy .sub');
+  if (iconEl) iconEl.textContent = icon;
+  if (h1) h1.textContent = title;
+  if (subEl) subEl.textContent = sub;
+};
+Dashboard.appendCardsFrom = async (fullFn, content, data, needles) => {
+  const tmp = document.createElement('div');
+  await fullFn(tmp, data);
+  const list = Array.isArray(needles) ? needles : [needles];
+  Dashboard.topCards(tmp).forEach((card) => {
+    const title = Dashboard.cardTitle(card);
+    if (list.some((n) => title.includes(n))) content.appendChild(card);
+  });
+};
+
+// Capturer les renderers complets AVANT de les recouvrir (sinon récursion).
+Dashboard._full = {
+  moderation: Dashboard.renderers.moderation,
+  community: Dashboard.renderers.community,
+  announcements: Dashboard.renderers.announcements,
+  server: Dashboard.renderers.server,
+  welcome: Dashboard.renderers.welcome,
+};
+
+Dashboard.renderers.moderation = async (content, data) => {
+  await Dashboard._full.moderation(content, data);
+  Dashboard.hideCards(content, ['Liste noire', 'Bouclier anti-raid']);
+};
+
+Dashboard.renderers.blacklist = async (content, data) => {
+  await Dashboard._full.moderation(content, data);
+  Dashboard.keepCards(content, ['Liste noire']);
+  Dashboard.retitle(content, '🔇', 'Liste noire', 'Mots interdits : les messages qui les contiennent sont supprimés.');
+};
+
+Dashboard.renderers.antiraid = async (content, data) => {
+  await Dashboard._full.moderation(content, data);
+  Dashboard.keepCards(content, ['Bouclier anti-raid']);
+  Dashboard.retitle(content, '🚧', 'Anti-raid', 'Arrivées trop rapides, puis verrouillage d’urgence des salons.');
+  await Dashboard.appendCardsFrom(Dashboard._full.server, content, data, ['Anti-raid']);
+};
+
+Dashboard.renderers.welcome = async (content, data) => {
+  await Dashboard._full.welcome(content, data);
+  Dashboard.hideCards(content, ['Auto-rôle']);
+  Dashboard.retitle(content, '👋', 'Bienvenue', 'Accueille les nouveaux membres.');
+};
+
+Dashboard.renderers.autoroles = async (content, data) => {
+  await Dashboard._full.welcome(content, data);
+  Dashboard.keepCards(content, ['Auto-rôle']);
+  Dashboard.retitle(content, '🏷️', 'Auto-rôles', 'Rôle automatique dès l’arrivée d’un membre.');
+};
+
+Dashboard.renderers.announcements = async (content, data) => {
+  await Dashboard._full.announcements(content, data);
+  Dashboard.hideCards(content, ['Message épinglé']);
+};
+
+Dashboard.renderers.sticky = async (content, data) => {
+  await Dashboard._full.announcements(content, data);
+  Dashboard.keepCards(content, ['Message épinglé']);
+  Dashboard.retitle(content, '📌', 'Message épinglé', 'Un message qui reste toujours en bas du salon.');
+};
+
+Dashboard.renderers.server = async (content, data) => {
+  await Dashboard._full.server(content, data);
+  Dashboard.hideCards(content, ['Anniversaires', 'Anti-raid']);
+};
+
+Dashboard.renderers.birthdays = async (content, data) => {
+  await Dashboard._full.server(content, data);
+  Dashboard.keepCards(content, ['Anniversaires']);
+  Dashboard.retitle(content, '🎂', 'Anniversaires', 'Vœux le jour J, et un rôle optionnel.');
+};
+
+Dashboard.renderers.starboard = async (content, data) => {
+  await Dashboard._full.community(content, data);
+  Dashboard.keepCards(content, ['Starboard']);
+  Dashboard.retitle(content, '⭐', 'Starboard', 'Les messages avec assez d’étoiles rejoignent le mur de la gloire.');
+};
+
+Dashboard.renderers.invites = async (content, data) => {
+  await Dashboard._full.community(content, data);
+  Dashboard.keepCards(content, ['Récompenses d', 'Traqueur d']);
+  Dashboard.retitle(content, '📨', 'Invitations', 'Récompenses et classement des recruteurs.');
+};
+
+Dashboard.renderers.lives = async (content, data) => {
+  await Dashboard._full.community(content, data);
+  Dashboard.keepCards(content, ['Annonces de live']);
+  Dashboard.retitle(content, '🔴', 'Lives', 'Annonces TikTok, Twitch, YouTube et Kick.');
+};

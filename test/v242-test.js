@@ -798,8 +798,9 @@ async function rafale(guild, kinds) {
   {
     const d = code('public/js/dashboard.js');
     check('onglet « Anti-nuke » déclaré dans la navigation', d.includes("['antinuke', '🚨', 'Anti-nuke']"));
-    check('onglet placé juste après Modération',
-      /\['moderation', '🛡️', 'Modération'\],\s*\['antinuke'/.test(d));
+    check('onglet anti-nuke toujours dans le menu, près de la modération',
+      /\['moderation', '🛡️', 'Modération'\],[\s\S]*?\['antinuke'/.test(d)
+      && d.indexOf("['moderation'") < d.indexOf("['antinuke'"));
     check('renderer Dashboard.renderers.antinuke défini', d.includes('Dashboard.renderers.antinuke = async'));
     check('le renderer appelle la route d\'état', d.includes('/antinuke/state'));
     check('le renderer appelle la route de configuration', d.includes('/antinuke`'));
@@ -873,10 +874,10 @@ async function rafale(guild, kinds) {
   // --------------------------------------------------------------------------
   {
     const html = racine('public/index.html');
-    check('index.html : ?v=320 référencé 7 fois', (html.match(/\?v=320/g) || []).length === 7,
-      String((html.match(/\?v=320/g) || []).length));
+    check('index.html : ?v=321 référencé 7 fois', (html.match(/\?v=321/g) || []).length === 7,
+      String((html.match(/\?v=321/g) || []).length));
     check('index.html : plus aucun ?v=241', !html.includes('?v=241'));
-    check('sw.js : cache « botdev-v242 »', racine('public/sw.js').includes("'botdev-v320'"));
+    check('sw.js : cache « botdev-v242 »', racine('public/sw.js').includes("'botdev-v321'"));
   }
 
   console.log(`\n${echecs === 0

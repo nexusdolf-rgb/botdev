@@ -69,10 +69,19 @@ window.__results = (async () => {
       results.welcome = {
         channelSelect: !!content.querySelector('select[data-k="channel"]'),
         colorPicker: !!content.querySelector('input[type=color][data-k="color"]'),
-        roleSelect: !!content.querySelector('select[data-k="role"]'),
         cards: content.querySelectorAll('.dash-card').length,
       };
     } catch (e) { results.welcome = { error: e.message }; }
+
+    try {
+      const contentA = document.createElement('div');
+      const gdataA = await App.api('/bots/1/guilds/G1');
+      await Dashboard.renderers.autoroles(contentA, gdataA);
+      results.autoroles = {
+        roleSelect: !!contentA.querySelector('select[data-k="role"]'),
+        cards: contentA.querySelectorAll('.dash-card').length,
+      };
+    } catch (e) { results.autoroles = { error: e.message }; }
 
     // Module Tickets (état + couleur bouton + questionnaire)
     try {
@@ -102,7 +111,8 @@ setTimeout(async () => {
     const ok = results.modules >= 15 && (results.header.includes('Tableau') || results.header.includes('Vue')) && results.guildPick === 'Serveur Test'
       && results.botSection && !results.errorShown
       && results.welcome && !results.welcome.error && results.welcome.channelSelect
-      && results.welcome.colorPicker && results.welcome.roleSelect && results.welcome.cards >= 2
+      && results.welcome.colorPicker && results.welcome.cards >= 1
+      && results.autoroles && !results.autoroles.error && results.autoroles.roleSelect && results.autoroles.cards >= 1
       && results.tickets && !results.tickets.error && results.tickets.styleSelect
       && results.tickets.reasonToggle && results.tickets.channelSelect
       && results.tickets.roleSelect && results.tickets.statusFound && results.tickets.sendBtn;
