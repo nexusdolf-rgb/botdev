@@ -12,8 +12,14 @@ const i18n = require('../i18n');
 const logging = require('./logging');
 const { ButtonBuilder, ButtonStyle, ActionRowBuilder, PermissionsBitField } = require('discord.js');
 
-const DEFAULTS = { enabled: false, channel: '', role: '', gate_days: 0, bot_filter: false, approved_bots: [], isolate: false, isolated_channels: [] };
-const GATE_CHOICES = [0, 1, 7, 30];
+const DEFAULTS = {
+  enabled: false, channel: '', role: '', gate_days: 0, bot_filter: false, approved_bots: [],
+  isolate: false, isolated_channels: [],
+  panel_title: '', panel_desc: '', button_label: '', panel_color: '#57F287',
+  require_avatar: false, block_spammer: false,
+};
+const GATE_CHOICES = [0, 1, 3, 7, 14, 30, 60];
+const SPAMMER_FLAG = 1048576; // Discord UserFlags.Spammer
 
 function cfgOf(guildId) {
   let raw = {};
@@ -32,6 +38,12 @@ function cfgOf(guildId) {
   cfg.isolated_channels = Array.isArray(cfg.isolated_channels)
     ? cfg.isolated_channels.map((x) => String(x)).filter(Boolean).slice(0, 3000)
     : [];
+  cfg.panel_title = String(cfg.panel_title || '').slice(0, 120);
+  cfg.panel_desc = String(cfg.panel_desc || '').slice(0, 1500);
+  cfg.button_label = String(cfg.button_label || '').slice(0, 80);
+  cfg.panel_color = /^#[0-9a-fA-F]{6}$/.test(String(cfg.panel_color || '')) ? String(cfg.panel_color) : '#57F287';
+  cfg.require_avatar = !!cfg.require_avatar;
+  cfg.block_spammer = !!cfg.block_spammer;
   return cfg;
 }
 
@@ -41,23 +53,48 @@ function saveCfg(guildId, patch) {
   return cfgOf(guildId);
 }
 
+function hasCustomAvatar(user) {
+  return !!(user && user.avatar);
+}
+
+function isSpammer(user) {
+  if (!user) return false;
+  const f = user.flags;
+  if (f && typeof f.has === 'function') {
+    try { if (f.has(SPAMMER_FLAG) || f.has('Spammer')) return true; } catch {}
+  }
+  const bit = Number(f && f.bitfield != null ? f.bitfield : (f || 0));
+  return Number.isFinite(bit) && (bit & SPAMMER_FLAG) !== 0;
+}
+
+function panelTexts(cfg, lang) {
+  const role = cfg.role ? `<@&${cfg.role}>` : '—';
+  const title = String(cfg.panel_title || '').trim() || i18n.t(lang, 'verif_panel_title');
+  const raw = String(cfg.panel_desc || '').trim();
+  const desc = (raw || i18n.t(lang, 'verif_panel_desc', { role })).split('{role}').join(role);
+  const button = String(cfg.button_label || '').trim() || i18n.t(lang, 'verif_button');
+  const color = /^#[0-9a-fA-F]{6}$/.test(String(cfg.panel_color || '')) ? String(cfg.panel_color) : '#57F287';
+  return { title: title.slice(0, 120), desc: desc.slice(0, 1500), button: button.slice(0, 80), color };
+}
+
 // Envoie (ou renvoie) le panneau de vérification dans le salon choisi.
 async function sendPanel(botId, guild, channelId) {
   const cfg = cfgOf(guild.id);
   const channel = guild.channels && guild.channels.cache ? guild.channels.cache.get(String(channelId || cfg.channel)) : null;
   if (!channel || typeof channel.send !== 'function') { const e = new Error('Salon du panneau introuvable.'); e.code = 'NO_CHANNEL'; throw e; }
   const lang = i18n.langForGuild(guild.id);
+  const texts = panelTexts(cfg, lang);
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`hxver:${botId}:human`)
-      .setLabel(i18n.t(lang, 'verif_button'))
+      .setLabel(texts.button)
       .setStyle(ButtonStyle.Success)
       .setEmoji('👋'),
   );
   const payload = ui.v2panel({
-    color: '#57F287',
-    title: i18n.t(lang, 'verif_panel_title'),
-    description: i18n.t(lang, 'verif_panel_desc', { role: cfg.role ? `<@&${cfg.role}>` : '—' }),
+    color: texts.color,
+    title: texts.title,
+    description: texts.desc,
     footer: false,
   }, [row]);
   return channel.send(payload);
@@ -88,6 +125,14 @@ async function handleButton(botId, interaction) {
     await interaction.reply({ content: i18n.t(lang, 'verif_too_young', { days }), ephemeral: true }).catch(() => {});
     return true;
   }
+  if (cfg.require_avatar && !hasCustomAvatar(interaction.user)) {
+    await interaction.reply({ content: i18n.t(lang, 'verif_need_avatar'), ephemeral: true }).catch(() => {});
+    return true;
+  }
+  if (cfg.block_spammer && isSpammer(interaction.user)) {
+    await interaction.reply({ content: i18n.t(lang, 'verif_spammer'), ephemeral: true }).catch(() => {});
+    return true;
+  }
   try {
     await member.roles.add(role.id, 'Vérification humaine (bouton)');
     await interaction.reply({ content: i18n.t(lang, 'verif_ok'), ephemeral: true }).catch(() => {});
@@ -109,6 +154,12 @@ async function onJoin(botId, member) {
         await member.kick('Filtre anti-bots : bot non approuvé (module Vérification)').catch(() => {});
         logging.log(botId, guild, { title: '🤖 Bot non approuvé expulsé', description: `${(member.user && (member.user.tag || member.user.username)) || member.id}`, color: '#ED4245' }).catch(() => {});
       }
+      return;
+    }
+    if (cfg.block_spammer && isSpammer(member.user)) {
+      try { await member.user.send(i18n.t(i18n.langForGuild(guild.id), 'verif_spammer')); } catch {}
+      await member.kick('Vérification : compte signalé spammeur par Discord').catch(() => {});
+      logging.log(botId, guild, { title: '🚫 Spammeur Discord refusé', description: `${(member.user && (member.user.tag || member.user.username)) || member.id}`, color: '#ED4245' }).catch(() => {});
       return;
     }
     const days = Number(cfg.gate_days) || 0;
@@ -303,4 +354,4 @@ async function grantRoleToAll(botId, guild) {
   return { added, errors };
 }
 
-module.exports = { cfgOf, saveCfg, sendPanel, handleButton, onJoin, GATE_CHOICES, assertIsolationReady, applyIsolation, removeIsolation, onChannelCreate, repairPrivateChannels, assertGrantReady, grantRoleToAll, _test: { DEFAULTS } };
+module.exports = { cfgOf, saveCfg, sendPanel, handleButton, onJoin, GATE_CHOICES, panelTexts, hasCustomAvatar, isSpammer, assertIsolationReady, applyIsolation, removeIsolation, onChannelCreate, repairPrivateChannels, assertGrantReady, grantRoleToAll, _test: { DEFAULTS } };

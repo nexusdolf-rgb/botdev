@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v319**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v320**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -962,6 +962,11 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v320 (23/09 — VÉRIFICATION : TEXTE MODIFIABLE + FILTRES PRO)** :
+  le texte du panneau (titre, message, bouton, couleur) se règle dans le
+  dashboard, avec aperçu. Filtres en plus : photo de profil obligatoire,
+  comptes signalés spammeur par Discord. Discord ne dit PAS si un compte
+  est volé ou arnaqueur — c’est écrit clairement. test/v320-test.js.
 - **v319 (23/09 — CONNEXION : PHOTO DE PROFIL OPTIMUS, PAS LA TÊTE 🤖 ORANGE)** :
   sur « Connectez-vous avec Discord », le cercle qui flotte affiche le
   vrai profil Discord (`/api/public/bot-avatar`), plus l’emoji robot
@@ -1467,8 +1472,9 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 23/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v319** — page de connexion : photo de profil Optimus
-  à la place de la tête 🤖 orange. `test/v319-test.js`.
+- Dernière version : **v320** — vérification : texte du panneau modifiable
+  + filtres pro (avatar, spammeur Discord). `test/v320-test.js`.
+- **v319** — page de connexion : photo de profil Optimus. `test/v319-test.js`.
 - **v318** — nettoyage auto : du plus ancien au plus récent. `test/v318-test.js`.
 - **v317** — module « Nettoyage auto ». `test/v317-test.js`.
 - **v316** — photo de profil Optimus Prime à côté de « Optimus Prime,

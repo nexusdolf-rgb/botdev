@@ -829,6 +829,12 @@ router.put('/bots/:id/guilds/:guildId/verification', requireAuth, async (req, re
   if (typeof b.bot_filter === 'boolean') patch.bot_filter = b.bot_filter;
   if (Array.isArray(b.approved_bots)) patch.approved_bots = b.approved_bots;
   if (typeof b.isolate === 'boolean') patch.isolate = b.isolate;
+  if (b.panel_title !== undefined) patch.panel_title = String(b.panel_title || '').slice(0, 120);
+  if (b.panel_desc !== undefined) patch.panel_desc = String(b.panel_desc || '').slice(0, 1500);
+  if (b.button_label !== undefined) patch.button_label = String(b.button_label || '').slice(0, 80);
+  if (b.panel_color !== undefined) patch.panel_color = String(b.panel_color || '').slice(0, 7);
+  if (typeof b.require_avatar === 'boolean') patch.require_avatar = b.require_avatar;
+  if (typeof b.block_spammer === 'boolean') patch.block_spammer = b.block_spammer;
   res.json({ ok: true, cfg: ver.saveCfg(req.params.guildId, patch) });
 });
 

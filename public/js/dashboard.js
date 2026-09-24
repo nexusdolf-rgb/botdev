@@ -7104,8 +7104,8 @@ Dashboard.renderers.botsettings = async (content) => {
 // ============================================================
 Dashboard.renderers.verification = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '✅', 'Vérification', 'Bouton « Je suis humain », Join Gate (comptes trop récents) et filtre anti-bots.');
-  const cfg = Object.assign({ enabled: false, channel: '', role: '', gate_days: 0, bot_filter: false, approved_bots: [], isolate: false, isolated_channels: [] }, data.verification || {});
+  const root = Dashboard.header(content, '✅', 'Vérification', 'Bouton, Join Gate, isolation. Le texte du panneau est modifiable. Discord ne dit pas aux bots si un compte est volé ou arnaqueur.');
+  const cfg = Object.assign({ enabled: false, channel: '', role: '', gate_days: 0, bot_filter: false, approved_bots: [], isolate: false, isolated_channels: [], panel_title: '', panel_desc: '', button_label: '', panel_color: '#57F287', require_avatar: false, block_spammer: false }, data.verification || {});
   const textCh = (data.channels || []).filter((ch) => !ch.voice && !ch.category);
   const c1 = Dashboard.card(root, '🛡️ Réglages de la vérification', 'Le nouveau membre clique sur « Je suis humain » dans le salon de vérification, puis reçoit le rôle vérifié. Astuce pro : dans vos salons, n\'autorisez la vue qu\'au rôle vérifié — les non-vérifiés ne verront que le salon de vérification.');
   c1.innerHTML += `
@@ -7115,9 +7115,11 @@ Dashboard.renderers.verification = async (content, data) => {
     <label class="dash-label">Rôle « vérifié » donné après le clic</label>
     <select class="dash-select" id="ver-role">${(data.roles || []).map((r) => `<option value="${r.id}" ${cfg.role === r.id ? 'selected' : ''}>@ ${App.escapeHtml(r.name)}</option>`).join('')}</select>
     <label class="dash-label">🚧 Join Gate — âge minimum du compte Discord</label>
-    <select class="dash-select" id="ver-gate" style="max-width:220px">${[[0, 'Désactivé'], [1, '1 jour minimum'], [7, '7 jours minimum'], [30, '30 jours minimum']].map(([v, l]) => `<option value="${v}" ${Number(cfg.gate_days) === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    <select class="dash-select" id="ver-gate" style="max-width:220px">${[[0, 'Désactivé'], [1, '1 jour minimum'], [3, '3 jours minimum'], [7, '7 jours minimum'], [14, '14 jours minimum'], [30, '30 jours minimum'], [60, '60 jours minimum']].map(([v, l]) => `<option value="${v}" ${Number(cfg.gate_days) === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
     <div style="font-size:12px;color:var(--d-dim);margin-top:4px">Les comptes plus récents sont refusés à l\'arrivée : explication envoyée en MP, puis expulsion (protection anti-raid, comme Wick).</div>
     <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="ver-botfilter" ${cfg.bot_filter ? 'checked' : ''} /> 🤖 Expulser les bots non approuvés qui rejoignent le serveur</label>
+    <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="ver-avatar" ${cfg.require_avatar ? 'checked' : ''} /> 🖼️ Exiger une photo de profil Discord (pas l’avatar par défaut)</label>
+    <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="ver-spammer" ${cfg.block_spammer ? 'checked' : ''} /> 🚫 Refuser les comptes signalés « spammeur » par Discord</label>
     <label class="dash-label">Identifiants des bots approuvés (un par ligne)</label>
     <textarea class="dash-input" id="ver-approved" rows="3" style="width:100%;font-size:12.5px" placeholder="123456789012345678">${App.escapeHtml((cfg.approved_bots || []).join('\n'))}</textarea>
     <div style="height:1px;background:var(--d-border);margin:16px 0"></div>
@@ -7163,6 +7165,12 @@ Dashboard.renderers.verification = async (content, data) => {
       bot_filter: c1.querySelector('#ver-botfilter').checked,
       isolate: c1.querySelector('#ver-isolate-sel').value === 'on',
       approved_bots: c1.querySelector('#ver-approved').value.split('\n').map((x) => x.trim()).filter(Boolean),
+      require_avatar: !!(c1.querySelector('#ver-avatar') && c1.querySelector('#ver-avatar').checked),
+      block_spammer: !!(c1.querySelector('#ver-spammer') && c1.querySelector('#ver-spammer').checked),
+      panel_title: (root.querySelector('#ver-title') || {}).value || '',
+      panel_desc: (root.querySelector('#ver-desc') || {}).value || '',
+      button_label: (root.querySelector('#ver-btn') || {}).value || '',
+      panel_color: (root.querySelector('#ver-color') || {}).value || '#57F287',
     };
     const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/verification`, { method: 'PUT', body });
     App.toast(r.ok ? '✅ Vérification enregistrée.' : '⚠️ Enregistrement impossible.');
@@ -7171,6 +7179,37 @@ Dashboard.renderers.verification = async (content, data) => {
     const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/verification/panel`, { method: 'POST', body: { channel: c1.querySelector('#ver-channel').value } });
     App.toast(r.ok ? '📤 Panneau de vérification envoyé !' : `⚠️ ${r.error || 'Envoi impossible (bot hors ligne ?).'}`);
   };
+
+  const c2 = Dashboard.card(root, '📝 Texte du panneau Discord', 'Ce que les nouveaux membres voient. Laissez vide pour le texte par défaut. Astuce : {role} affiche le rôle vérifié. Pensez à renvoyer le panneau après un changement.');
+  c2.innerHTML += `
+    <label class="dash-label">Titre</label>
+    <input class="dash-input" id="ver-title" maxlength="120" value="${App.escapeHtml(cfg.panel_title || '')}" placeholder="✅ Vérification" />
+    <label class="dash-label">Message</label>
+    <textarea class="dash-input" id="ver-desc" rows="5" maxlength="1500" placeholder="Bienvenue ! Cliquez sur le bouton pour accéder au serveur.">${App.escapeHtml(cfg.panel_desc || '')}</textarea>
+    <label class="dash-label">Texte du bouton</label>
+    <input class="dash-input" id="ver-btn" maxlength="80" value="${App.escapeHtml(cfg.button_label || '')}" placeholder="Je suis humain" />
+    <label class="dash-label">Couleur de la barre</label>
+    <input type="color" id="ver-color" value="${App.escapeHtml(/^#[0-9a-fA-F]{6}$/.test(String(cfg.panel_color || '')) ? cfg.panel_color : '#57F287')}" />
+    <label class="dash-label">Aperçu</label>
+    <div id="ver-preview" style="border-radius:10px;overflow:hidden;background:#2b2d31;border:1px solid rgba(255,255,255,.08);text-align:left"></div>
+    <div class="desc" style="margin-top:10px">Ce que ça contrôle vraiment : clic humain, âge du compte, bots, isolation, photo de profil, signalement spammeur Discord. <b>Pas</b> les comptes volés, les arnaques ou un « profil complet » — Discord ne le dit pas aux bots.</div>`;
+  const paintPreview = () => {
+    const box = c2.querySelector('#ver-preview');
+    if (!box) return;
+    const color = c2.querySelector('#ver-color').value || '#57F287';
+    const title = (c2.querySelector('#ver-title').value.trim() || '✅ Vérification');
+    const roleSel = c1.querySelector('#ver-role');
+    const roleName = (roleSel && roleSel.selectedOptions && roleSel.selectedOptions[0]) ? roleSel.selectedOptions[0].textContent.replace(/^@\s*/, '') : 'Vérifié';
+    const desc = (c2.querySelector('#ver-desc').value.trim() || 'Bienvenue ! Cliquez sur le bouton ci-dessous pour prouver que vous êtes humain et accéder au serveur.\nRôle accordé : {role}').split('{role}').join('@' + roleName);
+    const btn = (c2.querySelector('#ver-btn').value.trim() || 'Je suis humain');
+    box.innerHTML = `<div style="display:flex;min-height:90px"><div style="width:4px;background:${App.escapeHtml(color)};flex:0 0 4px"></div><div style="padding:12px 14px;flex:1;min-width:0"><b style="color:#f2f3f5;font-size:15px">${App.escapeHtml(title)}</b><p style="margin:8px 0 12px;color:#dbdee1;font-size:13.5px;white-space:pre-wrap;line-height:1.45">${App.escapeHtml(desc)}</p><span style="display:inline-block;background:#248046;color:#fff;border-radius:4px;padding:6px 12px;font-size:13px">👋 ${App.escapeHtml(btn)}</span></div></div>`;
+  };
+  ['#ver-title', '#ver-desc', '#ver-btn', '#ver-color'].forEach((sel) => {
+    const el = c2.querySelector(sel);
+    if (el) el.addEventListener('input', paintPreview);
+  });
+  c1.querySelector('#ver-role')?.addEventListener('change', paintPreview);
+  paintPreview();
 };
 
 Dashboard.renderers.transcripts = async (content, data) => {
