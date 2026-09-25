@@ -63,9 +63,9 @@ check('le visage v241 (v255/v256) est toujours là',
   && css.includes("/* --- v256 : sur OS de bureau, l'INTÉRIEUR des panneaux"));
 
 console.log('— 5. Version —');
-check('index.html : ?v=322 référencé 7 fois', (racine('public/index.html').match(/\?v=322/g) || []).length === 7,
-  String((racine('public/index.html').match(/\?v=322/g) || []).length));
-check('sw.js : cache « botdev-v322 »', racine('public/sw.js').includes("const CACHE = 'botdev-v322';"));
+check('index.html : ?v=323 référencé 7 fois', (racine('public/index.html').match(/\?v=323/g) || []).length === 7,
+  String((racine('public/index.html').match(/\?v=323/g) || []).length));
+check('sw.js : cache « botdev-v323 »', racine('public/sw.js').includes("const CACHE = 'botdev-v323';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v257 — ${ok} vérifications OK : la barre latérale pleine, comme en v241, à toutes les largeurs PC.`);

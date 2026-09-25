@@ -980,6 +980,43 @@ html.hx-light .sk-ico, html.hx-light .sk-line, html.hx-light .sk-stat {
 .dash-card:hover { border-color: rgba(var(--d-accent-rgb), .42); }
 .dash-card .card-head { padding-bottom: 2px; }
 
+/* v323 — Module Liens */
+.lp-item {
+  border: 1px solid var(--d-border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  background: var(--d-card2, rgba(255,255,255,.03));
+}
+.lp-item-head { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+.lp-discord {
+  background: #313338;
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: #DBDEE1;
+  font-size: 13px;
+}
+.lp-above { margin-bottom: 10px; white-space: pre-wrap; }
+.lp-emb {
+  background: #2B2D31;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+.lp-emb b { display: block; margin-bottom: 6px; color: #fff; }
+.lp-emb-body { white-space: pre-wrap; color: #C9CCD1; line-height: 1.45; }
+.lp-emb-url { margin-top: 8px; color: #00A8FC; word-break: break-all; font-size: 12.5px; }
+.lp-fake-btn {
+  display: inline-block;
+  margin-top: 8px;
+  background: #4E5058;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+}
+
 /* v322 — Guide tickets : 2 systèmes, noms clairs */
 .ticket-guide .tg-sys {
   display: grid;

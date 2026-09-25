@@ -804,6 +804,7 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
     shop_items: store.shop.all(bot.id, guildId),
     log_events: logEvents,
     sticky: (() => { const st = require('./discord/sticky'); return { ...st.cfgOf(guildId), last_id: st.lastIdOf(guildId) }; })(),
+    linkpanel: require('./discord/linkPanels').cfgOf(bot.id, guildId),
     reaction_roles: require('./discord/reactionroles').allOf(guildId),
   };
   // ✅ Checklist de configuration + 🚨 état du verrouillage anti-raid
@@ -1040,6 +1041,41 @@ router.put('/bots/:id/guilds/:guildId/sticky', requireAuth, async (req, res) => 
   const cfg = st.saveCfg(req.params.guildId, patch);
   if (!cfg.enabled) st.setLastId(req.params.guildId, '');
   res.json({ ok: true, sticky: { ...cfg, last_id: st.lastIdOf(req.params.guildId) } });
+});
+
+// 🔗 v323 — panneau de liens (textes uniques + un embed par lien)
+router.put('/bots/:id/guilds/:guildId/linkpanel', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const lp = require('./discord/linkPanels');
+  const b = req.body || {};
+  const patch = {};
+  if (b.channel !== undefined) patch.channel = String(b.channel || '');
+  if (b.content !== undefined) patch.content = String(b.content || '');
+  if (b.title !== undefined) patch.title = String(b.title || '');
+  if (b.description !== undefined) patch.description = String(b.description || '');
+  if (b.color !== undefined) patch.color = String(b.color || '');
+  if (b.image !== undefined) patch.image = String(b.image || '');
+  if (b.footer !== undefined) patch.footer = String(b.footer || '');
+  if (Array.isArray(b.links)) patch.links = b.links;
+  res.json({ ok: true, cfg: lp.saveCfg(bot.id, req.params.guildId, patch) });
+});
+
+router.post('/bots/:id/guilds/:guildId/linkpanel/send', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const entry = botManager.clients.get(bot.id);
+  if (!entry || !entry.client.isReady()) return res.status(503).json({ ok: false, error: 'Bot hors ligne, réessayez dans une minute.' });
+  const guild = entry.client.guilds.cache.get(req.params.guildId);
+  if (!guild) return res.status(404).json({ ok: false, error: 'Serveur introuvable pour ce bot.' });
+  try {
+    await require('./discord/linkPanels').sendPanel(bot.id, guild, (req.body || {}).channel);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: e.message || 'Envoi impossible.' });
+  }
 });
 
 // ---------------------- Communauté (façon DraftBot) ----------------------
