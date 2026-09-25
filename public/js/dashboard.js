@@ -250,10 +250,18 @@ Dashboard.dropdownMenu = ({ trigger, getOptions, onSelect, searchable = false, m
     const mq = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 700px)') : null;
     if (mq && mq.matches) {
       panel.classList.add('is-sheet');
-      panel.style.left = panel.style.right = panel.style.top = panel.style.bottom = panel.style.width = '';
+      panel.style.left = panel.style.right = panel.style.top = panel.style.width = '';
+      // v325 — remonter la feuille au-dessus du clavier (sinon le champ
+      // de recherche passe derrière et iOS ferme le clavier, surtout
+      // quand on tape un chiffre).
+      const vv = window.visualViewport;
+      const kb = vv ? Math.max(0, (window.innerHeight || 0) - vv.height - (vv.offsetTop || 0)) : 0;
+      panel.style.bottom = (10 + kb) + 'px';
+      if (vv && vv.height) panel.style.maxHeight = Math.round(Math.min(vv.height * 0.7, (window.innerHeight || 800) * 0.62)) + 'px';
       return;
     }
     panel.classList.remove('is-sheet');
+    panel.style.maxHeight = '';
     // v313 — le menu a la MÊME largeur que le sélecteur (DraftBot).
     // L'ancien plafond de 360 px laissait un petit menu sous un champ
     // pleine largeur. On ne bride plus que par la fenêtre (10 px de marge).
@@ -270,32 +278,46 @@ Dashboard.dropdownMenu = ({ trigger, getOptions, onSelect, searchable = false, m
     else { panel.style.bottom = 'auto'; panel.style.top = (r.bottom + 8) + 'px'; }
   };
 
-  const renderList = (filter = '') => {
-    const q = String(filter || '').trim().toLowerCase();
+  // v325 — on NE recrée PAS le champ de recherche à chaque lettre :
+  // sur mobile, innerHTML = '' retire le focus et le clavier disparaît
+  // (pire avec les chiffres : le pavé 123 se referme).
+  const renderList = (filter) => {
+    const wantSearch = (typeof searchable === 'function' ? searchable() : searchable) || (getOptions() || []).length > 7;
+    let input = panel.querySelector('.dd-search input');
+    if (wantSearch) {
+      if (!input) {
+        const search = App.el(`<div class="dd-search"><span aria-hidden="true">🔍</span><input type="text" placeholder="Rechercher…" aria-label="Rechercher une option" inputmode="text" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" /></div>`);
+        input = search.querySelector('input');
+        input.addEventListener('input', () => renderList());
+        input.addEventListener('keydown', (e) => {
+          const rows = Array.from(panel.querySelectorAll('.dd-option:not(.is-disabled)'));
+          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            activeIndex = e.key === 'ArrowDown' ? Math.min(activeIndex + 1, rows.length - 1) : Math.max(activeIndex - 1, 0);
+            rows.forEach((row, i) => row.classList.toggle('is-active', i === activeIndex));
+            if (rows[activeIndex] && typeof rows[activeIndex].scrollIntoView === 'function') rows[activeIndex].scrollIntoView({ block: 'nearest' });
+          } else if (e.key === 'Enter') {
+            e.preventDefault();
+            const row = rows[activeIndex] || rows[0];
+            if (row) choose(String(row.dataset.value));
+          } else if (e.key === 'Escape') { e.stopPropagation(); close(); trigger.focus(); }
+        });
+        panel.insertBefore(search, panel.firstChild);
+      }
+      if (typeof filter === 'string' && document.activeElement !== input) input.value = filter;
+    } else if (panel.querySelector('.dd-search')) {
+      panel.querySelector('.dd-search').remove();
+      input = null;
+    }
+    const q = String((input && input.value) || filter || '').trim().toLowerCase();
     let opts = getOptions() || [];
     if (q) opts = opts.filter((o) => String(o.label || '').toLowerCase().includes(q) || String(o.hint || '').toLowerCase().includes(q));
-    panel.innerHTML = '';
-    const wantSearch = (typeof searchable === 'function' ? searchable() : searchable) || (getOptions() || []).length > 7;
-    if (wantSearch) {
-      const search = App.el(`<div class="dd-search"><span aria-hidden="true">🔍</span><input type="text" placeholder="Rechercher…" aria-label="Rechercher une option" value="${App.escapeHtml(filter || '')}" /></div>`);
-      const input = search.querySelector('input');
-      input.oninput = () => renderList(input.value);
-      input.onkeydown = (e) => {
-        const rows = Array.from(panel.querySelectorAll('.dd-option:not(.is-disabled)'));
-        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-          e.preventDefault();
-          activeIndex = e.key === 'ArrowDown' ? Math.min(activeIndex + 1, rows.length - 1) : Math.max(activeIndex - 1, 0);
-          rows.forEach((row, i) => row.classList.toggle('is-active', i === activeIndex));
-          if (rows[activeIndex] && typeof rows[activeIndex].scrollIntoView === 'function') rows[activeIndex].scrollIntoView({ block: 'nearest' });
-        } else if (e.key === 'Enter') {
-          e.preventDefault();
-          const row = rows[activeIndex] || rows[0];
-          if (row) choose(String(row.dataset.value));
-        } else if (e.key === 'Escape') { e.stopPropagation(); close(); trigger.focus(); }
-      };
-      panel.appendChild(search);
+    let list = panel.querySelector('.dd-list');
+    if (!list) {
+      list = App.el('<div class="dd-list"></div>');
+      panel.appendChild(list);
     }
-    const list = App.el('<div class="dd-list"></div>');
+    list.innerHTML = '';
     if (!opts.length) list.appendChild(App.el('<div class="dd-empty">Aucun résultat</div>'));
     opts.forEach((o) => {
       // La pastille d'icône n'est créée que si l'option en a une (img, emoji
@@ -312,7 +334,6 @@ Dashboard.dropdownMenu = ({ trigger, getOptions, onSelect, searchable = false, m
       if (!o.disabled) row.onclick = () => choose(String(o.value));
       list.appendChild(row);
     });
-    panel.appendChild(list);
     activeIndex = -1;
   };
 
@@ -325,7 +346,11 @@ Dashboard.dropdownMenu = ({ trigger, getOptions, onSelect, searchable = false, m
     trigger.setAttribute('aria-expanded', 'true');
     position();
     const searchInput = panel.querySelector('.dd-search input');
-    if (searchInput) searchInput.focus();
+    if (searchInput) {
+      searchInput.value = '';
+      renderList('');
+      searchInput.focus();
+    }
     const reposition = () => { if (panel.dataset.open === '1') position(); };
     const onDocDown = (e) => {
       if (panel.dataset.open !== '1') return;
@@ -335,6 +360,8 @@ Dashboard.dropdownMenu = ({ trigger, getOptions, onSelect, searchable = false, m
     const onKey = (e) => { if (e.key === 'Escape') close(); };
     window.addEventListener('scroll', reposition, true);
     window.addEventListener('resize', reposition);
+    const vv = window.visualViewport;
+    if (vv) { vv.addEventListener('resize', reposition); vv.addEventListener('scroll', reposition); }
     // pointerdown couvre souris ET tactile ; mousedown est conservé pour les
     // navigateurs anciens (iOS n'émet pas toujours d'événements souris).
     document.addEventListener('pointerdown', onDocDown);
@@ -343,6 +370,7 @@ Dashboard.dropdownMenu = ({ trigger, getOptions, onSelect, searchable = false, m
     panel._ddCleanup = () => {
       window.removeEventListener('scroll', reposition, true);
       window.removeEventListener('resize', reposition);
+      if (vv) { vv.removeEventListener('resize', reposition); vv.removeEventListener('scroll', reposition); }
       document.removeEventListener('pointerdown', onDocDown);
       document.removeEventListener('mousedown', onDocDown);
       document.removeEventListener('keydown', onKey);

@@ -1688,14 +1688,17 @@ body.dash-body {
 .dd-add-btn.is-done { border-style: solid; border-color: rgba(59,165,93,.4); color: #7ed99a; cursor: default; }
 .dd-add-btn.is-done:hover { background: none; color: #7ed99a; }
 
-/* 📱 Sur mobile : le panneau devient une feuille qui monte du bas */
+/* 📱 Sur mobile : le panneau devient une feuille qui monte du bas.
+   bottom n’est PAS en !important : JS le calcule pour rester au-dessus
+   du clavier (v325). 16 px sur le champ = pas de zoom iOS (clavier chiffres). */
 @media (max-width: 700px) {
   .dd-panel.is-sheet {
-    left: 10px !important; right: 10px !important; top: auto !important; bottom: 10px !important;
+    left: 10px !important; right: 10px !important; top: auto !important;
     width: auto !important; max-height: 62vh;
     animation-name: dd-in-up;
   }
   .dd-panel { border-radius: 16px; }
+  .dd-search input { font-size: 16px; min-height: 44px; }
 }
 
 /* États et hiérarchie des actions */
