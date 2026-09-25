@@ -1,8 +1,7 @@
 // ============================================================
-// v323 — Panneau de liens (dashboard).
-// Un seul panneau (textes uniques, comme les tickets) + plusieurs
-// liens. Chaque lien a son embed personnalisable. Le lien est
-// écrit dans l’embed ET en bouton cliquable.
+// v324 — Panneau de liens façon DraftBot.
+// Un texte au-dessus + UN embed (titre, texte, image, couleur)
+// + des boutons lien, 2 par ligne (💙 Tiktok, 💙 Youtube…).
 // ============================================================
 const store = require('../db');
 const i18n = require('../i18n');
@@ -10,7 +9,8 @@ const {
   EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle,
 } = require('discord.js');
 
-const MAX_LINKS = 8;
+const MAX_LINKS = 10;
+const BUTTONS_PER_ROW = 2;
 const KEY = (botId, guildId) => `linkpanel:${botId}:${guildId}`;
 
 function isSafeUrl(u) {
@@ -31,16 +31,11 @@ function colorInt(hex) {
 
 function sanitizeLink(raw, i) {
   const x = raw && typeof raw === 'object' ? raw : {};
-  const url = String(x.url || '').trim().slice(0, 512);
   return {
     id: String(x.id || `l${i + 1}`).slice(0, 24),
     label: String(x.label || '').trim().slice(0, 80),
     emoji: String(x.emoji || '').trim().slice(0, 80),
-    url,
-    title: String(x.title || '').trim().slice(0, 256),
-    description: String(x.description || '').trim().slice(0, 1000),
-    color: hexColor(x.color, '#5865F2'),
-    image: String(x.image || '').trim().slice(0, 500),
+    url: String(x.url || '').trim().slice(0, 512),
   };
 }
 
@@ -109,21 +104,12 @@ function panelTexts(cfg, lang, guildName) {
 }
 
 function validLinks(cfg) {
-  return sanitizeLinks(cfg.links || []).filter((l) => isSafeUrl(l.url) && (l.label || l.title));
-}
-
-function linkDescription(link) {
-  const body = String(link.description || '').trim();
-  const url = String(link.url || '').trim();
-  if (!body) return url;
-  if (body.includes(url)) return body.slice(0, 4096);
-  return `${body}\n\n${url}`.slice(0, 4096);
+  return sanitizeLinks(cfg.links || []).filter((l) => isSafeUrl(l.url) && l.label);
 }
 
 function buildPayload(cfg, lang = 'fr', guildName = '') {
   const texts = panelTexts(cfg, lang, guildName);
   const links = validLinks(cfg);
-  const embeds = [];
 
   const panel = new EmbedBuilder()
     .setTitle(texts.title)
@@ -131,25 +117,14 @@ function buildPayload(cfg, lang = 'fr', guildName = '') {
     .setColor(colorInt(texts.color));
   if (isSafeUrl(cfg.image)) panel.setImage(String(cfg.image).trim());
   if (texts.footer) panel.setFooter({ text: texts.footer });
-  embeds.push(panel);
-
-  links.forEach((link) => {
-    const eb = new EmbedBuilder()
-      .setTitle(String(link.title || link.label || 'Lien').slice(0, 256))
-      .setDescription(linkDescription(link))
-      .setColor(colorInt(link.color));
-    if (isSafeUrl(link.url)) eb.setURL(link.url);
-    if (isSafeUrl(link.image)) eb.setImage(String(link.image).trim());
-    embeds.push(eb);
-  });
 
   const rows = [];
-  for (let i = 0; i < links.length; i += 5) {
+  for (let i = 0; i < links.length; i += BUTTONS_PER_ROW) {
     const row = new ActionRowBuilder();
-    links.slice(i, i + 5).forEach((link) => {
+    links.slice(i, i + BUTTONS_PER_ROW).forEach((link) => {
       const b = new ButtonBuilder()
         .setStyle(ButtonStyle.Link)
-        .setLabel(String(link.label || link.title || 'Ouvrir').slice(0, 80))
+        .setLabel(String(link.label || 'Ouvrir').slice(0, 80))
         .setURL(link.url);
       if (link.emoji) {
         try { b.setEmoji(link.emoji); } catch { /* emoji invalide : on ignore */ }
@@ -159,7 +134,7 @@ function buildPayload(cfg, lang = 'fr', guildName = '') {
     rows.push(row);
   }
 
-  const payload = { embeds, components: rows };
+  const payload = { embeds: [panel], components: rows };
   if (texts.content) payload.content = texts.content;
   return payload;
 }
@@ -194,5 +169,5 @@ async function sendPanel(botId, guild, channelId) {
 }
 
 module.exports = {
-  MAX_LINKS, isSafeUrl, sanitizeLinks, cfgOf, saveCfg, panelTexts, validLinks, buildPayload, sendPanel,
+  MAX_LINKS, BUTTONS_PER_ROW, isSafeUrl, sanitizeLinks, cfgOf, saveCfg, panelTexts, validLinks, buildPayload, sendPanel,
 };

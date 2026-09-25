@@ -82,9 +82,9 @@ check('la classe hx-os-pc vient toujours du système (v253)',
   index.includes("classList.add('hx-os-pc')"));
 
 console.log('— 5. Version —');
-check('index.html : ?v=323 référencé 7 fois', (index.match(/\?v=323/g) || []).length === 7,
-  String((index.match(/\?v=323/g) || []).length));
-check('sw.js : cache « botdev-v323 »', racine('public/sw.js').includes("const CACHE = 'botdev-v323';"));
+check('index.html : ?v=324 référencé 7 fois', (index.match(/\?v=324/g) || []).length === 7,
+  String((index.match(/\?v=324/g) || []).length));
+check('sw.js : cache « botdev-v324 »', racine('public/sw.js').includes("const CACHE = 'botdev-v324';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v255 — ${ok} vérifications OK : le PC retrouve son visage v241, le mobile garde le sien.`);

@@ -30,8 +30,8 @@ const routes = racine('server/routes.js');
 const i18n = racine('server/i18n.js');
 
 console.log('— 1. Pins de version v323 —');
-check('index.html : ?v=323 ×7', (html.match(/\?v=323/g) || []).length === 7);
-check('sw.js : cache botdev-v323', sw.includes("const CACHE = 'botdev-v323';"));
+check('index.html : ?v=324 ×7', (html.match(/\?v=324/g) || []).length === 7);
+check('sw.js : cache botdev-v324', sw.includes("const CACHE = 'botdev-v324';"));
 check('index.html : plus aucune ?v=322', !html.includes('?v=322'));
 
 console.log('— 2. Menu dashboard —');
@@ -39,7 +39,7 @@ check('MODULES contient « links »', /Dashboard\.MODULES = \[([\s\S]*?)\];/.exe
 check('renderer Dashboard.renderers.links', dash.includes('Dashboard.renderers.links ='));
 check('guide « Comment ça marche »', dash.includes('Comment ça marche') && dash.includes('lp-save') && dash.includes('lp-send'));
 check('textes du panneau uniques', dash.includes('Textes du panneau (uniques)'));
-check('chaque lien a son embed', dash.includes('Vos liens (chacun son embed)'));
+check('boutons sous le panneau', dash.includes('Boutons (2 par ligne)') || dash.includes('lp-add'));
 check('aperçu en direct', dash.includes('id="lp-preview"') || dash.includes("id=\"lp-preview\"") || dash.includes('lp-preview'));
 check('routes PUT + send', routes.includes("/guilds/:guildId/linkpanel'") && routes.includes("/guilds/:guildId/linkpanel/send'"));
 check('payload guilde : linkpanel', routes.includes("linkpanel: require('./discord/linkPanels').cfgOf"));
@@ -50,7 +50,7 @@ const BOT = store.bots.create({ user_id: 1, name: 'T', token: 'x', client_id: 'c
 const G = 'gV323';
 
 check('javascript: rejeté', !lp.isSafeUrl('javascript:alert(1)') && !lp.isSafeUrl('not-a-url') && lp.isSafeUrl('https://exemple.com'));
-check('max 8 liens', lp.sanitizeLinks(new Array(12).fill({ label: 'A', url: 'https://a.test' })).length === 8);
+check('max 10 liens', lp.sanitizeLinks(new Array(12).fill({ label: 'A', url: 'https://a.test' })).length === 10);
 
 lp.saveCfg(BOT, G, {
   content: 'Liens de {server}',
@@ -72,12 +72,11 @@ const p = lp.buildPayload(cfg, 'fr', 'MonServ');
 const json = dump(p);
 const data = JSON.parse(json);
 check('{server} remplacé dans le panneau unique', data.content.includes('MonServ') && data.embeds[0].title.includes('MonServ'));
-check('1 embed panneau + 1 embed par lien valide', data.embeds.length === 3);
-check('le 1er embed est le panneau unique (pas un lien)', data.embeds[0].description === 'Texte unique du panneau' && !String(data.embeds[0].description).includes('https://'));
-check('chaque lien a son embed', data.embeds[1].title === 'Notre site' && data.embeds[2].title === 'YouTube');
-check('le lien est ÉCRIT dans l’embed', String(data.embeds[1].description).includes('https://hoxera.is-a.dev') && String(data.embeds[2].description).includes('https://youtube.com/@demo'));
-check('et AUSSI en bouton cliquable (style Link = 5)',
-  data.components[0].components.length === 2
+check('UN seul embed (les liens sont des boutons)', data.embeds.length === 1);
+check('le embed est le panneau unique (pas un lien)', data.embeds[0].description === 'Texte unique du panneau' && !String(data.embeds[0].description).includes('https://'));
+check('boutons cliquables (style Link = 5), 2 par ligne',
+  data.components.length === 1
+  && data.components[0].components.length === 2
   && data.components[0].components.every((b) => b.style === 5)
   && data.components[0].components[0].url === 'https://hoxera.is-a.dev');
 check('pas de signature Hoxera par défaut', !data.embeds[0].footer);
@@ -120,7 +119,7 @@ check('textes par défaut i18n si vide', defJ.embeds[0].title.includes('Liens ut
     }]]) },
   }, 'C1');
   check('envoi réel : message stocké', lp.cfgOf(BOT, G).message_id === 'MSG9');
-  check('envoi réel : panneau + embed du lien', sent[0] && sent[0].embeds && sent[0].embeds.length === 2);
+  check('envoi réel : un seul embed', sent[0] && sent[0].embeds && sent[0].embeds.length === 1);
 
   console.log('\nRésultat : ' + ok + ' ✅ / ' + ko + ' ❌ sur ' + (ok + ko) + ' vérifications');
   if (fails.length) { console.log('Échecs :'); fails.forEach((f) => console.log('  ❌ ' + f)); }

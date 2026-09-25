@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v323**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v324**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -962,6 +962,9 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v324 (25/09 — LIENS : BOUTONS 2 PAR LIGNE COMME DRAFTBOT)** :
+  un texte au-dessus, UN embed (titre, texte, image, couleur), puis
+  les liens en boutons cliquables deux par ligne. test/v324-test.js.
 - **v323 (24/09 — MODULE LIENS)** :
   nouveau module dashboard « Liens ». Un panneau unique (titre, texte,
   couleur — comme les tickets) et plusieurs liens. Chaque lien a son
@@ -1489,7 +1492,9 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 23/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v323** — module Liens : un panneau unique
+- Dernière version : **v324** — Liens façon DraftBot : un encadré
+  + boutons 2 par ligne (TikTok, YouTube…). `test/v324-test.js`.
+- **v323** — module Liens : un panneau unique
   (textes comme les tickets) + plusieurs liens, chacun son embed
   (lien écrit + bouton). `test/v323-test.js`.
 - **v322** — page Tickets : noms clairs + guide

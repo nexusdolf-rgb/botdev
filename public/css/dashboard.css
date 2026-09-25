@@ -1006,16 +1006,39 @@ html.hx-light .sk-ico, html.hx-light .sk-line, html.hx-light .sk-stat {
 .lp-emb b { display: block; margin-bottom: 6px; color: #fff; }
 .lp-emb-body { white-space: pre-wrap; color: #C9CCD1; line-height: 1.45; }
 .lp-emb-url { margin-top: 8px; color: #00A8FC; word-break: break-all; font-size: 12.5px; }
+.lp-emb-img {
+  margin-top: 10px;
+  height: 90px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #3a2a4a, #2B2D31);
+  color: #949BA4;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 8px;
+}
+.lp-btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
 .lp-fake-btn {
-  display: inline-block;
-  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   background: #4E5058;
   color: #fff;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  padding: 6px 12px;
-  border-radius: 6px;
+  padding: 10px 12px;
+  border-radius: 8px;
 }
+.lp-fake-btn .lp-ext { opacity: .75; font-size: 12px; }
 
 /* v322 — Guide tickets : 2 systèmes, noms clairs */
 .ticket-guide .tg-sys {

@@ -7545,11 +7545,13 @@ Dashboard.renderers.lives = async (content, data) => {
 };
 
 // ============================================================
-// v323 — Module Liens : un panneau unique + un embed par lien.
+
+// ============================================================
+// v324 — Module Liens façon DraftBot : 1 embed + boutons 2 par ligne.
 // ============================================================
 Dashboard.renderers.links = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '🔗', 'Liens', 'Un seul panneau sur Discord (textes uniques, comme les tickets). Chaque lien a son propre encadré, le lien écrit dedans, et un bouton pour l’ouvrir.');
+  const root = Dashboard.header(content, '🔗', 'Liens', 'Comme sur Discord : un texte, un encadré, puis vos boutons (TikTok, YouTube…) deux par ligne.');
   const cfg = data.linkpanel || {};
   const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
   const serverName = (data.guild && data.guild.name) || 'votre serveur';
@@ -7559,10 +7561,6 @@ Dashboard.renderers.links = async (content, data) => {
       label: String(x.label || ''),
       emoji: String(x.emoji || ''),
       url: String(x.url || ''),
-      title: String(x.title || ''),
-      description: String(x.description || ''),
-      color: /^#[0-9a-fA-F]{6}$/.test(String(x.color || '')) ? String(x.color) : '#5865F2',
-      image: String(x.image || ''),
     }))
     : [];
 
@@ -7571,15 +7569,15 @@ Dashboard.renderers.links = async (content, data) => {
       <div class="tg-sys" style="margin-top:0">
         <div class="tg-box">
           <b>1. Le panneau (unique)</b>
-          <p>Titre, texte au-dessus, couleur… comme le panneau des tickets. Ces textes s’affichent <b>une seule fois</b>.</p>
+          <p>Le texte au-dessus, le titre, le message et l’image : tout ça s’affiche <b>une seule fois</b>.</p>
         </div>
         <div class="tg-box tg-box-alt">
-          <b>2. Vos liens (plusieurs)</b>
-          <p>Chaque lien a son encadré (titre, texte, couleur) + le lien écrit + un bouton cliquable.</p>
+          <b>2. Les boutons (vos liens)</b>
+          <p>TikTok, YouTube, Instagram… <b>deux boutons par ligne</b>, avec la petite flèche pour ouvrir le site.</p>
         </div>
       </div>`);
 
-  const c = Dashboard.card(root, '📋 Textes du panneau (uniques)', 'Ces textes s’affichent UNE fois, au-dessus de tous les liens. Champ vide = texte par défaut. {server} = nom du serveur.');
+  const c = Dashboard.card(root, '📋 Textes du panneau (uniques)', 'Comme le panneau des tickets : ces textes s’affichent UNE fois. Champ vide = texte par défaut. {server} = nom du serveur.');
   const chanOpts = ['<option value="">— Choisir un salon —</option>']
     .concat(textChannels.map((ch) => `<option value="${App.escapeHtml(ch.id)}" ${String(cfg.channel) === String(ch.id) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`));
   if (cfg.channel && !textChannels.some((ch) => String(ch.id) === String(cfg.channel))) {
@@ -7588,22 +7586,22 @@ Dashboard.renderers.links = async (content, data) => {
   c.innerHTML += `
     <label class="dash-label">Salon où envoyer le panneau</label>
     <select class="dash-select" id="lp-channel">${chanOpts.join('')}</select>
-    <label class="dash-label">Texte au-dessus du panneau (optionnel)</label>
-    <textarea class="dash-input" id="lp-content" rows="2" maxlength="1900" placeholder="Les liens officiels de {server} 👇">${App.escapeHtml(cfg.content || '')}</textarea>
-    <label class="dash-label">Titre du panneau</label>
+    <label class="dash-label">Texte au-dessus de l’encadré (vous pouvez y coller un lien)</label>
+    <textarea class="dash-input" id="lp-content" rows="4" maxlength="1900" placeholder="Les différents réseaux de {server}&#10;&#10;Voici le Linktree :&#10;https://">${App.escapeHtml(cfg.content || '')}</textarea>
+    <label class="dash-label">Titre de l’encadré</label>
     <input class="dash-input" id="lp-title" maxlength="256" placeholder="🔗 Liens utiles" value="${App.escapeHtml(cfg.title || '')}" />
-    <label class="dash-label">Texte du panneau</label>
-    <textarea class="dash-input" id="lp-desc" rows="3" maxlength="2000" placeholder="Retrouvez les liens officiels du serveur ci-dessous.">${App.escapeHtml(cfg.description || '')}</textarea>
+    <label class="dash-label">Texte dans l’encadré</label>
+    <textarea class="dash-input" id="lp-desc" rows="3" maxlength="2000" placeholder="N’hésitez pas à me suivre de partout !">${App.escapeHtml(cfg.description || '')}</textarea>
     <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px">
-      <div><label class="dash-label">Couleur</label><input type="color" id="lp-color" value="${App.escapeHtml(/^#[0-9a-fA-F]{6}$/.test(String(cfg.color || '')) ? cfg.color : '#e07a5f')}" /></div>
-      <div style="flex:1;min-width:180px"><label class="dash-label">Image (URL https, optionnel)</label>
+      <div><label class="dash-label">Couleur de la barre</label><input type="color" id="lp-color" value="${App.escapeHtml(/^#[0-9a-fA-F]{6}$/.test(String(cfg.color || '')) ? cfg.color : '#e07a5f')}" /></div>
+      <div style="flex:1;min-width:180px"><label class="dash-label">Grande image (URL https)</label>
         <input class="dash-input" id="lp-image" maxlength="500" placeholder="https://…/image.png" value="${App.escapeHtml(cfg.image || '')}" /></div>
     </div>
-    <label class="dash-label">Pied du panneau (optionnel, vide = aucun)</label>
+    <label class="dash-label">Pied de l’encadré (optionnel, vide = aucun)</label>
     <input class="dash-input" id="lp-footer" maxlength="200" placeholder="" value="${App.escapeHtml(cfg.footer || '')}" />`;
 
-  const c2 = Dashboard.card(root, '🔗 Vos liens (chacun son embed)', 'Jusqu’à 8 liens. Le lien est écrit dans l’encadré ET en bouton sous le panneau.');
-  c2.innerHTML += `<div id="lp-list"></div><button type="button" class="dash-btn dash-btn-sm" id="lp-add">＋ Ajouter un lien</button>`;
+  const c2 = Dashboard.card(root, '🔘 Boutons (2 par ligne)', 'Chaque bouton ouvre un site. Emoji + nom, comme TikTok / YouTube / Instagram.');
+  c2.innerHTML += `<div id="lp-list"></div><button type="button" class="dash-btn dash-btn-sm" id="lp-add">＋ Ajouter un bouton</button>`;
 
   const preview = App.el(`<div id="lp-preview" class="lp-preview"></div>`);
   c2.appendChild(preview);
@@ -7611,56 +7609,44 @@ Dashboard.renderers.links = async (content, data) => {
   const fill = (s) => String(s || '').split('{server}').join(serverName);
   const paint = () => {
     const title = fill(c.querySelector('#lp-title').value.trim()) || '🔗 Liens utiles';
-    const desc = fill(c.querySelector('#lp-desc').value.trim()) || 'Retrouvez les liens officiels du serveur ci-dessous.';
+    const desc = fill(c.querySelector('#lp-desc').value.trim()) || 'N’hésitez pas à me suivre de partout !';
     const above = fill(c.querySelector('#lp-content').value.trim());
     const color = c.querySelector('#lp-color').value;
-    const boxes = linksData.map((l) => {
-      const t = App.escapeHtml(l.title || l.label || 'Lien');
-      const body = App.escapeHtml(l.description || '');
-      const url = App.escapeHtml(l.url || 'https://…');
-      const btn = App.escapeHtml(l.label || l.title || 'Ouvrir');
-      return `<div class="lp-emb" style="border-left:4px solid ${App.escapeHtml(l.color || '#5865F2')}">
-        <b>${t}</b>
-        ${body ? `<div class="lp-emb-body">${body.replace(/\n/g, '<br>')}</div>` : ''}
-        <div class="lp-emb-url">${url}</div>
-        <span class="lp-fake-btn">${App.escapeHtml(l.emoji || '')} ${btn}</span>
-      </div>`;
-    }).join('') || `<div class="dash-empty" style="padding:12px">Aucun lien pour l’instant — ajoutez-en un.</div>`;
+    const img = String(c.querySelector('#lp-image').value.trim());
+    const btns = linksData.filter((l) => l.label || l.url).map((l) => {
+      const name = App.escapeHtml(l.label || 'Ouvrir');
+      return `<span class="lp-fake-btn">${App.escapeHtml(l.emoji || '💙')} ${name} <span class="lp-ext" aria-hidden="true">↗</span></span>`;
+    }).join('') || `<div class="dash-empty" style="padding:12px">Aucun bouton — ajoutez TikTok, YouTube…</div>`;
+    const imgHtml = /^https?:\/\//i.test(img) ? `<div class="lp-emb-img">${App.escapeHtml(img)}</div>` : '';
     preview.innerHTML = `
       <div class="dash-label" style="margin:12px 0 8px">👀 Aperçu sur Discord</div>
       <div class="lp-discord">
-        ${above ? `<div class="lp-above">${App.escapeHtml(above)}</div>` : ''}
-        <div class="lp-emb" style="border-left:4px solid ${App.escapeHtml(color)}"><b>${App.escapeHtml(title)}</b><div class="lp-emb-body">${App.escapeHtml(desc).replace(/\n/g, '<br>')}</div></div>
-        ${boxes}
+        ${above ? `<div class="lp-above">${App.escapeHtml(above).replace(/\n/g, '<br>')}</div>` : ''}
+        <div class="lp-emb" style="border-left:4px solid ${App.escapeHtml(color)}">
+          <b>${App.escapeHtml(title)}</b>
+          <div class="lp-emb-body">${App.escapeHtml(desc).replace(/\n/g, '<br>')}</div>
+          ${imgHtml}
+        </div>
+        <div class="lp-btns">${btns}</div>
       </div>`;
   };
 
   const renderLinks = () => {
     const el = c2.querySelector('#lp-list');
     el.innerHTML = '';
-    if (!linksData.length) el.appendChild(App.el(`<div class="dash-empty" style="padding:12px;margin-bottom:8px">Aucun lien — cliquez sur « Ajouter un lien ».</div>`));
+    if (!linksData.length) el.appendChild(App.el(`<div class="dash-empty" style="padding:12px;margin-bottom:8px">Aucun bouton — cliquez sur « Ajouter un bouton ».</div>`));
     linksData.forEach((x, i) => {
       const row = App.el(`<div class="lp-item">
         <div class="lp-item-head">
-          <input class="dash-input" data-k="emoji" value="${App.escapeHtml(x.emoji)}" placeholder="🌐" style="max-width:64px;text-align:center" />
-          <input class="dash-input" data-k="label" value="${App.escapeHtml(x.label)}" placeholder="Nom du bouton (ex : Site)" style="flex:1;min-width:140px" />
+          <input class="dash-input" data-k="emoji" value="${App.escapeHtml(x.emoji)}" placeholder="💙" style="max-width:64px;text-align:center" />
+          <input class="dash-input" data-k="label" value="${App.escapeHtml(x.label)}" placeholder="TikTok" style="flex:1;min-width:120px" />
           <button type="button" class="dash-btn dash-btn-danger dash-btn-sm" data-del>🗑</button>
         </div>
-        <label class="dash-label">Adresse du lien (https://…)</label>
-        <input class="dash-input" data-k="url" value="${App.escapeHtml(x.url)}" placeholder="https://exemple.com" />
-        <label class="dash-label">Titre de l’encadré (vide = nom du bouton)</label>
-        <input class="dash-input" data-k="title" value="${App.escapeHtml(x.title)}" placeholder="Notre site officiel" />
-        <label class="dash-label">Texte de l’encadré (le lien sera ajouté automatiquement s’il n’y est pas)</label>
-        <textarea class="dash-input" data-k="description" rows="2" maxlength="1000" placeholder="Boutique, actualités, règlement…">${App.escapeHtml(x.description)}</textarea>
-        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:6px">
-          <div><label class="dash-label">Couleur de l’encadré</label><input type="color" data-k="color" value="${App.escapeHtml(x.color)}" /></div>
-          <div style="flex:1;min-width:160px"><label class="dash-label">Image de l’encadré (URL, optionnel)</label>
-            <input class="dash-input" data-k="image" value="${App.escapeHtml(x.image)}" placeholder="https://…/image.png" /></div>
-        </div>
+        <label class="dash-label">Adresse (https://…)</label>
+        <input class="dash-input" data-k="url" value="${App.escapeHtml(x.url)}" placeholder="https://tiktok.com/@…" />
       </div>`);
       row.querySelectorAll('[data-k]').forEach((inp) => {
-        const ev = inp.type === 'color' || inp.tagName === 'SELECT' ? 'change' : 'input';
-        inp.addEventListener(ev, () => { x[inp.getAttribute('data-k')] = inp.value; paint(); });
+        inp.addEventListener('input', () => { x[inp.getAttribute('data-k')] = inp.value; paint(); });
       });
       row.querySelector('[data-del]').onclick = () => { linksData.splice(i, 1); renderLinks(); paint(); };
       el.appendChild(row);
@@ -7669,8 +7655,8 @@ Dashboard.renderers.links = async (content, data) => {
   };
   renderLinks();
   c2.querySelector('#lp-add').onclick = () => {
-    if (linksData.length >= 8) return App.toast('Maximum 8 liens (limite Discord).', 'error');
-    linksData.push({ id: `l${Date.now()}`, label: '', emoji: '', url: '', title: '', description: '', color: '#5865F2', image: '' });
+    if (linksData.length >= 10) return App.toast('Maximum 10 boutons.', 'error');
+    linksData.push({ id: `l${Date.now()}`, label: '', emoji: '💙', url: '' });
     renderLinks();
   };
   ['lp-content', 'lp-title', 'lp-desc', 'lp-image', 'lp-footer'].forEach((id) => {
