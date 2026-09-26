@@ -16,8 +16,8 @@ const sw = racine('public/sw.js');
 const dash = racine('public/js/dashboard.js');
 
 console.log('— 1. Pins de version v321 —');
-check('index.html : ?v=329 ×7', (html.match(/\?v=329/g) || []).length === 7);
-check('sw.js : cache botdev-v329', sw.includes("const CACHE = 'botdev-v329';"));
+check('index.html : ?v=330 ×7', (html.match(/\?v=330/g) || []).length === 7);
+check('sw.js : cache botdev-v330', sw.includes("const CACHE = 'botdev-v330';"));
 check('index.html : plus aucune ?v=320', !html.includes('?v=320'));
 
 console.log('— 2. Menu : 8 modules dédiés, plus de « Communauté » —');

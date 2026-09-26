@@ -1065,6 +1065,35 @@ html.hx-light .sk-ico, html.hx-light .sk-line, html.hx-light .sk-stat {
   .ticket-guide .tg-sys { grid-template-columns: 1fr; }
 }
 
+/* v330 — Tickets classiques : moins de texte, blocs repliés */
+.tk-classic-card > .card-head h3 { font-size: 16.5px; }
+.tk-classic-card > .card-head .desc { max-width: 640px; margin-bottom: 10px; }
+.tk-fold { padding: 0; }
+.tk-fold-sum {
+  list-style: none;
+  cursor: pointer;
+  padding: 16px 22px;
+  font-weight: 700;
+  font-size: 14.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+}
+.tk-fold-sum::-webkit-details-marker { display: none; }
+.tk-fold-sum::marker { content: ''; }
+.tk-fold-sum::after {
+  content: '▸';
+  margin-left: auto;
+  color: var(--d-dim);
+  font-weight: 500;
+  font-size: 13px;
+}
+.tk-fold[open] .tk-fold-sum::after { content: '▾'; }
+.tk-fold[open] .tk-fold-sum { border-bottom: 1px solid var(--d-border); }
+.tk-fold-body { padding: 14px 22px 18px; }
+.ticket-guide .tg-box small { margin-bottom: 0; }
+
 /* Constructeur du nouveau système de tickets */
 .adv-builder-card {
   border-color: rgba(var(--d-accent-rgb), .42);

@@ -2075,7 +2075,7 @@ Dashboard.renderers.tickets = async (content, data) => {
   let advancedConfig = null;
   try { advancedConfig = (await App.api(`/bots/${bot.id}/guilds/${guildId}/advanced-tickets`)).config || null; } catch {}
   const typesData = (t.types || []).map((x) => ({ label: x.label, emoji: x.emoji || '', description: x.description || '', category: x.category || '', questions: (Array.isArray(x.questions) && x.questions.length) ? [...x.questions] : [], staff_roles: (x.staff_roles && x.staff_roles.length) ? [...x.staff_roles] : [] }));
-  const root = Dashboard.header(content, '🎫', 'Système de tickets', 'Deux panneaux classiques (bouton ou liste), plus un système avancé à part. Aussi configurable avec /ticket.');
+  const root = Dashboard.header(content, '🎫', 'Système de tickets', 'Bouton, liste, ou le système avancé en bas.');
   const ts = data.tickets_stats || { total: 0, open: 0 };
   root.appendChild(App.el(`
     <div class="dash-stats" style="margin-bottom:14px">
@@ -2101,8 +2101,8 @@ Dashboard.renderers.tickets = async (content, data) => {
   const curStyle = String(t.button_style || '1');
   const reqReason = !(t.require_reason === 0 || t.require_reason === false);
 
-  const c = Dashboard.card(root, '🔘 Panneau à un bouton', 'Le membre voit UN bouton. Un clic ouvre un ticket. Ce n’est pas le menu, ni le système avancé du bas.');
-  c.querySelector('.desc').outerHTML = `<div class="desc">Le membre voit UN bouton. Un clic ouvre un ticket. Ce n’est pas le menu, ni le système avancé du bas.<br/>💡 Sur Discord : <b>/ticket setup</b> et <b>/ticket types setup</b> — synchronisé avec ce formulaire.</div>`;
+  const c = Dashboard.card(root, '🔘 Panneau à un bouton', 'Un bouton. Un clic ouvre un ticket.');
+  c.classList.add('tk-classic-card');
 
   // 📊 État actuel (data-status pour le retrouver après innerHTML +=)
   c.appendChild(App.el(`<div data-status style="margin-bottom:12px"></div>`));
@@ -2129,7 +2129,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     <label class="dash-label">📝 Questionnaire d'ouverture</label>
     <label style="display:flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer">
       <label class="switch"><input type="checkbox" id="t-reason" ${reqReason ? 'checked' : ''} /><span class="slider"></span></label>
-      <span style="color:var(--d-dim)">${reqReason ? '✅ Obligatoire : une raison est demandée avant l\'ouverture' : '❌ Désactivé : le ticket s\'ouvre directement'}</span>
+      <span style="color:var(--d-dim)">${reqReason ? '✅ Raison obligatoire' : '❌ Sans raison'}</span>
     </label>
 
     <label class="dash-label">Rôle staff global</label>
@@ -2150,23 +2150,22 @@ Dashboard.renderers.tickets = async (content, data) => {
     <textarea class="dash-input" id="t-msg" rows="3">${App.escapeHtml(t.message || '')}</textarea>
     <div style="margin-top:14px" data-panel-img></div>
 
-    <label class="dash-label">📔 Journal des tickets (salon staff — récapitulatif à la fermeture)</label>
+    <label class="dash-label">📔 Journal des tickets</label>
     <select class="dash-select" id="t-logchan">
       <option value="">— Désactivé (choisir un salon pour activer) —</option>
       ${textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches((data.settings || {}).ticket_log_channel, ch) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`).join('')}
       ${Dashboard.currentDiscordOption((data.settings || {}).ticket_log_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable')}
     </select>
-    <div style="font-size:12px;color:var(--d-dim);margin-top:6px">À chaque fermeture : panneau récap (qui a ouvert, staff en charge, raisons, durée, messages, lien transcription, note ⭐). Le MP du créateur ne change pas.</div>
 
     <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
       <button class="dash-btn dash-btn-primary" id="t-save">💾 Enregistrer</button>
       <button class="dash-btn" id="t-send">📨 Envoyer ce panneau (bouton)</button>
     </div>
-    <div style="font-size:12px;color:var(--d-dim);margin-top:8px">Ceci est le panneau à UN bouton. Le panneau avec liste (menu) est plus bas. Le système avancé est tout en bas — ce n’est pas la même chose.</div>`;
-
+`;
   // 🗂️ Carte PANNEAU MENU DÉROULANT — indépendante du panneau bouton :
   // son salon, son message, son 💾 et son 📨.
-  const cm = Dashboard.card(root, '📋 Panneau avec menu (liste)', 'Le membre choisit le type dans une liste (Support, Plaintes…). Ce n’est PAS le système avancé du bas. Indépendant du panneau à un bouton : chacun a son salon et son message.');
+  const cm = Dashboard.card(root, '📋 Panneau avec menu (liste)', 'Le membre choisit le type dans une liste.');
+  cm.classList.add('tk-classic-card');
   const menuChanOpts = ['<option value="">— Même salon que le panneau bouton —</option>']
     .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(t.menu_channel, ch) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`));
   if (t.menu_channel && !textChannels.some((ch) => Dashboard.discordRefMatches(t.menu_channel, ch))) {
@@ -2181,10 +2180,8 @@ Dashboard.renderers.tickets = async (content, data) => {
       ${categories.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(t.menu_category, ch) ? 'selected' : ''}>📁 ${App.escapeHtml(ch.name)}</option>`).join('')}
       ${Dashboard.currentDiscordOption(t.menu_category, categories, '⚠️', 'configuration actuelle — catégorie introuvable')}
     </select>
-    <div style="font-size:12px;color:var(--d-dim);margin-top:4px">✅ Si vous choisissez une catégorie ici, TOUS les tickets ouverts via le menu iront dedans — priorité absolue, zéro ambiguïté.</div>
-    <label class="dash-label">Message du panneau menu (vide = même message que le panneau bouton)</label>
+    <label class="dash-label">Message du panneau menu</label>
     <textarea class="dash-input" id="tm-msg" rows="3">${App.escapeHtml(t.menu_message || '')}</textarea>
-    <div style="font-size:12px;color:var(--d-dim);margin-top:6px">Les types de cette liste se règlent dans la carte « Types de tickets (bouton et menu) ». Les deux panneaux classiques peuvent cohabiter, même dans le même salon.</div>
     <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
       <button class="dash-btn dash-btn-primary" id="tm-save">💾 Enregistrer</button>
       <button class="dash-btn" id="tm-send">📨 Envoyer ce panneau (menu)</button>
@@ -2208,7 +2205,7 @@ Dashboard.renderers.tickets = async (content, data) => {
   // ---- ✏️ v297 : textes SÉPARÉS — une carte pour le panneau bouton, une carte pour le panneau menu ----
   let pt = {};
   try { pt = JSON.parse(t.panel_texts || '{}') || {}; } catch {}
-  const ctp = Dashboard.card(root, '✏️ Textes du panneau à un bouton', 'Uniquement pour le panneau à un bouton (pas le menu, pas le système avancé). Champ vide = texte par défaut. {server} = nom du serveur. Après enregistrement, renvoyez le panneau.');
+  const ctp = Dashboard.card(root, '✏️ Textes du panneau à un bouton', 'UNIQUEMENT au panneau bouton. Vide = texte par défaut. {server} = nom du serveur.');
   ctp.innerHTML += `
     <label class="dash-label">Titre du panneau</label>
     <input class="dash-input" id="tp-title" maxlength="100" placeholder="👑 Support | {server}" value="${App.escapeHtml(pt.title || '')}" />
@@ -2220,7 +2217,6 @@ Dashboard.renderers.tickets = async (content, data) => {
     <textarea class="dash-input" id="tp-rules" rows="4" maxlength="1000" placeholder="• Soyez clair et précis dans votre demande.&#10;• Le manque de respect envers le staff est strictement interdit.&#10;• Évitez les mentions inutiles.&#10;• Les tickets inactifs pendant 2 heures seront automatiquement fermés puis supprimés.">${App.escapeHtml(pt.rules || '')}</textarea>
     <label class="dash-label">Message de patience (pied du panneau)</label>
     <input class="dash-input" id="tp-patience" maxlength="300" placeholder="*⏳ Merci de votre patience, un membre du staff prendra votre ticket en charge dès que possible.*" value="${App.escapeHtml(pt.patience || '')}" />
-    <div style="font-size:12px;color:var(--d-dim);margin-top:6px">ℹ️ Le paragraphe d'explication se personnalise avec le champ « Message du panneau » de la carte du panneau bouton. Ces textes s'appliquent UNIQUEMENT au panneau bouton.</div>
     <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
       <button class="dash-btn dash-btn-primary" id="tp-save">💾 Enregistrer les textes du panneau bouton</button>
       <button class="dash-btn" id="tp-reset">↩️ Revenir aux textes par défaut</button>
@@ -2246,7 +2242,7 @@ Dashboard.renderers.tickets = async (content, data) => {
   // ---- ✏️ v297 : Textes du panneau MENU déroulant (indépendants du panneau bouton) ----
   let mpt = {};
   try { mpt = JSON.parse(String(t.menu_panel_texts || '').trim() || String(t.panel_texts || '') || '{}') || {}; } catch {}
-  const ctmenu = Dashboard.card(root, '✏️ Textes du panneau avec menu', 'Uniquement pour le panneau avec liste. Indépendant du panneau à un bouton. Champ vide = texte par défaut. Après enregistrement, renvoyez le panneau menu.');
+  const ctmenu = Dashboard.card(root, '✏️ Textes du panneau avec menu', 'UNIQUEMENT au panneau menu. Vide = texte par défaut.');
   ctmenu.innerHTML += `
     <label class="dash-label">Titre du panneau menu</label>
     <input class="dash-input" id="mp-title" maxlength="100" placeholder="👑 Support | {server}" value="${App.escapeHtml(mpt.title || '')}" />
@@ -2260,7 +2256,6 @@ Dashboard.renderers.tickets = async (content, data) => {
     <textarea class="dash-input" id="mp-rules" rows="4" maxlength="1000" placeholder="• Soyez clair et précis dans votre demande.&#10;• Le manque de respect envers le staff est strictement interdit.&#10;• Évitez les mentions inutiles.&#10;• Les tickets inactifs pendant 2 heures seront automatiquement fermés puis supprimés.">${App.escapeHtml(mpt.rules || '')}</textarea>
     <label class="dash-label">Message de patience (pied du panneau)</label>
     <input class="dash-input" id="mp-patience" maxlength="300" placeholder="*⏳ Merci de votre patience, un membre du staff prendra votre ticket en charge dès que possible.*" value="${App.escapeHtml(mpt.patience || '')}" />
-    <div style="font-size:12px;color:var(--d-dim);margin-top:6px">ℹ️ Le paragraphe d'explication se personnalise avec le champ « Message du panneau menu » de la carte « 🗂️ Panneau MENU déroulant ». Ces textes s'appliquent UNIQUEMENT au panneau menu.</div>
     <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
       <button class="dash-btn dash-btn-primary" id="mp-save">💾 Enregistrer les textes du panneau menu</button>
       <button class="dash-btn" id="mp-reset">↩️ Revenir aux textes par défaut</button>
@@ -2289,12 +2284,11 @@ Dashboard.renderers.tickets = async (content, data) => {
   c.querySelector('[data-panel-img]').appendChild(Dashboard.imageField('🖼️ Image du panneau (importée)', panelImage, (v) => { panelImage = v; }, 'Vide = bannière « SUPPORT » générée automatiquement. Importez une image (PNG/JPG/GIF/WebP) pour l\'afficher en bas du panneau.'));
 
   // 💬 Message privé après fermeture (v198) — personnalisable, vide = défaut
-  const cdm = Dashboard.card(root, '💬 Message privé après fermeture', 'Envoyé au créateur quand son ticket est fermé, avec la transcription. Laissez vide pour garder le message automatique du bot.');
+  const cdm = Dashboard.card(root, '💬 Message privé après fermeture', 'Vide = message automatique du bot.');
   let dmImage = String((data.settings || {}).close_dm_image || '');
   cdm.innerHTML += `
     <label class="dash-label">Message personnalisé (vide = message automatique)</label>
     <textarea class="dash-input" id="tdm-msg" rows="4" placeholder="${App.escapeHtml('Ex : Merci d\'avoir contacté le support ! Votre demande #12 est traitée.')}">${App.escapeHtml((data.settings || {}).close_dm_message || '')}</textarea>
-    <div style="font-size:12px;color:var(--d-dim);margin-top:6px">💡 Vous pouvez utiliser <b>{server}</b> (nom du serveur) et <b>{url}</b> (lien de la transcription).</div>
     <div style="margin-top:12px" data-dm-img></div>
     <div style="margin-top:14px"><button class="dash-btn dash-btn-primary" id="tdm-save">💾 Enregistrer</button></div>`;
   cdm.querySelector('[data-dm-img]').appendChild(Dashboard.imageField('🖼️ Image du message privé', dmImage, (v) => { dmImage = v; }, 'Vide = image par défaut du bot. Importez la vôtre pour personnaliser le message de fermeture.'));
@@ -2314,7 +2308,7 @@ Dashboard.renderers.tickets = async (content, data) => {
   let roomCfg = {};
   try { roomCfg = JSON.parse(String((data.settings || {}).ticket_room || '{}')) || {}; } catch {}
   const roomHexOk = (v) => /^#[0-9a-fA-F]{6}$/.test(String(v || '').trim());
-  const croom = Dashboard.card(root, '🏠 Embed du salon privé (à l’ouverture du ticket)', 'Personnalisez le message affiché dans le salon privé quand un ticket s’ouvre — ce que voient le membre ET le staff. Champs vides = texte court automatique. La couleur s’applique à l’embed.');
+  const croom = Dashboard.card(root, '🏠 Embed du salon privé (à l’ouverture du ticket)', 'Vide = texte automatique.');
   croom.innerHTML += `
     <label class="dash-label">🎨 Couleur de l’embed</label>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -2328,7 +2322,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     <textarea class="dash-input" id="tr-welcome" rows="3" maxlength="1500" placeholder="Bienvenue {member} ! Un membre de l’équipe va vous répondre ici même…">${App.escapeHtml(roomCfg.welcome || '')}</textarea>
     <label class="dash-label">📋 Déroulement personnalisé (facultatif)</label>
     <textarea class="dash-input" id="tr-steps" rows="2" maxlength="1200" placeholder="Vide = pas de déroulement détaillé — une ligne discrète annonce la transcription en MP.">${App.escapeHtml(roomCfg.steps || '')}</textarea>
-    <div style="font-size:12px;color:var(--d-dim);margin-top:4px">💡 Variables acceptées : <b>{member}</b> (mention), <b>{user}</b> (pseudo), <b>{server}</b>, <b>{type}</b>, <b>{number}</b>. L’embed garde automatiquement un en-tête propre (pseudo + numéro), les champs équipe / raisons / transcription, et le ⚙️ menu réservé au staff.</div>
+    <div style="font-size:12px;color:var(--d-dim);margin-top:4px">{member} {user} {server} {type} {number}</div>
     <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap;align-items:center">
       <button class="dash-btn dash-btn-primary" id="tr-save">💾 Enregistrer</button>
       <button class="dash-btn" id="tr-default">↩️ Restaurer les valeurs par défaut</button>
@@ -2413,8 +2407,8 @@ Dashboard.renderers.tickets = async (content, data) => {
   c.querySelector('#t-reason').onchange = () => {
     const on = c.querySelector('#t-reason').checked;
     c.querySelector('#t-reason').nextElementSibling.nextElementSibling.textContent = on
-      ? '✅ Obligatoire : une raison est demandée avant l\'ouverture'
-      : '❌ Désactivé : le ticket s\'ouvre directement';
+      ? '✅ Raison obligatoire'
+      : '❌ Sans raison';
   };
 
   c.querySelector('#t-save').onclick = async () => {
@@ -2471,7 +2465,8 @@ Dashboard.renderers.tickets = async (content, data) => {
   c.querySelector('#t-msg').addEventListener('input', renderPreview);
   renderPreview();
 
-  const c2 = Dashboard.card(root, '🗂️ Types de tickets (bouton et menu)', 'Pour les deux panneaux classiques uniquement (bouton + liste). Emoji, catégorie et rôles staff. Le système avancé du bas a ses propres types.');
+  const c2 = Dashboard.card(root, '🗂️ Types de tickets (bouton et menu)', 'Pour le bouton et le menu. Le système avancé a les siens.');
+  c2.classList.add('tk-classic-card');
   c2.appendChild(App.el(`<div id="t-types"></div>`));
   const addBtn = App.el(`<button class="dash-btn dash-btn-sm" id="t-add">＋ Ajouter un type</button>`);
   c2.appendChild(addBtn);
@@ -2482,7 +2477,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     if (!typesData.length) el.appendChild(App.el(`<div class="dash-empty">Aucun type — le panneau n\'affichera qu\'un bouton.</div>`));
     typesData.forEach((x, i) => {
       const row = App.el(`
-        <div style="border:1px solid var(--d-border);border-radius:11px;padding:12px 14px;margin-bottom:10px;background:var(--d-card2)">
+        <div class="adv-type-card" style="margin-bottom:10px">
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
             <input class="dash-input" data-k="emoji" value="${App.escapeHtml(x.emoji)}" placeholder="🤝" style="max-width:64px;text-align:center" />
             <input class="dash-input" data-k="label" value="${App.escapeHtml(x.label)}" placeholder="Nom du type" style="flex:1;min-width:140px" />
@@ -2491,17 +2486,17 @@ Dashboard.renderers.tickets = async (content, data) => {
           <div data-emojierr style="color:#ff8a8d;font-size:11.5px;margin-top:3px;display:none">⚠️ Emoji invalide — utilise un vrai emoji (ex : 🤝)</div>
           <label class="dash-label">📝 Description (affichée sous le type dans le menu)</label>
           <input class="dash-input" data-k="description" maxlength="100" value="${App.escapeHtml(x.description)}" placeholder="Ex : signalez un abus du staff, en toute confidentialité" />
-          <div style="color:var(--d-dim);font-size:10.5px;margin-top:2px">${String(x.description || '').length}/100 — si vide, une description professionnelle est générée automatiquement.</div>
+          <div style="color:var(--d-dim);font-size:10.5px;margin-top:2px">${String(x.description || '').length}/100</div>
           <label class="dash-label">🗂️ Catégorie</label>
           <select class="dash-select" data-k="categorySel">
             ${categories.length ? '<option value="">— Catégorie par défaut (Tickets) —</option>' : Dashboard.noDiscordChoice('Aucune catégorie reçue de Discord')}
             ${categories.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(x.category, ch) ? 'selected' : ''}>📁 ${App.escapeHtml(ch.name)}</option>`).join('')}
             ${Dashboard.currentDiscordOption(x.category, categories, '⚠️', 'configuration actuelle — catégorie introuvable')}
           </select>
-          <label class="dash-label">🛡️ Rôles staff (plusieurs possibles — menus déroulants)</label>
+          <label class="dash-label">🛡️ Rôles staff</label>
           <div class="t-roles" style="display:flex;flex-direction:column;gap:6px"></div>
           <button class="dash-btn dash-btn-sm" data-addrole style="margin-top:6px">＋ Ajouter un rôle staff</button>
-          <label class="dash-label" style="margin-top:12px">❓ Questionnaire (réponses OBLIGATOIRES à l'ouverture — max 5)</label>
+          <label class="dash-label" style="margin-top:12px">❓ Questionnaire (max 5)</label>
           <div class="t-questions" style="display:flex;flex-direction:column;gap:6px"></div>
           <button class="dash-btn dash-btn-sm" data-addq style="margin-top:6px">＋ Ajouter une question</button>
           <div style="color:var(--d-dim);font-size:10.5px;margin-top:5px">Vide = par défaut (seule la raison est demandée).</div>
@@ -2524,7 +2519,7 @@ Dashboard.renderers.tickets = async (content, data) => {
       descInp.addEventListener('input', () => {
         x.description = descInp.value;
         const cnt = descInp.nextElementSibling;
-        if (cnt) cnt.textContent = `${String(x.description || '').length}/100 — si vide, une description professionnelle est générée automatiquement.`;
+        if (cnt) cnt.textContent = `${String(x.description || '').length}/100`;
         renderPreview();
       });
       const catSel = row.querySelector('[data-k="categorySel"]');
@@ -2604,7 +2599,7 @@ Dashboard.renderers.tickets = async (content, data) => {
       staff_roles: Array.isArray(x.staff_roles) ? [...x.staff_roles] : [],
     })),
   };
-  const c3 = Dashboard.card(root, '🎨 Autre système : tickets avancés', 'ATTENTION : ce n’est PAS le panneau avec menu ci-dessus. C’est un 2ᵉ système, indépendant. Un salon privé par ticket. Les panneaux classiques (bouton et menu) ne sont pas modifiés.');
+  const c3 = Dashboard.card(root, '🎨 Autre système : tickets avancés', '2ᵉ système, indépendant. Ce n’est PAS le panneau avec menu ci-dessus.');
   c3.classList.add('adv-builder-card');
   const advChannelOptions = ['<option value="">— Choisir un salon —</option>']
     .concat(textChannels.map((ch) => {
@@ -2807,31 +2802,25 @@ Dashboard.renderers.tickets = async (content, data) => {
   const ticketGuide = App.el(`<div class="dash-card ticket-guide" data-dash-card>
       <div class="card-head"><div class="card-heading">
         <h3>🧭 Par où commencer ?</h3>
-        <div class="desc">Il y a 2 systèmes différents. Ce n’est pas la même chose. Commencez par un seul.</div>
+        <div class="desc">Choisissez un seul système.</div>
       </div></div>
       <div class="tg-sys">
         <div class="tg-box">
-          <b>1. Tickets classiques</b>
-          <small>Les cartes juste en dessous.</small>
-          <ul>
-            <li><b>Panneau à un bouton</b> — un seul bouton « Ouvrir un ticket ».</li>
-            <li><b>Panneau avec menu</b> — une liste de types à choisir.</li>
-            <li><b>Autres panneaux menu</b> — d’autres listes, chacune avec ses propres types.</li>
-          </ul>
-          <p>Le bouton et le premier menu partagent les mêmes types. Chaque panneau extra a les siens.</p>
+          <b>Tickets classiques</b>
+          <small>Bouton ou liste, ci-dessous.</small>
         </div>
         <div class="tg-box tg-box-alt">
-          <b>2. Tickets avancés</b>
-          <small>Tout en bas de la page.</small>
-          <p>Un <b>autre</b> panneau, complètement séparé. Ce n’est <b>pas</b> le menu du système classique. L’autre système n’est pas modifié.</p>
+          <b>Tickets avancés</b>
+          <small>Tout-en-un, en bas de page.</small>
         </div>
       </div>
     </div>`);
   // v328 — autres panneaux menu (chacun ses types), après le menu principal.
   const extraMenus = Array.isArray(data.ticket_menus) ? data.ticket_menus : [];
-  const cxm = Dashboard.card(root, '📋 Autres panneaux menu', 'Un nouveau menu déroulant, avec ses propres types (recrutement, partenariats…). Indépendant du menu ci-dessus et du système avancé.');
+  const cxm = Dashboard.card(root, '📋 Autres panneaux menu', 'Autres listes, chacune avec ses types.');
+  cxm.classList.add('tk-classic-card');
   if (!extraMenus.length) {
-    cxm.appendChild(App.el('<div class="dash-empty">Aucun panneau extra pour l’instant. Le menu principal (ci-dessus) n’est pas modifié.</div>'));
+    cxm.appendChild(App.el('<div class="dash-empty">Aucun autre menu pour l’instant.</div>'));
   }
   extraMenus.forEach((m) => {
     const n = Array.isArray(m.types) ? m.types.length : 0;
@@ -2860,7 +2849,23 @@ Dashboard.renderers.tickets = async (content, data) => {
   };
   cxm.appendChild(xmNew);
 
-  [c, ctp, cm, ctmenu, cxm, c2, cdm, croom, c3].forEach((el) => root.appendChild(el));
+  const tkFold = (card, label) => {
+    const d = App.el('<details class="dash-card tk-fold" data-dash-card></details>');
+    d.appendChild(App.el(`<summary class="tk-fold-sum">${label}</summary>`));
+    const body = App.el('<div class="tk-fold-body"></div>');
+    Array.from(card.childNodes).forEach((n) => {
+      if (n.classList && n.classList.contains('card-head')) return;
+      body.appendChild(n);
+    });
+    d.appendChild(body);
+    card.replaceWith(d);
+    return d;
+  };
+  const ctpF = tkFold(ctp, '✏️ Textes du panneau bouton');
+  const ctmenuF = tkFold(ctmenu, '✏️ Textes du panneau menu');
+  const cdmF = tkFold(cdm, '💬 Message privé après fermeture');
+  const croomF = tkFold(croom, '🏠 Message dans le salon du ticket');
+  [c, cm, cxm, c2, ctpF, ctmenuF, cdmF, croomF, c3].forEach((el) => root.appendChild(el));
   const ticketStats = root.querySelector('.dash-stats');
   if (ticketStats) ticketStats.insertAdjacentElement('afterend', ticketGuide);
   else root.insertBefore(ticketGuide, c);

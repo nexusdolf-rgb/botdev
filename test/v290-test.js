@@ -123,8 +123,8 @@ function check(label, cond, info) {
   console.log('— 6. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=329 référencé 7 fois', (index.match(/\?v=329/g) || []).length === 7);
-  check('sw.js : cache « botdev-v329 »', sw.includes("const CACHE = 'botdev-v329';"));
+  check('index.html : ?v=330 référencé 7 fois', (index.match(/\?v=330/g) || []).length === 7);
+  check('sw.js : cache « botdev-v330 »', sw.includes("const CACHE = 'botdev-v330';"));
 
   console.log(`\n🎉 v290 — ${ok} vérifications OK : vérification humaine + Join Gate opérationnels.`);
 })().catch((e) => { console.error(e); process.exit(1); });
