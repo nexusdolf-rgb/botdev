@@ -374,6 +374,16 @@ async function sweep(botManager) {
   }
 }
 
+
+// Mention de l'annonce : @everyone / @here / aucune / un rôle du serveur.
+function livePingFor(gs) {
+  const v = String((gs && gs.live_ping) || 'everyone');
+  if (v === 'none' || v === '') return { content: '', allowedMentions: { parse: [] } };
+  if (v === 'here') return { content: '@here', allowedMentions: { parse: ['everyone'] } };
+  if (/^\d{15,21}$/.test(v)) return { content: `<@&${v}>`, allowedMentions: { parse: [], roles: [v] } };
+  return { content: '@everyone', allowedMentions: { parse: ['everyone'] } };
+}
+
 async function announce(botId, guild, channel, social, result, gs) {
   // v236 — EmbedBuilder retiré : l'annonce de live est en Components V2.
   const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
@@ -383,7 +393,7 @@ async function announce(botId, guild, channel, social, result, gs) {
   const p = PLATFORMS[social.platform];
   if (!p) throw new Error(`plateforme inconnue : ${social.platform}`);
   const url = p.url(social.handle);
-  const ping = gs.live_ping === 'none' ? '' : gs.live_ping === 'here' ? '@here' : '@everyone';
+  const ping = livePingFor(gs);
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(`▶️ Regarder le live ${p.label}`).setURL(url)
@@ -408,7 +418,7 @@ async function announce(botId, guild, channel, social, result, gs) {
       // pied « {serveur} · Annonces de live ».
       title: `🔴 ${result.name} est en live sur ${p.label}`,
       titleLevel: 3,
-      content: ping || '',
+      content: ping.content,
       description: 'Rejoignez-le maintenant :',
       fields: [
         { name: 'Pseudo', value: `[@${social.handle}](${url})`, inline: true },
@@ -417,7 +427,7 @@ async function announce(botId, guild, channel, social, result, gs) {
       thumbnail: result.avatar || '',
       footer: false,
     }, [row]),
-    allowedMentions: { parse: ping ? ['everyone'] : [] },
+    allowedMentions: ping.allowedMentions,
   });
   store.activity.add(botId, guild.id, '🔴', `${result.name} (@${social.handle}) en live sur ${p.label} — annoncé dans #${channel.name}`);
   try {
@@ -494,5 +504,6 @@ module.exports = {
   sweep,
   announce,
   announceEnd,
+  livePingFor,
   formatDuration,
 };

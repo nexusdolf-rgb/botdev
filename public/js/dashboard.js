@@ -6394,6 +6394,16 @@ Dashboard.renderers.community = async (content, data) => {
 
   // ---- 🔴 Carte Annonces de live ----
   const cl = Dashboard.card(root, '🔴 Annonces de live', 'Enregistrez le lien TikTok / Twitch / YouTube / Kick d\'un membre : dès qu\'il lance un live, le bot l\'annonce automatiquement (pseudo + photo de profil + bouton Regarder) dans le salon choisi — et annonce aussi la fin du live (avec sa durée).');
+  const liveRoles = (data.roles || []).filter((role) => role.name !== '@everyone');
+  const livePing = String(s.live_ping || 'everyone');
+  const livePingOpts = [
+    `<option value="everyone" ${livePing === 'everyone' ? 'selected' : ''}>📣 @everyone (tout le monde)</option>`,
+    `<option value="here" ${livePing === 'here' ? 'selected' : ''}>🔔 @here (membres connectés)</option>`,
+    `<option value="none" ${livePing === 'none' ? 'selected' : ''}>🔕 Aucune mention</option>`,
+  ].concat(liveRoles.map((r) => `<option value="${App.escapeHtml(r.id)}" ${livePing === String(r.id) || Dashboard.discordRefMatches(livePing, r) ? 'selected' : ''}>🛡️ ${App.escapeHtml(r.name)}</option>`));
+  if (livePing && !['everyone', 'here', 'none'].includes(livePing) && !liveRoles.some((r) => String(r.id) === livePing || Dashboard.discordRefMatches(livePing, r))) {
+    livePingOpts.push(Dashboard.currentDiscordOption(livePing, liveRoles, '⚠️', 'configuration actuelle — rôle introuvable'));
+  }
   const liveChanOpts = ['<option value="">— Désactivé (choisir un salon pour activer) —</option>']
     .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(s.live_channel, ch) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`));
   if (s.live_channel && !textChannels.some((ch) => Dashboard.discordRefMatches(s.live_channel, ch))) {
@@ -6405,24 +6415,20 @@ Dashboard.renderers.community = async (content, data) => {
       : `<span class="dash-badge warn">⚠️ AUCUN salon choisi — les annonces sont DÉSACTIVÉES ! Choisissez un salon ci-dessous.</span>`}</div>
     <label class="dash-label">Salon des annonces de live</label>
     <select class="dash-select" id="lv-chan" style="max-width:320px">${liveChanOpts.join('')}</select>
-    <label class="dash-label">Mention envoyée avec l'annonce</label>
-    <select class="dash-select" id="lv-ping" style="max-width:320px">
-      <option value="everyone" ${(s.live_ping || 'everyone') === 'everyone' ? 'selected' : ''}>📣 @everyone (tout le monde)</option>
-      <option value="here" ${s.live_ping === 'here' ? 'selected' : ''}>🔔 @here (membres connectés)</option>
-      <option value="none" ${s.live_ping === 'none' ? 'selected' : ''}>🔕 Aucune mention</option>
-    </select>
+    <label class="dash-label">Rôle mentionné avec l'annonce</label>
+    <select class="dash-select" id="lv-ping">${livePingOpts.join('')}</select>
     <div style="margin-top:12px"><button class="dash-btn dash-btn-primary" id="lv-save">💾 Enregistrer</button></div>
     <div style="height:1px;background:var(--d-border);margin:16px 0"></div>
     <label class="dash-label">Ajouter un compte à suivre</label>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <input class="dash-input" id="lv-link" placeholder="Lien complet (tiktok.com/@pseudo) ou @pseudo" style="flex:2;min-width:220px" />
-      <select class="dash-select" id="lv-platform" style="flex:1;min-width:130px">
+    <div class="lv-add-row">
+      <input class="dash-input" id="lv-link" placeholder="Lien complet (tiktok.com/@pseudo) ou @pseudo" />
+      <select class="dash-select" id="lv-platform">
         <option value="tiktok">🎵 TikTok</option>
         <option value="twitch">🟣 Twitch</option>
         <option value="youtube">▶️ YouTube</option>
         <option value="kick">🟢 Kick</option>
       </select>
-      <select class="dash-select" id="lv-member" style="flex:1;min-width:160px"><option value="">👤 Membre lié (optionnel)</option></select>
+      <select class="dash-select" id="lv-member"><option value="">👤 Membre lié (optionnel)</option></select>
       <button class="dash-btn dash-btn-primary" id="lv-add">➕ Suivre</button>
     </div>
     <div class="dc-preview" style="margin-top:14px"><div class="dash-label" style="margin:0 0 8px">👀 Aperçu de l'annonce</div>
@@ -6452,14 +6458,22 @@ Dashboard.renderers.community = async (content, data) => {
   // 👀 Aperçu DYNAMIQUE de l'annonce : le premier compte suivi du serveur,
   // ou un exemple neutre (« votre_streamer ») s'il n'y en a aucun. Plus jamais
   // de pseudo réel affiché par erreur sur un autre serveur (v192).
+  let lastLiveSocials = [];
   const renderPreview = (socials) => {
     const pv = cl.querySelector('#lv-preview');
     if (!pv) return;
-    const s = (socials || [])[0];
+    if (socials) lastLiveSocials = socials;
+    const s = (lastLiveSocials || [])[0];
     const handle = s ? `@${s.handle}` : '@votre_streamer';
     const [emo, lab] = s ? (PLAT[s.platform] || ['🌐', s.platform]) : ['🎵', 'TikTok'];
+    const pingSel = cl.querySelector('#lv-ping');
+    const pingV = pingSel ? pingSel.value : 'everyone';
+    const pingLabel = pingV === 'none' || !pingV ? ''
+      : pingV === 'here' ? '@here'
+      : pingV === 'everyone' ? '@everyone'
+      : (pingSel.selectedOptions[0] ? pingSel.selectedOptions[0].textContent.replace(/^🛡️\s*/, '@') : `<@&${pingV}>`);
     pv.innerHTML = `
-      <div style="font-size:12.5px;color:#dbdee1;margin-bottom:6px">@everyone</div>
+      ${pingLabel ? `<div style="font-size:12.5px;color:#dbdee1;margin-bottom:6px">${App.escapeHtml(pingLabel)}</div>` : ''}
       <div style="border-left:4px solid #FE2C55;background:#2B2D31;border-radius:4px;padding:12px 14px;max-width:430px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#FE2C55,#8B5CF6);display:inline-block"></span><b style="font-size:13px;color:#f2f3f5">${App.escapeHtml(handle)} est en live !</b></div>
         <div style="font-weight:700;font-size:14px;color:#fff">${emo} 🔴 LIVE sur ${lab}</div>
@@ -6534,6 +6548,7 @@ Dashboard.renderers.community = async (content, data) => {
   };
   renderPreview([]);
   renderSocials();
+  cl.querySelector('#lv-ping').addEventListener('change', () => renderPreview(lastLiveSocials));
   // Liste des membres pour lier un compte (asynchrone, non bloquant)
   App.api(`/bots/${bot.id}/guilds/${guildId}/members`).then(({ members }) => {
     const sel = cl.querySelector('#lv-member');

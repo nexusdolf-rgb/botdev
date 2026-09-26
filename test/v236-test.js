@@ -249,7 +249,8 @@ check('automod.js : allowedMentions conservé pour notifier réellement',
   amSrc.includes('allowedMentions: { users: [userId] }'));
 const lwSrc = src('liveWatch.js');
 check('liveWatch.js : le ping @here est passé en option `content` du conteneur',
-  lwSrc.includes("content: ping || ''") && lwSrc.includes("allowedMentions: { parse: ping ? ['everyone'] : [] }"));
+  (lwSrc.includes("content: ping || ''") || lwSrc.includes('content: ping.content'))
+  && (lwSrc.includes("allowedMentions: { parse: ping ? ['everyone'] : [] }") || lwSrc.includes('allowedMentions: ping.allowedMentions')));
 check('liveWatch.js : le lien du live (perdu avec author.url) est porté par un bouton',
   lwSrc.includes('.setStyle(ButtonStyle.Link)') && lwSrc.includes('Regarder le live'));
 // Piège V2 : `content` + `embeds` interdits au niveau message.

@@ -1158,7 +1158,12 @@ const guildSettings = {
       starboard_channel: String(next.starboard_channel || '').slice(0, 100),
       starboard_min: Math.min(Math.max(parseInt(next.starboard_min, 10) || 3, 1), 50),
       live_channel: String(next.live_channel || '').slice(0, 100),
-      live_ping: ['everyone', 'here', 'none'].includes(String(next.live_ping || '')) ? String(next.live_ping) : 'everyone',
+      live_ping: (() => {
+        const v = String(next.live_ping || '');
+        if (['everyone', 'here', 'none'].includes(v)) return v;
+        if (/^\d{15,21}$/.test(v)) return v;
+        return 'everyone';
+      })(),
       ticket_log_channel: String(next.ticket_log_channel || '').slice(0, 100),
       xp_enabled: (next.xp_enabled === undefined || next.xp_enabled === null) ? 1 : (next.xp_enabled ? 1 : 0),
       xp_min: Math.min(Math.max(parseInt(next.xp_min, 10) || 10, 1), 1000),

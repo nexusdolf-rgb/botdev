@@ -4594,6 +4594,33 @@ html.hx-light { color-scheme: light; }
   .cm-row > .cm-label { flex-basis: 100%; }
   .cm-add-row > .dd-host, .cm-add-row > select.dash-select { flex-basis: 100%; }
 }
+
+/* v332 — Lives : ajouter un compte, lisible sur mobile */
+.lv-add-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+}
+.lv-add-row > .dash-input,
+.lv-add-row > .dd-host,
+.lv-add-row > select.dash-select {
+  flex: 1 1 160px;
+  min-width: 0;
+  max-width: 100%;
+}
+.lv-add-row > .dash-btn { flex: 0 0 auto; }
+@media (max-width: 700px) {
+  .lv-add-row { flex-direction: column; }
+  .lv-add-row > .dash-input,
+  .lv-add-row > .dd-host,
+  .lv-add-row > select.dash-select,
+  .lv-add-row > .dash-btn {
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: 100%;
+  }
+}
 @media (min-width: 700px) and (hover: none) and (pointer: coarse), (max-width: 640px) {
   .cm-row { gap: 6px; }
 }

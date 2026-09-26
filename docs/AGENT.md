@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v331**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v332**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -962,6 +962,10 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v332 (27/09 — LIVES : MOBILE + MENTION D’UN RÔLE)** :
+  « Ajouter un compte à suivre » s’empile sur mobile (plus de champs
+  coupés). La mention de l’annonce peut être un rôle du serveur, pas
+  seulement @everyone / @here. test/v332-test.js.
 - **v331 (26/09 — TICKETS CLASSIQUES : TOUT DANS LA CARTE)** :
   comme le système avancé : rien en dessous. Textes, types, MP et
   salon du ticket sont *dans* le panneau bouton ; textes + autres
@@ -1522,7 +1526,9 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 23/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v331** — page Tickets : chaque système a
+- Dernière version : **v332** — Lives : ajout de compte lisible sur
+  mobile, mention d’un rôle du serveur. `test/v332-test.js`.
+- **v331** — page Tickets : chaque système a
   tout *dans* sa carte (rien en dessous), comme l’avancé.
   `test/v331-test.js`.
 - **v330** — page Tickets : moins de texte, blocs repliés.
