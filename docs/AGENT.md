@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v327**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v328**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -962,6 +962,10 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v328 (26/09 — TICKETS : MENUS EXTRA, TYPES SÉPARÉS)** :
+  plusieurs panneaux menu déroulant, chacun son salon et ses types.
+  Le menu principal et le système avancé restent inchangés.
+  test/v328-test.js.
 - **v327 (26/09 — RECHERCHE RÔLES/SALONS SANS DÉCORATIONS)** :
   taper « staff » trouve « 『STAFF』 », taper « general » trouve
   «【🌸】général ». Crochets japonais, emojis, unicode décoratif
@@ -1506,7 +1510,9 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 23/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v327** — recherche rôles/salons : on tape le
+- Dernière version : **v328** — tickets : on peut ajouter d’autres
+  panneaux menu, chacun avec ses propres types. `test/v328-test.js`.
+- **v327** — recherche rôles/salons : on tape le
   nom simple (sans crochets japonais, emojis, lettres décoratives)
   et on trouve quand même. `test/v327-test.js`.
 - **v326** — rôles : Discord n’accepte que 25

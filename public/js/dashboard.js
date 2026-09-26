@@ -2816,8 +2816,9 @@ Dashboard.renderers.tickets = async (content, data) => {
           <ul>
             <li><b>Panneau à un bouton</b> — un seul bouton « Ouvrir un ticket ».</li>
             <li><b>Panneau avec menu</b> — une liste de types à choisir.</li>
+            <li><b>Autres panneaux menu</b> — d’autres listes, chacune avec ses propres types.</li>
           </ul>
-          <p>Les deux partagent les mêmes types (Support, Plaintes…).</p>
+          <p>Le bouton et le premier menu partagent les mêmes types. Chaque panneau extra a les siens.</p>
         </div>
         <div class="tg-box tg-box-alt">
           <b>2. Tickets avancés</b>
@@ -2826,7 +2827,40 @@ Dashboard.renderers.tickets = async (content, data) => {
         </div>
       </div>
     </div>`);
-  [c, ctp, cm, ctmenu, c2, cdm, croom, c3].forEach((el) => root.appendChild(el));
+  // v328 — autres panneaux menu (chacun ses types), après le menu principal.
+  const extraMenus = Array.isArray(data.ticket_menus) ? data.ticket_menus : [];
+  const cxm = Dashboard.card(root, '📋 Autres panneaux menu', 'Un nouveau menu déroulant, avec ses propres types (recrutement, partenariats…). Indépendant du menu ci-dessus et du système avancé.');
+  if (!extraMenus.length) {
+    cxm.appendChild(App.el('<div class="dash-empty">Aucun panneau extra pour l’instant. Le menu principal (ci-dessus) n’est pas modifié.</div>'));
+  }
+  extraMenus.forEach((m) => {
+    const n = Array.isArray(m.types) ? m.types.length : 0;
+    const row = App.el(`<div style="display:flex;align-items:center;gap:10px;border:1px solid var(--d-border);border-radius:10px;padding:10px 14px;margin-bottom:8px">
+      <div style="flex:1"><b>${App.escapeHtml(m.name || 'Menu')}</b><div style="color:var(--d-dim);font-size:12px">${n} type(s) · ${App.escapeHtml(m.channel || 'salon non défini')}</div></div>
+      <button class="dash-btn dash-btn-sm" data-xm-edit>✏️ Modifier</button>
+      <button class="dash-btn dash-btn-sm" data-xm-send>📨 Envoyer</button>
+      <button class="dash-btn dash-btn-danger dash-btn-sm" data-xm-del>🗑</button>
+    </div>`);
+    row.querySelector('[data-xm-edit]').onclick = () => BotViews.openTicketMenuModal(bot, guildId, m);
+    row.querySelector('[data-xm-send]').onclick = async () => {
+      try { await App.api(`/ticket-menus/${m.id}/send`, { method: 'POST' }); App.toast('Panneau menu extra envoyé !'); }
+      catch (e) { App.toast(e.message, 'error'); }
+    };
+    row.querySelector('[data-xm-del]').onclick = async () => {
+      if (!(await App.confirm(`Supprimer le panneau « ${m.name || 'Menu'} » ?`))) return;
+      try { await App.api(`/ticket-menus/${m.id}`, { method: 'DELETE' }); App.toast('Panneau supprimé.'); Dashboard.refresh(); }
+      catch (e) { App.toast(e.message, 'error'); }
+    };
+    cxm.appendChild(row);
+  });
+  const xmNew = App.el('<button class="dash-btn dash-btn-primary" style="margin-top:8px">＋ Nouveau panneau menu</button>');
+  xmNew.onclick = () => {
+    if (extraMenus.length >= 10) return App.toast('Maximum 10 menus supplémentaires.', 'error');
+    BotViews.openTicketMenuModal(bot, guildId, null);
+  };
+  cxm.appendChild(xmNew);
+
+  [c, ctp, cm, ctmenu, cxm, c2, cdm, croom, c3].forEach((el) => root.appendChild(el));
   const ticketStats = root.querySelector('.dash-stats');
   if (ticketStats) ticketStats.insertAdjacentElement('afterend', ticketGuide);
   else root.insertBefore(ticketGuide, c);

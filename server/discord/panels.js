@@ -473,7 +473,7 @@ function panelTitleOf(msg) {
   } catch { return ''; }
 }
 
-async function pruneOldPanels(channel, kind = '', customPrefix = '') {
+async function pruneOldPanels(channel, kind = '', customPrefix = '', customIdNeedle = '') {
   try {
     if (!channel || !channel.messages || typeof channel.messages.fetch !== 'function') return;
     const fetched = await channel.messages.fetch({ limit: 25 });
@@ -487,9 +487,16 @@ async function pruneOldPanels(channel, kind = '', customPrefix = '') {
         // bouton et le panneau menu peuvent vivre côte à côte.
         if (kind) {
           const ids = JSON.stringify(msg.components || '');
-          const isMenu = ids.includes('bd-ttype');
-          if (kind === 'menu' && !isMenu) continue;
-          if (kind === 'button' && isMenu) continue;
+          // v328 — un extra menu a custom_id bd-ttype:<bot>:x<id>.
+          // On ne le confond pas avec le menu principal (bd-ttype:<bot>).
+          const isExtra = /bd-ttype:\d+:x\d+/.test(ids);
+          const isMenu = ids.includes('bd-ttype') && !isExtra;
+          if (kind === 'extra') {
+            if (!customIdNeedle || !ids.includes(customIdNeedle)) continue;
+          } else {
+            if (kind === 'menu' && !isMenu) continue;
+            if (kind === 'button' && (isMenu || isExtra)) continue;
+          }
         }
         await msg.delete();
       } catch {}
@@ -564,6 +571,40 @@ async function sendTicketPanel(botId, guildId, client, channel, mode = 'auto') {
   } else {
     await require('../queue').send(channel, payload);
   }
+}
+
+// v328 — panneau menu EXTRA (ses propres types). custom_id bd-ttype:<bot>:x<id>
+async function sendExtraTicketMenu(botId, guildId, client, extra, channel) {
+  const types = Array.isArray(extra && extra.types) ? extra.types.filter((t) => t && t.label) : [];
+  if (!types.length) throw new Error('Ajoutez au moins un type à ce menu.');
+  if (!channel || typeof channel.send !== 'function') throw new Error('Salon introuvable.');
+  const cfg = store.tickets.get(botId, guildId) || {};
+  let PTs = {};
+  try { PTs = JSON.parse(extra.panel_texts || '{}') || {}; } catch { PTs = {}; }
+  const cfgForEmbed = { ...cfg, panel_texts: extra.panel_texts || '{}', message: extra.message || '' };
+  const select = new StringSelectMenuBuilder()
+    .setCustomId(`bd-ttype:${botId}:x${extra.id}`)
+    .setPlaceholder((String(PTs.menu_placeholder || '').trim() || '🗂️ Choisissez le type de ticket…').slice(0, 100))
+    .setMinValues(1).setMaxValues(1);
+  for (const t of types.slice(0, 25)) {
+    const opt = new StringSelectMenuOptionBuilder()
+      .setLabel(String(t.label).slice(0, 100))
+      .setValue(String(t.label).slice(0, 100));
+    const e = safeEmoji(t.emoji);
+    if (e) opt.setEmoji(e);
+    select.addOptions(opt);
+  }
+  const rows = [new ActionRowBuilder().addComponents(select)];
+  const identity = require('./identity');
+  const guild = client && client.guilds ? client.guilds.cache.get(guildId) : null;
+  let serverName = '';
+  if (guild && guild.name) serverName = String(guild.name).slice(0, 100);
+  try {
+    await pruneOldPanels(channel, 'extra', String(PTs.title || '').trim().split('{server}')[0], `bd-ttype:${botId}:x${extra.id}`);
+  } catch {}
+  const payload = buildTicketPanel(cfgForEmbed, client, types, serverName, guildId, rows);
+  if (guild) await identity.sendAsProfile(client, botId, guild, channel, payload);
+  else await require('../queue').send(channel, payload);
 }
 
 // ---------- Métadonnées du ticket (topic + mémoire) ----------
@@ -1210,8 +1251,8 @@ function combinedModal(botId, type, questions) {
   return modal;
 }
 
-async function askReason(botId, interaction, type, answers = [], skipQuestionnaire = false) {
-  const cfg = store.tickets.get(botId, interaction.guild.id) || {};
+async function askReason(botId, interaction, type, answers = [], skipQuestionnaire = false, cfgOverride = null) {
+  const cfg = cfgOverride || store.tickets.get(botId, interaction.guild.id) || {};
   const wantReason = !(cfg.require_reason === 0 || cfg.require_reason === false);
   const questions = (!skipQuestionnaire && type && Array.isArray(type.questions))
     ? type.questions.map((q) => String(q).slice(0, 45)).filter(Boolean).slice(0, 5)
@@ -1220,19 +1261,19 @@ async function askReason(botId, interaction, type, answers = [], skipQuestionnai
   // Cas 1 : questions + raison → UNE SEULE modale combinée
   // (Discord interdit modale → modale, on ne peut pas les enchaîner)
   if (questions.length && wantReason && questions.length < 5) {
-    pendingCombined.set(interaction.user.id, { botId, guildId: interaction.guild.id, type, questions, ts: Date.now() });
+    pendingCombined.set(interaction.user.id, { botId, guildId: interaction.guild.id, type, questions, cfgOverride, ts: Date.now() });
     await interaction.showModal(combinedModal(botId, type, questions));
     return;
   }
   // Cas 2 : questions seules (raison désactivée, ou déjà 5 questions → la raison est incluse via la description du type)
   if (questions.length) {
-    pendingQuestionnaires.set(interaction.user.id, { botId, guildId: interaction.guild.id, type, ts: Date.now() });
+    pendingQuestionnaires.set(interaction.user.id, { botId, guildId: interaction.guild.id, type, cfgOverride, ts: Date.now() });
     await interaction.showModal(questionnaireModal(botId, type));
     return;
   }
   // Cas 3 : raison seule
   if (wantReason) {
-    pendingReasons.set(interaction.user.id, { botId, guildId: interaction.guild.id, type, answers, ts: Date.now() });
+    pendingReasons.set(interaction.user.id, { botId, guildId: interaction.guild.id, type, answers, cfgOverride, ts: Date.now() });
     await interaction.showModal(reasonModal(
       botId,
       `bd-treason:${botId}`,
@@ -1244,7 +1285,7 @@ async function askReason(botId, interaction, type, answers = [], skipQuestionnai
   }
   // Cas 4 : ouverture directe (ni questions ni raison)
   try { await interaction.deferReply({ ephemeral: true }); } catch {}
-  await openTicket(botId, interaction, type, '', answers);
+  await openTicket(botId, interaction, type, '', answers, cfgOverride);
 }
 
 async function submitCombined(botId, interaction) {
@@ -1260,7 +1301,7 @@ async function submitCombined(botId, interaction) {
   const reason = (interaction.fields.getTextInputValue('reason') || '').trim();
   // Réponse différée AVANT l'ouverture (le salon peut prendre quelques secondes)
   try { await interaction.deferReply({ ephemeral: true }); } catch {}
-  await openTicket(botId, interaction, pending.type, reason, answers);
+  await openTicket(botId, interaction, pending.type, reason, answers, pending.cfgOverride || null);
 }
 
 async function submitQuestionnaire(botId, interaction) {
@@ -1277,7 +1318,7 @@ async function submitQuestionnaire(botId, interaction) {
   // ⚠️ Plus JAMAIS de modale après une modale (interdit par Discord) :
   // la raison est soit déjà intégrée (modale combinée), soit sans objet ici.
   try { await interaction.deferReply({ ephemeral: true }); } catch {}
-  await openTicket(botId, interaction, pending.type, '', answers);
+  await openTicket(botId, interaction, pending.type, '', answers, pending.cfgOverride || null);
 }
 
 async function submitReason(botId, interaction) {
@@ -1290,7 +1331,7 @@ async function submitReason(botId, interaction) {
   // Réponse différée : l'ouverture du salon peut prendre quelques secondes,
   // la confirmation (avec le lien du ticket) arrive ensuite proprement.
   try { await interaction.deferReply({ ephemeral: true }); } catch {}
-  await openTicket(botId, interaction, pending.type, reason, pending.answers || []);
+  await openTicket(botId, interaction, pending.type, reason, pending.answers || [], pending.cfgOverride || null);
 }
 
 async function handleTicketButton(botId, interaction) {
@@ -1298,10 +1339,29 @@ async function handleTicketButton(botId, interaction) {
 }
 
 async function handleTicketTypeSelect(botId, interaction) {
-  const cfg = store.tickets.get(botId, interaction.guild.id) || {};
+  const cid = String(interaction.customId || '');
+  const extraM = cid.match(/^bd-ttype:\d+:x(\d+)$/);
+  const main = store.tickets.get(botId, interaction.guild.id) || {};
+  let types = normalizeTypes(main);
+  let cfgOverride = null;
+  if (extraM) {
+    const extra = store.ticketMenus.get(Number(extraM[1]));
+    if (!extra || String(extra.bot_id) !== String(botId) || String(extra.guild_id) !== String(interaction.guild.id)) {
+      try { await interaction.reply({ content: '❓ Ce panneau n\'existe plus.', ephemeral: true }); } catch {}
+      return;
+    }
+    types = Array.isArray(extra.types) ? extra.types : [];
+    cfgOverride = {
+      ...main,
+      types: extra.types,
+      menu_category: extra.category || '',
+      menu_message: extra.message || '',
+      panel_texts: extra.panel_texts || '',
+    };
+  }
   const label = interaction.values[0];
-  const type = normalizeTypes(cfg).find((t) => t.label === label) || { label, questions: [] };
-  await askReason(botId, interaction, type);
+  const type = types.find((t) => t.label === label) || { label, questions: [] };
+  await askReason(botId, interaction, type, [], false, cfgOverride);
 }
 
 // ---------- Transcription + MP ----------
@@ -3040,7 +3100,7 @@ async function buildTranscriptFromChannel(botId, channel, guild, extraLines = []
 
 module.exports = {
   normDecorName, findCategoryFuzzy, findCategoryRef,
-  dispatchPanels, sendTicketPanel, sendRoleMenu, roleMenuPayload, findChannel, findChannelInGuild, bumpTicketStats,
+  dispatchPanels, sendTicketPanel, sendExtraTicketMenu, sendRoleMenu, roleMenuPayload, findChannel, findChannelInGuild, bumpTicketStats,
   buildTicketPanel, pruneOldPanels, effectiveTextsRaw,
   resolveRole, roleKey, uniqueRoleRefs, staffRoleRefsForConfig, parseTypes, isStaff, staffForTicket, openTicket, safeEmoji,
   parentIdOf, panelParentOf, panelChannelOf, repairTicketChannel,

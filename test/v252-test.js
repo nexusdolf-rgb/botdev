@@ -66,9 +66,9 @@ check('sous 700 px, tout le monde reste en mobile (fenêtre minuscule comprise)'
 console.log('— 4. Version —');
 const index = racine('public/index.html');
 const sw = racine('public/sw.js');
-check('index.html : ?v=327 référencé 7 fois', (index.match(/\?v=327/g) || []).length === 7,
-  String((index.match(/\?v=327/g) || []).length));
-check('sw.js : cache « botdev-v327 »', sw.includes("const CACHE = 'botdev-v327';"));
+check('index.html : ?v=328 référencé 7 fois', (index.match(/\?v=328/g) || []).length === 7,
+  String((index.match(/\?v=328/g) || []).length));
+check('sw.js : cache « botdev-v328 »', sw.includes("const CACHE = 'botdev-v328';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v252 — ${ok} vérifications OK : plus aucun PC en mobile, rail d'icônes entre 701 et 900 px.`);

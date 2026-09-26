@@ -792,6 +792,7 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
     invite_rewards: require('./discord/invites').cfgOf(guildId),
     events: { defs: EVENT_DEFS, state: eventsState(bot.id, guildId) },
     role_menus: store.roleMenus.all(bot.id, guildId),
+    ticket_menus: store.ticketMenus.all(bot.id, guildId),
     xp_roles: store.xpRoles.all(bot.id, guildId),
     profile: store.botProfiles.get(bot.id, guildId) || { name: '', avatar_url: '', banner_url: '', bio: '', color: '#e07a5f' },
     profiles_extra: store.profileAliases.list(bot.id, guildId),
@@ -2558,6 +2559,90 @@ router.post('/bots/:id/tickets/send', requireAuth, async (req, res) => {
   }
 });
 
+const TICKET_MENUS_MAX = 10;
+
+router.post('/bots/:id/ticket-menus', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  const b = req.body || {};
+  const guild_id = String(b.guild_id || '');
+  if (!guild_id) return res.status(400).json({ error: 'guild_id requis' });
+  if (!(await userCanManageGuild(req, guild_id))) return res.status(403).json({ error: 'Permission refusée.' });
+  if (store.ticketMenus.count(bot.id, guild_id) >= TICKET_MENUS_MAX) {
+    return res.status(400).json({ error: 'Maximum 10 menus supplémentaires. Supprimez-en un pour en créer un autre.' });
+  }
+  const types = Array.isArray(b.types) ? b.types : [];
+  if (!types.filter((t) => t && String(t.label || '').trim()).length) {
+    return res.status(400).json({ error: 'Ajoutez au moins un type à ce menu.' });
+  }
+  const id = store.ticketMenus.create({
+    bot_id: bot.id,
+    guild_id,
+    name: b.name,
+    channel: b.channel,
+    message: b.message,
+    category: b.category,
+    panel_texts: b.panel_texts,
+    types,
+  });
+  res.json({ id, menu: store.ticketMenus.get(id) });
+});
+
+router.put('/ticket-menus/:id', requireAuth, async (req, res) => {
+  const menu = store.ticketMenus.get(Number(req.params.id));
+  if (!menu) return res.status(404).json({ error: 'Menu introuvable' });
+  const bot = store.bots.get(menu.bot_id);
+  if (!bot) return res.status(404).json({ error: 'Menu introuvable' });
+  if (!(await userCanManageGuild(req, menu.guild_id))) return res.status(403).json({ error: 'Permission refusée.' });
+  const b = req.body || {};
+  const fields = {};
+  if (b.name !== undefined) fields.name = b.name;
+  if (b.channel !== undefined) fields.channel = b.channel;
+  if (b.message !== undefined) fields.message = b.message;
+  if (b.category !== undefined) fields.category = b.category;
+  if (b.panel_texts !== undefined) fields.panel_texts = b.panel_texts;
+  if (b.types !== undefined) {
+    const types = Array.isArray(b.types) ? b.types : [];
+    if (!types.filter((t) => t && String(t.label || '').trim()).length) {
+      return res.status(400).json({ error: 'Ajoutez au moins un type à ce menu.' });
+    }
+    fields.types = types;
+  }
+  store.ticketMenus.update(menu.id, fields);
+  res.json({ ok: true, menu: store.ticketMenus.get(menu.id) });
+});
+
+router.delete('/ticket-menus/:id', requireAuth, async (req, res) => {
+  const menu = store.ticketMenus.get(Number(req.params.id));
+  if (!menu) return res.status(404).json({ error: 'Menu introuvable' });
+  const bot = store.bots.get(menu.bot_id);
+  if (!bot) return res.status(404).json({ error: 'Menu introuvable' });
+  if (!(await userCanManageGuild(req, menu.guild_id))) return res.status(403).json({ error: 'Permission refusée.' });
+  store.ticketMenus.remove(menu.id);
+  res.json({ ok: true });
+});
+
+router.post('/ticket-menus/:id/send', requireAuth, async (req, res) => {
+  const menu = store.ticketMenus.get(Number(req.params.id));
+  if (!menu) return res.status(404).json({ error: 'Menu introuvable' });
+  const bot = store.bots.get(menu.bot_id);
+  if (!bot) return res.status(404).json({ error: 'Menu introuvable' });
+  if (!(await userCanManageGuild(req, menu.guild_id))) return res.status(403).json({ error: 'Permission refusée.' });
+  if (!botManager.isOnline(bot.id)) return res.status(400).json({ error: 'Démarre le bot avant d\'envoyer un panneau.' });
+  if (!menu.channel) return res.status(400).json({ error: 'Renseignez d\'abord le salon de ce menu.' });
+  const entry = botManager.clients.get(bot.id);
+  const guild = entry.client.guilds.cache.get(menu.guild_id);
+  if (!guild) return res.status(400).json({ error: 'Le bot n\'est pas sur ce serveur.' });
+  try {
+    const channel = panels.findChannelInGuild(guild, menu.channel);
+    if (!channel) return res.status(400).json({ error: 'Salon introuvable. Vérifie le salon (mention #salon ou nom).' });
+    await panels.sendExtraTicketMenu(bot.id, menu.guild_id, entry.client, menu, channel);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ error: String(e.message || e).slice(0, 200) });
+  }
+});
+
 // 💬 Message privé envoyé après la fermeture d'un ticket (v198) —
 // vide = message par défaut du bot (avec transcription). Image = par défaut sans image.
 router.put('/bots/:id/guilds/:guildId/tickets/dm', requireAuth, async (req, res) => {
@@ -3476,7 +3561,7 @@ const BOT_DATA_TABLES = [
   'marriages', 'birthdays', 'reminders', 'cmd_stats', 'scheduled_messages',
   'custom_announcements', 'message_stats', 'join_stats', 'shop_purchases',
   'applications', 'voicetemp', 'starboard_posts', 'invite_uses', 'invite_joins',
-  'live_socials', 'ticket_log_msgs', 'advanced_ticket_panels',
+  'live_socials', 'ticket_log_msgs', 'advanced_ticket_panels', 'ticket_menus',
   'advanced_ticket_channels', 'activity',
 ];
 

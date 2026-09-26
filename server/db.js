@@ -1492,6 +1492,101 @@ const tickets = {
   },
 };
 
+// v328 — panneaux MENU extra (classiques), chacun avec ses types.
+// Indépendants du panneau menu principal et du système avancé.
+try { db.exec(`CREATE TABLE IF NOT EXISTS ticket_menus (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  name TEXT DEFAULT 'Menu de tickets',
+  channel TEXT DEFAULT '',
+  message TEXT DEFAULT '',
+  category TEXT DEFAULT '',
+  panel_texts TEXT DEFAULT '',
+  types TEXT DEFAULT '[]',
+  message_id TEXT DEFAULT '',
+  message_channel TEXT DEFAULT '',
+  created_at TEXT DEFAULT (datetime('now'))
+)`); } catch (e) {}
+
+function cleanMenuTypes(types) {
+  return (Array.isArray(types) ? types : [])
+    .map((t) => {
+      const roles = Array.isArray(t.staff_roles)
+        ? t.staff_roles.map((r) => String(r).trim()).filter(Boolean).slice(0, 10)
+        : (t.staff_role ? [String(t.staff_role).trim()] : []);
+      return {
+        label: String(t.label || '').slice(0, 100),
+        emoji: String(t.emoji || '').slice(0, 100),
+        description: String(t.description || '').slice(0, 100),
+        category: String(t.category || '').slice(0, 100),
+        questions: (Array.isArray(t.questions) ? t.questions : []).map((q) => String(q).slice(0, 45)).filter(Boolean).slice(0, 5),
+        staff_roles: roles,
+      };
+    })
+    .filter((t) => t.label)
+    .slice(0, 25);
+}
+
+function parseMenuTexts(raw) {
+  let o = {};
+  try { o = typeof raw === 'string' ? (JSON.parse(raw || '{}') || {}) : (raw || {}); } catch { o = {}; }
+  if (!o || typeof o !== 'object' || Array.isArray(o)) o = {};
+  return JSON.stringify({
+    title: String(o.title || '').slice(0, 100),
+    welcome: String(o.welcome || '').slice(0, 200),
+    menu_placeholder: String(o.menu_placeholder || '').slice(0, 100),
+    info_title: String(o.info_title || '').slice(0, 100),
+    rules: String(o.rules || '').slice(0, 1000),
+    patience: String(o.patience || '').slice(0, 300),
+  });
+}
+
+function rowToTicketMenu(r) {
+  if (!r) return null;
+  let types = [];
+  try { types = JSON.parse(r.types || '[]'); } catch { types = []; }
+  return { ...r, types: Array.isArray(types) ? types : [], panel_texts: r.panel_texts || '' };
+}
+
+const ticketMenus = {
+  all: (botId, guildId) => db.prepare('SELECT * FROM ticket_menus WHERE bot_id = ? AND guild_id = ? ORDER BY id ASC').all(botId, guildId).map(rowToTicketMenu),
+  get: (id) => rowToTicketMenu(db.prepare('SELECT * FROM ticket_menus WHERE id = ?').get(Number(id))),
+  count: (botId, guildId) => {
+    const r = db.prepare('SELECT COUNT(*) AS n FROM ticket_menus WHERE bot_id = ? AND guild_id = ?').get(botId, guildId);
+    return r ? Number(r.n) : 0;
+  },
+  create: (data) => {
+    const info = db.prepare(`INSERT INTO ticket_menus (bot_id, guild_id, name, channel, message, category, panel_texts, types)
+      VALUES (@bot_id, @guild_id, @name, @channel, @message, @category, @panel_texts, @types)`).run({
+      bot_id: data.bot_id,
+      guild_id: data.guild_id,
+      name: String(data.name || 'Menu de tickets').slice(0, 80),
+      channel: String(data.channel || '').slice(0, 100),
+      message: String(data.message || '').slice(0, 1900),
+      category: String(data.category || '').slice(0, 100),
+      panel_texts: parseMenuTexts(data.panel_texts),
+      types: JSON.stringify(cleanMenuTypes(data.types)),
+    });
+    return info.lastInsertRowid;
+  },
+  update: (id, fields) => {
+    const allowed = ['name', 'channel', 'message', 'category', 'panel_texts', 'types'];
+    const sets = []; const vals = [];
+    for (const k of allowed) {
+      if (!(k in fields)) continue;
+      if (k === 'types') { sets.push('types = ?'); vals.push(JSON.stringify(cleanMenuTypes(fields.types))); }
+      else if (k === 'panel_texts') { sets.push('panel_texts = ?'); vals.push(parseMenuTexts(fields.panel_texts)); }
+      else { sets.push(`${k} = ?`); vals.push(String(fields[k] == null ? '' : fields[k]).slice(0, k === 'message' ? 1900 : 100)); }
+    }
+    if (!sets.length) return;
+    vals.push(id);
+    db.prepare(`UPDATE ticket_menus SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
+  },
+  setMessage: (id, messageId, channelId) => db.prepare('UPDATE ticket_menus SET message_id = ?, message_channel = ? WHERE id = ?').run(String(messageId || ''), String(channelId || ''), id),
+  remove: (id) => db.prepare('DELETE FROM ticket_menus WHERE id = ?').run(id),
+};
+
 // ---------------------- 🎨 Tickets personnalisés (nouveau système) ----------------------
 const advancedTickets = {
   get: (botId, guildId) => {
@@ -2433,4 +2528,4 @@ const antinuke = {
   },
 };
 
-module.exports = { db, antinuke, embedTemplates, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, reports, warnings, automodWarningMessages, roleMenus, tickets, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, modmail, closedTickets, botProfiles, profileAliases, profileState, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodStrikes, automodTempBans, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, afk, guildEvents, quizScores, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories, quizSets };
+module.exports = { db, antinuke, embedTemplates, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, reports, warnings, automodWarningMessages, roleMenus, tickets, ticketMenus, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, modmail, closedTickets, botProfiles, profileAliases, profileState, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodStrikes, automodTempBans, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, afk, guildEvents, quizScores, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories, quizSets };
