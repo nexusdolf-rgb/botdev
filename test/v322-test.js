@@ -19,8 +19,8 @@ const iT = dash.indexOf('Dashboard.renderers.tickets');
 const chunk = dash.slice(iT, dash.indexOf('Dashboard.renderers.welcome', iT));
 
 console.log('— 1. Pins de version v322 —');
-check('index.html : ?v=330 ×7', (html.match(/\?v=330/g) || []).length === 7);
-check('sw.js : cache botdev-v330', sw.includes("const CACHE = 'botdev-v330';"));
+check('index.html : ?v=331 ×7', (html.match(/\?v=331/g) || []).length === 7);
+check('sw.js : cache botdev-v331', sw.includes("const CACHE = 'botdev-v331';"));
 check('index.html : plus aucune ?v=321', !html.includes('?v=321'));
 
 console.log('— 2. Noms compréhensibles —');
@@ -36,8 +36,8 @@ check('le système avancé dit clairement que ce n’est PAS le menu',
 console.log('— 3. Guide + ordre —');
 check('guide « Par où commencer ? »', chunk.includes('Par où commencer ?') && chunk.includes('ticket-guide'));
 check('le guide oppose classiques et avancés', chunk.includes('Tickets classiques') && chunk.includes('Tickets avancés'));
-check('ordre DOM : bouton, menu, extras, types, textes repliés, puis avancé',
-  chunk.includes('[c, cm, cxm, c2, ctpF, ctmenuF, cdmF, croomF, c3]'));
+check('ordre DOM : bouton, menu, puis avancé (le reste est dans les cartes)',
+  chunk.includes('[c, cm, c3]'));
 check('CSS du guide', css.includes('.ticket-guide .tg-sys') && css.includes('.tg-box-alt'));
 
 console.log('— 4. Rien de cassé (IDs / APIs) —');

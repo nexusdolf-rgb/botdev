@@ -1065,16 +1065,23 @@ html.hx-light .sk-ico, html.hx-light .sk-line, html.hx-light .sk-stat {
   .ticket-guide .tg-sys { grid-template-columns: 1fr; }
 }
 
-/* v330 — Tickets classiques : moins de texte, blocs repliés */
+/* v330/v331 — Tickets classiques : tout dans la carte, comme l’avancé */
 .tk-classic-card > .card-head h3 { font-size: 16.5px; }
 .tk-classic-card > .card-head .desc { max-width: 640px; margin-bottom: 10px; }
+.tk-inner {
+  margin-top: 12px;
+  border: 1px solid var(--d-border);
+  border-radius: 14px;
+  background: var(--d-card2, rgba(255,255,255,.03));
+  overflow: hidden;
+}
 .tk-fold { padding: 0; }
 .tk-fold-sum {
   list-style: none;
   cursor: pointer;
-  padding: 16px 22px;
+  padding: 12px 14px;
   font-weight: 700;
-  font-size: 14.5px;
+  font-size: 14px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1091,7 +1098,7 @@ html.hx-light .sk-ico, html.hx-light .sk-line, html.hx-light .sk-stat {
 }
 .tk-fold[open] .tk-fold-sum::after { content: '▾'; }
 .tk-fold[open] .tk-fold-sum { border-bottom: 1px solid var(--d-border); }
-.tk-fold-body { padding: 14px 22px 18px; }
+.tk-fold-body { padding: 12px 14px 16px; }
 .ticket-guide .tg-box small { margin-bottom: 0; }
 
 /* Constructeur du nouveau système de tickets */

@@ -19,8 +19,8 @@ const iT = dash.indexOf('Dashboard.renderers.tickets');
 const chunk = dash.slice(iT, dash.indexOf('Dashboard.renderers.welcome', iT));
 
 console.log('— 1. Pins de version v330 —');
-check('index.html : ?v=330 ×7', (html.match(/\?v=330/g) || []).length === 7);
-check('sw.js : cache botdev-v330', sw.includes("const CACHE = 'botdev-v330';"));
+check('index.html : ?v=331 ×7', (html.match(/\?v=331/g) || []).length === 7);
+check('sw.js : cache botdev-v331', sw.includes("const CACHE = 'botdev-v331';"));
 check('index.html : plus aucune ?v=329', !html.includes('?v=329'));
 
 console.log('— 2. Page plus courte, même clarté —');
@@ -28,14 +28,14 @@ check('en-tête court', chunk.includes('Bouton, liste, ou le système avancé en
 check('plus de pavé « Deux panneaux classiques »', !chunk.includes('Deux panneaux classiques (bouton ou liste)'));
 check('plus de note « Ceci est le panneau à UN bouton »', !chunk.includes('Ceci est le panneau à UN bouton'));
 check('cartes classiques compactes', chunk.includes('tk-classic-card'));
-check('textes optionnels repliés', chunk.includes('tkFold') && chunk.includes('class="dash-card tk-fold"') && chunk.includes('tk-fold-sum'));
+check('textes optionnels repliés', chunk.includes('tkFold') && chunk.includes('tk-fold') && chunk.includes('tk-fold-sum'));
 check('CSS des blocs repliés', css.includes('.tk-fold-sum') && css.includes('.tk-fold-body'));
 check('guide 2 systèmes toujours là', chunk.includes('Par où commencer ?') && chunk.includes('Tickets classiques') && chunk.includes('Tickets avancés'));
 check('le système avancé dit encore que ce n’est PAS le menu', chunk.includes('PAS le panneau avec menu'));
 
 console.log('— 3. Ordre + IDs / APIs intacts —');
-check('ordre : bouton, menu, extras, types, textes, puis avancé',
-  chunk.includes('[c, cm, cxm, c2, ctpF, ctmenuF, cdmF, croomF, c3]'));
+check('ordre : bouton, menu, puis avancé',
+  chunk.includes('[c, cm, c3]'));
 for (const id of ['t-send', 'tm-send', 'adv-send', 'tp-save', 'mp-save', 't-channel', 't-role', 'adv-mode']) {
   check('id #' + id + ' toujours là', chunk.includes('id="' + id + '"') || chunk.includes("id=\\\"" + id + "\\\"") || chunk.includes('#' + id));
 }

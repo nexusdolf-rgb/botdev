@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v330**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v331**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -962,6 +962,10 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v331 (26/09 — TICKETS CLASSIQUES : TOUT DANS LA CARTE)** :
+  comme le système avancé : rien en dessous. Textes, types, MP et
+  salon du ticket sont *dans* le panneau bouton ; textes + autres
+  menus *dans* le panneau menu. IDs/APIs inchangés. test/v331-test.js.
 - **v330 (26/09 — TICKETS CLASSIQUES : MOINS DE TEXTE)** :
   page Tickets seulement. Les cartes bouton / menu / extras / types
   sont rangées comme le système avancé : descriptions courtes, textes
@@ -1518,8 +1522,11 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 23/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v330** — page Tickets : panneaux classiques
-  rangés comme le système avancé (moins de texte). `test/v330-test.js`.
+- Dernière version : **v331** — page Tickets : chaque système a
+  tout *dans* sa carte (rien en dessous), comme l’avancé.
+  `test/v331-test.js`.
+- **v330** — page Tickets : moins de texte, blocs repliés.
+  `test/v330-test.js`.
 - **v329** — rôles par réaction : titre du message
   Discord + emoji du titre modifiables. `test/v329-test.js`.
 - **v328** — tickets : on peut ajouter d’autres

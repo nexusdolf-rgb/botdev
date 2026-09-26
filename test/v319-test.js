@@ -18,8 +18,8 @@ const app = racine('public/js/app.js');
 const css = racine('public/css/style.css');
 
 console.log('— 1. Pins de version v319 —');
-check('index.html : ?v=330 ×7', (html.match(/\?v=330/g) || []).length === 7);
-check('sw.js : cache botdev-v330', sw.includes("const CACHE = 'botdev-v330';"));
+check('index.html : ?v=331 ×7', (html.match(/\?v=331/g) || []).length === 7);
+check('sw.js : cache botdev-v331', sw.includes("const CACHE = 'botdev-v331';"));
 check('index.html : plus aucune ?v=318', !html.includes('?v=318'));
 
 console.log('— 2. Page de connexion : profil Optimus, pas 🤖 orange —');

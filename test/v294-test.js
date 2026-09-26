@@ -54,8 +54,8 @@ check('moteur d\'isolation intact', ver.includes('async function applyIsolation'
 
 console.log('— 6. Bump v294 —');
 const index = racine('public/index.html');
-check('index.html : ?v=330 référencé 7 fois', (index.match(/\?v=330/g) || []).length === 7,
-  String((index.match(/\?v=330/g) || []).length));
-check('sw.js : cache « botdev-v330 »', racine('public/sw.js').includes("const CACHE = 'botdev-v330';"));
+check('index.html : ?v=331 référencé 7 fois', (index.match(/\?v=331/g) || []).length === 7,
+  String((index.match(/\?v=331/g) || []).length));
+check('sw.js : cache « botdev-v331 »', racine('public/sw.js').includes("const CACHE = 'botdev-v331';"));
 
 console.log(`\n🎉 v294 : ${ok} vérifications passées`);

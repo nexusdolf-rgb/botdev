@@ -2102,7 +2102,7 @@ Dashboard.renderers.tickets = async (content, data) => {
   const reqReason = !(t.require_reason === 0 || t.require_reason === false);
 
   const c = Dashboard.card(root, '🔘 Panneau à un bouton', 'Un bouton. Un clic ouvre un ticket.');
-  c.classList.add('tk-classic-card');
+  c.classList.add('tk-classic-card', 'adv-builder-card');
 
   // 📊 État actuel (data-status pour le retrouver après innerHTML +=)
   c.appendChild(App.el(`<div data-status style="margin-bottom:12px"></div>`));
@@ -2165,7 +2165,7 @@ Dashboard.renderers.tickets = async (content, data) => {
   // 🗂️ Carte PANNEAU MENU DÉROULANT — indépendante du panneau bouton :
   // son salon, son message, son 💾 et son 📨.
   const cm = Dashboard.card(root, '📋 Panneau avec menu (liste)', 'Le membre choisit le type dans une liste.');
-  cm.classList.add('tk-classic-card');
+  cm.classList.add('tk-classic-card', 'adv-builder-card');
   const menuChanOpts = ['<option value="">— Même salon que le panneau bouton —</option>']
     .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(t.menu_channel, ch) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`));
   if (t.menu_channel && !textChannels.some((ch) => Dashboard.discordRefMatches(t.menu_channel, ch))) {
@@ -2849,8 +2849,10 @@ Dashboard.renderers.tickets = async (content, data) => {
   };
   cxm.appendChild(xmNew);
 
-  const tkFold = (card, label) => {
-    const d = App.el('<details class="dash-card tk-fold" data-dash-card></details>');
+  // v331 — comme le système avancé : tout ce qui sert à un panneau
+  // est DANS sa carte, rien en dessous.
+  const tkFold = (host, card, label) => {
+    const d = App.el('<details class="tk-inner tk-fold"></details>');
     d.appendChild(App.el(`<summary class="tk-fold-sum">${label}</summary>`));
     const body = App.el('<div class="tk-fold-body"></div>');
     Array.from(card.childNodes).forEach((n) => {
@@ -2858,14 +2860,19 @@ Dashboard.renderers.tickets = async (content, data) => {
       body.appendChild(n);
     });
     d.appendChild(body);
-    card.replaceWith(d);
+    card.remove();
+    const previewEl = host.querySelector('#t-preview');
+    if (previewEl) host.insertBefore(d, previewEl);
+    else host.appendChild(d);
     return d;
   };
-  const ctpF = tkFold(ctp, '✏️ Textes du panneau bouton');
-  const ctmenuF = tkFold(ctmenu, '✏️ Textes du panneau menu');
-  const cdmF = tkFold(cdm, '💬 Message privé après fermeture');
-  const croomF = tkFold(croom, '🏠 Message dans le salon du ticket');
-  [c, cm, cxm, c2, ctpF, ctmenuF, cdmF, croomF, c3].forEach((el) => root.appendChild(el));
+  tkFold(c, ctp, '✏️ Textes du panneau');
+  tkFold(c, c2, '🗂️ Types de tickets');
+  tkFold(c, cdm, '💬 Message privé après fermeture');
+  tkFold(c, croom, '🏠 Message dans le salon du ticket');
+  tkFold(cm, ctmenu, '✏️ Textes du panneau');
+  tkFold(cm, cxm, '📋 Autres panneaux menu');
+  [c, cm, c3].forEach((el) => root.appendChild(el));
   const ticketStats = root.querySelector('.dash-stats');
   if (ticketStats) ticketStats.insertAdjacentElement('afterend', ticketGuide);
   else root.insertBefore(ticketGuide, c);
