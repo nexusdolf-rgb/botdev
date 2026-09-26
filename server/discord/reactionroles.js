@@ -12,6 +12,15 @@ const store = require('../db');
 // avant, un plafond à 10 coupait la liste en silence (« la moitié a disparu »).
 const MAX_SETUPS = 20;
 const MAX_MAPPINGS = 20;
+const DEFAULT_TITLE = 'Rôles par réaction emoji';
+const DEFAULT_TITLE_EMOJI = '🎭';
+
+function panelTitle(setup) {
+  const emoji = String(setup && setup.title_emoji != null ? setup.title_emoji : DEFAULT_TITLE_EMOJI).trim().slice(0, 32);
+  const title = String(setup && setup.title != null && String(setup.title).trim() ? setup.title : DEFAULT_TITLE).trim().slice(0, 200);
+  const full = [emoji, title].filter(Boolean).join(' ').trim();
+  return (full || `${DEFAULT_TITLE_EMOJI} ${DEFAULT_TITLE}`).slice(0, 256);
+}
 
 function allOf(guildId) {
   let list = [];
@@ -49,6 +58,8 @@ function saveAll(guildId, list) {
     message_id: String(s.message_id || ''),
     mode: s.mode === 'add-only' ? 'add-only' : 'toggle',
     content: String(s.content || '').slice(0, 1900),
+    title: String(s.title || '').trim().slice(0, 200),
+    title_emoji: String(s.title_emoji != null ? s.title_emoji : DEFAULT_TITLE_EMOJI).trim().slice(0, 32),
     mappings: (Array.isArray(s.mappings) ? s.mappings : []).slice(0, MAX_MAPPINGS).map((m) => ({
       emoji: normEmoji(m.emoji).slice(0, 64),
       role: String(m.role || ''),
@@ -94,7 +105,7 @@ async function sendSetup(botId, guild, setup) {
   const lines = setup.mappings.map((m) => `${m.emoji}  →  <@&${m.role}>${m.label ? ` — ${m.label}` : ''}`).join('\n');
   const msg = await channel.send({
     embeds: [{
-      title: '🎭 Choisissez vos rôles',
+      title: panelTitle(setup),
       description: `${setup.content ? setup.content + '\n\n' : ''}Réagissez pour recevoir ou retirer un rôle :\n${lines}`,
       color: 0xe07a5f,
     }],
@@ -105,4 +116,4 @@ async function sendSetup(botId, guild, setup) {
   return msg.id;
 }
 
-module.exports = { allOf, saveAll, setupOfMessage, onReaction, sendSetup, normEmoji, MAX_MAPPINGS, MAX_SETUPS };
+module.exports = { allOf, saveAll, setupOfMessage, onReaction, sendSetup, normEmoji, panelTitle, MAX_MAPPINGS, MAX_SETUPS, DEFAULT_TITLE, DEFAULT_TITLE_EMOJI };

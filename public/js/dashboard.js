@@ -4752,6 +4752,11 @@ Dashboard.renderers.roles = async (content, data) => {
   cRR.innerHTML += `<div id="rr-list" style="margin-bottom:12px"></div>
     <label class="dash-label">Salon du message de rôles</label>
     <select class="dash-select" id="rr-channel">${(data.channels || []).filter((ch) => !ch.voice && !ch.category).map((ch) => `<option value="${ch.id}"># ${App.escapeHtml(ch.name)}</option>`).join('')}</select>
+    <label class="dash-label">Emoji du titre</label>
+    <input class="dash-input" id="rr-title-emoji" maxlength="32" value="🎭" placeholder="🎭" style="width:70px;text-align:center" />
+    <label class="dash-label">Titre du message</label>
+    <input class="dash-input" id="rr-title" maxlength="200" value="Rôles par réaction emoji" placeholder="Rôles par réaction emoji" style="max-width:420px" />
+    <div class="desc" style="margin:-4px 0 8px">C’est le titre affiché en haut du message Discord. Vide = texte par défaut.</div>
     <label class="dash-label">Texte d'introduction (optionnel)</label>
     <input class="dash-input" id="rr-content" placeholder="Choisissez vos rôles ci-dessous !" style="max-width:420px" />
     <label class="dash-label">Comportement</label>
@@ -4796,7 +4801,7 @@ Dashboard.renderers.roles = async (content, data) => {
     if (maps.length > RR_MAX) return App.toast('Discord n’accepte que 20 réactions par message. Créez un second message pour les autres rôles.', 'error');
     const emojis = maps.map((m) => m.emoji);
     if (new Set(emojis).size !== emojis.length) return App.toast('Chaque emoji ne peut être utilisé qu’une fois.', 'error');
-    const setup = { id: 'rr' + Date.now(), channel: cRR.querySelector('#rr-channel').value, content: cRR.querySelector('#rr-content').value, mode: cRR.querySelector('#rr-mode').value, mappings: maps };
+    const setup = { id: 'rr' + Date.now(), channel: cRR.querySelector('#rr-channel').value, content: cRR.querySelector('#rr-content').value, title: cRR.querySelector('#rr-title').value.trim(), title_emoji: cRR.querySelector('#rr-title-emoji').value.trim(), mode: cRR.querySelector('#rr-mode').value, mappings: maps };
     try {
       const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/reaction_roles/send`, { method: 'POST', body: { setup } });
       App.toast(r && r.ok === false ? `⚠️ ${r.error || 'Envoi impossible.'}` : '🎭 Message de rôles envoyé : les réactions sont posées.');

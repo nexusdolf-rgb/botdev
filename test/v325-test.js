@@ -19,8 +19,8 @@ const iDd = js.indexOf('Dashboard.dropdownMenu =');
 const chunk = js.slice(iDd, js.indexOf('Dashboard.enhanceSelect =', iDd));
 
 console.log('— 1. Pins de version v325 —');
-check('index.html : ?v=328 ×7', (html.match(/\?v=328/g) || []).length === 7);
-check('sw.js : cache botdev-v328', sw.includes("const CACHE = 'botdev-v328';"));
+check('index.html : ?v=329 ×7', (html.match(/\?v=329/g) || []).length === 7);
+check('sw.js : cache botdev-v329', sw.includes("const CACHE = 'botdev-v329';"));
 check('index.html : plus aucune ?v=324', !html.includes('?v=324'));
 
 console.log('— 2. Le champ de recherche n’est plus recréé —');
