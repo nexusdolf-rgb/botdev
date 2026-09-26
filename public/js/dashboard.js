@@ -231,6 +231,36 @@ Dashboard.ddCloseAll = () => {
   document.querySelectorAll('[aria-expanded="true"][data-dd-trigger]').forEach((t) => t.setAttribute('aria-expanded', 'false'));
 };
 
+// v327 — recherche « lettres simples » : un salon «【🌸】général » ou un rôle
+// « 『STAFF』 » se trouve en tapant « general » / « staff ». On ignore
+// crochets japonais, emojis, lettres décoratives (unicode), accents.
+Dashboard.foldSearch = (s) => {
+  let t = String(s == null ? '' : s);
+  try { t = t.normalize('NFKC'); } catch { /* navigateurs très anciens */ }
+  try { t = t.normalize('NFD').replace(/\p{M}+/gu, ''); } catch { /* pas de unicode property */ }
+  t = t.replace(/[\u200B-\u200F\u202A-\u202E\u2060\uFEFF\u00AD]/g, '');
+  try {
+    t = t.replace(/\p{Extended_Pictographic}/gu, ' ');
+    t = t.replace(/[\p{P}\p{S}\p{C}]+/gu, ' ');
+  } catch {
+    t = t.replace(/[^a-zA-Z0-9\u00C0-\u024F\s]+/g, ' ');
+  }
+  return t.replace(/\s+/g, ' ').trim().toLowerCase();
+};
+Dashboard.searchMatch = (query, ...fields) => {
+  const q = String(query || '').trim();
+  if (!q) return true;
+  const hay = fields.map((f) => String(f || '')).join(' ');
+  if (hay.toLowerCase().includes(q.toLowerCase())) return true;
+  const qf = Dashboard.foldSearch(q);
+  if (!qf) return false;
+  const hf = Dashboard.foldSearch(hay);
+  if (hf.includes(qf)) return true;
+  const qc = qf.replace(/\s+/g, '');
+  const hc = hf.replace(/\s+/g, '');
+  return qc.length >= 1 && hc.includes(qc);
+};
+
 // dropdownMenu({ trigger, getOptions, onSelect, searchable, minPanelWidth })
 //   trigger    : élément cliquable qui ouvre le menu (bouton, carte…)
 //   getOptions : () => [{ value, label, icon, img, fallback, hint, disabled, selected }]
@@ -311,7 +341,7 @@ Dashboard.dropdownMenu = ({ trigger, getOptions, onSelect, searchable = false, m
     }
     const q = String((input && input.value) || filter || '').trim().toLowerCase();
     let opts = getOptions() || [];
-    if (q) opts = opts.filter((o) => String(o.label || '').toLowerCase().includes(q) || String(o.hint || '').toLowerCase().includes(q));
+    if (q) opts = opts.filter((o) => Dashboard.searchMatch(q, o.label, o.hint));
     let list = panel.querySelector('.dd-list');
     if (!list) {
       list = App.el('<div class="dd-list"></div>');

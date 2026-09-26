@@ -85,9 +85,9 @@ const check = (nom, cond, detail) => {
   console.log('— 5. Version —');
   const index = fs.readFileSync(require('path').join(__dirname, '..', 'public/index.html'), 'utf8');
   const sw = fs.readFileSync(require('path').join(__dirname, '..', 'public/sw.js'), 'utf8');
-  check('index.html : ?v=326 référencé 7 fois', (index.match(/\?v=326/g) || []).length === 7,
-    String((index.match(/\?v=326/g) || []).length));
-  check('sw.js : cache « botdev-v326 »', sw.includes("const CACHE = 'botdev-v326';"));
+  check('index.html : ?v=327 référencé 7 fois', (index.match(/\?v=327/g) || []).length === 7,
+    String((index.match(/\?v=327/g) || []).length));
+  check('sw.js : cache « botdev-v327 »', sw.includes("const CACHE = 'botdev-v327';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v261 — ${ok} vérifications OK : annonce de live allégée, titre plus petit, photo plus nette.`);
