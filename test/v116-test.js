@@ -6,12 +6,13 @@ const views = fs.readFileSync(__dirname + '/../public/js/views.js', 'utf8');
 const dashboard = fs.readFileSync(__dirname + '/../public/js/dashboard.js', 'utf8');
 const css = fs.readFileSync(__dirname + '/../public/css/dashboard.css', 'utf8');
 
-// 1. L'éditeur de menus de rôles utilise une vraie liste native pour les
-// rôles Discord : elle ouvre le sélecteur tactile sur Android/iPhone.
+// 1. L'éditeur de menus de rôles utilise une vraie liste (pas de saisie libre).
+// v326 : le <select> est un dash-select, le même menu custom que partout
+// ailleurs (plus de roulette native iOS d’un côté / feuille Hoxera de l’autre).
 assert.ok(views.includes('const roleChoices = (guildData.roles || []).filter'), 'liste des rôles chargée');
-assert.ok(views.includes('<select class="input" data-k="role">'), 'sélecteur de rôle natif dans le menu');
+assert.ok(views.includes('<select class="dash-select" data-k="role">'), 'sélecteur de rôle dans le menu');
 assert.ok(views.includes("inp.tagName === 'SELECT' ? 'change' : 'input'"), 'événement change compatible mobile');
-console.log('✅ menus de rôles : sélection native tactile, sans saisie obligatoire');
+console.log('✅ menus de rôles : sélection tactile, sans saisie obligatoire');
 
 // 2. Les autres endroits où un rôle est choisi (XP et boutique) suivent la
 // même règle, tout en gardant un repli texte si Discord ne renvoie aucun rôle.

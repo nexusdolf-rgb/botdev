@@ -25,8 +25,8 @@ const dash = racine('public/js/dashboard.js');
 const ac = racine('server/discord/autoclean.js');
 
 console.log('— 1. Pins de version v318 —');
-check('index.html : ?v=325 ×7', (html.match(/\?v=325/g) || []).length === 7);
-check('sw.js : cache botdev-v325', sw.includes("const CACHE = 'botdev-v325';"));
+check('index.html : ?v=326 ×7', (html.match(/\?v=326/g) || []).length === 7);
+check('sw.js : cache botdev-v326', sw.includes("const CACHE = 'botdev-v326';"));
 check('index.html : plus aucune ?v=317', !html.includes('?v=317'));
 
 console.log('— 2. Textes : plus « parmi les récents », on part des anciens —');

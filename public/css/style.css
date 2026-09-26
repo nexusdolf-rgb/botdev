@@ -358,7 +358,7 @@ label.field-label {
 .if-cond { display: grid; grid-template-columns: 1fr 130px 1fr; gap: 8px; align-items: center; padding: 10px 12px; background: rgba(254, 231, 92, .05); }
 
 .row-item { display: flex; gap: 7px; align-items: center; margin-bottom: 7px; }
-.row-item .input, .row-item .select { flex: 1; min-width: 0; }
+.row-item .input, .row-item .select, .row-item .dd-host { flex: 1; min-width: 0; }
 .row-item .btn { flex-shrink: 0; }
 
 .var-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }

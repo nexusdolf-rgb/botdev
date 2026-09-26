@@ -921,8 +921,12 @@ router.put('/bots/:id/guilds/:guildId/reaction_roles', requireAuth, async (req, 
   if (!bot) return;
   if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   const rr = require('./discord/reactionroles');
-  const list = rr.saveAll(req.params.guildId, Array.isArray((req.body || {}).setups) ? req.body.setups : []);
-  res.json({ ok: true, reaction_roles: list });
+  try {
+    const list = rr.saveAll(req.params.guildId, Array.isArray((req.body || {}).setups) ? req.body.setups : []);
+    res.json({ ok: true, reaction_roles: list });
+  } catch (e) {
+    res.status(400).json({ error: e.message || 'Enregistrement impossible.' });
+  }
 });
 
 router.post('/bots/:id/guilds/:guildId/reaction_roles/send', requireAuth, async (req, res) => {
@@ -938,7 +942,16 @@ router.post('/bots/:id/guilds/:guildId/reaction_roles/send', requireAuth, async 
   const id = String((req.body || {}).id || '');
   let setup = list.find((s) => s.id === id);
   if (!setup && (req.body || {}).setup) { // création + envoi en un geste
-    list = rr.saveAll(req.params.guildId, list.concat([{ id: 'rr' + Date.now(), ...(req.body.setup || {}) }]));
+    const incoming = req.body.setup || {};
+    const maps = Array.isArray(incoming.mappings) ? incoming.mappings : [];
+    const n = maps.filter((m) => m && m.emoji && m.role).length;
+    if (!n) return res.status(400).json({ error: 'Ajoutez au moins une réaction avec un rôle.' });
+    if (n > 20) return res.status(400).json({ error: 'Discord n\'accepte que 20 réactions par message. Créez un second message pour les autres rôles.' });
+    try {
+      list = rr.saveAll(req.params.guildId, list.concat([{ id: 'rr' + Date.now(), ...incoming }]));
+    } catch (e) {
+      return res.status(400).json({ error: e.message || 'Enregistrement impossible.' });
+    }
     setup = list[list.length - 1];
   }
   if (!setup) return res.status(404).json({ error: 'Configuration introuvable.' });
@@ -2650,6 +2663,11 @@ router.post('/bots/:id/role-menus', requireAuth, async (req, res) => {
   if (!guild_id) return res.status(400).json({ error: 'guild_id requis' });
   if (!(await userCanManageGuild(req, guild_id))) return res.status(403).json({ error: 'Permission refusée.' });
   if (!Array.isArray(options) || !options.length) return res.status(400).json({ error: 'Ajoutez au moins un rôle au menu.' });
+  if (options.length > 25) return res.status(400).json({ error: 'Discord n\'accepte que 25 rôles par panneau. Créez un second panneau pour les autres.' });
+  {
+    const keys = options.map((o) => String(o && o.role || '').trim()).filter(Boolean);
+    if (new Set(keys).size !== keys.length) return res.status(400).json({ error: 'Chaque rôle ne peut apparaître qu\'une fois dans le panneau.' });
+  }
   const id = store.roleMenus.create({
     bot_id: bot.id,
     guild_id,
@@ -2682,6 +2700,11 @@ router.put('/role-menus/:id', requireAuth, async (req, res) => {
   if (mode !== undefined) fields.mode = mode === 'buttons' ? 'buttons' : 'menu';
   if (options !== undefined) {
     if (!Array.isArray(options) || !options.length) return res.status(400).json({ error: 'Ajoutez au moins un rôle au menu.' });
+    if (options.length > 25) return res.status(400).json({ error: 'Discord n\'accepte que 25 rôles par panneau. Créez un second panneau pour les autres.' });
+    {
+      const keys = options.map((o) => String(o && o.role || '').trim()).filter(Boolean);
+      if (new Set(keys).size !== keys.length) return res.status(400).json({ error: 'Chaque rôle ne peut apparaître qu\'une fois dans le panneau.' });
+    }
     fields.options = JSON.stringify(options.map(o => ({
       label: String(o.label || 'Rôle').slice(0, 100),
       emoji: safeEmojiWeb(o.emoji).slice(0, 100),

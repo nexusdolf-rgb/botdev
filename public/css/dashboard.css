@@ -1701,6 +1701,33 @@ body.dash-body {
   .dd-search input { font-size: 16px; min-height: 44px; }
 }
 
+/* v326 — lignes « emoji → rôle » : même menu que les autres sélecteurs,
+   pas un pavé pleine carte à côté d’un champ 70 px. */
+.rr-maps { display: flex; flex-direction: column; gap: 8px; }
+.rr-map-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.rr-map-row .dd-host { flex: 1 1 200px; max-width: 280px; min-width: 160px; }
+.rr-map-row .dash-input.rr-emoji { width: 70px; flex: 0 0 70px; }
+.rr-map-row .dash-input.rr-label { flex: 1 1 140px; max-width: 220px; }
+.modal .row-item .dd-host { flex: 1 1 180px; min-width: 140px; max-width: 100%; }
+@media (max-width: 700px) {
+  .rr-map-row { flex-direction: column; align-items: stretch; }
+  .rr-map-row .dd-host,
+  .rr-map-row .dash-input.rr-emoji,
+  .rr-map-row .dash-input.rr-label {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 1 1 auto;
+  }
+  .modal .row-item { flex-wrap: wrap; }
+  .modal .row-item .dd-host,
+  .modal .row-item .input { width: 100%; max-width: 100%; }
+}
+
 /* États et hiérarchie des actions */
 .dash-btn { min-height: 42px; border-radius: 12px; font-size: 13px; letter-spacing: .05px; }
 .dash-btn-primary { box-shadow: 0 10px 28px -14px var(--d-glow), 0 1px 0 rgba(255,255,255,.2) inset; }

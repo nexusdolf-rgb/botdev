@@ -405,6 +405,12 @@ Dashboard.enhanceSelect = (select) => {
   const host = App.el('<div class="dd-host"></div>');
   select.parentNode.insertBefore(host, select);
   host.appendChild(select);
+  // v326 — le bouton reprend la largeur prévue du <select> (sinon, une fois
+  // le select masqué, le host s’étire sur toute la carte : « grand truc »
+  // surtout sur mobile, lignes compactes réactions / paliers XP).
+  if (select.style.maxWidth) host.style.maxWidth = select.style.maxWidth;
+  if (select.style.width) host.style.width = select.style.width;
+  if (select.style.flex) host.style.flex = select.style.flex;
   const trigger = App.el('<button type="button" class="dd-trigger" aria-haspopup="listbox"></button>');
   host.appendChild(trigger);
 
@@ -456,7 +462,10 @@ Dashboard.enhanceSelect = (select) => {
 
 Dashboard.enhanceSelects = (root) => {
   if (!root) return;
-  root.querySelectorAll('select.dash-select:not([data-dd])').forEach((s) => Dashboard.enhanceSelect(s));
+  // v326 — tous les <select> du dashboard (dash-select, dash-input, input)
+  // deviennent le MÊME menu custom : plus de roulette native iOS d’un côté
+  // et feuille Hoxera de l’autre.
+  root.querySelectorAll('select.dash-select:not([data-dd]), select.dash-input:not([data-dd]), select.input:not([data-dd])').forEach((s) => Dashboard.enhanceSelect(s));
 };
 
 // ---------------------- Shell ----------------------
@@ -4683,16 +4692,32 @@ Dashboard.renderers.roles = async (content, data) => {
     <input class="dash-input" id="rr-content" placeholder="Choisissez vos rôles ci-dessous !" style="max-width:420px" />
     <label class="dash-label">Comportement</label>
     <select class="dash-select" id="rr-mode" style="max-width:300px"><option value="toggle">🔁 Toggle : réagir = recevoir, retirer = perdre</option><option value="add-only">➕ Don seulement (jamais retiré)</option></select>
-    <label class="dash-label">Réactions → rôles</label>
-    <div id="rr-maps" style="display:flex;flex-direction:column;gap:6px"></div>
+    <label class="dash-label">Réactions → rôles <span id="rr-map-count" style="font-weight:400;color:var(--d-dim)"></span></label>
+    <div class="desc" style="margin:-4px 0 8px">Discord accepte 20 réactions maximum par message. Au-delà, créez un second message.</div>
+    <div id="rr-maps" class="rr-maps"></div>
     <div style="margin-top:8px;display:flex;gap:9px;flex-wrap:wrap"><button class="dash-btn" id="rr-addmap">➕ Ajouter une réaction</button></div>
     <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap"><button class="dash-btn dash-btn-primary" id="rr-send">📤 Enregistrer et envoyer sur Discord</button></div>`;
   const mapsHost = cRR.querySelector('#rr-maps');
+  const RR_MAX = 20;
+  const syncRrCount = () => {
+    const n = mapsHost.children.length;
+    const el = cRR.querySelector('#rr-map-count');
+    if (el) el.textContent = `(${n}/${RR_MAX})`;
+    const add = cRR.querySelector('#rr-addmap');
+    if (add) {
+      add.disabled = n >= RR_MAX;
+      add.textContent = n >= RR_MAX ? '✓ 20 réactions — maximum Discord' : '➕ Ajouter une réaction';
+    }
+  };
   const addMapRow = () => {
-    const row = App.el('<div style="display:flex;gap:6px;flex-wrap:wrap"></div>');
+    if (mapsHost.children.length >= RR_MAX) {
+      return App.toast('Discord n’accepte que 20 réactions par message. Créez un second message pour les autres rôles.', 'error');
+    }
+    const row = App.el('<div class="rr-map-row"></div>');
     row.innerHTML = `<input class="dash-input rr-emoji" placeholder="🎮" style="width:70px" /><select class="dash-select rr-role" style="max-width:220px">${(data.roles || []).filter((r) => r.name !== '@everyone').map((r) => `<option value="${r.id}">@ ${App.escapeHtml(r.name)}</option>`).join('')}</select><input class="dash-input rr-label" placeholder="description (optionnel)" style="max-width:200px" /><button class="dash-btn rr-rm" style="padding:4px 9px">➖</button>`;
-    row.querySelector('.rr-rm').onclick = () => row.remove();
+    row.querySelector('.rr-rm').onclick = () => { row.remove(); syncRrCount(); };
     mapsHost.appendChild(row);
+    syncRrCount();
   };
   addMapRow();
   cRR.querySelector('#rr-addmap').onclick = addMapRow;
@@ -4703,11 +4728,18 @@ Dashboard.renderers.roles = async (content, data) => {
       role: row.querySelector('.rr-role').value,
       label: row.querySelector('.rr-label').value.trim(),
     })).filter((m) => m.emoji && m.role);
-    if (!maps.length) return App.toast('⚠️ Ajoutez au moins une réaction avec un rôle.');
+    if (!maps.length) return App.toast('⚠️ Ajoutez au moins une réaction avec un rôle.', 'error');
+    if (maps.length > RR_MAX) return App.toast('Discord n’accepte que 20 réactions par message. Créez un second message pour les autres rôles.', 'error');
+    const emojis = maps.map((m) => m.emoji);
+    if (new Set(emojis).size !== emojis.length) return App.toast('Chaque emoji ne peut être utilisé qu’une fois.', 'error');
     const setup = { id: 'rr' + Date.now(), channel: cRR.querySelector('#rr-channel').value, content: cRR.querySelector('#rr-content').value, mode: cRR.querySelector('#rr-mode').value, mappings: maps };
-    const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/reaction_roles/send`, { method: 'POST', body: { setup } });
-    App.toast(r.ok ? '🎭 Message de rôles envoyé : les réactions sont posées.' : `⚠️ ${r.error || 'Envoi impossible.'}`);
-    if (r.ok) Dashboard.loadGuild().then((d) => Dashboard.renderers.roles(content, d));
+    try {
+      const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/reaction_roles/send`, { method: 'POST', body: { setup } });
+      App.toast(r && r.ok === false ? `⚠️ ${r.error || 'Envoi impossible.'}` : '🎭 Message de rôles envoyé : les réactions sont posées.');
+      if (r && r.ok !== false) Dashboard.loadGuild().then((d) => Dashboard.renderers.roles(content, d));
+    } catch (e) {
+      App.toast((e && e.message) || 'Envoi impossible.', 'error');
+    }
   };
 const c = Dashboard.card(root, 'Panneaux', 'Envoyez-les sur Discord avec /roles send, ou utilisez ✏️ pour modifier — si le panneau est déjà posté, le message Discord se met à jour en place (aucun doublon).');
   const menus = data.role_menus || [];

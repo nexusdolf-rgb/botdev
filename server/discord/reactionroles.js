@@ -8,10 +8,15 @@
 // ============================================================
 const store = require('../db');
 
+// Discord : 20 réactions maximum par message. On n’enregistre PAS plus :
+// avant, un plafond à 10 coupait la liste en silence (« la moitié a disparu »).
+const MAX_SETUPS = 20;
+const MAX_MAPPINGS = 20;
+
 function allOf(guildId) {
   let list = [];
   try { list = JSON.parse(store.settings.get(`rr:${guildId}`) || '[]') || []; } catch { list = []; }
-  return Array.isArray(list) ? list.slice(0, 20) : [];
+  return Array.isArray(list) ? list.slice(0, MAX_SETUPS) : [];
 }
 
 // Un émoji personnalisé peut arriver en « name:id » ou « <:name:id> » :
@@ -26,14 +31,25 @@ function normEmoji(raw) {
   return str;
 }
 
+function tooManyMappings(n) {
+  const e = new Error(`Discord n'accepte que ${MAX_MAPPINGS} réactions par message (vous en avez ${n}). Créez un second message pour les autres rôles.`);
+  e.code = 'RR_TOO_MANY';
+  return e;
+}
+
 function saveAll(guildId, list) {
-  const clean = (Array.isArray(list) ? list : []).slice(0, 20).map((s) => ({
+  const incoming = Array.isArray(list) ? list : [];
+  for (const s of incoming) {
+    const n = (Array.isArray(s.mappings) ? s.mappings : []).filter((m) => normEmoji(m.emoji) && m.role).length;
+    if (n > MAX_MAPPINGS) throw tooManyMappings(n);
+  }
+  const clean = incoming.slice(0, MAX_SETUPS).map((s) => ({
     id: String(s.id || ''),
     channel: String(s.channel || ''),
     message_id: String(s.message_id || ''),
     mode: s.mode === 'add-only' ? 'add-only' : 'toggle',
     content: String(s.content || '').slice(0, 1900),
-    mappings: (Array.isArray(s.mappings) ? s.mappings : []).slice(0, 10).map((m) => ({
+    mappings: (Array.isArray(s.mappings) ? s.mappings : []).slice(0, MAX_MAPPINGS).map((m) => ({
       emoji: normEmoji(m.emoji).slice(0, 64),
       role: String(m.role || ''),
       label: String(m.label || '').slice(0, 80),
@@ -89,4 +105,4 @@ async function sendSetup(botId, guild, setup) {
   return msg.id;
 }
 
-module.exports = { allOf, saveAll, setupOfMessage, onReaction, sendSetup, normEmoji };
+module.exports = { allOf, saveAll, setupOfMessage, onReaction, sendSetup, normEmoji, MAX_MAPPINGS, MAX_SETUPS };

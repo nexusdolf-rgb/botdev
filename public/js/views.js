@@ -5,22 +5,27 @@
 // ============================================================
 const BotViews = {};
 
+// Discord : 25 options max par menu / 25 boutons max par message.
+const ROLE_MENU_MAX = 25;
+
 // Éditeur de menu de rôles (modale) — utilisé par le module « Rôles »
 BotViews.openRoleMenuModal = (bot, guildId, menu) => {
   const isEdit = !!menu;
   const data = menu ? JSON.parse(JSON.stringify(menu)) : { name: '', content: '', placeholder: 'Choisissez vos rôles…', channel: '', options: [{ label: 'Notifications', emoji: '🔔', role: '' }] };
+  if (Array.isArray(data.options) && data.options.length > ROLE_MENU_MAX) data.options = data.options.slice(0, ROLE_MENU_MAX);
 
   App.modal(`
     <div class="modal-header"><h3>${isEdit ? '✏️ Modifier le menu' : '📋 Nouveau menu de rôles'}</h3><button class="x-btn" data-close>×</button></div>
     <div class="modal-body">
       <div class="help-box" style="margin-bottom:14px">
         Chaque option attribue (ou retire) un rôle quand le membre la choisit.
-        Sur mobile comme sur PC, sélectionne le rôle directement dans la liste Discord du serveur.
+        Sur mobile comme sur PC, le sélecteur est le même menu que partout ailleurs.
+        Discord accepte <b>25 rôles maximum</b> par panneau : au-delà, créez un second panneau.
       </div>
       <label class="field-label">Nom du panneau</label>
       <input class="input" id="rm-name" maxlength="50" value="${App.escapeHtml(data.name)}" placeholder="Rôles & notifications" />
       <label class="field-label">Style du panneau</label>
-      <select class="input" id="rm-mode">
+      <select class="dash-select" id="rm-mode">
         <option value="menu" ${data.mode !== 'buttons' ? 'selected' : ''}>📋 Menu déroulant (plusieurs rôles d'un coup)</option>
         <option value="buttons" ${data.mode === 'buttons' ? 'selected' : ''}>🔘 Boutons (un clic = un rôle, re-clic = retiré)</option>
       </select>
@@ -29,10 +34,10 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
       <label class="field-label">Texte d'attente du menu déroulant</label>
       <input class="input" id="rm-placeholder" maxlength="150" value="${App.escapeHtml(data.placeholder)}" />
       <label class="field-label">Salon où envoyer le panneau</label>
-      <select class="input" id="rm-channel">
+      <select class="dash-select" id="rm-channel">
         <option value="">— Choisir un salon —</option>
       </select>
-      <label class="field-label">Options du menu</label>
+      <label class="field-label">Options du menu <span id="rm-opt-count" style="font-weight:400;color:var(--d-dim)"></span></label>
       <div id="rm-options"></div>
       <button class="btn btn-sm btn-ghost" id="rm-add-opt" style="margin-top:8px">＋ Ajouter un rôle</button>
     </div>
@@ -66,6 +71,16 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
   }
 
   const roleChoices = (guildData.roles || []).filter((r) => r.name !== '@everyone');
+  const syncCount = () => {
+    const n = (data.options || []).length;
+    const el = document.querySelector('#rm-opt-count');
+    if (el) el.textContent = `(${n}/${ROLE_MENU_MAX})`;
+    const add = document.querySelector('#rm-add-opt');
+    if (add) {
+      add.disabled = n >= ROLE_MENU_MAX;
+      add.textContent = n >= ROLE_MENU_MAX ? '✓ 25 rôles — maximum Discord' : '＋ Ajouter un rôle';
+    }
+  };
   const renderOpts = () => {
     optWrap.innerHTML = '';
     data.options.forEach((o, i) => {
@@ -82,7 +97,7 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
       if (o.role && !roleKnown) {
         roleOptions.push(`<option value="${App.escapeHtml(o.role)}" selected>⚠️ ${App.escapeHtml(o.role)} (configuration actuelle — rôle introuvable)</option>`);
       }
-      const roleControl = `<select class="input" data-k="role">${roleOptions.join('')}</select>`;
+      const roleControl = `<select class="dash-select" data-k="role">${roleOptions.join('')}</select>`;
       const row = App.el(`
         <div class="row-item" style="margin-top:7px">
           <input class="input" data-k="emoji" placeholder="😀" value="${App.escapeHtml(o.emoji)}" style="max-width:56px;text-align:center" />
@@ -101,9 +116,13 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
       };
       optWrap.appendChild(row);
     });
+    syncCount();
   };
   renderOpts();
   document.querySelector('#rm-add-opt').onclick = () => {
+    if (data.options.length >= ROLE_MENU_MAX) {
+      return App.toast('Discord n’accepte que 25 rôles par panneau. Créez un second panneau pour les autres.', 'error');
+    }
     data.options.push({ label: 'Nouveau rôle', emoji: '', role: '' });
     renderOpts();
   };
@@ -119,6 +138,13 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
       options: data.options.filter(o => String(o.role).trim()),
     };
     if (!payload.options.length) return App.toast('Renseignez au moins un nom de rôle.', 'error');
+    if (payload.options.length > ROLE_MENU_MAX) {
+      return App.toast('Discord n’accepte que 25 rôles par panneau. Créez un second panneau pour les autres.', 'error');
+    }
+    const roleKeys = payload.options.map((o) => String(o.role).trim());
+    if (new Set(roleKeys).size !== roleKeys.length) {
+      return App.toast('Chaque rôle ne peut apparaître qu’une fois dans le panneau.', 'error');
+    }
     try {
       if (isEdit) await App.api(`/role-menus/${menu.id}`, { method: 'PUT', body: payload });
       else await App.api(`/bots/${bot.id}/role-menus`, { method: 'POST', body: payload });
