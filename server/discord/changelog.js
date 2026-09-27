@@ -7,7 +7,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const ui = require('./ui');
 
-const VERSION = 336;
+const VERSION = 337;
 const DASHBOARD_URL = 'https://hoxera.is-a.dev';
 const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3';
 const AUTO_REVERT_MS = 2 * 60 * 1000;
@@ -15,6 +15,12 @@ const SELECT_ID = (botId) => `hx-upd:${botId}`;
 
 // Plus récent en premier. Menu Discord = 25 options max (accueil + 24 versions).
 const VERSIONS = [
+  {
+    v: 337, date: '28/09', title: 'Page d’accueil au niveau du dashboard',
+    new: [],
+    improved: ['La page publique a le même style que le centre serveurs : texte à gauche, carte en direct à droite, cartes argile.'],
+    fixed: ['L’accueil restait sur l’ancien centrage et un mélange de couleurs.'],
+  },
   {
     v: 336, date: '27/09', title: '/update tout de suite',
     new: ['`/update` est aussi enregistrée **sur le serveur support** : elle apparaît tout de suite, sans attendre 1 h.'],

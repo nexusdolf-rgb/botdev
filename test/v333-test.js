@@ -25,8 +25,8 @@ const dash = racine('public/js/dashboard.js');
 const dbSrc = racine('server/db.js');
 
 console.log('— 1. Pins de version v333 —');
-check('index.html : ?v=336 ×7', (html.match(/\?v=336/g) || []).length === 7);
-check('sw.js : cache botdev-v336', sw.includes("const CACHE = 'botdev-v336';"));
+check('index.html : ?v=337 ×7', (html.match(/\?v=337/g) || []).length === 7);
+check('sw.js : cache botdev-v337', sw.includes("const CACHE = 'botdev-v337';"));
 check('index.html : plus aucune ?v=332', !html.includes('?v=332'));
 
 console.log('— 2. Prendre ce ticket = bouton, plus dans le menu —');

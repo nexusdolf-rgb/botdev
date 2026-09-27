@@ -1015,3 +1015,219 @@ html.hx-light .hp-cta-inner { background: radial-gradient(600px 240px at 50% -40
 @media (max-width: 700px) {
   .hp-cta-actions .btn { white-space: normal; }
 }
+
+/* ============================================================
+   🏠 HOXERA v337 — Home alignée sur le centre serveurs
+   HTML v167/v195/v240 inchangé (classes et ids verrouillés).
+   Couleurs + emplacement : même langage que le dashboard.
+   ============================================================ */
+body:has(#public-landing) {
+  background:
+    radial-gradient(920px 440px at 88% -10%, rgba(224,122,95,.15), transparent 58%),
+    radial-gradient(720px 380px at -10% 110%, rgba(201,91,73,.08), transparent 56%),
+    #0e0f15;
+}
+body:has(#public-landing) .navbar {
+  background: rgba(14, 15, 21, .82) !important;
+  border-bottom: 1px solid #2a2d3d;
+}
+#public-landing {
+  --panel: #1a1c28;
+  --panel2: #20222f;
+  --border: #2a2d3d;
+  --text: #e9eaf2;
+  --text-dim: #8b8fa3;
+}
+
+/* Hero : texte à gauche, carte « en direct » à droite (comme le panneau d’accueil) */
+#public-landing .pub-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, .82fr);
+  grid-template-areas:
+    "badge stage"
+    "title stage"
+    "tag stage"
+    "actions stage"
+    "support stage";
+  align-items: center;
+  text-align: left;
+  column-gap: 48px;
+  row-gap: 0;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: clamp(36px, 6vw, 72px) 28px 44px;
+}
+#public-landing .pub-hero-badge {
+  grid-area: badge;
+  justify-self: start;
+  margin-bottom: 14px;
+  background: rgba(224,122,95,.12);
+  border-color: rgba(224,122,95,.38);
+}
+#public-landing .hero-title { grid-area: title; margin: 0; }
+#public-landing .pub-tagline {
+  grid-area: tag;
+  margin: 16px 0 22px;
+  max-width: none;
+  color: #8b8fa3;
+}
+#public-landing .pub-hero-actions { grid-area: actions; justify-content: flex-start; }
+#public-landing .pub-support-link { grid-area: support; margin-top: 12px; }
+
+#public-landing .pub-stats {
+  grid-area: stage;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 0;
+  padding: 18px 16px 14px;
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(280px 140px at 100% 0%, rgba(224,122,95,.2), transparent 70%),
+    linear-gradient(165deg, rgba(255,255,255,.045), transparent 52%),
+    #1a1c28;
+  border: 1px solid rgba(224,122,95,.3);
+  border-radius: 20px;
+  box-shadow: 0 28px 60px -32px rgba(224,122,95,.55), inset 0 1px 0 rgba(255,255,255,.06);
+}
+#public-landing .pub-stats::before {
+  content: "";
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, #e07a5f, #c95b49, transparent 88%);
+}
+#public-landing .pub-stats::after {
+  content: "En direct";
+  order: -1;
+  display: block;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #e07a5f;
+  padding: 4px 6px 6px;
+}
+#public-landing .pub-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  padding: 12px 14px;
+  text-align: left;
+  background: #20222f;
+  border: 1px solid #2a2d3d;
+  border-radius: 14px;
+  box-shadow: none;
+}
+#public-landing .pub-stat .lbl { margin-top: 0; font-size: 12px; font-weight: 650; color: #8b8fa3; }
+#public-landing .pub-stat .val {
+  font-size: 22px;
+  background: linear-gradient(135deg, #e07a5f, #f2a65e);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Cartes façon centre serveurs (tuiles + lueur argile, plus de violet) */
+#public-landing .hp-about-card,
+#public-landing .hp-pillar,
+#public-landing .hp-step,
+#public-landing .pub-feature,
+#public-landing .hp-faq-item,
+#public-landing .bot-card,
+#public-landing .hp-cta-inner {
+  background: linear-gradient(180deg, rgba(255,255,255,.025), transparent), #1a1c28;
+  border: 1px solid #2a2d3d;
+  box-shadow: 0 18px 40px -28px rgba(0,0,0,.85);
+}
+#public-landing .hp-about-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  border-color: rgba(224,122,95,.32);
+  background:
+    radial-gradient(420px 180px at 100% -20%, rgba(224,122,95,.18), transparent 70%),
+    linear-gradient(150deg, rgba(255,255,255,.05), transparent 55%),
+    #1a1c28;
+}
+#public-landing .hp-about-card::before {
+  content: "";
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, #e07a5f, #c95b49, transparent 88%);
+}
+#public-landing .hp-pillar,
+#public-landing .hp-step,
+#public-landing .pub-feature,
+#public-landing .bot-card {
+  border-radius: 18px;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .2s ease;
+}
+#public-landing .hp-pillar:hover,
+#public-landing .pub-feature:hover,
+#public-landing .bot-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(224,122,95,.6);
+  box-shadow: 0 18px 40px -18px rgba(224,122,95,.45);
+}
+#public-landing .pub-features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#public-landing .pub-feature .f-ico {
+  width: 40px; height: 40px; border-radius: 12px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(224,122,95,.12);
+  border: 1px solid rgba(224,122,95,.28);
+  font-size: 20px;
+}
+#public-landing .hp-cta-inner {
+  border-color: rgba(224,122,95,.35);
+  background:
+    radial-gradient(600px 240px at 50% -40%, rgba(224,122,95,.22), transparent 70%),
+    #1a1c28;
+}
+
+@media (max-width: 900px) {
+  #public-landing .pub-hero {
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    padding: 36px 16px 28px;
+    gap: 0;
+  }
+  #public-landing .pub-hero-badge { align-self: center; }
+  #public-landing .pub-tagline { margin-left: auto; margin-right: auto; }
+  #public-landing .pub-hero-actions { justify-content: center; }
+  #public-landing .pub-stats {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: 22px;
+  }
+  #public-landing .pub-stats::after { width: 100%; text-align: left; }
+  #public-landing .pub-stat {
+    flex: 1 1 28%;
+    min-width: 96px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  #public-landing .pub-features { grid-template-columns: 1fr; }
+}
+
+html.hx-light body:has(#public-landing) { background: #f2f3f8; }
+html.hx-light body:has(#public-landing) .navbar {
+  background: rgba(255,255,255,.86) !important;
+  border-bottom-color: #e4e6ef;
+}
+html.hx-light #public-landing .pub-stats,
+html.hx-light #public-landing .hp-about-card,
+html.hx-light #public-landing .hp-pillar,
+html.hx-light #public-landing .hp-step,
+html.hx-light #public-landing .pub-feature,
+html.hx-light #public-landing .hp-faq-item,
+html.hx-light #public-landing .bot-card,
+html.hx-light #public-landing .hp-cta-inner {
+  background: #fff;
+  border-color: #e4e6ef;
+  box-shadow: 0 12px 28px -18px rgba(30,34,60,.28);
+}
+html.hx-light #public-landing .pub-stat { background: #f0f1f7; border-color: #e4e6ef; }

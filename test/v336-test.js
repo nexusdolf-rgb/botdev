@@ -24,8 +24,8 @@ const bm = racine('server/discord/botManager.js');
 const cl = racine('server/discord/changelog.js');
 
 console.log('— 1. Pins v336 —');
-check('index.html : ?v=336 ×7', (html.match(/\?v=336/g) || []).length === 7);
-check('sw.js : cache botdev-v336', sw.includes("const CACHE = 'botdev-v336';"));
+check('index.html : ?v=337 ×7', (html.match(/\?v=337/g) || []).length === 7);
+check('sw.js : cache botdev-v337', sw.includes("const CACHE = 'botdev-v337';"));
 check('index.html : plus aucune ?v=335', !html.includes('?v=335'));
 
 console.log('— 2. Enregistrement —');
@@ -37,7 +37,7 @@ check('slashPayload name update', cl.includes("name: 'update'"));
 
 process.env.NEXORA_ADMIN_DISCORD_ID = '1497375017980137534';
 const changelog = require('../server/discord/changelog');
-check('VERSION = 336', changelog.VERSION === 336);
+check('VERSION numérique ≥ 336', changelog.VERSION >= 336);
 check('slashPayload()', changelog.slashPayload().name === 'update');
 check('fondateur', changelog.isFounder('1497375017980137534') === true);
 

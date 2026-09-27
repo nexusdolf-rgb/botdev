@@ -67,8 +67,8 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('dash : sauvegarde triée par niveau', dash.includes('.sort((a, b) => a.level - b.level)'));
 
   // ---------- 5. Version ----------
-  check('site : bump v214 (index)', index.includes('?v=336'));
-  check('site : bump v214 (sw)', sw.includes('botdev-v336'));
+  check('site : bump v214 (index)', index.includes('?v=337'));
+  check('site : bump v214 (sw)', sw.includes('botdev-v337'));
 
   console.log(`  ✅ v214 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });

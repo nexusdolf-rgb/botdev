@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v336**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v337**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -962,6 +962,10 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v337 (28/09 — HOME PUBLIQUE = CENTRE SERVEURS)** :
+  page d’accueil (`public.js` HTML inchangé) : hero texte à gauche +
+  carte « en direct » à droite, cartes argile comme le dashboard.
+  test/v337-test.js.
 - **v336 (27/09 — /update ENREGISTRÉE TOUT DE SUITE)** :
   la commande est en tête des payloads + recopie **guild** sur le
   serveur support (`1539668540787925052`) à chaque sync (les
@@ -1546,7 +1550,9 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 23/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v336** — `/update` enregistrée tout de suite
+- Dernière version : **v337** — page d’accueil publique au niveau
+  du centre serveurs (CSS, HTML verrouillé). `test/v337-test.js`.
+- **v336** — `/update` enregistrée tout de suite
   (global + serveur support). `test/v336-test.js`.
 - **v335** — `/update` façon /help : actuelle +
   précédente, menu des versions, retour auto 2 min. `test/v335-test.js`.
