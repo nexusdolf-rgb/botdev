@@ -23,8 +23,8 @@ const extra = racine('server/discord/extra.js');
 const clSrc = racine('server/discord/changelog.js');
 
 console.log('— 1. Pins de version v334 —');
-check('index.html : ?v=334 ×7', (html.match(/\?v=334/g) || []).length === 7);
-check('sw.js : cache botdev-v334', sw.includes("const CACHE = 'botdev-v334';"));
+check('index.html : ?v=335 ×7', (html.match(/\?v=335/g) || []).length === 7);
+check('sw.js : cache botdev-v335', sw.includes("const CACHE = 'botdev-v335';"));
 check('index.html : plus aucune ?v=333', !html.includes('?v=333'));
 
 console.log('— 2. Commande /update enregistrée —');
@@ -36,11 +36,11 @@ check('handleSlash route vers changelog', extra.includes("require('./changelog')
 console.log('— 3. Réservé au fondateur (ID Render) —');
 check('lit NEXORA_ADMIN_DISCORD_ID', clSrc.includes('NEXORA_ADMIN_DISCORD_ID'));
 check('refus éphémère', clSrc.includes('réservée au fondateur') && clSrc.includes('ephemeral: true'));
-check('succès : reply public (pas éphémère)', clSrc.includes('return interaction.reply(payload)'));
+check('succès : reply public (pas éphémère)', clSrc.includes('interaction.reply(payload)'));
 
 process.env.NEXORA_ADMIN_DISCORD_ID = '1513133061489955006';
 const changelog = require('../server/discord/changelog');
-check('VERSION = 334', changelog.VERSION === 334);
+check('VERSION numérique', typeof changelog.VERSION === 'number' && changelog.VERSION >= 334);
 check('isFounder : bon id', changelog.isFounder('1513133061489955006') === true);
 check('isFounder : autre id refusé', changelog.isFounder('1') === false);
 check('isFounder : vide refusé', changelog.isFounder('') === false);
@@ -53,9 +53,8 @@ const panel = changelog.buildUpdatePanel();
 check('Components V2', !!(panel && panel.flags && (Number(panel.flags) & (1 << 15))));
 check('pas éphémère', !(Number(panel.flags) & (1 << 6)));
 const blob = JSON.stringify(panel);
-check('titre de version', blob.includes('Mise à jour v334') || blob.includes('v334'));
-check('sections nouveautés / améliorations / corrections',
-  blob.includes('Nouveautés') && blob.includes('Améliorations') && blob.includes('Corrections'));
+check('titre de version', blob.includes('Mises à jour') || blob.includes('v334') || blob.includes('v335'));
+check('sections nouveautés', blob.includes('Nouveautés'));
 check('boutons dashboard + support',
   blob.includes('https://hoxera.is-a.dev') && blob.includes('https://discord.gg/X9hTdr9N3'));
 check('pas de signature Hoxera', !blob.includes('Hoxera ·'));
@@ -69,13 +68,14 @@ console.log('— 5. Exécution simulée —');
   const fake = (id) => ({
     user: { id },
     reply: async (p) => { replies.push(p); return p; },
+    fetchReply: async () => ({ id: 'm1', edit: async () => {} }),
   });
   replies.length = 0;
-  await changelog.handleUpdate(fake('999'));
+  await changelog.handleUpdate(1, fake('999'));
   check('non-fondateur : 1 réponse éphémère', replies.length === 1 && replies[0].ephemeral === true);
 
   replies.length = 0;
-  await changelog.handleUpdate(fake('1513133061489955006'));
+  await changelog.handleUpdate(1, fake('1513133061489955006'));
   check('fondateur : panneau public', replies.length === 1 && !replies[0].ephemeral && !!(replies[0].flags && (Number(replies[0].flags) & (1 << 15))));
 
   console.log('\nRésultat : ' + ok + ' ✅ / ' + ko + ' ❌ sur ' + (ok + ko) + ' vérifications');

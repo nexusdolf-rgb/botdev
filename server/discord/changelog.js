@@ -1,31 +1,167 @@
 // ============================================================
-// /update — panneau public de version (serveur support)
-// Réservé au fondateur (NEXORA_ADMIN_DISCORD_ID sur Render).
-// Le message est visible par tout le monde dans le salon.
+// /update — journal de versions (comme /help, pour les mises à jour)
+// Fondateur seul pour PUBLIER (NEXORA_ADMIN_DISCORD_ID).
+// Tout le monde peut lire et choisir une version dans le menu.
+// Au bout de 2 min, le panneau revient à « actuelle + précédente ».
 // ============================================================
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const ui = require('./ui');
 
-const VERSION = 334;
+const VERSION = 335;
 const DASHBOARD_URL = 'https://hoxera.is-a.dev';
 const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3';
+const AUTO_REVERT_MS = 2 * 60 * 1000;
+const SELECT_ID = (botId) => `hx-upd:${botId}`;
 
-const NOTES = {
-  new: [
-    'Commande **/update** : publiez ce journal dans le salon des mises à jour.',
-    'Tickets : bouton **Prendre ce ticket** (plus dans le menu) — il disparaît après un clic.',
-    'Questionnaire : chaque question a sa propre limite de caractères (1 à 4000).',
-    'Lives : mention d’**un rôle du serveur**, pas seulement @everyone / @here.',
-  ],
-  improved: [
-    'Page Tickets : tout est rangé dans la carte, plus clair.',
-    'Lives sur téléphone : l’ajout de compte s’affiche en pile.',
-    'Rôles par réaction : titre et emoji du message modifiables.',
-  ],
-  fixed: [
-    'À l’arrivée d’un membre, la mention ping **vraiment** (notification Discord).',
-  ],
-};
+// Plus récent en premier. Menu Discord = 25 options max (accueil + 24 versions).
+const VERSIONS = [
+  {
+    v: 335, date: '27/09', title: 'Journal de versions',
+    new: ['Menu déroulant : toutes les versions, un clic pour le détail complet.', 'Aperçu par défaut : version **actuelle** + version **précédente**.'],
+    improved: ['Le panneau revient tout seul à l’aperçu au bout de 2 minutes.'],
+    fixed: [],
+  },
+  {
+    v: 334, date: '27/09', title: 'Commande /update',
+    new: ['Commande **/update** : le fondateur publie le journal dans le salon des mises à jour.'],
+    improved: [],
+    fixed: [],
+  },
+  {
+    v: 333, date: '27/09', title: 'Tickets : prendre + questions + ping',
+    new: ['Bouton **Prendre ce ticket** (plus dans le menu) — il disparaît après un clic.', 'Chaque question du questionnaire a sa propre limite de caractères (1 à 4000).'],
+    improved: [],
+    fixed: ['À l’arrivée d’un membre, la mention ping **vraiment** (notification Discord).'],
+  },
+  {
+    v: 332, date: '27/09', title: 'Lives : mobile + rôle',
+    new: ['La mention de l’annonce de live peut être **un rôle du serveur**.'],
+    improved: ['Sur téléphone, « Ajouter un compte à suivre » s’affiche en pile.'],
+    fixed: [],
+  },
+  {
+    v: 331, date: '26/09', title: 'Tickets : tout dans la carte',
+    new: [],
+    improved: ['Page Tickets : textes, types et extras sont **dans** la carte, plus rien en dessous.'],
+    fixed: [],
+  },
+  {
+    v: 330, date: '26/09', title: 'Tickets : moins de texte',
+    new: [],
+    improved: ['Cartes tickets rangées, descriptions courtes, textes optionnels repliés.'],
+    fixed: [],
+  },
+  {
+    v: 329, date: '26/09', title: 'Rôles par réaction',
+    new: ['Titre et emoji du message « Rôles par réaction » modifiables dans le dashboard.'],
+    improved: [],
+    fixed: [],
+  },
+  {
+    v: 328, date: '26/09', title: 'Tickets : autres menus',
+    new: ['Plusieurs panneaux menu déroulant, chacun avec ses propres types.'],
+    improved: [],
+    fixed: [],
+  },
+  {
+    v: 327, date: '26/09', title: 'Recherche rôles / salons',
+    new: [],
+    improved: ['La recherche affiche le nom simple, sans décorations.'],
+    fixed: [],
+  },
+  {
+    v: 326, date: '26/09', title: 'Rôles : limite Discord',
+    new: [],
+    improved: ['Sélecteurs de rôles identiques, limite Discord respectée.'],
+    fixed: [],
+  },
+  {
+    v: 325, date: '25/09', title: 'Sélecteurs mobile',
+    new: [],
+    improved: [],
+    fixed: ['Sur téléphone, le clavier reste ouvert dans les sélecteurs.'],
+  },
+  {
+    v: 324, date: '25/09', title: 'Liens : boutons 2 par ligne',
+    new: [],
+    improved: ['Boutons de liens affichés 2 par ligne, dans un encadré.'],
+    fixed: [],
+  },
+  {
+    v: 323, date: '24/09', title: 'Module Liens',
+    new: ['Module Liens : un panneau, un embed par lien.'],
+    improved: [],
+    fixed: [],
+  },
+  {
+    v: 322, date: '24/09', title: 'Tickets : noms clairs',
+    new: [],
+    improved: ['Noms plus clairs et page tickets rangée.'],
+    fixed: [],
+  },
+  {
+    v: 321, date: '24/09', title: 'Menu : modules découpés',
+    new: ['Gros modules du menu dashboard découpés (plus lisible).'],
+    improved: [],
+    fixed: [],
+  },
+  {
+    v: 320, date: '23/09', title: 'Vérification',
+    new: [],
+    improved: ['Texte de vérification modifiable, filtres plus clairs.'],
+    fixed: [],
+  },
+  {
+    v: 319, date: '23/09', title: 'Photo de profil à la connexion',
+    new: [],
+    improved: ['Connexion : photo de profil Optimus (plus l’emoji 🤖).'],
+    fixed: [],
+  },
+  {
+    v: 318, date: '23/09', title: 'Nettoyage auto : ordre',
+    new: [],
+    improved: ['Le nettoyage part des messages les plus anciens.'],
+    fixed: [],
+  },
+  {
+    v: 317, date: '23/09', title: 'Module nettoyage auto',
+    new: ['Module nettoyage automatique des salons.'],
+    improved: [],
+    fixed: [],
+  },
+  {
+    v: 316, date: '23/09', title: 'Photo de profil',
+    new: [],
+    improved: [],
+    fixed: ['Photo de **profil** du bot, pas la bannière.'],
+  },
+  {
+    v: 315, date: '23/09', title: 'Photo sur l’accueil',
+    new: [],
+    improved: ['Photo d’Optimus sur la page d’accueil, à la place de l’emoji.'],
+    fixed: [],
+  },
+  {
+    v: 314, date: '23/09', title: 'Liste noire',
+    new: [],
+    improved: [],
+    fixed: ['Supprimer un mot de la liste noire l’enregistre tout de suite.'],
+  },
+  {
+    v: 313, date: '23/09', title: 'Sélecteurs des modules',
+    new: [],
+    improved: ['Sélecteurs des modules façon DraftBot (plein largeur).'],
+    fixed: [],
+  },
+  {
+    v: 312, date: '22/09', title: 'Plus de signatures',
+    new: [],
+    improved: [],
+    fixed: ['Plus aucune signature « Hoxera · … » sous les panneaux.'],
+  },
+];
+
+const NOTES = VERSIONS[0]; // compat tests / aperçu actuel
 
 function isFounder(userId) {
   const id = String(process.env.NEXORA_ADMIN_DISCORD_ID || '').trim();
@@ -33,28 +169,111 @@ function isFounder(userId) {
 }
 
 function bullets(lines) {
-  return (lines || []).map((line) => `• ${line}`).join('\n');
+  return (lines || []).filter(Boolean).map((line) => `• ${line}`).join('\n');
 }
 
-function buildUpdatePanel() {
-  const row = new ActionRowBuilder().addComponents(
+function versionByNum(n) {
+  const num = parseInt(n, 10);
+  return VERSIONS.find((x) => x.v === num) || null;
+}
+
+function currentAndPrevious() {
+  return { current: VERSIONS[0], previous: VERSIONS[1] || null };
+}
+
+function formatBlock(entry, { heading } = {}) {
+  const parts = [];
+  if (heading) parts.push(`**v${entry.v} — ${entry.title}** · ${entry.date}`);
+  if (entry.new && entry.new.length) parts.push(`✨ **Nouveautés**\n${bullets(entry.new)}`);
+  if (entry.improved && entry.improved.length) parts.push(`🛠️ **Améliorations**\n${bullets(entry.improved)}`);
+  if (entry.fixed && entry.fixed.length) parts.push(`🔧 **Corrections**\n${bullets(entry.fixed)}`);
+  if (parts.length <= 1) parts.push('_Aucun détail enregistré pour cette version._');
+  return parts.join('\n\n');
+}
+
+function updateSelectRow(botId, currentValue) {
+  const options = [{
+    label: '🏠 Actuelle + précédente',
+    value: 'home',
+    description: currentValue === 'home' ? 'Vous êtes ici' : 'Aperçu des 2 dernières versions',
+  }];
+  for (const entry of VERSIONS.slice(0, 24)) {
+    options.push({
+      label: `v${entry.v} — ${entry.title}`.slice(0, 100),
+      value: String(entry.v),
+      description: (currentValue === String(entry.v) ? 'Vous êtes ici · ' : '') + entry.date,
+    });
+  }
+  return new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(SELECT_ID(botId))
+      .setPlaceholder('📂 Choisir une version…')
+      .setMinValues(1)
+      .setMaxValues(1)
+      .addOptions(options.slice(0, 25)),
+  );
+}
+
+function linkRow() {
+  return new ActionRowBuilder().addComponents(
     new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel('🌐 Dashboard').setURL(DASHBOARD_URL),
     new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel('🆘 Serveur support').setURL(SUPPORT_URL),
   );
-  return ui.v2panel({
-    color: '#e07a5f',
-    title: `🚀 Optimus Prime — Mise à jour v${VERSION}`,
-    description: [
-      'Voici ce qui est **nouveau**, **amélioré** et **corrigé** dans la version actuelle.',
-      `✨ **Nouveautés**\n${bullets(NOTES.new)}`,
-      `🛠️ **Améliorations**\n${bullets(NOTES.improved)}`,
-      `🔧 **Corrections**\n${bullets(NOTES.fixed)}`,
-    ].join('\n\n'),
-    footer: false,
-  }, [row]);
 }
 
-async function handleUpdate(interaction) {
+function rowsFor(botId, currentValue) {
+  return [updateSelectRow(botId, currentValue), linkRow()];
+}
+
+function buildHomePanel(botId) {
+  const { current, previous } = currentAndPrevious();
+  const chunks = [
+    'Aperçu des **2 dernières versions**. Le menu ci-dessous ouvre le détail complet d’une version. Dans 2 minutes, on revient ici.',
+    formatBlock(current, { heading: true }),
+  ];
+  if (previous) chunks.push(formatBlock(previous, { heading: true }));
+  return ui.v2panel({
+    color: '#e07a5f',
+    title: `🚀 Optimus Prime — Mises à jour (v${current.v})`,
+    description: chunks.join('\n\n'),
+    footer: false,
+  }, rowsFor(botId, 'home'));
+}
+
+function buildVersionPanel(botId, num) {
+  const entry = versionByNum(num);
+  if (!entry) return buildHomePanel(botId);
+  return ui.v2panel({
+    color: '#e07a5f',
+    title: `📦 v${entry.v} — ${entry.title}`,
+    description: `${entry.date}\n\n${formatBlock(entry)}`,
+    footer: false,
+  }, rowsFor(botId, String(entry.v)));
+}
+
+function buildUpdatePanel(botId) {
+  return buildHomePanel(botId || 1);
+}
+
+const revertTimers = new Map();
+
+function scheduleRevert(botId, message) {
+  if (!message || !message.id) return;
+  const key = String(message.id);
+  const prev = revertTimers.get(key);
+  if (prev) clearTimeout(prev);
+  const t = setTimeout(() => {
+    revertTimers.delete(key);
+    const payload = ui.v2edit
+      ? { ...buildHomePanel(botId), content: null, embeds: [], attachments: [] }
+      : buildHomePanel(botId);
+    Promise.resolve(message.edit(payload)).catch(() => {});
+  }, AUTO_REVERT_MS);
+  if (typeof t.unref === 'function') t.unref();
+  revertTimers.set(key, t);
+}
+
+async function handleUpdate(botId, interaction) {
   const uid = interaction && interaction.user && interaction.user.id;
   if (!isFounder(uid)) {
     return interaction.reply({
@@ -62,7 +281,7 @@ async function handleUpdate(interaction) {
       ephemeral: true,
     });
   }
-  const payload = buildUpdatePanel();
+  const payload = buildHomePanel(botId);
   try {
     const violations = typeof ui.v2Audit === 'function' ? ui.v2Audit(payload) : [];
     if (violations && violations.length) {
@@ -72,15 +291,36 @@ async function handleUpdate(interaction) {
       });
     }
   } catch { /* envoi quand même */ }
-  return interaction.reply(payload);
+  await interaction.reply(payload);
+  try {
+    const msg = await interaction.fetchReply();
+    scheduleRevert(botId, msg);
+  } catch { /* le panneau reste, sans retour auto */ }
+}
+
+async function handleSelect(botId, interaction) {
+  if (!interaction || typeof interaction.isStringSelectMenu !== 'function' || !interaction.isStringSelectMenu()) return false;
+  if (String(interaction.customId || '') !== SELECT_ID(botId)) return false;
+  const value = String((interaction.values && interaction.values[0]) || 'home');
+  const payload = value === 'home' ? buildHomePanel(botId) : buildVersionPanel(botId, value);
+  await interaction.update(payload);
+  scheduleRevert(botId, interaction.message);
+  return true;
 }
 
 module.exports = {
   VERSION,
   NOTES,
+  VERSIONS,
   DASHBOARD_URL,
   SUPPORT_URL,
+  AUTO_REVERT_MS,
+  SELECT_ID,
   isFounder,
   buildUpdatePanel,
+  buildHomePanel,
+  buildVersionPanel,
   handleUpdate,
+  handleSelect,
+  scheduleRevert,
 };

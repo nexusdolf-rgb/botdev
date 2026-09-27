@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v334**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v335**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -962,6 +962,11 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v335 (27/09 — /update FAÇON /HELP)** :
+  aperçu **actuelle + précédente** ; menu déroulant de toutes les
+  versions (détail au clic) ; retour automatique à l’aperçu après
+  2 min. Tout le monde lit / navigue ; seul le fondateur publie
+  (`NEXORA_ADMIN_DISCORD_ID`). test/v335-test.js.
 - **v334 (27/09 — /update : JOURNAL DE VERSION PUBLIC)** :
   commande slash `/update` : le fondateur (ID `NEXORA_ADMIN_DISCORD_ID`
   sur Render) publie un panneau V2 dans le salon — nouveautés,
@@ -1537,7 +1542,9 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 23/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v334** — commande `/update` : panneau public
+- Dernière version : **v335** — `/update` façon /help : actuelle +
+  précédente, menu des versions, retour auto 2 min. `test/v335-test.js`.
+- **v334** — commande `/update` : panneau public
   de version, fondateur uniquement. `test/v334-test.js`.
 - **v333** — tickets : bouton « Prendre ce ticket »,
   max caractères par question, ping à l’arrivée. `test/v333-test.js`.

@@ -189,9 +189,9 @@ const racine = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 
   console.log('— 12. Bump v292 —');
   const index = racine('public/index.html');
-  check('index.html : ?v=334 référencé 7 fois', (index.match(/\?v=334/g) || []).length === 7,
-    String((index.match(/\?v=334/g) || []).length));
-  check('sw.js : cache « botdev-v334 »', racine('public/sw.js').includes("const CACHE = 'botdev-v334';"));
+  check('index.html : ?v=335 référencé 7 fois', (index.match(/\?v=335/g) || []).length === 7,
+    String((index.match(/\?v=335/g) || []).length));
+  check('sw.js : cache « botdev-v335 »', racine('public/sw.js').includes("const CACHE = 'botdev-v335';"));
 
   console.log(`\n🎉 v292 : ${ok} vérifications passées`);
   process.exit(0);

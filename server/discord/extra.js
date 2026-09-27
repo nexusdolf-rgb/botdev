@@ -350,6 +350,9 @@ async function handleInteraction(botId, entry, interaction) {
       const vt = await handleVtInteraction(botId, entry, interaction);
       if (vt) return true;
     }
+    if (interaction.isStringSelectMenu && interaction.isStringSelectMenu()) {
+      if (await require('./changelog').handleSelect(botId, interaction)) return true;
+    }
     if (interaction.isChatInputCommand()) return await handleSlash(botId, entry, interaction);
     if (interaction.isButton()) return await handleButton(botId, entry, interaction);
     if (interaction.isModalSubmit()) return await handleModal(botId, entry, interaction);
@@ -390,7 +393,7 @@ async function handleSlash(botId, entry, interaction) {
   const member = interaction.member;
 
   if (cmd === 'update') {
-    return require('./changelog').handleUpdate(interaction);
+    return require('./changelog').handleUpdate(botId, interaction);
   }
 
   switch (cmd) {
