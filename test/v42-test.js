@@ -35,13 +35,16 @@ const check = (label, cond) => {
       rest: { put: async (route, opts) => { captured.push({ route, opts }); return restBehavior ? restBehavior() : {}; } },
     },
   });
+  // v336 : un PUT guild (serveur support) s’ajoute au PUT global. On ne
+  // compte ici que les commandes GLOBALES (limite Discord / hash / plafond).
+  const globalPuts = () => captured.filter((c) => typeof c.route === 'string' && !String(c.route).includes('/guilds/'));
 
   botManager.clients.set(botId, makeEntry());
   await botManager.syncGlobalCommands(botId);
 
-  check('une requête globale envoyée', captured.length === 1);
-  check('route globale (pas par serveur)', captured[0].route === '/applications/app123/commands');
-  const names = (captured[0].opts.body || []).map((p) => p.name);
+  check('une requête globale envoyée', globalPuts().length === 1);
+  check('route globale (pas par serveur)', globalPuts()[0].route === '/applications/app123/commands');
+  const names = (globalPuts()[0].opts.body || []).map((p) => p.name);
   check('toutes les familles présentes', [
     'help', 'invite', 'ping', 'botinfo',          // utilitaires
     'kick', 'ban', 'warn', 'timeout', 'clear',    // modération
@@ -62,7 +65,7 @@ const check = (label, cond) => {
   // ---------- 3. Le hash re-synchronise si la liste change ----------
   store.commands.create({ bot_id: botId, name: 'ma-commande', description: 'x', trigger_type: 'slash', trigger_value: '', options: '[]', blocks: '[]', cooldown: 0, enabled: 1, sort: 0 });
   await botManager.syncGlobalCommands(botId);
-  check('re-synchro après une commande personnalisée ajoutée', captured.length === 1 && captured[0].opts.body.some((p) => p.name === 'ma-commande'));
+  check('re-synchro après une commande personnalisée ajoutée', globalPuts().length === 1 && globalPuts()[0].opts.body.some((p) => p.name === 'ma-commande'));
 
   // ---------- 4. Erreur 429 gérée sans crash ----------
   store.commands.create({ bot_id: botId, name: 'cmd-429', description: 'x', trigger_type: 'slash', trigger_value: '', options: '[]', blocks: '[]', cooldown: 0, enabled: 1, sort: 0 });
@@ -79,7 +82,7 @@ const check = (label, cond) => {
   captured.length = 0;
   botManager.clients.set(botId, makeEntry());
   await botManager.syncGlobalCommands(botId);
-  check('plafond : max 90 commandes globales envoyées', captured.length === 1 && captured[0].opts.body.length === 90);
+  check('plafond : max 90 commandes globales envoyées', globalPuts().length === 1 && globalPuts()[0].opts.body.length === 90);
   // on retire les commandes spam pour la suite
   store.db.prepare("DELETE FROM commands WHERE name LIKE 'spam-%' OR name IN ('cmd-429','ma-commande')").run();
 

@@ -7,7 +7,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const ui = require('./ui');
 
-const VERSION = 335;
+const VERSION = 336;
 const DASHBOARD_URL = 'https://hoxera.is-a.dev';
 const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3';
 const AUTO_REVERT_MS = 2 * 60 * 1000;
@@ -15,6 +15,12 @@ const SELECT_ID = (botId) => `hx-upd:${botId}`;
 
 // Plus récent en premier. Menu Discord = 25 options max (accueil + 24 versions).
 const VERSIONS = [
+  {
+    v: 336, date: '27/09', title: '/update tout de suite',
+    new: ['`/update` est aussi enregistrée **sur le serveur support** : elle apparaît tout de suite, sans attendre 1 h.'],
+    improved: ['La commande est placée en tête pour ne jamais être coupée par la limite Discord.'],
+    fixed: ['`/update` n’apparaissait pas dans le menu : elle n’était pas encore chez Discord.'],
+  },
   {
     v: 335, date: '27/09', title: 'Journal de versions',
     new: ['Menu déroulant : toutes les versions, un clic pour le détail complet.', 'Aperçu par défaut : version **actuelle** + version **précédente**.'],
@@ -308,6 +314,27 @@ async function handleSelect(botId, interaction) {
   return true;
 }
 
+function slashPayload() {
+  return {
+    name: 'update',
+    description: '📢 Publier le journal de version dans ce salon (fondateur uniquement)',
+    dm_permission: false,
+  };
+}
+
+// Instantané sur le serveur support (les commandes GLOBALES peuvent mettre 1 h).
+async function syncOnSupportGuild(entry, record) {
+  if (!entry || !entry.client || !entry.client.rest) return false;
+  const guildId = String(process.env.HOXERA_SUPPORT_GUILD_ID || '1539668540787925052').trim();
+  if (!/^\d{15,21}$/.test(guildId)) return false;
+  const appId = (record && record.client_id) || (entry.client.user && entry.client.user.id);
+  if (!appId) return false;
+  await entry.client.rest.put(`/applications/${appId}/guilds/${guildId}/commands`, {
+    body: [slashPayload()],
+  });
+  return true;
+}
+
 module.exports = {
   VERSION,
   NOTES,
@@ -323,4 +350,6 @@ module.exports = {
   handleUpdate,
   handleSelect,
   scheduleRevert,
+  slashPayload,
+  syncOnSupportGuild,
 };

@@ -23,8 +23,8 @@ const extra = racine('server/discord/extra.js');
 const clSrc = racine('server/discord/changelog.js');
 
 console.log('— 1. Pins de version v335 —');
-check('index.html : ?v=335 ×7', (html.match(/\?v=335/g) || []).length === 7);
-check('sw.js : cache botdev-v335', sw.includes("const CACHE = 'botdev-v335';"));
+check('index.html : ?v=336 ×7', (html.match(/\?v=336/g) || []).length === 7);
+check('sw.js : cache botdev-v336', sw.includes("const CACHE = 'botdev-v336';"));
 check('index.html : plus aucune ?v=334', !html.includes('?v=334'));
 
 console.log('— 2. Câblage —');
@@ -37,9 +37,9 @@ const changelog = require('../server/discord/changelog');
 const ui = require('../server/discord/ui');
 
 console.log('— 3. Journal —');
-check('VERSION = 335', changelog.VERSION === 335);
+check('VERSION numérique ≥ 335', typeof changelog.VERSION === 'number' && changelog.VERSION >= 335);
 check('au moins 10 versions', Array.isArray(changelog.VERSIONS) && changelog.VERSIONS.length >= 10);
-check('plus récent en premier', changelog.VERSIONS[0].v === 335 && changelog.VERSIONS[1].v === 334);
+check('v335 dans le journal', changelog.VERSIONS.some((x) => x.v === 335));
 check('retour auto entre 1 et 3 min', changelog.AUTO_REVERT_MS >= 60000 && changelog.AUTO_REVERT_MS <= 180000);
 check('fondateur = ID fourni', changelog.isFounder('1497375017980137534') === true);
 check('autre id refusé', changelog.isFounder('1') === false);
@@ -47,8 +47,8 @@ check('autre id refusé', changelog.isFounder('1') === false);
 console.log('— 4. Aperçu actuelle + précédente —');
 const home = changelog.buildHomePanel(1);
 const homeBlob = JSON.stringify(home);
-check('titre aperçu', homeBlob.includes('Mises à jour') && homeBlob.includes('v335'));
-check('montre v335 ET v334', homeBlob.includes('v335') && homeBlob.includes('v334'));
+check('titre aperçu', homeBlob.includes('Mises à jour'));
+check('montre actuelle et précédente', homeBlob.includes('v' + changelog.VERSION) && homeBlob.includes('v' + changelog.VERSIONS[1].v));
 check('menu Choisir une version', homeBlob.includes('Choisir une version') || clSrc.includes('Choisir une version'));
 check('accueil dans le menu', homeBlob.includes('home') || clSrc.includes("value: 'home'"));
 check('V2 + pas éphémère', !!(home.flags && (Number(home.flags) & (1 << 15))) && !(Number(home.flags) & (1 << 6)));

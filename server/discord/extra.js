@@ -141,6 +141,11 @@ function helpFor(key) {
 function buildExtraPayloads() {
   const admin = PermissionsBitField.Flags.Administrator.toString();
   return [
+    // v334/v336 — /update EN TÊTE : jamais évincée par le plafond des 90.
+    {
+      name: 'update',
+      description: '📢 Publier le journal de version dans ce salon (fondateur uniquement)',
+    },
     // ---------- Social ----------
     {
       name: 'marry', description: '💍 Demander un membre en mariage (il/elle doit accepter !)',
@@ -298,11 +303,6 @@ function buildExtraPayloads() {
         { name: 'salon', description: 'Salon où arrivent les candidatures (pour set)', type: ApplicationCommandOptionType.Channel, required: false },
         { name: 'texte', description: 'La question à ajouter (pour question)', type: ApplicationCommandOptionType.String, required: false },
       ],
-    },
-    // v334 — journal de version public, fondateur uniquement (vérifié à l'exécution).
-    {
-      name: 'update',
-      description: '📢 Publier le journal de version dans ce salon (fondateur uniquement)',
     },
   ];
 }

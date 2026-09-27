@@ -752,7 +752,11 @@ async function syncGlobalCommands(botId) {
   // 🖱️ v259 — les menus contextuels (type 2/3) sont placés EN TÊTE : le
   // plafond de sécurité de 90 commandes ne pourra jamais les évincer.
   const { buildContextMenuPayloads } = require('./contextmenus');
-  const all = [...buildContextMenuPayloads(), ...buildSlashPayloads(botId), ...buildExtraPayloads(), ...buildEventPayloads()];
+  const extraPayloads = buildExtraPayloads();
+  const updatePayloads = extraPayloads.filter((p) => p && p.name === 'update');
+  const extraRest = extraPayloads.filter((p) => !p || p.name !== 'update');
+  // /update juste après les menus contextuels : jamais coupée par le slice(0, 90).
+  const all = [...buildContextMenuPayloads(), ...updatePayloads, ...buildSlashPayloads(botId), ...extraRest, ...buildEventPayloads()];
   if (!all.length) return;
 
   const global = all.slice(0, 90).map(p => ({ ...p, dm_permission: false })); // plafond de sécurité (limite Discord : 100) + commandes réservées aux serveurs
@@ -769,7 +773,10 @@ async function syncGlobalCommands(botId) {
       if (Array.isArray(current)) discordCount = current.length;
     } catch { return; } // lecture impossible → on réessaiera au prochain cycle
     const decision = globalSyncDecision(store.settings.get(key), hash, discordCount, global.length);
-    if (decision === 'skip') return;
+    if (decision === 'skip') {
+      try { await require('./changelog').syncOnSupportGuild(entry, record); } catch (e) { console.error('[BotDev] /update serveur support :', e.message); }
+      return;
+    }
     console.log(`[BotDev] bot ${botId} : dérive des commandes globales détectée (${discordCount} chez Discord ≠ ${global.length} attendues) — re-synchronisation…`);
   }
 
@@ -777,6 +784,7 @@ async function syncGlobalCommands(botId) {
     await entry.client.rest.put(`/applications/${appId}/commands`, { body: global });
     store.settings.set(key, hash);
     console.log(`[BotDev] bot ${botId} : ${global.length} commandes GLOBALES enregistrées (badge /)${all.length > 90 ? ` — ${all.length - 90} ignorées (limite Discord)` : ''}`);
+    try { await require('./changelog').syncOnSupportGuild(entry, record); } catch (e) { console.error('[BotDev] /update serveur support :', e.message); }
   } catch (e) {
     const msg = String(e.message || e);
     if (msg.includes('429') || msg.includes('rate')) {
