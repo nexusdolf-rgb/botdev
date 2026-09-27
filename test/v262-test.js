@@ -123,9 +123,9 @@ const mkMember = (flags) => {
   console.log('— 7. Version —');
   const index = fs.readFileSync(require('path').join(__dirname, '..', 'public/index.html'), 'utf8');
   const sw = fs.readFileSync(require('path').join(__dirname, '..', 'public/sw.js'), 'utf8');
-  check('index.html : ?v=333 référencé 7 fois', (index.match(/\?v=333/g) || []).length === 7,
-    String((index.match(/\?v=333/g) || []).length));
-  check('sw.js : cache « botdev-v333 »', sw.includes("const CACHE = 'botdev-v333';"));
+  check('index.html : ?v=334 référencé 7 fois', (index.match(/\?v=334/g) || []).length === 7,
+    String((index.match(/\?v=334/g) || []).length));
+  check('sw.js : cache « botdev-v334 »', sw.includes("const CACHE = 'botdev-v334';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v262 — ${ok} vérifications OK : le centre d'aide est devenu pro.`);

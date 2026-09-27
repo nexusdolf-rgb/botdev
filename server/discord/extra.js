@@ -299,6 +299,11 @@ function buildExtraPayloads() {
         { name: 'texte', description: 'La question à ajouter (pour question)', type: ApplicationCommandOptionType.String, required: false },
       ],
     },
+    // v334 — journal de version public, fondateur uniquement (vérifié à l'exécution).
+    {
+      name: 'update',
+      description: '📢 Publier le journal de version dans ce salon (fondateur uniquement)',
+    },
   ];
 }
 
@@ -360,7 +365,7 @@ async function handleInteraction(botId, entry, interaction) {
 }
 
 // ---------------------- Commandes slash ----------------------
-const EXTRA_CMDS = new Set(['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch', 'rps', 'pendu', 'morpion', 'birthday', 'remind', 'poll', 'snipe', 'work', 'gamble', 'rob', 'lockdown', 'voicetemp', 'emotes', 'sticky', 'apply', 'invites', 'afk', 'top', 'quiz']);
+const EXTRA_CMDS = new Set(['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch', 'rps', 'pendu', 'morpion', 'birthday', 'remind', 'poll', 'snipe', 'work', 'gamble', 'rob', 'lockdown', 'voicetemp', 'emotes', 'sticky', 'apply', 'invites', 'afk', 'top', 'quiz', 'update']);
 
 async function handleSlash(botId, entry, interaction) {
   const cmd = String(interaction.commandName || '').toLowerCase();
@@ -383,6 +388,10 @@ async function handleSlash(botId, entry, interaction) {
   const guild = interaction.guild;
   const user = interaction.user;
   const member = interaction.member;
+
+  if (cmd === 'update') {
+    return require('./changelog').handleUpdate(interaction);
+  }
 
   switch (cmd) {
     // ---------------- Social ----------------

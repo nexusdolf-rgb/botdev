@@ -27,8 +27,8 @@ const idx = racine('server/index.js');
 const ac = racine('server/discord/autoclean.js');
 
 console.log('— 1. Pins de version v317 —');
-check('index.html : ?v=333 ×7', (html.match(/\?v=333/g) || []).length === 7);
-check('sw.js : cache botdev-v333', sw.includes("const CACHE = 'botdev-v333';"));
+check('index.html : ?v=334 ×7', (html.match(/\?v=334/g) || []).length === 7);
+check('sw.js : cache botdev-v334', sw.includes("const CACHE = 'botdev-v334';"));
 check('index.html : plus aucune ?v=316', !html.includes('?v=316'));
 
 console.log('— 2. Dashboard : le module est là —');
