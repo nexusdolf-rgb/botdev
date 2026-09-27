@@ -7,7 +7,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const ui = require('./ui');
 
-const VERSION = 337;
+const VERSION = 338;
 const DASHBOARD_URL = 'https://hoxera.is-a.dev';
 const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3';
 const AUTO_REVERT_MS = 2 * 60 * 1000;
@@ -15,6 +15,12 @@ const SELECT_ID = (botId) => `hx-upd:${botId}`;
 
 // Plus récent en premier. Menu Discord = 25 options max (accueil + 24 versions).
 const VERSIONS = [
+  {
+    v: 338, date: '28/09', title: 'Accueil plus pro',
+    new: ['Page d’accueil publique : photo Optimus, un titre, un bouton, beaucoup d’air.'],
+    improved: ['Moins de bruit visuel : plus une page produit qu’un panneau d’administration.'],
+    fixed: [],
+  },
   {
     v: 337, date: '28/09', title: 'Page d’accueil au niveau du dashboard',
     new: [],

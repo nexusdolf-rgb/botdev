@@ -1231,3 +1231,242 @@ html.hx-light #public-landing .hp-cta-inner {
   box-shadow: 0 12px 28px -18px rgba(30,34,60,.28);
 }
 html.hx-light #public-landing .pub-stat { background: #f0f1f7; border-color: #e4e6ef; }
+
+/* ============================================================
+   🏠 HOXERA v338 — Home « produit », pas panneau d’admin
+   Inspiré du NIVEAU pro (espace, 1 CTA, marque au centre).
+   Interdit : cloner un autre bot (textes, vagues, police, classes dh-*).
+   HTML v167/v240 toujours inchangé.
+   ============================================================ */
+body:has(#public-landing) {
+  background: #12141c;
+}
+body:has(#public-landing) .navbar {
+  background: rgba(18, 20, 28, .78) !important;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+#public-landing .pub-blob { opacity: .14; filter: blur(90px); }
+#public-landing .pub-hero-badge.shimmer::after { animation: none; display: none; }
+
+#public-landing .pub-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 56px 24px 72px;
+  gap: 0;
+}
+#public-landing .pub-hero::before {
+  content: "";
+  width: 132px;
+  height: 132px;
+  margin: 0 auto 26px;
+  border-radius: 32px;
+  background: #1a1c28 url("/api/public/bot-avatar") center / cover no-repeat;
+  border: 2px solid rgba(224,122,95,.45);
+  box-shadow: 0 28px 54px -22px rgba(224,122,95,.6);
+}
+#public-landing .pub-hero-badge {
+  grid-area: auto;
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+#public-landing .hero-title {
+  grid-area: auto;
+  font-size: clamp(34px, 5.4vw, 58px);
+  font-weight: 800;
+  letter-spacing: -1.6px;
+  line-height: 1.08;
+  margin: 0;
+}
+#public-landing .grad-anim {
+  animation: none;
+  background: none;
+  -webkit-text-fill-color: #e07a5f;
+  color: #e07a5f;
+}
+#public-landing .pub-tagline {
+  grid-area: auto;
+  max-width: 540px;
+  margin: 18px auto 28px;
+  color: rgba(255,255,255,.62);
+  font-size: 17px;
+  line-height: 1.55;
+}
+#public-landing .pub-hero-actions {
+  grid-area: auto;
+  justify-content: center;
+  gap: 10px;
+}
+#public-landing .pub-hero-actions .btn-primary {
+  background: #e07a5f;
+  background-image: none;
+  border-radius: 6px;
+  font-size: 16.5px;
+  padding: 14px 22px;
+  box-shadow: none;
+  filter: none;
+}
+#public-landing .pub-hero-actions .btn-primary:hover {
+  background: #c95b49;
+  filter: none;
+  box-shadow: none;
+  transform: none;
+}
+#public-landing .pub-hero-actions .btn-discord,
+#public-landing .pub-hero-actions .btn:not(.btn-primary) {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,.16);
+  box-shadow: none;
+  width: auto;
+}
+#public-landing .pub-support-link {
+  grid-area: auto;
+  margin-top: 16px;
+}
+#public-landing .pub-support-link a { color: rgba(255,255,255,.45); font-size: 13px; }
+
+#public-landing .pub-stats {
+  grid-area: auto;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 40px;
+  width: 100%;
+  margin-top: 48px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+#public-landing .pub-stats::before,
+#public-landing .pub-stats::after { display: none; content: none; }
+#public-landing .pub-stat {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: auto;
+  min-width: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  text-align: center;
+}
+#public-landing .pub-stat .val {
+  font-size: 28px;
+  background: none;
+  -webkit-text-fill-color: #fff;
+  color: #fff;
+}
+#public-landing .pub-stat .lbl { color: rgba(255,255,255,.42); font-size: 11.5px; letter-spacing: .4px; }
+
+#public-landing .pub-section { padding: 56px 26px; }
+#public-landing .pub-section h2,
+#public-landing .hp-section h2 {
+  font-size: clamp(26px, 3.4vw, 40px);
+  font-weight: 750;
+  letter-spacing: -.6px;
+}
+
+#public-landing .pub-features {
+  grid-template-columns: 1fr 1fr;
+  gap: 0 48px;
+}
+#public-landing .pub-feature {
+  background: none !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(255,255,255,.07) !important;
+  border-radius: 0;
+  box-shadow: none !important;
+  padding: 22px 4px 22px 0;
+  transform: none !important;
+}
+#public-landing .pub-feature:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  border-color: rgba(224,122,95,.35) !important;
+}
+#public-landing .pub-feature .f-ico {
+  width: auto; height: auto;
+  background: none; border: none;
+  font-size: 22px;
+  transform: none !important;
+}
+#public-landing .pub-feature:hover .f-ico { transform: none !important; }
+#public-landing .pub-feature b {
+  font-size: 18px;
+  letter-spacing: -.02em;
+  color: #e07a5f;
+}
+
+#public-landing .hp-about-card,
+#public-landing .hp-pillar,
+#public-landing .hp-step,
+#public-landing .hp-faq-item,
+#public-landing .bot-card {
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: none;
+}
+#public-landing .hp-about-card::before { opacity: .9; }
+#public-landing .hp-pillar:hover,
+#public-landing .bot-card:hover {
+  transform: none;
+  border-color: rgba(224,122,95,.4);
+  box-shadow: none;
+}
+#public-landing .hp-cta-inner {
+  background: none;
+  border: 1px solid rgba(224,122,95,.35);
+  box-shadow: none;
+  border-radius: 16px;
+}
+#public-landing .hp-cta-inner .btn-primary {
+  background: #e07a5f;
+  background-image: none;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+@media (max-width: 900px) {
+  #public-landing .pub-hero {
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    padding: 40px 18px 48px;
+  }
+  #public-landing .pub-hero::before { width: 96px; height: 96px; border-radius: 24px; margin-bottom: 18px; }
+  #public-landing .pub-stats {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 22px 28px;
+    margin-top: 32px;
+  }
+  #public-landing .pub-stat { flex: 0 1 auto; min-width: 0; }
+  #public-landing .pub-features { grid-template-columns: 1fr; }
+}
+
+html.hx-light body:has(#public-landing) { background: #f4f5f8; }
+html.hx-light #public-landing .hero-title { color: #1c1e26; }
+html.hx-light #public-landing .pub-tagline { color: #5c6270; }
+html.hx-light #public-landing .pub-stat .val { -webkit-text-fill-color: #1c1e26; color: #1c1e26; }
+html.hx-light #public-landing .pub-stat .lbl { color: #8b8fa3; }
+html.hx-light #public-landing .pub-feature {
+  border-bottom-color: #e4e6ef !important;
+}
+html.hx-light #public-landing .hp-about-card,
+html.hx-light #public-landing .hp-pillar,
+html.hx-light #public-landing .hp-step,
+html.hx-light #public-landing .hp-faq-item,
+html.hx-light #public-landing .bot-card,
+html.hx-light #public-landing .hp-cta-inner {
+  background: #fff;
+  border-color: #e4e6ef;
+}

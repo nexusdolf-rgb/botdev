@@ -100,8 +100,8 @@ const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
   console.log('\n7) Versionnage front cohérent (v228)');
   const indexHtml = read('public/index.html');
   const swSource = read('public/sw.js');
-  check('index.html : 7 références ?v=337', (indexHtml.match(/\?v=337/g) || []).length === 7);
-  check('sw.js : cache v228', swSource.includes("const CACHE = 'botdev-v337';"));
+  check('index.html : 7 références ?v=338', (indexHtml.match(/\?v=338/g) || []).length === 7);
+  check('sw.js : cache v228', swSource.includes("const CACHE = 'botdev-v338';"));
 
   console.log(failures === 0 ? '\n✅ V228 — Messages partiels tolérés, /snipe intact, front v228.' : `\n❌ V228 — ${failures} échec(s)`);
   process.exit(failures ? 1 : 0);

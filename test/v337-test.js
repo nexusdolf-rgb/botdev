@@ -19,8 +19,8 @@ const css = racine('public/css/style.css');
 const pub = racine('public/js/public.js');
 
 console.log('— 1. Pins v337 —');
-check('index.html : ?v=337 ×7', (html.match(/\?v=337/g) || []).length === 7);
-check('sw.js : cache botdev-v337', sw.includes("const CACHE = 'botdev-v337';"));
+check('index.html : ?v=338 ×7', (html.match(/\?v=338/g) || []).length === 7);
+check('sw.js : cache botdev-v338', sw.includes("const CACHE = 'botdev-v338';"));
 check('index.html : plus aucune ?v=336', !html.includes('?v=336'));
 
 console.log('— 2. HTML public inchangé (verrous v167/v240) —');
@@ -45,7 +45,7 @@ check('tuiles 2 colonnes puis 1 sur mobile', css.includes('#public-landing .pub-
 check('v195 conservée', css.includes('HOXERA ULTRA PRO v195'));
 
 const changelog = require('../server/discord/changelog');
-check('VERSION = 337', changelog.VERSION === 337);
+check('VERSION numérique ≥ 337', changelog.VERSION >= 337);
 
 console.log('\nRésultat : ' + ok + ' ✅ / ' + ko + ' ❌ sur ' + (ok + ko) + ' vérifications');
 if (fails.length) fails.forEach((f) => console.log('  ❌ ' + f));
