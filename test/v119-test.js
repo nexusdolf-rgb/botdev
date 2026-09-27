@@ -57,7 +57,10 @@ function fakeInteraction({ customId, kind = 'button', userId = 'U1', values = []
 
   const raw = store.advancedTickets.get(botId, 'G1');
   const cfg = advanced.normalizeConfig(raw);
-  assert.deepStrictEqual(cfg.types[0].questions, ['Quel est ton pseudo ?', 'Que s\'est-il passé ?']);
+  assert.deepStrictEqual(cfg.types[0].questions, [
+    { text: 'Quel est ton pseudo ?', max: 500 },
+    { text: 'Que s\'est-il passé ?', max: 500 },
+  ]);
   assert.strictEqual(store.tickets.get(botId, 'G1').message, 'Ancien panneau');
   console.log('✅ questions par type : stockage séparé et ancien système intact');
 
@@ -129,7 +132,7 @@ function fakeInteraction({ customId, kind = 'button', userId = 'U1', values = []
   // Contrôles de régression : limites serveur et interface dédiée.
   assert.ok(advancedSource.includes('questionsFor(type)'));
   assert.ok(advancedSource.includes('hx2-tcomb') && advancedSource.includes('hx2-tquest'));
-  assert.ok(routesSource.includes('questions: (Array.isArray(t.questions)'));
+  assert.ok(routesSource.includes('questions: store.cleanTicketQuestions(t.questions)'));
   assert.ok(dashSource.includes('data-addquestion') && dashSource.includes('type.questions'));
   console.log('✅ routes et dashboard : ajout/sauvegarde des questions par type');
 

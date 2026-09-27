@@ -38,8 +38,8 @@ const HOXERA = 0xE07A5F;
 
 console.log('— 1. Pins de version v308 —');
 const html = racine('public/index.html');
-check('index.html : ?v=332 ×7', (html.match(/\?v=332/g) || []).length === 7);
-check('sw.js : cache botdev-v332', racine('public/sw.js').includes("const CACHE = 'botdev-v332';"));
+check('index.html : ?v=333 ×7', (html.match(/\?v=333/g) || []).length === 7);
+check('sw.js : cache botdev-v333', racine('public/sw.js').includes("const CACHE = 'botdev-v333';"));
 
 console.log('— 2. La petite ligne verticale est PARTOUT #e07a5f —');
 store.bots.create({ user_id: 1, name: 'B', token: 'x', client_id: 'c', prefix: '!' });
@@ -105,9 +105,8 @@ store.bots.create({ user_id: 1, name: 'B', token: 'x', client_id: 'c', prefix: '
     check(`panneau « ${titre} » : aucune ligne colorée (v309)`,
       b.includes('accent: false') && !b.includes(ancienne), b.slice(-120));
   }
-  const claim = src.indexOf('ticket_claim_msg');
-  check('panneau « 🖐️ Ticket pris en charge » : aucune ligne colorée (v309)',
-    claim >= 0 && src.slice(Math.max(0, claim - 320), claim).includes('accent: false'));
+  check('prise en charge : plus de gros panneau coloré (v333)',
+    !src.includes('ticket_claim_msg') && src.includes("s'occupe de ce ticket"));
 }
 
 console.log(`\nRésultat : ${ok} ✅ / ${ko} ❌ sur ${ok + ko} vérifications`);

@@ -158,6 +158,8 @@ async function runJoinEvent(botId, member, opts = {}) {
         // mode classique.
         const viaWebhook = !!((identity.effectiveProfile(botId, member.guild.id) || {}).name);
         const carteV2 = files.length && !viaWebhook;
+        const memberPing = `<@${member.id}>`;
+        const mentionOpts = { users: [String(member.id)] };
         let welcomePayload;
         if (!files.length || carteV2) {
           welcomePayload = {
@@ -165,6 +167,7 @@ async function runJoinEvent(botId, member, opts = {}) {
               color: cfg.color || '#57F287',
               author: { name: `${user.tag || user.username || 'Nouveau membre'} vient d'arriver !` },
               title: `👋 Bienvenue sur ${member.guild.name} !`,
+              content: memberPing,
               // `text` brut : ui.v2panel découpe lui-même les paragraphes et
               // pose les séparateurs NATIFS pleine largeur entre eux.
               description: text,
@@ -179,6 +182,7 @@ async function runJoinEvent(botId, member, opts = {}) {
               // L'iconURL du pied d'embed n'existe pas en V2 (pied en texte discret).
               footer: false,
             }),
+            allowedMentions: mentionOpts,
             ...(carteV2 ? { files } : {}),
           };
         } else {
@@ -195,12 +199,14 @@ async function runJoinEvent(botId, member, opts = {}) {
             // et PLUS d'horodatage (Discord affiche déjà l'heure du message).
             
             .setImage('attachment://bienvenue.png');
-          welcomePayload = { embeds: [embed], files };
+          welcomePayload = { content: memberPing, embeds: [embed], files, allowedMentions: mentionOpts };
         }
         const ok = await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, welcomePayload).then(() => true).catch((e) => { trace('envoi panneau ÉCHOUÉ : ' + e.message); return false; });
         trace(ok ? 'panneau premium envoyé ✅' : 'panneau premium NON envoyé ❌ (permissions ?)');
       } else {
-        const ok = await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { content: finalContent, files }).then(() => true).catch((e) => { trace('envoi texte ÉCHOUÉ : ' + e.message); return false; });
+        const ping = `<@${member.id}>`;
+        const body = String(finalContent || '').includes(ping) ? finalContent : `${ping} ${finalContent}`;
+        const ok = await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { content: body, files, allowedMentions: { users: [String(member.id)] } }).then(() => true).catch((e) => { trace('envoi texte ÉCHOUÉ : ' + e.message); return false; });
         trace(ok ? 'message texte envoyé ✅' : 'message texte NON envoyé ❌');
       }
       await logging.log(botId, member.guild, {

@@ -212,7 +212,7 @@ check('arrivée sans carte : la ligne de journal est, elle aussi, en V2',
 // garde-fou au niveau du code : c'est lui qui évite le 400 BAD REQUEST.
 const evSrc = src('events.js');
 check('arrivée AVEC carte + webhook : l\'embed classique est conservé (V2 + webhook + files = 400)',
-  evSrc.includes('welcomePayload = { embeds: [embed], files };'));
+  evSrc.includes('embeds: [embed], files'));
 check('arrivée AVEC carte : le branchement dépend de la carte ET du webhook (v240)',
   evSrc.includes('const carteV2 = files.length && !viaWebhook;')
   && evSrc.includes('if (!files.length || carteV2) {'));

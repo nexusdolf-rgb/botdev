@@ -2074,7 +2074,16 @@ Dashboard.renderers.tickets = async (content, data) => {
   const t = data.tickets;
   let advancedConfig = null;
   try { advancedConfig = (await App.api(`/bots/${bot.id}/guilds/${guildId}/advanced-tickets`)).config || null; } catch {}
-  const typesData = (t.types || []).map((x) => ({ label: x.label, emoji: x.emoji || '', description: x.description || '', category: x.category || '', questions: (Array.isArray(x.questions) && x.questions.length) ? [...x.questions] : [], staff_roles: (x.staff_roles && x.staff_roles.length) ? [...x.staff_roles] : [] }));
+  const qNorm = (q) => {
+    if (q && typeof q === 'object') {
+      const text = String(q.text || q.q || '').slice(0, 45);
+      let max = parseInt(q.max, 10);
+      if (!Number.isFinite(max)) max = 500;
+      return { text, max: Math.min(4000, Math.max(1, max)) };
+    }
+    return { text: String(q || '').slice(0, 45), max: 500 };
+  };
+  const typesData = (t.types || []).map((x) => ({ label: x.label, emoji: x.emoji || '', description: x.description || '', category: x.category || '', questions: (Array.isArray(x.questions) && x.questions.length) ? x.questions.map(qNorm) : [], staff_roles: (x.staff_roles && x.staff_roles.length) ? [...x.staff_roles] : [] }));
   const root = Dashboard.header(content, '🎫', 'Système de tickets', 'Bouton, liste, ou le système avancé en bas.');
   const ts = data.tickets_stats || { total: 0, open: 0 };
   root.appendChild(App.el(`
@@ -2423,7 +2432,7 @@ Dashboard.renderers.tickets = async (content, data) => {
         category: c.querySelector('#t-cat').value.trim() || 'Tickets',
         message: c.querySelector('#t-msg').value,
         image_url: panelImage,
-        types: typesData.filter((x) => x.label).map((x) => ({ label: x.label, emoji: x.emoji, description: x.description, category: x.category, questions: (x.questions || []).map((q) => String(q).slice(0, 45)).filter(Boolean).slice(0, 5), staff_roles: x.staff_roles.filter(Boolean) })),
+        types: typesData.filter((x) => x.label).map((x) => ({ label: x.label, emoji: x.emoji, description: x.description, category: x.category, questions: (x.questions || []).map(qNorm).filter((q) => q.text).slice(0, 5), staff_roles: x.staff_roles.filter(Boolean) })),
       }});
       // 📔 Journal des tickets : réglage serveur (indépendant de la config du panneau)
       await App.api(`/bots/${bot.id}/guilds/${guildId}/settings`, { method: 'PUT', body: {
@@ -2553,12 +2562,16 @@ Dashboard.renderers.tickets = async (content, data) => {
       const renderQs = () => {
         qEl.innerHTML = '';
         x.questions.forEach((q, j) => {
+          const qq = qNorm(q);
           const rq = App.el(`
-            <div style="display:flex;gap:7px">
-              <input class="dash-input" value="${App.escapeHtml(q)}" placeholder="Ex : Non RP ?" maxlength="45" />
+            <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
+              <input class="dash-input" data-qtext value="${App.escapeHtml(qq.text)}" placeholder="Ex : Non RP ?" maxlength="45" style="flex:1;min-width:160px" />
+              <input class="dash-input" data-qmax type="number" min="1" max="4000" value="${qq.max}" title="Caractères max de la réponse" style="width:92px" />
               <button class="dash-btn dash-btn-danger dash-btn-sm">🗑</button>
             </div>`);
-          rq.querySelector('input').addEventListener('input', (e) => { x.questions[j] = e.target.value; });
+          const syncQ = () => { x.questions[j] = { text: rq.querySelector('[data-qtext]').value, max: parseInt(rq.querySelector('[data-qmax]').value, 10) || 500 }; };
+          rq.querySelector('[data-qtext]').addEventListener('input', syncQ);
+          rq.querySelector('[data-qmax]').addEventListener('input', syncQ);
           rq.querySelector('button').onclick = () => { x.questions.splice(j, 1); renderQs(); };
           qEl.appendChild(rq);
         });
@@ -2567,7 +2580,7 @@ Dashboard.renderers.tickets = async (content, data) => {
       renderQs();
       row.querySelector('[data-addq]').onclick = () => {
         if (x.questions.length >= 5) return App.toast('Maximum 5 questions par type.', 'error');
-        x.questions.push('');
+        x.questions.push({ text: '', max: 500 });
         renderQs();
       };
       el.appendChild(row);
@@ -2593,7 +2606,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     types: (Array.isArray(adv.types) && adv.types.length ? adv.types : [{ id: 't1', label: 'Support', emoji: '🎫', button_label: '', description: 'Demande générale au staff', category: '', questions: [], color: '#5865F2', button_style: '1', staff_roles: [] }]).map((x, i) => ({
       id: String(x.id || `t${i + 1}`), label: String(x.label || ''), emoji: String(x.emoji || ''), button_label: String(x.button_label || ''),
       description: String(x.description || ''), category: String(x.category || ''),
-      questions: (Array.isArray(x.questions) ? x.questions : []).map((q) => String(q).trim()).filter(Boolean).slice(0, 5),
+      questions: (Array.isArray(x.questions) ? x.questions : []).map(qNorm).filter((q) => q.text).slice(0, 5),
       color: /^#[0-9a-fA-F]{6}$/.test(String(x.color || '')) ? String(x.color) : '#5865F2',
       button_style: ['1', '2', '3', '4'].includes(String(x.button_style)) ? String(x.button_style) : '1',
       staff_roles: Array.isArray(x.staff_roles) ? [...x.staff_roles] : [],
@@ -2726,15 +2739,17 @@ Dashboard.renderers.tickets = async (content, data) => {
           questionsEl.appendChild(App.el(`<div style="font-size:11.5px;color:var(--d-dim)">Aucune question — seule la raison générale sera demandée si elle est activée.</div>`));
         }
         type.questions.forEach((question, questionIndex) => {
+          const qq = qNorm(question);
           const questionRow = App.el(`
             <div class="adv-question-row">
               <span style="font-size:11px;color:var(--d-dim);min-width:17px">${questionIndex + 1}.</span>
-              <input class="dash-input" value="${App.escapeHtml(question)}" placeholder="Ex : Quel est votre pseudo ?" maxlength="45" style="flex:1" />
+              <input class="dash-input" data-qtext value="${App.escapeHtml(qq.text)}" placeholder="Ex : Quel est votre pseudo ?" maxlength="45" style="flex:1" />
+              <input class="dash-input" data-qmax type="number" min="1" max="4000" value="${qq.max}" title="Caractères max de la réponse" style="width:92px" />
               <button class="dash-btn dash-btn-danger dash-btn-sm">🗑</button>
             </div>`);
-          questionRow.querySelector('input').addEventListener('input', (event) => {
-            type.questions[questionIndex] = event.target.value;
-          });
+          const syncQ = () => { type.questions[questionIndex] = { text: questionRow.querySelector('[data-qtext]').value, max: parseInt(questionRow.querySelector('[data-qmax]').value, 10) || 500 }; };
+          questionRow.querySelector('[data-qtext]').addEventListener('input', syncQ);
+          questionRow.querySelector('[data-qmax]').addEventListener('input', syncQ);
           questionRow.querySelector('button').onclick = () => {
             type.questions.splice(questionIndex, 1);
             renderTypeQuestions();
@@ -2755,7 +2770,7 @@ Dashboard.renderers.tickets = async (content, data) => {
       row.querySelector('[data-addrole]').onclick = () => { type.staff_roles.push(''); renderTypeRoles(); };
       row.querySelector('[data-addquestion]').onclick = () => {
         if (type.questions.length >= 5) return App.toast('Maximum 5 questions par type.', 'error');
-        type.questions.push('');
+        type.questions.push({ text: '', max: 500 });
         renderTypeQuestions();
       };
       row.querySelector('[data-del]').onclick = () => { advancedData.types.splice(index, 1); advRenderTypes(); advRenderPreview(); };

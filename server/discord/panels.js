@@ -302,9 +302,7 @@ function normalizeTypes(cfg) {
       emoji: String(t.emoji || ''),
       category: String(t.category || ''),
       description: String(t.description || '').slice(0, 100),
-      questions: Array.isArray(t.questions)
-        ? t.questions.map((q) => String(q).slice(0, 45)).filter(Boolean).slice(0, 5)
-        : [],
+      questions: store.cleanTicketQuestions(t.questions),
       staff_roles: roles,
     };
   });
@@ -694,6 +692,66 @@ async function ackReply(interaction, payload) {
   }
 }
 
+// v332 — « Prendre ce ticket » est un BOUTON en bas du panneau, plus une
+// option du menu. Une fois cliqué, le bouton disparaît (un seul staff).
+function staffTicketRows(botId, claimed) {
+  const staffMenu = new StringSelectMenuBuilder()
+    .setCustomId(`bd-troom:${botId}`)
+    .setPlaceholder('⚙️ Actions du staff — gérer ce ticket…')
+    .setMinValues(1)
+    .setMaxValues(1)
+    .addOptions(
+      new StringSelectMenuOptionBuilder().setLabel('⏸ Mettre en attente').setDescription('Passer le ticket en lecture seule').setValue('hold'),
+      new StringSelectMenuOptionBuilder().setLabel('🔒 Fermer').setDescription('Verrouiller le ticket (réouvrable)').setValue('close'),
+      new StringSelectMenuOptionBuilder().setLabel('🔓 Réouvrir').setDescription('Rouvrir un ticket fermé').setValue('reopen'),
+      new StringSelectMenuOptionBuilder().setLabel('➕ Ajouter un membre').setDescription("Inviter quelqu'un dans le salon").setValue('addmember'),
+      new StringSelectMenuOptionBuilder().setLabel('🗑 Supprimer définitivement').setDescription('Fermeture finale + transcription en MP').setValue('delete'),
+    );
+  const rows = [new ActionRowBuilder().addComponents(staffMenu)];
+  if (!claimed) {
+    rows.push(new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`bd-tmenu:${botId}:claim`)
+        .setStyle(ButtonStyle.Success)
+        .setLabel('🖐️ Prendre ce ticket'),
+    ));
+  }
+  return rows;
+}
+
+function stripClaimButtonJson(components, claimId) {
+  const walk = (arr) => {
+    if (!Array.isArray(arr)) return arr;
+    return arr.map((c) => {
+      if (!c || typeof c !== 'object') return c;
+      const kids = c.components;
+      if (c.type === 1 && Array.isArray(kids)) {
+        const kept = kids.filter((b) => String((b && (b.custom_id || b.customId)) || '') !== claimId);
+        if (!kept.length) return null;
+        return { ...c, components: kept };
+      }
+      if (Array.isArray(kids)) {
+        const next = walk(kids).filter(Boolean);
+        return { ...c, components: next };
+      }
+      return c;
+    }).filter(Boolean);
+  };
+  return walk(components);
+}
+
+async function removeClaimButton(message, botId) {
+  if (!message || typeof message.edit !== 'function') return;
+  const claimId = `bd-tmenu:${botId}:claim`;
+  try {
+    const json = (message.components || []).map((c) => (c && typeof c.toJSON === 'function' ? c.toJSON() : c));
+    const stripped = stripClaimButtonJson(json, claimId);
+    await message.edit({ components: stripped, flags: MessageFlags.IsComponentsV2 });
+  } catch (e) {
+    console.error('[Hoxera] retrait bouton claim :', e.message);
+  }
+}
+
 // Embed de bienvenue du salon de ticket : textes professionnels,
 // type + description, équipe en charge, déroulement de la prise en charge,
 // et les réponses du questionnaire personnalisé (si le type en a un).
@@ -879,9 +937,7 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
     category: String(chosenRaw.category || ''),
     color: /^#[0-9a-fA-F]{6}$/.test(String(chosenRaw.color || '')) ? String(chosenRaw.color) : '',
     description: String(chosenRaw.description || '').slice(0, 100),
-    questions: Array.isArray(chosenRaw.questions)
-      ? chosenRaw.questions.map((q) => String(q).slice(0, 45)).filter(Boolean).slice(0, 5)
-      : [],
+    questions: store.cleanTicketQuestions(chosenRaw.questions),
     staff_roles: Array.isArray(chosenRaw.staff_roles)
       ? chosenRaw.staff_roles.map((r) => String(r).trim()).filter(Boolean)
       : (chosenRaw.staff_role ? [String(chosenRaw.staff_role).trim()] : []),
@@ -1064,20 +1120,7 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
   // ⚙️ v212 — Actions du staff en MENU DÉROULANT (plus de rangées de
   // boutons qui allongent le salon) : le staff choisit l'action dans le
   // sélecteur ; chaque action vérifie le rôle staff au moment de l'usage.
-  const staffMenu = new StringSelectMenuBuilder()
-    .setCustomId(`bd-troom:${botId}`)
-    .setPlaceholder('⚙️ Actions du staff — gérer ce ticket…')
-    .setMinValues(1)
-    .setMaxValues(1)
-    .addOptions(
-      new StringSelectMenuOptionBuilder().setLabel('🖐️ Prendre en charge').setDescription("S'attribuer le ticket").setValue('claim'),
-      new StringSelectMenuOptionBuilder().setLabel('⏸ Mettre en attente').setDescription('Passer le ticket en lecture seule').setValue('hold'),
-      new StringSelectMenuOptionBuilder().setLabel('🔒 Fermer').setDescription('Verrouiller le ticket (réouvrable)').setValue('close'),
-      new StringSelectMenuOptionBuilder().setLabel('🔓 Réouvrir').setDescription('Rouvrir un ticket fermé').setValue('reopen'),
-      new StringSelectMenuOptionBuilder().setLabel('➕ Ajouter un membre').setDescription("Inviter quelqu'un dans le salon").setValue('addmember'),
-      new StringSelectMenuOptionBuilder().setLabel('🗑 Supprimer définitivement').setDescription('Fermeture finale + transcription en MP').setValue('delete'),
-    );
-  const row1 = new ActionRowBuilder().addComponents(staffMenu);
+  const staffRows = staffTicketRows(botId, false);
 
   // Vérification MP dès l'ouverture : si les MP du membre sont fermés,
   // on l'avertit tout de suite qu'il ne pourra pas recevoir la transcription.
@@ -1139,7 +1182,7 @@ Notre équipe va vous répondre dans le salon privé prévu pour vous.`,
       room,
       {
         content: i18n.t(lang, 'ticket_first_line', { type: typeTitle, member: `${member}` }) + (staffMention ? ' · ' + staffMention : ''),
-        rows: [row1],
+        rows: staffRows,
       },
     );
     await identity.sendAsProfile(interaction.client, botId, guild, channel, welcome).catch(() => {});
@@ -1205,10 +1248,18 @@ function reasonModal(botId, customId, title, label, placeholder) {
 const pendingQuestionnaires = new Map(); // userId -> { botId, guildId, type, ts }
 const pendingCombined = new Map();       // userId -> { botId, guildId, type, questions, ts }
 
+function questionLabel(q) {
+  if (typeof q === 'string') return q.slice(0, 45);
+  return String((q && (q.text || q.q || '')) || '').slice(0, 45);
+}
+function questionMax(q) {
+  const n = parseInt(q && typeof q === 'object' ? q.max : 500, 10);
+  if (!Number.isFinite(n)) return 500;
+  return Math.min(4000, Math.max(1, n));
+}
+
 function questionnaireModal(botId, type) {
-  const questions = (type && type.questions && type.questions.length)
-    ? type.questions.map((q) => String(q).slice(0, 45)).filter(Boolean).slice(0, 5)
-    : [];
+  const questions = store.cleanTicketQuestions(type && type.questions);
   const modal = new ModalBuilder()
     .setCustomId(`bd-tquest:${botId}`)
     .setTitle(`📝 ${type ? String(type.label || 'Ticket').slice(0, 30) : 'Ticket'} — questionnaire`);
@@ -1216,10 +1267,10 @@ function questionnaireModal(botId, type) {
     modal.addComponents(new ActionRowBuilder().addComponents(
       new TextInputBuilder()
         .setCustomId(`q${i}`)
-        .setLabel(q)
+        .setLabel(questionLabel(q))
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true)
-        .setMaxLength(500),
+        .setMaxLength(questionMax(q)),
     ));
   });
   return modal;
@@ -1234,10 +1285,10 @@ function combinedModal(botId, type, questions) {
     modal.addComponents(new ActionRowBuilder().addComponents(
       new TextInputBuilder()
         .setCustomId(`q${i}`)
-        .setLabel(q)
+        .setLabel(questionLabel(q))
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true)
-        .setMaxLength(500),
+        .setMaxLength(questionMax(q)),
     ));
   });
   modal.addComponents(new ActionRowBuilder().addComponents(
@@ -1254,8 +1305,8 @@ function combinedModal(botId, type, questions) {
 async function askReason(botId, interaction, type, answers = [], skipQuestionnaire = false, cfgOverride = null) {
   const cfg = cfgOverride || store.tickets.get(botId, interaction.guild.id) || {};
   const wantReason = !(cfg.require_reason === 0 || cfg.require_reason === false);
-  const questions = (!skipQuestionnaire && type && Array.isArray(type.questions))
-    ? type.questions.map((q) => String(q).slice(0, 45)).filter(Boolean).slice(0, 5)
+  const questions = (!skipQuestionnaire && type)
+    ? store.cleanTicketQuestions(type.questions)
     : [];
 
   // Cas 1 : questions + raison → UNE SEULE modale combinée
@@ -1295,8 +1346,8 @@ async function submitCombined(botId, interaction) {
     return interaction.reply({ content: '⏰ Votre demande a expiré, réessayez.', ephemeral: true });
   }
   const answers = pending.questions.map((q, i) => ({
-    q: String(q).slice(0, 45),
-    a: (interaction.fields.getTextInputValue(`q${i}`) || '').trim().slice(0, 500) || '—',
+    q: questionLabel(q),
+    a: (interaction.fields.getTextInputValue(`q${i}`) || '').trim().slice(0, questionMax(q)) || '—',
   }));
   const reason = (interaction.fields.getTextInputValue('reason') || '').trim();
   // Réponse différée AVANT l'ouverture (le salon peut prendre quelques secondes)
@@ -1310,10 +1361,10 @@ async function submitQuestionnaire(botId, interaction) {
   if (!pending || pending.botId !== botId || Date.now() - (pending.ts || 0) > WIZARD_TTL) {
     return interaction.reply({ content: '⏰ Votre demande a expiré, réessayez.', ephemeral: true });
   }
-  const questions = (pending.type.questions || []);
+  const questions = store.cleanTicketQuestions(pending.type.questions);
   const answers = questions.map((q, i) => ({
-    q: String(q).slice(0, 45),
-    a: (interaction.fields.getTextInputValue(`q${i}`) || '').trim().slice(0, 500) || '—',
+    q: questionLabel(q),
+    a: (interaction.fields.getTextInputValue(`q${i}`) || '').trim().slice(0, questionMax(q)) || '—',
   }));
   // ⚠️ Plus JAMAIS de modale après une modale (interdit par Discord) :
   // la raison est soit déjà intégrée (modale combinée), soit sans objet ici.
@@ -1699,7 +1750,9 @@ async function handleTicketReopen(botId, interaction) {
 // et dans la transcription) — évite que deux modos répondent en même temps.
 async function handleTicketClaim(botId, interaction) {
   if (!isStaff(botId, interaction)) return staffDeny(interaction);
-  await safeDefer(interaction);
+  const fromButton = typeof interaction.isButton === 'function' && interaction.isButton();
+  if (fromButton) await safeDeferUpdate(interaction);
+  else await safeDefer(interaction);
   const channel = interaction.channel;
   const guild = interaction.guild;
   const lang = i18n.langForGuild(guild.id);
@@ -1715,17 +1768,12 @@ async function handleTicketClaim(botId, interaction) {
     claimed_at: new Date().toISOString(),
   });
   store.activity.add(botId, guild.id, '🖐️', `Ticket #${row.number} pris en charge par ${interaction.user.tag}`);
-  await channel.send(ui.v2panel({
-    // v308/v309 — aucune ligne colorée sur les panneaux tickets.
-    accent: false,
-    title: '🖐️ Ticket pris en charge',
-    description: i18n.t(lang, 'ticket_claim_msg', { staff: `${interaction.user}` }),
-    fields: [
-      { name: '🛡️ Staff responsable', value: `${interaction.user}`, inline: true },
-      { name: '🔢 Ticket', value: `#${row.number}`, inline: true },
-    ],
-    footer: false,
-  })).catch(() => {});
+  // v332 — plus de gros panneau : le bouton disparaît, une ligne discrète suffit.
+  await removeClaimButton(interaction.message, botId);
+  await channel.send({
+    content: `🛡️ **${interaction.user}** s'occupe de ce ticket.`,
+    allowedMentions: { parse: [] },
+  }).catch(() => {});
   try {
     await logging.log(botId, guild, {
       title: '🖐️ Ticket pris en charge', color: '#57F287',
@@ -1735,7 +1783,7 @@ async function handleTicketClaim(botId, interaction) {
       ],
     });
   } catch {}
-  await ackReply(interaction, { content: i18n.t(lang, 'ticket_claim_ok'), ephemeral: true });
+  if (!fromButton) await ackReply(interaction, { content: i18n.t(lang, 'ticket_claim_ok'), ephemeral: true });
 }
 
 // ➕ Ajouter un membre : le staff invite une autre personne dans le salon privé

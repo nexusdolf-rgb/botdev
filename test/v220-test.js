@@ -189,7 +189,7 @@ check('mono-section 4096 max non touchée', ui.embed({ description: 'x'.repeat(4
   check('bienvenue premium : la carte passe en MediaGallery attachment:// (v240)',
     ev.includes("image: carteV2 ? 'attachment://bienvenue.png'"));
   check('bienvenue premium : embed classique UNIQUEMENT si carte + webhook (v240)',
-    ev.includes('welcomePayload = { embeds: [embed], files };')
+    ev.includes('embeds: [embed], files')
     && ev.includes('if (!files.length || carteV2) {'));
   // LE BUG v240 : ui.sectionize() produisait des traits texte de 20 caractères
   // (━ x20) qui s'arrêtaient avant les bords arrondis de l'embed.

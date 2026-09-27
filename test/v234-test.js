@@ -279,7 +279,7 @@ console.log('\n5️⃣  Couverture — tout panels.js est en V2');
   // réponse « réservé au staff ». 14 + 5 = 19.
   // v239 — +1 : le MP de transcription (sendTranscriptDm), dernier panneau du
   // bot encore construit à la main. 19 + 1 = 20.
-  check('20 emplacements passés en ui.v2panel( (11+3+5+1)', count('ui.v2panel(') === 20);
+  check('emplacements ui.v2panel( (claim n’est plus un panneau, v333)', count('ui.v2panel(') === 19);
   check('plus aucune duplication « Panel.content = i18n.t(...) »', count('Panel.content = i18n.t') === 0);
   check('plus aucune référence à buildTicketPanelEmbed', count('buildTicketPanelEmbed') === 0);
   // v237 — il ne reste QU'UNE lecture de .embeds[0] dans le code exécuté :

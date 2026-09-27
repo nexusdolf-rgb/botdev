@@ -57,9 +57,7 @@ function normalizeType(raw = {}, index = 0) {
     button_label: String(raw.button_label || '').trim().slice(0, 80),
     emoji: String(raw.emoji || '').trim().slice(0, 100),
     description: String(raw.description || '').trim().slice(0, 100),
-    questions: Array.isArray(raw.questions)
-      ? raw.questions.map((q) => String(q).trim().slice(0, 45)).filter(Boolean).slice(0, 5)
-      : [],
+    questions: store.cleanTicketQuestions(raw.questions),
     category: String(raw.category || '').trim().slice(0, 100),
     color: validColor(raw.color),
     button_style: ['1', '2', '3', '4'].includes(String(raw.button_style)) ? String(raw.button_style) : '1',
@@ -266,10 +264,17 @@ function pendingKey(botId, guildId, userId) {
   return `${botId}:${guildId}:${userId}`;
 }
 
+function questionLabel(q) {
+  if (typeof q === 'string') return String(q).slice(0, 45);
+  return String((q && (q.text || q.q || '')) || '').slice(0, 45);
+}
+function questionMax(q) {
+  const n = parseInt(q && typeof q === 'object' ? q.max : 500, 10);
+  if (!Number.isFinite(n)) return 500;
+  return Math.min(4000, Math.max(1, n));
+}
 function questionsFor(type) {
-  return type && Array.isArray(type.questions)
-    ? type.questions.map((q) => String(q).trim().slice(0, 45)).filter(Boolean).slice(0, 5)
-    : [];
+  return store.cleanTicketQuestions(type && type.questions);
 }
 
 function wantsReason(config) {
@@ -313,11 +318,11 @@ function questionnaireModal(botId, panelId, type, questions) {
     modal.addComponents(new ActionRowBuilder().addComponents(
       new TextInputBuilder()
         .setCustomId(`q${index}`)
-        .setLabel(question)
+        .setLabel(questionLabel(question))
         .setPlaceholder('Écrivez votre réponse…')
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true)
-        .setMaxLength(500),
+        .setMaxLength(questionMax(question)),
     ));
   });
   return modal;
@@ -331,11 +336,11 @@ function combinedModal(botId, panelId, type, questions) {
     modal.addComponents(new ActionRowBuilder().addComponents(
       new TextInputBuilder()
         .setCustomId(`q${index}`)
-        .setLabel(question)
+        .setLabel(questionLabel(question))
         .setPlaceholder('Écrivez votre réponse…')
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true)
-        .setMaxLength(500),
+        .setMaxLength(questionMax(question)),
     ));
   });
   modal.addComponents(new ActionRowBuilder().addComponents(
@@ -414,8 +419,8 @@ async function handleCombinedSubmit(botId, interaction, panelId, typeId) {
     return;
   }
   const answers = pending.questions.map((question, index) => ({
-    q: String(question).slice(0, 45),
-    a: fieldValue(interaction, `q${index}`).slice(0, 500) || '—',
+    q: questionLabel(question),
+    a: fieldValue(interaction, `q${index}`).slice(0, questionMax(question)) || '—',
   }));
   const reason = fieldValue(interaction, 'reason').slice(0, 1000);
   await openForType(botId, interaction, config, type, reason, answers);
@@ -433,8 +438,8 @@ async function handleQuestionnaireSubmit(botId, interaction, panelId, typeId) {
     return;
   }
   const answers = pending.questions.map((question, index) => ({
-    q: String(question).slice(0, 45),
-    a: fieldValue(interaction, `q${index}`).slice(0, 500) || '—',
+    q: questionLabel(question),
+    a: fieldValue(interaction, `q${index}`).slice(0, questionMax(question)) || '—',
   }));
   await openForType(botId, interaction, config, type, '', answers);
 }

@@ -297,8 +297,11 @@ BotViews.openTicketMenuModal = (bot, guildId, menu) => {
       const paintQs = () => {
         qsEl.innerHTML = '';
         t.questions.forEach((q, j) => {
-          const line = App.el(`<div style="display:flex;gap:7px;margin-top:4px"><input class="input" value="${App.escapeHtml(q)}" placeholder="Question ${j + 1}" maxlength="45" /><button class="btn btn-danger btn-sm">🗑</button></div>`);
-          line.querySelector('input').addEventListener('input', (e) => { t.questions[j] = e.target.value; });
+          const qq = (q && typeof q === 'object') ? { text: String(q.text || q.q || ''), max: parseInt(q.max, 10) || 500 } : { text: String(q || ''), max: 500 };
+          const line = App.el(`<div style="display:flex;gap:7px;margin-top:4px;align-items:center;flex-wrap:wrap"><input class="input" data-qtext value="${App.escapeHtml(qq.text)}" placeholder="Question ${j + 1}" maxlength="45" style="flex:1;min-width:140px" /><input class="input" data-qmax type="number" min="1" max="4000" value="${qq.max}" title="Caractères max" style="width:88px" /><button class="btn btn-danger btn-sm">🗑</button></div>`);
+          const syncQ = () => { t.questions[j] = { text: line.querySelector('[data-qtext]').value, max: parseInt(line.querySelector('[data-qmax]').value, 10) || 500 }; };
+          line.querySelector('[data-qtext]').addEventListener('input', syncQ);
+          line.querySelector('[data-qmax]').addEventListener('input', syncQ);
           line.querySelector('button').onclick = () => { t.questions.splice(j, 1); paintQs(); };
           qsEl.appendChild(line);
         });
@@ -332,7 +335,7 @@ BotViews.openTicketMenuModal = (bot, guildId, menu) => {
         ...t,
         label: String(t.label || '').trim(),
         staff_roles: (t.staff_roles || []).map((r) => String(r || '').trim()).filter(Boolean),
-        questions: (t.questions || []).map((q) => String(q || '').trim()).filter(Boolean),
+        questions: (t.questions || []).map((q) => (q && typeof q === 'object' ? { text: String(q.text || '').trim().slice(0, 45), max: parseInt(q.max, 10) || 500 } : { text: String(q || '').trim().slice(0, 45), max: 500 })).filter((q) => q.text),
       })).filter((t) => t.label),
     };
     if (!payload.types.length) return App.toast('Ajoutez au moins un type (avec un nom).', 'error');

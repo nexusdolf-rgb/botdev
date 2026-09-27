@@ -11,7 +11,7 @@ const src = fs.readFileSync(__dirname + '/../server/routes.js', 'utf8');
 const start = src.indexOf('const parsedTypes');
 const block = src.slice(start, start + 1200);
 assert.ok(block.includes("description: x.description || ''"), 'description renvoyée au dashboard');
-assert.ok(block.includes('questions: Array.isArray(x.questions)'), 'questions renvoyées au dashboard');
+assert.ok(block.includes('questions: store.cleanTicketQuestions(x.questions)'), 'questions renvoyées au dashboard');
 assert.ok(block.includes('staff_roles: roles.filter(Boolean)'), 'rôles staff conservés');
 assert.ok(block.includes("emoji: x.emoji || ''") && block.includes("category: x.category || ''"), 'emoji + catégorie conservés');
 console.log('✅ l\'API renvoie les types COMPLETS (label, emoji, catégorie, description, questions, rôles)');

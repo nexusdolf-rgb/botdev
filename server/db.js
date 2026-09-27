@@ -1514,6 +1514,26 @@ try { db.exec(`CREATE TABLE IF NOT EXISTS ticket_menus (
   created_at TEXT DEFAULT (datetime('now'))
 )`); } catch (e) {}
 
+// v333 — une question = texte (max 45, limite Discord du libellé) +
+// nombre de caractères autorisés pour la RÉPONSE (1–4000, défaut 500).
+// Anciennes configs : simple chaîne → { text, max: 500 }.
+function cleanTicketQuestions(questions) {
+  return (Array.isArray(questions) ? questions : []).map((q) => {
+    if (typeof q === 'string') {
+      const text = q.trim().slice(0, 45);
+      return text ? { text, max: 500 } : null;
+    }
+    if (!q || typeof q !== 'object') return null;
+    const text = String(q.text || q.q || q.label || q.question || '').trim().slice(0, 45);
+    if (!text) return null;
+    let max = parseInt(q.max ?? q.maxLength ?? q.max_length, 10);
+    if (!Number.isFinite(max)) max = 500;
+    if (max < 1) max = 1;
+    if (max > 4000) max = 4000;
+    return { text, max };
+  }).filter(Boolean).slice(0, 5);
+}
+
 function cleanMenuTypes(types) {
   return (Array.isArray(types) ? types : [])
     .map((t) => {
@@ -1525,7 +1545,7 @@ function cleanMenuTypes(types) {
         emoji: String(t.emoji || '').slice(0, 100),
         description: String(t.description || '').slice(0, 100),
         category: String(t.category || '').slice(0, 100),
-        questions: (Array.isArray(t.questions) ? t.questions : []).map((q) => String(q).slice(0, 45)).filter(Boolean).slice(0, 5),
+        questions: cleanTicketQuestions(t.questions),
         staff_roles: roles,
       };
     })
@@ -2533,4 +2553,4 @@ const antinuke = {
   },
 };
 
-module.exports = { db, antinuke, embedTemplates, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, reports, warnings, automodWarningMessages, roleMenus, tickets, ticketMenus, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, modmail, closedTickets, botProfiles, profileAliases, profileState, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodStrikes, automodTempBans, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, afk, guildEvents, quizScores, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories, quizSets };
+module.exports = { db, antinuke, embedTemplates, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, reports, warnings, automodWarningMessages, roleMenus, tickets, ticketMenus, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, modmail, closedTickets, botProfiles, profileAliases, profileState, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodStrikes, automodTempBans, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, afk, guildEvents, quizScores, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories, quizSets, cleanTicketQuestions };
