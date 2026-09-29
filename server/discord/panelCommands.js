@@ -15,7 +15,7 @@ const {
   ChannelType,
 } = require('discord.js');
 const store = require('../db');
-const { sendTicketPanel, sendRoleMenu, findChannelInGuild, resolveRole, parseTypes, staffForTicket, startTypesWizard, handleTicketDeleteAsk, safeEmoji } = require('./panels');
+const { sendTicketPanel, sendRoleMenu, findChannelInGuild, resolveRole, parseTypes, staffForTicket, startTypesWizard, handleTicketDeleteAsk, safeEmoji, resolveOpenerId, lockTicketOpenerWrite } = require('./panels');
 const logging = require('./logging');
 const { canConfigureGuild } = require('./permissions');
 // v229 : grammaire des sections (traits ━) pour les accusés de réception texte.
@@ -506,12 +506,10 @@ async function handleTicket(botId, sub, group, interaction, guild) {
         return interaction.reply({ content: '🔒 Seul le **staff** peut fermer ce ticket.', ephemeral: true });
       }
       // 🔒 Fermer = verrouiller (le staff peut réouvrir) — la transcription part à la suppression
-      const m = topic.match(/\| (\d{15,21})/);
-      const openerId = m ? m[1] : null;
-      if (openerId) {
-        await ch.permissionOverwrites.edit(openerId, { ViewChannel: false, SendMessages: false }).catch(() => {});
-      }
+      const openerId = resolveOpenerId(ch);
+      await lockTicketOpenerWrite(ch, openerId, { view: true, send: false });
       store.closedTickets.add(ch.id, botId, guild.id);
+      try { store.openTickets.update(ch.id, { closed_at: new Date().toISOString() }); } catch {}
       require('./panels').bumpTicketStats(guild.id, 0, -1);
       await logging.log(botId, guild, {
         title: '🔒 Ticket fermé', color: '#ED4245',

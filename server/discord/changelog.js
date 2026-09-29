@@ -7,7 +7,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const ui = require('./ui');
 
-const VERSION = 339;
+const VERSION = 340;
 const DASHBOARD_URL = 'https://hoxera.is-a.dev';
 const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3';
 const AUTO_REVERT_MS = 2 * 60 * 1000;
@@ -15,6 +15,12 @@ const SELECT_ID = (botId) => `hx-upd:${botId}`;
 
 // Plus récent en premier. Menu Discord = 25 options max (accueil + 24 versions).
 const VERSIONS = [
+  {
+    v: 340, date: '29/09', title: 'Ticket fermé : plus d’écriture',
+    new: ['Après **🔒 Fermer**, le créateur voit encore le salon, mais il ne peut plus y écrire.'],
+    improved: ['La réparation automatique ne redonne plus l’écriture sur un ticket déjà fermé.'],
+    fixed: ['Le bouton Fermer (et `/ticket close`) laissait parfois le créateur écrire.'],
+  },
   {
     v: 339, date: '28/09', title: 'Ticket : responsable sur le panneau',
     new: ['Après **Prendre ce ticket**, le bouton devient une ligne courte : **Responsable : @staff** — sur le même panneau.'],

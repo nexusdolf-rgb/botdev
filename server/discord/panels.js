@@ -621,6 +621,47 @@ function ticketMetaFor(channel) {
   return ticketMeta.get(channel.id) || fromTopic;
 }
 
+function resolveOpenerId(channel) {
+  if (!channel) return '';
+  try {
+    const row = store.openTickets.getByChannel(channel.id);
+    if (row && row.opener_id) return String(row.opener_id);
+  } catch {}
+  const meta = ticketMetaFor(channel);
+  return meta && meta.openerId ? String(meta.openerId) : '';
+}
+
+function overwriteDenies(channel, targetId, flag) {
+  try {
+    const cache = channel && channel.permissionOverwrites && channel.permissionOverwrites.cache;
+    const ow = cache && typeof cache.get === 'function' ? cache.get(String(targetId)) : null;
+    return !!(ow && ow.deny && typeof ow.deny.has === 'function' && ow.deny.has(flag));
+  } catch { return false; }
+}
+
+// Verrouiller / rétablir l'écriture du créateur (sans cacher le salon).
+async function lockTicketOpenerWrite(channel, openerId, { view = true, send = false } = {}) {
+  if (!channel || !openerId) return false;
+  if (!channel.permissionOverwrites || typeof channel.permissionOverwrites.edit !== 'function') return false;
+  try {
+    await channel.permissionOverwrites.edit(String(openerId), {
+      ViewChannel: view,
+      ReadMessageHistory: true,
+      SendMessages: !!send,
+      AddReactions: !!send,
+      AttachFiles: !!send,
+      EmbedLinks: !!send,
+      CreatePublicThreads: !!send,
+      CreatePrivateThreads: !!send,
+      SendMessagesInThreads: !!send,
+    });
+    return true;
+  } catch (e) {
+    console.error('[Hoxera] verrou écriture ticket :', e.message);
+    return false;
+  }
+}
+
 // Le membre peut-il gérer ce ticket ? (propriétaire, admin, rôle support global OU rôle du type)
 function isStaff(botId, interaction) {
   const guild = interaction.guild;
@@ -1721,10 +1762,9 @@ async function handleTicketClose(botId, interaction) {
   const channel = interaction.channel;
   const guild = interaction.guild;
   ensureTicketRow(botId, guild, channel);
-  const { openerId } = ticketMetaFor(channel);
-  if (openerId) {
-    await channel.permissionOverwrites.edit(openerId, { ViewChannel: false, SendMessages: false }).catch(() => {});
-  }
+  const openerId = resolveOpenerId(channel);
+  const locked = await lockTicketOpenerWrite(channel, openerId, { view: true, send: false });
+  if (!locked) console.error('[Hoxera] fermeture : impossible de retirer l’écriture au créateur', openerId || '(id manquant)');
   store.closedTickets.add(channel.id, botId, guild.id);
   store.openTickets.update(channel.id, { closed_at: new Date().toISOString() });
   bumpTicketStats(guild.id, 0, -1);
@@ -1761,10 +1801,8 @@ async function handleTicketReopen(botId, interaction) {
   store.closedTickets.remove(channel.id);
   store.openTickets.update(channel.id, { closed_at: '' });
   bumpTicketStats(interaction.guild.id, 0, 1);
-  const { openerId } = ticketMetaFor(channel);
-  if (openerId) {
-    await channel.permissionOverwrites.edit(openerId, { ViewChannel: true, SendMessages: true }).catch(() => {});
-  }
+  const openerId = resolveOpenerId(channel);
+  await lockTicketOpenerWrite(channel, openerId, { view: true, send: true });
   await channel.send(ui.v2panel({
     // v308/v309 — aucune ligne colorée sur les panneaux tickets.
     accent: false,
@@ -2126,10 +2164,8 @@ async function handleTicketHold(botId, interaction) {
   await safeDefer(interaction);
   const channel = interaction.channel;
   ensureTicketRow(botId, interaction.guild, channel);
-  const { openerId } = ticketMetaFor(channel);
-  if (openerId) {
-    await channel.permissionOverwrites.edit(openerId, { ViewChannel: true, SendMessages: false }).catch(() => {});
-  }
+  const openerId = resolveOpenerId(channel);
+  await lockTicketOpenerWrite(channel, openerId, { view: true, send: false });
   await channel.send(ui.v2panel({
     // v308/v309 — aucune ligne colorée sur les panneaux tickets.
     accent: false,
@@ -2984,12 +3020,19 @@ async function repairTicketChannel(botId, guild, channel, row) {
     }
   }
   if (row.opener_id) {
-    const creatorAllowed = channelAllowsView(channel, row.opener_id);
-    if (creatorAllowed === false || creatorAllowed === null) {
-      await channel.permissionOverwrites.edit(row.opener_id, {
-        ViewChannel: true, SendMessages: true, ReadMessageHistory: true,
-      }).catch(() => {});
-      repaired = true;
+    if (row.closed_at) {
+      // Ticket FERMÉ : ne jamais redonner l'écriture (c'était le bug : la
+      // réparation recréait SendMessages après un 🔒 Fermer).
+      if (!overwriteDenies(channel, row.opener_id, PermissionFlagsBits.SendMessages)) {
+        await lockTicketOpenerWrite(channel, row.opener_id, { view: true, send: false });
+        repaired = true;
+      }
+    } else {
+      const creatorAllowed = channelAllowsView(channel, row.opener_id);
+      if (creatorAllowed === false || creatorAllowed === null) {
+        await lockTicketOpenerWrite(channel, row.opener_id, { view: true, send: true });
+        repaired = true;
+      }
     }
   }
 
@@ -3043,9 +3086,7 @@ async function sweepInactiveTickets(botId, entry, now = new Date()) {
           const inactiveMin = (now.getTime() - last) / 60000;
           if (inactiveMin >= INACTIVE_CLOSE_MIN) {
             // Fermeture automatique
-            if (row.opener_id) {
-              await channel.permissionOverwrites.edit(row.opener_id, { ViewChannel: false, SendMessages: false }).catch(() => {});
-            }
+            await lockTicketOpenerWrite(channel, row.opener_id, { view: true, send: false });
             store.closedTickets.add(channel.id, botId, row.guild_id);
             store.openTickets.update(channel.id, { closed_at: now.toISOString(), warned_inactive: 0 });
             bumpTicketStats(row.guild_id, 0, -1);
@@ -3178,6 +3219,7 @@ module.exports = {
   buildTicketPanel, pruneOldPanels, effectiveTextsRaw,
   resolveRole, roleKey, uniqueRoleRefs, staffRoleRefsForConfig, parseTypes, isStaff, staffForTicket, openTicket, safeEmoji,
   parentIdOf, panelParentOf, panelChannelOf, repairTicketChannel,
+  resolveOpenerId, lockTicketOpenerWrite,
   startTypesWizard, handleTypesWizardInteraction,
   handleTicketDeleteAsk, ticketMetaFor, ticketWelcomePanel, readRoomCfg, typeOptionDescription, normalizeTypes,
   sendTranscriptDm, sweepInactiveTickets, buildTranscriptFromChannel, sendRatingDm,

@@ -23,8 +23,8 @@ const panels = racine('server/discord/panels.js');
 const i18nSrc = racine('server/i18n.js');
 
 console.log('— 1. Pins v339 —');
-check('index.html : ?v=339 ×7', (html.match(/\?v=339/g) || []).length === 7);
-check('sw.js : cache botdev-v339', sw.includes("const CACHE = 'botdev-v339';"));
+check('index.html : ?v=340 ×7', (html.match(/\?v=340/g) || []).length === 7);
+check('sw.js : cache botdev-v340', sw.includes("const CACHE = 'botdev-v340';"));
 check('index.html : plus aucune ?v=338', !html.includes('?v=338'));
 
 console.log('— 2. Même panneau, pas un second message —');
@@ -55,7 +55,7 @@ check('la ligne responsable est à la place', flat.includes('"type":10') && flat
 check('le menu staff est intact', flat.includes('bd-troom:1'));
 
 const changelog = require('../server/discord/changelog');
-check('VERSION = 339', changelog.VERSION === 339);
+check('VERSION ≥ 339', changelog.VERSION >= 339);
 
 console.log('\nRésultat : ' + ok + ' ✅ / ' + ko + ' ❌ sur ' + (ok + ko) + ' vérifications');
 if (fails.length) fails.forEach((f) => console.log('  ❌ ' + f));
