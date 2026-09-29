@@ -25,8 +25,8 @@ const dash = racine('public/js/dashboard.js');
 const dbSrc = racine('server/db.js');
 
 console.log('— 1. Pins de version v333 —');
-check('index.html : ?v=338 ×7', (html.match(/\?v=338/g) || []).length === 7);
-check('sw.js : cache botdev-v338', sw.includes("const CACHE = 'botdev-v338';"));
+check('index.html : ?v=339 ×7', (html.match(/\?v=339/g) || []).length === 7);
+check('sw.js : cache botdev-v339', sw.includes("const CACHE = 'botdev-v339';"));
 check('index.html : plus aucune ?v=332', !html.includes('?v=332'));
 
 console.log('— 2. Prendre ce ticket = bouton, plus dans le menu —');
@@ -34,7 +34,7 @@ check('plus d’option claim dans le menu staff', !panels.includes("setValue('cl
 check('bouton « Prendre ce ticket »', panels.includes("setLabel('🖐️ Prendre ce ticket')") && panels.includes('bd-tmenu:${botId}:claim'));
 check('le bouton disparaît après prise', panels.includes('removeClaimButton') && panels.includes('stripClaimButtonJson'));
 check('plus de gros panneau dans le salon (ticket_claim_msg)', !panels.includes('ticket_claim_msg'));
-check('ligne discrète à la place', panels.includes("s'occupe de ce ticket"));
+check('prise en charge câblée', panels.includes('handleTicketClaim') && panels.includes('claimed_by'));
 
 console.log('— 3. Caractères max par question —');
 const store = require('../server/db');

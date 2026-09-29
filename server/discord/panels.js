@@ -740,13 +740,43 @@ function stripClaimButtonJson(components, claimId) {
   return walk(components);
 }
 
-async function removeClaimButton(message, botId) {
+// v339 — à la place du bouton : une ligne courte « Responsable : @staff »
+// (TextDisplay V2, type 10). Pas de second message dans le salon.
+function replaceClaimButtonJson(components, claimId, statusText) {
+  const walk = (arr) => {
+    if (!Array.isArray(arr)) return arr;
+    return arr.map((c) => {
+      if (!c || typeof c !== 'object') return c;
+      const kids = c.components;
+      if (c.type === 1 && Array.isArray(kids)) {
+        const hasClaim = kids.some((b) => String((b && (b.custom_id || b.customId)) || '') === claimId);
+        if (hasClaim) return { type: 10, content: String(statusText || '').slice(0, 4000) };
+        return c;
+      }
+      if (Array.isArray(kids)) return { ...c, components: walk(kids) };
+      return c;
+    });
+  };
+  return walk(components);
+}
+
+async function removeClaimButton(message, botId, staffUser, lang) {
   if (!message || typeof message.edit !== 'function') return;
   const claimId = `bd-tmenu:${botId}:claim`;
+  const staffId = staffUser && (staffUser.id || staffUser);
+  const status = staffId
+    ? i18n.t(lang || 'fr', 'ticket_claim_line', { staff: `<@${staffId}>` })
+    : '';
   try {
     const json = (message.components || []).map((c) => (c && typeof c.toJSON === 'function' ? c.toJSON() : c));
-    const stripped = stripClaimButtonJson(json, claimId);
-    await message.edit({ components: stripped, flags: MessageFlags.IsComponentsV2 });
+    const next = status
+      ? replaceClaimButtonJson(json, claimId, status)
+      : stripClaimButtonJson(json, claimId);
+    await message.edit({
+      components: next,
+      flags: MessageFlags.IsComponentsV2,
+      allowedMentions: { parse: [] },
+    });
   } catch (e) {
     console.error('[Hoxera] retrait bouton claim :', e.message);
   }
@@ -1768,12 +1798,8 @@ async function handleTicketClaim(botId, interaction) {
     claimed_at: new Date().toISOString(),
   });
   store.activity.add(botId, guild.id, '🖐️', `Ticket #${row.number} pris en charge par ${interaction.user.tag}`);
-  // v332 — plus de gros panneau : le bouton disparaît, une ligne discrète suffit.
-  await removeClaimButton(interaction.message, botId);
-  await channel.send({
-    content: `🛡️ **${interaction.user}** s'occupe de ce ticket.`,
-    allowedMentions: { parse: [] },
-  }).catch(() => {});
+  // v339 — le bouton est remplacé, sur le même panneau, par « Responsable : @staff ».
+  await removeClaimButton(interaction.message, botId, interaction.user, lang);
   try {
     await logging.log(botId, guild, {
       title: '🖐️ Ticket pris en charge', color: '#57F287',
@@ -3172,4 +3198,5 @@ module.exports = {
   __testSubmitAddMemberPick: submitAddMemberPick,
   __testUpdateRecapRating: updateRecapRating,
   __testHandleRating: handleRating,
+  __testReplaceClaimButtonJson: replaceClaimButtonJson,
 };

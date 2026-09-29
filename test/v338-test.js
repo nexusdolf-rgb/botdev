@@ -18,8 +18,8 @@ const css = racine('public/css/style.css');
 const pub = racine('public/js/public.js');
 
 console.log('— 1. Pins v338 —');
-check('index.html : ?v=338 ×7', (html.match(/\?v=338/g) || []).length === 7);
-check('sw.js : cache botdev-v338', sw.includes("const CACHE = 'botdev-v338';"));
+check('index.html : ?v=339 ×7', (html.match(/\?v=339/g) || []).length === 7);
+check('sw.js : cache botdev-v339', sw.includes("const CACHE = 'botdev-v339';"));
 check('index.html : plus aucune ?v=337', !html.includes('?v=337'));
 
 console.log('— 2. Pas un clone DraftBot —');
@@ -46,7 +46,7 @@ check('titre argile fixe (plus d’arc-en-ciel)', css.includes('#public-landing 
 check('v337 et v195 conservés dessous', css.includes('HOXERA v337') && css.includes('HOXERA ULTRA PRO v195'));
 
 const changelog = require('../server/discord/changelog');
-check('VERSION = 338', changelog.VERSION === 338);
+check('VERSION numérique ≥ 338', changelog.VERSION >= 338);
 
 console.log('\nRésultat : ' + ok + ' ✅ / ' + ko + ' ❌ sur ' + (ok + ko) + ' vérifications');
 if (fails.length) fails.forEach((f) => console.log('  ❌ ' + f));

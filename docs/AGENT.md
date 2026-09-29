@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v338**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v339**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -962,6 +962,9 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v339 (28/09 — TICKET : RESPONSABLE SUR LE PANNEAU)** :
+  le bouton « Prendre ce ticket » est remplacé, **sur le même panneau**,
+  par « Responsable : @staff ». Pas de second message. test/v339-test.js.
 - **v338 (28/09 — HOME PUBLIQUE NIVEAU PRO)** :
   page produit (photo Optimus, titre, 1 bouton, beaucoup d’air).
   **Pas un clone DraftBot** (textes, vagues, Open Sans interdits).
@@ -1554,7 +1557,9 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 23/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v338** — accueil public plus pro
+- Dernière version : **v339** — ticket : « Responsable : @staff »
+  à la place du bouton, même panneau. `test/v339-test.js`.
+- **v338** — accueil public plus pro
   (page produit, pas clone DraftBot). `test/v338-test.js`.
 - **v337** — page d’accueil publique au niveau
   du centre serveurs (CSS, HTML verrouillé). `test/v337-test.js`.
