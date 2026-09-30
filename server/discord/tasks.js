@@ -96,6 +96,7 @@ async function sweep(botId, entry) {
   // 🛡️ v301 — confidentialité : les salons de tickets ne doivent JAMAIS être
   // visibles du rôle vérifié (fuite de l'ancien onChannelCreate) → réparation.
   try { await require('./verification').repairPrivateChannels(botId, entry); } catch (e) { console.error('[Hoxera] réparation tickets/vérification:', e.message); }
+  try { await require('./verification').sweepCaptchas(botId, entry); } catch (e) { console.error('[Hoxera] captcha sweep:', e.message); }
 
   // 🎫 Fermeture automatique des tickets inactifs (promis sur le panneau)
   try { const panels = require('./panels'); await panels.sweepInactiveTickets(botId, entry); }

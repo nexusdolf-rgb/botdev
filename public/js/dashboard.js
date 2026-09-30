@@ -2037,7 +2037,7 @@ Dashboard.renderers.overview = async (content, data) => {
   const modules = [
     ['tickets', '🎫', 'Tickets', 'Types personnalisés et support privé'],
     ['welcome', '👋', 'Bienvenue', 'Accueil, départ et auto-rôles'],
-    ['verification', '✅', 'Vérification', 'Bouton humain, Join Gate, filtre anti-bots'],
+    ['verification', '✅', 'Vérification', 'Captcha à l’arrivée, bouton, Join Gate'],
     ['levels', '📈', 'Niveaux', 'XP et récompenses des membres'],
     ['shop', '🛒', 'Boutique', 'Articles et rôles à acheter'],
     ['moderation', '🛡️', 'Modération', 'Auto-Mod et sanctions'],
@@ -7323,9 +7323,21 @@ Dashboard.renderers.botsettings = async (content) => {
 // ============================================================
 Dashboard.renderers.verification = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '✅', 'Vérification', 'Bouton, Join Gate, isolation. Le texte du panneau est modifiable. Discord ne dit pas aux bots si un compte est volé ou arnaqueur.');
-  const cfg = Object.assign({ enabled: false, channel: '', role: '', gate_days: 0, bot_filter: false, approved_bots: [], isolate: false, isolated_channels: [], panel_title: '', panel_desc: '', button_label: '', panel_color: '#57F287', require_avatar: false, block_spammer: false }, data.verification || {});
+  const root = Dashboard.header(content, '✅', 'Vérification', 'Captcha à l’arrivée (nouveau), bouton « Je suis humain », Join Gate, isolation. Discord ne dit pas aux bots si un compte est volé.');
+  const cfg = Object.assign({ enabled: false, channel: '', role: '', gate_days: 0, bot_filter: false, approved_bots: [], isolate: false, isolated_channels: [], panel_title: '', panel_desc: '', button_label: '', panel_color: '#57F287', require_avatar: false, block_spammer: false, captcha: false, captcha_channel: '' }, data.verification || {});
   const textCh = (data.channels || []).filter((ch) => !ch.voice && !ch.category);
+  const capSel = textCh.map((ch) => `<option value="${ch.id}" ${String(cfg.captcha_channel || '') === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('');
+  const cCap = Dashboard.card(root, '🧩 Captcha à l’arrivée', 'Quand quelqu’un rejoint le serveur, le bot lui envoie une image de lettres dans le salon choisi. Il recopie ce qu’il voit. 2 essais, 2 minutes. Sinon il est expulsé, avec un message privé clair. Le bouton « Je suis humain » reste disponible plus bas.');
+  cCap.innerHTML += `
+    <label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" id="ver-captcha" ${cfg.captcha ? 'checked' : ''} /> Activer le captcha à l’arrivée</label>
+    <label class="dash-label">Salon du captcha</label>
+    <select class="dash-select" id="ver-captcha-channel">
+      <option value="">— Même salon que le panneau ci-dessous —</option>
+      ${capSel}
+    </select>
+    <div style="font-size:12px;color:var(--d-dim);margin-top:10px;line-height:1.45">
+      Ce qu’il voit : uniquement ce salon (si l’isolation est activée). Il recopie les lettres. S’il réussit, il reçoit le rôle vérifié, voit tout le serveur, et le message de bienvenue part dans le salon choisi au module <b>Bienvenue</b>.
+    </div>`;
   const c1 = Dashboard.card(root, '🛡️ Réglages de la vérification', 'Le nouveau membre clique sur « Je suis humain » dans le salon de vérification, puis reçoit le rôle vérifié. Astuce pro : dans vos salons, n\'autorisez la vue qu\'au rôle vérifié — les non-vérifiés ne verront que le salon de vérification.');
   c1.innerHTML += `
     <label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" id="ver-enabled" ${cfg.enabled ? 'checked' : ''} /> Activer la vérification sur ce serveur</label>
@@ -7375,9 +7387,14 @@ Dashboard.renderers.verification = async (content, data) => {
     e.target.checked = false; // action ponctuelle : la case se recoche à chaque demande
     App.toast(r.ok ? '👥 Distribution du rôle en cours — cela peut prendre quelques minutes sur un gros serveur.' : `⚠️ ${r.error || 'Distribution impossible.'}`);
   };
+  const capBox = root.querySelector('#ver-captcha');
+  if (capBox) capBox.onchange = () => {
+    if (capBox.checked) c1.querySelector('#ver-enabled').checked = true;
+  };
   c1.querySelector('#ver-save').onclick = async () => {
+    const captchaOn = !!(root.querySelector('#ver-captcha') && root.querySelector('#ver-captcha').checked);
     const body = {
-      enabled: c1.querySelector('#ver-enabled').checked,
+      enabled: c1.querySelector('#ver-enabled').checked || captchaOn,
       channel: c1.querySelector('#ver-channel').value,
       role: c1.querySelector('#ver-role').value,
       gate_days: Number(c1.querySelector('#ver-gate').value) || 0,
@@ -7390,6 +7407,8 @@ Dashboard.renderers.verification = async (content, data) => {
       panel_desc: (root.querySelector('#ver-desc') || {}).value || '',
       button_label: (root.querySelector('#ver-btn') || {}).value || '',
       panel_color: (root.querySelector('#ver-color') || {}).value || '#57F287',
+      captcha: captchaOn,
+      captcha_channel: (root.querySelector('#ver-captcha-channel') || {}).value || '',
     };
     const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/verification`, { method: 'PUT', body });
     App.toast(r.ok ? '✅ Vérification enregistrée.' : '⚠️ Enregistrement impossible.');

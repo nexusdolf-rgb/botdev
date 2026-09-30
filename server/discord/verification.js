@@ -10,6 +10,7 @@ const store = require('../db');
 const ui = require('./ui');
 const i18n = require('../i18n');
 const logging = require('./logging');
+const { canConfigureGuild } = require('./permissions');
 const { ButtonBuilder, ButtonStyle, ActionRowBuilder, PermissionsBitField } = require('discord.js');
 
 const DEFAULTS = {
@@ -17,7 +18,12 @@ const DEFAULTS = {
   isolate: false, isolated_channels: [],
   panel_title: '', panel_desc: '', button_label: '', panel_color: '#57F287',
   require_avatar: false, block_spammer: false,
+  captcha: false, captcha_channel: '',
 };
+const CAPTCHA_TIMEOUT_MS = 2 * 60 * 1000;
+const CAPTCHA_MAX_ATTEMPTS = 2;
+const CAPTCHA_LEN = 6;
+const CAPTCHA_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const GATE_CHOICES = [0, 1, 3, 7, 14, 30, 60];
 const SPAMMER_FLAG = 1048576; // Discord UserFlags.Spammer
 
@@ -44,7 +50,13 @@ function cfgOf(guildId) {
   cfg.panel_color = /^#[0-9a-fA-F]{6}$/.test(String(cfg.panel_color || '')) ? String(cfg.panel_color) : '#57F287';
   cfg.require_avatar = !!cfg.require_avatar;
   cfg.block_spammer = !!cfg.block_spammer;
+  cfg.captcha = !!cfg.captcha;
+  cfg.captcha_channel = String(cfg.captcha_channel || '').slice(0, 30);
   return cfg;
+}
+
+function captchaChannelId(cfg) {
+  return String((cfg && (cfg.captcha_channel || cfg.channel)) || '');
 }
 
 function saveCfg(guildId, patch) {
@@ -75,6 +87,278 @@ function panelTexts(cfg, lang) {
   const button = String(cfg.button_label || '').trim() || i18n.t(lang, 'verif_button');
   const color = /^#[0-9a-fA-F]{6}$/.test(String(cfg.panel_color || '')) ? String(cfg.panel_color) : '#57F287';
   return { title: title.slice(0, 120), desc: desc.slice(0, 1500), button: button.slice(0, 80), color };
+}
+
+function pendingKey(guildId, userId) {
+  return `captcha_pending:${guildId}:${userId}`;
+}
+
+function getPending(guildId, userId) {
+  try {
+    const raw = store.settings.get(pendingKey(guildId, userId));
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    return data && data.code ? data : null;
+  } catch { return null; }
+}
+
+function setPending(guildId, userId, data) {
+  store.settings.set(pendingKey(guildId, userId), JSON.stringify(data || {}));
+}
+
+function clearPending(guildId, userId) {
+  try { store.db.prepare('DELETE FROM settings WHERE key = ?').run(pendingKey(guildId, userId)); }
+  catch { try { store.settings.set(pendingKey(guildId, userId), ''); } catch {} }
+}
+
+function generateCode(len = CAPTCHA_LEN) {
+  const n = Math.max(4, Math.min(8, Number(len) || CAPTCHA_LEN));
+  let s = '';
+  for (let i = 0; i < n; i++) s += CAPTCHA_CHARS[Math.floor(Math.random() * CAPTCHA_CHARS.length)];
+  return s;
+}
+
+function normalizeGuess(value) {
+  return String(value || '').replace(/\s+/g, '').toUpperCase();
+}
+
+function captchaSvg(code) {
+  const letters = String(code || '').split('');
+  const w = 420;
+  const h = 130;
+  const pal = ['#c45c3e', '#d4764e', '#b85a3a', '#e07a5f'];
+  let noise = '';
+  for (let i = 0; i < 10; i++) {
+    noise += `<line x1="${(i * 37) % w}" y1="${(i * 19) % h}" x2="${(i * 53) % w}" y2="${(h - i * 11) % h}" stroke="#e07a5f" stroke-opacity="0.22" stroke-width="1.5"/>`;
+  }
+  const glyphs = letters.map((ch, i) => {
+    const x = 36 + i * 62;
+    const rot = ((i % 2 === 0) ? -1 : 1) * (8 + (i * 3) % 10);
+    const y = 86 + ((i % 3) - 1) * 6;
+    const safe = /[A-Z0-9]/.test(ch) ? ch : '?';
+    return `<text x="${x}" y="${y}" font-family="Times New Roman, Georgia, serif" font-size="58" font-style="italic" font-weight="700" fill="${pal[i % pal.length]}" transform="rotate(${rot} ${x} ${y})">${safe}</text>`;
+  }).join('');
+  return `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg"><rect width="${w}" height="${h}" rx="8" fill="#1e1f22"/>${noise}${glyphs}</svg>`;
+}
+
+async function captchaPng(code) {
+  const sharp = require('sharp');
+  return sharp(Buffer.from(captchaSvg(code))).png().toBuffer();
+}
+
+function holdsArrival(guildId, member) {
+  if (!member || !member.id) return false;
+  return !!getPending(guildId, member.id);
+}
+
+async function deleteCaptchaMessage(guild, pending) {
+  try {
+    if (!guild || !pending || !pending.channelId || !pending.messageId) return;
+    const ch = guild.channels && guild.channels.cache ? guild.channels.cache.get(String(pending.channelId)) : null;
+    if (!ch || !ch.messages || typeof ch.messages.fetch !== 'function') return;
+    const msg = await ch.messages.fetch(String(pending.messageId)).catch(() => null);
+    if (msg && typeof msg.delete === 'function') await msg.delete().catch(() => {});
+  } catch {}
+}
+
+async function clearMemberOverwrite(guild, channelId, userId) {
+  try {
+    const ch = guild && guild.channels && guild.channels.cache ? guild.channels.cache.get(String(channelId)) : null;
+    if (!ch || !ch.permissionOverwrites) return;
+    if (typeof ch.permissionOverwrites.delete === 'function') {
+      await ch.permissionOverwrites.delete(String(userId)).catch(() => {});
+    }
+  } catch {}
+}
+
+async function startCaptcha(botId, member) {
+  const guild = member && member.guild;
+  if (!guild) return false;
+  const cfg = cfgOf(guild.id);
+  const channelId = captchaChannelId(cfg);
+  const channel = guild.channels && guild.channels.cache ? guild.channels.cache.get(channelId) : null;
+  if (!channel || typeof channel.send !== 'function') return false;
+  if (cfg.role && member.roles && member.roles.cache && member.roles.cache.has(cfg.role)) return false;
+  const old = getPending(guild.id, member.id);
+  if (old) await deleteCaptchaMessage(guild, old);
+  const code = generateCode();
+  let buf;
+  try { buf = await captchaPng(code); }
+  catch (e) { console.error('[Hoxera] captcha image :', e && e.message); return false; }
+  const lang = i18n.langForGuild(guild.id);
+  let avatarUrl = '';
+  try {
+    if (member.user && typeof member.user.displayAvatarURL === 'function') {
+      avatarUrl = member.user.displayAvatarURL({ extension: 'png', size: 128 });
+    }
+  } catch {}
+  const payload = ui.v2panel({
+    color: '#e07a5f',
+    content: `${member}`,
+    author: {
+      name: (member.user && (member.user.globalName || member.user.username)) || 'Membre',
+      iconURL: avatarUrl,
+    },
+    title: i18n.t(lang, 'verif_captcha_title', { server: guild.name || 'ce serveur' }),
+    description: i18n.t(lang, 'verif_captcha_desc'),
+    image: 'attachment://captcha.png',
+    footer: false,
+  });
+  let sent;
+  try {
+    sent = await channel.send({
+      ...payload,
+      files: [{ attachment: buf, name: 'captcha.png' }],
+      allowedMentions: { users: [String(member.id)] },
+    });
+  } catch (e) {
+    console.error('[Hoxera] captcha envoi :', e && e.message);
+    return false;
+  }
+  try {
+    if (channel.permissionOverwrites && typeof channel.permissionOverwrites.edit === 'function') {
+      await channel.permissionOverwrites.edit(member.id, {
+        ViewChannel: true, SendMessages: true, ReadMessageHistory: true,
+      }).catch(() => {});
+      const everyone = guild.roles && guild.roles.everyone && guild.roles.everyone.id;
+      if (everyone) {
+        await channel.permissionOverwrites.edit(everyone, { ViewChannel: true, SendMessages: false }).catch(() => {});
+      }
+    }
+  } catch {}
+  setPending(guild.id, member.id, {
+    botId,
+    guildId: String(guild.id),
+    userId: String(member.id),
+    code,
+    attempts: 0,
+    expiresAt: Date.now() + CAPTCHA_TIMEOUT_MS,
+    messageId: sent && sent.id ? String(sent.id) : '',
+    channelId,
+  });
+  return true;
+}
+
+async function succeedCaptcha(botId, guild, member, pending) {
+  const userId = String((member && member.id) || (pending && pending.userId) || '');
+  clearPending(guild.id, userId);
+  await deleteCaptchaMessage(guild, pending);
+  await clearMemberOverwrite(guild, pending && pending.channelId, userId);
+  const cfg = cfgOf(guild.id);
+  const role = cfg.role && guild.roles && guild.roles.cache ? guild.roles.cache.get(cfg.role) : null;
+  if (role && member && member.roles && typeof member.roles.add === 'function') {
+    await member.roles.add(role.id, 'Captcha réussi').catch(() => {});
+  }
+  logging.log(botId, guild, {
+    title: '✅ Captcha réussi',
+    description: `${(member && member.user) || userId}`,
+    color: '#57F287',
+  }).catch(() => {});
+  try {
+    const { runJoinEvent } = require('./events');
+    await runJoinEvent(botId, member, { afterVerify: true });
+  } catch (e) { console.error('[Hoxera] bienvenue après captcha :', e && e.message); }
+}
+
+async function failCaptcha(botId, guild, member, pending, reason) {
+  const userId = String((member && member.id) || (pending && pending.userId) || '');
+  const lang = i18n.langForGuild(guild.id);
+  clearPending(guild.id, userId);
+  await deleteCaptchaMessage(guild, pending);
+  await clearMemberOverwrite(guild, pending && pending.channelId, userId);
+  const user = member && member.user;
+  try {
+    if (user && typeof user.send === 'function') {
+      await user.send(i18n.t(lang, 'verif_captcha_kick_dm', { serveur: guild.name || 'ce serveur' }));
+    }
+  } catch { /* MP fermés */ }
+  if (member && typeof member.kick === 'function') {
+    await member.kick(`Captcha : ${reason || 'échec'}`).catch(() => {});
+  }
+  logging.log(botId, guild, {
+    title: '🚫 Captcha : expulsion',
+    description: `${(user && (user.tag || user.username)) || userId} — ${reason || 'échec'}`,
+    color: '#ED4245',
+  }).catch(() => {});
+}
+
+async function onMessage(botId, message) {
+  try {
+    if (!message || (message.author && message.author.bot)) return false;
+    const guild = message.guild;
+    if (!guild) return false;
+    const cfg = cfgOf(guild.id);
+    if (!cfg.enabled || !cfg.captcha) return false;
+    const capCh = captchaChannelId(cfg);
+    const chId = String(message.channelId || (message.channel && message.channel.id) || '');
+    if (!capCh || chId !== capCh) return false;
+    const userId = String(message.author && message.author.id || '');
+    if (!userId) return false;
+    const pending = getPending(guild.id, userId);
+    const member = message.member;
+    if (!pending) {
+      let staff = false;
+      try { staff = canConfigureGuild(guild, member, userId); } catch {}
+      if (staff) return false;
+      await Promise.resolve(message.delete && message.delete()).catch(() => {});
+      return true;
+    }
+    await Promise.resolve(message.delete && message.delete()).catch(() => {});
+    const guess = normalizeGuess(message.content);
+    if (guess && guess === normalizeGuess(pending.code)) {
+      await succeedCaptcha(botId, guild, member, pending);
+      return true;
+    }
+    const attempts = Number(pending.attempts || 0) + 1;
+    if (attempts >= CAPTCHA_MAX_ATTEMPTS) {
+      await failCaptcha(botId, guild, member, pending, '2 essais incorrects');
+      return true;
+    }
+    pending.attempts = attempts;
+    setPending(guild.id, userId, pending);
+    const lang = i18n.langForGuild(guild.id);
+    const ch = message.channel;
+    if (ch && typeof ch.send === 'function') {
+      await ch.send({
+        content: `${message.author} ${i18n.t(lang, 'verif_captcha_wrong', { left: CAPTCHA_MAX_ATTEMPTS - attempts })}`,
+        allowedMentions: { users: [userId] },
+      }).catch(() => {});
+    }
+    return true;
+  } catch { return false; }
+}
+
+async function onMemberLeave(botId, member) {
+  try {
+    if (!member || !member.guild) return;
+    const pending = getPending(member.guild.id, member.id);
+    if (!pending) return;
+    clearPending(member.guild.id, member.id);
+    await deleteCaptchaMessage(member.guild, pending);
+  } catch {}
+}
+
+async function sweepCaptchas(botId, entry) {
+  try {
+    const keys = store.settings.keysLike('captcha_pending:%');
+    const now = Date.now();
+    for (const key of keys) {
+      let data = null;
+      try { data = JSON.parse(store.settings.get(key) || ''); } catch { data = null; }
+      if (!data || !data.code) {
+        try { store.db.prepare('DELETE FROM settings WHERE key = ?').run(key); } catch {}
+        continue;
+      }
+      if (String(data.botId) !== String(botId)) continue;
+      if (Number(data.expiresAt || 0) > now) continue;
+      const guild = entry && entry.client && entry.client.guilds && entry.client.guilds.cache
+        ? entry.client.guilds.cache.get(String(data.guildId))
+        : null;
+      if (!guild) { try { store.db.prepare('DELETE FROM settings WHERE key = ?').run(key); } catch {} continue; }
+      const member = await guild.members.fetch(String(data.userId)).catch(() => null);
+      await failCaptcha(botId, guild, member || { id: data.userId, user: null, kick: async () => {} }, data, 'temps écoulé');
+    }
+  } catch (e) { console.error('[Hoxera] captcha sweep :', e && e.message); }
 }
 
 // Envoie (ou renvoie) le panneau de vérification dans le salon choisi.
@@ -163,13 +447,17 @@ async function onJoin(botId, member) {
       return;
     }
     const days = Number(cfg.gate_days) || 0;
-    if (days <= 0) return;
-    const created = member.user && member.user.createdAt ? new Date(member.user.createdAt).getTime() : 0;
-    if (!created || Date.now() - created >= days * 86400000) return;
-    const lang = i18n.langForGuild(guild.id);
-    try { await member.user.send(i18n.t(lang, 'verif_kick_dm', { days, serveur: guild.name || 'ce serveur' })); } catch { /* MP fermés */ }
-    await member.kick(`Join Gate : compte de moins de ${days} jour(s)`).catch(() => {});
-    logging.log(botId, guild, { title: '🚧 Join Gate : arrivée refusée', description: `${(member.user && (member.user.tag || member.user.username)) || member.id} — compte plus récent que ${days} jour(s)`, color: '#FEE75C' }).catch(() => {});
+    if (days > 0) {
+      const created = member.user && member.user.createdAt ? new Date(member.user.createdAt).getTime() : 0;
+      if (created && Date.now() - created < days * 86400000) {
+        const lang = i18n.langForGuild(guild.id);
+        try { await member.user.send(i18n.t(lang, 'verif_kick_dm', { days, serveur: guild.name || 'ce serveur' })); } catch { /* MP fermés */ }
+        await member.kick(`Join Gate : compte de moins de ${days} jour(s)`).catch(() => {});
+        logging.log(botId, guild, { title: '🚧 Join Gate : arrivée refusée', description: `${(member.user && (member.user.tag || member.user.username)) || member.id} — compte plus récent que ${days} jour(s)`, color: '#FEE75C' }).catch(() => {});
+        return;
+      }
+    }
+    if (cfg.captcha) await startCaptcha(botId, member);
   } catch { /* la vérification ne doit jamais casser l'arrivée d'un membre */ }
 }
 
@@ -213,10 +501,15 @@ async function applyIsolation(botId, guild) {
       done++;
     } catch (e) { errors++; }
   }
-  // Le salon de vérification reste visible par tout le monde (nouveaux inclus)
+  // Le salon de vérification / captcha reste visible. Personne n'y discute :
+  // @everyone voit, mais n'écrit pas (le nouveau membre reçoit un écrasement).
   try {
-    const vch = guild.channels.cache.get(cfg.channel);
-    if (vch && vch.permissionOverwrites) await vch.permissionOverwrites.edit(everyone, { ViewChannel: true }, { reason: 'v293 vérification : salon visible des nouveaux arrivants' });
+    const vch = guild.channels.cache.get(captchaChannelId(cfg) || cfg.channel);
+    if (vch && vch.permissionOverwrites) {
+      const vis = { ViewChannel: true };
+      if (cfg.captcha) vis.SendMessages = false;
+      await vch.permissionOverwrites.edit(everyone, vis, { reason: 'v293 vérification : salon visible des nouveaux arrivants' });
+    }
   } catch (e) { /* best effort */ }
   saveCfg(guild.id, { isolate: true, isolated_channels: [...recorded] });
   try { logging.log(botId, guild, { title: '🔒 Isolation des non-vérifiés appliquée', description: `${done} salon(s) masqué(s) · ${skipped} déjà privé(s) ignoré(s)`, color: '#57F287' }).catch(() => {}); } catch (e) {}
@@ -354,4 +647,12 @@ async function grantRoleToAll(botId, guild) {
   return { added, errors };
 }
 
-module.exports = { cfgOf, saveCfg, sendPanel, handleButton, onJoin, GATE_CHOICES, panelTexts, hasCustomAvatar, isSpammer, assertIsolationReady, applyIsolation, removeIsolation, onChannelCreate, repairPrivateChannels, assertGrantReady, grantRoleToAll, _test: { DEFAULTS } };
+module.exports = {
+  cfgOf, saveCfg, sendPanel, handleButton, onJoin, GATE_CHOICES, panelTexts,
+  hasCustomAvatar, isSpammer, assertIsolationReady, applyIsolation, removeIsolation,
+  onChannelCreate, repairPrivateChannels, assertGrantReady, grantRoleToAll,
+  captchaChannelId, generateCode, normalizeGuess, captchaSvg, captchaPng,
+  getPending, setPending, clearPending, holdsArrival, startCaptcha, onMessage,
+  onMemberLeave, sweepCaptchas, CAPTCHA_TIMEOUT_MS, CAPTCHA_MAX_ATTEMPTS,
+  _test: { DEFAULTS, CAPTCHA_CHARS, CAPTCHA_LEN },
+};

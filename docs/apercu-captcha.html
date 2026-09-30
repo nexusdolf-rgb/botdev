@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aperçu — captcha à l’arrivée</title>
+  <style>
+    body { margin: 0; background: #1e1f22; color: #dbdee1; font-family: "gg sans","Noto Sans","Helvetica Neue",sans-serif; font-size: 14px; line-height: 1.45; }
+    .page { max-width: 420px; margin: 0 auto; padding: 24px 14px 80px; }
+    h1 { font-size: 20px; font-weight: 700; color: #f2f3f5; margin: 0 0 8px; }
+    .lead { color: #b5bac1; margin: 0 0 22px; font-size: 13.5px; }
+    .ch { font-size: 12px; letter-spacing: .4px; text-transform: uppercase; color: #949ba4; margin: 26px 0 10px; }
+    .phone { background: #313338; border-radius: 16px; overflow: hidden; border: 1px solid #1e1f22; }
+    .top { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #2b2d31; border-bottom: 1px solid #1e1f22; }
+    .hash { color: #80848e; font-size: 18px; }
+    .top b { color: #f2f3f5; font-size: 16px; }
+    .top small { display: block; color: #23a559; font-size: 11px; font-weight: 500; }
+    .feed { padding: 14px 12px 16px; }
+    .msg { display: flex; gap: 10px; }
+    .av { width: 40px; height: 40px; border-radius: 50%; background: #e07a5f; flex: 0 0 40px; display: flex; align-items: center; justify-content: center; }
+    .av svg { width: 28px; height: 28px; }
+    .name { font-weight: 650; color: #00a8fc; }
+    .bot { display: inline-block; background: #5865f2; color: #fff; font-size: 10px; font-weight: 700; border-radius: 4px; padding: 1px 4px; margin-left: 6px; vertical-align: 1px; }
+    .time { color: #949ba4; font-size: 11px; font-weight: 500; margin-left: 6px; }
+    .ping { display: inline-block; margin: 6px 0 8px; background: #414675; color: #c9cdfb; border-radius: 4px; padding: 1px 4px; font-weight: 600; font-size: 13px; }
+    .embed { background: #2b2d31; border-radius: 8px; overflow: hidden; display: flex; }
+    .bar { width: 4px; background: #e07a5f; flex: 0 0 4px; }
+    .emb { padding: 10px 12px 12px; min-width: 0; flex: 1; }
+    .who { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; color: #f2f3f5; font-weight: 650; font-size: 13px; }
+    .who i { width: 22px; height: 22px; border-radius: 50%; background: #5865f2; display: inline-block; }
+    .emb h2 { margin: 0 0 8px; font-size: 16px; color: #f2f3f5; }
+    .emb p { margin: 0 0 6px; color: #dbdee1; font-size: 14px; }
+    .cap { margin-top: 10px; background: #1e1f22; border-radius: 6px; padding: 8px 6px; }
+    .composer { display: flex; align-items: center; gap: 8px; margin: 12px; background: #383a40; border-radius: 22px; padding: 8px 14px; color: #949ba4; font-size: 13px; }
+    .note { font-size: 12.5px; color: #949ba4; margin-top: 10px; }
+    .ok { background: #2b2d31; border-radius: 8px; padding: 14px; }
+    .ok .title { font-size: 16px; font-weight: 650; color: #f2f3f5; margin: 0 0 8px; }
+    .userline { color: #dbdee1; margin: 8px 12px 0; font-size: 14px; }
+    .userav { display: inline-block; width: 18px; height: 18px; border-radius: 50%; background: #5865f2; vertical-align: -3px; margin-right: 4px; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>Captcha à l’arrivée</h1>
+    <p class="lead">Ce que le nouveau membre <b>voit et fait</b> si le captcha est activé. Le bouton « Je suis humain » n’a pas été retiré.</p>
+
+    <div class="ch">1. Il rejoint le serveur</div>
+    <p class="note">Avec l’isolation activée, il ne voit <b>aucun</b> autre salon ni catégorie — seulement <b>#vérification</b>.</p>
+
+    <div class="ch">2. Le bot lui envoie le captcha</div>
+    <div class="phone">
+      <div class="top">
+        <span class="hash">#</span>
+        <div><b>vérification</b><small>● 12 en ligne</small></div>
+      </div>
+      <div class="feed">
+        <div class="msg">
+          <div class="av" aria-hidden="true">
+            <svg viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="30" fill="#2b2d31"/><rect x="18" y="22" width="28" height="20" rx="4" fill="#f2f3f5"/><circle cx="26" cy="32" r="3" fill="#1e1f22"/><circle cx="38" cy="32" r="3" fill="#1e1f22"/><path d="M22 48h20l-4 8H26z" fill="#e07a5f"/></svg>
+          </div>
+          <div>
+            <div><span class="name">Optimus Prime</span><span class="bot">APP</span><span class="time">09:43</span></div>
+            <div class="ping">@Alex</div>
+            <div class="embed">
+              <div class="bar"></div>
+              <div class="emb">
+                <div class="who"><i></i> Alex</div>
+                <h2>Bienvenue sur AyAyTR COMMUNITY !</h2>
+                <p>Pour accéder à tout le serveur, recopiez <b>les caractères que vous voyez sur l’image</b>.</p>
+                <p>Vous avez <b>2 minutes</b> et <b>2 essais</b>.</p>
+                <div class="cap">
+                  <svg width="100%" height="88" viewBox="0 0 420 130" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="420" height="130" rx="8" fill="#1e1f22"/>
+                    <line x1="20" y1="30" x2="390" y2="100" stroke="#e07a5f" stroke-opacity="0.22" stroke-width="1.5"/>
+                    <line x1="40" y1="110" x2="360" y2="20" stroke="#e07a5f" stroke-opacity="0.22" stroke-width="1.5"/>
+                    <text x="36" y="86" font-family="Times New Roman, Georgia, serif" font-size="58" font-style="italic" font-weight="700" fill="#c45c3e" transform="rotate(-11 36 86)">Q</text>
+                    <text x="98" y="80" font-family="Times New Roman, Georgia, serif" font-size="58" font-style="italic" font-weight="700" fill="#d4764e" transform="rotate(10 98 80)">T</text>
+                    <text x="160" y="90" font-family="Times New Roman, Georgia, serif" font-size="58" font-style="italic" font-weight="700" fill="#b85a3a" transform="rotate(-9 160 90)">7</text>
+                    <text x="222" y="82" font-family="Times New Roman, Georgia, serif" font-size="58" font-style="italic" font-weight="700" fill="#e07a5f" transform="rotate(12 222 82)">K</text>
+                    <text x="284" y="88" font-family="Times New Roman, Georgia, serif" font-size="58" font-style="italic" font-weight="700" fill="#c45c3e" transform="rotate(-8 284 88)">2</text>
+                    <text x="346" y="80" font-family="Times New Roman, Georgia, serif" font-size="58" font-style="italic" font-weight="700" fill="#d4764e" transform="rotate(9 346 80)">H</text>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="composer">Envoyer un message…</div>
+    </div>
+    <p class="note">Il tape dans le salon ce qu’il lit, par exemple <b>QT7K2H</b>. Personne d’autre n’écrit ici.</p>
+
+    <div class="ch">3. S’il se trompe</div>
+    <div class="phone">
+      <div class="feed">
+        <div class="userline"><span class="userav"></span><b>Alex</b> — message supprimé (le salon reste propre)</div>
+        <p class="note" style="margin:10px 12px 12px">❌ Code incorrect. Il vous reste <b>1</b> essai.<br>Au 2<sup>e</sup> échec, ou au bout de 2 minutes sans rien envoyer : expulsion + message privé propre.</p>
+      </div>
+    </div>
+
+    <div class="ch">4. S’il réussit</div>
+    <div class="ok">
+      <div class="title">✅ Captcha réussi</div>
+      <p>Il reçoit le rôle vérifié, <b>voit tous les salons</b>, et le message de bienvenue part dans le salon choisi au module Bienvenue.</p>
+    </div>
+  </div>
+</body>
+</html>

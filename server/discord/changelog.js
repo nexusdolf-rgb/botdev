@@ -7,7 +7,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const ui = require('./ui');
 
-const VERSION = 340;
+const VERSION = 341;
 const DASHBOARD_URL = 'https://hoxera.is-a.dev';
 const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3';
 const AUTO_REVERT_MS = 2 * 60 * 1000;
@@ -15,6 +15,12 @@ const SELECT_ID = (botId) => `hx-upd:${botId}`;
 
 // Plus récent en premier. Menu Discord = 25 options max (accueil + 24 versions).
 const VERSIONS = [
+  {
+    v: 341, date: '30/09', title: 'Captcha à l’arrivée',
+    new: ['Quand un membre rejoint, le bot peut lui envoyer un **captcha** (image de lettres) dans le salon choisi : 2 essais, 2 minutes, sinon expulsion avec un MP clair.'],
+    improved: ['Le message de bienvenue part **après** le captcha, dans le salon du module Bienvenue. Le bouton « Je suis humain » est toujours là.'],
+    fixed: [],
+  },
   {
     v: 340, date: '29/09', title: 'Ticket fermé : plus d’écriture',
     new: ['Après **🔒 Fermer**, le créateur voit encore le salon, mais il ne peut plus y écrire.'],

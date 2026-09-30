@@ -453,6 +453,8 @@ function attachListeners(botId, entry) {
   client.on('messageCreate', (m) => {
     const extra = require('./extra');
     extra.trackMessage(botId, m);
+    // 🧩 Captcha : le nouveau membre recopie le code dans le salon dédié.
+    require('./verification').onMessage(botId, m).catch(() => {});
     // 🌙 Statut AFK (v188) : sort l'auteur de l'AFK + prévient les mentions
     extra.onMessage(botId, m).catch(() => {});
     // 📌 Sticky (v276) : message épinglé qui remonte en bas du salon
@@ -606,17 +608,20 @@ function attachListeners(botId, entry) {
       }
     } catch { /* le re-ban ne doit jamais casser l'arrivée normale */ }
     // 📨 Attribution de l'invitation AVANT tout (le relevé doit être frais)
-    const community = require('./community');
-    community.onMemberJoinInvites(botId, member).catch(() => {});
-    const { runJoinEvent } = require('./events');
-    runJoinEvent(botId, member).catch(e => console.error('[BotDev] join event error:', e.message));
-    // ✅ v290 — Join Gate + filtre anti-bots (isolé, jamais bloquant)
-    try { require('./verification').onJoin(botId, member).catch(() => {}); } catch { }
+    // Captcha d'abord, puis bienvenue : sinon le message d'accueil part trop tôt.
+    (async () => {
+      const community = require('./community');
+      await community.onMemberJoinInvites(botId, member).catch(() => {});
+      try { await require('./verification').onJoin(botId, member); } catch { }
+      const { runJoinEvent } = require('./events');
+      await runJoinEvent(botId, member).catch(e => console.error('[BotDev] join event error:', e.message));
+    })().catch((e) => console.error('[BotDev] join:', e && e.message));
   });
 
   client.on('guildMemberRemove', (member) => {
     const { runLeaveEvent } = require('./events');
     runLeaveEvent(botId, member).catch(e => console.error('[BotDev] leave event error:', e.message));
+    try { require('./verification').onMemberLeave(botId, member).catch(() => {}); } catch {}
     // 🛡️ v242 anti-nuke : expulsion de masse. Cet événement se déclenche aussi
     // pour les départs volontaires ; seul le journal d'audit distingue les deux,
     // et un départ normal ne produit aucune entrée « kick » donc aucun comptage.

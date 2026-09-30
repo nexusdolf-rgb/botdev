@@ -65,19 +65,32 @@ async function runJoinEvent(botId, member, opts = {}) {
   const state = store.events.all(botId, member.guild.id);
   const botRecord = store.bots.get(botId);
 
-  // 📈 Statistiques : nouveaux membres du jour (pas en mode test)
+  // 📈 Statistiques : nouveaux membres du jour (pas en mode test, pas après captcha)
   if (!opts.test) {
-    try {
-      store.joinStats.bump(botId, member.guild.id, new Date().toISOString().slice(0, 10));
-    } catch (e) { console.error('[Hoxera] join stats:', e.message); }
+    if (!opts.afterVerify) {
+      try {
+        store.joinStats.bump(botId, member.guild.id, new Date().toISOString().slice(0, 10));
+      } catch (e) { console.error('[Hoxera] join stats:', e.message); }
+    }
   }
 
   // 🛡️ Bouclier anti-raid : compteur d'arrivées + déclenchement éventuel
-  if (!opts.test) {
+  if (!opts.test && !opts.afterVerify) {
     try {
       const antiraid = require('./antiraid');
       await antiraid.onJoin(botId, member);
     } catch (e) { console.error('[Hoxera] anti-raid join:', e.message); }
+  }
+
+  // Captcha en cours : pas de bienvenue ni d'auto-rôle tant que ce n'est pas validé.
+  if (!opts.test && !opts.afterVerify) {
+    try {
+      const ver = require('./verification');
+      if (ver.holdsArrival(member.guild.id, member)) {
+        trace('captcha en attente — bienvenue reportée');
+        return;
+      }
+    } catch (e) { console.error('[Hoxera] hold captcha :', e.message); }
   }
 
   if (state.member_join && state.member_join.enabled) {
