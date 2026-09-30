@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v343**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v344**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -962,6 +962,10 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v344 (30/09 — COMMANDES : SÉLECTEURS)** :
+  slash Discord : salon/catégorie/rôle en menus cliquables. `/ticket logs`
+  pour le récapitulatif staff. `/ticket setup` ajoute cette étape.
+  test/v344-test.js.
 - **v343 (30/09 — CAPTCHA PRIVÉ)** :
   salon captcha invisible à @everyone, fil privé par membre, isolation
   forcée (tickets jamais ouverts au rôle vérifié), restrictMember à
@@ -1574,7 +1578,7 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 23/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v343** — captcha privé (fil + isolation forcée).
+- Dernière version : **v344** — commandes Discord en sélecteurs (salon/rôle).
   `test/v342-test.js`. Aperçu `docs/apercu-captcha.html`.
 - **v341** — captcha à l’arrivée dans Vérification
   (bouton conservé). `test/v341-test.js`. Aperçu `docs/apercu-captcha.html`.

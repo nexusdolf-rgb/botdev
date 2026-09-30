@@ -89,8 +89,8 @@ function pingMention(guild, ref) {
 }
 
 // Démarre un giveaway : envoie l'embed + réaction, enregistre en base
-async function startGiveaway(botId, interaction, durationMs, prize, winners) {
-  const channel = interaction.channel;
+async function startGiveaway(botId, interaction, durationMs, prize, winners, channelOpt) {
+  const channel = (channelOpt && typeof channelOpt.send === 'function') ? channelOpt : interaction.channel;
   if (!channel || typeof channel.send !== 'function') {
     return interaction.reply({ content: '❌ Salon invalide.', ephemeral: true });
   }

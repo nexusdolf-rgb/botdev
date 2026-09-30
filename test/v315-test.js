@@ -17,8 +17,8 @@ const sw = racine('public/sw.js');
 const pub = racine('public/js/public.js');
 const css = racine('public/css/style.css');
 console.log('— 1. Pins de version v315 —');
-check('index.html : ?v=343 ×7', (html.match(/\?v=343/g) || []).length === 7);
-check('sw.js : cache botdev-v343', sw.includes("const CACHE = 'botdev-v343';"));
+check('index.html : ?v=344 ×7', (html.match(/\?v=344/g) || []).length === 7);
+check('sw.js : cache botdev-v344', sw.includes("const CACHE = 'botdev-v344';"));
 check('index.html : plus aucune ?v=314', !html.includes('?v=314'));
 
 console.log('— 2. Photo d’Optimus à la place de l’emoji —');

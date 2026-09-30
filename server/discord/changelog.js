@@ -7,7 +7,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const ui = require('./ui');
 
-const VERSION = 343;
+const VERSION = 344;
 const DASHBOARD_URL = 'https://hoxera.is-a.dev';
 const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3';
 const AUTO_REVERT_MS = 2 * 60 * 1000;
@@ -15,6 +15,12 @@ const SELECT_ID = (botId) => `hx-upd:${botId}`;
 
 // Plus récent en premier. Menu Discord = 25 options max (accueil + 24 versions).
 const VERSIONS = [
+  {
+    v: 344, date: '30/09', title: 'Commandes : tout se clique',
+    new: ['Les commandes de configuration ont des **sélecteurs** : salon, catégorie, rôle. `/ticket logs` choisit le salon du récapitulatif staff.'],
+    improved: ['`/ticket setup` ajoute l’étape récap staff. `/ticket category`, `/giveaway`, `/event`, `/voicetemp`, `/apply` : on clique, on ne tape plus le nom.'],
+    fixed: ['Plusieurs options demandaient encore d’écrire le nom d’un salon ou d’un rôle à la main.'],
+  },
   {
     v: 343, date: '30/09', title: 'Captcha privé',
     new: ['Le captcha est **privé** : salon invisible aux autres, image et saisie dans un **fil privé**, tickets et serveur masqués jusqu’au succès.'],

@@ -9,6 +9,7 @@
 const {
   ActionRowBuilder, ButtonBuilder, ButtonStyle,
   StringSelectMenuBuilder, StringSelectMenuOptionBuilder,
+  ChannelSelectMenuBuilder,
   ModalBuilder, TextInputBuilder, TextInputStyle,
   ChannelType, PermissionFlagsBits, EmbedBuilder, MessageFlags,
 } = require('discord.js');
@@ -182,6 +183,7 @@ async function dispatchPanels(botId, interaction) {
     // Assistant des types de tickets (/ticket types setup)
     if ((interaction.isStringSelectMenu() && cid.startsWith('bdw-ts:'))
       || (interaction.isRoleSelectMenu() && cid.startsWith('bdw-tr:'))
+      || (typeof interaction.isChannelSelectMenu === 'function' && interaction.isChannelSelectMenu() && cid.startsWith('bdw-tc:'))
       || (interaction.isButton() && cid.startsWith('bdw-tb:'))
       || (interaction.isModalSubmit() && cid.startsWith('bdw-tm:'))) {
       await handleTypesWizardInteraction(botId, interaction);
@@ -191,7 +193,7 @@ async function dispatchPanels(botId, interaction) {
     // Assistant /ticket setup (boutons + modales + menus de sélection)
     if ((interaction.isButton() && cid.startsWith('bdw:'))
       || (interaction.isModalSubmit() && cid.startsWith('bdw-modal:'))
-      || ((interaction.isStringSelectMenu() || interaction.isChannelSelectMenu() || interaction.isRoleSelectMenu()) && cid.startsWith('bdw-sel:'))) {
+      || ((interaction.isStringSelectMenu() || (typeof interaction.isChannelSelectMenu === 'function' && interaction.isChannelSelectMenu()) || interaction.isRoleSelectMenu()) && cid.startsWith('bdw-sel:'))) {
       const { handleWizardInteraction } = require('./panelCommands');
       await handleWizardInteraction(botId, interaction);
       return true;
@@ -1648,9 +1650,18 @@ async function sendTicketRecap(botId, interaction, { row, meta, closeReason, tra
   try {
     const guild = interaction.guild;
     const gs = store.guildSettings.get(botId, guild.id) || {};
-    const chanName = String(gs.ticket_log_channel || '').replace(/^#/, '').trim();
-    if (!chanName) return; // journal des tickets non configuré
-    const board = guild.channels.cache.find((c) => c.name === chanName && c.isTextBased && c.isTextBased());
+    const raw = String(gs.ticket_log_channel || '').trim();
+    if (!raw) return; // journal des tickets non configuré
+    const isText = (c) => c && typeof c.isTextBased === 'function' && c.isTextBased();
+    let board = guild.channels.cache.get(raw);
+    if (!isText(board)) {
+      const id = (raw.match(/\d{15,21}/) || [])[0];
+      if (id) board = guild.channels.cache.get(id);
+    }
+    if (!isText(board)) {
+      const name = raw.replace(/^#/, '').toLowerCase();
+      board = guild.channels.cache.find((c) => isText(c) && String(c.name || '').toLowerCase() === name) || null;
+    }
     if (!board) return;
 
     const openerId = (row && row.opener_id) || meta.openerId || '';
@@ -2398,18 +2409,12 @@ function typesEditComponents(state) {
 }
 
 function typesCategoryComponents(state) {
-  const cats = [...state.guild.channels.cache.values()]
-    .filter((c) => c.type === ChannelType.GuildCategory)
-    .map((c) => c.name);
-  const uniq = [...new Set(cats)].slice(0, 23);
-  const opts = uniq.map((n) => ({ label: n, value: n }));
-  opts.push({ label: '➕ Nouvelle catégorie (écrire)', value: '__custom__', emoji: '➕' });
   return [new ActionRowBuilder().addComponents(
-    new StringSelectMenuBuilder()
-      .setCustomId(`bdw-ts:${state.botId}:${state.userId}`)
-      .setPlaceholder('Choisissez une catégorie…')
+    new ChannelSelectMenuBuilder()
+      .setCustomId(`bdw-tc:${state.botId}:${state.userId}`)
+      .setPlaceholder('🗂️ Sélectionnez la catégorie…')
       .setMinValues(1).setMaxValues(1)
-      .addOptions(opts.map((o) => typeOption(o.label, o.emoji || '', o.value)))
+      .setChannelTypes([ChannelType.GuildCategory])
   )];
 }
 
@@ -2695,6 +2700,15 @@ async function handleTypesWizardInteraction(botId, interaction) {
       return upd({ embeds: [typesQuestionsEmbed(state)], components: typesQuestionsComponents(state) });
     }
     return null;
+  }
+
+  // --- Sélecteur de catégorie natif ---
+  if (typeof interaction.isChannelSelectMenu === 'function' && interaction.isChannelSelectMenu()) {
+    const ch = interaction.guild.channels.cache.get(interaction.values[0]);
+    if (ch && ch.type === ChannelType.GuildCategory) {
+      updateType(botId, state.guildId, state.current, { category: ch.name });
+    }
+    return upd(backToEdit());
   }
 
   // --- Sélecteur de rôle natif (étape « ajouter un rôle staff ») : répétable ---

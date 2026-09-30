@@ -1,7 +1,9 @@
 // ============================================================
 // BotDev - Commandes pré-faites (modules activables en 1 clic)
 // ============================================================
-const { EmbedBuilder, ApplicationCommandOptionType, PermissionsBitField } = require('discord.js');
+const { EmbedBuilder, ApplicationCommandOptionType, PermissionsBitField, ChannelType } = require('discord.js');
+const TEXT_CH = [ChannelType.GuildText, ChannelType.GuildAnnouncement];
+const CAT_CH = [ChannelType.GuildCategory];
 const { xpForLevel, levelFromXp, resolveRole } = require('./xp');
 const logging = require('./logging');
 const suggestEngine = require('./suggest');
@@ -252,7 +254,7 @@ function buildSlashPayloads(botId) {
         { name: "👁️ Voir l'état actuel", value: 'view' },
       ]});
       options.push({ name: 'role', description: 'Le rôle de récompense à donner aux boosters', type: ApplicationCommandOptionType.Role, required: false });
-      options.push({ name: 'salon', description: 'Le salon du message de remerciement (optionnel)', type: ApplicationCommandOptionType.Channel, required: false });
+      options.push({ name: 'salon', description: 'Le salon du message de remerciement (optionnel)', type: ApplicationCommandOptionType.Channel, required: false, channel_types: TEXT_CH });
       options.push({ name: 'message', description: 'Message personnalisé ({membre} = mention)', type: ApplicationCommandOptionType.String, required: false });
     }
     if (['statchannels'].includes(name)) {
@@ -293,13 +295,14 @@ function buildSlashPayloads(botId) {
       options.push({ name: 'duree', description: 'Durée (ex : 30m, 2h, 1d)', type: ApplicationCommandOptionType.String, required: false });
       options.push({ name: 'prix', description: 'Le prix à gagner', type: ApplicationCommandOptionType.String, required: false });
       options.push({ name: 'gagnants', description: 'Nombre de gagnants', type: ApplicationCommandOptionType.Integer, required: false });
+      options.push({ name: 'salon', description: 'Salon du giveaway (défaut : salon actuel)', type: ApplicationCommandOptionType.Channel, required: false, channel_types: TEXT_CH });
       options.push({ name: 'message', description: 'ID du message du giveaway (pour end/reroll)', type: ApplicationCommandOptionType.String, required: false });
     }
     if (['suggestions'].includes(name)) {
       options.push({ name: 'action', description: 'Action', type: ApplicationCommandOptionType.String, required: true, choices: [
         { name: 'set', value: 'set' }, { name: 'off', value: 'off' }, { name: 'view', value: 'view' },
       ]});
-      options.push({ name: 'salon', description: 'Salon des suggestions', type: ApplicationCommandOptionType.Channel, required: false });
+      options.push({ name: 'salon', description: 'Salon des suggestions', type: ApplicationCommandOptionType.Channel, required: false, channel_types: TEXT_CH });
     }
     const payload = { name, description: def.desc, options };
     // Commandes réservées : visibles uniquement par les membres autorisés.
@@ -345,20 +348,23 @@ function buildSlashPayloads(botId) {
           { name: 'nom', description: 'Nom du type (ex : Candidature staff)', type: ApplicationCommandOptionType.String, required: true },
           { name: 'emoji', description: 'Emoji affiché dans le menu', type: ApplicationCommandOptionType.String, required: false },
           { name: 'description', description: 'Explication affichée sous le type dans le menu', type: ApplicationCommandOptionType.String, required: false },
-          { name: 'categorie', description: 'Catégorie dédiée (optionnel)', type: ApplicationCommandOptionType.String, required: false },
-          { name: 'staffrole', description: 'Ajoutez un rôle staff (pour EN ajouter plusieurs : /ticket types setup)', type: ApplicationCommandOptionType.String, required: false },
+          { name: 'categorie', description: 'Catégorie dédiée (menu de sélection)', type: ApplicationCommandOptionType.Channel, required: false, channel_types: CAT_CH },
+          { name: 'staffrole', description: 'Ajoutez un rôle staff (menu de sélection — pour en mettre plusieurs : /ticket types setup)', type: ApplicationCommandOptionType.Role, required: false },
         ]},
         { name: 'remove', description: 'Supprimer un type de ticket', type: ApplicationCommandOptionType.Subcommand, options: [
           { name: 'nom', description: 'Nom du type à supprimer', type: ApplicationCommandOptionType.String, required: true },
         ]},
         { name: 'list', description: 'Voir les types de tickets', type: ApplicationCommandOptionType.Subcommand },
       ]},
-      { name: 'setup', description: 'Assistant pas à pas : nom → catégorie → salon → rôle staff', type: ApplicationCommandOptionType.Subcommand },
+      { name: 'setup', description: 'Assistant : nom → catégorie → salon → récap staff → rôle (menus de sélection)', type: ApplicationCommandOptionType.Subcommand },
       { name: 'channel', description: 'Définir le salon du panneau de tickets', type: ApplicationCommandOptionType.Subcommand, options: [
-        { name: 'salon', description: 'Le salon où sera envoyé le panneau', type: ApplicationCommandOptionType.Channel, required: true },
+        { name: 'salon', description: 'Le salon où sera envoyé le panneau', type: ApplicationCommandOptionType.Channel, required: true, channel_types: TEXT_CH },
       ]},
       { name: 'category', description: 'Définir la catégorie des salons de tickets', type: ApplicationCommandOptionType.Subcommand, options: [
-        { name: 'nom', description: 'Nom de la catégorie', type: ApplicationCommandOptionType.String, required: true },
+        { name: 'categorie', description: 'La catégorie (menu de sélection)', type: ApplicationCommandOptionType.Channel, required: true, channel_types: CAT_CH },
+      ]},
+      { name: 'logs', description: 'Salon du récapitulatif staff (fermeture des tickets)', type: ApplicationCommandOptionType.Subcommand, options: [
+        { name: 'salon', description: 'Salon où envoyer le récapitulatif', type: ApplicationCommandOptionType.Channel, required: true, channel_types: TEXT_CH },
       ]},
       { name: 'role', description: 'Définir le rôle du staff (accès à tous les tickets)', type: ApplicationCommandOptionType.Subcommand, options: [
         { name: 'role', description: 'Le rôle staff', type: ApplicationCommandOptionType.Role, required: true },
@@ -370,7 +376,7 @@ function buildSlashPayloads(botId) {
         { name: 'texte', description: 'Message du panneau', type: ApplicationCommandOptionType.String, required: true },
       ]},
       { name: 'panel', description: 'Envoyer le panneau de tickets', type: ApplicationCommandOptionType.Subcommand, options: [
-        { name: 'salon', description: 'Salon (défaut : salon configuré ou salon actuel)', type: ApplicationCommandOptionType.Channel, required: false },
+        { name: 'salon', description: 'Salon (défaut : salon configuré ou salon actuel)', type: ApplicationCommandOptionType.Channel, required: false, channel_types: TEXT_CH },
       ]},
       { name: 'config', description: 'Voir la configuration actuelle', type: ApplicationCommandOptionType.Subcommand },
       { name: 'close', description: 'Verrouiller le ticket actuel (réouvrable)', type: ApplicationCommandOptionType.Subcommand },
@@ -412,7 +418,7 @@ function buildSlashPayloads(botId) {
     default_member_permissions: '8',
     options: [
       { name: 'set', description: 'Définir le salon des journaux', type: ApplicationCommandOptionType.Subcommand, options: [
-        { name: 'salon', description: 'Salon où seront envoyés les journaux', type: ApplicationCommandOptionType.Channel, required: true },
+        { name: 'salon', description: 'Salon où seront envoyés les journaux', type: ApplicationCommandOptionType.Channel, required: true, channel_types: TEXT_CH },
       ]},
       { name: 'off', description: 'Désactiver les journaux', type: ApplicationCommandOptionType.Subcommand },
       { name: 'view', description: 'Voir le salon des journaux actuel', type: ApplicationCommandOptionType.Subcommand },
@@ -444,7 +450,7 @@ function buildSlashPayloads(botId) {
       { name: 'list', description: 'Lister les menus de rôles de ce serveur', type: ApplicationCommandOptionType.Subcommand },
       { name: 'send', description: 'Envoyer un menu de rôles', type: ApplicationCommandOptionType.Subcommand, options: [
         { name: 'numero', description: 'Numéro du menu (voir /roles list)', type: ApplicationCommandOptionType.Integer, required: true },
-        { name: 'salon', description: 'Salon (défaut : salon configuré ou salon actuel)', type: ApplicationCommandOptionType.Channel, required: false },
+        { name: 'salon', description: 'Salon (défaut : salon configuré ou salon actuel)', type: ApplicationCommandOptionType.Channel, required: false, channel_types: TEXT_CH },
       ]},
     ],
   });
@@ -1140,7 +1146,8 @@ async function execute(botId, entry, cmd, src) {
       }
       const ms = giveawayEngine.parseDuration(duree);
       if (!ms) return reply('❌ Durée invalide (ex : 30m, 2h, 1d).');
-      return giveawayEngine.startGiveaway(botId, src.interaction, ms, prix, gagnants);
+      const salon = src.interaction.options.getChannel('salon') || null;
+      return giveawayEngine.startGiveaway(botId, src.interaction, ms, prix, gagnants, salon);
     }
     case 'temprole': {
       if (!isInt) return reply('⏳ Utilisez la commande slash `/temprole`.');
@@ -1510,7 +1517,7 @@ function argsMatch(str, regex) {
 // ============================================================
 const HELP_DETAILS = {
   ticket: ['🎫 Tickets', 'Le système de tickets complet : un bouton dans un salon, chaque clic crée un salon privé réservé au membre et au staff.',
-    '`/ticket types setup` — **Assistant interactif des types** : choisissez un type, renommez-le, choisissez son emoji, sa catégorie, **ajoutez AUTANT de rôles staff que vous voulez** (sélecteur de rôle, répétable) ou retirez-les, supprimez-le avec confirmation\n`/ticket types add Nom` — Ajouter/renommer un **type de ticket** (option `staffrole` pour un rôle — pour en mettre plusieurs : setup) (emoji, catégorie et rôle staff dédiés en options) — le panneau affiche un menu déroulant de types\n`/ticket types remove Nom` — Supprimer un type\n`/ticket types list` — Voir les types\n`/ticket setup` — **Assistant avec menus de sélection** : nom → catégorie → salon → rôle staff\n`/ticket panel` — Envoyer le panneau\n`/ticket channel #salon` — Changer le salon\n`/ticket role @Staff` — Changer le rôle staff\n`/ticket category Nom` — Changer la catégorie\n`/ticket button Texte` — Changer le texte du bouton\n`/ticket message Texte` — Changer le message\n`/ticket config` — Voir la configuration\n`/ticket close` — **Verrouiller** un ticket (staff, réouvrable avec 🔓)\n`/ticket delete` — **Supprimer** un ticket (staff) — 📄 la **transcription** est envoyée en MP au créateur à ce moment\n`/ticket add @membre` / `/ticket remove @membre` — Gérer l\'accès au ticket (staff)\n\n🔒 Configuration réservée au **propriétaire du serveur** ou aux membres ayant la permission **Administrateur** · gestion réservée au **staff**\n📄 La transcription part à la **suppression** (pas à la fermeture).\n\n🗂️ Exemples de types : Candidature staff, Ticket contre admin, Signaler un bug, Partenariat…'],
+    '`/ticket types setup` — **Assistant interactif des types** : choisissez un type, renommez-le, choisissez son emoji, sa catégorie, **ajoutez AUTANT de rôles staff que vous voulez** (sélecteur de rôle, répétable) ou retirez-les, supprimez-le avec confirmation\n`/ticket types add Nom` — Ajouter/renommer un **type de ticket** (option `staffrole` pour un rôle — pour en mettre plusieurs : setup) (emoji, catégorie et rôle staff dédiés en options) — le panneau affiche un menu déroulant de types\n`/ticket types remove Nom` — Supprimer un type\n`/ticket types list` — Voir les types\n`/ticket setup` — **Assistant avec menus** : nom → catégorie → salon → **récap staff** → rôle\n`/ticket panel` — Envoyer le panneau\n`/ticket channel` — Salon du panneau (sélecteur)\n`/ticket logs` — Salon du **récapitulatif staff** (sélecteur)\n`/ticket role` — Rôle staff (sélecteur)\n`/ticket category` — Catégorie (sélecteur)\n`/ticket button Texte` — Changer le texte du bouton\n`/ticket message Texte` — Changer le message\n`/ticket config` — Voir la configuration\n`/ticket close` — **Verrouiller** un ticket (staff, réouvrable avec 🔓)\n`/ticket delete` — **Supprimer** un ticket (staff) — 📄 la **transcription** est envoyée en MP au créateur à ce moment\n`/ticket add @membre` / `/ticket remove @membre` — Gérer l\'accès au ticket (staff)\n\n🔒 Configuration réservée au **propriétaire du serveur** ou aux membres ayant la permission **Administrateur** · gestion réservée au **staff**\n📄 La transcription part à la **suppression** (pas à la fermeture).\n\n🗂️ Exemples de types : Candidature staff, Ticket contre admin, Signaler un bug, Partenariat…'],
   ping: ['🔧 Utilitaire', 'Affiche la latence du bot.', '`/ping`', '`/ping` → 🏓 Pong ! Latence : 42 ms'],
   avatar: ['🔧 Utilitaire', 'Affiche l\'avatar d\'un membre.', '`/avatar @membre`', '`/avatar @Hoxera`'],
   userinfo: ['🔧 Utilitaire', 'Informations sur un membre (ID, date de création, arrivée).', '`/userinfo @membre`', '`/userinfo`'],

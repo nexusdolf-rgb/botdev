@@ -288,9 +288,9 @@ function buildExtraPayloads() {
         { name: 'action', description: 'Action', type: ApplicationCommandOptionType.String, required: true, choices: [
           { name: 'set', value: 'set' }, { name: 'off', value: 'off' }, { name: 'view', value: 'view' }, { name: 'emotes', value: 'emotes' },
         ]},
-        { name: 'salon', description: 'Le salon « ➕ Créer un vocal » (pour set)', type: ApplicationCommandOptionType.Channel, required: false },
-        { name: 'categorie', description: 'La catégorie des salons créés (pour set)', type: ApplicationCommandOptionType.Channel, required: false },
-        { name: 'panneau', description: 'Le salon textuel du panneau de contrôle (pour set)', type: ApplicationCommandOptionType.Channel, required: false },
+        { name: 'salon', description: 'Le salon « ➕ Créer un vocal » (pour set)', type: ApplicationCommandOptionType.Channel, required: false, channel_types: [ChannelType.GuildVoice] },
+        { name: 'categorie', description: 'La catégorie des salons créés (pour set)', type: ApplicationCommandOptionType.Channel, required: false, channel_types: [ChannelType.GuildCategory] },
+        { name: 'panneau', description: 'Le salon textuel du panneau de contrôle (pour set)', type: ApplicationCommandOptionType.Channel, required: false, channel_types: [ChannelType.GuildText, ChannelType.GuildAnnouncement] },
       ],
     },
     {
@@ -300,7 +300,7 @@ function buildExtraPayloads() {
         { name: 'action', description: 'Action', type: ApplicationCommandOptionType.String, required: true, choices: [
           { name: 'set', value: 'set' }, { name: 'question', value: 'question' }, { name: 'panel', value: 'panel' }, { name: 'view', value: 'view' }, { name: 'off', value: 'off' },
         ]},
-        { name: 'salon', description: 'Salon où arrivent les candidatures (pour set)', type: ApplicationCommandOptionType.Channel, required: false },
+        { name: 'salon', description: 'Salon où arrivent les candidatures (pour set)', type: ApplicationCommandOptionType.Channel, required: false, channel_types: [ChannelType.GuildText, ChannelType.GuildAnnouncement] },
         { name: 'texte', description: 'La question à ajouter (pour question)', type: ApplicationCommandOptionType.String, required: false },
       ],
     },

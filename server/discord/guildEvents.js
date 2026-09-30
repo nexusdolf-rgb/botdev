@@ -7,7 +7,7 @@
 // ============================================================
 const {
   EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle,
-  ApplicationCommandOptionType, PermissionsBitField,
+  ApplicationCommandOptionType, PermissionsBitField, ChannelType,
 } = require('discord.js');
 const store = require('../db');
 const tzUtil = require('../tz');
@@ -43,8 +43,8 @@ function buildEventPayloads() {
         { name: 'titre', description: 'Le nom de l\'événement (ex : Tournoi CODM)', type: ApplicationCommandOptionType.String, required: false },
         { name: 'description', description: 'La description (règles, prix, lien…)', type: ApplicationCommandOptionType.String, required: false },
         { name: 'quand', description: 'Date/heure : JJ/MM HH:MM (ex : 25/08 20:00) — heure du serveur', type: ApplicationCommandOptionType.String, required: false },
-        { name: 'salon', description: 'Salon où annoncer l\'événement (défaut : salon actuel)', type: ApplicationCommandOptionType.Channel, required: false },
-        { name: 'role', description: 'Rôle à mentionner dans les rappels (nom du rôle)', type: ApplicationCommandOptionType.String, required: false },
+        { name: 'salon', description: 'Salon où annoncer l\'événement (défaut : salon actuel)', type: ApplicationCommandOptionType.Channel, required: false, channel_types: [ChannelType.GuildText, ChannelType.GuildAnnouncement] },
+        { name: 'role', description: 'Rôle à mentionner dans les rappels (sélecteur)', type: ApplicationCommandOptionType.Role, required: false },
       ],
     },
   ];
@@ -179,7 +179,8 @@ async function handleInteraction(botId, entry, interaction) {
     if (startsAt < Date.now()) return interaction.reply({ content: '⏰ La date est déjà passée — choisissez une date future.', ephemeral: true }).catch(() => {});
     const salonOpt = interaction.options.getChannel('salon');
     const channelId = salonOpt ? salonOpt.id : interaction.channel.id;
-    const role = (interaction.options.getString('role') || 'none').trim();
+    const roleObj = typeof interaction.options.getRole === 'function' ? interaction.options.getRole('role') : null;
+    const role = roleObj ? String(roleObj.id) : 'none';
     const id = store.guildEvents.add(botId, guild.id, { title: titre, description, starts_at: startsAt, channel_id: channelId, ping_role: role, created_by: interaction.user.id });
     const ev = store.guildEvents.get(id);
     const channel = guild.channels.cache.get(channelId);

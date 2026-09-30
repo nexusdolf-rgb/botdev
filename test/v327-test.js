@@ -19,8 +19,8 @@ const sw = racine('public/sw.js');
 const js = racine('public/js/dashboard.js');
 
 console.log('— 1. Pins de version v327 —');
-check('index.html : ?v=343 ×7', (html.match(/\?v=343/g) || []).length === 7);
-check('sw.js : cache botdev-v343', sw.includes("const CACHE = 'botdev-v343';"));
+check('index.html : ?v=344 ×7', (html.match(/\?v=344/g) || []).length === 7);
+check('sw.js : cache botdev-v344', sw.includes("const CACHE = 'botdev-v344';"));
 check('index.html : plus aucune ?v=326', !html.includes('?v=326'));
 
 console.log('— 2. Le menu utilise la recherche « lettres simples » —');

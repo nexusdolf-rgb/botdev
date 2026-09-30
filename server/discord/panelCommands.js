@@ -59,10 +59,12 @@ const WIZARD_TTL = 10 * 60000; // 10 minutes
 const STEPS = [
   { key: 'name', type: 'string', emoji: '📛', label: 'Nom du panel',
     question: 'Donnez un nom à votre système de tickets. **Sélectionnez** un nom rapide ou écrivez le vôtre.' },
-  { key: 'category', type: 'string', emoji: '🗂️', label: 'Catégorie',
-    question: 'Dans quelle catégorie les salons de tickets seront-ils créés ? **Sélectionnez** une catégorie existante ou créez-en une.' },
+  { key: 'category', type: 'category', emoji: '🗂️', label: 'Catégorie',
+    question: 'Dans quelle catégorie les salons de tickets seront-ils créés ? **Cliquez** et choisissez la catégorie.' },
   { key: 'channel', type: 'channel', emoji: '📨', label: 'Salon du panneau',
     question: 'Dans quel salon voulez-vous envoyer le panneau avec le bouton ? **Sélectionnez** le salon dans le menu.' },
+  { key: 'logs', type: 'logs', emoji: '📔', label: 'Récapitulatif staff',
+    question: 'Où envoyer le **récapitulatif** à chaque ticket fermé (staff) ? **Sélectionnez** le salon, ou « Suivant » pour plus tard.' },
   { key: 'role', type: 'role', emoji: '🛡️', label: 'Rôle du staff',
     question: 'Quel rôle peut voir tous les tickets ? **Sélectionnez** le rôle dans le menu (ou cliquez « Terminer » pour aucun).' },
 ];
@@ -106,12 +108,18 @@ function stepComponents(state) {
   const rows = [];
 
   const first = new ActionRowBuilder();
-  if (step.type === 'channel') {
+  if (step.type === 'channel' || step.type === 'logs') {
     first.addComponents(new ChannelSelectMenuBuilder()
       .setCustomId(`bdw-sel:${state.botId}:${uid}`)
-      .setPlaceholder('📨 Sélectionnez le salon du panneau…')
+      .setPlaceholder(step.type === 'logs' ? '📔 Salon du récapitulatif staff…' : '📨 Sélectionnez le salon du panneau…')
       .setMinValues(1).setMaxValues(1)
-      .setChannelTypes([ChannelType.GuildText]));
+      .setChannelTypes([ChannelType.GuildText, ChannelType.GuildAnnouncement]));
+  } else if (step.type === 'category') {
+    first.addComponents(new ChannelSelectMenuBuilder()
+      .setCustomId(`bdw-sel:${state.botId}:${uid}`)
+      .setPlaceholder('🗂️ Sélectionnez la catégorie…')
+      .setMinValues(1).setMaxValues(1)
+      .setChannelTypes([ChannelType.GuildCategory]));
   } else if (step.type === 'role') {
     first.addComponents(new RoleSelectMenuBuilder()
       .setCustomId(`bdw-sel:${state.botId}:${uid}`)
@@ -170,7 +178,8 @@ async function startWizard(botId, interaction) {
   const values = {
     name: 'Support',
     category: 'Tickets',
-    channel: interaction.channel ? `#${interaction.channel.name}` : '',
+    channel: interaction.channel ? String(interaction.channel.id) : '',
+    logs: '',
     role: '',
   };
   const state = {
@@ -192,7 +201,7 @@ async function handleWizardInteraction(botId, interaction) {
     return interaction.reply({ content: '⛔ Votre accès de configuration a été retiré. Seul le propriétaire ou un membre ayant la permission Discord « Administrateur » peut continuer.', ephemeral: true });
   }
   // --- Menus de sélection (chaîne / salon / rôle) ---
-  if (interaction.isStringSelectMenu() || interaction.isChannelSelectMenu() || interaction.isRoleSelectMenu()) {
+  if (interaction.isStringSelectMenu() || (typeof interaction.isChannelSelectMenu === 'function' && interaction.isChannelSelectMenu()) || interaction.isRoleSelectMenu()) {
     const parts = (interaction.customId || '').split(':');
     if (parts.length !== 3 || parts[1] !== String(botId)) return;
     const uid = parts[2];
@@ -208,9 +217,12 @@ async function handleWizardInteraction(botId, interaction) {
         return showCustomModal(state, interaction);
       }
       state.values[step.key] = v;
-    } else if (interaction.isChannelSelectMenu()) {
+    } else if (typeof interaction.isChannelSelectMenu === 'function' && interaction.isChannelSelectMenu()) {
       const ch = interaction.guild.channels.cache.get(interaction.values[0]);
-      state.values.channel = ch ? `#${ch.name}` : interaction.values[0];
+      const id = ch ? String(ch.id) : String(interaction.values[0] || '');
+      if (step.key === 'category') state.values.category = ch ? ch.name : id;
+      else if (step.key === 'logs') state.values.logs = id;
+      else state.values.channel = id;
     } else {
       const role = interaction.guild.roles.cache.get(interaction.values[0]);
       state.values.role = role ? role.name : interaction.values[0];
@@ -291,6 +303,12 @@ async function finalizeWizard(state, interaction) {
     support_role: state.values.role || '',
   };
   store.tickets.set(state.botId, guild.id, cfg);
+  if (state.values.logs) {
+    try {
+      const gs = store.guildSettings.get(state.botId, guild.id) || {};
+      store.guildSettings.set(state.botId, guild.id, { ...gs, ticket_log_channel: String(state.values.logs) });
+    } catch {}
+  }
 
   // ⏱️ Accusé de réception immédiat avant l'envoi du panneau
   // (l'assistant ne doit jamais afficher « l'application ne répond pas »)
@@ -314,10 +332,11 @@ async function finalizeWizard(state, interaction) {
     .addFields(
       { name: '📛 Nom', value: cfg.name, inline: true },
       { name: '🗂️ Catégorie', value: cfg.category, inline: true },
-      { name: '📨 Salon', value: cfg.channel || 'non défini', inline: true },
+      { name: '📨 Salon', value: cfg.channel ? (/^\d{15,21}$/.test(String(cfg.channel)) ? `<#${cfg.channel}>` : cfg.channel) : 'non défini', inline: true },
+      { name: '📔 Récap staff', value: state.values.logs ? `<#${state.values.logs}>` : 'non défini (`/ticket logs`)', inline: true },
       { name: '🛡️ Rôle staff', value: cfg.support_role || 'aucun', inline: true },
     )
-    .setFooter({ text: 'Modifiez tout à tout moment avec /ticket channel, /ticket role, /ticket category…' });
+    .setFooter({ text: 'Modifiez tout à tout moment avec /ticket channel, /ticket role, /ticket category, /ticket logs…' });
 
   wizards.delete(wizardKey(state.botId, guild.id, state.userId));
   await interaction.editReply({ embeds: [embed], components: [] }).catch(() => {});
@@ -382,9 +401,11 @@ async function handleTicket(botId, sub, group, interaction, guild) {
       const emojiRaw = (interaction.options.getString('emoji') || '').trim();
       const emoji = safeEmoji(emojiRaw);
       if (emojiRaw && !emoji) return interaction.reply({ content: '❌ Emoji invalide — utilisez un vrai emoji (ex : 🤝).', ephemeral: true });
-      const categorie = (interaction.options.getString('categorie') || '').trim();
+      const catCh = typeof interaction.options.getChannel === 'function' ? interaction.options.getChannel('categorie') : null;
+      const categorie = (catCh && catCh.name) ? String(catCh.name) : '';
       const description = (interaction.options.getString('description') || '').trim();
-      const staffrole = (interaction.options.getString('staffrole') || '').trim();
+      const staffObj = typeof interaction.options.getRole === 'function' ? interaction.options.getRole('staffrole') : null;
+      const staffrole = staffObj ? String(staffObj.name || '') : '';
       const existingType = types.find((t) => t.label.toLowerCase() === nom.toLowerCase());
       const others = types.filter((t) => t.label.toLowerCase() !== nom.toLowerCase());
       const staffRoles = existingType
@@ -446,8 +467,20 @@ async function handleTicket(botId, sub, group, interaction, guild) {
       return save({ channel: `#${ch.name}` });
     }
     case 'category': {
-      const name = interaction.options.getString('nom');
-      return save({ category: name });
+      const cat = interaction.options.getChannel('categorie');
+      if (!cat || cat.type !== ChannelType.GuildCategory) {
+        return interaction.reply({ content: '❌ Choisissez une **catégorie** dans le menu (pas un salon texte).', ephemeral: true });
+      }
+      return save({ category: cat.name });
+    }
+    case 'logs': {
+      const ch = interaction.options.getChannel('salon');
+      if (!ch || !ch.isTextBased()) return interaction.reply({ content: '❌ Salon invalide.', ephemeral: true });
+      try {
+        const gs = store.guildSettings.get(botId, guild.id) || {};
+        store.guildSettings.set(botId, guild.id, { ...gs, ticket_log_channel: String(ch.id) });
+      } catch {}
+      return interaction.reply({ content: `✅ Le récapitulatif staff des tickets sera envoyé dans ${ch}.`, ephemeral: true });
     }
     case 'role': {
       const role = interaction.options.getRole('role');
@@ -484,6 +517,12 @@ async function handleTicket(botId, sub, group, interaction, guild) {
           { name: '📛 Nom du panel', value: cfg.name || '—', inline: true },
           { name: '📨 Salon du panneau', value: cfg.channel || 'non défini (utilisez `/ticket setup`)', inline: true },
           { name: '🗂️ Catégorie', value: cfg.category || 'aucune', inline: true },
+          { name: '📔 Récapitulatif staff', value: (() => {
+            const gs = store.guildSettings.get(botId, guild.id) || {};
+            const log = String(gs.ticket_log_channel || '').trim();
+            if (!log) return 'non défini (`/ticket logs`)';
+            return /^\d{15,21}$/.test(log) ? `<#${log}>` : log;
+          })(), inline: true },
           { name: '🛡️ Rôle staff global', value: cfg.support_role || 'aucun (les types peuvent avoir les leurs)', inline: true },
           { name: '🔘 Bouton', value: `${cfg.button_label} (${['bleu', 'gris', 'vert', 'rouge'][Number(cfg.button_style) - 1] || 'bleu'})`, inline: true },
           { name: '📝 Questionnaire à l\'ouverture', value: (cfg.require_reason === 0 || cfg.require_reason === false) ? '❌ désactivé (ouverture directe)' : '✅ obligatoire (raison demandée)', inline: true },
