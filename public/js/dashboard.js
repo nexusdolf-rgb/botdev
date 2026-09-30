@@ -1040,36 +1040,103 @@ if (!window.__hxPopoverDismiss) {
   });
 }
 
-// ---------------------- 🌍 Grille de serveurs (choix visuel) ----------------------
+// ---------------------- 🌍 Centre serveurs (choix visuel, façon panel pro) ----------------------
 Dashboard.renderServerGrid = (content) => {
   const guilds = Dashboard.state.discordGuilds || [];
+  const botName = (Dashboard.state.bot && Dashboard.state.bot.name) || 'Optimus Prime';
+  const withBot = guilds.filter((g) => g.hasBot).length;
+  const ready = guilds.filter((g) => g.hasBot && g.canManage).length;
+  const toInvite = guilds.filter((g) => !g.hasBot).length;
   content.innerHTML = '';
   const wrap = App.el(`
-    <div class="srv-grid-page">
+    <div class="srv-grid-page srv-center">
       <div class="srv-grid-head">
-        <h2>🌍 Choisissez un serveur</h2>
-        <p>Sélectionnez le serveur à configurer — ou invite ${App.escapeHtml(Dashboard.state.bot.name)} sur un nouveau.</p>
+        <span class="srv-kicker">Control Center · Centre serveurs</span>
+        <h2>Choisissez un serveur</h2>
+        <p>Bannière, membres, recherche — cliquez pour configurer, ou invitez ${App.escapeHtml(botName)}.</p>
+        <div class="srv-head-meta">
+          <span><b>${guilds.length}</b> serveur${guilds.length > 1 ? 's' : ''}</span>
+          <span><b>${withBot}</b> avec le bot</span>
+          <span><b>${ready}</b> prêt${ready > 1 ? 's' : ''} à configurer</span>
+        </div>
+        <div class="srv-toolbar">
+          <input type="search" class="srv-search" placeholder="🔍 Rechercher un serveur…" aria-label="Rechercher un serveur" ${guilds.length ? '' : 'disabled'} />
+          <button type="button" class="dash-btn dash-btn-primary" id="srv-invite">➕ Ajouter le bot</button>
+        </div>
+        <div class="srv-filters" role="tablist" aria-label="Filtrer les serveurs">
+          <button type="button" class="srv-filter is-on" data-f="all">Tous <small>${guilds.length}</small></button>
+          <button type="button" class="srv-filter" data-f="ready">À configurer <small>${ready}</small></button>
+          <button type="button" class="srv-filter" data-f="invite">À inviter <small>${toInvite}</small></button>
+        </div>
       </div>
       <div class="srv-grid"></div>
+      <div class="srv-empty" hidden>Aucun serveur ne correspond.</div>
     </div>`);
   const grid = wrap.querySelector('.srv-grid');
-  guilds.forEach((g) => {
-    const initial = (g.name || '?').trim()[0].toUpperCase();
-    const card = App.el(`
-      <button class="srv-card ${g.hasBot ? '' : 'no-bot'}">
-        ${g.icon ? `<img src="${App.escapeHtml(g.icon)}" alt="" data-fb-text="${App.escapeHtml(g.name)}" />` : `<span class="srv-card-fallback">${App.escapeHtml(initial)}</span>`}
-        <b title="${App.escapeHtml(g.name)}">${App.escapeHtml(g.name)}</b>
-        ${g.hasBot
-          ? (g.canManage ? '<span class="srv-badge ok">✅ Configurer</span>' : '<span class="srv-badge">🔒 Lecture seule</span>')
-          : '<span class="srv-badge invite">➕ Inviter le bot</span>'}
-      </button>`);
-    card.onclick = () => {
-      if (!g.hasBot) { App.openInvite(Dashboard.state.bot.invite_url); App.toast('Ajoutez le bot puis revenez — le serveur sera configurable !'); return; }
-      if (!g.canManage) { App.toast('Il vous faut la permission Discord « Administrateur » ou être propriétaire du serveur.', 'error'); return; }
-      Dashboard.selectGuild(g.id);
+  const empty = wrap.querySelector('.srv-empty');
+  const search = wrap.querySelector('.srv-search');
+  let filter = 'all';
+  const inviteBtn = wrap.querySelector('#srv-invite');
+  if (inviteBtn) inviteBtn.onclick = () => App.openInvite(Dashboard.state.bot.invite_url);
+
+  const matches = (g, q) => {
+    if (filter === 'ready' && !(g.hasBot && g.canManage)) return false;
+    if (filter === 'invite' && g.hasBot) return false;
+    if (q && !(g.name || '').toLowerCase().includes(q)) return false;
+    return true;
+  };
+
+  const paint = () => {
+    const q = String(search.value || '').trim().toLowerCase();
+    grid.innerHTML = '';
+    let shown = 0;
+    guilds.forEach((g) => {
+      if (!matches(g, q)) return;
+      shown += 1;
+      const initial = (g.name || '?').trim()[0].toUpperCase();
+      const members = g.members ? `${g.members} membre${g.members > 1 ? 's' : ''}` : (g.hasBot ? 'Optimus Prime présent' : 'Bot absent');
+      const boosts = g.boosts ? ` · ${g.boosts} boost${g.boosts > 1 ? 's' : ''}` : '';
+      const card = App.el(`
+        <button type="button" class="srv-card ${g.hasBot ? '' : 'no-bot'}" data-gid="${App.escapeHtml(g.id)}" data-name="${App.escapeHtml(String(g.name || '').toLowerCase())}">
+          <span class="srv-card-banner">
+            ${g.banner ? '' : `<span class="srv-card-fallback-bg">${App.escapeHtml(initial)}</span>`}
+          </span>
+          <span class="srv-card-body">
+            ${g.icon
+              ? `<img src="${App.escapeHtml(g.icon)}" alt="" data-fb-text="${App.escapeHtml(g.name)}" />`
+              : `<span class="srv-card-fallback">${App.escapeHtml(initial)}</span>`}
+            <span class="srv-card-txt">
+              <b title="${App.escapeHtml(g.name)}">${App.escapeHtml(g.name)}</b>
+              <small>${App.escapeHtml(members + boosts)}</small>
+            </span>
+            ${g.hasBot
+              ? (g.canManage ? '<span class="srv-badge ok">✅ Configurer</span>' : '<span class="srv-badge">🔒 Lecture seule</span>')
+              : '<span class="srv-badge invite">➕ Inviter le bot</span>'}
+          </span>
+        </button>`);
+      if (g.banner) {
+        const bannerEl = card.querySelector('.srv-card-banner');
+        if (bannerEl) bannerEl.style.backgroundImage = 'url("' + String(g.banner).replace(/["'()\\]/g, '') + '")';
+      }
+      card.onclick = () => {
+        if (!g.hasBot) { App.openInvite(Dashboard.state.bot.invite_url); App.toast('Ajoutez le bot puis revenez — le serveur sera configurable !'); return; }
+        if (!g.canManage) { App.toast('Il vous faut la permission Discord « Administrateur » ou être propriétaire du serveur.', 'error'); return; }
+        Dashboard.selectGuild(g.id);
+      };
+      grid.appendChild(card);
+    });
+    empty.hidden = shown > 0;
+  };
+
+  wrap.querySelectorAll('.srv-filter').forEach((btn) => {
+    btn.onclick = () => {
+      filter = btn.dataset.f || 'all';
+      wrap.querySelectorAll('.srv-filter').forEach((b) => b.classList.toggle('is-on', b === btn));
+      paint();
     };
-    grid.appendChild(card);
   });
+  search.oninput = paint;
+  paint();
   content.appendChild(wrap);
 };
 

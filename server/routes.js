@@ -363,7 +363,7 @@ router.get('/discord/guilds', requireAuth, async (req, res) => {
     for (const g of entry.client.guilds.cache.values()) {
       if (!botGuilds.has(g.id)) {
         botGuilds.set(g.id, {
-          banner: (typeof g.bannerURL === 'function' ? g.bannerURL({ size: 1024 }) : '') || '',
+          banner: (typeof g.bannerURL === 'function' ? imgproxy.imgProxy(g.bannerURL({ size: 1024 }) || '') : '') || '',
           members: g.memberCount || 0,
           boosts: g.premiumSubscriptionCount || 0,
         });

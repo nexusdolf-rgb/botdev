@@ -7,7 +7,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const ui = require('./ui');
 
-const VERSION = 345;
+const VERSION = 346;
 const DASHBOARD_URL = 'https://hoxera.is-a.dev';
 const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3';
 const AUTO_REVERT_MS = 2 * 60 * 1000;
@@ -15,6 +15,12 @@ const SELECT_ID = (botId) => `hx-upd:${botId}`;
 
 // Plus récent en premier. Menu Discord = 25 options max (accueil + 24 versions).
 const VERSIONS = [
+  {
+    v: 346, date: '30/09', title: 'Centre serveurs plus pro',
+    new: ['La page **Choisissez un serveur** a des **bannières**, le nombre de membres, une **recherche** et des filtres (tous / à configurer / à inviter).'],
+    improved: ['Le centre serveurs rattrape le reste du dashboard : plus seulement une petite icône et un nom.'],
+    fixed: ['Sans bannière Discord, une lettre de secours s’affiche. Les photos passent par le site pour s’afficher partout.'],
+  },
   {
     v: 345, date: '30/09', title: 'Commandes plus claires',
     new: ['**`/slowmode`** et **`/nick`** (comme les bots pro). `/clear` filtre un membre et un salon. `/unban` et `/say` : sélecteur. `/lockdown` peut verrouiller **un seul salon**.'],

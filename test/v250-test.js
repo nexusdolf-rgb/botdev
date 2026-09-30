@@ -97,9 +97,9 @@ check('…et le repli automatique des cartes passe par ecranEtroit',
 console.log('— 5. Version —');
 const index = racine('public/index.html');
 const sw = racine('public/sw.js');
-check('index.html : ?v=345 référencé 7 fois', (index.match(/\?v=345/g) || []).length === 7,
-  String((index.match(/\?v=345/g) || []).length));
-check('sw.js : cache « botdev-v345 »', sw.includes("const CACHE = 'botdev-v345';"));
+check('index.html : ?v=346 référencé 7 fois', (index.match(/\?v=346/g) || []).length === 7,
+  String((index.match(/\?v=346/g) || []).length));
+check('sw.js : cache « botdev-v346 »', sw.includes("const CACHE = 'botdev-v346';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v250 — ${ok} vérifications OK : un PC reste un PC, un mobile reste un mobile.`);
