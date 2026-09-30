@@ -21,10 +21,10 @@ const iT = dash.indexOf('Dashboard.renderers.tickets');
 const chunk = dash.slice(iT, dash.indexOf('Dashboard.renderers.welcome', iT));
 
 console.log('— 1. Pins v347 —');
-check('index.html : ?v=347 ×7', (html.match(/\?v=347/g) || []).length === 7);
-check('sw.js : cache botdev-v347', sw.includes("const CACHE = 'botdev-v347';"));
+check('index.html : ?v=348 ×7', (html.match(/\?v=348/g) || []).length === 7);
+check('sw.js : cache botdev-v348', sw.includes("const CACHE = 'botdev-v348';"));
 check('index.html : plus aucune ?v=346', !html.includes('?v=346'));
-check('VERSION = 347', changelog.VERSION === 347);
+check('VERSION ≥ 347', changelog.VERSION >= 347);
 check('journal v347 : au moins 1 nouveauté', Array.isArray(changelog.NOTES.new) && changelog.NOTES.new.length >= 1);
 check('v347 dans la liste', changelog.VERSIONS.some((x) => x.v === 347));
 

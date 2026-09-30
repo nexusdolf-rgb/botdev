@@ -23,8 +23,8 @@ const dash = racine('public/js/dashboard.js');
 const src = racine('server/discord/reactionroles.js');
 
 console.log('— 1. Pins de version v329 —');
-check('index.html : ?v=347 ×7', (html.match(/\?v=347/g) || []).length === 7);
-check('sw.js : cache botdev-v347', sw.includes("const CACHE = 'botdev-v347';"));
+check('index.html : ?v=348 ×7', (html.match(/\?v=348/g) || []).length === 7);
+check('sw.js : cache botdev-v348', sw.includes("const CACHE = 'botdev-v348';"));
 check('index.html : plus aucune ?v=328', !html.includes('?v=328'));
 
 console.log('— 2. Champs dashboard + envoi —');

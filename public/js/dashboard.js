@@ -3648,7 +3648,7 @@ Dashboard.renderers.moderation = async (content, data) => {
     id: String(member.id),
     name: String(member.username || member.tag || member.id),
   }));
-  const root = Dashboard.header(content, '🛡️', 'Modération', 'Auto-modération, liste noire et sanctions prédéfinies (/sanction membre nom).');
+  const root = Dashboard.header(content, '🛡️', 'Modération', 'Filtres, exceptions, sanctions. Tout se choisit dans un menu.');
 
   const parseAMList = (value) => {
     if (Array.isArray(value)) return value.map(String).filter(Boolean);
@@ -3705,74 +3705,88 @@ Dashboard.renderers.moderation = async (content, data) => {
   const blacklistData = blacklist.map((word) => ({ word: String(word || '') }));
   const memberBlacklistData = Array.isArray(data.automod_blacklist) ? data.automod_blacklist : [];
 
-  const c = Dashboard.card(root, '🛡️ Auto-modération', 'Un centre de protection complet : règles séparées, mode observation, actions maîtrisées et simulation sans risque.');
+  const c = Dashboard.card(root, '🛡️ Auto-modération', 'Chaque filtre a son action. Options avancées repliées.');
   c.classList.add('am-control-card');
   c.innerHTML += `
     <div class="am-control-hero">
-      <div class="am-hero-copy"><span class="am-shield-icon">🛡️</span><div><b>Protection intelligente</b><small id="am-status-line">${automodDraft ? '🟡 Brouillon local affiché — pas encore publié.' : (s.am_enabled ? 'Le serveur est protégé.' : 'La protection est désactivée.')}</small></div></div>
+      <div class="am-hero-copy"><span class="am-shield-icon">🛡️</span><div><b>Auto-mod</b><small id="am-status-line">${automodDraft ? '🟡 Brouillon local — pas encore publié.' : (s.am_enabled ? 'Protection active.' : 'Protection désactivée.')}</small></div></div>
       <label class="am-main-toggle"><span>Activer</span><input type="checkbox" id="am-on" ${s.am_enabled ? 'checked' : ''} /><i></i></label>
     </div>
     <div class="am-mode-row">
-      <div><label class="dash-label">Mode de fonctionnement</label><select class="dash-select" id="am-mode" style="max-width:260px">
+      <div><label class="dash-label">Mode</label><select class="dash-select" id="am-mode" style="max-width:260px">
         <option value="enforce" ${s.am_mode !== 'observe' ? 'selected' : ''}>🛡️ Protection active</option>
-        <option value="observe" ${s.am_mode === 'observe' ? 'selected' : ''}>👀 Observation sans sanction</option>
+        <option value="observe" ${s.am_mode === 'observe' ? 'selected' : ''}>👀 Observer sans sanction</option>
       </select></div>
-      <div class="am-mode-note" id="am-mode-note">${s.am_mode === 'observe' ? '👀 Les règles seront enregistrées, mais aucun message ne sera supprimé et aucune sanction ne sera appliquée.' : '🟢 Les règles appliquent les actions configurées aux messages détectés.'}</div>
+      <div class="am-mode-note" id="am-mode-note">${s.am_mode === 'observe' ? '👀 Rien n’est supprimé ni sanctionné.' : '🟢 Les actions des filtres s’appliquent.'}</div>
     </div>
-    <div class="am-rule-heading"><div><b>Règles de protection</b><small>Chaque règle peut avoir sa propre action. « Comportement actuel » conserve la logique historique.</small></div><span class="dash-badge ok">⚡ Temps réel</span></div>
+    <div class="am-rule-heading"><div><b>Filtres</b><small>Cochez, choisissez l’action. Options dans le menu.</small></div></div>
     <div class="am-rule-grid">
       <div class="am-rule-card" data-am-rule-card="phishing">
-        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">🎣</span><div><b>Phishing / faux Nitro</b><small>Détecte les liens d'arnaque : faux Nitro, faux cadeaux Steam, imitations de discord.com, vol de compte.</small></div></div><input type="checkbox" id="am-phishing" ${s.am_phishing === 0 ? '' : 'checked'} /></div>
+        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">🎣</span><div><b>Phishing / faux Nitro</b><small>Liens d’arnaque.</small></div></div><input type="checkbox" id="am-phishing" ${s.am_phishing === 0 ? '' : 'checked'} /></div>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-phishing" data-am-action="phishing">${actionOptions('phishing')}</select></label>
-        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-phishing" data-am-blacklist-rule="phishing" ${blacklistAfter('phishing') ? 'checked' : ''} /><span><b>🚫 Blacklist après sanction</b><small>Utile : un compte qui relaie une arnaque est souvent déjà compromis.</small></span></label>
-        <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><select class="dash-select" data-am-threshold="phishing">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, blacklistThresholdFor('phishing'))}</select><small>0 = désactivé</small></div></div>
-        <div class="am-threshold-box"><label>Domaines autorisés en plus</label><div class="am-threshold-controls" style="flex-direction:column;align-items:stretch"><input class="dash-input" id="am-phishing-allow" type="text" value="${App.escapeHtml(s.am_phishing_allow || '')}" placeholder="partenaire.com, monsite.fr" /><small>Séparés par des virgules. discord.com, discord.gg, discord.gift et steamcommunity.com sont déjà autorisés d'office.</small></div></div>
-        <div class="am-threshold-box" style="border-color:rgba(254,231,92,.35);background:rgba(254,231,92,.06)"><label>⚠️ Deux niveaux de certitude</label><div class="am-threshold-controls" style="flex-direction:column;align-items:stretch"><small><b>Certitude haute</b> — domaine d'arnaque connu, imitation de discord.com (dlscord, disc0rd), ou même lien posté dans 3 salons en 15 s : l'action choisie s'applique.<br /><b>Certitude moyenne</b> — domaine mêlant marque et mot-appât, ou expression d'arnaque à côté d'un lien inconnu : le message est supprimé et un avertissement envoyé, <b>mais jamais de ban, kick ou muet</b>. Ce ne sont pas des preuves.</small></div></div>
+        <details class="am-rule-more"><summary>Options</summary>
+        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-phishing" data-am-blacklist-rule="phishing" ${blacklistAfter('phishing') ? 'checked' : ''} /><span>🚫 Blacklist après sanction</span></label>
+        <div class="am-threshold-box"><label>Blacklist après</label><select class="dash-select" data-am-threshold="phishing">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, blacklistThresholdFor('phishing'))}</select></div>
+        <div class="am-threshold-box"><label>Domaines autorisés en plus</label><input class="dash-input" id="am-phishing-allow" type="text" value="${App.escapeHtml(s.am_phishing_allow || '')}" placeholder="partenaire.com, monsite.fr" /><small>Virgules. discord.com, discord.gg, discord.gift et steamcommunity.com sont déjà autorisés d'office.</small></div>
+        <div class="am-threshold-box"><label>⚠️ Deux niveaux de certitude</label><small><b>Certitude haute</b> — domaine d'arnaque connu, imitation de discord.com (dlscord, disc0rd), ou même lien posté dans 3 salons en 15 s : l'action choisie s'applique.<br /><b>Certitude moyenne</b> — domaine mêlant marque et mot-appât, ou expression d'arnaque à côté d'un lien inconnu : le message est supprimé et un avertissement envoyé, <b>mais jamais de ban, kick ou muet</b>. Ce ne sont pas des preuves.</small></div>
+        </details>
       </div>
       <div class="am-rule-card" data-am-rule-card="links">
-        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">🔗</span><div><b>Liens et invitations</b><small>Bloque les URL et invitations Discord.</small></div></div><input type="checkbox" id="am-links" ${s.am_links ? 'checked' : ''} /></div>
+        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">🔗</span><div><b>Liens et invitations</b><small>URL et invitations Discord.</small></div></div><input type="checkbox" id="am-links" ${s.am_links ? 'checked' : ''} /></div>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-links" data-am-action="links">${actionOptions('links')}</select></label>
-        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-links" data-am-blacklist-rule="links" ${blacklistAfter('links') ? 'checked' : ''} /><span><b>🚫 Blacklist après sanction</b><small>Ajoutez le membre au registre du serveur et envoyez le panneau dédié.</small></span></label>
-        <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><select class="dash-select" data-am-threshold="links">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, blacklistThresholdFor('links'))}</select><span>sanction(s) identique(s)</span></div><small>0 = désactivé. La sanction choisie ci-dessus doit être appliquée.</small></div>
+        <details class="am-rule-more"><summary>Options</summary>
+        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-links" data-am-blacklist-rule="links" ${blacklistAfter('links') ? 'checked' : ''} /><span>🚫 Blacklist après sanction</span></label>
+        <div class="am-threshold-box"><label>Blacklist après</label><select class="dash-select" data-am-threshold="links">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, blacklistThresholdFor('links'))}</select></div>
+        </details>
       </div>
       <div class="am-rule-card" data-am-rule-card="caps">
-        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">🔠</span><div><b>Majuscules</b><small>Détecte les messages écrits presque entièrement en majuscules.</small></div></div><input type="checkbox" id="am-caps" ${s.am_caps ? 'checked' : ''} /></div>
+        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">🔠</span><div><b>Majuscules</b><small>Messages presque tout en majuscules.</small></div></div><input type="checkbox" id="am-caps" ${s.am_caps ? 'checked' : ''} /></div>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-caps" data-am-action="caps">${actionOptions('caps')}</select></label>
-        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-caps" data-am-blacklist-rule="caps" ${blacklistAfter('caps') ? 'checked' : ''} /><span><b>🚫 Blacklist après sanction</b><small>Conserve le membre dans la blacklist de ce serveur.</small></span></label>
-        <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><select class="dash-select" data-am-threshold="caps">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, blacklistThresholdFor('caps'))}</select><span>sanction(s) identique(s)</span></div><small>0 = désactivé. La sanction choisie ci-dessus doit être appliquée.</small></div>
+        <details class="am-rule-more"><summary>Options</summary>
+        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-caps" data-am-blacklist-rule="caps" ${blacklistAfter('caps') ? 'checked' : ''} /><span>🚫 Blacklist après sanction</span></label>
+        <div class="am-threshold-box"><label>Blacklist après</label><select class="dash-select" data-am-threshold="caps">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, blacklistThresholdFor('caps'))}</select></div>
+        </details>
       </div>
       <div class="am-rule-card" data-am-rule-card="mentions">
-        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">📣</span><div><b>Mentions excessives</b><small>Bloque les rafales de mentions dans un message.</small></div></div></div>
+        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">📣</span><div><b>Mentions excessives</b><small>Trop de @ dans un message.</small></div></div></div>
         <label class="am-rule-setting">Mentions maximum <select class="dash-select" id="am-men">${Dashboard.presetOptions([[0, 'Illimité'], [3, '3'], [5, '5'], [8, '8'], [10, '10'], [15, '15'], [20, '20'], [25, '25'], [50, '50']], s.am_mentions ?? 5)}</select></label>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-mentions" data-am-action="mentions">${actionOptions('mentions')}</select></label>
-        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-mentions" data-am-blacklist-rule="mentions" ${blacklistAfter('mentions') ? 'checked' : ''} /><span><b>🚫 Blacklist après sanction</b><small>Ajoutez le membre seulement après une action réellement appliquée.</small></span></label>
-        <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><select class="dash-select" data-am-threshold="mentions">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, blacklistThresholdFor('mentions'))}</select><span>sanction(s) identique(s)</span></div><small>0 = désactivé. La sanction choisie ci-dessus doit être appliquée.</small></div>
+        <details class="am-rule-more"><summary>Options</summary>
+        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-mentions" data-am-blacklist-rule="mentions" ${blacklistAfter('mentions') ? 'checked' : ''} /><span>🚫 Blacklist après sanction</span></label>
+        <div class="am-threshold-box"><label>Blacklist après</label><select class="dash-select" data-am-threshold="mentions">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, blacklistThresholdFor('mentions'))}</select></div>
+        </details>
       </div>
       <div class="am-rule-card" data-am-rule-card="words">
-        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">🚫</span><div><b>Mots interdits</b><small>Utilise la liste noire configurée plus bas.</small></div></div><span class="am-rule-state">${blacklist.length ? '🟢 Actif' : '⚪ En attente'}</span></div>
+        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">🚫</span><div><b>Mots interdits</b><small>Liste noire du serveur.</small></div></div><span class="am-rule-state">${blacklist.length ? '🟢 Actif' : '⚪ En attente'}</span></div>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-words" data-am-action="words">${actionOptions('words')}</select></label>
-        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-words" data-am-blacklist-rule="words" ${blacklistAfter('words') ? 'checked' : ''} /><span><b>🚫 Blacklist après sanction</b><small>Le mot interdit déclenche aussi la blacklist du membre.</small></span></label>
-        <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><select class="dash-select" data-am-threshold="words">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, blacklistThresholdFor('words'))}</select><span>sanction(s) identique(s)</span></div><small>0 = désactivé. La sanction choisie ci-dessus doit être appliquée.</small></div>
+        <details class="am-rule-more"><summary>Options</summary>
+        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-words" data-am-blacklist-rule="words" ${blacklistAfter('words') ? 'checked' : ''} /><span>🚫 Blacklist après sanction</span></label>
+        <div class="am-threshold-box"><label>Blacklist après</label><select class="dash-select" data-am-threshold="words">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, blacklistThresholdFor('words'))}</select></div>
+        </details>
       </div>
       <div class="am-rule-card" data-am-rule-card="spam">
-        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">💥</span><div><b>Anti-spam</b><small>Détecte plusieurs messages envoyés en peu de temps.</small></div></div></div>
+        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">💥</span><div><b>Anti-spam</b><small>Trop de messages d’affilée.</small></div></div></div>
         <label class="am-rule-setting">Messages en 5 secondes <select class="dash-select" id="am-spam">${Dashboard.presetOptions([[0, 'Désactivé'], [3, '3 messages'], [4, '4 messages'], [5, '5 messages'], [6, '6 messages'], [8, '8 messages'], [10, '10 messages']], s.am_spam ?? 5)}</select></label>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-spam" data-am-action="spam">${actionOptions('spam')}</select></label>
-        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-spam" data-am-blacklist-rule="spam" ${blacklistAfter('spam') ? 'checked' : ''} /><span><b>🚫 Blacklist après sanction</b><small>Classe le membre après la détection de spam confirmée.</small></span></label>
-        <div class="am-threshold-box"><label>Blacklist après répétition</label><div class="am-threshold-controls"><select class="dash-select" data-am-threshold="spam">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, blacklistThresholdFor('spam'))}</select><span>sanction(s) identique(s)</span></div><small>0 = désactivé. La sanction choisie ci-dessus doit être appliquée.</small></div>
+        <details class="am-rule-more"><summary>Options</summary>
+        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-spam" data-am-blacklist-rule="spam" ${blacklistAfter('spam') ? 'checked' : ''} /><span>🚫 Blacklist après sanction</span></label>
+        <div class="am-threshold-box"><label>Blacklist après</label><select class="dash-select" data-am-threshold="spam">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, blacklistThresholdFor('spam'))}</select></div>
+        </details>
       </div>
     </div>
     <div class="am-policy-row">
-      <label class="am-inline-toggle"><input type="checkbox" id="am-staff" ${s.am_ignore_staff !== 0 ? 'checked' : ''} /><span><b>Ignorer les administrateurs et modérateurs</b><small>Recommandé pour éviter de filtrer le staff.</small></span></label>
+      <label class="am-inline-toggle"><input type="checkbox" id="am-staff" ${s.am_ignore_staff !== 0 ? 'checked' : ''} /><span><b>Ignorer le staff</b></span></label>
       <div class="am-policy-time"><label class="dash-label">Durée du timeout</label><select class="dash-select" id="am-timeout">${Dashboard.presetOptions(Dashboard.PRESETS_MIN, s.am_timeout_min ?? 5, Dashboard.labelMinutes)}</select></div>
     </div>
-    <label class="dash-label">Message privé d'avertissement (vide = message standard)</label>
-    <input class="dash-input" id="am-warn" value="${App.escapeHtml(s.am_warn_text || '')}" placeholder="Variables disponibles : {reason} et {server}." />
-    <div class="am-warning-panel">
-      <div class="am-panel-title"><div><b>⚠️ Avertissements progressifs</b><small>Le compteur actif est séparé de l'historique et repart à zéro après une sanction réussie.</small></div><span>1 → 2 → action</span></div>
+    <label class="dash-label">Message privé d'avertissement (vide = standard)</label>
+    <input class="dash-input" id="am-warn" value="${App.escapeHtml(s.am_warn_text || '')}" placeholder="{reason} · {server}" />
+    <details class="am-fold">
+      <summary>⚠️ Avertissements progressifs</summary>
+      <div class="am-warning-panel">
+      <div class="am-panel-title"><div><b>⚠️ Avertissements progressifs</b></div><span>1 → 2 → action</span></div>
       <div class="am-warning-grid">
-        <div><label class="dash-label">Sanction après X avertissements</label><select class="dash-select" id="am-warn-limit">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, s.am_warn_limit ?? 2)}</select><small class="am-help">0 = désactivé</small></div>
-        <div><label class="dash-label">Action automatique</label><select class="dash-select" id="am-warn-action">
+        <div><label class="dash-label">Après combien</label><select class="dash-select" id="am-warn-limit">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, s.am_warn_limit ?? 2)}</select></div>
+        <div><label class="dash-label">Puis</label><select class="dash-select" id="am-warn-action">
           <option value="none" ${s.am_warn_action === 'none' ? 'selected' : ''}>🔕 Journal seulement</option>
           <option value="timeout" ${(s.am_warn_action || 'timeout') === 'timeout' ? 'selected' : ''}>⏱️ Timeout</option>
           <option value="kick" ${s.am_warn_action === 'kick' ? 'selected' : ''}>👢 Expulser</option>
@@ -3780,28 +3794,31 @@ Dashboard.renderers.moderation = async (content, data) => {
         </select></div>
         <div><label class="dash-label">Durée du timeout</label><select class="dash-select" id="am-warn-timeout">${Dashboard.presetOptions(Dashboard.PRESETS_MIN, s.am_warn_timeout_min ?? 10, Dashboard.labelMinutes)}</select></div>
       </div>
-    </div>
-    <div class="am-blacklist-config">
-      <div class="am-panel-title"><div><b>🚫 Blacklist des membres par serveur</b><small>Après une sanction réellement appliquée, Optimus Prime enregistre le membre ici et publie un panneau dans le salon choisi.</small></div><span class="am-blacklist-badge">Serveur uniquement</span></div>
-      <div class="am-blacklist-duration"><div><label class="dash-label">Durée d’une blacklist</label><select class="dash-select" id="am-blacklist-duration">${blacklistDurationOptions.join('')}</select></div><small>Cette durée s’applique aux blacklists immédiates et à celles déclenchées après plusieurs sanctions. Le compteur est remis à zéro après le déclenchement.</small></div>
-      <div class="am-blacklist-grid">
-        <div><label class="dash-label">Salon dédié aux panneaux blacklist</label><select class="dash-select" id="am-blacklist-channel">${blacklistChannelOptions.join('')}</select><small class="am-help">Le panneau sera envoyé dans ce salon après l’action Auto-Mod. Si le salon est introuvable, le membre reste enregistré mais l’envoi sera signalé.</small></div>
-        <div><label class="dash-label">Titre du panneau</label><input class="dash-input" id="am-blacklist-title" maxlength="120" value="${App.escapeHtml(s.am_blacklist_title || '🚫 Membre ajouté à la blacklist')}" placeholder="🚫 Membre ajouté à la blacklist" /><label class="dash-label">Couleur du panneau</label><div class="am-blacklist-color"><input type="color" id="am-blacklist-color" value="${/^#[0-9a-fA-F]{6}$/.test(String(s.am_blacklist_color || '')) ? String(s.am_blacklist_color) : '#ED4245'}" /><input class="dash-input" id="am-blacklist-color-text" maxlength="7" value="${App.escapeHtml(/^#[0-9a-fA-F]{6}$/.test(String(s.am_blacklist_color || '')) ? String(s.am_blacklist_color) : '#ED4245')}" aria-label="Code couleur du panneau" /></div></div>
       </div>
-      <label class="dash-label">Pied de panneau</label><input class="dash-input" id="am-blacklist-footer" maxlength="200" value="${App.escapeHtml(s.am_blacklist_footer || 'Blacklist du serveur · Optimus Prime')}" placeholder="Blacklist du serveur · Optimus Prime" />
-      <div class="am-blacklist-preview"><span class="am-blacklist-preview-icon">🚫</span><div><b>Prévisualisation</b><small>Le panneau indiquera l’utilisateur, le comportement, l’action appliquée, le salon d’origine et la date.</small></div></div>
-    </div>
-    <div class="am-save-row"><span class="am-save-hint">💡 Brouillon local → teste en observation → publie quand tout est correct.</span><div class="am-save-actions">${automodDraft ? '<button class="dash-btn dash-btn-danger dash-btn-sm" id="am-clear-draft">↩️ Restaurer le publié</button>' : ''}<button class="dash-btn dash-btn-sm" id="am-draft">📝 Enregistrer le brouillon</button><button class="dash-btn dash-btn-primary" id="am-save">💾 🚀 Publier les réglages</button></div></div>`;
+    </details>
+    <details class="am-fold">
+      <summary>🚫 Panneau blacklist</summary>
+      <div class="am-blacklist-config">
+      <div class="am-panel-title"><div><b>🚫 Blacklist des membres</b></div></div>
+      <div class="am-blacklist-duration"><div><label class="dash-label">Durée</label><select class="dash-select" id="am-blacklist-duration">${blacklistDurationOptions.join('')}</select></div></div>
+      <div class="am-blacklist-grid">
+        <div><label class="dash-label">Salon du panneau</label><select class="dash-select" id="am-blacklist-channel">${blacklistChannelOptions.join('')}</select></div>
+        <div><label class="dash-label">Titre</label><input class="dash-input" id="am-blacklist-title" maxlength="120" value="${App.escapeHtml(s.am_blacklist_title || '🚫 Membre ajouté à la blacklist')}" placeholder="🚫 Membre ajouté à la blacklist" /><label class="dash-label">Couleur</label><div class="am-blacklist-color"><input type="color" id="am-blacklist-color" value="${/^#[0-9a-fA-F]{6}$/.test(String(s.am_blacklist_color || '')) ? String(s.am_blacklist_color) : '#ED4245'}" /><input class="dash-input" id="am-blacklist-color-text" maxlength="7" value="${App.escapeHtml(/^#[0-9a-fA-F]{6}$/.test(String(s.am_blacklist_color || '')) ? String(s.am_blacklist_color) : '#ED4245')}" aria-label="Code couleur du panneau" /></div></div>
+      </div>
+      <label class="dash-label">Pied</label><input class="dash-input" id="am-blacklist-footer" maxlength="200" value="${App.escapeHtml(s.am_blacklist_footer || 'Blacklist du serveur · Optimus Prime')}" placeholder="Blacklist du serveur · Optimus Prime" />
+      </div>
+    </details>
+    <div class="am-save-row"><span class="am-save-hint">Brouillon sur cet appareil. Publier pour l’appliquer.</span><div class="am-save-actions">${automodDraft ? '<button class="dash-btn dash-btn-danger dash-btn-sm" id="am-clear-draft">↩️ Restaurer le publié</button>' : ''}<button class="dash-btn dash-btn-sm" id="am-draft">📝 Brouillon</button><button class="dash-btn dash-btn-primary" id="am-save">💾 Publier</button></div></div>`;
 
   const syncAMStatus = () => {
     const on = c.querySelector('#am-on').checked;
     const mode = c.querySelector('#am-mode').value;
     const status = c.querySelector('#am-status-line');
     const note = c.querySelector('#am-mode-note');
-    if (status) status.textContent = !on ? 'La protection est désactivée.' : (mode === 'observe' ? 'Le serveur est observé sans sanction.' : 'Le serveur est protégé en temps réel.');
+    if (status) status.textContent = !on ? 'Protection désactivée.' : (mode === 'observe' ? 'Observation sans sanction.' : 'Protection active.');
     if (note) note.textContent = mode === 'observe'
-      ? '👀 Les règles seront enregistrées, mais aucun message ne sera supprimé et aucune sanction ne sera appliquée.'
-      : '🟢 Les règles appliquent les actions configurées aux messages détectés.';
+      ? '👀 Rien n’est supprimé ni sanctionné.'
+      : '🟢 Les actions des filtres s’appliquent.';
   };
   c.querySelector('#am-on').onchange = syncAMStatus;
   c.querySelector('#am-mode').onchange = syncAMStatus;
@@ -3931,7 +3948,7 @@ Dashboard.renderers.moderation = async (content, data) => {
 
   const escWindowOptions = (selected) => escWindows
     .map(([v, label]) => `<option value="${v}" ${Number(selected) === v ? 'selected' : ''}>${label}</option>`).join('');
-  const ce = Dashboard.card(root, '📈 Barème progressif des sanctions', 'Par règle, le bot monte seul d’un cran à chaque récidive dans une fenêtre glissante (ex : 3 infractions en 24 h → palier 3). Chaque palier a sa sanction et sa durée ; un palier peut aussi « 🚫 blacklister » le membre — tant que la blacklist est active, un retour est re-banni automatiquement. Barème désactivé = l’action simple de la règle s’applique (comportement actuel).');
+  const ce = Dashboard.card(root, '📈 Barème progressif des sanctions', 'À chaque récidive, le bot monte d’un cran. Désactivé = action simple du filtre.');
   ce.appendChild(App.el(`<div data-esc-box></div>`));
   const escBox = ce.querySelector('[data-esc-box]');
   const renderEsc = () => {
@@ -3966,8 +3983,8 @@ Dashboard.renderers.moderation = async (content, data) => {
       stepsEl.innerHTML = m.steps.map((st, i) => `
         <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;border:1px dashed var(--d-border);border-radius:10px;padding:8px 10px">
           <span style="color:var(--d-dim);font-size:12px">après</span>
-          <input class="dash-input" type="number" min="1" max="200" data-esc-after="${r.key}" data-i="${i}" value="${st.after}" style="max-width:66px" />
-          <span style="color:var(--d-dim);font-size:12px">infraction(s) →</span>
+          <select class="dash-select" data-esc-after="${r.key}" data-i="${i}" style="max-width:90px">${Dashboard.presetOptions([[1, '1'], [2, '2'], [3, '3'], [4, '4'], [5, '5'], [8, '8'], [10, '10'], [15, '15'], [20, '20']], st.after)}</select>
+          <span style="color:var(--d-dim);font-size:12px">fois →</span>
           <select class="dash-select" data-esc-action="${r.key}" data-i="${i}" style="max-width:170px">${Object.entries(escActionMeta).map(([v, label]) => `<option value="${v}" ${st.action === v ? 'selected' : ''}>${label}</option>`).join('')}</select>
           <span data-esc-dur-wrap="${r.key}" data-i="${i}" ${['timeout', 'ban'].includes(st.action) ? '' : 'style="display:none"'}>
             <select class="dash-select" data-esc-minutes="${r.key}" data-i="${i}" style="max-width:150px">${durOpts(st.minutes, '♾️ Définitif', st.action === 'ban' ? BAN_MIN : MUTE_MIN)}</select>
@@ -4001,10 +4018,12 @@ Dashboard.renderers.moderation = async (content, data) => {
       };
     });
     escBox.querySelectorAll('[data-esc-after]').forEach((input) => {
-      input.oninput = () => {
+      const maj = () => {
         const m = escModel[input.dataset.escAfter];
         if (m.steps[Number(input.dataset.i)]) m.steps[Number(input.dataset.i)].after = Math.min(Math.max(parseInt(input.value, 10) || 1, 1), 200);
       };
+      input.oninput = maj;
+      input.onchange = maj;
     });
     escBox.querySelectorAll('[data-esc-action]').forEach((sel) => {
       sel.onchange = () => {
@@ -4063,12 +4082,12 @@ Dashboard.renderers.moderation = async (content, data) => {
 
   // ☁️ Miroir officiel Discord : les règles natives restent en alerte
   // uniquement ; les sanctions avancées continuent d’être appliquées par Optimus Prime.
-  const cNative = Dashboard.card(root, '☁️ Auto-Mod officiel Discord', 'Optimus Prime peut synchroniser des règles Auto-Mod officielles pour obtenir le badge « Uses AutoMod » quand Discord atteint son seuil. Aucun doublon de sanction : les règles natives sont en mode alerte.');
+  const cNative = Dashboard.card(root, '☁️ Auto-Mod officiel Discord', 'Badge Discord « Uses AutoMod ». Alertes seulement, pas de double sanction.');
   cNative.classList.add('am-native-card');
   cNative.innerHTML += `
-    <div class="am-native-hero"><div class="am-native-copy"><span class="am-native-icon">☁️</span><div><b>Miroir officiel actif</b><small>Discord reçoit de vraies règles liées à votre configuration, sans remplacer le système Optimus Prime.</small></div></div><label class="am-native-toggle"><span>Activer</span><input type="checkbox" id="am-native-on" ${s.am_native_enabled !== 0 ? 'checked' : ''} /><i></i></label></div>
-    <div class="am-native-grid"><div><label class="dash-label">Salon des alertes Auto-Mod officielles</label><select class="dash-select" id="am-native-channel">${nativeChannelOptions.join('')}</select><small class="am-help">Choisissez un salon ou laissez Optimus Prime utiliser le salon de logs/blacklist. Les alertes natives ne sanctionnent pas deux fois.</small></div><div class="am-native-status" id="am-native-status"><span class="am-native-status-dot"></span><div><b>Lecture des règles Discord…</b><small>Vérification en cours</small></div></div></div>
-    <div class="am-native-actions"><span class="am-help">Le badge officiel apparaît uniquement selon les règles et le seuil définis par Discord.</span><button class="dash-btn dash-btn-primary" id="am-native-sync">☁️ Synchroniser avec Discord</button></div>`;
+    <div class="am-native-hero"><div class="am-native-copy"><span class="am-native-icon">☁️</span><div><b>Miroir officiel actif</b><small>Règles natives en alerte, sans double sanction.</small></div></div><label class="am-native-toggle"><span>Activer</span><input type="checkbox" id="am-native-on" ${s.am_native_enabled !== 0 ? 'checked' : ''} /><i></i></label></div>
+    <div class="am-native-grid"><div><label class="dash-label">Salon des alertes</label><select class="dash-select" id="am-native-channel">${nativeChannelOptions.join('')}</select></div><div class="am-native-status" id="am-native-status"><span class="am-native-status-dot"></span><div><b>Lecture des règles Discord…</b><small>Vérification en cours</small></div></div></div>
+    <div class="am-native-actions"><button class="dash-btn dash-btn-primary" id="am-native-sync">☁️ Synchroniser avec Discord</button></div>`;
   const nativeStatusBox = cNative.querySelector('#am-native-status');
   const renderNativeStatus = async () => {
     try {
@@ -4095,7 +4114,7 @@ Dashboard.renderers.moderation = async (content, data) => {
   };
 
   // 🚫 Membres actuellement blacklistés sur ce serveur.
-  const cMemberBlacklist = Dashboard.card(root, `🚫 Membres blacklistés <span class="am-blacklist-count">${memberBlacklistData.length}</span>`, 'Registre local au serveur sélectionné. Retirer un membre conserve l’historique Auto-Mod et les anciens panneaux Discord.');
+  const cMemberBlacklist = Dashboard.card(root, `🚫 Membres blacklistés <span class="am-blacklist-count">${memberBlacklistData.length}</span>`, 'Membres bloqués sur ce serveur.');
   cMemberBlacklist.classList.add('am-member-blacklist-card');
   const memberBlacklistBox = App.el(`<div class="am-member-blacklist-list"></div>`);
   cMemberBlacklist.appendChild(memberBlacklistBox);
@@ -4142,7 +4161,7 @@ Dashboard.renderers.moderation = async (content, data) => {
   renderMemberBlacklist();
 
   // 🚧 Exceptions configurables (rôles, salons et membres)
-  const cExceptions = Dashboard.card(root, '🚧 Exceptions et zones de confiance', 'Choisissez qui et où l’auto-mod doit ignorer. Les exceptions personnalisées s’ajoutent à l’option « Ignorer le staff ».');
+  const cExceptions = Dashboard.card(root, '🚧 Exceptions et zones de confiance', 'Rôles, salons et membres ignorés par les filtres.');
   cExceptions.classList.add('am-exceptions-card');
   cExceptions.innerHTML += `
     <div class="am-exception-grid">
@@ -4150,7 +4169,7 @@ Dashboard.renderers.moderation = async (content, data) => {
       <div><label class="dash-label">Salons ignorés</label><div class="am-choice-list" id="am-exempt-channels"></div></div>
     </div>
     <div style="margin-top:14px"><label class="dash-label">Membres ignorés</label><div class="am-choice-list" id="am-exempt-users"></div></div>
-    <div class="am-help">Utilise le sélecteur pour ajouter plusieurs éléments. Les anciennes références restent affichées avec ⚠️ si Discord ne les renvoie plus.</div>`;
+    <div class="am-help">Ajoutez avec le menu. ⚠️ = introuvable sur Discord.</div>`;
   Dashboard.renderDiscordMultiSelect(cExceptions.querySelector('#am-exempt-roles'), {
     items: rolesList,
     selected: selectedExemptRoles,
@@ -4180,7 +4199,7 @@ Dashboard.renderers.moderation = async (content, data) => {
   });
 
   // 📊 Résumé des actions réelles et des observations
-  const cSummary = Dashboard.card(root, '📊 Activité Auto-Mod', 'Les chiffres viennent du journal du bot et distinguent les observations des actions réellement appliquées.');
+  const cSummary = Dashboard.card(root, '📊 Activité Auto-Mod', 'Actions et observations.');
   cSummary.classList.add('am-summary-card');
   const summaryBox = App.el(`<div class="am-summary-loading">Chargement des statistiques…</div>`);
   cSummary.appendChild(summaryBox);
@@ -4194,11 +4213,11 @@ Dashboard.renderers.moderation = async (content, data) => {
   })();
 
   // 🧪 Simulation sans risque : aucun message Discord n'est envoyé.
-  const cSim = Dashboard.card(root, '🧪 Simulateur sans risque', 'Testez une phrase avec les vraies règles du serveur. Cette simulation ne supprime rien, ne crée aucun avertissement et ne sanctionne personne.');
+  const cSim = Dashboard.card(root, '🧪 Simulateur sans risque', 'Testez une phrase. Rien n’est envoyé sur Discord.');
   cSim.classList.add('am-simulator-card');
   cSim.innerHTML += `
     <textarea class="dash-input am-sim-text" id="am-sim-content" rows="3" maxlength="2000" placeholder="Écrivez ici un message à analyser… Ex : https://exemple.com"></textarea>
-    <div class="am-sim-controls"><select class="dash-select" id="am-sim-channel"><option value="">— Aucun salon spécifique —</option>${channelList.map((channel) => `<option value="${App.escapeHtml(channel.id)}">💬 #${App.escapeHtml(channel.name)}</option>`).join('')}</select><input class="dash-input" id="am-sim-spam" type="number" min="0" max="100" value="0" placeholder="Rafale (0 = non)" title="Nombre de messages simulés en 5 secondes" /><button class="dash-btn dash-btn-primary" id="am-sim-go">🧪 Analyser</button></div>
+    <div class="am-sim-controls"><select class="dash-select" id="am-sim-channel"><option value="">— Salon —</option>${channelList.map((channel) => `<option value="${App.escapeHtml(channel.id)}">💬 #${App.escapeHtml(channel.name)}</option>`).join('')}</select><select class="dash-select" id="am-sim-spam" title="Rafale simulée">${Dashboard.presetOptions([[0, 'Pas de rafale'], [3, '3 messages'], [5, '5 messages'], [8, '8 messages'], [10, '10 messages']], 0)}</select><button class="dash-btn dash-btn-primary" id="am-sim-go">🧪 Analyser</button></div>
     <div id="am-sim-result" class="am-sim-result"></div>`;
   cSim.querySelector('#am-sim-go').onclick = async () => {
     const contentValue = cSim.querySelector('#am-sim-content').value.trim();
@@ -4220,7 +4239,7 @@ Dashboard.renderers.moderation = async (content, data) => {
   };
 
   // 🛡️ Permissions réelles du bot sur ce serveur
-  const cPerm = Dashboard.card(root, '🛡️ Permissions du bot sur ce serveur', 'Ce que Optimus Prime peut réellement faire — vérifié en direct auprès de Discord.');
+  const cPerm = Dashboard.card(root, '🛡️ Permissions du bot sur ce serveur', 'Vérifié auprès de Discord.');
   const permBox = App.el(`<div class="desc">Vérification en cours…</div>`);
   cPerm.appendChild(permBox);
   (async () => {
@@ -4250,7 +4269,7 @@ Dashboard.renderers.moderation = async (content, data) => {
 
   // 🧪 Test réel de l'auto-mod
   const textChannelsAm = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
-  const cTest = Dashboard.card(root, '🧪 Tester l\'auto-mod', 'Envoyez un vrai message piégé dans un salon : le bot doit le supprimer. Le résultat s\'affiche ici.');
+  const cTest = Dashboard.card(root, '🧪 Tester l\'auto-mod', 'Message piégé réel. Le simulateur ci-dessus ne touche à rien.');
   cTest.innerHTML += `
     <label class="dash-label">Salon du test</label>
     <select class="dash-select" id="am-test-ch">${textChannelsAm.map((ch) => `<option value="${ch.id}">💬 #${App.escapeHtml(ch.name)}</option>`).join('')}</select>
@@ -4288,7 +4307,7 @@ Dashboard.renderers.moderation = async (content, data) => {
 
   // ⚠️ Centre des avertissements : la progression reste visible même si le
   // message public est automatiquement retiré après 24 heures.
-  const cWarnings = Dashboard.card(root, '⚠️ Centre des avertissements', 'Historique unifié des avertissements manuels et auto-mod : 1er avertissement, 2e palier et sanctions appliquées. Les messages publics restent 24 h puis sont supprimés automatiquement.');
+  const cWarnings = Dashboard.card(root, '⚠️ Centre des avertissements', 'Historique staff et Auto-Mod.');
   const warningFilters = App.el(`<div class="am-warning-filters"><button class="am-filter active" data-warning-filter="all">Tous</button><button class="am-filter" data-warning-filter="automod">🤖 Auto-Mod</button><button class="am-filter" data-warning-filter="staff">🛡️ Staff</button><button class="am-filter" data-warning-filter="recent">🕘 24 h</button></div>`);
   const warningBox = App.el(`<div class="desc">Chargement des avertissements…</div>`);
   cWarnings.appendChild(warningFilters);
@@ -4355,7 +4374,7 @@ Dashboard.renderers.moderation = async (content, data) => {
   renderWarnings();
 
   // 🛡️ Bouclier anti-raid automatique
-  const cRaid = Dashboard.card(root, '🛡️ Bouclier anti-raid', 'Détecte un afflux anormal de nouveaux membres et protège le serveur tout seul.');
+  const cRaid = Dashboard.card(root, '🛡️ Bouclier anti-raid', 'Trop d’arrivées d’un coup → verrouillage.');
   const raidBox = App.el(`<div class="desc">Chargement…</div>`);
   cRaid.appendChild(raidBox);
   (async () => {
@@ -4366,7 +4385,7 @@ Dashboard.renderers.moderation = async (content, data) => {
         <label class="dash-label">Armer le bouclier</label>
         <label class="switch"><input type="checkbox" id="raid-on" ${cfg.enabled ? 'checked' : ''} /><span class="slider"></span></label>
         <div class="dash-fields-grid" style="margin-top:10px">
-          <div><label class="dash-label">Seuil (arrivées)</label><input class="dash-input" id="raid-th" type="number" min="2" max="100" value="${cfg.threshold ?? 10}" /></div>
+          <div><label class="dash-label">Seuil (arrivées)</label><select class="dash-select" id="raid-th">${Dashboard.presetOptions([[5, '5'], [8, '8'], [10, '10'], [15, '15'], [20, '20'], [30, '30'], [50, '50']], cfg.threshold ?? 10)}</select></div>
           <div><label class="dash-label">Fenêtre</label><select class="dash-select" id="raid-win">${Dashboard.presetOptions(Dashboard.PRESETS_SEC, cfg.window ?? 30, Dashboard.labelSecondes)}</select></div>
           <div><label class="dash-label">Action</label><select class="dash-select" id="raid-act">
             <option value="lockdown" ${cfg.action === 'lockdown' ? 'selected' : ''}>🔒 Verrouiller les salons</option>
@@ -4420,7 +4439,7 @@ Dashboard.renderers.moderation = async (content, data) => {
     } catch (e) { raidBox.innerHTML = `<div class="desc">Bouclier indisponible : ${App.escapeHtml(e.message)}</div>`; }
   })();
 
-  const c2 = Dashboard.card(root, '🔇 Liste noire', 'Les messages contenant ces mots sont supprimés automatiquement. La corbeille enregistre tout de suite : le mot ne revient plus et ne sanctionne plus.');
+  const c2 = Dashboard.card(root, '🔇 Liste noire', 'Mots interdits. Un mot retiré ne sanctionne plus.');
   c2.appendChild(App.el(`<div id="bl-list"></div>`));
   c2.appendChild(App.el(`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center"><button class="dash-btn dash-btn-sm" id="bl-add">＋ Ajouter un mot</button><button class="dash-btn dash-btn-primary dash-btn-sm" id="bl-save">💾 Enregistrer la liste noire</button></div>`));
   const persistBlacklistWords = async () => {
@@ -4477,7 +4496,7 @@ Dashboard.renderers.moderation = async (content, data) => {
   };
 
   const sanctionsData = sanctions.map((x) => ({ name: x.name, action: x.action, duration: x.duration, message: x.message }));
-  const c3 = Dashboard.card(root, '⚖️ Sanctions prédéfinies', 'Applique-les sur Discord avec /sanction @membre nom.');
+  const c3 = Dashboard.card(root, '⚖️ Sanctions prédéfinies', 'Sur Discord : /sanction @membre nom.');
   c3.appendChild(App.el(`<div id="sanc-list"></div>`));
   c3.appendChild(App.el(`<button class="dash-btn dash-btn-sm" id="sanc-add" style="margin-top:8px">＋ Ajouter une sanction</button>`));
   const renderSanc = () => {
@@ -4489,7 +4508,7 @@ Dashboard.renderers.moderation = async (content, data) => {
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
           <input class="dash-input" data-k="name" value="${App.escapeHtml(x.name)}" placeholder="Nom" style="max-width:110px" />
           <select class="dash-select" data-k="action" style="max-width:130px">
-            ${['warn','timeout','kick','ban'].map((a) => `<option value="${a}" ${x.action === a ? 'selected' : ''}>${a}</option>`).join('')}
+            ${[['warn', '⚠️ Avertir'], ['timeout', '⏱️ Timeout'], ['kick', '👢 Expulser'], ['ban', '🔨 Bannir']].map(([a, l]) => `<option value="${a}" ${x.action === a ? 'selected' : ''}>${l}</option>`).join('')}
           </select>
           <select class="dash-select" data-k="duration" style="max-width:110px" aria-label="Durée du timeout">${Dashboard.presetOptions([[0, '—'], ...Dashboard.PRESETS_MIN], x.duration || 0, Dashboard.labelMinutes)}</select>
           <input class="dash-input" data-k="message" value="${App.escapeHtml(x.message)}" placeholder="Message (envoyé en MP)" style="flex:1;min-width:140px" />

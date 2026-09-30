@@ -528,13 +528,13 @@ const GUILD = 'G244';
 
   const champsLibres = (jsCode.match(/type="number"/g) || []).length;
   // v291 : +1 champ — le nombre d'invitations d'un palier de récompense (vraie mesure, pas une durée)
-  check('champs numériques libres restants = 16 (vraies mesures + max questions v333)', champsLibres === 16, String(champsLibres));
+  check('champs numériques libres restants = 13 (vraies mesures + max questions v333)', champsLibres === 13, String(champsLibres));
   check('presetOptions est effectivement utilisé', (jsCode.match(/presetOptions\(/g) || []).length >= 20,
     String((jsCode.match(/presetOptions\(/g) || []).length));
   // Les 13 restants doivent être des mesures, pas des durées.
   const idsRestants = [...jsCode.matchAll(/id="([a-z0-9-]+)"[^>]*type="number"|type="number"[^>]*id="([a-z0-9-]+)"/g)]
     .map((m) => m[1] || m[2]).filter(Boolean);
-  const idsInterdits = ['am-timeout', 'am-warn-timeout', 'raid-unlock', 'gw-duration', 'a-hour', 'a-minute', 'qz-window'];
+  const idsInterdits = ['am-timeout', 'am-warn-timeout', 'raid-unlock', 'raid-th', 'am-sim-spam', 'gw-duration', 'a-hour', 'a-minute', 'qz-window'];
   check('aucun champ CONVERTI n\'est revenu en case numérique',
     idsInterdits.every((i) => !idsRestants.includes(i)), idsRestants.join(','));
 
@@ -581,10 +581,10 @@ const GUILD = 'G244';
   // à diagnostiquer qui soit.
   const versions = [...new Set(html.match(/\?v=\d+/g) || [])];
   check('index.html : les 7 références pointent la MÊME version', versions.length === 1, versions.join(', '));
-  check('cette version est bien la v244', versions[0] === '?v=347', String(versions[0]));
+  check('cette version est bien la v244', versions[0] === '?v=348', String(versions[0]));
 
   check('sw.js : nom de cache présent', /const CACHE = 'botdev-v\d+'/.test(sw), (sw.match(/const CACHE = '[^']*'/) || ['?'])[0]);
-  // « ?v=347 » dans index.html doit correspondre à « botdev-v260 » dans sw.js.
+  // « ?v=348 » dans index.html doit correspondre à « botdev-v260 » dans sw.js.
   const cacheAttendu = `'botdev-${versions[0].replace('?v=', 'v')}'`;
   check('sw.js : cache aligné sur index.html', sw.includes(cacheAttendu),
     `${cacheAttendu} attendu, ${(sw.match(/const CACHE = '[^']*'/) || ['?'])[0]} trouvé`);

@@ -7,7 +7,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const ui = require('./ui');
 
-const VERSION = 347;
+const VERSION = 348;
 const DASHBOARD_URL = 'https://hoxera.is-a.dev';
 const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3';
 const AUTO_REVERT_MS = 2 * 60 * 1000;
@@ -15,6 +15,12 @@ const SELECT_ID = (botId) => `hx-upd:${botId}`;
 
 // Plus récent en premier. Menu Discord = 25 options max (accueil + 24 versions).
 const VERSIONS = [
+  {
+    v: 348, date: '30/09', title: 'Modération plus claire',
+    new: ['Le module **Modération** est rangé comme un bot pro : filtres compacts, options repliées, tout se choisit dans un **menu**.'],
+    improved: ['Moins de pavés de texte. Sanctions, barème et anti-raid : listes claires (Avertir, Timeout, Expulser…).'],
+    fixed: ['La page était trop longue : les mêmes aides se répétaient sur chaque filtre.'],
+  },
   {
     v: 347, date: '30/09', title: 'Tickets : noms clairs',
     new: ['Les 3 systèmes ont un nom : **Ticket classique**, **Ticket menu**, **Ticket avancé**, avec un exemple sur chacun.'],

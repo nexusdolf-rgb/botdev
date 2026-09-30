@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v347**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v348**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -962,6 +962,9 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v348 (30/09 — MODÉRATION RANGÉE)** :
+  filtres compacts, options repliées, sélecteurs (barème, anti-raid, sanctions FR).
+  IDs Auto-Mod et tickets conservés. test/v348-test.js.
 - **v347 (30/09 — TICKETS NOMS CLAIRS)** :
   Ticket classique / Ticket menu / Ticket avancé, exemples, sélecteurs
   nommés. IDs t-send / tm-send / adv-send et captcha ver-send conservés.
@@ -1589,7 +1592,7 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 23/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v347** — tickets : Ticket classique / Ticket menu / Ticket avancé.
+- Dernière version : **v348** — modération rangée (filtres, menus, moins de texte).
   `test/v342-test.js`. Aperçu `docs/apercu-captcha.html`.
 - **v341** — captcha à l’arrivée dans Vérification
   (bouton conservé). `test/v341-test.js`. Aperçu `docs/apercu-captcha.html`.

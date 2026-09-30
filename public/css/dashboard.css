@@ -1428,6 +1428,19 @@ html.hx-light .adv-check-row { background: rgba(var(--d-accent-rgb), .055); }
 .am-rule-icon { width: 31px; height: 31px; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; background: rgba(var(--d-accent-rgb), .13); font-size: 16px; }
 .am-rule-head > input[type="checkbox"] { width: 18px; height: 18px; margin: 4px 1px 0 0; accent-color: var(--d-accent); cursor: pointer; }
 .am-rule-state { flex: 0 0 auto; color: var(--d-dim); font-size: 10.5px; white-space: nowrap; }
+.am-rule-more { margin-top: 10px; border-top: 1px solid var(--d-border); padding-top: 8px; }
+.am-rule-more summary { cursor: pointer; font-size: 12px; font-weight: 700; color: var(--d-dim); list-style: none; }
+.am-rule-more summary::-webkit-details-marker { display: none; }
+.am-rule-more summary::after { content: ' ▸'; }
+.am-rule-more[open] summary::after { content: ' ▾'; }
+.am-rule-more .am-threshold-box, .am-rule-more .am-blacklist-toggle { margin-top: 8px; }
+.am-fold { margin-top: 12px; border: 1px solid var(--d-border); border-radius: 13px; background: rgba(255,255,255,.014); overflow: hidden; }
+.am-fold > summary { cursor: pointer; padding: 12px 14px; font-weight: 700; font-size: 13.5px; list-style: none; }
+.am-fold > summary::-webkit-details-marker { display: none; }
+.am-fold > summary::after { content: '▸'; float: right; color: var(--d-dim); font-weight: 500; }
+.am-fold[open] > summary { border-bottom: 1px solid var(--d-border); }
+.am-fold[open] > summary::after { content: '▾'; }
+.am-fold .am-warning-panel, .am-fold .am-blacklist-config { margin: 0; border: 0; border-radius: 0; }
 .am-rule-action, .am-rule-setting { display: flex; flex-direction: column; gap: 5px; margin-top: 12px; color: var(--d-dim); font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .35px; }
 .am-rule-action .dash-select { margin-top: 0; font-size: 12px; text-transform: none; letter-spacing: 0; }
 /* v244 : étendu aux sélecteurs — les cases numériques de l'auto-mod sont
