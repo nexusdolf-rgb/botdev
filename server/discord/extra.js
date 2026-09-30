@@ -203,7 +203,7 @@ function buildExtraPayloads() {
       name: 'birthday', description: '🎂 Gérez votre anniversaire (le bot vous souhaite le jour J !)',
       options: [
         { name: 'action', description: 'Que faire ?', type: ApplicationCommandOptionType.String, required: true, choices: [
-          { name: 'set', value: 'set' }, { name: 'remove', value: 'remove' }, { name: 'list', value: 'list' },
+          { name: '📅 Enregistrer ma date', value: 'set' }, { name: '🗑️ Retirer ma date', value: 'remove' }, { name: '📋 Voir la liste', value: 'list' },
         ]},
         { name: 'jour', description: 'Le jour (1-31)', type: ApplicationCommandOptionType.Integer, required: false },
         { name: 'mois', description: 'Le mois (1-12)', type: ApplicationCommandOptionType.Integer, required: false },
@@ -265,19 +265,22 @@ function buildExtraPayloads() {
     {
       name: 'lockdown', description: '🚨 Verrouille ou rouvre tous les salons du serveur (anti-raid)',
       default_member_permissions: admin,
-      options: [{ name: 'action', description: 'Verrouiller ou rouvrir ?', type: ApplicationCommandOptionType.String, required: true, choices: [
-        { name: 'on', value: 'on' }, { name: 'off', value: 'off' },
-      ]}],
+      options: [
+        { name: 'action', description: 'Verrouiller ou rouvrir ?', type: ApplicationCommandOptionType.String, required: true, choices: [
+          { name: '🔒 Verrouiller', value: 'on' }, { name: '🔓 Rouvrir', value: 'off' },
+        ]},
+        { name: 'salon', description: 'Un seul salon (sinon tout le serveur)', type: ApplicationCommandOptionType.Channel, required: false, channel_types: [ChannelType.GuildText, ChannelType.GuildAnnouncement] },
+      ],
     },
     {
-      name: 'sticky', description: '📌 État du message épinglé en bas de salon (v276)',
+      name: 'sticky', description: '📌 État du message épinglé en bas de salon',
     },
     {
       name: 'emotes', description: "🎨 Installe le pack d'émojis Hoxera (icônes des modules) sur le serveur",
       default_member_permissions: admin,
       options: [
-        { name: 'action', description: 'Action', type: ApplicationCommandOptionType.String, required: true, choices: [
-          { name: 'install', value: 'install' }, { name: 'view', value: 'view' },
+        { name: 'action', description: 'Que faire ?', type: ApplicationCommandOptionType.String, required: true, choices: [
+          { name: '🎨 Installer les émojis', value: 'install' }, { name: '👁️ Voir le pack', value: 'view' },
         ]},
       ],
     },
@@ -285,8 +288,8 @@ function buildExtraPayloads() {
       name: 'voicetemp', description: '🔊 Salons vocaux temporaires (création auto + suppression quand vides)',
       default_member_permissions: admin,
       options: [
-        { name: 'action', description: 'Action', type: ApplicationCommandOptionType.String, required: true, choices: [
-          { name: 'set', value: 'set' }, { name: 'off', value: 'off' }, { name: 'view', value: 'view' }, { name: 'emotes', value: 'emotes' },
+        { name: 'action', description: 'Que faire ?', type: ApplicationCommandOptionType.String, required: true, choices: [
+          { name: '📍 Régler les salons', value: 'set' }, { name: '🧹 Désactiver', value: 'off' }, { name: '👁️ Voir la config', value: 'view' }, { name: '🎨 Installer les émojis', value: 'emotes' },
         ]},
         { name: 'salon', description: 'Le salon « ➕ Créer un vocal » (pour set)', type: ApplicationCommandOptionType.Channel, required: false, channel_types: [ChannelType.GuildVoice] },
         { name: 'categorie', description: 'La catégorie des salons créés (pour set)', type: ApplicationCommandOptionType.Channel, required: false, channel_types: [ChannelType.GuildCategory] },
@@ -297,8 +300,8 @@ function buildExtraPayloads() {
       name: 'apply', description: '📝 Candidatures : les membres répondent à VOS questions',
       default_member_permissions: admin,
       options: [
-        { name: 'action', description: 'Action', type: ApplicationCommandOptionType.String, required: true, choices: [
-          { name: 'set', value: 'set' }, { name: 'question', value: 'question' }, { name: 'panel', value: 'panel' }, { name: 'view', value: 'view' }, { name: 'off', value: 'off' },
+        { name: 'action', description: 'Que faire ?', type: ApplicationCommandOptionType.String, required: true, choices: [
+          { name: '📍 Choisir le salon', value: 'set' }, { name: '❓ Ajouter une question', value: 'question' }, { name: '📨 Envoyer le panneau', value: 'panel' }, { name: '👁️ Voir la config', value: 'view' }, { name: '🧹 Désactiver', value: 'off' },
         ]},
         { name: 'salon', description: 'Salon où arrivent les candidatures (pour set)', type: ApplicationCommandOptionType.Channel, required: false, channel_types: [ChannelType.GuildText, ChannelType.GuildAnnouncement] },
         { name: 'texte', description: 'La question à ajouter (pour question)', type: ApplicationCommandOptionType.String, required: false },
@@ -327,7 +330,7 @@ const HELP_EXTRA = {
   work: ['💼 Travail', 'Travaille pour gagner des coins (entre 50 et 150, 1 fois par heure).', '`/work`', '`/work` → 🧑‍🍳 Vous avez cuisiné : +120 coins !'],
   gamble: ['🎰 Pari', 'Pariez des coins : 50 % de chances de doubler, 50 % de tout perdre.', '`/gamble montant`', '`/gamble 100` → 🎰 JACKPOT ! +100 coins !'],
   rob: ['🦹 Vol', 'Tentez de voler un membre : 40 % de réussite (10-20 % de ses coins). Si vous ratez, vous lui payez une amende !', '`/rob @membre`', '`/rob @Millionnaire` → 🚓 Raté ! Vous lui devez 15 % de votre solde.'],
-  lockdown: ['🚨 Anti-raid', 'Verrouille tous les salons texte en 1 clic (personne ne peut écrire sauf les admins) puis rouvre tout. Idéal contre un raid.', '`/lockdown on` · `/lockdown off`', '`/lockdown on` → 🔒 12 salons verrouillés'],
+  lockdown: ['🚨 Anti-raid', 'Verrouille tous les salons texte, ou **un seul salon** via le sélecteur. Personne ne peut écrire sauf les admins.', '`/lockdown` → Verrouiller · Rouvrir · salon optionnel', '`/lockdown` + salon #général → 🔒 ce salon seulement'],
   sticky: 'Message épinglé en bas de salon (sticky) : état et salon configuré. Réglage complet dans le dashboard → Annonces.',
     emotes: ["🎨 Émojis Hoxera", "Un pack d'émojis dessinés pour Hoxera, un par module (tickets, modération, niveaux…). `/emotes install` les ajoute au serveur : tout le monde peut les utiliser, et le dashboard affiche les mêmes icônes en PNG.", "`/emotes install` · `/emotes view`"],
   voicetemp: ['🔊 Salons vocaux temporaires +', 'Un salon « ➕ Créer un vocal » : dès qu\'un membre le rejoint, un salon à son nom est créé, et il est supprimé automatiquement quand il est vide. Le propriétaire gère SON salon depuis le panneau de contrôle (style TempVoice, en mieux) : NOM, LIMITE, PRIVÉ, PUBLIC, RÉCUPÉRER, ajout/retrait/expulsion de membres, TRANSFÉRER la propriété, SUPPRIMER — chaque réponse est personnelle. `/voicetemp emotes` installe les émojis Hoxera du panneau.', '`/voicetemp set` (salon + catégorie + panneau) · `/voicetemp emotes` · `/voicetemp view` · `/voicetemp off`'],
@@ -821,15 +824,27 @@ async function handleSlash(botId, entry, interaction) {
     case 'lockdown': {
       if (!isAdmin(member)) return interaction.reply({ content: '⛔ Réservé aux administrateurs.', ephemeral: true });
       const action = interaction.options.getString('action');
+      const salon = typeof interaction.options.getChannel === 'function' ? interaction.options.getChannel('salon') : null;
+      if (salon && salon.isTextBased && salon.isTextBased()) {
+        const everyone = guild.roles && guild.roles.everyone;
+        if (everyone && salon.permissionOverwrites && typeof salon.permissionOverwrites.edit === 'function') {
+          if (action === 'on') {
+            await salon.permissionOverwrites.edit(everyone, { SendMessages: false }, { reason: 'lockdown salon' }).catch(() => {});
+            return interaction.reply({ content: `🔒 ${salon} est en **lecture seule**. \`/lockdown\` → Rouvrir + le même salon pour rouvrir.`, ephemeral: true });
+          }
+          await salon.permissionOverwrites.edit(everyone, { SendMessages: null }, { reason: 'lockdown salon off' }).catch(() => {});
+          return interaction.reply({ content: `🔓 ${salon} est de nouveau **ouvert**.`, ephemeral: true });
+        }
+      }
       const lockdown = require('./lockdown');
       if (action === 'on') {
         const res = await lockdown.on(botId, guild, member.user.tag);
-        if (res.already) return interaction.reply({ content: '🔒 Le serveur est déjà verrouillé. `/lockdown off` pour rouvrir.', ephemeral: true });
+        if (res.already) return interaction.reply({ content: '🔒 Le serveur est déjà verrouillé. `/lockdown` → Rouvrir.', ephemeral: true });
         return interaction.reply(ui.v2panel({
           variant: 'danger',
           title: '🚨 Serveur verrouillé',
           description: `${res.channels} salon(s) sont maintenant en lecture seule.`,
-          fields: [{ name: '🔓 Pour rouvrir', value: 'Utilisez `/lockdown off` quand la situation est maîtrisée.' }],
+          fields: [{ name: '🔓 Pour rouvrir', value: 'Utilisez `/lockdown` → **Rouvrir** quand la situation est maîtrisée.' }],
           footer: false,
         }));
       }

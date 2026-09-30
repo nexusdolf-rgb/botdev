@@ -85,9 +85,9 @@ const membreStaff = mkMember(true); // Gérer les messages (ou Admin : has() = t
 
   console.log('— 7. Bump v295 —');
   const index = racine('public/index.html');
-  check('index.html : ?v=344 référencé 7 fois', (index.match(/\?v=344/g) || []).length === 7,
-    String((index.match(/\?v=344/g) || []).length));
-  check('sw.js : cache « botdev-v344 »', racine('public/sw.js').includes("const CACHE = 'botdev-v344';"));
+  check('index.html : ?v=345 référencé 7 fois', (index.match(/\?v=345/g) || []).length === 7,
+    String((index.match(/\?v=345/g) || []).length));
+  check('sw.js : cache « botdev-v345 »', racine('public/sw.js').includes("const CACHE = 'botdev-v345';"));
 
   console.log(`\n🎉 v295 : ${ok} vérifications passées`);
   process.exit(0);

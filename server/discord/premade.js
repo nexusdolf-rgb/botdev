@@ -16,7 +16,7 @@ const { canConfigureGuild } = require('./permissions');
 const MODULES = {
   moderation: {
     label: 'Modération', emoji: '🛡️', description: 'Kick, ban, warn, timeout, clear…',
-    commands: ['kick', 'ban', 'unban', 'timeout', 'warn', 'warns', 'clear', 'modexport'],
+    commands: ['kick', 'ban', 'unban', 'timeout', 'warn', 'warns', 'clear', 'slowmode', 'nick', 'modexport'],
   },
   utility: {
     label: 'Utilitaires', emoji: '🔧', description: 'Ping, avatar, infos serveur et utilisateur…',
@@ -64,21 +64,23 @@ const CMD_DEFS = {
   profile: { label: 'profile', desc: 'Carte de profil d\'un membre' },
   kick: { label: 'kick', desc: 'Expulse un membre', perms: [PermissionsBitField.Flags.KickMembers] },
   ban: { label: 'ban', desc: 'Bannit un membre', perms: [PermissionsBitField.Flags.BanMembers] },
-  unban: { label: 'unban', desc: 'Débannit un utilisateur', perms: [PermissionsBitField.Flags.BanMembers] },
+  unban: { label: 'unban', desc: 'Débannit un utilisateur (sélecteur)', perms: [PermissionsBitField.Flags.BanMembers] },
   timeout: { label: 'timeout', desc: 'Met un membre en timeout', perms: [PermissionsBitField.Flags.ModerateMembers] },
   warn: { label: 'warn', desc: 'Avertit un membre', perms: [PermissionsBitField.Flags.ModerateMembers] },
   // 🔐 /warns liste les avertissements de N'IMPORTE QUEL membre : c'est une
   // lecture réservée au staff (même permission que /warn). Sans cette
   // restriction, n'importe qui pourrait consulter le casier de tout le monde.
   warns: { label: 'warns', desc: 'Liste les avertissements d\'un membre (staff)', perms: [PermissionsBitField.Flags.ModerateMembers] },
-  clear: { label: 'clear', desc: 'Supprime des messages', perms: [PermissionsBitField.Flags.ManageMessages] },
+  clear: { label: 'clear', desc: 'Supprime des messages (filtre membre / salon)', perms: [PermissionsBitField.Flags.ManageMessages] },
+  slowmode: { label: 'slowmode', desc: 'Ralentit un salon (délai entre les messages)', perms: [PermissionsBitField.Flags.ManageChannels] },
+  nick: { label: 'nick', desc: 'Change le pseudo d’un membre sur le serveur', perms: [PermissionsBitField.Flags.ManageNicknames] },
   daily: { label: 'daily', desc: 'Récupère vos coins quotidiens' },
   balance: { label: 'balance', desc: 'Affiche votre solde de coins' },
   leaderboard: { label: 'leaderboard', desc: 'Classement des coins' },
   rank: { label: 'rank', desc: 'Votre niveau, votre XP et votre rang' },
   levels: { label: 'levels', desc: 'Le classement des niveaux du serveur' },
   invite: { label: 'invite', desc: 'Le lien pour inviter le bot' },
-  lang: { label: 'lang', desc: 'Choisissez la langue du bot sur ce serveur (fr, en, êtes, de, pt, it)', perms: [PermissionsBitField.Flags.Administrator] },
+  lang: { label: 'lang', desc: 'Choisissez la langue du bot sur ce serveur (français ou anglais)', perms: [PermissionsBitField.Flags.Administrator] },
   giveaway: { label: 'giveaway', desc: 'Lancer un giveaway avec tirage automatique', perms: [PermissionsBitField.Flags.Administrator] },
   suggest: { label: 'suggest', desc: 'Créer une suggestion (staff — votes 👍👎)', perms: [PermissionsBitField.Flags.ManageMessages] },
   suggestions: { label: 'suggestions', desc: 'Configurer le salon des suggestions', perms: [PermissionsBitField.Flags.Administrator] },
@@ -167,7 +169,7 @@ const HELP_BLOCKS = [
   { title: '💰 Économie & boutique', names: ['daily', 'balance', 'leaderboard', 'work', 'gamble', 'rob', 'pay', 'shop', 'buy'] },
   { title: '💡 Communauté', names: ['boostrewards'] },
   // --- Modération (permissions métier) ---
-  { title: '🛡️ Modération & sanctions (staff)', kind: 'staff', names: ['kick', 'ban', 'unban', 'timeout', 'warn', 'warns', 'clear', 'sanction', 'temprole'] },
+  { title: '🛡️ Modération & sanctions (staff)', kind: 'staff', names: ['kick', 'ban', 'unban', 'timeout', 'warn', 'warns', 'clear', 'slowmode', 'nick', 'sanction', 'temprole'] },
   { title: '📄 Audits & exports (admins)', kind: 'admin', names: ['modexport'] },
   // --- Administration (propriétaire / Administrateur) ---
   { title: '🎫 Tickets & menus de rôles', kind: 'admin', names: ['ticket', 'roles'] },
@@ -227,14 +229,27 @@ function buildSlashPayloads(botId) {
     if (['8ball', 'say', 'reverse'].includes(name)) {
       options.push({ name: 'texte', description: 'Votre texte / question', type: ApplicationCommandOptionType.String, required: true });
     }
+    if (['say'].includes(name)) {
+      options.push({ name: 'salon', description: 'Salon où envoyer le message (défaut : salon actuel)', type: ApplicationCommandOptionType.Channel, required: false, channel_types: TEXT_CH });
+    }
     if (['clear'].includes(name)) {
       options.push({ name: 'nombre', description: 'Nombre de messages (1-100)', type: ApplicationCommandOptionType.Integer, required: true });
+      options.push({ name: 'membre', description: 'Uniquement les messages de ce membre (optionnel)', type: ApplicationCommandOptionType.User, required: false });
+      options.push({ name: 'salon', description: 'Salon à nettoyer (défaut : salon actuel)', type: ApplicationCommandOptionType.Channel, required: false, channel_types: TEXT_CH });
+    }
+    if (['slowmode'].includes(name)) {
+      options.push({ name: 'secondes', description: 'Délai entre deux messages (0 = désactiver, max 21600)', type: ApplicationCommandOptionType.Integer, required: true });
+      options.push({ name: 'salon', description: 'Salon (défaut : salon actuel)', type: ApplicationCommandOptionType.Channel, required: false, channel_types: TEXT_CH });
+    }
+    if (['nick'].includes(name)) {
+      options.push({ name: 'membre', description: 'Le membre', type: ApplicationCommandOptionType.User, required: true });
+      options.push({ name: 'pseudo', description: 'Nouveau pseudo (vide = retirer le pseudo)', type: ApplicationCommandOptionType.String, required: false });
     }
     if (['roll'].includes(name)) {
       options.push({ name: 'max', description: 'Valeur max (défaut 6)', type: ApplicationCommandOptionType.Integer, required: false });
     }
     if (['unban'].includes(name)) {
-      options.push({ name: 'identifiant', description: 'ID de l\'utilisateur à débannir', type: ApplicationCommandOptionType.String, required: true });
+      options.push({ name: 'utilisateur', description: 'La personne à débannir (sélecteur, ou collez l’identifiant)', type: ApplicationCommandOptionType.User, required: true });
     }
     if (['help'].includes(name)) {
       options.push({ name: 'commande', description: 'Nom de la commande à détailler (ex : ticket)', type: ApplicationCommandOptionType.String, required: false });
@@ -260,7 +275,7 @@ function buildSlashPayloads(botId) {
     if (['statchannels'].includes(name)) {
       options.push({ name: 'action', description: 'setup · off · view', type: ApplicationCommandOptionType.String, required: false, choices: [
         { name: '🏗️ Activer (crée la catégorie verrouillée)', value: 'setup' },
-        { name: '🧹 Désactiver (supprime category et salons)', value: 'off' },
+        { name: '🧹 Désactiver (supprime la catégorie et les salons)', value: 'off' },
         { name: "👁️ Voir l'état actuel", value: 'view' },
       ]});
     }
@@ -289,8 +304,10 @@ function buildSlashPayloads(botId) {
       options.push({ name: 'sanction', description: 'Nom de la sanction prédéfinie', type: ApplicationCommandOptionType.String, required: true });
     }
     if (['giveaway'].includes(name)) {
-      options.push({ name: 'action', description: 'Action', type: ApplicationCommandOptionType.String, required: true, choices: [
-        { name: 'create', value: 'create' }, { name: 'end', value: 'end' }, { name: 'reroll', value: 'reroll' },
+      options.push({ name: 'action', description: 'Que faire ?', type: ApplicationCommandOptionType.String, required: true, choices: [
+        { name: '🎁 Créer un giveaway', value: 'create' },
+        { name: '🏁 Terminer maintenant', value: 'end' },
+        { name: '🎲 Relancer le tirage', value: 'reroll' },
       ]});
       options.push({ name: 'duree', description: 'Durée (ex : 30m, 2h, 1d)', type: ApplicationCommandOptionType.String, required: false });
       options.push({ name: 'prix', description: 'Le prix à gagner', type: ApplicationCommandOptionType.String, required: false });
@@ -299,8 +316,10 @@ function buildSlashPayloads(botId) {
       options.push({ name: 'message', description: 'ID du message du giveaway (pour end/reroll)', type: ApplicationCommandOptionType.String, required: false });
     }
     if (['suggestions'].includes(name)) {
-      options.push({ name: 'action', description: 'Action', type: ApplicationCommandOptionType.String, required: true, choices: [
-        { name: 'set', value: 'set' }, { name: 'off', value: 'off' }, { name: 'view', value: 'view' },
+      options.push({ name: 'action', description: 'Que faire ?', type: ApplicationCommandOptionType.String, required: true, choices: [
+        { name: '📍 Choisir le salon', value: 'set' },
+        { name: '🧹 Désactiver', value: 'off' },
+        { name: '👁️ Voir le salon actuel', value: 'view' },
       ]});
       options.push({ name: 'salon', description: 'Salon des suggestions', type: ApplicationCommandOptionType.Channel, required: false, channel_types: TEXT_CH });
     }
@@ -1250,7 +1269,13 @@ async function execute(botId, entry, cmd, src) {
     }
     case 'say': {
       const text = isInt ? src.interaction.options.getString('texte') : src.args;
-      await send({ content: text });
+      const dest = isInt ? src.interaction.options.getChannel('salon') : null;
+      if (dest && dest.id !== channel.id && typeof dest.send === 'function') {
+        await dest.send({ content: text }).catch(() => {});
+        await reply(`✅ Message envoyé dans ${dest}.`);
+      } else {
+        await send({ content: text });
+      }
       break;
     }
     case 'reverse': {
@@ -1307,20 +1332,23 @@ async function execute(botId, entry, cmd, src) {
       break;
     }
     case 'unban': {
-      const id = isInt ? src.interaction.options.getString('identifiant') : (src.args || '').trim();
-      if (!/^\d{15,21}$/.test(id)) return reply('❓ Identifiant invalide.');
-      await guild.bans.remove(id).catch(() => reply('❓ Utilisateur non banni ou introuvable.'));
+      const picked = isInt ? src.interaction.options.getUser('utilisateur') : null;
+      const id = picked ? String(picked.id) : String(src.args || '').trim();
+      if (!/^\d{15,21}$/.test(id)) return reply('❓ Choisissez la personne dans le menu, ou collez son identifiant.');
+      const okBan = await guild.bans.remove(id).then(() => true).catch(() => false);
+      if (!okBan) return reply('❓ Utilisateur non banni ou introuvable.');
+      const who = picked ? (picked.tag || picked.username) : id;
       await logging.log(botId, guild, {
         title: '🔓 Débannissement', color: '#57F287',
         fields: [
-          { name: '🆔 Utilisateur', value: id, inline: true },
+          { name: '👤 Utilisateur', value: String(who), inline: true },
           { name: '🛡️ Par', value: `${author.tag || author.username}`, inline: true },
         ],
       });
       await replyPanel({
         variant: 'success',
         title: '🔓 Débannissement effectué',
-        description: `L'utilisateur ${id} a été débanni.`,
+        description: `**${who}** a été débanni.`,
         fields: [{ name: '🆔 Identifiant', value: id, inline: true }],
         footer: false,
       });
@@ -1423,12 +1451,26 @@ async function execute(botId, entry, cmd, src) {
     case 'clear': {
       let n = isInt ? src.interaction.options.getInteger('nombre') : parseInt(src.args, 10);
       n = Math.min(Math.max(n || 0, 1), 100);
-      const deleted = await channel.bulkDelete(n, true).catch(() => null);
-      const count = deleted ? deleted.size : 0;
+      const destCh = isInt ? src.interaction.options.getChannel('salon') : null;
+      const ch = (destCh && typeof destCh.bulkDelete === 'function') ? destCh : channel;
+      const only = isInt ? src.interaction.options.getUser('membre') : null;
+      let count = 0;
+      if (only) {
+        const fetched = await ch.messages.fetch({ limit: 100 }).catch(() => null);
+        const mine = fetched ? fetched.filter((m) => m && m.author && m.author.id === only.id) : null;
+        const slice = mine ? [...mine.values()].slice(0, n) : [];
+        if (slice.length) {
+          const deleted = await ch.bulkDelete(slice, true).catch(() => null);
+          count = deleted ? deleted.size : 0;
+        }
+      } else {
+        const deleted = await ch.bulkDelete(n, true).catch(() => null);
+        count = deleted ? deleted.size : 0;
+      }
       await logging.log(botId, guild, {
         title: '🧹 Purge de messages', color: '#e07a5f',
         fields: [
-          { name: '📨 Salon', value: `<#${channel.id}>`, inline: true },
+          { name: '📨 Salon', value: `<#${ch.id}>`, inline: true },
           { name: '🔢 Messages', value: String(count), inline: true },
           { name: '🛡️ Par', value: `${author.tag || author.username}`, inline: true },
         ],
@@ -1436,10 +1478,46 @@ async function execute(botId, entry, cmd, src) {
       await replyPanel({
         variant: 'success',
         title: '🧹 Nettoyage terminé',
-        description: `${count} message(s) ont été supprimé(s) dans ce salon.`,
+        description: `${count} message(s) ont été supprimé(s) dans ${ch}.${only ? ` (filtre : ${only})` : ''}`,
         fields: [{ name: '🛡️ Action effectuée par', value: `${author.tag || author.username}`, inline: true }],
         footer: false,
       });
+      break;
+    }
+    case 'slowmode': {
+      const sec = Math.min(Math.max(isInt ? (src.interaction.options.getInteger('secondes') || 0) : (parseInt(src.args, 10) || 0), 0), 21600);
+      const destCh = isInt ? src.interaction.options.getChannel('salon') : null;
+      const ch = (destCh && typeof destCh.setRateLimitPerUser === 'function') ? destCh : channel;
+      if (!ch || typeof ch.setRateLimitPerUser !== 'function') return reply('❓ Choisissez un salon texte.');
+      await ch.setRateLimitPerUser(sec, `slowmode par ${author.tag || author.username}`).catch(() => {});
+      await logging.log(botId, guild, {
+        title: '🐢 Mode lent', color: '#e07a5f',
+        fields: [
+          { name: '📨 Salon', value: `<#${ch.id}>`, inline: true },
+          { name: '⏱ Délai', value: sec ? `${sec} s` : 'désactivé', inline: true },
+          { name: '🛡️ Par', value: `${author.tag || author.username}`, inline: true },
+        ],
+      });
+      await reply(sec ? `🐢 Mode lent : **${sec} s** dans ${ch}.` : `🐢 Mode lent **désactivé** dans ${ch}.`);
+      break;
+    }
+    case 'nick': {
+      const target = getUserArg('membre');
+      if (!target || !target.id) return reply('❓ Choisissez un membre dans le menu.');
+      const tMember = guild.members.cache.get(target.id) || await guild.members.fetch(target.id).catch(() => null);
+      if (!tMember || typeof tMember.setNickname !== 'function') return reply('❓ Membre introuvable.');
+      const pseudo = isInt ? String(src.interaction.options.getString('pseudo') || '').trim().slice(0, 32) : String(src.args || '').trim().slice(0, 32);
+      const okNick = await tMember.setNickname(pseudo || null, `nick par ${author.tag || author.username}`).then(() => true).catch(() => false);
+      if (!okNick) return reply('⛔ Je ne peux pas changer le pseudo de ce membre (rôle trop haut, ou permission manquante).');
+      await logging.log(botId, guild, {
+        title: '🏷️ Pseudo modifié', color: '#e07a5f',
+        fields: [
+          { name: '👤 Membre', value: `${target.tag || target.username}`, inline: true },
+          { name: '🏷️ Pseudo', value: pseudo || '*retiré*', inline: true },
+          { name: '🛡️ Par', value: `${author.tag || author.username}`, inline: true },
+        ],
+      });
+      await reply(pseudo ? `✅ Pseudo de **${target.username}** → **${pseudo}**.` : `✅ Pseudo de **${target.username}** retiré.`);
       break;
     }
     case 'daily': {
@@ -1525,16 +1603,18 @@ const HELP_DETAILS = {
   botinfo: ['🔧 Utilitaire', 'Informations sur le bot (serveurs, latence…).', '`/botinfo`'],
   kick: ['🛡️ Modération', 'Expulse un membre du serveur (il peut revenir avec une invitation).', '`/kick @membre raison`', '`/kick @spammeur Flood`'],
   ban: ['🛡️ Modération', 'Bannit un membre définitivement.', '`/ban @membre raison`', '`/ban @spammeur`'],
-  unban: ['🛡️ Modération', 'Débannit un utilisateur avec son identifiant.', '`/unban ID`', '`/unban 123456789012345678`'],
+  unban: ['🛡️ Modération', 'Débannit un utilisateur : **choisissez-le dans le menu** (ou collez son identifiant).', '`/unban utilisateur:@membre`', '`/unban` → sélecteur de personne'],
+  clear: ['🛡️ Modération', 'Supprime des messages. Vous pouvez **filtrer un membre** et **choisir le salon**.', '`/clear nombre:20` · `/clear nombre:20 membre:@Alex salon:#général`', '`/clear 20` → 20 messages supprimés'],
+  slowmode: ['🛡️ Modération', 'Impose un délai entre deux messages dans un salon (0 pour désactiver).', '`/slowmode secondes:10 salon:#général`', '`/slowmode 10` → 🐢 10 s dans ce salon'],
+  nick: ['🛡️ Modération', 'Change le pseudo d’un membre sur **ce serveur**. Laissez vide pour retirer le pseudo.', '`/nick membre:@Alex pseudo:Alex`', '`/nick @Alex Alex`'],
   timeout: ['🛡️ Modération', 'Empêche un membre d\'écrire pendant X minutes.', '`/timeout @membre minutes`', '`/timeout @membre 10`'],
   warn: ['🛡️ Modération', 'Avertit un membre (les avertissements sont comptés).', '`/warn @membre raison`', '`/warn @membre insultes`'],
   warns: ['🛡️ Modération', 'Liste les avertissements d\'un membre.', '`/warns @membre`'],
-  clear: ['🛡️ Modération', 'Supprime un nombre de messages du salon.', '`/clear nombre`', '`/clear 20`'],
   '8ball': ['🎉 Fun', 'Pose une question, la boule magique répond.', '`/8ball question`', '`/8ball BotDev est-il génial ?`'],
   meme: ['🎉 Fun', 'Envoie un meme aléatoire.', '`/meme`'],
   coinflip: ['🎉 Fun', 'Lancez une pièce : pile ou face.', '`/coinflip`', '`/coinflip` → 🪙 Face !'],
   roll: ['🎉 Fun', 'Lancez un dé (jusqu\'à la valeur choisie, défaut 6).', '`/roll max`', '`/roll 100` → 🎲 73'],
-  say: ['🎉 Fun', 'Le bot répète votre message.', '`/say texte`', '`/say Coucou !`'],
+  say: ['🎉 Fun', 'Le bot répète votre message. Vous pouvez **choisir le salon**.', '`/say texte salon:#annonces`', '`/say Coucou !`'],
   reverse: ['🎉 Fun', 'Inverse votre texte.', '`/reverse texte`', '`/reverse bonjour` → ruojnob'],
   daily: ['💰 Économie', 'Récupère 100 coins, une fois par jour.', '`/daily`', '`/daily` → 🎁 +100 coins !'],
   balance: ['💰 Économie', 'Affiche votre solde de coins.', '`/balance @membre`'],

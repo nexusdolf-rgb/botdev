@@ -35,9 +35,9 @@ function buildEventPayloads() {
         {
           name: 'action', description: 'Que faire ?', type: ApplicationCommandOptionType.String, required: true,
           choices: [
-            { name: 'create — créer un événement', value: 'create' },
-            { name: 'list — lister les événements', value: 'list' },
-            { name: 'delete — supprimer un événement', value: 'delete' },
+            { name: '🎮 Créer un événement', value: 'create' },
+            { name: '📋 Lister les événements', value: 'list' },
+            { name: '🗑️ Supprimer un événement', value: 'delete' },
           ],
         },
         { name: 'titre', description: 'Le nom de l\'événement (ex : Tournoi CODM)', type: ApplicationCommandOptionType.String, required: false },

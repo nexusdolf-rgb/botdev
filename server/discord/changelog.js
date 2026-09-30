@@ -7,7 +7,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const ui = require('./ui');
 
-const VERSION = 344;
+const VERSION = 345;
 const DASHBOARD_URL = 'https://hoxera.is-a.dev';
 const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3';
 const AUTO_REVERT_MS = 2 * 60 * 1000;
@@ -15,6 +15,12 @@ const SELECT_ID = (botId) => `hx-upd:${botId}`;
 
 // Plus récent en premier. Menu Discord = 25 options max (accueil + 24 versions).
 const VERSIONS = [
+  {
+    v: 345, date: '30/09', title: 'Commandes plus claires',
+    new: ['**`/slowmode`** et **`/nick`** (comme les bots pro). `/clear` filtre un membre et un salon. `/unban` et `/say` : sélecteur. `/lockdown` peut verrouiller **un seul salon**.'],
+    improved: ['Tous les menus des commandes sont en **français** (Créer, Verrouiller, Voir…) : plus de set / off / create.'],
+    fixed: ['Des options demandaient encore un identifiant à coller, et des choix s’affichaient en anglais.'],
+  },
   {
     v: 344, date: '30/09', title: 'Commandes : tout se clique',
     new: ['Les commandes de configuration ont des **sélecteurs** : salon, catégorie, rôle. `/ticket logs` choisit le salon du récapitulatif staff.'],
