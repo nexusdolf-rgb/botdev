@@ -24,8 +24,8 @@ const bm = racine('server/discord/botManager.js');
 const cl = racine('server/discord/changelog.js');
 
 console.log('— 1. Pins v336 —');
-check('index.html : ?v=346 ×7', (html.match(/\?v=346/g) || []).length === 7);
-check('sw.js : cache botdev-v346', sw.includes("const CACHE = 'botdev-v346';"));
+check('index.html : ?v=347 ×7', (html.match(/\?v=347/g) || []).length === 7);
+check('sw.js : cache botdev-v347', sw.includes("const CACHE = 'botdev-v347';"));
 check('index.html : plus aucune ?v=335', !html.includes('?v=335'));
 
 console.log('— 2. Enregistrement —');

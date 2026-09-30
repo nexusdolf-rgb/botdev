@@ -19,8 +19,8 @@ const iT = dash.indexOf('Dashboard.renderers.tickets');
 const chunk = dash.slice(iT, dash.indexOf('Dashboard.renderers.welcome', iT));
 
 console.log('— 1. Pins de version v331 —');
-check('index.html : ?v=346 ×7', (html.match(/\?v=346/g) || []).length === 7);
-check('sw.js : cache botdev-v346', sw.includes("const CACHE = 'botdev-v346';"));
+check('index.html : ?v=347 ×7', (html.match(/\?v=347/g) || []).length === 7);
+check('sw.js : cache botdev-v347', sw.includes("const CACHE = 'botdev-v347';"));
 check('index.html : plus aucune ?v=330', !html.includes('?v=330'));
 
 console.log('— 2. Tout dans la carte (rien en dessous) —');
@@ -41,7 +41,7 @@ for (const id of ['t-send', 'tm-send', 'adv-send', 'tp-save', 'mp-save', 't-chan
 check('envoi bouton / menu toujours séparés', chunk.includes("mode: 'button'") && chunk.includes("mode: 'menu'"));
 check('menus extra toujours là', chunk.includes('Autres panneaux menu') && chunk.includes('openTicketMenuModal'));
 check('advanced-tickets toujours utilisé', chunk.includes('/advanced-tickets'));
-check('le système avancé dit encore que ce n’est PAS le menu', chunk.includes('PAS le panneau avec menu'));
+check('le système avancé dit encore que ce n’est PAS le menu', chunk.includes('PAS le Ticket menu'));
 
 console.log('\nRésultat : ' + ok + ' ✅ / ' + ko + ' ❌ sur ' + (ok + ko) + ' vérifications');
 if (fails.length) { console.log('Échecs :'); fails.forEach((f) => console.log('  ❌ ' + f)); }

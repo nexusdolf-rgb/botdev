@@ -19,19 +19,19 @@ const iT = dash.indexOf('Dashboard.renderers.tickets');
 const chunk = dash.slice(iT, dash.indexOf('Dashboard.renderers.welcome', iT));
 
 console.log('— 1. Pins de version v330 —');
-check('index.html : ?v=346 ×7', (html.match(/\?v=346/g) || []).length === 7);
-check('sw.js : cache botdev-v346', sw.includes("const CACHE = 'botdev-v346';"));
+check('index.html : ?v=347 ×7', (html.match(/\?v=347/g) || []).length === 7);
+check('sw.js : cache botdev-v347', sw.includes("const CACHE = 'botdev-v347';"));
 check('index.html : plus aucune ?v=329', !html.includes('?v=329'));
 
 console.log('— 2. Page plus courte, même clarté —');
-check('en-tête court', chunk.includes('Bouton, liste, ou le système avancé en bas.'));
+check('en-tête court', chunk.includes('Ticket classique') && chunk.includes('Ticket menu') && chunk.includes('Ticket avancé'));
 check('plus de pavé « Deux panneaux classiques »', !chunk.includes('Deux panneaux classiques (bouton ou liste)'));
 check('plus de note « Ceci est le panneau à UN bouton »', !chunk.includes('Ceci est le panneau à UN bouton'));
 check('cartes classiques compactes', chunk.includes('tk-classic-card'));
 check('textes optionnels repliés', chunk.includes('tkFold') && chunk.includes('tk-fold') && chunk.includes('tk-fold-sum'));
 check('CSS des blocs repliés', css.includes('.tk-fold-sum') && css.includes('.tk-fold-body'));
-check('guide 2 systèmes toujours là', chunk.includes('Par où commencer ?') && chunk.includes('Tickets classiques') && chunk.includes('Tickets avancés'));
-check('le système avancé dit encore que ce n’est PAS le menu', chunk.includes('PAS le panneau avec menu'));
+check('guide 3 systèmes toujours là', chunk.includes('Par où commencer ?') && chunk.includes('Ticket classique') && chunk.includes('Ticket avancé'));
+check('le système avancé dit encore que ce n’est PAS le menu', chunk.includes('PAS le Ticket menu'));
 
 console.log('— 3. Ordre + IDs / APIs intacts —');
 check('ordre : bouton, menu, puis avancé',

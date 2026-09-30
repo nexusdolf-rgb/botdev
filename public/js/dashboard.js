@@ -2151,7 +2151,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     return { text: String(q || '').slice(0, 45), max: 500 };
   };
   const typesData = (t.types || []).map((x) => ({ label: x.label, emoji: x.emoji || '', description: x.description || '', category: x.category || '', questions: (Array.isArray(x.questions) && x.questions.length) ? x.questions.map(qNorm) : [], staff_roles: (x.staff_roles && x.staff_roles.length) ? [...x.staff_roles] : [] }));
-  const root = Dashboard.header(content, '🎫', 'Système de tickets', 'Bouton, liste, ou le système avancé en bas.');
+  const root = Dashboard.header(content, '🎫', 'Système de tickets', 'Trois systèmes, un seul à choisir : Ticket classique, Ticket menu, ou Ticket avancé.');
   const ts = data.tickets_stats || { total: 0, open: 0 };
   root.appendChild(App.el(`
     <div class="dash-stats" style="margin-bottom:14px">
@@ -2177,14 +2177,15 @@ Dashboard.renderers.tickets = async (content, data) => {
   const curStyle = String(t.button_style || '1');
   const reqReason = !(t.require_reason === 0 || t.require_reason === false);
 
-  const c = Dashboard.card(root, '🔘 Panneau à un bouton', 'Un bouton. Un clic ouvre un ticket.');
+  const c = Dashboard.card(root, '🎫 Ticket classique', 'Un bouton. Un clic ouvre un ticket. Exemple : « Ouvrir un ticket ».');
   c.classList.add('tk-classic-card', 'adv-builder-card');
+  c.id = 'tk-classic';
 
   // 📊 État actuel (data-status pour le retrouver après innerHTML +=)
   c.appendChild(App.el(`<div data-status style="margin-bottom:12px"></div>`));
 
   c.innerHTML += `
-    <label class="dash-label">Salon du panneau</label>
+    <label class="dash-label">Salon du Ticket classique</label>
     <select class="dash-select" id="t-channel">
       ${textChannels.length ? '<option value="">— Choisir un salon —</option>' : Dashboard.noDiscordChoice('Aucun salon texte reçu de Discord')}
       ${textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(t.channel, ch) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`).join('')}
@@ -2215,14 +2216,14 @@ Dashboard.renderers.tickets = async (content, data) => {
       ${Dashboard.currentDiscordOption(t.support_role, rolesList, '⚠️', 'configuration actuelle — rôle introuvable')}
     </select>
 
-    <label class="dash-label">Catégorie par défaut</label>
+    <label class="dash-label">Catégorie par défaut du Ticket classique</label>
     <select class="dash-select" id="t-cat">
       ${categories.length ? '<option value="">— Choisir une catégorie —</option>' : Dashboard.noDiscordChoice('Aucune catégorie reçue de Discord')}
       ${categories.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(t.category, ch) ? 'selected' : ''}>📁 ${App.escapeHtml(ch.name)}</option>`).join('')}
       ${Dashboard.currentDiscordOption(t.category, categories, '⚠️', 'configuration actuelle — catégorie introuvable')}
     </select>
 
-    <label class="dash-label">Message du panneau (vide = automatique)</label>
+    <label class="dash-label">Message du Ticket classique (vide = automatique)</label>
     <textarea class="dash-input" id="t-msg" rows="3">${App.escapeHtml(t.message || '')}</textarea>
     <div style="margin-top:14px" data-panel-img></div>
 
@@ -2235,32 +2236,33 @@ Dashboard.renderers.tickets = async (content, data) => {
 
     <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
       <button class="dash-btn dash-btn-primary" id="t-save">💾 Enregistrer</button>
-      <button class="dash-btn" id="t-send">📨 Envoyer ce panneau (bouton)</button>
+      <button class="dash-btn" id="t-send">📨 Envoyer le Ticket classique</button>
     </div>
 `;
   // 🗂️ Carte PANNEAU MENU DÉROULANT — indépendante du panneau bouton :
   // son salon, son message, son 💾 et son 📨.
-  const cm = Dashboard.card(root, '📋 Panneau avec menu (liste)', 'Le membre choisit le type dans une liste.');
+  const cm = Dashboard.card(root, '📋 Ticket menu', 'Le membre choisit le type dans une liste. Exemple : Support, Partenariat, Signalement.');
   cm.classList.add('tk-classic-card', 'adv-builder-card');
-  const menuChanOpts = ['<option value="">— Même salon que le panneau bouton —</option>']
+  cm.id = 'tk-menu';
+  const menuChanOpts = ['<option value="">— Même salon que le Ticket classique —</option>']
     .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(t.menu_channel, ch) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`));
   if (t.menu_channel && !textChannels.some((ch) => Dashboard.discordRefMatches(t.menu_channel, ch))) {
     menuChanOpts.push(Dashboard.currentDiscordOption(t.menu_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable'));
   }
   cm.innerHTML += `
-    <label class="dash-label">Salon du panneau menu</label>
+    <label class="dash-label">Salon du Ticket menu</label>
     <select class="dash-select" id="tm-channel">${menuChanOpts.join('')}</select>
-    <label class="dash-label">📁 Catégorie où créer les salons de tickets du MENU</label>
+    <label class="dash-label">📁 Catégorie où créer les salons de tickets du MENU (Ticket menu)</label>
     <select class="dash-select" id="tm-cat">
       <option value="">— Automatique (catégorie du type, sinon celle par défaut) —</option>
       ${categories.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(t.menu_category, ch) ? 'selected' : ''}>📁 ${App.escapeHtml(ch.name)}</option>`).join('')}
       ${Dashboard.currentDiscordOption(t.menu_category, categories, '⚠️', 'configuration actuelle — catégorie introuvable')}
     </select>
-    <label class="dash-label">Message du panneau menu</label>
+    <label class="dash-label">Message du Ticket menu</label>
     <textarea class="dash-input" id="tm-msg" rows="3">${App.escapeHtml(t.menu_message || '')}</textarea>
     <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
       <button class="dash-btn dash-btn-primary" id="tm-save">💾 Enregistrer</button>
-      <button class="dash-btn" id="tm-send">📨 Envoyer ce panneau (menu)</button>
+      <button class="dash-btn" id="tm-send">📨 Envoyer le Ticket menu</button>
     </div>`;
   cm.querySelector('#tm-save').onclick = async () => {
     try {
@@ -2270,18 +2272,18 @@ Dashboard.renderers.tickets = async (content, data) => {
         menu_message: cm.querySelector('#tm-msg').value,
         menu_category: cm.querySelector('#tm-cat').value,
       }});
-      App.toast('Panneau menu enregistré !');
+      App.toast('Ticket menu enregistré !');
     } catch (e) { App.toast(e.message, 'error'); }
   };
   cm.querySelector('#tm-send').onclick = async () => {
-    try { await App.api(`/bots/${bot.id}/tickets/send`, { method: 'POST', body: { guild_id: guildId, mode: 'menu' } }); App.toast('Panneau avec menu envoyé !'); }
+    try { await App.api(`/bots/${bot.id}/tickets/send`, { method: 'POST', body: { guild_id: guildId, mode: 'menu' } }); App.toast('Ticket menu envoyé !'); }
     catch (e) { App.toast(e.message, 'error'); }
   };
 
   // ---- ✏️ v297 : textes SÉPARÉS — une carte pour le panneau bouton, une carte pour le panneau menu ----
   let pt = {};
   try { pt = JSON.parse(t.panel_texts || '{}') || {}; } catch {}
-  const ctp = Dashboard.card(root, '✏️ Textes du panneau à un bouton', 'UNIQUEMENT au panneau bouton. Vide = texte par défaut. {server} = nom du serveur.');
+  const ctp = Dashboard.card(root, '✏️ Textes du panneau à un bouton', 'UNIQUEMENT au panneau bouton (Ticket classique). Vide = texte par défaut. {server} = nom du serveur.');
   ctp.innerHTML += `
     <label class="dash-label">Titre du panneau</label>
     <input class="dash-input" id="tp-title" maxlength="100" placeholder="👑 Support | {server}" value="${App.escapeHtml(pt.title || '')}" />
@@ -2318,7 +2320,7 @@ Dashboard.renderers.tickets = async (content, data) => {
   // ---- ✏️ v297 : Textes du panneau MENU déroulant (indépendants du panneau bouton) ----
   let mpt = {};
   try { mpt = JSON.parse(String(t.menu_panel_texts || '').trim() || String(t.panel_texts || '') || '{}') || {}; } catch {}
-  const ctmenu = Dashboard.card(root, '✏️ Textes du panneau avec menu', 'UNIQUEMENT au panneau menu. Vide = texte par défaut.');
+  const ctmenu = Dashboard.card(root, '✏️ Textes du panneau avec menu', 'UNIQUEMENT au panneau menu (Ticket menu). Vide = texte par défaut.');
   ctmenu.innerHTML += `
     <label class="dash-label">Titre du panneau menu</label>
     <input class="dash-input" id="mp-title" maxlength="100" placeholder="👑 Support | {server}" value="${App.escapeHtml(mpt.title || '')}" />
@@ -2513,7 +2515,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     } catch (e) { App.toast(e.message, 'error'); }
   };
   c.querySelector('#t-send').onclick = async () => {
-    try { await App.api(`/bots/${bot.id}/tickets/send`, { method: 'POST', body: { guild_id: guildId, mode: 'button' } }); App.toast('Panneau à un bouton envoyé !'); }
+    try { await App.api(`/bots/${bot.id}/tickets/send`, { method: 'POST', body: { guild_id: guildId, mode: 'button' } }); App.toast('Ticket classique envoyé !'); }
     catch (e) { App.toast(e.message, 'error'); }
   };
 
@@ -2541,7 +2543,7 @@ Dashboard.renderers.tickets = async (content, data) => {
   c.querySelector('#t-msg').addEventListener('input', renderPreview);
   renderPreview();
 
-  const c2 = Dashboard.card(root, '🗂️ Types de tickets (bouton et menu)', 'Pour le bouton et le menu. Le système avancé a les siens.');
+  const c2 = Dashboard.card(root, '🗂️ Types de tickets (bouton et menu)', 'Pour le Ticket classique et le Ticket menu. Le Ticket avancé a les siens.');
   c2.classList.add('tk-classic-card');
   c2.appendChild(App.el(`<div id="t-types"></div>`));
   const addBtn = App.el(`<button class="dash-btn dash-btn-sm" id="t-add">＋ Ajouter un type</button>`);
@@ -2679,8 +2681,9 @@ Dashboard.renderers.tickets = async (content, data) => {
       staff_roles: Array.isArray(x.staff_roles) ? [...x.staff_roles] : [],
     })),
   };
-  const c3 = Dashboard.card(root, '🎨 Autre système : tickets avancés', '2ᵉ système, indépendant. Ce n’est PAS le panneau avec menu ci-dessus.');
+  const c3 = Dashboard.card(root, '🎨 Ticket avancé', 'Système à part : ses propres types, couleurs et questions. Ce n’est PAS le Ticket menu.');
   c3.classList.add('adv-builder-card');
+  c3.id = 'tk-adv';
   const advChannelOptions = ['<option value="">— Choisir un salon —</option>']
     .concat(textChannels.map((ch) => {
       const selected = advancedData.channel === ch.id || advancedData.channel === `#${ch.name}`;
@@ -2690,15 +2693,15 @@ Dashboard.renderers.tickets = async (content, data) => {
     advChannelOptions.push(`<option value="${App.escapeHtml(advancedData.channel)}" selected>${App.escapeHtml(advancedData.channel)} (actuel)</option>`);
   }
   c3.innerHTML += `
-    <div class="adv-builder-status"><span class="dash-badge ok">✅ Système séparé</span><span class="adv-status-copy">${advancedData.id ? 'Configuration enregistrée' : 'Pas encore configuré'}</span></div>
-    <label class="dash-label">Nom visible du nouveau panneau</label>
+    <div class="adv-builder-status"><span class="dash-badge ok">✅ Ticket avancé</span><span class="adv-status-copy">${advancedData.id ? 'Configuration enregistrée' : 'Pas encore configuré'}</span></div>
+    <label class="dash-label">Nom du Ticket avancé</label>
     <input class="dash-input" id="adv-name" value="${App.escapeHtml(advancedData.name)}" placeholder="Tickets personnalisés" maxlength="80" />
     <label class="dash-label">Type d'affichage</label>
-    <select class="dash-select" id="adv-mode" style="max-width:300px">
-      <option value="buttons" ${advancedData.mode === 'buttons' ? 'selected' : ''}>🔘 Boutons simples (un bouton par type)</option>
-      <option value="menu" ${advancedData.mode === 'menu' ? 'selected' : ''}>📋 Menu déroulant (choix du type)</option>
+    <select class="dash-select" id="adv-mode" style="max-width:360px">
+      <option value="buttons" ${advancedData.mode === 'buttons' ? 'selected' : ''}>🔘 Boutons — un bouton par type</option>
+      <option value="menu" ${advancedData.mode === 'menu' ? 'selected' : ''}>📋 Liste — le membre choisit le type</option>
     </select>
-    <label class="dash-label">Salon où envoyer le nouveau panneau</label>
+    <label class="dash-label">Salon du Ticket avancé</label>
     <select class="dash-select" id="adv-channel" style="max-width:360px">${advChannelOptions.join('')}</select>
     <label class="dash-label">Image en haut du panneau (URL https, optionnelle)</label>
     <input class="dash-input" id="adv-image" value="${App.escapeHtml(advancedData.image_url)}" placeholder="https://.../image.png" />
@@ -2712,15 +2715,15 @@ Dashboard.renderers.tickets = async (content, data) => {
     <div class="adv-placement-notice"><span>📁</span><div><b>Placement simple et prévisible</b><small>Chaque type doit avoir une catégorie existante. Le même salon privé sera visible uniquement par son créateur et le staff autorisé à ce type.</small></div></div>
     <div class="adv-builder-grid">
       <div class="adv-types-panel">
-        <div class="adv-panel-heading"><div><b>🗂️ Types du nouveau système</b><small>Chaque type possède sa couleur, son bouton, ses rôles staff et jusqu'à 5 questions obligatoires.</small></div><span class="adv-count" id="adv-type-count"></span></div>
+        <div class="adv-panel-heading"><div><b>🗂️ Types du Ticket avancé</b><small>Chaque type a sa couleur, son bouton, ses rôles staff et jusqu’à 5 questions.</small></div><span class="adv-count" id="adv-type-count"></span></div>
         <div id="adv-types"></div>
         <button class="dash-btn dash-btn-sm adv-add-type" id="adv-add-type">＋ Ajouter un type</button>
       </div>
       <div id="adv-preview" class="adv-preview-shell"></div>
     </div>
     <div class="adv-builder-actions">
-      <button class="dash-btn dash-btn-primary" id="adv-save">💾 Enregistrer le nouveau système</button>
-      <button class="dash-btn" id="adv-send">📨 Envoyer le panneau avancé</button>
+      <button class="dash-btn dash-btn-primary" id="adv-save">💾 Enregistrer le Ticket avancé</button>
+      <button class="dash-btn" id="adv-send">📨 Envoyer le Ticket avancé</button>
     </div>
     <div id="adv-status" class="desc adv-status-line"></div>`;
 
@@ -2868,15 +2871,15 @@ Dashboard.renderers.tickets = async (content, data) => {
         require_reason: c3.querySelector('#adv-reason').checked ? 1 : 0, types: validTypes,
       }});
       advancedData.id = r.config && r.config.id;
-      c3.querySelector('#adv-status').textContent = '✅ Nouveau système enregistré. Vous pouvez maintenant envoyer son panneau.';
-      App.toast('Nouveau système de tickets enregistré !');
+      c3.querySelector('#adv-status').textContent = '✅ Ticket avancé enregistré. Vous pouvez maintenant envoyer son panneau.';
+      App.toast('Ticket avancé enregistré !');
     } catch (e) { App.toast(e.message, 'error'); }
   };
   c3.querySelector('#adv-send').onclick = async () => {
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/advanced-tickets/send`, { method: 'POST' });
-      c3.querySelector('#adv-status').textContent = '✅ Panneau avancé envoyé dans le salon choisi. Les panneaux classiques n’ont pas été touchés.';
-      App.toast('Panneau avancé envoyé ! L’autre système n’a pas été touché.');
+      c3.querySelector('#adv-status').textContent = '✅ Ticket avancé envoyé. Le Ticket classique et le Ticket menu n’ont pas été touchés.';
+      App.toast('Ticket avancé envoyé ! Les autres systèmes n’ont pas été touchés.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
 
@@ -2884,22 +2887,29 @@ Dashboard.renderers.tickets = async (content, data) => {
   const ticketGuide = App.el(`<div class="dash-card ticket-guide" data-dash-card>
       <div class="card-head"><div class="card-heading">
         <h3>🧭 Par où commencer ?</h3>
-        <div class="desc">Choisissez un seul système.</div>
+        <div class="desc">Choisissez un seul système. Cliquez une case pour descendre jusqu’à lui.</div>
       </div></div>
       <div class="tg-sys">
-        <div class="tg-box">
-          <b>Tickets classiques</b>
-          <small>Bouton ou liste, ci-dessous.</small>
+        <div class="tg-box" data-jump="tk-classic" role="button" tabindex="0">
+          <b>Ticket classique</b>
+          <small>Un bouton. Un clic.</small>
+          <p>Exemple : « Ouvrir un ticket ».</p>
         </div>
-        <div class="tg-box tg-box-alt">
-          <b>Tickets avancés</b>
-          <small>Tout-en-un, en bas de page.</small>
+        <div class="tg-box" data-jump="tk-menu" role="button" tabindex="0">
+          <b>Ticket menu</b>
+          <small>Une liste de types.</small>
+          <p>Exemple : Support, Partenariat, Signalement.</p>
+        </div>
+        <div class="tg-box tg-box-alt" data-jump="tk-adv" role="button" tabindex="0">
+          <b>Ticket avancé</b>
+          <small>Système à part, tout-en-un.</small>
+          <p>Exemple : types avec couleurs et questions.</p>
         </div>
       </div>
     </div>`);
   // v328 — autres panneaux menu (chacun ses types), après le menu principal.
   const extraMenus = Array.isArray(data.ticket_menus) ? data.ticket_menus : [];
-  const cxm = Dashboard.card(root, '📋 Autres panneaux menu', 'Autres listes, chacune avec ses types.');
+  const cxm = Dashboard.card(root, '📋 Autres panneaux menu', 'Autres Ticket menu, chacun avec ses types. En plus du Ticket menu principal.');
   cxm.classList.add('tk-classic-card');
   if (!extraMenus.length) {
     cxm.appendChild(App.el('<div class="dash-empty">Aucun autre menu pour l’instant.</div>'));
@@ -2948,22 +2958,30 @@ Dashboard.renderers.tickets = async (content, data) => {
     else host.appendChild(d);
     return d;
   };
-  tkFold(c, ctp, '✏️ Textes du panneau');
+  tkFold(c, ctp, '✏️ Textes du Ticket classique');
   tkFold(c, c2, '🗂️ Types de tickets');
   tkFold(c, cdm, '💬 Message privé après fermeture');
   tkFold(c, croom, '🏠 Message dans le salon du ticket');
-  tkFold(cm, ctmenu, '✏️ Textes du panneau');
+  tkFold(cm, ctmenu, '✏️ Textes du Ticket menu');
   tkFold(cm, cxm, '📋 Autres panneaux menu');
   [c, cm, c3].forEach((el) => root.appendChild(el));
   const ticketStats = root.querySelector('.dash-stats');
   if (ticketStats) ticketStats.insertAdjacentElement('afterend', ticketGuide);
   else root.insertBefore(ticketGuide, c);
+  ticketGuide.querySelectorAll('[data-jump]').forEach((box) => {
+    const go = () => {
+      const el = document.getElementById(box.dataset.jump);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    box.onclick = go;
+    box.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } };
+  });
 };
 
 // ---------- Bienvenue ----------
 Dashboard.renderers.welcome = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '👋', 'Bienvenue & auto-rôles', 'Accueille les nouveaux membres et donnez des rôles automatiquement.');
+  const root = Dashboard.header(content, '👋', 'Bienvenue & auto-rôles', 'Accueillez les nouveaux membres et donnez-leur un rôle automatiquement.');
   const defs = data.events.defs;
   const state = data.events.state || {};
   const textChannels = (data.channels || []).filter((c) => !c.category && !c.voice);
@@ -5749,7 +5767,7 @@ const ANNOUNCEMENT_TZ_LABEL = Object.fromEntries(ANNOUNCEMENT_TZ_OPTIONS.map(([t
 
 Dashboard.renderers.announcements = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '📅', 'Annonces programmées', 'Des messages envoyés automatiquement aux jours et heures choisissez (ex : le lundi à 18 h).');
+  const root = Dashboard.header(content, '📅', 'Annonces programmées', 'Messages envoyés tout seuls aux jours et heures choisis (ex. : lundi 18 h).');
   const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
   const rolesList = (data.roles || []).filter((role) => role.name !== '@everyone');
   // 📌 v276 — message épinglé en bas de salon (sticky)
@@ -6020,7 +6038,7 @@ Dashboard.renderers.logs = async (content, data) => {
   const s = data.settings;
   const ev = data.log_events || {};
   const textChannels = (data.channels || []).filter((channel) => !channel.category && !channel.voice);
-  const root = Dashboard.header(content, '📜', 'Journaux de modération', 'Un salon où le bot trace ce que VOUS choisissez.');
+  const root = Dashboard.header(content, '📜', 'Journaux de modération', 'Un salon où le bot note ce que vous choisissez de suivre.');
   const c = Dashboard.card(root, 'Configuration', 'Activez avec /modlogs set #salon ou ici.');
   c.innerHTML += `
     <label class="dash-label">Salon des journaux</label>
@@ -6308,7 +6326,7 @@ Dashboard.renderers.quiz = async (content, data) => {
 
 Dashboard.renderers.events = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '🎮', 'Événements & tournois', 'Crée des événements datés : les membres s\'inscrivent avec un bouton, et le bot rappelle automatiquement 24 h et 1 h avant.');
+  const root = Dashboard.header(content, '🎮', 'Événements & tournois', 'Créez des événements datés : les membres s\'inscrivent avec un bouton, le bot rappelle 24 h et 1 h avant.');
   const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
 
   // ---- 📋 Liste des événements ----
@@ -7390,7 +7408,7 @@ Dashboard.renderers.botsettings = async (content) => {
 // ============================================================
 Dashboard.renderers.verification = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '✅', 'Vérification', 'Captcha à l’arrivée (nouveau), bouton « Je suis humain », Join Gate, isolation. Discord ne dit pas aux bots si un compte est volé.');
+  const root = Dashboard.header(content, '✅', 'Vérification', 'Captcha à l’arrivée, bouton « Je suis humain », isolation. Discord ne dit pas aux bots si un compte est volé.');
   const cfg = Object.assign({ enabled: false, channel: '', role: '', gate_days: 0, bot_filter: false, approved_bots: [], isolate: false, isolated_channels: [], panel_title: '', panel_desc: '', button_label: '', panel_color: '#57F287', require_avatar: false, block_spammer: false, captcha: false, captcha_channel: '', captcha_role: '', captcha_title: '', captcha_desc: '', captcha_color: '#e07a5f' }, data.verification || {});
   const textCh = (data.channels || []).filter((ch) => !ch.voice && !ch.category);
   const capSel = textCh.map((ch) => `<option value="${ch.id}" ${String(cfg.captcha_channel || '') === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('');
@@ -7795,7 +7813,7 @@ Dashboard.renderers.antiraid = async (content, data) => {
 Dashboard.renderers.welcome = async (content, data) => {
   await Dashboard._full.welcome(content, data);
   Dashboard.hideCards(content, ['Auto-rôle']);
-  Dashboard.retitle(content, '👋', 'Bienvenue', 'Accueille les nouveaux membres.');
+  Dashboard.retitle(content, '👋', 'Bienvenue', 'Accueillez les nouveaux membres.');
 };
 
 Dashboard.renderers.autoroles = async (content, data) => {

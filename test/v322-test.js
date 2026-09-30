@@ -19,23 +19,23 @@ const iT = dash.indexOf('Dashboard.renderers.tickets');
 const chunk = dash.slice(iT, dash.indexOf('Dashboard.renderers.welcome', iT));
 
 console.log('— 1. Pins de version v322 —');
-check('index.html : ?v=346 ×7', (html.match(/\?v=346/g) || []).length === 7);
-check('sw.js : cache botdev-v346', sw.includes("const CACHE = 'botdev-v346';"));
+check('index.html : ?v=347 ×7', (html.match(/\?v=347/g) || []).length === 7);
+check('sw.js : cache botdev-v347', sw.includes("const CACHE = 'botdev-v347';"));
 check('index.html : plus aucune ?v=321', !html.includes('?v=321'));
 
 console.log('— 2. Noms compréhensibles —');
-check('carte « Panneau à un bouton »', chunk.includes('🔘 Panneau à un bouton'));
-check('carte « Panneau avec menu (liste) »', chunk.includes('📋 Panneau avec menu (liste)'));
+check('carte Ticket classique', chunk.includes('🎫 Ticket classique'));
+check('carte Ticket menu', chunk.includes('📋 Ticket menu'));
 check('plus de titre vague « Configuration » dans tickets', !chunk.includes("Dashboard.card(root, 'Configuration'"));
 check('plus de « Panneau MENU déroulant » comme titre', !chunk.includes("'🗂️ Panneau MENU déroulant'"));
 check('types : pour bouton et menu seulement', chunk.includes('Types de tickets (bouton et menu)'));
-check('l’autre système s’appelle tickets avancés', chunk.includes('Autre système : tickets avancés'));
+check('l’autre système s’appelle Ticket avancé', chunk.includes('🎨 Ticket avancé'));
 check('le système avancé dit clairement que ce n’est PAS le menu',
-  chunk.includes('PAS le panneau avec menu') || chunk.includes('Ce n’est PAS le système avancé'));
+  chunk.includes('PAS le Ticket menu') || chunk.includes('Ce n’est PAS le Ticket menu'));
 
 console.log('— 3. Guide + ordre —');
 check('guide « Par où commencer ? »', chunk.includes('Par où commencer ?') && chunk.includes('ticket-guide'));
-check('le guide oppose classiques et avancés', chunk.includes('Tickets classiques') && chunk.includes('Tickets avancés'));
+check('le guide nomme les 3 systèmes', chunk.includes('Ticket classique') && chunk.includes('Ticket menu') && chunk.includes('Ticket avancé'));
 check('ordre DOM : bouton, menu, puis avancé (le reste est dans les cartes)',
   chunk.includes('[c, cm, c3]'));
 check('CSS du guide', css.includes('.ticket-guide .tg-sys') && css.includes('.tg-box-alt'));

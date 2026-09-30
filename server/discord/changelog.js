@@ -7,7 +7,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const ui = require('./ui');
 
-const VERSION = 346;
+const VERSION = 347;
 const DASHBOARD_URL = 'https://hoxera.is-a.dev';
 const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3';
 const AUTO_REVERT_MS = 2 * 60 * 1000;
@@ -15,6 +15,12 @@ const SELECT_ID = (botId) => `hx-upd:${botId}`;
 
 // Plus récent en premier. Menu Discord = 25 options max (accueil + 24 versions).
 const VERSIONS = [
+  {
+    v: 347, date: '30/09', title: 'Tickets : noms clairs',
+    new: ['Les 3 systèmes ont un nom : **Ticket classique**, **Ticket menu**, **Ticket avancé**, avec un exemple sur chacun.'],
+    improved: ['Les textes sous les modules sont plus clairs. Les menus des tickets disent à quel système ils appartiennent.'],
+    fixed: ['« Autre système : tickets avancés » et « Panneau avec menu (liste) » n’expliquaient pas assez.'],
+  },
   {
     v: 346, date: '30/09', title: 'Centre serveurs plus pro',
     new: ['La page **Choisissez un serveur** a des **bannières**, le nombre de membres, une **recherche** et des filtres (tous / à configurer / à inviter).'],
