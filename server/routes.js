@@ -839,6 +839,10 @@ router.put('/bots/:id/guilds/:guildId/verification', requireAuth, async (req, re
   if (typeof b.block_spammer === 'boolean') patch.block_spammer = b.block_spammer;
   if (typeof b.captcha === 'boolean') patch.captcha = b.captcha;
   if (b.captcha_channel !== undefined) patch.captcha_channel = String(b.captcha_channel || '').slice(0, 30);
+  if (b.captcha_role !== undefined) patch.captcha_role = String(b.captcha_role || '').slice(0, 30);
+  if (b.captcha_title !== undefined) patch.captcha_title = String(b.captcha_title || '').slice(0, 120);
+  if (b.captcha_desc !== undefined) patch.captcha_desc = String(b.captcha_desc || '').slice(0, 1500);
+  if (b.captcha_color !== undefined) patch.captcha_color = String(b.captcha_color || '').slice(0, 7);
   res.json({ ok: true, cfg: ver.saveCfg(req.params.guildId, patch) });
 });
 

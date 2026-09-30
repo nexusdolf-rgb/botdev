@@ -18,7 +18,8 @@ const DEFAULTS = {
   isolate: false, isolated_channels: [],
   panel_title: '', panel_desc: '', button_label: '', panel_color: '#57F287',
   require_avatar: false, block_spammer: false,
-  captcha: false, captcha_channel: '',
+  captcha: false, captcha_channel: '', captcha_role: '',
+  captcha_title: '', captcha_desc: '', captcha_color: '#e07a5f',
 };
 const CAPTCHA_TIMEOUT_MS = 2 * 60 * 1000;
 const CAPTCHA_MAX_ATTEMPTS = 2;
@@ -52,11 +53,35 @@ function cfgOf(guildId) {
   cfg.block_spammer = !!cfg.block_spammer;
   cfg.captcha = !!cfg.captcha;
   cfg.captcha_channel = String(cfg.captcha_channel || '').slice(0, 30);
+  cfg.captcha_role = String(cfg.captcha_role || '').slice(0, 30);
+  cfg.captcha_title = String(cfg.captcha_title || '').slice(0, 120);
+  cfg.captcha_desc = String(cfg.captcha_desc || '').slice(0, 1500);
+  cfg.captcha_color = /^#[0-9a-fA-F]{6}$/.test(String(cfg.captcha_color || '')) ? String(cfg.captcha_color) : '#e07a5f';
   return cfg;
 }
 
 function captchaChannelId(cfg) {
   return String((cfg && (cfg.captcha_channel || cfg.channel)) || '');
+}
+
+function verifiedRoleId(cfg) {
+  return String((cfg && (cfg.captcha_role || cfg.role)) || '');
+}
+
+function fillVars(text, vars) {
+  let out = String(text || '');
+  for (const [k, v] of Object.entries(vars || {})) out = out.split(`{${k}}`).join(String(v));
+  return out;
+}
+
+function captchaTexts(cfg, lang, extra = {}) {
+  const roleId = verifiedRoleId(cfg);
+  const role = roleId ? `<@&${roleId}>` : '—';
+  const vars = { server: extra.server || '', user: extra.user || '', role, ...extra };
+  const title = fillVars(String((cfg && cfg.captcha_title) || '').trim() || i18n.t(lang, 'verif_captcha_title', vars), vars);
+  const desc = fillVars(String((cfg && cfg.captcha_desc) || '').trim() || i18n.t(lang, 'verif_captcha_desc', vars), vars);
+  const color = /^#[0-9a-fA-F]{6}$/.test(String((cfg && cfg.captcha_color) || '')) ? String(cfg.captcha_color) : '#e07a5f';
+  return { title: title.slice(0, 120), desc: desc.slice(0, 1500), color };
 }
 
 function saveCfg(guildId, patch) {
@@ -111,10 +136,15 @@ function clearPending(guildId, userId) {
   catch { try { store.settings.set(pendingKey(guildId, userId), ''); } catch {} }
 }
 
+function randInt(n) {
+  const max = Math.max(1, Number(n) || 1);
+  try { return require('crypto').randomInt(max); } catch { return Math.floor(Math.random() * max); }
+}
+
 function generateCode(len = CAPTCHA_LEN) {
   const n = Math.max(4, Math.min(8, Number(len) || CAPTCHA_LEN));
   let s = '';
-  for (let i = 0; i < n; i++) s += CAPTCHA_CHARS[Math.floor(Math.random() * CAPTCHA_CHARS.length)];
+  for (let i = 0; i < n; i++) s += CAPTCHA_CHARS[randInt(CAPTCHA_CHARS.length)];
   return s;
 }
 
@@ -126,19 +156,26 @@ function captchaSvg(code) {
   const letters = String(code || '').split('');
   const w = 420;
   const h = 130;
-  const pal = ['#c45c3e', '#d4764e', '#b85a3a', '#e07a5f'];
+  const pal = ['#c45c3e', '#d4764e', '#b85a3a', '#e07a5f', '#f2cc8f'];
+  const rnd = () => {
+    try { return require('crypto').randomInt(10000) / 10000; } catch { return Math.random(); }
+  };
   let noise = '';
-  for (let i = 0; i < 10; i++) {
-    noise += `<line x1="${(i * 37) % w}" y1="${(i * 19) % h}" x2="${(i * 53) % w}" y2="${(h - i * 11) % h}" stroke="#e07a5f" stroke-opacity="0.22" stroke-width="1.5"/>`;
+  for (let i = 0; i < 12; i++) {
+    noise += `<line x1="${(rnd() * w).toFixed(1)}" y1="${(rnd() * h).toFixed(1)}" x2="${(rnd() * w).toFixed(1)}" y2="${(rnd() * h).toFixed(1)}" stroke="${pal[i % pal.length]}" stroke-opacity="${(0.12 + rnd() * 0.28).toFixed(2)}" stroke-width="${(1 + rnd() * 2).toFixed(1)}"/>`;
   }
-  const glyphs = letters.map((ch, i) => {
-    const x = 36 + i * 62;
-    const rot = ((i % 2 === 0) ? -1 : 1) * (8 + (i * 3) % 10);
-    const y = 86 + ((i % 3) - 1) * 6;
+  for (let i = 0; i < 16; i++) {
+    noise += `<circle cx="${(rnd() * w).toFixed(1)}" cy="${(rnd() * h).toFixed(1)}" r="${(0.7 + rnd() * 1.8).toFixed(1)}" fill="${pal[i % pal.length]}" fill-opacity="0.35"/>`;
+  }
+  const drawn = letters.map((ch, i) => {
+    const x = 24 + i * 64 + (rnd() * 14 - 7);
+    const rot = rnd() * 28 - 14;
+    const y = 76 + rnd() * 22;
+    const size = 50 + rnd() * 14;
     const safe = /[A-Z0-9]/.test(ch) ? ch : '?';
-    return `<text x="${x}" y="${y}" font-family="Times New Roman, Georgia, serif" font-size="58" font-style="italic" font-weight="700" fill="${pal[i % pal.length]}" transform="rotate(${rot} ${x} ${y})">${safe}</text>`;
+    return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-family="Times New Roman, Georgia, serif" font-size="${size.toFixed(0)}" font-style="italic" font-weight="700" fill="${pal[randInt(pal.length)]}" transform="rotate(${rot.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)})">${safe}</text>`;
   }).join('');
-  return `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg"><rect width="${w}" height="${h}" rx="8" fill="#1e1f22"/>${noise}${glyphs}</svg>`;
+  return `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg"><rect width="${w}" height="${h}" rx="8" fill="#1e1f22"/>${noise}${drawn}</svg>`;
 }
 
 async function captchaPng(code) {
@@ -178,7 +215,8 @@ async function startCaptcha(botId, member) {
   const channelId = captchaChannelId(cfg);
   const channel = guild.channels && guild.channels.cache ? guild.channels.cache.get(channelId) : null;
   if (!channel || typeof channel.send !== 'function') return false;
-  if (cfg.role && member.roles && member.roles.cache && member.roles.cache.has(cfg.role)) return false;
+  const already = verifiedRoleId(cfg);
+  if (already && member.roles && member.roles.cache && member.roles.cache.has(already)) return false;
   const old = getPending(guild.id, member.id);
   if (old) await deleteCaptchaMessage(guild, old);
   const code = generateCode();
@@ -186,6 +224,8 @@ async function startCaptcha(botId, member) {
   try { buf = await captchaPng(code); }
   catch (e) { console.error('[Hoxera] captcha image :', e && e.message); return false; }
   const lang = i18n.langForGuild(guild.id);
+  const who = (member.user && (member.user.globalName || member.user.username)) || 'Membre';
+  const texts = captchaTexts(cfg, lang, { server: guild.name || 'ce serveur', user: `${member}` });
   let avatarUrl = '';
   try {
     if (member.user && typeof member.user.displayAvatarURL === 'function') {
@@ -193,14 +233,14 @@ async function startCaptcha(botId, member) {
     }
   } catch {}
   const payload = ui.v2panel({
-    color: '#e07a5f',
+    color: texts.color,
     content: `${member}`,
     author: {
-      name: (member.user && (member.user.globalName || member.user.username)) || 'Membre',
+      name: who,
       iconURL: avatarUrl,
     },
-    title: i18n.t(lang, 'verif_captcha_title', { server: guild.name || 'ce serveur' }),
-    description: i18n.t(lang, 'verif_captcha_desc'),
+    title: texts.title,
+    description: texts.desc,
     image: 'attachment://captcha.png',
     footer: false,
   });
@@ -245,7 +285,8 @@ async function succeedCaptcha(botId, guild, member, pending) {
   await deleteCaptchaMessage(guild, pending);
   await clearMemberOverwrite(guild, pending && pending.channelId, userId);
   const cfg = cfgOf(guild.id);
-  const role = cfg.role && guild.roles && guild.roles.cache ? guild.roles.cache.get(cfg.role) : null;
+  const roleId = verifiedRoleId(cfg);
+  const role = roleId && guild.roles && guild.roles.cache ? guild.roles.cache.get(roleId) : null;
   if (role && member && member.roles && typeof member.roles.add === 'function') {
     await member.roles.add(role.id, 'Captcha réussi').catch(() => {});
   }
@@ -397,7 +438,8 @@ async function handleButton(botId, interaction) {
   }
   const cfg = cfgOf(guild.id);
   if (!cfg.enabled) { await interaction.reply({ content: i18n.t(lang, 'verif_off'), ephemeral: true }).catch(() => {}); return true; }
-  const role = cfg.role && guild.roles && guild.roles.cache ? guild.roles.cache.get(cfg.role) : null;
+  const roleId = String(cfg.role || cfg.captcha_role || '');
+  const role = roleId && guild.roles && guild.roles.cache ? guild.roles.cache.get(roleId) : null;
   if (!role) { await interaction.reply({ content: i18n.t(lang, 'verif_no_role'), ephemeral: true }).catch(() => {}); return true; }
   if (member.roles && member.roles.cache && member.roles.cache.has(role.id)) {
     await interaction.reply({ content: i18n.t(lang, 'verif_already'), ephemeral: true }).catch(() => {});
@@ -474,8 +516,8 @@ async function onJoin(botId, member) {
 // Vérifications rapides (salon, rôle, permission) — avant le long travail.
 function assertIsolationReady(guild) {
   const cfg = cfgOf(guild.id);
-  if (!cfg.channel) { const e = new Error('Choisissez d\'abord le salon de vérification.'); e.code = 'NO_CHANNEL'; throw e; }
-  if (!cfg.role) { const e = new Error('Choisissez d\'abord le rôle vérifié.'); e.code = 'NO_ROLE'; throw e; }
+  if (!cfg.channel && !captchaChannelId(cfg)) { const e = new Error('Choisissez d\'abord le salon de vérification.'); e.code = 'NO_CHANNEL'; throw e; }
+  if (!verifiedRoleId(cfg)) { const e = new Error('Choisissez d\'abord le rôle vérifié.'); e.code = 'NO_ROLE'; throw e; }
   const me = guild.members && guild.members.me;
   if (!me || !me.permissions || typeof me.permissions.has !== 'function' || !me.permissions.has(PermissionsBitField.Flags.ManageChannels)) {
     const e = new Error('Le bot n\'a pas la permission « Gérer les salons » sur ce serveur.'); e.code = 'NO_PERM'; throw e;
@@ -486,17 +528,19 @@ function assertIsolationReady(guild) {
 async function applyIsolation(botId, guild) {
   const cfg = assertIsolationReady(guild);
   const everyone = guild.roles.everyone.id;
+  const roleId = verifiedRoleId(cfg);
+  const skipIds = new Set([String(cfg.channel || ''), captchaChannelId(cfg)].filter(Boolean));
   const recorded = new Set(cfg.isolated_channels);
   let done = 0, skipped = 0, errors = 0;
   for (const ch of guild.channels.cache.values()) {
     if (!ch || ch.type === 4) continue; // catégories : jamais touchées
-    if (String(ch.id) === String(cfg.channel)) continue; // salon de vérification : traité à part
+    if (skipIds.has(String(ch.id))) continue; // salon de vérification / captcha : traité à part
     try {
       const ow = ch.permissionOverwrites && ch.permissionOverwrites.cache ? ch.permissionOverwrites.cache.get(everyone) : null;
       const alreadyHidden = !!(ow && ow.deny && typeof ow.deny.has === 'function' && ow.deny.has(PermissionsBitField.Flags.ViewChannel));
       if (alreadyHidden) { skipped++; continue; } // déjà privé : on ne touche pas, on ne note pas
       await ch.permissionOverwrites.edit(everyone, { ViewChannel: false }, { reason: 'v293 vérification : masqué aux non-vérifiés' });
-      await ch.permissionOverwrites.edit(cfg.role, { ViewChannel: true }, { reason: 'v293 vérification : visible pour les vérifiés' });
+      await ch.permissionOverwrites.edit(roleId, { ViewChannel: true }, { reason: 'v293 vérification : visible pour les vérifiés' });
       recorded.add(String(ch.id));
       done++;
     } catch (e) { errors++; }
@@ -527,7 +571,8 @@ async function removeIsolation(botId, guild) {
       // ViewChannel: null retire UNIQUEMENT cette permission de l'écrasement
       // (les autres réglages du salon sont conservés).
       await ch.permissionOverwrites.edit(everyone, { ViewChannel: null }, { reason: 'v293 vérification : fin de l\'isolation' });
-      if (cfg.role) await ch.permissionOverwrites.edit(cfg.role, { ViewChannel: null }, { reason: 'v293 vérification : fin de l\'isolation' });
+      const rid = verifiedRoleId(cfg);
+      if (rid) await ch.permissionOverwrites.edit(rid, { ViewChannel: null }, { reason: 'v293 vérification : fin de l\'isolation' });
       done++;
     } catch (e) { /* best effort */ }
   }
@@ -542,7 +587,7 @@ async function onChannelCreate(botId, channel) {
     const guild = channel && channel.guild;
     if (!guild || channel.type === 4) return;
     const cfg = cfgOf(guild.id);
-    if (!cfg.enabled || !cfg.isolate || !cfg.role) return;
+    if (!cfg.enabled || !cfg.isolate || !verifiedRoleId(cfg)) return;
     if (String(channel.id) === String(cfg.channel)) return;
     const everyone = guild.roles.everyone.id;
     // 🛡️ v301 — un salon créé avec « @everyone : voir le salon = refusé »
@@ -554,7 +599,7 @@ async function onChannelCreate(botId, channel) {
     const alreadyHidden = !!(ow && ow.deny && typeof ow.deny.has === 'function' && ow.deny.has(PermissionsBitField.Flags.ViewChannel));
     if (alreadyHidden) return;
     await channel.permissionOverwrites.edit(everyone, { ViewChannel: false }, { reason: 'v293 vérification : nouveau salon masqué aux non-vérifiés' });
-    await channel.permissionOverwrites.edit(cfg.role, { ViewChannel: true }, { reason: 'v293 vérification : nouveau salon visible pour les vérifiés' });
+    await channel.permissionOverwrites.edit(verifiedRoleId(cfg), { ViewChannel: true }, { reason: 'v293 vérification : nouveau salon visible pour les vérifiés' });
     const set = new Set(cfg.isolated_channels);
     set.add(String(channel.id));
     saveCfg(guild.id, { isolated_channels: [...set] });
@@ -572,7 +617,7 @@ async function repairPrivateChannels(botId, entry) {
   for (const guild of client.guilds.cache.values()) {
     try {
       const cfg = cfgOf(guild.id);
-      if (!cfg.enabled || !cfg.isolate || !cfg.role) continue;
+      if (!cfg.enabled || !cfg.isolate || !verifiedRoleId(cfg)) continue;
       const privateIds = new Set();
       try { for (const t of store.openTickets.allForGuild(botId, guild.id)) privateIds.add(String(t.channel_id)); } catch {}
       try {
@@ -595,11 +640,12 @@ async function repairPrivateChannels(botId, entry) {
       for (const id of privateIds) {
         const ch = guild.channels.cache.get(id);
         if (!ch || !ch.permissionOverwrites || !ch.permissionOverwrites.cache) continue;
-        const owRole = ch.permissionOverwrites.cache.get(String(cfg.role));
+        const rid = verifiedRoleId(cfg);
+        const owRole = ch.permissionOverwrites.cache.get(String(rid));
         const leaks = !!(owRole && owRole.allow && typeof owRole.allow.has === 'function' && owRole.allow.has(PermissionsBitField.Flags.ViewChannel));
         if (!leaks) continue;
         const done = await ch.permissionOverwrites
-          .edit(String(cfg.role), { ViewChannel: null }, { reason: 'v301 vérification : salon de ticket privé — visibilité du rôle vérifié retirée' })
+          .edit(String(rid), { ViewChannel: null }, { reason: 'v301 vérification : salon de ticket privé — visibilité du rôle vérifié retirée' })
           .then(() => true).catch(() => false);
         if (!done) continue;
         fixed++;
@@ -620,8 +666,9 @@ async function repairPrivateChannels(botId, entry) {
 // les membres présents quand on active l'isolation sur un serveur existant).
 function assertGrantReady(guild) {
   const cfg = cfgOf(guild.id);
-  if (!cfg.role) { const e = new Error('Choisissez d\'abord le rôle vérifié.'); e.code = 'NO_ROLE'; throw e; }
-  const role = guild.roles.cache.get(cfg.role);
+  const rid = verifiedRoleId(cfg);
+  if (!rid) { const e = new Error('Choisissez d\'abord le rôle vérifié.'); e.code = 'NO_ROLE'; throw e; }
+  const role = guild.roles.cache.get(rid);
   if (!role) { const e = new Error('Rôle vérifié introuvable sur ce serveur.'); e.code = 'NO_ROLE'; throw e; }
   const me = guild.members && guild.members.me;
   if (!me || !me.permissions || typeof me.permissions.has !== 'function' || !me.permissions.has(PermissionsBitField.Flags.ManageRoles)) {
@@ -651,7 +698,7 @@ module.exports = {
   cfgOf, saveCfg, sendPanel, handleButton, onJoin, GATE_CHOICES, panelTexts,
   hasCustomAvatar, isSpammer, assertIsolationReady, applyIsolation, removeIsolation,
   onChannelCreate, repairPrivateChannels, assertGrantReady, grantRoleToAll,
-  captchaChannelId, generateCode, normalizeGuess, captchaSvg, captchaPng,
+  captchaChannelId, verifiedRoleId, captchaTexts, generateCode, normalizeGuess, captchaSvg, captchaPng,
   getPending, setPending, clearPending, holdsArrival, startCaptcha, onMessage,
   onMemberLeave, sweepCaptchas, CAPTCHA_TIMEOUT_MS, CAPTCHA_MAX_ATTEMPTS,
   _test: { DEFAULTS, CAPTCHA_CHARS, CAPTCHA_LEN },

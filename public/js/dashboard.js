@@ -7324,20 +7324,37 @@ Dashboard.renderers.botsettings = async (content) => {
 Dashboard.renderers.verification = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const root = Dashboard.header(content, '✅', 'Vérification', 'Captcha à l’arrivée (nouveau), bouton « Je suis humain », Join Gate, isolation. Discord ne dit pas aux bots si un compte est volé.');
-  const cfg = Object.assign({ enabled: false, channel: '', role: '', gate_days: 0, bot_filter: false, approved_bots: [], isolate: false, isolated_channels: [], panel_title: '', panel_desc: '', button_label: '', panel_color: '#57F287', require_avatar: false, block_spammer: false, captcha: false, captcha_channel: '' }, data.verification || {});
+  const cfg = Object.assign({ enabled: false, channel: '', role: '', gate_days: 0, bot_filter: false, approved_bots: [], isolate: false, isolated_channels: [], panel_title: '', panel_desc: '', button_label: '', panel_color: '#57F287', require_avatar: false, block_spammer: false, captcha: false, captcha_channel: '', captcha_role: '', captcha_title: '', captcha_desc: '', captcha_color: '#e07a5f' }, data.verification || {});
   const textCh = (data.channels || []).filter((ch) => !ch.voice && !ch.category);
   const capSel = textCh.map((ch) => `<option value="${ch.id}" ${String(cfg.captcha_channel || '') === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('');
-  const cCap = Dashboard.card(root, '🧩 Captcha à l’arrivée', 'Quand quelqu’un rejoint le serveur, le bot lui envoie une image de lettres dans le salon choisi. Il recopie ce qu’il voit. 2 essais, 2 minutes. Sinon il est expulsé, avec un message privé clair. Le bouton « Je suis humain » reste disponible plus bas.');
+  const capRoleSel = (data.roles || []).map((r) => `<option value="${r.id}" ${String(cfg.captcha_role || '') === r.id ? 'selected' : ''}>@ ${App.escapeHtml(r.name)}</option>`).join('');
+  const capColor = /^#[0-9a-fA-F]{6}$/.test(String(cfg.captcha_color || '')) ? cfg.captcha_color : '#e07a5f';
+  const cCap = Dashboard.card(root, '🧩 Captcha à l’arrivée', 'Quand quelqu’un rejoint, le bot lui envoie un panneau + une image de lettres. Chaque arrivée a un code différent. 2 essais, 2 minutes. Le bouton « Je suis humain » reste plus bas.');
   cCap.innerHTML += `
     <label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" id="ver-captcha" ${cfg.captcha ? 'checked' : ''} /> Activer le captcha à l’arrivée</label>
     <label class="dash-label">Salon du captcha</label>
     <select class="dash-select" id="ver-captcha-channel">
-      <option value="">— Même salon que le panneau ci-dessous —</option>
+      <option value="">— Même salon que le panneau bouton —</option>
       ${capSel}
     </select>
+    <label class="dash-label">Rôle accordé après le captcha</label>
+    <select class="dash-select" id="ver-captcha-role">
+      <option value="">— Choisir un rôle —</option>
+      ${capRoleSel}
+    </select>
+    <label class="dash-label">Titre du panneau</label>
+    <input class="dash-input" id="ver-captcha-title" maxlength="120" value="${App.escapeHtml(cfg.captcha_title || '')}" placeholder="Bienvenue sur {server} !" />
+    <label class="dash-label">Texte du panneau</label>
+    <textarea class="dash-input" id="ver-captcha-desc" rows="4" maxlength="1500" placeholder="Pour accéder à tout le serveur, recopiez les caractères que vous voyez sur l’image.">${App.escapeHtml(cfg.captcha_desc || '')}</textarea>
+    <div style="font-size:12px;color:var(--d-dim);margin:4px 0 8px">{server} = nom du serveur · {user} = mention du membre · {role} = rôle accordé. L’image de lettres, elle, change à chaque personne — on ne la rédige pas.</div>
+    <label class="dash-label">Couleur de la barre</label>
+    <input type="color" id="ver-captcha-color" value="${App.escapeHtml(capColor)}" />
+    <label class="dash-label">Aperçu du panneau</label>
+    <div id="ver-captcha-preview" style="border-radius:10px;overflow:hidden;background:#2b2d31;border:1px solid rgba(255,255,255,.08);text-align:left"></div>
     <div style="font-size:12px;color:var(--d-dim);margin-top:10px;line-height:1.45">
-      Ce qu’il voit : uniquement ce salon (si l’isolation est activée). Il recopie les lettres. S’il réussit, il reçoit le rôle vérifié, voit tout le serveur, et le message de bienvenue part dans le salon choisi au module <b>Bienvenue</b>.
-    </div>`;
+      Avec l’isolation activée, il ne voit que ce salon. S’il réussit : le rôle ci-dessus, tous les salons, puis le message du module <b>Bienvenue</b>.
+    </div>
+    <div style="margin-top:12px"><button class="dash-btn dash-btn-primary" id="ver-cap-save">💾 Enregistrer le captcha</button></div>`;
   const c1 = Dashboard.card(root, '🛡️ Réglages de la vérification', 'Le nouveau membre clique sur « Je suis humain » dans le salon de vérification, puis reçoit le rôle vérifié. Astuce pro : dans vos salons, n\'autorisez la vue qu\'au rôle vérifié — les non-vérifiés ne verront que le salon de vérification.');
   c1.innerHTML += `
     <label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" id="ver-enabled" ${cfg.enabled ? 'checked' : ''} /> Activer la vérification sur ce serveur</label>
@@ -7409,10 +7426,17 @@ Dashboard.renderers.verification = async (content, data) => {
       panel_color: (root.querySelector('#ver-color') || {}).value || '#57F287',
       captcha: captchaOn,
       captcha_channel: (root.querySelector('#ver-captcha-channel') || {}).value || '',
+      captcha_role: (root.querySelector('#ver-captcha-role') || {}).value || '',
+      captcha_title: (root.querySelector('#ver-captcha-title') || {}).value || '',
+      captcha_desc: (root.querySelector('#ver-captcha-desc') || {}).value || '',
+      captcha_color: (root.querySelector('#ver-captcha-color') || {}).value || '#e07a5f',
     };
+    if (body.captcha_role && !body.role) body.role = body.captcha_role;
     const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/verification`, { method: 'PUT', body });
     App.toast(r.ok ? '✅ Vérification enregistrée.' : '⚠️ Enregistrement impossible.');
   };
+  const capSave = root.querySelector('#ver-cap-save');
+  if (capSave) capSave.onclick = () => c1.querySelector('#ver-save').click();
   c1.querySelector('#ver-send').onclick = async () => {
     const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/verification/panel`, { method: 'POST', body: { channel: c1.querySelector('#ver-channel').value } });
     App.toast(r.ok ? '📤 Panneau de vérification envoyé !' : `⚠️ ${r.error || 'Envoi impossible (bot hors ligne ?).'}`);
@@ -7448,6 +7472,25 @@ Dashboard.renderers.verification = async (content, data) => {
   });
   c1.querySelector('#ver-role')?.addEventListener('change', paintPreview);
   paintPreview();
+  const paintCapPreview = () => {
+    const box = root.querySelector('#ver-captcha-preview');
+    if (!box) return;
+    const color = (root.querySelector('#ver-captcha-color') || {}).value || '#e07a5f';
+    const roleSel = root.querySelector('#ver-captcha-role');
+    const roleName = (roleSel && roleSel.selectedOptions && roleSel.selectedOptions[0] && roleSel.value) ? roleSel.selectedOptions[0].textContent.replace(/^@\s*/, '') : 'Vérifié';
+    const title = ((root.querySelector('#ver-captcha-title') || {}).value || '').trim() || 'Bienvenue sur {server} !';
+    const desc = ((root.querySelector('#ver-captcha-desc') || {}).value || '').trim() || 'Pour accéder à tout le serveur, recopiez les caractères que vous voyez sur l’image.\nVous avez 2 minutes et 2 essais.';
+    const filled = (s) => s.split('{server}').join('AyAyTR').split('{user}').join('@Alex').split('{role}').join('@' + roleName);
+    const sample = ['Q','T','7','K','2','H'];
+    const letters = sample.map((ch, i) => `<text x="${36+i*62}" y="${80+(i%2)*8}" font-family="Times New Roman, Georgia, serif" font-size="52" font-style="italic" font-weight="700" fill="${['#c45c3e','#d4764e','#b85a3a','#e07a5f'][i%4]}" transform="rotate(${(i%2?1:-1)*(8+i)} ${36+i*62} ${80+(i%2)*8})">${ch}</text>`).join('');
+    box.innerHTML = `<div style="display:flex;min-height:90px"><div style="width:4px;background:${App.escapeHtml(color)};flex:0 0 4px"></div><div style="padding:12px 14px;flex:1;min-width:0"><b style="color:#f2f3f5;font-size:15px">${App.escapeHtml(filled(title))}</b><p style="margin:8px 0 12px;color:#dbdee1;font-size:13.5px;white-space:pre-wrap;line-height:1.45">${App.escapeHtml(filled(desc))}</p><div style="background:#1e1f22;border-radius:6px;padding:6px 4px"><svg width="100%" height="70" viewBox="0 0 420 130" xmlns="http://www.w3.org/2000/svg"><rect width="420" height="130" rx="8" fill="#1e1f22"/>${letters}</svg></div><div style="margin-top:8px;font-size:11px;color:#949ba4">Aperçu : l’image réelle est différente à chaque arrivée.</div></div></div>`;
+  };
+  ['#ver-captcha-title', '#ver-captcha-desc', '#ver-captcha-color', '#ver-captcha-role'].forEach((sel) => {
+    const el = root.querySelector(sel);
+    if (el) el.addEventListener('input', paintCapPreview);
+    if (el) el.addEventListener('change', paintCapPreview);
+  });
+  paintCapPreview();
 };
 
 Dashboard.renderers.transcripts = async (content, data) => {

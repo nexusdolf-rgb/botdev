@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v341**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (dernier : **v342**) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -962,6 +962,9 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v342 (30/09 — CAPTCHA COMPLET)** :
+  rôle après succès, textes du panneau captcha modifiables, aperçu,
+  code + dessin uniques à chaque arrivée. test/v342-test.js.
 - **v341 (30/09 — CAPTCHA À L’ARRIVÉE)** :
   nouveau système dans le module Vérification : image de lettres dans
   le salon choisi, 2 essais / 2 min, kick + MP. Le bouton « Je suis
@@ -1567,7 +1570,9 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 ## 📌 ÉTAT AU 23/09/2026 (dernière mise à jour de ce document)
 
-- Dernière version : **v341** — captcha à l’arrivée dans Vérification
+- Dernière version : **v342** — captcha complet (rôle, textes, unique).
+  `test/v342-test.js`. Aperçu `docs/apercu-captcha.html`.
+- **v341** — captcha à l’arrivée dans Vérification
   (bouton conservé). `test/v341-test.js`. Aperçu `docs/apercu-captcha.html`.
 - **v340** — ticket fermé : le créateur voit
   encore le salon mais ne peut plus écrire. `test/v340-test.js`.

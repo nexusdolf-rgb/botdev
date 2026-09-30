@@ -7,7 +7,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const ui = require('./ui');
 
-const VERSION = 341;
+const VERSION = 342;
 const DASHBOARD_URL = 'https://hoxera.is-a.dev';
 const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3';
 const AUTO_REVERT_MS = 2 * 60 * 1000;
@@ -15,6 +15,12 @@ const SELECT_ID = (botId) => `hx-upd:${botId}`;
 
 // Plus récent en premier. Menu Discord = 25 options max (accueil + 24 versions).
 const VERSIONS = [
+  {
+    v: 342, date: '30/09', title: 'Captcha : rôle, textes, unique',
+    new: ['Dans le captcha : **rôle après succès**, **titre et texte du panneau** modifiables, aperçu en direct.'],
+    improved: ['Chaque arrivée reçoit un **nouveau** code, avec une image différente (pas la même à chaque fois).'],
+    fixed: [],
+  },
   {
     v: 341, date: '30/09', title: 'Captcha à l’arrivée',
     new: ['Quand un membre rejoint, le bot peut lui envoyer un **captcha** (image de lettres) dans le salon choisi : 2 essais, 2 minutes, sinon expulsion avec un MP clair.'],
