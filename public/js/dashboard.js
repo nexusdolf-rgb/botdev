@@ -7352,7 +7352,7 @@ Dashboard.renderers.verification = async (content, data) => {
     <label class="dash-label">Aperçu du panneau</label>
     <div id="ver-captcha-preview" style="border-radius:10px;overflow:hidden;background:#2b2d31;border:1px solid rgba(255,255,255,.08);text-align:left"></div>
     <div style="font-size:12px;color:var(--d-dim);margin-top:10px;line-height:1.45">
-      Avec l’isolation activée, il ne voit que ce salon. S’il réussit : le rôle ci-dessus, tous les salons, puis le message du module <b>Bienvenue</b>.
+      Le salon est <b>invisible</b> aux autres membres. Le captcha part dans un <b>fil privé</b> : personne ne voit l’image ni ce qu’il tape. Le reste du serveur (tickets compris) est masqué jusqu’à succès. L’isolation s’active toute seule.
     </div>
     <div style="margin-top:12px"><button class="dash-btn dash-btn-primary" id="ver-cap-save">💾 Enregistrer le captcha</button></div>`;
   const c1 = Dashboard.card(root, '🛡️ Réglages de la vérification', 'Le nouveau membre clique sur « Je suis humain » dans le salon de vérification, puis reçoit le rôle vérifié. Astuce pro : dans vos salons, n\'autorisez la vue qu\'au rôle vérifié — les non-vérifiés ne verront que le salon de vérification.');

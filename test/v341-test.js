@@ -31,8 +31,8 @@ const ver = require('../server/discord/verification');
 const changelog = require('../server/discord/changelog');
 
 console.log('— 1. Pins v341 —');
-check('index.html : ?v=342 ×7', (html.match(/\?v=342/g) || []).length === 7);
-check('sw.js : cache botdev-v342', sw.includes("const CACHE = 'botdev-v342';"));
+check('index.html : ?v=343 ×7', (html.match(/\?v=343/g) || []).length === 7);
+check('sw.js : cache botdev-v343', sw.includes("const CACHE = 'botdev-v343';"));
 check('index.html : plus aucune ?v=340', !html.includes('?v=340'));
 check('VERSION ≥ 341', changelog.VERSION >= 341);
 check('journal v341 : au moins 1 nouveauté', Array.isArray(changelog.NOTES.new) && changelog.NOTES.new.length >= 1);

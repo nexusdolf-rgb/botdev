@@ -7,7 +7,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const ui = require('./ui');
 
-const VERSION = 342;
+const VERSION = 343;
 const DASHBOARD_URL = 'https://hoxera.is-a.dev';
 const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3';
 const AUTO_REVERT_MS = 2 * 60 * 1000;
@@ -15,6 +15,12 @@ const SELECT_ID = (botId) => `hx-upd:${botId}`;
 
 // Plus récent en premier. Menu Discord = 25 options max (accueil + 24 versions).
 const VERSIONS = [
+  {
+    v: 343, date: '30/09', title: 'Captcha privé',
+    new: ['Le captcha est **privé** : salon invisible aux autres, image et saisie dans un **fil privé**, tickets et serveur masqués jusqu’au succès.'],
+    improved: ['Activer le captcha **isole tout seul** le serveur. Les tickets ne sont jamais ouverts au rôle vérifié.'],
+    fixed: ['Le panneau et le code tapé étaient visibles de tout le serveur ; un nouveau membre voyait les tickets avant d’être vérifié.'],
+  },
   {
     v: 342, date: '30/09', title: 'Captcha : rôle, textes, unique',
     new: ['Dans le captcha : **rôle après succès**, **titre et texte du panneau** modifiables, aperçu en direct.'],

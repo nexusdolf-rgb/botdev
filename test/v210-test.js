@@ -66,8 +66,8 @@ check('dashboard : toggle des niveaux ciblé par id (plus de sélecteur généri
 check('dashboard : carte activée par défaut', dash.includes("s.xp_card === 0 || s.xp_card === false ? '' : 'checked'"));
 
 // ---------- 5. Versions ----------
-check('index : version v210', index.includes('?v=342'));
-check('service worker : cache v210', sw.includes('botdev-v342'));
+check('index : version v210', index.includes('?v=343'));
+check('service worker : cache v210', sw.includes('botdev-v343'));
 
 console.log(`\n✅ v210-test.js : ${n} vérifications OK`);
 process.exit(0);

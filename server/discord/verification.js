@@ -11,7 +11,7 @@ const ui = require('./ui');
 const i18n = require('../i18n');
 const logging = require('./logging');
 const { canConfigureGuild } = require('./permissions');
-const { ButtonBuilder, ButtonStyle, ActionRowBuilder, PermissionsBitField } = require('discord.js');
+const { ButtonBuilder, ButtonStyle, ActionRowBuilder, PermissionsBitField, ChannelType } = require('discord.js');
 
 const DEFAULTS = {
   enabled: false, channel: '', role: '', gate_days: 0, bot_filter: false, approved_bots: [],
@@ -188,10 +188,24 @@ function holdsArrival(guildId, member) {
   return !!getPending(guildId, member.id);
 }
 
+function isThreadType(ch) {
+  const t = ch && ch.type;
+  return t === 10 || t === 11 || t === 12 || t === ChannelType.PublicThread || t === ChannelType.PrivateThread || t === ChannelType.AnnouncementThread;
+}
+
+function isPrivateTicketChannel(channel) {
+  if (!channel) return false;
+  if (String(channel.topic || '').startsWith('Ticket #')) return true;
+  try { if (store.openTickets.getByChannel(channel.id)) return true; } catch {}
+  try { if (store.advancedTickets.byChannel(channel.id)) return true; } catch {}
+  return false;
+}
+
 async function deleteCaptchaMessage(guild, pending) {
   try {
-    if (!guild || !pending || !pending.channelId || !pending.messageId) return;
-    const ch = guild.channels && guild.channels.cache ? guild.channels.cache.get(String(pending.channelId)) : null;
+    if (!guild || !pending || !pending.messageId) return;
+    const destId = pending.threadId || pending.channelId;
+    const ch = guild.channels && guild.channels.cache ? guild.channels.cache.get(String(destId)) : null;
     if (!ch || !ch.messages || typeof ch.messages.fetch !== 'function') return;
     const msg = await ch.messages.fetch(String(pending.messageId)).catch(() => null);
     if (msg && typeof msg.delete === 'function') await msg.delete().catch(() => {});
@@ -208,6 +222,68 @@ async function clearMemberOverwrite(guild, channelId, userId) {
   } catch {}
 }
 
+async function lockCaptchaChannel(guild, channel) {
+  if (!guild || !channel || !channel.permissionOverwrites || typeof channel.permissionOverwrites.edit !== 'function') return;
+  const everyone = guild.roles && guild.roles.everyone && guild.roles.everyone.id;
+  if (!everyone) return;
+  await channel.permissionOverwrites.edit(everyone, {
+    ViewChannel: false,
+    SendMessages: false,
+    CreatePublicThreads: false,
+    CreatePrivateThreads: false,
+    SendMessagesInThreads: false,
+  }, { reason: 'captcha : salon invisible aux membres' }).catch(() => {});
+}
+
+async function restrictMember(guild, member, exceptId) {
+  const hidden = [];
+  if (!guild || !member) return hidden;
+  const targets = [];
+  for (const ch of guild.channels.cache.values()) {
+    if (!ch || isThreadType(ch)) continue;
+    if (String(ch.id) === String(exceptId)) continue;
+    if (isPrivateTicketChannel(ch)) continue;
+    if (ch.type === 4 || !ch.parentId) targets.push(ch);
+  }
+  for (let i = 0; i < targets.length; i += 8) {
+    const slice = targets.slice(i, i + 8);
+    await Promise.all(slice.map((ch) => {
+      if (!ch.permissionOverwrites || typeof ch.permissionOverwrites.edit !== 'function') return Promise.resolve();
+      return ch.permissionOverwrites.edit(member.id, { ViewChannel: false }, { reason: 'captcha : serveur masqué' })
+        .then(() => { hidden.push(String(ch.id)); })
+        .catch(() => {});
+    }));
+  }
+  return hidden;
+}
+
+async function unrestrictMember(guild, memberId, ids) {
+  const list = Array.isArray(ids) ? ids : [];
+  for (let i = 0; i < list.length; i += 8) {
+    const slice = list.slice(i, i + 8);
+    await Promise.all(slice.map((id) => {
+      const ch = guild && guild.channels && guild.channels.cache ? guild.channels.cache.get(String(id)) : null;
+      if (!ch || !ch.permissionOverwrites || typeof ch.permissionOverwrites.delete !== 'function') return Promise.resolve();
+      return ch.permissionOverwrites.delete(String(memberId)).catch(() => {});
+    }));
+  }
+}
+
+async function deleteCaptchaThread(guild, pending) {
+  try {
+    if (!pending || !pending.threadId || String(pending.threadId) === String(pending.channelId)) return;
+    const th = guild && guild.channels && guild.channels.cache ? guild.channels.cache.get(String(pending.threadId)) : null;
+    if (th && typeof th.delete === 'function') await th.delete('Captcha terminé').catch(() => {});
+  } catch {}
+}
+
+async function cleanupCaptcha(guild, pending, userId) {
+  await deleteCaptchaMessage(guild, pending);
+  await deleteCaptchaThread(guild, pending);
+  await clearMemberOverwrite(guild, pending && pending.channelId, userId);
+  await unrestrictMember(guild, userId, pending && pending.hidden);
+}
+
 async function startCaptcha(botId, member) {
   const guild = member && member.guild;
   if (!guild) return false;
@@ -218,7 +294,19 @@ async function startCaptcha(botId, member) {
   const already = verifiedRoleId(cfg);
   if (already && member.roles && member.roles.cache && member.roles.cache.has(already)) return false;
   const old = getPending(guild.id, member.id);
-  if (old) await deleteCaptchaMessage(guild, old);
+  if (old) await cleanupCaptcha(guild, old, member.id);
+  await lockCaptchaChannel(guild, channel);
+  try {
+    if (channel.permissionOverwrites && typeof channel.permissionOverwrites.edit === 'function') {
+      await channel.permissionOverwrites.edit(member.id, {
+        ViewChannel: true,
+        ReadMessageHistory: true,
+        SendMessages: false,
+        SendMessagesInThreads: true,
+      }, { reason: 'captcha : accès au salon privé' }).catch(() => {});
+    }
+  } catch {}
+  const hidden = await restrictMember(guild, member, channelId);
   const code = generateCode();
   let buf;
   try { buf = await captchaPng(code); }
@@ -244,9 +332,37 @@ async function startCaptcha(botId, member) {
     image: 'attachment://captcha.png',
     footer: false,
   });
+  let dest = channel;
+  try {
+    if (channel.threads && typeof channel.threads.create === 'function') {
+      const tname = (`captcha-${who}`).replace(/[^\w\- àâäéèêëïîôùûüçÀ-ÿ]/gi, '').trim().slice(0, 90) || 'captcha';
+      const thread = await channel.threads.create({
+        name: tname,
+        autoArchiveDuration: 60,
+        type: ChannelType.PrivateThread,
+        invitable: false,
+        reason: 'Captcha privé',
+      });
+      if (thread) {
+        if (thread.members && typeof thread.members.add === 'function') {
+          await thread.members.add(member.id).catch(() => {});
+        }
+        dest = thread;
+      }
+    }
+  } catch (e) { console.error('[Hoxera] captcha fil privé :', e && e.message); }
+  if (dest === channel) {
+    try {
+      await channel.permissionOverwrites.edit(member.id, {
+        ViewChannel: true,
+        ReadMessageHistory: true,
+        SendMessages: true,
+      }, { reason: 'captcha : saisie dans le salon (fil indisponible)' }).catch(() => {});
+    } catch {}
+  }
   let sent;
   try {
-    sent = await channel.send({
+    sent = await dest.send({
       ...payload,
       files: [{ attachment: buf, name: 'captcha.png' }],
       allowedMentions: { users: [String(member.id)] },
@@ -255,17 +371,6 @@ async function startCaptcha(botId, member) {
     console.error('[Hoxera] captcha envoi :', e && e.message);
     return false;
   }
-  try {
-    if (channel.permissionOverwrites && typeof channel.permissionOverwrites.edit === 'function') {
-      await channel.permissionOverwrites.edit(member.id, {
-        ViewChannel: true, SendMessages: true, ReadMessageHistory: true,
-      }).catch(() => {});
-      const everyone = guild.roles && guild.roles.everyone && guild.roles.everyone.id;
-      if (everyone) {
-        await channel.permissionOverwrites.edit(everyone, { ViewChannel: true, SendMessages: false }).catch(() => {});
-      }
-    }
-  } catch {}
   setPending(guild.id, member.id, {
     botId,
     guildId: String(guild.id),
@@ -275,6 +380,8 @@ async function startCaptcha(botId, member) {
     expiresAt: Date.now() + CAPTCHA_TIMEOUT_MS,
     messageId: sent && sent.id ? String(sent.id) : '',
     channelId,
+    threadId: dest && dest.id && String(dest.id) !== String(channelId) ? String(dest.id) : '',
+    hidden,
   });
   return true;
 }
@@ -282,8 +389,7 @@ async function startCaptcha(botId, member) {
 async function succeedCaptcha(botId, guild, member, pending) {
   const userId = String((member && member.id) || (pending && pending.userId) || '');
   clearPending(guild.id, userId);
-  await deleteCaptchaMessage(guild, pending);
-  await clearMemberOverwrite(guild, pending && pending.channelId, userId);
+  await cleanupCaptcha(guild, pending, userId);
   const cfg = cfgOf(guild.id);
   const roleId = verifiedRoleId(cfg);
   const role = roleId && guild.roles && guild.roles.cache ? guild.roles.cache.get(roleId) : null;
@@ -305,8 +411,7 @@ async function failCaptcha(botId, guild, member, pending, reason) {
   const userId = String((member && member.id) || (pending && pending.userId) || '');
   const lang = i18n.langForGuild(guild.id);
   clearPending(guild.id, userId);
-  await deleteCaptchaMessage(guild, pending);
-  await clearMemberOverwrite(guild, pending && pending.channelId, userId);
+  await cleanupCaptcha(guild, pending, userId);
   const user = member && member.user;
   try {
     if (user && typeof user.send === 'function') {
@@ -332,15 +437,23 @@ async function onMessage(botId, message) {
     if (!cfg.enabled || !cfg.captcha) return false;
     const capCh = captchaChannelId(cfg);
     const chId = String(message.channelId || (message.channel && message.channel.id) || '');
-    if (!capCh || chId !== capCh) return false;
+    const parentId = String((message.channel && (message.channel.parentId || (message.channel.parent && message.channel.parent.id))) || '');
     const userId = String(message.author && message.author.id || '');
     if (!userId) return false;
     const pending = getPending(guild.id, userId);
+    const destId = pending ? String(pending.threadId || pending.channelId || '') : '';
+    const inDest = pending && destId && chId === destId;
+    const inCap = !!capCh && (chId === capCh || parentId === capCh);
+    if (!inDest && !inCap) return false;
     const member = message.member;
     if (!pending) {
       let staff = false;
       try { staff = canConfigureGuild(guild, member, userId); } catch {}
       if (staff) return false;
+      await Promise.resolve(message.delete && message.delete()).catch(() => {});
+      return true;
+    }
+    if (pending.threadId && chId !== String(pending.threadId)) {
       await Promise.resolve(message.delete && message.delete()).catch(() => {});
       return true;
     }
@@ -375,7 +488,7 @@ async function onMemberLeave(botId, member) {
     const pending = getPending(member.guild.id, member.id);
     if (!pending) return;
     clearPending(member.guild.id, member.id);
-    await deleteCaptchaMessage(member.guild, pending);
+    await cleanupCaptcha(member.guild, pending, member.id);
   } catch {}
 }
 
@@ -499,7 +612,13 @@ async function onJoin(botId, member) {
         return;
       }
     }
-    if (cfg.captcha) await startCaptcha(botId, member);
+    if (cfg.captcha) {
+      if (!cfg.isolate) {
+        try { await applyIsolation(botId, guild); }
+        catch (e) { console.error('[Hoxera] isolation captcha :', e && e.message); }
+      }
+      await startCaptcha(botId, member);
+    }
   } catch { /* la vérification ne doit jamais casser l'arrivée d'un membre */ }
 }
 
@@ -535,6 +654,7 @@ async function applyIsolation(botId, guild) {
   for (const ch of guild.channels.cache.values()) {
     if (!ch || ch.type === 4) continue; // catégories : jamais touchées
     if (skipIds.has(String(ch.id))) continue; // salon de vérification / captcha : traité à part
+    if (isThreadType(ch) || isPrivateTicketChannel(ch)) continue;
     try {
       const ow = ch.permissionOverwrites && ch.permissionOverwrites.cache ? ch.permissionOverwrites.cache.get(everyone) : null;
       const alreadyHidden = !!(ow && ow.deny && typeof ow.deny.has === 'function' && ow.deny.has(PermissionsBitField.Flags.ViewChannel));
@@ -545,14 +665,14 @@ async function applyIsolation(botId, guild) {
       done++;
     } catch (e) { errors++; }
   }
-  // Le salon de vérification / captcha reste visible. Personne n'y discute :
-  // @everyone voit, mais n'écrit pas (le nouveau membre reçoit un écrasement).
+  // Captcha : le salon est INVISIBLE à @everyone. Seul le membre en cours
+  // (écrasement individuel + fil privé) le voit. Le panneau bouton, lui,
+  // reste visible si le captcha n'est pas activé.
   try {
     const vch = guild.channels.cache.get(captchaChannelId(cfg) || cfg.channel);
     if (vch && vch.permissionOverwrites) {
-      const vis = { ViewChannel: true };
-      if (cfg.captcha) vis.SendMessages = false;
-      await vch.permissionOverwrites.edit(everyone, vis, { reason: 'v293 vérification : salon visible des nouveaux arrivants' });
+      if (cfg.captcha) await lockCaptchaChannel(guild, vch);
+      else await vch.permissionOverwrites.edit(everyone, { ViewChannel: true }, { reason: 'v293 vérification : salon visible des nouveaux arrivants' });
     }
   } catch (e) { /* best effort */ }
   saveCfg(guild.id, { isolate: true, isolated_channels: [...recorded] });
@@ -589,6 +709,8 @@ async function onChannelCreate(botId, channel) {
     const cfg = cfgOf(guild.id);
     if (!cfg.enabled || !cfg.isolate || !verifiedRoleId(cfg)) return;
     if (String(channel.id) === String(cfg.channel)) return;
+    if (String(channel.id) === captchaChannelId(cfg)) return;
+    if (isThreadType(channel) || isPrivateTicketChannel(channel)) return;
     const everyone = guild.roles.everyone.id;
     // 🛡️ v301 — un salon créé avec « @everyone : voir le salon = refusé »
     // (tickets, salons staff, modmail…) est VOLONTAIREMENT privé : lui ajouter

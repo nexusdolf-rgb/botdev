@@ -843,7 +843,20 @@ router.put('/bots/:id/guilds/:guildId/verification', requireAuth, async (req, re
   if (b.captcha_title !== undefined) patch.captcha_title = String(b.captcha_title || '').slice(0, 120);
   if (b.captcha_desc !== undefined) patch.captcha_desc = String(b.captcha_desc || '').slice(0, 1500);
   if (b.captcha_color !== undefined) patch.captcha_color = String(b.captcha_color || '').slice(0, 7);
-  res.json({ ok: true, cfg: ver.saveCfg(req.params.guildId, patch) });
+  const before = ver.cfgOf(req.params.guildId);
+  const nextCaptcha = patch.captcha !== undefined ? patch.captcha : before.captcha;
+  if (nextCaptcha) patch.isolate = true;
+  const cfg = ver.saveCfg(req.params.guildId, patch);
+  res.json({ ok: true, cfg });
+  if (cfg.captcha && (!before.captcha || !before.isolate)) {
+    const entry = botManager.clients.get(bot.id);
+    const guild = entry && entry.client && entry.client.isReady && entry.client.isReady()
+      ? entry.client.guilds.cache.get(req.params.guildId) : null;
+    if (guild) {
+      ver.applyIsolation(bot.id, guild).catch(() => {});
+      try { ver.assertGrantReady(guild); ver.grantRoleToAll(bot.id, guild).catch(() => {}); } catch {}
+    }
+  }
 });
 
 router.post('/bots/:id/guilds/:guildId/verification/panel', requireAuth, async (req, res) => {
