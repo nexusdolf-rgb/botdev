@@ -1595,12 +1595,18 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 4. Vérifie les tokens (GitHub 200, Render 200, Discord `users/@me` avec curl)
 5. Fais-moi un point de situation clair, puis attends mes instructions
 
-## 📌 ÉTAT AU 03/10/2026 (mise à jour après v349)
+## 📌 ÉTAT AU 03/10/2026 (v349 en production)
 
-- Version de travail : **v349**, changements locaux non poussés et non déployés.
-  La carte reprend le visuel validé avec l'avatar Discord propre à chaque membre ; le message
-  le ping. XP/rang/récompense ne sont plus affichés dans l'annonce, mais calcul XP, classement
-  et rôles restent actifs. `test/v349-test.js` ; suite complète : **265 fichiers verts**.
+- **v349 poussée et déployée** sur `main` (commit `34217bb`, Render deploy `dep-db0htdlg1s2s73e5nkv0`).
+  La carte utilise l'avatar Discord propre à chaque membre ; l'annonce le mentionne et le ping.
+  XP/rang/récompense ne sont plus affichés dans l'annonce, mais calcul XP, classement et rôles
+  restent actifs. `test/v349-test.js` ; suite complète : **265/265**, CI GitHub verte.
+- Après le déploiement, `bootRestore` a d'abord échoué car `BOTDEV_GH_TOKEN` était invalide.
+  Le token a été actualisé dans Render puis v349 redéployée : état vérifié
+  `bootRestore: ok (618496 octets, 1 bot)`, DB restaurée, 10 serveurs / 306 membres,
+  0 erreur sur 24 h. Ne jamais laisser une valeur `bootRestore` différente de `ok (…)`.
+- Version précédente : **v348** — modération rangée (filtres, menus, moins de texte).
+  `test/v348-test.js`. Aperçu `docs/apercu-captcha.html`.
 - Version précédente : **v348** — modération rangée (filtres, menus, moins de texte).
   `test/v348-test.js`. Aperçu `docs/apercu-captcha.html`.
 - **v341** — captcha à l’arrivée dans Vérification
