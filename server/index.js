@@ -136,6 +136,10 @@ async function main() {
     }
   });
 
+  // Carte PNG de montée de niveau : clé temporaire aléatoire, cache borné.
+  // Discord récupère l'image via cette URL depuis le Media Gallery Components V2.
+  app.get('/levelup-card/:key.png', (req, res) => require('./levelUpCardCache').route(req, res));
+
   // Fichiers statiques (dashboard)
   app.use(express.static(path.join(__dirname, '..', 'public')));
 

@@ -25,8 +25,8 @@ const routes = racine('server/routes.js');
 const i18n = racine('server/i18n.js');
 
 console.log('— 1. Pins de version v320 —');
-check('index.html : ?v=349 ×7', (html.match(/\?v=349/g) || []).length === 7);
-check('sw.js : cache botdev-v349', sw.includes("const CACHE = 'botdev-v349';"));
+check('index.html : ?v=350 ×7', (html.match(/\?v=350/g) || []).length === 7);
+check('sw.js : cache botdev-v350', sw.includes("const CACHE = 'botdev-v350';"));
 check('index.html : plus aucune ?v=319', !html.includes('?v=319'));
 
 console.log('— 2. Dashboard : texte du panneau + aperçu —');

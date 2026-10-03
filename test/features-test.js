@@ -64,13 +64,18 @@ console.log('1️⃣  Maths XP validées ✅');
   const ok3 = await xpEngine.onMessage(1, msg());
   row = store.xp.get(1, 'G1', 'U1');
   assert(row.level === 1, 'niveau attendu 1, obtenu ' + row.level);
-  // v349 : le membre est pingé dans le contenu ; l'embed ne garde que la carte.
-  const ann = sent && sent.embeds && sent.embeds[0] && (sent.embeds[0].data || sent.embeds[0].toJSON());
-  const annText = String((sent && sent.content) || '');
-  assert(annText.includes('niveau 1'), 'annonce attendue dans content');
+  // v350 : le ping, la phrase et la carte sont dans le même panneau V2.
+  const annPanel = sent && sent.components && sent.components[0] && sent.components[0].toJSON();
+  const annBlocks = annPanel && annPanel.components || [];
+  const annTextBlock = annBlocks.find((item) => item.type === 10);
+  const annGallery = annBlocks.find((item) => item.type === 12);
+  const annText = String((annTextBlock && annTextBlock.content) || '');
+  const annImage = annGallery && annGallery.items && annGallery.items[0];
+  const annImageUrl = annImage && ((annImage.media && annImage.media.url) || annImage.url);
+  assert(annText.startsWith('## <@U1>') && annText.includes('niveau 1'), 'annonce agrandie : ping avant le texte dans TextDisplay');
   assert(sent && sent.allowedMentions && sent.allowedMentions.users.includes('U1'), 'annonce : vrai ping autorisé pour le membre');
-  assert(ann && ann.color === 0x30d5ff && ann.image.url === 'attachment://levelup.png', 'annonce : carte image cyan intégrée');
-  assert(!ann.fields || ann.fields.length === 0, 'annonce : aucun champ XP/rang');
+  assert(annPanel && annPanel.type === 17 && annImageUrl && annImageUrl.includes('/levelup-card/'), 'annonce : carte dans la Media Gallery du même panneau');
+  assert(sent.content === undefined && sent.embeds === undefined && sent.files === undefined, 'annonce : aucun message ou fichier séparé');
   console.log('4️⃣  Montée de niveau + ping + carte ✅ («', annText.slice(0, 40), '… »)');
 
   // XP désactivé → aucun gain

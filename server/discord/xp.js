@@ -3,7 +3,7 @@
 // rôles de récompense, tout est configurable par serveur.
 // ============================================================
 const store = require('../db');
-const { EmbedBuilder } = require('discord.js');
+const ui = require('./ui');
 
 // Progression : niveau N nécessite 100*N² XP
 function xpForLevel(level) {
@@ -154,11 +154,14 @@ async function announce(botId, message, level, gs) {
   const displayName = (message.member && message.member.displayName)
     || user.globalName || user.username || user.tag || 'Membre';
 
-  // Le message de niveau est une vraie mention Discord dans le contenu.
-  // Le seul contenu visuel supplémentaire est la carte validée : pas de champs
-  // XP, rang ou rôle dans l'annonce. XP, rangs et rôles restent actifs ailleurs.
-  let files = [];
-  let embeds = [];
+  // Une seule annonce Components V2 : la vraie mention apparaît dans le
+  // TextDisplay, puis la carte dynamique dans la Media Gallery du même panneau.
+  // Aucune statistique XP/rang/rôle n'est ajoutée ; les calculs, classements et
+  // rôles de récompense restent inchangés. Un repli classique conserve le ping
+  // si la carte ne peut exceptionnellement pas être créée.
+  const allowedMentions = { parse: [], users: userId ? [userId] : [] };
+  let payload = { content: text, allowedMentions };
+  let cardKey = '';
   const cardEnabled = !(gs.xp_card === 0 || gs.xp_card === false);
   if (cardEnabled) {
     try {
@@ -168,29 +171,27 @@ async function announce(botId, message, level, gs) {
         ? avatarSource.displayAvatarURL({ extension: 'png', size: 256 }) : '';
       const buf = await community.levelUpCard({ avatarUrl, name: displayName, level, pct });
       if (buf && buf.length) {
-        files = [{ attachment: buf, name: 'levelup.png' }];
-        embeds = [new EmbedBuilder()
-          .setColor('#30d5ff')
-          .setImage('attachment://levelup.png')];
+        const cardCache = require('../levelUpCardCache');
+        cardKey = cardCache.put(buf) || '';
+        if (cardKey) {
+          const publicSite = String(store.settings.get('public_url') || 'https://hoxera.is-a.dev').replace(/\/+$/, '');
+          const imageUrl = `${publicSite}/levelup-card/${cardKey}.png`;
+          const panelText = /^#{1,3}\s/.test(text) ? text : `## ${text}`;
+          payload = {
+            ...ui.v2panel({
+              content: panelText,
+              image: imageUrl,
+              color: '#30d5ff',
+              sections: false,
+            }),
+            allowedMentions,
+          };
+        }
       }
     } catch (e) { console.error('[Hoxera] carte de niveau :', e.message); }
   }
 
-  // ⛔ EXCLUSION VOLONTAIRE de la migration Components V2 : cette annonce
-  // passe par sendAsProfile (webhook) avec du contenu, une embed et un fichier.
-  // La doc officielle « Webhook Resource / Execute Webhook » précise qu'un
-  // message V2 doit contenir uniquement des composants ; content, embeds ou
-  // fichiers avec IS_COMPONENTS_V2 donnent 400 BAD REQUEST. La carte jointe
-  // et l'identité du bot sont conservées en format classique.
   const identity = require('./identity');
-  const payload = {
-    content: text,
-    allowedMentions: { parse: [], users: userId ? [userId] : [] },
-  };
-  if (embeds.length) {
-    payload.embeds = embeds;
-    payload.files = files;
-  }
   await identity.sendAsProfile(message.client, botId, message.guild, channel, payload).catch(() => {});
 }
 

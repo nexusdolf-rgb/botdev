@@ -1,7 +1,7 @@
 // Test v210 — Carte image de montée de niveau (XP)
 // --------------------------------------------------
 // Contrat actuel : carte dynamique avec l'avatar propre au membre, niveau, nom
-// et barre de progression. L'annonce ping le membre dans le contenu du message.
+// et barre de progression. Le ping et la carte sont réunis dans un panneau V2.
 const assert = require('assert');
 const fs = require('fs');
 const read = (p) => fs.readFileSync(p, 'utf8');
@@ -52,8 +52,9 @@ console.log('— Annonce de niveau avec carte —');
 check('xp : importe le générateur de carte', xp.includes("const community = require('./community')"));
 check('xp : transmet avatar, nom, niveau et progression dynamiques', xp.includes('community.levelUpCard({ avatarUrl, name: displayName, level, pct })'));
 check('xp : carte activée par défaut (sauf xp_card = 0/false)', xp.includes('!(gs.xp_card === 0 || gs.xp_card === false)'));
-check('xp : pièce jointe levelup.png intégrée en image', xp.includes("name: 'levelup.png'") && xp.includes(".setImage('attachment://levelup.png')"));
-check('xp : le membre est pingé dans content avec allowedMentions ciblé', xp.includes('content: text') && xp.includes('allowedMentions: { parse: [], users: userId ? [userId] : [] }'));
+check('xp : carte dynamique présentée par URL dans ui.v2panel', xp.includes('ui.v2panel({') && xp.includes('image: imageUrl'));
+check('xp : le texte agrandi contient la mention autorisée dans le panneau', xp.includes('content: panelText') && xp.includes('const allowedMentions = { parse: [], users: userId ? [userId] : [] }'));
+check('xp : le cache image et sa route publique sont présents', read('server/levelUpCardCache.js').includes('MAX_ENTRIES = 256') && read('server/index.js').includes("/levelup-card/:key.png"));
 check('xp : génération de carte non bloquante', xp.includes("console.error('[Hoxera] carte de niveau :', e.message)"));
 check('xp : aucune statistique XP/rang/récompense dans l’annonce', !xp.includes("name: '✨ XP'") && !xp.includes("name: '🏆 Rang'") && !xp.includes("name: '🎁 Rôle débloqué'"));
 
@@ -67,8 +68,8 @@ check('dashboard : carte activée par défaut', dash.includes("s.xp_card === 0 |
 check('dashboard : exemple de message correspond au nouveau rendu', dash.includes("placeholder=\"{user} vient d\\'atteindre le niveau {level} !\""));
 
 // ---------- 5. Versions ----------
-check('index : version courante v349', index.includes('?v=349'));
-check('service worker : cache courant v349', sw.includes('botdev-v349'));
+check('index : version courante v350', index.includes('?v=350'));
+check('service worker : cache courant v350', sw.includes('botdev-v350'));
 
 console.log(`\n✅ v210-test.js : ${n} vérifications OK`);
 process.exit(0);

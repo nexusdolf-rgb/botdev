@@ -8,8 +8,8 @@
 // 2. La couleur neutre/brand des embeds = terracotta de marque #e07a5f
 //    (fini le blurple #5865F2 de Discord partout). Vert/jaune/rouge
 //    sémantiques et or de l'économie inchangés.
-// 3. Montée de niveau = embed soigné (progression, rang, récompense,
-//    footer signé) au lieu d'un simple texte.
+// 3. Montée de niveau = panneau Components V2 avec ping autorisé et carte.
+//    Les statistiques XP/rang ne sont pas ajoutées à l'annonce.
 // 4. Giveaway structuré (champs) et sans titre en MAJUSCULES.
 // 5. Plus d'avatar en double (author + thumbnail) sur /rank & /profile.
 // 6. Aperçus Discord du dashboard unifiés (mêmes arrondis, même surface).
@@ -55,18 +55,18 @@ check('plus aucune signature « Optimus Prime · » dans les messages', !files.p
 
 // ---------- 2. Palette : la marque suit sur Discord ----------
 console.log('— Palette : terracotta #e07a5f = neutre, zéro blurple par défaut —');
-check('xp (niveau) : accent cyan assorti à la nouvelle carte', files.xp.includes(".setColor('#30d5ff')"));
+check('xp (niveau) : accent cyan assorti à la nouvelle carte', files.xp.includes("color: '#30d5ff'"));
 check('events : couleur invalide → marque', files.events.includes(": '#e07a5f'"));
 check('premade : /rank couleur de marque', files.premade.includes(".setColor('#e07a5f')"));
 check('aucun blurple #5865F2 restant dans ui/events/premade/extra/xp',
   !files.ui.includes('5865F2') && !files.events.includes('5865F2') && !files.premade.includes('5865F2')
   && !files.extra.includes('5865F2') && !files.xp.includes('5865F2'));
 
-// ---------- 3. Montée de niveau : embed soigné ----------
-console.log('— Niveau : annonce en embed soigné —');
-check('xp.js : importe EmbedBuilder', files.xp.includes("require('discord.js')"));
-check('xp.js : annonce en embed', files.xp.includes('new EmbedBuilder()'));
-check('xp.js : annonce placée dans le contenu du message', files.xp.includes('content: text'));
+// ---------- 3. Montée de niveau : panneau V2 ----------
+console.log('— Niveau : annonce dans un panneau Components V2 —');
+check('xp.js : annonce construite avec ui.v2panel', files.xp.includes('ui.v2panel({'));
+check('xp.js : ping autorisé seulement pour le membre ciblé', files.xp.includes('const allowedMentions = { parse: [], users: userId ? [userId] : [] }'));
+check('xp.js : carte dynamique publiée par Media Gallery', files.xp.includes('image: imageUrl') && files.xp.includes('community.levelUpCard({ avatarUrl, name: displayName, level, pct })'));
 check('xp.js : aucune statistique XP/rang dans l’annonce', !files.xp.includes("name: '✨ XP'") && !files.xp.includes("name: '🏆 Rang'"));
 check('v312 : xp.js n\'a plus de pied signé Hoxera', !files.xp.includes('Hoxera · ${message.guild.name}'));
 
@@ -94,8 +94,8 @@ check('CSS : toutes les surfaces Discord aux mêmes arrondis', files.css.include
 check('dashboard : modèle d’accueil au tutoiement (plus de « je vous invite »)', !files.dashJs.includes('je vous invite à prendre connaissance'));
 // v240 — tout le produit est passé au vouvoiement : le modèle de départ aussi.
 check('dashboard : modèle de départ au vouvoiement', files.dashJs.includes('la porte reste ouverte si vous revenez'));
-check('index : version v209', files.indexHtml.includes('?v=349'));
-check('service worker : cache v209', files.sw.includes('botdev-v349'));
+check('index : version v209', files.indexHtml.includes('?v=350'));
+check('service worker : cache v209', files.sw.includes('botdev-v350'));
 check('menu mobile : nom du bot dynamique', files.dashJs.includes('Dashboard.state.bot.name'));
 
 // ---------- 7. Invitations (extra) : champ + footer ----------

@@ -37,7 +37,7 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   // ---------- 4. Annonce de montée de niveau ----------
   console.log('— Annonce de niveau (mention + carte) —');
   check('annonce : le texte par défaut annonce le niveau atteint', xp.includes("{user} vient d\\'atteindre le niveau {level} !"));
-  check('annonce : la mention est autorisée pour le membre ciblé uniquement', xp.includes('allowedMentions: { parse: [], users: userId ? [userId] : [] }'));
+  check('annonce : la mention est autorisée pour le membre ciblé uniquement', xp.includes('const allowedMentions = { parse: [], users: userId ? [userId] : [] }'));
   check('annonce : pas de champs XP/rang/progression/rôle', !xp.includes("name: '🏆 Rang'") && !xp.includes("name: '✨ XP'") && !xp.includes("name: 'Progression'") && !xp.includes("name: '🎁 Rôle débloqué'"));
 
   // ---------- 5. Dashboard (échelle des rôles) ----------
@@ -53,8 +53,8 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('le mot reste dans les phrases/descriptions (clarté)', premade.includes('Votre niveau, votre XP et votre rang'));
 
   // ---------- 7. Version ----------
-  check('site : bump v215 (index)', index.includes('?v=349'));
-  check('site : bump v215 (sw)', sw.includes('botdev-v349'));
+  check('site : bump v215 (index)', index.includes('?v=350'));
+  check('site : bump v215 (sw)', sw.includes('botdev-v350'));
 
   console.log(`  ✅ v215 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });

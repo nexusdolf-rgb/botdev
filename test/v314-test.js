@@ -28,8 +28,8 @@ const html = racine('public/index.html');
 const sw = racine('public/sw.js');
 
 console.log('— 1. Pins de version v314 —');
-check('index.html : ?v=349 ×7', (html.match(/\?v=349/g) || []).length === 7);
-check('sw.js : cache botdev-v349', sw.includes("const CACHE = 'botdev-v349';"));
+check('index.html : ?v=350 ×7', (html.match(/\?v=350/g) || []).length === 7);
+check('sw.js : cache botdev-v350', sw.includes("const CACHE = 'botdev-v350';"));
 check('index.html : plus aucune ?v=313', !html.includes('?v=313'));
 
 console.log('— 2. Dashboard : suppression vraiment enregistrée —');

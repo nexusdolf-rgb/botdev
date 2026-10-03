@@ -197,7 +197,7 @@ const ex = read('server/discord/extra.js');
 check('v232 — premade.js : replyPanel toujours en v2panel', /send\(ui\.v2panel\(options, components\)\)/.test(read('server/discord/premade.js')));
 check('v232 — suggest.js : buildPanel toujours exporté', typeof require('../server/discord/suggest').buildPanel === 'function');
 check('v232 — queue.js : clé de dédoublonnage 3 familles', /'embed'[\s\S]*'v2'[\s\S]*'msg'/.test(read('server/queue.js')));
-check('v232 — xp.js : exclusion toujours documentée', read('server/discord/xp.js').includes('⛔ EXCLUSION VOLONTAIRE'));
+check('v350 — xp.js : annonce migrée en V2 avec carte URL', read('server/discord/xp.js').includes('ui.v2panel({') && read('server/discord/xp.js').includes('image: imageUrl'));
 check('v231 — /quiz toujours en ui.v2panel', (ex.match(/ui\.v2panel\(/g) || []).length >= 2);
 check('v231 — colorInt accepte les couleurs numériques', ui.colorInt(0x57f287) === 0x57f287);
 check('v230 — /poll toujours en champs d’embed', /addFields\(fields\)/.test(ex));
@@ -213,9 +213,9 @@ console.log('\n8) Aucun secret ajouté + versionnage front v233');
   check(`aucun token en dur dans ${path.basename(f)}`,
     !/(ghp_|github_pat_|rnd_|xox[baprs]-)[A-Za-z0-9_-]{15,}/.test(read(f)));
 });
-check('index.html : 7 références ?v=349', (read('public/index.html').match(/\?v=349/g) || []).length === 7);
+check('index.html : 7 références ?v=350', (read('public/index.html').match(/\?v=350/g) || []).length === 7);
 check('index.html : plus aucune référence ?v=232', !read('public/index.html').includes('?v=232'));
-check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'botdev-v349';"));
+check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'botdev-v350';"));
 
 console.log(failures === 0
   ? '\n✅ V233 — Lot n°3 : giveaways (5) et événements (7) en séparateurs natifs pleine largeur, édition de fin de tirage comprise.'

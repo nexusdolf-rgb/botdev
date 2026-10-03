@@ -10,7 +10,8 @@
 //   • suggest.js : `buildEmbed` → `buildPanel` (5 emplacements), dont les
 //     deux `interaction.update()` de vote.
 //   • queue.js : clé de dédoublonnage rendue V2-aware.
-//   • xp.js : EXCLUSION VOLONTAIRE et documentée (webhook + pièce jointe).
+//   • xp.js : l'exclusion historique (webhook + pièce jointe) a été résolue en v350
+//     avec une image publique référencée par la Media Gallery.
 //
 // Garanties vérifiées ici :
 //  1. queue.js distingue embed classique / panneau V2 / message texte
@@ -21,7 +22,7 @@
 //  6. Ordre des blocs calqué sur l'embed classique
 //  7. premade.js : plus aucun trait texte, 11 panneaux migrés
 //  8. suggest.js : plus aucun trait texte, ping conservé, boutons conservés
-//  9. xp.js : exclusion documentée (pas un oubli)
+//  9. xp.js : la migration v350 conserve le ping et sert la carte par URL
 // 10. Plafonds Discord toujours respectés
 // 11. Garde-fous v220/v229/v230/v231 toujours debout
 // 12. Aucun secret ajouté + versionnage front v232
@@ -192,12 +193,12 @@ const pDen = suggest.buildPanel({ ...row, status: 'denied' }, 'T', {});
 check('statut refusé → rouge', pDen.components[0].toJSON().accent_color === 0xed4245);
 
 // ------------------------------------------------------------
-console.log('\n9) xp.js — exclusion VOLONTAIRE et documentée');
+console.log('\n9) xp.js — migration Components V2 v350');
 const xp = read('server/discord/xp.js');
-check('l’exclusion est marquée ⛔ EXCLUSION VOLONTAIRE', xp.includes('⛔ EXCLUSION VOLONTAIRE de la migration Components V2'));
-check('la cause officielle est citée (400 BAD REQUEST)', xp.includes('400 BAD REQUEST'));
-check('la source est citée (Webhook Resource / Execute Webhook)', xp.includes('Execute Webhook'));
-check('xp.js : annonce en content + pièce jointe classique (non Components V2)', xp.includes('content: text') && xp.includes(".setImage('attachment://levelup.png')"));
+check('xp.js : l’annonce utilise ui.v2panel', xp.includes('ui.v2panel({'));
+check('xp.js : la carte est servie par URL publique en Media Gallery', xp.includes('image: imageUrl') && xp.includes("/levelup-card/${cardKey}.png"));
+check('xp.js : le ping reste ciblé et autorisé dans le panneau', xp.includes('const allowedMentions = { parse: [], users: userId ? [userId] : [] }') && xp.includes('allowedMentions,'));
+check('xp.js : plus de pièce jointe ni d’embed classique pour la carte', !xp.includes(".setImage('attachment://levelup.png')") && !xp.includes("name: 'levelup.png'"));
 
 // ------------------------------------------------------------
 console.log('\n10) Plafonds Discord toujours respectés');
@@ -238,11 +239,11 @@ console.log('\n12) Aucun secret ajouté + versionnage front v232');
   check(`aucun token en dur dans ${path.basename(f)}`,
     !/(ghp_|github_pat_|rnd_|xox[baprs]-)[A-Za-z0-9_-]{15,}/.test(read(f)));
 });
-check('index.html : 7 références ?v=349', (read('public/index.html').match(/\?v=349/g) || []).length === 7);
+check('index.html : 7 références ?v=350', (read('public/index.html').match(/\?v=350/g) || []).length === 7);
 check('index.html : plus aucune référence ?v=231', !read('public/index.html').includes('?v=231'));
-check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'botdev-v349';"));
+check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'botdev-v350';"));
 
 console.log(failures === 0
-  ? '\n✅ V232 — Lot n°2 : 18 emplacements migrés (premade ×13, suggest ×5), queue.js corrigé, xp.js exclu et documenté.'
+  ? '\n✅ V232 — Lot n°2 : 18 emplacements migrés (premade ×13, suggest ×5), queue.js corrigé, xp.js migré en V2 en v350.'
   : `\n❌ V232 — ${failures} échec(s)`);
 process.exit(failures ? 1 : 0);

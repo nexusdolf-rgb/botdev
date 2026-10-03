@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (version de travail : **v349**, non poussée) avec description détaillée
+- Commits en français, préfixés par un numéro de version (version de travail : **v350**, locale/non poussée ; **v349** reste en production) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -32,7 +32,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 
 **Hoxera** : plateforme web + bot Discord tout-en-un, 100 % gratuit.
 - **Bot « Optimus Prime »** (ex-« Nexora », renommé le 29/08/2026) — client_id :
-  `1537443352281088000` — en ligne sur 7 serveurs
+  `1537443352281088000` — dernier état vérifié : 10 serveurs / 310 membres
 - Tickets pro (types, transcriptions, notes ⭐), modération + auto-mod + anti-raid,
   XP/niveaux, économie, giveaways, jeux, mariages, anniversaires, sondages, rappels,
   rôles par boutons, salons vocaux temporaires, starboard, traqueur d'invitations,
@@ -230,9 +230,9 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   V2 + webhook + files = 400 (piège n°10). Détection du webhook via
   `identity.effectiveProfile(botId, guildId)`. Dans ce dernier cas on ne met
   **AUCUN** trait : les paragraphes respirent par des lignes vides.
-  `ui.sectionize()` a donc **disparu d'`events.js`**. Il ne reste que 2 appels
-  assumés : `xp.js:202` (carte de niveau, webhook + pièce jointe) et
-  `panels.js:2274` (assistant « types », 6 étapes éditées en place).
+  `ui.sectionize()` a donc **disparu d'`events.js`**. Après la migration v350
+  de l'annonce de niveau, le seul appel restant est `panels.js:2274`
+  (assistant « types », 6 étapes éditées en place).
   🧪 **`test/v240-test.js`** (6 sections) : périmètre des langues + repli,
   parité fr/en, absence de tutoiement (bot **et** dashboard), identifiants de
   commandes intacts, garde-fous de concordance, et **rendu réel** de la
@@ -724,18 +724,18 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   `embeds` : tous les panneaux V2 seraient tombés dans la clé `'msg'` et
   amalgamés avec les messages texte. Désormais 3 familles : `embed` / `v2` /
   `msg`. **Ce bug serait apparu dès le lot n°3.**
-  ⛔ **`xp.js` — EXCLUSION VOLONTAIRE ET DOCUMENTÉE** (25 lignes de
-  commentaire dans le fichier). La carte de montée de niveau est envoyée par
-  `identity.sendAsProfile()` → **WEBHOOK** avec la carte en **pièce jointe**
-  (`attachment://levelup.png`). Or la doc officielle Discord (*Webhook
-  Resource → Execute Webhook*) dit : *« When the flag IS_COMPONENTS_V2 is set,
-  the webhook message can only contain components. Providing content, embeds,
-  **files[n]** or poll will fail with a **400 BAD REQUEST** response »*. Le
-  repli sur `channel.send()` ferait partir le message **sans le nom ni
-  l'avatar personnalisés** → on perdrait une fonctionnalité produit pour un
-  détail cosmétique. Le webhook étant `application-owned` (créé par
-  `channel.createWebhook`), **les messages V2 SANS pièce jointe qui passent par
-  `sendAsProfile` restent migrables** (`events.js:217` et `:220`).
+  ⛔ **À l'époque de v232, `xp.js` était exclu volontairement et documenté** : la carte
+  de montée de niveau était envoyée par `identity.sendAsProfile()` → **WEBHOOK** avec la
+  carte en pièce jointe (`attachment://levelup.png`). Or la doc officielle Discord
+  (*Webhook Resource → Execute Webhook*) indique : *« When the flag IS_COMPONENTS_V2 is
+  set, the webhook message can only contain components. Providing content, embeds,
+  **files[n]** or poll will fail with a **400 BAD REQUEST** response »*. Le repli sur
+  `channel.send()` aurait fait partir le message **sans le nom ni l'avatar personnalisés**
+  → perte d'une fonctionnalité pour un détail cosmétique. Le webhook étant
+  `application-owned` (créé par `channel.createWebhook`), **les messages V2 SANS pièce
+  jointe qui passent par `sendAsProfile` étaient migrables** (`events.js:217` et `:220`).
+  ℹ️ Cette exclusion décrit l'état de v232 ; elle a été levée en **v350** en servant le PNG
+  par URL temporaire publique et en le plaçant dans une Media Gallery Components V2.
   🧪 **4 tests existants mis à jour** (ils suivaient l'ancien rendu) :
   `test/v198-test.js` et `test/v220-test.js` appelaient `suggest.buildEmbed`
   (2 assertions) ; `test/v229-test.js` suivait `/levels` en `sectionize`
@@ -931,8 +931,8 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **v229-v236** : migration « trait texte `━` » → **Components V2** (séparateurs natifs
   pleine largeur). Ordre : v231 quiz · v232 premade · v233 suggest/giveaway ·
   v234 guildEvents/panels · v235 extra.js · v236 les 16 derniers emplacements.
-  **Exception définitive** : `xp.js` reste en embed classique (webhook + pièce jointe
-  = erreur 400 en V2, piège n°10)
+  **Exception à l'époque** : `xp.js` restait en embed classique (webhook + pièce jointe
+  = erreur 400 en V2, piège n°10) ; ce cas a été résolu en **v350** par une URL d'image publique.
 - **v237/v238/v239** : confirmations éphémères ; pied de ticket privé =
   `Hoxera · Ticket #N` seul ; portée strictement limitée aux bugs signalés
 - **v240** : « tu → vous » généralisé (fr + en uniquement) + **migration des données
@@ -962,11 +962,17 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v350 (03/10 — PING AVANT TEXTE, DANS LE MÊME PANNEAU)** : suite à l'aperçu confirmé,
+  l'annonce place `@membre` avant la phrase dans un Text Display agrandi, puis la carte
+  dynamique dans la Media Gallery du même panneau Components V2. Le PNG est servi par une
+  route temporaire publique à clé imprévisible (cache 24 h, 256 images maximum) pour rester
+  compatible avec le webhook d'identité, sans pièce jointe. Avatar, carte, absence d'XP/rang,
+  calcul XP et rôles sont préservés. `test/v350-test.js`. Version locale, non poussée/déployée.
 - **v349 (03/10 — CARTE DE NIVEAU VALIDÉE)** : annonce Discord avec un vrai ping du membre,
   avatar Discord de chaque membre, nom/niveau/barre de progression dynamiques. Le logo Optimus
   de l'image de référence n'était qu'un exemple. L'annonce n'affiche plus XP, rang ou rôle,
   mais calcul XP, classements et attribution des rôles restent actifs. Dashboard actualisé.
-  `test/v349-test.js` (17 vérifications). Version locale non poussée/non déployée.
+  v349 reste en production (commit applicatif `34217bb`, documentation `e4fdd87`).
 - **v348 (30/09 — MODÉRATION RANGÉE)** :
   filtres compacts, options repliées, sélecteurs (barème, anti-raid, sanctions FR).
   IDs Auto-Mod et tickets conservés. test/v348-test.js.
@@ -1407,15 +1413,13 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
     officielle Discord (*Webhook Resource → Execute Webhook*) : *« When the flag
     IS_COMPONENTS_V2 is set, the webhook message can only contain components.
     Providing content, embeds, **files[n]** or poll will fail with a 400 BAD
-    REQUEST response »*. Conséquence pour ce projet : tout message envoyé par
-    `identity.sendAsProfile()` (qui passe par un webhook pour afficher le nom et
-    l'avatar personnalisés du bot) **ET** qui transporte une pièce jointe ne peut
-    PAS passer en V2. C'est le cas de la carte de montée de niveau (`xp.js`,
-    `attachment://levelup.png`) → **exclusion documentée dans le fichier**.
-    Le webhook étant `application-owned` (créé par `channel.createWebhook`), les
-    messages V2 **sans** pièce jointe y fonctionnent. Ne PAS migrer aveuglément
-    un message qui passe par `sendAsProfile` : vérifier d'abord s'il a des
-    `files`.
+    REQUEST response »*. Un message envoyé par `identity.sendAsProfile()` ne
+    peut donc pas joindre directement un fichier en V2. Depuis **v350**, l'annonce
+    de niveau évite ce piège : le PNG reste dynamique, mais est mis en cache
+    temporaire (`server/levelUpCardCache.js`, 24 h / 256 entrées max) puis référencé
+    par une URL publique dans la Media Gallery. Le webhook ne reçoit ainsi ni
+    `content`, ni embed, ni `files`. Pour toute autre migration `sendAsProfile`,
+    vérifier les fichiers et ne pas convertir aveuglément.
 11. **Components V2 n'a ni `content`, ni `embeds`, ni champs `inline`, ni
     `author`, ni `thumbnail`, ni `timestamp`.** Tout doit être reconstruit en
     TextDisplay / Section / MediaGallery, et les plafonds changent : **40
@@ -1591,22 +1595,24 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 
 1. Clone `https://github.com/nexusdolf-rgb/botdev`, `npm install`, lis le dernier commit
 2. Vérifie l'état : `https://hoxera.is-a.dev/api/health/bot` (bot en ligne ? erreurs ?)
-3. `bash scripts/check.sh` → doit être 🟢 (167 tests, ~2,8 min)
+3. `bash scripts/check.sh` → doit être 🟢 (suite complète, environ 3,5 min)
 4. Vérifie les tokens (GitHub 200, Render 200, Discord `users/@me` avec curl)
 5. Fais-moi un point de situation clair, puis attends mes instructions
 
-## 📌 ÉTAT AU 03/10/2026 (v349 en production)
+## 📌 ÉTAT AU 03/10/2026 (v349 en production, v350 en local)
 
+- **v350 est en cours localement**, sur la base `e4fdd87` : l'annonce de niveau place le ping
+  avant le texte agrandi et la carte dans le même panneau Components V2. L'image passe par un
+  cache temporaire borné et une route publique. `test/v350-test.js` (28 vérifications). **Pas encore
+  poussé ni déployé.**
 - **v349 poussée et déployée** sur `main` (commit `34217bb`, Render deploy `dep-db0htdlg1s2s73e5nkv0`).
-  La carte utilise l'avatar Discord propre à chaque membre ; l'annonce le mentionne et le ping.
-  XP/rang/récompense ne sont plus affichés dans l'annonce, mais calcul XP, classement et rôles
-  restent actifs. `test/v349-test.js` ; suite complète : **265/265**, CI GitHub verte.
+  La carte utilise l'avatar Discord propre à chaque membre ; le vrai ping est conservé. XP/rang/
+  récompense ne sont pas affichés dans l'annonce, mais calcul XP, classement et rôles restent actifs.
+  La CI GitHub de v349 est verte. `bash scripts/check.sh` après v350 : **265/265**, feu vert.
 - Après le déploiement, `bootRestore` a d'abord échoué car `BOTDEV_GH_TOKEN` était invalide.
-  Le token a été actualisé dans Render puis v349 redéployée : état vérifié
-  `bootRestore: ok (618496 octets, 1 bot)`, DB restaurée, 10 serveurs / 306 membres,
-  0 erreur sur 24 h. Ne jamais laisser une valeur `bootRestore` différente de `ok (…)`.
-- Version précédente : **v348** — modération rangée (filtres, menus, moins de texte).
-  `test/v348-test.js`. Aperçu `docs/apercu-captcha.html`.
+  Le token a été actualisé dans Render puis v349 redéployée : dernier état vérifié avant v350
+  `bootRestore: ok (618496 octets, 1 bot)`, DB restaurée, 10 serveurs / 310 membres, 0 erreur sur
+  24 h, sauvegarde active. Ne jamais laisser une valeur `bootRestore` différente de `ok (…)`.
 - Version précédente : **v348** — modération rangée (filtres, menus, moins de texte).
   `test/v348-test.js`. Aperçu `docs/apercu-captcha.html`.
 - **v341** — captcha à l’arrivée dans Vérification

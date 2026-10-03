@@ -38,8 +38,8 @@ const HOXERA = 0xE07A5F;
 
 console.log('— 1. Pins de version v308 —');
 const html = racine('public/index.html');
-check('index.html : ?v=349 ×7', (html.match(/\?v=349/g) || []).length === 7);
-check('sw.js : cache botdev-v349', racine('public/sw.js').includes("const CACHE = 'botdev-v349';"));
+check('index.html : ?v=350 ×7', (html.match(/\?v=350/g) || []).length === 7);
+check('sw.js : cache botdev-v350', racine('public/sw.js').includes("const CACHE = 'botdev-v350';"));
 
 console.log('— 2. La petite ligne verticale est PARTOUT #e07a5f —');
 store.bots.create({ user_id: 1, name: 'B', token: 'x', client_id: 'c', prefix: '!' });
