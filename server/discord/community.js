@@ -231,57 +231,78 @@ async function welcomeCard(member) {
 }
 
 // ------------------------------------------------------------
-// 🖼️ Carte de montée de niveau (image générée avec sharp — même
-// recette que la carte de bienvenue). v210.
+// 🖼️ Carte de montée de niveau (v349) : modèle fourni par l'utilisateur,
+// avatar du membre, nom, niveau et barre de progression générés à chaque gain.
 // ------------------------------------------------------------
-function levelUpCardSvg({ name, server, level, pct } = {}) {
+function levelUpCardSvg({ name, level, pct } = {}) {
   const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const uname = esc(String(name || 'Membre').slice(0, 24));
-  const srv = esc(String(server || '').toUpperCase().slice(0, 28));
-  const lvl = parseInt(level, 10) || 1;
+  const uname = esc(String(name || 'Membre').replace(/\s+/g, ' ').trim().slice(0, 24));
+  const lvl = Math.max(1, parseInt(level, 10) || 1);
+  const lvlText = String(lvl);
+  const lvlFont = lvlText.length >= 4 ? 56 : (lvlText.length === 3 ? 66 : 76);
   const p = Math.max(0, Math.min(100, Math.round((Number(pct) || 0) * 100)));
-  const barW = Math.round(520 * p / 100);
-  return `<svg width="880" height="280" xmlns="http://www.w3.org/2000/svg">
+  const barX = 262;
+  const barWidth = 540;
+  const barW = Math.round(barWidth * p / 100);
+  const hex = (cx, cy) => {
+    const dx = 12.124;
+    const r = 14;
+    return `M${cx} ${cy - r}L${cx + dx} ${cy - r / 2}L${cx + dx} ${cy + r / 2}L${cx} ${cy + r}L${cx - dx} ${cy + r / 2}L${cx - dx} ${cy - r / 2}Z`;
+  };
+  const hexes = [[0, 0], [24.25, 0], [12.125, 21], [36.375, 21]]
+    .map(([x, y]) => hex(x, y)).join(' ');
+  return `<svg width="880" height="280" viewBox="0 0 880 280" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#1b1e2e"/>
-      <stop offset="55%" stop-color="#232746"/>
-      <stop offset="100%" stop-color="#2b1e46"/>
+    <linearGradient id="levelBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#080d16"/>
+      <stop offset="58%" stop-color="#101a27"/>
+      <stop offset="100%" stop-color="#0b2230"/>
     </linearGradient>
-    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#e07a5f"/>
-      <stop offset="100%" stop-color="#EB459E"/>
+    <linearGradient id="levelBar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#35d8ff"/>
+      <stop offset="100%" stop-color="#28c8f5"/>
     </linearGradient>
+    <pattern id="levelHex" width="48.5" height="42" patternUnits="userSpaceOnUse">
+      <path d="${hexes}" fill="none" stroke="#294052" stroke-width="0.8"/>
+    </pattern>
   </defs>
-  <rect width="880" height="280" rx="24" fill="url(#bg)"/>
-  <rect x="0" y="268" width="880" height="12" rx="6" fill="url(#accent)"/>
-  <circle cx="140" cy="140" r="86" fill="none" stroke="url(#accent)" stroke-width="6"/>
-  <text x="260" y="96" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#8f93a8">${srv}</text>
-  <text x="260" y="148" font-family="Arial, Helvetica, sans-serif" font-size="50" font-weight="bold" fill="#ffffff">Niveau ${lvl}</text>
-  <text x="260" y="196" font-family="Arial, Helvetica, sans-serif" font-size="26" fill="#b8bccf">${uname} monte de niveau !</text>
-  <rect x="260" y="224" width="520" height="14" rx="7" fill="#1a1c28"/>
-  <rect x="260" y="224" width="${Math.max(barW, 14)}" height="14" rx="7" fill="url(#accent)"/>
-  <text x="790" y="212" font-family="Arial, Helvetica, sans-serif" font-size="17" text-anchor="end" fill="#b8bccf">${p}%</text>
+  <rect width="880" height="280" fill="url(#levelBg)"/>
+  <rect width="880" height="280" fill="url(#levelHex)" opacity="0.62"/>
+  <circle cx="140" cy="140" r="89" fill="none" stroke="#30d5ff" stroke-width="5"/>
+  <circle cx="140" cy="140" r="82" fill="none" stroke="#152d3c" stroke-width="3"/>
+  <circle cx="140" cy="140" r="75" fill="#030507" stroke="#111922" stroke-width="1"/>
+  <text x="262" y="70" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="700"
+    letter-spacing="7" fill="#8796ad">NIVEAU</text>
+  <text x="262" y="151" font-family="Arial, Helvetica, sans-serif" font-size="${lvlFont}" font-weight="700"
+    fill="#f7f8fa">${lvlText}</text>
+  <text x="430" y="154" font-family="Arial, Helvetica, sans-serif" font-size="29" font-weight="600"
+    fill="#dce2eb">${uname}</text>
+  <rect x="${barX}" y="210" width="${barWidth}" height="9" rx="4.5" fill="#0a111a"/>
+  <rect x="${barX}" y="210" width="${barW}" height="9" rx="4.5" fill="url(#levelBar)"/>
+  <circle cx="${barX + barW}" cy="214.5" r="7.5" fill="#eafaff"/>
 </svg>`;
 }
 
-async function levelUpCard({ avatarUrl = '', name, server, level, pct } = {}) {
+async function levelUpCard({ avatarUrl = '', name, level, pct } = {}) {
   const sharp = require('sharp');
-  const svg = levelUpCardSvg({ name, server, level, pct });
-  const base = sharp(Buffer.from(svg)).png();
+  const svg = levelUpCardSvg({ name, level, pct });
+  const image = sharp(Buffer.from(svg));
   try {
+    // La carte utilise l'avatar du membre (avatar de serveur si disponible),
+    // recadré en cercle. Le fichier reste générable si Discord est indisponible.
     if (avatarUrl) {
       const res = await fetch(String(avatarUrl));
       if (res.ok) {
-        const buf = Buffer.from(await res.arrayBuffer());
-        const size = 160;
-        const circle = Buffer.from(`<svg width="${size}" height="${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${size / 2}" fill="#fff"/></svg>`);
-        const avatar = await require('sharp')(buf).resize(size, size).composite([{ input: circle, blend: 'dest-in' }]).png().toBuffer();
-        return await base.composite([{ input: avatar, left: 60, top: 60 }]).toBuffer();
+        const data = Buffer.from(await res.arrayBuffer());
+        const size = 138;
+        const circle = Buffer.from(`<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg"><circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 1}" fill="#fff"/></svg>`);
+        const avatar = await sharp(data).resize(size, size, { fit: 'cover' })
+          .composite([{ input: circle, blend: 'dest-in' }]).png().toBuffer();
+        image.composite([{ input: avatar, left: 71, top: 71 }]);
       }
     }
-  } catch { /* avatar indisponible → carte sans avatar */ }
-  return await base.toBuffer();
+  } catch { /* avatar indisponible → carte sans avatar, le niveau reste annoncé */ }
+  return await image.png().toBuffer();
 }
 
 module.exports = {

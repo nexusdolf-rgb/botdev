@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (dernier : **v348**) avec description détaillée
+- Commits en français, préfixés par un numéro de version (version de travail : **v349**, non poussée) avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -61,7 +61,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   `automod.js`, `antiraid.js`, `xp.js`, `logging.js`, `i18n.js`, `nativeAutomod.js`
 - `public/` : SPA vanilla JS — `js/dashboard.js` (modules), `js/app.js`, `js/public.js`
   (landing), `css/dashboard.css` (bloc « mode clair » en fin de fichier)
-- `test/` : **155 tests**. `bash scripts/check.sh` = syntaxe + secrets + suite (OBLIGATOIRE, ~2,5 min)
+- `test/` : **265 fichiers de test**. `bash scripts/check.sh` = syntaxe + secrets + suite (OBLIGATOIRE, ~3,5 min)
 - `docs/AGENT.md` : ce document — **le mettre à jour à chaque grande étape**
 
 ## 🔁 RECETTE DE LIVRAISON (à connaître par cœur)
@@ -962,6 +962,11 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v349 (03/10 — CARTE DE NIVEAU VALIDÉE)** : annonce Discord avec un vrai ping du membre,
+  avatar Discord de chaque membre, nom/niveau/barre de progression dynamiques. Le logo Optimus
+  de l'image de référence n'était qu'un exemple. L'annonce n'affiche plus XP, rang ou rôle,
+  mais calcul XP, classements et attribution des rôles restent actifs. Dashboard actualisé.
+  `test/v349-test.js` (17 vérifications). Version locale non poussée/non déployée.
 - **v348 (30/09 — MODÉRATION RANGÉE)** :
   filtres compacts, options repliées, sélecteurs (barème, anti-raid, sanctions FR).
   IDs Auto-Mod et tickets conservés. test/v348-test.js.
@@ -1590,10 +1595,14 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 4. Vérifie les tokens (GitHub 200, Render 200, Discord `users/@me` avec curl)
 5. Fais-moi un point de situation clair, puis attends mes instructions
 
-## 📌 ÉTAT AU 23/09/2026 (dernière mise à jour de ce document)
+## 📌 ÉTAT AU 03/10/2026 (mise à jour après v349)
 
-- Dernière version : **v348** — modération rangée (filtres, menus, moins de texte).
-  `test/v342-test.js`. Aperçu `docs/apercu-captcha.html`.
+- Version de travail : **v349**, changements locaux non poussés et non déployés.
+  La carte reprend le visuel validé avec l'avatar Discord propre à chaque membre ; le message
+  le ping. XP/rang/récompense ne sont plus affichés dans l'annonce, mais calcul XP, classement
+  et rôles restent actifs. `test/v349-test.js` ; suite complète : **265 fichiers verts**.
+- Version précédente : **v348** — modération rangée (filtres, menus, moins de texte).
+  `test/v348-test.js`. Aperçu `docs/apercu-captcha.html`.
 - **v341** — captcha à l’arrivée dans Vérification
   (bouton conservé). `test/v341-test.js`. Aperçu `docs/apercu-captcha.html`.
 - **v340** — ticket fermé : le créateur voit
@@ -1844,6 +1853,12 @@ me, bio 4 lignes, icône d'application
   quiz, série de connexion, export CSV). LOT 3 (backlog) = modmail, /profile,
   recherche transcriptions. Musique écartée.
 enommer le rôle « Nexora » à la main sur 6 serveurs
+  (Discord ne le permet pas automatiquement — voir piège n°4)
+- Roadmap : LOT 1 ✅ (v188), LOT 2 ✅ (v189), LOT 4 ✅ (v190, puis v191 :
+  retrait des pages publiques serveur/statut à la demande — il reste 6 langues,
+  quiz, série de connexion, export CSV). LOT 3 (backlog) = modmail, /profile,
+  recherche transcriptions. Musique écartée.
+ « Nexora » à la main sur 6 serveurs
   (Discord ne le permet pas automatiquement — voir piège n°4)
 - Roadmap : LOT 1 ✅ (v188), LOT 2 ✅ (v189), LOT 4 ✅ (v190, puis v191 :
   retrait des pages publiques serveur/statut à la demande — il reste 6 langues,

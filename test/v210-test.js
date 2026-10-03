@@ -1,8 +1,7 @@
 // Test v210 — Carte image de montée de niveau (XP)
 // --------------------------------------------------
-// v210 ajoute une carte générée (avatar + « Niveau X » + barre de
-// progression) à l'annonce de montée de niveau — comme la carte de
-// bienvenue. Option par serveur, activée par défaut, jamais bloquante.
+// Contrat actuel : carte dynamique avec l'avatar propre au membre, niveau, nom
+// et barre de progression. L'annonce ping le membre dans le contenu du message.
 const assert = require('assert');
 const fs = require('fs');
 const read = (p) => fs.readFileSync(p, 'utf8');
@@ -21,27 +20,25 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
 
 console.log('▶ v210-test.js');
 
-// ---------- 1. Génération de la carte (pure) ----------
+// ---------- 1. Génération de la carte (SVG pur) ----------
 console.log('— Carte de niveau : SVG —');
-const svg = community.levelUpCardSvg({ name: 'OptiPrime', server: 'Serveur Test', level: 7, pct: 0.5 });
-check('svg : « Niveau 7 »', svg.includes('Niveau 7'));
-check('svg : pseudo présent', svg.includes('OptiPrime'));
-check('svg : barre de progression 50 % → 260/520', svg.includes('width="260"') && svg.includes('width="520"'));
-check('svg : ne dépasse jamais 100 %', community.levelUpCardSvg({ level: 1, pct: 2 }).includes('width="520"'));
-check('svg : échappe les caractères <>&', community.levelUpCardSvg({ name: 'A&B<C>', level: 1 }).includes('A&amp;B&lt;C&gt;'));
-check('community : levelUpCard exportée (génère un PNG)', typeof community.levelUpCard === 'function');
+const svg = community.levelUpCardSvg({ name: 'Alex', server: 'Serveur Test', level: 7, pct: 0.5 });
+check('svg : libellé NIVEAU + chiffre dynamique', svg.includes('NIVEAU') && svg.includes('>7</text>'));
+check('svg : pseudo dynamique présent', svg.includes('Alex'));
+check('svg : progression 50 % → 270/540', svg.includes('width="270"') && svg.includes('width="540"'));
+check('svg : progression plafonnée à 100 %', community.levelUpCardSvg({ level: 1, pct: 2 }).includes('width="540"'));
+check('svg : nom échappé contre l’injection XML', community.levelUpCardSvg({ name: 'A&B<C>', level: 1 }).includes('A&amp;B&lt;C&gt;'));
+check('svg : fond à motifs hexagonaux et accent cyan', svg.includes('levelHex') && svg.includes('#30d5ff'));
+check('community : générateur PNG exporté', typeof community.levelUpCard === 'function');
+check('carte : avatar du membre découpé en cercle', communityJs.includes("blend: 'dest-in'") && xp.includes("displayAvatarURL({ extension: 'png', size: 256 })"));
 
 // ---------- 2. Réglage par serveur (db + routes) ----------
 console.log('— Réglage xp_card —');
 check('db : colonne xp_card (migration ALTER)', db.includes('ADD COLUMN xp_card INTEGER DEFAULT 1'));
 check('db : xp_card dans la liste des colonnes', db.includes("'xp_card',"));
 check('db : défaut activé (1) sauf si 0/false', db.includes('xp_card: (next.xp_card === 0 || next.xp_card === false) ? 0 : 1,'));
-// v249 : la route est devenue conditionnelle — deux boutons d'enregistrement
-// (XP texte et XP vocale) partagent PUT /xp, et un champ absent ne doit plus
-// écraser la valeur stockée. L'ancienne assertion vérifiait la ligne exacte
-// `xp_card: (card === false || card === 0) ? 0 : 1,`, disparue avec cette
-// réécriture. On vérifie désormais l'intention : le champ est bien accepté,
-// déstructuré, et converti en 0/1 uniquement s'il est fourni.
+// v249 : XP texte et XP vocale partagent PUT /xp ; les champs absents ne
+// doivent pas écraser les réglages déjà enregistrés.
 check('routes : déstructure « card » depuis le corps de la requête', /\bcard,/.test(routes));
 check('routes : xp_card n\'est écrit que si « card » est fourni',
   /if \(fourni\(card\)\) paquet\.xp_card =/.test(routes));
@@ -50,24 +47,28 @@ check('routes : …et il est bien normalisé en 0/1',
 check('routes : la base normalise toujours xp_card (dernier rempart)',
   db.includes('xp_card: (next.xp_card === 0 || next.xp_card === false) ? 0 : 1,'));
 
-// ---------- 3. Annonce : carte branchée (non bloquante) ----------
+// ---------- 3. Annonce : ping réel + carte ----------
 console.log('— Annonce de niveau avec carte —');
-check('xp : importe la carte depuis community', xp.includes("const community = require('./community')"));
-check('xp : génère la carte si option activée', xp.includes('community.levelUpCard({'));
-check('xp : active par défaut (sauf xp_card = 0/false)', xp.includes('!(gs.xp_card === 0 || gs.xp_card === false)'));
-check('xp : pièce jointe levelup.png + image de l’embed', xp.includes("name: 'levelup.png'") && xp.includes("embed.setImage('attachment://levelup.png')"));
-check('xp : jamais bloquante (try/catch)', xp.includes('} catch (e) { console.error(\'[Hoxera] carte de niveau :\', e.message); }'));
+check('xp : importe le générateur de carte', xp.includes("const community = require('./community')"));
+check('xp : transmet avatar, nom, niveau et progression dynamiques', xp.includes('community.levelUpCard({ avatarUrl, name: displayName, level, pct })'));
+check('xp : carte activée par défaut (sauf xp_card = 0/false)', xp.includes('!(gs.xp_card === 0 || gs.xp_card === false)'));
+check('xp : pièce jointe levelup.png intégrée en image', xp.includes("name: 'levelup.png'") && xp.includes(".setImage('attachment://levelup.png')"));
+check('xp : le membre est pingé dans content avec allowedMentions ciblé', xp.includes('content: text') && xp.includes('allowedMentions: { parse: [], users: userId ? [userId] : [] }'));
+check('xp : génération de carte non bloquante', xp.includes("console.error('[Hoxera] carte de niveau :', e.message)"));
+check('xp : aucune statistique XP/rang/récompense dans l’annonce', !xp.includes("name: '✨ XP'") && !xp.includes("name: '🏆 Rang'") && !xp.includes("name: '🎁 Rôle débloqué'"));
 
 // ---------- 4. Dashboard ----------
 console.log('— Dashboard —');
-check('dashboard : case « Carte de montée de niveau »', dash.includes("🖼️ Carte de montée de niveau") && dash.includes("id=\"xp-card\""));
+check('dashboard : réglage carte de montée de niveau présent', dash.includes("🖼️ Carte de montée de niveau") && dash.includes("id=\"xp-card\""));
+check('dashboard : libellé décrit l’avatar du membre', dash.includes('avatar du membre, nom et progression'));
 check('dashboard : envoie « card » à la sauvegarde', dash.includes('card: c.querySelector(\'#xp-card\').checked,'));
-check('dashboard : toggle des niveaux ciblé par id (plus de sélecteur générique)', dash.includes("c.querySelector('#xp-enabled').checked"));
+check('dashboard : toggle des niveaux ciblé par id', dash.includes("c.querySelector('#xp-enabled').checked"));
 check('dashboard : carte activée par défaut', dash.includes("s.xp_card === 0 || s.xp_card === false ? '' : 'checked'"));
+check('dashboard : exemple de message correspond au nouveau rendu', dash.includes("placeholder=\"{user} vient d\\'atteindre le niveau {level} !\""));
 
 // ---------- 5. Versions ----------
-check('index : version v210', index.includes('?v=348'));
-check('service worker : cache v210', sw.includes('botdev-v348'));
+check('index : version courante v349', index.includes('?v=349'));
+check('service worker : cache courant v349', sw.includes('botdev-v349'));
 
 console.log(`\n✅ v210-test.js : ${n} vérifications OK`);
 process.exit(0);

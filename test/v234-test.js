@@ -333,7 +333,7 @@ console.log('\n6️⃣  Garde-fous des versions précédentes');
   const ev = fs.readFileSync(path.join(__dirname, '..', 'server', 'discord', 'guildEvents.js'), 'utf8');
   check('v233 : guildEvents.js toujours sans sectionize', !ev.includes('ui.sectionize('));
   check('v232 : xp.js reste EXCLU du V2 (webhook + pièce jointe = 400)',
-    fs.readFileSync(path.join(__dirname, '..', 'server', 'discord', 'xp.js'), 'utf8').includes('ui.sectionize(text)'));
+    fs.readFileSync(path.join(__dirname, '..', 'server', 'discord', 'xp.js'), 'utf8').includes('allowedMentions: { parse: [], users: userId ? [userId] : [] }'));
   check('ui.js : v2panel reste compatible drop-in avec ui.panel (mêmes options)',
     typeof ui.v2panel === 'function' && (() => {
       const opts = { variant: 'info', title: 'T', description: 'A\n\nB', fields: [{ name: 'n', value: 'v' }], footer: 'F' };

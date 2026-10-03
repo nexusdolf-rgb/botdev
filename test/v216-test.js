@@ -34,11 +34,9 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
 
   // ---------- 2. Annonce de montée de niveau ----------
   console.log('— Annonce de niveau —');
-  check('annonce : auteur avec pseudo du membre + avatar', xp.includes("const authorName = `${user.username || user.tag || 'Membre'} 🎉`") && xp.includes('if (avatarUrl) authorOpts.iconURL = avatarUrl'));
-  check('annonce : champ ✨ XP (actuel max / requis)', xp.includes("{ name: '✨ XP', value: `${Math.max(row.xp || 0, cur)} / ${next}`"));
-  check('annonce : champ 🏆 Rang', xp.includes("name: '🏆 Rang'"));
-  check('annonce : 🎁 Rôle débloqué quand palier franchi', xp.includes("name: '🎁 Rôle débloqué'"));
-  check('annonce : carte image (avatar + niveau) conservée', xp.includes('community.levelUpCard({') && xp.includes("name: 'levelup.png'") && xp.includes("embed.setImage('attachment://levelup.png')"));
+  check('annonce : le membre est pingé dans le contenu du message', xp.includes('content: text') && xp.includes('allowedMentions: { parse: [], users: userId ? [userId] : [] }'));
+  check('annonce : pas de champs XP, rang ou rôle', !xp.includes("name: '✨ XP'") && !xp.includes("name: '🏆 Rang'") && !xp.includes("name: '🎁 Rôle débloqué'"));
+  check('annonce : carte image intégrée (avatar du membre + données dynamiques)', xp.includes('community.levelUpCard({ avatarUrl, name: displayName, level, pct })') && xp.includes("name: 'levelup.png'") && xp.includes(".setImage('attachment://levelup.png')"));
 
   // ---------- 3. /levels : votre position « vous » ----------
   console.log('— /levels : classement + ta position —');
@@ -70,8 +68,8 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
 
   // ---------- 8. Version ----------
   console.log('— Bump de version —');
-  check('index : bump v216', fs.readFileSync('public/index.html', 'utf8').includes('?v=348'));
-  check('sw : bump botdev-v241', fs.readFileSync('public/sw.js', 'utf8').includes('botdev-v348'));
+  check('index : bump v216', fs.readFileSync('public/index.html', 'utf8').includes('?v=349'));
+  check('sw : bump botdev-v241', fs.readFileSync('public/sw.js', 'utf8').includes('botdev-v349'));
 
   console.log(`  ✅ v216 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });

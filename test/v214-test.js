@@ -45,7 +45,8 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('xp.js : applyRankToMember (ajout + retrait hiérarchie)', xpSrc.includes('async function applyRankToMember(botId, guild, member, level, rewards)'));
   check('xp.js : applyRewards délègue à applyRankToMember', xpSrc.includes('await applyRankToMember(botId, message.guild, member, level,'));
   check('xp.js : plus d’attribution cumulative de tous les rôles', !xpSrc.includes('for (const r of roles) {') && !xpSrc.includes('if (r.level > level) continue;'));
-  check('xp.js : l’annonce affiche le palier FRANCHI (sauts de niveaux gérés)', xpSrc.includes('Number(r.level) > Number(oldLevel) && Number(r.level) <= Number(level))'));
+  check('xp.js : les rôles restent appliqués après chaque montée de niveau', xpSrc.includes('await applyRewards(botId, message, newLevel);'));
+  check('xp.js : aucun rôle de récompense affiché dans l’annonce', !xpSrc.includes("name: '🎁 Rôle débloqué'"));
   check('xp.js : exports rank helpers', /computeRankGoal, applyRankToMember, resolveRole/.test(xpSrc));
   check('db : xp.rows pour la synchro', db.includes('rows: (botId, guildId) => db.prepare(\'SELECT user_id, level, xp FROM xp'));
   check('db : stockage rôles par niveau (PK niveau unique)', db.includes('PRIMARY KEY (bot_id, guild_id, level)'));
@@ -67,8 +68,8 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('dash : sauvegarde triée par niveau', dash.includes('.sort((a, b) => a.level - b.level)'));
 
   // ---------- 5. Version ----------
-  check('site : bump v214 (index)', index.includes('?v=348'));
-  check('site : bump v214 (sw)', sw.includes('botdev-v348'));
+  check('site : bump v214 (index)', index.includes('?v=349'));
+  check('site : bump v214 (sw)', sw.includes('botdev-v349'));
 
   console.log(`  ✅ v214 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });

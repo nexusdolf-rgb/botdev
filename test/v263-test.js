@@ -112,9 +112,9 @@ const brut = (p) => JSON.stringify(p);
   console.log('— 6. Version —');
   const index = fs.readFileSync(require('path').join(__dirname, '..', 'public/index.html'), 'utf8');
   const sw = fs.readFileSync(require('path').join(__dirname, '..', 'public/sw.js'), 'utf8');
-  check('index.html : ?v=348 référencé 7 fois', (index.match(/\?v=348/g) || []).length === 7,
-    String((index.match(/\?v=348/g) || []).length));
-  check('sw.js : cache « botdev-v348 »', sw.includes("const CACHE = 'botdev-v348';"));
+  check('index.html : ?v=349 référencé 7 fois', (index.match(/\?v=349/g) || []).length === 7,
+    String((index.match(/\?v=349/g) || []).length));
+  check('sw.js : cache « botdev-v349 »', sw.includes("const CACHE = 'botdev-v349';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v263 — ${ok} vérifications OK : l'aide s'efface pour de bon.`);

@@ -61,16 +61,15 @@ for (const f of FICHIERS) {
     !/ui\.panel\(/.test(code) && !/ui\.embed\(/.test(code),
     (code.match(/ui\.(panel|embed)\(/g) || []).join(', '));
 }
-// Les 3 appels ui.sectionize() restants sont des EXCLUSIONS VOLONTAIRES :
-// ils sont tous dans des messages envoyés AVEC une pièce jointe par webhook
-// (V2 + webhook + files = 400 BAD REQUEST) ou dans un assistant multi-étapes.
+// Les appels ui.sectionize() restants servent aux assistants multi-étapes.
+// L'annonce de niveau utilise désormais un contenu Discord simple + carte image.
 const RESTANTS = FICHIERS.concat(['xp.js', 'panels.js', 'extra.js', 'premade.js'])
   .map((f) => ({ f, n: (codeOnly(f).match(/ui\.sectionize\(/g) || []).length }))
   .filter((x) => x.n > 0);
-check('seuls panels.js (assistant) et xp.js (carte de niveau) gardent ui.sectionize — events.js n’en a plus (v240)',
-  RESTANTS.map((x) => `${x.f}:${x.n}`).sort().join(' ') === 'panels.js:1 xp.js:1',
+check('seul panels.js (assistant) garde ui.sectionize — XP annonce maintenant en content Discord',
+  RESTANTS.map((x) => `${x.f}:${x.n}`).sort().join(' ') === 'panels.js:1',
   JSON.stringify(RESTANTS));
-console.log('✅ inventaire : 0 ui.panel / 0 ui.embed / 2 ui.sectionize documentés (events.js nettoyé en v240)');
+console.log('✅ inventaire : 0 ui.panel / 0 ui.embed / 1 ui.sectionize restant dans panels.js');
 
 // ═══════════════════════════════════════════════════════════════════════════
 console.log('\n2) Annonce personnalisée (announcements.js) — buildPanel / buildPayload');

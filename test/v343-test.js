@@ -30,8 +30,8 @@ const ver = require('../server/discord/verification');
 const changelog = require('../server/discord/changelog');
 
 console.log('— 1. Pins v343 —');
-check('index.html : ?v=348 ×7', (html.match(/\?v=348/g) || []).length === 7);
-check('sw.js : cache botdev-v348', sw.includes("const CACHE = 'botdev-v348';"));
+check('index.html : ?v=349 ×7', (html.match(/\?v=349/g) || []).length === 7);
+check('sw.js : cache botdev-v349', sw.includes("const CACHE = 'botdev-v349';"));
 check('index.html : plus aucune ?v=342', !html.includes('?v=342'));
 check('VERSION ≥ 343', changelog.VERSION >= 343);
 check('journal v343 : au moins 1 nouveauté', Array.isArray(changelog.NOTES.new) && changelog.NOTES.new.length >= 1);

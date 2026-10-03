@@ -10,6 +10,7 @@ process.env.BOTDEV_DATA_DIR = DATA_DIR;
 
 const store = require('../server/db');
 const xpEngine = require('../server/discord/xp');
+const identity = require('../server/discord/identity');
 const { runAutomod } = require('../server/discord/automod');
 const { buildSlashPayloads, buildHelpPanel } = require('../server/discord/premade');
 
@@ -29,6 +30,8 @@ console.log('1️⃣  Maths XP validées ✅');
   store.modules.set(1, 'levels', true);
 
   let sent = null;
+  // Capturer le payload final sans démarrer de webhook ni Discord réel.
+  identity.sendAsProfile = async (...args) => { sent = args[4]; return true; };
   const guild = {
     id: 'G1', name: 'Serveur Test',
     roles: { cache: { get: () => undefined, find: () => undefined } },
@@ -61,13 +64,14 @@ console.log('1️⃣  Maths XP validées ✅');
   const ok3 = await xpEngine.onMessage(1, msg());
   row = store.xp.get(1, 'G1', 'U1');
   assert(row.level === 1, 'niveau attendu 1, obtenu ' + row.level);
-  // v209 : l'annonce de niveau est un embed soigné (couleur de marque + progression)
-  const ann = sent && sent.embeds && sent.embeds[0] && sent.embeds[0].data;
-  const annText = ann ? String(ann.description || '') : String((sent && sent.content) || sent || '');
-  assert(annText.includes('niveau 1'), 'annonce attendue (embed de niveau)');
-  assert(ann && ann.color === 0xe07a5f, 'annonce : couleur de marque Hoxera (#e07a5f)');
-  assert(!(ann && ann.footer && String(ann.footer.text || '').includes('Hoxera')), 'v312 : annonce XP sans signature Hoxera');
-  console.log('4️⃣  Montée de niveau + annonce en embed ✅ («', annText.slice(0, 40), '… »)');
+  // v349 : le membre est pingé dans le contenu ; l'embed ne garde que la carte.
+  const ann = sent && sent.embeds && sent.embeds[0] && (sent.embeds[0].data || sent.embeds[0].toJSON());
+  const annText = String((sent && sent.content) || '');
+  assert(annText.includes('niveau 1'), 'annonce attendue dans content');
+  assert(sent && sent.allowedMentions && sent.allowedMentions.users.includes('U1'), 'annonce : vrai ping autorisé pour le membre');
+  assert(ann && ann.color === 0x30d5ff && ann.image.url === 'attachment://levelup.png', 'annonce : carte image cyan intégrée');
+  assert(!ann.fields || ann.fields.length === 0, 'annonce : aucun champ XP/rang');
+  console.log('4️⃣  Montée de niveau + ping + carte ✅ («', annText.slice(0, 40), '… »)');
 
   // XP désactivé → aucun gain
   store.guildSettings.set(1, 'G1', { xp_enabled: 0 });

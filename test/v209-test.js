@@ -55,7 +55,7 @@ check('plus aucune signature « Optimus Prime · » dans les messages', !files.p
 
 // ---------- 2. Palette : la marque suit sur Discord ----------
 console.log('— Palette : terracotta #e07a5f = neutre, zéro blurple par défaut —');
-check('xp (niveau) : couleur de marque', files.xp.includes(".setColor('#e07a5f')"));
+check('xp (niveau) : accent cyan assorti à la nouvelle carte', files.xp.includes(".setColor('#30d5ff')"));
 check('events : couleur invalide → marque', files.events.includes(": '#e07a5f'"));
 check('premade : /rank couleur de marque', files.premade.includes(".setColor('#e07a5f')"));
 check('aucun blurple #5865F2 restant dans ui/events/premade/extra/xp',
@@ -66,8 +66,8 @@ check('aucun blurple #5865F2 restant dans ui/events/premade/extra/xp',
 console.log('— Niveau : annonce en embed soigné —');
 check('xp.js : importe EmbedBuilder', files.xp.includes("require('discord.js')"));
 check('xp.js : annonce en embed', files.xp.includes('new EmbedBuilder()'));
-check('xp.js : mention de la progression', files.xp.includes("name: 'Progression'"));
-check('xp.js : champ XP', files.xp.includes("name: '✨ XP'"));
+check('xp.js : annonce placée dans le contenu du message', files.xp.includes('content: text'));
+check('xp.js : aucune statistique XP/rang dans l’annonce', !files.xp.includes("name: '✨ XP'") && !files.xp.includes("name: '🏆 Rang'"));
 check('v312 : xp.js n\'a plus de pied signé Hoxera', !files.xp.includes('Hoxera · ${message.guild.name}'));
 
 // ---------- 4. Giveaway : structuré, sans MAJUSCULES ----------
@@ -94,8 +94,8 @@ check('CSS : toutes les surfaces Discord aux mêmes arrondis', files.css.include
 check('dashboard : modèle d’accueil au tutoiement (plus de « je vous invite »)', !files.dashJs.includes('je vous invite à prendre connaissance'));
 // v240 — tout le produit est passé au vouvoiement : le modèle de départ aussi.
 check('dashboard : modèle de départ au vouvoiement', files.dashJs.includes('la porte reste ouverte si vous revenez'));
-check('index : version v209', files.indexHtml.includes('?v=348'));
-check('service worker : cache v209', files.sw.includes('botdev-v348'));
+check('index : version v209', files.indexHtml.includes('?v=349'));
+check('service worker : cache v209', files.sw.includes('botdev-v349'));
 check('menu mobile : nom du bot dynamique', files.dashJs.includes('Dashboard.state.bot.name'));
 
 // ---------- 7. Invitations (extra) : champ + footer ----------

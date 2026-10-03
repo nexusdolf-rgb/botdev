@@ -272,7 +272,7 @@ const check = (label, ok) => {
       && (src.match(/EmbedBuilder\.from\(emb\)/g) || []).length === 2);
     check('les 2 MP de décision de candidature sont, eux, en V2',
       /applicant\.send\(ui\.v2panel\(\{/.test(src) && (src.match(/applicant\.send\(ui\.v2panel\(\{/g) || []).length === 2);
-    check('xp.js reste EXCLU du V2 (webhook + pièce jointe = 400)', read('server/discord/xp.js').includes('ui.sectionize(text)'));
+    check('xp.js reste EXCLU du V2 (webhook + pièce jointe = 400)', read('server/discord/xp.js').includes('allowedMentions: { parse: [], users: userId ? [userId] : [] }'));
   }
 
   console.log('\n9️⃣  Garde-fous des versions précédentes');

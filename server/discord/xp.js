@@ -4,7 +4,6 @@
 // ============================================================
 const store = require('../db');
 const { EmbedBuilder } = require('discord.js');
-const ui = require('./ui');
 
 // Progression : niveau N nécessite 100*N² XP
 function xpForLevel(level) {
@@ -121,113 +120,78 @@ async function onMessage(botId, message) {
 
   if (newLevel > oldLevel) {
     store.xp.setLevel(botId, message.guild.id, message.author.id, newLevel);
-    await announce(botId, message, newLevel, gs, oldLevel);
+    await announce(botId, message, newLevel, gs);
     await applyRewards(botId, message, newLevel);
   }
   return true;
 }
 
-async function announce(botId, message, level, gs, oldLevel = 0) {
-  const template = String(gs.xp_message || '').trim() || '{user} vient d\'atteindre le **niveau {level}** ! 🎉';
-  const text = template
-    .replace(/\{user\}/g, `<@${message.author.id}>`)
+async function announce(botId, message, level, gs) {
+  const template = String(gs.xp_message || '').trim()
+    || '{user} vient d\'atteindre le niveau {level} !';
+  const user = message.author || {};
+  const userId = String(user.id || '').trim();
+  const mention = userId ? `<@${userId}>` : '';
+  let text = template
+    .replace(/\{user\}/g, mention)
     .replace(/\{level\}/g, String(level))
-    .replace(/\{server\}/g, message.guild.name)
-    .slice(0, 4096);
+    .replace(/\{server\}/g, String(message.guild.name || ''))
+    .slice(0, 2000);
+  // Le ping doit rester un vrai contenu de message, même si un ancien modèle
+  // personnalisé ne contient pas {user}. Il est limité à ce membre uniquement.
+  if (mention && !text.includes(mention)) {
+    text = `${mention} ${text}`.trim().slice(0, 2000);
+  }
   let channel = null;
-  // ⚠️ resolveChannel est ASYNCHRONE : sans await, on recevait une promesse
-  // (sans .send) → l'annonce partait toujours dans le salon du message.
   if (gs.xp_channel) channel = await resolveChannel(message.guild, gs.xp_channel);
   channel = channel || message.channel;
   if (!channel || typeof channel.send !== 'function') return;
 
-  // 🎉 Annonce de niveau en EMBED soigné (v209) : ton texte personnalisé
-  // reste la description ({user}, {level}, {server}…), on y ajoute la
-  // progression, le rang et la récompense de rôle débloquée.
-  const row = store.xp.get(botId, message.guild.id, message.author.id) || { xp: 0 };
+  const row = store.xp.get(botId, message.guild.id, userId) || { xp: 0 };
   const cur = xpForLevel(level);
   const next = xpForLevel(level + 1);
   const pct = next > cur ? Math.max(0, Math.min(1, (row.xp - cur) / (next - cur))) : 0;
-  const bars = 12;
-  const bar = '▰'.repeat(Math.round(pct * bars)) + '▱'.repeat(bars - Math.round(pct * bars));
-  let pos = 0;
-  try { pos = store.xp.rankOf(botId, message.guild.id, message.author.id) || 0; } catch {}
-  let reward = '';
-  try {
-    // v214 : le rôle annoncé est celui du palier FRANCHI (même en sautant
-    // plusieurs niveaux d'un coup : ex 3 → 6 avec un palier à 5).
-    const rewards = store.xpRoles.all(botId, message.guild.id) || [];
-    let crossed = null;
-    for (const r of rewards) {
-      if (Number(r.level) > Number(oldLevel) && Number(r.level) <= Number(level)) crossed = r;
-    }
-    if (crossed) {
-      const role = resolveRole(message.guild, crossed.role);
-      if (role) reward = role.toString();
-    }
-  } catch {}
+  const displayName = (message.member && message.member.displayName)
+    || user.globalName || user.username || user.tag || 'Membre';
 
-  const user = message.author || {};
-  const avatarUrl = (typeof user.displayAvatarURL === 'function')
-    ? user.displayAvatarURL({ extension: 'png', size: 256 }) : '';
-  const authorName = `${user.username || user.tag || 'Membre'} 🎉`;
-  const authorOpts = { name: authorName };
-  if (avatarUrl) authorOpts.iconURL = avatarUrl;
-  // ⛔ EXCLUSION VOLONTAIRE de la migration Components V2 (v232) — et elle est
-  // DOCUMENTÉE, pas oubliée.
-  //
-  // Ce message est envoyé par identity.sendAsProfile(), qui passe par un
-  // WEBHOOK (pour afficher le nom et l'avatar personnalisés du bot). Or la doc
-  // officielle Discord (Webhook Resource, Execute Webhook) est explicite :
-  //   « When the flag IS_COMPONENTS_V2 is set, the webhook message can only
-  //    contain components. Providing content, embeds, files[n] or poll will
-  //    fail with a 400 BAD REQUEST response »
-  // Ce message transporte la CARTE DE NIVEAU en pièce jointe
-  // (attachment://levelup.png). En V2 via webhook → 400 BAD REQUEST, puis
-  // repli silencieux sur channel.send() : le message partirait, mais SANS le
-  // nom et l'avatar personnalisés. On perdrait donc une fonctionnalité produit
-  // pour un détail cosmétique.
-  //
-  // Un webhook « application-owned » (créé par le bot, ce qui est le cas ici
-  // via channel.createWebhook) accepte bien les composants V2 — mais pas avec
-  // des fichiers. Les messages V2 SANS pièce jointe qui passent par
-  // sendAsProfile restent donc migrables.
-  //
-  // Le trait reste ici un trait TEXTE. Pour le rendre pleine largeur il
-  // faudrait soit renoncer à la carte de niveau, soit renoncer à l'identité
-  // personnalisée : les deux sont des décisions produit, pas techniques.
-  const embed = new EmbedBuilder()
-    .setColor('#e07a5f')
-    .setAuthor(authorOpts)
-    .setDescription(ui.sectionize(text))
-    .addFields(
-      { name: '✨ XP', value: `${Math.max(row.xp || 0, cur)} / ${next}`, inline: true },
-      { name: '🏆 Rang', value: pos ? `#${pos}` : '—', inline: true },
-      ...(reward ? [{ name: '🎁 Rôle débloqué', value: reward, inline: true }] : []),
-      { name: 'Progression', value: `${bar} ${Math.round(pct * 100)}%` },
-    )
-    
-    .setTimestamp();
-  // 🖼️ Carte de montée de niveau (v210) : image avatar + niveau + barre de
-  // progression, option activée par défaut — jamais bloquante : si la
-  // génération échoue (ou option désactivée), l'embed part seul.
+  // Le message de niveau est une vraie mention Discord dans le contenu.
+  // Le seul contenu visuel supplémentaire est la carte validée : pas de champs
+  // XP, rang ou rôle dans l'annonce. XP, rangs et rôles restent actifs ailleurs.
   let files = [];
+  let embeds = [];
   const cardEnabled = !(gs.xp_card === 0 || gs.xp_card === false);
   if (cardEnabled) {
     try {
       const community = require('./community');
-      const buf = await community.levelUpCard({
-        avatarUrl, name: user.username || user.tag || 'Membre',
-        server: message.guild.name, level, pct,
-      });
+      const avatarSource = message.member || user;
+      const avatarUrl = avatarSource && typeof avatarSource.displayAvatarURL === 'function'
+        ? avatarSource.displayAvatarURL({ extension: 'png', size: 256 }) : '';
+      const buf = await community.levelUpCard({ avatarUrl, name: displayName, level, pct });
       if (buf && buf.length) {
         files = [{ attachment: buf, name: 'levelup.png' }];
-        embed.setImage('attachment://levelup.png');
+        embeds = [new EmbedBuilder()
+          .setColor('#30d5ff')
+          .setImage('attachment://levelup.png')];
       }
     } catch (e) { console.error('[Hoxera] carte de niveau :', e.message); }
   }
+
+  // ⛔ EXCLUSION VOLONTAIRE de la migration Components V2 : cette annonce
+  // passe par sendAsProfile (webhook) avec du contenu, une embed et un fichier.
+  // La doc officielle « Webhook Resource / Execute Webhook » précise qu'un
+  // message V2 doit contenir uniquement des composants ; content, embeds ou
+  // fichiers avec IS_COMPONENTS_V2 donnent 400 BAD REQUEST. La carte jointe
+  // et l'identité du bot sont conservées en format classique.
   const identity = require('./identity');
-  await identity.sendAsProfile(message.client, botId, message.guild, channel, { embeds: [embed], files }).catch(() => {});
+  const payload = {
+    content: text,
+    allowedMentions: { parse: [], users: userId ? [userId] : [] },
+  };
+  if (embeds.length) {
+    payload.embeds = embeds;
+    payload.files = files;
+  }
+  await identity.sendAsProfile(message.client, botId, message.guild, channel, payload).catch(() => {});
 }
 
 async function applyRewards(botId, message, level) {

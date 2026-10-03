@@ -3359,7 +3359,7 @@ Dashboard.renderers.levels = async (content, data) => {
 
   const c = Dashboard.card(root, 'Gain d\'XP', '');
   const toggleRow = App.el(`<div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0 4px"><label class="dash-label" style="margin:0">Activer les niveaux</label><label class="switch"><input type="checkbox" id="xp-enabled" ${s.xp_enabled ? 'checked' : ''} /><span class="slider"></span></label></div>`);
-  const cardRow = App.el(`<div style="display:flex;align-items:center;justify-content:space-between;margin:2px 0 4px"><label class="dash-label" style="margin:0">🖼️ Carte de montée de niveau (avatar + niveau en image)</label><label class="switch"><input type="checkbox" id="xp-card" ${s.xp_card === 0 || s.xp_card === false ? '' : 'checked'} /><span class="slider"></span></label></div>`);
+  const cardRow = App.el(`<div style="display:flex;align-items:center;justify-content:space-between;margin:2px 0 4px"><label class="dash-label" style="margin:0">🖼️ Carte de montée de niveau (avatar du membre, nom et progression)</label><label class="switch"><input type="checkbox" id="xp-card" ${s.xp_card === 0 || s.xp_card === false ? '' : 'checked'} /><span class="slider"></span></label></div>`);
   c.appendChild(toggleRow);
   c.appendChild(cardRow);
   c.innerHTML += `
@@ -3369,7 +3369,7 @@ Dashboard.renderers.levels = async (content, data) => {
       <div><label class="dash-label">Pause (secondes)</label><input class="dash-input" id="xp-cd" type="number" value="${s.xp_cooldown ?? 60}" /></div>
     </div>
     <label class="dash-label">Message de niveau (variables {user}, {level})</label>
-    <input class="dash-input" id="xp-msg" value="${App.escapeHtml(s.xp_message || '')}" placeholder="{user} vient d\'atteindre le niveau {level} ! 🎉" />
+    <input class="dash-input" id="xp-msg" value="${App.escapeHtml(s.xp_message || '')}" placeholder="{user} vient d\'atteindre le niveau {level} !" />
     <label class="dash-label">Salon d\'annonce (vide = salon du message)</label>
     <select class="dash-select" id="xp-channel">
       <option value="">— Salon du message —</option>
