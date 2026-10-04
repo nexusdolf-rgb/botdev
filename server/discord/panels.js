@@ -844,6 +844,16 @@ function readRoomCfg(botId, guildId) {
 }
 const ROOM_DEFAULTS = { color: '', title: '', welcome: '', steps: '' };
 
+function appendTicketNumberToTitle(title, number, titleUsesNumberTemplate = false) {
+  const base = String(title || '').trim();
+  const value = String(number == null ? '' : number).trim();
+  if (!base || !value) return base;
+  if (titleUsesNumberTemplate) return base;
+  if (!/^\d+$/.test(value)) return base;
+  if (new RegExp(`#\\s*${value}(?!\\d)`).test(base)) return base;
+  return `${base} · #${value}`;
+}
+
 function ticketWelcomePanel(member, chosen, staffMention, reason, dmWarning = '', answers = [], lang = 'fr', meta = {}, room = ROOM_DEFAULTS, extra = {}) {
   // 🧹 v220 : panneau de bienvenue ALLÉGÉ — l'essentiel sans le bruit.
   // On garde : type, équipe, à propos, demande (raison), réponses au
@@ -852,9 +862,12 @@ function ticketWelcomePanel(member, chosen, staffMention, reason, dmWarning = ''
   // d'emploi du menu staff (le menu est réservé au staff). Le déroulement
   // détaillé n'apparaît que si le serveur en a configuré un ; sinon une
   // ligne discrète annonce la transcription en MP.
+  const teamLabel = String(extra.teamLabel || '').trim() || i18n.t(lang, 'ticket_team_default');
   const fields = [
-    { name: i18n.t(lang, 'ticket_type'), value: chosen ? `${chosen.emoji ? chosen.emoji + ' ' : ''}**${chosen.label}**` : '**Ticket simple**', inline: true },
-    { name: i18n.t(lang, 'ticket_team'), value: staffMention || i18n.t(lang, 'ticket_team_default'), inline: true },
+    { name: i18n.t(lang, 'ticket_type'), value: chosen ? `${chosen.emoji ? chosen.emoji + ' ' : ''}**${chosen.label}**` : `**${i18n.t(lang, 'ticket_simple')}**`, inline: true },
+    // Le rôle est pingé une fois sur la ligne d’identité ; ce champ reste lisible
+    // sans répéter la mention et sans générer un second ping.
+    { name: i18n.t(lang, 'ticket_team'), value: teamLabel, inline: true },
   ];
   if (chosen && chosen.description) {
     fields.push({ name: i18n.t(lang, 'ticket_about'), value: chosen.description.slice(0, 1024), inline: true });
@@ -892,10 +905,21 @@ function ticketWelcomePanel(member, chosen, staffMention, reason, dmWarning = ''
     .replace(/{server}/g, member.guild ? member.guild.name : 'serveur')
     .replace(/{type}/g, chosen ? (chosen.label || '') : 'ticket')
     .replace(/{number}/g, String(meta.number || ''));
-  const title = room.title ? resolveRoomVars(room.title) : i18n.t(lang, 'ticket_title');
+  const titleTemplate = String(room.title || '').trim() || i18n.t(lang, 'ticket_title');
+  const resolvedTitle = resolveRoomVars(titleTemplate);
+  const title = appendTicketNumberToTitle(
+    resolvedTitle,
+    meta.number,
+    Boolean(room.title && /\{number\}/i.test(String(room.title))),
+  );
   const desc = room.welcome
     ? resolveRoomVars(room.welcome)
     : i18n.t(lang, 'ticket_welcome_desc', { member: `${member}` });
+  const identityLine = `${i18n.t(lang, 'ticket_first_line', { member: `${member}` })}${staffMention ? ` • ${staffMention}` : ''}`;
+  // Le TextDisplay d’identité vient après le titre, dans le corps V2. Le double
+  // saut ne sépare que cette ligne de l’accueil ; l’accueil et sa consigne
+  // restent dans le même bloc (un seul saut de ligne).
+  const panelDescription = [identityLine, desc].filter(Boolean).join('\n\n');
   // v238 — le lien du dashboard (`public_url`) et l'horodatage sont RETIRÉS du
   // pied de page du salon privé, à la demande de l'utilisateur : c'est un espace
   // de travail entre le membre et le staff, pas une vitrine. La signature
@@ -907,19 +931,16 @@ function ticketWelcomePanel(member, chosen, staffMention, reason, dmWarning = ''
   // des séparateurs NATIFS pleine largeur. (Avant : aucun séparateur — le
   // message était volontairement « court », mais il porte en réalité jusqu'à
   // 7 blocs, dont les réponses au questionnaire.)
-  // • `extra.content` : la première ligne du salon (type + créateur + ping
-  //   staff). En V2 le `content` du message est interdit → il devient un
-  //   TextDisplay en tête de conteneur (même position visuelle). Le ping
-  //   `<@&rôle>` continue de notifier.
-  // • `extra.rows` : le menu « ⚙️ Actions du staff » entre DANS le conteneur,
-  //   au lieu de traîner en dessous du panneau.
-  // • L'avatar n'est plus répété en `author.iconURL` : la vignette suffit.
+  // v351 — titre et numéro réunis, puis ligne d’identité sous le titre.
+  // Le nom d’auteur « Ticket de Alice · #42 » disparaît : le membre et le rôle
+  // staff sont sur une ligne dédiée, le ping de rôle restant à sa fin.
+  // • Le séparateur V2 est natif et pleine largeur entre les blocs : pas de trait
+  //   entre la bienvenue et « Décrivez votre demande », ni entre type et équipe.
+  // • Le menu « ⚙️ Actions du staff » et le bouton restent dans le même panneau.
   return ui.v2panel({
     accent: false,
-    author: { name: `Ticket de ${member.user.username}${meta.number ? ` · #${meta.number}` : ''}` },
     title,
-    content: extra.content || '',
-    description: desc,
+    description: panelDescription,
     fields,
     thumbnail: avatar,
     footer: false,
@@ -1242,21 +1263,16 @@ Notre équipe va vous répondre dans le salon privé prévu pour vous.`,
     const openRow = store.openTickets.getByChannel(channel.id);
     const room = readRoomCfg(botId, guild.id);
     const identity = require('./identity');
-    // 🎫 La PREMIÈRE LIGNE du salon annonce le type + le créateur : le staff
-    // voit d'un coup d'œil de quel type de ticket il s'agit et qui l'a ouvert.
-    const typeTitle = chosen ? `${chosen.emoji ? chosen.emoji + ' ' : ''}**${chosen.label}**` : '**Ticket**';
-    // v237 — un SEUL payload Components V2 : la première ligne devient le
-    // `content` du conteneur et le menu staff (`row1`) une rangée À L'INTÉRIEUR
-    // du conteneur. Plus aucun `embeds` / `components` au niveau du message.
-    // Aucune pièce jointe ici → webhook + V2 est autorisé (piège n°12).
+    // 🎫 Le type reste dans son champ dédié ; la ligne sous le titre identifie
+    // le créateur puis ping les rôles staff une seule fois, à la fin.
+    // v237 — un SEUL payload Components V2 : titre, identité, contenu, champs
+    // et menu staff restent dans un seul conteneur. Aucune pièce jointe ici.
+    const teamLabel = supportRoles.map((role) => String(role.name || '').trim()).filter(Boolean).join(', ');
     const welcome = ticketWelcomePanel(
       member, chosen, staffMention, reason, dmWarning, answers, lang,
       { number: ticketNumber, prevCount, openedAt: openRow ? openRow.opened_at : new Date().toISOString() },
       room,
-      {
-        content: i18n.t(lang, 'ticket_first_line', { type: typeTitle, member: `${member}` }) + (staffMention ? ' · ' + staffMention : ''),
-        rows: staffRows,
-      },
+      { teamLabel, rows: staffRows },
     );
     await identity.sendAsProfile(interaction.client, botId, guild, channel, welcome).catch(() => {});
     await logging.log(botId, guild, {

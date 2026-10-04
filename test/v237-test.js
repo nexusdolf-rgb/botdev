@@ -13,7 +13,7 @@
 //     réponse éphémère de secours et le panneau ne bougeait pas.
 //  3. Dans le SALON PRIVÉ du ticket, le menu « ⚙️ Actions du staff » traînait
 //     EN DESSOUS du panneau (message en 3 morceaux : content + embed + row).
-//     → un seul payload V2, première ligne en tête de conteneur, menu DEDANS,
+//     → un seul payload V2, titre puis ligne d’identité, menu DEDANS,
 //     et séparateurs natifs entre les blocs (demande explicite).
 // ============================================================================
 'use strict';
@@ -218,24 +218,31 @@ async function main() {
         new StringSelectMenuOptionBuilder().setLabel('🗑 Supprimer définitivement').setValue('delete'),
       )
   );
-  const firstLine = '🎫 **Support** · <@u1> · <@&R1>';
+  const firstLine = 'Ticket de <@u1> • <@&R1>';
   const welcome = panels.ticketWelcomePanel(member, chosen, '<@&R1>', 'Je n\'arrive pas à me connecter', '',
     [{ q: 'Urgence ?', a: 'Haute' }], 'fr', { number: 12 }, {},
-    { content: firstLine, rows: [staffRow] });
+    { teamLabel: 'Modération', rows: [staffRow] });
 
   check('salon privé : un SEUL payload Components V2', v2.isV2(welcome) && welcome.embeds === undefined);
   check('salon privé : aucun `content`/`components` au niveau message',
     welcome.content === undefined && welcome.components.length === 1);
-  check('salon privé : la première ligne (type + créateur + ping staff) est en tête de conteneur',
-    v2.texts(welcome)[0] === firstLine, JSON.stringify(v2.texts(welcome)[0]));
+  const welcomeTexts = v2.texts(welcome);
+  check('salon privé : titre numéroté en premier, sans ligne auteur',
+    v2.title(welcome) === '🎫 TICKET OUVERT · #12' && v2.author(welcome) === '' && welcomeTexts[0] === '## 🎫 TICKET OUVERT · #12');
+  check('salon privé : ligne créateur + ping staff après le titre, sans type répété',
+    welcomeTexts[1] === firstLine && !welcomeTexts[1].includes('Support'));
   check('salon privé : le menu « ⚙️ Actions du staff » est DANS le conteneur',
     v2.rows(welcome).length === 1 && v2.json(welcome).includes(`bd-troom:${BOT}`)
     && v2.json(welcome).includes('Actions du staff'));
   check('salon privé : séparateurs NATIFS entre les blocs (demande utilisateur)',
     v2.dividers(welcome) >= 3, `${v2.dividers(welcome)} séparateur(s)`);
+  check('salon privé : rôle pingé une seule fois, équipe en texte simple',
+    (v2.allText(welcome).match(/<@&R1>/g) || []).length === 1
+      && v2.texts(welcome).some((t) => t.includes('Équipe en charge') && t.includes('Modération') && !t.includes('<@&R1>')));
   noTextSep(welcome, 'salon privé : aucun trait texte ━');
-  check('salon privé : message d\'accueil découpé en paragraphes (plus de \\n\\n brut)',
-    !v2.texts(welcome).some((t) => t.includes('\n\n')));
+  const greetingBlock = welcomeTexts.find((t) => t.includes('Bienvenue')) || '';
+  check('salon privé : bienvenue et consigne dans le même bloc, sans séparateur entre eux',
+    greetingBlock.includes('\n✍️ Décrivez votre demande') && !greetingBlock.includes('\n\n'));
   check('salon privé : tous les blocs sont rendus (type, équipe, à propos, réponses, raison)',
     ['Type de ticket', 'Équipe en charge', 'À propos de ce type', 'Urgence ?', 'Haute', 'Je n\'arrive pas à me connecter']
       .every((k) => v2.json(welcome).includes(k)));

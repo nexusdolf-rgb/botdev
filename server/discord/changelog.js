@@ -7,7 +7,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const ui = require('./ui');
 
-const VERSION = 348;
+const VERSION = 351;
 const DASHBOARD_URL = 'https://hoxera.is-a.dev';
 const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3';
 const AUTO_REVERT_MS = 2 * 60 * 1000;
@@ -15,6 +15,24 @@ const SELECT_ID = (botId) => `hx-upd:${botId}`;
 
 // Plus récent en premier. Menu Discord = 25 options max (accueil + 24 versions).
 const VERSIONS = [
+  {
+    v: 351, date: '04/10', title: 'Panneau de ticket privé plus clair',
+    new: ['Le numéro apparaît à côté de **🎫 TICKET OUVERT**. La ligne suivante indique le membre puis ping le rôle staff.'],
+    improved: ['Le type simple devient **🎟️ Simple** et le motif est clairement intitulé **Raison de l’ouverture du ticket**.'],
+    fixed: ['La ligne auteur redondante disparaît ; les séparateurs sont placés entre les sections, sans trait entre la bienvenue et sa consigne.'],
+  },
+  {
+    v: 350, date: '03/10', title: 'Ping et carte dans le même panneau',
+    new: ['Le vrai ping du membre précède le texte ; sa carte dynamique apparaît dans le même panneau Components V2.'],
+    improved: ['L’avatar du membre est conservé et l’annonce reste sans affichage d’XP ou de rang.'],
+    fixed: ['La carte est servie par une URL temporaire, compatible avec le webhook d’identité.'],
+  },
+  {
+    v: 349, date: '03/10', title: 'Carte de niveau personnalisée',
+    new: ['La carte utilise l’avatar Discord du membre et affiche son nom, son niveau et sa progression.'],
+    improved: ['Le vrai ping est conservé ; calcul XP, classement et rôles restent actifs.'],
+    fixed: ['Le logo fixe Optimus et les valeurs XP/rang ne sont pas affichés dans l’annonce.'],
+  },
   {
     v: 348, date: '30/09', title: 'Modération plus claire',
     new: ['Le module **Modération** est rangé comme un bot pro : filtres compacts, options repliées, tout se choisit dans un **menu**.'],

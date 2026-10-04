@@ -36,7 +36,7 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('message d’accueil FR nettement plus court', frWelcome.length < 200);
   check('la mention des actions parle d’un menu déroulant', frButtons.includes('menu déroulant'));
   check('le libellé du champ dit « Actions » et non « Boutons »', i18n.includes("ticket_buttons: '🔒 Actions réservées au staff'"));
-  check('6 langues ont un titre de ticket court', (i18n.match(/ticket_title: '🎫 Ticket ouvert'/g) || []).length === 1);
+  check('titre par défaut du salon privé : TICKET OUVERT', i18n.includes("ticket_title: '🎫 TICKET OUVERT'"));
 
   // ---------- 2. Réglage « salon privé » (db + routes) ----------
   console.log('— Réglage ticket_room (texte + couleur) —');

@@ -96,7 +96,7 @@ const check = (label, cond) => {
       return c;
     };
     mk('C1', 'support', 0);
-    const roles = new Map([['R1', { id: 'R1', name: 'Staff', hexColor: '#5865F2', toString: () => '@Staff', position: 10 }]]);
+    const roles = new Map([['R1', { id: 'R1', name: 'Staff', hexColor: '#5865F2', toString: () => '<@&R1>', position: 10 }]]);
     const coll = (map) => ({ get: (k) => map.get(k), has: (k) => map.has(k), find: (fn) => [...map.values()].find(fn), values: () => map.values() });
     return {
       id: 'G1', name: 'Serveur', ownerId: 'u1', memberCount: 5,
@@ -116,7 +116,7 @@ const check = (label, cond) => {
   };
   const makeI = (over = {}) => {
     const user = { id: 'u2', tag: 'Bob#0001', username: 'Bob', bot: false, displayAvatarURL: () => '', send: async () => ({}) };
-    const member = { id: 'u2', user, permissions: { has: () => true }, roles: { cache: new Map(), add: async () => ({}), remove: async () => ({}) } };
+    const member = { id: 'u2', user, toString: () => '<@u2>', permissions: { has: () => true }, roles: { cache: new Map(), add: async () => ({}), remove: async () => ({}) } };
     const i = {
       replied: false, deferred: false, replies: [], commandName: '', customId: '', values: [],
       fields: { getTextInputValue: () => '' }, user, member, guild: makeGuild(),
@@ -152,13 +152,17 @@ const check = (label, cond) => {
   const firstMsg = tSends[0] || {};
   check('type : le salon est nommé « reclamation-bob » (type + créateur)', String(channelsCreated[0].name) === 'reclamation-bob');
   check('type : le topic contient « Réclamation »', String(channelsCreated[0].topic).includes('Réclamation'));
-  // v237 — le message du salon privé est un payload Components V2 UNIQUE : la
-  // première ligne (type + créateur + ping staff) est un TextDisplay en tête de
-  // conteneur, plus le `content` du message, et il n'y a plus d'embed.
+  // v351 — le type est dans son champ dédié ; la ligne d’identité sous le
+  // titre indique l’ouvreur, puis ping le rôle staff. Aucun type n’y est répété.
   check('type : le salon privé est envoyé en Components V2 (un seul payload)', v2.isV2(firstMsg));
   const tEmb = v2.json(firstMsg);
-  check('type : la PREMIÈRE LIGNE du salon annonce « **Réclamation** — ticket de »', tEmb.includes('**Réclamation**') && tEmb.includes('ticket de'));
-  check('type : le panneau de bienvenue affiche « Réclamation »', tEmb.includes('Réclamation'));
+  const identityLine = v2.texts(firstMsg).find((text) => text.startsWith('Ticket de ')) || '';
+  check('type : ligne d’identité = créateur + ping staff, sans répéter le type', identityLine === 'Ticket de <@u2> • <@&R1>');
+  check('type : rôle pingé une fois, nom lisible dans le champ équipe',
+    (v2.allText(firstMsg).match(/<@&R1>/g) || []).length === 1
+      && v2.texts(firstMsg).some((text) => /Équipe en charge|Team in charge/.test(text) && text.includes('Staff') && !text.includes('<@&R1>')));
+  check('type : le panneau de bienvenue affiche le type « Réclamation » dans son champ', tEmb.includes('Réclamation'));
+  check('type : numéro visible à côté du titre', v2.title(firstMsg).includes('🎫 TICKET OUVERT · #1'));
   check('type : le menu staff est DANS le conteneur', tEmb.includes('bd-troom:'));
   const lastReply = wAns.replies[wAns.replies.length - 1];
   check('logique : confirmation privée avec le lien', lastReply && String(lastReply[1].content).includes('Votre ticket') && String(lastReply[1].content).includes('a été créé') && String(lastReply[1].content).includes('#reclamation-bob'));

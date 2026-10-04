@@ -92,12 +92,12 @@ const check = (label, cond) => {
   const embJson = v2.json(embed);
   check('salon : payload Components V2 (plus d\'embed)', v2.isV2(embed));
   check('salon : séparateurs natifs pleine largeur entre les blocs', v2.dividers(embed) >= 2);
-  check('salon : titre professionnel', embJson.includes('🎫 Ticket ouvert'));
+  check('salon : titre professionnel', embJson.includes('🎫 TICKET OUVERT'));
   check('salon : type avec emoji', embJson.includes('🤝 **Ticket contre admin**'));
   check('salon : description du type rappelée', embJson.includes('À propos de ce type') && embJson.includes('Signale un abus'));
   check('salon : équipe en charge', embJson.includes('Équipe en charge'));
   check('salon : transcription annoncée (note discrète)', embJson.includes('transcription'));
-  check('salon : vouvoyé (« votre demande »)', embJson.includes('Votre demande'));
+  check('salon : raison explicitement libellée', embJson.includes('Raison de l’ouverture du ticket'));
   // 🧹 v220 : le panneau du salon privé a été allégé — plus de détail inutile.
   check('salon : allégé — pas de date brute, tickets précédents, étapes ni mode d emploi staff',
     !embJson.includes('Ouvert le') && !embJson.includes('Tickets précédents')

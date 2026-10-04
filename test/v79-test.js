@@ -34,7 +34,7 @@ const check = (label, cond) => {
   // ---------- 1. i18n de base ----------
   check('i18n : t() français', i18n.t('fr', 'panel_welcome', { server: 'Test' }).includes('Bienvenue sur le support officiel de Test'));
   check('i18n : t() anglais', i18n.t('en', 'panel_welcome', { server: 'Test' }).includes('Welcome to the official support of Test'));
-  check('i18n : variables remplacées', i18n.t('en', 'ticket_first_line', { type: '❓ Question', member: '@Bob' }).includes('ticket from @Bob'));
+  check('i18n : variables remplacées', i18n.t('en', 'ticket_first_line', { type: '❓ Question', member: '@Bob' }).includes('Ticket from @Bob'));
   check('i18n : normalisation (EN → en)', i18n.normalize('EN') === 'en');
   check('i18n : langue inconnue → fr', i18n.normalize('xx') === 'fr');
   // v240 — périmètre ramené à fr + en (les blocs es/de/pt/it étaient incomplets).
@@ -72,7 +72,7 @@ const check = (label, cond) => {
   // v237 — payload Components V2 : le titre est porté par le conteneur et les
   // libellés de champs sont rendus dans des TextDisplay.
   const embTicketEn = panels.ticketWelcomePanel(member, chosen, '<@&R1>', 'hello', '', [], 'en');
-  check('ticket EN : titre traduit', v2.title(embTicketEn) === '🎫 Ticket opened');
+  check('ticket EN : titre traduit', v2.title(embTicketEn) === '🎫 TICKET OPEN');
   check('ticket EN : champs traduits', v2.json(embTicketEn).includes('Ticket type') && v2.json(embTicketEn).includes('Team in charge'));
   const embTicketFr = panels.ticketWelcomePanel(member, chosen, '<@&R1>', 'bonjour', '', [], 'fr');
   check('ticket FR : champs français', v2.json(embTicketFr).includes('Type de ticket'));

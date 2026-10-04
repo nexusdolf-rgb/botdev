@@ -16,7 +16,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 - **Teste TOUT avant de mettre en ligne** : jamais de push sans feu vert de `bash scripts/check.sh`
 - **Chaque nouvelle fonctionnalité = son test automatique** (dossier `test/`, nommage `vNNN-test.js`)
 - Trouve des solutions vite, protège le bot et ses données, explique-moi simplement (je suis débutant)
-- Commits en français, préfixés par un numéro de version (version de travail : **v350**, locale/non poussée ; **v349** reste en production) avec description détaillée
+- Commits en français, préfixés par un numéro de version ; noter l’état réel de production après chaque livraison, avec description détaillée
 
 ## 🧑‍💻 MOI, L'UTILISATEUR (à respecter scrupuleusement)
 
@@ -61,7 +61,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   `automod.js`, `antiraid.js`, `xp.js`, `logging.js`, `i18n.js`, `nativeAutomod.js`
 - `public/` : SPA vanilla JS — `js/dashboard.js` (modules), `js/app.js`, `js/public.js`
   (landing), `css/dashboard.css` (bloc « mode clair » en fin de fichier)
-- `test/` : **265 fichiers de test**. `bash scripts/check.sh` = syntaxe + secrets + suite (OBLIGATOIRE, ~3,5 min)
+- `test/` : `bash scripts/check.sh` exécute **266 tests** (syntaxe + secrets + suite ; obligatoire, ~3,5 min)
 - `docs/AGENT.md` : ce document — **le mettre à jour à chaque grande étape**
 
 ## 🔁 RECETTE DE LIVRAISON (à connaître par cœur)
@@ -962,12 +962,27 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   légende incluses. Test v303 : 25 vérifications. 📌 **RÈGLE** : tout nouveau
   panneau doit être compté « à la Discord » (composants imbriqués compris,
   enfants des rangées inclus) — voir `discordCount` dans `test/v303-test.js`.
+- **v351 (04/10 — PANNEAU PRIVÉ DU TICKET, APERÇU CONFIRMÉ)** : `panels.js` affiche
+  `🎫 TICKET OUVERT · #N` (les titres personnalisés restent pris en compte ; `{number}` ou
+  un numéro déjà présent ne sont pas doublés). La ligne auteur disparaît au profit de
+  `Ticket de @membre • @staff` : type non répété, vrai ping staff une seule fois, nom d’équipe
+  lisible dans son champ. Le type simple devient `🎟️ Simple`, les types personnalisés gardent
+  leurs libellés/emojis, et le motif est `📝 Raison de l’ouverture du ticket`.
+  Séparateurs natifs testés dans l’ordre de l’aperçu : après l’identité, les consignes, le
+  groupe type/équipe et la raison ; aucun entre bienvenue/consignes, type/équipe, ni avant
+  les actions staff. Les réglages personnalisés, l’avatar et les contrôles staff sont préservés.
+  `test/v351-test.js` (26 vérifications) + intégration v48. Le journal `/update` inclut aussi
+  les versions v350 et v349, absentes malgré leur livraison, pour que « actuelle + précédente »
+  reflète bien v351/v350. La vieille assertion de v348 vérifie désormais sa présence historique
+  sans bloquer les versions ultérieures. `bash scripts/check.sh` a réussi **5 fois** (266/266
+  chacune). Commit v351 créé ; push et déploiement explicitement autorisés, à vérifier ci-dessous.
 - **v350 (03/10 — PING AVANT TEXTE, DANS LE MÊME PANNEAU)** : suite à l'aperçu confirmé,
   l'annonce place `@membre` avant la phrase dans un Text Display agrandi, puis la carte
   dynamique dans la Media Gallery du même panneau Components V2. Le PNG est servi par une
   route temporaire publique à clé imprévisible (cache 24 h, 256 images maximum) pour rester
   compatible avec le webhook d'identité, sans pièce jointe. Avatar, carte, absence d'XP/rang,
-  calcul XP et rôles sont préservés. `test/v350-test.js`. Version locale, non poussée/déployée.
+  calcul XP et rôles sont préservés. `test/v350-test.js` (28 vérifications). Commit `698bade`
+  poussé et déployé ; CI GitHub verte et santé de production vérifiée.
 - **v349 (03/10 — CARTE DE NIVEAU VALIDÉE)** : annonce Discord avec un vrai ping du membre,
   avatar Discord de chaque membre, nom/niveau/barre de progression dynamiques. Le logo Optimus
   de l'image de référence n'était qu'un exemple. L'annonce n'affiche plus XP, rang ou rôle,
@@ -1599,20 +1614,31 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 4. Vérifie les tokens (GitHub 200, Render 200, Discord `users/@me` avec curl)
 5. Fais-moi un point de situation clair, puis attends mes instructions
 
-## 📌 ÉTAT AU 03/10/2026 (v349 en production, v350 en local)
+## 📌 PRÉPARATION DE LA LIVRAISON v351 (04/10/2026)
 
-- **v350 est en cours localement**, sur la base `e4fdd87` : l'annonce de niveau place le ping
-  avant le texte agrandi et la carte dans le même panneau Components V2. L'image passe par un
-  cache temporaire borné et une route publique. `test/v350-test.js` (28 vérifications). **Pas encore
-  poussé ni déployé.**
-- **v349 poussée et déployée** sur `main` (commit `34217bb`, Render deploy `dep-db0htdlg1s2s73e5nkv0`).
-  La carte utilise l'avatar Discord propre à chaque membre ; le vrai ping est conservé. XP/rang/
-  récompense ne sont pas affichés dans l'annonce, mais calcul XP, classement et rôles restent actifs.
-  La CI GitHub de v349 est verte. `bash scripts/check.sh` après v350 : **265/265**, feu vert.
-- Après le déploiement, `bootRestore` a d'abord échoué car `BOTDEV_GH_TOKEN` était invalide.
-  Le token a été actualisé dans Render puis v349 redéployée : dernier état vérifié avant v350
-  `bootRestore: ok (618496 octets, 1 bot)`, DB restaurée, 10 serveurs / 310 membres, 0 erreur sur
-  24 h, sauvegarde active. Ne jamais laisser une valeur `bootRestore` différente de `ok (…)`.
+- v350 (`698bade`) était le dernier état de production vérifié avant v351. La version v351 a été
+  commitée après **5 suites complètes vertes** (266/266 chacune). `test/v351-test.js` comporte
+  26 vérifications ; les titres, types/messages personnalisés, avatar et actions staff sont
+  préservés. Push et déploiement ont été explicitement autorisés ; vérifier CI et Render après.
+- Contrôles ciblés exécutés : v36/v48/v79/v212/v220/v237/v238/v307/v308/v309/v312/v348 ;
+  assertions historiques concernées mises à jour. `git diff --check` OK.
+- **Tâche XP séparée encore ouverte** : vérifier/corriger le fallback classique des annonces XP
+  pour qu’il reste Components V2 sans image si la carte est désactivée ou échoue, avec ping réel
+  et avatar conservés, sans logo fixe ni XP/rang affichés. Elle n’est pas incluse dans v351.
+- **v350 poussée et déployée** sur `main` (commit `698bade`). Annonce : ping avant le texte
+  agrandi, carte dynamique dans le même panneau Components V2. `test/v350-test.js` (28 vérifications).
+  CI GitHub verte.
+- Dernière vérification de production connue (03/10) : les 7 ressources HTML portent `?v=350` ;
+  la route image répond 404 à une clé inconnue (route v350 active). `/api/health/bot` :
+  `bootRestore: ok (643072 octets, 1 bot(s))`, 1 bot en ligne, 10 serveurs / 310 membres,
+  0 erreur sur 24 h, sauvegardes actives. Dernière sauvegarde observée :
+  `2026-10-03T21:03:28.068Z`. Ne jamais laisser `bootRestore` différent de `ok (…)`.
+- Limite v350 : les images sont en cache mémoire (24 h, 256 entrées maximum) ; un redémarrage
+  avant leur récupération peut invalider une URL encore non consultée. L’envoi réel d’une montée
+  de niveau n’a pas été déclenché manuellement en production.
+- v349 précédente (commit `34217bb`, Render deploy `dep-db0htdlg1s2s73e5nkv0`) : carte dynamique
+  et avatar de membre, vrai ping, XP/rang/récompense absents de l’annonce ; calcul XP, classement
+  et rôles conservés. CI v349 verte.
 - Version précédente : **v348** — modération rangée (filtres, menus, moins de texte).
   `test/v348-test.js`. Aperçu `docs/apercu-captcha.html`.
 - **v341** — captcha à l’arrivée dans Vérification
