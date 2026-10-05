@@ -1614,6 +1614,15 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 4. Vérifie les tokens (GitHub 200, Render 200, Discord `users/@me` avec curl)
 5. Fais-moi un point de situation clair, puis attends mes instructions
 
+## 📌 PRÉPARATION v352 — NON LIVRÉE (05/10/2026)
+
+- L’utilisateur a confirmé l’aperçu : retirer **uniquement** le champ « Équipe en charge » du panneau privé ; conserver le ping réel du rôle staff sur la ligne d’identité, le type, le motif, les séparateurs, les actions staff et les réglages personnalisés.
+- Modifications locales dans `panels.js`, `changelog.js`, les tests de régression, `test/v352-test.js` et l’aperçu canonique `docs/apercu-ticket-prive.html`. L’aperçu est maintenant la version sans le champ, avec ping conservé.
+- Vérifications réussies : `test/v352-test.js` 18/18 ; `test/v351-test.js` 25/25 ; `bash scripts/check.sh` une fois, **267/267** (syntaxe et recherche de secrets incluses) ; `git diff --check` OK.
+- L’utilisateur a explicitement autorisé la livraison le 05/10/2026. Dans l’environnement de reprise, `origin` était absent ; il a été rétabli vers le dépôt public connu. Aucun GitHub CLI, helper d’identifiants, agent SSH, jeton d’environnement ni fichier netrc/credentials n’est présent. Tentative `git push origin main` : refus GitHub faute d’identifiant ; aucun push ni déploiement.
+- Commit v352 conservé localement. Le jeton collé dans la conversation n’a pas été enregistré ni utilisé ; le considérer comme exposé et révoquer. Ne pas le réutiliser ni demander qu’il soit renvoyé dans le chat.
+- v351 reste le dernier déploiement connu (`b55dc5f`). Au dernier contrôle, Render était sain ; le run GitHub Actions #277 était encore en cours, son état final n’a pas été vérifié.
+
 ## 📌 PRÉPARATION DE LA LIVRAISON v351 (04/10/2026)
 
 - v350 (`698bade`) était le dernier état de production vérifié avant v351. La version v351 a été

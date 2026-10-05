@@ -95,7 +95,8 @@ const check = (label, cond) => {
   check('salon : titre professionnel', embJson.includes('🎫 TICKET OUVERT'));
   check('salon : type avec emoji', embJson.includes('🤝 **Ticket contre admin**'));
   check('salon : description du type rappelée', embJson.includes('À propos de ce type') && embJson.includes('Signale un abus'));
-  check('salon : équipe en charge', embJson.includes('Équipe en charge'));
+  check('salon : champ équipe retiré, ping staff conservé une fois',
+    !embJson.includes('Équipe en charge') && (embJson.match(/<@&R1>/g) || []).length === 1);
   check('salon : transcription annoncée (note discrète)', embJson.includes('transcription'));
   check('salon : raison explicitement libellée', embJson.includes('Raison de l’ouverture du ticket'));
   // 🧹 v220 : le panneau du salon privé a été allégé — plus de détail inutile.

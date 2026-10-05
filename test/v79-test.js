@@ -73,7 +73,11 @@ const check = (label, cond) => {
   // libellés de champs sont rendus dans des TextDisplay.
   const embTicketEn = panels.ticketWelcomePanel(member, chosen, '<@&R1>', 'hello', '', [], 'en');
   check('ticket EN : titre traduit', v2.title(embTicketEn) === '🎫 TICKET OPEN');
-  check('ticket EN : champs traduits', v2.json(embTicketEn).includes('Ticket type') && v2.json(embTicketEn).includes('Team in charge'));
+  check('ticket EN : type et motif traduits, sans champ équipe ; ping conservé',
+    v2.json(embTicketEn).includes('Ticket type')
+      && v2.json(embTicketEn).includes('Reason for opening this ticket')
+      && !v2.json(embTicketEn).includes('Team in charge')
+      && (v2.allText(embTicketEn).match(/<@&R1>/g) || []).length === 1);
   const embTicketFr = panels.ticketWelcomePanel(member, chosen, '<@&R1>', 'bonjour', '', [], 'fr');
   check('ticket FR : champs français', v2.json(embTicketFr).includes('Type de ticket'));
 

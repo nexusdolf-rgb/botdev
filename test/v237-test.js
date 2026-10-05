@@ -236,15 +236,15 @@ async function main() {
     && v2.json(welcome).includes('Actions du staff'));
   check('salon privé : séparateurs NATIFS entre les blocs (demande utilisateur)',
     v2.dividers(welcome) >= 3, `${v2.dividers(welcome)} séparateur(s)`);
-  check('salon privé : rôle pingé une seule fois, équipe en texte simple',
+  check('salon privé : champ équipe retiré, ping staff conservé une seule fois',
     (v2.allText(welcome).match(/<@&R1>/g) || []).length === 1
-      && v2.texts(welcome).some((t) => t.includes('Équipe en charge') && t.includes('Modération') && !t.includes('<@&R1>')));
+      && !v2.allText(welcome).includes('Équipe en charge'));
   noTextSep(welcome, 'salon privé : aucun trait texte ━');
   const greetingBlock = welcomeTexts.find((t) => t.includes('Bienvenue')) || '';
   check('salon privé : bienvenue et consigne dans le même bloc, sans séparateur entre eux',
     greetingBlock.includes('\n✍️ Décrivez votre demande') && !greetingBlock.includes('\n\n'));
-  check('salon privé : tous les blocs sont rendus (type, équipe, à propos, réponses, raison)',
-    ['Type de ticket', 'Équipe en charge', 'À propos de ce type', 'Urgence ?', 'Haute', 'Je n\'arrive pas à me connecter']
+  check('salon privé : tous les blocs sont rendus (type, à propos, réponses, raison)',
+    ['Type de ticket', 'À propos de ce type', 'Urgence ?', 'Haute', 'Je n\'arrive pas à me connecter']
       .every((k) => v2.json(welcome).includes(k)));
   check('salon privé : l\'espaceur invisible \\u200b ne réapparaît pas comme intitulé',
     !v2.texts(welcome).some((t) => t.includes('\u200b')));

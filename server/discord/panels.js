@@ -825,9 +825,9 @@ async function removeClaimButton(message, botId, staffUser, lang) {
   }
 }
 
-// Embed de bienvenue du salon de ticket : textes professionnels,
-// type + description, équipe en charge, déroulement de la prise en charge,
-// et les réponses du questionnaire personnalisé (si le type en a un).
+// Panneau Components V2 de bienvenue du salon de ticket : type + description,
+// déroulement de la prise en charge et réponses au questionnaire personnalisé
+// (si le type en a un). Le rôle staff est pingé sur la ligne d’identité.
 // v212 — Réglage « Panneau du salon privé » (dashboard) : textes + couleur.
 // Champs vides → valeurs par défaut concises (i18n).
 function readRoomCfg(botId, guildId) {
@@ -856,18 +856,15 @@ function appendTicketNumberToTitle(title, number, titleUsesNumberTemplate = fals
 
 function ticketWelcomePanel(member, chosen, staffMention, reason, dmWarning = '', answers = [], lang = 'fr', meta = {}, room = ROOM_DEFAULTS, extra = {}) {
   // 🧹 v220 : panneau de bienvenue ALLÉGÉ — l'essentiel sans le bruit.
-  // On garde : type, équipe, à propos, demande (raison), réponses au
-  // questionnaire. On ne remonte plus la date brute (l'horodatage du pied
+  // On garde : type, à propos, demande (raison), réponses au
+  // questionnaire. L’équipe est indiquée par le ping sur la ligne d’identité.
+  // On ne remonte plus la date brute (l'horodatage du pied
   // l'affiche), ni le compteur « tickets précédents », ni le long mode
   // d'emploi du menu staff (le menu est réservé au staff). Le déroulement
   // détaillé n'apparaît que si le serveur en a configuré un ; sinon une
   // ligne discrète annonce la transcription en MP.
-  const teamLabel = String(extra.teamLabel || '').trim() || i18n.t(lang, 'ticket_team_default');
   const fields = [
     { name: i18n.t(lang, 'ticket_type'), value: chosen ? `${chosen.emoji ? chosen.emoji + ' ' : ''}**${chosen.label}**` : `**${i18n.t(lang, 'ticket_simple')}**`, inline: true },
-    // Le rôle est pingé une fois sur la ligne d’identité ; ce champ reste lisible
-    // sans répéter la mention et sans générer un second ping.
-    { name: i18n.t(lang, 'ticket_team'), value: teamLabel, inline: true },
   ];
   if (chosen && chosen.description) {
     fields.push({ name: i18n.t(lang, 'ticket_about'), value: chosen.description.slice(0, 1024), inline: true });
@@ -926,8 +923,8 @@ function ticketWelcomePanel(member, chosen, staffMention, reason, dmWarning = ''
   // « Hoxera · Ticket #N » suffit. (`public_url` reste utilisé ailleurs :
   // bannière du panneau public, lien de transcription.)
   // v237 — le message du salon PRIVÉ passe en Components V2, comme le panneau
-  // public : les paragraphes du message d'accueil ET chaque bloc (type, équipe,
-  // à propos, réponses au questionnaire, raison, déroulement) sont séparés par
+  // public : les paragraphes du message d'accueil ET chaque bloc (type, à propos,
+  // réponses au questionnaire, raison, déroulement) sont séparés par
   // des séparateurs NATIFS pleine largeur. (Avant : aucun séparateur — le
   // message était volontairement « court », mais il porte en réalité jusqu'à
   // 7 blocs, dont les réponses au questionnaire.)
@@ -935,7 +932,7 @@ function ticketWelcomePanel(member, chosen, staffMention, reason, dmWarning = ''
   // Le nom d’auteur « Ticket de Alice · #42 » disparaît : le membre et le rôle
   // staff sont sur une ligne dédiée, le ping de rôle restant à sa fin.
   // • Le séparateur V2 est natif et pleine largeur entre les blocs : pas de trait
-  //   entre la bienvenue et « Décrivez votre demande », ni entre type et équipe.
+  //   entre la bienvenue et « Décrivez votre demande ».
   // • Le menu « ⚙️ Actions du staff » et le bouton restent dans le même panneau.
   return ui.v2panel({
     accent: false,
@@ -1267,12 +1264,11 @@ Notre équipe va vous répondre dans le salon privé prévu pour vous.`,
     // le créateur puis ping les rôles staff une seule fois, à la fin.
     // v237 — un SEUL payload Components V2 : titre, identité, contenu, champs
     // et menu staff restent dans un seul conteneur. Aucune pièce jointe ici.
-    const teamLabel = supportRoles.map((role) => String(role.name || '').trim()).filter(Boolean).join(', ');
     const welcome = ticketWelcomePanel(
       member, chosen, staffMention, reason, dmWarning, answers, lang,
       { number: ticketNumber, prevCount, openedAt: openRow ? openRow.opened_at : new Date().toISOString() },
       room,
-      { teamLabel, rows: staffRows },
+      { rows: staffRows },
     );
     await identity.sendAsProfile(interaction.client, botId, guild, channel, welcome).catch(() => {});
     await logging.log(botId, guild, {

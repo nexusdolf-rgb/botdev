@@ -67,15 +67,16 @@ check('le titre est le premier bloc ; la ligne auteur a disparu',
     && !v2.allText(simplePanel).includes('Ticket de Alice · #42'));
 check('la ligne suivante indique le créateur puis ping le rôle staff',
   simpleTexts[1] === `Ticket de <@U1> • ${roleMention}`);
-check('le rôle n’est pingé qu’une fois et le champ équipe reste en texte simple',
+check('le ping réel du rôle reste présent une seule fois et le champ équipe est absent',
   (v2.allText(simplePanel).match(/<@&R1>/g) || []).length === 1
-    && simpleTexts.some((t) => t.includes('Équipe en charge') && t.includes('Modération') && !t.includes(roleMention)));
+    && !v2.allText(simplePanel).includes('Équipe en charge')
+    && !v2.allText(simplePanel).includes('Modération'));
 
 console.log('— Type, raison et texte de bienvenue —');
-const typeTeamBlock = simpleTexts.find((t) => t.includes('Type de ticket') && t.includes('Équipe en charge')) || '';
-check('le type simple est « 🎟️ Simple », sans « Ticket simple » redondant',
-  typeTeamBlock.includes('**🎟️ Simple**') && !typeTeamBlock.includes('Ticket simple'));
-check('le libellé équipe conserve le nom staff', typeTeamBlock.includes('Modération'));
+const typeBlock = simpleTexts.find((t) => t.includes('Type de ticket')) || '';
+check('le type simple est « 🎟️ Simple », sans champ équipe redondant',
+  typeBlock.includes('**🎟️ Simple**') && !typeBlock.includes('Ticket simple')
+    && !typeBlock.includes('Équipe en charge'));
 const greetingBlock = simpleTexts.find((t) => t.includes('Bienvenue')) || '';
 check('bienvenue et consigne restent dans le même bloc (aucun séparateur entre elles)',
   greetingBlock.includes('Bienvenue <@U1>')
@@ -86,7 +87,7 @@ check('le motif porte le nouveau libellé et garde la réponse',
   reasonBlock.includes('📝 Raison de l’ouverture du ticket')
     && reasonBlock.includes('Ma commande n’est jamais arrivée…'));
 check('la note de transcription reste présente', v2.allText(simplePanel).includes('📄 À la fermeture définitive'));
-check('séparateurs dans l’ordre confirmé : identité, consignes, type/équipe, raison',
+check('séparateurs confirmés dans l’ordre : identité, consignes, type, raison',
   separatorsBetween('Ticket de <@U1>', 'Bienvenue <@U1>') === 1
     && separatorsBetween('Décrivez votre demande', 'Type de ticket') === 1
     && separatorsBetween('Type de ticket', 'Raison de l’ouverture du ticket') === 1
@@ -155,16 +156,17 @@ const lastNoteIndex = textPartIndex('À la fermeture définitive', controlsParts
 const firstActionIndex = controlsParts.findIndex((part) => Number(part.type) === v2.TYPE.ACTION_ROW);
 check('aucun séparateur entre la dernière note et les actions staff',
   lastNoteIndex >= 0 && firstActionIndex === lastNoteIndex + 1);
-check('journal : v351 courant et versions récentes complètes dans l’ordre',
-  changelog.VERSION === 351 && changelog.VERSIONS[0].v === 351 && changelog.NOTES.v === 351
-    && changelog.VERSIONS.slice(0, 4).map((version) => version.v).join(',') === '351,350,349,348');
+check('journal : v351 est conservée derrière la version courante',
+  changelog.VERSION >= 351 && changelog.VERSIONS[0].v === changelog.VERSION
+    && changelog.NOTES.v === changelog.VERSION && changelog.VERSIONS.some((version) => version.v === 351));
 const homeUpdate = changelog.buildHomePanel(1);
 const homeUpdateText = v2.allText(homeUpdate);
-check('/update affiche bien v351 + v350 comme actuelle et précédente',
-  v2.title(homeUpdate) === '🚀 Optimus Prime — Mises à jour (v351)'
-    && homeUpdateText.includes('**v351 — Panneau de ticket privé plus clair**')
-    && homeUpdateText.includes('**v350 — Ping et carte dans le même panneau**')
-    && !homeUpdateText.includes('**v349 —'));
+const currentUpdate = changelog.VERSIONS[0];
+const previousUpdate = changelog.VERSIONS[1];
+check('/update affiche la version courante et la précédente',
+  v2.title(homeUpdate) === `🚀 Optimus Prime — Mises à jour (v${currentUpdate.v})`
+    && homeUpdateText.includes(`**v${currentUpdate.v} — ${currentUpdate.title}**`)
+    && homeUpdateText.includes(`**v${previousUpdate.v} — ${previousUpdate.title}**`));
 check('traductions : raison, type simple et accueil sans séparateur ajouté',
   i18n.t('fr', 'ticket_reason') === '📝 Raison de l’ouverture du ticket'
     && i18n.t('fr', 'ticket_simple') === '🎟️ Simple'

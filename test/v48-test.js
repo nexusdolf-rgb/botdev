@@ -158,9 +158,9 @@ const check = (label, cond) => {
   const tEmb = v2.json(firstMsg);
   const identityLine = v2.texts(firstMsg).find((text) => text.startsWith('Ticket de ')) || '';
   check('type : ligne d’identité = créateur + ping staff, sans répéter le type', identityLine === 'Ticket de <@u2> • <@&R1>');
-  check('type : rôle pingé une fois, nom lisible dans le champ équipe',
+  check('type : champ « Équipe en charge » retiré, ping réel conservé une fois',
     (v2.allText(firstMsg).match(/<@&R1>/g) || []).length === 1
-      && v2.texts(firstMsg).some((text) => /Équipe en charge|Team in charge/.test(text) && text.includes('Staff') && !text.includes('<@&R1>')));
+      && !/Équipe en charge|Team in charge/.test(v2.allText(firstMsg)));
   check('type : le panneau de bienvenue affiche le type « Réclamation » dans son champ', tEmb.includes('Réclamation'));
   check('type : numéro visible à côté du titre', v2.title(firstMsg).includes('🎫 TICKET OUVERT · #1'));
   check('type : le menu staff est DANS le conteneur', tEmb.includes('bd-troom:'));

@@ -7,7 +7,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const ui = require('./ui');
 
-const VERSION = 351;
+const VERSION = 352;
 const DASHBOARD_URL = 'https://hoxera.is-a.dev';
 const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3';
 const AUTO_REVERT_MS = 2 * 60 * 1000;
@@ -15,6 +15,12 @@ const SELECT_ID = (botId) => `hx-upd:${botId}`;
 
 // Plus récent en premier. Menu Discord = 25 options max (accueil + 24 versions).
 const VERSIONS = [
+  {
+    v: 352, date: '05/10', title: 'Panneau privé sans champ d’équipe',
+    new: ['Le champ **Équipe en charge** est retiré du panneau privé du ticket.'],
+    improved: ['Le ping réel du rôle staff reste sur la ligne d’identité ; type, motif et actions staff sont conservés.'],
+    fixed: ['Les autres contenus et réglages personnalisés du panneau restent inchangés.'],
+  },
   {
     v: 351, date: '04/10', title: 'Panneau de ticket privé plus clair',
     new: ['Le numéro apparaît à côté de **🎫 TICKET OUVERT**. La ligne suivante indique le membre puis ping le rôle staff.'],
