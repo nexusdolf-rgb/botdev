@@ -35,10 +35,11 @@ assert.ok(around.includes('try {') && around.includes('catch'), 'setPosition pro
 console.log('✅ placement best-effort : jamais bloquant');
 
 // 5. Créateur : bouton-lien direct + mention + MP conservé
-assert.ok(src.includes("setLabel('🎫 Ouvrir mon ticket')"), 'bouton-lien direct dans la confirmation');
+assert.ok(src.includes("setLabel(i18n.t(lang, 'ticket_dm_open_button'))"), 'bouton-lien direct du MP, libellé localisé');
 assert.ok(src.includes('https://discord.com/channels/${guild.id}/${channel.id}'), 'URL directe du salon');
-assert.ok(src.includes('Rejoignez-le ici : ${channel}'), 'MP au créateur avec le lien conservé');
+assert.ok(src.includes('buildTicketOpenDmPayload(interaction.client, guild, channel, ticketNumber, lang)'), 'MP au créateur concis avec lien direct');
+assert.ok(!src.includes('Rejoignez-le ici : ${channel}'), 'ancien champ de lien redondant retiré du MP');
 assert.ok(src.includes('ephemeral: true'), 'confirmation privée (éphémère)');
-console.log('✅ créateur : bouton « Ouvrir mon ticket » + mention éphémère + MP avec lien');
+console.log('✅ créateur : bouton direct localisé + mention éphémère + MP concis');
 
 console.log('\n🎉 Tous les tests v2.4 passent');

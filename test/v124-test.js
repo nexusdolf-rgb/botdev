@@ -36,7 +36,7 @@ assert.ok(panelsSource.includes("const ui = require('./ui')"));
 // y ont été remplacés par ui.v2panel. L'intention (brique commune du design
 // system) est inchangée.
 assert.ok(panelsSource.includes('ui.v2panel({') && !panelsSource.includes('ui.embed({') && !panelsSource.includes('ui.panel({'));
-assert.ok(panelsSource.includes('ui.linkRow(\'📜 Ouvrir la transcription\''));
+assert.ok(panelsSource.includes("ui.linkRow(i18n.t(lang, 'transcript_button')"));
 assert.ok(panelsSource.includes('bd-tmenu:${botId}:claim'));
 assert.ok(extraSource.includes("const ui = require('./ui')"));
 // v235 — extra.js est entièrement passé en Components V2 (0 ui.panel, 0 ui.embed).

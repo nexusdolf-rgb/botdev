@@ -266,8 +266,9 @@ check('mono-section 4096 max non touchée', ui.embed({ description: 'x'.repeat(4
   const pSrc = src('panels.js');
   check('salon privé : accueil = texte naturel (ui.text, pas de trait)',
     pSrc.includes('.setDescription(ui.text(desc, 4096))'));
-  check('DM « votre ticket est ouvert » : sections désactivées',
-    pSrc.includes('sections: false,') && pSrc.includes("title: '🎫 Votre ticket est ouvert'"));
+  check('DM d’ouverture : payload concis en Components V2, sections désactivées',
+    pSrc.includes('function buildTicketOpenDmPayload(') && pSrc.includes('sections: false,')
+      && pSrc.includes("title: i18n.t(lang, 'ticket_dm_open_title'"));
   check('DM de transcription : texte naturel (ui.text, pas de trait)',
     pSrc.includes('.setDescription(ui.text(desc, 4096))'));
   const memberW = { id: 'u1', user: { username: 'Alice', displayAvatarURL: () => '' }, toString: () => '@Alice', guild: { name: 'S' } };

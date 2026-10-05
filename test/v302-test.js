@@ -57,10 +57,10 @@ function mkDb(file, { bots = 0, guildCfg = 0 } = {}) {
 (async () => {
   console.log('— 1. Pins de version v302 —');
   const html = racine('public/index.html');
-  check('index.html : ?v=350 ×7', (html.match(/\?v=350/g) || []).length === 7, String((html.match(/\?v=350/g) || []).length));
+  check('index.html : ?v=353 ×7', (html.match(/\?v=353/g) || []).length === 7, String((html.match(/\?v=353/g) || []).length));
   check('index.html : aucun ?v=301 restant', !(html.includes('?v=301')));
   const sw = racine('public/sw.js');
-  check('sw.js : cache botdev-v350', sw.includes("const CACHE = 'botdev-v350';"));
+  check('sw.js : cache botdev-v353', sw.includes("const CACHE = 'botdev-v353';"));
 
   console.log('— 2. countBotsIn : validation d\'une sauvegarde téléchargée —');
   const goodFile = path.join(TMP, 'good.db');

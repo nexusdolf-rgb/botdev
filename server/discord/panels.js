@@ -1012,6 +1012,22 @@ function panelChannelOf(guild, interaction, configOverride) {
   return null;
 }
 
+function buildTicketOpenDmPayload(client, guild, channel, ticketNumber, lang) {
+  const ticketLink = new ButtonBuilder()
+    .setStyle(ButtonStyle.Link)
+    .setLabel(i18n.t(lang, 'ticket_dm_open_button'))
+    .setURL(`https://discord.com/channels/${guild.id}/${channel.id}`);
+  return ui.v2panel({
+    accent: false,
+    title: i18n.t(lang, 'ticket_dm_open_title', { number: ticketNumber }),
+    description: i18n.t(lang, 'ticket_dm_open_desc', { server: guild.name }),
+    sections: false,
+    footer: false,
+    thumbnail: client && client.user && client.user.displayAvatarURL
+      ? client.user.displayAvatarURL({ size: 128 }) : '',
+  }, [new ActionRowBuilder().addComponents(ticketLink)]);
+}
+
 async function openTicket(botId, interaction, type, reason = '', answers = [], configOverride = null) {
   const guild = interaction.guild;
   const member = interaction.member;
@@ -1220,34 +1236,8 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
     if (interaction.client && interaction.client.users) {
       const openerUser = await interaction.client.users.fetch(member.id);
       const lang = i18n.langForGuild(guild.id);
-      const ticketTitle = chosen ? `${chosen.emoji ? chosen.emoji + ' ' : ''}${chosen.label}` : 'Support';
-      const ticketLink = new ButtonBuilder()
-        .setStyle(ButtonStyle.Link)
-        .setLabel('🎫 Ouvrir mon ticket')
-        .setURL(`https://discord.com/channels/${guild.id}/${channel.id}`);
-      // v234 — payload Components V2 : le bouton-lien va DANS le conteneur.
-      const dmPayload = ui.v2panel({
-        // v309/v310 — aucune ligne verticale colorée sur les panneaux du
-        // système de tickets (celui-ci est le MP de confirmation envoyé au
-        // créateur juste après la création) : bordure neutre.
-        accent: false,
-        title: '🎫 Votre ticket est ouvert',
-        // DM de confirmation COURT : pas de séparateur plaqué entre les
-        // phrases — il garde ses sauts de paragraphe naturels.
-        sections: false,
-        description: `Votre demande sur **${guild.name}** a bien été créée.
-
-Notre équipe va vous répondre dans le salon privé prévu pour vous.`,
-        fields: [
-          { name: '🗂️ Type', value: ticketTitle, inline: true },
-          { name: '🔢 Numéro', value: `#${ticketNumber}`, inline: true },
-          { name: '📌 Prochaine étape', value: 'Ouvrez votre ticket et répondez aux messages du staff.', inline: false },
-          { name: '🔗 Accès direct', value: `Rejoignez-le ici : ${channel}`, inline: false },
-        ],
-        footer: false,
-        thumbnail: interaction.client.user && interaction.client.user.displayAvatarURL ? interaction.client.user.displayAvatarURL({ size: 128 }) : '',
-      }, [new ActionRowBuilder().addComponents(ticketLink)]);
-      await openerUser.send(dmPayload);
+      // v353 — MP concis : type retiré, bouton-lien direct et texte bilingue.
+      await openerUser.send(buildTicketOpenDmPayload(interaction.client, guild, channel, ticketNumber, lang));
     }
   } catch {
     dmWarning = '\n⚠️ **Mes messages privés ne vous atteignent pas** : activez « Autoriser les messages privés des membres du serveur » (Réglages Discord → Confidentialité) si vous voulez recevoir la transcription à la fermeture.';
@@ -1610,7 +1600,7 @@ async function sendTranscriptDm(clientOrInteraction, guild, channelName, { text,
     // Le bouton lien rentre DANS le conteneur (V2 refuse les components au
     // niveau du message). ⚠️ Il passe en 2ᵉ ARGUMENT de v2panel : dans les
     // options, il était avalé (voir le correctif ui.js v239).
-  }, url ? [ui.linkRow('📜 Ouvrir la transcription', url)] : []);
+  }, url ? [ui.linkRow(i18n.t(lang, 'transcript_button'), url)] : []);
   try {
     await user.send({
       ...payload,
@@ -1630,7 +1620,7 @@ async function sendTranscriptDm(clientOrInteraction, guild, channelName, { text,
           .setDescription(ui.text(desc, 4096))
           .setImage(customImg || profileBanner)
           ],
-        components: url ? [ui.linkRow('📜 Ouvrir la transcription', url)] : [],
+        components: url ? [ui.linkRow(i18n.t(lang, 'transcript_button'), url)] : [],
         files: [{ attachment: Buffer.from(text || 'Transcription indisponible.', 'utf-8'), name: fileName }],
       });
       return true;
@@ -2141,7 +2131,6 @@ async function sendRatingDm(client, guild, openerId, number, lang) {
       accent: false,
       title: `⭐ ${i18n.t(lang, 'ticket_rating_title')}`,
       description: i18n.t(lang, 'ticket_rating_desc', { number, server: guild.name }),
-      fields: [{ name: '🧭 Comment noter ?', value: 'Choisissez une note ci-dessous. Votre avis aide le staff à améliorer le support.' }],
       footer: false,
       thumbnail: client && client.user && client.user.displayAvatarURL ? client.user.displayAvatarURL({ size: 128 }) : '',
     }, [row]));
@@ -3250,6 +3239,7 @@ module.exports = {
   handleTicketDeleteAsk, ticketMetaFor, ticketWelcomePanel, readRoomCfg, typeOptionDescription, normalizeTypes,
   sendTranscriptDm, sweepInactiveTickets, buildTranscriptFromChannel, sendRatingDm,
   __testPanelBannerUrl: panelBannerUrl,
+  __testBuildTicketOpenDmPayload: buildTicketOpenDmPayload,
   // v234 — exposé pour les tests : pruneOldPanels doit reconnaître les panneaux
   // classiques ET les conteneurs Components V2, sinon les doublons s'accumulent.
   __testPanelTitleOf: panelTitleOf,

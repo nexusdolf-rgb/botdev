@@ -33,8 +33,8 @@ const racine = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 
 console.log('— 1. Pins de version v309 —');
 const html = racine('public/index.html');
-check('index.html : ?v=350 ×7', (html.match(/\?v=350/g) || []).length === 7);
-check('sw.js : cache botdev-v350', racine('public/sw.js').includes("const CACHE = 'botdev-v350';"));
+check('index.html : ?v=353 ×7', (html.match(/\?v=353/g) || []).length === 7);
+check('sw.js : cache botdev-v353', racine('public/sw.js').includes("const CACHE = 'botdev-v353';"));
 
 console.log('— 2. Panneaux tickets : plus AUCUNE ligne colorée —');
 store.bots.create({ user_id: 1, name: 'B', token: 'x', client_id: 'c', prefix: '!' });
@@ -71,10 +71,10 @@ store.bots.create({ user_id: 1, name: 'B', token: 'x', client_id: 'c', prefix: '
   check('DM transcription : aucune ligne colorée', src.slice(Math.max(0, dmi - 300), dmi).includes('accent: false'));
   const ri = src.indexOf('ticket_rating_title');
   check('DM évaluation : aucune ligne colorée', src.slice(Math.max(0, ri - 300), ri).includes('accent: false'));
-  // v310 — le MP de confirmation envoyé au créateur juste après la création
-  // (« 🎫 Votre ticket est ouvert ») et le rappel « bientôt fermé ».
-  const oi = src.indexOf("title: '🎫 Votre ticket est ouvert'");
-  check('DM créateur après création : aucune ligne colorée (v310)', src.slice(Math.max(0, oi - 320), oi).includes('accent: false'));
+  // v310 — le MP d’ouverture envoyé au créateur après la création
+  // (titre via i18n) et le rappel « bientôt fermé ».
+  const oi = src.indexOf("title: i18n.t(lang, 'ticket_dm_open_title'");
+  check('DM d’ouverture du ticket : aucune ligne colorée (v310)', src.slice(Math.max(0, oi - 320), oi).includes('accent: false'));
   const wi = src.indexOf("title: '⚠️ Ticket bientôt fermé'");
   check('rappel « bientôt fermé » : aucune ligne colorée (v310)', src.slice(Math.max(0, wi - 320), wi).includes('accent: false'));
 }

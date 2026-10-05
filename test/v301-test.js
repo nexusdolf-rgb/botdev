@@ -159,8 +159,8 @@ console.log('\n— Section 3 : comportement onChannelCreate —');
   console.log('\n— Section 6 : bump v301 —');
   const index = racine('public/index.html');
   const sw = racine('public/sw.js');
-  check('index.html : ?v=350 ×7', (index.match(/\?v=350/g) || []).length === 7);
-  check('sw.js : CACHE botdev-v350', sw.includes("const CACHE = 'botdev-v350';"));
+  check('index.html : ?v=353 ×7', (index.match(/\?v=353/g) || []).length === 7);
+  check('sw.js : CACHE botdev-v353', sw.includes("const CACHE = 'botdev-v353';"));
   check('aucune référence v=300 restante', !index.includes('?v=300') && !sw.includes('botdev-v300'));
 
   fs.rmSync(TMP, { recursive: true, force: true });

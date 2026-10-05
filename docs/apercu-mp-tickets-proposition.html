@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aperçu proposé — MP des tickets</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #1e1f22; color: #f2f3f5; }
+    .wrap { max-width: 1190px; margin: 0 auto; padding: 28px 20px 42px; }
+    .intro { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin: 0 0 22px; }
+    h1 { margin: 0 0 8px; font-size: clamp(22px, 3vw, 30px); line-height: 1.2; letter-spacing: -.3px; }
+    .sub { max-width: 760px; margin: 0; color: #b5bac1; font-size: 14px; line-height: 1.6; }
+    .badge { flex: 0 0 auto; border: 1px solid #5865f2; color: #c9cdfc; background: #343a76; border-radius: 999px; padding: 7px 11px; font-size: 11px; font-weight: 800; letter-spacing: .5px; }
+    .window { overflow: hidden; border: 1px solid #202225; border-radius: 14px; background: #313338; box-shadow: 0 20px 55px #0005; }
+    .topbar { display: flex; align-items: center; gap: 12px; height: 56px; padding: 0 18px; background: #2b2d31; border-bottom: 1px solid #222327; }
+    .top-icon { width: 27px; height: 27px; display: grid; place-items: center; border-radius: 8px; background: #3a3d43; font-size: 15px; }
+    .top-title { font-weight: 750; font-size: 14px; }
+    .online { color: #949ba4; font-size: 12px; margin-left: auto; }
+    .online i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #23a559; margin-right: 6px; vertical-align: 1px; }
+    .layout { display: grid; grid-template-columns: 190px minmax(0, 1fr); min-height: 650px; }
+    .side { background: #2b2d31; padding: 17px 10px; border-right: 1px solid #242529; }
+    .side-label { margin: 2px 8px 10px; color: #949ba4; text-transform: uppercase; font-size: 10px; font-weight: 800; letter-spacing: .7px; }
+    .dm-item { display: flex; align-items: center; gap: 9px; padding: 8px; border-radius: 7px; color: #dbdee1; font-size: 12px; margin: 2px 0; }
+    .dm-item.active { background: #404249; color: #fff; }
+    .mini-avatar { display: grid; place-items: center; flex: 0 0 auto; width: 25px; height: 25px; border-radius: 50%; background: #5865f2; font-size: 14px; }
+    .content { min-width: 0; padding: 20px clamp(14px, 3vw, 32px) 26px; }
+    .section-title { display: flex; align-items: center; gap: 9px; margin: 2px 0 13px; color: #f2f3f5; font-weight: 760; font-size: 15px; }
+    .lang { color: #c9cdfc; background: #393f7b; border-radius: 5px; padding: 3px 6px; font-size: 10px; font-weight: 850; letter-spacing: .4px; }
+    .msg { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 11px; margin: 0 0 27px; }
+    .avatar { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(145deg, #5865f2, #353a85); font-size: 21px; box-shadow: inset 0 1px 4px #ffffff24; }
+    .meta { display: flex; align-items: baseline; flex-wrap: wrap; gap: 7px; margin: 1px 0 7px; }
+    .name { font-weight: 730; font-size: 13px; color: #f2f3f5; }
+    .tag { color: #fff; background: #5865f2; border-radius: 3px; padding: 2px 4px; font-size: 9px; font-weight: 800; }
+    .time { color: #949ba4; font-size: 10px; }
+    .panel { max-width: 680px; padding: 15px 16px 14px; border: 1px solid #42454c; border-radius: 12px; background: #2b2d31; }
+    .panel h3 { margin: 0 0 9px; color: #f2f3f5; font-size: 17px; line-height: 1.3; font-weight: 760; }
+    .desc { color: #dbdee1; font-size: 13px; line-height: 1.55; }
+    .fields { display: flex; flex-wrap: wrap; gap: 18px; margin: 13px 0 0; }
+    .field { min-width: 105px; display: flex; flex-direction: column; gap: 4px; }
+    .field b { font-size: 11px; color: #b5bac1; font-weight: 700; }
+    .field span { color: #f2f3f5; font-size: 13px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 13px; }
+    .button { min-height: 32px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 6px 12px; border: 1px solid #5a5c63; border-radius: 4px; background: #4e5058; color: white; font-size: 13px; font-weight: 600; white-space: nowrap; }
+    .button.link-button { background: #4e5058; border-color: #5a5c63; }
+    .link-mark { color: #d5d7dc; font-size: 12px; margin-left: 2px; }
+    .button.action-button { min-width: 44px; padding-inline: 9px; border: 0; border-radius: 6px; background: #41434a; font-size: 13px; }
+    .button.action-button.positive { background: #248046; }
+    .file { display: flex; align-items: center; gap: 10px; max-width: 330px; margin-top: 13px; padding: 9px 11px; background: #232428; border: 1px solid #41434a; border-radius: 8px; }
+    .file-icon { display: grid; place-items: center; width: 30px; height: 34px; border-radius: 5px; color: #c9cdfc; background: #393f7b; font-size: 10px; font-weight: 900; }
+    .file-name { color: #f2f3f5; font-size: 12px; font-weight: 650; }
+    .file-size { margin-top: 3px; color: #949ba4; font-size: 10px; }
+    .divider { height: 1px; margin: 28px 0 22px; background: #42454c; }
+    .note { margin: 8px 0 0; padding: 12px 14px; border-left: 3px solid #5865f2; border-radius: 7px; background: #292b30; color: #b5bac1; font-size: 12px; line-height: 1.55; }
+    .foot { margin: 16px 0 0; color: #949ba4; font-size: 11px; line-height: 1.5; }
+    @media (max-width: 700px) {
+      .wrap { padding: 18px 10px 26px; }
+      .intro { display: block; }
+      .badge { display: inline-block; margin-top: 12px; }
+      .layout { grid-template-columns: 1fr; }
+      .side { display: none; }
+      .topbar { padding-inline: 13px; }
+      .content { padding: 17px 12px 23px; }
+      .msg { grid-template-columns: 32px minmax(0,1fr); gap: 8px; }
+      .avatar { width: 32px; height: 32px; font-size: 18px; }
+      .panel { padding: 13px; }
+      .panel h3 { font-size: 15px; }
+      .desc { font-size: 12px; }
+      .button { font-size: 11px; padding-inline: 9px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="intro">
+      <div>
+        <h1>Messages privés des tickets — v353</h1>
+        <p class="sub">Aperçu des MP Discord FR/EN implémentés en v353 : ouverture, clôture avec transcription et demande d’avis. Les exemples utilisent le ticket #123 et « Serveur exemple ». Les textes et images de clôture personnalisés restent conservés.</p>
+      </div>
+      <span class="badge">VERSION 353 · FR / EN</span>
+    </header>
+
+    <section class="window" aria-label="Aperçu d’une conversation privée Discord">
+      <div class="topbar">
+        <div class="top-icon">💬</div>
+        <div class="top-title">Messages directs</div>
+        <div class="online"><i></i>Optimus Prime · en ligne</div>
+      </div>
+      <div class="layout">
+        <aside class="side">
+          <div class="side-label">Messages directs</div>
+          <div class="dm-item active"><span class="mini-avatar">🤖</span>Optimus Prime</div>
+          <div class="dm-item"><span class="mini-avatar" style="background:#4c5058">👤</span>Serveur exemple</div>
+        </aside>
+        <div class="content">
+          <div class="section-title"><span class="lang">FR</span> Ouverture du ticket</div>
+          <article class="msg">
+            <div class="avatar">🤖</div>
+            <div>
+              <div class="meta"><span class="name">Optimus Prime</span><span class="tag">BOT</span><span class="time">Aujourd’hui à 14:02</span></div>
+              <div class="panel">
+                <h3>🎫 Ticket ouvert · #123</h3>
+                <div class="desc">Votre demande sur <strong>Serveur exemple</strong> a été transmise à l’équipe.</div>
+                <div class="actions"><span class="button link-button">🎫 Ouvrir mon ticket <span class="link-mark" aria-hidden="true">↗</span></span></div>
+              </div>
+            </div>
+          </article>
+
+          <div class="divider"></div>
+          <div class="section-title"><span class="lang">FR</span> Clôture et transcription</div>
+          <article class="msg">
+            <div class="avatar">🤖</div>
+            <div>
+              <div class="meta"><span class="name">Optimus Prime</span><span class="tag">BOT</span><span class="time">Aujourd’hui à 16:30</span></div>
+              <div class="panel">
+                <h3>🎫 Ticket clôturé</h3>
+                <div class="desc">Votre ticket sur <strong>Serveur exemple</strong> est clôturé. La transcription complète est jointe.</div>
+                <div class="file"><div class="file-icon">TXT</div><div><div class="file-name">transcription-ticket-123.txt</div><div class="file-size">Fichier texte · transcription complète</div></div></div>
+                <div class="actions"><span class="button link-button">📄 Voir la transcription <span class="link-mark" aria-hidden="true">↗</span></span></div>
+              </div>
+              <p class="foot">Le bouton s’affiche seulement lorsqu’un lien web de transcription est disponible.</p>
+            </div>
+          </article>
+
+          <div class="divider"></div>
+          <div class="section-title"><span class="lang">FR</span> Demande d’avis</div>
+          <article class="msg">
+            <div class="avatar">🤖</div>
+            <div>
+              <div class="meta"><span class="name">Optimus Prime</span><span class="tag">BOT</span><span class="time">Aujourd’hui à 16:31</span></div>
+              <div class="panel">
+                <h3>⭐ Votre avis</h3>
+                <div class="desc">Votre ticket <strong>#123</strong> sur <strong>Serveur exemple</strong> est clôturé. Comment évaluez-vous la prise en charge&nbsp;?</div>
+                <div class="actions">
+                  <span class="button action-button star">⭐</span><span class="button action-button star">⭐⭐</span><span class="button action-button star">⭐⭐⭐</span><span class="button action-button star positive">⭐⭐⭐⭐</span><span class="button action-button star positive">⭐⭐⭐⭐⭐</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <div class="divider"></div>
+          <div class="section-title"><span class="lang">EN</span> Ticket opened</div>
+          <article class="msg">
+            <div class="avatar">🤖</div>
+            <div>
+              <div class="meta"><span class="name">Optimus Prime</span><span class="tag">BOT</span><span class="time">Today at 14:02</span></div>
+              <div class="panel">
+                <h3>🎫 Ticket opened · #123</h3>
+                <div class="desc">Your request on <strong>Example server</strong> has been sent to the team.</div>
+                <div class="actions"><span class="button link-button">🎫 Open my ticket <span class="link-mark" aria-hidden="true">↗</span></span></div>
+              </div>
+            </div>
+          </article>
+
+          <div class="divider"></div>
+          <div class="section-title"><span class="lang">EN</span> Ticket closed · transcript</div>
+          <article class="msg">
+            <div class="avatar">🤖</div>
+            <div>
+              <div class="meta"><span class="name">Optimus Prime</span><span class="tag">BOT</span><span class="time">Today at 16:30</span></div>
+              <div class="panel">
+                <h3>🎫 Ticket closed</h3>
+                <div class="desc">Your ticket on <strong>Example server</strong> is closed. The full transcript is attached.</div>
+                <div class="file"><div class="file-icon">TXT</div><div><div class="file-name">transcript-ticket-123.txt</div><div class="file-size">Text file · full transcript</div></div></div>
+                <div class="actions"><span class="button link-button">📄 View transcript <span class="link-mark" aria-hidden="true">↗</span></span></div>
+              </div>
+              <p class="foot">The button appears only when an online transcript link is available.</p>
+            </div>
+          </article>
+
+          <div class="divider"></div>
+          <div class="section-title"><span class="lang">EN</span> Feedback request</div>
+          <article class="msg">
+            <div class="avatar">🤖</div>
+            <div>
+              <div class="meta"><span class="name">Optimus Prime</span><span class="tag">BOT</span><span class="time">Today at 16:31</span></div>
+              <div class="panel">
+                <h3>⭐ Your feedback</h3>
+                <div class="desc">Your ticket <strong>#123</strong> on <strong>Example server</strong> is closed. How would you rate the support?</div>
+                <div class="actions">
+                  <span class="button action-button star">⭐</span><span class="button action-button star">⭐⭐</span><span class="button action-button star">⭐⭐⭐</span><span class="button action-button star positive">⭐⭐⭐⭐</span><span class="button action-button star positive">⭐⭐⭐⭐⭐</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <aside class="note"><strong>Conservation des réglages :</strong> le texte et l’image de clôture personnalisés par serveur resteront inchangés. Le fichier de transcription restera joint. Les liens vers le ticket et la transcription sont représentés en boutons-lien gris, comme dans Discord ; les étoiles restent des boutons d’action pour enregistrer la note.</aside>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

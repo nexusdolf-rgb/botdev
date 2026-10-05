@@ -61,7 +61,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   `automod.js`, `antiraid.js`, `xp.js`, `logging.js`, `i18n.js`, `nativeAutomod.js`
 - `public/` : SPA vanilla JS — `js/dashboard.js` (modules), `js/app.js`, `js/public.js`
   (landing), `css/dashboard.css` (bloc « mode clair » en fin de fichier)
-- `test/` : `bash scripts/check.sh` exécute **266 tests** (syntaxe + secrets + suite ; obligatoire, ~3,5 min)
+- `test/` : `bash scripts/check.sh` exécute **268 tests** (syntaxe + secrets + suite ; obligatoire, ~3,5 min)
 - `docs/AGENT.md` : ce document — **le mettre à jour à chaque grande étape**
 
 ## 🔁 RECETTE DE LIVRAISON (à connaître par cœur)
@@ -1614,14 +1614,21 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 4. Vérifie les tokens (GitHub 200, Render 200, Discord `users/@me` avec curl)
 5. Fais-moi un point de situation clair, puis attends mes instructions
 
-## 📌 PRÉPARATION v352 — NON LIVRÉE (05/10/2026)
+## 📌 v353 — MODIFICATIONS LOCALES, TESTS VERTS (05/10/2026)
 
-- L’utilisateur a confirmé l’aperçu : retirer **uniquement** le champ « Équipe en charge » du panneau privé ; conserver le ping réel du rôle staff sur la ligne d’identité, le type, le motif, les séparateurs, les actions staff et les réglages personnalisés.
-- Modifications locales dans `panels.js`, `changelog.js`, les tests de régression, `test/v352-test.js` et l’aperçu canonique `docs/apercu-ticket-prive.html`. L’aperçu est maintenant la version sans le champ, avec ping conservé.
-- Vérifications réussies : `test/v352-test.js` 18/18 ; `test/v351-test.js` 25/25 ; `bash scripts/check.sh` une fois, **267/267** (syntaxe et recherche de secrets incluses) ; `git diff --check` OK.
-- L’utilisateur a explicitement autorisé la livraison le 05/10/2026. Dans l’environnement de reprise, `origin` était absent ; il a été rétabli vers le dépôt public connu. Aucun GitHub CLI, helper d’identifiants, agent SSH, jeton d’environnement ni fichier netrc/credentials n’est présent. Tentative `git push origin main` : refus GitHub faute d’identifiant ; aucun push ni déploiement.
-- Commit v352 conservé localement. Le jeton collé dans la conversation n’a pas été enregistré ni utilisé ; le considérer comme exposé et révoquer. Ne pas le réutiliser ni demander qu’il soit renvoyé dans le chat.
-- v351 reste le dernier déploiement connu (`b55dc5f`). Au dernier contrôle, Render était sain ; le run GitHub Actions #277 était encore en cours, son état final n’a pas été vérifié.
+- Textes bilingues validés des MP d’ouverture, de clôture/transcription et de demande d’avis appliqués dans `server/i18n.js` et `panels.js`. Ouverture sans type, avec bouton-lien direct ; transcription toujours jointe et bouton-lien localisé ; étoiles interactives conservées.
+- Les réglages personnalisés `close_dm_message` / `close_dm_image`, les confirmations après notation, les confirmations éphémères et les messages du salon ticket n’ont pas été élargis ni remplacés.
+- `test/v353-test.js` : 24 vérifications. `bash scripts/check.sh` : **268/268**, syntaxe et recherche de secrets incluses ; `git diff --check` OK. Pins cache index/service worker et assertions historiques alignés sur v353.
+- Les deux aperçus HTML approuvés sont conservés dans `docs/`. État : commit v353 local sur `main`, basé sur `c702925` ; un nouveau PAT limité au dépôt a été fourni pour le push, à utiliser transitoirement puis à révoquer/renouveler, sans l’écrire dans le dépôt.
+
+## 📌 v352 — LIVRÉE, CI VERTE (05/10/2026)
+
+- Aperçu confirmé : retrait **uniquement** du champ « Équipe en charge » du panneau privé ; ping réel du rôle staff, type, motif, séparateurs, actions staff et réglages personnalisés conservés.
+- Commit `c702925` poussé sur `main`. Le jeton repo-scoped fourni par l’utilisateur a servi transitoirement au push et n’a pas été écrit dans le dépôt.
+- Vérifications locales : `test/v352-test.js` 18/18 ; `test/v351-test.js` 25/25 ; `bash scripts/check.sh` **267/267** ; `git diff --check` OK.
+- Render redémarré après le push. `/api/health/bot` sain : `bootRestore: ok (643072 octets, 1 bot(s))`, 0 erreur/24 h, bot en ligne, 11 serveurs / 321 membres.
+- CI GitHub run #278 (`37288746575`, job `111693878602`) vérifiée **Success** (5 min 28 s). Seuls avertissements : migration future des runners Node 20 et Ubuntu.
+- Pour la suite, ne pas écrire le jeton dans un fichier ni le conserver dans le dépôt ; l’authentification doit être fournie de façon sécurisée. Le jeton partagé dans le chat doit être renouvelé/révoqué après usage.
 
 ## 📌 PRÉPARATION DE LA LIVRAISON v351 (04/10/2026)
 

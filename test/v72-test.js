@@ -1,12 +1,7 @@
 // ============================================================
-// Test Hoxera v72 — MP de transcription amélioré
-// Le membre reçoit en MP un embed soigné (même style que le panneau
-// de tickets) avec :
-//  - le titre « 🎫 Votre ticket a été clôturé »
-//  - le nom du serveur dans le texte de remerciement
-//  - la bannière « SUPPORT - {nom du serveur} » générée automatiquement
-//  - le lien vers la transcription + le fichier .txt joint
-//  - le footer Optimus Prime
+// Test Hoxera v72 — MP de transcription (actualisé v353)
+// Le membre reçoit un MP Components V2 bilingue avec le nom du serveur,
+// un bouton-lien vers la transcription et le fichier .txt toujours joint.
 // + si les MP sont fermés → aucun crash, retour false propre.
 // ============================================================
 process.env.NODE_ENV = 'test';
@@ -55,12 +50,15 @@ const check = (label, cond) => {
   check('MP : un seul message envoyé', sent.length === 1);
   const payload = sent[0];
   check('MP : payload Components V2 (plus d\'embed classique)', readDm(payload).isV2);
-  check('MP : des séparateurs natifs pleine largeur', readDm(payload).separators >= 3, `${readDm(payload).separators}`);
+  check('MP : les séparateurs natifs pleine largeur sont présents', readDm(payload).separators >= 2, `${readDm(payload).separators}`);
   const emb = readDm(payload);
-  check('MP : titre « 🎫 Votre ticket a été clôturé »', emb.title === '🎫 Votre ticket a été clôturé');
-  check('MP : nom du serveur dans le remerciement', String(emb.description).includes('Carré RP Officiel'));
-  check('MP : lien de la transcription', String(emb.description).includes('https://dash-hoxora.onrender.com/transcript/abc123'));
-  check('MP : invite à rouvrir un ticket', String(emb.description).includes('Rouvrez simplement un ticket'));
+  check('MP : titre bilingue approuvé', emb.title === '🎫 Ticket clôturé');
+  check('MP : texte de clôture concis et nom du serveur',
+    String(emb.description).includes('Votre ticket sur **Carré RP Officiel** est clôturé. La transcription complète est jointe.'));
+  const transcriptButton = v2.controls(payload).find((button) => button.label === '📄 Voir la transcription');
+  check('MP : bouton-lien direct vers la transcription',
+    !!transcriptButton && transcriptButton.style === 5
+      && transcriptButton.url === 'https://dash-hoxora.onrender.com/transcript/abc123');
   // 🖼️ Bannière du PROFIL du bot (repli local si l'URL Discord n'est pas encore connue)
   check('MP : bannière du profil du bot en MediaGallery', String(emb.image).includes('/icons/nexora-profile-banner.png'), String(emb.image));
   check('MP : plus de signature Hoxera (v312)', !String(emb.footer || '').includes('Hoxera'));
@@ -97,6 +95,6 @@ const check = (label, cond) => {
   check('créateur introuvable : retour false propre', ok3 === false);
 
   store.db.close();
-  console.log(failures === 0 ? '\n✅ V72 — MP de transcription : embed soigné avec bannière du serveur. 🎉' : `\n❌ ${failures} vérification(s) en échec`);
+  console.log(failures === 0 ? '\n✅ V72 — MP Components V2 de transcription : bouton direct et fichier joint. 🎉' : `\n❌ ${failures} vérification(s) en échec`);
   process.exit(failures === 0 ? 0 : 1);
 })().catch((e) => { console.error('❌', e); process.exit(1); });

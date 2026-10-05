@@ -90,8 +90,9 @@ const check = (label, cond) => {
   await panels.sendTranscriptDm(interaction, guild, 'question-bob', { text: 'x', url: 'https://example.com/abc', openerId: 'u2' });
   // v239 — le MP est en Components V2 : plus d'embeds[0], on relit le conteneur.
   const dmEn = { title: v2.title(dms[0]), description: v2.texts(dms[0]).join('\n') };
-  check('transcription EN : titre traduit', dmEn.title === '🎫 Your ticket has been closed', dmEn.title);
-  check('transcription EN : texte traduit', String(dmEn.description).includes('Thank you for contacting'));
+  check('transcription EN : titre traduit', dmEn.title === '🎫 Ticket closed', dmEn.title);
+  check('transcription EN : texte traduit',
+    String(dmEn.description).includes('Your ticket on **Carré RP** is closed. The full transcript is attached.'));
   store.guildSettings.set(BOT, G, { lang: 'fr' });
 
   // ---------- 6. Commande /lang ----------

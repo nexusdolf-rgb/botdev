@@ -7,7 +7,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const ui = require('./ui');
 
-const VERSION = 352;
+const VERSION = 353;
 const DASHBOARD_URL = 'https://hoxera.is-a.dev';
 const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3';
 const AUTO_REVERT_MS = 2 * 60 * 1000;
@@ -15,6 +15,12 @@ const SELECT_ID = (botId) => `hx-upd:${botId}`;
 
 // Plus récent en premier. Menu Discord = 25 options max (accueil + 24 versions).
 const VERSIONS = [
+  {
+    v: 353, date: '05/10', title: 'MP tickets bilingues, clairs et directs',
+    new: ['Le MP d’ouverture est plus court et propose un bouton direct vers le ticket.', 'La demande d’avis ne garde que son texte et les cinq boutons d’étoiles.'],
+    improved: ['Les MP d’ouverture, de transcription et d’évaluation sont alignés en français et en anglais.'],
+    fixed: ['Le texte et l’image de clôture personnalisés par serveur, ainsi que la transcription jointe, restent conservés.'],
+  },
   {
     v: 352, date: '05/10', title: 'Panneau privé sans champ d’équipe',
     new: ['Le champ **Équipe en charge** est retiré du panneau privé du ticket.'],

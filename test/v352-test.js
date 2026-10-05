@@ -130,15 +130,18 @@ const customTitle = panels.ticketWelcomePanel(
 check('titre personnalisé et numéro restent respectés', v2.title(customTitle) === 'Assistance Alice · #9');
 
 console.log('— Journal des versions /update —');
-check('v352 est la version courante et v351 est la précédente',
-  changelog.VERSION === 352 && changelog.VERSIONS[0].v === 352
-    && changelog.NOTES.v === 352 && changelog.VERSIONS[1].v === 351);
+const current = changelog.VERSIONS[0];
+const previous = changelog.VERSIONS[1];
+check('v352 reste dans le journal après l’ajout de versions récentes',
+  changelog.VERSION === 353 && current.v === 353 && changelog.NOTES.v === 353
+    && changelog.VERSIONS.some((entry) => entry.v === 352));
 const home = changelog.buildHomePanel(1);
 const homeText = v2.allText(home);
-check('/update présente v352 puis v351',
-  v2.title(home) === '🚀 Optimus Prime — Mises à jour (v352)'
-    && homeText.includes('**v352 — Panneau privé sans champ d’équipe**')
-    && homeText.includes('**v351 — Panneau de ticket privé plus clair**'));
+check('/update présente la version courante puis v352',
+  v2.title(home) === `🚀 Optimus Prime — Mises à jour (v${current.v})`
+    && previous.v === 352
+    && homeText.includes(`**v${current.v} — ${current.title}**`)
+    && homeText.includes('**v352 — Panneau privé sans champ d’équipe**'));
 
 const previewPath = path.join(__dirname, '..', 'docs', 'apercu-ticket-prive.html');
 const preview = fs.readFileSync(previewPath, 'utf8');

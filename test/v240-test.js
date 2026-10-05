@@ -129,11 +129,11 @@ async function main() {
   check('i18n en : aucune forme archaïque', enTutoie.length === 0);
   // Repères : quelques clés visibles doivent être au « vous ».
   for (const [cle, attendu] of [
-    ['transcript_title', 'Votre ticket'],
+    ['transcript_title', 'Ticket clôturé'],
     ['ticket_confirm', 'Votre ticket'],
     ['ticket_rating_desc', 'Votre ticket'],
   ]) {
-    check(`i18n fr : ${cle} au vouvoiement`, String(STRINGS.fr[cle]).includes(attendu),
+    check(`i18n fr : ${cle} respecte le texte attendu`, String(STRINGS.fr[cle]).includes(attendu),
       String(STRINGS.fr[cle]).slice(0, 70));
   }
 
@@ -220,9 +220,9 @@ async function main() {
 
   // Repères de conversion effective côté bot.
   for (const [fichier, attendu] of [
-    ['server/discord/panels.js', "'🎫 Votre ticket est ouvert'"],
-    ['server/discord/panels.js', 'Ouvrez votre ticket et répondez aux messages du staff.'],
-    ['server/discord/panels.js', 'Rejoignez-le ici : ${channel}'],
+    ['server/discord/panels.js', 'ticket_dm_open_title'],
+    ['server/discord/panels.js', 'ticket_dm_open_button'],
+    ['server/discord/panels.js', 'buildTicketOpenDmPayload(interaction.client, guild, channel, ticketNumber, lang)'],
     ['server/discord/premade.js', 'Ajoutez-moi à votre serveur'],
     ['server/discord/premade.js', 'Votre solde : ${solde} coins'],
     ['server/discord/premade.js', '⬅️ vous'],
@@ -535,9 +535,9 @@ async function main() {
 
   const index = src('public/index.html');
   const sw = src('public/sw.js');
-  check('index.html : ?v=350 référencé 7 fois', (index.match(/\?v=350/g) || []).length === 7,
-    `trouvé ${(index.match(/\?v=350/g) || []).length}`);
-  check("sw.js : cache 'botdev-v350'", sw.includes("const CACHE = 'botdev-v350';"));
+  check('index.html : ?v=353 référencé 7 fois', (index.match(/\?v=353/g) || []).length === 7,
+    `trouvé ${(index.match(/\?v=353/g) || []).length}`);
+  check("sw.js : cache 'botdev-v353'", sw.includes("const CACHE = 'botdev-v353';"));
   check('index.html : plus aucun ?v=239', !/\?v=239/.test(index));
 }
 

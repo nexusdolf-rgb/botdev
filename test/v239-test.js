@@ -142,13 +142,13 @@ console.log('\n1) ui.v2container : option `files` → composants File (type 13)'
 // ---------------------------------------------------------------------------
 console.log('\n2) ui.v2panel : les boutons passés dans options.rows ne disparaissent plus');
 {
-  const row = ui.linkRow('📜 Ouvrir la transcription', 'https://hoxera.is-a.dev/transcript/abc');
+  const row = ui.linkRow('📄 Voir la transcription', 'https://hoxera.is-a.dev/transcript/abc');
 
   const viaOptions = ui.v2panel({ title: 'T', description: 'd', rows: [row], footer: false });
   check('rows DANS les options → la rangée est présente',
     v2.rows(viaOptions).length === 1, `${v2.rows(viaOptions).length} rangée(s)`);
   check('rows DANS les options → le bon bouton',
-    (v2.controls(viaOptions).find((b) => /Ouvrir la transcription/.test(b.label || '')) || {}).url
+    (v2.controls(viaOptions).find((b) => /Voir la transcription/.test(b.label || '')) || {}).url
       === 'https://hoxera.is-a.dev/transcript/abc');
 
   const viaArg = ui.v2panel({ title: 'T', description: 'd', footer: false }, [row]);
@@ -195,7 +195,7 @@ async function main() {
 
   // Le cœur du bug signalé : les traits.
   const seps = v2.dividers(p); // ⚠️ renvoie un NOMBRE
-  check('des séparateurs NATIFS pleine largeur sont présents', seps >= 3, `${seps} séparateur(s)`);
+  check('les séparateurs NATIFS pleine largeur restent présents', seps >= 2, `${seps} séparateur(s)`);
   check('tous les séparateurs sont de type 14 avec divider:true',
     collect(p, 14).length === seps && collect(p, 14).every((x) => x.divider === true));
   const all = v2.allText(p);
@@ -219,11 +219,11 @@ async function main() {
 
   // Le bouton lien rentre DANS le conteneur.
   const ctrls = v2.controls(p);
-  check('le bouton « 📜 Ouvrir la transcription » est DANS le conteneur',
-    ctrls.some((b) => /Ouvrir la transcription/.test(b.label || '')),
+  check('le bouton « 📄 Voir la transcription » est DANS le conteneur',
+    ctrls.some((b) => /Voir la transcription/.test(b.label || '')),
     ctrls.map((b) => b.label).join(' | '));
   check('ce bouton pointe vers la transcription',
-    (ctrls.find((b) => /Ouvrir la transcription/.test(b.label || '')) || {}).url
+    (ctrls.find((b) => /Voir la transcription/.test(b.label || '')) || {}).url
       === 'https://hoxera.is-a.dev/transcript/abc123');
 
   // Pied de page : signature seule, pas d'heure (aligné sur la v238).
@@ -463,9 +463,9 @@ async function main() {
   console.log('\n10) Version épinglée v239');
   const index = src('public/index.html');
   const sw = src('public/sw.js');
-  check('index.html : ?v=350 référencé 7 fois', (index.match(/\?v=350/g) || []).length === 7,
-    `trouvé ${(index.match(/\?v=350/g) || []).length}`);
-  check("sw.js : cache 'botdev-v350'", sw.includes("const CACHE = 'botdev-v350';"));
+  check('index.html : ?v=353 référencé 7 fois', (index.match(/\?v=353/g) || []).length === 7,
+    `trouvé ${(index.match(/\?v=353/g) || []).length}`);
+  check("sw.js : cache 'botdev-v353'", sw.includes("const CACHE = 'botdev-v353';"));
   check('index.html : plus aucun ?v=238', !/\?v=238/.test(index));
 }
 
