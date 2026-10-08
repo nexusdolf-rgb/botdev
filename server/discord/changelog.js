@@ -7,7 +7,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const ui = require('./ui');
 
-const VERSION = 354;
+const VERSION = 355;
 const DASHBOARD_URL = 'https://hoxera.is-a.dev';
 const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3';
 const AUTO_REVERT_MS = 2 * 60 * 1000;
@@ -15,6 +15,12 @@ const SELECT_ID = (botId) => `hx-upd:${botId}`;
 
 // Plus récent en premier. Menu Discord = 25 options max (accueil + 24 versions).
 const VERSIONS = [
+  {
+    v: 355, date: '08/10', title: 'Bannière support bleu, blanc, rouge',
+    new: ['Le panneau de tickets adopte des couleurs plus nettes : bleu royal, blanc et rouge, avec le casque-micro.'],
+    improved: ['Le nom Discord réel est repris depuis le serveur, l’URL du panneau ou le nom mémorisé.'],
+    fixed: ['« Hoxera » ne remplace plus un nom de serveur manquant sur la bannière.'],
+  },
   {
     v: 354, date: '08/10', title: 'Bannière de tickets repensée',
     new: ['La bannière adopte un fond bleu nuit, un nom argenté lumineux et un casque-micro de support.'],

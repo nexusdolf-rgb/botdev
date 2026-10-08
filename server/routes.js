@@ -59,10 +59,37 @@ function setSessionCookie(req, res, token) {
 // STATIQUE uniquement : génération ~1 s, zéro charge, zéro échec.
 // Les anciennes URLs en .gif restent valides (elles servent le PNG).
 // ============================================================
+function livePanelServerName(guildId) {
+  try {
+    for (const entry of botManager.clients.values()) {
+      const guild = entry && entry.client && entry.client.guilds && entry.client.guilds.cache
+        ? entry.client.guilds.cache.get(String(guildId)) : null;
+      if (guild && guild.name) return String(guild.name).trim();
+    }
+  } catch {}
+  return '';
+}
+
+function resolvePanelBannerName(req, banner, guildId) {
+  const live = livePanelServerName(guildId);
+  if (live) return Array.from(live).slice(0, 60).join('');
+
+  const rawQuery = req && req.query ? req.query.n : '';
+  const requested = Array.from(String(Array.isArray(rawQuery) ? rawQuery[0] : rawQuery || '').trim()).slice(0, 60).join('');
+  const stored = banner.storedPanelName(guildId);
+  // Si l’ancienne URL transportait le nom générique, préférer le nom réel déjà
+  // mémorisé. Si aucun nom réel n’existe, laisser le titre vide plutôt que Hoxera.
+  if (requested && requested.toUpperCase() !== 'HOXERA') return requested;
+  if (stored && stored.toUpperCase() !== 'HOXERA') return stored;
+  if (stored && requested && stored.toUpperCase() === requested.toUpperCase()) return stored;
+  if (stored && !requested) return stored;
+  return '';
+}
+
 function servePanelBannerPng(req, res) {
   const guildId = String(req.params.guildId || '').replace(/[^0-9]/g, '').slice(0, 25);
   const banner = require('./banner');
-  const name = banner.storedPanelName(guildId) || 'HOXERA';
+  const name = resolvePanelBannerName(req, banner, guildId);
   try {
     const buf = banner.generateBanner(name);
     if (buf && buf.then) {
@@ -3840,3 +3867,4 @@ router.use((err, req, res, next) => {
 module.exports = router;
 module.exports.guildChecklist = guildChecklist;
 module.exports.sortGuildCatalog = sortGuildCatalog;
+module.exports.__testResolvePanelBannerName = resolvePanelBannerName;

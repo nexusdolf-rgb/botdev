@@ -30,16 +30,20 @@ const check = (label, ok) => {
   // ================= 1. Rebranding =================
   console.log('\n1️⃣  Rebranding : BotDev / NEXORA → Hoxera');
   check('db.js : statut par défaut HOXERA', read('server/db.js').includes("status_text TEXT DEFAULT 'HOXERA'"));
-  check('banner.js : défaut HOXERA (plus de NEXORA)', !read('server/banner.js').includes("|| 'NEXORA'") && read('server/banner.js').includes("|| 'HOXERA'"));
-  check('routes.js : panneau par défaut HOXERA', read('server/routes.js').includes("|| 'HOXERA'"));
+  check('banner.js : un nom absent ne devient pas HOXERA',
+    !read('server/banner.js').includes("|| 'HOXERA'") && read('server/banner.js').includes('return Array.from(raw).slice'));
+  check('routes.js : bannière sans faux Hoxera, nom réel privilégié',
+    read('server/routes.js').includes('function resolvePanelBannerName')
+      && read('server/routes.js').includes('livePanelServerName(guildId)')
+      && read('server/routes.js').includes("return '';"));
   check('premade.js : boutique « dashboard Hoxera »', read('server/discord/premade.js').includes('dashboard Hoxera'));
   check('index.js : transcription « Propulsé par Hoxera »', read('server/index.js').includes('Propulsé par Hoxera'));
   check('app.js : aide « HOXERA_TOKEN »', read('public/js/app.js').includes('<b>HOXERA_TOKEN</b>'));
   const indexHtml = read('public/index.html');
   const swSource = read('public/sw.js');
-  check('index.html : version v193 référencée 7 fois', (indexHtml.match(/\?v=354/g) || []).length === 7);
+  check('index.html : version v193 référencée 7 fois', (indexHtml.match(/\?v=355/g) || []).length === 7);
   check('index.html : plus aucune référence v192', !indexHtml.includes('?v=192'));
-  check('sw.js : cache v193', swSource.includes("const CACHE = 'botdev-v354';"));
+  check('sw.js : cache v193', swSource.includes("const CACHE = 'botdev-v355';"));
 
   // ================= 2. /say protégé =================
   console.log('\n2️⃣  /say : réservé aux administrateurs');

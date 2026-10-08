@@ -200,8 +200,8 @@ function fakeResponse() {
   }
 
   console.log('— Cache frontend —');
-  check('index.html : les 7 ressources pointent vers v350', (indexHtml.match(/\?v=354/g) || []).length === 7);
-  check('service worker : cache botdev-v354', serviceWorker.includes("const CACHE = 'botdev-v354';"));
+  check('index.html : les 7 ressources pointent vers v350', (indexHtml.match(/\?v=355/g) || []).length === 7);
+  check('service worker : cache botdev-v355', serviceWorker.includes("const CACHE = 'botdev-v355';"));
 
   console.log(`\n✅ v350-test.js : ${n} vérifications OK`);
 })().catch((err) => { console.error(err); process.exit(1); });

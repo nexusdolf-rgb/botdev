@@ -32,8 +32,8 @@ async function main() {
   const svg = banner.baseSvg('Carré RP Officiel');
   check('format SVG 544×192', svg.includes('width="544" height="192" viewBox="0 0 544 192"'));
   check('étiquette SUPPORT séparée du nom du serveur', svg.includes('>SUPPORT</text>') && svg.includes('>CARRÉ RP OFFICIEL</text>'));
-  check('nom rendu en blanc perlé/argent avec halo froid discret',
-    svg.includes('id="titleShine"') && svg.includes('#f1f6fb') && svg.includes('flood-color="#badcf8"'));
+  check('nom rendu en blanc très lisible avec halo froid discret',
+    svg.includes('id="titleShine"') && svg.includes('#f7faff') && svg.includes('flood-color="#b3deff"'));
   check('casque-micro support présent à droite', svg.includes('id="support-headset"') && svg.includes('M434 96A30 30'));
   check('ancienne trame glitch RGB retirée', !/glitch|glowPink|#39ff6a|#1aff4d/.test(svg));
   check('nom de serveur encodé contre les caractères XML',
@@ -66,9 +66,9 @@ async function main() {
 
   const url = panels.__testPanelBannerUrl('354123', 'Carré RP Officiel');
   check('URL de bannière versionnée pour recharger le nouveau visuel',
-    url.includes('/api/tickets/panel-banner/354123.png?v=5') && url.includes('Carr'));
-  check('journal de versions et release alignés sur v354',
-    changelog.VERSION === 354 && changelog.VERSIONS[0].v === 354 && changelog.VERSIONS[1].v === 353);
+    url.includes('/api/tickets/panel-banner/354123.png?v=6') && url.includes('Carr'));
+  check('journal conserve v354 sous la version courante v355',
+    changelog.VERSION === 355 && changelog.VERSIONS[0].v === 355 && changelog.VERSIONS[1].v === 354);
 
   try { store.db.close(); } catch {}
   try { fs.rmSync(DATA_DIR, { recursive: true, force: true }); } catch {}

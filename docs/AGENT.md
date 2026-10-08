@@ -1614,6 +1614,13 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 4. Vérifie les tokens (GitHub 200, Render 200, Discord `users/@me` avec curl)
 5. Fais-moi un point de situation clair, puis attends mes instructions
 
+## 📌 v355 — APERÇU APPROUVÉ, CORRECTIF LOCAL EN COURS (08/10/2026)
+
+- Palette validée : bleu royal, blanc et rouge ; casque-micro ; nom d’exemple `CARRÉ RP OFFICIEL`. PNG réel du nouveau générateur : `docs/apercu-banniere-ticket-v355.png` (544×192).
+- Cause du faux nom : `/api/tickets/panel-banner` ignorait `n=` dans l’URL et retombait sur `HOXERA`. v355 privilégie le nom Discord en cache, puis le nom transmis/mémorisé ; si aucun nom réel n’existe, l’image ne ment plus en affichant Hoxera. Les anciens panneaux doivent être republiés/édités pour utiliser l’URL v6.
+- `server/banner.js` : palette plus contrastée, texte blanc clair, nom dynamique ajusté en largeur ; `server/discord/panels.js` et `server/routes.js` mis à jour pour la résolution du nom.
+- `test/v355-test.js` : 16 vérifications ; `bash scripts/check.sh` : **270/270** (syntaxe, secrets, suite complète) ; `git diff --check` OK. Branche locale basée sur le dernier main v354 `99fb109`; commit local `022263b` prêt, push/déploiement encore à faire. Aucun remote `origin` n’est configuré dans ce checkout. Le PAT v354 ne doit pas être réutilisé : il a servi aux pushes v354 et doit être révoqué/renouvelé avant la prochaine livraison.
+
 ## 📌 v354 — LIVRÉE, CI VERTE, RENDER SAIN (08/10/2026)
 
 - Bannière tickets approuvée par l’utilisateur : fond bleu nuit, libellé **SUPPORT**, nom de serveur en blanc perlé/argent avec halo froid discret, casque-micro à droite. Fichier de référence rendu par le vrai générateur : `docs/apercu-banniere-ticket-v354.png` (544×192).

@@ -63,9 +63,9 @@ check('…et la clause tactile 700-900 px aussi',
 console.log('— 4. Version —');
 const index = racine('public/index.html');
 const sw = racine('public/sw.js');
-check('index.html : ?v=354 référencé 7 fois', (index.match(/\?v=354/g) || []).length === 7,
-  String((index.match(/\?v=354/g) || []).length));
-check('sw.js : cache « botdev-v350 »', sw.includes("const CACHE = 'botdev-v354';"));
+check('index.html : ?v=355 référencé 7 fois', (index.match(/\?v=355/g) || []).length === 7,
+  String((index.match(/\?v=355/g) || []).length));
+check('sw.js : cache « botdev-v350 »', sw.includes("const CACHE = 'botdev-v355';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v251 — ${ok} vérifications OK : un PC tactile avec souris reste un PC.`);

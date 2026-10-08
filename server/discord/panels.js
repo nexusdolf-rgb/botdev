@@ -366,20 +366,40 @@ function isDefaultMessage(msg) {
 // 🌍 PERSONNALISATION AUTOMATIQUE PAR SERVEUR :
 //  - « Support | {nom du serveur} » (titre)
 //  - « Bienvenue sur le support officiel de {nom du serveur} »
-//  - Bannière SUPPORT avec le nom du serveur, casque-micro dessiné à la volée
-//    (Optimus Prime = nom de repli si le serveur est inconnu)
+//  - Bannière SUPPORT en rouge/blanc/bleu avec le vrai nom du serveur et un casque-micro
+//    (le repli Hoxera des textes ne s’imprime jamais comme faux nom sur l’image)
 //  - Textes dans la langue du serveur (/lang fr|en)
 // ============================================================
 const i18n = require('../i18n');
 const PANEL_DEFAULT_NAME = 'Hoxera';
 
+// Nom destiné à l’image : privilégier le vrai nom Discord en cache, puis le nom
+// transmis et enfin celui mémorisé. Ne jamais injecter Hoxera comme faux nom.
+function panelBannerServerName(serverName, client, guildId) {
+  let liveName = '';
+  try {
+    const guild = client?.guilds?.cache?.get(String(guildId || ''));
+    liveName = String(guild?.name || '').trim();
+  } catch {}
+  if (liveName) return Array.from(liveName).slice(0, 100).join('');
+
+  const supplied = String(serverName || '').trim();
+  let stored = '';
+  try { stored = require('../banner').storedPanelName(guildId); } catch {}
+  if (supplied && supplied.toUpperCase() !== PANEL_DEFAULT_NAME.toUpperCase()) {
+    return Array.from(supplied).slice(0, 100).join('');
+  }
+  if (stored) return Array.from(stored).slice(0, 100).join('');
+  // Le libellé générique reste utile aux textes du panneau, mais pas au nom
+  // imprimé sur l’image : une bannière sans nom vaut mieux qu’un faux Hoxera.
+  return '';
+}
+
 function panelBannerUrl(guildId, name) {
   const site = store.settings.get('public_url') || 'https://hoxera.is-a.dev';
   // Bannière STATIQUE par serveur (générée en ~1 s, mise en cache).
-  // ⚠️ Le paramètre v= sert à casser le cache de Discord : chaque fois que
-  // le style de la bannière change, on incrémente → Discord recharge
-  // l'image au lieu d'afficher l'ancienne mémorisée.
-  return `${site}/api/tickets/panel-banner/${encodeURIComponent(guildId || '0')}.png?v=5&n=${encodeURIComponent(String(name || '').slice(0, 60))}`;
+  // ⚠️ Incrémenter v à chaque changement de style pour casser le cache Discord.
+  return `${site}/api/tickets/panel-banner/${encodeURIComponent(guildId || '0')}.png?v=6&n=${encodeURIComponent(String(name || '').slice(0, 60))}`;
 }
 
 // v234 — retourne désormais un PAYLOAD Components V2 (et non plus un
@@ -387,7 +407,8 @@ function panelBannerUrl(guildId, name) {
 // `rows` doit être passé ICI car en V2 les lignes de boutons/menus vont DANS le
 // conteneur, pas au niveau du message.
 function buildTicketPanel(cfg, client, types, serverName = '', guildId = '', rows = []) {
-  const name = String(serverName || '').trim().slice(0, 100) || PANEL_DEFAULT_NAME;
+  const bannerName = panelBannerServerName(serverName, client, guildId);
+  const name = String(bannerName || String(serverName || '').trim()).slice(0, 100) || PANEL_DEFAULT_NAME;
   // 🌍 Textes dans la langue du serveur
   const lang = i18n.langForGuild(guildId);
   const P = i18n.panelTexts(lang);
@@ -430,9 +451,9 @@ function buildTicketPanel(cfg, client, types, serverName = '', guildId = '', row
     description: `${welcomeText}\n\n${paragraph}`,
     fields,
     // 🖼️ Image du panneau : image importée par l'utilisateur (v198) si
-    // présente, sinon bannière « SUPPORT - {nom} » générée par le site.
+    // présente, sinon bannière rouge/blanc/bleu générée avec le nom Discord réel.
     // C'est une URL HTTP (pas une pièce jointe) → MediaGallery compatible.
-    image: String(cfg.image_url || '').trim() || panelBannerUrl(guildId, name),
+    image: String(cfg.image_url || '').trim() || panelBannerUrl(guildId, bannerName),
     // Demande utilisateur (06/09) — « Sélectionnez une option pour commencer »
     // est retiré : le menu déroulant est juste en dessous, la consigne était
     // superflue.
@@ -3239,6 +3260,7 @@ module.exports = {
   handleTicketDeleteAsk, ticketMetaFor, ticketWelcomePanel, readRoomCfg, typeOptionDescription, normalizeTypes,
   sendTranscriptDm, sweepInactiveTickets, buildTranscriptFromChannel, sendRatingDm,
   __testPanelBannerUrl: panelBannerUrl,
+  __testPanelBannerServerName: panelBannerServerName,
   __testBuildTicketOpenDmPayload: buildTicketOpenDmPayload,
   // v234 — exposé pour les tests : pruneOldPanels doit reconnaître les panneaux
   // classiques ET les conteneurs Components V2, sinon les doublons s'accumulent.
