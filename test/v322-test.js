@@ -19,8 +19,8 @@ const iT = dash.indexOf('Dashboard.renderers.tickets');
 const chunk = dash.slice(iT, dash.indexOf('Dashboard.renderers.welcome', iT));
 
 console.log('— 1. Pins de version v322 —');
-check('index.html : ?v=356 ×7', (html.match(/\?v=356/g) || []).length === 7);
-check('sw.js : cache botdev-v356', sw.includes("const CACHE = 'botdev-v356';"));
+check('index.html : ?v=357 ×7', (html.match(/\?v=357/g) || []).length === 7);
+check('sw.js : cache botdev-v357', sw.includes("const CACHE = 'botdev-v357';"));
 check('index.html : plus aucune ?v=321', !html.includes('?v=321'));
 
 console.log('— 2. Noms compréhensibles —');

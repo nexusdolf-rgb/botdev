@@ -167,14 +167,14 @@ async function main() {
       && i18n.t('en', 'ticket_dm_open_button') === '🎫 Open my ticket'
       && i18n.t('fr', 'transcript_button') === '📄 Voir la transcription'
       && i18n.t('en', 'transcript_button') === '📄 View transcript');
-  check('le journal conserve v353 et démarre désormais en v356',
-    changelog.VERSION === 356 && changelog.VERSIONS[0].v === 356
-      && changelog.VERSIONS[1].v === 355 && changelog.VERSIONS.some((entry) => entry.v === 353)
-      && changelog.NOTES.v === 356);
+  check('le journal conserve v353 et démarre désormais en v357',
+    changelog.VERSION === 357 && changelog.VERSIONS[0].v === 357
+      && changelog.VERSIONS[1].v === 356 && changelog.VERSIONS.some((entry) => entry.v === 353)
+      && changelog.NOTES.v === 357);
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('cache web actualisé : ?v=356 7 fois et botdev-v356',
-    (index.match(/\?v=356/g) || []).length === 7 && sw.includes("const CACHE = 'botdev-v356';"));
+  check('cache web actualisé : ?v=357 7 fois et botdev-v357',
+    (index.match(/\?v=357/g) || []).length === 7 && sw.includes("const CACHE = 'botdev-v357';"));
 
   try { store.db.close(); } catch {}
   try { fs.rmSync(DATA_DIR, { recursive: true, force: true }); } catch {}

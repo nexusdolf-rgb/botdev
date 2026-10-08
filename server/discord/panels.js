@@ -399,7 +399,7 @@ function panelBannerUrl(guildId, name) {
   const site = store.settings.get('public_url') || 'https://hoxera.is-a.dev';
   // Bannière STATIQUE par serveur (générée en ~1 s, mise en cache).
   // ⚠️ Incrémenter v à chaque changement de style pour casser le cache Discord.
-  return `${site}/api/tickets/panel-banner/${encodeURIComponent(guildId || '0')}.png?v=7&n=${encodeURIComponent(String(name || '').slice(0, 60))}`;
+  return `${site}/api/tickets/panel-banner/${encodeURIComponent(guildId || '0')}.png?v=8&n=${encodeURIComponent(String(name || '').slice(0, 60))}`;
 }
 
 // v234 — retourne désormais un PAYLOAD Components V2 (et non plus un
@@ -451,7 +451,7 @@ function buildTicketPanel(cfg, client, types, serverName = '', guildId = '', row
     description: `${welcomeText}\n\n${paragraph}`,
     fields,
     // 🖼️ Image du panneau : image importée par l'utilisateur (v198) si
-    // présente, sinon bannière rouge rubis/blanc chaud générée avec le nom Discord réel.
+    // présente, sinon bannière bleu profond/rubis générée avec le nom Discord réel.
     // C'est une URL HTTP (pas une pièce jointe) → MediaGallery compatible.
     image: String(cfg.image_url || '').trim() || panelBannerUrl(guildId, bannerName),
     // Demande utilisateur (06/09) — « Sélectionnez une option pour commencer »

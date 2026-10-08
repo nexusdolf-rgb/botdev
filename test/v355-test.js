@@ -31,15 +31,16 @@ function check(label, condition, detail = '') {
 }
 
 async function main() {
-  console.log('— Bannière pro rouge rubis et blanc chaud —');
+  console.log('— Bannière simple bleu profond, blanc et rubis —');
   const svg = banner.baseSvg('CARRÉ RP OFFICIEL');
-  check('image 544×192, rouge rubis et blanc chaud',
+  check('image 544×192, bleu profond, texte blanc et rouge rubis',
     svg.includes('width="544" height="192"')
-      && svg.includes('#B62F43') && svg.includes('#FAFAF7') && svg.includes('#272D33'));
+      && svg.includes('#142A46') && svg.includes('#B62F43') && svg.includes('#F7FAFF'));
   check('SUPPORT et nom du serveur restent distincts',
     svg.includes('>SUPPORT</text>') && svg.includes('>CARRÉ RP OFFICIEL</text>'));
-  check('casque-micro blanc conservé à droite',
-    svg.includes('id="support-headset"') && svg.includes('stroke="#FFFFFF"') && svg.includes('fill="#B62F43"'));
+  check('casque-micro dans un badge bleu, avec accents rouges et lignes blanches',
+    svg.includes('id="support-headset"') && svg.includes('#193F67')
+      && svg.includes('#89AFCF') && svg.includes('fill="#EF4653"') && svg.includes('#F7FAFF'));
   check('nom absent : aucun faux « HOXERA » n’est imprimé',
     !banner.baseSvg('').includes('HOXERA') && !banner.baseSvg('').includes('id="server-name"'));
   check('nom de serveur échappé pour le SVG',
@@ -90,10 +91,10 @@ async function main() {
   check('long nom large réduit automatiquement pour ne pas toucher le casque', short > long && long >= 12);
 
   const url = panels.__testPanelBannerUrl(guildId, 'CARRÉ RP OFFICIEL');
-  check('URL v7 force Discord à récupérer la nouvelle palette et transmet le nom',
-    url.includes(`${guildId}.png?v=7&n=`) && url.includes('CARR'));
-  check('journal conserve v355 sous la version courante v356',
-    changelog.VERSION === 356 && changelog.VERSIONS[0].v === 356 && changelog.VERSIONS[1].v === 355);
+  check('URL v8 force Discord à récupérer la nouvelle palette et transmet le nom',
+    url.includes(`${guildId}.png?v=8&n=`) && url.includes('CARR'));
+  check('journal conserve v355 sous la version courante v357',
+    changelog.VERSION === 357 && changelog.VERSIONS[0].v === 357 && changelog.VERSIONS[1].v === 356);
 
   try { store.db.close(); } catch {}
   try { fs.rmSync(DATA_DIR, { recursive: true, force: true }); } catch {}

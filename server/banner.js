@@ -1,8 +1,8 @@
 // ============================================================
 // Hoxera — Bannière du panneau de tickets, générée PAR SERVEUR
-// PNG 544×192, simple, naturel et professionnel.
-// Palette rouge rubis / blanc chaud, casque-micro discret,
-// nom du serveur dynamique (aucun faux nom par défaut).
+// PNG 544×192, composition simple et professionnelle.
+// Fond bleu profond, texte blanc, panneau rubis et casque-micro encadré.
+// Nom du serveur dynamique (aucun faux nom par défaut).
 // ============================================================
 const store = require('./db');
 let sharp = null;
@@ -18,9 +18,11 @@ const W = 544;
 const H = 192;
 const SERVER_TEXT_MAX_WIDTH = 335;
 const SERVER_NAME_MAX_LENGTH = 26;
+const NAVY = '#142A46';
 const RUBY = '#B62F43';
-const WARM_WHITE = '#FAFAF7';
-const INK = '#272D33';
+const TILE = '#193F67';
+const WHITE = '#F7FAFF';
+const HEADSET_RED = '#EF4653';
 
 function escapeXml(s) {
   return String(s || '')
@@ -65,33 +67,43 @@ function baseSvg(name) {
   const label = escapeXml(plainName);
   const size = autoFontSize(plainName);
   const nameText = label
-    ? `<text id="server-name" x="42" y="104" font-family="DejaVu Sans, Arial, sans-serif" font-size="${size}" font-weight="700" fill="${INK}">${label}</text>`
+    ? `<text id="server-name" x="42" y="107" font-family="DejaVu Sans, Arial, sans-serif" font-size="${size}" font-weight="700" fill="${WHITE}">${label}</text>`
     : '';
 
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-  <rect width="${W}" height="${H}" fill="${WARM_WHITE}"/>
+  <defs>
+    <clipPath id="ruby-panel-clip"><path d="M421 7H539V177H367Z"/></clipPath>
+    <pattern id="ruby-dots" width="8" height="8" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r=".8" fill="#E79AA5" fill-opacity=".72"/>
+    </pattern>
+  </defs>
+  <rect width="${W}" height="${H}" fill="${NAVY}"/>
 
-  <!-- Composition sobre : panneau clair, rail rouge et aplat rubis à droite -->
+  <!-- Composition simple : fond bleu profond, texte clair, panneau rubis à droite -->
   <path d="M421 7H539V177H367Z" fill="${RUBY}"/>
+  <rect x="365" y="48" width="44" height="104" fill="url(#ruby-dots)" clip-path="url(#ruby-panel-clip)"/>
   <rect x="6" y="7" width="8" height="170" fill="${RUBY}"/>
   <rect x="5" y="177" width="534" height="7" fill="${RUBY}"/>
-  <rect x="4.5" y="4.5" width="535" height="183" fill="none" stroke="#D4D3CE" stroke-width="1"/>
+  <rect x="4.5" y="4.5" width="535" height="183" fill="none" stroke="#60788F" stroke-width="1"/>
 
-  <!-- Repère discret et libellé -->
-  <path d="M42 43H74" stroke="${RUBY}" stroke-width="2" stroke-linecap="round"/>
-  <text id="support-label" x="42" y="67" font-family="DejaVu Sans, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="2.15" fill="${RUBY}">SUPPORT</text>
+  <!-- Repère rouge discret et texte blanc de la version bleu/blanc -->
+  <path d="M42 43H74" stroke="${HEADSET_RED}" stroke-width="2" stroke-linecap="round"/>
+  <text id="support-label" x="42" y="67" font-family="DejaVu Sans, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="2.15" fill="${WHITE}">SUPPORT</text>
 
   <!-- Nom Discord réel, ajusté à la largeur disponible -->
   ${nameText}
 
-  <!-- Casque-micro blanc, fin et sans médaillon chargé -->
-  <g id="support-headset" fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="468" cy="96" r="47" stroke-width="2"/>
-    <path d="M443 96A25 25 0 0 1 493 96" stroke-width="2.6"/>
-    <rect x="434" y="91" width="11" height="25" rx="5.5" stroke-width="2.6"/>
-    <rect x="491" y="91" width="11" height="25" rx="5.5" stroke-width="2.6"/>
-    <path d="M496 108V114Q496 126 484 128H479" stroke-width="2.6"/>
-    <rect x="472" y="124" width="10" height="6" rx="3" fill="#FFFFFF" stroke="none"/>
+  <!-- Badge bleu distinct et casque-micro de la version précédente -->
+  <rect x="407" y="42" width="117" height="108" rx="16" fill="${TILE}" stroke="#89AFCF" stroke-width="1"/>
+  <rect x="413" y="48" width="105" height="96" rx="12" fill="none" stroke="#4D749A" stroke-width="1"/>
+  <g id="support-headset" fill="none" stroke="${WHITE}" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M434 96A30 30 0 0 1 494 96" stroke-width="3.5"/>
+    <rect x="429" y="91" width="15" height="29" rx="6" fill="${HEADSET_RED}" stroke="none"/>
+    <rect x="433" y="96" width="3" height="17" rx="1.5" fill="#FFE3E5" stroke="none"/>
+    <rect x="483" y="91" width="15" height="29" rx="6" fill="${HEADSET_RED}" stroke="none"/>
+    <rect x="488" y="96" width="3" height="17" rx="1.5" fill="#FFE3E5" stroke="none"/>
+    <path d="M493 111Q493 122 485 126Q481 130 470 130" stroke-width="3"/>
+    <circle cx="466" cy="130" r="4" fill="${HEADSET_RED}" stroke="none"/>
   </g>
 </svg>`;
 }

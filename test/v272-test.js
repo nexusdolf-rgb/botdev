@@ -68,8 +68,8 @@ const check = (nom, cond, detail) => {
   console.log('— 4. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=356 référencé 7 fois', (index.match(/\?v=356/g) || []).length === 7);
-  check('sw.js : cache « botdev-v350 »', sw.includes("const CACHE = 'botdev-v356';"));
+  check('index.html : ?v=357 référencé 7 fois', (index.match(/\?v=357/g) || []).length === 7);
+  check('sw.js : cache « botdev-v350 »', sw.includes("const CACHE = 'botdev-v357';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v272 — ${ok} vérifications OK : présentation TempVoice, émojis Hoxera.`);

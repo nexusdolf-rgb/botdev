@@ -18,8 +18,8 @@ const css = racine('public/css/style.css');
 const pub = racine('public/js/public.js');
 
 console.log('— 1. Pins v338 —');
-check('index.html : ?v=356 ×7', (html.match(/\?v=356/g) || []).length === 7);
-check('sw.js : cache botdev-v356', sw.includes("const CACHE = 'botdev-v356';"));
+check('index.html : ?v=357 ×7', (html.match(/\?v=357/g) || []).length === 7);
+check('sw.js : cache botdev-v357', sw.includes("const CACHE = 'botdev-v357';"));
 check('index.html : plus aucune ?v=337', !html.includes('?v=337'));
 
 console.log('— 2. Pas un clone DraftBot —');

@@ -1614,6 +1614,12 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 4. Vérifie les tokens (GitHub 200, Render 200, Discord `users/@me` avec curl)
 5. Fais-moi un point de situation clair, puis attends mes instructions
 
+## 📌 v357 — BANNIÈRE SIMPLE BLEU PROFOND / TEXTE BLANC / PANNEAU RUBIS (08/10/2026)
+
+- Direction confirmée par l’utilisateur : composition simple inspirée de la maquette naturelle, texte blanc et badge de casque bleu repris de la version bleu/blanc, panneau rubis à droite. Aperçu exact généré par le code : `docs/apercu-banniere-ticket-v357.png` (544×192).
+- Le nom du serveur reste dynamique et adaptatif ; aucun nom d’exemple n’est codé en dur. Les nouveaux panneaux utilisent `?v=8` pour renouveler le cache Discord.
+- `test/v357-test.js` : 18 vérifications ciblées ; `bash scripts/check.sh` : **271/271** (syntaxe, secrets, suite complète) ; `git diff --check` OK.
+
 ## 📌 v356 — BANNIÈRE SUPPORT ROUGE RUBIS / BLANC CHAUD (08/10/2026)
 
 - Direction confirmée par l’utilisateur : bannière simple et professionnelle, grand espace blanc, panneau rubis à droite, casque-micro discret et texte graphite. Aperçu exact généré depuis le code : `docs/apercu-banniere-ticket-v356.png` (544×192).
