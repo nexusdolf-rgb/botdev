@@ -1614,6 +1614,12 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 4. Vérifie les tokens (GitHub 200, Render 200, Discord `users/@me` avec curl)
 5. Fais-moi un point de situation clair, puis attends mes instructions
 
+## 📌 v356 — BANNIÈRE SUPPORT ROUGE RUBIS / BLANC CHAUD (08/10/2026)
+
+- Direction confirmée par l’utilisateur : bannière simple et professionnelle, grand espace blanc, panneau rubis à droite, casque-micro discret et texte graphite. Aperçu exact généré depuis le code : `docs/apercu-banniere-ticket-v356.png` (544×192).
+- `server/banner.js` garde le nom dynamique (cache Discord, transmis ou mémorisé) et n’imprime aucun faux nom si la source manque. La couleur principale est `#B62F43`; les panneaux republiés utilisent l’URL `v=7` pour invalider le cache Discord.
+- `test/v356-test.js` : 16 vérifications ciblées ; `bash scripts/check.sh` : **271/271** (syntaxe, secrets, suite complète) ; `git diff --check` OK.
+
 ## 📌 v355 — LIVRÉE, CI VERTE, RENDER SAIN (08/10/2026)
 
 - Palette validée : bleu royal, blanc et rouge ; casque-micro ; nom d’exemple `CARRÉ RP OFFICIEL`. PNG réel du nouveau générateur : `docs/apercu-banniere-ticket-v355.png` (544×192).

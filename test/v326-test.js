@@ -27,8 +27,8 @@ const routes = racine('server/routes.js');
 const rrSrc = racine('server/discord/reactionroles.js');
 
 console.log('— 1. Pins de version v326 —');
-check('index.html : ?v=355 ×7', (html.match(/\?v=355/g) || []).length === 7);
-check('sw.js : cache botdev-v355', sw.includes("const CACHE = 'botdev-v355';"));
+check('index.html : ?v=356 ×7', (html.match(/\?v=356/g) || []).length === 7);
+check('sw.js : cache botdev-v356', sw.includes("const CACHE = 'botdev-v356';"));
 check('index.html : plus aucune ?v=325', !html.includes('?v=325'));
 
 console.log('— 2. Sélecteurs : le même menu partout —');

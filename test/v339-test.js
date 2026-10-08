@@ -23,8 +23,8 @@ const panels = racine('server/discord/panels.js');
 const i18nSrc = racine('server/i18n.js');
 
 console.log('— 1. Pins v339 —');
-check('index.html : ?v=355 ×7', (html.match(/\?v=355/g) || []).length === 7);
-check('sw.js : cache botdev-v355', sw.includes("const CACHE = 'botdev-v355';"));
+check('index.html : ?v=356 ×7', (html.match(/\?v=356/g) || []).length === 7);
+check('sw.js : cache botdev-v356', sw.includes("const CACHE = 'botdev-v356';"));
 check('index.html : plus aucune ?v=338', !html.includes('?v=338'));
 
 console.log('— 2. Même panneau, pas un second message —');

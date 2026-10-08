@@ -1,4 +1,4 @@
-// v355 — palette rouge/blanc/bleu et nom Discord réel sur chaque bannière.
+// v355 — non-régression du nom Discord réel et du cache de bannière.
 'use strict';
 
 const fs = require('node:fs');
@@ -31,15 +31,15 @@ function check(label, condition, detail = '') {
 }
 
 async function main() {
-  console.log('— Aperçu exact rouge/blanc/bleu et texte lisible —');
+  console.log('— Bannière pro rouge rubis et blanc chaud —');
   const svg = banner.baseSvg('CARRÉ RP OFFICIEL');
-  check('image 544×192 et couleurs bleu/blanc/rouge',
+  check('image 544×192, rouge rubis et blanc chaud',
     svg.includes('width="544" height="192"')
-      && svg.includes('#14355b') && svg.includes('#f7faff') && svg.includes('#ef4653'));
+      && svg.includes('#B62F43') && svg.includes('#FAFAF7') && svg.includes('#272D33'));
   check('SUPPORT et nom du serveur restent distincts',
     svg.includes('>SUPPORT</text>') && svg.includes('>CARRÉ RP OFFICIEL</text>'));
-  check('casque-micro rouge et blanc conservé',
-    svg.includes('id="support-headset"') && svg.includes('fill="#ef4653"') && svg.includes('stroke="#f7faff"'));
+  check('casque-micro blanc conservé à droite',
+    svg.includes('id="support-headset"') && svg.includes('stroke="#FFFFFF"') && svg.includes('fill="#B62F43"'));
   check('nom absent : aucun faux « HOXERA » n’est imprimé',
     !banner.baseSvg('').includes('HOXERA') && !banner.baseSvg('').includes('id="server-name"'));
   check('nom de serveur échappé pour le SVG',
@@ -80,7 +80,7 @@ async function main() {
   let redPixels = 0, whitePixels = 0;
   for (let i = 0; i < raw.data.length; i += raw.info.channels) {
     const r = raw.data[i], g = raw.data[i + 1], b = raw.data[i + 2];
-    if (r > 190 && g < 125 && b < 155) redPixels++;
+    if (r > 150 && g < 100 && b < 110) redPixels++;
     if (r > 230 && g > 230 && b > 235) whitePixels++;
   }
   check('rendu réel contient des accents rouges et du texte blanc', redPixels > 100 && whitePixels > 500,
@@ -90,10 +90,10 @@ async function main() {
   check('long nom large réduit automatiquement pour ne pas toucher le casque', short > long && long >= 12);
 
   const url = panels.__testPanelBannerUrl(guildId, 'CARRÉ RP OFFICIEL');
-  check('URL v6 force Discord à récupérer la nouvelle palette et transmet le nom',
-    url.includes(`${guildId}.png?v=6&n=`) && url.includes('CARR'));
-  check('journal de versions conserve v354 et démarre en v355',
-    changelog.VERSION === 355 && changelog.VERSIONS[0].v === 355 && changelog.VERSIONS[1].v === 354);
+  check('URL v7 force Discord à récupérer la nouvelle palette et transmet le nom',
+    url.includes(`${guildId}.png?v=7&n=`) && url.includes('CARR'));
+  check('journal conserve v355 sous la version courante v356',
+    changelog.VERSION === 356 && changelog.VERSIONS[0].v === 356 && changelog.VERSIONS[1].v === 355);
 
   try { store.db.close(); } catch {}
   try { fs.rmSync(DATA_DIR, { recursive: true, force: true }); } catch {}

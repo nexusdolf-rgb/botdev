@@ -39,7 +39,7 @@ const check = (label, cond) => {
   // ---------- 1bis. URL de bannière versionnée (casse le cache de Discord) ----------
   const panels = require('../server/discord/panels');
   const url = panels.__testPanelBannerUrl ? panels.__testPanelBannerUrl('111222333', 'Carré RP') : '';
-  check('URL bannière : versionnée en v6 pour forcer Discord à recharger', !!url && url.includes('.png?v=6') && url.includes('Carr'));
+  check('URL bannière : versionnée en v7 pour forcer Discord à recharger', !!url && url.includes('.png?v=7') && url.includes('Carr'));
 
   // ---------- 1ter. Le texte tient TOUJOURS dans la bannière (aucun débordement) ----------
   const sharp = require('sharp');
@@ -48,13 +48,15 @@ const check = (label, cond) => {
     const { data, info } = await sharp(p).raw().toBuffer({ resolveWithObject: true });
     const ch = info.channels, W = info.width;
     let minX = W, maxX = 0;
-    for (let y = 0; y < info.height; y++) {
-      for (let x = 0; x < W; x++) {
+    // Le titre v356 est en graphite (et non plus blanc) : mesurer ses pixels
+    // dans la seule zone du nom, sans confondre le fond clair avec le texte.
+    for (let y = 78; y < 114; y++) {
+      for (let x = 30; x < 410; x++) {
         const i = (y * W + x) * ch;
-        if (data[i] > 200 && data[i + 1] > 200 && data[i + 2] > 200) { if (x < minX) minX = x; if (x > maxX) maxX = x; }
+        if (data[i] < 100 && data[i + 1] < 120 && data[i + 2] < 130) { if (x < minX) minX = x; if (x > maxX) maxX = x; }
       }
     }
-    check(`bannière « ${nm.slice(0, 25)} » : texte dans les marges (x ${minX}→${maxX} / ${W})`, minX >= 10 && maxX <= W - 10);
+    check(`bannière « ${nm.slice(0, 25)} » : texte dans sa zone (x ${minX}→${maxX} / ${W})`, minX >= 35 && maxX < 390);
   }
   // Taille adaptative : nom court = plus grand, nom long = réduit mais lisible
   const sizeShort = Number(banner.baseSvg('RP').match(/id="server-name"[^>]*font-size="(\d+)"/)[1]);
