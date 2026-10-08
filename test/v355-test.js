@@ -93,8 +93,8 @@ async function main() {
   const url = panels.__testPanelBannerUrl(guildId, 'CARRÉ RP OFFICIEL');
   check('URL v9 force Discord à récupérer la nouvelle palette et transmet le nom',
     url.includes(`${guildId}.png?v=9&n=`) && url.includes('CARR'));
-  check('journal conserve v355 sous la version courante v358',
-    changelog.VERSION === 358 && changelog.VERSIONS[0].v === 358 && changelog.VERSIONS[1].v === 357);
+  check('journal conserve v355 sous la version courante v359',
+    changelog.VERSION === 359 && changelog.VERSIONS[0].v === 359 && changelog.VERSIONS[1].v === 358);
 
   try { store.db.close(); } catch {}
   try { fs.rmSync(DATA_DIR, { recursive: true, force: true }); } catch {}

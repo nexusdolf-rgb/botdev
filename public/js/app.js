@@ -338,24 +338,51 @@ App.renderAdminPage = async () => {
   root.appendChild(App.renderNavbar());
   const page = App.el(`
     <div class="page admin-platform-page">
-      <div class="admin-head">
-        <div>
-          <h1>👑 Espace fondateur</h1>
-          <p class="sub">Administration privée d'Optimus Prime — statistiques, comptes, bots et protection de la plateforme.</p>
+      <header class="admin-head">
+        <div class="admin-identity">
+          <span class="admin-mark" aria-hidden="true">OP</span>
+          <div class="admin-head-copy">
+            <div class="admin-breadcrumb"><span>OPTIMUS PRIME</span><i>/</i><b>CONSOLE FONDATEUR</b></div>
+            <h1>Espace fondateur</h1>
+            <p class="sub">Le pilotage global de la plateforme, dans un espace privé.</p>
+          </div>
         </div>
-        <button class="btn btn-ghost btn-sm" id="a-refresh">🔄 Rafraîchir</button>
-      </div>
-      <div class="admin-tabs" id="a-tabs"></div>
-      <div id="a-body"></div>
+        <div class="admin-head-actions">
+          <span class="admin-access-badge"><span class="admin-access-dot"></span>Accès fondateur</span>
+          <button class="btn admin-refresh-btn" id="a-refresh"><span aria-hidden="true">↻</span>Actualiser</button>
+        </div>
+      </header>
+      <nav class="admin-tabs" id="a-tabs" role="tablist" aria-label="Navigation de l'espace fondateur"></nav>
+      <div id="a-body" role="tabpanel"></div>
     </div>`);
   root.appendChild(page);
 
+  const ADMIN_ICONS = {
+    overview: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+    link: '<path d="M10 13a5 5 0 0 0 7.07 0l2-2A5 5 0 0 0 12 3.93l-1.14 1.14"/><path d="M14 11a5 5 0 0 0-7.07 0l-2 2A5 5 0 0 0 12 20.07l1.14-1.14"/>',
+    shield: '<path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"/><path d="m9 12 2 2 4-4"/>',
+    server: '<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01M11 7.5h6M11 16.5h6"/>',
+    group: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+    ticket: '<path d="M2 9a3 3 0 0 0 0 6v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-4a3 3 0 0 1 0-6V5a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2M13 11v2M13 17v2"/>',
+    message: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/>',
+    bot: '<rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4M8 13h.01M16 13h.01M9 17h6"/><circle cx="12" cy="3" r="1"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    database: '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/>',
+    activity: '<path d="M3 12h4l3-8 4 16 3-8h4"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1a1.7 1.7 0 0 1-2.4 2.4l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.3a1.7 1.7 0 0 1-3.4 0v-.2A1.7 1.7 0 0 0 7.8 17l-.1.1a1.7 1.7 0 1 1-2.4-2.4l.1-.1a1.7 1.7 0 0 0-1.2-2.9h-.3a1.7 1.7 0 0 1 0-3.4h.2A1.7 1.7 0 0 0 5.3 7l-.1-.1a1.7 1.7 0 1 1 2.4-2.4l.1.1a1.7 1.7 0 0 0 2.9-1.2v-.3a1.7 1.7 0 0 1 3.4 0v.2A1.7 1.7 0 0 0 16.9 5l.1-.1a1.7 1.7 0 1 1 2.4 2.4l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.3a1.7 1.7 0 0 1 0 3.4h-.2a1.7 1.7 0 0 0-1.2 1.3Z"/>',
+    refresh: '<path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 17.5 6L20 12M4 12l2.5 6a7 7 0 0 0 11.9-3"/>',
+    restart: '<path d="M3 12a9 9 0 1 0 2.64-6.36L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>',
+    arrow: '<path d="M7 17 17 7M7 7h10v10"/>',
+  };
+  const adminIcon = (name, className = '') => `<svg class="${className}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ADMIN_ICONS[name] || ''}</svg>`;
+
   const TABS = [
-    ['overview', '👑', 'Vue d\'ensemble'],
-    ['users', '👥', 'Comptes'],
-    ['bots', '🤖', 'Bots'],
-    ['audit', '🛡️', 'Journal'],
-    ['settings', '⚙️', 'Réglages'],
+    ['overview', 'overview', 'Vue d\'ensemble'],
+    ['users', 'users', 'Comptes'],
+    ['bots', 'bot', 'Bots'],
+    ['audit', 'shield', 'Journal'],
+    ['settings', 'settings', 'Réglages'],
   ];
   const tabsEl = page.querySelector('#a-tabs');
   const bodyEl = page.querySelector('#a-body');
@@ -364,7 +391,8 @@ App.renderAdminPage = async () => {
   const renderTabs = () => {
     tabsEl.innerHTML = '';
     TABS.forEach(([id, ico, label]) => {
-      const b = App.el(`<button class="admin-tab ${App.ADMIN_TAB === id ? 'active' : ''}" data-tab="${id}"><span class="t-ico">${ico}</span>${label}</button>`);
+      const active = App.ADMIN_TAB === id;
+      const b = App.el(`<button class="admin-tab ${active ? 'active' : ''}" type="button" role="tab" aria-selected="${active}" data-tab="${id}">${adminIcon(ico, 'admin-tab-icon')}<span class="admin-tab-label">${label}</span></button>`);
       b.onclick = () => { App.ADMIN_TAB = id; renderTabs(); renderBody(); };
       tabsEl.appendChild(b);
     });
@@ -385,61 +413,123 @@ App.renderAdminPage = async () => {
 
   // ─────────────────── Vue d'ensemble ───────────────────
   const renderOverview = async () => {
-    const [stats, system, activityRes] = await Promise.all([
+    const [stats, system, activityRes, botsRes] = await Promise.all([
       App.api('/admin/stats'),
       App.api('/admin/system'),
       App.api('/admin/activity?limit=40'),
+      App.api('/admin/bots').catch(() => ({ bots: [] })),
     ]);
-    const uptime = Math.floor((system.uptimeMs || 0) / 1000);
+    const uptime = Math.floor((Number(system.uptimeMs) || 0) / 1000);
     const upStr = uptime > 86400 ? Math.floor(uptime / 86400) + ' j ' + Math.floor((uptime % 86400) / 3600) + ' h'
       : uptime > 3600 ? Math.floor(uptime / 3600) + ' h ' + Math.floor((uptime % 3600) / 60) + ' min'
       : Math.max(1, Math.floor(uptime / 60)) + ' min';
+    const primaryBot = (Array.isArray(botsRes.bots) ? botsRes.bots : []).find((bot) => Number(bot.id) === 1);
+    const botName = String((primaryBot && primaryBot.name) || 'Bot principal');
+    const botOnline = primaryBot ? Boolean(primaryBot.online) : Boolean(stats.online);
+    const backupActive = Boolean(system.backupEnabled);
+    const activityItems = Array.isArray(activityRes.items) ? activityRes.items.slice(0, 8) : [];
+    const displayNumber = (value) => (Number(value) || 0).toLocaleString('fr-FR');
+    const lastBackup = system.lastBackup ? String(system.lastBackup).replace('T', ' ').slice(0, 16) : 'Aucune sauvegarde enregistrée';
+    const metrics = [
+      ['users', 'Comptes', displayNumber(stats.users), 'Utilisateurs de la plateforme'],
+      ['link', 'Liés à Discord', displayNumber(stats.linked), 'Comptes connectés'],
+      ['shield', 'Comptes bannis', displayNumber(stats.banned), 'Mesures de protection'],
+      ['server', 'Serveurs', displayNumber(stats.servers), 'Espaces suivis'],
+      ['group', 'Membres suivis', displayNumber(stats.members), 'Sur l’ensemble des serveurs'],
+      ['ticket', 'Tickets', displayNumber((Number(stats.tickets) || 0) + (Number(stats.openTickets) || 0)), 'Ouverts et traités'],
+      ['message', 'Messages · 24 h', displayNumber(stats.messages24h), 'Sur les dernières 24 heures'],
+      ['bot', botName, botOnline ? 'Connecté' : 'Hors ligne', botOnline ? 'Connexion Discord active' : 'Bot non connecté'],
+    ];
+    const metricsMarkup = metrics.map(([icon, label, value, note]) => `
+      <article class="admin-stat-card${icon === 'bot' ? (botOnline ? ' is-online' : ' is-offline') : ''}">
+        <div class="admin-stat-top"><span class="admin-stat-icon">${adminIcon(icon)}</span>${icon === 'bot' ? `<span class="admin-stat-live"><i></i>${botOnline ? 'En ligne' : 'Hors ligne'}</span>` : ''}</div>
+        <div class="admin-stat-value">${App.escapeHtml(String(value))}</div>
+        <div class="admin-stat-label">${App.escapeHtml(label)}</div>
+        <div class="admin-stat-note">${App.escapeHtml(note)}</div>
+      </article>`).join('');
+    const activityMarkup = activityItems.length ? activityItems.map((it) => {
+      const context = [it.guild_name, it.bot_name].filter(Boolean).map((part) => App.escapeHtml(String(part))).join(' · ');
+      const rawTime = String(it.created_at || '');
+      const time = rawTime ? rawTime.replace('T', ' ').slice(0, 16) : '—';
+      return `
+        <article class="admin-activity-item">
+          <span class="admin-activity-icon">${it.emoji ? App.escapeHtml(it.emoji) : adminIcon('activity')}</span>
+          <div class="admin-activity-copy"><strong>${App.escapeHtml(String(it.text || 'Activité enregistrée'))}</strong>${context ? `<span>${context}</span>` : ''}</div>
+          <time class="admin-activity-time">${App.escapeHtml(time)}</time>
+        </article>`;
+    }).join('') : '<div class="admin-empty"><span class="admin-empty-mark">—</span><strong>Aucune activité récente</strong><span>Les événements de la plateforme apparaîtront ici.</span></div>';
+    const backupActionMarkup = `${adminIcon('database')}<span>Sauvegarder maintenant</span>`;
     bodyEl.innerHTML = `
-      <div class="stats-grid">
-        <div class="stat-card"><div class="val">${stats.users}</div><div class="lbl">👤 Comptes</div></div>
-        <div class="stat-card"><div class="val">${stats.linked ?? 0}</div><div class="lbl">🔗 Liés à Discord</div></div>
-        <div class="stat-card"><div class="val">${stats.banned ?? 0}</div><div class="lbl">⛔ Bannis</div></div>
-        <div class="stat-card"><div class="val">${stats.servers ?? 0}</div><div class="lbl">🖥️ Serveurs</div></div>
-        <div class="stat-card"><div class="val">${stats.members ?? 0}</div><div class="lbl">👥 Membres suivis</div></div>
-        <div class="stat-card"><div class="val">${(stats.tickets ?? 0) + (stats.openTickets ?? 0)}</div><div class="lbl">🎫 Tickets traités</div></div>
-        <div class="stat-card"><div class="val">${stats.messages24h ?? 0}</div><div class="lbl">💬 Messages 24 h</div></div>
-        <div class="stat-card"><div class="val">${stats.online ? '🟢' : '🔴'}</div><div class="lbl">Bot Hoxera</div></div>
-      </div>
+      <div class="admin-overview">
+        <section class="admin-overview-hero">
+          <div class="admin-overview-copy">
+            <span class="admin-section-kicker">SYNTHÈSE DE LA PLATEFORME</span>
+            <h2>Vue d’ensemble opérationnelle</h2>
+            <p>Activité, disponibilité et volumes clés — réunis au même endroit.</p>
+          </div>
+          <div class="admin-hero-status ${botOnline ? 'is-online' : 'is-offline'}">
+            <span class="admin-hero-status-mark"><i></i></span>
+            <span><strong>${botOnline ? 'Bot opérationnel' : 'Bot hors ligne'}</strong><small>Processus actif depuis ${App.escapeHtml(upStr)}</small></span>
+          </div>
+        </section>
 
-      <div class="card">
-        <h3>🩺 Santé du système</h3>
-        <div class="card-sub">État du serveur, du bot et des sauvegardes.</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">✅ Serveur en ligne — ${App.escapeHtml(upStr)}</span>
-          <span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">✅ ${stats.online ? 'Bot connecté' : 'Bot hors ligne'}</span>
-          <span class="chip" style="color:${system.backupEnabled ? '#57F287' : '#ff8a8d'};border-color:${system.backupEnabled ? 'rgba(87,242,135,.4)' : 'rgba(237,66,69,.45)'}">${system.backupEnabled ? '✅ Sauvegardes automatiques actives' : '⚠️ Sauvegardes désactivées'}</span>
-          <span class="chip">💾 Dernière sauvegarde : ${system.lastBackup ? App.escapeHtml(String(system.lastBackup).slice(0, 16)) : 'jamais'}</span>
-        </div>
-        <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
-          <button class="btn btn-sm" id="a-backup-now">💾 Sauvegarder maintenant</button>
-          <button class="btn btn-sm" id="a-restart-bot">🔄 Redémarrer le bot</button>
-        </div>
-      </div>
+        <section class="admin-metrics-section" aria-label="Indicateurs de la plateforme">
+          <div class="admin-section-heading">
+            <div><span class="admin-section-kicker">INDICATEURS</span><h3>Les chiffres clés</h3></div>
+            <span class="admin-section-note">Données de la plateforme</span>
+          </div>
+          <div class="admin-stat-grid">${metricsMarkup}</div>
+        </section>
 
-      <div class="card">
-        <h3>🌍 Activité récente</h3>
-        <div class="card-sub">Ce qui se passe sur tous les serveurs en ce moment.</div>
-        <div id="a-feed">${!activityRes.items.length ? '<div class="empty-state">Aucune activité pour l\'instant.</div>' : activityRes.items.map((it) => `
-          <div class="activity-item">
-            <span class="a-emoji">${App.escapeHtml(it.emoji || '•')}</span>
-            <span class="a-text">${App.escapeHtml(it.text)}</span>
-            <span class="a-meta">${it.guild_name ? App.escapeHtml(it.guild_name) : ''}${it.bot_name ? ' · ' + App.escapeHtml(it.bot_name) : ''} · ${App.escapeHtml(String(it.created_at || '').slice(5, 16))}</span>
-          </div>`).join('')}</div>
+        <div class="admin-overview-grid">
+          <section class="admin-panel admin-health-panel">
+            <header class="admin-panel-head">
+              <div><span class="admin-section-kicker">SYSTÈME</span><h3>Santé de la plateforme</h3><p>État des services essentiels et des sauvegardes.</p></div>
+              <span class="admin-summary-mark">${adminIcon('activity')}</span>
+            </header>
+            <div class="admin-health-list">
+              <div class="admin-health-row">
+                <span class="admin-health-icon is-good">${adminIcon('server')}</span>
+                <span class="admin-health-copy"><strong>Serveur web</strong><small>Actif depuis ${App.escapeHtml(upStr)}</small></span>
+                <span class="admin-state-tag is-good"><i></i>En ligne</span>
+              </div>
+              <div class="admin-health-row">
+                <span class="admin-health-icon ${botOnline ? 'is-good' : 'is-bad'}">${adminIcon('bot')}</span>
+                <span class="admin-health-copy"><strong>${App.escapeHtml(botName)}</strong><small>Connexion au réseau Discord</small></span>
+                <span class="admin-state-tag ${botOnline ? 'is-good' : 'is-bad'}"><i></i>${botOnline ? 'Connecté' : 'Hors ligne'}</span>
+              </div>
+              <div class="admin-health-row">
+                <span class="admin-health-icon ${backupActive ? 'is-good' : 'is-warn'}">${adminIcon('database')}</span>
+                <span class="admin-health-copy"><strong>Sauvegardes automatiques</strong><small>${App.escapeHtml(lastBackup)}</small></span>
+                <span class="admin-state-tag ${backupActive ? 'is-good' : 'is-warn'}"><i></i>${backupActive ? 'Actives' : 'À configurer'}</span>
+              </div>
+            </div>
+            <div class="admin-panel-actions">
+              <button class="btn admin-action-primary" id="a-backup-now">${backupActionMarkup}</button>
+              <button class="btn admin-action-secondary" id="a-restart-bot">${adminIcon('restart')}<span>Redémarrer le bot</span></button>
+            </div>
+          </section>
+
+          <section class="admin-panel admin-activity-panel">
+            <header class="admin-panel-head">
+              <div><span class="admin-section-kicker">ÉVÉNEMENTS</span><h3>Activité récente</h3><p>Les dernières opérations enregistrées sur la plateforme.</p></div>
+              <span class="admin-activity-count">${activityItems.length}</span>
+            </header>
+            <div class="admin-activity-feed" id="a-feed">${activityMarkup}</div>
+            <div class="admin-panel-footer"><button class="admin-text-action" id="a-view-audit" type="button">Ouvrir le journal ${adminIcon('arrow')}</button></div>
+          </section>
+        </div>
       </div>`;
 
     bodyEl.querySelector('#a-backup-now').onclick = async () => {
       const b = bodyEl.querySelector('#a-backup-now');
-      b.disabled = true; b.textContent = '⏳ Sauvegarde…';
+      b.disabled = true;
+      b.innerHTML = '<span class="admin-inline-spinner" aria-hidden="true"></span><span>Sauvegarde…</span>';
       try {
         const r = await App.api('/backup/now', { method: 'POST' });
         App.toast(r.ok ? '✅ Sauvegarde terminée !' : (r.error || 'Erreur'));
       } catch (e) { App.toast(e.message, 'error'); }
-      finally { b.disabled = false; b.textContent = '💾 Sauvegarder maintenant'; renderBody(); }
+      finally { b.disabled = false; b.innerHTML = backupActionMarkup; renderBody(); }
     };
     bodyEl.querySelector('#a-restart-bot').onclick = async () => {
       if (!(await App.confirm('Redémarrer le bot Optimus Prime ? Il sera indisponible ~10 secondes.'))) return;
@@ -451,6 +541,7 @@ App.renderAdminPage = async () => {
         renderBody();
       } catch (e) { App.toast(e.message, 'error'); }
     };
+    bodyEl.querySelector('#a-view-audit').onclick = () => { App.ADMIN_TAB = 'audit'; renderTabs(); renderBody(); };
   };
 
   // ─────────────────── Comptes ───────────────────

@@ -7,7 +7,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const ui = require('./ui');
 
-const VERSION = 358;
+const VERSION = 359;
 const DASHBOARD_URL = 'https://hoxera.is-a.dev';
 const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3';
 const AUTO_REVERT_MS = 2 * 60 * 1000;
@@ -15,6 +15,12 @@ const SELECT_ID = (botId) => `hx-upd:${botId}`;
 
 // Plus récent en premier. Menu Discord = 25 options max (accueil + 24 versions).
 const VERSIONS = [
+  {
+    v: 359, date: '09/10', title: 'Espace fondateur repensé',
+    new: ['Le hub fondateur dispose d’une vue d’ensemble plus claire : indicateurs, santé du système et activité récente sont regroupés.'],
+    improved: ['La navigation, les cartes et les commandes reprennent le style Slate & Clay du centre serveur, avec un affichage adapté au mobile.'],
+    fixed: ['Les actions existantes, les données et les permissions fondateur restent inchangées.'],
+  },
   {
     v: 358, date: '08/10', title: 'Texte de bannière plus grand et lumineux',
     new: ['Les libellés SUPPORT et le nom du serveur gagnent en taille pour une meilleure lecture.'],

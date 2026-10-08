@@ -28,8 +28,8 @@ const sw = racine('public/sw.js');
 const dash = racine('public/js/dashboard.js');
 
 console.log('— 1. Pins de version v324 —');
-check('index.html : ?v=358 ×7', (html.match(/\?v=358/g) || []).length === 7);
-check('sw.js : cache botdev-v358', sw.includes("const CACHE = 'botdev-v358';"));
+check('index.html : ?v=359 ×7', (html.match(/\?v=359/g) || []).length === 7);
+check('sw.js : cache botdev-v359', sw.includes("const CACHE = 'botdev-v359';"));
 check('index.html : plus aucune ?v=323', !html.includes('?v=323'));
 
 console.log('— 2. Dashboard calé sur l’exemple —');

@@ -36,7 +36,8 @@ const index = racine('public/index.html');
 
 const deb = css.indexOf('/* --- v255 : sur OS de bureau, le VISAGE v241');
 const finBrut = css.indexOf("/* --- Palier B : 481-900 px, rail d'icônes de 64 px --- */");
-const fin = finBrut > 0 ? finBrut : css.length;   // palier B retiré en v257
+const finV359 = css.indexOf('   v359 — Espace fondateur : console Slate & Clay');
+const fin = finBrut > 0 ? finBrut : (finV359 > deb ? finV359 : css.length);   // palier B retiré en v257 ; borné avant les nouveaux modules
 check('le bloc de restauration v241 existe', deb > 0 && deb < fin);
 const restaure = css.slice(deb, fin);
 
@@ -82,9 +83,9 @@ check('la classe hx-os-pc vient toujours du système (v253)',
   index.includes("classList.add('hx-os-pc')"));
 
 console.log('— 5. Version —');
-check('index.html : ?v=358 référencé 7 fois', (index.match(/\?v=358/g) || []).length === 7,
-  String((index.match(/\?v=358/g) || []).length));
-check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("const CACHE = 'botdev-v358';"));
+check('index.html : ?v=359 référencé 7 fois', (index.match(/\?v=359/g) || []).length === 7,
+  String((index.match(/\?v=359/g) || []).length));
+check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("const CACHE = 'botdev-v359';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v255 — ${ok} vérifications OK : le PC retrouve son visage v241, le mobile garde le sien.`);

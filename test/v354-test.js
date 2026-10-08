@@ -70,8 +70,8 @@ async function main() {
   const url = panels.__testPanelBannerUrl('354123', 'Carré RP Officiel');
   check('URL de bannière versionnée pour recharger le nouveau visuel',
     url.includes('/api/tickets/panel-banner/354123.png?v=9') && url.includes('Carr'));
-  check('journal conserve v354 sous la version courante v358',
-    changelog.VERSION === 358 && changelog.VERSIONS[0].v === 358 && changelog.VERSIONS[1].v === 357);
+  check('journal conserve v354 sous la version courante v359',
+    changelog.VERSION === 359 && changelog.VERSIONS[0].v === 359 && changelog.VERSIONS[1].v === 358);
 
   try { store.db.close(); } catch {}
   try { fs.rmSync(DATA_DIR, { recursive: true, force: true }); } catch {}

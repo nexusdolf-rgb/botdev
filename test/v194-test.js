@@ -53,9 +53,9 @@ check('aria-label sur les interrupteurs de modules', js.includes('aria-label="Mo
 
 // ---------- 4. Version + accessibilité ----------
 console.log('\n4️⃣  Version et accessibilité');
-check('index.html : ?v=358 référencé 7 fois', (index.match(/\?v=358/g) || []).length === 7);
+check('index.html : ?v=359 référencé 7 fois', (index.match(/\?v=359/g) || []).length === 7);
 check('index.html : plus aucune ?v=193', !index.includes('?v=193'));
-check('sw.js : cache v194', sw.includes("const CACHE = 'botdev-v358';"));
+check('sw.js : cache v194', sw.includes("const CACHE = 'botdev-v359';"));
 check('conteneur de notifications annoncé (aria-live)', index.includes('<div id="toasts" aria-live="polite">'));
 
 console.log(failures === 0
