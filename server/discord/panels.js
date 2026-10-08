@@ -366,7 +366,7 @@ function isDefaultMessage(msg) {
 // 🌍 PERSONNALISATION AUTOMATIQUE PAR SERVEUR :
 //  - « Support | {nom du serveur} » (titre)
 //  - « Bienvenue sur le support officiel de {nom du serveur} »
-//  - Bannière « SUPPORT - {NOM DU SERVEUR} » générée à la volée
+//  - Bannière SUPPORT avec le nom du serveur, casque-micro dessiné à la volée
 //    (Optimus Prime = nom de repli si le serveur est inconnu)
 //  - Textes dans la langue du serveur (/lang fr|en)
 // ============================================================
@@ -379,7 +379,7 @@ function panelBannerUrl(guildId, name) {
   // ⚠️ Le paramètre v= sert à casser le cache de Discord : chaque fois que
   // le style de la bannière change, on incrémente → Discord recharge
   // l'image au lieu d'afficher l'ancienne mémorisée.
-  return `${site}/api/tickets/panel-banner/${encodeURIComponent(guildId || '0')}.png?v=4&n=${encodeURIComponent(String(name || '').slice(0, 60))}`;
+  return `${site}/api/tickets/panel-banner/${encodeURIComponent(guildId || '0')}.png?v=5&n=${encodeURIComponent(String(name || '').slice(0, 60))}`;
 }
 
 // v234 — retourne désormais un PAYLOAD Components V2 (et non plus un

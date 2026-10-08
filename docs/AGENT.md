@@ -1614,12 +1614,19 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 4. Vérifie les tokens (GitHub 200, Render 200, Discord `users/@me` avec curl)
 5. Fais-moi un point de situation clair, puis attends mes instructions
 
-## 📌 v353 — MODIFICATIONS LOCALES, TESTS VERTS (05/10/2026)
+## 📌 v354 — BANNIÈRE APPROUVÉE, TESTS VERTS (08/10/2026)
+
+- Bannière tickets approuvée par l’utilisateur : fond bleu nuit, libellé **SUPPORT**, nom de serveur en blanc perlé/argent avec halo froid discret, casque-micro à droite. Fichier de référence rendu par le vrai générateur : `docs/apercu-banniere-ticket-v354.png` (544×192).
+- `server/banner.js` conserve le nom dynamique par serveur et l’ajustement de taille automatique ; l’ancien préfixe `SUPPORT -` en base reste compatible. Le cache Discord est invalidé par l’URL `?v=5`. L’image personnalisée des panneaux et la logique des tickets ne sont pas modifiées.
+- `test/v354-test.js` : 13 vérifications. `bash scripts/check.sh` : **269/269** (syntaxe, secrets, suite complète) ; génération PNG réelle vérifiée ; `git diff --check` OK.
+- **État livraison :** la branche locale est prête, basée sur le commit v353 `6b8208f`; le `main` public vérifié pointe encore sur v353. Push et Render ne sont pas encore réalisés/confirmés. Le PAT de v353 n’a pas été sauvegardé et doit être révoqué/renouvelé ; fournir un nouveau droit d’écriture repo-scoped pour terminer le push, sans le conserver.
+
+## 📌 v353 — LIVRÉE, RENDER SAIN (05/10/2026)
 
 - Textes bilingues validés des MP d’ouverture, de clôture/transcription et de demande d’avis appliqués dans `server/i18n.js` et `panels.js`. Ouverture sans type, avec bouton-lien direct ; transcription toujours jointe et bouton-lien localisé ; étoiles interactives conservées.
 - Les réglages personnalisés `close_dm_message` / `close_dm_image`, les confirmations après notation, les confirmations éphémères et les messages du salon ticket n’ont pas été élargis ni remplacés.
-- `test/v353-test.js` : 24 vérifications. `bash scripts/check.sh` : **268/268**, syntaxe et recherche de secrets incluses ; `git diff --check` OK. Pins cache index/service worker et assertions historiques alignés sur v353.
-- Les deux aperçus HTML approuvés sont conservés dans `docs/`. État : commit v353 local sur `main`, basé sur `c702925` ; un nouveau PAT limité au dépôt a été fourni pour le push, à utiliser transitoirement puis à révoquer/renouveler, sans l’écrire dans le dépôt.
+- `test/v353-test.js` : 24 vérifications. `bash scripts/check.sh` à l’époque : **268/268**. Commit `6b8208f9c14a575cc8f12fb6fc81ef1b8d6e3ae5` poussé sur `main`; vérification Render saine après redémarrage. CI #279 était `in_progress` à 10:36:55Z et son résultat n’avait pas encore été revérifié.
+- Le PAT utilisé pour v353 a servi transitoirement, n’a pas été conservé et doit être révoqué/renouvelé après usage.
 
 ## 📌 v352 — LIVRÉE, CI VERTE (05/10/2026)
 

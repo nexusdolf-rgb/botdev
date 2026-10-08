@@ -167,13 +167,13 @@ async function main() {
       && i18n.t('en', 'ticket_dm_open_button') === '🎫 Open my ticket'
       && i18n.t('fr', 'transcript_button') === '📄 Voir la transcription'
       && i18n.t('en', 'transcript_button') === '📄 View transcript');
-  check('le journal démarre en v353 et v352 reste la précédente',
-    changelog.VERSION === 353 && changelog.VERSIONS[0].v === 353
-      && changelog.VERSIONS[1].v === 352 && changelog.NOTES.v === 353);
+  check('le journal conserve v353 et démarre désormais en v354',
+    changelog.VERSION === 354 && changelog.VERSIONS[0].v === 354
+      && changelog.VERSIONS[1].v === 353 && changelog.NOTES.v === 354);
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('cache web actualisé : ?v=353 7 fois et botdev-v353',
-    (index.match(/\?v=353/g) || []).length === 7 && sw.includes("const CACHE = 'botdev-v353';"));
+  check('cache web actualisé : ?v=354 7 fois et botdev-v354',
+    (index.match(/\?v=354/g) || []).length === 7 && sw.includes("const CACHE = 'botdev-v354';"));
 
   try { store.db.close(); } catch {}
   try { fs.rmSync(DATA_DIR, { recursive: true, force: true }); } catch {}

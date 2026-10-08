@@ -7,7 +7,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const ui = require('./ui');
 
-const VERSION = 353;
+const VERSION = 354;
 const DASHBOARD_URL = 'https://hoxera.is-a.dev';
 const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3';
 const AUTO_REVERT_MS = 2 * 60 * 1000;
@@ -15,6 +15,12 @@ const SELECT_ID = (botId) => `hx-upd:${botId}`;
 
 // Plus récent en premier. Menu Discord = 25 options max (accueil + 24 versions).
 const VERSIONS = [
+  {
+    v: 354, date: '08/10', title: 'Bannière de tickets repensée',
+    new: ['La bannière adopte un fond bleu nuit, un nom argenté lumineux et un casque-micro de support.'],
+    improved: ['Le nom de chaque serveur reste automatique et sa taille s’ajuste pour tenir dans l’image.'],
+    fixed: ['L’URL de l’image est versionnée pour forcer Discord à charger le nouveau visuel.'],
+  },
   {
     v: 353, date: '05/10', title: 'MP tickets bilingues, clairs et directs',
     new: ['Le MP d’ouverture est plus court et propose un bouton direct vers le ticket.', 'La demande d’avis ne garde que son texte et les cinq boutons d’étoiles.'],

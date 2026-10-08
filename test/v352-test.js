@@ -133,15 +133,15 @@ console.log('— Journal des versions /update —');
 const current = changelog.VERSIONS[0];
 const previous = changelog.VERSIONS[1];
 check('v352 reste dans le journal après l’ajout de versions récentes',
-  changelog.VERSION === 353 && current.v === 353 && changelog.NOTES.v === 353
+  changelog.VERSION === 354 && current.v === 354 && changelog.NOTES.v === 354
     && changelog.VERSIONS.some((entry) => entry.v === 352));
 const home = changelog.buildHomePanel(1);
 const homeText = v2.allText(home);
-check('/update présente la version courante puis v352',
+check('/update présente la version courante puis v353',
   v2.title(home) === `🚀 Optimus Prime — Mises à jour (v${current.v})`
-    && previous.v === 352
+    && previous.v === 353
     && homeText.includes(`**v${current.v} — ${current.title}**`)
-    && homeText.includes('**v352 — Panneau privé sans champ d’équipe**'));
+    && homeText.includes('**v353 — MP tickets bilingues, clairs et directs**'));
 
 const previewPath = path.join(__dirname, '..', 'docs', 'apercu-ticket-prive.html');
 const preview = fs.readFileSync(previewPath, 'utf8');

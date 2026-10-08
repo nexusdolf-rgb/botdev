@@ -1,7 +1,7 @@
 // ============================================================
 // Test Hoxera v67 — Bannière STATIQUE (l'animation a été retirée)
 // + nouveaux garde-fous anti-catastrophe
-//  1. Bannière : PNG statique avec « SUPPORT - {NOM DU SERVEUR} »
+//  1. Bannière : PNG statique avec étiquette SUPPORT, nom dynamique et casque-micro
 //  2. Aucun code GIF ne subsiste (fonctions supprimées)
 //  3. Route .png ET .gif → PNG (les anciens panneaux marchent)
 //  4. Sauvegarde : refus si la base dépasse la limite de taille
@@ -29,14 +29,17 @@ const check = (label, cond) => {
   // ---------- 1. Bannière statique ----------
   const png = await banner.generateBanner('Carré RP');
   check('bannière : PNG généré', !!png && png.slice(0, 4).toString('hex') === '89504e47');
-  check('bannière : texte « SUPPORT - CARRÉ RP »', banner.baseSvg('Carré RP').includes('SUPPORT - CARR'));
-  check('bannière : pas de doublon de préfixe', !banner.baseSvg('Support - X').includes('SUPPORT - SUPPORT'));
+  check('bannière : étiquette SUPPORT et nom du serveur sur deux lignes',
+    banner.baseSvg('Carré RP').includes('>SUPPORT</text>') && banner.baseSvg('Carré RP').includes('>CARRÉ RP</text>'));
+  check('bannière : préfixe historique retiré sans doublon',
+    banner.baseSvg('Support - X').includes('>X</text>') && !banner.baseSvg('SUPPORT - SUPPORT').includes('SUPPORT - SUPPORT'));
+  check('bannière : casque-micro support présent', banner.baseSvg('Carré RP').includes('id="support-headset"'));
   check('bannière : nom stocké retrouvé', banner.storedPanelName('111222333') === 'Carré RP');
 
   // ---------- 1bis. URL de bannière versionnée (casse le cache de Discord) ----------
   const panels = require('../server/discord/panels');
   const url = panels.__testPanelBannerUrl ? panels.__testPanelBannerUrl('111222333', 'Carré RP') : '';
-  check('URL bannière : versionnée (?v=3) pour forcer Discord à recharger', !!url && url.includes('.png?v=4') && url.includes('Carr'));
+  check('URL bannière : versionnée en v5 pour forcer Discord à recharger', !!url && url.includes('.png?v=5') && url.includes('Carr'));
 
   // ---------- 1ter. Le texte tient TOUJOURS dans la bannière (aucun débordement) ----------
   const sharp = require('sharp');
@@ -54,8 +57,8 @@ const check = (label, cond) => {
     check(`bannière « ${nm.slice(0, 25)} » : texte dans les marges (x ${minX}→${maxX} / ${W})`, minX >= 10 && maxX <= W - 10);
   }
   // Taille adaptative : nom court = plus grand, nom long = réduit mais lisible
-  const sizeShort = Number(banner.baseSvg('RP').match(/font-size="(\d+)"/)[1]);
-  const sizeLong = Number(banner.baseSvg('Un Serveur Avec Un Nom Vraiment Tres Long').match(/font-size="(\d+)"/)[1]);
+  const sizeShort = Number(banner.baseSvg('RP').match(/id="server-name"[^>]*font-size="(\d+)"/)[1]);
+  const sizeLong = Number(banner.baseSvg('Un Serveur Avec Un Nom Vraiment Tres Long').match(/id="server-name"[^>]*font-size="(\d+)"/)[1]);
   check('bannière : taille adaptée (court = plus grand)', sizeShort > sizeLong && sizeLong >= 12);
 
   // ---------- 2. Plus aucun code GIF ----------

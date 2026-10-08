@@ -68,8 +68,8 @@ check('dashboard : carte activée par défaut', dash.includes("s.xp_card === 0 |
 check('dashboard : exemple de message correspond au nouveau rendu', dash.includes("placeholder=\"{user} vient d\\'atteindre le niveau {level} !\""));
 
 // ---------- 5. Versions ----------
-check('index : version courante v350', index.includes('?v=353'));
-check('service worker : cache courant v350', sw.includes('botdev-v353'));
+check('index : version courante v350', index.includes('?v=354'));
+check('service worker : cache courant v350', sw.includes('botdev-v354'));
 
 console.log(`\n✅ v210-test.js : ${n} vérifications OK`);
 process.exit(0);
