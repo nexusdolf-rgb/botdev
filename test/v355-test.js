@@ -91,10 +91,10 @@ async function main() {
   check('long nom large réduit automatiquement pour ne pas toucher le casque', short > long && long >= 12);
 
   const url = panels.__testPanelBannerUrl(guildId, 'CARRÉ RP OFFICIEL');
-  check('URL v8 force Discord à récupérer la nouvelle palette et transmet le nom',
-    url.includes(`${guildId}.png?v=8&n=`) && url.includes('CARR'));
-  check('journal conserve v355 sous la version courante v357',
-    changelog.VERSION === 357 && changelog.VERSIONS[0].v === 357 && changelog.VERSIONS[1].v === 356);
+  check('URL v9 force Discord à récupérer la nouvelle palette et transmet le nom',
+    url.includes(`${guildId}.png?v=9&n=`) && url.includes('CARR'));
+  check('journal conserve v355 sous la version courante v358',
+    changelog.VERSION === 358 && changelog.VERSIONS[0].v === 358 && changelog.VERSIONS[1].v === 357);
 
   try { store.db.close(); } catch {}
   try { fs.rmSync(DATA_DIR, { recursive: true, force: true }); } catch {}

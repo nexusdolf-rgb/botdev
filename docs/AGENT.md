@@ -1614,6 +1614,12 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 4. Vérifie les tokens (GitHub 200, Render 200, Discord `users/@me` avec curl)
 5. Fais-moi un point de situation clair, puis attends mes instructions
 
+## 📌 v358 — TEXTE DE BANNIÈRE AGRANDI ET LUMINEUX (08/10/2026)
+
+- Ajustement confirmé par l’utilisateur : « SUPPORT » agrandi, nom Discord plus grand en blanc vif avec halo bleu discret ; garde la composition bleu profond/rubis et le badge casque bleu.
+- Le nom de serveur reste dynamique, échappé et auto-ajusté ; aucun exemple n’est codé en dur. L’aperçu exact généré par le code est `docs/apercu-banniere-ticket-v358.png` (544×192). Les panneaux republiés utilisent `?v=9` pour invalider le cache Discord.
+- `test/v358-test.js` : 19 vérifications ciblées ; `bash scripts/check.sh` : **271/271** (syntaxe, secrets, suite complète) ; `git diff --check` OK.
+
 ## 📌 v357 — BANNIÈRE SIMPLE BLEU PROFOND / TEXTE BLANC / PANNEAU RUBIS (08/10/2026)
 
 - Direction confirmée par l’utilisateur : composition simple inspirée de la maquette naturelle, texte blanc et badge de casque bleu repris de la version bleu/blanc, panneau rubis à droite. Aperçu exact généré par le code : `docs/apercu-banniere-ticket-v357.png` (544×192).

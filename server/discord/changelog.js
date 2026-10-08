@@ -7,7 +7,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const ui = require('./ui');
 
-const VERSION = 357;
+const VERSION = 358;
 const DASHBOARD_URL = 'https://hoxera.is-a.dev';
 const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3';
 const AUTO_REVERT_MS = 2 * 60 * 1000;
@@ -15,6 +15,12 @@ const SELECT_ID = (botId) => `hx-upd:${botId}`;
 
 // Plus récent en premier. Menu Discord = 25 options max (accueil + 24 versions).
 const VERSIONS = [
+  {
+    v: 358, date: '08/10', title: 'Texte de bannière plus grand et lumineux',
+    new: ['Les libellés SUPPORT et le nom du serveur gagnent en taille pour une meilleure lecture.'],
+    improved: ['Le nom du serveur s’affiche en blanc plus vif, avec un halo bleu discret et une taille toujours adaptée.'],
+    fixed: ['L’URL v9 renouvelle le cache de la bannière dans Discord.'],
+  },
   {
     v: 357, date: '08/10', title: 'Bannière simple bleu profond et rubis',
     new: ['La bannière de tickets adopte une composition épurée : fond bleu profond, texte blanc et panneau rubis.'],

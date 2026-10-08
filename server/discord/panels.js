@@ -399,7 +399,7 @@ function panelBannerUrl(guildId, name) {
   const site = store.settings.get('public_url') || 'https://hoxera.is-a.dev';
   // Bannière STATIQUE par serveur (générée en ~1 s, mise en cache).
   // ⚠️ Incrémenter v à chaque changement de style pour casser le cache Discord.
-  return `${site}/api/tickets/panel-banner/${encodeURIComponent(guildId || '0')}.png?v=8&n=${encodeURIComponent(String(name || '').slice(0, 60))}`;
+  return `${site}/api/tickets/panel-banner/${encodeURIComponent(guildId || '0')}.png?v=9&n=${encodeURIComponent(String(name || '').slice(0, 60))}`;
 }
 
 // v234 — retourne désormais un PAYLOAD Components V2 (et non plus un

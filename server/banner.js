@@ -1,7 +1,7 @@
 // ============================================================
 // Hoxera — Bannière du panneau de tickets, générée PAR SERVEUR
 // PNG 544×192, composition simple et professionnelle.
-// Fond bleu profond, texte blanc, panneau rubis et casque-micro encadré.
+// Fond bleu profond, texte blanc légèrement lumineux, panneau rubis et casque encadré.
 // Nom du serveur dynamique (aucun faux nom par défaut).
 // ============================================================
 const store = require('./db');
@@ -18,10 +18,12 @@ const W = 544;
 const H = 192;
 const SERVER_TEXT_MAX_WIDTH = 335;
 const SERVER_NAME_MAX_LENGTH = 26;
+const SERVER_NAME_MAX_FONT_SIZE = 29;
 const NAVY = '#142A46';
 const RUBY = '#B62F43';
 const TILE = '#193F67';
 const WHITE = '#F7FAFF';
+const TEXT_WHITE = '#FFFFFF';
 const HEADSET_RED = '#EF4653';
 
 function escapeXml(s) {
@@ -59,7 +61,7 @@ function autoFontSize(label) {
   const glyphs = Array.from(String(label || ''));
   const widthEm = Math.max(.7, glyphs.reduce((sum, char) => sum + (GLYPH_WIDTHS[char] ?? 1.1), 0));
   const estimated = Math.floor(SERVER_TEXT_MAX_WIDTH / (widthEm * 1.04));
-  return Math.max(12, Math.min(25, estimated));
+  return Math.max(12, Math.min(SERVER_NAME_MAX_FONT_SIZE, estimated));
 }
 
 function baseSvg(name) {
@@ -67,7 +69,7 @@ function baseSvg(name) {
   const label = escapeXml(plainName);
   const size = autoFontSize(plainName);
   const nameText = label
-    ? `<text id="server-name" x="42" y="107" font-family="DejaVu Sans, Arial, sans-serif" font-size="${size}" font-weight="700" fill="${WHITE}">${label}</text>`
+    ? `<text id="server-name" x="42" y="107" font-family="DejaVu Sans, Arial, sans-serif" font-size="${size}" font-weight="700" fill="${TEXT_WHITE}" filter="url(#server-name-glow)">${label}</text>`
     : '';
 
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
@@ -76,6 +78,12 @@ function baseSvg(name) {
     <pattern id="ruby-dots" width="8" height="8" patternUnits="userSpaceOnUse">
       <circle cx="1" cy="1" r=".8" fill="#E79AA5" fill-opacity=".72"/>
     </pattern>
+    <filter id="server-name-glow" x="-12%" y="-35%" width="124%" height="170%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2.5" result="blur"/>
+      <feFlood flood-color="#A8D3FF" flood-opacity=".18" result="glowColor"/>
+      <feComposite in="glowColor" in2="blur" operator="in" result="glow"/>
+      <feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
   </defs>
   <rect width="${W}" height="${H}" fill="${NAVY}"/>
 
@@ -88,7 +96,7 @@ function baseSvg(name) {
 
   <!-- Repère rouge discret et texte blanc de la version bleu/blanc -->
   <path d="M42 43H74" stroke="${HEADSET_RED}" stroke-width="2" stroke-linecap="round"/>
-  <text id="support-label" x="42" y="67" font-family="DejaVu Sans, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="2.15" fill="${WHITE}">SUPPORT</text>
+  <text id="support-label" x="42" y="67" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="700" letter-spacing="2.15" fill="${TEXT_WHITE}">SUPPORT</text>
 
   <!-- Nom Discord réel, ajusté à la largeur disponible -->
   ${nameText}
