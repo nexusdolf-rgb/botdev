@@ -1614,12 +1614,14 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 4. Vérifie les tokens (GitHub 200, Render 200, Discord `users/@me` avec curl)
 5. Fais-moi un point de situation clair, puis attends mes instructions
 
-## 📌 v354 — BANNIÈRE APPROUVÉE, TESTS VERTS (08/10/2026)
+## 📌 v354 — LIVRÉE, CI VERTE, RENDER SAIN (08/10/2026)
 
 - Bannière tickets approuvée par l’utilisateur : fond bleu nuit, libellé **SUPPORT**, nom de serveur en blanc perlé/argent avec halo froid discret, casque-micro à droite. Fichier de référence rendu par le vrai générateur : `docs/apercu-banniere-ticket-v354.png` (544×192).
 - `server/banner.js` conserve le nom dynamique par serveur et l’ajustement de taille automatique ; l’ancien préfixe `SUPPORT -` en base reste compatible. Le cache Discord est invalidé par l’URL `?v=5`. L’image personnalisée des panneaux et la logique des tickets ne sont pas modifiées.
-- `test/v354-test.js` : 13 vérifications. `bash scripts/check.sh` : **269/269** (syntaxe, secrets, suite complète) ; génération PNG réelle vérifiée ; `git diff --check` OK.
-- **État livraison :** la branche locale est prête, basée sur le commit v353 `6b8208f`; le `main` public vérifié pointe encore sur v353. Push et Render ne sont pas encore réalisés/confirmés. Le PAT de v353 n’a pas été sauvegardé et doit être révoqué/renouvelé ; fournir un nouveau droit d’écriture repo-scoped pour terminer le push, sans le conserver.
+- `test/v354-test.js` : 13 vérifications. `bash scripts/check.sh` : **269/269** ; `git diff --check` OK. CI GitHub #280 (`37772058815`) : **Success** sur le commit `e962e6f82ca2925ff6580256a2df726b1c2699b0`.
+- Déploiement Render confirmé : redémarrage du processus, `/api/health/bot` : `ready: true`, restauration base OK (655360 octets), 0 erreur/24 h, 10 serveurs / 315 membres. L’index en production contient 7 références `?v=354`, le service worker `botdev-v354`; la route v5 a servi un PNG 544×192.
+- Un panneau déjà publié conserve son ancienne URL jusqu’à sa republication/édition ; les nouveaux panneaux ou panneaux republiés prennent le visuel v5.
+- Le PAT utilisé pour pousser v354 n’a pas été enregistré dans le dépôt ni dans l’URL Git ; l’utilisateur doit le révoquer/renouveler après usage.
 
 ## 📌 v353 — LIVRÉE, RENDER SAIN (05/10/2026)
 
