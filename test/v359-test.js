@@ -43,11 +43,11 @@ check('style desktop et breakpoints mobile présents',
     && css.includes('@media (max-width: 390px)'));
 check('mode clair prévu pour la console fondatrice',
   css.includes('html.hx-light .admin-platform-page {'));
-check('version 359 chargée par les sept assets et le Service Worker',
-  (index.match(/\?v=359/g) || []).length === 7 && sw.includes("const CACHE = 'botdev-v359';"));
-check('version 359 annoncée dans le journal',
-  changelog.VERSION === 359 && changelog.VERSIONS[0].v === 359
-    && changelog.VERSIONS[1].v === 358);
+check('cache des sept assets et du Service Worker en v360',
+  (index.match(/\?v=360/g) || []).length === 7 && sw.includes("const CACHE = 'botdev-v360';"));
+check('v360 annoncée dans le journal, v359 conservée comme précédente',
+  changelog.VERSION === 360 && changelog.VERSIONS[0].v === 360
+    && changelog.VERSIONS[1].v === 359);
 
 console.log(`\nRésultat v359 : ${ok} ✅ / ${failed} ❌`);
 if (failed) process.exitCode = 1;

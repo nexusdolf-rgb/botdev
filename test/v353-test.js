@@ -168,13 +168,13 @@ async function main() {
       && i18n.t('fr', 'transcript_button') === '📄 Voir la transcription'
       && i18n.t('en', 'transcript_button') === '📄 View transcript');
   check('le journal conserve v353 et démarre désormais en v359',
-    changelog.VERSION === 359 && changelog.VERSIONS[0].v === 359
-      && changelog.VERSIONS[1].v === 358 && changelog.VERSIONS.some((entry) => entry.v === 353)
-      && changelog.NOTES.v === 359);
+    changelog.VERSION === 360 && changelog.VERSIONS[0].v === 360
+      && changelog.VERSIONS[1].v === 359 && changelog.VERSIONS.some((entry) => entry.v === 353)
+      && changelog.NOTES.v === 360);
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('cache web actualisé : ?v=359 7 fois et botdev-v359',
-    (index.match(/\?v=359/g) || []).length === 7 && sw.includes("const CACHE = 'botdev-v359';"));
+  check('cache web actualisé : ?v=360 7 fois et botdev-v360',
+    (index.match(/\?v=360/g) || []).length === 7 && sw.includes("const CACHE = 'botdev-v360';"));
 
   try { store.db.close(); } catch {}
   try { fs.rmSync(DATA_DIR, { recursive: true, force: true }); } catch {}

@@ -33,8 +33,8 @@ const guildEvents = require('../server/discord/guildEvents');
 const changelog = require('../server/discord/changelog');
 
 console.log('— 1. Pins v344 —');
-check('index.html : ?v=359 ×7', (html.match(/\?v=359/g) || []).length === 7);
-check('sw.js : cache botdev-v359', sw.includes("const CACHE = 'botdev-v359';"));
+check('index.html : ?v=360 ×7', (html.match(/\?v=360/g) || []).length === 7);
+check('sw.js : cache botdev-v360', sw.includes("const CACHE = 'botdev-v360';"));
 check('index.html : plus aucune ?v=343', !html.includes('?v=343'));
 check('VERSION ≥ 344', changelog.VERSION >= 344);
 check('journal v344 : au moins 1 nouveauté', Array.isArray(changelog.NOTES.new) && changelog.NOTES.new.length >= 1);

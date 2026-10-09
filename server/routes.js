@@ -3671,7 +3671,7 @@ router.get('/admin/users', requireAuth, requireAdmin, (req, res) => {
     const like = `%${q}%`;
     rows = store.db.prepare(`
       SELECT u.id, u.email, u.discord_id, u.discord_username, u.discord_avatar,
-        u.discord_guilds, u.created_at,
+        u.discord_deco, u.discord_guilds, u.created_at,
         (SELECT COUNT(*) FROM bots b WHERE b.user_id = u.id) AS bots_count,
         (pb.user_id IS NOT NULL) AS banned,
         pb.reason AS ban_reason, pb.created_at AS banned_at
@@ -3681,7 +3681,7 @@ router.get('/admin/users', requireAuth, requireAdmin, (req, res) => {
   } else {
     rows = store.db.prepare(`
       SELECT u.id, u.email, u.discord_id, u.discord_username, u.discord_avatar,
-        u.discord_guilds, u.created_at,
+        u.discord_deco, u.discord_guilds, u.created_at,
         (SELECT COUNT(*) FROM bots b WHERE b.user_id = u.id) AS bots_count,
         (pb.user_id IS NOT NULL) AS banned,
         pb.reason AS ban_reason, pb.created_at AS banned_at
@@ -3696,6 +3696,7 @@ router.get('/admin/users', requireAuth, requireAdmin, (req, res) => {
       discord_id: u.discord_id || '',
       discord_username: u.discord_username || '',
       discord_avatar: u.discord_avatar || '',
+      discord_deco: u.discord_deco || '',
       discord_linked: !!u.discord_id,
       guild_count: guilds.length,
       guilds,
@@ -3817,7 +3818,7 @@ router.post('/admin/users/:id/unlink-discord', requireAuth, requireAdmin, platfo
   const target = adminTarget(req, res);
   if (!target) return;
   store.users.updateDiscord(target.targetId, {
-    discord_id: '', discord_username: '', discord_avatar: '', discord_guilds: '[]',
+    discord_id: '', discord_username: '', discord_avatar: '', discord_deco: '', discord_guilds: '[]',
   });
   store.discordTokens.remove(target.targetId);
   store.platformAudit.add(req.userId, target.targetId, 'unlink_discord', 'Liaison Discord supprimée, compte conservé.');

@@ -133,15 +133,15 @@ console.log('— Journal des versions /update —');
 const current = changelog.VERSIONS[0];
 const previous = changelog.VERSIONS[1];
 check('v352 reste dans le journal après l’ajout de versions récentes',
-  changelog.VERSION === 359 && current.v === 359 && changelog.NOTES.v === 359
+  changelog.VERSION === 360 && current.v === 360 && changelog.NOTES.v === 360
     && changelog.VERSIONS.some((entry) => entry.v === 352));
 const home = changelog.buildHomePanel(1);
 const homeText = v2.allText(home);
-check('/update présente la version courante puis v358',
+check('/update présente la version courante puis v359',
   v2.title(home) === `🚀 Optimus Prime — Mises à jour (v${current.v})`
-    && previous.v === 358
+    && previous.v === 359
     && homeText.includes(`**v${current.v} — ${current.title}**`)
-    && homeText.includes('**v358 — Texte de bannière plus grand et lumineux**'));
+    && homeText.includes('**v359 — Espace fondateur repensé**'));
 
 const previewPath = path.join(__dirname, '..', 'docs', 'apercu-ticket-prive.html');
 const preview = fs.readFileSync(previewPath, 'utf8');

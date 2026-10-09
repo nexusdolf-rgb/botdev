@@ -27,8 +27,8 @@ const iC = dash.indexOf("Dashboard.card(root, '🔴 Annonces de live'");
 const chunk = dash.slice(iC, dash.indexOf('// ---- Carte Starboard', iC));
 
 console.log('— 1. Pins de version v332 —');
-check('index.html : ?v=359 ×7', (html.match(/\?v=359/g) || []).length === 7);
-check('sw.js : cache botdev-v359', sw.includes("const CACHE = 'botdev-v359';"));
+check('index.html : ?v=360 ×7', (html.match(/\?v=360/g) || []).length === 7);
+check('sw.js : cache botdev-v360', sw.includes("const CACHE = 'botdev-v360';"));
 check('index.html : plus aucune ?v=331', !html.includes('?v=331'));
 
 console.log('— 2. Dashboard (Lives seulement) —');

@@ -112,8 +112,8 @@ async function main() {
   check('URL v9 invalide le cache Discord et transmet le nom dynamique',
     url.includes(`${guildId}.png?v=9&n=`) && url.includes('NOM%20DU%20SERVEUR'));
   check('journal démarre en v359 et conserve v358',
-    changelog.VERSION === 359 && changelog.VERSIONS[0].v === 359
-      && changelog.VERSIONS[1].v === 358 && changelog.VERSIONS.some((entry) => entry.v === 356));
+    changelog.VERSION === 360 && changelog.VERSIONS[0].v === 360
+      && changelog.VERSIONS[1].v === 359 && changelog.VERSIONS.some((entry) => entry.v === 356));
 
   try { store.db.close(); } catch {}
   try { fs.rmSync(DATA_DIR, { recursive: true, force: true }); } catch {}

@@ -71,7 +71,7 @@ async function main() {
   check('URL de bannière versionnée pour recharger le nouveau visuel',
     url.includes('/api/tickets/panel-banner/354123.png?v=9') && url.includes('Carr'));
   check('journal conserve v354 sous la version courante v359',
-    changelog.VERSION === 359 && changelog.VERSIONS[0].v === 359 && changelog.VERSIONS[1].v === 358);
+    changelog.VERSION === 360 && changelog.VERSIONS[0].v === 360 && changelog.VERSIONS[1].v === 359);
 
   try { store.db.close(); } catch {}
   try { fs.rmSync(DATA_DIR, { recursive: true, force: true }); } catch {}

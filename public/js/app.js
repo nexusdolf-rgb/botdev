@@ -340,7 +340,7 @@ App.renderAdminPage = async () => {
     <div class="page admin-platform-page">
       <header class="admin-head">
         <div class="admin-identity">
-          <span class="admin-mark" aria-hidden="true">OP</span>
+          <img id="a-bot-avatar" class="admin-mark admin-bot-avatar" src="/api/public/bot-avatar?v=360" alt="Avatar d’Optimus Prime" width="48" height="48" />
           <div class="admin-head-copy">
             <div class="admin-breadcrumb"><span>OPTIMUS PRIME</span><i>/</i><b>CONSOLE FONDATEUR</b></div>
             <h1>Espace fondateur</h1>
@@ -563,16 +563,39 @@ App.renderAdminPage = async () => {
     if (!res.users || !res.users.length) {
       usersEl.innerHTML = `<div class="empty-state">${query ? 'Aucun compte trouvé pour « ' + App.escapeHtml(query) + ' ».' : 'Aucun compte utilisateur.'}</div>`;
     } else {
-      usersEl.innerHTML = `<div style="overflow-x:auto"><table class="leaderboard-table admin-users-table"><thead><tr><th>Compte</th><th>Discord lié</th><th>Serveurs</th><th>Statut</th><th>Actions</th></tr></thead><tbody></tbody></table></div>`;
+      usersEl.innerHTML = `<div class="admin-users-table-wrap"><table class="leaderboard-table admin-users-table"><thead><tr><th>Compte</th><th>Discord lié</th><th>Serveurs</th><th>Statut</th><th>Actions</th></tr></thead><tbody></tbody></table></div>`;
       const tb = usersEl.querySelector('tbody');
+      const discordAvatarUrl = (user) => {
+        const id = String(user.discord_id || '').trim();
+        if (!/^\d{15,21}$/.test(id)) return '';
+        const hash = String(user.discord_avatar || '').trim();
+        let source;
+        if (/^[a-zA-Z0-9_]+$/.test(hash)) {
+          // Les avatars animés Nitro portent le préfixe a_ et se chargent en GIF.
+          source = `https://cdn.discordapp.com/avatars/${id}/${hash}.${hash.startsWith('a_') ? 'gif' : 'png'}?size=96`;
+        } else {
+          let index = 0;
+          try { index = Number((BigInt(id) >> 22n) % 6n); } catch {}
+          source = `https://cdn.discordapp.com/embed/avatars/${index}.png?size=96`;
+        }
+        // Même origine que le dashboard : évite les blocages directs du CDN Discord.
+        return `/api/img?u=${encodeURIComponent(source)}`;
+      };
       res.users.forEach((u) => {
         const isCurrent = Number(u.id) === Number(App.state.user && App.state.user.id);
-        const avatar = u.discord_avatar && u.discord_id
-          ? `https://cdn.discordapp.com/avatars/${u.discord_id}/${u.discord_avatar}.png?size=64` : '';
         const guildNames = (u.guilds || []).slice(0, 5).map((g) => App.escapeHtml(g.name)).join(', ');
         const moreGuilds = (u.guilds || []).length > 5 ? ` +${u.guilds.length - 5}` : '';
+        const avatarUrl = u.discord_linked ? discordAvatarUrl(u) : '';
+        const avatarInitial = [...String(u.discord_username || u.discord_id || '?').trim()][0] || '?';
+        const avatarImage = avatarUrl
+          ? `<img class="admin-discord-avatar" src="${App.escapeHtml(avatarUrl)}" alt="" width="34" height="34" loading="lazy" data-fb-text="${App.escapeHtml(avatarInitial)}" />`
+          : `<span class="admin-discord-avatar-fallback" aria-hidden="true">${App.escapeHtml(avatarInitial.toUpperCase())}</span>`;
+        const decoUrl = typeof Dashboard !== 'undefined' && typeof Dashboard.userDecoUrl === 'function'
+          ? Dashboard.userDecoUrl(u.discord_deco) : '';
+        const discordAvatar = typeof Dashboard !== 'undefined' && typeof Dashboard.decoWrap === 'function'
+          ? Dashboard.decoWrap(avatarImage, decoUrl) : avatarImage;
         const discordCell = u.discord_linked
-          ? `<span style="display:flex;align-items:center;gap:8px">${avatar ? `<img src="${avatar}" style="width:28px;height:28px;border-radius:50%" alt=""/>` : '<span style="width:28px;height:28px;border-radius:50%;background:var(--panel);display:inline-flex;align-items:center;justify-content:center">🎭</span>'}<span><b>${App.escapeHtml('@' + (u.discord_username || u.discord_id))}</b><small style="display:block;color:var(--text-dim)">ID ${App.escapeHtml(u.discord_id)}</small></span></span>`
+          ? `<span class="admin-linked-account"><span class="admin-linked-avatar${u.discord_deco ? ' has-decoration' : ''}" title="${u.discord_deco ? 'Photo Discord avec décoration d’avatar' : 'Photo Discord'}">${discordAvatar}</span><span class="admin-linked-copy"><b>${App.escapeHtml('@' + (u.discord_username || u.discord_id))}</b><small>ID ${App.escapeHtml(u.discord_id)}</small></span></span>`
           : `<span style="color:var(--text-dim)">Non lié</span><small style="display:block;color:var(--text-dim)">${App.escapeHtml(u.email)}</small>`;
         const statusCell = u.banned
           ? `<span class="chip" style="color:#ff8a8d;border-color:rgba(237,66,69,.45)">⛔ Banni</span><small style="display:block;color:var(--text-dim);max-width:180px">${App.escapeHtml(u.ban_reason || 'Aucune raison')}</small>`

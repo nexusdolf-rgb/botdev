@@ -7,7 +7,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const ui = require('./ui');
 
-const VERSION = 359;
+const VERSION = 360;
 const DASHBOARD_URL = 'https://hoxera.is-a.dev';
 const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3';
 const AUTO_REVERT_MS = 2 * 60 * 1000;
@@ -15,6 +15,12 @@ const SELECT_ID = (botId) => `hx-upd:${botId}`;
 
 // Plus récent en premier. Menu Discord = 25 options max (accueil + 24 versions).
 const VERSIONS = [
+  {
+    v: 360, date: '09/10', title: 'Photos et décorations Discord dans l’espace fondateur',
+    new: ['Les comptes liés affichent leur vraie photo de profil Discord et leur décoration d’avatar si elle existe.', 'La photo officielle d’Optimus Prime apparaît maintenant à côté du titre de la console fondateur.'],
+    improved: ['Les avatars passent par le proxy du site, les GIF animés sont conservés et les comptes sans photo utilisent l’avatar Discord par défaut.'],
+    fixed: ['La déliaison efface aussi l’ancienne décoration Discord pour ne pas laisser de données périmées.'],
+  },
   {
     v: 359, date: '09/10', title: 'Espace fondateur repensé',
     new: ['Le hub fondateur dispose d’une vue d’ensemble plus claire : indicateurs, santé du système et activité récente sont regroupés.'],

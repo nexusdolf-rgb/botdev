@@ -32,7 +32,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
 
 **Hoxera** : plateforme web + bot Discord tout-en-un, 100 % gratuit.
 - **Bot « Optimus Prime »** (ex-« Nexora », renommé le 29/08/2026) — client_id :
-  `1537443352281088000` — dernière vérification v358 : 11 serveurs / 317 membres
+  `1537443352281088000` — dernier contrôle connu v359 : 11 serveurs / 318 membres
 - Tickets pro (types, transcriptions, notes ⭐), modération + auto-mod + anti-raid,
   XP/niveaux, économie, giveaways, jeux, mariages, anniversaires, sondages, rappels,
   rôles par boutons, salons vocaux temporaires, starboard, traqueur d'invitations,
@@ -61,7 +61,7 @@ agent précédent. Comporte-toi comme un vrai développeur expérimenté :
   `automod.js`, `antiraid.js`, `xp.js`, `logging.js`, `i18n.js`, `nativeAutomod.js`
 - `public/` : SPA vanilla JS — `js/dashboard.js` (modules), `js/app.js`, `js/public.js`
   (landing), `css/dashboard.css` (bloc « mode clair » en fin de fichier)
-- `test/` : `bash scripts/check.sh` exécute **272 tests** après v359 (syntaxe + secrets + suite ; obligatoire, ~3,5 min)
+- `test/` : `bash scripts/check.sh` exécute **273 tests** après v360 (syntaxe + secrets + suite ; obligatoire, ~3,5 min)
 - `docs/AGENT.md` : ce document — **le mettre à jour à chaque grande étape**
 
 ## 🔁 RECETTE DE LIVRAISON (à connaître par cœur)
@@ -1614,13 +1614,22 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 4. Vérifie les tokens (GitHub 200, Render 200, Discord `users/@me` avec curl)
 5. Fais-moi un point de situation clair, puis attends mes instructions
 
+## 📌 v360 — PHOTOS ET DÉCORATIONS DISCORD DANS L’ESPACE FONDATEUR (09/10/2026)
+
+- Cause repérée : `/admin/users` ne renvoyait pas `discord_deco`, le tableau chargeait les avatars directement depuis le CDN Discord et l’en-tête utilisait encore les initiales « OP ».
+- L’API fondateur renvoie désormais la décoration enregistrée. Les avatars liés sont servis via `/api/img`, les hashes `a_` gardent l’animation GIF et les comptes sans avatar personnalisé utilisent l’avatar Discord par défaut. La décoration est superposée au profil si elle existe.
+- L’en-tête affiche l’image réelle Optimus Prime via `/api/public/bot-avatar`. La déliaison efface aussi l’ancienne décoration pour éviter les données périmées.
+- Le tableau reste en colonnes sur PC et passe en cartes mobiles sous 620 px : identité, serveurs, statut et actions visibles sans défilement horizontal du tableau. Diagnostics à 1440, 390 et 320 px : pas de débordement de page, photo/décoration chargées et boutons dans la largeur mobile.
+- Aperçu HTML et captures : `docs/apercu-espace-fondateur-v360.html`, `docs/apercu-espace-fondateur-v360-pc.png`, `docs/apercu-espace-fondateur-v360-mobile.png`, `docs/apercu-espace-fondateur-v360-mobile-complet.png` et `docs/apercu-espace-fondateur-v360-mobile-320.png`.
+- `test/v360-test.js` vérifie la route, l’avatar, la décoration, la déliaison et les actions existantes. `bash scripts/check.sh` : **273/273** (syntaxe, secrets, suite complète) ; `git diff --check` propre.
+
 ## 📌 v359 — ESPACE FONDATEUR DU DASHBOARD REFONDU (09/10/2026)
 
 - Périmètre confirmé par l’utilisateur : le hub fondateur du dashboard (gestion des comptes — délier Discord, bannir/débannir/supprimer —, bots, journal et réglages), et non l’administration d’un serveur. Les actions et routes existantes sont conservées.
 - Vue d’ensemble restructurée avec indicateurs, santé système et activité récente ; état du bot principal lu depuis `/admin/bots` quand disponible. Palette Slate & Clay accordée au centre serveur ; mode clair et mise en page mobile pris en compte.
 - Aperçu HTML statique (valeurs illustratives) : `docs/apercu-espace-fondateur-v359.html`. Captures Chromium vérifiées : `docs/apercu-espace-fondateur-v359-pc.png`, `docs/apercu-espace-fondateur-v359-mobile.png` et vue mobile complète `docs/apercu-espace-fondateur-v359-mobile-complet.png`. Diagnostics à 1440 px / 390 px : 4 / 2 colonnes, 8 métriques dans chaque vue, onglets mobile sur 2 lignes, aucun débordement horizontal ni erreur JS.
 - `bash scripts/check.sh` : **272/272** (syntaxe, secrets, suite complète) ; rendu JSDOM des actions/nav et parse CSS validés ; `git diff --check` OK.
-- État de livraison dans cette session : code prêt localement, mais **pas encore poussé ni déployé**. Le remote `origin` et l’authentification GitHub sont absents de la config de session (exclue des snapshots) ; demander un token fine-grained temporaire si le push échoue. Ne jamais écrire ni recopier un token dans ce document.
+- Livraison v359 confirmée : commit `1c1642a`, poussé sur `main`; CI GitHub #287 verte et Render servait les fichiers v359. La santé du bot était OK (restauration DB, 11 serveurs / 318 membres). Les accès temporaires de push ne sont jamais conservés dans le dépôt.
 
 ## 📌 v358 — TEXTE DE BANNIÈRE AGRANDI ET LUMINEUX (08/10/2026)
 
