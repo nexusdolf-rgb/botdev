@@ -276,6 +276,10 @@ function guildMock(channels, roleId, guildName) {
       return out.verified === false;
     })());
     const src = lire('server/discord/rules.js');
+    check('le succès est JOURNALISÉ aussi (bouton vérifié + taille du panneau)',
+      src.includes('function notePublished(') && src.includes('bouton \u2705 vérifié')
+      && src.includes("notePublished(botId, guild, 'send', sent, plan_)")
+      && src.includes("notePublished(botId, guild, 'edit', edited, plan_)"));
     check('le cas « publié sans bouton » est journalisé et remonté à /api/health/bot',
       src.includes("console.error(`[BotDev] 📜 panneau de règles publié SANS bouton") && src.includes("recordError('panneau-regles-sans-bouton'"));
     check('la saturation du budget crie aussi (fini le silence)',

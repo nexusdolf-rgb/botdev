@@ -479,6 +479,8 @@ async function sendPanel(botId, guild, channelId) {
         const verified = panelHasButton(edited, botId);
         if (!verified) noteMissingButton(botId, guild, plan_);
         saveCfg(guild.id, { panel_message: edited.id, panel_channel: previous.id });
+        if (verified) notePublished(botId, guild, 'edit', edited, plan_);
+        else noteMissingButton(botId, guild, plan_);
         return { mode: 'edit', message: edited, verified, plan: plan_ };
       }
       if (String(previous.id) !== String(target.id)) {
@@ -494,6 +496,7 @@ async function sendPanel(botId, guild, channelId) {
   const sent = await target.send(payload);
   const verified = panelHasButton(sent, botId);
   if (!verified) noteMissingButton(botId, guild, plan_);
+  else notePublished(botId, guild, 'send', sent, plan_);
   saveCfg(guild.id, {
     panel_message: sent.id,
     panel_channel: sent.channel.id,
@@ -507,6 +510,12 @@ async function sendPanel(botId, guild, channelId) {
     ],
   });
   return { mode: 'send', message: sent, verified, plan: plan_ };
+}
+
+// Succès affiché dans les journaux : le fondateur (et nous) peut vérifier
+// qu'un panneau publié contient BIEN son bouton, sans avoir à ouvrir Discord.
+function notePublished(botId, guild, mode, message, plan_) {
+  console.log(`[BotDev] 📜 panneau de règles ${mode === 'edit' ? 'mis à jour' : 'publié'} sur ${guild.name || guild.id} — bouton ✅ vérifié (${plan_.shown}/${plan_.blocks} bloc(s), ${plan_.components}/${plan_.cap} composants, id ${message && message.id})`);
 }
 
 // Le panneau est parti sans bouton ? On ne le cache pas : journal + santé, pour
