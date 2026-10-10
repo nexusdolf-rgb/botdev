@@ -16,14 +16,14 @@
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^12.11.1",
+    "better-sqlite3": "^13.0.3",
     "cookie-parser": "^1.4.7",
     "discord.js": "^14.27.0",
     "express": "^5.2.1",
     "sharp": "^0.35.3"
   },
   "devDependencies": {
-    "jsdom": "^29.1.1",
+    "jsdom": "^30.1.2",
     "playwright-core": "^1.64.0"
   }
 }
