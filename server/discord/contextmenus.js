@@ -9,7 +9,9 @@
 //   • toutes les confirmations sont ÉPHÉMÈRES (v238) ;
 //   • « Avertir » passe par une MODALE de raison (jamais de raison vide) ;
 //   • « Signaler » est protégé par un anti-spam (1 signalement / minute) ;
-//   • textes fr + en (v240), lus via i18n comme le reste du bot.
+//   • textes fr + en (v240), lus via i18n comme le reste du bot. Le code de
+//     langue Discord est « en-US » : « en » est refusé et ferait échouer
+//     toute la synchronisation globale des commandes.
 // Les payloads (type 2 = membre, type 3 = message) sont AJOUTÉS EN TÊTE de
 // la synchronisation globale : le plafond de sécurité de 90 commandes ne
 // pourra jamais les évincer.
@@ -31,16 +33,16 @@ const keyOfName = (name) => Object.keys(NAMES).find((k) => NAMES[k].fr === name 
 
 function buildContextMenuPayloads() {
   return [
-    { type: 2, name: NAMES.profile.fr, name_localizations: { en: NAMES.profile.en } },
+    { type: 2, name: NAMES.profile.fr, name_localizations: { 'en-US': NAMES.profile.en } },
     {
       type: 2,
       name: NAMES.warn.fr,
-      name_localizations: { en: NAMES.warn.en },
+      name_localizations: { 'en-US': NAMES.warn.en },
       // Visible uniquement par qui peut modérer : Discord filtre le menu.
       default_member_permissions: String(PermissionsBitField.Flags.ModerateMembers),
     },
-    { type: 3, name: NAMES.report.fr, name_localizations: { en: NAMES.report.en } },
-    { type: 3, name: NAMES.ticket.fr, name_localizations: { en: NAMES.ticket.en } },
+    { type: 3, name: NAMES.report.fr, name_localizations: { 'en-US': NAMES.report.en } },
+    { type: 3, name: NAMES.ticket.fr, name_localizations: { 'en-US': NAMES.ticket.en } },
   ];
 }
 

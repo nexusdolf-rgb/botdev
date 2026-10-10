@@ -8,7 +8,8 @@
 // Règles produit vérifiées ici :
 //   • payloads de type 2 (membre) et 3 (message), AJOUTÉS EN TÊTE de la
 //     synchronisation globale — le plafond de 90 ne peut pas les évincer ;
-//   • noms fr + name_localizations en (v240 : fr et en seulement) ;
+//   • noms fr + name_localizations 'en-US' (v240 : fr et en seulement — et
+//     « en » seul est un code invalide, rejeté par l'API) ;
 //   • « Avertir » : permission de modération exigée, raison par MODALE
 //     (jamais vide), enregistrement en base + journal du serveur ;
 //   • « Signaler » : anti-spam d'une minute, enregistrement en table
@@ -44,8 +45,10 @@ check('deux menus membre (type 2) et deux menus message (type 3)',
   payloads.filter((p) => p.type === 2).length === 2 && payloads.filter((p) => p.type === 3).length === 2);
 check('les noms fr de la feuille de route',
   payloads.map((p) => p.name).join('|') === 'Voir le profil|Avertir|Signaler ce message|Ouvrir un ticket sur ce message');
-check('…localisations anglaises présentes',
-  payloads.every((p) => p.name_localizations && p.name_localizations.en));
+check('…localisations anglaises présentes avec un code de langue QUE Discord accepte',
+  payloads.every((p) => p.name_localizations && p.name_localizations['en-US']
+    && !('en' in p.name_localizations)),
+  JSON.stringify(payloads[0].name_localizations));
 check('…« Avertir » réservé à qui peut modérer',
   payloads.find((p) => p.name === 'Avertir').default_member_permissions != null);
 
