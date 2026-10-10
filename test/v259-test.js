@@ -149,7 +149,19 @@ console.log('— 3. Voir le profil (interaction simulée) —');
   check('la table reports existe en base et est exportée',
     dbSrc.includes('CREATE TABLE IF NOT EXISTS reports (') && !!store.reports);
 
-  console.log('— 7. Version —');
+  console.log('— 7. Événement de connexion —');
+  // discord.js 14.27 a renommé « ready » en « clientReady » : l'ancien nom
+  // émet un DeprecationWarning à chaud et disparaîtra en v15. La lib émet les deux
+  // noms pendant toute la v14 (WebSocketManager.triggerClientReady), donc basculer
+  // est sans risque — et le jour d'une montée en v15, le bot se connecte encore.
+  const bmSrc = racine('server/discord/botManager.js');
+  check('botManager écoute « clientReady » (watchdog + connexion)',
+    (bmSrc.match(/\.(once|on)\('clientReady'/g) || []).length === 2,
+    String((bmSrc.match(/\.(once|on)\('clientReady'/g) || []).length));
+  check('plus aucun écouteur sur l’événement déprécié « ready »',
+    !/\.(once|on)\('ready'/.test(bmSrc));
+
+  console.log('— 8. Version —');
   check('index.html : ?v=360 référencé 7 fois', (index.match(/\?v=360/g) || []).length === 7,
     String((index.match(/\?v=360/g) || []).length));
   check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("const CACHE = 'botdev-v360';"));

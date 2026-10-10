@@ -180,7 +180,6 @@ async function connect(botId, record, intents, degradedHint) {
     try { client.removeAllListeners(); } catch {}
     try {
       client.once('clientReady', () => { try { client.destroy(); } catch {} });
-      client.once('ready', () => { try { client.destroy(); } catch {} });
     } catch {}
     try { client.destroy(); } catch {}
     store.bots.update(botId, { enabled: 0, last_error: friendlyError(err) });
@@ -412,7 +411,7 @@ async function stopAll() {
 function attachListeners(botId, entry) {
   const { client } = entry;
 
-  client.once('ready', async () => {
+  client.once('clientReady', async () => {
     const record = store.bots.get(botId);
     try {
       const me = client.user;
