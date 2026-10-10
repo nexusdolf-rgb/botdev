@@ -13,6 +13,7 @@
 const store = require('../db');
 const health = require('../health');
 const ui = require('./ui');
+const { fetchJson, readLimitedBody } = require('../http');
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36';
 const OFFLINE_CONFIRMATIONS = 2;
@@ -140,32 +141,36 @@ function parseTikTokResponse(payload, handle) {
 }
 
 async function checkTikTok(handle) {
-  const r = await fetch(`https://www.tiktok.com/api-live/user/room/?aid=1988&sourceType=54&uniqueId=${encodeURIComponent(handle)}`, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(10000) });
-  if (!r.ok) return null;
-  const d = await r.json().catch(() => null);
+  const result = await fetchJson(`https://www.tiktok.com/api-live/user/room/?aid=1988&sourceType=54&uniqueId=${encodeURIComponent(handle)}`, {
+    headers: { 'User-Agent': UA }, redirect: 'error',
+  }, { timeoutMs: 10000, maxBytes: 1024 * 1024 });
+  if (!result.response.ok) return null;
+  const d = result.json;
   const u = d && d.data && d.data.user;
   if (!u) return null;
   return parseTikTokResponse(d, handle);
 }
 
 async function checkTwitch(handle) {
-  const r = await fetch('https://gql.twitch.tv/gql', {
+  const result = await fetchJson('https://gql.twitch.tv/gql', {
     method: 'POST',
     headers: { 'Client-ID': 'kimne78kx3ncx6brgo4mv6wki5h1ko', 'Content-Type': 'application/json', 'User-Agent': UA },
     body: JSON.stringify({ query: `query { user(login: "${handle.replace(/[^\w\-]/g, '')}") { displayName profileImageURL(width: 300) stream { id } } }` }),
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!r.ok) return null;
-  const d = await r.json().catch(() => null);
+    redirect: 'error',
+  }, { timeoutMs: 10000, maxBytes: 256 * 1024 });
+  if (!result.response.ok) return null;
+  const d = result.json;
   const u = d && d.data && d.data.user;
   if (!u) return null;
   return { live: !!u.stream, name: u.displayName || handle, avatar: u.profileImageURL || '', liveKey: u.stream && u.stream.id ? `stream:${u.stream.id}` : '' };
 }
 
 async function checkKick(handle) {
-  const r = await fetch(`https://kick.com/api/v2/channels/${encodeURIComponent(handle)}`, { headers: { 'User-Agent': UA, Accept: 'application/json' }, signal: AbortSignal.timeout(10000) });
-  if (!r.ok) return null;
-  const d = await r.json().catch(() => null);
+  const result = await fetchJson(`https://kick.com/api/v2/channels/${encodeURIComponent(handle)}`, {
+    headers: { 'User-Agent': UA, Accept: 'application/json' }, redirect: 'error',
+  }, { timeoutMs: 10000, maxBytes: 1024 * 1024 });
+  if (!result.response.ok) return null;
+  const d = result.json;
   if (!d || !d.user) return null;
   const stream = d.livestream;
   const liveKey = stream && (stream.id || stream.stream_id || stream.session_id || stream.slug || stream.created_at || stream.start_time);
@@ -173,9 +178,20 @@ async function checkKick(handle) {
 }
 
 async function checkYouTube(handle) {
-  const r = await fetch(`https://www.youtube.com/@${encodeURIComponent(handle)}/live`, { headers: { 'User-Agent': UA, 'Accept-Language': 'en' }, signal: AbortSignal.timeout(10000) });
-  if (!r.ok) return null;
-  const html = await r.text();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  let r;
+  try {
+    r = await fetch(`https://www.youtube.com/@${encodeURIComponent(handle)}/live`, {
+      headers: { 'User-Agent': UA, 'Accept-Language': 'en' }, signal: controller.signal, redirect: 'error',
+    });
+    if (!r.ok) return null;
+  } finally {
+    if (!r || !r.ok) clearTimeout(timer);
+  }
+  let html;
+  try { html = (await readLimitedBody(r, 4 * 1024 * 1024)).toString('utf8'); }
+  finally { clearTimeout(timer); }
   const live = /"isLive"\s*:\s*true/.test(html) && !/"status"\s*:\s*"LIVE_STREAM_OFFLINE"/.test(html);
   const videoMatch = html.match(/"videoId"\s*:\s*"([\w-]{6,})"/);
   const avatarMatch = html.match(/<link rel="image_src" href="([^"]+)"/) || html.match(/"avatar":\{"thumbnails":\[\{"url":"([^"]+)"/);

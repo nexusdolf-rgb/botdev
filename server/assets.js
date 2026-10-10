@@ -1,50 +1,125 @@
-// ============================================================
-// BotDev - Magasin d'images (avatars/bannières des profils de bot)
-// Les images sont stockées dans le dépôt GitHub de données (sous assets/)
-// et servies publiquement via /assets/:key → elles survivent aux mises à jour.
-// ============================================================
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
+// Images de profil du bot : stockage local persistant + dépôt GitHub privé.
+const fs = require('node:fs');
+const path = require('node:path');
+const crypto = require('node:crypto');
+const sharp = require('sharp');
 const backup = require('./backup');
+const { fetchJson, readLimitedBody } = require('./http');
 
-const MAX_SIZE = 3 * 1024 * 1024; // 3 Mo par image
+const MAX_SIZE = 3 * 1024 * 1024;
 const EXT_BY_MIME = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif', 'image/webp': '.webp' };
+const FORMAT_BY_MIME = { 'image/png': 'png', 'image/jpeg': 'jpeg', 'image/gif': 'gif', 'image/webp': 'webp' };
+const ASSET_KEY = /^[a-f0-9]{16}\.(?:png|jpg|gif|webp)$/i;
 
 function assetsDir() {
   const dir = path.join(process.env.BOTDEV_DATA_DIR || path.join(__dirname, '..'), 'assets');
-  fs.mkdirSync(dir, { recursive: true });
+  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  try { fs.chmodSync(dir, 0o700); } catch {}
   return dir;
 }
 
 function localPath(key) {
-  if (!/^[a-zA-Z0-9._-]+$/.test(key)) throw new Error('clé invalide');
-  return path.join(assetsDir(), key);
+  if (typeof key !== 'string' || !ASSET_KEY.test(key)) throw new Error('clé image invalide');
+  const root = path.resolve(assetsDir());
+  const file = path.resolve(root, key);
+  const relative = path.relative(root, file);
+  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) throw new Error('clé image invalide');
+  return file;
 }
 
 function enabled() {
   return backup.enabled();
 }
 
-function sanitizeExt(mime) {
-  return EXT_BY_MIME[mime] || '.png';
+function normalizeMime(mime) {
+  const normalized = String(mime || '').split(';')[0].trim().toLowerCase();
+  return normalized === 'image/jpg' ? 'image/jpeg' : normalized;
 }
 
-// Enregistre une image (buffer) : local + GitHub. Retourne la clé publique.
+async function validateImage(buffer, mime) {
+  const type = normalizeMime(mime);
+  if (!Buffer.isBuffer(buffer) || !buffer.length || buffer.length > MAX_SIZE) throw new Error('image vide ou trop lourde (3 Mo max)');
+  const expectedFormat = FORMAT_BY_MIME[type];
+  if (!expectedFormat) throw new Error('format d’image non autorisé');
+  let metadata;
+  try { metadata = await sharp(buffer, { limitInputPixels: 20_000_000, failOn: 'error' }).metadata(); }
+  catch { throw new Error('fichier image invalide'); }
+  if (metadata.format !== expectedFormat || !metadata.width || !metadata.height
+    || metadata.width > 10000 || metadata.height > 10000) throw new Error('type ou dimensions d’image invalides');
+  return type;
+}
+
+function githubApiBase() {
+  const raw = String(process.env.BOTDEV_GITHUB_API || 'https://api.github.com').replace(/\/$/, '');
+  const parsed = new URL(raw);
+  const host = parsed.hostname.toLowerCase();
+  const isLocal = ['localhost', '127.0.0.1', '::1', '[::1]'].includes(host);
+  const production = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
+  if (parsed.username || parsed.password || parsed.search || parsed.hash
+    || (isLocal && (production || parsed.protocol !== 'http:'))
+    || (!isLocal && (host !== 'api.github.com' || parsed.protocol !== 'https:' || parsed.port || parsed.pathname !== '/'))) {
+    throw new Error('URL de l’API GitHub invalide.');
+  }
+  return parsed.origin + parsed.pathname.replace(/\/$/, '');
+}
+
+async function ghJson(route, token, method = 'GET', body = null) {
+  const base = githubApiBase();
+  const result = await fetchJson(`${base}${route}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      ...(body ? { 'Content-Type': 'application/json' } : {}),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  }, { timeoutMs: 12000, maxBytes: 2 * 1024 * 1024 });
+  if (!result.response.ok) {
+    const message = result.json && result.json.message ? result.json.message : `HTTP ${result.response.status}`;
+    const err = new Error(`GitHub : ${String(message).slice(0, 160)}`);
+    err.status = result.response.status;
+    throw err;
+  }
+  if (!result.json || typeof result.json !== 'object') throw new Error('Réponse GitHub invalide.');
+  return result.json;
+}
+
+async function fetchRawAsset(url, token) {
+  let parsed;
+  try { parsed = new URL(url); } catch { return null; }
+  // Ne transmet jamais un PAT à une URL fournie par les métadonnées sans
+  // vérifier son hôte. GitHub renvoie les fichiers privés depuis raw.github.com.
+  if (parsed.protocol !== 'https:' || parsed.hostname !== 'raw.githubusercontent.com'
+    || parsed.port || parsed.username || parsed.password) return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 12000);
+  try {
+    const response = await fetch(parsed.toString(), {
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/octet-stream' },
+      signal: controller.signal,
+      redirect: 'error',
+    });
+    if (!response.ok) return null;
+    const buffer = await readLimitedBody(response, MAX_SIZE);
+    return buffer.length ? buffer : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Enregistre une image validée et la synchronise si le dépôt est configuré.
 async function put(buffer, mime) {
-  if (!Buffer.isBuffer(buffer) || !buffer.length) throw new Error('image vide');
-  if (buffer.length > MAX_SIZE) throw new Error('image trop lourde (3 Mo max)');
-  const ext = sanitizeExt(mime);
+  const type = await validateImage(buffer, mime);
+  const ext = EXT_BY_MIME[type];
   const key = crypto.randomBytes(8).toString('hex') + ext;
   const filePath = localPath(key);
-  fs.writeFileSync(filePath, buffer);
+  fs.writeFileSync(filePath, buffer, { mode: 0o600, flag: 'wx' });
   if (enabled()) {
-    try {
-      await uploadToGithub(key, buffer);
-    } catch (e) {
-      console.error('[BotDev] upload asset GitHub:', e.message);
-      // L'image reste disponible localement cette session
-    }
+    try { await uploadToGithub(key, buffer); }
+    catch (error) { console.error('[Hoxera] upload asset GitHub échoué (copie locale conservée) :', error.message); }
   }
   return key;
 }
@@ -52,98 +127,76 @@ async function put(buffer, mime) {
 async function uploadToGithub(key, buffer) {
   const token = process.env.BOTDEV_GH_TOKEN;
   const repo = backup.repo();
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)) throw new Error('dépôt GitHub invalide');
   const file = `assets/${key}`;
   let sha = null;
   try {
     const meta = await ghJson(`/repos/${repo}/contents/${file}`, token);
     sha = meta && meta.sha;
-  } catch (e) {
-    if (e.status !== 404) throw e;
+  } catch (error) {
+    if (error.status !== 404) throw error;
   }
-  const body = {
-    message: `🖼️ ${key}`,
-    content: buffer.toString('base64'),
-    ...(sha ? { sha } : {}),
-  };
+  const body = { message: `Hoxera image ${key}`, content: buffer.toString('base64'), ...(sha ? { sha } : {}) };
   await ghJson(`/repos/${repo}/contents/${file}`, token, 'PUT', body);
 }
 
-async function ghJson(route, token, method = 'GET', body = null) {
-  const res = await fetch(`${process.env.BOTDEV_GITHUB_API || 'https://api.github.com'}${route}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/vnd.github+json',
-      ...(body ? { 'Content-Type': 'application/json' } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  let json = null;
-  try { json = await res.json(); } catch {}
-  if (!res.ok) {
-    const err = new Error(json && json.message ? json.message : `HTTP ${res.status}`);
-    err.status = res.status;
-    throw err;
-  }
-  return json;
+function mimeFor(key) {
+  const ext = path.extname(String(key || '')).toLowerCase();
+  return ({ '.png': 'image/png', '.jpg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp' })[ext] || '';
 }
 
-// Récupère une image (local puis GitHub). Retourne { buffer, mime } ou null.
 async function get(key) {
+  const mime = mimeFor(key);
+  if (!mime) return null;
   try {
-    const p = localPath(key);
-    if (fs.existsSync(p)) {
-      return { buffer: fs.readFileSync(p), mime: mimeFor(key) };
-    }
+    const file = localPath(key);
+    const stat = fs.lstatSync(file);
+    if (!stat.isFile() || stat.size <= 0 || stat.size > MAX_SIZE) return null;
+    const buffer = fs.readFileSync(file);
+    await validateImage(buffer, mime);
+    return { buffer, mime };
   } catch {}
+
   if (!enabled()) return null;
   try {
     const token = process.env.BOTDEV_GH_TOKEN;
-    const meta = await ghJson(`/repos/${backup.repo()}/contents/assets/${encodeURIComponent(key)}`, token);
-    let buf = null;
-    if (meta && typeof meta.content === 'string') {
-      buf = Buffer.from(meta.content.replace(/\s/g, ''), 'base64');
+    const repo = backup.repo();
+    if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo) || !ASSET_KEY.test(key)) return null;
+    const meta = await ghJson(`/repos/${repo}/contents/assets/${encodeURIComponent(key)}`, token);
+    let buffer = null;
+    if (meta && typeof meta.content === 'string' && meta.content.length > 0) {
+      const encoded = meta.content.replace(/\s/g, '');
+      if (encoded.length <= Math.ceil(MAX_SIZE / 3) * 4 + 8) buffer = Buffer.from(encoded, 'base64');
     } else if (meta && meta.download_url) {
-      const res = await fetch(meta.download_url, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) return null;
-      buf = Buffer.from(await res.arrayBuffer());
+      buffer = await fetchRawAsset(meta.download_url, token);
     }
-    if (buf && buf.length <= MAX_SIZE * 2) {
-      try { fs.writeFileSync(localPath(key), buf); } catch {}
-      return { buffer: buf, mime: mimeFor(key) };
-    }
-  } catch {}
-  return null;
+    if (!buffer || buffer.length > MAX_SIZE) return null;
+    await validateImage(buffer, mime);
+    try { fs.writeFileSync(localPath(key), buffer, { mode: 0o600 }); } catch {}
+    return { buffer, mime };
+  } catch {
+    return null;
+  }
 }
 
-// Au démarrage : rapatrie toutes les images depuis GitHub
 async function syncFromRemote() {
   if (!enabled()) return 0;
   try {
     const token = process.env.BOTDEV_GH_TOKEN;
-    const list = await ghJson(`/repos/${backup.repo()}/contents/assets`, token);
+    const repo = backup.repo();
+    if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)) return 0;
+    const list = await ghJson(`/repos/${repo}/contents/assets`, token);
     if (!Array.isArray(list)) return 0;
-    let n = 0;
-    for (const f of list) {
-      if (f.type !== 'file' || !/^[a-zA-Z0-9._-]+$/.test(f.name)) continue;
-      try {
-        const got = await get(f.name);
-        if (got) n++;
-      } catch {}
+    let restored = 0;
+    for (const file of list.slice(0, 500)) {
+      if (file.type !== 'file' || !ASSET_KEY.test(String(file.name || ''))) continue;
+      if (await get(file.name)) restored++;
     }
-    return n;
-  } catch (e) {
-    if (e.status === 404) return 0;
-    console.error('[BotDev] sync assets:', e.message);
+    return restored;
+  } catch (error) {
+    if (error.status !== 404) console.error('[Hoxera] synchronisation assets :', error.message);
     return 0;
   }
 }
 
-function mimeFor(key) {
-  if (key.endsWith('.png')) return 'image/png';
-  if (key.endsWith('.gif')) return 'image/gif';
-  if (key.endsWith('.webp')) return 'image/webp';
-  return 'image/jpeg';
-}
-
-module.exports = { put, get, syncFromRemote, mimeFor, enabled };
+module.exports = { put, get, syncFromRemote, mimeFor, enabled, validateImage, MAX_SIZE };

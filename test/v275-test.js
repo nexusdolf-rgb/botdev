@@ -9,7 +9,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
-process.env.BOTDEV_DATA_DIR = process.env.BOTDEV_DATA_DIR || path.join(__dirname, '.tmp-v275');
+process.env.BOTDEV_DATA_DIR = process.env.BOTDEV_DATA_DIR || path.join(require('node:os').tmpdir(), 'hoxera-v275-' + process.pid + '-' + Date.now());
 fs.mkdirSync(process.env.BOTDEV_DATA_DIR, { recursive: true });
 
 const store = require('../server/db');

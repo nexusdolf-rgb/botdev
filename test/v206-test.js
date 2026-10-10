@@ -64,7 +64,7 @@ const dom = new JSDOM('<!doctype html><html><body><div id="t"></div></body></htm
 const w = dom.window;
 global.window = w;
 global.document = w.document;
-global.navigator = w.navigator;
+Object.defineProperty(global, 'navigator', { value: w.navigator, configurable: true, writable: true });
 w.eval(appSource + '\nwindow.App=App;');
 const { App } = w;
 

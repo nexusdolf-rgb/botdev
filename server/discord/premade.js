@@ -11,7 +11,9 @@ const giveawayEngine = require('./giveaway');
 const tasks = require('./tasks');
 const store = require('../db');
 const ui = require('./ui');
+const { fetchJson } = require('../http');
 const { canConfigureGuild } = require('./permissions');
+const { inviteUrl } = require('./invite');
 
 const MODULES = {
   moderation: {
@@ -571,15 +573,11 @@ const MEME_FETCH_TIMEOUT_MS = 8000;
 const MEME_PASSES = 3;
 
 async function fetchMemeJson(url) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), MEME_FETCH_TIMEOUT_MS);
-  try {
-    const res = await fetch(url, { signal: controller.signal });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json().catch(() => null);
-    if (!data || typeof data.title !== 'string' || typeof data.url !== 'string') throw new Error('Réponse invalide');
-    return data;
-  } finally { clearTimeout(timer); }
+  const result = await fetchJson(url, { redirect: 'error' }, { timeoutMs: MEME_FETCH_TIMEOUT_MS, maxBytes: 512 * 1024 });
+  if (!result.response.ok) throw new Error('HTTP ' + result.response.status);
+  const data = result.json;
+  if (!data || typeof data.title !== 'string' || typeof data.url !== 'string') throw new Error('Réponse invalide');
+  return data;
 }
 
 // Sélectionne un mème SÛR (jamais NSFW/spoiler) : sources françaises d'abord,
@@ -1021,14 +1019,15 @@ async function execute(botId, entry, cmd, src) {
       break;
     }
     case 'invite': {
-      if (!record.client_id) return reply('❌ Application ID manquant.');
+      const url = inviteUrl(record.client_id);
+      if (!url) return reply('❌ Application ID invalide ou manquant.');
       await replyPanel({
         variant: 'brand',
         title: '🔗 Ajouter Hoxera à un serveur',
-        description: 'Utilisez le bouton ou le lien ci-dessous pour inviter le bot.',
-        fields: [{ name: '🌐 Lien d’invitation', value: `https://discord.com/oauth2/authorize?client_id=${record.client_id}&permissions=8&scope=bot%20applications.commands` }],
+        description: 'Utilisez le bouton ou le lien ci-dessous pour inviter le bot. Les permissions sont limitées aux fonctionnalités Hoxera; Administrateur n’est pas demandé.',
+        fields: [{ name: '🌐 Lien d’invitation', value: url }],
         footer: false,
-      }, [ui.linkRow('➕ Inviter le bot', `https://discord.com/oauth2/authorize?client_id=${record.client_id}&permissions=8&scope=bot%20applications.commands`)]);
+      }, [ui.linkRow('➕ Inviter le bot', url)]);
       break;
     }
     case 'lang': {

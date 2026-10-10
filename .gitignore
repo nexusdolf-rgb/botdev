@@ -1,6 +1,13 @@
 node_modules/
 *.db
-*.db-journal
-*.db-wal
-*.db-shm
+*.db-*
+*.db.*
 .env
+.env.*
+!.env.example
+/uploads/
+/assets/
+coverage/
+
+# Aperçus générés (node scripts/render-preview.js) — non commités
+/maquette-v361-modules.html

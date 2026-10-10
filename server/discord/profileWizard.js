@@ -13,6 +13,7 @@ const store = require('../db');
 // v229 : grammaire des sections (traits ━) pour les messages texte de l'assistant.
 const ui = require('./ui');
 const assets = require('../assets');
+const imgproxy = require('../imgproxy');
 const identity = require('./identity');
 const { canConfigureGuild } = require('./permissions');
 
@@ -162,11 +163,11 @@ async function collectAttachment(state, url, contentType, size) {
   const step = STEPS[state.step];
   if (step.key !== 'avatar' && step.key !== 'banner') return;
   if (size && size > 3 * 1024 * 1024) throw new Error('Image trop lourde (3 Mo max)');
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Impossible de télécharger l'image (${res.status})`);
-  const buf = Buffer.from(await res.arrayBuffer());
+  const downloaded = await imgproxy.fetchDiscordImage(String(url || ''));
+  if (!downloaded) throw new Error('Image Discord non autorisée, indisponible ou trop lourde.');
+  const buf = downloaded.buffer;
   if (!buf.length || buf.length > 3 * 1024 * 1024) throw new Error('Image trop lourde (3 Mo max)');
-  const key = await assets.put(buf, contentType || extFromUrl(url));
+  const key = await assets.put(buf, downloaded.type);
   state.values[step.key] = `/assets/${key}`;
   stopCollector(state);
   await advance(state);
@@ -360,11 +361,11 @@ async function applyAttachmentToWizard(botId, guildId, userId, kind, url, conten
   const state = wizards.get(wKey(botId, guildId, userId));
   if (!state) return false;
   if (size && size > 3 * 1024 * 1024) throw new Error('Image trop lourde (3 Mo max)');
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Impossible de télécharger l'image (${res.status})`);
-  const buf = Buffer.from(await res.arrayBuffer());
+  const downloaded = await imgproxy.fetchDiscordImage(String(url || ''));
+  if (!downloaded) throw new Error('Image Discord non autorisée, indisponible ou trop lourde.');
+  const buf = downloaded.buffer;
   if (!buf.length || buf.length > 3 * 1024 * 1024) throw new Error('Image trop lourde (3 Mo max)');
-  const key = await assets.put(buf, contentType || extFromUrl(url));
+  const key = await assets.put(buf, downloaded.type);
   state.values[kind] = `/assets/${key}`;
   const step = STEPS[state.step];
   if (step && step.key === kind) {

@@ -1,44 +1,44 @@
 #!/usr/bin/env bash
-# ============================================================
-# 🛡️ Vérification complète AVANT tout déploiement.
-# Usage : bash scripts/check.sh
-# 1. Syntaxe de tous les fichiers JS (serveur + dashboard + tests)
-# 2. Recherche de secrets oubliés dans le code
-# 3. Suite de tests complète
-# Sortie 0 = feu vert. Toute autre valeur = NE PAS POUSSER.
-# ============================================================
+# Contrôles locaux/CI avant déploiement. Aucune suppression générale dans /tmp.
 set -u
 cd "$(dirname "$0")/.."
 ERR=0
+SYNERR="$(mktemp)"
+trap 'rm -f "$SYNERR"' EXIT
 
-# 🧹 Les tests créent des bases temporaires dans /tmp (hoxera-*, botdev-*, v*test-*…).
-# Sans nettoyage, /tmp finit plein et les tests échouent en SQLITE_FULL.
-find /tmp -maxdepth 1 -type d \( -name "hoxera-*" -o -name "botdev-*" -o -name "v*test-*" -o -name "v17*-*" -o -name "ticket*" -o -name "backup*" -o -name "xptest*" -o -name "apptest*" \) -exec rm -rf {} + 2>/dev/null || true
-
-echo "── 1/3 Vérification de syntaxe ─────────────────"
-while IFS= read -r f; do
-  if ! node --check "$f" 2>/tmp/synerr; then
-    echo "❌ Erreur de syntaxe : $f"; cat /tmp/synerr; ERR=1
-  fi
-done < <(find server public test scripts -name "*.js" -not -path "*/node_modules/*" 2>/dev/null)
-[ $ERR -eq 0 ] && echo "✅ Syntaxe OK"
-
-echo "── 2/3 Recherche de secrets en dur ─────────────"
-if grep -rnIE "(ghp_|github_pat_|xox[baprs]-)[A-Za-z0-9_]{15,}" server public test --include="*.js" 2>/dev/null | grep -v "exemple" ; then
-  echo "❌ SECRET DÉTECTÉ dans le code — à retirer avant de pousser !"; ERR=1
-elif grep -rnIE "['\"][MN][A-Za-z0-9_-]{23}\.[A-Za-z0-9_-]{6}\.[A-Za-z0-9_-]{20,}['\"]" server public test --include="*.js" 2>/dev/null ; then
-  echo "❌ TOKEN DISCORD suspect détecté dans le code !"; ERR=1
+node_major="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)"
+echo "── 1/5 Runtime Node.js ─────────────────────────"
+if [[ "$node_major" != "24" ]]; then
+  echo "❌ Node.js 24 requis (détecté : $(node --version 2>/dev/null || echo absent))."
+  ERR=1
 else
-  echo "✅ Aucun secret détecté"
+  echo "✅ $(node --version)"
 fi
 
-echo "── 3/3 Suite de tests complète ─────────────────"
+echo "── 2/5 Vérification de syntaxe ─────────────────"
+syntax_failed=0
+while IFS= read -r -d '' file; do
+  if ! node --check "$file" 2>"$SYNERR"; then
+    echo "❌ Erreur de syntaxe : $file"
+    cat "$SYNERR"
+    syntax_failed=1
+  fi
+done < <(find server public test scripts -type f -name '*.js' -not -path '*/node_modules/*' -print0 2>/dev/null)
+if [[ "$syntax_failed" -eq 0 ]]; then echo "✅ Syntaxe OK"; else ERR=1; fi
+
+echo "── 3/5 Recherche de secrets ────────────────────"
+if ! node scripts/secret-scan.js; then ERR=1; fi
+
+echo "── 4/5 Audit des dépendances ───────────────────"
+if ! npm audit --audit-level=low; then ERR=1; fi
+
+echo "── 5/5 Suite de tests complète ─────────────────"
 if ! node test/run-all.js; then ERR=1; fi
 
 echo
-if [ $ERR -eq 0 ]; then
-  echo "🟢 FEU VERT — tu peux pousser / déployer."
+if [[ "$ERR" -eq 0 ]]; then
+  echo "🟢 Contrôles locaux réussis. Vérifie ensuite la CI et la santé après déploiement."
 else
-  echo "🔴 FEU ROUGE — corrige avant de pousser."
+  echo "🔴 Contrôles en échec — ne déploie pas avant correction."
 fi
-exit $ERR
+exit "$ERR"

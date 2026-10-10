@@ -41,7 +41,7 @@ console.log('1️⃣  En-têtes HTTP de sécurité appliqués ✅');
 
 // ---------- Origine ----------
 let originNext = false;
-security.originGuard(request({ method: 'POST', headers: { origin: 'https://hoxera.is-a.dev', host: 'hoxera.is-a.dev', 'x-forwarded-proto': 'https' } }), response(), () => { originNext = true; });
+security.originGuard(request({ method: 'POST', secure: true, headers: { origin: 'https://hoxera.is-a.dev', host: 'hoxera.is-a.dev', 'x-forwarded-proto': 'https' } }), response(), () => { originNext = true; });
 assert(originNext, 'origine officielle autorisée');
 const originDenied = response();
 security.originGuard(request({ method: 'POST', headers: { origin: 'https://site-pirate.example', host: 'hoxera.is-a.dev', 'x-forwarded-proto': 'https' } }), originDenied, () => {});

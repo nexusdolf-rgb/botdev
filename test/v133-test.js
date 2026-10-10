@@ -49,7 +49,7 @@ process.env.BOTDEV_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'hoxera-v133
     url: 'https://hoxera.is-a.dev/#/dashboard', runScripts: 'outside-only', pretendToBeVisual: true,
   });
   const w = dom.window;
-  global.window = w; global.document = w.document; global.navigator = w.navigator; global.location = w.location;
+  global.window = w; global.document = w.document; Object.defineProperty(global, 'navigator', { value: w.navigator, configurable: true, writable: true }); global.location = w.location;
   w.fetch = async () => ({ ok: true, json: async () => ({}) });
   w.eval(fs.readFileSync('public/js/app.js', 'utf8') + '\n' + fs.readFileSync('public/js/dashboard.js', 'utf8') + '\nwindow.App=App;window.Dashboard=Dashboard;');
   w.App.state = { user: { id: 1, is_admin: false } };

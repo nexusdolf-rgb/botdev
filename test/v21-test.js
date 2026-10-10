@@ -3,7 +3,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const http = require('http');
+const sharp = require('sharp');
 const assert = require('assert');
 // v236 — lecteur de payload Components V2
 const v2 = require('./helpers/v2');
@@ -16,15 +16,17 @@ const store = require('../server/db');
 const panels = require('../server/discord/panels');
 const { handleProfileCommand } = require('../server/discord/profileCommands');
 
-const PNG = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3, 4, 5, 6, 7, 8]);
-const imgServer = http.createServer((req, res) => {
-  res.writeHead(200, { 'Content-Type': 'image/png' });
-  res.end(PNG);
-});
+const IMG_URL = 'https://cdn.discordapp.com/attachments/123456789012345678/123456789012345678/photo.png';
+const originalFetch = global.fetch;
+let PNG;
 
 (async () => {
-  await new Promise((r) => imgServer.listen(0, '127.0.0.1', r));
-  const imgUrl = `http://127.0.0.1:${imgServer.address().port}/photo.png`;
+  PNG = await sharp({ create: { width: 1, height: 1, channels: 4, background: '#193f67' } }).png().toBuffer();
+  const imgUrl = IMG_URL;
+  global.fetch = async (url) => {
+    assert.strictEqual(String(url), imgUrl, 'seul le CDN Discord autorisé est appelé');
+    return new Response(PNG, { headers: { 'content-type': 'image/png' } });
+  };
 
   store.bots.create({ user_id: 1, name: 'Hoxera', token: 'T', client_id: '1', prefix: '!' });
   const guild = { id: 'G1', name: 'Serveur', ownerId: 'OWNER1' };
@@ -100,7 +102,7 @@ const imgServer = http.createServer((req, res) => {
   assert(v2.allText(lastReply).includes('enregistré'), 'enregistrement direct : ' + v2.allText(lastReply));
   console.log('4️⃣  Sans assistant → enregistrement direct ✅');
 
-  imgServer.close();
+  global.fetch = originalFetch;
   console.log('\n🎉 Tous les tests v1.21 passent !');
   process.exit(0);
-})().catch((e) => { console.error('❌', e.message); process.exit(1); });
+})().catch((e) => { global.fetch = originalFetch; console.error('❌', e.message); process.exit(1); });

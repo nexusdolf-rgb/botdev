@@ -1,25 +1,26 @@
-// ============================================================
-// Hoxera — Filets de sécurité du processus
-// Le bot ne doit JAMAIS mourir à cause d'une erreur isolée :
-// les erreurs non interceptées sont journalisées et le processus
-// continue de tourner (le chien de garde redémarre les bots).
-// + Surveillance de la mémoire et des avertissements Node.
-// ============================================================
+// Filets de sécurité du processus : les incidents sont tracés, puis le
+// processus s'arrête proprement par code non nul. Continuer après une erreur
+// non interceptée pourrait laisser la base ou les clients Discord incohérents;
+// Render/Docker/PM2 doit redémarrer une instance saine.
 function install() {
   const health = require('./health');
-  process.on('uncaughtException', (err) => {
-    health.recordError('processus', (err && err.message) || err);
-    console.error('[Hoxera] ⚠️ Erreur inattendue (récupérée, le bot continue) :', (err && err.message) || err);
+  let stopping = false;
+  const fatal = (source, error) => {
+    if (stopping) return;
+    stopping = true;
+    const message = (error && error.message) || String(error || 'erreur inconnue');
+    health.recordError(source, message);
+    console.error(`[Hoxera] 🛑 Erreur fatale (${source}) :`, message);
+    process.exit(1);
+  };
+
+  process.on('uncaughtException', (err) => fatal('processus', err));
+  process.on('unhandledRejection', (reason) => fatal('promesse', reason));
+  process.on('warning', (warning) => {
+    console.error('[Hoxera] ⚠️ Avertissement Node :', (warning && warning.message) || warning);
   });
-  process.on('unhandledRejection', (reason) => {
-    health.recordError('promesse', (reason && reason.message) || reason);
-    console.error('[Hoxera] ⚠️ Promesse non gérée (récupérée, le bot continue) :', (reason && reason.message) || reason);
-  });
-  process.on('warning', (w) => {
-    console.error('[Hoxera] ⚠️ Avertissement Node :', (w && w.message) || w);
-  });
-  // 🧠 Surveillance mémoire : plusieurs seuils, nettoyage des caches non
-  // essentiels et état exposé au centre de santé avant un éventuel OOM.
+
+  // Surveillance mémoire : les seuils restent visibles dans le centre de santé.
   const resourceGuard = require('./resourceGuard');
   const checkMemory = () => {
     const info = resourceGuard.observe();

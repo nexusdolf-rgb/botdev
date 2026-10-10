@@ -1,7 +1,7 @@
 // Test v2.7 — Flux d'activité + barre de sauvegarde + première visite + aperçus
 const assert = require('assert');
 const fs = require('fs');
-const dir = '/tmp/v27test-' + Date.now();
+const dir = require('node:os').tmpdir() + '/v27test-' + Date.now();
 fs.mkdirSync(dir, { recursive: true });
 process.env.BOTDEV_DATA_DIR = dir;
 

@@ -22,7 +22,7 @@ const check = (label, cond) => {
     url: 'http://localhost:3000/#/dashboard', runScripts: 'outside-only', pretendToBeVisual: true,
   });
   const w = dom.window;
-  global.window = w; global.document = w.document; global.navigator = w.navigator; global.location = w.location;
+  global.window = w; global.document = w.document; Object.defineProperty(global, 'navigator', { value: w.navigator, configurable: true, writable: true }); global.location = w.location;
 
   w.fetch = async (url) => {
     const p = String(url).split('?')[0];
@@ -88,7 +88,9 @@ const check = (label, cond) => {
         open: !!modal,
         items: modal ? modal.querySelectorAll('.sheet-item').length : 0,
         hasServerSection: modal ? modal.textContent.includes('Serveur sélectionné') : false,
-        hasBotSection: modal ? modal.textContent.includes('🤖 Bot') : false,
+        // v361 : la feuille « Plus » range les modules par famille ; le bloc
+// d'administration s'appelle désormais « Administration du bot ».
+hasBotSection: modal ? modal.textContent.includes('Administration du bot') : false,
         hasLevels: modal ? modal.textContent.includes('Niveaux') : false,
         hasGiveaways: modal ? modal.textContent.includes('Giveaways') : false,
       };

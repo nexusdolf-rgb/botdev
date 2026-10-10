@@ -1,53 +1,57 @@
 #!/usr/bin/env node
-// ============================================================
-// 🧪 Lanceur de la suite de tests complète — LE garde-fou.
-// Usage : node test/run-all.js
-// Règle d'or : AUCUN push en production si ce script échoue.
-//
-// - Exécute tous les tests de test/*.js (ordre alphabétique)
-// - Ignore les tests manuels (besoin de secrets/réseau) et lui-même
-// - Les tests obsolètes vivent dans test/legacy/ (non exécutés)
-// - Code de sortie 0 = tout vert, 1 = au moins un échec
-// ============================================================
-const fs = require('fs');
-const path = require('path');
-const { execFileSync } = require('child_process');
+// Lance la suite dans des processus isolés. Tous les temporaires créés par
+// os.tmpdir() sont confinés à un répertoire unique, supprimé à la fin.
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { execFileSync } = require('node:child_process');
 
-// Tests manuels : nécessitent des identifiants réels / le réseau.
-// À lancer à la main : BOTDEV_GH_TOKEN=... node test/github-roundtrip.js
 const MANUAL = new Set(['github-roundtrip.js', 'run-all.js']);
-
 const dir = __dirname;
 const files = fs.readdirSync(dir)
-  .filter(f => f.endsWith('.js') && !MANUAL.has(f))
+  .filter((file) => file.endsWith('.js') && !MANUAL.has(file))
   .sort((a, b) => a.localeCompare(b, 'fr', { numeric: true }));
+const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hoxera-suite-'));
+const childEnv = { ...process.env, TMPDIR: tempRoot };
 
-let pass = 0, fail = 0;
+let pass = 0;
+let fail = 0;
 const failed = [];
-const t0 = Date.now();
+const startedAt = Date.now();
 
-for (const f of files) {
-  const p = path.join(dir, f);
-  process.stdout.write(`▶ ${f} ... `);
-  try {
-    execFileSync(process.execPath, [p], { stdio: ['ignore', 'pipe', 'pipe'], timeout: 120000 });
-    pass++;
-    console.log('✅');
-  } catch (e) {
+try {
+  for (const file of files) {
+    const testPath = path.join(dir, file);
+    process.stdout.write(`▶ ${file} ... `);
+    try {
+      execFileSync(process.execPath, [testPath], {
+        stdio: ['ignore', 'pipe', 'pipe'],
+        timeout: 120000,
+        env: childEnv,
+      });
+      pass++;
+      console.log('✅');
+    } catch (error) {
+      fail++;
+      failed.push(file);
+      console.log('❌');
+      const output = ((error.stdout || '') + '\n' + (error.stderr || '')).toString().trim().split('\n').slice(-10).join('\n');
+      console.log('   └─ dernières lignes :\n' + output.replace(/^/gm, '     '));
+    }
+  }
+} finally {
+  try { fs.rmSync(tempRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 }); } catch (error) {
+    console.error(`⚠️ Nettoyage du répertoire temporaire impossible (${error.code || 'erreur'}).`);
     fail++;
-    failed.push(f);
-    console.log('❌');
-    const out = ((e.stdout || '') + '\n' + (e.stderr || '')).toString().trim().split('\n').slice(-8).join('\n');
-    console.log('   └─ dernières lignes :\n' + out.replace(/^/gm, '     '));
   }
 }
 
-const secs = ((Date.now() - t0) / 1000).toFixed(1);
+const seconds = ((Date.now() - startedAt) / 1000).toFixed(1);
 console.log('\n' + '='.repeat(50));
-console.log(`Résultat : ${pass} ✅ / ${fail} ❌  (${files.length} tests, ${secs}s)`);
+console.log(`Résultat : ${pass} ✅ / ${fail} ❌ (${files.length} tests, ${seconds}s)`);
+if (failed.length) console.log('Échecs : ' + failed.join(', '));
 if (fail > 0) {
-  console.log('Échecs : ' + failed.join(', '));
-  console.log('🚫 NE PAS DÉPLOYER tant que ce n\'est pas corrigé.');
+  console.log('🚫 NE PAS DÉPLOYER tant que les échecs ne sont pas corrigés.');
   process.exit(1);
 }
-console.log('🎉 Suite complète verte — déploiement autorisé.');
+console.log('🎉 Suite complète verte. Cela ne remplace pas une revue humaine ni les vérifications de déploiement.');

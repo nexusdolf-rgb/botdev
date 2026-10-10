@@ -7,7 +7,7 @@
 // Discord et on re-pousse si le compte ne correspond pas.
 const assert = require('assert');
 const fs = require('fs');
-const dir = '/tmp/v91test-' + Date.now();
+const dir = require('node:os').tmpdir() + '/v91test-' + Date.now();
 fs.mkdirSync(dir, { recursive: true });
 process.env.BOTDEV_DATA_DIR = dir;
 

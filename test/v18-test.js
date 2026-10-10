@@ -20,12 +20,12 @@ const logging = require('../server/discord/logging');
 
 (async () => {
   // ---------- 1. Assets : stockage local ----------
-  const pngBuf = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3, 4, 5, 6, 7, 8]);
+  const pngBuf = await require('sharp')({ create: { width: 1, height: 1, channels: 3, background: { r: 20, g: 40, b: 60 } } }).png().toBuffer();
   const key = await assets.put(pngBuf, 'image/png');
   assert(/^[a-f0-9]{16}\.png$/.test(key), 'clé png attendue');
   const got = await assets.get(key);
   assert(got && got.buffer.equals(pngBuf) && got.mime === 'image/png');
-  assert(got.buffer.length === 16);
+  assert((await require('sharp')(got.buffer).metadata()).format === 'png');
   console.log('1️⃣  Magasin d\'images : écriture + lecture locale ✅ (', key.slice(0, 10) + '… )');
 
   // ---------- 2. Profil : API store ----------

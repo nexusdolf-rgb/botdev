@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
 
-const TMP = path.join(__dirname, '.tmp-v341');
+const TMP = path.join(require('node:os').tmpdir(), 'hoxera-v341-' + process.pid + '-' + Date.now());
 fs.rmSync(TMP, { recursive: true, force: true });
 process.env.BOTDEV_DATA_DIR = TMP;
 fs.mkdirSync(TMP, { recursive: true });

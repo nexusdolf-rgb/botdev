@@ -11,7 +11,7 @@ const dom = new JSDOM('<!doctype html><html><body><div id="app"></div><div id="t
 const w = dom.window;
 global.window = w;
 global.document = w.document;
-global.navigator = w.navigator;
+Object.defineProperty(global, 'navigator', { value: w.navigator, configurable: true, writable: true });
 global.location = w.location;
 w.fetch = async () => ({ ok: true, json: async () => ({}) });
 w.eval(

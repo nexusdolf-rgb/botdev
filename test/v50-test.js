@@ -3,8 +3,8 @@
 //  1. Une interaction qui plante → réponse polie, pas de crash
 //  2. Une interaction bloquée (ne répond jamais) → réponse « patiente »
 //     après le délai max, le bot continue
-//  3. Le processus survit aux erreurs non interceptées (uncaughtException
-//     / unhandledRejection) — vérifié dans un vrai sous-processus
+//  3. Une erreur non interceptée (uncaughtException / unhandledRejection)
+//     arrête le processus avec un code non nul — vérifié en sous-processus
 //  4. Une commande dont l'ENVOI échoue ne plante pas (premade blindé)
 //  5. Anti-fuite mémoire : les jeux/sondages abandonnés sont purgés
 //  6. Les permissions des commandes de modération restent correctes
@@ -13,7 +13,7 @@ process.env.NODE_ENV = 'test';
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { execFileSync } = require('child_process');
+const { spawnSync } = require('child_process');
 process.env.BOTDEV_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'hoxera-v50-'));
 
 let failures = 0;
@@ -74,14 +74,13 @@ const check = (label, cond) => {
   check('interaction bloquée : délai respecté (300-2000 ms)', elapsed >= 250 && elapsed < 2500);
   extra.handleInteraction = origExtra;
 
-  // ---------- 3. Le processus survit aux erreurs non interceptées ----------
-  const child = execFileSync(process.execPath, ['-e', `
+  // ---------- 3. Une erreur non interceptée arrête l'instance ----------
+  const child = spawnSync(process.execPath, ['-e', `
     require('${path.join(__dirname, '..', 'server', 'safety.js').replace(/\\/g, '/')}').install();
     setTimeout(() => { throw new Error('erreur sauvage'); }, 100);
-    setTimeout(() => { Promise.reject(new Error('promesse sauvage')); }, 150);
     setTimeout(() => { console.log('ALIVE'); process.exit(0); }, 400);
-  `], { encoding: 'utf8' });
-  check('processus : survit à une erreur sauvage (uncaughtException)', child.includes('ALIVE'));
+  `], { encoding: 'utf8', timeout: 5000 });
+  check('processus : erreur sauvage → arrêt non nul (redémarrage superviseur)', child.status !== 0 && !child.stdout.includes('ALIVE'));
 
   // ---------- 4. Envoi qui échoue → la commande ne plante pas ----------
   let threw = false;

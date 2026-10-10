@@ -7,6 +7,9 @@
 //     base, garde-fous, erreurs) et s'actualise
 // ============================================================
 process.env.NODE_ENV = 'test';
+process.env.ADMIN_EMAILS = '';
+delete process.env.NEXORA_ADMIN_DISCORD_ID;
+delete process.env.NEXORA_ADMIN_FAIL_CLOSED;
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -45,6 +48,8 @@ const check = (label, cond) => {
 
   // ---------- 3. Route /health/bot enrichie ----------
   const store = require('../server/db');
+  const adminId = store.users.create('founder@v76.test', 'x');
+  const adminToken = store.sessions.create(adminId);
   store.settings.set('last_backup', '2026-08-20T10:00:00.000Z');
   const child = spawn(process.execPath, ['server/index.js'], {
     cwd: path.join(__dirname, '..'),
@@ -55,7 +60,7 @@ const check = (label, cond) => {
     let diag = null;
     for (let i = 0; i < 40; i++) {
       try {
-        const r = await fetch('http://localhost:3195/api/health/bot');
+        const r = await fetch('http://localhost:3195/api/admin/system', { headers: { Cookie: `botdev_session=${adminToken}` } });
         if (r.ok) { diag = await r.json(); break; }
       } catch {}
       await new Promise((r) => setTimeout(r, 500));
@@ -74,11 +79,11 @@ const check = (label, cond) => {
   const { JSDOM } = require('jsdom');
   const dom = new JSDOM('<!DOCTYPE html><html><body><div id="app"></div><div id="toasts"></div><div id="modal-root"></div></body></html>', { url: 'http://localhost:3000/#/dashboard', runScripts: 'outside-only', pretendToBeVisual: true });
   const w = dom.window;
-  global.window = w; global.document = w.document; global.navigator = w.navigator; global.location = w.location;
+  global.window = w; global.document = w.document; Object.defineProperty(global, 'navigator', { value: w.navigator, configurable: true, writable: true }); global.location = w.location;
   w.fetch = async (url) => {
     const p = String(url).split('?')[0];
     const resp = (body) => ({ ok: true, status: 200, json: async () => body });
-    if (p.endsWith('/api/health/bot')) return resp({
+    if (p.endsWith('/api/admin/system')) return resp({
       processUptimeMs: 3720000,
       tokenConfigured: true, oauthConfigured: true, botCount: 1,
       bootRestore: 'ok', backupEnabled: true,

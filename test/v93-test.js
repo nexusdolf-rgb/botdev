@@ -5,7 +5,7 @@
 // des doublons périmés dans le menu « / ».
 const assert = require('assert');
 const fs = require('fs');
-const dir = '/tmp/v93test-' + Date.now();
+const dir = require('node:os').tmpdir() + '/v93test-' + Date.now();
 fs.mkdirSync(dir, { recursive: true });
 process.env.BOTDEV_DATA_DIR = dir;
 

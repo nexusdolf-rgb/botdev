@@ -2,12 +2,27 @@
 // BotDev - Base de données (SQLite via better-sqlite3)
 // ============================================================
 const Database = require('better-sqlite3');
+const fs = require('node:fs');
+const path = require('node:path');
 const crypto = require('crypto');
 const paths = require('./paths');
 const tzUtil = require('./tz');
+const secretStore = require('./secretStore');
 
-const db = new Database(paths.dbPath);
-db.pragma('journal_mode = WAL');
+fs.mkdirSync(path.dirname(paths.dbPath), { recursive: true, mode: 0o700 });
+const previousUmask = process.umask(0o077);
+let db;
+try {
+  db = new Database(paths.dbPath);
+  db.pragma('journal_mode = WAL');
+} finally {
+  process.umask(previousUmask);
+}
+// La base contient des informations personnelles et des identifiants chiffrés.
+// Réduit aussi les permissions d'une ancienne base créée avec un umask permissif.
+for (const file of [paths.dbPath, `${paths.dbPath}-wal`, `${paths.dbPath}-shm`]) {
+  try { if (fs.existsSync(file)) fs.chmodSync(file, 0o600); } catch {}
+}
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS users (
@@ -1003,6 +1018,30 @@ if (!eventsCols.includes('guild_id')) {
   )`);
 }
 
+// ---------------------- Migration des secrets et sessions ----------------------
+// Les anciennes sessions utilisaient leur jeton brut comme clé SQLite.
+// Le navigateur garde le jeton aléatoire; seule son empreinte SHA-256 est conservée.
+const SESSION_HASH_PREFIX = 's1:';
+function sessionHash(token) {
+  const value = String(token || '');
+  if (!/^[a-f0-9]{64}$/i.test(value)) return '';
+  return SESSION_HASH_PREFIX + crypto.createHash('sha256')
+    .update('hoxera-session-v1\0', 'utf8').update(value, 'utf8').digest('hex');
+}
+const migrateLegacySessions = db.transaction(() => {
+  const rows = db.prepare("SELECT token FROM sessions WHERE token NOT LIKE 's1:%'").all();
+  const update = db.prepare('UPDATE sessions SET token = ? WHERE token = ?');
+  for (const row of rows) {
+    const hashed = sessionHash(row.token);
+    if (hashed) update.run(hashed, row.token);
+  }
+});
+migrateLegacySessions();
+// Les bases existantes sont chiffrées sur place lorsque la clé est disponible.
+// Les valeurs legacy restent lisibles en développement, mais le démarrage en
+// production exige une clé (voir secretStore.assertReady dans server/index.js).
+secretStore.migrateDatabase(db);
+
 // ---------------------- Utilisateurs & sessions ----------------------
 const users = {
   findByEmail: (email) => db.prepare('SELECT * FROM users WHERE email = ?').get(String(email).toLowerCase().trim()),
@@ -1049,23 +1088,42 @@ const sessions = {
   create: (userId, days = 30) => {
     const token = crypto.randomBytes(32).toString('hex');
     const expires = new Date(Date.now() + days * 86400000).toISOString();
-    db.prepare('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)').run(token, userId, expires);
+    db.prepare('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)').run(sessionHash(token), userId, expires);
     return token;
   },
-  find: (token) => db.prepare('SELECT * FROM sessions WHERE token = ?').get(token),
-  destroy: (token) => db.prepare('DELETE FROM sessions WHERE token = ?').run(token),
+  find: (token) => {
+    const hashed = sessionHash(token);
+    if (!hashed) return undefined;
+    return db.prepare('SELECT user_id, created_at, expires_at FROM sessions WHERE token = ?').get(hashed);
+  },
+  destroy: (token) => {
+    const hashed = sessionHash(token);
+    if (!hashed) return { changes: 0 };
+    return db.prepare('DELETE FROM sessions WHERE token = ?').run(hashed);
+  },
   cleanup: () => db.prepare("DELETE FROM sessions WHERE expires_at < datetime('now')").run(),
 };
 
 // ---------------------- Bots ----------------------
+function revealBot(row) {
+  if (!row) return row;
+  return { ...row, token: secretStore.decrypt(row.token, 'bots.token') };
+}
+
 const bots = {
-  all: (userId) => db.prepare('SELECT * FROM bots WHERE user_id = ? ORDER BY created_at DESC').all(userId),
-  get: (id) => db.prepare('SELECT * FROM bots WHERE id = ?').get(id),
-  create: (data) => db.prepare(`INSERT INTO bots (user_id, name, token, client_id, prefix) VALUES (@user_id, @name, @token, @client_id, @prefix)`).run(data).lastInsertRowid,
+  all: (userId) => db.prepare('SELECT * FROM bots WHERE user_id = ? ORDER BY created_at DESC').all(userId).map(revealBot),
+  get: (id) => revealBot(db.prepare('SELECT * FROM bots WHERE id = ?').get(id)),
+  create: (data) => {
+    const stored = { ...data, token: secretStore.encrypt(data.token, 'bots.token') };
+    return db.prepare(`INSERT INTO bots (user_id, name, token, client_id, prefix) VALUES (@user_id, @name, @token, @client_id, @prefix)`).run(stored).lastInsertRowid;
+  },
   update: (id, fields) => {
     const allowed = ['name', 'prefix', 'status_text', 'status_type', 'enabled', 'last_error', 'avatar_url', 'bot_username', 'client_id', 'token'];
     const sets = [], vals = [];
-    for (const k of allowed) if (k in fields) { sets.push(`${k} = ?`); vals.push(fields[k]); }
+    for (const k of allowed) if (k in fields) {
+      sets.push(`${k} = ?`);
+      vals.push(k === 'token' ? secretStore.encrypt(fields[k], 'bots.token') : fields[k]);
+    }
     if (!sets.length) return;
     vals.push(id);
     db.prepare(`UPDATE bots SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
@@ -1104,9 +1162,20 @@ const modules = {
 
 // ---------------------- Jetons Discord (OAuth2) ----------------------
 const discordTokens = {
-  get: (userId) => db.prepare('SELECT * FROM discord_tokens WHERE user_id = ?').get(userId) || null,
+  get: (userId) => {
+    const row = db.prepare('SELECT * FROM discord_tokens WHERE user_id = ?').get(userId);
+    if (!row) return null;
+    return {
+      ...row,
+      access_token: secretStore.decrypt(row.access_token, 'discord_tokens.access_token'),
+      refresh_token: secretStore.decrypt(row.refresh_token, 'discord_tokens.refresh_token'),
+    };
+  },
   set: (userId, { access, refresh, expires }) => db.prepare('INSERT INTO discord_tokens (user_id, access_token, refresh_token, expires_at) VALUES (?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET access_token = excluded.access_token, refresh_token = excluded.refresh_token, expires_at = excluded.expires_at')
-    .run(userId, access, refresh, expires),
+    .run(userId,
+      secretStore.encrypt(access, 'discord_tokens.access_token'),
+      secretStore.encrypt(refresh, 'discord_tokens.refresh_token'),
+      expires),
   remove: (userId) => db.prepare('DELETE FROM discord_tokens WHERE user_id = ?').run(userId),
 };
 

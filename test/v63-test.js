@@ -52,9 +52,11 @@ const check = (label, cond) => {
   {
     const origFetch = global.fetch;
     const goodBuf2 = fs.readFileSync(path.join(process.env.BOTDEV_DATA_DIR, 'good.db'));
-    backup.ghJson = async () => ({ content: '', download_url: 'https://fake.local/botdev.db', sha: 'x' });
+    backup.ghJson = async () => ({ content: '', download_url: 'https://raw.githubusercontent.com/test-owner/test-repo/main/botdev.db', sha: 'x' });
     global.fetch = async (url) => {
-      if (String(url).includes('fake.local')) return { ok: true, arrayBuffer: async () => goodBuf2.buffer.slice(goodBuf2.byteOffset, goodBuf2.byteOffset + goodBuf2.byteLength) };
+      if (String(url).includes('raw.githubusercontent.com')) {
+        return new Response(goodBuf2, { headers: { 'content-type': 'application/octet-stream' } });
+      }
       return origFetch(url);
     };
     const bigBuf = await backup.download();

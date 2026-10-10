@@ -4,6 +4,7 @@
 // Les décisions sont des fonctions PURES (testables sans Discord).
 // ============================================================
 const store = require('../db');
+const imgproxy = require('../imgproxy');
 
 // ------------------------------------------------------------
 // ⚖️ Paliers de sanctions automatiques (fonction pure)
@@ -219,8 +220,9 @@ async function welcomeCard(member) {
       ? member.user.displayAvatarURL({ extension: 'png', size: 256 })
       : null;
     if (url) {
-      const res = await fetch(url);
-      const buf = Buffer.from(await res.arrayBuffer());
+      const downloaded = await imgproxy.fetchDiscordImage(url);
+      if (!downloaded) throw new Error('avatar indisponible');
+      const buf = downloaded.buffer;
       const size = 160;
       const circle = Buffer.from(`<svg width="${size}" height="${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${size / 2}" fill="#fff"/></svg>`);
       const avatar = await require('sharp')(buf).resize(size, size).composite([{ input: circle, blend: 'dest-in' }]).png().toBuffer();
@@ -291,9 +293,9 @@ async function levelUpCard({ avatarUrl = '', name, level, pct } = {}) {
     // La carte utilise l'avatar du membre (avatar de serveur si disponible),
     // recadré en cercle. Le fichier reste générable si Discord est indisponible.
     if (avatarUrl) {
-      const res = await fetch(String(avatarUrl));
-      if (res.ok) {
-        const data = Buffer.from(await res.arrayBuffer());
+      const downloaded = await imgproxy.fetchDiscordImage(String(avatarUrl));
+      if (downloaded) {
+        const data = downloaded.buffer;
         const size = 138;
         const circle = Buffer.from(`<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg"><circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 1}" fill="#fff"/></svg>`);
         const avatar = await sharp(data).resize(size, size, { fit: 'cover' })

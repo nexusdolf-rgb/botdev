@@ -213,7 +213,7 @@ const GUILD = 'G244';
   const dom = new JSDOM('<!doctype html><html><body><div id="c"></div></body></html>', { url: 'http://localhost/' });
   global.window = dom.window;
   global.document = dom.window.document;
-  global.navigator = dom.window.navigator;
+  Object.defineProperty(global, 'navigator', { value: dom.window.navigator, configurable: true, writable: true });
   global.HTMLElement = dom.window.HTMLElement;
   global.MutationObserver = dom.window.MutationObserver;
   global.requestAnimationFrame = (f) => setTimeout(f, 0);

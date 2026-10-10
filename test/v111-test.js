@@ -4,7 +4,7 @@
 // stricte échouée → catégorie CLONE créée en haut du serveur, à chaque ticket.
 const assert = require('assert');
 const fs = require('fs');
-const dir = '/tmp/v34test-' + Date.now();
+const dir = require('node:os').tmpdir() + '/v34test-' + Date.now();
 fs.mkdirSync(dir, { recursive: true });
 process.env.BOTDEV_DATA_DIR = dir;
 

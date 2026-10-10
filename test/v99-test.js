@@ -1,7 +1,7 @@
 // Test v2.1 — 🔴 Annonces de live + 🏷️ auto-rôle multiple
 const assert = require('assert');
 const fs = require('fs');
-const dir = '/tmp/v21test-' + Date.now();
+const dir = require('node:os').tmpdir() + '/v21test-' + Date.now();
 fs.mkdirSync(dir, { recursive: true });
 process.env.BOTDEV_DATA_DIR = dir;
 

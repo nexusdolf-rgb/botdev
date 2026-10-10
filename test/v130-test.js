@@ -117,7 +117,7 @@ const cookieParser = require('cookie-parser');
   const { JSDOM } = require('jsdom');
   const dom = new JSDOM('<!doctype html><html><body><div id="app"></div><div id="toasts"></div><div id="modal-root"></div></body></html>', { url: 'https://hoxera.is-a.dev/#/dashboard', runScripts: 'outside-only' });
   const w = dom.window;
-  global.window = w; global.document = w.document; global.navigator = w.navigator; global.location = w.location;
+  global.window = w; global.document = w.document; Object.defineProperty(global, 'navigator', { value: w.navigator, configurable: true, writable: true }); global.location = w.location;
   w.fetch = async () => ({ ok: true, json: async () => ({}) });
   w.eval(fs.readFileSync('public/js/app.js', 'utf8') + '\n' + fs.readFileSync('public/js/dashboard.js', 'utf8') + '\nwindow.App=App;window.Dashboard=Dashboard;');
   w.App.state = { user: { id: 1, is_admin: true } };

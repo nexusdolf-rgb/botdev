@@ -26,7 +26,7 @@ assert(/token/.test(upd[0]) && /client_id/.test(upd[0]),
 
 // ---------- 2. Test comportemental : un redémarrage garde le nom ----------
 // (on simule le provisionnement sur une base neuve, comme au boot)
-process.env.BOTDEV_DATA_DIR = fs.mkdtempSync('/tmp/v174-');
+process.env.BOTDEV_DATA_DIR = fs.mkdtempSync(require('node:os').tmpdir() + '/v174-');
 const { execFileSync } = require('child_process');
 const probe = `
   const Database = require('better-sqlite3');

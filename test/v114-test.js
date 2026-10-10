@@ -3,7 +3,7 @@ const assert = require('assert');
 // v236 — lecteur de payload Components V2
 const v2 = require('./helpers/v2');
 const fs = require('fs');
-const dir = '/tmp/v38test-' + Date.now();
+const dir = require('node:os').tmpdir() + '/v38test-' + Date.now();
 fs.mkdirSync(dir, { recursive: true });
 process.env.BOTDEV_DATA_DIR = dir;
 

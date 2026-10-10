@@ -102,17 +102,17 @@ const check = (label, ok) => {
     check('/meme : timeout → message propre', sent.length === 1 && String(sent[0].content || '').includes('⏱️'));
 
     sent.length = 0;
-    global.fetch = async () => ({ ok: false, status: 500 });
+    global.fetch = async () => new Response('service unavailable', { status: 500 });
     await premade.handlePremadePrefix(BOT, entry, mkMsg(adminMember), 'meme', '');
     check('/meme : HTTP 500 → message propre', sent.length === 1 && String(sent[0].content || '').includes('😢 Impossible'));
 
     sent.length = 0;
-    global.fetch = async () => ({ ok: true, json: async () => ({ title: 'Sans image' }) });
+    global.fetch = async () => new Response(JSON.stringify({ title: 'Sans image' }), { headers: { 'content-type': 'application/json' } });
     await premade.handlePremadePrefix(BOT, entry, mkMsg(adminMember), 'meme', '');
     check('/meme : données invalides (pas d\'image) → message propre', sent.length === 1 && String(sent[0].content || '').includes('😢 Impossible'));
 
     sent.length = 0;
-    global.fetch = async () => ({ ok: true, json: async () => ({ title: 'Bon meme', url: 'https://i.redd.it/x.png', subreddit: 'memes' }) });
+    global.fetch = async () => new Response(JSON.stringify({ title: 'Bon meme', url: 'https://i.redd.it/x.png', subreddit: 'memes' }), { headers: { 'content-type': 'application/json' } });
     await premade.handlePremadePrefix(BOT, entry, mkMsg(adminMember), 'meme', '');
     const memeEmb = sent[0] && sent[0].embeds && sent[0].embeds[0];
     check('/meme : données valides → embed titre + image', !!memeEmb && memeEmb.data.title === 'Bon meme' && memeEmb.data.image && memeEmb.data.image.url === 'https://i.redd.it/x.png');
@@ -160,7 +160,8 @@ const check = (label, ok) => {
 
   // ================= 6. Env vars + domaines =================
   console.log('\n6️⃣  Env vars obsolètes et anciens domaines');
-  check('routes.js : tokenConfigured = HOXERA_TOKEN uniquement', read('server/routes.js').includes('tokenConfigured: !!(process.env.HOXERA_TOKEN)'));
+  const routeSource = read('server/routes.js');
+  check('diagnostic public : aucun indicateur de secret exposé', !routeSource.includes('tokenConfigured:') && !routeSource.includes('oauthConfigured:'));
   check('index.js : provision = HOXERA_TOKEN uniquement (aucun ancien fallback)', read('server/index.js').includes('const token = process.env.HOXERA_TOKEN;') && !read('server/index.js').includes('process.env.NEXORA_TOKEN') && !read('server/index.js').includes('process.env.NOXERA_TOKEN'));
   check('security.js : origine morte retirée (domaine officiel seul)', read('server/security.js').includes("'https://hoxera.is-a.dev'") && !read('server/security.js').includes('hoxera.onrender.com'));
   check('index.js : footer transcription sans BotDev', !read('server/index.js').includes('Propulsé par BotDev'));

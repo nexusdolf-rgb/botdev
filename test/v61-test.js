@@ -72,8 +72,8 @@ const check = (label, cond) => {
     }
     check('health/bot : répond', !!diag);
     check('health/bot : processus en vie (uptime > 0)', diag && diag.processUptimeMs > 0);
-    check('health/bot : le bot est listé', diag && Array.isArray(diag.bots) && diag.bots.some((b) => b.name === 'Hoxera'));
-    check('health/bot : état des connexions exposé', diag && Array.isArray(diag.clients));
+    check('health/bot : compteurs publics limités', diag && Number(diag.botCount) >= 1 && Number.isInteger(diag.onlineBotCount));
+    check('health/bot : détails internes masqués', diag && !('bots' in diag) && !('clients' in diag) && !('errors24h' in diag) && !('db' in diag));
   } finally {
     try { child.kill('SIGKILL'); } catch {}
   }

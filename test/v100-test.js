@@ -1,7 +1,7 @@
 // Test v2.3 — 📔 Journal des tickets (récapitulatif staff)
 const assert = require('assert');
 const fs = require('fs');
-const dir = '/tmp/v23test-' + Date.now();
+const dir = require('node:os').tmpdir() + '/v23test-' + Date.now();
 fs.mkdirSync(dir, { recursive: true });
 process.env.BOTDEV_DATA_DIR = dir;
 

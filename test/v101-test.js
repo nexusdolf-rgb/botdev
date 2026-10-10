@@ -3,7 +3,7 @@
 // tickets. Aucune catégorie n'est créée et aucun ticket n'est placé au hasard.
 const assert = require('assert');
 const fs = require('fs');
-const dir = '/tmp/v24test-' + Date.now();
+const dir = require('node:os').tmpdir() + '/v24test-' + Date.now();
 fs.mkdirSync(dir, { recursive: true });
 process.env.BOTDEV_DATA_DIR = dir;
 

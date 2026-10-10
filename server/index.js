@@ -12,6 +12,11 @@ require('./safety').install();
 const PORT = process.env.PORT || 3000;
 
 async function main() {
+  // Vérifie la disponibilité d'une clé avant tout accès à la sauvegarde ou
+  // migration de données. En production, l'absence de clé doit fermer le boot.
+  const secretStore = require('./secretStore');
+  secretStore.assertReady();
+
   // 1) Restauration des données (sauvegarde GitHub) AVANT d'ouvrir la base
   let restoreStatus = 'inconnu';
   try {
@@ -82,24 +87,24 @@ async function main() {
   app.disable('x-powered-by');
   app.set('trust proxy', 1);
   app.use(security.securityHeaders);
-  app.use(express.json({ limit: '250kb' }));
-  app.use(cookieParser());
 
-  // Capture automatique de l'URL publique (première visite) :
-  // elle sert à afficher le lien dans la bio du bot et dans /help
+  const apiRateLimit = security.rateLimit({ name: 'api-global', windowMs: 60000, max: 600 });
+  const uploadRateLimit = security.rateLimit({ name: 'api-image-upload', windowMs: 10 * 60000, max: 20 });
+  // Les mutations exigent une origine exacte; le débit est limité avant le
+  // parsing du corps pour réduire le coût des requêtes abusives.
+  app.use('/api', security.originGuard, apiRateLimit);
+  // Images encodées en base64 : limite dédiée, bornée à 3 Mo côté JSON.
+  app.use('/api/bots/:id/guilds/:guildId/uploads', uploadRateLimit, express.json({ limit: '3mb' }));
+  app.use('/api', express.json({ limit: '250kb' }), cookieParser(), routes);
+
+  // Capture de l'URL publique uniquement depuis l'origine canonique validée.
   app.use((req, res, next) => {
     if (!store.settings.get('public_url')) {
-      const host = (req.headers['x-forwarded-host'] || req.get('host') || '');
-      const proto = String(req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http')).split(',')[0].trim();
-      if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
-        store.settings.set('public_url', `${proto}://${host}`);
-      }
+      const origin = security.publicOrigin(req);
+      if (origin && !/localhost|127\.0\.0\.1/.test(origin)) store.settings.set('public_url', origin);
     }
     next();
   });
-
-  // API : contrôle d'origine avant toutes les routes et permissions métier.
-  app.use('/api', security.originGuard, routes);
 
   // 🏓 Endpoint ultra-léger pour le garde-éveil (aucune base, aucun calcul)
   app.get('/ping', (req, res) => res.type('text').send('pong'));
@@ -149,11 +154,33 @@ async function main() {
     res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
   });
 
-  app.listen(PORT, '0.0.0.0', async () => {
+  app.use('/api', (req, res) => res.status(404).json({ error: 'Route API introuvable.' }));
+
+  // Erreurs de parsing (JSON invalide/trop volumineux) et erreurs statiques :
+  // réponse générique, sans détails internes ni corps de requête dans les logs.
+  app.use((err, req, res, next) => {
+    if (res.headersSent) return next(err);
+    const status = Number(err && (err.statusCode || err.status));
+    const code = Number.isInteger(status) && status >= 400 && status < 500 ? status : 500;
+    const kind = err && err.type === 'entity.too.large' ? 'body_too_large'
+      : err && err.type === 'entity.parse.failed' ? 'invalid_json'
+      : (err && err.name) || 'http_error';
+    try { require('./health').recordError('http', `${code} ${kind}`); } catch {}
+    console.error(`[Hoxera] Erreur HTTP ${code} (${kind})`);
+    if (String(req.originalUrl || req.url || '').startsWith('/api/')) {
+      return res.status(code).json({ error: code === 413 ? 'Requête trop volumineuse.' : code === 400 ? 'Requête invalide.' : 'Erreur interne du serveur.' });
+    }
+    return res.status(code).type('text').send(code === 404 ? 'Page introuvable.' : 'Erreur interne du serveur.');
+  });
+
+  const server = app.listen(PORT, '0.0.0.0', async () => {
     console.log(`🚀 Hoxera démarré sur http://0.0.0.0:${PORT}`);
     await provisionHoxera();
     startupBots();
   });
+  server.requestTimeout = 60000;
+  server.headersTimeout = 15000;
+  server.keepAliveTimeout = 5000;
 
   // ⚡ Hoxera (bot unique) : créé automatiquement depuis les variables
   // d'environnement — plus besoin de « créer un bot » depuis le dashboard.

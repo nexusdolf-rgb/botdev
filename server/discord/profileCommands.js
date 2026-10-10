@@ -8,6 +8,7 @@
 const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
 const store = require('../db');
 const assets = require('../assets');
+const imgproxy = require('../imgproxy');
 const identity = require('./identity');
 const { canConfigureGuild } = require('./permissions');
 // v229 : grammaire des sections (traits ━) pour les accusés de réception texte.
@@ -86,11 +87,11 @@ async function handleProfileCommand(botId, interaction) {
         return interaction.editReply({ content: `⚠️ ${e.message.slice(0, 120)}` });
       }
       try {
-        const res = await fetch(file.url);
-        if (!res.ok) return interaction.editReply({ content: `⚠️ Impossible de récupérer l\'image (${res.status}).` });
-        const buf = Buffer.from(await res.arrayBuffer());
+        const downloaded = await imgproxy.fetchDiscordImage(String(file.url || ''));
+        if (!downloaded) return interaction.editReply({ content: '⚠️ Image Discord non autorisée, indisponible ou trop lourde.' });
+        const buf = downloaded.buffer;
         if (!buf.length || buf.length > 3 * 1024 * 1024) return interaction.editReply({ content: '❌ Image trop lourde (3 Mo max).' });
-        const key = await assets.put(buf, file.contentType || 'image/png');
+        const key = await assets.put(buf, downloaded.type);
         if (sub === 'avatar') p.avatar_url = `/assets/${key}`;
         else p.banner_url = `/assets/${key}`;
         store.botProfiles.set(botId, guild.id, p);

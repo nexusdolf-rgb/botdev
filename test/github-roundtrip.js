@@ -1,40 +1,46 @@
-// Test de roundtrip RÉEL contre GitHub (branche backup, base factice)
-// ⚠️ ATTENTION : à lancer UNIQUEMENT avec un dépôt de TEST dans BOTDEV_DATA_REPO,
-// jamais le dépôt de production (le garde-fou « base vide » protège, mais ne
-// tentez pas le diable). Test MANUEL — exclu de la suite automatique.
-// Usage : BOTDEV_DATA_DIR=/tmp/ghbktest/data BOTDEV_GH_TOKEN=... node test/github-roundtrip.js
-const fs = require('fs');
+// Test MANUEL de roundtrip contre un dépôt de TEST uniquement.
+// Ne fournis jamais ici le dépôt GitHub de production.
+// Usage : BOTDEV_GH_TOKEN=... BOTDEV_DATA_REPO=owner/test-repo node test/github-roundtrip.js
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const Database = require('better-sqlite3');
 
+const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hoxera-github-roundtrip-'));
+const dataDir = path.join(tempRoot, 'data');
+const fakePath = path.join(tempRoot, 'fake.db');
+const downloadedPath = path.join(tempRoot, 'from-github.db');
+process.env.BOTDEV_DATA_DIR = dataDir;
+fs.mkdirSync(dataDir, { recursive: true, mode: 0o700 });
+
 (async () => {
-  // 0. Nettoyage d'un éventuel passage précédent (sinon « table fake already exists »)
-  fs.rmSync('/tmp/ghbktest', { recursive: true, force: true });
+  try {
+    const seed = new Database(fakePath);
+    seed.exec("CREATE TABLE fake (id INTEGER, nom TEXT); INSERT INTO fake VALUES (42, 'test-real'), (7, 'hoxera-test');");
+    seed.close();
+    fs.copyFileSync(fakePath, path.join(dataDir, 'botdev.db'));
 
-  // 1. Base factice (aucun secret)
-  const fakePath = '/tmp/ghbktest/fake.db';
-  fs.mkdirSync('/tmp/ghbktest/data', { recursive: true });
-  const seed = new Database(fakePath);
-  seed.exec("CREATE TABLE fake (id INTEGER, nom TEXT); INSERT INTO fake VALUES (42, 'test-real'), (7, 'nexora');");
-  seed.close();
-  fs.copyFileSync(fakePath, '/tmp/ghbktest/data/botdev.db');
+    const store = require('../server/db');
+    const backup = require('../server/backup');
+    if (!backup.enabled()) throw new Error('Configure un PAT et un dépôt de test privé.');
+    const uploaded = await backup.upload(store.db);
+    if (!uploaded) throw new Error('Upload refusé par les garde-fous; vérifie que le dépôt de test est vide.');
+    console.log('→ upload vers le dépôt de test terminé');
 
-  // 2. Upload réel
-  const store = require('../server/db');
-  const backup = require('../server/backup');
-  await backup.upload(store.db);
-  console.log('→ upload vers GitHub OK');
-
-  // 3. Download réel + preuve : la base téléchargée s'ouvre avec les données
-  const buf = await backup.download();
-  if (!buf) { console.error('❌ download null'); process.exit(1); }
-  fs.writeFileSync('/tmp/ghbktest/from-github.db', buf);
-  const check = new Database('/tmp/ghbktest/from-github.db', { readonly: true });
-  const rows = check.prepare('SELECT * FROM fake ORDER BY id').all();
-  check.close();
-  if (rows.length === 2 && rows[0].nom === 'nexora' && rows[1].nom === 'test-real') {
-    console.log("✅ ROUNDTRIP GITHUB RÉEL VALIDÉ — la base téléchargée s'ouvre et contient :", JSON.stringify(rows));
-    process.exit(0);
+    const buffer = await backup.download();
+    if (!buffer) throw new Error('Téléchargement vide.');
+    fs.writeFileSync(downloadedPath, buffer, { mode: 0o600 });
+    const check = new Database(downloadedPath, { readonly: true, fileMustExist: true });
+    const rows = check.prepare('SELECT * FROM fake ORDER BY id').all();
+    check.close();
+    if (rows.length !== 2 || rows[0].nom !== 'hoxera-test' || rows[1].nom !== 'test-real') {
+      throw new Error(`Données de test incorrectes : ${JSON.stringify(rows)}`);
+    }
+    console.log('✅ Roundtrip GitHub de test validé.');
+  } finally {
+    try { fs.rmSync(tempRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 }); } catch {}
   }
-  console.error('❌ données incorrectes :', rows);
+})().catch((error) => {
+  console.error('❌', error.message);
   process.exit(1);
-})().catch((e) => { console.error('❌', e.message); process.exit(1); });
+});

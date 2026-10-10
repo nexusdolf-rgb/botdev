@@ -1,7 +1,7 @@
 // Test v3.5 — Panneaux bouton et menu SÉPARÉS (config, envoi, cohabitation)
 const assert = require('assert');
 const fs = require('fs');
-const dir = '/tmp/v35test-' + Date.now();
+const dir = require('node:os').tmpdir() + '/v35test-' + Date.now();
 fs.mkdirSync(dir, { recursive: true });
 process.env.BOTDEV_DATA_DIR = dir;
 

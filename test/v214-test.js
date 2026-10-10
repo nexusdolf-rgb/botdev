@@ -63,7 +63,9 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   console.log('— Dashboard : carte « Rôles par niveau » —');
   check('dash : titre et description échelle', dash.includes('🏆 Rôles par niveau'));
   check('dash : aperçu de l’échelle (remplace le palier précédent)', dash.includes('data-xp-ladder'));
-  check('dash : bouton Synchroniser + statut', dash.includes('xp-sync') && dash.includes('🔄 Synchroniser les membres'));
+  // v361 : les libellés de boutons du tableau de bord sont unifiés et ne portent
+// plus d'émoji décoratif — le test vérifie le texte seul.
+check('dash : bouton Synchroniser + statut', dash.includes('xp-sync') && dash.includes('Synchroniser les membres'));
   check('dash : nouveau palier par défaut = suivant', dash.includes("rolesData[rolesData.length - 1].level"));
   check('dash : sauvegarde triée par niveau', dash.includes('.sort((a, b) => a.level - b.level)'));
 

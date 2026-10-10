@@ -4,6 +4,7 @@
 const { Client, GatewayIntentBits, Partials, PermissionsBitField } = require('discord.js');
 const store = require('../db');
 const imgproxy = require('../imgproxy');
+const { inviteUrl } = require('./invite');
 
 const INTENTS = [
   GatewayIntentBits.Guilds,
@@ -881,9 +882,7 @@ function publicBotInfo(botId) {
     members,
     ping,
     uptime,
-    invite_url: record.client_id
-      ? `https://discord.com/oauth2/authorize?client_id=${record.client_id}&permissions=8&scope=bot%20applications.commands`
-      : '',
+    invite_url: inviteUrl(record.client_id),
   };
 }
 

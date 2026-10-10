@@ -1,7 +1,7 @@
 // Test v3.7 — Catégorie dédiée du type : priorité absolue, zéro ambiguïté
 const assert = require('assert');
 const fs = require('fs');
-const dir = '/tmp/v37test-' + Date.now();
+const dir = require('node:os').tmpdir() + '/v37test-' + Date.now();
 fs.mkdirSync(dir, { recursive: true });
 process.env.BOTDEV_DATA_DIR = dir;
 

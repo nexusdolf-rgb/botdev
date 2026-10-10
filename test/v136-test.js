@@ -11,7 +11,7 @@ process.env.BOTDEV_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'hoxera-v136
 const store = require('../server/db');
 const userId = store.users.create('avatar@test.local', 'x');
 store.bots.create({ user_id: userId, name: 'Hoxera', token: 'T', client_id: 'C', prefix: '!', });
-store.bots.update(1, { avatar_url: 'https://cdn.example.test/nexora.png' });
+store.bots.update(1, { avatar_url: 'https://cdn.discordapp.com/avatars/123456789012345678/avatar.png' });
 
 (async () => {
   const originalFetch = global.fetch;

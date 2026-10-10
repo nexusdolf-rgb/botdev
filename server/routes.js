@@ -9,6 +9,8 @@ const crypto = require('crypto');
 const store = require('./db');
 const botManager = require('./discord/botManager');
 const imgproxy = require('./imgproxy');
+const { fetchJson } = require('./http');
+const secretStore = require('./secretStore');
 
 // 🎨 v298 — URL de la décoration d'avatar Discord (image séparée à superposer).
 // `avatarDecorationURL` renvoie null quand le membre n'a aucune décoration.
@@ -25,6 +27,7 @@ const security = require('./security');
 const { AsyncTTLCache, TTLCache } = require('./cache');
 const { MODULES, CMD_DEFS, enabledModules, enabledCommandNames } = require('./discord/premade');
 const { EVENT_DEFS, eventsState, sanitizeEventConfig } = require('./discord/events');
+const { inviteUrl } = require('./discord/invite');
 
 const router = express.Router();
 const COOKIE = 'botdev_session';
@@ -127,38 +130,66 @@ router.get('/tickets/panel-banner/:guildId.gif', (req, res) => servePanelBannerP
 function uploadsDir() {
   return path.join(process.env.BOTDEV_DATA_DIR || path.join(__dirname, '..'), 'uploads');
 }
+
+function parseImageUpload(dataUrl) {
+  if (typeof dataUrl !== 'string' || dataUrl.length > 3 * 1024 * 1024) return null;
+  const match = dataUrl.match(/^data:image\/(png|jpeg|gif|webp);base64,([A-Za-z0-9+/]+={0,2})$/i);
+  if (!match) return null;
+  const type = `image/${match[1].toLowerCase()}`;
+  const encoded = match[2];
+  if (encoded.length % 4 !== 0) return null;
+  const buffer = Buffer.from(encoded, 'base64');
+  if (!buffer.length || buffer.length > 2 * 1024 * 1024 || buffer.toString('base64') !== encoded) return null;
+  const signatures = {
+    'image/png': buffer.length >= 24 && buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])),
+    'image/jpeg': buffer.length >= 4 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff,
+    'image/gif': buffer.length >= 10 && ['GIF87a', 'GIF89a'].includes(buffer.subarray(0, 6).toString('ascii')),
+    'image/webp': buffer.length >= 16 && buffer.subarray(0, 4).toString('ascii') === 'RIFF' && buffer.subarray(8, 12).toString('ascii') === 'WEBP',
+  };
+  if (!signatures[type]) return null;
+  const ext = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp' }[type];
+  return { buffer, type, ext };
+}
+
 router.post('/bots/:id/guilds/:guildId/uploads', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
   if (!bot) return;
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
-  const data = String((req.body || {}).data || '');
-  const m = data.match(/^data:(image\/(?:png|jpe?g|gif|webp));base64,(.+)$/i);
-  if (!m) return res.status(400).json({ error: 'Image invalide — formats acceptés : PNG, JPEG, GIF, WebP.' });
-  const buf = Buffer.from(m[2], 'base64');
-  if (!buf.length || buf.length > 2 * 1024 * 1024) return res.status(400).json({ error: 'Image trop lourde (maximum 2 Mo).' });
-  const ext = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp' }[m[1]];
-  const sig = buf.slice(0, 12).toString('hex');
-  const okSig = ext === 'png' ? sig.startsWith('89504e47')
-    : ext === 'jpg' ? sig.startsWith('ffd8ff')
-    : ext === 'gif' ? sig.startsWith('47494638')
-    : sig.includes('57454250');
-  if (!okSig) return res.status(400).json({ error: 'Fichier non reconnu comme image.' });
+  const image = parseImageUpload((req.body || {}).data);
+  if (!image) return res.status(400).json({ error: 'Image invalide — formats acceptés : PNG, JPEG, GIF, WebP (2 Mo maximum).' });
+  try {
+    const metadata = await require('sharp')(image.buffer, { limitInputPixels: 20_000_000, failOn: 'error' }).metadata();
+    if (metadata.format !== image.ext.replace('jpg', 'jpeg') || !metadata.width || !metadata.height
+      || metadata.width > 10000 || metadata.height > 10000) {
+      return res.status(400).json({ error: 'Fichier non reconnu comme image valide.' });
+    }
+  } catch {
+    return res.status(400).json({ error: 'Fichier non reconnu comme image valide.' });
+  }
   const dir = uploadsDir();
-  fs.mkdirSync(dir, { recursive: true });
-  const file = `${bot.id}-${guildId}-${Date.now()}-${crypto.randomBytes(3).toString('hex')}.${ext}`;
-  fs.writeFileSync(path.join(dir, file), buf);
-  res.json({ url: `/api/uploads/${file}` });
+  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  try { fs.chmodSync(dir, 0o700); } catch {}
+  const file = `${bot.id}-${guildId}-${Date.now()}-${crypto.randomBytes(12).toString('hex')}.${image.ext}`;
+  fs.writeFileSync(path.join(dir, file), image.buffer, { mode: 0o600, flag: 'wx' });
+  return res.json({ url: `/api/uploads/${file}` });
 });
+
 router.get('/uploads/:file', (req, res) => {
-  const file = String(req.params.file || '').replace(/[^a-zA-Z0-9._-]/g, '');
+  const file = String(req.params.file || '');
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,180}\.(?:png|jpe?g|gif|webp)$/i.test(file) || file.includes('..')) return res.status(404).end();
   const dir = uploadsDir();
-  const p = path.join(dir, file);
-  if (!file || !p.startsWith(dir)) return res.status(404).end();
+  const resolvedDir = path.resolve(dir);
+  const p = path.resolve(resolvedDir, file);
+  const relative = path.relative(resolvedDir, p);
+  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return res.status(404).end();
+  try { if (!fs.lstatSync(p).isFile()) return res.status(404).end(); } catch { return res.status(404).end(); }
   const types = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp' };
-  res.set('Content-Type', types[path.extname(file).toLowerCase()] || 'application/octet-stream');
+  res.set('Content-Type', types[path.extname(file).toLowerCase()]);
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('Content-Security-Policy', "default-src 'none'; sandbox");
   res.set('Cache-Control', 'public, max-age=86400');
-  res.sendFile(p, (err) => { if (err) res.status(404).end(); });
+  res.sendFile(p, (err) => { if (err && !res.headersSent) res.status(404).end(); });
 });
 
 // Emoji sûr (même règle que le bot) : évite de stocker des emojis invalides
@@ -234,29 +265,42 @@ router.get('/auth/me', requireAuth, (req, res) => {
 // Connexion avec Discord (OAuth2)
 // ============================================================
 function reqOrigin(req) {
-  const host = req.headers['x-forwarded-host'] || req.get('host') || '';
-  const proto = String(req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http')).split(',')[0].trim();
-  return `${proto}://${host}`;
+  return security.publicOrigin(req);
 }
 
 function oauthClientId() {
-  if (process.env.DISCORD_CLIENT_ID) return process.env.DISCORD_CLIENT_ID;
-  const bot = store.db.prepare("SELECT client_id FROM bots WHERE client_id != '' LIMIT 1").get();
-  return bot ? bot.client_id : '';
+  const configured = process.env.DISCORD_CLIENT_ID;
+  const bot = configured ? null : store.db.prepare("SELECT client_id FROM bots WHERE client_id != '' LIMIT 1").get();
+  const value = String(configured || (bot && bot.client_id) || '').trim();
+  return /^\d{15,21}$/.test(value) ? value : '';
 }
 
 function oauthRedirectUri(req) {
-  return process.env.DISCORD_REDIRECT_URI || `${reqOrigin(req)}/api/auth/discord/callback`;
+  const origin = reqOrigin(req);
+  if (!origin) return '';
+  const fallback = `${origin}/api/auth/discord/callback`;
+  const configured = String(process.env.DISCORD_REDIRECT_URI || '').trim();
+  if (!configured) return fallback;
+  try {
+    const parsed = new URL(configured);
+    if (parsed.origin !== origin || parsed.pathname !== '/api/auth/discord/callback' || parsed.search || parsed.hash
+      || (process.env.NODE_ENV === 'production' && parsed.protocol !== 'https:')) return '';
+    return parsed.toString();
+  } catch {
+    return '';
+  }
 }
 
 router.get('/auth/discord/url', oauthRateLimit, (req, res) => {
   const clientId = oauthClientId();
+  const redirectUri = oauthRedirectUri(req);
   if (!clientId) return res.status(400).json({ error: 'Aucune application Discord configurée.' });
+  if (!redirectUri) return res.status(503).json({ error: 'URL OAuth Discord invalide ou non configurée.' });
   const state = crypto.randomBytes(16).toString('hex');
   res.cookie('bd_oauth_state', state, security.secureCookieOptions(req, 600000));
   const url = 'https://discord.com/oauth2/authorize'
     + `?client_id=${clientId}`
-    + `&redirect_uri=${encodeURIComponent(oauthRedirectUri(req))}`
+    + `&redirect_uri=${encodeURIComponent(redirectUri)}`
     + '&response_type=code'
     + '&scope=' + encodeURIComponent('identify guilds')
     + `&state=${state}`;
@@ -265,13 +309,19 @@ router.get('/auth/discord/url', oauthRateLimit, (req, res) => {
 
 router.get('/auth/discord/callback', oauthRateLimit, async (req, res) => {
   const { code, state } = req.query;
-  if (!code || state !== req.cookies.bd_oauth_state) return res.redirect('/#/login?oauth=error');
+  const stateCookie = req.cookies && req.cookies.bd_oauth_state;
+  if (!code || !stateCookie || typeof state !== 'string' || !/^[a-f0-9]{32}$/i.test(state) || state !== stateCookie) {
+    res.clearCookie('bd_oauth_state');
+    return res.redirect('/#/login?oauth=error');
+  }
   res.clearCookie('bd_oauth_state');
   const clientId = oauthClientId();
   const secret = process.env.DISCORD_CLIENT_SECRET || '';
+  const redirectUri = oauthRedirectUri(req);
   if (!secret) return res.redirect('/#/dashboard?oauth=nosecret');
+  if (!clientId || !redirectUri || typeof code !== 'string' || code.length > 2048) return res.redirect('/#/dashboard?oauth=error');
   try {
-    const tokenRes = await fetch('https://discord.com/api/oauth2/token', {
+    const tokenResult = await fetchJson('https://discord.com/api/oauth2/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
@@ -279,19 +329,19 @@ router.get('/auth/discord/callback', oauthRateLimit, async (req, res) => {
         client_secret: secret,
         grant_type: 'authorization_code',
         code,
-        redirect_uri: oauthRedirectUri(req),
+        redirect_uri: redirectUri,
       }),
-    });
-    if (!tokenRes.ok) return res.redirect('/#/dashboard?oauth=token');
-    const tokens = await tokenRes.json();
+    }, { timeoutMs: 10000, maxBytes: 128 * 1024 });
+    if (!tokenResult.response.ok || !tokenResult.json || !tokenResult.json.access_token) return res.redirect('/#/dashboard?oauth=token');
+    const tokens = tokenResult.json;
     const h = { Authorization: `Bearer ${tokens.access_token}` };
-    const [meRes, guildsRes] = await Promise.all([
-      fetch('https://discord.com/api/v10/users/@me', { headers: h }),
-      fetch('https://discord.com/api/v10/users/@me/guilds', { headers: h }),
+    const [meResult, guildsResult] = await Promise.all([
+      fetchJson('https://discord.com/api/v10/users/@me', { headers: h }, { timeoutMs: 10000, maxBytes: 256 * 1024 }),
+      fetchJson('https://discord.com/api/v10/users/@me/guilds', { headers: h }, { timeoutMs: 10000, maxBytes: 2 * 1024 * 1024 }),
     ]);
-    if (!meRes.ok) return res.redirect('/#/dashboard?oauth=me');
-    const me = await meRes.json();
-    const guilds = guildsRes.ok ? await guildsRes.json() : [];
+    if (!meResult.response.ok || !meResult.json || !/^\d{15,21}$/.test(String(meResult.json.id || ''))) return res.redirect('/#/dashboard?oauth=me');
+    const me = meResult.json;
+    const guilds = guildsResult.response.ok && Array.isArray(guildsResult.json) ? guildsResult.json : [];
 
     // 1) Compte Discord déjà connu ?
     let user = store.users.findByDiscordId(me.id);
@@ -341,24 +391,24 @@ async function refreshDiscordData(userId) {
     if (new Date(row.expires_at) < new Date(Date.now() + 60000)) {
       const secret = process.env.DISCORD_CLIENT_SECRET || '';
       if (!secret || !row.refresh_token) return false;
-      const res = await fetch('https://discord.com/api/oauth2/token', {
+      const refreshed = await fetchJson('https://discord.com/api/oauth2/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ client_id: oauthClientId(), client_secret: secret, grant_type: 'refresh_token', refresh_token: row.refresh_token }),
-      });
-      if (!res.ok) return false;
-      const d = await res.json();
+      }, { timeoutMs: 10000, maxBytes: 128 * 1024 });
+      if (!refreshed.response.ok || !refreshed.json || !refreshed.json.access_token) return false;
+      const d = refreshed.json;
       access = d.access_token;
-      store.discordTokens.set(userId, { access, refresh: d.refresh_token || row.refresh_token, expires: new Date(Date.now() + d.expires_in * 1000).toISOString() });
+      store.discordTokens.set(userId, { access, refresh: d.refresh_token || row.refresh_token, expires: new Date(Date.now() + (Number(d.expires_in) || 3600) * 1000).toISOString() });
     }
     const h = { Authorization: `Bearer ${access}` };
-    const [meRes, guildsRes] = await Promise.all([
-      fetch('https://discord.com/api/v10/users/@me', { headers: h }),
-      fetch('https://discord.com/api/v10/users/@me/guilds', { headers: h }),
+    const [meResult, guildsResult] = await Promise.all([
+      fetchJson('https://discord.com/api/v10/users/@me', { headers: h }, { timeoutMs: 10000, maxBytes: 256 * 1024 }),
+      fetchJson('https://discord.com/api/v10/users/@me/guilds', { headers: h }, { timeoutMs: 10000, maxBytes: 2 * 1024 * 1024 }),
     ]);
-    if (!meRes.ok) return false;
-    const me = await meRes.json();
-    const guilds = guildsRes.ok ? await guildsRes.json() : [];
+    if (!meResult.response.ok || !meResult.json || !/^\d{15,21}$/.test(String(meResult.json.id || ''))) return false;
+    const me = meResult.json;
+    const guilds = guildsResult.response.ok && Array.isArray(guildsResult.json) ? guildsResult.json : [];
     store.users.updateDiscord(userId, {
       discord_username: me.username,
       discord_avatar: me.avatar || '',
@@ -475,7 +525,7 @@ function botDetail(bot) {
     commands_count: store.commands.all(bot.id).length,
     modules: store.modules.all(bot.id),
     events_count: store.events.countEnabled(bot.id),
-    invite_url: bot.client_id ? `https://discord.com/oauth2/authorize?client_id=${bot.client_id}&permissions=8&scope=bot%20applications.commands` : '',
+    invite_url: inviteUrl(bot.client_id),
   };
 }
 
@@ -3417,45 +3467,23 @@ router.get('/health/backup', (req, res) => {
   res.json({ enabled: backup.enabled() });
 });
 
-// 🩺 Diagnostic public du bot (aucune donnée sensible) : état de connexion,
-// ancienneté des connexions, dernière erreur enregistrée — sert à débugger
-// à distance sans accès aux journaux Render.
+// Diagnostic public minimal : aucune erreur interne, nom de compte, détail DB
+// ou état OAuth. Les diagnostics complets sont réservés au fondateur via
+// /admin/system.
 router.get('/health/bot', (req, res) => {
-  const rows = store.db.prepare('SELECT id, name, enabled, last_error, bot_username FROM bots').all();
-  const clientsState = [];
-  for (const [id, entry] of botManager.clients) {
-    clientsState.push({
-      id,
-      ready: !!(entry.client && entry.client.isReady()),
-      startedAt: entry.startedAt || null,
-      ageMs: entry.startedAt ? Date.now() - entry.startedAt : null,
-    });
+  const botCount = Number(store.db.prepare('SELECT COUNT(*) AS n FROM bots').get().n) || 0;
+  let onlineBotCount = 0;
+  for (const entry of botManager.clients.values()) {
+    try { if (entry.client && entry.client.isReady()) onlineBotCount++; } catch {}
   }
-  // 🩺 Taille de la base + compteurs (sans données sensibles) : permet de
-  // surveiller à distance que la sauvegarde reste sous la limite de 1 Mo.
-  let dbInfo = { sizeKo: 0 };
-  try { dbInfo = require('./maintenance').dbStats(store.db); } catch {}
-  // 🩺 Santé complète : mémoire, erreurs 24 h, plateforme
-  let healthInfo = {};
-  try { healthInfo = require('./health').snapshot(); } catch {}
+  let backupEnabled = false;
+  try { backupEnabled = require('./backup').enabled(); } catch {}
   res.json({
+    status: 'ok',
     processUptimeMs: Math.round(process.uptime() * 1000),
-    tokenConfigured: !!(process.env.HOXERA_TOKEN),
-    oauthConfigured: !!(process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET),
-    botCount: rows.length,
-    bootRestore: store.settings.get('boot_restore') || 'inconnu',
-    backupEnabled: !!process.env.BOTDEV_GH_TOKEN && !!process.env.BOTDEV_DATA_REPO,
-    lastBackup: store.settings.get('last_backup') || '',
-    db: dbInfo,
-    memory: (healthInfo && healthInfo.memory) || {},
-    resources: (healthInfo && healthInfo.resources) || {},
-    cache: (healthInfo && healthInfo.cache) || {},
-    errors24h: (healthInfo && healthInfo.errors24h) || { count: 0, last: [] },
-    platform: (healthInfo && healthInfo.platform) || {},
-    queue: (healthInfo && healthInfo.queue) || { waiting: 0, active: 0, processed: 0, failed: 0, refused: 0 },
-    resilience: (healthInfo && healthInfo.resilience) || { state: 'ok', failuresInWindow: 0 },
-    bots: rows.map((r) => ({ id: r.id, name: r.name, enabled: !!r.enabled, last_error: String(r.last_error || '').slice(0, 200), username: r.bot_username || '' })),
-    clients: clientsState,
+    botCount,
+    onlineBotCount,
+    backupEnabled,
   });
 });
 
@@ -3493,7 +3521,7 @@ router.get('/public/bots', (req, res) => {
     return info || {
       id: b.id, name: b.name, username: b.bot_username || '', avatar_url: b.avatar_url || '',
       client_id: b.client_id || '', online: false, servers: 0, members: 0, ping: 0, uptime: 0,
-      invite_url: b.client_id ? `https://discord.com/oauth2/authorize?client_id=${b.client_id}&permissions=8&scope=bot%20applications.commands` : '',
+      invite_url: inviteUrl(b.client_id),
     };
   });
   res.json({ bots });
@@ -3511,16 +3539,14 @@ router.get('/public/bot-avatar', async (req, res) => {
   }
   try {
     const bot = store.db.prepare('SELECT avatar_url FROM bots ORDER BY id LIMIT 1').get();
-    const url = bot && /^https:\/\//i.test(String(bot.avatar_url || '')) ? String(bot.avatar_url) : '';
-    if (url) {
-      const image = await fetch(url);
-      const contentType = String(image.headers.get('content-type') || '').toLowerCase();
-      const buffer = Buffer.from(await image.arrayBuffer());
-      if (image.ok && contentType.startsWith('image/') && buffer.length > 0 && buffer.length <= 5 * 1024 * 1024) {
-        publicAvatarCache.set('hoxera', { buffer, contentType });
-        res.set('Content-Type', contentType);
+    const url = bot ? String(bot.avatar_url || '') : '';
+    if (imgproxy.isDiscordImageUrl(url)) {
+      const image = await imgproxy.fetchDiscordImage(url);
+      if (image && image.buffer.length > 0) {
+        publicAvatarCache.set('hoxera', { buffer: image.buffer, contentType: image.type });
+        res.set('Content-Type', image.type);
         res.set('Cache-Control', 'public, max-age=600');
-        return res.send(buffer);
+        return res.send(image.buffer);
       }
     }
   } catch {}
@@ -3793,11 +3819,23 @@ router.put('/admin/settings', requireAuth, requireAdmin, platformMutationRateLim
 router.get('/admin/system', requireAuth, requireAdmin, (req, res) => {
   let health = {};
   try { health = require('./health').snapshot(); } catch {}
+  let backupEnabled = false;
+  try { backupEnabled = require('./backup').enabled(); } catch {}
   res.json({
-    uptimeMs: process.uptime() * 1000,
-    memory: (health && health.memory) || {},
+    processUptimeMs: Math.round(process.uptime() * 1000),
+    uptimeMs: process.uptime() * 1000, // compatibilité avec l'ancien rendu fondateur
+    bootRestore: store.settings.get('boot_restore') || 'inconnu',
+    memory: health.memory || {},
+    resources: health.resources || {},
+    cache: health.cache || {},
+    errors24h: health.errors24h || { count: 0, last: [] },
+    platform: health.platform || {},
+    queue: health.queue || { waiting: 0, active: 0, processed: 0, failed: 0, refused: 0 },
+    resilience: health.resilience || { state: 'ok', failuresInWindow: 0 },
+    db: health.db || { fileSizeKo: 0, tables: {} },
     lastBackup: store.settings.get('last_backup') || '',
-    backupEnabled: (() => { try { return require('./backup').enabled(); } catch { return false; } })(),
+    backupEnabled,
+    secretStorage: secretStore.status(),
   });
 });
 

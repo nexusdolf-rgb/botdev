@@ -16,7 +16,7 @@ const dom = new JSDOM(html, { url: 'https://hoxera.is-a.dev/#/', runScripts: 'ou
 const window = dom.window;
 global.window = window;
 global.document = window.document;
-global.navigator = window.navigator;
+Object.defineProperty(global, 'navigator', { value: window.navigator, configurable: true, writable: true });
 global.location = window.location;
 
 const check = (label, cond) => {

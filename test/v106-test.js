@@ -1,7 +1,7 @@
 // Test v2.9 — Bienvenue réparée (le « # » fatal) + await XP + mise à jour auto
 const assert = require('assert');
 const fs = require('fs');
-const dir = '/tmp/v29test-' + Date.now();
+const dir = require('node:os').tmpdir() + '/v29test-' + Date.now();
 fs.mkdirSync(dir, { recursive: true });
 process.env.BOTDEV_DATA_DIR = dir;
 

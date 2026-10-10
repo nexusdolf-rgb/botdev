@@ -295,7 +295,7 @@ const okReply = (i) => {
     url: 'http://localhost:3000/#/dashboard', runScripts: 'outside-only', pretendToBeVisual: true,
   });
   const wdom = dom.window;
-  global.window = wdom; global.document = wdom.document; global.navigator = wdom.navigator; global.location = wdom.location;
+  global.window = wdom; global.document = wdom.document; Object.defineProperty(global, 'navigator', { value: wdom.navigator, configurable: true, writable: true }); global.location = wdom.location;
   wdom.fetch = async (url) => {
     const p = String(url).split('?')[0];
     const resp = (body) => ({ ok: true, status: 200, json: async () => body });

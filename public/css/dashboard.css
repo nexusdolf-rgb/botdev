@@ -7141,3 +7141,136 @@ html.hx-light .admin-platform-page .admin-discord-avatar-fallback { color: #3c41
   .admin-platform-page .admin-health-row { grid-template-columns: 30px minmax(0, 1fr) auto; gap: 7px; }
   .admin-platform-page .admin-state-tag { font-size: 10.5px; }
 }
+
+/* ============================================================
+   v361 — Catalogue de modules : émoticônes dessinées, fiches de
+   lecture, aperçus « façon Discord » et libellés de boutons unifiés.
+   Couche ajoutée à la fin : elle doit prendre le pas sur les couches
+   historiques (certaines sont scopées .dashboard-shell-host).
+   ============================================================ */
+
+/* ---------- 1. L'émoticône d'un module, partout ----------
+   Les couches historiques de ce fichier sont scopées en .dashboard-shell-host
+   (et html.hx-os-pc pour le bureau) : les règles ci-dessous portent donc le
+   même poids, en dernier, pour ne pas lutter contre elles. Elles ne touchent
+   JAMAIS les tailles : chaque couche responsive continue de dimensionner les
+   pastilles, l'image suit simplement la boîte. */
+.mod-emote { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.ico-fallback { display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+html .has-emote .ico-fallback { display: none; }
+
+/* Barre latérale : la pastille accueille l'image pleine largeur */
+html .dashboard-shell-host .dash-side-item .ico { overflow: hidden; }
+html .dashboard-shell-host .dash-side-item .ico.has-emote { background: transparent; border-radius: 7px; }
+html .dashboard-shell-host .dash-side-item .ico.has-emote .mod-emote { border-radius: 7px; }
+html .dashboard-shell-host .dash-side-item.active .ico.has-emote { background: transparent; box-shadow: none; }
+
+/* En-tête de module : l'image remplace le fond dégradé, sans toucher à la taille */
+html .dashboard-shell-host .dash-module-header .m-icon.has-emote,
+html.hx-os-pc .dashboard-shell-host .dash-module-header .m-icon.has-emote {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  border-radius: 12px;
+  overflow: hidden;
+}
+html .dashboard-shell-host .dash-module-header .m-icon.has-emote .mod-emote,
+html.hx-os-pc .dashboard-shell-host .dash-module-header .m-icon.has-emote .mod-emote { border-radius: 12px; }
+
+/* Vues d'ensemble et listes : la boîte garde sa taille, l'image la remplit. */
+html .dashboard-shell-host .ov-module-icon { position: relative; overflow: hidden; background: transparent; border: 0; border-radius: 10px; }
+html .dashboard-shell-host .ov-module-icon .mod-emote { width: 100%; height: 100%; border-radius: 10px; }
+.sheet-ico.has-emote { display: inline-flex; align-items: center; justify-content: center; }
+.sheet-ico .mod-emote { width: 26px; height: 26px; border-radius: 8px; }
+.bnav-ico.has-emote { padding: 2px 9px; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; }
+.bnav-ico.has-emote .mod-emote { width: 24px; height: 24px; border-radius: 8px; }
+.dash-mobile-module-item > .mmi-ico { display: inline-flex; align-items: center; justify-content: center; overflow: hidden; }
+.mmi-ico .mod-emote { width: 22px; height: 22px; border-radius: 7px; }
+html .dashboard-shell-host .dp-ico { background: transparent; overflow: hidden; border-radius: 9px; }
+.dp-ico .mod-emote { width: 30px; height: 30px; border-radius: 9px; }
+.modal-header h3 .mod-emote { width: 26px; height: 26px; border-radius: 8px; display: inline-block; vertical-align: -6px; margin-right: 8px; }
+
+/* ---------- 2. Famille du module, dans l'en-tête ---------- */
+.module-cat {
+  display: inline-flex; align-items: center; padding: 4px 9px; border-radius: 999px;
+  border: 1px solid var(--d-border); background: rgba(var(--d-accent-rgb), .07);
+  color: var(--d-dim); font-size: 10.5px; font-weight: 750; letter-spacing: .3px;
+}
+
+/* ---------- 3. Fiche de lecture (ce que fait le module / l'aperçu) ---------- */
+.mod-guide {
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px;
+  margin: 0 0 20px; padding: 15px 17px;
+  background: linear-gradient(180deg, rgba(var(--d-accent-rgb), .08), rgba(var(--d-accent-rgb), .02));
+  border: 1px solid rgba(var(--d-accent-rgb), .22); border-radius: 15px;
+}
+.mod-guide:has(.mg-side) { grid-template-columns: minmax(0, 1fr) minmax(240px, 330px); }
+.mg-main { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.mg-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px 16px; }
+.mg-col { min-width: 0; }
+.mg-kicker {
+  display: block; margin-bottom: 4px; color: var(--d-accent);
+  font-size: 9.5px; font-weight: 800; letter-spacing: .75px; text-transform: uppercase;
+}
+.mg-col p { margin: 0; color: #c6ccda; font-size: 12.5px; line-height: 1.55; }
+.mg-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.mg-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.mg-side { min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+.mg-modal-note { margin-top: 12px; color: var(--d-dim); font-size: 11.5px; line-height: 1.5; }
+
+/* ---------- 4. Aperçu « façon Discord » ---------- */
+.dprev { background: #313338; border-radius: 12px; padding: 12px 14px; color: #dbdee1; font-size: 13px; }
+.dprev.is-compact { font-size: 12px; padding: 10px 11px; }
+.dprev-text { white-space: pre-wrap; margin-bottom: 8px; line-height: 1.45; }
+.dprev-embed { background: #2b2d31; border-left: 4px solid var(--dprev-bar, var(--d-accent)); border-radius: 6px; padding: 9px 12px; }
+.dprev-title { color: #fff; font-weight: 700; margin-bottom: 5px; font-size: 13.5px; }
+.dprev.is-compact .dprev-title { font-size: 12.5px; }
+.dprev-desc { color: #c9ccd1; line-height: 1.45; white-space: normal; }
+.dprev-foot { margin-top: 7px; color: #949ba4; font-size: 11px; }
+.dprev-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 9px; }
+.dprev-btn {
+  padding: 6px 13px; border-radius: 5px; font-size: 12.5px; font-weight: 600;
+  background: #4e5058; color: #fff; transition: background .13s;
+}
+.dprev-btn.is-green { background: #248046; }
+.dprev-btn.is-red { background: #da373c; }
+.dprev-btn.is-blurple { background: #5865f2; }
+.dprev-btn.is-purple { background: #9b59b6; }
+.dprev-btn.is-grey { background: #4e5058; }
+.dprev:hover .dprev-btn { filter: brightness(1.08); }
+
+/* ---------- 5. Familles dans la vue d'ensemble ---------- */
+.ov-module-cat {
+  grid-column: 1 / -1; display: flex; align-items: center; gap: 8px;
+  margin: 6px 0 -2px; color: var(--d-dim);
+  font-size: 10.5px; font-weight: 800; letter-spacing: 1.1px; text-transform: uppercase;
+}
+.ov-module-cat small {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 19px; height: 19px;
+  padding: 0 5px; border-radius: 999px; background: rgba(var(--d-accent-rgb), .14);
+  color: var(--d-accent); font-size: 10.5px; letter-spacing: 0;
+}
+.ov-module-card { align-content: start; }
+
+/* ---------- 6. Boutons : un seul langage de libellé ---------- */
+.dash-btn { white-space: nowrap; }
+.dash-btn .btn-ico { margin-right: 6px; }
+.dash-btn-danger { color: #ffb4b8; }
+html.hx-light .mod-guide { background: linear-gradient(180deg, rgba(86,103,217, .06), rgba(86,103,217, .02)); border-color: #d3ddef; }
+html.hx-light .mg-col p { color: #46536b; }
+html.hx-light .module-cat { color: #687893; background: rgba(86,103,217, .06); border-color: #d3ddef; }
+
+/* ---------- 7. Responsive ---------- */
+@media (max-width: 1180px) {
+  .mod-guide:has(.mg-side) { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 700px) {
+  .mod-guide { padding: 13px 13px; border-radius: 13px; }
+  .mg-cols { grid-template-columns: 1fr; gap: 10px; }
+  .mg-foot { flex-direction: column; align-items: stretch; }
+  .mg-actions { justify-content: flex-start; }
+  .mg-actions .dash-btn { flex: 1; justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dprev:hover .dprev-btn { filter: none; }
+}

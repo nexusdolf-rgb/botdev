@@ -45,7 +45,7 @@ const dom = new JSDOM('<!DOCTYPE html><html><body><div id="app"></div><div id="t
   url: 'http://localhost:3000/#/dashboard', runScripts: 'outside-only', pretendToBeVisual: true,
 });
 const w = dom.window;
-global.window = w; global.document = w.document; global.navigator = w.navigator; global.location = w.location;
+global.window = w; global.document = w.document; Object.defineProperty(global, 'navigator', { value: w.navigator, configurable: true, writable: true }); global.location = w.location;
 w.fetch = async () => ({ ok: true, status: 200, json: async () => ({}) });
 
 const code = ['app.js', 'editor.js', 'views.js', 'public.js', 'dashboard.js']

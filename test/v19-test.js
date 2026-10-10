@@ -2,7 +2,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const http = require('http');
+const sharp = require('sharp');
 const assert = require('assert');
 
 const DATA_DIR = path.join(os.tmpdir(), `botdev-v19-${Date.now()}`);
@@ -22,16 +22,18 @@ const fakeChannel = {
   }),
 };
 
-// Petit serveur HTTP local qui sert un PNG factice (pour l'URL de l'avatar)
-const PNG = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3, 4, 5, 6, 7, 8]);
-const imgServer = http.createServer((req, res) => {
-  res.writeHead(200, { 'Content-Type': 'image/png' });
-  res.end(PNG);
-});
+// Image PNG réelle + fetch simulé sur un hôte CDN Discord autorisé.
+const IMG_URL = 'https://cdn.discordapp.com/attachments/123456789012345678/123456789012345678/avatar.png';
+const originalFetch = global.fetch;
+let PNG;
 
 (async () => {
-  await new Promise((r) => imgServer.listen(0, '127.0.0.1', r));
-  const imgUrl = `http://127.0.0.1:${imgServer.address().port}/avatar.png`;
+  PNG = await sharp({ create: { width: 1, height: 1, channels: 4, background: '#193f67' } }).png().toBuffer();
+  const imgUrl = IMG_URL;
+  global.fetch = async (url) => {
+    assert.strictEqual(String(url), imgUrl, 'seul le CDN Discord autorisé est appelé');
+    return new Response(PNG, { headers: { 'content-type': 'image/png' } });
+  };
 
   store.bots.create({ user_id: 1, name: 'Hoxera', token: 'T', client_id: '1', prefix: '!' });
 
@@ -144,7 +146,7 @@ const imgServer = http.createServer((req, res) => {
   assert(bp.options[0].name === 'setup', 'setup en premier');
   console.log('🔟  Payload /botprofile : setup ✅ (', bp.options.map((o) => o.name).join(', '), ')');
 
-  imgServer.close();
+  global.fetch = originalFetch;
   console.log('\n🎉 Tous les tests v1.19 passent !');
   process.exit(0);
-})().catch((e) => { console.error('❌', e.message); process.exit(1); });
+})().catch((e) => { global.fetch = originalFetch; console.error('❌', e.message); process.exit(1); });

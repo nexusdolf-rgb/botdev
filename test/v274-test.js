@@ -4,7 +4,9 @@
 //
 //   • dashboard : les icônes de modules (nav, grille, recherche, mobile)
 //     affichent nos PNG terracotta servis par le bot (/emotes/hox_*.png),
-//     avec repli automatique sur l'émoji texte si l'image manque ;
+//     avec repli automatique sur l'émoji texte si l'image manque.
+//     (La version 274 était revenue aux émojis texte ; la version 361 a
+//     redonné à chaque module SON émoticône — voir test/v361-test.js.)
 //   • Discord : /emotes install ajoute le pack au serveur (tout le monde
 //     peut ensuite les utiliser), /emotes view le montre dans un panneau ;
 //   • NI les émojis vocaux (pack hox_* du panneau), NI les émojis de tickets
@@ -17,7 +19,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const dir = '/tmp/v274test-' + Date.now();
+const dir = require('node:os').tmpdir() + '/v274test-' + Date.now();
 fs.mkdirSync(dir, { recursive: true });
 process.env.BOTDEV_DATA_DIR = dir;
 
@@ -44,11 +46,20 @@ const KEYS = ['vue', 'ticket', 'bienvenue', 'niveaux', 'eco', 'boutique', 'mod',
   check('…tous sous la limite Discord (256 Ko)', KEYS.every((k) => fs.statSync(path.join(assets, 'hox_' + k + '.png')).size < 256000));
   check('liste officielle du pack', JSON.stringify(extra.HOX_SIG_EMOTES.slice().sort()) === JSON.stringify(KEYS.slice().sort()));
 
-  console.log("— 2. Dashboard laissé intact (icônes d'origine) —");
+  console.log("— 2. Dashboard : nos PNG affichés par module (depuis v361) —");
+  // Historique : la version 274 avait REMIS les émojis texte partout, par
+  // prudence. La demande du 10/10/2026 (« chaque module doit avoir SON
+  // émoticône, pas un émoji de tout le monde ») a tranché : le catalogue
+  // v361 donne à chaque module son image, l'émoji texte ne servant plus que
+  // de repli. Ce bloc vérifie donc maintenant la présence de l'intégration.
   const dash = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'dashboard.js'), 'utf8');
-  const carte = (dash.match(/Dashboard\.HOX_EMOTES = \{([^}]*)\}/) || [0, ''])[1];
-  check('dashboard REVENUs aux icônes d origine (sans nos PNG)', !dash.includes('moduleIcon') && !dash.includes('HOX_EMOTES'));
-  check('css dashboard sans .hox-ico', !fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'dashboard.css'), 'utf8').includes('.hox-ico'));
+  const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'dashboard.css'), 'utf8');
+  const meta = (dash.match(/Dashboard\.MODULE_META = \{([\s\S]*?)\n\};/) || [0, ''])[1];
+  const emotes = [...meta.matchAll(/emote: '(hox_[a-z]+)'/g)].map((m) => m[1]);
+  check('le catalogue donne une image à chaque module', emotes.length === 39, String(emotes.length));
+  check('…servies par le bot depuis /emotes', dash.includes('src=\"/emotes/${meta.emote}.png\"'));
+  check('…avec repli sur l\'émoji texte (ico-fallback)', dash.includes('ico-fallback') && css.includes('.has-emote .ico-fallback'));
+  check('css dashboard : la classe des images de modules', css.includes('.mod-emote'));
   const cmd = extra.buildExtraPayloads().find((c) => c && c.name === 'emotes');
   check('commande /emotes (install / view)', !!cmd && JSON.stringify(cmd.options).includes('install') && JSON.stringify(cmd.options).includes('view'));
   let seq = 0;

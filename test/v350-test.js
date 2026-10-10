@@ -80,7 +80,7 @@ function fakeResponse() {
   const originalFetch = global.fetch;
   global.fetch = async (url) => {
     avatarRequests.push(String(url));
-    return { ok: true, arrayBuffer: async () => avatarPng };
+    return { ok: true, headers: { get: (name) => String(name).toLowerCase() === 'content-type' ? 'image/png' : null }, arrayBuffer: async () => avatarPng };
   };
 
   try {
@@ -96,7 +96,7 @@ function fakeResponse() {
     check('le nom est échappé avant insertion dans le SVG',
       community.levelUpCardSvg({ name: 'A&B<C>', level: 2 }).includes('A&amp;B&lt;C&gt;'));
 
-    const avatarUrl = 'https://cdn.example/alex-avatar.png';
+    const avatarUrl = 'https://cdn.discordapp.com/avatars/123456789012345678/alex-avatar.png';
     const png = await community.levelUpCard({ avatarUrl, name: 'Alex', level: 12, pct: 0.42 });
     const meta = await sharp(png).metadata();
     const svgOnly = await sharp(Buffer.from(svg)).png().toBuffer();
@@ -170,7 +170,7 @@ function fakeResponse() {
       check('le webhook ne reçoit ni content séparé, ni embed, ni fichier',
         payload && payload.content === undefined && payload.embeds === undefined && payload.files === undefined);
       check('la carte de l’annonce utilise l’avatar Discord du membre',
-        avatarRequests.includes(`https://cdn.example/member/${USER}.png`));
+        avatarRequests.includes('https://cdn.discordapp.com/avatars/123456789012345678/alex-avatar.png'));
       check('le niveau atteint et le calcul XP sont conservés',
         (store.xp.get(BOT, GUILD, USER) || {}).level === 1);
 

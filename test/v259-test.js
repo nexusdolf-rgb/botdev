@@ -17,7 +17,7 @@
 //     module tickets (lien et extrait du message en raison) ;
 //   • toutes les confirmations sont éphémères (v238).
 
-process.env.BOTDEV_DATA_DIR = process.env.BOTDEV_DATA_DIR || require('node:fs').mkdtempSync('/tmp/v259-');
+process.env.BOTDEV_DATA_DIR = process.env.BOTDEV_DATA_DIR || require('node:fs').mkdtempSync(require('node:os').tmpdir() + '/v259-');
 
 const fs = require('node:fs');
 const path = require('node:path');

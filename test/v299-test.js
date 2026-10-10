@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const { MessageFlags } = require('discord.js');
 
-const TMP = path.join(__dirname, '.tmp-v299');
+const TMP = path.join(require('node:os').tmpdir(), 'hoxera-v299-' + process.pid + '-' + Date.now());
 fs.rmSync(TMP, { recursive: true, force: true });
 process.env.BOTDEV_DATA_DIR = TMP;
 fs.mkdirSync(TMP, { recursive: true });

@@ -15,7 +15,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const dir = '/tmp/v272test-' + Date.now();
+const dir = require('node:os').tmpdir() + '/v272test-' + Date.now();
 fs.mkdirSync(dir, { recursive: true });
 process.env.BOTDEV_DATA_DIR = dir;
 

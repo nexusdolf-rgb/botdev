@@ -12,29 +12,51 @@
 //   BOTDEV_DATA_REPO = propriétaire/dépôt  (ex : nexusdolf-rgb/botdev-data)
 //   BOTDEV_DATA_BRANCH = branche (optionnel, défaut : branche par défaut)
 // ============================================================
-const fs = require('fs');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const crypto = require('node:crypto');
 const paths = require('./paths');
+const { fetchJson, readLimitedBody } = require('./http');
 
-const GITHUB_API = process.env.BOTDEV_GITHUB_API || 'https://api.github.com';
+function githubApiBase() {
+  const raw = String(process.env.BOTDEV_GITHUB_API || 'https://api.github.com').replace(/\/$/, '');
+  const parsed = new URL(raw);
+  const host = parsed.hostname.toLowerCase();
+  const isLocal = ['localhost', '127.0.0.1', '::1', '[::1]'].includes(host);
+  const production = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
+  if (parsed.username || parsed.password || parsed.search || parsed.hash
+    || (isLocal && (production || parsed.protocol !== 'http:'))
+    || (!isLocal && (host !== 'api.github.com' || parsed.protocol !== 'https:' || parsed.port || parsed.pathname !== '/'))) {
+    throw new Error('URL de l’API GitHub invalide.');
+  }
+  return parsed.origin + parsed.pathname.replace(/\/$/, '');
+}
 // 🛟 Taille max de la sauvegarde : sous la limite de 1 Mo de l'API GitHub
 // (les fichiers plus gros ne sont plus lisibles via l'API standard).
 const MAX_BACKUP_BYTES = 900 * 1024;
 const FILE = 'botdev.db';
 
-function enabled() {
-  return !!(process.env.BOTDEV_GH_TOKEN && process.env.BOTDEV_DATA_REPO);
+function repo() {
+  const value = String(process.env.BOTDEV_DATA_REPO || '').trim();
+  const [owner, name, extra] = value.split('/');
+  if (extra !== undefined || !/^[A-Za-z0-9](?:[A-Za-z0-9_.-]{0,98}[A-Za-z0-9])?$/.test(owner || '')
+    || !/^[A-Za-z0-9](?:[A-Za-z0-9_.-]{0,98}[A-Za-z0-9])?$/.test(name || '')
+    || owner === '..' || name === '..') return '';
+  return value;
 }
 
-function repo() {
-  return process.env.BOTDEV_DATA_REPO || '';
+function enabled() {
+  return !!(process.env.BOTDEV_GH_TOKEN && repo());
 }
 
 function branch() {
-  return process.env.BOTDEV_DATA_BRANCH || '';
+  return String(process.env.BOTDEV_DATA_BRANCH || '').trim().slice(0, 200);
 }
 
 async function ghJson(route, { method = 'GET', body, token } = {}) {
-  const res = await fetch(`${GITHUB_API}${route}`, {
+  const base = githubApiBase();
+  const result = await fetchJson(`${base}${route}`, {
     method,
     headers: {
       Authorization: `Bearer ${token}`,
@@ -43,16 +65,15 @@ async function ghJson(route, { method = 'GET', body, token } = {}) {
       ...(body ? { 'Content-Type': 'application/json' } : {}),
     },
     body,
-  });
-  let json = null;
-  try { json = await res.json(); } catch {}
-  if (!res.ok) {
-    const msg = json && json.message ? json.message : `HTTP ${res.status}`;
-    const err = new Error(`GitHub ${route} : ${msg}`);
-    err.status = res.status;
+  }, { timeoutMs: 15000, maxBytes: 2 * 1024 * 1024 });
+  if (!result.response.ok) {
+    const msg = result.json && result.json.message ? result.json.message : `HTTP ${result.response.status}`;
+    const err = new Error(`GitHub : ${String(msg).slice(0, 160)}`);
+    err.status = result.response.status;
     throw err;
   }
-  return json;
+  if (!result.json || typeof result.json !== 'object') throw new Error('Réponse GitHub invalide.');
+  return result.json;
 }
 
 function isValidSqlite(buf) {
@@ -63,69 +84,82 @@ function isValidSqlite(buf) {
 // moins un bot dedans (une base sans bot est le symptôme exact de la base
 // fraîche qu'il ne faut JAMAIS restaurer ni ré-écrire par-dessus la bonne).
 function countBotsIn(buf) {
-  const tmp = paths.dbPath + '.incoming';
+  const tmp = path.join(os.tmpdir(), `hoxera-backup-check-${process.pid}-${crypto.randomBytes(8).toString('hex')}.db`);
+  let check = null;
   try {
-    fs.writeFileSync(tmp, buf);
+    fs.writeFileSync(tmp, buf, { mode: 0o600, flag: 'wx' });
     const Database = require('better-sqlite3');
-    const check = new Database(tmp, { readonly: true });
-    const n = check.prepare('SELECT COUNT(*) AS n FROM bots').get().n || 0;
-    check.close();
-    return n;
+    check = new Database(tmp, { readonly: true, fileMustExist: true });
+    return Number(check.prepare('SELECT COUNT(*) AS n FROM bots').get().n) || 0;
   } catch { return 0; }
-  finally { try { fs.rmSync(tmp, { force: true }); } catch {} }
+  finally {
+    try { if (check) check.close(); } catch {}
+    try { fs.rmSync(tmp, { force: true }); } catch {}
+  }
+}
+
+async function readRaw(url, headers, maxBytes, allowedHosts) {
+  let parsed;
+  try { parsed = new URL(url); } catch { return null; }
+  if (parsed.protocol !== 'https:' || !allowedHosts.has(parsed.hostname) || parsed.port || parsed.username || parsed.password) return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch(parsed.toString(), { headers, signal: controller.signal, redirect: 'error' });
+    if (!response.ok) return null;
+    return await readLimitedBody(response, maxBytes);
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // Télécharge la sauvegarde distante. Retourne un Buffer ou null.
-// (L'API GitHub peut mettre 1-2 s à propager un fichier fraîchement écrit :
-// on retente donc quelques fois en cas de 404.)
 async function download() {
   if (!enabled()) return null;
   const token = process.env.BOTDEV_GH_TOKEN;
   const r = repo();
   const b = branch();
-  const apiUrl = `/repos/${r}/contents/${FILE}${b ? `?ref=${encodeURIComponent(b)}` : ''}`;
+  const apiUrl = `/repos/${r.split('/').map(encodeURIComponent).join('/')}/contents/${FILE}${b ? `?ref=${encodeURIComponent(b)}` : ''}`;
   let meta = null;
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       meta = await module.exports.ghJson(apiUrl, { token });
       break;
-    } catch (e) {
-      if (e.status === 404 && attempt < 3) {
+    } catch (error) {
+      if (error.status === 404 && attempt < 3) {
         await new Promise((resolve) => setTimeout(resolve, 1500));
         continue;
       }
-      if (e.status === 404) return null; // pas encore de sauvegarde
-      throw e;
+      if (error.status === 404) return null;
+      throw error;
     }
   }
-  let buf = null;
-  // 1) Contenu base64 (fichiers ≤ 1 Mo). ⚠️ Pour les fichiers > 1 Mo, l'API
-  //    renvoie content = "" (chaîne vide !) → on ne décode QUE si non vide.
+  let buffer = null;
   if (meta && typeof meta.content === 'string' && meta.content.length > 0) {
-    buf = Buffer.from(meta.content.replace(/\s/g, ''), 'base64');
+    const encoded = meta.content.replace(/\s/g, '');
+    const maxEncoded = Math.ceil(MAX_BACKUP_BYTES * 4 / 3) + 8;
+    if (encoded.length <= maxEncoded && encoded.length % 4 === 0 && /^[A-Za-z0-9+/]*={0,2}$/.test(encoded)) {
+      const decoded = Buffer.from(encoded, 'base64');
+      if (decoded.toString('base64') === encoded && decoded.length <= MAX_BACKUP_BYTES) buffer = decoded;
+    }
   }
-  // 2) Téléchargement brut via download_url (fichiers > 1 Mo)
-  if ((!buf || buf.length === 0) && meta && meta.download_url) {
-    try {
-      const res = await fetch(meta.download_url, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) buf = Buffer.from(await res.arrayBuffer());
-    } catch {}
+  if ((!buffer || !buffer.length) && meta && meta.download_url) {
+    buffer = await readRaw(meta.download_url, { Authorization: `Bearer ${token}` }, MAX_BACKUP_BYTES,
+      new Set(['raw.githubusercontent.com']));
   }
-  // 3) Dernier recours : brut via l'API avec Accept: raw
-  if ((!buf || buf.length === 0) && meta && meta.sha) {
-    try {
-      const raw = await fetch(`${GITHUB_API}${apiUrl}`, {
-        headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.raw' },
-      });
-      if (raw.ok) buf = Buffer.from(await raw.arrayBuffer());
-    } catch {}
+  if ((!buffer || !buffer.length) && meta && meta.sha) {
+    const rawUrl = `${githubApiBase()}${apiUrl}`;
+    buffer = await readRaw(rawUrl, { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.raw' }, MAX_BACKUP_BYTES,
+      new Set([new URL(githubApiBase()).hostname]));
   }
-  if (!buf || buf.length === 0) return null;
-  if (!isValidSqlite(buf)) {
-    console.log('[BotDev] ⚠️ Sauvegarde distante invalide, ignorée');
+  if (!buffer || buffer.length === 0) return null;
+  if (!isValidSqlite(buffer)) {
+    console.log('[Hoxera] sauvegarde distante invalide, ignorée');
     return null;
   }
-  return buf;
+  return buffer;
 }
 
 // Restaure la base au démarrage (à appeler AVANT d'ouvrir la base locale).
@@ -153,7 +187,13 @@ async function restore() {
       console.log('🛟 Sauvegarde distante SANS bot — ignorée. (taille reçue : ' + buf.length + ' octets)');
       return false;
     }
-    fs.writeFileSync(paths.dbPath, buf);
+    const restoreTmp = `${paths.dbPath}.restore-${process.pid}-${crypto.randomBytes(6).toString('hex')}`;
+    try {
+      fs.writeFileSync(restoreTmp, buf, { mode: 0o600, flag: 'wx' });
+      fs.renameSync(restoreTmp, paths.dbPath);
+    } finally {
+      try { fs.rmSync(restoreTmp, { force: true }); } catch {}
+    }
     for (const suffix of ['-wal', '-shm']) {
       try { fs.rmSync(paths.dbPath + suffix, { force: true }); } catch {}
     }
@@ -178,69 +218,66 @@ async function snapshot(db) {
   }
 }
 
-// Envoie la sauvegarde sur GitHub.
-async function upload(db) {
+// Envoie les sauvegardes en série : auto-save + demande manuelle ne se
+// disputent pas le SHA GitHub, et un échec précédent ne bloque pas la file.
+let uploadQueue = Promise.resolve();
+function upload(db) {
+  const task = uploadQueue.catch(() => false).then(() => performUpload(db));
+  uploadQueue = task;
+  return task;
+}
+
+async function performUpload(db) {
   if (!enabled()) return false;
   const token = process.env.BOTDEV_GH_TOKEN;
   const r = repo();
   const b = branch();
+  const apiPath = `/repos/${r.split('/').map(encodeURIComponent).join('/')}/contents/${FILE}`;
+  const metaPath = `${apiPath}${b ? `?ref=${encodeURIComponent(b)}` : ''}`;
   const buf = await snapshot(db);
-
-  // 🛟 GARDE-FOU TAILLE : la base ne doit JAMAIS repasser au-dessus de la
-  // limite de 1 Mo de l'API GitHub (c'est exactement ce qui a déclenché la
-  // panne). Au-delà, on refuse de sauvegarder et on journalise.
   const bufSize = buf.length;
   if (bufSize > MAX_BACKUP_BYTES) {
-    console.error(`🛟 Sauvegarde ANNULÉE : la base fait ${bufSize} octets (max ${MAX_BACKUP_BYTES}). Vérifie ce qui la fait grossir !`);
+    console.error(`[Hoxera] sauvegarde annulée : base ${bufSize} octets (maximum ${MAX_BACKUP_BYTES}).`);
     return false;
   }
 
-  let sha = null;
-  try {
-    const meta = await module.exports.ghJson(`/repos/${r}/contents/${FILE}${b ? `?ref=${encodeURIComponent(b)}` : ''}`, { token });
-    sha = meta && meta.sha;
-  } catch (e) {
-    if (e.status !== 404) throw e;
-  }
-
-  // 🛟 GARDE-FOU ANTI-CATASTROPHE : ne JAMAIS écraser la bonne sauvegarde
-  // distante par une base vide/fraîche (bot absent). C'est exactement ce qui
-  // a détruit les données : une instance sans données a sauvegardé sa base
-  // vide par-dessus la bonne.
-  let botCount = 0;
-  try { botCount = db.prepare('SELECT COUNT(*) AS n FROM bots').get().n || 0; } catch {}
-  if (botCount === 0 && sha) {
-    console.log('🛟 Sauvegarde ANNULÉE : la base locale n\'a aucun bot (base vide ?) — la bonne sauvegarde distante est préservée.');
-    return false;
-  }
-  // 🛟 v302 — GARDE-FOU « BASE FRAÎCHE » : une instance qui vient de démarrer
-  // sans réussir sa restauration (token GitHub mort, panne réseau…) se
-  // retrouve avec 1 bot provisionné mais AUCUN réglage de serveur. Si elle
-  // poussait sa base, la sauvegarde distante (qui contient tout le travail :
-  // réglages, tickets, transcriptions…) serait écrasée par 4 Ko vides.
-  // Une vraie base en service a toujours au moins un réglage de serveur.
-  let guildCfgCount = 0;
-  try { guildCfgCount = db.prepare('SELECT COUNT(*) AS n FROM guild_settings').get().n || 0; } catch {}
-  if (guildCfgCount === 0 && sha) {
-    console.log('🛟 Sauvegarde ANNULÉE : la base locale n\'a aucun réglage de serveur (instance fraîche / restauration ratée ?) — la bonne sauvegarde distante est préservée.');
-    return false;
-  }
-  const body = {
-    message: `💾 botdev.db (${new Date().toISOString()})`,
-    content: buf.toString('base64'),
-    ...(sha ? { sha } : {}),
-    ...(b ? { branch: b } : {}),
-  };
-  // 🔁 3 tentatives en cas d'erreur réseau passagère
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  const fetchSha = async () => {
     try {
-      await module.exports.ghJson(`/repos/${r}/contents/${FILE}`, { method: 'PUT', body: JSON.stringify(body), token });
-      console.log(`[BotDev] 💾 Sauvegarde envoyée (${bufSize} octets${attempt > 1 ? `, tentative ${attempt}` : ''})`);
+      const meta = await module.exports.ghJson(metaPath, { token });
+      return meta && typeof meta.sha === 'string' ? meta.sha : null;
+    } catch (error) {
+      if (error.status === 404) return null;
+      throw error;
+    }
+  };
+  let sha = await fetchSha();
+
+  // Ne jamais remplacer une sauvegarde valide par une base vide/fraîche.
+  let botCount = 0;
+  let guildCfgCount = 0;
+  try { botCount = Number(db.prepare('SELECT COUNT(*) AS n FROM bots').get().n) || 0; } catch {}
+  try { guildCfgCount = Number(db.prepare('SELECT COUNT(*) AS n FROM guild_settings').get().n) || 0; } catch {}
+  if (sha && (botCount === 0 || guildCfgCount === 0)) {
+    console.warn('[Hoxera] sauvegarde annulée : base fraîche/vide, la copie GitHub existante est préservée.');
+    return false;
+  }
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const body = {
+      message: `Hoxera backup (${new Date().toISOString()})`,
+      content: buf.toString('base64'),
+      ...(sha ? { sha } : {}),
+      ...(b ? { branch: b } : {}),
+    };
+    try {
+      await module.exports.ghJson(apiPath, { method: 'PUT', body: JSON.stringify(body), token });
+      console.log(`[Hoxera] sauvegarde envoyée (${bufSize} octets${attempt > 1 ? `, tentative ${attempt}` : ''})`);
       return true;
-    } catch (e) {
-      if (attempt === 3) throw e;
-      console.log(`[BotDev] ⚠️ Sauvegarde échouée (${e.message}) — nouvelle tentative…`);
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+    } catch (error) {
+      if (attempt === 3) throw error;
+      console.warn(`[Hoxera] sauvegarde échouée (${String(error.message || error).slice(0, 120)}), nouvelle tentative…`);
+      await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+      sha = await fetchSha();
     }
   }
   return false;
@@ -294,6 +331,7 @@ function startRestoreRetries(getDb) {
   restoreRetryTimer = setInterval(() => {
     module.exports._retryRestoreOnce(getDb).catch(() => { /* prochain cycle dans 5 min */ });
   }, RESTORE_RETRY_INTERVAL_MS);
+  restoreRetryTimer.unref();
 }
 
 function stopRestoreRetries() {

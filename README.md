@@ -1,6 +1,13 @@
 # 🤖 Hoxera
 
-**Hoxera** est un bot Discord complet + dashboard web **100 % gratuit** (Render + GitHub), inspiré de DraftBot et Ticket Tool — sans écrire une ligne de code.
+**Hoxera** est un bot Discord complet + dashboard web (Render + GitHub), inspiré de DraftBot et Ticket Tool — sans écrire une ligne de code.
+
+## Exploitation et sécurité
+
+- **Runtime requis : Node.js 24 LTS.** En production, installe avec `npm ci` et lance `npm run check` avant chaque déploiement.
+- Les mises à jour sont suivies par CI, `npm audit` et Dependabot; leurs contrôles réduisent le risque mais ne constituent pas une garantie d'absence de vulnérabilités.
+- Les tokens Discord et OAuth sont chiffrés dans SQLite. Configure une clé privée stable de 64 caractères hexadécimaux `BOTDEV_DATA_ENCRYPTION_KEY` (par exemple `openssl rand -hex 32`), conserve-la hors du dépôt et sauvegarde-la séparément des données chiffrées.
+- Les nouveaux liens d'invitation demandent des permissions ciblées et **pas** `Administrator`. Vérifie la hiérarchie des rôles Discord pour les actions de modération.
 
 ## 🆕 Hoxera 2.0 (v33) — la grosse mise à jour
 
@@ -106,7 +113,7 @@ La plateforme est devenue un **site dédié à Hoxera** :
 - **Site public** (aucun compte requis) : accueil avec stats en direct, fonctionnalités, bouton d'invitation
 - **Connexion 100 % Discord** : les formulaires email/mot de passe sont supprimés — un seul bouton « 🎮 Se connecter avec Discord ». Une fois lié, les boutons disparaissent et le dashboard s'ouvre directement
 - **Dashboard pré-câblé à Hoxera** : sidebar avec la liste des serveurs Discord de l'utilisateur + tous les modules (tickets, niveaux, boutique, giveaways, modération, journaux…) — seuls les propriétaires/administrateurs des serveurs où Hoxera est présent peuvent configurer
-- **Provisionnement automatique** : Hoxera est créé et connecté automatiquement au démarrage via les variables d'environnement (`HOXERA_TOKEN` recommandé — `NOXERA_TOKEN`/`NEXORA_TOKEN` restent acceptés par compatibilité, et `HOXERA_CLIENT_ID`) — plus aucune « création de bot »
+- **Provisionnement automatique** : Hoxera est créé et connecté au démarrage avec `HOXERA_TOKEN` et `HOXERA_CLIENT_ID`; les anciens alias de token ne sont plus acceptés — plus aucune « création de bot » manuelle
 
 ## 🎨 Dashboard v2 (façon DraftBot) — reconstruction propre
 
@@ -115,6 +122,15 @@ Le dashboard a été **entièrement reconstruit** (anciennes interfaces et fichi
 - **Shell professionnel** : barre latérale avec **la liste de tes serveurs Discord** (icônes + statut) en haut, puis les modules du serveur sélectionné, puis les réglages du bot
 - **Sélecteur de serveur** + modules synchronisés en temps réel avec le bot (même base par serveur)
 - **Flux d'authentification fluide** : connexion avec Discord → les boutons « Se connecter / Créer un compte » **disparaissent automatiquement** → le dashboard s'ouvre directement sur tes serveurs. Si le compte n'est pas encore lié, un bouton « 🎮 Lier mon Discord » est proposé partout.
+
+### 🧩 Présentation des modules (v361)
+
+- **Un module = une émoticône.** Chaque module a sa propre icône dessinée (`public/emotes/hox_*.png`, 128 × 128, fond terracotta), reprise dans la barre latérale, la nav mobile, la feuille « Plus », la recherche Ctrl+K, les cartes de la vue d'ensemble et l'en-tête du module. Pas d'émoji universel (🎉, …) comme identité : l'émoji texte ne sert que de repli si l'image manque.
+- **Le menu suit des familles** : Démarrer · Communauté & support · Vie du serveur · Sécurité & modération · Publication & contenu · Réglages du serveur · Administration du bot.
+- **Fiche de lecture en haut de chaque module** : ce que fait le module, ce que voient les membres sur Discord, où le régler depuis Discord — et un **aperçu du message** que le bot enverra (bouton « Agrandir l'aperçu »). Tout vient de `Dashboard.MODULE_META` dans `public/js/dashboard.js` ; `test/v361-test.js` vérifie que les 39 modules sont couverts et que chaque image existe.
+- **Libellés de boutons unifiés** : `Enregistrer`, `Enregistrer la liste noire`, `Envoyer sur Discord`, `Modifier`, `Supprimer`, `Ajouter`, `Réinitialiser les valeurs`, `Exporter en CSV`… Les glyphes décoratifs (💾 🗑 ✏️) ne portent plus les textes, et la barre flottante « Tout enregistrer » s'appuie sur la classe `dash-save-action`.
+- **Ajouter ou redessiner une émoticône** : `python3 scripts/gen-emotes.py --force`, puis `npm test`. Le pack installable sur Discord (`/emotes install`) reste volontairement à 25 émojis (`HOX_SIG_EMOTES`).
+- **Aperçu statique pour juger le rendu** : `node scripts/render-preview.js` écrit `maquette-v361-modules.html` (vrai HTML du dashboard + CSS officiel, images incluses), à ouvrir dans un navigateur.
 
 ## 🎨 Dashboard v2 (façon DraftBot) + couche animation
 
@@ -144,9 +160,12 @@ Pour activer « Se connecter avec Discord » et le dashboard par serveur :
 2. Sur Render → ton service → **Environment** :
    | Variable | Valeur |
    |---|---|
-   | `DISCORD_CLIENT_ID` | `1537443352281088000` |
-   | `DISCORD_CLIENT_SECRET` | le secret copié à l'étape 1 |
-   | `DISCORD_REDIRECT_URI` | (optionnel) auto-détecté sinon |
+   | `DISCORD_CLIENT_ID` | ID de l'application Discord |
+   | `DISCORD_CLIENT_SECRET` | secret copié à l'étape 1 |
+   | `DISCORD_REDIRECT_URI` | `https://hoxera.is-a.dev/api/auth/discord/callback` |
+   | `PUBLIC_ORIGIN` | `https://hoxera.is-a.dev` (origine publique exacte) |
+   | `NEXORA_ADMIN_DISCORD_ID` | ID numérique du compte fondateur; sans valeur valide, l'administration reste verrouillée |
+   | `BOTDEV_DATA_ENCRYPTION_KEY` | clé stable de 64 caractères hexadécimaux, créée avec `openssl rand -hex 32`; à conserver hors du dépôt |
 
 C'est tout : le bouton « 🎮 Se connecter avec Discord » apparaît, et l'onglet « 🌍 Serveurs » de chaque bot permet de configurer ses serveurs.
 
@@ -161,8 +180,9 @@ Variables d'environnement à définir sur Render :
 | `BOTDEV_GH_TOKEN` | Token GitHub fine-grained, permission **Contents : Read and write**, limité à un dépôt **privé** (ex : `botdev-data`) |
 | `BOTDEV_DATA_REPO` | `pseudo/botdev-data` |
 | `BOTDEV_DATA_BRANCH` | (optionnel) branche du dépôt |
+| `BOTDEV_DATA_DIR` | (optionnel) répertoire persistant réservé aux données locales |
 
-Fréquence : sauvegarde toutes les 10 min + sauvegarde finale à l'arrêt. Restauration automatique à chaque démarrage.
+Le PAT doit être limité à un dépôt privé et à l'accès **Contents**. Les fichiers SQLite contiennent des données chiffrées avec `BOTDEV_DATA_ENCRYPTION_KEY`; conserve cette clé hors du dépôt et séparément de la sauvegarde. Fréquence : sauvegarde toutes les 10 min + sauvegarde finale à l'arrêt. Restauration automatique à chaque démarrage.
 
 ## 🌍 Mettre BotDev en ligne gratuitement
 
