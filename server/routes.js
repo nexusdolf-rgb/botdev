@@ -981,6 +981,7 @@ router.put('/bots/:id/guilds/:guildId/rules', requireAuth, async (req, res) => {
   if (b.color !== undefined) patch.color = String(b.color || '').slice(0, 7);
   if (b.button_label !== undefined) patch.button_label = String(b.button_label || '').slice(0, rules.BUTTON_MAX);
   if (b.button_style !== undefined) patch.button_style = String(b.button_style || '').slice(0, 10);
+  if (b.button_placement !== undefined) patch.button_placement = String(b.button_placement || '').slice(0, 12);
   if (b.footer !== undefined) patch.footer = String(b.footer || '').slice(0, rules.FOOTER_MAX);
   if (b.thanks !== undefined) patch.thanks = String(b.thanks || '').slice(0, 500);
   if (b.log_channel !== undefined) patch.log_channel = String(b.log_channel || '').slice(0, 30);
@@ -999,7 +1000,17 @@ router.post('/bots/:id/guilds/:guildId/rules/panel', requireAuth, discordPublish
   if (!guild) return res.status(404).json({ ok: false, error: 'Serveur introuvable pour ce bot.' });
   try {
     const out = await require('./discord/rules').sendPanel(bot.id, guild, (req.body || {}).channel);
-    res.json({ ok: true, mode: out.mode, message_id: out.message && out.message.id });
+    // `verified` : on a relu le message renvoyé par Discord et le bouton y est
+    // bien. Sans ce contrôle, un panneau amputé de son bouton passait pour un
+    // succès (le bug signalé par le fondateur).
+    res.json({
+      ok: true,
+      mode: out.mode,
+      message_id: out.message && out.message.id,
+      verified: out.verified === true,
+      plan: out.plan || null,
+      cfg: require('./discord/rules').summary(req.params.guildId),
+    });
   } catch (e) {
     res.status(400).json({ ok: false, error: e.message || 'Envoi impossible.' });
   }

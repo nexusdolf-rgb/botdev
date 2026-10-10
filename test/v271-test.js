@@ -63,8 +63,8 @@ check('guildCatalog applique le tri', block.includes('sortGuildCatalog(channels,
 console.log('— 4. Version —');
 const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-check('index.html : ?v=360 référencé 7 fois', (index.match(/\?v=360/g) || []).length === 7);
-check('sw.js : cache « botdev-v350 »', sw.includes("const CACHE = 'botdev-v360';"));
+check('index.html : ?v=363 référencé 7 fois', (index.match(/\?v=363/g) || []).length === 7);
+check('sw.js : cache « botdev-v350 »', sw.includes("const CACHE = 'botdev-v363';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v271 — ${ok} vérifications OK : les selecteurs suivent l'ordre du serveur.`);

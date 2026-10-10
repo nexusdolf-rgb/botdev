@@ -8529,7 +8529,7 @@ Dashboard.renderers.rules = async (content, data) => {
     enabled: false, channel: '', role: '', title: '', body: '', color: '#5865F2',
     button_label: '', button_style: 'vert', footer: '', thanks: '', log_channel: '',
     panel_message: '', panel_channel: '', accepts: 0, last_at: 0, recent: [],
-    presets: [], using_default: false,
+    presets: [], using_default: false, button_placement: 'ligne', plan: null, accept_hint: '',
   }, data.rules || {});
   const racine = Dashboard.header(content, '📖', 'Règles du serveur',
     'Un panneau soigné dans le salon de votre choix, un bouton pour accepter, et le rôle qui suit automatiquement.');
@@ -8577,9 +8577,16 @@ Dashboard.renderers.rules = async (content, data) => {
     <label class="dash-label">Texte des règles <span class="rl-compteur" id="rl-count"></span></label>
     <textarea class="dash-input rl-zone" id="rl-body" rows="12" maxlength="3000"
       placeholder="Collez vos règles ici, ou choisissez un modèle ci-dessous.">${App.escapeHtml(cfg.body)}</textarea>
+    <div class="rl-plan" id="rl-plan"></div>
     <div class="rl-modeles">
-      <span class="rl-modeles-titre">Modèles livrés</span>
-      ${(cfg.presets || []).map((p) => `<button type="button" class="dash-btn dash-btn-sm" data-preset="${App.escapeHtml(p.id)}">${App.escapeHtml(p.label)}</button>`).join('')}
+      <span class="rl-modeles-titre">Modèles livrés · ${(cfg.presets || []).length} panneaux prêts à publier</span>
+      <div class="rl-modeles-grille">
+        ${(cfg.presets || []).map((p) => `<button type="button" class="rl-modele" data-preset="${App.escapeHtml(p.id)}">
+          <span class="rl-modele-nom">${App.escapeHtml(p.label)}</span>
+          ${p.hint ? `<span class="rl-modele-hint">${App.escapeHtml(p.hint)}</span>` : ''}
+          <span class="rl-modele-taille">${Number(p.blocks) || 0} bloc${(Number(p.blocks) || 0) > 1 ? 's' : ''}${p.airy === false ? ' · regroupés' : ''} · ${Number(p.length) || 0} car.</span>
+        </button>`).join('')}
+      </div>
     </div>
     <div class="rl-grille rl-grille-2">
       <div>
@@ -8600,6 +8607,13 @@ Dashboard.renderers.rules = async (content, data) => {
       <div>
         <label class="dash-label">Pied de page</label>
         <input class="dash-input" id="rl-footer" maxlength="300" value="${App.escapeHtml(cfg.footer)}" placeholder="En acceptant, vous vous engagez à les respecter." />
+      </div>
+      <div>
+        <label class="dash-label">Présentation du bouton</label>
+        <select class="dash-select" id="rl-placement">
+          ${[['ligne', 'Large — bouton sous le panneau'], ['carte', 'Intégré — bouton à droite, dans le panneau']]
+    .map(([v, l]) => `<option value="${v}" ${cfg.button_placement === v ? 'selected' : ''}>${l}</option>`).join('')}
+        </select>
       </div>
     </div>
     <label class="dash-label">Réponse après un clic (privée, visible par le membre seul)</label>
@@ -8632,29 +8646,80 @@ Dashboard.renderers.rules = async (content, data) => {
       .split('{role}').join(nomRole)
       .split('{membres}').join(String(Number(cfg.accepts) || 0));
   };
+  // Mêmes découpe et nettoyage que le serveur (server/discord/rules.js :
+  // cleanBody + ui.paragraphs) : un bloc = un paragraphe = un TextDisplay suivi
+  // d'un séparateur pleine largeur. L'aperçu montre donc VRAIMENT le panneau,
+  // y compris quand Discord regroupe les blocs parce que le plafond de 40
+  // composants est atteint (le texte, lui, n'est jamais tronqué).
+  const TRAIT = /^[\s\u2501\u2500\u2502\u2503\u2504\u2505\u2506\u2507\u254c\u254d\u25ac\u2014\u2013\-=~\u00b7\u2022]+$/;
+  const nettoyer = (t) => String(t == null ? '' : t).replace(/\r\n?/g, '\n').split('\n')
+    .filter((l) => { const x = l.trim(); return !(x.length && x.length <= 40 && TRAIT.test(x)); })
+    .join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  const decoupe = (t) => {
+    const out = []; let cur = []; let fence = null;
+    for (const line of nettoyer(t).split('\n')) {
+      const trimmed = line.trim();
+      const mark = /^(```+|~~~+)/.exec(trimmed);
+      if (fence) { cur.push(line); if (mark) fence = null; continue; }
+      if (mark) { fence = mark[1]; cur.push(line); continue; }
+      if (!trimmed) { if (cur.length) out.push(cur.join('\n')); cur = []; continue; }
+      cur.push(line);
+    }
+    if (cur.length) out.push(cur.join('\n'));
+    return out;
+  };
+  const regrouper = (liste, max) => {
+    let blocs = liste.slice();
+    let groupe = 1;
+    while (blocs.length > 1 && blocs.length * 2 - 1 > max) {
+      const next = [];
+      for (let i = 0; i < blocs.length; i += groupe + 1) next.push(blocs.slice(i, i + groupe + 1).join('\n\n'));
+      if (next.length >= blocs.length) { groupe *= 2; if (groupe > blocs.length) break; continue; }
+      blocs = next;
+    }
+    return blocs;
+  };
+  const planEl = champ('#rl-plan');
   const maj = () => {
-    const texte = remplir(corps.value || '');
     const brut = corps.value || '';
-    compteur.textContent = `${brut.length}/3000`;
+    const blocsBruts = decoupe(brut);
+    const maxBlocs = (cfg.plan && Number(cfg.plan.max_blocks)) || 17;
+    const budget = maxBlocs * 2 - 1;
+    const blocsRendus = regrouper(blocsBruts.length ? blocsBruts : [''], budget);
+    const regroupes = blocsRendus.length !== blocsBruts.length;
+    compteur.textContent = `${brut.length}/3000 · ${blocsBruts.length} bloc${blocsBruts.length > 1 ? 's' : ''}`;
     compteur.classList.toggle('is-plein', brut.length > 2850);
+    if (planEl) {
+      planEl.classList.toggle('is-haut', regroupes);
+      planEl.innerHTML = regroupes
+        ? `⚠️ ${blocsBruts.length} blocs pour un maximum de ${maxBlocs} : à la publication, ils sont <strong>regroupés deux par deux</strong> (aucun texte perdu, le bouton est conservé).`
+        : `✅ ${blocsBruts.length} bloc${blocsBruts.length > 1 ? 's' : ''} sur ${maxBlocs} · chaque bloc reçoit son séparateur pleine largeur, le bouton est réservé.`;
+    }
     const titre = remplir(champ('#rl-title').value || 'Règles du serveur').slice(0, 120);
     const couleur = /^#[0-9a-fA-F]{6}$/i.test(champ('#rl-color').value) ? champ('#rl-color').value : couleurOk;
     const pied = remplir(champ('#rl-footer').value || '').slice(0, 300);
     const bouton = remplir(champ('#rl-button').value || 'J’accepte les règles').slice(0, 80);
     const styleBouton = { vert: 'is-green', bleu: 'is-blurple', gris: 'is-grey', rouge: 'is-red' }[champ('#rl-style').value] || 'is-green';
+    const placement = (champ('#rl-placement') || {}).value || 'ligne';
+    const indice = remplir(cfg.accept_hint || 'En cliquant sur le bouton, vous confirmez avoir lu et accepté le règlement.').slice(0, 300);
+    const rangee = `<span class="dprev-btn ${styleBouton}">✅ ${App.escapeHtml(bouton)}</span>`;
+    const corpsHtml = blocsRendus.map((b) => `<div class="dmd">${Dashboard.discordMarkdownHtml(remplir(b))}</div>`)
+      .join('<div class="dprev-sep"></div>');
     apercu.innerHTML = `<div class="dprev">
       <div class="dprev-embed" style="--dprev-bar:${App.escapeHtml(couleur)}">
         <div class="dprev-body">
           <div class="dprev-title">${App.escapeHtml('📜 ' + titre)}</div>
-          <div class="dmd">${Dashboard.discordMarkdownHtml(texte)}</div>
-          ${pied ? `<div class="dprev-foot">${App.escapeHtml(pied)}</div>` : ''}
+          ${corpsHtml}
+          ${pied ? `<div class="dprev-sep"></div><div class="dprev-foot">${App.escapeHtml(pied)}</div>` : ''}
+          ${placement === 'carte' ? `<div class="dprev-sep"></div><div class="dprev-carte"><div class="dprev-carte-texte">${Dashboard.discordMarkdownHtml(indice)}</div><div>${rangee}</div></div>` : ''}
         </div>
       </div>
-      <div class="dprev-btns"><span class="dprev-btn ${styleBouton}">✅ ${App.escapeHtml(bouton)}</span></div>
+      ${placement === 'carte' ? '' : `<div class="dprev-btns">${rangee}</div>`}
     </div>`;
   };
   ['#rl-body', '#rl-title', '#rl-footer', '#rl-button'].forEach((id) => { champ(id).oninput = maj; });
   carte.querySelector('#rl-role').onchange = maj;
+  if (champ('#rl-placement')) champ('#rl-placement').onchange = maj;
   champ('#rl-color').oninput = maj;
   champ('#rl-style').onchange = maj;
   maj();
@@ -8669,6 +8734,7 @@ Dashboard.renderers.rules = async (content, data) => {
     color: champ('#rl-color').value,
     button_style: champ('#rl-style').value,
     button_label: champ('#rl-button').value.trim(),
+    button_placement: (champ('#rl-placement') || {}).value || 'ligne',
     footer: champ('#rl-footer').value.trim(),
     thanks: champ('#rl-thanks').value.trim(),
   });
@@ -8706,7 +8772,15 @@ Dashboard.renderers.rules = async (content, data) => {
         g.onclick = retirer;
         champ('#rl-send').after(g);
       }
-      etat('Panneau publié, identifiant suivi : ' + (r.message_id || '—'));
+      // Le serveur relit le message renvoyé par Discord : le bouton y est, ou
+      // on le dit. Fini d'annoncer « publié » pour un panneau sans bouton.
+      const planTxt = r.plan ? ` ${r.plan.shown || r.plan.blocks || 0} bloc(s), ${r.plan.components || 0}/40 composants.` : '';
+      if (r.verified === false) {
+        App.toast('Panneau publié, mais le bouton n’a pas été retrouvé sur Discord — essayez la présentation « Intégré ».', 'error');
+        etat('⚠️ Panneau envoyé, bouton non vérifié sur Discord.' + planTxt);
+      } else {
+        etat('✅ Panneau publié et bouton vérifié sur Discord (id ' + (r.message_id || '—') + ').' + planTxt);
+      }
     } catch (e) { App.toast(e.message, 'error'); etat('Échec de la publication : ' + e.message); }
   };
   const retirer = async () => {

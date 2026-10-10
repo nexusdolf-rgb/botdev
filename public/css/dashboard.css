@@ -7484,3 +7484,81 @@ html.hx-light .pp-del { border-color: #d3ddef; }
 @media (prefers-reduced-motion: reduce) {
   .dmd-spoiler { transition: none; }
 }
+
+/* ============================================================
+   v363 — Règles : le panneau se pilote à vue d'œil.
+   ----------------------------------------------------------
+   • .rl-plan : la ligne sous la zone de texte dit ce que Discord
+     affichera (nombre de blocs, regroupement automatique) ;
+   • .rl-modele : les modèles livrés deviennent des cartes lisibles
+     (nom, intention, taille) au lieu d'une rangée de boutons ;
+   • .dprev-sep / .dprev-carte : l'aperçu montre les vrais séparateurs
+     pleine largeur et le bouton en accessoire quand ce mode est choisi.
+   ============================================================ */
+.rl-plan { font-size: 11.5px; color: var(--d-dim, #8b93a7); margin: 6px 0 10px; line-height: 1.45; }
+.rl-plan strong { color: inherit; }
+.rl-plan.is-haut { color: #e07a5f; }
+
+.rl-modeles-grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(216px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.rl-modele {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 9px 11px;
+  border: 1px solid rgba(var(--d-accent-rgb), .16);
+  border-radius: 10px;
+  background: rgba(var(--d-accent-rgb), .05);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color .15s ease, background .15s ease, transform .15s ease;
+}
+.rl-modele:hover {
+  border-color: rgba(var(--d-accent-rgb), .42);
+  background: rgba(var(--d-accent-rgb), .1);
+  transform: translateY(-1px);
+}
+.rl-modele:focus-visible { outline: 2px solid rgba(var(--d-accent-rgb), .7); outline-offset: 2px; }
+.rl-modele-nom { font-size: 12.5px; font-weight: 700; color: var(--d-text, #e9edf6); line-height: 1.3; }
+.rl-modele-hint { font-size: 11px; color: var(--d-dim, #8b93a7); line-height: 1.4; }
+.rl-modele-taille {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  color: var(--d-dim, #8b93a7);
+}
+
+/* Séparateur pleine largeur, comme le <Separator> natif de Discord. */
+.dprev-sep { height: 1px; margin: 10px 0; background: rgba(255, 255, 255, .08); }
+
+/* Bouton en accessoire d'une Section (mode « Intégré »). */
+.dprev-carte {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .04);
+}
+.dprev-carte-texte { font-size: 12px; color: #b8bfcb; flex: 1 1 auto; min-width: 0; }
+.dprev-carte > div:last-child { flex: 0 0 auto; }
+
+html.hx-light .rl-modele { border-color: #d3ddef; background: rgba(20, 30, 60, .03); }
+html.hx-light .rl-modele:hover { border-color: #b9c6e0; background: rgba(20, 30, 60, .06); }
+html.hx-light .dprev-sep { background: rgba(20, 30, 60, .12); }
+html.hx-light .dprev-carte { background: rgba(20, 30, 60, .05); }
+html.hx-light .dprev-carte-texte { color: #4a5468; }
+
+@media (max-width: 640px) {
+  .rl-modeles-grille { grid-template-columns: minmax(0, 1fr); }
+  .dprev-carte { flex-direction: column; align-items: stretch; }
+  .dprev-carte .dprev-btn { justify-content: center; }
+}

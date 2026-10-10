@@ -125,11 +125,33 @@ function textChannel(extra = {}) {
   // ==========================================================
   console.log('\n— 2. Les modèles de règles livrés —');
   const presets = rules.presets();
-  check('quatre modèles, du plus court au plus complet', presets.length === 4, presets.map((p) => p.id).join(', '));
+  check('dix modèles livrés (v363)', presets.length === 10, presets.map((p) => p.id).join(', '));
   check('chaque modèle tient dans le budget du panneau V2', presets.every((p) => p.length > 200 && p.length <= rules.BODY_MAX),
     presets.map((p) => `${p.id}:${p.length}`).join(' '));
   check('chaque modèle utilise le Markdown Discord (gras, citation, liste)', presets.every((p) => /\*\*.+\*\*/.test(p.text) && p.text.includes('> **') && (p.text.includes('- ') || p.text.includes('\n**'))));
-  check('…et les séparateurs pleine largeur du style Hoxera', presets.every((p) => p.text.includes('━')));
+  // v363 : une règle = un bloc. Le titre de règle est la PREMIÈRE ligne du
+  // paragraphe, son développement la seconde — jamais deux paragraphes.
+  // Un bloc réduit à son seul titre coûte 2 composants (texte + séparateur)
+  // pour 0 information : le développement doit être dans le MÊME paragraphe.
+  check('une règle = un bloc (aucun paragraphe réduit à un titre gras)',
+    presets.every((p) => p.text.split('\n\n').every((b) => !/^\*\*[^*]*\*\*$/.test(b.trim()))),
+    presets.map((p) => `${p.id}:${p.blocks}`).join(' '));
+  // Un « @everyone » en clair dans un panneau pingAIT tout le serveur à la
+  // publication : il est écrit entre accents graves (et le message est
+  // envoyé avec allowedMentions vide, voir v363).
+  check('jamais de mention `@everyone` hors code dans un modèle',
+    presets.every((p) => !/(^|[^`\w])@(everyone|here)([^`]|$)/.test(p.text.split('`')[0] || '')));
+  // v363 : le trait « ━ » tapé à la main EST LE BUG du budget (2 composants
+  // gaspillés par trait). Le séparateur est désormais NATIF : aucun modèle ne
+  // doit plus en contenir, et tous doivent tenir tels quels dans le panneau.
+  check('aucun modèle ne triche avec un faux séparateur texte',
+    presets.every((p) => !/^\s*━+\s*$/m.test(p.text)),
+    presets.filter((p) => /\━/.test(p.text)).map((p) => p.id).join(', '));
+  check('chaque modèle tient dans les 40 composants SANS regroupement',
+    presets.every((p) => p.blocks <= rules.MAX_BLOCKS && p.airy !== false),
+    presets.map((p) => `${p.id}:${p.blocks}`).join(' '));
+  check('chaque modèle a une intention affichée dans le tableau de bord (hint)',
+    presets.every((p) => String(p.hint || '').length > 12 && String(p.label || '').length > 4));
   const TU = /(^|[\s(,;:!?'"«»])(tu|te|tes|ton|ta|toi)($|[\s.,;:!?'"»«])/im;
   check('aucun modèle ne tutoie (règle maison : vouvoiement)', presets.every((p) => !TU.test(p.text)));
   check('le placeholder {serveur} est présent et sera rempli', presets.every((p) => p.text.includes('{serveur}')));

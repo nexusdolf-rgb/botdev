@@ -254,6 +254,57 @@ function v2separator(container, state) {
   return true;
 }
 
+// ------------------------------------------------------------
+// v363 — RÉSERVATION + FUSION. Le budget de 40 composants est partagé avec
+// les lignes de boutons. Avant ce correctif, le corps était posé en premier et
+// les boutons en dernier derrière un simple garde-fou `v2room()` : dès qu'un
+// texte comptait beaucoup de paragraphes, le garde-fou refusait la ligne de
+// boutons et LE BOUTON DISPARAISSAIT SILENCIEUSEMENT — signalé sur le panneau
+// de règles : panneau publié, aucun bouton, aucune erreur nulle part.
+// Un bouton d'action n'est pas une décoration, il fait partie du contrat du
+// panneau : on réserve donc sa place AVANT de dérouler le corps, et si le corps
+// est trop grand on FUSIONNE ses paragraphes deux par deux (ils restent
+// lisibles, ils perdent seulement leur trait de séparation).
+// ------------------------------------------------------------
+function v2rowCost(rows) {
+  const list = Array.isArray(rows) ? rows : [];
+  return list.reduce((n, row) => {
+    if (!row) return n;
+    // ActionRow = 1 + ses boutons ; Section (accessoire bouton) = 1 + ses
+    // TextDisplay + l'accessoire. Les deux comptent dans le plafond de 40.
+    let wire = row;
+    try { wire = JSON.parse(JSON.stringify(row)); } catch { return n + 1; }
+    const kids = Array.isArray(wire.components) ? wire.components.length : 0;
+    return n + 1 + kids + (wire.accessory ? 1 : 0);
+  }, 0);
+}
+
+// Chaque bloc coûte 1 TextDisplay et chaque charnière 1 Separator : n blocs
+// valent 2n - 1 composants. On réduit jusqu'à tenir dans le budget restant.
+function v2fitBlocks(blocks, available) {
+  let list = (Array.isArray(blocks) ? blocks : []).filter((b) => String(b || '').length);
+  const cost = (n) => (n <= 0 ? 0 : n * 2 - 1);
+  if (cost(list.length) <= available) return list;
+  if (available < 1) return [];
+  let groupe = 1;
+  while (list.length > 1 && cost(list.length) > available) {
+    const fusionnes = [];
+    for (let i = 0; i < list.length; i += groupe + 1) {
+      fusionnes.push(list.slice(i, i + groupe + 1).join('\n\n'));
+    }
+    // Garde-fou anti-boucle : si une passe ne réduit rien, on double la taille
+    // des groupes ; si ça ne suffit toujours pas, on s'arrête (le reste du
+    // corps sera simplement tronqué par le budget de caractères).
+    if (fusionnes.length >= list.length) {
+      groupe *= 2;
+      if (groupe > list.length) break;
+      continue;
+    }
+    list = fusionnes;
+  }
+  return list;
+}
+
 // Construit le conteneur V2. Accepte la MÊME grammaire que embed()/panel()
 // pour que la migration d'un message soit mécanique :
 //   title       → TextDisplay « ## titre » (ou « ### titre » avec titleLevel: 3,
@@ -274,6 +325,10 @@ function v2container(options = {}) {
   if (options.accent !== false) container.setAccentColor(colorInt(options.color || options.variant || 'info'));
   const state = v2state();
   const useSections = options.sections !== false;
+  // v363 — la place des lignes interactives est réservée tout de suite : le
+  // corps est taillé ensuite pour qu'elles rentrent TOUJOURS.
+  const rows = Array.isArray(options.rows) ? options.rows : [];
+  const rowReserve = v2rowCost(rows);
 
   // ORDRE CALQUÉ SUR L'EMBED CLASSIQUE : content (texte du message, au-dessus
   // de l'embed) → author/titre/vignette → description → champs → image →
@@ -283,7 +338,7 @@ function v2container(options = {}) {
   //    est interdit au niveau du message → il devient un bloc en tête, suivi
   //    d'un séparateur s'il y a quelque chose derrière.
   const hasContent = !!options.content;
-  const bodyBlocks = v2bodyBlocks(options, useSections);
+  let bodyBlocks = v2bodyBlocks(options, useSections);
   const authorName = options.author && options.author.name ? text(options.author.name, 256) : '';
   // v312 — plus de signature par défaut (« Hoxera · Assistant… »). Un pied
   // n'est rendu que s'il est fourni explicitement (texte non vide).
@@ -329,6 +384,9 @@ function v2container(options = {}) {
   // 3) Corps : un séparateur natif ENTRE chaque bloc — mais AUCUN juste après
   //    l'en-tête (le « ## » est déjà visuellement détaché), comme dans le
   //    panneau de tickets personnalisés qui sert de référence.
+  // v363 — le pied de panneau (2 composants) et les boutons (rowReserve)
+  // sont déduits du budget AVANT de poser les blocs.
+  bodyBlocks = v2fitBlocks(bodyBlocks, V2_COMPONENT_CAP - state.components - 2 - rowReserve);
   bodyBlocks.forEach((block, index) => {
     if (index > 0) v2separator(container, state);
     v2text(container, block, state);
@@ -390,11 +448,25 @@ function v2container(options = {}) {
   //    seul l'ActionRow était compté : le centre d'aide admin atteignait en
   //    réalité 44 composants → rejet silencieux de TOUT le panneau
   //    (« COMPONENT_MAX_TOTAL_COMPONENTS_EXCEEDED », incident /help du 14/09).
-  const rows = Array.isArray(options.rows) ? options.rows : [];
+  // v363 — ajout SANS garde-fou `v2room` : la place a été réservée à l'étape 3.
+  // Si un appelant dépasse quand même le plafond, on le crie dans les journaux
+  // au lieu de perdre le bouton en silence — c'est ce mutisme qui rendait le
+  // bug invisible (le panneau partait, sans bouton, sans erreur).
   rows.slice(0, 5).forEach((row) => {
     if (!row) return;
     const children = Array.isArray(row.components) ? row.components.length : 0;
-    if (v2room(state, 1 + children)) { container.addActionRowComponents(row); state.components += 1 + children; }
+    if (!v2room(state, 1 + children)) {
+      const detail = `${state.components}/${V2_COMPONENT_CAP} composants, ligne de ${children} élément(s) interactif(s) à la limite`;
+      console.error(`[Hoxera] 🛡️ Panneau V2 saturé (${detail}) — titre « ${String((options && options.title) || '').slice(0, 40)} »`);
+      try { require('../health').recordError('panneau-sature', detail); } catch {}
+    }
+    // Une Section (bouton en accessoire, comme le mode boutons des tickets)
+    // est un enfant valide du conteneur : on la pose avec sa propre méthode.
+    let wireType = null;
+    try { wireType = Number((JSON.parse(JSON.stringify(row)) || {}).type); } catch {}
+    if (wireType === 9 && typeof container.addSectionComponents === 'function') container.addSectionComponents(row);
+    else container.addActionRowComponents(row);
+    state.components += 1 + children;
   });
   return container;
 }
@@ -582,4 +654,5 @@ module.exports = {
   COLORS, DEFAULT_FOOTER, colorFor, colorInt, embed, panel, contentPanel, row, linkRow, status,
   text, SEPARATOR, sectionize, paragraphs,
   V2_TEXT_BUDGET, V2_COMPONENT_CAP, v2container, v2panel, v2contentPanel, v2status, v2edit, v2Audit,
+  v2rowCost, v2fitBlocks,
 };
