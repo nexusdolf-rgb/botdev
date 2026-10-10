@@ -41,6 +41,9 @@ const platformMutationRateLimit = security.rateLimit({
 const eventsTestRateLimit = security.rateLimit({ name: 'events-test', windowMs: 60000, max: 10 });
 // Sauvegardes de config d'événements : limitées, config assainie côté serveur.
 const eventsSaveRateLimit = security.rateLimit({ name: 'events-save', windowMs: 60000, max: 120 });
+// 📤 v362 — publications Discord déclenchées depuis le dashboard (panneau de
+// règles, sondage) : plafonnées pour éviter un flood accidentel du bot.
+const discordPublishRateLimit = security.rateLimit({ name: 'discord-publish', windowMs: 60000, max: 20 });
 
 // Les listes relisibles de Discord sont mises en cache brièvement pour
 // absorber les ouvertures simultanées du dashboard sans relire la même
@@ -866,6 +869,13 @@ router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
     tickets: { name: '', channel: '', message: '', button_label: '🎫 Ouvrir un ticket', button_style: '1', require_reason: 1, support_role: '', category: 'Tickets', types: [], ...(cfg || {}), types: parsedTypes },
     tickets_stats: ticketsStats,
     verification: require('./discord/verification').cfgOf(guildId),
+    rules: require('./discord/rules').summary(guildId),
+    polls: (() => {
+      const polls = require('./discord/polls');
+      const cfg = polls.cfgOf(guildId);
+      return { ...cfg, list: polls.listOf(guildId, { limit: 12 }), open: polls.openIndex()
+        .filter((row) => String(row.guild_id) === String(guildId)).length };
+    })(),
     invite_rewards: require('./discord/invites').cfgOf(guildId),
     events: { defs: EVENT_DEFS, state: eventsState(bot.id, guildId) },
     role_menus: store.roleMenus.all(bot.id, guildId),
@@ -950,6 +960,193 @@ router.post('/bots/:id/guilds/:guildId/verification/panel', requireAuth, async (
   } catch (e) {
     res.status(400).json({ ok: false, error: e.message || 'Envoi impossible.' });
   }
+});
+
+// ============================================================
+// 📜 v362 — Règles : panneau Markdown + bouton d'acceptation + rôle
+// ============================================================
+router.put('/bots/:id/guilds/:guildId/rules', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const rules = require('./discord/rules');
+  const b = req.body || {};
+  const patch = {};
+  if (typeof b.enabled === 'boolean') patch.enabled = b.enabled;
+  if (b.channel !== undefined) patch.channel = String(b.channel || '').slice(0, 30);
+  if (b.role !== undefined) patch.role = String(b.role || '').slice(0, 30);
+  if (b.title !== undefined) patch.title = String(b.title || '').slice(0, rules.TITLE_MAX);
+  if (b.preset && rules.PRESETS[String(b.preset)]) patch.body = rules.PRESETS[String(b.preset)].text;
+  if (b.body !== undefined) patch.body = String(b.body || '').slice(0, rules.BODY_MAX);
+  if (b.color !== undefined) patch.color = String(b.color || '').slice(0, 7);
+  if (b.button_label !== undefined) patch.button_label = String(b.button_label || '').slice(0, rules.BUTTON_MAX);
+  if (b.button_style !== undefined) patch.button_style = String(b.button_style || '').slice(0, 10);
+  if (b.footer !== undefined) patch.footer = String(b.footer || '').slice(0, rules.FOOTER_MAX);
+  if (b.thanks !== undefined) patch.thanks = String(b.thanks || '').slice(0, 500);
+  if (b.log_channel !== undefined) patch.log_channel = String(b.log_channel || '').slice(0, 30);
+  rules.saveCfg(req.params.guildId, patch);
+  res.json({ ok: true, cfg: rules.summary(req.params.guildId) });
+});
+
+// 📤 Envoi (ou mise à jour) du panneau dans le salon choisi.
+router.post('/bots/:id/guilds/:guildId/rules/panel', requireAuth, discordPublishRateLimit, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const entry = botManager.clients.get(bot.id);
+  if (!entry || !entry.client.isReady()) return res.status(503).json({ ok: false, error: 'Bot hors ligne, réessayez dans une minute.' });
+  const guild = entry.client.guilds.cache.get(req.params.guildId);
+  if (!guild) return res.status(404).json({ ok: false, error: 'Serveur introuvable pour ce bot.' });
+  try {
+    const out = await require('./discord/rules').sendPanel(bot.id, guild, (req.body || {}).channel);
+    res.json({ ok: true, mode: out.mode, message_id: out.message && out.message.id });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: e.message || 'Envoi impossible.' });
+  }
+});
+
+// 🧹 Retire le panneau suivi (sans toucher au rôle des membres).
+router.post('/bots/:id/guilds/:guildId/rules/panel/delete', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const entry = botManager.clients.get(bot.id);
+  if (!entry || !entry.client.isReady()) return res.status(503).json({ ok: false, error: 'Bot hors ligne, réessayez dans une minute.' });
+  const guild = entry.client.guilds.cache.get(req.params.guildId);
+  if (!guild) return res.status(404).json({ ok: false, error: 'Serveur introuvable pour ce bot.' });
+  try {
+    const out = await require('./discord/rules').deletePanel(bot.id, guild);
+    res.json({ ok: true, mode: out.mode });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: e.message || 'Suppression impossible.' });
+  }
+});
+
+// 👥 Qui n'a pas encore le rôle d'acceptation.
+router.post('/bots/:id/guilds/:guildId/rules/missing', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const entry = botManager.clients.get(bot.id);
+  if (!entry || !entry.client.isReady()) return res.status(503).json({ ok: false, error: 'Bot hors ligne, réessayez dans une minute.' });
+  const guild = entry.client.guilds.cache.get(req.params.guildId);
+  if (!guild) return res.status(404).json({ ok: false, error: 'Serveur introuvable pour ce bot.' });
+  const out = await require('./discord/rules').missingMembers(bot.id, guild, (req.body || {}).limit);
+  res.json({ ok: !out.error, ...(out.error ? { error: out.error } : out) });
+});
+
+// ♻️ Remise à zéro du compteur d'acceptations (les rôles déjà donnés restent).
+router.post('/bots/:id/guilds/:guildId/rules/reset', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const rules = require('./discord/rules');
+  rules.resetAcceptations(req.params.guildId);
+  res.json({ ok: true, cfg: rules.summary(req.params.guildId) });
+});
+
+// ============================================================
+// 🗳️ v362 — Sondages natifs Discord (champ `poll` du message)
+// ============================================================
+router.put('/bots/:id/guilds/:guildId/polls', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const polls = require('./discord/polls');
+  const b = req.body || {};
+  const patch = {};
+  if (typeof b.enabled === 'boolean') patch.enabled = b.enabled;
+  if (b.channel !== undefined) patch.channel = String(b.channel || '').slice(0, 30);
+  if (b.duration !== undefined) patch.duration = polls.clampDuration(b.duration);
+  if (typeof b.allow_multiselect === 'boolean') patch.allow_multiselect = b.allow_multiselect;
+  if (b.intro !== undefined) patch.intro = String(b.intro || '').slice(0, 2000);
+  if (b.announce_role !== undefined) patch.announce_role = String(b.announce_role || '').slice(0, 30);
+  if (b.results_channel !== undefined) patch.results_channel = String(b.results_channel || '').slice(0, 30);
+  if (typeof b.auto_report === 'boolean') patch.auto_report = b.auto_report;
+  const cfg = polls.saveCfg(req.params.guildId, patch);
+  res.json({ ok: true, cfg });
+});
+
+// 📤 Publie le sondage. La validation est serveur : le navigateur ne voit pas
+// les limites Discord, lui si.
+router.post('/bots/:id/guilds/:guildId/polls/send', requireAuth, discordPublishRateLimit, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const entry = botManager.clients.get(bot.id);
+  if (!entry || !entry.client.isReady()) return res.status(503).json({ ok: false, error: 'Bot hors ligne, réessayez dans une minute.' });
+  const guild = entry.client.guilds.cache.get(req.params.guildId);
+  if (!guild) return res.status(404).json({ ok: false, error: 'Serveur introuvable pour ce bot.' });
+  try {
+    const out = await require('./discord/polls').sendPoll(bot.id, guild, req.body || {});
+    res.json({ ok: true, message_id: out.message && out.message.id, poll: out.poll });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: e.message || 'Publication impossible.', code: e.code || '' });
+  }
+});
+
+// 🔎 Relit les résultats à la source (Discord, pas un cache).
+router.post('/bots/:id/guilds/:guildId/polls/results', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const entry = botManager.clients.get(bot.id);
+  if (!entry || !entry.client.isReady()) return res.status(503).json({ ok: false, error: 'Bot hors ligne, réessayez dans une minute.' });
+  const guild = entry.client.guilds.cache.get(req.params.guildId);
+  if (!guild) return res.status(404).json({ ok: false, error: 'Serveur introuvable pour ce bot.' });
+  try {
+    const out = await require('./discord/polls').results(bot.id, guild, (req.body || {}).message_id);
+    res.json({ ok: true, results: out });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: e.message || 'Lecture impossible.' });
+  }
+});
+
+// ⏹️ Clôture anticipée (Discord n'autorise de clôturer que nos propres sondages).
+router.post('/bots/:id/guilds/:guildId/polls/end', requireAuth, discordPublishRateLimit, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const entry = botManager.clients.get(bot.id);
+  if (!entry || !entry.client.isReady()) return res.status(503).json({ ok: false, error: 'Bot hors ligne, réessayez dans une minute.' });
+  const guild = entry.client.guilds.cache.get(req.params.guildId);
+  if (!guild) return res.status(404).json({ ok: false, error: 'Serveur introuvable pour ce bot.' });
+  try {
+    const out = await require('./discord/polls').endPoll(bot.id, guild, (req.body || {}).message_id);
+    res.json({ ok: true, ...out });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: e.message || 'Clôture impossible.' });
+  }
+});
+
+// 👥 Votants d'un choix (100 par appel, limite de l'API).
+router.post('/bots/:id/guilds/:guildId/polls/voters', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const entry = botManager.clients.get(bot.id);
+  if (!entry || !entry.client.isReady()) return res.status(503).json({ ok: false, error: 'Bot hors ligne, réessayez dans une minute.' });
+  const guild = entry.client.guilds.cache.get(req.params.guildId);
+  if (!guild) return res.status(404).json({ ok: false, error: 'Serveur introuvable pour ce bot.' });
+  try {
+    const b = req.body || {};
+    const out = await require('./discord/polls').voters(bot.id, guild, b.message_id, b.answer_id, b.limit);
+    res.json({ ok: true, voters: out });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: e.message || 'Lecture des votants impossible.' });
+  }
+});
+
+// 🗑️ Oubli d'un sondage dans l'historique du dashboard (ne touche pas Discord).
+router.post('/bots/:id/guilds/:guildId/polls/forget', requireAuth, async (req, res) => {
+  const bot = getAnyBot(req, res);
+  if (!bot) return;
+  if (!(await userCanManageGuild(req, req.params.guildId))) return res.status(403).json({ error: 'Permission refusée.' });
+  const polls = require('./discord/polls');
+  const id = String((req.body || {}).message_id || '');
+  polls.forget(req.params.guildId, id);
+  polls.deindexOpen(id);
+  res.json({ ok: true });
 });
 
 // ============================================================

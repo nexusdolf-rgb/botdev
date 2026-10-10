@@ -37,7 +37,7 @@ const check = (nom, cond, detail) => {
 const dash = lus('public/js/dashboard.js');
 
 // ---------- 1. Le catalogue ----------
-console.log('— 1. Le catalogue des 39 modules —');
+console.log('— 1. Le catalogue des 41 modules —');
 const moduleDe = (nom) => {
   const m = dash.match(new RegExp(`Dashboard\\.${nom} = \\[([\\s\\S]*?)\\];`));
   return m ? [...m[1].matchAll(/\['([a-z]+)',/g)].map((x) => x[1]) : [];
@@ -45,7 +45,7 @@ const moduleDe = (nom) => {
 const SERVEUR = moduleDe('MODULES');
 const BOT = moduleDe('BOT_MODULES');
 const TOUS = [...SERVEUR, ...BOT];
-check('les modules du menu serveur sont listés', SERVEUR.length === 34, String(SERVEUR.length));
+check('les modules du menu serveur sont listés', SERVEUR.length === 36, String(SERVEUR.length));
 check('les modules d’administration le sont aussi', BOT.length === 5, String(BOT.length));
 
 const metaBloc = (dash.match(/Dashboard\.MODULE_META = \{([\s\S]*?)\n\};/) || [0, ''])[1];
@@ -76,7 +76,7 @@ check('les accroches et les notices sont assez parlantes pour être utiles', tro
 // ---------- 2. Les émoticônes dessinées ----------
 console.log('\n— 2. Une émoticône dessinée par module —');
 const dossiers = fs.readdirSync(path.join(RACINE, 'public', 'emotes')).filter((f) => f.endsWith('.png'));
-check('le dossier public/emotes contient au moins 40 images', dossiers.length >= 40, String(dossiers.length));
+check('le dossier public/emotes contient au moins 42 images', dossiers.length >= 42, String(dossiers.length));
 const citees = [...dash.matchAll(/emote: '(hox_[a-z]+)'/g)].map((m) => m[1]);
 check('toutes les émoticônes citées existent sur le disque',citees.every((n) => fs.existsSync(path.join(RACINE, 'public', 'emotes', `${n}.png`))),
   citees.filter((n) => !fs.existsSync(path.join(RACINE, 'public', 'emotes', `${n}.png`))).join(', '));
@@ -271,9 +271,9 @@ console.log('\n— 6. Rendu réel dans le navigateur simulé —');
 
   check('la barre latérale est rendue', res.sidebar === true);
   check('le menu est coupé en familles (au moins 6 titres)', res.familles.length >= 6, res.familles.join(' · '));
-  check('tous les modules du serveur restent accessibles', res.items >= 34, String(res.items));
-  check('chaque entrée du menu porte son émoticône', res.images >= 34, `${res.images} images pour ${res.items} entrées`);
-  check('…et l’émoji de repli est masqué quand l’image existe', res.emojisCaches >= 34);
+  check('tous les modules du serveur restent accessibles', res.items >= 36, String(res.items));
+  check('chaque entrée du menu porte son émoticône', res.images >= 36, `${res.images} images pour ${res.items} entrées`);
+  check('…et l’émoji de repli est masqué quand l’image existe', res.emojisCaches >= 36);
   check('le module ouvert affiche sa fiche de lecture', res.guide === true);
   check('la fiche a ses trois colonnes', res.cols === 3 && res.colNames.length === 4, res.colNames.join(' / '));
   check('l’aperçu Discord est monté dans la fiche', res.apercuInline === true);
@@ -289,8 +289,8 @@ console.log('\n— 6. Rendu réel dans le navigateur simulé —');
   check('…sans effacer l’émoticône du module', res.imageGardee === true);
   check('…sans effacer la fiche de lecture', res.ficheGardee === true);
   check('les réglages du module restent affichés sous la fiche', res.cartesGardees === true);
-  check('la vue d’ensemble liste les 33 modules configurables', res.cartes === 33, String(res.cartes));
-  check('ses cartes portent l’émoticône du module', res.cartesImages === 33, String(res.cartesImages));
+  check('la vue d’ensemble liste les 35 modules configurables', res.cartes === 35, String(res.cartes));
+  check('ses cartes portent l’émoticône du module', res.cartesImages === 35, String(res.cartesImages));
   check('elles sont groupées par famille', res.tetesDeSection >= 5, String(res.tetesDeSection));
   check('un seul verbe d’action sur chaque carte', res.verbes.every((v) => v.startsWith('Configurer')), res.verbes.slice(0, 3).join(' | '));
   check('les boutons « Enregistrer » du module sont repérables par la barre', res.saves.length >= 2 && res.saves.every((s) => /^Enregistrer|^Tout/.test(s)), res.saves.join(' | '));

@@ -35,6 +35,7 @@ const REQUIRED_PERMISSIONS = [
   F.ManageNicknames,
   F.ChangeNickname,
   F.ManageGuildExpressions,
+  F.SendPolls, // 🗳️ v362 — sans elle, un sondage natif est refusé
 ].filter((flag) => flag !== undefined);
 
 const PERMISSION_BITS = PermissionsBitField.resolve(REQUIRED_PERMISSIONS);

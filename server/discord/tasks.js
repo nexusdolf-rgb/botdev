@@ -106,6 +106,10 @@ async function sweep(botId, entry) {
   try { const antiraid = require('./antiraid'); await antiraid.sweep(botId, entry); }
   catch (e) { console.error('[Hoxera] anti-raid sweep:', e.message); }
 
+  // 🗳️ v362 — sondages échus : le bilan est publié dans le salon choisi
+  try { const due = await require('./polls').sweepDue(botId, entry); if (due) console.log(`[Hoxera] 🗳️ ${due} sondage(s) clos, bilan publié`); }
+  catch (e) { console.error('[Hoxera] polls sweep:', e.message); }
+
   // 🛡️ v242 Anti-nuke : purge des compteurs par auteur
   try { require('./antinuke').sweep(); }
   catch (e) { console.error('[Hoxera] anti-nuke sweep:', e.message); }

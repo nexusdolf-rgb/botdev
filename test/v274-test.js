@@ -56,7 +56,7 @@ const KEYS = ['vue', 'ticket', 'bienvenue', 'niveaux', 'eco', 'boutique', 'mod',
   const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'dashboard.css'), 'utf8');
   const meta = (dash.match(/Dashboard\.MODULE_META = \{([\s\S]*?)\n\};/) || [0, ''])[1];
   const emotes = [...meta.matchAll(/emote: '(hox_[a-z]+)'/g)].map((m) => m[1]);
-  check('le catalogue donne une image à chaque module', emotes.length === 39, String(emotes.length));
+  check('le catalogue donne une image à chaque module', emotes.length === 41, String(emotes.length));
   check('…servies par le bot depuis /emotes', dash.includes('src=\"/emotes/${meta.emote}.png\"'));
   check('…avec repli sur l\'émoji texte (ico-fallback)', dash.includes('ico-fallback') && css.includes('.has-emote .ico-fallback'));
   check('css dashboard : la classe des images de modules', css.includes('.mod-emote'));

@@ -191,6 +191,35 @@ def botsettings(d: ImageDraw.ImageDraw):
         x = (0.62, 0.36, 0.56)[i]
         d.ellipse([U(x - 0.08), U(y - 0.08), U(x + 0.08), U(y + 0.08)], fill=BG, outline=FG, width=int(U(0.05)))
 
+def poll(d: ImageDraw.ImageDraw):
+    """Urne + bulletin coché qui s'y glisse : le vote natif Discord."""
+    # Bulletin au-dessus de la fente, coche en creux.
+    d.rounded_rectangle([U(0.38), U(0.11), U(0.68), U(0.38)], radius=U(0.04), fill=FG)
+    cx, cy = U(0.53), U(0.245)
+    d.line([(cx - U(0.065), cy), (cx - U(0.017), cy + U(0.05))], fill=BG, width=int(U(0.045)))
+    d.line([(cx - U(0.017), cy + U(0.05)), (cx + U(0.075), cy - U(0.058))], fill=BG, width=int(U(0.045)))
+    # Urne pleine, fente fine et centrée (une fente, pas une poignée).
+    d.rounded_rectangle([U(0.15), U(0.45), U(0.85), U(0.86)], radius=U(0.055), fill=FG)
+    d.rounded_rectangle([U(0.32), U(0.52), U(0.68), U(0.562)], radius=U(0.021), fill=BG)
+
+def rules(d: ImageDraw.ImageDraw):
+    """Page de règlement avec son barre d'accent et son sceau d'acceptation."""
+    d.rounded_rectangle([U(0.15), U(0.13), U(0.72), U(0.87)], radius=U(0.06), fill=FG)
+    # Barre verticale façon encadré Discord : ce qui distingue une règle d'un brouillon.
+    d.rectangle([U(0.215), U(0.22), U(0.255), U(0.78)], fill=BG)
+    # Titre + lignes.
+    d.rectangle([U(0.31), U(0.24), U(0.60), U(0.30)], fill=BG)
+    d.rectangle([U(0.31), U(0.375), U(0.645), U(0.405)], fill=BG)
+    d.rectangle([U(0.31), U(0.46), U(0.645), U(0.49)], fill=BG)
+    d.rectangle([U(0.31), U(0.545), U(0.545), U(0.575)], fill=BG)
+    # Sceau d'acceptation, posé sur le coin bas droit de la page.
+    d.ellipse([U(0.52), U(0.56), U(0.90), U(0.94)], fill=BG)
+    d.ellipse([U(0.55), U(0.59), U(0.87), U(0.91)], fill=FG)
+    cx, cy = U(0.71), U(0.75)
+    d.line([(cx - U(0.08), cy + U(0.005)), (cx - U(0.024), cy + U(0.06))], fill=BG, width=int(U(0.05)))
+    d.line([(cx - U(0.024), cy + U(0.06)), (cx + U(0.09), cy - U(0.065))], fill=BG, width=int(U(0.05)))
+
+
 
 SHAPE = {
     "verification": verification,
@@ -208,6 +237,8 @@ SHAPE = {
     "modules": modules,
     "health": health,
     "botsettings": botsettings,
+    "poll": poll,
+    "rules": rules,
 }
 
 

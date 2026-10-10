@@ -52,6 +52,9 @@ function getGuildPerms(botId, guildId) {
       kickMembers: has(F.KickMembers),
       banMembers: has(F.BanMembers),
       viewChannel: has(F.ViewChannel),
+      // 📜 v362 — deux permissions que les modules Règles et Sondages exigent
+      manageRoles: has(F.ManageRoles),
+      sendPolls: F.SendPolls === undefined ? null : has(F.SendPolls),
     },
   };
 }
@@ -281,6 +284,12 @@ async function guardInteraction(botId, entry, i, timeoutMs = 15000) {
           if (await require('./verification').handleButton(botId, i)) return;
         }
       } catch (e) { console.error('[BotDev] verification:', (e && e.message) || e); }
+      // 📜 v362 — bouton « J'accepte les règles » du panneau de règles
+      try {
+        if (i.isButton && i.isButton() && String(i.customId || '').startsWith('hxrules:')) {
+          if (await require('./rules').handleButton(botId, i)) return;
+        }
+      } catch (e) { console.error('[BotDev] rules:', (e && e.message) || e); }
       // 🎁 v292 — bouton « 👥 Participants » des giveaways
       try {
         if (i.isButton && i.isButton() && String(i.customId || '').startsWith('hxgw:')) {

@@ -622,6 +622,7 @@ Dashboard.discordPreviewHtml = (apercu, options = {}) => {
   return `
     <div class="dprev${options.compact ? ' is-compact' : ''}" role="img" aria-label="Aperçu du message que le bot enverra sur Discord">
       ${apercu.message ? `<div class="dprev-text">${md(apercu.message)}</div>` : ''}
+      ${apercu.poll ? Dashboard.discordPollHtml(apercu.poll) : ''}
       ${emb ? `<div class="dprev-embed"${couleur ? ` style="--dprev-bar:${esc(couleur)}"` : ''}>
         <div class="dprev-body">
           ${emb.title ? `<div class="dprev-title">${md(emb.title)}</div>` : ''}
@@ -696,6 +697,7 @@ Dashboard.MODULES = [
   ['welcome', '👋', 'Bienvenue'],
   ['autoroles', '🏷️', 'Auto-rôles'],
   ['verification', '✅', 'Vérification'],
+  ['rules', '📖', 'Règles'],
   ['levels', '📈', 'Niveaux'],
   ['economy', '💰', 'Économie'],
   ['shop', '🛒', 'Boutique'],
@@ -708,6 +710,7 @@ Dashboard.MODULES = [
   ['giveaways', '🎁', 'Giveaways'],
   ['events', '🎮', 'Événements'],
   ['quiz', '🧠', 'Quiz'],
+  ['polls', '🗳️', 'Sondages'],
   ['voicetemp', '🎙️', 'Vocal'],
   ['starboard', '⭐', 'Starboard'],
   ['invites', '📨', 'Invitations'],
@@ -974,6 +977,24 @@ Dashboard.MODULE_META = {
     aide: 'Trois étapes pour démarrer, la liste des modules et le lien du support.',
     voit: 'Rien sur Discord : ce guide est dans le tableau de bord.',
     slash: '/aide sur Discord' },
+
+  rules: { e: '📖', emote: 'hox_rules', cat: 'support', tag: 'Le règlement que les membres acceptent avant d’entrer',
+    aide: 'Vous écrivez vos règles en Markdown Discord, ou vous partez d’un modèle livré : le bot publie le panneau dans le salon que vous choisissez, avec un bouton, et donne le rôle à qui accepte.',
+    voit: 'Un encadré de règlement dans le salon, un bouton « J’accepte les règles » en dessous, le rôle qui arrive au clic.',
+    slash: 'Aucune commande — le panneau se publie et se met à jour depuis le tableau de bord',
+    apercu: { embed: { title: '📜 Règlement — votre serveur',
+      desc: '**1.** Restez courtois : insultes, harcèlement et propos haineux sont interdits.\n**2.** Pas de spam, pas de publicité en message privé.\n**3.** Un seul compte, un pseudo lisible.\n> Le staff tranche en dernier ressort.',
+      color: '#5865F2',
+      footer: 'En acceptant, vous obtenez le rôle vérifié et vous reconnaissez avoir lu ce règlement.' },
+      buttons: [{ label: '✅ J’accepte les règles', style: 'vert' }] } },
+
+  polls: { e: '🗳️', emote: 'hox_poll', cat: 'vie', tag: 'Le vrai sondage Discord, préparé et publié d’ici',
+    aide: 'Question, jusqu’à 10 choix, durée de 1 heure à 32 jours, réponses multiples autorisées : le bot envoie le widget de vote natif de Discord, relit les résultats à la source et peut les clôturer plus tôt.',
+    voit: 'Un message Discord avec ses cases à cocher, le compteur de votes, puis les barres de résultats à la fin.',
+    slash: 'Aucune commande — le sondage se publie ici ; /poll reste le sondage rapide à boutons',
+    apercu: { poll: { question: 'Soirée cinéma vendredi : quel film ?',
+      options: ['Un film d’horreur', 'Un film de science-fiction', 'Un animé pour toute la famille', 'Peu importe, je viens pour l’ambiance'],
+      duration: 48, allowMultiselect: false } } },
 };
 
 // Libellé lisible de chaque module (titres, recherche, aperçus).
@@ -8394,6 +8415,606 @@ Dashboard.renderers.links = async (content, data) => {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/linkpanel`, { method: 'PUT', body: collect() });
       await App.api(`/bots/${bot.id}/guilds/${guildId}/linkpanel/send`, { method: 'POST', body: { channel: c.querySelector('#lp-channel').value } });
       App.toast('Panneau de liens envoyé sur Discord !');
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+};
+
+// ------------------------------------------------------------
+// v362 — Rendu FIDÈLE du Markdown Discord, pour les aperçus du tableau
+// de bord (Règles, Sondage). Ligne par ligne, sans expression à
+// backtracking : le texte vient de l'utilisateur et peut être volumineux.
+// Balises prises en charge : titres #, citations >, listes -, gras,
+// italique, souligné, barré, code, bloc de code, spoiler, mentions
+// <@&rôle> / <#salon>, séparateurs « ━ ».
+// ------------------------------------------------------------
+Dashboard.discordInlineMd = (escaped) => {
+  let out = escaped;
+  // Blocs de code d'abord : leur contenu ne doit JAMAIS être transformé.
+  const blocs = [];
+  out = out.replace(/```([\s\S]*?)```/g, (_m, corps) => {
+    blocs.push(corps.replace(/^\n/, '').replace(/\n$/, ''));
+    return `\u0000BLOC${blocs.length - 1}\u0000`;
+  });
+  const paires = [
+    [/\*\*\*([^*\n]+)\*\*\*/g, '<b><i>$1</i></b>'],
+    [/\*\*([^*\n]+)\*\*/g, '<b>$1</b>'],
+    [/__([^_\n]+)__/g, '<u>$1</u>'],
+    [/~~([^~\n]+)~~/g, '<s>$1</s>'],
+    [/`([^`\n]+)`/g, '<code>$1</code>'],
+    [/\|\|([^|\n]+)\|\|/g, '<span class="dmd-spoiler">$1</span>'],
+    [/\*([^*\n]+)\*/g, '<i>$1</i>'],
+  ];
+  for (const [re, tpl] of paires) out = out.replace(re, tpl);
+  // Mentions : après échappement, <@&123> est devenu &lt;@&amp;123&gt;.
+  out = out.replace(/&lt;@&amp;(\d{5,25})&gt;/g, '<span class="dmd-mention">rôle sélectionné</span>')
+    .replace(/&lt;#(\d{5,25})&gt;/g, '<span class="dmd-mention">#salon sélectionné</span>')
+    .replace(/&lt;@!?(\d{5,25})&gt;/g, '<span class="dmd-mention">@membre</span>');
+  out = out.replace(/\u0000BLOC(\d+)\u0000/g, (_m, i) => `<pre class="dmd-code">${blocs[Number(i)] || ''}</pre>`);
+  return out;
+};
+
+Dashboard.discordMarkdownHtml = (texte) => {
+  const src = String(texte == null ? '' : texte).replace(/\r\n?/g, '\n');
+  if (!src.trim()) return '<div class="dmd-empty">Rien à prévisualiser pour l\u2019instant.</div>';
+  const lignes = src.split('\n');
+  const parts = [];
+  let liste = [];
+  const closeListe = () => {
+    if (!liste.length) return;
+    parts.push(`<ul class="dmd-list">${liste.map((item) => `<li>${Dashboard.discordInlineMd(App.escapeHtml(item))}</li>`).join('')}</ul>`);
+    liste = [];
+  };
+  for (const brut of lignes) {
+    const ligne = brut.replace(/\s+$/, '');
+    if (/^━+$/.test(ligne.trim())) { closeListe(); parts.push('<hr class="dmd-sep" />'); continue; }
+    if (!ligne.trim()) { closeListe(); continue; }
+    const cite = ligne.match(/^>\s?(.*)$/);
+    if (cite) { closeListe(); parts.push(`<blockquote class="dmd-quote">${Dashboard.discordInlineMd(App.escapeHtml(cite[1]))}</blockquote>`); continue; }
+    const puce = ligne.match(/^[-*•]\s+(.*)$/);
+    if (puce) { liste.push(puce[1]); continue; }
+    const titre = ligne.match(/^(#{1,3})\s+(.*)$/);
+    if (titre) {
+      closeListe();
+      parts.push(`<div class="dmd-h${titre[1].length}">${Dashboard.discordInlineMd(App.escapeHtml(titre[2]))}</div>`);
+      continue;
+    }
+    closeListe();
+    parts.push(`<div class="dmd-p">${Dashboard.discordInlineMd(App.escapeHtml(ligne))}</div>`);
+  }
+  closeListe();
+  return parts.join('');
+};
+
+// Aperçu du widget de sondage NATIF : cases, barres, pied de page.
+// Reproduit la présentation Discord (question en gras, une ligne par choix,
+// durée en pied) — pas un inventé : les textes viennent de ce que vous tapez.
+Dashboard.discordPollHtml = ({ question, options, duration, allowMultiselect, intro, counts, total, closed }) => {
+  const choix = (Array.isArray(options) ? options : []).filter((o) => String(o || '').trim());
+  const votes = Array.isArray(counts) ? counts : [];
+  const cumul = votes.reduce((a, b) => a + (Number(b) || 0), 0) || Number(total) || 0;
+  const lignes = choix.map((texte, index) => {
+    const n = Number(votes[index]) || 0;
+    const pct = closed && cumul ? Math.round((n / cumul) * 100) : 0;
+    const bar = cumul && closed ? `<span class="dpp-bar"><span style="width:${pct}%"></span></span>` : '';
+    const num = `<span class="dpp-n">${n}</span>`;
+    return `<div class="dpp-row${closed ? ' is-closed' : ''}">
+      <span class="dpp-box${allowMultiselect ? ' is-square' : ''}"></span>
+      <span class="dpp-txt">${App.escapeHtml(String(texte).slice(0, 55))}</span>
+      ${bar}${num}
+    </div>`;
+  }).join('');
+  const duree = Number(duration) || 0;
+  const quand = duree >= 24 ? `${Math.round(duree / 24)} jour(s)` : `${duree} heure(s)`;
+  return `<div class="dprev-poll" role="img" aria-label="Aperçu du sondage tel qu'il apparaîtra sur Discord">
+    ${intro ? `<div class="dpp-intro">${Dashboard.discordMarkdownHtml(intro)}</div>` : ''}
+    <div class="dpp-question">${Dashboard.discordInlineMd(App.escapeHtml(String(question || 'Votre question').slice(0, 300)))}</div>
+    ${lignes || '<div class="dpp-empty">Ajoutez au moins deux choix.</div>'}
+    <div class="dpp-foot">
+      <span>${closed ? `🏁 ${cumul} vote(s)` : `🗳️ ${cumul || 0} vote(s)`}</span>
+      <span>⏳ ${closed ? 'Sondage clôturé' : `Le sondage se termine dans ${quand}`}</span>
+    </div>
+    ${allowMultiselect ? '<div class="dpp-multi">Plusieurs réponses possibles</div>' : ''}
+  </div>`;
+};
+
+// ============================================================
+// v362 — 📜 Règles : panneau Markdown + acceptation + rôle.
+// ------------------------------------------------------------
+// L'aperçu du bas se met à jour à chaque frappe : ce que vous voyez est ce
+// que le bot enverra (mêmes balises, même ordre, même barre de couleur).
+// ============================================================
+Dashboard.renderers.rules = async (content, data) => {
+  const { bot, guildId } = Dashboard.state;
+  const cfg = Object.assign({
+    enabled: false, channel: '', role: '', title: '', body: '', color: '#5865F2',
+    button_label: '', button_style: 'vert', footer: '', thanks: '', log_channel: '',
+    panel_message: '', panel_channel: '', accepts: 0, last_at: 0, recent: [],
+    presets: [], using_default: false,
+  }, data.rules || {});
+  const racine = Dashboard.header(content, '📖', 'Règles du serveur',
+    'Un panneau soigné dans le salon de votre choix, un bouton pour accepter, et le rôle qui suit automatiquement.');
+  const salons = (data.channels || []).filter((ch) => !ch.voice && !ch.category);
+  const roles = (data.roles || []).filter((r) => r.name !== '@everyone');
+  const optionsSalon = (valeur) => [
+    '<option value="">— Choisir un salon —</option>',
+    ...salons.map((ch) => `<option value="${ch.id}" ${String(valeur) === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`),
+    Dashboard.currentDiscordOption(valeur, salons),
+  ].join('');
+  const optionsRole = (valeur) => [
+    '<option value="">— Aucun rôle (juste la trace des acceptations) —</option>',
+    ...roles.map((r) => `<option value="${r.id}" ${String(valeur) === r.id ? 'selected' : ''}>@ ${App.escapeHtml(r.name)}</option>`),
+    Dashboard.currentDiscordOption(valeur, roles),
+  ].join('');
+  const couleurOk = /^#[0-9a-fA-F]{6}$/.test(String(cfg.color || '')) ? cfg.color : '#5865F2';
+
+  racine.appendChild(App.el(`
+    <div class="dash-stats" style="margin-bottom:14px">
+      <div class="dash-stat"><div class="val">${Number(cfg.accepts) || 0}</div><div class="lbl">✅ Acceptations enregistrées</div></div>
+      <div class="dash-stat"><div class="val">${cfg.panel_message ? 'Oui' : 'Non'}</div><div class="lbl">📣 Panneau en ligne</div></div>
+      <div class="dash-stat"><div class="val">${cfg.enabled ? 'Activé' : 'Désactivé'}</div><div class="lbl">🔘 Module</div></div>
+    </div>`));
+
+  const carte = Dashboard.card(racine, '📖 Le panneau de règles',
+    'Écrivez vos règles, ou partez d\u2019un modèle. Le texte accepte le Markdown Discord : **gras**, *italique*, __souligné__, > citation, - liste, `code`, ||spoiler||.');
+  carte.innerHTML += `
+    <label style="display:flex;gap:8px;align-items:center;margin:6px 0 12px"><input type="checkbox" id="rl-enabled" ${cfg.enabled ? 'checked' : ''} /> Activer le module sur ce serveur</label>
+    <div class="rl-grille">
+      <div>
+        <label class="dash-label">Salon du panneau</label>
+        <select class="dash-select" id="rl-channel">${optionsSalon(cfg.channel)}</select>
+      </div>
+      <div>
+        <label class="dash-label">Rôle donné à qui accepte</label>
+        <select class="dash-select" id="rl-role">${optionsRole(cfg.role)}</select>
+      </div>
+      <div>
+        <label class="dash-label">Salon du journal (facultatif)</label>
+        <select class="dash-select" id="rl-log">${optionsSalon(cfg.log_channel)}</select>
+      </div>
+    </div>
+    <label class="dash-label">Titre du panneau</label>
+    <input class="dash-input" id="rl-title" maxlength="120" value="${App.escapeHtml(cfg.title)}" placeholder="Règles du serveur" />
+    <label class="dash-label">Texte des règles <span class="rl-compteur" id="rl-count"></span></label>
+    <textarea class="dash-input rl-zone" id="rl-body" rows="12" maxlength="3000"
+      placeholder="Collez vos règles ici, ou choisissez un modèle ci-dessous.">${App.escapeHtml(cfg.body)}</textarea>
+    <div class="rl-modeles">
+      <span class="rl-modeles-titre">Modèles livrés</span>
+      ${(cfg.presets || []).map((p) => `<button type="button" class="dash-btn dash-btn-sm" data-preset="${App.escapeHtml(p.id)}">${App.escapeHtml(p.label)}</button>`).join('')}
+    </div>
+    <div class="rl-grille rl-grille-2">
+      <div>
+        <label class="dash-label">Couleur de la barre</label>
+        <input type="color" id="rl-color" value="${App.escapeHtml(couleurOk)}" />
+      </div>
+      <div>
+        <label class="dash-label">Style du bouton</label>
+        <select class="dash-select" id="rl-style">
+          ${[['vert', 'Vert — accepter'], ['bleu', 'Bleu'], ['gris', 'Gris'], ['rouge', 'Rouge']]
+    .map(([v, l]) => `<option value="${v}" ${cfg.button_style === v ? 'selected' : ''}>${l}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label class="dash-label">Texte du bouton</label>
+        <input class="dash-input" id="rl-button" maxlength="80" value="${App.escapeHtml(cfg.button_label)}" placeholder="J’accepte les règles" />
+      </div>
+      <div>
+        <label class="dash-label">Pied de page</label>
+        <input class="dash-input" id="rl-footer" maxlength="300" value="${App.escapeHtml(cfg.footer)}" placeholder="En acceptant, vous vous engagez à les respecter." />
+      </div>
+    </div>
+    <label class="dash-label">Réponse après un clic (privée, visible par le membre seul)</label>
+    <input class="dash-input" id="rl-thanks" maxlength="500" value="${App.escapeHtml(cfg.thanks)}" placeholder="✅ Règles acceptées ! Le rôle {role} vient de vous être donné." />
+    <div class="rl-aide">{serveur} = nom du serveur · {role} (ou {rôle}) = rôle accordé · {membres} = nombre d\u2019acceptations. Dans l\u2019aperçu comme sur Discord, ces marqueurs sont remplacés et le Markdown est conservé tel quel.</div>
+    <label class="dash-label">Aperçu du panneau, tel qu\u2019il sera publié</label>
+    <div id="rl-preview" class="rl-preview"></div>
+    <div class="rl-actions">
+      <button class="dash-save-action dash-btn dash-btn-primary" id="rl-save">Enregistrer</button>
+      <button class="dash-btn" id="rl-send">${cfg.panel_message ? 'Mettre à jour le panneau sur Discord' : 'Publier le panneau dans le salon'}</button>
+      ${cfg.panel_message ? '<button class="dash-btn" id="rl-drop">Retirer le panneau</button>' : ''}
+    </div>
+    <div class="rl-note" id="rl-etat">${cfg.panel_message ? 'Panneau suivi : la mise à jour remplace le message déjà en ligne, sans en créer un deuxième.' : 'Aucun panneau publié pour le moment.'}${cfg.using_default ? ' · Le modèle « essentiel » sera utilisé tant que la zone de texte reste vide.' : ''}</div>`;
+
+  const champ = (id) => carte.querySelector(id);
+  const corps = champ('#rl-body');
+  const compteur = champ('#rl-count');
+  const apercu = champ('#rl-preview');
+
+  const nomServeur = (data.guild && data.guild.name) || 'votre serveur';
+  // Mêmes marqueurs, même remplacement que server/discord/rules.js (fill()) :
+  // l'aperçu doit dire ce que le membre lira, pas ce que vous avez tapé.
+  const remplir = (texte) => {
+    const sel = carte.querySelector('#rl-role').value;
+    const choisi = roles.find((r) => String(r.id) === String(sel));
+    const nomRole = choisi ? `@${choisi.name}` : '—';
+    return String(texte == null ? '' : texte)
+      .split('{serveur}').join(nomServeur)
+      .split('{rôle}').join(nomRole)
+      .split('{role}').join(nomRole)
+      .split('{membres}').join(String(Number(cfg.accepts) || 0));
+  };
+  const maj = () => {
+    const texte = remplir(corps.value || '');
+    const brut = corps.value || '';
+    compteur.textContent = `${brut.length}/3000`;
+    compteur.classList.toggle('is-plein', brut.length > 2850);
+    const titre = remplir(champ('#rl-title').value || 'Règles du serveur').slice(0, 120);
+    const couleur = /^#[0-9a-fA-F]{6}$/i.test(champ('#rl-color').value) ? champ('#rl-color').value : couleurOk;
+    const pied = remplir(champ('#rl-footer').value || '').slice(0, 300);
+    const bouton = remplir(champ('#rl-button').value || 'J’accepte les règles').slice(0, 80);
+    const styleBouton = { vert: 'is-green', bleu: 'is-blurple', gris: 'is-grey', rouge: 'is-red' }[champ('#rl-style').value] || 'is-green';
+    apercu.innerHTML = `<div class="dprev">
+      <div class="dprev-embed" style="--dprev-bar:${App.escapeHtml(couleur)}">
+        <div class="dprev-body">
+          <div class="dprev-title">${App.escapeHtml('📜 ' + titre)}</div>
+          <div class="dmd">${Dashboard.discordMarkdownHtml(texte)}</div>
+          ${pied ? `<div class="dprev-foot">${App.escapeHtml(pied)}</div>` : ''}
+        </div>
+      </div>
+      <div class="dprev-btns"><span class="dprev-btn ${styleBouton}">✅ ${App.escapeHtml(bouton)}</span></div>
+    </div>`;
+  };
+  ['#rl-body', '#rl-title', '#rl-footer', '#rl-button'].forEach((id) => { champ(id).oninput = maj; });
+  carte.querySelector('#rl-role').onchange = maj;
+  champ('#rl-color').oninput = maj;
+  champ('#rl-style').onchange = maj;
+  maj();
+
+  const collecte = () => ({
+    enabled: champ('#rl-enabled').checked,
+    channel: champ('#rl-channel').value,
+    role: champ('#rl-role').value,
+    log_channel: champ('#rl-log').value,
+    title: champ('#rl-title').value.trim(),
+    body: corps.value,
+    color: champ('#rl-color').value,
+    button_style: champ('#rl-style').value,
+    button_label: champ('#rl-button').value.trim(),
+    footer: champ('#rl-footer').value.trim(),
+    thanks: champ('#rl-thanks').value.trim(),
+  });
+  const etat = (texte) => { champ('#rl-etat').textContent = texte; };
+
+  carte.querySelectorAll('[data-preset]').forEach((b) => {
+    b.onclick = async () => {
+      const id = b.dataset.preset;
+      const modele = (cfg.presets || []).find((p) => p.id === id);
+      if (!modele) return;
+      if (corps.value.trim() && !(await App.confirm('Ce modèle remplacera le texte des règles déjà écrit.'))) return;
+      corps.value = modele.text;
+      maj();
+      App.toast(`Modèle « ${modele.label} » appliqué — enregistrez pour le publier.`);
+    };
+  });
+
+  champ('#rl-save').onclick = async () => {
+    try {
+      const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/rules`, { method: 'PUT', body: collecte() });
+      cfg.panel_message = (r.cfg && r.cfg.panel_message) || cfg.panel_message;
+      App.toast('Réglages des règles enregistrés !');
+      etat('Enregistré à ' + new Date().toLocaleTimeString('fr-FR') + '.');
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+  champ('#rl-send').onclick = async () => {
+    try {
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/rules`, { method: 'PUT', body: collecte() });
+      const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/rules/panel`, { method: 'POST', body: { channel: champ('#rl-channel').value } });
+      App.toast(r.mode === 'edit' ? 'Panneau de règles mis à jour sur Discord !' : 'Panneau de règles publié sur Discord !');
+      const boutonEnvoyer = champ('#rl-send');
+      if (boutonEnvoyer) boutonEnvoyer.textContent = 'Mettre à jour le panneau sur Discord';
+      if (!champ('#rl-drop')) {
+        const g = App.el('<button class="dash-btn" id="rl-drop">Retirer le panneau</button>');
+        g.onclick = retirer;
+        champ('#rl-send').after(g);
+      }
+      etat('Panneau publié, identifiant suivi : ' + (r.message_id || '—'));
+    } catch (e) { App.toast(e.message, 'error'); etat('Échec de la publication : ' + e.message); }
+  };
+  const retirer = async () => {
+    if (!(await App.confirm('Le panneau sera supprimé du salon Discord. Les rôles déjà donnés ne sont pas retirés.'))) return;
+    try {
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/rules/panel/delete`, { method: 'POST' });
+      App.toast('Panneau retiré du salon.');
+      champ('#rl-drop') && champ('#rl-drop').remove();
+      champ('#rl-send').textContent = 'Publier le panneau dans le salon';
+      etat('Aucun panneau publié pour le moment.');
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+  const boutonRetirer = champ('#rl-drop');
+  if (boutonRetirer) boutonRetirer.onclick = retirer;
+
+  // 👥 Acceptations
+  const carte2 = Dashboard.card(racine, '✅ Acceptations',
+    'Chaque clic est relevé ici. Le compteur suit le rôle : un membre qui l\u2019a déjà est reconnu sans doublon.');
+  carte2.innerHTML += `
+    <div class="rl-puce-ligne" id="rl-recent">
+      ${(cfg.recent || []).length
+    ? (cfg.recent || []).slice(0, 12).map((m) => `<span class="rl-chip" title="le ${new Date(Number(m.at) || 0).toLocaleDateString('fr-FR')}">${App.escapeHtml(m.tag || m.id)}</span>`).join('')
+    : '<span class="rl-vide">Personne n\u2019a encore accepté sur ce serveur.</span>'}
+    </div>
+    <div class="rl-actions">
+      <button class="dash-btn" id="rl-missing">Lister les membres sans le rôle</button>
+      <button class="dash-btn" id="rl-reset">Réinitialiser les acceptations</button>
+    </div>
+    <div id="rl-result" class="rl-result" hidden></div>`;
+  carte2.querySelector('#rl-missing').onclick = async () => {
+    const zone = carte2.querySelector('#rl-result');
+    zone.hidden = false;
+    zone.innerHTML = '<div class="rl-vide">Lecture du serveur en cours…</div>';
+    try {
+      const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/rules/missing`, { method: 'POST', body: { limit: 200 } });
+      if (!r.ok) { zone.innerHTML = `<div class="rl-vide">${App.escapeHtml(r.error || 'Liste indisponible.')}</div>`; return; }
+      const nb = Number(r.total) || 0;
+      zone.innerHTML = `<div class="rl-result-titre">${nb} membre(s) sans le rôle « ${App.escapeHtml(r.role || '—')} »</div>`
+        + (nb ? `<div class="rl-chips">${(r.members || []).map((m) => `<span class="rl-chip">${App.escapeHtml(m.tag)}</span>`).join('')}</div>` : '');
+    } catch (e) { zone.innerHTML = `<div class="rl-vide">${App.escapeHtml(e.message)}</div>`; }
+  };
+  carte2.querySelector('#rl-reset').onclick = async () => {
+    if (!(await App.confirm('Le compteur et la liste des acceptations seront remis à zéro. Les rôles déjà attribués ne bougent pas.'))) return;
+    try {
+      const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/rules/reset`, { method: 'POST' });
+      carte2.querySelector('#rl-recent').innerHTML = '<span class="rl-vide">Personne n’a encore accepté sur ce serveur.</span>';
+      App.toast('Compteur remis à zéro.');
+      const stat = racine.querySelector('.dash-stat .val');
+      if (stat) stat.textContent = String((r.cfg && r.cfg.accepts) || 0);
+    } catch (e) { App.toast(e.message, 'error'); }
+  };
+};
+
+// ============================================================
+// v324 — 🗳️ Sondages : le VRAI widget de vote de Discord.
+// ------------------------------------------------------------
+// Un sondage Discord n'est pas un embed : le bot envoie un message portant
+// un champ `poll`. Le widget est dessiné par Discord, les votes aussi.
+// Limites reprises de l'API : 300 car. de question, 10 choix de 55 car.,
+// durée de 1 h à 32 jours, message non modifiable après envoi.
+// ============================================================
+Dashboard.renderers.polls = async (content, data) => {
+  const { bot, guildId } = Dashboard.state;
+  const cfg = Object.assign({
+    enabled: false, channel: '', duration: 24, allow_multiselect: false, intro: '',
+    results_channel: '', auto_report: true, last_message: '', last_channel: '',
+  }, data.polls || {});
+  const liste = Array.isArray(data.polls && data.polls.list) ? data.polls.list : [];
+  const ouverts = liste.filter((row) => !row.closed);
+  const racine = Dashboard.header(content, '🗳️', 'Sondages',
+    'Le sondage natif de Discord : cases à cocher, barres de résultats, fin automatique. Rien à fabriquer vous-même.');
+  const salons = (data.channels || []).filter((ch) => !ch.voice && !ch.category);
+  const optionsSalon = (valeur) => [
+    '<option value="">— Choisir un salon —</option>',
+    ...salons.map((ch) => `<option value="${ch.id}" ${String(valeur) === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`),
+    Dashboard.currentDiscordOption(valeur, salons),
+  ].join('');
+  const DUREES = [[1, '1 heure'], [2, '2 heures'], [4, '4 heures'], [6, '6 heures'], [12, '12 heures'],
+    [24, '1 jour'], [48, '2 jours'], [72, '3 jours'], [168, '7 jours'], [336, '14 jours'], [768, '32 jours (maximum Discord)']];
+
+  racine.appendChild(App.el(`
+    <div class="dash-stats" style="margin-bottom:14px">
+      <div class="dash-stat"><div class="val">${liste.length}</div><div class="lbl">🗳️ Sondages publiés</div></div>
+      <div class="dash-stat"><div class="val">${ouverts.length}</div><div class="lbl">🔵 Encore ouverts</div></div>
+      <div class="dash-stat"><div class="val">10</div><div class="lbl">⚙️ Choix maximum (Discord)</div></div>
+    </div>`));
+
+  // 1 — Constructeur
+  const carte = Dashboard.card(racine, '🗳️ Nouveau sondage',
+    'Écrivez la question, ajoutez vos choix. Le sondage publié ne peut plus être modifié après (limite Discord) : on le clôture et on en relance un autre.');
+  carte.innerHTML += `
+    <label class="dash-label">Question <span class="rl-compteur" id="pp-qcount"></span></label>
+    <input class="dash-input" id="pp-question" maxlength="300" placeholder="On mange quoi samedi soir ?" />
+    <label class="dash-label">Choix — 10 maximum, 55 caractères chacun</label>
+    <div id="pp-opts" class="pp-opts"></div>
+    <div class="rl-grille rl-grille-2">
+      <div>
+        <label class="dash-label">Durée du vote</label>
+        <select class="dash-select" id="pp-duration">${DUREES.map(([v, l]) => `<option value="${v}" ${Number(cfg.duration) === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      </div>
+      <div>
+        <label class="dash-label">Salon du sondage</label>
+        <select class="dash-select" id="pp-channel">${optionsSalon(cfg.channel)}</select>
+      </div>
+    </div>
+    <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="pp-multi" ${cfg.allow_multiselect ? 'checked' : ''} /> Autoriser plusieurs réponses (choix multiples)</label>
+    <label class="dash-label">Texte au-dessus du sondage (facultatif — gardé comme défaut)</label>
+    <textarea class="dash-input" id="pp-intro" rows="3" maxlength="2000" placeholder="On doit trancher avant jeudi. Répondez honnêtement 🙂">${App.escapeHtml(cfg.intro || '')}</textarea>
+    <label class="dash-label">Aperçu du message, tel qu\u2019il sera publié</label>
+    <div id="pp-preview" class="rl-preview"></div>
+    <div class="rl-actions">
+      <button class="dash-btn dash-btn-primary" id="pp-send">Publier le sondage sur Discord</button>
+    </div>
+    <div class="rl-note" id="pp-etat">Le bot doit avoir la permission Discord « Créer des sondages » dans le salon choisi.</div>`;
+
+  let choix = ['Oui, avec plaisir', 'Non, pas cette fois'];
+  const blocOpts = carte.querySelector('#pp-opts');
+  const question = carte.querySelector('#pp-question');
+  const intro = carte.querySelector('#pp-intro');
+  const apercu = carte.querySelector('#pp-preview');
+  const compteurQ = carte.querySelector('#pp-qcount');
+
+  const dessinerOpts = () => {
+    blocOpts.innerHTML = choix.map((valeur, index) => `
+      <div class="pp-opt">
+        <span class="pp-num">${index + 1}</span>
+        <input class="dash-input" data-idx="${index}" maxlength="55" value="${App.escapeHtml(valeur)}" placeholder="Choix ${index + 1}" />
+        ${choix.length > 2 ? `<button type="button" class="pp-del" data-del="${index}" title="Retirer ce choix">✕</button>` : ''}
+      </div>`).join('')
+      + (choix.length < 10 ? '<button type="button" class="dash-btn dash-btn-sm" id="pp-add">Ajouter un choix</button>'
+        : '<div class="rl-aide">Limite Discord atteinte : 10 choix.</div>');
+    blocOpts.querySelectorAll('input[data-idx]').forEach((input) => {
+      input.oninput = () => { choix[Number(input.dataset.idx)] = input.value; maj(); };
+    });
+    blocOpts.querySelectorAll('[data-del]').forEach((b) => {
+      b.onclick = () => { choix.splice(Number(b.dataset.del), 1); dessinerOpts(); maj(); };
+    });
+    const add = blocOpts.querySelector('#pp-add');
+    if (add) add.onclick = () => { if (choix.length < 10) { choix.push(''); dessinerOpts(); maj(); } };
+  };
+  const maj = () => {
+    compteurQ.textContent = `${question.value.length}/300`;
+    compteurQ.classList.toggle('is-plein', question.value.length > 280);
+    apercu.innerHTML = Dashboard.discordPollHtml({
+      question: question.value || 'Votre question',
+      options: choix.filter((o) => String(o).trim()),
+      duration: Number(carte.querySelector('#pp-duration').value) || 24,
+      allowMultiselect: carte.querySelector('#pp-multi').checked,
+      intro: intro.value,
+    });
+  };
+  carte.querySelector('#pp-duration').onchange = maj;
+  carte.querySelector('#pp-multi').onchange = maj;
+  question.oninput = maj;
+  intro.oninput = maj;
+  dessinerOpts();
+  maj();
+
+  const etat = (texte) => { carte.querySelector('#pp-etat').textContent = texte; };
+  carte.querySelector('#pp-send').onclick = async () => {
+    const corps = {
+      question: question.value.trim(),
+      options: choix.map((o) => String(o).trim()).filter(Boolean),
+      duration: Number(carte.querySelector('#pp-duration').value) || 24,
+      allow_multiselect: carte.querySelector('#pp-multi').checked,
+      channel: carte.querySelector('#pp-channel').value || cfg.channel,
+      intro: intro.value,
+    };
+    if (!corps.channel) { App.toast('Choisissez le salon du sondage.', 'error'); return; }
+    const bouton = carte.querySelector('#pp-send');
+    bouton.disabled = true;
+    try {
+      const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/polls/send`, { method: 'POST', body: corps });
+      App.toast('Sondage publié sur Discord !');
+      etat('Sondage publié (message ' + (r.message_id || '—') + ').');
+      Dashboard.hideSaveBar();
+      Dashboard.refresh();
+    } catch (e) {
+      App.toast(e.message, 'error');
+      etat('Publication refusée : ' + e.message);
+    } finally {
+      bouton.disabled = false;
+    }
+  };
+
+  // 2 — Historique et résultats
+  const carte2 = Dashboard.card(racine, '📊 Sondages publiés',
+    'Les compteurs viennent de Discord à la demande : ni cache, ni approximation. La clôture est immédiate et définitive.');
+  const lignes = liste.length ? liste.map((row) => {
+    const votes = Array.isArray(row.counts) ? row.counts.reduce((a, b) => a + (Number(b) || 0), 0) : 0;
+    const fin = Number(row.ends_at) || 0;
+    const clos = !!row.closed || (fin > 0 && fin <= Date.now());
+    const quand = fin ? (clos ? 'clos' : `fin dans ${Math.max(1, Math.round((fin - Date.now()) / 3600000))} h`) : '—';
+    return `<div class="pp-row" data-msg="${App.escapeHtml(String(row.message_id || ''))}">
+      <div class="pp-row-tete">
+        <span class="pp-letat ${clos ? 'is-clos' : 'is-ouvert'}">${clos ? '🏁 Clos' : '🔵 Ouvert'}</span>
+        <span class="pp-question">${App.escapeHtml(String(row.question || '').slice(0, 120))}</span>
+        <span class="pp-meta">#${App.escapeHtml(String(row.channel_name || '—'))} · ${votes} vote(s) · ${quand}</span>
+      </div>
+      <div class="pp-row-barre">
+        <button type="button" class="dash-btn dash-btn-sm" data-act="read">Actualiser les résultats</button>
+        ${clos ? '' : '<button type="button" class="dash-btn dash-btn-sm" data-act="close">Clôturer maintenant</button>'}
+        <button type="button" class="dash-btn dash-btn-sm" data-act="forget">Oublier d’ici</button>
+      </div>
+      <div class="pp-row-resultat" hidden></div>
+    </div>`;
+  }).join('') : '<div class="rl-vide">Aucun sondage publié depuis ce module pour le moment.</div>';
+  carte2.innerHTML += `<div class="pp-liste">${lignes}</div>`;
+
+  carte2.querySelectorAll('.pp-row').forEach((ligneEl) => {
+    const messageId = ligneEl.dataset.msg;
+    const zone = ligneEl.querySelector('.pp-row-resultat');
+    const lire = async () => {
+      zone.hidden = false;
+      zone.innerHTML = '<div class="rl-vide">Lecture du sondage sur Discord…</div>';
+      try {
+        const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/polls/results`, { method: 'POST', body: { message_id: messageId } });
+        const res = r.results || {};
+        zone.innerHTML = Dashboard.discordPollHtml({
+          question: res.question, options: res.options, duration: 0,
+          allowMultiselect: res.allow_multiselect, counts: res.counts, total: res.total, closed: true,
+        }) + `<div class="pp-lien"><a href="${App.escapeHtml(res.link || '#')}" target="_blank" rel="noopener noreferrer">Ouvrir le message sur Discord</a>${res.finalized ? ' · décompte définitif' : ' · décompte provisoire'}</div>`
+          + `<div class="pp-row-barre"><button type="button" class="dash-btn dash-btn-sm" data-act="voters">Voir qui a voté</button></div>`
+          + '<div class="pp-votants" hidden></div>';
+        const boutonVotants = zone.querySelector('[data-act="voters"]');
+        const zoneVotants = zone.querySelector('.pp-votants');
+        boutonVotants.onclick = async () => {
+          zoneVotants.hidden = false;
+          zoneVotants.innerHTML = '<div class="rl-vide">Lecture de la liste des votants…</div>';
+          const regroupes = [];
+          for (let index = 1; index <= (res.options || []).length && index <= 10; index += 1) {
+            try {
+              const v = await App.api(`/bots/${bot.id}/guilds/${guildId}/polls/voters`, { method: 'POST', body: { message_id: messageId, answer_id: index, limit: 100 } });
+              regroupes.push({ choix: res.options[index - 1], votants: v.voters || [] });
+            } catch { regroupes.push({ choix: res.options[index - 1], votants: [], erreur: true }); }
+          }
+          zoneVotants.innerHTML = regroupes.map((groupe) => `<div class="pp-votants-ligne">
+            <b>${App.escapeHtml(String(groupe.choix || '').slice(0, 55))}</b> —
+            ${groupe.erreur ? '<span class="rl-vide">liste indisponible</span>'
+    : (groupe.votants.length ? groupe.votants.map((u) => `<span class="rl-chip">${App.escapeHtml(u.tag)}</span>`).join('') : '<span class="rl-vide">aucun vote</span>')}
+          </div>`).join('');
+        };
+      } catch (e) { zone.innerHTML = `<div class="rl-vide">${App.escapeHtml(e.message)}</div>`; }
+    };
+    ligneEl.querySelectorAll('[data-act]').forEach((b) => {
+      b.onclick = async () => {
+        const act = b.dataset.act;
+        if (act === 'read') { await lire(); return; }
+        if (act === 'close') {
+          if (!(await App.confirm('Le vote sera arrêté immédiatement et le bilan envoyé dans votre salon de résultats. Sur Discord, cette opération est définitive.'))) return;
+          try {
+            await App.api(`/bots/${bot.id}/guilds/${guildId}/polls/end`, { method: 'POST', body: { message_id: messageId } });
+            App.toast('Sondage clôturé.');
+            await lire();
+            Dashboard.hideSaveBar();
+          } catch (e) { App.toast(e.message, 'error'); }
+          return;
+        }
+        if (act === 'forget') {
+          if (!(await App.confirm('Cela retire seulement le sondage de l\u2019historique du tableau de bord. Le message Discord n\u2019est pas touché.'))) return;
+          try {
+            await App.api(`/bots/${bot.id}/guilds/${guildId}/polls/forget`, { method: 'POST', body: { message_id: messageId } });
+            ligneEl.remove();
+            App.toast('Sondage retiré de l\u2019historique.');
+          } catch (e) { App.toast(e.message, 'error'); }
+        }
+      };
+    });
+  });
+
+  // 3 — Réglages par défaut
+  const carte3 = Dashboard.card(racine, '⚙️ Réglages par défaut',
+    'Ce que le module applique quand vous ne changez rien : salon, durée, réponses multiples, et où envoyer le bilan.');
+  carte3.innerHTML += `
+    <label style="display:flex;gap:8px;align-items:center;margin:6px 0 12px"><input type="checkbox" id="pp-enabled" ${cfg.enabled ? 'checked' : ''} /> Activer le module sur ce serveur</label>
+    <div class="rl-grille rl-grille-2">
+      <div>
+        <label class="dash-label">Salon par défaut</label>
+        <select class="dash-select" id="pp-def-channel">${optionsSalon(cfg.channel)}</select>
+      </div>
+      <div>
+        <label class="dash-label">Durée par défaut</label>
+        <select class="dash-select" id="pp-def-duration">${DUREES.map(([v, l]) => `<option value="${v}" ${Number(cfg.duration) === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      </div>
+      <div>
+        <label class="dash-label">Salon du bilan (facultatif)</label>
+        <select class="dash-select" id="pp-results">${optionsSalon(cfg.results_channel)}</select>
+      </div>
+    </div>
+    <label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" id="pp-report" ${cfg.auto_report ? 'checked' : ''} /> Envoyer le bilan automatiquement à la fin du vote</label>
+    <label style="display:flex;gap:8px;align-items:center;margin:0 0 10px"><input type="checkbox" id="pp-def-multi" ${cfg.allow_multiselect ? 'checked' : ''} /> Réponses multiples par défaut</label>
+    <div class="rl-aide">Un sondage Discord a toujours une fin : l\u2019API ne connaît pas le sondage illimité. Maximum 32 jours.</div>
+    <div class="rl-actions"><button class="dash-save-action dash-btn dash-btn-primary" id="pp-save">Enregistrer</button></div>`;
+  carte3.querySelector('#pp-save').onclick = async () => {
+    try {
+      await App.api(`/bots/${bot.id}/guilds/${guildId}/polls`, {
+        method: 'PUT',
+        body: {
+          enabled: carte3.querySelector('#pp-enabled').checked,
+          channel: carte3.querySelector('#pp-def-channel').value,
+          duration: Number(carte3.querySelector('#pp-def-duration').value) || 24,
+          allow_multiselect: carte3.querySelector('#pp-def-multi').checked,
+          results_channel: carte3.querySelector('#pp-results').value,
+          auto_report: carte3.querySelector('#pp-report').checked,
+          intro: intro.value,
+        },
+      });
+      App.toast('Réglages des sondages enregistrés !');
     } catch (e) { App.toast(e.message, 'error'); }
   };
 };
