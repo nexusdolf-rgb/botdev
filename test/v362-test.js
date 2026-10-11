@@ -125,7 +125,12 @@ function textChannel(extra = {}) {
   // ==========================================================
   console.log('\n— 2. Les modèles de règles livrés —');
   const presets = rules.presets();
-  check('dix modèles livrés (v363)', presets.length === 10, presets.map((p) => p.id).join(', '));
+  // v363.2 — le fondateur a demandé à revenir aux quatre modèles d'origine :
+  // les six ajoutés en v363 sont retirés, les correctifs (budget, nettoyage,
+  // mentions, auto-vérification) restent, eux.
+  check('quatre modèles livrés, les mêmes qu’à l’origine',
+    presets.length === 4 && presets.map((x) => x.id).join(',') === 'classique,gaming,roleplay,essentiel',
+    presets.map((p) => p.id).join(', '));
   check('chaque modèle tient dans le budget du panneau V2', presets.every((p) => p.length > 200 && p.length <= rules.BODY_MAX),
     presets.map((p) => `${p.id}:${p.length}`).join(' '));
   check('chaque modèle utilise le Markdown Discord (gras, citation, liste)', presets.every((p) => /\*\*.+\*\*/.test(p.text) && p.text.includes('> **') && (p.text.includes('- ') || p.text.includes('\n**'))));

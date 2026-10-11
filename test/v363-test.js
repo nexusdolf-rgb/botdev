@@ -367,11 +367,11 @@ function guildMock(channels, roleId, guildName) {
   }
 
   // ==========================================================
-  console.log('\n— 9. Les dix modèles livrés tiennent tels quels —');
+  console.log('\n— 9. Les quatre modèles livrés tiennent tels quels —');
   {
     const presets = rules.presets();
-    check('dix modèles, chacun avec label, hint, taille et plan',
-      presets.length === 10 && presets.every((p) => p.label && p.hint && p.blocks >= 4 && p.length > 400),
+    check('quatre modèles, chacun avec label, intention, taille et plan',
+      presets.length === 4 && presets.every((p) => p.label && p.hint && p.blocks >= 4 && p.length > 400),
       presets.map((p) => `${p.id}:${p.blocks}/${p.length}`).join(' '));
     let tousFides = true;
     const details = [];
@@ -392,11 +392,16 @@ function guildMock(channels, roleId, guildName) {
       const TU = /(^|[\s(,;:!?'«»])(tu|te|tes|ton|ta|toi)($|[\s.,;:!?'«»])/im;
       return presets.every((p) => !TU.test(p.text));
     })());
-    check('« essentiel » reste le modèle par défaut et le plus court',
-      rules.DEFAULT_PRESET === 'essentiel' && presets[0].id === 'essentiel'
-      && Math.min(...presets.map((p) => p.length)) === presets[0].length, presets.map((p) => p.length).join(','));
-    check('les sujets couverts dépassent le gaming/RP (amis, famille, support, tournoi, créateurs, événement)',
-      ['amis', 'famille', 'support', 'tournoi', 'createurs', 'evenement'].every((id) => presets.some((p) => p.id === id)));
+    check('« essentiel » reste le modèle par défaut et le plus court des quatre',
+      rules.DEFAULT_PRESET === 'essentiel'
+      && Math.min(...presets.map((p) => p.length)) === presets.find((p) => p.id === 'essentiel').length,
+      presets.map((p) => `${p.id}:${p.length}`).join(','));
+    // v363.2 : les six modèles ajoutés (amis, famille, support, tournoi,
+    // créateurs, événement) ont été RETIRÉS sur demande du fondateur. Le test
+    // verrouille ce choix pour que personne ne les « recommande » par erreur.
+    check('les six modèles ajoutés en v363 sont bien retirés',
+      ['amis', 'famille', 'support', 'tournoi', 'createurs', 'evenement']
+        .every((id) => !rules.PRESETS[id]), Object.keys(rules.PRESETS).join(','));
   }
 
   // ==========================================================
@@ -544,6 +549,6 @@ function guildMock(channels, roleId, guildName) {
 
   try { fs.rmSync(TMP, { recursive: true, force: true }); } catch {}
   console.log('');
-  if (ko === 0) console.log(`🎉 v363 — ${ok} vérifications OK : le bouton des règles est garanti, vérifié, et dix modèles tiennent.`);
+  if (ko === 0) console.log(`🎉 v363 — ${ok} vérifications OK : le bouton des règles est garanti, vérifié, et les quatre modèles tiennent.`);
   else { console.log(`❌ v363 — ${ko} échec(s) sur ${ok + ko}`); process.exitCode = 1; }
 })().catch((e) => { console.error('💥', e && e.stack || e); process.exitCode = 1; });

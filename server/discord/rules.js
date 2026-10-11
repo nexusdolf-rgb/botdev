@@ -10,11 +10,13 @@
 //      journalise.
 // Le texte des règles est du MARKDOWN DISCORD réel : **gras**, *italique*,
 // __souligné__, ~~barré~~, `code`, ```bloc```, > citation, - liste,
-// ||spoiler||, <a:nom:id> et <:nom:id>. Les dix modèles livrés respectent ces
+// ||spoiler||, <a:nom:id> et <:nom:id>. Les quatre modèles livrés respectent ces
 // balises et les plafonds de l'API (voir server/discord/ui.js :
 // V2_TEXT_BUDGET = 4000 caractères et 40 composants par panneau).
 //
-// v363 — trois corrections de fond demandées par le terrain :
+// v363 — trois corrections de fond, toutes conservées en v363.2 (où les
+// six modèles ajoutés sont retirés à la demande du fondateur : on revient
+// aux quatre d'origine, sans toucher aux correctifs) :
 //   • le bouton ne peut plus disparaître : le budget de composants est réservé
 //     en amont (voir ui.v2container) et plan() annonce à l'avance ce que le
 //     panneau contiendra ;
@@ -77,149 +79,78 @@ const RULES_STYLES = {
 };
 
 // ------------------------------------------------------------
-// Modèles livrés : dix panneaux écrits avec la grammaire Discord réelle.
-// Règle d'or d'écriture (tenue par le test v362) : UNE RÈGLE = UN BLOC.
-// Le titre de la règle est la première ligne du bloc, son développement est
-// la ligne suivante, sans ligne vide entre les deux — chaque ligne vide crée
-// un bloc, donc un composant et un séparateur ; dix règles mal groupées
-// suffisaient à saturer les 40 composants autorisés.
-// « {serveur} » est remplacé par le nom du serveur ; « @everyone » est écrit
-// entre accents graves pour ne JAMAIS déclencher de notification.
+// Modèles livrés (les quatre d'origine, remis à leur place sur demande du
+// fondateur en v363.2). Trois choses ont tout de même changé ici, et elles
+// tiennent à la correction du bug du bouton :
+//   • plus aucun trait « ━ » écrit à la main : Discord pose un VRAI
+//     séparateur entre chaque bloc, et chaque trait coûtait 2 composants
+//     sur les 40 autorisées (c'est ce gaspillage qui faisait sauter le
+//     bouton sur les panneaux longs) ;
+//   • une règle = un bloc : le titre et son développement sont dans le
+//     MÊME paragraphe (avant, le titre seul formait un bloc de plus) ;
+//   • « @everyone » est écrit entre accents graves : hors d'un span de
+//     code, cette mention aurait notifié tout le serveur à la publication
+//     (le message part maintenant avec allowedMentions vide, donc double
+//     protection).
+// Le marqueur « {serveur} » est remplacé par le nom du serveur.
 // ------------------------------------------------------------
 const PRESETS = {
-  essentiel: {
-    label: 'L’essentiel — 5 règles courtes',
-    hint: 'Le plus lu : dix secondes de lecture, zéro ambiguïté.',
-    text: [
-      '> **{serveur} — le minimum pour que ça reste agréable.**',
-      '**1.** Restez courtois : pas d’insulte, pas de harcèlement, pas de propos haineux.',
-      '**2.** Gardez le serveur propre : pas de spam, pas de publicité, pas de liens douteux.',
-      '**3.** Rien de choquant : pas de contenu adulte, violent ou illégal, nulle part.',
-      '**4.** Écrivez dans le bon salon ; une question = un ticket, jamais dix messages.',
-      '**5.** Les décisions du staff sont appliquées avec calme et sans débat public.',
-      '*Refuser ces règles, c’est quitter le serveur. En acceptant, vous vous engagez à les lire vraiment.*',
-    ].join('\n\n'),
-  },
   classique: {
     label: 'Classique — communauté générale',
-    hint: 'Polyvalent : discutions, salon vocal, événements.',
+    hint: 'Polyvalent : discussions, salon vocal, événements.',
     text: [
       '> **Bienvenue sur {serveur}.** Ces règles sont là pour que tout le monde puisse discuter tranquillement. En restant ici, vous les acceptez.',
-      '**1. Respect avant tout**\nAucune insulte, moquerie, harcèlement ou provocation. Un désaccord se règle en **message privé avec le staff**, jamais en public. __Les propos racistes, sexistes, homophobes ou transphobes entraînent un bannissement immédiat.__',
-      '**2. Pas de spam ni de publicité**\nPas de flood, pas de messages en MAJUSCULES, pas de `@everyone` non autorisé, pas de promotion d’un autre serveur sans accord du staff. Les liens raccourcis sont interdits.',
-      '**3. Contenu réservé aux adultes**\nEst interdit : contenu pornographique, gore ou choquant, apologie du crime ou de la drogue, ainsi que toute information personnelle (adresse, téléphone, nom complet) publiée sur quelqu’un.',
-      '**4. Un salon pour chaque sujet**\nÉcrivez dans le bon salon. Les demandes de support passent par les **tickets** ; les bugs et les suggestions ont leur salon dédié.',
-      '**5. Pseudos et identités**\nPseudo lisible, sans lien ni caractères rendant la modération impossible. Usurper l’identité d’un membre ou du staff, c’est une exclusion définitive.',
-      '**6. Les sanctions ne se discutent pas en public**\nUne décision peut être contestée **en ticket**, avec des faits. Contester dans un salon public vaut un avertissement de plus.',
-      '*Ce règlement peut évoluer. La version publiée ici est la seule qui compte : {membres} acceptation(s) enregistrée(s).*',
+      '**1. Respect avant tout**\\nAucune insulte, moquerie, harcèlement ou provocation. Un désaccord se règle en **MP avec le staff**, jamais en public. __Les remarques racistes, sexistes, homophobes ou transphobes entraînent un bannissement immédiat.__',
+      '**2. Pas de spam ni de pub**\\nPas de flood, de messages en MAJUSCULES, de `@everyone` non autorisé, ni de publicité pour un autre serveur sans accord du staff. Les liens raccourcis sont interdits.',
+      '**3. Contenu réservé aux adultes**\\nEst interdit : contenu pornographique, gore, violent ou choquant, apologie du crime ou de la drogue, ainsi que toute information personnelle (adresse, téléphone, nom complet) publiée sur quelqu’un.',
+      '**4. Un salon pour chaque sujet**\\nÉcrivez dans le bon salon. Les demandes de support passent par les **tickets** ; les bugs et suggestions ont leur salon dédié.',
+      '**5. Pseudos et identités**\\nPseudo lisible, sans lien ni caractères exotiques rendant la modération impossible. Interdiction d’usurper l’identité d’un membre ou d’un membre du staff.',
+      '**6. Mineurs**\\nCe serveur est ouvert aux 13 ans et plus, conformément à l’âge minimum de Discord. Un compte doit rester sous la seule responsabilité de son titulaire.',
+      '**7. Décisions du staff**\\nLe staff peut supprimer un message, masquer un membre ou exclure **sans préavis** quand la situation l’exige. Contester une sanction se fait en ticket, en privé.',
+      '*En cas de doute sur une règle, demandez : une question posée n’a jamais été sanctionnée. Bonne visite !*',
     ].join('\n\n'),
   },
   gaming: {
-    label: 'Gaming — serveur de jeu',
-    hint: 'Files d’attente, squad, triche et language VOIP.',
+    label: 'Gaming — équipe & tournois',
+    hint: 'File d’attente, squad, triche et micro.',
     text: [
-      '> **{serveur} — on joue ensemble, on reste corrects.** Le salon vocal est aussi important que le chat : il défend l’ambiance.',
-      '**1. Triche, exploit et script**\nTout logiciel tiers, macro matérielle ou abus de bug est **interdit** : exclusion définitive du serveur et des tournois, sans appel si la preuve est là.',
-      '**2. Vocal : la règle des trois**\nPas de musique par-dessus la discussion, pas de micro qui sert de haut-parleur, pas de cris dans le canal général. Un `@everyone` pour appeler une partie : on évite, ça réveille tout le serveur.',
-      '**3. Recrutement et équipes**\nLes demandes de squad passent par le salon **🎮 recherche-de-team**. Le démarchage en MP non sollicité est interdit, même entre joueurs du serveur.',
-      '**4. Propos et conduites**\nAucune insulte, aucune discrimination, aucun harcèlement, y compris en jeu. Un joueur muet par vote est respecté : on ne le force pas à parler.',
-      '**5. Événements et tournois**\nInscrivez-vous dans le salon dédié. Tout abandon sans prévenir perturbe les autres équipes : prévenez le staff **avant** le début.',
-      '**6. Pas de revente ni de compte partagé**\nComptes, skins, classements et services achetés ou vendus entre membres : hors de question, et le serveur ne peut garantir aucune transaction.',
-      '*Le staff peut couper un micro ou éjecter d’une file d’attente sur-le-champ si l’ambiance devient toxique.*',
+      '> **{serveur} — salle d’attente, puis terrain.** Ici on joue sérieusement sans être lourd.',
+      '**1. Esport mindset**\\nLe tilt se garde pour la partie. On n’insulte ni un coéquipier, ni un adversaire, ni un arbitre. La prise de place se fait en vocal, calmement.',
+      '**2. Triche & exploit**\\nTout logiciel tiers, script, macro matérielle ou abus de bug est **interdit** : exclusion définitive du serveur et des tournois, sans appel si la preuve est là.',
+      '**3. Vocal et micro**\\nPas de musique, de cris permanents ni de microphone qui sert de réveil. Un **push-to-talk** est conseillé en partie classée.',
+      '**4. Inscriptions aux tournois**\\nPseudo du joueur = pseudo du formulaire. Tout retrait après le début de la poule bloque l’accès à la prochaine édition.',
+      '**5. Recherche de coéquipiers**\\nUn seul poste de recrutement à la fois, dans le salon dédié, avec le niveau indiqué. Le harcèlement par MP après un refus se signale en ticket.',
+      '**6. Contenu et langage**\\nAucun contenu haineux, aucun doxxing, aucune capture d’écran personnelle publiée sans accord. Le spoil d’un match se place derrière un ||spoiler||.',
+      '*Le staff peut changer une règle de tournoi jusqu’à 24 h avant le début ; la version affichée ici fait foi.*',
     ].join('\n\n'),
   },
   roleplay: {
     label: 'Roleplay — serveur RP',
-    hint: 'Immersion, hors-RP, interactions et-sanction RP.',
+    hint: 'Immersion, hors-RP, consentement en scène.',
     text: [
       '> **{serveur} — l’histoire passe avant le joueur.** Le hors-RP se dit en parenthèses, jamais dans la scène.',
-      '**1. Un personnage, une fiche**\nChaque personnage est déclaré dans **📝 fiches** avec un passé cohérent avec l’univers. Aucun pouvoir, aucun argent, aucun objet hors barème sans validation du staff.',
-      '**2. Immersion obligatoire**\nPas de métajeu : ne pas utiliser d’information obtenue hors scène. Le *powergaming* (imposer une action sans laisser de réponse) est sanctionné.',
-      '**3. Thèmes lourds**\nViolence, emprise, dépendances : **🔞** en début de scène, jamais dans un salon ouvert à tous. Un thème refusé par un joueur est écarté, sans discussion.',
-      '**4. Consentement en scène**\nToute interaction entre personnages se fait avec l’accord des deux joueurs. Un refus n’est pas un caprice : c’est une limite.',
-      '**5. Rythme et qualité**\nUne réponse en trois lignes minimum est attendue en scène principale. Spammer une ligne pour « avancer » casse le rythme de tout le monde.',
-      '**6. Hors-RP et modération**\nLes conflits se règlent en **ticket**, pas en scène. Une sanction RP doit être justifiée par un écrit : on ne punit pas un personnage sur un soupçon.',
-      '*Le règlement des événements spéciaux (soirées, enquêtes, guerres de factions) s’ajoute à celui-ci et prime pendant la scène.*',
+      '**1. Séparation joueur / personnage**\\nCe qui arrive en jeu reste en jeu. Une frustration de personnage ne devient jamais une attaque contre le joueur. Le staff arbitre, il ne joue pas contre vous.',
+      '**2. No RDM / no VDM**\\nAucun meurtre ni vol sans scène préparée, aucun véhicule utilisé comme arme. Une interaction commence par un signal clair (salut, regard, appel).',
+      '**3. Fear RP et cohérence**\\nVotre personnage tient à sa vie : il recule face à une arme, il négocie, il fuit. Un personnage suicidaire ou invincible se voit retirer la scène.',
+      '**4. Métagaming & powergaming**\\nN’utilisez aucune information obtenue hors-jeu (stream, Discord, vocal). Une action impossible en une seconde ne se joue pas.',
+      '**5. New Life Rule**\\nAprès une mort, votre personnage oublie la scène qui l’a tué et ne revient pas sur les lieux avant le temps indiqué par le règlement de la ville.',
+      '**6. Prénoms, tenues, véhicules**\\nAucun nom de marque réel, aucune tenue parodiant une marque, aucun véhicule non validé dans le salon de réception.',
+      '**7. Scènes sensibles**\\nTout contenu sexuel ou autodestructeur est interdit. Les thèmes lourds se concertent **avant** la scène et s’arrêtent au premier refus.',
+      '**8. Staff en scène**\\nUn membre du staff qui intervient porte l’épaulette. Son arbitrage est définitif pour la scène en cours ; le recours se fait en ticket.',
+      '*Le règlement complet de la ville est épinglé dans le salon des annonces. Cette page reste la version courte qui fait foi côté Discord.*',
     ].join('\n\n'),
   },
-  amis: {
-    label: 'Entre amis — serveur privé',
-    hint: 'Court et détendu : petit groupe, vocaux, invites.',
+  essentiel: {
+    label: 'Essentiel — cinq lignes',
+    hint: 'Le plus lu : dix secondes de lecture, zéro ambiguïté.',
     text: [
-      '> **{serveur} — le salon de la bande.** On s’invite entre gens d’accord, et on garde ça agréable.',
-      '**1. On invite avec la tête**\nUn nouvel invité est présenté dans **👋 accueil**. Les comptes créés la veille ou sans pseudo lisible repartent sans discussion.',
-      '**2. Le vocal est à tout le monde**\nPas de musique en boucle, pas de micro ouvert dans le vide, on se tait quand quelqu’un raconte quelque chose.',
-      '**3. Pas de capture d’écran méchante**\nCe qui se dit ici reste ici. Publier une capture pour se moquer, c’est sortir du groupe.',
-      '**4. On se dit les choses**\nUn agacement se règle en MP ou à la prochaine partie, pas par trois messages passifs-agressifs dans le général.',
-      '*Aucun rôle, aucune sanction automatique : ici, c’est le bon sens qui fait la règle.*',
-    ].join('\n\n'),
-  },
-  famille: {
-    label: 'Famille & jeunes publics',
-    hint: 'Un texte court, des parents rassurés, l’âge minimum rappelé.',
-    text: [
-      '> **{serveur} — un endroit calme pour tous les âges.** Les plus jeunes sont encadrés, les parents peuvent être rassurés.',
-      '**1. Âge minimum**\nCe serveur est ouvert aux **13 ans et plus**, conformément à l’âge minimum de Discord. Un compte reste sous la seule responsabilité de son titulaire.',
-      '**2. Langage propre**\nPas d’insulte, pas de blague humiliante, pas de mot pour désigner quelqu’un. Un avertissement, puis une pause de 24 h.',
-      '**3. Rien de choquant**\nImages, vidéos, liens et jeux doivent rester adaptés à un public de 13 ans. En cas de doute : demandez au staff avant de publier.',
-      '**4. On ne donne aucune information personnelle**\nAdresse, école, âge exact, numéro, nom de famille, photo de classe : jamais, même en MP, même entre amis.',
-      '**5. Les adultes du staff tranchent**\nUn parent qui signale un problème est reçu en **ticket** et reçoit une réponse sous 48 h.',
-      '*En acceptant, vous confirmez avoir lu ces règles avec la personne qui vous accompagne.*',
-    ].join('\n\n'),
-  },
-  support: {
-    label: 'Communauté officielle & support',
-    hint: 'Produit ou créateur : le bon canal pour chaque demande.',
-    text: [
-      '> **{serveur} — communauté officielle.** Ici on s’entraide, on signale, et on attend le support par le bon canal.',
-      '**1. Une demande = un ticket**\nLes problèmes de compte, de commande ou de paiement passent **uniquement** par les tickets. Un message posté ailleurs sera supprimé, sans réponse.',
-      '**2. Aucun détail sensible en public**\nJamais de mot de passe, de clé de licence ni de capture de facture dans un salon public. En ticket, masquez ce qui n’est pas nécessaire.',
-      '**3. Réponses de l’équipe**\nSeuls les membres du rôle **🛠️ staff** engagent le serveur (remboursement, délai, promesse). Le reste de la communauté partage son expérience, sans la présenter comme officielle.',
-      '**4. Courtoisie dans les échanges**\nPas d’insulte, pas de meute sur un message, pas de menace juridique en chaîne. Une plainte se dépose en ticket, pas dans le général.',
-      '**5. Publicité et liens**\nEst interdite : la promotion d’un service concurrent, d’un groupe parallèle, de tout lien d’affiliation non déclaré.',
-      '**6. Modération des fausses infos**\nUne réponse erronée peut être corrigée ou masquée par le staff. La version officielle d’un sujet reste la réponse en ticket.',
-      '*Les horaires de support sont indiqués dans **📬 tickets**. En dehors, le serveur reste une entraide entre membres.*',
-    ].join('\n\n'),
-  },
-  tournoi: {
-    label: 'Compétition & tournois',
-    hint: 'Règles de match, arbitrage, inscriptions et litiges.',
-    text: [
-      '> **{serveur} — circuit compétitif.** Une inscription vaut acceptation du règlement du format en cours.',
-      '**1. Inscription et présence**\nLe rôle **🏆 inscrit** est donné après inscription en **📋 inscriptions**. Absent 10 minutes après l’appel : match perdu.',
-      '**2. Équipes et substitutions**\nUne équipe est déclarée avant la première manche. Une substitution se signale à l’arbitre AVANT le match, jamais pendant.',
-      '**3. Matériel et logiciels**\nAucun logiciel tiers, aucune macro non prévue par le jeu, aucun périphérique non déclaré. Vérification possible avant chaque manche.',
-      '**4. Comportement en match**\nInsultes, provocation, abandon de match volontaire ou *griefing* : disqualification du tournoi en cours, points retirés.',
-      '**5. Litiges**\nSe règlent en **ticket arbitrage**, avec preuve (rediffusion, capture horodatée). Aucune réclamation dans le salon général ni en vocal.',
-      '**6. Argent et lots**\nLes lots sont versés après vérification des identifiants fournis. Aucun remboursement, aucune revente de place.',
-      '*Le calendrier, la formule (poules, élimination directe) et le barème de points sont publiés avant chaque édition : ils complètent ce règlement.*',
-    ].join('\n\n'),
-  },
-  createurs: {
-    label: 'Créateurs & streamers',
-    hint: 'Auto-promo cadrée, droits d’image, entraide assumée.',
-    text: [
-      '> **{serveur} — le coin des créateurs.** Chacun peut montrer son travail, dans un cadre qui protège tout le monde.',
-      '**1. Auto-promo : un seul endroit**\nLes liens (chaîne, réseaux, boutique) se publient dans **📣 autopromo**, à raison de **deux posts par semaine**. Ailleurs, c’est suppression.',
-      '**2. Aucun spam entre créateurs**\nS’abonner pour s’abonner, déposer un commentaire d’abonnement en MP, ou organiser des raids d’abonnement : interdit.',
-      '**3. Droits d’image**\nUne capture, une vidéo ou un extrait d’un membre ou d’un stream en cours nécessite son accord. Un refus se respecte sans négociation.',
-      '**4. Le chat d’un autre, c’est pas le vôtre**\nOn ne vient pas polluer un stream partenaire avec de la pub, du spoil ou des remarques sur les spectateurs.',
-      '**5. Contenu et monétisation**\nPas de contenu choquant, pas de loterie non déclarée, pas de lien de paiement hors cadre annoncé. Toute collaboration payante est signalée.',
-      '**6. Statistiques et entraide**\nLes retours d’analyse (vues, référencement, miniature) se font en **💬 entraide**, avec des faits : les conseils gratuits ne sont pas une obligation.',
-      '*Les créateurs référencés dans **🌟 partenaires** gardent les mêmes règles : la visibilité ne dispense pas du respect du cadre.*',
-    ].join('\n\n'),
-  },
-  evenement: {
-    label: 'Événement ponctuel',
-    hint: 'Soirée, convention, salon : règles courtes et datées.',
-    text: [
-      '> **{serveur} — événement du moment.** Ces règles ne valent que pour la durée de l’événement, puis le salon est archivé.',
-      '**1. Programme**\nLes horaires affichés dans **📅 programme** sont ceux de référence. Un retard de plus de 20 minutes annule l’atelier correspondant.',
-      '**2. Inscriptions et places**\nUne place est nominative : elle ne se revend pas et ne se cède qu’auprès du staff, qui la réattribue le jour même.',
-      '**3. Sur place et en ligne**\nPas de course, pas de poussette dans les passages, pas d’objet en hauteur. En vocal, on lève la main (réaction ✋) avant de couper la parole.',
-      '**4. Photos et vidéos**\nChaque participant peut être photographié. Pour ne pas apparaître, prenez le rôle **🚫 sans-photos** à l’accueil.',
-      '**5. Sécurité**\nUne consigne du staff (évacuation, micro coupé, fin de session) s’applique immédiatement, sans discussion.',
-      '*En cas de désaccord pendant l’événement, le staff présent tranche ; la réclamation se dépose ensuite en ticket.*',
+      '> **{serveur} — le minimum pour que ça reste agréable.**',
+      '**1.** Restez courtois : pas d’insulte, pas de harcèlement, pas de propos haineux.',
+      '**2.** Gardez le serveur propre : pas de spam, pas de pub, pas de liens douteux.',
+      '**3.** Rien de choquant : pas de contenu adulte, violent ou personnel exposé.',
+      '**4.** Écrivez dans le bon salon, et passez par un ticket pour toute demande sérieuse.',
+      '**5.** Les décisions du staff sont appliquées avec bon sens et se discutent en privé.',
+      '*Refuser ces règles, c’est quitter le serveur. En acceptant, vous vous engagez à les lire vraiment.*',
     ].join('\n\n'),
   },
 };
