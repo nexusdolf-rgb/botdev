@@ -313,7 +313,12 @@ async function main() {
     boutons: (t.match(/<button/g) || []).length,
     interpolations: (t.match(/\$\{/g) || []).length,
   });
-  const attenduPub = { balises: 571, classes: 188, ids: 22, divs: 151, boutons: 14, interpolations: 55 };
+  // v364 : l'avatar de l'utilisateur, dans la navbar publique, passe par le
+  // proxy local comme TOUT le reste du site (il etait le seul a charger le CDN
+  // Discord en dur). Deux interpolations de plus (encodeURIComponent + initiale
+  // de secours), rien d'autre : balises, classes, ids, divs et boutons sont
+  // restes identiques, c'est exactement ce que ce verrou cherche a protéger.
+  const attenduPub = { balises: 571, classes: 188, ids: 22, divs: 151, boutons: 14, interpolations: 57 };
   const reelPub = compteBalises(pubSrc);
   for (const cle of Object.keys(attenduPub)) {
     check(`landing : structure intacte (${cle} = ${attenduPub[cle]})`,
@@ -535,9 +540,9 @@ async function main() {
 
   const index = src('public/index.html');
   const sw = src('public/sw.js');
-  check('index.html : ?v=363 référencé 7 fois', (index.match(/\?v=363/g) || []).length === 7,
-    `trouvé ${(index.match(/\?v=363/g) || []).length}`);
-  check("sw.js : cache 'botdev-v363'", sw.includes("const CACHE = 'botdev-v363';"));
+  check('index.html : ?v=364 référencé 7 fois', (index.match(/\?v=364/g) || []).length === 7,
+    `trouvé ${(index.match(/\?v=364/g) || []).length}`);
+  check("sw.js : cache 'botdev-v364'", sw.includes("const CACHE = 'botdev-v364';"));
   check('index.html : plus aucun ?v=239', !/\?v=239/.test(index));
 }
 

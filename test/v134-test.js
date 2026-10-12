@@ -20,8 +20,13 @@ w.App.state = {
 };
 const nav = w.App.renderNavbar();
 assert(nav.querySelector('#nav-brand-avatar'), 'avatar réel présent dans la barre');
-assert.strictEqual(nav.querySelector('#nav-brand-avatar').getAttribute('src'), 'https://cdn.discordapp.com/avatars/1/avatar.png');
-console.log('1️⃣  Dashboard : avatar réel d’Optimus Prime utilisé dans la barre ✅');
+// v364 : la barre ne pointe plus le CDN Discord en dur. Elle demande le proxy
+// local, qui sert exactement ce même avatar (et la marque posée sur le serveur
+// si Discord est muet) : plus d'image partielle ni de trou pendant le
+// chargement, et le fichier est déjà en cache mémoire du navigateur grâce au
+// preload d'index.html.
+assert.strictEqual(nav.querySelector('#nav-brand-avatar').getAttribute('src'), '/api/public/bot-avatar');
+console.log('1️⃣  Dashboard : avatar du bot dans la barre, via le proxy local ✅');
 
 const image = nav.querySelector('#nav-brand-avatar');
 image.dispatchEvent(new w.Event('error'));
@@ -30,6 +35,9 @@ console.log('2️⃣  Dashboard : fallback éclair conservé si Discord ne fourn
 
 const source = fs.readFileSync('public/js/app.js', 'utf8');
 assert(source.includes('currentNav.replaceWith(App.renderNavbar())'));
-console.log('3️⃣  Dashboard : barre reconstruite après chargement de l avatar Optimus Prime ✅');
+// v364 : elle n'est plus reconstruite à l'aveugle à chaque rafraîchissement
+// (c'était ça, le flash) ; seulement si l'identité a réellement changé.
+assert(source.includes("currentNav.dataset.brandSig !== App.brandSig(bot)"));
+console.log('3️⃣  Dashboard : barre reconstruite UNIQUEMENT si l identité a changé ✅');
 
 console.log('\n🎉 Tous les tests v3.34 passent !');

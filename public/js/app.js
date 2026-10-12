@@ -37,6 +37,19 @@ App.el = (html) => {
 
 App.escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+// 🎨 v364 — couleur de la barre du navigateur : elle doit suivre le thème.
+// Les deux valeurs viennent du CSS (fond sombre `--bg`, fond clair du body),
+// jamais inventées. Le script de index.html la pose avant le premier rendu ;
+// ceci la remet d'aplomb si le thème change en cours de route.
+App.THEME_COLORS = { dark: '#080b12', light: '#f2f3f8' };
+App.syncThemeColor = () => {
+  try {
+    const clair = document.documentElement.classList.contains('hx-light');
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', clair ? App.THEME_COLORS.light : App.THEME_COLORS.dark);
+  } catch {}
+};
+
 App.api = async (path, options = {}) => {
   const opts = { headers: { 'Content-Type': 'application/json' }, ...options };
   if (opts.body && typeof opts.body !== 'string') opts.body = JSON.stringify(opts.body);
@@ -141,6 +154,10 @@ App.router.parse = () => {
 App.router.go = (path) => { location.hash = `#/${path}`; };
 
 App.router.run = async () => {
+  // 🚦 v364 : chaque navigation prend un numero. Une vue dont les arrivees
+  // reseau trainaient ne repeint plus la page par-dessus celle demandee depuis
+  // (l'ancien code ecrivait dans le DOM apres un await, sans verifier).
+  App._vueSeq = (App._vueSeq || 0) + 1;
   if (!App.state.loaded) {
     try {
       const me = await App.api('/auth/me');
@@ -259,13 +276,40 @@ App.renderConnect = () => {
   };
 };
 
+// ---------------------- Marque du bot, mémorisée ----------------------
+// 🏷️ v364 — le nom et l'avatar du bot sont gardés en mémoire entre deux
+// visites. Sans ça, chaque rafraîchissement peignait la marque de secours
+// (« ⚡ Hoxera ») pendant que /api/hoxera répondait, puis RECONSTRUISAIT la
+// barre avec la vraie identité (« Optimus Prime ») : le flash signalé par le
+// fondateur, mesuré à 2 constructions de navbar par chargement.
+App.BRAND_KEY = 'hx-brand';
+App.brandSig = (b) => (b && b.name ? `${b.name}\u0000${b.avatar_url || ''}` : '');
+App.brandRead = () => {
+  try {
+    const raw = localStorage.getItem(App.BRAND_KEY);
+    if (!raw) return null;
+    const b = JSON.parse(raw);
+    return b && b.name ? { name: String(b.name), avatar_url: String(b.avatar_url || '') } : null;
+  } catch { return null; }
+};
+App.brandWrite = (bot) => {
+  if (!bot || !bot.name) return;
+  const b = { name: String(bot.name), avatar_url: String(bot.avatar_url || '') };
+  if (App.brandSig(b) === App.brandSig(App.brandRead())) return;
+  try { localStorage.setItem(App.BRAND_KEY, JSON.stringify(b)); } catch {}
+};
+
 // ---------------------- Navbar (connecté) ----------------------
 App.renderNavbar = () => {
   const user = App.state.user;
-  const bot = App.state.bot;
-  const brand = bot && bot.avatar_url
-    ? `<img id="nav-brand-avatar" class="logo" src="${App.escapeHtml(bot.avatar_url)}" alt="Avatar d’Optimus Prime" style="border-radius:50%;object-fit:cover" />`
-    : '<span class="logo">⚡</span>';
+  // La barre se peint avec l'identité connue : celle de cette session, sinon
+  // celle de la visite précédente. Jamais un trou ni un faux nom.
+  const bot = App.state.bot || App.brandRead();
+  // L'avatar passe par le proxy local : il répond toujours avec une image
+  // (l'avatar Discord du bot, sinon la marque posée sur le serveur), alors que
+  // l'URL du CDN peut traîner une seconde — et c'est ce décalage qui laissait
+  // voir l'éclair de secours avant la vraie photo.
+  const brand = '<img id="nav-brand-avatar" class="logo" src="/api/public/bot-avatar" alt="Avatar du bot" style="border-radius:50%;object-fit:cover" />';
   const nav = App.el(`
     <div class="navbar">
       <div class="logo-row" style="cursor:pointer" id="nav-logo">${brand} ${App.escapeHtml((bot && bot.name) || 'Hoxera')}</div>
@@ -284,6 +328,8 @@ App.renderNavbar = () => {
   `);
   const brandImage = nav.querySelector('#nav-brand-avatar');
   if (brandImage) brandImage.onerror = () => brandImage.replaceWith(App.el('<span class="logo">⚡</span>'));
+  // Ce que cette barre sait deja : la comparaison evite de la jeter pour rien.
+  nav.dataset.brandSig = App.brandSig(bot);
   nav.querySelector('#nav-logo').onclick = () => App.router.go('/dashboard');
   const adminBtn = nav.querySelector('#nav-admin');
   if (adminBtn) adminBtn.onclick = () => App.router.go('/admin');
@@ -298,6 +344,7 @@ App.renderNavbar = () => {
 // ---------------------- Dashboard Hoxera ----------------------
 App.renderHoxeraDashboard = async () => {
   const root = document.getElementById('app');
+  const seq = App._vueSeq;
   root.innerHTML = '';
   root.appendChild(App.renderNavbar());
   const shell = App.el(`<div class="bot-shell"><div class="center-loading"><div class="spinner"></div></div></div>`);
@@ -305,6 +352,8 @@ App.renderHoxeraDashboard = async () => {
 
   try {
     const { bot, configured } = await App.api('/hoxera');
+    // Une autre vue a ete demandee pendant l'attente : on ne touche plus a rien.
+    if (App._vueSeq !== seq) return;
     if (!configured || !bot) {
       shell.innerHTML = `
         <div class="dash-card" style="max-width:560px;margin:24px auto">
@@ -314,13 +363,18 @@ App.renderHoxeraDashboard = async () => {
       return;
     }
     App.state.bot = bot;
-    // La barre a été créée avant le chargement de /hoxera : on la reconstruit
-    // maintenant pour afficher l'avatar Discord réel du bot.
+    App.brandWrite(bot);
+    // v364 — on ne remplace la barre QUE si l'identite a reellement change
+    // (renommage du bot, nouvel avatar). La remplacer a chaque rafraichissement
+    // etait exactement le flash constate en haut a gauche.
     const currentNav = root.querySelector('.navbar');
-    if (currentNav) currentNav.replaceWith(App.renderNavbar());
+    if (currentNav && currentNav.dataset.brandSig !== App.brandSig(bot)) {
+      currentNav.replaceWith(App.renderNavbar());
+    }
     shell.innerHTML = '';
     await Dashboard.mount(shell, bot);
   } catch (e) {
+    if (App._vueSeq !== seq) return;
     shell.innerHTML = `<div class="empty-state"><div class="big">⚠️</div>${App.escapeHtml(e.message)}</div>`;
   }
 };
@@ -340,7 +394,7 @@ App.renderAdminPage = async () => {
     <div class="page admin-platform-page">
       <header class="admin-head">
         <div class="admin-identity">
-          <img id="a-bot-avatar" class="admin-mark admin-bot-avatar" src="/api/public/bot-avatar?v=363" alt="Avatar d’Optimus Prime" width="48" height="48" />
+          <img id="a-bot-avatar" class="admin-mark admin-bot-avatar" src="/api/public/bot-avatar?v=364" alt="Avatar d’Optimus Prime" width="48" height="48" />
           <div class="admin-head-copy">
             <div class="admin-breadcrumb"><span>OPTIMUS PRIME</span><i>/</i><b>CONSOLE FONDATEUR</b></div>
             <h1>Espace fondateur</h1>
@@ -789,6 +843,7 @@ App.renderAdminPage = async () => {
 };
 
 // ---------------------- Démarrage ----------------------
+App.syncThemeColor();
 window.addEventListener('hashchange', () => App.router.run());
 window.addEventListener('DOMContentLoaded', () => App.router.run());
 if (document.readyState !== 'loading') App.router.run();

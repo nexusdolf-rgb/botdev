@@ -1755,6 +1755,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
     const light = !document.documentElement.classList.contains('hx-light');
     document.documentElement.classList.toggle('hx-light', light);
     try { localStorage.setItem('hx-theme', light ? 'light' : 'dark'); } catch {}
+    if (typeof App !== 'undefined' && App.syncThemeColor) App.syncThemeColor(); // v364
     App.toast(light ? '☀️ Mode clair activé' : '🌙 Mode sombre activé');
   };
   // 🔔 Notifications : badge + panneau, dans un portal hors de la topbar

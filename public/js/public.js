@@ -33,7 +33,7 @@ App.renderPublicNavbar = (withLandingLinks = false) => {
         ${user && user.discord_id
           ? `<div class="user-pill">
                ${user.discord_avatar
-                 ? `<img class="user-avatar" style="border-radius:50%" src="https://cdn.discordapp.com/avatars/${App.escapeHtml(user.discord_id)}/${App.escapeHtml(user.discord_avatar)}.png" alt="" />`
+                 ? `<img class="user-avatar" style="border-radius:50%" src="/api/img?u=${encodeURIComponent(`https://cdn.discordapp.com/avatars/${user.discord_id}/${user.discord_avatar}.png?size=64`)}" alt="" data-fb-text="${App.escapeHtml((user.discord_username || user.email || '?').trim().slice(0, 1).toUpperCase())}" />`
                  : `<div class="user-avatar">${App.escapeHtml((user.email[0] || '?').toUpperCase())}</div>`}
                <span>${App.escapeHtml(user.discord_username || user.email)}</span>
                <span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">🔗</span>
