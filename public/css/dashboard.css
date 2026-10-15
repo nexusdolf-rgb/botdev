@@ -432,6 +432,13 @@
     border-radius: 20px 20px 0 0; border-bottom: none;
     animation: sheetUp .25s cubic-bezier(.2, .9, .3, 1);
     overscroll-behavior: contain;
+    /* v366 — la feuille est collée au bord de l'écran : sans aire de sécurité,
+       le dernier bouton d'action passe sous l'indicateur de retour Android (et
+       sous la barre de gestes iPhone en mode « standalone », cf. manifeste).
+       Mesuré au banc : padding-bottom 0px avec le premier bouton à 718 px dans
+       une fenêtre de 780 px. C'est déjà ce que font .dash-main (neuf lignes plus
+       haut) et #toasts (six lignes plus bas). */
+    padding-bottom: env(safe-area-inset-bottom);
   }
   .modal.large { width: 100vw; }
   @keyframes sheetUp { from { transform: translateY(60px); opacity: .4; } to { transform: none; opacity: 1; } }
@@ -1716,7 +1723,14 @@ body.dash-body {
 .dd-trigger[aria-expanded="true"] .dd-caret { transform: rotate(180deg); color: var(--d-accent); }
 
 .dd-panel {
-  position: fixed; z-index: 950; width: 260px; max-height: 336px; overflow: hidden;
+  /* v366 — le plafond est lié à l'écran, plus seulement à 336 px : une fenêtre
+     courte (téléphone à l'horizontale, petit hubot) coupait le bas de la liste
+     sans moyen d'y atteindre. La 2e ligne est ignorée des très vieux
+     navigateurs, qui gardent 336 px. */
+  position: fixed; z-index: 950; width: 260px; overflow: hidden;
+  max-height: 336px;
+  max-height: min(336px, calc(100vh - 24px));
+  max-height: min(336px, calc(100dvh - 24px));
   display: flex; flex-direction: column;
   background: #232637; border: 1px solid rgba(255,255,255,.09);
   border-radius: 14px; box-shadow: 0 18px 50px -12px rgba(0,0,0,.7), 0 2px 8px rgba(0,0,0,.35);
@@ -1785,10 +1799,16 @@ body.dash-body {
 /* 📱 Sur mobile : le panneau devient une feuille qui monte du bas.
    bottom n’est PAS en !important : JS le calcule pour rester au-dessus
    du clavier (v325). 16 px sur le champ = pas de zoom iOS (clavier chiffres). */
-@media (max-width: 700px) {
+@media (max-width: 700px), (max-width: 900px) and (hover: none) and (pointer: coarse) and (any-pointer: coarse), (hover: none) and (pointer: coarse) and (max-height: 800px) and (any-pointer: coarse) {
   .dd-panel.is-sheet {
     left: 10px !important; right: 10px !important; top: auto !important;
-    width: auto !important; max-height: 62vh;
+    width: auto !important;
+    /* v366 — 62vh : sur mobile, « vh » est la GRANDE hauteur (barre d'adresse
+       masquée). La feuille dépassait donc l'écran de quelques pixels pile au
+       moment où le bandeau se referme. « dvh » = hauteur réellement visible,
+       comme le fait déjà .modal (92dvh). */
+    max-height: 62vh;
+    max-height: min(62dvh, calc(100dvh - 20px));
     animation-name: dd-in-up;
   }
   .dd-panel { border-radius: 16px; }
@@ -4373,11 +4393,14 @@ html.hx-light { color-scheme: light; }
     min-height: 40px;
   }
   .dashboard-shell-host .dash-mobile-navbtn {
+    /* v366 — 36 px ici, 42 px plus bas (bloc « audit v199 », mêmes sélecteurs,
+       !important) : la règle du haut ne gagnait JAMAIS. Mises d'accord, plus de
+       valeur fantôme à lire pour qui veut ajuster la barre. */
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
+    width: 42px;
+    height: 42px;
     padding: 0;
     border: 0;
     border-radius: 4px;
@@ -4420,9 +4443,13 @@ html.hx-light { color-scheme: light; }
     animation: mobileDrawerIn .16s ease both;
   }
   .dash-mobile-modules-drawer { width: min(380px, calc(100vw - 18px)); }
-  .dash-mobile-drawer-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 54px; padding: 8px 14px; border-bottom: 1px solid #4f545c; background: #202225; }
+  /* v366 — le tiroir couvre toute la hauteur, y compris la bande du haut : en
+     mode « standalone » (manifeste) avec viewport-fit=cover, son titre et sa
+     croix de fermeture passaient sous l'encoche. Même idiome que .dash-topbar,
+     cinq lignes plus haut. Mesuré à 8px de padding haut, sans aire de sécurité. */
+  .dash-mobile-drawer-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 54px; padding: calc(8px + env(safe-area-inset-top)) 14px 8px; border-bottom: 1px solid #4f545c; background: #202225; }
   .dash-mobile-drawer-head b { font-size: 15px; }
-  .dash-mobile-close { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 0; border-radius: 4px; color: #e07a5f; background: transparent; font: inherit; font-size: 27px; cursor: pointer; }
+  .dash-mobile-close { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 0; border-radius: 4px; color: #e07a5f; background: transparent; font: inherit; font-size: 27px; cursor: pointer; }
   .dash-mobile-close:hover { color: #fff; background: #323438; }
   .dash-mobile-site-links { display: flex; flex-direction: column; padding: 7px 0; }
   .dash-mobile-site-links button { display: flex; align-items: center; gap: 12px; min-height: 43px; padding: 9px 18px; border: 0; border-bottom: 1px solid rgba(79,84,92,.35); color: #b5bac1; background: transparent; font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
@@ -4433,11 +4460,16 @@ html.hx-light { color-scheme: light; }
   .dash-mobile-drawer-account > div { display: flex; flex: 1; flex-direction: column; min-width: 0; }
   .dash-mobile-drawer-account b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
   .dash-mobile-drawer-account small { margin-top: 2px; color: #b5bac1; font-size: 10px; }
-  .dash-mobile-drawer-account button { width: 34px; height: 34px; border: 1px solid #4f545c; border-radius: 4px; color: #e07a5f; background: transparent; font-size: 17px; cursor: pointer; }
+  /* v366 — seul bouton du tiroir encore sous le plancher tactile maison (40 px,
+     « Apple et Google recommandent 44 px ; on monte à 40 px ») : mesuré à 34 px
+     au banc, à côté d'une croix de fermeture déjà à 40 px. L'avatar de la même
+     rangée reste à 34 px : c'est un visuel, pas une cible, et c'est la taille des
+     avatars de serveurs du shell (.dash-server-pick img). */
+  .dash-mobile-drawer-account button { width: 40px; height: 40px; border: 1px solid #4f545c; border-radius: 4px; color: #e07a5f; background: transparent; font-size: 17px; cursor: pointer; }
   .dash-mobile-drawer-account button:hover { color: #fff; background: #ed4245; border-color: #ed4245; }
   .dash-mobile-modules-body { display: grid; grid-template-columns: 52px minmax(0, 1fr); min-height: 0; flex: 1; }
   .dash-mobile-server-rail { display: flex; flex-direction: column; align-items: center; gap: 9px; overflow-y: auto; padding: 12px 7px; background: #202225; border-right: 1px solid #4f545c; }
-  .dash-mobile-server-item { display: inline-flex; align-items: center; justify-content: center; width: 37px; height: 37px; flex: 0 0 37px; padding: 0; overflow: hidden; border: 2px solid transparent; border-radius: 50%; color: #f2f3f5; background: #40444b; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: border-color .14s ease, border-radius .14s ease, background .14s ease; }
+  .dash-mobile-server-item { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; flex: 0 0 42px; padding: 0; overflow: hidden; border: 2px solid transparent; border-radius: 50%; color: #f2f3f5; background: #40444b; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: border-color .14s ease, border-radius .14s ease, background .14s ease; }
   .dash-mobile-server-item img { width: 100%; height: 100%; object-fit: cover; }
   .dash-mobile-server-item:hover { border-color: #72767d; }
   .dash-mobile-server-item.active { border-color: #e07a5f; border-radius: 11px; background: #e07a5f; }
@@ -4446,11 +4478,15 @@ html.hx-light { color-scheme: light; }
   .dash-mobile-current-server small { color: #b5bac1; font-size: 10px; text-transform: uppercase; letter-spacing: .7px; }
   .dash-mobile-current-server b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #f2f3f5; font-size: 13px; }
   .dash-mobile-module-group { padding: 14px 13px 6px; color: #949ba4; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .9px; }
-  .dash-mobile-module-item { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 38px; padding: 7px 13px; border: 0; border-left: 3px solid transparent; color: #b5bac1; background: transparent; font: inherit; text-align: left; cursor: pointer; }
+  /* v366 — la liste des modules est la navigation principale du mobile : elle
+     était la SEULE cible sous le plancher maison (38 px mesurés), pendant que
+     les lignes du menu général du même tiroir sont à 43 px et les sélecteurs à
+     48 px. Aligné sur 43 px, libellé à 13 px comme « Serveur sélectionné ». */
+  .dash-mobile-module-item { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 43px; padding: 9px 13px; border: 0; border-left: 3px solid transparent; color: #b5bac1; background: transparent; font: inherit; text-align: left; cursor: pointer; }
   .dash-mobile-module-item:hover { color: #fff; background: #323438; }
   .dash-mobile-module-item.active { color: #e07a5f; background: #323438; border-left-color: #e07a5f; }
   .dash-mobile-module-item > span { width: 22px; font-size: 16px; text-align: center; }
-  .dash-mobile-module-item b { overflow: hidden; flex: 1; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 600; }
+  .dash-mobile-module-item b { overflow: hidden; flex: 1; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; }
   .dash-mobile-module-item i { color: #949ba4; font-size: 18px; font-style: normal; }
   .dash-mobile-module-empty { padding: 20px 13px; color: #b5bac1; font-size: 12px; line-height: 1.5; }
   @keyframes mobileDrawerIn { from { opacity: .55; transform: translateX(-12px); } to { opacity: 1; transform: none; } }
@@ -5919,7 +5955,15 @@ html.hx-light .dd-option.is-selected .dd-check { background: #e07a5f; color: #ff
    11 px) et les badges imitant Discord (8 px) sont volontairement
    exclus — ce sont des choix de design assumés, pas des accidents.
    ============================================================ */
-@media (max-width: 700px) {
+@media (max-width: 700px), (hover: none) and (pointer: coarse) {
+  /* v366 — les trois étiquettes de la fiche de module (« Ce que fait ce
+     module », « Ce que voient les membres », « Aussi réglable sur Discord »)
+     étaient à 9,5 px sur TOUS les appareils, sous le plancher que v244 s'était
+     lui-même fixé. Le banc maison en dénombre 222 textes sous 12 px à 360 px
+     — et 251 à 768 px, parce que ce plancher ignorait le tactile : le bloc des
+     cibles tactiles, trois lignes plus bas, avait déjà reçu le second membre
+     de la requête pour cette raison exacte. */
+  .dashboard-shell-host .mg-kicker,
   .dashboard-shell-host .ov-intro-health small,
   .dashboard-shell-host .ov-eyebrow,
   .dashboard-shell-host .ov-side-heading span,
@@ -6530,13 +6574,27 @@ html.hx-os-pc .dashboard-shell-host .dash-topbar-actions {
   padding: 0;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 700px), (max-width: 900px) and (hover: none) and (pointer: coarse) and (any-pointer: coarse), (hover: none) and (pointer: coarse) and (max-height: 800px) and (any-pointer: coarse) {
   .dashboard-shell-host .dd-trigger {
     min-height: 48px;
     font-size: 16px;
   }
   .dashboard-shell-host .discord-multi-picker {
     min-height: 48px;
+  }
+  /* v366 — les <select> natifs des cartes de réglages restaient à 12-13 px sur
+     téléphone ET sur tablette (mesuré : « Salon des logs » 13 px, paliers de
+     Modération 12 et 13 px). Sous 16 px, iOS zoome la page à la prise de focus
+     et ne la dézoome pas ; le texte devient du même coup le plus petit de
+     l'écran. Sur grand écran, rien ne change. */
+  .dashboard-shell-host .am-rule-action .dash-select,
+  .dashboard-shell-host .am-rule-setting .dash-select,
+  .dashboard-shell-host .am-rule-setting .dash-input,
+  .dashboard-shell-host .am-threshold-controls .dash-select,
+  .dashboard-shell-host .am-threshold-controls .dash-input,
+  body:has(.dashboard-shell-host) .nk-limit-field .dash-select {
+    font-size: 16px;
+    min-height: 44px;
   }
 }
 

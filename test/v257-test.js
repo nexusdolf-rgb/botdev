@@ -56,16 +56,18 @@ check('…le repli mobile reste jugé sur la classe système (v253)',
 console.log('— 4. Le mobile et les garde-fous ne bougent pas —');
 check('le bloc v252 « pointeur fin » reste pour les machines sans classe PC',
   css.includes('@media (pointer: fine) and (min-width: 701px) and (max-width: 900px) {'));
-check('les 21 requêtes médias mobiles sont intactes',
-  (css.match(/@media \(max-width: 700px\), \(max-width: 900px\) and \(hover: none\)/g) || []).length === 21);
+  // v366 : deux blocs de plus portent la requete maison (les selecteurs .dd-*
+  // et le bloc « Discord 48px ») — c'est exactement ce que ces controles visaient.
+check('les 23 requêtes médias mobiles sont intactes',
+  (css.match(/@media \(max-width: 700px\), \(max-width: 900px\) and \(hover: none\)/g) || []).length === 23);
 check('le visage v241 (v255/v256) est toujours là',
   css.includes("/* --- v255 : sur OS de bureau, le VISAGE v241")
   && css.includes("/* --- v256 : sur OS de bureau, l'INTÉRIEUR des panneaux"));
 
 console.log('— 5. Version —');
-check('index.html : ?v=364 référencé 7 fois', (racine('public/index.html').match(/\?v=364/g) || []).length === 7,
-  String((racine('public/index.html').match(/\?v=364/g) || []).length));
-check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("const CACHE = 'botdev-v364';"));
+check('index.html : ?v=366 référencé 7 fois', (racine('public/index.html').match(/\?v=366/g) || []).length === 7,
+  String((racine('public/index.html').match(/\?v=366/g) || []).length));
+check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("const CACHE = 'botdev-v366';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v257 — ${ok} vérifications OK : la barre latérale pleine, comme en v241, à toutes les largeurs PC.`);

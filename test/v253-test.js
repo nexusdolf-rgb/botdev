@@ -75,16 +75,18 @@ check('ecranEtroit rend faux sur OS de bureau au-delà de 480 px (pas de repli m
   /classList\.contains\('hx-os-pc'\)/.test(js) && /window\.innerWidth > 480\) return false;/.test(js));
 
 console.log('— 4. Les anciens filets restent en place —');
-check('les 21 requêtes médias à mesures existent toujours (double sécurité)',
-  (css.match(/@media \(max-width: 700px\), \(max-width: 900px\) and \(hover: none\)/g) || []).length === 21,
+  // v366 : deux blocs de plus portent la requete maison (les selecteurs .dd-*
+  // et le bloc « Discord 48px ») — c'est exactement ce que ces controles visaient.
+check('les 23 requêtes médias à mesures existent toujours (double sécurité)',
+  (css.match(/@media \(max-width: 700px\), \(max-width: 900px\) and \(hover: none\)/g) || []).length === 23,
   String((css.match(/@media \(max-width: 700px\), \(max-width: 900px\) and \(hover: none\)/g) || []).length));
 check('le rail « pointeur fin » 701-900 px existe toujours',
   css.includes('@media (pointer: fine) and (min-width: 701px) and (max-width: 900px)'));
 
 console.log('— 5. Version —');
-check('index.html : ?v=364 référencé 7 fois', (index.match(/\?v=364/g) || []).length === 7,
-  String((index.match(/\?v=364/g) || []).length));
-check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("const CACHE = 'botdev-v364';"));
+check('index.html : ?v=366 référencé 7 fois', (index.match(/\?v=366/g) || []).length === 7,
+  String((index.match(/\?v=366/g) || []).length));
+check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("const CACHE = 'botdev-v366';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v253 — ${ok} vérifications OK : un PC est un PC, un mobile est un mobile, sans mesure.`);

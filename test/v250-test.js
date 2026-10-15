@@ -48,7 +48,9 @@ check('le repli sans matchMedia suit le même plancher (700 px)',
 
 console.log('— 2. Le CSS applique exactement la même règle —');
 const nb = (css.match(new RegExp(MQ.replace(/[().,]/g, (c) => '\\' + c), 'g')) || []).length;
-check(`les 21 requêtes médias du shell portent la nouvelle règle (${nb})`, nb === 21, String(nb));
+  // v366 : deux blocs de plus portent la requete maison (les selecteurs .dd-*
+  // et le bloc « Discord 48px ») — c'est exactement ce que ces controles visaient.
+check(`les 23 requêtes médias du shell portent la nouvelle règle (${nb})`, nb === 23, String(nb));
 check('plus AUCUNE bascule du shell sur la seule largeur à 900 px',
   !/@media \(max-width: ?900px\), /.test(css));
 check('…ni à 600 px (premier plancher essayé, trop haut pour les PC scaling forts)',
@@ -84,11 +86,16 @@ check('ecranEtroit lit la constante (une seule source de vérité)',
 // Le placement des popovers décidait LUI AUSSI « mobile ou pas » avec sa
 // propre copie de la requête : une seconde source de vérité qui aurait fini
 // par diverger. Il lit maintenant la constante.
+// v366 : le sélecteur déroulant (dropdownMenu, ligne ~280) avait lui aussi sa
+// copie « (max-width: 700px) » toute seule — à 812 × 375, la page passait en
+// feuille et le menu restait un panneau flottant de 336 px dont 66 px
+// d'options étaient sous le bord de l'écran. Le nombre de lecteurs de la
+// constante passe donc de 2 à 3, et il n'y a plus de copie isolée nulle part.
 check('le placement des popovers lit la même constante (pas de copie divergente)',
-  (js.match(/matchMedia\(Dashboard\.MQ_ECRAN_ETROIT\)/g) || []).length === 2,
+  (js.match(/matchMedia\(Dashboard\.MQ_ECRAN_ETROIT\)/g) || []).length === 3,
   String((js.match(/matchMedia\(Dashboard\.MQ_ECRAN_ETROIT\)/g) || []).length));
-// (Une requête à 700 px existe encore ligne ~248 : elle règle un composant
-// isolé, pas l'identité du shell. Elle reste donc libre.)
+// (Il n'y a plus aucune requête « mobile » en dur dans le JS du shell : la
+// seule qui restait a été rallongée à la constante en v366.)
 check('…plus aucun seuil du shell (800/900 px) en dur dans le JS',
   !/matchMedia\('\(max-width: (8|9)00px/.test(js));
 check('…et le repli automatique des cartes passe par ecranEtroit',
@@ -97,9 +104,9 @@ check('…et le repli automatique des cartes passe par ecranEtroit',
 console.log('— 5. Version —');
 const index = racine('public/index.html');
 const sw = racine('public/sw.js');
-check('index.html : ?v=364 référencé 7 fois', (index.match(/\?v=364/g) || []).length === 7,
-  String((index.match(/\?v=364/g) || []).length));
-check('sw.js : cache « botdev-v350 »', sw.includes("const CACHE = 'botdev-v364';"));
+check('index.html : ?v=366 référencé 7 fois', (index.match(/\?v=366/g) || []).length === 7,
+  String((index.match(/\?v=366/g) || []).length));
+check('sw.js : cache « botdev-v350 »', sw.includes("const CACHE = 'botdev-v366';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v250 — ${ok} vérifications OK : un PC reste un PC, un mobile reste un mobile.`);

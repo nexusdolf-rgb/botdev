@@ -36,7 +36,9 @@ const MQ = '(max-width: 700px), '
 
 console.log('— 1. Les deux clauses tactiles exigent l\'absence de pointeur fin —');
 const nbComplet = (css.match(new RegExp(MQ.replace(/[().,]/g, (c) => '\\' + c), 'g')) || []).length;
-check(`les 21 requêtes du shell portent la règle complète (${nbComplet})`, nbComplet === 21, String(nbComplet));
+  // v366 : deux blocs de plus portent la requete maison (les selecteurs .dd-*
+  // et le bloc « Discord 48px ») — c'est exactement ce que ces controles visaient.
+check(`les 23 requêtes du shell portent la règle complète (${nbComplet})`, nbComplet === 23, String(nbComplet));
 // Aucune clause tactile « nue » ne doit survivre : ce sont elles qui envoyaient
 // le PC tactile de l'utilisateur en mobile.
 const nue2 = (css.match(/\(max-width: 900px\) and \(hover: none\) and \(pointer: coarse\)(?! and \(any-pointer: coarse\))/g) || []).length;
@@ -63,9 +65,9 @@ check('…et la clause tactile 700-900 px aussi',
 console.log('— 4. Version —');
 const index = racine('public/index.html');
 const sw = racine('public/sw.js');
-check('index.html : ?v=364 référencé 7 fois', (index.match(/\?v=364/g) || []).length === 7,
-  String((index.match(/\?v=364/g) || []).length));
-check('sw.js : cache « botdev-v350 »', sw.includes("const CACHE = 'botdev-v364';"));
+check('index.html : ?v=366 référencé 7 fois', (index.match(/\?v=366/g) || []).length === 7,
+  String((index.match(/\?v=366/g) || []).length));
+check('sw.js : cache « botdev-v350 »', sw.includes("const CACHE = 'botdev-v366';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v251 — ${ok} vérifications OK : un PC tactile avec souris reste un PC.`);

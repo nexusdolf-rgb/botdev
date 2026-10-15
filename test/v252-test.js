@@ -36,7 +36,9 @@ const RAIL = '@media (pointer: fine) and (min-width: 701px) and (max-width: 900p
 
 console.log('— 1. Le plancher « tout mobile » est à 700 px —');
 const nb = (css.match(new RegExp(MQ.replace(/[().,]/g, (c) => '\\' + c), 'g')) || []).length;
-check(`les 21 requêtes du shell portent le plancher 700 px (${nb})`, nb === 21, String(nb));
+  // v366 : deux blocs de plus portent la requete maison (les selecteurs .dd-*
+  // et le bloc « Discord 48px ») — c'est exactement ce que ces controles visaient.
+check(`les 23 requêtes du shell portent le plancher 700 px (${nb})`, nb === 23, String(nb));
 check('la constante JS est alignée', js.includes(`Dashboard.MQ_ECRAN_ETROIT = '${MQ}';`));
 check('le repli sans matchMedia suit le plancher', js.includes('window.innerWidth <= 700;'));
 check('plus aucune clause « tout mobile » à 800 px', !/\(max-width: 800px\)/.test(css));
@@ -66,9 +68,9 @@ check('sous 700 px, tout le monde reste en mobile (fenêtre minuscule comprise)'
 console.log('— 4. Version —');
 const index = racine('public/index.html');
 const sw = racine('public/sw.js');
-check('index.html : ?v=364 référencé 7 fois', (index.match(/\?v=364/g) || []).length === 7,
-  String((index.match(/\?v=364/g) || []).length));
-check('sw.js : cache « botdev-v350 »', sw.includes("const CACHE = 'botdev-v364';"));
+check('index.html : ?v=366 référencé 7 fois', (index.match(/\?v=366/g) || []).length === 7,
+  String((index.match(/\?v=366/g) || []).length));
+check('sw.js : cache « botdev-v350 »', sw.includes("const CACHE = 'botdev-v366';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v252 — ${ok} vérifications OK : plus aucun PC en mobile, rail d'icônes entre 701 et 900 px.`);

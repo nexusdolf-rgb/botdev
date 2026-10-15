@@ -44,7 +44,7 @@ check('style desktop et breakpoints mobile présents',
 check('mode clair prévu pour la console fondatrice',
   css.includes('html.hx-light .admin-platform-page {'));
 check('cache des sept assets et du Service Worker en v360',
-  (index.match(/\?v=364/g) || []).length === 7 && sw.includes("const CACHE = 'botdev-v364';"));
+  (index.match(/\?v=366/g) || []).length === 7 && sw.includes("const CACHE = 'botdev-v366';"));
 check('v360 annoncée dans le journal, v359 conservée comme précédente',
   changelog.VERSION === 360 && changelog.VERSIONS[0].v === 360
     && changelog.VERSIONS[1].v === 359);

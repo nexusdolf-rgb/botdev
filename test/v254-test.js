@@ -1,6 +1,6 @@
 // v254 — Correctif : la coquille mobile s'appliquait À TOUTES LES LARGEURS.
 //
-// Le bloc mobile (21 requêtes médias) contient une clause SANS limite de
+// Le bloc mobile (23 requêtes médias) contient une clause SANS limite de
 // largeur : « (hover: none) and (pointer: coarse) and (max-height: 800px)
 // and (any-pointer: coarse) ». Sur un PC portable tactile dont la hauteur
 // utile tombe sous 800 px (1366×768, ou 1920×1080 à 150 % = 720 px), cette
@@ -36,8 +36,10 @@ const index = racine('public/index.html');
 
 console.log('— 1. La clause mobile sans limite de largeur existe toujours (le danger) —');
 const CLAUSE = '(hover: none) and (pointer: coarse) and (max-height: 800px) and (any-pointer: coarse)';
-check('les 21 requêtes médias contiennent la clause « tactile + hauteur ≤ 800 px » SANS largeur',
-  (css.match(new RegExp(CLAUSE.replace(/[()]/g, '\\$&'), 'g')) || []).length === 21,
+  // v366 : deux blocs de plus portent la requete maison (les selecteurs .dd-*
+  // et le bloc « Discord 48px ») — c'est exactement ce que ces controles visaient.
+check('les 23 requêtes médias contiennent la clause « tactile + hauteur ≤ 800 px » SANS largeur',
+  (css.match(new RegExp(CLAUSE.replace(/[()]/g, '\\$&'), 'g')) || []).length === 23,
   String((css.match(new RegExp(CLAUSE.replace(/[()]/g, '\\$&'), 'g')) || []).length));
 
 console.log('— 2. Palier A : socle commun à TOUTES les largeurs ≥ 481 px —');
@@ -88,9 +90,9 @@ check('ecranEtroit garde son verrou « OS de bureau »',
   racine('public/js/dashboard.js').includes("classList.contains('hx-os-pc')"));
 
 console.log('— 7. Version —');
-check('index.html : ?v=364 référencé 7 fois', (index.match(/\?v=364/g) || []).length === 7,
-  String((index.match(/\?v=364/g) || []).length));
-check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("const CACHE = 'botdev-v364';"));
+check('index.html : ?v=366 référencé 7 fois', (index.match(/\?v=366/g) || []).length === 7,
+  String((index.match(/\?v=366/g) || []).length));
+check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("const CACHE = 'botdev-v366';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v254 — ${ok} vérifications OK : plus aucune largeur où un PC bascule en mobile.`);

@@ -277,8 +277,16 @@ Dashboard.dropdownMenu = ({ trigger, getOptions, onSelect, searchable = false, m
 
   const position = () => {
     const r = trigger.getBoundingClientRect();
-    const mq = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 700px)') : null;
-    if (mq && mq.matches) {
+    // v366 — LE MÊME critère que le CSS (Dashboard.MQ_ECRAN_ETROIT, documenté en
+    // v253 : « les critères sont EXACTEMENT ceux du CSS »). Le « (max-width:
+    // 700px) » brut laissait un téléphone à l'horizontale (812 × 375) et une
+    // tablette (768 × 1024) avec la mise en page mobile et un sélecteur desktop.
+    // Mesuré dans Chromium à 812 × 375 : panneau de 336 px dont 66 px hors
+    // écran — inatteignables, le panneau étant en position fixed — et champ de
+    // recherche à 13 px, ce qui déclenche le zoom d'iOS à la prise de focus.
+    const etroit = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      && window.matchMedia(Dashboard.MQ_ECRAN_ETROIT).matches;
+    if (etroit) {
       panel.classList.add('is-sheet');
       panel.style.left = panel.style.right = panel.style.top = panel.style.width = '';
       // v325 — remonter la feuille au-dessus du clavier (sinon le champ
@@ -306,6 +314,13 @@ Dashboard.dropdownMenu = ({ trigger, getOptions, onSelect, searchable = false, m
     panel.style.left = Math.max(10, Math.min(r.left, window.innerWidth - clamped - 10)) + 'px';
     if (up) { panel.style.top = 'auto'; panel.style.bottom = (window.innerHeight - r.top + 8) + 'px'; }
     else { panel.style.bottom = 'auto'; panel.style.top = (r.bottom + 8) + 'px'; }
+    // v366 — en mode flottant, la hauteur du panneau est limitée à la place QUI
+    // RESTE à l'écran (sous le déclencheur, ou au-dessus quand il bascule), moins
+    // 16 px d'air. Sans ça, un écran court gardait le plafond de 336 px du CSS :
+    // mesuré à 812 × 375, 66 px de liste sous le bord, inatteignables puisque le
+    // panneau est en position fixed et que la page ne défile pas avec lui.
+    const dispo = Math.max(150, (up ? r.top : spaceBelow) - 16);
+    panel.style.maxHeight = Math.min(336, dispo) + 'px';
   };
 
   // v325 — on NE recrée PAS le champ de recherche à chaque lettre :
