@@ -79,7 +79,7 @@ Editor.open = async (bot, command = null, existingCommands = []) => {
   const triggerValueLabel = { prefix: 'Nom de la commande (ex : bonjour)', slash: 'Nom (ex : info)', keyword: 'Mot-clé exact (ex : salut)' };
 
   App.modal(`
-    <div class="modal-header"><h3>${command ? '✏️ Modifier la commande' : '🧩 Nouvelle commande'}</h3><button class="x-btn" data-close>×</button></div>
+    <div class="modal-header"><h3>${command ? 'Modifier la commande' : 'Nouvelle commande'}</h3><button class="x-btn" data-close>×</button></div>
     <div class="modal-body" style="padding:0">
       <div style="padding:16px 22px 4px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:12px" id="cmd-settings"></div>
       <div class="editor-layout">
@@ -88,9 +88,9 @@ Editor.open = async (bot, command = null, existingCommands = []) => {
       </div>
     </div>
     <div class="modal-footer">
-      <div style="margin-right:auto;color:var(--text-dim);font-size:12px">💡 Astuce : clique sur une variable pour l'insérer dans le champ en cours d'édition.</div>
+      <div style="margin-right:auto;color:var(--text-dim);font-size:12px">Astuce : clique sur une variable pour l'insérer dans le champ en cours d'édition.</div>
       <button class="btn btn-ghost" data-close>Annuler</button>
-      <button class="btn btn-primary" id="editor-save">💾 Enregistrer</button>
+      <button class="btn btn-primary" id="editor-save">Enregistrer</button>
     </div>
   `, true);
   document.querySelectorAll('[data-close]').forEach(b => b.onclick = App.closeModal);
@@ -138,7 +138,7 @@ Editor.open = async (bot, command = null, existingCommands = []) => {
     const options = getOptions();
     wrap.innerHTML = `
       <label class="field-label">Options de la commande slash</label>
-      <div id="opt-list">${options.length ? '' : '<div style="color:var(--text-dim);font-size:12.5px">Aucune option — la commande n\'aura pas d\'arguments.</div>'}</div>
+      <div id="opt-list">${options.length ? '' : '<div style="color:var(--text-dim);font-size:13px">Aucune option — la commande n\'aura pas d\'arguments.</div>'}</div>
       <button class="btn btn-sm btn-ghost" id="opt-add" style="margin-top:8px">＋ Ajouter une option</button>
     `;
     const list = wrap.querySelector('#opt-list');
@@ -157,10 +157,10 @@ Editor.open = async (bot, command = null, existingCommands = []) => {
         <select class="select" data-k="type" style="max-width:110px">
           ${['string', 'user', 'channel', 'role', 'number', 'boolean'].map(t => `<option value="${t}" ${o.type === t ? 'selected' : ''}>${t}</option>`).join('')}
         </select>
-        <label style="display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--text-dim);white-space:nowrap">
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-dim);white-space:nowrap">
           <input type="checkbox" data-k="required" ${o.required ? 'checked' : ''} /> requis
         </label>
-        <button class="btn btn-danger btn-icon btn-sm" data-del>🗑</button>
+        <button class="btn btn-danger btn-icon btn-sm" data-del><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 6.5h16M9.5 6.5V4.2h5v2.3M6.5 6.5l1 13h9l1-13M10 10v6M14 10v6"/></svg></button>
       </div>
     `);
     row.querySelectorAll('[data-k]').forEach(inp => {
@@ -186,7 +186,7 @@ Editor.open = async (bot, command = null, existingCommands = []) => {
   const palette = modal.querySelector('#palette');
   palette.innerHTML = BLOCK_CATEGORIES.map(cat => `
     <h4>${cat.name}</h4>
-    ${cat.blocks.map(b => `<button class="palette-item" data-type="${b.type}"><span>${b.icon}</span> ${b.title}</button>`).join('')}
+    ${cat.blocks.map(b => `<button class="palette-item" data-type="${b.type}">${b.title}</button>`).join('')}
   `).join('');
   palette.querySelectorAll('.palette-item').forEach(btn => btn.onclick = () => {
     Editor.blocks.push(newBlock(btn.dataset.type));
@@ -238,12 +238,12 @@ Editor.renderCanvas = () => {
       active.dispatchEvent(new Event('input', { bubbles: true }));
       active.focus();
     } else {
-      navigator.clipboard.writeText(v).then(() => App.toast(`${v} copié !`));
+      navigator.clipboard.writeText(v).then(() => App.toast(`${v} copié.`));
     }
   });
   Editor.canvasEl.appendChild(vars);
 
-  Editor.canvasEl.appendChild(App.el(`<div style="color:var(--text-dim);font-size:12.5px;margin-bottom:8px">🧩 ${Editor.blocks.length} bloc(s) — ajoute des blocs depuis la palette, glisse les cartes pour les réordonner.</div>`));
+  Editor.canvasEl.appendChild(App.el(`<div style="color:var(--text-dim);font-size:13px;margin-bottom:8px">${Editor.blocks.length} bloc(s) — ajoute des blocs depuis la palette, glisse les cartes pour les réordonner.</div>`));
 
   Editor.canvasEl.appendChild(Editor.renderZone(Editor.blocks, 'Racine de la commande', 'root'));
 };
@@ -333,7 +333,7 @@ Editor.renderBlockCard = (block, list, index) => {
           <button class="icon-btn" data-up title="Monter">↑</button>
           <button class="icon-btn" data-down title="Descendre">↓</button>
           <button class="icon-btn" data-dup title="Dupliquer">⧉</button>
-          <button class="icon-btn" data-del title="Supprimer">🗑</button>
+          <button class="icon-btn" data-del title="Supprimer"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 6.5h16M9.5 6.5V4.2h5v2.3M6.5 6.5l1 13h9l1-13M10 10v6M14 10v6"/></svg></button>
         </div>
       </div>
       <div class="block-body"></div>
@@ -409,7 +409,7 @@ Editor.renderBlockBody = (body, block) => {
   switch (block.type) {
     case 'send_message': {
       addTextarea('Message', 'text', 'Texte à envoyer…');
-      const row = App.el(`<label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12.5px;color:var(--text-dim);cursor:pointer"><input type="checkbox" ${p.reply ? 'checked' : ''} /> Répondre au message déclencheur</label>`);
+      const row = App.el(`<label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:var(--text-dim);cursor:pointer"><input type="checkbox" ${p.reply ? 'checked' : ''} /> Répondre au message déclencheur</label>`);
       Editor.bindInput(row.querySelector('input'), p, 'reply');
       body.appendChild(row);
       break;
@@ -434,7 +434,7 @@ Editor.renderBlockBody = (body, block) => {
             <input class="input" placeholder="Nom du champ" value="${App.escapeHtml(f.name)}" />
             <input class="input" placeholder="Valeur" value="${App.escapeHtml(f.value)}" />
             <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-dim);white-space:nowrap"><input type="checkbox" ${f.inline ? 'checked' : ''} /> inline</label>
-            <button class="btn btn-danger btn-icon btn-sm">🗑</button>
+            <button class="btn btn-danger btn-icon btn-sm"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 6.5h16M9.5 6.5V4.2h5v2.3M6.5 6.5l1 13h9l1-13M10 10v6M14 10v6"/></svg></button>
           </div>
         `);
         Editor.bindInput(row.querySelectorAll('input')[0], f, 'name');
@@ -468,7 +468,7 @@ Editor.renderBlockBody = (body, block) => {
             <select class="select" style="max-width:130px">
               ${[['1', 'Bleu'], ['2', 'Gris'], ['3', 'Vert'], ['4', 'Rouge']].map(([v, l]) => `<option value="${v}" ${String(b.style) === v ? 'selected' : ''}>${l}</option>`).join('')}
             </select>
-            <button class="btn btn-danger btn-icon btn-sm">🗑</button>
+            <button class="btn btn-danger btn-icon btn-sm"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 6.5h16M9.5 6.5V4.2h5v2.3M6.5 6.5l1 13h9l1-13M10 10v6M14 10v6"/></svg></button>
           </div>
         `);
         Editor.bindInput(row.querySelectorAll('input')[0], b, 'label');
@@ -492,7 +492,7 @@ Editor.renderBlockBody = (body, block) => {
       addField('Réponses possibles (une sera tirée au hasard)');
       const wrap = App.el('<div></div>');
       (p.options || []).forEach((opt, i) => {
-        const row = App.el(`<div class="row-item"><input class="input" value="${App.escapeHtml(opt)}" /><button class="btn btn-danger btn-icon btn-sm">🗑</button></div>`);
+        const row = App.el(`<div class="row-item"><input class="input" value="${App.escapeHtml(opt)}" /><button class="btn btn-danger btn-icon btn-sm">${App.glyphe('corbeille', { taille: 16 })}</button></div>`);
         Editor.bindDirect(row.querySelector('input'), (v) => { p.options[i] = v; });
         row.querySelector('button').onclick = () => { p.options.splice(i, 1); rerender(); };
         wrap.appendChild(row);
@@ -508,7 +508,7 @@ Editor.renderBlockBody = (body, block) => {
       break;
     }
     case 'delete_message': {
-      body.appendChild(App.el(`<p style="color:var(--text-dim);font-size:12.5px">Supprime le message qui a déclenché la commande (si possible).</p>`));
+      body.appendChild(App.el(`<p style="color:var(--text-dim);font-size:13px">Supprime le message qui a déclenché la commande (si possible).</p>`));
       break;
     }
     case 'add_role':
@@ -541,9 +541,9 @@ Editor.renderBlockBody = (body, block) => {
       cond.appendChild(left); cond.appendChild(op); cond.appendChild(right);
       body.appendChild(cond);
       const wrap = App.el(`<div class="if-wrap" style="margin-top:10px"></div>`);
-      wrap.appendChild(App.el(`<div class="zone-label">✅ Si vrai</div>`));
+      wrap.appendChild(App.el(`<div class="zone-label">Si vrai</div>`));
       wrap.appendChild(Editor.renderZone(block.thenBlocks || [], null, `then-${block.id}`));
-      wrap.appendChild(App.el(`<div class="zone-label">❌ Sinon</div>`));
+      wrap.appendChild(App.el(`<div class="zone-label">Sinon</div>`));
       wrap.appendChild(Editor.renderZone(block.elseBlocks || [], null, `else-${block.id}`));
       body.appendChild(wrap);
       break;

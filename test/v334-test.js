@@ -23,8 +23,8 @@ const extra = racine('server/discord/extra.js');
 const clSrc = racine('server/discord/changelog.js');
 
 console.log('— 1. Pins de version v334 —');
-check('index.html : ?v=366 ×7', (html.match(/\?v=366/g) || []).length === 7);
-check('sw.js : cache botdev-v366', sw.includes("const CACHE = 'botdev-v366';"));
+check('index.html : ?v=367 ×7', (html.match(/\?v=367/g) || []).length === 7);
+check('sw.js : cache botdev-v367', sw.includes("const CACHE = 'botdev-v367';"));
 check('index.html : plus aucune ?v=333', !html.includes('?v=333'));
 
 console.log('— 2. Commande /update enregistrée —');

@@ -79,7 +79,7 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
   check('channelsmulti toujours présent (arrivée)', joinCfg.some((f) => f.type === 'channelsmulti'));
   check('channelsmulti toujours présent (départ)', leaveCfg.some((f) => f.type === 'channelsmulti'));
   const dash = read('public/js/dashboard.js');
-  check('bouton ✨ Modèle présent', dash.includes('✨ Modèle'));
+  check('bouton Modèle présent', dash.includes('Modèle'));
   // v241 — `{user}` n'est PLUS dans les modèles : l'en-tête du panneau affiche
   // déjà le pseudo (et le titre dit déjà « Bienvenue sur {serveur} ! »), donc le
   // corps le répétait. Les variables utiles restent : `{channels}` et `{server}`.

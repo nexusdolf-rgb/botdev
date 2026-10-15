@@ -61,7 +61,7 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
 
   // ---------- 4. Dashboard ----------
   console.log('— Dashboard : carte « Rôles par niveau » —');
-  check('dash : titre et description échelle', dash.includes('🏆 Rôles par niveau'));
+  check('dash : titre et description échelle', dash.includes('Rôles par niveau'));
   check('dash : aperçu de l’échelle (remplace le palier précédent)', dash.includes('data-xp-ladder'));
   // v361 : les libellés de boutons du tableau de bord sont unifiés et ne portent
 // plus d'émoji décoratif — le test vérifie le texte seul.
@@ -70,8 +70,8 @@ check('dash : bouton Synchroniser + statut', dash.includes('xp-sync') && dash.in
   check('dash : sauvegarde triée par niveau', dash.includes('.sort((a, b) => a.level - b.level)'));
 
   // ---------- 5. Version ----------
-  check('site : bump v214 (index)', index.includes('?v=366'));
-  check('site : bump v214 (sw)', sw.includes('botdev-v366'));
+  check('site : bump v214 (index)', index.includes('?v=367'));
+  check('site : bump v214 (sw)', sw.includes('botdev-v367'));
 
   console.log(`  ✅ v214 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });

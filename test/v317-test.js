@@ -27,12 +27,12 @@ const idx = racine('server/index.js');
 const ac = racine('server/discord/autoclean.js');
 
 console.log('— 1. Pins de version v317 —');
-check('index.html : ?v=366 ×7', (html.match(/\?v=366/g) || []).length === 7);
-check('sw.js : cache botdev-v366', sw.includes("const CACHE = 'botdev-v366';"));
+check('index.html : ?v=367 ×7', (html.match(/\?v=367/g) || []).length === 7);
+check('sw.js : cache botdev-v367', sw.includes("const CACHE = 'botdev-v367';"));
 check('index.html : plus aucune ?v=316', !html.includes('?v=316'));
 
 console.log('— 2. Dashboard : le module est là —');
-check('entrée menu Nettoyage auto', dash.includes("['autoclean', '🧹', 'Nettoyage auto']"));
+check('entrée menu Nettoyage auto', dash.includes("['autoclean', '', 'Nettoyage auto']"));
 check('renderer Dashboard.renderers.autoclean', dash.includes('Dashboard.renderers.autoclean'));
 check('sélecteur multi-salons', dash.includes("id=\"ac-channels\"") && dash.includes('Ajouter un salon'));
 check('rythme en secondes', dash.includes('id="ac-interval"') && dash.includes('10 s · conseillé'));

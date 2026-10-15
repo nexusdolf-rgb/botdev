@@ -19,17 +19,17 @@ const iT = dash.indexOf('Dashboard.renderers.tickets');
 const chunk = dash.slice(iT, dash.indexOf('Dashboard.renderers.welcome', iT));
 
 console.log('— 1. Pins de version v322 —');
-check('index.html : ?v=366 ×7', (html.match(/\?v=366/g) || []).length === 7);
-check('sw.js : cache botdev-v366', sw.includes("const CACHE = 'botdev-v366';"));
+check('index.html : ?v=367 ×7', (html.match(/\?v=367/g) || []).length === 7);
+check('sw.js : cache botdev-v367', sw.includes("const CACHE = 'botdev-v367';"));
 check('index.html : plus aucune ?v=321', !html.includes('?v=321'));
 
 console.log('— 2. Noms compréhensibles —');
-check('carte Ticket classique', chunk.includes('🎫 Ticket classique'));
-check('carte Ticket menu', chunk.includes('📋 Ticket menu'));
+check('carte Ticket classique', chunk.includes('Ticket classique'));
+check('carte Ticket menu', chunk.includes('Ticket menu'));
 check('plus de titre vague « Configuration » dans tickets', !chunk.includes("Dashboard.card(root, 'Configuration'"));
 check('plus de « Panneau MENU déroulant » comme titre', !chunk.includes("'🗂️ Panneau MENU déroulant'"));
 check('types : pour bouton et menu seulement', chunk.includes('Types de tickets (bouton et menu)'));
-check('l’autre système s’appelle Ticket avancé', chunk.includes('🎨 Ticket avancé'));
+check('l’autre système s’appelle Ticket avancé', chunk.includes('Ticket avancé'));
 check('le système avancé dit clairement que ce n’est PAS le menu',
   chunk.includes('PAS le Ticket menu') || chunk.includes('Ce n’est PAS le Ticket menu'));
 

@@ -19,8 +19,8 @@ const css = racine('public/css/style.css');
 const pub = racine('public/js/public.js');
 
 console.log('— 1. Pins v337 —');
-check('index.html : ?v=366 ×7', (html.match(/\?v=366/g) || []).length === 7);
-check('sw.js : cache botdev-v366', sw.includes("const CACHE = 'botdev-v366';"));
+check('index.html : ?v=367 ×7', (html.match(/\?v=367/g) || []).length === 7);
+check('sw.js : cache botdev-v367', sw.includes("const CACHE = 'botdev-v367';"));
 check('index.html : plus aucune ?v=336', !html.includes('?v=336'));
 
 console.log('— 2. HTML public inchangé (verrous v167/v240) —');
@@ -34,7 +34,7 @@ const compte = {
   divs: (pub.match(/<div/g) || []).length,
   boutons: (pub.match(/<button/g) || []).length,
 };
-check('structure HTML landing intacte', compte.classes === 188 && compte.ids === 22 && compte.divs === 151 && compte.boutons === 14, JSON.stringify(compte));
+check('structure HTML landing intacte', compte.classes === 199 && compte.ids === 22 && compte.divs === 151 && compte.boutons === 14, JSON.stringify(compte));
 
 console.log('— 3. Couche CSS v337 —');
 check('commentaire v337', css.includes('HOXERA v337'));

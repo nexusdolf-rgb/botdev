@@ -89,13 +89,16 @@ check('premade /profile : titre au lieu de l’auteur doublé', files.premade.in
 
 // ---------- 6. Aperçus du dashboard unifiés ----------
 console.log('— Dashboard : surface Discord unique + textes —');
-check('CSS : tokens d’arrondis v209', files.css.includes('--r-sm: 10px'));
+// v367 : ce que v209 exigeait, c'est une SEULE valeur pour toutes les surfaces
+// qui imitent Discord, pas son nombre. L'echelle de rayons a ramene ce jeton
+// unique a 8 px (la mesure reelle d'un encart Discord) ; il reste unique.
+check('CSS : tokens d’arrondis v209', files.css.includes('--r-sm: 8px'));
 check('CSS : toutes les surfaces Discord aux mêmes arrondis', files.css.includes('.ca-discord-preview, .eb-discord') && files.css.includes('border-radius: var(--r-sm)'));
 check('dashboard : modèle d’accueil au tutoiement (plus de « je vous invite »)', !files.dashJs.includes('je vous invite à prendre connaissance'));
 // v240 — tout le produit est passé au vouvoiement : le modèle de départ aussi.
 check('dashboard : modèle de départ au vouvoiement', files.dashJs.includes('la porte reste ouverte si vous revenez'));
-check('index : version v209', files.indexHtml.includes('?v=366'));
-check('service worker : cache v209', files.sw.includes('botdev-v366'));
+check('index : version v209', files.indexHtml.includes('?v=367'));
+check('service worker : cache v209', files.sw.includes('botdev-v367'));
 check('menu mobile : nom du bot dynamique', files.dashJs.includes('Dashboard.state.bot.name'));
 
 // ---------- 7. Invitations (extra) : champ + footer ----------

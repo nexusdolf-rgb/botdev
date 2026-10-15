@@ -38,24 +38,26 @@ check('le bloc v256 existe', deb > 0 && deb < fin);
 const zone = css.slice(deb, fin);
 
 console.log('— 1. Les cartes redeviennent des cartes —');
+// v367 : l'echelle de rayons ne retient que 4, 8, 12 et 999 — le 14 px est
+// donc devenu 12. Le fond de carte, lui, est bien toujours restaure.
 check('fond et bordure de carte restaurés (fini les sections aplaties)',
-  zone.includes('background: var(--d-card) !important;') && zone.includes('border-radius: 14px !important;'));
+  zone.includes('background: var(--d-card) !important;') && zone.includes('border-radius: 12px !important;'));
 check('…y compris les petites cartes de l\'accueil',
   zone.includes('.ov-module-card') && zone.includes('.ov-intro'));
 
 console.log('— 2. Titres et en-têtes v241 —');
 check('titre de module 22 px (pas le titre géant de la v244)',
   zone.includes('font-size: 22px; letter-spacing: -.3px;'));
-check('icône de module 46 px en carré dégradé',
-  zone.includes('width: 46px; height: 46px; border-radius: 13px;'));
+check('icône de module 46 px en carré dégradé (rayon 12 px depuis v367)',
+  zone.includes('width: 46px; height: 46px; border-radius: 12px;'));
 check('en-tête de carte souligné d\'un trait fin, comme v241',
   zone.includes('.dash-card[data-dash-card] .card-head') && zone.includes('border-bottom: 1px solid rgba(49,65,88,.62);'));
 
 console.log('— 3. Formulaires et boutons v241 —');
-check('saisies arrondies 10 px sur fond de thème (pas les boîtes Discord)',
-  zone.includes('border-radius: 10px !important;') && zone.includes('background: var(--d-card2) !important;'));
-check('boutons v241 : rayon 9 px, fond card2, léger relief au survol',
-  zone.includes('border-radius: 9px;') && zone.includes('transform: translateY(-1px) !important;'));
+check('saisies arrondies 8 px sur fond de thème (pas les boîtes Discord)',
+  zone.includes('border-radius: 8px !important;') && zone.includes('background: var(--d-card2) !important;'));
+check('boutons v241 : rayon 8 px, fond card2, léger relief au survol',
+  zone.includes('border-radius: 8px;') && zone.includes('transform: translateY(-1px) !important;'));
 check('stats et tableaux d\'origine',
   zone.includes('.dash-stat') && zone.includes('.dash-table th'));
 
@@ -71,9 +73,9 @@ check('la classe hx-os-pc vient toujours du système (v253)',
   index.includes("classList.add('hx-os-pc')"));
 
 console.log('— 5. Version —');
-check('index.html : ?v=366 référencé 7 fois', (index.match(/\?v=366/g) || []).length === 7,
-  String((index.match(/\?v=366/g) || []).length));
-check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("const CACHE = 'botdev-v366';"));
+check('index.html : ?v=367 référencé 7 fois', (index.match(/\?v=367/g) || []).length === 7,
+  String((index.match(/\?v=367/g) || []).length));
+check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("const CACHE = 'botdev-v367';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v256 — ${ok} vérifications OK : l'intérieur des panneaux PC est redevenu celui de la v241.`);

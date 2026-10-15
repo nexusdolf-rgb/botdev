@@ -79,15 +79,15 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
 
   // ---------- 5. Dashboard ----------
   console.log('— Dashboard : carte « Barème » —');
-  check('dash : carte dédiée présente', dash.includes('📈 Barème progressif des sanctions'));
+  check('dash : carte dédiée présente', dash.includes('Barème progressif des sanctions'));
   check('dash : toggle + fenêtre + paliers par règle', dash.includes('data-esc-on') && dash.includes('data-esc-win') && dash.includes('data-esc-steps'));
   check('dash : durées + blacklist + palier supprimable', dash.includes('data-esc-minutes') && dash.includes('data-esc-blmin') && dash.includes('data-esc-del'));
   check('dash : enregistré dans collectAutomodForm', dash.includes('escalation: collectEscalationForm()'));
   check('dash : relecture brouillon (draft.escalation)', dash.includes('automodDraft.escalation'));
 
   // ---------- 6. Version ----------
-  check('site : bump v213 (index)', index.includes('?v=366'));
-  check('site : bump v213 (sw)', sw.includes('botdev-v366'));
+  check('site : bump v213 (index)', index.includes('?v=367'));
+  check('site : bump v213 (sw)', sw.includes('botdev-v367'));
 
   console.log(`  ✅ v213 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });

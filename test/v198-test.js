@@ -193,7 +193,7 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
   check('renderer giveaways : configuration complète', dash.includes('giveaways/config') && dash.includes('Lancer un giveaway'));
   check('renderer suggestions : couleur + ping + 👎 + salon approuvées', dash.includes('suggestions/config') && dash.includes('s-downvotes') && dash.includes('s-approve'));
   check('renderer tickets : image du panneau + MP fermeture', dash.includes('tickets/dm') && dash.includes('data-panel-img') && dash.includes('Message privé après fermeture'));
-  check('renderer quiz : création + édition + activation', dash.includes('quiz/sets') && dash.includes('📚 Mes quiz') && dash.includes('qze-add'));
+  check('renderer quiz : création + édition + activation', dash.includes('quiz/sets') && dash.includes('Mes quiz') && dash.includes('qze-add'));
   check('helper import d\'image présent', dash.includes('Dashboard.uploadImage') && dash.includes('Dashboard.imageField'));
 
   console.log(failures === 0

@@ -37,7 +37,7 @@ Dashboard.discordRefMatches = (current, item) => {
   return value === id || lower === name.toLowerCase() || lower === `#${name.toLowerCase()}`;
 };
 
-Dashboard.currentDiscordOption = (current, items, icon = '⚠️', label = 'configuration actuelle — élément introuvable') => {
+Dashboard.currentDiscordOption = (current, items, icon = '', label = 'configuration actuelle — élément introuvable') => {
   const value = String(current || '').trim();
   if (!value || (items || []).some((item) => Dashboard.discordRefMatches(value, item))) return '';
   return `<option value="${App.escapeHtml(value)}" selected>${icon} ${App.escapeHtml(value)} (${label})</option>`;
@@ -45,7 +45,7 @@ Dashboard.currentDiscordOption = (current, items, icon = '⚠️', label = 'conf
 
 Dashboard.noDiscordChoice = (label) => `<option value="" disabled>— ${App.escapeHtml(label)} —</option>`;
 
-// 🎚️ v244 — Sélecteur à préréglages.
+// v244 — Sélecteur à préréglages.
 //
 // Remplace les cases numériques libres partout où la valeur est en réalité un
 // CHOIX et non une mesure : une durée, un palier. « 1440 » dans une case ne
@@ -331,7 +331,7 @@ Dashboard.dropdownMenu = ({ trigger, getOptions, onSelect, searchable = false, m
     let input = panel.querySelector('.dd-search input');
     if (wantSearch) {
       if (!input) {
-        const search = App.el(`<div class="dd-search"><span aria-hidden="true">🔍</span><input type="text" placeholder="Rechercher…" aria-label="Rechercher une option" inputmode="text" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" /></div>`);
+        const search = App.el(`<div class="dd-search"><span aria-hidden="true">${App.glyphe('recherche', { taille: 16 })}</span><input type="text" placeholder="Rechercher…" aria-label="Rechercher une option" inputmode="text" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" /></div>`);
         input = search.querySelector('input');
         input.addEventListener('input', () => renderList());
         input.addEventListener('keydown', (e) => {
@@ -474,15 +474,15 @@ Dashboard.enhanceSelect = (select) => {
     trigger,
     searchable: () => select.options.length > 7,
     getOptions: () => Array.from(select.options).map((o) => {
-      // 🏷️ Chaque option porte son icône (💬 salon, 🛡️ rôle, 📁 catégorie,
-      // ⚠️ référence introuvable…) : la pastille de gauche n'est plus jamais
+      // Chaque option porte son icône (💬 salon, 🛡️ rôle, 📁 catégorie,
+      // référence introuvable…) : la pastille de gauche n'est plus jamais
       // une case vide. L'emoji de tête quitte le label (pas de doublon).
       const raw = String(o.textContent || '').trim();
       let label = raw;
       let icon = '';
       const em = raw.match(/^((?:\p{Extended_Pictographic}\uFE0F?)+)(?:\s+|$)([\s\S]*)$/u);
       if (em) { icon = em[1]; label = (em[2] || '').trim() || raw; }
-      else if (/^#/.test(raw)) icon = '💬';
+      else if (/^#/.test(raw)) icon = '';
       return {
         value: o.value,
         label,
@@ -543,7 +543,7 @@ Dashboard.mount = async (shell, bot) => {
   Dashboard.renderTopbar(layout.querySelector('#dash-topbar'), discordGuilds, needLink);
   const content = layout.querySelector('#dash-content');
 
-  // 🎛️ Sélecteurs façon panel pro : chaque <select> du contenu (et des
+  // Sélecteurs façon panel pro : chaque <select> du contenu (et des
   // modales) devient un vrai menu déroulant dès qu'il apparaît dans le DOM,
   // y compris ceux rendus plus tard en asynchrone.
   [content, document.querySelector('#modal-root')].filter(Boolean).forEach((zone) => {
@@ -565,7 +565,7 @@ Dashboard.mount = async (shell, bot) => {
   if (needLink) {
     content.innerHTML = `
       <div class="dash-card" style="max-width:560px;margin:20px auto">
-        <h3>🔗 Liez votre compte Discord</h3>
+        <h3>Liez votre compte Discord</h3>
         <div class="desc">Pour configurer vos serveurs depuis le dashboard (comme DraftBot), connectez votre compte Discord. On vérifiera automatiquement vos serveurs et votre permission Discord « Administrateur ».</div>
         <button class="dash-btn dash-btn-primary" id="d-link">Lier mon compte Discord</button>
       </div>`;
@@ -576,7 +576,7 @@ Dashboard.mount = async (shell, bot) => {
     return;
   }
 
-  // 🌍 Dernier serveur utilisé mémorisé → on y retourne directement.
+  // Dernier serveur utilisé mémorisé → on y retourne directement.
   // Sinon : GRILLE DE CARTES SERVEURS (le pattern signature des dashboards pro).
   let saved = null;
   try { saved = localStorage.getItem('hx-guild'); } catch {}
@@ -591,7 +591,7 @@ Dashboard.mount = async (shell, bot) => {
   } else {
     content.innerHTML = `
       <div class="dash-card" style="max-width:560px;margin:20px auto">
-        <h3>🌍 Aucun serveur à configurer</h3>
+        <h3>Aucun serveur à configurer</h3>
         <div class="desc">Ajoutez ${App.escapeHtml(bot.name)} à l'un de vos serveurs Discord (bouton « ➕ Ajouter le bot »), puis revenez ici pour tout configurer.</div>
         <button class="dash-btn dash-btn-primary" id="d-invite">Ajouter le bot</button>
       </div>`;
@@ -611,7 +611,7 @@ Dashboard.loadDiscordGuilds = async () => {
 };
 
 // ============================================================
-// 🧭 Fiche de lecture du module (v361)
+// Fiche de lecture du module (v361)
 // ------------------------------------------------------------
 // Quand on clique sur un module, on doit comprendre en trois secondes :
 // ce qu'il fait, ce que les membres verront sur Discord, et où le régler
@@ -707,53 +707,53 @@ Dashboard.openModulePreview = (moduleId) => {
 
 // ---------------------- Sidebar ----------------------
 Dashboard.MODULES = [
-  ['overview', '📊', 'Vue d\'ensemble'],
-  ['tickets', '🎫', 'Tickets'],
-  ['welcome', '👋', 'Bienvenue'],
-  ['autoroles', '🏷️', 'Auto-rôles'],
-  ['verification', '✅', 'Vérification'],
-  ['rules', '📖', 'Règles'],
-  ['levels', '📈', 'Niveaux'],
-  ['economy', '💰', 'Économie'],
-  ['shop', '🛒', 'Boutique'],
-  ['moderation', '🛡️', 'Modération'],
-  ['blacklist', '🔇', 'Liste noire'],
-  ['antiraid', '🚧', 'Anti-raid'],
-  ['antinuke', '🚨', 'Anti-nuke'],
-  ['roles', '📋', 'Rôles'],
-  ['suggestions', '💡', 'Suggestions'],
-  ['giveaways', '🎁', 'Giveaways'],
-  ['events', '🎮', 'Événements'],
-  ['quiz', '🧠', 'Quiz'],
-  ['polls', '🗳️', 'Sondages'],
-  ['voicetemp', '🎙️', 'Vocal'],
+  ['overview', '', 'Vue d\'ensemble'],
+  ['tickets', '', 'Tickets'],
+  ['welcome', '', 'Bienvenue'],
+  ['autoroles', '', 'Auto-rôles'],
+  ['verification', '', 'Vérification'],
+  ['rules', '', 'Règles'],
+  ['levels', '', 'Niveaux'],
+  ['economy', '', 'Économie'],
+  ['shop', '', 'Boutique'],
+  ['moderation', '', 'Modération'],
+  ['blacklist', '', 'Liste noire'],
+  ['antiraid', '', 'Anti-raid'],
+  ['antinuke', '', 'Anti-nuke'],
+  ['roles', '', 'Rôles'],
+  ['suggestions', '', 'Suggestions'],
+  ['giveaways', '', 'Giveaways'],
+  ['events', '', 'Événements'],
+  ['quiz', '', 'Quiz'],
+  ['polls', '', 'Sondages'],
+  ['voicetemp', '', 'Vocal'],
   ['starboard', '⭐', 'Starboard'],
-  ['invites', '📨', 'Invitations'],
-  ['lives', '🔴', 'Lives'],
-  ['announcements', '📅', 'Annonces'],
-  ['sticky', '📌', 'Message épinglé'],
-  ['birthdays', '🎂', 'Anniversaires'],
-  ['links', '🔗', 'Liens'],
-  ['embeds', '🧱', 'Embed Builder'],
-  ['members', '👥', 'Membres'],
-  ['stats', '📈', 'Statistiques'],
-  ['logs', '📜', 'Journaux'],
-  ['autoclean', '🧹', 'Nettoyage auto'],
-  ['transcripts', '🔎', 'Transcriptions'],
-  ['modmail', '💬', 'Modmail'],
-  ['server', '⚙️', 'Réglages serveur'],
-  ['botprofile', '🤖', 'Identité du bot'],
+  ['invites', '', 'Invitations'],
+  ['lives', '', 'Lives'],
+  ['announcements', '', 'Annonces'],
+  ['sticky', '', 'Message épinglé'],
+  ['birthdays', '', 'Anniversaires'],
+  ['links', '', 'Liens'],
+  ['embeds', '', 'Embed Builder'],
+  ['members', '', 'Membres'],
+  ['stats', '', 'Statistiques'],
+  ['logs', '', 'Journaux'],
+  ['autoclean', '', 'Nettoyage auto'],
+  ['transcripts', '', 'Transcriptions'],
+  ['modmail', '', 'Modmail'],
+  ['server', '', 'Réglages serveur'],
+  ['botprofile', '', 'Identité du bot'],
 ];
 Dashboard.BOT_MODULES = [
-  ['commands', '🧩', 'Commandes'],
-  ['modules', '📦', 'Modules'],
-  ['health', '🩺', 'Santé du bot'],
-  ['botsettings', '🤖', 'Réglages du bot'],
-  ['help', '❓', 'Aide & Guide'],
+  ['commands', '', 'Commandes'],
+  ['modules', '', 'Modules'],
+  ['health', '', 'Santé du bot'],
+  ['botsettings', '', 'Réglages du bot'],
+  ['help', '', 'Aide & Guide'],
 ];
 
 // ============================================================
-// 🧩 Catalogue des modules (v361)
+// Catalogue des modules (v361)
 // ------------------------------------------------------------
 // Une seule source de vérité pour : l'émoticône dessinée pour le module,
 // sa famille dans le menu, sa phrase d'accroche, ce qu'il fait, ce que les
@@ -783,7 +783,7 @@ Dashboard.MODULE_META = {
     voit: 'Un bouton « Ouvrir un ticket ». Après le clic, le membre obtient un salon privé où l’équipe peut répondre.',
     slash: '/config ➜ Tickets',
     apercu: { message: 'Besoin d’aide ? Ouvrez un ticket, l’équipe vous répond en privé.',
-      embed: { title: '🎫 Support du serveur', desc: 'Choisissez un motif, puis cliquez sur « Ouvrir un ticket ». Votre question reste confidentielle.', color: '#3ba55d', footer: 'Optimus Prime' },
+      embed: { title: 'Support du serveur', desc: 'Choisissez un motif, puis cliquez sur « Ouvrir un ticket ». Votre question reste confidentielle.', color: '#3ba55d', footer: 'Optimus Prime' },
       buttons: [{ label: 'Ouvrir un ticket', style: 'vert' }, { label: 'Lire la FAQ', style: 'gris' }] } },
 
   welcome: { e: '👋', emote: 'hox_bienvenue', cat: 'support', tag: 'Le premier message que reçoit un nouvel arrivant',
@@ -810,7 +810,7 @@ Dashboard.MODULE_META = {
     voit: 'Un encadré avec un menu « Choisir vos rôles » ou une rangée de boutons.',
     slash: '/config ➜ Rôles-réactions',
     apercu: { embed: { title: '🎭 Choisissez vos rôles', desc: 'Un clic sur un bouton ajoute ou retire le rôle correspondant.', color: '#eb459e', footer: 'Optimus Prime' },
-      buttons: [{ label: '🔔 Annonces', style: 'gris' }, { label: '🎮 Joueurs', style: 'gris' }, { label: '🎨 Couleurs', style: 'gris' }] } },
+      buttons: [{ label: 'Annonces', style: 'gris' }, { label: 'Joueurs', style: 'gris' }, { label: 'Couleurs', style: 'gris' }] } },
 
   members: { e: '👥', emote: 'hox_membres', cat: 'support', tag: 'Retrouver un membre et agir en un clic',
     aide: 'Recherche par nom ou identifiant, fiche du membre, rôles, sanctions et actions rapides.',
@@ -856,7 +856,7 @@ Dashboard.MODULE_META = {
     voit: 'Un message « Giveaway — cliquez pour participer » qui se termine tout seul.',
     slash: '/giveaway lancer — /config ➜ Giveaways',
     apercu: { embed: { title: '🎁 Giveaway — Nitro 1 mois', desc: 'Cliquez sur le bouton pour participer. **2 gagnants** dans 3 jours.', color: '#eb459e', footer: 'Se termine <dans 3 jours>' },
-      buttons: [{ label: '🎉 Participer', style: 'gris' }] } },
+      buttons: [{ label: 'Participer', style: 'gris' }] } },
 
   events: { e: '🎮', emote: 'hox_events', cat: 'vie', tag: 'Vos soirées, tournois et animations suivis',
     aide: 'Suivi des événements du serveur, inscriptions et rappels avant le début.',
@@ -1001,7 +1001,7 @@ Dashboard.MODULE_META = {
       desc: '**1.** Restez courtois : insultes, harcèlement et propos haineux sont interdits.\n**2.** Pas de spam, pas de publicité en message privé.\n**3.** Un seul compte, un pseudo lisible.\n> Le staff tranche en dernier ressort.',
       color: '#5865F2',
       footer: 'En acceptant, vous obtenez le rôle vérifié et vous reconnaissez avoir lu ce règlement.' },
-      buttons: [{ label: '✅ J’accepte les règles', style: 'vert' }] } },
+      buttons: [{ label: 'J’accepte les règles', style: 'vert' }] } },
 
   polls: { e: '🗳️', emote: 'hox_poll', cat: 'vie', tag: 'Le vrai sondage Discord, préparé et publié d’ici',
     aide: 'Question, jusqu’à 10 choix, durée de 1 heure à 32 jours, réponses multiples autorisées : le bot envoie le widget de vote natif de Discord, relit les résultats à la source et peut les clôturer plus tôt.',
@@ -1032,8 +1032,8 @@ Dashboard.iconCell = (moduleId, emoji, cls = 'ico') => {
     : `<span class="${cls}"><span class="ico-fallback" aria-hidden="true">${emoji}</span></span>`;
 };
 
-// 🎛️ Composant partagé : carte de sélection du serveur (style DraftBot).
-// 🗂️ Grille de sélection de serveurs (façon DraftBot) : grandes cartes avec
+// Composant partagé : carte de sélection du serveur (style DraftBot).
+// Grille de sélection de serveurs (façon DraftBot) : grandes cartes avec
 // bannière, icône en recouvrement, stats et état du bot. Recherche dès 9 serveurs.
 Dashboard.openServerPicker = () => {
   const guilds = Dashboard.state.discordGuilds || [];
@@ -1087,7 +1087,7 @@ Dashboard.openServerPicker = () => {
     card.onclick = async () => {
       const g = guilds.find((x) => x.id === card.dataset.gid);
       if (!g) return;
-      if (!g.hasBot) { App.openInvite(Dashboard.state.bot.invite_url); App.toast('Ajoutez le bot sur ce serveur pour le configurer !'); return; }
+      if (!g.hasBot) { App.openInvite(Dashboard.state.bot.invite_url); App.toast('Ajoutez le bot sur ce serveur pour le configurer.'); return; }
       if (!g.canManage) { App.toast('Lecture seule : il vous faut la permission Discord « Administrateur » ou être propriétaire du serveur.', 'error'); return; }
       App.closeModal();
       await Dashboard.selectGuild(g.id);
@@ -1099,7 +1099,7 @@ Dashboard.openServerPicker = () => {
 Dashboard.serverPicker = () => {
   const guilds = Dashboard.state.discordGuilds || [];
   const cur = guilds.find((g) => g.id === Dashboard.state.guildId);
-  const initial = cur ? (cur.name || '?').trim()[0].toUpperCase() : '🌍';
+  const initial = cur ? (cur.name || '?').trim()[0].toUpperCase() : '';
   const pick = App.el(`
     <div class="dash-server-card" title="Changer de serveur" role="button" tabindex="0">
       ${cur && cur.icon
@@ -1154,7 +1154,7 @@ Dashboard.renderSide = (aside) => {
     : '<img class="dash-side-brand-avatar fallback-logo" src="/icons/nexora-robot-mark.svg" alt="Logo Optimus Prime" />';
   aside.appendChild(App.el(`<div class="dash-side-brand">${brandAvatar}<div class="dash-side-brand-copy"><b>${App.escapeHtml(bot.name || 'Hoxera')}</b><span>Control Center</span></div><span class="dash-side-brand-status" title="${bot.online ? 'Bot en ligne' : 'Bot hors ligne'}"></span></div>`));
   const sideBrandImage = aside.querySelector('.dash-side-brand-avatar:not(.fallback)');
-  if (sideBrandImage) sideBrandImage.onerror = () => sideBrandImage.replaceWith(App.el('<span class="dash-side-brand-avatar fallback">⚡</span>'));
+  if (sideBrandImage) sideBrandImage.onerror = () => sideBrandImage.replaceWith(App.el('<span class="dash-side-brand-avatar fallback"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M13.4 2.6 5.6 13.4h4.8L9 21.4l8.6-11.2h-5l.8-7.6Z"/></svg></span>'));
   aside.appendChild(Dashboard.serverPicker());
 
   // Le menu suit les familles du catalogue (Communauté & support, Sécurité,
@@ -1173,7 +1173,7 @@ Dashboard.renderSide = (aside) => {
   // Administrateur global : reste tout en bas de la gestion du serveur.
   // Ce bouton dépend du compte fondateur, jamais du serveur sélectionné.
   if (App.state.user && App.state.user.is_admin) {
-    const platformAdmin = App.el(`<button class="dash-side-item dash-global-admin" data-platform-admin="true" title="Administration globale d’Optimus Prime"><span class="ico">👑</span>Administrateur global</button>`);
+    const platformAdmin = App.el(`<button class="dash-side-item dash-global-admin" data-platform-admin="true" title="Administration globale d’Optimus Prime"><span class="ico">${App.glyphe('couronne', { taille: 16 })}</span>Administrateur global</button>`);
     platformAdmin.onclick = () => App.router.go('/admin');
     aside.appendChild(platformAdmin);
 
@@ -1227,10 +1227,10 @@ Dashboard.goBack = () => {
 // 4 destinations principales + « Plus » qui ouvre la liste complète
 // des modules dans une feuille glissante (comme une app Android).
 Dashboard.BNav = [
-  ['overview', '📊', 'Accueil'],
-  ['tickets', '🎫', 'Tickets'],
-  ['members', '👥', 'Membres'],
-  ['stats', '📈', 'Stats'],
+  ['overview', '', 'Accueil'],
+  ['tickets', '', 'Tickets'],
+  ['members', '', 'Membres'],
+  ['stats', '', 'Stats'],
 ];
 
 Dashboard.renderBottomNav = (nav) => {
@@ -1268,7 +1268,7 @@ Dashboard.openMoreSheet = () => {
     .filter(([, items]) => items.length);
   App.modal(`
     <div class="modal-header" style="border:none">
-      <h3>⚡ Modules</h3>
+      <h3>Modules</h3>
       <button class="x-btn" data-close>×</button>
     </div>
     <div class="modal-body" style="padding-top:0">
@@ -1311,7 +1311,7 @@ Dashboard.openPalette = () => {
   const entries = [
     ...Dashboard.MODULES.map(([id, ico, label]) => ({ kind: 'module', id, ico, label, sub: Dashboard.CATEGORY_LABEL[Dashboard.categoryOf(id)] || 'Module' })),
     ...((App.state.user && App.state.user.is_admin) ? Dashboard.BOT_MODULES.map(([id, ico, label]) => ({ kind: 'module', id, ico, label, sub: 'Administration du bot' })) : []),
-    ...guilds.map((g) => ({ kind: 'guild', id: g.id, ico: '🌍', label: g.name, sub: 'Changer de serveur' })),
+    ...guilds.map((g) => ({ kind: 'guild', id: g.id, ico: '', label: g.name, sub: 'Changer de serveur' })),
   ];
   const ov = App.el(`
     <div id="dash-palette" class="dash-palette-overlay">
@@ -1400,7 +1400,7 @@ try {
   Dashboard.applyAccent(savedAccent);
 } catch {}
 
-// 🎨/🔔 Popovers : un clic sur l'icône ouvre, un second clic ou un clic
+// /🔔 Popovers : un clic sur l'icône ouvre, un second clic ou un clic
 // ailleurs ferme. Le gestionnaire unique évite les panneaux « collés » lors
 // des re-rendus de la topbar et fonctionne aussi sur écran tactile.
 Dashboard.closePopovers = (except = null) => {
@@ -1508,8 +1508,8 @@ Dashboard.renderServerGrid = (content) => {
               <small>${App.escapeHtml(members + boosts)}</small>
             </span>
             ${g.hasBot
-              ? (g.canManage ? '<span class="srv-badge ok">✅ Configurer</span>' : '<span class="srv-badge">🔒 Lecture seule</span>')
-              : '<span class="srv-badge invite">➕ Inviter le bot</span>'}
+              ? (g.canManage ? '<span class="srv-badge ok">Configurer</span>' : '<span class="srv-badge">Lecture seule</span>')
+              : '<span class="srv-badge invite">Inviter le bot</span>'}
           </span>
         </button>`);
       if (g.banner) {
@@ -1517,7 +1517,7 @@ Dashboard.renderServerGrid = (content) => {
         if (bannerEl) bannerEl.style.backgroundImage = 'url("' + String(g.banner).replace(/["'()\\]/g, '') + '")';
       }
       card.onclick = () => {
-        if (!g.hasBot) { App.openInvite(Dashboard.state.bot.invite_url); App.toast('Ajoutez le bot puis revenez — le serveur sera configurable !'); return; }
+        if (!g.hasBot) { App.openInvite(Dashboard.state.bot.invite_url); App.toast('Ajoutez le bot puis revenez — le serveur sera configurable.'); return; }
         if (!g.canManage) { App.toast('Il vous faut la permission Discord « Administrateur » ou être propriétaire du serveur.', 'error'); return; }
         Dashboard.selectGuild(g.id);
       };
@@ -1560,7 +1560,7 @@ Dashboard.removeMobileDrawers = () => {
 
 Dashboard.positionTopbarPopover = (popover, button) => {
   if (!popover || popover.hidden || !button) return;
-  // 📱 Interface compacte : écran étroit OU appareil tactile en paysage
+  // Interface compacte : écran étroit OU appareil tactile en paysage
   // (téléphone tourné : la sidebar desktop y coupe la liste des modules)
   const isMobile = window.matchMedia
     ? window.matchMedia(Dashboard.MQ_ECRAN_ETROIT).matches
@@ -1582,7 +1582,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
   const cur = discordGuilds.find((g) => g.id === Dashboard.state.guildId);
   const needsInvite = discordGuilds.some((g) => g.canManage && !g.hasBot);
   const all = [...Dashboard.MODULES, ...Dashboard.BOT_MODULES];
-  const mod = all.find(([id]) => id === Dashboard.state.module) || ['', '📊', 'Vue d\'ensemble'];
+  const mod = all.find(([id]) => id === Dashboard.state.module) || ['', '', 'Vue d\'ensemble'];
   const acct = App.state.user || {};
   const acctName = acct.discord_username || acct.email || 'Compte Discord';
   const acctAvatar = acct.discord_avatar
@@ -1606,13 +1606,13 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
     </div>
     <div class="dash-topbar-actions" aria-label="Actions rapides du dashboard">
       <div class="dash-accent-wrap">
-        <button class="dash-iconbtn" id="d-bell" data-tip="Notifications" aria-label="Notifications" aria-controls="dash-bell-pop" aria-expanded="false">🔔<span class="bell-badge" hidden></span></button>
+        <button class="dash-iconbtn" id="d-bell" data-tip="Notifications" aria-label="Notifications" aria-controls="dash-bell-pop" aria-expanded="false"><span class="bell-badge" hidden></span></button>
       </div>
-      <button class="dash-iconbtn" id="d-theme" data-tip="Mode clair / sombre" aria-label="Changer le thème">🌓</button>
-      <button class="dash-iconbtn" id="d-palette" data-tip="Recherche rapide (Ctrl+K)" aria-label="Rechercher un module ou un serveur">🔍</button>
-      <button class="dash-iconbtn" id="d-refresh" data-tip="Actualiser le module" aria-label="Actualiser le module">🔄</button>
+      <button class="dash-iconbtn" id="d-theme" data-tip="Mode clair / sombre" aria-label="Changer le thème"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="8.2"/><path d="M12 3.8a8.2 8.2 0 0 1 0 16.4Z" fill="currentColor" stroke="none"/></svg></button>
+      <button class="dash-iconbtn" id="d-palette" data-tip="Recherche rapide (Ctrl+K)" aria-label="Rechercher un module ou un serveur"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="10.6" cy="10.6" r="6.2"/><path d="M15.2 15.2 20 20"/></svg></button>
+      <button class="dash-iconbtn" id="d-refresh" data-tip="Actualiser le module" aria-label="Actualiser le module"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M19.4 12a7.4 7.4 0 1 1-2.2-5.3"/><path d="M18.2 3.4v3.6h-3.6"/></svg></button>
       <div class="dash-accent-wrap">
-        <button class="dash-iconbtn" id="d-accent" data-tip="Couleur du dashboard" aria-label="Choisir la couleur du dashboard" aria-controls="dash-accent-pop" aria-expanded="false">🎨</button>
+        <button class="dash-iconbtn" id="d-accent" data-tip="Couleur du dashboard" aria-label="Choisir la couleur du dashboard" aria-controls="dash-accent-pop" aria-expanded="false"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3.6a8.4 8.4 0 0 0 0 16.8c1.4 0 2-.9 2-1.9s-.7-1.6-.7-2.4c0-1 .8-1.7 1.9-1.7h1.7a3.5 3.5 0 0 0 3.5-3.6A8.3 8.3 0 0 0 12 3.6Z"/><circle cx="8.2" cy="9.2" r="1.1"/><circle cx="12.6" cy="7.2" r="1.1"/><circle cx="16.6" cy="9.8" r="1.1"/></svg></button>
       </div>
       ${needsInvite ? `<button class="dash-btn" id="d-invite2" aria-label="Ajouter le bot au serveur">Ajouter le bot</button>` : ''}
       <div class="dash-bot-chip" title="${App.escapeHtml(bot.bot_username || bot.name)}" aria-label="${App.escapeHtml(bot.name)}">
@@ -1629,7 +1629,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
       </div>
     </div>
   `;
-  // 🖥️ v258 : badge du compte connecté (photo, pseudo, déconnexion) dans la
+  // v258 : badge du compte connecté (photo, pseudo, déconnexion) dans la
   // barre d'actions — sur PC elle reste visible ; sur mobile le tiroir garde
   // son propre bloc compte.
   const logoutBtn = topbar.querySelector('#d-logout');
@@ -1639,7 +1639,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
     location.reload();
   };
 
-  // 📱 Sur mobile la sidebar est masquée : le sélecteur de serveur vit ici
+  // Sur mobile la sidebar est masquée : le sélecteur de serveur vit ici
   const mobilePick = Dashboard.serverPicker();
   mobilePick.classList.add('topbar-pick');
   topbar.appendChild(mobilePick);
@@ -1648,7 +1648,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
   // sur les petits écrans et permet un vrai panneau lisible au-dessus du contenu.
   const bellPop = App.el(`
     <div id="dash-bell-pop" class="dash-bell-pop dash-topbar-popover" data-dash-topbar-popover="true" hidden role="dialog" aria-label="Notifications" aria-live="polite">
-      <div class="bp-head"><b>🔔 Notifications</b><button class="bp-close" type="button" aria-label="Fermer les notifications">×</button></div>
+      <div class="bp-head"><b>Notifications</b><button class="bp-close" type="button" aria-label="Fermer les notifications">×</button></div>
       <div class="bp-list"><div class="dp-empty">Chargement…</div></div>
     </div>`);
   const accPop = App.el(`
@@ -1658,7 +1658,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
   document.body.appendChild(bellPop);
   document.body.appendChild(accPop);
 
-  // 📱 Navigation mobile inspirée d'un vrai panel : un menu général et un
+  // Navigation mobile inspirée d'un vrai panel : un menu général et un
   // tiroir séparé pour les serveurs/modules. Sur desktop, ces éléments sont
   // masqués ; la sidebar classique reste la navigation principale.
   const mobileUser = App.state.user || {};
@@ -1671,7 +1671,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
         <nav class="dash-mobile-site-links">
           <button type="button" data-mobile-home><span>⌂</span>Accueil</button>
           <button type="button" data-mobile-open-modules><span>▦</span>Serveurs et modules</button>
-          ${mobileUser.is_admin ? '<button type="button" data-mobile-admin><span>♛</span>Administration globale</button>' : ''}
+          ${mobileUser.is_admin ? '<button type="button" data-mobile-admin><span><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4.4 18.2h15.2M5 17.6 3.6 8.4l4.5 3.3L12 5.2l3.9 6.5 4.5-3.3-1.4 9.2"/></svg></span>Administration globale</button>' : ''}
         </nav>
         <div class="dash-mobile-drawer-account">
           ${mobileUser.discord_avatar
@@ -1765,15 +1765,15 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
   const inviteBtn = topbar.querySelector('#d-invite2');
   if (inviteBtn) inviteBtn.onclick = () => App.openInvite(bot.invite_url);
   topbar.querySelector('#d-palette').onclick = () => { Dashboard.closePopovers(); Dashboard.openPalette(); };
-  // 🌓 Mode clair / sombre
+  // Mode clair / sombre
   topbar.querySelector('#d-theme').onclick = () => {
     const light = !document.documentElement.classList.contains('hx-light');
     document.documentElement.classList.toggle('hx-light', light);
     try { localStorage.setItem('hx-theme', light ? 'light' : 'dark'); } catch {}
     if (typeof App !== 'undefined' && App.syncThemeColor) App.syncThemeColor(); // v364
-    App.toast(light ? '☀️ Mode clair activé' : '🌙 Mode sombre activé');
+    App.toast(light ? 'Mode clair activé' : 'Mode sombre activé');
   };
-  // 🔔 Notifications : badge + panneau, dans un portal hors de la topbar
+  // Notifications : badge + panneau, dans un portal hors de la topbar
   const bellBtn = topbar.querySelector('#d-bell');
   const bellBadge = topbar.querySelector('.bell-badge');
   Dashboard.loadNotifications().then(({ warnings = [], infos = [] }) => {
@@ -1781,7 +1781,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
     const list = bellPop.querySelector('.bp-list');
     list.innerHTML = '';
     if (!warnings.length && !infos.length) { list.appendChild(App.el(`<div class="dp-empty">✅ Tout va bien — aucune alerte !</div>`)); return; }
-    warnings.forEach((w) => list.appendChild(App.el(`<div class="bp-item warn"><span>${w.icon || '⚠️'}</span><div>${App.escapeHtml(w.text)}</div>`)));
+    warnings.forEach((w) => list.appendChild(App.el(`<div class="bp-item warn"><span>${w.icon || ''}</span><div>${App.escapeHtml(w.text)}</div>`)));
     infos.forEach((i2) => list.appendChild(App.el(`<div class="bp-item"><span>${i2.icon || 'ℹ️'}</span><div>${App.escapeHtml(i2.text)}</div>`)));
   });
   bellBtn.onclick = (e) => {
@@ -1797,7 +1797,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
     bellPop.hidden = true;
     bellBtn.setAttribute('aria-expanded', 'false');
   };
-  topbar.querySelector('#d-refresh').onclick = () => { Dashboard.closePopovers(); App.toast('Module actualisé !'); Dashboard.refresh(); };
+  topbar.querySelector('#d-refresh').onclick = () => { Dashboard.closePopovers(); App.toast('Module actualisé.'); Dashboard.refresh(); };
   const accBtn = topbar.querySelector('#d-accent');
   accBtn.onclick = (e) => {
     e.stopPropagation();
@@ -1812,7 +1812,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
       Dashboard.applyAccent(d.dataset.acc);
       accPop.hidden = true;
       accBtn.setAttribute('aria-expanded', 'false');
-      App.toast(`🎨 Thème « ${d.dataset.acc} » appliqué !`);
+      App.toast(`Thème « ${d.dataset.acc} » appliqué.`);
     };
   });
 };
@@ -1837,7 +1837,7 @@ Dashboard.loadGuild = async () => {
 };
 
 // ============================================================
-// 💾 Barre de sauvegarde intelligente (v2.7)
+// Barre de sauvegarde intelligente (v2.7)
 // Dès qu'un champ est modifié, une barre flottante apparaît :
 // « Tout enregistrer » déclenche TOUS les boutons 💾 du module d'un
 // coup (avec un seul récap), « Annuler » recharge le module.
@@ -1848,7 +1848,7 @@ Dashboard.saveBar = () => {
   if (bar) return bar;
   bar = App.el(`
     <div id="dash-savebar" class="dash-savebar" hidden>
-      <span class="sb-txt">✏️ Modifications non enregistrées</span>
+      <span class="sb-txt">Modifications non enregistrées</span>
       <div class="sb-actions">
         <button class="dash-btn dash-btn-sm" id="sb-cancel">Annuler</button>
         <button class="dash-save-action dash-btn dash-btn-primary dash-btn-sm" id="sb-save">Tout enregistrer</button>
@@ -1873,8 +1873,8 @@ Dashboard.saveBar = () => {
       await new Promise((r) => setTimeout(r, 450));
     } finally { App.toast = orig; }
     const errs = msgs.filter((x) => x.t === 'error');
-    if (errs.length) App.toast(`⚠️ ${errs[0].m}`, 'error');
-    else App.toast('✅ Tout est enregistré !');
+    if (errs.length) App.toast(`${errs[0].m}`, 'error');
+    else App.toast('Tout est enregistré.');
     saveBtn.disabled = false; saveBtn.textContent = 'Tout enregistrer';
     if (!errs.length) Dashboard.hideSaveBar();
   };
@@ -1902,16 +1902,16 @@ Dashboard.renderContent = async (content) => {
       <div class="sk-card"><div class="sk-line w30"></div><div class="sk-line w90 thin"></div><div class="sk-line w75 thin"></div><div class="sk-line w50 thin"></div></div>
       <div class="sk-card"><div class="sk-line w25"></div><div class="sk-line w80 thin"></div></div>
     </div>`;
-  // 💾 Nouveau module = page propre : barre de sauvegarde masquée + surveillance
+  // Nouveau module = page propre : barre de sauvegarde masquée + surveillance
   Dashboard.hideSaveBar();
   if (!content.dataset.dirtyWatched) { Dashboard.watchDirty(content); content.dataset.dirtyWatched = '1'; }
 
-  // 🩺 On coupe l'actualisation automatique de la page Santé si on la quitte
+  // On coupe l'actualisation automatique de la page Santé si on la quitte
   if (module !== 'health' && Dashboard.state.healthTimer) {
     clearInterval(Dashboard.state.healthTimer);
     Dashboard.state.healthTimer = null;
   }
-  // 📰 Idem pour le flux d'activité de la Vue d'ensemble
+  // Idem pour le flux d'activité de la Vue d'ensemble
   if (module !== 'overview' && Dashboard.state.feedTimer) {
     clearInterval(Dashboard.state.feedTimer);
     Dashboard.state.feedTimer = null;
@@ -1925,12 +1925,12 @@ Dashboard.renderContent = async (content) => {
     const fn = Dashboard.renderers[module];
     if (fn) {
       await fn(content, data);
-      // 🧷 Mise en page des réglages en lignes (libellé à gauche, contrôle à droite)
+      // Mise en page des réglages en lignes (libellé à gauche, contrôle à droite)
       Dashboard.layoutSettingRows(content);
-      // 📖 v245 — Repli des longs textes d'explication. APRES la mise en rows :
+      // v245 — Repli des longs textes d'explication. APRES la mise en rows :
       // celle-ci déplace des éléments, il faut donc plier sur le DOM final.
       Dashboard.plierTextesLongs(content);
-      // 🗂️ v245 — Cartes pliables, en dernier : la mise en rows crée
+      // v245 — Cartes pliables, en dernier : la mise en rows crée
       // .card-actions, et le repli des textes ajoute des <details>.
       Dashboard.rendreCartesPliables(content);
     }
@@ -1938,7 +1938,7 @@ Dashboard.renderContent = async (content) => {
   } catch (e) {
     content.innerHTML = `
       <div class="dash-state-card is-error" role="alert">
-        <div class="state-icon">⚠️</div>
+        <div class="state-icon"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3.6 21.4 20H2.6L12 3.6Z"/><path d="M12 9.4v4.4"/><circle cx="12" cy="16.8" r=".9" fill="currentColor" stroke="none"/></svg></div>
         <div class="state-copy"><h2>Impossible de charger ce module</h2><p>${App.escapeHtml(e.message || 'Une erreur temporaire est survenue.')}</p></div>
         <div class="state-actions"><button class="dash-btn" id="dash-error-back">Retour</button><button class="dash-btn dash-btn-primary" id="dash-retry">Réessayer</button></div>
       </div>`;
@@ -1986,12 +1986,16 @@ Dashboard.header = (content, icon, title, sub) => {
 };
 
 Dashboard.card = (content, title, desc, inner = '') => {
-  const c = App.el(`<div class="dash-card" data-dash-card><div class="card-head"><div class="card-heading"><h3>${title}</h3><div class="desc">${desc}</div></div></div>${inner}</div>`);
+  // v367 — titre et description passent par App.sansPicto : 28 en-tetes de carte
+  // et 7 descriptions portaient un pictogramme de decoratif herite des premiers
+  // gabarits. On ne corrige pas 43 appels un par un, on ferme la porte a l'entree.
+
+  const c = App.el(`<div class="dash-card" data-dash-card><div class="card-head"><div class="card-heading"><h3>${App.sansPicto(title)}</h3><div class="desc">${App.sansPicto(desc)}</div></div></div>${inner}</div>`);
   content.appendChild(c);
   return c;
 };
 
-// 🎨 v298 — Décorations d'avatar Discord (anneau Nitro, cadres d'événement…).
+// v298 — Décorations d'avatar Discord (anneau Nitro, cadres d'événement…).
 // La décoration est une image SÉPARÉE avec un trou central : on la superpose
 // à l'avatar, exactement comme sur Discord. Vide = aucun changement de rendu.
 Dashboard.decoWrap = (avatarHtml, deco) => (String(deco || '').trim()
@@ -2006,9 +2010,9 @@ Dashboard.userDecoUrl = (asset) => (String(asset || '').trim()
 Dashboard.renderers = {};
 
 // ============================================================
-// 🧷 Mise en page des réglages façon Discord/DraftBot (v159)
+// Mise en page des réglages façon Discord/DraftBot (v159)
 // ============================================================
-// 📖 v245 — Textes longs repliés dans « En savoir plus ».
+// v245 — Textes longs repliés dans « En savoir plus ».
 //
 // Constat mesuré dans Chromium à 360 px (banc test/tools/audit-mobile.js,
 // mode --textes) : 115 blocs d'explication de plus de 70 caractères,
@@ -2019,7 +2023,7 @@ Dashboard.renderers = {};
 // replié derrière un <details> natif. Il reste donc accessible au clavier,
 // aux lecteurs d'écran et à la recherche dans la page.
 //
-// ⚠️ LISTE BLANCHE, pas liste noire. L'audit a montré que plusieurs textes
+// LISTE BLANCHE, pas liste noire. L'audit a montré que plusieurs textes
 // longs ne doivent JAMAIS être repliés, et une liste noire les aurait ratés :
 //   • .dash-badge           → « ⚠️ AUCUN salon choisi — les annonces sont
 //                              DÉSACTIVÉES » : un avertissement critique.
@@ -2087,7 +2091,7 @@ Dashboard.plierTextesLongs = (root, seuil) => {
 };
 
 // ============================================================
-// 🗂️ v245 — Cartes pliables.
+// v245 — Cartes pliables.
 //
 // Les textes d'explication ne pèsent que 21 % de la hauteur d'un onglet
 // (mesuré : 12 905 px sur 62 282 px). Les CARTES en pèsent 82 % : 98 cartes
@@ -2097,7 +2101,7 @@ Dashboard.plierTextesLongs = (root, seuil) => {
 // Choix validé par l'utilisateur : TOUT reste ouvert par défaut, on plie ce
 // qui gêne, et le choix est mémorisé le temps de la session.
 //
-// ⚠️ Aucune restructuration du DOM. Emballer le contenu dans un <div>
+// Aucune restructuration du DOM. Emballer le contenu dans un <div>
 // « card-body » aurait cassé six règles CSS existantes qui ciblent les
 // enfants DIRECTS d'une carte (.dash-card > .card-actions, .dash-card
 // [data-dash-card] > .dash-input, etc.). On se contente d'ajouter une classe
@@ -2134,7 +2138,7 @@ Dashboard.enregistrerEtatCartes = () => {
 
 // Clé de mémorisation : onglet + titre de la carte.
 //
-// ⚠️ Le chevron injecté doit être EXCLU du titre. Sans ça, la clé dépendait du
+// Le chevron injecté doit être EXCLU du titre. Sans ça, la clé dépendait du
 // moment de l'appel : calculée avant l'injection elle valait « …Auto-modération »,
 // et après « …Auto-modération ▾ ». L'état mémorisé sous la première clé devenait
 // alors introuvable, et le choix de l'utilisateur était perdu.
@@ -2219,7 +2223,7 @@ Dashboard.rendreCartesPliables = (root) => {
     });
   if (!pliables.length) return 0;
 
-  // ⚠️ Mesurer les hauteurs AVANT d'appliquer le moindre repli : une carte
+  // Mesurer les hauteurs AVANT d'appliquer le moindre repli : une carte
   // déjà pliée ne mesure plus que son en-tête, et la décision serait faussée.
   const hauteurs = pliables.map((carte) => carte.getBoundingClientRect().height);
   const dejaPliees = root.querySelectorAll('.dash-card.is-folded').length;
@@ -2358,16 +2362,16 @@ Dashboard.renderers.overview = async (content, data) => {
   const serverBanner = g.banner || '';
   const statusText = bot.online === false ? 'Optimus Prime est hors ligne' : 'Optimus Prime est opérationnel';
   const statusClass = bot.online === false ? 'is-offline' : 'is-online';
-  // 🖼️ Stats riches du serveur (bannière, boosts, salons, rôles, création)
+  // Stats riches du serveur (bannière, boosts, salons, rôles, création)
   const createdLabel = g.createdAt
     ? new Date(g.createdAt).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
     : '';
   const heroChips = [
-    g.members ? `<span class="ov-hero-chip"><span>👥</span><b>${App.escapeHtml(String(g.members))}</b><small>membres</small></span>` : '',
-    g.boosts ? `<span class="ov-hero-chip"><span>🚀</span><b>${App.escapeHtml(String(g.boosts))}</b><small>boost${g.boosts > 1 ? 's' : ''}</small></span>` : '',
+    g.members ? `<span class="ov-hero-chip"><span>${App.glyphe('personnes', { taille: 16 })}</span><b>${App.escapeHtml(String(g.members))}</b><small>membres</small></span>` : '',
+    g.boosts ? `<span class="ov-hero-chip"><span>${App.glyphe('fusee', { taille: 16 })}</span><b>${App.escapeHtml(String(g.boosts))}</b><small>boost${g.boosts > 1 ? 's' : ''}</small></span>` : '',
     g.channelsCount ? `<span class="ov-hero-chip"><span>#️⃣</span><b>${App.escapeHtml(String(g.channelsCount))}</b><small>salons</small></span>` : '',
-    g.rolesCount ? `<span class="ov-hero-chip"><span>🎭</span><b>${App.escapeHtml(String(g.rolesCount))}</b><small>rôles</small></span>` : '',
-    createdLabel ? `<span class="ov-hero-chip"><span>🎂</span><small>créé en ${App.escapeHtml(createdLabel)}</small></span>` : '',
+    g.rolesCount ? `<span class="ov-hero-chip"><span>${App.glyphe('etiquette', { taille: 16 })}</span><b>${App.escapeHtml(String(g.rolesCount))}</b><small>rôles</small></span>` : '',
+    createdLabel ? `<span class="ov-hero-chip"><span>${App.glyphe('calendrier', { taille: 16 })}</span><small>créé en ${App.escapeHtml(createdLabel)}</small></span>` : '',
   ].filter(Boolean).join('');
   const overviewIntro = App.el(`
     <section class="ov-intro ov-welcome-panel${serverBanner ? ' has-banner' : ''}" aria-label="Résumé du serveur">
@@ -2395,10 +2399,10 @@ Dashboard.renderers.overview = async (content, data) => {
   const quickActions = App.el(`
     <div class="ov-quick-actions ov-access-bar" aria-label="Accès rapides">
       <span class="ov-quick-label">Accès rapides</span>
-      <button class="ov-quick-action" data-go="tickets"><span>🎫</span><div class="ov-qa-txt"><b>Tickets</b><small>Configurer</small></div><i>→</i></button>
-      <button class="ov-quick-action" data-go="welcome"><span>👋</span><div class="ov-qa-txt"><b>Bienvenue</b><small>Préparer</small></div><i>→</i></button>
-      <button class="ov-quick-action" data-go="moderation"><span>🛡️</span><div class="ov-qa-txt"><b>Modération</b><small>Protéger</small></div><i>→</i></button>
-      <button class="ov-quick-action" data-go="botprofile"><span>🤖</span><div class="ov-qa-txt"><b>Identité du bot</b><small>Personnaliser</small></div><i>→</i></button>
+      <button class="ov-quick-action" data-go="tickets"><span><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M2 9a3 3 0 0 0 0 6v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-4a3 3 0 0 1 0-6V5a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2M13 11v2M13 17v2"/></svg></span><div class="ov-qa-txt"><b>Tickets</b><small>Configurer</small></div><i>→</i></button>
+      <button class="ov-quick-action" data-go="welcome"><span><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6.6 3.6h10.8v16.8H6.6z"/><path d="M14.6 12h1"/><path d="M4.6 20.4h15"/></svg></span><div class="ov-qa-txt"><b>Bienvenue</b><small>Préparer</small></div><i>→</i></button>
+      <button class="ov-quick-action" data-go="moderation"><span></span><div class="ov-qa-txt"><b>Modération</b><small>Protéger</small></div><i>→</i></button>
+      <button class="ov-quick-action" data-go="botprofile"><span><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="4.4" y="8" width="15.2" height="11.6" rx="3"/><path d="M12 4.2V8"/><circle cx="12" cy="3.2" r="1.1" fill="currentColor" stroke="none"/><circle cx="9" cy="13.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="15" cy="13.4" r="1.15" fill="currentColor" stroke="none"/><path d="M9.6 16.8h4.8"/></svg></span><div class="ov-qa-txt"><b>Identité du bot</b><small>Personnaliser</small></div><i>→</i></button>
     </div>`);
   quickActions.querySelectorAll('[data-go]').forEach((button) => { button.onclick = () => Dashboard.setModule(button.dataset.go); });
   workspace.appendChild(quickActions);
@@ -2443,9 +2447,9 @@ Dashboard.renderers.overview = async (content, data) => {
         <h2>Mettons ${App.escapeHtml(g.name)} en place</h2>
         <p>Votre bot est prêt. Commencez par le support, l'accueil et la sécurité.</p>
         <div class="hero-steps">
-          <button class="hero-step" data-go="tickets"><span class="hs-num">1</span><span class="hs-emoji">🎫</span><b>Support</b><span>Tickets et catégories</span></button>
-          <button class="hero-step" data-go="welcome"><span class="hs-num">2</span><span class="hs-emoji">👋</span><b>Accueil</b><span>Bienvenue et auto-rôles</span></button>
-          <button class="hero-step" data-go="community"><span class="hs-num">3</span><span class="hs-emoji">⭐</span><b>Communauté</b><span>Starboard, lives et annonces</span></button>
+          <button class="hero-step" data-go="tickets"><span class="hs-num">1</span><span class="hs-emoji"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M2 9a3 3 0 0 0 0 6v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-4a3 3 0 0 1 0-6V5a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2M13 11v2M13 17v2"/></svg></span><b>Support</b><span>Tickets et catégories</span></button>
+          <button class="hero-step" data-go="welcome"><span class="hs-num">2</span><span class="hs-emoji"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6.6 3.6h10.8v16.8H6.6z"/><path d="M14.6 12h1"/><path d="M4.6 20.4h15"/></svg></span><b>Accueil</b><span>Bienvenue et auto-rôles</span></button>
+          <button class="hero-step" data-go="community"><span class="hs-num">3</span><span class="hs-emoji"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3.6l2.55 5.4 5.85.72-4.35 4.05 1.17 5.79L12 16.74l-5.22 2.82 1.17-5.79L3.6 9.72l5.85-.72L12 3.6Z"/></svg></span><b>Communauté</b><span>Starboard, lives et annonces</span></button>
         </div>
       </section>`);
     onboarding.querySelectorAll('[data-go]').forEach((button) => { button.onclick = () => Dashboard.setModule(button.dataset.go); });
@@ -2453,12 +2457,12 @@ Dashboard.renderers.overview = async (content, data) => {
   }
 
   const stats = [
-    ['👥', g.members, 'Membres', 'Communauté suivie'],
-    ['🎫', ts.open, 'Tickets ouverts', 'À traiter maintenant'],
-    ['🗂️', data.tickets && data.tickets.types ? data.tickets.types.length : 0, 'Types de tickets', 'Support organisé'],
-    ['🏆', (data.xp_roles || []).length, 'Récompenses de niveau', 'Progression des membres'],
-    ['📋', (data.role_menus || []).length, 'Menus de rôles', 'Accès simplifiés'],
-    ['📅', (data.scheduled || []).length, 'Annonces programmées', 'Prochains envois'],
+    ['', g.members, 'Membres', 'Communauté suivie'],
+    ['', ts.open, 'Tickets ouverts', 'À traiter maintenant'],
+    ['', data.tickets && data.tickets.types ? data.tickets.types.length : 0, 'Types de tickets', 'Support organisé'],
+    ['', (data.xp_roles || []).length, 'Récompenses de niveau', 'Progression des membres'],
+    ['', (data.role_menus || []).length, 'Menus de rôles', 'Accès simplifiés'],
+    ['', (data.scheduled || []).length, 'Annonces programmées', 'Prochains envois'],
   ];
   const statsSection = App.el('<section class="ov-home-side-section ov-summary-section"><div class="ov-side-heading"><b>Résumé du serveur</b><span>État actuel</span></div><div class="dash-stats ov-stats"></div></section>');
   const statsEl = statsSection.querySelector('.ov-stats');
@@ -2502,10 +2506,10 @@ Dashboard.renderers.overview = async (content, data) => {
     const totalJoins = (st.joins || []).reduce((sum, day) => sum + Number(day.members || 0), 0);
     const top3 = (st.top_active || []).slice(0, 3);
     const brief = briefSection.querySelector('.ov-brief-content');
-    brief.innerHTML = `<div class="ov-brief-badges"><span class="dash-badge ok">💬 ${totalMsgs} messages</span><span class="dash-badge">🆕 ${totalJoins} arrivée(s)</span><span class="dash-badge warn">🎫 ${ts.open} ticket(s)</span></div>`;
+    brief.innerHTML = `<div class="ov-brief-badges"><span class="dash-badge ok">${totalMsgs} messages</span><span class="dash-badge">${totalJoins} arrivée(s)</span><span class="dash-badge warn">${ts.open} ticket(s)</span></div>`;
     if (top3.length) {
       brief.innerHTML += '<div class="dash-label ov-top-label">Membres actifs</div>';
-      top3.forEach((member, index) => { brief.innerHTML += `<div class="ov-top-member"><span>${['🥇', '🥈', '🥉'][index]}</span><b>${App.escapeHtml(member.tag)}</b><small>${member.messages} msg</small></div>`; });
+      top3.forEach((member, index) => { brief.innerHTML += `<div class="ov-top-member"><span>${['', '', ''][index]}</span><b>${App.escapeHtml(member.tag)}</b><small>${member.messages} msg</small></div>`; });
     }
   } catch {
     briefSection.querySelector('.ov-brief-content').innerHTML = '<div class="ov-feed-empty">Statistiques indisponibles pour le moment.</div>';
@@ -2547,14 +2551,14 @@ Dashboard.renderers.tickets = async (content, data) => {
     return { text: String(q || '').slice(0, 45), max: 500 };
   };
   const typesData = (t.types || []).map((x) => ({ label: x.label, emoji: x.emoji || '', description: x.description || '', category: x.category || '', questions: (Array.isArray(x.questions) && x.questions.length) ? x.questions.map(qNorm) : [], staff_roles: (x.staff_roles && x.staff_roles.length) ? [...x.staff_roles] : [] }));
-  const root = Dashboard.header(content, '🎫', 'Système de tickets', 'Trois systèmes, un seul à choisir : Ticket classique, Ticket menu, ou Ticket avancé.');
+  const root = Dashboard.header(content, '', 'Système de tickets', 'Trois systèmes, un seul à choisir : Ticket classique, Ticket menu, ou Ticket avancé.');
   const ts = data.tickets_stats || { total: 0, open: 0 };
   root.appendChild(App.el(`
     <div class="dash-stats" style="margin-bottom:14px">
-      <div class="dash-stat"><div class="val">${ts.open}</div><div class="lbl">🎫 Ouverts en ce moment</div></div>
-      <div class="dash-stat"><div class="val">${ts.total}</div><div class="lbl">📦 Ouverts au total</div></div>
-      <div class="dash-stat"><div class="val">${typesData.length}</div><div class="lbl">🗂️ Types configurés</div></div>
-      <div class="dash-stat"><div class="val" id="t-rating-val">…</div><div class="lbl">⭐ Note du support</div></div>
+      <div class="dash-stat"><div class="val">${ts.open}</div><div class="lbl">Ouverts en ce moment</div></div>
+      <div class="dash-stat"><div class="val">${ts.total}</div><div class="lbl">Ouverts au total</div></div>
+      <div class="dash-stat"><div class="val">${typesData.length}</div><div class="lbl">Types configurés</div></div>
+      <div class="dash-stat"><div class="val" id="t-rating-val">…</div><div class="lbl">Note du support</div></div>
     </div>`));
   (async () => {
     try {
@@ -2573,61 +2577,61 @@ Dashboard.renderers.tickets = async (content, data) => {
   const curStyle = String(t.button_style || '1');
   const reqReason = !(t.require_reason === 0 || t.require_reason === false);
 
-  const c = Dashboard.card(root, '🎫 Ticket classique', 'Un bouton. Un clic ouvre un ticket. Exemple : « Ouvrir un ticket ».');
+  const c = Dashboard.card(root, 'Ticket classique', 'Un bouton. Un clic ouvre un ticket. Exemple : « Ouvrir un ticket ».');
   c.classList.add('tk-classic-card', 'adv-builder-card');
   c.id = 'tk-classic';
 
-  // 📊 État actuel (data-status pour le retrouver après innerHTML +=)
+  // État actuel (data-status pour le retrouver après innerHTML +=)
   c.appendChild(App.el(`<div data-status style="margin-bottom:12px"></div>`));
 
   c.innerHTML += `
     <label class="dash-label">Salon du Ticket classique</label>
     <select class="dash-select" id="t-channel">
       ${textChannels.length ? '<option value="">— Choisir un salon —</option>' : Dashboard.noDiscordChoice('Aucun salon texte reçu de Discord')}
-      ${textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(t.channel, ch) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`).join('')}
+      ${textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(t.channel, ch) ? 'selected' : ''}>#${App.escapeHtml(ch.name)}</option>`).join('')}
       ${Dashboard.currentDiscordOption(t.channel, textChannels)}
     </select>
 
     <label class="dash-label">Texte du bouton</label>
     <input class="dash-input" id="t-label" value="${App.escapeHtml(t.button_label || '')}" placeholder="🎫 Ouvrir un ticket" />
 
-    <label class="dash-label">🎨 Couleur du bouton</label>
+    <label class="dash-label">Couleur du bouton</label>
     <select class="dash-select" id="t-style" style="max-width:240px">
-      <option value="1" ${curStyle === '1' ? 'selected' : ''}>🔵 Bleu (défaut)</option>
-      <option value="2" ${curStyle === '2' ? 'selected' : ''}>⚪ Gris</option>
-      <option value="3" ${curStyle === '3' ? 'selected' : ''}>🟢 Vert</option>
-      <option value="4" ${curStyle === '4' ? 'selected' : ''}>🔴 Rouge</option>
+      <option value="1" ${curStyle === '1' ? 'selected' : ''}>Bleu (défaut)</option>
+      <option value="2" ${curStyle === '2' ? 'selected' : ''}>Gris</option>
+      <option value="3" ${curStyle === '3' ? 'selected' : ''}>Vert</option>
+      <option value="4" ${curStyle === '4' ? 'selected' : ''}>Rouge</option>
     </select>
 
-    <label class="dash-label">📝 Questionnaire d'ouverture</label>
-    <label style="display:flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer">
+    <label class="dash-label">Questionnaire d'ouverture</label>
+    <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer">
       <label class="switch"><input type="checkbox" id="t-reason" ${reqReason ? 'checked' : ''} /><span class="slider"></span></label>
-      <span style="color:var(--d-dim)">${reqReason ? '✅ Raison obligatoire' : '❌ Sans raison'}</span>
+      <span style="color:var(--d-dim)">${reqReason ? 'Raison obligatoire' : 'Sans raison'}</span>
     </label>
 
     <label class="dash-label">Rôle staff global</label>
     <select class="dash-select" id="t-role">
       ${rolesList.length ? '<option value="">— Choisir un rôle —</option>' : Dashboard.noDiscordChoice('Aucun rôle reçu de Discord')}
-      ${rolesList.map((r) => `<option value="${App.escapeHtml(r.name)}" ${Dashboard.discordRefMatches(t.support_role, r) ? 'selected' : ''}>🛡️ ${App.escapeHtml(r.name)}</option>`).join('')}
-      ${Dashboard.currentDiscordOption(t.support_role, rolesList, '⚠️', 'configuration actuelle — rôle introuvable')}
+      ${rolesList.map((r) => `<option value="${App.escapeHtml(r.name)}" ${Dashboard.discordRefMatches(t.support_role, r) ? 'selected' : ''}>${App.escapeHtml(r.name)}</option>`).join('')}
+      ${Dashboard.currentDiscordOption(t.support_role, rolesList, '', 'configuration actuelle — rôle introuvable')}
     </select>
 
     <label class="dash-label">Catégorie par défaut du Ticket classique</label>
     <select class="dash-select" id="t-cat">
       ${categories.length ? '<option value="">— Choisir une catégorie —</option>' : Dashboard.noDiscordChoice('Aucune catégorie reçue de Discord')}
-      ${categories.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(t.category, ch) ? 'selected' : ''}>📁 ${App.escapeHtml(ch.name)}</option>`).join('')}
-      ${Dashboard.currentDiscordOption(t.category, categories, '⚠️', 'configuration actuelle — catégorie introuvable')}
+      ${categories.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(t.category, ch) ? 'selected' : ''}>${App.escapeHtml(ch.name)}</option>`).join('')}
+      ${Dashboard.currentDiscordOption(t.category, categories, '', 'configuration actuelle — catégorie introuvable')}
     </select>
 
     <label class="dash-label">Message du Ticket classique (vide = automatique)</label>
     <textarea class="dash-input" id="t-msg" rows="3">${App.escapeHtml(t.message || '')}</textarea>
     <div style="margin-top:14px" data-panel-img></div>
 
-    <label class="dash-label">📔 Journal des tickets</label>
+    <label class="dash-label">Journal des tickets</label>
     <select class="dash-select" id="t-logchan">
       <option value="">— Désactivé (choisir un salon pour activer) —</option>
-      ${textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches((data.settings || {}).ticket_log_channel, ch) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`).join('')}
-      ${Dashboard.currentDiscordOption((data.settings || {}).ticket_log_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable')}
+      ${textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches((data.settings || {}).ticket_log_channel, ch) ? 'selected' : ''}>#${App.escapeHtml(ch.name)}</option>`).join('')}
+      ${Dashboard.currentDiscordOption((data.settings || {}).ticket_log_channel, textChannels, '', 'configuration actuelle — salon introuvable')}
     </select>
 
     <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
@@ -2635,24 +2639,24 @@ Dashboard.renderers.tickets = async (content, data) => {
       <button class="dash-btn" id="t-send">Envoyer le Ticket classique</button>
     </div>
 `;
-  // 🗂️ Carte PANNEAU MENU DÉROULANT — indépendante du panneau bouton :
+  // Carte PANNEAU MENU DÉROULANT — indépendante du panneau bouton :
   // son salon, son message, son 💾 et son 📨.
-  const cm = Dashboard.card(root, '📋 Ticket menu', 'Le membre choisit le type dans une liste. Exemple : Support, Partenariat, Signalement.');
+  const cm = Dashboard.card(root, 'Ticket menu', 'Le membre choisit le type dans une liste. Exemple : Support, Partenariat, Signalement.');
   cm.classList.add('tk-classic-card', 'adv-builder-card');
   cm.id = 'tk-menu';
   const menuChanOpts = ['<option value="">— Même salon que le Ticket classique —</option>']
-    .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(t.menu_channel, ch) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`));
+    .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(t.menu_channel, ch) ? 'selected' : ''}>#${App.escapeHtml(ch.name)}</option>`));
   if (t.menu_channel && !textChannels.some((ch) => Dashboard.discordRefMatches(t.menu_channel, ch))) {
-    menuChanOpts.push(Dashboard.currentDiscordOption(t.menu_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable'));
+    menuChanOpts.push(Dashboard.currentDiscordOption(t.menu_channel, textChannels, '', 'configuration actuelle — salon introuvable'));
   }
   cm.innerHTML += `
     <label class="dash-label">Salon du Ticket menu</label>
     <select class="dash-select" id="tm-channel">${menuChanOpts.join('')}</select>
-    <label class="dash-label">📁 Catégorie où créer les salons de tickets du MENU (Ticket menu)</label>
+    <label class="dash-label">Catégorie où créer les salons de tickets du MENU (Ticket menu)</label>
     <select class="dash-select" id="tm-cat">
       <option value="">— Automatique (catégorie du type, sinon celle par défaut) —</option>
-      ${categories.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(t.menu_category, ch) ? 'selected' : ''}>📁 ${App.escapeHtml(ch.name)}</option>`).join('')}
-      ${Dashboard.currentDiscordOption(t.menu_category, categories, '⚠️', 'configuration actuelle — catégorie introuvable')}
+      ${categories.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(t.menu_category, ch) ? 'selected' : ''}>${App.escapeHtml(ch.name)}</option>`).join('')}
+      ${Dashboard.currentDiscordOption(t.menu_category, categories, '', 'configuration actuelle — catégorie introuvable')}
     </select>
     <label class="dash-label">Message du Ticket menu</label>
     <textarea class="dash-input" id="tm-msg" rows="3">${App.escapeHtml(t.menu_message || '')}</textarea>
@@ -2660,7 +2664,8 @@ Dashboard.renderers.tickets = async (content, data) => {
       <button class="dash-save-action dash-btn dash-btn-primary" id="tm-save">Enregistrer</button>
       <button class="dash-btn" id="tm-send">Envoyer le Ticket menu</button>
     </div>`;
-  cm.querySelector('#tm-save').onclick = async () => {
+  cm.querySelector('#tm-save').onclick = async (e) => {
+    const bouton = e.currentTarget;
     try {
       await App.api(`/bots/${bot.id}/tickets`, { method: 'PUT', body: {
         guild_id: guildId,
@@ -2668,18 +2673,19 @@ Dashboard.renderers.tickets = async (content, data) => {
         menu_message: cm.querySelector('#tm-msg').value,
         menu_category: cm.querySelector('#tm-cat').value,
       }});
-      App.toast('Ticket menu enregistré !');
+      App.retourEnregistrement(bouton);
+      App.toast('Ticket menu enregistré.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
   cm.querySelector('#tm-send').onclick = async () => {
-    try { await App.api(`/bots/${bot.id}/tickets/send`, { method: 'POST', body: { guild_id: guildId, mode: 'menu' } }); App.toast('Ticket menu envoyé !'); }
+    try { await App.api(`/bots/${bot.id}/tickets/send`, { method: 'POST', body: { guild_id: guildId, mode: 'menu' } }); App.toast('Ticket menu envoyé.'); }
     catch (e) { App.toast(e.message, 'error'); }
   };
 
   // ---- ✏️ v297 : textes SÉPARÉS — une carte pour le panneau bouton, une carte pour le panneau menu ----
   let pt = {};
   try { pt = JSON.parse(t.panel_texts || '{}') || {}; } catch {}
-  const ctp = Dashboard.card(root, '✏️ Textes du panneau à un bouton', 'UNIQUEMENT au panneau bouton (Ticket classique). Vide = texte par défaut. {server} = nom du serveur.');
+  const ctp = Dashboard.card(root, 'Textes du panneau à un bouton', 'UNIQUEMENT au panneau bouton (Ticket classique). Vide = texte par défaut. {server} = nom du serveur.');
   ctp.innerHTML += `
     <label class="dash-label">Titre du panneau</label>
     <input class="dash-input" id="tp-title" maxlength="100" placeholder="👑 Support | {server}" value="${App.escapeHtml(pt.title || '')}" />
@@ -2716,7 +2722,7 @@ Dashboard.renderers.tickets = async (content, data) => {
   // ---- ✏️ v297 : Textes du panneau MENU déroulant (indépendants du panneau bouton) ----
   let mpt = {};
   try { mpt = JSON.parse(String(t.menu_panel_texts || '').trim() || String(t.panel_texts || '') || '{}') || {}; } catch {}
-  const ctmenu = Dashboard.card(root, '✏️ Textes du panneau avec menu', 'UNIQUEMENT au panneau menu (Ticket menu). Vide = texte par défaut.');
+  const ctmenu = Dashboard.card(root, 'Textes du panneau avec menu', 'UNIQUEMENT au panneau menu (Ticket menu). Vide = texte par défaut.');
   ctmenu.innerHTML += `
     <label class="dash-label">Titre du panneau menu</label>
     <input class="dash-input" id="mp-title" maxlength="100" placeholder="👑 Support | {server}" value="${App.escapeHtml(mpt.title || '')}" />
@@ -2753,38 +2759,40 @@ Dashboard.renderers.tickets = async (content, data) => {
     await mpSave({});
   };
 
-  // 🖼️ Image personnalisée du panneau principal (vide = bannière générée par défaut)
+  // Image personnalisée du panneau principal (vide = bannière générée par défaut)
   let panelImage = String(t.image_url || '');
-  c.querySelector('[data-panel-img]').appendChild(Dashboard.imageField('🖼️ Image du panneau (importée)', panelImage, (v) => { panelImage = v; }, 'Vide = bannière « SUPPORT » générée automatiquement. Importez une image (PNG/JPG/GIF/WebP) pour l\'afficher en bas du panneau.'));
+  c.querySelector('[data-panel-img]').appendChild(Dashboard.imageField('Image du panneau (importée)', panelImage, (v) => { panelImage = v; }, 'Vide = bannière « SUPPORT » générée automatiquement. Importez une image (PNG/JPG/GIF/WebP) pour l\'afficher en bas du panneau.'));
 
-  // 💬 Message privé après fermeture (v198) — personnalisable, vide = défaut
-  const cdm = Dashboard.card(root, '💬 Message privé après fermeture', 'Vide = message automatique du bot.');
+  // Message privé après fermeture (v198) — personnalisable, vide = défaut
+  const cdm = Dashboard.card(root, 'Message privé après fermeture', 'Vide = message automatique du bot.');
   let dmImage = String((data.settings || {}).close_dm_image || '');
   cdm.innerHTML += `
     <label class="dash-label">Message personnalisé (vide = message automatique)</label>
     <textarea class="dash-input" id="tdm-msg" rows="4" placeholder="${App.escapeHtml('Ex : Merci d\'avoir contacté le support ! Votre demande #12 est traitée.')}">${App.escapeHtml((data.settings || {}).close_dm_message || '')}</textarea>
     <div style="margin-top:12px" data-dm-img></div>
     <div style="margin-top:14px"><button class="dash-save-action dash-btn dash-btn-primary" id="tdm-save">Enregistrer</button></div>`;
-  cdm.querySelector('[data-dm-img]').appendChild(Dashboard.imageField('🖼️ Image du message privé', dmImage, (v) => { dmImage = v; }, 'Vide = image par défaut du bot. Importez la vôtre pour personnaliser le message de fermeture.'));
-  cdm.querySelector('#tdm-save').onclick = async () => {
+  cdm.querySelector('[data-dm-img]').appendChild(Dashboard.imageField('Image du message privé', dmImage, (v) => { dmImage = v; }, 'Vide = image par défaut du bot. Importez la vôtre pour personnaliser le message de fermeture.'));
+  cdm.querySelector('#tdm-save').onclick = async (e) => {
+    const bouton = e.currentTarget;
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/tickets/dm`, { method: 'PUT', body: {
         message: cdm.querySelector('#tdm-msg').value,
         image: dmImage,
       }});
-      App.toast('Message de fermeture enregistré !');
+      App.retourEnregistrement(bouton);
+      App.toast('Message de fermeture enregistré.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
 
-  // 🏠 v212 — Embed du SALON PRIVÉ du ticket : textes + couleur modifiables.
+  // v212 — Embed du SALON PRIVÉ du ticket : textes + couleur modifiables.
   // Posté à l'ouverture du ticket (visible membre + staff). Vide = texte court
   // automatique du bot. Le menu déroulant des actions du staff reste sous l'embed.
   let roomCfg = {};
   try { roomCfg = JSON.parse(String((data.settings || {}).ticket_room || '{}')) || {}; } catch {}
   const roomHexOk = (v) => /^#[0-9a-fA-F]{6}$/.test(String(v || '').trim());
-  const croom = Dashboard.card(root, '🏠 Embed du salon privé (à l’ouverture du ticket)', 'Vide = texte automatique.');
+  const croom = Dashboard.card(root, 'Embed du salon privé (à l’ouverture du ticket)', 'Vide = texte automatique.');
   croom.innerHTML += `
-    <label class="dash-label">🎨 Couleur de l’embed</label>
+    <label class="dash-label">Couleur de l’embed</label>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <input type="color" id="tr-color" value="${roomHexOk(roomCfg.color) ? App.escapeHtml(roomCfg.color) : '#57F287'}" style="width:52px;height:36px;border-radius:8px;border:1px solid var(--d-border);background:transparent;padding:2px;cursor:pointer" />
       <input class="dash-input" id="tr-color-hex" value="${roomHexOk(roomCfg.color) ? App.escapeHtml(roomCfg.color) : ''}" placeholder="#57F287 — vide = couleur du type" style="max-width:240px" />
@@ -2794,7 +2802,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     <input class="dash-input" id="tr-title" maxlength="100" value="${App.escapeHtml(roomCfg.title || '')}" placeholder="🎫 Ticket ouvert" />
     <label class="dash-label">Message d’accueil</label>
     <textarea class="dash-input" id="tr-welcome" rows="3" maxlength="1500" placeholder="Bienvenue {member} ! Un membre de l’équipe va vous répondre ici même…">${App.escapeHtml(roomCfg.welcome || '')}</textarea>
-    <label class="dash-label">📋 Déroulement personnalisé (facultatif)</label>
+    <label class="dash-label">Déroulement personnalisé (facultatif)</label>
     <textarea class="dash-input" id="tr-steps" rows="2" maxlength="1200" placeholder="Vide = pas de déroulement détaillé — une ligne discrète annonce la transcription en MP.">${App.escapeHtml(roomCfg.steps || '')}</textarea>
     <div style="font-size:12px;color:var(--d-dim);margin-top:4px">{member} {user} {server} {type} {number}</div>
     <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap;align-items:center">
@@ -2813,26 +2821,26 @@ Dashboard.renderers.tickets = async (content, data) => {
     const color = colorIn.value;
     croom.querySelector('#tr-color-note').textContent = hv ? 'Couleur personnalisée enregistrée.' : 'Vide → couleur du type de ticket (ou vert par défaut).';
     const fill = (s) => String(s || '').replace(/\{member\}/g, '@pseudo').replace(/\{user\}/g, 'pseudo').replace(/\{server\}/g, 'Mon serveur').replace(/\{type\}/g, 'Support').replace(/\{number\}/g, '12');
-    const title = fill(croom.querySelector('#tr-title').value.trim()) || '🎫 Ticket ouvert';
+    const title = fill(croom.querySelector('#tr-title').value.trim()) || 'Ticket ouvert';
     const welcome = fill(croom.querySelector('#tr-welcome').value.trim()) || autoWelcome().replace(/\{member\}/g, '@pseudo');
     const steps = fill(croom.querySelector('#tr-steps').value.trim());
     const box = croom.querySelector('[data-room-preview]');
     const stepsPreview = steps
       ? `<div style="margin-top:10px;border-top:1px solid #1E1F22;padding:8px 0 2px">
-          <div style="font-weight:600;margin-bottom:3px">📋 Déroulement de la prise en charge</div>
+          <div style="font-weight:600;margin-bottom:3px">Déroulement de la prise en charge</div>
           <div style="white-space:pre-wrap;color:#C9CCD1">${App.escapeHtml(steps)}</div>
         </div>`
-      : `<div style="margin-top:10px;border-top:1px solid #1E1F22;padding:8px 0 2px;color:#A8ABAF;font-size:12px">📄 À la fermeture définitive, la transcription vous est envoyée en MP.</div>`;
+      : `<div style="margin-top:10px;border-top:1px solid #1E1F22;padding:8px 0 2px;color:#A8ABAF;font-size:12px">À la fermeture définitive, la transcription vous est envoyée en MP.</div>`;
     box.innerHTML = `
-      <div class="dash-label" style="margin:0 0 8px">👀 Aperçu de l’embed du salon privé</div>
-      <div style="background:#313338;border-radius:10px;overflow:hidden;color:#DBDEE1;font-size:13px">
+      <div class="dash-label" style="margin:0 0 8px">Aperçu de l’embed du salon privé</div>
+      <div style="background:#313338;border-radius:8px;overflow:hidden;color:#DBDEE1;font-size:13px">
         <div style="height:4px;background:${color}"></div>
         <div style="padding:12px 15px">
-          <div style="font-size:11px;color:#949BA4;margin-bottom:6px">🎫 Ticket de @pseudo · #12</div>
+          <div style="font-size:11px;color:#949BA4;margin-bottom:6px">Ticket de @pseudo · #12</div>
           <div style="font-weight:700;margin-bottom:8px">${App.escapeHtml(title)}</div>
           <div style="white-space:pre-wrap">${App.escapeHtml(welcome)}</div>
           ${stepsPreview}
-          <div style="margin-top:10px;border-top:1px solid #1E1F22;padding:8px 0 0;color:#A8ABAF;font-size:11.5px">⚙️ Menu « Actions du staff » — réservé au staff du serveur.</div>
+          <div style="margin-top:10px;border-top:1px solid #1E1F22;padding:8px 0 0;color:#A8ABAF;font-size:12px">Menu « Actions du staff » — réservé au staff du serveur.</div>
         </div>
       </div>`;
   };
@@ -2845,7 +2853,8 @@ Dashboard.renderers.tickets = async (content, data) => {
   croom.querySelector('#tr-welcome').addEventListener('input', roomPreview);
   croom.querySelector('#tr-steps').addEventListener('input', roomPreview);
   roomPreview();
-  croom.querySelector('#tr-save').onclick = async () => {
+  croom.querySelector('#tr-save').onclick = async (e) => {
+    const bouton = e.currentTarget;
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/ticket-room`, { method: 'PUT', body: {
         color: croom.querySelector('#tr-color-hex').value.trim(),
@@ -2853,7 +2862,8 @@ Dashboard.renderers.tickets = async (content, data) => {
         welcome: croom.querySelector('#tr-welcome').value,
         steps: croom.querySelector('#tr-steps').value,
       }});
-      App.toast('Embed du salon privé enregistré !');
+      App.retourEnregistrement(bouton);
+      App.toast('Embed du salon privé enregistré.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
   croom.querySelector('#tr-default').onclick = () => {
@@ -2871,26 +2881,27 @@ Dashboard.renderers.tickets = async (content, data) => {
     const selected = c.querySelector('#t-channel').value.trim();
     const selectedChannel = textChannels.find((ch) => Dashboard.discordRefMatches(selected, ch));
     zone.innerHTML = selectedChannel
-      ? `<span class="dash-badge ok">📨 Panneau configuré dans #${App.escapeHtml(selectedChannel.name)} — salon trouvé ✅</span>`
+      ? `<span class="dash-badge ok">Panneau configuré dans #${App.escapeHtml(selectedChannel.name)} — salon trouvé ✅`
       : (selected
-          ? `<span class="dash-badge warn">⚠️ Le salon enregistré n'est plus disponible dans Discord</span>`
-          : `<span class="dash-badge warn">⚠️ Aucun salon défini — choisissez-en un puis « Envoyer le panneau »</span>`);
+          ? `<span class="dash-badge warn">Le salon enregistré n'est plus disponible dans Discord</span>`
+          : `<span class="dash-badge warn">Aucun salon défini — choisissez-en un puis « Envoyer le panneau »</span>`);
   };
   renderStatus();
   c.querySelector('#t-channel').onchange = renderStatus;
   c.querySelector('#t-reason').onchange = () => {
     const on = c.querySelector('#t-reason').checked;
     c.querySelector('#t-reason').nextElementSibling.nextElementSibling.textContent = on
-      ? '✅ Raison obligatoire'
-      : '❌ Sans raison';
+      ? 'Raison obligatoire'
+      : 'Sans raison';
   };
 
-  c.querySelector('#t-save').onclick = async () => {
+  c.querySelector('#t-save').onclick = async (e) => {
+    const bouton = e.currentTarget;
     try {
       await App.api(`/bots/${bot.id}/tickets`, { method: 'PUT', body: {
         guild_id: guildId,
         channel: c.querySelector('#t-channel').value.trim(),
-        button_label: c.querySelector('#t-label').value.trim() || '🎫 Ouvrir un ticket',
+        button_label: c.querySelector('#t-label').value.trim() || 'Ouvrir un ticket',
         button_style: c.querySelector('#t-style').value,
         require_reason: c.querySelector('#t-reason').checked ? 1 : 0,
         support_role: c.querySelector('#t-role').value.trim(),
@@ -2899,39 +2910,40 @@ Dashboard.renderers.tickets = async (content, data) => {
         image_url: panelImage,
         types: typesData.filter((x) => x.label).map((x) => ({ label: x.label, emoji: x.emoji, description: x.description, category: x.category, questions: (x.questions || []).map(qNorm).filter((q) => q.text).slice(0, 5), staff_roles: x.staff_roles.filter(Boolean) })),
       }});
-      // 📔 Journal des tickets : réglage serveur (indépendant de la config du panneau)
+      // Journal des tickets : réglage serveur (indépendant de la config du panneau)
       await App.api(`/bots/${bot.id}/guilds/${guildId}/settings`, { method: 'PUT', body: {
         prefix: (data.settings || {}).prefix || '',
         warn_limit: (data.settings || {}).warn_limit || 0,
         warn_action: (data.settings || {}).warn_action || 'none',
         ticket_log_channel: c.querySelector('#t-logchan').value,
       }});
-      App.toast('Tickets enregistrés !');
+      App.retourEnregistrement(bouton);
+      App.toast('Tickets enregistrés.');
       renderStatus();
     } catch (e) { App.toast(e.message, 'error'); }
   };
   c.querySelector('#t-send').onclick = async () => {
-    try { await App.api(`/bots/${bot.id}/tickets/send`, { method: 'POST', body: { guild_id: guildId, mode: 'button' } }); App.toast('Ticket classique envoyé !'); }
+    try { await App.api(`/bots/${bot.id}/tickets/send`, { method: 'POST', body: { guild_id: guildId, mode: 'button' } }); App.toast('Ticket classique envoyé.'); }
     catch (e) { App.toast(e.message, 'error'); }
   };
 
-  // 👀 Aperçu en direct du panneau (bouton + menu déroulant des types)
+  // Aperçu en direct du panneau (bouton + menu déroulant des types)
   const btnColors = { '1': '#5865F2', '2': '#4E5058', '3': '#3BA55D', '4': '#ED4245' };
   const preview = App.el(`<div id="t-preview" style="margin-top:16px;border:1px dashed var(--d-border);border-radius:12px;padding:14px 16px;background:var(--d-card2)"></div>`);
   c.appendChild(preview);
   const renderPreview = () => {
-    const label = c.querySelector('#t-label').value.trim() || '🎫 Ouvrir un ticket';
+    const label = c.querySelector('#t-label').value.trim() || 'Ouvrir un ticket';
     const style = c.querySelector('#t-style').value;
     const color = btnColors[style] || '#5865F2';
     const typesCount = typesData.filter((x) => x.label).length;
     preview.innerHTML = `
-      <div class="dash-label" style="margin:0 0 8px">👀 Aperçu du panneau sur Discord</div>
-      <div style="background:#313338;border-radius:10px;padding:14px;color:#DBDEE1;font-size:13px">
-        <div style="margin-bottom:10px">🎫 ${App.escapeHtml(t.message || 'Besoin d\'aide ? Ouvrez un ticket !')}</div>
-        <span style="display:inline-flex;align-items:center;gap:6px;background:${color};color:#fff;font-weight:700;padding:7px 16px;border-radius:6px">${App.escapeHtml(label)}</span>
+      <div class="dash-label" style="margin:0 0 8px">Aperçu du panneau sur Discord</div>
+      <div style="background:#313338;border-radius:8px;padding:14px;color:#DBDEE1;font-size:13px">
+        <div style="margin-bottom:10px">${App.escapeHtml(t.message || 'Besoin d\'aide ? Ouvrez un ticket !')}</div>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:${color};color:#fff;font-weight:700;padding:7px 16px;border-radius:4px">${App.escapeHtml(label)}</span>
         ${typesCount
-          ? `<div style="margin-top:12px;border:1px solid #1E1F22;border-radius:6px;padding:9px 12px;color:#A8ABAF;text-align:left">${typesData.filter((x) => x.label).map((x) => `<div style="padding:4px 0">${App.escapeHtml(x.emoji || '🎫')} <b style="color:#DBDEE1">${App.escapeHtml(x.label)}</b>${(x.questions || []).length ? ` <span style="font-size:10px;background:rgba(88,101,242,.2);color:#aab1ff;padding:1px 7px;border-radius:8px">❓ ${x.questions.length} question(s)</span>` : ''}${x.description ? `<div style="font-size:11px;margin-left:20px;color:#949BA4">${App.escapeHtml(x.description.slice(0, 70))}${x.description.length > 70 ? '…' : ''}</div>` : ''}</div>`).join('')}</div>`
-          : `<div style="margin-top:10px;color:#A8ABAF;font-size:11.5px">Aucun type → un simple bouton s\'affichera.</div>`}
+          ? `<div style="margin-top:12px;border:1px solid #1E1F22;border-radius:4px;padding:9px 12px;color:#A8ABAF;text-align:left">${typesData.filter((x) => x.label).map((x) => `<div style="padding:4px 0">${App.escapeHtml(x.emoji || '')} <b style="color:#DBDEE1">${App.escapeHtml(x.label)}</b>${(x.questions || []).length ? ` <span style="font-size:11px;background:rgba(88,101,242,.2);color:#aab1ff;padding:1px 7px;border-radius:8px">${x.questions.length} question(s)</span>` : ''}${x.description ? `<div style="font-size:11px;margin-left:20px;color:#949BA4">${App.escapeHtml(x.description.slice(0, 70))}${x.description.length > 70 ? '…' : ''}</div>` : ''}</div>`).join('')}</div>`
+          : `<div style="margin-top:10px;color:#A8ABAF;font-size:12px">Aucun type → un simple bouton s\'affichera.</div>`}
       </div>`;
   };
   c.querySelector('#t-label').addEventListener('input', renderPreview);
@@ -2939,7 +2951,7 @@ Dashboard.renderers.tickets = async (content, data) => {
   c.querySelector('#t-msg').addEventListener('input', renderPreview);
   renderPreview();
 
-  const c2 = Dashboard.card(root, '🗂️ Types de tickets (bouton et menu)', 'Pour le Ticket classique et le Ticket menu. Le Ticket avancé a les siens.');
+  const c2 = Dashboard.card(root, 'Types de tickets (bouton et menu)', 'Pour le Ticket classique et le Ticket menu. Le Ticket avancé a les siens.');
   c2.classList.add('tk-classic-card');
   c2.appendChild(App.el(`<div id="t-types"></div>`));
   const addBtn = App.el(`<button class="dash-btn dash-btn-sm" id="t-add">＋ Ajouter un type</button>`);
@@ -2957,23 +2969,23 @@ Dashboard.renderers.tickets = async (content, data) => {
             <input class="dash-input" data-k="label" value="${App.escapeHtml(x.label)}" placeholder="Nom du type" style="flex:1;min-width:140px" />
             <button class="dash-btn dash-btn-danger dash-btn-sm" data-del>Supprimer</button>
           </div>
-          <div data-emojierr style="color:#ff8a8d;font-size:11.5px;margin-top:3px;display:none">⚠️ Emoji invalide — utilise un vrai emoji (ex : 🤝)</div>
-          <label class="dash-label">📝 Description (affichée sous le type dans le menu)</label>
+          <div data-emojierr style="color:#ff8a8d;font-size:12px;margin-top:3px;display:none">Emoji invalide — utilise un vrai emoji (ex : 🤝)</div>
+          <label class="dash-label">Description (affichée sous le type dans le menu)</label>
           <input class="dash-input" data-k="description" maxlength="100" value="${App.escapeHtml(x.description)}" placeholder="Ex : signalez un abus du staff, en toute confidentialité" />
-          <div style="color:var(--d-dim);font-size:10.5px;margin-top:2px">${String(x.description || '').length}/100</div>
-          <label class="dash-label">🗂️ Catégorie</label>
+          <div style="color:var(--d-dim);font-size:11px;margin-top:2px">${String(x.description || '').length}/100</div>
+          <label class="dash-label">Catégorie</label>
           <select class="dash-select" data-k="categorySel">
             ${categories.length ? '<option value="">— Catégorie par défaut (Tickets) —</option>' : Dashboard.noDiscordChoice('Aucune catégorie reçue de Discord')}
-            ${categories.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(x.category, ch) ? 'selected' : ''}>📁 ${App.escapeHtml(ch.name)}</option>`).join('')}
-            ${Dashboard.currentDiscordOption(x.category, categories, '⚠️', 'configuration actuelle — catégorie introuvable')}
+            ${categories.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(x.category, ch) ? 'selected' : ''}>${App.escapeHtml(ch.name)}</option>`).join('')}
+            ${Dashboard.currentDiscordOption(x.category, categories, '', 'configuration actuelle — catégorie introuvable')}
           </select>
-          <label class="dash-label">🛡️ Rôles staff</label>
+          <label class="dash-label">Rôles staff</label>
           <div class="t-roles" style="display:flex;flex-direction:column;gap:6px"></div>
           <button class="dash-btn dash-btn-sm" data-addrole style="margin-top:6px">＋ Ajouter un rôle staff</button>
-          <label class="dash-label" style="margin-top:12px">❓ Questionnaire (max 5)</label>
+          <label class="dash-label" style="margin-top:12px">Questionnaire (max 5)</label>
           <div class="t-questions" style="display:flex;flex-direction:column;gap:6px"></div>
           <button class="dash-btn dash-btn-sm" data-addq style="margin-top:6px">＋ Ajouter une question</button>
-          <div style="color:var(--d-dim);font-size:10.5px;margin-top:5px">Vide = par défaut (seule la raison est demandée).</div>
+          <div style="color:var(--d-dim);font-size:11px;margin-top:5px">Vide = par défaut (seule la raison est demandée).</div>
         </div>`);
       const emojiInp = row.querySelector('[data-k="emoji"]');
       const emojiErr = row.querySelector('[data-emojierr]');
@@ -3010,8 +3022,8 @@ Dashboard.renderers.tickets = async (content, data) => {
             <div style="display:flex;gap:7px">
               <select class="dash-select t-role-sel">
                 ${rolesList.length ? '<option value="">— Choisir un rôle —</option>' : Dashboard.noDiscordChoice('Aucun rôle reçu de Discord')}
-                ${rolesList.map((role) => `<option value="${App.escapeHtml(role.name)}" ${Dashboard.discordRefMatches(r, role) ? 'selected' : ''}>🛡️ ${App.escapeHtml(role.name)}</option>`).join('')}
-                ${r && !rolesList.some((role) => Dashboard.discordRefMatches(r, role)) ? `<option value="${App.escapeHtml(r)}" selected>⚠️ ${App.escapeHtml(r)} (configuration actuelle — rôle introuvable)</option>` : ''}
+                ${rolesList.map((role) => `<option value="${App.escapeHtml(role.name)}" ${Dashboard.discordRefMatches(r, role) ? 'selected' : ''}>${App.escapeHtml(role.name)}</option>`).join('')}
+                ${r && !rolesList.some((role) => Dashboard.discordRefMatches(r, role)) ? `<option value="${App.escapeHtml(r)}" selected>${App.escapeHtml(r)} (configuration actuelle — rôle introuvable)</option>` : ''}
               </select>
               <button class="dash-btn dash-btn-danger dash-btn-sm">Supprimer</button>
             </div>`);
@@ -3055,7 +3067,7 @@ Dashboard.renderers.tickets = async (content, data) => {
   c2.querySelector('#t-add').onclick = () => { typesData.push({ label: '', emoji: '', category: '', description: '', questions: [], staff_roles: [] }); renderTypes(); };
 
   // ============================================================
-  // 🎨 NOUVEAU système indépendant : Tickets personnalisés
+  // NOUVEAU système indépendant : Tickets personnalisés
   // Il est volontairement placé SOUS l'ancien système et possède sa propre
   // table, ses propres IDs d'interaction et son propre panneau Discord.
   // ============================================================
@@ -3077,25 +3089,25 @@ Dashboard.renderers.tickets = async (content, data) => {
       staff_roles: Array.isArray(x.staff_roles) ? [...x.staff_roles] : [],
     })),
   };
-  const c3 = Dashboard.card(root, '🎨 Ticket avancé', 'Système à part : ses propres types, couleurs et questions. Ce n’est PAS le Ticket menu.');
+  const c3 = Dashboard.card(root, 'Ticket avancé', 'Système à part : ses propres types, couleurs et questions. Ce n’est PAS le Ticket menu.');
   c3.classList.add('adv-builder-card');
   c3.id = 'tk-adv';
   const advChannelOptions = ['<option value="">— Choisir un salon —</option>']
     .concat(textChannels.map((ch) => {
       const selected = advancedData.channel === ch.id || advancedData.channel === `#${ch.name}`;
-      return `<option value="${App.escapeHtml(ch.id)}" ${selected ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`;
+      return `<option value="${App.escapeHtml(ch.id)}" ${selected ? 'selected' : ''}>#${App.escapeHtml(ch.name)}</option>`;
     }));
   if (advancedData.channel && !textChannels.some((ch) => advancedData.channel === ch.id || advancedData.channel === `#${ch.name}`)) {
     advChannelOptions.push(`<option value="${App.escapeHtml(advancedData.channel)}" selected>${App.escapeHtml(advancedData.channel)} (actuel)</option>`);
   }
   c3.innerHTML += `
-    <div class="adv-builder-status"><span class="dash-badge ok">✅ Ticket avancé</span><span class="adv-status-copy">${advancedData.id ? 'Configuration enregistrée' : 'Pas encore configuré'}</span></div>
+    <div class="adv-builder-status"><span class="dash-badge ok">Ticket avancé</span><span class="adv-status-copy">${advancedData.id ? 'Configuration enregistrée' : 'Pas encore configuré'}</span></div>
     <label class="dash-label">Nom du Ticket avancé</label>
     <input class="dash-input" id="adv-name" value="${App.escapeHtml(advancedData.name)}" placeholder="Tickets personnalisés" maxlength="80" />
     <label class="dash-label">Type d'affichage</label>
     <select class="dash-select" id="adv-mode" style="max-width:360px">
-      <option value="buttons" ${advancedData.mode === 'buttons' ? 'selected' : ''}>🔘 Boutons — un bouton par type</option>
-      <option value="menu" ${advancedData.mode === 'menu' ? 'selected' : ''}>📋 Liste — le membre choisit le type</option>
+      <option value="buttons" ${advancedData.mode === 'buttons' ? 'selected' : ''}>Boutons — un bouton par type</option>
+      <option value="menu" ${advancedData.mode === 'menu' ? 'selected' : ''}>Liste — le membre choisit le type</option>
     </select>
     <label class="dash-label">Salon du Ticket avancé</label>
     <select class="dash-select" id="adv-channel" style="max-width:360px">${advChannelOptions.join('')}</select>
@@ -3108,10 +3120,10 @@ Dashboard.renderers.tickets = async (content, data) => {
     <label class="dash-label">Ligne de pied du panneau (vide = texte par défaut)</label>
     <input class="dash-input" id="adv-footer" value="${App.escapeHtml(advancedData.footer_text || '')}" placeholder="Hoxera · Support privé · Choisissez une option pour commencer" maxlength="200" />
     <label class="adv-check-row"><input type="checkbox" id="adv-reason" ${advancedData.require_reason ? 'checked' : ''} /><span><b>Demander une raison avant de créer le ticket</b><small>La raison sera ajoutée au questionnaire si Discord a encore un champ disponible.</small></span></label>
-    <div class="adv-placement-notice"><span>📁</span><div><b>Placement simple et prévisible</b><small>Chaque type doit avoir une catégorie existante. Le même salon privé sera visible uniquement par son créateur et le staff autorisé à ce type.</small></div></div>
+    <div class="adv-placement-notice"><span><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M3.4 6.6h5.4l1.8 2.2h9.8v9.6a1.6 1.6 0 0 1-1.6 1.6H5a1.6 1.6 0 0 1-1.6-1.6V6.6Z"/></svg></span><div><b>Placement simple et prévisible</b><small>Chaque type doit avoir une catégorie existante. Le même salon privé sera visible uniquement par son créateur et le staff autorisé à ce type.</small></div></div>
     <div class="adv-builder-grid">
       <div class="adv-types-panel">
-        <div class="adv-panel-heading"><div><b>🗂️ Types du Ticket avancé</b><small>Chaque type a sa couleur, son bouton, ses rôles staff et jusqu’à 5 questions.</small></div><span class="adv-count" id="adv-type-count"></span></div>
+        <div class="adv-panel-heading"><div><b>️ Types du Ticket avancé</b><small>Chaque type a sa couleur, son bouton, ses rôles staff et jusqu’à 5 questions.</small></div><span class="adv-count" id="adv-type-count"></span></div>
         <div id="adv-types"></div>
         <button class="dash-btn dash-btn-sm adv-add-type" id="adv-add-type">＋ Ajouter un type</button>
       </div>
@@ -3135,11 +3147,11 @@ Dashboard.renderers.tickets = async (content, data) => {
     const imagePreview = /^https:\/\//i.test(imageUrl) ? `<img src="${App.escapeHtml(imageUrl)}" alt="" style="display:block;width:100%;max-height:180px;object-fit:cover;border-radius:8px;margin-bottom:12px" />` : '';
     const validTypes = advancedData.types.filter((x) => x.label.trim());
     const questionBadge = (x) => (x.questions && x.questions.length)
-      ? `<span style="display:inline-block;margin-left:6px;font-size:10px;background:rgba(88,101,242,.2);color:#AAB1FF;padding:1px 6px;border-radius:8px">❓ ${x.questions.length}</span>`
+      ? `<span style="display:inline-block;margin-left:6px;font-size:11px;background:rgba(88,101,242,.2);color:#AAB1FF;padding:1px 6px;border-radius:8px">${x.questions.length}</span>`
       : '';
     const body = mode === 'menu'
-      ? `<div style="border:1px solid #1E1F22;border-radius:8px;padding:10px 12px;color:#A8ABAF">📋 Choisissez un type…<div style="margin-top:8px">${validTypes.map((x) => `<div style="padding:6px 8px;border-top:1px solid #3f4147"><span style="color:${x.color}">●</span> ${App.escapeHtml(x.emoji || '🎫')} <b style="color:#DBDEE1">${App.escapeHtml(x.label)}</b>${questionBadge(x)}<small style="display:block;margin-left:22px;color:#949BA4">${App.escapeHtml(x.description || 'Ouvrir un ticket en privé.')}</small></div>`).join('')}</div></div>`
-      : `<div style="display:flex;flex-direction:column;gap:8px">${validTypes.map((x) => `<div style="padding:9px 10px;border-left:4px solid ${x.color};border-top:1px solid #3f4147"><b style="display:block;color:#DBDEE1">${App.escapeHtml(x.emoji || '🎫')} ${App.escapeHtml(x.label)}${questionBadge(x)}</b><small style="display:block;color:#949BA4;margin:3px 0 7px">${App.escapeHtml(x.description || 'Ouvrir un ticket en privé.')}</small><span style="display:inline-flex;background:${advColorToStyle[x.button_style] || '#5865F2'};color:#fff;font-weight:700;padding:6px 10px;border-radius:6px">${App.escapeHtml(x.emoji || '🎫')} ${App.escapeHtml(x.button_label || ('Envoyer un ticket ' + x.label.toLowerCase()))}</span></div>`).join('') || '<span style="color:var(--d-dim)">Ajoutez un type pour voir l’aperçu.</span>'}</div>`;
+      ? `<div style="border:1px solid #1E1F22;border-radius:8px;padding:10px 12px;color:#A8ABAF">Choisissez un type…<div style="margin-top:8px">${validTypes.map((x) => `<div style="padding:6px 8px;border-top:1px solid #3f4147"><span style="color:${x.color}">●</span> ${App.escapeHtml(x.emoji || '')} <b style="color:#DBDEE1">${App.escapeHtml(x.label)}</b>${questionBadge(x)}<small style="display:block;margin-left:22px;color:#949BA4">${App.escapeHtml(x.description || 'Ouvrir un ticket en privé.')}</small></div>`).join('')}</div></div>`
+      : `<div style="display:flex;flex-direction:column;gap:8px">${validTypes.map((x) => `<div style="padding:9px 10px;border-left:4px solid ${x.color};border-top:1px solid #3f4147"><b style="display:block;color:#DBDEE1">${App.escapeHtml(x.emoji || '')} ${App.escapeHtml(x.label)}${questionBadge(x)}</b><small style="display:block;color:#949BA4;margin:3px 0 7px">${App.escapeHtml(x.description || 'Ouvrir un ticket en privé.')}</small><span style="display:inline-flex;background:${advColorToStyle[x.button_style] || '#5865F2'};color:#fff;font-weight:700;padding:6px 10px;border-radius:4px">${App.escapeHtml(x.emoji || '')} ${App.escapeHtml(x.button_label || ('Envoyer un ticket ' + x.label.toLowerCase()))}</span></div>`).join('') || '<span style="color:var(--d-dim)">Ajoutez un type pour voir l’aperçu.</span>'}</div>`;
     c3.querySelector('#adv-preview').innerHTML = `<div class="adv-preview-title">👀 Aperçu Discord <span>Mis à jour en direct</span></div><div class="adv-discord-preview">${imagePreview}<div class="adv-discord-title">🎨 ${App.escapeHtml(c3.querySelector('#adv-name').value || 'Créer un ticket')}</div>${body}</div>`;
   };
   const advRenderTypes = () => {
@@ -3158,25 +3170,25 @@ Dashboard.renderers.tickets = async (content, data) => {
           </div>
           <div class="dash-fields-grid" style="gap:8px;margin-top:9px">
             <div><label class="dash-label">Style du bouton</label><select class="dash-select" data-k="button_style">
-              <option value="1" ${type.button_style === '1' ? 'selected' : ''}>🔵 Bleu</option>
-              <option value="2" ${type.button_style === '2' ? 'selected' : ''}>⚪ Gris</option>
-              <option value="3" ${type.button_style === '3' ? 'selected' : ''}>🟢 Vert</option>
-              <option value="4" ${type.button_style === '4' ? 'selected' : ''}>🔴 Rouge</option>
+              <option value="1" ${type.button_style === '1' ? 'selected' : ''}>Bleu</option>
+              <option value="2" ${type.button_style === '2' ? 'selected' : ''}>Gris</option>
+              <option value="3" ${type.button_style === '3' ? 'selected' : ''}>Vert</option>
+              <option value="4" ${type.button_style === '4' ? 'selected' : ''}>Rouge</option>
             </select></div>
             <div><label class="dash-label">Catégorie de création du ticket</label><select class="dash-select" data-k="category">
               <option value="">— Choisir une catégorie (obligatoire) —</option>
-              ${categories.map((cat) => `<option value="${App.escapeHtml(cat.id)}" ${Dashboard.discordRefMatches(type.category, cat) ? 'selected' : ''}>📁 ${App.escapeHtml(cat.name)}</option>`).join('')}
-              ${Dashboard.currentDiscordOption(type.category, categories, '⚠️', 'configuration actuelle — catégorie introuvable')}
+              ${categories.map((cat) => `<option value="${App.escapeHtml(cat.id)}" ${Dashboard.discordRefMatches(type.category, cat) ? 'selected' : ''}>${App.escapeHtml(cat.name)}</option>`).join('')}
+              ${Dashboard.currentDiscordOption(type.category, categories, '', 'configuration actuelle — catégorie introuvable')}
             </select><small class="adv-category-help">Le salon privé sera créé directement ici. Optimus Prime ne créera jamais de catégorie.</small></div>
           </div>
           <label class="dash-label">Description du type</label>
           <input class="dash-input" data-k="description" value="${App.escapeHtml(type.description)}" placeholder="Ex : demande privée au staff" maxlength="100" />
           <label class="dash-label">Texte du bouton (vide = « Envoyer un ticket + nom »)</label>
           <input class="dash-input" data-k="button_label" value="${App.escapeHtml(type.button_label)}" placeholder="Envoyer un ticket ${App.escapeHtml(type.label || 'support')}" maxlength="80" />
-          <label class="dash-label" style="margin-top:12px">❓ Questionnaire de ce type (réponses obligatoires — max 5)</label>
+          <label class="dash-label" style="margin-top:12px">Questionnaire de ce type (réponses obligatoires — max 5)</label>
           <div data-questions style="display:flex;flex-direction:column;gap:6px"></div>
           <button class="dash-btn dash-btn-sm" data-addquestion style="margin-top:6px">＋ Ajouter une question</button>
-          <div style="color:var(--d-dim);font-size:10.5px;margin-top:5px">Au clic sur ce type, le membre devra répondre à ces questions avant la création du ticket.</div>
+          <div style="color:var(--d-dim);font-size:11px;margin-top:5px">Au clic sur ce type, le membre devra répondre à ces questions avant la création du ticket.</div>
           <label class="dash-label">Rôles staff autorisés (sélection)</label>
           <div data-roles></div>
           <button class="dash-btn dash-btn-sm" data-addrole style="margin-top:6px">＋ Ajouter un rôle staff</button>
@@ -3184,11 +3196,11 @@ Dashboard.renderers.tickets = async (content, data) => {
       const rolesEl = row.querySelector('[data-roles]');
       const renderTypeRoles = () => {
         rolesEl.innerHTML = '';
-        if (!type.staff_roles.length) rolesEl.appendChild(App.el(`<div style="font-size:11.5px;color:var(--d-dim)">Aucun rôle spécifique — gestionnaire du serveur uniquement.</div>`));
+        if (!type.staff_roles.length) rolesEl.appendChild(App.el(`<div style="font-size:12px;color:var(--d-dim)">Aucun rôle spécifique — gestionnaire du serveur uniquement.</div>`));
         type.staff_roles.forEach((roleName, roleIndex) => {
           const roleOptions = [availableRoles.length ? '<option value="">— Choisir un rôle staff —</option>' : Dashboard.noDiscordChoice('Aucun rôle reçu de Discord')]
-            .concat(availableRoles.map((role) => `<option value="${App.escapeHtml(role.name)}" ${Dashboard.discordRefMatches(roleName, role) ? 'selected' : ''}>🛡️ ${App.escapeHtml(role.name)}</option>`));
-          if (roleName && !availableRoles.some((role) => Dashboard.discordRefMatches(roleName, role))) roleOptions.push(`<option value="${App.escapeHtml(roleName)}" selected>⚠️ ${App.escapeHtml(roleName)} (configuration actuelle — rôle introuvable)</option>`);
+            .concat(availableRoles.map((role) => `<option value="${App.escapeHtml(role.name)}" ${Dashboard.discordRefMatches(roleName, role) ? 'selected' : ''}>${App.escapeHtml(role.name)}</option>`));
+          if (roleName && !availableRoles.some((role) => Dashboard.discordRefMatches(roleName, role))) roleOptions.push(`<option value="${App.escapeHtml(roleName)}" selected>${App.escapeHtml(roleName)} (configuration actuelle — rôle introuvable)</option>`);
           const rr = App.el(`<div style="display:flex;gap:7px;margin-top:6px"><select class="dash-select" style="flex:1">${roleOptions.join('')}</select><button class="dash-btn dash-btn-danger dash-btn-sm">Supprimer</button></div>`);
           const sel = rr.querySelector('select');
           if (roleName && [...sel.options].some((option) => option.value === roleName)) sel.value = roleName;
@@ -3202,7 +3214,7 @@ Dashboard.renderers.tickets = async (content, data) => {
       const renderTypeQuestions = () => {
         questionsEl.innerHTML = '';
         if (!type.questions.length) {
-          questionsEl.appendChild(App.el(`<div style="font-size:11.5px;color:var(--d-dim)">Aucune question — seule la raison générale sera demandée si elle est activée.</div>`));
+          questionsEl.appendChild(App.el(`<div style="font-size:12px;color:var(--d-dim)">Aucune question — seule la raison générale sera demandée si elle est activée.</div>`));
         }
         type.questions.forEach((question, questionIndex) => {
           const qq = qNorm(question);
@@ -3253,7 +3265,8 @@ Dashboard.renderers.tickets = async (content, data) => {
     advancedData.types.push({ id: `t${Date.now()}`, label: '', emoji: '🎫', description: '', category: '', questions: [], color: '#5865F2', button_style: '1', staff_roles: [] });
     advRenderTypes(); advRenderPreview();
   };
-  c3.querySelector('#adv-save').onclick = async () => {
+  c3.querySelector('#adv-save').onclick = async (e) => {
+    const bouton = e.currentTarget;
     const validTypes = advancedData.types.filter((x) => x.label.trim());
     if (!validTypes.length) return App.toast('Ajoutez au moins un type de ticket.', 'error');
     const missingCategory = validTypes.find((type) => !String(type.category || '').trim());
@@ -3267,14 +3280,15 @@ Dashboard.renderers.tickets = async (content, data) => {
         require_reason: c3.querySelector('#adv-reason').checked ? 1 : 0, types: validTypes,
       }});
       advancedData.id = r.config && r.config.id;
-      c3.querySelector('#adv-status').textContent = '✅ Ticket avancé enregistré. Vous pouvez maintenant envoyer son panneau.';
-      App.toast('Ticket avancé enregistré !');
+      c3.querySelector('#adv-status').textContent = 'Ticket avancé enregistré. Vous pouvez maintenant envoyer son panneau.';
+      App.retourEnregistrement(bouton);
+      App.toast('Ticket avancé enregistré.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
   c3.querySelector('#adv-send').onclick = async () => {
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/advanced-tickets/send`, { method: 'POST' });
-      c3.querySelector('#adv-status').textContent = '✅ Ticket avancé envoyé. Le Ticket classique et le Ticket menu n’ont pas été touchés.';
+      c3.querySelector('#adv-status').textContent = 'Ticket avancé envoyé. Le Ticket classique et le Ticket menu n’ont pas été touchés.';
       App.toast('Ticket avancé envoyé ! Les autres systèmes n’ont pas été touchés.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
@@ -3282,7 +3296,7 @@ Dashboard.renderers.tickets = async (content, data) => {
   // v322 — guide + ordre lisible (bouton, ses textes, menu, ses textes, types, puis l’autre système).
   const ticketGuide = App.el(`<div class="dash-card ticket-guide" data-dash-card>
       <div class="card-head"><div class="card-heading">
-        <h3>🧭 Par où commencer ?</h3>
+        <h3>Par où commencer ?</h3>
         <div class="desc">Choisissez un seul système. Cliquez une case pour descendre jusqu’à lui.</div>
       </div></div>
       <div class="tg-sys">
@@ -3305,14 +3319,14 @@ Dashboard.renderers.tickets = async (content, data) => {
     </div>`);
   // v328 — autres panneaux menu (chacun ses types), après le menu principal.
   const extraMenus = Array.isArray(data.ticket_menus) ? data.ticket_menus : [];
-  const cxm = Dashboard.card(root, '📋 Autres panneaux menu', 'Autres Ticket menu, chacun avec ses types. En plus du Ticket menu principal.');
+  const cxm = Dashboard.card(root, 'Autres panneaux menu', 'Autres Ticket menu, chacun avec ses types. En plus du Ticket menu principal.');
   cxm.classList.add('tk-classic-card');
   if (!extraMenus.length) {
     cxm.appendChild(App.el('<div class="dash-empty">Aucun autre menu pour l’instant.</div>'));
   }
   extraMenus.forEach((m) => {
     const n = Array.isArray(m.types) ? m.types.length : 0;
-    const row = App.el(`<div style="display:flex;align-items:center;gap:10px;border:1px solid var(--d-border);border-radius:10px;padding:10px 14px;margin-bottom:8px">
+    const row = App.el(`<div style="display:flex;align-items:center;gap:10px;border:1px solid var(--d-border);border-radius:8px;padding:10px 14px;margin-bottom:8px">
       <div style="flex:1"><b>${App.escapeHtml(m.name || 'Menu')}</b><div style="color:var(--d-dim);font-size:12px">${n} type(s) · ${App.escapeHtml(m.channel || 'salon non défini')}</div></div>
       <button class="dash-btn dash-btn-sm" data-xm-edit>Modifier</button>
       <button class="dash-btn dash-btn-sm" data-xm-send>Envoyer</button>
@@ -3320,7 +3334,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     </div>`);
     row.querySelector('[data-xm-edit]').onclick = () => BotViews.openTicketMenuModal(bot, guildId, m);
     row.querySelector('[data-xm-send]').onclick = async () => {
-      try { await App.api(`/ticket-menus/${m.id}/send`, { method: 'POST' }); App.toast('Panneau menu extra envoyé !'); }
+      try { await App.api(`/ticket-menus/${m.id}/send`, { method: 'POST' }); App.toast('Panneau menu extra envoyé.'); }
       catch (e) { App.toast(e.message, 'error'); }
     };
     row.querySelector('[data-xm-del]').onclick = async () => {
@@ -3354,12 +3368,12 @@ Dashboard.renderers.tickets = async (content, data) => {
     else host.appendChild(d);
     return d;
   };
-  tkFold(c, ctp, '✏️ Textes du Ticket classique');
-  tkFold(c, c2, '🗂️ Types de tickets');
-  tkFold(c, cdm, '💬 Message privé après fermeture');
-  tkFold(c, croom, '🏠 Message dans le salon du ticket');
-  tkFold(cm, ctmenu, '✏️ Textes du Ticket menu');
-  tkFold(cm, cxm, '📋 Autres panneaux menu');
+  tkFold(c, ctp, 'Textes du Ticket classique');
+  tkFold(c, c2, 'Types de tickets');
+  tkFold(c, cdm, 'Message privé après fermeture');
+  tkFold(c, croom, 'Message dans le salon du ticket');
+  tkFold(cm, ctmenu, 'Textes du Ticket menu');
+  tkFold(cm, cxm, 'Autres panneaux menu');
   [c, cm, c3].forEach((el) => root.appendChild(el));
   const ticketStats = root.querySelector('.dash-stats');
   if (ticketStats) ticketStats.insertAdjacentElement('afterend', ticketGuide);
@@ -3377,7 +3391,7 @@ Dashboard.renderers.tickets = async (content, data) => {
 // ---------- Bienvenue ----------
 Dashboard.renderers.welcome = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '👋', 'Bienvenue & auto-rôles', 'Accueillez les nouveaux membres et donnez-leur un rôle automatiquement.');
+  const root = Dashboard.header(content, '', 'Bienvenue & auto-rôles', 'Accueillez les nouveaux membres et donnez-leur un rôle automatiquement.');
   const defs = data.events.defs;
   const state = data.events.state || {};
   const textChannels = (data.channels || []).filter((c) => !c.category && !c.voice);
@@ -3400,7 +3414,7 @@ Dashboard.renderers.welcome = async (content, data) => {
         return;
       }
       if (f.type === 'rolesmulti') {
-        // 🏷️ Sélecteur multiple de rôles : l'événement historique attend
+        // Sélecteur multiple de rôles : l'événement historique attend
         // des noms séparés par des virgules, donc on conserve volontairement
         // le nom comme valeur de compatibilité.
         cfgZone.appendChild(App.el(`<label class="dash-label">${f.label}</label>`));
@@ -3427,7 +3441,7 @@ Dashboard.renderers.welcome = async (content, data) => {
         // avertissement, mais ne redevient jamais un champ libre.
         const current = String(ev.config[f.key] || '');
         const opts = [textChannels.length ? '<option value="">— Choisir un salon —</option>' : Dashboard.noDiscordChoice('Aucun salon texte reçu de Discord')]
-          .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(current, ch) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`))
+          .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(current, ch) ? 'selected' : ''}>#${App.escapeHtml(ch.name)}</option>`))
           .concat(Dashboard.currentDiscordOption(current, textChannels));
         cfgZone.appendChild(App.el(`<select class="dash-select" data-k="${f.key}">${opts.join('')}</select>`));
         return;
@@ -3436,15 +3450,15 @@ Dashboard.renderers.welcome = async (content, data) => {
       if (f.type === 'role') {
         const current = String(ev.config[f.key] || '');
         const opts = [rolesList.length ? '<option value="">— Choisir un rôle —</option>' : Dashboard.noDiscordChoice('Aucun rôle reçu de Discord')]
-          .concat(rolesList.map((r) => `<option value="${App.escapeHtml(r.name)}" ${Dashboard.discordRefMatches(current, r) ? 'selected' : ''}>🛡️ ${App.escapeHtml(r.name)}</option>`))
-          .concat(Dashboard.currentDiscordOption(current, rolesList, '⚠️', 'configuration actuelle — rôle introuvable'));
+          .concat(rolesList.map((r) => `<option value="${App.escapeHtml(r.name)}" ${Dashboard.discordRefMatches(current, r) ? 'selected' : ''}>${App.escapeHtml(r.name)}</option>`))
+          .concat(Dashboard.currentDiscordOption(current, rolesList, '', 'configuration actuelle — rôle introuvable'));
         cfgZone.appendChild(App.el(`<select class="dash-select" data-k="${f.key}">${opts.join('')}</select>`));
         return;
       }
 
       if (f.type === 'color') {
         const current = String(ev.config[f.key] || f.default || '#5865F2');
-        cfgZone.appendChild(App.el(`<div style="display:flex;gap:10px;align-items:center"><input type="color" data-k="${f.key}" value="${App.escapeHtml(current)}" style="width:52px;height:40px;border:1px solid var(--d-border);border-radius:9px;background:var(--d-card2);padding:3px" /><input class="dash-input" data-k-hex="${f.key}" value="${App.escapeHtml(current)}" style="max-width:110px" /></div>`));
+        cfgZone.appendChild(App.el(`<div style="display:flex;gap:10px;align-items:center"><input type="color" data-k="${f.key}" value="${App.escapeHtml(current)}" style="width:52px;height:40px;border:1px solid var(--d-border);border-radius:8px;background:var(--d-card2);padding:3px" /><input class="dash-input" data-k-hex="${f.key}" value="${App.escapeHtml(current)}" style="max-width:110px" /></div>`));
         return;
       }
 
@@ -3454,7 +3468,7 @@ Dashboard.renderers.welcome = async (content, data) => {
       }
 
       if (f.type === 'channelsmulti') {
-        // 📌 Sélecteur de salons à détailler : on choisit les salons dans la
+        // Sélecteur de salons à détailler : on choisit les salons dans la
         // liste déroulante (➕ Ajouter), chacun reçoit une phrase où {salon}
         // devient la mention cliquable du salon. La variable {channels} dans
         // le message affiche toutes les phrases, une par ligne.
@@ -3481,7 +3495,7 @@ Dashboard.renderers.welcome = async (content, data) => {
         cfgZone.appendChild(App.el(`<label class="dash-label" style="margin-top:8px">${f.label}</label>`));
         const box = App.el(`<div class="dash-channelsmulti" data-k="${f.key}" data-channelsmulti="1"></div>`);
         cfgZone.appendChild(box);
-        cfgZone.appendChild(App.el(`<div style="font-size:12px;color:var(--d-dim);margin-top:6px;line-height:1.6">💡 <b>Comment ça marche :</b><br/>• Dans le message, écrivez <b>{channels}</b> à l'endroit où les salons doivent apparaître.<br/>• Pour chaque salon ajouté, écrivez une phrase avec <b>{salon}</b> : la mention cliquable du salon est insérée à la place.<br/>• Exemple : « 📜 Je vous invite à prendre connaissance de {salon} » → « 📜 Je vous invite à prendre connaissance de #regles »</div>`));
+        cfgZone.appendChild(App.el(`<div style="font-size:12px;color:var(--d-dim);margin-top:6px;line-height:1.6"><b>Comment ça marche :</b><br/>• Dans le message, écrivez <b>{channels}</b> à l'endroit où les salons doivent apparaître.<br/>• Pour chaque salon ajouté, écrivez une phrase avec <b>{salon}</b> : la mention cliquable du salon est insérée à la place.<br/>• Exemple : « 📜 Je vous invite à prendre connaissance de {salon} » → « 📜 Je vous invite à prendre connaissance de #regles »</div>`));
         let addRow = null;
         const refresh = () => {
           box.querySelectorAll('.cm-row').forEach((r) => r.remove());
@@ -3491,13 +3505,13 @@ Dashboard.renderers.welcome = async (content, data) => {
             // vrai salon : désactivée pour qu'elle ne soit pas cliquable dans
             // le menu déroulant custom (sinon clic = rien ne se passe).
             addRow.querySelector('[data-cm-add]').innerHTML = ['<option value="" disabled>— Ajouter un salon —</option>']
-              .concat(textChannels.filter((ch) => !taken.has('#' + ch.name)).map((ch) => `<option value="${App.escapeHtml('#' + ch.name)}">💬 #${App.escapeHtml(ch.name)}</option>`))
+              .concat(textChannels.filter((ch) => !taken.has('#' + ch.name)).map((ch) => `<option value="${App.escapeHtml('#' + ch.name)}">#${App.escapeHtml(ch.name)}</option>`))
               .join('');
           }
           order.forEach((ref) => {
             const row = App.el(`
             <div class="cm-row">
-              <span class="cm-name">💬 <b>#${App.escapeHtml(String(ref).replace(/^#/, ''))}</b></span>
+              <span class="cm-name"><b>#${App.escapeHtml(String(ref).replace(/^#/, ''))}</b></span>
               <input class="dash-input cm-label" data-cm-label="${App.escapeHtml(ref)}" placeholder="Phrase (ex : découvrez {salon}, les règles y sont)" value="${App.escapeHtml(labels.get(ref) || '')}" />
               <button class="dash-btn cm-remove" type="button" data-cm-remove="${App.escapeHtml(ref)}" title="Retirer ce salon">Retirer</button>
             </div>`);
@@ -3540,11 +3554,11 @@ Dashboard.renderers.welcome = async (content, data) => {
       cfgZone.appendChild(App.el(`<input class="dash-input" data-k="${f.key}" value="${App.escapeHtml(ev.config[f.key] ?? '')}" placeholder="${f.placeholder || ''}" />`));
     });
 
-    // 👀 Aperçu Discord en direct (arrivée + départ), avec les vraies données du serveur
+    // Aperçu Discord en direct (arrivée + départ), avec les vraies données du serveur
     if (key === 'member_join' || key === 'member_leave') {
-      // ✨ Modèle prêt à l'emploi : message bien organisé avec mention du membre
+      // Modèle prêt à l'emploi : message bien organisé avec mention du membre
       // ({user} → @membre) et salons détaillés ({channels} + {salon} par phrase).
-      const tmplBtn = App.el(`<button class="dash-btn" style="margin-top:10px">✨ Modèle ${key === 'member_join' ? '« bienvenue pro »' : '« départ pro »'}</button>`);
+      const tmplBtn = App.el(`<button class="dash-btn" style="margin-top:10px">Modèle ${key === 'member_join' ? '« bienvenue pro »' : '« départ pro »'}</button>`);
       tmplBtn.onclick = () => {
         const msgEl = cfgZone.querySelector('[data-k="message"]');
         if (!msgEl) return;
@@ -3560,7 +3574,7 @@ Dashboard.renderers.welcome = async (content, data) => {
         msgEl.dispatchEvent(new Event('input', { bubbles: true }));
       };
       cfgZone.appendChild(tmplBtn);
-      const pv = App.el(`<div class="dc-preview" style="margin-top:12px"><div class="dash-label" style="margin:0 0 8px">👀 Aperçu sur Discord</div><div class="dc-msg"></div></div>`);
+      const pv = App.el(`<div class="dc-preview" style="margin-top:12px"><div class="dash-label" style="margin:0 0 8px">Aperçu sur Discord</div><div class="dc-msg"></div></div>`);
       const renderPv = () => {
         const msgEl = pv.querySelector('.dc-msg');
         const get = (k) => { const el = cfgZone.querySelector(`[data-k="${k}"]`); return el ? (el.type === 'checkbox' ? el.checked : el.value) : ''; };
@@ -3632,14 +3646,14 @@ Dashboard.renderers.welcome = async (content, data) => {
         const hasCard = isJoin && !!get('card');
         const imgUrl = String(get('image') || '').trim();
 
-        const botLine = `<div style="font-size:13px"><b style="color:#f2f3f5">${E(Dashboard.state.bot.name)}</b> <span style="background:#5865F2;color:#fff;font-size:9px;padding:1px 5px;border-radius:4px;vertical-align:middle">✓ APP</span></div>`;
+        const botLine = `<div style="font-size:13px"><b style="color:#f2f3f5">${E(Dashboard.state.bot.name)}</b> <span style="background:#5865F2;color:#fff;font-size:11px;padding:1px 5px;border-radius:4px;vertical-align:middle">✓ APP</span></div>`;
         const avatarBox = '<div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#5865F2,#8B5CF6);flex-shrink:0"></div>';
-        const cardBox = `<div style="margin-top:8px;height:74px;border-radius:8px;background:linear-gradient(135deg,#1b1e2e,#2b1e46);display:flex;align-items:center;justify-content:center;color:#8f93a8;font-size:12px">🖼️ Carte de bienvenue (avatar + pseudo)</div>`;
+        const cardBox = `<div style="margin-top:8px;height:74px;border-radius:8px;background:linear-gradient(135deg,#1b1e2e,#2b1e46);display:flex;align-items:center;justify-content:center;color:#8f93a8;font-size:12px">Carte de bienvenue (avatar + pseudo)</div>`;
         const shell = (inner) => `<div style="display:flex;gap:10px">${avatarBox}<div style="min-width:0;flex:1">${botLine}${inner}</div></div>`;
 
-        // 📝 Mode texte simple : le bot n'envoie AUCUN panneau → aucun trait.
+        // Mode texte simple : le bot n'envoie AUCUN panneau → aucun trait.
         if (isPlain) {
-          msgEl.innerHTML = shell(`<div style="font-size:13.5px;color:#dbdee1;margin-top:2px;white-space:pre-wrap">${inline(txt)}</div>${hasCard ? cardBox : ''}`);
+          msgEl.innerHTML = shell(`<div style="font-size:14px;color:#dbdee1;margin-top:2px;white-space:pre-wrap">${inline(txt)}</div>${hasCard ? cardBox : ''}`);
           return;
         }
 
@@ -3647,7 +3661,7 @@ Dashboard.renderers.welcome = async (content, data) => {
         // exactement comme sur Discord (c'est ce que le trait texte ━ ne savait
         // pas faire).
         const sep = '<hr style="border:0;border-top:1px solid #3f4147;margin:9px -12px;width:calc(100% + 24px)">';
-        const thumb = imgUrl ? '' : '<div style="width:40px;height:40px;border-radius:6px;flex-shrink:0;background:linear-gradient(135deg,#5865F2,#8B5CF6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px">👤</div>';
+        const thumb = imgUrl ? '' : '<div style="width:40px;height:40px;border-radius:6px;flex-shrink:0;background:linear-gradient(135deg,#5865F2,#8B5CF6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="8.4" r="3.6"/><path d="M4.8 20.2a7.2 7.2 0 0 1 14.4 0"/></svg></div>';
 
         // Le bot découpe les paragraphes sur les LIGNES VIDES et pose un
         // séparateur ENTRE chaque bloc — jamais juste après l'en-tête (le
@@ -3658,24 +3672,30 @@ Dashboard.renderers.welcome = async (content, data) => {
         const paras = String(txt).split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean);
         const body = paras.map((x) => `<div style="font-size:13px;color:#dbdee1;line-height:1.45;white-space:pre-wrap">${inline(x)}</div>`).join(sep);
 
+        // v367 — l'aperçu n'est pas de la deco : il doit montrer ce que le bot
+        // ecrit VRAIMENT (server/discord/events.js:182 poste « 👋 Bienvenue sur
+        // … »). Le 👋 reste donc dans la chaine d'aperçu, comme le 6 px de la
+        // vignette et le 11,5 px du pied, qui sont les mesures Discord. Les
+        // scripts de passe design (retire-les-empreintes, harmonise-le-decor,
+        // hausse-le-plancher) laissent ces trois valeurs tranquilles.
         const head = `<div style="display:flex;gap:10px;align-items:flex-start">
             <div style="flex:1;min-width:0">
-              <div style="font-size:12.5px;font-weight:600;color:#f2f3f5">${E(isJoin ? 'NouveauMembre#0001 vient d\u2019arriver !' : 'NouveauMembre#0001 s\u2019en va\u2026')}</div>
+              <div style="font-size:13px;font-weight:600;color:#f2f3f5">${E(isJoin ? 'NouveauMembre#0001 vient d\u2019arriver !' : 'NouveauMembre#0001 s\u2019en va\u2026')}</div>
               ${isJoin ? `<div style="font-size:16px;font-weight:800;color:#f2f3f5;line-height:1.3;margin-top:3px">👋 Bienvenue sur ${E(serverName)} !</div>` : ''}
             </div>${thumb}</div>`;
 
         const fields = isJoin
-          ? `<b style="color:#f2f3f5">👥 Vous êtes le membre</b> <b style="color:#f2f3f5">n°${E(memberCount)}</b> · <b style="color:#f2f3f5">📅 Compte créé</b> il y a 3 jours`
-          : `<b style="color:#f2f3f5">👥 Membres restants</b> <b style="color:#f2f3f5">${E(memberCount)}</b> · <b style="color:#f2f3f5">🕐 Était membre depuis</b> il y a 2 mois`;
+          ? `<b style="color:#f2f3f5">Vous êtes le membre</b> <b style="color:#f2f3f5">n°${E(memberCount)}</b> · <b style="color:#f2f3f5">Compte créé</b> il y a 3 jours`
+          : `<b style="color:#f2f3f5">Membres restants</b> <b style="color:#f2f3f5">${E(memberCount)}</b> · <b style="color:#f2f3f5">Était membre depuis</b> il y a 2 mois`;
 
         const img = imgUrl
-          ? `${sep}<div style="height:96px;border-radius:6px;background:#1e1f22;border:1px dashed #3f4147;display:flex;align-items:center;justify-content:center;color:#949ba4;font-size:12px">🖼️ ${E(imgUrl.length > 34 ? imgUrl.slice(0, 34) + '…' : imgUrl)}</div>`
+          ? `${sep}<div style="height:96px;border-radius:4px;background:#1e1f22;border:1px dashed #3f4147;display:flex;align-items:center;justify-content:center;color:#949ba4;font-size:12px">${E(imgUrl.length > 34 ? imgUrl.slice(0, 34) + '…' : imgUrl)}</div>`
           : (hasCard ? sep + cardBox : '');
 
         msgEl.innerHTML = shell(`
           <div style="background:#2b2d31;border:1px solid #1e1f22;border-left:4px solid ${E(color)};border-radius:8px;padding:10px 12px;margin-top:4px">
             ${head}${body}${sep}
-            <div style="font-size:12.5px;color:#dbdee1">${fields}</div>${img}${sep}
+            <div style="font-size:13px;color:#dbdee1">${fields}</div>${img}${sep}
             <div style="font-size:11.5px;color:#949ba4">${E(serverName)} · ${new Date().toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</div>
           </div>`);
       };
@@ -3686,16 +3706,16 @@ Dashboard.renderers.welcome = async (content, data) => {
     }
     const save = App.el(`<button class="dash-save-action dash-btn dash-btn-primary" style="margin-top:12px">Enregistrer</button>`);
     cfgZone.appendChild(save);
-    // 🧪 Bouton de test réel (arrivée / départ) : le bot envoie le vrai
+    // Bouton de test réel (arrivée / départ) : le bot envoie le vrai
     // message dans le vrai salon, avec TOI comme membre — vérification
     // instantanée sans quitter le serveur.
     if (key === 'member_join' || key === 'member_leave') {
-      const testBtn = App.el(`<button class="dash-btn" style="margin-top:12px;margin-left:8px">🧪 Tester ${key === 'member_join' ? 'l\'arrivée' : 'le départ'}</button>`);
+      const testBtn = App.el(`<button class="dash-btn" style="margin-top:12px;margin-left:8px">Tester ${key === 'member_join' ? 'l\'arrivée' : 'le départ'}</button>`);
       testBtn.onclick = async () => {
         testBtn.disabled = true; testBtn.textContent = 'Envoi…';
         try {
           await App.api(`/bots/${bot.id}/guilds/${guildId}/events/${key}/test`, { method: 'POST' });
-          App.toast('🧪 Message de test envoyé — allez voir le salon ! (Pensez à 💾 Enregistrer d\'abord si vous venez de modifier.)');
+          App.toast('Message de test envoyé — allez voir le salon ! (Pensez à 💾 Enregistrer d\'abord si vous venez de modifier.)');
         } catch (e) { App.toast(e.message, 'error'); }
         testBtn.disabled = false; testBtn.textContent = `Tester ${key === 'member_join' ? 'l’arrivée' : 'le départ'}`;
       };
@@ -3720,12 +3740,12 @@ Dashboard.renderers.welcome = async (content, data) => {
       const config = {};
       cfgZone.querySelectorAll('[data-k]').forEach((inp) => {
         if (inp.classList && inp.classList.contains('dash-roles-multi')) {
-          // 🏷️ multi-rôles : valeurs du sélecteur, séparées par des virgules
+          // multi-rôles : valeurs du sélecteur, séparées par des virgules
           config[inp.dataset.k] = [...(inp.__discordSelected || [])].join(', ');
           return;
         }
         if (inp.dataset.channelsmulti) {
-          // 📌 salons à détailler : JSON [{channel, label}] (compatible v200/v201)
+          // salons à détailler : JSON [{channel, label}] (compatible v200/v201)
           const rows = [];
           inp.querySelectorAll('.cm-row [data-cm-label]').forEach((lbl) => {
             const ref = lbl.dataset.cmLabel;
@@ -3739,7 +3759,7 @@ Dashboard.renderers.welcome = async (content, data) => {
       });
       try {
         await App.api(`/bots/${bot.id}/guilds/${guildId}/events/${key}`, { method: 'PUT', body: { enabled: toggle.checked, config } });
-        App.toast('Événement enregistré !');
+        App.toast('Événement enregistré.');
       } catch (e) { App.toast(e.message, 'error'); }
     };
   });
@@ -3751,11 +3771,11 @@ Dashboard.renderers.levels = async (content, data) => {
   const s = data.settings;
   const textChannels = (data.channels || []).filter((channel) => !channel.category && !channel.voice);
   const rolesData = (data.xp_roles || []).map((r) => ({ level: r.level, role: r.role }));
-  const root = Dashboard.header(content, '📈', 'Niveaux (XP)', 'Les membres gagnent de l\'XP en discutant, montent en niveau, et reçoivent des rôles en récompense.');
+  const root = Dashboard.header(content, '', 'Niveaux (XP)', 'Les membres gagnent de l\'XP en discutant, montent en niveau, et reçoivent des rôles en récompense.');
 
   const c = Dashboard.card(root, 'Gain d\'XP', '');
   const toggleRow = App.el(`<div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0 4px"><label class="dash-label" style="margin:0">Activer les niveaux</label><label class="switch"><input type="checkbox" id="xp-enabled" ${s.xp_enabled ? 'checked' : ''} /><span class="slider"></span></label></div>`);
-  const cardRow = App.el(`<div style="display:flex;align-items:center;justify-content:space-between;margin:2px 0 4px"><label class="dash-label" style="margin:0">🖼️ Carte de montée de niveau (avatar du membre, nom et progression)</label><label class="switch"><input type="checkbox" id="xp-card" ${s.xp_card === 0 || s.xp_card === false ? '' : 'checked'} /><span class="slider"></span></label></div>`);
+  const cardRow = App.el(`<div style="display:flex;align-items:center;justify-content:space-between;margin:2px 0 4px"><label class="dash-label" style="margin:0">Carte de montée de niveau (avatar du membre, nom et progression)</label><label class="switch"><input type="checkbox" id="xp-card" ${s.xp_card === 0 || s.xp_card === false ? '' : 'checked'} /><span class="slider"></span></label></div>`);
   c.appendChild(toggleRow);
   c.appendChild(cardRow);
   c.innerHTML += `
@@ -3769,20 +3789,20 @@ Dashboard.renderers.levels = async (content, data) => {
     <label class="dash-label">Salon d\'annonce (vide = salon du message)</label>
     <select class="dash-select" id="xp-channel">
       <option value="">— Salon du message —</option>
-      ${textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(s.xp_channel, ch) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`).join('')}
-      ${Dashboard.currentDiscordOption(s.xp_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable')}
+      ${textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(s.xp_channel, ch) ? 'selected' : ''}>#${App.escapeHtml(ch.name)}</option>`).join('')}
+      ${Dashboard.currentDiscordOption(s.xp_channel, textChannels, '', 'configuration actuelle — salon introuvable')}
     </select>
     <button class="dash-save-action dash-btn dash-btn-primary" style="margin-top:14px" id="xp-save">Enregistrer</button>`;
 
   // ------------------------------------------------------------
-  // 🎙️ v249 — XP vocale. Mêmes réglages que l'XP texte, même niveau, même
+  // v249 — XP vocale. Mêmes réglages que l'XP texte, même niveau, même
   // classement : seule la source change. Les libellés annoncent le résultat
   // concret (« 30 XP toutes les 3 minutes ») plutôt que deux nombres séparés,
   // parce que c'est ce que l'administrateur veut savoir.
   // ------------------------------------------------------------
   const vRate = Number(s.voice_xp_rate ?? 10);
   const vIntervalle = Number(s.voice_xp_interval ?? 3);
-  const cVoix = Dashboard.card(root, '🎙️ XP vocale',
+  const cVoix = Dashboard.card(root, 'XP vocale',
     'Les membres gagnent aussi de l\'XP en restant dans un salon vocal. Elle alimente le même niveau et le même classement que les messages.');
   const voixActive = App.el(`<div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0 4px"><label class="dash-label" style="margin:0">Activer l'XP vocale</label><label class="switch"><input type="checkbox" id="vxp-enabled" ${s.voice_xp_enabled ? 'checked' : ''}><span class="slider"></span></label></div>`);
   cVoix.appendChild(voixActive);
@@ -3797,9 +3817,9 @@ Dashboard.renderers.levels = async (content, data) => {
     <div><label class="dash-label">Membres minimum dans le salon</label><select class="dash-select" id="vxp-min">${Dashboard.presetOptions(Dashboard.PRESETS_MEMBRES, Number(s.voice_xp_min_members ?? 2), Dashboard.labelMembres)}</select></div>
     <div class="desc" data-vxp-apercu style="margin:10px 0 4px"></div>
     <div class="dash-label" style="margin-top:6px">Anti-triche</div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin:4px 0"><label class="dash-label" style="margin:0">🔇 Ignorer les membres muets ou sourds</label><label class="switch"><input type="checkbox" id="vxp-muted" ${s.voice_xp_ignore_muted === 0 ? '' : 'checked'}><span class="slider"></span></label></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin:4px 0"><label class="dash-label" style="margin:0">💤 Ignorer le salon AFK du serveur</label><label class="switch"><input type="checkbox" id="vxp-afk" ${s.voice_xp_ignore_afk === 0 ? '' : 'checked'}><span class="slider"></span></label></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin:4px 0"><label class="dash-label" style="margin:0">🕐 Réduire après 4 h d'affilée</label><label class="switch"><input type="checkbox" id="vxp-taper" ${s.voice_xp_taper === 0 ? '' : 'checked'}><span class="slider"></span></label></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:4px 0"><label class="dash-label" style="margin:0">Ignorer les membres muets ou sourds</label><label class="switch"><input type="checkbox" id="vxp-muted" ${s.voice_xp_ignore_muted === 0 ? '' : 'checked'}><span class="slider"></span></label></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:4px 0"><label class="dash-label" style="margin:0">Ignorer le salon AFK du serveur</label><label class="switch"><input type="checkbox" id="vxp-afk" ${s.voice_xp_ignore_afk === 0 ? '' : 'checked'}><span class="slider"></span></label></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:4px 0"><label class="dash-label" style="margin:0">Réduire après 4 h d'affilée</label><label class="switch"><input type="checkbox" id="vxp-taper" ${s.voice_xp_taper === 0 ? '' : 'checked'}><span class="slider"></span></label></div>
     <div class="desc">Le bot n'entre jamais dans le salon vocal : il lit l'état de présence fourni par Discord. Réduire après 4 h empêche de laisser un salon ouvert toute la nuit pour farmer — moitié jusqu'à 8 h, plus rien au-delà.</div>
     <button class="dash-save-action dash-btn dash-btn-primary" style="margin-top:14px" id="vxp-save">Enregistrer</button>`;
 
@@ -3812,8 +3832,8 @@ Dashboard.renderers.levels = async (content, data) => {
     const inter = Math.max(1, Math.min(60, parseInt(cVoix.querySelector('#vxp-interval').value, 10) || 1));
     const gain = Math.floor(rate * inter);
     zone.textContent = gain > 0
-      ? `➡️ ${gain} XP toutes les ${inter} minute${inter > 1 ? 's' : ''} de présence active.`
-      : '➡️ Aucun gain : le taux est à 0.';
+      ? `${gain} XP toutes les ${inter} minute${inter > 1 ? 's' : ''} de présence active.`
+      : 'Aucun gain : le taux est à 0.';
   };
   ['#vxp-rate', '#vxp-interval'].forEach((sel) => {
     const champ = cVoix.querySelector(sel);
@@ -3823,11 +3843,11 @@ Dashboard.renderers.levels = async (content, data) => {
   });
   apercuVoix();
 
-  // 🏆 v214 — Rôles par niveau « en échelle » : un rôle par palier, le rôle du
+  // v214 — Rôles par niveau « en échelle » : un rôle par palier, le rôle du
   // palier atteint REMPLACE ceux des paliers inférieurs. Automatique à la
   // montée, et synchronisable pour les membres déjà avancés.
-  const c2 = Dashboard.card(root, '🏆 Rôles par niveau', 'Chaque niveau peut avoir son rôle : quand le membre atteint le palier, il reçoit ce rôle et le bot lui RETIRE le rôle du palier précédent — il ne porte que son rang actuel. Rien de configuré pour un niveau = il garde le rôle de son dernier palier atteint.');
-  c2.appendChild(App.el(`<div data-xp-ladder style="background:var(--d-card2);border:1px solid var(--d-border);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--d-dim);margin-bottom:12px"></div>`));
+  const c2 = Dashboard.card(root, 'Rôles par niveau', 'Chaque niveau peut avoir son rôle : quand le membre atteint le palier, il reçoit ce rôle et le bot lui RETIRE le rôle du palier précédent — il ne porte que son rang actuel. Rien de configuré pour un niveau = il garde le rôle de son dernier palier atteint.');
+  c2.appendChild(App.el(`<div data-xp-ladder style="background:var(--d-card2);border:1px solid var(--d-border);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--d-dim);margin-bottom:12px"></div>`));
   c2.appendChild(App.el(`<div id="xp-roles"></div>`));
   c2.appendChild(App.el(`<button class="dash-btn dash-btn-sm" id="xp-add" style="margin-top:8px">＋ Ajouter un niveau</button>`));
   const xpRoleChoices = (data.roles || []).filter((role) => role.name !== '@everyone');
@@ -3838,7 +3858,7 @@ Dashboard.renderers.levels = async (content, data) => {
     if (!box) return;
     sortRoles();
     if (!rolesData.length) { box.innerHTML = 'Aucun palier configuré — ajoutez des niveaux avec leur rôle.'; return; }
-    box.innerHTML = '<b style="color:var(--d-text)">📊 Échelle actuelle</b><div style="opacity:.75;margin-top:2px">Le chiffre = le niveau · chaque rôle remplace celui du palier précédent.</div><div style="margin-top:6px">'
+    box.innerHTML = '<b style="color:var(--d-text)">Échelle actuelle</b><div style="opacity:.75;margin-top:2px">Le chiffre = le niveau · chaque rôle remplace celui du palier précédent.</div><div style="margin-top:6px">'
       + rolesData.map((r) => `<div style="margin:2px 0"><b>${r.level}</b> → ${App.escapeHtml(String(r.role || '—'))}</div>`).join('')
       + '</div>';
   };
@@ -3849,8 +3869,8 @@ Dashboard.renderers.levels = async (content, data) => {
     if (!rolesData.length) el.appendChild(App.el(`<div class="dash-empty">Aucun palier — ajoutez un niveau et choisissez son rôle.</div>`));
     rolesData.forEach((r, i) => {
       const options = [xpRoleChoices.length ? '<option value="">— Choisir un rôle —</option>' : Dashboard.noDiscordChoice('Aucun rôle reçu de Discord')]
-        .concat(xpRoleChoices.map((role) => `<option value="${App.escapeHtml(role.name)}" ${Dashboard.discordRefMatches(r.role, role) ? 'selected' : ''}>🛡️ ${App.escapeHtml(role.name)}</option>`));
-      if (r.role && !xpRoleChoices.some((role) => Dashboard.discordRefMatches(r.role, role))) options.push(`<option value="${App.escapeHtml(r.role)}" selected>⚠️ ${App.escapeHtml(r.role)} (configuration actuelle — rôle introuvable)</option>`);
+        .concat(xpRoleChoices.map((role) => `<option value="${App.escapeHtml(role.name)}" ${Dashboard.discordRefMatches(r.role, role) ? 'selected' : ''}>${App.escapeHtml(role.name)}</option>`));
+      if (r.role && !xpRoleChoices.some((role) => Dashboard.discordRefMatches(r.role, role))) options.push(`<option value="${App.escapeHtml(r.role)}" selected>${App.escapeHtml(r.role)} (configuration actuelle — rôle introuvable)</option>`);
       const roleControl = `<select class="dash-select" data-k="role">${options.join('')}</select>`;
       const row = App.el(`
         <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center">
@@ -3877,7 +3897,7 @@ Dashboard.renderers.levels = async (content, data) => {
     renderRoles();
   };
 
-  // 🔄 v214 — Synchronisation des membres déjà avancés (rôles mérités donnés
+  // v214 — Synchronisation des membres déjà avancés (rôles mérités donnés
   // immédiatement, anciens paliers retirés).
   const syncRow = App.el(`<div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
       <button class="dash-btn" id="xp-sync">Synchroniser les membres</button>
@@ -3892,14 +3912,15 @@ Dashboard.renderers.levels = async (content, data) => {
     try {
       const out = await App.api(`/bots/${bot.id}/guilds/${guildId}/xp/sync`, { method: 'POST', body: { limit: 250 } });
       status.textContent = out.message
-        || `✅ Terminé : ${out.present} membre(s) à jour · ${out.added} rôle(s) ajouté(s) · ${out.removed} ancien(s) retiré(s)${out.remaining ? ` — ${out.remaining} restant(s), relancez pour finir.` : ''}`;
+        || `Terminé : ${out.present} membre(s) à jour · ${out.added} rôle(s) ajouté(s) · ${out.removed} ancien(s) retiré(s)${out.remaining ? ` — ${out.remaining} restant(s), relancez pour finir.` : ''}`;
     } catch (e) {
-      status.textContent = '⚠️ ' + (e.message || 'Synchronisation impossible.');
+      status.textContent = '' + (e.message || 'Synchronisation impossible.');
     }
     btn.disabled = false;
   };
 
-  c.querySelector('#xp-save').onclick = async () => {
+  c.querySelector('#xp-save').onclick = async (e) => {
+    const bouton = e.currentTarget;
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/xp`, { method: 'PUT', body: {
         enabled: c.querySelector('#xp-enabled').checked,
@@ -3914,12 +3935,13 @@ Dashboard.renderers.levels = async (content, data) => {
           .map((r) => ({ level: parseInt(r.level, 10) || 1, role: String(r.role).trim() }))
           .sort((a, b) => a.level - b.level),
       }});
-      App.toast('Niveaux enregistrés !');
+      App.retourEnregistrement(bouton);
+      App.toast('Niveaux enregistrés.');
       renderLadder();
     } catch (e) { App.toast(e.message, 'error'); }
   };
 
-  // 🎙️ v249 — Enregistrement séparé de l'XP vocale : les deux cartes ont
+  // v249 — Enregistrement séparé de l'XP vocale : les deux cartes ont
   // chacune leur bouton, comme le reste du tableau de bord. La route est la
   // même (PUT /xp) ; les champs vocaux sont ignorés s'ils sont absents.
   const btnVoix = cVoix.querySelector('#vxp-save');
@@ -3934,23 +3956,23 @@ Dashboard.renderers.levels = async (content, data) => {
         voice_ignore_afk: cVoix.querySelector('#vxp-afk').checked,
         voice_taper: cVoix.querySelector('#vxp-taper').checked,
       }});
-      App.toast('XP vocale enregistrée !');
+      App.toast('XP vocale enregistrée.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
 };
 
 // ---------- Économie ----------
 Dashboard.renderers.economy = async (content, data) => {
-  const root = Dashboard.header(content, '💰', 'Économie', 'Coins, transferts et classement du serveur. Les membres utilisent /daily, /balance, /pay et /leaderboard.');
+  const root = Dashboard.header(content, '', 'Économie', 'Coins, transferts et classement du serveur. Les membres utilisent /daily, /balance, /pay et /leaderboard.');
   const lb = await App.api(`/bots/${Dashboard.state.bot.id}/economy/leaderboard?guild_id=${Dashboard.state.guildId}`);
-  const c = Dashboard.card(root, '🏆 Classement', 'Les 25 membres les plus riches de ce serveur.');
-  if (!lb.top.length) c.appendChild(App.el(`<div class="dash-empty"><div class="big">🪙</div>Aucune transaction pour l\'instant — les membres gagnent des coins avec /daily !</div>`));
+  const c = Dashboard.card(root, 'Classement', 'Les 25 membres les plus riches de ce serveur.');
+  if (!lb.top.length) c.appendChild(App.el(`<div class="dash-empty"><div class="big">${App.glyphe('piece', { taille: 26 })}</div>Aucune transaction pour l\'instant — les membres gagnent des coins avec /daily !</div>`));
   else {
-    const table = App.el(`<table class="dash-table"><thead><tr><th>#</th><th>Membre</th><th>Coins</th><th>Série 🔥</th></tr></thead><tbody></tbody></table>`);
+    const table = App.el(`<table class="dash-table"><thead><tr><th>#</th><th>Membre</th><th>Coins</th><th>Série 🔥</tr></thead><tbody></tbody></table>`);
     const tb = table.querySelector('tbody');
-    lb.top.forEach((r, i) => tb.appendChild(App.el(`<tr><td>${['🥇','🥈','🥉'][i] || i + 1}</td><td><@${r.user_id}></td><td>🪙 ${r.coins}</td><td>${Number(r.daily_streak) > 1 ? `${r.daily_streak} j` : '—'}</td></tr>`)));
+    lb.top.forEach((r, i) => tb.appendChild(App.el(`<tr><td>${['','',''][i] || i + 1}</td><td><@${r.user_id}></td><td>${r.coins}</td><td>${Number(r.daily_streak) > 1 ? `${r.daily_streak} j` : '—'}</td></tr>`)));
     c.appendChild(table);
-    // 📥 Export CSV (v190)
+    // Export CSV (v190)
     const exp = App.el(`<div style="margin-top:12px"><button class="btn btn-sm" id="exp-csv">Exporter en CSV</button></div>`);
     c.appendChild(exp);
     exp.querySelector('#exp-csv').onclick = () => {
@@ -3963,7 +3985,7 @@ Dashboard.renderers.economy = async (content, data) => {
 // ---------- Boutique ----------
 Dashboard.renderers.shop = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '🛒', 'Boutique', 'Les membres achètent des rôles avec leurs coins (/shop, /buy). Vous gérez les articles ici.');
+  const root = Dashboard.header(content, '', 'Boutique', 'Les membres achètent des rôles avec leurs coins (/shop, /buy). Vous gérez les articles ici.');
   const { items } = await App.api(`/bots/${bot.id}/guilds/${guildId}/shop`);
   const itemsData = items.map((i) => ({ id: i.id, name: i.name, description: i.description, price: i.price, role: i.role, emoji: i.emoji }));
   const roleChoices = (data && data.roles || []).filter((role) => role.name !== '@everyone');
@@ -3976,8 +3998,8 @@ Dashboard.renderers.shop = async (content, data) => {
     if (!itemsData.length) el.appendChild(App.el(`<div class="dash-empty">Boutique vide.</div>`));
     itemsData.forEach((it, i) => {
       const roleOptions = [roleChoices.length ? '<option value="">— Choisir un rôle —</option>' : Dashboard.noDiscordChoice('Aucun rôle reçu de Discord')]
-        .concat(roleChoices.map((role) => `<option value="${App.escapeHtml(role.name)}" ${Dashboard.discordRefMatches(it.role, role) ? 'selected' : ''}>🛡️ ${App.escapeHtml(role.name)}</option>`));
-      if (it.role && !roleChoices.some((role) => Dashboard.discordRefMatches(it.role, role))) roleOptions.push(`<option value="${App.escapeHtml(it.role)}" selected>⚠️ ${App.escapeHtml(it.role)} (configuration actuelle — rôle introuvable)</option>`);
+        .concat(roleChoices.map((role) => `<option value="${App.escapeHtml(role.name)}" ${Dashboard.discordRefMatches(it.role, role) ? 'selected' : ''}>${App.escapeHtml(role.name)}</option>`));
+      if (it.role && !roleChoices.some((role) => Dashboard.discordRefMatches(it.role, role))) roleOptions.push(`<option value="${App.escapeHtml(it.role)}" selected>${App.escapeHtml(it.role)} (configuration actuelle — rôle introuvable)</option>`);
       const roleControl = `<select class="dash-select" data-k="role">${roleOptions.join('')}</select>`;
       const row = App.el(`
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
@@ -4003,11 +4025,11 @@ Dashboard.renderers.shop = async (content, data) => {
   save.onclick = async () => {
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/shop`, { method: 'PUT', body: { items: itemsData.filter((i) => i.name && i.role) } });
-      App.toast('Boutique enregistrée !');
+      App.toast('Boutique enregistrée.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
 
-  const c2 = Dashboard.card(root, '🧾 Historique des achats', 'Les 15 derniers achats des membres.');
+  const c2 = Dashboard.card(root, 'Historique des achats', 'Les 15 derniers achats des membres.');
   try {
     const { purchases } = await App.api(`/bots/${bot.id}/guilds/${guildId}/shop/purchases`);
     if (!purchases.length) c2.appendChild(App.el(`<div class="dash-empty">Aucun achat pour l\'instant.</div>`));
@@ -4015,7 +4037,7 @@ Dashboard.renderers.shop = async (content, data) => {
       const table = App.el(`<table class="dash-table"><thead><tr><th>Membre</th><th>Article</th><th>Prix</th><th>Quand</th></tr></thead><tbody></tbody></table>`);
       const tb = table.querySelector('tbody');
       purchases.forEach((p) => {
-        tb.appendChild(App.el(`<tr><td><@${p.user_id}></td><td>${App.escapeHtml(p.item)}</td><td>🪙 ${p.price}</td><td style="color:var(--d-dim);font-size:12px">${App.escapeHtml(p.ts)}</td></tr>`));
+        tb.appendChild(App.el(`<tr><td><@${p.user_id}></td><td>${App.escapeHtml(p.item)}</td><td>${p.price}</td><td style="color:var(--d-dim);font-size:12px">${App.escapeHtml(p.ts)}</td></tr>`));
       });
       c2.appendChild(table);
     }
@@ -4044,7 +4066,7 @@ Dashboard.renderers.moderation = async (content, data) => {
     id: String(member.id),
     name: String(member.username || member.tag || member.id),
   }));
-  const root = Dashboard.header(content, '🛡️', 'Modération', 'Filtres, exceptions, sanctions. Tout se choisit dans un menu.');
+  const root = Dashboard.header(content, '', 'Modération', 'Filtres, exceptions, sanctions. Tout se choisit dans un menu.');
 
   const parseAMList = (value) => {
     if (Array.isArray(value)) return value.map(String).filter(Boolean);
@@ -4066,12 +4088,12 @@ Dashboard.renderers.moderation = async (content, data) => {
   const blacklistThresholdFor = (rule) => Math.min(Math.max(parseInt(blacklistThresholds[rule], 10) || 0, 0), 50);
   const actionLabels = {
     inherit: 'Comportement actuel',
-    log: '📋 Journal seulement',
-    delete: '🗑️ Supprimer uniquement',
-    warn: '⚠️ Supprimer + avertir',
+    log: 'Journal seulement',
+    delete: 'Supprimer uniquement',
+    warn: 'Supprimer + avertir',
     timeout: '⏱️ Supprimer + timeout',
-    kick: '👢 Supprimer + expulser',
-    ban: '🔨 Supprimer + bannir',
+    kick: 'Supprimer + expulser',
+    ban: 'Supprimer + bannir',
   };
   const actionOptions = (rule) => Object.entries(actionLabels).map(([value, label]) => `<option value="${value}" ${String(ruleActions[rule] || 'inherit') === value ? 'selected' : ''}>${label}</option>`).join('');
   const selectedExemptRoles = new Set(parseAMList(s.am_exempt_roles));
@@ -4082,90 +4104,90 @@ Dashboard.renderers.moderation = async (content, data) => {
   const currentBlacklistChannel = String(s.am_blacklist_channel || '').trim();
   const blacklistChannelOptions = [
     channelList.length ? '<option value="">— Aucun salon dédié —</option>' : Dashboard.noDiscordChoice('Aucun salon texte reçu de Discord'),
-    ...channelList.map((channel) => `<option value="${App.escapeHtml(channel.id)}" ${Dashboard.discordRefMatches(currentBlacklistChannel, channel) ? 'selected' : ''}>💬 #${App.escapeHtml(channel.name)}</option>`),
+    ...channelList.map((channel) => `<option value="${App.escapeHtml(channel.id)}" ${Dashboard.discordRefMatches(currentBlacklistChannel, channel) ? 'selected' : ''}>#${App.escapeHtml(channel.name)}</option>`),
   ];
   if (currentBlacklistChannel && !channelList.some((channel) => Dashboard.discordRefMatches(currentBlacklistChannel, channel))) {
-    blacklistChannelOptions.push(Dashboard.currentDiscordOption(currentBlacklistChannel, channelList, '⚠️', 'configuration actuelle — salon blacklist introuvable'));
+    blacklistChannelOptions.push(Dashboard.currentDiscordOption(currentBlacklistChannel, channelList, '', 'configuration actuelle — salon blacklist introuvable'));
   }
   const blacklistDuration = Math.min(Math.max(parseInt(s.am_blacklist_duration_min, 10) || 0, 0), 525600);
-  const blacklistDurations = [[0, '♾️ Permanente'], [60, '1 heure'], [360, '6 heures'], [1440, '24 heures'], [4320, '3 jours'], [10080, '7 jours'], [43200, '30 jours'], [525600, '365 jours']];
+  const blacklistDurations = [[0, 'Permanente'], [60, '1 heure'], [360, '6 heures'], [1440, '24 heures'], [4320, '3 jours'], [10080, '7 jours'], [43200, '30 jours'], [525600, '365 jours']];
   const blacklistDurationOptions = blacklistDurations.map(([value, label]) => `<option value="${value}" ${blacklistDuration === value ? 'selected' : ''}>${label}</option>`);
   const nativeAlertChannel = String(s.am_native_alert_channel || '').trim();
   const nativeChannelOptions = [
     '<option value="">— Utiliser le salon de logs ou blacklist —</option>',
-    ...channelList.map((channel) => `<option value="${App.escapeHtml(channel.id)}" ${Dashboard.discordRefMatches(nativeAlertChannel, channel) ? 'selected' : ''}>💬 #${App.escapeHtml(channel.name)}</option>`),
+    ...channelList.map((channel) => `<option value="${App.escapeHtml(channel.id)}" ${Dashboard.discordRefMatches(nativeAlertChannel, channel) ? 'selected' : ''}>#${App.escapeHtml(channel.name)}</option>`),
   ];
   if (nativeAlertChannel && !channelList.some((channel) => Dashboard.discordRefMatches(nativeAlertChannel, channel))) {
-    nativeChannelOptions.push(Dashboard.currentDiscordOption(nativeAlertChannel, channelList, '⚠️', 'configuration actuelle — salon introuvable'));
+    nativeChannelOptions.push(Dashboard.currentDiscordOption(nativeAlertChannel, channelList, '', 'configuration actuelle — salon introuvable'));
   }
   const blacklistData = blacklist.map((word) => ({ word: String(word || '') }));
   const memberBlacklistData = Array.isArray(data.automod_blacklist) ? data.automod_blacklist : [];
 
-  const c = Dashboard.card(root, '🛡️ Auto-modération', 'Chaque filtre a son action. Options avancées repliées.');
+  const c = Dashboard.card(root, 'Auto-modération', 'Chaque filtre a son action. Options avancées repliées.');
   c.classList.add('am-control-card');
   c.innerHTML += `
     <div class="am-control-hero">
-      <div class="am-hero-copy"><span class="am-shield-icon">🛡️</span><div><b>Auto-mod</b><small id="am-status-line">${automodDraft ? '🟡 Brouillon local — pas encore publié.' : (s.am_enabled ? 'Protection active.' : 'Protection désactivée.')}</small></div></div>
+      <div class="am-hero-copy"><span class="am-shield-icon"></span><div><b>Auto-mod</b><small id="am-status-line">${automodDraft ? 'Brouillon local — pas encore publié.' : (s.am_enabled ? 'Protection active.' : 'Protection désactivée.')}</small></div></div>
       <label class="am-main-toggle"><span>Activer</span><input type="checkbox" id="am-on" ${s.am_enabled ? 'checked' : ''} /><i></i></label>
     </div>
     <div class="am-mode-row">
       <div><label class="dash-label">Mode</label><select class="dash-select" id="am-mode" style="max-width:260px">
-        <option value="enforce" ${s.am_mode !== 'observe' ? 'selected' : ''}>🛡️ Protection active</option>
-        <option value="observe" ${s.am_mode === 'observe' ? 'selected' : ''}>👀 Observer sans sanction</option>
+        <option value="enforce" ${s.am_mode !== 'observe' ? 'selected' : ''}>Protection active</option>
+        <option value="observe" ${s.am_mode === 'observe' ? 'selected' : ''}>Observer sans sanction</option>
       </select></div>
-      <div class="am-mode-note" id="am-mode-note">${s.am_mode === 'observe' ? '👀 Rien n’est supprimé ni sanctionné.' : '🟢 Les actions des filtres s’appliquent.'}</div>
+      <div class="am-mode-note" id="am-mode-note">${s.am_mode === 'observe' ? 'Rien n’est supprimé ni sanctionné.' : 'Les actions des filtres s’appliquent.'}</div>
     </div>
     <div class="am-rule-heading"><div><b>Filtres</b><small>Cochez, choisissez l’action. Options dans le menu.</small></div></div>
     <div class="am-rule-grid">
       <div class="am-rule-card" data-am-rule-card="phishing">
-        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">🎣</span><div><b>Phishing / faux Nitro</b><small>Liens d’arnaque.</small></div></div><input type="checkbox" id="am-phishing" ${s.am_phishing === 0 ? '' : 'checked'} /></div>
+        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M13.6 3.4v8.4a4.6 4.6 0 0 1-9.2 0"/><path d="M4.2 10 6.8 12.6"/><circle cx="13.6" cy="4.6" r="1.4"/></svg></span><div><b>Phishing / faux Nitro</b><small>Liens d’arnaque.</small></div></div><input type="checkbox" id="am-phishing" ${s.am_phishing === 0 ? '' : 'checked'} /></div>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-phishing" data-am-action="phishing">${actionOptions('phishing')}</select></label>
         <details class="am-rule-more"><summary>Options</summary>
-        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-phishing" data-am-blacklist-rule="phishing" ${blacklistAfter('phishing') ? 'checked' : ''} /><span>🚫 Blacklist après sanction</span></label>
+        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-phishing" data-am-blacklist-rule="phishing" ${blacklistAfter('phishing') ? 'checked' : ''} /><span>Blacklist après sanction</span></label>
         <div class="am-threshold-box"><label>Blacklist après</label><select class="dash-select" data-am-threshold="phishing">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, blacklistThresholdFor('phishing'))}</select></div>
         <div class="am-threshold-box"><label>Domaines autorisés en plus</label><input class="dash-input" id="am-phishing-allow" type="text" value="${App.escapeHtml(s.am_phishing_allow || '')}" placeholder="partenaire.com, monsite.fr" /><small>Virgules. discord.com, discord.gg, discord.gift et steamcommunity.com sont déjà autorisés d'office.</small></div>
-        <div class="am-threshold-box"><label>⚠️ Deux niveaux de certitude</label><small><b>Certitude haute</b> — domaine d'arnaque connu, imitation de discord.com (dlscord, disc0rd), ou même lien posté dans 3 salons en 15 s : l'action choisie s'applique.<br /><b>Certitude moyenne</b> — domaine mêlant marque et mot-appât, ou expression d'arnaque à côté d'un lien inconnu : le message est supprimé et un avertissement envoyé, <b>mais jamais de ban, kick ou muet</b>. Ce ne sont pas des preuves.</small></div>
+        <div class="am-threshold-box"><label>Deux niveaux de certitude</label><small><b>Certitude haute</b> — domaine d'arnaque connu, imitation de discord.com (dlscord, disc0rd), ou même lien posté dans 3 salons en 15 s : l'action choisie s'applique.<br /><b>Certitude moyenne</b> — domaine mêlant marque et mot-appât, ou expression d'arnaque à côté d'un lien inconnu : le message est supprimé et un avertissement envoyé, <b>mais jamais de ban, kick ou muet</b>. Ce ne sont pas des preuves.</small></div>
         </details>
       </div>
       <div class="am-rule-card" data-am-rule-card="links">
-        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">🔗</span><div><b>Liens et invitations</b><small>URL et invitations Discord.</small></div></div><input type="checkbox" id="am-links" ${s.am_links ? 'checked' : ''} /></div>
+        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M10.2 13.8a3.6 3.6 0 0 0 5.2.2l2.6-2.6a3.7 3.7 0 0 0-5.2-5.2l-1.4 1.4"/><path d="M13.8 10.2a3.6 3.6 0 0 0-5.2-.2L6 12.6a3.7 3.7 0 0 0 5.2 5.2l1.4-1.4"/></svg></span><div><b>Liens et invitations</b><small>URL et invitations Discord.</small></div></div><input type="checkbox" id="am-links" ${s.am_links ? 'checked' : ''} /></div>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-links" data-am-action="links">${actionOptions('links')}</select></label>
         <details class="am-rule-more"><summary>Options</summary>
-        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-links" data-am-blacklist-rule="links" ${blacklistAfter('links') ? 'checked' : ''} /><span>🚫 Blacklist après sanction</span></label>
+        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-links" data-am-blacklist-rule="links" ${blacklistAfter('links') ? 'checked' : ''} /><span>Blacklist après sanction</span></label>
         <div class="am-threshold-box"><label>Blacklist après</label><select class="dash-select" data-am-threshold="links">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, blacklistThresholdFor('links'))}</select></div>
         </details>
       </div>
       <div class="am-rule-card" data-am-rule-card="caps">
-        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">🔠</span><div><b>Majuscules</b><small>Messages presque tout en majuscules.</small></div></div><input type="checkbox" id="am-caps" ${s.am_caps ? 'checked' : ''} /></div>
+        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M3.6 18.4 8 6.6l4.4 11.8M5.2 14.6h5.6"/><path d="M20.4 12.4v5.6M17 15.4a3 3 0 0 1 6 0"/></svg></span><div><b>Majuscules</b><small>Messages presque tout en majuscules.</small></div></div><input type="checkbox" id="am-caps" ${s.am_caps ? 'checked' : ''} /></div>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-caps" data-am-action="caps">${actionOptions('caps')}</select></label>
         <details class="am-rule-more"><summary>Options</summary>
-        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-caps" data-am-blacklist-rule="caps" ${blacklistAfter('caps') ? 'checked' : ''} /><span>🚫 Blacklist après sanction</span></label>
+        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-caps" data-am-blacklist-rule="caps" ${blacklistAfter('caps') ? 'checked' : ''} /><span>Blacklist après sanction</span></label>
         <div class="am-threshold-box"><label>Blacklist après</label><select class="dash-select" data-am-threshold="caps">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, blacklistThresholdFor('caps'))}</select></div>
         </details>
       </div>
       <div class="am-rule-card" data-am-rule-card="mentions">
-        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">📣</span><div><b>Mentions excessives</b><small>Trop de @ dans un message.</small></div></div></div>
+        <div class="am-rule-head"><div class="am-rule-name"><div><b>Mentions excessives</b><small>Trop de @ dans un message.</small></div></div></div>
         <label class="am-rule-setting">Mentions maximum <select class="dash-select" id="am-men">${Dashboard.presetOptions([[0, 'Illimité'], [3, '3'], [5, '5'], [8, '8'], [10, '10'], [15, '15'], [20, '20'], [25, '25'], [50, '50']], s.am_mentions ?? 5)}</select></label>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-mentions" data-am-action="mentions">${actionOptions('mentions')}</select></label>
         <details class="am-rule-more"><summary>Options</summary>
-        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-mentions" data-am-blacklist-rule="mentions" ${blacklistAfter('mentions') ? 'checked' : ''} /><span>🚫 Blacklist après sanction</span></label>
+        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-mentions" data-am-blacklist-rule="mentions" ${blacklistAfter('mentions') ? 'checked' : ''} /><span>Blacklist après sanction</span></label>
         <div class="am-threshold-box"><label>Blacklist après</label><select class="dash-select" data-am-threshold="mentions">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, blacklistThresholdFor('mentions'))}</select></div>
         </details>
       </div>
       <div class="am-rule-card" data-am-rule-card="words">
-        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">🚫</span><div><b>Mots interdits</b><small>Liste noire du serveur.</small></div></div><span class="am-rule-state">${blacklist.length ? '🟢 Actif' : '⚪ En attente'}</span></div>
+        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="8.2"/><path d="M6.2 17.8 17.8 6.2"/></svg></span><div><b>Mots interdits</b><small>Liste noire du serveur.</small></div></div><span class="am-rule-state">${blacklist.length ? 'Actif' : 'En attente'}</span></div>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-words" data-am-action="words">${actionOptions('words')}</select></label>
         <details class="am-rule-more"><summary>Options</summary>
-        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-words" data-am-blacklist-rule="words" ${blacklistAfter('words') ? 'checked' : ''} /><span>🚫 Blacklist après sanction</span></label>
+        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-words" data-am-blacklist-rule="words" ${blacklistAfter('words') ? 'checked' : ''} /><span>Blacklist après sanction</span></label>
         <div class="am-threshold-box"><label>Blacklist après</label><select class="dash-select" data-am-threshold="words">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, blacklistThresholdFor('words'))}</select></div>
         </details>
       </div>
       <div class="am-rule-card" data-am-rule-card="spam">
-        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon">💥</span><div><b>Anti-spam</b><small>Trop de messages d’affilée.</small></div></div></div>
+        <div class="am-rule-head"><div class="am-rule-name"><div><b>Anti-spam</b><small>Trop de messages d’affilée.</small></div></div></div>
         <label class="am-rule-setting">Messages en 5 secondes <select class="dash-select" id="am-spam">${Dashboard.presetOptions([[0, 'Désactivé'], [3, '3 messages'], [4, '4 messages'], [5, '5 messages'], [6, '6 messages'], [8, '8 messages'], [10, '10 messages']], s.am_spam ?? 5)}</select></label>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-spam" data-am-action="spam">${actionOptions('spam')}</select></label>
         <details class="am-rule-more"><summary>Options</summary>
-        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-spam" data-am-blacklist-rule="spam" ${blacklistAfter('spam') ? 'checked' : ''} /><span>🚫 Blacklist après sanction</span></label>
+        <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-spam" data-am-blacklist-rule="spam" ${blacklistAfter('spam') ? 'checked' : ''} /><span>Blacklist après sanction</span></label>
         <div class="am-threshold-box"><label>Blacklist après</label><select class="dash-select" data-am-threshold="spam">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, blacklistThresholdFor('spam'))}</select></div>
         </details>
       </div>
@@ -4177,25 +4199,25 @@ Dashboard.renderers.moderation = async (content, data) => {
     <label class="dash-label">Message privé d'avertissement (vide = standard)</label>
     <input class="dash-input" id="am-warn" value="${App.escapeHtml(s.am_warn_text || '')}" placeholder="{reason} · {server}" />
     <details class="am-fold">
-      <summary>⚠️ Avertissements progressifs</summary>
+      <summary>Avertissements progressifs</summary>
       <div class="am-warning-panel">
-      <div class="am-panel-title"><div><b>⚠️ Avertissements progressifs</b></div><span>1 → 2 → action</span></div>
+      <div class="am-panel-title"><div><b>Avertissements progressifs</b></div><span>1 → 2 → action</span></div>
       <div class="am-warning-grid">
         <div><label class="dash-label">Après combien</label><select class="dash-select" id="am-warn-limit">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, s.am_warn_limit ?? 2)}</select></div>
         <div><label class="dash-label">Puis</label><select class="dash-select" id="am-warn-action">
-          <option value="none" ${s.am_warn_action === 'none' ? 'selected' : ''}>🔕 Journal seulement</option>
+          <option value="none" ${s.am_warn_action === 'none' ? 'selected' : ''}>Journal seulement</option>
           <option value="timeout" ${(s.am_warn_action || 'timeout') === 'timeout' ? 'selected' : ''}>⏱️ Timeout</option>
-          <option value="kick" ${s.am_warn_action === 'kick' ? 'selected' : ''}>👢 Expulser</option>
-          <option value="ban" ${s.am_warn_action === 'ban' ? 'selected' : ''}>🔨 Bannir</option>
+          <option value="kick" ${s.am_warn_action === 'kick' ? 'selected' : ''}>Expulser</option>
+          <option value="ban" ${s.am_warn_action === 'ban' ? 'selected' : ''}>Bannir</option>
         </select></div>
         <div><label class="dash-label">Durée du timeout</label><select class="dash-select" id="am-warn-timeout">${Dashboard.presetOptions(Dashboard.PRESETS_MIN, s.am_warn_timeout_min ?? 10, Dashboard.labelMinutes)}</select></div>
       </div>
       </div>
     </details>
     <details class="am-fold">
-      <summary>🚫 Panneau blacklist</summary>
+      <summary>Panneau blacklist</summary>
       <div class="am-blacklist-config">
-      <div class="am-panel-title"><div><b>🚫 Blacklist des membres</b></div></div>
+      <div class="am-panel-title"><div><b>Blacklist des membres</b></div></div>
       <div class="am-blacklist-duration"><div><label class="dash-label">Durée</label><select class="dash-select" id="am-blacklist-duration">${blacklistDurationOptions.join('')}</select></div></div>
       <div class="am-blacklist-grid">
         <div><label class="dash-label">Salon du panneau</label><select class="dash-select" id="am-blacklist-channel">${blacklistChannelOptions.join('')}</select></div>
@@ -4213,8 +4235,8 @@ Dashboard.renderers.moderation = async (content, data) => {
     const note = c.querySelector('#am-mode-note');
     if (status) status.textContent = !on ? 'Protection désactivée.' : (mode === 'observe' ? 'Observation sans sanction.' : 'Protection active.');
     if (note) note.textContent = mode === 'observe'
-      ? '👀 Rien n’est supprimé ni sanctionné.'
-      : '🟢 Les actions des filtres s’appliquent.';
+      ? 'Rien n’est supprimé ni sanctionné.'
+      : 'Les actions des filtres s’appliquent.';
   };
   c.querySelector('#am-on').onchange = syncAMStatus;
   c.querySelector('#am-mode').onchange = syncAMStatus;
@@ -4271,9 +4293,9 @@ Dashboard.renderers.moderation = async (content, data) => {
   const saveAutomodDraft = () => {
     try {
       localStorage.setItem(draftKey, JSON.stringify(collectAutomodForm()));
-      App.toast('🟡 Brouillon Auto-Mod enregistré sur cet appareil.');
+      App.toast('Brouillon Auto-Mod enregistré sur cet appareil.');
       const status = c.querySelector('#am-status-line');
-      if (status) status.textContent = '🟡 Brouillon local enregistré — pas encore publié.';
+      if (status) status.textContent = 'Brouillon local enregistré — pas encore publié.';
     } catch { App.toast('Impossible d’enregistrer le brouillon.', 'error'); }
   };
   c.querySelector('#am-draft').onclick = saveAutomodDraft;
@@ -4281,10 +4303,10 @@ Dashboard.renderers.moderation = async (content, data) => {
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/automod`, { method: 'PUT', body: collectAutomodForm() });
       try { localStorage.removeItem(draftKey); } catch {}
-      App.toast('🚀 Auto-modération publiée !');
+      App.toast('Auto-modération publiée.');
       syncAMStatus();
       const status = c.querySelector('#am-status-line');
-      if (status) status.textContent = '🟢 Configuration publiée et active.';
+      if (status) status.textContent = 'Configuration publiée et active.';
     } catch (e) { App.toast(e.message, 'error'); }
   };
   const clearDraft = c.querySelector('#am-clear-draft');
@@ -4294,17 +4316,17 @@ Dashboard.renderers.moderation = async (content, data) => {
     (Dashboard.renderers[Dashboard.state.module] || Dashboard.renderers.moderation)(content, data);
   };
 
-  // 📈 v213 — Barème progressif des sanctions (échelle par règle).
+  // v213 — Barème progressif des sanctions (échelle par règle).
   // Chaque règle peut monter seule : avertir → muet → ban temporaire →
   // ban définitif + blacklist (avec durée). Fenêtre glissante par règle.
   const escRules = [
-    { key: 'links', emoji: '🔗', label: 'Liens et invitations' },
-    { key: 'caps', emoji: '🔠', label: 'Majuscules' },
-    { key: 'mentions', emoji: '📣', label: 'Mentions excessives' },
-    { key: 'words', emoji: '🚫', label: 'Mots interdits' },
-    { key: 'spam', emoji: '💥', label: 'Anti-spam' },
+    { key: 'links', emoji: '', label: 'Liens et invitations' },
+    { key: 'caps', emoji: '', label: 'Majuscules' },
+    { key: 'mentions', emoji: '', label: 'Mentions excessives' },
+    { key: 'words', emoji: '', label: 'Mots interdits' },
+    { key: 'spam', emoji: '', label: 'Anti-spam' },
   ];
-  const escActionMeta = { delete: '🗑️ Supprimer', warn: '⚠️ Avertir', timeout: '⏱️ Muet', kick: '👢 Expulser', ban: '🔨 Bannir' };
+  const escActionMeta = { delete: 'Supprimer', warn: 'Avertir', timeout: '⏱️ Muet', kick: 'Expulser', ban: 'Bannir' };
   const escDurNames = { 10: '10 min', 30: '30 min', 60: '1 h', 360: '6 h', 1440: '1 jour', 4320: '3 jours', 10080: '7 jours', 43200: '30 jours', 525600: '1 an' };
   const MUTE_MIN = [10, 30, 60, 360, 1440, 4320, 10080, 43200];
   const BAN_MIN = [0, 60, 360, 1440, 4320, 10080, 43200, 525600];
@@ -4344,7 +4366,7 @@ Dashboard.renderers.moderation = async (content, data) => {
 
   const escWindowOptions = (selected) => escWindows
     .map(([v, label]) => `<option value="${v}" ${Number(selected) === v ? 'selected' : ''}>${label}</option>`).join('');
-  const ce = Dashboard.card(root, '📈 Barème progressif des sanctions', 'À chaque récidive, le bot monte d’un cran. Désactivé = action simple du filtre.');
+  const ce = Dashboard.card(root, 'Barème progressif des sanctions', 'À chaque récidive, le bot monte d’un cran. Désactivé = action simple du filtre.');
   ce.appendChild(App.el(`<div data-esc-box></div>`));
   const escBox = ce.querySelector('[data-esc-box]');
   const renderEsc = () => {
@@ -4362,7 +4384,7 @@ Dashboard.renderers.moderation = async (content, data) => {
         </div>
         ${on ? `
         <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <label class="dash-label" style="margin:0">🕐 Récidives comptées sur</label>
+          <label class="dash-label" style="margin:0">Récidives comptées sur</label>
           <select class="dash-select" data-esc-win="${r.key}" style="max-width:220px">${(escWindows.some(([v]) => v === m.windowMin) ? '' : `<option value="${m.windowMin}" selected>Personnalisée (${m.windowMin} min)</option>`) + escWindowOptions(m.windowMin)}</select>
         </div>
         <div data-esc-steps="${r.key}" style="margin-top:8px;display:flex;flex-direction:column;gap:6px"></div>
@@ -4377,17 +4399,17 @@ Dashboard.renderers.moderation = async (content, data) => {
       if (!m.enabled) return;
       const stepsEl = escBox.querySelector(`[data-esc-steps="${r.key}"]`);
       stepsEl.innerHTML = m.steps.map((st, i) => `
-        <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;border:1px dashed var(--d-border);border-radius:10px;padding:8px 10px">
+        <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;border:1px dashed var(--d-border);border-radius:8px;padding:8px 10px">
           <span style="color:var(--d-dim);font-size:12px">après</span>
           <select class="dash-select" data-esc-after="${r.key}" data-i="${i}" style="max-width:90px">${Dashboard.presetOptions([[1, '1'], [2, '2'], [3, '3'], [4, '4'], [5, '5'], [8, '8'], [10, '10'], [15, '15'], [20, '20']], st.after)}</select>
           <span style="color:var(--d-dim);font-size:12px">fois →</span>
           <select class="dash-select" data-esc-action="${r.key}" data-i="${i}" style="max-width:170px">${Object.entries(escActionMeta).map(([v, label]) => `<option value="${v}" ${st.action === v ? 'selected' : ''}>${label}</option>`).join('')}</select>
           <span data-esc-dur-wrap="${r.key}" data-i="${i}" ${['timeout', 'ban'].includes(st.action) ? '' : 'style="display:none"'}>
-            <select class="dash-select" data-esc-minutes="${r.key}" data-i="${i}" style="max-width:150px">${durOpts(st.minutes, '♾️ Définitif', st.action === 'ban' ? BAN_MIN : MUTE_MIN)}</select>
+            <select class="dash-select" data-esc-minutes="${r.key}" data-i="${i}" style="max-width:150px">${durOpts(st.minutes, 'Définitif', st.action === 'ban' ? BAN_MIN : MUTE_MIN)}</select>
           </span>
-          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;color:var(--d-dim)"><input type="checkbox" data-esc-bl="${r.key}" data-i="${i}" ${st.blacklist ? 'checked' : ''} /> 🚫 Blacklist</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;color:var(--d-dim)"><input type="checkbox" data-esc-bl="${r.key}" data-i="${i}" ${st.blacklist ? 'checked' : ''} />Blacklist</label>
           <span data-esc-blmin-wrap="${r.key}" data-i="${i}" ${st.blacklist ? '' : 'style="display:none"'}>
-            <select class="dash-select" data-esc-blmin="${r.key}" data-i="${i}" style="max-width:160px">${durOpts(st.blacklistMin, '♾️ Permanente', BL_MIN)}</select>
+            <select class="dash-select" data-esc-blmin="${r.key}" data-i="${i}" style="max-width:160px">${durOpts(st.blacklistMin, 'Permanente', BL_MIN)}</select>
           </span>
           <button class="dash-btn dash-btn-danger dash-btn-sm" data-esc-del="${r.key}" data-i="${i}" title="Retirer ce palier">Supprimer</button>
         </div>`).join('');
@@ -4476,12 +4498,12 @@ Dashboard.renderers.moderation = async (content, data) => {
     return { rules };
   };
 
-  // ☁️ Miroir officiel Discord : les règles natives restent en alerte
+  // Miroir officiel Discord : les règles natives restent en alerte
   // uniquement ; les sanctions avancées continuent d’être appliquées par Optimus Prime.
-  const cNative = Dashboard.card(root, '☁️ Auto-Mod officiel Discord', 'Badge Discord « Uses AutoMod ». Alertes seulement, pas de double sanction.');
+  const cNative = Dashboard.card(root, 'Auto-Mod officiel Discord', 'Badge Discord « Uses AutoMod ». Alertes seulement, pas de double sanction.');
   cNative.classList.add('am-native-card');
   cNative.innerHTML += `
-    <div class="am-native-hero"><div class="am-native-copy"><span class="am-native-icon">☁️</span><div><b>Miroir officiel actif</b><small>Règles natives en alerte, sans double sanction.</small></div></div><label class="am-native-toggle"><span>Activer</span><input type="checkbox" id="am-native-on" ${s.am_native_enabled !== 0 ? 'checked' : ''} /><i></i></label></div>
+    <div class="am-native-hero"><div class="am-native-copy"><span class="am-native-icon"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M7.2 18.4h9.4a3.8 3.8 0 0 0 .4-7.6 5.6 5.6 0 0 0-10.6-1.4 3.9 3.9 0 0 0 .4 9Z"/></svg></span><div><b>Miroir officiel actif</b><small>Règles natives en alerte, sans double sanction.</small></div></div><label class="am-native-toggle"><span>Activer</span><input type="checkbox" id="am-native-on" ${s.am_native_enabled !== 0 ? 'checked' : ''} /><i></i></label></div>
     <div class="am-native-grid"><div><label class="dash-label">Salon des alertes</label><select class="dash-select" id="am-native-channel">${nativeChannelOptions.join('')}</select></div><div class="am-native-status" id="am-native-status"><span class="am-native-status-dot"></span><div><b>Lecture des règles Discord…</b><small>Vérification en cours</small></div></div></div>
     <div class="am-native-actions"><button class="dash-btn dash-btn-primary" id="am-native-sync">Synchroniser avec Discord</button></div>`;
   const nativeStatusBox = cNative.querySelector('#am-native-status');
@@ -4490,10 +4512,10 @@ Dashboard.renderers.moderation = async (content, data) => {
       const nativeStatus = await App.api(`/bots/${bot.id}/guilds/${guildId}/automod/native`);
       const count = Number(nativeStatus.nativeRules) || 0;
       nativeStatusBox.innerHTML = nativeStatus.badgeEligible
-        ? `<span class="am-native-status-dot is-ok"></span><div><b>✅ Seuil Auto-Mod atteint</b><small>${count} règle(s) native(s) détectée(s) par Discord.</small></div>`
-        : `<span class="am-native-status-dot ${nativeStatus.ok ? '' : 'is-warn'}"></span><div><b>${nativeStatus.ok ? `☁️ ${count} règle(s) native(s) active(s)` : '⚠️ Synchronisation à vérifier'}</b><small>${nativeStatus.ok ? `${Math.max(0, 100 - count)} règle(s) native(s) manquante(s) pour le seuil indicatif.` : App.escapeHtml(nativeStatus.error || 'Choisissez un salon d’alerte et synchronisez.')}</small></div>`;
+        ? `<span class="am-native-status-dot is-ok"></span><div><b>Seuil Auto-Mod atteint</b><small>${count} règle(s) native(s) détectée(s) par Discord.</small></div>`
+        : `<span class="am-native-status-dot ${nativeStatus.ok ? '' : 'is-warn'}"></span><div><b>${nativeStatus.ok ? `${count} règle(s) native(s) active(s)` : 'Synchronisation à vérifier'}</b><small>${nativeStatus.ok ? `${Math.max(0, 100 - count)} règle(s) native(s) manquante(s) pour le seuil indicatif.` : App.escapeHtml(nativeStatus.error || 'Choisissez un salon d’alerte et synchronisez.')}</small></div>`;
     } catch (e) {
-      nativeStatusBox.innerHTML = `<span class="am-native-status-dot is-warn"></span><div><b>⚠️ API Discord indisponible</b><small>${App.escapeHtml(e.message)}</small></div>`;
+      nativeStatusBox.innerHTML = `<span class="am-native-status-dot is-warn"></span><div><b>API Discord indisponible</b><small>${App.escapeHtml(e.message)}</small></div>`;
     }
   };
   renderNativeStatus();
@@ -4502,19 +4524,19 @@ Dashboard.renderers.moderation = async (content, data) => {
     syncButton.disabled = true; syncButton.textContent = 'Synchronisation…';
     try {
       const result = await App.api(`/bots/${bot.id}/guilds/${guildId}/automod/native/sync`, { method: 'POST', body: { enabled: cNative.querySelector('#am-native-on').checked, alert_channel: cNative.querySelector('#am-native-channel').value } });
-      if (result.ok) App.toast(`☁️ Auto-Mod officiel synchronisé : ${result.created || 0} créée(s), ${result.updated || 0} mise(s) à jour.`);
+      if (result.ok) App.toast(`Auto-Mod officiel synchronisé : ${result.created || 0} créée(s), ${result.updated || 0} mise(s) à jour.`);
       else App.toast(result.error || 'Synchronisation Auto-Mod officielle impossible.', 'error');
       renderNativeStatus();
     } catch (e) { App.toast(e.message, 'error'); }
-    syncButton.disabled = false; syncButton.textContent = '☁️ Synchroniser avec Discord';
+    syncButton.disabled = false; syncButton.textContent = 'Synchroniser avec Discord';
   };
 
-  // 🚫 Membres actuellement blacklistés sur ce serveur.
-  const cMemberBlacklist = Dashboard.card(root, `🚫 Membres blacklistés <span class="am-blacklist-count">${memberBlacklistData.length}</span>`, 'Membres bloqués sur ce serveur.');
+  // Membres actuellement blacklistés sur ce serveur.
+  const cMemberBlacklist = Dashboard.card(root, `Membres blacklistés <span class="am-blacklist-count">${memberBlacklistData.length}</span>`, 'Membres bloqués sur ce serveur.');
   cMemberBlacklist.classList.add('am-member-blacklist-card');
   const memberBlacklistBox = App.el(`<div class="am-member-blacklist-list"></div>`);
   cMemberBlacklist.appendChild(memberBlacklistBox);
-  const blacklistRuleLabels = { links: '🔗 Liens', caps: '🔠 Majuscules', mentions: '📣 Mentions', words: '🚫 Mots interdits', spam: '💥 Spam' };
+  const blacklistRuleLabels = { links: 'Liens', caps: 'Majuscules', mentions: 'Mentions', words: 'Mots interdits', spam: 'Spam' };
   const blacklistActionLabels = { legacy: 'Action historique', delete: 'Message supprimé', warn: 'Avertissement', timeout: 'Timeout', kick: 'Expulsion', ban: 'Bannissement' };
   const sourceChannelName = (id) => {
     const channel = channelList.find((item) => String(item.id) === String(id));
@@ -4531,13 +4553,13 @@ Dashboard.renderers.moderation = async (content, data) => {
     const count = cMemberBlacklist.querySelector('.am-blacklist-count');
     if (count) count.textContent = String(memberBlacklistData.length);
     if (!memberBlacklistData.length) {
-      memberBlacklistBox.appendChild(App.el(`<div class="am-blacklist-empty"><span>✅</span><div><b>Aucun membre blacklisté</b><small>Les membres ajoutés après une sanction apparaîtront ici.</small></div></div>`));
+      memberBlacklistBox.appendChild(App.el(`<div class="am-blacklist-empty"><span>${App.glyphe('coche', { taille: 16 })}</span><div><b>Aucun membre blacklisté</b><small>Les membres ajoutés après une sanction apparaîtront ici.</small></div></div>`));
       return;
     }
     memberBlacklistData.forEach((entry) => {
       const row = App.el(`
         <div class="am-member-blacklist-row">
-          <span class="am-member-blacklist-icon">🚫</span>
+          <span class="am-member-blacklist-icon"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="8.2"/><path d="M6.2 17.8 17.8 6.2"/></svg></span>
           <div class="am-member-blacklist-copy"><b>${App.escapeHtml(entry.user_tag || entry.user_id || 'Membre inconnu')}</b><small>${App.escapeHtml(blacklistRuleLabels[entry.rule] || entry.rule || 'Auto-Mod')} · ${App.escapeHtml(blacklistActionLabels[entry.action] || entry.action || 'Action')} · ${App.escapeHtml(sourceChannelName(entry.source_channel_id))}</small><small>${App.escapeHtml(blacklistTriggerText(entry))} · ${App.escapeHtml(blacklistExpiryText(entry))}</small><small>${App.escapeHtml(entry.reason || 'Aucune raison')} · ${App.escapeHtml(entry.created_at || '')}</small></div>
           <button class="dash-btn dash-btn-danger dash-btn-sm" data-remove-blacklist="${App.escapeHtml(entry.user_id || '')}" title="Retirer de la blacklist">Retirer</button>
         </div>`);
@@ -4556,8 +4578,8 @@ Dashboard.renderers.moderation = async (content, data) => {
   };
   renderMemberBlacklist();
 
-  // 🚧 Exceptions configurables (rôles, salons et membres)
-  const cExceptions = Dashboard.card(root, '🚧 Exceptions et zones de confiance', 'Rôles, salons et membres ignorés par les filtres.');
+  // Exceptions configurables (rôles, salons et membres)
+  const cExceptions = Dashboard.card(root, 'Exceptions et zones de confiance', 'Rôles, salons et membres ignorés par les filtres.');
   cExceptions.classList.add('am-exceptions-card');
   cExceptions.innerHTML += `
     <div class="am-exception-grid">
@@ -4565,7 +4587,7 @@ Dashboard.renderers.moderation = async (content, data) => {
       <div><label class="dash-label">Salons ignorés</label><div class="am-choice-list" id="am-exempt-channels"></div></div>
     </div>
     <div style="margin-top:14px"><label class="dash-label">Membres ignorés</label><div class="am-choice-list" id="am-exempt-users"></div></div>
-    <div class="am-help">Ajoutez avec le menu. ⚠️ = introuvable sur Discord.</div>`;
+    <div class="am-help">Ajoutez-les avec le menu ; un filtre absent de Discord est signalé comme introuvable.</div>`;
   Dashboard.renderDiscordMultiSelect(cExceptions.querySelector('#am-exempt-roles'), {
     items: rolesList,
     selected: selectedExemptRoles,
@@ -4594,26 +4616,26 @@ Dashboard.renderers.moderation = async (content, data) => {
     selectedClass: 'am-choice',
   });
 
-  // 📊 Résumé des actions réelles et des observations
-  const cSummary = Dashboard.card(root, '📊 Activité Auto-Mod', 'Actions et observations.');
+  // Résumé des actions réelles et des observations
+  const cSummary = Dashboard.card(root, 'Activité Auto-Mod', 'Actions et observations.');
   cSummary.classList.add('am-summary-card');
   const summaryBox = App.el(`<div class="am-summary-loading">Chargement des statistiques…</div>`);
   cSummary.appendChild(summaryBox);
   (async () => {
     try {
       const stats = await App.api(`/bots/${bot.id}/guilds/${guildId}/automod/summary`);
-      const ruleLabels = { links: '🔗 Liens', caps: '🔠 Majuscules', mentions: '📣 Mentions', words: '🚫 Mots', spam: '💥 Spam', unknown: '❔ Autre' };
+      const ruleLabels = { links: 'Liens', caps: 'Majuscules', mentions: 'Mentions', words: 'Mots', spam: 'Spam', unknown: 'Autre' };
       const topRules = (stats.byRule || []).slice(0, 5).map((entry) => `<span class="am-summary-tag">${ruleLabels[entry.rule] || App.escapeHtml(entry.rule)} <b>${entry.count}</b></span>`).join('') || '<span class="am-help">Aucune action enregistrée.</span>';
       summaryBox.innerHTML = `<div class="am-summary-stats"><div><b>${stats.today || 0}</b><small>Aujourd’hui</small></div><div><b>${stats.enforced || 0}</b><small>Actions appliquées</small></div><div><b>${stats.observed || 0}</b><small>Observations</small></div><div><b>${stats.total || 0}</b><small>Total</small></div></div><div class="am-summary-label">Règles les plus déclenchées</div><div class="am-summary-tags">${topRules}</div>`;
     } catch { summaryBox.innerHTML = '<div class="am-help">Les statistiques apparaîtront dès la première action du bot.</div>'; }
   })();
 
-  // 🧪 Simulation sans risque : aucun message Discord n'est envoyé.
-  const cSim = Dashboard.card(root, '🧪 Simulateur sans risque', 'Testez une phrase. Rien n’est envoyé sur Discord.');
+  // Simulation sans risque : aucun message Discord n'est envoyé.
+  const cSim = Dashboard.card(root, 'Simulateur sans risque', 'Testez une phrase. Rien n’est envoyé sur Discord.');
   cSim.classList.add('am-simulator-card');
   cSim.innerHTML += `
     <textarea class="dash-input am-sim-text" id="am-sim-content" rows="3" maxlength="2000" placeholder="Écrivez ici un message à analyser… Ex : https://exemple.com"></textarea>
-    <div class="am-sim-controls"><select class="dash-select" id="am-sim-channel"><option value="">— Salon —</option>${channelList.map((channel) => `<option value="${App.escapeHtml(channel.id)}">💬 #${App.escapeHtml(channel.name)}</option>`).join('')}</select><select class="dash-select" id="am-sim-spam" title="Rafale simulée">${Dashboard.presetOptions([[0, 'Pas de rafale'], [3, '3 messages'], [5, '5 messages'], [8, '8 messages'], [10, '10 messages']], 0)}</select><button class="dash-btn dash-btn-primary" id="am-sim-go">Analyser</button></div>
+    <div class="am-sim-controls"><select class="dash-select" id="am-sim-channel"><option value="">— Salon —</option>${channelList.map((channel) => `<option value="${App.escapeHtml(channel.id)}">#${App.escapeHtml(channel.name)}</option>`).join('')}</select><select class="dash-select" id="am-sim-spam" title="Rafale simulée">${Dashboard.presetOptions([[0, 'Pas de rafale'], [3, '3 messages'], [5, '5 messages'], [8, '8 messages'], [10, '10 messages']], 0)}</select><button class="dash-btn dash-btn-primary" id="am-sim-go">Analyser</button></div>
     <div id="am-sim-result" class="am-sim-result"></div>`;
   cSim.querySelector('#am-sim-go').onclick = async () => {
     const contentValue = cSim.querySelector('#am-sim-content').value.trim();
@@ -4625,17 +4647,17 @@ Dashboard.renderers.moderation = async (content, data) => {
       const channelId = cSim.querySelector('#am-sim-channel').value;
       const channel = channelList.find((item) => item.id === channelId);
       const result = await App.api(`/bots/${bot.id}/guilds/${guildId}/automod/simulate`, { method: 'POST', body: { content: contentValue, channel_id: channelId, channel_name: channel ? channel.name : '', spam_count: parseInt(cSim.querySelector('#am-sim-spam').value, 10) || 0 } });
-      if (!result.enabled) resultBox.innerHTML = '<div class="am-result neutral">⚪ Auto-modération désactivée : aucune règle ne sera appliquée.</div>';
-      else if (result.exempt) resultBox.innerHTML = '<div class="am-result neutral">🛡️ Ce message serait ignoré car le salon, le rôle ou le membre est dans les exceptions.</div>';
-      else if (!result.matched) resultBox.innerHTML = '<div class="am-result success">✅ Aucun filtre ne détecte ce message.</div>';
-      else if (result.mode === 'observe') resultBox.innerHTML = `<div class="am-result observe">👀 Règle détectée : <b>${App.escapeHtml(result.rule)}</b><br/>Mode observation : le message serait conservé et aucune sanction ne serait appliquée.</div>`;
-      else resultBox.innerHTML = `<div class="am-result ${result.action === 'ban' ? 'danger' : 'warning'}">${result.action === 'legacy' ? '🛡️' : '⚡'} Règle détectée : <b>${App.escapeHtml(result.rule)}</b><br/>Action prévue : <b>${App.escapeHtml(actionLabels[result.action] || result.action)}</b><br/><small>${App.escapeHtml(result.reason || '')}</small></div>`;
-    } catch (e) { resultBox.innerHTML = `<div class="am-result danger">❌ ${App.escapeHtml(e.message)}</div>`; }
-    button.disabled = false; button.textContent = '🧪 Analyser';
+      if (!result.enabled) resultBox.innerHTML = '<div class="am-result neutral">Auto-modération désactivée : aucune règle ne sera appliquée.</div>';
+      else if (result.exempt) resultBox.innerHTML = '<div class="am-result neutral">Ce message serait ignoré car le salon, le rôle ou le membre est dans les exceptions.</div>';
+      else if (!result.matched) resultBox.innerHTML = '<div class="am-result success">Aucun filtre ne détecte ce message.</div>';
+      else if (result.mode === 'observe') resultBox.innerHTML = `<div class="am-result observe">Règle détectée : <b>${App.escapeHtml(result.rule)}</b><br/>Mode observation : le message serait conservé et aucune sanction ne serait appliquée.</div>`;
+      else resultBox.innerHTML = `<div class="am-result ${result.action === 'ban' ? 'danger' : 'warning'}">${result.action === 'legacy' ? '' : ''} Règle détectée : <b>${App.escapeHtml(result.rule)}</b><br/>Action prévue : <b>${App.escapeHtml(actionLabels[result.action] || result.action)}</b><br/><small>${App.escapeHtml(result.reason || '')}</small></div>`;
+    } catch (e) { resultBox.innerHTML = `<div class="am-result danger">${App.escapeHtml(e.message)}</div>`; }
+    button.disabled = false; button.textContent = 'Analyser';
   };
 
-  // 🛡️ Permissions réelles du bot sur ce serveur
-  const cPerm = Dashboard.card(root, '🛡️ Permissions du bot sur ce serveur', 'Vérifié auprès de Discord.');
+  // Permissions réelles du bot sur ce serveur
+  const cPerm = Dashboard.card(root, 'Permissions du bot sur ce serveur', 'Vérifié auprès de Discord.');
   const permBox = App.el(`<div class="desc">Vérification en cours…</div>`);
   cPerm.appendChild(permBox);
   (async () => {
@@ -4644,38 +4666,38 @@ Dashboard.renderers.moderation = async (content, data) => {
       if (!p.online) { permBox.innerHTML = `<div class="desc">Bot hors ligne — les permissions seront vérifiées à son retour.</div>`; return; }
       if (!p.perms) { permBox.innerHTML = `<div class="desc">Serveur introuvable pour le bot.</div>`; return; }
       const items = [
-        ['manageMessages', '🗑 Supprimer les messages', 'l\'auto-mod peut effacer les messages'],
+        ['manageMessages', 'Supprimer les messages', 'l\'auto-mod peut effacer les messages'],
         ['moderateMembers', '⏱ Mettre en timeout', 'l\'anti-spam peut punir'],
-        ['manageChannels', '⚙️ Gérer les salons', 'tickets et salons vocaux temporaires'],
-        ['kickMembers', '👢 Expulser des membres', 'sanctions'],
-        ['banMembers', '🔨 Bannir des membres', 'sanctions'],
-        ['administrator', '👑 Administrateur', 'toutes les permissions'],
+        ['manageChannels', 'Gérer les salons', 'tickets et salons vocaux temporaires'],
+        ['kickMembers', 'Expulser des membres', 'sanctions'],
+        ['banMembers', 'Bannir des membres', 'sanctions'],
+        ['administrator', 'Administrateur', 'toutes les permissions'],
       ];
       permBox.innerHTML = items.map(([k, label, desc]) => `
         <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #222434">
-          <span style="font-size:16px">${p.perms[k] ? '✅' : '❌'}</span>
-          <div style="flex:1;min-width:0"><b style="font-size:13.5px">${label}</b><div class="m-meta">${desc}</div></div>
+          <span style="font-size:16px">${p.perms[k] ? '' : ''}</span>
+          <div style="flex:1;min-width:0"><b style="font-size:14px">${label}</b><div class="m-meta">${desc}</div></div>
           ${p.perms[k] ? '<span class="dash-badge ok">OK</span>' : '<span class="dash-badge bad">Manquante</span>'}
         </div>`).join('');
       if (!p.perms.manageMessages && !p.perms.administrator) {
-        permBox.insertAdjacentHTML('beforeend', `<div class="desc" style="margin:10px 0 0;color:var(--d-yellow)">⚠️ Sans « Supprimer les messages », l'auto-mod ne peut pas effacer les messages : réinvite le bot avec les permissions demandées.</div>`);
+        permBox.insertAdjacentHTML('beforeend', `<div class="desc" style="margin:10px 0 0;color:var(--d-yellow)">Sans « Supprimer les messages », l'auto-mod ne peut pas effacer les messages : réinvite le bot avec les permissions demandées.</div>`);
       }
     } catch (e) { permBox.innerHTML = `<div class="desc">Vérification impossible : ${App.escapeHtml(e.message)}</div>`; }
   })();
 
-  // 🧪 Test réel de l'auto-mod
+  // Test réel de l'auto-mod
   const textChannelsAm = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
-  const cTest = Dashboard.card(root, '🧪 Tester l\'auto-mod', 'Message piégé réel. Le simulateur ci-dessus ne touche à rien.');
+  const cTest = Dashboard.card(root, 'Tester l\'auto-mod', 'Message piégé réel. Le simulateur ci-dessus ne touche à rien.');
   cTest.innerHTML += `
     <label class="dash-label">Salon du test</label>
-    <select class="dash-select" id="am-test-ch">${textChannelsAm.map((ch) => `<option value="${ch.id}">💬 #${App.escapeHtml(ch.name)}</option>`).join('')}</select>
+    <select class="dash-select" id="am-test-ch">${textChannelsAm.map((ch) => `<option value="${ch.id}">#${App.escapeHtml(ch.name)}</option>`).join('')}</select>
     <label class="dash-label">Type de piège</label>
     <select class="dash-select" id="am-test-type">
-      <option value="link">🔗 Lien interdit</option>
-      <option value="caps">🔠 MAJUSCULES</option>
-      <option value="mentions">📣 Mentions en trop</option>
-      <option value="word">🔇 Mot interdit</option>
-      <option value="spam">💥 Rafale (spam)</option>
+      <option value="link">Lien interdit</option>
+      <option value="caps">MAJUSCULES</option>
+      <option value="mentions">Mentions en trop</option>
+      <option value="word">Mot interdit</option>
+      <option value="spam">Rafale (spam)</option>
     </select>
     <div style="display:flex;gap:8px;margin-top:12px">
       <button class="dash-btn dash-btn-primary" id="am-test-go" style="flex:1">Lancer le test</button>
@@ -4684,7 +4706,7 @@ Dashboard.renderers.moderation = async (content, data) => {
   cTest.querySelector('#am-test-go').onclick = async () => {
     const resBox = cTest.querySelector('#am-test-result');
     const go = cTest.querySelector('#am-test-go');
-    resBox.innerHTML = `<div class="desc">🧪 Test en cours… regardez le salon <#${cTest.querySelector('#am-test-ch').value}> !</div>`;
+    resBox.innerHTML = `<div class="desc">Test en cours… regardez le salon <#${cTest.querySelector('#am-test-ch').value}> !</div>`;
     go.disabled = true;
     try {
       const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/automod/test`, { method: 'POST', body: {
@@ -4693,17 +4715,17 @@ Dashboard.renderers.moderation = async (content, data) => {
       }});
       if (r.hint === 'mentions_off') resBox.innerHTML = `<div class="desc">ℹ️ La limite de mentions est à 0 (illimité) — rien à tester pour ce filtre.</div>`;
       else if (r.hint === 'no_words') resBox.innerHTML = `<div class="desc">ℹ️ Ajoutez d'abord un mot dans la liste noire, puis relancez le test.</div>`;
-      else if (r.observed) resBox.innerHTML = `<div style="padding:12px;border:1px solid rgba(254,231,92,.4);border-radius:10px;background:rgba(254,231,92,.08)">👀 <b>Mode observation actif.</b> La règle a été détectée, mais aucun message n'a été supprimé et aucune sanction n'a été appliquée.</div>`;
-      else if (r.acted && r.deleted) resBox.innerHTML = `<div style="padding:12px;border:1px solid rgba(59,165,93,.4);border-radius:10px;background:rgba(59,165,93,.08)">✅ <b>L'auto-mod fonctionne !</b> Le message a été supprimé (raison : ${App.escapeHtml(r.reason || '—')}).</div>`;
-      else if (r.acted) resBox.innerHTML = `<div style="padding:12px;border:1px solid rgba(254,231,92,.4);border-radius:10px;background:rgba(254,231,92,.08)">⚠️ <b>Détecté mais pas supprimé.</b> Vérifie la carte « Permissions du bot » ci-dessus : il lui faut « Supprimer les messages ».</div>`;
-      else resBox.innerHTML = `<div style="padding:12px;border:1px solid rgba(237,66,69,.4);border-radius:10px;background:rgba(237,66,69,.08)">❌ <b>Le bot n'a pas réagi.</b> Vérifie que l'auto-mod est activé, que le filtre testé est coché, et que le salon du test n'est pas exclu.</div>`;
-    } catch (e) { resBox.innerHTML = `<div style="padding:12px;border:1px solid rgba(237,66,69,.4);border-radius:10px;background:rgba(237,66,69,.08)">❌ ${App.escapeHtml(e.message)}</div>`; }
+      else if (r.observed) resBox.innerHTML = `<div style="padding:12px;border:1px solid rgba(254,231,92,.4);border-radius:8px;background:rgba(254,231,92,.08)"><b>Mode observation actif.</b> La règle a été détectée, mais aucun message n'a été supprimé et aucune sanction n'a été appliquée.</div>`;
+      else if (r.acted && r.deleted) resBox.innerHTML = `<div style="padding:12px;border:1px solid rgba(59,165,93,.4);border-radius:8px;background:rgba(59,165,93,.08)"><b>L'auto-mod fonctionne !</b> Le message a été supprimé (raison : ${App.escapeHtml(r.reason || '—')}).</div>`;
+      else if (r.acted) resBox.innerHTML = `<div style="padding:12px;border:1px solid rgba(254,231,92,.4);border-radius:8px;background:rgba(254,231,92,.08)"><b>Détecté mais pas supprimé.</b> Vérifie la carte « Permissions du bot » ci-dessus : il lui faut « Supprimer les messages ».</div>`;
+      else resBox.innerHTML = `<div style="padding:12px;border:1px solid rgba(237,66,69,.4);border-radius:8px;background:rgba(237,66,69,.08)"><b>Le bot n'a pas réagi.</b> Vérifie que l'auto-mod est activé, que le filtre testé est coché, et que le salon du test n'est pas exclu.</div>`;
+    } catch (e) { resBox.innerHTML = `<div style="padding:12px;border:1px solid rgba(237,66,69,.4);border-radius:8px;background:rgba(237,66,69,.08)">${App.escapeHtml(e.message)}</div>`; }
     go.disabled = false;
   };
 
-  // ⚠️ Centre des avertissements : la progression reste visible même si le
+  // Centre des avertissements : la progression reste visible même si le
   // message public est automatiquement retiré après 24 heures.
-  const cWarnings = Dashboard.card(root, '⚠️ Centre des avertissements', 'Historique staff et Auto-Mod.');
+  const cWarnings = Dashboard.card(root, 'Centre des avertissements', 'Historique staff et Auto-Mod.');
   const warningFilters = App.el(`<div class="am-warning-filters"><button class="am-filter active" data-warning-filter="all">Tous</button><button class="am-filter" data-warning-filter="automod">Auto-Mod</button><button class="am-filter" data-warning-filter="staff">Staff</button><button class="am-filter" data-warning-filter="recent">24 h</button></div>`);
   const warningBox = App.el(`<div class="desc">Chargement des avertissements…</div>`);
   cWarnings.appendChild(warningFilters);
@@ -4723,15 +4745,15 @@ Dashboard.renderers.moderation = async (content, data) => {
       const summary = payload.summary || [];
       const cfg = payload.config || {};
       if (!warningRows.length) {
-        warningBox.innerHTML = `<div class="dash-empty" style="padding:16px 4px">✅ Aucun avertissement enregistré pour le moment.</div>`;
+        warningBox.innerHTML = `<div class="dash-empty" style="padding:16px 4px">Aucun avertissement enregistré pour le moment.</div>`;
         return;
       }
-      const actionLabel = (action) => ({ timeout: '⏳ timeout', kick: '👢 expulsion', ban: '🔨 bannissement', warn: '⚠️ avertissement' }[action] || '⚠️ avertissement');
+      const actionLabel = (action) => ({ timeout: '⏳ timeout', kick: 'expulsion', ban: 'bannissement', warn: 'avertissement' }[action] || 'avertissement');
       const summaryHtml = summary.length ? `
-        <div style="font-size:12px;color:var(--d-dim);margin-bottom:8px">👥 Membres concernés · palier configuré : <b>${cfg.limit || 'désactivé'}</b>${cfg.action && cfg.action !== 'none' ? ` → ${App.escapeHtml(actionLabel(cfg.action))}` : ''}</div>
+        <div style="font-size:12px;color:var(--d-dim);margin-bottom:8px">Membres concernés · palier configuré : <b>${cfg.limit || 'désactivé'}</b>${cfg.action && cfg.action !== 'none' ? ` → ${App.escapeHtml(actionLabel(cfg.action))}` : ''}</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin-bottom:14px">
           ${summary.slice(0, 8).map((s) => `<div style="display:flex;align-items:center;gap:8px;padding:10px 11px;border:1px solid var(--d-border);border-radius:12px;background:rgba(88,101,242,.06)">
-            <span style="font-size:18px">⚠️</span><div style="flex:1;min-width:0"><b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${App.escapeHtml(s.user_tag)}</b><span style="font-size:11.5px;color:var(--d-dim)">${s.count} actif(s)${s.history_count ? ` · ${s.history_count} historique(s)` : ''}</span></div>
+            <span style="font-size:18px">${App.glyphe('alerte', { taille: 16 })}</span><div style="flex:1;min-width:0"><b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${App.escapeHtml(s.user_tag)}</b><span style="font-size:12px;color:var(--d-dim)">${s.count} actif(s)${s.history_count ? ` · ${s.history_count} historique(s)` : ''}</span></div>
             <button class="dash-btn dash-btn-danger dash-btn-sm" data-clear-warnings="${App.escapeHtml(s.user_id)}" title="Réinitialiser">Réinitialiser</button>
           </div>`).join('')}
         </div>` : '';
@@ -4744,7 +4766,7 @@ Dashboard.renderers.moderation = async (content, data) => {
       const listHtml = visibleWarnings.slice(0, 30).map((w) => {
         const isAuto = w.source === 'automod';
         const level = isAuto && w.warning_no ? `${w.warning_no}${cfg.limit ? '/' + cfg.limit : ''}` : 'staff';
-        const origin = isAuto ? '🤖 Auto-mod' : '🛡️ Staff';
+        const origin = isAuto ? 'Auto-mod' : 'Staff';
         const action = w.action && w.action !== 'warn' ? ` · ${actionLabel(w.action)}` : '';
         const channel = w.channel_name ? ` · #${w.channel_name}` : '';
         return `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 4px;border-bottom:1px solid var(--d-border)">
@@ -4752,7 +4774,7 @@ Dashboard.renderers.moderation = async (content, data) => {
           <div style="flex:1;min-width:0"><b>${App.escapeHtml(w.user_tag || w.user_id)}</b><div class="m-meta">${origin}${action}${channel} · ${App.escapeHtml(w.reason || 'Aucune raison')} · ${App.escapeHtml(String(w.created_at || '').replace('T', ' '))}</div></div>
         </div>`;
       }).join('');
-      warningBox.innerHTML = summaryHtml + `<div style="font-size:12px;color:var(--d-dim);margin:4px 0 6px">🧾 Dernières actions</div>${listHtml || '<div class="am-help">Aucun avertissement pour ce filtre.</div>'}`;
+      warningBox.innerHTML = summaryHtml + `<div style="font-size:12px;color:var(--d-dim);margin:4px 0 6px">Dernières actions</div>${listHtml || '<div class="am-help">Aucun avertissement pour ce filtre.</div>'}`;
       warningBox.querySelectorAll('[data-clear-warnings]').forEach((btn) => {
         btn.onclick = async () => {
           if (!(await App.confirm('Réinitialiser tous les avertissements de ce membre ?'))) return;
@@ -4769,8 +4791,8 @@ Dashboard.renderers.moderation = async (content, data) => {
   };
   renderWarnings();
 
-  // 🛡️ Bouclier anti-raid automatique
-  const cRaid = Dashboard.card(root, '🛡️ Bouclier anti-raid', 'Trop d’arrivées d’un coup → verrouillage.');
+  // Bouclier anti-raid automatique
+  const cRaid = Dashboard.card(root, 'Bouclier anti-raid', 'Trop d’arrivées d’un coup → verrouillage.');
   const raidBox = App.el(`<div class="desc">Chargement…</div>`);
   cRaid.appendChild(raidBox);
   (async () => {
@@ -4784,8 +4806,8 @@ Dashboard.renderers.moderation = async (content, data) => {
           <div><label class="dash-label">Seuil (arrivées)</label><select class="dash-select" id="raid-th">${Dashboard.presetOptions([[5, '5'], [8, '8'], [10, '10'], [15, '15'], [20, '20'], [30, '30'], [50, '50']], cfg.threshold ?? 10)}</select></div>
           <div><label class="dash-label">Fenêtre</label><select class="dash-select" id="raid-win">${Dashboard.presetOptions(Dashboard.PRESETS_SEC, cfg.window ?? 30, Dashboard.labelSecondes)}</select></div>
           <div><label class="dash-label">Action</label><select class="dash-select" id="raid-act">
-            <option value="lockdown" ${cfg.action === 'lockdown' ? 'selected' : ''}>🔒 Verrouiller les salons</option>
-            <option value="alert" ${cfg.action === 'alert' ? 'selected' : ''}>🔔 Alerter seulement</option>
+            <option value="lockdown" ${cfg.action === 'lockdown' ? 'selected' : ''}>Verrouiller les salons</option>
+            <option value="alert" ${cfg.action === 'alert' ? 'selected' : ''}>Alerter seulement</option>
           </select></div>
           <div><label class="dash-label">Réouverture auto</label><select class="dash-select" id="raid-unlock">${Dashboard.presetOptions([[0, 'Manuelle'], ...Dashboard.PRESETS_MIN], cfg.unlockMin ?? 0, Dashboard.labelMinutes)}</select></div>
         </div>
@@ -4797,21 +4819,22 @@ Dashboard.renderers.moderation = async (content, data) => {
       const statusEl = cRaid.querySelector('#raid-status');
       if (st.raid) {
         const when = new Date(st.raid.triggeredAt).toLocaleString('fr-FR');
-        statusEl.innerHTML = `<div style="padding:10px 12px;border:1px solid rgba(237,66,69,.4);border-radius:10px;background:rgba(237,66,69,.08);font-size:13px">🚨 <b>Raid détecté</b> le ${when} — ${st.raid.count} arrivées en ${st.raid.window}s (${st.raid.action === 'lockdown' ? st.raid.locked + ' salon(s) verrouillé(s)' : 'alerte'})${st.raid.unlockAt ? ' · réouverture auto programmée' : ''}<br/><button class="dash-btn dash-btn-sm" id="raid-unlock-now" style="margin-top:8px">Rouvrir maintenant</button></div>`;
+        statusEl.innerHTML = `<div style="padding:10px 12px;border:1px solid rgba(237,66,69,.4);border-radius:8px;background:rgba(237,66,69,.08);font-size:13px"><b>Raid détecté</b> le ${when} — ${st.raid.count} arrivées en ${st.raid.window}s (${st.raid.action === 'lockdown' ? st.raid.locked + ' salon(s) verrouillé(s)' : 'alerte'})${st.raid.unlockAt ? ' · réouverture auto programmée' : ''}<br/><button class="dash-btn dash-btn-sm" id="raid-unlock-now" style="margin-top:8px">Rouvrir maintenant</button></div>`;
         cRaid.querySelector('#raid-unlock-now').onclick = async () => {
-          try { await App.api(`/bots/${bot.id}/guilds/${guildId}/antiraid/unlock`, { method: 'POST' }); App.toast('Serveur réouvert !'); (Dashboard.renderers[Dashboard.state.module] || Dashboard.renderers.moderation)(content, data); }
+          try { await App.api(`/bots/${bot.id}/guilds/${guildId}/antiraid/unlock`, { method: 'POST' }); App.toast('Serveur réouvert.'); (Dashboard.renderers[Dashboard.state.module] || Dashboard.renderers.moderation)(content, data); }
           catch (e) { App.toast(e.message, 'error'); }
         };
       } else if (st.lockdown && st.lockdown.locked) {
-        statusEl.innerHTML = `<div style="padding:10px 12px;border:1px solid rgba(254,231,92,.4);border-radius:10px;background:rgba(254,231,92,.08);font-size:13px">🔒 Le serveur est verrouillé (${st.lockdown.channels.length} salon(s)). <button class="dash-btn dash-btn-sm" id="raid-unlock-now" style="margin-top:8px">Rouvrir</button></div>`;
+        statusEl.innerHTML = `<div style="padding:10px 12px;border:1px solid rgba(254,231,92,.4);border-radius:8px;background:rgba(254,231,92,.08);font-size:13px">Le serveur est verrouillé (${st.lockdown.channels.length} salon(s)). <button class="dash-btn dash-btn-sm" id="raid-unlock-now" style="margin-top:8px">Rouvrir</button></div>`;
         cRaid.querySelector('#raid-unlock-now').onclick = async () => {
-          try { await App.api(`/bots/${bot.id}/guilds/${guildId}/antiraid/unlock`, { method: 'POST' }); App.toast('Serveur réouvert !'); (Dashboard.renderers[Dashboard.state.module] || Dashboard.renderers.moderation)(content, data); }
+          try { await App.api(`/bots/${bot.id}/guilds/${guildId}/antiraid/unlock`, { method: 'POST' }); App.toast('Serveur réouvert.'); (Dashboard.renderers[Dashboard.state.module] || Dashboard.renderers.moderation)(content, data); }
           catch (e) { App.toast(e.message, 'error'); }
         };
       } else {
-        statusEl.innerHTML = `<div class="desc" style="margin:0">${cfg.enabled ? '✅ Bouclier armé — le serveur est protégé.' : '⚠️ Bouclier désarmé.'}</div>`;
+        statusEl.innerHTML = `<div class="desc" style="margin:0">${cfg.enabled ? 'Bouclier armé — le serveur est protégé.' : 'Bouclier désarmé.'}</div>`;
       }
-      cRaid.querySelector('#raid-save').onclick = async () => {
+      cRaid.querySelector('#raid-save').onclick = async (e) => {
+        const bouton = e.currentTarget;
         try {
           await App.api(`/bots/${bot.id}/guilds/${guildId}/antiraid`, { method: 'PUT', body: {
             enabled: cRaid.querySelector('#raid-on').checked,
@@ -4820,22 +4843,23 @@ Dashboard.renderers.moderation = async (content, data) => {
             action: cRaid.querySelector('#raid-act').value,
             unlock_min: parseInt(cRaid.querySelector('#raid-unlock').value, 10) || 0,
           }});
-          App.toast('Bouclier anti-raid enregistré !');
+          App.retourEnregistrement(bouton);
+          App.toast('Bouclier anti-raid enregistré.');
           (Dashboard.renderers[Dashboard.state.module] || Dashboard.renderers.moderation)(content, data);
         } catch (e) { App.toast(e.message, 'error'); }
       };
       cRaid.querySelector('#raid-test').onclick = async () => {
         try {
-          App.toast('🧪 Raid simulé : le serveur se verrouille 1 minute…');
+          App.toast('Raid simulé : le serveur se verrouille 1 minute…');
           const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/antiraid/test`, { method: 'POST' });
-          App.toast(r.action === 'lockdown' ? `🚨 ${r.locked} salon(s) verrouillé(s) — réouverture auto dans 1 min !` : '🔔 Alerte de raid envoyée !');
+          App.toast(r.action === 'lockdown' ? `${r.locked} salon(s) verrouillé(s) — réouverture auto dans 1 min !` : 'Alerte de raid envoyée !');
           (Dashboard.renderers[Dashboard.state.module] || Dashboard.renderers.moderation)(content, data);
         } catch (e) { App.toast(e.message, 'error'); }
       };
     } catch (e) { raidBox.innerHTML = `<div class="desc">Bouclier indisponible : ${App.escapeHtml(e.message)}</div>`; }
   })();
 
-  const c2 = Dashboard.card(root, '🔇 Liste noire', 'Mots interdits. Un mot retiré ne sanctionne plus.');
+  const c2 = Dashboard.card(root, 'Liste noire', 'Mots interdits. Un mot retiré ne sanctionne plus.');
   c2.appendChild(App.el(`<div id="bl-list"></div>`));
   c2.appendChild(App.el(`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center"><button class="dash-btn dash-btn-sm" id="bl-add">＋ Ajouter un mot</button><button class="dash-save-action dash-btn dash-btn-primary dash-btn-sm" id="bl-save">Enregistrer la liste noire</button></div>`));
   const persistBlacklistWords = async () => {
@@ -4892,7 +4916,7 @@ Dashboard.renderers.moderation = async (content, data) => {
   };
 
   const sanctionsData = sanctions.map((x) => ({ name: x.name, action: x.action, duration: x.duration, message: x.message }));
-  const c3 = Dashboard.card(root, '⚖️ Sanctions prédéfinies', 'Sur Discord : /sanction @membre nom.');
+  const c3 = Dashboard.card(root, 'Sanctions prédéfinies', 'Sur Discord : /sanction @membre nom.');
   c3.appendChild(App.el(`<div id="sanc-list"></div>`));
   c3.appendChild(App.el(`<button class="dash-btn dash-btn-sm" id="sanc-add" style="margin-top:8px">＋ Ajouter une sanction</button>`));
   const renderSanc = () => {
@@ -4904,13 +4928,13 @@ Dashboard.renderers.moderation = async (content, data) => {
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
           <input class="dash-input" data-k="name" value="${App.escapeHtml(x.name)}" placeholder="Nom" style="max-width:110px" />
           <select class="dash-select" data-k="action" style="max-width:130px">
-            ${[['warn', '⚠️ Avertir'], ['timeout', '⏱️ Timeout'], ['kick', '👢 Expulser'], ['ban', '🔨 Bannir']].map(([a, l]) => `<option value="${a}" ${x.action === a ? 'selected' : ''}>${l}</option>`).join('')}
+            ${[['warn', 'Avertir'], ['timeout', '⏱️ Timeout'], ['kick', 'Expulser'], ['ban', 'Bannir']].map(([a, l]) => `<option value="${a}" ${x.action === a ? 'selected' : ''}>${l}</option>`).join('')}
           </select>
           <select class="dash-select" data-k="duration" style="max-width:110px" aria-label="Durée du timeout">${Dashboard.presetOptions([[0, '—'], ...Dashboard.PRESETS_MIN], x.duration || 0, Dashboard.labelMinutes)}</select>
           <input class="dash-input" data-k="message" value="${App.escapeHtml(x.message)}" placeholder="Message (envoyé en MP)" style="flex:1;min-width:140px" />
           <button class="dash-btn dash-btn-danger dash-btn-sm" data-del>Supprimer</button>
         </div>`);
-      // ⚠️ BUG PRÉEXISTANT CORRIGÉ (v244) : seul l'événement « input » était
+      // BUG PRÉEXISTANT CORRIGÉ (v244) : seul l'événement « input » était
       // écouté. Or Dashboard.enhanceSelect remplace le <select> natif par une
       // liste personnalisée qui ne déclenche QUE « change » (voir la fonction :
       // dispatchEvent(new Event('change'))). Résultat : choisir une autre
@@ -4932,13 +4956,13 @@ Dashboard.renderers.moderation = async (content, data) => {
   saveSanc.onclick = async () => {
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/sanctions`, { method: 'PUT', body: { sanctions: sanctionsData.filter((x) => x.name) } });
-      App.toast('Sanctions enregistrées !');
+      App.toast('Sanctions enregistrées.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
 };
 
 // ---------- Rôles (menus) ----------
-// 🛡️ v242 — Anti-nuke : onglet dédié.
+// v242 — Anti-nuke : onglet dédié.
 // L'anti-raid (dans Modération) protège contre un afflux de membres venant de
 // l'extérieur. L'anti-nuke protège contre les actions destructrices venant de
 // l'intérieur : compte admin volé, staff malveillant, erreur de manipulation.
@@ -4950,7 +4974,7 @@ Dashboard.renderers.moderation = async (content, data) => {
 // les deux et bannissait des admins légitimes.
 Dashboard.renderers.antinuke = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '🚨', 'Anti-nuke',
+  const root = Dashboard.header(content, '', 'Anti-nuke',
     'Protège le serveur contre les actions destructrices venant de l’intérieur : suppressions en série, bans de masse, élévation de privilèges.');
 
   const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
@@ -4959,39 +4983,39 @@ Dashboard.renderers.antinuke = async (content, data) => {
 
   // Les 11 types surveillés, groupés pour rester lisibles.
   const GROUPES = [
-    ['📁 Salons', [
+    ['Salons', [
       ['channel_delete', 'Suppression de salon', 'Un nuke vide le serveur en quelques secondes.'],
       ['channel_create', 'Création de salon', 'Les scripts recréent des salons pleins de liens d’arnaque.'],
       ['overwrite', 'Permissions de salon modifiées', 'Rendre les salons invisibles à tout le monde.'],
     ]],
-    ['🏷️ Rôles et permissions', [
+    ['Rôles et permissions', [
       ['role_delete', 'Suppression de rôle', 'Purge de la hiérarchie des rôles.'],
       ['role_create', 'Création de rôle', 'Création de rôles Administrateur en série.'],
-      ['role_update', 'Rôle qui reçoit « Administrateur »', '⚡ Se déclenche sur UNE seule action : élever un rôle est rarement anodin.'],
+      ['role_update', 'Rôle qui reçoit « Administrateur »', 'Se déclenche sur UNE seule action : élever un rôle est rarement anodin.'],
     ]],
-    ['👥 Membres', [
+    ['Membres', [
       ['ban', 'Bannissement', 'Fenêtre longue : bannir plusieurs raiders à la suite est normal.'],
       ['kick', 'Expulsion', 'Fenêtre longue, même raison.'],
     ]],
-    ['🧩 Autres', [
+    ['Autres', [
       ['webhook', 'Création de webhook', 'Contourner les salons verrouillés.'],
       ['emoji', 'Suppression d’emoji', 'Effacer l’identité du serveur.'],
-      ['bot_add', 'Ajout d’un bot', '⚡ Se déclenche sur UNE seule action : c’est le vecteur classique d’un nuke.'],
+      ['bot_add', 'Ajout d’un bot', 'Se déclenche sur UNE seule action : c’est le vecteur classique d’un nuke.'],
     ]],
   ];
 
   // ------------------------------------------------------------
   // 1. Comment Hoxera fait la différence
   // ------------------------------------------------------------
-  const cHow = Dashboard.card(root, '🧠 Comment Hoxera distingue un nuke d’une modération normale',
+  const cHow = Dashboard.card(root, 'Comment Hoxera distingue un nuke d’une modération normale',
     'Deux signaux opposés, mesurés séparément pour chaque type d’action.');
   cHow.appendChild(App.el(`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;font-size:13px">
-    <div style="padding:10px 12px;border:1px solid rgba(237,66,69,.4);border-radius:10px;background:rgba(237,66,69,.08)">
-      <b>💥 Un nuke</b><br />
+    <div style="padding:10px 12px;border:1px solid rgba(237,66,69,.4);border-radius:8px;background:rgba(237,66,69,.08)">
+      <b>Un nuke</b><br />
       Rapide et <b>répété sur un seul type</b> : 10 à 20 salons supprimés en 2 secondes, par dizaines, à vitesse machine.
     </div>
-    <div style="padding:10px 12px;border:1px solid rgba(87,186,120,.4);border-radius:10px;background:rgba(87,186,120,.08)">
-      <b>🧑‍⚖️ Une modération normale</b><br />
+    <div style="padding:10px 12px;border:1px solid rgba(87,186,120,.4);border-radius:8px;background:rgba(87,186,120,.08)">
+      <b>Une modération normale</b><br />
       Lente et <b>variée</b> : un ban par-ci, un vieux salon supprimé par-là, un rôle ajusté, étalés sur plusieurs minutes.
     </div>
   </div>
@@ -5001,27 +5025,27 @@ Dashboard.renderers.antinuke = async (content, data) => {
   // ------------------------------------------------------------
   // 2. Protections permanentes
   // ------------------------------------------------------------
-  const cRails = Dashboard.card(root, '🔐 Protections permanentes',
+  const cRails = Dashboard.card(root, 'Protections permanentes',
     'Ces règles ne sont pas réglables : elles empêchent Hoxera de punir un innocent.');
   cRails.appendChild(App.el(`<div style="display:grid;gap:6px;font-size:13px">
-    <div class="desc" style="margin:0">👑 Le <b>propriétaire du serveur</b> n’est jamais sanctionné, quoi qu’il fasse.</div>
-    <div class="desc" style="margin:0">🤖 <b>Hoxera lui-même</b> est exclu (suppressions de tickets et de vocaux temporaires ignorées).</div>
-    <div class="desc" style="margin:0">🧩 <b>Les autres bots</b> ne sont pas sanctionnés par défaut — punir un bot de tickets casserait le serveur. Une alerte est envoyée à la place.</div>
-    <div class="desc" style="margin:0">✅ Les membres de la <b>liste blanche</b> ne sont jamais sanctionnés.</div>
-    <div class="desc" style="margin:0">❓ Sans <b>identification certaine</b> de l’auteur par le journal d’audit, Hoxera alerte mais ne punit pas.</div>
+    <div class="desc" style="margin:0">Le <b>propriétaire du serveur</b> n’est jamais sanctionné, quoi qu’il fasse.</div>
+    <div class="desc" style="margin:0"><b>Hoxera lui-même</b> est exclu (suppressions de tickets et de vocaux temporaires ignorées).</div>
+    <div class="desc" style="margin:0"><b>Les autres bots</b> ne sont pas sanctionnés par défaut — punir un bot de tickets casserait le serveur. Une alerte est envoyée à la place.</div>
+    <div class="desc" style="margin:0">Les membres de la <b>liste blanche</b> ne sont jamais sanctionnés.</div>
+    <div class="desc" style="margin:0">Sans <b>identification certaine</b> de l’auteur par le journal d’audit, Hoxera alerte mais ne punit pas.</div>
   </div>`));
 
   // ------------------------------------------------------------
   // 3. Configuration générale
   // ------------------------------------------------------------
-  const cCfg = Dashboard.card(root, '⚙️ Réaction et portée', 'Désactivé par défaut. Activez-le seulement après avoir réglé la liste blanche.');
+  const cCfg = Dashboard.card(root, 'Réaction et portée', 'Désactivé par défaut. Activez-le seulement après avoir réglé la liste blanche.');
   const cfgBox = App.el(`<div class="desc">Chargement…</div>`);
   cCfg.appendChild(cfgBox);
 
   // ------------------------------------------------------------
   // 4. Limites par type
   // ------------------------------------------------------------
-  const cLim = Dashboard.card(root, '🎚️ Limites par type d’action',
+  const cLim = Dashboard.card(root, 'Limites par type d’action',
     'Le réglage qui compte vraiment : « au-delà de N actions de ce type en T secondes, Hoxera réagit ».');
   const limBox = App.el(`<div class="desc">Chargement…</div>`);
   cLim.appendChild(limBox);
@@ -5029,7 +5053,7 @@ Dashboard.renderers.antinuke = async (content, data) => {
   // ------------------------------------------------------------
   // 5. Historique
   // ------------------------------------------------------------
-  const cHist = Dashboard.card(root, '📜 Historique des réactions', 'Chaque réaction est tracée, y compris celles refusées par une protection.');
+  const cHist = Dashboard.card(root, 'Historique des réactions', 'Chaque réaction est tracée, y compris celles refusées par une protection.');
   const histBox = App.el(`<div class="desc">Chargement…</div>`);
   cHist.appendChild(histBox);
 
@@ -5048,22 +5072,22 @@ Dashboard.renderers.antinuke = async (content, data) => {
 
     // --- Alerte sur la permission d'audit : sans elle, aucune sanction. ---
     const auditBanner = st.audit && st.audit.ok
-      ? `<div class="desc" style="margin:10px 0 0">✅ Journal d’audit lisible — Hoxera peut identifier les auteurs.</div>`
-      : `<div style="margin:10px 0 0;padding:10px 12px;border:1px solid rgba(254,231,92,.4);border-radius:10px;background:rgba(254,231,92,.08);font-size:13px">
-          ⚠️ <b>Journal d’audit illisible</b> (${App.escapeHtml((st.audit && st.audit.reason) || 'bot hors ligne')}).<br />
+      ? `<div class="desc" style="margin:10px 0 0">Journal d’audit lisible — Hoxera peut identifier les auteurs.</div>`
+      : `<div style="margin:10px 0 0;padding:10px 12px;border:1px solid rgba(254,231,92,.4);border-radius:8px;background:rgba(254,231,92,.08);font-size:13px">
+          <b>Journal d’audit illisible</b> (${App.escapeHtml((st.audit && st.audit.reason) || 'bot hors ligne')}).<br />
           Donnez à Hoxera la permission <b>« Voir le journal d’audit »</b> dans Paramètres du serveur → Rôles.
           Sans elle, Hoxera <b>alerte mais ne sanctionne jamais</b> : il ne peut pas prouver qui a agi.
         </div>`;
 
     // --- Avertissement propre à chaque réaction choisie. ---
     const notes = {
-      ban: `⛔ <b>Action la plus agressive, et elle ne s’annule pas facilement.</b> Security Bot le dit explicitement : le ban est le plus sûr mais difficile à révoquer. C’est pour ça que Hoxera est réglé sur la <b>quarantaine</b> par défaut. Ne passez au ban que si vous savez pourquoi.`,
-      quarantine: `🔒 <b>Réglage par défaut, recommandé par Wick et Security Bot.</b> Tous les rôles sont retirés et remplacés par un rôle sans aucune permission. Le membre reste sur le serveur, vous pouvez enquêter puis restaurer ses rôles. Les rôles d’origine sont conservés dans l’historique ci-dessous.`,
-      demote: `🔻 Seule la permission Administrateur est retirée. Hoxera doit être au-dessus du membre dans la hiérarchie des rôles.`,
-      lockdown: `🔒 Les salons sont verrouillés pour stopper l’hémorragie. Réouverture depuis Modération → Bouclier anti-raid.`,
-      alert: `🔔 Mode le plus sûr : Hoxera signale, vous décidez. Idéal pour les premiers jours, le temps de voir si vos seuils sont bons.`,
+      ban: `<b>Action la plus agressive, et elle ne s’annule pas facilement.</b> Security Bot le dit explicitement : le ban est le plus sûr mais difficile à révoquer. C’est pour ça que Hoxera est réglé sur la <b>quarantaine</b> par défaut. Ne passez au ban que si vous savez pourquoi.`,
+      quarantine: `<b>Réglage par défaut, recommandé par Wick et Security Bot.</b> Tous les rôles sont retirés et remplacés par un rôle sans aucune permission. Le membre reste sur le serveur, vous pouvez enquêter puis restaurer ses rôles. Les rôles d’origine sont conservés dans l’historique ci-dessous.`,
+      demote: `Seule la permission Administrateur est retirée. Hoxera doit être au-dessus du membre dans la hiérarchie des rôles.`,
+      lockdown: `Les salons sont verrouillés pour stopper l’hémorragie. Réouverture depuis Modération → Bouclier anti-raid.`,
+      alert: `Mode le plus sûr : Hoxera signale, vous décidez. Idéal pour les premiers jours, le temps de voir si vos seuils sont bons.`,
     };
-    const dangerNote = `<div style="margin-top:10px;padding:10px 12px;border:1px solid ${cfg.action === 'ban' ? 'rgba(237,66,69,.4)' : 'rgba(255,255,255,.14)'};border-radius:10px;background:${cfg.action === 'ban' ? 'rgba(237,66,69,.08)' : 'rgba(255,255,255,.04)'};font-size:13px">${notes[cfg.action] || notes.alert}</div>`;
+    const dangerNote = `<div style="margin-top:10px;padding:10px 12px;border:1px solid ${cfg.action === 'ban' ? 'rgba(237,66,69,.4)' : 'rgba(255,255,255,.14)'};border-radius:8px;background:${cfg.action === 'ban' ? 'rgba(237,66,69,.08)' : 'rgba(255,255,255,.04)'};font-size:13px">${notes[cfg.action] || notes.alert}</div>`;
 
     cfgBox.innerHTML = `
       <label class="dash-label">Activer l’anti-nuke</label>
@@ -5072,11 +5096,11 @@ Dashboard.renderers.antinuke = async (content, data) => {
         <div>
           <label class="dash-label">Réaction</label>
           <select class="dash-select" id="nk-act">
-            <option value="alert" ${cfg.action === 'alert' ? 'selected' : ''}>🔔 Alerter seulement (le plus sûr)</option>
-            <option value="quarantine" ${cfg.action === 'quarantine' ? 'selected' : ''}>🔒 Quarantaine (réglage par défaut — réversible)</option>
-            <option value="demote" ${cfg.action === 'demote' ? 'selected' : ''}>🔻 Retirer Administrateur</option>
-            <option value="lockdown" ${cfg.action === 'lockdown' ? 'selected' : ''}>🔐 Verrouiller les salons</option>
-            <option value="ban" ${cfg.action === 'ban' ? 'selected' : ''}>⛔ Bannir l’auteur (agressif, irréversible)</option>
+            <option value="alert" ${cfg.action === 'alert' ? 'selected' : ''}>Alerter seulement (le plus sûr)</option>
+            <option value="quarantine" ${cfg.action === 'quarantine' ? 'selected' : ''}>Quarantaine (réglage par défaut — réversible)</option>
+            <option value="demote" ${cfg.action === 'demote' ? 'selected' : ''}>Retirer Administrateur</option>
+            <option value="lockdown" ${cfg.action === 'lockdown' ? 'selected' : ''}>Verrouiller les salons</option>
+            <option value="ban" ${cfg.action === 'ban' ? 'selected' : ''}>Bannir l’auteur (agressif, irréversible)</option>
           </select>
         </div>
         <div>
@@ -5118,8 +5142,8 @@ Dashboard.renderers.antinuke = async (content, data) => {
       [6, '6 actions'], [8, '8 actions'], [10, '10 actions'], [15, '15 actions'], [20, '20 actions']];
     const FENETRES = [[5, '5 s'], [10, '10 s'], [15, '15 s'], [30, '30 s'], [60, '1 min'],
       [120, '2 min'], [300, '5 min'], [600, '10 min']];
-    const SANCTIONS = [['alert', '🔔 Alerter'], ['quarantine', '🔒 Quarantaine'], ['demote', '🔻 Retirer Admin'],
-      ['lockdown', '🔐 Verrouiller'], ['ban', '⛔ Bannir']];
+    const SANCTIONS = [['alert', 'Alerter'], ['quarantine', 'Quarantaine'], ['demote', 'Retirer Admin'],
+      ['lockdown', 'Verrouiller'], ['ban', 'Bannir']];
 
     // Une valeur déjà enregistrée qui ne figure pas dans les préréglages est
     // ajoutée comme option supplémentaire : aucun réglage existant n'est
@@ -5200,7 +5224,7 @@ Dashboard.renderers.antinuke = async (content, data) => {
             actions: collectActions(),
           },
         });
-        App.toast('Anti-nuke enregistré !');
+        App.toast('Anti-nuke enregistré.');
         load();
       } catch (e) { App.toast(e.message, 'error'); }
     };
@@ -5208,7 +5232,7 @@ Dashboard.renderers.antinuke = async (content, data) => {
     cCfg.querySelector('#nk-save').onclick = save;
     cCfg.querySelector('#nk-sim').onclick = async () => {
       try {
-        App.toast('🧪 Simulation : aucune sanction ne sera appliquée…');
+        App.toast('Simulation : aucune sanction ne sera appliquée…');
         const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/antinuke/simulate`, { method: 'POST' });
         App.toast(r.sent ? `Alerte de test envoyée (${r.channel}) !` : 'Simulation terminée (salon d’alerte introuvable).');
         load();
@@ -5240,8 +5264,8 @@ Dashboard.renderers.antinuke = async (content, data) => {
       return;
     }
     const label = {
-      ban: '⛔ banni', quarantine: '🔒 quarantaine', demote: '🔻 rétrogradé',
-      lockdown: '🔐 confinement', alert: '🔔 alerte', simulation: '🧪 simulation', 'échec': '⚠️ échec',
+      ban: 'banni', quarantine: 'quarantaine', demote: 'rétrogradé',
+      lockdown: 'confinement', alert: 'alerte', simulation: 'simulation', 'échec': 'échec',
     };
     histBox.innerHTML = `<div style="overflow-x:auto"><table class="dash-table" style="width:100%;font-size:13px">
       <thead><tr><th>Date</th><th>Auteur</th><th>Déclencheur</th><th>Réaction</th><th>Détail</th></tr></thead>
@@ -5260,20 +5284,20 @@ Dashboard.renderers.antinuke = async (content, data) => {
 
 Dashboard.renderers.roles = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '📋', 'Menus & boutons de rôles', 'Deux styles au choix : menu déroulant (plusieurs rôles d\'un coup) ou boutons (un clic = un rôle, re-clic = retiré).');
-    // 🎭 v277 — rôles par réaction emoji (comme les grands bots)
+  const root = Dashboard.header(content, '', 'Menus & boutons de rôles', 'Deux styles au choix : menu déroulant (plusieurs rôles d\'un coup) ou boutons (un clic = un rôle, re-clic = retiré).');
+    // v277 — rôles par réaction emoji (comme les grands bots)
   const rrList = (data.reaction_roles || []).map((x) => ({ ...x }));
-  const cRR = Dashboard.card(root, '🎭 Rôles par réaction emoji', 'Réagir au message donne le rôle, retirer la réaction le retire (mode toggle) — modifiable à volonté, comme chez les autres bots.');
+  const cRR = Dashboard.card(root, 'Rôles par réaction emoji', 'Réagir au message donne le rôle, retirer la réaction le retire (mode toggle) — modifiable à volonté, comme chez les autres bots.');
   const chanName = (id) => { const ch = (data.channels || []).find((c) => c.id === id); return ch ? ch.name : id; };
   const paintRR = () => {
     const host = cRR.querySelector('#rr-list');
-    if (!rrList.length) { host.innerHTML = '<div style="font-size:12.5px;color:var(--d-dim)">Aucun message de rôles pour l\'instant : créez-le ci-dessous.</div>'; return; }
-    host.innerHTML = rrList.map((st) => `<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;padding:9px 10px;border:1px solid var(--d-line);border-radius:10px;margin-bottom:6px;background:var(--d-card2,#ffffff08)">
-      <div style="font-size:12.5px"># ${App.escapeHtml(chanName(st.channel))} · ${st.mappings.length} réaction(s) · mode ${st.mode === 'add-only' ? '➕ don seulement' : '🔁 toggle'}${st.message_id ? ` · <a href="https://discord.com/channels/${guildId}/${st.channel}/${st.message_id}" target="_blank" rel="noopener" style="color:var(--d-accent,#e07a5f)">voir le message</a>` : ' · 📤 pas encore envoyé'}</div>
+    if (!rrList.length) { host.innerHTML = '<div style="font-size:13px;color:var(--d-dim)">Aucun message de rôles pour l\'instant : créez-le ci-dessous.</div>'; return; }
+    host.innerHTML = rrList.map((st) => `<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;padding:9px 10px;border:1px solid var(--d-line);border-radius:8px;margin-bottom:6px;background:var(--d-card2,#ffffff08)">
+      <div style="font-size:13px"># ${App.escapeHtml(chanName(st.channel))} · ${st.mappings.length} réaction(s) · mode ${st.mode === 'add-only' ? 'don seulement' : 'toggle'}${st.message_id ? ` · <a href="https://discord.com/channels/${guildId}/${st.channel}/${st.message_id}" target="_blank" rel="noopener" style="color:var(--d-accent,#e07a5f)">voir le message</a>` : ' · 📤 pas encore envoyé'}</div>
       <button class="dash-btn" data-rr-del="${st.id}" style="padding:4px 9px">Supprimer</button></div>`).join('');
     host.querySelectorAll('[data-rr-del]').forEach((b) => { b.onclick = async () => {
       const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/reaction_roles/${b.dataset.rrDel}`, { method: 'DELETE' });
-      if (r.ok) { App.toast('🎭 Message de rôles supprimé.'); Dashboard.loadGuild().then((d) => Dashboard.renderers.roles(content, d)); }
+      if (r.ok) { App.toast('Message de rôles supprimé.'); Dashboard.loadGuild().then((d) => Dashboard.renderers.roles(content, d)); }
     }; });
   };
   cRR.innerHTML += `<div id="rr-list" style="margin-bottom:12px"></div>
@@ -5287,7 +5311,7 @@ Dashboard.renderers.roles = async (content, data) => {
     <label class="dash-label">Texte d'introduction (optionnel)</label>
     <input class="dash-input" id="rr-content" placeholder="Choisissez vos rôles ci-dessous !" style="max-width:420px" />
     <label class="dash-label">Comportement</label>
-    <select class="dash-select" id="rr-mode" style="max-width:300px"><option value="toggle">🔁 Toggle : réagir = recevoir, retirer = perdre</option><option value="add-only">➕ Don seulement (jamais retiré)</option></select>
+    <select class="dash-select" id="rr-mode" style="max-width:300px"><option value="toggle">Toggle : réagir = recevoir, retirer = perdre</option><option value="add-only">Don seulement (jamais retiré)</option></select>
     <label class="dash-label">Réactions → rôles <span id="rr-map-count" style="font-weight:400;color:var(--d-dim)"></span></label>
     <div class="desc" style="margin:-4px 0 8px">Discord accepte 20 réactions maximum par message. Au-delà, créez un second message.</div>
     <div id="rr-maps" class="rr-maps"></div>
@@ -5324,34 +5348,34 @@ Dashboard.renderers.roles = async (content, data) => {
       role: row.querySelector('.rr-role').value,
       label: row.querySelector('.rr-label').value.trim(),
     })).filter((m) => m.emoji && m.role);
-    if (!maps.length) return App.toast('⚠️ Ajoutez au moins une réaction avec un rôle.', 'error');
+    if (!maps.length) return App.toast('Ajoutez au moins une réaction avec un rôle.', 'error');
     if (maps.length > RR_MAX) return App.toast('Discord n’accepte que 20 réactions par message. Créez un second message pour les autres rôles.', 'error');
     const emojis = maps.map((m) => m.emoji);
     if (new Set(emojis).size !== emojis.length) return App.toast('Chaque emoji ne peut être utilisé qu’une fois.', 'error');
     const setup = { id: 'rr' + Date.now(), channel: cRR.querySelector('#rr-channel').value, content: cRR.querySelector('#rr-content').value, title: cRR.querySelector('#rr-title').value.trim(), title_emoji: cRR.querySelector('#rr-title-emoji').value.trim(), mode: cRR.querySelector('#rr-mode').value, mappings: maps };
     try {
       const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/reaction_roles/send`, { method: 'POST', body: { setup } });
-      App.toast(r && r.ok === false ? `⚠️ ${r.error || 'Envoi impossible.'}` : '🎭 Message de rôles envoyé : les réactions sont posées.');
+      App.toast(r && r.ok === false ? `${r.error || 'Envoi impossible.'}` : 'Message de rôles envoyé : les réactions sont posées.');
       if (r && r.ok !== false) Dashboard.loadGuild().then((d) => Dashboard.renderers.roles(content, d));
     } catch (e) {
       App.toast((e && e.message) || 'Envoi impossible.', 'error');
     }
   };
-const c = Dashboard.card(root, 'Panneaux', 'Envoyez-les sur Discord avec /roles send, ou utilisez ✏️ pour modifier — si le panneau est déjà posté, le message Discord se met à jour en place (aucun doublon).');
+const c = Dashboard.card(root, 'Panneaux', 'Envoyez-les sur Discord avec /roles send, ou modifiez-les ici — si le panneau est déjà posté, le message Discord se met à jour en place (aucun doublon).');
   const menus = data.role_menus || [];
-  if (!menus.length) c.appendChild(App.el(`<div class="dash-empty"><div class="big">📋</div>Aucun panneau pour l\'instant.</div>`));
+  if (!menus.length) c.appendChild(App.el(`<div class="dash-empty"><div class="big">${App.glyphe('presse', { taille: 26 })}</div>Aucun panneau pour l\'instant.</div>`));
   const list = App.el(`<div></div>`);
   menus.forEach((m) => {
-    const modeLabel = m.mode === 'buttons' ? '🔘 Boutons' : '📋 Menu déroulant';
+    const modeLabel = m.mode === 'buttons' ? 'Boutons' : 'Menu déroulant';
     const sent = !!m.message_id;
     const status = sent
       ? '<span style="color:var(--d-success,#57F287)">● déjà envoyé — se met à jour sur place</span>'
       : '<span style="color:var(--d-dim)">pas encore envoyé</span>';
     const row = App.el(`
-      <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--d-border);border-radius:10px;padding:10px 14px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--d-border);border-radius:8px;padding:10px 14px;margin-bottom:8px">
         <div style="flex:1"><b>${App.escapeHtml(m.name)}</b><div style="color:var(--d-dim);font-size:12px">${m.options.length} rôle(s) · ${modeLabel} · ${status}</div></div>
         <button class="dash-btn dash-btn-sm" data-edit="${m.id}">Modifier</button>
-        <button class="dash-btn dash-btn-sm" data-send="${m.id}">${sent ? '🔄 Mettre à jour' : '📨 Envoyer'}</button>
+        <button class="dash-btn dash-btn-sm" data-send="${m.id}">${sent ? 'Mettre à jour' : 'Envoyer'}</button>
         <button class="dash-btn dash-btn-danger dash-btn-sm" data-del="${m.id}">Supprimer</button>
       </div>`);
     row.querySelector('[data-edit]').onclick = () => BotViews.openRoleMenuModal(bot, guildId, m);
@@ -5378,24 +5402,24 @@ const c = Dashboard.card(root, 'Panneaux', 'Envoyez-les sur Discord avec /roles 
 // ---------- Suggestions ----------
 Dashboard.renderers.suggestions = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '💡', 'Suggestions', 'Les membres proposent (/suggest), tout le monde vote, le staff tranche.');
+  const root = Dashboard.header(content, '', 'Suggestions', 'Les membres proposent (/suggest), tout le monde vote, le staff tranche.');
   const s = data.settings;
   const textChannels = (data.channels || []).filter((channel) => !channel.category && !channel.voice);
   const rolesList = (data.roles || []).filter((role) => role.name !== '@everyone');
   const c = Dashboard.card(root, 'Configuration', '');
-  const pingOpts = ['<option value="">— Aucun (ne pas mentionner) —</option>', `<option value="@everyone" ${s.suggestion_ping_role === '@everyone' ? 'selected' : ''}>📣 @everyone (tout le monde)</option>`]
+  const pingOpts = ['<option value="">— Aucun (ne pas mentionner) —</option>', `<option value="@everyone" ${s.suggestion_ping_role === '@everyone' ? 'selected' : ''}>@everyone (tout le monde)</option>`]
     .concat(rolesList.map((r) => `<option value="${App.escapeHtml(r.name)}" ${s.suggestion_ping_role === r.name || s.suggestion_ping_role === r.id ? 'selected' : ''}>@${App.escapeHtml(r.name)}</option>`));
   c.innerHTML += `
     <div class="setting-row">
       <label class="dash-label">Salon des suggestions</label>
       <select class="dash-select" id="s-channel">
         <option value="">— Désactivé —</option>
-        ${textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.suggestion_channel, channel) ? 'selected' : ''}>💡 #${App.escapeHtml(channel.name)}</option>`).join('')}
-        ${Dashboard.currentDiscordOption(s.suggestion_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable')}
+        ${textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.suggestion_channel, channel) ? 'selected' : ''}>#${App.escapeHtml(channel.name)}</option>`).join('')}
+        ${Dashboard.currentDiscordOption(s.suggestion_channel, textChannels, '', 'configuration actuelle — salon introuvable')}
       </select>
     </div>
     <div class="setting-row">
-      <label class="dash-label">🎨 Couleur de l\'annonce</label>
+      <label class="dash-label">Couleur de l\'annonce</label>
       <input class="dash-input" id="s-color" type="color" value="${/^#[0-9a-fA-F]{6}$/.test(String(s.suggestion_color)) ? s.suggestion_color : '#5865F2'}" style="width:64px;height:38px;padding:2px" />
     </div>
     <div class="setting-row">
@@ -5403,24 +5427,25 @@ Dashboard.renderers.suggestions = async (content, data) => {
       <select class="dash-select" id="s-ping">${pingOpts.join('')}</select>
     </div>
     <div class="setting-row" style="flex-wrap:wrap">
-      <label class="dash-label">👎 Autoriser les votes négatifs</label>
+      <label class="dash-label">Autoriser les votes négatifs</label>
       <label class="switch"><input type="checkbox" id="s-downvotes" ${s.suggestion_downvotes !== 0 && s.suggestion_downvotes !== false ? 'checked' : ''} /><span class="slider"></span></label>
     </div>
     <div class="setting-row" style="flex-wrap:wrap">
-      <label class="dash-label">🕶️ Autoriser les suggestions anonymes (option « anonyme » de /suggest)</label>
+      <label class="dash-label">Autoriser les suggestions anonymes (option « anonyme » de /suggest)</label>
       <label class="switch"><input type="checkbox" id="s-anon" ${s.suggestion_anon === 1 || s.suggestion_anon === true ? 'checked' : ''} /><span class="slider"></span></label>
     </div>
     <div class="setting-row">
-      <label class="dash-label">📢 Salon des approuvées (annonce publique quand une suggestion est validée)</label>
+      <label class="dash-label">Salon des approuvées (annonce publique quand une suggestion est validée)</label>
       <select class="dash-select" id="s-approve">
         <option value="">— Désactivé —</option>
-        ${textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.suggestion_approve_channel, channel) ? 'selected' : ''}>📢 #${App.escapeHtml(channel.name)}</option>`).join('')}
-        ${Dashboard.currentDiscordOption(s.suggestion_approve_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable')}
+        ${textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.suggestion_approve_channel, channel) ? 'selected' : ''}>#${App.escapeHtml(channel.name)}</option>`).join('')}
+        ${Dashboard.currentDiscordOption(s.suggestion_approve_channel, textChannels, '', 'configuration actuelle — salon introuvable')}
       </select>
     </div>
-    <div style="font-size:12px;color:var(--d-dim);margin-top:6px">💡 Vide = système par défaut. Les suggestions sont postées dans le salon choisi avec les boutons 👍/👎. Le staff tranche avec ✅ Approuver, ❌ Refuser (une fenêtre demande le motif, affiché sous la suggestion) et 💬 En discussion.</div>
+    <div style="font-size:12px;color:var(--d-dim);margin-top:6px">Vide = système par défaut. Les suggestions sont postées dans le salon choisi avec les boutons 👍/👎. Le staff tranche avec ✅ Approuver, ❌ Refuser (une fenêtre demande le motif, affiché sous la suggestion) et 💬 En discussion.</div>
     <button class="dash-save-action dash-btn dash-btn-primary" style="margin-top:12px" id="s-save">Enregistrer</button>`;
-  c.querySelector('#s-save').onclick = async () => {
+  c.querySelector('#s-save').onclick = async (e) => {
+    const bouton = e.currentTarget;
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/suggestions/config`, { method: 'PUT', body: {
         channel: c.querySelector('#s-channel').value.trim(),
@@ -5430,7 +5455,8 @@ Dashboard.renderers.suggestions = async (content, data) => {
         anon: c.querySelector('#s-anon').checked ? 1 : 0,
         approve_channel: c.querySelector('#s-approve').value.trim(),
       }});
-      App.toast('Configuration des suggestions enregistrée !');
+      App.retourEnregistrement(bouton);
+      App.toast('Configuration des suggestions enregistrée.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
 
@@ -5443,18 +5469,18 @@ Dashboard.renderers.suggestions = async (content, data) => {
     const tr = App.el(`<tr>
       <td>#${sg.id}</td>
       <td style="max-width:340px">${App.escapeHtml(sg.text.slice(0, 120))}${sg.text.length > 120 ? '…' : ''}</td>
-      <td>👍 ${sg.upvotes} / 👎 ${sg.downvotes}</td>
+      <td>${sg.upvotes} / 👎 ${sg.downvotes}</td>
       <td>
         <select class="dash-select" style="max-width:150px">
           <option value="pending" ${sg.status === 'pending' ? 'selected' : ''}>⏳ En attente</option>
-          <option value="approved" ${sg.status === 'approved' ? 'selected' : ''}>✅ Approuvée</option>
-          <option value="denied" ${sg.status === 'denied' ? 'selected' : ''}>❌ Refusée</option>
+          <option value="approved" ${sg.status === 'approved' ? 'selected' : ''}>Approuvée</option>
+          <option value="denied" ${sg.status === 'denied' ? 'selected' : ''}>Refusée</option>
         </select>
       </td>
       <td><button class="dash-btn dash-btn-danger dash-btn-sm" data-del>Supprimer</button></td>
     </tr>`);
     tr.querySelector('select').onchange = async (e) => {
-      try { await App.api(`/bots/${bot.id}/guilds/${guildId}/suggestions/${sg.id}`, { method: 'PUT', body: { status: e.target.value } }); App.toast('Statut mis à jour !'); }
+      try { await App.api(`/bots/${bot.id}/guilds/${guildId}/suggestions/${sg.id}`, { method: 'PUT', body: { status: e.target.value } }); App.toast('Statut mis à jour.'); }
       catch (err) { App.toast(err.message, 'error'); }
     };
     tr.querySelector('[data-del]').onclick = async () => {
@@ -5468,7 +5494,7 @@ Dashboard.renderers.suggestions = async (content, data) => {
 };
 
 // ---------- Giveaways ----------
-// 🖼️ Import d'image (v198) : le fichier choisi est envoyé au serveur qui
+// Import d'image (v198) : le fichier choisi est envoyé au serveur qui
 // renvoie une URL publique (utilisée dans les panneaux / MP de fermeture).
 Dashboard.uploadImage = async (file) => {
   if (!file) return '';
@@ -5495,7 +5521,7 @@ Dashboard.imageField = (label, value, onChange, hint = '') => {
         <button class="dash-btn dash-btn-sm dash-btn-ghost" data-remove ${value ? '' : 'disabled'}>Retirer (par défaut)</button>
       </div>
     </div>
-    <div style="font-size:12px;color:var(--d-dim);margin-top:6px">${hint || (value ? '✅ Image personnalisée enregistrée' : '💡 Laisser vide = image générée automatiquement (par défaut)')}</div>
+    <div style="font-size:12px;color:var(--d-dim);margin-top:6px">${hint || (value ? 'Image personnalisée enregistrée' : 'Laisser vide = image générée automatiquement (par défaut)')}</div>
   </div>`);
   const preview = wrap.querySelector('[data-preview]');
   const fileInput = wrap.querySelector('[data-file]');
@@ -5516,7 +5542,7 @@ Dashboard.imageField = (label, value, onChange, hint = '') => {
       img.onload = () => { preview.innerHTML = ''; img.style.cssText = 'width:100%;height:100%;object-fit:cover'; preview.appendChild(img); };
       img.src = url;
       wrap.querySelector('[data-remove]').disabled = false;
-      App.toast('✅ Image importée ! Cliquez sur 💾 Enregistrer pour l\'appliquer.');
+      App.toast('Image importée ! Cliquez sur 💾 Enregistrer pour l\'appliquer.');
       onChange(url);
     } catch (e) {
       App.toast('Erreur : ' + (e.message || 'image refusée'), 'error');
@@ -5536,28 +5562,28 @@ Dashboard.imageField = (label, value, onChange, hint = '') => {
 
 Dashboard.renderers.giveaways = async (content) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '🎁', 'Giveaways', 'Tirages automatiques par réaction 🎉 — tout se configure ici.');
+  const root = Dashboard.header(content, '', 'Giveaways', 'Tirages automatiques par réaction 🎉 — tout se configure ici.');
   const data = Dashboard.state.guildData || {};
   const s = data.settings || {};
   const textChannels = (data.channels || []).filter((channel) => !channel.category && !channel.voice);
   const rolesList = (data.roles || []).filter((role) => role.name !== '@everyone');
   const gwSettings = await App.api(`/bots/${bot.id}/guilds/${guildId}/giveaways`);
 
-  // ⚙️ Configuration par défaut
-  const c = Dashboard.card(root, '⚙️ Configuration', 'Valeurs par défaut utilisées partout : les giveaways lancés sur Discord (/giveaway) et ceux créés ici.');
+  // Configuration par défaut
+  const c = Dashboard.card(root, 'Configuration', 'Valeurs par défaut utilisées partout : les giveaways lancés sur Discord (/giveaway) et ceux créés ici.');
 
   const chanOpts = ['<option value="">— Choisir un salon (aucun par défaut) —</option>']
-    .concat(textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.giveaway_channel, channel) ? 'selected' : ''}>💬 #${App.escapeHtml(channel.name)}</option>`));
+    .concat(textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.giveaway_channel, channel) ? 'selected' : ''}>#${App.escapeHtml(channel.name)}</option>`));
   if (s.giveaway_channel && !textChannels.some((ch) => Dashboard.discordRefMatches(s.giveaway_channel, ch))) {
-    chanOpts.push(Dashboard.currentDiscordOption(s.giveaway_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable'));
+    chanOpts.push(Dashboard.currentDiscordOption(s.giveaway_channel, textChannels, '', 'configuration actuelle — salon introuvable'));
   }
-  const pingOpts = ['<option value="">— Aucun (ne pas mentionner) —</option>', `<option value="@everyone" ${s.giveaway_ping_role === '@everyone' ? 'selected' : ''}>📣 @everyone (tout le monde)</option>`]
+  const pingOpts = ['<option value="">— Aucun (ne pas mentionner) —</option>', `<option value="@everyone" ${s.giveaway_ping_role === '@everyone' ? 'selected' : ''}>@everyone (tout le monde)</option>`]
     .concat(rolesList.map((r) => `<option value="${App.escapeHtml(r.name)}" ${s.giveaway_ping_role === r.name || s.giveaway_ping_role === r.id ? 'selected' : ''}>@${App.escapeHtml(r.name)}</option>`));
   // v292 — conditions de participation : rôle requis (par identifiant) + niveau minimum + rappel
   const reqRoleOpts = ['<option value="">— Aucun rôle requis —</option>']
     .concat(rolesList.map((r) => `<option value="${r.id}" ${String(s.giveaway_req_role || '') === String(r.id) ? 'selected' : ''}>@${App.escapeHtml(r.name)}</option>`));
   if (s.giveaway_req_role && !rolesList.some((r) => String(r.id) === String(s.giveaway_req_role))) {
-    reqRoleOpts.push(`<option value="${App.escapeHtml(String(s.giveaway_req_role))}" selected>⚠️ configuration actuelle — rôle introuvable</option>`);
+    reqRoleOpts.push(`<option value="${App.escapeHtml(String(s.giveaway_req_role))}" selected>configuration actuelle — rôle introuvable</option>`);
   }
   const reqLevelOpts = Dashboard.presetOptions([[0, 'Désactivé'], [2, 'Niveau 2+'], [3, 'Niveau 3+'], [5, 'Niveau 5+'], [10, 'Niveau 10+'], [15, 'Niveau 15+'], [20, 'Niveau 20+'], [25, 'Niveau 25+'], [30, 'Niveau 30+'], [40, 'Niveau 40+'], [50, 'Niveau 50+']], parseInt(s.giveaway_req_level, 10) || 0);
 
@@ -5577,21 +5603,22 @@ Dashboard.renderers.giveaways = async (content) => {
       <select class="dash-select" id="gw-ping">${pingOpts.join('')}</select>
     </div>
     <div class="setting-row" style="flex-wrap:wrap">
-      <label class="dash-label">🔒 Rôle requis pour participer</label>
+      <label class="dash-label">Rôle requis pour participer</label>
       <select class="dash-select" id="gw-req-role">${reqRoleOpts.join('')}</select>
-      <label class="dash-label" style="margin-top:10px">📶 Niveau minimum requis</label>
+      <label class="dash-label" style="margin-top:10px">Niveau minimum requis</label>
       <select class="dash-select" id="gw-req-level">${reqLevelOpts}</select>
     </div>
     <div style="font-size:12px;color:var(--d-dim);margin:4px 0 0">Les membres qui ne remplissent pas les conditions voient leur réaction 🎉 retirée (explication envoyée en MP) et ne peuvent pas gagner au tirage.</div>
     <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="gw-reminder" ${parseInt(s.giveaway_reminder, 10) ? 'checked' : ''} /> ⏰ Rappel automatique dans le salon 5 minutes avant la fin</label>
     <div class="setting-row">
-      <label class="dash-label">🎨 Couleur de l\'annonce</label>
+      <label class="dash-label">Couleur de l\'annonce</label>
       <input class="dash-input" id="gw-color" type="color" value="${/^#[0-9a-fA-F]{6}$/.test(String(s.giveaway_color)) ? s.giveaway_color : '#FEE75C'}" style="width:64px;height:38px;padding:2px" />
     </div>
     <label class="dash-label">Message personnalisé (vide = « Réagissez avec 🎉 pour participer ! »)</label>
     <textarea class="dash-input" id="gw-msg" rows="2">${App.escapeHtml(s.giveaway_message || '')}</textarea>
     <div style="margin-top:12px"><button class="dash-save-action dash-btn dash-btn-primary" id="gw-save">Enregistrer la configuration</button></div>`;
-  c.querySelector('#gw-save').onclick = async () => {
+  c.querySelector('#gw-save').onclick = async (e) => {
+    const bouton = e.currentTarget;
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/giveaways/config`, { method: 'PUT', body: {
         channel: c.querySelector('#gw-channel').value.trim(),
@@ -5604,17 +5631,18 @@ Dashboard.renderers.giveaways = async (content) => {
         req_level: parseInt(c.querySelector('#gw-req-level').value, 10) || 0,
         reminder: c.querySelector('#gw-reminder').checked,
       }});
-      App.toast('Configuration des giveaways enregistrée !');
+      App.retourEnregistrement(bouton);
+      App.toast('Configuration des giveaways enregistrée.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
 
-  // ➕ Créer un giveaway
-  const c3 = Dashboard.card(root, '➕ Lancer un giveaway', 'Le bot envoie l\'annonce dans le salon choisi avec le bouton 🎉 pour participer.');
+  // Créer un giveaway
+  const c3 = Dashboard.card(root, 'Lancer un giveaway', 'Le bot envoie l\'annonce dans le salon choisi avec le bouton 🎉 pour participer.');
   const createChanOpts = ['<option value="">— Salon par défaut —</option>']
-    .concat(textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.giveaway_channel, channel) ? 'selected' : ''}>💬 #${App.escapeHtml(channel.name)}</option>`));
+    .concat(textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.giveaway_channel, channel) ? 'selected' : ''}>#${App.escapeHtml(channel.name)}</option>`));
   c3.innerHTML += `
     <div class="setting-row" style="flex-wrap:wrap">
-      <label class="dash-label">🏆 Prix à gagner *</label>
+      <label class="dash-label">Prix à gagner *</label>
       <input class="dash-input" id="gw-new-prize" placeholder="Ex : 50€ Nitro, une clé de jeu…" style="flex:1 1 220px;min-width:0" />
     </div>
     <div class="setting-row" style="flex-wrap:wrap">
@@ -5650,7 +5678,7 @@ Dashboard.renderers.giveaways = async (content) => {
         ping_role: c3.querySelector('#gw-new-ping').value.trim(),
         message: c3.querySelector('#gw-new-msg').value,
       }});
-      App.toast('🎁 Giveaway lancé !');
+      App.toast('Giveaway lancé.');
       setTimeout(() => Dashboard.renderContent(document.querySelector('#dash-content')), 900);
     } catch (e) { App.toast(e.message, 'error'); }
     finally { btn.disabled = false; btn.textContent = 'Lancer le giveaway'; }
@@ -5662,8 +5690,8 @@ Dashboard.renderers.giveaways = async (content) => {
   if (!active.length) c2.appendChild(App.el(`<div class="dash-empty">Aucun giveaway en cours.</div>`));
   active.forEach((g) => {
     const row = App.el(`
-      <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--d-border);border-radius:10px;padding:10px 14px;margin-bottom:8px">
-        <div style="flex:1;min-width:0"><b>🎁 ${App.escapeHtml(g.prize)}</b><div style="color:var(--d-dim);font-size:12px">${g.winners} gagnant(s) · fin <t:${Math.floor(g.ends_at / 1000)}:R></div></div>
+      <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--d-border);border-radius:8px;padding:10px 14px;margin-bottom:8px">
+        <div style="flex:1;min-width:0"><b>${App.escapeHtml(g.prize)}</b><div style="color:var(--d-dim);font-size:12px">${g.winners} gagnant(s) · fin <t:${Math.floor(g.ends_at / 1000)}:R></div></div>
         <button class="dash-btn dash-btn-danger dash-btn-sm" data-end="${g.id}">Terminer maintenant</button>
       </div>`);
     row.querySelector('[data-end]').onclick = async () => {
@@ -5681,20 +5709,20 @@ Dashboard.renderers.giveaways = async (content) => {
   else {
     const table = App.el(`<table class="dash-table"><thead><tr><th>Prix</th><th>Gagnants</th><th>Statut</th></tr></thead><tbody></tbody></table>`);
     const tb = table.querySelector('tbody');
-    gwSettings.giveaways.slice(0, 15).forEach((g) => tb.appendChild(App.el(`<tr><td>${App.escapeHtml(g.prize)}</td><td>${g.winners}</td><td>${g.drawn ? '✅ Terminé' : '⏳ En cours'}</td></tr>`)));
+    gwSettings.giveaways.slice(0, 15).forEach((g) => tb.appendChild(App.el(`<tr><td>${App.escapeHtml(g.prize)}</td><td>${g.winners}</td><td>${g.drawn ? 'Terminé' : '⏳ En cours'}</td></tr>`)));
     c4.appendChild(table);
   }
 };
 
 // ---------- Membres (liste + actions) ----------
 // ============================================================
-// 🧱 Embed Builder (v168) — constructeur visuel de messages du bot
+// Embed Builder (v168) — constructeur visuel de messages du bot
 // ============================================================
 Dashboard.embedDraft = Dashboard.embedDraft || null;
 
 Dashboard.renderers.embeds = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '🧱', 'Embed Builder', 'Construisez visuellement les messages de votre bot : aperçu Discord en direct, envoi immédiat dans un salon et modèles réutilisables.');
+  const root = Dashboard.header(content, '', 'Embed Builder', 'Construisez visuellement les messages de votre bot : aperçu Discord en direct, envoi immédiat dans un salon et modèles réutilisables.');
   const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
   const g = data.guild || {};
   const serverName = g.name || 'votre serveur';
@@ -5717,7 +5745,7 @@ Dashboard.renderers.embeds = async (content, data) => {
   wrap.append(leftCol, rightCol);
 
   // ---------- Carte 1 : le message ----------
-  const cMsg = Dashboard.card(leftCol, '✍️ Votre message', 'Le texte au-dessus de l\'embed (optionnel) et l\'embed lui-même.');
+  const cMsg = Dashboard.card(leftCol, 'Votre message', 'Le texte au-dessus de l\'embed (optionnel) et l\'embed lui-même.');
   cMsg.innerHTML += `
     <div class="eb-vars">
       <span class="eb-vars-lbl">Variables :</span>
@@ -5756,11 +5784,11 @@ Dashboard.renderers.embeds = async (content, data) => {
   `;
 
   // ---------- Carte 2 : les boutons ----------
-  const cBtns = Dashboard.card(leftCol, '🔘 Boutons', "Jusqu'à 5 boutons sous le message. « Lien » ouvre une page web, les autres sont décoratifs.");
+  const cBtns = Dashboard.card(leftCol, 'Boutons', "Jusqu'à 5 boutons sous le message. « Lien » ouvre une page web, les autres sont décoratifs.");
   cBtns.innerHTML += `<div id="eb-btn-list"></div><button type="button" class="btn btn-sm eb-btn-add" id="eb-btn-add">Ajouter un bouton</button>`;
 
   // ---------- Carte 3 : les modèles ----------
-  const cTpl = Dashboard.card(leftCol, '💾 Modèles', 'Sauvegardez vos constructions pour les réutiliser plus tard.');
+  const cTpl = Dashboard.card(leftCol, 'Modèles', 'Sauvegardez vos constructions pour les réutiliser plus tard.');
   cTpl.innerHTML += `
     <div class="eb-tpl-save">
       <input class="dash-input" id="eb-tpl-name" maxlength="80" placeholder="Nom du modèle (ex : Règlement)" />
@@ -5772,7 +5800,7 @@ Dashboard.renderers.embeds = async (content, data) => {
   // ---------- Colonne droite : envoi + aperçu ----------
   rightCol.innerHTML += `
     <div class="dash-card eb-send-card">
-      <div class="card-head"><div class="card-heading"><h3>🚀 Envoyer</h3><div class="desc">Le message part immédiatement dans le salon choisi.</div></div></div>
+      <div class="card-head"><div class="card-heading"><h3>Envoyer</h3><div class="desc">Le message part immédiatement dans le salon choisi.</div></div></div>
       <label class="dash-label">Salon de destination</label>
       <select class="dash-input" id="eb-channel">
         <option value="">— Choisir un salon —</option>
@@ -5784,7 +5812,7 @@ Dashboard.renderers.embeds = async (content, data) => {
       </div>
     </div>
     <div class="dash-card eb-preview-card">
-      <div class="card-head"><div class="card-heading"><h3>👀 Aperçu en direct</h3><div class="desc">Exactement comme vos membres le verront sur Discord.</div></div></div>
+      <div class="card-head"><div class="card-heading"><h3>Aperçu en direct</h3><div class="desc">Exactement comme vos membres le verront sur Discord.</div></div></div>
       <div id="eb-preview"></div>
     </div>
   `;
@@ -5837,7 +5865,7 @@ Dashboard.renderers.embeds = async (content, data) => {
               ${d.thumbnail && /^https?:\/\//.test(d.thumbnail) ? `<img class="eb-e-thumb" src="${App.escapeHtml(d.thumbnail)}" alt="" onerror="this.style.display='none'" />` : ''}
             </div>` : ''}
             ${(d.buttons || []).length ? `<div class="eb-btns">${d.buttons.map((b) => `
-              <span class="eb-btn s${Number(b.style) || 1}">${b.emoji ? App.escapeHtml(b.emoji) + ' ' : ''}${App.escapeHtml(b.label || 'Bouton')}${Number(b.style) === 5 ? ' 🔗' : ''}</span>`).join('')}</div>` : ''}
+              <span class="eb-btn s${Number(b.style) || 1}">${b.emoji ? App.escapeHtml(b.emoji) + ' ' : ''}${App.escapeHtml(b.label || 'Bouton')}${Number(b.style) === 5 ? '' : ''}</span>`).join('')}</div>` : ''}
           </div>
         </div>
       </div>
@@ -5862,7 +5890,7 @@ Dashboard.renderers.embeds = async (content, data) => {
           <option value="2"${Number(b.style) === 2 ? ' selected' : ''}>Gris</option>
           <option value="3"${Number(b.style) === 3 ? ' selected' : ''}>Vert</option>
           <option value="4"${Number(b.style) === 4 ? ' selected' : ''}>Rouge</option>
-          <option value="5"${Number(b.style) === 5 ? ' selected' : ''}>🔗 Lien</option>
+          <option value="5"${Number(b.style) === 5 ? ' selected' : ''}>Lien</option>
         </select>
         <button type="button" class="btn btn-sm eb-b-del" title="Retirer ce bouton">Supprimer</button>
         ${Number(b.style) === 5 ? `<input class="dash-input eb-b-url" maxlength="500" placeholder="https://… (page à ouvrir)" value="${App.escapeHtml(b.url || '')}" />` : ''}
@@ -5914,7 +5942,7 @@ Dashboard.renderers.embeds = async (content, data) => {
     btn.disabled = true; btn.textContent = '⏳ Envoi…';
     try {
       const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/embed/send`, { method: 'POST', body: { channel, ...getPayload() } });
-      App.toast(`✅ Message envoyé dans #${r.channel || channel} !`);
+      App.toast(`Message envoyé dans #${r.channel || channel}.`);
     } catch (e) { App.toast(e.message, 'error'); }
     btn.disabled = false; btn.textContent = 'Envoyer le message';
   };
@@ -5922,7 +5950,7 @@ Dashboard.renderers.embeds = async (content, data) => {
     const json = JSON.stringify(getPayload(), null, 2);
     try {
       await navigator.clipboard.writeText(json);
-      App.toast('📋 JSON copié dans le presse-papiers !');
+      App.toast('JSON copié dans le presse-papiers.');
     } catch {
       App.modal(`<div class="eb-json"><h3>JSON du message</h3><pre>${App.escapeHtml(json)}</pre></div>`, true);
     }
@@ -5957,12 +5985,12 @@ Dashboard.renderers.embeds = async (content, data) => {
       });
       renderButtons();
       updatePreview();
-      App.toast(`✅ Modèle « ${t.name} » chargé !`);
+      App.toast(`Modèle « ${t.name} » chargé.`);
     });
     host.querySelectorAll('[data-del]').forEach((b) => b.onclick = async () => {
       try {
         await App.api(`/bots/${bot.id}/guilds/${guildId}/embed-templates/${b.dataset.del}`, { method: 'DELETE' });
-        App.toast('🗑 Modèle supprimé.');
+        App.toast('Modèle supprimé.');
         loadTemplates();
       } catch (e) { App.toast(e.message, 'error'); }
     });
@@ -5976,7 +6004,7 @@ Dashboard.renderers.embeds = async (content, data) => {
     if (!name) return App.toast('Donnez un nom à votre modèle.', 'error');
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/embed-templates`, { method: 'POST', body: { name, ...getPayload() } });
-      App.toast(`💾 Modèle « ${name} » sauvegardé !`);
+      App.toast(`Modèle « ${name} » sauvegardé.`);
       cTpl.querySelector('#eb-tpl-name').value = '';
       loadTemplates();
     } catch (e) { App.toast(e.message, 'error'); }
@@ -5995,7 +6023,7 @@ Dashboard.renderers.embeds = async (content, data) => {
 
 Dashboard.renderers.members = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '👥', 'Membres du serveur', 'La liste des membres avec leurs rôles, niveaux et coins — et des actions directes.');
+  const root = Dashboard.header(content, '', 'Membres du serveur', 'La liste des membres avec leurs rôles, niveaux et coins — et des actions directes.');
   const rolesList = data.roles || [];
   const c = Dashboard.card(root, 'Recherche', '');
   c.innerHTML += `<input class="dash-input" id="m-search" placeholder="🔍 Rechercher un membre…" style="max-width:320px" />`;
@@ -6020,9 +6048,9 @@ Dashboard.renderers.members = async (content, data) => {
         <div class="dash-member">
           ${Dashboard.decoWrap(`<img class="m-avatar" src="${App.escapeHtml(m.avatar)}" alt="" loading="lazy" />`, m.deco)}
           <div class="m-info">
-            <b>${App.escapeHtml(m.username)}</b>${m.is_owner ? ' 👑' : ''}
+            <b>${App.escapeHtml(m.username)}</b>${m.is_owner ? '' : ''}
             <div class="m-roles">${rolesHtml}</div>
-            <div class="m-meta">🪙 ${Number(m.coins) || 0} coins · ✨ ${Number(m.level) || 0} (${Number(m.xp) || 0} XP)</div>
+            <div class="m-meta">${Number(m.coins) || 0} coins · niveau ${Number(m.level) || 0} (${Number(m.xp) || 0} XP)</div>
           </div>
           <div class="m-actions">
             <button class="dash-btn dash-btn-sm" data-coins>Coins</button>
@@ -6030,7 +6058,7 @@ Dashboard.renderers.members = async (content, data) => {
             <button class="dash-btn dash-btn-danger dash-btn-sm" data-kick>Expulser</button>
           </div>
         </div>`);
-      row.querySelector('[data-coins]').onclick = () => App.prompt('🪙 Coins à donner (ex : 500, ou -100 pour retirer) :', '500').then(async (val) => {
+      row.querySelector('[data-coins]').onclick = () => App.prompt('Coins à donner (ex : 500, ou -100 pour retirer) :', '500').then(async (val) => {
         if (!val) return;
         const amt = parseInt(val, 10);
         if (!amt) return App.toast('Montant invalide.', 'error');
@@ -6043,7 +6071,7 @@ Dashboard.renderers.members = async (content, data) => {
       });
       row.querySelector('[data-role]').onclick = () => {
         App.modal(`
-          <div class="modal-header"><h3>🏷️ Rôle — ${App.escapeHtml(m.username)}</h3><button class="x-btn" data-close>×</button></div>
+          <div class="modal-header"><h3>️ Rôle — ${App.escapeHtml(m.username)}</h3><button class="x-btn" data-close>×</button></div>
           <div class="modal-body">
             <label class="field-label">Rôle</label>
             <select class="input" id="mr-role">${rolesList.map((r) => `<option value="${App.escapeHtml(r.id)}">${App.escapeHtml(r.name)}</option>`).join('')}</select>
@@ -6054,11 +6082,11 @@ Dashboard.renderers.members = async (content, data) => {
           </div>`);
         document.querySelector('[data-close]').onclick = App.closeModal;
         document.querySelector('#mr-add').onclick = async () => {
-          try { await App.api(`/bots/${bot.id}/guilds/${guildId}/members/role`, { method: 'POST', body: { user_id: m.id, role_id: document.querySelector('#mr-role').value, action: 'add' } }); App.closeModal(); App.toast('Rôle ajouté !'); }
+          try { await App.api(`/bots/${bot.id}/guilds/${guildId}/members/role`, { method: 'POST', body: { user_id: m.id, role_id: document.querySelector('#mr-role').value, action: 'add' } }); App.closeModal(); App.toast('Rôle ajouté.'); }
           catch (e) { App.toast(e.message, 'error'); }
         };
         document.querySelector('#mr-remove').onclick = async () => {
-          try { await App.api(`/bots/${bot.id}/guilds/${guildId}/members/role`, { method: 'POST', body: { user_id: m.id, role_id: document.querySelector('#mr-role').value, action: 'remove' } }); App.closeModal(); App.toast('Rôle retiré !'); }
+          try { await App.api(`/bots/${bot.id}/guilds/${guildId}/members/role`, { method: 'POST', body: { user_id: m.id, role_id: document.querySelector('#mr-role').value, action: 'remove' } }); App.closeModal(); App.toast('Rôle retiré.'); }
           catch (e) { App.toast(e.message, 'error'); }
         };
       };
@@ -6073,17 +6101,17 @@ Dashboard.renderers.members = async (content, data) => {
   c.querySelector('#m-search').addEventListener('input', (e) => render(e.target.value));
   render();
 
-  // 📜 Historique des sanctions (v188) : les avertissements récents du serveur
-  const warnCard = Dashboard.card(root, '📜 Avertissements récents', 'Les dernières sanctions infligées sur le serveur (warn, timeout, kick, ban) — issues de la modération et de l\'auto-modération.');
+  // Historique des sanctions (v188) : les avertissements récents du serveur
+  const warnCard = Dashboard.card(root, 'Avertissements récents', 'Les dernières sanctions infligées sur le serveur (warn, timeout, kick, ban) — issues de la modération et de l\'auto-modération.');
   const warnList = App.el('<div id="m-warnings" style="display:flex;flex-direction:column;gap:6px;margin-top:10px"></div>');
   warnCard.appendChild(warnList);
   try {
     const wr = await App.api(`/bots/${bot.id}/guilds/${guildId}/warnings`);
     const warns = wr.warnings || [];
     if (!warns.length) {
-      warnList.appendChild(App.el('<div class="dash-empty">Aucun avertissement pour le moment — tout est calme. 🕊️</div>'));
+      warnList.appendChild(App.el('<div class="dash-empty">Aucun avertissement pour le moment.'));
     } else {
-      const actionLabel = { warn: '⚠️ warn', timeout: '⏱️ timeout', kick: '👢 kick', ban: '🔨 ban' };
+      const actionLabel = { warn: 'warn', timeout: '⏱️ timeout', kick: 'kick', ban: 'ban' };
       warns.slice(0, 20).forEach((w) => {
         const tag = w.user_tag || w.user_id;
         warnList.appendChild(App.el(`
@@ -6101,7 +6129,7 @@ Dashboard.renderers.members = async (content, data) => {
 // ---------- Statistiques ----------
 Dashboard.renderers.stats = async (content) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '📈', 'Statistiques du serveur', 'Activité des 7 derniers jours — mesurée automatiquement par le bot.');
+  const root = Dashboard.header(content, '', 'Statistiques du serveur', 'Activité des 7 derniers jours — mesurée automatiquement par le bot.');
   let s;
   try { s = await App.api(`/bots/${bot.id}/guilds/${guildId}/stats`); }
   catch (e) { root.appendChild(App.el(`<div class="dash-empty">${App.escapeHtml(e.message)}</div>`)); return; }
@@ -6117,30 +6145,30 @@ Dashboard.renderers.stats = async (content) => {
       <div class="bar-lbl">${App.escapeHtml(labels[i])}</div>
     </div>`).join('');
 
-  const c1 = Dashboard.card(root, '💬 Messages par jour', '');
+  const c1 = Dashboard.card(root, 'Messages par jour', '');
   c1.appendChild(App.el(`<div class="chart">${bars(s.activity.map((d) => d.messages), maxMsgs, 'linear-gradient(180deg,#5865F2,#4752c4)', 'msg', dayLabels)}</div>`));
-  if (!s.activity.some((d) => d.messages)) c1.appendChild(App.el(`<div class="desc" style="margin-top:8px">📊 Les statistiques commencent à se remplir dès que les membres discutent !</div>`));
+  if (!s.activity.some((d) => d.messages)) c1.appendChild(App.el(`<div class="desc" style="margin-top:8px">Les statistiques commencent à se remplir dès que les membres discutent !</div>`));
 
-  const c2 = Dashboard.card(root, '🆕 Nouveaux membres par jour', '');
+  const c2 = Dashboard.card(root, 'Nouveaux membres par jour', '');
   c2.appendChild(App.el(`<div class="chart">${bars(s.joins.map((d) => d.members), maxJoins, 'linear-gradient(180deg,#57F287,#3ba55d)', 'mbr', dayLabels)}</div>`));
 
-  const c3 = Dashboard.card(root, '🏆 Top actifs (7 jours)', 'Les membres qui discutent le plus.');
+  const c3 = Dashboard.card(root, 'Top actifs (7 jours)', 'Les membres qui discutent le plus.');
   if (!s.top_active.length) c3.appendChild(App.el(`<div class="dash-empty">Pas encore assez de messages.</div>`));
   else {
     s.top_active.forEach((t, i) => {
       c3.appendChild(App.el(`
         <div class="dash-member" style="border:none;padding:7px 2px">
           ${Dashboard.decoWrap(`<img class="m-avatar" src="${App.escapeHtml(t.avatar)}" alt="" loading="lazy" />`, t.deco)}
-          <div class="m-info"><b>${App.escapeHtml(t.tag)}</b><div class="m-meta">💬 ${t.messages} messages</div></div>
-          <div class="m-actions"><span class="dash-badge ${i === 0 ? 'ok' : ''}">${['🥇','🥈','🥉'][i] || `#${i + 1}`}</span></div>
+          <div class="m-info"><b>${App.escapeHtml(t.tag)}</b><div class="m-meta">${t.messages} messages</div></div>
+          <div class="m-actions"><span class="dash-badge ${i === 0 ? 'ok' : ''}">${['','',''][i] || `#${i + 1}`}</span></div>
         </div>`));
     });
   }
 
-  // 🧭 Commandes utilisées (stats d'utilisation v88)
+  // Commandes utilisées (stats d'utilisation v88)
   try {
     const cs = await App.api(`/bots/${bot.id}/guilds/${guildId}/stats/commands`);
-    const c4 = Dashboard.card(root, '🧭 Commandes utilisées', `${cs.total} commande(s) au total (30 derniers jours).`);
+    const c4 = Dashboard.card(root, 'Commandes utilisées', `${cs.total} commande(s) au total (30 derniers jours).`);
     if (!cs.total) {
       c4.appendChild(App.el(`<div class="desc" style="margin:0">Les compteurs se remplissent dès que les membres utilisent les commandes.</div>`));
     } else {
@@ -6150,8 +6178,8 @@ Dashboard.renderers.stats = async (content) => {
       cs.top.slice(0, 8).forEach((c5, i) => {
         c4.appendChild(App.el(`
           <div style="display:flex;align-items:center;gap:10px;padding:6px 2px;border-bottom:1px solid #222434">
-            <span style="font-size:15px">${['🥇','🥈','🥉'][i] || `#${i + 1}`}</span>
-            <span style="flex:1;font-size:13.5px">/${App.escapeHtml(c5.command)}</span>
+            <span style="font-size:16px">${['','',''][i] || `#${i + 1}`}</span>
+            <span style="flex:1;font-size:14px">/${App.escapeHtml(c5.command)}</span>
             <span class="dash-badge">${c5.n} fois</span>
           </div>`));
       });
@@ -6161,33 +6189,33 @@ Dashboard.renderers.stats = async (content) => {
 
 // ---------- Annonces programmées ----------
 const ANNOUNCEMENT_TZ_OPTIONS = [
-  ['Europe/Paris', '🇫🇷 Paris (Europe/Paris)'],
-  ['Europe/Brussels', '🇧🇪 Bruxelles (Europe/Brussels)'],
-  ['Europe/London', '🇬🇧 Londres (Europe/London)'],
-  ['Europe/Madrid', '🇪🇸 Madrid (Europe/Madrid)'],
-  ['Europe/Zurich', '🇨🇭 Genève (Europe/Zurich)'],
-  ['America/Toronto', '🇨🇦 Montréal (America/Toronto)'],
-  ['America/New_York', '🇺🇸 New York (America/New_York)'],
-  ['America/Los_Angeles', '🇺🇸 Los Angeles (America/Los_Angeles)'],
-  ['America/Sao_Paulo', '🇧🇷 São Paulo (America/Sao_Paulo)'],
-  ['America/Mexico_City', '🇲🇽 Mexico (America/Mexico_City)'],
-  ['Africa/Casablanca', '🇲🇦 Casablanca (Africa/Casablanca)'],
-  ['Africa/Dakar', '🇸🇳 Dakar (Africa/Dakar)'],
-  ['Indian/Reunion', '🇷🇪 La Réunion (Indian/Reunion)'],
-  ['Indian/Antananarivo', '🇲🇬 Antananarivo (Indian/Antananarivo)'],
-  ['Asia/Tokyo', '🇯🇵 Tokyo (Asia/Tokyo)'],
-  ['Australia/Sydney', '🇦🇺 Sydney (Australia/Sydney)'],
+  ['Europe/Paris', 'Paris (Europe/Paris)'],
+  ['Europe/Brussels', 'Bruxelles (Europe/Brussels)'],
+  ['Europe/London', 'Londres (Europe/London)'],
+  ['Europe/Madrid', 'Madrid (Europe/Madrid)'],
+  ['Europe/Zurich', 'Genève (Europe/Zurich)'],
+  ['America/Toronto', 'Montréal (America/Toronto)'],
+  ['America/New_York', 'New York (America/New_York)'],
+  ['America/Los_Angeles', 'Los Angeles (America/Los_Angeles)'],
+  ['America/Sao_Paulo', 'São Paulo (America/Sao_Paulo)'],
+  ['America/Mexico_City', 'Mexico (America/Mexico_City)'],
+  ['Africa/Casablanca', 'Casablanca (Africa/Casablanca)'],
+  ['Africa/Dakar', 'Dakar (Africa/Dakar)'],
+  ['Indian/Reunion', 'La Réunion (Indian/Reunion)'],
+  ['Indian/Antananarivo', 'Antananarivo (Indian/Antananarivo)'],
+  ['Asia/Tokyo', 'Tokyo (Asia/Tokyo)'],
+  ['Australia/Sydney', 'Sydney (Australia/Sydney)'],
 ];
 const ANNOUNCEMENT_TZ_LABEL = Object.fromEntries(ANNOUNCEMENT_TZ_OPTIONS.map(([tz, label]) => [tz, label.split(' (')[0]]));
 
 Dashboard.renderers.announcements = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '📅', 'Annonces programmées', 'Messages envoyés tout seuls aux jours et heures choisis (ex. : lundi 18 h).');
+  const root = Dashboard.header(content, '', 'Annonces programmées', 'Messages envoyés tout seuls aux jours et heures choisis (ex. : lundi 18 h).');
   const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
   const rolesList = (data.roles || []).filter((role) => role.name !== '@everyone');
-  // 📌 v276 — message épinglé en bas de salon (sticky)
+  // v276 — message épinglé en bas de salon (sticky)
   const stk = data.sticky || { enabled: false, channel: '', every: 10, content: '', embed: true };
-  const cStk = Dashboard.card(root, '📌 Message épinglé en bas (sticky)', 'Un message important qui remonte toujours tout en bas du salon : règlement, événement, lien utile…');
+  const cStk = Dashboard.card(root, 'Message épinglé en bas (sticky)', 'Un message important qui remonte toujours tout en bas du salon : règlement, événement, lien utile…');
   cStk.innerHTML += `
     <label style="display:flex;gap:8px;align-items:center;margin-bottom:10px"><input type="checkbox" id="stk-enabled" ${stk.enabled ? 'checked' : ''} /> Activer le sticky sur ce serveur</label>
     <label class="dash-label">Salon concerné</label>
@@ -6200,10 +6228,11 @@ Dashboard.renderers.announcements = async (content, data) => {
       <div><label class="dash-label">Présentation</label><select class="dash-select" id="stk-embed" style="max-width:190px"><option value="1" ${stk.embed ? 'selected' : ''}>Joli encadré (embed)</option><option value="0" ${stk.embed ? '' : 'selected'}>Texte simple</option></select></div>
     </div>
     <label class="dash-label">Contenu du message</label>
-    <textarea class="dash-input" id="stk-content" rows="4" style="width:100%;font-size:12.5px" placeholder="Règlement : merci de rester respectueux…&#10;Événement vendredi 20 h !">${App.escapeHtml(stk.content || '')}</textarea>
-    <div style="font-size:12px;color:var(--d-dim);margin-top:8px">📌 Le bot supprime uniquement SON ancien message épinglé puis le republie tout en bas : les messages des membres ne sont jamais touchés.</div>
+    <textarea class="dash-input" id="stk-content" rows="4" style="width:100%;font-size:13px" placeholder="Règlement : merci de rester respectueux…&#10;Événement vendredi 20 h !">${App.escapeHtml(stk.content || '')}</textarea>
+    <div style="font-size:12px;color:var(--d-dim);margin-top:8px">Le bot supprime uniquement SON ancien message épinglé puis le republie tout en bas : les messages des membres ne sont jamais touchés.</div>
     <div style="margin-top:12px"><button class="dash-save-action dash-btn dash-btn-primary" id="stk-save">Enregistrer le sticky</button></div>`;
-  cStk.querySelector('#stk-save').onclick = async () => {
+  cStk.querySelector('#stk-save').onclick = async (e) => {
+    const bouton = e.currentTarget;
     const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/sticky`, { method: 'PUT', body: {
       enabled: cStk.querySelector('#stk-enabled').checked,
       channel: cStk.querySelector('#stk-channel').value,
@@ -6211,7 +6240,8 @@ Dashboard.renderers.announcements = async (content, data) => {
       embed: cStk.querySelector('#stk-embed').value === '1',
       content: cStk.querySelector('#stk-content').value,
     } });
-    App.toast(r.ok ? '📌 Sticky enregistré.' : '⚠️ Enregistrement impossible.');
+    App.retourEnregistrement(bouton);
+    App.toast(r.ok ? 'Sticky enregistré.' : 'Enregistrement impossible.');
     Dashboard.loadGuild().then((d) => (Dashboard.renderers[Dashboard.state.module] || Dashboard.renderers.announcements)(content, d));
   };
   const [scheduledResult, customResult] = await Promise.all([
@@ -6222,8 +6252,8 @@ Dashboard.renderers.announcements = async (content, data) => {
   const customAnnouncement = customResult.config || { id: null, name: 'Annonce personnalisée', title: '', message: '', color: '#5865F2', image_url: '', footer: '', channels: [], ping_roles: [] };
   const currentTz = ((data.settings || {}).timezone) || 'Europe/Paris';
 
-  // 📣 Le nouveau composeur est indépendant des annonces programmées.
-  const cCustom = Dashboard.card(root, '📣 Annonce personnalisée', 'Composez un panneau complet, choisissez plusieurs salons et les rôles à mentionner, puis publie-le immédiatement. Les annonces programmées historiques restent conservées en dessous.');
+  // Le nouveau composeur est indépendant des annonces programmées.
+  const cCustom = Dashboard.card(root, 'Annonce personnalisée', 'Composez un panneau complet, choisissez plusieurs salons et les rôles à mentionner, puis publie-le immédiatement. Les annonces programmées historiques restent conservées en dessous.');
   cCustom.classList.add('custom-announcement-card');
   const customData = {
     ...customAnnouncement,
@@ -6243,12 +6273,12 @@ Dashboard.renderers.announcements = async (content, data) => {
     ['S', '~~', '~~', 'Barré'],
     ['<>', '`', '`', 'Code court'],
     ['{}', '```\n', '\n```', 'Bloc de code'],
-    ['❯', '> ', '', 'Citation'],
+    ['', '> ', '', 'Citation'],
     ['•', '- ', '', 'Liste'],
-    ['🔗', '[', '](https://...)', 'Lien Markdown'],
+    ['', '[', '](https://...)', 'Lien Markdown'],
   ];
   cCustom.innerHTML += `
-    <div class="ca-status-row"><span class="dash-badge ok">✨ Éditeur visuel</span><span class="ca-status-copy">Formatage Discord pris en charge : gras, italique, souligné, code et citations.</span></div>
+    <div class="ca-status-row"><span class="dash-badge ok">Éditeur visuel</span><span class="ca-status-copy">Formatage Discord pris en charge : gras, italique, souligné, code et citations.</span></div>
     <div class="ca-top-grid">
       <div>
         <label class="dash-label">Nom de cette annonce</label>
@@ -6352,8 +6382,8 @@ Dashboard.renderers.announcements = async (content, data) => {
     if (!payload.message.trim()) throw new Error('Écrivez le contenu de votre annonce.');
     if (!payload.channels.length) throw new Error('Choisissez au moins un salon de publication.');
     const result = await App.api(`/bots/${bot.id}/guilds/${guildId}/announcements/custom`, { method: 'PUT', body: payload });
-    if (caStatus) caStatus.textContent = silent ? '✅ Brouillon enregistré, publication en cours…' : '🟡 Brouillon enregistré. Il sera publié uniquement après le bouton « Publier maintenant ».'.replace('uniquement', silent ? 'ensuite' : 'uniquement');
-    if (!silent) App.toast('Brouillon d’annonce enregistré !');
+    if (caStatus) caStatus.textContent = silent ? 'Brouillon enregistré, publication en cours…' : 'Brouillon enregistré. Il sera publié uniquement après le bouton « Publier maintenant ».'.replace('uniquement', silent ? 'ensuite' : 'uniquement');
+    if (!silent) App.toast('Brouillon d’annonce enregistré.');
     return result;
   };
   cCustom.querySelector('#ca-save').onclick = async () => { try { await saveCustomAnnouncement(false); } catch (e) { App.toast(e.message, 'error'); } };
@@ -6363,10 +6393,10 @@ Dashboard.renderers.announcements = async (content, data) => {
     try {
       await saveCustomAnnouncement(true);
       const result = await App.api(`/bots/${bot.id}/guilds/${guildId}/announcements/custom/send`, { method: 'POST' });
-      caStatus.textContent = `✅ Annonce publiée dans ${result.sent || 0} salon(s).` + (result.missingChannels && result.missingChannels.length ? ' Certains salons sont introuvables.' : '');
-      App.toast('Annonce publiée sur Discord !');
+      caStatus.textContent = `Annonce publiée dans ${result.sent || 0} salon(s).` + (result.missingChannels && result.missingChannels.length ? ' Certains salons sont introuvables.' : '');
+      App.toast('Annonce publiée sur Discord.');
     } catch (e) { App.toast(e.message, 'error'); }
-    button.disabled = false; button.textContent = '🚀 Publier maintenant';
+    button.disabled = false; button.textContent = 'Publier maintenant';
   };
 
   const c = Dashboard.card(root, 'Mes annonces programmées', `Jusqu'à 20 annonces. Envoi à l'heure de : ${ANNOUNCEMENT_TZ_LABEL[currentTz] || currentTz}.`);
@@ -6379,11 +6409,11 @@ Dashboard.renderers.announcements = async (content, data) => {
       const days = String(a.days || '').split(',').map((x) => parseInt(x, 10)).filter(Boolean);
       const dayNames = ['', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
       const row = App.el(`
-        <div class="dash-member" style="border:1px solid var(--d-border);border-radius:11px;margin-bottom:9px">
+        <div class="dash-member" style="border:1px solid var(--d-border);border-radius:12px;margin-bottom:9px">
           <div class="m-info" style="flex:1">
-            <b>🕐 ${String(a.hour).padStart(2, '0')}h${String(a.minute).padStart(2, '0')}</b>
+            <b>${String(a.hour).padStart(2, '0')}h${String(a.minute).padStart(2, '0')}</b>
             <div class="m-meta">${days.length === 7 ? 'Tous les jours' : days.map((d) => dayNames[d]).join(' · ')} · <#${App.escapeHtml(a.channel_id)}></div>
-            <div style="color:var(--d-dim);font-size:12.5px;margin-top:4px;max-width:520px">${App.escapeHtml(a.text.slice(0, 160))}${a.text.length > 160 ? '…' : ''}</div>
+            <div style="color:var(--d-dim);font-size:13px;margin-top:4px;max-width:520px">${App.escapeHtml(a.text.slice(0, 160))}${a.text.length > 160 ? '…' : ''}</div>
           </div>
           <div class="m-actions">
             <button class="dash-btn dash-btn-sm" data-toggle>${a.enabled ? '⏸ Désactiver' : '▶️ Activer'}</button>
@@ -6412,7 +6442,7 @@ Dashboard.renderers.announcements = async (content, data) => {
     <label class="dash-label">Fuseau horaire (heure d'envoi)</label>
     <select class="dash-select" id="a-tz">${ANNOUNCEMENT_TZ_OPTIONS.map(([tz, label]) => `<option value="${tz}" ${tz === currentTz ? 'selected' : ''}>${label}</option>`).join('')}</select>
     <label class="dash-label" style="margin-top:10px">Salon</label>
-    <select class="dash-select" id="a-channel">${textChannels.map((ch) => `<option value="${ch.id}">💬 #${App.escapeHtml(ch.name)}</option>`).join('')}</select>
+    <select class="dash-select" id="a-channel">${textChannels.map((ch) => `<option value="${ch.id}">#${App.escapeHtml(ch.name)}</option>`).join('')}</select>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
       <div style="flex:1;min-width:96px"><label class="dash-label">Heure</label><select class="dash-select" id="a-hour">${Dashboard.presetOptions(Array.from({ length: 24 }, (_, h) => [h, String(h).padStart(2, '0') + ' h']), 18)}</select></div>
       <div style="flex:1;min-width:96px"><label class="dash-label">Minute</label><select class="dash-select" id="a-minute">${Dashboard.presetOptions(Array.from({ length: 12 }, (_, m) => [m * 5, String(m * 5).padStart(2, '0')]), 0)}</select></div>
@@ -6425,7 +6455,8 @@ Dashboard.renderers.announcements = async (content, data) => {
     <label class="dash-label" style="margin-top:10px">Message</label>
     <textarea class="dash-input" id="a-text" rows="3" placeholder="Ex : 📣 Rappel : réunion du staff ce soir à 20 h !"></textarea>
     <button class="dash-btn dash-btn-primary" style="margin-top:12px" id="a-add">Programmer</button>`;
-  c2.querySelector('#a-add').onclick = async () => {
+  c2.querySelector('#a-add').onclick = async (e) => {
+    const bouton = e.currentTarget;
     const days = [...c2.querySelectorAll('[data-day]')].filter((x) => x.checked).map((x) => Number(x.dataset.day));
     const text = c2.querySelector('#a-text').value.trim();
     if (!days.length || !text) return App.toast('Choisissez au moins un jour et écrivez le message.', 'error');
@@ -6441,6 +6472,7 @@ Dashboard.renderers.announcements = async (content, data) => {
         days,
         text,
       }});
+      App.retourEnregistrement(bouton);
       App.toast('Annonce programmée ! 🎉');
       Dashboard.renderers.announcements(content, data);
     } catch (e) { App.toast(e.message, 'error'); }
@@ -6453,29 +6485,29 @@ Dashboard.renderers.logs = async (content, data) => {
   const s = data.settings;
   const ev = data.log_events || {};
   const textChannels = (data.channels || []).filter((channel) => !channel.category && !channel.voice);
-  const root = Dashboard.header(content, '📜', 'Journaux de modération', 'Un salon où le bot note ce que vous choisissez de suivre.');
+  const root = Dashboard.header(content, '', 'Journaux de modération', 'Un salon où le bot note ce que vous choisissez de suivre.');
   const c = Dashboard.card(root, 'Configuration', 'Activez avec /modlogs set #salon ou ici.');
   c.innerHTML += `
     <label class="dash-label">Salon des journaux</label>
     <select class="dash-select" id="l-channel">
       <option value="">— Journaux désactivés —</option>
-      ${textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.log_channel, channel) ? 'selected' : ''}>📜 #${App.escapeHtml(channel.name)}</option>`).join('')}
-      ${Dashboard.currentDiscordOption(s.log_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable')}
+      ${textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.log_channel, channel) ? 'selected' : ''}>#${App.escapeHtml(channel.name)}</option>`).join('')}
+      ${Dashboard.currentDiscordOption(s.log_channel, textChannels, '', 'configuration actuelle — salon introuvable')}
     </select>
-    <label class="dash-label" style="margin-top:12px">📂 Que devez-je tracer ?</label>
+    <label class="dash-label" style="margin-top:12px">Que devez-je tracer ?</label>
     <div class="dash-filter-grid">
       ${[
-        ['tickets', '🎫 Tickets', 'ouverture, fermeture, suppression'],
-        ['mod', '🛡️ Modération', 'kick, ban, warn, timeout, purge…'],
-        ['automod', '🤖 Auto-mod', 'liens, spam, mots interdits…'],
-        ['messages', '💬 Messages', 'supprimés, modifiés, purge massive'],
-        ['roles', '🏷️ Rôles', 'créés, supprimés, modifiés, rôles des membres'],
-        ['channels', '📂 Salons', 'créés, supprimés, modifiés, fils'],
-        ['server', '⚙️ Serveur', 'réglages modifiés, webhooks'],
-        ['voice', '🔊 Vocal', 'connexions, déconnexions, déplacements'],
-        ['security', '🚨 Sécurité', 'raids, verrouillages, bouclier'],
-        ['joinleave', '👋 Arrivées / départs', 'nouveaux membres'],
-        ['other', '🛒 Boutique & divers', 'achats…'],
+        ['tickets', 'Tickets', 'ouverture, fermeture, suppression'],
+        ['mod', 'Modération', 'kick, ban, warn, timeout, purge…'],
+        ['automod', 'Auto-mod', 'liens, spam, mots interdits…'],
+        ['messages', 'Messages', 'supprimés, modifiés, purge massive'],
+        ['roles', 'Rôles', 'créés, supprimés, modifiés, rôles des membres'],
+        ['channels', 'Salons', 'créés, supprimés, modifiés, fils'],
+        ['server', 'Serveur', 'réglages modifiés, webhooks'],
+        ['voice', 'Vocal', 'connexions, déconnexions, déplacements'],
+        ['security', 'Sécurité', 'raids, verrouillages, bouclier'],
+        ['joinleave', 'Arrivées / départs', 'nouveaux membres'],
+        ['other', 'Boutique & divers', 'achats…'],
       ].map(([key, label, desc]) => `
         <label class="dash-filter">
           <input type="checkbox" data-ev="${key}" ${ev[key] === 1 || ev[key] === true || !Object.keys(ev).length ? 'checked' : ''} />
@@ -6483,17 +6515,19 @@ Dashboard.renderers.logs = async (content, data) => {
         </label>`).join('')}
     </div>
     <button class="dash-save-action dash-btn dash-btn-primary" style="margin-top:14px" id="l-save">Enregistrer</button>`;
-  c.querySelector('#l-save').onclick = async () => {
+  c.querySelector('#l-save').onclick = async (e) => {
+    const bouton = e.currentTarget;
     try {
       const map = {};
       c.querySelectorAll('[data-ev]').forEach((inp) => { map[inp.dataset.ev] = inp.checked ? 1 : 0; });
       await App.api(`/bots/${bot.id}/guilds/${guildId}/settings`, { method: 'PUT', body: { log_channel: c.querySelector('#l-channel').value.trim(), log_events: map } });
-      App.toast('Journaux enregistrés !');
+      App.retourEnregistrement(bouton);
+      App.toast('Journaux enregistrés.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
 
-  // 🛡️ Historique des actions d'auto-mod (visible même sans salon #logs)
-  const hc = Dashboard.card(root, '🛡️ Auto-modération — dernières actions', 'Les 20 dernières suppressions automatiques sur ce serveur.');
+  // Historique des actions d'auto-mod (visible même sans salon #logs)
+  const hc = Dashboard.card(root, 'Auto-modération — dernières actions', 'Les 20 dernières suppressions automatiques sur ce serveur.');
   const hList = App.el(`<div class="desc">Chargement…</div>`);
   hc.appendChild(hList);
   (async () => {
@@ -6502,7 +6536,7 @@ Dashboard.renderers.logs = async (content, data) => {
       if (!logs.length) { hList.innerHTML = `<div class="desc">Aucune action pour l'instant. Les suppressions de l'auto-mod apparaîtront ici.</div>`; return; }
       hList.innerHTML = logs.slice(0, 20).map((l) => `
         <div style="display:flex;align-items:center;gap:10px;padding:7px 2px;border-bottom:1px solid #222434">
-          <span style="font-size:15px">🛡️</span>
+          <span style="font-size:16px"></span>
           <div style="flex:1;min-width:0">
             <b style="font-size:13px">${App.escapeHtml(l.user_tag || 'membre inconnu')}</b>
             <div class="m-meta">${App.escapeHtml(l.reason)} · ${App.escapeHtml(String(l.created_at || '').replace('T', ' '))}</div>
@@ -6523,7 +6557,7 @@ Dashboard.renderers.autoclean = async (content, data) => {
   try { selected = JSON.parse(s.autoclean_channels || '[]'); } catch { selected = []; }
   if (!Array.isArray(selected)) selected = [];
   const interval = s.autoclean_interval || 10;
-  const root = Dashboard.header(content, '🧹', 'Nettoyage auto', 'Dès que c’est activé, le bot commence tout de suite : d’abord les plus anciens messages, puis vers les plus récents. Pas besoin d’attendre un nouveau message. Un message toutes les X secondes. Les épinglés restent.');
+  const root = Dashboard.header(content, '', 'Nettoyage auto', 'Dès que c’est activé, le bot commence tout de suite : d’abord les plus anciens messages, puis vers les plus récents. Pas besoin d’attendre un nouveau message. Un message toutes les X secondes. Les épinglés restent.');
   const c = Dashboard.card(root, 'Configuration', 'Choisissez les salons et le rythme, puis enregistrez. Le bot a besoin de la permission « Gérer les messages ».');
   const presets = [[2, '2 s'], [5, '5 s'], [10, '10 s · conseillé'], [15, '15 s'], [30, '30 s'], [60, '1 min'], [120, '2 min'], [300, '5 min'], [600, '10 min'], [1800, '30 min'], [3600, '1 h']];
   c.innerHTML += `
@@ -6548,7 +6582,8 @@ Dashboard.renderers.autoclean = async (content, data) => {
     getValue: (ch) => ch.id,
     getLabel: (ch) => `#${ch.name}`,
   });
-  c.querySelector('#ac-save').onclick = async () => {
+  c.querySelector('#ac-save').onclick = async (e) => {
+    const bouton = e.currentTarget;
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/autoclean`, {
         method: 'PUT',
@@ -6558,7 +6593,8 @@ Dashboard.renderers.autoclean = async (content, data) => {
           interval: parseInt(c.querySelector('#ac-interval').value, 10),
         },
       });
-      App.toast('Nettoyage auto enregistré !');
+      App.retourEnregistrement(bouton);
+      App.toast('Nettoyage auto enregistré.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
 };
@@ -6566,17 +6602,17 @@ Dashboard.renderers.autoclean = async (content, data) => {
 // ---------- 🎮 Événements & tournois (v189) ----------
 Dashboard.renderers.quiz = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '🧠', 'Quiz', 'Créez vos propres quiz, sélectionnez le salon, réglez les points. Les membres répondent avec /quiz.');
+  const root = Dashboard.header(content, '', 'Quiz', 'Créez vos propres quiz, sélectionnez le salon, réglez les points. Les membres répondent avec /quiz.');
   const s = data.settings || {};
   const textChannels = (data.channels || []).filter((channel) => !channel.category && !channel.voice);
   const setsData = await App.api(`/bots/${bot.id}/guilds/${guildId}/quiz/sets`);
 
-  // ⚙️ Configuration générale
-  const c = Dashboard.card(root, '⚙️ Configuration du quiz', 'Le salon choisi reçoit les questions de /quiz. Vide = le salon où la commande est lancée.');
+  // Configuration générale
+  const c = Dashboard.card(root, 'Configuration du quiz', 'Le salon choisi reçoit les questions de /quiz. Vide = le salon où la commande est lancée.');
   const chanOpts = ['<option value="">— Salon où la commande est lancée —</option>']
-    .concat(textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.quiz_channel, channel) ? 'selected' : ''}>💬 #${App.escapeHtml(channel.name)}</option>`));
+    .concat(textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.quiz_channel, channel) ? 'selected' : ''}>#${App.escapeHtml(channel.name)}</option>`));
   if (s.quiz_channel && !textChannels.some((ch) => Dashboard.discordRefMatches(s.quiz_channel, ch))) {
-    chanOpts.push(Dashboard.currentDiscordOption(s.quiz_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable'));
+    chanOpts.push(Dashboard.currentDiscordOption(s.quiz_channel, textChannels, '', 'configuration actuelle — salon introuvable'));
   }
   c.innerHTML += `
     <div class="setting-row">
@@ -6592,7 +6628,8 @@ Dashboard.renderers.quiz = async (content, data) => {
       <select class="dash-select" id="qz-window" style="max-width:130px">${Dashboard.presetOptions(Dashboard.PRESETS_SEC_COURTES, parseInt(s.quiz_bonus_window, 10) || 8, Dashboard.labelSecondes)}</select>
     </div>
     <div style="margin-top:12px"><button class="dash-save-action dash-btn dash-btn-primary" id="qz-save">Enregistrer</button></div>`;
-  c.querySelector('#qz-save').onclick = async () => {
+  c.querySelector('#qz-save').onclick = async (e) => {
+    const bouton = e.currentTarget;
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/quiz/config`, { method: 'PUT', body: {
         channel: c.querySelector('#qz-channel').value.trim(),
@@ -6600,20 +6637,21 @@ Dashboard.renderers.quiz = async (content, data) => {
         bonus: parseInt(c.querySelector('#qz-bonus').value, 10) || 5,
         bonus_window: parseInt(c.querySelector('#qz-window').value, 10) || 8,
       }});
-      App.toast('Configuration du quiz enregistrée !');
+      App.retourEnregistrement(bouton);
+      App.toast('Configuration du quiz enregistrée.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
 
-  // 📚 Mes quiz
-  const list = Dashboard.card(root, '📚 Mes quiz', 'Vos banques de questions. Désactivez un quiz pour qu\'il ne sorte plus dans /quiz (les questions restent).');
+  // Mes quiz
+  const list = Dashboard.card(root, 'Mes quiz', 'Vos banques de questions. Désactivez un quiz pour qu\'il ne sorte plus dans /quiz (les questions restent).');
   const sets = setsData.sets || [];
-  if (!sets.length) list.appendChild(App.el(`<div class="dash-empty"><div class="big">🧠</div>Vous n\'avez pas encore créé de quiz — utilisez le formulaire « ➕ Créer un quiz » ci-dessous.<br/><span style="font-size:12px;color:var(--d-dim)">Sans quiz personnalisé, /quiz utilise la banque de questions par défaut.</span></div>`));
+  if (!sets.length) list.appendChild(App.el(`<div class="dash-empty"><div class="big">${App.glyphe('cerveau', { taille: 26 })}</div>Vous n\'avez pas encore créé de quiz — utilisez le formulaire « ➕ Créer un quiz » ci-dessous.<br/><span style="font-size:12px;color:var(--d-dim)">Sans quiz personnalisé, /quiz utilise la banque de questions par défaut.</span></div>`));
   sets.forEach((set) => {
     const qCount = (set.questions || []).length;
     const row = App.el(`
-      <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--d-border);border-radius:10px;padding:10px 14px;margin-bottom:8px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--d-border);border-radius:8px;padding:10px 14px;margin-bottom:8px;flex-wrap:wrap">
         <div style="flex:1;min-width:0">
-          <b>🧠 ${App.escapeHtml(set.name || 'Mon quiz')}</b>
+          <b>${App.escapeHtml(set.name || 'Mon quiz')}</b>
           <div style="color:var(--d-dim);font-size:12px">${qCount} question(s)${set.channel ? ' · salon #' + App.escapeHtml(set.channel.replace(/^#/, '')) : ''} ${set.enabled ? '' : ' · <span style="color:#ED4245">désactivé</span>'}</div>
         </div>
         <label class="switch" title="Activer / désactiver"><input type="checkbox" data-toggle="${set.id}" ${set.enabled ? 'checked' : ''} /><span class="slider"></span></label>
@@ -6635,8 +6673,8 @@ Dashboard.renderers.quiz = async (content, data) => {
     list.appendChild(row);
   });
 
-  // ➕ Créer / ✏️ Modifier un quiz
-  const editor = Dashboard.card(root, '➕ Créer un quiz', 'Ajoutez autant de questions que vous voulez : une question + la bonne réponse + deux mauvaises réponses.');
+  // Créer / ✏️ Modifier un quiz
+  const editor = Dashboard.card(root, 'Créer un quiz', 'Ajoutez autant de questions que vous voulez : une question + la bonne réponse + deux mauvaises réponses.');
   let editingId = null;
   const editorName = App.el(`<input class="dash-input" id="qze-name" placeholder="Nom du quiz (ex : Culture générale, Jeux vidéo…)" style="max-width:420px" />`);
   const editorChan = App.el(`<select class="dash-select" id="qze-channel">${chanOpts.join('')}</select>`);
@@ -6655,7 +6693,7 @@ Dashboard.renderers.quiz = async (content, data) => {
 
   const qRow = (q = {}) => {
     const row = App.el(`
-      <div data-qrow style="border:1px solid var(--d-border);border-radius:10px;padding:10px;margin-bottom:8px;display:flex;flex-direction:column;gap:6px">
+      <div data-qrow style="border:1px solid var(--d-border);border-radius:8px;padding:10px;margin-bottom:8px;display:flex;flex-direction:column;gap:6px">
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <input class="dash-input" data-f-q placeholder="❓ Question (ex : Quelle est la capitale du Japon ?)" value="${App.escapeHtml(q.q || '')}" style="flex:1 1 260px;min-width:0" />
           <button class="dash-btn dash-btn-danger dash-btn-sm" data-q-del>Supprimer</button>
@@ -6690,7 +6728,7 @@ Dashboard.renderers.quiz = async (content, data) => {
   const renderEditor = (set) => {
     editingId = set.id;
     const headTitle = editor.querySelector('.card-head h3');
-    if (headTitle) headTitle.textContent = '✏️ Modifier le quiz';
+    if (headTitle) headTitle.textContent = 'Modifier le quiz';
     editorName.value = set.name || '';
     if (set.channel) {
       const opt = editorChan.querySelector(`option[value="${CSS.escape(set.channel)}"]`);
@@ -6712,23 +6750,23 @@ Dashboard.renderers.quiz = async (content, data) => {
     try {
       if (editingId) {
         await App.api(`/bots/${bot.id}/guilds/${guildId}/quiz/sets/${editingId}`, { method: 'PUT', body });
-        App.toast('Quiz mis à jour !');
+        App.toast('Quiz mis à jour.');
       } else {
         await App.api(`/bots/${bot.id}/guilds/${guildId}/quiz/sets`, { method: 'POST', body });
-        App.toast('Quiz créé !');
+        App.toast('Quiz créé.');
       }
       Dashboard.renderers.quiz(content, data);
     } catch (e) { App.toast(e.message, 'error'); }
   };
 
-  // 🏆 Classement
+  // Classement
   const { top } = await App.api(`/bots/${bot.id}/guilds/${guildId}/quiz/top`);
-  const c2 = Dashboard.card(root, '🏆 Classement Quiz', 'Les 25 meilleurs joueurs de ce serveur.');
-  if (!top.length) c2.appendChild(App.el(`<div class="dash-empty"><div class="big">🧠</div>Personne n\'a encore joué au quiz — lancez <b>/quiz</b> sur le serveur !</div>`));
+  const c2 = Dashboard.card(root, 'Classement Quiz', 'Les 25 meilleurs joueurs de ce serveur.');
+  if (!top.length) c2.appendChild(App.el(`<div class="dash-empty"><div class="big">${App.glyphe('cerveau', { taille: 26 })}</div>Personne n\'a encore joué au quiz — lancez <b>/quiz</b> sur le serveur !</div>`));
   else {
     const table = App.el(`<table class="dash-table"><thead><tr><th>#</th><th>Membre</th><th>Points</th><th>Réponses</th></tr></thead><tbody></tbody></table>`);
     const tb = table.querySelector('tbody');
-    top.forEach((r, i) => tb.appendChild(App.el(`<tr><td>${['🥇','🥈','🥉'][i] || i + 1}</td><td><@${r.user_id}></td><td>${r.score} pts</td><td>${r.answers}</td></tr>`)));
+    top.forEach((r, i) => tb.appendChild(App.el(`<tr><td>${['','',''][i] || i + 1}</td><td><@${r.user_id}></td><td>${r.score} pts</td><td>${r.answers}</td></tr>`)));
     c2.appendChild(table);
     const exp = App.el(`<div style="margin-top:12px"><button class="btn btn-sm" id="quiz-exp-csv">Exporter en CSV</button></div>`);
     c2.appendChild(exp);
@@ -6741,11 +6779,11 @@ Dashboard.renderers.quiz = async (content, data) => {
 
 Dashboard.renderers.events = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '🎮', 'Événements & tournois', 'Créez des événements datés : les membres s\'inscrivent avec un bouton, le bot rappelle 24 h et 1 h avant.');
+  const root = Dashboard.header(content, '', 'Événements & tournois', 'Créez des événements datés : les membres s\'inscrivent avec un bouton, le bot rappelle 24 h et 1 h avant.');
   const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
 
   // ---- 📋 Liste des événements ----
-  const listCard = Dashboard.card(root, '📋 Événements du serveur', '');
+  const listCard = Dashboard.card(root, 'Événements du serveur', '');
   const listEl = App.el('<div id="ev-list" style="display:flex;flex-direction:column;gap:8px;margin-top:10px"></div>');
   listCard.appendChild(listEl);
 
@@ -6764,22 +6802,22 @@ Dashboard.renderers.events = async (content, data) => {
     } catch (e) { listEl.appendChild(App.el(`<div class="dash-empty">${App.escapeHtml(e.message)}</div>`)); return; }
     const upcoming = events.filter((e) => e.starts_at > Date.now()).sort((a, b) => a.starts_at - b.starts_at);
     if (!upcoming.length) {
-      listEl.appendChild(App.el('<div class="dash-empty">Aucun événement à venir. Créez votre premier tournoi ci-dessous ! 🎮</div>'));
+      listEl.appendChild(App.el('<div class="dash-empty">Aucun événement à venir. Créez votre premier tournoi ci-dessous ! 🎮'));
       return;
     }
     upcoming.forEach((ev) => {
       let participants = [];
       try { participants = JSON.parse(ev.participants || '[]'); } catch {}
       const item = App.el(`
-        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--d-surface-2,#23262e);border:1px solid var(--d-border,#2f323b)">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:var(--d-surface-2,#23262e);border:1px solid var(--d-border,#2f323b)">
           <div style="flex:1;min-width:180px">
-            <b>🎮 ${App.escapeHtml(ev.title)}</b>
-            <div style="font-size:12px;color:var(--d-dim,#a0a5b3)">🕒 ${App.escapeHtml(fmtDate(ev.starts_at))}${ev.ping_role && ev.ping_role !== 'none' ? ' · 📣 ' + App.escapeHtml(ev.ping_role) : ''}</div>
+            <b>${App.escapeHtml(ev.title)}</b>
+            <div style="font-size:12px;color:var(--d-dim,#a0a5b3)">${App.escapeHtml(fmtDate(ev.starts_at))}${ev.ping_role && ev.ping_role !== 'none' ? ' · 📣 ' + App.escapeHtml(ev.ping_role) : ''}</div>
             ${ev.description ? `<div style="font-size:12px;color:var(--d-dim,#a0a5b3);overflow-wrap:anywhere">${App.escapeHtml(ev.description).slice(0, 160)}</div>` : ''}
           </div>
           <div style="text-align:center;min-width:70px">
             <b style="font-size:18px">${participants.length}</b>
-            <div style="font-size:10px;color:var(--d-dim,#a0a5b3)">inscrit(s)</div>
+            <div style="font-size:11px;color:var(--d-dim,#a0a5b3)">inscrit(s)</div>
           </div>
           <div style="display:flex;gap:6px">
             <button class="dash-btn dash-btn-sm" data-ev-copy>Copier le lien</button>
@@ -6792,7 +6830,7 @@ Dashboard.renderers.events = async (content, data) => {
         App.toast('Commande copiée : /event create ' + ev.title);
         const cmd = `/event create titre:${ev.title} quand:${p}${ev.ping_role && ev.ping_role !== 'none' ? ' role:' + ev.ping_role : ''}`;
         try { navigator.clipboard.writeText(cmd); } catch {}
-        App.modal(`<div class="modal-header"><h3>📋 Commande de recréation</h3><button class="x-btn" data-close>×</button></div><div class="modal-body"><p style="font-size:13px;overflow-wrap:anywhere">${App.escapeHtml(cmd)}</p><div style="display:flex;gap:10px;margin-top:14px"><button class="btn btn-primary" data-close style="flex:1">OK</button></div></div>`);
+        App.modal(`<div class="modal-header"><h3>Commande de recréation</h3><button class="x-btn" data-close>×</button></div><div class="modal-body"><p style="font-size:13px;overflow-wrap:anywhere">${App.escapeHtml(cmd)}</p><div style="display:flex;gap:10px;margin-top:14px"><button class="btn btn-primary" data-close style="flex:1">OK</button></div></div>`);
         document.querySelectorAll('[data-close]').forEach((b) => b.onclick = App.closeModal);
       };
       item.querySelector('[data-ev-del]').onclick = async () => {
@@ -6806,7 +6844,7 @@ Dashboard.renderers.events = async (content, data) => {
   await renderList();
 
   // ---- ➕ Créer un événement ----
-  const createCard = Dashboard.card(root, '➕ Créer un événement', 'Titre, date (JJ/MM HH:MM — heure du serveur), description, salon d\'annonce et rôle à mentionner en option.');
+  const createCard = Dashboard.card(root, 'Créer un événement', 'Titre, date (JJ/MM HH:MM — heure du serveur), description, salon d\'annonce et rôle à mentionner en option.');
   const chOpts = ['<option value="">— Salon actuel / premier salon texte —</option>']
     .concat(textChannels.map((ch) => `<option value="${ch.id}">#${App.escapeHtml(ch.name)}</option>`));
   createCard.innerHTML += `
@@ -6857,17 +6895,17 @@ Dashboard.renderers.community = async (content, data) => {
 
   // ---- 📨 v291 : Récompenses d'invitations ----
   const irc = Object.assign({ enabled: false, min_hours: 24, channel: '', rewards: [] }, data.invite_rewards || {});
-  const ci = Dashboard.card(root, '📨 Récompenses d\'invitations', 'Récompensez les membres qui font grandir le serveur : un rôle automatique à chaque palier d\'invitations VALIDES. Un invité qui repart avant le délai choisi ne compte pas (anti fausses invitations).');
+  const ci = Dashboard.card(root, 'Récompenses d\'invitations', 'Récompensez les membres qui font grandir le serveur : un rôle automatique à chaque palier d\'invitations VALIDES. Un invité qui repart avant le délai choisi ne compte pas (anti fausses invitations).');
   let ircRows = (irc.rewards || []).map((rw) => ({ invites: Number(rw.invites) || 5, role: String(rw.role || '') }));
   const ircRoleOpts = (sel) => ['<option value="">— Choisir un rôle —</option>']
     .concat((data.roles || []).map((r) => `<option value="${r.id}" ${String(sel) === String(r.id) ? 'selected' : ''}>@ ${App.escapeHtml(r.name)}</option>`)).join('');
   const ircDraw = () => {
     const box = ci.querySelector('#irc-rows');
-    if (!ircRows.length) { box.innerHTML = '<div style="font-size:12.5px;color:var(--d-dim)">Aucun palier — ajoutez-en un (ex. 5 invitations → rôle Fan, 25 → rôle Ambassadeur).</div>'; return; }
+    if (!ircRows.length) { box.innerHTML = '<div style="font-size:13px;color:var(--d-dim)">Aucun palier — ajoutez-en un (ex. 5 invitations → rôle Fan, 25 → rôle Ambassadeur).</div>'; return; }
     box.innerHTML = ircRows.map((rw, i) => `
       <div class="irc-row" data-i="${i}" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
         <input type="number" class="dash-input irc-inv" min="1" max="100000" value="${rw.invites}" style="width:110px" title="Nombre d'invitations valides" />
-        <span style="color:var(--d-dim);font-size:12.5px">invitation(s) →</span>
+        <span style="color:var(--d-dim);font-size:13px">invitation(s) →</span>
         <select class="dash-select irc-role" style="max-width:240px">${ircRoleOpts(rw.role)}</select>
         <button class="dash-btn irc-del" title="Supprimer ce palier">Supprimer</button>
       </div>`).join('');
@@ -6880,11 +6918,11 @@ Dashboard.renderers.community = async (content, data) => {
   };
   ci.innerHTML += `
     <label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" id="irc-enabled" ${irc.enabled ? 'checked' : ''} /> Activer les récompenses d'invitations</label>
-    <label class="dash-label">🕵️ Anti fausses invitations — un invité qui part avant ce délai ne compte pas</label>
+    <label class="dash-label">Anti fausses invitations — un invité qui part avant ce délai ne compte pas</label>
     <select class="dash-select" id="irc-minh" style="max-width:320px">${[[0, 'Désactivé — tous les invités comptent'], [6, '6 heures'], [24, '24 heures (recommandé)'], [72, '3 jours'], [168, '7 jours']].map(([v, l]) => `<option value="${v}" ${Number(irc.min_hours) === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
-    <label class="dash-label">📣 Salon d'annonce des paliers atteints</label>
+    <label class="dash-label">Salon d'annonce des paliers atteints</label>
     <select class="dash-select" id="irc-chan" style="max-width:320px">${['<option value="">— Aucune annonce —</option>'].concat(textChannels.map((ch) => `<option value="${ch.id}" ${irc.channel === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`)).join('')}</select>
-    <label class="dash-label">🏆 Paliers (invitations valides → rôle donné à l'inviteur)</label>
+    <label class="dash-label">Paliers (invitations valides → rôle donné à l'inviteur)</label>
     <div id="irc-rows"></div>
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
       <button class="dash-btn" id="irc-add">Ajouter un palier</button>
@@ -6892,7 +6930,7 @@ Dashboard.renderers.community = async (content, data) => {
     </div>`;
   ircDraw();
   ci.querySelector('#irc-add').onclick = () => {
-    if (ircRows.length >= 10) { App.toast('⚠️ 10 paliers maximum.'); return; }
+    if (ircRows.length >= 10) { App.toast('10 paliers maximum.'); return; }
     ircRows.push({ invites: 5, role: '' });
     ircDraw();
   };
@@ -6904,30 +6942,30 @@ Dashboard.renderers.community = async (content, data) => {
       rewards: ircRows,
     };
     const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/invite-rewards`, { method: 'PUT', body });
-    App.toast(r.ok ? '✅ Récompenses d\'invitations enregistrées.' : `⚠️ ${r.error || 'Enregistrement impossible.'}`);
+    App.toast(r.ok ? 'Récompenses d\'invitations enregistrées.' : `${r.error || 'Enregistrement impossible.'}`);
   };
 
   // ---- 🔴 Carte Annonces de live ----
-  const cl = Dashboard.card(root, '🔴 Annonces de live', 'Enregistrez le lien TikTok / Twitch / YouTube / Kick d\'un membre : dès qu\'il lance un live, le bot l\'annonce automatiquement (pseudo + photo de profil + bouton Regarder) dans le salon choisi — et annonce aussi la fin du live (avec sa durée).');
+  const cl = Dashboard.card(root, 'Annonces de live', 'Enregistrez le lien TikTok / Twitch / YouTube / Kick d\'un membre : dès qu\'il lance un live, le bot l\'annonce automatiquement (pseudo + photo de profil + bouton Regarder) dans le salon choisi — et annonce aussi la fin du live (avec sa durée).');
   const liveRoles = (data.roles || []).filter((role) => role.name !== '@everyone');
   const livePing = String(s.live_ping || 'everyone');
   const livePingOpts = [
-    `<option value="everyone" ${livePing === 'everyone' ? 'selected' : ''}>📣 @everyone (tout le monde)</option>`,
-    `<option value="here" ${livePing === 'here' ? 'selected' : ''}>🔔 @here (membres connectés)</option>`,
-    `<option value="none" ${livePing === 'none' ? 'selected' : ''}>🔕 Aucune mention</option>`,
-  ].concat(liveRoles.map((r) => `<option value="${App.escapeHtml(r.id)}" ${livePing === String(r.id) || Dashboard.discordRefMatches(livePing, r) ? 'selected' : ''}>🛡️ ${App.escapeHtml(r.name)}</option>`));
+    `<option value="everyone" ${livePing === 'everyone' ? 'selected' : ''}>@everyone (tout le monde)</option>`,
+    `<option value="here" ${livePing === 'here' ? 'selected' : ''}>@here (membres connectés)</option>`,
+    `<option value="none" ${livePing === 'none' ? 'selected' : ''}>Aucune mention</option>`,
+  ].concat(liveRoles.map((r) => `<option value="${App.escapeHtml(r.id)}" ${livePing === String(r.id) || Dashboard.discordRefMatches(livePing, r) ? 'selected' : ''}>${App.escapeHtml(r.name)}</option>`));
   if (livePing && !['everyone', 'here', 'none'].includes(livePing) && !liveRoles.some((r) => String(r.id) === livePing || Dashboard.discordRefMatches(livePing, r))) {
-    livePingOpts.push(Dashboard.currentDiscordOption(livePing, liveRoles, '⚠️', 'configuration actuelle — rôle introuvable'));
+    livePingOpts.push(Dashboard.currentDiscordOption(livePing, liveRoles, '', 'configuration actuelle — rôle introuvable'));
   }
   const liveChanOpts = ['<option value="">— Désactivé (choisir un salon pour activer) —</option>']
-    .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(s.live_channel, ch) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`));
+    .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(s.live_channel, ch) ? 'selected' : ''}>#${App.escapeHtml(ch.name)}</option>`));
   if (s.live_channel && !textChannels.some((ch) => Dashboard.discordRefMatches(s.live_channel, ch))) {
-    liveChanOpts.push(Dashboard.currentDiscordOption(s.live_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable'));
+    liveChanOpts.push(Dashboard.currentDiscordOption(s.live_channel, textChannels, '', 'configuration actuelle — salon introuvable'));
   }
   cl.innerHTML += `
     <div id="lv-status" style="margin-bottom:10px">${s.live_channel
-      ? `<span class="dash-badge ok">✅ Annonces ACTIVES dans ${App.escapeHtml(s.live_channel)}</span>`
-      : `<span class="dash-badge warn">⚠️ AUCUN salon choisi — les annonces sont DÉSACTIVÉES ! Choisissez un salon ci-dessous.</span>`}</div>
+      ? `<span class="dash-badge ok">Annonces ACTIVES dans ${App.escapeHtml(s.live_channel)}</span>`
+      : `<span class="dash-badge warn">AUCUN salon choisi — les annonces sont DÉSACTIVÉES ! Choisissez un salon ci-dessous.</span>`}</div>
     <label class="dash-label">Salon des annonces de live</label>
     <select class="dash-select" id="lv-chan" style="max-width:320px">${liveChanOpts.join('')}</select>
     <label class="dash-label">Rôle mentionné avec l'annonce</label>
@@ -6938,21 +6976,21 @@ Dashboard.renderers.community = async (content, data) => {
     <div class="lv-add-row">
       <input class="dash-input" id="lv-link" placeholder="Lien complet (tiktok.com/@pseudo) ou @pseudo" />
       <select class="dash-select" id="lv-platform">
-        <option value="tiktok">🎵 TikTok</option>
-        <option value="twitch">🟣 Twitch</option>
+        <option value="tiktok">TikTok</option>
+        <option value="twitch">Twitch</option>
         <option value="youtube">▶️ YouTube</option>
-        <option value="kick">🟢 Kick</option>
+        <option value="kick">Kick</option>
       </select>
-      <select class="dash-select" id="lv-member"><option value="">👤 Membre lié (optionnel)</option></select>
+      <select class="dash-select" id="lv-member"><option value="">Membre lié (optionnel)</option></select>
       <button class="dash-btn dash-btn-primary" id="lv-add">Suivre</button>
     </div>
-    <div class="dc-preview" style="margin-top:14px"><div class="dash-label" style="margin:0 0 8px">👀 Aperçu de l'annonce</div>
+    <div class="dc-preview" style="margin-top:14px"><div class="dash-label" style="margin:0 0 8px">Aperçu de l'annonce</div>
       <div id="lv-preview">…</div>
     </div>
     <div id="lv-list" style="margin-top:14px"></div>
-    <div style="font-size:12px;color:var(--d-dim);margin-top:8px">💡 Vérification automatique toutes les 60 secondes · 20 comptes max · une annonce par session live (les faux hors-ligne sont confirmés) · annonce de fin automatique.</div>`;
+    <div style="font-size:12px;color:var(--d-dim);margin-top:8px">Vérification automatique toutes les 60 secondes · 20 comptes max · une annonce par session live (les faux hors-ligne sont confirmés) · annonce de fin automatique.</div>`;
 
-  // 💾 Enregistrement des réglages live (partagé : bouton 💾 ET ajout de compte)
+  // Enregistrement des réglages live (partagé : bouton 💾 ET ajout de compte)
   const saveLiveSettings = async () => {
     await App.api(`/bots/${bot.id}/guilds/${guildId}/settings`, { method: 'PUT', body: {
       prefix: s.prefix || '', warn_limit: s.warn_limit || 0, warn_action: s.warn_action || 'none',
@@ -6961,16 +6999,16 @@ Dashboard.renderers.community = async (content, data) => {
     }});
     const chosen = cl.querySelector('#lv-chan').value;
     cl.querySelector('#lv-status').innerHTML = chosen
-      ? `<span class="dash-badge ok">✅ Annonces ACTIVES dans ${App.escapeHtml(chosen)}</span>`
-      : `<span class="dash-badge warn">⚠️ AUCUN salon choisi — les annonces sont DÉSACTIVÉES !</span>`;
+      ? `<span class="dash-badge ok">Annonces ACTIVES dans ${App.escapeHtml(chosen)}</span>`
+      : `<span class="dash-badge warn">AUCUN salon choisi — les annonces sont DÉSACTIVÉES !</span>`;
   };
   cl.querySelector('#lv-save').onclick = async () => {
-    try { await saveLiveSettings(); App.toast('Annonces de live enregistrées !'); }
+    try { await saveLiveSettings(); App.toast('Annonces de live enregistrées.'); }
     catch (e) { App.toast(e.message, 'error'); }
   };
 
-  const PLAT = { tiktok: ['🎵', 'TikTok'], twitch: ['🟣', 'Twitch'], youtube: ['▶️', 'YouTube'], kick: ['🟢', 'Kick'] };
-  // 👀 Aperçu DYNAMIQUE de l'annonce : le premier compte suivi du serveur,
+  const PLAT = { tiktok: ['', 'TikTok'], twitch: ['', 'Twitch'], youtube: ['▶️', 'YouTube'], kick: ['', 'Kick'] };
+  // Aperçu DYNAMIQUE de l'annonce : le premier compte suivi du serveur,
   // ou un exemple neutre (« votre_streamer ») s'il n'y en a aucun. Plus jamais
   // de pseudo réel affiché par erreur sur un autre serveur (v192).
   let lastLiveSocials = [];
@@ -6980,7 +7018,7 @@ Dashboard.renderers.community = async (content, data) => {
     if (socials) lastLiveSocials = socials;
     const s = (lastLiveSocials || [])[0];
     const handle = s ? `@${s.handle}` : '@votre_streamer';
-    const [emo, lab] = s ? (PLAT[s.platform] || ['🌐', s.platform]) : ['🎵', 'TikTok'];
+    const [emo, lab] = s ? (PLAT[s.platform] || ['', s.platform]) : ['', 'TikTok'];
     const pingSel = cl.querySelector('#lv-ping');
     const pingV = pingSel ? pingSel.value : 'everyone';
     const pingLabel = pingV === 'none' || !pingV ? ''
@@ -6988,12 +7026,12 @@ Dashboard.renderers.community = async (content, data) => {
       : pingV === 'everyone' ? '@everyone'
       : (pingSel.selectedOptions[0] ? pingSel.selectedOptions[0].textContent.replace(/^🛡️\s*/, '@') : `<@&${pingV}>`);
     pv.innerHTML = `
-      ${pingLabel ? `<div style="font-size:12.5px;color:#dbdee1;margin-bottom:6px">${App.escapeHtml(pingLabel)}</div>` : ''}
+      ${pingLabel ? `<div style="font-size:13px;color:#dbdee1;margin-bottom:6px">${App.escapeHtml(pingLabel)}</div>` : ''}
       <div style="border-left:4px solid #FE2C55;background:#2B2D31;border-radius:4px;padding:12px 14px;max-width:430px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#FE2C55,#8B5CF6);display:inline-block"></span><b style="font-size:13px;color:#f2f3f5">${App.escapeHtml(handle)} est en live !</b></div>
         <div style="font-weight:700;font-size:14px;color:#fff">${emo} 🔴 LIVE sur ${lab}</div>
-        <div style="font-size:12.5px;color:#b5bac1;margin:6px 0">✨ Rejoignez-le maintenant, il vous attend…</div>
-        <div style="display:inline-block;background:#4E5058;color:#fff;font-size:12px;font-weight:600;padding:7px 14px;border-radius:6px">▶️ Regarder le live ${lab}</div>
+        <div style="font-size:13px;color:#b5bac1;margin:6px 0">Rejoignez-le maintenant, il vous attend…</div>
+        <div style="display:inline-block;background:#4E5058;color:#fff;font-size:12px;font-weight:600;padding:7px 14px;border-radius:4px">▶️ Regarder le live ${lab}</div>
       </div>`;
   };
   const renderSocials = async () => {
@@ -7004,21 +7042,21 @@ Dashboard.renderers.community = async (content, data) => {
       renderPreview(socials);
       if (!socials.length) { list.appendChild(App.el(`<div class="dash-empty" style="padding:14px">Aucun compte suivi pour l'instant.</div>`)); return; }
       socials.forEach((so) => {
-        const [emo, lab] = PLAT[so.platform] || ['🌐', so.platform];
+        const [emo, lab] = PLAT[so.platform] || ['', so.platform];
         const checkedLabel = so.last_checked_at
           ? ` · contrôle ${new Date(Number(so.last_checked_at)).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
           : '';
         const errorLine = so.last_error
-          ? `<div style="font-size:11.5px;color:#faa61a;margin-top:5px">⚠️ ${App.escapeHtml(so.last_error)}</div>`
+          ? `<div style="font-size:12px;color:#faa61a;margin-top:5px">${App.escapeHtml(so.last_error)}</div>`
           : '';
         const row = App.el(`
           <div style="padding:9px 4px;border-bottom:1px solid var(--d-border)">
             <div style="display:flex;align-items:center;gap:10px">
-              <span style="font-size:17px">${emo}</span>
+              <span style="font-size:18px">${emo}</span>
               <div style="flex:1;min-width:0">
                 <b>@${App.escapeHtml(so.handle)}</b> <span style="color:var(--d-dim);font-size:12px">· ${lab}${so.user_id ? ` · lié à un membre` : ''}${checkedLabel}</span>
               </div>
-              <span class="dash-badge ${so.last_status === 'live' ? 'ok' : ''}">${so.last_status === 'live' ? '🔴 EN LIVE' : '⚫ hors ligne'}</span>
+              <span class="dash-badge ${so.last_status === 'live' ? 'ok' : ''}">${so.last_status === 'live' ? 'EN LIVE' : 'hors ligne'}</span>
               <button class="dash-btn dash-btn-sm" data-test>Tester</button>
               <button class="dash-btn dash-btn-danger dash-btn-sm" data-del>Supprimer</button>
             </div>
@@ -7029,10 +7067,10 @@ Dashboard.renderers.community = async (content, data) => {
           btn.disabled = true; btn.textContent = '⏳…';
           try {
             const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/livesocials/${so.id}/test`, { method: 'POST' });
-            if (!r.ok) App.toast(`🧪 ${r.error}`, 'error');
+            if (!r.ok) App.toast(`${r.error}`, 'error');
             else {
               const channelHint = r.channelSet ? ` · salon #${r.channelName || 'configuré'} prêt` : ` — ⚠️ ${r.channelIssue || 'salon d\'annonces introuvable'}`;
-              App.toast(`🧪 ${r.name} : ${r.live ? '🔴 EN LIVE en ce moment' : '⚫ pas en live actuellement'}${channelHint}`, r.channelSet && !r.channelIssue ? undefined : 'error');
+              App.toast(`${r.name} : ${r.live ? 'EN LIVE en ce moment' : 'pas en live actuellement'}${channelHint}`, r.channelSet && !r.channelIssue ? undefined : 'error');
             }
           } catch (e) { App.toast(e.message, 'error'); }
           btn.disabled = false; btn.textContent = 'Tester';
@@ -7047,7 +7085,7 @@ Dashboard.renderers.community = async (content, data) => {
   };
   cl.querySelector('#lv-add').onclick = async () => {
     try {
-      // 💾 L'ajout enregistre AUSSI le salon/mention sélectionnés : une seule
+      // L'ajout enregistre AUSSI le salon/mention sélectionnés : une seule
       // action suffit, plus jamais d'annonces silencieusement désactivées.
       await saveLiveSettings();
       const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/livesocials`, { method: 'POST', body: {
@@ -7056,7 +7094,7 @@ Dashboard.renderers.community = async (content, data) => {
         user_id: cl.querySelector('#lv-member').value,
       }});
       const chanOk = !!cl.querySelector('#lv-chan').value;
-      App.toast(`Compte @${r.handle} (${r.platform}) suivi !${chanOk ? '' : ' ⚠️ Choisissez aussi un salon d\'annonces !'}`, chanOk ? undefined : 'error');
+      App.toast(`Compte @${r.handle} (${r.platform}) suivi !${chanOk ? '' : 'Choisissez aussi un salon d\'annonces !'}`, chanOk ? undefined : 'error');
       cl.querySelector('#lv-link').value = '';
       renderSocials();
     } catch (e) { App.toast(e.message, 'error'); }
@@ -7067,47 +7105,49 @@ Dashboard.renderers.community = async (content, data) => {
   // Liste des membres pour lier un compte (asynchrone, non bloquant)
   App.api(`/bots/${bot.id}/guilds/${guildId}/members`).then(({ members }) => {
     const sel = cl.querySelector('#lv-member');
-    (members || []).slice(0, 100).forEach((m) => sel.appendChild(App.el(`<option value="${m.id}">👤 ${App.escapeHtml(m.username || m.tag)}</option>`)));
+    (members || []).slice(0, 100).forEach((m) => sel.appendChild(App.el(`<option value="${m.id}">${App.escapeHtml(m.username || m.tag)}</option>`)));
   }).catch(() => {});
 
   // ---- Carte Starboard ----
   const c1 = Dashboard.card(root, '⭐ Starboard', 'Quand un message reçoit assez d\'étoiles (réaction ⭐), il est épinglé dans le salon choisi — le mur de la gloire de votre serveur.');
   const chanOpts = ['<option value="">— Désactivé (choisir un salon pour activer) —</option>']
-    .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(s.starboard_channel, ch) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`));
+    .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(s.starboard_channel, ch) ? 'selected' : ''}>#${App.escapeHtml(ch.name)}</option>`));
   if (s.starboard_channel && !textChannels.some((ch) => Dashboard.discordRefMatches(s.starboard_channel, ch))) {
-    chanOpts.push(Dashboard.currentDiscordOption(s.starboard_channel, textChannels, '⚠️', 'configuration actuelle — salon introuvable'));
+    chanOpts.push(Dashboard.currentDiscordOption(s.starboard_channel, textChannels, '', 'configuration actuelle — salon introuvable'));
   }
   c1.innerHTML += `
     <label class="dash-label">Salon du starboard</label>
     <select class="dash-select" id="sb-chan" style="max-width:320px">${chanOpts.join('')}</select>
     <label class="dash-label">Nombre d'étoiles minimum</label>
     <input class="dash-input" id="sb-min" type="number" min="1" max="50" value="${s.starboard_min || 3}" style="max-width:140px" />
-    <div style="font-size:12.5px;color:var(--d-dim);margin-top:8px">💡 Astuce : 3 étoiles est un bon réglage pour un serveur de moins de 500 membres.</div>
+    <div style="font-size:13px;color:var(--d-dim);margin-top:8px">Astuce : 3 étoiles est un bon réglage pour un serveur de moins de 500 membres.</div>
     <div style="margin-top:14px"><button class="dash-save-action dash-btn dash-btn-primary" id="sb-save">Enregistrer</button></div>`;
-  c1.querySelector('#sb-save').onclick = async () => {
+  c1.querySelector('#sb-save').onclick = async (e) => {
+    const bouton = e.currentTarget;
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/settings`, { method: 'PUT', body: {
         prefix: s.prefix || '', warn_limit: s.warn_limit || 0, warn_action: s.warn_action || 'none',
         starboard_channel: c1.querySelector('#sb-chan').value,
         starboard_min: parseInt(c1.querySelector('#sb-min').value, 10) || 3,
       }});
-      App.toast('Starboard enregistré !');
+      App.retourEnregistrement(bouton);
+      App.toast('Starboard enregistré.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
 
   // ---- Carte Invitations ----
-  const c2 = Dashboard.card(root, '📨 Traqueur d\'invitations', 'Qui recrute le plus ? Le bot détecte automatiquement quelle invitation chaque nouveau membre a utilisée. Commande : /invites');
+  const c2 = Dashboard.card(root, 'Traqueur d\'invitations', 'Qui recrute le plus ? Le bot détecte automatiquement quelle invitation chaque nouveau membre a utilisée. Commande : /invites');
   try {
     const [{ invitesTop, starboardCount }, membersRes] = await Promise.all([
       App.api(`/bots/${bot.id}/guilds/${guildId}/community`),
       App.api(`/bots/${bot.id}/guilds/${guildId}/members`).catch(() => ({ members: [] })),
     ]);
     const byId = new Map((membersRes.members || []).map((m) => [String(m.id), m]));
-    c2.appendChild(App.el(`<div style="font-size:12.5px;color:var(--d-dim);margin-bottom:10px">⭐ ${starboardCount} message(s) au starboard · ⚠️ Le bot doit avoir la permission « Gérer le serveur » pour lire les invitations.</div>`));
+    c2.appendChild(App.el(`<div style="font-size:13px;color:var(--d-dim);margin-bottom:10px">${starboardCount} message(s) au starboard · ⚠️ Le bot doit avoir la permission « Gérer le serveur » pour lire les invitations.</div>`));
     if (!invitesTop.length) {
       c2.appendChild(App.el(`<div class="dash-empty">Aucune invitation traquée pour l'instant — le classement se remplit à chaque nouvelle arrivée.</div>`));
     } else {
-      const medals = ['🥇', '🥈', '🥉'];
+      const medals = ['', '', ''];
       invitesTop.forEach((r, idx) => {
         const m = byId.get(String(r.inviter_id));
         const name = m ? (m.displayName || m.username || m.tag || r.inviter_id) : r.inviter_id;
@@ -7127,66 +7167,70 @@ Dashboard.renderers.community = async (content, data) => {
 };
 
 // ---------- Réglages serveur ----------
-// 🎙️ v269 — module Vocal dédié : la carte des vocaux temporaires a son propre
+// v269 — module Vocal dédié : la carte des vocaux temporaires a son propre
 // onglet dans la liste des modules (elle était cachée dans Réglages serveur).
 Dashboard.renderers.voicetemp = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '🎙️', 'Vocal', 'Salons vocaux temporaires, panneau de contrôle et émojis Hoxera.');
+  const root = Dashboard.header(content, '', 'Vocal', 'Salons vocaux temporaires, panneau de contrôle et émojis Hoxera.');
   const categories = (data.channels || []).filter((ch) => ch.category);
-  // 🔊 Salons vocaux temporaires
+  // Salons vocaux temporaires
   const vt = data.voicetemp || { creator_channel: '', category: '', name_template: '', panel_channel: '' };
   const voiceChannels = (data.channels || []).filter((ch) => ch.voice);
   const vtTextChannels = (data.channels || []).filter((ch) => !ch.voice && !ch.category);
-  const c4 = Dashboard.card(root, '🔊 Salons vocaux temporaires', 'Un salon « ➕ Créer un vocal » : le bot crée un vocal au nom du membre et le supprime quand il est vide.');
+  const c4 = Dashboard.card(root, 'Salons vocaux temporaires', 'Un salon « ➕ Créer un vocal » : le bot crée un vocal au nom du membre et le supprime quand il est vide.');
   c4.innerHTML += `
     <label class="dash-label">Salon de création (vocal)</label>
     <select class="dash-select" id="vt-channel">
       <option value="">— Désactivé —</option>
-      ${voiceChannels.map((ch) => `<option value="${ch.id}" ${String(vt.creator_channel || '') === ch.id ? 'selected' : ''}>🔊 ${App.escapeHtml(ch.name)}</option>`).join('')}
+      ${voiceChannels.map((ch) => `<option value="${ch.id}" ${String(vt.creator_channel || '') === ch.id ? 'selected' : ''}>${App.escapeHtml(ch.name)}</option>`).join('')}
     </select>
     <label class="dash-label">Catégorie des vocaux créés</label>
     <select class="dash-select" id="vt-cat">
       <option value="">— Catégorie du salon de création —</option>
-      ${categories.map((ch) => `<option value="${ch.id}" ${String(vt.category || '') === ch.id ? 'selected' : ''}>📁 ${App.escapeHtml(ch.name)}</option>`).join('')}
+      ${categories.map((ch) => `<option value="${ch.id}" ${String(vt.category || '') === ch.id ? 'selected' : ''}>${App.escapeHtml(ch.name)}</option>`).join('')}
     </select>
     <label class="dash-label">Nom des salons (optionnel)</label>
     <input class="dash-input" id="vt-name" value="${App.escapeHtml(vt.name_template || '')}" placeholder="🔊 {name}" style="max-width:300px" />
-    <label class="dash-label">🎙️ Salon textuel du panneau de contrôle</label>
+    <label class="dash-label">Salon textuel du panneau de contrôle</label>
     <select class="dash-select" id="vt-panel">
       <option value="">— Aucun panneau —</option>
       ${vtTextChannels.map((ch) => `<option value="${ch.id}" ${String(vt.panel_channel || '') === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('')}
     </select>
-    <div style="font-size:12px;color:var(--d-dim);margin-top:8px">🎙️ Dans ce salon, un panneau permet à chaque propriétaire d'un vocal temporaire de gérer SON salon : 🔒 privé / 🔓 public, ➕ ➖ invités, ✏️ renommer, 🗑️ supprimer. Chaque réponse ne se voit que chez lui.</div>
+    <div style="font-size:12px;color:var(--d-dim);margin-top:8px">Dans ce salon, un panneau permet à chaque propriétaire d'un vocal temporaire de gérer SON salon : 🔒 privé / 🔓 public, ➕ ➖ invités, ✏️ renommer, 🗑️ supprimer. Chaque réponse ne se voit que chez lui.</div>
     <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap"><button class="dash-save-action dash-btn dash-btn-primary" id="vt-save">Enregistrer</button><button class="dash-btn" id="vt-panel-send">Envoyer / mettre à jour le panneau</button><button class="dash-btn" id="vt-emotes" title="Installe les 10 émojis Hoxera du panneau vocal sur ce serveur">Installer les émojis Hoxera</button></div>`;
-  c4.querySelector('#vt-save').onclick = async () => {
+  c4.querySelector('#vt-save').onclick = async (e) => {
+    const bouton = e.currentTarget;
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/voicetemp`, { method: 'PUT', body: {
         creator_channel: c4.querySelector('#vt-channel').value,
         category: c4.querySelector('#vt-cat').value,
-        name_template: c4.querySelector('#vt-name').value.trim() || '🔊 {name}',
+        name_template: c4.querySelector('#vt-name').value.trim() || '{name}',
         panel_channel: c4.querySelector('#vt-panel').value,
       }});
-      App.toast('Salons vocaux enregistrés !');
+      App.retourEnregistrement(bouton);
+      App.toast('Salons vocaux enregistrés.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
   c4.querySelector('#vt-emotes').onclick = async () => {
     try {
       const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/voicetemp/emotes`, { method: 'POST', body: {} });
-      App.toast(r.created && r.created.length ? `🎨 ${r.created.length} émojis Hoxera installés !` : '🎨 Émojis déjà installés.');
+      App.toast(r.created && r.created.length ? `${r.created.length} émojis Hoxera installés !` : 'Émojis déjà installés.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
-  c4.querySelector('#vt-panel-send').onclick = async () => {
+  c4.querySelector('#vt-panel-send').onclick = async (e) => {
+    const bouton = e.currentTarget;
     const channelId = c4.querySelector('#vt-panel').value;
     if (!channelId) { App.toast("Choisissez d'abord un salon textuel pour le panneau.", 'error'); return; }
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/voicetemp`, { method: 'PUT', body: {
         creator_channel: c4.querySelector('#vt-channel').value,
         category: c4.querySelector('#vt-cat').value,
-        name_template: c4.querySelector('#vt-name').value.trim() || '🔊 {name}',
+        name_template: c4.querySelector('#vt-name').value.trim() || '{name}',
         panel_channel: channelId,
       }});
       await App.api(`/bots/${bot.id}/guilds/${guildId}/voicetemp/panel`, { method: 'POST', body: { channel: channelId } });
-      App.toast('🎙️ Panneau de contrôle envoyé !');
+      App.retourEnregistrement(bouton);
+      App.toast('️ Panneau de contrôle envoyé.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
 
@@ -7196,21 +7240,21 @@ Dashboard.renderers.server = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const s = data.settings;
   const currentLanguage = ['fr', 'en'].includes(String(s.lang || 'fr')) ? String(s.lang || 'fr') : 'fr';
-  const root = Dashboard.header(content, '⚙️', 'Réglages du serveur', 'Préfixe, langue, anniversaires, anti-raid et plus.');
+  const root = Dashboard.header(content, '', 'Réglages du serveur', 'Préfixe, langue, anniversaires, anti-raid et plus.');
   const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
   const categories = (data.channels || []).filter((ch) => ch.category);
-  // 💾 v280 — sauvegarde de la structure du serveur
-  const cBk = Dashboard.card(root, '💾 Sauvegarde de la structure', 'Photographie rôles + catégories + salons. La restauration ne recrée QUE ce qui manque : rien n est jamais supprimé.');
-  cBk.innerHTML += `<div id="bk-list" style="margin-bottom:12px"><div style="font-size:12.5px;color:var(--d-dim)">⏳ Chargement…</div></div>
+  // v280 — sauvegarde de la structure du serveur
+  const cBk = Dashboard.card(root, 'Sauvegarde de la structure', 'Photographie rôles + catégories + salons. La restauration ne recrée QUE ce qui manque : rien n est jamais supprimé.');
+  cBk.innerHTML += `<div id="bk-list" style="margin-bottom:12px"><div style="font-size:13px;color:var(--d-dim)">⏳ Chargement…</div></div>
     <div style="display:flex;gap:9px;flex-wrap:wrap"><button class="dash-btn dash-btn-primary" id="bk-create">Créer une sauvegarde maintenant</button></div>
     <div style="font-size:12px;color:var(--d-dim);margin-top:8px">5 sauvegardes maximum par serveur (les plus récentes d'abord). Export JSON téléchargeable pour vos archives.</div>`;
   const loadBk = async () => {
     const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/backups`);
     const host = cBk.querySelector('#bk-list');
     const items = r.backups || [];
-    if (!items.length) { host.innerHTML = '<div style="font-size:12.5px;color:var(--d-dim)">Aucune sauvegarde pour l instant : créez la première, c est votre filet de sécurité.</div>'; return; }
-    host.innerHTML = items.map((b) => `<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;padding:9px 10px;border:1px solid var(--d-line);border-radius:10px;margin-bottom:6px;background:var(--d-card2,#ffffff08)">
-      <div style="font-size:12.5px">📸 ${new Date(b.t).toLocaleString('fr-FR')} · <b>${b.counts.roles || 0}</b> rôles · <b>${b.counts.channels || 0}</b> salons/catégories</div>
+    if (!items.length) { host.innerHTML = '<div style="font-size:13px;color:var(--d-dim)">Aucune sauvegarde pour l instant : créez la première, c est votre filet de sécurité.</div>'; return; }
+    host.innerHTML = items.map((b) => `<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;padding:9px 10px;border:1px solid var(--d-line);border-radius:8px;margin-bottom:6px;background:var(--d-card2,#ffffff08)">
+      <div style="font-size:13px">${new Date(b.t).toLocaleString('fr-FR')} · <b>${b.counts.roles || 0}</b> rôles · <b>${b.counts.channels || 0}</b> salons/catégories</div>
       <div style="display:flex;gap:6px">
         <button class="dash-btn" data-bk-restore="${b.id}" style="padding:4px 9px" title="Recrée uniquement ce qui manque">Restaurer</button>
         <button class="dash-btn" data-bk-export="${b.id}" style="padding:4px 9px" title="Télécharger le JSON">Télécharger</button>
@@ -7219,7 +7263,7 @@ Dashboard.renderers.server = async (content, data) => {
     host.querySelectorAll('[data-bk-restore]').forEach((btn) => { btn.onclick = async () => {
       if (!confirm('Restaurer cette sauvegarde ? Seuls les rôles et salons MANQUANTS seront recréés ; rien ne sera supprimé.')) return;
       const rr2 = await App.api(`/bots/${bot.id}/guilds/${guildId}/backups/${btn.dataset.bkRestore}/restore`, { method: 'POST', body: {} });
-      App.toast(rr2.ok ? `♻️ Restauration terminée : ${rr2.made.roles} rôle(s) et ${rr2.made.channels} salon(s) recréés.` : `⚠️ ${rr2.error || 'Restauration impossible.'}`);
+      App.toast(rr2.ok ? `Restauration terminée : ${rr2.made.roles} rôle(s) et ${rr2.made.channels} salon(s) recréés.` : `${rr2.error || 'Restauration impossible.'}`);
     }; });
     host.querySelectorAll('[data-bk-export]').forEach((btn) => { btn.onclick = async () => {
       const token = App.state && App.state.token ? App.state.token : (localStorage.getItem('hx-token') || '');
@@ -7233,13 +7277,13 @@ Dashboard.renderers.server = async (content, data) => {
     }; });
     host.querySelectorAll('[data-bk-del]').forEach((btn) => { btn.onclick = async () => {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/backups/${btn.dataset.bkDel}`, { method: 'DELETE' });
-      App.toast('🗑️ Sauvegarde supprimée.');
+      App.toast('️ Sauvegarde supprimée.');
       loadBk();
     }; });
   };
   cBk.querySelector('#bk-create').onclick = async () => {
     const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/backups`, { method: 'POST', body: {} });
-    App.toast(r.ok ? `📸 Sauvegarde créée : ${r.counts.roles} rôles, ${r.counts.channels} salons/catégories.` : `⚠️ ${r.error || 'Création impossible.'}`);
+    App.toast(r.ok ? `Sauvegarde créée : ${r.counts.roles} rôles, ${r.counts.channels} salons/catégories.` : `${r.error || 'Création impossible.'}`);
     loadBk();
   };
   loadBk();
@@ -7248,15 +7292,15 @@ Dashboard.renderers.server = async (content, data) => {
   c.innerHTML += `
     <label class="dash-label">Préfixe (vide = « ${App.escapeHtml(bot.prefix)} »)</label>
     <input class="dash-input" id="g-prefix" maxlength="5" value="${App.escapeHtml(s.prefix || '')}" placeholder="${App.escapeHtml(bot.prefix)}" style="max-width:200px" />
-    <label class="dash-label" style="margin-top:12px">🌍 Langue d’Optimus Prime sur ce serveur</label>
+    <label class="dash-label" style="margin-top:12px">Langue d’Optimus Prime sur ce serveur</label>
     <select class="dash-select" id="g-lang" style="max-width:280px">
-      <option value="fr" ${currentLanguage === 'fr' ? 'selected' : ''}>🇫🇷 Français</option>
-      <option value="en" ${currentLanguage === 'en' ? 'selected' : ''}>🇬🇧 English</option>
+      <option value="fr" ${currentLanguage === 'fr' ? 'selected' : ''}>Français</option>
+      <option value="en" ${currentLanguage === 'en' ? 'selected' : ''}>English</option>
     </select>
     <div class="desc" style="margin-top:6px">Les panneaux de tickets, messages publics, arrivées et transcriptions suivront cette langue. Le réglage est propre à ce serveur.</div>
     <div class="dash-tier-box" style="margin-top:14px;padding:14px;border:1px solid var(--d-border);border-radius:12px">
-      <div style="font-weight:700;margin-bottom:2px">⚖️ Sanctions automatiques progressives</div>
-      <div style="font-size:12.5px;color:var(--d-dim);margin-bottom:6px">Exemple pro : 3 avertissements → timeout, 5 → expulsion. La sanction la plus sévère atteinte s'applique.</div>
+      <div style="font-weight:700;margin-bottom:2px">Sanctions automatiques progressives</div>
+      <div style="font-size:13px;color:var(--d-dim);margin-bottom:6px">Exemple pro : 3 avertissements → timeout, 5 → expulsion. La sanction la plus sévère atteinte s'applique.</div>
       <label class="dash-label">Palier 1 — timeout après X avertissements (0 = désactivé)</label>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <select class="dash-select" id="g-warn-t1" style="max-width:140px">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, s.warn_timeout_limit || 0)}</select>
@@ -7268,12 +7312,13 @@ Dashboard.renderers.server = async (content, data) => {
       <select class="dash-select" id="g-action" style="max-width:220px">
         <option value="none" ${s.warn_action === 'none' ? 'selected' : ''}>Aucune</option>
         <option value="timeout" ${s.warn_action === 'timeout' ? 'selected' : ''}>⏳ Timeout</option>
-        <option value="kick" ${s.warn_action === 'kick' ? 'selected' : ''}>👢 Expulser</option>
-        <option value="ban" ${s.warn_action === 'ban' ? 'selected' : ''}>🔨 Bannir</option>
+        <option value="kick" ${s.warn_action === 'kick' ? 'selected' : ''}>Expulser</option>
+        <option value="ban" ${s.warn_action === 'ban' ? 'selected' : ''}>Bannir</option>
       </select>
     </div>
     <div style="margin-top:14px"><button class="dash-save-action dash-btn dash-btn-primary" id="g-save">Enregistrer</button></div>`;
-  c.querySelector('#g-save').onclick = async () => {
+  c.querySelector('#g-save').onclick = async (e) => {
+    const bouton = e.currentTarget;
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/settings`, { method: 'PUT', body: {
         prefix: c.querySelector('#g-prefix').value.trim(),
@@ -7283,7 +7328,8 @@ Dashboard.renderers.server = async (content, data) => {
         warn_timeout_limit: parseInt(c.querySelector('#g-warn-t1').value, 10) || 0,
         warn_timeout_min: parseInt(c.querySelector('#g-warn-t1min').value, 10) || 60,
       }});
-      App.toast('Réglages enregistrés !');
+      App.retourEnregistrement(bouton);
+      App.toast('Réglages enregistrés.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
 
@@ -7304,33 +7350,35 @@ Dashboard.renderers.server = async (content, data) => {
     c2.appendChild(row);
   });
 
-  // 🎂 Anniversaires
-  const c3 = Dashboard.card(root, '🎂 Anniversaires', 'Les membres enregistrent leur date avec /birthday set jour mois. Le jour J, le bot les souhaite (et peut donner un rôle).');
+  // Anniversaires
+  const c3 = Dashboard.card(root, 'Anniversaires', 'Les membres enregistrent leur date avec /birthday set jour mois. Le jour J, le bot les souhaite (et peut donner un rôle).');
   c3.innerHTML += `
     <label class="dash-label">Salon des anniversaires</label>
     <select class="dash-select" id="bd-channel">
       <option value="">— Aucun (annonces désactivées) —</option>
-      ${textChannels.map((ch) => `<option value="${ch.id}" ${String(s.birthday_channel || '') === ch.id ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`).join('')}
+      ${textChannels.map((ch) => `<option value="${ch.id}" ${String(s.birthday_channel || '') === ch.id ? 'selected' : ''}>#${App.escapeHtml(ch.name)}</option>`).join('')}
     </select>
     <label class="dash-label">Rôle anniversaire (optionnel — donné 24 h)</label>
     <select class="dash-select" id="bd-role">
       <option value="">— Aucun —</option>
-      ${rolesList.map((r) => `<option value="${r.id}" ${String(s.birthday_role || '') === r.id ? 'selected' : ''}>🎂 ${App.escapeHtml(r.name)}</option>`).join('')}
+      ${rolesList.map((r) => `<option value="${r.id}" ${String(s.birthday_role || '') === r.id ? 'selected' : ''}>${App.escapeHtml(r.name)}</option>`).join('')}
     </select>
     <div style="margin-top:12px"><button class="dash-save-action dash-btn dash-btn-primary" id="bd-save">Enregistrer</button></div>`;
-  c3.querySelector('#bd-save').onclick = async () => {
+  c3.querySelector('#bd-save').onclick = async (e) => {
+    const bouton = e.currentTarget;
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/settings`, { method: 'PUT', body: {
         birthday_channel: c3.querySelector('#bd-channel').value,
         birthday_role: c3.querySelector('#bd-role').value,
       }});
-      App.toast('Anniversaires enregistrés !');
+      App.retourEnregistrement(bouton);
+      App.toast('Anniversaires enregistrés.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
 
-  // 🚨 Anti-raid depuis le dashboard (verrouillage du serveur en 1 clic)
+  // Anti-raid depuis le dashboard (verrouillage du serveur en 1 clic)
   const ld = data.lockdown || { locked: false, channels: [] };
-  const c5 = Dashboard.card(root, '🚨 Anti-raid (verrouillage)', 'En cas d\'attaque : verrouille tous les salons en 1 clic, puis rouvre-les. Même chose sur Discord avec /lockdown.');
+  const c5 = Dashboard.card(root, 'Anti-raid (verrouillage)', 'En cas d\'attaque : verrouille tous les salons en 1 clic, puis rouvre-les. Même chose sur Discord avec /lockdown.');
   c5.innerHTML += `<div id="ld-zone"></div>
     <div style="display:flex;gap:9px;flex-wrap:wrap">
       <button class="dash-btn dash-btn-danger" id="ld-on">Verrouiller le serveur</button>
@@ -7340,10 +7388,10 @@ Dashboard.renderers.server = async (content, data) => {
     const zone = c5.querySelector('#ld-zone');
     if (ld.locked) {
       const names = (ld.channels || []).slice(0, 12).map((ch) => '#' + App.escapeHtml(ch.name)).join(', ');
-      zone.innerHTML = `<div class="dash-badge bad" style="margin-bottom:8px">🔒 Serveur verrouillé — ${ld.channels.length} salon(s) en lecture seule</div>
+      zone.innerHTML = `<div class="dash-badge bad" style="margin-bottom:8px">Serveur verrouillé — ${ld.channels.length} salon(s) en lecture seule</div>
         <div style="font-size:12px;color:var(--d-dim);margin-bottom:12px">${names}${ld.channels.length > 12 ? '…' : ''}</div>`;
     } else {
-      zone.innerHTML = `<div class="dash-badge ok" style="margin-bottom:12px">🔓 Serveur ouvert — tout le monde peut écrire normalement</div>`;
+      zone.innerHTML = `<div class="dash-badge ok" style="margin-bottom:12px">Serveur ouvert — tout le monde peut écrire normalement</div>`;
     }
   };
   renderLock();
@@ -7360,7 +7408,7 @@ Dashboard.renderers.server = async (content, data) => {
     try {
       const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/lockdown`, { method: 'POST', body: { action: 'off' } });
       ld.locked = r.state.locked; ld.channels = r.state.channels;
-      App.toast(`${r.reopened} salon(s) rouverts !`);
+      App.toast(`${r.reopened} salon(s) rouverts.`);
       renderLock();
     } catch (e) { App.toast(e.message, 'error'); }
   };
@@ -7369,14 +7417,14 @@ Dashboard.renderers.server = async (content, data) => {
 // ---------- Identité du bot par serveur ----------
 // La page montre UNE carte d'aperçu vivante (photo + bannière + nom + bio),
 // mise à jour instantanément pendant l'édition — identique à /botprofile view.
-// ⚠️ Règle Discord : l'identité est PAR SERVEUR, appliquée aux messages du bot
+// Règle Discord : l'identité est PAR SERVEUR, appliquée aux messages du bot
 // (bienvenue, tickets, niveaux, panneaux) via webhooks. Le bot global (nom,
 // avatar, bannière) n'est JAMAIS modifié, sur aucun autre serveur.
 Dashboard.renderers.botprofile = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const profile = data.profile || {};
   const serverName = data.guild && data.guild.name ? data.guild.name : 'ce serveur';
-  const root = Dashboard.header(content, '🤖', 'Identité du bot', `Personnalisez Optimus Prime uniquement sur ${serverName}.`);
+  const root = Dashboard.header(content, '', 'Identité du bot', `Personnalisez Optimus Prime uniquement sur ${serverName}.`);
   // URL absolue : la base de données stocke /assets/… (chemin relatif du site).
   const abs = (u) => {
     if (!u) return '';
@@ -7387,11 +7435,11 @@ Dashboard.renderers.botprofile = async (content, data) => {
   const bannerOf = (pr) => pr.banner_url || '';
   const letterTile = (nm) => App.escapeHtml(String(nm || '?').trim().slice(0, 1).toUpperCase() || '?');
 
-  const card = Dashboard.card(root, '🤖 Profil d’Optimus Prime sur ce serveur', 'Cette identité est indépendante des autres serveurs et ne modifie jamais le bot global.');
-  // 🔎 Aperçu vivant (photo + bannière + nom + bio ensemble)
+  const card = Dashboard.card(root, 'Profil d’Optimus Prime sur ce serveur', 'Cette identité est indépendante des autres serveurs et ne modifie jamais le bot global.');
+  // Aperçu vivant (photo + bannière + nom + bio ensemble)
   card.innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:14px;border:1px solid rgba(88,101,242,.28);border-radius:10px;background:rgba(88,101,242,.07)">
-      <span style="font-size:20px">🔒</span><div><b>Configuration limitée à ${App.escapeHtml(serverName)}</b><div class="desc" style="margin:2px 0 0">Le nom, la photo et la bannière ci-dessous ne s’appliquent qu’à CE serveur. Les autres serveurs et le bot global ne changent jamais.</div></div>
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:14px;border:1px solid rgba(88,101,242,.28);border-radius:8px;background:rgba(88,101,242,.07)">
+      <span style="font-size:22px"><svg class="ico-svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="5.2" y="10.4" width="13.6" height="9.6" rx="2.4"/><path d="M8.4 10.4V8a3.6 3.6 0 0 1 7.2 0v2.4"/></svg></span><div><b>Configuration limitée à ${App.escapeHtml(serverName)}</b><div class="desc" style="margin:2px 0 0">Le nom, la photo et la bannière ci-dessous ne s’appliquent qu’à CE serveur. Les autres serveurs et le bot global ne changent jamais.</div></div>
     </div>
     <div id="bp-live" style="margin-bottom:14px"></div>
     <label class="dash-label">Nom affiché par Optimus Prime sur ce serveur</label>
@@ -7399,13 +7447,13 @@ Dashboard.renderers.botprofile = async (content, data) => {
     <div class="desc" style="margin-top:5px">Apparaît dans les messages envoyés par le bot sur ce serveur. L’application bot globale n’est pas renommée.</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:16px">
       <div>
-        <label class="dash-label">🖼️ Photo du bot sur ce serveur</label>
+        <label class="dash-label">Photo du bot sur ce serveur</label>
         <input class="dash-input" id="bp-avatar" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
         <div class="desc" style="margin-top:5px">Image maximum : 3 Mo. Sans image personnalisée, l’avatar global est utilisé (affiché à droite en aperçu).</div>
         <div id="bp-avatar-preview" style="margin-top:10px"></div>
       </div>
       <div>
-        <label class="dash-label">🎴 Bannière du bot sur ce serveur</label>
+        <label class="dash-label">Bannière du bot sur ce serveur</label>
         <input class="dash-input" id="bp-banner" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
         <div class="desc" style="margin-top:5px">Image maximum : 3 Mo. Aucune bannière = l’aperçu garde un dégradé.</div>
         <div id="bp-banner-preview" style="margin-top:10px"></div>
@@ -7421,7 +7469,7 @@ Dashboard.renderers.botprofile = async (content, data) => {
   const drawTile = (where, url, shape, border) => {
     const el = card.querySelector(where);
     el.innerHTML = url
-      ? `<img src="${App.escapeHtml(url)}" alt="Aperçu" style="display:block;width:${shape === 'round' ? '88px' : '100%'};max-width:390px;height:${shape === 'round' ? '88px' : '120px'};border-radius:${shape === 'round' ? '50%' : '10px'};object-fit:cover;border:${border}" />`
+      ? `<img src="${App.escapeHtml(url)}" alt="Aperçu" style="display:block;width:${shape === 'round' ? '88px' : '100%'};max-width:390px;height:${shape === 'round' ? '88px' : '120px'};border-radius:${shape === 'round' ? '50%' : '8px'};object-fit:cover;border:${border}" />`
       : `<div class="dash-empty" style="padding:12px">${shape === 'round' ? 'Avatar global utilisé' : 'Aucune bannière personnalisée'}</div>`;
   };
   const renderLive = () => {
@@ -7431,7 +7479,7 @@ Dashboard.renderers.botprofile = async (content, data) => {
     const cardLive = card.querySelector('#bp-live');
     // Une seule carte « profil », avec bannière, photo, nom, bio (comme /botprofile view).
     cardLive.innerHTML = `
-      <div style="border:1px solid rgba(88,101,242,.35);border-radius:14px;overflow:hidden;background:#151522">
+      <div style="border:1px solid rgba(88,101,242,.35);border-radius:12px;overflow:hidden;background:#151522">
         ${bUrl
           ? `<div style="height:120px;background:url('${App.escapeHtml(bUrl)}') center/cover no-repeat"></div>`
           : `<div style="height:120px;background:linear-gradient(120deg,#e07a5f33,#8b5cf633,#5865f233)"></div>`}
@@ -7440,11 +7488,11 @@ Dashboard.renderers.botprofile = async (content, data) => {
             ? `<img src="${App.escapeHtml(aUrl)}" alt="Photo" style="width:78px;height:78px;border-radius:50%;object-fit:cover;border:4px solid #151522" />`
             : `<span style="width:78px;height:78px;border-radius:50%;background:#5865F2;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;border:4px solid #151522">${letterTile(name)}</span>`}
           <div style="flex:1;min-width:0;padding-bottom:2px">
-            <b style="font-size:17px">${App.escapeHtml(name)}</b>
+            <b style="font-size:18px">${App.escapeHtml(name)}</b>
             <div style="font-size:12px;color:var(--d-dim);margin-top:2px">${App.escapeHtml(current.bio || 'Aucune bio définie.')}</div>
           </div>
         </div>
-        <div style="font-size:11.5px;color:var(--d-dim);padding:0 16px 12px">🔒 Affiché par le bot sur <b>${App.escapeHtml(serverName)}</b> uniquement — jamais ailleurs.</div>
+        <div style="font-size:12px;color:var(--d-dim);padding:0 16px 12px">Affiché par le bot sur <b>${App.escapeHtml(serverName)}</b> uniquement — jamais ailleurs.</div>
       </div>`;
   };
   renderLive();
@@ -7482,7 +7530,8 @@ Dashboard.renderers.botprofile = async (content, data) => {
   avatarInput.onchange = () => pickFile(avatarInput, 'Photo');
   bannerInput.onchange = () => pickFile(bannerInput, 'Bannière');
 
-  card.querySelector('#bp-save').onclick = async () => {
+  card.querySelector('#bp-save').onclick = async (e) => {
+    const bouton = e.currentTarget;
     const button = card.querySelector('#bp-save');
     const status = card.querySelector('#bp-status');
     button.disabled = true; button.textContent = '⏳ Enregistrement…';
@@ -7496,11 +7545,12 @@ Dashboard.renderers.botprofile = async (content, data) => {
       if (aFile) body.avatar_b64 = await fileAsDataUrl(aFile);
       if (bFile) body.banner_b64 = await fileAsDataUrl(bFile);
       await App.api(`/bots/${bot.id}/guilds/${guildId}/profile`, { method: 'PUT', body });
-      status.textContent = `✅ Identité enregistrée pour ${serverName} uniquement — les autres serveurs et le bot global ne changent pas.`;
-      App.toast('Identité d’Optimus Prime enregistrée pour ce serveur !');
+      status.textContent = `Identité enregistrée pour ${serverName} uniquement — les autres serveurs et le bot global ne changent pas.`;
+      App.retourEnregistrement(bouton);
+      App.toast('Identité d’Optimus Prime enregistrée pour ce serveur.');
       await Dashboard.renderContent(content);
     } catch (e) {
-      status.textContent = `⚠️ ${e.message}`;
+      status.textContent = `${e.message}`;
       App.toast(e.message, 'error');
     }
     button.disabled = false; button.textContent = 'Enregistrer l’identité';
@@ -7514,25 +7564,25 @@ Dashboard.renderers.botprofile = async (content, data) => {
     } catch (e) { App.toast(e.message, 'error'); }
   };
 
-  // 👥 v211 — Profils d'envoi multiples : choisir QUI signe les messages.
+  // v211 — Profils d'envoi multiples : choisir QUI signe les messages.
   // La rangée « Profil principal » affiche maintenant sa PHOTO (si définie),
   // comme les profils d'envoi — plus de pastille lettre trompeuse.
   const aliases = data.profiles_extra || [];
   const activeId = Number(data.profile_active || 0);
   const principalName = (profile.name || '').trim() || 'Identité globale du bot';
-  const card2 = Dashboard.card(root, '👥 Profils d’envoi (qui signe les messages)', `Choisissez l’identité utilisée quand le bot envoie un message sur ${serverName} (bienvenue, tickets, annonces, niveaux…). Le « profil principal » est celui modifié ci-dessus.`);
+  const card2 = Dashboard.card(root, 'Profils d’envoi (qui signe les messages)', `Choisissez l’identité utilisée quand le bot envoie un message sur ${serverName} (bienvenue, tickets, annonces, niveaux…). Le « profil principal » est celui modifié ci-dessus.`);
   const choices = [{ id: 0, name: principalName, avatar: avatarOf(profile), isPrincipal: true }]
     .concat(aliases.map((a) => ({ id: a.id, name: a.name, avatar: a.avatar_url || '' })));
   choices.forEach((c) => {
     const row = App.el(`
-      <div style="display:flex;align-items:center;gap:12px;border:1px solid var(--d-border);border-radius:10px;padding:9px 12px;margin-bottom:8px;background:${c.id === activeId ? 'rgba(var(--d-accent-rgb),.07)' : 'transparent'}">
+      <div style="display:flex;align-items:center;gap:12px;border:1px solid var(--d-border);border-radius:8px;padding:9px 12px;margin-bottom:8px;background:${c.id === activeId ? 'rgba(var(--d-accent-rgb),.07)' : 'transparent'}">
         <input type="radio" name="bp-active" value="${c.id}" ${c.id === activeId ? 'checked' : ''} aria-label="Signer avec ${App.escapeHtml(c.name)}" style="accent-color:var(--d-accent)" />
         ${c.avatar
           ? `<img src="${App.escapeHtml(abs(c.avatar))}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover" onerror="this.style.display='none'" />`
           : `<span style="width:36px;height:36px;border-radius:50%;background:var(--d-card2);display:inline-flex;align-items:center;justify-content:center;font-weight:800">${letterTile(c.name)}</span>`}
         <div style="flex:1;min-width:0">
           <b>${App.escapeHtml(c.name)}</b>
-          <div style="font-size:11.5px;color:var(--d-dim)">${c.isPrincipal ? 'Personnalisé pour ce serveur' : 'Profil d’envoi additionnel'}${c.id === activeId ? ' · ✅ utilisé pour les envois' : ''}</div>
+          <div style="font-size:12px;color:var(--d-dim)">${c.isPrincipal ? 'Personnalisé pour ce serveur' : 'Profil d’envoi additionnel'}${c.id === activeId ? ' · utilisé pour les envois' : ''}</div>
         </div>
         ${c.isPrincipal ? '' : `<button class="dash-btn dash-btn-danger dash-btn-sm" data-del-alias="${c.id}" aria-label="Supprimer ce profil">Supprimer</button>`}
       </div>`);
@@ -7567,7 +7617,8 @@ Dashboard.renderers.botprofile = async (content, data) => {
     <div class="desc" style="margin-top:5px">${aliases.length >= 10 ? 'Limite de 10 profils atteinte.' : 'Jusqu’à 10 profils. Sans image, l’avatar du profil principal est utilisé.'}</div>
   </div>`);
   card2.appendChild(addZone);
-  card2.querySelector('#bp-alias-add').onclick = async () => {
+  card2.querySelector('#bp-alias-add').onclick = async (e) => {
+    const bouton = e.currentTarget;
     const nameInput2 = card2.querySelector('#bp-alias-name');
     const fileInput = card2.querySelector('#bp-alias-file');
     const name = nameInput2.value.trim();
@@ -7581,7 +7632,8 @@ Dashboard.renderers.botprofile = async (content, data) => {
         body.avatar_b64 = await fileAsDataUrl(file);
       }
       await App.api(`/bots/${bot.id}/guilds/${guildId}/profiles`, { method: 'PUT', body });
-      App.toast('Profil d’envoi créé !');
+      App.retourEnregistrement(bouton);
+      App.toast('Profil d’envoi créé.');
       await Dashboard.renderContent(content);
     } catch (e) { App.toast(e.message, 'error'); }
   };
@@ -7590,16 +7642,16 @@ Dashboard.renderers.botprofile = async (content, data) => {
 // ---------- Commandes (niveau bot) ----------
 Dashboard.renderers.commands = async (content) => {
   const bot = Dashboard.state.bot;
-  const root = Dashboard.header(content, '🧩', 'Commandes personnalisées', 'Construisez vos propres commandes avec l\'éditeur de blocs (glisser-déposer).');
+  const root = Dashboard.header(content, '', 'Commandes personnalisées', 'Construisez vos propres commandes avec l\'éditeur de blocs (glisser-déposer).');
   const { commands } = await App.api(`/bots/${bot.id}/commands`);
   const c = Dashboard.card(root, 'Mes commandes', '');
-  if (!commands.length) c.appendChild(App.el(`<div class="dash-empty"><div class="big">🧩</div>Aucune commande personnalisée.</div>`));
+  if (!commands.length) c.appendChild(App.el(`<div class="dash-empty"><div class="big">${App.glyphe('morceau', { taille: 26 })}</div>Aucune commande personnalisée.</div>`));
   const list = App.el(`<div></div>`);
   commands.forEach((cmd) => {
     const trigger = { prefix: `${bot.prefix}${cmd.trigger_value || cmd.name}`, slash: `/${cmd.name}`, keyword: `mot-clé « ${cmd.trigger_value} »` }[cmd.trigger_type] || cmd.trigger_type;
     const blocks = JSON.parse(cmd.blocks || '[]');
     const row = App.el(`
-      <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--d-border);border-radius:10px;padding:10px 14px;margin-bottom:8px;cursor:pointer">
+      <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--d-border);border-radius:8px;padding:10px 14px;margin-bottom:8px;cursor:pointer">
         <div style="flex:1"><b>${App.escapeHtml(cmd.name)}</b><div style="color:var(--d-dim);font-size:12px">${App.escapeHtml(cmd.description || '')} · ${blocks.length} bloc(s)</div></div>
         <span class="dash-badge">${App.escapeHtml(trigger)}</span>
         <button class="dash-btn dash-btn-sm" data-edit="${cmd.id}">Modifier</button>
@@ -7623,7 +7675,7 @@ Dashboard.renderers.commands = async (content) => {
 // ---------- Modules (niveau bot) ----------
 Dashboard.renderers.modules = async (content) => {
   const bot = Dashboard.state.bot;
-  const root = Dashboard.header(content, '📦', 'Modules pré-faits', 'Activez des commandes en un clic — elles s\'enregistrent automatiquement sur tous les serveurs du bot.');
+  const root = Dashboard.header(content, '', 'Modules pré-faits', 'Activez des commandes en un clic — elles s\'enregistrent automatiquement sur tous les serveurs du bot.');
   const { modules } = await App.api(`/bots/${bot.id}/modules`);
   const grid = App.el(`<div class="dash-grid"></div>`);
   modules.forEach((m) => {
@@ -7633,12 +7685,12 @@ Dashboard.renderers.modules = async (content) => {
     const card = App.el(`
       <div class="dash-card" data-module-card="${App.escapeHtml(m.key)}">
         <div class="card-head">
-          <div><h3>${m.emoji} ${App.escapeHtml(m.label)}</h3><div class="desc">${App.escapeHtml(m.description)}</div></div>
+          <div><h3>${App.escapeHtml(m.label)}</h3><div class="desc">${App.escapeHtml(m.description)}</div></div>
           <label class="switch" aria-label="Module ${App.escapeHtml(m.label)}"><input type="checkbox" ${on ? 'checked' : ''} /><span class="slider"></span></label>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;flex-wrap:wrap">
           <span class="dash-badge ${on ? 'ok' : 'bad'}">${on ? '● Activé' : '○ Désactivé'}</span>
-          <span style="color:var(--d-dim);font-size:11.5px;font-weight:650">${count} commande${count > 1 ? 's' : ''}</span>
+          <span style="color:var(--d-dim);font-size:12px;font-weight:650">${count} commande${count > 1 ? 's' : ''}</span>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">${cmds.map((c) => `<span class="dash-badge">${App.escapeHtml(bot.prefix)}${App.escapeHtml(c.name)}</span>`).join('')}</div>
       </div>`);
@@ -7662,7 +7714,7 @@ Dashboard.renderers.modules = async (content) => {
 // ---------- Santé du bot (centre de santé, fondateur) ----------
 Dashboard.renderers.health = async (content) => {
   const bot = Dashboard.state.bot;
-  const root = Dashboard.header(content, '🩺', 'Santé du bot', 'État en direct du processus : mémoire, base, sauvegarde, garde-fous et erreurs des 24 h.');
+  const root = Dashboard.header(content, '', 'Santé du bot', 'État en direct du processus : mémoire, base, sauvegarde, garde-fous et erreurs des 24 h.');
 
   const render = async () => {
     let h = {};
@@ -7677,12 +7729,12 @@ Dashboard.renderers.health = async (content) => {
     const errs = h.errors24h || { count: 0, last: [] };
     const uptime = Math.round((h.processUptimeMs || 0) / 1000);
 
-    Dashboard.header(content, '🩺', 'Santé du bot', 'État en direct — actualisation automatique toutes les 30 secondes.');
+    Dashboard.header(content, '', 'Santé du bot', 'État en direct — actualisation automatique toutes les 30 secondes.');
 
-    // 🟢 Statut global
+    // Statut global
     const statsEl = App.el(`
       <div class="dash-stats">
-        <div class="dash-stat"><div class="val">${bot.online ? '🟢 En ligne' : '🔴 Hors ligne'}</div><div class="lbl">Bot</div></div>
+        <div class="dash-stat"><div class="val">${bot.online ? 'En ligne' : 'Hors ligne'}</div><div class="lbl">Bot</div></div>
         <div class="dash-stat"><div class="val">${(h.platform && h.platform.servers) ?? '-'}</div><div class="lbl">Serveurs</div></div>
         <div class="dash-stat"><div class="val">${(h.platform && h.platform.members) ?? '-'}</div><div class="lbl">Membres</div></div>
         <div class="dash-stat"><div class="val">${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m</div><div class="lbl">Processus en vie</div></div>
@@ -7692,59 +7744,59 @@ Dashboard.renderers.health = async (content) => {
     const grid = App.el(`<div class="dash-grid"></div>`);
     root.appendChild(grid);
 
-    // 🧠 Mémoire
-    const cMem = App.el(`<div class="dash-card"><h3>🧠 Mémoire</h3>
+    // Mémoire
+    const cMem = App.el(`<div class="dash-card"><h3>Mémoire</h3>
       <div class="desc">Sur l'instance (512 Mo) — alertes automatiques au-delà de 400 Mo.</div>
       <div class="dash-label">Utilisée : ${mem.heapUsedMb ?? '-'} Mo / ${mem.heapTotalMb ?? '-'} Mo</div>
-      <div style="height:12px;background:var(--d-card2);border-radius:20px;overflow:hidden;margin:8px 0 4px">
-        <div style="height:100%;width:${heapPct}%;background:linear-gradient(90deg,#5865F2,#8B5CF6);border-radius:20px"></div>
+      <div style="height:12px;background:var(--d-card2);border-radius:12px;overflow:hidden;margin:8px 0 4px">
+        <div style="height:100%;width:${heapPct}%;background:linear-gradient(90deg,#5865F2,#8B5CF6);border-radius:12px"></div>
       </div>
-      <div style="color:var(--d-dim);font-size:11.5px">${heapGlobalPct}% de l'instance · RSS ${mem.rssMb ?? '-'} Mo</div>
-      <div style="color:var(--d-dim);font-size:11.5px;margin-top:6px">${resource.state === 'critical' ? '🚨 Pression critique' : resource.state === 'high' ? '⚠️ Pression élevée' : resource.state === 'watch' ? '👀 À surveiller' : '🟢 Niveau normal'} · cache ${cache.entries ?? 0} entrée(s) en mémoire</div>
+      <div style="color:var(--d-dim);font-size:12px">${heapGlobalPct}% de l'instance · RSS ${mem.rssMb ?? '-'} Mo</div>
+      <div style="color:var(--d-dim);font-size:12px;margin-top:6px">${resource.state === 'critical' ? 'Pression critique' : resource.state === 'high' ? 'Pression élevée' : resource.state === 'watch' ? 'À surveiller' : 'Niveau normal'} · cache ${cache.entries ?? 0} entrée(s) en mémoire</div>
     </div>`);
     grid.appendChild(cMem);
 
-    // 💾 Base + sauvegarde
-    const cDb = App.el(`<div class="dash-card"><h3>💾 Base & sauvegarde</h3>
+    // Base + sauvegarde
+    const cDb = App.el(`<div class="dash-card"><h3>Base & sauvegarde</h3>
       <div class="desc">Limite de sécurité : 900 Ko (jamais dépassée grâce au nettoyage automatique).</div>
-      <div class="dash-badge ${(h.db && h.db.fileSizeKo) < 700 ? 'ok' : 'warn'}">📦 Base : ${(h.db && h.db.fileSizeKo) ?? '-'} Ko</div>
-      <div style="height:10px;background:var(--d-card2);border-radius:20px;overflow:hidden;margin:10px 0 4px">
-        <div style="height:100%;width:${Math.min(100, ((h.db && h.db.fileSizeKo) || 0) / 900 * 100)}%;background:${(h.db && h.db.fileSizeKo) > 700 ? '#ED4245' : 'linear-gradient(90deg,#3BA55D,#57F287)'};border-radius:20px"></div>
+      <div class="dash-badge ${(h.db && h.db.fileSizeKo) < 700 ? 'ok' : 'warn'}">Base : ${(h.db && h.db.fileSizeKo) ?? '-'} Ko</div>
+      <div style="height:10px;background:var(--d-card2);border-radius:12px;overflow:hidden;margin:10px 0 4px">
+        <div style="height:100%;width:${Math.min(100, ((h.db && h.db.fileSizeKo) || 0) / 900 * 100)}%;background:${(h.db && h.db.fileSizeKo) > 700 ? '#ED4245' : 'linear-gradient(90deg,#3BA55D,#57F287)'};border-radius:12px"></div>
       </div>
-      <div style="color:var(--d-dim);font-size:11.5px;margin-bottom:10px">${h.db && h.db.tables ? Object.keys(h.db.tables).length + ' tables avec des données' : ''}</div>
-      <div class="dash-badge ${h.backupEnabled ? 'ok' : 'warn'}">💾 Sauvegarde ${h.backupEnabled ? 'active' : 'désactivée'}</div>
-      <div style="color:var(--d-dim);font-size:12px;margin-top:6px">🕐 Dernière : ${lastBStr} · démarrage : ${App.escapeHtml(h.bootRestore || '?')}</div>
+      <div style="color:var(--d-dim);font-size:12px;margin-bottom:10px">${h.db && h.db.tables ? Object.keys(h.db.tables).length + ' tables avec des données' : ''}</div>
+      <div class="dash-badge ${h.backupEnabled ? 'ok' : 'warn'}">Sauvegarde ${h.backupEnabled ? 'active' : 'désactivée'}</div>
+      <div style="color:var(--d-dim);font-size:12px;margin-top:6px">Dernière : ${lastBStr} · démarrage : ${App.escapeHtml(h.bootRestore || '?')}</div>
     </div>`);
     grid.appendChild(cDb);
 
-    // 🛡️ Garde-fous
+    // Garde-fous
     const guards = [
-      ['🛟 Anti-base-vide (restauration + sauvegarde)', true],
-      ['📏 Anti-dépassement 900 Ko', true],
-      ['🐕 Reconnexion forcée (60 s)', true],
+      ['Anti-base-vide (restauration + sauvegarde)', true],
+      ['Anti-dépassement 900 Ko', true],
+      ['Reconnexion forcée (60 s)', true],
       ['⏱️ Anti-blocage des interactions (15 s)', true],
-      ['💥 Anti-crash (réponses polies)', true],
-      ['🧹 Nettoyage auto (24 h)', true],
+      ['Anti-crash (réponses polies)', true],
+      ['Nettoyage auto (24 h)', true],
     ];
-    const cGuards = App.el(`<div class="dash-card"><h3>🛡️ Garde-fous actifs</h3>
+    const cGuards = App.el(`<div class="dash-card"><h3>️ Garde-fous actifs</h3>
       <div class="desc">Les protections installées — toutes actives en permanence.</div>
-      ${guards.map(([label]) => `<div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid #222434;font-size:13px"><span>✅</span>${label}</div>`).join('')}
+      ${guards.map(([label]) => `<div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid #222434;font-size:13px"><span>${App.glyphe('coche', { taille: 16 })}</span>${label}</div>`).join('')}
     </div>`);
     grid.appendChild(cGuards);
 
-    // 📉 Alerte de résilience (si le mode dégradé est actif)
+    // Alerte de résilience (si le mode dégradé est actif)
     const res = h.resilience || { state: 'ok', failuresInWindow: 0 };
     if (res.state !== 'ok') {
       root.appendChild(App.el(`
         <div class="dash-card" style="border-color:rgba(254,231,92,.5);background:rgba(254,231,92,.06);margin-bottom:14px">
-          <h3>📉 Mode ${res.state === 'critique' ? 'critique' : 'dégradé'} — Discord ralentit</h3>
+          <h3>Mode ${res.state === 'critique' ? 'critique' : 'dégradé'} — Discord ralentit</h3>
           <div class="desc" style="margin:0">${res.failuresInWindow} échec(s) en 1 minute. Le bot ralentit et retente automatiquement${res.state === 'critique' ? ' — certaines commandes répondent « très sollicité »' : ''}. Retour à la normale automatique dès que Discord récupère.</div>
         </div>`));
     }
 
-    // 🚦 File d'attente (anti-limites Discord)
+    // File d'attente (anti-limites Discord)
     const q = h.queue || { waiting: 0, active: 0, processed: 0, failed: 0, refused: 0 };
-    const cQueue = App.el(`<div class="dash-card"><h3>🚦 File d'attente</h3>
+    const cQueue = App.el(`<div class="dash-card"><h3>File d'attente</h3>
       <div class="desc">Tous les envois vers Discord passent par ici : les rafales sont lissées pour ne jamais dépasser les limites.</div>
       <div class="dash-stats dash-stats-dense">
         <div class="dash-stat" style="padding:10px"><div class="val">${q.waiting}</div><div class="lbl">En attente</div></div>
@@ -7756,12 +7808,12 @@ Dashboard.renderers.health = async (content) => {
     </div>`);
     grid.appendChild(cQueue);
 
-    // ⚠️ Erreurs 24h
-    const cErr = App.el(`<div class="dash-card"><h3>⚠️ Erreurs (24 h)</h3>
+    // Erreurs 24h
+    const cErr = App.el(`<div class="dash-card"><h3>Erreurs (24 h)</h3>
       <div class="desc">Les incidents récupérés automatiquement — le bot continue de tourner.</div>
       <div class="dash-badge ${errs.count === 0 ? 'ok' : 'bad'}">${errs.count} erreur(s)</div>
       ${errs.count === 0
-        ? `<div class="dash-empty" style="padding:18px">Tout est calme 🎉</div>`
+        ? `<div class="dash-empty" style="padding:18px">Tout est calme 🎉`
         : `<div style="margin-top:10px">${errs.last.map((e) => `
           <div style="background:var(--d-card2);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:12px">
             <b>${App.escapeHtml(e.source)}</b> <span style="color:var(--d-dim)">· ${new Date(e.at).toLocaleTimeString('fr-FR')}</span>
@@ -7772,7 +7824,7 @@ Dashboard.renderers.health = async (content) => {
   };
 
   await render();
-  // 🔄 Actualisation automatique tant que la page Santé est ouverte
+  // Actualisation automatique tant que la page Santé est ouverte
   if (Dashboard.state.healthTimer) clearInterval(Dashboard.state.healthTimer);
   Dashboard.state.healthTimer = setInterval(() => render().catch(() => {}), 30000);
 };
@@ -7780,7 +7832,7 @@ Dashboard.renderers.health = async (content) => {
 // ---------- Réglages du bot ----------
 Dashboard.renderers.botsettings = async (content) => {
   const bot = Dashboard.state.bot;
-  const root = Dashboard.header(content, '🤖', 'Réglages du bot', 'Préfixe global, statut, identité et sauvegarde.');
+  const root = Dashboard.header(content, '', 'Réglages du bot', 'Préfixe global, statut, identité et sauvegarde.');
   const c = Dashboard.card(root, 'Général', '');
   c.innerHTML += `
     <label class="dash-label">Préfixe global</label>
@@ -7791,19 +7843,19 @@ Dashboard.renderers.botsettings = async (content) => {
   c.querySelector('#b-save').onclick = async () => {
     try {
       await App.api(`/bots/${bot.id}`, { method: 'PATCH', body: { prefix: c.querySelector('#b-prefix').value.trim() || '!', status_text: c.querySelector('#b-status').value } });
-      App.toast('Enregistré !');
+      App.toast('Enregistré.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
 
-  const c2 = Dashboard.card(root, '💾 Sauvegarde automatique', 'Toutes les données (comptes, bots, configs) sont sauvegardées et restaurées à chaque mise à jour.');
+  const c2 = Dashboard.card(root, 'Sauvegarde automatique', 'Toutes les données (comptes, bots, configs) sont sauvegardées et restaurées à chaque mise à jour.');
   try {
     const s = await App.api('/backup/status');
     const last = s.last_backup ? new Date(s.last_backup) : null;
     const lastStr = last && !isNaN(last) ? last.toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : 'jamais';
     c2.appendChild(App.el(`<div class="desc" style="margin:0 0 10px">${s.enabled
-      ? `✅ <b>Active</b> — dépôt <code>${App.escapeHtml(s.repo)}</code> · sauvegarde toutes les 10 minutes + restauration au démarrage.`
-      : '⚠️ Désactivée — configurez BOTDEV_GH_TOKEN et BOTDEV_DATA_REPO sur Render.'}</div>`));
-    c2.appendChild(App.el(`<div class="dash-badge ${s.enabled ? 'ok' : 'warn'}" style="margin-bottom:10px">🕐 Dernière sauvegarde : ${lastStr}</div>`));
+      ? `<b>Active</b> — dépôt <code>${App.escapeHtml(s.repo)}</code> · sauvegarde toutes les 10 minutes + restauration au démarrage.`
+      : 'Désactivée — configurez BOTDEV_GH_TOKEN et BOTDEV_DATA_REPO sur Render.'}</div>`));
+    c2.appendChild(App.el(`<div class="dash-badge ${s.enabled ? 'ok' : 'warn'}" style="margin-bottom:10px">Dernière sauvegarde : ${lastStr}</div>`));
     const nowBtn = App.el(`<button class="dash-save-action dash-btn dash-btn-primary">Enregistrer maintenant</button>`);
     nowBtn.onclick = async () => {
       try { await App.api('/backup/now', { method: 'POST' }); App.toast('Sauvegarde faite ! 🎉'); Dashboard.renderers.botsettings(content); }
@@ -7817,19 +7869,19 @@ Dashboard.renderers.botsettings = async (content) => {
 // Phase 3 (v196) — Fonctionnalités avancées
 // ============================================================
 
-// 🔎 Recherche de transcriptions
+// Recherche de transcriptions
 // ============================================================
-// ✅ v290 — Vérification humaine + Join Gate
+// v290 — Vérification humaine + Join Gate
 // ============================================================
 Dashboard.renderers.verification = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '✅', 'Vérification', 'Captcha à l’arrivée, bouton « Je suis humain », isolation. Discord ne dit pas aux bots si un compte est volé.');
+  const root = Dashboard.header(content, '', 'Vérification', 'Captcha à l’arrivée, bouton « Je suis humain », isolation. Discord ne dit pas aux bots si un compte est volé.');
   const cfg = Object.assign({ enabled: false, channel: '', role: '', gate_days: 0, bot_filter: false, approved_bots: [], isolate: false, isolated_channels: [], panel_title: '', panel_desc: '', button_label: '', panel_color: '#57F287', require_avatar: false, block_spammer: false, captcha: false, captcha_channel: '', captcha_role: '', captcha_title: '', captcha_desc: '', captcha_color: '#e07a5f' }, data.verification || {});
   const textCh = (data.channels || []).filter((ch) => !ch.voice && !ch.category);
   const capSel = textCh.map((ch) => `<option value="${ch.id}" ${String(cfg.captcha_channel || '') === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('');
   const capRoleSel = (data.roles || []).map((r) => `<option value="${r.id}" ${String(cfg.captcha_role || '') === r.id ? 'selected' : ''}>@ ${App.escapeHtml(r.name)}</option>`).join('');
   const capColor = /^#[0-9a-fA-F]{6}$/.test(String(cfg.captcha_color || '')) ? cfg.captcha_color : '#e07a5f';
-  const cCap = Dashboard.card(root, '🧩 Captcha à l’arrivée', 'Quand quelqu’un rejoint, le bot lui envoie un panneau + une image de lettres. Chaque arrivée a un code différent. 2 essais, 2 minutes. Le bouton « Je suis humain » reste plus bas.');
+  const cCap = Dashboard.card(root, 'Captcha à l’arrivée', 'Quand quelqu’un rejoint, le bot lui envoie un panneau + une image de lettres. Chaque arrivée a un code différent. 2 essais, 2 minutes. Le bouton « Je suis humain » reste plus bas.');
   cCap.innerHTML += `
     <label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" id="ver-captcha" ${cfg.captcha ? 'checked' : ''} /> Activer le captcha à l’arrivée</label>
     <label class="dash-label">Salon du captcha</label>
@@ -7850,36 +7902,36 @@ Dashboard.renderers.verification = async (content, data) => {
     <label class="dash-label">Couleur de la barre</label>
     <input type="color" id="ver-captcha-color" value="${App.escapeHtml(capColor)}" />
     <label class="dash-label">Aperçu du panneau</label>
-    <div id="ver-captcha-preview" style="border-radius:10px;overflow:hidden;background:#2b2d31;border:1px solid rgba(255,255,255,.08);text-align:left"></div>
+    <div id="ver-captcha-preview" style="border-radius:8px;overflow:hidden;background:#2b2d31;border:1px solid rgba(255,255,255,.08);text-align:left"></div>
     <div style="font-size:12px;color:var(--d-dim);margin-top:10px;line-height:1.45">
       Le salon est <b>invisible</b> aux autres membres. Le captcha part dans un <b>fil privé</b> : personne ne voit l’image ni ce qu’il tape. Le reste du serveur (tickets compris) est masqué jusqu’à succès. L’isolation s’active toute seule.
     </div>
     <div style="margin-top:12px"><button class="dash-save-action dash-btn dash-btn-primary" id="ver-cap-save">Enregistrer le captcha</button></div>`;
-  const c1 = Dashboard.card(root, '🛡️ Réglages de la vérification', 'Le nouveau membre clique sur « Je suis humain » dans le salon de vérification, puis reçoit le rôle vérifié. Astuce pro : dans vos salons, n\'autorisez la vue qu\'au rôle vérifié — les non-vérifiés ne verront que le salon de vérification.');
+  const c1 = Dashboard.card(root, 'Réglages de la vérification', 'Le nouveau membre clique sur « Je suis humain » dans le salon de vérification, puis reçoit le rôle vérifié. Astuce pro : dans vos salons, n\'autorisez la vue qu\'au rôle vérifié — les non-vérifiés ne verront que le salon de vérification.');
   c1.innerHTML += `
     <label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" id="ver-enabled" ${cfg.enabled ? 'checked' : ''} /> Activer la vérification sur ce serveur</label>
     <label class="dash-label">Salon du panneau de vérification</label>
     <select class="dash-select" id="ver-channel">${textCh.map((ch) => `<option value="${ch.id}" ${cfg.channel === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('')}</select>
     <label class="dash-label">Rôle « vérifié » donné après le clic</label>
     <select class="dash-select" id="ver-role">${(data.roles || []).map((r) => `<option value="${r.id}" ${cfg.role === r.id ? 'selected' : ''}>@ ${App.escapeHtml(r.name)}</option>`).join('')}</select>
-    <label class="dash-label">🚧 Join Gate — âge minimum du compte Discord</label>
+    <label class="dash-label">Join Gate — âge minimum du compte Discord</label>
     <select class="dash-select" id="ver-gate" style="max-width:220px">${[[0, 'Désactivé'], [1, '1 jour minimum'], [3, '3 jours minimum'], [7, '7 jours minimum'], [14, '14 jours minimum'], [30, '30 jours minimum'], [60, '60 jours minimum']].map(([v, l]) => `<option value="${v}" ${Number(cfg.gate_days) === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
     <div style="font-size:12px;color:var(--d-dim);margin-top:4px">Les comptes plus récents sont refusés à l\'arrivée : explication envoyée en MP, puis expulsion (protection anti-raid, comme Wick).</div>
-    <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="ver-botfilter" ${cfg.bot_filter ? 'checked' : ''} /> 🤖 Expulser les bots non approuvés qui rejoignent le serveur</label>
-    <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="ver-avatar" ${cfg.require_avatar ? 'checked' : ''} /> 🖼️ Exiger une photo de profil Discord (pas l’avatar par défaut)</label>
-    <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="ver-spammer" ${cfg.block_spammer ? 'checked' : ''} /> 🚫 Refuser les comptes signalés « spammeur » par Discord</label>
+    <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="ver-botfilter" ${cfg.bot_filter ? 'checked' : ''} />Expulser les bots non approuvés qui rejoignent le serveur</label>
+    <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="ver-avatar" ${cfg.require_avatar ? 'checked' : ''} />Exiger une photo de profil Discord (pas l’avatar par défaut)</label>
+    <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="ver-spammer" ${cfg.block_spammer ? 'checked' : ''} />Refuser les comptes signalés « spammeur » par Discord</label>
     <label class="dash-label">Identifiants des bots approuvés (un par ligne)</label>
-    <textarea class="dash-input" id="ver-approved" rows="3" style="width:100%;font-size:12.5px" placeholder="123456789012345678">${App.escapeHtml((cfg.approved_bots || []).join('\n'))}</textarea>
+    <textarea class="dash-input" id="ver-approved" rows="3" style="width:100%;font-size:13px" placeholder="123456789012345678">${App.escapeHtml((cfg.approved_bots || []).join('\n'))}</textarea>
     <div style="height:1px;background:var(--d-border);margin:16px 0"></div>
-    <label class="dash-label">🔒 Isolation des salons pour les membres non vérifiés</label>
+    <label class="dash-label">Isolation des salons pour les membres non vérifiés</label>
     <select class="dash-select" id="ver-isolate-sel" style="max-width:460px">
       <option value="off" ${cfg.isolate ? '' : 'selected'}>Désactivée — tous les salons restent visibles</option>
       <option value="on" ${cfg.isolate ? 'selected' : ''}>Activée — les non-vérifiés ne voient que le salon de vérification</option>
     </select>
     <div style="font-size:12px;color:var(--d-dim);margin:4px 0 8px">Le changement s'applique tout de suite : Hoxera masque (ou rouvre) les salons lui-même. Les nouveaux arrivants ne voient QUE le salon de vérification ; dès leur clic sur « Je suis humain », ils voient tout le serveur. Les salons créés pendant l'isolation sont masqués automatiquement.</div>
-    ${cfg.isolate ? `<div style="margin-bottom:8px"><span class="dash-badge ok">🔒 Isolation ACTIVE — ${(cfg.isolated_channels || []).length} salon(s) masqué(s)</span></div>` : ''}
-    <div style="background:rgba(237,66,69,0.08);border:1px solid rgba(237,66,69,0.35);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--d-dim);margin-bottom:10px">⚠️ Sur un serveur existant, les membres actuels sans le rôle vérifié ne verront plus que le salon de vérification. Juste après l'activation, cochez la case ci-dessous pour ne bloquer personne.</div>
-    <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="ver-grant-case" /> 👥 Donner le rôle vérifié à tous les membres actuels (juste après l'activation)</label>
+    ${cfg.isolate ? `<div style="margin-bottom:8px"><span class="dash-badge ok">Isolation ACTIVE — ${(cfg.isolated_channels || []).length} salon(s) masqué(s)</span></div>` : ''}
+    <div style="background:rgba(237,66,69,0.08);border:1px solid rgba(237,66,69,0.35);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--d-dim);margin-bottom:10px">Sur un serveur existant, les membres actuels sans le rôle vérifié ne verront plus que le salon de vérification. Juste après l'activation, cochez la case ci-dessous pour ne bloquer personne.</div>
+    <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="ver-grant-case" />Donner le rôle vérifié à tous les membres actuels (juste après l'activation)</label>
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
       <button class="dash-save-action dash-btn dash-btn-primary" id="ver-save">Enregistrer</button>
       <button class="dash-btn" id="ver-send">Envoyer le panneau dans le salon</button>
@@ -7893,8 +7945,8 @@ Dashboard.renderers.verification = async (content, data) => {
     sel.disabled = true;
     const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/verification/isolate`, { method: 'POST', body: { on } });
     sel.disabled = false;
-    if (!r.ok) { sel.value = on ? 'off' : 'on'; App.toast(`⚠️ ${r.error || 'Changement impossible.'}`); return; }
-    App.toast(on ? '🔒 Isolation en cours d\'application — cela peut prendre quelques instants. Rechargez la page dans une minute.' : '🔓 Salons en cours de réouverture — rechargez la page dans un instant.');
+    if (!r.ok) { sel.value = on ? 'off' : 'on'; App.toast(`${r.error || 'Changement impossible.'}`); return; }
+    App.toast(on ? 'Isolation en cours d\'application — cela peut prendre quelques instants. Rechargez la page dans une minute.' : 'Salons en cours de réouverture — rechargez la page dans un instant.');
   };
   c1.querySelector('#ver-grant-case').onchange = async (e) => {
     if (!e.target.checked) return;
@@ -7902,7 +7954,7 @@ Dashboard.renderers.verification = async (content, data) => {
     const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/verification/grant-role`, { method: 'POST', body: {} });
     e.target.disabled = false;
     e.target.checked = false; // action ponctuelle : la case se recoche à chaque demande
-    App.toast(r.ok ? '👥 Distribution du rôle en cours — cela peut prendre quelques minutes sur un gros serveur.' : `⚠️ ${r.error || 'Distribution impossible.'}`);
+    App.toast(r.ok ? 'Distribution du rôle en cours — cela peut prendre quelques minutes sur un gros serveur.' : `${r.error || 'Distribution impossible.'}`);
   };
   const capBox = root.querySelector('#ver-captcha');
   if (capBox) capBox.onchange = () => {
@@ -7933,16 +7985,16 @@ Dashboard.renderers.verification = async (content, data) => {
     };
     if (body.captcha_role && !body.role) body.role = body.captcha_role;
     const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/verification`, { method: 'PUT', body });
-    App.toast(r.ok ? '✅ Vérification enregistrée.' : '⚠️ Enregistrement impossible.');
+    App.toast(r.ok ? 'Vérification enregistrée.' : 'Enregistrement impossible.');
   };
   const capSave = root.querySelector('#ver-cap-save');
   if (capSave) capSave.onclick = () => c1.querySelector('#ver-save').click();
   c1.querySelector('#ver-send').onclick = async () => {
     const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/verification/panel`, { method: 'POST', body: { channel: c1.querySelector('#ver-channel').value } });
-    App.toast(r.ok ? '📤 Panneau de vérification envoyé !' : `⚠️ ${r.error || 'Envoi impossible (bot hors ligne ?).'}`);
+    App.toast(r.ok ? 'Panneau de vérification envoyé !' : `${r.error || 'Envoi impossible (bot hors ligne ?).'}`);
   };
 
-  const c2 = Dashboard.card(root, '📝 Texte du panneau Discord', 'Ce que les nouveaux membres voient. Laissez vide pour le texte par défaut. Astuce : {role} affiche le rôle vérifié. Pensez à renvoyer le panneau après un changement.');
+  const c2 = Dashboard.card(root, 'Texte du panneau Discord', 'Ce que les nouveaux membres voient. Laissez vide pour le texte par défaut. Astuce : {role} affiche le rôle vérifié. Pensez à renvoyer le panneau après un changement.');
   c2.innerHTML += `
     <label class="dash-label">Titre</label>
     <input class="dash-input" id="ver-title" maxlength="120" value="${App.escapeHtml(cfg.panel_title || '')}" placeholder="✅ Vérification" />
@@ -7953,18 +8005,18 @@ Dashboard.renderers.verification = async (content, data) => {
     <label class="dash-label">Couleur de la barre</label>
     <input type="color" id="ver-color" value="${App.escapeHtml(/^#[0-9a-fA-F]{6}$/.test(String(cfg.panel_color || '')) ? cfg.panel_color : '#57F287')}" />
     <label class="dash-label">Aperçu</label>
-    <div id="ver-preview" style="border-radius:10px;overflow:hidden;background:#2b2d31;border:1px solid rgba(255,255,255,.08);text-align:left"></div>
+    <div id="ver-preview" style="border-radius:8px;overflow:hidden;background:#2b2d31;border:1px solid rgba(255,255,255,.08);text-align:left"></div>
     <div class="desc" style="margin-top:10px">Ce que ça contrôle vraiment : clic humain, âge du compte, bots, isolation, photo de profil, signalement spammeur Discord. <b>Pas</b> les comptes volés, les arnaques ou un « profil complet » — Discord ne le dit pas aux bots.</div>`;
   const paintPreview = () => {
     const box = c2.querySelector('#ver-preview');
     if (!box) return;
     const color = c2.querySelector('#ver-color').value || '#57F287';
-    const title = (c2.querySelector('#ver-title').value.trim() || '✅ Vérification');
+    const title = (c2.querySelector('#ver-title').value.trim() || 'Vérification');
     const roleSel = c1.querySelector('#ver-role');
     const roleName = (roleSel && roleSel.selectedOptions && roleSel.selectedOptions[0]) ? roleSel.selectedOptions[0].textContent.replace(/^@\s*/, '') : 'Vérifié';
     const desc = (c2.querySelector('#ver-desc').value.trim() || 'Bienvenue ! Cliquez sur le bouton ci-dessous pour prouver que vous êtes humain et accéder au serveur.\nRôle accordé : {role}').split('{role}').join('@' + roleName);
     const btn = (c2.querySelector('#ver-btn').value.trim() || 'Je suis humain');
-    box.innerHTML = `<div style="display:flex;min-height:90px"><div style="width:4px;background:${App.escapeHtml(color)};flex:0 0 4px"></div><div style="padding:12px 14px;flex:1;min-width:0"><b style="color:#f2f3f5;font-size:15px">${App.escapeHtml(title)}</b><p style="margin:8px 0 12px;color:#dbdee1;font-size:13.5px;white-space:pre-wrap;line-height:1.45">${App.escapeHtml(desc)}</p><span style="display:inline-block;background:#248046;color:#fff;border-radius:4px;padding:6px 12px;font-size:13px">👋 ${App.escapeHtml(btn)}</span></div></div>`;
+    box.innerHTML = `<div style="display:flex;min-height:90px"><div style="width:4px;background:${App.escapeHtml(color)};flex:0 0 4px"></div><div style="padding:12px 14px;flex:1;min-width:0"><b style="color:#f2f3f5;font-size:16px">${App.escapeHtml(title)}</b><p style="margin:8px 0 12px;color:#dbdee1;font-size:14px;white-space:pre-wrap;line-height:1.45">${App.escapeHtml(desc)}</p><span style="display:inline-block;background:#248046;color:#fff;border-radius:4px;padding:6px 12px;font-size:13px">${App.escapeHtml(btn)}</span></div></div>`;
   };
   ['#ver-title', '#ver-desc', '#ver-btn', '#ver-color'].forEach((sel) => {
     const el = c2.querySelector(sel);
@@ -7983,7 +8035,7 @@ Dashboard.renderers.verification = async (content, data) => {
     const filled = (s) => s.split('{server}').join('AyAyTR').split('{user}').join('@Alex').split('{role}').join('@' + roleName);
     const sample = ['Q','T','7','K','2','H'];
     const letters = sample.map((ch, i) => `<text x="${36+i*62}" y="${80+(i%2)*8}" font-family="Times New Roman, Georgia, serif" font-size="52" font-style="italic" font-weight="700" fill="${['#c45c3e','#d4764e','#b85a3a','#e07a5f'][i%4]}" transform="rotate(${(i%2?1:-1)*(8+i)} ${36+i*62} ${80+(i%2)*8})">${ch}</text>`).join('');
-    box.innerHTML = `<div style="display:flex;min-height:90px"><div style="width:4px;background:${App.escapeHtml(color)};flex:0 0 4px"></div><div style="padding:12px 14px;flex:1;min-width:0"><b style="color:#f2f3f5;font-size:15px">${App.escapeHtml(filled(title))}</b><p style="margin:8px 0 12px;color:#dbdee1;font-size:13.5px;white-space:pre-wrap;line-height:1.45">${App.escapeHtml(filled(desc))}</p><div style="background:#1e1f22;border-radius:6px;padding:6px 4px"><svg width="100%" height="70" viewBox="0 0 420 130" xmlns="http://www.w3.org/2000/svg"><rect width="420" height="130" rx="8" fill="#1e1f22"/>${letters}</svg></div><div style="margin-top:8px;font-size:11px;color:#949ba4">Aperçu : l’image réelle est différente à chaque arrivée.</div></div></div>`;
+    box.innerHTML = `<div style="display:flex;min-height:90px"><div style="width:4px;background:${App.escapeHtml(color)};flex:0 0 4px"></div><div style="padding:12px 14px;flex:1;min-width:0"><b style="color:#f2f3f5;font-size:16px">${App.escapeHtml(filled(title))}</b><p style="margin:8px 0 12px;color:#dbdee1;font-size:14px;white-space:pre-wrap;line-height:1.45">${App.escapeHtml(filled(desc))}</p><div style="background:#1e1f22;border-radius:4px;padding:6px 4px"><svg width="100%" height="70" viewBox="0 0 420 130" xmlns="http://www.w3.org/2000/svg"><rect width="420" height="130" rx="8" fill="#1e1f22"/>${letters}</svg></div><div style="margin-top:8px;font-size:11px;color:#949ba4">Aperçu : l’image réelle est différente à chaque arrivée.</div></div></div>`;
   };
   ['#ver-captcha-title', '#ver-captcha-desc', '#ver-captcha-color', '#ver-captcha-role'].forEach((sel) => {
     const el = root.querySelector(sel);
@@ -7995,11 +8047,11 @@ Dashboard.renderers.verification = async (content, data) => {
 
 Dashboard.renderers.transcripts = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '🔎', 'Recherche de transcriptions', 'Retrouve un ticket fermé par salon, serveur, ouvreur, type ou contenu.');
+  const root = Dashboard.header(content, '', 'Recherche de transcriptions', 'Retrouve un ticket fermé par salon, serveur, ouvreur, type ou contenu.');
   const searchCard = App.el(`
     <div class="dash-card">
       <div class="card-head">
-        <div><h3>🔎 Rechercher</h3><div class="desc">Tapez un mot-clé (salon, membre, contenu…) puis appuyez sur Entrée — sans mot-clé, les 100 dernières transcriptions.</div></div>
+        <div><h3>Rechercher</h3><div class="desc">Tapez un mot-clé (salon, membre, contenu…) puis appuyez sur Entrée — sans mot-clé, les 100 dernières transcriptions.</div></div>
       </div>
       <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
         <input class="dash-input" id="tr-search" placeholder="Ex : support, Bob, remboursement…" style="flex:1;min-width:220px" />
@@ -8007,14 +8059,14 @@ Dashboard.renderers.transcripts = async (content, data) => {
       </div>
     </div>`);
   root.appendChild(searchCard);
-  const listEl = App.el(`<div id="tr-list" style="margin-top:16px"><div class="dash-empty"><div class="big">🔎</div><p>Lancez une recherche pour voir les transcriptions du serveur.</p></div></div>`);
+  const listEl = App.el(`<div id="tr-list" style="margin-top:16px"><div class="dash-empty"><div class="big">${App.glyphe('recherche', { taille: 26 })}</div><p>Lancez une recherche pour voir les transcriptions du serveur.</p></div></div>`);
   root.appendChild(listEl);
   const run = async (q) => {
     listEl.innerHTML = '<div class="spinner"></div>';
     try {
       const { items } = await App.api(`/bots/${bot.id}/guilds/${guildId}/transcripts${q ? '?q=' + encodeURIComponent(q) : ''}`);
       if (!items || !items.length) {
-        listEl.innerHTML = '<div class="dash-empty"><div class="big">📭</div><p>Aucune transcription trouvée pour cette recherche.</p></div>';
+        listEl.innerHTML = '<div class="dash-empty"><div class="big"><svg class="ico-svg" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M3.4 13.6h4.4l1.4 2.6h5.6l1.4-2.6h4.4M4.8 4.4h14.4l1.4 9.2v6H3.4v-6L4.8 4.4Z"/></svg></div><p>Aucune transcription trouvée pour cette recherche.</p></div>';
         return;
       }
       listEl.innerHTML = `<div style="overflow-x:auto"><table class="dash-table"><thead><tr><th>Salon</th><th>Type</th><th>Serveur</th><th>Ouvreur</th><th>Date</th><th></th></tr></thead><tbody></tbody></table></div>`;
@@ -8026,12 +8078,12 @@ Dashboard.renderers.transcripts = async (content, data) => {
           <td>${App.escapeHtml(t.server_name || '—')}</td>
           <td>${App.escapeHtml(t.opener_id || '—')}</td>
           <td style="white-space:nowrap">${App.escapeHtml(String(t.created_at || '').slice(0, 16))}</td>
-          <td><a class="dash-btn dash-btn-sm" target="_blank" rel="noopener" href="/transcript/${App.escapeHtml(t.token)}">👁 Voir</a></td>
+          <td><a class="dash-btn dash-btn-sm" target="_blank" rel="noopener" href="/transcript/${App.escapeHtml(t.token)}">Voir</a></td>
         </tr>`);
         tb.appendChild(tr);
       });
     } catch (e) {
-      listEl.innerHTML = `<div class="dash-empty"><div class="big">⚠️</div><p>${App.escapeHtml(e.message)}</p></div>`;
+      listEl.innerHTML = `<div class="dash-empty"><div class="big">${App.glyphe('alerte', { taille: 26 })}</div><p>${App.escapeHtml(e.message)}</p></div>`;
     }
   };
   const go = () => run(searchCard.querySelector('#tr-search').value.trim());
@@ -8040,23 +8092,23 @@ Dashboard.renderers.transcripts = async (content, data) => {
   run('');
 };
 
-// 💬 Modmail : configuration + conversations
+// Modmail : configuration + conversations
 Dashboard.renderers.modmail = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '💬', 'Modmail', 'Vos membres vous écrivent en message privé : chaque conversation arrive dans un fil du salon choisi. Le staff répond dans le fil, le membre reçoit en MP.');
+  const root = Dashboard.header(content, '', 'Modmail', 'Vos membres vous écrivent en message privé : chaque conversation arrive dans un fil du salon choisi. Le staff répond dans le fil, le membre reçoit en MP.');
   const textChannels = (data.channels || []).filter((c) => !c.category && !c.voice);
 
   const load = async () => {
     root.querySelectorAll('.dash-card[data-mm]').forEach((c) => c.remove());
     let m;
     try { m = await App.api(`/bots/${bot.id}/guilds/${guildId}/modmail`); }
-    catch (e) { root.appendChild(App.el(`<div class="dash-empty"><div class="big">⚠️</div><p>${App.escapeHtml(e.message)}</p></div>`)); return; }
+    catch (e) { root.appendChild(App.el(`<div class="dash-empty"><div class="big">${App.glyphe('alerte', { taille: 26 })}</div><p>${App.escapeHtml(e.message)}</p></div>`)); return; }
 
     // ——— Configuration ———
     const cfgCard = App.el(`
       <div class="dash-card" data-mm>
         <div class="card-head">
-          <div><h3>⚙️ Configuration</h3><div class="desc">Activez le modmail et choisissez le salon où les conversations apparaîtront.</div></div>
+          <div><h3>Configuration</h3><div class="desc">Activez le modmail et choisissez le salon où les conversations apparaîtront.</div></div>
           <label class="switch" aria-label="Activer le modmail"><input type="checkbox" id="mm-enabled" ${m.enabled ? 'checked' : ''} /><span class="slider"></span></label>
         </div>
         <div style="margin-top:12px">
@@ -8066,7 +8118,7 @@ Dashboard.renderers.modmail = async (content, data) => {
             ${textChannels.map((c) => {
               const val = '#' + c.name;
               const sel = typeof Dashboard.discordRefMatches === 'function' && Dashboard.discordRefMatches(m.channel, c) ? 'selected' : '';
-              return `<option value="${App.escapeHtml(val)}" ${sel}>💬 #${App.escapeHtml(c.name)}</option>`;
+              return `<option value="${App.escapeHtml(val)}" ${sel}>#${App.escapeHtml(c.name)}</option>`;
             }).join('')}
           </select>
         </div>
@@ -8076,10 +8128,12 @@ Dashboard.renderers.modmail = async (content, data) => {
     const en = cfgCard.querySelector('#mm-enabled');
     const chan = cfgCard.querySelector('#mm-channel');
     en.onchange = () => { chan.disabled = !en.checked; };
-    cfgCard.querySelector('#mm-save').onclick = async () => {
+    cfgCard.querySelector('#mm-save').onclick = async (e) => {
+      const bouton = e.currentTarget;
       try {
         await App.api(`/bots/${bot.id}/guilds/${guildId}/modmail`, { method: 'PUT', body: { enabled: en.checked, channel: chan.value } });
-        App.toast('Modmail enregistré !');
+        App.retourEnregistrement(bouton);
+        App.toast('Modmail enregistré.');
         await load();
       } catch (e) { App.toast(e.message, 'error'); }
     };
@@ -8088,9 +8142,9 @@ Dashboard.renderers.modmail = async (content, data) => {
     const open = m.open || [];
     const openCard = App.el(`
       <div class="dash-card" data-mm style="margin-top:16px">
-        <h3>💬 Conversations ouvertes (${open.length})</h3>
+        <h3>Conversations ouvertes (${open.length})</h3>
         <div class="desc">Répondez directement dans le fil Discord du salon modmail — le membre recevra votre réponse en MP.</div>
-        ${open.length ? `<div style="overflow-x:auto;margin-top:8px"><table class="dash-table"><thead><tr><th>Membre</th><th>Ouverte le</th><th></th></tr></thead><tbody></tbody></table></div>` : `<div class="dash-empty" style="margin-top:10px"><div class="big">📭</div><p>Aucune conversation ouverte.</p></div>`}
+        ${open.length ? `<div style="overflow-x:auto;margin-top:8px"><table class="dash-table"><thead><tr><th>Membre</th><th>Ouverte le</th><th></th></tr></thead><tbody></tbody></table></div>` : `<div class="dash-empty" style="margin-top:10px"><div class="big">${App.glyphe('boite', { taille: 26 })}</div><p>Aucune conversation ouverte.</p></div>`}
       </div>`);
     root.appendChild(openCard);
     const tb = openCard.querySelector('tbody');
@@ -8115,33 +8169,35 @@ Dashboard.renderers.modmail = async (content, data) => {
   await load();
 };
 
-// ❓ Aide intégrée (module global du bot)
+// Aide intégrée (module global du bot)
 Dashboard.renderers.help = async (content) => {
-  const root = Dashboard.header(content, '❓', 'Aide & Guide', 'Bien démarrer, configurer, se faire aider — tout est ici.');
+  const root = Dashboard.header(content, '', 'Aide & Guide', 'Bien démarrer, configurer, se faire aider — tout est ici.');
   const bot = Dashboard.state.bot || {};
   const serverName = (Dashboard.state.guildData && Dashboard.state.guildData.name) || 'votre serveur';
 
-  const block = (icon, title, desc) => `<div class="dash-card" style="margin-bottom:16px"><h3>${icon} ${title}</h3><div class="desc">${desc}</div></div>`;
+  // v367 — l'argument `icon` n'est plus affiche : la page d'aide alignait un
+  // pictogramme devant chaque titre, ce que plus aucun tableau de bord ne fait.
+  const block = (icon, title, desc) => `<div class="dash-card" style="margin-bottom:16px"><h3>${App.sansPicto(title)}</h3><div class="desc">${desc}</div></div>`;
 
-  root.appendChild(App.el(block('🚀', 'Bien démarrer en 3 étapes', `
+  root.appendChild(App.el(block('', 'Bien démarrer en 3 étapes', `
     <ol style="margin:0;padding-left:20px;line-height:1.9">
       <li><b>Ajoutez ${App.escapeHtml(bot.name || 'Hoxera')}</b> à ${App.escapeHtml(serverName)} (bouton « Ajouter le bot » en haut à droite).</li>
       <li><b>Choisissez votre serveur</b> dans le sélecteur en haut, puis ouvrez un module depuis le menu de gauche.</li>
       <li><b>Enregistrez vos réglages</b> : chaque module a son bouton « Enregistrer » — une barre de sauvegarde apparaît en bas dès qu'un réglage change.</li>
     </ol>`)));
 
-  root.appendChild(App.el(block('🧩', 'Les modules en un coup d\'œil', `
+  root.appendChild(App.el(block('', 'Les modules en un coup d\'œil', `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px">
-      <div class="dash-badge" style="display:flex;gap:8px;padding:10px">🎫 Tickets : boutons, types, transcriptions automatiques en MP</div>
-      <div class="dash-badge" style="display:flex;gap:8px;padding:10px">👋 Bienvenue : message d'accueil + rôles automatiques</div>
-      <div class="dash-badge" style="display:flex;gap:8px;padding:10px">📈 Niveaux : XP, rangs, récompenses de rôles, /profile</div>
-      <div class="dash-badge" style="display:flex;gap:8px;padding:10px">💰 Économie : coins, boutique, giveaways, classement</div>
-      <div class="dash-badge" style="display:flex;gap:8px;padding:10px">🛡️ Modération : Auto-Mod et sanctions</div>
-      <div class="dash-badge" style="display:flex;gap:8px;padding:10px">🧹 Nettoyage auto : vider des salons, un message toutes les X secondes</div>
-      <div class="dash-badge" style="display:flex;gap:8px;padding:10px">💬 Modmail : vos membres vous écrivent en MP, vous répondez ici</div>
+      <div class="dash-badge" style="display:flex;gap:8px;padding:10px">Tickets : boutons, types, transcriptions automatiques en MP</div>
+      <div class="dash-badge" style="display:flex;gap:8px;padding:10px">Bienvenue : message d'accueil + rôles automatiques</div>
+      <div class="dash-badge" style="display:flex;gap:8px;padding:10px">Niveaux : XP, rangs, récompenses de rôles, /profile</div>
+      <div class="dash-badge" style="display:flex;gap:8px;padding:10px">Économie : coins, boutique, giveaways, classement</div>
+      <div class="dash-badge" style="display:flex;gap:8px;padding:10px">Modération : Auto-Mod et sanctions</div>
+      <div class="dash-badge" style="display:flex;gap:8px;padding:10px">Nettoyage auto : vider des salons, un message toutes les X secondes</div>
+      <div class="dash-badge" style="display:flex;gap:8px;padding:10px">Modmail : vos membres vous écrivent en MP, vous répondez ici</div>
     </div>`)));
 
-  root.appendChild(App.el(block('⚡', 'Astuces', `
+  root.appendChild(App.el(block('', 'Astuces', `
     <ul style="margin:0;padding-left:20px;line-height:1.9">
       <li><b>Recherche rapide</b> : touchez <kbd>Ctrl</kbd>+<kbd>K</kbd> (ou l'icône 🔍) pour sauter d'un module à l'autre.</li>
       <li><b>Mode clair / sombre</b> : bouton 🌓 en haut à droite, mémorisé sur votre appareil.</li>
@@ -8150,9 +8206,9 @@ Dashboard.renderers.help = async (content) => {
       <li><b>Mobile</b> : navigation en bas d'écran (Accueil, Tickets, Membres, Stats + « Plus »).</li>
     </ul>`)));
 
-  root.appendChild(App.el(block('🆘', 'Besoin d\'aide ?', `
+  root.appendChild(App.el(block('', 'Besoin d\'aide ?', `
     <p style="margin:0 0 12px;color:var(--d-dim);line-height:1.6">Rejoignez le serveur support officiel : l'équipe et la communauté répondent en français.</p>
-    <a class="dash-btn" target="_blank" rel="noopener" href="https://discord.gg/X9hTdr9N3" style="text-decoration:none">🆘 Rejoindre le support</a>`)));
+    <a class="dash-btn" target="_blank" rel="noopener" href="https://discord.gg/X9hTdr9N3" style="text-decoration:none">Rejoindre le support</a>`)));
 };
 
 // ============================================================
@@ -8221,26 +8277,26 @@ Dashboard.renderers.moderation = async (content, data) => {
 Dashboard.renderers.blacklist = async (content, data) => {
   await Dashboard._full.moderation(content, data);
   Dashboard.keepCards(content, ['Liste noire']);
-  Dashboard.retitle(content, '🔇', 'Liste noire', 'Mots interdits : les messages qui les contiennent sont supprimés.');
+  Dashboard.retitle(content, '', 'Liste noire', 'Mots interdits : les messages qui les contiennent sont supprimés.');
 };
 
 Dashboard.renderers.antiraid = async (content, data) => {
   await Dashboard._full.moderation(content, data);
   Dashboard.keepCards(content, ['Bouclier anti-raid']);
-  Dashboard.retitle(content, '🚧', 'Anti-raid', 'Arrivées trop rapides, puis verrouillage d’urgence des salons.');
+  Dashboard.retitle(content, '', 'Anti-raid', 'Arrivées trop rapides, puis verrouillage d’urgence des salons.');
   await Dashboard.appendCardsFrom(Dashboard._full.server, content, data, ['Anti-raid']);
 };
 
 Dashboard.renderers.welcome = async (content, data) => {
   await Dashboard._full.welcome(content, data);
   Dashboard.hideCards(content, ['Auto-rôle']);
-  Dashboard.retitle(content, '👋', 'Bienvenue', 'Accueillez les nouveaux membres.');
+  Dashboard.retitle(content, '', 'Bienvenue', 'Accueillez les nouveaux membres.');
 };
 
 Dashboard.renderers.autoroles = async (content, data) => {
   await Dashboard._full.welcome(content, data);
   Dashboard.keepCards(content, ['Auto-rôle']);
-  Dashboard.retitle(content, '🏷️', 'Auto-rôles', 'Rôle automatique dès l’arrivée d’un membre.');
+  Dashboard.retitle(content, '', 'Auto-rôles', 'Rôle automatique dès l’arrivée d’un membre.');
 };
 
 Dashboard.renderers.announcements = async (content, data) => {
@@ -8251,7 +8307,7 @@ Dashboard.renderers.announcements = async (content, data) => {
 Dashboard.renderers.sticky = async (content, data) => {
   await Dashboard._full.announcements(content, data);
   Dashboard.keepCards(content, ['Message épinglé']);
-  Dashboard.retitle(content, '📌', 'Message épinglé', 'Un message qui reste toujours en bas du salon.');
+  Dashboard.retitle(content, '', 'Message épinglé', 'Un message qui reste toujours en bas du salon.');
 };
 
 Dashboard.renderers.server = async (content, data) => {
@@ -8262,7 +8318,7 @@ Dashboard.renderers.server = async (content, data) => {
 Dashboard.renderers.birthdays = async (content, data) => {
   await Dashboard._full.server(content, data);
   Dashboard.keepCards(content, ['Anniversaires']);
-  Dashboard.retitle(content, '🎂', 'Anniversaires', 'Vœux le jour J, et un rôle optionnel.');
+  Dashboard.retitle(content, '', 'Anniversaires', 'Vœux le jour J, et un rôle optionnel.');
 };
 
 Dashboard.renderers.starboard = async (content, data) => {
@@ -8274,13 +8330,13 @@ Dashboard.renderers.starboard = async (content, data) => {
 Dashboard.renderers.invites = async (content, data) => {
   await Dashboard._full.community(content, data);
   Dashboard.keepCards(content, ['Récompenses d', 'Traqueur d']);
-  Dashboard.retitle(content, '📨', 'Invitations', 'Récompenses et classement des recruteurs.');
+  Dashboard.retitle(content, '', 'Invitations', 'Récompenses et classement des recruteurs.');
 };
 
 Dashboard.renderers.lives = async (content, data) => {
   await Dashboard._full.community(content, data);
   Dashboard.keepCards(content, ['Annonces de live']);
-  Dashboard.retitle(content, '🔴', 'Lives', 'Annonces TikTok, Twitch, YouTube et Kick.');
+  Dashboard.retitle(content, '', 'Lives', 'Annonces TikTok, Twitch, YouTube et Kick.');
 };
 
 // ============================================================
@@ -8290,7 +8346,7 @@ Dashboard.renderers.lives = async (content, data) => {
 // ============================================================
 Dashboard.renderers.links = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '🔗', 'Liens', 'Comme sur Discord : un texte, un encadré, puis vos boutons (TikTok, YouTube…) deux par ligne.');
+  const root = Dashboard.header(content, '', 'Liens', 'Comme sur Discord : un texte, un encadré, puis vos boutons (TikTok, YouTube…) deux par ligne.');
   const cfg = data.linkpanel || {};
   const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
   const serverName = (data.guild && data.guild.name) || 'votre serveur';
@@ -8303,7 +8359,7 @@ Dashboard.renderers.links = async (content, data) => {
     }))
     : [];
 
-  Dashboard.card(root, '🧭 Comment ça marche', '')
+  Dashboard.card(root, 'Comment ça marche', '')
     .insertAdjacentHTML('beforeend', `
       <div class="tg-sys" style="margin-top:0">
         <div class="tg-box">
@@ -8316,11 +8372,11 @@ Dashboard.renderers.links = async (content, data) => {
         </div>
       </div>`);
 
-  const c = Dashboard.card(root, '📋 Textes du panneau (uniques)', 'Comme le panneau des tickets : ces textes s’affichent UNE fois. Champ vide = texte par défaut. {server} = nom du serveur.');
+  const c = Dashboard.card(root, 'Textes du panneau (uniques)', 'Comme le panneau des tickets : ces textes s’affichent UNE fois. Champ vide = texte par défaut. {server} = nom du serveur.');
   const chanOpts = ['<option value="">— Choisir un salon —</option>']
-    .concat(textChannels.map((ch) => `<option value="${App.escapeHtml(ch.id)}" ${String(cfg.channel) === String(ch.id) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`));
+    .concat(textChannels.map((ch) => `<option value="${App.escapeHtml(ch.id)}" ${String(cfg.channel) === String(ch.id) ? 'selected' : ''}>#${App.escapeHtml(ch.name)}</option>`));
   if (cfg.channel && !textChannels.some((ch) => String(ch.id) === String(cfg.channel))) {
-    chanOpts.push(`<option value="${App.escapeHtml(cfg.channel)}" selected>⚠️ salon actuel introuvable</option>`);
+    chanOpts.push(`<option value="${App.escapeHtml(cfg.channel)}" selected>salon actuel introuvable</option>`);
   }
   c.innerHTML += `
     <label class="dash-label">Salon où envoyer le panneau</label>
@@ -8339,7 +8395,7 @@ Dashboard.renderers.links = async (content, data) => {
     <label class="dash-label">Pied de l’encadré (optionnel, vide = aucun)</label>
     <input class="dash-input" id="lp-footer" maxlength="200" placeholder="" value="${App.escapeHtml(cfg.footer || '')}" />`;
 
-  const c2 = Dashboard.card(root, '🔘 Boutons (2 par ligne)', 'Chaque bouton ouvre un site. Emoji + nom, comme TikTok / YouTube / Instagram.');
+  const c2 = Dashboard.card(root, 'Boutons (2 par ligne)', 'Chaque bouton ouvre un site. Emoji + nom, comme TikTok / YouTube / Instagram.');
   c2.innerHTML += `<div id="lp-list"></div><button type="button" class="dash-btn dash-btn-sm" id="lp-add">＋ Ajouter un bouton</button>`;
 
   const preview = App.el(`<div id="lp-preview" class="lp-preview"></div>`);
@@ -8347,18 +8403,18 @@ Dashboard.renderers.links = async (content, data) => {
 
   const fill = (s) => String(s || '').split('{server}').join(serverName);
   const paint = () => {
-    const title = fill(c.querySelector('#lp-title').value.trim()) || '🔗 Liens utiles';
+    const title = fill(c.querySelector('#lp-title').value.trim()) || 'Liens utiles';
     const desc = fill(c.querySelector('#lp-desc').value.trim()) || 'N’hésitez pas à me suivre de partout !';
     const above = fill(c.querySelector('#lp-content').value.trim());
     const color = c.querySelector('#lp-color').value;
     const img = String(c.querySelector('#lp-image').value.trim());
     const btns = linksData.filter((l) => l.label || l.url).map((l) => {
       const name = App.escapeHtml(l.label || 'Ouvrir');
-      return `<span class="lp-fake-btn">${App.escapeHtml(l.emoji || '💙')} ${name} <span class="lp-ext" aria-hidden="true">↗</span></span>`;
+      return `<span class="lp-fake-btn">${App.escapeHtml(l.emoji || '')} ${name} <span class="lp-ext" aria-hidden="true">↗</span></span>`;
     }).join('') || `<div class="dash-empty" style="padding:12px">Aucun bouton — ajoutez TikTok, YouTube…</div>`;
     const imgHtml = /^https?:\/\//i.test(img) ? `<div class="lp-emb-img">${App.escapeHtml(img)}</div>` : '';
     preview.innerHTML = `
-      <div class="dash-label" style="margin:12px 0 8px">👀 Aperçu sur Discord</div>
+      <div class="dash-label" style="margin:12px 0 8px">Aperçu sur Discord</div>
       <div class="lp-discord">
         ${above ? `<div class="lp-above">${App.escapeHtml(above).replace(/\n/g, '<br>')}</div>` : ''}
         <div class="lp-emb" style="border-left:4px solid ${App.escapeHtml(color)}">
@@ -8420,17 +8476,21 @@ Dashboard.renderers.links = async (content, data) => {
     footer: c.querySelector('#lp-footer').value,
     links: linksData,
   });
-  c2.querySelector('#lp-save').onclick = async () => {
+  c2.querySelector('#lp-save').onclick = async (e) => {
+    const bouton = e.currentTarget;
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/linkpanel`, { method: 'PUT', body: collect() });
-      App.toast('Panneau de liens enregistré !');
+      App.retourEnregistrement(bouton);
+      App.toast('Panneau de liens enregistré.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
-  c2.querySelector('#lp-send').onclick = async () => {
+  c2.querySelector('#lp-send').onclick = async (e) => {
+    const bouton = e.currentTarget;
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/linkpanel`, { method: 'PUT', body: collect() });
       await App.api(`/bots/${bot.id}/guilds/${guildId}/linkpanel/send`, { method: 'POST', body: { channel: c.querySelector('#lp-channel').value } });
-      App.toast('Panneau de liens envoyé sur Discord !');
+      App.retourEnregistrement(bouton);
+      App.toast('Panneau de liens envoyé sur Discord.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
 };
@@ -8526,7 +8586,7 @@ Dashboard.discordPollHtml = ({ question, options, duration, allowMultiselect, in
     <div class="dpp-question">${Dashboard.discordInlineMd(App.escapeHtml(String(question || 'Votre question').slice(0, 300)))}</div>
     ${lignes || '<div class="dpp-empty">Ajoutez au moins deux choix.</div>'}
     <div class="dpp-foot">
-      <span>${closed ? `🏁 ${cumul} vote(s)` : `🗳️ ${cumul || 0} vote(s)`}</span>
+      <span>${closed ? `${cumul} vote(s)` : `${cumul || 0} vote(s)`}</span>
       <span>⏳ ${closed ? 'Sondage clôturé' : `Le sondage se termine dans ${quand}`}</span>
     </div>
     ${allowMultiselect ? '<div class="dpp-multi">Plusieurs réponses possibles</div>' : ''}
@@ -8547,7 +8607,7 @@ Dashboard.renderers.rules = async (content, data) => {
     panel_message: '', panel_channel: '', accepts: 0, last_at: 0, recent: [],
     presets: [], using_default: false, button_placement: 'ligne', plan: null, accept_hint: '',
   }, data.rules || {});
-  const racine = Dashboard.header(content, '📖', 'Règles du serveur',
+  const racine = Dashboard.header(content, '', 'Règles du serveur',
     'Un panneau soigné dans le salon de votre choix, un bouton pour accepter, et le rôle qui suit automatiquement.');
   const salons = (data.channels || []).filter((ch) => !ch.voice && !ch.category);
   const roles = (data.roles || []).filter((r) => r.name !== '@everyone');
@@ -8565,12 +8625,12 @@ Dashboard.renderers.rules = async (content, data) => {
 
   racine.appendChild(App.el(`
     <div class="dash-stats" style="margin-bottom:14px">
-      <div class="dash-stat"><div class="val">${Number(cfg.accepts) || 0}</div><div class="lbl">✅ Acceptations enregistrées</div></div>
-      <div class="dash-stat"><div class="val">${cfg.panel_message ? 'Oui' : 'Non'}</div><div class="lbl">📣 Panneau en ligne</div></div>
-      <div class="dash-stat"><div class="val">${cfg.enabled ? 'Activé' : 'Désactivé'}</div><div class="lbl">🔘 Module</div></div>
+      <div class="dash-stat"><div class="val">${Number(cfg.accepts) || 0}</div><div class="lbl">Acceptations enregistrées</div></div>
+      <div class="dash-stat"><div class="val">${cfg.panel_message ? 'Oui' : 'Non'}</div><div class="lbl">Panneau en ligne</div></div>
+      <div class="dash-stat"><div class="val">${cfg.enabled ? 'Activé' : 'Désactivé'}</div><div class="lbl">Module</div></div>
     </div>`));
 
-  const carte = Dashboard.card(racine, '📖 Le panneau de règles',
+  const carte = Dashboard.card(racine, 'Le panneau de règles',
     'Écrivez vos règles, ou partez d\u2019un modèle. Le texte accepte le Markdown Discord : **gras**, *italique*, __souligné__, > citation, - liste, `code`, ||spoiler||.');
   carte.innerHTML += `
     <label style="display:flex;gap:8px;align-items:center;margin:6px 0 12px"><input type="checkbox" id="rl-enabled" ${cfg.enabled ? 'checked' : ''} /> Activer le module sur ce serveur</label>
@@ -8708,8 +8768,8 @@ Dashboard.renderers.rules = async (content, data) => {
     if (planEl) {
       planEl.classList.toggle('is-haut', regroupes);
       planEl.innerHTML = regroupes
-        ? `⚠️ ${blocsBruts.length} blocs pour un maximum de ${maxBlocs} : à la publication, ils sont <strong>regroupés deux par deux</strong> (aucun texte perdu, le bouton est conservé).`
-        : `✅ ${blocsBruts.length} bloc${blocsBruts.length > 1 ? 's' : ''} sur ${maxBlocs} · chaque bloc reçoit son séparateur pleine largeur, le bouton est réservé.`;
+        ? `${blocsBruts.length} blocs pour un maximum de ${maxBlocs} : à la publication, ils sont <strong>regroupés deux par deux</strong> (aucun texte perdu, le bouton est conservé).`
+        : `${blocsBruts.length} bloc${blocsBruts.length > 1 ? 's' : ''} sur ${maxBlocs} · chaque bloc reçoit son séparateur pleine largeur, le bouton est réservé.`;
     }
     const titre = remplir(champ('#rl-title').value || 'Règles du serveur').slice(0, 120);
     const couleur = /^#[0-9a-fA-F]{6}$/i.test(champ('#rl-color').value) ? champ('#rl-color').value : couleurOk;
@@ -8718,13 +8778,13 @@ Dashboard.renderers.rules = async (content, data) => {
     const styleBouton = { vert: 'is-green', bleu: 'is-blurple', gris: 'is-grey', rouge: 'is-red' }[champ('#rl-style').value] || 'is-green';
     const placement = (champ('#rl-placement') || {}).value || 'ligne';
     const indice = remplir(cfg.accept_hint || 'En cliquant sur le bouton, vous confirmez avoir lu et accepté le règlement.').slice(0, 300);
-    const rangee = `<span class="dprev-btn ${styleBouton}">✅ ${App.escapeHtml(bouton)}</span>`;
+    const rangee = `<span class="dprev-btn ${styleBouton}">${App.escapeHtml(bouton)}</span>`;
     const corpsHtml = blocsRendus.map((b) => `<div class="dmd">${Dashboard.discordMarkdownHtml(remplir(b))}</div>`)
       .join('<div class="dprev-sep"></div>');
     apercu.innerHTML = `<div class="dprev">
       <div class="dprev-embed" style="--dprev-bar:${App.escapeHtml(couleur)}">
         <div class="dprev-body">
-          <div class="dprev-title">${App.escapeHtml('📜 ' + titre)}</div>
+          <div class="dprev-title">${App.escapeHtml('' + titre)}</div>
           ${corpsHtml}
           ${pied ? `<div class="dprev-sep"></div><div class="dprev-foot">${App.escapeHtml(pied)}</div>` : ''}
           ${placement === 'carte' ? `<div class="dprev-sep"></div><div class="dprev-carte"><div class="dprev-carte-texte">${Dashboard.discordMarkdownHtml(indice)}</div><div>${rangee}</div></div>` : ''}
@@ -8772,7 +8832,7 @@ Dashboard.renderers.rules = async (content, data) => {
     try {
       const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/rules`, { method: 'PUT', body: collecte() });
       cfg.panel_message = (r.cfg && r.cfg.panel_message) || cfg.panel_message;
-      App.toast('Réglages des règles enregistrés !');
+      App.toast('Réglages des règles enregistrés.');
       etat('Enregistré à ' + new Date().toLocaleTimeString('fr-FR') + '.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
@@ -8793,9 +8853,9 @@ Dashboard.renderers.rules = async (content, data) => {
       const planTxt = r.plan ? ` ${r.plan.shown || r.plan.blocks || 0} bloc(s), ${r.plan.components || 0}/40 composants.` : '';
       if (r.verified === false) {
         App.toast('Panneau publié, mais le bouton n’a pas été retrouvé sur Discord — essayez la présentation « Intégré ».', 'error');
-        etat('⚠️ Panneau envoyé, bouton non vérifié sur Discord.' + planTxt);
+        etat('Panneau envoyé, bouton non vérifié sur Discord.' + planTxt);
       } else {
-        etat('✅ Panneau publié et bouton vérifié sur Discord (id ' + (r.message_id || '—') + ').' + planTxt);
+        etat('Panneau publié et bouton vérifié sur Discord (id ' + (r.message_id || '—') + ').' + planTxt);
       }
     } catch (e) { App.toast(e.message, 'error'); etat('Échec de la publication : ' + e.message); }
   };
@@ -8812,8 +8872,8 @@ Dashboard.renderers.rules = async (content, data) => {
   const boutonRetirer = champ('#rl-drop');
   if (boutonRetirer) boutonRetirer.onclick = retirer;
 
-  // 👥 Acceptations
-  const carte2 = Dashboard.card(racine, '✅ Acceptations',
+  // Acceptations
+  const carte2 = Dashboard.card(racine, 'Acceptations',
     'Chaque clic est relevé ici. Le compteur suit le rôle : un membre qui l\u2019a déjà est reconnu sans doublon.');
   carte2.innerHTML += `
     <div class="rl-puce-ligne" id="rl-recent">
@@ -8866,7 +8926,7 @@ Dashboard.renderers.polls = async (content, data) => {
   }, data.polls || {});
   const liste = Array.isArray(data.polls && data.polls.list) ? data.polls.list : [];
   const ouverts = liste.filter((row) => !row.closed);
-  const racine = Dashboard.header(content, '🗳️', 'Sondages',
+  const racine = Dashboard.header(content, '', 'Sondages',
     'Le sondage natif de Discord : cases à cocher, barres de résultats, fin automatique. Rien à fabriquer vous-même.');
   const salons = (data.channels || []).filter((ch) => !ch.voice && !ch.category);
   const optionsSalon = (valeur) => [
@@ -8879,13 +8939,13 @@ Dashboard.renderers.polls = async (content, data) => {
 
   racine.appendChild(App.el(`
     <div class="dash-stats" style="margin-bottom:14px">
-      <div class="dash-stat"><div class="val">${liste.length}</div><div class="lbl">🗳️ Sondages publiés</div></div>
-      <div class="dash-stat"><div class="val">${ouverts.length}</div><div class="lbl">🔵 Encore ouverts</div></div>
-      <div class="dash-stat"><div class="val">10</div><div class="lbl">⚙️ Choix maximum (Discord)</div></div>
+      <div class="dash-stat"><div class="val">${liste.length}</div><div class="lbl">Sondages publiés</div></div>
+      <div class="dash-stat"><div class="val">${ouverts.length}</div><div class="lbl">Encore ouverts</div></div>
+      <div class="dash-stat"><div class="val">10</div><div class="lbl">Choix maximum (Discord)</div></div>
     </div>`));
 
   // 1 — Constructeur
-  const carte = Dashboard.card(racine, '🗳️ Nouveau sondage',
+  const carte = Dashboard.card(racine, 'Nouveau sondage',
     'Écrivez la question, ajoutez vos choix. Le sondage publié ne peut plus être modifié après (limite Discord) : on le clôture et on en relance un autre.');
   carte.innerHTML += `
     <label class="dash-label">Question <span class="rl-compteur" id="pp-qcount"></span></label>
@@ -8970,7 +9030,7 @@ Dashboard.renderers.polls = async (content, data) => {
     bouton.disabled = true;
     try {
       const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/polls/send`, { method: 'POST', body: corps });
-      App.toast('Sondage publié sur Discord !');
+      App.toast('Sondage publié sur Discord.');
       etat('Sondage publié (message ' + (r.message_id || '—') + ').');
       Dashboard.hideSaveBar();
       Dashboard.refresh();
@@ -8983,7 +9043,7 @@ Dashboard.renderers.polls = async (content, data) => {
   };
 
   // 2 — Historique et résultats
-  const carte2 = Dashboard.card(racine, '📊 Sondages publiés',
+  const carte2 = Dashboard.card(racine, 'Sondages publiés',
     'Les compteurs viennent de Discord à la demande : ni cache, ni approximation. La clôture est immédiate et définitive.');
   const lignes = liste.length ? liste.map((row) => {
     const votes = Array.isArray(row.counts) ? row.counts.reduce((a, b) => a + (Number(b) || 0), 0) : 0;
@@ -8992,7 +9052,7 @@ Dashboard.renderers.polls = async (content, data) => {
     const quand = fin ? (clos ? 'clos' : `fin dans ${Math.max(1, Math.round((fin - Date.now()) / 3600000))} h`) : '—';
     return `<div class="pp-row" data-msg="${App.escapeHtml(String(row.message_id || ''))}">
       <div class="pp-row-tete">
-        <span class="pp-letat ${clos ? 'is-clos' : 'is-ouvert'}">${clos ? '🏁 Clos' : '🔵 Ouvert'}</span>
+        <span class="pp-letat ${clos ? 'is-clos' : 'is-ouvert'}">${clos ? 'Clos' : 'Ouvert'}</span>
         <span class="pp-question">${App.escapeHtml(String(row.question || '').slice(0, 120))}</span>
         <span class="pp-meta">#${App.escapeHtml(String(row.channel_name || '—'))} · ${votes} vote(s) · ${quand}</span>
       </div>
@@ -9068,7 +9128,7 @@ Dashboard.renderers.polls = async (content, data) => {
   });
 
   // 3 — Réglages par défaut
-  const carte3 = Dashboard.card(racine, '⚙️ Réglages par défaut',
+  const carte3 = Dashboard.card(racine, 'Réglages par défaut',
     'Ce que le module applique quand vous ne changez rien : salon, durée, réponses multiples, et où envoyer le bilan.');
   carte3.innerHTML += `
     <label style="display:flex;gap:8px;align-items:center;margin:6px 0 12px"><input type="checkbox" id="pp-enabled" ${cfg.enabled ? 'checked' : ''} /> Activer le module sur ce serveur</label>
@@ -9090,7 +9150,8 @@ Dashboard.renderers.polls = async (content, data) => {
     <label style="display:flex;gap:8px;align-items:center;margin:0 0 10px"><input type="checkbox" id="pp-def-multi" ${cfg.allow_multiselect ? 'checked' : ''} /> Réponses multiples par défaut</label>
     <div class="rl-aide">Un sondage Discord a toujours une fin : l\u2019API ne connaît pas le sondage illimité. Maximum 32 jours.</div>
     <div class="rl-actions"><button class="dash-save-action dash-btn dash-btn-primary" id="pp-save">Enregistrer</button></div>`;
-  carte3.querySelector('#pp-save').onclick = async () => {
+  carte3.querySelector('#pp-save').onclick = async (e) => {
+    const bouton = e.currentTarget;
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/polls`, {
         method: 'PUT',
@@ -9104,7 +9165,8 @@ Dashboard.renderers.polls = async (content, data) => {
           intro: intro.value,
         },
       });
-      App.toast('Réglages des sondages enregistrés !');
+      App.retourEnregistrement(bouton);
+      App.toast('Réglages des sondages enregistrés.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
 };

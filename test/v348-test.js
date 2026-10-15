@@ -21,8 +21,8 @@ const iM = dash.indexOf('Dashboard.renderers.moderation');
 const chunk = dash.slice(iM, dash.indexOf('Dashboard.renderers.antinuke', iM));
 
 console.log('— 1. Pins v348 —');
-check('index.html : ?v=366 ×7', (html.match(/\?v=366/g) || []).length === 7);
-check('sw.js : cache botdev-v366', sw.includes("const CACHE = 'botdev-v366';"));
+check('index.html : ?v=367 ×7', (html.match(/\?v=367/g) || []).length === 7);
+check('sw.js : cache botdev-v367', sw.includes("const CACHE = 'botdev-v367';"));
 check('index.html : plus aucune ?v=347', !html.includes('?v=347'));
 check('v348 conservée dans le journal des versions récentes', changelog.VERSION >= 348 && changelog.VERSIONS.some((version) => version.v === 348));
 check('journal v348 : au moins 1 nouveauté', Array.isArray(changelog.NOTES.new) && changelog.NOTES.new.length >= 1);
@@ -37,14 +37,14 @@ console.log('— 3. Sélecteurs —');
 check('barème : après N = menu', chunk.includes('data-esc-after') && chunk.includes('fois →'));
 check('simulateur rafale = menu', chunk.includes('id="am-sim-spam"') && chunk.includes('Pas de rafale'));
 check('anti-raid seuil = menu', chunk.includes('id="raid-th"') && chunk.includes('presetOptions([[5, \'5\']'));
-check('sanctions en français', chunk.includes('⚠️ Avertir') && chunk.includes('👢 Expulser'));
+check('sanctions en français', chunk.includes('Avertir') && chunk.includes('Expulser'));
 
 console.log('— 4. Rien de cassé —');
 for (const id of ['am-on', 'am-mode', 'am-phishing', 'am-links', 'am-caps', 'am-men', 'am-spam', 'am-save', 'am-draft', 'am-sim-go', 'am-native-on', 'am-native-sync', 'am-warn-limit', 'am-blacklist-channel']) {
   check('id #' + id, chunk.includes('id="' + id + '"') || chunk.includes("id=\\'" + id + "\\'") || chunk.includes('#' + id));
 }
 check('hideCards liste noire + anti-raid', dash.includes("hideCards(content, ['Liste noire', 'Bouclier anti-raid'])"));
-check('cartes titres conservés', chunk.includes('🛡️ Auto-modération') && chunk.includes('📈 Barème progressif des sanctions') && chunk.includes('Centre des avertissements'));
+check('cartes titres conservés', chunk.includes('Auto-modération') && chunk.includes('Barème progressif des sanctions') && chunk.includes('Centre des avertissements'));
 check('tickets IDs intacts', dash.includes('t-send') && dash.includes('tm-send') && dash.includes('adv-send'));
 check('captcha ver-send', dash.includes('ver-send'));
 check('Control Center', dash.includes('<span>Control Center</span>'));

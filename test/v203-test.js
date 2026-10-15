@@ -28,17 +28,17 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
 
   // ================= 1. Cache-buster v203 =================
   console.log('\n1️⃣  Version v203');
-  check('index.html : ?v=366 référencé 7 fois', (index.match(/\?v=366/g) || []).length === 7);
+  check('index.html : ?v=367 référencé 7 fois', (index.match(/\?v=367/g) || []).length === 7);
   check('index.html : plus aucune ?v=202', !index.includes('?v=202'));
-  check('sw.js : cache botdev-v241', sw.includes("const CACHE = 'botdev-v366';"));
+  check('sw.js : cache botdev-v241', sw.includes("const CACHE = 'botdev-v367';"));
   check('sw.js : plus de botdev-v202', !sw.includes('botdev-v202'));
 
   // ================= 2. Polices minuscules → lisibles =================
   console.log('\n2️⃣  Texte minuscule (< 10px) corrigé');
-  check('badge « Mis à jour en direct » (tickets) ≥ 10.5px', css.includes('.adv-preview-title span { color: #6ee7a0; font-size: 10.5px;'));
-  check('badge « Actualisé en direct » (annonces) ≥ 10.5px', css.includes('.ca-preview-label span { color: #6ee7a0; font-size: 10.5px;'));
-  check('« Serveur sélectionné » (tiroir mobile) ≥ 10px', css.includes('.dash-mobile-current-server small { color: #b5bac1; font-size: 10px;'));
-  check('groupes du tiroir mobile ≥ 10px', css.includes('.dash-mobile-module-group { padding: 14px 13px 6px; color: #949ba4; font-size: 10px;'));
+  check('badge « Mis à jour en direct » (tickets) ≥ 10,5 px — cran 11 de l’échelle v367', css.includes('.adv-preview-title span { color: #6ee7a0; font-size: 11px;'));
+  check('badge « Actualisé en direct » (annonces) ≥ 10,5 px — cran 11 de l’échelle v367', css.includes('.ca-preview-label span { color: #6ee7a0; font-size: 11px;'));
+  check('« Serveur sélectionné » (tiroir mobile) ≥ 10px', css.includes('.dash-mobile-current-server small { color: #b5bac1; font-size: 11px;'));
+  check('groupes du tiroir mobile ≥ 10px', css.includes('.dash-mobile-module-group { padding: 14px 13px 6px; color: #949ba4; font-size: 11px;'));
 
   // ================= 3. Cartes d'accès rapide (overview) ≤ 64px =================
   console.log('\n3️⃣  Accès rapides overview : hauteur compacte');
@@ -54,7 +54,7 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
 
   // ================= 5. Grille initiale « Choisis un serveur » =================
   console.log('\n5️⃣  Grille de serveurs : cartes compactes');
-  check('icône 48px (au lieu de 64px)', css.includes('.srv-card img, .srv-card-fallback { width: 48px; height: 48px; border-radius: 15px; }'));
+  check('icône 48px (au lieu de 64px)', css.includes('.srv-card img, .srv-card-fallback { width: 48px; height: 48px; border-radius: 12px; }'));
   check('padding compact', css.includes('padding: 18px 14px 14px; color: var(--d-text);'));
 
   console.log(failures ? `\n❌ ${failures} échec(s)` : '\n✅ v203 OK — 0 échec');

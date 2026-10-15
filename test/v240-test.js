@@ -290,7 +290,7 @@ async function main() {
   for (const attendu of [
     '<span class="grad grad-anim">votre serveur Discord</span></h1>',
     'Ajoutez Hoxera à votre serveur, puis configurez tout depuis le dashboard',
-    '➕ Ajouter Hoxera à votre serveur</button>',
+    'id="pub-invite-hero" style="padding:13px 22px;font-size:16px">Ajouter Hoxera à votre serveur</button>',
     '<b>Ajoutez le bot</b>',
     '<b>Connectez-vous</b>',
     '<b>Configurez</b>',
@@ -318,7 +318,11 @@ async function main() {
   // Discord en dur). Deux interpolations de plus (encodeURIComponent + initiale
   // de secours), rien d'autre : balises, classes, ids, divs et boutons sont
   // restes identiques, c'est exactement ce que ce verrou cherche a protéger.
-  const attenduPub = { balises: 571, classes: 188, ids: 22, divs: 151, boutons: 14, interpolations: 57 };
+  // v367 : les pictogrammes decoratifs de l'accueil sont devenus des glyphes
+  // SVG en ligne (15 remplacements dans public/js/public.js) — c'est ce qui
+  // ajoute 48 balises, 11 classes et 4 interpolations. Ni les divs ni les
+  // boutons n'ont bouge : c'est exactement ce que ce verrou surveillait.
+  const attenduPub = { balises: 619, classes: 199, ids: 22, divs: 151, boutons: 14, interpolations: 61 };
   const reelPub = compteBalises(pubSrc);
   for (const cle of Object.keys(attenduPub)) {
     check(`landing : structure intacte (${cle} = ${attenduPub[cle]})`,
@@ -540,9 +544,9 @@ async function main() {
 
   const index = src('public/index.html');
   const sw = src('public/sw.js');
-  check('index.html : ?v=366 référencé 7 fois', (index.match(/\?v=366/g) || []).length === 7,
-    `trouvé ${(index.match(/\?v=366/g) || []).length}`);
-  check("sw.js : cache 'botdev-v366'", sw.includes("const CACHE = 'botdev-v366';"));
+  check('index.html : ?v=367 référencé 7 fois', (index.match(/\?v=367/g) || []).length === 7,
+    `trouvé ${(index.match(/\?v=367/g) || []).length}`);
+  check("sw.js : cache 'botdev-v367'", sw.includes("const CACHE = 'botdev-v367';"));
   check('index.html : plus aucun ?v=239', !/\?v=239/.test(index));
 }
 

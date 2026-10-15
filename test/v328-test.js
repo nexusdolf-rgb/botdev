@@ -26,8 +26,8 @@ const routes = racine('server/routes.js');
 const dbSrc = racine('server/db.js');
 
 console.log('— 1. Pins de version v328 —');
-check('index.html : ?v=366 ×7', (html.match(/\?v=366/g) || []).length === 7);
-check('sw.js : cache botdev-v366', sw.includes("const CACHE = 'botdev-v366';"));
+check('index.html : ?v=367 ×7', (html.match(/\?v=367/g) || []).length === 7);
+check('sw.js : cache botdev-v367', sw.includes("const CACHE = 'botdev-v367';"));
 check('index.html : plus aucune ?v=327', !html.includes('?v=327'));
 
 console.log('— 2. Câblage —');
@@ -38,7 +38,7 @@ check('envoi sendExtraTicketMenu', panels.includes('async function sendExtraTick
 check('routes CRUD + send', routes.includes("/bots/:id/ticket-menus") && routes.includes("/ticket-menus/:id/send"));
 check('dashboard : carte Autres panneaux menu', dash.includes('Autres panneaux menu') && dash.includes('openTicketMenuModal'));
 check('modale dans views.js', views.includes('BotViews.openTicketMenuModal'));
-check('le menu principal n’est pas retiré', dash.includes('📋 Ticket menu') && dash.includes("mode: 'menu'"));
+check('le menu principal n’est pas retiré', dash.includes('Ticket menu') && dash.includes("mode: 'menu'"));
 check('prune : extra ≠ menu principal', panels.includes("kind === 'extra'") && panels.includes('bd-ttype:\\d+:x\\d+'));
 
 console.log('— 3. Comportement store —');

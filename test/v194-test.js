@@ -21,7 +21,7 @@ const check = (label, ok) => {
 // ---------- 1. Couche v194 présente dans le CSS ----------
 console.log('\n1️⃣  Couche Ultra Pro v194 (dashboard.css)');
 check('marqueur « HOXERA ULTRA PRO v194 »', css.includes('HOXERA ULTRA PRO v194'));
-check('tokens de design --dp-*', css.includes('--dp-radius-card: 16px') && css.includes('--dp-shadow-card'));
+check('tokens de design --dp-*', css.includes('--dp-radius-card: 8px') && css.includes('--dp-shadow-card'));
 check('focus visible restauré (outline !important)', css.includes('.dash-btn:focus-visible') && css.includes('outline: 3px solid var(--dp-ring) !important'));
 check('états vides affinés (.dash-empty)', css.includes('.dashboard-shell-host .dash-empty {') && css.includes('border: 1.5px dashed'));
 check('micro-interaction cartes (hover lift)', css.includes('.dash-card:hover') && css.includes('translateY(-2px)'));
@@ -53,9 +53,9 @@ check('aria-label sur les interrupteurs de modules', js.includes('aria-label="Mo
 
 // ---------- 4. Version + accessibilité ----------
 console.log('\n4️⃣  Version et accessibilité');
-check('index.html : ?v=366 référencé 7 fois', (index.match(/\?v=366/g) || []).length === 7);
+check('index.html : ?v=367 référencé 7 fois', (index.match(/\?v=367/g) || []).length === 7);
 check('index.html : plus aucune ?v=193', !index.includes('?v=193'));
-check('sw.js : cache v194', sw.includes("const CACHE = 'botdev-v366';"));
+check('sw.js : cache v194', sw.includes("const CACHE = 'botdev-v367';"));
 check('conteneur de notifications annoncé (aria-live)', index.includes('<div id="toasts" aria-live="polite">'));
 
 console.log(failures === 0

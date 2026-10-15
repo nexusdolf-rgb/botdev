@@ -301,7 +301,7 @@ async function main() {
 
   // (c) L'aperçu doit dessiner le V2 : séparateurs pleine largeur, pas un
   //     embed classique à barre de gauche.
-  const pvBlock = dash.slice(dash.indexOf('👀 Aperçu Discord en direct'), dash.indexOf('cfgZone.addEventListener(\'input\', renderPv)'));
+  const pvBlock = dash.slice(dash.indexOf('Aperçu Discord en direct'), dash.indexOf('cfgZone.addEventListener(\'input\', renderPv)'));
   check('l\u2019aperçu dessine un séparateur pleine largeur (border-top + débordement du padding)',
     /border-top:1px solid #3f4147/.test(pvBlock) && /calc\(100% \+ 24px\)/.test(pvBlock));
   check('l\u2019aperçu dessine un CONTENEUR V2 (bordure gauche d\u2019accent + coins arrondis 8px)',
@@ -463,9 +463,9 @@ async function main() {
   console.log('\n10) Version épinglée v239');
   const index = src('public/index.html');
   const sw = src('public/sw.js');
-  check('index.html : ?v=366 référencé 7 fois', (index.match(/\?v=366/g) || []).length === 7,
-    `trouvé ${(index.match(/\?v=366/g) || []).length}`);
-  check("sw.js : cache 'botdev-v366'", sw.includes("const CACHE = 'botdev-v366';"));
+  check('index.html : ?v=367 référencé 7 fois', (index.match(/\?v=367/g) || []).length === 7,
+    `trouvé ${(index.match(/\?v=367/g) || []).length}`);
+  check("sw.js : cache 'botdev-v367'", sw.includes("const CACHE = 'botdev-v367';"));
   check('index.html : plus aucun ?v=238', !/\?v=238/.test(index));
 }
 

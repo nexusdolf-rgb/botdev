@@ -15,9 +15,9 @@ const sw = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
 const dashSrc = fs.readFileSync(path.join(root, 'public/js/dashboard.js'), 'utf8');
 
 // ---------- 1. Pins de version ----------
-assert.strictEqual((index.match(/\?v=366/g) || []).length, 7,
+assert.strictEqual((index.match(/\?v=367/g) || []).length, 7,
   'index.html doit référencer v192 7 fois');
-assert(sw.includes('botdev-v366'), 'le cache du service worker n’est pas en v192');
+assert(sw.includes('botdev-v367'), 'le cache du service worker n’est pas en v192');
 assert(!index.includes('?v=191'), 'index.html référence encore v191');
 
 // ---------- 2. Le pseudo d'exemple codé en dur a disparu ----------
@@ -41,6 +41,6 @@ assert(dashSrc.includes("const handle = s ? `@${s.handle}` : '@votre_streamer';"
 // ---------- 4. Le reste du module est intact ----------
 assert(dashSrc.includes('lv-list'), 'la liste des comptes suivis doit rester');
 assert(dashSrc.includes('/livesocials'), 'les routes livesocials doivent rester');
-assert(dashSrc.includes("'🟢', 'Kick'"), 'les plateformes doivent rester');
+assert(dashSrc.includes("'', 'Kick'"), 'les plateformes doivent rester');
 
 console.log('✅ v192-test : aperçu des annonces dynamique (plus de pseudo codé en dur affiché sur tous les serveurs) — 0 problème');

@@ -23,8 +23,8 @@ const dash = racine('public/js/dashboard.js');
 const src = racine('server/discord/reactionroles.js');
 
 console.log('— 1. Pins de version v329 —');
-check('index.html : ?v=366 ×7', (html.match(/\?v=366/g) || []).length === 7);
-check('sw.js : cache botdev-v366', sw.includes("const CACHE = 'botdev-v366';"));
+check('index.html : ?v=367 ×7', (html.match(/\?v=367/g) || []).length === 7);
+check('sw.js : cache botdev-v367', sw.includes("const CACHE = 'botdev-v367';"));
 check('index.html : plus aucune ?v=328', !html.includes('?v=328'));
 
 console.log('— 2. Champs dashboard + envoi —');
@@ -35,7 +35,7 @@ check('sendSetup utilise panelTitle', src.includes('title: panelTitle(setup)'));
 
 console.log('— 3. Comportement —');
 const rr = require('../server/discord/reactionroles');
-check('défaut : 🎭 Rôles par réaction emoji', rr.panelTitle({}) === '🎭 Rôles par réaction emoji');
+check('défaut : Rôles par réaction emoji', rr.panelTitle({}) === '🎭 Rôles par réaction emoji');
 check('titre + emoji perso', rr.panelTitle({ title: 'Choisis tes grades', title_emoji: '⭐' }) === '⭐ Choisis tes grades');
 check('emoji vide → titre seul', rr.panelTitle({ title: 'Grades', title_emoji: '' }) === 'Grades');
 

@@ -53,7 +53,7 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
   const dash = read('public/js/dashboard.js');
   check('dashboard : bouton ✏️ Modifier sur chaque panneau', /querySelector\('\[data-edit\]'\)\.onclick = \(\) => BotViews\.openRoleMenuModal\(bot, guildId, m\)/.test(dash));
   check('dashboard : statut « déjà envoyé » (message_id)', /const sent = !!m\.message_id/.test(dash) && /se met à jour sur place/.test(dash));
-  check('dashboard : bouton 🔄 Mettre à jour vs 📨 Envoyer', /sent \? '🔄 Mettre à jour' : '📨 Envoyer'/.test(dash));
+  check('dashboard : bouton Mettre à jour vs Envoyer (v367 : sans pictogramme)', /sent \? 'Mettre à jour' : 'Envoyer'/.test(dash));
   const views = read('public/js/views.js');
   check('views : éditer un panneau envoyé synchronise Discord', /if \(isEdit && menu\.message_id\)[\s\S]*?\/role-menus\/\$\{menu\.id\}\/send/.test(views));
 

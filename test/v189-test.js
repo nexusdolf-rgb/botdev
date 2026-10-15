@@ -50,7 +50,7 @@ assert(idxSrc.includes('runGuildEventSweep'), 'sweep non branché dans index.js'
 assert(routesSrc.includes("router.get('/bots/:id/guilds/:guildId/events'"), 'route GET /events manquante');
 assert(routesSrc.includes("router.post('/bots/:id/guilds/:guildId/events'"), 'route POST /events manquante');
 assert(routesSrc.includes("router.delete('/bots/:id/guilds/:guildId/events/:eid'"), 'route DELETE /events/:eid manquante');
-assert(dashSrc.includes("['events', '🎮', 'Événements']"), 'entrée module Événements manquante');
+assert(dashSrc.includes("['events', '', 'Événements']"), 'entrée module Événements manquante');
 assert(dashSrc.includes('Dashboard.renderers.events = '), 'renderer events manquant');
 assert(dashSrc.includes('id="ev-create"'), 'formulaire de création manquant');
 assert(premadeSrc.includes('🎮 Événements & tournois (admins)'), 'section help manquante');

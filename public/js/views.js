@@ -15,7 +15,7 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
   if (Array.isArray(data.options) && data.options.length > ROLE_MENU_MAX) data.options = data.options.slice(0, ROLE_MENU_MAX);
 
   App.modal(`
-    <div class="modal-header"><h3>${isEdit ? '✏️ Modifier le menu' : '📋 Nouveau menu de rôles'}</h3><button class="x-btn" data-close>×</button></div>
+    <div class="modal-header"><h3>${isEdit ? 'Modifier le menu' : 'Nouveau menu de rôles'}</h3><button class="x-btn" data-close>×</button></div>
     <div class="modal-body">
       <div class="help-box" style="margin-bottom:14px">
         Chaque option attribue (ou retire) un rôle quand le membre la choisit.
@@ -26,8 +26,8 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
       <input class="input" id="rm-name" maxlength="50" value="${App.escapeHtml(data.name)}" placeholder="Rôles & notifications" />
       <label class="field-label">Style du panneau</label>
       <select class="dash-select" id="rm-mode">
-        <option value="menu" ${data.mode !== 'buttons' ? 'selected' : ''}>📋 Menu déroulant (plusieurs rôles d'un coup)</option>
-        <option value="buttons" ${data.mode === 'buttons' ? 'selected' : ''}>🔘 Boutons (un clic = un rôle, re-clic = retiré)</option>
+        <option value="menu" ${data.mode !== 'buttons' ? 'selected' : ''}>Menu déroulant (plusieurs rôles d'un coup)</option>
+        <option value="buttons" ${data.mode === 'buttons' ? 'selected' : ''}>Boutons (un clic = un rôle, re-clic = retiré)</option>
       </select>
       <label class="field-label">Message au-dessus du panneau (optionnel)</label>
       <textarea class="input" id="rm-content" rows="2" placeholder="Choisissez vos rôles !">${App.escapeHtml(data.content)}</textarea>
@@ -43,13 +43,13 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" data-close>Annuler</button>
-      <button class="btn btn-primary" id="rm-save">💾 Enregistrer</button>
+      <button class="btn btn-primary" id="rm-save">Enregistrer</button>
     </div>
   `);
   document.querySelectorAll('[data-close]').forEach(b => b.onclick = App.closeModal);
   const optWrap = document.querySelector('#rm-options');
 
-  // 📋 Sélecteur de salons : rempli avec les salons textuels du serveur
+  // Sélecteur de salons : rempli avec les salons textuels du serveur
   // (fini la saisie à la main). L'ancienne valeur reste sélectionnée même
   // si le salon a été renommé/supprimé (option « actuelle » ajoutée).
   const chanSel = document.querySelector('#rm-channel');
@@ -61,13 +61,13 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
     const selected = typeof Dashboard !== 'undefined' && Dashboard.discordRefMatches
       ? Dashboard.discordRefMatches(current, ch)
       : current === val;
-    chanSel.appendChild(App.el(`<option value="${App.escapeHtml(val)}" ${selected ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`));
+    chanSel.appendChild(App.el(`<option value="${App.escapeHtml(val)}" ${selected ? 'selected' : ''}>#${App.escapeHtml(ch.name)}</option>`));
   });
   const channelKnown = chans.some((ch) => typeof Dashboard !== 'undefined' && Dashboard.discordRefMatches
     ? Dashboard.discordRefMatches(current, ch)
     : current === `#${ch.name}`);
   if (current && !channelKnown) {
-    chanSel.appendChild(App.el(`<option value="${App.escapeHtml(current)}" selected>⚠️ ${App.escapeHtml(current)} (configuration actuelle — salon introuvable)</option>`));
+    chanSel.appendChild(App.el(`<option value="${App.escapeHtml(current)}" selected>${App.escapeHtml(current)} (configuration actuelle — salon introuvable)</option>`));
   }
 
   const roleChoices = (guildData.roles || []).filter((r) => r.name !== '@everyone');
@@ -89,13 +89,13 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
           const selected = typeof Dashboard !== 'undefined' && Dashboard.discordRefMatches
             ? Dashboard.discordRefMatches(o.role, r)
             : o.role === r.name;
-          return `<option value="${App.escapeHtml(r.name)}" ${selected ? 'selected' : ''}>🛡️ ${App.escapeHtml(r.name)}</option>`;
+          return `<option value="${App.escapeHtml(r.name)}" ${selected ? 'selected' : ''}>${App.escapeHtml(r.name)}</option>`;
         }));
       const roleKnown = roleChoices.some((r) => typeof Dashboard !== 'undefined' && Dashboard.discordRefMatches
         ? Dashboard.discordRefMatches(o.role, r)
         : o.role === r.name);
       if (o.role && !roleKnown) {
-        roleOptions.push(`<option value="${App.escapeHtml(o.role)}" selected>⚠️ ${App.escapeHtml(o.role)} (configuration actuelle — rôle introuvable)</option>`);
+        roleOptions.push(`<option value="${App.escapeHtml(o.role)}" selected>${App.escapeHtml(o.role)} (configuration actuelle — rôle introuvable)</option>`);
       }
       const roleControl = `<select class="dash-select" data-k="role">${roleOptions.join('')}</select>`;
       const row = App.el(`
@@ -103,7 +103,7 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
           <input class="input" data-k="emoji" placeholder="😀" value="${App.escapeHtml(o.emoji)}" style="max-width:56px;text-align:center" />
           <input class="input" data-k="label" placeholder="Texte affiché" value="${App.escapeHtml(o.label)}" style="max-width:170px" />
           ${roleControl}
-          <button class="btn btn-danger btn-icon btn-sm" data-del>🗑</button>
+          <button class="btn btn-danger btn-icon btn-sm" data-del><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 6.5h16M9.5 6.5V4.2h5v2.3M6.5 6.5l1 13h9l1-13M10 10v6M14 10v6"/></svg></button>
         </div>
       `);
       row.querySelectorAll('[data-k]').forEach((inp) => {
@@ -197,19 +197,19 @@ BotViews.openTicketMenuModal = (bot, guildId, menu) => {
     ? Dashboard.discordRefMatches(ref, item) : String(ref) === String(item && item.name);
 
   const chanOpts = ['<option value="">— Choisir un salon —</option>']
-    .concat(chans.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${match(data.channel, ch) ? 'selected' : ''}>💬 #${App.escapeHtml(ch.name)}</option>`));
+    .concat(chans.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${match(data.channel, ch) ? 'selected' : ''}>#${App.escapeHtml(ch.name)}</option>`));
   if (data.channel && !chans.some((ch) => match(data.channel, ch))) {
-    chanOpts.push(`<option value="${App.escapeHtml(data.channel)}" selected>⚠️ ${App.escapeHtml(data.channel)}</option>`);
+    chanOpts.push(`<option value="${App.escapeHtml(data.channel)}" selected>${App.escapeHtml(data.channel)}</option>`);
   }
   const catOpts = ['<option value="">— Catégorie du type, sinon celle par défaut —</option>']
-    .concat(cats.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${match(data.category, ch) ? 'selected' : ''}>📁 ${App.escapeHtml(ch.name)}</option>`));
+    .concat(cats.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${match(data.category, ch) ? 'selected' : ''}>${App.escapeHtml(ch.name)}</option>`));
   if (data.category && !cats.some((ch) => match(data.category, ch))) {
-    catOpts.push(`<option value="${App.escapeHtml(data.category)}" selected>⚠️ ${App.escapeHtml(data.category)}</option>`);
+    catOpts.push(`<option value="${App.escapeHtml(data.category)}" selected>${App.escapeHtml(data.category)}</option>`);
   }
   const pt = data.panel_texts;
 
   App.modal(`
-    <div class="modal-header"><h3>${isEdit ? '✏️ Modifier le panneau menu' : '📋 Nouveau panneau menu'}</h3><button class="x-btn" data-close>×</button></div>
+    <div class="modal-header"><h3>${isEdit ? 'Modifier le panneau menu' : 'Nouveau panneau menu'}</h3><button class="x-btn" data-close>×</button></div>
     <div class="modal-body">
       <div class="help-box" style="margin-bottom:14px">
         Ce panneau a <b>ses propres types</b>. Il n’utilise pas la liste du menu principal.
@@ -231,7 +231,7 @@ BotViews.openTicketMenuModal = (bot, guildId, menu) => {
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" data-close>Annuler</button>
-      <button class="btn btn-primary" id="xm-save">💾 Enregistrer</button>
+      <button class="btn btn-primary" id="xm-save">Enregistrer</button>
     </div>
   `);
   document.querySelectorAll('[data-close]').forEach((b) => { b.onclick = App.closeModal; });
@@ -246,17 +246,17 @@ BotViews.openTicketMenuModal = (bot, guildId, menu) => {
   };
   const roleSelect = (selected) => {
     const opts = [rolesList.length ? '<option value="">— Choisir un rôle —</option>' : '<option value="" disabled>— Aucun rôle —</option>']
-      .concat(rolesList.map((r) => `<option value="${App.escapeHtml(r.name)}" ${match(selected, r) ? 'selected' : ''}>🛡️ ${App.escapeHtml(r.name)}</option>`));
+      .concat(rolesList.map((r) => `<option value="${App.escapeHtml(r.name)}" ${match(selected, r) ? 'selected' : ''}>${App.escapeHtml(r.name)}</option>`));
     if (selected && !rolesList.some((r) => match(selected, r))) {
-      opts.push(`<option value="${App.escapeHtml(selected)}" selected>⚠️ ${App.escapeHtml(selected)}</option>`);
+      opts.push(`<option value="${App.escapeHtml(selected)}" selected>${App.escapeHtml(selected)}</option>`);
     }
     return `<select class="dash-select" data-role>${opts.join('')}</select>`;
   };
   const catSelect = (selected) => {
     const opts = ['<option value="">— Catégorie du panneau —</option>']
-      .concat(cats.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${match(selected, ch) ? 'selected' : ''}>📁 ${App.escapeHtml(ch.name)}</option>`));
+      .concat(cats.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${match(selected, ch) ? 'selected' : ''}>${App.escapeHtml(ch.name)}</option>`));
     if (selected && !cats.some((ch) => match(selected, ch))) {
-      opts.push(`<option value="${App.escapeHtml(selected)}" selected>⚠️ ${App.escapeHtml(selected)}</option>`);
+      opts.push(`<option value="${App.escapeHtml(selected)}" selected>${App.escapeHtml(selected)}</option>`);
     }
     return `<select class="dash-select" data-k="category">${opts.join('')}</select>`;
   };
@@ -265,10 +265,10 @@ BotViews.openTicketMenuModal = (bot, guildId, menu) => {
     data.types.forEach((t, i) => {
       if (!Array.isArray(t.staff_roles)) t.staff_roles = [];
       if (!Array.isArray(t.questions)) t.questions = [];
-      const row = App.el(`<div class="row-item" style="flex-wrap:wrap;margin-top:10px;padding:10px;border:1px solid var(--d-border,#333);border-radius:10px">
+      const row = App.el(`<div class="row-item" style="flex-wrap:wrap;margin-top:10px;padding:10px;border:1px solid var(--d-border,#333);border-radius:8px">
         <input class="input" data-k="emoji" placeholder="🎫" value="${App.escapeHtml(t.emoji || '')}" style="max-width:56px;text-align:center" />
         <input class="input" data-k="label" placeholder="Nom du type" value="${App.escapeHtml(t.label || '')}" style="flex:1;min-width:140px" />
-        <button class="btn btn-danger btn-icon btn-sm" data-del>🗑</button>
+        <button class="btn btn-danger btn-icon btn-sm" data-del><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 6.5h16M9.5 6.5V4.2h5v2.3M6.5 6.5l1 13h9l1-13M10 10v6M14 10v6"/></svg></button>
         <input class="input" data-k="description" placeholder="Description (optionnel)" value="${App.escapeHtml(t.description || '')}" style="flex:1 1 100%;margin-top:6px" maxlength="100" />
         <div style="flex:1 1 100%;margin-top:6px"><label class="field-label">Catégorie de ce type</label>${catSelect(t.category)}</div>
         <div style="flex:1 1 100%;margin-top:6px" data-staff></div>
@@ -285,7 +285,7 @@ BotViews.openTicketMenuModal = (bot, guildId, menu) => {
       const paintStaff = () => {
         staffEl.innerHTML = t.staff_roles.length ? '' : '<div class="desc">Aucun rôle staff propre à ce type (le rôle global s’applique).</div>';
         t.staff_roles.forEach((ref, j) => {
-          const line = App.el(`<div style="display:flex;gap:7px;margin-top:4px">${roleSelect(ref)}<button class="btn btn-danger btn-sm" data-rm>🗑</button></div>`);
+          const line = App.el(`<div style="display:flex;gap:7px;margin-top:4px">${roleSelect(ref)}<button class="btn btn-danger btn-sm" data-rm>${App.glyphe('corbeille', { taille: 16 })}</button></div>`);
           line.querySelector('[data-role]').addEventListener('change', (e) => { t.staff_roles[j] = e.target.value; });
           line.querySelector('[data-rm]').onclick = () => { t.staff_roles.splice(j, 1); paintStaff(); };
           staffEl.appendChild(line);
@@ -298,7 +298,7 @@ BotViews.openTicketMenuModal = (bot, guildId, menu) => {
         qsEl.innerHTML = '';
         t.questions.forEach((q, j) => {
           const qq = (q && typeof q === 'object') ? { text: String(q.text || q.q || ''), max: parseInt(q.max, 10) || 500 } : { text: String(q || ''), max: 500 };
-          const line = App.el(`<div style="display:flex;gap:7px;margin-top:4px;align-items:center;flex-wrap:wrap"><input class="input" data-qtext value="${App.escapeHtml(qq.text)}" placeholder="Question ${j + 1}" maxlength="45" style="flex:1;min-width:140px" /><input class="input" data-qmax type="number" min="1" max="4000" value="${qq.max}" title="Caractères max" style="width:88px" /><button class="btn btn-danger btn-sm">🗑</button></div>`);
+          const line = App.el(`<div style="display:flex;gap:7px;margin-top:4px;align-items:center;flex-wrap:wrap"><input class="input" data-qtext value="${App.escapeHtml(qq.text)}" placeholder="Question ${j + 1}" maxlength="45" style="flex:1;min-width:140px" /><input class="input" data-qmax type="number" min="1" max="4000" value="${qq.max}" title="Caractères max" style="width:88px" /><button class="btn btn-danger btn-sm">${App.glyphe('corbeille', { taille: 16 })}</button></div>`);
           const syncQ = () => { t.questions[j] = { text: line.querySelector('[data-qtext]').value, max: parseInt(line.querySelector('[data-qmax]').value, 10) || 500 }; };
           line.querySelector('[data-qtext]').addEventListener('input', syncQ);
           line.querySelector('[data-qmax]').addEventListener('input', syncQ);

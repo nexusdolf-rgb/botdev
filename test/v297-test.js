@@ -96,8 +96,8 @@ const json = (x) => JSON.stringify(x.components.map((c) => (c.toJSON ? c.toJSON(
   const dash = racine('public/js/dashboard.js');
   const iT = dash.indexOf('Dashboard.renderers.tickets');
   const chunk = dash.slice(iT, iT + 60000);
-  check('carte textes du panneau à un bouton', chunk.includes('✏️ Textes du panneau à un bouton'));
-  check('carte textes du panneau avec menu', chunk.includes('✏️ Textes du panneau avec menu'));
+  check('carte textes du panneau à un bouton', chunk.includes('Textes du panneau à un bouton'));
+  check('carte textes du panneau avec menu', chunk.includes('Textes du panneau avec menu'));
   check('ancienne carte partagée disparue', !dash.includes('✏️ Textes des panneaux (optionnel)'));
   check('champs bouton (5, sans placeholder)', ['tp-title', 'tp-welcome', 'tp-info', 'tp-rules', 'tp-patience'].every((id) => chunk.includes(id)) && !chunk.includes('tp-placeholder'));
   check('champs menu (6, avec placeholder)', ['mp-title', 'mp-welcome', 'mp-placeholder', 'mp-info', 'mp-rules', 'mp-patience'].every((id) => chunk.includes(id)));
@@ -118,8 +118,8 @@ const json = (x) => JSON.stringify(x.components.map((c) => (c.toJSON ? c.toJSON(
 
   console.log('— 9. Bump v297 —');
   const index = racine('public/index.html');
-  check('index.html : ?v=366 référencé 7 fois', (index.match(/\?v=366/g) || []).length === 7, String((index.match(/\?v=366/g) || []).length));
-  check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("const CACHE = 'botdev-v366';"));
+  check('index.html : ?v=367 référencé 7 fois', (index.match(/\?v=367/g) || []).length === 7, String((index.match(/\?v=367/g) || []).length));
+  check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("const CACHE = 'botdev-v367';"));
 
   console.log(`\n🎉 v297 : ${ok} vérifications passées`);
   process.exit(0);

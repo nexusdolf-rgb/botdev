@@ -50,9 +50,9 @@ assert.ok(dash.includes('data-go="tickets"') && dash.includes('data-go="welcome"
 console.log('✅ première visite : héros de bienvenue avec 3 étapes guidées');
 
 // ---- 5. 👀 Aperçus Discord ----
-assert.ok(dash.includes('👀 Aperçu sur Discord'), 'aperçu bienvenue');
+assert.ok(dash.includes('Aperçu sur Discord'), 'aperçu bienvenue');
 assert.ok(dash.includes('Carte de bienvenue (avatar + pseudo)'), 'aperçu de la carte image');
-assert.ok(dash.includes("👀 Aperçu de l'annonce"), 'aperçu annonce de live');
+assert.ok(dash.includes("Aperçu de l'annonce"), 'aperçu annonce de live');
 console.log('✅ aperçus en direct : bienvenue (+ carte) et annonce de live');
 
 console.log('\n🎉 Tous les tests v2.7 passent');

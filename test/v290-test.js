@@ -117,14 +117,14 @@ function check(label, cond, info) {
   const routes = fs.readFileSync(path.join(__dirname, '..', 'server', 'routes.js'), 'utf8');
   check('routes PUT verification + POST panel + payload dashboard', routes.includes("guildId/verification'") && routes.includes('verification/panel') && routes.includes("verification: require('./discord/verification').cfgOf(guildId)"));
   const dash = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'dashboard.js'), 'utf8');
-  check('module ✅ Vérification dans la navigation', dash.includes("['verification', '✅', 'Vérification']"));
+  check('module ✅ Vérification dans la navigation', dash.includes("['verification', '', 'Vérification']"));
   check('renderer verification + champs du formulaire', dash.includes('Dashboard.renderers.verification =') && dash.includes('id="ver-gate"') && dash.includes('id="ver-botfilter"') && dash.includes('id="ver-send"'));
 
   console.log('— 6. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=366 référencé 7 fois', (index.match(/\?v=366/g) || []).length === 7);
-  check('sw.js : cache « botdev-v350 »', sw.includes("const CACHE = 'botdev-v366';"));
+  check('index.html : ?v=367 référencé 7 fois', (index.match(/\?v=367/g) || []).length === 7);
+  check('sw.js : cache « botdev-v350 »', sw.includes("const CACHE = 'botdev-v367';"));
 
   console.log(`\n🎉 v290 — ${ok} vérifications OK : vérification humaine + Join Gate opérationnels.`);
 })().catch((e) => { console.error(e); process.exit(1); });

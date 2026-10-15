@@ -62,7 +62,7 @@ assert(exSrc.includes("name: 'quiz'"), 'la commande /quiz doit rester');
 assert(exSrc.includes('hx:quiz:'), 'les boutons hxquiz doivent rester');
 assert(routesSrc.includes("router.get('/bots/:id/guilds/:guildId/quiz/top'"),
   'la route dashboard quiz/top doit rester');
-assert(dashSrc.includes("['quiz', '🧠', 'Quiz']"),
+assert(dashSrc.includes("['quiz', '', 'Quiz']"),
   'le module Quiz du dashboard doit rester');
 // 3c. Série de connexion
 assert(dbSrc.includes('daily_streak INTEGER DEFAULT 0'),

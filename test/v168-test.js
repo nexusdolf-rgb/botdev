@@ -13,7 +13,7 @@ const index = read('index.html');
 const sw = read('sw.js');
 
 // 1. Le module est dans la sidebar et le renderer existe
-assert(dashJs.includes("['embeds', '🧱', 'Embed Builder']"), 'module Embed Builder manquant dans la sidebar');
+assert(dashJs.includes("['embeds', '', 'Embed Builder']"), 'module Embed Builder manquant dans la sidebar');
 assert(dashJs.includes('Dashboard.renderers.embeds'), 'renderer embeds manquant');
 
 // 2. L'éditeur complet

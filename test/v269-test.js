@@ -25,7 +25,9 @@ const dash = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'dashboa
 console.log('— 1. Le module apparaît dans la liste —');
 const mods = dash.match(/Dashboard\.MODULES = \[([\s\S]*?)\];/);
 check('module « voicetemp » déclaré dans MODULES', !!mods && mods[1].includes("['voicetemp'"));
-check('…avec icône 🎙️ et libellé Vocal', !!mods && /\['voicetemp', '🎙️', 'Vocal'\]/.test(mods[1]));
+// v367 : le deuxieme champ du tuple n'est plus un emoji (la navigation dessine
+// ses glyphes en SVG) ; le libelle, lui, doit rester « Vocal ».
+check('…avec son emplacement et son libellé Vocal', !!mods && /\['voicetemp', '', 'Vocal'\]/.test(mods[1]));
 check('…placé parmi les modules serveur (pas bot)', !!mods && mods[1].includes("['voicetemp'") && !((dash.match(/Dashboard\.BOT_MODULES = \[([\s\S]*?)\];/) || [0, ''])[1].includes('voicetemp')));
 
 console.log('— 2. Son rendeur porte toute la carte —');
@@ -36,7 +38,7 @@ check('…sélecteur du salon de création', body.includes('id="vt-channel"'));
 check('…sélecteur de catégorie', body.includes('id="vt-cat"'));
 check('…sélecteur du salon textuel du panneau', body.includes('id="vt-panel"'));
 check('…boutons enregistrer / panneau / émojis', body.includes('id="vt-save"') && body.includes('id="vt-panel-send"') && body.includes('id="vt-emotes"'));
-check('…en-tête de page dédié « Vocal »', body.includes("'🎙️', 'Vocal'"));
+check('…en-tête de page dédié « Vocal »', body.includes("'Vocal'"));
 
 console.log('— 3. Réglages serveur ne la contient plus —');
 const srv = dash.match(/Dashboard\.renderers\.server = async[\s\S]*?\n\};/);
@@ -51,8 +53,8 @@ check('audit-mobile audite le module voicetemp par défaut', banc.includes("'voi
 console.log('— 5. Version —');
 const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-check('index.html : ?v=366 référencé 7 fois', (index.match(/\?v=366/g) || []).length === 7);
-check('sw.js : cache « botdev-v350 »', sw.includes("const CACHE = 'botdev-v366';"));
+check('index.html : ?v=367 référencé 7 fois', (index.match(/\?v=367/g) || []).length === 7);
+check('sw.js : cache « botdev-v350 »', sw.includes("const CACHE = 'botdev-v367';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v269 — ${ok} vérifications OK : le module Vocal a son onglet.`);

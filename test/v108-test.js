@@ -31,7 +31,7 @@ console.log('✅ mode test propre (pas de fausses statistiques)');
 // 5. Boutons 🧪 dans le dashboard + endpoint
 assert.ok(routes.includes("events/:type/test"), 'endpoint de test');
 assert.ok(routes.includes('runJoinEvent(bot.id, member, { test: true })'), 'test arrivée réel');
-assert.ok(dash.includes('🧪 Tester') && dash.includes('/events/${key}/test'), 'boutons dans le module Bienvenue');
+assert.ok(dash.includes('Tester') && dash.includes('/events/${key}/test'), 'boutons dans le module Bienvenue');
 console.log('✅ boutons « 🧪 Tester l\'arrivée / le départ » : vérification sans quitter le serveur');
 
 console.log('\n🎉 Tous les tests v3.1 passent');

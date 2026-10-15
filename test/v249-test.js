@@ -483,11 +483,11 @@ const raz = () => { xp.sessionsVocales.clear(); xp.oublierBot(BOT); };
   // ==========================================================================
 
   const js = racine('public/js/dashboard.js');
-  check('une carte « XP vocale » existe dans l\'onglet Niveaux', js.includes("'🎙️ XP vocale'"));
+  check('une carte « XP vocale » existe dans l\'onglet Niveaux', js.includes("'XP vocale'"));
   check('…dans le rendeur levels', (() => {
     const i = js.indexOf('Dashboard.renderers.levels');
     const j = js.indexOf('Dashboard.renderers.economy');
-    return i > 0 && j > i && js.slice(i, j).includes("'🎙️ XP vocale'");
+    return i > 0 && j > i && js.slice(i, j).includes("'XP vocale'");
   })());
   ['#vxp-enabled', '#vxp-rate', '#vxp-interval', '#vxp-min', '#vxp-muted', '#vxp-afk', '#vxp-taper', '#vxp-save']
     .forEach((sel) => check(`le champ ${sel} est présent`, js.includes(sel)));
@@ -519,7 +519,7 @@ const raz = () => { xp.sessionsVocales.clear(); xp.oublierBot(BOT); };
   // <span class="slider"> rend une case À COCHER NUE — invisible une fois le
   // CSS appliqué (l'entrée est masquée, le curseur absent). Le rendu semblait
   // « correct » en relisant le code ; seule la capture d'écran l'a trahi.
-  const blocVoix = js.slice(js.indexOf("Dashboard.card(root, '🎙️ XP vocale'"), js.indexOf('// 🏆 v214'));
+  const blocVoix = js.slice(js.indexOf("Dashboard.card(root, 'XP vocale'"), js.indexOf('// v214'));
   const inters = (blocVoix.match(/<label class="switch">/g) || []).length;
   const curseurs = (blocVoix.match(/<span class="slider"><\/span>/g) || []).length;
   check(`chaque interrupteur de la carte a son curseur (${inters}/${curseurs})`,
@@ -571,10 +571,10 @@ const raz = () => { xp.sessionsVocales.clear(); xp.oublierBot(BOT); };
   const indexHtml = racine('public/index.html');
   const swSource = racine('public/sw.js');
   const versions = [...indexHtml.matchAll(/\?v=(\d+)/g)].map((m) => `?v=${m[1]}`);
-  check('index.html : ?v=366 référencé 7 fois',
-    versions.length === 7 && versions.every((v) => v === '?v=366'),
+  check('index.html : ?v=367 référencé 7 fois',
+    versions.length === 7 && versions.every((v) => v === '?v=367'),
     `${versions.length} refs : ${[...new Set(versions)].join(',')}`);
-  check('sw.js : cache « botdev-v350 »', swSource.includes("const CACHE = 'botdev-v366';"));
+  check('sw.js : cache « botdev-v350 »', swSource.includes("const CACHE = 'botdev-v367';"));
 
   raz();
   console.log('');

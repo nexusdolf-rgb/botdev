@@ -10,7 +10,10 @@ const html = fs.readFileSync(__dirname + '/../public/index.html', 'utf8');
 // 1. Grille de serveurs + mémorisation
 assert.ok(dash.includes('Dashboard.renderServerGrid'), 'grille présente');
 assert.ok(dash.includes("localStorage.getItem('hx-guild')") && dash.includes("localStorage.setItem('hx-guild'"), 'dernier serveur mémorisé');
-assert.ok(dash.includes('➕ Inviter le bot') && dash.includes('✅ Configurer'), 'badges des cartes');
+// v367 : les pictogrammes décoratifs des libellés d'interface sont partis du
+// source (le socle render les remplace par des glyphes SVG), donc l'ancre ne
+// cite plus que le texte.
+assert.ok(dash.includes('Inviter le bot') && dash.includes('Configurer'), 'badges des cartes');
 assert.ok(dcss.includes('.srv-card:hover'), 'survol des cartes');
 console.log('✅ grille de cartes serveurs façon MEE6 + retour direct au dernier serveur');
 

@@ -48,9 +48,9 @@ check('sidebar 278 px, et 258 px sous 1200 px (comme v241)',
 check('marque centrée en colonne, avatar rond de 82 px',
   restaure.includes('flex-direction: column; align-items: center;')
   && restaure.includes('width: 82px; height: 82px; flex-basis: 82px; border-radius: 50%;'));
-check('entrées de menu v241 : 13,5 px, paddées 24 px, hauteur 43 px, angle droit',
+check('entrées de menu v241 : 14 px (cran entier depuis v367), paddées 24 px, hauteur 43 px, angle droit',
   restaure.includes('min-height: 43px; margin: 0; padding: 9px 24px;')
-  && restaure.includes('font-size: 13.5px; font-weight: 600;')
+  && restaure.includes('font-size: 14px; font-weight: 600;')
   && restaure.includes('border-radius: 0;'));
 check('barre d\'outils 48 px soulignée d\'un trait, fil d\'ariane détaillé',
   restaure.includes('min-height: 48px; margin: 0 auto 24px; padding: 0 0 12px;')
@@ -85,9 +85,9 @@ check('la classe hx-os-pc vient toujours du système (v253)',
   index.includes("classList.add('hx-os-pc')"));
 
 console.log('— 5. Version —');
-check('index.html : ?v=366 référencé 7 fois', (index.match(/\?v=366/g) || []).length === 7,
-  String((index.match(/\?v=366/g) || []).length));
-check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("const CACHE = 'botdev-v366';"));
+check('index.html : ?v=367 référencé 7 fois', (index.match(/\?v=367/g) || []).length === 7,
+  String((index.match(/\?v=367/g) || []).length));
+check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("const CACHE = 'botdev-v367';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v255 — ${ok} vérifications OK : le PC retrouve son visage v241, le mobile garde le sien.`);

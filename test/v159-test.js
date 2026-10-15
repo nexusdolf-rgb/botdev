@@ -12,7 +12,7 @@ const sw = read('public/sw.js');
 // 1. Le post-processeur de mise en lignes existe et est branché sur le rendu
 assert(js.includes('Dashboard.layoutSettingRows'), 'post-processeur layoutSettingRows manquant');
 assert(js.includes('Dashboard.SETTING_ROW_CONTROLS'), 'liste des contrôles reconnus manquante');
-assert(/\await fn\(content, data\);\s*\n\s*\/\/ 🧷 Mise en page/.test(js), 'le post-traitement n’est pas appelé après le rendu du module');
+assert(/\await fn\(content, data\);\s*\n\s*\/\/\s*Mise en page/.test(js), 'le post-traitement n’est pas appelé après le rendu du module');
 
 // 2. Les lignes : libellé à gauche, contrôle à droite, repli mobile
 assert(css.includes('🧷 Lignes de réglage façon Discord/DraftBot (v159)'), 'couche CSS des lignes manquante');

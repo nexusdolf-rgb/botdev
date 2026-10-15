@@ -21,17 +21,17 @@ const iT = dash.indexOf('Dashboard.renderers.tickets');
 const chunk = dash.slice(iT, dash.indexOf('Dashboard.renderers.welcome', iT));
 
 console.log('— 1. Pins v347 —');
-check('index.html : ?v=366 ×7', (html.match(/\?v=366/g) || []).length === 7);
-check('sw.js : cache botdev-v366', sw.includes("const CACHE = 'botdev-v366';"));
+check('index.html : ?v=367 ×7', (html.match(/\?v=367/g) || []).length === 7);
+check('sw.js : cache botdev-v367', sw.includes("const CACHE = 'botdev-v367';"));
 check('index.html : plus aucune ?v=346', !html.includes('?v=346'));
 check('VERSION ≥ 347', changelog.VERSION >= 347);
 check('journal v347 : au moins 1 nouveauté', Array.isArray(changelog.NOTES.new) && changelog.NOTES.new.length >= 1);
 check('v347 dans la liste', changelog.VERSIONS.some((x) => x.v === 347));
 
 console.log('— 2. Trois noms clairs —');
-check('carte Ticket classique', chunk.includes('🎫 Ticket classique'));
-check('carte Ticket menu', chunk.includes('📋 Ticket menu'));
-check('carte Ticket avancé', chunk.includes('🎨 Ticket avancé'));
+check('carte Ticket classique', chunk.includes('Ticket classique'));
+check('carte Ticket menu', chunk.includes('Ticket menu'));
+check('carte Ticket avancé', chunk.includes('Ticket avancé'));
 check('exemples sur les cartes', chunk.includes('Exemple : « Ouvrir un ticket »') && chunk.includes('Support, Partenariat, Signalement'));
 check('guide 3 cases + exemples', chunk.includes('data-jump="tk-classic"') && chunk.includes('data-jump="tk-menu"') && chunk.includes('data-jump="tk-adv"'));
 check('avancé ≠ Ticket menu', chunk.includes('PAS le Ticket menu'));
@@ -46,7 +46,7 @@ check('envoi bouton / menu séparés', chunk.includes("mode: 'button'") && chunk
 check('menus extra toujours là', chunk.includes('Autres panneaux menu') && chunk.includes('openTicketMenuModal'));
 check('advanced-tickets toujours utilisé', chunk.includes('/advanced-tickets'));
 check('Control Center sidebar', dash.includes('<span>Control Center</span>'));
-check('badges v110', dash.includes('➕ Inviter le bot') && dash.includes('✅ Configurer'));
+check('badges v110', dash.includes('Inviter le bot') && dash.includes('Configurer'));
 
 console.log('— 4. Sélecteurs + textes modules —');
 check('labels salon = nom du système', chunk.includes('Salon du Ticket classique') && chunk.includes('Salon du Ticket menu') && chunk.includes('Salon du Ticket avancé'));

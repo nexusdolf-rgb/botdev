@@ -15,8 +15,8 @@
        gauche le trouve deja charge, au lieu de peindre un rond vide puis la
        photo une fois le JavaScript demarre. -->
   <link rel="preload" href="/api/public/bot-avatar" as="image" />
-  <link rel="stylesheet" href="/css/style.css?v=366" />
-  <link rel="stylesheet" href="/css/dashboard.css?v=366" />
+  <link rel="stylesheet" href="/css/style.css?v=367" />
+  <link rel="stylesheet" href="/css/dashboard.css?v=367" />
 </head>
 <body>
   <div id="app"></div>
@@ -25,7 +25,7 @@
   <div id="modal-root"></div>
 
   <script>
-    // 🖥️ v253 : « PC ou mobile » décidé par le SYSTÈME D'EXPLOITATION, pas par des
+    // v253 : « PC ou mobile » décidé par le SYSTÈME D'EXPLOITATION, pas par des
     // mesures que le navigateur peut fausser (échelle d'affichage Windows,
     // écran tactile déclaré pointeur principal…). Un Windows / Mac / Linux de
     // bureau porte la classe hx-os-pc et garde la disposition PC ; un Android,
@@ -40,7 +40,7 @@
     } catch {}
   </script>
   <script>
-    // ☀️/🌙 Thème appliqué AVANT le rendu (pas de flash) : choix mémorisé, sinon réglage système
+    // /🌙 Thème appliqué AVANT le rendu (pas de flash) : choix mémorisé, sinon réglage système
     try {
       const t = localStorage.getItem('hx-theme');
       const clair = t === 'light' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches);
@@ -52,11 +52,11 @@
       if (meta) meta.setAttribute('content', clair ? '#f2f3f8' : '#080b12');
     } catch {}
   </script>
-  <script src="/js/app.js?v=366"></script>
-  <script src="/js/editor.js?v=366"></script>
-  <script src="/js/views.js?v=366"></script>
-  <script src="/js/public.js?v=366"></script>
-  <script src="/js/dashboard.js?v=366"></script>
+  <script src="/js/app.js?v=367"></script>
+  <script src="/js/editor.js?v=367"></script>
+  <script src="/js/views.js?v=367"></script>
+  <script src="/js/public.js?v=367"></script>
+  <script src="/js/dashboard.js?v=367"></script>
   <script>
     // Mode app installable (PWA) + MISE À JOUR AUTOMATIQUE :
     // dès qu'une nouvelle version du site est installée, la page se

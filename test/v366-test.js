@@ -103,6 +103,12 @@ console.log('\n— 1. Un seul critère « mobile », le JS comme le CSS —');
     state: { user: { is_admin: true } },
     escapeHtml: (t) => String(t),
     el: (h) => { const d = document.createElement('div'); d.innerHTML = h; return d.firstElementChild; },
+    // v367 — le produit s'appuie desormais sur trois helpers apparus avec la
+    // passe decor. Un harnais qui ne les expose pas fait tomber tout un rendu
+    // pour une raison qui n'a rien a voir avec ce qu'il est en train de tester.
+    glyphe: (nom) => '<svg class="ico-svg" data-glyphe="' + nom + '" aria-hidden="true"></svg>',
+    sansPicto: (t) => String(t == null ? '' : t).trim(),
+    retourEnregistrement: () => {},
   };
   window.addEventListener('error', (e) => { window.__err = String(e.message); });
 `);

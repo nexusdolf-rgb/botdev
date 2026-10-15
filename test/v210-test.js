@@ -60,7 +60,7 @@ check('xp : aucune statistique XP/rang/récompense dans l’annonce', !xp.includ
 
 // ---------- 4. Dashboard ----------
 console.log('— Dashboard —');
-check('dashboard : réglage carte de montée de niveau présent', dash.includes("🖼️ Carte de montée de niveau") && dash.includes("id=\"xp-card\""));
+check('dashboard : réglage carte de montée de niveau présent', dash.includes("Carte de montée de niveau") && dash.includes("id=\"xp-card\""));
 check('dashboard : libellé décrit l’avatar du membre', dash.includes('avatar du membre, nom et progression'));
 check('dashboard : envoie « card » à la sauvegarde', dash.includes('card: c.querySelector(\'#xp-card\').checked,'));
 check('dashboard : toggle des niveaux ciblé par id', dash.includes("c.querySelector('#xp-enabled').checked"));
@@ -68,8 +68,8 @@ check('dashboard : carte activée par défaut', dash.includes("s.xp_card === 0 |
 check('dashboard : exemple de message correspond au nouveau rendu', dash.includes("placeholder=\"{user} vient d\\'atteindre le niveau {level} !\""));
 
 // ---------- 5. Versions ----------
-check('index : version courante v350', index.includes('?v=366'));
-check('service worker : cache courant v350', sw.includes('botdev-v366'));
+check('index : version courante v350', index.includes('?v=367'));
+check('service worker : cache courant v350', sw.includes('botdev-v367'));
 
 console.log(`\n✅ v210-test.js : ${n} vérifications OK`);
 process.exit(0);

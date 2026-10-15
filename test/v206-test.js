@@ -43,7 +43,7 @@ check('avatar bot (brand mobile)', dashSource.includes('data-fb-text="${App.esca
 // ---------- 3. enhanceSelect : icônes extraites des options ----------
 console.log('— Icônes dans les menus déroulants —');
 check('extraction emoji → icône', dashSource.includes('const em = raw.match(/^((?:\\p{Extended_Pictographic}\\uFE0F?)+)(?:\\s+|$)([\\s\\S]*)$/u);'));
-check('salon sans emoji → 💬', dashSource.includes("else if (/^#/.test(raw)) icon = '💬';"));
+check('salon sans emoji → 💬', dashSource.includes("else if (/^#/.test(raw)) icon = '';"));
 check('pastille absente si aucune icône', dashSource.includes('icoContent ? `<span class="dd-opt-ico">'));
 check('classe no-ico pour alignement', dashSource.includes("no-ico'}"));
 

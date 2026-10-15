@@ -82,16 +82,16 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
 
   // ---------- 5. Dashboard ----------
   console.log('— Dashboard : carte « Embed du salon privé » —');
-  check('dash : carte dédiée présente', dash.includes("🏠 Embed du salon privé"));
+  check('dash : carte dédiée présente', dash.includes("Embed du salon privé"));
   check('dash : sélecteur de couleur + hex', dash.includes('id="tr-color"') && dash.includes('id="tr-color-hex"'));
   check('dash : titre / accueil / étapes modifiables', dash.includes('id="tr-title"') && dash.includes('id="tr-welcome"') && dash.includes('id="tr-steps"'));
   check('dash : sauvegarde via PUT ticket-room', dash.includes('/ticket-room'));
-  check('dash : aperçu live de l’embed', dash.includes('👀 Aperçu de l’embed du salon privé'));
+  check('dash : aperçu live de l’embed', dash.includes('Aperçu de l’embed du salon privé'));
   check('dash : bouton restaurer les valeurs par défaut', dash.includes('id="tr-default"'));
 
   // ---------- 6. Version ----------
-  check('site : bump v212 (index)', index.includes('?v=366'));
-  check('site : bump v212 (sw cache)', sw.includes('botdev-v366'));
+  check('site : bump v212 (index)', index.includes('?v=367'));
+  check('site : bump v212 (sw cache)', sw.includes('botdev-v367'));
 
   console.log(`  ✅ v212 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });

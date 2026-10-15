@@ -11,3 +11,5 @@ coverage/
 
 # Aperçus générés (node scripts/render-preview.js) — non commités
 /maquette-v361-modules.html
+__pycache__/
+*.pyc

@@ -9,7 +9,7 @@ const App = {
 };
 
 // ---------------------- Utilitaires ----------------------
-// 🌊 Effet « ripple » Material sur TOUS les boutons (délégué global)
+// Effet « ripple » Material sur TOUS les boutons (délégué global)
 if (typeof document !== 'undefined' && !window.__hxRipple) {
   window.__hxRipple = true;
   document.addEventListener('click', (e) => {
@@ -35,9 +35,154 @@ App.el = (html) => {
   return t.content.firstElementChild;
 };
 
+// ——————————————————————————————————————————————————————————————————————————
+// v367 — Jeu d'icônes dessiné.
+//
+// Pourquoi : le tableau de bord illustrait chaque bouton, chaque titre et
+// chaque notification d'un émoji (173 pictogrammes comptés dans l'interface
+// rendue, pour 6 seulement dans les aperçus de messages — l'inverse de ce
+// qu'il faut). Un émoji dans un MESSAGE Discord simulé est réaliste ; un émoji
+// en guise d'icône de bouton est une empreinte de générateur, qui de plus rend
+// mal (couleur imposée, taille imposée, aucune optical alignment) et ne suit
+// pas le thème.
+//
+// Ces tracés sont dessinés ici, à la main, sur une grille de 24 : trait de
+// 1,7, currentColor (donc ils suivent le texte, le thème clair/sombre et l'état
+// focus/erreur), bout de trait arrondi, aucune couleur codée en dur. Ils sont
+// pensés pour être lus à 16 px : c'est la taille de l'interface dense.
+// La classe .ico-svg (style.css) porte le centrage et le retrait sous les
+// lecteurs d'écran : une icône qui accompagne un libellé est décorative.
+// ——————————————————————————————————————————————————————————————————————————
+App.GLYPHES = {
+  corbeille: '<path d="M4 6.5h16M9.5 6.5V4.2h5v2.3M6.5 6.5l1 13h9l1-13M10 10v6M14 10v6"/>',
+  alerte: '<path d="M12 3.6 21.4 20H2.6L12 3.6Z"/><path d="M12 9.4v4.4"/><circle cx="12" cy="16.8" r=".9" fill="currentColor" stroke="none"/>',
+  eclair: '<path d="M13.4 2.6 5.6 13.4h4.8L9 21.4l8.6-11.2h-5l.8-7.6Z"/>',
+  coche: '<path d="M4.4 12.6 9.4 17.6 19.6 6.6"/>',
+  recherche: '<circle cx="10.6" cy="10.6" r="6.2"/><path d="M15.2 15.2 20 20"/>',
+  theme: '<circle cx="12" cy="12" r="8.2"/><path d="M12 3.8a8.2 8.2 0 0 1 0 16.4Z" fill="currentColor" stroke="none"/>',
+  robot: '<rect x="4.4" y="8" width="15.2" height="11.6" rx="3"/><path d="M12 4.2V8"/><circle cx="12" cy="3.2" r="1.1" fill="currentColor" stroke="none"/><circle cx="9" cy="13.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="15" cy="13.4" r="1.15" fill="currentColor" stroke="none"/><path d="M9.6 16.8h4.8"/>',
+  boite: '<path d="M3.4 13.6h4.4l1.4 2.6h5.6l1.4-2.6h4.4M4.8 4.4h14.4l1.4 9.2v6H3.4v-6L4.8 4.4Z"/>',
+  cerveau: '<path d="M12 5.2v13.6M12 6.6c-1-1.6-4.6-1.6-5.2.6-1.8.4-2 3.2-.4 4-1 2 .6 4 2.6 3.6.4 1.8 3 1.8 3 0M12 6.6c1-1.6 4.6-1.6 5.2.6 1.8.4 2 3.2.4 4 1 2-.6 4-2.6 3.6-.4 1.8-3 1.8-3 0"/>',
+  lien: '<path d="M10.2 13.8a3.6 3.6 0 0 0 5.2.2l2.6-2.6a3.7 3.7 0 0 0-5.2-5.2l-1.4 1.4"/><path d="M13.8 10.2a3.6 3.6 0 0 0-5.2-.2L6 12.6a3.7 3.7 0 0 0 5.2 5.2l1.4-1.4"/>',
+  couronne: '<path d="M3.6 7.4 7.4 12l4.6-6.2L16.6 12l3.8-4.6-1.6 11.2H5.2L3.6 7.4Z"/>',
+  croix: '<path d="M6 6l12 12M18 6 6 18"/>',
+  chevron: '<path d="M6.4 9.6 12 15.2l5.6-5.6"/>',
+  horloge: '<circle cx="12" cy="12" r="8.4"/><path d="M12 7.2V12l3.4 2.2"/>',
+  etincelle: '<path d="M12 3.6l1.7 4.9 4.9 1.7-4.9 1.7L12 16.8l-1.7-4.9-4.9-1.7 4.9-1.7L12 3.6ZM18.4 15.6l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2Z"/>',
+  casque: '<path d="M4.6 14.4v-2.2a7.4 7.4 0 0 1 14.8 0v2.2"/><rect x="2.8" y="13.6" width="3.8" height="6.4" rx="1.6"/><rect x="17.4" y="13.6" width="3.8" height="6.4" rx="1.6"/>',
+  bouclier: '<path d="M12 3.4 19.6 6v6.2c0 4-3.2 6.9-7.6 8.4-4.4-1.5-7.6-4.4-7.6-8.4V6L12 3.4Z"/>',
+  bulle: '<path d="M4.4 5.6h15.2v10.2H10l-4 3.4v-3.4H4.4V5.6Z"/>',
+  cadenas: '<rect x="5.2" y="10.4" width="13.6" height="9.6" rx="2.4"/><path d="M8.4 10.4V8a3.6 3.6 0 0 1 7.2 0v2.4"/>',
+  ticket: '<path d="M3.6 8.6V6.4h16.8v2.2a3.4 3.4 0 0 0 0 6.8v2.2H3.6v-2.2a3.4 3.4 0 0 1 0-6.8Z"/><path d="M12 6.4v11.2" stroke-dasharray="2 2.4"/>',
+  horloge2: '<circle cx="12" cy="12" r="8.4"/><path d="M12 7.8V12h3.6"/>',
+  // v367 — second lot, dicte par la mesure : les 20 pictogrammes que le
+  // balayage laissait sans equivalent (liste imprimee par
+  // scripts/retire-les-empreintes.py). Un jeu d'icones n'a d'interet que s'il
+  // couvre tout ce que l'interface demande a illustrer.
+  etoile: '<path d="M12 3.6l2.55 5.4 5.85.72-4.35 4.05 1.17 5.79L12 16.74l-5.22 2.82 1.17-5.79L3.6 9.72l5.85-.72L12 3.6Z"/>',
+  dossier: '<path d="M3.4 6.6h5.4l1.8 2.2h9.8v9.6a1.6 1.6 0 0 1-1.6 1.6H5a1.6 1.6 0 0 1-1.6-1.6V6.6Z"/>',
+  personne: '<circle cx="12" cy="8.4" r="3.6"/><path d="M4.8 20.2a7.2 7.2 0 0 1 14.4 0"/>',
+  piece: '<circle cx="12" cy="12" r="8.2"/><circle cx="12" cy="12" r="4.4"/>',
+  interdit: '<circle cx="12" cy="12" r="8.2"/><path d="M6.2 17.8 17.8 6.2"/>',
+  lettres: '<path d="M3.6 18.4 8 6.6l4.4 11.8M5.2 14.6h5.6"/><path d="M20.4 12.4v5.6M17 15.4a3 3 0 0 1 6 0"/>',
+  nuage: '<path d="M7.2 18.4h9.4a3.8 3.8 0 0 0 .4-7.6 5.6 5.6 0 0 0-10.6-1.4 3.9 3.9 0 0 0 .4 9Z"/>',
+  presse: '<rect x="5" y="4.6" width="14" height="16.2" rx="2.2"/><path d="M9 4.6V3.2h6v1.4"/><path d="M8.4 11h7.2M8.4 15h5"/>',
+  morceau: '<path d="M9.6 3.6a2.4 2.4 0 0 1 4.8 0v1.2h3.2v3.4h1.2a2.4 2.4 0 0 1 0 4.8h-1.2v3.4h-3.2v1.2a2.4 2.4 0 0 1-4.8 0v-1.2H6.4v-3.4H5.2a2.4 2.4 0 0 1 0-4.8h1.2V4.8h3.2V3.6Z"/>',
+  courbe: '<path d="M4 19.4h16M5.4 15.4l4-4.6 3.2 2.6 5.2-6.4"/><path d="M17.8 7h2.4v2.4"/>',
+  panier: '<path d="M3.6 5.6h2.2l2.4 10.2h9l2-7.2H7.4"/><circle cx="9.6" cy="19.2" r="1.5"/><circle cx="17" cy="19.2" r="1.5"/>',
+  telephone: '<rect x="6.6" y="2.8" width="10.8" height="18.4" rx="2.4"/><path d="M10.4 18.2h3.2"/>',
+  diplome: '<path d="M12 4.6l9 4.4-9 4.4-9-4.4 9-4.4Z"/><path d="M7 11.4v4.2c0 1.6 2.4 2.8 5 2.8s5-1.2 5-2.8v-4.2"/>',
+  son: '<path d="M4.4 9.6h3l4.4-3.8v12.4l-4.4-3.8h-3V9.6Z"/><path d="M16.4 8.6a5.2 5.2 0 0 1 0 6.8M18.8 6.2a8.6 8.6 0 0 1 0 11.6"/>',
+  calendrier: '<rect x="3.8" y="5.6" width="16.4" height="15" rx="2.2"/><path d="M3.8 10h16.4M8.4 3.8v3.2M15.6 3.8v3.2"/><path d="M7.6 13.6h2v2h-2zM14.4 13.6h2v2h-2z"/>',
+  billets: '<rect x="2.6" y="6.6" width="18.8" height="11" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 12h.6M17.4 12h.6"/>',
+  ampoule: '<path d="M9 17.4a6.4 6.4 0 1 1 6 0v1.8H9v-1.8Z"/><path d="M10 21.2h4"/>',
+  // v367 — quatrieme trait : ce que le bilan du balayage reclamait (diise de
+  // salon, etiquette de role, porte d'entree, hamecon d'hameconnage).
+  diise: '<path d="M9.4 3.8 7.6 20.2M16.4 3.8l-1.8 16.4M4.4 8.8h15.2M3.6 15.2h15.2"/>',
+  etiquette: '<path d="M11.6 3.6H19a1.4 1.4 0 0 1 1.4 1.4v7.4L13.2 20.2a1.4 1.4 0 0 1-2 0L3.8 12.8a1.4 1.4 0 0 1 0-2l6.8-6.8a1.4 1.4 0 0 1 1-.4Z"/><circle cx="16" cy="8" r="1.6"/>',
+  porte: '<path d="M6.6 3.6h10.8v16.8H6.6z"/><path d="M14.6 12h1"/><path d="M4.6 20.4h15"/>',
+  hamecon: '<path d="M13.6 3.4v8.4a4.6 4.6 0 0 1-9.2 0"/><path d="M4.2 10 6.8 12.6"/><circle cx="13.6" cy="4.6" r="1.4"/>',
+  palette: '<path d="M12 3.6a8.4 8.4 0 0 0 0 16.8c1.4 0 2-.9 2-1.9s-.7-1.6-.7-2.4c0-1 .8-1.7 1.9-1.7h1.7a3.5 3.5 0 0 0 3.5-3.6A8.3 8.3 0 0 0 12 3.6Z"/><circle cx="8.2" cy="9.2" r="1.1"/><circle cx="12.6" cy="7.2" r="1.1"/><circle cx="16.6" cy="9.8" r="1.1"/>',
+  personnes: '<circle cx="9" cy="8.6" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16.2 5.9a3.2 3.2 0 0 1 0 5.5M17.6 14.6A6 6 0 0 1 21 20"/>',
+  fusee: '<path d="M13.6 3.6c3.4 1.4 5.6 4.6 6 8.4l-4.2 4.2-6-6 4.2-6.6Z"/><path d="M9.4 10.2 6.2 11l1.9 2.5M13.4 16.2l.8 3.2 2.5-1.9"/><circle cx="14.6" cy="8.6" r="1.5"/>',
+  rafraichir: '<path d="M19.4 12a7.4 7.4 0 1 1-2.2-5.3"/><path d="M18.2 3.4v3.6h-3.6"/>',
+  megaphone: '<path d="M4.2 10.2v3.6a1.4 1.4 0 0 0 1.4 1.4h2l8.6 4V4.8l-8.6 4h-2A1.4 1.4 0 0 0 4.2 10.2Z"/><path d="M19.4 9.2a4.4 4.4 0 0 1 0 5.6"/>',
+  impact: '<circle cx="12" cy="12" r="3.3"/><path d="M12 3.6v3.2M12 17.2v3.2M3.6 12h3.2M17.2 12h3.2M6.1 6.1l2.3 2.3M15.6 15.6l2.3 2.3M17.9 6.1l-2.3 2.3M8.4 15.6l-2.3 2.3"/>',
+  image: '<rect x="3.6" y="5" width="16.8" height="14" rx="2.2"/><circle cx="9" cy="10" r="1.6"/><path d="M4.8 17.2l4.6-4.4 3.4 3 2.6-2.4 4.2 3.8"/>',
+  crayon: '<path d="M4.4 19.6l1.2-3.6L15.6 6a1.9 1.9 0 0 1 2.7 2.7L8.3 18.6l-3.9 1Z"/><path d="M14 7.6l2.4 2.4"/>',
+  reglages: '<circle cx="12" cy="12" r="3.1"/><path d="M12 3.6v2.6M12 17.8v2.6M4.8 12H7.4M16.6 12h2.6M6.9 6.9l1.9 1.9M15.2 15.2l1.9 1.9M17.1 6.9l-1.9 1.9M8.8 15.2l-1.9 1.9"/>',
+};
+
+/**
+ * Rend un <svg> du jeu App.GLYPHES.
+ *   nom   : clé du jeu ; à défaut on obtient une pastille vide, jamais un émoji.
+ *   opts  : { taille = 16, classe = '', titre = '' } — `titre` passe l'icône de
+ *           décorative (aria-hidden) à informative (role=img + libellé accessible).
+ * Les tracés sont en currentColor avec un trait de 1,7 : ils se lisent à 16 px
+ * et suivent le thème, les états et l'accessibilité du texte voisin.
+ */
+App.glyphe = (nom, opts = {}) => {
+  const taille = Number(opts.taille || 16);
+  const trace = App.GLYPHES[nom] || '<circle cx="12" cy="12" r="7.4"/>';
+  const titre = String(opts.titre || '');
+  const accessibilite = titre
+    ? `role="img" aria-label="${App.escapeHtml(titre)}"`
+    : 'aria-hidden="true" focusable="false"';
+  return `<svg class="ico-svg${opts.classe ? ' ' + opts.classe : ''}" viewBox="0 0 24 24" width="${taille}" height="${taille}" ${accessibilite}>`
+    + `<g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${trace}</g></svg>`;
+};
+
+// v367 — un libellé d'interface ne se dépouille pas d'un emoji chez chaque
+// appelant : le helper de carte le fait pour tous. Les titres de module arrivaient
+// en forme « <pictogramme> Auto-modération » ; l'identité visuelle d'un module est
+// portée par son émoji dessiné (Dashboard.iconCell), pas par le texte.
+const PICTO_EN_TETE = /^(?:\s*[\u{1F000}-\u{1FAFF}\u2705\u274C\u2757\u2764\u27A1\u2B50\u2B55\u3030\u303D][\uFE0F\u20E3]?)+\s*/u;
+App.sansPicto = (texte) => String(texte == null ? '' : texte).replace(PICTO_EN_TETE, '').trim();
+
+/**
+ * v367 — le retour après un enregistrement, calibre production.
+ * Le bouton d'action confirme lui-même (l'attente bascule sur un état fini) et
+ * une horodatation discrète s'écrit à côté, à la minute — comme un champ
+ * « dernière modification ». Puis tout s'efface. Aucun pictogramme, aucun point
+ * d'exclamation : un produit constate, il ne s'applaudit pas.
+ */
+App.retourEnregistrement = function (bouton, quoi) {
+  const libellé = quoi || 'Enregistré';
+  if (bouton && bouton.nodeType === 1) {
+    if (!bouton.dataset.libelleAvant) bouton.dataset.libelleAvant = bouton.innerHTML;
+    bouton.classList.add('is-done');
+    bouton.innerHTML = App.glyphe('coche', { taille: 15 }) + '<span>' + libellé + '</span>';
+    clearTimeout(bouton._retourTimer);
+    bouton._retourTimer = setTimeout(function () {
+      bouton.classList.remove('is-done');
+      bouton.innerHTML = bouton.dataset.libelleAvant;
+    }, 1800);
+  }
+  const racine = bouton
+    ? bouton.closest('.dash-card, .dash-row, .cfg-actions, .am-actions, .ov-hero-actions, ' +
+      '.modal-actions, .dash-modal-actions, .sheet-actions, .dash-mod-actions, .card-head')
+    : null;
+  const hôte = racine || (bouton && bouton.parentElement);
+  if (!hôte) return;
+  let horo = hôte.querySelector(':scope > .save-stamp');
+  if (!horo) {
+    horo = App.el('<span class="save-stamp" role="status"></span>');
+    hôte.appendChild(horo);
+  }
+  const maintenant = new Date();
+  horo.textContent = libellé + ' à ' +
+    String(maintenant.getHours()).padStart(2, '0') + ':' +
+    String(maintenant.getMinutes()).padStart(2, '0');
+  horo.classList.remove('is-on');
+  void hôte.offsetWidth;                 // relance la transition à chaque clic
+  horo.classList.add('is-on');
+  clearTimeout(horo._horoTimer);
+  horo._horoTimer = setTimeout(function () { horo.classList.remove('is-on'); }, 6000);
+};
+
 App.escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-// 🎨 v364 — couleur de la barre du navigateur : elle doit suivre le thème.
+// v364 — couleur de la barre du navigateur : elle doit suivre le thème.
 // Les deux valeurs viennent du CSS (fond sombre `--bg`, fond clair du body),
 // jamais inventées. Le script de index.html la pose avant le premier rendu ;
 // ceci la remet d'aplomb si le thème change en cours de route.
@@ -117,7 +262,7 @@ App.openInvite = (url) => {
   try { window.open(url, '_blank', 'noopener'); } catch {}
   navigator.clipboard.writeText(url)
     .then(() => App.toast('Fenêtre Discord ouverte : choisissez votre serveur dans le sélecteur ! (lien aussi copié)'))
-    .catch(() => App.toast('Choisissez votre serveur dans la fenêtre Discord !'));
+    .catch(() => App.toast('Choisissez votre serveur dans la fenêtre Discord.'));
 };
 
 App.fmtNumber = (n) => (n >= 1000 ? Math.round(n / 1000) + 'k' : String(n));
@@ -154,7 +299,7 @@ App.router.parse = () => {
 App.router.go = (path) => { location.hash = `#/${path}`; };
 
 App.router.run = async () => {
-  // 🚦 v364 : chaque navigation prend un numero. Une vue dont les arrivees
+  // v364 : chaque navigation prend un numero. Une vue dont les arrivees
   // reseau trainaient ne repeint plus la page par-dessus celle demandee depuis
   // (l'ancien code ecrivait dans le DOM apres un await, sans verifier).
   App._vueSeq = (App._vueSeq || 0) + 1;
@@ -172,8 +317,8 @@ App.router.run = async () => {
   // Messages OAuth2
   if (query && query.get('oauth')) {
     const o = query.get('oauth');
-    if (o === 'linked') App.toast('✅ Compte Discord lié — bienvenue !');
-    else if (o === 'banned') App.toast('⛔ Ce compte est banni d’Optimus Prime.', 'error');
+    if (o === 'linked') App.toast('Compte Discord lié — bienvenue.');
+    else if (o === 'banned') App.toast('Ce compte est banni d’Optimus Prime.', 'error');
     else if (o === 'nosecret') App.toast("Le Client Secret Discord n'est pas configuré sur le serveur.", 'error');
     else App.toast('La connexion Discord a échoué. Réessaie.', 'error');
     history.replaceState(null, '', '#/dashboard');
@@ -216,11 +361,11 @@ App.loadPublicBotAvatar = (root) => {
     // Le logo est déjà une image dans le HTML initial : on lui ajoute
     // seulement un fallback pour éviter un second chargement inutile.
     if (oldLogo.tagName === 'IMG') {
-      oldLogo.onerror = () => { if (oldLogo.isConnected) oldLogo.replaceWith(App.el('<span class="logo" data-brand-logo>⚡</span>')); };
+      oldLogo.onerror = () => { if (oldLogo.isConnected) oldLogo.replaceWith(App.el('<span class="logo" data-brand-logo><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M13.4 2.6 5.6 13.4h4.8L9 21.4l8.6-11.2h-5l.8-7.6Z"/></svg></span>')); };
       return;
     }
     const image = App.el('<img class="logo" data-brand-logo src="/api/public/bot-avatar" alt="Avatar d’Optimus Prime" style="border-radius:50%;object-fit:cover" />');
-    image.onerror = () => { if (image.isConnected) image.replaceWith(App.el('<span class="logo" data-brand-logo>⚡</span>')); };
+    image.onerror = () => { if (image.isConnected) image.replaceWith(App.el('<span class="logo" data-brand-logo><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M13.4 2.6 5.6 13.4h4.8L9 21.4l8.6-11.2h-5l.8-7.6Z"/></svg></span>')); };
     if (oldLogo.isConnected) oldLogo.replaceWith(image);
   });
 };
@@ -236,11 +381,11 @@ App.renderConnect = () => {
         <h1 style="margin-top:52px">Configurez votre serveur<br/><span>en quelques clics</span></h1>
         <p class="tagline">Tickets automatiques, niveaux, boutique, giveaways, bienvenue… Tout se règle ici, sans mot de passe : on vérifie simplement avec votre compte Discord.</p>
         <ul class="auth-features">
-          <li><span class="f-ico">🎫</span> Tickets avec types personnalisés & transcriptions</li>
-          <li><span class="f-ico">📈</span> Niveaux XP et récompenses de rôles</li>
-          <li><span class="f-ico">🛒</span> Boutique, économie et giveaways</li>
-          <li><span class="f-ico">👋</span> Bienvenue, auto-rôles et menus de rôles</li>
-          <li><span class="f-ico">🛡️</span> Modération et journaux complets</li>
+          <li><span class="f-ico"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M2 9a3 3 0 0 0 0 6v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-4a3 3 0 0 1 0-6V5a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2M13 11v2M13 17v2"/></svg></span> Tickets avec types personnalisés & transcriptions</li>
+          <li><span class="f-ico"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 19.4h16M5.4 15.4l4-4.6 3.2 2.6 5.2-6.4"/><path d="M17.8 7h2.4v2.4"/></svg></span> Niveaux XP et récompenses de rôles</li>
+          <li><span class="f-ico"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M3.6 5.6h2.2l2.4 10.2h9l2-7.2H7.4"/><circle cx="9.6" cy="19.2" r="1.5"/><circle cx="17" cy="19.2" r="1.5"/></svg></span> Boutique, économie et giveaways</li>
+          <li><span class="f-ico"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6.6 3.6h10.8v16.8H6.6z"/><path d="M14.6 12h1"/><path d="M4.6 20.4h15"/></svg></span> Bienvenue, auto-rôles et menus de rôles</li>
+          <li><span class="f-ico"></span> Modération et journaux complets</li>
         </ul>
       </div>
       <div class="auth-right">
@@ -248,13 +393,13 @@ App.renderConnect = () => {
           <div class="auth-bot-ava"><img src="/api/public/bot-avatar" alt="Optimus Prime" /></div>
           <h2>Connectez-vous avec Discord</h2>
           <p class="sub" style="margin:8px 0 20px">Aucun compte à créer, aucun mot de passe.<br/>Discord vérifie automatiquement vos serveurs et vos permissions.</p>
-          <button class="btn btn-discord" id="connect-discord" style="padding:13px;font-size:15px">🎮 Se connecter avec Discord</button>
+          <button class="btn btn-discord" id="connect-discord" style="padding:13px;font-size:16px">Se connecter avec Discord</button>
           <div class="auth-trust">
-            <span>🔒 Connexion sécurisée OAuth2 — nous ne voyons <b>jamais</b> votre mot de passe</span>
-            <span>👁️ Accès demandé : votre pseudo, votre avatar et votre liste de serveurs. Rien d'autre.</span>
-            <span>🛡️ Seuls les <b>admins</b> des serveurs peuvent configurer.</span>
+            <span>Connexion sécurisée OAuth2 — nous ne voyons <b>jamais</b> votre mot de passe</span>
+            <span>Accès demandé : votre pseudo, votre avatar et votre liste de serveurs. Rien d'autre.</span>
+            <span>Seuls les <b>admins</b> des serveurs peuvent configurer.</span>
           </div>
-          <a href="#/" style="font-size:12.5px">← Retour à l'accueil</a>
+          <a href="#/" style="font-size:13px">← Retour à l'accueil</a>
         </div>
       </div>
     </div>
@@ -271,13 +416,13 @@ App.renderConnect = () => {
     } catch (e) {
       App.toast(e.message, 'error');
       b.classList.remove('loading'); b.disabled = false;
-      b.textContent = '🎮 Se connecter avec Discord';
+      b.textContent = 'Se connecter avec Discord';
     }
   };
 };
 
 // ---------------------- Marque du bot, mémorisée ----------------------
-// 🏷️ v364 — le nom et l'avatar du bot sont gardés en mémoire entre deux
+// v364 — le nom et l'avatar du bot sont gardés en mémoire entre deux
 // visites. Sans ça, chaque rafraîchissement peignait la marque de secours
 // (« ⚡ Hoxera ») pendant que /api/hoxera répondait, puis RECONSTRUISAIT la
 // barre avec la vraie identité (« Optimus Prime ») : le flash signalé par le
@@ -314,20 +459,20 @@ App.renderNavbar = () => {
     <div class="navbar">
       <div class="logo-row" style="cursor:pointer" id="nav-logo">${brand} ${App.escapeHtml((bot && bot.name) || 'Hoxera')}</div>
       <div class="navbar-right">
-        ${user.is_admin ? `<button class="btn btn-ghost btn-sm" id="nav-admin">👑 Admin</button>` : ''}
+        ${user.is_admin ? `<button class="btn btn-ghost btn-sm" id="nav-admin">Admin</button>` : ''}
         <div class="user-pill">
           ${user.discord_avatar
             ? `<img class="user-avatar" style="border-radius:50%" src="/api/img?u=${encodeURIComponent(`https://cdn.discordapp.com/avatars/${user.discord_id}/${user.discord_avatar}.png?size=64`)}" alt="" data-fb-text="${App.escapeHtml((user.discord_username || user.email || '?').trim().slice(0, 1).toUpperCase())}" />`
             : `<div class="user-avatar">${App.escapeHtml((user.email[0] || '?').toUpperCase())}</div>`}
           <span>${App.escapeHtml(user.discord_username || user.email)}</span>
-          <span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">🔗</span>
+          <span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M10.2 13.8a3.6 3.6 0 0 0 5.2.2l2.6-2.6a3.7 3.7 0 0 0-5.2-5.2l-1.4 1.4"/><path d="M13.8 10.2a3.6 3.6 0 0 0-5.2-.2L6 12.6a3.7 3.7 0 0 0 5.2 5.2l1.4-1.4"/></svg></span>
         </div>
         <button class="btn btn-ghost btn-sm" id="nav-logout" title="Déconnexion"><span class="nl-ico">⏻</span><span class="nl-lbl">Déconnexion</span></button>
       </div>
     </div>
   `);
   const brandImage = nav.querySelector('#nav-brand-avatar');
-  if (brandImage) brandImage.onerror = () => brandImage.replaceWith(App.el('<span class="logo">⚡</span>'));
+  if (brandImage) brandImage.onerror = () => brandImage.replaceWith(App.el('<span class="logo"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M13.4 2.6 5.6 13.4h4.8L9 21.4l8.6-11.2h-5l.8-7.6Z"/></svg></span>'));
   // Ce que cette barre sait deja : la comparaison evite de la jeter pour rien.
   nav.dataset.brandSig = App.brandSig(bot);
   nav.querySelector('#nav-logo').onclick = () => App.router.go('/dashboard');
@@ -357,7 +502,7 @@ App.renderHoxeraDashboard = async () => {
     if (!configured || !bot) {
       shell.innerHTML = `
         <div class="dash-card" style="max-width:560px;margin:24px auto">
-          <h3>⚡ Hoxera n'est pas encore branché</h3>
+          <h3>Hoxera n'est pas encore branché</h3>
           <div class="desc">Ajoute la variable d'environnement <b>HOXERA_TOKEN</b> (token du bot) dans les réglages du service sur Render, puis redémarre. La connexion se fait automatiquement.</div>
         </div>`;
       return;
@@ -375,14 +520,14 @@ App.renderHoxeraDashboard = async () => {
     await Dashboard.mount(shell, bot);
   } catch (e) {
     if (App._vueSeq !== seq) return;
-    shell.innerHTML = `<div class="empty-state"><div class="big">⚠️</div>${App.escapeHtml(e.message)}</div>`;
+    shell.innerHTML = `<div class="empty-state"><div class="big">${App.glyphe('alerte', { taille: 26 })}</div>${App.escapeHtml(e.message)}</div>`;
   }
 };
 
 // ---------------------- Administration Optimus Prime (fondateur uniquement) ----------------------
 App.ADMIN_TAB = App.ADMIN_TAB || 'overview';
 
-// 👑 HUB FONDATEUR (v199) — espace privé du créateur d'Optimus Prime.
+// HUB FONDATEUR (v199) — espace privé du créateur d'Optimus Prime.
 // Onglets : Vue d'ensemble (stats + santé + activité + actions rapides),
 // Comptes (recherche + gestion), Bots (démarrer/arrêter), Journal de
 // sécurité (filtrable), Réglages plateforme (URL publique, bannière, sauvegarde).
@@ -394,7 +539,7 @@ App.renderAdminPage = async () => {
     <div class="page admin-platform-page">
       <header class="admin-head">
         <div class="admin-identity">
-          <img id="a-bot-avatar" class="admin-mark admin-bot-avatar" src="/api/public/bot-avatar?v=366" alt="Avatar d’Optimus Prime" width="48" height="48" />
+          <img id="a-bot-avatar" class="admin-mark admin-bot-avatar" src="/api/public/bot-avatar?v=367" alt="Avatar d’Optimus Prime" width="48" height="48" />
           <div class="admin-head-copy">
             <div class="admin-breadcrumb"><span>OPTIMUS PRIME</span><i>/</i><b>CONSOLE FONDATEUR</b></div>
             <h1>Espace fondateur</h1>
@@ -581,7 +726,7 @@ App.renderAdminPage = async () => {
       b.innerHTML = '<span class="admin-inline-spinner" aria-hidden="true"></span><span>Sauvegarde…</span>';
       try {
         const r = await App.api('/backup/now', { method: 'POST' });
-        App.toast(r.ok ? '✅ Sauvegarde terminée !' : (r.error || 'Erreur'));
+        App.toast(r.ok ? 'Sauvegarde terminée.' : (r.error || 'Erreur'));
       } catch (e) { App.toast(e.message, 'error'); }
       finally { b.disabled = false; b.innerHTML = backupActionMarkup; renderBody(); }
     };
@@ -591,7 +736,7 @@ App.renderAdminPage = async () => {
         await App.api('/bots/1/stop', { method: 'POST' });
         await new Promise((r) => setTimeout(r, 800));
         await App.api('/bots/1/start', { method: 'POST' });
-        App.toast('🔄 Bot redémarré !');
+        App.toast('Bot redémarré.');
         renderBody();
       } catch (e) { App.toast(e.message, 'error'); }
     };
@@ -603,7 +748,7 @@ App.renderAdminPage = async () => {
     const query = (App.ADMIN_Q = App.ADMIN_Q || '');
     bodyEl.innerHTML = `
       <div class="card">
-        <h3>👥 Comptes Optimus Prime liés à Discord</h3>
+        <h3>Comptes Optimus Prime liés à Discord</h3>
         <div class="card-sub">Délier Discord, bannir ou supprimer un compte. Votre propre compte est toujours protégé.</div>
         <div class="admin-toolbar">
           <input class="dash-input" id="a-search" placeholder="🔎 Rechercher (nom, ID Discord, email)…" value="${App.escapeHtml(query)}" style="max-width:340px" />
@@ -652,14 +797,14 @@ App.renderAdminPage = async () => {
           ? `<span class="admin-linked-account"><span class="admin-linked-avatar${u.discord_deco ? ' has-decoration' : ''}" title="${u.discord_deco ? 'Photo Discord avec décoration d’avatar' : 'Photo Discord'}">${discordAvatar}</span><span class="admin-linked-copy"><b>${App.escapeHtml('@' + (u.discord_username || u.discord_id))}</b><small>ID ${App.escapeHtml(u.discord_id)}</small></span></span>`
           : `<span style="color:var(--text-dim)">Non lié</span><small style="display:block;color:var(--text-dim)">${App.escapeHtml(u.email)}</small>`;
         const statusCell = u.banned
-          ? `<span class="chip" style="color:#ff8a8d;border-color:rgba(237,66,69,.45)">⛔ Banni</span><small style="display:block;color:var(--text-dim);max-width:180px">${App.escapeHtml(u.ban_reason || 'Aucune raison')}</small>`
-          : `<span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">✅ Actif</span>`;
+          ? `<span class="chip" style="color:#ff8a8d;border-color:rgba(237,66,69,.45)">Banni</span><small style="display:block;color:var(--text-dim);max-width:180px">${App.escapeHtml(u.ban_reason || 'Aucune raison')}</small>`
+          : `<span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">Actif</span>`;
         const actions = isCurrent
-          ? `<span style="font-size:12px;color:var(--text-dim)">👑 Compte protégé</span>`
+          ? `<span style="font-size:12px;color:var(--text-dim)">Compte protégé</span>`
           : `<div style="display:flex;gap:6px;flex-wrap:wrap">
-              ${u.discord_linked ? '<button class="btn btn-ghost btn-sm" data-unlink>🔗 Délier</button>' : ''}
-              ${u.banned ? '<button class="btn btn-ghost btn-sm" data-unban>✅ Débannir</button>' : '<button class="btn btn-ghost btn-sm" data-ban>⛔ Bannir</button>'}
-              <button class="btn btn-danger btn-sm" data-delete>🗑 Supprimer</button>
+              ${u.discord_linked ? '<button class="btn btn-ghost btn-sm" data-unlink>Délier</button>' : ''}
+              ${u.banned ? '<button class="btn btn-ghost btn-sm" data-unban>Débannir</button>' : '<button class="btn btn-ghost btn-sm" data-ban>Bannir</button>'}
+              <button class="btn btn-danger btn-sm" data-delete>Supprimer</button>
             </div>`;
         const row = App.el(`<tr>
           <td><b>#${u.id}</b>${Number(u.bots_count) ? `<small style="display:block;color:var(--text-dim)">${u.bots_count} bot(s)</small>` : ''}</td>
@@ -706,7 +851,7 @@ App.renderAdminPage = async () => {
 
   // ─────────────────── Bots ───────────────────
   const renderBots = async () => {
-    bodyEl.innerHTML = `<div class="card"><h3>🤖 Bots de la plateforme</h3><div class="card-sub">Contrôle complet en tant que fondateur : démarrer, arrêter, redémarrer.</div><div id="a-bots"><div class="spinner" style="margin:20px auto"></div></div></div>`;
+    bodyEl.innerHTML = `<div class="card"><h3>Bots de la plateforme</h3><div class="card-sub">Contrôle complet en tant que fondateur : démarrer, arrêter, redémarrer.</div><div id="a-bots"><div class="spinner" style="margin:20px auto"></div></div></div>`;
     const res = await App.api('/admin/bots');
     const botsEl = bodyEl.querySelector('#a-bots');
     if (!res.bots || !res.bots.length) {
@@ -716,16 +861,16 @@ App.renderAdminPage = async () => {
       const tb = botsEl.querySelector('tbody');
       res.bots.forEach((b) => {
         const statusCell = b.online
-          ? `<span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">🟢 En ligne</span>`
-          : `<span class="chip" style="color:#ff8a8d;border-color:rgba(237,66,69,.45)">🔴 Hors ligne</span>`;
+          ? `<span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">En ligne</span>`
+          : `<span class="chip" style="color:#ff8a8d;border-color:rgba(237,66,69,.45)">Hors ligne</span>`;
         const row = App.el(`<tr>
           <td><b>${App.escapeHtml(b.name || 'Sans nom')}</b>${b.bot_username ? `<small style="display:block;color:var(--text-dim)">${App.escapeHtml(b.bot_username)}</small>` : ''}</td>
           <td>${statusCell}</td>
           <td>${b.servers ?? 0}</td>
-          <td style="color:var(--text-dim);font-size:12.5px">${App.escapeHtml(b.owner_email || '—')}</td>
+          <td style="color:var(--text-dim);font-size:13px">${App.escapeHtml(b.owner_email || '—')}</td>
           <td><div style="display:flex;gap:6px;flex-wrap:wrap">
             ${b.online
-              ? '<button class="btn btn-ghost btn-sm" data-restart>🔄 Redémarrer</button><button class="btn btn-danger btn-sm" data-stop>⏹ Arrêter</button>'
+              ? '<button class="btn btn-ghost btn-sm" data-restart>Redémarrer</button><button class="btn btn-danger btn-sm" data-stop>⏹ Arrêter</button>'
               : '<button class="btn btn-sm" data-start>▶️ Démarrer</button>'}
           </div></td>
         </tr>`);
@@ -736,14 +881,14 @@ App.renderAdminPage = async () => {
             await App.api(`/bots/${b.id}/stop`, { method: 'POST' });
             await new Promise((r) => setTimeout(r, 800));
             await App.api(`/bots/${b.id}/start`, { method: 'POST' });
-            App.toast('🔄 Bot redémarré !');
+            App.toast('Bot redémarré.');
             renderBody();
           } catch (e) { App.toast(e.message, 'error'); btn.disabled = false; }
         };
         const start = row.querySelector('[data-start]');
         if (start) start.onclick = async () => {
           start.disabled = true;
-          try { await App.api(`/bots/${b.id}/start`, { method: 'POST' }); App.toast('▶️ Bot démarré !'); renderBody(); }
+          try { await App.api(`/bots/${b.id}/start`, { method: 'POST' }); App.toast('▶️ Bot démarré.'); renderBody(); }
           catch (e) { App.toast(e.message, 'error'); start.disabled = false; }
         };
         const stop = row.querySelector('[data-stop]');
@@ -764,14 +909,14 @@ App.renderAdminPage = async () => {
   const renderAudit = async () => {
     const filter = App.ADMIN_AUDIT_FILTER = App.ADMIN_AUDIT_FILTER || '';
     const actionLabels = {
-      unlink_discord: '🔗 Discord délié',
-      ban_user: '⛔ Compte banni',
-      unban_user: '✅ Compte débanni',
-      delete_user: '🗑 Compte supprimé',
+      unlink_discord: 'Discord délié',
+      ban_user: 'Compte banni',
+      unban_user: 'Compte débanni',
+      delete_user: 'Compte supprimé',
     };
     bodyEl.innerHTML = `
       <div class="card">
-        <h3>🛡️ Journal de sécurité</h3>
+        <h3>️ Journal de sécurité</h3>
         <div class="card-sub">Historique des actions sensibles réalisées dans l'administration globale.</div>
         <div class="admin-toolbar">
           <select class="dash-select" id="a-audit-filter" style="max-width:240px">
@@ -797,26 +942,26 @@ App.renderAdminPage = async () => {
     const cfg = await App.api('/admin/settings');
     bodyEl.innerHTML = `
       <div class="card">
-        <h3>⚙️ Réglages plateforme</h3>
+        <h3>Réglages plateforme</h3>
         <div class="card-sub">Ces réglages sont appliqués partout : liens de transcription, bannière du profil, sauvegardes.</div>
-        <label class="dash-label">🌐 URL publique du site</label>
+        <label class="dash-label">URL publique du site</label>
         <input class="dash-input" id="a-public-url" placeholder="https://hoxera.onrender.com" value="${App.escapeHtml(cfg.public_url || '')}" style="max-width:420px" />
         <div style="font-size:12px;color:var(--text-dim);margin-top:6px">Utilisée pour les liens de transcription envoyés en message privé. Laisse vide pour le défaut.</div>
-        <label class="dash-label" style="margin-top:16px">🖼️ Bannière du profil du bot (MP de fermeture des tickets)</label>
+        <label class="dash-label" style="margin-top:16px">Bannière du profil du bot (MP de fermeture des tickets)</label>
         <input class="dash-input" id="a-banner-url" placeholder="https://…" value="${App.escapeHtml(cfg.profile_banner_url || '')}" style="max-width:420px" />
         <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
-          <button class="btn btn-sm" id="a-settings-save">💾 Enregistrer</button>
+          <button class="btn btn-sm" id="a-settings-save">Enregistrer</button>
         </div>
       </div>
       <div class="card">
-        <h3>💾 Sauvegardes</h3>
+        <h3>Sauvegardes</h3>
         <div class="card-sub">La base de données est sauvegardée sur GitHub automatiquement (si configuré).</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <span class="chip" style="color:${cfg.backup_enabled ? '#57F287' : '#ff8a8d'};border-color:${cfg.backup_enabled ? 'rgba(87,242,135,.4)' : 'rgba(237,66,69,.45)'}">${cfg.backup_enabled ? '✅ Sauvegarde configurée' : '⚠️ Non configurée'}</span>
-          ${cfg.backup_repo ? `<span class="chip">📦 ${App.escapeHtml(cfg.backup_repo)}</span>` : ''}
-          <span class="chip">💾 Dernière : ${cfg.last_backup ? App.escapeHtml(String(cfg.last_backup).slice(0, 16)) : 'jamais'}</span>
+          <span class="chip" style="color:${cfg.backup_enabled ? '#57F287' : '#ff8a8d'};border-color:${cfg.backup_enabled ? 'rgba(87,242,135,.4)' : 'rgba(237,66,69,.45)'}">${cfg.backup_enabled ? 'Sauvegarde configurée' : 'Non configurée'}</span>
+          ${cfg.backup_repo ? `<span class="chip">${App.escapeHtml(cfg.backup_repo)}</span>` : ''}
+          <span class="chip">Dernière : ${cfg.last_backup ? App.escapeHtml(String(cfg.last_backup).slice(0, 16)) : 'jamais'}</span>
         </div>
-        <div style="margin-top:12px"><button class="btn btn-sm" id="a-backup">💾 Sauvegarder maintenant</button></div>
+        <div style="margin-top:12px"><button class="btn btn-sm" id="a-backup">Sauvegarder maintenant</button></div>
       </div>`;
     bodyEl.querySelector('#a-settings-save').onclick = async () => {
       try {
@@ -824,7 +969,7 @@ App.renderAdminPage = async () => {
           public_url: bodyEl.querySelector('#a-public-url').value.trim(),
           profile_banner_url: bodyEl.querySelector('#a-banner-url').value.trim(),
         }});
-        App.toast('Réglages enregistrés !');
+        App.toast('Réglages enregistrés.');
       } catch (e) { App.toast(e.message, 'error'); }
     };
     bodyEl.querySelector('#a-backup').onclick = async () => {
@@ -832,9 +977,9 @@ App.renderAdminPage = async () => {
       b.disabled = true; b.textContent = '⏳ Sauvegarde…';
       try {
         const r = await App.api('/backup/now', { method: 'POST' });
-        App.toast(r.ok ? '✅ Sauvegarde terminée !' : (r.error || 'Erreur'));
+        App.toast(r.ok ? 'Sauvegarde terminée.' : (r.error || 'Erreur'));
       } catch (e) { App.toast(e.message, 'error'); }
-      finally { b.disabled = false; b.textContent = '💾 Sauvegarder maintenant'; renderBody(); }
+      finally { b.disabled = false; b.textContent = 'Sauvegarder maintenant'; renderBody(); }
     };
   };
 
@@ -849,7 +994,7 @@ window.addEventListener('DOMContentLoaded', () => App.router.run());
 if (document.readyState !== 'loading') App.router.run();
 
 // ============================================================
-// 🖼️ Anti-images cassées (global, capture) — v206, robuste v207
+// Anti-images cassées (global, capture) — v206, robuste v207
 // ------------------------------------------------------------
 // Toute <img> qui échoue à charger (CDN Discord injoignable, avatar ou
 // icône supprimé, URL devenue invalide…) est remplacée SUR PLACE par une
@@ -858,7 +1003,7 @@ if (document.readyState !== 'loading') App.router.run();
 // ni dans les menus déroulants, ni sur les pages publiques.
 // Les images qui ont déjà leur propre onerror (logo public ⚡, etc.)
 // restent gérées par leur code local : on ne les touche pas.
-// ⚠️ Règle d'or v207 : une pastille de secours DOIT rester visible.
+// Règle d'or v207 : une pastille de secours DOIT rester visible.
 //   - Si l'image échoue avant que son conteneur ait une taille (layout pas
 //     encore fait, conteneur masqué…), on NE fige PAS une pastille de 1 px :
 //     on réessaie au frame suivant, puis on attend que l'élément devienne
@@ -879,7 +1024,10 @@ App.imgFallbackText = (img) => {
     const nm = (nameEl && nameEl.textContent || '').trim().replace(/^#/, '');
     if (nm) return [...nm][0].toUpperCase();
   }
-  return '⚡';
+  // v367 — « ? » et non un eclair : la pastille de repli n'est pas une signature
+  // graphique, c'est un etat « aucun nom exploitable ». Les six occurrences
+  // mesurees dans la liste des membres rendaient un eclair identique partout.
+  return '?';
 };
 
 // Mesure la taille CSS effective d'une image (layout + styles calculés).

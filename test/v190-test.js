@@ -76,7 +76,7 @@ assert(routesSrc.includes("router.get('/bots/:id/guilds/:guildId/quiz/top'"),
   'route dashboard quiz/top manquante');
 assert(appJs.includes('App.downloadCSV = '),
   'App.downloadCSV manque dans app.js');
-assert(dashSrc.includes("['quiz', '🧠', 'Quiz']"),
+assert(dashSrc.includes("['quiz', '', 'Quiz']"),
   'entrée module Quiz manquante dans le dashboard');
 assert(dashSrc.includes('Dashboard.renderers.quiz = '),
   'renderer quiz manquant dans le dashboard');
