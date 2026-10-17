@@ -57,25 +57,23 @@ fi
 
 # --------------------------------------------- bibliothèques système de Chromium ---
 etape "Bibliothèques système attendues par Chromium (extraites sans root)"
-PAQUETS="libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 libpango-1.0-0 libcairo2 libatspi2.0-0"
+# Les paquets de Debian 13 ont pour la plupart pris le suffixe « t64 » : le nom
+# simple n'existe plus, un « apt-get download libasound2 » échoue en silence et
+# Chromium refusait de se lancer faute de libnspr4. On tente les deux noms.
+PAQUETS="libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 libpango-1.0-0 libcairo2 libatspi2.0-0 libx11-6 libxext6 libxcb1 libexpat1 libuuid1 libgraphite2-3 libharfbuzz0b libfreetype6 libfontconfig1 libpng16-16"
 if ls "$LIBS"/usr/lib/x86_64-linux-gnu/libnss3.so >/dev/null 2>&1; then
   ok "$LIBS déjà peuplée"
 elif [ "$VERIF" = 1 ]; then
   non "absente"
 else
   mkdir -p "$LIBS/pool"
-  if [ -n "$(ls /var/lib/apt/lists/*Packages* 2>/dev/null | head -1)" ]; then
-    ( cd "$LIBS/pool" && apt-get download $PAQUETS >/dev/null 2>&1 ) || true
-  else
-    non "index apt vide : récupération des .deb par l'archive Debian…"
-    for p in $PAQUETS; do
-      # le paquet s'appelle parfois libX2t64 sur trixie : on laisse le nom de
-      # côté et on prend le premier candidat du paquet « réel »
-      curl -s "http://deb.debian.org/debian/pool/main/$(printf %s "$p" | cut -c1)/$p/" >/dev/null 2>&1 || true
-    done
-    # sans index, on ne peut pas résoudre les versions : on retente via apt
-    ( cd "$LIBS/pool" && apt-get download $PAQUETS >/dev/null 2>&1 ) || true
-  fi
+  ( sudo -n apt-get update -qq || apt-get update -qq ) >/dev/null 2>&1 || true
+  ( cd "$LIBS/pool" && for p in $PAQUETS; do
+      t64=$(printf %s "$p" | sed 's/\([0-9][0-9]*\)$/\1t64/')
+      for nom in "$p" "$p-t64" "$t64"; do
+        if apt-get download "$nom" >/dev/null 2>&1; then break; fi
+      done
+    done ) || true
   DEBATS=$(ls "$LIBS"/pool/*.deb 2>/dev/null | wc -l)
   if [ "$DEBATS" -gt 0 ]; then
     for d in "$LIBS"/pool/*.deb; do dpkg -x "$d" "$LIBS" >/dev/null 2>&1 || true; done
