@@ -13,7 +13,8 @@ const path = require('path');
 const RACINE = path.join(__dirname, '..');
 const lus = {};
 for (const f of ['public/js/public.js', 'public/js/app.js', 'public/js/dashboard.js', 'public/index.html',
-  'public/css/style.css', 'public/css/dashboard.css']) {
+  'public/css/style.css', 'public/css/dashboard.css', 'public/robots.txt', 'public/sitemap.xml',
+  'public/llms.txt', 'server/security.js', 'server/index.js', 'public/sw.js']) {
   lus[f] = fs.readFileSync(path.join(RACINE, f), 'utf8');
 }
 const VERSION = 368;
@@ -103,6 +104,38 @@ check('aucun SVG de gabarit ne laisse un path sans remplissage ni groupe',
 check('les trois boutons de connexion partagent le meme fond',
   /\.btn-discord, \.navbar #public-landing \.btn-discord \{ background-color: #4752c4; color: #fff; \}/.test(lus['public/css/style.css'])
   && /\.navbar \.btn-discord, \.navbar \.btn-discord:hover \{ background-color: #4752c4; color: #fff; \}/.test(lus['public/css/style.css']));
+
+
+check('le robots.txt existe, autorise l’accueil et coupe /api',
+  /^User-agent: \*/m.test(lus['public/robots.txt'])
+  && /Disallow: \/api\//.test(lus['public/robots.txt'])
+  && /Sitemap: https:\/\/hoxera\.is-a\.dev\/sitemap\.xml/.test(lus['public/robots.txt']));
+check('le sitemap ne promet que la page qui existe',
+  (lus['public/sitemap.xml'].match(/<loc>/g) || []).length === 1
+  && !/lastmod/.test(lus['public/sitemap.xml']));
+check('llms.txt reste sur des faits verifiables',
+  /discord\.gg\/X9hTdr9N3/.test(lus['public/llms.txt']) && !/ — /.test(lus['public/llms.txt']));
+check('le head porte canonical, OG et Twitter sur le domaine officiel',
+  /<link rel="canonical" href="https:\/\/hoxera\.is-a\.dev\/" \/>/.test(lus['public/index.html'])
+  && (lus['public/index.html'].match(/hoxera\.is-a\.dev\//g) || []).length >= 3
+  && /property="og:site_name" content="Hoxera"/.test(lus['public/index.html']));
+check('le JSON-LD est lisible et ne promet pas un prix invente',
+  (() => {
+    const m = lus['public/index.html'].match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+    if (!m) return false;
+    const d = JSON.parse(m[1]);
+    return d.name === 'Hoxera' && d.url === 'https://hoxera.is-a.dev/' && !('offers' in d) && !('aggregateRating' in d);
+  })());
+check('un chemin inconnu renvoie un vrai 404, plus la coquille en 200',
+  /CHEMINS_PAGE = new Set\(\['\/', '\/index\.html'\]\)/.test(lus['server/index.js'])
+  && /res\.status\(404\)\.sendFile\(fichier\)/.test(lus['server/index.js'])
+  && /X-Robots-Tag', 'noindex, follow'/.test(lus['server/index.js']));
+check('la CSP ne laisse plus passer les hotes de polices externes',
+  !/fonts\.googleapis\.com|fonts\.gstatic\.com/.test(lus['server/security.js'])
+  && /img-src 'self' data: https:\/\/cdn\.discordapp\.com/.test(lus['server/security.js']));
+check('le dashboard se declare noindex a la navigation',
+  /App\.marquageIndexation = \(publique\)/.test(lus['public/js/app.js'])
+  && /App\.marquageIndexation\(parts\.length === 0/.test(lus['public/js/app.js']));
 
 console.log('— 7. Version —');
 const index = lus['public/index.html'];
