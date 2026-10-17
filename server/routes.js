@@ -425,6 +425,14 @@ async function refreshDiscordData(userId) {
 async function userCanManageGuild(req, guildId) {
   const user = store.users.findById(req.userId);
   if (!user || !user.discord_id) return false;
+  // v368 : le contrôle se faisait sur la dernière liste de serveurs MEMORISEE,
+  // rafraîchie seulement quand l'utilisateur ouvrait son sélecteur de serveurs.
+  // Retiré du serveur ou rétrogradé sur Discord, il gardait donc la main sur les
+  // réglages jusqu'à sa prochaine visite. On retente la synchro à chaque contrôle ;
+  // discordRefreshCache est borné à 60 s par compte (server/routes.js:51), donc ça
+  // ne part sur le réseau qu'une fois par minute et par utilisateur au pire.
+  // En cas d'échec (Discord injoignable), on retombe sur la liste mémorisée.
+  await refreshDiscordData(req.userId).catch(() => {});
   const guilds = store.users.discordGuilds(req.userId);
   const g = guilds.find((x) => String(x.id) === String(guildId));
   return oauthGuildCanConfigure(g);

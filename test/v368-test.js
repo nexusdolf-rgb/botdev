@@ -12,6 +12,8 @@ const fs = require('fs');
 const path = require('path');
 const RACINE = path.join(__dirname, '..');
 const lus = {};
+const routesJs = fs.readFileSync(path.join(RACINE, 'server/routes.js'), 'utf8');
+const permsJs = fs.readFileSync(path.join(RACINE, 'server/discord/permissions.js'), 'utf8');
 for (const f of ['public/js/public.js', 'public/js/app.js', 'public/js/dashboard.js', 'public/index.html',
   'public/css/style.css', 'public/css/dashboard.css', 'public/robots.txt', 'public/sitemap.xml',
   'public/llms.txt', 'server/security.js', 'server/index.js', 'public/sw.js']) {
@@ -136,6 +138,34 @@ check('la CSP ne laisse plus passer les hotes de polices externes',
 check('le dashboard se declare noindex a la navigation',
   /App\.marquageIndexation = \(publique\)/.test(lus['public/js/app.js'])
   && /App\.marquageIndexation\(parts\.length === 0/.test(lus['public/js/app.js']));
+
+// — 8. Sécurité des routes (audit transformé en garde permanente) —
+check('la garde de serveur ne se contente plus du cache Discord',
+  /async function userCanManageGuild[\s\S]{0,900}await refreshDiscordData\(req\.userId\)/.test(routesJs));
+check("la configuration d'un serveur reste au propriétaire ou à Administrateur",
+  /function oauthGuildCanConfigure\(guild\) \{[\s\S]{0,160}return !!guild\.owner \|\| hasAdministratorPermission\(guild\.permissions\);/.test(permsJs)
+  && !/function oauthGuildCanConfigure[\s\S]{0,220}return true/.test(permsJs));
+check('le bandeau public ne garde que des chiffres dans l\'identifiant de serveur',
+  /function servePanelBannerPng[\s\S]{0,220}replace\(\/\[\^0-9\]\/g, \'\'\)/.test(routesJs));
+check('aucune route touchant un serveur n\'est ajoutée sans garde d\'accès',
+  (() => {
+    const lignes = routesJs.split('\n');
+    const pat = /^\s*(?:router|app)\.(get|post|put|patch|delete)\(\s*(['"])(.+?)\2/;
+    const debuts = [];
+    lignes.forEach((l, i) => { const m = pat.exec(l); if (m) debuts.push([i, m[3]]); });
+    const connues = new Set(['/tickets/panel-banner/:guildId.png', '/tickets/panel-banner/:guildId.gif', '/bots', '/bots/:id']);
+    const gardes = /userCanManageGuild|requireAdmin|getOwnBot|adminTarget|isPlatformAdmin|403/;
+    for (let k = 0; k < debuts.length; k++) {
+      const [i, chemin] = debuts[k];
+      const fin = k + 1 < debuts.length ? debuts[k + 1][0] : lignes.length;
+      const corps = lignes.slice(i, fin).join('\n');
+      if (!/guildId|userId|user_id/.test(corps.slice(0, 1200))) continue;
+      if (gardes.test(corps)) continue;
+      if (connues.has(chemin)) continue;
+      return false;
+    }
+    return true;
+  })());
 
 console.log('— 7. Version —');
 const index = lus['public/index.html'];
