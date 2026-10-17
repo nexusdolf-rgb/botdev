@@ -384,7 +384,7 @@ function buildHomePanel(botId) {
   if (previous) chunks.push(formatBlock(previous, { heading: true }));
   return ui.v2panel({
     color: '#e07a5f',
-    title: `🚀 Optimus Prime — Mises à jour (v${current.v})`,
+    title: `🚀 Mises à jour de Hoxera (v${current.v})`,
     description: chunks.join('\n\n'),
     footer: false,
   }, rowsFor(botId, 'home'));

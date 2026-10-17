@@ -220,7 +220,7 @@ async function requireAuth(req, res, next) {
   if (store.platformBans.isBanned(session.user_id)) {
     store.sessions.destroy(token);
     res.clearCookie(COOKIE);
-    return res.status(403).json({ error: 'Ce compte est banni d’Optimus Prime.' });
+    return res.status(403).json({ error: 'Ce compte est banni d’Hoxera.' });
   }
   req.userId = session.user_id;
   req.currentUser = currentUser;
@@ -1956,7 +1956,7 @@ router.get('/bots/:id/guilds/:guildId/automod/summary', requireAuth, async (req,
   res.json(store.automodLogs.summary(bot.id, guildId));
 });
 
-// ☁️ Auto-Mod officiel Discord : état des règles natives créées par Optimus Prime.
+// ☁️ Auto-Mod officiel Discord : état des règles natives créées par Hoxera.
 router.get('/bots/:id/guilds/:guildId/automod/native', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
   if (!bot) return;
@@ -3735,7 +3735,7 @@ router.get('/public/bots', (req, res) => {
   res.json({ bots });
 });
 
-// Avatar public d’Optimus Prime : proxy local court pour éviter qu'un blocage
+// Avatar public d’Hoxera : proxy local court pour éviter qu'un blocage
 // navigateur/CDN ne remplace la photo par le logo de secours.
 router.get('/public/bot-avatar', async (req, res) => {
   const fallback = path.join(__dirname, '..', 'public', 'icons', 'icon-512.png');
@@ -3809,7 +3809,7 @@ router.get('/public/bots/:id', (req, res) => {
 });
 
 // ============================================================
-// Panneau admin plateforme (réservé au fondateur Optimus Prime)
+// Panneau admin plateforme (réservé au fondateur Hoxera)
 // ============================================================
 function parseAdminGuilds(raw) {
   try {
@@ -4068,7 +4068,7 @@ router.post('/admin/users/:id/unlink-discord', requireAuth, requireAdmin, platfo
   });
   store.discordTokens.remove(target.targetId);
   store.platformAudit.add(req.userId, target.targetId, 'unlink_discord', 'Liaison Discord supprimée, compte conservé.');
-  res.json({ ok: true, message: 'Compte Discord délié. Le compte Optimus Prime est conservé.' });
+  res.json({ ok: true, message: 'Compte Discord délié. Le compte Hoxera est conservé.' });
 });
 
 router.post('/admin/users/:id/ban', requireAuth, requireAdmin, platformMutationRateLimit, (req, res) => {
@@ -4080,15 +4080,15 @@ router.post('/admin/users/:id/ban', requireAuth, requireAdmin, platformMutationR
   store.db.prepare('DELETE FROM sessions WHERE user_id = ?').run(target.targetId);
   store.discordTokens.remove(target.targetId);
   store.platformAudit.add(req.userId, target.targetId, 'ban_user', reason ? `Raison : ${reason}` : 'Aucune raison fournie.');
-  res.json({ ok: true, message: 'Compte banni d’Optimus Prime.' });
+  res.json({ ok: true, message: 'Compte banni d’Hoxera.' });
 });
 
 router.delete('/admin/users/:id/ban', requireAuth, requireAdmin, platformMutationRateLimit, (req, res) => {
   const target = adminTarget(req, res);
   if (!target) return;
   store.platformBans.remove(target.targetId);
-  store.platformAudit.add(req.userId, target.targetId, 'unban_user', 'Bannissement Optimus Prime retiré.');
-  res.json({ ok: true, message: 'Compte débanni d’Optimus Prime. Il devra se reconnecter.' });
+  store.platformAudit.add(req.userId, target.targetId, 'unban_user', 'Bannissement Hoxera retiré.');
+  res.json({ ok: true, message: 'Compte débanni d’Hoxera. Il devra se reconnecter.' });
 });
 
 router.delete('/admin/users/:id', requireAuth, requireAdmin, platformMutationRateLimit, async (req, res) => {

@@ -21,7 +21,7 @@ App.renderPublicNavbar = (withLandingLinks = false) => {
   const user = App.state.user;
   const nav = App.el(`
     <div class="navbar">
-      <div class="logo-row" style="cursor:pointer" id="pub-logo"><img class="logo" data-brand-logo src="/api/public/bot-avatar" alt="Avatar d’Optimus Prime" style="border-radius:50%;object-fit:cover" /> Hoxera</div>
+      <div class="logo-row" style="cursor:pointer" id="pub-logo"><img class="logo" data-brand-logo src="/api/public/bot-avatar" alt="Avatar d’Hoxera" style="border-radius:50%;object-fit:cover" /> Hoxera</div>
       ${withLandingLinks ? `
       <nav class="navbar-links" aria-label="Navigation de la page d'accueil">
         <a href="#hp-about" data-anchor="hp-about">Hoxera</a>
@@ -83,7 +83,7 @@ App.renderPublicLanding = () => {
     <div id="public-landing">
       <div class="pub-hero">
         <div class="pub-blob b1"></div><div class="pub-blob b2"></div><div class="pub-blob b3"></div>
-        <div class="pub-hero-badge shimmer">Hoxera — synchronisé en direct avec Discord</div>
+        <div class="pub-hero-badge shimmer">Hoxera · synchronisé en direct avec Discord</div>
         <h1 class="hero-title">Le bot qui anime<br/><span class="grad grad-anim">votre serveur Discord</span></h1>
         <p class="pub-tagline">Tickets automatiques avec transcriptions, niveaux XP, boutique, giveaways, bienvenue et modération.
         Ajoutez Hoxera à votre serveur, puis configurez tout depuis le dashboard avec votre compte Discord.</p>
@@ -178,7 +178,7 @@ App.renderPublicLanding = () => {
         <div class="hp-faq">
           <details class="hp-faq-item" open>
             <summary>Est-ce que Hoxera est gratuit ?</summary>
-            <p>Oui. Hoxera est gratuit et le reste : toutes les fonctions sont incluses, sans abonnement ni compte payant. Vous ne payez que si vous voulez un jour soutenir le projet (une option future, jamais obligatoire).</p>
+            <p>Oui. Toutes les fonctions sont incluses, sans abonnement et sans compte à séparer du compte Discord.</p>
           </details>
           <details class="hp-faq-item">
             <summary>Quelles permissions Discord sont nécessaires ?</summary>
@@ -207,7 +207,7 @@ App.renderPublicLanding = () => {
       <div class="hp-cta reveal">
         <div class="hp-cta-inner">
           <h2>Prêt à donner vie à votre serveur ?</h2>
-          <p>Ajoutez Hoxera maintenant — c'est gratuit, configuré en quelques minutes, et il vous accompagne pas à pas.</p>
+          <p>Ajoutez Hoxera maintenant : c'est gratuit, sans compte à créer côté Hoxera et sans engagement.</p>
           <div class="hp-cta-actions">
             <button class="btn btn-primary" id="pub-invite-cta" style="padding:13px 22px;font-size:16px">Ajouter Hoxera à votre serveur</button>
             ${user && user.discord_id
@@ -220,7 +220,7 @@ App.renderPublicLanding = () => {
       <div class="pub-footer hp-footer">
         <div class="hp-footer-cols">
           <div class="hp-footer-col">
-            <div class="hp-footer-brand"><b>Hoxera</b><p>Le bot d'animation tout-en-un pour votre serveur Discord.</p></div>
+            <div class="hp-footer-brand"><b>Hoxera</b><p>Modération, tickets, niveaux, bienvenue : un bot et son tableau de bord pour un serveur Discord.</p></div>
           </div>
           <div class="hp-footer-col">
             <b>Produit</b>
@@ -446,7 +446,7 @@ App.renderPublicBot = async (id) => {
         <div style="margin-top:14px;color:var(--text-dim);font-size:12px">Une fois le bot sur votre serveur, tapez <b>/help</b> pour le guide complet, et <b>/ticket setup</b> pour installer les tickets.</div>
       </div>
 
-      <div class="pub-footer" style="text-align:left"><b>Hoxera</b> — ajoutez-le à votre serveur, puis configurez-le avec votre compte Discord.</div>
+      <div class="pub-footer" style="text-align:left"><b>Hoxera</b>. Ajoutez-le à votre serveur, puis configurez-le avec votre compte Discord.</div>
     `;
     shell.querySelector('#pub-back').onclick = () => App.router.go(App.state.user && App.state.user.discord_id ? '/dashboard' : '/');
     shell.querySelector('#pub-invite').onclick = () => { if (b.invite_url) App.openInvite(b.invite_url); };

@@ -318,8 +318,8 @@ App.router.run = async () => {
   // Messages OAuth2
   if (query && query.get('oauth')) {
     const o = query.get('oauth');
-    if (o === 'linked') App.toast('Compte Discord lié — bienvenue.');
-    else if (o === 'banned') App.toast('Ce compte est banni d’Optimus Prime.', 'error');
+    if (o === 'linked') App.toast('Compte Discord lié.');
+    else if (o === 'banned') App.toast('Ce compte est banni d’Hoxera.', 'error');
     else if (o === 'nosecret') App.toast("Le Client Secret Discord n'est pas configuré sur le serveur.", 'error');
     else App.toast('La connexion Discord a échoué. Réessaie.', 'error');
     history.replaceState(null, '', '#/dashboard');
@@ -353,7 +353,7 @@ App.router.run = async () => {
   App.renderHoxeraDashboard();
 };
 
-// ---------------------- Avatar public d’Optimus Prime ----------------------
+// ---------------------- Avatar public d’Hoxera ----------------------
 // Les pages publiques utilisent une route locale qui sert l'avatar réel du
 // bot. Cela évite qu'un blocage du CDN Discord laisse uniquement le logo ⚡.
 App.loadPublicBotAvatar = (root) => {
@@ -426,7 +426,7 @@ App.renderConnect = () => {
 // v364 — le nom et l'avatar du bot sont gardés en mémoire entre deux
 // visites. Sans ça, chaque rafraîchissement peignait la marque de secours
 // (« ⚡ Hoxera ») pendant que /api/hoxera répondait, puis RECONSTRUISAIT la
-// barre avec la vraie identité (« Optimus Prime ») : le flash signalé par le
+// barre avec la vraie identité (« Hoxera ») : le flash signalé par le
 // fondateur, mesuré à 2 constructions de navbar par chargement.
 App.BRAND_KEY = 'hx-brand';
 App.brandSig = (b) => (b && b.name ? `${b.name}\u0000${b.avatar_url || ''}` : '');
@@ -525,10 +525,10 @@ App.renderHoxeraDashboard = async () => {
   }
 };
 
-// ---------------------- Administration Optimus Prime (fondateur uniquement) ----------------------
+// ---------------------- Administration Hoxera (fondateur uniquement) ----------------------
 App.ADMIN_TAB = App.ADMIN_TAB || 'overview';
 
-// HUB FONDATEUR (v199) — espace privé du créateur d'Optimus Prime.
+// HUB FONDATEUR (v199) — espace privé du créateur d'Hoxera.
 // Onglets : Vue d'ensemble (stats + santé + activité + actions rapides),
 // Comptes (recherche + gestion), Bots (démarrer/arrêter), Journal de
 // sécurité (filtrable), Réglages plateforme (URL publique, bannière, sauvegarde).
@@ -732,7 +732,7 @@ App.renderAdminPage = async () => {
       finally { b.disabled = false; b.innerHTML = backupActionMarkup; renderBody(); }
     };
     bodyEl.querySelector('#a-restart-bot').onclick = async () => {
-      if (!(await App.confirm('Redémarrer le bot Optimus Prime ? Il sera indisponible ~10 secondes.'))) return;
+      if (!(await App.confirm('Redémarrer le bot Hoxera ? Il sera indisponible ~10 secondes.'))) return;
       try {
         await App.api('/bots/1/stop', { method: 'POST' });
         await new Promise((r) => setTimeout(r, 800));
@@ -749,7 +749,7 @@ App.renderAdminPage = async () => {
     const query = (App.ADMIN_Q = App.ADMIN_Q || '');
     bodyEl.innerHTML = `
       <div class="card">
-        <h3>Comptes Optimus Prime liés à Discord</h3>
+        <h3>Comptes Hoxera liés à Discord</h3>
         <div class="card-sub">Délier Discord, bannir ou supprimer un compte. Votre propre compte est toujours protégé.</div>
         <div class="admin-toolbar">
           <input class="dash-input" id="a-search" placeholder="🔎 Rechercher (nom, ID Discord, email)…" value="${App.escapeHtml(query)}" style="max-width:340px" />
@@ -818,26 +818,26 @@ App.renderAdminPage = async () => {
         const reload = async () => { await renderBody(); };
         const unlink = row.querySelector('[data-unlink]');
         if (unlink) unlink.onclick = async () => {
-          if (!(await App.confirm('Délier le compte Discord de cet utilisateur ? Son compte Optimus Prime sera conservé, mais il devra relier Discord pour revenir.'))) return;
+          if (!(await App.confirm('Délier le compte Discord de cet utilisateur ? Son compte Hoxera sera conservé, mais il devra relier Discord pour revenir.'))) return;
           try { await App.api(`/admin/users/${u.id}/unlink-discord`, { method: 'POST' }); App.toast('Compte Discord délié.'); await reload(); }
           catch (e) { App.toast(e.message, 'error'); }
         };
         const ban = row.querySelector('[data-ban]');
         if (ban) ban.onclick = async () => {
-          if (!(await App.confirm('Bannir cet utilisateur d\'Optimus Prime ? Ses données seront conservées et le bannissement pourra être retiré.'))) return;
+          if (!(await App.confirm('Bannir cet utilisateur d\'Hoxera ? Ses données seront conservées et le bannissement pourra être retiré.'))) return;
           const reason = await App.prompt('Raison du bannissement (optionnelle)', 'Abus de la plateforme');
-          try { await App.api(`/admin/users/${u.id}/ban`, { method: 'POST', body: { reason } }); App.toast('Utilisateur banni d\'Optimus Prime.'); await reload(); }
+          try { await App.api(`/admin/users/${u.id}/ban`, { method: 'POST', body: { reason } }); App.toast('Utilisateur banni d\'Hoxera.'); await reload(); }
           catch (e) { App.toast(e.message, 'error'); }
         };
         const unban = row.querySelector('[data-unban]');
         if (unban) unban.onclick = async () => {
-          if (!(await App.confirm('Débannir cet utilisateur d\'Optimus Prime ?'))) return;
+          if (!(await App.confirm('Débannir cet utilisateur d\'Hoxera ?'))) return;
           try { await App.api(`/admin/users/${u.id}/ban`, { method: 'DELETE' }); App.toast('Utilisateur débanni.'); await reload(); }
           catch (e) { App.toast(e.message, 'error'); }
         };
         const del = row.querySelector('[data-delete]');
         if (del) del.onclick = async () => {
-          if (!(await App.confirm('Supprimer définitivement ce compte et toutes ses données Optimus Prime ? Cette action est irréversible.'))) return;
+          if (!(await App.confirm('Supprimer définitivement ce compte et toutes ses données Hoxera ? Cette action est irréversible.'))) return;
           try { await App.api(`/admin/users/${u.id}`, { method: 'DELETE' }); App.toast('Compte et données supprimés.'); await reload(); }
           catch (e) { App.toast(e.message, 'error'); }
         };
@@ -1014,7 +1014,7 @@ App.imgFallbackText = (img) => {
   const named = img.dataset && (img.dataset.fbText || img.dataset.name);
   if (named && String(named).trim()) return [...String(named).trim()][0].toUpperCase();
   const alt = String(img.getAttribute && (img.getAttribute('alt') || '') || '').trim();
-  if (alt && !/^(logo|avatar|ic[oô]ne|image|banni[eè]re|photo)/i.test(alt) && alt !== 'Logo Optimus Prime') return [...alt][0].toUpperCase();
+  if (alt && !/^(logo|avatar|ic[oô]ne|image|banni[eè]re|photo)/i.test(alt) && alt !== 'Logo Hoxera') return [...alt][0].toUpperCase();
   const title = String(img.title || '').trim();
   if (title) return [...title][0].toUpperCase();
   // Contexte : carte de serveur (le <b> voisin porte le nom), option de

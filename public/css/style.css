@@ -872,7 +872,10 @@ html.hx-light .navbar-links a:hover { background: rgba(20,22,40,.07); color: #1c
   content: ''; width: 22px; height: 2px; border-radius: 99px;
   background: linear-gradient(90deg, var(--accent), var(--accent2));
 }
-.hp-section { scroll-margin-top: 84px; }
+/* Le decalage est porte par html { scroll-padding-top } : une seule source. */
+/* Le bandeau est collant : sans reserve, un lien d'ancre ouvre la section a
+   moitie cachee dessous. */
+html { scroll-padding-top: 84px; }
 
 /* ---------- Présentation Hoxera ---------- */
 .hp-about-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 18px; margin-top: 26px; }

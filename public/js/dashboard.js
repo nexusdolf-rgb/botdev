@@ -776,25 +776,25 @@ Dashboard.MODULE_META = {
   overview: { e: '📊', emote: 'hox_vue', cat: 'decouvrir', tag: 'Tout l’état du serveur, d’un coup d’œil',
     aide: 'Réunit ce qui demande une attention immédiate : tickets ouverts, activité du jour, membres et annonces à venir.',
     voit: 'Rien sur Discord : cette page est faite pour vous.',
-    slash: 'Aucune commande — c’est la page d’accueil du tableau de bord.' },
+    slash: 'Aucune commande · c’est la page d’accueil du tableau de bord.' },
 
   tickets: { e: '🎫', emote: 'hox_ticket', cat: 'support', tag: 'Un canal privé entre un membre et votre équipe',
     aide: 'Trois systèmes au choix : Ticket classique (un bouton), Ticket menu (un panneau avec plusieurs motifs) ou Ticket avancé (motifs, questions et rôles du staff).',
     voit: 'Un bouton « Ouvrir un ticket ». Après le clic, le membre obtient un salon privé où l’équipe peut répondre.',
     slash: '/config ➜ Tickets',
     apercu: { message: 'Besoin d’aide ? Ouvrez un ticket, l’équipe vous répond en privé.',
-      embed: { title: 'Support du serveur', desc: 'Choisissez un motif, puis cliquez sur « Ouvrir un ticket ». Votre question reste confidentielle.', color: '#3ba55d', footer: 'Optimus Prime' },
+      embed: { title: 'Support du serveur', desc: 'Choisissez un motif, puis cliquez sur « Ouvrir un ticket ». Votre question reste confidentielle.', color: '#3ba55d', footer: 'Hoxera' },
       buttons: [{ label: 'Ouvrir un ticket', style: 'vert' }, { label: 'Lire la FAQ', style: 'gris' }] } },
 
   welcome: { e: '👋', emote: 'hox_bienvenue', cat: 'support', tag: 'Le premier message que reçoit un nouvel arrivant',
     aide: 'Message d’accueil dans le salon de votre choix, avec le nom du membre, le compteur de membres et un bouton optionnel.',
     voit: '« Bienvenue @Membre ! Vous êtes la 1 248ᵉ personne du serveur. » avec le message que vous avez écrit.',
     slash: '/config ➜ Bienvenue',
-    apercu: { embed: { title: '👋 Bienvenue sur le serveur !', desc: 'Ravi de vous compter parmi nous. Faites un tour du côté des règles, puis dites bonjour dans le salon de présentation.', color: '#5865f2', footer: 'Optimus Prime' },
+    apercu: { embed: { title: '👋 Bienvenue sur le serveur !', desc: 'Ravi de vous compter parmi nous. Faites un tour du côté des règles, puis dites bonjour dans le salon de présentation.', color: '#5865f2', footer: 'Hoxera' },
       buttons: [{ label: 'Lire le règlement', style: 'bleu' }, { label: 'Se présenter', style: 'gris' }] } },
 
   autoroles: { e: '🏷️', emote: 'hox_autoroles', cat: 'support', tag: 'Un rôle offert automatiquement à l’arrivée',
-    aide: 'Attribue un ou plusieurs rôles dès qu’un membre rejoint le serveur — et, si vous le voulez, un rôle temporaire qui se retire tout seul.',
+    aide: 'Attribue un ou plusieurs rôles dès qu’un membre rejoint le serveur · et, si vous le voulez, un rôle temporaire qui se retire tout seul.',
     voit: 'Rien de visible : le rôle apparaît dans la liste des rôles du membre.',
     slash: '/config ➜ Rôles automatiques' },
 
@@ -802,14 +802,14 @@ Dashboard.MODULE_META = {
     aide: 'Un portail d’entrée : bouton, captcha ou question. Tant que le membre n’est pas vérifié, il ne voit pas le serveur.',
     voit: 'Un message « Cliquez sur le bouton pour entrer » avec un rôle « Vérifié » accordé après réussite.',
     slash: '/config ➜ Vérification',
-    apercu: { embed: { title: '✅ Vérification requise', desc: 'Cliquez sur le bouton ci-dessous pour accéder au serveur. Vous recevrez le rôle « Vérifié ».', color: '#eb459e', footer: 'Optimus Prime' },
+    apercu: { embed: { title: '✅ Vérification requise', desc: 'Cliquez sur le bouton ci-dessous pour accéder au serveur. Vous recevrez le rôle « Vérifié ».', color: '#eb459e', footer: 'Hoxera' },
       buttons: [{ label: 'Je vérifie mon compte', style: 'vert' }] } },
 
   roles: { e: '📋', emote: 'hox_roles', cat: 'support', tag: 'Menus et boutons pour choisir ses rôles',
     aide: 'Un panneau où les membres prennent eux-mêmes leurs rôles : menu déroulant pour en cumuler plusieurs, boutons pour un rôle par clic.',
     voit: 'Un encadré avec un menu « Choisir vos rôles » ou une rangée de boutons.',
     slash: '/config ➜ Rôles-réactions',
-    apercu: { embed: { title: '🎭 Choisissez vos rôles', desc: 'Un clic sur un bouton ajoute ou retire le rôle correspondant.', color: '#eb459e', footer: 'Optimus Prime' },
+    apercu: { embed: { title: '🎭 Choisissez vos rôles', desc: 'Un clic sur un bouton ajoute ou retire le rôle correspondant.', color: '#eb459e', footer: 'Hoxera' },
       buttons: [{ label: 'Annonces', style: 'gris' }, { label: 'Joueurs', style: 'gris' }, { label: 'Couleurs', style: 'gris' }] } },
 
   members: { e: '👥', emote: 'hox_membres', cat: 'support', tag: 'Retrouver un membre et agir en un clic',
@@ -818,10 +818,10 @@ Dashboard.MODULE_META = {
     slash: '/profil @Membre pour voir la carte publique' },
 
   birthdays: { e: '🎂', emote: 'hox_birthdays', cat: 'support', tag: 'L’anniversaire de chaque membre, annoncé à l’heure dite',
-    aide: 'Les membres donnent leur date avec /birthday set ; Optimus Prime félicite tout le monde dans le salon choisi.',
+    aide: 'Les membres donnent leur date avec /birthday set ; Hoxera félicite tout le monde dans le salon choisi.',
     voit: '« 🎂 Aujourd’hui, c’est l’anniversaire de @Membre ! Souhaitez-lui une bonne journée. »',
     slash: '/birthday set (membre) — /config ➜ Anniversaires (réglage)',
-    apercu: { embed: { title: '🎂 Joyeux anniversaire !', desc: 'Aujourd’hui, c’est l’anniversaire de **@Membre**. On sort le gâteau et les confettis !', color: '#fee75c', footer: 'Optimus Prime' } } },
+    apercu: { embed: { title: '🎂 Joyeux anniversaire !', desc: 'Aujourd’hui, c’est l’anniversaire de **@Membre**. On sort le gâteau et les confettis !', color: '#fee75c', footer: 'Hoxera' } } },
 
   modmail: { e: '💬', emote: 'hox_modmail', cat: 'support', tag: 'Les messages privés de vos membres, au même endroit',
     aide: 'Un membre écrit au bot en MP ; la conversation arrive dans un salon de votre serveur et votre réponse repart en privé.',
@@ -837,7 +837,7 @@ Dashboard.MODULE_META = {
     aide: 'XP par message et en vocal, classement, paliers et récompenses (rôles, pièces, objets) à chaque niveau atteint.',
     voit: '« @Membre vient de passer niveau 12 ! » avec sa carte de progression.',
     slash: '/niveau pour consulter, /config ➜ Niveaux pour régler',
-    apercu: { embed: { title: '🎉 Niveau 12 atteint !', desc: '**@Membre** passe au niveau 12 avec 3 480 XP. Nouvelle récompense débloquée : rôle « Habitué ».', color: '#57f287', footer: 'Optimus Prime' } } },
+    apercu: { embed: { title: '🎉 Niveau 12 atteint !', desc: '**@Membre** passe au niveau 12 avec 3 480 XP. Nouvelle récompense débloquée : rôle « Habitué ».', color: '#57f287', footer: 'Hoxera' } } },
 
   economy: { e: '💰', emote: 'hox_eco', cat: 'vie', tag: 'Une monnaie interne, un classement, des cadeaux',
     aide: 'Récompense périodique, /daily, transferts entre membres et classement du serveur.',
@@ -848,14 +848,14 @@ Dashboard.MODULE_META = {
     aide: 'Vous créez les articles (nom, prix, rôle ou objet donné), le bot gère l’achat et le stock.',
     voit: 'Une liste d’articles achetables avec /shop.',
     slash: '/config ➜ Boutique',
-    apercu: { embed: { title: '🛒 Boutique du serveur', desc: '**Rôles à vendre**\n▪️ Membre VIP — 5 000 💰\n▪️ Couleur rose — 1 200 💰\n▪️ Accès salon cinéma — 800 💰', color: '#f1c40f', footer: 'Optimus Prime' },
+    apercu: { embed: { title: '🛒 Boutique du serveur', desc: '**Rôles à vendre**\n▪️ Membre VIP · 5 000 💰\n▪️ Couleur rose · 1 200 💰\n▪️ Accès salon cinéma · 800 💰', color: '#f1c40f', footer: 'Hoxera' },
       buttons: [{ label: 'Acheter Membre VIP', style: 'vert' }, { label: 'Voir mon solde', style: 'gris' }] } },
 
   giveaways: { e: '🎁', emote: 'hox_cadeau', cat: 'vie', tag: 'Un tirage au sort propre, avec date et gagnants',
     aide: 'Vous fixez le lot, la durée et le nombre de gagnants ; le bot compte les participants et annonce le résultat.',
-    voit: 'Un message « Giveaway — cliquez pour participer » qui se termine tout seul.',
+    voit: 'Un message « Giveaway · cliquez pour participer » qui se termine tout seul.',
     slash: '/giveaway lancer — /config ➜ Giveaways',
-    apercu: { embed: { title: '🎁 Giveaway — Nitro 1 mois', desc: 'Cliquez sur le bouton pour participer. **2 gagnants** dans 3 jours.', color: '#eb459e', footer: 'Se termine <dans 3 jours>' },
+    apercu: { embed: { title: '🎁 Giveaway · Nitro 1 mois', desc: 'Cliquez sur le bouton pour participer. **2 gagnants** dans 3 jours.', color: '#eb459e', footer: 'Se termine <dans 3 jours>' },
       buttons: [{ label: 'Participer', style: 'gris' }] } },
 
   events: { e: '🎮', emote: 'hox_events', cat: 'vie', tag: 'Vos soirées, tournois et animations suivis',
@@ -865,14 +865,14 @@ Dashboard.MODULE_META = {
 
   quiz: { e: '🧠', emote: 'hox_quiz', cat: 'vie', tag: 'Un questionnaire, des points, un classement',
     aide: 'Créez vos séries de questions (bonne réponse, temps, bonus) et lancez la partie dans un salon.',
-    voit: '« Question 3/10 — répondez avec les boutons. » puis le score final.',
+    voit: '« Question 3/10 · répondez avec les boutons. » puis le score final.',
     slash: '/quiz lancer — /config ➜ Quiz' },
 
   suggestions: { e: '💡', emote: 'hox_suggestion', cat: 'support', tag: 'Vos membres proposent, le serveur vote',
     aide: 'Boîte à idées : les membres publient une suggestion, la communauté vote, et vous répondez (acceptée, en pause, refusée).',
     voit: 'Un encadré avec le vote 👍 / 👎 et votre réponse de l’équipe.',
     slash: '/suggestion — /config ➜ Suggestions',
-    apercu: { embed: { title: '💡 Idée n°24 · Un salon cinéma le vendredi', desc: 'Ajouter un salon vocal “soirée film” ouvert le vendredi soir.', color: '#5865f2', footer: 'Optimus Prime · 18 pour · 2 contre' },
+    apercu: { embed: { title: '💡 Idée n°24 · Un salon cinéma le vendredi', desc: 'Ajouter un salon vocal “soirée film” ouvert le vendredi soir.', color: '#5865f2', footer: 'Hoxera · 18 pour · 2 contre' },
       buttons: [{ label: 'Accepter', style: 'vert' }, { label: 'Refuser', style: 'rouge' }, { label: 'Voir les commentaires', style: 'gris' }] } },
 
   stats: { e: '📊', emote: 'hox_stats', cat: 'vie', tag: 'Messages, arrivées et membres les plus actifs',
@@ -882,9 +882,9 @@ Dashboard.MODULE_META = {
 
   starboard: { e: '⭐', emote: 'hox_starboard', cat: 'vie', tag: 'Les meilleurs messages, publiés sur un mur',
     aide: 'À partir de X réactions, un message est recopié dans le salon du starboard avec son compteur.',
-    voit: '« ⭐ 12 — le message de @Membre » dans le salon choisi.',
+    voit: '« ⭐ 12 · le message de @Membre » dans le salon choisi.',
     slash: '/config ➜ Starboard',
-    apercu: { embed: { title: '⭐ 12 — mur de la gloire', desc: '« J’ai enfin monté mon PC de rêve, merci vos conseils ici ! » — @Membre, dans #entraide', color: '#fee75c', footer: 'Optimus Prime' } } },
+    apercu: { embed: { title: '⭐ 12 · mur de la gloire', desc: '« J’ai enfin monté mon PC de rêve, merci vos conseils ici ! » — @Membre, dans #entraide', color: '#fee75c', footer: 'Hoxera' } } },
 
   invites: { e: '📨', emote: 'hox_invites', cat: 'vie', tag: 'Qui amène qui, et ce que ça rapporte',
     aide: 'Suit les invitations de chaque membre, les récompense par paliers et tient un classement.',
@@ -900,7 +900,7 @@ Dashboard.MODULE_META = {
     aide: 'Surveillez vos streameurs et publiez un message dès qu’ils passent en direct.',
     voit: '« 🔴 @Pseudo est en live : « Soirée RP » — cliquez pour regarder. »',
     slash: '/config ➜ Annonces de live',
-    apercu: { embed: { title: '🔴 En direct maintenant', desc: '**@Pseudo** — « Soirée RP » sur Twitch', color: '#9146ff', footer: 'Optimus Prime' },
+    apercu: { embed: { title: '🔴 En direct maintenant', desc: '**@Pseudo** — « Soirée RP » sur Twitch', color: '#9146ff', footer: 'Hoxera' },
       buttons: [{ label: 'Regarder le direct', style: 'violet' }] } },
 
   moderation: { e: '🛡️', emote: 'hox_mod', cat: 'securite', tag: 'Auto-Mod, sanctions et échelle progressive',
@@ -917,7 +917,7 @@ Dashboard.MODULE_META = {
     aide: 'Détecte les arrivées anormalement rapides et ferme les salons, puis rouvre quand le calme revient.',
     voit: '«  Serveur verrouillé par sécurité » pendant la crise.',
     slash: '/config ➜ Anti-raid',
-    apercu: { embed: { title: '🚧 Serveur temporairement verrouillé', desc: 'Trop d’arrivées simultanées. Les salons sont fermés le temps de vérifier. Réessayez dans quelques minutes.', color: '#ed4245', footer: 'Optimus Prime' } } },
+    apercu: { embed: { title: '🚧 Serveur temporairement verrouillé', desc: 'Trop d’arrivées simultanées. Les salons sont fermés le temps de vérifier. Réessayez dans quelques minutes.', color: '#ed4245', footer: 'Hoxera' } } },
 
   antinuke: { e: '🚨', emote: 'hox_antinuke', cat: 'securite', tag: 'Un admin compromis ne peut rien casser',
     aide: 'Surveille les actions dangereuses (rôles supprimés, salons effacés, webhooks) et retire les pouvoirs en cas de dérive.',
@@ -938,7 +938,7 @@ Dashboard.MODULE_META = {
     aide: 'Rédigez une annonce, choisissez les salons et une date : le bot publie tout seul à l’heure prévue.',
     voit: 'Un message d’annonce dans les salons choisis, avec @role si vous l’autorisez.',
     slash: '/config ➜ Annonces',
-    apercu: { embed: { title: '📅 Nouvelle édition ce soir', desc: 'Rassemblement à 21 h dans le salon général. Au programme : annonces, jeux et récompenses.', color: '#e07a5f', footer: 'Optimus Prime' },
+    apercu: { embed: { title: '📅 Nouvelle édition ce soir', desc: 'Rassemblement à 21 h dans le salon général. Au programme : annonces, jeux et récompenses.', color: '#e07a5f', footer: 'Hoxera' },
       buttons: [{ label: 'Je serai là', style: 'vert' }, { label: 'Voir le programme', style: 'gris' }] } },
 
   sticky: { e: '📌', emote: 'hox_sticky', cat: 'publier', tag: 'Un message qui reste en bas du salon',
@@ -950,7 +950,7 @@ Dashboard.MODULE_META = {
     aide: 'Titre, texte, image et boutons vers TikTok, YouTube, Instagram… dans l’encadré Discord.',
     voit: 'Un encadré avec vos boutons de liens.',
     slash: '/config ➜ Panneau de liens',
-    apercu: { embed: { title: '🔗 Liens utiles', desc: 'N’hésitez pas à me suivre de partout !', color: '#e07a5f', footer: 'Optimus Prime' },
+    apercu: { embed: { title: '🔗 Liens utiles', desc: 'N’hésitez pas à me suivre de partout !', color: '#e07a5f', footer: 'Hoxera' },
       buttons: [{ label: 'TikTok', style: 'gris' }, { label: 'YouTube', style: 'gris' }, { label: 'Instagram', style: 'gris' }, { label: 'Twitch', style: 'gris' }] } },
 
   embeds: { e: '🧱', emote: 'hox_embed', cat: 'publier', notice: false, tag: 'Fabriquez vos encadrés, envoyez-les proprement',
@@ -1044,7 +1044,7 @@ Dashboard.openServerPicker = () => {
       <div class="sp-head">
         <div class="sp-head-copy">
           <h2>Choisissez un serveur</h2>
-          <p>${guilds.length} serveur${guilds.length > 1 ? 's' : ''} · ${guilds.filter((g) => g.hasBot).length} avec Optimus Prime</p>
+          <p>${guilds.length} serveur${guilds.length > 1 ? 's' : ''} · ${guilds.filter((g) => g.hasBot).length} avec Hoxera</p>
         </div>
         ${wantSearch ? '<input type="text" class="sp-search" placeholder="🔍 Rechercher un serveur…" aria-label="Rechercher un serveur" />' : ''}
         <button type="button" class="sp-close" aria-label="Fermer">×</button>
@@ -1061,7 +1061,7 @@ Dashboard.openServerPicker = () => {
               <span class="sp-ico">${g.icon ? `<img src="${App.escapeHtml(g.icon)}" alt="" data-fb-text="${App.escapeHtml(g.name)}" />` : `<span>${App.escapeHtml(initialOf(g.name))}</span>`}</span>
               <span class="sp-txt">
                 <b title="${App.escapeHtml(g.name)}">${App.escapeHtml(g.name)}</b>
-                <small>${g.hasBot ? (g.members ? `${App.escapeHtml(String(g.members))} membres` : 'Optimus Prime présent') : 'Optimus Prime absent — inviter'}</small>
+                <small>${g.hasBot ? (g.members ? `${App.escapeHtml(String(g.members))} membres` : 'Hoxera présent') : 'Hoxera absent · inviter'}</small>
               </span>
               <span class="sp-mark">${g.hasBot ? '→' : '＋'}</span>
             </span>
@@ -1186,7 +1186,7 @@ Dashboard.renderSide = (aside) => {
   }
   aside.appendChild(App.el(`<div class="dash-side-foot">
     <div style="display:flex;align-items:center;gap:10px">
-      ${Dashboard.state.bot.avatar_url ? `<img src="${App.escapeHtml(Dashboard.state.bot.avatar_url)}" alt="" data-fb-text="${App.escapeHtml(Dashboard.state.bot.name || 'Optimus Prime')}" style="width:34px;height:34px;border-radius:50%;box-shadow:0 0 0 2px rgba(var(--d-accent-rgb,224,122,95),.45)"/>` : '<span style="font-size:22px">⚡</span>'}
+      ${Dashboard.state.bot.avatar_url ? `<img src="${App.escapeHtml(Dashboard.state.bot.avatar_url)}" alt="" data-fb-text="${App.escapeHtml(Dashboard.state.bot.name || 'Hoxera')}" style="width:34px;height:34px;border-radius:50%;box-shadow:0 0 0 2px rgba(var(--d-accent-rgb,224,122,95),.45)"/>` : '<span style="font-size:22px">⚡</span>'}
       <div>
         <b style="color:var(--d-text)">${App.escapeHtml(Dashboard.state.bot.name)}</b><br/>
         <span style="font-size:11px">Synchronisé en temps réel</span>
@@ -1441,7 +1441,7 @@ if (!window.__hxPopoverDismiss) {
 // ---------------------- 🌍 Centre serveurs (choix visuel, façon panel pro) ----------------------
 Dashboard.renderServerGrid = (content) => {
   const guilds = Dashboard.state.discordGuilds || [];
-  const botName = (Dashboard.state.bot && Dashboard.state.bot.name) || 'Optimus Prime';
+  const botName = (Dashboard.state.bot && Dashboard.state.bot.name) || 'Hoxera';
   const withBot = guilds.filter((g) => g.hasBot).length;
   const ready = guilds.filter((g) => g.hasBot && g.canManage).length;
   const toInvite = guilds.filter((g) => !g.hasBot).length;
@@ -1492,7 +1492,7 @@ Dashboard.renderServerGrid = (content) => {
       if (!matches(g, q)) return;
       shown += 1;
       const initial = (g.name || '?').trim()[0].toUpperCase();
-      const members = g.members ? `${g.members} membre${g.members > 1 ? 's' : ''}` : (g.hasBot ? 'Optimus Prime présent' : 'Bot absent');
+      const members = g.members ? `${g.members} membre${g.members > 1 ? 's' : ''}` : (g.hasBot ? 'Hoxera présent' : 'Bot absent');
       const boosts = g.boosts ? ` · ${g.boosts} boost${g.boosts > 1 ? 's' : ''}` : '';
       const card = App.el(`
         <button type="button" class="srv-card ${g.hasBot ? '' : 'no-bot'}" data-gid="${App.escapeHtml(g.id)}" data-name="${App.escapeHtml(String(g.name || '').toLowerCase())}">
@@ -1592,8 +1592,8 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
     <div class="dash-mobile-bar" aria-label="Navigation mobile">
       <button class="dash-mobile-navbtn" id="d-mobile-menu" type="button" aria-label="Ouvrir le menu principal" aria-expanded="false">☰</button>
       <div class="dash-mobile-brand">
-        ${bot.avatar_url ? `<img src="${App.escapeHtml(bot.avatar_url)}" alt="" data-fb-text="${App.escapeHtml(bot.name || 'Optimus Prime')}" />` : '<img src="/icons/nexora-robot-mark.svg" alt="Logo Optimus Prime" />'}
-        <b>${App.escapeHtml(bot.name || 'Optimus Prime')}</b>
+        ${bot.avatar_url ? `<img src="${App.escapeHtml(bot.avatar_url)}" alt="" data-fb-text="${App.escapeHtml(bot.name || 'Hoxera')}" />` : '<img src="/icons/nexora-robot-mark.svg" alt="Logo Hoxera" />'}
+        <b>${App.escapeHtml(bot.name || 'Hoxera')}</b>
       </div>
       <button class="dash-mobile-navbtn" id="d-mobile-modules" type="button" aria-label="Ouvrir les serveurs et modules" aria-expanded="false">▦</button>
     </div>
@@ -1616,7 +1616,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
       </div>
       ${needsInvite ? `<button class="dash-btn" id="d-invite2" aria-label="Ajouter le bot au serveur">Ajouter le bot</button>` : ''}
       <div class="dash-bot-chip" title="${App.escapeHtml(bot.bot_username || bot.name)}" aria-label="${App.escapeHtml(bot.name)}">
-        ${bot.avatar_url ? `<img src="${App.escapeHtml(bot.avatar_url)}" alt="Avatar de ${App.escapeHtml(bot.name)}" data-fb-text="${App.escapeHtml(bot.name || 'Optimus Prime')}" />` : '<span class="chip-fallback" aria-hidden="true">🤖</span>'}
+        ${bot.avatar_url ? `<img src="${App.escapeHtml(bot.avatar_url)}" alt="Avatar de ${App.escapeHtml(bot.name)}" data-fb-text="${App.escapeHtml(bot.name || 'Hoxera')}" />` : '<span class="chip-fallback" aria-hidden="true">🤖</span>'}
         <div class="chip-txt">
           <b>${App.escapeHtml(bot.name)}</b>
           <span class="${bot.online ? 'on' : 'off'}">${bot.online ? '● En ligne' : '● Hors ligne'}</span>
@@ -1955,7 +1955,7 @@ Dashboard.header = (content, icon, title, sub) => {
   const isBotScope = ['commands', 'modules', 'health', 'botsettings', 'help'].includes(Dashboard.state.module);
   const isGuildScope = Boolean(Dashboard.state.guildId) && !isBotScope;
   const bot = Dashboard.state.bot || {};
-  const statusLabel = bot.online === false ? 'Optimus Prime hors ligne' : 'Optimus Prime en ligne';
+  const statusLabel = bot.online === false ? 'Hoxera hors ligne' : 'Hoxera en ligne';
   const statusClass = bot.online === false ? 'is-offline' : 'is-online';
   const canGoBack = Dashboard.state.module !== 'overview' && Array.isArray(Dashboard.state.moduleHistory) && Dashboard.state.moduleHistory.length > 0;
   const header = App.el(`
@@ -2352,15 +2352,16 @@ Dashboard.renderers.overview = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const g = data.guild || { name: 'Serveur', members: 0 };
   const ts = data.tickets_stats || { total: 0, open: 0 };
-  const root = Dashboard.header(content, '⌂', 'Tableau de bord', `Gestion de ${App.escapeHtml(g.name)} · ${g.members} membres · Optimus Prime`);
+  const root = Dashboard.header(content, '⌂', 'Tableau de bord', `Gestion de ${App.escapeHtml(g.name)} · ${g.members} membres · Hoxera`);
   const workspace = App.el('<div class="ov-workspace ov-draft-home"></div>');
   root.appendChild(workspace);
 
   const greeting = new Date().getHours() < 18 ? 'Bonjour' : 'Bonsoir';
+  const pseudo = App.state.user && App.state.user.discord_username ? String(App.state.user.discord_username).slice(0, 32) : '';
   const serverInitial = String(g.name || '?').trim().slice(0, 1).toUpperCase() || '?';
   const serverIcon = g.icon || g.icon_url || '';
   const serverBanner = g.banner || '';
-  const statusText = bot.online === false ? 'Optimus Prime est hors ligne' : 'Optimus Prime est opérationnel';
+  const statusText = bot.online === false ? 'Hoxera est hors ligne' : 'Hoxera est opérationnel';
   const statusClass = bot.online === false ? 'is-offline' : 'is-online';
   // Stats riches du serveur (bannière, boosts, salons, rôles, création)
   const createdLabel = g.createdAt
@@ -2381,14 +2382,14 @@ Dashboard.renderers.overview = async (content, data) => {
           ? `<img class="ov-server-avatar" src="${App.escapeHtml(serverIcon)}" alt="" data-fb-text="${App.escapeHtml(g.name || 'S')}" />`
           : `<span class="ov-server-avatar fallback">${App.escapeHtml(serverInitial)}</span>`}
         <div class="ov-intro-copy">
-          <span class="ov-eyebrow">${greeting}, administrateur</span>
+          <span class="ov-eyebrow">${greeting}${pseudo ? ', ' + App.escapeHtml(pseudo) : ''}</span>
           <h2>Bienvenue dans votre espace de gestion</h2>
-          <p>${App.escapeHtml(g.name)}${g.description ? ` · ${App.escapeHtml(g.description)}` : ` · ${App.escapeHtml(String(g.members || 0))} membres · tous les réglages d’Optimus Prime au même endroit.`}</p>
+          <p>${App.escapeHtml(g.name)}${g.description ? ` · ${App.escapeHtml(g.description)}` : ` · ${App.escapeHtml(String(g.members || 0))} membres · tous les réglages d’Hoxera au même endroit.`}</p>
         </div>
       </div>
       <div class="ov-intro-health ${statusClass}">
         <span class="ov-health-dot ${statusClass}"></span>
-        <div><b>${App.escapeHtml(statusText)}</b><small>Dernière synchronisation disponible</small></div>
+        <div><b>${App.escapeHtml(statusText)}</b></div>
         <button class="ov-welcome-settings" data-go="server" type="button">Réglages <span>→</span></button>
       </div>
       ${heroChips ? `<div class="ov-hero-stats">${heroChips}</div>` : ''}
@@ -2420,7 +2421,7 @@ Dashboard.renderers.overview = async (content, data) => {
     <section class="ov-config-panel ov-checklist-card">
       <div class="ov-section-heading"><b>Configuration du serveur</b><span>${doneCount} étape(s) terminée(s) sur ${checklist.length || 0}</span></div>
       <div class="ov-progress-head">
-        <div class="ov-progress-copy"><b>${pct === 100 ? 'Serveur prêt' : 'Progression de la configuration'}</b><span>Les éléments importants de votre installation Optimus Prime</span></div>
+        <div class="ov-progress-copy"><b>${pct === 100 ? 'Serveur prêt' : 'Progression de la configuration'}</b><span>Les éléments importants de votre installation Hoxera</span></div>
         <strong>${pct}%</strong>
       </div>
       <div class="ov-progress-track" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Progression de la configuration"><div class="ov-progress-value" style="width:${pct}%"></div></div>
@@ -2488,7 +2489,7 @@ Dashboard.renderers.overview = async (content, data) => {
       const { items } = await App.api(`/bots/${bot.id}/guilds/${guildId}/activity`);
       feedList.innerHTML = '';
       if (!items.length) {
-        feedList.appendChild(App.el('<div class="ov-feed-empty">Le flux se remplira dès que Optimus Prime agit.</div>'));
+        feedList.appendChild(App.el('<div class="ov-feed-empty">Le flux se remplira dès que Hoxera agit.</div>'));
         return;
       }
       items.forEach((item) => feedList.appendChild(App.el(`<div class="feed-item"><span class="feed-emoji">${item.emoji || '•'}</span><span class="feed-text">${App.escapeHtml(item.text)}</span><span class="feed-time">${relTime(item.created_at)}</span></div>`)));
@@ -3178,14 +3179,14 @@ Dashboard.renderers.tickets = async (content, data) => {
             <div><label class="dash-label">Catégorie de création du ticket</label><select class="dash-select" data-k="category">
               <option value="">— Choisir une catégorie (obligatoire) —</option>
               ${categories.map((cat) => `<option value="${App.escapeHtml(cat.id)}" ${Dashboard.discordRefMatches(type.category, cat) ? 'selected' : ''}>${App.escapeHtml(cat.name)}</option>`).join('')}
-              ${Dashboard.currentDiscordOption(type.category, categories, '', 'configuration actuelle — catégorie introuvable')}
-            </select><small class="adv-category-help">Le salon privé sera créé directement ici. Optimus Prime ne créera jamais de catégorie.</small></div>
+              ${Dashboard.currentDiscordOption(type.category, categories, '', 'configuration actuelle · catégorie introuvable')}
+            </select><small class="adv-category-help">Le salon privé sera créé directement ici. Hoxera ne créera jamais de catégorie.</small></div>
           </div>
           <label class="dash-label">Description du type</label>
           <input class="dash-input" data-k="description" value="${App.escapeHtml(type.description)}" placeholder="Ex : demande privée au staff" maxlength="100" />
           <label class="dash-label">Texte du bouton (vide = « Envoyer un ticket + nom »)</label>
           <input class="dash-input" data-k="button_label" value="${App.escapeHtml(type.button_label)}" placeholder="Envoyer un ticket ${App.escapeHtml(type.label || 'support')}" maxlength="80" />
-          <label class="dash-label" style="margin-top:12px">Questionnaire de ce type (réponses obligatoires — max 5)</label>
+          <label class="dash-label" style="margin-top:12px">Questionnaire de ce type (réponses obligatoires · max 5)</label>
           <div data-questions style="display:flex;flex-direction:column;gap:6px"></div>
           <button class="dash-btn dash-btn-sm" data-addquestion style="margin-top:6px">＋ Ajouter une question</button>
           <div style="color:var(--d-dim);font-size:11px;margin-top:5px">Au clic sur ce type, le membre devra répondre à ces questions avant la création du ticket.</div>
@@ -4223,7 +4224,7 @@ Dashboard.renderers.moderation = async (content, data) => {
         <div><label class="dash-label">Salon du panneau</label><select class="dash-select" id="am-blacklist-channel">${blacklistChannelOptions.join('')}</select></div>
         <div><label class="dash-label">Titre</label><input class="dash-input" id="am-blacklist-title" maxlength="120" value="${App.escapeHtml(s.am_blacklist_title || '🚫 Membre ajouté à la blacklist')}" placeholder="🚫 Membre ajouté à la blacklist" /><label class="dash-label">Couleur</label><div class="am-blacklist-color"><input type="color" id="am-blacklist-color" value="${/^#[0-9a-fA-F]{6}$/.test(String(s.am_blacklist_color || '')) ? String(s.am_blacklist_color) : '#ED4245'}" /><input class="dash-input" id="am-blacklist-color-text" maxlength="7" value="${App.escapeHtml(/^#[0-9a-fA-F]{6}$/.test(String(s.am_blacklist_color || '')) ? String(s.am_blacklist_color) : '#ED4245')}" aria-label="Code couleur du panneau" /></div></div>
       </div>
-      <label class="dash-label">Pied</label><input class="dash-input" id="am-blacklist-footer" maxlength="200" value="${App.escapeHtml(s.am_blacklist_footer || 'Blacklist du serveur · Optimus Prime')}" placeholder="Blacklist du serveur · Optimus Prime" />
+      <label class="dash-label">Pied</label><input class="dash-input" id="am-blacklist-footer" maxlength="200" value="${App.escapeHtml(s.am_blacklist_footer || 'Blacklist du serveur · Hoxera')}" placeholder="Blacklist du serveur · Hoxera" />
       </div>
     </details>
     <div class="am-save-row"><span class="am-save-hint">Brouillon sur cet appareil. Publier pour l’appliquer.</span><div class="am-save-actions">${automodDraft ? '<button class="dash-btn dash-btn-danger dash-btn-sm" id="am-clear-draft">Revenir à la version publiée</button>' : ''}<button class="dash-btn dash-btn-sm" id="am-draft">Enregistrer le brouillon</button><button class="dash-save-action dash-btn dash-btn-primary" id="am-save">Publier</button></div></div>`;
@@ -4499,7 +4500,7 @@ Dashboard.renderers.moderation = async (content, data) => {
   };
 
   // Miroir officiel Discord : les règles natives restent en alerte
-  // uniquement ; les sanctions avancées continuent d’être appliquées par Optimus Prime.
+  // uniquement ; les sanctions avancées continuent d’être appliquées par Hoxera.
   const cNative = Dashboard.card(root, 'Auto-Mod officiel Discord', 'Badge Discord « Uses AutoMod ». Alertes seulement, pas de double sanction.');
   cNative.classList.add('am-native-card');
   cNative.innerHTML += `
@@ -5030,7 +5031,7 @@ Dashboard.renderers.antinuke = async (content, data) => {
   cRails.appendChild(App.el(`<div style="display:grid;gap:6px;font-size:13px">
     <div class="desc" style="margin:0">Le <b>propriétaire du serveur</b> n’est jamais sanctionné, quoi qu’il fasse.</div>
     <div class="desc" style="margin:0"><b>Hoxera lui-même</b> est exclu (suppressions de tickets et de vocaux temporaires ignorées).</div>
-    <div class="desc" style="margin:0"><b>Les autres bots</b> ne sont pas sanctionnés par défaut — punir un bot de tickets casserait le serveur. Une alerte est envoyée à la place.</div>
+    <div class="desc" style="margin:0"><b>Les autres bots</b> ne sont pas sanctionnés par défaut · punir un bot de tickets casserait le serveur. Une alerte est envoyée à la place.</div>
     <div class="desc" style="margin:0">Les membres de la <b>liste blanche</b> ne sont jamais sanctionnés.</div>
     <div class="desc" style="margin:0">Sans <b>identification certaine</b> de l’auteur par le journal d’audit, Hoxera alerte mais ne punit pas.</div>
   </div>`));
@@ -5072,7 +5073,7 @@ Dashboard.renderers.antinuke = async (content, data) => {
 
     // --- Alerte sur la permission d'audit : sans elle, aucune sanction. ---
     const auditBanner = st.audit && st.audit.ok
-      ? `<div class="desc" style="margin:10px 0 0">Journal d’audit lisible — Hoxera peut identifier les auteurs.</div>`
+      ? `<div class="desc" style="margin:10px 0 0">Journal d’audit lisible · Hoxera peut identifier les auteurs.</div>`
       : `<div style="margin:10px 0 0;padding:10px 12px;border:1px solid rgba(254,231,92,.4);border-radius:8px;background:rgba(254,231,92,.08);font-size:13px">
           <b>Journal d’audit illisible</b> (${App.escapeHtml((st.audit && st.audit.reason) || 'bot hors ligne')}).<br />
           Donnez à Hoxera la permission <b>« Voir le journal d’audit »</b> dans Paramètres du serveur → Rôles.
@@ -5727,7 +5728,7 @@ Dashboard.renderers.embeds = async (content, data) => {
   const g = data.guild || {};
   const serverName = g.name || 'votre serveur';
   const memberCount = g.members || '?';
-  const botName = (bot && bot.name) || 'Optimus Prime';
+  const botName = (bot && bot.name) || 'Hoxera';
 
   // Brouillon persistant (conservé quand on change de module)
   if (!Dashboard.embedDraft) {
@@ -5773,7 +5774,7 @@ Dashboard.renderers.embeds = async (content, data) => {
         </div>
       </div>
       <div><label class="dash-label">Pied de page</label>
-        <input class="dash-input" id="eb-footer" maxlength="2048" placeholder="Optimus Prime · ${App.escapeHtml(serverName)}" /></div>
+        <input class="dash-input" id="eb-footer" maxlength="2048" placeholder="Hoxera · ${App.escapeHtml(serverName)}" /></div>
     </div>
     <div class="eb-grid2">
       <div><label class="dash-label">Grande image (URL)</label>
@@ -7292,7 +7293,7 @@ Dashboard.renderers.server = async (content, data) => {
   c.innerHTML += `
     <label class="dash-label">Préfixe (vide = « ${App.escapeHtml(bot.prefix)} »)</label>
     <input class="dash-input" id="g-prefix" maxlength="5" value="${App.escapeHtml(s.prefix || '')}" placeholder="${App.escapeHtml(bot.prefix)}" style="max-width:200px" />
-    <label class="dash-label" style="margin-top:12px">Langue d’Optimus Prime sur ce serveur</label>
+    <label class="dash-label" style="margin-top:12px">Langue d’Hoxera sur ce serveur</label>
     <select class="dash-select" id="g-lang" style="max-width:280px">
       <option value="fr" ${currentLanguage === 'fr' ? 'selected' : ''}>Français</option>
       <option value="en" ${currentLanguage === 'en' ? 'selected' : ''}>English</option>
@@ -7424,7 +7425,7 @@ Dashboard.renderers.botprofile = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const profile = data.profile || {};
   const serverName = data.guild && data.guild.name ? data.guild.name : 'ce serveur';
-  const root = Dashboard.header(content, '', 'Identité du bot', `Personnalisez Optimus Prime uniquement sur ${serverName}.`);
+  const root = Dashboard.header(content, '', 'Identité du bot', `Personnalisez Hoxera uniquement sur ${serverName}.`);
   // URL absolue : la base de données stocke /assets/… (chemin relatif du site).
   const abs = (u) => {
     if (!u) return '';
@@ -7545,9 +7546,9 @@ Dashboard.renderers.botprofile = async (content, data) => {
       if (aFile) body.avatar_b64 = await fileAsDataUrl(aFile);
       if (bFile) body.banner_b64 = await fileAsDataUrl(bFile);
       await App.api(`/bots/${bot.id}/guilds/${guildId}/profile`, { method: 'PUT', body });
-      status.textContent = `Identité enregistrée pour ${serverName} uniquement — les autres serveurs et le bot global ne changent pas.`;
+      status.textContent = `Identité enregistrée pour ${serverName} uniquement · les autres serveurs et le bot global ne changent pas.`;
       App.retourEnregistrement(bouton);
-      App.toast('Identité d’Optimus Prime enregistrée pour ce serveur.');
+      App.toast('Identité d’Hoxera enregistrée pour ce serveur.');
       await Dashboard.renderContent(content);
     } catch (e) {
       status.textContent = `${e.message}`;
@@ -7556,7 +7557,7 @@ Dashboard.renderers.botprofile = async (content, data) => {
     button.disabled = false; button.textContent = 'Enregistrer l’identité';
   };
   card.querySelector('#bp-reset').onclick = async () => {
-    if (!(await App.confirm(`Reprendre l’identité globale d’Optimus Prime sur ${serverName} ? Le bot global n’est jamais modifié.`))) return;
+    if (!(await App.confirm(`Reprendre l’identité globale d’Hoxera sur ${serverName} ? Le bot global n’est jamais modifié.`))) return;
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/profile`, { method: 'DELETE' });
       App.toast('Identité globale reprise sur ce serveur.');
@@ -7925,8 +7926,8 @@ Dashboard.renderers.verification = async (content, data) => {
     <div style="height:1px;background:var(--d-border);margin:16px 0"></div>
     <label class="dash-label">Isolation des salons pour les membres non vérifiés</label>
     <select class="dash-select" id="ver-isolate-sel" style="max-width:460px">
-      <option value="off" ${cfg.isolate ? '' : 'selected'}>Désactivée — tous les salons restent visibles</option>
-      <option value="on" ${cfg.isolate ? 'selected' : ''}>Activée — les non-vérifiés ne voient que le salon de vérification</option>
+      <option value="off" ${cfg.isolate ? '' : 'selected'}>Désactivée : tous les salons restent visibles</option>
+      <option value="on" ${cfg.isolate ? 'selected' : ''}>Activée : les non-vérifiés ne voient que le salon de vérification</option>
     </select>
     <div style="font-size:12px;color:var(--d-dim);margin:4px 0 8px">Le changement s'applique tout de suite : Hoxera masque (ou rouvre) les salons lui-même. Les nouveaux arrivants ne voient QUE le salon de vérification ; dès leur clic sur « Je suis humain », ils voient tout le serveur. Les salons créés pendant l'isolation sont masqués automatiquement.</div>
     ${cfg.isolate ? `<div style="margin-bottom:8px"><span class="dash-badge ok">Isolation ACTIVE — ${(cfg.isolated_channels || []).length} salon(s) masqué(s)</span></div>` : ''}
