@@ -160,7 +160,7 @@ router.post('/bots/:id/guilds/:guildId/uploads', requireAuth, async (req, res) =
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   const image = parseImageUpload((req.body || {}).data);
-  if (!image) return res.status(400).json({ error: 'Image invalide — formats acceptés : PNG, JPEG, GIF, WebP (2 Mo maximum).' });
+  if (!image) return res.status(400).json({ error: 'Image invalide · formats acceptés : PNG, JPEG, GIF, WebP (2 Mo maximum).' });
   try {
     const metadata = await require('sharp')(image.buffer, { limitInputPixels: 20_000_000, failOn: 'error' }).metadata();
     if (metadata.format !== image.ext.replace('jpg', 'jpeg') || !metadata.width || !metadata.height
@@ -1746,7 +1746,7 @@ router.post('/bots/:id/guilds/:guildId/xp/sync', requireAuth, async (req, res) =
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   const rewards = store.xpRoles.all(bot.id, guildId);
-  if (!rewards.length) return res.json({ ok: true, configured: 0, message: 'Aucun rôle de niveau configuré — ajoutez des récompenses puis réessayez.' });
+  if (!rewards.length) return res.json({ ok: true, configured: 0, message: 'Aucun rôle de niveau configuré · ajoutez des récompenses puis réessayez.' });
   const entry = botManager.clients.get(bot.id);
   const guild = entry && entry.client.isReady() ? entry.client.guilds.cache.get(guildId) : null;
   if (!guild) return res.status(400).json({ error: 'Le bot est hors ligne ou absent de ce serveur.' });
@@ -2089,7 +2089,7 @@ router.get('/bots/:id/guilds/:guildId/notifications', requireAuth, async (req, r
   try {
     const entry = botManager.clients.get(bot.id);
     if (!entry || !entry.client.isReady()) {
-      warnings.push({ icon: '🔴', text: 'Le bot est hors ligne — aucune fonctionnalité ne tourne.' });
+      warnings.push({ icon: '🔴', text: 'Le bot est hors ligne · aucune fonctionnalité ne tourne.' });
       return res.json({ warnings, infos });
     }
     const guild = entry.client.guilds.cache.get(guildId);
@@ -2138,7 +2138,7 @@ router.get('/bots/:id/guilds/:guildId/notifications', requireAuth, async (req, r
     const today = new Date().toISOString().slice(0, 10);
     try {
       const j = store.db.prepare('SELECT count FROM join_stats WHERE bot_id = ? AND guild_id = ? AND day = ?').get(bot.id, guildId, today);
-      if (j && j.count) infos.push({ icon: '🆕', text: `${j.count} nouveau(x) membre(s) aujourd'hui — bienvenue à eux !` });
+      if (j && j.count) infos.push({ icon: '🆕', text: `${j.count} nouveau(x) membre(s) aujourd'hui · bienvenue à eux !` });
     } catch {}
     try {
       const open = store.openTickets.allForGuild(bot.id, guildId).filter((t) => !t.closed_at).length;
@@ -2338,7 +2338,7 @@ router.post('/bots/:id/guilds/:guildId/antiraid/test', requireAuth, async (req, 
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   const entry = botManager.clients.get(bot.id);
-  if (!entry || !entry.client.isReady()) return res.status(503).json({ error: 'Le bot est hors ligne — impossible de tester.' });
+  if (!entry || !entry.client.isReady()) return res.status(503).json({ error: 'Le bot est hors ligne · impossible de tester.' });
   const guild = entry.client.guilds.cache.get(guildId);
   if (!guild) return res.status(404).json({ error: 'Serveur introuvable pour le bot.' });
   const antiraid = require('./discord/antiraid');
@@ -2437,7 +2437,7 @@ router.post('/bots/:id/guilds/:guildId/antinuke/simulate', requireAuth, async (r
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   const entry = botManager.clients.get(bot.id);
-  if (!entry || !entry.client.isReady()) return res.status(503).json({ error: 'Le bot est hors ligne — impossible de simuler.' });
+  if (!entry || !entry.client.isReady()) return res.status(503).json({ error: 'Le bot est hors ligne · impossible de simuler.' });
   const guild = entry.client.guilds.cache.get(guildId);
   if (!guild) return res.status(404).json({ error: 'Serveur introuvable pour le bot.' });
   const antinuke = require('./discord/antinuke');
@@ -2571,7 +2571,7 @@ router.post('/bots/:id/guilds/:guildId/automod/test', requireAuth, async (req, r
   const types = ['link', 'caps', 'mentions', 'word', 'spam'];
   if (!types.includes(type)) return res.status(400).json({ error: 'Type de test inconnu.' });
   const entry = botManager.clients.get(bot.id);
-  if (!entry || !entry.client.isReady()) return res.status(503).json({ error: 'Le bot est hors ligne — impossible de tester.' });
+  if (!entry || !entry.client.isReady()) return res.status(503).json({ error: 'Le bot est hors ligne · impossible de tester.' });
   const guild = entry.client.guilds.cache.get(guildId);
   if (!guild) return res.status(404).json({ error: 'Serveur introuvable pour le bot.' });
   const channel = guild.channels.cache.get(String(channel_id));
@@ -4107,7 +4107,7 @@ router.use((err, req, res, next) => {
   console.error('[BotDev] Erreur route API :', (err && err.message) || err);
   try { require('./health').recordError('api', (err && err.message) || err); } catch {}
   try {
-    if (!res.headersSent) res.status(500).json({ error: 'Erreur interne du serveur — elle a été journalisée.' });
+    if (!res.headersSent) res.status(500).json({ error: 'Erreur interne du serveur · elle a été journalisée.' });
   } catch {}
 });
 

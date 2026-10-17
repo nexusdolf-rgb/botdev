@@ -203,7 +203,7 @@ App.api = async (path, options = {}) => {
   let data = {};
   try { data = await res.json(); } catch {}
   if (!res.ok) {
-    if (res.status === 401) throw new Error('Session expirée — reconnectez-vous avec Discord.');
+    if (res.status === 401) throw new Error('Session expirée. Reconnectez-vous avec Discord.');
     throw new Error(data.error || 'Une erreur est survenue');
   }
   return data;
@@ -665,7 +665,7 @@ App.renderAdminPage = async () => {
           <div class="admin-overview-copy">
             <span class="admin-section-kicker">SYNTHÈSE DE LA PLATEFORME</span>
             <h2>Vue d’ensemble opérationnelle</h2>
-            <p>Activité, disponibilité et volumes clés — réunis au même endroit.</p>
+            <p>Activité, disponibilité et volumes clés · réunis au même endroit.</p>
           </div>
           <div class="admin-hero-status ${botOnline ? 'is-online' : 'is-offline'}">
             <span class="admin-hero-status-mark"><i></i></span>

@@ -154,7 +154,7 @@ App.renderPublicLanding = () => {
       <div class="pub-section reveal hp-section" id="hp-preview">
         <span class="hp-kicker">Aperçu</span>
         <h2>Un dashboard digne des plus grands</h2>
-        <p class="pub-sub">Configurez tout depuis votre téléphone ou votre PC — design pro, sauvegarde intelligente, flux d'activité en direct.</p>
+        <p class="pub-sub">Configurez tout depuis votre téléphone ou votre PC. Sauvegarde automatique du fichier de données, flux d'activité en direct en direct.</p>
         <div class="pub-mock">
           <div class="mock-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="mock-url">hoxera.is-a.dev</span></div>
           <div class="mock-body">
@@ -186,7 +186,7 @@ App.renderPublicLanding = () => {
           </details>
           <details class="hp-faq-item">
             <summary>Comment fonctionne la connexion au dashboard ?</summary>
-            <p>Uniquement avec votre compte Discord (OAuth2). Aucun mot de passe à retenir : vous vous connectez, on vérifie vos serveurs et votre permission, et vous configurez vos serveurs en quelques clics.</p>
+            <p>Uniquement avec votre compte Discord (OAuth2). Aucun mot de passe à retenir : vous vous connectez, on vérifie vos serveurs et votre permission, et vous arrivez sur les réglages des serveurs où vous avez la gestion du serveur.</p>
           </details>
           <details class="hp-faq-item">
             <summary>Le bot fonctionne-t-il sur mobile ?</summary>
@@ -345,7 +345,7 @@ App.renderPublicLanding = () => {
             </div>
             <div class="bot-card-status">
               <span class="dot ${b.online ? 'dot-online' : 'dot-offline'}"></span>
-              ${b.online ? `En ligne — ${App.fmtNumber(b.servers)} serveur(s) · ${App.fmtNumber(b.members)} membres` : 'Hors ligne'}
+              ${b.online ? `En ligne · ${App.fmtNumber(b.servers)} serveur(s) · ${App.fmtNumber(b.members)} membres` : 'Hors ligne'}
             </div>
             <div class="bot-card-actions">
               <button class="btn btn-primary" data-view>Voir la page</button>

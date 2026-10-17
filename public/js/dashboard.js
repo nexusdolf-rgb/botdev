@@ -37,7 +37,7 @@ Dashboard.discordRefMatches = (current, item) => {
   return value === id || lower === name.toLowerCase() || lower === `#${name.toLowerCase()}`;
 };
 
-Dashboard.currentDiscordOption = (current, items, icon = '', label = 'configuration actuelle — élément introuvable') => {
+Dashboard.currentDiscordOption = (current, items, icon = '', label = 'configuration actuelle, élément introuvable') => {
   const value = String(current || '').trim();
   if (!value || (items || []).some((item) => Dashboard.discordRefMatches(value, item))) return '';
   return `<option value="${App.escapeHtml(value)}" selected>${icon} ${App.escapeHtml(value)} (${label})</option>`;
@@ -930,7 +930,7 @@ Dashboard.MODULE_META = {
     slash: '/config ➜ Journaux' },
 
   autoclean: { e: '🧹', emote: 'hox_autoclean', cat: 'securite', tag: 'Vider un salon sans faire exploser les limites',
-    aide: 'Supprime un message à la fois, à intervalle réglable, jusqu’à la date choisie — sans jamais déclencher de bannissement Discord.',
+    aide: 'Supprime un message à la fois, à intervalle réglable, jusqu’à la date choisie · sans jamais déclencher de bannissement Discord.',
     voit: 'Le salon se vide progressivement, sans message du bot.',
     slash: '/config ➜ Nettoyage auto' },
 
@@ -996,8 +996,8 @@ Dashboard.MODULE_META = {
   rules: { e: '📖', emote: 'hox_rules', cat: 'support', tag: 'Le règlement que les membres acceptent avant d’entrer',
     aide: 'Vous écrivez vos règles en Markdown Discord, ou vous partez d’un modèle livré : le bot publie le panneau dans le salon que vous choisissez, avec un bouton, et donne le rôle à qui accepte.',
     voit: 'Un encadré de règlement dans le salon, un bouton « J’accepte les règles » en dessous, le rôle qui arrive au clic.',
-    slash: 'Aucune commande — le panneau se publie et se met à jour depuis le tableau de bord',
-    apercu: { embed: { title: '📜 Règlement — votre serveur',
+    slash: 'Aucune commande · le panneau se publie et se met à jour depuis le tableau de bord',
+    apercu: { embed: { title: '📜 Règlement · votre serveur',
       desc: '**1.** Restez courtois : insultes, harcèlement et propos haineux sont interdits.\n**2.** Pas de spam, pas de publicité en message privé.\n**3.** Un seul compte, un pseudo lisible.\n> Le staff tranche en dernier ressort.',
       color: '#5865F2',
       footer: 'En acceptant, vous obtenez le rôle vérifié et vous reconnaissez avoir lu ce règlement.' },
@@ -1006,7 +1006,7 @@ Dashboard.MODULE_META = {
   polls: { e: '🗳️', emote: 'hox_poll', cat: 'vie', tag: 'Le vrai sondage Discord, préparé et publié d’ici',
     aide: 'Question, jusqu’à 10 choix, durée de 1 heure à 32 jours, réponses multiples autorisées : le bot envoie le widget de vote natif de Discord, relit les résultats à la source et peut les clôturer plus tôt.',
     voit: 'Un message Discord avec ses cases à cocher, le compteur de votes, puis les barres de résultats à la fin.',
-    slash: 'Aucune commande — le sondage se publie ici ; /poll reste le sondage rapide à boutons',
+    slash: 'Aucune commande · le sondage se publie ici ; /poll reste le sondage rapide à boutons',
     apercu: { poll: { question: 'Soirée cinéma vendredi : quel film ?',
       options: ['Un film d’horreur', 'Un film de science-fiction', 'Un animé pour toute la famille', 'Peu importe, je viens pour l’ambiance'],
       duration: 48, allowMultiselect: false } } },
@@ -1451,7 +1451,7 @@ Dashboard.renderServerGrid = (content) => {
       <div class="srv-grid-head">
         <span class="srv-kicker">Control Center · Centre serveurs</span>
         <h2>Choisissez un serveur</h2>
-        <p>Bannière, membres, recherche — cliquez pour configurer, ou invitez ${App.escapeHtml(botName)}.</p>
+        <p>Bannière, membres, recherche · cliquez pour configurer, ou invitez ${App.escapeHtml(botName)}.</p>
         <div class="srv-head-meta">
           <span><b>${guilds.length}</b> serveur${guilds.length > 1 ? 's' : ''}</span>
           <span><b>${withBot}</b> avec le bot</span>
@@ -1517,7 +1517,7 @@ Dashboard.renderServerGrid = (content) => {
         if (bannerEl) bannerEl.style.backgroundImage = 'url("' + String(g.banner).replace(/["'()\\]/g, '') + '")';
       }
       card.onclick = () => {
-        if (!g.hasBot) { App.openInvite(Dashboard.state.bot.invite_url); App.toast('Ajoutez le bot puis revenez — le serveur sera configurable.'); return; }
+        if (!g.hasBot) { App.openInvite(Dashboard.state.bot.invite_url); App.toast('Ajoutez le bot puis revenez · le serveur sera configurable.'); return; }
         if (!g.canManage) { App.toast('Il vous faut la permission Discord « Administrateur » ou être propriétaire du serveur.', 'error'); return; }
         Dashboard.selectGuild(g.id);
       };
@@ -1780,7 +1780,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
     if (warnings.length) { bellBadge.textContent = warnings.length; bellBadge.hidden = false; }
     const list = bellPop.querySelector('.bp-list');
     list.innerHTML = '';
-    if (!warnings.length && !infos.length) { list.appendChild(App.el(`<div class="dp-empty">✅ Tout va bien — aucune alerte !</div>`)); return; }
+    if (!warnings.length && !infos.length) { list.appendChild(App.el(`<div class="dp-empty">✅ Tout va bien · aucune alerte !</div>`)); return; }
     warnings.forEach((w) => list.appendChild(App.el(`<div class="bp-item warn"><span>${w.icon || ''}</span><div>${App.escapeHtml(w.text)}</div>`)));
     infos.forEach((i2) => list.appendChild(App.el(`<div class="bp-item"><span>${i2.icon || 'ℹ️'}</span><div>${App.escapeHtml(i2.text)}</div>`)));
   });
@@ -2614,14 +2614,14 @@ Dashboard.renderers.tickets = async (content, data) => {
     <select class="dash-select" id="t-role">
       ${rolesList.length ? '<option value="">— Choisir un rôle —</option>' : Dashboard.noDiscordChoice('Aucun rôle reçu de Discord')}
       ${rolesList.map((r) => `<option value="${App.escapeHtml(r.name)}" ${Dashboard.discordRefMatches(t.support_role, r) ? 'selected' : ''}>${App.escapeHtml(r.name)}</option>`).join('')}
-      ${Dashboard.currentDiscordOption(t.support_role, rolesList, '', 'configuration actuelle — rôle introuvable')}
+      ${Dashboard.currentDiscordOption(t.support_role, rolesList, '', 'configuration actuelle · rôle introuvable')}
     </select>
 
     <label class="dash-label">Catégorie par défaut du Ticket classique</label>
     <select class="dash-select" id="t-cat">
       ${categories.length ? '<option value="">— Choisir une catégorie —</option>' : Dashboard.noDiscordChoice('Aucune catégorie reçue de Discord')}
       ${categories.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(t.category, ch) ? 'selected' : ''}>${App.escapeHtml(ch.name)}</option>`).join('')}
-      ${Dashboard.currentDiscordOption(t.category, categories, '', 'configuration actuelle — catégorie introuvable')}
+      ${Dashboard.currentDiscordOption(t.category, categories, '', 'configuration actuelle · catégorie introuvable')}
     </select>
 
     <label class="dash-label">Message du Ticket classique (vide = automatique)</label>
@@ -2632,7 +2632,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     <select class="dash-select" id="t-logchan">
       <option value="">— Désactivé (choisir un salon pour activer) —</option>
       ${textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches((data.settings || {}).ticket_log_channel, ch) ? 'selected' : ''}>#${App.escapeHtml(ch.name)}</option>`).join('')}
-      ${Dashboard.currentDiscordOption((data.settings || {}).ticket_log_channel, textChannels, '', 'configuration actuelle — salon introuvable')}
+      ${Dashboard.currentDiscordOption((data.settings || {}).ticket_log_channel, textChannels, '', 'configuration actuelle · salon introuvable')}
     </select>
 
     <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
@@ -2648,7 +2648,7 @@ Dashboard.renderers.tickets = async (content, data) => {
   const menuChanOpts = ['<option value="">— Même salon que le Ticket classique —</option>']
     .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(t.menu_channel, ch) ? 'selected' : ''}>#${App.escapeHtml(ch.name)}</option>`));
   if (t.menu_channel && !textChannels.some((ch) => Dashboard.discordRefMatches(t.menu_channel, ch))) {
-    menuChanOpts.push(Dashboard.currentDiscordOption(t.menu_channel, textChannels, '', 'configuration actuelle — salon introuvable'));
+    menuChanOpts.push(Dashboard.currentDiscordOption(t.menu_channel, textChannels, '', 'configuration actuelle · salon introuvable'));
   }
   cm.innerHTML += `
     <label class="dash-label">Salon du Ticket menu</label>
@@ -2657,7 +2657,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     <select class="dash-select" id="tm-cat">
       <option value="">— Automatique (catégorie du type, sinon celle par défaut) —</option>
       ${categories.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(t.menu_category, ch) ? 'selected' : ''}>${App.escapeHtml(ch.name)}</option>`).join('')}
-      ${Dashboard.currentDiscordOption(t.menu_category, categories, '', 'configuration actuelle — catégorie introuvable')}
+      ${Dashboard.currentDiscordOption(t.menu_category, categories, '', 'configuration actuelle · catégorie introuvable')}
     </select>
     <label class="dash-label">Message du Ticket menu</label>
     <textarea class="dash-input" id="tm-msg" rows="3">${App.escapeHtml(t.menu_message || '')}</textarea>
@@ -2796,7 +2796,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     <label class="dash-label">Couleur de l’embed</label>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <input type="color" id="tr-color" value="${roomHexOk(roomCfg.color) ? App.escapeHtml(roomCfg.color) : '#57F287'}" style="width:52px;height:36px;border-radius:8px;border:1px solid var(--d-border);background:transparent;padding:2px;cursor:pointer" />
-      <input class="dash-input" id="tr-color-hex" value="${roomHexOk(roomCfg.color) ? App.escapeHtml(roomCfg.color) : ''}" placeholder="#57F287 — vide = couleur du type" style="max-width:240px" />
+      <input class="dash-input" id="tr-color-hex" value="${roomHexOk(roomCfg.color) ? App.escapeHtml(roomCfg.color) : ''}" placeholder="#57F287 · vide = couleur du type" style="max-width:240px" />
       <span id="tr-color-note" style="font-size:12px;color:var(--d-dim)"></span>
     </div>
     <label class="dash-label">Titre (vide = « 🎫 Ticket ouvert »)</label>
@@ -2804,7 +2804,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     <label class="dash-label">Message d’accueil</label>
     <textarea class="dash-input" id="tr-welcome" rows="3" maxlength="1500" placeholder="Bienvenue {member} ! Un membre de l’équipe va vous répondre ici même…">${App.escapeHtml(roomCfg.welcome || '')}</textarea>
     <label class="dash-label">Déroulement personnalisé (facultatif)</label>
-    <textarea class="dash-input" id="tr-steps" rows="2" maxlength="1200" placeholder="Vide = pas de déroulement détaillé — une ligne discrète annonce la transcription en MP.">${App.escapeHtml(roomCfg.steps || '')}</textarea>
+    <textarea class="dash-input" id="tr-steps" rows="2" maxlength="1200" placeholder="Vide = pas de déroulement détaillé · une ligne discrète annonce la transcription en MP.">${App.escapeHtml(roomCfg.steps || '')}</textarea>
     <div style="font-size:12px;color:var(--d-dim);margin-top:4px">{member} {user} {server} {type} {number}</div>
     <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap;align-items:center">
       <button class="dash-save-action dash-btn dash-btn-primary" id="tr-save">Enregistrer</button>
@@ -2885,7 +2885,7 @@ Dashboard.renderers.tickets = async (content, data) => {
       ? `<span class="dash-badge ok">Panneau configuré dans #${App.escapeHtml(selectedChannel.name)} — salon trouvé ✅`
       : (selected
           ? `<span class="dash-badge warn">Le salon enregistré n'est plus disponible dans Discord</span>`
-          : `<span class="dash-badge warn">Aucun salon défini — choisissez-en un puis « Envoyer le panneau »</span>`);
+          : `<span class="dash-badge warn">Aucun salon défini · choisissez-en un puis « Envoyer le panneau »</span>`);
   };
   renderStatus();
   c.querySelector('#t-channel').onchange = renderStatus;
@@ -2961,7 +2961,7 @@ Dashboard.renderers.tickets = async (content, data) => {
   const renderTypes = () => {
     const el = c2.querySelector('#t-types');
     el.innerHTML = '';
-    if (!typesData.length) el.appendChild(App.el(`<div class="dash-empty">Aucun type — le panneau n\'affichera qu\'un bouton.</div>`));
+    if (!typesData.length) el.appendChild(App.el(`<div class="dash-empty">Aucun type · le panneau n\'affichera qu\'un bouton.</div>`));
     typesData.forEach((x, i) => {
       const row = App.el(`
         <div class="adv-type-card" style="margin-bottom:10px">
@@ -2970,7 +2970,7 @@ Dashboard.renderers.tickets = async (content, data) => {
             <input class="dash-input" data-k="label" value="${App.escapeHtml(x.label)}" placeholder="Nom du type" style="flex:1;min-width:140px" />
             <button class="dash-btn dash-btn-danger dash-btn-sm" data-del>Supprimer</button>
           </div>
-          <div data-emojierr style="color:#ff8a8d;font-size:12px;margin-top:3px;display:none">Emoji invalide — utilise un vrai emoji (ex : 🤝)</div>
+          <div data-emojierr style="color:#ff8a8d;font-size:12px;margin-top:3px;display:none">Emoji invalide · utilise un vrai emoji (ex : 🤝)</div>
           <label class="dash-label">Description (affichée sous le type dans le menu)</label>
           <input class="dash-input" data-k="description" maxlength="100" value="${App.escapeHtml(x.description)}" placeholder="Ex : signalez un abus du staff, en toute confidentialité" />
           <div style="color:var(--d-dim);font-size:11px;margin-top:2px">${String(x.description || '').length}/100</div>
@@ -2978,7 +2978,7 @@ Dashboard.renderers.tickets = async (content, data) => {
           <select class="dash-select" data-k="categorySel">
             ${categories.length ? '<option value="">— Catégorie par défaut (Tickets) —</option>' : Dashboard.noDiscordChoice('Aucune catégorie reçue de Discord')}
             ${categories.map((ch) => `<option value="${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(x.category, ch) ? 'selected' : ''}>${App.escapeHtml(ch.name)}</option>`).join('')}
-            ${Dashboard.currentDiscordOption(x.category, categories, '', 'configuration actuelle — catégorie introuvable')}
+            ${Dashboard.currentDiscordOption(x.category, categories, '', 'configuration actuelle · catégorie introuvable')}
           </select>
           <label class="dash-label">Rôles staff</label>
           <div class="t-roles" style="display:flex;flex-direction:column;gap:6px"></div>
@@ -3024,7 +3024,7 @@ Dashboard.renderers.tickets = async (content, data) => {
               <select class="dash-select t-role-sel">
                 ${rolesList.length ? '<option value="">— Choisir un rôle —</option>' : Dashboard.noDiscordChoice('Aucun rôle reçu de Discord')}
                 ${rolesList.map((role) => `<option value="${App.escapeHtml(role.name)}" ${Dashboard.discordRefMatches(r, role) ? 'selected' : ''}>${App.escapeHtml(role.name)}</option>`).join('')}
-                ${r && !rolesList.some((role) => Dashboard.discordRefMatches(r, role)) ? `<option value="${App.escapeHtml(r)}" selected>${App.escapeHtml(r)} (configuration actuelle — rôle introuvable)</option>` : ''}
+                ${r && !rolesList.some((role) => Dashboard.discordRefMatches(r, role)) ? `<option value="${App.escapeHtml(r)}" selected>${App.escapeHtml(r)} (configuration actuelle · rôle introuvable)</option>` : ''}
               </select>
               <button class="dash-btn dash-btn-danger dash-btn-sm">Supprimer</button>
             </div>`);
@@ -3032,7 +3032,7 @@ Dashboard.renderers.tickets = async (content, data) => {
           rr.querySelector('button').onclick = () => { x.staff_roles.splice(j, 1); renderRoles(); };
           rolesEl.appendChild(rr);
         });
-        if (!x.staff_roles.length) rolesEl.appendChild(App.el(`<div style="color:var(--d-dim);font-size:12px">Aucun — rôle staff global utilisé.</div>`));
+        if (!x.staff_roles.length) rolesEl.appendChild(App.el(`<div style="color:var(--d-dim);font-size:12px">Aucun · rôle staff global utilisé.</div>`));
       };
       renderRoles();
       row.querySelector('[data-addrole]').onclick = () => { x.staff_roles.push(''); renderRoles(); };
@@ -3053,7 +3053,7 @@ Dashboard.renderers.tickets = async (content, data) => {
           rq.querySelector('button').onclick = () => { x.questions.splice(j, 1); renderQs(); };
           qEl.appendChild(rq);
         });
-        if (!x.questions.length) qEl.appendChild(App.el(`<div style="color:var(--d-dim);font-size:12px">Aucune question — questionnaire par défaut (juste la raison).</div>`));
+        if (!x.questions.length) qEl.appendChild(App.el(`<div style="color:var(--d-dim);font-size:12px">Aucune question · questionnaire par défaut (juste la raison).</div>`));
       };
       renderQs();
       row.querySelector('[data-addq]').onclick = () => {
@@ -3107,8 +3107,8 @@ Dashboard.renderers.tickets = async (content, data) => {
     <input class="dash-input" id="adv-name" value="${App.escapeHtml(advancedData.name)}" placeholder="Tickets personnalisés" maxlength="80" />
     <label class="dash-label">Type d'affichage</label>
     <select class="dash-select" id="adv-mode" style="max-width:360px">
-      <option value="buttons" ${advancedData.mode === 'buttons' ? 'selected' : ''}>Boutons — un bouton par type</option>
-      <option value="menu" ${advancedData.mode === 'menu' ? 'selected' : ''}>Liste — le membre choisit le type</option>
+      <option value="buttons" ${advancedData.mode === 'buttons' ? 'selected' : ''}>Boutons : un bouton par type</option>
+      <option value="menu" ${advancedData.mode === 'menu' ? 'selected' : ''}>Liste : le membre choisit le type</option>
     </select>
     <label class="dash-label">Salon du Ticket avancé</label>
     <select class="dash-select" id="adv-channel" style="max-width:360px">${advChannelOptions.join('')}</select>
@@ -3197,11 +3197,11 @@ Dashboard.renderers.tickets = async (content, data) => {
       const rolesEl = row.querySelector('[data-roles]');
       const renderTypeRoles = () => {
         rolesEl.innerHTML = '';
-        if (!type.staff_roles.length) rolesEl.appendChild(App.el(`<div style="font-size:12px;color:var(--d-dim)">Aucun rôle spécifique — gestionnaire du serveur uniquement.</div>`));
+        if (!type.staff_roles.length) rolesEl.appendChild(App.el(`<div style="font-size:12px;color:var(--d-dim)">Aucun rôle spécifique · gestionnaire du serveur uniquement.</div>`));
         type.staff_roles.forEach((roleName, roleIndex) => {
           const roleOptions = [availableRoles.length ? '<option value="">— Choisir un rôle staff —</option>' : Dashboard.noDiscordChoice('Aucun rôle reçu de Discord')]
             .concat(availableRoles.map((role) => `<option value="${App.escapeHtml(role.name)}" ${Dashboard.discordRefMatches(roleName, role) ? 'selected' : ''}>${App.escapeHtml(role.name)}</option>`));
-          if (roleName && !availableRoles.some((role) => Dashboard.discordRefMatches(roleName, role))) roleOptions.push(`<option value="${App.escapeHtml(roleName)}" selected>${App.escapeHtml(roleName)} (configuration actuelle — rôle introuvable)</option>`);
+          if (roleName && !availableRoles.some((role) => Dashboard.discordRefMatches(roleName, role))) roleOptions.push(`<option value="${App.escapeHtml(roleName)}" selected>${App.escapeHtml(roleName)} (configuration actuelle · rôle introuvable)</option>`);
           const rr = App.el(`<div style="display:flex;gap:7px;margin-top:6px"><select class="dash-select" style="flex:1">${roleOptions.join('')}</select><button class="dash-btn dash-btn-danger dash-btn-sm">Supprimer</button></div>`);
           const sel = rr.querySelector('select');
           if (roleName && [...sel.options].some((option) => option.value === roleName)) sel.value = roleName;
@@ -3215,7 +3215,7 @@ Dashboard.renderers.tickets = async (content, data) => {
       const renderTypeQuestions = () => {
         questionsEl.innerHTML = '';
         if (!type.questions.length) {
-          questionsEl.appendChild(App.el(`<div style="font-size:12px;color:var(--d-dim)">Aucune question — seule la raison générale sera demandée si elle est activée.</div>`));
+          questionsEl.appendChild(App.el(`<div style="font-size:12px;color:var(--d-dim)">Aucune question · seule la raison générale sera demandée si elle est activée.</div>`));
         }
         type.questions.forEach((question, questionIndex) => {
           const qq = qNorm(question);
@@ -3313,7 +3313,7 @@ Dashboard.renderers.tickets = async (content, data) => {
         </div>
         <div class="tg-box tg-box-alt" data-jump="tk-adv" role="button" tabindex="0">
           <b>Ticket avancé</b>
-          <small>Système à part, tout-en-un.</small>
+          <small>Types colorés et questions à la création.</small>
           <p>Exemple : types avec couleurs et questions.</p>
         </div>
       </div>
@@ -3452,7 +3452,7 @@ Dashboard.renderers.welcome = async (content, data) => {
         const current = String(ev.config[f.key] || '');
         const opts = [rolesList.length ? '<option value="">— Choisir un rôle —</option>' : Dashboard.noDiscordChoice('Aucun rôle reçu de Discord')]
           .concat(rolesList.map((r) => `<option value="${App.escapeHtml(r.name)}" ${Dashboard.discordRefMatches(current, r) ? 'selected' : ''}>${App.escapeHtml(r.name)}</option>`))
-          .concat(Dashboard.currentDiscordOption(current, rolesList, '', 'configuration actuelle — rôle introuvable'));
+          .concat(Dashboard.currentDiscordOption(current, rolesList, '', 'configuration actuelle · rôle introuvable'));
         cfgZone.appendChild(App.el(`<select class="dash-select" data-k="${f.key}">${opts.join('')}</select>`));
         return;
       }
@@ -3570,8 +3570,8 @@ Dashboard.renderers.welcome = async (content, data) => {
         // si aucun salon n'est détaillé, engine.js retire les DEUX lignes
         // (sinon la phrase restait suspendue sur ses deux points).
         msgEl.value = (key === 'member_join')
-          ? "Pour bien commencer, découvrez les salons utiles :\n{channels}\n\nPassez un bon moment parmi nous — l'équipe est là pour vous aider ! 🚀"
-          : "Merci d'avoir fait partie de {server}.\nBonne continuation — la porte reste ouverte si vous revenez ! 💛";
+          ? "Pour bien commencer, découvrez les salons utiles :\n{channels}\n\nPassez un bon moment parmi nous · l'équipe est là pour vous aider ! 🚀"
+          : "Merci d'avoir fait partie de {server}.\nBonne continuation · la porte reste ouverte si vous revenez ! 💛";
         msgEl.dispatchEvent(new Event('input', { bubbles: true }));
       };
       cfgZone.appendChild(tmplBtn);
@@ -3716,7 +3716,7 @@ Dashboard.renderers.welcome = async (content, data) => {
         testBtn.disabled = true; testBtn.textContent = 'Envoi…';
         try {
           await App.api(`/bots/${bot.id}/guilds/${guildId}/events/${key}/test`, { method: 'POST' });
-          App.toast('Message de test envoyé — allez voir le salon ! (Pensez à 💾 Enregistrer d\'abord si vous venez de modifier.)');
+          App.toast('Message de test envoyé · allez voir le salon ! (Pensez à 💾 Enregistrer d\'abord si vous venez de modifier.)');
         } catch (e) { App.toast(e.message, 'error'); }
         testBtn.disabled = false; testBtn.textContent = `Tester ${key === 'member_join' ? 'l’arrivée' : 'le départ'}`;
       };
@@ -3791,7 +3791,7 @@ Dashboard.renderers.levels = async (content, data) => {
     <select class="dash-select" id="xp-channel">
       <option value="">— Salon du message —</option>
       ${textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(s.xp_channel, ch) ? 'selected' : ''}>#${App.escapeHtml(ch.name)}</option>`).join('')}
-      ${Dashboard.currentDiscordOption(s.xp_channel, textChannels, '', 'configuration actuelle — salon introuvable')}
+      ${Dashboard.currentDiscordOption(s.xp_channel, textChannels, '', 'configuration actuelle · salon introuvable')}
     </select>
     <button class="dash-save-action dash-btn dash-btn-primary" style="margin-top:14px" id="xp-save">Enregistrer</button>`;
 
@@ -3821,7 +3821,7 @@ Dashboard.renderers.levels = async (content, data) => {
     <div style="display:flex;align-items:center;justify-content:space-between;margin:4px 0"><label class="dash-label" style="margin:0">Ignorer les membres muets ou sourds</label><label class="switch"><input type="checkbox" id="vxp-muted" ${s.voice_xp_ignore_muted === 0 ? '' : 'checked'}><span class="slider"></span></label></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin:4px 0"><label class="dash-label" style="margin:0">Ignorer le salon AFK du serveur</label><label class="switch"><input type="checkbox" id="vxp-afk" ${s.voice_xp_ignore_afk === 0 ? '' : 'checked'}><span class="slider"></span></label></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin:4px 0"><label class="dash-label" style="margin:0">Réduire après 4 h d'affilée</label><label class="switch"><input type="checkbox" id="vxp-taper" ${s.voice_xp_taper === 0 ? '' : 'checked'}><span class="slider"></span></label></div>
-    <div class="desc">Le bot n'entre jamais dans le salon vocal : il lit l'état de présence fourni par Discord. Réduire après 4 h empêche de laisser un salon ouvert toute la nuit pour farmer — moitié jusqu'à 8 h, plus rien au-delà.</div>
+    <div class="desc">Le bot n'entre jamais dans le salon vocal : il lit l'état de présence fourni par Discord. Réduire après 4 h empêche de laisser un salon ouvert toute la nuit pour farmer · moitié jusqu'à 8 h, plus rien au-delà.</div>
     <button class="dash-save-action dash-btn dash-btn-primary" style="margin-top:14px" id="vxp-save">Enregistrer</button>`;
 
   // Aperçu vivant : « 30 XP toutes les 3 minutes ». Recalculé à la frappe pour
@@ -3847,7 +3847,7 @@ Dashboard.renderers.levels = async (content, data) => {
   // v214 — Rôles par niveau « en échelle » : un rôle par palier, le rôle du
   // palier atteint REMPLACE ceux des paliers inférieurs. Automatique à la
   // montée, et synchronisable pour les membres déjà avancés.
-  const c2 = Dashboard.card(root, 'Rôles par niveau', 'Chaque niveau peut avoir son rôle : quand le membre atteint le palier, il reçoit ce rôle et le bot lui RETIRE le rôle du palier précédent — il ne porte que son rang actuel. Rien de configuré pour un niveau = il garde le rôle de son dernier palier atteint.');
+  const c2 = Dashboard.card(root, 'Rôles par niveau', 'Chaque niveau peut avoir son rôle : quand le membre atteint le palier, il reçoit ce rôle et le bot lui RETIRE le rôle du palier précédent · il ne porte que son rang actuel. Rien de configuré pour un niveau = il garde le rôle de son dernier palier atteint.');
   c2.appendChild(App.el(`<div data-xp-ladder style="background:var(--d-card2);border:1px solid var(--d-border);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--d-dim);margin-bottom:12px"></div>`));
   c2.appendChild(App.el(`<div id="xp-roles"></div>`));
   c2.appendChild(App.el(`<button class="dash-btn dash-btn-sm" id="xp-add" style="margin-top:8px">＋ Ajouter un niveau</button>`));
@@ -3858,7 +3858,7 @@ Dashboard.renderers.levels = async (content, data) => {
     const box = c2.querySelector('[data-xp-ladder]');
     if (!box) return;
     sortRoles();
-    if (!rolesData.length) { box.innerHTML = 'Aucun palier configuré — ajoutez des niveaux avec leur rôle.'; return; }
+    if (!rolesData.length) { box.innerHTML = 'Aucun palier configuré · ajoutez des niveaux avec leur rôle.'; return; }
     box.innerHTML = '<b style="color:var(--d-text)">Échelle actuelle</b><div style="opacity:.75;margin-top:2px">Le chiffre = le niveau · chaque rôle remplace celui du palier précédent.</div><div style="margin-top:6px">'
       + rolesData.map((r) => `<div style="margin:2px 0"><b>${r.level}</b> → ${App.escapeHtml(String(r.role || '—'))}</div>`).join('')
       + '</div>';
@@ -3867,11 +3867,11 @@ Dashboard.renderers.levels = async (content, data) => {
     sortRoles();
     const el = c2.querySelector('#xp-roles');
     el.innerHTML = '';
-    if (!rolesData.length) el.appendChild(App.el(`<div class="dash-empty">Aucun palier — ajoutez un niveau et choisissez son rôle.</div>`));
+    if (!rolesData.length) el.appendChild(App.el(`<div class="dash-empty">Aucun palier · ajoutez un niveau et choisissez son rôle.</div>`));
     rolesData.forEach((r, i) => {
       const options = [xpRoleChoices.length ? '<option value="">— Choisir un rôle —</option>' : Dashboard.noDiscordChoice('Aucun rôle reçu de Discord')]
         .concat(xpRoleChoices.map((role) => `<option value="${App.escapeHtml(role.name)}" ${Dashboard.discordRefMatches(r.role, role) ? 'selected' : ''}>${App.escapeHtml(role.name)}</option>`));
-      if (r.role && !xpRoleChoices.some((role) => Dashboard.discordRefMatches(r.role, role))) options.push(`<option value="${App.escapeHtml(r.role)}" selected>${App.escapeHtml(r.role)} (configuration actuelle — rôle introuvable)</option>`);
+      if (r.role && !xpRoleChoices.some((role) => Dashboard.discordRefMatches(r.role, role))) options.push(`<option value="${App.escapeHtml(r.role)}" selected>${App.escapeHtml(r.role)} (configuration actuelle · rôle introuvable)</option>`);
       const roleControl = `<select class="dash-select" data-k="role">${options.join('')}</select>`;
       const row = App.el(`
         <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center">
@@ -4000,7 +4000,7 @@ Dashboard.renderers.shop = async (content, data) => {
     itemsData.forEach((it, i) => {
       const roleOptions = [roleChoices.length ? '<option value="">— Choisir un rôle —</option>' : Dashboard.noDiscordChoice('Aucun rôle reçu de Discord')]
         .concat(roleChoices.map((role) => `<option value="${App.escapeHtml(role.name)}" ${Dashboard.discordRefMatches(it.role, role) ? 'selected' : ''}>${App.escapeHtml(role.name)}</option>`));
-      if (it.role && !roleChoices.some((role) => Dashboard.discordRefMatches(it.role, role))) roleOptions.push(`<option value="${App.escapeHtml(it.role)}" selected>${App.escapeHtml(it.role)} (configuration actuelle — rôle introuvable)</option>`);
+      if (it.role && !roleChoices.some((role) => Dashboard.discordRefMatches(it.role, role))) roleOptions.push(`<option value="${App.escapeHtml(it.role)}" selected>${App.escapeHtml(it.role)} (configuration actuelle · rôle introuvable)</option>`);
       const roleControl = `<select class="dash-select" data-k="role">${roleOptions.join('')}</select>`;
       const row = App.el(`
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
@@ -4108,7 +4108,7 @@ Dashboard.renderers.moderation = async (content, data) => {
     ...channelList.map((channel) => `<option value="${App.escapeHtml(channel.id)}" ${Dashboard.discordRefMatches(currentBlacklistChannel, channel) ? 'selected' : ''}>#${App.escapeHtml(channel.name)}</option>`),
   ];
   if (currentBlacklistChannel && !channelList.some((channel) => Dashboard.discordRefMatches(currentBlacklistChannel, channel))) {
-    blacklistChannelOptions.push(Dashboard.currentDiscordOption(currentBlacklistChannel, channelList, '', 'configuration actuelle — salon blacklist introuvable'));
+    blacklistChannelOptions.push(Dashboard.currentDiscordOption(currentBlacklistChannel, channelList, '', 'configuration actuelle · salon blacklist introuvable'));
   }
   const blacklistDuration = Math.min(Math.max(parseInt(s.am_blacklist_duration_min, 10) || 0, 0), 525600);
   const blacklistDurations = [[0, 'Permanente'], [60, '1 heure'], [360, '6 heures'], [1440, '24 heures'], [4320, '3 jours'], [10080, '7 jours'], [43200, '30 jours'], [525600, '365 jours']];
@@ -4119,7 +4119,7 @@ Dashboard.renderers.moderation = async (content, data) => {
     ...channelList.map((channel) => `<option value="${App.escapeHtml(channel.id)}" ${Dashboard.discordRefMatches(nativeAlertChannel, channel) ? 'selected' : ''}>#${App.escapeHtml(channel.name)}</option>`),
   ];
   if (nativeAlertChannel && !channelList.some((channel) => Dashboard.discordRefMatches(nativeAlertChannel, channel))) {
-    nativeChannelOptions.push(Dashboard.currentDiscordOption(nativeAlertChannel, channelList, '', 'configuration actuelle — salon introuvable'));
+    nativeChannelOptions.push(Dashboard.currentDiscordOption(nativeAlertChannel, channelList, '', 'configuration actuelle · salon introuvable'));
   }
   const blacklistData = blacklist.map((word) => ({ word: String(word || '') }));
   const memberBlacklistData = Array.isArray(data.automod_blacklist) ? data.automod_blacklist : [];
@@ -4296,7 +4296,7 @@ Dashboard.renderers.moderation = async (content, data) => {
       localStorage.setItem(draftKey, JSON.stringify(collectAutomodForm()));
       App.toast('Brouillon Auto-Mod enregistré sur cet appareil.');
       const status = c.querySelector('#am-status-line');
-      if (status) status.textContent = 'Brouillon local enregistré — pas encore publié.';
+      if (status) status.textContent = 'Brouillon local enregistré · pas encore publié.';
     } catch { App.toast('Impossible d’enregistrer le brouillon.', 'error'); }
   };
   c.querySelector('#am-draft').onclick = saveAutomodDraft;
@@ -4664,7 +4664,7 @@ Dashboard.renderers.moderation = async (content, data) => {
   (async () => {
     try {
       const p = await App.api(`/bots/${bot.id}/guilds/${guildId}/permissions`);
-      if (!p.online) { permBox.innerHTML = `<div class="desc">Bot hors ligne — les permissions seront vérifiées à son retour.</div>`; return; }
+      if (!p.online) { permBox.innerHTML = `<div class="desc">Bot hors ligne · les permissions seront vérifiées à son retour.</div>`; return; }
       if (!p.perms) { permBox.innerHTML = `<div class="desc">Serveur introuvable pour le bot.</div>`; return; }
       const items = [
         ['manageMessages', 'Supprimer les messages', 'l\'auto-mod peut effacer les messages'],
@@ -4832,7 +4832,7 @@ Dashboard.renderers.moderation = async (content, data) => {
           catch (e) { App.toast(e.message, 'error'); }
         };
       } else {
-        statusEl.innerHTML = `<div class="desc" style="margin:0">${cfg.enabled ? 'Bouclier armé — le serveur est protégé.' : 'Bouclier désarmé.'}</div>`;
+        statusEl.innerHTML = `<div class="desc" style="margin:0">${cfg.enabled ? 'Bouclier armé · le serveur est protégé.' : 'Bouclier désarmé.'}</div>`;
       }
       cRaid.querySelector('#raid-save').onclick = async (e) => {
         const bouton = e.currentTarget;
@@ -5098,7 +5098,7 @@ Dashboard.renderers.antinuke = async (content, data) => {
           <label class="dash-label">Réaction</label>
           <select class="dash-select" id="nk-act">
             <option value="alert" ${cfg.action === 'alert' ? 'selected' : ''}>Alerter seulement (le plus sûr)</option>
-            <option value="quarantine" ${cfg.action === 'quarantine' ? 'selected' : ''}>Quarantaine (réglage par défaut — réversible)</option>
+            <option value="quarantine" ${cfg.action === 'quarantine' ? 'selected' : ''}>Quarantaine (réglage par défaut, réversible)</option>
             <option value="demote" ${cfg.action === 'demote' ? 'selected' : ''}>Retirer Administrateur</option>
             <option value="lockdown" ${cfg.action === 'lockdown' ? 'selected' : ''}>Verrouiller les salons</option>
             <option value="ban" ${cfg.action === 'ban' ? 'selected' : ''}>Bannir l’auteur (agressif, irréversible)</option>
@@ -5255,7 +5255,7 @@ Dashboard.renderers.antinuke = async (content, data) => {
         // comportement avant la v244, et le bouton doit rester prévisible.
         row.querySelector('.nk-action').value = '';
       });
-      App.toast('Seuils recommandés rétablis — pensez à enregistrer.');
+      App.toast('Seuils recommandés rétablis · pensez à enregistrer.');
     };
 
     // --- Historique ---
@@ -5370,7 +5370,7 @@ const c = Dashboard.card(root, 'Panneaux', 'Envoyez-les sur Discord avec /roles 
     const modeLabel = m.mode === 'buttons' ? 'Boutons' : 'Menu déroulant';
     const sent = !!m.message_id;
     const status = sent
-      ? '<span style="color:var(--d-success,#57F287)">● déjà envoyé — se met à jour sur place</span>'
+      ? '<span style="color:var(--d-success,#57F287)">● déjà envoyé · se met à jour sur place</span>'
       : '<span style="color:var(--d-dim)">pas encore envoyé</span>';
     const row = App.el(`
       <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--d-border);border-radius:8px;padding:10px 14px;margin-bottom:8px">
@@ -5416,7 +5416,7 @@ Dashboard.renderers.suggestions = async (content, data) => {
       <select class="dash-select" id="s-channel">
         <option value="">— Désactivé —</option>
         ${textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.suggestion_channel, channel) ? 'selected' : ''}>#${App.escapeHtml(channel.name)}</option>`).join('')}
-        ${Dashboard.currentDiscordOption(s.suggestion_channel, textChannels, '', 'configuration actuelle — salon introuvable')}
+        ${Dashboard.currentDiscordOption(s.suggestion_channel, textChannels, '', 'configuration actuelle · salon introuvable')}
       </select>
     </div>
     <div class="setting-row">
@@ -5440,7 +5440,7 @@ Dashboard.renderers.suggestions = async (content, data) => {
       <select class="dash-select" id="s-approve">
         <option value="">— Désactivé —</option>
         ${textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.suggestion_approve_channel, channel) ? 'selected' : ''}>#${App.escapeHtml(channel.name)}</option>`).join('')}
-        ${Dashboard.currentDiscordOption(s.suggestion_approve_channel, textChannels, '', 'configuration actuelle — salon introuvable')}
+        ${Dashboard.currentDiscordOption(s.suggestion_approve_channel, textChannels, '', 'configuration actuelle · salon introuvable')}
       </select>
     </div>
     <div style="font-size:12px;color:var(--d-dim);margin-top:6px">Vide = système par défaut. Les suggestions sont postées dans le salon choisi avec les boutons 👍/👎. Le staff tranche avec ✅ Approuver, ❌ Refuser (une fenêtre demande le motif, affiché sous la suggestion) et 💬 En discussion.</div>
@@ -5556,7 +5556,7 @@ Dashboard.imageField = (label, value, onChange, hint = '') => {
     fileInput.value = '';
     wrap.querySelector('[data-remove]').disabled = true;
     onChange('');
-    App.toast('Image retirée — le système utilisera son image par défaut.');
+    App.toast('Image retirée · le système utilisera son image par défaut.');
   };
   return wrap;
 };
@@ -5576,7 +5576,7 @@ Dashboard.renderers.giveaways = async (content) => {
   const chanOpts = ['<option value="">— Choisir un salon (aucun par défaut) —</option>']
     .concat(textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.giveaway_channel, channel) ? 'selected' : ''}>#${App.escapeHtml(channel.name)}</option>`));
   if (s.giveaway_channel && !textChannels.some((ch) => Dashboard.discordRefMatches(s.giveaway_channel, ch))) {
-    chanOpts.push(Dashboard.currentDiscordOption(s.giveaway_channel, textChannels, '', 'configuration actuelle — salon introuvable'));
+    chanOpts.push(Dashboard.currentDiscordOption(s.giveaway_channel, textChannels, '', 'configuration actuelle · salon introuvable'));
   }
   const pingOpts = ['<option value="">— Aucun (ne pas mentionner) —</option>', `<option value="@everyone" ${s.giveaway_ping_role === '@everyone' ? 'selected' : ''}>@everyone (tout le monde)</option>`]
     .concat(rolesList.map((r) => `<option value="${App.escapeHtml(r.name)}" ${s.giveaway_ping_role === r.name || s.giveaway_ping_role === r.id ? 'selected' : ''}>@${App.escapeHtml(r.name)}</option>`));
@@ -5584,7 +5584,7 @@ Dashboard.renderers.giveaways = async (content) => {
   const reqRoleOpts = ['<option value="">— Aucun rôle requis —</option>']
     .concat(rolesList.map((r) => `<option value="${r.id}" ${String(s.giveaway_req_role || '') === String(r.id) ? 'selected' : ''}>@${App.escapeHtml(r.name)}</option>`));
   if (s.giveaway_req_role && !rolesList.some((r) => String(r.id) === String(s.giveaway_req_role))) {
-    reqRoleOpts.push(`<option value="${App.escapeHtml(String(s.giveaway_req_role))}" selected>configuration actuelle — rôle introuvable</option>`);
+    reqRoleOpts.push(`<option value="${App.escapeHtml(String(s.giveaway_req_role))}" selected>configuration actuelle · rôle introuvable</option>`);
   }
   const reqLevelOpts = Dashboard.presetOptions([[0, 'Désactivé'], [2, 'Niveau 2+'], [3, 'Niveau 3+'], [5, 'Niveau 5+'], [10, 'Niveau 10+'], [15, 'Niveau 15+'], [20, 'Niveau 20+'], [25, 'Niveau 25+'], [30, 'Niveau 30+'], [40, 'Niveau 40+'], [50, 'Niveau 50+']], parseInt(s.giveaway_req_level, 10) || 0);
 
@@ -5879,7 +5879,7 @@ Dashboard.renderers.embeds = async (content, data) => {
     if (!host) return;
     d.buttons = d.buttons || [];
     if (!d.buttons.length) {
-      host.innerHTML = '<div class="eb-tpl-empty">Aucun bouton — le message sera sans boutons.</div>';
+      host.innerHTML = '<div class="eb-tpl-empty">Aucun bouton · le message sera sans boutons.</div>';
       return;
     }
     host.innerHTML = d.buttons.map((b, i) => `
@@ -6024,7 +6024,7 @@ Dashboard.renderers.embeds = async (content, data) => {
 
 Dashboard.renderers.members = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '', 'Membres du serveur', 'La liste des membres avec leurs rôles, niveaux et coins — et des actions directes.');
+  const root = Dashboard.header(content, '', 'Membres du serveur', 'La liste des membres avec leurs rôles, niveaux et coins · et des actions directes.');
   const rolesList = data.roles || [];
   const c = Dashboard.card(root, 'Recherche', '');
   c.innerHTML += `<input class="dash-input" id="m-search" placeholder="🔍 Rechercher un membre…" style="max-width:320px" />`;
@@ -6130,7 +6130,7 @@ Dashboard.renderers.members = async (content, data) => {
 // ---------- Statistiques ----------
 Dashboard.renderers.stats = async (content) => {
   const { bot, guildId } = Dashboard.state;
-  const root = Dashboard.header(content, '', 'Statistiques du serveur', 'Activité des 7 derniers jours — mesurée automatiquement par le bot.');
+  const root = Dashboard.header(content, '', 'Statistiques du serveur', 'Activité des 7 derniers jours · mesurée automatiquement par le bot.');
   let s;
   try { s = await App.api(`/bots/${bot.id}/guilds/${guildId}/stats`); }
   catch (e) { root.appendChild(App.el(`<div class="dash-empty">${App.escapeHtml(e.message)}</div>`)); return; }
@@ -6493,7 +6493,7 @@ Dashboard.renderers.logs = async (content, data) => {
     <select class="dash-select" id="l-channel">
       <option value="">— Journaux désactivés —</option>
       ${textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.log_channel, channel) ? 'selected' : ''}>#${App.escapeHtml(channel.name)}</option>`).join('')}
-      ${Dashboard.currentDiscordOption(s.log_channel, textChannels, '', 'configuration actuelle — salon introuvable')}
+      ${Dashboard.currentDiscordOption(s.log_channel, textChannels, '', 'configuration actuelle · salon introuvable')}
     </select>
     <label class="dash-label" style="margin-top:12px">Que devez-je tracer ?</label>
     <div class="dash-filter-grid">
@@ -6528,7 +6528,7 @@ Dashboard.renderers.logs = async (content, data) => {
   };
 
   // Historique des actions d'auto-mod (visible même sans salon #logs)
-  const hc = Dashboard.card(root, 'Auto-modération — dernières actions', 'Les 20 dernières suppressions automatiques sur ce serveur.');
+  const hc = Dashboard.card(root, 'Auto-modération · dernières actions', 'Les 20 dernières suppressions automatiques sur ce serveur.');
   const hList = App.el(`<div class="desc">Chargement…</div>`);
   hc.appendChild(hList);
   (async () => {
@@ -6613,7 +6613,7 @@ Dashboard.renderers.quiz = async (content, data) => {
   const chanOpts = ['<option value="">— Salon où la commande est lancée —</option>']
     .concat(textChannels.map((channel) => `<option value="#${App.escapeHtml(channel.name)}" ${Dashboard.discordRefMatches(s.quiz_channel, channel) ? 'selected' : ''}>#${App.escapeHtml(channel.name)}</option>`));
   if (s.quiz_channel && !textChannels.some((ch) => Dashboard.discordRefMatches(s.quiz_channel, ch))) {
-    chanOpts.push(Dashboard.currentDiscordOption(s.quiz_channel, textChannels, '', 'configuration actuelle — salon introuvable'));
+    chanOpts.push(Dashboard.currentDiscordOption(s.quiz_channel, textChannels, '', 'configuration actuelle · salon introuvable'));
   }
   c.innerHTML += `
     <div class="setting-row">
@@ -6845,12 +6845,12 @@ Dashboard.renderers.events = async (content, data) => {
   await renderList();
 
   // ---- ➕ Créer un événement ----
-  const createCard = Dashboard.card(root, 'Créer un événement', 'Titre, date (JJ/MM HH:MM — heure du serveur), description, salon d\'annonce et rôle à mentionner en option.');
+  const createCard = Dashboard.card(root, 'Créer un événement', 'Titre, date (JJ/MM HH:MM · heure du serveur), description, salon d\'annonce et rôle à mentionner en option.');
   const chOpts = ['<option value="">— Salon actuel / premier salon texte —</option>']
     .concat(textChannels.map((ch) => `<option value="${ch.id}">#${App.escapeHtml(ch.name)}</option>`));
   createCard.innerHTML += `
     <label class="dash-label">Titre *</label>
-    <input class="dash-input" id="ev-title" placeholder="Tournoi CODM — 1v1" style="max-width:420px" />
+    <input class="dash-input" id="ev-title" placeholder="Tournoi CODM · 1v1" style="max-width:420px" />
     <label class="dash-label">Date & heure (JJ/MM HH:MM) *</label>
     <input class="dash-input" id="ev-when" placeholder="25/08 20:00" style="max-width:180px" />
     <label class="dash-label">Description</label>
@@ -6902,7 +6902,7 @@ Dashboard.renderers.community = async (content, data) => {
     .concat((data.roles || []).map((r) => `<option value="${r.id}" ${String(sel) === String(r.id) ? 'selected' : ''}>@ ${App.escapeHtml(r.name)}</option>`)).join('');
   const ircDraw = () => {
     const box = ci.querySelector('#irc-rows');
-    if (!ircRows.length) { box.innerHTML = '<div style="font-size:13px;color:var(--d-dim)">Aucun palier — ajoutez-en un (ex. 5 invitations → rôle Fan, 25 → rôle Ambassadeur).</div>'; return; }
+    if (!ircRows.length) { box.innerHTML = '<div style="font-size:13px;color:var(--d-dim)">Aucun palier · ajoutez-en un (ex. 5 invitations → rôle Fan, 25 → rôle Ambassadeur).</div>'; return; }
     box.innerHTML = ircRows.map((rw, i) => `
       <div class="irc-row" data-i="${i}" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
         <input type="number" class="dash-input irc-inv" min="1" max="100000" value="${rw.invites}" style="width:110px" title="Nombre d'invitations valides" />
@@ -6919,8 +6919,8 @@ Dashboard.renderers.community = async (content, data) => {
   };
   ci.innerHTML += `
     <label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" id="irc-enabled" ${irc.enabled ? 'checked' : ''} /> Activer les récompenses d'invitations</label>
-    <label class="dash-label">Anti fausses invitations — un invité qui part avant ce délai ne compte pas</label>
-    <select class="dash-select" id="irc-minh" style="max-width:320px">${[[0, 'Désactivé — tous les invités comptent'], [6, '6 heures'], [24, '24 heures (recommandé)'], [72, '3 jours'], [168, '7 jours']].map(([v, l]) => `<option value="${v}" ${Number(irc.min_hours) === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    <label class="dash-label">Anti fausses invitations · un invité qui part avant ce délai ne compte pas</label>
+    <select class="dash-select" id="irc-minh" style="max-width:320px">${[[0, 'Désactivé · tous les invités comptent'], [6, '6 heures'], [24, '24 heures (recommandé)'], [72, '3 jours'], [168, '7 jours']].map(([v, l]) => `<option value="${v}" ${Number(irc.min_hours) === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
     <label class="dash-label">Salon d'annonce des paliers atteints</label>
     <select class="dash-select" id="irc-chan" style="max-width:320px">${['<option value="">— Aucune annonce —</option>'].concat(textChannels.map((ch) => `<option value="${ch.id}" ${irc.channel === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`)).join('')}</select>
     <label class="dash-label">Paliers (invitations valides → rôle donné à l'inviteur)</label>
@@ -6947,7 +6947,7 @@ Dashboard.renderers.community = async (content, data) => {
   };
 
   // ---- 🔴 Carte Annonces de live ----
-  const cl = Dashboard.card(root, 'Annonces de live', 'Enregistrez le lien TikTok / Twitch / YouTube / Kick d\'un membre : dès qu\'il lance un live, le bot l\'annonce automatiquement (pseudo + photo de profil + bouton Regarder) dans le salon choisi — et annonce aussi la fin du live (avec sa durée).');
+  const cl = Dashboard.card(root, 'Annonces de live', 'Enregistrez le lien TikTok / Twitch / YouTube / Kick d\'un membre : dès qu\'il lance un live, le bot l\'annonce automatiquement (pseudo + photo de profil + bouton Regarder) dans le salon choisi · et annonce aussi la fin du live (avec sa durée).');
   const liveRoles = (data.roles || []).filter((role) => role.name !== '@everyone');
   const livePing = String(s.live_ping || 'everyone');
   const livePingOpts = [
@@ -6956,17 +6956,17 @@ Dashboard.renderers.community = async (content, data) => {
     `<option value="none" ${livePing === 'none' ? 'selected' : ''}>Aucune mention</option>`,
   ].concat(liveRoles.map((r) => `<option value="${App.escapeHtml(r.id)}" ${livePing === String(r.id) || Dashboard.discordRefMatches(livePing, r) ? 'selected' : ''}>${App.escapeHtml(r.name)}</option>`));
   if (livePing && !['everyone', 'here', 'none'].includes(livePing) && !liveRoles.some((r) => String(r.id) === livePing || Dashboard.discordRefMatches(livePing, r))) {
-    livePingOpts.push(Dashboard.currentDiscordOption(livePing, liveRoles, '', 'configuration actuelle — rôle introuvable'));
+    livePingOpts.push(Dashboard.currentDiscordOption(livePing, liveRoles, '', 'configuration actuelle · rôle introuvable'));
   }
   const liveChanOpts = ['<option value="">— Désactivé (choisir un salon pour activer) —</option>']
     .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(s.live_channel, ch) ? 'selected' : ''}>#${App.escapeHtml(ch.name)}</option>`));
   if (s.live_channel && !textChannels.some((ch) => Dashboard.discordRefMatches(s.live_channel, ch))) {
-    liveChanOpts.push(Dashboard.currentDiscordOption(s.live_channel, textChannels, '', 'configuration actuelle — salon introuvable'));
+    liveChanOpts.push(Dashboard.currentDiscordOption(s.live_channel, textChannels, '', 'configuration actuelle · salon introuvable'));
   }
   cl.innerHTML += `
     <div id="lv-status" style="margin-bottom:10px">${s.live_channel
       ? `<span class="dash-badge ok">Annonces ACTIVES dans ${App.escapeHtml(s.live_channel)}</span>`
-      : `<span class="dash-badge warn">AUCUN salon choisi — les annonces sont DÉSACTIVÉES ! Choisissez un salon ci-dessous.</span>`}</div>
+      : `<span class="dash-badge warn">AUCUN salon choisi · les annonces sont DÉSACTIVÉES ! Choisissez un salon ci-dessous.</span>`}</div>
     <label class="dash-label">Salon des annonces de live</label>
     <select class="dash-select" id="lv-chan" style="max-width:320px">${liveChanOpts.join('')}</select>
     <label class="dash-label">Rôle mentionné avec l'annonce</label>
@@ -7001,7 +7001,7 @@ Dashboard.renderers.community = async (content, data) => {
     const chosen = cl.querySelector('#lv-chan').value;
     cl.querySelector('#lv-status').innerHTML = chosen
       ? `<span class="dash-badge ok">Annonces ACTIVES dans ${App.escapeHtml(chosen)}</span>`
-      : `<span class="dash-badge warn">AUCUN salon choisi — les annonces sont DÉSACTIVÉES !</span>`;
+      : `<span class="dash-badge warn">AUCUN salon choisi · les annonces sont DÉSACTIVÉES !</span>`;
   };
   cl.querySelector('#lv-save').onclick = async () => {
     try { await saveLiveSettings(); App.toast('Annonces de live enregistrées.'); }
@@ -7110,11 +7110,11 @@ Dashboard.renderers.community = async (content, data) => {
   }).catch(() => {});
 
   // ---- Carte Starboard ----
-  const c1 = Dashboard.card(root, '⭐ Starboard', 'Quand un message reçoit assez d\'étoiles (réaction ⭐), il est épinglé dans le salon choisi — le mur de la gloire de votre serveur.');
+  const c1 = Dashboard.card(root, '⭐ Starboard', 'Quand un message reçoit assez d\'étoiles (réaction ⭐), il est épinglé dans le salon choisi · le mur de la gloire de votre serveur.');
   const chanOpts = ['<option value="">— Désactivé (choisir un salon pour activer) —</option>']
     .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(s.starboard_channel, ch) ? 'selected' : ''}>#${App.escapeHtml(ch.name)}</option>`));
   if (s.starboard_channel && !textChannels.some((ch) => Dashboard.discordRefMatches(s.starboard_channel, ch))) {
-    chanOpts.push(Dashboard.currentDiscordOption(s.starboard_channel, textChannels, '', 'configuration actuelle — salon introuvable'));
+    chanOpts.push(Dashboard.currentDiscordOption(s.starboard_channel, textChannels, '', 'configuration actuelle · salon introuvable'));
   }
   c1.innerHTML += `
     <label class="dash-label">Salon du starboard</label>
@@ -7146,7 +7146,7 @@ Dashboard.renderers.community = async (content, data) => {
     const byId = new Map((membersRes.members || []).map((m) => [String(m.id), m]));
     c2.appendChild(App.el(`<div style="font-size:13px;color:var(--d-dim);margin-bottom:10px">${starboardCount} message(s) au starboard · ⚠️ Le bot doit avoir la permission « Gérer le serveur » pour lire les invitations.</div>`));
     if (!invitesTop.length) {
-      c2.appendChild(App.el(`<div class="dash-empty">Aucune invitation traquée pour l'instant — le classement se remplit à chaque nouvelle arrivée.</div>`));
+      c2.appendChild(App.el(`<div class="dash-empty">Aucune invitation traquée pour l'instant · le classement se remplit à chaque nouvelle arrivée.</div>`));
     } else {
       const medals = ['', '', ''];
       invitesTop.forEach((r, idx) => {
@@ -7302,12 +7302,12 @@ Dashboard.renderers.server = async (content, data) => {
     <div class="dash-tier-box" style="margin-top:14px;padding:14px;border:1px solid var(--d-border);border-radius:12px">
       <div style="font-weight:700;margin-bottom:2px">Sanctions automatiques progressives</div>
       <div style="font-size:13px;color:var(--d-dim);margin-bottom:6px">Exemple pro : 3 avertissements → timeout, 5 → expulsion. La sanction la plus sévère atteinte s'applique.</div>
-      <label class="dash-label">Palier 1 — timeout après X avertissements (0 = désactivé)</label>
+      <label class="dash-label">Palier 1 · timeout après X avertissements (0 = désactivé)</label>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <select class="dash-select" id="g-warn-t1" style="max-width:140px">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, s.warn_timeout_limit || 0)}</select>
         <div style="display:flex;align-items:center;gap:8px"><select class="dash-select" id="g-warn-t1min" style="max-width:120px">${Dashboard.presetOptions(Dashboard.PRESETS_MIN, s.warn_timeout_min || 60, Dashboard.labelMinutes)}</select><span style="font-size:13px;color:var(--d-dim)">minutes de timeout</span></div>
       </div>
-      <label class="dash-label">Palier 2 — sanction finale après X avertissements (0 = désactivé)</label>
+      <label class="dash-label">Palier 2 · sanction finale après X avertissements (0 = désactivé)</label>
       <select class="dash-select" id="g-warn" style="max-width:140px">${Dashboard.presetOptions(Dashboard.PRESETS_PALIER, s.warn_limit || 0)}</select>
       <label class="dash-label">Action du palier 2</label>
       <select class="dash-select" id="g-action" style="max-width:220px">
@@ -7336,7 +7336,7 @@ Dashboard.renderers.server = async (content, data) => {
 
   // Rôles temporaires actifs
   const { roles } = await App.api(`/bots/${bot.id}/guilds/${guildId}/temproles`);
-  const c2 = Dashboard.card(root, '⏳ Rôles temporaires', 'Donnés avec /temprole — retirés automatiquement à l\'expiration.');
+  const c2 = Dashboard.card(root, '⏳ Rôles temporaires', 'Donnés avec /temprole · retirés automatiquement à l\'expiration.');
   if (!roles.length) c2.appendChild(App.el(`<div class="dash-empty">Aucun rôle temporaire actif.</div>`));
   roles.forEach((r) => {
     const row = App.el(`
@@ -7359,7 +7359,7 @@ Dashboard.renderers.server = async (content, data) => {
       <option value="">— Aucun (annonces désactivées) —</option>
       ${textChannels.map((ch) => `<option value="${ch.id}" ${String(s.birthday_channel || '') === ch.id ? 'selected' : ''}>#${App.escapeHtml(ch.name)}</option>`).join('')}
     </select>
-    <label class="dash-label">Rôle anniversaire (optionnel — donné 24 h)</label>
+    <label class="dash-label">Rôle anniversaire (optionnel · donné 24 h)</label>
     <select class="dash-select" id="bd-role">
       <option value="">— Aucun —</option>
       ${rolesList.map((r) => `<option value="${r.id}" ${String(s.birthday_role || '') === r.id ? 'selected' : ''}>${App.escapeHtml(r.name)}</option>`).join('')}
@@ -7392,7 +7392,7 @@ Dashboard.renderers.server = async (content, data) => {
       zone.innerHTML = `<div class="dash-badge bad" style="margin-bottom:8px">Serveur verrouillé — ${ld.channels.length} salon(s) en lecture seule</div>
         <div style="font-size:12px;color:var(--d-dim);margin-bottom:12px">${names}${ld.channels.length > 12 ? '…' : ''}</div>`;
     } else {
-      zone.innerHTML = `<div class="dash-badge ok" style="margin-bottom:12px">Serveur ouvert — tout le monde peut écrire normalement</div>`;
+      zone.innerHTML = `<div class="dash-badge ok" style="margin-bottom:12px">Serveur ouvert · tout le monde peut écrire normalement</div>`;
     }
   };
   renderLock();
@@ -7493,7 +7493,7 @@ Dashboard.renderers.botprofile = async (content, data) => {
             <div style="font-size:12px;color:var(--d-dim);margin-top:2px">${App.escapeHtml(current.bio || 'Aucune bio définie.')}</div>
           </div>
         </div>
-        <div style="font-size:12px;color:var(--d-dim);padding:0 16px 12px">Affiché par le bot sur <b>${App.escapeHtml(serverName)}</b> uniquement — jamais ailleurs.</div>
+        <div style="font-size:12px;color:var(--d-dim);padding:0 16px 12px">Affiché par le bot sur <b>${App.escapeHtml(serverName)}</b> uniquement · jamais ailleurs.</div>
       </div>`;
   };
   renderLive();
@@ -7676,7 +7676,7 @@ Dashboard.renderers.commands = async (content) => {
 // ---------- Modules (niveau bot) ----------
 Dashboard.renderers.modules = async (content) => {
   const bot = Dashboard.state.bot;
-  const root = Dashboard.header(content, '', 'Modules pré-faits', 'Activez des commandes en un clic — elles s\'enregistrent automatiquement sur tous les serveurs du bot.');
+  const root = Dashboard.header(content, '', 'Modules pré-faits', 'Activez des commandes en un clic · elles s\'enregistrent automatiquement sur tous les serveurs du bot.');
   const { modules } = await App.api(`/bots/${bot.id}/modules`);
   const grid = App.el(`<div class="dash-grid"></div>`);
   modules.forEach((m) => {
@@ -7730,7 +7730,7 @@ Dashboard.renderers.health = async (content) => {
     const errs = h.errors24h || { count: 0, last: [] };
     const uptime = Math.round((h.processUptimeMs || 0) / 1000);
 
-    Dashboard.header(content, '', 'Santé du bot', 'État en direct — actualisation automatique toutes les 30 secondes.');
+    Dashboard.header(content, '', 'Santé du bot', 'État en direct · actualisation automatique toutes les 30 secondes.');
 
     // Statut global
     const statsEl = App.el(`
@@ -7811,7 +7811,7 @@ Dashboard.renderers.health = async (content) => {
 
     // Erreurs 24h
     const cErr = App.el(`<div class="dash-card"><h3>Erreurs (24 h)</h3>
-      <div class="desc">Les incidents récupérés automatiquement — le bot continue de tourner.</div>
+      <div class="desc">Les incidents récupérés automatiquement · le bot continue de tourner.</div>
       <div class="dash-badge ${errs.count === 0 ? 'ok' : 'bad'}">${errs.count} erreur(s)</div>
       ${errs.count === 0
         ? `<div class="dash-empty" style="padding:18px">Tout est calme 🎉`
@@ -7855,7 +7855,7 @@ Dashboard.renderers.botsettings = async (content) => {
     const lastStr = last && !isNaN(last) ? last.toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : 'jamais';
     c2.appendChild(App.el(`<div class="desc" style="margin:0 0 10px">${s.enabled
       ? `<b>Active</b> — dépôt <code>${App.escapeHtml(s.repo)}</code> · sauvegarde toutes les 10 minutes + restauration au démarrage.`
-      : 'Désactivée — configurez BOTDEV_GH_TOKEN et BOTDEV_DATA_REPO sur Render.'}</div>`));
+      : 'Désactivée · configurez BOTDEV_GH_TOKEN et BOTDEV_DATA_REPO sur Render.'}</div>`));
     c2.appendChild(App.el(`<div class="dash-badge ${s.enabled ? 'ok' : 'warn'}" style="margin-bottom:10px">Dernière sauvegarde : ${lastStr}</div>`));
     const nowBtn = App.el(`<button class="dash-save-action dash-btn dash-btn-primary">Enregistrer maintenant</button>`);
     nowBtn.onclick = async () => {
@@ -7899,7 +7899,7 @@ Dashboard.renderers.verification = async (content, data) => {
     <input class="dash-input" id="ver-captcha-title" maxlength="120" value="${App.escapeHtml(cfg.captcha_title || '')}" placeholder="Bienvenue sur {server} !" />
     <label class="dash-label">Texte du panneau</label>
     <textarea class="dash-input" id="ver-captcha-desc" rows="4" maxlength="1500" placeholder="Pour accéder à tout le serveur, recopiez les caractères que vous voyez sur l’image.">${App.escapeHtml(cfg.captcha_desc || '')}</textarea>
-    <div style="font-size:12px;color:var(--d-dim);margin:4px 0 8px">{server} = nom du serveur · {user} = mention du membre · {role} = rôle accordé. L’image de lettres, elle, change à chaque personne — on ne la rédige pas.</div>
+    <div style="font-size:12px;color:var(--d-dim);margin:4px 0 8px">{server} = nom du serveur · {user} = mention du membre · {role} = rôle accordé. L’image de lettres, elle, change à chaque personne · on ne la rédige pas.</div>
     <label class="dash-label">Couleur de la barre</label>
     <input type="color" id="ver-captcha-color" value="${App.escapeHtml(capColor)}" />
     <label class="dash-label">Aperçu du panneau</label>
@@ -7908,14 +7908,14 @@ Dashboard.renderers.verification = async (content, data) => {
       Le salon est <b>invisible</b> aux autres membres. Le captcha part dans un <b>fil privé</b> : personne ne voit l’image ni ce qu’il tape. Le reste du serveur (tickets compris) est masqué jusqu’à succès. L’isolation s’active toute seule.
     </div>
     <div style="margin-top:12px"><button class="dash-save-action dash-btn dash-btn-primary" id="ver-cap-save">Enregistrer le captcha</button></div>`;
-  const c1 = Dashboard.card(root, 'Réglages de la vérification', 'Le nouveau membre clique sur « Je suis humain » dans le salon de vérification, puis reçoit le rôle vérifié. Astuce pro : dans vos salons, n\'autorisez la vue qu\'au rôle vérifié — les non-vérifiés ne verront que le salon de vérification.');
+  const c1 = Dashboard.card(root, 'Réglages de la vérification', 'Le nouveau membre clique sur « Je suis humain » dans le salon de vérification, puis reçoit le rôle vérifié. Astuce pro : dans vos salons, n\'autorisez la vue qu\'au rôle vérifié · les non-vérifiés ne verront que le salon de vérification.');
   c1.innerHTML += `
     <label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" id="ver-enabled" ${cfg.enabled ? 'checked' : ''} /> Activer la vérification sur ce serveur</label>
     <label class="dash-label">Salon du panneau de vérification</label>
     <select class="dash-select" id="ver-channel">${textCh.map((ch) => `<option value="${ch.id}" ${cfg.channel === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('')}</select>
     <label class="dash-label">Rôle « vérifié » donné après le clic</label>
     <select class="dash-select" id="ver-role">${(data.roles || []).map((r) => `<option value="${r.id}" ${cfg.role === r.id ? 'selected' : ''}>@ ${App.escapeHtml(r.name)}</option>`).join('')}</select>
-    <label class="dash-label">Join Gate — âge minimum du compte Discord</label>
+    <label class="dash-label">Join Gate · âge minimum du compte Discord</label>
     <select class="dash-select" id="ver-gate" style="max-width:220px">${[[0, 'Désactivé'], [1, '1 jour minimum'], [3, '3 jours minimum'], [7, '7 jours minimum'], [14, '14 jours minimum'], [30, '30 jours minimum'], [60, '60 jours minimum']].map(([v, l]) => `<option value="${v}" ${Number(cfg.gate_days) === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
     <div style="font-size:12px;color:var(--d-dim);margin-top:4px">Les comptes plus récents sont refusés à l\'arrivée : explication envoyée en MP, puis expulsion (protection anti-raid, comme Wick).</div>
     <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="ver-botfilter" ${cfg.bot_filter ? 'checked' : ''} />Expulser les bots non approuvés qui rejoignent le serveur</label>
@@ -7947,7 +7947,7 @@ Dashboard.renderers.verification = async (content, data) => {
     const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/verification/isolate`, { method: 'POST', body: { on } });
     sel.disabled = false;
     if (!r.ok) { sel.value = on ? 'off' : 'on'; App.toast(`${r.error || 'Changement impossible.'}`); return; }
-    App.toast(on ? 'Isolation en cours d\'application — cela peut prendre quelques instants. Rechargez la page dans une minute.' : 'Salons en cours de réouverture — rechargez la page dans un instant.');
+    App.toast(on ? 'Isolation en cours d\'application · cela peut prendre quelques instants. Rechargez la page dans une minute.' : 'Salons en cours de réouverture · rechargez la page dans un instant.');
   };
   c1.querySelector('#ver-grant-case').onchange = async (e) => {
     if (!e.target.checked) return;
@@ -7955,7 +7955,7 @@ Dashboard.renderers.verification = async (content, data) => {
     const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/verification/grant-role`, { method: 'POST', body: {} });
     e.target.disabled = false;
     e.target.checked = false; // action ponctuelle : la case se recoche à chaque demande
-    App.toast(r.ok ? 'Distribution du rôle en cours — cela peut prendre quelques minutes sur un gros serveur.' : `${r.error || 'Distribution impossible.'}`);
+    App.toast(r.ok ? 'Distribution du rôle en cours · cela peut prendre quelques minutes sur un gros serveur.' : `${r.error || 'Distribution impossible.'}`);
   };
   const capBox = root.querySelector('#ver-captcha');
   if (capBox) capBox.onchange = () => {
@@ -8052,7 +8052,7 @@ Dashboard.renderers.transcripts = async (content, data) => {
   const searchCard = App.el(`
     <div class="dash-card">
       <div class="card-head">
-        <div><h3>Rechercher</h3><div class="desc">Tapez un mot-clé (salon, membre, contenu…) puis appuyez sur Entrée — sans mot-clé, les 100 dernières transcriptions.</div></div>
+        <div><h3>Rechercher</h3><div class="desc">Tapez un mot-clé (salon, membre, contenu…) puis appuyez sur Entrée · sans mot-clé, les 100 dernières transcriptions.</div></div>
       </div>
       <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
         <input class="dash-input" id="tr-search" placeholder="Ex : support, Bob, remboursement…" style="flex:1;min-width:220px" />
@@ -8172,7 +8172,7 @@ Dashboard.renderers.modmail = async (content, data) => {
 
 // Aide intégrée (module global du bot)
 Dashboard.renderers.help = async (content) => {
-  const root = Dashboard.header(content, '', 'Aide & Guide', 'Bien démarrer, configurer, se faire aider — tout est ici.');
+  const root = Dashboard.header(content, '', 'Aide & Guide', 'Bien démarrer, configurer, se faire aider · tout est ici.');
   const bot = Dashboard.state.bot || {};
   const serverName = (Dashboard.state.guildData && Dashboard.state.guildData.name) || 'votre serveur';
 
@@ -8412,7 +8412,7 @@ Dashboard.renderers.links = async (content, data) => {
     const btns = linksData.filter((l) => l.label || l.url).map((l) => {
       const name = App.escapeHtml(l.label || 'Ouvrir');
       return `<span class="lp-fake-btn">${App.escapeHtml(l.emoji || '')} ${name} <span class="lp-ext" aria-hidden="true">↗</span></span>`;
-    }).join('') || `<div class="dash-empty" style="padding:12px">Aucun bouton — ajoutez TikTok, YouTube…</div>`;
+    }).join('') || `<div class="dash-empty" style="padding:12px">Aucun bouton · ajoutez TikTok, YouTube…</div>`;
     const imgHtml = /^https?:\/\//i.test(img) ? `<div class="lp-emb-img">${App.escapeHtml(img)}</div>` : '';
     preview.innerHTML = `
       <div class="dash-label" style="margin:12px 0 8px">Aperçu sur Discord</div>
@@ -8430,7 +8430,7 @@ Dashboard.renderers.links = async (content, data) => {
   const renderLinks = () => {
     const el = c2.querySelector('#lp-list');
     el.innerHTML = '';
-    if (!linksData.length) el.appendChild(App.el(`<div class="dash-empty" style="padding:12px;margin-bottom:8px">Aucun bouton — cliquez sur « Ajouter un bouton ».</div>`));
+    if (!linksData.length) el.appendChild(App.el(`<div class="dash-empty" style="padding:12px;margin-bottom:8px">Aucun bouton · cliquez sur « Ajouter un bouton ».</div>`));
     linksData.forEach((x, i) => {
       const row = App.el(`<div class="lp-item">
         <div class="lp-item-head">
@@ -8673,7 +8673,7 @@ Dashboard.renderers.rules = async (content, data) => {
       <div>
         <label class="dash-label">Style du bouton</label>
         <select class="dash-select" id="rl-style">
-          ${[['vert', 'Vert — accepter'], ['bleu', 'Bleu'], ['gris', 'Gris'], ['rouge', 'Rouge']]
+          ${[['vert', 'Vert · accepter'], ['bleu', 'Bleu'], ['gris', 'Gris'], ['rouge', 'Rouge']]
     .map(([v, l]) => `<option value="${v}" ${cfg.button_style === v ? 'selected' : ''}>${l}</option>`).join('')}
         </select>
       </div>
@@ -8688,7 +8688,7 @@ Dashboard.renderers.rules = async (content, data) => {
       <div>
         <label class="dash-label">Présentation du bouton</label>
         <select class="dash-select" id="rl-placement">
-          ${[['ligne', 'Large — bouton sous le panneau'], ['carte', 'Intégré — bouton à droite, dans le panneau']]
+          ${[['ligne', 'Large · bouton sous le panneau'], ['carte', 'Intégré · bouton à droite, dans le panneau']]
     .map(([v, l]) => `<option value="${v}" ${cfg.button_placement === v ? 'selected' : ''}>${l}</option>`).join('')}
         </select>
       </div>
@@ -8825,7 +8825,7 @@ Dashboard.renderers.rules = async (content, data) => {
       if (corps.value.trim() && !(await App.confirm('Ce modèle remplacera le texte des règles déjà écrit.'))) return;
       corps.value = modele.text;
       maj();
-      App.toast(`Modèle « ${modele.label} » appliqué — enregistrez pour le publier.`);
+      App.toast(`Modèle « ${modele.label} » appliqué · enregistrez pour le publier.`);
     };
   });
 
@@ -8853,7 +8853,7 @@ Dashboard.renderers.rules = async (content, data) => {
       // on le dit. Fini d'annoncer « publié » pour un panneau sans bouton.
       const planTxt = r.plan ? ` ${r.plan.shown || r.plan.blocks || 0} bloc(s), ${r.plan.components || 0}/40 composants.` : '';
       if (r.verified === false) {
-        App.toast('Panneau publié, mais le bouton n’a pas été retrouvé sur Discord — essayez la présentation « Intégré ».', 'error');
+        App.toast('Panneau publié, mais le bouton n’a pas été retrouvé sur Discord · essayez la présentation « Intégré ».', 'error');
         etat('Panneau envoyé, bouton non vérifié sur Discord.' + planTxt);
       } else {
         etat('Panneau publié et bouton vérifié sur Discord (id ' + (r.message_id || '—') + ').' + planTxt);
@@ -8951,7 +8951,7 @@ Dashboard.renderers.polls = async (content, data) => {
   carte.innerHTML += `
     <label class="dash-label">Question <span class="rl-compteur" id="pp-qcount"></span></label>
     <input class="dash-input" id="pp-question" maxlength="300" placeholder="On mange quoi samedi soir ?" />
-    <label class="dash-label">Choix — 10 maximum, 55 caractères chacun</label>
+    <label class="dash-label">Choix · 10 maximum, 55 caractères chacun</label>
     <div id="pp-opts" class="pp-opts"></div>
     <div class="rl-grille rl-grille-2">
       <div>
@@ -8964,7 +8964,7 @@ Dashboard.renderers.polls = async (content, data) => {
       </div>
     </div>
     <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="pp-multi" ${cfg.allow_multiselect ? 'checked' : ''} /> Autoriser plusieurs réponses (choix multiples)</label>
-    <label class="dash-label">Texte au-dessus du sondage (facultatif — gardé comme défaut)</label>
+    <label class="dash-label">Texte au-dessus du sondage (facultatif · gardé comme défaut)</label>
     <textarea class="dash-input" id="pp-intro" rows="3" maxlength="2000" placeholder="On doit trancher avant jeudi. Répondez honnêtement 🙂">${App.escapeHtml(cfg.intro || '')}</textarea>
     <label class="dash-label">Aperçu du message, tel qu\u2019il sera publié</label>
     <div id="pp-preview" class="rl-preview"></div>
