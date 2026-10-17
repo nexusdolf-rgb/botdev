@@ -299,6 +299,20 @@ App.router.parse = () => {
 
 App.router.go = (path) => { location.hash = `#/${path}`; };
 
+// Une seule page du site a le droit d'etre indexee : l'accueil (et les fiches
+// publiques). Le dashboard, l'administration et les vues transitaires passent
+// en « noindex » a chaque navigation, sinon l'URL se retrouve dans les resultats
+// avec une page vide derriere.
+App.marquageIndexation = (publique) => {
+  let meta = document.querySelector('meta[name="robots"]');
+  if (!meta) {
+    meta = document.createElement('meta');
+    meta.setAttribute('name', 'robots');
+    document.head.appendChild(meta);
+  }
+  meta.setAttribute('content', publique ? 'index, follow' : 'noindex, follow');
+};
+
 App.router.run = async () => {
   // v364 : chaque navigation prend un numero. Une vue dont les arrivees
   // reseau trainaient ne repeint plus la page par-dessus celle demandee depuis
@@ -314,6 +328,7 @@ App.router.run = async () => {
 
   const { parts, query } = App.router.parse();
   const user = App.state.user;
+  App.marquageIndexation(parts.length === 0 || (parts[0] === 'bot' && parts[1]));
 
   // Messages OAuth2
   if (query && query.get('oauth')) {

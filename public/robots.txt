@@ -1,0 +1,6 @@
+# Hoxera : seule la page d'accueil est destinee aux moteurs.
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://hoxera.is-a.dev/sitemap.xml

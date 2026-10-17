@@ -148,10 +148,21 @@ async function main() {
   // Fichiers statiques (dashboard)
   app.use(express.static(path.join(__dirname, '..', 'public')));
 
-  // Fallback SPA
+  // Fallback SPA : seule la page d'accueil existe comme chemin. Avant, tout
+  // ce qui etait inconnu (y compris /robots.txt quand il n'existait pas)
+  // repondait 200 avec la coquille : les moteurs voyaient des milliers de
+  // pages dupliquees et aucun 404. L'humain arrive quand meme sur le site,
+  // le crawler recoit le bon code.
+  const CHEMINS_PAGE = new Set(['/', '/index.html']);
   app.use((req, res, next) => {
     if (req.path.startsWith('/api')) return next();
-    res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+    if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+    const fichier = path.join(__dirname, '..', 'public', 'index.html');
+    if (!CHEMINS_PAGE.has(req.path)) {
+      res.set('X-Robots-Tag', 'noindex, follow');
+      return res.status(404).sendFile(fichier);
+    }
+    res.sendFile(fichier);
   });
 
   app.use('/api', (req, res) => res.status(404).json({ error: 'Route API introuvable.' }));

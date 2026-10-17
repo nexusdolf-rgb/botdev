@@ -1,0 +1,14 @@
+# Hoxera
+
+> Hoxera est un bot Discord pour la moderation et le suivi d'un serveur : Auto-Mod, sanctions, tickets et regles, pilotes depuis un dashboard connecte au bot.
+
+## Pages
+- [Accueil](https://hoxera.is-a.dev/) : presentation des modules et de la configuration.
+- [Dashboard](https://hoxera.is-a.dev/#/dashboard) : espace de configuration, réservé aux membres connectés avec Discord.
+
+## Communauté
+- [Serveur Discord d'entraide](https://discord.gg/X9hTdr9N3)
+
+## Donnees
+- Les statistiques affichees sur l'accueil viennent du processus du bot au moment du rendu : elles ne sont ni stockees, ni estimees.
+- Le dashboard n'est pas indexable : il renvoie une page vide sans session, et le meta robots passe en « noindex » des qu'on le quitte pas.
