@@ -162,7 +162,7 @@ function mkGuild(G, opts = {}) {
   const iVer = dash.indexOf('Dashboard.renderers.verification');
   const chunk = dash.slice(iVer, iVer + 14000);
   // v294 : les 3 boutons sont devenus un sélecteur + une case (mêmes routes)
-  check('sélecteur d\'isolation (2 choix) + badge actif', chunk.includes('ver-isolate-sel') && chunk.includes('Isolation ACTIVE') && chunk.includes('Désactivée — tous les salons restent visibles'));
+  check('sélecteur d\'isolation (2 choix) + badge actif', chunk.includes('ver-isolate-sel') && chunk.includes('Isolation ACTIVE') && chunk.includes('Désactivée : tous les salons restent visibles'));
   check('case « Donner le rôle aux membres actuels »', chunk.includes('ver-grant-case') && chunk.includes('Donner le rôle vérifié à tous les membres actuels'));
   check('les 3 boutons ont disparu', !chunk.includes('ver-iso-on') && !chunk.includes('ver-iso-off') && !chunk.includes('ver-grant\''));
   check('isolate envoyé avec la sauvegarde (depuis le sélecteur)', chunk.includes("isolate: c1.querySelector('#ver-isolate-sel').value === 'on'"));
@@ -170,9 +170,9 @@ function mkGuild(G, opts = {}) {
 
   console.log('— 10. Bump v293 —');
   const index = racine('public/index.html');
-  check('index.html : ?v=367 référencé 7 fois', (index.match(/\?v=367/g) || []).length === 7,
-    String((index.match(/\?v=367/g) || []).length));
-  check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("const CACHE = 'botdev-v367';"));
+  check('index.html : ?v=368 référencé 7 fois', (index.match(/\?v=368/g) || []).length === 7,
+    String((index.match(/\?v=368/g) || []).length));
+  check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("const CACHE = 'botdev-v368';"));
 
   console.log(`\n🎉 v293 : ${ok} vérifications passées`);
   process.exit(0);

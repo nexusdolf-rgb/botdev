@@ -13,8 +13,8 @@ const sw = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
 const botManager = fs.readFileSync(path.join(root, 'server/discord/botManager.js'), 'utf8');
 
 // ---------- 1. La bio du code est complète et au nom du bot ----------
-assert(botManager.includes("'🤖 Optimus Prime — le bot qui anime votre serveur !'"),
-  'aboutText : première ligne au nom d’Optimus Prime');
+assert(botManager.includes("'🤖 Hoxera, le bot qui anime votre serveur !'"),
+  'aboutText : première ligne au nom du bot, sans tutoiement');
 assert(!botManager.includes("'✨ Hoxera — le bot qui anime ton serveur !'"),
   'aboutText : l’ancienne première ligne doit être remplacée');
 // les 4 lignes de la bio complète (dashboard + support + /help)

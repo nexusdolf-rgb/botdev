@@ -164,7 +164,7 @@ const homeUpdateText = v2.allText(homeUpdate);
 const currentUpdate = changelog.VERSIONS[0];
 const previousUpdate = changelog.VERSIONS[1];
 check('/update affiche la version courante et la précédente',
-  v2.title(homeUpdate) === `🚀 Optimus Prime — Mises à jour (v${currentUpdate.v})`
+  v2.title(homeUpdate) === `🚀 Mises à jour de Hoxera (v${currentUpdate.v})`
     && homeUpdateText.includes(`**v${currentUpdate.v} — ${currentUpdate.title}**`)
     && homeUpdateText.includes(`**v${previousUpdate.v} — ${previousUpdate.title}**`));
 check('traductions : raison, type simple et accueil sans séparateur ajouté',

@@ -18,8 +18,8 @@ const css = racine('public/css/style.css');
 const pub = racine('public/js/public.js');
 
 console.log('— 1. Pins v338 —');
-check('index.html : ?v=367 ×7', (html.match(/\?v=367/g) || []).length === 7);
-check('sw.js : cache botdev-v367', sw.includes("const CACHE = 'botdev-v367';"));
+check('index.html : ?v=368 ×7', (html.match(/\?v=368/g) || []).length === 7);
+check('sw.js : cache botdev-v368', sw.includes("const CACHE = 'botdev-v368';"));
 check('index.html : plus aucune ?v=337', !html.includes('?v=337'));
 
 console.log('— 2. Pas un clone DraftBot —');
@@ -36,7 +36,8 @@ const compte = {
   divs: (pub.match(/<div/g) || []).length,
   boutons: (pub.match(/<button/g) || []).length,
 };
-check('structure HTML intacte', compte.classes === 199 && compte.ids === 22 && compte.divs === 151 && compte.boutons === 14, JSON.stringify(compte));
+check('structure HTML intacte', compte.classes === 203 &&  // v368 : 4 glypes SVG en plus dans les icones de l'accueil
+     compte.ids === 22 && compte.divs === 151 && compte.boutons === 14, JSON.stringify(compte));
 
 console.log('— 4. Couche CSS v338 —');
 check('commentaire v338', css.includes('HOXERA v338'));

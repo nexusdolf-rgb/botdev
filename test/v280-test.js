@@ -87,8 +87,8 @@ function makeGuild() {
   console.log('— 5. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=367 référencé 7 fois', (index.match(/\?v=367/g) || []).length === 7);
-  check('sw.js : cache « botdev-v350 »', sw.includes("const CACHE = 'botdev-v367';"));
+  check('index.html : ?v=368 référencé 7 fois', (index.match(/\?v=368/g) || []).length === 7);
+  check('sw.js : cache « botdev-v350 »', sw.includes("const CACHE = 'botdev-v368';"));
 
   console.log(`\n🎉 v280 — ${ok} vérifications OK : sauvegarde de structure, restauration sans risque.`);
 })().catch((e) => { console.error(e); process.exit(1); });

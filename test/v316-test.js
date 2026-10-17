@@ -1,5 +1,5 @@
-// v316 — photo de PROFIL Optimus Prime (pas la bannière)
-// à côté de « Optimus Prime, votre nouveau membre ».
+// v316 — photo de PROFIL du bot (pas la bannière), à côté du titre
+// du bloc d'accueil, et rien d'autre.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -18,12 +18,12 @@ const pub = racine('public/js/public.js');
 const css = racine('public/css/style.css');
 
 console.log('— 1. Pins de version v316 —');
-check('index.html : ?v=367 ×7', (html.match(/\?v=367/g) || []).length === 7);
-check('sw.js : cache botdev-v367', sw.includes("const CACHE = 'botdev-v367';"));
+check('index.html : ?v=368 ×7', (html.match(/\?v=368/g) || []).length === 7);
+check('sw.js : cache botdev-v368', sw.includes("const CACHE = 'botdev-v368';"));
 check('index.html : plus aucune ?v=315', !html.includes('?v=315'));
 
 console.log('— 2. Profil Discord, pas la bannière —');
-check('le titre « Optimus Prime, votre nouveau membre » est toujours là', pub.includes('<h3>Optimus Prime, votre nouveau membre</h3>'));
+check('le titre du bloc d\'accueil est toujours là', pub.includes('<h3>Le bot et le dashboard sont le même service</h3>'));
 check('la source est /api/public/bot-avatar (profil Discord)', pub.includes('src="/api/public/bot-avatar"') && pub.includes('class="hp-robot"'));
 check('ce n’est PAS le crop de bannière optimus-photo.png', !pub.includes('optimus-photo.png') && !css.includes('optimus-photo.png'));
 check('ce n’est PAS nexora-profile-banner', !pub.includes('nexora-profile-banner') && !css.includes('nexora-profile-banner'));

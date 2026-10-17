@@ -17,12 +17,12 @@ const sw = racine('public/sw.js');
 const pub = racine('public/js/public.js');
 const css = racine('public/css/style.css');
 console.log('— 1. Pins de version v315 —');
-check('index.html : ?v=367 ×7', (html.match(/\?v=367/g) || []).length === 7);
-check('sw.js : cache botdev-v367', sw.includes("const CACHE = 'botdev-v367';"));
+check('index.html : ?v=368 ×7', (html.match(/\?v=368/g) || []).length === 7);
+check('sw.js : cache botdev-v368', sw.includes("const CACHE = 'botdev-v368';"));
 check('index.html : plus aucune ?v=314', !html.includes('?v=314'));
 
 console.log('— 2. Photo d’Optimus à la place de l’emoji —');
-check('la carte « votre nouveau membre » a une vraie photo', pub.includes('<img src=') && pub.includes('Optimus Prime, votre nouveau membre'));
+check('la carte « votre nouveau membre » a une vraie photo', pub.includes('<img src="/api/public/bot-avatar"') && pub.includes('Le bot et le dashboard sont le même service'));
 check('plus d’emoji 🤖 dans .hp-robot', !/hp-robot[^>]*>[\s\S]{0,80}🤖/.test(pub));
 check('le cadre .hp-robot est conservé', pub.includes('class="hp-robot"'));
 check('CSS : la photo remplit le cadre (object-fit: cover)', css.includes('.hp-robot img') && css.includes('object-fit: cover'));

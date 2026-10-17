@@ -138,7 +138,7 @@ check('v352 reste dans le journal après l’ajout de versions récentes',
 const home = changelog.buildHomePanel(1);
 const homeText = v2.allText(home);
 check('/update présente la version courante puis v359',
-  v2.title(home) === `🚀 Optimus Prime — Mises à jour (v${current.v})`
+  v2.title(home) === `🚀 Mises à jour de Hoxera (v${current.v})`
     && previous.v === 359
     && homeText.includes(`**v${current.v} — ${current.title}**`)
     && homeText.includes('**v359 — Espace fondateur repensé**'));

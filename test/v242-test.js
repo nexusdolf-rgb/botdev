@@ -863,7 +863,7 @@ async function rafale(guild, kinds) {
     check('les seuils recommandés de l’UI sont alignés sur le serveur',
       /channel_delete: \[2, 10\]/.test(d) && /ban: \[3, 60\]/.test(d) && /role_update: \[1, 10\]/.test(d));
     check('option « sanctionner les autres bots » présente', d.includes('nk-bots'));
-    check('la quarantaine est signalée comme réglage par défaut', /réglage par défaut — réversible/.test(d));
+    check('la quarantaine est signalée comme réglage par défaut', /réglage par défaut, réversible/.test(d));
     check('le caractère irréversible du ban est annoncé', /irréversible/.test(d));
     // Aucune échappée de variable non interpolée dans les libellés.
     check('pas de « undefined » codé en dur dans l\'onglet', !d.includes('>undefined<'));
@@ -874,10 +874,10 @@ async function rafale(guild, kinds) {
   // --------------------------------------------------------------------------
   {
     const html = racine('public/index.html');
-    check('index.html : ?v=367 référencé 7 fois', (html.match(/\?v=367/g) || []).length === 7,
-      String((html.match(/\?v=367/g) || []).length));
+    check('index.html : ?v=368 référencé 7 fois', (html.match(/\?v=368/g) || []).length === 7,
+      String((html.match(/\?v=368/g) || []).length));
     check('index.html : plus aucun ?v=241', !html.includes('?v=241'));
-    check('sw.js : cache « botdev-v242 »', racine('public/sw.js').includes("'botdev-v367'"));
+    check('sw.js : cache « botdev-v242 »', racine('public/sw.js').includes("'botdev-v368'"));
   }
 
   console.log(`\n${echecs === 0

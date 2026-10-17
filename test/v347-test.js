@@ -21,8 +21,8 @@ const iT = dash.indexOf('Dashboard.renderers.tickets');
 const chunk = dash.slice(iT, dash.indexOf('Dashboard.renderers.welcome', iT));
 
 console.log('— 1. Pins v347 —');
-check('index.html : ?v=367 ×7', (html.match(/\?v=367/g) || []).length === 7);
-check('sw.js : cache botdev-v367', sw.includes("const CACHE = 'botdev-v367';"));
+check('index.html : ?v=368 ×7', (html.match(/\?v=368/g) || []).length === 7);
+check('sw.js : cache botdev-v368', sw.includes("const CACHE = 'botdev-v368';"));
 check('index.html : plus aucune ?v=346', !html.includes('?v=346'));
 check('VERSION ≥ 347', changelog.VERSION >= 347);
 check('journal v347 : au moins 1 nouveauté', Array.isArray(changelog.NOTES.new) && changelog.NOTES.new.length >= 1);
@@ -50,7 +50,7 @@ check('badges v110', dash.includes('Inviter le bot') && dash.includes('Configure
 
 console.log('— 4. Sélecteurs + textes modules —');
 check('labels salon = nom du système', chunk.includes('Salon du Ticket classique') && chunk.includes('Salon du Ticket menu') && chunk.includes('Salon du Ticket avancé'));
-check('sélecteur affichage avancé plus clair', chunk.includes('Boutons — un bouton par type') && chunk.includes('Liste — le membre choisit le type'));
+check('sélecteur affichage avancé plus clair', chunk.includes('Boutons : un bouton par type') && chunk.includes('Liste : le membre choisit le type'));
 check('CSS 3 colonnes', css.includes('repeat(3, minmax(0, 1fr))'));
 check('annonce : « heures choisis »', dash.includes('heures choisis'));
 check('plus de « heures choisissez »', !dash.includes('heures choisissez'));

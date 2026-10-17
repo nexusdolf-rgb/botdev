@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-// TEST v172 — Renommage du bot : « Nexora » → « Optimus Prime »
+// TEST v172 — Renommage du bot : « Nexora » → « Hoxera »
 // + nouvelle identité visuelle (logo robot + bannière).
 // Ce test verrouille le renommage pour qu'aucun « Nexora » ne
 // réapparaisse dans l'interface ou les messages du bot.
@@ -37,7 +37,7 @@ for (const f of jsFiles) {
 }
 
 // ---------- 2. Le nouveau nom est bien en place ----------
-assert(dash.includes("'Optimus Prime hors ligne'") || dash.includes('Optimus Prime hors ligne'),
+assert(dash.includes("'Hoxera hors ligne'") || dash.includes('Hoxera hors ligne'),
   'dashboard : étiquette de statut au nouveau nom');
 assert(dash.includes('Dashboard.state.bot.name') || dash.includes('(bot && bot.name)'),
   'dashboard : le nom réel du bot est affiché dynamiquement (v208/v209)');
@@ -45,7 +45,7 @@ assert(panels.includes("PANEL_DEFAULT_NAME = 'Hoxera'"), 'panneau tickets : nom 
 assert(!/footer:\s*[`'"]Hoxera ·/.test(panels), 'v312 : plus de signature Hoxera sous les panneaux tickets');
 assert(i18n.includes('Hoxera est très sollicité'), 'i18n fr : message busy (v209)');
 assert(i18n.includes('Hoxera is very busy'), 'i18n en : message busy');
-assert(routes.includes('banni d’Optimus Prime'), 'routes : message de bannissement (apostrophe typographique)');
+assert(routes.includes('banni d’Hoxera'), 'routes : message de bannissement (apostrophe typographique)');
 assert(!automod.includes("'Blacklist du serveur · Hoxera'"), 'v312 : plus de pied blacklist signé Hoxera par défaut');
 
 // ---------- 3. Nouvelle identité visuelle : logo + bannières ----------
@@ -65,4 +65,4 @@ assert(native.includes('legacyName'), 'nativeAutomod : les règles historiques d
 
 // ---------- 5. Version : gérée par le test de la version courante (v173) ----------
 
-console.log('✅ v172-test : renommage « Optimus Prime » + identité visuelle verrouillés');
+console.log('✅ v172-test : renommage « Hoxera » + identité visuelle verrouillés');

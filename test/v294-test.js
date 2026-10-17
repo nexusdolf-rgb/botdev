@@ -23,8 +23,8 @@ const chunk = dash.slice(iVer, iVer + 16000);
 
 console.log('— 1. Sélecteur d\'isolation —');
 check('sélecteur présent avec id ver-isolate-sel', chunk.includes('id="ver-isolate-sel"'));
-check('choix « Désactivée »', chunk.includes('<option value="off" ${cfg.isolate ? \'\' : \'selected\'}>Désactivée — tous les salons restent visibles</option>'));
-check('choix « Activée »', chunk.includes('<option value="on" ${cfg.isolate ? \'selected\' : \'\'}>Activée — les non-vérifiés ne voient que le salon de vérification</option>'));
+check('choix « Désactivée »', chunk.includes('<option value="off" ${cfg.isolate ? \'\' : \'selected\'}>Désactivée : tous les salons restent visibles</option>'));
+check('choix « Activée »', chunk.includes('<option value="on" ${cfg.isolate ? \'selected\' : \'\'}>Activée : les non-vérifiés ne voient que le salon de vérification</option>'));
 check('changement de sélecteur → POST verification/isolate', chunk.includes("querySelector('#ver-isolate-sel').onchange") && chunk.includes("/verification/isolate`, { method: 'POST', body: { on } }"));
 check('erreur → le sélecteur revient en arrière', chunk.includes("sel.value = on ? 'off' : 'on'"));
 check('sélecteur désactivé pendant l\'appel', chunk.includes('sel.disabled = true') && chunk.includes('sel.disabled = false'));
@@ -54,8 +54,8 @@ check('moteur d\'isolation intact', ver.includes('async function applyIsolation'
 
 console.log('— 6. Bump v294 —');
 const index = racine('public/index.html');
-check('index.html : ?v=367 référencé 7 fois', (index.match(/\?v=367/g) || []).length === 7,
-  String((index.match(/\?v=367/g) || []).length));
-check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("const CACHE = 'botdev-v367';"));
+check('index.html : ?v=368 référencé 7 fois', (index.match(/\?v=368/g) || []).length === 7,
+  String((index.match(/\?v=368/g) || []).length));
+check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("const CACHE = 'botdev-v368';"));
 
 console.log(`\n🎉 v294 : ${ok} vérifications passées`);

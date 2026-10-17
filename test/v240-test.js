@@ -294,7 +294,7 @@ async function main() {
     '<b>Ajoutez le bot</b>',
     '<b>Connectez-vous</b>',
     '<b>Configurez</b>',
-    'Vous ne payez que si vous voulez un jour soutenir le projet',
+    'Toutes les fonctions sont incluses, sans abonnement et sans compte à séparer du compte Discord',
     '<h2>Prêt à donner vie à votre serveur ?</h2>',
   ]) {
     check(`landing : « ${attendu.slice(0, 44)} »`, pubSrc.includes(attendu));
@@ -322,7 +322,12 @@ async function main() {
   // SVG en ligne (15 remplacements dans public/js/public.js) — c'est ce qui
   // ajoute 48 balises, 11 classes et 4 interpolations. Ni les divs ni les
   // boutons n'ont bouge : c'est exactement ce que ce verrou surveillait.
-  const attenduPub = { balises: 619, classes: 199, ids: 22, divs: 151, boutons: 14, interpolations: 61 };
+  // v368 : les sept contenants d'icône vidés par la passe precedente ont recu
+  // leur glyphe SVG (4 sur l'accueil, 3 ailleurs). Chaque glyphe ajoute une
+  // balise svg, une balise g et une ou deux balises path dans un contenant qui
+  // etait vide : +23 balises, +4 classes « ico-svg ». Aucun div, aucun bouton,
+  // aucune interpolation de plus, c'est ce que ce verrou surveillait.
+  const attenduPub = { balises: 642, classes: 203, ids: 22, divs: 151, boutons: 14, interpolations: 61 };
   const reelPub = compteBalises(pubSrc);
   for (const cle of Object.keys(attenduPub)) {
     check(`landing : structure intacte (${cle} = ${attenduPub[cle]})`,
@@ -544,9 +549,9 @@ async function main() {
 
   const index = src('public/index.html');
   const sw = src('public/sw.js');
-  check('index.html : ?v=367 référencé 7 fois', (index.match(/\?v=367/g) || []).length === 7,
-    `trouvé ${(index.match(/\?v=367/g) || []).length}`);
-  check("sw.js : cache 'botdev-v367'", sw.includes("const CACHE = 'botdev-v367';"));
+  check('index.html : ?v=368 référencé 7 fois', (index.match(/\?v=368/g) || []).length === 7,
+    `trouvé ${(index.match(/\?v=368/g) || []).length}`);
+  check("sw.js : cache 'botdev-v368'", sw.includes("const CACHE = 'botdev-v368';"));
   check('index.html : plus aucun ?v=239', !/\?v=239/.test(index));
 }
 
