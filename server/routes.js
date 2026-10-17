@@ -4098,7 +4098,7 @@ router.delete('/admin/users/:id', requireAuth, requireAdmin, platformMutationRat
   for (const bot of bots) await botManager.logoutBot(bot.id);
   store.platformAudit.add(req.userId, target.targetId, 'delete_user', 'Compte et données associées supprimés.');
   deleteUserData(target.targetId, bots.map((bot) => Number(bot.id)));
-  res.json({ ok: true, message: 'Compte Optimus Prime et données associées supprimés.' });
+  res.json({ ok: true, message: 'Compte Hoxera et données associées supprimés.' });
 });
 
 // 🛟 Filet de sécurité final : AUCUNE route ne doit faire tomber le serveur.

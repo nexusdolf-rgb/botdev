@@ -1625,7 +1625,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
       <div class="dash-account-chip" title="Compte connecté au tableau de bord">
         ${acctAvatar}
         <div class="chip-txt"><b>${App.escapeHtml(acctName)}</b><small>Compte Discord</small></div>
-        <button class="dash-iconbtn" id="d-logout" data-tip="Déconnexion" aria-label="Déconnexion">⏻</button>
+        <button class="dash-iconbtn" id="d-logout" data-tip="Déconnexion" aria-label="Se déconnecter du dashboard"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.4 20.4H5.6a2 2 0 0 1-2-2V5.6a2 2 0 0 1 2-2h3.8"/><path d="M15.6 16.8 20.4 12l-4.8-4.8"/><path d="M20.4 12H9.4"/></g></svg></button>
       </div>
     </div>
   `;
@@ -1678,7 +1678,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
             ? Dashboard.decoWrap(`<img class="dash-mobile-account-avatar" src="/api/img?u=${encodeURIComponent(`https://cdn.discordapp.com/avatars/${mobileUser.discord_id}/${mobileUser.discord_avatar}.png?size=64`)}" alt="" data-fb-text="${App.escapeHtml(String(mobileUserName).slice(0, 1).toUpperCase())}" />`, Dashboard.userDecoUrl(mobileUser.discord_deco))
             : `<span class="dash-mobile-account-avatar">${App.escapeHtml(String(mobileUserName).slice(0, 1).toUpperCase())}</span>`}
           <div><b>${App.escapeHtml(mobileUserName)}</b><small>Compte connecté</small></div>
-          <button type="button" data-mobile-logout aria-label="Déconnexion">⏻</button>
+          <button type="button" data-mobile-logout aria-label="Se déconnecter du dashboard"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.4 20.4H5.6a2 2 0 0 1-2-2V5.6a2 2 0 0 1 2-2h3.8"/><path d="M15.6 16.8 20.4 12l-4.8-4.8"/><path d="M20.4 12H9.4"/></g></svg></button>
         </div>
       </aside>
       <aside class="dash-mobile-drawer dash-mobile-modules-drawer" id="dash-mobile-modules-drawer" hidden aria-label="Serveurs et modules">

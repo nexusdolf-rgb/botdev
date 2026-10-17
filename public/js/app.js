@@ -54,6 +54,7 @@ App.el = (html) => {
 // lecteurs d'écran : une icône qui accompagne un libellé est décorative.
 // ——————————————————————————————————————————————————————————————————————————
 App.GLYPHES = {
+  'sortie': '<path d="M9.4 20.4H5.6a2 2 0 0 1-2-2V5.6a2 2 0 0 1 2-2h3.8"/><path d="M15.6 16.8 20.4 12l-4.8-4.8"/><path d="M20.4 12H9.4"/>',
   corbeille: '<path d="M4 6.5h16M9.5 6.5V4.2h5v2.3M6.5 6.5l1 13h9l1-13M10 10v6M14 10v6"/>',
   alerte: '<path d="M12 3.6 21.4 20H2.6L12 3.6Z"/><path d="M12 9.4v4.4"/><circle cx="12" cy="16.8" r=".9" fill="currentColor" stroke="none"/>',
   eclair: '<path d="M13.4 2.6 5.6 13.4h4.8L9 21.4l8.6-11.2h-5l.8-7.6Z"/>',
@@ -467,7 +468,7 @@ App.renderNavbar = () => {
           <span>${App.escapeHtml(user.discord_username || user.email)}</span>
           <span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M10.2 13.8a3.6 3.6 0 0 0 5.2.2l2.6-2.6a3.7 3.7 0 0 0-5.2-5.2l-1.4 1.4"/><path d="M13.8 10.2a3.6 3.6 0 0 0-5.2-.2L6 12.6a3.7 3.7 0 0 0 5.2 5.2l1.4-1.4"/></svg></span>
         </div>
-        <button class="btn btn-ghost btn-sm" id="nav-logout" title="Déconnexion"><span class="nl-ico">⏻</span><span class="nl-lbl">Déconnexion</span></button>
+        <button class="btn btn-ghost btn-sm" id="nav-logout" title="Déconnexion" aria-label="Se déconnecter du dashboard"><span class="nl-ico"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.4 20.4H5.6a2 2 0 0 1-2-2V5.6a2 2 0 0 1 2-2h3.8"/><path d="M15.6 16.8 20.4 12l-4.8-4.8"/><path d="M20.4 12H9.4"/></g></svg></span><span class="nl-lbl">Déconnexion</span></button>
       </div>
     </div>
   `);
