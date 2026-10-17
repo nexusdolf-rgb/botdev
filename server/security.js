@@ -117,7 +117,7 @@ function securityHeaders(req, res, next) {
   res.set('X-Content-Type-Options', 'nosniff');
   res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  res.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'");
+  res.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https://cdn.discordapp.com; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'");
   res.set('X-Frame-Options', 'SAMEORIGIN');
   res.set('Cross-Origin-Opener-Policy', 'same-origin');
   if (String(req.path || '').startsWith('/api')) res.set('Cache-Control', 'no-store');
