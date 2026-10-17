@@ -364,7 +364,7 @@ App.loadPublicBotAvatar = (root) => {
       oldLogo.onerror = () => { if (oldLogo.isConnected) oldLogo.replaceWith(App.el('<span class="logo" data-brand-logo><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M13.4 2.6 5.6 13.4h4.8L9 21.4l8.6-11.2h-5l.8-7.6Z"/></svg></span>')); };
       return;
     }
-    const image = App.el('<img class="logo" data-brand-logo src="/api/public/bot-avatar" alt="Avatar d’Optimus Prime" style="border-radius:50%;object-fit:cover" />');
+    const image = App.el('<img class="logo" data-brand-logo src="/api/public/bot-avatar" alt="Avatar d’Hoxera" style="border-radius:50%;object-fit:cover" />');
     image.onerror = () => { if (image.isConnected) image.replaceWith(App.el('<span class="logo" data-brand-logo><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M13.4 2.6 5.6 13.4h4.8L9 21.4l8.6-11.2h-5l.8-7.6Z"/></svg></span>')); };
     if (oldLogo.isConnected) oldLogo.replaceWith(image);
   });
@@ -377,25 +377,25 @@ App.renderConnect = () => {
   const page = App.el(`
     <div class="auth-wrap" id="connect-card">
       <div class="auth-left">
-        <div class="logo-row"><img class="logo" data-brand-logo src="/api/public/bot-avatar" alt="Avatar d’Optimus Prime" style="border-radius:50%;object-fit:cover" /> Hoxera</div>
-        <h1 style="margin-top:52px">Configurez votre serveur<br/><span>en quelques clics</span></h1>
+        <div class="logo-row"><img class="logo" data-brand-logo src="/api/public/bot-avatar" alt="Avatar d’Hoxera" style="border-radius:50%;object-fit:cover" /> Hoxera</div>
+        <h1 style="margin-top:52px">Configurez votre serveur<br/><span>depuis votre compte Discord</span></h1>
         <p class="tagline">Tickets automatiques, niveaux, boutique, giveaways, bienvenue… Tout se règle ici, sans mot de passe : on vérifie simplement avec votre compte Discord.</p>
         <ul class="auth-features">
           <li><span class="f-ico"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M2 9a3 3 0 0 0 0 6v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-4a3 3 0 0 1 0-6V5a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2M13 11v2M13 17v2"/></svg></span> Tickets avec types personnalisés & transcriptions</li>
           <li><span class="f-ico"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 19.4h16M5.4 15.4l4-4.6 3.2 2.6 5.2-6.4"/><path d="M17.8 7h2.4v2.4"/></svg></span> Niveaux XP et récompenses de rôles</li>
           <li><span class="f-ico"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M3.6 5.6h2.2l2.4 10.2h9l2-7.2H7.4"/><circle cx="9.6" cy="19.2" r="1.5"/><circle cx="17" cy="19.2" r="1.5"/></svg></span> Boutique, économie et giveaways</li>
           <li><span class="f-ico"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6.6 3.6h10.8v16.8H6.6z"/><path d="M14.6 12h1"/><path d="M4.6 20.4h15"/></svg></span> Bienvenue, auto-rôles et menus de rôles</li>
-          <li><span class="f-ico"></span> Modération et journaux complets</li>
+          <li><span class="f-ico"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2l7 2.8v5.6c0 4.2-2.9 7.3-7 8.6-4.1-1.3-7-4.4-7-8.6V6l7-2.8Z"/><path d="M9 12.1l2 2 4-4"/></g></svg></span> Modération et journaux complets</li>
         </ul>
       </div>
       <div class="auth-right">
         <div class="auth-card auth-glass" style="text-align:center">
-          <div class="auth-bot-ava"><img src="/api/public/bot-avatar" alt="Optimus Prime" /></div>
+          <div class="auth-bot-ava"><img src="/api/public/bot-avatar" alt="Hoxera" /></div>
           <h2>Connectez-vous avec Discord</h2>
           <p class="sub" style="margin:8px 0 20px">Aucun compte à créer, aucun mot de passe.<br/>Discord vérifie automatiquement vos serveurs et vos permissions.</p>
           <button class="btn btn-discord" id="connect-discord" style="padding:13px;font-size:16px">Se connecter avec Discord</button>
           <div class="auth-trust">
-            <span>Connexion sécurisée OAuth2 — nous ne voyons <b>jamais</b> votre mot de passe</span>
+            <span>Connexion sécurisée OAuth2 · nous ne voyons <b>jamais</b> votre mot de passe</span>
             <span>Accès demandé : votre pseudo, votre avatar et votre liste de serveurs. Rien d'autre.</span>
             <span>Seuls les <b>admins</b> des serveurs peuvent configurer.</span>
           </div>

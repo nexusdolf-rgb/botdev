@@ -7711,3 +7711,18 @@ html.hx-light .dprev-carte-texte { color: #4a5468; }
   white-space: nowrap;
 }
 .save-stamp.is-on { opacity: 1; transform: none; }
+
+/* Les noms de serveurs et les options des menus doivent prendre la police de
+   l'interface : sans cet héritage, <button> et <select> retombent sur la police
+   par défaut du système, qui arrive serif selon le poste. */
+html .dashboard-shell-host button,
+html .dashboard-shell-host select,
+html .dashboard-shell-host option,
+html .dashboard-shell-host input,
+html .dashboard-shell-host textarea { font-family: inherit; }
+
+/* La regle de la tuile d'entree laterale impose sa couleur aux glyphes ; celle
+   de l'administration globale doit passer apres elle pour que la couronne suive
+   la teinte du lien dans les deux themes. */
+html .dashboard-shell-host .dash-global-admin .ico,
+html.hx-light .dashboard-shell-host .dash-global-admin .ico { color: inherit; }

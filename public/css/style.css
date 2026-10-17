@@ -43,6 +43,13 @@ button { font-family: inherit; }
    d'interface. Le centrage est là, pas dans chaque gabarit : une icône et son
    libellé doivent partager la même ligne de base. */
 .ico-svg { display: inline-block; vertical-align: -3px; flex: 0 0 auto; }
+/* Le trait est defini ici, une seule fois. Les glyphes passes par App.glyphe
+   portent deja leur groupe <g fill=none stroke=currentColor>, mais les SVG ecrits
+   a la main dans les gabarits n'avaient rien : un <path> sans remplissage se
+   rend en noir plein, d'ou les silhouettes noires sur les cartes. */
+.ico-svg :is(path, rect, circle, line, polyline, polygon):not([fill]) {
+  fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
+}
 .ico-svg circle[fill], .ico-svg path[fill] { stroke: none; }
 .btn {
   display: inline-flex; align-items: center; gap: 7px;
@@ -1475,3 +1482,37 @@ html.hx-light #public-landing .hp-cta-inner {
   background: #fff;
   border-color: #e4e6ef;
 }
+
+/* Theme clair de l'accueil : les cartes etaient passees en clair, mais pas le
+   texte pose dessus. Le badge du haut, les paragraphes des pavés et les liens du
+   pied heritaient des couleurs sombres, soit 1,5 a 2,6:1 sur fond blanc. */
+html.hx-light #public-landing .pub-hero-badge { background: rgba(224,122,95,.14); border-color: rgba(164,70,42,.32); color: #9c3f1f; }
+html.hx-light #public-landing .pub-sub,
+html.hx-light #public-landing .pub-tagline,
+html.hx-light #public-landing .hp-about-card p,
+html.hx-light #public-landing .hp-pillar p,
+html.hx-light #public-landing .pub-feature p,
+html.hx-light #public-landing .hp-step p,
+html.hx-light #public-landing .hp-faq-item p { color: #4f5361; }
+html.hx-light #public-landing .hp-faq-item summary { color: #1c1e26; }
+html.hx-light #public-landing .hp-footer-col a,
+html.hx-light #public-landing .pub-footer-links a { color: #474b59; }
+html.hx-light #public-landing .hp-footer-col a:hover,
+html.hx-light #public-landing .pub-footer-links a:hover { color: #a4462a; }
+html.hx-light #public-landing .pub-footer,
+html.hx-light #public-landing .hp-footer-brand p { color: #4f5361; }
+html.hx-light #public-landing .hp-kicker { color: #a4462a; }
+html.hx-light #public-landing .pub-support-link a { color: #3f4bc4; }
+html.hx-light #public-landing .pub-support-link a:hover { color: #2c3591; }
+.pub-support-link a { text-decoration: none; border-bottom: 1px solid transparent; transition: color .15s ease, border-color .15s ease; }
+.pub-support-link a:hover { border-bottom-color: currentColor; }
+/* Titre du heros et titres de pavés en couleur d'accentuation : sur fond clair,
+   l'accent du theme sombre disparait. Meme teinte que les boutons primaires. */
+html.hx-light #public-landing .grad,
+html.hx-light #public-landing .pub-feature > b,
+html.hx-light #public-landing .hp-pillar > b { -webkit-text-fill-color: #a4462a; color: #a4462a; }
+html.hx-light #public-landing .hp-footer-col > b,
+html.hx-light #public-landing .hp-footer-bottom,
+html.hx-light #public-landing .hp-footer-bottom span { color: #5f6472; }
+
+html.hx-light #public-landing .hp-cta-inner p { color: #43485a; }

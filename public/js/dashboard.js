@@ -1135,7 +1135,7 @@ Dashboard.mountScrollHint = (container, label) => {
   const update = () => {
     const reste = container.scrollHeight - container.clientHeight - container.scrollTop;
     hint.classList.toggle('on', reste > 60);
-    hint.textContent = `▼ ${label}`;
+    hint.innerHTML = `<svg class="ico-svg" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.6 12 15.6l6-6"/></g></svg><span>${label}</span>`;
   };
   if (!container.__scrollHintBound) {
     container.addEventListener('scroll', update, { passive: true });
@@ -1151,7 +1151,7 @@ Dashboard.renderSide = (aside) => {
   const bot = Dashboard.state.bot || {};
   const brandAvatar = bot.avatar_url
     ? `<img class="dash-side-brand-avatar" src="${App.escapeHtml(bot.avatar_url)}" alt="" />`
-    : '<img class="dash-side-brand-avatar fallback-logo" src="/icons/nexora-robot-mark.svg" alt="Logo Optimus Prime" />';
+    : '<img class="dash-side-brand-avatar fallback-logo" src="/icons/nexora-robot-mark.svg" alt="Logo Hoxera" />';
   aside.appendChild(App.el(`<div class="dash-side-brand">${brandAvatar}<div class="dash-side-brand-copy"><b>${App.escapeHtml(bot.name || 'Hoxera')}</b><span>Control Center</span></div><span class="dash-side-brand-status" title="${bot.online ? 'Bot en ligne' : 'Bot hors ligne'}"></span></div>`));
   const sideBrandImage = aside.querySelector('.dash-side-brand-avatar:not(.fallback)');
   if (sideBrandImage) sideBrandImage.onerror = () => sideBrandImage.replaceWith(App.el('<span class="dash-side-brand-avatar fallback"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M13.4 2.6 5.6 13.4h4.8L9 21.4l8.6-11.2h-5l.8-7.6Z"/></svg></span>'));
@@ -1173,7 +1173,7 @@ Dashboard.renderSide = (aside) => {
   // Administrateur global : reste tout en bas de la gestion du serveur.
   // Ce bouton dépend du compte fondateur, jamais du serveur sélectionné.
   if (App.state.user && App.state.user.is_admin) {
-    const platformAdmin = App.el(`<button class="dash-side-item dash-global-admin" data-platform-admin="true" title="Administration globale d’Optimus Prime"><span class="ico">${App.glyphe('couronne', { taille: 16 })}</span>Administrateur global</button>`);
+    const platformAdmin = App.el(`<button class="dash-side-item dash-global-admin" data-platform-admin="true" title="Administration globale de Hoxera"><span class="ico">${App.glyphe('couronne', { taille: 16 })}</span>Administrateur global</button>`);
     platformAdmin.onclick = () => App.router.go('/admin');
     aside.appendChild(platformAdmin);
 
@@ -2369,7 +2369,7 @@ Dashboard.renderers.overview = async (content, data) => {
   const heroChips = [
     g.members ? `<span class="ov-hero-chip"><span>${App.glyphe('personnes', { taille: 16 })}</span><b>${App.escapeHtml(String(g.members))}</b><small>membres</small></span>` : '',
     g.boosts ? `<span class="ov-hero-chip"><span>${App.glyphe('fusee', { taille: 16 })}</span><b>${App.escapeHtml(String(g.boosts))}</b><small>boost${g.boosts > 1 ? 's' : ''}</small></span>` : '',
-    g.channelsCount ? `<span class="ov-hero-chip"><span>#️⃣</span><b>${App.escapeHtml(String(g.channelsCount))}</b><small>salons</small></span>` : '',
+    g.channelsCount ? `<span class="ov-hero-chip"><span>${App.glyphe('diise', { taille: 16 })}</span><b>${App.escapeHtml(String(g.channelsCount))}</b><small>salons</small></span>` : '',
     g.rolesCount ? `<span class="ov-hero-chip"><span>${App.glyphe('etiquette', { taille: 16 })}</span><b>${App.escapeHtml(String(g.rolesCount))}</b><small>rôles</small></span>` : '',
     createdLabel ? `<span class="ov-hero-chip"><span>${App.glyphe('calendrier', { taille: 16 })}</span><small>créé en ${App.escapeHtml(createdLabel)}</small></span>` : '',
   ].filter(Boolean).join('');
@@ -2401,7 +2401,7 @@ Dashboard.renderers.overview = async (content, data) => {
       <span class="ov-quick-label">Accès rapides</span>
       <button class="ov-quick-action" data-go="tickets"><span><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M2 9a3 3 0 0 0 0 6v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-4a3 3 0 0 1 0-6V5a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2M13 11v2M13 17v2"/></svg></span><div class="ov-qa-txt"><b>Tickets</b><small>Configurer</small></div><i>→</i></button>
       <button class="ov-quick-action" data-go="welcome"><span><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6.6 3.6h10.8v16.8H6.6z"/><path d="M14.6 12h1"/><path d="M4.6 20.4h15"/></svg></span><div class="ov-qa-txt"><b>Bienvenue</b><small>Préparer</small></div><i>→</i></button>
-      <button class="ov-quick-action" data-go="moderation"><span></span><div class="ov-qa-txt"><b>Modération</b><small>Protéger</small></div><i>→</i></button>
+      <button class="ov-quick-action" data-go="moderation"><span><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2l7 2.8v5.6c0 4.2-2.9 7.3-7 8.6-4.1-1.3-7-4.4-7-8.6V6l7-2.8Z"/><path d="M9 12.1l2 2 4-4"/></g></svg></span><div class="ov-qa-txt"><b>Modération</b><small>Protéger</small></div><i>→</i></button>
       <button class="ov-quick-action" data-go="botprofile"><span><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="4.4" y="8" width="15.2" height="11.6" rx="3"/><path d="M12 4.2V8"/><circle cx="12" cy="3.2" r="1.1" fill="currentColor" stroke="none"/><circle cx="9" cy="13.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="15" cy="13.4" r="1.15" fill="currentColor" stroke="none"/><path d="M9.6 16.8h4.8"/></svg></span><div class="ov-qa-txt"><b>Identité du bot</b><small>Personnaliser</small></div><i>→</i></button>
     </div>`);
   quickActions.querySelectorAll('[data-go]').forEach((button) => { button.onclick = () => Dashboard.setModule(button.dataset.go); });
@@ -3966,7 +3966,7 @@ Dashboard.renderers.economy = async (content, data) => {
   const root = Dashboard.header(content, '', 'Économie', 'Coins, transferts et classement du serveur. Les membres utilisent /daily, /balance, /pay et /leaderboard.');
   const lb = await App.api(`/bots/${Dashboard.state.bot.id}/economy/leaderboard?guild_id=${Dashboard.state.guildId}`);
   const c = Dashboard.card(root, 'Classement', 'Les 25 membres les plus riches de ce serveur.');
-  if (!lb.top.length) c.appendChild(App.el(`<div class="dash-empty"><div class="big">${App.glyphe('piece', { taille: 26 })}</div>Aucune transaction pour l\'instant — les membres gagnent des coins avec /daily !</div>`));
+  if (!lb.top.length) c.appendChild(App.el(`<div class="dash-empty"><div class="big">${App.glyphe('piece', { taille: 26 })}</div>Aucune transaction pour l\'instant · les membres gagnent des coins avec /daily !</div>`));
   else {
     const table = App.el(`<table class="dash-table"><thead><tr><th>#</th><th>Membre</th><th>Coins</th><th>Série 🔥</tr></thead><tbody></tbody></table>`);
     const tb = table.querySelector('tbody');
@@ -4127,7 +4127,7 @@ Dashboard.renderers.moderation = async (content, data) => {
   c.classList.add('am-control-card');
   c.innerHTML += `
     <div class="am-control-hero">
-      <div class="am-hero-copy"><span class="am-shield-icon"></span><div><b>Auto-mod</b><small id="am-status-line">${automodDraft ? 'Brouillon local — pas encore publié.' : (s.am_enabled ? 'Protection active.' : 'Protection désactivée.')}</small></div></div>
+      <div class="am-hero-copy"><span class="am-shield-icon"><svg class="ico-svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2l7 2.8v5.6c0 4.2-2.9 7.3-7 8.6-4.1-1.3-7-4.4-7-8.6V6l7-2.8Z"/><path d="M9 12.1l2 2 4-4"/></g></svg></span><div><b>Auto-mod</b><small id="am-status-line">${automodDraft ? 'Brouillon local, pas encore publié.' : (s.am_enabled ? 'Protection active.' : 'Protection désactivée.')}</small></div></div>
       <label class="am-main-toggle"><span>Activer</span><input type="checkbox" id="am-on" ${s.am_enabled ? 'checked' : ''} /><i></i></label>
     </div>
     <div class="am-mode-row">
@@ -5361,7 +5361,7 @@ Dashboard.renderers.roles = async (content, data) => {
       App.toast((e && e.message) || 'Envoi impossible.', 'error');
     }
   };
-const c = Dashboard.card(root, 'Panneaux', 'Envoyez-les sur Discord avec /roles send, ou modifiez-les ici — si le panneau est déjà posté, le message Discord se met à jour en place (aucun doublon).');
+const c = Dashboard.card(root, 'Panneaux', 'Envoyez-les sur Discord avec /roles send, ou modifiez-les ici · si le panneau est déjà posté, le message Discord se met à jour en place (aucun doublon).');
   const menus = data.role_menus || [];
   if (!menus.length) c.appendChild(App.el(`<div class="dash-empty"><div class="big">${App.glyphe('presse', { taille: 26 })}</div>Aucun panneau pour l\'instant.</div>`));
   const list = App.el(`<div></div>`);
@@ -6645,7 +6645,7 @@ Dashboard.renderers.quiz = async (content, data) => {
   // Mes quiz
   const list = Dashboard.card(root, 'Mes quiz', 'Vos banques de questions. Désactivez un quiz pour qu\'il ne sorte plus dans /quiz (les questions restent).');
   const sets = setsData.sets || [];
-  if (!sets.length) list.appendChild(App.el(`<div class="dash-empty"><div class="big">${App.glyphe('cerveau', { taille: 26 })}</div>Vous n\'avez pas encore créé de quiz — utilisez le formulaire « ➕ Créer un quiz » ci-dessous.<br/><span style="font-size:12px;color:var(--d-dim)">Sans quiz personnalisé, /quiz utilise la banque de questions par défaut.</span></div>`));
+  if (!sets.length) list.appendChild(App.el(`<div class="dash-empty"><div class="big">${App.glyphe('cerveau', { taille: 26 })}</div>Vous n\'avez pas encore créé de quiz · utilisez le formulaire « ➕ Créer un quiz » ci-dessous.<br/><span style="font-size:12px;color:var(--d-dim)">Sans quiz personnalisé, /quiz utilise la banque de questions par défaut.</span></div>`));
   sets.forEach((set) => {
     const qCount = (set.questions || []).length;
     const row = App.el(`
@@ -6762,7 +6762,7 @@ Dashboard.renderers.quiz = async (content, data) => {
   // Classement
   const { top } = await App.api(`/bots/${bot.id}/guilds/${guildId}/quiz/top`);
   const c2 = Dashboard.card(root, 'Classement Quiz', 'Les 25 meilleurs joueurs de ce serveur.');
-  if (!top.length) c2.appendChild(App.el(`<div class="dash-empty"><div class="big">${App.glyphe('cerveau', { taille: 26 })}</div>Personne n\'a encore joué au quiz — lancez <b>/quiz</b> sur le serveur !</div>`));
+  if (!top.length) c2.appendChild(App.el(`<div class="dash-empty"><div class="big">${App.glyphe('cerveau', { taille: 26 })}</div>Personne n\'a encore joué au quiz · lancez <b>/quiz</b> sur le serveur !</div>`));
   else {
     const table = App.el(`<table class="dash-table"><thead><tr><th>#</th><th>Membre</th><th>Points</th><th>Réponses</th></tr></thead><tbody></tbody></table>`);
     const tb = table.querySelector('tbody');
@@ -7435,14 +7435,14 @@ Dashboard.renderers.botprofile = async (content, data) => {
   const bannerOf = (pr) => pr.banner_url || '';
   const letterTile = (nm) => App.escapeHtml(String(nm || '?').trim().slice(0, 1).toUpperCase() || '?');
 
-  const card = Dashboard.card(root, 'Profil d’Optimus Prime sur ce serveur', 'Cette identité est indépendante des autres serveurs et ne modifie jamais le bot global.');
+  const card = Dashboard.card(root, 'Profil d’Hoxera sur ce serveur', 'Cette identité est indépendante des autres serveurs et ne modifie jamais le bot global.');
   // Aperçu vivant (photo + bannière + nom + bio ensemble)
   card.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:14px;border:1px solid rgba(88,101,242,.28);border-radius:8px;background:rgba(88,101,242,.07)">
       <span style="font-size:22px"><svg class="ico-svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="5.2" y="10.4" width="13.6" height="9.6" rx="2.4"/><path d="M8.4 10.4V8a3.6 3.6 0 0 1 7.2 0v2.4"/></svg></span><div><b>Configuration limitée à ${App.escapeHtml(serverName)}</b><div class="desc" style="margin:2px 0 0">Le nom, la photo et la bannière ci-dessous ne s’appliquent qu’à CE serveur. Les autres serveurs et le bot global ne changent jamais.</div></div>
     </div>
     <div id="bp-live" style="margin-bottom:14px"></div>
-    <label class="dash-label">Nom affiché par Optimus Prime sur ce serveur</label>
+    <label class="dash-label">Nom affiché par Hoxera sur ce serveur</label>
     <input class="dash-input" id="bp-name" maxlength="80" value="${App.escapeHtml(profile.name || '')}" placeholder="Hoxera" />
     <div class="desc" style="margin-top:5px">Apparaît dans les messages envoyés par le bot sur ce serveur. L’application bot globale n’est pas renommée.</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:16px">
@@ -7779,7 +7779,7 @@ Dashboard.renderers.health = async (content) => {
       ['Nettoyage auto (24 h)', true],
     ];
     const cGuards = App.el(`<div class="dash-card"><h3>️ Garde-fous actifs</h3>
-      <div class="desc">Les protections installées — toutes actives en permanence.</div>
+      <div class="desc">Les protections installées · toutes actives en permanence.</div>
       ${guards.map(([label]) => `<div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid #222434;font-size:13px"><span>${App.glyphe('coche', { taille: 16 })}</span>${label}</div>`).join('')}
     </div>`);
     grid.appendChild(cGuards);
@@ -8143,7 +8143,7 @@ Dashboard.renderers.modmail = async (content, data) => {
     const openCard = App.el(`
       <div class="dash-card" data-mm style="margin-top:16px">
         <h3>Conversations ouvertes (${open.length})</h3>
-        <div class="desc">Répondez directement dans le fil Discord du salon modmail — le membre recevra votre réponse en MP.</div>
+        <div class="desc">Répondez directement dans le fil Discord du salon modmail · le membre recevra votre réponse en MP.</div>
         ${open.length ? `<div style="overflow-x:auto;margin-top:8px"><table class="dash-table"><thead><tr><th>Membre</th><th>Ouverte le</th><th></th></tr></thead><tbody></tbody></table></div>` : `<div class="dash-empty" style="margin-top:10px"><div class="big">${App.glyphe('boite', { taille: 26 })}</div><p>Aucune conversation ouverte.</p></div>`}
       </div>`);
     root.appendChild(openCard);
