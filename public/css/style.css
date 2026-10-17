@@ -64,21 +64,24 @@ button { font-family: inherit; }
 .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
 .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  background: #b4452c;
   border: none; color: #fff;
-  box-shadow: 0 4px 16px rgba(224,122,95, .35);
+  box-shadow: 0 4px 16px rgba(180,69,44, .3);
 }
-.btn-primary:hover { filter: brightness(1.1); border: none; box-shadow: 0 7px 22px rgba(224,122,95, .5); }
+.btn-primary:hover { background: #9d3a23; border: none; box-shadow: 0 7px 22px rgba(180,122,95, .34); }
 .btn-danger { box-shadow: 0 2px 10px rgba(237, 66, 69, .12); }
 .btn-discord { box-shadow: 0 4px 16px rgba(224,122,95, .35); }
 .btn-danger { background: rgba(237, 66, 69, .12); color: #ff7b7e; border-color: rgba(237, 66, 69, .35); }
 .btn-danger:hover { border-color: var(--red); }
 .btn-ghost { background: transparent; }
 .btn-discord {
-  background: #e07a5f; color: #fff; border: none; width: 100%;
+  background: #4752c4; color: #fff; border: none; width: 100%;
   justify-content: center; padding: 11px; font-weight: 700; font-size: 14px;
 }
-.btn-discord:hover { background: #4752c4; border: none; }
+.btn-discord:hover { background: #3c46a8; border: none; }
+/* Le bouton du bandeau heritait du fond translucide de la barre : texte blanc
+   sur blanc en theme clair. Meme fond plat que les autres boutons Discord. */
+/* (deplace plus bas : la barre du haut n'est pas dans #public-landing) */
 .auth-divider {
   display: flex; align-items: center; gap: 12px; color: var(--text-dim);
   font-size: 12px; margin: 18px 0;
@@ -284,7 +287,7 @@ label.field-label {
   transition: border-color .15s ease, box-shadow .15s ease;
 }
 .card:hover { border-color: #33334f; box-shadow: 0 4px 16px rgba(0, 0, 0, .16); }
-.card h3 { font-size: 16px; margin-bottom: 4px; display: flex; align-items: center; gap: 9px; }
+.card h3 { font-size: 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 9px; }
 .card .card-sub { color: var(--text-dim); font-size: 13px; margin-bottom: 16px; line-height: 1.5; }
 
 
@@ -426,7 +429,7 @@ label.field-label {
 .pub-stat .val { font-size: 28px; font-weight: 800; }
 .pub-stat .lbl { color: var(--text-dim); font-size: 13px; margin-top: 3px; }
 .pub-section { max-width: 1180px; margin: 0 auto; padding: 30px 26px; }
-.pub-section h2 { font-size: 22px; margin-bottom: 4px; }
+.pub-section h2 { font-size: 22px; margin-bottom: 12px; }
 .pub-sub { color: var(--text-dim); margin-bottom: 22px; }
 .pub-features { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; }
 .pub-feature {
@@ -750,7 +753,12 @@ a:hover { color: #c3caff; }
 .navbar .logo-row { font-size: 18px; }
 .navbar .btn { border-color: rgba(54,68,92,.85); background: rgba(18,25,35,.8); }
 .navbar .btn:hover { border-color: rgba(224,122,95,.7); background: rgba(30,39,58,.86); }
-.navbar .btn-primary, .navbar .btn-discord { background: linear-gradient(135deg,#6477ff,#906fff); border: 0; }
+/* Le bouton Discord garde le meme fond plat que partout ailleurs. */
+.navbar .btn-primary { background: linear-gradient(135deg,#6477ff,#906fff); border: 0; }
+/* Le bouton « Se connecter avec Discord » du bandeau doit etre identique a ceux
+   du heros et du pied : meme fond plat, meme texte. La regle .navbar .btn qui le
+   precedait le peignait en anthracite translucide. */
+.navbar .btn-discord, .navbar .btn-discord:hover { background-color: #4752c4; color: #fff; }
 .user-pill { color: #a9b5c9; }
 .user-pill > span:first-of-type { color: #e9edf6; font-weight: 650; }
 
@@ -762,9 +770,13 @@ a:hover { color: #c3caff; }
 .btn:hover { transform: translateY(-2px); border-color: var(--accent); background: #1a2637; box-shadow: 0 10px 24px -16px rgba(224,122,95,.9); }
 .btn:active { transform: translateY(0) scale(.985); }
 .btn-primary, .btn-discord {
-  background: linear-gradient(135deg, #6478ff, #926fff);
-  box-shadow: 0 12px 28px -16px rgba(224,122,95,.95), inset 0 1px 0 rgba(255,255,255,.22);
+  background-image: none;
+  /* Le fond plat est redit ici : cette regle suit celles des deux classes. */
+  background-color: #b4452c;
+  color: #fff;
 }
+.btn-discord, .navbar #public-landing .btn-discord { background-color: #4752c4; color: #fff; }
+#public-landing .btn-discord:hover { background-color: #3c46a8; }
 .btn-primary:hover, .btn-discord:hover { background: linear-gradient(135deg, #e88a70, #d0765f); box-shadow: 0 16px 34px -16px rgba(224,122,95,1), inset 0 1px 0 rgba(255,255,255,.28); }
 .btn-danger { color: #ff9da3; background: rgba(240,108,117,.1); border-color: rgba(240,108,117,.3); }
 .btn-danger:hover { border-color: #f06c75; background: rgba(240,108,117,.16); }
@@ -951,9 +963,9 @@ html { scroll-padding-top: 84px; }
 .hp-faq-item[open] summary::after { transform: rotate(45deg); }
 .hp-faq-item p {
   color: var(--text-dim); font-size: 14px; line-height: 1.65;
-  padding: 0 18px 16px; margin: 0;
+  padding: 14px 18px 16px; margin: 0;
 }
-.hp-faq-item[open] summary { border-bottom: 1px solid var(--border); }
+.hp-faq-item[open] summary { padding-bottom: 12px; border-bottom: 1px solid var(--border); }
 
 /* ---------- CTA final ---------- */
 .hp-cta { padding: 10px 26px 50px; }
@@ -980,6 +992,8 @@ html { scroll-padding-top: 84px; }
 .hp-footer-col > b { font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-dim); margin-bottom: 4px; }
 .hp-footer-col a { color: var(--text-dim); font-size: 14px; text-decoration: none; transition: color .15s ease; }
 .hp-footer-col a:hover { color: var(--accent); }
+.pub-footer-links a { color: var(--text-dim); text-decoration: none; transition: color .15s ease; }
+.pub-footer-links a:hover { color: var(--accent); }
 .hp-footer-brand b { font-size: 18px; }
 .hp-footer-brand p { color: var(--text-dim); font-size: 13px; line-height: 1.6; margin: 6px 0 0; }
 .hp-footer-bottom {
@@ -1318,7 +1332,7 @@ body:has(#public-landing) .navbar {
   gap: 10px;
 }
 #public-landing .pub-hero-actions .btn-primary {
-  background: #e07a5f;
+  background: #b4452c;
   background-image: none;
   border-radius: 4px;
   font-size: 16px;
@@ -1332,8 +1346,10 @@ body:has(#public-landing) .navbar {
   box-shadow: none;
   transform: none;
 }
-#public-landing .pub-hero-actions .btn-discord,
-#public-landing .pub-hero-actions .btn:not(.btn-primary) {
+/* Le bouton « Se connecter avec Discord » garde le meme fond plein que dans le
+   bandeau : en transparence il devenait illisible des que le fond clair
+   s'activait. Les autres actions du heros restent en contour. */
+#public-landing .pub-hero-actions .btn:not(.btn-primary):not(.btn-discord) {
   background: transparent;
   border: 1px solid rgba(255,255,255,.16);
   box-shadow: none;
@@ -1380,7 +1396,7 @@ body:has(#public-landing) .navbar {
   -webkit-text-fill-color: #fff;
   color: #fff;
 }
-#public-landing .pub-stat .lbl { color: rgba(255,255,255,.42); font-size: 12px; letter-spacing: .4px; }
+#public-landing .pub-stat .lbl { color: rgba(255,255,255,.62); font-size: 12px; letter-spacing: .4px; }
 
 #public-landing .pub-section { padding: 56px 26px; }
 #public-landing .pub-section h2,
@@ -1444,7 +1460,7 @@ body:has(#public-landing) .navbar {
   border-radius: 12px;
 }
 #public-landing .hp-cta-inner .btn-primary {
-  background: #e07a5f;
+  background: #b4452c;
   background-image: none;
   border-radius: 4px;
   box-shadow: none;
@@ -1472,7 +1488,7 @@ html.hx-light body:has(#public-landing) { background: #f4f5f8; }
 html.hx-light #public-landing .hero-title { color: #1c1e26; }
 html.hx-light #public-landing .pub-tagline { color: #5c6270; }
 html.hx-light #public-landing .pub-stat .val { -webkit-text-fill-color: #1c1e26; color: #1c1e26; }
-html.hx-light #public-landing .pub-stat .lbl { color: #8b8fa3; }
+html.hx-light #public-landing .pub-stat .lbl { color: #5f6472; }
 html.hx-light #public-landing .pub-feature {
   border-bottom-color: #e4e6ef !important;
 }
