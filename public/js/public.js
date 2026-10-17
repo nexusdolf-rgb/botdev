@@ -231,16 +231,16 @@ App.renderPublicLanding = () => {
           </div>
           <div class="hp-footer-col">
             <b>Accès</b>
-            <a href="#" id="pub-foot-dash">Dashboard</a>
+            <a href="/#/dashboard" id="pub-foot-dash">Dashboard</a>
             <a href="https://discord.gg/X9hTdr9N3" target="_blank" rel="noopener">Serveur support</a>
           </div>
         </div>
         <div class="hp-footer-bottom">
-          <span>© ${new Date().getFullYear()} Hoxera — Optimus Prime</span>
+          <span>© ${new Date().getFullYear()} Hoxera</span>
           <div class="pub-footer-links">
             <a href="https://discord.gg/X9hTdr9N3" target="_blank" rel="noopener">Serveur support</a>
             <span>·</span>
-            <a href="#" id="pub-foot-dash-2">Dashboard</a>
+            <a href="/#/dashboard" id="pub-foot-dash-2">Dashboard</a>
           </div>
         </div>
       </div>
