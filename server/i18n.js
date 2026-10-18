@@ -40,6 +40,7 @@ const STRINGS = {
     ticket_dm_open_title: '🎫 Ticket ouvert · #{number}',
     ticket_dm_open_desc: 'Votre demande sur **{server}** a été transmise à l’équipe.',
     ticket_dm_open_button: '🎫 Ouvrir mon ticket',
+    ticket_confirm_note: 'Ce message n’est visible que par vous.',
     ticket_confirm: '✅ Votre ticket {type} a été créé : **{channel}**',
     // Transcription (MP)
     transcript_title: '🎫 Ticket clôturé',
@@ -261,6 +262,7 @@ const STRINGS = {
     ticket_dm_open_title: '🎫 Ticket opened · #{number}',
     ticket_dm_open_desc: 'Your request on **{server}** has been sent to the team.',
     ticket_dm_open_button: '🎫 Open my ticket',
+    ticket_confirm_note: 'Only you can see this message.',
     ticket_confirm: '✅ Your ticket {type} has been created: **{channel}** — click to open it!',
     transcript_title: '🎫 Ticket closed',
     transcript_desc: 'Your ticket on **{server}** is closed. The full transcript is attached.',

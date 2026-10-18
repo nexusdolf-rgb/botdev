@@ -1057,6 +1057,43 @@ function buildTicketOpenDmPayload(client, guild, channel, ticketNumber, lang) {
   }, [new ActionRowBuilder().addComponents(ticketLink)]);
 }
 
+// v371 — la confirmation « ticket créé » était du texte brut avec un bouton
+// posé dessous, seule réponse du bot encore dans ce format. Elle prend la même
+// carte que le MP d'ouverture : titre, phrase, puce de pied, et le bouton DANS
+// le conteneur. Elle reste éphémère : personne d'autre ne la voit.
+function buildTicketOpenConfirmPayload(client, guild, channel, ticketNumber, lang, typeConfirm = '') {
+  const confirmMsg = i18n.t(lang, 'ticket_confirm', {
+    type: typeConfirm,
+    channel: `<#${channel.id}>`,
+  });
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setStyle(ButtonStyle.Link)
+      .setLabel(i18n.t(lang, 'ticket_dm_open_button'))
+      .setURL(`https://discord.com/channels/${guild.id}/${channel.id}`)
+  );
+  const payload = ui.v2panel({
+    ephemeral: true,
+    accent: false,
+    title: i18n.t(lang, 'ticket_dm_open_title', { number: ticketNumber }),
+    description: confirmMsg,
+    sections: false,
+    footer: false,
+    thumbnail: client && client.user && client.user.displayAvatarURL
+      ? client.user.displayAvatarURL({ size: 128 }) : '',
+  });
+  // v371 — l'ordre demandé : la phrase, un trait, le bouton, et la petite
+  // ligne « visible par vous seulement » SOUS le bouton. Le pied de v2panel
+  // se pose avant les lignes d'action, d'où ce montage à la main.
+  const conteneur = payload.components[0];
+  conteneur.addSeparatorComponents(new SeparatorBuilder());
+  conteneur.addActionRowComponents(row);
+  conteneur.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(`-# ${i18n.t(lang, 'ticket_confirm_note')}`)
+  );
+  return payload;
+}
+
 async function openTicket(botId, interaction, type, reason = '', answers = [], configOverride = null) {
   const guild = interaction.guild;
   const member = interaction.member;
@@ -1311,12 +1348,9 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
   // est privé, son lien ne doit pas être exposé à tout le serveur).
   const lang = i18n.langForGuild(guild.id);
   const typeConfirm = chosen ? `${chosen.emoji ? chosen.emoji + ' ' : ''}**${chosen.label}**` : '';
-  const confirmMsg = i18n.t(lang, 'ticket_confirm', { type: typeConfirm, channel: `${channel}` });
-  // 🎫 Bouton-lien direct vers le salon du ticket (en plus de la mention)
-  const linkRow = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel('🎫 Ouvrir mon ticket').setURL(`https://discord.com/channels/${guild.id}/${channel.id}`)
-  );
-  await ackReply(interaction, { content: confirmMsg, components: [linkRow], ephemeral: true });
+  // v371 — même carte que le MP d'ouverture, bouton compris dans le panneau.
+  await ackReply(interaction,
+    buildTicketOpenConfirmPayload(interaction.client, guild, channel, ticketNumber, lang, typeConfirm));
 }
 
 // ---------- Raisons : ouverture & suppression ----------
@@ -3321,6 +3355,7 @@ module.exports = {
   __testPanelBannerUrl: panelBannerUrl,
   __testPanelBannerServerName: panelBannerServerName,
   __testBuildTicketOpenDmPayload: buildTicketOpenDmPayload,
+  __testBuildTicketOpenConfirmPayload: buildTicketOpenConfirmPayload,
   // v234 — exposé pour les tests : pruneOldPanels doit reconnaître les panneaux
   // classiques ET les conteneurs Components V2, sinon les doublons s'accumulent.
   __testPanelTitleOf: panelTitleOf,

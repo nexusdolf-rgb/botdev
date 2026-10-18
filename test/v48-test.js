@@ -165,8 +165,15 @@ const check = (label, cond) => {
   check('type : numéro visible à côté du titre', v2.title(firstMsg).includes('🎫 TICKET OUVERT · #1'));
   check('type : le menu staff est DANS le conteneur', tEmb.includes('bd-troom:'));
   const lastReply = wAns.replies[wAns.replies.length - 1];
-  check('logique : confirmation privée avec le lien', lastReply && String(lastReply[1].content).includes('Votre ticket') && String(lastReply[1].content).includes('a été créé') && String(lastReply[1].content).includes('#reclamation-bob'));
-  check('type : la confirmation privée mentionne le type', lastReply && String(lastReply[1].content).includes('Réclamation'));
+  // v371 — la confirmation est une carte V2 (plus de `content` nu) et reste
+  // éphémère : le lien vers le salon privé ne doit pas être exposé.
+  const dernierPayload = lastReply ? lastReply[1] : {};
+  const dernierTexte = v2.allText(dernierPayload);
+  check('logique : confirmation privée et éphémère, dans un panneau',
+    v2.isV2(dernierPayload) && (Number(dernierPayload.flags) & 64) !== 0);
+  check('logique : la confirmation porte le lien du ticket',
+    dernierTexte.includes('Votre ticket') && dernierTexte.includes('a été créé'));
+  check('type : la confirmation privée mentionne le type', dernierTexte.includes('Réclamation'));
 
   // 3c. fermeture par le staff : bouton INTACT
   const staffI = makeI({ isBtn: true, customId: `bd-tmenu:${BOT}:close` });

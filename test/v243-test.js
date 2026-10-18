@@ -577,10 +577,10 @@ const sig = (texte, opts) => phishing.analyze(texte, opts || {});
   // --------------------------------------------------------------------------
   {
     const html = racine('public/index.html');
-    check('index.html : ?v=370 référencé 7 fois', (html.match(/\?v=370/g) || []).length === 7,
-      String((html.match(/\?v=370/g) || []).length));
+    check('index.html : ?v=371 référencé 7 fois', (html.match(/\?v=371/g) || []).length === 7,
+      String((html.match(/\?v=371/g) || []).length));
     check('index.html : plus aucun ?v=242', !html.includes('?v=242'));
-    check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("'botdev-v370'"));
+    check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("'botdev-v371'"));
   }
 
   console.log(`\n${echecs === 0

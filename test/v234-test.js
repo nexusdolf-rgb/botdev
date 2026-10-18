@@ -282,7 +282,8 @@ console.log('\n5️⃣  Couverture — tout panels.js est en V2');
   // v369 — -3 : les panneaux d’inactivité (rappel, fermeture auto, suppression
   // auto) sont partis avec le mécanisme. 19 - 3 = 16.
   // v370 — +1 : le MP fusionné transcription + note (panneauFermeture).
-  check('emplacements ui.v2panel( (claim n’est plus un panneau, v333)', count('ui.v2panel(') === 17);
+  // v371 — +1 : la confirmation d’ouverture de ticket (buildTicketOpenConfirmPayload).
+  check('emplacements ui.v2panel( (claim n’est plus un panneau, v333)', count('ui.v2panel(') === 18);
   check('plus aucune duplication « Panel.content = i18n.t(...) »', count('Panel.content = i18n.t') === 0);
   check('plus aucune référence à buildTicketPanelEmbed', count('buildTicketPanelEmbed') === 0);
   // v237 — il ne reste QU'UNE lecture de .embeds[0] dans le code exécuté :

@@ -174,8 +174,8 @@ async function main() {
       && changelog.NOTES.v === 360);
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('cache web actualisé : ?v=370 7 fois et botdev-v370',
-    (index.match(/\?v=370/g) || []).length === 7 && sw.includes("const CACHE = 'botdev-v370';"));
+  check('cache web actualisé : ?v=371 7 fois et botdev-v371',
+    (index.match(/\?v=371/g) || []).length === 7 && sw.includes("const CACHE = 'botdev-v371';"));
 
   try { store.db.close(); } catch {}
   try { fs.rmSync(DATA_DIR, { recursive: true, force: true }); } catch {}
