@@ -98,9 +98,10 @@ async function sweep(botId, entry) {
   try { await require('./verification').repairPrivateChannels(botId, entry); } catch (e) { console.error('[Hoxera] réparation tickets/vérification:', e.message); }
   try { await require('./verification').sweepCaptchas(botId, entry); } catch (e) { console.error('[Hoxera] captcha sweep:', e.message); }
 
-  // 🎫 Fermeture automatique des tickets inactifs (promis sur le panneau)
-  try { const panels = require('./panels'); await panels.sweepInactiveTickets(botId, entry); }
-  catch (e) { console.error('[Hoxera] ticket sweep:', e.message); }
+  // 🎫 Entretien des tickets : autorisations et placement réparés, fiches
+  // orphelines oubliées. v369 : plus rien ne se ferme tout seul pour inactivité.
+  try { const panels = require('./panels'); await panels.sweepTickets(botId, entry); }
+  catch (e) { console.error('[Hoxera] entretien tickets:', e.message); }
 
   // 🛡️ Anti-raid : purge du compteur + réouverture automatique programmée
   try { const antiraid = require('./antiraid'); await antiraid.sweep(botId, entry); }

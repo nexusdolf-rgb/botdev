@@ -2695,7 +2695,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     <label class="dash-label">Titre du bloc d'informations</label>
     <input class="dash-input" id="tp-info" maxlength="100" placeholder="__ⓘ Informations importantes :__" value="${App.escapeHtml(pt.info_title || '')}" />
     <label class="dash-label">Informations importantes (une ligne = une puce)</label>
-    <textarea class="dash-input" id="tp-rules" rows="4" maxlength="1000" placeholder="• Soyez clair et précis dans votre demande.&#10;• Le manque de respect envers le staff est strictement interdit.&#10;• Évitez les mentions inutiles.&#10;• Les tickets inactifs pendant 2 heures seront automatiquement fermés puis supprimés.">${App.escapeHtml(pt.rules || '')}</textarea>
+    <textarea class="dash-input" id="tp-rules" rows="4" maxlength="1000" placeholder="• Soyez clair et précis dans votre demande.&#10;• Le manque de respect envers le staff est strictement interdit.&#10;• Évitez les mentions inutiles.">${App.escapeHtml(pt.rules || '')}</textarea>
     <label class="dash-label">Message de patience (pied du panneau)</label>
     <input class="dash-input" id="tp-patience" maxlength="300" placeholder="*⏳ Merci de votre patience, un membre du staff prendra votre ticket en charge dès que possible.*" value="${App.escapeHtml(pt.patience || '')}" />
     <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
@@ -2734,7 +2734,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     <label class="dash-label">Titre du bloc d'informations</label>
     <input class="dash-input" id="mp-info" maxlength="100" placeholder="__ⓘ Informations importantes :__" value="${App.escapeHtml(mpt.info_title || '')}" />
     <label class="dash-label">Informations importantes (une ligne = une puce)</label>
-    <textarea class="dash-input" id="mp-rules" rows="4" maxlength="1000" placeholder="• Soyez clair et précis dans votre demande.&#10;• Le manque de respect envers le staff est strictement interdit.&#10;• Évitez les mentions inutiles.&#10;• Les tickets inactifs pendant 2 heures seront automatiquement fermés puis supprimés.">${App.escapeHtml(mpt.rules || '')}</textarea>
+    <textarea class="dash-input" id="mp-rules" rows="4" maxlength="1000" placeholder="• Soyez clair et précis dans votre demande.&#10;• Le manque de respect envers le staff est strictement interdit.&#10;• Évitez les mentions inutiles.">${App.escapeHtml(mpt.rules || '')}</textarea>
     <label class="dash-label">Message de patience (pied du panneau)</label>
     <input class="dash-input" id="mp-patience" maxlength="300" placeholder="*⏳ Merci de votre patience, un membre du staff prendra votre ticket en charge dès que possible.*" value="${App.escapeHtml(mpt.patience || '')}" />
     <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">

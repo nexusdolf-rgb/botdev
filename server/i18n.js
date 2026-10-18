@@ -19,7 +19,6 @@ const STRINGS = {
     panel_rule1: '• Soyez clair et précis dans votre demande.',
     panel_rule2: '• Le manque de respect envers le staff est strictement interdit.',
     panel_rule3: '• Évitez les mentions inutiles.',
-    panel_rule4: '• Les tickets inactifs pendant 2 heures seront automatiquement fermés puis supprimés.',
     panel_patience: '*⏳ Merci de votre patience, un membre du staff prendra votre ticket en charge dès que possible.*',
     // Salon de ticket
     ticket_title: '🎫 TICKET OUVERT',
@@ -161,9 +160,6 @@ const STRINGS = {
     ticket_add_amb_desc: '« {query} » correspond à **{count}** membres de **{server}**. Sélectionnez le bon ci-dessous :',
     ticket_add_retry: '🔁 Réessayer',
     ticket_add_expired: '⏰ La demande a expiré. Recommence depuis le menu « ⚙️ Actions du staff ».',
-    ticket_auto_warn: '⏰ **Rappel** : ce ticket est inactif depuis un moment. Sans nouveau message, il sera **fermé automatiquement dans 10 minutes** (puis supprimé après 24 h).',
-    ticket_auto_closed: '⏰ Ticket **fermé automatiquement** : 2 heures sans activité.\n📄 La transcription sera envoyée à la suppression définitive.',
-    ticket_auto_deleted: '⏰ Ticket **supprimé automatiquement** : fermé depuis plus de 24 h.',
     ticket_rating_title: 'Votre avis',
     ticket_rating_desc: 'Votre ticket **#{number}** sur **{server}** est clôturé. Comment évaluez-vous la prise en charge ?',
     ticket_rating_thanks: '🙏 Merci pour votre note. Elle aide {server} à s\'améliorer.',
@@ -242,7 +238,6 @@ const STRINGS = {
     panel_rule1: '• Be clear and precise in your request.',
     panel_rule2: '• Disrespect towards the staff is strictly forbidden.',
     panel_rule3: '• Avoid unnecessary mentions.',
-    panel_rule4: '• Tickets inactive for 2 hours will be automatically closed and deleted.',
     panel_patience: '*⏳ Thank you for your patience, a staff member will take care of your ticket as soon as possible.*',
     ticket_title: '🎫 TICKET OPEN',
     ticket_type: '🗂️ Ticket type',
@@ -380,9 +375,6 @@ const STRINGS = {
     ticket_add_amb_desc: '“{query}” matches **{count}** members of **{server}**. Pick the right one below:',
     ticket_add_retry: '🔁 Try again',
     ticket_add_expired: '⏰ The request expired. Start again from the “⚙️ Staff actions” menu.',
-    ticket_auto_warn: '⏰ **Reminder**: this ticket has been inactive for a while. Without a new message, it will be **automatically closed in 10 minutes** (then deleted after 24 h).',
-    ticket_auto_closed: '⏰ Ticket **automatically closed**: 2 hours without activity.\n📄 The transcript will be sent on final deletion.',
-    ticket_auto_deleted: '⏰ Ticket **automatically deleted**: closed for more than 24 h.',
     ticket_rating_title: 'Your feedback',
     ticket_rating_desc: 'Your ticket **#{number}** on **{server}** is closed. How would you rate the support?',
     ticket_rating_thanks: '🙏 Thank you! Your rating helps {server} improve.',
@@ -486,7 +478,7 @@ function t(lang, key, vars = {}) {
 
 // Textes du panneau de tickets pour une langue
 function panelTexts(lang) {
-  const rules = [t(lang, 'panel_rule1'), t(lang, 'panel_rule2'), t(lang, 'panel_rule3'), t(lang, 'panel_rule4')];
+  const rules = [t(lang, 'panel_rule1'), t(lang, 'panel_rule2'), t(lang, 'panel_rule3')];
   return {
     title: (server) => t(lang, 'panel_title', { server }),
     welcome: (server) => t(lang, 'panel_welcome', { server }),

@@ -423,7 +423,14 @@ function buildTicketPanel(cfg, client, types, serverName = '', guildId = '', row
   const welcomeText = String(PT.welcome || '').trim() ? withServer(String(PT.welcome).trim().slice(0, 200)) : P.welcome(name);
   const infoTitle = pickText(PT.info_title, P.infoTitle);
   const rulesCustom = String(PT.rules || '').trim();
-  const rules = rulesCustom ? rulesCustom.split('\n').map((l) => l.trim()).filter(Boolean).slice(0, 15) : P.rules;
+  // v369 : la fermeture pour inactivité n'existe plus, mais les panneaux créés
+  // avant l'ont dans leurs règles personnalisées. On ne l'affiche plus : promis
+  // et plus fait, c'est exactement ce qui fait exploser un ticket au visage d'un
+  // utilisateur. Les règles saisies par le staff passent avant le défaut.
+  const reglesSaisies = rulesCustom
+    ? rulesCustom.split('\n').map((l) => l.trim()).filter(Boolean).filter((l) => !/inactifs? pendant|inactifs? after|sans activité depuis/i.test(l))
+    : [];
+  const rules = reglesSaisies.length ? reglesSaisies.slice(0, 15) : P.rules;
   const patience = pickText(PT.patience, P.patience);
   // Le message personnalisé (configuré dans le dashboard) reste respecté :
   // s'il existe, il remplace le paragraphe d'explication standard.
@@ -1316,10 +1323,11 @@ const pendingReasons = new Map(); // userId -> { botId, guildId, type }
 const pendingDeletes = new Map(); // userId -> { botId }
 const pendingAdds = new Map();    // userId -> { botId, ts } (ajout d'un membre au ticket)
 
-// Fermeture automatique des tickets inactifs (promis sur le panneau)
-const INACTIVE_CLOSE_MIN = 120;          // fermeture après 2 h sans activité
-const INACTIVE_WARN_BEFORE_MIN = 10;     // rappel 10 min avant la fermeture
-const CLOSED_DELETE_AFTER_MIN = 24 * 60; // suppression 24 h après fermeture
+// v369 : plus de fermeture ni de suppression automatique pour inactivité
+// (demande du 17/10). Un ticket reste ouvert jusqu'à ce que le staff le ferme,
+// et rien n'est envoyé au client pour le presser. Les trois constantes qui
+// pilotaient le mécanisme (2 h, rappel 10 min, suppression 24 h) sont parties
+// avec lui ; le ménage des fiches orphelines est passé dans sweepTickets.
 
 function reasonModal(botId, customId, title, label, placeholder) {
   const modal = new ModalBuilder().setCustomId(customId).setTitle(String(title).slice(0, 45));
@@ -3096,15 +3104,16 @@ async function repairTicketChannel(botId, guild, channel, row) {
 }
 
 // ============================================================
-// ⏰ Fermeture automatique des tickets inactifs (promis sur le panneau)
-//   - rappel 10 min avant la fermeture (2 h sans activité)
-//   - fermeture auto (verrouillage + notification)
-//   - suppression auto 24 h après fermeture (transcription envoyée en MP)
+// 🎫 Entretien des tickets. v369 : ce qui suivait l'inactivité (rappel à 1 h
+//   50, fermeture à 2 h, suppression à 24 h avec transcription) est retiré.
+//   Il ne reste que ce qui répare : autorisations et placement du salon, et
+//   oubli de la fiche quand le salon a été supprimé à la main. Sans ce filet,
+//   un ticket renommé ou dont les rôles avaient dérivé restait bloqué, et les
+//   lignes orphelines s'accumulaient dans open_tickets.
 // Appelé par tasks.js toutes les 30 secondes pour chaque bot.
 // ============================================================
-async function sweepInactiveTickets(botId, entry, now = new Date()) {
+async function sweepTickets(botId, entry) {
   try {
-    // Tous les tickets ouverts du bot, tous serveurs confondus
     const all = store.db.prepare('SELECT * FROM open_tickets WHERE bot_id = ?').all(botId);
     for (const row of all) {
       try {
@@ -3113,92 +3122,14 @@ async function sweepInactiveTickets(botId, entry, now = new Date()) {
         if (!channel) { store.openTickets.remove(row.channel_id); continue; }
         try {
           const repair = await repairTicketChannel(botId, guild, channel, row);
-          if (repair.repaired) console.log(`[Hoxera] 🧰 ticket #${row.number} réparé : ${repair.roles} rôle(s), ${repair.moved ? 'placement corrigé' : 'accès vérifié'}`);
+          if (repair.repaired) console.log(`[Hoxera] 🧰 ticket #${row.number} réparé : ${repair.roles} rôle(s), ${repair.moved ? 'placement corrigé' : 'accès déjà bons'}`);
         } catch (e) { console.error(`[Hoxera] 🧰 réparation ticket #${row.number} : ${e.message}`); }
-        const lang = i18n.langForGuild(row.guild_id);
-        if (!row.closed_at) {
-          // Ticket OUVERT : inactivité ?
-          const last = new Date(row.last_activity || row.opened_at || Date.now()).getTime();
-          const inactiveMin = (now.getTime() - last) / 60000;
-          if (inactiveMin >= INACTIVE_CLOSE_MIN) {
-            // Fermeture automatique
-            await lockTicketOpenerWrite(channel, row.opener_id, { view: true, send: false });
-            store.closedTickets.add(channel.id, botId, row.guild_id);
-            store.openTickets.update(channel.id, { closed_at: now.toISOString(), warned_inactive: 0 });
-            bumpTicketStats(row.guild_id, 0, -1);
-            // v234 — payload V2. Le texte était posé DEUX FOIS (content du
-            // message + description de l'embed) : duplication supprimée, seule
-            // la description dans le conteneur est conservée.
-            const autoClosedPanel = ui.v2panel({
-              // v309 — aucune ligne colorée sur les panneaux du système de tickets.
-              accent: false,
-              title: '⏰ Ticket fermé automatiquement',
-              description: i18n.t(lang, 'ticket_auto_closed'),
-              fields: [{ name: '⌛ Motif', value: 'Aucune activité pendant 2 heures.', inline: true }, { name: '📄 Suite', value: 'Le ticket pourra être supprimé automatiquement après le délai prévu.', inline: true }],
-              footer: false,
-            });
-            await channel.send(autoClosedPanel).catch(() => {});
-            try {
-              await logging.log(botId, guild, {
-                title: '⏰ Ticket fermé automatiquement (2 h sans activité)', color: '#FEE75C',
-                fields: [
-                  { name: '📨 Salon', value: `<#${channel.id}>`, inline: true },
-                  { name: '🎫 Numéro', value: `#${row.number}`, inline: true },
-                ],
-              });
-            } catch {}
-          } else if (inactiveMin >= INACTIVE_CLOSE_MIN - INACTIVE_WARN_BEFORE_MIN && !row.warned_inactive) {
-            // Rappel 10 min avant la fermeture
-            store.openTickets.update(channel.id, { warned_inactive: 1 });
-            // v234 — payload V2. Le texte était posé DEUX FOIS (content du
-            // message + description de l'embed) : duplication supprimée, seule
-            // la description dans le conteneur est conservée.
-            const autoWarnPanel = ui.v2panel({
-              // v309/v310 — aucune ligne colorée sur les panneaux du système de tickets.
-              accent: false,
-              title: '⚠️ Ticket bientôt fermé',
-              description: i18n.t(lang, 'ticket_auto_warn'),
-              fields: [{ name: '⏳ Inactivité', value: 'Le ticket sera fermé si aucune réponse n’arrive.', inline: true }, { name: '💬 Action', value: 'Un nouveau message remet le délai à zéro.', inline: true }],
-              footer: false,
-            });
-            await channel.send(autoWarnPanel).catch(() => {});
-          }
-        } else {
-          // Ticket FERMÉ : suppression 24 h après
-          const closedMs = new Date(row.closed_at).getTime();
-          if (now.getTime() - closedMs >= CLOSED_DELETE_AFTER_MIN * 60000) {
-            const t = await buildTranscriptFromChannel(botId, channel, guild, [
-              i18n.t(lang, 'ticket_auto_deleted'),
-            ]);
-            await sendTranscriptDm(entry.client, guild, channel.name || '', t, botId);
-            store.openTickets.remove(channel.id);
-            try { store.advancedTickets.unbindChannel(channel.id); } catch {}
-            // v234 — payload V2. Le texte était posé DEUX FOIS (content du
-            // message + description de l'embed) : duplication supprimée, seule
-            // la description dans le conteneur est conservée.
-            const autoDeletedPanel = ui.v2panel({
-              variant: 'danger',
-              title: '🗑️ Ticket supprimé automatiquement',
-              description: i18n.t(lang, 'ticket_auto_deleted'),
-              fields: [{ name: '📄 Transcription', value: 'Elle a été préparée et envoyée au créateur si ses MP sont ouverts.', inline: true }],
-              footer: false,
-            });
-            await channel.send(autoDeletedPanel).catch(() => {});
-            setTimeout(() => { channel.delete('Ticket fermé depuis plus de 24 h').catch(() => {}); }, 1500);
-            try {
-              await logging.log(botId, guild, {
-                title: '⏰ Ticket supprimé automatiquement (fermé depuis 24 h)', color: '#FEE75C',
-                fields: [{ name: '📨 Salon', value: `#${channel.name || channel.id}` }],
-              });
-            } catch {}
-          }
-        }
       } catch (e) {
-        console.error('[BotDev] ticket sweep (fiche):', e.message);
+        console.error('[Hoxera] entretien ticket (fiche):', e.message);
       }
     }
   } catch (e) {
-    console.error('[BotDev] ticket sweep:', e.message);
+    console.error('[Hoxera] entretien tickets:', e.message);
   }
 }
 
@@ -3258,7 +3189,7 @@ module.exports = {
   resolveOpenerId, lockTicketOpenerWrite,
   startTypesWizard, handleTypesWizardInteraction,
   handleTicketDeleteAsk, ticketMetaFor, ticketWelcomePanel, readRoomCfg, typeOptionDescription, normalizeTypes,
-  sendTranscriptDm, sweepInactiveTickets, buildTranscriptFromChannel, sendRatingDm,
+  sendTranscriptDm, sweepTickets, buildTranscriptFromChannel, sendRatingDm,
   __testPanelBannerUrl: panelBannerUrl,
   __testPanelBannerServerName: panelBannerServerName,
   __testBuildTicketOpenDmPayload: buildTicketOpenDmPayload,
