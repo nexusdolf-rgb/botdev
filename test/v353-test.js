@@ -55,11 +55,14 @@ async function main() {
     !v2.allText(openFr).includes('Type de ticket')
       && !v2.allText(openFr).includes('Prochaine étape')
       && !v2.allText(openFr).includes('Rejoignez-le ici'));
+  // v372 — la carte n'affiche plus l'avatar du bot en accessory du titre.
+  check('FR : le panneau d’ouverture n’a pas d’avatar', v2.thumbnailUrls(openFr).length === 0);
   check('FR : un seul bouton-lien Discord vers le salon du ticket',
     !!frLink && frLink.style === ButtonStyle.Link && frLink.url === ticketUrl
       && frLink.label === '🎫 Ouvrir mon ticket');
-  check('FR : message d’ouverture en Components V2, avatar conservé',
-    v2.isV2(openFr) && v2.thumbnailUrls(openFr).includes('https://cdn.example/bot.png'));
+  // v372 — la vignette d'avatar a été retirée : la carte reste en V2, plus sobre.
+  check('FR : message d’ouverture en Components V2, sans avatar',
+    v2.isV2(openFr) && v2.thumbnailUrls(openFr).length === 0);
 
   const openEn = panels.__testBuildTicketOpenDmPayload(client, guild, channel, 123, 'en');
   const enLink = oneLink(openEn);
@@ -174,8 +177,8 @@ async function main() {
       && changelog.NOTES.v === 360);
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('cache web actualisé : ?v=371 7 fois et botdev-v371',
-    (index.match(/\?v=371/g) || []).length === 7 && sw.includes("const CACHE = 'botdev-v371';"));
+  check('cache web actualisé : ?v=372 7 fois et botdev-v372',
+    (index.match(/\?v=372/g) || []).length === 7 && sw.includes("const CACHE = 'botdev-v372';"));
 
   try { store.db.close(); } catch {}
   try { fs.rmSync(DATA_DIR, { recursive: true, force: true }); } catch {}

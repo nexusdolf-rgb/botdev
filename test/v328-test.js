@@ -26,8 +26,8 @@ const routes = racine('server/routes.js');
 const dbSrc = racine('server/db.js');
 
 console.log('— 1. Pins de version v328 —');
-check('index.html : ?v=371 ×7', (html.match(/\?v=371/g) || []).length === 7);
-check('sw.js : cache botdev-v371', sw.includes("const CACHE = 'botdev-v371';"));
+check('index.html : ?v=372 ×7', (html.match(/\?v=372/g) || []).length === 7);
+check('sw.js : cache botdev-v372', sw.includes("const CACHE = 'botdev-v372';"));
 check('index.html : plus aucune ?v=327', !html.includes('?v=327'));
 
 console.log('— 2. Câblage —');

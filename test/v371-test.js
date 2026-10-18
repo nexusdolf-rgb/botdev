@@ -11,7 +11,7 @@ const os = require('os');
 const path = require('path');
 const { ButtonStyle } = require('discord.js');
 
-const DATA_DIR = path.join(os.tmpdir(), `botdev-v371-${process.pid}-${Date.now()}`);
+const DATA_DIR = path.join(os.tmpdir(), `botdev-v372-${process.pid}-${Date.now()}`);
 fs.rmSync(DATA_DIR, { recursive: true, force: true });
 fs.mkdirSync(DATA_DIR, { recursive: true });
 process.env.BOTDEV_DATA_DIR = DATA_DIR;
@@ -31,7 +31,7 @@ const check = (label, cond, detail) => {
 
 const RACINE = path.join(__dirname, '..');
 const src = fs.readFileSync(path.join(RACINE, 'server', 'discord', 'panels.js'), 'utf8');
-const VERSION = 371;
+const VERSION = 372;
 const guild = { id: '153999999999999371', name: 'Serveur exemple' };
 const channel = { id: '154000000000000371', name: 'ticket-alice' };
 const client = { user: { displayAvatarURL: () => 'https://cdn.example/bot.png' } };
@@ -39,8 +39,8 @@ const client = { user: { displayAvatarURL: () => 'https://cdn.example/bot.png' }
 console.log('— 1. Version —');
 const index = fs.readFileSync(path.join(RACINE, 'public', 'index.html'), 'utf8');
 const sw = fs.readFileSync(path.join(RACINE, 'public', 'sw.js'), 'utf8');
-check(`index.html : ?v=${VERSION} référencé 7 fois`, (index.match(/\?v=371/g) || []).length === 7);
-check('service worker au même cache', sw.includes("const CACHE = 'botdev-v371';"));
+check(`index.html : ?v=${VERSION} référencé 7 fois`, (index.match(/\?v=372/g) || []).length === 7);
+check('service worker au même cache', sw.includes("const CACHE = 'botdev-v372';"));
 
 console.log('— 2. Le message de confirmation est une carte —');
 const pay = panels.__testBuildTicketOpenConfirmPayload(client, guild, channel, 12, 'fr', '**Bug**');
@@ -53,21 +53,14 @@ check('titre avec le numéro', v2.title(pay).includes('#12'), v2.title(pay));
 check('la phrase de création est dans la carte',
   textes.includes('a été créé') && textes.includes('<#154000000000000371>'));
 check('le type choisi est rappelé', textes.includes('**Bug**'));
-check('la petite ligne dit que seul le demandeur la voit',
-  textes.includes(i18n.t('fr', 'ticket_confirm_note')));
-// v371 — ordre demandé : la phrase, un trait, le bouton, PUIS la petite ligne.
-{
-  // Les enfants du conteneur sont des builders : on les passe en JSON pour
-  // lire l'ordre réel de ce qui partira sur le réseau.
-  const enfants = JSON.parse(JSON.stringify(pay.components[0])).components || [];
-  const types = enfants.map((c) => Number(c.type));
-  const posBouton = types.indexOf(1);
-  const posSeparateur = types.indexOf(14);
-  const posNote = enfants.findIndex((c) => Number(c.type) === 10
-    && String(c.content || '').includes(i18n.t('fr', 'ticket_confirm_note')));
-  check('le trait sépare la phrase du bouton', posSeparateur > -1 && posSeparateur < posBouton, types.join(','));
-  check('la petite ligne est SOUS le bouton', posNote > posBouton, types.join(','));
-}
+// v372 — ni la petite ligne « visible par vous » ni l'avatar du bot : la carte
+// se limite au titre, à la phrase et au bouton.
+check('plus de ligne de pied dans la carte', !v2.allText(pay).includes('visible que par vous'));
+check('aucun avatar dans la carte', v2.thumbnailUrls(pay).length === 0);
+check('la carte se termine par le bouton', (() => {
+  const types = (JSON.parse(JSON.stringify(pay.components[0])).components || []).map((c) => Number(c.type));
+  return types[types.length - 1] === 1 && types.filter((t) => t === 1).length === 1;
+})());
 check('le bouton est DANS le conteneur (plus posé dessous)',
   v2.controls(pay).length === 1 && v2.controls(pay)[0].style === ButtonStyle.Link);
 check('le bouton pointe vers le salon du ticket',
@@ -83,10 +76,11 @@ check('le constructeur est appelé par openTicket',
 
 console.log('— 4. Les autres langues suivent —');
 check('EN : titre localisé', v2.title(panels.__testBuildTicketOpenConfirmPayload(client, guild, channel, 3, 'en')).includes('#3'));
-check('EN : phrase et pied traduits',
-  v2.allText(panels.__testBuildTicketOpenConfirmPayload(client, guild, channel, 3, 'en')).includes('Only you can see this message'));
-check('aucun cadratin dans les textes ajoutés',
-  !i18n.t('fr', 'ticket_confirm_note').includes('—') && !i18n.t('en', 'ticket_confirm_note').includes('—'));
+check('EN : phrase traduite',
+  v2.allText(panels.__testBuildTicketOpenConfirmPayload(client, guild, channel, 3, 'en')).includes('has been created'));
+check('la clé de pied est retirée des deux langues',
+  i18n.t('fr', 'ticket_confirm_note') === 'ticket_confirm_note'
+    && i18n.t('en', 'ticket_confirm_note') === 'ticket_confirm_note');
 
 console.log(`\nRésultat : ${ok} ✅ / ${echecs.length} ❌ sur ${ok + echecs.length} vérifications`);
 try { store.db.close(); } catch {}
