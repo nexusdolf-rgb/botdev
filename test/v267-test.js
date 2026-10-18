@@ -152,9 +152,9 @@ const mkGuild = (channels) => ({
   console.log('— 6. Version —');
   const index = fs.readFileSync(require('path').join(__dirname, '..', 'public/index.html'), 'utf8');
   const sw = fs.readFileSync(require('path').join(__dirname, '..', 'public/sw.js'), 'utf8');
-  check('index.html : ?v=369 référencé 7 fois', (index.match(/\?v=369/g) || []).length === 7,
-    String((index.match(/\?v=369/g) || []).length));
-  check('sw.js : cache « botdev-v350 »', sw.includes("const CACHE = 'botdev-v369';"));
+  check('index.html : ?v=370 référencé 7 fois', (index.match(/\?v=370/g) || []).length === 7,
+    String((index.match(/\?v=370/g) || []).length));
+  check('sw.js : cache « botdev-v350 »', sw.includes("const CACHE = 'botdev-v370';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v267 — ${ok} vérifications OK : chaque membre administre son salon vocal.`);

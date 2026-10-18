@@ -162,6 +162,9 @@ const STRINGS = {
     ticket_add_expired: '⏰ La demande a expiré. Recommence depuis le menu « ⚙️ Actions du staff ».',
     ticket_rating_title: 'Votre avis',
     ticket_rating_desc: 'Votre ticket **#{number}** sur **{server}** est clôturé. Comment évaluez-vous la prise en charge ?',
+    // v370 — la note est posée SOUS la transcription, dans le même message :
+    // la phrase ne redit pas que le ticket est clos, elle demande juste l'avis.
+    ticket_rating_ask: 'Comment évaluez-vous la prise en charge du ticket **#{number}** ?',
     ticket_rating_thanks: '🙏 Merci pour votre note. Elle aide {server} à s\'améliorer.',
     ticket_rating_done: '⭐ Note enregistrée : {stars}/5. Merci !',
     ticket_rating_already: 'Vous avez déjà noté ce ticket.',
@@ -377,6 +380,7 @@ const STRINGS = {
     ticket_add_expired: '⏰ The request expired. Start again from the “⚙️ Staff actions” menu.',
     ticket_rating_title: 'Your feedback',
     ticket_rating_desc: 'Your ticket **#{number}** on **{server}** is closed. How would you rate the support?',
+    ticket_rating_ask: 'How would you rate the support on ticket **#{number}**?',
     ticket_rating_thanks: '🙏 Thank you! Your rating helps {server} improve.',
     ticket_rating_done: '⭐ Rating saved: {stars}/5 — thank you!',
     ticket_rating_already: 'You already rated this ticket.',

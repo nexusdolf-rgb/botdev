@@ -12,6 +12,7 @@ const {
   ChannelSelectMenuBuilder,
   ModalBuilder, TextInputBuilder, TextInputStyle,
   ChannelType, PermissionFlagsBits, EmbedBuilder, MessageFlags,
+  SeparatorBuilder, TextDisplayBuilder,
 } = require('discord.js');
 const store = require('../db');
 const crypto = require('crypto');
@@ -1661,6 +1662,117 @@ async function sendTranscriptDm(clientOrInteraction, guild, channelName, { text,
 }
 
 // ============================================================
+// 🎫 v370 — UN SEUL MP à la fermeture : la transcription, puis la note dessous.
+//
+// Avant, le créateur recevait deux messages coup sur coup : le panneau de
+// transcription, puis un second panneau « Votre avis » avec ses cinq étoiles.
+// Deux cartes pour une seule nouvelle, ça fait bricolé. Ici c'est un seul
+// conteneur : la transcription et son fichier, un séparateur, la question, et
+// les étoiles juste en dessous.
+//
+// Quand le membre note, on réécrit CE MESSAGE avec la confirmation à la place
+// des étoiles : la transcription et le fichier restent en place, on ne les
+// remplace pas par un petit panneau « merci » comme avant (c'était la v237).
+// ============================================================
+const mpFermeture = new Map(); // messageId -> { d, expire }
+const MP_FERMETURE_TTL = 24 * 3600 * 1000;
+const MP_FERMETURE_MAX = 200;
+
+function oublierVieuxMpFermeture() {
+  const maintenant = Date.now();
+  for (const [id, v] of mpFermeture) if (!v || v.expire < maintenant) mpFermeture.delete(id);
+  while (mpFermeture.size > MP_FERMETURE_MAX) mpFermeture.delete(mpFermeture.keys().next().value);
+}
+
+// Construit le panneau unique. `confirmation` remplace le bloc de note (après
+// le clic sur une étoile) ; sans elle, le bloc de note n'est posé que si le
+// ticket a un numéro exploitable.
+function panneauFermeture(d, confirmation) {
+  const charge = ui.v2panel({
+    // v309 — aucune ligne colorée sur les panneaux du système de tickets.
+    accent: false,
+    title: d.titre,
+    description: ui.text(d.desc, 4096),
+    image: d.image,
+    files: [d.nomFichier],
+    footer: false,
+    timestamp: false,
+  }, d.url ? [ui.linkRow(i18n.t(d.lang, 'transcript_button'), d.url)] : []);
+  const conteneur = charge.components[0];
+  conteneur.addSeparatorComponents(new SeparatorBuilder());
+  if (confirmation) {
+    conteneur.addTextDisplayComponents(new TextDisplayBuilder().setContent(String(confirmation).slice(0, 2000)));
+    return charge;
+  }
+  if (!d.avis) return charge;
+  conteneur.addTextDisplayComponents(new TextDisplayBuilder().setContent(`## ⭐ ${i18n.t(d.lang, 'ticket_rating_title')}`));
+  conteneur.addTextDisplayComponents(new TextDisplayBuilder().setContent(
+    i18n.t(d.lang, 'ticket_rating_ask', { number: d.numero })
+  ));
+  conteneur.addActionRowComponents(etoilesRow(d));
+  return charge;
+}
+
+function etoilesRow(d) {
+  return new ActionRowBuilder().addComponents(
+    [1, 2, 3, 4, 5].map((n) => new ButtonBuilder()
+      .setCustomId(`bd-rate:${d.guildId}:${d.numero}:${n}:${d.lang}`)
+      .setLabel('⭐'.repeat(n))
+      .setStyle(n >= 4 ? ButtonStyle.Success : ButtonStyle.Secondary))
+  );
+}
+
+// Envoie le MP unique. Repli : si Discord refuse la fusion, on repart sur les
+// deux messages séparés d'avant, sans rien perdre.
+async function sendCloseDm(clientOrInteraction, guild, channelName, { text, url, openerId }, botId, number) {
+  if (!openerId) return false;
+  const client = clientOrInteraction && clientOrInteraction.client ? clientOrInteraction.client : clientOrInteraction;
+  let user = null;
+  try { user = await client.users.fetch(openerId); } catch {}
+  if (!user) {
+    try { user = (await guild.members.fetch(openerId)).user; } catch {}
+  }
+  if (!user) return false;
+  const lang = i18n.langForGuild(guild.id);
+  const serverName = String(guild.name || 'Hoxera').slice(0, 100);
+  const siteUrl = store.settings.get('public_url') || 'https://hoxera.is-a.dev';
+  const profileBanner = store.settings.get('profile_banner_url') || `${siteUrl}/icons/nexora-profile-banner.png`;
+  const resolvedBotId = botId || (guild.client && guild.client.botId) || 0;
+  const gs = resolvedBotId ? store.guildSettings.get(resolvedBotId, guild.id) || {} : {};
+  const customMsg = String(gs.close_dm_message || '').trim();
+  const customImg = String(gs.close_dm_image || '').trim();
+  const desc = customMsg
+    ? customMsg.replace(/{server}/g, serverName).replace(/{url}/g, url || '')
+    : (url
+        ? i18n.t(lang, 'transcript_desc', { server: serverName, url })
+        : i18n.t(lang, 'transcript_desc_file', { server: serverName }));
+  const d = {
+    lang, numero: Number(number) || 0, guildId: guild.id, serveur: serverName, url: url || '',
+    titre: customMsg ? serverName + ' · ' + i18n.t(lang, 'transcript_title') : i18n.t(lang, 'transcript_title'),
+    desc, image: customImg || profileBanner,
+    nomFichier: `transcription-${channelName}.txt`,
+    contenu: String(text || 'Transcription indisponible.'),
+    avis: Number(number) > 0,
+  };
+  try {
+    const msg = await user.send({
+      ...panneauFermeture(d),
+      files: [{ attachment: Buffer.from(d.contenu, 'utf-8'), name: d.nomFichier }],
+    });
+    if (msg && msg.id && d.avis) {
+      oublierVieuxMpFermeture();
+      mpFermeture.set(msg.id, { d, expire: Date.now() + MP_FERMETURE_TTL });
+    }
+    return true;
+  } catch (e) {
+    console.log('[BotDev] DM fusionné impossible, retour aux deux messages :', e.message);
+    const ok = await sendTranscriptDm(clientOrInteraction, guild, channelName, { text, url, openerId }, botId);
+    await sendRatingDm(client, guild, openerId, d.numero, lang).catch(() => {});
+    return ok;
+  }
+}
+
+// ============================================================
 // 📔 Journal des tickets (v2.3) — panneau récapitulatif STAFF
 // Posté dans le salon dédié (réglage « ticket_log_channel ») à la
 // suppression du ticket : qui a ouvert, quel staff a pris en charge,
@@ -2183,8 +2295,25 @@ async function handleRating(botId, interaction) {
   store.ticketRatings.add(botId, guildId, { number, opener_id: interaction.user.id, rating: stars });
   // 📔 Le panneau du journal des tickets affiche désormais la note
   updateRecapRating(botId, interaction.client, guildId, number, stars).catch(() => {});
-  try { await interaction.update(ratingConfirmPanel(i18n.t(lang, 'ticket_rating_done', { stars }))); }
-  catch { try { await interaction.reply({ content: i18n.t(lang, 'ticket_rating_done', { stars }), ephemeral: true }); } catch {} }
+  const texte = i18n.t(lang, 'ticket_rating_done', { stars });
+  // v370 — si la note était posée sous une transcription (MP unique), on
+  // réécrit CE message : la transcription et le fichier restent, seules les
+  // étoiles cèdent la place au remerciement.
+  const enAttente = interaction.message && interaction.message.id ? mpFermeture.get(interaction.message.id) : null;
+  if (enAttente) {
+    try {
+      await interaction.update({
+        ...panneauFermeture(enAttente.d, `**${texte}**`),
+        files: [{ attachment: Buffer.from(enAttente.d.contenu, 'utf-8'), name: enAttente.d.nomFichier }],
+      });
+      mpFermeture.delete(interaction.message.id);
+      return;
+    } catch (e) {
+      console.log('[Hoxera] note : réécriture du MP fusionné impossible :', e.message);
+    }
+  }
+  try { await interaction.update(ratingConfirmPanel(texte)); }
+  catch { try { await interaction.reply({ content: texte, ephemeral: true }); } catch {} }
 }
 
 // v237 — 🐛 BUG CORRIGÉ : « l'embed d'évaluation reste affiché après le clic ».
@@ -2254,12 +2383,11 @@ async function submitDeleteReason(botId, interaction) {
   const t = await buildTranscript(botId, interaction, [
     `🗑 Ticket supprimé par ${interaction.user.tag} — raison : ${reason}`,
   ]);
-  const dmOk = await sendTranscriptDm(interaction, guild, channel.name, t, botId);
+  // v370 — transcription ET note dans le même MP, la note sous le texte.
+  const dmOk = await sendCloseDm(interaction, guild, channel.name, t, botId, ticketRow ? ticketRow.number : 0);
   // 📔 Panneau récapitulatif dans le journal des tickets (staff)
   await sendTicketRecap(botId, interaction, { row: ticketRow, meta: ticketMetaFor(channel), closeReason: reason, transcript: t });
   store.activity.add(botId, guild.id, '🗑', `Ticket #${ticketRow ? ticketRow.number : '?'} supprimé par ${interaction.user.tag} — ${reason}`);
-  const ratingLang = i18n.langForGuild(guild.id);
-  await sendRatingDm(interaction.client, guild, t.openerId, ticketRow ? ticketRow.number : 0, ratingLang).catch(() => {});
   store.openTickets.remove(channel.id);
   try { store.advancedTickets.unbindChannel(channel.id); } catch {}
   await logging.log(botId, guild, {
@@ -2289,12 +2417,11 @@ async function handleTicketDeleteConfirm(botId, interaction) {
   const t = await buildTranscript(botId, interaction, [
     `🗑 Ticket supprimé par ${interaction.user.tag} — raison : aucune raison fournie`,
   ]);
-  const dmOk = await sendTranscriptDm(interaction, guild, channel.name, t, botId);
+  // v370 — transcription ET note dans le même MP, la note sous le texte.
+  const dmOk = await sendCloseDm(interaction, guild, channel.name, t, botId, ticketRow ? ticketRow.number : 0);
   // 📔 Panneau récapitulatif dans le journal des tickets (staff)
   await sendTicketRecap(botId, interaction, { row: ticketRow, meta: ticketMetaFor(channel), closeReason: '', transcript: t });
   store.activity.add(botId, guild.id, '🗑', `Ticket #${ticketRow ? ticketRow.number : '?'} supprimé par ${interaction.user.tag}`);
-  const ratingLang = i18n.langForGuild(guild.id);
-  await sendRatingDm(interaction.client, guild, t.openerId, ticketRow ? ticketRow.number : 0, ratingLang).catch(() => {});
   store.openTickets.remove(channel.id);
   try { store.advancedTickets.unbindChannel(channel.id); } catch {}
   await ackReply(interaction, {
@@ -3190,6 +3317,7 @@ module.exports = {
   startTypesWizard, handleTypesWizardInteraction,
   handleTicketDeleteAsk, ticketMetaFor, ticketWelcomePanel, readRoomCfg, typeOptionDescription, normalizeTypes,
   sendTranscriptDm, sweepTickets, buildTranscriptFromChannel, sendRatingDm,
+  sendCloseDm, panneauFermeture, mpFermeture,
   __testPanelBannerUrl: panelBannerUrl,
   __testPanelBannerServerName: panelBannerServerName,
   __testBuildTicketOpenDmPayload: buildTicketOpenDmPayload,

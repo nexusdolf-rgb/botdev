@@ -97,8 +97,8 @@ check('CSS : toutes les surfaces Discord aux mêmes arrondis', files.css.include
 check('dashboard : modèle d’accueil au tutoiement (plus de « je vous invite »)', !files.dashJs.includes('je vous invite à prendre connaissance'));
 // v240 — tout le produit est passé au vouvoiement : le modèle de départ aussi.
 check('dashboard : modèle de départ au vouvoiement', files.dashJs.includes('la porte reste ouverte si vous revenez'));
-check('index : version v209', files.indexHtml.includes('?v=369'));
-check('service worker : cache v209', files.sw.includes('botdev-v369'));
+check('index : version v209', files.indexHtml.includes('?v=370'));
+check('service worker : cache v209', files.sw.includes('botdev-v370'));
 check('menu mobile : nom du bot dynamique', files.dashJs.includes('Dashboard.state.bot.name'));
 
 // ---------- 7. Invitations (extra) : champ + footer ----------

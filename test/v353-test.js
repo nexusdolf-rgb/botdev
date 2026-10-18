@@ -160,8 +160,9 @@ async function main() {
   const handleStart = panelsSrc.indexOf('async function handleRating(');
   const handleEnd = panelsSrc.indexOf('\n// v237', handleStart);
   const handleCode = panelsSrc.slice(handleStart, handleEnd > handleStart ? handleEnd : undefined);
-  check('la confirmation après notation n’a pas été modifiée',
-    handleCode.includes("ratingConfirmPanel(i18n.t(lang, 'ticket_rating_done', { stars }))"));
+  check('la confirmation après notation est toujours le petit panneau dédié',
+    handleCode.includes("i18n.t(lang, 'ticket_rating_done', { stars })")
+      && handleCode.includes('ratingConfirmPanel(texte)'));
   check('les nouvelles clés FR et EN sont bien définies',
     i18n.t('fr', 'ticket_dm_open_button') === '🎫 Ouvrir mon ticket'
       && i18n.t('en', 'ticket_dm_open_button') === '🎫 Open my ticket'
@@ -173,8 +174,8 @@ async function main() {
       && changelog.NOTES.v === 360);
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('cache web actualisé : ?v=369 7 fois et botdev-v369',
-    (index.match(/\?v=369/g) || []).length === 7 && sw.includes("const CACHE = 'botdev-v369';"));
+  check('cache web actualisé : ?v=370 7 fois et botdev-v370',
+    (index.match(/\?v=370/g) || []).length === 7 && sw.includes("const CACHE = 'botdev-v370';"));
 
   try { store.db.close(); } catch {}
   try { fs.rmSync(DATA_DIR, { recursive: true, force: true }); } catch {}

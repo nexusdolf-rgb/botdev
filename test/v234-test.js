@@ -280,8 +280,9 @@ console.log('\n5️⃣  Couverture — tout panels.js est en V2');
   // v239 — +1 : le MP de transcription (sendTranscriptDm), dernier panneau du
   // bot encore construit à la main. 19 + 1 = 20.
   // v369 — -3 : les panneaux d’inactivité (rappel, fermeture auto, suppression
-  // auto) sont partis avec le mécanisme. 20 - 3 ... sur le seul panels.js, 19 - 3 = 16.
-  check('emplacements ui.v2panel( (claim n’est plus un panneau, v333)', count('ui.v2panel(') === 16);
+  // auto) sont partis avec le mécanisme. 19 - 3 = 16.
+  // v370 — +1 : le MP fusionné transcription + note (panneauFermeture).
+  check('emplacements ui.v2panel( (claim n’est plus un panneau, v333)', count('ui.v2panel(') === 17);
   check('plus aucune duplication « Panel.content = i18n.t(...) »', count('Panel.content = i18n.t') === 0);
   check('plus aucune référence à buildTicketPanelEmbed', count('buildTicketPanelEmbed') === 0);
   // v237 — il ne reste QU'UNE lecture de .embeds[0] dans le code exécuté :

@@ -33,8 +33,8 @@ const racine = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 
 console.log('— 1. Pins de version v309 —');
 const html = racine('public/index.html');
-check('index.html : ?v=369 ×7', (html.match(/\?v=369/g) || []).length === 7);
-check('sw.js : cache botdev-v369', racine('public/sw.js').includes("const CACHE = 'botdev-v369';"));
+check('index.html : ?v=370 ×7', (html.match(/\?v=370/g) || []).length === 7);
+check('sw.js : cache botdev-v370', racine('public/sw.js').includes("const CACHE = 'botdev-v370';"));
 
 console.log('— 2. Panneaux tickets : plus AUCUNE ligne colorée —');
 store.bots.create({ user_id: 1, name: 'B', token: 'x', client_id: 'c', prefix: '!' });
@@ -70,7 +70,9 @@ store.bots.create({ user_id: 1, name: 'B', token: 'x', client_id: 'c', prefix: '
   const dmi = src.indexOf('transcript_title');
   check('DM transcription : aucune ligne colorée', src.slice(Math.max(0, dmi - 300), dmi).includes('accent: false'));
   const ri = src.indexOf('ticket_rating_title');
-  check('DM évaluation : aucune ligne colorée', src.slice(Math.max(0, ri - 300), ri).includes('accent: false'));
+  // v370 — le titre de la note vit désormais dans panneauFermeture, une
+  // cinquantaine de lignes après son ui.v2panel({ accent: false }.
+  check('DM évaluation : aucune ligne colorée', src.slice(Math.max(0, ri - 900), ri).includes('accent: false'));
   // v310 — le MP d’ouverture envoyé au créateur après la création
   // (titre via i18n) et le rappel « bientôt fermé ».
   const oi = src.indexOf("title: i18n.t(lang, 'ticket_dm_open_title'");
