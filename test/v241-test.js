@@ -103,10 +103,11 @@ const P = i18n.panelTexts('fr');
   check('1. auteur « · Centre d\'assistance » RETIRÉ',
     !textes.some((t) => t.includes(`· Centre d'assistance`)));
   check('2. flèches 🔴➡️ REMPLACÉES par des puces « • »',
-    !brut.includes('🔴➡️') && P.rules.length === 4 && P.rules.every((r) => r.startsWith('•')));
-  check('2b. les 4 règles sont toujours là, textes inchangés',
+    !brut.includes('🔴➡️') && P.rules.length === 3 && P.rules.every((r) => r.startsWith('•')));
+  check('2b. les 3 règles sont là, et plus aucune ne parle d’inactivité',
     P.rules[0].includes('Soyez clair et précis') && P.rules[1].includes('manque de respect')
-    && P.rules[2].includes('mentions inutiles') && P.rules[3].includes('inactifs pendant 2 heures'));
+    && P.rules[2].includes('mentions inutiles')
+    && !P.rules.some((r) => /inactifs pendant/i.test(r)));
   check('2c. les puces « • » existent aussi en anglais',
     i18n.panelTexts('en').rules.every((r) => r.startsWith('•'))
     && !i18n.panelTexts('en').rules.some((r) => r.includes('🔴➡️')));
@@ -343,10 +344,10 @@ const membre = () => ({
   }
   {
     const html = racine('public/index.html');
-    check('index.html : ?v=368 référencé 7 fois', (html.match(/\?v=368/g) || []).length === 7,
-      String((html.match(/\?v=368/g) || []).length));
+    check('index.html : ?v=369 référencé 7 fois', (html.match(/\?v=369/g) || []).length === 7,
+      String((html.match(/\?v=369/g) || []).length));
     check('index.html : plus aucun ?v=240', !html.includes('?v=240'));
-    check('sw.js : cache « botdev-v241 »', racine('public/sw.js').includes("'botdev-v368'"));
+    check('sw.js : cache « botdev-v241 »', racine('public/sw.js').includes("'botdev-v369'"));
   }
 
   // ==========================================================================

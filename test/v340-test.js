@@ -28,8 +28,8 @@ const panels = require('../server/discord/panels');
 const changelog = require('../server/discord/changelog');
 
 console.log('— 1. Pins v340 —');
-check('index.html : ?v=368 ×7', (html.match(/\?v=368/g) || []).length === 7);
-check('sw.js : cache botdev-v368', sw.includes("const CACHE = 'botdev-v368';"));
+check('index.html : ?v=369 ×7', (html.match(/\?v=369/g) || []).length === 7);
+check('sw.js : cache botdev-v369', sw.includes("const CACHE = 'botdev-v369';"));
 check('index.html : plus aucune ?v=339', !html.includes('?v=339'));
 check('VERSION ≥ 340', changelog.VERSION >= 340);
 check('journal v340 : au moins 1 nouveauté', Array.isArray(changelog.NOTES.new) && changelog.NOTES.new.length >= 1);
@@ -43,8 +43,9 @@ check('fermeture bouton utilise le verrou', /handleTicketClose[\s\S]{0,900}lockT
 check('fermeture n’enlève plus la vue', !/handleTicketClose[\s\S]{0,1200}ViewChannel:\s*false/.test(panelsSrc));
 check('réouverture rend l’écriture', /handleTicketReopen[\s\S]{0,900}lockTicketOpenerWrite\(channel, openerId, \{ view: true, send: true \}/.test(panelsSrc));
 check('attente verrouille l’écriture', /handleTicketHold[\s\S]{0,500}lockTicketOpenerWrite\(channel, openerId, \{ view: true, send: false \}/.test(panelsSrc));
-check('auto-close verrouille l’écriture', /INACTIVE_CLOSE_MIN[\s\S]{0,400}lockTicketOpenerWrite\(channel, row\.opener_id, \{ view: true, send: false \}/.test(panelsSrc)
-  || /Fermeture automatique[\s\S]{0,250}lockTicketOpenerWrite\(channel, row\.opener_id, \{ view: true, send: false \}/.test(panelsSrc));
+check('inactivité : plus de fermeture automatique dans les panneaux',
+  !/INACTIVE_CLOSE_MIN|sweepInactiveTickets/.test(panelsSrc) && /async function sweepTickets/.test(panelsSrc));
+check('fermeture manuelle : verrouille toujours l’écriture de l’ouvreur', /lockTicketOpenerWrite\(/.test(panelsSrc));
 check('repair fermé : jamais SendMessages true', /if \(row\.closed_at\) \{[\s\S]{0,450}send: false/.test(panelsSrc));
 check('repair ouvert : peut encore restaurer', /row\.closed_at[\s\S]{0,700}send: true/.test(panelsSrc));
 check('/ticket close utilise le même verrou', cmdSrc.includes('lockTicketOpenerWrite(ch, openerId, { view: true, send: false })'));

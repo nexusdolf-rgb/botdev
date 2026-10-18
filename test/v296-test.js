@@ -49,7 +49,8 @@ const json = (x) => JSON.stringify(x.components.map((c) => (c.toJSON ? c.toJSON(
   const jd = json(def);
   check('titre par défaut', jd.includes('👑 Support | MonServeur'));
   check('bienvenue par défaut', jd.includes('Bienvenue sur le support officiel de MonServeur'));
-  check('règles par défaut (4 puces)', jd.includes('Soyez clair et précis') && jd.includes('strictement interdit') && jd.includes('mentions inutiles') && jd.includes('inactifs pendant 2 heures'));
+  check('règles par défaut (3 puces depuis v369)', jd.includes('Soyez clair et précis') && jd.includes('strictement interdit')
+    && jd.includes('mentions inutiles') && !jd.includes('inactifs pendant 2 heures'));
   check('patience par défaut', jd.includes('Merci de votre patience'));
   check('titre du bloc infos par défaut', jd.includes('Informations importantes'));
 
@@ -121,9 +122,9 @@ const json = (x) => JSON.stringify(x.components.map((c) => (c.toJSON ? c.toJSON(
 
   console.log('— 8. Bump v296 —');
   const index = racine('public/index.html');
-  check('index.html : ?v=368 référencé 7 fois', (index.match(/\?v=368/g) || []).length === 7,
-    String((index.match(/\?v=368/g) || []).length));
-  check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("const CACHE = 'botdev-v368';"));
+  check('index.html : ?v=369 référencé 7 fois', (index.match(/\?v=369/g) || []).length === 7,
+    String((index.match(/\?v=369/g) || []).length));
+  check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("const CACHE = 'botdev-v369';"));
 
   console.log(`\n🎉 v296 : ${ok} vérifications passées`);
   process.exit(0);

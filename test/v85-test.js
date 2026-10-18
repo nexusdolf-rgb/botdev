@@ -4,8 +4,8 @@
 //  2. Fiche open_tickets : création, activité (touch), prise en charge, fermeture
 //  3. Historique du membre (transcriptions précédentes comptées)
 //  4. Fermeture automatique : rappel 10 min avant, fermeture à 2 h, activité = repoussé
-//  5. Suppression automatique 24 h après fermeture + transcription stockée
-//  6. Salon disparu → fiche nettoyée
+//  5. v369 : ni rappel, ni fermeture, ni suppression pour inactivité (vérifié)
+//  6. Salon disparu → fiche nettoyée (entretien conservé)
 //  7. Transcription : en-tête pro (numéro, dates, prise en charge) + pièces jointes
 //  8. Notes ⭐ : enregistrement, doublon refusé, moyenne
 //  9. Fermeture par le créateur (bouton dédié) : réservée à l'ouvreur
@@ -85,35 +85,39 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   store.openTickets.update('CT1', { last_activity: '2026-08-20T10:00:00.000Z' });
   store.openTickets.touch('CT1', '2026-08-20T10:00:00.000Z');
 
-  // 110 min plus tard → rappel (pas encore fermé)
-  await panels.sweepInactiveTickets(BOT, entry, new Date(now0.getTime() + 110 * 60000));
-  check('auto : rappel envoyé à 110 min', sent.includes(i18n.t('fr', 'ticket_auto_warn')));
-  check('auto : pas fermé avant 2 h', store.openTickets.getByChannel('CT1').closed_at === '' || store.openTickets.getByChannel('CT1').closed_at === null);
+  // v369 (demande du 17/10) : plus de rappel, plus de fermeture automatique,
+  // plus de suppression à 24 h. Le test simule trois jours de silence pour
+  // vérifier que rien ne part tout seul, dans les deux états de la fiche.
+  const transcriptsAvant = store.db.prepare('SELECT COUNT(*) AS n FROM transcripts').get().n;
+  const ilYa3Jours = new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString();
+  store.openTickets.update('CT1', { last_activity: ilYa3Jours });
+  await panels.sweepTickets(BOT, entry);
+  await sleep(150);
+  check('inactivité : aucune relance envoyée', sent.length === 0);
+  check('inactivité : rien n’est fermé après trois jours', !store.openTickets.getByChannel('CT1').closed_at);
+  check('inactivité : le salon est toujours là', channel.deleted !== true);
 
-  // 121 min → fermeture automatique
-  await panels.sweepInactiveTickets(BOT, entry, new Date(now0.getTime() + 121 * 60000));
-  check('auto : fermé à 2 h d\'inactivité', store.openTickets.getByChannel('CT1').closed_at);
-  check('auto : message de fermeture envoyé', sent.includes(i18n.t('fr', 'ticket_auto_closed')));
+  // Pareil côté ticket fermé : plus de suppression programmée.
+  store.openTickets.update('CT1', { closed_at: ilYa3Jours });
+  await panels.sweepTickets(BOT, entry);
+  await sleep(150);
+  check('inactivité : un ticket fermé depuis trois jours n’est pas supprimé',
+    channel.deleted !== true && !!store.openTickets.getByChannel('CT1'));
+  check('inactivité : aucune transcription forcée',
+    store.db.prepare('SELECT COUNT(*) AS n FROM transcripts').get().n === transcriptsAvant);
+  store.openTickets.update('CT1', { closed_at: '' });
 
-  // Nouvelle activité → touch remet warned à 0 (testé sur une autre fiche)
+  // L’activité reste tracée (le champ sert encore au tableau du dashboard).
   store.openTickets.add(BOT, G, { channel_id: 'CT2', number: 8, opener_id: 'u3', opener_tag: 'Trois#0003', type_label: '' });
   store.openTickets.update('CT2', { warned_inactive: 1 });
   store.openTickets.touch('CT2', '2026-08-20T12:00:00.000Z');
-  check('auto : nouvelle activité remet warned à 0', store.openTickets.getByChannel('CT2').warned_inactive === 0);
+  check('activité : touch remet warned à 0', store.openTickets.getByChannel('CT2').warned_inactive === 0);
   store.openTickets.remove('CT2');
-
-  // 24 h après fermeture → suppression automatique + transcription
-  const before = store.db.prepare('SELECT COUNT(*) AS n FROM transcripts').get().n;
-  await panels.sweepInactiveTickets(BOT, entry, new Date(now0.getTime() + (121 + 24 * 60) * 60000));
-  await sleep(2000); // la suppression du salon est différée de 1,5 s (comme en prod)
-  check('auto : salon supprimé après 24 h', channel.deleted === true);
-  check('auto : fiche nettoyée', store.openTickets.getByChannel('CT1') === null);
-  check('auto : transcription enregistrée', store.db.prepare('SELECT COUNT(*) AS n FROM transcripts').get().n === before + 1);
 
   // ---------- 6. Salon disparu → nettoyage ----------
   store.openTickets.add(BOT, G, { channel_id: 'GONE', number: 9, opener_id: 'u4', opener_tag: 'X', type_label: '' });
-  await panels.sweepInactiveTickets(BOT, entry, new Date(now0));
-  check('auto : fiche orpheline nettoyée', store.openTickets.getByChannel('GONE') === null);
+  await panels.sweepTickets(BOT, entry);
+  check('entretien : fiche orpheline nettoyée', store.openTickets.getByChannel('GONE') === null);
 
   // ---------- 7. Transcription : en-tête pro + pièces jointes ----------
   const atts = { size: 1, values: () => [{ url: 'https://cdn.example/a.png' }, { url: 'https://cdn.example/b.png' }] };
@@ -193,8 +197,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   // ---------- 10. Traductions ----------
   check('i18n FR : message de prise en charge', i18n.t('fr', 'ticket_claim_msg', { staff: '@Modo' }).includes('prend'));
   check('i18n EN : message de prise en charge', i18n.t('en', 'ticket_claim_msg', { staff: '@Modo' }).includes('taking'));
-  check('i18n FR : rappel fermeture auto', i18n.t('fr', 'ticket_auto_warn').includes('10 minutes'));
-  check('i18n EN : rappel fermeture auto', i18n.t('en', 'ticket_auto_warn').includes('10 minutes'));
+  check('i18n : les trois textes de relance automatique sont retirés',
+    ['ticket_auto_warn', 'ticket_auto_closed', 'ticket_auto_deleted']
+      .every((k) => i18n.t('fr', k) === k && i18n.t('en', k) === k));
   check('i18n FR : note merci', i18n.t('fr', 'ticket_rating_done', { stars: 4 }).includes('4/5'));
   check('i18n EN : note merci', i18n.t('en', 'ticket_rating_done', { stars: 4 }).includes('4/5'));
 

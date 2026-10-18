@@ -279,7 +279,9 @@ console.log('\n5️⃣  Couverture — tout panels.js est en V2');
   // réponse « réservé au staff ». 14 + 5 = 19.
   // v239 — +1 : le MP de transcription (sendTranscriptDm), dernier panneau du
   // bot encore construit à la main. 19 + 1 = 20.
-  check('emplacements ui.v2panel( (claim n’est plus un panneau, v333)', count('ui.v2panel(') === 19);
+  // v369 — -3 : les panneaux d’inactivité (rappel, fermeture auto, suppression
+  // auto) sont partis avec le mécanisme. 20 - 3 ... sur le seul panels.js, 19 - 3 = 16.
+  check('emplacements ui.v2panel( (claim n’est plus un panneau, v333)', count('ui.v2panel(') === 16);
   check('plus aucune duplication « Panel.content = i18n.t(...) »', count('Panel.content = i18n.t') === 0);
   check('plus aucune référence à buildTicketPanelEmbed', count('buildTicketPanelEmbed') === 0);
   // v237 — il ne reste QU'UNE lecture de .embeds[0] dans le code exécuté :
@@ -295,18 +297,14 @@ console.log('\n5️⃣  Couverture — tout panels.js est en V2');
   check('panelTitleOf lit AUSSI le conteneur V2 (type 17 → TextDisplay « ## »)',
     src.includes('Number(json.type) !== 17') && src.includes(".replace(/^##\\s*/, '')"));
 
-  // Les 3 panneaux automatiques ne posaient le même texte QUE dans content :
-  // vérifié ici sur le rendu réel, pas seulement sur le source.
-  for (const [label, key, titre] of [
-    ['fermeture auto', 'ticket_auto_closed', '⏰ Ticket fermé automatiquement'],
-    ['rappel auto', 'ticket_auto_warn', '⚠️ Ticket bientôt fermé'],
-    ['suppression auto', 'ticket_auto_deleted', '🗑️ Ticket supprimé automatiquement'],
-  ]) {
-    const texte = i18n.t('fr', key, { number: 1 });
-    check(`panneau ${label} : le texte i18n n’a pas de saut de paragraphe (donc pas de trait)`,
-      !texte.includes('\n\n'));
-    check(`panneau ${label} : « ${titre} » toujours présent dans le source`, src.includes(titre));
-  }
+  // v369 — les trois panneaux automatiques (rappel, fermeture, suppression) sont
+  // partis avec le mécanisme d’inactivité : on vérifie l’absence dans le source
+  // et dans i18n, au lieu de vérifier leur rendu.
+  check('panneaux auto d’inactivité : titres retirés du source',
+    !/Ticket bientôt fermé|Ticket fermé automatiquement|Ticket supprimé automatiquement/.test(src));
+  check('panneaux auto d’inactivité : clés i18n retirées',
+    ['ticket_auto_warn', 'ticket_auto_closed', 'ticket_auto_deleted']
+      .every((k) => i18n.t('fr', k) === k && i18n.t('en', k) === k));
 
   // Le wizard « assistant types » reste volontairement en embeds classiques.
   check('wizard « assistant types » : toujours 1 sectionize (reporté dans un lot dédié)',

@@ -41,7 +41,9 @@ const check = (label, cond) => {
   check('i18n : les 2 langues sont reconnues', ['fr', 'en'].every((l) => i18n.normalize(l) === l));
   check('i18n : une langue retirée retombe sur le français', ['es', 'de', 'pt', 'it'].every((l) => i18n.normalize(l) === 'fr'));
   check('i18n : clé inconnue → repli fr ou clé (jamais de crash)', typeof i18n.t('en', 'cle_inexistante') === 'string');
-  check('i18n : panelTexts règles (4)', i18n.panelTexts('en').rules.length === 4 && i18n.panelTexts('en').rules[0].includes('Be clear'));
+  check('i18n : panelTexts règles (3 depuis v369)', i18n.panelTexts('en').rules.length === 3
+  && i18n.panelTexts('en').rules[0].includes('Be clear')
+  && !i18n.panelTexts('en').rules.some((r) => /inactiv/i.test(r)));
 
   // ---------- 2. Langue du serveur ----------
   check('langue : défaut français', i18n.langForGuild(G) === 'fr');
