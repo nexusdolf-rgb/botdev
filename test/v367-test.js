@@ -39,7 +39,7 @@ const lecture = (rel) => fs.readFileSync(path.join(RACINE, rel), 'utf8');
 const CSS = ['public/css/dashboard.css', 'public/css/style.css'];
 const JS = ['public/js/app.js', 'public/js/dashboard.js', 'public/js/public.js',
   'public/js/editor.js', 'public/js/views.js'];
-const VERSION = 372;
+const VERSION = 373;
 
 let ok = 0;
 let ko = 0;

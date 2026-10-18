@@ -77,7 +77,7 @@ const TARGETS = [
   { f: 'server/discord/premade.js',         needle: 'send(ui.v2panel(options, components))',                   label: 'premade.js — replyPanel convertit 11 messages (v232)' },
   { f: 'server/discord/profileCommands.js', needle: "description: '✅ Identité mise à jour !",                 label: '/botprofile — identité mise à jour (v236 : V2)' },
   { f: 'server/discord/profileCommands.js', needle: 'description: `✅ ${sub ===',                              label: '/botprofile — avatar / bannière enregistré (v236 : V2)' },
-  { f: 'server/discord/profileWizard.js',   needle: 'description: `📱 **Pour ouvrir votre galerie :**',           label: '/botprofile setup — mode d’emploi galerie (v236 : V2)' },
+  { f: 'server/discord/profileWizard.js',   needle: 'Touchez **🖼️ Choisir une image**',                          label: '/botprofile setup — sélecteur de fichier (v373)', },
   // v231 — le quiz est passé en Components V2 (séparateurs natifs pleine
   // largeur) : il ne passe plus par ui.sectionize().
   { f: 'server/discord/extra.js',           needle: 'const quizOptions = {',                                     label: '/quiz — lancement (v231 : options du conteneur V2)' },
@@ -229,9 +229,9 @@ const touched = ['server/discord/extra.js', 'server/discord/panelCommands.js', '
   'public/index.html', 'public/sw.js'];
 check('aucun token en dur dans les fichiers modifiés',
   !touched.some((f) => /(ghp_|github_pat_|xox[baprs]-)[A-Za-z0-9_]{15,}/.test(src(f))));
-check('index.html : 7 références ?v=372', (src('public/index.html').match(/\?v=372/g) || []).length === 7);
+check('index.html : 7 références ?v=373', (src('public/index.html').match(/\?v=373/g) || []).length === 7);
 check('index.html : plus aucune référence ?v=236', !src('public/index.html').includes('?v=236'));
-check('sw.js : cache botdev-v241', src('public/sw.js').includes("const CACHE = 'botdev-v372';"));
+check('sw.js : cache botdev-v241', src('public/sw.js').includes("const CACHE = 'botdev-v373';"));
 
 console.log(failures === 0
   ? '\n✅ V229 — Traits ━ étendus aux 10 messages multi-blocs (dont le quiz), exclusions verrouillées, garde-fous v220 intacts.'

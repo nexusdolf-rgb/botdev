@@ -27,8 +27,8 @@ const ver = require('../server/discord/verification');
 const changelog = require('../server/discord/changelog');
 
 console.log('— 1. Pins v342 —');
-check('index.html : ?v=372 ×7', (html.match(/\?v=372/g) || []).length === 7);
-check('sw.js : cache botdev-v372', sw.includes("const CACHE = 'botdev-v372';"));
+check('index.html : ?v=373 ×7', (html.match(/\?v=373/g) || []).length === 7);
+check('sw.js : cache botdev-v373', sw.includes("const CACHE = 'botdev-v373';"));
 check('index.html : plus aucune ?v=341', !html.includes('?v=341'));
 check('VERSION ≥ 342', changelog.VERSION >= 342);
 

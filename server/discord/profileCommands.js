@@ -42,7 +42,15 @@ async function handleProfileCommand(botId, interaction) {
     const p = store.botProfiles.get(botId, guild.id) || {};
 
     if (sub === 'view') {
-      return interaction.reply({ embeds: [identity.buildProfileEmbed(botId, guild.id, botRecord)] });
+      // v373 — si le bot ne peut pas créer de webhook ici (permission « Gérer
+      // les webhooks »), l'identité enregistrée ne s'appliquera jamais. Avant,
+      // rien ne le disait : le réglage semblait enregistré mais restait muet.
+      const etat = await identity.identityStatus(interaction.client, botId, guild);
+      const payload = { embeds: [identity.buildProfileEmbed(botId, guild.id, botRecord)] };
+      if (etat.configured && !etat.webhook) {
+        payload.content = '⚠️ L’identité est bien enregistrée, mais le bot n’a pas la permission **Gérer les webhooks** dans un salon textuel : sans elle, il ne peut pas écrire sous ce nom. Accordez-lui cette permission, puis renvoyez `/botprofile view`.';
+      }
+      return interaction.reply(payload);
     }
 
     if (sub === 'set') {

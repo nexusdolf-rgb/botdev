@@ -79,7 +79,7 @@ let PNG;
   await panels.dispatchPanels(1, wizard('bpw:1:OWNER1:next', { isButton: () => true }));
   assert(lastReply.embeds[0].data.title.includes('Étape 4/5'), 'étape avatar');
   const btns = lastReply.components[0].components.map((c) => c.data.label);
-  assert(btns.some((l) => l.includes('Importer la photo')), 'bouton « 📷 Importer la photo » visible : ' + btns.join('|'));
+  assert(btns.some((l) => l.includes('Choisir une image')), 'bouton « 🖼️ Choisir une image » visible : ' + btns.join('|'));
   console.log('1️⃣  Assistant → étape avatar avec bouton visible «', btns.find((l) => l.includes('Importer')), '» ✅');
 
   // ---------- 2. /botprofile avatar (galerie native) appliqué à l'assistant ----------

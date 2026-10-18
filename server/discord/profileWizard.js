@@ -8,6 +8,7 @@ const {
   EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle,
   StringSelectMenuBuilder, StringSelectMenuOptionBuilder,
   ModalBuilder, TextInputBuilder, TextInputStyle,
+  LabelBuilder, FileUploadBuilder,
 } = require('discord.js');
 const store = require('../db');
 // v229 : grammaire des sections (traits ━) pour les messages texte de l'assistant.
@@ -25,8 +26,10 @@ const STEPS = [
   { key: 'name', emoji: '📛', label: 'Nom du bot', q: 'Comment voulez-vous que le bot s\'appelle sur **ce serveur** ?' },
   { key: 'bio', emoji: '📝', label: 'Bio du bot', q: 'Écrivez la **bio** affichée sur le profil du bot.' },
   { key: 'color', emoji: '🎨', label: 'Couleur', q: 'Choisissez la **couleur** du profil dans le sélecteur.' },
-  { key: 'avatar', emoji: '🖼️', label: 'Avatar', q: '**Ouvrez votre galerie** :\n📱 **Option 1** : tapez `/botprofile avatar` — l\'option « image » **ouvre votre galerie automatiquement**.\n📎 **Option 2** : touchez le bouton ➕ de la barre de message et envoyez la photo ici (récupérée automatiquement, 60 s).' },
-  { key: 'banner', emoji: '🎴', label: 'Bannière', q: '**Ouvrez votre galerie** :\n📱 **Option 1** : tapez `/botprofile banner` — l\'option « image » **ouvre votre galerie automatiquement**.\n📎 **Option 2** : touchez le bouton ➕ et envoyez la photo ici (récupérée automatiquement, 60 s).' },
+  // v373 — plus besoin de taper une commande : le bouton « Choisir une image »
+  // ouvre le sélecteur de fichiers natif de Discord (composant File Upload).
+  { key: 'avatar', emoji: '🖼️', label: 'Avatar', q: 'Touchez **🖼️ Choisir une image** : le sélecteur de fichiers de Discord s\'ouvre directement (3 Mo max).' },
+  { key: 'banner', emoji: '🎴', label: 'Bannière', q: 'Touchez **🖼️ Choisir une image** : le sélecteur de fichiers de Discord s\'ouvre directement (3 Mo max).' },
 ];
 
 const COLORS = [
@@ -106,7 +109,7 @@ function componentsFor(state) {
   }
   if (step.key === 'avatar' || step.key === 'banner') {
     rows.push(new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId(`bpw:${state.botId}:${uid}:import`).setLabel('📷 Importer la photo').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId(`bpw:${state.botId}:${uid}:pick`).setLabel('🖼️ Choisir une image').setStyle(ButtonStyle.Primary),
       new ButtonBuilder().setCustomId(`bpw:${state.botId}:${uid}:skip`).setLabel('⏭ Passer (sans image)').setStyle(ButtonStyle.Secondary),
     ));
   }
@@ -130,6 +133,36 @@ function textModal(botId, uid, title, label, placeholder, paragraph, required, v
   if (value) input.setValue(String(value).slice(0, paragraph ? 1900 : 100));
   modal.addComponents(new ActionRowBuilder().addComponents(input));
   return modal;
+}
+
+// v373 — modale avec un champ de fichier : Discord ouvre le sélecteur natif,
+// ce qui remplace le « tapez /botprofile avatar » qu'on demandait avant.
+function pickModal(botId, uid, kind) {
+  const modal = new ModalBuilder()
+    .setCustomId(`bpw-file:${botId}:${uid}:${kind}`)
+    .setTitle(kind === 'banner' ? '🎴 Bannière du bot' : '🖼️ Avatar du bot');
+  const label = new LabelBuilder()
+    .setLabel(kind === 'banner' ? 'Choisissez la bannière' : 'Choisissez la photo')
+    .setDescription('Image de 3 Mo maximum, PNG, JPG ou GIF.')
+    .setFileUploadComponent(
+      new FileUploadBuilder().setCustomId('image').setMinValues(1).setMaxValues(1).setRequired(true)
+    );
+  modal.addLabelComponents(label);
+  return modal;
+}
+
+// Récupère le fichier envoyé par la modale, l'enregistre et avance.
+async function applyUploadedFile(state, file) {
+  if (!file) throw new Error('Aucune image reçue.');
+  if (file.size && file.size > 3 * 1024 * 1024) throw new Error('Image trop lourde (3 Mo max).');
+  const downloaded = await imgproxy.fetchDiscordImage(String(file.url || file.proxyURL || ''));
+  if (!downloaded) throw new Error('Image Discord non autorisée, indisponible ou trop lourde.');
+  const buf = downloaded.buffer;
+  if (!buf.length || buf.length > 3 * 1024 * 1024) throw new Error('Image trop lourde (3 Mo max).');
+  const key = await assets.put(buf, downloaded.type);
+  state.values[STEPS[state.step].key] = `/assets/${key}`;
+  stopCollector(state);
+  await advance(state);
 }
 
 function stopCollector(state) {
@@ -241,6 +274,34 @@ async function startProfileWizard(botId, interaction) {
 async function handleProfileWizardInteraction(botId, interaction) {
   const parts = String(interaction.customId || '').split(':');
   const uid = parts[2];
+  // v373 — la modale de choix de fichier arrive avec son propre préfixe.
+  if (parts[0] === 'bpw-file') {
+    const kind = parts[3] === 'banner' ? 'banner' : 'avatar';
+    // v373 — cette fenêtre contournait les deux gardes de l'assistant :
+    //   • la permission est revérifiée À CHAQUE soumission, pas une fois au
+    //     départ : un admin destitué entre-temps ne peut plus rien envoyer ;
+    //   • l'expiration de dix minutes s'applique aussi ici.
+    if (!canConfigureGuild(interaction.guild, interaction.member, interaction.user && interaction.user.id)) {
+      return interaction.reply({ content: '⛔ Seul le **propriétaire du serveur** ou un membre ayant la permission Discord **Administrateur** peut personnaliser l\'identité du bot.', ephemeral: true });
+    }
+    const stateFile = wizards.get(wKey(botId, interaction.guild.id, uid));
+    if (!stateFile || stateFile.userId !== interaction.user.id) {
+      return interaction.reply({ content: '⏰ Assistant expiré. Relancez `/botprofile setup`.', ephemeral: true });
+    }
+    if (Date.now() - stateFile.startedAt > WIZARD_TTL) {
+      wizards.delete(wKey(botId, interaction.guild.id, uid));
+      return interaction.reply({ content: '⏰ Assistant expiré. Relancez `/botprofile setup`.', ephemeral: true });
+    }
+    let files = null;
+    try { files = interaction.fields.getUploadedFiles('image'); } catch { files = null; }
+    const file = files && (files.first ? files.first() : (Array.isArray(files) ? files[0] : null));
+    try {
+      await applyUploadedFile(stateFile, file);
+      return interaction.reply({ content: `✅ ${kind === 'banner' ? 'Bannière' : 'Photo'} enregistrée.`, ephemeral: true });
+    } catch (e) {
+      return interaction.reply({ content: `⚠️ ${e.message.slice(0, 150)}`, ephemeral: true });
+    }
+  }
   if (!uid || uid !== interaction.user.id) return;
   const state = wizards.get(wKey(botId, interaction.guild.id, uid));
   if (!state) return interaction.reply({ content: '⏰ Assistant expiré. Relancez `/botprofile setup`.', ephemeral: true });
@@ -313,19 +374,10 @@ async function handleProfileWizardInteraction(botId, interaction) {
       state.step = Math.max(0, state.step - 1);
       return interaction.update(renderPayload(state));
     }
-    if (action === 'import') {
+    if (action === 'pick' || action === 'import') {
       const step = STEPS[state.step];
-      const cmdName = step.key === 'banner' ? 'banner' : 'avatar';
-      return interaction.reply(
-        // v236 — accusé de réception en Components V2 : les paragraphes sont
-        // séparés par des séparateurs NATIFS pleine largeur (avant : trait texte ━
-        // via ui.sectionize, qui s'arrêtait avant les bords arrondis).
-        // `footer: false` : ces messages courts n'avaient pas de pied.
-        ui.v2panel({
-          description: `📱 **Pour ouvrir votre galerie :**\n\n1️⃣ Tapez \`/botprofile ${cmdName}\` puis touchez l\'option « image » → **votre galerie s\'ouvre automatiquement** (la photo s\'appliquera directement à cette étape).\n\n2️⃣ Ou touchez le **bouton ➕** de la barre de message, choisissez votre photo et envoyez-la ici — je la récupère automatiquement.`,
-          footer: false,
-          ephemeral: true,
-        }));
+      const kind = step.key === 'banner' ? 'banner' : 'avatar';
+      return interaction.showModal(pickModal(botId, uid, kind));
     }
     if (action === 'skip') {
       const fin = await advance(state);
@@ -377,4 +429,7 @@ async function applyAttachmentToWizard(botId, guildId, userId, kind, url, conten
   return true;
 }
 
-module.exports = { startProfileWizard, handleProfileWizardInteraction, collectAttachment, applyAttachmentToWizard };
+module.exports = {
+  startProfileWizard, handleProfileWizardInteraction, collectAttachment, applyAttachmentToWizard,
+  __testPickModal: pickModal, __testApplyUploadedFile: applyUploadedFile,
+};

@@ -151,7 +151,8 @@ async function dispatchPanels(botId, interaction) {
     // Assistant interactif /botprofile setup (boutons + modales + sélecteur de couleurs)
     if ((interaction.isButton() && cid.startsWith('bpw:'))
       || (interaction.isStringSelectMenu() && cid.startsWith('bpw-sel:'))
-      || (interaction.isModalSubmit() && cid.startsWith('bpw-modal:'))) {
+      || (interaction.isModalSubmit() && cid.startsWith('bpw-modal:'))
+      || (interaction.isModalSubmit() && cid.startsWith('bpw-file:'))) {
       const { handleProfileWizardInteraction } = require('./profileWizard');
       await handleProfileWizardInteraction(botId, interaction);
       return true;

@@ -19,8 +19,8 @@ const css = racine('public/css/style.css');
 const pub = racine('public/js/public.js');
 
 console.log('— 1. Pins v337 —');
-check('index.html : ?v=372 ×7', (html.match(/\?v=372/g) || []).length === 7);
-check('sw.js : cache botdev-v372', sw.includes("const CACHE = 'botdev-v372';"));
+check('index.html : ?v=373 ×7', (html.match(/\?v=373/g) || []).length === 7);
+check('sw.js : cache botdev-v373', sw.includes("const CACHE = 'botdev-v373';"));
 check('index.html : plus aucune ?v=336', !html.includes('?v=336'));
 
 console.log('— 2. HTML public inchangé (verrous v167/v240) —');
