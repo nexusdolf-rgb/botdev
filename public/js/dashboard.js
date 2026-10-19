@@ -7414,6 +7414,45 @@ Dashboard.renderers.commands = async (content) => {
   const bot = Dashboard.state.bot;
   const root = Dashboard.header(content, '', 'Commandes personnalisées', 'Construisez vos propres commandes avec l\'éditeur de blocs (glisser-déposer).');
 
+  // ---------- v374 : ce que Discord connaît vraiment ----------
+  // Une commande peut exister dans le bot et manquer chez Discord : module
+  // coupé, synchronisation refusée, ou décalage de propagation. Ce bloc lit
+  // l'état réel et signale les commandes absentes, au lieu de le supposer.
+  const etat = Dashboard.card(root, 'Commandes dans Discord', 'Ce que Discord affiche vraiment dans le sélecteur /');
+  const zoneEtat = App.el('<div class="dash-empty">Lecture en cours…</div>');
+  etat.appendChild(zoneEtat);
+  const lireEtat = async () => {
+    zoneEtat.innerHTML = '<div class="dash-empty">Lecture en cours…</div>';
+    let s;
+    try { s = await App.api(`/bots/${bot.id}/commands/status`); }
+    catch (e) { zoneEtat.innerHTML = `<div class="dash-empty">${App.escapeHtml(e.message)}</div>`; return; }
+    const lignes = [];
+    lignes.push(`<div style="font-size:13px;margin-bottom:8px">Discord connaît <b>${s.registered ? s.registered.length : 0}</b> commande(s) sur <b>${s.wanted.length}</b> attendue(s).</div>`);
+    if (s.error) lignes.push(`<div class="dash-empty">${App.escapeHtml(s.error)}</div>`);
+    if (s.off && s.off.length) {
+      lignes.push(`<div style="font-size:13px;margin:6px 0">Modules coupés : ${s.off.map((m) => `<b>${App.escapeHtml(m.label)}</b> (${App.escapeHtml(m.commands.join(', '))})`).join(' · ')}</div>`);
+    }
+    if (s.missing && s.missing.length) {
+      lignes.push(`<div style="font-size:13px;margin:6px 0;color:#f0b849">Absentes chez Discord : ${s.missing.map((n) => '`/' + App.escapeHtml(n) + '`').join(', ')}</div>`);
+    } else if (s.registered) {
+      lignes.push('<div style="font-size:13px;margin:6px 0;color:#57F287">Toutes les commandes attendues sont enregistrées.</div>');
+    }
+    if (s.extra && s.extra.length) {
+      lignes.push(`<div style="font-size:13px;margin:6px 0">En trop chez Discord (anciennes) : ${s.extra.map((n) => '`/' + App.escapeHtml(n) + '`').join(', ')}</div>`);
+    }
+    zoneEtat.innerHTML = lignes.join('');
+    const btn = App.el(`<button class="dash-btn" style="margin-top:8px">Resynchroniser maintenant</button>`);
+    btn.onclick = async () => {
+      btn.disabled = true;
+      try { const r = await App.api(`/bots/${bot.id}/commands/resync`, { method: 'POST' }); App.toast(`${r.count} commande(s) renvoyée(s) à Discord. Patiente jusqu'à une heure : Discord met du temps à les propager.`); }
+      catch (e) { App.toast(e.message, 'error'); }
+      btn.disabled = false;
+      lireEtat();
+    };
+    zoneEtat.appendChild(btn);
+  };
+  lireEtat();
+
   const { commands } = await App.api(`/bots/${bot.id}/commands`);
   const c = Dashboard.card(root, 'Mes commandes', '');
   if (!commands.length) c.appendChild(App.el(`<div class="dash-empty"><div class="big">${App.glyphe('morceau', { taille: 26 })}</div>Aucune commande personnalisée.</div>`));

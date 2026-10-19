@@ -686,6 +686,51 @@ async function resyncSlash(bot) {
   await Promise.all([...entry.client.guilds.cache.values()].map(g => botManager.syncSlashCommands(bot.id, g.id).catch(() => {})));
 }
 
+// ---------------------- Diagnostic des commandes (v374) ----------------------
+// « Pourquoi /clear n'apparaît pas ? » : la liste voulue par le bot et la liste
+// réellement enregistrée chez Discord ne sont pas forcément identiques (module
+// coupé, limite de 90, synchronisation refusée). Cette route lit l'état RÉEL
+// et renvoie l'écart, sans rien modifier.
+router.get('/bots/:id/commands/status', requireAuth, async (req, res) => {
+  const bot = getOwnBot(req, res);
+  if (!bot) return;
+  const wanted = botManager.desiredCommandPayloads(bot.id).slice(0, 90).map((p) => p.name);
+  const entry = botManager.clients.get(bot.id);
+  const online = botManager.isOnline(bot.id);
+  const modules = store.modules.all(bot.id);
+  const off = Object.entries(MODULES).filter(([key]) => Object.keys(modules).length && !modules[key]).map(([key, m]) => ({ key, label: m.label, commands: m.commands }));
+  const out = { online, wanted, off, registered: null, missing: null, extra: null, error: '' };
+  if (!online || !entry) { out.error = 'Le bot est hors ligne : impossible de lire ce que Discord connaît.'; return res.json(out); }
+  try {
+    const appId = bot.client_id || entry.client.user.id;
+    const current = await entry.client.rest.get(`/applications/${appId}/commands`);
+    const registered = (Array.isArray(current) ? current : []).map((c) => c.name);
+    out.registered = registered;
+    const set = new Set(registered);
+    out.missing = wanted.filter((n) => !set.has(n));
+    const wantedSet = new Set(wanted);
+    out.extra = registered.filter((n) => !wantedSet.has(n));
+  } catch (e) {
+    out.error = 'Lecture refusée par Discord : ' + (e.message || 'erreur inconnue');
+  }
+  return res.json(out);
+});
+
+// Resynchronisation à la demande : on oublie l'empreinte de la dernière synchro
+// pour forcer un envoi, puis on relance la synchronisation globale.
+router.post('/bots/:id/commands/resync', requireAuth, async (req, res) => {
+  const bot = getOwnBot(req, res);
+  if (!bot) return;
+  if (!botManager.isOnline(bot.id)) return res.status(409).json({ error: 'Le bot est hors ligne.' });
+  store.settings.set(`global_cmds_${bot.id}`, '');
+  try {
+    await botManager.syncGlobalCommands(bot.id);
+    return res.json({ ok: true, count: botManager.desiredCommandPayloads(bot.id).slice(0, 90).length });
+  } catch (e) {
+    return res.status(502).json({ error: 'Synchronisation refusée par Discord : ' + (e.message || 'erreur inconnue') });
+  }
+});
+
 // ---------------------- Modules ----------------------
 router.get('/bots/:id/modules', requireAuth, (req, res) => {
   const bot = getOwnBot(req, res);

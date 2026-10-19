@@ -754,12 +754,10 @@ function globalSyncDecision(storedHash, wantedHash, discordCount, wantedCount) {
   return 'skip';
 }
 
-async function syncGlobalCommands(botId) {
-  const entry = clients.get(botId);
-  if (!entry || !entry.client.isReady()) return;
-  const record = store.bots.get(botId);
-  if (!record) return;
-
+// 🧾 v374 — la liste des commandes VOULUES, dans l'ordre où elles partent chez
+// Discord. Extraite de syncGlobalCommands pour que le diagnostic du dashboard
+// compare exactement la même chose que la synchronisation.
+function desiredCommandPayloads(botId) {
   const { buildSlashPayloads } = require('./premade');
   const { buildExtraPayloads } = require('./extra');
   const { buildEventPayloads } = require('./guildEvents');
@@ -770,7 +768,16 @@ async function syncGlobalCommands(botId) {
   const updatePayloads = extraPayloads.filter((p) => p && p.name === 'update');
   const extraRest = extraPayloads.filter((p) => !p || p.name !== 'update');
   // /update juste après les menus contextuels : jamais coupée par le slice(0, 90).
-  const all = [...buildContextMenuPayloads(), ...updatePayloads, ...buildSlashPayloads(botId), ...extraRest, ...buildEventPayloads()];
+  return [...buildContextMenuPayloads(), ...updatePayloads, ...buildSlashPayloads(botId), ...extraRest, ...buildEventPayloads()];
+}
+
+async function syncGlobalCommands(botId) {
+  const entry = clients.get(botId);
+  if (!entry || !entry.client.isReady()) return;
+  const record = store.bots.get(botId);
+  if (!record) return;
+
+  const all = desiredCommandPayloads(botId);
   if (!all.length) return;
 
   const global = all.slice(0, 90).map(p => ({ ...p, dm_permission: false })); // plafond de sécurité (limite Discord : 100) + commandes réservées aux serveurs
@@ -904,4 +911,4 @@ function platformStats() {
   return { onlineBots, servers, members };
 }
 
-module.exports = { clients, getClient, isOnline, getGuildPerms, loginBot, reconnectBot, logoutBot, stopAll, syncSlashCommands, syncGlobalCommands, globalSyncDecision, gatewayPauseMs, applyPresence, applyBotAbout, aboutText, publicBotInfo, platformStats, guardInteraction, wrapInteractionAudit };
+module.exports = { clients, getClient, isOnline, getGuildPerms, loginBot, reconnectBot, logoutBot, stopAll, syncSlashCommands, syncGlobalCommands, globalSyncDecision, desiredCommandPayloads, gatewayPauseMs, applyPresence, applyBotAbout, aboutText, publicBotInfo, platformStats, guardInteraction, wrapInteractionAudit };
