@@ -28,11 +28,26 @@ const check = (label, cond) => {
   for (const k of ['moderation', 'utility', 'fun', 'economy', 'levels', 'community']) store.modules.set(botId, k, 1);
 
   const captured = [];
+  // v374 — la synchronisation LIT la liste réelle chez Discord avant de pousser
+  // (comparaison par noms, pas par nombre). Ce faux Discord garde donc l'état :
+  // ce que le dernier PUT a enregistré est ce que le GET renverra.
+  const discord = { list: [] };
   const makeEntry = (restBehavior) => ({
     client: {
       isReady: () => true,
       user: { id: 'bot-user-id' },
-      rest: { put: async (route, opts) => { captured.push({ route, opts }); return restBehavior ? restBehavior() : {}; } },
+      rest: {
+        get: async () => discord.list,
+        put: async (route, opts) => {
+          captured.push({ route, opts });
+          // Seul le PUT GLOBAL change la liste globale : le PUT du serveur
+          // support (changelog) écrit dans un autre périmètre.
+          if (!restBehavior && !String(route).includes('/guilds/')) {
+            discord.list = (opts.body || []).map((p) => ({ name: p.name }));
+          }
+          return restBehavior ? restBehavior() : {};
+        },
+      },
     },
   });
   // v336 : un PUT guild (serveur support) s’ajoute au PUT global. On ne
@@ -60,7 +75,7 @@ const check = (label, cond) => {
   // ---------- 2. Hash : pas de re-synchro inutile ----------
   captured.length = 0;
   await botManager.syncGlobalCommands(botId);
-  check('aucune requête si rien n\'a changé (anti-limite)', captured.length === 0);
+  check('aucune requête GLOBALE si rien n\'a changé (anti-limite)', globalPuts().length === 0);
 
   // ---------- 3. Le hash re-synchronise si la liste change ----------
   store.commands.create({ bot_id: botId, name: 'ma-commande', description: 'x', trigger_type: 'slash', trigger_value: '', options: '[]', blocks: '[]', cooldown: 0, enabled: 1, sort: 0 });

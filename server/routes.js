@@ -3630,12 +3630,33 @@ router.get('/health/bot', (req, res) => {
   }
   let backupEnabled = false;
   try { backupEnabled = require('./backup').enabled(); } catch {}
+  // 🧾 v374 — état de l'enregistrement des commandes chez Discord, pour pouvoir
+  // répondre « est-ce que les nouvelles commandes sont bien enregistrées ? »
+  // sans accès aux journaux Render. Aucun secret : des noms de commandes
+  // publiques et des compteurs.
+  let commands = null;
+  try {
+    for (const [botId, entry] of botManager.clients) {
+      if (!entry.client || !entry.client.isReady()) continue;
+      const st = botManager.commandsSyncState(botId);
+      commands = {
+        expected: st.expected || 0,
+        registered: st.registered == null ? null : st.registered,
+        missing: st.missing == null ? null : st.missing,
+        ok: st.ok === true,
+        at: st.at || null,
+        error: st.error || '',
+      };
+      break;
+    }
+  } catch {}
   res.json({
     status: 'ok',
     processUptimeMs: Math.round(process.uptime() * 1000),
     botCount,
     onlineBotCount,
     backupEnabled,
+    commands,
   });
 });
 

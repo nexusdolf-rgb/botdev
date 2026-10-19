@@ -771,6 +771,22 @@ function desiredCommandPayloads(botId) {
   return [...buildContextMenuPayloads(), ...updatePayloads, ...buildSlashPayloads(botId), ...extraRest, ...buildEventPayloads()];
 }
 
+// 🧾 v374 — dernier résultat de la synchronisation, lisible depuis /api/health/bot.
+// Sans ça, « les commandes n'apparaissent pas » ne se diagnostique qu'en lisant
+// les journaux Render, auxquels on n'a pas toujours accès.
+const syncStateKey = (botId) => `global_cmds_state_${botId}`;
+
+function recordSyncState(botId, patch) {
+  try {
+    const prev = JSON.parse(store.settings.get(syncStateKey(botId)) || '{}');
+    store.settings.set(syncStateKey(botId), JSON.stringify({ ...prev, ...patch, at: Date.now() }));
+  } catch {}
+}
+
+function commandsSyncState(botId) {
+  try { return JSON.parse(store.settings.get(syncStateKey(botId)) || '{}'); } catch { return {}; }
+}
+
 async function syncGlobalCommands(botId) {
   const entry = clients.get(botId);
   if (!entry || !entry.client.isReady()) return;
@@ -784,30 +800,47 @@ async function syncGlobalCommands(botId) {
   const hash = crypto.createHash('sha1').update(JSON.stringify(global)).digest('hex');
   const key = `global_cmds_${botId}`;
   const appId = record.client_id || entry.client.user.id;
+  const wantedNames = global.map((p) => p.name);
 
-  if (store.settings.get(key) === hash) {
-    // 🧭 Anti-dérive : on vérifie l'état RÉEL chez Discord (1 lecture toutes
-    // les 10 min, sans risque de limite de débit).
-    let discordCount = -1;
-    try {
-      const current = await entry.client.rest.get(`/applications/${appId}/commands`);
-      if (Array.isArray(current)) discordCount = current.length;
-    } catch { return; } // lecture impossible → on réessaiera au prochain cycle
-    const decision = globalSyncDecision(store.settings.get(key), hash, discordCount, global.length);
-    if (decision === 'skip') {
-      try { await require('./changelog').syncOnSupportGuild(entry, record); } catch (e) { console.error('[BotDev] /update serveur support :', e.message); }
-      return;
-    }
-    console.log(`[BotDev] bot ${botId} : dérive des commandes globales détectée (${discordCount} chez Discord ≠ ${global.length} attendues) — re-synchronisation…`);
+  // 🧭 v374 — on ne compare plus seulement le NOMBRE de commandes : deux listes
+  // de même taille peuvent ne pas contenir les mêmes. C'est exactement le cas
+  // « les nouvelles commandes ne sont pas proposées » alors que le compte tombe
+  // juste. On lit donc la LISTE réelle et on compare les noms.
+  let currentNames = null;
+  try {
+    const current = await entry.client.rest.get(`/applications/${appId}/commands`);
+    if (Array.isArray(current)) currentNames = current.map((c) => c.name);
+  } catch (e) {
+    recordSyncState(botId, { ok: false, expected: wantedNames.length, error: `lecture Discord : ${(e && e.message) || e}`.slice(0, 200) });
+    return; // lecture impossible → on réessaiera au prochain cycle
+  }
+  if (!currentNames) {
+    recordSyncState(botId, { ok: false, expected: wantedNames.length, error: 'réponse Discord illisible' });
+    return;
+  }
+
+  const currentSet = new Set(currentNames);
+  const missing = wantedNames.filter((n) => !currentSet.has(n));
+
+  if (store.settings.get(key) === hash && missing.length === 0) {
+    recordSyncState(botId, { ok: true, expected: wantedNames.length, registered: currentNames.length, missing: 0, error: '' });
+    try { await require('./changelog').syncOnSupportGuild(entry, record); } catch (e) { console.error('[BotDev] /update serveur support :', e.message); }
+    return;
+  }
+
+  if (missing.length) {
+    console.log(`[BotDev] bot ${botId} : ${missing.length} commande(s) absente(s) chez Discord (${missing.slice(0, 8).join(', ')}${missing.length > 8 ? '…' : ''}) — enregistrement global…`);
   }
 
   try {
     await entry.client.rest.put(`/applications/${appId}/commands`, { body: global });
     store.settings.set(key, hash);
+    recordSyncState(botId, { ok: true, expected: wantedNames.length, registered: wantedNames.length, missing: 0, error: '' });
     console.log(`[BotDev] bot ${botId} : ${global.length} commandes GLOBALES enregistrées (badge /)${all.length > 90 ? ` — ${all.length - 90} ignorées (limite Discord)` : ''}`);
     try { await require('./changelog').syncOnSupportGuild(entry, record); } catch (e) { console.error('[BotDev] /update serveur support :', e.message); }
   } catch (e) {
-    const msg = String(e.message || e);
+    const msg = String((e && e.message) || e);
+    recordSyncState(botId, { ok: false, expected: wantedNames.length, registered: currentNames.length, missing: missing.length, error: msg.slice(0, 200) });
     if (msg.includes('429') || msg.includes('rate')) {
       console.log(`[BotDev] bot ${botId} : commandes globales en attente (limite de débit Discord), nouvelle tentative au prochain cycle.`);
       return;
@@ -911,4 +944,4 @@ function platformStats() {
   return { onlineBots, servers, members };
 }
 
-module.exports = { clients, getClient, isOnline, getGuildPerms, loginBot, reconnectBot, logoutBot, stopAll, syncSlashCommands, syncGlobalCommands, globalSyncDecision, desiredCommandPayloads, gatewayPauseMs, applyPresence, applyBotAbout, aboutText, publicBotInfo, platformStats, guardInteraction, wrapInteractionAudit };
+module.exports = { clients, getClient, isOnline, getGuildPerms, loginBot, reconnectBot, logoutBot, stopAll, syncSlashCommands, syncGlobalCommands, globalSyncDecision, desiredCommandPayloads, commandsSyncState, gatewayPauseMs, applyPresence, applyBotAbout, aboutText, publicBotInfo, platformStats, guardInteraction, wrapInteractionAudit };

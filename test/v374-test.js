@@ -106,6 +106,52 @@ async function main() {
   const aide = JSON.stringify(buildHelpPanel(BOT, { prefix: '!' }, clientUser, null, null));
   check('/help ne mentionne plus /botprofile', !aide.includes('botprofile'));
 
+  console.log('— 7. L’enregistrement global compare les NOMS, pas le nombre —');
+  {
+    const botManager = require('../server/discord/botManager');
+    const bot = store.bots.create({ user_id: 1, name: 'Hoxera', token: 'x', client_id: 'app374', prefix: '!' });
+    const wanted = botManager.desiredCommandPayloads(bot).slice(0, 90).map((p) => p.name);
+    const NOUVELLES = ['unmute', 'softban', 'banlist', 'roleadd', 'roleremove', 'membercount', 'announce'];
+    check('les sept commandes sont dans la liste voulue', NOUVELLES.every((n) => wanted.includes(n)));
+    // Discord n'a encore que l'ancienne liste : les nouvelles manquent.
+    const discord = { list: wanted.filter((n) => !NOUVELLES.includes(n)).map((n) => ({ name: n })) };
+    const appels = [];
+    const entry = {
+      client: {
+        isReady: () => true,
+        user: { id: 'u374' },
+        rest: {
+          get: async () => discord.list,
+          put: async (route, opts) => {
+            appels.push(route);
+            if (!String(route).includes('/guilds/')) discord.list = (opts.body || []).map((p) => ({ name: p.name }));
+            return {};
+          },
+        },
+      },
+    };
+    botManager.clients.set(bot, entry);
+    await botManager.syncGlobalCommands(bot);
+    const global = () => appels.filter((r) => !String(r).includes('/guilds/'));
+    check('une liste incomplète déclenche un nouvel enregistrement global', global().length === 1);
+    check('les sept nouvelles commandes partent chez Discord',
+      NOUVELLES.every((n) => discord.list.some((c) => c.name === n)));
+    const etat = botManager.commandsSyncState(bot);
+    check('l’état de synchronisation est exposé pour /api/health/bot',
+      etat.ok === true && etat.expected === wanted.length && etat.missing === 0, JSON.stringify(etat));
+    appels.length = 0;
+    await botManager.syncGlobalCommands(bot);
+    check('une liste déjà correcte ne renvoie rien (économie de limite de débit)', global().length === 0);
+
+    // Le cas piège : MÊME NOMBRE de commandes, mais pas les mêmes.
+    discord.list = wanted.map((n) => ({ name: n }));
+    discord.list[0] = { name: 'commande-fantome' };
+    appels.length = 0;
+    await botManager.syncGlobalCommands(bot);
+    check('un nombre identique mais des noms différents déclenche quand même la synchro', global().length === 1);
+    botManager.clients.delete(bot);
+  }
+
   console.log(`\nRésultat : ${ok} ✅ / ${echecs.length} ❌ sur ${ok + echecs.length} vérifications`);
   try { store.db.close(); } catch {}
   try { fs.rmSync(DATA_DIR, { recursive: true, force: true }); } catch {}
