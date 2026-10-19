@@ -18,11 +18,11 @@ const { inviteUrl } = require('./invite');
 const MODULES = {
   moderation: {
     label: 'Modération', emoji: '🛡️', description: 'Kick, ban, warn, timeout, clear…',
-    commands: ['kick', 'ban', 'unban', 'timeout', 'warn', 'warns', 'clear', 'slowmode', 'nick', 'modexport'],
+    commands: ['kick', 'ban', 'unban', 'timeout', 'unmute', 'softban', 'banlist', 'warn', 'warns', 'clear', 'slowmode', 'nick', 'modexport', 'roleadd', 'roleremove', 'announce'],
   },
   utility: {
     label: 'Utilitaires', emoji: '🔧', description: 'Ping, avatar, infos serveur et utilisateur…',
-    commands: ['ping', 'avatar', 'userinfo', 'serverinfo', 'botinfo', 'help', 'invite', 'lang'],
+    commands: ['ping', 'avatar', 'userinfo', 'serverinfo', 'botinfo', 'help', 'invite', 'lang', 'membercount'],
   },
   fun: {
     label: 'Fun', emoji: '🎉', description: '8ball, meme, pile ou face, dés, say…',
@@ -94,6 +94,16 @@ const CMD_DEFS = {
   pay: { label: 'pay', desc: 'Transférer des coins à un membre' },
   temprole: { label: 'temprole', desc: 'Donner un rôle temporaire', perms: [PermissionsBitField.Flags.ManageRoles] },
   sanction: { label: 'sanction', desc: 'Appliquer une sanction prédéfinie', perms: [PermissionsBitField.Flags.ModerateMembers] },
+  // ===================== v374 : commandes manquantes =====================
+  // Mêmes familles que ci-dessus : la permission « métier » exacte décide de
+  // la visibilité, et la même garde est vérifiée à l'exécution.
+  unmute: { label: 'unmute', desc: 'Retire le timeout d’un membre', perms: [PermissionsBitField.Flags.ModerateMembers] },
+  softban: { label: 'softban', desc: 'Bannit puis débannit pour effacer les messages', perms: [PermissionsBitField.Flags.BanMembers] },
+  banlist: { label: 'banlist', desc: 'Liste les membres bannis du serveur (staff)', perms: [PermissionsBitField.Flags.BanMembers] },
+  roleadd: { label: 'roleadd', desc: 'Ajoute un rôle à un membre', perms: [PermissionsBitField.Flags.ManageRoles] },
+  roleremove: { label: 'roleremove', desc: 'Retire un rôle à un membre', perms: [PermissionsBitField.Flags.ManageRoles] },
+  membercount: { label: 'membercount', desc: 'Nombre de membres, humains et bots' },
+  announce: { label: 'announce', desc: 'Publie une annonce dans un salon', perms: [PermissionsBitField.Flags.Administrator] },
 };
 
 // ============================================================
@@ -162,7 +172,7 @@ function canViewCommandName(name, guild, member) {
 // Blocs du centre d'aide, dans l'ordre : tout le monde → staff → admins.
 const HELP_BLOCKS = [
   // --- Tout le monde ---
-  { title: '🧰 Utilitaires', names: ['ping', 'avatar', 'userinfo', 'serverinfo', 'botinfo', 'help', 'invite'] },
+  { title: '🧰 Utilitaires', names: ['ping', 'avatar', 'userinfo', 'serverinfo', 'botinfo', 'help', 'invite', 'membercount'] },
   { title: '🎉 Fun & divertissement', names: ['8ball', 'meme', 'coinflip', 'roll', 'reverse'] },
   { title: '💍 Social & interactions', names: ['marry', 'divorce', 'couple', 'hug', 'kiss', 'slap', 'pat', 'punch'] },
   { title: '🕹️ Jeux dans le chat', names: ['rps', 'pendu', 'morpion', 'quiz'] },
@@ -185,6 +195,10 @@ const HELP_BLOCKS = [
   // Placé en FIN de liste pour ne pas décaler les identifiants « cN » des
   // catégories existantes (le centre d'aide et ses tests les référencent).
   { title: '📣 Suggestions & sondages (staff)', kind: 'staff', names: ['suggest', 'poll'] },
+  // v374 — commandes ajoutées. Nouveaux blocs EN FIN de liste : les
+  // identifiants « cN » des catégories existantes ne bougent pas.
+  { title: '🧹 Outils de modération (staff)', kind: 'staff', names: ['unmute', 'softban', 'banlist', 'roleadd', 'roleremove'] },
+  { title: '📢 Annonces (admins)', kind: 'admin', names: ['announce'] },
 ];
 
 function enabledModules(botId) {
@@ -218,15 +232,26 @@ function buildSlashPayloads(botId) {
         { name: '🇬🇧 English', value: 'en' },
       ]});
     }
-    if (['avatar', 'userinfo', 'kick', 'ban', 'timeout', 'warn', 'warns', 'balance', 'rank', 'profile'].includes(name)) {
-      options.push({ name: 'utilisateur', description: 'L\'utilisateur ciblé', type: ApplicationCommandOptionType.User, required: ['kick', 'ban', 'timeout', 'warn'].includes(name) });
+    if (['avatar', 'userinfo', 'kick', 'ban', 'timeout', 'warn', 'warns', 'balance', 'rank', 'profile', 'unmute', 'softban', 'roleadd', 'roleremove'].includes(name)) {
+      options.push({ name: 'utilisateur', description: 'L\'utilisateur ciblé', type: ApplicationCommandOptionType.User, required: ['kick', 'ban', 'timeout', 'warn', 'unmute', 'softban', 'roleadd', 'roleremove'].includes(name) });
     }
     // IMPORTANT : Discord exige que les options requises soient placées avant les optionnelles
     if (['timeout'].includes(name)) {
       options.push({ name: 'minutes', description: 'Durée en minutes', type: ApplicationCommandOptionType.Integer, required: true });
     }
-    if (['kick', 'ban', 'timeout', 'warn'].includes(name)) {
+    if (['kick', 'ban', 'timeout', 'warn', 'unmute', 'softban'].includes(name)) {
       options.push({ name: 'raison', description: 'La raison', type: ApplicationCommandOptionType.String, required: false });
+    }
+    if (['softban'].includes(name)) {
+      options.push({ name: 'jours', description: 'Supprimer les messages des X derniers jours (0 à 7, défaut 1)', type: ApplicationCommandOptionType.Integer, required: false, min_value: 0, max_value: 7 });
+    }
+    if (['roleadd', 'roleremove'].includes(name)) {
+      options.push({ name: 'role', description: 'Le rôle à ajouter ou retirer', type: ApplicationCommandOptionType.Role, required: true });
+    }
+    if (['announce'].includes(name)) {
+      options.push({ name: 'salon', description: 'Salon où publier l’annonce', type: ApplicationCommandOptionType.Channel, required: true, channel_types: TEXT_CH });
+      options.push({ name: 'message', description: 'Texte de l’annonce', type: ApplicationCommandOptionType.String, required: true });
+      options.push({ name: 'titre', description: 'Titre de l’annonce (optionnel)', type: ApplicationCommandOptionType.String, required: false });
     }
     if (['8ball', 'say', 'reverse'].includes(name)) {
       options.push({ name: 'texte', description: 'Votre texte / question', type: ApplicationCommandOptionType.String, required: true });
@@ -1461,6 +1486,164 @@ async function execute(botId, entry, cmd, src) {
       });
       break;
     }
+    // ===================== v374 : commandes de modération manquantes =====================
+    case 'unmute': {
+      const target = getUserArg('utilisateur');
+      if (!target || !target.id) return reply('❓ Choisissez un membre dans le menu.');
+      const tMember = guild.members.cache.get(target.id) || await guild.members.fetch(target.id).catch(() => null);
+      if (!tMember || typeof tMember.timeout !== 'function') return reply('❓ Membre introuvable.');
+      const raison = isInt ? (src.interaction.options.getString('raison') || '') : String(src.args || '').trim();
+      const ok = await tMember.timeout(null, `unmute par ${author.tag || author.username}`).then(() => true).catch(() => false);
+      if (!ok) return reply('⛔ Je ne peux pas retirer le timeout de ce membre (rôle trop haut, ou permission manquante).');
+      await logging.log(botId, guild, {
+        title: '🔊 Timeout retiré', color: '#57F287',
+        fields: [
+          { name: '👤 Membre', value: `${target.tag || target.username}`, inline: true },
+          { name: '🛡️ Par', value: `${author.tag || author.username}`, inline: true },
+          { name: '📝 Raison', value: raison || 'Aucune', inline: false },
+        ],
+      });
+      await replyPanel({
+        variant: 'success',
+        title: '🔊 Timeout retiré',
+        description: `**${target.tag || target.username}** peut de nouveau écrire.`,
+        fields: [{ name: '📝 Raison', value: raison || 'Aucune', inline: true }],
+        footer: false,
+      });
+      break;
+    }
+    case 'softban': {
+      const target = getUserArg('utilisateur');
+      if (!target || !target.id) return reply('❓ Choisissez un membre dans le menu.');
+      if (target.id === author.id) return reply('🙃 Vous ne pouvez pas vous sanctionner vous-même.');
+      const raison = isInt ? (src.interaction.options.getString('raison') || '') : '';
+      const jours = isInt ? (src.interaction.options.getInteger('jours') == null ? 1 : src.interaction.options.getInteger('jours')) : 1;
+      const tMember = guild.members.cache.get(target.id) || await guild.members.fetch(target.id).catch(() => null);
+      if (tMember && !tMember.bannable) return reply('⛔ Ce membre a un rôle trop haut : je ne peux pas le bannir.');
+      const okBan = await guild.bans.create(target.id, { reason: `softban par ${author.tag || author.username}`, deleteMessageSeconds: Math.min(Math.max(jours, 0), 7) * 86400 })
+        .then(() => true).catch(() => false);
+      if (!okBan) return reply('⛔ Discord a refusé le bannissement (permission ou rôle trop haut).');
+      const okUnban = await guild.bans.remove(target.id, 'softban : débannissement immédiat').then(() => true).catch(() => false);
+      if (!okUnban) return reply('⚠️ Le membre a bien été banni, mais le débannissement a échoué — débannissez-le à la main dans Discord.');
+      await logging.log(botId, guild, {
+        title: '🧹 Softban', color: '#ED4245',
+        fields: [
+          { name: '👤 Membre', value: `${target.tag || target.username}`, inline: true },
+          { name: '🗓️ Messages effacés', value: `${Math.min(Math.max(jours, 0), 7)} jour(s)`, inline: true },
+          { name: '🛡️ Par', value: `${author.tag || author.username}`, inline: true },
+          { name: '📝 Raison', value: raison || 'Aucune', inline: false },
+        ],
+      });
+      await replyPanel({
+        variant: 'warning',
+        title: '🧹 Softban appliqué',
+        description: `**${target.tag || target.username}** a été banni puis débanni : ses messages des ${Math.min(Math.max(jours, 0), 7)} dernier(s) jour(s) sont partis, son compte reste utilisable.`,
+        fields: [{ name: '📝 Raison', value: raison || 'Aucune', inline: true }],
+        footer: false,
+      });
+      break;
+    }
+    case 'banlist': {
+      const bans = await guild.bans.fetch().catch(() => null);
+      if (!bans) return reply('⛔ Je n’ai pas la permission « Bannir des membres » sur ce serveur.');
+      if (!bans.size) return reply('✅ Ce serveur n’a aucun membre banni.');
+      const lignes = [...bans.values()].slice(0, 25).map((b, i) => {
+        const nom = (b.user && (b.user.tag || b.user.username)) || b.userId;
+        const raison = (b.reason || 'Aucune raison notée').slice(0, 80);
+        return `**${i + 1}.** ${nom} · ${raison}`;
+      });
+      await replyPanel({
+        variant: 'brand',
+        title: '🔨 Membres bannis',
+        description: lignes.join('\n'),
+        fields: [{ name: '🔢 Total', value: `${bans.size} bannissement(s)${bans.size > 25 ? ' (25 premiers affichés)' : ''}`, inline: true }],
+        footer: false,
+      });
+      break;
+    }
+    case 'roleadd':
+    case 'roleremove': {
+      const cible = getUserArg('utilisateur');
+      if (!cible || !cible.id) return reply('❓ Choisissez un membre dans le menu.');
+      const role = isInt ? src.interaction.options.getRole('role') : (guild.roles.cache.get((argsMatch(src.args || '', /<@&(\d+)>/) || [])[1]) || null);
+      if (!role) return reply('❓ Choisissez un rôle (ou mentionnez-le avec `@rôle`).');
+      if (role.managed) return reply('⛔ Ce rôle est géré par une intégration (bot) : Discord refuse qu’on l’ajoute à la main.');
+      if (role.position >= guild.members.me.roles.highest.position) return reply('⛔ Ce rôle est au-dessus du mien : je ne peux pas le distribuer.');
+      const tMember = guild.members.cache.get(cible.id) || await guild.members.fetch(cible.id).catch(() => null);
+      if (!tMember) return reply('❓ Membre introuvable.');
+      const ajout = cmd === 'roleadd';
+      if (ajout && tMember.roles.cache.has(role.id)) return reply(`ℹ️ **${cible.tag || cible.username}** a déjà le rôle **${role.name}**.`);
+      if (!ajout && !tMember.roles.cache.has(role.id)) return reply(`ℹ️ **${cible.tag || cible.username}** n’a pas le rôle **${role.name}**.`);
+      const ok = await (ajout ? tMember.roles.add(role, `${cmd} par ${author.tag || author.username}`) : tMember.roles.remove(role, `${cmd} par ${author.tag || author.username}`))
+        .then(() => true).catch(() => false);
+      if (!ok) return reply('⛔ Discord a refusé : vérifiez que mon rôle est au-dessus de celui visé.');
+      await logging.log(botId, guild, {
+        title: ajout ? '🏷️ Rôle ajouté' : '🏷️ Rôle retiré', color: '#e07a5f',
+        fields: [
+          { name: '👤 Membre', value: `${cible.tag || cible.username}`, inline: true },
+          { name: '🏷️ Rôle', value: `${role.name}`, inline: true },
+          { name: '🛡️ Par', value: `${author.tag || author.username}`, inline: true },
+        ],
+      });
+      await replyPanel({
+        variant: 'success',
+        title: ajout ? '🏷️ Rôle ajouté' : '🏷️ Rôle retiré',
+        description: ajout
+          ? `**${role.name}** a été ajouté à **${cible.tag || cible.username}**.`
+          : `**${role.name}** a été retiré à **${cible.tag || cible.username}**.`,
+        footer: false,
+      });
+      break;
+    }
+    case 'membercount': {
+      if (!guild) return reply('🌍 Cette commande fonctionne sur un **serveur Discord**.');
+      const total = guild.memberCount || guild.members.cache.size;
+      let humains = null;
+      let bots = null;
+      try {
+        const tous = await guild.members.fetch();
+        bots = tous.filter((m) => m.user && m.user.bot).size;
+        humains = tous.size - bots;
+      } catch {}
+      await replyPanel({
+        variant: 'brand',
+        title: '👥 Membres du serveur',
+        description: `**${guild.name}** compte actuellement **${total}** membre(s).`,
+        fields: [
+          ...(humains == null ? [] : [
+            { name: '🙋 Humains', value: `${humains}`, inline: true },
+            { name: '🤖 Bots', value: `${bots}`, inline: true },
+          ]),
+          { name: '🟢 En ligne', value: `${guild.presences ? guild.presences.cache.size : '—'}`, inline: true },
+        ],
+        footer: false,
+      });
+      break;
+    }
+    case 'announce': {
+      if (!guild) return reply('🌍 Cette commande fonctionne sur un **serveur Discord**.');
+      const dest = isInt ? src.interaction.options.getChannel('salon') : null;
+      const cible = dest && typeof dest.send === 'function' ? dest : channel;
+      const texte = isInt ? (src.interaction.options.getString('message') || '').trim() : String(src.args || '').trim();
+      const titre = isInt ? (src.interaction.options.getString('titre') || '').trim() : '';
+      if (!texte) return reply('❓ Écrivez le texte de l’annonce.');
+      const ok = await cible.send(ui.v2panel({
+        variant: 'brand',
+        title: titre ? `📢 ${titre}` : '📢 Annonce',
+        description: texte,
+        footer: false,
+      })).then(() => true).catch(() => false);
+      if (!ok) return reply('⛔ Je ne peux pas écrire dans ce salon (permission manquante).');
+      await logging.log(botId, guild, {
+        title: '📢 Annonce publiée', color: '#e07a5f',
+        fields: [
+          { name: '📨 Salon', value: `<#${cible.id}>`, inline: true },
+          { name: '🛡️ Par', value: `${author.tag || author.username}`, inline: true },
+        ],
+      });
+      await reply(`✅ Annonce publiée dans ${cible}.`);
+      break;
+    }
     case 'slowmode': {
       const sec = Math.min(Math.max(isInt ? (src.interaction.options.getInteger('secondes') || 0) : (parseInt(src.args, 10) || 0), 0), 21600);
       const destCh = isInt ? src.interaction.options.getChannel('salon') : null;
@@ -1608,6 +1791,24 @@ const HELP_DETAILS = {
   giveaway: ['🎁 Giveaways', 'Lancez un giveaway : les membres réagissent 🎉, le tirage est automatique.', '`/giveaway create 2h Prix 3` · `/giveaway end` · `/giveaway reroll`', '`/giveaway create 1d 🎁 Clé du jeu 1`'],
   temprole: ['⏳ Rôles temporaires', 'Donnez un rôle pour une durée limitée — retiré automatiquement.', '`/temprole @membre @rôle 2h`', '`/temprole @Membre @VIP 1d`'],
   sanction: ['⚖️ Sanctions', 'Applique une sanction prédéfinie (configurée dans le dashboard).', '`/sanction @membre nom_de_la_sanction`'],
+  unmute: ['🔊 Retirer un timeout', 'Rend la parole à un membre mis en timeout avant la fin.', '`/unmute @membre raison`'],
+  softban: ['🧹 Softban', 'Bannit puis débannit d’un coup : les messages récents disparaissent, le membre peut revenir.', '`/softban @membre jours:1 raison`'],
+  banlist: ['🔨 Bannis', 'La liste des membres bannis du serveur, avec le motif quand il a été noté.', '`/banlist`'],
+  roleadd: ['🏷️ Rôles', 'Ajoute un rôle à un membre.', '`/roleadd @membre @rôle`'],
+  roleremove: ['🏷️ Rôles', 'Retire un rôle à un membre.', '`/roleremove @membre @rôle`'],
+  membercount: ['👥 Membres', 'Le nombre de membres du serveur, humains et bots séparés.', '`/membercount`'],
+  announce: ['📢 Annonces', 'Publie une annonce propre dans un salon, au nom du bot.', '`/announce salon:#général message:Texte` · `titre:` optionnel'],
+  // v374 — /botprofile et l'identité par serveur sont retirés du bot.
+  modlogs: ['📋 Journaux', 'Un salon où le bot trace tout : modération, tickets, auto-mod, arrivées et départs.',
+    '`/modlogs set #salon` — activer\n`/modlogs view` — voir\n`/modlogs off` — désactiver'],
+  modexport: ['📄 Export des sanctions', "Tout l'historique de modération (date, membre, modérateur, origine, action, raison) exporté en un fichier : CSV pour Excel (accents conservés) ou HTML pour le navigateur. Utile pour un passage de staff, un recours ou un audit. Le fichier est remis en main propre (message éphémère).",
+    '`/modexport format:csv` — export tableur\n`/modexport format:html membre:@X` — export navigateur pour un membre\n\n🔒 Réservé au **propriétaire du serveur** ou aux membres ayant la permission **Administrateur**'],
+  boostrewards: ['🚀 Récompenses boosters', "Chaque membre qui booste le serveur avec Nitro reçoit automatiquement un rôle de remerciement, et un message de remerciement part dans le salon choisi. Quand le boost s'arrête, le rôle est retiré tout seul.",
+    "`/boostrewards action:setup role:@Rôle salon:#salon message:Texte` — activer ({membre} = mention dans le message)\n`/boostrewards action:sync` — donner le rôle aux boosteurs actuels\n`/boostrewards action:view` — voir l'état\n`/boostrewards action:off` — désactiver\n\n🔒 Réservé au **propriétaire du serveur** ou aux membres ayant la permission **Administrateur**"],
+  statchannels: ['📊 Compteurs vocaux', 'Une catégorie verrouillée avec trois salons vocaux impossibles à rejoindre dont les noms affichent les statistiques en direct : membres, membres en ligne, boosts. Mise à jour automatique dès que le chiffre change.',
+    "`/statchannels action:setup` — créer la catégorie et les salons\n`/statchannels action:view` — voir l'état et les chiffres actuels\n`/statchannels action:off` — supprimer la catégorie et les salons\n\n🔒 Réservé au **propriétaire du serveur** ou aux membres ayant la permission **Administrateur**"],
+  blacklist: ['🔇 Liste noire', 'Des mots interdits : les messages qui les contiennent sont supprimés automatiquement.',
+    '`/blacklist add mot` · `/blacklist remove mot` · `/blacklist list`'],
 };
 
 function helpDescription() {
