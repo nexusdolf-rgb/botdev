@@ -7430,6 +7430,8 @@ Dashboard.renderers.commands = async (content) => {
     lignes.push(`<div style="font-size:13px;margin-bottom:8px">Discord connaît <b>${s.registered ? s.registered.length : 0}</b> commande(s) sur <b>${s.wanted.length}</b> attendue(s).</div>`);
     if (s.error) lignes.push(`<div class="dash-empty">${App.escapeHtml(s.error)}</div>`);
     if (s.off && s.off.length) {
+      const retenues = (s.totalIfAllOn || s.wanted.length) - s.wanted.length;
+      lignes.push(`<div style="font-size:13px;margin:6px 0;color:#f0b849"><b>${retenues}</b> commande(s) ne sont même pas demandées à Discord : leurs modules sont coupés.</div>`);
       lignes.push(`<div style="font-size:13px;margin:6px 0">Modules coupés : ${s.off.map((m) => `<b>${App.escapeHtml(m.label)}</b> (${App.escapeHtml(m.commands.join(', '))})`).join(' · ')}</div>`);
     }
     if (s.missing && s.missing.length) {
@@ -7441,6 +7443,11 @@ Dashboard.renderers.commands = async (content) => {
       lignes.push(`<div style="font-size:13px;margin:6px 0">En trop chez Discord (anciennes) : ${s.extra.map((n) => '`/' + App.escapeHtml(n) + '`').join(', ')}</div>`);
     }
     zoneEtat.innerHTML = lignes.join('');
+    if (s.off && s.off.length) {
+      const allerModules = App.el('<button class="dash-btn" style="margin-top:8px;margin-right:8px">Ouvrir les modules</button>');
+      allerModules.onclick = () => Dashboard.setModule('modules');
+      zoneEtat.appendChild(allerModules);
+    }
     const btn = App.el(`<button class="dash-btn" style="margin-top:8px">Resynchroniser maintenant</button>`);
     btn.onclick = async () => {
       btn.disabled = true;

@@ -699,7 +699,10 @@ router.get('/bots/:id/commands/status', requireAuth, async (req, res) => {
   const online = botManager.isOnline(bot.id);
   const modules = store.modules.all(bot.id);
   const off = Object.entries(MODULES).filter(([key]) => Object.keys(modules).length && !modules[key]).map(([key, m]) => ({ key, label: m.label, commands: m.commands }));
-  const out = { online, wanted, off, registered: null, missing: null, extra: null, error: '' };
+  // Nombre de commandes qu'il y aurait si TOUS les modules étaient allumés :
+  // c'est ce qui rend visible l'écart « 37 en ligne » contre « 84 prévues ».
+  const totalIfAllOn = wanted.length + off.reduce((n, m) => n + m.commands.length, 0);
+  const out = { online, wanted, off, totalIfAllOn, registered: null, missing: null, extra: null, error: '' };
   if (!online || !entry) { out.error = 'Le bot est hors ligne : impossible de lire ce que Discord connaît.'; return res.json(out); }
   try {
     const appId = bot.client_id || entry.client.user.id;

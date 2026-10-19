@@ -73,8 +73,8 @@ const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
   // Versionnage front cohérent
   const indexHtml = read('public/index.html');
   const swSource = read('public/sw.js');
-  check('index.html : 7 références ?v=374', (indexHtml.match(/\?v=374/g) || []).length === 7);
-  check('sw.js : cache v373', swSource.includes("const CACHE = 'botdev-v374';"));
+  check('index.html : 7 références ?v=375', (indexHtml.match(/\?v=375/g) || []).length === 7);
+  check('sw.js : cache v373', swSource.includes("const CACHE = 'botdev-v375';"));
 
   console.log(failures === 0 ? '\n✅ V227 — plus d’identité locale, bot global intact. 🎉' : `\n❌ ${failures} vérification(s) en échec`);
   process.exit(failures === 0 ? 0 : 1);
