@@ -694,7 +694,8 @@ async function resyncSlash(bot) {
 router.get('/bots/:id/commands/status', requireAuth, async (req, res) => {
   const bot = getOwnBot(req, res);
   if (!bot) return;
-  const wanted = botManager.desiredCommandPayloads(bot.id).slice(0, 90).map((p) => p.name);
+  const payloads = botManager.desiredCommandPayloads(bot.id).slice(0, 90);
+  const wanted = payloads.map((p) => p.name);
   const entry = botManager.clients.get(bot.id);
   const online = botManager.isOnline(bot.id);
   const modules = store.modules.all(bot.id);
@@ -702,7 +703,7 @@ router.get('/bots/:id/commands/status', requireAuth, async (req, res) => {
   // Nombre de commandes qu'il y aurait si TOUS les modules étaient allumés :
   // c'est ce qui rend visible l'écart « 37 en ligne » contre « 84 prévues ».
   const totalIfAllOn = wanted.length + off.reduce((n, m) => n + m.commands.length, 0);
-  const out = { online, wanted, off, totalIfAllOn, registered: null, missing: null, extra: null, error: '' };
+  const out = { online, wanted, off, totalIfAllOn, registered: null, missing: null, extra: null, schemaDrift: null, optionCheck: null, error: '' };
   if (!online || !entry) { out.error = 'Le bot est hors ligne : impossible de lire ce que Discord connaît.'; return res.json(out); }
   try {
     const appId = bot.client_id || entry.client.user.id;
@@ -713,6 +714,26 @@ router.get('/bots/:id/commands/status', requireAuth, async (req, res) => {
     out.missing = wanted.filter((n) => !set.has(n));
     const wantedSet = new Set(wanted);
     out.extra = registered.filter((n) => !wantedSet.has(n));
+    // 🧬 v376 — même nom mais options différentes : le cas « l'option est là
+    // mais le sélecteur de membre ne s'ouvre pas ». On expose le schéma réel
+    // que Discord connaît, en clair, pour chaque commande concernée.
+    const byName = new Map();
+    for (const c of Array.isArray(current) ? current : []) if (c && c.name) byName.set(c.name, c);
+    out.schemaDrift = payloads
+      .filter((p) => byName.has(p.name) && !botManager.sameCommandShape(p, byName.get(p.name)))
+      .map((p) => ({ name: p.name, attendu: botManager.describeCommandShape(p), trouve: botManager.describeCommandShape(byName.get(p.name)) }));
+    // Détail d'une commande précise : /bots/:id/commands/status?commande=warn
+    const cible = String(req.query.commande || '').trim().toLowerCase();
+    if (cible) {
+      const voulu = payloads.find((p) => p.name === cible);
+      const reel = byName.get(cible);
+      out.optionCheck = {
+        name: cible,
+        attendu: voulu ? botManager.describeCommandShape(voulu) : null,
+        trouve: reel ? botManager.describeCommandShape(reel) : null,
+        identique: !!(voulu && reel && botManager.sameCommandShape(voulu, reel)),
+      };
+    }
   } catch (e) {
     out.error = 'Lecture refusée par Discord : ' + (e.message || 'erreur inconnue');
   }
@@ -3646,6 +3667,9 @@ router.get('/health/bot', (req, res) => {
         expected: st.expected || 0,
         registered: st.registered == null ? null : st.registered,
         missing: st.missing == null ? null : st.missing,
+        // 🧬 v376 — commandes présentes mais dont les options diffèrent de ce
+        // que le bot demande (ex. « utilisateur » en texte au lieu de membre).
+        schemaDrift: Array.isArray(st.schemaDrift) ? st.schemaDrift.map((d) => d.name) : [],
         ok: st.ok === true,
         at: st.at || null,
         error: st.error || '',

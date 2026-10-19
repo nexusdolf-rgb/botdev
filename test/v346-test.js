@@ -21,8 +21,8 @@ const routes = racine('server/routes.js');
 const changelog = require('../server/discord/changelog');
 
 console.log('— 1. Pins v346 —');
-check('index.html : ?v=375 ×7', (html.match(/\?v=375/g) || []).length === 7);
-check('sw.js : cache botdev-v375', sw.includes("const CACHE = 'botdev-v375';"));
+check('index.html : ?v=376 ×7', (html.match(/\?v=376/g) || []).length === 7);
+check('sw.js : cache botdev-v376', sw.includes("const CACHE = 'botdev-v376';"));
 check('index.html : plus aucune ?v=345', !html.includes('?v=345'));
 check('VERSION ≥ 346', changelog.VERSION >= 346);
 check('journal v346 : au moins 1 nouveauté', Array.isArray(changelog.NOTES.new) && changelog.NOTES.new.length >= 1);

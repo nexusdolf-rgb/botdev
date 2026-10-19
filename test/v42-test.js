@@ -43,7 +43,9 @@ const check = (label, cond) => {
           // Seul le PUT GLOBAL change la liste globale : le PUT du serveur
           // support (changelog) écrit dans un autre périmètre.
           if (!restBehavior && !String(route).includes('/guilds/')) {
-            discord.list = (opts.body || []).map((p) => ({ name: p.name }));
+            // Fiche complète (options comprises) : le contrôle de schéma de la
+            // v376 compare aussi le type des options, pas seulement les noms.
+            discord.list = JSON.parse(JSON.stringify(opts.body || []));
           }
           return restBehavior ? restBehavior() : {};
         },

@@ -15,7 +15,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const DATA_DIR = path.join(os.tmpdir(), `botdev-v375-${process.pid}-${Date.now()}`);
+const DATA_DIR = path.join(os.tmpdir(), `botdev-v376-${process.pid}-${Date.now()}`);
 fs.rmSync(DATA_DIR, { recursive: true, force: true });
 fs.mkdirSync(DATA_DIR, { recursive: true });
 process.env.BOTDEV_DATA_DIR = DATA_DIR;
@@ -110,11 +110,14 @@ async function main() {
   {
     const botManager = require('../server/discord/botManager');
     const bot = store.bots.create({ user_id: 1, name: 'Hoxera', token: 'x', client_id: 'app374', prefix: '!' });
-    const wanted = botManager.desiredCommandPayloads(bot).slice(0, 90).map((p) => p.name);
+    const chargees = botManager.desiredCommandPayloads(bot).slice(0, 90);
+    const wanted = chargees.map((p) => p.name);
     const NOUVELLES = ['unmute', 'softban', 'banlist', 'roleadd', 'roleremove', 'membercount', 'announce'];
     check('les sept commandes sont dans la liste voulue', NOUVELLES.every((n) => wanted.includes(n)));
-    // Discord n'a encore que l'ancienne liste : les nouvelles manquent.
-    const discord = { list: wanted.filter((n) => !NOUVELLES.includes(n)).map((n) => ({ name: n })) };
+    // Discord n'a encore que l'ancienne liste : les nouvelles manquent. On garde
+    // la fiche COMPLÈTE (options comprises) pour ne pas simuler une dérive.
+    const copie = (liste) => JSON.parse(JSON.stringify(liste));
+    const discord = { list: copie(chargees.filter((p) => !NOUVELLES.includes(p.name))) };
     const appels = [];
     const entry = {
       client: {
@@ -124,7 +127,7 @@ async function main() {
           get: async () => discord.list,
           put: async (route, opts) => {
             appels.push(route);
-            if (!String(route).includes('/guilds/')) discord.list = (opts.body || []).map((p) => ({ name: p.name }));
+            if (!String(route).includes('/guilds/')) discord.list = copie(opts.body || []);
             return {};
           },
         },
@@ -144,11 +147,80 @@ async function main() {
     check('une liste déjà correcte ne renvoie rien (économie de limite de débit)', global().length === 0);
 
     // Le cas piège : MÊME NOMBRE de commandes, mais pas les mêmes.
-    discord.list = wanted.map((n) => ({ name: n }));
+    discord.list = copie(chargees);
     discord.list[0] = { name: 'commande-fantome' };
     appels.length = 0;
     await botManager.syncGlobalCommands(bot);
     check('un nombre identique mais des noms différents déclenche quand même la synchro', global().length === 1);
+    botManager.clients.delete(bot);
+  }
+
+  console.log('— 8. Une commande au bon nom mais aux mauvaises options est réenregistrée —');
+  {
+    // Le cas signalé : /warn est bien là, mais son option « utilisateur » est
+    // un champ TEXTE chez Discord, donc la liste des membres ne s'ouvre pas.
+    const botManager = require('../server/discord/botManager');
+    const bot = store.bots.create({ user_id: 1, name: 'Hoxera', token: 'x', client_id: 'app376', prefix: '!' });
+    for (const k of ['moderation']) store.modules.set(bot, k, 1);
+    const payloads = botManager.desiredCommandPayloads(bot).slice(0, 90);
+    const copies = () => JSON.parse(JSON.stringify(payloads));
+    // Discord détient la bonne liste de noms, mais /warn en version texte.
+    const discord = { list: copies() };
+    const warn = discord.list.find((c) => c.name === 'warn');
+    warn.options = [{ name: 'utilisateur', description: 'L\'utilisateur ciblé', type: 3, required: true },
+      { name: 'raison', description: 'La raison', type: 3, required: false }];
+    const appels = [];
+    botManager.clients.set(bot, {
+      client: {
+        isReady: () => true,
+        user: { id: 'u376' },
+        rest: {
+          get: async () => discord.list,
+          put: async (route, opts) => {
+            appels.push(route);
+            if (!String(route).includes('/guilds/')) discord.list = JSON.parse(JSON.stringify(opts.body || []));
+            return {};
+          },
+        },
+      },
+    });
+    const global = () => appels.filter((r) => !String(r).includes('/guilds/'));
+
+    const forme = botManager.commandShape(warn);
+    check('le schéma texte et le schéma membre ne sont pas confondus',
+      !botManager.sameCommandShape(payloads.find((p) => p.name === 'warn'), warn));
+    check('la lecture humaine nomme le type attendu',
+      /utilisateur : membre/.test(botManager.describeCommandShape(payloads.find((p) => p.name === 'warn'))),
+      botManager.describeCommandShape(payloads.find((p) => p.name === 'warn')));
+    check('la lecture humaine du schéma Discord dit « texte »',
+      /utilisateur : texte/.test(botManager.describeCommandShape(warn)));
+
+    await botManager.syncGlobalCommands(bot);
+    check('un schéma périmé déclenche un réenregistrement global', global().length === 1);
+    const warnApres = discord.list.find((c) => c.name === 'warn');
+    check('l’option redevient un sélecteur de membre (type 6)',
+      warnApres.options.find((o) => o.name === 'utilisateur').type === 6);
+    const etat = botManager.commandsSyncState(bot);
+    check('l’état ne signale plus de dérive', Array.isArray(etat.schemaDrift) && etat.schemaDrift.length === 0);
+
+    appels.length = 0;
+    await botManager.syncGlobalCommands(bot);
+    check('une fiche conforme ne provoque plus aucun envoi', global().length === 0);
+
+    // Une commande peut aussi avoir l'option en trop ou obligatoire à tort.
+    discord.list = copies();
+    const kick = discord.list.find((c) => c.name === 'kick');
+    kick.options = kick.options.filter((o) => o.name !== 'raison');
+    appels.length = 0;
+    await botManager.syncGlobalCommands(bot);
+    check('une option oubliée chez Discord déclenche la synchro', global().length === 1);
+
+    // Les menus contextuels (type 2/3, sans options) ne doivent pas être vus
+    // comme une dérive à cause de leur absence d'options.
+    discord.list = copies();
+    appels.length = 0;
+    await botManager.syncGlobalCommands(bot);
+    check('les menus contextuels sans option ne comptent pas comme une dérive', global().length === 0);
     botManager.clients.delete(bot);
   }
 

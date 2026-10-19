@@ -757,6 +757,49 @@ function globalSyncDecision(storedHash, wantedHash, discordCount, wantedCount) {
 // 🧾 v374 — la liste des commandes VOULUES, dans l'ordre où elles partent chez
 // Discord. Extraite de syncGlobalCommands pour que le diagnostic du dashboard
 // compare exactement la même chose que la synchronisation.
+// 🧬 v376 — la synchronisation ne regardait que le NOM des commandes. Une
+// commande présente sous le bon nom mais avec un SCHÉMA différent (par exemple
+// /warn dont l'option « utilisateur » est un champ texte au lieu d'un sélecteur
+// de membre) passait donc pour conforme et n'était jamais réenregistrée : dans
+// Discord, on voyait l'option, mais la liste des membres ne s'ouvrait pas.
+// On compare désormais le type et le caractère obligatoire de chaque option.
+const OPTION_TYPE_LABELS = {
+  1: 'sous-commande', 2: 'groupe de sous-commandes', 3: 'texte', 4: 'entier',
+  5: 'booléen', 6: 'membre', 7: 'salon', 8: 'rôle', 9: 'mentionnable',
+  10: 'nombre', 11: 'pièce jointe',
+};
+
+function optionShape(options) {
+  return (Array.isArray(options) ? options : []).map((o) => ({
+    name: String((o && o.name) || ''),
+    type: Number((o && o.type) || 0),
+    required: !!(o && o.required),
+    options: optionShape(o && o.options),
+  }));
+}
+
+function commandShape(cmd) {
+  return { type: Number((cmd && cmd.type) || 1), options: optionShape(cmd && cmd.options) };
+}
+
+function sameCommandShape(a, b) {
+  return JSON.stringify(commandShape(a)) === JSON.stringify(commandShape(b));
+}
+
+// Version lisible du schéma, pour le diagnostic : « utilisateur : membre
+// (obligatoire), raison : texte ».
+function describeCommandShape(cmd) {
+  const list = Array.isArray(cmd && cmd.options) ? cmd.options : [];
+  if (!list.length) return 'aucune option';
+  return list.map((o) => {
+    const nom = String((o && o.name) || '?');
+    const type = OPTION_TYPE_LABELS[Number(o && o.type)] || `type ${Number(o && o.type) || 0}`;
+    const obligatoire = o && o.required ? ' (obligatoire)' : '';
+    const imbrique = Array.isArray(o && o.options) && o.options.length ? ' puis ses sous-options' : '';
+    return `${nom} : ${type}${obligatoire}${imbrique}`;
+  }).join(', ');
+}
+
 function desiredCommandPayloads(botId) {
   const { buildSlashPayloads } = require('./premade');
   const { buildExtraPayloads } = require('./extra');
@@ -807,9 +850,13 @@ async function syncGlobalCommands(botId) {
   // « les nouvelles commandes ne sont pas proposées » alors que le compte tombe
   // juste. On lit donc la LISTE réelle et on compare les noms.
   let currentNames = null;
+  let currentByName = new Map();
   try {
     const current = await entry.client.rest.get(`/applications/${appId}/commands`);
-    if (Array.isArray(current)) currentNames = current.map((c) => c.name);
+    if (Array.isArray(current)) {
+      currentNames = current.map((c) => c.name);
+      for (const c of current) if (c && c.name) currentByName.set(c.name, c);
+    }
   } catch (e) {
     recordSyncState(botId, { ok: false, expected: wantedNames.length, error: `lecture Discord : ${(e && e.message) || e}`.slice(0, 200) });
     return; // lecture impossible → on réessaiera au prochain cycle
@@ -821,9 +868,18 @@ async function syncGlobalCommands(botId) {
 
   const currentSet = new Set(currentNames);
   const missing = wantedNames.filter((n) => !currentSet.has(n));
+  // Même nom, mais options différentes (type ou caractère obligatoire) : la
+  // copie chez Discord est périmée, il faut la remplacer.
+  const schemaDrift = global
+    .filter((p) => currentSet.has(p.name) && !sameCommandShape(p, currentByName.get(p.name)))
+    .map((p) => ({
+      name: p.name,
+      attendu: describeCommandShape(p),
+      trouve: describeCommandShape(currentByName.get(p.name)),
+    }));
 
-  if (store.settings.get(key) === hash && missing.length === 0) {
-    recordSyncState(botId, { ok: true, expected: wantedNames.length, registered: currentNames.length, missing: 0, error: '' });
+  if (store.settings.get(key) === hash && missing.length === 0 && schemaDrift.length === 0) {
+    recordSyncState(botId, { ok: true, expected: wantedNames.length, registered: currentNames.length, missing: 0, schemaDrift: [], error: '' });
     try { await require('./changelog').syncOnSupportGuild(entry, record); } catch (e) { console.error('[BotDev] /update serveur support :', e.message); }
     return;
   }
@@ -831,16 +887,20 @@ async function syncGlobalCommands(botId) {
   if (missing.length) {
     console.log(`[BotDev] bot ${botId} : ${missing.length} commande(s) absente(s) chez Discord (${missing.slice(0, 8).join(', ')}${missing.length > 8 ? '…' : ''}) — enregistrement global…`);
   }
+  if (schemaDrift.length) {
+    const apercu = schemaDrift.slice(0, 4).map((d) => `/${d.name} (Discord : ${d.trouve} · attendu : ${d.attendu})`).join(' ; ');
+    console.log(`[BotDev] bot ${botId} : ${schemaDrift.length} commande(s) au schéma périmé chez Discord — ${apercu} — réenregistrement global…`);
+  }
 
   try {
     await entry.client.rest.put(`/applications/${appId}/commands`, { body: global });
     store.settings.set(key, hash);
-    recordSyncState(botId, { ok: true, expected: wantedNames.length, registered: wantedNames.length, missing: 0, error: '' });
+    recordSyncState(botId, { ok: true, expected: wantedNames.length, registered: wantedNames.length, missing: 0, schemaDrift: [], error: '' });
     console.log(`[BotDev] bot ${botId} : ${global.length} commandes GLOBALES enregistrées (badge /)${all.length > 90 ? ` — ${all.length - 90} ignorées (limite Discord)` : ''}`);
     try { await require('./changelog').syncOnSupportGuild(entry, record); } catch (e) { console.error('[BotDev] /update serveur support :', e.message); }
   } catch (e) {
     const msg = String((e && e.message) || e);
-    recordSyncState(botId, { ok: false, expected: wantedNames.length, registered: currentNames.length, missing: missing.length, error: msg.slice(0, 200) });
+    recordSyncState(botId, { ok: false, expected: wantedNames.length, registered: currentNames.length, missing: missing.length, schemaDrift, error: msg.slice(0, 200) });
     if (msg.includes('429') || msg.includes('rate')) {
       console.log(`[BotDev] bot ${botId} : commandes globales en attente (limite de débit Discord), nouvelle tentative au prochain cycle.`);
       return;
@@ -944,4 +1004,4 @@ function platformStats() {
   return { onlineBots, servers, members };
 }
 
-module.exports = { clients, getClient, isOnline, getGuildPerms, loginBot, reconnectBot, logoutBot, stopAll, syncSlashCommands, syncGlobalCommands, globalSyncDecision, desiredCommandPayloads, commandsSyncState, gatewayPauseMs, applyPresence, applyBotAbout, aboutText, publicBotInfo, platformStats, guardInteraction, wrapInteractionAudit };
+module.exports = { clients, getClient, isOnline, getGuildPerms, loginBot, reconnectBot, logoutBot, stopAll, syncSlashCommands, syncGlobalCommands, globalSyncDecision, desiredCommandPayloads, commandsSyncState, commandShape, sameCommandShape, describeCommandShape, gatewayPauseMs, applyPresence, applyBotAbout, aboutText, publicBotInfo, platformStats, guardInteraction, wrapInteractionAudit };

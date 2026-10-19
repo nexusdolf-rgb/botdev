@@ -7439,6 +7439,10 @@ Dashboard.renderers.commands = async (content) => {
     } else if (s.registered) {
       lignes.push('<div style="font-size:13px;margin:6px 0;color:#57F287">Toutes les commandes attendues sont enregistrées.</div>');
     }
+    if (s.schemaDrift && s.schemaDrift.length) {
+      lignes.push(`<div style="font-size:13px;margin:6px 0;color:#f0b849"><b>Options périmées chez Discord</b> : ${s.schemaDrift.map((d) => `<b>/${App.escapeHtml(d.name)}</b> (Discord a « ${App.escapeHtml(d.trouve)} », il faudrait « ${App.escapeHtml(d.attendu)} »)`).join(' · ')}</div>`);
+      lignes.push('<div style="font-size:12px;margin:6px 0;color:var(--muted)">Une option peut porter le bon nom sans proposer les bons choix : un champ texte à la place du sélecteur de membre, par exemple. Une resynchronisation corrige la fiche.</div>');
+    }
     if (s.extra && s.extra.length) {
       lignes.push(`<div style="font-size:13px;margin:6px 0">En trop chez Discord (anciennes) : ${s.extra.map((n) => '`/' + App.escapeHtml(n) + '`').join(', ')}</div>`);
     }
@@ -7448,6 +7452,30 @@ Dashboard.renderers.commands = async (content) => {
       allerModules.onclick = () => Dashboard.setModule('modules');
       zoneEtat.appendChild(allerModules);
     }
+    const verif = App.el('<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><input class="dash-input" placeholder="Vérifier une commande (ex : warn)" style="max-width:260px"><button class="dash-btn">Vérifier</button></div>');
+    const champ = verif.querySelector('input');
+    const bouton = verif.querySelector('button');
+    const sortie = App.el('<div style="font-size:13px;margin-top:8px"></div>');
+    const verifier = async () => {
+      const nom = String(champ.value || '').trim().replace(/^\//, '').toLowerCase();
+      if (!nom) return;
+      sortie.textContent = 'Lecture en cours…';
+      try {
+        const r = await App.api(`/bots/${bot.id}/commands/status?commande=${encodeURIComponent(nom)}`);
+        const c = r.optionCheck;
+        if (!c) { sortie.textContent = 'Réponse illisible.'; return; }
+        if (c.attendu == null) { sortie.textContent = `/${nom} ne fait pas partie des commandes du bot.`; return; }
+        if (c.trouve == null) { sortie.textContent = `/${nom} n'existe pas chez Discord : une resynchronisation va l'envoyer.`; return; }
+        sortie.innerHTML = c.identique
+          ? `<span style="color:#57F287">/${App.escapeHtml(nom)} est conforme : ${App.escapeHtml(c.trouve)}.</span>`
+          : `<span style="color:#f0b849">/${App.escapeHtml(nom)} : Discord a « ${App.escapeHtml(c.trouve)} », il faudrait « ${App.escapeHtml(c.attendu)} ».</span>`;
+        if (!c.identique) sortie.innerHTML += ' <span style="color:var(--muted)">Resynchroniser maintenant.</span>';
+      } catch (e) { sortie.textContent = e.message; }
+    };
+    bouton.onclick = verifier;
+    champ.addEventListener('keydown', (e) => { if (e.key === 'Enter') verifier(); });
+    zoneEtat.appendChild(verif);
+    zoneEtat.appendChild(sortie);
     const btn = App.el(`<button class="dash-btn" style="margin-top:8px">Resynchroniser maintenant</button>`);
     btn.onclick = async () => {
       btn.disabled = true;
