@@ -88,13 +88,18 @@ for (const [f, { code }] of srcs) {
 }
 
 // ── B3 : V2 + pièce jointe + webhook ────────────────────────────────────────
-// identity.sendAsProfile() passe par un webhook si un profil personnalisé est
-// réglé. V2 + webhook + files = 400.
+// v374 — l'identité par serveur est retirée, donc plus aucun envoi ne passe par
+// un webhook : la règle « V2 + webhook + files = 400 » n'a plus d'objet. On
+// vérifie simplement qu'aucun fichier n'appelle encore sendAsProfile.
 {
-  const ev = srcs.get('events.js');
-  if (ev) {
-    const hookCalls = [...ev.code.matchAll(/sendAsProfile\([^)]*\)/g)];
-    notes.push(`events.js : ${hookCalls.length} appel(s) à identity.sendAsProfile() — chacun doit être sans pièce jointe s'il est en V2`);
+  const restants = [];
+  for (const [f, { code }] of srcs) {
+    if (code.includes('sendAsProfile(')) restants.push(f);
+  }
+  if (restants.length) {
+    add('B3 sendAsProfile', '🔴', `appel restant à sendAsProfile dans : ${restants.join(', ')}`);
+  } else {
+    notes.push('aucun appel à identity.sendAsProfile() — la règle webhook+files est sans objet');
   }
   for (const [f, { code }] of srcs) {
     for (const m of code.matchAll(/sendAsProfile\([\s\S]{0,500}?\)/g)) {

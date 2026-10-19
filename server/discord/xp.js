@@ -191,8 +191,7 @@ async function announce(botId, message, level, gs) {
     } catch (e) { console.error('[Hoxera] carte de niveau :', e.message); }
   }
 
-  const identity = require('./identity');
-  await identity.sendAsProfile(message.client, botId, message.guild, channel, payload).catch(() => {});
+  await require('../queue').send(channel, payload).catch(() => {});
 }
 
 async function applyRewards(botId, message, level) {

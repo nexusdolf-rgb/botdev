@@ -16,7 +16,7 @@ const TOKEN = process.env.TOKEN || '';
 const GUILD = process.env.GUILD || '1513133061489955006';
 const OUT = path.join(__dirname, '..', '..', 'ui-audit', 'report');
 
-const SERVER_MODULES = ['overview', 'tickets', 'welcome', 'levels', 'economy', 'shop', 'moderation', 'roles', 'suggestions', 'giveaways', 'events', 'quiz', 'community', 'announcements', 'embeds', 'members', 'stats', 'logs', 'transcripts', 'modmail', 'server', 'botprofile'];
+const SERVER_MODULES = ['overview', 'tickets', 'welcome', 'levels', 'economy', 'shop', 'moderation', 'roles', 'suggestions', 'giveaways', 'events', 'quiz', 'community', 'announcements', 'embeds', 'members', 'stats', 'logs', 'transcripts', 'modmail', 'server'];
 const BOT_MODULES = ['commands', 'modules', 'health', 'botsettings', 'help'];
 const WAIT = 1500;
 

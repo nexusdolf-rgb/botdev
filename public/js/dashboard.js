@@ -742,7 +742,6 @@ Dashboard.MODULES = [
   ['transcripts', '', 'Transcriptions'],
   ['modmail', '', 'Modmail'],
   ['server', '', 'Réglages serveur'],
-  ['botprofile', '', 'Identité du bot'],
 ];
 Dashboard.BOT_MODULES = [
   ['commands', '', 'Commandes'],
@@ -962,11 +961,6 @@ Dashboard.MODULE_META = {
     aide: 'Salons de référence, rôles immunisés, temporaires, anti-raid et réglages fins du comportement du bot ici.',
     voit: 'Rien directement : ce sont les règles appliquées par le bot.',
     slash: '/config ➜ Réglages serveur' },
-
-  botprofile: { e: '🤖', emote: 'hox_bot', cat: 'reglages', tag: 'Le nom, la bio et l’image du bot sur ce serveur',
-    aide: 'Identité d’envoi locale : nom affiché, avatar, bannière et couleurs des encadrés pour ce serveur uniquement.',
-    voit: 'Les messages du bot portent l’identité que vous avez choisie.',
-    slash: '/config ➜ Identité du bot' },
 
   commands: { e: '🧩', emote: 'hox_commands', cat: 'bot', tag: 'Vos propres commandes, construites par blocs',
     aide: 'Déclencheur (préfixe, slash ou mot-clé), actions en glisser-déposer, restrictions par rôle, salon et temps d’attente.',
@@ -2403,7 +2397,7 @@ Dashboard.renderers.overview = async (content, data) => {
       <button class="ov-quick-action" data-go="tickets"><span><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M2 9a3 3 0 0 0 0 6v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-4a3 3 0 0 1 0-6V5a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2M13 11v2M13 17v2"/></svg></span><div class="ov-qa-txt"><b>Tickets</b><small>Configurer</small></div><i>→</i></button>
       <button class="ov-quick-action" data-go="welcome"><span><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6.6 3.6h10.8v16.8H6.6z"/><path d="M14.6 12h1"/><path d="M4.6 20.4h15"/></svg></span><div class="ov-qa-txt"><b>Bienvenue</b><small>Préparer</small></div><i>→</i></button>
       <button class="ov-quick-action" data-go="moderation"><span><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2l7 2.8v5.6c0 4.2-2.9 7.3-7 8.6-4.1-1.3-7-4.4-7-8.6V6l7-2.8Z"/><path d="M9 12.1l2 2 4-4"/></g></svg></span><div class="ov-qa-txt"><b>Modération</b><small>Protéger</small></div><i>→</i></button>
-      <button class="ov-quick-action" data-go="botprofile"><span><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="4.4" y="8" width="15.2" height="11.6" rx="3"/><path d="M12 4.2V8"/><circle cx="12" cy="3.2" r="1.1" fill="currentColor" stroke="none"/><circle cx="9" cy="13.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="15" cy="13.4" r="1.15" fill="currentColor" stroke="none"/><path d="M9.6 16.8h4.8"/></svg></span><div class="ov-qa-txt"><b>Identité du bot</b><small>Personnaliser</small></div><i>→</i></button>
+      <button class="ov-quick-action" data-go="logs"><span><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 4h16v2H4zM4 10h16v2H4zM4 16h10v2H4z"/></svg></span>Journaux</button>
     </div>`);
   quickActions.querySelectorAll('[data-go]').forEach((button) => { button.onclick = () => Dashboard.setModule(button.dataset.go); });
   workspace.appendChild(quickActions);
@@ -7415,235 +7409,11 @@ Dashboard.renderers.server = async (content, data) => {
   };
 };
 
-// ---------- Identité du bot par serveur ----------
-// La page montre UNE carte d'aperçu vivante (photo + bannière + nom + bio),
-// mise à jour instantanément pendant l'édition — identique à /botprofile view.
-// Règle Discord : l'identité est PAR SERVEUR, appliquée aux messages du bot
-// (bienvenue, tickets, niveaux, panneaux) via webhooks. Le bot global (nom,
-// avatar, bannière) n'est JAMAIS modifié, sur aucun autre serveur.
-Dashboard.renderers.botprofile = async (content, data) => {
-  const { bot, guildId } = Dashboard.state;
-  const profile = data.profile || {};
-  const serverName = data.guild && data.guild.name ? data.guild.name : 'ce serveur';
-  const root = Dashboard.header(content, '', 'Identité du bot', `Personnalisez Hoxera uniquement sur ${serverName}.`);
-  // URL absolue : la base de données stocke /assets/… (chemin relatif du site).
-  const abs = (u) => {
-    if (!u) return '';
-    if (/^https?:\/\//i.test(u) || u.startsWith('data:') || u.startsWith('blob:')) return u;
-    return (window.location.origin || '') + u;
-  };
-  const avatarOf = (pr) => pr.avatar_url || bot.avatar_url || '';
-  const bannerOf = (pr) => pr.banner_url || '';
-  const letterTile = (nm) => App.escapeHtml(String(nm || '?').trim().slice(0, 1).toUpperCase() || '?');
 
-  const card = Dashboard.card(root, 'Profil d’Hoxera sur ce serveur', 'Cette identité est indépendante des autres serveurs et ne modifie jamais le bot global.');
-  // Aperçu vivant (photo + bannière + nom + bio ensemble)
-  card.innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:14px;border:1px solid rgba(88,101,242,.28);border-radius:8px;background:rgba(88,101,242,.07)">
-      <span style="font-size:22px"><svg class="ico-svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="5.2" y="10.4" width="13.6" height="9.6" rx="2.4"/><path d="M8.4 10.4V8a3.6 3.6 0 0 1 7.2 0v2.4"/></svg></span><div><b>Configuration limitée à ${App.escapeHtml(serverName)}</b><div class="desc" style="margin:2px 0 0">Le nom, la photo et la bannière ci-dessous ne s’appliquent qu’à CE serveur. Les autres serveurs et le bot global ne changent jamais.</div></div>
-    </div>
-    <div id="bp-live" style="margin-bottom:14px"></div>
-    <label class="dash-label">Nom affiché par Hoxera sur ce serveur</label>
-    <input class="dash-input" id="bp-name" maxlength="80" value="${App.escapeHtml(profile.name || '')}" placeholder="Hoxera" />
-    <div class="desc" style="margin-top:5px">Apparaît dans les messages envoyés par le bot sur ce serveur. L’application bot globale n’est pas renommée.</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:16px">
-      <div>
-        <label class="dash-label">Photo du bot sur ce serveur</label>
-        <input class="dash-input" id="bp-avatar" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
-        <div class="desc" style="margin-top:5px">Image maximum : 3 Mo. Sans image personnalisée, l’avatar global est utilisé (affiché à droite en aperçu).</div>
-        <div id="bp-avatar-preview" style="margin-top:10px"></div>
-      </div>
-      <div>
-        <label class="dash-label">Bannière du bot sur ce serveur</label>
-        <input class="dash-input" id="bp-banner" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
-        <div class="desc" style="margin-top:5px">Image maximum : 3 Mo. Aucune bannière = l’aperçu garde un dégradé.</div>
-        <div id="bp-banner-preview" style="margin-top:10px"></div>
-      </div>
-    </div>
-    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:18px">
-      <button class="dash-save-action dash-btn dash-btn-primary" id="bp-save">Enregistrer l’identité</button>
-      <button class="dash-btn dash-btn-danger" id="bp-reset">Reprendre l’identité globale</button>
-    </div>
-    <div class="desc" id="bp-status" style="margin-top:10px"></div>`;
-
-  const current = { name: profile.name || '', avatar: avatarOf(profile), banner: bannerOf(profile), bio: profile.bio || '' };
-  const drawTile = (where, url, shape, border) => {
-    const el = card.querySelector(where);
-    el.innerHTML = url
-      ? `<img src="${App.escapeHtml(url)}" alt="Aperçu" style="display:block;width:${shape === 'round' ? '88px' : '100%'};max-width:390px;height:${shape === 'round' ? '88px' : '120px'};border-radius:${shape === 'round' ? '50%' : '8px'};object-fit:cover;border:${border}" />`
-      : `<div class="dash-empty" style="padding:12px">${shape === 'round' ? 'Avatar global utilisé' : 'Aucune bannière personnalisée'}</div>`;
-  };
-  const renderLive = () => {
-    const name = (current.name || '').trim() || 'Identité globale du bot';
-    const bUrl = current.banner ? abs(current.banner) : '';
-    const aUrl = current.avatar ? abs(current.avatar) : '';
-    const cardLive = card.querySelector('#bp-live');
-    // Une seule carte « profil », avec bannière, photo, nom, bio (comme /botprofile view).
-    cardLive.innerHTML = `
-      <div style="border:1px solid rgba(88,101,242,.35);border-radius:12px;overflow:hidden;background:#151522">
-        ${bUrl
-          ? `<div style="height:120px;background:url('${App.escapeHtml(bUrl)}') center/cover no-repeat"></div>`
-          : `<div style="height:120px;background:linear-gradient(120deg,#e07a5f33,#8b5cf633,#5865f233)"></div>`}
-        <div style="display:flex;gap:14px;padding:0 16px 14px;margin-top:-34px;align-items:flex-end">
-          ${aUrl
-            ? `<img src="${App.escapeHtml(aUrl)}" alt="Photo" style="width:78px;height:78px;border-radius:50%;object-fit:cover;border:4px solid #151522" />`
-            : `<span style="width:78px;height:78px;border-radius:50%;background:#5865F2;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;border:4px solid #151522">${letterTile(name)}</span>`}
-          <div style="flex:1;min-width:0;padding-bottom:2px">
-            <b style="font-size:18px">${App.escapeHtml(name)}</b>
-            <div style="font-size:12px;color:var(--d-dim);margin-top:2px">${App.escapeHtml(current.bio || 'Aucune bio définie.')}</div>
-          </div>
-        </div>
-        <div style="font-size:12px;color:var(--d-dim);padding:0 16px 12px">Affiché par le bot sur <b>${App.escapeHtml(serverName)}</b> uniquement · jamais ailleurs.</div>
-      </div>`;
-  };
-  renderLive();
-  drawTile('#bp-avatar-preview', current.avatar ? abs(current.avatar) : '', 'round', '3px solid rgba(88,101,242,.45)');
-  drawTile('#bp-banner-preview', current.banner ? abs(current.banner) : '', 'wide', '1px solid rgba(88,101,242,.35)');
-
-  const fileAsDataUrl = (file) => new Promise((resolve, reject) => {
-    if (!file) return resolve('');
-    if (!String(file.type || '').startsWith('image/')) return reject(new Error('Choisissez un fichier image.'));
-    if (file.size > 3 * 1024 * 1024) return reject(new Error('Image trop lourde : 3 Mo maximum.'));
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(new Error('Lecture de l’image impossible.'));
-    reader.readAsDataURL(file);
-  });
-  const pickFile = (input, kind) => {
-    const file = input.files && input.files[0];
-    if (!file) return;
-    if (!String(file.type || '').startsWith('image/') || file.size > 3 * 1024 * 1024) {
-      input.value = '';
-      App.toast(kind + ' invalide ou trop lourde (3 Mo maximum).', 'error');
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    if (kind === 'Photo') { current.avatar = url; }
-    else { current.banner = url; }
-    renderLive();
-    drawTile('#bp-avatar-preview', current.avatar ? current.avatar : '', 'round', '3px solid rgba(88,101,242,.45)');
-    drawTile('#bp-banner-preview', current.banner ? current.banner : '', 'wide', '1px solid rgba(88,101,242,.35)');
-  };
-  const nameInput = card.querySelector('#bp-name');
-  const avatarInput = card.querySelector('#bp-avatar');
-  const bannerInput = card.querySelector('#bp-banner');
-  nameInput.oninput = () => { current.name = nameInput.value; renderLive(); };
-  avatarInput.onchange = () => pickFile(avatarInput, 'Photo');
-  bannerInput.onchange = () => pickFile(bannerInput, 'Bannière');
-
-  card.querySelector('#bp-save').onclick = async (e) => {
-    const bouton = e.currentTarget;
-    const button = card.querySelector('#bp-save');
-    const status = card.querySelector('#bp-status');
-    button.disabled = true; button.textContent = '⏳ Enregistrement…';
-    try {
-      // On lit la valeur du champ au moment de l'enregistrement (fiable
-      // même sans événement input : autofill, tests, etc.).
-      current.name = nameInput.value;
-      const body = { name: current.name.trim() };
-      const aFile = avatarInput.files && avatarInput.files[0];
-      const bFile = bannerInput.files && bannerInput.files[0];
-      if (aFile) body.avatar_b64 = await fileAsDataUrl(aFile);
-      if (bFile) body.banner_b64 = await fileAsDataUrl(bFile);
-      await App.api(`/bots/${bot.id}/guilds/${guildId}/profile`, { method: 'PUT', body });
-      status.textContent = `Identité enregistrée pour ${serverName} uniquement · les autres serveurs et le bot global ne changent pas.`;
-      App.retourEnregistrement(bouton);
-      App.toast('Identité d’Hoxera enregistrée pour ce serveur.');
-      await Dashboard.renderContent(content);
-    } catch (e) {
-      status.textContent = `${e.message}`;
-      App.toast(e.message, 'error');
-    }
-    button.disabled = false; button.textContent = 'Enregistrer l’identité';
-  };
-  card.querySelector('#bp-reset').onclick = async () => {
-    if (!(await App.confirm(`Reprendre l’identité globale d’Hoxera sur ${serverName} ? Le bot global n’est jamais modifié.`))) return;
-    try {
-      await App.api(`/bots/${bot.id}/guilds/${guildId}/profile`, { method: 'DELETE' });
-      App.toast('Identité globale reprise sur ce serveur.');
-      await Dashboard.renderContent(content);
-    } catch (e) { App.toast(e.message, 'error'); }
-  };
-
-  // v211 — Profils d'envoi multiples : choisir QUI signe les messages.
-  // La rangée « Profil principal » affiche maintenant sa PHOTO (si définie),
-  // comme les profils d'envoi — plus de pastille lettre trompeuse.
-  const aliases = data.profiles_extra || [];
-  const activeId = Number(data.profile_active || 0);
-  const principalName = (profile.name || '').trim() || 'Identité globale du bot';
-  const card2 = Dashboard.card(root, 'Profils d’envoi (qui signe les messages)', `Choisissez l’identité utilisée quand le bot envoie un message sur ${serverName} (bienvenue, tickets, annonces, niveaux…). Le « profil principal » est celui modifié ci-dessus.`);
-  const choices = [{ id: 0, name: principalName, avatar: avatarOf(profile), isPrincipal: true }]
-    .concat(aliases.map((a) => ({ id: a.id, name: a.name, avatar: a.avatar_url || '' })));
-  choices.forEach((c) => {
-    const row = App.el(`
-      <div style="display:flex;align-items:center;gap:12px;border:1px solid var(--d-border);border-radius:8px;padding:9px 12px;margin-bottom:8px;background:${c.id === activeId ? 'rgba(var(--d-accent-rgb),.07)' : 'transparent'}">
-        <input type="radio" name="bp-active" value="${c.id}" ${c.id === activeId ? 'checked' : ''} aria-label="Signer avec ${App.escapeHtml(c.name)}" style="accent-color:var(--d-accent)" />
-        ${c.avatar
-          ? `<img src="${App.escapeHtml(abs(c.avatar))}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover" onerror="this.style.display='none'" />`
-          : `<span style="width:36px;height:36px;border-radius:50%;background:var(--d-card2);display:inline-flex;align-items:center;justify-content:center;font-weight:800">${letterTile(c.name)}</span>`}
-        <div style="flex:1;min-width:0">
-          <b>${App.escapeHtml(c.name)}</b>
-          <div style="font-size:12px;color:var(--d-dim)">${c.isPrincipal ? 'Personnalisé pour ce serveur' : 'Profil d’envoi additionnel'}${c.id === activeId ? ' · utilisé pour les envois' : ''}</div>
-        </div>
-        ${c.isPrincipal ? '' : `<button class="dash-btn dash-btn-danger dash-btn-sm" data-del-alias="${c.id}" aria-label="Supprimer ce profil">Supprimer</button>`}
-      </div>`);
-    const radio = row.querySelector('input[type=radio]');
-    radio.onchange = async () => {
-      try {
-        await App.api(`/bots/${bot.id}/guilds/${guildId}/profile-active`, { method: 'PUT', body: { alias_id: Number(radio.value) } });
-        App.toast(c.id === 0 ? 'Messages signés par le profil principal.' : 'Messages signés par « ' + c.name + ' ».');
-        await Dashboard.renderContent(content);
-      } catch (e) { App.toast(e.message, 'error'); }
-    };
-    const del = row.querySelector('[data-del-alias]');
-    if (del) del.onclick = async (ev) => {
-      ev.stopPropagation();
-      if (!(await App.confirm('Supprimer ce profil d’envoi ?'))) return;
-      try {
-        await App.api(`/bots/${bot.id}/guilds/${guildId}/profiles/${del.dataset.delAlias}`, { method: 'DELETE' });
-        App.toast('Profil supprimé.');
-        await Dashboard.renderContent(content);
-      } catch (e) { App.toast(e.message, 'error'); }
-    };
-    card2.appendChild(row);
-  });
-  // Formulaire « ajouter un profil »
-  const addZone = App.el(`<div style="margin-top:12px;border-top:1px dashed var(--d-border);padding-top:12px">
-    <label class="dash-label">＋ Ajouter un profil d’envoi</label>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <input class="dash-input" id="bp-alias-name" placeholder="Nom du profil (ex : Support, Événements…)" maxlength="80" style="max-width:260px" />
-      <input class="dash-input" id="bp-alias-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" style="max-width:230px" />
-      <button class="dash-btn dash-btn-primary" id="bp-alias-add">Créer</button>
-    </div>
-    <div class="desc" style="margin-top:5px">${aliases.length >= 10 ? 'Limite de 10 profils atteinte.' : 'Jusqu’à 10 profils. Sans image, l’avatar du profil principal est utilisé.'}</div>
-  </div>`);
-  card2.appendChild(addZone);
-  card2.querySelector('#bp-alias-add').onclick = async (e) => {
-    const bouton = e.currentTarget;
-    const nameInput2 = card2.querySelector('#bp-alias-name');
-    const fileInput = card2.querySelector('#bp-alias-file');
-    const name = nameInput2.value.trim();
-    if (!name) { App.toast('Donnez un nom au profil.', 'error'); return; }
-    try {
-      const body = { name };
-      const file = fileInput.files && fileInput.files[0];
-      if (file) {
-        if (!String(file.type || '').startsWith('image/')) throw new Error('Choisissez un fichier image.');
-        if (file.size > 3 * 1024 * 1024) throw new Error('Image trop lourde : 3 Mo maximum.');
-        body.avatar_b64 = await fileAsDataUrl(file);
-      }
-      await App.api(`/bots/${bot.id}/guilds/${guildId}/profiles`, { method: 'PUT', body });
-      App.retourEnregistrement(bouton);
-      App.toast('Profil d’envoi créé.');
-      await Dashboard.renderContent(content);
-    } catch (e) { App.toast(e.message, 'error'); }
-  };
-};
-
-// ---------- Commandes (niveau bot) ----------
 Dashboard.renderers.commands = async (content) => {
   const bot = Dashboard.state.bot;
   const root = Dashboard.header(content, '', 'Commandes personnalisées', 'Construisez vos propres commandes avec l\'éditeur de blocs (glisser-déposer).');
+
   const { commands } = await App.api(`/bots/${bot.id}/commands`);
   const c = Dashboard.card(root, 'Mes commandes', '');
   if (!commands.length) c.appendChild(App.el(`<div class="dash-empty"><div class="big">${App.glyphe('morceau', { taille: 26 })}</div>Aucune commande personnalisée.</div>`));

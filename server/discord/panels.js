@@ -127,7 +127,7 @@ async function dispatchPanels(botId, interaction) {
       await handlePanelCommand(botId, interaction);
       return true;
     }
-    if (interaction.isChatInputCommand() && ['botprofile', 'modlogs', 'blacklist'].includes(interaction.commandName)) {
+    if (interaction.isChatInputCommand() && ['modlogs', 'blacklist'].includes(interaction.commandName)) {
       const { handleProfileCommand } = require('./profileCommands');
       await handleProfileCommand(botId, interaction);
       return true;
@@ -145,16 +145,6 @@ async function dispatchPanels(botId, interaction) {
     if (cid.startsWith('rls:')) {
       const { handleWizardInteraction } = require('./roleWizard');
       await handleWizardInteraction(botId, interaction);
-      return true;
-    }
-
-    // Assistant interactif /botprofile setup (boutons + modales + sélecteur de couleurs)
-    if ((interaction.isButton() && cid.startsWith('bpw:'))
-      || (interaction.isStringSelectMenu() && cid.startsWith('bpw-sel:'))
-      || (interaction.isModalSubmit() && cid.startsWith('bpw-modal:'))
-      || (interaction.isModalSubmit() && cid.startsWith('bpw-file:'))) {
-      const { handleProfileWizardInteraction } = require('./profileWizard');
-      await handleProfileWizardInteraction(botId, interaction);
       return true;
     }
 
@@ -579,7 +569,6 @@ async function sendTicketPanel(botId, guildId, client, channel, mode = 'auto') {
         .setStyle(style)
     ));
   }
-  const identity = require('./identity');
   const guild = client && client.guilds ? client.guilds.cache.get(guildId) : null;
   // 🌍 Nom du serveur : mémorisé (pour la bannière dynamique) et affiché
   // dans le titre + la bienvenue du panneau. Repli : « Optimus Prime ».
@@ -597,7 +586,7 @@ async function sendTicketPanel(botId, guildId, client, channel, mode = 'auto') {
   // v234 — rows est passé au constructeur : en V2 les boutons vont DANS le conteneur.
   const payload = buildTicketPanel(cfgForEmbed, client, types, serverName, guildId, rows);
   if (guild) {
-    await identity.sendAsProfile(client, botId, guild, channel, payload);
+    await require('../queue').send(channel, payload);
   } else {
     await require('../queue').send(channel, payload);
   }
@@ -625,7 +614,6 @@ async function sendExtraTicketMenu(botId, guildId, client, extra, channel) {
     select.addOptions(opt);
   }
   const rows = [new ActionRowBuilder().addComponents(select)];
-  const identity = require('./identity');
   const guild = client && client.guilds ? client.guilds.cache.get(guildId) : null;
   let serverName = '';
   if (guild && guild.name) serverName = String(guild.name).slice(0, 100);
@@ -633,7 +621,7 @@ async function sendExtraTicketMenu(botId, guildId, client, extra, channel) {
     await pruneOldPanels(channel, 'extra', String(PTs.title || '').trim().split('{server}')[0], `bd-ttype:${botId}:x${extra.id}`);
   } catch {}
   const payload = buildTicketPanel(cfgForEmbed, client, types, serverName, guildId, rows);
-  if (guild) await identity.sendAsProfile(client, botId, guild, channel, payload);
+  if (guild) await require('../queue').send(channel, payload);
   else await require('../queue').send(channel, payload);
 }
 
@@ -1303,7 +1291,6 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
     const staffMention = supportRoles.length ? supportRoles.map((r) => r.toString()).join(' ') : '';
     const openRow = store.openTickets.getByChannel(channel.id);
     const room = readRoomCfg(botId, guild.id);
-    const identity = require('./identity');
     // 🎫 Le type reste dans son champ dédié ; la ligne sous le titre identifie
     // le créateur puis ping les rôles staff une seule fois, à la fin.
     // v237 — un SEUL payload Components V2 : titre, identité, contenu, champs
@@ -1314,7 +1301,7 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
       room,
       { rows: staffRows },
     );
-    await identity.sendAsProfile(interaction.client, botId, guild, channel, welcome).catch(() => {});
+    await require('../queue').send(channel, welcome).catch(() => {});
     await logging.log(botId, guild, {
       title: '🎫 Ticket ouvert', color: '#e07a5f',
       fields: [

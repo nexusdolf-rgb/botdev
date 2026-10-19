@@ -1,11 +1,9 @@
 // ============================================================
 // BotDev - Événements (bienvenue, départ, auto-rôle)
 // ============================================================
-const { EmbedBuilder } = require('discord.js');
 const ui = require('./ui');
 const store = require('../db');
 const { resolveVariables } = require('./engine');
-const identity = require('./identity');
 const logging = require('./logging');
 
 const EVENT_DEFS = {
@@ -144,82 +142,42 @@ async function runJoinEvent(botId, member, opts = {}) {
           ...(createdTs ? [{ name: '📅 Compte créé', value: `<t:${createdTs}:R>`, inline: true }] : []),
           ...(invitedBy ? [{ name: '🎟️ Invité par', value: invitedBy, inline: true }] : []),
         ];
-        // v236 — 🚨 La carte de bienvenue est une PIÈCE JOINTE envoyée par
-        // webhook (identity.sendAsProfile). Or **Components V2 + webhook +
-        // files = 400 BAD REQUEST** (documentation officielle Discord, ressource
-        // Webhook : « When the flag IS_COMPONENTS_V2 is set, the webhook message
-        // can only contain components. Providing content, embeds, files[n] or
-        // poll will fail »). C'est exactement le piège n°10 qui a fait exclure
-        // xp.js en v232.
-        // → Le panneau reste en embed classique QUAND la carte image est
-        //   activée, et passe en Components V2 SANS carte (réglage par défaut :
-        //   `card` vaut false). Ses paragraphes sont alors séparés par un
-        //   séparateur NATIF pleine largeur au lieu du trait texte ━.
-        // v240 — UNE SEULE branche V2 au lieu de deux rendus différents.
-        //
-        // La seule contrainte : la carte de bienvenue est une PIÈCE JOINTE, et
-        // **V2 + webhook + files = 400 BAD REQUEST** (piège n°10, doc officielle
-        // Discord ressource Webhook). `identity.sendAsProfile()` passe par un
-        // webhook dès qu'un profil d'envoi personnalisé est réglé sur ce
-        // serveur, et par `channel.send()` sinon.
-        //   • pas de carte            → V2, toujours (webhook ou non : pas de file)
-        //   • carte + pas de webhook  → V2 + MediaGallery en `attachment://`
-        //   • carte + webhook         → embed classique, seul cas restant
-        // Dans ce dernier cas on n'ajoute AUCUN trait : un séparateur natif y
-        // est impossible et un trait texte serait court et cassé. Les
-        // paragraphes respirent par des lignes vides, comme partout ailleurs en
-        // mode classique.
-        const viaWebhook = !!((identity.effectiveProfile(botId, member.guild.id) || {}).name);
-        const carteV2 = files.length && !viaWebhook;
+        // v236 — la carte de bienvenue est une PIÈCE JOINTE. **Components V2 +
+        // webhook + files = 400 BAD REQUEST** (piège n°10, doc Discord).
+        // v374 — l'identité par serveur est retirée : plus aucun webhook, tout
+        // passe par le bot lui-même. Le panneau peut donc toujours rester en V2,
+        // avec sa MediaGallery en `attachment://` quand une carte est générée.
         const memberPing = `<@${member.id}>`;
         const mentionOpts = { users: [String(member.id)] };
-        let welcomePayload;
-        if (!files.length || carteV2) {
-          welcomePayload = {
-            ...ui.v2panel({
-              color: cfg.color || '#57F287',
-              author: { name: `${user.tag || user.username || 'Nouveau membre'} vient d'arriver !` },
-              title: `👋 Bienvenue sur ${member.guild.name} !`,
-              content: memberPing,
-              // `text` brut : ui.v2panel découpe lui-même les paragraphes et
-              // pose les séparateurs NATIFS pleine largeur entre eux.
-              description: text,
-              fields: welcomeFields,
-              // 🎴 La carte générée est une pièce jointe → MediaGallery en
-              //    `attachment://` (en V2 une pièce jointe n'apparaît que si un
-              //    composant la référence, piège n°18). Elle contient déjà
-              //    l'avatar et le pseudo en grand : pas de vignette en plus.
-              // 🖼️ Sinon : l'image configurée (URL HTTP), ou l'avatar en vignette.
-              image: carteV2 ? 'attachment://bienvenue.png' : (cfg.image ? String(cfg.image).trim() : ''),
-              thumbnail: !carteV2 && !cfg.image && avatarUrl ? avatarUrl : '',
-              // L'iconURL du pied d'embed n'existe pas en V2 (pied en texte discret).
-              footer: false,
-            }),
-            allowedMentions: mentionOpts,
-            ...(carteV2 ? { files } : {}),
-          };
-        } else {
-          const embed = new EmbedBuilder()
-            .setColor(cfg.color || '#57F287')
-            .setAuthor({ name: `${user.tag || user.username || 'Nouveau membre'} vient d'arriver !` })
-            .setTitle(`👋 Bienvenue sur ${member.guild.name} !`)
-            // Pas de ui.sectionize() : les paragraphes respirent par des lignes
-            // vides. Un trait texte serait court (20 caractères) et s'arrêterait
-            // avant les bords arrondis — exactement le bug corrigé en v240.
-            .setDescription(ui.text(text, 4096))
-            .addFields(...welcomeFields)
-            // v241 — aligné sur le panneau premium : pied signé « Hoxera · … »
-            // et PLUS d'horodatage (Discord affiche déjà l'heure du message).
-            
-            .setImage('attachment://bienvenue.png');
-          welcomePayload = { content: memberPing, embeds: [embed], files, allowedMentions: mentionOpts };
-        }
-        const ok = await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, welcomePayload).then(() => true).catch((e) => { trace('envoi panneau ÉCHOUÉ : ' + e.message); return false; });
+        const welcomePayload = {
+          ...ui.v2panel({
+            color: cfg.color || '#57F287',
+            author: { name: `${user.tag || user.username || 'Nouveau membre'} vient d'arriver !` },
+            title: `👋 Bienvenue sur ${member.guild.name} !`,
+            content: memberPing,
+            // `text` brut : ui.v2panel découpe lui-même les paragraphes et
+            // pose les séparateurs NATIFS pleine largeur entre eux.
+            description: text,
+            fields: welcomeFields,
+            // 🎴 La carte générée est une pièce jointe → MediaGallery en
+            //    `attachment://` (en V2 une pièce jointe n'apparaît que si un
+            //    composant la référence, piège n°18). Elle contient déjà
+            //    l'avatar et le pseudo en grand : pas de vignette en plus.
+            // 🖼️ Sinon : l'image configurée (URL HTTP), ou l'avatar en vignette.
+            image: files.length ? 'attachment://bienvenue.png' : (cfg.image ? String(cfg.image).trim() : ''),
+            thumbnail: !files.length && !cfg.image && avatarUrl ? avatarUrl : '',
+            // L'iconURL du pied d'embed n'existe pas en V2 (pied en texte discret).
+            footer: false,
+          }),
+          allowedMentions: mentionOpts,
+          ...(files.length ? { files } : {}),
+        };
+        const ok = await require('../queue').send(channel, welcomePayload).then(() => true).catch((e) => { trace('envoi panneau ÉCHOUÉ : ' + e.message); return false; });
         trace(ok ? 'panneau premium envoyé ✅' : 'panneau premium NON envoyé ❌ (permissions ?)');
       } else {
         const ping = `<@${member.id}>`;
         const body = String(finalContent || '').includes(ping) ? finalContent : `${ping} ${finalContent}`;
-        const ok = await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { content: body, files, allowedMentions: { users: [String(member.id)] } }).then(() => true).catch((e) => { trace('envoi texte ÉCHOUÉ : ' + e.message); return false; });
+        const ok = await require('../queue').send(channel, { content: body, files, allowedMentions: { users: [String(member.id)] } }).then(() => true).catch((e) => { trace('envoi texte ÉCHOUÉ : ' + e.message); return false; });
         trace(ok ? 'message texte envoyé ✅' : 'message texte NON envoyé ❌');
       }
       await logging.log(botId, member.guild, {
@@ -286,7 +244,7 @@ async function runLeaveEvent(botId, member, opts = {}) {
     // largeur entre les paragraphes. Contrairement à la bienvenue, le départ
     // n'envoie JAMAIS de pièce jointe (pas de carte image) → le webhook + V2 est
     // toujours valable ici, aucun branchement nécessaire.
-    const ok = await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, ui.v2panel({
+    const ok = await require('../queue').send(channel, ui.v2panel({
       color: cfg.color || '#ED4245',
       // 👤 Un seul avatar : porté par l'image ou la vignette, pas en author.
       author: { name: `${user.tag || user.username || 'Un membre'} s'en va…` },
@@ -307,7 +265,7 @@ async function runLeaveEvent(botId, member, opts = {}) {
     })).then(() => true).catch((e) => { trace('envoi ÉCHOUÉ : ' + e.message); return false; });
     trace(ok ? 'panneau de départ envoyé ✅' : 'panneau NON envoyé ❌ (permissions ?)');
   } else {
-    await identity.sendAsProfile(member.client || botRecord, botId, member.guild, channel, { content: finalContent }).catch(() => {});
+    await require('../queue').send(channel, { content: finalContent }).catch(() => {});
   }
   if (opts.test) return; // en test : pas de journal serveur
   await logging.log(botId, member.guild, {

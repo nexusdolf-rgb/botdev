@@ -7,7 +7,6 @@ const store = require('../db');
 const ui = require('./ui');
 // v373 — les journaux signent avec l'identité du serveur (nom et avatar), sinon
 // ils restaient les seuls messages à garder le visage global du bot.
-const identity = require('./identity');
 
 function logChannel(botId, guild) {
   const gs = store.guildSettings.get(botId, guild.id) || {};
@@ -54,7 +53,7 @@ async function log(botId, guild, { title, description = '', color = '#e07a5f', f
     // description sont séparés par des séparateurs NATIFS pleine largeur (avant
     // c'était ui.sectionize(), un trait texte qui s'arrêtait avant les bords).
     // Toutes les troncatures Discord sont conservées à l'identique.
-    await identity.sendAs(botId, channel, ui.v2panel({
+    await channel.send(ui.v2panel({
       color,
       author: { name: `Hoxera · ${String(guild.name || 'Journal du serveur').slice(0, 180)}` },
       title: title.slice(0, 256),

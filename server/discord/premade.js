@@ -114,7 +114,7 @@ const CMD_DEFS = {
 
 // Commandes de configuration enregistrées hors CMD_DEFS (payloads dédiés)
 const ADMIN_COMMAND_NAMES = new Set([
-  'ticket', 'botprofile', 'modlogs', 'blacklist', 'roles',
+  'ticket', 'modlogs', 'blacklist', 'roles',
   'lockdown', 'voicetemp', 'apply', 'event', 'statchannels', 'boostrewards', 'modexport',
 ]);
 
@@ -175,7 +175,7 @@ const HELP_BLOCKS = [
   { title: '📄 Audits & exports (admins)', kind: 'admin', names: ['modexport'] },
   // --- Administration (propriétaire / Administrateur) ---
   { title: '🎫 Tickets & menus de rôles', kind: 'admin', names: ['ticket', 'roles'] },
-  { title: '🤖 Personnalisation du serveur', kind: 'admin', names: ['botprofile', 'modlogs', 'blacklist'] },
+  { title: '⚙️ Configuration du serveur', kind: 'admin', names: ['modlogs', 'blacklist'] },
   // Aide historique : « 🎮 Événements & tournois (admins) » — le bloc actuel
   // regroupe aussi la sécurité (lockdown) et les vocaux temporaires.
   { title: '🚨 Sécurité & événements', kind: 'admin', names: ['lockdown', 'voicetemp', 'apply', 'event'] },
@@ -408,28 +408,6 @@ function buildSlashPayloads(botId) {
       { name: 'remove', description: 'Retirer un membre de ce ticket', type: ApplicationCommandOptionType.Subcommand, options: [
         { name: 'membre', description: 'Le membre à retirer', type: ApplicationCommandOptionType.User, required: true },
       ]},
-    ],
-  });
-
-  payloads.push({
-    name: 'botprofile',
-    description: '🤖 Personnaliser l\'identité du bot sur CE serveur',
-    default_member_permissions: '8',
-    options: [
-      { name: 'setup', description: 'Assistant pas à pas : nom → bio → couleur → avatar → bannière', type: ApplicationCommandOptionType.Subcommand },
-      { name: 'view', description: 'Voir le profil actuel du bot sur ce serveur', type: ApplicationCommandOptionType.Subcommand },
-      { name: 'set', description: 'Définir le nom, la bio et la couleur', type: ApplicationCommandOptionType.Subcommand, options: [
-        { name: 'nom', description: 'Nom affiché par le bot sur ce serveur', type: ApplicationCommandOptionType.String, required: false },
-        { name: 'bio', description: 'Bio affichée sur le profil', type: ApplicationCommandOptionType.String, required: false },
-        { name: 'couleur', description: 'Couleur du profil (ex : #e07a5f)', type: ApplicationCommandOptionType.String, required: false },
-      ]},
-      { name: 'avatar', description: 'Choisir un avatar depuis votre galerie', type: ApplicationCommandOptionType.Subcommand, options: [
-        { name: 'image', description: '📱 La galerie s\'ouvre automatiquement — choisissez votre photo (3 Mo max)', type: ApplicationCommandOptionType.Attachment, required: true },
-      ]},
-      { name: 'banner', description: 'Choisir une bannière depuis votre galerie', type: ApplicationCommandOptionType.Subcommand, options: [
-        { name: 'image', description: '📱 La galerie s\'ouvre automatiquement — choisissez votre photo (3 Mo max)', type: ApplicationCommandOptionType.Attachment, required: true },
-      ]},
-      { name: 'reset', description: 'Retirer l\'identité personnalisée de ce serveur', type: ApplicationCommandOptionType.Subcommand },
     ],
   });
 
@@ -1630,18 +1608,6 @@ const HELP_DETAILS = {
   giveaway: ['🎁 Giveaways', 'Lancez un giveaway : les membres réagissent 🎉, le tirage est automatique.', '`/giveaway create 2h Prix 3` · `/giveaway end` · `/giveaway reroll`', '`/giveaway create 1d 🎁 Clé du jeu 1`'],
   temprole: ['⏳ Rôles temporaires', 'Donnez un rôle pour une durée limitée — retiré automatiquement.', '`/temprole @membre @rôle 2h`', '`/temprole @Membre @VIP 1d`'],
   sanction: ['⚖️ Sanctions', 'Applique une sanction prédéfinie (configurée dans le dashboard).', '`/sanction @membre nom_de_la_sanction`'],
-  botprofile: ['🤖 Identité du bot', 'Personnalisez le bot sur CE serveur : nom, avatar, bannière (depuis votre galerie), bio et couleur. Le bot s\'exprime avec cette identité dans ses messages ici.',
-    '`/botprofile setup` — **Assistant pas à pas** : nom → bio → **sélecteur de couleurs** → avatar (**📱 votre galerie s\'ouvre directement**, envoyez la photo) → bannière (galerie aussi) → ✅ Enregistrer (boutons Suivant/Retour/Annuler)\n`/botprofile view` — voir le profil\n`/botprofile set nom|bio|couleur` — nom, bio, couleur\n`/botprofile avatar` — 📱 la galerie s\'ouvre automatiquement\n`/botprofile banner` — 📱 galerie aussi\n`/botprofile reset` — revenir à l\'identité globale\n\n🔒 Réservé au **propriétaire du serveur** ou à un membre ayant la permission **Administrateur**'],
-  modlogs: ['📋 Journaux', 'Un salon où le bot trace tout : modération, tickets, auto-mod, arrivées et départs.',
-    '`/modlogs set #salon` — activer\n`/modlogs view` — voir\n`/modlogs off` — désactiver'],
-  modexport: ['📄 Export des sanctions', "Tout l'historique de modération (date, membre, modérateur, origine, action, raison) exporté en un fichier : CSV pour Excel (accents conservés) ou HTML pour le navigateur. Utile pour un passage de staff, un recours ou un audit. Le fichier est remis en main propre (message éphémère).",
-    '`/modexport format:csv` — export tableur\n`/modexport format:html membre:@X` — export navigateur pour un membre\n\n🔒 Réservé au **propriétaire du serveur** ou aux membres ayant la permission **Administrateur**'],
-  boostrewards: ['🚀 Récompenses boosters', "Chaque membre qui booste le serveur avec Nitro reçoit automatiquement un rôle de remerciement, et un message de remerciement part dans le salon choisi. Quand le boost s'arrête, le rôle est retiré tout seul.",
-    "`/boostrewards action:setup role:@Rôle salon:#salon message:Texte` — activer ({membre} = mention dans le message)\n`/boostrewards action:sync` — donner le rôle aux boosteurs actuels\n`/boostrewards action:view` — voir l'état\n`/boostrewards action:off` — désactiver\n\n🔒 Réservé au **propriétaire du serveur** ou aux membres ayant la permission **Administrateur**"],
-  statchannels: ['📊 Compteurs vocaux', 'Une catégorie verrouillée avec trois salons vocaux impossibles à rejoindre dont les noms affichent les statistiques en direct : membres, membres en ligne, boosts. Mise à jour automatique dès que le chiffre change.',
-    "`/statchannels action:setup` — créer la catégorie et les salons\n`/statchannels action:view` — voir l'état et les chiffres actuels\n`/statchannels action:off` — supprimer la catégorie et les salons\n\n🔒 Réservé au **propriétaire du serveur** ou aux membres ayant la permission **Administrateur**"],
-  blacklist: ['🔇 Liste noire', 'Des mots interdits : les messages qui les contiennent sont supprimés automatiquement.',
-    '`/blacklist add mot` · `/blacklist remove mot` · `/blacklist list`'],
 };
 
 function helpDescription() {
@@ -1751,7 +1717,7 @@ function buildHelpPanel(botId, record, client, guild, requested, member, view = 
   if (requested) {
     const key = requested.toLowerCase().replace(/^\//, '');
     const detail = DETAILS[key];
-    const available = ['ticket', 'roles', 'botprofile', 'modlogs', 'blacklist'].includes(key) || enabledCommandNames(botId).includes(key) || !!DETAILS[key];
+    const available = ['ticket', 'roles', 'modlogs', 'blacklist'].includes(key) || enabledCommandNames(botId).includes(key) || !!DETAILS[key];
     if (detail && available) {
       // 🔒 Le détail d'une commande staff n'est pas divulgué aux non-staff.
       if (guild && member && !canViewCommandName(key, guild, member)) {

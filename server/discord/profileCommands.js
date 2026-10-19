@@ -1,15 +1,12 @@
 // ============================================================
-// BotDev - Commandes Discord du panneau d'identité du bot
-//   /botprofile  → identité du bot sur CE serveur (nom, avatar, bannière, bio, couleur)
+// BotDev - Commandes Discord de configuration du serveur
 //   /modlogs     → salon des journaux de modération
 //   /blacklist   → liste noire de mots
+// (v374 — /botprofile et l'identité par serveur sont retirés.)
 // Permissions : propriétaire ou Administrateur sur le serveur concerné.
 // ============================================================
 const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
 const store = require('../db');
-const assets = require('../assets');
-const imgproxy = require('../imgproxy');
-const identity = require('./identity');
 const { canConfigureGuild } = require('./permissions');
 // v229 : grammaire des sections (traits ━) pour les accusés de réception texte.
 const ui = require('./ui');
@@ -30,99 +27,6 @@ async function handleProfileCommand(botId, interaction) {
   const guild = interaction.guild;
   const sub = interaction.options.getSubcommand();
   const botRecord = store.bots.get(botId);
-
-  if (interaction.commandName === 'botprofile') {
-    if (!isAdmin(interaction)) {
-      return interaction.reply({ content: '⛔ Seul le **propriétaire du serveur** ou un membre ayant la permission Discord **Administrateur** peut personnaliser l\'identité du bot.', ephemeral: true });
-    }
-    if (sub === 'setup') {
-      const { startProfileWizard } = require('./profileWizard');
-      return startProfileWizard(botId, interaction);
-    }
-    const p = store.botProfiles.get(botId, guild.id) || {};
-
-    if (sub === 'view') {
-      // v373 — si le bot ne peut pas créer de webhook ici (permission « Gérer
-      // les webhooks »), l'identité enregistrée ne s'appliquera jamais. Avant,
-      // rien ne le disait : le réglage semblait enregistré mais restait muet.
-      const etat = await identity.identityStatus(interaction.client, botId, guild);
-      const payload = { embeds: [identity.buildProfileEmbed(botId, guild.id, botRecord)] };
-      if (etat.configured && !etat.webhook) {
-        payload.content = '⚠️ L’identité est bien enregistrée, mais le bot n’a pas la permission **Gérer les webhooks** dans un salon textuel : sans elle, il ne peut pas écrire sous ce nom. Accordez-lui cette permission, puis renvoyez `/botprofile view`.';
-      }
-      return interaction.reply(payload);
-    }
-
-    if (sub === 'set') {
-      const name = interaction.options.getString('nom');
-      const bio = interaction.options.getString('bio');
-      const color = interaction.options.getString('couleur');
-      if (!name && !bio && !color) return interaction.reply({ content: '❌ Précisez au moins un élément (nom, bio ou couleur).', ephemeral: true });
-      if (name) p.name = name;
-      if (bio) p.bio = bio;
-      if (color) {
-        if (!/^#[0-9a-fA-F]{6}$/.test(color)) return interaction.reply({ content: '❌ Couleur au format hexadécimal : #e07a5f', ephemeral: true });
-        p.color = color;
-      }
-      store.botProfiles.set(botId, guild.id, p);
-      return interaction.reply(
-        // v236 — accusé de réception en Components V2 : les paragraphes sont
-        // séparés par des séparateurs NATIFS pleine largeur (avant : trait texte ━
-        // via ui.sectionize, qui s'arrêtait avant les bords arrondis).
-        // `footer: false` : ces messages courts n'avaient pas de pied.
-        ui.v2panel({
-          description: '✅ Identité mise à jour !\n\n📛 Nom : **' + (p.name || botRecord.name) + '**\n🎨 Couleur : ' + p.color + '\n📝 Bio : ' + (p.bio ? 'définie' : 'aucune') + '\n\nContinue avec `/botprofile avatar` et `/botprofile banner` pour les images.',
-          footer: false,
-          ephemeral: true,
-        }));
-    }
-
-    if (sub === 'avatar' || sub === 'banner') {
-      const file = interaction.options.getAttachment('image');
-      if (!file) return interaction.reply({ content: '❌ Joignez une image : touchez l\'option « image », votre galerie s\'ouvre automatiquement.', ephemeral: true });
-      if (file.size > 3 * 1024 * 1024) return interaction.reply({ content: '❌ Image trop lourde (3 Mo max).', ephemeral: true });
-      // 📥 On répond immédiatement « en cours » : le téléchargement peut prendre
-      // quelques secondes, sinon Discord affiche « l\'application ne répond plus ».
-      try { await interaction.deferReply({ ephemeral: true }); } catch {}
-      // Un assistant est en cours ? → on applique la photo directement à l'étape
-      try {
-        const { applyAttachmentToWizard } = require('./profileWizard');
-        const applied = await applyAttachmentToWizard(botId, guild.id, interaction.user.id, sub, file.url, file.contentType || 'image/png', file.size || 0);
-        if (applied) {
-          return interaction.editReply({ content: `✅ Photo appliquée à l\'assistant ! Continuez avec « Suivant ➡️ » ou envoyez la suite.` });
-        }
-      } catch (e) {
-        return interaction.editReply({ content: `⚠️ ${e.message.slice(0, 120)}` });
-      }
-      try {
-        const downloaded = await imgproxy.fetchDiscordImage(String(file.url || ''));
-        if (!downloaded) return interaction.editReply({ content: '⚠️ Image Discord non autorisée, indisponible ou trop lourde.' });
-        const buf = downloaded.buffer;
-        if (!buf.length || buf.length > 3 * 1024 * 1024) return interaction.editReply({ content: '❌ Image trop lourde (3 Mo max).' });
-        const key = await assets.put(buf, downloaded.type);
-        if (sub === 'avatar') p.avatar_url = `/assets/${key}`;
-        else p.banner_url = `/assets/${key}`;
-        store.botProfiles.set(botId, guild.id, p);
-        // v236 — Components V2 : séparateur NATIF pleine largeur entre les 2
-        // paragraphes. `content: null` car le message édité pouvait en porter un.
-        return interaction.editReply({
-          ...ui.v2panel({
-            description: `✅ ${sub === 'avatar' ? 'Avatar' : 'Bannière'} enregistré ! Le bot utilisera cette identité sur ce serveur.\n\nVérifie avec \`/botprofile view\`.`,
-            footer: false,
-          }),
-          content: null, embeds: [],
-        });
-      } catch (e) {
-        return interaction.editReply({ content: `⚠️ Impossible de récupérer l\'image : ${e.message.slice(0, 120)}` });
-      }
-    }
-
-    if (sub === 'reset') {
-      store.botProfiles.remove(botId, guild.id);
-      return interaction.reply({ content: '♻️ Identité personnalisée supprimée — le bot reprend son identité globale sur ce serveur.', ephemeral: true });
-    }
-    return interaction.reply({ content: '❓ Sous-commande inconnue.', ephemeral: true });
-  }
 
   // ---------------------- /modlogs ----------------------
   if (interaction.commandName === 'modlogs') {

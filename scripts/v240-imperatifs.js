@@ -67,7 +67,6 @@ const LOT = [
   ['server/discord/panelCommands.js', 'Supprime : /ticket types remove', 'Supprimez : /ticket types remove'],
   ['server/discord/panelCommands.js', 'Modifie tout avec /ticket setup', 'Modifiez tout avec /ticket setup'],
   ['server/discord/profileCommands.js', 'Modifie : `/modlogs set #salon` · Désactive : `/modlogs off`', 'Modifiez : `/modlogs set #salon` · Désactivez : `/modlogs off`'],
-  ['server/discord/identity.js', 'Personnalise avec /botprofile set · avatar · banner · reset', 'Personnalisez avec /botprofile set · avatar · banner · reset'],
   ['server/discord/roleWizard.js', 'Modifie-le à tout moment avec /roles edit.', 'Modifiez-le à tout moment avec /roles edit.'],
   ['server/discord/guildEvents.js', 'Crée des événements datés (tournois, events, soirées…)', 'Créez des événements datés (tournois, events, soirées…)'],
   ['server/discord/guildEvents.js', 'pour en supprimer un, note son **ID**', 'pour en supprimer un, notez son **ID**'],
