@@ -52,7 +52,7 @@ const check = (label, cond) => {
     'daily', 'balance', 'leaderboard',            // économie
     'rank', 'levels',                             // niveaux
     'giveaway', 'suggest', 'shop', 'buy', 'temprole', 'sanction', // communauté
-    'ticket', 'roles', 'botprofile', 'modlogs', 'blacklist',      // configuration
+    'ticket', 'roles', 'modlogs', 'blacklist',                    // configuration
     'marry', 'divorce', 'couple', 'hug', 'rps', 'pendu', 'morpion', 'poll', 'snipe', 'work', 'gamble', 'rob', 'lockdown', 'voicetemp', 'apply', 'birthday', 'remind', // Hoxera 2.0
   ].every((n) => names.includes(n)));
   check('total ~59 commandes globales', names.length >= 50 && names.length <= 90);
@@ -130,12 +130,12 @@ const check = (label, cond) => {
   await panels.dispatchPanels(botId, dmTicket);
   check('MP : /ticket répond poliment', polite(dmTicket));
 
-  // profil (/botprofile en MP)
+  // configuration (/modlogs en MP)
   const { handleProfileCommand } = require('../server/discord/profileCommands');
-  const dmProfile = makeDMI({ isChat: true, commandName: 'botprofile' });
-  dmProfile.options.getSubcommand = () => 'setup';
-  await handleProfileCommand(botId, dmProfile);
-  check('MP : /botprofile répond poliment', polite(dmProfile));
+  const dmLogs = makeDMI({ isChat: true, commandName: 'modlogs' });
+  dmLogs.options.getSubcommand = () => 'view';
+  await handleProfileCommand(botId, dmLogs);
+  check('MP : /modlogs répond poliment', polite(dmLogs));
 
   store.db.close();
   console.log(failures === 0 ? '\n✅ V42 — TOUTES les commandes globales, protections anti-limite et gardes MP : 100 % vérifiés. 🎉' : `\n❌ ${failures} vérification(s) en échec`);

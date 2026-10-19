@@ -10,7 +10,7 @@ process.env.BOTDEV_DATA_DIR = DATA_DIR;
 
 const store = require('../server/db');
 const xpEngine = require('../server/discord/xp');
-const identity = require('../server/discord/identity');
+const queue = require('../server/queue');
 const { runAutomod } = require('../server/discord/automod');
 const { buildSlashPayloads, buildHelpPanel } = require('../server/discord/premade');
 
@@ -31,7 +31,8 @@ console.log('1️⃣  Maths XP validées ✅');
 
   let sent = null;
   // Capturer le payload final sans démarrer de webhook ni Discord réel.
-  identity.sendAsProfile = async (...args) => { sent = args[4]; return true; };
+  // v374 — tout passe par la file d'attente : send(salon, payload).
+  queue.send = async (target, payload) => { sent = payload; return true; };
   const guild = {
     id: 'G1', name: 'Serveur Test',
     roles: { cache: { get: () => undefined, find: () => undefined } },

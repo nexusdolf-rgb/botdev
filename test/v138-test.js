@@ -34,7 +34,7 @@ w.Dashboard.renderSide(aside);
 assert(aside.querySelector('.dash-side-brand'), 'marque du bot dans la sidebar');
 assert(aside.querySelector('.dash-side-brand-copy').textContent.includes('Control Center'));
 assert(aside.querySelector('.dash-global-admin'), 'administration globale conservée');
-assert(w.Dashboard.MODULES.some(([id]) => id === 'botprofile'), 'identité du bot dans la gestion serveur');
+assert(w.Dashboard.MODULES.some(([id]) => id === 'tickets'), 'gestion serveur toujours peuplée');
 console.log('2️⃣  Sidebar : marque, serveur et navigation structurée sans casser les modules ✅');
 
 const source = fs.readFileSync('public/js/dashboard.js', 'utf8');

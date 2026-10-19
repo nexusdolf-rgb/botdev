@@ -204,12 +204,10 @@ async function main() {
   // 1ʳᵉ personne : « je sais » ne doit pas devenir « je savez ».
   check('concordance : « je sais » préservé (1ʳᵉ personne)',
     src('server/discord/premade.js').includes('tout ce que je sais faire'));
-  // 3ᵉ personne : « le bot continue de tourner », « la galerie s'ouvre ».
+  // 3ᵉ personne : « le bot continue de tourner ».
   const dashSrc = src('public/js/dashboard.js');
   check('concordance : « le bot continue de tourner » préservé (3ᵉ personne)',
     dashSrc.includes('le bot continue de tourner'));
-  check('concordance : « la galerie s\u2019ouvre » préservé (réfléchi)',
-    /galerie s\\?'ouvre automatiquement/.test(src('server/discord/premade.js')));
   check('concordance : « Blacklist active » préservé (adjectif)',
     src('server/discord/automod.js').includes('Blacklist active sur ce serveur'));
   check('concordance : « un membre quitte le serveur » préservé (3ᵉ personne)',
@@ -390,16 +388,12 @@ async function main() {
     .filter((l) => !/^\s*(?:\/\/|\*|\/\*)/.test(l) && l.includes('ui.sectionize(')).length;
   check('events.js : PLUS AUCUN appel ui.sectionize hors commentaire',
     appelsSectionize === 0, `${appelsSectionize} appel(s)`);
-  check('events.js : le webhook est détecté via le profil d\u2019envoi',
-    evSrc.includes('const viaWebhook = !!((identity.effectiveProfile(botId, member.guild.id) || {}).name);'));
-  check('events.js : la carte ne force l\u2019embed classique QUE si webhook',
-    evSrc.includes('const carteV2 = files.length && !viaWebhook;')
-    && evSrc.includes('if (!files.length || carteV2) {'));
+  check('events.js : plus de branche webhook (v374)',
+    !evSrc.includes('viaWebhook') && !evSrc.includes('identity.'));
   check('events.js : la carte passe en MediaGallery attachment://',
-    evSrc.includes("image: carteV2 ? 'attachment://bienvenue.png'"));
-  check('events.js : le rendu classique n\u2019a AUCUN trait texte',
-    evSrc.includes('.setDescription(ui.text(text, 4096))')
-    && !/setDescription\([^)]*SEPARATOR/.test(evSrc));
+    evSrc.includes("image: files.length ? 'attachment://bienvenue.png'"));
+  check('events.js : aucun rendu embed classique ne subsiste',
+    !evSrc.includes('.setDescription(') && !evSrc.includes('embeds: [embed]'));
 
   // ---- Rendu réel, sans carte : V2 + séparateurs natifs -------------------
   // Un vrai bot en base : runJoinEvent lit store.bots.get(botId), et render()
@@ -453,26 +447,9 @@ async function main() {
     check('carte sans webhook : séparateurs natifs, AUCUN trait texte ━',
       carte && v2.dividers(carte) >= 1 && !v2.json(carte).includes('━'));
 
-    // ---- AVEC carte ET webhook (profil d'envoi) : embed classique obligatoire
-    store.botProfiles.set(BOT, GUILD, { name: 'Hoxera Support' });
-    check('le profil d\u2019envoi est bien vu comme un chemin webhook',
-      !!require('../server/discord/identity').effectiveProfile(BOT, GUILD));
-    sentPayloads = [];
-    await events.runJoinEvent(BOT, member(), { test: true });
-    // ⚠️ L'arrivée écrit AUSSI une ligne dans le journal (logging.js) et le
-    // salon mocké est le même : on cible l'embed de BIENVENUE, pas le premier.
-    const classique = sentPayloads.find((p) => p && Array.isArray(p.embeds) && p.embeds.length
-      && JSON.stringify(p.embeds).includes('Bienvenue sur'));
-    check('carte + webhook : embed classique conservé (V2 + webhook + files = 400)',
-      !!classique && !!classique.files && classique.files.length === 1);
-    const descEmbed = classique
-      ? String((classique.embeds[0].toJSON ? classique.embeds[0].toJSON() : classique.embeds[0]).description || '')
-      : '';
-    check('carte + webhook : AUCUN trait texte ━ dans la description',
-      classique && !descEmbed.includes('━'));
-    check('carte + webhook : les paragraphes respirent (saut de ligne conservé)',
-      classique && descEmbed.includes('\n\n'), JSON.stringify(descEmbed.slice(0, 70)));
-    store.botProfiles.remove(BOT, GUILD);
+    // ---- v374 : plus de profil d'envoi, donc plus de cas « embed classique »
+    check('plus aucun profil d\u2019envoi : le payload reste en V2 même avec la carte',
+      !!carte && v2.isV2(carte));
   } finally {
     community.welcomeCard = welcomeCardReel;
   }
@@ -549,9 +526,9 @@ async function main() {
 
   const index = src('public/index.html');
   const sw = src('public/sw.js');
-  check('index.html : ?v=373 référencé 7 fois', (index.match(/\?v=373/g) || []).length === 7,
-    `trouvé ${(index.match(/\?v=373/g) || []).length}`);
-  check("sw.js : cache 'botdev-v373'", sw.includes("const CACHE = 'botdev-v373';"));
+  check('index.html : ?v=374 référencé 7 fois', (index.match(/\?v=374/g) || []).length === 7,
+    `trouvé ${(index.match(/\?v=374/g) || []).length}`);
+  check("sw.js : cache 'botdev-v374'", sw.includes("const CACHE = 'botdev-v374';"));
   check('index.html : plus aucun ?v=239', !/\?v=239/.test(index));
 }
 

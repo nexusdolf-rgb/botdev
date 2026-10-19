@@ -27,7 +27,7 @@ function makeWorld() {
   const membersMap = new Map();
 
   const mkRole = (id, name, position = 5) => {
-    const r = { id, name, position, hexColor: '#5865F2', toString: () => `@${name}` };
+    const r = { id, name, position, hexColor: '#5865F2', managed: false, toString: () => `@${name}` };
     rolesMap.set(id, r);
     return r;
   };
@@ -90,7 +90,12 @@ function makeWorld() {
       fetch: async (id) => membersMap.get(id) || null,
       me: { roles: { highest: { position: 100 } } },
     },
-    bans: { remove: async () => ({}) },
+    bans: {
+      remove: async () => ({}),
+      create: async () => ({}),
+      fetch: async () => new Map([['u9', { user: { id: 'u9', tag: 'Tricheur#0001' }, reason: 'raid' }]]),
+    },
+    presences: { cache: { size: 2 } },
   };
 
   const mkI = (over = {}) => {
@@ -178,6 +183,10 @@ const okReply = (i) => {
     ['kick', { utilisateur: u2 }], ['ban', { utilisateur: u2 }], ['unban', { string: { identifiant: '123456789012345678' } }],
     ['timeout', { utilisateur: u2, int: { minutes: 5 } }], ['warn', { utilisateur: u2, string: { raison: 'test' } }], ['warns', { utilisateur: u2 }],
     ['clear', { int: { nombre: 5 } }], ['daily', {}], ['balance', {}], ['leaderboard', {}],
+    // v374 — commandes ajoutées
+    ['unmute', { utilisateur: u2, string: { raison: 'erreur' } }], ['softban', { utilisateur: u2, int: { jours: 1 } }],
+    ['banlist', {}], ['roleadd', { utilisateur: u2, role: W.roleStaff }], ['roleremove', { utilisateur: u2, role: W.roleMembre }],
+    ['membercount', {}], ['announce', { channel: W.chGeneral, string: { message: 'Grand tournoi ce soir !', titre: 'Tournoi' } }],
   ];
   for (const [name, opts] of PREMADE) {
     tested++;
@@ -256,13 +265,10 @@ const okReply = (i) => {
   }
 
   // ============================================================
-  // 4. Commandes de profil (/botprofile, /modlogs, /blacklist)
+  // 4. Commandes de configuration (/modlogs, /blacklist)
   // ============================================================
-  console.log('\n── Commandes de profil & configuration ──');
+  console.log('\n── Commandes de configuration ──');
   const PROFILE = [
-    ['botprofile', { sub: 'view' }], ['botprofile', { sub: 'set', string: { nom: 'Hoxera' } }],
-    ['botprofile', { sub: 'reset' }], ['botprofile', { sub: 'setup' }],
-    ['botprofile', { sub: 'avatar', attachment: { size: 10 * 1024 * 1024, url: 'https://x', contentType: 'image/png' } }],
     ['modlogs', { sub: 'view' }], ['modlogs', { sub: 'off' }], ['modlogs', { sub: 'set', channel: W.chGeneral }],
     ['blacklist', { sub: 'list' }], ['blacklist', { sub: 'add', string: { mot: 'spamtest' } }], ['blacklist', { sub: 'remove', string: { mot: 'spamtest' } }],
   ];
@@ -271,7 +277,7 @@ const okReply = (i) => {
     const i = W.mkI({ isChat: true, commandName: name, opts });
     let crashed = false;
     try { await handleProfileCommand(BOT, i); } catch (e) { crashed = true; console.log(`   💥 /${name} ${opts.sub}:`, e.message); }
-    check(`profil /${name} ${opts.sub} : répond sans crash`, !crashed && okReply(i));
+    check(`config /${name} ${opts.sub} : répond sans crash`, !crashed && okReply(i));
   }
 
   // ============================================================

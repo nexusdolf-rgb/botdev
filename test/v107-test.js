@@ -16,8 +16,8 @@ assert.ok(ev.includes("u.tag || u.username || 'un membre'"), 'repli de pseudo pr
 console.log('✅ membre partiel au départ : aucun crash possible');
 
 // 3. Panneau de bienvenue PREMIUM : tous les éléments pro
-for (const marker of ['setAuthor', 'Bienvenue sur ${member.guild.name}', '👥 Membre n°', '📅 Compte créé', '🎟️ Invité par', // v236 — la branche V2 porte la vignette via l'option `thumbnail:` du conteneur.
-  'thumbnail: !cfg.image && avatarUrl']) {
+for (const marker of ['author: { name:', 'Bienvenue sur ${member.guild.name}', '👥 Membre n°', '📅 Compte créé', '🎟️ Invité par', // v374 — une seule branche V2 : la vignette est l'option `thumbnail:` du conteneur.
+  'thumbnail: !files.length && !cfg.image && avatarUrl']) {
   assert.ok(ev.includes(marker), `bienvenue premium : ${marker}`);
 }
 // v241 — l'horodatage est retiré de TOUS les panneaux (Discord affiche déjà

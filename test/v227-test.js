@@ -1,23 +1,20 @@
-// Test v2.27 — Identité du bot PAR SERVEUR : garanties d'isolation.
-// Objectifs (bug remonté « l'identité par serveur ne marche pas / la photo
-// ne s'affiche pas pareil pour la bannière et le nom ») :
-//  1. Un profil d'un serveur ne touche JAMAIS les autres serveurs ni le bot
-//     global (nom/avatar/bannière globaux intacts).
-//  2. Résolution à l'envoi : alias actif > profil principal > bot global.
-//  3. absoluteUrl : chemin relatif /assets/… -> URL publique complète.
-//  4. La page « Identité du bot » du dashboard affiche désormais un aperçu
-//     unique (photo + bannière + nom) et la PHOTO sur le « profil principal ».
+// Test v2.27 — Identité du bot PAR SERVEUR (RETIRÉE en v374).
+// -----------------------------------------------------------------
+// La banque d'origine vérifiait l'isolation d'un profil par serveur et la
+// résolution « alias actif > profil principal > bot global ». En v374 tout le
+// système est retiré : ce qui reste à garantir, c'est que le bot global n'est
+// jamais modifié par aucun code du projet, et que plus rien n'écrit d'identité
+// locale.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const assert = require('assert');
 
-const DATA_DIR = path.join(os.tmpdir(), `botdev-v228-${Date.now()}`);
+const DATA_DIR = path.join(os.tmpdir(), `botdev-v227-${Date.now()}`);
 fs.mkdirSync(DATA_DIR, { recursive: true });
 process.env.BOTDEV_DATA_DIR = DATA_DIR;
 
 const store = require('../server/db');
-const identity = require('../server/discord/identity');
 
 let failures = 0;
 function check(name, ok) {
@@ -32,66 +29,53 @@ const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
   const uid = store.users.create('discord:v227@discord.botdev', 'x', {});
   const BOT = store.bots.create({ user_id: uid, name: 'Hoxera Global', token: 'T', client_id: '1', prefix: '!' });
 
-  // ---------- 1. Isolation PAR SERVEUR ----------
-  console.log('\n1) Un serveur ne change jamais les autres ni le bot global');
+  // ---------- 1. Plus aucun réglage d'identité locale ----------
+  console.log('\n1) Aucun réglage d’identité locale ne subsiste');
+  check('botProfiles absent du store', !('botProfiles' in store));
+  check('profileAliases absent du store', !('profileAliases' in store));
+  check('profileState absent du store', !('profileState' in store));
+  check('identity.js supprimé', !fs.existsSync(path.join(__dirname, '../server/discord/identity.js')));
+  check('profileCommands.js ne traite plus /botprofile', !read('server/discord/profileCommands.js').includes("commandName === 'botprofile'"));
+
+  // ---------- 2. Le bot global n'est jamais modifié ----------
+  console.log('\n2) Le bot global reste intact');
   const globalNameBefore = store.bots.get(BOT).name;
   const globalAvatarBefore = store.bots.get(BOT).avatar_url || '';
-  store.botProfiles.set(BOT, 'G1', { name: 'Hoxera du Serveur 1', bio: 'bio 1', avatar_url: '/assets/a.png', banner_url: '/assets/b.png', color: '#e07a5f' });
-  store.botProfiles.set(BOT, 'G2', { name: 'Hoxera du Serveur 2', bio: 'bio 2', color: '#57F287' });
-  check('profil G1 = Hoxera du Serveur 1', (store.botProfiles.get(BOT, 'G1') || {}).name === 'Hoxera du Serveur 1');
-  check('profil G2 = Hoxera du Serveur 2', (store.botProfiles.get(BOT, 'G2') || {}).name === 'Hoxera du Serveur 2');
-  check('les deux serveurs sont indépendants', (store.botProfiles.get(BOT, 'G1') || {}).name !== (store.botProfiles.get(BOT, 'G2') || {}).name);
   check('le nom GLOBAL du bot n’a pas changé', store.bots.get(BOT).name === globalNameBefore);
   check('l’avatar GLOBAL du bot n’a pas changé', (store.bots.get(BOT).avatar_url || '') === globalAvatarBefore);
 
-  // Supprimer G1 ne doit pas toucher G2
-  store.botProfiles.remove(BOT, 'G1');
-  check('suppression G1 → G2 intact', !store.botProfiles.get(BOT, 'G1') && (store.botProfiles.get(BOT, 'G2') || {}).name === 'Hoxera du Serveur 2');
-  // Aucun appel global dans identity.js (jamais de modification de l’application)
-  const idSrc = read('server/discord/identity.js');
-  check('identity.js ne modifie jamais le bot global', !idSrc.includes('setAvatar') && !idSrc.includes('users/@me') && !idSrc.includes('applications/@me'));
+  // Aucun code du serveur ne renomme l'application Discord ni son avatar.
+  const fichiers = [];
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(path.join(__dirname, '..', dir), { withFileTypes: true })) {
+      if (e.name === 'node_modules') continue;
+      const rel = path.join(dir, e.name);
+      if (e.isDirectory()) walk(rel);
+      else if (e.name.endsWith('.js')) fichiers.push(rel);
+    }
+  };
+  walk('server');
+  const coupables = fichiers.filter((f) => {
+    const src = read(f);
+    // Un PATCH sur l'application avec un nom ou un avatar = renommage global.
+    return /patch\(['\"]\/applications\/@me['\"],\s*\{?\s*body:\s*\{[^}]*\b(name|avatar)\b/.test(src)
+      || /patch\(['\"]\/users\/@me['\"],\s*\{?\s*body:\s*\{[^}]*\b(username|avatar)\b/.test(src);
+  });
+  check('aucun fichier serveur ne renomme le bot global', coupables.length === 0);
 
-  // ---------- 2. Résolution à l’envoi : alias actif > principal > global ----------
-  console.log('\n2) Résolution de l’identité effective');
-  store.botProfiles.set(BOT, 'G1', { name: 'Principal G1', avatar_url: '/assets/principal.png', banner_url: '', bio: '', color: '#e07a5f' });
-  const alias = store.profileAliases.create(BOT, 'G1', { name: 'Support', avatar_url: '' });
-  store.profileState.setActive(BOT, 'G1', 0);
-  const effPrincipal = identity.effectiveProfile(BOT, 'G1');
-  check('aucun alias actif → profil principal', effPrincipal && effPrincipal.name === 'Principal G1');
-  store.profileState.setActive(BOT, 'G1', alias);
-  const effAlias = identity.effectiveProfile(BOT, 'G1');
-  check('alias actif → nom de l’alias', effAlias && effAlias.name === 'Support');
-  check('alias sans image → repli avatar du profil principal', effAlias && effAlias.avatar_url === '/assets/principal.png');
-  store.profileAliases.setAvatar(alias, '/assets/alias.png');
-  const effAliasImg = identity.effectiveProfile(BOT, 'G1');
-  check('alias avec image → avatar de l’alias', effAliasImg && effAliasImg.avatar_url === '/assets/alias.png');
-  store.botProfiles.remove(BOT, 'G3');
-  check('serveur sans profil → null (identité globale du bot)', identity.effectiveProfile(BOT, 'G3') === null);
-
-  // ---------- 3. absoluteUrl ----------
-  console.log('\n3) absoluteUrl : des chemins /assets/… aux URLs publiques');
-  store.settings.set('public_url', '');
-  check('sans public_url, relatif → vide (envoi global, jamais cassant)', identity.absoluteUrl('/assets/x.png') === '');
-  store.settings.set('public_url', 'https://hoxera.is-a.dev');
-  check('relatif préfixé par le site', identity.absoluteUrl('/assets/x.png') === 'https://hoxera.is-a.dev/assets/x.png');
-  check('URL absolue conservée telle quelle', identity.absoluteUrl('https://cdn.discordapp.com/a.png') === 'https://cdn.discordapp.com/a.png');
-  check('vide → vide', identity.absoluteUrl('') === '');
-
-  // ---------- 4. Page « Identité du bot » du dashboard ----------
-  console.log('\n4) Dashboard : aperçu vivant photo + bannière + nom, photo sur « profil principal »');
+  // ---------- 3. Le front ne parle plus d'identité par serveur ----------
+  console.log('\n3) Le dashboard ne propose plus de régler l’identité');
   const dash = read('public/js/dashboard.js');
-  check('aperçu vivant (#bp-live)', dash.includes('#bp-live') || dash.includes('"bp-live"'));
-  check('la carte d’aperçu combine bannière et photo', dash.includes('height:120px') && dash.includes('border-radius:50%'));
-  check('le profil principal affiche sa PHOTO dans « qui signe »', dash.includes('abs(c.avatar)') && dash.includes("this.style.display='none'"));
-  check('rappel visuel « uniquement / jamais global »', dash.includes('jamais ailleurs') || dash.includes('ne modifie jamais le bot global'));
-  check('anciennes tuiles conservées (avatar/bannière)', dash.includes('Avatar global utilisé') && dash.includes('Aucune bannière personnalisée'));
+  check('plus d’aperçu #bp-live', !dash.includes('bp-live'));
+  check('plus de section botprofile', !dash.includes("data-go=\"botprofile\""));
+  check('plus de renderer botprofile', !/Dashboard\.renderers\.botprofile\s*=/.test(dash));
 
-  // Versionnage front cohérent (v227)
+  // Versionnage front cohérent
   const indexHtml = read('public/index.html');
   const swSource = read('public/sw.js');
-  check('index.html : 7 références ?v=373', (indexHtml.match(/\?v=373/g) || []).length === 7);
-  check('sw.js : cache v227', swSource.includes("const CACHE = 'botdev-v373';"));
+  check('index.html : 7 références ?v=374', (indexHtml.match(/\?v=374/g) || []).length === 7);
+  check('sw.js : cache v373', swSource.includes("const CACHE = 'botdev-v374';"));
 
-  console.log(failures === 0 ? '\n✅ V227 — Identité par serveur isolée, jamais globale ; dashboard cohérent. 🎉' : `\n❌ ${failures} vérification(s) en échec`);
+  console.log(failures === 0 ? '\n✅ V227 — plus d’identité locale, bot global intact. 🎉' : `\n❌ ${failures} vérification(s) en échec`);
   process.exit(failures === 0 ? 0 : 1);
 })().catch((e) => { console.error(e); process.exit(1); });

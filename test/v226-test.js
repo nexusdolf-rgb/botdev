@@ -55,7 +55,7 @@ const helpCtx = { prefix: '!' };
 
   // ---------- 1. Classification ----------
   console.log('\n1) Classification public / staff / admin');
-  const ADMIN_NAMES = ['ticket', 'botprofile', 'modlogs', 'blacklist', 'roles', 'lockdown', 'voicetemp', 'apply', 'event', 'lang', 'say', 'giveaway', 'suggestions'];
+  const ADMIN_NAMES = ['ticket', 'modlogs', 'blacklist', 'roles', 'lockdown', 'voicetemp', 'apply', 'event', 'lang', 'say', 'giveaway', 'suggestions'];
   // v295 : /suggest (et /poll) rejoignent le staff — plus visibles aux membres
   const STAFF_NAMES = ['kick', 'ban', 'unban', 'timeout', 'warn', 'warns', 'clear', 'sanction', 'temprole', 'suggest', 'poll'];
   const PUBLIC_NAMES = ['ping', '8ball', 'meme', 'marry', 'quiz', 'daily', 'help'];
@@ -130,14 +130,14 @@ const helpCtx = { prefix: '!' };
 
   // Vue complete (sans contexte membre) : conserve l'ancienne semantique
   const full = premade.buildHelpPanel(BOT, helpCtx, { user: clientUser }, null, null, null);
-  check('sans contexte : Personnalisation du serveur presente', hasField(full, 'Personnalisation du serveur'));
+  check('sans contexte : Personnalisation du serveur presente', hasField(full, 'Configuration du serveur'));
   check('sans contexte : bloc moderation present', hasField(full, 'Modération & sanctions'));
   check('sans contexte : bloc tickets present', hasField(full, 'Tickets & menus'));
 
   // Membre lambda : aucune commande staff/admin, legende explicite
   const gNormal = premade.buildHelpPanel(BOT, helpCtx, { user: clientUser }, guild, null, normal);
   check('membre lambda : pas de bloc moderation', !hasField(gNormal, 'Modération & sanctions'));
-  check('membre lambda : pas de Personnalisation du serveur', !hasField(gNormal, 'Personnalisation du serveur'));
+  check('membre lambda : pas de Personnalisation du serveur', !hasField(gNormal, 'Configuration du serveur'));
   check('membre lambda : pas de bloc tickets', !hasField(gNormal, 'Tickets & menus'));
   check('membre lambda : pas de /kick dans le panneau', !JSON.stringify(gNormal).includes('/kick'));
   check('membre lambda : legende Commandes invisibles', hasField(gNormal, 'Commandes invisibles'));
@@ -148,33 +148,33 @@ const helpCtx = { prefix: '!' };
   const gMod = premade.buildHelpPanel(BOT, helpCtx, { user: clientUser }, guild, null, mod);
   check('moderateur : bloc moderation visible', hasField(gMod, 'Modération & sanctions'));
   check('moderateur : /warns visible dans le panneau', JSON.stringify(gMod).includes('/warns'));
-  check('moderateur : pas de configuration admin', !hasField(gMod, 'Personnalisation du serveur'));
+  check('moderateur : pas de configuration admin', !hasField(gMod, 'Configuration du serveur'));
   check('moderateur : legende administration presente', hasField(gMod, 'Commandes invisibles'));
 
   // Administrateur : tout est visible
   const gAdmin = premade.buildHelpPanel(BOT, helpCtx, { user: clientUser }, guild, null, admin);
   check('administrateur : bloc moderation visible', hasField(gAdmin, 'Modération & sanctions'));
-  check('administrateur : Personnalisation du serveur visible', hasField(gAdmin, 'Personnalisation du serveur'));
+  check('administrateur : Personnalisation du serveur visible', hasField(gAdmin, 'Configuration du serveur'));
   check('administrateur : bloc tickets visible', hasField(gAdmin, 'Tickets & menus'));
   check("administrateur : pas de legende d'invisibilite", !hasField(gAdmin, 'Commandes invisibles'));
 
   // Proprietaire du serveur : tout est visible sans permission speciale
   const gOwner = premade.buildHelpPanel(BOT, helpCtx, { user: clientUser }, guild, null, owner);
-  check('proprietaire : bloc admin visible', hasField(gOwner, 'Personnalisation du serveur') && hasField(gOwner, 'Tickets & menus'));
+  check('proprietaire : bloc admin visible', hasField(gOwner, 'Configuration du serveur') && hasField(gOwner, 'Tickets & menus'));
 
   // Detail d'une commande staff : non divulgue au membre lambda
   const detailNormal = premade.buildHelpPanel(BOT, helpCtx, { user: clientUser }, guild, 'kick', normal);
   check('/help kick (lambda) -> reservee au staff', JSON.stringify(detailNormal).includes('réservée au staff'));
   const detailMod = premade.buildHelpPanel(BOT, helpCtx, { user: clientUser }, guild, 'kick', mod);
   check('/help kick (moderateur) -> detail fourni', !JSON.stringify(detailMod).includes('réservée au staff') && JSON.stringify(detailMod).includes('/kick'));
-  const detailBotprofileAdmin = premade.buildHelpPanel(BOT, helpCtx, { user: clientUser }, guild, 'botprofile', admin);
-  check('/help botprofile (admin) -> detail fourni', JSON.stringify(detailBotprofileAdmin).includes('botprofile avatar'));
+  const detailModlogsAdmin = premade.buildHelpPanel(BOT, helpCtx, { user: clientUser }, guild, 'modlogs', admin);
+  check('/help modlogs (admin) -> detail fourni', JSON.stringify(detailModlogsAdmin).includes('/modlogs'));
 
   // ---------- 4. Sanity : commandes enregistrees toujours bien routees ----------
   console.log('\n4) Sanity final');
   const all = premade.buildSlashPayloads(BOT).concat(extra.buildExtraPayloads(), guildEvents.buildEventPayloads());
   const names = new Set(all.map((p) => p.name));
-  for (const n of [...premade.enabledCommandNames(BOT), 'ticket', 'roles', 'botprofile', 'modlogs', 'blacklist', 'lockdown', 'voicetemp', 'apply', 'event']) {
+  for (const n of [...premade.enabledCommandNames(BOT), 'ticket', 'roles', 'modlogs', 'blacklist', 'lockdown', 'voicetemp', 'apply', 'event']) {
     check(`commande ${n} enregistree`, names.has(n));
   }
 

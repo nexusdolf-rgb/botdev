@@ -75,9 +75,6 @@ const TARGETS = [
   // largeur) via le helper replyPanel de premade.js.
   { f: 'server/discord/premade.js',         needle: "title: '📈 Classement des niveaux',",                     label: '/levels — classement des niveaux (v232 : V2)' },
   { f: 'server/discord/premade.js',         needle: 'send(ui.v2panel(options, components))',                   label: 'premade.js — replyPanel convertit 11 messages (v232)' },
-  { f: 'server/discord/profileCommands.js', needle: "description: '✅ Identité mise à jour !",                 label: '/botprofile — identité mise à jour (v236 : V2)' },
-  { f: 'server/discord/profileCommands.js', needle: 'description: `✅ ${sub ===',                              label: '/botprofile — avatar / bannière enregistré (v236 : V2)' },
-  { f: 'server/discord/profileWizard.js',   needle: 'Touchez **🖼️ Choisir une image**',                          label: '/botprofile setup — sélecteur de fichier (v373)', },
   // v231 — le quiz est passé en Components V2 (séparateurs natifs pleine
   // largeur) : il ne passe plus par ui.sectionize().
   { f: 'server/discord/extra.js',           needle: 'const quizOptions = {',                                     label: '/quiz — lancement (v231 : options du conteneur V2)' },
@@ -134,11 +131,6 @@ check('/ticket types add : 1 trait', count(typeAdded) === 1);
 const typeUpdated = ui.sectionize('✅ Type « 🎫 **Support** » mis à jour !\n🛡️ Staff de ce type : <@&R1>\n\n💡 Ajoute **plusieurs rôles staff** avec `/ticket types setup`.\n\nTypes actuels : Support\n\n📨 Re-envoie le panneau avec `/ticket panel`.', 2000);
 check('/ticket types (maj) : 3 traits', count(typeUpdated) === 3);
 
-const identity = ui.sectionize('✅ Identité mise à jour !\n\n📛 Nom : **Optimus Prime**\n🎨 Couleur : #e07a5f\n📝 Bio : définie\n\nContinue avec `/botprofile avatar` et `/botprofile banner`.', 2000);
-check('/botprofile (maj) : 2 traits', count(identity) === 2);
-
-const gallery = ui.sectionize('📱 **Pour ouvrir ta galerie :**\n\n1️⃣ Tape `/botprofile avatar` puis touche l\'option « image ».\n\n2️⃣ Ou touche le **bouton ➕** de la barre de message.', 2000);
-check('/botprofile setup galerie : 2 traits', count(gallery) === 2);
 
 // v232 — /levels est en Components V2 : on vérifie le séparateur NATIF du
 // payload réel, plus le trait texte. 2 paragraphes → 1 séparateur entre eux
@@ -215,7 +207,7 @@ check('advancedTickets : séparateurs NATIFS toujours présents (>= 3)',
 
 // ------------------------------------------------------------
 console.log('\n6) Les fichiers nouvellement branchés importent ui.js');
-for (const f of ['server/discord/panelCommands.js', 'server/discord/profileCommands.js', 'server/discord/profileWizard.js']) {
+for (const f of ['server/discord/panelCommands.js', 'server/discord/profileCommands.js']) {
   check(`${path.basename(f)} : import ui présent`, /const ui = require\('\.\/ui'\);/.test(src(f)));
 }
 check('extra.js / panels.js / premade.js : imports ui conservés',
@@ -225,13 +217,13 @@ check('extra.js / panels.js / premade.js : imports ui conservés',
 // ------------------------------------------------------------
 console.log('\n7) Aucun secret ajouté + versionnage front v229');
 const touched = ['server/discord/extra.js', 'server/discord/panelCommands.js', 'server/discord/panels.js',
-  'server/discord/premade.js', 'server/discord/profileCommands.js', 'server/discord/profileWizard.js',
+  'server/discord/premade.js', 'server/discord/profileCommands.js',
   'public/index.html', 'public/sw.js'];
 check('aucun token en dur dans les fichiers modifiés',
   !touched.some((f) => /(ghp_|github_pat_|xox[baprs]-)[A-Za-z0-9_]{15,}/.test(src(f))));
-check('index.html : 7 références ?v=373', (src('public/index.html').match(/\?v=373/g) || []).length === 7);
+check('index.html : 7 références ?v=374', (src('public/index.html').match(/\?v=374/g) || []).length === 7);
 check('index.html : plus aucune référence ?v=236', !src('public/index.html').includes('?v=236'));
-check('sw.js : cache botdev-v241', src('public/sw.js').includes("const CACHE = 'botdev-v373';"));
+check('sw.js : cache botdev-v241', src('public/sw.js').includes("const CACHE = 'botdev-v374';"));
 
 console.log(failures === 0
   ? '\n✅ V229 — Traits ━ étendus aux 10 messages multi-blocs (dont le quiz), exclusions verrouillées, garde-fous v220 intacts.'

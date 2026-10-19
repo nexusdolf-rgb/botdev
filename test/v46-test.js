@@ -32,7 +32,7 @@ const check = (label, cond) => {
     voicetemp: { creator_channel: '' }, profile: {},
   };
   const empty = routes.guildChecklist(basePayload);
-  check('checklist : 12 éléments', empty.length === 12);
+  check('checklist : 11 éléments', empty.length === 11);
   check('checklist : serveur vierge → presque tout à faire', empty.filter((i) => !i.done).length >= 10);
   check('checklist : les niveaux comptent comme faits (activés par défaut)', empty.find((i) => i.key === 'levels').done === true);
 
@@ -41,7 +41,7 @@ const check = (label, cond) => {
     tickets: { channel: '#support' },
     events: { state: { member_join: { enabled: true }, autorole: { enabled: true } } },
     shop_items: [{ name: 'VIP' }], scheduled: [{ id: 1 }],
-    voicetemp: { creator_channel: 'V1' }, profile: { name: 'Hoxera' },
+    voicetemp: { creator_channel: 'V1' },
   });
   check('checklist : serveur configuré → 100 %', full.every((i) => i.done) === true);
 
@@ -111,7 +111,7 @@ const check = (label, cond) => {
           },
           state: { member_join: { enabled: true, config: { channel: '#bienvenue' } }, autorole: { enabled: false, config: {} } },
         },
-        role_menus: [], xp_roles: [], profile: {}, blacklist: [],
+        role_menus: [], xp_roles: [], blacklist: [],
         voicetemp: { creator_channel: '', category: '', name_template: '' },
         applications: { channel: '', questions: '[]', title: '', enabled: 0 },
         scheduled: [], shop_items: [], log_events: {},
@@ -176,7 +176,7 @@ const check = (label, cond) => {
   const res = await w.__r;
   console.log(JSON.stringify(res, null, 2));
 
-  const ok = res.overview && !res.overview.error && res.overview.checklist === 12 && res.overview.progress && res.overview.brief && res.overview.msgs && res.overview.top
+  const ok = res.overview && !res.overview.error && res.overview.checklist === 11 && res.overview.progress && res.overview.brief && res.overview.msgs && res.overview.top
     && res.welcome && !res.welcome.error && res.welcome.preview && res.welcome.previewText.includes('NouveauMembre') && res.welcome.colorPicker
     && res.server && !res.server.error && res.server.lockdownCard && res.server.lockBtn && res.server.unlockBtn && res.server.stateOk;
 

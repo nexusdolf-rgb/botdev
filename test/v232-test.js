@@ -142,9 +142,10 @@ const pm = read('server/discord/premade.js');
 check('replyPanel passe par ui.v2panel', /send\(ui\.v2panel\(options, components\)\)/.test(pm));
 check('PLUS AUCUN ui.sectionize dans premade.js', !pm.includes('ui.sectionize'));
 // 11 appels historiques (invite, buy, pay, kick, ban, unban, timeout, warn,
-// clear, daily, balance) + /levels migré en v232 = 12.
-check('12 appels replyPanel (11 historiques + /levels migré en v232)',
-  (pm.match(/await replyPanel\(\{/g) || []).length === 12);
+// clear, daily, balance) + /levels migré en v232 = 12. v374 ajoute 5 panneaux
+// (unmute, softban, banlist, roleadd/roleremove partagé, membercount) = 17.
+check('17 appels replyPanel (12 + les 5 appels v374)',
+  (pm.match(/await replyPanel\(\{/g) || []).length === 17);
 ['invite', 'buy', 'pay', 'kick', 'ban', 'unban', 'timeout', 'warn', 'clear', 'daily', 'balance'].forEach((c) => {
   check(`commande « ${c} » toujours présente`, new RegExp(`case '${c}':`).test(pm));
 });
@@ -239,9 +240,9 @@ console.log('\n12) Aucun secret ajouté + versionnage front v232');
   check(`aucun token en dur dans ${path.basename(f)}`,
     !/(ghp_|github_pat_|rnd_|xox[baprs]-)[A-Za-z0-9_-]{15,}/.test(read(f)));
 });
-check('index.html : 7 références ?v=373', (read('public/index.html').match(/\?v=373/g) || []).length === 7);
+check('index.html : 7 références ?v=374', (read('public/index.html').match(/\?v=374/g) || []).length === 7);
 check('index.html : plus aucune référence ?v=231', !read('public/index.html').includes('?v=231'));
-check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'botdev-v373';"));
+check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'botdev-v374';"));
 
 console.log(failures === 0
   ? '\n✅ V232 — Lot n°2 : 18 emplacements migrés (premade ×13, suggest ×5), queue.js corrigé, xp.js migré en V2 en v350.'

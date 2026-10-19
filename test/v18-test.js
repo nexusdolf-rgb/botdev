@@ -12,7 +12,6 @@ process.env.BOTDEV_DATA_DIR = DATA_DIR;
 
 const store = require('../server/db');
 const assets = require('../server/assets');
-const identity = require('../server/discord/identity');
 const { runAutomod } = require('../server/discord/automod');
 const { handleProfileCommand } = require('../server/discord/profileCommands');
 const { buildSlashPayloads, buildHelpPanel } = require('../server/discord/premade');
@@ -28,65 +27,12 @@ const logging = require('../server/discord/logging');
   assert((await require('sharp')(got.buffer).metadata()).format === 'png');
   console.log('1️⃣  Magasin d\'images : écriture + lecture locale ✅ (', key.slice(0, 10) + '… )');
 
-  // ---------- 2. Profil : API store ----------
-  store.botProfiles.set(1, 'G1', { name: 'Hoxera du CHEAT', avatar_url: `/assets/${key}`, banner_url: '', bio: 'Le bot officiel !', color: '#ED4245' });
-  const p = store.botProfiles.get(1, 'G1');
-  assert(p.name === 'Hoxera du CHEAT' && p.color === '#ED4245' && p.avatar_url.endsWith('.png'));
-  console.log('2️⃣  Profil enregistré ✅ (', p.name, p.color, ')');
-
-  // ---------- 3. sendAsProfile : identité appliquée via webhook ----------
-  let hookSend = null, normalSend = null;
-  const guild = { id: 'G1', name: 'Serveur' };
-  const channel = {
-    id: 'C1', send: async (payload) => { normalSend = payload; },
-    fetchWebhooks: async () => [{ owner: { id: 'BOT1' } }],
-  };
-  const client = { user: { id: 'BOT1', displayAvatarURL: () => 'https://cdn/x.png' } };
-  channel.fetchWebhooks = async () => [{ owner: { id: 'BOT1' }, send: async (payload) => { hookSend = payload; } }];
-  await identity.sendAsProfile(client, 1, guild, channel, { content: 'Bienvenue !' });
-  assert(hookSend && hookSend.username === 'Hoxera du CHEAT', 'nom personnalisé attendu');
-  assert(hookSend.content === 'Bienvenue !');
-  console.log('3️⃣  Webhook : message envoyé avec le nom personnalisé ✅');
-
-  // ---------- 4. sendAsProfile sans profil → envoi normal ----------
-  hookSend = null; normalSend = null;
-  store.botProfiles.remove(1, 'G1');
-  await identity.sendAsProfile(client, 1, guild, channel, { content: 'Hello' });
-  assert(normalSend && normalSend.content === 'Hello' && !hookSend);
-  console.log('4️⃣  Sans profil → envoi normal (fallback) ✅');
-
-  // ---------- 5. Carte de profil (/botprofile view) ----------
-  store.botProfiles.set(1, 'G1', { name: 'Hoxera VIP', avatar_url: '', banner_url: '', bio: 'bio test', color: '#57F287' });
-  const embed = identity.buildProfileEmbed(1, 'G1', { name: 'Hoxera' });
-  assert(embed.data.title.includes('Hoxera VIP') && embed.data.description === 'bio test');
-  console.log('5️⃣  Carte de profil ✅');
-
-  // ---------- 6. Commandes /botprofile : permission + set + reset ----------
-  const cmd = (sub, opts = {}) => ({
-    guild: { id: 'G1', ownerId: 'OWNER1' },
-    user: { id: opts.userId || 'OWNER1' },
-    member: { permissions: { has: () => false } },
-    commandName: 'botprofile',
-    options: {
-      getSubcommand: () => sub,
-      getString: (k) => ({ nom: 'MonBot', bio: 'Ma bio', couleur: '#123456' }[k] || null),
-      getAttachment: () => opts.attachment || null,
-    },
-    reply: async (p) => { cmdReply = p; },
-  });
-  let cmdReply;
-  await handleProfileCommand(1, cmd('set'));
-  // v236 — l'accusé de réception est en Components V2 : le texte est dans le
-  // conteneur, plus dans `content`. v2.allText lit les deux formats.
-  assert(v2.allText(cmdReply).includes('Identité mise à jour'), 'set OK');
-  assert(v2.allText(cmdReply).includes('MonBot'));
-  await handleProfileCommand(1, cmd('set', { userId: 'STRANGER' }));
-  assert(cmdReply.content.includes('propriétaire'), 'non-propriétaire refusé');
-  await handleProfileCommand(1, cmd('view'));
-  assert(cmdReply.embeds[0].data.title.includes('MonBot'));
-  await handleProfileCommand(1, cmd('reset'));
-  assert(cmdReply.content.includes('réinitialisée') || cmdReply.content.includes('reprend'));
-  console.log('6️⃣  /botprofile : set ✅ refus ✅ view ✅ reset ✅');
+  // ---------- 2. v374 : identité par serveur retirée ----------
+  assert(!fs.existsSync(path.join(__dirname, '../server/discord/identity.js')), 'identity.js doit être supprimé');
+  assert(!fs.existsSync(path.join(__dirname, '../server/discord/profileWizard.js')), 'profileWizard.js doit être supprimé');
+  assert(!('botProfiles' in store), 'API botProfiles retirée du store');
+  assert(!('profileAliases' in store) && !('profileState' in store), 'alias et état retirés du store');
+  console.log('2️⃣  Identité par serveur absente du code et du store ✅');
 
   // ---------- 7. /modlogs + /blacklist ----------
   const cmd2 = (name, sub, opts = {}) => ({
@@ -143,17 +89,14 @@ const logging = require('../server/discord/logging');
 
   // ---------- 10. Payloads + help ----------
   const payloads = buildSlashPayloads(1);
-  for (const n of ['botprofile', 'modlogs', 'blacklist']) assert(payloads.some((x) => x.name === n), n + ' absent');
-  const bp = payloads.find((x) => x.name === 'botprofile');
-  assert(bp.options.find((o) => o.name === 'avatar').options[0].type === 11, 'pièce jointe attendue');
+  for (const n of ['modlogs', 'blacklist']) assert(payloads.some((x) => x.name === n), n + ' absent');
+  assert(!payloads.some((x) => x.name === 'botprofile'), '/botprofile doit avoir disparu');
   store.modules.set(1, 'utility', true);
   const clientUser = { user: { username: 'T', displayAvatarURL: () => 'https://cdn.discordapp.com/avatars/1/a.png' } };
   // v262 — le centre d'aide est un panneau Components V2 (plus d'embed).
   const help = buildHelpPanel(1, { prefix: '!' }, clientUser, null, null);
-  assert(JSON.stringify(help).includes('Personnalisation du serveur'));
-  const helpProfile = buildHelpPanel(1, { prefix: '!' }, clientUser, null, 'botprofile');
-  assert(JSON.stringify(helpProfile).includes('botprofile avatar'));
-  console.log('🔟  Payloads (pièce jointe = galerie) + /help ✅');
+  assert(JSON.stringify(help).includes('Configuration du serveur'));
+  console.log('🔟  Payloads /modlogs + /blacklist + /help ✅');
 
   // ---------- 11. Admin API (simulation via fonctions) ----------
   // On teste isPlatformAdmin indirectement : l'utilisateur 1 est admin par défaut

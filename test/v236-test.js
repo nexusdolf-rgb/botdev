@@ -9,7 +9,7 @@
 // v231 quiz · v232 premade · v233 suggest/giveaway · v234 guildEvents/panels ·
 // v235 extra.js · **v236 : les 16 derniers emplacements répartis sur 12 fichiers**
 // (logging, liveWatch, community, engine, roleWizard, panelCommands,
-//  profileCommands, profileWizard, automod, announcements, tasks, events).
+//  profileCommands, automod, announcements, tasks, events).
 // ============================================================================
 'use strict';
 
@@ -53,7 +53,7 @@ console.log('\n1) Inventaire : plus aucun trait texte ni embed classique actif')
 // dépend de l'écran et un trait texte n'y atteint jamais les bords arrondis.
 // Après v236 il ne doit plus en rester UN SEUL dans le code exécuté.
 const FICHIERS = ['logging.js', 'liveWatch.js', 'community.js', 'engine.js', 'roleWizard.js',
-  'panelCommands.js', 'profileCommands.js', 'profileWizard.js', 'automod.js',
+  'panelCommands.js', 'profileCommands.js', 'automod.js',
   'announcements.js', 'tasks.js', 'events.js'];
 for (const f of FICHIERS) {
   const code = codeOnly(f);
@@ -137,14 +137,13 @@ console.log('✅ journal : V2, séparateurs natifs, champs conservés');
 console.log('\n4) Bienvenue / départ (events.js) — le piège webhook + pièce jointe');
 // ═══════════════════════════════════════════════════════════════════════════
 const events = require('../server/discord/events');
-const identity = require('../server/discord/identity');
-const sendAsProfileOriginal = identity.sendAsProfile;
+const queue = require('../server/queue');
+const queueSendOriginal = queue.send;
 let sentPayloads = [];
-// On intercepte l'envoi « au nom du bot » : en production il passe par webhook,
-// ici on capture simplement le payload pour l'inspecter.
-identity.sendAsProfile = async (_bot, _botId, _guild, _channel, payload) => {
+// On intercepte l'envoi : en production il part par la file d'attente.
+// v374 — plus d'identité par serveur, donc plus de webhook à simuler.
+queue.send = async (_channel, payload) => {
   sentPayloads.push(payload);
-  if (process.env.DBG) console.log('>>> APPEL sendAsProfile depuis :', new Error('x').stack.split('\n').slice(2,4).map((l)=>l.trim()).join(' <- '));
   return { id: 'MSG' };
 };
 const member = (partial) => ({
@@ -210,17 +209,15 @@ check('arrivée sans carte : la ligne de journal est, elle aussi, en V2',
 // Générer une vraie carte exigerait sharp + une image de fond ; on vérifie le
 // garde-fou au niveau du code : c'est lui qui évite le 400 BAD REQUEST.
 const evSrc = src('events.js');
-check('arrivée AVEC carte + webhook : l\'embed classique est conservé (V2 + webhook + files = 400)',
-  evSrc.includes('embeds: [embed], files'));
-check('arrivée AVEC carte : le branchement dépend de la carte ET du webhook (v240)',
-  evSrc.includes('const carteV2 = files.length && !viaWebhook;')
-  && evSrc.includes('if (!files.length || carteV2) {'));
+check('arrivée AVEC carte : plus de seconde branche embed (v374)',
+  !evSrc.includes('embeds: [embed], files') && !evSrc.includes('viaWebhook'));
+check('arrivée AVEC carte : la carte référence bien la pièce jointe',
+  evSrc.includes("image: files.length ? 'attachment://bienvenue.png'"));
 check('arrivée AVEC carte : le piège est documenté dans le code',
   evSrc.includes('files = 400 BAD REQUEST'));
-check('arrivée : les 3 compteurs sont partagés par les 2 rendus (welcomeFields)',
-  evSrc.includes('const welcomeFields = [') && evSrc.includes('.addFields(...welcomeFields)')
-  && evSrc.includes('fields: welcomeFields,'));
-console.log('✅ arrivée/départ : V2 par défaut, embed classique uniquement si carte image + webhook');
+check('arrivée : les 3 compteurs passent par welcomeFields',
+  evSrc.includes('const welcomeFields = [') && evSrc.includes('fields: welcomeFields,'));
+console.log('✅ arrivée/départ : V2 partout, carte comprise');
 
 // ═══════════════════════════════════════════════════════════════════════════
 console.log('\n5) Garde-fous sur les pièges déjà rencontrés');
@@ -268,7 +265,7 @@ const SECRET = /(ghp_|github_pat_|rnd_|xox[baprs]-)[A-Za-z0-9_-]{15,}/;
 const fuites = modifs.filter((f) => SECRET.test(fs.readFileSync(path.join(__dirname, '..', f), 'utf8')));
 check('aucun token en dur dans les fichiers modifiés', fuites.length === 0, fuites.join(', '));
 
-identity.sendAsProfile = sendAsProfileOriginal;
+queue.send = queueSendOriginal;
 try { store.db.close(); } catch {}
 fs.rmSync(DATA_DIR, { recursive: true, force: true });
 

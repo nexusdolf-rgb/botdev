@@ -15,7 +15,7 @@ process.env.BOTDEV_DATA_DIR = DATA_DIR;
 const store = require('../server/db');
 const xp = require('../server/discord/xp');
 const community = require('../server/discord/community');
-const identity = require('../server/discord/identity');
+const queue = require('../server/queue');
 const cardCache = require('../server/levelUpCardCache');
 const { MessageFlags } = require('discord.js');
 const sharp = require('sharp');
@@ -135,8 +135,9 @@ function fakeResponse() {
     // ---------- 3. Annonce : vrai payload transmis à Discord ----------
     console.log('— Ping avant le texte, carte dans le même panneau —');
     let sent = [];
-    const originalSend = identity.sendAsProfile;
-    identity.sendAsProfile = async (...args) => { sent.push(args[4]); return true; };
+    // v374 — l'envoi passe par la file d'attente : send(salon, payload).
+    const originalSend = queue.send;
+    queue.send = async (target, payload) => { sent.push(payload); return true; };
 
     try {
       store.settings.set('public_url', 'https://hoxera.is-a.dev');
@@ -167,7 +168,7 @@ function fakeResponse() {
       check('le ping est autorisé uniquement pour le membre ciblé',
         payload && payload.allowedMentions && payload.allowedMentions.parse.length === 0
         && payload.allowedMentions.users.length === 1 && payload.allowedMentions.users[0] === USER);
-      check('le webhook ne reçoit ni content séparé, ni embed, ni fichier',
+      check('le panneau ne porte ni content séparé, ni embed, ni fichier',
         payload && payload.content === undefined && payload.embeds === undefined && payload.files === undefined);
       check('la carte de l’annonce utilise l’avatar Discord du membre',
         avatarRequests.includes('https://cdn.discordapp.com/avatars/123456789012345678/alex-avatar.png'));
@@ -193,15 +194,15 @@ function fakeResponse() {
         custom && !custom.components && !custom.embeds && !custom.files
         && !avatarRequests.includes(`https://cdn.example/member/${USER2}.png`));
     } finally {
-      identity.sendAsProfile = originalSend;
+      queue.send = originalSend;
     }
   } finally {
     global.fetch = originalFetch;
   }
 
   console.log('— Cache frontend —');
-  check('index.html : les 7 ressources pointent vers v350', (indexHtml.match(/\?v=373/g) || []).length === 7);
-  check('service worker : cache botdev-v373', serviceWorker.includes("const CACHE = 'botdev-v373';"));
+  check('index.html : les 7 ressources pointent vers v350', (indexHtml.match(/\?v=374/g) || []).length === 7);
+  check('service worker : cache botdev-v374', serviceWorker.includes("const CACHE = 'botdev-v374';"));
 
   console.log(`\n✅ v350-test.js : ${n} vérifications OK`);
 })().catch((err) => { console.error(err); process.exit(1); });

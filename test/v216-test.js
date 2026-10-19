@@ -68,8 +68,8 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
 
   // ---------- 8. Version ----------
   console.log('— Bump de version —');
-  check('index : bump v216', fs.readFileSync('public/index.html', 'utf8').includes('?v=373'));
-  check('sw : bump botdev-v241', fs.readFileSync('public/sw.js', 'utf8').includes('botdev-v373'));
+  check('index : bump v216', fs.readFileSync('public/index.html', 'utf8').includes('?v=374'));
+  check('sw : bump botdev-v241', fs.readFileSync('public/sw.js', 'utf8').includes('botdev-v374'));
 
   console.log(`  ✅ v216 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });

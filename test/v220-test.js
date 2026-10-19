@@ -176,21 +176,18 @@ check('mono-section 4096 max non touchée', ui.embed({ description: 'x'.repeat(4
   // v236 — bienvenue, départ, journal, action send_embed, annonce de live et
   // automod sont passés en Components V2 : leurs paragraphes sont séparés par
   // des séparateurs NATIFS pleine largeur au lieu du trait texte ui.sectionize.
-  // v240 — la bienvenue « pro » n'a plus qu'UNE seule branche V2. Le rendu
-  // classique ne subsiste que dans le seul cas où Discord l'impose :
-  // carte image (pièce jointe) + profil d'envoi personnalisé (webhook), car
-  // V2 + webhook + files = 400. Et dans ce cas on ne met AUCUN trait texte :
-  // c'était exactement le bug « les traits sont courts » remonté par le user.
+  // v374 — plus d'identité par serveur : la bienvenue n'a plus qu'UNE seule
+  // branche, en Components V2, carte comprise. Le cas « classique » qui
+  // existait pour le webhook (V2 + webhook + files = 400) a disparu.
   const ev = src('events.js');
-  check('bienvenue premium : branche V2 unique (v240)',
-    ev.includes('...ui.v2panel({') && ev.includes('const carteV2 = files.length && !viaWebhook;'));
-  check('bienvenue premium : le webhook est détecté via le profil d’envoi (v240)',
-    ev.includes('identity.effectiveProfile(botId, member.guild.id)'));
-  check('bienvenue premium : la carte passe en MediaGallery attachment:// (v240)',
-    ev.includes("image: carteV2 ? 'attachment://bienvenue.png'"));
-  check('bienvenue premium : embed classique UNIQUEMENT si carte + webhook (v240)',
-    ev.includes('embeds: [embed], files')
-    && ev.includes('if (!files.length || carteV2) {'));
+  check('bienvenue premium : une seule branche V2',
+    ev.includes('...ui.v2panel({') && !ev.includes('viaWebhook'));
+  check('bienvenue premium : plus aucun appel à l’identité locale',
+    !ev.includes('identity.'));
+  check('bienvenue premium : la carte passe en MediaGallery attachment://',
+    ev.includes("image: files.length ? 'attachment://bienvenue.png'"));
+  check('bienvenue premium : plus de rendu embed classique',
+    !ev.includes('embeds: [embed], files'));
   // LE BUG v240 : ui.sectionize() produisait des traits texte de 20 caractères
   // (━ x20) qui s'arrêtaient avant les bords arrondis de l'embed.
   // On ne compte que les APPELS hors commentaire : events.js documente le bug
@@ -200,8 +197,8 @@ check('mono-section 4096 max non touchée', ui.embed({ description: 'x'.repeat(4
     .filter((l) => !/^\s*(?:\/\/|\*|\/\*)/.test(l) && l.includes('ui.sectionize(')).length;
   check('bienvenue premium : PLUS AUCUN appel ui.sectionize hors commentaire (bug v240)',
     appelsSectionize === 0);
-  check('bienvenue premium : le rendu classique utilise ui.text (paragraphes, pas de trait)',
-    ev.includes('.setDescription(ui.text(text, 4096))'));
+  check('bienvenue premium : le texte passe en description V2, pas en embed',
+    ev.includes('description: text,') && !ev.includes('.setDescription('));
   check('journal (logging.js) : description en V2 (v236)',
     src('logging.js').includes('ui.v2panel({'));
   check('action send_embed (engine.js) : description structurée en V2 (v236)',

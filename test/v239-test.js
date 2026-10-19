@@ -386,17 +386,12 @@ async function main() {
   check('l\u2019en-tête est une Section (type 9) avec vignette en accessoire',
     collect(welcomeV2, 9).some((n) => n.accessory && Number(n.accessory.type) === 11));
 
-  // v240 — la carte image passe en V2 + MediaGallery SAUF quand un profil
-  // d'envoi impose un webhook : V2 + webhook + files = 400 (piège n°10).
-  // L'embed classique ne reste donc que pour ce dernier cas.
+  // v374 — plus de profil d'envoi : la carte image reste en V2 + MediaGallery,
+  // il n'y a plus aucune branche embed classique.
   const branchStart = evSrc.indexOf('if (!cfg.plain) {');
-  // ⚠️ Le premier `} else {` après ce point est celui de la branche CARTE —
-  // il tombe AVANT le ui.v2panel. On découpe jusqu'à l'envoi effectif.
-  const cardBranch = evSrc.slice(branchStart, evSrc.indexOf('const ok = await identity.sendAsProfile', branchStart));
-  check('branche carte image + webhook : EmbedBuilder conservé (V2 + webhook + files = 400)',
-    /const carteV2 = files\.length && !viaWebhook;/.test(cardBranch)
-    && /new EmbedBuilder\(\)/.test(cardBranch));
-  check('branche sans carte : toujours ui.v2panel (pas de régression)',
+  const cardBranch = evSrc.slice(branchStart, evSrc.indexOf("require('../queue').send(channel, welcomePayload)", branchStart));
+  check('branche carte image : plus aucun EmbedBuilder (v374)', !/new EmbedBuilder\(\)/.test(cardBranch));
+  check('branche carte image : toujours ui.v2panel (pas de régression)',
     /ui\.v2panel\(\{/.test(cardBranch));
 
   // -----------------------------------------------------------------------
@@ -463,9 +458,9 @@ async function main() {
   console.log('\n10) Version épinglée v239');
   const index = src('public/index.html');
   const sw = src('public/sw.js');
-  check('index.html : ?v=373 référencé 7 fois', (index.match(/\?v=373/g) || []).length === 7,
-    `trouvé ${(index.match(/\?v=373/g) || []).length}`);
-  check("sw.js : cache 'botdev-v373'", sw.includes("const CACHE = 'botdev-v373';"));
+  check('index.html : ?v=374 référencé 7 fois', (index.match(/\?v=374/g) || []).length === 7,
+    `trouvé ${(index.match(/\?v=374/g) || []).length}`);
+  check("sw.js : cache 'botdev-v374'", sw.includes("const CACHE = 'botdev-v374';"));
   check('index.html : plus aucun ?v=238', !/\?v=238/.test(index));
 }
 

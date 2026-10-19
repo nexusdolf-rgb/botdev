@@ -117,8 +117,8 @@ const json = (x) => JSON.stringify(x || {});
 (async () => {
   console.log('— 1. Pins de version v305 —');
   const html = racine('public/index.html');
-  check('index.html : ?v=373 ×7', (html.match(/\?v=373/g) || []).length === 7);
-  check('sw.js : cache botdev-v373', racine('public/sw.js').includes("const CACHE = 'botdev-v373';"));
+  check('index.html : ?v=374 ×7', (html.match(/\?v=374/g) || []).length === 7);
+  check('sw.js : cache botdev-v374', racine('public/sw.js').includes("const CACHE = 'botdev-v374';"));
 
   console.log('— 2. Création : bonne catégorie + liste + propriétaire —');
   await extra.onVoiceState(botId, entry, { channel: null, guild }, { channelId: creator.id, member: membre, guild });
