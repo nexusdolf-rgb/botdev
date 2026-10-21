@@ -3722,6 +3722,10 @@ router.get('/hoxera', requireAuth, (req, res) => {
   res.json({ bot: botDetail(bot), configured: true });
 });
 
+// v378 — « Nom#2500 » → « Nom ». Discord affiche désormais des pseudos simples ;
+// les bases plus anciennes en gardent la trace, on la retire à la lecture.
+const sansDiscriminateur = (pseudo) => String(pseudo || '').replace(/#\d{0,4}$/, '').trim();
+
 router.get('/public/stats', (req, res) => {
   const totalBots = store.db.prepare('SELECT COUNT(*) AS n FROM bots').get().n;
   const live = botManager.platformStats();
@@ -3733,7 +3737,10 @@ router.get('/public/bots', (req, res) => {
   const bots = rows.map((b) => {
     const info = botManager.publicBotInfo(b.id);
     return info || {
-      id: b.id, name: b.name, username: b.bot_username || '', avatar_url: b.avatar_url || '',
+      // v378 — les anciennes lignes gardent « Nom#2500 » en base : on nettoie à
+      // l'affichage, sinon la page publique montre un format que Discord a
+      // supprimé (voir aussi /public/bots/:id).
+      id: b.id, name: b.name, username: sansDiscriminateur(b.bot_username), avatar_url: b.avatar_url || '',
       client_id: b.client_id || '', online: false, servers: 0, members: 0, ping: 0, uptime: 0,
       invite_url: inviteUrl(b.client_id),
     };

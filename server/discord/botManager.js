@@ -416,7 +416,10 @@ function attachListeners(botId, entry) {
     try {
       const me = client.user;
       store.bots.update(botId, {
-        bot_username: me ? `${me.username}#${me.discriminator === '0' ? '' : me.discriminator}` : '',
+        // v378 — Discord n'affiche plus de discriminateur (#1234) depuis 2023.
+        // Cette ligne écrivait « Nom#2500 », ou pire « Nom# » quand le
+        // discriminateur vaut « 0 ». On ne garde que le pseudo.
+        bot_username: me ? String(me.username || '') : '',
         avatar_url: me ? me.displayAvatarURL({ size: 128 }) : '',
       });
       // 🖼️ Bannière de profil du bot : on garde l'URL à jour automatiquement
@@ -982,7 +985,8 @@ function publicBotInfo(botId) {
   return {
     id: record.id,
     name: record.name,
-    username: record.bot_username || '',
+    // v378 — « Nom#2500 » en base (ancien format) → « Nom » à la lecture.
+    username: String(record.bot_username || '').replace(/#\d{0,4}$/, '').trim(),
     avatar_url: imgproxy.imgProxy(liveAvatar || record.avatar_url || ''),
     client_id: record.client_id || '',
     online,
