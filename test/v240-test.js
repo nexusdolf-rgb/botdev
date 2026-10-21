@@ -325,7 +325,9 @@ async function main() {
   // balise svg, une balise g et une ou deux balises path dans un contenant qui
   // etait vide : +23 balises, +4 classes « ico-svg ». Aucun div, aucun bouton,
   // aucune interpolation de plus, c'est ce que ce verrou surveillait.
-  const attenduPub = { balises: 642, classes: 203, ids: 22, divs: 151, boutons: 14, interpolations: 61 };
+  // v377 : menu mobile ajouté (hamburger + panneau) → +20 balises, +3 classes,
+// +3 ids, +2 divs, +1 bouton. Voir v337 pour le détail.
+const attenduPub = { balises: 662, classes: 206, ids: 25, divs: 153, boutons: 15, interpolations: 63 };
   const reelPub = compteBalises(pubSrc);
   for (const cle of Object.keys(attenduPub)) {
     check(`landing : structure intacte (${cle} = ${attenduPub[cle]})`,
@@ -353,7 +355,9 @@ async function main() {
     'Bienvenue dans votre espace de gestion',
     'Choisissez un serveur',
     'Votre serveur en bref',
-    'Vous êtes le membre',
+    // v377 — l'aperçu de bienvenue reprend l'intitulé RÉEL du panneau
+    // (« 👥 Membre n° »), au lieu d'une phrase qui n'existait nulle part.
+    'Membre n°',
     'Passez un bon moment parmi nous',
   ]) {
     check(`dashboard : « ${attendu} »`, dashSrc.includes(attendu));
@@ -526,9 +530,9 @@ async function main() {
 
   const index = src('public/index.html');
   const sw = src('public/sw.js');
-  check('index.html : ?v=376 référencé 7 fois', (index.match(/\?v=376/g) || []).length === 7,
-    `trouvé ${(index.match(/\?v=376/g) || []).length}`);
-  check("sw.js : cache 'botdev-v376'", sw.includes("const CACHE = 'botdev-v376';"));
+  check('index.html : ?v=377 référencé 7 fois', (index.match(/\?v=377/g) || []).length === 7,
+    `trouvé ${(index.match(/\?v=377/g) || []).length}`);
+  check("sw.js : cache 'botdev-v377'", sw.includes("const CACHE = 'botdev-v377';"));
   check('index.html : plus aucun ?v=239', !/\?v=239/.test(index));
 }
 

@@ -342,8 +342,10 @@ async function main() {
     /margin:9px -12px;width:calc\(100% \+ 24px\)/.test(join));
   check('en-tête : « vient d\u2019arriver ! » + titre + vignette',
     /vient d/.test(join) && /👋 Bienvenue sur Mon serveur !/.test(join) && /border-radius:6px/.test(join));
+  // v377 — l'exemple d'aperçu s'appelle « Nouveau membre » : Discord n'affiche
+  // plus de discriminateur #0001, l'ancien nom montrait un format disparu.
   check('{user} → ping, {count} → n°42, {server} → nom réel',
-    /dc-mention">@NouveauMembre/.test(join) && /n°42/.test(join));
+    /dc-mention">@Nouveau membre/.test(join) && /n°42/.test(join));
   check('{channels} → les 2 salons avec leurs phrases et leurs vrais pings',
     /dc-mention">#règlement/.test(join) && /dc-mention">#support/.test(join)
     && /Lis le règlement/.test(join) && /Ouvre un ticket/.test(join));
@@ -458,9 +460,9 @@ async function main() {
   console.log('\n10) Version épinglée v239');
   const index = src('public/index.html');
   const sw = src('public/sw.js');
-  check('index.html : ?v=376 référencé 7 fois', (index.match(/\?v=376/g) || []).length === 7,
-    `trouvé ${(index.match(/\?v=376/g) || []).length}`);
-  check("sw.js : cache 'botdev-v376'", sw.includes("const CACHE = 'botdev-v376';"));
+  check('index.html : ?v=377 référencé 7 fois', (index.match(/\?v=377/g) || []).length === 7,
+    `trouvé ${(index.match(/\?v=377/g) || []).length}`);
+  check("sw.js : cache 'botdev-v377'", sw.includes("const CACHE = 'botdev-v377';"));
   check('index.html : plus aucun ?v=238', !/\?v=238/.test(index));
 }
 

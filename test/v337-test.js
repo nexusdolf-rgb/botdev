@@ -19,8 +19,8 @@ const css = racine('public/css/style.css');
 const pub = racine('public/js/public.js');
 
 console.log('— 1. Pins v337 —');
-check('index.html : ?v=376 ×7', (html.match(/\?v=376/g) || []).length === 7);
-check('sw.js : cache botdev-v376', sw.includes("const CACHE = 'botdev-v376';"));
+check('index.html : ?v=377 ×7', (html.match(/\?v=377/g) || []).length === 7);
+check('sw.js : cache botdev-v377', sw.includes("const CACHE = 'botdev-v377';"));
 check('index.html : plus aucune ?v=336', !html.includes('?v=336'));
 
 console.log('— 2. HTML public inchangé (verrous v167/v240) —');
@@ -34,8 +34,10 @@ const compte = {
   divs: (pub.match(/<div/g) || []).length,
   boutons: (pub.match(/<button/g) || []).length,
 };
-check('structure HTML landing intacte', compte.classes === 203 &&  // v368 : 4 glypes SVG en plus dans les icones de l'accueil
-     compte.ids === 22 && compte.divs === 151 && compte.boutons === 14, JSON.stringify(compte));
+// v377 : menu mobile (bouton hamburger + panneau replié) → +3 classes,
+// +3 ids, +2 divs, +1 bouton. Le reste de la page d'accueil est inchangé.
+check('structure HTML landing intacte', compte.classes === 206 &&  // v368 : 4 glypes SVG en plus dans les icones de l'accueil
+     compte.ids === 25 && compte.divs === 153 && compte.boutons === 15, JSON.stringify(compte));
 
 console.log('— 3. Couche CSS v337 —');
 check('commentaire v337', css.includes('HOXERA v337'));

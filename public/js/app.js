@@ -555,7 +555,7 @@ App.renderAdminPage = async () => {
     <div class="page admin-platform-page">
       <header class="admin-head">
         <div class="admin-identity">
-          <img id="a-bot-avatar" class="admin-mark admin-bot-avatar" src="/api/public/bot-avatar?v=376" alt="Avatar d’Hoxera" width="48" height="48" />
+          <img id="a-bot-avatar" class="admin-mark admin-bot-avatar" src="/api/public/bot-avatar?v=377" alt="Avatar d’Hoxera" width="48" height="48" />
           <div class="admin-head-copy">
             <div class="admin-breadcrumb"><span>OPTIMUS PRIME</span><i>/</i><b>CONSOLE FONDATEUR</b></div>
             <h1>Espace fondateur</h1>
@@ -932,7 +932,7 @@ App.renderAdminPage = async () => {
     };
     bodyEl.innerHTML = `
       <div class="card">
-        <h3>️ Journal de sécurité</h3>
+        <h3>Journal de sécurité</h3>
         <div class="card-sub">Historique des actions sensibles réalisées dans l'administration globale.</div>
         <div class="admin-toolbar">
           <select class="dash-select" id="a-audit-filter" style="max-width:240px">

@@ -28,7 +28,11 @@ App.renderPublicNavbar = (withLandingLinks = false) => {
         <a href="#hp-features" data-anchor="hp-features">Fonctionnalités</a>
         <a href="#hp-preview" data-anchor="hp-preview">Aperçu</a>
         <a href="#hp-faq" data-anchor="hp-faq">FAQ</a>
-      </nav>` : ''}
+      </nav>
+      <button class="nav-burger" id="pub-burger" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="pub-burger-menu">
+        <span></span><span></span><span></span>
+      </button>` : ''}
+      ${withLandingLinks ? '' : ''}
       <div class="navbar-right" id="pub-nav-right">
         ${user && user.discord_id
           ? `<div class="user-pill">
@@ -44,6 +48,49 @@ App.renderPublicNavbar = (withLandingLinks = false) => {
     </div>
   `);
   nav.querySelector('#pub-logo').onclick = () => App.router.go(user ? '/dashboard' : '/');
+  // Menu mobile : le même contenu que la barre de liens, replié sous le header.
+  // Sans lui, les liens disparaissaient purement et simplement sous 900 px.
+  if (withLandingLinks) {
+    const burger = nav.querySelector('#pub-burger');
+    const panneau = App.el(`
+      <div class="nav-menu" id="pub-burger-menu" hidden>
+        <a href="#hp-about" data-anchor="hp-about">Hoxera</a>
+        <a href="#hp-features" data-anchor="hp-features">Fonctionnalités</a>
+        <a href="#hp-preview" data-anchor="hp-preview">Aperçu</a>
+        <a href="#hp-faq" data-anchor="hp-faq">FAQ</a>
+        <div class="nav-menu-action" id="pub-menu-action"></div>
+      </div>`);
+    nav.appendChild(panneau);
+    // Sur téléphone, l'action principale vit dans le menu : garder le bouton
+    // dans la barre obligeait le bandeau à passer sur deux lignes.
+    const actionHote = panneau.querySelector('#pub-menu-action');
+    const vraiBouton = nav.querySelector('#pub-connect, #pub-dash');
+    if (vraiBouton && actionHote) {
+      const copie = vraiBouton.cloneNode(true);
+      copie.removeAttribute('id');
+      copie.setAttribute('data-menu-action', '1');
+      copie.style.width = '100%';
+      actionHote.appendChild(copie);
+    }
+    const fermer = () => {
+      panneau.hidden = true;
+      burger.setAttribute('aria-expanded', 'false');
+      burger.setAttribute('aria-label', 'Ouvrir le menu');
+      nav.classList.remove('menu-ouvert');
+    };
+    burger.onclick = () => {
+      const ouvert = panneau.hidden;
+      panneau.hidden = !ouvert;
+      burger.setAttribute('aria-expanded', String(ouvert));
+      burger.setAttribute('aria-label', ouvert ? 'Fermer le menu' : 'Ouvrir le menu');
+      nav.classList.toggle('menu-ouvert', ouvert);
+    };
+    panneau.querySelectorAll('[data-anchor]').forEach((a) => {
+      a.addEventListener('click', fermer);
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !panneau.hidden) fermer(); });
+    window.addEventListener('resize', () => { if (window.innerWidth > 900 && !panneau.hidden) fermer(); });
+  }
   if (withLandingLinks) {
     nav.querySelectorAll('[data-anchor]').forEach((a) => {
       a.onclick = (e) => {
@@ -69,6 +116,16 @@ App.renderPublicNavbar = (withLandingLinks = false) => {
     try { const { url } = await App.api('/auth/discord/url'); window.location.href = url; }
     catch (e) { App.toast(e.message, 'error'); }
   };
+  // La copie du menu doit faire exactement la même chose que le bouton d'origine.
+  const menuAction = nav.querySelector('[data-menu-action]');
+  if (menuAction) {
+    const source = nav.querySelector('#pub-dash') ? 'dash' : 'connect';
+    menuAction.onclick = () => {
+      if (source === 'dash') { App.router.go('/dashboard'); return; }
+      const maitre = nav.querySelector('#pub-connect');
+      if (maitre) maitre.click();
+    };
+  }
   return nav;
 };
 
@@ -95,7 +152,7 @@ App.renderPublicLanding = () => {
         </div>
         <div class="pub-support-link"><a href="https://discord.gg/X9hTdr9N3" target="_blank" rel="noopener">Rejoindre le serveur support officiel</a></div>
         <div class="pub-stats" id="pub-stats">
-          <div class="pub-stat"><div class="val">—</div><div class="lbl">Bots en ligne</div></div>
+          <div class="pub-stat"><div class="val">—</div><div class="lbl">Bot en ligne</div></div>
           <div class="pub-stat"><div class="val">—</div><div class="lbl">Serveurs Discord</div></div>
           <div class="pub-stat"><div class="val">—</div><div class="lbl">Membres touchés</div></div>
         </div>
@@ -104,8 +161,8 @@ App.renderPublicLanding = () => {
       <!-- 🎯 Présentation Hoxera -->
       <div class="pub-section reveal hp-section" id="hp-about">
         <div class="hp-kicker">Hoxera en bref</div>
-        <h2>Le robot d'animation, pensé comme un produit</h2>
-        <p class="pub-sub">Pas juste une liste de commandes : une expérience complète, du premier message d'accueil au journal d'audit, en passant par un dashboard qui vous fait gagner du temps.</p>
+        <h2>Ce que Hoxera fait pour votre serveur</h2>
+        <p class="pub-sub">Accueil, tickets, modération, niveaux et journal d'audit se règlent depuis le même tableau de bord.</p>
         <div class="hp-about-grid">
           <div class="hp-about-card">
             <div class="hp-robot" aria-hidden="true"><img src="/api/public/bot-avatar" alt="Hoxera" /></div>
@@ -153,8 +210,8 @@ App.renderPublicLanding = () => {
 
       <div class="pub-section reveal hp-section" id="hp-preview">
         <span class="hp-kicker">Aperçu</span>
-        <h2>Un dashboard digne des plus grands</h2>
-        <p class="pub-sub">Configurez tout depuis votre téléphone ou votre PC. Sauvegarde automatique du fichier de données, flux d'activité en direct en direct.</p>
+        <h2>Le tableau de bord</h2>
+        <p class="pub-sub">Tous les réglages du bot se modifient depuis votre téléphone comme depuis votre ordinateur. Les données sont sauvegardées automatiquement.</p>
         <div class="pub-mock">
           <div class="mock-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="mock-url">hoxera.is-a.dev</span></div>
           <div class="mock-body">
@@ -345,7 +402,7 @@ App.renderPublicLanding = () => {
             </div>
             <div class="bot-card-status">
               <span class="dot ${b.online ? 'dot-online' : 'dot-offline'}"></span>
-              ${b.online ? `En ligne · ${App.fmtNumber(b.servers)} serveur(s) · ${App.fmtNumber(b.members)} membres` : 'Hors ligne'}
+              ${b.online ? `En ligne · ${App.fmtNumber(b.servers)} ${Number(b.servers) > 1 ? 'serveurs' : 'serveur'} · ${App.fmtNumber(b.members)} membres` : 'Hors ligne'}
             </div>
             <div class="bot-card-actions">
               <button class="btn btn-primary" data-view>Voir la page</button>

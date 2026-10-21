@@ -20,7 +20,8 @@ assert.ok(pub.includes('const countUp') && pub.includes('requestAnimationFrame')
 console.log('✅ statistiques : chiffres qui montent');
 
 // 4. Maquette dashboard + section
-assert.ok(pub.includes('Un dashboard digne des plus grands') && pub.includes('pub-mock'), 'section maquette');
+// v377 — l'accroche « digne des plus grands » a été retirée : elle ne disait rien.
+assert.ok(pub.includes('Le tableau de bord') && pub.includes('pub-mock'), 'section maquette');
 assert.ok(css.includes('.mock-side') && css.includes('@keyframes mockFloat'), 'maquette CSS flottante');
 console.log('✅ maquette du dashboard dessinée en CSS (flottante)');
 

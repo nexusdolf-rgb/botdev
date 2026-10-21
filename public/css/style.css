@@ -1535,3 +1535,73 @@ html.hx-light #public-landing .hp-footer-bottom,
 html.hx-light #public-landing .hp-footer-bottom span { color: #5f6472; }
 
 html.hx-light #public-landing .hp-cta-inner p { color: #43485a; }
+
+/* ════════════════════════════════════════════════════════════════
+   v377 — En-tête public : un seul bandeau, quel que soit l'écran
+   ----------------------------------------------------------------
+   Constat à 375 px : les quatre liens de section étaient masqués
+   sans remplacement, et le bouton « Se connecter avec Discord »
+   sortait de 10 px à droite. Le bandeau se replie donc en deux
+   lignes courtes, et le menu prend le relais sous 900 px.
+   ════════════════════════════════════════════════════════════════ */
+.navbar { gap: 12px; flex-wrap: wrap; }
+.navbar .logo-row { min-width: 0; flex: 0 1 auto; }
+.navbar .logo-row { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.navbar-right { flex-wrap: wrap; justify-content: flex-end; min-width: 0; }
+.navbar-right .btn { max-width: 100%; white-space: nowrap; }
+
+/* Bouton hamburger : caché sur grand écran, visible sous 900 px */
+.nav-burger {
+  display: none; width: 42px; height: 42px; padding: 0;
+  align-items: center; justify-content: center; flex-direction: column; gap: 5px;
+  background: rgba(18, 25, 35, .85); border: 1px solid rgba(54, 68, 92, .85);
+  border-radius: 12px; cursor: pointer; flex: 0 0 auto;
+}
+.nav-burger span {
+  display: block; width: 18px; height: 2px; border-radius: 2px;
+  background: var(--text); transition: transform .18s ease, opacity .18s ease;
+}
+.navbar.menu-ouvert .nav-burger span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.navbar.menu-ouvert .nav-burger span:nth-child(2) { opacity: 0; }
+.navbar.menu-ouvert .nav-burger span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+.nav-burger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Le panneau replié : pleine largeur, sous le bandeau, même fond */
+.nav-menu {
+  display: none; flex-basis: 100%; width: 100%;
+  flex-direction: column; gap: 2px;
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid rgba(54, 68, 92, .62);
+}
+.nav-menu[hidden] { display: none; }
+.nav-menu a {
+  display: block; padding: 12px 10px; border-radius: 8px;
+  color: var(--text-dim); font-size: 15px; font-weight: 650; text-decoration: none;
+}
+.nav-menu a:hover, .nav-menu a:focus-visible { background: rgba(255, 255, 255, .06); color: var(--text); }
+
+@media (max-width: 900px) {
+  .navbar-links { display: none; }
+  .nav-burger { display: inline-flex; }
+  .nav-menu:not([hidden]) { display: flex; }
+  .navbar { padding: 11px clamp(14px, 4vw, 44px); }
+  .navbar .logo-row { font-size: 17px; }
+}
+@media (max-width: 420px) {
+  .navbar-right { gap: 10px; }
+  .navbar .btn { font-size: 14px; padding: 9px 12px; }
+  .navbar .logo-row { font-size: 16px; }
+  .navbar .logo { width: 32px; height: 32px; }
+}
+
+/* v377 — sous 900 px, l'action principale vit dans le menu déroulant :
+   la barre du haut ne garde que le logo et le hamburger. */
+.nav-menu-action { padding: 8px 4px 4px; }
+.nav-menu-action .btn, .nav-menu-action button {
+  width: 100%; justify-content: center; text-align: center; white-space: normal;
+}
+@media (max-width: 900px) {
+  .navbar-right { order: 3; }
+  .navbar > .navbar-right .btn { display: none; }
+  .navbar.menu-ouvert .navbar-right { display: none; }
+}

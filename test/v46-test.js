@@ -177,7 +177,7 @@ const check = (label, cond) => {
   console.log(JSON.stringify(res, null, 2));
 
   const ok = res.overview && !res.overview.error && res.overview.checklist === 11 && res.overview.progress && res.overview.brief && res.overview.msgs && res.overview.top
-    && res.welcome && !res.welcome.error && res.welcome.preview && res.welcome.previewText.includes('NouveauMembre') && res.welcome.colorPicker
+    && res.welcome && !res.welcome.error && res.welcome.preview && res.welcome.previewText.includes('Nouveau membre') && res.welcome.colorPicker
     && res.server && !res.server.error && res.server.lockdownCard && res.server.lockBtn && res.server.unlockBtn && res.server.stateOk;
 
   store.db.close();

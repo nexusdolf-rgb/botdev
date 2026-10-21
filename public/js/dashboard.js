@@ -1103,7 +1103,7 @@ Dashboard.serverPicker = () => {
         <span class="srv-label">Serveur</span>
         <b title="${cur ? App.escapeHtml(cur.name) : 'Choisir un serveur…'}">${cur ? App.escapeHtml(cur.name) : 'Choisir un serveur…'}</b>
       </div>
-      <span class="srv-caret" aria-hidden="true">⌄</span>
+      <span class="srv-caret" aria-hidden="true"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16"><path d="M6.4 9.6 12 15.2l5.6-5.6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
     </div>`);
   const open = () => Dashboard.openServerPicker();
   pick.addEventListener('click', open);
@@ -2295,6 +2295,58 @@ Dashboard.SETTING_ROW_CONTROLS = 'select.dash-select, input.dash-input, textarea
 //     un contenu pleine largeur et ne voyait rien.
 Dashboard.SETTING_ROW_PLEINE_LARGEUR = '.dash-channelsmulti, .nk-limit-list';
 
+// ============================================================
+// Variables de message : affichées, jamais déformées, insérables
+// ------------------------------------------------------------
+// Les formulaires se contentaient d'écrire « {member} {user} » en
+// petit sous le champ. On ne savait donc ni à quoi correspondait
+// chaque variable, ni comment l'insérer sans la taper. Chaque
+// variable devient ici une puce cliquable qui écrit la syntaxe
+// EXACTE (toujours en minuscules, jamais transformée par une
+// classe CSS) à l'endroit du curseur.
+// ============================================================
+Dashboard.VARIABLES = {
+  'user': 'mention du membre (@pseudo)',
+  'user.name': 'pseudo du membre',
+  'user.tag': 'pseudo complet du membre',
+  'user.id': 'identifiant du membre',
+  'server': 'nom du serveur',
+  'count': 'nombre de membres du serveur',
+  'channels': 'liste des salons choisis, sur plusieurs lignes',
+  'channel': 'mention du salon où le message est envoyé',
+  'role': 'mention du rôle concerné',
+  'coins': 'solde de coins du membre',
+  'level': 'niveau du membre',
+  'prefix': 'préfixe des commandes',
+  'bot': 'mention du bot',
+};
+
+Dashboard.varChips = (host, names, cible) => {
+  if (!host || !names || !names.length) return null;
+  const boite = App.el('<div class="var-chips" role="group" aria-label="Variables disponibles"></div>');
+  boite.appendChild(App.el('<span class="var-chips-lbl">Insérer une variable</span>'));
+  names.forEach((nom) => {
+    const bouton = App.el(`<button type="button" class="var-chip" data-var="${App.escapeHtml(nom)}" title="${App.escapeHtml(Dashboard.VARIABLES[nom] || nom)}">{${App.escapeHtml(nom)}}</button>`);
+    bouton.addEventListener('click', () => {
+      const champ = typeof cible === 'function' ? cible() : (host.querySelector(cible) || host.parentElement.querySelector(cible));
+      if (!champ) return App.toast('Champ introuvable : la variable n’a pas été insérée.', 'error');
+      const texte = `{${nom}}`;
+      const debut = typeof champ.selectionStart === 'number' ? champ.selectionStart : champ.value.length;
+      const fin = typeof champ.selectionEnd === 'number' ? champ.selectionEnd : champ.value.length;
+      const valeur = String(champ.value || '');
+      champ.value = valeur.slice(0, debut) + texte + valeur.slice(fin);
+      champ.focus();
+      try { champ.setSelectionRange(debut + texte.length, debut + texte.length); } catch {}
+      // Un vrai « input » : la barre de sauvegarde le voit comme une modification.
+      champ.dispatchEvent(new Event('input', { bubbles: true }));
+      champ.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    boite.appendChild(bouton);
+  });
+  host.appendChild(boite);
+  return boite;
+};
+
 Dashboard.layoutSettingRows = (root) => {
   if (!root || !root.querySelectorAll) return;
   // 1) Lignes « libellé → contrôle »
@@ -2906,10 +2958,10 @@ Dashboard.renderers.tickets = async (content, data) => {
         types: typesData.filter((x) => x.label).map((x) => ({ label: x.label, emoji: x.emoji, description: x.description, category: x.category, questions: (x.questions || []).map(qNorm).filter((q) => q.text).slice(0, 5), staff_roles: x.staff_roles.filter(Boolean) })),
       }});
       // Journal des tickets : réglage serveur (indépendant de la config du panneau)
+      // v377 — On n'envoie QUE le champ de ce formulaire. Recopier ici le
+      // préfixe et les sanctions lus au chargement de la page écrasait ce
+      // qu'un autre onglet venait de régler.
       await App.api(`/bots/${bot.id}/guilds/${guildId}/settings`, { method: 'PUT', body: {
-        prefix: (data.settings || {}).prefix || '',
-        warn_limit: (data.settings || {}).warn_limit || 0,
-        warn_action: (data.settings || {}).warn_action || 'none',
         ticket_log_channel: c.querySelector('#t-logchan').value,
       }});
       App.retourEnregistrement(bouton);
@@ -3066,14 +3118,14 @@ Dashboard.renderers.tickets = async (content, data) => {
   // Il est volontairement placé SOUS l'ancien système et possède sa propre
   // table, ses propres IDs d'interaction et son propre panneau Discord.
   // ============================================================
-  const adv = advancedConfig || { id: null, name: 'Créer un ticket', mode: 'buttons', channel: '', message: '', image_url: 'https://hoxera.is-a.dev/icons/support-banner.png', require_reason: 1, types: [] };
+  const adv = advancedConfig || { id: null, name: 'Créer un ticket', mode: 'buttons', channel: '', message: '', image_url: '/icons/support-banner.png', require_reason: 1, types: [] };
   const advancedData = {
     ...adv,
     name: String(adv.name || 'Créer un ticket'),
     mode: adv.mode === 'menu' ? 'menu' : 'buttons',
     channel: String(adv.channel || ''),
     message: String(adv.message || ''),
-    image_url: String(adv.image_url || 'https://hoxera.is-a.dev/icons/support-banner.png'),
+    image_url: String(adv.image_url || '/icons/support-banner.png'),
     require_reason: adv.require_reason === 0 ? 0 : 1,
     types: (Array.isArray(adv.types) && adv.types.length ? adv.types : [{ id: 't1', label: 'Support', emoji: '🎫', button_label: '', description: 'Demande générale au staff', category: '', questions: [], color: '#5865F2', button_style: '1', staff_roles: [] }]).map((x, i) => ({
       id: String(x.id || `t${i + 1}`), label: String(x.label || ''), emoji: String(x.emoji || ''), button_label: String(x.button_label || ''),
@@ -3118,7 +3170,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     <div class="adv-placement-notice"><span><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M3.4 6.6h5.4l1.8 2.2h9.8v9.6a1.6 1.6 0 0 1-1.6 1.6H5a1.6 1.6 0 0 1-1.6-1.6V6.6Z"/></svg></span><div><b>Placement simple et prévisible</b><small>Chaque type doit avoir une catégorie existante. Le même salon privé sera visible uniquement par son créateur et le staff autorisé à ce type.</small></div></div>
     <div class="adv-builder-grid">
       <div class="adv-types-panel">
-        <div class="adv-panel-heading"><div><b>️ Types du Ticket avancé</b><small>Chaque type a sa couleur, son bouton, ses rôles staff et jusqu’à 5 questions.</small></div><span class="adv-count" id="adv-type-count"></span></div>
+        <div class="adv-panel-heading"><div><b>Types du Ticket avancé</b><small>Chaque type a sa couleur, son bouton, ses rôles staff et jusqu’à 5 questions.</small></div><span class="adv-count" id="adv-type-count"></span></div>
         <div id="adv-types"></div>
         <button class="dash-btn dash-btn-sm adv-add-type" id="adv-add-type">＋ Ajouter un type</button>
       </div>
@@ -3384,6 +3436,12 @@ Dashboard.renderers.tickets = async (content, data) => {
 };
 
 // ---------- Bienvenue ----------
+// v377 — Variables que le moteur sait réellement remplacer, par champ.
+const EVENT_VARS = {
+  message: ['user', 'user.name', 'server', 'count', 'channels'],
+  steps: ['member', 'user', 'server', 'type', 'number'],
+};
+
 Dashboard.renderers.welcome = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const root = Dashboard.header(content, '', 'Bienvenue & auto-rôles', 'Accueillez les nouveaux membres et donnez-leur un rôle automatiquement.');
@@ -3458,7 +3516,13 @@ Dashboard.renderers.welcome = async (content, data) => {
       }
 
       if (f.type === 'multiline') {
-        cfgZone.appendChild(App.el(`<textarea class="dash-input" rows="3" data-k="${f.key}">${App.escapeHtml(ev.config[f.key] ?? f.default ?? '')}</textarea>`));
+        const zone = App.el(`<textarea class="dash-input" rows="3" data-k="${f.key}">${App.escapeHtml(ev.config[f.key] ?? f.default ?? '')}</textarea>`);
+        cfgZone.appendChild(zone);
+        // v377 — Les variables réellement comprises par le moteur pour cet
+        // événement, en puces cliquables : la syntaxe est écrite telle quelle,
+        // jamais recopiée à la main ni mise en majuscules.
+        const dispo = EVENT_VARS[f.key] || ['user', 'server', 'count'];
+        Dashboard.varChips(cfgZone, dispo, () => cfgZone.querySelector(`textarea[data-k="${f.key}"]`));
         return;
       }
 
@@ -3599,7 +3663,13 @@ Dashboard.renderers.welcome = async (content, data) => {
             channelsPv = sel.join('\n');
           }
         } catch {}
-        let txt = String(get('message') || 'Bienvenue {user} !').replace('{user}', '@NouveauMembre').replace('{server}', serverName).replace('{count}', memberCount);
+        // v377 — l'aperçu montre le nom que le bot écrit réellement quand il
+        // n'a pas encore le pseudo : « Nouveau membre » (server/discord/events.js).
+        // L'ancien « NouveauMembre#0001 » utilisait un discriminateur que
+        // Discord n'affiche plus depuis 2023 : l'aperçu montrait un format
+        // qui n'existe plus dans aucun salon.
+        const EXEMPLE_MEMBRE = 'Nouveau membre';
+        let txt = String(get('message') || 'Bienvenue {user} !').replace('{user}', `@${EXEMPLE_MEMBRE}`).replace('{server}', serverName).replace('{count}', memberCount);
         if (txt.includes('{channels}')) txt = txt.replace('{channels}', channelsPv || '(aucun salon sélectionné)');
         // Auto-mention côté aperçu : les noms de salons collés depuis Discord
         // (« #nom » ou « ⁠nom ») deviennent des pings <#id>, comme l'envoi réel.
@@ -3633,7 +3703,7 @@ Dashboard.renderers.welcome = async (content, data) => {
         const E = App.escapeHtml;
         const inline = (raw) => E(raw)
           .replace(/&lt;#(\d{15,21})&gt;/g, (m, id) => `<span class="dc-mention">#${E(chanNameById.get(id) || id)}</span>`)
-          .replace(/@NouveauMembre/g, '<span class="dc-mention">@NouveauMembre</span>');
+          .replace(new RegExp('@' + EXEMPLE_MEMBRE.replace(/ /g, '\\s'), 'g'), `<span class="dc-mention">@${EXEMPLE_MEMBRE}</span>`);
 
         const isJoin = key === 'member_join';
         const color = get('color') || (isJoin ? '#57F287' : '#ED4245');
@@ -3642,7 +3712,9 @@ Dashboard.renderers.welcome = async (content, data) => {
         const imgUrl = String(get('image') || '').trim();
 
         const botLine = `<div style="font-size:13px"><b style="color:#f2f3f5">${E(Dashboard.state.bot.name)}</b> <span style="background:#5865F2;color:#fff;font-size:11px;padding:1px 5px;border-radius:4px;vertical-align:middle">✓ APP</span></div>`;
-        const avatarBox = '<div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#5865F2,#8B5CF6);flex-shrink:0"></div>';
+        // v377 — l'aperçu portait un rond dégradé sans rapport avec le bot.
+        // Il affiche maintenant l'avatar réel du bot, servi par /api/public/bot-avatar.
+        const avatarBox = '<img src="/api/public/bot-avatar" alt="" width="38" height="38" style="width:38px;height:38px;border-radius:50%;flex-shrink:0;object-fit:cover;background:#5865F2" />';
         const cardBox = `<div style="margin-top:8px;height:74px;border-radius:8px;background:linear-gradient(135deg,#1b1e2e,#2b1e46);display:flex;align-items:center;justify-content:center;color:#8f93a8;font-size:12px">Carte de bienvenue (avatar + pseudo)</div>`;
         const shell = (inner) => `<div style="display:flex;gap:10px">${avatarBox}<div style="min-width:0;flex:1">${botLine}${inner}</div></div>`;
 
@@ -3675,13 +3747,13 @@ Dashboard.renderers.welcome = async (content, data) => {
         // hausse-le-plancher) laissent ces trois valeurs tranquilles.
         const head = `<div style="display:flex;gap:10px;align-items:flex-start">
             <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:600;color:#f2f3f5">${E(isJoin ? 'NouveauMembre#0001 vient d\u2019arriver !' : 'NouveauMembre#0001 s\u2019en va\u2026')}</div>
+              <div style="font-size:13px;font-weight:600;color:#f2f3f5">${E(isJoin ? `${EXEMPLE_MEMBRE} vient d\u2019arriver !` : `${EXEMPLE_MEMBRE} s\u2019en va\u2026`)}</div>
               ${isJoin ? `<div style="font-size:16px;font-weight:800;color:#f2f3f5;line-height:1.3;margin-top:3px">👋 Bienvenue sur ${E(serverName)} !</div>` : ''}
             </div>${thumb}</div>`;
 
         const fields = isJoin
-          ? `<b style="color:#f2f3f5">Vous êtes le membre</b> <b style="color:#f2f3f5">n°${E(memberCount)}</b> · <b style="color:#f2f3f5">Compte créé</b> il y a 3 jours`
-          : `<b style="color:#f2f3f5">Membres restants</b> <b style="color:#f2f3f5">${E(memberCount)}</b> · <b style="color:#f2f3f5">Était membre depuis</b> il y a 2 mois`;
+          ? `<b style="color:#f2f3f5">👥 Membre n°</b> <b style="color:#f2f3f5">${E(memberCount)}</b> · <b style="color:#f2f3f5">📅 Compte créé</b> à la date de son inscription`
+          : `<b style="color:#f2f3f5">👥 Membres restants</b> <b style="color:#f2f3f5">${E(memberCount)}</b> · <b style="color:#f2f3f5">📅 Membre depuis</b> sa date d'arrivée`;
 
         const img = imgUrl
           ? `${sep}<div style="height:96px;border-radius:4px;background:#1e1f22;border:1px dashed #3f4147;display:flex;align-items:center;justify-content:center;color:#949ba4;font-size:12px">${E(imgUrl.length > 34 ? imgUrl.slice(0, 34) + '…' : imgUrl)}</div>`
@@ -5291,6 +5363,8 @@ Dashboard.renderers.roles = async (content, data) => {
       <div style="font-size:13px"># ${App.escapeHtml(chanName(st.channel))} · ${st.mappings.length} réaction(s) · mode ${st.mode === 'add-only' ? 'don seulement' : 'toggle'}${st.message_id ? ` · <a href="https://discord.com/channels/${guildId}/${st.channel}/${st.message_id}" target="_blank" rel="noopener" style="color:var(--d-accent,#e07a5f)">voir le message</a>` : ' · 📤 pas encore envoyé'}</div>
       <button class="dash-btn" data-rr-del="${st.id}" style="padding:4px 9px">Supprimer</button></div>`).join('');
     host.querySelectorAll('[data-rr-del]').forEach((b) => { b.onclick = async () => {
+      // v377 — suppression immédiate côté Discord : on demande confirmation.
+      if (!(await App.confirm('Supprimer ce message de rôles ? Les réactions déjà posées ne donneront plus de rôle.'))) return;
       const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/reaction_roles/${b.dataset.rrDel}`, { method: 'DELETE' });
       if (r.ok) { App.toast('Message de rôles supprimé.'); Dashboard.loadGuild().then((d) => Dashboard.renderers.roles(content, d)); }
     }; });
@@ -5984,6 +6058,7 @@ Dashboard.renderers.embeds = async (content, data) => {
     });
     host.querySelectorAll('[data-del]').forEach((b) => b.onclick = async () => {
       try {
+        if (!(await App.confirm('Supprimer ce modèle d’embed ? Il ne pourra pas être récupéré.'))) return;
         await App.api(`/bots/${bot.id}/guilds/${guildId}/embed-templates/${b.dataset.del}`, { method: 'DELETE' });
         App.toast('Modèle supprimé.');
         loadTemplates();
@@ -6066,7 +6141,7 @@ Dashboard.renderers.members = async (content, data) => {
       });
       row.querySelector('[data-role]').onclick = () => {
         App.modal(`
-          <div class="modal-header"><h3>️ Rôle — ${App.escapeHtml(m.username)}</h3><button class="x-btn" data-close>×</button></div>
+          <div class="modal-header"><h3>Rôle · ${App.escapeHtml(m.username)}</h3><button class="x-btn" data-close>×</button></div>
           <div class="modal-body">
             <label class="field-label">Rôle</label>
             <select class="input" id="mr-role">${rolesList.map((r) => `<option value="${App.escapeHtml(r.id)}">${App.escapeHtml(r.name)}</option>`).join('')}</select>
@@ -7071,7 +7146,10 @@ Dashboard.renderers.community = async (content, data) => {
           btn.disabled = false; btn.textContent = 'Tester';
         };
         row.querySelector('[data-del]').onclick = async () => {
-          try { await App.api(`/bots/${bot.id}/guilds/${guildId}/livesocials/${so.id}`, { method: 'DELETE' }); App.toast('Compte retiré.'); renderSocials(); }
+          try {
+            if (!(await App.confirm(`Retirer le compte ${so.platform || ''} de la surveillance ?`))) return;
+            await App.api(`/bots/${bot.id}/guilds/${guildId}/livesocials/${so.id}`, { method: 'DELETE' }); App.toast('Compte retiré.'); renderSocials();
+          }
           catch (e) { App.toast(e.message, 'error'); }
         };
         list.appendChild(row);
@@ -7104,7 +7182,7 @@ Dashboard.renderers.community = async (content, data) => {
   }).catch(() => {});
 
   // ---- Carte Starboard ----
-  const c1 = Dashboard.card(root, '⭐ Starboard', 'Quand un message reçoit assez d\'étoiles (réaction ⭐), il est épinglé dans le salon choisi · le mur de la gloire de votre serveur.');
+  const c1 = Dashboard.card(root, 'Starboard', 'Quand un message reçoit assez d\'étoiles (réaction ⭐), il est épinglé dans le salon choisi · le mur de la gloire de votre serveur.');
   const chanOpts = ['<option value="">— Désactivé (choisir un salon pour activer) —</option>']
     .concat(textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(s.starboard_channel, ch) ? 'selected' : ''}>#${App.escapeHtml(ch.name)}</option>`));
   if (s.starboard_channel && !textChannels.some((ch) => Dashboard.discordRefMatches(s.starboard_channel, ch))) {
@@ -7225,7 +7303,7 @@ Dashboard.renderers.voicetemp = async (content, data) => {
       }});
       await App.api(`/bots/${bot.id}/guilds/${guildId}/voicetemp/panel`, { method: 'POST', body: { channel: channelId } });
       App.retourEnregistrement(bouton);
-      App.toast('️ Panneau de contrôle envoyé.');
+      App.toast('Panneau de contrôle envoyé.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
 
@@ -7271,8 +7349,10 @@ Dashboard.renderers.server = async (content, data) => {
       a.click();
     }; });
     host.querySelectorAll('[data-bk-del]').forEach((btn) => { btn.onclick = async () => {
+      // v377 — une sauvegarde de structure supprimée ne se recrée pas à l'identique.
+      if (!(await App.confirm('Supprimer cette sauvegarde de la structure du serveur ?'))) return;
       await App.api(`/bots/${bot.id}/guilds/${guildId}/backups/${btn.dataset.bkDel}`, { method: 'DELETE' });
-      App.toast('️ Sauvegarde supprimée.');
+      App.toast('Sauvegarde supprimée.');
       loadBk();
     }; });
   };
@@ -7623,7 +7703,7 @@ Dashboard.renderers.health = async (content) => {
       ['Anti-crash (réponses polies)', true],
       ['Nettoyage auto (24 h)', true],
     ];
-    const cGuards = App.el(`<div class="dash-card"><h3>️ Garde-fous actifs</h3>
+    const cGuards = App.el(`<div class="dash-card"><h3>Garde-fous actifs</h3>
       <div class="desc">Les protections installées · toutes actives en permanence.</div>
       ${guards.map(([label]) => `<div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid #222434;font-size:13px"><span>${App.glyphe('coche', { taille: 16 })}</span>${label}</div>`).join('')}
     </div>`);

@@ -2588,12 +2588,18 @@ router.put('/bots/:id/guilds/:guildId/settings', requireAuth, async (req, res) =
   const guildId = req.params.guildId;
   if (!(await userCanManageGuild(req, guildId))) return res.status(403).json({ error: 'Permission refusée.' });
   const { prefix, lang, warn_limit, warn_action, warn_timeout_limit, warn_timeout_min, starboard_channel, starboard_min, live_channel, live_ping, ticket_log_channel, log_channel, birthday_channel, birthday_role, log_events, timezone } = req.body || {};
+  // v377 — Cette route écrivait `prefix`, `warn_limit` et `warn_action` même
+  // quand la requête ne les contenait pas : un formulaire qui ne modifiait que
+  // le journal des tickets renvoyait le préfixe lu au chargement de la page et
+  // écrasait donc la valeur qu'un autre onglet venait de changer. Ces trois
+  // champs suivent maintenant la même règle que les autres : on n'écrit que ce
+  // qui est envoyé. `store.guildSettings.set` fusionne avec la ligne existante.
   store.guildSettings.set(bot.id, guildId, {
-    prefix: String(prefix || '').slice(0, 5),
+    ...(prefix !== undefined ? { prefix: String(prefix || '').slice(0, 5) } : {}),
     // v240 — fr|en uniquement (voir server/i18n.js LANG_CODES).
     ...(lang !== undefined ? { lang: ['fr', 'en'].includes(String(lang)) ? String(lang) : 'fr' } : {}),
-    warn_limit: Math.max(0, parseInt(warn_limit, 10) || 0),
-    warn_action: ['none', 'timeout', 'kick', 'ban'].includes(warn_action) ? warn_action : 'none',
+    ...(warn_limit !== undefined ? { warn_limit: Math.max(0, parseInt(warn_limit, 10) || 0) } : {}),
+    ...(warn_action !== undefined ? { warn_action: ['none', 'timeout', 'kick', 'ban'].includes(warn_action) ? warn_action : 'none' } : {}),
     ...(warn_timeout_limit !== undefined ? { warn_timeout_limit: Math.max(0, parseInt(warn_timeout_limit, 10) || 0) } : {}),
     ...(warn_timeout_min !== undefined ? { warn_timeout_min: Math.min(Math.max(parseInt(warn_timeout_min, 10) || 60, 1), 10080) } : {}),
     ...(starboard_channel !== undefined ? { starboard_channel: String(starboard_channel).slice(0, 100) } : {}),
