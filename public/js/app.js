@@ -67,6 +67,7 @@ App.GLYPHES = {
   lien: '<path d="M10.2 13.8a3.6 3.6 0 0 0 5.2.2l2.6-2.6a3.7 3.7 0 0 0-5.2-5.2l-1.4 1.4"/><path d="M13.8 10.2a3.6 3.6 0 0 0-5.2-.2L6 12.6a3.7 3.7 0 0 0 5.2 5.2l1.4-1.4"/>',
   couronne: '<path d="M3.6 7.4 7.4 12l4.6-6.2L16.6 12l3.8-4.6-1.6 11.2H5.2L3.6 7.4Z"/>',
   croix: '<path d="M6 6l12 12M18 6 6 18"/>',
+  plus: '<path d="M12 5.2v13.6M5.2 12h13.6"/>',
   chevron: '<path d="M6.4 9.6 12 15.2l5.6-5.6"/>',
   horloge: '<circle cx="12" cy="12" r="8.4"/><path d="M12 7.2V12l3.4 2.2"/>',
   etincelle: '<path d="M12 3.6l1.7 4.9 4.9 1.7-4.9 1.7L12 16.8l-1.7-4.9-4.9-1.7 4.9-1.7L12 3.6ZM18.4 15.6l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2Z"/>',
@@ -97,6 +98,7 @@ App.GLYPHES = {
   calendrier: '<rect x="3.8" y="5.6" width="16.4" height="15" rx="2.2"/><path d="M3.8 10h16.4M8.4 3.8v3.2M15.6 3.8v3.2"/><path d="M7.6 13.6h2v2h-2zM14.4 13.6h2v2h-2z"/>',
   billets: '<rect x="2.6" y="6.6" width="18.8" height="11" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 12h.6M17.4 12h.6"/>',
   ampoule: '<path d="M9 17.4a6.4 6.4 0 1 1 6 0v1.8H9v-1.8Z"/><path d="M10 21.2h4"/>',
+  cloche: '<path d="M6.4 17.4h11.2l-1.4-2.2V10a4.2 4.2 0 0 0-8.4 0v5.2l-1.4 2.2Z"/><path d="M10.2 20a1.9 1.9 0 0 0 3.6 0"/>',
   // v367 — quatrieme trait : ce que le bilan du balayage reclamait (diise de
   // salon, etiquette de role, porte d'entree, hamecon d'hameconnage).
   diise: '<path d="M9.4 3.8 7.6 20.2M16.4 3.8l-1.8 16.4M4.4 8.8h15.2M3.6 15.2h15.2"/>',
@@ -180,6 +182,10 @@ App.retourEnregistrement = function (bouton, quoi) {
   clearTimeout(horo._horoTimer);
   horo._horoTimer = setTimeout(function () { horo.classList.remove('is-on'); }, 6000);
 };
+
+// v378 — les libellés « membre(s) », « étape(s) », « jour(s) » font mécanique.
+// Un compteur se met au singulier à 0 et 1, au pluriel au-delà.
+App.pluriel = (n, un, plusieurs) => `${Number(n) || 0} ${(Number(n) || 0) > 1 ? plusieurs : un}`;
 
 App.escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -483,7 +489,7 @@ App.renderNavbar = () => {
           <span>${App.escapeHtml(user.discord_username || user.email)}</span>
           <span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M10.2 13.8a3.6 3.6 0 0 0 5.2.2l2.6-2.6a3.7 3.7 0 0 0-5.2-5.2l-1.4 1.4"/><path d="M13.8 10.2a3.6 3.6 0 0 0-5.2-.2L6 12.6a3.7 3.7 0 0 0 5.2 5.2l1.4-1.4"/></svg></span>
         </div>
-        <button class="btn btn-ghost btn-sm" id="nav-logout" title="Déconnexion" aria-label="Se déconnecter du dashboard"><span class="nl-ico"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.4 20.4H5.6a2 2 0 0 1-2-2V5.6a2 2 0 0 1 2-2h3.8"/><path d="M15.6 16.8 20.4 12l-4.8-4.8"/><path d="M20.4 12H9.4"/></g></svg></span><span class="nl-lbl">Déconnexion</span></button>
+        <button class="btn btn-ghost btn-sm" id="nav-logout" title="Déconnexion" aria-label="Se déconnecter du tableau de bord"><span class="nl-ico"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.4 20.4H5.6a2 2 0 0 1-2-2V5.6a2 2 0 0 1 2-2h3.8"/><path d="M15.6 16.8 20.4 12l-4.8-4.8"/><path d="M20.4 12H9.4"/></g></svg></span><span class="nl-lbl">Déconnexion</span></button>
       </div>
     </div>
   `);
@@ -555,7 +561,7 @@ App.renderAdminPage = async () => {
     <div class="page admin-platform-page">
       <header class="admin-head">
         <div class="admin-identity">
-          <img id="a-bot-avatar" class="admin-mark admin-bot-avatar" src="/api/public/bot-avatar?v=377" alt="Avatar d’Hoxera" width="48" height="48" />
+          <img id="a-bot-avatar" class="admin-mark admin-bot-avatar" src="/api/public/bot-avatar?v=378" alt="Avatar d’Hoxera" width="48" height="48" />
           <div class="admin-head-copy">
             <div class="admin-breadcrumb"><span>OPTIMUS PRIME</span><i>/</i><b>CONSOLE FONDATEUR</b></div>
             <h1>Espace fondateur</h1>
@@ -823,7 +829,7 @@ App.renderAdminPage = async () => {
               <button class="btn btn-danger btn-sm" data-delete>Supprimer</button>
             </div>`;
         const row = App.el(`<tr>
-          <td><b>#${u.id}</b>${Number(u.bots_count) ? `<small style="display:block;color:var(--text-dim)">${u.bots_count} bot(s)</small>` : ''}</td>
+          <td><b>#${u.id}</b>${Number(u.bots_count) ? `<small style="display:block;color:var(--text-dim)">${App.pluriel(u.bots_count, 'bot', 'bots')}</small>` : ''}</td>
           <td>${discordCell}</td>
           <td title="${App.escapeHtml(guildNames)}">${u.guild_count || 0}${guildNames ? `<small style="display:block;color:var(--text-dim);max-width:230px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${guildNames}${moreGuilds}</small>` : ''}</td>
           <td>${statusCell}</td>

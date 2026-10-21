@@ -99,7 +99,7 @@ Dashboard.PRESETS_MEMBRES = [[1, '1 · même seul'], [2, '2 membres · conseill�
 // Étiquette de repli si la valeur enregistrée sort des préréglages.
 Dashboard.labelXpParMinute = (v) => `${parseInt(v, 10) || 0} XP / min`;
 Dashboard.labelVersement = (v) => `toutes les ${parseInt(v, 10) || 1} min`;
-Dashboard.labelMembres = (v) => `${parseInt(v, 10) || 1} membre(s)`;
+Dashboard.labelMembres = (v) => App.pluriel(parseInt(v, 10) || 1, 'membre', 'membres');
 
 // Durées exprimées en HEURES (giveaways).
 Dashboard.PRESETS_HEURES = [[1, '1 h'], [2, '2 h'], [6, '6 h'], [12, '12 h'], [24, '1 jour'],
@@ -164,7 +164,7 @@ Dashboard.renderDiscordMultiSelect = (host, {
   const render = () => {
     const available = availableItems();
     addBtn.innerHTML = available.length
-      ? `＋ ${App.escapeHtml(placeholder)}`
+      ? `${App.glyphe('plus', { taille: 12, classe: 'g-plus' })}${App.escapeHtml(placeholder)}`
       : `✓ ${App.escapeHtml(list.length ? 'Tout est sélectionné' : emptyText)}`;
     addBtn.classList.toggle('is-done', !available.length);
 
@@ -566,7 +566,7 @@ Dashboard.mount = async (shell, bot) => {
     content.innerHTML = `
       <div class="dash-card" style="max-width:560px;margin:20px auto">
         <h3>Liez votre compte Discord</h3>
-        <div class="desc">Pour configurer vos serveurs depuis le dashboard (comme DraftBot), connectez votre compte Discord. On vérifiera automatiquement vos serveurs et votre permission Discord « Administrateur ».</div>
+        <div class="desc">Pour configurer vos serveurs depuis le tableau de bord, connectez votre compte Discord. On vérifiera automatiquement vos serveurs et votre permission Discord « Administrateur ».</div>
         <button class="dash-btn dash-btn-primary" id="d-link">Lier mon compte Discord</button>
       </div>`;
     content.querySelector('#d-link').onclick = async () => {
@@ -1598,15 +1598,15 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
         <span>${cur ? App.escapeHtml(cur.name) : 'Aucun serveur sélectionné'}</span>
       </div>
     </div>
-    <div class="dash-topbar-actions" aria-label="Actions rapides du dashboard">
+    <div class="dash-topbar-actions" aria-label="Actions rapides du tableau de bord">
       <div class="dash-accent-wrap">
-        <button class="dash-iconbtn" id="d-bell" data-tip="Notifications" aria-label="Notifications" aria-controls="dash-bell-pop" aria-expanded="false"><span class="bell-badge" hidden></span></button>
+        <button class="dash-iconbtn" id="d-bell" data-tip="Notifications" aria-label="Notifications" aria-controls="dash-bell-pop" aria-expanded="false">${App.glyphe('cloche', { taille: 16 })}<span class="bell-badge" hidden></span></button>
       </div>
       <button class="dash-iconbtn" id="d-theme" data-tip="Mode clair / sombre" aria-label="Changer le thème"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="8.2"/><path d="M12 3.8a8.2 8.2 0 0 1 0 16.4Z" fill="currentColor" stroke="none"/></svg></button>
       <button class="dash-iconbtn" id="d-palette" data-tip="Recherche rapide (Ctrl+K)" aria-label="Rechercher un module ou un serveur"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="10.6" cy="10.6" r="6.2"/><path d="M15.2 15.2 20 20"/></svg></button>
       <button class="dash-iconbtn" id="d-refresh" data-tip="Actualiser le module" aria-label="Actualiser le module"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M19.4 12a7.4 7.4 0 1 1-2.2-5.3"/><path d="M18.2 3.4v3.6h-3.6"/></svg></button>
       <div class="dash-accent-wrap">
-        <button class="dash-iconbtn" id="d-accent" data-tip="Couleur du dashboard" aria-label="Choisir la couleur du dashboard" aria-controls="dash-accent-pop" aria-expanded="false"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3.6a8.4 8.4 0 0 0 0 16.8c1.4 0 2-.9 2-1.9s-.7-1.6-.7-2.4c0-1 .8-1.7 1.9-1.7h1.7a3.5 3.5 0 0 0 3.5-3.6A8.3 8.3 0 0 0 12 3.6Z"/><circle cx="8.2" cy="9.2" r="1.1"/><circle cx="12.6" cy="7.2" r="1.1"/><circle cx="16.6" cy="9.8" r="1.1"/></svg></button>
+        <button class="dash-iconbtn" id="d-accent" data-tip="Couleur du tableau de bord" aria-label="Choisir la couleur du tableau de bord" aria-controls="dash-accent-pop" aria-expanded="false"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3.6a8.4 8.4 0 0 0 0 16.8c1.4 0 2-.9 2-1.9s-.7-1.6-.7-2.4c0-1 .8-1.7 1.9-1.7h1.7a3.5 3.5 0 0 0 3.5-3.6A8.3 8.3 0 0 0 12 3.6Z"/><circle cx="8.2" cy="9.2" r="1.1"/><circle cx="12.6" cy="7.2" r="1.1"/><circle cx="16.6" cy="9.8" r="1.1"/></svg></button>
       </div>
       ${needsInvite ? `<button class="dash-btn" id="d-invite2" aria-label="Ajouter le bot au serveur">Ajouter le bot</button>` : ''}
       <div class="dash-bot-chip" title="${App.escapeHtml(bot.bot_username || bot.name)}" aria-label="${App.escapeHtml(bot.name)}">
@@ -1619,7 +1619,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
       <div class="dash-account-chip" title="Compte connecté au tableau de bord">
         ${acctAvatar}
         <div class="chip-txt"><b>${App.escapeHtml(acctName)}</b><small>Compte Discord</small></div>
-        <button class="dash-iconbtn" id="d-logout" data-tip="Déconnexion" aria-label="Se déconnecter du dashboard"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.4 20.4H5.6a2 2 0 0 1-2-2V5.6a2 2 0 0 1 2-2h3.8"/><path d="M15.6 16.8 20.4 12l-4.8-4.8"/><path d="M20.4 12H9.4"/></g></svg></button>
+        <button class="dash-iconbtn" id="d-logout" data-tip="Déconnexion" aria-label="Se déconnecter du tableau de bord"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.4 20.4H5.6a2 2 0 0 1-2-2V5.6a2 2 0 0 1 2-2h3.8"/><path d="M15.6 16.8 20.4 12l-4.8-4.8"/><path d="M20.4 12H9.4"/></g></svg></button>
       </div>
     </div>
   `;
@@ -1646,7 +1646,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
       <div class="bp-list"><div class="dp-empty">Chargement…</div></div>
     </div>`);
   const accPop = App.el(`
-    <div id="dash-accent-pop" class="dash-accent-pop dash-topbar-popover" data-dash-topbar-popover="true" hidden role="dialog" aria-label="Couleur du dashboard">
+    <div id="dash-accent-pop" class="dash-accent-pop dash-topbar-popover" data-dash-topbar-popover="true" hidden role="dialog" aria-label="Couleur du tableau de bord">
       ${Dashboard.ACCENTS.map(([n, c1, c2]) => `<button class="acc-dot" type="button" data-acc="${n}" aria-label="Thème ${n}" title="${n}" style="background:linear-gradient(135deg,${c1},${c2})"></button>`).join('')}
     </div>`);
   document.body.appendChild(bellPop);
@@ -1672,7 +1672,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
             ? Dashboard.decoWrap(`<img class="dash-mobile-account-avatar" src="/api/img?u=${encodeURIComponent(`https://cdn.discordapp.com/avatars/${mobileUser.discord_id}/${mobileUser.discord_avatar}.png?size=64`)}" alt="" data-fb-text="${App.escapeHtml(String(mobileUserName).slice(0, 1).toUpperCase())}" />`, Dashboard.userDecoUrl(mobileUser.discord_deco))
             : `<span class="dash-mobile-account-avatar">${App.escapeHtml(String(mobileUserName).slice(0, 1).toUpperCase())}</span>`}
           <div><b>${App.escapeHtml(mobileUserName)}</b><small>Compte connecté</small></div>
-          <button type="button" data-mobile-logout aria-label="Se déconnecter du dashboard"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.4 20.4H5.6a2 2 0 0 1-2-2V5.6a2 2 0 0 1 2-2h3.8"/><path d="M15.6 16.8 20.4 12l-4.8-4.8"/><path d="M20.4 12H9.4"/></g></svg></button>
+          <button type="button" data-mobile-logout aria-label="Se déconnecter du tableau de bord"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.4 20.4H5.6a2 2 0 0 1-2-2V5.6a2 2 0 0 1 2-2h3.8"/><path d="M15.6 16.8 20.4 12l-4.8-4.8"/><path d="M20.4 12H9.4"/></g></svg></button>
         </div>
       </aside>
       <aside class="dash-mobile-drawer dash-mobile-modules-drawer" id="dash-mobile-modules-drawer" hidden aria-label="Serveurs et modules">
@@ -2465,7 +2465,7 @@ Dashboard.renderers.overview = async (content, data) => {
 
   const configPanel = App.el(`
     <section class="ov-config-panel ov-checklist-card">
-      <div class="ov-section-heading"><b>Configuration du serveur</b><span>${doneCount} étape(s) terminée(s) sur ${checklist.length || 0}</span></div>
+      <div class="ov-section-heading"><b>Configuration du serveur</b><span>${App.pluriel(doneCount, 'étape terminée', 'étapes terminées')} sur ${checklist.length || 0}</span></div>
       <div class="ov-progress-head">
         <div class="ov-progress-copy"><b>${pct === 100 ? 'Serveur prêt' : 'Progression de la configuration'}</b><span>Les éléments importants de votre installation Hoxera</span></div>
         <strong>${pct}%</strong>
@@ -2553,7 +2553,7 @@ Dashboard.renderers.overview = async (content, data) => {
     const totalJoins = (st.joins || []).reduce((sum, day) => sum + Number(day.members || 0), 0);
     const top3 = (st.top_active || []).slice(0, 3);
     const brief = briefSection.querySelector('.ov-brief-content');
-    brief.innerHTML = `<div class="ov-brief-badges"><span class="dash-badge ok">${totalMsgs} messages</span><span class="dash-badge">${totalJoins} arrivée(s)</span><span class="dash-badge warn">${ts.open} ticket(s)</span></div>`;
+    brief.innerHTML = `<div class="ov-brief-badges"><span class="dash-badge ok">${App.pluriel(totalMsgs, 'message', 'messages')}</span><span class="dash-badge">${App.pluriel(totalJoins, 'arrivée', 'arrivées')}</span><span class="dash-badge warn">${App.pluriel(ts.open, 'ticket ouvert', 'tickets ouverts')}</span></div>`;
     if (top3.length) {
       brief.innerHTML += '<div class="dash-label ov-top-label">Membres actifs</div>';
       top3.forEach((member, index) => { brief.innerHTML += `<div class="ov-top-member"><span>${['', '', ''][index]}</span><b>${App.escapeHtml(member.tag)}</b><small>${member.messages} msg</small></div>`; });
@@ -2989,7 +2989,7 @@ Dashboard.renderers.tickets = async (content, data) => {
         <div style="margin-bottom:10px">${App.escapeHtml(t.message || 'Besoin d\'aide ? Ouvrez un ticket !')}</div>
         <span style="display:inline-flex;align-items:center;gap:6px;background:${color};color:#fff;font-weight:700;padding:7px 16px;border-radius:4px">${App.escapeHtml(label)}</span>
         ${typesCount
-          ? `<div style="margin-top:12px;border:1px solid #1E1F22;border-radius:4px;padding:9px 12px;color:#A8ABAF;text-align:left">${typesData.filter((x) => x.label).map((x) => `<div style="padding:4px 0">${App.escapeHtml(x.emoji || '')} <b style="color:#DBDEE1">${App.escapeHtml(x.label)}</b>${(x.questions || []).length ? ` <span style="font-size:11px;background:rgba(88,101,242,.2);color:#aab1ff;padding:1px 7px;border-radius:8px">${x.questions.length} question(s)</span>` : ''}${x.description ? `<div style="font-size:11px;margin-left:20px;color:#949BA4">${App.escapeHtml(x.description.slice(0, 70))}${x.description.length > 70 ? '…' : ''}</div>` : ''}</div>`).join('')}</div>`
+          ? `<div style="margin-top:12px;border:1px solid #1E1F22;border-radius:4px;padding:9px 12px;color:#A8ABAF;text-align:left">${typesData.filter((x) => x.label).map((x) => `<div style="padding:4px 0">${App.escapeHtml(x.emoji || '')} <b style="color:#DBDEE1">${App.escapeHtml(x.label)}</b>${(x.questions || []).length ? ` <span style="font-size:11px;background:rgba(88,101,242,.2);color:#aab1ff;padding:1px 7px;border-radius:8px">${App.pluriel(x.questions.length, 'question', 'questions')}</span>` : ''}${x.description ? `<div style="font-size:11px;margin-left:20px;color:#949BA4">${App.escapeHtml(x.description.slice(0, 70))}${x.description.length > 70 ? '…' : ''}</div>` : ''}</div>`).join('')}</div>`
           : `<div style="margin-top:10px;color:#A8ABAF;font-size:12px">Aucun type → un simple bouton s\'affichera.</div>`}
       </div>`;
   };
@@ -3374,7 +3374,7 @@ Dashboard.renderers.tickets = async (content, data) => {
   extraMenus.forEach((m) => {
     const n = Array.isArray(m.types) ? m.types.length : 0;
     const row = App.el(`<div style="display:flex;align-items:center;gap:10px;border:1px solid var(--d-border);border-radius:8px;padding:10px 14px;margin-bottom:8px">
-      <div style="flex:1"><b>${App.escapeHtml(m.name || 'Menu')}</b><div style="color:var(--d-dim);font-size:12px">${n} type(s) · ${App.escapeHtml(m.channel || 'salon non défini')}</div></div>
+      <div style="flex:1"><b>${App.escapeHtml(m.name || 'Menu')}</b><div style="color:var(--d-dim);font-size:12px">${App.pluriel(n, 'type', 'types')} · ${App.escapeHtml(m.channel || 'salon non défini')}</div></div>
       <button class="dash-btn dash-btn-sm" data-xm-edit>Modifier</button>
       <button class="dash-btn dash-btn-sm" data-xm-send>Envoyer</button>
       <button class="dash-btn dash-btn-danger dash-btn-sm" data-xm-del>Supprimer</button>
@@ -3979,7 +3979,7 @@ Dashboard.renderers.levels = async (content, data) => {
     try {
       const out = await App.api(`/bots/${bot.id}/guilds/${guildId}/xp/sync`, { method: 'POST', body: { limit: 250 } });
       status.textContent = out.message
-        || `Terminé : ${out.present} membre(s) à jour · ${out.added} rôle(s) ajouté(s) · ${out.removed} ancien(s) retiré(s)${out.remaining ? ` — ${out.remaining} restant(s), relancez pour finir.` : ''}`;
+        || `Terminé : ${App.pluriel(out.present, 'membre à jour', 'membres à jour')} · ${App.pluriel(out.added, 'rôle ajouté', 'rôles ajoutés')} · ${App.pluriel(out.removed, 'ancien retiré', 'anciens retirés')}${out.remaining ? ` — ${out.remaining} restant(s), relancez pour finir.` : ''}`;
     } catch (e) {
       status.textContent = '' + (e.message || 'Synchronisation impossible.');
     }
@@ -4579,8 +4579,8 @@ Dashboard.renderers.moderation = async (content, data) => {
       const nativeStatus = await App.api(`/bots/${bot.id}/guilds/${guildId}/automod/native`);
       const count = Number(nativeStatus.nativeRules) || 0;
       nativeStatusBox.innerHTML = nativeStatus.badgeEligible
-        ? `<span class="am-native-status-dot is-ok"></span><div><b>Seuil Auto-Mod atteint</b><small>${count} règle(s) native(s) détectée(s) par Discord.</small></div>`
-        : `<span class="am-native-status-dot ${nativeStatus.ok ? '' : 'is-warn'}"></span><div><b>${nativeStatus.ok ? `${count} règle(s) native(s) active(s)` : 'Synchronisation à vérifier'}</b><small>${nativeStatus.ok ? `${Math.max(0, 100 - count)} règle(s) native(s) manquante(s) pour le seuil indicatif.` : App.escapeHtml(nativeStatus.error || 'Choisissez un salon d’alerte et synchronisez.')}</small></div>`;
+        ? `<span class="am-native-status-dot is-ok"></span><div><b>Seuil Auto-Mod atteint</b><small>${App.pluriel(count, 'règle native détectée', 'règles natives détectées')} par Discord.</small></div>`
+        : `<span class="am-native-status-dot ${nativeStatus.ok ? '' : 'is-warn'}"></span><div><b>${nativeStatus.ok ? App.pluriel(count, 'règle native active', 'règles natives actives') : 'Synchronisation à vérifier'}</b><small>${nativeStatus.ok ? `${App.pluriel(Math.max(0, 100 - count), 'règle native manquante', 'règles natives manquantes')}(s) pour le seuil indicatif.` : App.escapeHtml(nativeStatus.error || 'Choisissez un salon d’alerte et synchronisez.')}</small></div>`;
     } catch (e) {
       nativeStatusBox.innerHTML = `<span class="am-native-status-dot is-warn"></span><div><b>API Discord indisponible</b><small>${App.escapeHtml(e.message)}</small></div>`;
     }
@@ -4591,7 +4591,7 @@ Dashboard.renderers.moderation = async (content, data) => {
     syncButton.disabled = true; syncButton.textContent = 'Synchronisation…';
     try {
       const result = await App.api(`/bots/${bot.id}/guilds/${guildId}/automod/native/sync`, { method: 'POST', body: { enabled: cNative.querySelector('#am-native-on').checked, alert_channel: cNative.querySelector('#am-native-channel').value } });
-      if (result.ok) App.toast(`Auto-Mod officiel synchronisé : ${result.created || 0} créée(s), ${result.updated || 0} mise(s) à jour.`);
+      if (result.ok) App.toast(`Auto-Mod officiel synchronisé : ${App.pluriel(result.created || 0, 'règle créée', 'règles créées')}, ${App.pluriel(result.updated || 0, 'mise à jour', 'mises à jour')}.`);
       else App.toast(result.error || 'Synchronisation Auto-Mod officielle impossible.', 'error');
       renderNativeStatus();
     } catch (e) { App.toast(e.message, 'error'); }
@@ -4820,7 +4820,7 @@ Dashboard.renderers.moderation = async (content, data) => {
         <div style="font-size:12px;color:var(--d-dim);margin-bottom:8px">Membres concernés · palier configuré : <b>${cfg.limit || 'désactivé'}</b>${cfg.action && cfg.action !== 'none' ? ` → ${App.escapeHtml(actionLabel(cfg.action))}` : ''}</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin-bottom:14px">
           ${summary.slice(0, 8).map((s) => `<div style="display:flex;align-items:center;gap:8px;padding:10px 11px;border:1px solid var(--d-border);border-radius:12px;background:rgba(88,101,242,.06)">
-            <span style="font-size:18px">${App.glyphe('alerte', { taille: 16 })}</span><div style="flex:1;min-width:0"><b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${App.escapeHtml(s.user_tag)}</b><span style="font-size:12px;color:var(--d-dim)">${s.count} actif(s)${s.history_count ? ` · ${s.history_count} historique(s)` : ''}</span></div>
+            <span style="font-size:18px">${App.glyphe('alerte', { taille: 16 })}</span><div style="flex:1;min-width:0"><b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${App.escapeHtml(s.user_tag)}</b><span style="font-size:12px;color:var(--d-dim)">${App.pluriel(s.count, 'actif', 'actifs')}${s.history_count ? ` · ${App.pluriel(s.history_count, 'historique', 'historiques')}` : ''}</span></div>
             <button class="dash-btn dash-btn-danger dash-btn-sm" data-clear-warnings="${App.escapeHtml(s.user_id)}" title="Réinitialiser">Réinitialiser</button>
           </div>`).join('')}
         </div>` : '';
@@ -5360,7 +5360,7 @@ Dashboard.renderers.roles = async (content, data) => {
     const host = cRR.querySelector('#rr-list');
     if (!rrList.length) { host.innerHTML = '<div style="font-size:13px;color:var(--d-dim)">Aucun message de rôles pour l\'instant : créez-le ci-dessous.</div>'; return; }
     host.innerHTML = rrList.map((st) => `<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;padding:9px 10px;border:1px solid var(--d-line);border-radius:8px;margin-bottom:6px;background:var(--d-card2,#ffffff08)">
-      <div style="font-size:13px"># ${App.escapeHtml(chanName(st.channel))} · ${st.mappings.length} réaction(s) · mode ${st.mode === 'add-only' ? 'don seulement' : 'toggle'}${st.message_id ? ` · <a href="https://discord.com/channels/${guildId}/${st.channel}/${st.message_id}" target="_blank" rel="noopener" style="color:var(--d-accent,#e07a5f)">voir le message</a>` : ' · 📤 pas encore envoyé'}</div>
+      <div style="font-size:13px"># ${App.escapeHtml(chanName(st.channel))} · ${App.pluriel(st.mappings.length, 'réaction', 'réactions')} · mode ${st.mode === 'add-only' ? 'don seulement' : 'toggle'}${st.message_id ? ` · <a href="https://discord.com/channels/${guildId}/${st.channel}/${st.message_id}" target="_blank" rel="noopener" style="color:var(--d-accent,#e07a5f)">voir le message</a>` : ' · 📤 pas encore envoyé'}</div>
       <button class="dash-btn" data-rr-del="${st.id}" style="padding:4px 9px">Supprimer</button></div>`).join('');
     host.querySelectorAll('[data-rr-del]').forEach((b) => { b.onclick = async () => {
       // v377 — suppression immédiate côté Discord : on demande confirmation.
@@ -5442,7 +5442,7 @@ const c = Dashboard.card(root, 'Panneaux', 'Envoyez-les sur Discord avec /roles 
       : '<span style="color:var(--d-dim)">pas encore envoyé</span>';
     const row = App.el(`
       <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--d-border);border-radius:8px;padding:10px 14px;margin-bottom:8px">
-        <div style="flex:1"><b>${App.escapeHtml(m.name)}</b><div style="color:var(--d-dim);font-size:12px">${m.options.length} rôle(s) · ${modeLabel} · ${status}</div></div>
+        <div style="flex:1"><b>${App.escapeHtml(m.name)}</b><div style="color:var(--d-dim);font-size:12px">${App.pluriel(m.options.length, 'rôle', 'rôles')} · ${modeLabel} · ${status}</div></div>
         <button class="dash-btn dash-btn-sm" data-edit="${m.id}">Modifier</button>
         <button class="dash-btn dash-btn-sm" data-send="${m.id}">${sent ? 'Mettre à jour' : 'Envoyer'}</button>
         <button class="dash-btn dash-btn-danger dash-btn-sm" data-del="${m.id}">Supprimer</button>
@@ -5760,7 +5760,7 @@ Dashboard.renderers.giveaways = async (content) => {
   active.forEach((g) => {
     const row = App.el(`
       <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--d-border);border-radius:8px;padding:10px 14px;margin-bottom:8px">
-        <div style="flex:1;min-width:0"><b>${App.escapeHtml(g.prize)}</b><div style="color:var(--d-dim);font-size:12px">${g.winners} gagnant(s) · fin <t:${Math.floor(g.ends_at / 1000)}:R></div></div>
+        <div style="flex:1;min-width:0"><b>${App.escapeHtml(g.prize)}</b><div style="color:var(--d-dim);font-size:12px">${App.pluriel(g.winners, 'gagnant', 'gagnants')} · fin <t:${Math.floor(g.ends_at / 1000)}:R></div></div>
         <button class="dash-btn dash-btn-danger dash-btn-sm" data-end="${g.id}">Terminer maintenant</button>
       </div>`);
     row.querySelector('[data-end]').onclick = async () => {
@@ -6238,7 +6238,7 @@ Dashboard.renderers.stats = async (content) => {
   // Commandes utilisées (stats d'utilisation v88)
   try {
     const cs = await App.api(`/bots/${bot.id}/guilds/${guildId}/stats/commands`);
-    const c4 = Dashboard.card(root, 'Commandes utilisées', `${cs.total} commande(s) au total (30 derniers jours).`);
+    const c4 = Dashboard.card(root, 'Commandes utilisées', `${App.pluriel(cs.total, 'commande utilisée', 'commandes utilisées')} sur 30 jours.`);
     if (!cs.total) {
       c4.appendChild(App.el(`<div class="desc" style="margin:0">Les compteurs se remplissent dès que les membres utilisent les commandes.</div>`));
     } else {
@@ -6343,9 +6343,9 @@ Dashboard.renderers.announcements = async (content, data) => {
     ['S', '~~', '~~', 'Barré'],
     ['<>', '`', '`', 'Code court'],
     ['{}', '```\n', '\n```', 'Bloc de code'],
-    ['', '> ', '', 'Citation'],
+    [App.glyphe('bulle', { taille: 14 }), '> ', '', 'Citation'],
     ['•', '- ', '', 'Liste'],
-    ['', '[', '](https://...)', 'Lien Markdown'],
+    [App.glyphe('lien', { taille: 14 }), '[', '](https://...)', 'Lien Markdown'],
   ];
   cCustom.innerHTML += `
     <div class="ca-status-row"><span class="dash-badge ok">Éditeur visuel</span><span class="ca-status-copy">Formatage Discord pris en charge : gras, italique, souligné, code et citations.</span></div>
@@ -6463,7 +6463,7 @@ Dashboard.renderers.announcements = async (content, data) => {
     try {
       await saveCustomAnnouncement(true);
       const result = await App.api(`/bots/${bot.id}/guilds/${guildId}/announcements/custom/send`, { method: 'POST' });
-      caStatus.textContent = `Annonce publiée dans ${result.sent || 0} salon(s).` + (result.missingChannels && result.missingChannels.length ? ' Certains salons sont introuvables.' : '');
+      caStatus.textContent = `Annonce publiée dans ${App.pluriel(result.sent || 0, 'salon', 'salons')}.` + (result.missingChannels && result.missingChannels.length ? ' Certains salons sont introuvables.' : '');
       App.toast('Annonce publiée sur Discord.');
     } catch (e) { App.toast(e.message, 'error'); }
     button.disabled = false; button.textContent = 'Publier maintenant';
@@ -6722,7 +6722,7 @@ Dashboard.renderers.quiz = async (content, data) => {
       <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--d-border);border-radius:8px;padding:10px 14px;margin-bottom:8px;flex-wrap:wrap">
         <div style="flex:1;min-width:0">
           <b>${App.escapeHtml(set.name || 'Mon quiz')}</b>
-          <div style="color:var(--d-dim);font-size:12px">${qCount} question(s)${set.channel ? ' · salon #' + App.escapeHtml(set.channel.replace(/^#/, '')) : ''} ${set.enabled ? '' : ' · <span style="color:#ED4245">désactivé</span>'}</div>
+          <div style="color:var(--d-dim);font-size:12px">${App.pluriel(qCount, 'question', 'questions')}${set.channel ? ' · salon #' + App.escapeHtml(set.channel.replace(/^#/, '')) : ''} ${set.enabled ? '' : ' · <span style="color:#ED4245">désactivé</span>'}</div>
         </div>
         <label class="switch" title="Activer / désactiver"><input type="checkbox" data-toggle="${set.id}" ${set.enabled ? 'checked' : ''} /><span class="slider"></span></label>
         <button class="dash-btn dash-btn-sm" data-edit="${set.id}">Modifier</button>
@@ -6887,7 +6887,7 @@ Dashboard.renderers.events = async (content, data) => {
           </div>
           <div style="text-align:center;min-width:70px">
             <b style="font-size:18px">${participants.length}</b>
-            <div style="font-size:11px;color:var(--d-dim,#a0a5b3)">inscrit(s)</div>
+            <div style="font-size:11px;color:var(--d-dim,#a0a5b3)">inscrits</div>
           </div>
           <div style="display:flex;gap:6px">
             <button class="dash-btn dash-btn-sm" data-ev-copy>Copier le lien</button>
@@ -6975,7 +6975,7 @@ Dashboard.renderers.community = async (content, data) => {
     box.innerHTML = ircRows.map((rw, i) => `
       <div class="irc-row" data-i="${i}" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
         <input type="number" class="dash-input irc-inv" min="1" max="100000" value="${rw.invites}" style="width:110px" title="Nombre d'invitations valides" />
-        <span style="color:var(--d-dim);font-size:13px">invitation(s) →</span>
+        <span style="color:var(--d-dim);font-size:13px">invitations →</span>
         <select class="dash-select irc-role" style="max-width:240px">${ircRoleOpts(rw.role)}</select>
         <button class="dash-btn irc-del" title="Supprimer ce palier">Supprimer</button>
       </div>`).join('');
@@ -7216,7 +7216,7 @@ Dashboard.renderers.community = async (content, data) => {
       App.api(`/bots/${bot.id}/guilds/${guildId}/members`).catch(() => ({ members: [] })),
     ]);
     const byId = new Map((membersRes.members || []).map((m) => [String(m.id), m]));
-    c2.appendChild(App.el(`<div style="font-size:13px;color:var(--d-dim);margin-bottom:10px">${starboardCount} message(s) au starboard · ⚠️ Le bot doit avoir la permission « Gérer le serveur » pour lire les invitations.</div>`));
+    c2.appendChild(App.el(`<div style="font-size:13px;color:var(--d-dim);margin-bottom:10px">${App.pluriel(starboardCount, 'message', 'messages')} au starboard · ⚠️ Le bot doit avoir la permission « Gérer le serveur » pour lire les invitations.</div>`));
     if (!invitesTop.length) {
       c2.appendChild(App.el(`<div class="dash-empty">Aucune invitation traquée pour l'instant · le classement se remplit à chaque nouvelle arrivée.</div>`));
     } else {
@@ -7230,7 +7230,7 @@ Dashboard.renderers.community = async (content, data) => {
             <span style="width:34px;text-align:center;font-size:${idx < 3 ? '20px' : '14px'}">${medals[idx] || (idx + 1) + '.'}</span>
             ${avatar}
             <span style="flex:1;font-weight:600">${App.escapeHtml(String(name))}</span>
-            <span class="dash-badge">${r.n} invitation(s)</span>
+            <span class="dash-badge">${App.pluriel(r.n, 'invitation', 'invitations')}</span>
           </div>`));
       });
     }
@@ -7336,7 +7336,7 @@ Dashboard.renderers.server = async (content, data) => {
     host.querySelectorAll('[data-bk-restore]').forEach((btn) => { btn.onclick = async () => {
       if (!confirm('Restaurer cette sauvegarde ? Seuls les rôles et salons MANQUANTS seront recréés ; rien ne sera supprimé.')) return;
       const rr2 = await App.api(`/bots/${bot.id}/guilds/${guildId}/backups/${btn.dataset.bkRestore}/restore`, { method: 'POST', body: {} });
-      App.toast(rr2.ok ? `Restauration terminée : ${rr2.made.roles} rôle(s) et ${rr2.made.channels} salon(s) recréés.` : `${rr2.error || 'Restauration impossible.'}`);
+      App.toast(rr2.ok ? `Restauration terminée : ${App.pluriel(rr2.made.roles, 'rôle', 'rôles')} et ${App.pluriel(rr2.made.channels, 'salon recréé', 'salons recréés')}.` : `${rr2.error || 'Restauration impossible.'}`);
     }; });
     host.querySelectorAll('[data-bk-export]').forEach((btn) => { btn.onclick = async () => {
       const token = App.state && App.state.token ? App.state.token : (localStorage.getItem('hx-token') || '');
@@ -7463,7 +7463,7 @@ Dashboard.renderers.server = async (content, data) => {
     const zone = c5.querySelector('#ld-zone');
     if (ld.locked) {
       const names = (ld.channels || []).slice(0, 12).map((ch) => '#' + App.escapeHtml(ch.name)).join(', ');
-      zone.innerHTML = `<div class="dash-badge bad" style="margin-bottom:8px">Serveur verrouillé — ${ld.channels.length} salon(s) en lecture seule</div>
+      zone.innerHTML = `<div class="dash-badge bad" style="margin-bottom:8px">Serveur verrouillé — ${App.pluriel(ld.channels.length, 'salon en lecture seule', 'salons en lecture seule')}</div>
         <div style="font-size:12px;color:var(--d-dim);margin-bottom:12px">${names}${ld.channels.length > 12 ? '…' : ''}</div>`;
     } else {
       zone.innerHTML = `<div class="dash-badge ok" style="margin-bottom:12px">Serveur ouvert · tout le monde peut écrire normalement</div>`;
@@ -7475,7 +7475,7 @@ Dashboard.renderers.server = async (content, data) => {
     try {
       const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/lockdown`, { method: 'POST', body: { action: 'on' } });
       ld.locked = r.state.locked; ld.channels = r.state.channels;
-      App.toast(r.already ? 'Le serveur était déjà verrouillé.' : `${r.channels} salon(s) verrouillés !`);
+      App.toast(r.already ? 'Le serveur était déjà verrouillé.' : `${App.pluriel(r.channels, 'salon verrouillé', 'salons verrouillés')} !`);
       renderLock();
     } catch (e) { App.toast(e.message, 'error'); }
   };
@@ -7483,7 +7483,7 @@ Dashboard.renderers.server = async (content, data) => {
     try {
       const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/lockdown`, { method: 'POST', body: { action: 'off' } });
       ld.locked = r.state.locked; ld.channels = r.state.channels;
-      App.toast(`${r.reopened} salon(s) rouverts.`);
+      App.toast(`${App.pluriel(r.reopened, 'salon rouvert', 'salons rouverts')}.`);
       renderLock();
     } catch (e) { App.toast(e.message, 'error'); }
   };
@@ -7507,11 +7507,14 @@ Dashboard.renderers.commands = async (content) => {
     try { s = await App.api(`/bots/${bot.id}/commands/status`); }
     catch (e) { zoneEtat.innerHTML = `<div class="dash-empty">${App.escapeHtml(e.message)}</div>`; return; }
     const lignes = [];
-    lignes.push(`<div style="font-size:13px;margin-bottom:8px">Discord connaît <b>${s.registered ? s.registered.length : 0}</b> commande(s) sur <b>${s.wanted.length}</b> attendue(s).</div>`);
+    // v378 — si la réponse ne porte pas la liste attendue (bot hors ligne,
+    // route partielle), le module entier tombait sur « undefined.length ».
+    const attendues = Array.isArray(s.wanted) ? s.wanted : [];
+    lignes.push(`<div style="font-size:13px;margin-bottom:8px">Discord connaît <b>${App.pluriel(s.registered ? s.registered.length : 0, 'commande', 'commandes')}</b> sur <b>${attendues.length}</b> attendues.</div>`);
     if (s.error) lignes.push(`<div class="dash-empty">${App.escapeHtml(s.error)}</div>`);
     if (s.off && s.off.length) {
-      const retenues = (s.totalIfAllOn || s.wanted.length) - s.wanted.length;
-      lignes.push(`<div style="font-size:13px;margin:6px 0;color:#f0b849"><b>${retenues}</b> commande(s) ne sont même pas demandées à Discord : leurs modules sont coupés.</div>`);
+      const retenues = (s.totalIfAllOn || attendues.length) - attendues.length;
+      lignes.push(`<div style="font-size:13px;margin:6px 0;color:#f0b849"><b>${retenues > 1 ? `${retenues} commandes ne sont même pas demandées` : `${retenues} commande n’est même pas demandée`}</b> à Discord : les modules concernés sont coupés.</div>`);
       lignes.push(`<div style="font-size:13px;margin:6px 0">Modules coupés : ${s.off.map((m) => `<b>${App.escapeHtml(m.label)}</b> (${App.escapeHtml(m.commands.join(', '))})`).join(' · ')}</div>`);
     }
     if (s.missing && s.missing.length) {
@@ -7559,7 +7562,7 @@ Dashboard.renderers.commands = async (content) => {
     const btn = App.el(`<button class="dash-btn" style="margin-top:8px">Resynchroniser maintenant</button>`);
     btn.onclick = async () => {
       btn.disabled = true;
-      try { const r = await App.api(`/bots/${bot.id}/commands/resync`, { method: 'POST' }); App.toast(`${r.count} commande(s) renvoyée(s) à Discord. Patiente jusqu'à une heure : Discord met du temps à les propager.`); }
+      try { const r = await App.api(`/bots/${bot.id}/commands/resync`, { method: 'POST' }); App.toast(`${App.pluriel(r.count, 'commande renvoyée', 'commandes renvoyées')} à Discord. Patiente jusqu'à une heure : Discord met du temps à les propager.`); }
       catch (e) { App.toast(e.message, 'error'); }
       btn.disabled = false;
       lireEtat();
@@ -7577,7 +7580,7 @@ Dashboard.renderers.commands = async (content) => {
     const blocks = JSON.parse(cmd.blocks || '[]');
     const row = App.el(`
       <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--d-border);border-radius:8px;padding:10px 14px;margin-bottom:8px;cursor:pointer">
-        <div style="flex:1"><b>${App.escapeHtml(cmd.name)}</b><div style="color:var(--d-dim);font-size:12px">${App.escapeHtml(cmd.description || '')} · ${blocks.length} bloc(s)</div></div>
+        <div style="flex:1"><b>${App.escapeHtml(cmd.name)}</b><div style="color:var(--d-dim);font-size:12px">${App.escapeHtml(cmd.description || '')} · ${App.pluriel(blocks.length, 'bloc', 'blocs')}</div></div>
         <span class="dash-badge">${App.escapeHtml(trigger)}</span>
         <button class="dash-btn dash-btn-sm" data-edit="${cmd.id}">Modifier</button>
         <button class="dash-btn dash-btn-danger dash-btn-sm" data-del="${cmd.id}">Supprimer</button>
@@ -7677,7 +7680,7 @@ Dashboard.renderers.health = async (content) => {
         <div style="height:100%;width:${heapPct}%;background:linear-gradient(90deg,#5865F2,#8B5CF6);border-radius:12px"></div>
       </div>
       <div style="color:var(--d-dim);font-size:12px">${heapGlobalPct}% de l'instance · RSS ${mem.rssMb ?? '-'} Mo</div>
-      <div style="color:var(--d-dim);font-size:12px;margin-top:6px">${resource.state === 'critical' ? 'Pression critique' : resource.state === 'high' ? 'Pression élevée' : resource.state === 'watch' ? 'À surveiller' : 'Niveau normal'} · cache ${cache.entries ?? 0} entrée(s) en mémoire</div>
+      <div style="color:var(--d-dim);font-size:12px;margin-top:6px">${resource.state === 'critical' ? 'Pression critique' : resource.state === 'high' ? 'Pression élevée' : resource.state === 'watch' ? 'À surveiller' : 'Niveau normal'} · cache ${App.pluriel(cache.entries ?? 0, 'entrée', 'entrées')} en mémoire</div>
     </div>`);
     grid.appendChild(cMem);
 
@@ -7715,7 +7718,7 @@ Dashboard.renderers.health = async (content) => {
       root.appendChild(App.el(`
         <div class="dash-card" style="border-color:rgba(254,231,92,.5);background:rgba(254,231,92,.06);margin-bottom:14px">
           <h3>Mode ${res.state === 'critique' ? 'critique' : 'dégradé'} — Discord ralentit</h3>
-          <div class="desc" style="margin:0">${res.failuresInWindow} échec(s) en 1 minute. Le bot ralentit et retente automatiquement${res.state === 'critique' ? ' — certaines commandes répondent « très sollicité »' : ''}. Retour à la normale automatique dès que Discord récupère.</div>
+          <div class="desc" style="margin:0">${App.pluriel(res.failuresInWindow, 'échec', 'échecs')} en 1 minute. Le bot ralentit et retente automatiquement${res.state === 'critique' ? ' — certaines commandes répondent « très sollicité »' : ''}. Retour à la normale automatique dès que Discord récupère.</div>
         </div>`));
     }
 
@@ -7736,7 +7739,7 @@ Dashboard.renderers.health = async (content) => {
     // Erreurs 24h
     const cErr = App.el(`<div class="dash-card"><h3>Erreurs (24 h)</h3>
       <div class="desc">Les incidents récupérés automatiquement · le bot continue de tourner.</div>
-      <div class="dash-badge ${errs.count === 0 ? 'ok' : 'bad'}">${errs.count} erreur(s)</div>
+      <div class="dash-badge ${errs.count === 0 ? 'ok' : 'bad'}">${App.pluriel(errs.count, 'erreur', 'erreurs')}</div>
       ${errs.count === 0
         ? `<div class="dash-empty" style="padding:18px">Tout est calme 🎉`
         : `<div style="margin-top:10px">${errs.last.map((e) => `
@@ -7854,7 +7857,7 @@ Dashboard.renderers.verification = async (content, data) => {
       <option value="on" ${cfg.isolate ? 'selected' : ''}>Activée : les non-vérifiés ne voient que le salon de vérification</option>
     </select>
     <div style="font-size:12px;color:var(--d-dim);margin:4px 0 8px">Le changement s'applique tout de suite : Hoxera masque (ou rouvre) les salons lui-même. Les nouveaux arrivants ne voient QUE le salon de vérification ; dès leur clic sur « Je suis humain », ils voient tout le serveur. Les salons créés pendant l'isolation sont masqués automatiquement.</div>
-    ${cfg.isolate ? `<div style="margin-bottom:8px"><span class="dash-badge ok">Isolation ACTIVE — ${(cfg.isolated_channels || []).length} salon(s) masqué(s)</span></div>` : ''}
+    ${cfg.isolate ? `<div style="margin-bottom:8px"><span class="dash-badge ok">Isolation ACTIVE — ${App.pluriel((cfg.isolated_channels || []).length, 'salon masqué', 'salons masqués')}</span></div>` : ''}
     <div style="background:rgba(237,66,69,0.08);border:1px solid rgba(237,66,69,0.35);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--d-dim);margin-bottom:10px">Sur un serveur existant, les membres actuels sans le rôle vérifié ne verront plus que le salon de vérification. Juste après l'activation, cochez la case ci-dessous pour ne bloquer personne.</div>
     <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="ver-grant-case" />Donner le rôle vérifié à tous les membres actuels (juste après l'activation)</label>
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
@@ -7887,7 +7890,7 @@ Dashboard.renderers.verification = async (content, data) => {
       return;
     }
     if (on) {
-      App.toast(`Isolation appliquée · le rôle « ${r.role || 'vérifié'} » a été donné à ${r.granted || 0} membre(s)${r.failed ? ` (${r.failed} échec(s))` : ''}. Rechargez la page.`);
+      App.toast(`Isolation appliquée · le rôle « ${r.role || 'vérifié'} » a été donné à ${App.pluriel(r.granted || 0, 'membre', 'membres')}${r.failed ? ` (${r.failed} échec(s))` : ''}. Rechargez la page.`);
     } else {
       App.toast('Salons rouverts · rechargez la page dans un instant.');
     }
@@ -8145,7 +8148,7 @@ Dashboard.renderers.help = async (content) => {
     <ul style="margin:0;padding-left:20px;line-height:1.9">
       <li><b>Recherche rapide</b> : touchez <kbd>Ctrl</kbd>+<kbd>K</kbd> (ou l'icône 🔍) pour sauter d'un module à l'autre.</li>
       <li><b>Mode clair / sombre</b> : bouton 🌓 en haut à droite, mémorisé sur votre appareil.</li>
-      <li><b>Couleur du dashboard</b> : bouton 🎨 pour choisir votre teinte préférée.</li>
+      <li><b>Couleur du tableau de bord</b> : bouton 🎨 pour choisir votre teinte préférée.</li>
       <li><b>Chaque serveur a ses réglages</b> : change de serveur dans le sélecteur en haut.</li>
       <li><b>Mobile</b> : navigation en bas d'écran (Accueil, Tickets, Membres, Stats + « Plus »).</li>
     </ul>`)));
@@ -8524,13 +8527,13 @@ Dashboard.discordPollHtml = ({ question, options, duration, allowMultiselect, in
     </div>`;
   }).join('');
   const duree = Number(duration) || 0;
-  const quand = duree >= 24 ? `${Math.round(duree / 24)} jour(s)` : `${duree} heure(s)`;
+  const quand = duree >= 24 ? `${App.pluriel(Math.round(duree / 24), 'jour', 'jours')}` : `${App.pluriel(duree, 'heure', 'heures')}`;
   return `<div class="dprev-poll" role="img" aria-label="Aperçu du sondage tel qu'il apparaîtra sur Discord">
     ${intro ? `<div class="dpp-intro">${Dashboard.discordMarkdownHtml(intro)}</div>` : ''}
     <div class="dpp-question">${Dashboard.discordInlineMd(App.escapeHtml(String(question || 'Votre question').slice(0, 300)))}</div>
     ${lignes || '<div class="dpp-empty">Ajoutez au moins deux choix.</div>'}
     <div class="dpp-foot">
-      <span>${closed ? `${cumul} vote(s)` : `${cumul || 0} vote(s)`}</span>
+      <span>${closed ? `${App.pluriel(cumul, 'vote', 'votes')}` : `${App.pluriel(cumul || 0, 'vote', 'votes')}`}</span>
       <span>⏳ ${closed ? 'Sondage clôturé' : `Le sondage se termine dans ${quand}`}</span>
     </div>
     ${allowMultiselect ? '<div class="dpp-multi">Plusieurs réponses possibles</div>' : ''}
@@ -8794,7 +8797,7 @@ Dashboard.renderers.rules = async (content, data) => {
       }
       // Le serveur relit le message renvoyé par Discord : le bouton y est, ou
       // on le dit. Fini d'annoncer « publié » pour un panneau sans bouton.
-      const planTxt = r.plan ? ` ${r.plan.shown || r.plan.blocks || 0} bloc(s), ${r.plan.components || 0}/40 composants.` : '';
+      const planTxt = r.plan ? ` ${App.pluriel(r.plan.shown || r.plan.blocks || 0, 'bloc', 'blocs')}, ${r.plan.components || 0}/40 composants.` : '';
       if (r.verified === false) {
         App.toast('Panneau publié, mais le bouton n’a pas été retrouvé sur Discord · essayez la présentation « Intégré ».', 'error');
         etat('Panneau envoyé, bouton non vérifié sur Discord.' + planTxt);
@@ -8838,7 +8841,7 @@ Dashboard.renderers.rules = async (content, data) => {
       const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/rules/missing`, { method: 'POST', body: { limit: 200 } });
       if (!r.ok) { zone.innerHTML = `<div class="rl-vide">${App.escapeHtml(r.error || 'Liste indisponible.')}</div>`; return; }
       const nb = Number(r.total) || 0;
-      zone.innerHTML = `<div class="rl-result-titre">${nb} membre(s) sans le rôle « ${App.escapeHtml(r.role || '—')} »</div>`
+      zone.innerHTML = `<div class="rl-result-titre">${App.pluriel(nb, 'membre sans le rôle', 'membres sans le rôle')} « ${App.escapeHtml(r.role || '—')} »</div>`
         + (nb ? `<div class="rl-chips">${(r.members || []).map((m) => `<span class="rl-chip">${App.escapeHtml(m.tag)}</span>`).join('')}</div>` : '');
     } catch (e) { zone.innerHTML = `<div class="rl-vide">${App.escapeHtml(e.message)}</div>`; }
   };
@@ -8998,7 +9001,7 @@ Dashboard.renderers.polls = async (content, data) => {
       <div class="pp-row-tete">
         <span class="pp-letat ${clos ? 'is-clos' : 'is-ouvert'}">${clos ? 'Clos' : 'Ouvert'}</span>
         <span class="pp-question">${App.escapeHtml(String(row.question || '').slice(0, 120))}</span>
-        <span class="pp-meta">#${App.escapeHtml(String(row.channel_name || '—'))} · ${votes} vote(s) · ${quand}</span>
+        <span class="pp-meta">#${App.escapeHtml(String(row.channel_name || '—'))} · ${App.pluriel(votes, 'vote', 'votes')} · ${quand}</span>
       </div>
       <div class="pp-row-barre">
         <button type="button" class="dash-btn dash-btn-sm" data-act="read">Actualiser les résultats</button>
