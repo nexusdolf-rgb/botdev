@@ -956,11 +956,17 @@ html { scroll-padding-top: 84px; }
   padding: 16px 18px; font-weight: 700; font-size: 14px;
 }
 .hp-faq-item summary::-webkit-details-marker { display: none; }
+/* v378 — le « + » tourné à 45° passait pour une croix de fermeture. On pose
+   un vrai chevron du jeu d'icônes (masque SVG, donc il suit --accent) qui
+   pivote vers le haut quand la question est ouverte.
+   L'ancien caractère exigeait des fontes de secours différentes sur Android. */
 .hp-faq-item summary::after {
-  content: '+'; margin-left: auto; font-size: 22px; font-weight: 600;
-  color: var(--accent); transition: transform .2s ease;
+  content: ''; margin-left: auto; width: 18px; height: 18px; flex: 0 0 18px;
+  background-color: var(--accent); transition: transform .2s ease;
+  -webkit-mask: var(--faq-chevron) center / contain no-repeat;
+  mask: var(--faq-chevron) center / contain no-repeat;
 }
-.hp-faq-item[open] summary::after { transform: rotate(45deg); }
+.hp-faq-item[open] summary::after { transform: rotate(180deg); }
 .hp-faq-item p {
   color: var(--text-dim); font-size: 14px; line-height: 1.65;
   padding: 14px 18px 16px; margin: 0;
@@ -1061,6 +1067,7 @@ body:has(#public-landing) .navbar {
   border-bottom: 1px solid #2a2d3d;
 }
 #public-landing {
+  --faq-chevron: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M6.4 9.6 12 15.2l5.6-5.6'/></svg>");
   --panel: #1a1c28;
   --panel2: #20222f;
   --border: #2a2d3d;
@@ -1514,6 +1521,10 @@ html.hx-light #public-landing .pub-feature p,
 html.hx-light #public-landing .hp-step p,
 html.hx-light #public-landing .hp-faq-item p { color: #4f5361; }
 html.hx-light #public-landing .hp-faq-item summary { color: #1c1e26; }
+/* v378 — la carte du bot : le pseudo et la ligne d'état gardaient le gris du
+   thème sombre (3,2:1 sur fond blanc, mesuré à 375 et 1440 px). */
+html.hx-light #public-landing .bot-card .uname,
+html.hx-light #public-landing .bot-card .bot-card-status { color: #5f6472; }
 html.hx-light #public-landing .hp-footer-col a,
 html.hx-light #public-landing .pub-footer-links a { color: #474b59; }
 html.hx-light #public-landing .hp-footer-col a:hover,
@@ -1547,7 +1558,16 @@ html.hx-light #public-landing .hp-cta-inner p { color: #43485a; }
 .navbar { gap: 12px; flex-wrap: wrap; }
 .navbar .logo-row { min-width: 0; flex: 0 1 auto; }
 .navbar .logo-row { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.navbar-right { flex-wrap: wrap; justify-content: flex-end; min-width: 0; }
+.navbar-right { flex-wrap: nowrap; justify-content: flex-end; min-width: 0; }
+/* v378 — mesuré à 901 px, compte connecté : le logo (120 px), les quatre
+   liens (372 px) et le bloc « pseudo + tableau de bord » (354 px) ne tiennent
+   pas sur 901 px, et le groupe de droite basculait seul sur une deuxième
+   ligne : le bandeau doublait de hauteur. Le pseudo et la pastille de liaison
+   s'effacent quand la place manque, le bouton reste. */
+@media (max-width: 1100px) {
+  .navbar .user-pill { gap: 0; min-width: 0; }
+  .navbar .user-pill > span:not(.chip) { display: none; }
+}
 .navbar-right .btn { max-width: 100%; white-space: nowrap; }
 
 /* Bouton hamburger : caché sur grand écran, visible sous 900 px */
@@ -1600,8 +1620,44 @@ html.hx-light #public-landing .hp-cta-inner p { color: #43485a; }
 .nav-menu-action .btn, .nav-menu-action button {
   width: 100%; justify-content: center; text-align: center; white-space: normal;
 }
+/* v378 — le hamburger flottait au milieu du bandeau, un grand vide à sa
+   droite (capture du 21/10). En cause : `justify-content: space-between`
+   répartit l'espace entre TOUS les éléments de la ligne, et `.navbar-right`
+   reste un élément de 0 px dont le bouton est masqué sous 900 px. Le
+   hamburger se retrouvait donc à mi-chemin, entre le logo et ce fantôme.
+   Côté connecté, le même fantôme — et son `order: 3` écrit pour la ligne
+   unique — renvoyait tout le groupe de droite à la ligne suivante dès
+   901 px. Une seule règle pour les deux cas : le logo tient la gauche, les
+   actions la droite, le menu déroulant passe à la ligne en dernier. */
 @media (max-width: 900px) {
-  .navbar-right { order: 3; }
+  .navbar { justify-content: flex-end; }
+  .navbar > .logo-row { margin-right: auto; }
+  .navbar-right { order: 2; }
+  .nav-burger { order: 3; }
+  .nav-menu { order: 4; }
   .navbar > .navbar-right .btn { display: none; }
   .navbar.menu-ouvert .navbar-right { display: none; }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   v378 — Cibles tactiles sur téléphone
+   ----------------------------------------------------------------
+   Mesuré à 375 px : les liens du pied de page et le lien vers le
+   serveur support ne faisaient que 16 px de haut, alors que tout le
+   reste de la page respecte 38 px minimum. Un lien de texte n'a pas
+   besoin d'un fond, seulement d'une zone plus haute à toucher.
+   ════════════════════════════════════════════════════════════════ */
+@media (max-width: 900px), (hover: none) and (pointer: coarse) {
+  .hp-footer-col a,
+  .pub-footer-links a,
+  .pub-support-link a,
+  .nav-menu a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+  .pub-footer-links { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; }
+  .hp-footer-col a { padding-left: 0; padding-right: 0; }
 }

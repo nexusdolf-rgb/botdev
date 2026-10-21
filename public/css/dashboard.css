@@ -7826,3 +7826,43 @@ details[open] > summary.am-chevron::after { transform: none; }
   .var-chips { gap: 5px; padding: 7px 8px; }
   .var-chip { font-size: 11.5px; padding: 7px 8px; }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   v378 — Cibles tactiles du tableau de bord : l'ordre des règles
+   ----------------------------------------------------------------
+   La règle mobile qui remontait les petits boutons à 40 px était
+   écrite AVANT la taille de base (32 px) plus haut dans ce fichier :
+   à spécificité égale, c'est la dernière qui gagne, donc la règle
+   mobile ne s'appliquait jamais. Mesuré à 375 px : 32 px de haut sur
+   les boutons « Ajouter un salon », « Ajouter un rôle », etc. Les
+   rappels ci-dessous passent après et rétablissent 40 px.
+   ════════════════════════════════════════════════════════════════ */
+/* Le bouton d'ajout portait son libellé sur une seule ligne (311 px mesures a
+   768 px) dans une colonne de 182 px : il depassait de 145 px et sortait de la
+   carte. Il peut desormais se replier sur deux lignes et rester dans sa boite. */
+.dashboard-shell-host .discord-multi-picker { min-width: 0; }
+.dashboard-shell-host .discord-multi-picker .dd-add-btn {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.25;
+}
+
+@media (max-width: 700px), (hover: none) and (pointer: coarse) {
+  .dash-btn { min-height: 46px; }
+  .dash-btn-sm { min-height: 40px; }
+  .dash-btn-lg { min-height: 50px; }
+  /* Un bouton de 40 px de haut doit rester lisible : le texte garde sa taille. */
+  .dash-btn-sm { padding-top: 6px; padding-bottom: 6px; }
+  /* Les liens de texte des cartes suivent la même règle que les boutons. */
+  .dash-card a[href], .dash-card button.link-like { display: inline-flex; align-items: center; min-height: 40px; }
+  /* Cases à cocher posées à la main dans les modules (« Activer le captcha
+     à l'arrivée », « Autoriser plusieurs réponses »…). Ces <label> n'ont pas
+     de classe et ne faisaient que 20 px de haut ; on porte la ligne à la
+     hauteur des autres cibles sans toucher au texte. */
+  #dash-content label:not([class]) { min-height: 40px; }
+  /* Bouton d'ajout du multi-sélecteur : 32 px mesurés à 375 px
+     (« Ajouter un salon », « Ajouter un rôle »). */
+  .dashboard-shell-host .discord-multi-picker .dd-add-btn { min-height: 40px; padding-top: 6px; padding-bottom: 6px; }
+}
