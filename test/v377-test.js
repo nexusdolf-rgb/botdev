@@ -32,10 +32,13 @@ const lire = (p) => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
   check('le bouton du bandeau ne déborde plus', /\.navbar-right \.btn \{ max-width: 100%/.test(css));
 
   console.log('— 2. Textes marketing retirés —');
-  for (const phrase of ['digne des plus grands', 'pensé comme un produit', 'expérience complète', 'en direct en direct', 'serveur(s)', 'Bots en ligne']) {
+  // v378 : « Bots en ligne » redevient legitime — c'est l'accord du libelle
+  // quand plusieurs bots sont en ligne. Ce que v377 visait vraiment, c'est la
+  // fraction « 1/1 » collee a ce libelle : on la verrouille explicitement.
+  for (const phrase of ['digne des plus grands', 'pensé comme un produit', 'expérience complète', 'en direct en direct', 'serveur(s)', '${onlineBots}/${totalBots}']) {
     check('« ' + phrase + ' » a disparu', !js.includes(phrase));
   }
-  check('le nombre de bots s\'accorde', /Bot en ligne/.test(js));
+  check('le nombre de bots s\'accorde', /Bot en ligne/.test(js) && /Bots en ligne/.test(js));
 
   console.log('— 3. Chevrons et carrés blancs —');
   check('plus aucun chevron Unicode dans le CSS', !/[▸▾]/.test(dashCss.replace(/\/\*[\s\S]*?\*\//g, '')));
@@ -69,11 +72,12 @@ const lire = (p) => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
   check('un rôle non attribuable bloque l\'isolation', /assertGrantReady\(guild\)[\s\S]{0,200}grantRoleToAll/.test(routes));
   check('l\'erreur dit que rien n\'a été touché', /untouched: true/.test(routes));
   check('le dashboard demande confirmation', /Activer l’isolation \?/.test(dash));
-  check('le compte-rendu donne le nombre de membres', /a été donné à \$\{r\.granted/.test(dash));
+  // v378 : le compteur passe par App.pluriel (accord singulier/pluriel).
+  check('le compte-rendu donne le nombre de membres', /a été donné à \$\{App\.pluriel\(r\.granted/.test(dash));
 
   console.log('— 8. Version —');
-  check('index.html sert la v377', (html.match(/\?v=377/g) || []).length === 7);
-  check('le service worker est en v377', lire('public/sw.js').includes('botdev-v377'));
+  check('index.html sert la v377', (html.match(/\?v=378/g) || []).length === 7);
+  check('le service worker est en v377', lire('public/sw.js').includes('botdev-v378'));
 
   try { require('../server/db').db.close(); } catch {}
   try { fs.rmSync(process.env.BOTDEV_DATA_DIR, { recursive: true, force: true }); } catch {}

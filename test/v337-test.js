@@ -19,8 +19,8 @@ const css = racine('public/css/style.css');
 const pub = racine('public/js/public.js');
 
 console.log('— 1. Pins v337 —');
-check('index.html : ?v=377 ×7', (html.match(/\?v=377/g) || []).length === 7);
-check('sw.js : cache botdev-v377', sw.includes("const CACHE = 'botdev-v377';"));
+check('index.html : ?v=378 ×7', (html.match(/\?v=378/g) || []).length === 7);
+check('sw.js : cache botdev-v378', sw.includes("const CACHE = 'botdev-v378';"));
 check('index.html : plus aucune ?v=336', !html.includes('?v=336'));
 
 console.log('— 2. HTML public inchangé (verrous v167/v240) —');
@@ -36,8 +36,10 @@ const compte = {
 };
 // v377 : menu mobile (bouton hamburger + panneau replié) → +3 classes,
 // +3 ids, +2 divs, +1 bouton. Le reste de la page d'accueil est inchangé.
-check('structure HTML landing intacte', compte.classes === 206 &&  // v368 : 4 glypes SVG en plus dans les icones de l'accueil
-     compte.ids === 25 && compte.divs === 153 && compte.boutons === 15, JSON.stringify(compte));
+// v378 : gabarit unique pour la vignette d'un bot (voir v240) -> -2 classes,
+// -1 div. Le rendu de la page reste identique (memes 296 elements mesures).
+check('structure HTML landing intacte', compte.classes === 204 &&
+     compte.ids === 25 && compte.divs === 152 && compte.boutons === 15, JSON.stringify(compte));
 
 console.log('— 3. Couche CSS v337 —');
 check('commentaire v337', css.includes('HOXERA v337'));

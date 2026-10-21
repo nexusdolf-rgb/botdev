@@ -21,7 +21,7 @@ const MODULES = ARGS[1]
   ? ARGS[1].split(',')
   : ['overview', 'tickets', 'welcome', 'levels', 'economy', 'shop', 'moderation', 'antinuke',
     'roles', 'suggestions', 'giveaways', 'events', 'quiz', 'community', 'announcements',
-    'embeds', 'members', 'stats', 'logs', 'transcripts', 'modmail', 'server', 'botprofile', 'voicetemp',
+    'embeds', 'members', 'stats', 'logs', 'transcripts', 'modmail', 'server', 'voicetemp',
     'commands', 'modules', 'health', 'botsettings', 'help'];
 
 // ---------- Données simulées réalistes ----------
@@ -298,8 +298,8 @@ function repondre(url) {
       } catch (e) {
         // La pile est indispensable : sans elle on ne sait pas quel champ
         // manque dans les données simulées.
-        erreur = String(e && e.message || e).slice(0, 60) + ' @ ' +
-          String((e && e.stack || '').split('\n').find((l) => /dashboard\.js/.test(l)) || '').replace(/^\s*at\s*/, '').slice(0, 130);
+        erreur = String(e && e.message || e).slice(0, 80) + ' @ ' +
+          String((e && e.stack || '').split('\n').find((l) => /dashboard\.js/.test(l)) || '').replace(/^\s*at\s*/, '').slice(0, 150);
       }
       await new Promise((res) => setTimeout(res, 260));
 
@@ -626,7 +626,7 @@ function repondre(url) {
       String(r.texte).padStart(7), String(r.blocs).padStart(5), String(r.nbMinuscules).padStart(6),
       String(r.nbTactiles).padStart(8), String(r.tronques).padStart(6),
       String(r.plies || 0).padStart(6), String(r.candidatsNonPlies || 0).padStart(7),
-      '  ' + (r.erreur || r.erreurs[0] || '').slice(0, 46));
+      '  ' + (r.erreur || r.erreurs[0] || '').slice(0, 110));
   }
   console.log('-'.repeat(104));
   console.log(`  débordements ${totalDeb} | hauteur cumulée ${Math.round(totalEcrans)} écrans | polices < 12 px ${totalMin} | cibles tactiles < 40 px ${totalTac} | modules en erreur ${modulesCasses}`);

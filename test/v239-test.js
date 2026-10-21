@@ -460,9 +460,9 @@ async function main() {
   console.log('\n10) Version épinglée v239');
   const index = src('public/index.html');
   const sw = src('public/sw.js');
-  check('index.html : ?v=377 référencé 7 fois', (index.match(/\?v=377/g) || []).length === 7,
-    `trouvé ${(index.match(/\?v=377/g) || []).length}`);
-  check("sw.js : cache 'botdev-v377'", sw.includes("const CACHE = 'botdev-v377';"));
+  check('index.html : ?v=378 référencé 7 fois', (index.match(/\?v=378/g) || []).length === 7,
+    `trouvé ${(index.match(/\?v=378/g) || []).length}`);
+  check("sw.js : cache 'botdev-v378'", sw.includes("const CACHE = 'botdev-v378';"));
   check('index.html : plus aucun ?v=238', !/\?v=238/.test(index));
 }
 

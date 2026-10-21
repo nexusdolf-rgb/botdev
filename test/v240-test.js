@@ -287,13 +287,13 @@ async function main() {
   const pubSrc = src('public/js/public.js');
   for (const attendu of [
     '<span class="grad grad-anim">votre serveur Discord</span></h1>',
-    'Ajoutez Hoxera à votre serveur, puis configurez tout depuis le dashboard',
+    'Ajoutez Hoxera à votre serveur, puis configurez tout depuis le tableau de bord',
     'id="pub-invite-hero" style="padding:13px 22px;font-size:16px">Ajouter Hoxera à votre serveur</button>',
     '<b>Ajoutez le bot</b>',
     '<b>Connectez-vous</b>',
     '<b>Configurez</b>',
     'Toutes les fonctions sont incluses, sans abonnement et sans compte à séparer du compte Discord',
-    '<h2>Prêt à donner vie à votre serveur ?</h2>',
+    '<h2>Prêt à donner vie à votre serveur\u00a0?</h2>',
   ]) {
     check(`landing : « ${attendu.slice(0, 44)} »`, pubSrc.includes(attendu));
   }
@@ -327,7 +327,12 @@ async function main() {
   // aucune interpolation de plus, c'est ce que ce verrou surveillait.
   // v377 : menu mobile ajouté (hamburger + panneau) → +20 balises, +3 classes,
 // +3 ids, +2 divs, +1 bouton. Voir v337 pour le détail.
-const attenduPub = { balises: 662, classes: 206, ids: 25, divs: 153, boutons: 15, interpolations: 63 };
+// v378 : la vignette d'un bot (accueil + page /bot/:id) passait deux fois par
+  // le meme ternaire image/pastille ; elle vient d'un seul gabarit desormais.
+  // Le DOM rendu est identique au balayage pres (296 elements, memes comptes),
+  // seuls les doublons de source disparaissent : -3 balises, -2 classes, -1 div,
+  // -3 interpolations. Aucun bouton, aucun id de plus ni de moins.
+  const attenduPub = { balises: 659, classes: 204, ids: 25, divs: 152, boutons: 15, interpolations: 60 };
   const reelPub = compteBalises(pubSrc);
   for (const cle of Object.keys(attenduPub)) {
     check(`landing : structure intacte (${cle} = ${attenduPub[cle]})`,
@@ -530,9 +535,9 @@ const attenduPub = { balises: 662, classes: 206, ids: 25, divs: 153, boutons: 15
 
   const index = src('public/index.html');
   const sw = src('public/sw.js');
-  check('index.html : ?v=377 référencé 7 fois', (index.match(/\?v=377/g) || []).length === 7,
-    `trouvé ${(index.match(/\?v=377/g) || []).length}`);
-  check("sw.js : cache 'botdev-v377'", sw.includes("const CACHE = 'botdev-v377';"));
+  check('index.html : ?v=378 référencé 7 fois', (index.match(/\?v=378/g) || []).length === 7,
+    `trouvé ${(index.match(/\?v=378/g) || []).length}`);
+  check("sw.js : cache 'botdev-v378'", sw.includes("const CACHE = 'botdev-v378';"));
   check('index.html : plus aucun ?v=239', !/\?v=239/.test(index));
 }
 

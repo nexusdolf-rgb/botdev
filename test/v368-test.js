@@ -56,8 +56,8 @@ check('le jeu de glyphes compte au moins 52 entrees et le nouveau signe de sorti
 
 console.log('— 2. Sortie : glyphe et nom accessible, pas un caractere —');
 check('plus de caractere d\'alimentation dans le front', !/[\u232B\u23FB\u23BA\u23BD⏼]/.test(gabarits));
-check('le bouton de sortie du tableau de bord est nomme', /id="d-logout"[^>]*aria-label="Se déconnecter du dashboard"/.test(lus['public/js/dashboard.js']));
-check('le bouton de sortie de la barre haute est nomme', /aria-label="Se déconnecter du dashboard"/.test(lus['public/js/app.js']));
+check('le bouton de sortie du tableau de bord est nomme', /id="d-logout"[^>]*aria-label="Se déconnecter du tableau de bord"/.test(lus['public/js/dashboard.js']));
+check('le bouton de sortie de la barre haute est nomme', /aria-label="Se déconnecter du tableau de bord"/.test(lus['public/js/app.js']));
 check('les deux portent un SVG', (lus['public/js/dashboard.js'].match(/id="d-logout"[^>]*>[\s\S]{0,220}?<svg/g) || []).length === 1
   && (lus['public/js/app.js'].match(/id="nav-logout"[^>]*>[\s\S]{0,260}?<svg/g) || []).length === 1);
 check('le libellé de la tuile de garde n\'est pas vide', /am-shield-icon"><svg/.test(lus['public/js/dashboard.js']));
@@ -169,12 +169,12 @@ check('aucune route touchant un serveur n\'est ajoutée sans garde d\'accès',
 
 console.log('— 7. Version —');
 const index = lus['public/index.html'];
-check(`index.html : ?v=${VERSION} référencé 7 fois`, (index.match(/\?v=377/g) || []).length === 7,
-  String((index.match(/\?v=377/g) || []).length));
+check(`index.html : ?v=${VERSION} référencé 7 fois`, (index.match(/\?v=378/g) || []).length === 7,
+  String((index.match(/\?v=378/g) || []).length));
 const sw = fs.readFileSync(path.join(RACINE, 'public/sw.js'), 'utf8');
-check('le service worker porte la même version de cache', sw.includes("const CACHE = 'botdev-v377';"));
+check('le service worker porte la même version de cache', sw.includes("const CACHE = 'botdev-v378';"));
 check('aucun fichier de public/js ne cite une version périmée',
-  !/\?v=3[0-9][0-9]/.test(gabarits.replace(/\?v=377/g, '')), (gabarits.match(/\?v=3\d\d/g) || []).join(' '));
+  !/\?v=3[0-9][0-9]/.test(gabarits.replace(/\?v=378/g, '')), (gabarits.match(/\?v=3\d\d/g) || []).join(' '));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v368 — ${ok} vérifications OK : icônes remplies, sortie nommée, marque unique, texte sans cadratin, liens réels.`);

@@ -681,7 +681,7 @@ function textChannel(extra = {}) {
         /dmd-mention">rôle sélectionné</.test(res.md) && /dmd-mention">#salon sélectionné</.test(res.md));
       check('une zone vide ne casse pas le rendu', /dmd-empty/.test(res.mdVide));
       check('l’aperçu du sondage dessine les choix, les votes et la durée',
-        /dpp-row/.test(res.poll) && /On mange quoi \?/.test(res.poll) && /3 vote\(s\)|4 vote\(s\)/.test(res.poll)
+        /dpp-row/.test(res.poll) && /On mange quoi \?/.test(res.poll) && /\b3 votes\b|\b4 votes\b/.test(res.poll)
         && /se termine dans 1 jour/.test(res.poll), res.poll.replace(/\s+/g, ' ').slice(0, 200));
       check('…et le décompte fermé affiche ses barres',
         /is-closed/.test(res.pollClos) && /dpp-bar/.test(res.pollClos) && /Sondage clôturé/.test(res.pollClos));
@@ -717,7 +717,7 @@ function textChannel(extra = {}) {
       check('la question tapée apparaît dans l’aperçu du widget',
         /On mange quoi samedi/.test(res.pollsQuestion) && res.pollsBarres === 3, res.pollsQuestion + ' · ' + res.pollsBarres + ' lignes');
       check('la durée choisie est dite en clair sous le sondage',
-        /se termine dans 3 jour/.test(res.pollsDureeApres) && /jour\(s\)/.test(res.pollsDureeApres), res.pollsDureeApres.replace(/\s+/g, ' '));
+        /se termine dans 3 jours/.test(res.pollsDureeApres), res.pollsDureeApres.replace(/\s+/g, ' '));
       check('le multi-réponse est proposé d\u00e8s la construction', res.pollsMulti === true);
       check('publier envoie question, choix, dur\u00e9e et salon',
         res.pollsAppels.some((a) => /\/polls\/send$/.test(a.url) && a.methode === 'POST'
