@@ -17,11 +17,11 @@ const EVENT_DEFS = {
       // la rubrique « 👥 Membre n° » porte déjà le compteur : le corps n'a plus
       // à les répéter. Il ne reste que la phrase chaleureuse.
       { key: 'message', label: 'Message ({user}, {server}, {count}…)', type: 'multiline', default: "Passez un bon moment parmi nous — l'équipe est là pour vous aider ! 🚀" },
-      { key: 'card', label: '🖼️ Carte de bienvenue en image (avatar + pseudo)', type: 'checkbox', default: false },
-      { key: 'plain', label: '📝 Mode texte simple (désactive le panneau premium)', type: 'checkbox', default: false },
+      { key: 'card', label: 'Carte de bienvenue en image (avatar et pseudo)', type: 'checkbox', default: false },
+      { key: 'plain', label: 'Mode texte simple (désactive le panneau complet)', type: 'checkbox', default: false },
       { key: 'color', label: 'Couleur de l\'embed', type: 'color', default: '#57F287' },
       { key: 'image', label: 'Image de l\'embed (URL, optionnel)', type: 'text', placeholder: 'https://…' },
-      { key: 'channels', label: '📌 Salons à détailler (règles, tickets, chat général…) — une phrase par salon, utilisez {channels} dans le message', type: 'channelsmulti', default: '' },
+      { key: 'channels', label: 'Salons à détailler (règles, tickets, chat général…) · une phrase par salon, avec {channels} dans le message', type: 'channelsmulti', default: '' },
     ],
   },
   member_leave: {
@@ -32,10 +32,10 @@ const EVENT_DEFS = {
       { key: 'channel', label: 'Salon des départs', type: 'channel', placeholder: '#au-revoir' },
       // v241 — l'en-tête dit déjà « {pseudo} s'en va… » : le corps ne le répète pas.
       { key: 'message', label: 'Message', type: 'multiline', default: 'Merci d\'avoir fait partie de {server} 💛' },
-      { key: 'plain', label: '📝 Mode texte simple (désactive le panneau premium)', type: 'checkbox', default: false },
+      { key: 'plain', label: 'Mode texte simple (désactive le panneau complet)', type: 'checkbox', default: false },
       { key: 'color', label: 'Couleur de l\'embed', type: 'color', default: '#ED4245' },
       { key: 'image', label: 'Image de l\'embed (URL, optionnel)', type: 'text', placeholder: 'https://…' },
-      { key: 'channels', label: '📌 Salons à mentionner — utilisez {channels} dans le message', type: 'channelsmulti', default: '' },
+      { key: 'channels', label: 'Salons à mentionner, avec {channels} dans le message', type: 'channelsmulti', default: '' },
     ],
   },
   autorole: {
