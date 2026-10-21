@@ -727,7 +727,7 @@ Dashboard.MODULES = [
   ['quiz', '', 'Quiz'],
   ['polls', '', 'Sondages'],
   ['voicetemp', '', 'Vocal'],
-  ['starboard', '⭐', 'Starboard'],
+  ['starboard', '', 'Starboard'],
   ['invites', '', 'Invitations'],
   ['lives', '', 'Lives'],
   ['announcements', '', 'Annonces'],
@@ -2682,7 +2682,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     </select>
 
     <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
-      <button class="dash-save-action dash-btn dash-btn-primary" id="t-save">Enregistrer</button>
+      <button class="dash-save-action dash-btn dash-btn-primary" id="t-save">Enregistrer le panneau</button>
       <button class="dash-btn" id="t-send">Envoyer le Ticket classique</button>
     </div>
 `;
@@ -2708,7 +2708,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     <label class="dash-label">Message du Ticket menu</label>
     <textarea class="dash-input" id="tm-msg" rows="3">${App.escapeHtml(t.menu_message || '')}</textarea>
     <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap">
-      <button class="dash-save-action dash-btn dash-btn-primary" id="tm-save">Enregistrer</button>
+      <button class="dash-save-action dash-btn dash-btn-primary" id="tm-save">Enregistrer le journal des tickets</button>
       <button class="dash-btn" id="tm-send">Envoyer le Ticket menu</button>
     </div>`;
   cm.querySelector('#tm-save').onclick = async (e) => {
@@ -2817,7 +2817,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     <label class="dash-label">Message personnalisé (vide = message automatique)</label>
     <textarea class="dash-input" id="tdm-msg" rows="4" placeholder="${App.escapeHtml('Ex : Merci d\'avoir contacté le support ! Votre demande #12 est traitée.')}">${App.escapeHtml((data.settings || {}).close_dm_message || '')}</textarea>
     <div style="margin-top:12px" data-dm-img></div>
-    <div style="margin-top:14px"><button class="dash-save-action dash-btn dash-btn-primary" id="tdm-save">Enregistrer</button></div>`;
+    <div style="margin-top:14px"><button class="dash-save-action dash-btn dash-btn-primary" id="tdm-save">Enregistrer les rôles par réaction</button></div>`;
   cdm.querySelector('[data-dm-img]').appendChild(Dashboard.imageField('Image du message privé', dmImage, (v) => { dmImage = v; }, 'Vide = image par défaut du bot. Importez la vôtre pour personnaliser le message de fermeture.'));
   cdm.querySelector('#tdm-save').onclick = async (e) => {
     const bouton = e.currentTarget;
@@ -2845,7 +2845,7 @@ Dashboard.renderers.tickets = async (content, data) => {
       <input class="dash-input" id="tr-color-hex" value="${roomHexOk(roomCfg.color) ? App.escapeHtml(roomCfg.color) : ''}" placeholder="#57F287 · vide = couleur du type" style="max-width:240px" />
       <span id="tr-color-note" style="font-size:12px;color:var(--d-dim)"></span>
     </div>
-    <label class="dash-label">Titre (vide = « 🎫 Ticket ouvert »)</label>
+    <label class="dash-label">Titre du panneau (par défaut : « Ticket ouvert »)</label>
     <input class="dash-input" id="tr-title" maxlength="100" value="${App.escapeHtml(roomCfg.title || '')}" placeholder="🎫 Ticket ouvert" />
     <label class="dash-label">Message d’accueil</label>
     <textarea class="dash-input" id="tr-welcome" rows="3" maxlength="1500" placeholder="Bienvenue {member} ! Un membre de l’équipe va vous répondre ici même…">${App.escapeHtml(roomCfg.welcome || '')}</textarea>
@@ -2853,7 +2853,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     <textarea class="dash-input" id="tr-steps" rows="2" maxlength="1200" placeholder="Vide = pas de déroulement détaillé · une ligne discrète annonce la transcription en MP.">${App.escapeHtml(roomCfg.steps || '')}</textarea>
     <div style="font-size:12px;color:var(--d-dim);margin-top:4px">{member} {user} {server} {type} {number}</div>
     <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap;align-items:center">
-      <button class="dash-save-action dash-btn dash-btn-primary" id="tr-save">Enregistrer</button>
+      <button class="dash-save-action dash-btn dash-btn-primary" id="tr-save">Enregistrer ces réglages</button>
       <button class="dash-btn" id="tr-default">Réinitialiser les valeurs</button>
     </div>
     <div data-room-preview style="margin-top:14px"></div>`;
@@ -3162,7 +3162,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     <input class="dash-input" id="adv-image" value="${App.escapeHtml(advancedData.image_url)}" placeholder="https://.../image.png" />
     <label class="dash-label">Message au-dessus du panneau (optionnel)</label>
     <textarea class="dash-input" id="adv-message" rows="2" maxlength="1900" placeholder="Choisissez le service dont vous avez besoin…">${App.escapeHtml(advancedData.message)}</textarea>
-    <label class="dash-label">Texte du menu déroulant (vide = « 🗂️ Choisissez un type de ticket… »)</label>
+    <label class="dash-label">Texte du menu déroulant (par défaut : « Choisissez un type de ticket… »)</label>
     <input class="dash-input" id="adv-placeholder" value="${App.escapeHtml(advancedData.menu_placeholder || '')}" placeholder="🗂️ Choisissez un type de ticket…" maxlength="100" />
     <label class="dash-label">Ligne de pied du panneau (vide = texte par défaut)</label>
     <input class="dash-input" id="adv-footer" value="${App.escapeHtml(advancedData.footer_text || '')}" placeholder="Hoxera · Support privé · Choisissez une option pour commencer" maxlength="200" />
@@ -3859,7 +3859,7 @@ Dashboard.renderers.levels = async (content, data) => {
       ${textChannels.map((ch) => `<option value="#${App.escapeHtml(ch.name)}" ${Dashboard.discordRefMatches(s.xp_channel, ch) ? 'selected' : ''}>#${App.escapeHtml(ch.name)}</option>`).join('')}
       ${Dashboard.currentDiscordOption(s.xp_channel, textChannels, '', 'configuration actuelle · salon introuvable')}
     </select>
-    <button class="dash-save-action dash-btn dash-btn-primary" style="margin-top:14px" id="xp-save">Enregistrer</button>`;
+    <button class="dash-save-action dash-btn dash-btn-primary" style="margin-top:14px" id="xp-save">Enregistrer les gains d’XP</button>`;
 
   // ------------------------------------------------------------
   // v249 — XP vocale. Mêmes réglages que l'XP texte, même niveau, même
@@ -3888,7 +3888,7 @@ Dashboard.renderers.levels = async (content, data) => {
     <div style="display:flex;align-items:center;justify-content:space-between;margin:4px 0"><label class="dash-label" style="margin:0">Ignorer le salon AFK du serveur</label><label class="switch"><input type="checkbox" id="vxp-afk" ${s.voice_xp_ignore_afk === 0 ? '' : 'checked'}><span class="slider"></span></label></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin:4px 0"><label class="dash-label" style="margin:0">Réduire après 4 h d'affilée</label><label class="switch"><input type="checkbox" id="vxp-taper" ${s.voice_xp_taper === 0 ? '' : 'checked'}><span class="slider"></span></label></div>
     <div class="desc">Le bot n'entre jamais dans le salon vocal : il lit l'état de présence fourni par Discord. Réduire après 4 h empêche de laisser un salon ouvert toute la nuit pour farmer · moitié jusqu'à 8 h, plus rien au-delà.</div>
-    <button class="dash-save-action dash-btn dash-btn-primary" style="margin-top:14px" id="vxp-save">Enregistrer</button>`;
+    <button class="dash-save-action dash-btn dash-btn-primary" style="margin-top:14px" id="vxp-save">Enregistrer les rôles de niveau</button>`;
 
   // Aperçu vivant : « 30 XP toutes les 3 minutes ». Recalculé à la frappe pour
   // que l'administrateur voie l'effet de ses deux nombres avant d'enregistrer.
@@ -4879,7 +4879,7 @@ Dashboard.renderers.moderation = async (content, data) => {
           <div><label class="dash-label">Réouverture auto</label><select class="dash-select" id="raid-unlock">${Dashboard.presetOptions([[0, 'Manuelle'], ...Dashboard.PRESETS_MIN], cfg.unlockMin ?? 0, Dashboard.labelMinutes)}</select></div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
-          <button class="dash-save-action dash-btn dash-btn-primary" id="raid-save" style="flex:1">Enregistrer</button>
+          <button class="dash-save-action dash-btn dash-btn-primary" id="raid-save" style="flex:1">Enregistrer les filtres</button>
           <button class="dash-btn" id="raid-test" style="flex:1">Tester (verrouille 1 min)</button>
         </div>
         <div id="raid-status" style="margin-top:10px"></div>`;
@@ -5683,7 +5683,7 @@ Dashboard.renderers.giveaways = async (content) => {
       <label class="dash-label">Couleur de l\'annonce</label>
       <input class="dash-input" id="gw-color" type="color" value="${/^#[0-9a-fA-F]{6}$/.test(String(s.giveaway_color)) ? s.giveaway_color : '#FEE75C'}" style="width:64px;height:38px;padding:2px" />
     </div>
-    <label class="dash-label">Message personnalisé (vide = « Réagissez avec 🎉 pour participer ! »)</label>
+    <label class="dash-label">Message personnalisé (par défaut : « Réagissez avec une réaction pour participer ! »)</label>
     <textarea class="dash-input" id="gw-msg" rows="2">${App.escapeHtml(s.giveaway_message || '')}</textarea>
     <div style="margin-top:12px"><button class="dash-save-action dash-btn dash-btn-primary" id="gw-save">Enregistrer la configuration</button></div>`;
   c.querySelector('#gw-save').onclick = async (e) => {
@@ -6697,7 +6697,7 @@ Dashboard.renderers.quiz = async (content, data) => {
       <label class="dash-label" style="margin-top:10px">Fenêtre bonus (secondes)</label>
       <select class="dash-select" id="qz-window" style="max-width:130px">${Dashboard.presetOptions(Dashboard.PRESETS_SEC_COURTES, parseInt(s.quiz_bonus_window, 10) || 8, Dashboard.labelSecondes)}</select>
     </div>
-    <div style="margin-top:12px"><button class="dash-save-action dash-btn dash-btn-primary" id="qz-save">Enregistrer</button></div>`;
+    <div style="margin-top:12px"><button class="dash-save-action dash-btn dash-btn-primary" id="qz-save">Enregistrer les réglages du quiz</button></div>`;
   c.querySelector('#qz-save').onclick = async (e) => {
     const bouton = e.currentTarget;
     try {
@@ -6996,7 +6996,7 @@ Dashboard.renderers.community = async (content, data) => {
     <div id="irc-rows"></div>
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
       <button class="dash-btn" id="irc-add">Ajouter un palier</button>
-      <button class="dash-save-action dash-btn dash-btn-primary" id="irc-save">Enregistrer</button>
+      <button class="dash-save-action dash-btn dash-btn-primary" id="irc-save">Enregistrer les invitations</button>
     </div>`;
   ircDraw();
   ci.querySelector('#irc-add').onclick = () => {
@@ -7040,7 +7040,7 @@ Dashboard.renderers.community = async (content, data) => {
     <select class="dash-select" id="lv-chan" style="max-width:320px">${liveChanOpts.join('')}</select>
     <label class="dash-label">Rôle mentionné avec l'annonce</label>
     <select class="dash-select" id="lv-ping">${livePingOpts.join('')}</select>
-    <div style="margin-top:12px"><button class="dash-save-action dash-btn dash-btn-primary" id="lv-save">Enregistrer</button></div>
+    <div style="margin-top:12px"><button class="dash-save-action dash-btn dash-btn-primary" id="lv-save">Enregistrer les alertes de live</button></div>
     <div style="height:1px;background:var(--d-border);margin:16px 0"></div>
     <label class="dash-label">Ajouter un compte à suivre</label>
     <div class="lv-add-row">
@@ -7194,7 +7194,7 @@ Dashboard.renderers.community = async (content, data) => {
     <label class="dash-label">Nombre d'étoiles minimum</label>
     <input class="dash-input" id="sb-min" type="number" min="1" max="50" value="${s.starboard_min || 3}" style="max-width:140px" />
     <div style="font-size:13px;color:var(--d-dim);margin-top:8px">Astuce : 3 étoiles est un bon réglage pour un serveur de moins de 500 membres.</div>
-    <div style="margin-top:14px"><button class="dash-save-action dash-btn dash-btn-primary" id="sb-save">Enregistrer</button></div>`;
+    <div style="margin-top:14px"><button class="dash-save-action dash-btn dash-btn-primary" id="sb-save">Enregistrer les réactions de rôle</button></div>`;
   c1.querySelector('#sb-save').onclick = async (e) => {
     const bouton = e.currentTarget;
     try {
@@ -7391,7 +7391,7 @@ Dashboard.renderers.server = async (content, data) => {
         <option value="ban" ${s.warn_action === 'ban' ? 'selected' : ''}>Bannir</option>
       </select>
     </div>
-    <div style="margin-top:14px"><button class="dash-save-action dash-btn dash-btn-primary" id="g-save">Enregistrer</button></div>`;
+    <div style="margin-top:14px"><button class="dash-save-action dash-btn dash-btn-primary" id="g-save">Enregistrer les réglages du serveur</button></div>`;
   c.querySelector('#g-save').onclick = async (e) => {
     const bouton = e.currentTarget;
     try {
@@ -7438,7 +7438,7 @@ Dashboard.renderers.server = async (content, data) => {
       <option value="">— Aucun —</option>
       ${rolesList.map((r) => `<option value="${r.id}" ${String(s.birthday_role || '') === r.id ? 'selected' : ''}>${App.escapeHtml(r.name)}</option>`).join('')}
     </select>
-    <div style="margin-top:12px"><button class="dash-save-action dash-btn dash-btn-primary" id="bd-save">Enregistrer</button></div>`;
+    <div style="margin-top:12px"><button class="dash-save-action dash-btn dash-btn-primary" id="bd-save">Enregistrer la langue et le fuseau</button></div>`;
   c3.querySelector('#bd-save').onclick = async (e) => {
     const bouton = e.currentTarget;
     try {
@@ -7858,7 +7858,7 @@ Dashboard.renderers.verification = async (content, data) => {
     <div style="background:rgba(237,66,69,0.08);border:1px solid rgba(237,66,69,0.35);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--d-dim);margin-bottom:10px">Sur un serveur existant, les membres actuels sans le rôle vérifié ne verront plus que le salon de vérification. Juste après l'activation, cochez la case ci-dessous pour ne bloquer personne.</div>
     <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="ver-grant-case" />Donner le rôle vérifié à tous les membres actuels (juste après l'activation)</label>
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-      <button class="dash-save-action dash-btn dash-btn-primary" id="ver-save">Enregistrer</button>
+      <button class="dash-save-action dash-btn dash-btn-primary" id="ver-save">Enregistrer les réglages de vérification</button>
       <button class="dash-btn" id="ver-send">Envoyer le panneau dans le salon</button>
     </div>`;
   // v294 — les 3 boutons deviennent un sélecteur + une case : le changement de
