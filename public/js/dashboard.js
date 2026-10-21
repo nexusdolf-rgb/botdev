@@ -7868,10 +7868,29 @@ Dashboard.renderers.verification = async (content, data) => {
     const sel = e.target;
     const on = sel.value === 'on';
     sel.disabled = true;
+    // v377 — Activer l'isolation cache tous les salons aux membres qui n'ont
+    // pas le rôle vérifié. On annonce exactement ce qui va se passer, et on
+    // n'applique rien tant que l'utilisateur n'a pas confirmé.
+    if (on) {
+      const ok = await App.confirm(
+        'Isolation : tous les salons deviennent invisibles aux membres qui n’ont pas le rôle vérifié.\n\n'
+        + 'Les membres déjà présents vont d’abord recevoir ce rôle, puis les salons seront masqués. '
+        + 'Cela peut prendre plusieurs minutes sur un gros serveur.\n\nActiver l’isolation ?'
+      );
+      if (!ok) { sel.value = 'off'; sel.disabled = false; return; }
+    }
     const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/verification/isolate`, { method: 'POST', body: { on } });
     sel.disabled = false;
-    if (!r.ok) { sel.value = on ? 'off' : 'on'; App.toast(`${r.error || 'Changement impossible.'}`); return; }
-    App.toast(on ? 'Isolation en cours d\'application · cela peut prendre quelques instants. Rechargez la page dans une minute.' : 'Salons en cours de réouverture · rechargez la page dans un instant.');
+    if (!r.ok) {
+      sel.value = on ? 'off' : 'on';
+      App.toast(`${r.error || 'Changement impossible.'}${r.untouched ? ' Aucun salon n’a été modifié.' : ''}`, 'error');
+      return;
+    }
+    if (on) {
+      App.toast(`Isolation appliquée · le rôle « ${r.role || 'vérifié'} » a été donné à ${r.granted || 0} membre(s)${r.failed ? ` (${r.failed} échec(s))` : ''}. Rechargez la page.`);
+    } else {
+      App.toast('Salons rouverts · rechargez la page dans un instant.');
+    }
   };
   c1.querySelector('#ver-grant-case').onchange = async (e) => {
     if (!e.target.checked) return;

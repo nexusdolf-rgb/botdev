@@ -1261,14 +1261,22 @@ router.post('/bots/:id/guilds/:guildId/verification/isolate', requireAuth, async
   const on = !!(req.body || {}).on;
   try {
     if (on) {
-      ver.assertIsolationReady(guild); // erreurs immédiates (salon/rôle/permission)
-      ver.applyIsolation(bot.id, guild).catch(() => {}); // long travail en arrière-plan
-    } else {
-      ver.removeIsolation(bot.id, guild).catch(() => {});
+      // v377 — L'isolation cache TOUS les salons aux membres qui n'ont pas le
+      // rôle vérifié. Sur un serveur déjà peuplé, les membres présents le
+      // perdaient donc instantanément leur accès : seul le rôle manquait, et
+      // rien ne le leur donnait. On refuse maintenant d'isoler tant que le
+      // rôle ne peut pas être distribué, et on le distribue AVANT de masquer.
+      ver.assertIsolationReady(guild); // salon, rôle, permission
+      const { role } = ver.assertGrantReady(guild); // rôle réellement attribuable
+      const distribution = await ver.grantRoleToAll(bot.id, guild);
+      await ver.applyIsolation(bot.id, guild).catch(() => {});
+      return res.json({ ok: true, started: true, role: role.name, granted: distribution.added, failed: distribution.errors });
     }
-    res.json({ ok: true, started: true });
+    ver.removeIsolation(bot.id, guild).catch(() => {});
+    res.json({ ok: true, started: true, removed: true });
   } catch (e) {
-    res.status(400).json({ ok: false, error: e.message || 'Application impossible.' });
+    // Erreur AVANT toute modification : les salons n'ont pas été touchés.
+    res.status(400).json({ ok: false, error: e.message || 'Application impossible.', untouched: true });
   }
 });
 
