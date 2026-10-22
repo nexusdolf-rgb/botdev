@@ -212,13 +212,12 @@ async function main() {
   const staffRow = new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId(`bd-troom:${BOT}`)
-      .setPlaceholder('⚙️ Actions du staff — gérer ce ticket…')
+      .setPlaceholder('Gérer ce ticket…')
       .addOptions(
         new StringSelectMenuOptionBuilder().setLabel('🖐️ Prendre en charge').setValue('claim'),
         new StringSelectMenuOptionBuilder().setLabel('🗑 Supprimer définitivement').setValue('delete'),
       )
   );
-  const firstLine = 'Ticket de <@u1> • <@&R1>';
   const welcome = panels.ticketWelcomePanel(member, chosen, '<@&R1>', 'Je n\'arrive pas à me connecter', '',
     [{ q: 'Urgence ?', a: 'Haute' }], 'fr', { number: 12 }, {},
     { teamLabel: 'Modération', rows: [staffRow] });
@@ -227,30 +226,32 @@ async function main() {
   check('salon privé : aucun `content`/`components` au niveau message',
     welcome.content === undefined && welcome.components.length === 1);
   const welcomeTexts = v2.texts(welcome);
+  const cardBlock = welcomeTexts.find((t) => t.startsWith('👤 **Ouvert par :**')) || '';
+  // v379 — la carte du salon suit les captures du 22/10 : titre, trait, puis
+  // un bloc compact (Ouvert par / Statut / Type / Raison, sans séparateur).
   check('salon privé : titre numéroté en premier, sans ligne auteur',
-    v2.title(welcome) === '🎫 TICKET OUVERT · #12' && v2.author(welcome) === '' && welcomeTexts[0] === '## 🎫 TICKET OUVERT · #12');
-  check('salon privé : ligne créateur + ping staff après le titre, sans type répété',
-    welcomeTexts[1] === firstLine && !welcomeTexts[1].includes('Support'));
-  check('salon privé : le menu « ⚙️ Actions du staff » est DANS le conteneur',
+    v2.title(welcome) === '🎫 Ticket #12' && v2.author(welcome) === '' && welcomeTexts[0] === '### 🎫 Ticket #12');
+  check('salon privé : ligne créateur dans la carte, sans type répété sur la 1re ligne',
+    cardBlock.split('\n')[0] === '👤 **Ouvert par :** <@u1>'
+      && !cardBlock.includes('Équipe'));
+  check('salon privé : le menu « Gérer ce ticket… » est DANS le conteneur',
     v2.rows(welcome).length === 1 && v2.json(welcome).includes(`bd-troom:${BOT}`)
-    && v2.json(welcome).includes('Actions du staff'));
+    && v2.json(welcome).includes('Gérer ce ticket…'));
   check('salon privé : séparateurs NATIFS entre les blocs (demande utilisateur)',
     v2.dividers(welcome) >= 3, `${v2.dividers(welcome)} séparateur(s)`);
-  check('salon privé : champ équipe retiré, ping staff conservé une seule fois',
-    (v2.allText(welcome).match(/<@&R1>/g) || []).length === 1
+  check('salon privé : aucun champ équipe ni ping ajouté (v379-b)',
+    (v2.allText(welcome).match(/<@&R1>/g) || []).length === 0
       && !v2.allText(welcome).includes('Équipe en charge'));
   noTextSep(welcome, 'salon privé : aucun trait texte ━');
-  const greetingBlock = welcomeTexts.find((t) => t.includes('Bienvenue')) || '';
-  check('salon privé : bienvenue et consigne dans le même bloc, sans séparateur entre eux',
-    greetingBlock.includes('\n✍️ Décrivez votre demande') && !greetingBlock.includes('\n\n'));
   check('salon privé : tous les blocs sont rendus (type, à propos, réponses, raison)',
-    ['Type de ticket', 'À propos de ce type', 'Urgence ?', 'Haute', 'Je n\'arrive pas à me connecter']
+    ['🏷 **Type :**', 'Pour toute demande générale.', 'Urgence ?', 'Haute', 'Je n\'arrive pas à me connecter']
       .every((k) => v2.json(welcome).includes(k)));
   check('salon privé : l\'espaceur invisible \\u200b ne réapparaît pas comme intitulé',
     !v2.texts(welcome).some((t) => t.includes('\u200b')));
-  check('salon privé : l\'avatar n\'est PAS répété (vignette seule)',
-    v2.thumbnailUrls(welcome).includes('https://cdn.discordapp.com/alice.png')
-    && (v2.json(welcome).match(/alice\.png/g) || []).length === 1);
+  // v379 — la carte n'a plus de vignette (elle n'est pas sur la capture) :
+  // l'avatar n'apparaît nulle part, donc jamais deux fois.
+  check('salon privé : aucun avatar dupliqué (pas de vignette sur la carte v379)',
+    (v2.json(welcome).match(/alice\.png/g) || []).length === 0);
   // v308/v309 — plus aucune ligne colorée sur les panneaux du système de
   // tickets, quelle que soit la couleur du type : bordure neutre.
   check('salon privé : titre + pied conservés, aucune ligne colorée (v308/v309)',

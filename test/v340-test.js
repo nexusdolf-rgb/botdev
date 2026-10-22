@@ -39,7 +39,12 @@ console.log('— 2. Sources : ouvreur DB + verrou sans cacher —');
 check('resolveOpenerId lit openTickets', panelsSrc.includes('store.openTickets.getByChannel') && panelsSrc.includes('function resolveOpenerId'));
 check('lockTicketOpenerWrite garde ViewChannel', panelsSrc.includes('ViewChannel: view') && panelsSrc.includes('SendMessages: !!send'));
 check('threads et fichiers aussi verrouillés', panelsSrc.includes('CreatePublicThreads: !!send') && panelsSrc.includes('AttachFiles: !!send') && panelsSrc.includes('SendMessagesInThreads: !!send'));
-check('fermeture bouton utilise le verrou', /handleTicketClose[\s\S]{0,900}lockTicketOpenerWrite\(channel, openerId, \{ view: true, send: false \}/.test(panelsSrc));
+// v379 — la fermeture confirmée supprime le salon : le verrou d'écriture
+// n'est plus posé (l'ancien comportement « fermer = verrouiller » vit encore
+// via ⏸ Mettre en attente et /ticket close).
+check('fermeture confirmée : transcription + suppression différée',
+  /handleTicketCloseConfirm[\s\S]{0,2600}buildTranscript\(botId, interaction/.test(panelsSrc)
+    && /handleTicketCloseConfirm[\s\S]{0,3600}channel\.delete\(\)/.test(panelsSrc));
 check('fermeture n’enlève plus la vue', !/handleTicketClose[\s\S]{0,1200}ViewChannel:\s*false/.test(panelsSrc));
 check('réouverture rend l’écriture', /handleTicketReopen[\s\S]{0,900}lockTicketOpenerWrite\(channel, openerId, \{ view: true, send: true \}/.test(panelsSrc));
 check('attente verrouille l’écriture', /handleTicketHold[\s\S]{0,500}lockTicketOpenerWrite\(channel, openerId, \{ view: true, send: false \}/.test(panelsSrc));
@@ -51,7 +56,7 @@ check('repair ouvert : peut encore restaurer', /row\.closed_at[\s\S]{0,700}send:
 check('/ticket close utilise le même verrou', cmdSrc.includes('lockTicketOpenerWrite(ch, openerId, { view: true, send: false })'));
 check('/ticket close pose closed_at', cmdSrc.includes("closed_at: new Date().toISOString()"));
 check('exports publics', typeof panels.resolveOpenerId === 'function' && typeof panels.lockTicketOpenerWrite === 'function' && typeof panels.repairTicketChannel === 'function');
-check('claim v339 intact', panelsSrc.includes('function replaceClaimButtonJson') && panelsSrc.includes("setLabel('🖐️ Prendre ce ticket')"));
+check('claim v339 intact', panelsSrc.includes('function replaceClaimButtonJson') && panelsSrc.includes('ticket_claim_btn'));
 
 console.log('— 3. Ouvreur : base d’abord, topic ensuite —');
 const dbOpener = '111111111111111111';

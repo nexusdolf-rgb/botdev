@@ -307,7 +307,7 @@ function v2fitBlocks(blocks, available) {
 
 // Construit le conteneur V2. Accepte la MÊME grammaire que embed()/panel()
 // pour que la migration d'un message soit mécanique :
-//   title       → TextDisplay « ## titre » (ou « ### titre » avec titleLevel: 3,
+//   title       → TextDisplay « ## titre » (« # titre » avec titleLevel: 1,
 //                 v261 — titre plus petit, demandé pour les annonces de live)
 //   description → paragraphs() → un TextDisplay par paragraphe + séparateurs
 //   content     → TextDisplay en tête (l'équivalent du content: classique)
@@ -362,7 +362,10 @@ function v2container(options = {}) {
   if (options.title) {
     // v261 — titleLevel: 3 rend un titre « ### » plus discret : sur mobile,
     // le « ## » par défaut occupait trop de place dans l'annonce de live.
-    const hashes = Number(options.titleLevel) === 3 ? '###' : '##';
+    // v379 — titleLevel: 1 rend un titre « # » (24 px), la taille des cartes
+    // de ticket mesurée sur les captures (titre 1,5 fois plus haut que le texte).
+    const level = Number(options.titleLevel);
+    const hashes = level === 1 ? '#' : (level === 3 ? '###' : '##');
     headTexts.push(`${hashes} ${text(options.title, V2_TITLE_MAX)}`);
   }
   if (headTexts.length) {
@@ -384,9 +387,15 @@ function v2container(options = {}) {
   // 3) Corps : un séparateur natif ENTRE chaque bloc — mais AUCUN juste après
   //    l'en-tête (le « ## » est déjà visuellement détaché), comme dans le
   //    panneau de tickets personnalisés qui sert de référence.
+  // v379 — `separatorAfterTitle: true` pose, à la demande, un séparateur
+  //    pleine largeur JUSTE sous le titre : c'est ce que montrent les cartes
+  //    du salon de ticket (ticket, confirmation de fermeture). Optionnel, donc
+  //    aucun panneau existant ne change d'apparence.
   // v363 — le pied de panneau (2 composants) et les boutons (rowReserve)
   // sont déduits du budget AVANT de poser les blocs.
-  bodyBlocks = v2fitBlocks(bodyBlocks, V2_COMPONENT_CAP - state.components - 2 - rowReserve);
+  const underTitle = options.separatorAfterTitle && bodyBlocks.length ? 1 : 0;
+  bodyBlocks = v2fitBlocks(bodyBlocks, V2_COMPONENT_CAP - state.components - 2 - rowReserve - underTitle);
+  if (underTitle) v2separator(container, state);
   bodyBlocks.forEach((block, index) => {
     if (index > 0) v2separator(container, state);
     v2text(container, block, state);

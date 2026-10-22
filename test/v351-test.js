@@ -61,43 +61,41 @@ const separatorsBetween = (left, right, parts = simpleParts) => {
 
 console.log('— Titre, numéro et ligne d’identité —');
 check('un seul message Components V2', v2.isV2(simplePanel) && simplePanel.content === undefined && simplePanel.embeds === undefined);
-check('titre en capitales avec le numéro à côté', v2.title(simplePanel) === '🎫 TICKET OUVERT · #42');
+check('titre avec le numéro', v2.title(simplePanel) === '🎫 Ticket #42');
 check('le titre est le premier bloc ; la ligne auteur a disparu',
-  simpleTexts[0] === '## 🎫 TICKET OUVERT · #42' && v2.author(simplePanel) === ''
+  simpleTexts[0] === '### 🎫 Ticket #42' && v2.author(simplePanel) === ''
     && !v2.allText(simplePanel).includes('Ticket de Alice · #42'));
-check('la ligne suivante indique le créateur puis ping le rôle staff',
-  simpleTexts[1] === `Ticket de <@U1> • ${roleMention}`);
-check('le ping réel du rôle reste présent une seule fois et le champ équipe est absent',
-  (v2.allText(simplePanel).match(/<@&R1>/g) || []).length === 1
-    && !v2.allText(simplePanel).includes('Équipe en charge')
+// v379-b — plus aucune ligne ajoutée à la carte : le ping du rôle staff n'est
+// plus rendu (les captures n'en ont pas).
+check('le bloc suivant indique le créateur, le statut et le type',
+  (simpleTexts[1] || '').startsWith('👤 **Ouvert par :** <@U1>\n⏳ **Statut :** en attente')
+    && !simpleTexts[1].includes('Équipe'));
+check('aucun bloc équipe ni ping ajouté à la carte',
+  !v2.allText(simplePanel).includes('Équipe en charge')
     && !v2.allText(simplePanel).includes('Modération'));
 
 console.log('— Type, raison et texte de bienvenue —');
-const typeBlock = simpleTexts.find((t) => t.includes('Type de ticket')) || '';
+const typeBlock = simpleTexts.find((t) => t.includes('🏷 **Type :**')) || '';
 check('le type simple est « 🎟️ Simple », sans champ équipe redondant',
-  typeBlock.includes('**🎟️ Simple**') && !typeBlock.includes('Ticket simple')
+  typeBlock.includes('🏷 **Type :** 🎟️ Simple') && !typeBlock.includes('Ticket simple')
     && !typeBlock.includes('Équipe en charge'));
-const greetingBlock = simpleTexts.find((t) => t.includes('Bienvenue')) || '';
-check('bienvenue et consigne restent dans le même bloc (aucun séparateur entre elles)',
-  greetingBlock.includes('Bienvenue <@U1>')
-    && greetingBlock.includes('\n✍️ Décrivez votre demande')
-    && !greetingBlock.includes('\n\n'));
-const reasonBlock = simpleTexts.find((t) => t.includes('Raison de l’ouverture du ticket')) || '';
-check('le motif porte le nouveau libellé et garde la réponse',
-  reasonBlock.includes('📝 Raison de l’ouverture du ticket')
-    && reasonBlock.includes('Ma commande n’est jamais arrivée…'));
-check('la note de transcription reste présente', v2.allText(simplePanel).includes('📄 À la fermeture définitive'));
-check('séparateurs confirmés dans l’ordre : identité, consignes, type, raison',
-  separatorsBetween('Ticket de <@U1>', 'Bienvenue <@U1>') === 1
-    && separatorsBetween('Décrivez votre demande', 'Type de ticket') === 1
-    && separatorsBetween('Type de ticket', 'Raison de l’ouverture du ticket') === 1
-    && separatorsBetween('Raison de l’ouverture du ticket', 'À la fermeture définitive') === 1
-    && v2.dividers(simplePanel) === 4,
+// v379 — plus de texte d'accueil par défaut sur la carte (comme la capture) :
+// le message d'accueil personnalisé du dashboard reste rendu (voir plus bas).
+check('aucun texte d’accueil par défaut ne s’ajoute à la carte',
+  !v2.allText(simplePanel).includes('Bienvenue <@U1>'));
+const reasonBlock = simpleTexts.find((t) => t.includes('📄 **Raison :**')) || '';
+check('le motif porte le nouveau libellé et la réponse en bloc de code',
+  reasonBlock.includes('📄 **Raison :**')
+    && reasonBlock.includes('```\nMa commande n’est jamais arrivée…\n```'));
+check('la note de transcription a quitté la carte', !v2.allText(simplePanel).includes('📄 À la fermeture définitive'));
+check('un seul séparateur : sous le titre, entre les lignes de la carte',
+  separatorsBetween('### 🎫 Ticket #42', '👤 **Ouvert par :**') === 1
+    && v2.dividers(simplePanel) === 1,
   `${v2.dividers(simplePanel)} séparateur(s)`);
 check('aucun ancien trait en texte « ━ »', !v2.allText(simplePanel).includes('━'));
-check('l’avatar membre reste présent une seule fois',
-  v2.thumbnailUrls(simplePanel).includes('https://cdn.example/alice.png')
-    && (v2.json(simplePanel).match(/alice\.png/g) || []).length === 1);
+check('aucune vignette : l’avatar n’apparaît pas sur la carte (v379)',
+  v2.thumbnailUrls(simplePanel).length === 0
+    && (v2.json(simplePanel).match(/alice\.png/g) || []).length === 0);
 check('le panneau reste sans ligne d’accent ni pied par défaut',
   v2.accentColor(simplePanel) === undefined && v2.footer(simplePanel) === '');
 check('limite Components V2 respectée', v2.componentCount(simplePanel) <= 40);
@@ -124,25 +122,25 @@ const chosenType = panels.ticketWelcomePanel(
   roleMention, '', '', [], 'fr', { number: 12 }, {}, { teamLabel: 'Modération' },
 );
 check('les noms et emojis des types personnalisés restent inchangés',
-  v2.allText(chosenType).includes('🎫 **Ticket simple personnalisé**'));
+  v2.allText(chosenType).includes('🏷 **Type :** 🎫 Ticket simple personnalisé'));
 const englishPanel = panels.ticketWelcomePanel(
   member, null, roleMention, 'The reason', '', [], 'en', { number: 7 }, {}, { teamLabel: 'Moderation' },
 );
 check('anglais : titre et motif cohérents',
-  v2.title(englishPanel) === '🎫 TICKET OPEN · #7'
-    && v2.allText(englishPanel).includes('📝 Reason for opening this ticket'));
+  v2.title(englishPanel) === '🎫 Ticket #7'
+    && v2.allText(englishPanel).includes('📄 **Reason:**'));
 check('sans numéro, le titre par défaut reste propre',
-  v2.title(panels.ticketWelcomePanel(member, null, '', '', '', [], 'fr', {}, {})) === '🎫 TICKET OUVERT');
+  v2.title(panels.ticketWelcomePanel(member, null, '', '', '', [], 'fr', {}, {})) === '🎫 Ticket');
 
 console.log('— Contrôles staff et version —');
 const staffMenu = new StringSelectMenuBuilder()
   .setCustomId('v351:staff')
-  .setPlaceholder('⚙️ Actions du staff — gérer ce ticket…')
+  .setPlaceholder('Gérer ce ticket…')
   .addOptions(new StringSelectMenuOptionBuilder().setLabel('🔒 Fermer').setValue('close'));
 const claimButton = new ButtonBuilder()
   .setCustomId('v351:claim')
-  .setStyle(ButtonStyle.Success)
-  .setLabel('🖐️ Prendre ce ticket');
+  .setStyle(ButtonStyle.Primary)
+  .setLabel('🖐️ Pris en charge');
 const withControls = panels.ticketWelcomePanel(
   member, null, roleMention, 'Raison', '', [], 'fr', { number: 43 }, {},
   { teamLabel: 'Modération', rows: [new ActionRowBuilder().addComponents(staffMenu), new ActionRowBuilder().addComponents(claimButton)] },
@@ -152,9 +150,9 @@ check('menu et bouton staff restent dans le même conteneur V2',
     && v2.controlByPrefix(withControls, 'v351:staff')
     && v2.controlByPrefix(withControls, 'v351:claim'));
 const controlsParts = (v2.plain(v2.container(withControls)) || {}).components || [];
-const lastNoteIndex = textPartIndex('À la fermeture définitive', controlsParts);
+const lastNoteIndex = textPartIndex('📄 **Raison :**', controlsParts);
 const firstActionIndex = controlsParts.findIndex((part) => Number(part.type) === v2.TYPE.ACTION_ROW);
-check('aucun séparateur entre la dernière note et les actions staff',
+check('aucun séparateur entre la carte et les actions staff',
   lastNoteIndex >= 0 && firstActionIndex === lastNoteIndex + 1);
 check('journal : v351 est conservée derrière la version courante',
   changelog.VERSION >= 351 && changelog.VERSIONS[0].v === changelog.VERSION

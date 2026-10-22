@@ -31,8 +31,9 @@ check('index.html : plus aucune ?v=332', !html.includes('?v=332'));
 
 console.log('— 2. Prendre ce ticket = bouton, plus dans le menu —');
 check('plus d’option claim dans le menu staff', !panels.includes("setValue('claim')"));
-check('bouton « Prendre ce ticket »', panels.includes("setLabel('🖐️ Prendre ce ticket')") && panels.includes('bd-tmenu:${botId}:claim'));
-check('le bouton disparaît après prise', panels.includes('removeClaimButton') && panels.includes('stripClaimButtonJson'));
+// v379 — le bouton s'appelle « Pris en charge » et reste en place, grisé.
+check('bouton « Pris en charge »', panels.includes("i18n.t(lang, 'ticket_claim_btn')") && panels.includes('bd-tmenu:${botId}:claim'));
+check('le bouton est grisé après prise', panels.includes('removeClaimButton') && panels.includes('disabled: true'));
 check('plus de gros panneau dans le salon (ticket_claim_msg)', !panels.includes('ticket_claim_msg'));
 check('prise en charge câblée', panels.includes('handleTicketClaim') && panels.includes('claimed_by'));
 

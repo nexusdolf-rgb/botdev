@@ -34,7 +34,9 @@ const src = fs.readFileSync(__dirname + '/../server/discord/panels.js', 'utf8');
 
   // ---- 4. Les branchements sont bien en place dans panels.js ----
   assert.ok(src.includes('async function sendTicketRecap'), 'fonction récap présente');
-  assert.strictEqual((src.match(/await sendTicketRecap\(botId, interaction/g) || []).length, 2, 'récap branché sur LES DEUX chemins de suppression');
+  // v379 — un TROISIÈME chemin rejoint le journal : la fermeture confirmée
+  // (les deux suppressions historiques restent branchées).
+  assert.strictEqual((src.match(/await sendTicketRecap\(botId, interaction/g) || []).length, 3, 'récap branché sur les trois chemins de clôture');
   assert.ok(src.includes('updateRecapRating(botId, interaction.client'), 'note ⭐ branchée sur la notation');
   assert.ok(src.includes("open_reason: reason || ''"), 'raison d\'ouverture enregistrée à la création');
   assert.ok(src.includes('Voir la transcription complète'), 'bouton lien transcription présent');

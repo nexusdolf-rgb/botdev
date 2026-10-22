@@ -97,13 +97,27 @@ store.bots.create({ user_id: 1, name: 'B', token: 'x', client_id: 'c', prefix: '
     return i >= 0 ? src.slice(Math.max(0, i - 260), i + 40) : '';
   };
   for (const [titre, ancienne] of [
-    ['🔒 Ticket fermé', 'variant: \'danger\''],
     ['🔓 Ticket réouvert', 'variant: \'success\''],
     ['⏸ Ticket mis en attente', 'variant: \'warning\''],
   ]) {
     const b = bloc(titre);
     check(`panneau « ${titre} » : aucune ligne colorée (v309)`,
       b.includes('accent: false') && !b.includes(ancienne), b.slice(-120));
+  }
+  // v379 — les trois cartes de fermeture (confirmation, compte à rebours,
+  // transcription dans les logs) n'ont aucune ligne colorée.
+  const blocFn = (marqueur) => {
+    const i = src.indexOf(marqueur);
+    return i >= 0 ? src.slice(i, i + 2800) : '';
+  };
+  for (const [marqueur, libelle] of [
+    ['async function submitCloseReason', 'carte de confirmation de fermeture'],
+    ['async function handleTicketCloseConfirm', 'compte à rebours de fermeture'],
+    ['async function sendTranscriptToLogs', 'transcription dans le salon de logs'],
+    ['async function handleTicketAddSelect', 'confirmation d’ajout de membre'],
+    ['async function handleTicketRemoveAsk', 'carte de retrait de membre'],
+  ]) {
+    check(`« ${libelle} » : aucune ligne colorée (v309)`, blocFn(marqueur).includes('accent: false'));
   }
   check('prise en charge : plus de gros panneau coloré (v333)',
     !src.includes('ticket_claim_msg') && (src.includes("s'occupe de ce ticket") || src.includes('replaceClaimButtonJson')));

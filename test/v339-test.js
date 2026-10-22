@@ -28,14 +28,16 @@ check('sw.js : cache botdev-v378', sw.includes("const CACHE = 'botdev-v378';"));
 check('index.html : plus aucune ?v=338', !html.includes('?v=338'));
 
 console.log('— 2. Même panneau, pas un second message —');
-check('bouton Prendre ce ticket inchangé', panels.includes("setLabel('🖐️ Prendre ce ticket')"));
-check('le bouton disparaît toujours', panels.includes('removeClaimButton') && panels.includes('stripClaimButtonJson'));
-check('plus de ligne « s\'occupe de ce ticket »', !panels.includes("s'occupe de ce ticket"));
-check('remplace le bouton par un TextDisplay', panels.includes('function replaceClaimButtonJson') && panels.includes('type: 10'));
-check('pas d’envoi channel.send après claim', !/removeClaimButton\([\s\S]{0,180}channel\.send/.test(panels));
-check('mention sans ping', panels.includes('allowedMentions') && panels.includes('parse: []'));
-check('i18n FR court', i18nSrc.includes("ticket_claim_line: 'Responsable : {staff}'"));
-check('i18n EN', i18nSrc.includes("ticket_claim_line: 'Handled by {staff}'"));
+// v379 — le bouton est grisé sur place et la ligne « Statut » du panneau est
+// réécrite ; l'annonce « s'occupe désormais de ce ticket » est une carte
+// demandée par l'utilisateur (captures du 22/10).
+check('bouton « Pris en charge » dans la carte', panels.includes("ticket_claim_btn"));
+check('le bouton est grisé sur le même message', panels.includes('removeClaimButton') && panels.includes('disabled: true'));
+check('la ligne Statut est réécrite sur le même message',
+  panels.includes('function replaceClaimButtonJson') && panels.includes('(?:Statut|Status)'));
+check('mention sans ping sur l’édition', panels.includes('allowedMentions') && panels.includes('parse: []'));
+check('i18n FR de la carte', i18nSrc.includes("ticket_card_status_claimed: 'pris en charge par {staff}'"));
+check('i18n EN de la carte', i18nSrc.includes("ticket_card_status_claimed: 'claimed by {staff}'"));
 
 console.log('— 3. Transformation JSON —');
 const { __testReplaceClaimButtonJson: replace } = require('../server/discord/panels');
@@ -43,15 +45,15 @@ const claimId = 'bd-tmenu:1:claim';
 const tree = [{
   type: 17,
   components: [
-    { type: 10, content: 'Ticket ouvert' },
+    { type: 10, content: '👤 **Ouvert par :** <@1>\n⏳ **Statut :** en attente' },
     { type: 1, components: [{ type: 3, custom_id: 'bd-troom:1' }] },
     { type: 1, components: [{ type: 2, custom_id: claimId, label: 'Prendre ce ticket' }] },
   ],
 }];
-const out = replace(tree, claimId, 'Responsable : <@42>');
+const out = replace(tree, claimId, '⏳ **Statut :** pris en charge par <@42>');
 const flat = JSON.stringify(out);
-check('le bouton a disparu', !flat.includes(claimId));
-check('la ligne responsable est à la place', flat.includes('"type":10') && flat.includes('Responsable : <@42>'));
+check('le bouton est conservé mais grisé', flat.includes(claimId) && flat.includes('"disabled":true'));
+check('la ligne Statut est réécrite', flat.includes('pris en charge par <@42>'));
 check('le menu staff est intact', flat.includes('bd-troom:1'));
 
 const changelog = require('../server/discord/changelog');

@@ -3,115 +3,122 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Aperçu — salon ticket privé</title>
+  <title>Aperçu — salon ticket privé (v379)</title>
   <style>
-    body { margin: 0; background: #1e1f22; color: #dbdee1; font-family: "gg sans","Noto Sans","Helvetica Neue",sans-serif; font-size: 14px; line-height: 1.45; }
+    body { margin: 0; background: #313338; color: #dbdee1; font-family: "gg sans","Noto Sans","Helvetica Neue",sans-serif; font-size: 14px; line-height: 1.45; }
     .page { max-width: 720px; margin: 0 auto; padding: 28px 16px 80px; }
     h1 { font-size: 20px; font-weight: 700; color: #f2f3f5; margin: 0 0 8px; }
     .lead { color: #b5bac1; margin: 0 0 28px; font-size: 13.5px; }
     .ch { font-size: 12px; letter-spacing: .4px; text-transform: uppercase; color: #949ba4; margin: 28px 0 10px; }
-    .panel { background: #2b2d31; border-radius: 8px; padding: 16px; border: 1px solid #1e1f22; }
+    .panel { background: #2b2d31; border-radius: 8px; padding: 14px 16px; border: 1px solid #1e1f22; }
     .panel + .panel { margin-top: 10px; }
-    .author { font-size: 12px; color: #949ba4; margin-bottom: 8px; }
-    .title { font-size: 16px; font-weight: 650; color: #f2f3f5; margin: 0 0 8px; }
-    .sep { height: 1px; background: #3f4147; margin: 12px 0; }
-    p { margin: 0 0 8px; }
+    .title { font-size: 17px; font-weight: 700; color: #f2f3f5; margin: 0 0 10px; }
+    .sep { height: 1px; background: #3f4147; margin: 12px 0; border: 0; }
+    p { margin: 0 0 6px; }
+    b { color: #f2f3f5; }
     .muted { color: #b5bac1; }
-    .field b { color: #f2f3f5; font-size: 12px; display: block; margin-bottom: 2px; }
-    .row { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 10px; }
+    .small { font-size: 12px; color: #949ba4; }
+    .quote { border-left: 4px solid #4e5058; padding: 2px 0 2px 12px; color: #dbdee1; margin: 4px 0 0; }
+    .code { background: #1e1f22; border: 1px solid #2b2d31; border-radius: 4px; padding: 8px 10px; margin: 4px 0 0;
+      font-family: ui-monospace, Consolas, Menlo, monospace; font-size: 13.5px; color: #dbdee1; white-space: pre-wrap; }
     .ping { color: #c9cdfb; background: rgba(88,101,242,.18); border-radius: 4px; padding: 0 4px; }
-    .menu { margin-top: 12px; background: #1e1f22; border: 1px solid #3f4147; border-radius: 8px; padding: 10px 12px; color: #b5bac1; font-size: 13px; }
-    .btn { display: inline-flex; margin-top: 10px; background: #248046; color: #fff; border-radius: 8px; padding: 8px 14px; font-weight: 600; font-size: 13px; }
-    .who { margin-top: 12px; color: #dbdee1; font-size: 14px; }
+    .menu { margin-top: 10px; background: #1e1f22; border: 1px solid #3f4147; border-radius: 8px; padding: 10px 12px; color: #b5bac1; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+    .menu span:last-child { color: #dbdee1; }
+    .btn { display: inline-flex; margin-top: 8px; border-radius: 8px; padding: 8px 14px; font-weight: 600; font-size: 13px; color: #fff; }
+    .btn-primary { background: #5865f2; }
+    .btn-danger { background: #da373c; }
+    .btn-secondary { background: #4e5058; }
+    .btn-disabled { background: #5865f2; opacity: .5; }
     .note { font-size: 12.5px; color: #949ba4; margin-top: 8px; }
   </style>
 </head>
 <body>
   <div class="page">
-    <h1>Salon ticket privé — tous les panneaux</h1>
-    <p class="lead">Uniquement ce qui s’affiche <b>dans le salon du ticket</b>. Le champ d’équipe est retiré ; le ping du rôle reste sur la ligne d’identité.</p>
+    <h1>Salon ticket privé — les cartes de la v379</h1>
+    <p class="lead">Tout ce qui s’affiche <b>dans le salon du ticket</b>, calqué sur les captures du 22/10 : carte d’en-tête, prise en charge, ajout et retrait de membre, fermeture confirmée avec compte à rebours.</p>
 
-    <div class="ch">1. À l’ouverture</div>
+    <div class="ch">1. Carte du ticket (à l’ouverture)</div>
     <div class="panel">
-      <div class="title">🎫 TICKET OUVERT · #42</div>
-      <p>Ticket de <span class="ping">@Alex</span> • <span class="ping">@Modération</span></p>
-      <div class="sep"></div>
-      <p>Bienvenue <span class="ping">@Alex</span> ! Un membre de l’équipe va vous répondre ici même.</p>
-      <p>✍️ Décrivez votre demande : texte, captures d’écran ou fichiers.</p>
-      <div class="sep"></div>
-      <div class="row">
-        <div class="field"><b>🗂️ Type de ticket</b>🎟️ Simple</div>
-      </div>
-      <div class="sep"></div>
-      <div class="field"><b>📝 Raison de l’ouverture du ticket</b>Ma commande n’est jamais arrivée…</div>
-      <div class="sep"></div>
-      <p class="muted">📄 À la fermeture définitive, la transcription vous est envoyée en MP.</p>
-      <div class="menu">⚙️ Actions du staff — gérer ce ticket…</div>
-      <div class="btn">🖐️ Prendre ce ticket</div>
+      <div class="title">🎫 Ticket #11</div>
+      <hr class="sep" />
+      <p>👤 <b>Ouvert par :</b> <span class="ping">@Fox</span></p>
+      <p>⏳ <b>Statut :</b> en attente</p>
+      <p>🏷 <b>Type :</b> 🧠 Test</p>
+      <p>📄 <b>Raison :</b></p>
+      <div class="code">Bonjour Mr j’arrive pas j’ai gros problème de me connecter en jeu</div>
+      <p class="small">Équipe : <span class="ping">@Modération</span></p>
+      <div class="btn btn-primary">🖐️ Pris en charge</div>
+      <div class="menu"><span>Gérer ce ticket…</span><span>›</span></div>
     </div>
 
-    <div class="ch">2. Après le clic — même panneau, bouton remplacé</div>
+    <div class="ch">2. Après la prise en charge — même carte, bouton grisé</div>
     <div class="panel">
-      <div class="title">🎫 TICKET OUVERT · #42</div>
-      <p>Ticket de <span class="ping">@Alex</span> • <span class="ping">@Modération</span></p>
-      <div class="sep"></div>
-      <p>Bienvenue <span class="ping">@Alex</span> ! Un membre de l’équipe va vous répondre ici même.</p>
-      <p>✍️ Décrivez votre demande : texte, captures d’écran ou fichiers.</p>
-      <div class="sep"></div>
-      <div class="row">
-        <div class="field"><b>🗂️ Type de ticket</b>🎟️ Simple</div>
-      </div>
-      <div class="sep"></div>
-      <div class="field"><b>📝 Raison de l’ouverture du ticket</b>Ma commande n’est jamais arrivée…</div>
-      <div class="sep"></div>
-      <p class="muted">📄 À la fermeture définitive, la transcription vous est envoyée en MP.</p>
-      <div class="menu">⚙️ Actions du staff — gérer ce ticket…</div>
-      <div class="who">Responsable : <span class="ping">@Marie</span></div>
-    </div>
-    <p class="note">Le bouton a disparu. À sa place : une ligne courte avec la mention du staff. Pas d’autre message dans le salon.</p>
-
-    <div class="ch">3. En attente</div>
-    <div class="panel">
-      <div class="title">⏸ Ticket mis en attente</div>
-      <p>Le ticket est temporairement en pause. Le créateur ne peut plus écrire jusqu’à la reprise du traitement.</p>
-      <div class="field"><b>🛡️ Mis en attente par</b><span class="ping">@Marie</span></div>
+      <div class="title">🎫 Ticket #11</div>
+      <hr class="sep" />
+      <p>👤 <b>Ouvert par :</b> <span class="ping">@Fox</span></p>
+      <p>⏳ <b>Statut :</b> pris en charge par <span class="ping">@Fox</span></p>
+      <p>🏷 <b>Type :</b> 🧠 Test</p>
+      <p>📄 <b>Raison :</b></p>
+      <div class="code">Bonjour Mr j’arrive pas j’ai gros problème de me connecter en jeu</div>
+      <p class="small">Équipe : <span class="ping">@Modération</span></p>
+      <div class="btn btn-disabled">🖐️ Pris en charge</div>
+      <div class="menu"><span>Gérer ce ticket…</span><span>›</span></div>
     </div>
 
-    <div class="ch">4. Fermé (par le staff)</div>
+    <div class="ch">3. Annonce de prise en charge (nouveau message)</div>
     <div class="panel">
-      <div class="title">🔒 Ticket fermé</div>
-      <p>Le ticket est maintenant verrouillé. Le créateur ne peut plus écrire, mais le staff peut encore le réouvrir.</p>
-      <div class="row">
-        <div class="field"><b>🛡️ Fermé par</b><span class="ping">@Marie</span></div>
-        <div class="field"><b>📄 Transcription</b>Elle sera envoyée à la suppression définitive.</div>
-      </div>
+      <div class="title">🔔 Ticket pris en charge</div>
+      <p><span class="ping">@Fox</span> s’occupe désormais de ce ticket.</p>
     </div>
 
-    <div class="ch">5. Réouvert</div>
+    <div class="ch">4. Ajouter un membre</div>
     <div class="panel">
-      <div class="title">🔓 Ticket réouvert</div>
-      <p>Le créateur peut de nouveau répondre. Le staff peut reprendre le traitement du ticket.</p>
-      <div class="field"><b>🛡️ Réouvert par</b><span class="ping">@Marie</span></div>
+      <div class="title">➕ Ajouter un membre au ticket</div>
+      <p>Choisis une ou plusieurs personnes dans la liste : elles pourront voir et écrire dans ce salon.</p>
+      <div class="menu"><span>👥 Choisis le(s) membre(s) à ajouter</span><span>›</span></div>
+    </div>
+    <p class="note">Le sélecteur ouvre la liste native de Discord : recherche, cases à cocher, « Sélectionne au moins 1 ».</p>
+
+    <div class="ch">5. Retirer un membre — aucun membre ajouté</div>
+    <div class="panel">
+      <div class="title">👥 Aucun membre à retirer</div>
+      <p>Seuls les membres ajoutés au ticket apparaissent ici. Utilise « ➕ Ajouter un membre » d’abord.</p>
     </div>
 
-    <div class="ch">6. Rappel d’inactivité</div>
+    <div class="ch">6. Confirmer la fermeture du ticket</div>
     <div class="panel">
-      <div class="title">⚠️ Ticket bientôt fermé</div>
-      <p>⏰ <b>Rappel</b> : sans nouveau message, fermeture automatique dans 10 minutes.</p>
-      <div class="row">
-        <div class="field"><b>⏳ Inactivité</b>Le ticket sera fermé si aucune réponse n’arrive.</div>
-        <div class="field"><b>💬 Action</b>Un nouveau message remet le délai à zéro.</div>
-      </div>
+      <div class="title">🔒 Confirmer la fermeture du ticket</div>
+      <hr class="sep" />
+      <p>🗓 <b>Ticket :</b> #11</p>
+      <p>📝 <b>Raison :</b> Ticket été fermé</p>
+      <p>👮 <b>Fermé par :</b> <span class="ping">@Fox</span></p>
+      <hr class="sep" />
+      <p>⚠️ Le salon sera supprimé et une transcription sera envoyée dans le salon de logs.</p>
+      <div class="btn btn-danger">✅ Confirmer la fermeture</div>
+      <div class="btn btn-secondary">❌ Annuler</div>
     </div>
 
-    <div class="ch">7. Fermeture automatique</div>
+    <div class="ch">7. Fermeture en cours, puis compte à rebours</div>
     <div class="panel">
-      <div class="title">⏰ Ticket fermé automatiquement</div>
-      <p>⏰ Ticket <b>fermé automatiquement</b> : 2 heures sans activité.</p>
-      <div class="row">
-        <div class="field"><b>⌛ Motif</b>Aucune activité pendant 2 heures.</div>
-        <div class="field"><b>📄 Suite</b>Transcription à la suppression définitive.</div>
-      </div>
+      <div class="title">⏳ Fermeture en cours…</div>
+      <hr class="sep" />
+      <div class="title">✅ Ticket fermé</div>
+      <p>Ce salon sera supprimé dans 5 secondes.</p>
+    </div>
+
+    <div class="ch">8. Salon de logs — transcription déposée</div>
+    <div class="panel">
+      <div class="title">📄 Transcription · Ticket #11</div>
+      <hr class="sep" />
+      <p>👤 <b>Ouvert par :</b> <span class="ping">@Fox</span></p>
+      <p>👮 <b>Fermé par :</b> <span class="ping">@Marie</span></p>
+      <hr class="sep" />
+      <p>📝 <b>Raison :</b> Ticket été fermé</p>
+      <hr class="sep" />
+      <p>⭐ <b>Évaluation</b><br />En attente de la note du membre…</p>
+      <hr class="sep" />
+      <p class="muted">📎 transcription-ticket-11.txt</p>
+      <div class="btn btn-secondary">📜 Voir la transcription complète</div>
     </div>
   </div>
 </body>

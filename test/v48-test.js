@@ -156,13 +156,17 @@ const check = (label, cond) => {
   // titre indique l’ouvreur, puis ping le rôle staff. Aucun type n’y est répété.
   check('type : le salon privé est envoyé en Components V2 (un seul payload)', v2.isV2(firstMsg));
   const tEmb = v2.json(firstMsg);
-  const identityLine = v2.texts(firstMsg).find((text) => text.startsWith('Ticket de ')) || '';
-  check('type : ligne d’identité = créateur + ping staff, sans répéter le type', identityLine === 'Ticket de <@u2> • <@&R1>');
-  check('type : champ « Équipe en charge » retiré, ping réel conservé une fois',
-    (v2.allText(firstMsg).match(/<@&R1>/g) || []).length === 1
+  // v379 — la carte du salon affiche le créateur et le ping staff sur des
+  // lignes distinctes du bloc d'informations (plus de « Ticket de … »).
+  const card = v2.texts(firstMsg).find((text) => text.startsWith('👤 **Ouvert par :**')) || '';
+  const ownerLine = card.split('\n')[0] || '';
+  check('type : carte = créateur seul, sans répéter le type',
+    ownerLine === '👤 **Ouvert par :** <@u2>' && !card.includes('Équipe'));
+  check('type : champ « Équipe en charge » retiré, aucun ping ajouté',
+    (v2.allText(firstMsg).match(/<@&R1>/g) || []).length === 0
       && !/Équipe en charge|Team in charge/.test(v2.allText(firstMsg)));
   check('type : le panneau de bienvenue affiche le type « Réclamation » dans son champ', tEmb.includes('Réclamation'));
-  check('type : numéro visible à côté du titre', v2.title(firstMsg).includes('🎫 TICKET OUVERT · #1'));
+  check('type : numéro visible dans le titre', v2.title(firstMsg).includes('🎫 Ticket #1'));
   check('type : le menu staff est DANS le conteneur', tEmb.includes('bd-troom:'));
   const lastReply = wAns.replies[wAns.replies.length - 1];
   // v371 — la confirmation est une carte V2 (plus de `content` nu) et reste
@@ -182,8 +186,12 @@ const check = (label, cond) => {
   staffI.guild = makeGuild();
   staffI.channel = { id: 'tk-1', name: 'reclamation-bob', topic: 'Ticket de Bob#0001 | u2 | Réclamation', isTextBased: () => true, send: async () => ({}), permissionOverwrites: { edit: async () => ({}) }, permissionsFor: () => ({ has: () => true }) };
   await panels.dispatchPanels(BOT, staffI);
+  // v379 — « Fermer » ouvre d'abord la fenêtre de raison : la fermeture
+  // elle-même se confirme ensuite sur une carte dédiée.
   check('logique : bouton 🔒 Fermer fonctionne toujours', staffI.replied);
-  check('logique : ticket marqué fermé (registre)', store.closedTickets.isClosed('tk-1'));
+  check('logique : la fermeture demande la raison avant d’agir',
+    staffI.replies.some(([kind]) => kind === 'modal'));
+  check('logique : le ticket n’est pas encore fermé avant confirmation', !store.closedTickets.isClosed('tk-1'));
 
   store.db.close();
   console.log(failures === 0 ? '\n✅ V48 — Nouveau panneau Optimus Prime appliqué, logique 100 % intacte. 🎉' : `\n❌ ${failures} vérification(s) en échec`);

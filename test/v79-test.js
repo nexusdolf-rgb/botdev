@@ -74,14 +74,15 @@ const check = (label, cond) => {
   // v237 — payload Components V2 : le titre est porté par le conteneur et les
   // libellés de champs sont rendus dans des TextDisplay.
   const embTicketEn = panels.ticketWelcomePanel(member, chosen, '<@&R1>', 'hello', '', [], 'en');
-  check('ticket EN : titre traduit', v2.title(embTicketEn) === '🎫 TICKET OPEN');
-  check('ticket EN : type et motif traduits, sans champ équipe ; ping conservé',
-    v2.json(embTicketEn).includes('Ticket type')
-      && v2.json(embTicketEn).includes('Reason for opening this ticket')
+  // v379 — la carte du salon a de nouveaux libellés (bloc compact).
+  check('ticket EN : titre traduit', v2.title(embTicketEn) === '🎫 Ticket');
+  check('ticket EN : type et motif traduits, sans champ équipe ni ping',
+    v2.json(embTicketEn).includes('🏷 **Type:**')
+      && v2.json(embTicketEn).includes('📄 **Reason:**')
       && !v2.json(embTicketEn).includes('Team in charge')
-      && (v2.allText(embTicketEn).match(/<@&R1>/g) || []).length === 1);
+      && (v2.allText(embTicketEn).match(/<@&R1>/g) || []).length === 0);
   const embTicketFr = panels.ticketWelcomePanel(member, chosen, '<@&R1>', 'bonjour', '', [], 'fr');
-  check('ticket FR : champs français', v2.json(embTicketFr).includes('Type de ticket'));
+  check('ticket FR : champs français', v2.json(embTicketFr).includes('🏷 **Type :**'));
 
   // ---------- 5. Transcription en MP traduite ----------
   const dms = [];

@@ -9,7 +9,7 @@
 const {
   ActionRowBuilder, ButtonBuilder, ButtonStyle,
   StringSelectMenuBuilder, StringSelectMenuOptionBuilder,
-  ChannelSelectMenuBuilder,
+  UserSelectMenuBuilder, ChannelSelectMenuBuilder,
   ModalBuilder, TextInputBuilder, TextInputStyle,
   ChannelType, PermissionFlagsBits, EmbedBuilder, MessageFlags,
   SeparatorBuilder, TextDisplayBuilder,
@@ -155,6 +155,8 @@ async function dispatchPanels(botId, interaction) {
       if (cid.startsWith(`bd-tquest:${botId}`)) { await submitQuestionnaire(botId, interaction); return true; }
       if (cid.startsWith(`bd-treason:${botId}`)) { await submitReason(botId, interaction); return true; }
       if (cid.startsWith(`bd-tdel:${botId}`)) { await submitDeleteReason(botId, interaction); return true; }
+      // v379 — raison de fermeture, puis carte de confirmation.
+      if (cid.startsWith(`bd-tcls:${botId}`)) { await submitCloseReason(botId, interaction); return true; }
       if (cid.startsWith(`bd-taddm:${botId}`)) { await submitAddMember(botId, interaction); return true; }
       // 💡 v299 — motif du refus d'une suggestion (modale staff obligatoire)
       if (cid.startsWith(`bd-suggdeny:${botId}`)) { const { submitDenyReason } = require('./suggest'); await submitDenyReason(botId, interaction); return true; }
@@ -207,8 +209,9 @@ async function dispatchPanels(botId, interaction) {
     if (interaction.isStringSelectMenu() && cid === `bd-troom:${botId}`) {
       const action = interaction.values && interaction.values[0];
       const actions = {
-        claim: handleTicketClaim, hold: handleTicketHold, close: handleTicketClose,
-        reopen: handleTicketReopen, addmember: handleTicketAddAsk, delete: handleTicketDeleteAsk,
+        claim: handleTicketClaim, hold: handleTicketHold, close: handleTicketCloseAsk,
+        reopen: handleTicketReopen, addmember: handleTicketAddAsk, removemember: handleTicketRemoveAsk,
+        delete: handleTicketDeleteAsk,
       };
       const handler = actions[action];
       if (handler) await handler(botId, interaction);
@@ -230,7 +233,7 @@ async function dispatchPanels(botId, interaction) {
         return true;
       }
       if (cid === `bd-ticket:${botId}`) { await handleTicketButton(botId, interaction); return true; }
-      if (cid === `bd-tmenu:${botId}:close`) { await handleTicketClose(botId, interaction); return true; }
+      if (cid === `bd-tmenu:${botId}:close`) { await handleTicketCloseAsk(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:reopen`) { await handleTicketReopen(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:hold`) { await handleTicketHold(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:claim`) { await handleTicketClaim(botId, interaction); return true; }
@@ -241,6 +244,9 @@ async function dispatchPanels(botId, interaction) {
       if (cid === `bd-tmenu:${botId}:delete`) { await handleTicketDeleteAsk(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:delconfirm`) { await handleTicketDeleteConfirm(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:delcancel`) { await handleTicketDeleteCancel(interaction); return true; }
+      // v379 — carte « Confirmer la fermeture du ticket ».
+      if (cid === `bd-tclsok:${botId}`) { await handleTicketCloseConfirm(botId, interaction); return true; }
+      if (cid === `bd-tclscancel:${botId}`) { await handleTicketCloseCancel(botId, interaction); return true; }
       // Ancien bouton « Fermer le ticket » du créateur (retiré en v86) :
       // les tickets ouverts AVANT la mise à jour l'affichent encore → réponse propre.
       if (cid.startsWith(`bd-tclose:`)) {
@@ -252,7 +258,16 @@ async function dispatchPanels(botId, interaction) {
       return false;
     }
 
+    // v379 — sélecteur NATIF de membres (ajout au ticket).
+    if (typeof interaction.isUserSelectMenu === 'function' && interaction.isUserSelectMenu()
+      && cid === `bd-taddsel:${botId}`) {
+      await handleTicketAddSelect(botId, interaction);
+      return true;
+    }
+
     if (interaction.isStringSelectMenu()) {
+      // v379 — choix du membre à retirer du ticket.
+      if (cid === `bd-trempick:${botId}`) { await handleTicketRemovePick(botId, interaction); return true; }
       if (cid.startsWith(`bd-menu:${botId}:`)) {
         await handleRoleMenu(botId, interaction, parseInt(cid.split(':')[2], 10));
         return true;
@@ -755,29 +770,32 @@ async function ackReply(interaction, payload) {
 
 // v332 — « Prendre ce ticket » est un BOUTON en bas du panneau, plus une
 // option du menu. Une fois cliqué, le bouton disparaît (un seul staff).
-function staffTicketRows(botId, claimed) {
+// v379 — rangées du panneau de ticket, calquées sur les captures du 22/10 :
+//   • bouton « Pris en charge » au-dessus du menu (et grisé une fois pris) ;
+//   • menu « Gérer ce ticket… » en dessous, sans préfixe d'engrenage ;
+//   • nouvelle action « Retirer un membre ».
+function staffTicketRows(botId, claimed, lang = 'fr') {
   const staffMenu = new StringSelectMenuBuilder()
     .setCustomId(`bd-troom:${botId}`)
-    .setPlaceholder('⚙️ Actions du staff — gérer ce ticket…')
+    .setPlaceholder(i18n.t(lang, 'ticket_menu_ph'))
     .setMinValues(1)
     .setMaxValues(1)
     .addOptions(
       new StringSelectMenuOptionBuilder().setLabel('⏸ Mettre en attente').setDescription('Passer le ticket en lecture seule').setValue('hold'),
-      new StringSelectMenuOptionBuilder().setLabel('🔒 Fermer').setDescription('Verrouiller le ticket (réouvrable)').setValue('close'),
+      new StringSelectMenuOptionBuilder().setLabel('🔒 Fermer le ticket').setDescription('Fermer, transcrire puis supprimer le salon').setValue('close'),
       new StringSelectMenuOptionBuilder().setLabel('🔓 Réouvrir').setDescription('Rouvrir un ticket fermé').setValue('reopen'),
       new StringSelectMenuOptionBuilder().setLabel('➕ Ajouter un membre').setDescription("Inviter quelqu'un dans le salon").setValue('addmember'),
+      new StringSelectMenuOptionBuilder().setLabel('➖ Retirer un membre').setDescription('Retirer un accès ajouté au ticket').setValue('removemember'),
       new StringSelectMenuOptionBuilder().setLabel('🗑 Supprimer définitivement').setDescription('Fermeture finale + transcription en MP').setValue('delete'),
     );
-  const rows = [new ActionRowBuilder().addComponents(staffMenu)];
-  if (!claimed) {
-    rows.push(new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`bd-tmenu:${botId}:claim`)
-        .setStyle(ButtonStyle.Success)
-        .setLabel('🖐️ Prendre ce ticket'),
-    ));
-  }
-  return rows;
+  const claimRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`bd-tmenu:${botId}:claim`)
+      .setStyle(ButtonStyle.Primary)
+      .setLabel(i18n.t(lang, 'ticket_claim_btn'))
+      .setDisabled(!!claimed),
+  );
+  return [claimRow, new ActionRowBuilder().addComponents(staffMenu)];
 }
 
 function stripClaimButtonJson(components, claimId) {
@@ -801,18 +819,31 @@ function stripClaimButtonJson(components, claimId) {
   return walk(components);
 }
 
-// v339 — à la place du bouton : une ligne courte « Responsable : @staff »
-// (TextDisplay V2, type 10). Pas de second message dans le salon.
+// v379 — prise en charge : le bouton du panneau ne disparaît plus, il est
+// GRISÉ (comme sur la capture), et la ligne « ⏳ Statut : … » du bloc d'en-tête
+// passe à « pris en charge par @staff ». Aucun second message n'est nécessaire
+// pour mettre la carte à jour : on ne touche qu'aux composants existants.
 function replaceClaimButtonJson(components, claimId, statusText) {
+  const patchText = (content) => {
+    const src = String(content || '');
+    if (!/^⏳ \*\*(?:Statut|Status)\s*:\*\*/m.test(src)) return src;
+    return src.replace(/^⏳ \*\*(?:Statut|Status)\s*:\*\*.*$/m, String(statusText || '').slice(0, 400));
+  };
   const walk = (arr) => {
     if (!Array.isArray(arr)) return arr;
     return arr.map((c) => {
       if (!c || typeof c !== 'object') return c;
       const kids = c.components;
       if (c.type === 1 && Array.isArray(kids)) {
-        const hasClaim = kids.some((b) => String((b && (b.custom_id || b.customId)) || '') === claimId);
-        if (hasClaim) return { type: 10, content: String(statusText || '').slice(0, 4000) };
-        return c;
+        const next = kids.map((b) => {
+          const id = String((b && (b.custom_id || b.customId)) || '');
+          if (id !== claimId) return b;
+          return { ...b, disabled: true };
+        });
+        return { ...c, components: next };
+      }
+      if (c.type === 10 && typeof c.content === 'string') {
+        return { ...c, content: patchText(c.content) };
       }
       if (Array.isArray(kids)) return { ...c, components: walk(kids) };
       return c;
@@ -825,21 +856,23 @@ async function removeClaimButton(message, botId, staffUser, lang) {
   if (!message || typeof message.edit !== 'function') return;
   const claimId = `bd-tmenu:${botId}:claim`;
   const staffId = staffUser && (staffUser.id || staffUser);
+  const l = lang || 'fr';
   const status = staffId
-    ? i18n.t(lang || 'fr', 'ticket_claim_line', { staff: `<@${staffId}>` })
+    ? i18n.t(l, 'ticket_card_status', {
+        status: i18n.t(l, 'ticket_card_status_claimed', { staff: `<@${staffId}>` }),
+      })
     : '';
+  if (!status) return;
   try {
     const json = (message.components || []).map((c) => (c && typeof c.toJSON === 'function' ? c.toJSON() : c));
-    const next = status
-      ? replaceClaimButtonJson(json, claimId, status)
-      : stripClaimButtonJson(json, claimId);
+    const next = replaceClaimButtonJson(json, claimId, status);
     await message.edit({
       components: next,
       flags: MessageFlags.IsComponentsV2,
       allowedMentions: { parse: [] },
     });
   } catch (e) {
-    console.error('[Hoxera] retrait bouton claim :', e.message);
+    console.error('[Hoxera] mise à jour du bouton de prise en charge :', e.message);
   }
 }
 
@@ -873,94 +906,92 @@ function appendTicketNumberToTitle(title, number, titleUsesNumberTemplate = fals
 }
 
 function ticketWelcomePanel(member, chosen, staffMention, reason, dmWarning = '', answers = [], lang = 'fr', meta = {}, room = ROOM_DEFAULTS, extra = {}) {
-  // 🧹 v220 : panneau de bienvenue ALLÉGÉ — l'essentiel sans le bruit.
-  // On garde : type, à propos, demande (raison), réponses au
-  // questionnaire. L’équipe est indiquée par le ping sur la ligne d’identité.
-  // On ne remonte plus la date brute (l'horodatage du pied
-  // l'affiche), ni le compteur « tickets précédents », ni le long mode
-  // d'emploi du menu staff (le menu est réservé au staff). Le déroulement
-  // détaillé n'apparaît que si le serveur en a configuré un ; sinon une
-  // ligne discrète annonce la transcription en MP.
-  const fields = [
-    { name: i18n.t(lang, 'ticket_type'), value: chosen ? `${chosen.emoji ? chosen.emoji + ' ' : ''}**${chosen.label}**` : `**${i18n.t(lang, 'ticket_simple')}**`, inline: true },
+  // v379 — carte d'en-tête calquée sur les captures du 22/10 :
+  //
+  //   🎫 Ticket #11
+  //   ────────────────────────────
+  //   👤 Ouvert par : @Fox
+  //   ⏳ Statut : pris en charge par @Fox
+  //   🏷 Type : 🧠 Test
+  //   📄 Raison :
+  //   ``` … ```
+  //
+  // Un seul bloc de texte (les lignes ne sont PAS séparées par des traits) :
+  // c'est `paragraphs()` qui pose un séparateur entre les blocs, pas entre les
+  // lignes. Le reste de la configuration du serveur (message d'accueil,
+  // description du type, questionnaire, déroulement personnalisé, alerte MP)
+  // reste affiché sous la carte, dans l'ordre habituel.
+  const number = meta && meta.number != null && meta.number !== '' ? String(meta.number) : '';
+  const claimedBy = extra && extra.claimedBy ? String(extra.claimedBy) : '';
+  const status = claimedBy
+    ? i18n.t(lang, 'ticket_card_status_claimed', { staff: `<@${claimedBy}>` })
+    : i18n.t(lang, 'ticket_card_status_open');
+  const typeValue = chosen
+    ? `${chosen.emoji ? chosen.emoji + ' ' : ''}${chosen.label}`
+    : i18n.t(lang, 'ticket_simple');
+  const card = [
+    i18n.t(lang, 'ticket_card_owner', { member: `${member}` }),
+    i18n.t(lang, 'ticket_card_status', { status }),
+    i18n.t(lang, 'ticket_card_type', { type: typeValue }),
   ];
-  if (chosen && chosen.description) {
-    fields.push({ name: i18n.t(lang, 'ticket_about'), value: chosen.description.slice(0, 1024), inline: true });
+  if (reason) {
+    card.push(i18n.t(lang, 'ticket_card_reason'));
+    // v379 — la demande s'affiche dans un BLOC DE CODE (triple accent grave),
+    // comme sur les captures : fond sombre et police à chasse fixe. Les accents
+    // graves saisis par le membre sont neutralisés pour ne pas fermer le bloc
+    // au milieu du texte.
+    const clean = String(reason).slice(0, 900).replace(/`/g, "'");
+    card.push(['```', clean, '```'].join('\n'));
   }
-  if (Array.isArray(answers) && answers.length) {
-    fields.push({
-      name: i18n.t(lang, 'ticket_answers'),
-      value: answers
-        .map((a, i) => `**${i + 1}. ${a.q}**\n↳ ${a.a}`)
-        .join('\n')
-        .slice(0, 1024),
-      inline: false,
-    });
-  }
-  if (reason) fields.push({ name: i18n.t(lang, 'ticket_reason'), value: reason.slice(0, 1024), inline: false });
-  if (room.steps) {
-    // « Déroulement » personnalisé (dashboard) → toujours respecté.
-    fields.push({ name: i18n.t(lang, 'ticket_steps'), value: room.steps.slice(0, 1200), inline: false });
-  } else {
-    // Note de fin discrète : transcription en MP à la fermeture définitive.
-    fields.push({ name: '\u200b', value: i18n.t(lang, 'ticket_step3'), inline: false });
-  }
-  if (dmWarning) {
-    fields.push({ name: '⚠️', value: String(dmWarning).replace(/^\n+/, '').slice(0, 1024), inline: false });
-  }
-  const avatar = member.user.displayAvatarURL ? member.user.displayAvatarURL({ dynamic: true }) : '';
-  // v308/v309 (demande du fondateur) — aucune ligne verticale colorée sur
-  // les panneaux du système de tickets : bordure neutre par défaut, quelle
-  // que soit la couleur du type (les couleurs des types restent disponibles
-  // pour les boutons staff via le mapping privé).
+  // v379-b — la carte ne porte QUE ce que montrent les captures. Le ping du
+  // rôle staff n'y est plus ajouté : `staffMention` reste accepté pour les
+  // appelants historiques, mais n'est plus rendu.
+
   // Variables disponibles dans le titre / message personnalisé.
   const resolveRoomVars = (tpl) => String(tpl || '')
     .replace(/{member}/g, `${member}`)
     .replace(/{user}/g, member.user ? (member.user.username || '') : '')
     .replace(/{server}/g, member.guild ? member.guild.name : 'serveur')
     .replace(/{type}/g, chosen ? (chosen.label || '') : 'ticket')
-    .replace(/{number}/g, String(meta.number || ''));
-  const titleTemplate = String(room.title || '').trim() || i18n.t(lang, 'ticket_title');
+    .replace(/{number}/g, number);
+  const defaultTitle = number ? `🎫 Ticket #${number}` : '🎫 Ticket';
+  const titleTemplate = String(room.title || '').trim() || defaultTitle;
   const resolvedTitle = resolveRoomVars(titleTemplate);
   const title = appendTicketNumberToTitle(
     resolvedTitle,
-    meta.number,
+    number,
     Boolean(room.title && /\{number\}/i.test(String(room.title))),
   );
-  const desc = room.welcome
-    ? resolveRoomVars(room.welcome)
-    : i18n.t(lang, 'ticket_welcome_desc', { member: `${member}` });
-  const identityLine = `${i18n.t(lang, 'ticket_first_line', { member: `${member}` })}${staffMention ? ` • ${staffMention}` : ''}`;
-  // Le TextDisplay d’identité vient après le titre, dans le corps V2. Le double
-  // saut ne sépare que cette ligne de l’accueil ; l’accueil et sa consigne
-  // restent dans le même bloc (un seul saut de ligne).
-  const panelDescription = [identityLine, desc].filter(Boolean).join('\n\n');
-  // v238 — le lien du dashboard (`public_url`) et l'horodatage sont RETIRÉS du
-  // pied de page du salon privé, à la demande de l'utilisateur : c'est un espace
-  // de travail entre le membre et le staff, pas une vitrine. La signature
-  // « Hoxera · Ticket #N » suffit. (`public_url` reste utilisé ailleurs :
-  // bannière du panneau public, lien de transcription.)
-  // v237 — le message du salon PRIVÉ passe en Components V2, comme le panneau
-  // public : les paragraphes du message d'accueil ET chaque bloc (type, à propos,
-  // réponses au questionnaire, raison, déroulement) sont séparés par
-  // des séparateurs NATIFS pleine largeur. (Avant : aucun séparateur — le
-  // message était volontairement « court », mais il porte en réalité jusqu'à
-  // 7 blocs, dont les réponses au questionnaire.)
-  // v351 — titre et numéro réunis, puis ligne d’identité sous le titre.
-  // Le nom d’auteur « Ticket de Alice · #42 » disparaît : le membre et le rôle
-  // staff sont sur une ligne dédiée, le ping de rôle restant à sa fin.
-  // • Le séparateur V2 est natif et pleine largeur entre les blocs : pas de trait
-  //   entre la bienvenue et « Décrivez votre demande ».
-  // • Le menu « ⚙️ Actions du staff » et le bouton restent dans le même panneau.
+
+  const blocks = [card.join('\n')];
+  // Message d'accueil : uniquement s'il a été personnalisé dans le dashboard.
+  if (room.welcome) blocks.push(resolveRoomVars(room.welcome));
+  // Description du type (réglage existant, conservée).
+  if (chosen && chosen.description) blocks.push(`ℹ️ ${String(chosen.description).slice(0, 900)}`);
+  if (Array.isArray(answers) && answers.length) {
+    blocks.push([
+      `📋 ${i18n.t(lang, 'ticket_answers')}`,
+      answers.map((a, i) => `**${i + 1}. ${a.q}**\n↳ ${a.a}`).join('\n'),
+    ].join('\n').slice(0, 1500));
+  }
+  // « Déroulement » personnalisé (dashboard) : toujours respecté.
+  if (room.steps) blocks.push(String(room.steps).slice(0, 1200));
+  if (dmWarning) blocks.push(String(dmWarning).replace(/^\n+/, '').slice(0, 1000));
+
+  // Aucune ligne colorée sur les panneaux tickets (v308/v309), pas de
+  // vignette ni d'horodatage : la carte reste celle des captures.
   return ui.v2panel({
     accent: false,
+    titleLevel: 3,
     title,
-    description: panelDescription,
-    fields,
-    thumbnail: avatar,
+    // « ### » (16 px, même hauteur que le texte) : sur les captures, le titre
+    // d'une carte ne dépasse pas les lignes du dessous (« Confirmer la
+    // fermeture du ticket », « Aucun membre à retirer »).
+    description: blocks.join('\n\n'),
+    // Un trait pleine largeur sépare le titre du bloc d'informations, comme
+    // sur la capture ; les lignes du bloc restent, elles, sans séparateur.
+    separatorAfterTitle: true,
     footer: false,
-    // ⚠️ ui.v2container ajoute l'heure PAR DÉFAUT (`options.timestamp !== false`) :
-    // il faut l'éteindre explicitement, sinon le pied reste « … · 05/09 22:11 ».
     timestamp: false,
   }, extra.rows || []);
 }
@@ -1269,7 +1300,7 @@ async function openTicket(botId, interaction, type, reason = '', answers = [], c
   // ⚙️ v212 — Actions du staff en MENU DÉROULANT (plus de rangées de
   // boutons qui allongent le salon) : le staff choisit l'action dans le
   // sélecteur ; chaque action vérifie le rôle staff au moment de l'usage.
-  const staffRows = staffTicketRows(botId, false);
+  const staffRows = staffTicketRows(botId, false, i18n.langForGuild(guild.id));
 
   // Vérification MP dès l'ouverture : si les MP du membre sont fermés,
   // on l'avertit tout de suite qu'il ne pourra pas recevoir la transcription.
@@ -1876,84 +1907,303 @@ async function sendTicketRecap(botId, interaction, { row, meta, closeReason, tra
 const RECAP_RATING_LABEL = '⭐ Évaluation';
 const RECAP_RATING_PENDING = 'En attente de la note du membre…';
 
-// ⭐ Quand le membre note son ticket, le panneau du journal est mis à jour.
+// ⭐ Réécrit le bloc « **⭐ Évaluation** … » d'un message du journal.
+// v237 — ce sont des conteneurs Components V2 : on ne peut plus relire
+// `msg.embeds[0].fields`. On sérialise l'arborescence, on remplace le
+// TextDisplay « ⭐ Évaluation » et on renvoie le tout à l'identique. discord.js
+// accepte les objets JSON bruts dans `components` (MessagePayload les passe à
+// son jsonTransformer) et le flag IsComponentsV2 est re-posé explicitement :
+// on ne peut pas sortir du V2.
+// Retourne true quand le bloc a été trouvé et le message réécrit.
+async function patchRatingMessage(msg, stars) {
+  if (!msg || !msg.components || !msg.components.length) return false;
+  const raw = JSON.parse(JSON.stringify(
+    msg.components.map((c) => (c && typeof c.toJSON === 'function' ? c.toJSON() : c))
+  ));
+  const mark = `**${RECAP_RATING_LABEL}**`;
+  let patched = false;
+  const walk = (node) => {
+    if (!node || typeof node !== 'object') return;
+    if (node.type === 10 && typeof node.content === 'string' && node.content.startsWith(mark)) {
+      node.content = `${mark}\n${'⭐'.repeat(stars)} (${stars}/5)`;
+      patched = true;
+      return;
+    }
+    for (const child of node.components || []) walk(child);
+  };
+  raw.forEach(walk);
+  if (!patched) return false;
+  await msg.edit({
+    components: raw, flags: MessageFlags.IsComponentsV2,
+    content: null, embeds: [], attachments: [],
+  }).catch(() => {});
+  return true;
+}
+
+// ⭐ Quand le membre note son ticket, les deux cartes du journal sont mises à
+// jour : le récapitulatif (journal des tickets) et la carte de transcription
+// (salon de logs), qui portent la même ligne d'évaluation.
 async function updateRecapRating(botId, client, guildId, number, stars) {
   try {
     const ref = store.ticketLogMsgs.get(botId, guildId, number);
     if (!ref) return;
     const guild = client.guilds.cache.get(String(guildId));
     if (!guild) return;
-    const channel = guild.channels.cache.get(ref.channel_id);
-    if (!channel) return;
-    const msg = await channel.messages.fetch(ref.message_id).catch(() => null);
-    if (!msg || !msg.components || !msg.components.length) return;
-    // v237 — le récapitulatif est désormais un conteneur Components V2 : on ne
-    // peut plus relire `msg.embeds[0].fields`. On sérialise l'arborescence, on
-    // remplace le TextDisplay « ⭐ Évaluation » et on renvoie le tout à
-    // l'identique. discord.js accepte les objets JSON bruts dans `components`
-    // (MessagePayload les passe à son jsonTransformer) et le flag
-    // IsComponentsV2 est re-posé explicitement : on ne peut pas sortir du V2.
-    const raw = JSON.parse(JSON.stringify(
-      msg.components.map((c) => (c && typeof c.toJSON === 'function' ? c.toJSON() : c))
-    ));
-    const mark = `**${RECAP_RATING_LABEL}**`;
-    let patched = false;
-    const walk = (node) => {
-      if (!node || typeof node !== 'object') return;
-      if (node.type === 10 && typeof node.content === 'string' && node.content.startsWith(mark)) {
-        node.content = `${mark}\n${'⭐'.repeat(stars)} (${stars}/5)`;
-        patched = true;
-        return;
-      }
-      for (const child of node.components || []) walk(child);
-    };
-    raw.forEach(walk);
-    if (!patched) return;
-    await msg.edit({
-      components: raw, flags: MessageFlags.IsComponentsV2,
-      content: null, embeds: [], attachments: [],
-    }).catch(() => {});
+    const targets = [
+      { channelId: ref.channel_id, messageId: ref.message_id },
+      { channelId: ref.transcript_channel_id, messageId: ref.transcript_message_id },
+    ];
+    for (const t of targets) {
+      if (!t.channelId || !t.messageId) continue;
+      const channel = guild.channels.cache.get(String(t.channelId));
+      if (!channel || !channel.messages) continue;
+      const msg = await channel.messages.fetch(String(t.messageId)).catch(() => null);
+      await patchRatingMessage(msg, stars);
+    }
   } catch { /* jamais bloquant */ }
 }
 
 // ---------- Fermer / Réouvrir / En attente / Supprimer (staff) ----------
-// 🔒 Fermer = verrouiller le ticket (le staff peut Réouvrir).
-// 📄 La transcription n'est envoyée qu'à la SUPPRESSION (le point final).
-async function handleTicketClose(botId, interaction) {
+// 🔒 v379 — la fermeture suit désormais les captures du 22/10 :
+//   menu « Fermer le ticket » → fenêtre de raison → carte de confirmation
+//   → « Fermeture en cours… » → compte à rebours 5 s → suppression du salon.
+// La transcription part dans le salon de logs, et reste aussi envoyée en MP
+// au créateur (comportement historique conservé).
+const pendingCloses = new Map(); // userId -> { botId, reason, channelId, ts }
+
+// 🔒 Étape 1 : la raison (une interaction de menu peut ouvrir une fenêtre).
+async function handleTicketCloseAsk(botId, interaction) {
   if (!isStaff(botId, interaction)) return staffDeny(interaction);
-  await safeDefer(interaction);
+  const lang = i18n.langForGuild(interaction.guild.id);
+  const ch = interaction.channel;
+  const chName = ch ? ch.name || '' : '';
+  const chTopic = ch && ch.topic ? ch.topic : '';
+  if (!chName.startsWith('ticket-') && !chTopic.includes('Ticket de') && !chTopic.includes('Ticket #')) {
+    return ackReply(interaction, { content: '❌ Cette action doit être utilisée dans un salon de ticket.', ephemeral: true });
+  }
+  pendingCloses.set(interaction.user.id, { botId, ts: Date.now(), channelId: ch.id });
+  await interaction.showModal(reasonModal(
+    botId,
+    `bd-tcls:${botId}`,
+    i18n.t(lang, 'ticket_close_modal_title'),
+    i18n.t(lang, 'ticket_close_modal_label'),
+    i18n.t(lang, 'ticket_close_modal_ph'),
+  ));
+}
+
+// Le numéro du ticket vient de la fiche en base, sinon du sujet du salon.
+// Édition d'un message Components V2 déjà éphémère : on ne renvoie que le
+// drapeau V2 (le drapeau EPHEMERAL n'est valable qu'à l'envoi).
+function v2EditPayload(options = {}, rows = []) {
+  const payload = ui.v2edit(options, rows);
+  payload.flags = MessageFlags.IsComponentsV2;
+  return payload;
+}
+
+function ticketNumberOf(channel, row) {
+  if (row && row.number) return String(row.number);
+  const m = /Ticket #(\d+)/.exec(String(channel && channel.topic || ''));
+  return m ? m[1] : '';
+}
+
+// 🔒 Étape 2 : la carte de confirmation (éphémère, staff seul).
+async function submitCloseReason(botId, interaction) {
+  const pending = pendingCloses.get(interaction.user.id);
+  pendingCloses.delete(interaction.user.id);
+  if (!pending || pending.botId !== botId || Date.now() - (pending.ts || 0) > WIZARD_TTL) {
+    return interaction.reply({ content: '⏰ La demande de fermeture a expiré, relancez-la.', ephemeral: true }).catch(() => {});
+  }
+  if (!isStaff(botId, interaction)) return staffDeny(interaction);
+  const lang = i18n.langForGuild(interaction.guild.id);
+  const channel = interaction.channel;
+  const reason = (interaction.fields.getTextInputValue('value') || '').trim() || 'aucune raison fournie';
+  const row = store.openTickets.getByChannel(channel.id);
+  const number = ticketNumberOf(channel, row) || '?';
+  pendingCloses.set(interaction.user.id, { botId, reason, channelId: channel.id, ts: Date.now() });
+  const rows = [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`bd-tclsok:${botId}`).setStyle(ButtonStyle.Danger)
+        .setLabel(i18n.t(lang, 'ticket_close_confirm_yes')),
+    ),
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`bd-tclscancel:${botId}`).setStyle(ButtonStyle.Secondary)
+        .setLabel(i18n.t(lang, 'ticket_close_confirm_no')),
+    ),
+  ];
+  const facts = [
+    i18n.t(lang, 'ticket_close_confirm_ticket', { number }),
+    i18n.t(lang, 'ticket_close_confirm_reason', { reason: String(reason).slice(0, 400) }),
+    i18n.t(lang, 'ticket_close_confirm_by', { staff: `<@${interaction.user.id}>` }),
+  ].join('\n');
+  return interaction.reply(ui.v2panel({
+    accent: false,
+    titleLevel: 3,
+    title: i18n.t(lang, 'ticket_close_confirm_title'),
+    description: `${facts}\n\n${i18n.t(lang, 'ticket_close_confirm_warn')}`,
+    separatorAfterTitle: true,
+    footer: false,
+    ephemeral: true,
+  }, rows)).catch(() => {});
+}
+
+// 📄 Transcription dans le salon de logs (fichier + lien).
+// Salon de logs du serveur : le journal de modération d'abord, et à défaut le
+// salon du récapitulatif des tickets (les deux sont des « salons de logs » pour
+// le staff). Aucun des deux → repli sur le MP du créateur.
+function resolveLogsChannel(botId, guild) {
+  try {
+    const direct = logging.logChannel(botId, guild);
+    if (direct && typeof direct.send === 'function') return direct;
+  } catch {}
+  try {
+    const gs = store.guildSettings.get(botId, guild.id) || {};
+    const raw = String(gs.ticket_log_channel || '').trim();
+    if (!raw) return null;
+    const id = (raw.match(/\d{15,21}/) || [])[0];
+    const cache = guild.channels && guild.channels.cache;
+    if (!cache) return null;
+    if (id) {
+      const byId = cache.get(id);
+      if (byId && typeof byId.send === 'function') return byId;
+    }
+    const name = raw.replace(/^#/, '').toLowerCase();
+    const byName = cache.find((c) => c && String(c.name || '').toLowerCase() === name);
+    return byName && typeof byName.send === 'function' ? byName : null;
+  } catch { return null; }
+}
+
+async function sendTranscriptToLogs(botId, guild, channelName, transcript, meta = {}) {
+  try {
+    const channel = resolveLogsChannel(botId, guild);
+    if (!channel || typeof channel.send !== 'function') return false;
+    const fileName = `transcription-${channelName}.txt`;
+    const rows = transcript && transcript.url
+      ? [ui.linkRow('📜 Voir la transcription complète', transcript.url)]
+      : [];
+    // v379 — la carte rappelle qui a OUVERT le ticket, juste au-dessus de qui
+    // l'a fermé : le staff qui lit le salon de logs voit tout de suite de qui
+    // il s'agit. Même écriture que la carte du ticket (« 👤 **Ouvert par :** … »).
+    const openerId = String(meta.openerId || '').trim();
+    const who = [];
+    if (/^\d{5,25}$/.test(openerId)) who.push(`👤 **Ouvert par :** <@${openerId}>`);
+    who.push(`👮 **Fermé par :** <@${meta.staffId}>`);
+    const payload = ui.v2panel({
+      accent: false,
+      titleLevel: 3,
+      title: `📄 Transcription · Ticket #${meta.number || '?'}`,
+      // Un nom de champ vide : le bloc affiche la valeur telle quelle, sans
+      // intitulé. Les deux lignes restent ainsi côte à côte dans UN bloc.
+      fields: [
+        { name: '', value: who.join('\n'), inline: false },
+        { name: '', value: `📝 **Raison :**\n${String(meta.reason || '—').slice(0, 900)}`, inline: false },
+        // v379 — le membre note son ticket depuis le MP de fermeture ; la note
+        // s'écrit ici, dans le salon de logs, comme sur le récapitulatif.
+        { name: RECAP_RATING_LABEL, value: RECAP_RATING_PENDING, inline: false },
+      ],
+      files: [fileName],
+      footer: false,
+    }, rows);
+    const sent = await channel.send({
+      ...payload,
+      files: [{ attachment: Buffer.from(String(transcript && transcript.text || 'Transcription indisponible.'), 'utf-8'), name: fileName }],
+    });
+    const num = parseInt(meta.number, 10);
+    if (sent && sent.id && num) {
+      try { store.ticketLogMsgs.setTranscript(botId, guild.id, num, channel.id, sent.id); } catch {}
+    }
+    return true;
+  } catch (e) {
+    console.error('[Hoxera] transcription vers le salon de logs :', e.message);
+    return false;
+  }
+}
+
+// 🔒 Étape 3 : confirmation → transcription → compte à rebours → suppression.
+async function handleTicketCloseConfirm(botId, interaction) {
+  if (!isStaff(botId, interaction)) return staffDeny(interaction);
+  const lang = i18n.langForGuild(interaction.guild.id);
+  const pending = pendingCloses.get(interaction.user.id);
+  if (!pending || pending.botId !== botId || pending.channelId !== interaction.channel.id
+    || Date.now() - (pending.ts || 0) > WIZARD_TTL) {
+    return interaction.reply({ content: '⏰ Confirmation expirée, relancez la fermeture.', ephemeral: true }).catch(() => {});
+  }
+  pendingCloses.delete(interaction.user.id);
+  const reason = String(pending.reason || 'aucune raison fournie');
   const channel = interaction.channel;
   const guild = interaction.guild;
-  ensureTicketRow(botId, guild, channel);
-  const openerId = resolveOpenerId(channel);
-  const locked = await lockTicketOpenerWrite(channel, openerId, { view: true, send: false });
-  if (!locked) console.error('[Hoxera] fermeture : impossible de retirer l’écriture au créateur', openerId || '(id manquant)');
-  store.closedTickets.add(channel.id, botId, guild.id);
-  store.openTickets.update(channel.id, { closed_at: new Date().toISOString() });
-  bumpTicketStats(guild.id, 0, -1);
-  await channel.send(ui.v2panel({
-    // v308/v309 — aucune ligne colorée sur les panneaux tickets.
+  await safeDeferUpdate(interaction);
+  // 1) La carte éphémère passe à « Fermeture en cours… »
+  try {
+    await interaction.editReply(v2EditPayload({
+      accent: false,
+      titleLevel: 3,
+      title: i18n.t(lang, 'ticket_close_progress_title'),
+      footer: false,
+      ephemeral: true,
+    }));
+  } catch {}
+  // 2) Message public dans le salon : c'est lui qui portera le compte à rebours.
+  const progress = await channel.send(ui.v2panel({
     accent: false,
-    title: '🔒 Ticket fermé',
-    description: 'Le ticket est maintenant verrouillé. Le créateur ne peut plus écrire, mais le staff peut encore le réouvrir.',
-    fields: [
-      { name: '🛡️ Fermé par', value: `${interaction.user}`, inline: true },
-      { name: '📄 Transcription', value: 'Elle sera envoyée à la suppression définitive.', inline: true },
-    ],
+    titleLevel: 3,
+    title: i18n.t(lang, 'ticket_close_progress_title'),
     footer: false,
-  })).catch(() => {});
-  await logging.log(botId, guild, {
-    title: '🔒 Ticket fermé', color: '#ED4245',
-    fields: [
-      { name: '📨 Salon', value: `<#${channel.id}>`, inline: true },
-      { name: '🛡️ Par', value: `${interaction.user.tag}`, inline: true },
-      { name: '📄 Transcription', value: 'envoyée à la suppression', inline: true },
-    ],
+  })).catch(() => null);
+
+  const ticketRow = store.openTickets.getByChannel(channel.id);
+  const number = ticketNumberOf(channel, ticketRow) || '';
+  store.closedTickets.add(channel.id, botId, guild.id);
+  try { store.openTickets.update(channel.id, { closed_at: new Date().toISOString() }); } catch {}
+  bumpTicketStats(guild.id, 0, -1);
+  // 3) Transcription : MP au créateur (historique) + fichier dans le salon de logs.
+  const t = await buildTranscript(botId, interaction, [
+    `🔒 Ticket fermé par ${interaction.user.tag} — raison : ${reason}`,
+  ]);
+  const dmOk = await sendCloseDm(interaction, guild, channel.name, t, botId, Number(number) || 0);
+  const logsOk = await sendTranscriptToLogs(botId, guild, channel.name, t, {
+    number: number || '?', reason, staffId: interaction.user.id,
+    openerId: (ticketRow && ticketRow.opener_id) || resolveOpenerId(channel),
   });
-  await ackReply(interaction, {
-    content: '🔒 Ticket fermé. 📄 La **transcription** sera envoyée en MP au créateur au moment de la **suppression** (`/ticket delete` ou bouton 🗑).',
+  await sendTicketRecap(botId, interaction, { row: ticketRow, meta: ticketMetaFor(channel), closeReason: reason, transcript: t });
+  store.activity.add(botId, guild.id, '🔒', `Ticket #${number || '?'} fermé par ${interaction.user.tag} — ${reason}`);
+  store.openTickets.remove(channel.id);
+  try { store.advancedTickets.unbindChannel(channel.id); } catch {}
+  try {
+    await logging.log(botId, guild, {
+      title: '🔒 Ticket fermé', color: '#ED4245',
+      fields: [
+        { name: '📨 Salon', value: `\`#${channel.name}\``, inline: true },
+        { name: '🛡️ Par', value: `${interaction.user.tag}`, inline: true },
+        { name: '📝 Raison', value: reason.slice(0, 900) },
+        { name: '📄 Transcription', value: logsOk ? 'envoyée dans le salon de logs' : (dmOk ? 'envoyée en MP au créateur' : 'indisponible'), inline: true },
+      ],
+    });
+  } catch {}
+  // 4) Le message public devient le compte à rebours, puis le salon part.
+  if (progress) {
+    await progress.edit(v2EditPayload({
+      accent: false,
+      titleLevel: 3,
+      title: i18n.t(lang, 'ticket_close_done_title'),
+      description: logsOk ? i18n.t(lang, 'ticket_close_done_desc') : i18n.t(lang, 'ticket_close_done_desc_dm'),
+      footer: false,
+    })).catch(() => {});
+  }
+  setTimeout(() => { channel.delete().catch(() => {}); }, 5000);
+}
+
+// « ❌ Annuler » : la carte éphémère devient une confirmation d'annulation.
+async function handleTicketCloseCancel(botId, interaction) {
+  const lang = i18n.langForGuild(interaction.guild ? interaction.guild.id : '');
+  pendingCloses.delete(interaction.user.id);
+  const payload = v2EditPayload({
+    accent: false,
+    title: '❌ Fermeture annulée',
+    description: i18n.t(lang, 'ticket_close_cancelled'),
+    footer: false,
     ephemeral: true,
   });
+  try { await interaction.update(payload); } catch { try { await interaction.reply({ content: i18n.t(lang, 'ticket_close_cancelled'), ephemeral: true }); } catch {} }
 }
 
 async function handleTicketReopen(botId, interaction) {
@@ -1999,8 +2249,18 @@ async function handleTicketClaim(botId, interaction) {
     claimed_at: new Date().toISOString(),
   });
   store.activity.add(botId, guild.id, '🖐️', `Ticket #${row.number} pris en charge par ${interaction.user.tag}`);
-  // v339 — le bouton est remplacé, sur le même panneau, par « Responsable : @staff ».
+  // v379 — le bouton passe en grisé et la ligne « Statut » du panneau se met à
+  // jour (même message, aucun doublon).
   await removeClaimButton(interaction.message, botId, interaction.user, lang);
+  // 🔔 Carte d'annonce dans le salon, comme sur la capture : le créateur voit
+  // qui traite son ticket.
+  await channel.send(ui.v2panel({
+    accent: false,
+    titleLevel: 3,
+    title: i18n.t(lang, 'ticket_claimed_title'),
+    description: i18n.t(lang, 'ticket_claimed_desc', { staff: `<@${interaction.user.id}>` }),
+    footer: false,
+  })).catch(() => {});
   try {
     await logging.log(botId, guild, {
       title: '🖐️ Ticket pris en charge', color: '#57F287',
@@ -2115,6 +2375,7 @@ function addMemberOkPanel(lang, guild, member, staffId) {
   const tag = user.tag || (user.username ? `@${user.username}` : member.id);
   return ui.v2panel({
     variant: 'success',
+    titleLevel: 3,
     title: i18n.t(lang, 'ticket_add_ok_title'),
     description: i18n.t(lang, 'ticket_add_ok_desc', { name: memberLabel(member) }),
     fields: [
@@ -2133,6 +2394,7 @@ function addMemberOkPanel(lang, guild, member, staffId) {
 function addMemberErrPanel(botId, lang, guild, query) {
   return ui.v2panel({
     variant: 'danger',
+    titleLevel: 3,
     title: i18n.t(lang, 'ticket_add_err_title'),
     description: i18n.t(lang, 'ticket_add_err_desc', {
       server: String(guild && guild.name || 'ce serveur').slice(0, 120),
@@ -2164,6 +2426,7 @@ function addMemberAmbPanel(botId, lang, guild, query, matches) {
   });
   return ui.v2panel({
     variant: 'info',
+    titleLevel: 3,
     title: i18n.t(lang, 'ticket_add_amb_title'),
     description: i18n.t(lang, 'ticket_add_amb_desc', {
       query: String(query || '').slice(0, 120),
@@ -2175,23 +2438,188 @@ function addMemberAmbPanel(botId, lang, guild, query, matches) {
   }, [new ActionRowBuilder().addComponents(select)]);
 }
 
+// v379 — l'ajout se fait désormais par un SÉLECTEUR NATIF de membres
+// (recherche + cases à cocher, comme sur la capture) et non plus par une
+// fenêtre à remplir. La modale v238 reste branchée pour les anciens panneaux.
 async function handleTicketAddAsk(botId, interaction) {
   if (!isStaff(botId, interaction)) return staffDeny(interaction);
+  // Conservé : une fenêtre ouverte AVANT la v379 (ou l'ancien bouton
+  // « Réessayer ») doit encore pouvoir aboutir.
   pendingAdds.set(interaction.user.id, { botId, ts: Date.now() });
   const lang = i18n.langForGuild(interaction.guild.id);
-  await interaction.showModal(new ModalBuilder()
-    .setCustomId(`bd-taddm:${botId}`)
-    .setTitle(i18n.t(lang, 'ticket_add_modal_title').slice(0, 45))
-    .addComponents(new ActionRowBuilder().addComponents(
-      new TextInputBuilder()
-        .setCustomId('value')
-        .setLabel(i18n.t(lang, 'ticket_add_modal_label'))
-        .setPlaceholder(i18n.t(lang, 'ticket_add_modal_ph'))
-        // v238 — un exemple concret sous le champ : le staff sait immédiatement
-        // ce qui est accepté, au lieu de deviner puis de se faire recaler.
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true)
-    )));
+  const select = new UserSelectMenuBuilder()
+    .setCustomId(`bd-taddsel:${botId}`)
+    .setPlaceholder(i18n.t(lang, 'ticket_add_select_ph'))
+    .setMinValues(1)
+    .setMaxValues(10);
+  await ackReply(interaction, ui.v2panel({
+    accent: false,
+    titleLevel: 3,
+    title: i18n.t(lang, 'ticket_add_title'),
+    description: i18n.t(lang, 'ticket_add_desc'),
+    footer: false,
+    ephemeral: true,
+  }, [new ActionRowBuilder().addComponents(select)]));
+}
+
+// Sélection d'un ou plusieurs membres à ajouter (sélecteur natif).
+async function handleTicketAddSelect(botId, interaction) {
+  if (!isStaff(botId, interaction)) return staffDeny(interaction);
+  const guild = interaction.guild;
+  const lang = i18n.langForGuild(guild.id);
+  const ids = [...new Set((interaction.values || []).map(String))]
+    .filter((id) => /^\d{15,21}$/.test(id)).slice(0, 10);
+  try { await interaction.deferUpdate(); } catch {}
+  const added = [];
+  for (const id of ids) {
+    let member = null;
+    try { member = await guild.members.fetch(id); } catch { member = guild.members.cache.get(id) || null; }
+    if (!member) continue;
+    const ok = await grantTicketAccess(interaction.channel, member);
+    if (ok) added.push(member);
+  }
+  if (!added.length) {
+    const payload = ui.v2panel({
+      variant: 'danger',
+      titleLevel: 3,
+      title: i18n.t(lang, 'ticket_add_err_title'),
+      description: 'Discord a refusé de modifier les accès de ce salon pour la sélection. Vérifie que le rôle du bot est au-dessus de celui des membres choisis.',
+      footer: false,
+      ephemeral: true,
+    });
+    try { return await interaction.editReply(payload); } catch { return; }
+  }
+  store.activity.add(botId, guild.id, '➕', `Membre(s) ajouté(s) au ticket par ${interaction.user.tag} : ${added.map((m) => m.user.tag).join(', ')}`);
+  const payload = ui.v2panel({
+    accent: false,
+    titleLevel: 3,
+    title: i18n.t(lang, 'ticket_add_multi_title'),
+    description: [
+      i18n.t(lang, 'ticket_add_multi_desc'),
+      added.map((m) => `• <@${m.id}> — \`${String(m.user.tag || m.user.username || m.id).slice(0, 60)}\``).join('\n'),
+    ].join('\n\n'),
+    footer: false,
+    ephemeral: true,
+  });
+  try { await interaction.editReply({ ...payload, flags: MessageFlags.IsComponentsV2 }); }
+  catch { try { await interaction.followUp(payload); } catch {} }
+}
+
+// Membres réellement AJOUTÉS au ticket : les permissions individuelles du
+// salon qui autorisent « voir le salon », moins le créateur, le staff qui a
+// pris le ticket et le bot lui-même. Aucune donnée en base n'est nécessaire :
+// l'état du salon fait foi.
+function addedTicketMembers(channel) {
+  const out = [];
+  try {
+    const guild = channel.guild;
+    const meta = ticketMetaFor(channel);
+    const row = store.openTickets.getByChannel(channel.id);
+    const excluded = new Set([String(meta.openerId || ''), String((row && row.claimed_by) || '')]);
+    try {
+      const me = channel.client && channel.client.user ? String(channel.client.user.id) : '';
+      if (me) excluded.add(me);
+    } catch {}
+    const cache = channel.permissionOverwrites && channel.permissionOverwrites.cache;
+    if (!cache) return out;
+    for (const [id, ow] of cache) {
+      if (!ow) continue;
+      if (Number(ow.type) !== 1) continue;                       // 1 = permission de membre
+      if (excluded.has(String(id))) continue;
+      let sees = false;
+      try { sees = ow.allow && typeof ow.allow.has === 'function' && ow.allow.has(PermissionFlagsBits.ViewChannel); } catch {}
+      if (!sees) continue;
+      let denied = false;
+      try { denied = ow.deny && typeof ow.deny.has === 'function' && ow.deny.has(PermissionFlagsBits.ViewChannel); } catch {}
+      if (denied) continue;
+      out.push({ id: String(id), member: (guild && guild.members && guild.members.cache.get(String(id))) || null });
+    }
+  } catch {}
+  return out;
+}
+
+function memberDisplayLabel(entry, lang) {
+  const m = entry && entry.member;
+  if (m) return memberLabel(m);
+  return entry && entry.id ? `<@${entry.id}>` : (lang ? i18n.t(lang, 'ticket_simple') : 'Membre');
+}
+
+// ➖ Retirer un membre : carte d'explication + liste des membres ajoutés.
+async function handleTicketRemoveAsk(botId, interaction) {
+  if (!isStaff(botId, interaction)) return staffDeny(interaction);
+  const lang = i18n.langForGuild(interaction.guild.id);
+  const added = addedTicketMembers(interaction.channel);
+  if (!added.length) {
+    return ackReply(interaction, ui.v2panel({
+      accent: false,
+      titleLevel: 3,
+      title: i18n.t(lang, 'ticket_remove_empty_title'),
+      description: i18n.t(lang, 'ticket_remove_empty_desc'),
+      footer: false,
+      ephemeral: true,
+    }));
+  }
+  const select = new StringSelectMenuBuilder()
+    .setCustomId(`bd-trempick:${botId}`)
+    .setPlaceholder(i18n.t(lang, 'ticket_remove_select_ph'))
+    .setMinValues(1).setMaxValues(1);
+  added.slice(0, 25).forEach((entry) => {
+    const m = entry.member;
+    const tag = m && m.user ? (m.user.tag || m.user.username || '') : '';
+    const opt = new StringSelectMenuOptionBuilder()
+      .setLabel(String(memberLabel(m) || entry.id).slice(0, 95))
+      .setValue(entry.id);
+    if (tag) opt.setDescription(String(tag).slice(0, 90));
+    select.addOptions(opt);
+  });
+  return ackReply(interaction, ui.v2panel({
+    accent: false,
+    titleLevel: 3,
+    title: i18n.t(lang, 'ticket_remove_title'),
+    description: i18n.t(lang, 'ticket_remove_desc'),
+    footer: false,
+    ephemeral: true,
+  }, [new ActionRowBuilder().addComponents(select)]));
+}
+
+// Choix du membre à retirer.
+async function handleTicketRemovePick(botId, interaction) {
+  if (!isStaff(botId, interaction)) return staffDeny(interaction);
+  const guild = interaction.guild;
+  const lang = i18n.langForGuild(guild.id);
+  const id = String((interaction.values && interaction.values[0]) || '');
+  if (!/^\d{15,21}$/.test(id)) {
+    return interaction.reply({ content: i18n.t(lang, 'ticket_add_err'), ephemeral: true }).catch(() => {});
+  }
+  try { await interaction.deferUpdate(); } catch {}
+  const channel = interaction.channel;
+  let ok = false;
+  try {
+    if (channel.permissionOverwrites && typeof channel.permissionOverwrites.delete === 'function') {
+      await channel.permissionOverwrites.delete(id);
+      ok = true;
+    }
+  } catch { ok = false; }
+  const member = guild.members.cache.get(id) || null;
+  const payload = ok
+    ? ui.v2panel({
+      accent: false,
+      titleLevel: 3,
+      title: i18n.t(lang, 'ticket_remove_ok_title'),
+      description: i18n.t(lang, 'ticket_remove_ok_desc', { name: memberLabel(member) || `<@${id}>` }),
+      footer: false,
+      ephemeral: true,
+    })
+    : ui.v2panel({
+      variant: 'danger',
+      titleLevel: 3,
+      title: i18n.t(lang, 'ticket_remove_empty_title'),
+      description: 'Discord a refusé de retirer cet accès. Vérifie que le rôle du bot est assez haut dans la hiérarchie.',
+      footer: false,
+      ephemeral: true,
+    });
+  try { await interaction.editReply({ ...payload, flags: MessageFlags.IsComponentsV2 }); }
+  catch { try { await interaction.reply(payload); } catch {} }
 }
 
 async function submitAddMember(botId, interaction) {
@@ -2222,6 +2650,7 @@ async function submitAddMember(botId, interaction) {
     // ça a marché.
     return interaction.reply(ui.v2panel({
       variant: 'danger',
+      titleLevel: 3,
       title: i18n.t(lang, 'ticket_add_err_title'),
       description: `**${memberLabel(found.member)}** a bien été trouvé, mais Discord refuse de modifier les accès de ce salon (rôle du bot trop bas, ou salon non modifiable).`,
       fields: [{ name: i18n.t(lang, 'ticket_add_tip'), value: 'Vérifie que le rôle du bot est **au-dessus** de celui du membre, et que la catégorie du ticket autorise la modification des permissions.' }],
@@ -2251,6 +2680,7 @@ async function submitAddMemberPick(botId, interaction) {
   const payload = granted
     ? addMemberOkPanel(lang, guild, member, interaction.user.id)
     : ui.v2panel({
+      titleLevel: 3,
       variant: 'danger', title: i18n.t(lang, 'ticket_add_err_title'),
       description: `**${memberLabel(member)}** a bien été trouvé, mais Discord refuse de modifier les accès de ce salon.`,
       footer: false, ephemeral: true,
@@ -3348,4 +3778,11 @@ module.exports = {
   __testUpdateRecapRating: updateRecapRating,
   __testHandleRating: handleRating,
   __testReplaceClaimButtonJson: replaceClaimButtonJson,
+  // v379 — cartes du salon de ticket : carte d'en-tête, ajout par sélecteur,
+  // retrait, confirmation de fermeture et transcription vers le salon de logs.
+  __testStaffTicketRows: staffTicketRows,
+  __testAddedTicketMembers: addedTicketMembers,
+  __testSendTranscriptToLogs: sendTranscriptToLogs,
+  __testResolveLogsChannel: resolveLogsChannel,
+  __testTicketNumberOf: ticketNumberOf,
 };

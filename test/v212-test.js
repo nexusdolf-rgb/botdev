@@ -68,9 +68,10 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
 
   // ---------- 4. Actions staff en MENU DÉROULANT ----------
   console.log('— Sélecteur « Actions du staff » —');
-  check('panels : un seul menu StringSelect (placeholder staff)', /setPlaceholder\('⚙️ Actions du staff/.test(panels));
+  // v379 — le menu du salon s'appelle « Gérer ce ticket… » (capture du 22/10).
+  check('panels : un seul menu StringSelect (placeholder staff)', /setPlaceholder\(i18n\.t\(lang, 'ticket_menu_ph'\)\)/.test(panels));
   check('panels : customId du menu bd-troom:{botId}', panels.includes('bd-troom:${botId}'));
-  check('panels : 5 options menu (claim est un bouton, v333)', ['hold', 'close', 'reopen', 'addmember', 'delete'].every((v) => panels.includes(`setValue('${v}')`)) && !panels.includes("setValue('claim')"));
+  check('panels : 6 options menu (claim est un bouton, v333 ; retrait ajouté en v379)', ['hold', 'close', 'reopen', 'addmember', 'removemember', 'delete'].every((v) => panels.includes(`setValue('${v}')`)) && !panels.includes("setValue('claim')"));
   check('panels : le composant du salon n’a plus 2 rangées', !panels.includes('components: [row1, row2]'));
   // v237 — la rangée du menu staff est passée DANS le conteneur V2 : elle est
   // fournie via `rows:` de ticketWelcomePanel, plus via `components:` du message.

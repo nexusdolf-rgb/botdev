@@ -106,7 +106,8 @@ async function main() {
 
   console.log('— 4. Le code des deux chemins de suppression —');
   const appelsFusion = src.split('sendCloseDm(interaction, guild, channel.name, t, botId').length - 1;
-  check('les deux chemins de suppression passent par le MP unique', appelsFusion === 2, appelsFusion);
+  // v379 — un troisième chemin (fermeture confirmée) rejoint le MP unique.
+  check('les trois chemins de clôture passent par le MP unique', appelsFusion === 3, appelsFusion);
   check('plus aucun second envoi de note juste après la transcription',
     !/sendRatingDm\(interaction\.client/.test(src));
   check('sendTranscriptDm et sendRatingDm restent disponibles (repli et autres usages)',

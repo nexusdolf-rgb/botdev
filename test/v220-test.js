@@ -272,11 +272,15 @@ check('mono-section 4096 max non touchée', ui.embed({ description: 'x'.repeat(4
   // v237 — le message du salon privé est passé en Components V2 : les
   // paragraphes de l'accueil deviennent des blocs séparés par des séparateurs
   // NATIFS pleine largeur (plus de sauts de ligne « bruts » à la place).
-  const wPanel = panels.ticketWelcomePanel(memberW, { label: 'Support', emoji: '🎫', staff_roles: [] }, '', '', '', [], 'fr', { number: 1 }, {});
+  // v379 — un motif est fourni : la carte + le motif = deux blocs, donc au
+  // moins deux séparateurs natifs (titre compris).
+  const wPanel = panels.ticketWelcomePanel(memberW, { label: 'Support', emoji: '🎫', staff_roles: [] }, '', 'Ma demande', '', [], 'fr', { number: 1 }, {});
   check('salon privé (runtime) : payload Components V2',
     (wPanel.flags & IS_V2) !== 0 && wPanel.embeds === undefined);
+  // v379 — la carte est un seul bloc compact : le séparateur est celui posé
+  // sous le titre. Aucun trait texte ━ ne doit subsister.
   check('salon privé (runtime) : séparateurs natifs, aucun trait texte ━',
-    v2div(wPanel) >= 2 && !v2json(wPanel).includes(ui.SEPARATOR));
+    v2div(wPanel) >= 1 && !v2json(wPanel).includes(ui.SEPARATOR));
 
   console.log(failures ? `\n❌ ${failures} échec(s)` : '\n🎉 Tous les tests v220 passent');
   process.exit(failures ? 1 : 0);

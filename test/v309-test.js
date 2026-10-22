@@ -60,12 +60,18 @@ store.bots.create({ user_id: 1, name: 'B', token: 'x', client_id: 'c', prefix: '
 }
 {
   const src = racine('server/discord/panels.js');
-  for (const titre of ['🔒 Ticket fermé', '🔓 Ticket réouvert', '⏸ Ticket mis en attente', '⏰ Ticket fermé automatiquement', '📔 Récapitulatif']) {
+  // v379 — les cartes de fermeture remplacent l'ancien panneau « Ticket fermé ».
+  for (const titre of ['🔓 Ticket réouvert', '⏸ Ticket mis en attente', '⏰ Ticket fermé automatiquement', '📔 Récapitulatif']) {
     const i = src.indexOf(`title: '${titre}'`);
     const i2 = src.indexOf('title: `📔 Récapitulatif');
     const pos = i >= 0 ? i : i2;
     const bloc = src.slice(Math.max(0, pos - 320), pos + 40);
     check(`« ${titre} » : aucune ligne colorée`, bloc.includes('accent: false'), bloc.slice(-100));
+  }
+  // v379 — confirmation, compte à rebours et transcription dans les logs.
+  for (const marqueur of ['async function submitCloseReason', 'async function handleTicketCloseConfirm', 'async function sendTranscriptToLogs']) {
+    const i = src.indexOf(marqueur);
+    check(`« ${marqueur} » : aucune ligne colorée`, i >= 0 && src.slice(i, i + 2800).includes('accent: false'));
   }
   const dmi = src.indexOf('transcript_title');
   check('DM transcription : aucune ligne colorée', src.slice(Math.max(0, dmi - 300), dmi).includes('accent: false'));

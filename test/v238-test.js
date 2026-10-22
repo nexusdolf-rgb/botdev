@@ -122,7 +122,7 @@ async function main() {
   check('pied de page : le lien reste utilisé AILLEURS (bannière du panneau public)',
     src('panels.js').includes("store.settings.get('public_url') || 'https://hoxera.is-a.dev'"));
   check('pied de page : le reste du panneau est intact (V2 + séparateurs + menu dedans)',
-    v2.isV2(welcome) && v2.dividers(welcome) >= 3 && v2.title(welcome).includes('🎫'));
+    v2.isV2(welcome) && v2.dividers(welcome) >= 2 && v2.title(welcome).includes('🎫'));
 
   // ═══════════════════════════════════════════════════════════════════════
   console.log('\n2) Recherche du membre — toutes les formes de saisie');
@@ -176,9 +176,14 @@ async function main() {
   // pendingAdds est posé par handleTicketAddAsk ; on simule son passage.
   const itAsk = mkInteraction('');
   await armPending(BOT, itAsk);
-  check('fenêtre à remplir : ouverte via le menu staff', !!itAsk.modal);
-  check('fenêtre à remplir : le placeholder annonce les 3 formes acceptées',
-    itAsk.modal && JSON.stringify(itAsk.modal.toJSON ? itAsk.modal.toJSON() : itAsk.modal).includes('@mention'));
+  // v379 — le menu staff n'ouvre plus une fenêtre mais une carte avec le
+  // sélecteur natif de membres ; la modale reste un chemin de compatibilité.
+  const askJson = JSON.stringify(itAsk.replied || {});
+  check('carte d’ajout : le menu staff ouvre la carte + le sélecteur natif',
+    askJson.includes('Ajouter un membre au ticket') && askJson.includes('bd-taddsel:'));
+  check('carte d’ajout : le sélecteur demande au moins 1 membre et en accepte plusieurs',
+    askJson.includes('"min_values":1') && askJson.includes('"max_values":10')
+      && askJson.includes('Choisis le(s) membre(s) à ajouter'));
   await panels.__testSubmitAddMember(BOT, it1);
   // __testSubmitAddMember consomme pendingAdds : on le repose pour chaque cas.
   const rep = it1.replied;
@@ -254,7 +259,8 @@ async function main() {
   // Le bouton « Réessayer » rouvre bien la fenêtre.
   const itRetry = mkInteraction('');
   await armPending(BOT, itRetry, `bd-taddretry:${BOT}`);
-  check('bouton « Réessayer » : rouvre la fenêtre à remplir', !!itRetry.modal);
+  // v379 — « Réessayer » rouvre la carte de recherche (sélecteur natif).
+  check('bouton « Réessayer » : rouvre la carte d’ajout', String(JSON.stringify(itRetry.replied || {})).includes('bd-taddsel:'));
 
   // ═══════════════════════════════════════════════════════════════════════
   console.log('\n6) Cas limites — expiration, accès refusé, sécurité');

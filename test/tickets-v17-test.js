@@ -104,11 +104,20 @@ const panels = require('../server/discord/panels');
   console.log('1️⃣  Ouverture → « ticket-contre-ad-membre » ✅');
 
   // ---------- 2. Fermeture par le staff → registre ----------
+  // v379 — « Fermer le ticket » demande la raison, affiche la carte de
+  // confirmation, puis ferme après le clic sur « Confirmer la fermeture ».
   ch1.permissionsFor = () => ({ has: () => false }); // verrouillé
+  shownModal = null;
   await panels.dispatchPanels(1, staffBtn('bd-tmenu:1:close', ch1));
-  assert(lastReply.content.includes('fermé'), 'fermeture confirmée');
+  assert(shownModal && shownModal.data.title.includes('Fermer'), 'fenêtre de raison');
+  await panels.dispatchPanels(1, {
+    ...staffBtn('bd-tcls:1', ch1), isButton: () => false, isModalSubmit: () => true,
+    fields: { getTextInputValue: () => 'ticket réglé' },
+  });
+  assert(store.closedTickets.isClosed(ch1.id) === false, 'pas encore fermé avant confirmation');
+  await panels.dispatchPanels(1, staffBtn('bd-tclsok:1', ch1));
   assert(store.closedTickets.isClosed(ch1.id), 'registre : salon marqué fermé');
-  console.log('2️⃣  Fermeture → registre mis à jour ✅');
+  console.log('2️⃣  Fermeture confirmée → registre mis à jour ✅');
 
   // ---------- 3. Réouverture du même type → RÉINITIALISATION automatique ----------
   deletedIds = [];

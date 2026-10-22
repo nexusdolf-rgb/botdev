@@ -176,7 +176,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     deferUpdate: async () => {},
     isRepliable: () => true,
     update: async () => {},
-    showModal: async () => {},
+    showModal: async () => { replies.push({ content: 'MODAL' }); },
   });
   // Un membre NON-staff (même le créateur) clique sur « Fermer » → refus net
   const nonStaff = mkBtnInteraction('1336752601802473482', false);
@@ -187,11 +187,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const oldBtn = mkBtnInteraction('1336752601802473482', false, 'bd-tclose:1');
   await panels.dispatchPanels(BOT, oldBtn);
   check('staff : l\'ancien bouton créateur (bd-tclose) n\'existe plus', !store.openTickets.getByChannel('CT4').closed_at);
-  // Un STAFF clique sur « Fermer » → accusé de réception immédiat (defer) puis confirmation
+  // v379 — un STAFF clique sur « Fermer » : la raison est demandée, puis la
+  // fermeture se confirme sur une carte (le salon n'est pas supprimé avant).
   const staffBtn = mkBtnInteraction('STAFF2', true);
   await panels.dispatchPanels(BOT, staffBtn);
-  check('anti-échec : accusé de réception immédiat (defer)', replies.some((r) => r && r.content === 'DEFERRED'));
-  check('staff : fermeture confirmée après le travail', !!store.openTickets.getByChannel('CT4').closed_at);
+  check('staff : la fermeture demande la raison (fenêtre)', replies.some((r) => r && r.content === 'MODAL'));
+  check('staff : le ticket reste ouvert tant que ce n’est pas confirmé', !store.openTickets.getByChannel('CT4').closed_at);
   store.openTickets.remove('CT4');
 
   // ---------- 10. Traductions ----------

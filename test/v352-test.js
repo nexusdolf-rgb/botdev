@@ -62,47 +62,42 @@ const separatorsBetween = (left, right) => {
 console.log('— Le champ est retiré, le ping reste —');
 check('le panneau reste un seul message Components V2',
   v2.isV2(panel) && panel.content === undefined && panel.embeds === undefined && panel.components.length === 1);
-check('titre et numéro restent inchangés', v2.title(panel) === '🎫 TICKET OUVERT · #42');
-check('la ligne identité conserve le créateur puis le rôle staff pingé',
-  texts[1] === `Ticket de <@U1> • ${roleMention}` && v2.author(panel) === '');
-check('le rôle staff reste pingé exactement une fois', (allText.match(/<@&R1>/g) || []).length === 1);
+check('titre et numéro restent inchangés', v2.title(panel) === '🎫 Ticket #42');
+check('le bloc d’identité conserve le créateur, sans ping ajouté',
+  (texts[1] || '').startsWith('👤 **Ouvert par :** <@U1>')
+    && !texts[1].includes('Équipe') && v2.author(panel) === '');
+check('aucun ping de rôle ajouté (carte identique aux captures)', (allText.match(/<@&R1>/g) || []).length === 0);
 check('« Équipe en charge : Modération » a disparu du panneau',
   !allText.includes('Équipe en charge') && !allText.includes('Modération'));
 
 console.log('— Le reste du panneau reste intact —');
-const typeBlock = texts.find((text) => text.includes('Type de ticket')) || '';
+const typeBlock = texts.find((text) => text.includes('🏷 **Type :**')) || '';
 check('le type simple « 🎟️ Simple » reste présent sans champ équipe',
-  typeBlock.includes('**🎟️ Simple**') && !typeBlock.includes('Équipe en charge'));
-const welcomeBlock = texts.find((text) => text.includes('Bienvenue')) || '';
-check('bienvenue et consigne restent dans le même bloc',
-  welcomeBlock.includes('Bienvenue <@U1>')
-    && welcomeBlock.includes('\n✍️ Décrivez votre demande')
-    && !welcomeBlock.includes('\n\n'));
-const reasonBlock = texts.find((text) => text.includes('Raison de l’ouverture du ticket')) || '';
-check('libellé et réponse de la raison restent présents',
-  reasonBlock.includes('📝 Raison de l’ouverture du ticket')
-    && reasonBlock.includes('Ma commande n’est jamais arrivée…'));
-check('les quatre séparateurs gardent leur position autour des sections restantes',
-  separatorsBetween('Ticket de <@U1>', 'Bienvenue <@U1>') === 1
-    && separatorsBetween('Décrivez votre demande', 'Type de ticket') === 1
-    && separatorsBetween('Type de ticket', 'Raison de l’ouverture du ticket') === 1
-    && separatorsBetween('Raison de l’ouverture du ticket', 'À la fermeture définitive') === 1
-    && v2.dividers(panel) === 4);
-check('l’avatar du membre est présent une seule fois',
-  v2.thumbnailUrls(panel).includes('https://cdn.example/alice.png')
-    && (v2.json(panel).match(/alice\.png/g) || []).length === 1);
+  typeBlock.includes('🏷 **Type :** 🎟️ Simple') && !typeBlock.includes('Équipe en charge'));
+// v379 — la carte ne porte plus de texte d'accueil implicite.
+check('aucun texte d’accueil implicite ne s’ajoute à la carte', !allText.includes('Bienvenue <@U1>'));
+const reasonBlock = texts.find((text) => text.includes('📄 **Raison :**')) || '';
+check('libellé et réponse de la raison restent présents (bloc de code)',
+  reasonBlock.includes('📄 **Raison :**')
+    && reasonBlock.includes('```\nMa commande n’est jamais arrivée…\n```'));
+check('le séparateur reste sous le titre, entre les lignes de la carte',
+  separatorsBetween('### 🎫 Ticket #42', '👤 **Ouvert par :**') === 1
+    && v2.dividers(panel) === 1);
+check('aucune vignette sur la carte (v379)',
+  v2.thumbnailUrls(panel).length === 0
+    && (v2.json(panel).match(/alice\.png/g) || []).length === 0);
 check('aucun ancien séparateur textuel et plafond Components V2 respecté',
   !allText.includes('━') && v2.componentCount(panel) <= 40);
 
 console.log('— Contrôles staff, types et titres personnalisés —');
 const staffMenu = new StringSelectMenuBuilder()
   .setCustomId('v352:staff')
-  .setPlaceholder('⚙️ Actions du staff — gérer ce ticket…')
+  .setPlaceholder('Gérer ce ticket…')
   .addOptions(new StringSelectMenuOptionBuilder().setLabel('🔒 Fermer').setValue('close'));
 const claimButton = new ButtonBuilder()
   .setCustomId('v352:claim')
-  .setStyle(ButtonStyle.Success)
-  .setLabel('🖐️ Prendre ce ticket');
+  .setStyle(ButtonStyle.Primary)
+  .setLabel('🖐️ Pris en charge');
 const withControls = panels.ticketWelcomePanel(
   member, null, roleMention, 'Raison', '', [], 'fr', { number: 43 }, {},
   { rows: [new ActionRowBuilder().addComponents(staffMenu), new ActionRowBuilder().addComponents(claimButton)] },
@@ -113,7 +108,7 @@ check('menu et bouton staff restent dans le même conteneur V2',
     && v2.controlByPrefix(withControls, 'v352:claim'));
 const controlParts = (v2.plain(v2.container(withControls)) || {}).components || [];
 const lastNote = controlParts.findIndex((part) =>
-  Number(part.type) === v2.TYPE.TEXT_DISPLAY && String(part.content || '').includes('À la fermeture définitive'));
+  Number(part.type) === v2.TYPE.TEXT_DISPLAY && String(part.content || '').includes('📄 **Raison :**'));
 const firstAction = controlParts.findIndex((part) => Number(part.type) === v2.TYPE.ACTION_ROW);
 check('aucun séparateur supplémentaire avant les actions staff', lastNote >= 0 && firstAction === lastNote + 1);
 const customType = panels.ticketWelcomePanel(
@@ -121,7 +116,7 @@ const customType = panels.ticketWelcomePanel(
   roleMention, '', '', [], 'fr', { number: 44 }, {}, {},
 );
 check('les noms et emojis personnalisés de type restent inchangés',
-  v2.allText(customType).includes('🧭 **Assistance spéciale**')
+  v2.allText(customType).includes('🏷 **Type :** 🧭 Assistance spéciale')
     && !v2.allText(customType).includes('Équipe en charge'));
 const customTitle = panels.ticketWelcomePanel(
   member, null, roleMention, '', '', [], 'fr', { number: 9 },
@@ -145,9 +140,10 @@ check('/update présente la version courante puis v359',
 
 const previewPath = path.join(__dirname, '..', 'docs', 'apercu-ticket-prive.html');
 const preview = fs.readFileSync(previewPath, 'utf8');
-check('l’aperçu statique reflète le champ retiré et le ping conservé',
-  !preview.includes('<div class="field"><b>🛡️ Équipe en charge</b>Modération</div>')
-    && preview.includes('Ticket de <span class="ping">@Alex</span> • <span class="ping">@Modération</span>'));
+check('l’aperçu statique reflète la carte v379 (statut + ping conservé)',
+  !preview.includes('Équipe en charge')
+    && preview.includes('Ouvert par')
+    && preview.includes('<span class="ping">@Modération</span>'));
 
 try { store.db.close(); } catch {}
 try { fs.rmSync(DATA_DIR, { recursive: true, force: true }); } catch {}

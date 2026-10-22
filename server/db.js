@@ -2410,6 +2410,10 @@ try { db.exec(`CREATE TABLE IF NOT EXISTS ticket_log_msgs (
   channel_id TEXT NOT NULL, message_id TEXT NOT NULL,
   created_at TEXT DEFAULT (datetime('now')),
   PRIMARY KEY (bot_id, guild_id, number))`); } catch (e) {}
+// v379 — la carte de transcription du salon de logs porte elle aussi la note ⭐ :
+// on garde sa référence pour pouvoir la réécrire quand le membre note.
+try { db.exec("ALTER TABLE ticket_log_msgs ADD COLUMN transcript_channel_id TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec("ALTER TABLE ticket_log_msgs ADD COLUMN transcript_message_id TEXT DEFAULT ''"); } catch (e) {}
 
 // v3.14 — 🎨 Système de tickets personnalisés indépendant de l'ancien.
 try { db.exec(`CREATE TABLE IF NOT EXISTS advanced_ticket_panels (
@@ -2491,6 +2495,14 @@ const activity = {
 const ticketLogMsgs = {
   set: (botId, guildId, number, channelId, messageId) => db.prepare('INSERT INTO ticket_log_msgs (bot_id, guild_id, number, channel_id, message_id) VALUES (?, ?, ?, ?, ?) ON CONFLICT(bot_id, guild_id, number) DO UPDATE SET channel_id = excluded.channel_id, message_id = excluded.message_id').run(botId, guildId, number, String(channelId), String(messageId)),
   get: (botId, guildId, number) => db.prepare('SELECT * FROM ticket_log_msgs WHERE bot_id = ? AND guild_id = ? AND number = ?').get(botId, guildId, number) || null,
+  // Référence de la carte de transcription (salon de logs), distincte du
+  // récapitulatif : les deux portent la note, mais vivent dans deux salons.
+  setTranscript: (botId, guildId, number, channelId, messageId) => db.prepare(`INSERT INTO ticket_log_msgs
+    (bot_id, guild_id, number, channel_id, message_id, transcript_channel_id, transcript_message_id)
+    VALUES (?, ?, ?, '', '', ?, ?)
+    ON CONFLICT(bot_id, guild_id, number) DO UPDATE SET
+      transcript_channel_id = excluded.transcript_channel_id,
+      transcript_message_id = excluded.transcript_message_id`).run(botId, guildId, number, String(channelId), String(messageId)),
   remove: (botId, guildId, number) => db.prepare('DELETE FROM ticket_log_msgs WHERE bot_id = ? AND guild_id = ? AND number = ?').run(botId, guildId, number),
 };
 
