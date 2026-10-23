@@ -16,6 +16,10 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const zlib = require('node:zlib');
+const { promisify } = require('node:util');
+const gzipAsync = promisify(zlib.gzip);
+const gunzipAsync = promisify(zlib.gunzip);
 const paths = require('./paths');
 const { fetchJson, readLimitedBody } = require('./http');
 
@@ -32,10 +36,37 @@ function githubApiBase() {
   }
   return parsed.origin + parsed.pathname.replace(/\/$/, '');
 }
-// 🛟 Taille max de la sauvegarde : sous la limite de 1 Mo de l'API GitHub
-// (les fichiers plus gros ne sont plus lisibles via l'API standard).
+// 🛟 Taille max d'UN fichier de sauvegarde : sous la limite de 1 Mo de l'API
+// GitHub (les fichiers plus gros ne sont plus lisibles via l'API standard).
+// Ce n'est plus un plafond pour la BASE : depuis la v379, la sauvegarde est
+// compressée puis découpée en morceaux de PART_BYTES, chacun sous la limite.
 const MAX_BACKUP_BYTES = 900 * 1024;
 const FILE = 'botdev.db';
+
+// ============================================================
+// v379 — Sauvegarde versionnée (format 2)
+// ------------------------------------------------------------
+// Problème réglé : la sauvegarde brute était refusée au-delà de 900 Ko, et
+// l'échec était silencieux. Au redéploiement suivant, le bot restaurait donc
+// une sauvegarde plus ANCIENNE (impression que tout « repart de zéro »).
+//
+// Nouveau fonctionnement, sans changer de moteur (SQLite reste la base) :
+//   1. la base est compressée (gzip) — environ 5× plus petite ;
+//   2. si elle dépasse encore PART_BYTES, elle est découpée en morceaux ;
+//   3. un manifeste JSON décrit les morceaux (taille + empreinte SHA-256) ;
+//   4. le manifeste est écrit en DERNIER : une sauvegarde incomplète ne peut
+//      donc jamais être prise pour une sauvegarde valide.
+// La restauration vérifie chaque empreinte, puis la base elle-même.
+// Un ancien déploiement (qui ne connaît pas le format 2) continue de lire
+// `botdev.db` : on continue donc de l'écrire tant que la base brute tient.
+// ============================================================
+const BACKUP_FORMAT = 2;
+const MANIFEST_FILE = 'botdev-backup.json';
+const PART_PREFIX = 'botdev-backup-';
+const PART_SUFFIX = '.gz';
+const PART_BYTES = 700 * 1024;              // < 900 Ko, marge confortable
+const MAX_PARTS = 64;                       // 45 Mo de sauvegarde compressée
+const MAX_RESTORE_BYTES = 256 * 1024 * 1024; // garde-fou mémoire à la lecture
 
 function repo() {
   const value = String(process.env.BOTDEV_DATA_REPO || '').trim();
@@ -115,8 +146,168 @@ async function readRaw(url, headers, maxBytes, allowedHosts) {
   }
 }
 
+// ---------- Helpers du format 2 ----------
+function sha256(buf) {
+  return crypto.createHash('sha256').update(buf).digest('hex');
+}
+
+function partName(index) {
+  return `${PART_PREFIX}${String(index).padStart(3, '0')}${PART_SUFFIX}`;
+}
+
+function splitBuffer(buf, size) {
+  const out = [];
+  for (let offset = 0; offset < buf.length; offset += size) {
+    out.push(buf.subarray(offset, Math.min(offset + size, buf.length)));
+  }
+  return out;
+}
+
+function contentsApiPath(name) {
+  const r = repo();
+  const b = branch();
+  const base = `/repos/${r.split('/').map(encodeURIComponent).join('/')}/contents/${encodeURIComponent(name)}`;
+  return b ? `${base}?ref=${encodeURIComponent(b)}` : base;
+}
+
+// Supprime les morceaux d'une sauvegarde précédente qui n'ont plus lieu
+// d'être : si la base rétrécit (5 morceaux → 3), les morceaux 4 et 5
+// resteraient sinon indéfiniment dans le dépôt. Une erreur ici n'est jamais
+// bloquante : le manifeste, lui, ne désigne que les morceaux valides.
+async function removeStaleParts(fromIndex, maxIndex) {
+  const token = process.env.BOTDEV_GH_TOKEN;
+  for (let i = fromIndex; i < maxIndex; i++) {
+    const name = partName(i);
+    try {
+      const meta = await module.exports.ghJson(contentsApiPath(name), { token });
+      if (!meta || typeof meta.sha !== 'string') continue;
+      const b = branch();
+      const body = JSON.stringify({
+        message: `Hoxera backup — suppression du morceau inutilisé ${name}`,
+        sha: meta.sha,
+        ...(b ? { branch: b } : {}),
+      });
+      await module.exports.ghJson(contentsApiPath(name), { method: 'DELETE', body, token });
+      console.log(`[Hoxera] morceau inutilisé supprimé : ${name}`);
+    } catch (error) {
+      if (error && error.status === 404) continue;
+      break;
+    }
+  }
+}
+
+// Lit un fichier du dépôt de données et renvoie son contenu brut.
+async function fetchRepositoryFile(name, maxBytes) {
+  const token = process.env.BOTDEV_GH_TOKEN;
+  const apiPath = contentsApiPath(name);
+  let meta;
+  try {
+    meta = await module.exports.ghJson(apiPath, { token });
+  } catch (error) {
+    if (error.status === 404) return null;
+    throw error;
+  }
+  if (!meta || typeof meta !== 'object') return null;
+  if (typeof meta.content === 'string' && meta.content.length > 0) {
+    const encoded = meta.content.replace(/\s/g, '');
+    if (encoded.length % 4 === 0 && /^[A-Za-z0-9+/]*={0,2}$/.test(encoded)) {
+      const decoded = Buffer.from(encoded, 'base64');
+      if (decoded.toString('base64') === encoded && decoded.length <= maxBytes) return decoded;
+    }
+    return null;
+  }
+  if (meta.download_url) {
+    return readRaw(meta.download_url, { Authorization: `Bearer ${token}` }, maxBytes,
+      new Set(['raw.githubusercontent.com']));
+  }
+  return null;
+}
+
+// Écrit un fichier dans le dépôt de données (création ou mise à jour).
+async function putRepositoryFile(name, buffer, sha, message) {
+  const token = process.env.BOTDEV_GH_TOKEN;
+  const b = branch();
+  const body = {
+    message: message || `Hoxera backup (${new Date().toISOString()})`,
+    content: buffer.toString('base64'),
+    ...(sha ? { sha } : {}),
+    ...(b ? { branch: b } : {}),
+  };
+  await module.exports.ghJson(contentsApiPath(name), { method: 'PUT', body: JSON.stringify(body), token });
+}
+
+// Dernier format : manifeste + morceaux compressés. Retourne un Buffer SQLite
+// ou null (aucune sauvegarde de ce format, ou sauvegarde inexploitable).
+async function downloadV2() {
+  let manifest = null;
+  try {
+    const raw = await fetchRepositoryFile(MANIFEST_FILE, 64 * 1024);
+    if (!raw) return null;
+    manifest = JSON.parse(raw.toString('utf8'));
+  } catch (e) {
+    console.log(`[Hoxera] manifeste de sauvegarde illisible (${String(e.message || e).slice(0, 80)}), repli sur l’ancien format`);
+    return null;
+  }
+  if (!manifest || manifest.v !== BACKUP_FORMAT || !Array.isArray(manifest.parts) || manifest.parts.length === 0) return null;
+  if (manifest.parts.length > MAX_PARTS) return null;
+  const totalSize = Number(manifest.total);
+  if (!Number.isFinite(totalSize) || totalSize <= 0 || totalSize > MAX_RESTORE_BYTES) return null;
+
+  const pieces = [];
+  for (let i = 0; i < manifest.parts.length; i++) {
+    const part = manifest.parts[i] || {};
+    const name = typeof part.name === 'string' && part.name ? part.name : partName(i);
+    if (!name.startsWith(PART_PREFIX) || !name.endsWith(PART_SUFFIX)) return null;
+    const buf = await fetchRepositoryFile(name, PART_BYTES + 4096);
+    if (!buf || !buf.length) {
+      console.log(`[Hoxera] morceau de sauvegarde manquant (${name}), repli sur l’ancien format`);
+      return null;
+    }
+    if (part.sha256 && sha256(buf) !== part.sha256) {
+      console.log(`[Hoxera] morceau de sauvegarde corrompu (${name}), repli sur l’ancien format`);
+      return null;
+    }
+    pieces.push(buf);
+  }
+  const compressed = Buffer.concat(pieces);
+  if (compressed.length !== totalSize) {
+    console.log('[Hoxera] sauvegarde incomplète (taille inattendue), repli sur l’ancien format');
+    return null;
+  }
+  if (manifest.sha256 && sha256(compressed) !== manifest.sha256) {
+    console.log('[Hoxera] sauvegarde corrompue (empreinte différente), repli sur l’ancien format');
+    return null;
+  }
+  let buf;
+  try {
+    buf = await gunzipAsync(compressed, { maxOutputLength: MAX_RESTORE_BYTES });
+  } catch (e) {
+    console.log(`[Hoxera] sauvegarde non décompressable (${String(e.message || e).slice(0, 80)}), repli sur l’ancien format`);
+    return null;
+  }
+  if (!buf || !buf.length) return null;
+  if (manifest.dbSha256 && sha256(buf) !== manifest.dbSha256) {
+    console.log('[Hoxera] base restaurée non conforme à l’empreinte, repli sur l’ancien format');
+    return null;
+  }
+  if (!isValidSqlite(buf)) {
+    console.log('[Hoxera] sauvegarde décompressée invalide, repli sur l’ancien format');
+    return null;
+  }
+  return buf;
+}
+
 // Télécharge la sauvegarde distante. Retourne un Buffer ou null.
+// v379 — format 2 (compressé + morceaux) d'abord, ancien format en repli.
 async function download() {
+  if (!enabled()) return null;
+  const recent = await downloadV2();
+  if (recent && recent.length) return recent;
+  return downloadLegacy();
+}
+
+// Ancien format : un seul fichier `botdev.db` brut.
+async function downloadLegacy() {
   if (!enabled()) return null;
   const token = process.env.BOTDEV_GH_TOKEN;
   const r = repo();
@@ -227,60 +418,122 @@ function upload(db) {
   return task;
 }
 
+async function getFileSha(name) {
+  try {
+    const meta = await module.exports.ghJson(contentsApiPath(name), { token: process.env.BOTDEV_GH_TOKEN });
+    return meta && typeof meta.sha === 'string' ? meta.sha : null;
+  } catch (error) {
+    if (error.status === 404) return null;
+    throw error;
+  }
+}
+
+// Écrit un fichier avec 3 tentatives : le SHA peut changer entre la lecture
+// et l'écriture si deux sauvegardes se croisent.
+async function putFileWithRetry(name, buffer, message) {
+  let sha = await getFileSha(name);
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      await putRepositoryFile(name, buffer, sha, message);
+      return true;
+    } catch (error) {
+      if (attempt === 3) throw error;
+      await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+      sha = await getFileSha(name);
+    }
+  }
+  return false;
+}
+
 async function performUpload(db) {
   if (!enabled()) return false;
-  const token = process.env.BOTDEV_GH_TOKEN;
-  const r = repo();
-  const b = branch();
-  const apiPath = `/repos/${r.split('/').map(encodeURIComponent).join('/')}/contents/${FILE}`;
-  const metaPath = `${apiPath}${b ? `?ref=${encodeURIComponent(b)}` : ''}`;
+
+  // Un seul instantané pour toute la sauvegarde : les morceaux doivent venir
+  // exactement de la même image de la base.
   const buf = await snapshot(db);
   const bufSize = buf.length;
-  if (bufSize > MAX_BACKUP_BYTES) {
-    console.error(`[Hoxera] sauvegarde annulée : base ${bufSize} octets (maximum ${MAX_BACKUP_BYTES}).`);
-    return false;
-  }
-
-  const fetchSha = async () => {
-    try {
-      const meta = await module.exports.ghJson(metaPath, { token });
-      return meta && typeof meta.sha === 'string' ? meta.sha : null;
-    } catch (error) {
-      if (error.status === 404) return null;
-      throw error;
-    }
-  };
-  let sha = await fetchSha();
 
   // Ne jamais remplacer une sauvegarde valide par une base vide/fraîche.
   let botCount = 0;
   let guildCfgCount = 0;
   try { botCount = Number(db.prepare('SELECT COUNT(*) AS n FROM bots').get().n) || 0; } catch {}
   try { guildCfgCount = Number(db.prepare('SELECT COUNT(*) AS n FROM guild_settings').get().n) || 0; } catch {}
-  if (sha && (botCount === 0 || guildCfgCount === 0)) {
-    console.warn('[Hoxera] sauvegarde annulée : base fraîche/vide, la copie GitHub existante est préservée.');
-    return false;
-  }
-
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    const body = {
-      message: `Hoxera backup (${new Date().toISOString()})`,
-      content: buf.toString('base64'),
-      ...(sha ? { sha } : {}),
-      ...(b ? { branch: b } : {}),
-    };
-    try {
-      await module.exports.ghJson(apiPath, { method: 'PUT', body: JSON.stringify(body), token });
-      console.log(`[Hoxera] sauvegarde envoyée (${bufSize} octets${attempt > 1 ? `, tentative ${attempt}` : ''})`);
-      return true;
-    } catch (error) {
-      if (attempt === 3) throw error;
-      console.warn(`[Hoxera] sauvegarde échouée (${String(error.message || error).slice(0, 120)}), nouvelle tentative…`);
-      await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
-      sha = await fetchSha();
+  if (botCount === 0 || guildCfgCount === 0) {
+    const existing = await getFileSha(MANIFEST_FILE).catch(() => null);
+    const legacyExisting = existing ? null : await getFileSha(FILE).catch(() => null);
+    if (existing || legacyExisting) {
+      console.warn('[Hoxera] sauvegarde annulée : base fraîche/vide, la copie distante existante est préservée.');
+      return false;
     }
   }
-  return false;
+
+  // Nombre de morceaux de la sauvegarde précédente : sert à supprimer
+  // exactement ceux qui ne servent plus, sans balayer les 64 possibles.
+  let previousParts = 0;
+  try {
+    const precedent = await fetchRepositoryFile(MANIFEST_FILE, 64 * 1024);
+    if (precedent) {
+      const m = JSON.parse(precedent.toString('utf8'));
+      if (m && Array.isArray(m.parts)) previousParts = Math.min(m.parts.length, MAX_PARTS);
+    }
+  } catch { previousParts = 0; }
+
+  // ---------- 1. Format 2 : compression puis découpage ----------
+  let v2Ok = false;
+  try {
+    const compressed = await gzipAsync(buf, { level: 9 });
+    const parts = splitBuffer(compressed, PART_BYTES);
+    const stamp = new Date().toISOString();
+    // Les morceaux d'abord…
+    for (let i = 0; i < parts.length; i++) {
+      await putFileWithRetry(partName(i), parts[i], `Hoxera backup — morceau ${i + 1}/${parts.length} (${stamp})`);
+    }
+    // …le manifeste en DERNIER : il ne peut donc jamais désigner un morceau
+    // qui n'existe pas encore.
+    const manifest = {
+      v: BACKUP_FORMAT,
+      format: 'gzip',
+      ts: stamp,
+      parts: parts.map((piece, i) => ({ name: partName(i), size: piece.length, sha256: sha256(piece) })),
+      total: compressed.length,
+      sha256: sha256(compressed),
+      dbSize: bufSize,
+      dbSha256: sha256(buf),
+      bots: botCount,
+      guilds: guildCfgCount,
+    };
+    await putFileWithRetry(MANIFEST_FILE, Buffer.from(JSON.stringify(manifest, null, 2), 'utf8'), 'Hoxera backup — manifeste');
+    v2Ok = true;
+    console.log(`[Hoxera] sauvegarde envoyée : ${bufSize} octets → ${compressed.length} octets compressés en ${parts.length} morceau(x)`);
+    // Le manifeste est écrit : les morceaux au-delà ne servent plus à rien.
+    // On ne balaie que l'intervalle de la sauvegarde précédente (économie
+    // d'appels à l'API GitHub, qui est limitée à 5000 par heure).
+    await removeStaleParts(parts.length, Math.max(parts.length, previousParts));
+  } catch (error) {
+    console.warn(`[Hoxera] sauvegarde compressée impossible (${String(error.message || error).slice(0, 120)})`);
+  }
+
+  // ---------- 2. Ancien format, tant qu'il reste possible ----------
+  // Il sert de filet : un déploiement antérieur (qui ignore le format 2) sait
+  // encore restaurer les données si on doit revenir en arrière.
+  let legacyOk = false;
+  if (bufSize <= MAX_BACKUP_BYTES) {
+    try {
+      const legacySha = await getFileSha(FILE);
+      await putRepositoryFile(FILE, buf, legacySha, `Hoxera backup (${new Date().toISOString()})`);
+      legacyOk = true;
+    } catch (error) {
+      if (!v2Ok) console.warn(`[Hoxera] sauvegarde échouée (${String(error.message || error).slice(0, 120)})`);
+    }
+  } else if (v2Ok) {
+    console.log(`[Hoxera] base de ${bufSize} octets : au-delà de la limite d’un fichier, seul le format 2 est écrit.`);
+  }
+
+  if (!v2Ok && !legacyOk && bufSize > MAX_BACKUP_BYTES) {
+    console.error(`[Hoxera] sauvegarde impossible : base ${bufSize} octets, aucun format n’a abouti.`);
+    return false;
+  }
+  return v2Ok || legacyOk;
 }
 
 // ============================================================
@@ -338,4 +591,12 @@ function stopRestoreRetries() {
   if (restoreRetryTimer) { clearInterval(restoreRetryTimer); restoreRetryTimer = null; }
 }
 
-module.exports = { enabled, repo, branch, download, restore, upload, ghJson, snapshot, getLastRestoreInfo: () => lastRestoreInfo, startRestoreRetries, stopRestoreRetries, _retryRestoreOnce: retryRestoreOnce, countBotsIn, MAX_BACKUP_BYTES, RESTORE_RETRY_INTERVAL_MS };
+module.exports = {
+  enabled, repo, branch, download, restore, upload, ghJson, snapshot,
+  getLastRestoreInfo: () => lastRestoreInfo,
+  startRestoreRetries, stopRestoreRetries, _retryRestoreOnce: retryRestoreOnce,
+  countBotsIn, MAX_BACKUP_BYTES, RESTORE_RETRY_INTERVAL_MS,
+  // v379 — format 2 : exposé pour les tests et pour /api/health/bot.
+  BACKUP_FORMAT, PART_BYTES, MAX_PARTS, MANIFEST_FILE, PART_PREFIX, PART_SUFFIX,
+  downloadV2, downloadLegacy, sha256, partName, splitBuffer,
+};

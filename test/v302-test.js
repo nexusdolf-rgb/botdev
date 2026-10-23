@@ -86,12 +86,14 @@ function mkDb(file, { bots = 0, guildCfg = 0 } = {}) {
     check('base fraîche (1 bot, 0 réglages) → sauvegarde REFUSÉE', res1 === false && putCalls === 0, 'putCalls=' + putCalls);
     freshDb.prepare('INSERT INTO guild_settings (bot_id, guild_id) VALUES (1, ?)').run('vrai-serveur');
     const res2 = await backup.upload(freshDb);
-    check('dès qu\'un réglage existe → la sauvegarde repart', res2 === true && putCalls === 1);
+    // v379 — plusieurs fichiers écrits par sauvegarde (morceaux + manifeste + ancien fichier).
+    check('dès qu\'un réglage existe → la sauvegarde repart', res2 === true && putCalls >= 2, 'putCalls=' + putCalls);
     freshDb.close();
     const noBotFile = path.join(TMP, 'nobots.db');
     const noBotDb = mkDb(noBotFile, { bots: 0, guildCfg: 3 });
+    const putAvantRefus = putCalls;
     const res3 = await backup.upload(noBotDb);
-    check('garde historique conservé : 0 bot → refusée aussi', res3 === false && putCalls === 1);
+    check('garde historique conservé : 0 bot → refusée aussi', res3 === false && putCalls === putAvantRefus);
     noBotDb.close();
   } finally { backup.ghJson = origGhJson; }
 

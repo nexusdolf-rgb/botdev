@@ -101,12 +101,25 @@ const check = (label, cond) => {
   const backup = require('../server/backup');
   const origSnapshot = backup.snapshot;
   const origGhJson = backup.ghJson;
+  // v379 — le plafond de 900 Ko ne bloque plus la sauvegarde : la base est
+  // compressée puis découpée, chaque morceau restant sous la limite de l'API.
+  // On vérifie donc qu'une base au-delà de 900 Ko est bien SAUVEGARDÉE.
+  let ecritures = 0;
   backup.snapshot = async () => Buffer.alloc(backup.MAX_BACKUP_BYTES + 1000, 1);
-  backup.ghJson = async () => ({ sha: 'x' });
+  backup.ghJson = async (chemin, options) => {
+    if (options && options.method === 'PUT') { ecritures += 1; return { content: { sha: 'x' } }; }
+    return { sha: 'x' };
+  };
+  // Il faut un bot et un réglage : c'est la garde anti-base-vide qui refuse
+  // une sauvegarde sans contenu, pas la taille.
+  const userV67 = store.users.create('v67-backup@botdev.fr', 'hash');
+  const botV67 = store.bots.create({ user_id: userV67, name: 'V67', token: 'T', client_id: '2', prefix: '!' });
+  store.guildSettings.set(botV67, 'G-TEST', {});
   const rBig = await backup.upload(store.db);
   backup.snapshot = origSnapshot;
   backup.ghJson = origGhJson;
-  check('sauvegarde : base trop grosse → refusée (jamais re-dépasser 1 Mo)', rBig === false);
+  check('sauvegarde : une base au-dessus de 900 Ko part quand même (format 2)', rBig === true);
+  check('sauvegarde : compression + découpage ont bien écrit sur le dépôt', ecritures >= 2);
 
   // ---------- 5. Sécurité ----------
   const safety = require('../server/safety');

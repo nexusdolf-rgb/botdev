@@ -16,30 +16,40 @@ process.env.BOTDEV_GH_TOKEN = 'fake-token';
 process.env.BOTDEV_DATA_REPO = 'testowner/testrepo';
 
 // ---- Faux serveur GitHub (stockage en mémoire) ----
-let stored = null; // { content, sha }
+// v379 — accepte TOUS les fichiers de sauvegarde (morceaux + manifeste +
+// ancien fichier unique), pas seulement `botdev.db`.
+const fichiers = new Map(); // nom → { content, sha }
 let requests = 0;
 const server = http.createServer((req, res) => {
   let body = '';
   req.on('data', (c) => { body += c; });
   req.on('end', () => {
     requests += 1;
-    const p = req.url.split('?')[0];
-    const isFile = /\/repos\/[^/]+\/[^/]+\/contents\/botdev\.db$/.test(p);
+    const urlPath = decodeURIComponent(req.url.split('?')[0]);
+    const m = urlPath.match(/\/repos\/[^/]+\/[^/]+\/contents\/(.+)$/);
     res.setHeader('Content-Type', 'application/json');
-    if (req.method === 'GET' && isFile) {
-      if (!stored) { res.writeHead(404); return res.end(JSON.stringify({ message: 'Not Found' })); }
+    if (!m) { res.writeHead(404); return res.end(JSON.stringify({ message: 'Not Found' })); }
+    const nom = m[1];
+    const actuel = fichiers.get(nom);
+    if (req.method === 'GET') {
+      if (!actuel) { res.writeHead(404); return res.end(JSON.stringify({ message: 'Not Found' })); }
       res.writeHead(200);
-      return res.end(JSON.stringify({ content: stored.content, sha: stored.sha }));
+      return res.end(JSON.stringify({ content: actuel.content, sha: actuel.sha }));
     }
-    if (req.method === 'PUT' && isFile) {
+    if (req.method === 'PUT') {
       const j = JSON.parse(body);
       assert(j.content, 'contenu base64 requis');
-      stored = { content: j.content, sha: 'sha-' + requests };
+      fichiers.set(nom, { content: j.content, sha: 'sha-' + requests });
       res.writeHead(200);
-      return res.end(JSON.stringify({ content: { sha: stored.sha } }));
+      return res.end(JSON.stringify({ content: { sha: 'sha-' + requests } }));
     }
-    res.writeHead(404);
-    res.end(JSON.stringify({ message: 'Not Found' }));
+    if (req.method === 'DELETE') {
+      fichiers.delete(nom);
+      res.writeHead(200);
+      return res.end(JSON.stringify({}));
+    }
+    res.writeHead(405);
+    res.end(JSON.stringify({ message: 'Method Not Allowed' }));
   });
 });
 
@@ -74,8 +84,10 @@ async function run() {
   // ---- Upload ----
   const ok = await backup.upload(store.db);
   assert(ok, 'upload réussi');
-  assert(stored && stored.content, 'fichier stocké côté GitHub simulé');
-  console.log('3️⃣  Upload OK (', Math.floor(stored.content.length * 0.75), 'octets côté serveur)');
+  assert(fichiers.has('botdev.db'), 'ancien fichier unique toujours écrit (compatibilité)');
+  assert(fichiers.has('botdev-backup.json'), 'manifeste de sauvegarde écrit');
+  const octets = [...fichiers.values()].reduce((n, f) => n + Math.floor(f.content.length * 0.75), 0);
+  console.log('3️⃣  Upload OK (', octets, 'octets côté serveur, ', fichiers.size, 'fichier(s))');
 
   // ---- Simulation de perte de données (redéploiement Render) ----
   fs.rmSync(DATA_DIR, { recursive: true, force: true });

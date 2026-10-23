@@ -110,7 +110,9 @@ const check = (label, cond) => {
   };
   const r4b = await backup.upload(store.db);
   backup.ghJson = origGhJson;
-  check('upload : base avec bot + réglages → sauvegarde effectuée', r4b === true && putCalls === 1);
+  // v379 — depuis le format 2, une sauvegarde écrit plusieurs fichiers :
+  // les morceaux compressés, le manifeste, et l'ancien fichier unique.
+  check('upload : base avec bot + réglages → sauvegarde effectuée', r4b === true && putCalls >= 2, 'putCalls=' + putCalls);
 
   store.db.close();
   console.log(failures === 0 ? '\n✅ V63 — Garde-fous anti-catastrophe : une base vide ne peut plus rien détruire. 🎉' : `\n❌ ${failures} vérification(s) en échec`);
