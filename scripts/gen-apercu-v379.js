@@ -156,6 +156,23 @@ function mkInteraction(which, { customId = '', values = [], value = '', user = S
 
   const scenes = [];
 
+  // 0. À la création du ticket : le panneau d'ouverture, dans le salon puis en
+  //    MP. Les deux viennent des fonctions réelles (aucune maquette).
+  const openGuild = { id: GUILD, name: 'Nexus' };
+  const openChannel = { id: TICKET_ID, toString: () => `<#${TICKET_ID}>` };
+  scenes.push({
+    kind: 'ephemeral',
+    label: '0a. À la création : la réponse éphémère sous le panneau du ticket',
+    payload: panels.__testBuildTicketOpenConfirmPayload({}, openGuild, openChannel, 11, 'fr'),
+    time: '22:58',
+  });
+  scenes.push({
+    kind: 'message',
+    label: '0b. Le même panneau, reçu en message privé',
+    payload: panels.__testBuildTicketOpenDmPayload({}, openGuild, openChannel, 11, 'fr'),
+    time: '22:58',
+  });
+
   // 1. Carte à l'ouverture (le staff n'a pas encore pris en charge)
   const openPanel = panels.ticketWelcomePanel(opener, chosen, '<@&400000000000000001> <@&400000000000000002>', reason, '', [], 'fr', { number: 11 }, {},
     { rows: panels.__testStaffTicketRows(BOT, false, 'fr') });
@@ -404,7 +421,7 @@ function mkInteraction(which, { customId = '', values = [], value = '', user = S
   const shown = ONLY
     ? scenes.filter((_, i) => ONLY.split(',').map((n) => Number(n.trim())).includes(i + 1))
     : scenes;
-  const suffix = ONLY ? '-prise-en-charge' : '';
+  const suffix = ONLY ? (process.env.APERCU_SUFFIX || '-prise-en-charge') : '';
   const html = `<!DOCTYPE html>
 <html lang="fr">
 <head>

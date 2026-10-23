@@ -37,9 +37,12 @@ const STRINGS = {
     ticket_buttons_desc: '⚙️ Le menu déroulant ci-dessous est réservé au staff : 🖐️ prendre en charge · ⏸ mettre en attente · 🔒 fermer · 🔓 rouvrir · ➕ ajouter un membre · 🗑 supprimer (transcription en MP).',
     ticket_welcome_desc: 'Bienvenue {member} ! Un membre de l’équipe va vous répondre ici même.\n✍️ Décrivez votre demande : texte, captures d’écran ou fichiers.',
     ticket_first_line: 'Ticket de {member}',
-    ticket_dm_open_title: '🎫 Ticket ouvert · #{number}',
+    ticket_dm_open_title: 'Votre ticket est ouvert',
     ticket_dm_open_desc: 'Votre demande sur **{server}** a été transmise à l’équipe.',
     ticket_dm_open_button: '🎫 Ouvrir mon ticket',
+    // v379 (4e passe) — la ligne du panneau d'ouverture : le salon privé, rien
+    // d'autre. C'est ce que le membre voit sous « Votre ticket est ouvert ».
+    ticket_open_private: 'Salon privé : {channel}',
     ticket_confirm: '✅ Votre ticket {type} a été créé : **{channel}**',
     // Transcription (MP)
     transcript_title: '🎫 Ticket clôturé',
@@ -301,9 +304,10 @@ const STRINGS = {
     ticket_buttons_desc: '⚙️ Dropdown below is staff-only: 🖐️ claim · ⏸ hold · 🔒 close · 🔓 reopen · ➕ add member · 🗑 delete (transcript by DM).',
     ticket_welcome_desc: 'Welcome {member}! A staff member will reply to you right here.\n✍️ Describe your request: text, screenshots or files.',
     ticket_first_line: 'Ticket from {member}',
-    ticket_dm_open_title: '🎫 Ticket opened · #{number}',
+    ticket_dm_open_title: 'Your ticket is open',
     ticket_dm_open_desc: 'Your request on **{server}** has been sent to the team.',
     ticket_dm_open_button: '🎫 Open my ticket',
+    ticket_open_private: 'Private channel: {channel}',
     ticket_confirm: '✅ Your ticket {type} has been created: **{channel}** — click to open it!',
     transcript_title: '🎫 Ticket closed',
     transcript_desc: 'Your ticket on **{server}** is closed. The full transcript is attached.',

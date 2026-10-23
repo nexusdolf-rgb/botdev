@@ -49,8 +49,10 @@ async function main() {
   console.log('— MP d’ouverture : texte localisé et bouton-lien direct —');
   const openFr = panels.__testBuildTicketOpenDmPayload(client, guild, channel, 123, 'fr');
   const frLink = oneLink(openFr);
-  check('FR : titre exact avec numéro', v2.title(openFr) === '🎫 Ticket ouvert · #123');
-  check('FR : description exacte', v2.allText(openFr).includes('Votre demande sur **Serveur exemple** a été transmise à l’équipe.'));
+  // v379 (4e passe) — le panneau d'ouverture tient en deux lignes, sans numéro.
+  check('FR : titre exact « Votre ticket est ouvert »', v2.title(openFr) === 'Votre ticket est ouvert');
+  check('FR : la seule ligne est le salon privé',
+    v2.allText(openFr).includes(`Salon privé : <#${channel.id}>`));
   check('FR : aucun champ Type ni ancienne consigne redondante',
     !v2.allText(openFr).includes('Type de ticket')
       && !v2.allText(openFr).includes('Prochaine étape')
@@ -67,8 +69,8 @@ async function main() {
   const openEn = panels.__testBuildTicketOpenDmPayload(client, guild, channel, 123, 'en');
   const enLink = oneLink(openEn);
   check('EN : title and description are translated',
-    v2.title(openEn) === '🎫 Ticket opened · #123'
-      && v2.allText(openEn).includes('Your request on **Serveur exemple** has been sent to the team.'));
+    v2.title(openEn) === 'Your ticket is open'
+      && v2.allText(openEn).includes(`Private channel: <#${channel.id}>`));
   check('EN : direct link button is localized and opens the same ticket',
     !!enLink && enLink.style === ButtonStyle.Link && enLink.url === ticketUrl
       && enLink.label === '🎫 Open my ticket');

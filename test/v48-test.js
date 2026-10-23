@@ -175,9 +175,12 @@ const check = (label, cond) => {
   const dernierTexte = v2.allText(dernierPayload);
   check('logique : confirmation privée et éphémère, dans un panneau',
     v2.isV2(dernierPayload) && (Number(dernierPayload.flags) & 64) !== 0);
+  // v379 (4e passe) — la confirmation ne porte plus que « Votre ticket est
+  // ouvert » et le salon privé, en mention cliquable.
   check('logique : la confirmation porte le lien du ticket',
-    dernierTexte.includes('Votre ticket') && dernierTexte.includes('a été créé'));
-  check('type : la confirmation privée mentionne le type', dernierTexte.includes('Réclamation'));
+    dernierTexte.includes('Votre ticket est ouvert')
+      && dernierTexte.includes('Salon privé :') && dernierTexte.includes('<#'));
+  check('type : la confirmation ne répète plus le type', !dernierTexte.includes('Réclamation'));
 
   // 3c. fermeture par le staff : bouton INTACT
   const staffI = makeI({ isBtn: true, customId: `bd-tmenu:${BOT}:close` });

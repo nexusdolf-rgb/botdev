@@ -1112,44 +1112,46 @@ function panelChannelOf(guild, interaction, configOverride) {
   return null;
 }
 
+// v379 (4e passe, 23/10) — le panneau d'ouverture tient en deux lignes, comme
+// sur la capture : « Votre ticket est ouvert », puis « Salon privé : #salon ».
+// Plus de numéro, plus d'emoji, plus de paragraphe.
 function buildTicketOpenDmPayload(client, guild, channel, ticketNumber, lang) {
+  // En MP, une mention de salon n'est pas cliquable (le client n'a pas le
+  // contexte du serveur) : le bouton-lien reste donc sous la carte, sinon le
+  // membre n'a aucun moyen de rejoindre son ticket depuis ses messages privés.
   const ticketLink = new ButtonBuilder()
     .setStyle(ButtonStyle.Link)
     .setLabel(i18n.t(lang, 'ticket_dm_open_button'))
     .setURL(`https://discord.com/channels/${guild.id}/${channel.id}`);
   return ui.v2panel({
     accent: false,
-    title: i18n.t(lang, 'ticket_dm_open_title', { number: ticketNumber }),
-    description: i18n.t(lang, 'ticket_dm_open_desc', { server: guild.name }),
+    titleLevel: 2,
+    title: i18n.t(lang, 'ticket_dm_open_title'),
+    description: i18n.t(lang, 'ticket_open_private', { channel: `<#${channel.id}>` }),
     sections: false,
     footer: false,
+    separatorAfterTitle: false,
     // v372 — plus d'avatar en accessory du titre : cette carte n'en a pas besoin.
   }, [new ActionRowBuilder().addComponents(ticketLink)]);
 }
 
 // v371 — la confirmation « ticket créé » était du texte brut avec un bouton
-// posé dessous, seule réponse du bot encore dans ce format. Elle prend la même
-// carte que le MP d'ouverture. v372 : ni avatar, ni ligne de pied, juste le
-// titre, la phrase et le bouton. Elle reste éphémère : personne d'autre ne la voit.
+// posé dessous, seule réponse du bot encore dans ce format.
+// v379 (4e passe, 23/10) — elle prend exactement l'allure de la capture :
+// « Votre ticket est ouvert », puis « Salon privé : #salon ». Ici, dans le
+// salon, la mention est cliquable : aucun bouton n'est nécessaire. La réponse
+// reste éphémère, donc personne d'autre ne la voit.
 function buildTicketOpenConfirmPayload(client, guild, channel, ticketNumber, lang, typeConfirm = '') {
-  const confirmMsg = i18n.t(lang, 'ticket_confirm', {
-    type: typeConfirm,
-    channel: `<#${channel.id}>`,
-  });
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setStyle(ButtonStyle.Link)
-      .setLabel(i18n.t(lang, 'ticket_dm_open_button'))
-      .setURL(`https://discord.com/channels/${guild.id}/${channel.id}`)
-  );
   return ui.v2panel({
     ephemeral: true,
     accent: false,
-    title: i18n.t(lang, 'ticket_dm_open_title', { number: ticketNumber }),
-    description: confirmMsg,
+    titleLevel: 2,
+    title: i18n.t(lang, 'ticket_dm_open_title'),
+    description: i18n.t(lang, 'ticket_open_private', { channel: `<#${channel.id}>` }),
     sections: false,
     footer: false,
-  }, [row]);
+    separatorAfterTitle: false,
+  });
 }
 
 async function openTicket(botId, interaction, type, reason = '', answers = [], configOverride = null) {

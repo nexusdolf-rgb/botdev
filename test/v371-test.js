@@ -47,24 +47,23 @@ const pay = panels.__testBuildTicketOpenConfirmPayload(client, guild, channel, 1
 check('payload Components V2', v2.isV2(pay));
 check('toujours éphémère', (Number(pay.flags) & 64) !== 0);
 check('un conteneur, pas un message nu', Number(v2.container(pay).type) === 17);
-check('aucun composant hors du conteneur', pay.components.length === 1 && v2.componentCount(pay) >= 3);
+check('aucun composant hors du conteneur', pay.components.length === 1 && v2.componentCount(pay) >= 2);
 const textes = v2.allText(pay);
-check('titre avec le numéro', v2.title(pay).includes('#12'), v2.title(pay));
-check('la phrase de création est dans la carte',
-  textes.includes('a été créé') && textes.includes('<#154000000000000371>'));
-check('le type choisi est rappelé', textes.includes('**Bug**'));
+// v379 (4e passe) — le panneau d'ouverture ne porte plus que deux lignes :
+// « Votre ticket est ouvert » et le salon privé.
+check('titre exact, sans numéro', v2.title(pay) === 'Votre ticket est ouvert', v2.title(pay));
+check('la seule ligne est le salon privé',
+  textes.includes('Salon privé : <#154000000000000371>') && !textes.includes('a été créé'));
+check('plus de rappel du type choisi', !textes.includes('**Bug**'));
 // v372 — ni la petite ligne « visible par vous » ni l'avatar du bot : la carte
 // se limite au titre, à la phrase et au bouton.
 check('plus de ligne de pied dans la carte', !v2.allText(pay).includes('visible que par vous'));
 check('aucun avatar dans la carte', v2.thumbnailUrls(pay).length === 0);
-check('la carte se termine par le bouton', (() => {
-  const types = (JSON.parse(JSON.stringify(pay.components[0])).components || []).map((c) => Number(c.type));
-  return types[types.length - 1] === 1 && types.filter((t) => t === 1).length === 1;
-})());
-check('le bouton est DANS le conteneur (plus posé dessous)',
-  v2.controls(pay).length === 1 && v2.controls(pay)[0].style === ButtonStyle.Link);
-check('le bouton pointe vers le salon du ticket',
-  v2.controls(pay)[0].url === `https://discord.com/channels/${guild.id}/${channel.id}`);
+// v379 (4e passe) — dans le salon, la mention du salon est cliquable : la
+// confirmation n'a plus de bouton du tout.
+check('la carte n’a plus aucun bouton', v2.controls(pay).length === 0);
+check('la carte ne contient que le titre et la ligne du salon',
+  (JSON.parse(JSON.stringify(pay.components[0])).components || []).every((c) => [10, 14].includes(Number(c.type))));
 
 console.log('— 3. Plus aucun texte brut à cet endroit —');
 check('openTicket n’envoie plus content + components',
@@ -75,9 +74,9 @@ check('le constructeur est appelé par openTicket',
   /buildTicketOpenConfirmPayload\(interaction\.client, guild, channel, ticketNumber, lang, typeConfirm\)/.test(src));
 
 console.log('— 4. Les autres langues suivent —');
-check('EN : titre localisé', v2.title(panels.__testBuildTicketOpenConfirmPayload(client, guild, channel, 3, 'en')).includes('#3'));
-check('EN : phrase traduite',
-  v2.allText(panels.__testBuildTicketOpenConfirmPayload(client, guild, channel, 3, 'en')).includes('has been created'));
+check('EN : titre localisé', v2.title(panels.__testBuildTicketOpenConfirmPayload(client, guild, channel, 3, 'en')) === 'Your ticket is open');
+check('EN : ligne traduite',
+  v2.allText(panels.__testBuildTicketOpenConfirmPayload(client, guild, channel, 3, 'en')).includes('Private channel: <#154000000000000371>'));
 check('la clé de pied est retirée des deux langues',
   i18n.t('fr', 'ticket_confirm_note') === 'ticket_confirm_note'
     && i18n.t('en', 'ticket_confirm_note') === 'ticket_confirm_note');
