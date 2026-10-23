@@ -1125,7 +1125,8 @@ function buildTicketOpenDmPayload(client, guild, channel, ticketNumber, lang) {
     .setURL(`https://discord.com/channels/${guild.id}/${channel.id}`);
   return ui.v2panel({
     accent: false,
-    titleLevel: 2,
+    // « ### » (16 px) : mêmes titres que les autres cartes du salon.
+    titleLevel: 3,
     title: i18n.t(lang, 'ticket_dm_open_title'),
     description: i18n.t(lang, 'ticket_open_private', { channel: `<#${channel.id}>` }),
     sections: false,
@@ -1145,7 +1146,8 @@ function buildTicketOpenConfirmPayload(client, guild, channel, ticketNumber, lan
   return ui.v2panel({
     ephemeral: true,
     accent: false,
-    titleLevel: 2,
+    // « ### » (16 px) : mêmes titres que les autres cartes du salon.
+    titleLevel: 3,
     title: i18n.t(lang, 'ticket_dm_open_title'),
     description: i18n.t(lang, 'ticket_open_private', { channel: `<#${channel.id}>` }),
     sections: false,
