@@ -245,14 +245,30 @@ const json = (p) => v2.json(p || {});
     && v2.rows(cardOpen)[0].components[0].type === 2
     && v2.rows(cardOpen)[1].components[0].type === 3);
   check('aucune ligne colorée ni pied', v2.accentColor(cardOpen) === undefined && v2.footer(cardOpen) === '');
+  // v379 (3e passe) — la description du type n'est plus recopiée sous la carte.
+  const cardWithDesc = panels.ticketWelcomePanel(
+    opener, { label: 'Support technique', emoji: '🌟', description: "Besoin d'aide avec le bot ? Ouvre un ticket pour obtenir de l'assistance.", staff_roles: [] },
+    '<@&R1>', 'Test', '', [], 'fr', { number: 9 }, {}, { rows: [] },
+  );
+  check('la description du type ne figure plus sur la carte',
+    !allText(cardWithDesc).includes("Besoin d'aide avec le bot")
+      && !allText(cardWithDesc).includes('ℹ️'),
+    JSON.stringify(allText(cardWithDesc)));
+  check('la ligne Type reste affichée sans la description',
+    allText(cardWithDesc).includes('🏷 **Type :** 🌟 Support technique'));
 
   const cardClaimed = panels.ticketWelcomePanel(
-    opener, chosen, '', 'raison', '', [], 'fr', { number: 11 }, {},
+    opener, chosen, '<@&R1> <@&R2>', 'raison', '', [], 'fr', { number: 11 }, {},
     { rows: panels.__testStaffTicketRows(BOT, true, 'fr'), claimedBy: STAFF },
   );
   check('carte prise en charge : statut « pris en charge par @Marie »',
     allText(cardClaimed).includes('⏳ **Statut :** pris en charge par <@STAFF1>'));
   check('carte prise en charge : bouton grisé', json(cardClaimed).includes('"disabled":true'));
+  // v379 (3e passe) — une fois le staff engagé, ses rôles ne sont plus pingés.
+  check('carte prise en charge : aucun rôle staff pingé', !allText(cardClaimed).includes('<@&'),
+    JSON.stringify(allText(cardClaimed)));
+  check('carte prise en charge : la ligne ne garde que le créateur',
+    v2.texts(cardClaimed)[1] === '<@100000000000000001>', JSON.stringify(v2.texts(cardClaimed)[1]));
 
   // ═══════════════════════════════════════════════════════════════
   console.log('\n2) Prise en charge — bouton grisé, statut réécrit, annonce');
@@ -264,6 +280,7 @@ const json = (p) => v2.json(p || {});
     components: [
       { type: 17, components: [
         { type: 10, content: '## 🎫 Ticket #11' },
+        { type: 10, content: '<@100000000000000001> · <@&R1> · <@&R2>' },
         { type: 14, divider: true },
         { type: 10, content: '👤 **Ouvert par :** <@100000000000000001>\n⏳ **Statut :** en attente' },
         { type: 1, components: [{ type: 2, custom_id: `bd-tmenu:${BOT}:claim`, style: 1, label: '🖐️ Pris en charge' }] },
@@ -277,6 +294,13 @@ const json = (p) => v2.json(p || {});
     && JSON.stringify(claimI.message.edited.components).includes('"disabled":true'));
   check('ligne Statut réécrite', JSON.stringify(claimI.message.edited.components)
     .includes('⏳ **Statut :** pris en charge par <@STAFF1>'));
+  const edited = JSON.stringify(claimI.message.edited.components);
+  check('les rôles staff disparaissent de la carte après prise en charge',
+    !edited.includes('<@&R1>') && !edited.includes('<@&R2>'), edited);
+  check('le créateur reste affiché sur la ligne d’identité',
+    claimI.message.edited.components[0].components.some((c) => c.type === 10 && c.content === '<@100000000000000001>'),
+    JSON.stringify(claimI.message.edited.components[0].components.map((c) => c.content)));
+  check('le séparateur du titre est intact', edited.includes('"divider":true'));
   check('annonce « 🔔 Ticket pris en charge » envoyée dans le salon',
     messages.some((m) => v2.title(m) === '🔔 Ticket pris en charge'
       && allText(m).includes('s’occupe désormais de ce ticket.')));

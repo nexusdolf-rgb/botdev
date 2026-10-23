@@ -121,8 +121,9 @@ async function main() {
   check('pied de page : l\'horodatage a disparu', !/\d{2}\/\d{2}\s+\d{2}:\d{2}/.test(footer));
   check('pied de page : le lien reste utilisé AILLEURS (bannière du panneau public)',
     src('panels.js').includes("store.settings.get('public_url') || 'https://hoxera.is-a.dev'"));
-  check('pied de page : le reste du panneau est intact (V2 + séparateurs + menu dedans)',
-    v2.isV2(welcome) && v2.dividers(welcome) >= 2 && v2.title(welcome).includes('🎫'));
+  // v379 (3e passe) — un seul bloc sur la carte : le trait sous le titre.
+  check('pied de page : le reste du panneau est intact (V2 + séparateur + titre)',
+    v2.isV2(welcome) && v2.dividers(welcome) === 1 && v2.title(welcome).includes('🎫'));
 
   // ═══════════════════════════════════════════════════════════════════════
   console.log('\n2) Recherche du membre — toutes les formes de saisie');

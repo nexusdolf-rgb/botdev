@@ -92,12 +92,14 @@ const check = (label, cond) => {
   const embed = panels.ticketWelcomePanel(member, chosen, '<@&R1>', 'Un modo me harcèle', '');
   const embJson = v2.json(embed);
   check('salon : payload Components V2 (plus d\'embed)', v2.isV2(embed));
-  check('salon : séparateurs natifs pleine largeur entre les blocs', v2.dividers(embed) >= 2);
+  // v379 (3e passe) — la carte n'a qu'un bloc : le seul trait est celui du titre.
+  check('salon : séparateur natif pleine largeur sous le titre', v2.dividers(embed) === 1);
   // v379 — la carte du salon suit les captures du 22/10 : titre « 🎫 Ticket »,
   // puis un bloc compact (Ouvert par / Statut / Type / Raison).
   check('salon : titre professionnel', embJson.includes('🎫 Ticket'));
   check('salon : type avec emoji', embJson.includes('🏷 **Type :** 🤝 Ticket contre admin'));
-  check('salon : description du type rappelée', embJson.includes('Signale un abus'));
+  check('salon : la description du type n\'est plus recopiée sur la carte',
+    !embJson.includes('Signale un abus'));
   check('salon : champ équipe retiré, rôle staff pingé sous le titre',
     !embJson.includes('Équipe en charge') && (embJson.match(/<@&R1>/g) || []).length === 1);
   check('salon : la note de transcription a quitté la carte (annoncée à la fermeture)',

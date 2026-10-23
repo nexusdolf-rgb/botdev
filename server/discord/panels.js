@@ -854,6 +854,41 @@ function replaceClaimButtonJson(components, claimId, statusText) {
   return walk(components);
 }
 
+// v379 (3e passe, 23/10) — dès qu'un staff prend le ticket, la ligne
+// d'identité du panneau ne doit plus ping les rôles du staff : sinon chaque
+// prise en charge renvoie une notification aux rôles alors qu'ils ont déjà
+// répondu. On retire les mentions de rôle et le séparateur « · » devenu
+// orphelin ; la mention du créateur reste affichée.
+// La ligne est reconnaissable sans marqueur : une seule ligne, qui commence
+// par la mention du créateur. Le bloc d'informations, lui, est multiligne.
+function stripStaffRoleMentionsJson(components) {
+  const isIdentityLine = (content) => {
+    const s = String(content || '').trim();
+    return Boolean(s) && !s.includes('\n') && /^<@!?[^>\s]+>/.test(s) && /<@&[^>\s]+>/.test(s);
+  };
+  const clean = (content) => String(content)
+    .replace(/<@&[^>\s]+>/g, '')
+    .replace(/(?:^|\s)·(?=\s|$)/g, ' ')
+    .replace(/\s*·\s*·\s*/g, ' · ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/^\s*·\s*/, '')
+    .replace(/\s*·\s*$/, '')
+    .trim();
+  const walk = (arr) => {
+    if (!Array.isArray(arr)) return arr;
+    return arr.map((c) => {
+      if (!c || typeof c !== 'object') return c;
+      const kids = c.components;
+      if (c.type === 10 && typeof c.content === 'string' && isIdentityLine(c.content)) {
+        return { ...c, content: clean(c.content) };
+      }
+      if (Array.isArray(kids)) return { ...c, components: walk(kids) };
+      return c;
+    });
+  };
+  return walk(components);
+}
+
 async function removeClaimButton(message, botId, staffUser, lang) {
   if (!message || typeof message.edit !== 'function') return;
   const claimId = `bd-tmenu:${botId}:claim`;
@@ -867,7 +902,9 @@ async function removeClaimButton(message, botId, staffUser, lang) {
   if (!status) return;
   try {
     const json = (message.components || []).map((c) => (c && typeof c.toJSON === 'function' ? c.toJSON() : c));
-    const next = replaceClaimButtonJson(json, claimId, status);
+    // v379 (3e passe) — le bouton passe en grisé, le statut est réécrit, et
+    // les rôles du staff quittent la ligne d'identité.
+    const next = stripStaffRoleMentionsJson(replaceClaimButtonJson(json, claimId, status));
     await message.edit({
       components: next,
       flags: MessageFlags.IsComponentsV2,
@@ -949,9 +986,12 @@ function ticketWelcomePanel(member, chosen, staffMention, reason, dmWarning = ''
   // sur les captures réelles : le créateur puis les rôles staff sélectionnés,
   // séparés par « · ». Ces mentions sont de vrais pings : le staff est notifié
   // à l'ouverture du ticket.
+  // v379 (3e passe, 23/10) — une fois le ticket pris en charge, les rôles du
+  // staff s'effacent de cette ligne (ils ont répondu, inutile de les re-pinger
+  // à chaque réécriture) ; la mention du créateur, elle, reste.
   const staffRoles = String(staffMention || '').trim().split(/\s+/).filter(Boolean);
   const identity = staffRoles.length
-    ? [`${member}`, ...staffRoles].join(' · ')
+    ? (claimedBy ? `${member}` : [`${member}`, ...staffRoles].join(' · '))
     : '';
 
   // Variables disponibles dans le titre / message personnalisé.
@@ -973,8 +1013,10 @@ function ticketWelcomePanel(member, chosen, staffMention, reason, dmWarning = ''
   const blocks = [card.join('\n')];
   // Message d'accueil : uniquement s'il a été personnalisé dans le dashboard.
   if (room.welcome) blocks.push(resolveRoomVars(room.welcome));
-  // Description du type (réglage existant, conservée).
-  if (chosen && chosen.description) blocks.push(`ℹ️ ${String(chosen.description).slice(0, 900)}`);
+  // v379 (3e passe, 23/10) — la description du type ne s'affiche plus sur la
+  // carte du salon. Elle reste un réglage du dashboard (elle apparaît encore
+  // dans le sélecteur de types et dans l'aide), mais elle n'a rien à faire
+  // sous la raison du ticket : la carte ne montre que le ticket lui-même.
   if (Array.isArray(answers) && answers.length) {
     blocks.push([
       `📋 ${i18n.t(lang, 'ticket_answers')}`,
@@ -3773,6 +3815,9 @@ module.exports = {
   // v234 — exposé pour les tests : pruneOldPanels doit reconnaître les panneaux
   // classiques ET les conteneurs Components V2, sinon les doublons s'accumulent.
   __testPanelTitleOf: panelTitleOf,
+  // v379 (3e passe) — exposé pour les tests : la prise en charge doit retirer
+  // les mentions de rôle de la ligne d'identité sans toucher au reste.
+  __testStripStaffRoleMentions: stripStaffRoleMentionsJson,
 
   // v237 — exposés pour les tests : le récapitulatif du journal des tickets est
   // passé en Components V2 et sa note s'édite en patchant le conteneur (plus de

@@ -149,45 +149,44 @@ function mkInteraction(which, { customId = '', values = [], value = '', user = S
   overwrites.set(OPENER, mkOverwrite(true));
 
   const opener = members.get(OPENER);
-  const chosen = { label: 'Test', emoji: '🧠', description: '', staff_roles: [] };
+  // La description du type est volontairement remplie : elle ne doit PLUS
+  // apparaître sur la carte (3e passe du 23/10).
+  const chosen = { label: 'Support technique', emoji: '🌟', description: "Besoin d'aide avec le bot ? Ouvre un ticket pour obtenir de l'assistance.", staff_roles: [] };
   const reason = 'Bonjour Mr j’arrive pas j’ai gros problème de me connecter en jeu je crois que j’ai perdu mon mot de passe si vous pouvez m’aider svp je suis bloqué';
 
   const scenes = [];
 
-  // 1. Carte à l'ouverture
+  // 1. Carte à l'ouverture (le staff n'a pas encore pris en charge)
+  const openPanel = panels.ticketWelcomePanel(opener, chosen, '<@&400000000000000001> <@&400000000000000002>', reason, '', [], 'fr', { number: 11 }, {},
+    { rows: panels.__testStaffTicketRows(BOT, false, 'fr') });
   scenes.push({
     kind: 'message',
-    label: '1. À l’ouverture du ticket',
-    payload: panels.ticketWelcomePanel(opener, chosen, '<@&400000000000000001> <@&400000000000000002>', reason, '', [], 'fr', { number: 11 }, {},
-      { rows: panels.__testStaffTicketRows(BOT, false, 'fr') }),
+    label: '1. À l’ouverture du ticket : le staff n’a pas encore pris en charge',
+    payload: openPanel,
     time: '22:59',
   });
 
-  // 2. Carte après prise en charge (même message, bouton grisé)
+  // 2. Après prise en charge : on rejoue le VRAI clic sur « Pris en charge » à
+  // partir du VRAI message, puis on affiche le payload d'édition que
+  // removeClaimButton envoie à Discord (bouton grisé, statut réécrit, rôles
+  // du staff retirés de la ligne d'identité).
+  const claimI = mkInteraction('button', { customId: `bd-tmenu:${BOT}:claim` });
+  claimI.message = {
+    id: 'MSG-CARD',
+    components: (openPanel.components || []).map((c) => (c && typeof c.toJSON === 'function' ? c.toJSON() : c)),
+    toJSON() { return this.components; },
+    edit: async (p) => { claimI.message.edited = p; return {}; },
+  };
+  await panels.dispatchPanels(BOT, claimI);
+  const edited = claimI.message.edited || { components: [], flags: undefined };
   scenes.push({
     kind: 'message',
-    label: '2. Après « Pris en charge » : même carte, bouton grisé',
-    payload: panels.ticketWelcomePanel(members.get(OPENER), chosen, '<@&400000000000000001> <@&400000000000000002>', reason, '', [], 'fr', { number: 11 }, {},
-      { rows: panels.__testStaffTicketRows(BOT, true, 'fr'), claimedBy: STAFF }),
+    label: '2. Après « Pris en charge » : mêmes lignes, rôles du staff retirés',
+    payload: { components: edited.components, flags: edited.flags },
     time: '22:59',
   });
 
   // 3. Prise en charge : annonce
-  const claimI = mkInteraction('button', { customId: `bd-tmenu:${BOT}:claim` });
-  claimI.message = {
-    id: 'MSG-CARD',
-    components: [
-      { type: 17, components: [
-        { type: 10, content: '## 🎫 Ticket #11' },
-        { type: 14, divider: true },
-        { type: 10, content: `👤 **Ouvert par :** <@${OPENER}>\n⏳ **Statut :** en attente` },
-        { type: 1, components: [{ type: 2, custom_id: `bd-tmenu:${BOT}:claim`, style: 1, label: '🖐️ Pris en charge' }] },
-      ] },
-    ],
-    toJSON() { return this.components; },
-    edit: async () => ({}),
-  };
-  await panels.dispatchPanels(BOT, claimI);
   const announce = messages.find((m) => JSON.stringify(m).includes('Ticket pris en charge'));
   scenes.push({ kind: 'message', label: '3. Annonce de prise en charge', payload: announce, time: '23:00' });
 
@@ -399,6 +398,13 @@ function mkInteraction(which, { customId = '', values = [], value = '', user = S
       </section>`;
   };
 
+  // APERCU_SCENES=1,2 ne garde que les scènes demandées (aperçu avant/après
+  // prise en charge), dans un fichier et des captures séparés.
+  const ONLY = String(process.env.APERCU_SCENES || '').trim();
+  const shown = ONLY
+    ? scenes.filter((_, i) => ONLY.split(',').map((n) => Number(n.trim())).includes(i + 1))
+    : scenes;
+  const suffix = ONLY ? '-prise-en-charge' : '';
   const html = `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -483,15 +489,15 @@ function mkInteraction(which, { customId = '', values = [], value = '', user = S
 <body>
   <div class="wrap">
     <div class="head"><b># ticket-11</b><span>· Optimus Prime · aperçu v379</span></div>
-    ${scenes.map(sceneHtml).join('')}
+    ${shown.map(sceneHtml).join('')}
     <div class="foot">Aperçu généré par scripts/gen-apercu-v379.js — les cartes sont celles que le bot enverra, pas une maquette.</div>
   </div>
 </body>
 </html>`;
 
-  const outHtml = path.join(__dirname, '..', '..', 'apercu-v379-salon-ticket.html');
+  const outHtml = path.join(__dirname, '..', '..', `apercu-v379-salon-ticket${suffix}.html`);
   fs.writeFileSync(outHtml, html, 'utf8');
-  fs.writeFileSync('/tmp/apercu-v379.html', html, 'utf8');
+  fs.writeFileSync(`/tmp/apercu-v379${suffix}.html`, html, 'utf8');
   console.log('HTML →', outHtml);
 
   // ---------- Captures ----------
@@ -502,12 +508,12 @@ function mkInteraction(which, { customId = '', values = [], value = '', user = S
     args: ['--no-sandbox'],
   });
   const shots = [
-    { name: 'apercu-v379-salon-ticket-mobile.png', width: 393, scale: 2 },
-    { name: 'apercu-v379-salon-ticket-desktop.png', width: 900, scale: 1.5 },
+    { name: `apercu-v379-salon-ticket${suffix}-mobile.png`, width: 393, scale: 2 },
+    { name: `apercu-v379-salon-ticket${suffix}-desktop.png`, width: 900, scale: 1.5 },
   ];
   for (const shot of shots) {
     const page = await browser.newPage({ viewport: { width: shot.width, height: 900 }, deviceScaleFactor: shot.scale });
-    await page.goto('file:///tmp/apercu-v379.html', { waitUntil: 'load' });
+    await page.goto(`file:///tmp/apercu-v379${suffix}.html`, { waitUntil: 'load' });
     await page.waitForTimeout(150);
     const file = path.join(__dirname, '..', '..', shot.name);
     await page.screenshot({ path: file, fullPage: true });

@@ -237,15 +237,19 @@ async function main() {
   check('salon privé : le menu « Gérer ce ticket… » est DANS le conteneur',
     v2.rows(welcome).length === 1 && v2.json(welcome).includes(`bd-troom:${BOT}`)
     && v2.json(welcome).includes('Gérer ce ticket…'));
+  // v379 (3e passe) — la description du type n'est plus un bloc de la carte :
+  // il reste le trait sous le titre et celui qui sépare la carte des réponses.
   check('salon privé : séparateurs NATIFS entre les blocs (demande utilisateur)',
-    v2.dividers(welcome) >= 3, `${v2.dividers(welcome)} séparateur(s)`);
+    v2.dividers(welcome) === 2, `${v2.dividers(welcome)} séparateur(s)`);
   check('salon privé : plus de champ équipe, rôle staff pingé sous le titre',
     (v2.allText(welcome).match(/<@&R1>/g) || []).length === 1
       && !v2.allText(welcome).includes('Équipe en charge'));
   noTextSep(welcome, 'salon privé : aucun trait texte ━');
-  check('salon privé : tous les blocs sont rendus (type, à propos, réponses, raison)',
-    ['🏷 **Type :**', 'Pour toute demande générale.', 'Urgence ?', 'Haute', 'Je n\'arrive pas à me connecter']
+  check('salon privé : tous les blocs sont rendus (type, réponses, raison)',
+    ['🏷 **Type :**', 'Urgence ?', 'Haute', 'Je n\'arrive pas à me connecter']
       .every((k) => v2.json(welcome).includes(k)));
+  check('salon privé : la description du type n\'est plus recopiée sur la carte',
+    !v2.json(welcome).includes('Pour toute demande générale.'));
   check('salon privé : l\'espaceur invisible \\u200b ne réapparaît pas comme intitulé',
     !v2.texts(welcome).some((t) => t.includes('\u200b')));
   // v379 — la carte n'a plus de vignette (elle n'est pas sur la capture) :
