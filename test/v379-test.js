@@ -235,8 +235,12 @@ const json = (p) => v2.json(p || {});
     cardJson.includes('"label":"🖐️ Pris en charge"') && cardJson.includes('"style":1')
       && !cardJson.includes('"disabled":true'));
   check('menu « Gérer ce ticket… » sans engrenage', cardJson.includes('"placeholder":"Gérer ce ticket…"'));
-  check('menu : 6 actions dont « Retirer un membre »',
-    ['hold', 'close', 'reopen', 'addmember', 'removemember', 'delete'].every((v) => cardJson.includes(`"value":"${v}"`)));
+  check('menu : 5 actions, sans « Supprimer définitivement »',
+    ['hold', 'reopen', 'addmember', 'removemember', 'close'].every((v) => cardJson.includes(`"value":"${v}"`))
+      && !cardJson.includes('"value":"delete"'));
+  check('menu : « Fermer le ticket » est la dernière action',
+    (cardJson.match(/"value":"([a-z]+)"/g) || []).pop() === '"value":"close"',
+    JSON.stringify((cardJson.match(/"value":"([a-z]+)"/g) || []).slice(-2)));
   check('bouton au-dessus du menu', v2.rows(cardOpen).length === 2
     && v2.rows(cardOpen)[0].components[0].type === 2
     && v2.rows(cardOpen)[1].components[0].type === 3);

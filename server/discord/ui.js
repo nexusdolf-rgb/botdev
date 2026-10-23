@@ -309,6 +309,7 @@ function v2fitBlocks(blocks, available) {
 // pour que la migration d'un message soit mécanique :
 //   title       → TextDisplay « ## titre » (« # titre » avec titleLevel: 1,
 //                 v261 — titre plus petit, demandé pour les annonces de live)
+//   titleNote   → TextDisplay juste sous le titre, avant le séparateur
 //   description → paragraphs() → un TextDisplay par paragraphe + séparateurs
 //   content     → TextDisplay en tête (l'équivalent du content: classique)
 //   fields      → un TextDisplay « **nom**\nvaleur » par champ + séparateurs
@@ -383,6 +384,15 @@ function v2container(options = {}) {
       usable.forEach((t) => v2text(container, t, state));
     }
   }
+
+  // 2b) v379 — `titleNote` : une ligne juste SOUS le titre, avant le
+  //     séparateur. C'est la ligne d'identité des cartes de ticket
+  //     (« @Fox · @Assistant · @Modérateur ») qui ping le créateur et les
+  //     rôles du staff à l'ouverture.
+  const titleNote = options.title && options.titleNote
+    ? text(String(options.titleNote), V2_TEXT_BUDGET).trim()
+    : '';
+  if (titleNote && v2room(state)) v2text(container, titleNote, state);
 
   // 3) Corps : un séparateur natif ENTRE chaque bloc — mais AUCUN juste après
   //    l'en-tête (le « ## » est déjà visuellement détaché), comme dans le

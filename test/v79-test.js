@@ -76,11 +76,11 @@ const check = (label, cond) => {
   const embTicketEn = panels.ticketWelcomePanel(member, chosen, '<@&R1>', 'hello', '', [], 'en');
   // v379 — la carte du salon a de nouveaux libellés (bloc compact).
   check('ticket EN : titre traduit', v2.title(embTicketEn) === '🎫 Ticket');
-  check('ticket EN : type et motif traduits, sans champ équipe ni ping',
+  check('ticket EN : type et motif traduits, sans champ équipe',
     v2.json(embTicketEn).includes('🏷 **Type:**')
       && v2.json(embTicketEn).includes('📄 **Reason:**')
       && !v2.json(embTicketEn).includes('Team in charge')
-      && (v2.allText(embTicketEn).match(/<@&R1>/g) || []).length === 0);
+      && (v2.allText(embTicketEn).match(/<@&R1>/g) || []).length === 1);
   const embTicketFr = panels.ticketWelcomePanel(member, chosen, '<@&R1>', 'bonjour', '', [], 'fr');
   check('ticket FR : champs français', v2.json(embTicketFr).includes('🏷 **Type :**'));
 

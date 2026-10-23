@@ -71,7 +71,12 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   // v379 — le menu du salon s'appelle « Gérer ce ticket… » (capture du 22/10).
   check('panels : un seul menu StringSelect (placeholder staff)', /setPlaceholder\(i18n\.t\(lang, 'ticket_menu_ph'\)\)/.test(panels));
   check('panels : customId du menu bd-troom:{botId}', panels.includes('bd-troom:${botId}'));
-  check('panels : 6 options menu (claim est un bouton, v333 ; retrait ajouté en v379)', ['hold', 'close', 'reopen', 'addmember', 'removemember', 'delete'].every((v) => panels.includes(`setValue('${v}')`)) && !panels.includes("setValue('claim')"));
+  // v379 (2e passe) — « Supprimer définitivement » quitte le menu : la
+  // fermeture supprime déjà le salon. Il reste 5 actions, « Fermer » en dernier.
+  check('panels : 5 options menu (claim est un bouton, v333)', ['hold', 'reopen', 'addmember', 'removemember', 'close'].every((v) => panels.includes(`setValue('${v}')`))
+    && !panels.includes("setValue('claim'") && !panels.includes("setValue('delete')"));
+  check('panels : « Fermer le ticket » est la dernière option du menu',
+    panels.indexOf("setValue('close')") > panels.indexOf("setValue('removemember')"));
   check('panels : le composant du salon n’a plus 2 rangées', !panels.includes('components: [row1, row2]'));
   // v237 — la rangée du menu staff est passée DANS le conteneur V2 : elle est
   // fournie via `rows:` de ticketWelcomePanel, plus via `components:` du message.

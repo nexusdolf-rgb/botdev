@@ -158,7 +158,7 @@ function mkInteraction(which, { customId = '', values = [], value = '', user = S
   scenes.push({
     kind: 'message',
     label: '1. À l’ouverture du ticket',
-    payload: panels.ticketWelcomePanel(opener, chosen, '<@&400000000000000001>', reason, '', [], 'fr', { number: 11 }, {},
+    payload: panels.ticketWelcomePanel(opener, chosen, '<@&400000000000000001> <@&400000000000000002>', reason, '', [], 'fr', { number: 11 }, {},
       { rows: panels.__testStaffTicketRows(BOT, false, 'fr') }),
     time: '22:59',
   });
@@ -167,7 +167,7 @@ function mkInteraction(which, { customId = '', values = [], value = '', user = S
   scenes.push({
     kind: 'message',
     label: '2. Après « Pris en charge » : même carte, bouton grisé',
-    payload: panels.ticketWelcomePanel(members.get(OPENER), chosen, '<@&400000000000000001>', reason, '', [], 'fr', { number: 11 }, {},
+    payload: panels.ticketWelcomePanel(members.get(OPENER), chosen, '<@&400000000000000001> <@&400000000000000002>', reason, '', [], 'fr', { number: 11 }, {},
       { rows: panels.__testStaffTicketRows(BOT, true, 'fr'), claimedBy: STAFF }),
     time: '22:59',
   });
@@ -225,13 +225,19 @@ function mkInteraction(which, { customId = '', values = [], value = '', user = S
   scenes.push({ kind: 'message', label: '8. Salon de logs : transcription déposée', payload: logs, time: '23:07' });
 
   // ---------- Rendu HTML ----------
-  const NAMES = [[OPENER, 'Fox'], [STAFF, 'Marie'], ['BOTID', 'Optimus Prime']];
+  const NAMES = [
+    [OPENER, 'Fox'], [STAFF, 'Marie'], ['BOTID', 'Optimus Prime'],
+    ['400000000000000001', 'Assistant'], ['400000000000000002', 'Modérateur'],
+  ];
   const esc = (s) => String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
   const inline = (s) => {
     let out = esc(s);
-    out = out.replace(/&lt;@&amp;(\d+)&gt;/g, () => `<span class="mention role">@Staff</span>`);
+    out = out.replace(/&lt;@&amp;(\d+)&gt;/g, (m, id) => {
+      const name = (NAMES.find(([n]) => n === id) || [null, 'Staff'])[1];
+      return `<span class="mention role">@${name}</span>`;
+    });
     out = out.replace(/&lt;@!?(\d+)&gt;/g, (m, id) => {
       const name = (NAMES.find(([n]) => n === id) || [null, 'membre'])[1];
       return `<span class="mention">@${name}</span>`;

@@ -98,8 +98,8 @@ const check = (label, cond) => {
   check('salon : titre professionnel', embJson.includes('🎫 Ticket'));
   check('salon : type avec emoji', embJson.includes('🏷 **Type :** 🤝 Ticket contre admin'));
   check('salon : description du type rappelée', embJson.includes('Signale un abus'));
-  check('salon : champ équipe retiré, aucun ping ajouté (v379-b)',
-    !embJson.includes('Équipe en charge') && (embJson.match(/<@&R1>/g) || []).length === 0);
+  check('salon : champ équipe retiré, rôle staff pingé sous le titre',
+    !embJson.includes('Équipe en charge') && (embJson.match(/<@&R1>/g) || []).length === 1);
   check('salon : la note de transcription a quitté la carte (annoncée à la fermeture)',
     !embJson.includes('À la fermeture définitive'));
   const raisonBlock = v2.texts(embed).find((t) => t.includes('📄 **Raison :**')) || '';

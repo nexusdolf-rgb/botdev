@@ -65,11 +65,13 @@ check('titre avec le numéro', v2.title(simplePanel) === '🎫 Ticket #42');
 check('le titre est le premier bloc ; la ligne auteur a disparu',
   simpleTexts[0] === '### 🎫 Ticket #42' && v2.author(simplePanel) === ''
     && !v2.allText(simplePanel).includes('Ticket de Alice · #42'));
-// v379-b — plus aucune ligne ajoutée à la carte : le ping du rôle staff n'est
-// plus rendu (les captures n'en ont pas).
+// v379 (2e passe) — la ligne d'identité est revenue sous le titre, comme sur
+// les captures réelles : créateur puis rôles staff, séparés par « · ».
+check('ligne d’identité sous le titre : créateur puis rôles staff',
+  simpleTexts[1] === '<@U1> · <@&R1>');
 check('le bloc suivant indique le créateur, le statut et le type',
-  (simpleTexts[1] || '').startsWith('👤 **Ouvert par :** <@U1>\n⏳ **Statut :** en attente')
-    && !simpleTexts[1].includes('Équipe'));
+  (simpleTexts[2] || '').startsWith('👤 **Ouvert par :** <@U1>\n⏳ **Statut :** en attente')
+    && !simpleTexts[2].includes('Équipe'));
 check('aucun bloc équipe ni ping ajouté à la carte',
   !v2.allText(simplePanel).includes('Équipe en charge')
     && !v2.allText(simplePanel).includes('Modération'));

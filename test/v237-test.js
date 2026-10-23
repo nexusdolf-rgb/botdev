@@ -239,8 +239,8 @@ async function main() {
     && v2.json(welcome).includes('Gérer ce ticket…'));
   check('salon privé : séparateurs NATIFS entre les blocs (demande utilisateur)',
     v2.dividers(welcome) >= 3, `${v2.dividers(welcome)} séparateur(s)`);
-  check('salon privé : aucun champ équipe ni ping ajouté (v379-b)',
-    (v2.allText(welcome).match(/<@&R1>/g) || []).length === 0
+  check('salon privé : plus de champ équipe, rôle staff pingé sous le titre',
+    (v2.allText(welcome).match(/<@&R1>/g) || []).length === 1
       && !v2.allText(welcome).includes('Équipe en charge'));
   noTextSep(welcome, 'salon privé : aucun trait texte ━');
   check('salon privé : tous les blocs sont rendus (type, à propos, réponses, raison)',

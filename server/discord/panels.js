@@ -781,12 +781,14 @@ function staffTicketRows(botId, claimed, lang = 'fr') {
     .setMinValues(1)
     .setMaxValues(1)
     .addOptions(
+      // v379 (2e passe) — « Supprimer définitivement » a quitté le menu : la
+      // fermeture fait déjà la transcription et la suppression du salon.
+      // « Fermer le ticket » passe donc en DERNIÈRE position, là où il était.
       new StringSelectMenuOptionBuilder().setLabel('⏸ Mettre en attente').setDescription('Passer le ticket en lecture seule').setValue('hold'),
-      new StringSelectMenuOptionBuilder().setLabel('🔒 Fermer le ticket').setDescription('Fermer, transcrire puis supprimer le salon').setValue('close'),
       new StringSelectMenuOptionBuilder().setLabel('🔓 Réouvrir').setDescription('Rouvrir un ticket fermé').setValue('reopen'),
       new StringSelectMenuOptionBuilder().setLabel('➕ Ajouter un membre').setDescription("Inviter quelqu'un dans le salon").setValue('addmember'),
       new StringSelectMenuOptionBuilder().setLabel('➖ Retirer un membre').setDescription('Retirer un accès ajouté au ticket').setValue('removemember'),
-      new StringSelectMenuOptionBuilder().setLabel('🗑 Supprimer définitivement').setDescription('Fermeture finale + transcription en MP').setValue('delete'),
+      new StringSelectMenuOptionBuilder().setLabel('🔒 Fermer le ticket').setDescription('Fermer, transcrire puis supprimer le salon').setValue('close'),
     );
   const claimRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
@@ -943,9 +945,14 @@ function ticketWelcomePanel(member, chosen, staffMention, reason, dmWarning = ''
     const clean = String(reason).slice(0, 900).replace(/`/g, "'");
     card.push(['```', clean, '```'].join('\n'));
   }
-  // v379-b — la carte ne porte QUE ce que montrent les captures. Le ping du
-  // rôle staff n'y est plus ajouté : `staffMention` reste accepté pour les
-  // appelants historiques, mais n'est plus rendu.
+  // v379 (2e passe, 23/10) — la ligne d'identité revient SOUS le titre, comme
+  // sur les captures réelles : le créateur puis les rôles staff sélectionnés,
+  // séparés par « · ». Ces mentions sont de vrais pings : le staff est notifié
+  // à l'ouverture du ticket.
+  const staffRoles = String(staffMention || '').trim().split(/\s+/).filter(Boolean);
+  const identity = staffRoles.length
+    ? [`${member}`, ...staffRoles].join(' · ')
+    : '';
 
   // Variables disponibles dans le titre / message personnalisé.
   const resolveRoomVars = (tpl) => String(tpl || '')
@@ -984,6 +991,8 @@ function ticketWelcomePanel(member, chosen, staffMention, reason, dmWarning = ''
     accent: false,
     titleLevel: 3,
     title,
+    // Ligne d'identité : « @Fox · @Assistant · @Modérateur ».
+    titleNote: identity,
     // « ### » (16 px, même hauteur que le texte) : sur les captures, le titre
     // d'une carte ne dépasse pas les lignes du dessous (« Confirmer la
     // fermeture du ticket », « Aucun membre à retirer »).

@@ -63,10 +63,12 @@ console.log('— Le champ est retiré, le ping reste —');
 check('le panneau reste un seul message Components V2',
   v2.isV2(panel) && panel.content === undefined && panel.embeds === undefined && panel.components.length === 1);
 check('titre et numéro restent inchangés', v2.title(panel) === '🎫 Ticket #42');
-check('le bloc d’identité conserve le créateur, sans ping ajouté',
-  (texts[1] || '').startsWith('👤 **Ouvert par :** <@U1>')
-    && !texts[1].includes('Équipe') && v2.author(panel) === '');
-check('aucun ping de rôle ajouté (carte identique aux captures)', (allText.match(/<@&R1>/g) || []).length === 0);
+check('ligne d’identité sous le titre : créateur puis rôle staff',
+  texts[1] === '<@U1> · <@&R1>', JSON.stringify(texts[1]));
+check('le bloc d’identité conserve le créateur',
+  (texts[2] || '').startsWith('👤 **Ouvert par :** <@U1>')
+    && !texts[2].includes('Équipe') && v2.author(panel) === '');
+check('le rôle staff sélectionné est pingé une seule fois', (allText.match(/<@&R1>/g) || []).length === 1);
 check('« Équipe en charge : Modération » a disparu du panneau',
   !allText.includes('Équipe en charge') && !allText.includes('Modération'));
 

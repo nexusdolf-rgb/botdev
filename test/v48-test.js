@@ -162,8 +162,8 @@ const check = (label, cond) => {
   const ownerLine = card.split('\n')[0] || '';
   check('type : carte = créateur seul, sans répéter le type',
     ownerLine === '👤 **Ouvert par :** <@u2>' && !card.includes('Équipe'));
-  check('type : champ « Équipe en charge » retiré, aucun ping ajouté',
-    (v2.allText(firstMsg).match(/<@&R1>/g) || []).length === 0
+  check('type : champ « Équipe en charge » retiré, rôle staff pingé sous le titre',
+    (v2.allText(firstMsg).match(/<@&R1>/g) || []).length === 1
       && !/Équipe en charge|Team in charge/.test(v2.allText(firstMsg)));
   check('type : le panneau de bienvenue affiche le type « Réclamation » dans son champ', tEmb.includes('Réclamation'));
   check('type : numéro visible dans le titre', v2.title(firstMsg).includes('🎫 Ticket #1'));
