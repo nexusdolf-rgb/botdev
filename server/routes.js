@@ -44,6 +44,9 @@ const eventsSaveRateLimit = security.rateLimit({ name: 'events-save', windowMs: 
 // 📤 v362 — publications Discord déclenchées depuis le dashboard (panneau de
 // règles, sondage) : plafonnées pour éviter un flood accidentel du bot.
 const discordPublishRateLimit = security.rateLimit({ name: 'discord-publish', windowMs: 60000, max: 20 });
+// 🚫 v379 — lecture du panneau de bannissement : publique (pas de session),
+// donc limitée par adresse IP pour éviter le balayage de jetons.
+const banStatusRateLimit = security.rateLimit({ name: 'ban-status', windowMs: 60000, max: 60 });
 
 // Les listes relisibles de Discord sont mises en cache brièvement pour
 // absorber les ouvertures simultanées du dashboard sans relire la même
@@ -365,7 +368,13 @@ router.get('/auth/discord/callback', oauthRateLimit, async (req, res) => {
         user = { id: userId };
       }
     }
-    if (store.platformBans.isBanned(user.id)) return res.redirect('/#/login?oauth=banned');
+    if (store.platformBans.isBanned(user.id)) {
+      // v379 — la personne bannie doit lire son motif et son chrono. On lui
+      // donne un jeton de lecture signé, valable 10 minutes, qui ne contient
+      // que son identifiant et n'ouvre aucune session.
+      const banToken = require('./banToken').sign(user.id);
+      return res.redirect(`/#/banned?t=${encodeURIComponent(banToken)}`);
+    }
     store.users.updateDiscord(user.id, {
       discord_id: me.id,
       discord_username: me.username,
@@ -3921,7 +3930,8 @@ router.get('/admin/users', requireAuth, requireAdmin, (req, res) => {
         u.discord_deco, u.discord_guilds, u.created_at,
         (SELECT COUNT(*) FROM bots b WHERE b.user_id = u.id) AS bots_count,
         (pb.user_id IS NOT NULL) AS banned,
-        pb.reason AS ban_reason, pb.created_at AS banned_at
+        pb.reason AS ban_reason, pb.created_at AS banned_at,
+        pb.expires_at AS ban_expires_at, pb.duration_min AS ban_duration_min
       FROM users u LEFT JOIN platform_bans pb ON pb.user_id = u.id
       WHERE u.email LIKE ? OR u.discord_username LIKE ? OR u.discord_id LIKE ?
       ORDER BY u.created_at DESC LIMIT 200`).all(like, like, like);
@@ -3931,7 +3941,8 @@ router.get('/admin/users', requireAuth, requireAdmin, (req, res) => {
         u.discord_deco, u.discord_guilds, u.created_at,
         (SELECT COUNT(*) FROM bots b WHERE b.user_id = u.id) AS bots_count,
         (pb.user_id IS NOT NULL) AS banned,
-        pb.reason AS ban_reason, pb.created_at AS banned_at
+        pb.reason AS ban_reason, pb.created_at AS banned_at,
+        pb.expires_at AS ban_expires_at, pb.duration_min AS ban_duration_min
       FROM users u LEFT JOIN platform_bans pb ON pb.user_id = u.id
       ORDER BY u.created_at DESC LIMIT 200`).all();
   }
@@ -3952,6 +3963,10 @@ router.get('/admin/users', requireAuth, requireAdmin, (req, res) => {
       banned: !!u.banned,
       ban_reason: u.ban_reason || '',
       banned_at: u.banned_at || '',
+      // v379 — durée : date de fin (vide = permanent) et minutes demandées.
+      ban_expires_at: u.ban_expires_at || '',
+      ban_duration_min: Number(u.ban_duration_min) || 0,
+      ban_active: store.platformBans.isBanned(u.id),
     };
   });
   res.json({ users });
@@ -4084,16 +4099,66 @@ router.post('/admin/users/:id/unlink-discord', requireAuth, requireAdmin, platfo
   res.json({ ok: true, message: 'Compte Discord délié. Le compte Hoxera est conservé.' });
 });
 
+// ============================================================
+// v379 — Panneau du membre banni (route publique)
+// ------------------------------------------------------------
+// Accessible sans session, uniquement avec le jeton signé remis après le
+// retour OAuth. Elle ne révèle que le bannissement de la personne concernée :
+// motif, date de début, date de fin, durée restante. Rien d'autre du compte.
+// Quand la date est passée, elle répond `active: false` pour que la page
+// propose de se reconnecter.
+// ============================================================
+router.get('/ban/status', banStatusRateLimit, (req, res) => {
+  const token = String((req.query && req.query.t) || '');
+  const verified = require('./banToken').verify(token);
+  if (!verified) {
+    return res.status(401).json({ error: 'Lien de bannissement invalide ou expiré. Reconnectez-vous pour réessayer.' });
+  }
+  const ban = store.platformBans.get(verified.userId);
+  if (!ban) return res.json({ active: false });
+  const expiresAt = ban.expires_at || '';
+  const finMs = expiresAt ? new Date(expiresAt).getTime() : 0;
+  const remainingMs = expiresAt ? Math.max(0, finMs - Date.now()) : 0;
+  if (expiresAt && remainingMs <= 0) {
+    // Le bannissement vient d'expirer : on répond « inactif » et on nettoie.
+    store.platformBans.purgeExpired();
+    return res.json({ active: false, expiredNow: true });
+  }
+  res.json({
+    active: true,
+    reason: ban.reason || '',
+    bannedAt: ban.created_at || '',
+    expiresAt,
+    durationMin: Number(ban.duration_min) || 0,
+    permanent: !expiresAt,
+    remainingMs,
+    serverTime: new Date().toISOString(),
+  });
+});
+
+// v379 — bannissement avec durée : `duration` en minutes (0 ou absent =
+// permanent). Le motif est obligatoire : la personne bannie doit savoir
+// pourquoi, c'est tout l'objet du panneau qu'elle verra en se connectant.
 router.post('/admin/users/:id/ban', requireAuth, requireAdmin, platformMutationRateLimit, (req, res) => {
   const target = adminTarget(req, res);
   if (!target) return;
-  const reason = String((req.body || {}).reason || '').trim().slice(0, 500);
-  store.platformBans.set(target.targetId, reason, req.userId);
+  const body = req.body || {};
+  const reason = String(body.reason || '').trim().slice(0, 500);
+  if (!reason) return res.status(400).json({ error: 'Le motif du bannissement est obligatoire.' });
+  const durationMin = Math.max(0, Math.min(5256000, Math.floor(Number(body.duration) || 0)));
+  const ban = store.platformBans.set(target.targetId, reason, req.userId, durationMin);
   // Les sessions et le jeton OAuth ne servent plus à un compte banni.
   store.db.prepare('DELETE FROM sessions WHERE user_id = ?').run(target.targetId);
   store.discordTokens.remove(target.targetId);
-  store.platformAudit.add(req.userId, target.targetId, 'ban_user', reason ? `Raison : ${reason}` : 'Aucune raison fournie.');
-  res.json({ ok: true, message: 'Compte banni d’Hoxera.' });
+  const duree = durationMin > 0 ? `${durationMin} minute(s)` : 'permanent';
+  store.platformAudit.add(req.userId, target.targetId, 'ban_user', `Raison : ${reason} · Durée : ${duree}`);
+  res.json({
+    ok: true,
+    message: durationMin > 0
+      ? `Compte banni pour ${durationMin} minute(s).`
+      : 'Compte banni définitivement.',
+    ban: { reason: ban.reason, expires_at: ban.expires_at || '', duration_min: ban.duration_min || 0 },
+  });
 });
 
 router.delete('/admin/users/:id/ban', requireAuth, requireAdmin, platformMutationRateLimit, (req, res) => {

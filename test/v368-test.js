@@ -154,7 +154,9 @@ check('aucune route touchant un serveur n\'est ajoutée sans garde d\'accès',
     const debuts = [];
     lignes.forEach((l, i) => { const m = pat.exec(l); if (m) debuts.push([i, m[3]]); });
     const connues = new Set(['/tickets/panel-banner/:guildId.png', '/tickets/panel-banner/:guildId.gif', '/bots', '/bots/:id']);
-    const gardes = /userCanManageGuild|requireAdmin|getOwnBot|adminTarget|isPlatformAdmin|403/;
+    // v379 : /ban/status n'ouvre aucune session — il est gardé par le jeton
+    // signe de 10 min (banToken.verify), qui designe le compte sans cookie.
+    const gardes = /userCanManageGuild|requireAdmin|getOwnBot|adminTarget|isPlatformAdmin|banToken'\)\.verify|403/;
     for (let k = 0; k < debuts.length; k++) {
       const [i, chemin] = debuts[k];
       const fin = k + 1 < debuts.length ? debuts[k + 1][0] : lignes.length;
@@ -169,12 +171,12 @@ check('aucune route touchant un serveur n\'est ajoutée sans garde d\'accès',
 
 console.log('— 7. Version —');
 const index = lus['public/index.html'];
-check(`index.html : ?v=${VERSION} référencé 7 fois`, (index.match(/\?v=378/g) || []).length === 7,
-  String((index.match(/\?v=378/g) || []).length));
+check(`index.html : ?v=${VERSION} référencé 7 fois`, (index.match(/\?v=379/g) || []).length === 7,
+  String((index.match(/\?v=379/g) || []).length));
 const sw = fs.readFileSync(path.join(RACINE, 'public/sw.js'), 'utf8');
-check('le service worker porte la même version de cache', sw.includes("const CACHE = 'botdev-v378';"));
+check('le service worker porte la même version de cache', sw.includes("const CACHE = 'botdev-v379';"));
 check('aucun fichier de public/js ne cite une version périmée',
-  !/\?v=3[0-9][0-9]/.test(gabarits.replace(/\?v=378/g, '')), (gabarits.match(/\?v=3\d\d/g) || []).join(' '));
+  !/\?v=3[0-9][0-9]/.test(gabarits.replace(/\?v=379/g, '')), (gabarits.match(/\?v=3\d\d/g) || []).join(' '));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v368 — ${ok} vérifications OK : icônes remplies, sortie nommée, marque unique, texte sans cadratin, liens réels.`);

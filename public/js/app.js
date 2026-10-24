@@ -255,6 +255,83 @@ App.prompt = (message, placeholder = '') => new Promise((resolve) => {
   document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => { App.closeModal(); resolve(''); });
 });
 
+// 🚫 v379 — fenêtre de bannissement : motif obligatoire + durée.
+// Résout avec { reason, duration } (duration en minutes, 0 = permanent),
+// ou null si le fondateur annule.
+App.banDialog = (nomCompte) => new Promise((resolve) => {
+  const DUREES = [
+    ['60', '1 heure'],
+    ['1440', '1 jour'],
+    ['10080', '7 jours'],
+    ['43200', '30 jours'],
+    ['0', 'Permanent'],
+    ['custom', 'Durée personnalisée…'],
+  ];
+  App.modal(`
+    <div class="modal-header"><h3>Bannir ${App.escapeHtml(nomCompte || 'ce compte')}</h3><button class="x-btn" data-close>×</button></div>
+    <div class="modal-body">
+      <p style="line-height:1.6;margin-bottom:14px">Le compte ne pourra plus se connecter jusqu'à la fin de la durée. Ses données sont conservées : il retrouve tout en se reconnectant.</p>
+      <label class="banned-label" for="ban-reason-input">Motif du bannissement</label>
+      <textarea class="input" id="ban-reason-input" rows="3" maxlength="500" placeholder="Exemple : usurpation d'identité, spam dans les tickets…" style="resize:vertical;margin:6px 0 16px"></textarea>
+      <label class="banned-label" for="ban-duration-select">Durée</label>
+      <select class="input" id="ban-duration-select" style="margin:6px 0 0">
+        ${DUREES.map(([v, label]) => `<option value="${v}">${App.escapeHtml(label)}</option>`).join('')}
+      </select>
+      <div id="ban-custom-wrap" style="display:none;margin-top:10px">
+        <label class="banned-label" for="ban-custom-value">Nombre</label>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <input class="input" id="ban-custom-value" type="number" min="1" max="5256000" value="3" style="flex:1" />
+          <select class="input" id="ban-custom-unit" style="flex:1">
+            <option value="1">minutes</option>
+            <option value="60">heures</option>
+            <option value="1440">jours</option>
+          </select>
+        </div>
+      </div>
+      <p id="ban-error" style="color:#ff8a8d;font-size:13px;margin:10px 0 0;display:none"></p>
+      <p style="font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-top:14px">La personne verra ce motif et le temps restant en essayant de se connecter.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close>Annuler</button>
+      <button class="btn btn-danger" id="ban-confirm">Bannir</button>
+    </div>
+  `);
+  const raison = document.getElementById('ban-reason-input');
+  const duree = document.getElementById('ban-duration-select');
+  const perso = document.getElementById('ban-custom-wrap');
+  const persoVal = document.getElementById('ban-custom-value');
+  const persoUnit = document.getElementById('ban-custom-unit');
+  const erreur = document.getElementById('ban-error');
+  setTimeout(() => raison && raison.focus(), 50);
+  duree.onchange = () => {
+    perso.style.display = duree.value === 'custom' ? 'block' : 'none';
+    if (duree.value === 'custom' && persoVal) setTimeout(() => persoVal.focus(), 30);
+  };
+  const fermer = (valeur) => { App.closeModal(); resolve(valeur); };
+  document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => fermer(null));
+  document.getElementById('ban-confirm').onclick = () => {
+    const texte = raison.value.trim();
+    if (!texte) {
+      erreur.textContent = 'Le motif est obligatoire : la personne doit savoir pourquoi elle est bannie.';
+      erreur.style.display = 'block';
+      raison.focus();
+      return;
+    }
+    let minutes = Number(duree.value);
+    if (duree.value === 'custom') {
+      const n = Math.floor(Number(persoVal.value) || 0);
+      if (n <= 0) {
+        erreur.textContent = 'Indiquez une durée supérieure à zéro, ou choisissez « Permanent ».';
+        erreur.style.display = 'block';
+        persoVal.focus();
+        return;
+      }
+      minutes = n * Math.max(1, Number(persoUnit.value) || 1);
+    }
+    fermer({ reason: texte, duration: Math.max(0, Math.min(5256000, minutes)) });
+  };
+});
+
 App.modal = (innerHtml, large = false) => {
   const root = document.getElementById('modal-root');
   const overlay = App.el(`<div class="modal-overlay"><div class="modal ${large ? 'large' : ''}">${innerHtml}</div></div>`);
@@ -346,6 +423,14 @@ App.router.run = async () => {
     history.replaceState(null, '', '#/dashboard');
   }
 
+  // 🚫 v379 — panneau du compte banni : accessible SANS session, avec le
+  // jeton signé remis après le retour OAuth. Doit passer avant le contrôle
+  // de connexion, sinon la personne serait renvoyée à la page de connexion.
+  if (parts[0] === 'banned') {
+    App.renderBanned((query && query.get('t')) || '');
+    return;
+  }
+
   // Page publique du bot (consultable par tous, sans connexion)
   if (parts[0] === 'bot' && parts[1]) {
     App.renderPublicBot(Number(parts[1]));
@@ -390,6 +475,153 @@ App.loadPublicBotAvatar = (root) => {
     image.onerror = () => { if (image.isConnected) image.replaceWith(App.el('<span class="logo" data-brand-logo><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M13.4 2.6 5.6 13.4h4.8L9 21.4l8.6-11.2h-5l.8-7.6Z"/></svg></span>')); };
     if (oldLogo.isConnected) oldLogo.replaceWith(image);
   });
+};
+
+// ---------------------- Panneau du compte banni ----------------------
+// v379 — une personne bannie ne se connecte pas, mais elle doit savoir
+// POURQUOI et POUR COMBIEN DE TEMPS. Le bot lui remet un jeton signé valable
+// dix minutes ; cette page l'échange contre le motif et la date de fin, puis
+// fait défiler le temps restant à la seconde.
+App.bannedTimer = null;
+
+// Formate une durée en millisecondes : « 2 j 4 h 12 min 30 s ».
+App.formatRemaining = (ms) => {
+  const total = Math.max(0, Math.floor(Number(ms) / 1000));
+  const jours = Math.floor(total / 86400);
+  const heures = Math.floor((total % 86400) / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const secondes = total % 60;
+  const pad = (n) => String(n).padStart(2, '0');
+  if (jours > 0) return `${jours} j ${pad(heures)} h ${pad(minutes)} min ${pad(secondes)} s`;
+  if (heures > 0) return `${pad(heures)} h ${pad(minutes)} min ${pad(secondes)} s`;
+  return `${pad(minutes)} min ${pad(secondes)} s`;
+};
+
+// Formate une date ISO en français lisible (fuseau du navigateur).
+App.formatDateHeure = (iso) => {
+  const d = new Date(iso);
+  if (!iso || Number.isNaN(d.getTime())) return '';
+  try {
+    return d.toLocaleString('fr-FR', {
+      day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
+  } catch { return d.toISOString(); }
+};
+
+App.renderBanned = async (token) => {
+  const root = document.getElementById('app');
+  if (App.bannedTimer) { clearInterval(App.bannedTimer); App.bannedTimer = null; }
+  const icone = `<svg class="ico-svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>`;
+  const page = App.el(`
+    <div class="auth-wrap banned-wrap">
+      <div class="auth-right" style="margin:0 auto">
+        <div class="auth-card auth-glass banned-card" id="banned-card">
+          <div class="banned-icon" aria-hidden="true">${icone}</div>
+          <h2 id="banned-title">Vérification du bannissement…</h2>
+          <p class="sub" id="banned-sub">Un instant, nous vérifions votre situation.</p>
+          <div id="banned-body"><div class="spinner" style="margin:18px auto"></div></div>
+          <a href="#/" style="font-size:13px;display:inline-block;margin-top:18px">← Retour à l'accueil</a>
+        </div>
+      </div>
+    </div>
+  `);
+  root.innerHTML = '';
+  root.appendChild(page);
+
+  const titre = page.querySelector('#banned-title');
+  const sousTitre = page.querySelector('#banned-sub');
+  const corps = page.querySelector('#banned-body');
+
+  const afficherErreur = (message) => {
+    titre.textContent = 'Lien de bannissement expiré';
+    sousTitre.textContent = 'Ce lien ne permet plus d’afficher votre situation.';
+    corps.innerHTML = `
+      <p style="line-height:1.6;margin-bottom:6px">${App.escapeHtml(message)}</p>
+      <button class="btn btn-discord" id="banned-retry" style="padding:12px">Se reconnecter avec Discord</button>`;
+    const b = corps.querySelector('#banned-retry');
+    if (b) b.onclick = () => App.router.go('/connect');
+  };
+
+  let data;
+  try {
+    const res = await fetch(`/api/ban/status?t=${encodeURIComponent(token)}`, { headers: { Accept: 'application/json' } });
+    data = await res.json().catch(() => ({}));
+    if (!res.ok) return afficherErreur(data.error || 'Ce lien n’est plus valable.');
+  } catch {
+    return afficherErreur('Connexion au serveur impossible. Réessayez dans un instant.');
+  }
+
+  if (!data.active) {
+    titre.textContent = data.expiredNow ? 'Votre bannissement est terminé' : 'Aucun bannissement actif';
+    sousTitre.textContent = 'Vous pouvez de nouveau vous connecter à Hoxera.';
+    corps.innerHTML = `<button class="btn btn-discord" id="banned-retry" style="padding:12px">Se connecter avec Discord</button>`;
+    const b = corps.querySelector('#banned-retry');
+    if (b) b.onclick = () => App.router.go('/connect');
+    return;
+  }
+
+  titre.textContent = 'Votre compte est banni';
+  sousTitre.textContent = 'Vous ne pouvez pas utiliser le dashboard pendant cette période.';
+
+  // Compte à rebours calculé sur l'heure du serveur : on ne dépend pas de
+  // l'horloge du navigateur, qui peut être fausse.
+  const finMs = data.permanent || !data.expiresAt ? 0 : new Date(data.expiresAt).getTime();
+
+  corps.innerHTML = `
+    <div class="banned-reason">
+      <span class="banned-label">Motif</span>
+      <p id="banned-reason-text">${App.escapeHtml(data.reason || 'Aucun motif précisé.')}</p>
+    </div>
+    <div class="banned-grid">
+      <div><span class="banned-label">Banni le</span><p>${App.escapeHtml(App.formatDateHeure(data.bannedAt) || 'Non précisé')}</p></div>
+      ${data.permanent
+        ? `<div><span class="banned-label">Durée</span><p>Permanent</p></div>`
+        : `<div><span class="banned-label">Jusqu’au</span><p>${App.escapeHtml(App.formatDateHeure(data.expiresAt) || 'Non précisé')}</p></div>`}
+    </div>
+    ${data.permanent ? '' : `
+      <div class="banned-countdown">
+        <span class="banned-label">Temps restant</span>
+        <p id="banned-remaining" class="banned-clock">${App.formatRemaining(data.remainingMs)}</p>
+        <div class="banned-bar"><span id="banned-bar-fill"></span></div>
+      </div>`}
+  `;
+
+  if (data.permanent) return;
+
+  const reste = corps.querySelector('#banned-remaining');
+  const barre = corps.querySelector('#banned-bar-fill');
+  const dureeTotale = Math.max(1, Number(data.durationMin || 0) * 60000);
+  // Décalage entre l'horloge du navigateur et celle du serveur : le chrono
+  // reste juste même si l'ordinateur du membre est mal réglé.
+  const decalage = Date.now() - new Date(data.serverTime || Date.now()).getTime();
+  const maintenant = () => Date.now() - decalage;
+
+  const terminer = () => {
+    if (App.bannedTimer) { clearInterval(App.bannedTimer); App.bannedTimer = null; }
+    titre.textContent = 'Votre bannissement est terminé';
+    sousTitre.textContent = 'Vous pouvez de nouveau vous connecter à Hoxera.';
+    corps.innerHTML = `<button class="btn btn-discord" id="banned-retry" style="padding:12px">Se connecter avec Discord</button>`;
+    const bouton = corps.querySelector('#banned-retry');
+    if (bouton) bouton.onclick = () => App.router.go('/connect');
+  };
+
+  const rafraichir = () => {
+    if (!document.body.contains(reste)) {
+      if (App.bannedTimer) { clearInterval(App.bannedTimer); App.bannedTimer = null; }
+      return;
+    }
+    const restant = Math.max(0, finMs - maintenant());
+    if (restant <= 0) return terminer();
+    reste.textContent = App.formatRemaining(restant);
+    if (barre) {
+      const partie = Math.min(1, Math.max(0, restant / dureeTotale));
+      barre.style.width = `${Math.round(partie * 100)}%`;
+    }
+    return undefined;
+  };
+
+  rafraichir();
+  App.bannedTimer = setInterval(rafraichir, 1000);
 };
 
 // ---------------------- Page « Connectez-vous avec Discord » ----------------------
@@ -561,7 +793,7 @@ App.renderAdminPage = async () => {
     <div class="page admin-platform-page">
       <header class="admin-head">
         <div class="admin-identity">
-          <img id="a-bot-avatar" class="admin-mark admin-bot-avatar" src="/api/public/bot-avatar?v=378" alt="Avatar d’Hoxera" width="48" height="48" />
+          <img id="a-bot-avatar" class="admin-mark admin-bot-avatar" src="/api/public/bot-avatar?v=379" alt="Avatar d’Hoxera" width="48" height="48" />
           <div class="admin-head-copy">
             <div class="admin-breadcrumb"><span>OPTIMUS PRIME</span><i>/</i><b>CONSOLE FONDATEUR</b></div>
             <h1>Espace fondateur</h1>
@@ -818,14 +1050,31 @@ App.renderAdminPage = async () => {
         const discordCell = u.discord_linked
           ? `<span class="admin-linked-account"><span class="admin-linked-avatar${u.discord_deco ? ' has-decoration' : ''}" title="${u.discord_deco ? 'Photo Discord avec décoration d’avatar' : 'Photo Discord'}">${discordAvatar}</span><span class="admin-linked-copy"><b>${App.escapeHtml('@' + (u.discord_username || u.discord_id))}</b><small>ID ${App.escapeHtml(u.discord_id)}</small></span></span>`
           : `<span style="color:var(--text-dim)">Non lié</span><small style="display:block;color:var(--text-dim)">${App.escapeHtml(u.email)}</small>`;
-        const statusCell = u.banned
-          ? `<span class="chip" style="color:#ff8a8d;border-color:rgba(237,66,69,.45)">Banni</span><small style="display:block;color:var(--text-dim);max-width:180px">${App.escapeHtml(u.ban_reason || 'Aucune raison')}</small>`
-          : `<span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">Actif</span>`;
+        // v379 — un bannissement expiré n'est plus « Banni » : il s'affiche
+        // comme terminé, et le bouton propose de le retirer proprement.
+        let statusCell;
+        if (u.banned && u.ban_active) {
+          const fin = u.ban_expires_at ? App.formatDateHeure(u.ban_expires_at) : '';
+          const reste = u.ban_expires_at
+            ? App.formatRemaining(new Date(u.ban_expires_at).getTime() - Date.now())
+            : '';
+          statusCell = `<span class="chip" style="color:#ff8a8d;border-color:rgba(237,66,69,.45)">Banni</span>`
+            + `<small style="display:block;color:var(--text-dim);max-width:190px">${App.escapeHtml(u.ban_reason || 'Aucun motif')}</small>`
+            + `<small style="display:block;color:#ffb4a2;max-width:190px">${u.ban_expires_at
+              ? `Jusqu’au ${App.escapeHtml(fin)} · reste ${App.escapeHtml(reste)}`
+              : 'Bannissement permanent'}</small>`;
+        } else if (u.banned) {
+          statusCell = `<span class="chip" style="color:#f0a05e;border-color:rgba(240,160,94,.45)">Bannissement terminé</span>`
+            + `<small style="display:block;color:var(--text-dim);max-width:190px">${App.escapeHtml(u.ban_reason || 'Aucun motif')}</small>`;
+        } else {
+          statusCell = `<span class="chip" style="color:#57F287;border-color:rgba(87,242,135,.4)">Actif</span>`;
+        }
         const actions = isCurrent
           ? `<span style="font-size:12px;color:var(--text-dim)">Compte protégé</span>`
           : `<div style="display:flex;gap:6px;flex-wrap:wrap">
               ${u.discord_linked ? '<button class="btn btn-ghost btn-sm" data-unlink>Délier</button>' : ''}
-              ${u.banned ? '<button class="btn btn-ghost btn-sm" data-unban>Débannir</button>' : '<button class="btn btn-ghost btn-sm" data-ban>Bannir</button>'}
+              ${(u.banned && u.ban_active) ? '<button class="btn btn-ghost btn-sm" data-unban>Débannir</button>'
+                : `<button class="btn btn-ghost btn-sm" data-ban>${u.banned ? 'Bannir à nouveau' : 'Bannir'}</button>`}
               <button class="btn btn-danger btn-sm" data-delete>Supprimer</button>
             </div>`;
         const row = App.el(`<tr>
@@ -845,10 +1094,14 @@ App.renderAdminPage = async () => {
         };
         const ban = row.querySelector('[data-ban]');
         if (ban) ban.onclick = async () => {
-          if (!(await App.confirm('Bannir cet utilisateur d\'Hoxera ? Ses données seront conservées et le bannissement pourra être retiré.'))) return;
-          const reason = await App.prompt('Raison du bannissement (optionnelle)', 'Abus de la plateforme');
-          try { await App.api(`/admin/users/${u.id}/ban`, { method: 'POST', body: { reason } }); App.toast('Utilisateur banni d\'Hoxera.'); await reload(); }
-          catch (e) { App.toast(e.message, 'error'); }
+          // v379 — motif obligatoire et durée au choix (0 = permanent).
+          const saisie = await App.banDialog(u.discord_username ? '@' + u.discord_username : 'le compte #' + u.id);
+          if (!saisie) return;
+          try {
+            const r = await App.api(`/admin/users/${u.id}/ban`, { method: 'POST', body: saisie });
+            App.toast(r.message || 'Utilisateur banni d’Hoxera.');
+            await reload();
+          } catch (e) { App.toast(e.message, 'error'); }
         };
         const unban = row.querySelector('[data-unban]');
         if (unban) unban.onclick = async () => {

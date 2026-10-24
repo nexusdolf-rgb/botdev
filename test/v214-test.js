@@ -70,8 +70,8 @@ check('dash : bouton Synchroniser + statut', dash.includes('xp-sync') && dash.in
   check('dash : sauvegarde triée par niveau', dash.includes('.sort((a, b) => a.level - b.level)'));
 
   // ---------- 5. Version ----------
-  check('site : bump v214 (index)', index.includes('?v=378'));
-  check('site : bump v214 (sw)', sw.includes('botdev-v378'));
+  check('site : bump v214 (index)', index.includes('?v=379'));
+  check('site : bump v214 (sw)', sw.includes('botdev-v379'));
 
   console.log(`  ✅ v214 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });

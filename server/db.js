@@ -598,6 +598,13 @@ try { db.exec("ALTER TABLE role_menus ADD COLUMN guild_id TEXT DEFAULT ''"); } c
 
 // Migrations : colonnes Discord (OAuth2)
 try { db.exec("ALTER TABLE users ADD COLUMN discord_id TEXT DEFAULT ''"); } catch (e) {}
+// v379 — bannissement avec durée : « jusqu'à quand » et « combien de temps ».
+// `expires_at` vide = bannissement permanent. Les bases antérieures gardent
+// leurs bannissements, qui deviennent permanents (aucune expiration connue).
+try { db.exec("ALTER TABLE platform_bans ADD COLUMN expires_at TEXT DEFAULT ''"); } catch (e) {}
+try { db.exec('ALTER TABLE platform_bans ADD COLUMN duration_min INTEGER DEFAULT 0'); } catch (e) {}
+try { db.exec("CREATE INDEX IF NOT EXISTS idx_platform_bans_expires ON platform_bans(expires_at)"); } catch (e) {}
+
 try { db.exec("ALTER TABLE users ADD COLUMN discord_username TEXT DEFAULT ''"); } catch (e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN discord_avatar TEXT DEFAULT ''"); } catch (e) {}
 // 🎨 v298 — décoration d'avatar Discord du compte dashboard (asset, vide = aucune)
@@ -1037,14 +1044,43 @@ const users = {
   },
 };
 
+// v379 — bannissement avec durée.
+// Un bannissement est ACTIF tant que `expires_at` est vide (permanent) ou
+// dans le futur. Une fois la date passée, il n'a plus d'effet : la personne
+// peut se reconnecter sans qu'aucune tâche de fond ne doive passer.
 const platformBans = {
   get: (userId) => db.prepare('SELECT * FROM platform_bans WHERE user_id = ?').get(userId) || null,
-  isBanned: (userId) => !!db.prepare('SELECT 1 FROM platform_bans WHERE user_id = ?').get(userId),
+  // Bannissement en cours uniquement (les expirés ne comptent plus).
+  isBanned: (userId) => !!db.prepare(`SELECT 1 FROM platform_bans
+    WHERE user_id = ? AND (expires_at IS NULL OR expires_at = '' OR datetime(expires_at) > datetime('now'))`).get(userId),
   all: () => db.prepare('SELECT * FROM platform_bans ORDER BY created_at DESC').all(),
-  set: (userId, reason = '', createdBy = 0) => db.prepare(`INSERT INTO platform_bans (user_id, reason, created_by)
-    VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET reason = excluded.reason, created_at = datetime('now'), created_by = excluded.created_by`)
-    .run(userId, String(reason || '').slice(0, 500), createdBy || 0),
+  // reason, auteur, et durée en minutes (0 ou absent = permanent).
+  set: (userId, reason = '', createdBy = 0, durationMin = 0) => {
+    const minutes = Math.max(0, Math.floor(Number(durationMin) || 0));
+    const expiresAt = minutes > 0
+      ? new Date(Date.now() + minutes * 60000).toISOString()
+      : '';
+    db.prepare(`INSERT INTO platform_bans (user_id, reason, created_by, expires_at, duration_min)
+      VALUES (?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET
+        reason = excluded.reason,
+        created_at = datetime('now'),
+        created_by = excluded.created_by,
+        expires_at = excluded.expires_at,
+        duration_min = excluded.duration_min`)
+      .run(userId, String(reason || '').slice(0, 500), createdBy || 0, expiresAt, minutes);
+    return platformBans.get(userId);
+  },
   remove: (userId) => db.prepare('DELETE FROM platform_bans WHERE user_id = ?').run(userId),
+  // Millièmes restants avant la fin du bannissement (0 = permanent ou expiré).
+  remainingMs: (ban) => {
+    if (!ban || !ban.expires_at) return 0;
+    const fin = new Date(ban.expires_at).getTime();
+    if (!Number.isFinite(fin)) return 0;
+    return Math.max(0, fin - Date.now());
+  },
+  // Nettoyage des bannissements expirés : appelé à l'occasion, jamais bloquant.
+  purgeExpired: () => db.prepare(`DELETE FROM platform_bans
+    WHERE expires_at IS NOT NULL AND expires_at <> '' AND datetime(expires_at) <= datetime('now')`).run().changes,
 };
 
 const platformAudit = {

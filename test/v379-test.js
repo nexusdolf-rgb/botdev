@@ -474,7 +474,7 @@ const json = (p) => v2.json(p || {});
     check(`i18n ${cle} : FR + EN`, typeof fr === 'string' && fr !== cle && typeof en === 'string' && en !== cle);
   }
   const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
-  check('cache public inchangé (aucun fichier servi modifié)', (html.match(/\?v=378/g) || []).length === 7);
+  check('cache public inchangé (aucun fichier servi modifié)', (html.match(/\?v=379/g) || []).length === 7);
   const src = fs.readFileSync(path.join(__dirname, '..', 'server', 'discord', 'panels.js'), 'utf8');
   check('aucun tiret cadratin dans les nouveaux textes',
     ![/—/.test(i18n.t('fr', 'ticket_add_desc')), /—/.test(i18n.t('fr', 'ticket_remove_empty_desc')),

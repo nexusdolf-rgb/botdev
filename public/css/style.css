@@ -690,6 +690,69 @@ body { font-family: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, sans-
 @keyframes avaFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
 .auth-trust { display: flex; flex-direction: column; gap: 7px; margin: 18px 0 14px; text-align: left; }
 .auth-trust span { font-size: 12px; color: var(--text-dim); line-height: 1.45; }
+/* ============================================================
+   v379 — panneau du compte banni
+   Une personne bannie ne peut pas se connecter : cette page lui dit
+   pourquoi, jusqu'à quand, et fait défiler le temps restant.
+   ============================================================ */
+.banned-wrap { align-items: center; }
+.banned-card { width: min(520px, 94vw); text-align: center; }
+.banned-icon {
+  width: 58px; height: 58px; margin: 0 auto 14px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #ff8a8d; background: rgba(237, 66, 69, .12);
+  border: 1px solid rgba(237, 66, 69, .38);
+}
+/* La carte reste sombre dans les deux thèmes : on force donc des couleurs
+   claires. Sans cela, le thème clair du navigateur (html.hx-light body
+   { color: #1c1e26 }) rendait le titre et le motif illisibles sur ce fond. */
+.banned-card, .banned-card h2, .banned-card p, .banned-card a { color: var(--text); }
+.banned-card .sub, .banned-card .banned-label { color: var(--text-dim); }
+.banned-card h2 { font-size: 21px; margin-bottom: 6px; }
+.banned-card .sub { color: var(--text-dim); font-size: 14px; margin-bottom: 18px; }
+.banned-reason {
+  text-align: left; padding: 13px 15px; margin-bottom: 12px;
+  background: rgba(8, 11, 18, .36); border: 1px solid rgba(54, 68, 92, .5);
+  border-radius: 12px;
+}
+.banned-reason p { margin: 4px 0 0; line-height: 1.55; font-size: 14.5px; word-break: break-word; }
+.banned-label {
+  display: block; font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--text-dim); font-weight: 600;
+}
+.banned-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  text-align: left; margin-bottom: 12px;
+}
+.banned-grid > div {
+  padding: 11px 13px; border-radius: 12px;
+  background: rgba(8, 11, 18, .3); border: 1px solid rgba(54, 68, 92, .42);
+}
+.banned-grid p { margin: 4px 0 0; font-size: 14px; }
+.banned-countdown {
+  text-align: left; padding: 13px 15px; border-radius: 12px;
+  background: rgba(8, 11, 18, .36); border: 1px solid rgba(224, 122, 95, .34);
+}
+.banned-clock {
+  margin: 6px 0 10px; font-size: 24px; font-weight: 700;
+  font-variant-numeric: tabular-nums; letter-spacing: .01em;
+  color: #ffb4a2;
+}
+.banned-bar {
+  height: 6px; border-radius: 999px; overflow: hidden;
+  background: rgba(255, 255, 255, .08);
+}
+.banned-bar span {
+  display: block; height: 100%; width: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, #ed4245, #f0a05e);
+  transition: width .9s linear;
+}
+.banned-card .btn-discord { margin-top: 16px; }
+@media (max-width: 520px) {
+  .banned-grid { grid-template-columns: 1fr; }
+  .banned-clock { font-size: 21px; }
+}
+
 .btn-spin {
   width: 15px; height: 15px; border-radius: 50%; display: inline-block;
   border: 2px solid rgba(255,255,255,.35); border-top-color: #fff;
