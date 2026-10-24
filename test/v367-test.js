@@ -39,7 +39,7 @@ const lecture = (rel) => fs.readFileSync(path.join(RACINE, rel), 'utf8');
 const CSS = ['public/css/dashboard.css', 'public/css/style.css'];
 const JS = ['public/js/app.js', 'public/js/dashboard.js', 'public/js/public.js',
   'public/js/editor.js', 'public/js/views.js'];
-const VERSION = 381;
+const VERSION = 380;
 
 let ok = 0;
 let ko = 0;
@@ -105,10 +105,7 @@ const sansCommentaires = (s) => s
   // Le plancher de 11 px ne s'applique pas aux pieces qui copient Discord
   // (badge « APP » a 8 px, etiquette d'embed a 8,5 px, pied d'apercu a 11,5 px)
   // ni au 9,5 px de base de .mg-kicker, ou le plancher mobile prend le relais.
-  // v381 — `.dprev-*` : les cadres d'aperçu recopient Discord (dont le
-  // « NIVEAU » en 10 px de la carte de montée de niveau). Même raison que
-  // `.dp-` et `.adv-` : ce n'est pas du texte d'interface.
-  const APERCU = /\.(dp-|ca-|adv-|eb-|discord-|dprev-|mg-kicker)/;
+  const APERCU = /\.(dp-|ca-|adv-|eb-|discord-|mg-kicker)/;
   for (const rel of [...CSS, ...JS]) {
     const src = sansCommentaires(lecture(rel));
     // La regle n'est pas « taille entiere » mais « cran de 0,5 px » : 11,5 px

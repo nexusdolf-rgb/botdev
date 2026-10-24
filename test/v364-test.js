@@ -249,8 +249,8 @@ window.__r = (async () => {
       /<link rel="preload" href="\/api\/public\/bot-avatar" as="image" \/>/.test(html), 'preload absent');
     check('le preload est une image (sinon le navigateur ignore la ressource)',
       html.includes('as="image"'), 'as="image" absent');
-    check('index.html versionné ?v=381 (7 liens)', (html.match(/\?v=381/g) || []).length === 7,
-      String((html.match(/\?v=381/g) || []).length));
+    check('index.html versionné ?v=380 (7 liens)', (html.match(/\?v=380/g) || []).length === 7,
+      String((html.match(/\?v=380/g) || []).length));
     check('aucun ancien ?v=363 n\u2019est resté dans public/',
       !fs.readdirSync(path.join(RACINE, 'public', 'js')).some((f) => /bot-avatar\?v=363/.test(lire('public/js/' + f))),
       'version périmée dans un js');
@@ -278,7 +278,7 @@ window.__r = (async () => {
   console.log('\n— 6. Service worker : trois pièges fermés —');
   {
     const src = lire('public/sw.js');
-    check('le nom du cache suit la version', src.includes("const CACHE = 'botdev-v381';"), 'CACHE périmé');
+    check('le nom du cache suit la version', src.includes("const CACHE = 'botdev-v380';"), 'CACHE périmé');
     check('installation tolérante (Promise.allSettled)', /Promise\.allSettled\(ASSETS\.map/.test(src), 'addAll toujours présent');
     check('seules les réponses valides sont mises en cache', /if \(resp && resp\.ok\)/.test(src), 'garde resp.ok absente');
     check('la coquille HTML n\u2019est servie que pour une navigation', /mode === 'navigate'/.test(src), 'garde de mode absente');
@@ -324,7 +324,7 @@ window.__r = (async () => {
       const cachesObj = {
         open: async () => cache,
         match: (req) => cache.match(req),
-        keys: async () => ['botdev-v381', 'botdev-v1'],
+        keys: async () => ['botdev-v380', 'botdev-v1'],
         delete: async (k) => { deletes.push(k); return true; },
       };
       const location = { origin: 'http://localhost:3000' };
@@ -361,7 +361,7 @@ window.__r = (async () => {
       // Réseau OK sur un JS : mis en cache.
       const vus = [];
       const sw = monteSw({ fetchImpl: async (r) => { vus.push(String(r.url)); return R(true, 200, 'code'); } });
-      const out = await sw.fetche(H('http://localhost:3000/js/dashboard.js?v=381'));
+      const out = await sw.fetche(H('http://localhost:3000/js/dashboard.js?v=380'));
       await wait(10);
       check('js valide : passé au navigateur ET mis en cache',
         out.repondu && out.valeur && out.valeur.ok && sw.puts.some((p) => /dashboard\.js/.test(p.url)), JSON.stringify(out.valeur && { ok: out.valeur.ok }) + ' puts=' + sw.puts.length);
@@ -370,7 +370,7 @@ window.__r = (async () => {
     {
       // 404 sur un CSS : avalé, mais SURTOUT pas stocké.
       const sw = monteSw({ fetchImpl: async () => R(false, 404, 'pas trouve') });
-      const out = await sw.fetche(H('http://localhost:3000/css/dashboard.css?v=381'));
+      const out = await sw.fetche(H('http://localhost:3000/css/dashboard.css?v=380'));
       await wait(10);
       check('réponse d\u2019erreur : transmise telle quelle, jamais stockée',
         out.repondu && out.valeur.status === 404 && sw.puts.length === 0, 'puts=' + JSON.stringify(sw.puts));
@@ -378,7 +378,7 @@ window.__r = (async () => {
     {
       // Réseau en panne sur un JS non cache : PAS de coquille HTML.
       const sw = monteSw({ fetchImpl: async () => { throw new Error('réseau'); } });
-      const out = await sw.fetche(H('http://localhost:3000/js/dashboard.js?v=381'));
+      const out = await sw.fetche(H('http://localhost:3000/js/dashboard.js?v=380'));
       check('js introuvable hors ligne : le HTML n\u2019est plus servi en guise de script',
         out.repondu && !!out.erreur && !out.valeur, JSON.stringify(out));
       check('le refus est net (message « hors ligne »), pas une page blanche muette',
