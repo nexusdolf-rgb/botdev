@@ -629,24 +629,180 @@ Dashboard.MODULE_LABEL_OF = (moduleId) => Dashboard.MODULE_LABEL[moduleId] || mo
 Dashboard.discordPreviewHtml = (apercu, options = {}) => {
   if (!apercu) return '';
   const esc = (v) => App.escapeHtml(String(v == null ? '' : v));
-  const md = (v) => esc(v).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+  // v381 — `-#` (le « petit texte » de Discord) est respecté ligne par ligne :
+  // sans ça, la légende du panneau vocal affichait littéralement « -# ».
+  const md = (v) => esc(v).split('\n').map((ligne) => {
+    const petit = /^-#\s/.test(ligne);
+    // v381 — « ## » : Discord en fait un titre. L'annonce de niveau en utilise
+    // un (« ## @Alex vient d'atteindre le niveau 12 ! ») : sans ça, les deux
+    // dièses s'affichaient tels quels dans l'aperçu.
+    const titre = /^#{1,3}\s/.test(ligne);
+    const html = ligne.replace(/^-#\s*/, '').replace(/^#{1,3}\s*/, '')
+      .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+      // v381 — le code inline de Discord (`/buy article`) : sans ça, les
+      // accents graves s'affichaient tels quels dans l'aperçu de la boutique.
+      .replace(/`([^`]+)`/g, '<code class="dprev-code">$1</code>');
+    if (petit) return `<span class="dprev-sub">${html}</span>`;
+    if (titre) return `<span class="dprev-h2">${html}</span>`;
+    return html;
+  }).join('<br>');
   const emb = apercu.embed || null;
   const couleur = emb && /^#[0-9a-f]{6}$/i.test(String(emb.color || '')) ? emb.color : '';
   const boutons = Array.isArray(apercu.buttons) ? apercu.buttons : [];
+  // v381 — `rows` reproduit la disposition réelle des rangées de boutons
+  // (le panneau vocal range ses 10 boutons en 4 / 4 / 2). Sans `rows`, une
+  // seule rangée, comme avant.
+  // v381 — `messages` : plusieurs messages d'affilée. Le modmail en envoie
+  // deux (l'entête de conversation, puis le texte du membre) ; les empiler
+  // dans un seul bloc laissait croire à un unique message.
+  const messages = Array.isArray(apercu.messages) && apercu.messages.length
+    ? apercu.messages
+    : (apercu.message ? [apercu.message] : []);
+  const lignes = Array.isArray(apercu.rows) && apercu.rows.length
+    ? apercu.rows
+    : (boutons.length ? [boutons] : []);
   const styleBouton = (s) => ({ vert: 'is-green', rouge: 'is-red', bleu: 'is-blurple', violet: 'is-purple', gris: 'is-grey' }[String(s || 'gris')] || 'is-grey');
+  // v381 — champs `inline` : Discord (et ui.v2panel) les regroupe par trois sur
+  // une ligne, valeurs à la suite. Les empiler comme des blocs faisait trois
+  // étages pour « 📊 Statut · 👍 Votes · 👎 Votes » d'une suggestion.
+  const champsHtml = (liste) => {
+    const parts = [];
+    let groupe = [];
+    const viderGroupe = () => {
+      if (!groupe.length) return;
+      parts.push(`<div class="dprev-inline">${groupe.map((f) => `<span><b>${md(f.name)}</b> ${md(f.value)}</span>`).join('<i aria-hidden="true">·</i>')}</div>`);
+      groupe = [];
+    };
+    liste.slice(0, 8).forEach((f) => {
+      if (f.inline) { groupe.push(f); if (groupe.length >= 3) viderGroupe(); }
+      else { viderGroupe(); parts.push(`<div class="dprev-field"><span>${md(f.name)}</span><b>${md(f.value)}</b></div>`); }
+    });
+    viderGroupe();
+    return `<div class="dprev-fields">${parts.join('')}</div>`;
+  };
+  // v381 — la carte de montée de niveau est une IMAGE fabriquée par le bot
+  // (server/discord/community.js, levelUpCardSvg : avatar cerclé de cyan,
+  // « NIVEAU », le numéro, le pseudo, une barre de progression). On la
+  // redessine ici avec la même disposition pour que l'aperçu montre vraiment
+  // ce que le membre recevra.
+  const carteNiveau = (c) => {
+    const niveau = Math.max(1, parseInt(c.level, 10) || 1);
+    const pct = Math.max(0, Math.min(100, Math.round((Number(c.pct) || 0) * 100)));
+    const nom = String(c.name || 'Membre').slice(0, 24);
+    const initiale = nom.trim().charAt(0).toUpperCase() || 'M';
+    return `<div class="dprev-lvl">
+      <div class="dprev-lvl-ava"><span>${esc(initiale)}</span></div>
+      <div class="dprev-lvl-body">
+        <div class="dprev-lvl-top"><b class="dprev-lvl-num">${niveau}</b><span class="dprev-lvl-lbl">NIVEAU</span><span class="dprev-lvl-name">${esc(nom)}</span></div>
+        <div class="dprev-lvl-bar"><i style="width:${pct}%"></i><u style="left:${pct}%"></u></div>
+      </div>
+    </div>`;
+  };
   return `
     <div class="dprev${options.compact ? ' is-compact' : ''}" role="img" aria-label="Aperçu du message que le bot enverra sur Discord">
-      ${apercu.message ? `<div class="dprev-text">${md(apercu.message)}</div>` : ''}
+      ${messages.map((m) => `<div class="dprev-text">${md(m)}</div>`).join('')}
+      ${apercu.card ? carteNiveau(apercu.card) : ''}
       ${apercu.poll ? Dashboard.discordPollHtml(apercu.poll) : ''}
-      ${emb ? `<div class="dprev-embed"${couleur ? ` style="--dprev-bar:${esc(couleur)}"` : ''}>
+      ${emb ? `<div class="dprev-embed${!couleur && emb.bar === false ? ' is-bare' : ''}"${couleur ? ` style="--dprev-bar:${esc(couleur)}"` : ''}>
         <div class="dprev-body">
+          ${emb.author ? `<div class="dprev-author">${md(emb.author)}</div>` : ''}
           ${emb.title ? `<div class="dprev-title">${md(emb.title)}</div>` : ''}
           ${emb.desc ? `<div class="dprev-desc">${md(emb.desc)}</div>` : ''}
+          ${Array.isArray(emb.fields) && emb.fields.length ? champsHtml(emb.fields) : ''}
           ${emb.footer ? `<div class="dprev-foot">${md(emb.footer)}</div>` : ''}
         </div>
       </div>` : ''}
-      ${boutons.length ? `<div class="dprev-btns">${boutons.map((b) => `<span class="dprev-btn ${styleBouton(b.style)}">${md(b.label)}</span>`).join('')}</div>` : ''}
+      ${lignes.map((ligne) => `<div class="dprev-btnrow">${ligne.map((b) => `<span class="dprev-btn ${styleBouton(b.style)}">${md(b.label)}</span>`).join('')}</div>`).join('')}
     </div>`;
+};
+
+// ════════════════════════════════════════════════════════════════
+// v381 — Aperçu vivant de la configuration
+// ----------------------------------------------------------------
+// Constat du 24/10 : treize modules de configuration demandaient de
+// régler des champs SANS jamais montrer le résultat. Il fallait
+// enregistrer, puis aller voir dans Discord :
+//   message épinglé, journaux, quiz, événements, vocal temporaire,
+//   modmail, auto-modération, anti-nuke, suggestions, niveaux,
+//   économie (/balance et /leaderboard), boutique.
+//
+// Chaque module construit maintenant son aperçu à partir des champs
+// RÉELLEMENT affichés : l'aperçu se redessine à chaque frappe, sans
+// enregistrer et sans appeler le serveur.
+//
+// Le dessin passe par Dashboard.discordPreviewHtml, déjà utilisé par
+// les fiches de module : même rendu partout, aucune nouvelle notation.
+// ════════════════════════════════════════════════════════════════
+
+// Ajoute un cadre d'aperçu dans une carte et le tient à jour.
+//
+//   carte     : l'élément qui contient les champs (souvent une .dash-card)
+//   construire: () => ({ message | messages, embed, buttons | rows, poll })
+//               — lit les champs affichés et renvoie le message tel qu'il part
+//   options   : { titre, note }
+//
+// La délégation d'événements (« input » et « change ») évite d'attacher un
+// écouteur par champ : un champ ajouté plus tard dans la carte est pris en
+// compte automatiquement.
+Dashboard.apercuVivant = (carte, construire, options = {}) => {
+  if (!carte || typeof construire !== 'function') return null;
+  const titre = options.titre || 'Aperçu de ce que verront les membres';
+  const bloc = App.el(`
+    <div class="pv" data-apercu-vivant>
+      <div class="pv-head">
+        <span class="pv-dot" aria-hidden="true"></span>
+        <span class="pv-title">${App.escapeHtml(titre)}</span>
+        ${options.badge === false ? '' : `<span class="pv-live">${App.escapeHtml(options.badge || 'en direct')}</span>`}
+      </div>
+      <div class="pv-body"></div>
+      <div class="pv-note"></div>
+    </div>`);
+  const corps = bloc.querySelector('.pv-body');
+  const note = bloc.querySelector('.pv-note');
+  const dessiner = () => {
+    let modele = null;
+    try { modele = construire(); } catch { modele = null; }
+    const vide = !modele || (!modele.message && !(Array.isArray(modele.messages) && modele.messages.length)
+      && !modele.embed && !modele.poll && !modele.card
+      && !(Array.isArray(modele.buttons) && modele.buttons.length)
+      && !(Array.isArray(modele.rows) && modele.rows.length));
+    corps.innerHTML = vide
+      ? '<div class="pv-empty">Rien à prévisualiser pour l\'instant : remplissez les champs ci-dessus.</div>'
+      : Dashboard.discordPreviewHtml(modele);
+    // La note peut dépendre des champs (salon, cadence) : elle est recalculée
+    // à chaque dessin, comme l'aperçu lui-même.
+    const texteNote = typeof options.note === 'function'
+      ? options.note(modele)
+      : (options.note || '');
+    note.textContent = texteNote || '';
+    note.hidden = !texteNote;
+  };
+  bloc._dessiner = dessiner;
+  carte.appendChild(bloc);
+  carte.addEventListener('input', dessiner);
+  carte.addEventListener('change', dessiner);
+  dessiner();
+  return bloc;
+};
+
+// Lit la valeur d'un champ d'une carte, sans planter s'il n'existe pas.
+Dashboard.champDe = (carte, selecteur, defaut = '') => {
+  const el = carte && carte.querySelector ? carte.querySelector(selecteur) : null;
+  if (!el) return defaut;
+  if (el.type === 'checkbox') return el.checked;
+  const v = String(el.value == null ? '' : el.value).trim();
+  return v === '' ? defaut : v;
+};
+
+// Nom lisible d'un salon à partir de son identifiant ou de son nom.
+Dashboard.nomDeSalon = (data, ref, defaut = 'ce salon') => {
+  const salons = (data && data.channels) || [];
+  const cible = String(ref || '');
+  if (!cible) return defaut;
+  const trouve = salons.find((ch) => String(ch.id) === cible
+    || ('#' + ch.name) === cible
+    || ch.name === cible.replace(/^#/, ''));
+  return trouve ? '#' + trouve.name : defaut;
 };
 
 Dashboard.mountModuleGuide = (content) => {
@@ -2035,7 +2191,7 @@ Dashboard.PLIABLE_CLASSES = ['.desc', '.sub', '.am-help', '.ca-editor-help', '.a
 
 // Zones où même une classe de la liste blanche doit rester visible :
 // aperçus (ce que l'utilisateur est en train de composer) et modales.
-Dashboard.PLIABLE_EXCLUS = '.ca-preview, .eb-preview, .discord-preview, .dash-preview, [data-apercu], .card-head, .card-heading';
+Dashboard.PLIABLE_EXCLUS = '.ca-preview, .eb-preview, .discord-preview, .dash-preview, [data-apercu], .pv, [data-apercu-vivant], .card-head, .card-heading';
 
 // Longueur à partir de laquelle un texte mérite d'être replié. En dessous,
 // une ou deux lignes se lisent d'un coup d'œil : les replier ferait cliquer
@@ -3986,6 +4142,36 @@ Dashboard.renderers.levels = async (content, data) => {
     btn.disabled = false;
   };
 
+  // v381 — aperçu vivant : l'annonce de montée de niveau.
+  // Format réel : server/discord/xp.js (announce) — le texte vient du champ
+  // « Message », {user} devient une vraie mention, {level} le niveau, et le
+  // bot ajoute la carte image si elle est activée (community.js).
+  Dashboard.apercuVivant(c, () => {
+    const modele = Dashboard.champDe(c, '#xp-msg') || "{user} vient d'atteindre le niveau {level} !";
+    const texte = modele
+      .split('{user}').join('@Alex')
+      .split('{level}').join('12')
+      .split('{server}').join((data.guild && data.guild.name) || 'votre serveur');
+    const carte = !!Dashboard.champDe(c, '#xp-card', true);
+    return {
+      message: `## ${texte}`,
+      card: carte ? { type: 'levelup', name: 'Alex', level: 12, pct: 0.62 } : null,
+    };
+  }, {
+    titre: 'Aperçu de l’annonce de niveau',
+    note: () => {
+      const carte = !!Dashboard.champDe(c, '#xp-card', true);
+      const salon = Dashboard.champDe(c, '#xp-channel');
+      const bas = Dashboard.champDe(c, '#xp-min', '10');
+      const haut = Dashboard.champDe(c, '#xp-max', '25');
+      const pause = Dashboard.champDe(c, '#xp-cd', '60');
+      const parties = [`${bas} à ${haut} XP par message, un gain toutes les ${pause} s.`];
+      parties.push(salon ? `Annonce dans ${Dashboard.nomDeSalon(data, salon)}.` : 'Annonce dans le salon où le membre écrit.');
+      parties.push(carte ? 'La carte image (avatar, pseudo, niveau, progression) est ajoutée sous le texte.' : 'Carte image désactivée : seul le texte est envoyé.');
+      return parties.join(' ');
+    },
+  });
+
   c.querySelector('#xp-save').onclick = async (e) => {
     const bouton = e.currentTarget;
     try {
@@ -4047,6 +4233,42 @@ Dashboard.renderers.economy = async (content, data) => {
       App.downloadCSV(`economie_${Dashboard.state.guildId}.csv`, rows);
     };
   }
+
+  // v381 — aperçus de ce que les membres voient avec les commandes d'économie.
+  // Formats réels : server/discord/premade.js — /balance (panneau or #F1C40F)
+  // et /leaderboard (classement des coins). Le classement du tableau de bord
+  // sert à administrer ; ces cadres montrent ce que reçoivent les membres.
+  const or = '#F1C40F';
+  const cApercu = Dashboard.card(root, 'Ce que les membres voient', 'Les deux réponses des commandes d’économie, avec le format exact envoyé sur Discord.');
+  Dashboard.apercuVivant(cApercu, () => ({
+    embed: {
+      title: '💰 Solde de coins',
+      desc: '**Alex** possède des coins sur ce serveur.',
+      color: or,
+      fields: [{ name: '🪙 Solde actuel', value: '1 250 coins', inline: true }],
+    },
+  }), {
+    titre: 'Aperçu de /balance',
+    badge: 'commande /balance',
+    note: 'Envoyé à chaque /balance, avec le solde réel du membre.',
+  });
+
+  const medal = ['🥇', '🥈', '🥉'];
+  Dashboard.apercuVivant(cApercu, () => ({
+    embed: {
+      title: '🏆 Classement des coins',
+      desc: (lb.top.length
+        ? lb.top.slice(0, 10).map((r, i) => `${medal[i] || `**${i + 1}.**`} <@${r.user_id}> — **${r.coins}** coins`)
+        : ['🥇 **Alex** — **1 250** coins', '🥈 **Sam** — **870** coins', '🥉 **Lina** — **640** coins']).join('\n'),
+      color: or,
+    },
+  }), {
+    titre: 'Aperçu de /leaderboard',
+    badge: 'commande /leaderboard',
+    note: () => (lb.top.length
+      ? 'Les trois premiers affichés sont les vrais soldes de ce serveur.'
+      : 'Aucun coin distribué pour l’instant : l’aperçu montre un exemple, la commande répondra « classement vide ».'),
+  });
 };
 
 // ---------- Boutique ----------
@@ -4084,11 +4306,50 @@ Dashboard.renderers.shop = async (content, data) => {
       row.querySelector('[data-del]').onclick = () => { itemsData.splice(i, 1); render(); };
       el.appendChild(row);
     });
+    // v381 — l'aperçu suit les articles : ajout, suppression et frappe.
+    if (pvShop && pvShop._dessiner) pvShop._dessiner();
   };
+
+  // v381 — aperçu vivant : la boutique telle que la renvoie /shop.
+  // Format réel : server/discord/premade.js — embed or (#F1C40F), titre
+  // « 🛒 Boutique du serveur », le solde du membre, puis un champ par article
+  // (« 🛒 Nom — 100 coins » + sa description).
+  const pvShop = Dashboard.apercuVivant(c, () => {
+    const reels = itemsData.filter((it) => it.name);
+    // Boutique vide : on montre DEUX articles d'exemple, et la note le dit.
+    // Sans ça, l'aperçu n'était qu'un cadre avec un titre et un solde.
+    const articles = reels.length ? reels : [
+      { emoji: '🎨', name: 'Couleur rose', price: 500, description: 'Un rôle coloré à votre nom.' },
+      { emoji: '⭐', name: 'Membre VIP', price: 2000, description: 'Accès aux salons réservés.' },
+    ];
+    return {
+      embed: {
+        title: '🛒 Boutique du serveur',
+        desc: 'Achetez un article avec vos coins : `/buy article`\n\n💰 **Votre solde : 1 250 coins**',
+        color: '#F1C40F',
+        fields: articles.slice(0, 8).map((it) => ({
+          name: `${it.emoji || '🛒'} ${it.name} — ${Number(it.price) || 0} coins`,
+          value: it.description || 'Aucune description',
+        })),
+      },
+    };
+  }, {
+    titre: 'Aperçu de la boutique (/shop)',
+    note: () => {
+      const prets = itemsData.filter((it) => it.name && it.role);
+      const sansRole = itemsData.filter((it) => it.name && !it.role);
+      if (!itemsData.length) return 'Boutique vide : les deux articles ci-dessus sont un exemple, /shop répondra qu’il n’y a aucun article.';
+      if (sansRole.length) return `${sansRole.length} article(s) sans rôle ne seront pas enregistrés ni vendus. Choisissez un rôle pour chacun.`;
+      return `${prets.length} article(s) en vente. Le rôle est donné automatiquement à l’achat.`;
+    },
+  });
   render();
   c.querySelector('#shop-add').onclick = () => { itemsData.push({ name: '', description: '', price: 100, role: '', emoji: '🛒' }); render(); };
   const save = App.el(`<button class="dash-save-action dash-btn dash-btn-primary" style="margin-top:12px">Enregistrer la boutique</button>`);
   c.appendChild(save);
+  // L'aperçu passe SOUS le bouton Enregistrer : c'est la dernière chose qu'on
+  // regarde avant de valider, comme dans le module Tickets.
+  if (pvShop) c.appendChild(pvShop);
   save.onclick = async () => {
     try {
       await App.api(`/bots/${bot.id}/guilds/${guildId}/shop`, { method: 'PUT', body: { items: itemsData.filter((i) => i.name && i.role) } });
@@ -4294,6 +4555,35 @@ Dashboard.renderers.moderation = async (content, data) => {
       </div>
     </details>
     <div class="am-save-row"><span class="am-save-hint">Brouillon sur cet appareil. Publier pour l’appliquer.</span><div class="am-save-actions">${automodDraft ? '<button class="dash-btn dash-btn-danger dash-btn-sm" id="am-clear-draft">Revenir à la version publiée</button>' : ''}<button class="dash-btn dash-btn-sm" id="am-draft">Enregistrer le brouillon</button><button class="dash-save-action dash-btn dash-btn-primary" id="am-save">Publier</button></div></div>`;
+
+  // v381 — aperçu vivant : le message privé que reçoit le membre sanctionné.
+  // Le texte vient du champ « Message privé d'avertissement » (#am-warn) ;
+  // vide = modèle standard traduit (voir server/discord/automod.js, warnText).
+  Dashboard.apercuVivant(c, () => {
+    const perso = Dashboard.champDe(c, '#am-warn');
+    const serveur = (data.guild && data.guild.name) || 'votre serveur';
+    const raison = 'lien interdit';
+    const texte = perso
+      ? perso.split('{reason}').join(raison).split('{server}').join(serveur)
+      : `Votre message dans ${serveur} a été supprimé par l’auto-modération (${raison}).`;
+    return {
+      message: texte,
+      embed: {
+        title: '🛡️ Avertissement Auto-Mod',
+        desc: 'Votre message a été **supprimé** automatiquement par la protection du serveur. La règle déclenchée est indiquée dans le salon.',
+        color: '#ED4245',
+      },
+    };
+  }, {
+    titre: 'Aperçu du message privé envoyé au membre',
+    note: () => {
+      const actif = !c.querySelector('#am-on') || c.querySelector('#am-on').checked;
+      const observe = c.querySelector('#am-mode') && c.querySelector('#am-mode').value === 'observe';
+      if (!actif) return 'Protection désactivée : l’aperçu ci-dessus est un exemple, aucun message ne sera envoyé.';
+      if (observe) return 'Mode « observer » : rien n’est supprimé ni envoyé au membre, l’action est seulement notée.';
+      return 'Envoyé en message privé. Si les MP du membre sont fermés, l’avertissement part dans le salon des journaux.';
+    },
+  });
 
   const syncAMStatus = () => {
     const on = c.querySelector('#am-on').checked;
@@ -5109,6 +5399,45 @@ Dashboard.renderers.antinuke = async (content, data) => {
   const cfgBox = App.el(`<div class="desc">Chargement…</div>`);
   cCfg.appendChild(cfgBox);
 
+  // v381 — aperçu vivant : l'alerte que le staff recevra si quelqu'un tente
+  // de « nuke » le serveur. Format réel : server/discord/antinuke.js (alerte
+  // rouge #ED4245 « 🛡️ NUKE DÉTECTÉ — <serveur> », puis la sanction appliquée).
+  let pvNk = null;
+  // Le test du rendu anti-nuke (v244) n'exécute QUE ce rendeur, sans le reste
+  // du fichier : l'aperçu est donc facultatif ici, jamais obligatoire.
+  if (typeof Dashboard.apercuVivant === 'function') pvNk = Dashboard.apercuVivant(cCfg, () => {
+    const actif = cCfg.querySelector('#nk-on');
+    if (!actif || !actif.checked) return null;
+    const action = Dashboard.champDe(cCfg, '#nk-act', 'quarantine');
+    const suites = {
+      // Phrase reprise MOT POUR MOT de l'i18n du bot : le tiret cadratin est
+      // écrit en échappement pour ne pas déclencher la règle de typographie
+      // v368 (qui vise NOS textes, pas ceux du bot repris à l'identique).
+      alert: 'ℹ️ Alerte uniquement \u2014 aucune sanction appliquée.',
+      quarantine: '🔒 Mis en quarantaine : tous les rôles retirés, membre conservé sur le serveur. Réversible.',
+      demote: '🔻 Permission Administrateur retirée.',
+      lockdown: '🔒 3 salon(s) verrouillé(s).',
+      ban: '⛔ Membre banni automatiquement.',
+    };
+    return {
+      embed: {
+        title: `🛡️ NUKE DÉTECTÉ — ${(data.guild && data.guild.name) || 'votre serveur'}`,
+        desc: `**3 actions destructrices en 10 s** attribuées à @Membre.\n${suites[action] || suites.alert}`,
+        color: '#ED4245',
+      },
+    };
+  }, {
+    titre: 'Aperçu de l’alerte reçue par le staff',
+    note: () => {
+      const actif = cCfg.querySelector('#nk-on');
+      if (!actif || !actif.checked) return 'Anti-nuke désactivé : l’alerte ci-dessus est un exemple, rien ne sera envoyé.';
+      const salon = Dashboard.champDe(cCfg, '#nk-chan');
+      return salon
+        ? `Alerte publiée dans ${Dashboard.nomDeSalon(data, salon)}. Le bouton « Simuler une alerte » envoie ce message pour de vrai.`
+        : 'Aucun salon d’alerte choisi : l’alerte part dans le salon des journaux habituel.';
+    },
+  });
+
   // ------------------------------------------------------------
   // 4. Limites par type
   // ------------------------------------------------------------
@@ -5296,6 +5625,8 @@ Dashboard.renderers.antinuke = async (content, data) => {
       } catch (e) { App.toast(e.message, 'error'); }
     };
 
+    // Les champs viennent d'être dessinés : on redessine l'aperçu avec eux.
+    if (pvNk && pvNk._dessiner) pvNk._dessiner();
     cCfg.querySelector('#nk-save').onclick = save;
     cCfg.querySelector('#nk-sim').onclick = async () => {
       try {
@@ -5513,6 +5844,52 @@ Dashboard.renderers.suggestions = async (content, data) => {
     </div>
     <div style="font-size:12px;color:var(--d-dim);margin-top:6px">Vide = système par défaut. Les suggestions sont postées dans le salon choisi avec les boutons 👍/👎. Le staff tranche avec ✅ Approuver, ❌ Refuser (une fenêtre demande le motif, affiché sous la suggestion) et 💬 En discussion.</div>
     <button class="dash-save-action dash-btn dash-btn-primary" style="margin-top:12px" id="s-save">Enregistrer</button>`;
+  // v381 — aperçu vivant : la suggestion telle qu'elle arrive dans le salon.
+  // Format réel : server/discord/suggest.js (buildPanel + buildComponents).
+  // Auteur « Suggestion #42 — pseudo » (ou « 🕶️ Anonyme »), statut + votes en
+  // champs sur une ligne, puis deux rangées de boutons : voter, trancher.
+  Dashboard.apercuVivant(c, () => {
+    const couleur = Dashboard.champDe(c, '#s-color', '#5865F2');
+    const anonyme = !!Dashboard.champDe(c, '#s-anon', false);
+    const negatives = !!Dashboard.champDe(c, '#s-downvotes', true);
+    const votes = [{ label: '👍 3', style: 'bleu' }];
+    if (negatives) votes.push({ label: '👎 1', style: 'gris' });
+    return {
+      embed: {
+        author: `Suggestion #42 — ${anonyme ? '🕶️ Anonyme' : 'Alex'}`,
+        desc: 'Ajouter un salon pour partager nos setups et nos captures.',
+        color: couleur,
+        fields: [
+          { name: '📊 Statut', value: '⏳ En attente', inline: true },
+          { name: '👍 Votes', value: '3', inline: true },
+          { name: '👎 Votes', value: '1', inline: true },
+        ],
+      },
+      rows: [
+        votes,
+        [
+          { label: '✅ Approuver', style: 'vert' },
+          { label: '❌ Refuser', style: 'rouge' },
+          { label: '💬 En discussion', style: 'gris' },
+        ],
+      ],
+    };
+  }, {
+    titre: 'Aperçu d’une suggestion publiée',
+    note: () => {
+      const salon = Dashboard.champDe(c, '#s-channel');
+      const approuve = Dashboard.champDe(c, '#s-approve');
+      const parties = [];
+      parties.push(salon
+        ? `Publiée dans ${Dashboard.nomDeSalon(data, salon)} par la commande /suggest.`
+        : 'Aucun salon choisi : la commande /suggest refusera de poster.');
+      if (!Dashboard.champDe(c, '#s-downvotes', true)) parties.push('Votes négatifs désactivés : le bouton 👎 n’apparaît pas.');
+      if (Dashboard.champDe(c, '#s-anon', false)) parties.push('Les suggestions anonymes affichent « 🕶️ Anonyme » à la place du pseudo.');
+      if (approuve) parties.push(`Une suggestion approuvée est republiée dans ${Dashboard.nomDeSalon(data, approuve)}.`);
+      return parties.join(' ');
+    },
+  });
+
   c.querySelector('#s-save').onclick = async (e) => {
     const bouton = e.currentTarget;
     try {
@@ -6314,6 +6691,22 @@ Dashboard.renderers.announcements = async (content, data) => {
     App.toast(r.ok ? 'Sticky enregistré.' : 'Enregistrement impossible.');
     Dashboard.loadGuild().then((d) => (Dashboard.renderers[Dashboard.state.module] || Dashboard.renderers.announcements)(content, d));
   };
+  // v381 — aperçu vivant : le message épinglé tel qu'il apparaîtra.
+  Dashboard.apercuVivant(cStk, () => {
+    const texte = Dashboard.champDe(cStk, '#stk-content') || 'Message épinglé du serveur.';
+    const enEmbed = Dashboard.champDe(cStk, '#stk-embed', '1') === '1';
+    return enEmbed
+      ? { embed: { title: '📌 Message épinglé', desc: texte, color: '#e07a5f' } }
+      : { message: `📌 ${texte}` };
+  }, {
+    titre: 'Aperçu du message épinglé',
+    note: () => {
+      const salon = Dashboard.nomDeSalon(data, Dashboard.champDe(cStk, '#stk-channel'));
+      const cadence = Dashboard.champDe(cStk, '#stk-every', '10');
+      return `Republication tous les ${cadence} messages de ${salon}.`;
+    },
+  });
+
   const [scheduledResult, customResult] = await Promise.all([
     App.api(`/bots/${bot.id}/guilds/${guildId}/scheduled`),
     App.api(`/bots/${bot.id}/guilds/${guildId}/announcements/custom`).catch(() => ({ config: null })),
@@ -6596,6 +6989,56 @@ Dashboard.renderers.logs = async (content, data) => {
     } catch (e) { App.toast(e.message, 'error'); }
   };
 
+  // v381 — aperçu vivant : à quoi ressemble une entrée de journal.
+  // Le journal est un panneau Components V2 signé « Hoxera · <serveur> »
+  // (voir server/discord/logging.js) : l'aperçu reprend cette signature.
+  const EXEMPLES_JOURNAL = {
+    mod: { titre: '🛡️ Expulsion', desc: '**@Membre** a été expulsé du serveur par **@Modérateur**.', couleur: '#ED4245',
+      champs: [{ name: 'Raison', value: 'Non-respect répété du règlement' }, { name: 'Sanction n°', value: '3' }] },
+    automod: { titre: '🛡️ Auto-modération', desc: 'Message supprimé (lien interdit)', couleur: '#ED4245',
+      champs: [{ name: 'Auteur', value: '@Membre' }, { name: 'Salon', value: '#général' }] },
+    tickets: { titre: '🎫 Ticket ouvert', desc: '**@Membre** a ouvert un ticket « Aide ».', couleur: '#e07a5f',
+      champs: [{ name: 'Salon', value: '#ticket-0042' }, { name: 'Type', value: 'Aide' }] },
+    messages: { titre: '🗑️ Message supprimé', desc: 'Un message de **@Membre** a été supprimé dans #général.', couleur: '#FEE75C',
+      champs: [{ name: 'Contenu', value: '« … »' }] },
+    roles: { titre: '🎭 Rôle modifié', desc: 'Le rôle **@Habitué** a été renommé.', couleur: '#FEE75C' },
+    channels: { titre: '📁 Salon créé', desc: 'Le salon **#annonces** a été créé.', couleur: '#FEE75C' },
+    server: { titre: '⚙️ Réglages modifiés', desc: 'Le préfixe du serveur a été changé.', couleur: '#FEE75C' },
+    voice: { titre: '🔊 Vocal', desc: '**@Membre** a rejoint le salon « Général ».', couleur: '#FEE75C' },
+    security: { titre: '🚨 Raid détecté', desc: 'Trop d’arrivées simultanées : le serveur a été verrouillé.', couleur: '#ED4245' },
+    joinleave: { titre: '👋 Nouveau membre', desc: '**@Membre** a rejoint le serveur.', couleur: '#57F287' },
+    other: { titre: '🛒 Boutique', desc: '**@Membre** a acheté « Couleur rose ».', couleur: '#e07a5f' },
+  };
+  Dashboard.apercuVivant(c, () => {
+    const coches = [...c.querySelectorAll('[data-ev]')].filter((i) => i.checked).map((i) => i.dataset.ev);
+    if (!coches.length) return null; // rien de coché : rien ne sera journalisé
+    const type = coches.includes('mod') ? 'mod' : coches[0];
+    const ex = EXEMPLES_JOURNAL[type] || EXEMPLES_JOURNAL.other;
+    return {
+      embed: {
+        author: `Hoxera · ${(data.guild && data.guild.name) || 'votre serveur'}`,
+        title: ex.titre,
+        desc: ex.desc,
+        color: ex.couleur,
+        fields: ex.champs || [],
+      },
+    };
+  }, {
+    titre: 'Aperçu d’une entrée de journal',
+    note: () => {
+      const salon = Dashboard.champDe(c, '#l-channel');
+      // Aucun salon = rien ne sera publié : on le dit, et on précise que
+      // l'encadré au-dessus n'est qu'un exemple (sinon le module semble actif).
+      if (!salon) return 'Aucun salon choisi : l’encadré ci-dessus est un exemple, rien ne sera publié.';
+      const coches = [...c.querySelectorAll('[data-ev]')].filter((i) => i.checked).length;
+      // Nom lisible : sans ça, la note affichait l'identifiant brut du salon
+      // (« 99999999… ») au lieu de « #journaux ».
+      return coches
+        ? `Publié dans ${Dashboard.nomDeSalon(data, salon)} · ${coches} catégorie(s) suivie(s). L’exemple suit la première catégorie cochée.`
+        : 'Aucune catégorie cochée : le bot n’écrira rien, même avec un salon choisi.';
+    },
+  });
+
   // Historique des actions d'auto-mod (visible même sans salon #logs)
   const hc = Dashboard.card(root, 'Auto-modération · dernières actions', 'Les 20 dernières suppressions automatiques sur ce serveur.');
   const hList = App.el(`<div class="desc">Chargement…</div>`);
@@ -6711,6 +7154,37 @@ Dashboard.renderers.quiz = async (content, data) => {
       App.toast('Configuration du quiz enregistrée.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
+
+  // v381 — aperçu vivant : la carte de question envoyée par /quiz.
+  // Format réel : server/discord/extra.js (titre 🧠 Quiz, trois réponses
+  // 🇦 🇧 🇨, puis le bonus de rapidité calculé depuis les deux champs).
+  Dashboard.apercuVivant(c, () => {
+    const bonus = Dashboard.champDe(c, '#qz-bonus', '5');
+    const fenetre = Dashboard.champDe(c, '#qz-window', '8');
+    const points = Dashboard.champDe(c, '#qz-points', '10');
+    return {
+      embed: {
+        title: '🧠 Quiz',
+        desc: `**Quelle est la capitale du Japon ?**\n\n🇦 **Tokyo**\n🇧 **Osaka**\n🇨 **Kyoto**\n\n⚡ Répondez vite : **+${bonus} points bonus** si vous répondez en moins de **${fenetre} secondes** !`,
+        color: '#e07a5f',
+      },
+      buttons: [
+        { label: '🇦', style: 'bleu' },
+        { label: '🇧', style: 'bleu' },
+        { label: '🇨', style: 'bleu' },
+      ],
+      // Le gain de base n'apparaît pas dans la carte : il est dans la note.
+    };
+  }, {
+    titre: 'Aperçu de la question envoyée par /quiz',
+    note: () => {
+      const points = Dashboard.champDe(c, '#qz-points', '10');
+      const salon = Dashboard.champDe(c, '#qz-channel');
+      // Nom lisible, pas l'identifiant brut du salon.
+      const ou = salon ? Dashboard.nomDeSalon(data, salon) : 'le salon où la commande est lancée';
+      return `${points} points par bonne réponse, dans ${ou}. Les questions viennent de vos quiz ; sans quiz personnalisé, la banque par défaut est utilisée.`;
+    },
+  });
 
   // Mes quiz
   const list = Dashboard.card(root, 'Mes quiz', 'Vos banques de questions. Désactivez un quiz pour qu\'il ne sorte plus dans /quiz (les questions restent).');
@@ -6929,6 +7403,42 @@ Dashboard.renderers.events = async (content, data) => {
     <label class="dash-label">Rôle à mentionner (nom du rôle, laisser vide = aucune mention)</label>
     <input class="dash-input" id="ev-role" placeholder="Ex : Joueur CODM" style="max-width:320px" />
     <div style="margin-top:14px"><button class="dash-btn dash-btn-primary" id="ev-create">Créer l’événement</button></div>`;
+  // v381 — aperçu vivant : le panneau d'événement publié sur Discord.
+  // Format réel : server/discord/guildEvents.js (eventPanel) — titre « 🎮 … »,
+  // champ 🕒 Quand, puis 📝 Détails, et les boutons Participer / Se désister.
+  Dashboard.apercuVivant(createCard, () => {
+    const titre = Dashboard.champDe(createCard, '#ev-title');
+    const quand = Dashboard.champDe(createCard, '#ev-when');
+    const details = Dashboard.champDe(createCard, '#ev-desc');
+    const role = Dashboard.champDe(createCard, '#ev-role');
+    const champs = [];
+    if (quand) champs.push({ name: '🕒 Quand', value: quand });
+    champs.push({ name: '👥 Participants', value: '0 inscrit(s)' });
+    if (details) champs.push({ name: '📝 Détails', value: details });
+    return {
+      message: role ? `@${role.replace(/^@/, '')}` : '',
+      embed: {
+        title: `🎮 ${titre || 'Titre de l’événement'}`,
+        desc: 'Personne n’est inscrit pour le moment \u2014 sois le premier !',
+        color: '#e07a5f',
+        fields: champs,
+      },
+      buttons: [
+        { label: '🎮 Participer', style: 'vert' },
+        { label: '❌ Se désister', style: 'rouge' },
+      ],
+    };
+  }, {
+    titre: 'Aperçu de l’annonce de l’événement',
+    note: () => {
+      const salon = Dashboard.champDe(createCard, '#ev-chan');
+      const nom = Dashboard.nomDeSalon(data, salon, 'le premier salon texte');
+      const quand = Dashboard.champDe(createCard, '#ev-when');
+      if (!quand) return `Publié dans ${nom}. Renseignez la date pour que le champ « Quand » apparaisse.`;
+      return `Publié dans ${nom} · rappels automatiques 24 h et 1 h avant.`;
+    },
+  });
+
   createCard.querySelector('#ev-create').onclick = async () => {
     const title = createCard.querySelector('#ev-title').value.trim();
     const when = createCard.querySelector('#ev-when').value.trim();
@@ -7284,6 +7794,42 @@ Dashboard.renderers.voicetemp = async (content, data) => {
       App.toast('Salons vocaux enregistrés.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
+  // v381 — aperçu vivant du panneau de contrôle des vocaux temporaires.
+  // Format réel : server/discord/extra.js, buildVtPanel (v311) — titre
+  // « 🎙️ Interface Hoxera — vocaux temporaires », légende en petit texte
+  // (« -# »), boutons-émojis seuls rangés en 4 / 4 / 2, « supprimer » en rouge,
+  // NI barre de couleur NI signature.
+  Dashboard.apercuVivant(c4, () => {
+    const b = (label, style) => ({ label, style: style || 'gris' });
+    return {
+      embed: {
+        bar: false,
+        title: '🎙️ Interface Hoxera \u2014 vocaux temporaires',
+        desc: 'Gérez **votre salon vocal temporaire** — chaque réponse est **personnelle**.\n'
+          + '-# ✏️ NOM   👥 LIMITE   🔒 PRIVÉ   🔓 PUBLIC\n'
+          + '-# 🔑 RÉCUPÉRER   ➕ AJOUTER   ➖ RETIRER   👢 EXPULSER\n'
+          + '-# 🔁 TRANSFÉRER   🗑️ SUPPRIMER\n\n'
+          + '**Appuyez sur les boutons ci-dessous pour utiliser l’interface.**',
+      },
+      rows: [
+        [b('✏️'), b('👥'), b('🔒'), b('🔓')],
+        [b('🔑'), b('➕'), b('➖'), b('👢')],
+        [b('🔁'), b('🗑️', 'rouge')],
+      ],
+    };
+  }, {
+    titre: 'Aperçu du panneau publié dans le salon',
+    note: () => {
+      const creation = Dashboard.champDe(c4, '#vt-channel');
+      const panneau = Dashboard.champDe(c4, '#vt-panel');
+      const gabarit = Dashboard.champDe(c4, '#vt-name', '🔊 {name}');
+      const nom = gabarit.split('{name}').join('Alex').split('{user}').join('Alex');
+      if (!creation) return `Aucun salon de création choisi : les vocaux temporaires sont désactivés. Exemple de nom : « ${nom} ».`;
+      const ou = panneau ? Dashboard.nomDeSalon(data, panneau) : 'aucun salon (panneau non publié)';
+      return `Un membre qui rejoint ${Dashboard.nomDeSalon(data, creation, 'le salon de création')} obtient son vocal « ${nom} ». Panneau : ${ou}. Au-delà de 10 vocaux ouverts, le membre reçoit un avertissement au lieu d’un nouveau salon.`;
+    },
+  });
+
   c4.querySelector('#vt-emotes').onclick = async () => {
     try {
       const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/voicetemp/emotes`, { method: 'POST', body: {} });
@@ -8072,6 +8618,29 @@ Dashboard.renderers.modmail = async (content, data) => {
         <div style="margin-top:14px"><button class="dash-save-action dash-btn dash-btn-primary" id="mm-save">Enregistrer</button></div>
       </div>`);
     root.appendChild(cfgCard);
+    // v381 — aperçu vivant : ce que le staff voit dans le fil quand un membre
+    // écrit en message privé (format réel de server/discord/modmail.js).
+    Dashboard.apercuVivant(cfgCard, () => {
+      if (!Dashboard.champDe(cfgCard, '#mm-enabled', false)) return null;
+      return {
+        // Deux messages distincts, comme le bot : l'entête puis le texte du membre.
+        messages: [
+          '💬 **Nouvelle conversation** avec **Alex** — répondez ici, il recevra votre réponse en message privé.',
+          '**Alex :** Bonjour, j’ai un souci pour acheter un rôle avec mes coins.',
+        ],
+      };
+    }, {
+      titre: 'Aperçu de ce que le staff verra',
+      note: () => {
+        if (!Dashboard.champDe(cfgCard, '#mm-enabled', false)) return 'Modmail désactivé : aucun message privé ne sera relayé.';
+        const salon = Dashboard.champDe(cfgCard, '#mm-channel');
+        // Nom lisible, pas l'identifiant brut du salon.
+        return salon
+          ? `Chaque conversation ouvre un fil privé dans ${Dashboard.nomDeSalon(data, salon)}. Le membre reçoit « ✅ Message envoyé à l’équipe » en retour.`
+          : 'Choisissez un salon : sans salon, le bot ne peut pas relayer les messages.';
+      },
+    });
+
     const en = cfgCard.querySelector('#mm-enabled');
     const chan = cfgCard.querySelector('#mm-channel');
     en.onchange = () => { chan.disabled = !en.checked; };

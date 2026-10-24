@@ -7331,7 +7331,51 @@ html .dashboard-shell-host .dp-ico { background: transparent; overflow: hidden; 
 .dprev.is-compact .dprev-title { font-size: 13px; }
 .dprev-desc { color: #c9ccd1; line-height: 1.45; white-space: normal; }
 .dprev-foot { margin-top: 7px; color: #949ba4; font-size: 11px; }
+/* v381 — auteur et champs : les journaux et les panneaux du bot les utilisent. */
+.dprev-author { color: #fff; font-weight: 700; font-size: 12.5px; margin-bottom: 4px; }
+.dprev-fields { display: grid; gap: 5px; margin-top: 8px; }
+.dprev-field { display: grid; gap: 1px; font-size: 12.5px; }
+.dprev-field span { color: #f2f3f5; font-weight: 700; }
+.dprev-field b { color: #dbdee1; font-weight: 400; }
 .dprev-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 9px; }
+/* v381 — une ligne de boutons par rangée réelle (panneau vocal : 4 / 4 / 2). */
+.dprev-btnrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 9px; }
+/* v381 — code inline de Discord (`/buy article`). */
+.dprev-code { background: #1e1f22; border-radius: 4px; padding: 1px 5px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; color: #dbdee1; }
+/* v381 — titre « ## » d'un message Discord. */
+.dprev-h2 { display: inline-block; font-size: 16px; font-weight: 700; color: #fff; line-height: 1.35; }
+/* v381 — champs inline : trois par ligne, séparés par un point (comme ui.v2panel). */
+.dprev-inline { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; font-size: 12.5px; color: #dbdee1; margin-top: 4px; }
+.dprev-inline b { color: #dbdee1; font-weight: 700; }
+.dprev-inline i { color: #5c6068; font-style: normal; padding: 0 2px; }
+/* v381 — carte de montée de niveau : reproduction de l'image du bot
+   (community.js, levelUpCardSvg). Rapport 880 × 280. */
+.dprev-lvl {
+  display: flex; align-items: center; gap: 16px;
+  padding: 12px 16px; border-radius: 8px; overflow: hidden;
+  background: linear-gradient(135deg, #080d16 0%, #101a27 58%, #0b2230 100%);
+  border: 1px solid #1c2a35;
+}
+.dprev-lvl-ava {
+  flex: 0 0 62px; width: 62px; height: 62px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: #030507; border: 4px solid #30d5ff; color: #eafaff;
+  font-weight: 700; font-size: 22px; box-shadow: 0 0 0 3px #152d3c inset;
+}
+.dprev-lvl-body { flex: 1; min-width: 0; }
+.dprev-lvl-top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.dprev-lvl-num { font-size: 30px; line-height: 1; color: #f7f8fa; }
+.dprev-lvl-lbl { order: -1; font-size: 10px; font-weight: 700; letter-spacing: .18em; color: #8796ad; }
+.dprev-lvl-name { font-size: 15px; font-weight: 600; color: #dce2eb; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dprev-lvl-bar { position: relative; height: 7px; margin-top: 10px; border-radius: 4px; background: #0a111a; }
+.dprev-lvl-bar i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, #35d8ff, #28c8f5); }
+.dprev-lvl-bar u { position: absolute; top: 50%; width: 9px; height: 9px; border-radius: 50%; background: #eafaff; transform: translate(-50%, -50%); }
+/* v381 — plusieurs messages d'affilée (modmail) : un peu d'air entre eux. */
+.dprev-text + .dprev-text { margin-top: 6px; }
+/* v381 — « -# » : le petit texte de Discord, rendu petit (panneau vocal). */
+.dprev-sub { font-size: 11.5px; color: #949ba4; }
+/* v381 — panneau sans barre de couleur (le panneau vocal n'en a pas). */
+.dprev-embed.is-bare { border-left: 0; padding-left: 12px; }
 .dprev-btn {
   padding: 6px 13px; border-radius: 4px; font-size: 13px; font-weight: 600;
   background: #4e5058; color: #fff; transition: background .13s;
@@ -7865,4 +7909,48 @@ details[open] > summary.am-chevron::after { transform: none; }
   /* Bouton d'ajout du multi-sélecteur : 32 px mesurés à 375 px
      (« Ajouter un salon », « Ajouter un rôle »). */
   .dashboard-shell-host .discord-multi-picker .dd-add-btn { min-height: 40px; padding-top: 6px; padding-bottom: 6px; }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   v381 — Cadre d'aperçu vivant
+   ----------------------------------------------------------------
+   Un module de configuration montre désormais ce que les membres
+   verront AVANT l'enregistrement. Le cadre se distingue d'un réglage
+   ordinaire : bordure pointillée, pastille qui respire, mention
+   « en direct ». Il se réutilise dans n'importe quelle carte.
+   ════════════════════════════════════════════════════════════════ */
+.pv {
+  margin-top: 14px;
+  border: 1px dashed var(--d-border);
+  border-radius: 12px;
+  padding: 12px 13px 13px;
+  background: rgba(0, 0, 0, .14);
+}
+.pv-head { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+.pv-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex: 0 0 7px;
+  background: var(--d-accent); box-shadow: 0 0 0 3px rgba(var(--d-accent-rgb), .18);
+  animation: pvPulse 2.4s ease-in-out infinite;
+}
+@keyframes pvPulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+.pv-title { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--d-dim); }
+.pv-live {
+  margin-left: auto; font-size: 11px; font-weight: 700; letter-spacing: .03em;
+  color: var(--d-accent); background: rgba(var(--d-accent-rgb), .12);
+  border: 1px solid rgba(var(--d-accent-rgb), .3); border-radius: 999px; padding: 1px 9px;
+}
+.pv-body { min-height: 40px; }
+.pv-empty { font-size: 12.5px; color: var(--d-dim); line-height: 1.5; }
+.pv-note { margin-top: 9px; font-size: 11.5px; color: var(--d-dim); line-height: 1.45; }
+@media (prefers-reduced-motion: reduce) { .pv-dot { animation: none; } }
+@media (max-width: 520px) {
+  .pv { padding: 10px 10px 11px; }
+  /* Sur téléphone, le titre en capitales passait sur trois lignes à cause de
+     la pastille « en direct » : on resserre les deux pour qu'il tienne. */
+  .pv-head { gap: 7px; flex-wrap: wrap; }
+  /* La pastille « en direct » dit déjà que c'est vivant : la puce devient
+     un caractère isolé sur sa ligne, on la retire sur petit écran. */
+  .pv-dot { display: none; }
+  .pv-title { font-size: 11px; letter-spacing: .02em; line-height: 1.3; }
+  .pv-live { font-size: 11px; padding: 1px 7px; }
 }

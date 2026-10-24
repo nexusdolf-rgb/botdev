@@ -76,8 +76,8 @@ const lire = (p) => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
   check('le compte-rendu donne le nombre de membres', /a été donné à \$\{App\.pluriel\(r\.granted/.test(dash));
 
   console.log('— 8. Version —');
-  check('index.html sert la v377', (html.match(/\?v=380/g) || []).length === 7);
-  check('le service worker est en v377', lire('public/sw.js').includes('botdev-v380'));
+  check('index.html sert la v377', (html.match(/\?v=381/g) || []).length === 7);
+  check('le service worker est en v377', lire('public/sw.js').includes('botdev-v381'));
 
   try { require('../server/db').db.close(); } catch {}
   try { fs.rmSync(process.env.BOTDEV_DATA_DIR, { recursive: true, force: true }); } catch {}

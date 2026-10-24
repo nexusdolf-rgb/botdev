@@ -15,7 +15,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const DATA_DIR = path.join(os.tmpdir(), `botdev-v380-${process.pid}-${Date.now()}`);
+const DATA_DIR = path.join(os.tmpdir(), `botdev-v381-${process.pid}-${Date.now()}`);
 fs.rmSync(DATA_DIR, { recursive: true, force: true });
 fs.mkdirSync(DATA_DIR, { recursive: true });
 process.env.BOTDEV_DATA_DIR = DATA_DIR;

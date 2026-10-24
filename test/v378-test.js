@@ -120,8 +120,8 @@ const page = lire('public/index.html');
   check('la page /bot/:id partage ce gabarit', pub.includes("avatarBot(b).replace('bot-avatar', 'pub-avatar')"));
 
   console.log('— 8. Version —');
-  check('index.html sert la v378', (html.match(/\?v=380/g) || []).length === 7);
-  check('le service worker est en v378', sw.includes("const CACHE = 'botdev-v380';"));
+  check('index.html sert la v378', (html.match(/\?v=381/g) || []).length === 7);
+  check('le service worker est en v378', sw.includes("const CACHE = 'botdev-v381';"));
   check('le jeton de version n’apparaît plus nulle part en 377',
     !/v=377/.test(html) && !/v=377/.test(app) && !/botdev-v377/.test(sw));
 

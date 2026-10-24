@@ -15,7 +15,7 @@ const os = require('os');
 const path = require('path');
 const { ButtonStyle } = require('discord.js');
 
-const DATA_DIR = path.join(os.tmpdir(), `botdev-v380-${process.pid}-${Date.now()}`);
+const DATA_DIR = path.join(os.tmpdir(), `botdev-v381-${process.pid}-${Date.now()}`);
 fs.rmSync(DATA_DIR, { recursive: true, force: true });
 fs.mkdirSync(DATA_DIR, { recursive: true });
 process.env.BOTDEV_DATA_DIR = DATA_DIR;
@@ -48,8 +48,8 @@ async function main() {
   console.log('— 1. Version —');
   const index = fs.readFileSync(path.join(RACINE, 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(RACINE, 'public', 'sw.js'), 'utf8');
-  check(`index.html : ?v=${VERSION} référencé 7 fois`, (index.match(/\?v=380/g) || []).length === 7);
-  check('service worker au même cache', sw.includes("const CACHE = 'botdev-v380';"));
+  check(`index.html : ?v=${VERSION} référencé 7 fois`, (index.match(/\?v=381/g) || []).length === 7);
+  check('service worker au même cache', sw.includes("const CACHE = 'botdev-v381';"));
 
   console.log('— 2. Un seul message, la note en dessous —');
   envois = [];
