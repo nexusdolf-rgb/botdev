@@ -2,13 +2,13 @@
    BotDev — Thème sombre
    ============================================================ */
 :root {
-  --bg: #0d0d14;
-  --bg2: #131320;
-  --panel: #181826;
-  --panel2: #1e1e30;
-  --border: #2a2a40;
-  --text: #e8e8f0;
-  --text-dim: #9a9ab0;
+  --bg: #36393f;
+  --bg2: #2b2d31;
+  --panel: #2b2d31;
+  --panel2: #40444b;
+  --border: #4f545c;
+  --text: #f2f3f5;
+  --text-dim: #b5bac1;
   --accent: #e07a5f;
   --accent2: #c95b49;
   --green: #3ba55d;
@@ -614,7 +614,7 @@ body { font-family: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, sans-
 /* Maquette du dashboard (dessinée en CSS pur) */
 .pub-mock {
   max-width: 760px; margin: 26px auto 0;
-  background: #14151f; border: 1px solid var(--border); border-radius: 12px;
+  background: #2b2d31; border: 1px solid var(--border); border-radius: 12px;
   overflow: hidden; box-shadow: 0 30px 70px -30px rgba(0,0,0,.85), 0 0 0 1px rgba(224,122,95,.12);
   animation: mockFloat 7s ease-in-out infinite;
 }
@@ -700,8 +700,8 @@ body { font-family: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, sans-
 .banned-icon {
   width: 58px; height: 58px; margin: 0 auto 14px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  color: #ff8a8d; background: rgba(237, 66, 69, .12);
-  border: 1px solid rgba(237, 66, 69, .38);
+  color: #e07a5f; background: rgba(224, 122, 95, .12);
+  border: 1px solid rgba(224, 122, 95, .38);
 }
 /* La carte reste sombre dans les deux thèmes : on force donc des couleurs
    claires. Sans cela, le thème clair du navigateur (html.hx-light body
@@ -712,7 +712,7 @@ body { font-family: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, sans-
 .banned-card .sub { color: var(--text-dim); font-size: 14px; margin-bottom: 18px; }
 .banned-reason {
   text-align: left; padding: 13px 15px; margin-bottom: 12px;
-  background: rgba(8, 11, 18, .36); border: 1px solid rgba(54, 68, 92, .5);
+  background: rgba(32, 34, 37, .42); border: 1px solid #4f545c;
   border-radius: 12px;
 }
 .banned-reason p { margin: 4px 0 0; line-height: 1.55; font-size: 14.5px; word-break: break-word; }
@@ -726,17 +726,17 @@ body { font-family: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, sans-
 }
 .banned-grid > div {
   padding: 11px 13px; border-radius: 12px;
-  background: rgba(8, 11, 18, .3); border: 1px solid rgba(54, 68, 92, .42);
+  background: rgba(32, 34, 37, .3); border: 1px solid #4f545c;
 }
 .banned-grid p { margin: 4px 0 0; font-size: 14px; }
 .banned-countdown {
   text-align: left; padding: 13px 15px; border-radius: 12px;
-  background: rgba(8, 11, 18, .36); border: 1px solid rgba(224, 122, 95, .34);
+  background: rgba(32, 34, 37, .42); border: 1px solid rgba(224, 122, 95, .45);
 }
 .banned-clock {
   margin: 6px 0 10px; font-size: 24px; font-weight: 700;
   font-variant-numeric: tabular-nums; letter-spacing: .01em;
-  color: #ffb4a2;
+  color: #f0b6a4;
 }
 .banned-bar {
   height: 6px; border-radius: 999px; overflow: hidden;
@@ -744,7 +744,7 @@ body { font-family: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, sans-
 }
 .banned-bar span {
   display: block; height: 100%; width: 100%; border-radius: 999px;
-  background: linear-gradient(90deg, #ed4245, #f0a05e);
+  background: linear-gradient(90deg, #e07a5f, #c95b49);
   transition: width .9s linear;
 }
 .banned-card .btn-discord { margin-top: 16px; }
@@ -768,13 +768,13 @@ html.hx-light body { background: #f2f3f8; color: #1c1e26; }
    régression fonctionnelle pendant la refonte.
    ============================================================ */
 :root {
-  --bg: #080b12;
-  --bg2: #0f141e;
-  --panel: #121923;
-  --panel2: #182231;
-  --border: #263246;
-  --text: #f4f7fb;
-  --text-dim: #91a0b7;
+  --bg: #36393f;
+  --bg2: #2b2d31;
+  --panel: #2b2d31;
+  --panel2: #40444b;
+  --border: #4f545c;
+  --text: #f2f3f5;
+  --text-dim: #b5bac1;
   --accent: #e88a70;
   --accent2: #d06a55;
   --green: #49d17d;
@@ -784,12 +784,12 @@ html.hx-light body { background: #f2f3f8; color: #1c1e26; }
   --shadow: 0 24px 70px rgba(0, 0, 0, .38);
 }
 
-html { background: #080b12; }
+html { background: #36393f; }
 body {
   background:
     radial-gradient(900px 520px at 100% -12%, rgba(224,122,95,.13), transparent 66%),
     radial-gradient(760px 460px at -12% 100%, rgba(154,123,255,.09), transparent 68%),
-    linear-gradient(180deg, #080b12 0%, #0a0e16 100%);
+    linear-gradient(180deg, #36393f 0%, #313338 100%);
   color: var(--text);
   letter-spacing: .01px;
 }
@@ -817,7 +817,7 @@ a:hover { color: #c3caff; }
 .navbar .btn { border-color: rgba(54,68,92,.85); background: rgba(18,25,35,.8); }
 .navbar .btn:hover { border-color: rgba(224,122,95,.7); background: rgba(30,39,58,.86); }
 /* Le bouton Discord garde le meme fond plat que partout ailleurs. */
-.navbar .btn-primary { background: linear-gradient(135deg,#6477ff,#906fff); border: 0; }
+.navbar .btn-primary { background: linear-gradient(135deg,#e07a5f,#c95b49); border: 0; }
 /* Le bouton « Se connecter avec Discord » du bandeau doit etre identique a ceux
    du heros et du pied : meme fond plat, meme texte. La regle .navbar .btn qui le
    precedait le peignait en anthracite translucide. */
@@ -859,16 +859,16 @@ a:hover { color: #c3caff; }
 .auth-wrap {
   min-height: 100vh;
   background:
-    linear-gradient(90deg, rgba(224,122,95,.035) 1px, transparent 1px),
-    linear-gradient(rgba(224,122,95,.035) 1px, transparent 1px),
-    radial-gradient(720px 560px at 12% 18%, rgba(224,122,95,.12), transparent 66%),
-    #080b12;
+    linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px),
+    linear-gradient(rgba(255,255,255,.028) 1px, transparent 1px),
+    radial-gradient(680px 420px at 50% -22%, rgba(224,122,95,.06), transparent 68%),
+    #36393f;
   background-size: 42px 42px, 42px 42px, auto, auto;
 }
 .auth-left {
   position: relative; padding: clamp(34px, 7vw, 92px);
-  background: linear-gradient(140deg, rgba(18,28,45,.82), rgba(8,11,18,.22) 72%);
-  border-right: 1px solid rgba(54,68,92,.58);
+  background: linear-gradient(140deg, rgba(224,122,95,.05), rgba(43,45,49,.10) 72%);
+  border-right: 1px solid #4f545c;
 }
 .auth-left::after {
   content: ''; position: absolute; width: 260px; height: 260px; right: -130px; top: 18%;
@@ -882,7 +882,7 @@ a:hover { color: #c3caff; }
 .auth-right { padding: clamp(20px, 5vw, 60px); }
 .auth-card.auth-glass {
   padding: 32px 30px 28px; border-radius: 12px !important;
-  background: rgba(17,24,35,.76) !important;
+  background: rgba(43,45,49,.92) !important;
   border: 1px solid rgba(70,88,119,.62) !important;
   box-shadow: 0 30px 80px -32px rgba(0,0,0,.96), inset 0 1px 0 rgba(255,255,255,.045) !important;
 }
@@ -1121,21 +1121,21 @@ html.hx-light .hp-cta-inner { background: radial-gradient(600px 240px at 50% -40
    ============================================================ */
 body:has(#public-landing) {
   background:
-    radial-gradient(920px 440px at 88% -10%, rgba(224,122,95,.15), transparent 58%),
-    radial-gradient(720px 380px at -10% 110%, rgba(201,91,73,.08), transparent 56%),
-    #0e0f15;
+    radial-gradient(920px 440px at 88% -10%, rgba(224,122,95,.10), transparent 58%),
+    radial-gradient(720px 380px at -10% 110%, rgba(201,91,73,.06), transparent 56%),
+    #36393f;
 }
 body:has(#public-landing) .navbar {
-  background: rgba(14, 15, 21, .82) !important;
-  border-bottom: 1px solid #2a2d3d;
+  background: rgba(43, 45, 49, .94) !important;
+  border-bottom: 1px solid #202225;
 }
 #public-landing {
   --faq-chevron: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M6.4 9.6 12 15.2l5.6-5.6'/></svg>");
-  --panel: #1a1c28;
-  --panel2: #20222f;
-  --border: #2a2d3d;
-  --text: #e9eaf2;
-  --text-dim: #8b8fa3;
+  --panel: #2b2d31;
+  --panel2: #40444b;
+  --border: #4f545c;
+  --text: #f2f3f5;
+  --text-dim: #b5bac1;
 }
 
 /* Hero : texte à gauche, carte « en direct » à droite (comme le panneau d’accueil) */
@@ -1168,7 +1168,7 @@ body:has(#public-landing) .navbar {
   grid-area: tag;
   margin: 16px 0 22px;
   max-width: none;
-  color: #8b8fa3;
+  color: #b5bac1;
 }
 #public-landing .pub-hero-actions { grid-area: actions; justify-content: flex-start; }
 #public-landing .pub-support-link { grid-area: support; margin-top: 12px; }
@@ -1185,7 +1185,7 @@ body:has(#public-landing) .navbar {
   background:
     radial-gradient(280px 140px at 100% 0%, rgba(224,122,95,.2), transparent 70%),
     linear-gradient(165deg, rgba(255,255,255,.045), transparent 52%),
-    #1a1c28;
+    #2b2d31;
   border: 1px solid rgba(224,122,95,.3);
   border-radius: 12px;
   box-shadow: 0 28px 60px -32px rgba(224,122,95,.55), inset 0 1px 0 rgba(255,255,255,.06);
@@ -1215,12 +1215,12 @@ body:has(#public-landing) .navbar {
   min-width: 0;
   padding: 12px 14px;
   text-align: left;
-  background: #20222f;
-  border: 1px solid #2a2d3d;
+  background: #232428;
+  border: 1px solid #4f545c;
   border-radius: 12px;
   box-shadow: none;
 }
-#public-landing .pub-stat .lbl { margin-top: 0; font-size: 12px; font-weight: 650; color: #8b8fa3; }
+#public-landing .pub-stat .lbl { margin-top: 0; font-size: 12px; font-weight: 650; color: #b5bac1; }
 #public-landing .pub-stat .val {
   font-size: 22px;
   background: linear-gradient(135deg, #e07a5f, #f2a65e);
@@ -1236,8 +1236,8 @@ body:has(#public-landing) .navbar {
 #public-landing .hp-faq-item,
 #public-landing .bot-card,
 #public-landing .hp-cta-inner {
-  background: linear-gradient(180deg, rgba(255,255,255,.025), transparent), #1a1c28;
-  border: 1px solid #2a2d3d;
+  background: linear-gradient(180deg, rgba(255,255,255,.025), transparent), #2b2d31;
+  border: 1px solid #4f545c;
   box-shadow: 0 18px 40px -28px rgba(0,0,0,.85);
 }
 #public-landing .hp-about-card {
@@ -1248,7 +1248,7 @@ body:has(#public-landing) .navbar {
   background:
     radial-gradient(420px 180px at 100% -20%, rgba(224,122,95,.18), transparent 70%),
     linear-gradient(150deg, rgba(255,255,255,.05), transparent 55%),
-    #1a1c28;
+    #2b2d31;
 }
 #public-landing .hp-about-card::before {
   content: "";
@@ -1281,7 +1281,7 @@ body:has(#public-landing) .navbar {
   border-color: rgba(224,122,95,.35);
   background:
     radial-gradient(600px 240px at 50% -40%, rgba(224,122,95,.22), transparent 70%),
-    #1a1c28;
+    #2b2d31;
 }
 
 @media (max-width: 900px) {
@@ -1338,11 +1338,11 @@ html.hx-light #public-landing .pub-stat { background: #f0f1f7; border-color: #e4
    HTML v167/v240 toujours inchangé.
    ============================================================ */
 body:has(#public-landing) {
-  background: #12141c;
+  background: #36393f;
 }
 body:has(#public-landing) .navbar {
-  background: rgba(18, 20, 28, .78) !important;
-  border-bottom: 1px solid rgba(255,255,255,.06);
+  background: rgba(43, 45, 49, .94) !important;
+  border-bottom: 1px solid #202225;
 }
 #public-landing .pub-blob { opacity: .14; filter: blur(90px); }
 #public-landing .pub-hero-badge.shimmer::after { animation: none; display: none; }
@@ -1363,7 +1363,7 @@ body:has(#public-landing) .navbar {
   height: 132px;
   margin: 0 auto 26px;
   border-radius: 12px;
-  background: #1a1c28 url("/api/public/bot-avatar") center / cover no-repeat;
+  background: #2b2d31 url("/api/public/bot-avatar") center / cover no-repeat;
   border: 2px solid rgba(224,122,95,.45);
   box-shadow: 0 28px 54px -22px rgba(224,122,95,.6);
 }
@@ -1724,3 +1724,100 @@ html.hx-light #public-landing .hp-cta-inner p { color: #43485a; }
   .pub-footer-links { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; }
   .hp-footer-col a { padding-left: 0; padding-right: 0; }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   v380 — Une seule palette pour tout le site
+   ----------------------------------------------------------------
+   Constat mesuré le 24/10 : les écrans parlaient trois langues.
+
+     · accueil public et page « compte banni »  → bleu nuit (#1a1c28)
+     · tableau de bord, modules, espace fondateur → gris Discord (#36393f)
+
+   Décision : le gris du tableau de bord devient la base partout, avec
+   le terracotta comme seul accent. Les jetons ci-dessous sont la seule
+   source pour les pages publiques ; les règles écrites en dur ont été
+   alignées sur les mêmes valeurs dans le corps de la feuille.
+
+   Les boutons « Se connecter avec Discord » restent en blurple : c'est
+   la couleur que Discord impose à son bouton de connexion, comme un
+   bouton « Se connecter avec Google » reste blanc.
+   ════════════════════════════════════════════════════════════════ */
+body:has(#public-landing),
+body:has(.auth-wrap),
+body:has(.pub-bot-hero) {
+  --bg: #36393f;
+  --bg2: #2b2d31;
+  --panel: #2b2d31;
+  --panel2: #40444b;
+  --border: #4f545c;
+  --text: #f2f3f5;
+  --text-dim: #b5bac1;
+  --accent: #e07a5f;
+  --accent2: #c95b49;
+}
+
+/* Connexion et page du compte banni : même fond que le tableau de bord. */
+body:has(.auth-wrap) {
+  background:
+    radial-gradient(980px 460px at 88% -10%, rgba(224,122,95,.10), transparent 60%),
+    radial-gradient(760px 400px at -10% 108%, rgba(201,91,73,.06), transparent 62%),
+    #36393f;
+}
+body:has(.pub-bot-hero),
+body:has(.pub-bot-hero) #app {
+  background: #36393f;
+}
+
+/* Les cartes en verre de la connexion et du bannissement : surface pleine. */
+body:has(.auth-wrap) .auth-card.auth-glass {
+  background: #2b2d31 !important;
+  border: 1px solid #4f545c !important;
+  box-shadow: 0 18px 40px -28px rgba(0, 0, 0, .85) !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+body:has(.auth-wrap) .auth-left {
+  background: linear-gradient(160deg, rgba(224,122,95,.12), rgba(201,91,73,.06) 60%, transparent);
+  border-right: 1px solid #4f545c;
+}
+
+/* Thème clair : gris clair Discord (#f2f3f5) au lieu du bleu nuit. */
+html.hx-light body:has(#public-landing),
+html.hx-light body:has(.auth-wrap),
+html.hx-light body:has(.pub-bot-hero) {
+  --bg: #f2f3f5;
+  --bg2: #ffffff;
+  --panel: #ffffff;
+  --panel2: #f2f3f5;
+  --border: #d7dbe0;
+  --text: #1c1e26;
+  --text-dim: #5d6375;
+  background: #f2f3f5;
+}
+/* En thème clair, le calque de motifs de .auth-wrap est sombre : il faut le
+   reprendre, sinon la page reste grise sombre sous une carte blanche. */
+html.hx-light .auth-wrap {
+  background:
+    linear-gradient(90deg, rgba(28, 30, 38, .035) 1px, transparent 1px),
+    linear-gradient(rgba(28, 30, 38, .035) 1px, transparent 1px),
+    radial-gradient(680px 420px at 50% -22%, rgba(224,122,95,.07), transparent 68%),
+    #f2f3f5;
+  background-size: 42px 42px, 42px 42px, auto, auto;
+}
+html.hx-light .auth-left {
+  background: linear-gradient(140deg, rgba(224,122,95,.07), rgba(255,255,255,.25) 72%);
+  border-right: 1px solid #d7dbe0;
+}
+html.hx-light body:has(.auth-wrap) .auth-card.auth-glass {
+  background: #ffffff !important;
+  border-color: #d7dbe0 !important;
+  box-shadow: 0 18px 40px -30px rgba(30, 34, 60, .3) !important;
+}
+html.hx-light .banned-card, html.hx-light .banned-card h2,
+html.hx-light .banned-card p, html.hx-light .banned-card a { color: #1c1e26; }
+html.hx-light .banned-card .sub, html.hx-light .banned-card .banned-label { color: #5d6375; }
+html.hx-light .banned-reason,
+html.hx-light .banned-grid > div,
+html.hx-light .banned-countdown { background: #f2f3f5; border-color: #d7dbe0; }
+html.hx-light .banned-countdown { border-color: rgba(224, 122, 95, .5); }
+html.hx-light .banned-clock { color: #b3543d; }

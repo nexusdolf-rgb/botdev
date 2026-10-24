@@ -249,8 +249,8 @@ window.__r = (async () => {
       /<link rel="preload" href="\/api\/public\/bot-avatar" as="image" \/>/.test(html), 'preload absent');
     check('le preload est une image (sinon le navigateur ignore la ressource)',
       html.includes('as="image"'), 'as="image" absent');
-    check('index.html versionné ?v=379 (7 liens)', (html.match(/\?v=379/g) || []).length === 7,
-      String((html.match(/\?v=379/g) || []).length));
+    check('index.html versionné ?v=380 (7 liens)', (html.match(/\?v=380/g) || []).length === 7,
+      String((html.match(/\?v=380/g) || []).length));
     check('aucun ancien ?v=363 n\u2019est resté dans public/',
       !fs.readdirSync(path.join(RACINE, 'public', 'js')).some((f) => /bot-avatar\?v=363/.test(lire('public/js/' + f))),
       'version périmée dans un js');
@@ -262,12 +262,12 @@ window.__r = (async () => {
     // v364 — la couleur de la barre du navigateur doit suivre le theme : le
     // meta etait fige sur #0e0f15, qui ne correspond au fond d'aucun theme.
     check('le meta theme-color porte le fond reel du theme sombre',
-      /<meta name="theme-color" content="#080b12" \/>/.test(html), html.match(/theme-color[^>]*/)[0]);
+      /<meta name="theme-color" content="#36393f" \/>/.test(html), html.match(/theme-color[^>]*/)[0]);
     check('le script anti-flash regle la couleur de la barre selon le theme',
-      html.includes("meta.setAttribute('content', clair ? '#f2f3f8' : '#080b12')"), 'reglage absent');
+      html.includes("meta.setAttribute('content', clair ? '#f2f3f8' : '#36393f')"), 'reglage absent');
     check('les deux couleurs viennent du CSS (rien d\u2019invente)',
       lire('public/css/style.css').includes('html.hx-light body { background: #f2f3f8; color: #1c1e26; }')
-      && /:root \{\n  --bg: #080b12;/.test(lire('public/css/style.css')), 'valeur CSS introuvable');
+      && /:root \{\n  --bg: #36393f;/.test(lire('public/css/style.css')), 'valeur CSS introuvable');
     check('le bouton clair/sombre du dashboard resynchronise la barre',
       /localStorage\.setItem\('hx-theme'[^\n]*\n.*App\.syncThemeColor\(\)/.test(lire('public/js/dashboard.js')), 'appel absent de dashboard.js');
     check('le helper est appele au demarrage de l\u2019application',
@@ -278,7 +278,7 @@ window.__r = (async () => {
   console.log('\n— 6. Service worker : trois pièges fermés —');
   {
     const src = lire('public/sw.js');
-    check('le nom du cache suit la version', src.includes("const CACHE = 'botdev-v379';"), 'CACHE périmé');
+    check('le nom du cache suit la version', src.includes("const CACHE = 'botdev-v380';"), 'CACHE périmé');
     check('installation tolérante (Promise.allSettled)', /Promise\.allSettled\(ASSETS\.map/.test(src), 'addAll toujours présent');
     check('seules les réponses valides sont mises en cache', /if \(resp && resp\.ok\)/.test(src), 'garde resp.ok absente');
     check('la coquille HTML n\u2019est servie que pour une navigation', /mode === 'navigate'/.test(src), 'garde de mode absente');
@@ -324,7 +324,7 @@ window.__r = (async () => {
       const cachesObj = {
         open: async () => cache,
         match: (req) => cache.match(req),
-        keys: async () => ['botdev-v379', 'botdev-v1'],
+        keys: async () => ['botdev-v380', 'botdev-v1'],
         delete: async (k) => { deletes.push(k); return true; },
       };
       const location = { origin: 'http://localhost:3000' };
@@ -361,7 +361,7 @@ window.__r = (async () => {
       // Réseau OK sur un JS : mis en cache.
       const vus = [];
       const sw = monteSw({ fetchImpl: async (r) => { vus.push(String(r.url)); return R(true, 200, 'code'); } });
-      const out = await sw.fetche(H('http://localhost:3000/js/dashboard.js?v=379'));
+      const out = await sw.fetche(H('http://localhost:3000/js/dashboard.js?v=380'));
       await wait(10);
       check('js valide : passé au navigateur ET mis en cache',
         out.repondu && out.valeur && out.valeur.ok && sw.puts.some((p) => /dashboard\.js/.test(p.url)), JSON.stringify(out.valeur && { ok: out.valeur.ok }) + ' puts=' + sw.puts.length);
@@ -370,7 +370,7 @@ window.__r = (async () => {
     {
       // 404 sur un CSS : avalé, mais SURTOUT pas stocké.
       const sw = monteSw({ fetchImpl: async () => R(false, 404, 'pas trouve') });
-      const out = await sw.fetche(H('http://localhost:3000/css/dashboard.css?v=379'));
+      const out = await sw.fetche(H('http://localhost:3000/css/dashboard.css?v=380'));
       await wait(10);
       check('réponse d\u2019erreur : transmise telle quelle, jamais stockée',
         out.repondu && out.valeur.status === 404 && sw.puts.length === 0, 'puts=' + JSON.stringify(sw.puts));
@@ -378,7 +378,7 @@ window.__r = (async () => {
     {
       // Réseau en panne sur un JS non cache : PAS de coquille HTML.
       const sw = monteSw({ fetchImpl: async () => { throw new Error('réseau'); } });
-      const out = await sw.fetche(H('http://localhost:3000/js/dashboard.js?v=379'));
+      const out = await sw.fetche(H('http://localhost:3000/js/dashboard.js?v=380'));
       check('js introuvable hors ligne : le HTML n\u2019est plus servi en guise de script',
         out.repondu && !!out.erreur && !out.valeur, JSON.stringify(out));
       check('le refus est net (message « hors ligne »), pas une page blanche muette',

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#080b12" />
+  <meta name="theme-color" content="#36393f" />
   <title>Hoxera · Le bot de votre serveur Discord</title>
   <meta name="description" content="Hoxera est un bot Discord pour la modération et le suivi d’un serveur : auto-modération, sanctions, tickets et règles, réglés depuis un tableau de bord relié au bot." />
   <link rel="canonical" href="https://hoxera.is-a.dev/" />
@@ -39,8 +39,8 @@
        gauche le trouve deja charge, au lieu de peindre un rond vide puis la
        photo une fois le JavaScript demarre. -->
   <link rel="preload" href="/api/public/bot-avatar" as="image" />
-  <link rel="stylesheet" href="/css/style.css?v=379" />
-  <link rel="stylesheet" href="/css/dashboard.css?v=379" />
+  <link rel="stylesheet" href="/css/style.css?v=380" />
+  <link rel="stylesheet" href="/css/dashboard.css?v=380" />
 </head>
 <body>
   <div id="app"></div>
@@ -73,14 +73,14 @@
       // doit etre celle du fond REEL du theme : sinon, en theme clair, le
       // bandeau du haut arrive bleu nuit puis blanchit sous les yeux.
       const meta = document.querySelector('meta[name="theme-color"]');
-      if (meta) meta.setAttribute('content', clair ? '#f2f3f8' : '#080b12');
+      if (meta) meta.setAttribute('content', clair ? '#f2f3f8' : '#36393f');
     } catch {}
   </script>
-  <script src="/js/app.js?v=379"></script>
-  <script src="/js/editor.js?v=379"></script>
-  <script src="/js/views.js?v=379"></script>
-  <script src="/js/public.js?v=379"></script>
-  <script src="/js/dashboard.js?v=379"></script>
+  <script src="/js/app.js?v=380"></script>
+  <script src="/js/editor.js?v=380"></script>
+  <script src="/js/views.js?v=380"></script>
+  <script src="/js/public.js?v=380"></script>
+  <script src="/js/dashboard.js?v=380"></script>
   <script>
     // Mode app installable (PWA) + MISE À JOUR AUTOMATIQUE :
     // dès qu'une nouvelle version du site est installée, la page se
