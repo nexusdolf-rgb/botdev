@@ -72,11 +72,17 @@ def blacklist(d: ImageDraw.ImageDraw):
 
 
 def antiraid(d: ImageDraw.ImageDraw):
-    """Barrière baissée sur le serveur : plus personne n'entre en rafale."""
+    """Barrière baissée sur le serveur : plus personne n'entre en rafale.
+
+    v382 — les bandes rouges étaient découpées en partant de 0.16 : la première
+    laissait un copeau blanc de 7 px collé au bord gauche (visible comme une
+    poussière), et la cinquième coupait le montant droit. Les bandes partent
+    maintenant de 0.22 et s'arrêtent à 0.80, dans la largeur de la barrière.
+    """
     d.rectangle([U(0.14), U(0.30), U(0.86), U(0.52)], fill=FG)
-    for i in range(5):
-        x = U(0.16 + i * 0.17)
-        d.polygon([(x, U(0.30)), (x + U(0.06), U(0.30)), (x - U(0.02), U(0.52)), (x - U(0.08), U(0.52))], fill=BG)
+    for i in range(4):
+        x = U(0.22 + i * 0.16)
+        d.polygon([(x, U(0.30)), (x + U(0.07), U(0.30)), (x - U(0.02), U(0.52)), (x - U(0.09), U(0.52))], fill=BG)
     d.rectangle([U(0.17), U(0.52), U(0.27), U(0.86)], fill=FG)
     d.rectangle([U(0.73), U(0.52), U(0.83), U(0.86)], fill=FG)
     d.ellipse([U(0.44), U(0.10), U(0.56), U(0.22)], fill=FG)
@@ -153,12 +159,23 @@ def links(d: ImageDraw.ImageDraw):
 
 
 def autoclean(d: ImageDraw.ImageDraw):
-    """Balai : un message à la fois."""
-    d.line([(U(0.72), U(0.16)), (U(0.40), U(0.52))], fill=FG, width=int(U(0.06)))
-    d.polygon([(U(0.22), U(0.54)), (U(0.58), U(0.54)), (U(0.66), U(0.74)), (U(0.14), U(0.74))], fill=FG)
+    """Balai : un message à la fois.
+
+    v382 — trois défauts corrigés, mesurés sur le rendu :
+      • le manche s'arrêtait à y=0.52 alors que la tête commence à 0.54 :
+        4 px de fond les séparaient, le manche semblait flotter ;
+      • les 4 dents mesuraient 5 px de large : à 22 px (taille réelle de la
+        barre latérale) elles se fondaient dans le fond et il ne restait
+        qu'une barre floue ;
+      • la tête était décentrée de 7 px vers le bas.
+    Le manche descend maintenant DANS la tête, et les dents font 8 px.
+    """
+    # Manche : il plonge dans la tête (0.60) au lieu de s'arrêter avant (0.52).
+    d.line([(U(0.72), U(0.16)), (U(0.40), U(0.60))], fill=FG, width=int(U(0.07)))
+    d.polygon([(U(0.21), U(0.54)), (U(0.59), U(0.54)), (U(0.67), U(0.73)), (U(0.13), U(0.73))], fill=FG)
     for i in range(4):
-        x = U(0.22 + i * 0.14)
-        d.line([(x + U(0.02), U(0.74)), (x, U(0.88))], fill=FG, width=int(U(0.035)))
+        x = U(0.23 + i * 0.135)
+        d.line([(x + U(0.015), U(0.72)), (x, U(0.87))], fill=FG, width=int(U(0.055)))
 
 
 def commands(d: ImageDraw.ImageDraw):
@@ -206,12 +223,14 @@ def rules(d: ImageDraw.ImageDraw):
     """Page de règlement avec son barre d'accent et son sceau d'acceptation."""
     d.rounded_rectangle([U(0.15), U(0.13), U(0.72), U(0.87)], radius=U(0.06), fill=FG)
     # Barre verticale façon encadré Discord : ce qui distingue une règle d'un brouillon.
-    d.rectangle([U(0.215), U(0.22), U(0.255), U(0.78)], fill=BG)
-    # Titre + lignes.
-    d.rectangle([U(0.31), U(0.24), U(0.60), U(0.30)], fill=BG)
-    d.rectangle([U(0.31), U(0.375), U(0.645), U(0.405)], fill=BG)
-    d.rectangle([U(0.31), U(0.46), U(0.645), U(0.49)], fill=BG)
-    d.rectangle([U(0.31), U(0.545), U(0.545), U(0.575)], fill=BG)
+    # v382 — la barre touchait le bord de la page (elle commençait à 0.215 pour
+    # un bord à 0.15) : on la rentre de 6 px, elle respire.
+    d.rectangle([U(0.245), U(0.22), U(0.285), U(0.78)], fill=BG)
+    # Titre + lignes. v382 — le titre était collé à la barre (2 px) : écarté.
+    d.rectangle([U(0.345), U(0.24), U(0.63), U(0.30)], fill=BG)
+    d.rectangle([U(0.345), U(0.375), U(0.645), U(0.405)], fill=BG)
+    d.rectangle([U(0.345), U(0.46), U(0.645), U(0.49)], fill=BG)
+    d.rectangle([U(0.345), U(0.545), U(0.545), U(0.575)], fill=BG)
     # Sceau d'acceptation, posé sur le coin bas droit de la page.
     d.ellipse([U(0.52), U(0.56), U(0.90), U(0.94)], fill=BG)
     d.ellipse([U(0.55), U(0.59), U(0.87), U(0.91)], fill=FG)
@@ -240,6 +259,30 @@ SHAPE = {
     "poll": poll,
     "rules": rules,
 }
+
+
+# ════════════════════════════════════════════════════════════════
+# v382 — icônes dessinées hors de ce script.
+# ----------------------------------------------------------------
+# 25 des 42 icônes (tickets, membres, vocal, règles, bienvenue…) n'ont jamais
+# eu de fonction ici : leurs PNG ont été posés à la main. On ne peut donc pas
+# les corriger à la source ; le script ci-dessous les retouche à partir de
+# leur propre dessin, et seulement quand un défaut a été mesuré.
+# ════════════════════════════════════════════════════════════════
+def epaissir(src_png: Path, dst_png: Path, rayon: int, seuil_alpha: int = 250):
+    """Épaissit le pictogramme de `rayon` pixels, sans toucher au fond.
+
+    On part du masque des pixels PLEINEMENT opaques (les bords lissés du carré
+    sont écartés : c'est eux qui fabriquaient un liseré clair quand on
+    détourait naïvement), puis on dilate.
+    """
+    from PIL import ImageFilter
+    im = Image.open(src_png).convert("RGBA")
+    a = im.split()[3].point(lambda v: 255 if v >= seuil_alpha else 0)
+    a = a.filter(ImageFilter.MaxFilter(rayon * 2 + 1))
+    out = Image.new("RGBA", im.size, FG)
+    out.putalpha(a)
+    out.resize((SIZE, SIZE), Image.LANCZOS).save(dst_png, optimize=True)
 
 
 def main() -> int:
