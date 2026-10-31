@@ -66,9 +66,12 @@ assert(out.startsWith('OK rôle → Optimus Prime'), 'la logique de renommage do
 const sharp = require('sharp');
 (async () => {
   const mp = await sharp(path.join(root, 'public/icons/nexora-profile-banner.png')).metadata();
-  assert(mp.width === 1500 && mp.height === 600, `bannière MP 1500×600 attendue (${mp.width}×${mp.height})`);
+  // v386 — même dessin, poids divisé : on vérifie les PROPORTIONS (5:2),
+  // la netteté minimale (1200 px, Discord affiche 1024) et le poids plafonné.
+  assert(mp.width >= 1200 && Math.abs(mp.width / mp.height - 2.5) < 0.06,
+    `bannière MP : proportions 5:2 et 1200 px mini attendues (${mp.width}×${mp.height})`);
   const st = fs.statSync(path.join(root, 'public/icons/nexora-profile-banner.png'));
-  assert(st.size > 400000, 'bannière MP : version HD attendue');
+  assert(st.size < 450000, `bannière MP : ${st.size} octets — au-dessus du plafond v386 (450 Ko)`);
 
   // ---------- 4. Version : gérée par le test de la version courante (v177) ----------
 

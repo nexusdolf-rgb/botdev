@@ -145,8 +145,22 @@ async function main() {
   // Discord récupère l'image via cette URL depuis le Media Gallery Components V2.
   app.get('/levelup-card/:key.png', (req, res) => require('./levelUpCardCache').route(req, res));
 
+  // 📉 v386 — le texte du site part compressé (JS, CSS, HTML, SVG, JSON) et
+  // les fichiers versionnés restent un an dans le navigateur. C'est ce qui
+  // divise le trafic sortant par ~4, donc le quota de l'hébergeur tient.
+  try { app.use(require('./staticCompress').middleware); } catch (e) { console.error('[BotDev] compression :', e.message); }
+
   // Fichiers statiques (dashboard)
-  app.use(express.static(path.join(__dirname, '..', 'public')));
+  app.use(express.static(path.join(__dirname, '..', 'public'), {
+    // v386 — cache long côté navigateur pour les fichiers qui portent « ?v= »
+    setHeaders: (res, filePath, stat) => {
+      const rel = String(filePath || '');
+      if (/\.(js|css|png|svg|webp|jpg|woff2?)$/i.test(rel)) {
+        res.setHeader('Cache-Control', 'public, max-age=604800');
+      }
+      if (stat && stat.mtime) res.setHeader('Last-Modified', stat.mtime.toUTCString());
+    },
+  }));
 
   // Fallback SPA : seule la page d'accueil existe comme chemin. Avant, tout
   // ce qui etait inconnu (y compris /robots.txt quand il n'existait pas)

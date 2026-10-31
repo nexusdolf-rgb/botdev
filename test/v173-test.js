@@ -15,11 +15,11 @@ const svg = read('public/icons/nexora-robot-mark.svg');
 
 // ---------- 1. Les images HD sont en place (et volumineuses = détaillées) ----------
 const minSizes = {
-  'public/icons/nexora-robot-mark.png': 100000,        // logo 512 (≈ 300 Ko)
+  'public/icons/nexora-robot-mark.png': 15000,         // v386 — logo allégé (≈ 25 Ko)
   'public/icons/nexora-robot-mark-192.png': 20000,     // logo 192
   'public/icons/icon-512.png': 100000,
-  'public/icons/nexora-profile-banner.png': 300000,    // bannière MP transcription
-  'public/icons/support-banner.png': 300000,           // bannière panneaux tickets
+  'public/icons/nexora-profile-banner.png': 250000,    // v386 — bannière MP allégée
+  'public/icons/support-banner.png': 250000,           // v386 — bannière tickets allégée
 };
 for (const [f, min] of Object.entries(minSizes)) {
   const st = fs.statSync(path.join(root, f));
@@ -30,10 +30,12 @@ for (const [f, min] of Object.entries(minSizes)) {
 const sharp = require('sharp');
 (async () => {
   const logo = await sharp(path.join(root, 'public/icons/nexora-robot-mark.png')).metadata();
-  assert(logo.width === 512 && logo.height === 512, `logo doit être 512×512 (reçu ${logo.width}×${logo.height})`);
+  // v386 — logo affiché en 192 px au maximum : carré, et au moins 192 px.
+  assert(logo.width === logo.height && logo.width >= 192,
+    `logo : carré d'au moins 192 px attendu (reçu ${logo.width}×${logo.height})`);
   const banner = await sharp(path.join(root, 'public/icons/nexora-profile-banner.png')).metadata();
-  assert(banner.width === 1500 && banner.height === 600,
-    `bannière doit être 1500×600 (reçue ${banner.width}×${banner.height})`);
+  assert(banner.width >= 1200 && Math.abs(banner.width / banner.height - 2.5) < 0.06,
+    `bannière : proportions 5:2 et 1200 px mini (reçue ${banner.width}×${banner.height})`);
   const fav = await sharp(path.join(root, 'public/icons/nexora-robot-mark-192.png')).metadata();
   assert(fav.width === 192 && fav.height === 192, 'favicon doit être 192×192');
 

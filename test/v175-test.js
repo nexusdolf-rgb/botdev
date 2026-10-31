@@ -27,13 +27,16 @@ assert(botManager.includes('.slice(0, 190)'), 'aboutText : garde-fou 190 caract�
 const sharp = require('sharp');
 (async () => {
   const mp = await sharp(path.join(root, 'public/icons/nexora-profile-banner.png')).metadata();
-  assert(mp.width === 1500 && mp.height === 600, `bannière MP doit être 1500×600 (${mp.width}×${mp.height})`);
+  // v386 — même dessin, poids divisé : proportions 5:2 et 1200 px mini.
+  assert(mp.width >= 1200 && Math.abs(mp.width / mp.height - 2.5) < 0.06,
+    `bannière MP : proportions 5:2 et 1200 px mini (${mp.width}×${mp.height})`);
   const tk = await sharp(path.join(root, 'public/icons/support-banner.png')).metadata();
-  assert(tk.width === 1696 && tk.height === 624, `bannière tickets doit être 1696×624 (${tk.width}×${tk.height})`);
+  assert(tk.width >= 1200 && Math.abs(tk.width / tk.height - 1696 / 624) < 0.06,
+    `bannière tickets : proportions d'origine et 1200 px mini (${tk.width}×${tk.height})`);
   const stMp = fs.statSync(path.join(root, 'public/icons/nexora-profile-banner.png'));
   const stTk = fs.statSync(path.join(root, 'public/icons/support-banner.png'));
-  assert(stMp.size > 400000, `bannière MP trop légère (${stMp.size} octets) — version HD manquante ?`);
-  assert(stTk.size > 400000, `bannière tickets trop légère (${stTk.size} octets)`);
+  assert(stMp.size > 200000 && stMp.size < 450000, `bannière MP hors plage v386 (${stMp.size} octets)`);
+  assert(stTk.size > 200000 && stTk.size < 450000, `bannière tickets hors plage v386 (${stTk.size} octets)`);
 
   // ---------- 3. Version : gérée par le test de la version courante (v176) ----------
 
