@@ -445,6 +445,10 @@ function attachListeners(botId, entry) {
       // du bot (les commandes par serveur ne suffisent pas pour le badge).
       try { await syncGlobalCommands(botId); }
       catch (e) { console.error(`[BotDev] sync globale (bot ${botId}):`, e.message); }
+      // 🎙️ v385 — les 10 émojis du panneau vocal vivent désormais SUR
+      // L'APPLICATION : installés une fois au démarrage, ils servent dans tous
+      // les serveurs. Un échec (quota, réseau) ne doit jamais gêner le reste.
+      try { await require('./extra').ensureVtEmotes(botId, null); } catch {}
       // ☁️ Miroir Auto-Mod officiel : uniquement si la configuration Optimus Prime
       // l’autorise. Les règles natives sont en mode alerte, donc aucune double
       // sanction avec le moteur Optimus Prime.

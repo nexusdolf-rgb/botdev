@@ -195,6 +195,90 @@ function check(label, cond, extraInfo) {
   check('rattrapage : 10 boutons en unicode si les émojis sont refusés',
     secours.length === 10 && secours[0].emoji.name === '✏️');
 
+  console.log('— 2c. Émojis de l’APPLICATION : globaux, zéro installation —');
+  {
+    // Faux client Discord : mêmes routes que la vraie API, aucune connexion.
+    let seqApp = 0;
+    const appEmojis = [];
+    const appels = { get: 0, post: 0, delete: 0 };
+    const client = {
+      application: { id: 'APP-1' },
+      isReady: () => true,
+      rest: {
+        get: async (route) => {
+          appels.get += 1;
+          if (!route.includes('/applications/APP-1/emojis')) throw new Error('route inattendue ' + route);
+          return { items: appEmojis.map((e) => ({ id: e.id, name: e.name })) };
+        },
+        post: async (route, corps) => {
+          appels.post += 1;
+          if (!route.includes('/applications/APP-1/emojis')) throw new Error('route inattendue ' + route);
+          if (!corps || !corps.body || !/^data:image\/png;base64,/.test(corps.body.image)) throw new Error('image absente');
+          const e = { id: String(960000000000000000n + BigInt(++seqApp)), name: corps.body.name };
+          appEmojis.push(e);
+          return { id: e.id, name: e.name };
+        },
+        delete: async () => { appels.delete += 1; },
+      },
+    };
+
+    const crees = await extra.installVtEmotesApp(client);
+    check('10 émojis créés SUR l’application (pas sur un serveur)', crees.length === 10, String(crees.length));
+    const packApp = extra.vtAppPack();
+    check('…le pack d’application est mémorisé', Object.keys(packApp).length === 10, String(Object.keys(packApp).length));
+    const relance = await extra.installVtEmotesApp(client);
+    check('…relancé aussitôt : rien de recréé (idempotent)', relance.length === 0 && appEmojis.length === 10,
+      relance.length + '/' + appEmojis.length);
+
+    // Un serveur qui n’a JAMAIS rien installé, et dont le pack local est mort
+    // (c’est exactement le cas du panneau en capture : deux boutons vides).
+    const orphelin = { id: 'gOrphelin', emojis: { cache: { get: () => null, find: () => undefined }, create: async () => { throw new Error('refusé'); } } };
+    store.settings.set('vt_emotes:gOrphelin', JSON.stringify({ nom: '111111111111111111', ajouter: '222222222222222222' }));
+    store.settings.set('vt_emotes_ver:gOrphelin', 'pack-morte');
+    const pOrphelin = JSON.parse(JSON.stringify(extra.buildVtPanel(BOT, orphelin).components[0]));
+    const bOrphelin = pOrphelin.components.filter((c) => c.type === 1).flatMap((r) => r.components);
+    const idsApp = Object.values(packApp).map(String);
+    check('serveur au pack mort : 10 boutons pleins, aucun vide', bOrphelin.length === 10 && bOrphelin.every((b) => b.emoji && b.emoji.id));
+    check('…tous portés par les émojis de l’application', bOrphelin.every((b) => idsApp.includes(String(b.emoji.id))));
+    check('…plus un seul émoji unicode dans les boutons', bOrphelin.every((b) => /^\d+$/.test(String(b.emoji.id))));
+
+    // ensureVtEmotes ne doit RIEN créer quand l’application est déjà servie.
+    const botManager = require('../server/discord/botManager');
+    if (botManager.clients && botManager.clients.set) botManager.clients.set(BOT, { client });
+    const avant = appels.post;
+    await extra.ensureVtEmotes(BOT, orphelin);
+    check('…ensureVtEmotes ne retouche à rien', appels.post === avant, String(appels.post - avant));
+    if (botManager.clients && botManager.clients.delete) botManager.clients.delete(BOT);
+  }
+
+  console.log('— 2d. Ligne de légende : émojis de serveur, jamais un id d’application —');
+  {
+    const idsApp = Object.values(extra.vtAppPack()).map(String);
+    const texteDe = (g) => JSON.parse(JSON.stringify(extra.buildVtPanel(BOT, g).components[0]))
+      .components.filter((c) => c.type === 10).map((c) => c.content).join('\n');
+
+    // Serveur AVEC son pack local, à jour : la légende porte nos dessins.
+    const mapL = {};
+    for (let i = 0; i < 10; i++) mapL[extra.VT_EMOTES[i]] = String(700000000000000000n + BigInt(i));
+    store.settings.set('vt_emotes:gL', JSON.stringify(mapL));
+    store.settings.set('vt_emotes_ver:gL', (() => { const c = require('crypto'); const pa = require('path');
+      const h = c.createHash('sha256');
+      for (const k of extra.VT_EMOTES) h.update(require('fs').readFileSync(pa.join(__dirname, '..', 'server', 'assets', 'voicetemp', 'hox_' + k + '.png')));
+      return h.digest('hex').slice(0, 16); })());
+    const cacheL = new Map(Object.entries(mapL).map(([k, id]) => [id, { id, name: 'hox_' + k }]));
+    const gL = { id: 'gL', emojis: { cache: { get: (id) => cacheL.get(id) || null, find: () => undefined } } };
+    const tL = texteDe(gL);
+    check('légende avec pack local : 10 de nos dessins', (tL.match(/<:hox_/g) || []).length === 10,
+      String((tL.match(/<:hox_/g) || []).length));
+    check('…aucun identifiant d’application dans le texte', idsApp.every((id) => !tL.includes(id)));
+
+    // Serveur SANS pack local : la légende ne doit JAMAIS afficher un id brut.
+    const gVide = { id: 'gNul', emojis: { cache: { get: () => null, find: () => undefined } } };
+    const tVide = texteDe(gVide);
+    check('légende sans pack local : jamais un identifiant brut', !/<:\w+:\d+>/.test(tVide), tVide.slice(0, 60));
+    check('…elle retombe proprement sur les émojis du clavier', tVide.includes('✏️'));
+  }
+
   console.log('— 3. Panneau rafraîchi après remplacement —');
   check('slash /voicetemp emotes : message « panneau mis à jour »', fs.readFileSync(path.join(__dirname, '..', 'server', 'discord', 'extra.js'), 'utf8').includes('a été mis à jour avec les nouveaux émojis'));
   check('route dashboard panneau : les émojis sont assurés avant envoi', /ensureVtEmotes\(bot\.id, guild\)[\s\S]{0,200}sendVtPanel/.test(fs.readFileSync(path.join(__dirname, '..', 'server', 'routes.js'), 'utf8')));

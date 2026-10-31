@@ -1683,6 +1683,52 @@ function vtEmotesOf(guild) { try { return JSON.parse(store.settings.get(`vt_emot
 const VT_GLOBAL_KEY = 'vt_emotes_global';        // { cle: id }
 const VT_GLOBAL_GUILD = 'vt_emotes_global_guild'; // serveur qui héberge les émojis
 const VT_GLOBAL_VER = 'vt_emotes_global_ver';
+// v385 (demande du fondateur) — Discord permet à une application de posséder
+// ses propres émojis : jusqu'à 2000, utilisables par elle partout, dans
+// n'importe quel serveur, SANS permission externe et sans installation côté
+// serveur. C'est la seule façon d'avoir des émojis « globaux » : un émoji de
+// serveur dépend du serveur qui l'héberge, un émoji d'application non.
+const VT_APP_KEY = 'vt_emotes_app';       // { cle: id } propres à l'application
+const VT_APP_VER = 'vt_emotes_app_ver';
+function vtAppPack() {
+  try {
+    const brut = store.settings.get(VT_APP_KEY);
+    const map = brut ? JSON.parse(brut) : {};
+    return map && typeof map === 'object' ? map : {};
+  } catch { return {}; }
+}
+function vtAppComplet() { return VT_EMOTES.every((k) => !!vtAppPack()[k]); }
+
+// Installe (ou remet à jour) les 10 émojis SUR L'APPLICATION. Une seule fois :
+// ensuite tous les serveurs en profitent. Renvoie les noms créés.
+async function installVtEmotesApp(client) {
+  const fs = require('fs'); const path = require('path');
+  const appId = (client && client.application && client.application.id)
+    || (client && client.user && client.user.id);
+  if (!appId || !client.rest) throw new Error('application inconnue');
+  const ver = vtVer();
+  const dejaLa = await client.rest.get(`/applications/${appId}/emojis`).catch(() => null);
+  const items = Array.isArray(dejaLa && dejaLa.items) ? dejaLa.items : [];
+  const parNom = new Map(items.map((e) => [e.name, e]));
+  const map = vtAppPack();
+  const rapide = store.settings.get(VT_APP_VER) === ver;
+  const crees = [];
+  for (const key of VT_EMOTES) {
+    const nom = 'hox_' + key;
+    const existant = parNom.get(nom);
+    if (existant && rapide) { map[key] = String(existant.id); continue; }
+    if (existant) { try { await client.rest.delete(`/applications/${appId}/emojis/${existant.id}`); } catch {} }
+    const fichier = path.join(__dirname, '..', 'assets', 'voicetemp', nom + '.png');
+    if (!fs.existsSync(fichier)) continue;
+    const image = 'data:image/png;base64,' + fs.readFileSync(fichier).toString('base64');
+    const cree = await client.rest.post(`/applications/${appId}/emojis`, { body: { name: nom, image } });
+    if (cree && cree.id) { map[key] = String(cree.id); crees.push(nom); }
+  }
+  store.settings.set(VT_APP_KEY, JSON.stringify(map));
+  store.settings.set(VT_APP_VER, ver);
+  return crees;
+}
+
 function vtGlobalPack() {
   try {
     const brut = store.settings.get(VT_GLOBAL_KEY);
@@ -1723,20 +1769,38 @@ function _emojiDuServeur(guild, key) {
   return null;
 }
 
-function vtEmoji(guild, key) {
+// v385 — dans un bloc de TEXTE (Components V2), Discord n'affiche PAS les
+// émojis d'application : il écrit le code brut « <:hox_nom:123…> ». La légende
+// garde donc un émoji de SERVEUR quand il y en a un de valide, et retombe sur
+// l'émoji du clavier sinon — jamais sur un identifiant d'application.
+function vtEmojiTexte(guild, key) {
   const ver = vtVer();
-  // 1. le pack de CE serveur, s'il est à l'image des dessins actuels
   if (store.settings.get(`vt_emotes_ver:${guild && guild.id}`) === ver) {
     const id = _emojiDuServeur(guild, key);
     if (id) return id;
   }
-  // 2. le pack d'accueil : rien à installer côté serveur, et il est partagé
-  if (store.settings.get(VT_GLOBAL_VER) === ver) {
-    const gid = vtGlobalPack()[key];
-    if (gid) return String(gid);
+  const local = _emojiDuServeur(guild, key);
+  if (local) return local;
+  return VT_EMOTE_FALLBACK[key];
+}
+
+function vtEmoji(guild, key) {
+  const ver = vtVer();
+  // 1. les émojis de l'APPLICATION : ils marchent dans tous les serveurs,
+  //    quelle que soit la configuration de celui-ci. C'est la source voulue.
+  if (store.settings.get(VT_APP_VER) === ver) {
+    const appId = vtAppPack()[key];
+    if (appId) return String(appId);
   }
-  // 3. un pack plus ancien (anciens dessins, mais toujours blancs : mieux
-  //    qu'un émoji de couleur du clavier unicode)
+  // 2. le pack de CE serveur, s'il est à l'image des dessins actuels
+  if (store.settings.get(`vt_emotes_ver:${guild && guild.id}`) === ver) {
+    const id = _emojiDuServeur(guild, key);
+    if (id) return id;
+  }
+  // 3. un pack d'application ou de serveur plus ancien : anciens dessins, mais
+  //    toujours nos dessins blancs — mieux qu'un émoji de couleur unicode.
+  const appAncien = vtAppPack()[key];
+  if (appAncien) return String(appAncien);
   const local = _emojiDuServeur(guild, key);
   if (local) return local;
   const gid = vtGlobalPack()[key];
@@ -1792,25 +1856,41 @@ async function installVtEmotes(botId, guild, options = {}) {
 // il part alors avec des émojis unicode, jamais avec un panneau cassé.
 async function ensureVtEmotes(botId, guild) {
   const ver = vtVer();
-  const hote = store.settings.get(VT_GLOBAL_GUILD);
-  // Pack d'accueil présent ET à jour : personne n'a rien à installer.
-  if (vtGlobalComplet() && store.settings.get(VT_GLOBAL_VER) === ver) return null;
-  // Pack d'accueil présent mais à l'ancien dessin : on le remet à jour CHEZ
-  // LUI. C'est le serveur d'accueil qui change, pas les serveurs voisins.
-  if (vtGlobalComplet() && hote) {
+  let client = null;
+  try {
+    const bm = require('./botManager');
+    const entry = bm.clients && bm.clients.get ? bm.clients.get(botId) : null;
+    client = entry && entry.client;
+  } catch {}
+
+  // 1) Les émojis de l'APPLICATION : ils portent les boutons, dans tous les
+  //    serveurs, sans que personne n'installe quoi que ce soit.
+  if (!vtAppComplet() || store.settings.get(VT_APP_VER) !== ver) {
     try {
-      const bm = require('./botManager');
-      const entry = bm.clients && bm.clients.get ? bm.clients.get(botId) : null;
-      const host = entry && entry.client && entry.client.guilds && entry.client.guilds.cache
-        ? entry.client.guilds.cache.get(String(hote)) : null;
-      if (host) { await installVtEmotes(botId, host); return null; }
-    } catch {}
+      if (client && client.isReady && client.isReady()) await installVtEmotesApp(client);
+    } catch (e) {
+      console.error('[Hoxera] émojis d’application : ' + (e && e.message ? e.message : e));
+    }
   }
+
+  // 2) Le pack LOCAL : Discord n'affiche pas les émojis d'application dans un
+  //    bloc de texte, donc la ligne de légende a besoin d'émojis de serveur.
+  //    On le répare seulement s'il manque ou s'il est à l'ancien dessin.
   if (!guild || !guild.emojis) return null;
-  const deja = vtEmotesOf(guild);
-  // Ce serveur a déjà le pack, à jour : rien à faire.
-  if (VT_EMOTES.every((k) => !!deja[k]) && store.settings.get(`vt_emotes_ver:${guild.id}`) === ver) return null;
-  return installVtEmotes(botId, guild);
+  const local = vtEmotesOf(guild);
+  const localOk = VT_EMOTES.every((k) => !!local[k] && _emojiDuServeur(guild, k))
+    && store.settings.get(`vt_emotes_ver:${guild.id}`) === ver;
+  if (localOk) return null;
+  // Créer un émoji demande « Gérer les expressions ». Sans cette permission on
+  // ne tente rien : le panneau part quand même, la légende passe au clavier.
+  try {
+    const moi = guild.members && guild.members.me;
+    if (moi && moi.permissions && typeof moi.permissions.has === 'function'
+      && !moi.permissions.has('ManageGuildExpressions')
+      && !moi.permissions.has('ManageEmojisAndStickers')
+      && !moi.permissions.has('Administrator')) return null;
+  } catch {}
+  try { return await installVtEmotes(botId, guild); } catch (e) { return null; }
 }
 
 // 🛡️ v300 — Balayeur des vocaux temporaires (appelé toutes les 30 s par
@@ -1909,8 +1989,9 @@ function buildVtPanel(botId, guild, options = {}) {
   // identifiant d'émoji (pack d'accueil supprimé), le panneau repart en unicode
   // plutôt que d'échouer.
   const emo = (key) => (options.sansEmoji ? VT_EMOTE_FALLBACK[key] : vtEmoji(guild, key));
+  const emoTexte = (key) => (options.sansEmoji ? VT_EMOTE_FALLBACK[key] : vtEmojiTexte(guild, key));
   const tag = (key, label) => {
-    const e = emo(key);
+    const e = emoTexte(key);
     return /^\d+$/.test(String(e)) ? `<:hox_${key}:${e}> ${label}` : `${e} ${label}`;
   };
   // v273 — légende en PETIT TEXTE (« -# ») : chez TempVoice la légende est
@@ -2328,6 +2409,6 @@ module.exports = {
   // 🧪 États internes exposés pour les tests (anti-fuite mémoire)
   _test: { penduGames, morpionGames, pollState, quizState, capMap },
   buildVtPanel, sendVtPanel, handleVtInteraction, vtSetOwner, vtGetOwner, vtClearOwner, vtChannelOf,
-  installVtEmotes, ensureVtEmotes, vtGlobalPack, vtClaimableChannel, vtEmoji, VT_EMOTES, VT_EMOTE_FALLBACK,
+  installVtEmotes, installVtEmotesApp, ensureVtEmotes, vtAppPack, vtGlobalPack, vtClaimableChannel, vtEmoji, vtEmojiTexte, VT_EMOTES, VT_EMOTE_FALLBACK,
   installHoxEmotes, hoxEmotesPanel, HOX_SIG_EMOTES, HOX_SIG_FALLBACK,
 };
