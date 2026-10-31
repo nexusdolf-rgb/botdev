@@ -25,11 +25,67 @@ function check(label, cond, extraInfo) {
 (async () => {
   const BOT = store.bots.create({ user_id: 1, name: 'T', token: 'x', client_id: 'c', prefix: '!' });
 
-  console.log('— 1. Pack vocal PREMIUM (10 PNG) —');
+  console.log('— 1. Pack vocal au style du tableau de bord (10 PNG) —');
   const dir = path.join(__dirname, '..', 'server', 'assets', 'voicetemp');
   check('10 émojis vocaux présents', extra.VT_EMOTES.every((k) => fs.existsSync(path.join(dir, 'hox_' + k + '.png'))));
   check('…tous sous la limite Discord (256 Ko)', extra.VT_EMOTES.every((k) => fs.statSync(path.join(dir, 'hox_' + k + '.png')).size < 256000));
-  check('…ce sont bien les versions premium (pas les plats)', fs.statSync(path.join(dir, 'hox_nom.png')).size > 1500);
+  // Le pack vocal suit le style du tableau de bord : une puce sombre #2B2D31
+  // et un dessin gris #949BA4. Un dessin GRIS SANS FOND serait invisible sur
+  // le thème clair de Discord (2,2:1) et sur le bouton rouge « supprimer »
+  // (1,6:1) : c'est la puce qui garantit 4,9:1 sur n'importe quel bouton.
+  const pixels = (f) => {
+    const brut = fs.readFileSync(path.join(dir, f));
+    const zlib = require('zlib');
+    let pos = 8, idat = [], largeur = 0, hauteur = 0;
+    while (pos < brut.length) {
+      const len = brut.readUInt32BE(pos);
+      const type = brut.toString('ascii', pos + 4, pos + 8);
+      if (type === 'IHDR') { largeur = brut.readUInt32BE(pos + 8); hauteur = brut.readUInt32BE(pos + 12); }
+      if (type === 'IDAT') idat.push(brut.subarray(pos + 8, pos + 8 + len));
+      pos += 12 + len;
+    }
+    const flux = zlib.inflateSync(Buffer.concat(idat));
+    const octetsParPixel = 4, parLigne = largeur * octetsParPixel;
+    const sortie = Buffer.alloc(hauteur * parLigne);
+    for (let y = 0; y < hauteur; y += 1) {
+      const filtre = flux[y * (parLigne + 1)];
+      const ligne = flux.subarray(y * (parLigne + 1) + 1, (y + 1) * (parLigne + 1));
+      for (let x = 0; x < parLigne; x += 1) {
+        const gauche = x >= octetsParPixel ? sortie[y * parLigne + x - octetsParPixel] : 0;
+        const haut = y > 0 ? sortie[(y - 1) * parLigne + x] : 0;
+        const hautGauche = (y > 0 && x >= octetsParPixel) ? sortie[(y - 1) * parLigne + x - octetsParPixel] : 0;
+        let v = ligne[x];
+        if (filtre === 1) v += gauche;
+        else if (filtre === 2) v += haut;
+        else if (filtre === 3) v += Math.floor((gauche + haut) / 2);
+        else if (filtre === 4) {
+          const p = gauche + haut - hautGauche;
+          const da = Math.abs(p - gauche), db = Math.abs(p - haut), dc = Math.abs(p - hautGauche);
+          v += (da <= db && da <= dc) ? gauche : (db <= dc ? haut : hautGauche);
+        }
+        sortie[y * parLigne + x] = v & 255;
+      }
+    }
+    const compte = new Map();
+    for (let i = 0; i < sortie.length; i += 4) {
+      if (sortie[i + 3] < 200) continue;
+      const cle = sortie[i] + ',' + sortie[i + 1] + ',' + sortie[i + 2];
+      compte.set(cle, (compte.get(cle) || 0) + 1);
+    }
+    return compte;
+  };
+  const teintes = (k) => pixels('hox_' + k + '.png');
+  check('…puce sombre #2B2D31 derrière le dessin (visibilité sur tout bouton)',
+    extra.VT_EMOTES.every((k) => (teintes(k).get('43,45,49') || 0) > 8000),
+    String(teintes('nom').get('43,45,49')));
+  check('…dessin gris #949BA4, le gris exact du tableau de bord',
+    extra.VT_EMOTES.every((k) => (teintes(k).get('148,155,164') || 0) > 500),
+    String(teintes('nom').get('148,155,164')));
+  check('…aucune tuile terracotta brillante ne subsiste',
+    extra.VT_EMOTES.every((k) => ![...teintes(k).keys()].some((c) => {
+      const [r, g, b] = c.split(',').map(Number);
+      return r > 150 && g < 130 && b < 110 && (teintes(k).get(c) || 0) > 2000;
+    })));
 
   console.log('— 2. Remplacement automatique si nos fichiers changent —');
   let seq = 0;
