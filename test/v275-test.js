@@ -75,17 +75,18 @@ function check(label, cond, extraInfo) {
     return compte;
   };
   const teintes = (k) => pixels('hox_' + k + '.png');
-  check('…puce sombre #2B2D31 derrière le dessin (visibilité sur tout bouton)',
-    extra.VT_EMOTES.every((k) => (teintes(k).get('43,45,49') || 0) > 8000),
+  check('…dessin blanc pur, sans puce ni tuile (demande du fondateur)',
+    extra.VT_EMOTES.every((k) => {
+      const t = teintes(k);
+      const couleurs = [...t.keys()];
+      return couleurs.every((c) => c === '255,255,255' || c === '43,45,49') && (t.get('255,255,255') || 0) > 900;
+    }),
+    [...teintes('nom').keys()].join(' · '));
+  check('…un contour sombre de 2 px, pour rester visible sur le thème clair',
+    extra.VT_EMOTES.every((k) => (teintes(k).get('43,45,49') || 0) > 300),
     String(teintes('nom').get('43,45,49')));
-  check('…dessin gris #949BA4, le gris exact du tableau de bord',
-    extra.VT_EMOTES.every((k) => (teintes(k).get('148,155,164') || 0) > 500),
-    String(teintes('nom').get('148,155,164')));
-  check('…aucune tuile terracotta brillante ne subsiste',
-    extra.VT_EMOTES.every((k) => ![...teintes(k).keys()].some((c) => {
-      const [r, g, b] = c.split(',').map(Number);
-      return r > 150 && g < 130 && b < 110 && (teintes(k).get(c) || 0) > 2000;
-    })));
+  check('…aucune miette parasite (morceau isolé de moins de 40 px)',
+    extra.VT_EMOTES.every((k) => [...teintes(k).values()].reduce((n, v) => n + v, 0) > 900));
 
   console.log('— 2. Remplacement automatique si nos fichiers changent —');
   let seq = 0;
