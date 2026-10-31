@@ -8,6 +8,27 @@ const App = {
   router: {},
 };
 
+// ---------------------- Garde-fou anti double-clic ----------------------
+// Un clic rapide deux fois sur « Enregistrer » envoyait deux fois la même
+// requête : deux sauvegardes créées par « Sauvegarder maintenant », deux
+// messages pour « Envoyer ». Le second clic est ignoré tant que le premier
+// n'a pas eu le temps d'aboutir (800 ms). Un enregistrement volontairement
+// refait plus tard passe normalement.
+if (typeof document !== 'undefined' && !window.__hxAntiDouble) {
+  window.__hxAntiDouble = true;
+  const ACTIONS_UNIQUES = /^(enregistrer|sauvegarder|envoyer|publier|créer|confirmer|réinitialiser|reinitialiser|resynchroniser|ressynchroniser|vérifier|verifier|appliquer|supprimer|retirer)\b/i;
+  document.addEventListener('click', (e) => {
+    const bouton = e.target && e.target.closest ? e.target.closest('button') : null;
+    if (!bouton) return;
+    const texte = String(bouton.innerText || '').trim();
+    if (!ACTIONS_UNIQUES.test(texte)) return;
+    if (bouton.dataset.envoiEnCours === '1') { e.preventDefault(); e.stopImmediatePropagation(); return; }
+    bouton.dataset.envoiEnCours = '1';
+    clearTimeout(bouton._envoiTimer);
+    bouton._envoiTimer = setTimeout(() => { delete bouton.dataset.envoiEnCours; }, 800);
+  }, true);
+}
+
 // ---------------------- Utilitaires ----------------------
 // Effet « ripple » Material sur TOUS les boutons (délégué global)
 if (typeof document !== 'undefined' && !window.__hxRipple) {

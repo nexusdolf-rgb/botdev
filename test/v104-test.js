@@ -46,7 +46,11 @@ console.log('✅ barre de sauvegarde : détection, action globale, récap unique
 
 // ---- 4. 👋 Première visite ----
 assert.ok(dash.includes('dash-hero') && dash.includes('pct < 25'), 'héros affiché quand config < 25 %');
-assert.ok(dash.includes('data-go="tickets"') && dash.includes('data-go="welcome"') && dash.includes('data-go="community"'), '3 étapes cliquables');
+// Les 3 étapes doivent pointer vers un module réel : l'ancienne troisième
+// étape visait « community », un nom qui n'existe plus (alias d'Invitations)
+// alors que son libellé annonçait Starboard, lives et annonces.
+const etapes = [...dash.matchAll(/class="hero-step" data-go="([a-z]+)"/g)].map((m) => m[1]);
+assert.deepStrictEqual(etapes, ['tickets', 'welcome', 'starboard'], '3 étapes cliquables, chacune vers un module existant');
 console.log('✅ première visite : héros de bienvenue avec 3 étapes guidées');
 
 // ---- 5. 👀 Aperçus Discord ----

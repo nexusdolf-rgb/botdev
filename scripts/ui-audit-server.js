@@ -23,6 +23,25 @@ const botManager = require('../server/discord/botManager');
 // en production. Sans cela, l'audit ne reproduit pas le chemin réel.
 const lid = (n) => '9'.repeat(3) + String(n).padStart(16, '0');
 
+// Discord renvoie des Collection (une Map enrichie de filter/map/some/find…).
+// Le mock se contentait de Map : tout le code qui fait cache.filter(...)
+// tombait alors sur « is not a function » et la page affichait une erreur
+// serveur qui n'existe pas en production. Ce faux Collection rend le mock
+// fidèle, sans rien changer au vrai code.
+class Collection extends Map {
+  filter(predicat) { const c = new Collection(); for (const [k, v] of this) if (predicat(v, k, this)) c.set(k, v); return c; }
+  map(fn) { return [...this].map(([k, v]) => fn(v, k, this)); }
+  some(fn) { return [...this].some(([k, v]) => fn(v, k, this)); }
+  every(fn) { return [...this].every(([k, v]) => fn(v, k, this)); }
+  find(fn) { return [...this].find(([k, v]) => fn(v, k, this)); }
+  reduce(fn, depart) { return [...this].reduce((acc, [k, v], i) => fn(acc, v, k, i), depart); }
+  sort(fn) { return [...this.values()].sort(fn); }
+  first() { return this.values().next().value; }
+  last() { return [...this.values()].pop(); }
+  random() { const v = [...this.values()]; return v[Math.floor(Math.random() * v.length)]; }
+  toJSON() { return [...this.values()]; }
+}
+
 // ------------------------------------------------------------
 // Fabrique un faux salon Discord
 // ------------------------------------------------------------
@@ -53,7 +72,7 @@ function member(id, username, guild, joinedDaysAgo = 100, roleIds = []) {
     displayAvatarURL: (o) => 'https://cdn.discordapp.com/avatars/' + id + '/a.png',
     toString: () => `<@${id}>`,
   };
-  const roles = new Map();
+  const roles = new Collection();
   for (const r of roleIds) {
     const longRoleId = lid(r);
     if (guild.roles.cache.has(longRoleId)) roles.set(longRoleId, guild.roles.cache.get(longRoleId));
@@ -75,9 +94,9 @@ function member(id, username, guild, joinedDaysAgo = 100, roleIds = []) {
 // Fabrique un faux serveur Discord (pires cas de longueur)
 // ------------------------------------------------------------
 function makeGuild(id, name, { big = false } = {}) {
-  const channels = new Map();
-  const roles = new Map();
-  const members = new Map();
+  const channels = new Collection();
+  const roles = new Collection();
+  const members = new Collection();
 
   // Rôles : certains très longs (pires cas)
   const roleDefs = [
@@ -170,9 +189,9 @@ function makeGuild(id, name, { big = false } = {}) {
 // pour auditer le rendu mobile réel (vue d'ensemble, tickets, salons).
 // ------------------------------------------------------------
 function makeCodmGuild() {
-  const channels = new Map();
-  const roles = new Map();
-  const members = new Map();
+  const channels = new Collection();
+  const roles = new Collection();
+  const members = new Collection();
 
   const roleBase = [
     ['72001', 'Administrateur', 30], ['72002', 'Fondateur', 29], ['72003', 'Co-fondateur', 28],
@@ -241,7 +260,7 @@ function makeCodmGuild() {
 // Faux client Discord (interface minimale lue par les routes)
 // ------------------------------------------------------------
 function makeClient(guilds) {
-  const guildMap = new Map();
+  const guildMap = new Collection();
   for (const g of guilds) guildMap.set(String(g.id), g);
   const user = {
     id: '1537443352281088000',
@@ -254,15 +273,31 @@ function makeClient(guilds) {
     displayAvatarURL: (o) => 'https://cdn.discordapp.com/avatars/1537443352281088000/6dff30dc9e5abf146aae3e48d759522f.png',
     fetch: async () => user,
   };
+  user.setPresence = () => user;
   return {
     user,
     isReady: () => true,
     ws: { ping: 42 },
     guilds: { cache: guildMap },
-    channels: { cache: new Map() },
-    users: { cache: new Map() },
+    channels: { cache: new Collection() },
+    users: { cache: new Collection() },
     fetch: async (id) => (guildMap.get(String(id)) ? guildMap.get(String(id)) : user),
     login: async () => {},
+    // Discord répond par sa propre liste de commandes enregistrées. Sans ce
+    // client REST, l'écran « Commandes » affichait « Lecture refusée par
+    // Discord : Cannot read properties of undefined (reading 'get') ».
+    rest: {
+      get: async (route) => {
+        if (/^\/applications\/[^/]+\/commands/.test(String(route))) {
+          return botManager.desiredCommandPayloads(bot ? bot.id : 1).map((c) => ({ ...c }));
+        }
+        return {};
+      },
+      post: async () => ({}),
+      put: async () => ({}),
+      patch: async () => ({}),
+      delete: async () => ({}),
+    },
   };
 }
 

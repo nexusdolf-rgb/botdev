@@ -1047,7 +1047,6 @@ Dashboard.openServerPicker = () => {
         ${guilds.map((g) => `
           <button type="button" class="sp-card${g.id === Dashboard.state.guildId ? ' is-current' : ''}" data-gid="${App.escapeHtml(g.id)}" data-name="${App.escapeHtml(String(g.name || '').toLowerCase())}">
             <span class="sp-banner" style="${g.banner ? `background-image:url('${App.escapeHtml(g.banner)}')` : ''}">
-              ${g.banner ? '' : `<span class="sp-fallback">${App.escapeHtml(initialOf(g.name))}</span>`}
               ${g.id === Dashboard.state.guildId ? '<span class="sp-current-tag">✓ Serveur actif</span>' : ''}
               ${g.canManage ? '' : '<span class="sp-ro">Lecture seule</span>'}
             </span>
@@ -2496,7 +2495,7 @@ Dashboard.renderers.overview = async (content, data) => {
         <div class="hero-steps">
           <button class="hero-step" data-go="tickets"><span class="hs-num">1</span><span class="hs-emoji"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M2 9a3 3 0 0 0 0 6v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-4a3 3 0 0 1 0-6V5a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2M13 11v2M13 17v2"/></svg></span><b>Support</b><span>Tickets et catégories</span></button>
           <button class="hero-step" data-go="welcome"><span class="hs-num">2</span><span class="hs-emoji"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6.6 3.6h10.8v16.8H6.6z"/><path d="M14.6 12h1"/><path d="M4.6 20.4h15"/></svg></span><b>Accueil</b><span>Bienvenue et auto-rôles</span></button>
-          <button class="hero-step" data-go="community"><span class="hs-num">3</span><span class="hs-emoji"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3.6l2.55 5.4 5.85.72-4.35 4.05 1.17 5.79L12 16.74l-5.22 2.82 1.17-5.79L3.6 9.72l5.85-.72L12 3.6Z"/></svg></span><b>Communauté</b><span>Starboard, lives et annonces</span></button>
+          <button class="hero-step" data-go="starboard"><span class="hs-num">3</span><span class="hs-emoji"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3.6l2.55 5.4 5.85.72-4.35 4.05 1.17 5.79L12 16.74l-5.22 2.82 1.17-5.79L3.6 9.72l5.85-.72L12 3.6Z"/></svg></span><b>Communauté</b><span>Starboard, lives et annonces</span></button>
         </div>
       </section>`);
     onboarding.querySelectorAll('[data-go]').forEach((button) => { button.onclick = () => Dashboard.setModule(button.dataset.go); });
@@ -3551,8 +3550,9 @@ Dashboard.renderers.welcome = async (content, data) => {
             if (i >= 0) order[i] = ref;
           }
         });
-        cfgZone.appendChild(App.el(`<label class="dash-label" style="margin-top:8px">${f.label}</label>`));
-        const box = App.el(`<div class="dash-channelsmulti" data-k="${f.key}" data-channelsmulti="1"></div>`);
+        // Le libellé du champ est déjà posé par la boucle commune, juste
+        // au-dessus : le reposer ici l'affichait deux fois de suite.
+        const box = App.el(`<div class="dash-channelsmulti" data-k="${f.key}" data-channelsmulti="1" style="margin-top:8px"></div>`);
         cfgZone.appendChild(box);
         cfgZone.appendChild(App.el(`<div style="font-size:12px;color:var(--d-dim);margin-top:6px;line-height:1.6"><b>Comment ça marche :</b><br/>• Dans le message, écrivez <b>{channels}</b> à l'endroit où les salons doivent apparaître.<br/>• Pour chaque salon ajouté, écrivez une phrase avec <b>{salon}</b> : la mention cliquable du salon est insérée à la place.<br/>• Exemple : « 📜 Je vous invite à prendre connaissance de {salon} » → « 📜 Je vous invite à prendre connaissance de #regles »</div>`));
         let addRow = null;
