@@ -37,8 +37,9 @@ const check = (nom, cond, detail) => {
 
   console.log('— 1. Tailles calibrées sur TempVoice —');
   check('titre en « ### » (petit titre, pas « ## »)', txt.includes('### Gérez votre salon vocal'));
-  // v311 — signature du pied retirée : il reste les 3 lignes de légende.
-  check('légende entière en petit texte « -# » (3 lignes)', (txt.match(/-# /g) || []).length === 3);
+  // v385b — la légende est dessinée (image de 3 rangées), plus de petit texte.
+  check('légende dessinée : aucune ligne « -# »', (txt.match(/-# /g) || []).length === 0
+    && JSON.stringify(panel.components[0].toJSON()).includes('attachment://legende-vocale.png'));
   check('description tenue en une phrase', txt.includes('Chaque réponse est **personnelle**.'));
   check("pas de gros paragraphe d'intro", !txt.includes('Cette interface sert à gérer'));
 

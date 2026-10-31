@@ -35,9 +35,11 @@ const check = (nom, cond, detail) => {
 
   console.log('— 1. La légende, comme chez TempVoice —');
   const txt = v2.texts(extra.buildVtPanel(botId, null)).join('\n');
-  check('ligne 1 : NOM LIMITE PRIVÉ PUBLIC', txt.includes('✏️ NOM   👥 LIMITE   🔒 PRIVÉ   🔓 PUBLIC'));
-  check('ligne 2 : RÉCUPÉRER AJOUTER RETIRER EXPULSER', txt.includes('🔑 RÉCUPÉRER   ➕ AJOUTER   ➖ RETIRER   👢 EXPULSER'));
-  check('ligne 3 : TRANSFÉRER SUPPRIMER', txt.includes('🤝 TRANSFÉRER   🗑️ SUPPRIMER'));
+  const json = JSON.stringify(extra.buildVtPanel(botId, null).components[0].toJSON());
+  // v385b — plus aucune ligne de légende en texte : elle est dessinée.
+  check('ligne 1 : NOM LIMITE PRIVÉ PUBLIC (dessinée)', !txt.includes('✏️ NOM') && json.includes('legende-vocale.png'));
+  check('ligne 2 : RÉCUPÉRER AJOUTER RETIRER EXPULSER (dessinée)', !txt.includes('🔑 RÉCUPÉRER'));
+  check('ligne 3 : TRANSFÉRER SUPPRIMER (dessinée)', !txt.includes('🤝 TRANSFÉRER'));
   
   check("phrase d'invitation en gras", txt.includes('**Appuyez sur les boutons ci-dessous pour gérer votre salon.**'));
   check('plus de présentation du panneau (« Interface Hoxera » retiré)', !txt.includes('Interface Hoxera'));
@@ -48,7 +50,7 @@ const check = (nom, cond, detail) => {
   check('10 boutons sans aucun libellé', btn.length === 10 && btn.every((b) => !b.label && b.emoji));
   check("…nos émojis de repli dans l'ordre", btn.map((b) => b.emoji.name).join('') === "✏️👥🔒🔓🔑➕➖👢🤝🗑️");
   check('suppression : bouton sans libellé, même gris que les autres', !rows[2].components[1].label && rows[2].components[1].style === 2 && rows[2].components[1].emoji.name === '🗑️');
-  check('légende en petit texte « -# » (panneau compact)', txt.includes('-# ✏️ NOM'));
+  check('légende en une seule image, aucun émoji du clavier', (txt.match(/-# /g) || []).length === 0 && json.includes('attachment://legende-vocale.png'));
   check('grille rangée 4/4/2 (mobile propre)', rows.length === 3 && rows[0].components.length === 4 && rows[1].components.length === 4 && rows[2].components.length === 2);
 
   console.log('— 3. Avec nos émojis installés : la légende les affiche —');
@@ -63,7 +65,8 @@ const check = (nom, cond, detail) => {
   };
   await extra.installVtEmotes(botId, guild);
   const txt2 = v2.texts(extra.buildVtPanel(botId, guild)).join('\n');
-  check('légende avec <:hox_nom:ID> etc.', txt2.includes('<:hox_nom:910000000000000001> NOM'));
+  const json2 = JSON.stringify(extra.buildVtPanel(botId, guild).components[0].toJSON());
+  check('…la légende reste la même image (aucun code d’émoji brut)', !/<:\w+:\d+>/.test(txt2) && json2.includes('legende-vocale.png'));
   check('…boutons pointant sur nos émojis', v2.rows(extra.buildVtPanel(botId, guild))[0].components[0].emoji.id === '910000000000000001');
 
   console.log('— 4. Version —');

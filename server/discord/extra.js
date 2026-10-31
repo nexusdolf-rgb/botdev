@@ -1996,7 +1996,15 @@ function buildVtPanel(botId, guild, options = {}) {
   };
   // v273 — légende en PETIT TEXTE (« -# ») : chez TempVoice la légende est
   // minuscule ; c'est elle (et le titre « ## ») qui agrandissait notre panneau.
-  const legende = [
+  // v385b (capture du fondateur) — Discord n'affiche PAS un émoji d'application
+  // dans un bloc de texte (il écrirait le code brut) et l'émoji de serveur
+  // dépend des permissions du serveur. La légende devient donc une IMAGE
+  // dessinée avec nos 10 PNG : même rendu partout, aucun émoji du clavier.
+  const fs = require('fs');
+  const path = require('path');
+  const legendeFichier = path.join(__dirname, '..', 'assets', 'voicetemp', 'legende-vocale.png');
+  const legendeRef = fs.existsSync(legendeFichier) ? 'attachment://legende-vocale.png' : '';
+  const legende = legendeRef ? '' : [
     [tag('nom', 'NOM'), tag('limite', 'LIMITE'), tag('prive', 'PRIVÉ'), tag('public', 'PUBLIC')].join('   '),
     [tag('recup', 'RÉCUPÉRER'), tag('ajouter', 'AJOUTER'), tag('retirer', 'RETIRER'), tag('expulser', 'EXPULSER')].join('   '),
     [tag('transfer', 'TRANSFÉRER'), tag('suppr', 'SUPPRIMER')].join('   '),
@@ -2030,7 +2038,7 @@ function buildVtPanel(botId, guild, options = {}) {
     new ButtonBuilder().setCustomId(id('transfer')).setEmoji(emo('transfer')).setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId(id('del')).setEmoji(emo('suppr')).setStyle(ButtonStyle.Secondary),
   );
-  return ui.v2panel({
+  const panneauOptions = {
     // v311 (demande du fondateur) — ni ligne colorée ni signature sur le
     // panneau de l'interface vocaux temporaires.
     accent: false,
@@ -2038,11 +2046,33 @@ function buildVtPanel(botId, guild, options = {}) {
     // v384 (demande du fondateur) — le panneau ne se présente plus :
     // « Gérez votre salon vocal » en tête, et la consigne parle du salon.
     title: 'Gérez votre salon vocal',
-    description: `Chaque réponse est **personnelle**.\n${legende}\n\n**Appuyez sur les boutons ci-dessous pour gérer votre salon.**`,
+    description: legendeRef
+      ? 'Chaque réponse est **personnelle**.\n\n**Appuyez sur les boutons ci-dessous pour gérer votre salon.**'
+      : `Chaque réponse est **personnelle**.\n${legende}\n\n**Appuyez sur les boutons ci-dessous pour gérer votre salon.**`,
+    // la légende dessinée : MediaGallery juste au-dessus des boutons
+    ...(legendeRef ? { image: legendeRef } : {}),
     // v311 (demande du fondateur) — la signature « Hoxera · … » est retirée
     // du panneau de l'interface vocaux temporaires.
     footer: false,
-  }, [row1b, row2, row3]);
+  };
+  const rangees = [row1b, row2, row3];
+  const payload = ui.v2panel(panneauOptions, rangees);
+  // La pièce jointe doit voyager AVEC le message, sinon `attachment://` ne
+  // montre rien. Si elle ne peut pas être créée, on repart sur la légende
+  // texte : le panneau, lui, part toujours.
+  if (legendeRef) {
+    try {
+      const { AttachmentBuilder } = require('discord.js');
+      payload.files = [new AttachmentBuilder(legendeFichier, { name: 'legende-vocale.png' })];
+    } catch {
+      return ui.v2panel({
+        ...panneauOptions,
+        image: undefined,
+        description: `Chaque réponse est **personnelle**.\n${legende}\n\n**Appuyez sur les boutons ci-dessous pour gérer votre salon.**`,
+      }, rangees);
+    }
+  }
+  return payload;
 }
 
 // Envoie (ou remplace) le panneau dans le salon textuel configuré.

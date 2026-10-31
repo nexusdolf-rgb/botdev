@@ -251,32 +251,22 @@ function check(label, cond, extraInfo) {
     if (botManager.clients && botManager.clients.delete) botManager.clients.delete(BOT);
   }
 
-  console.log('— 2d. Ligne de légende : émojis de serveur, jamais un id d’application —');
+  console.log('— 2d. Légende du panneau : une image avec NOS dessins —');
   {
-    const idsApp = Object.values(extra.vtAppPack()).map(String);
-    const texteDe = (g) => JSON.parse(JSON.stringify(extra.buildVtPanel(BOT, g).components[0]))
-      .components.filter((c) => c.type === 10).map((c) => c.content).join('\n');
-
-    // Serveur AVEC son pack local, à jour : la légende porte nos dessins.
-    const mapL = {};
-    for (let i = 0; i < 10; i++) mapL[extra.VT_EMOTES[i]] = String(700000000000000000n + BigInt(i));
-    store.settings.set('vt_emotes:gL', JSON.stringify(mapL));
-    store.settings.set('vt_emotes_ver:gL', (() => { const c = require('crypto'); const pa = require('path');
-      const h = c.createHash('sha256');
-      for (const k of extra.VT_EMOTES) h.update(require('fs').readFileSync(pa.join(__dirname, '..', 'server', 'assets', 'voicetemp', 'hox_' + k + '.png')));
-      return h.digest('hex').slice(0, 16); })());
-    const cacheL = new Map(Object.entries(mapL).map(([k, id]) => [id, { id, name: 'hox_' + k }]));
-    const gL = { id: 'gL', emojis: { cache: { get: (id) => cacheL.get(id) || null, find: () => undefined } } };
-    const tL = texteDe(gL);
-    check('légende avec pack local : 10 de nos dessins', (tL.match(/<:hox_/g) || []).length === 10,
-      String((tL.match(/<:hox_/g) || []).length));
-    check('…aucun identifiant d’application dans le texte', idsApp.every((id) => !tL.includes(id)));
-
-    // Serveur SANS pack local : la légende ne doit JAMAIS afficher un id brut.
-    const gVide = { id: 'gNul', emojis: { cache: { get: () => null, find: () => undefined } } };
-    const tVide = texteDe(gVide);
-    check('légende sans pack local : jamais un identifiant brut', !/<:\w+:\d+>/.test(tVide), tVide.slice(0, 60));
-    check('…elle retombe proprement sur les émojis du clavier', tVide.includes('✏️'));
+    const panneau = extra.buildVtPanel(BOT, { id: 'gImg', emojis: { cache: { get: () => null, find: () => undefined } } });
+    const j = JSON.parse(JSON.stringify(panneau.components[0]));
+    const textes = j.components.filter((c) => c.type === 10).map((c) => c.content).join('\n');
+    const galeries = j.components.filter((c) => c.type === 12);
+    const url = galeries.length && galeries[0].items && galeries[0].items[0] && galeries[0].items[0].media
+      ? galeries[0].items[0].media.url : '';
+    check('légende affichée en image (MediaGallery)', url === 'attachment://legende-vocale.png', String(url));
+    check('…l’image voyage avec le message', (panneau.files || []).some((f) => f.name === 'legende-vocale.png'));
+    check('…le fichier existe sur le disque',
+      require('fs').existsSync(require('path').join(__dirname, '..', 'server', 'assets', 'voicetemp', 'legende-vocale.png')));
+    check('…plus un seul émoji du clavier dans le texte', !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(textes), textes.slice(0, 60));
+    check('…et aucun code d’émoji brut dans le texte', !/<:\w+:\d+>/.test(textes));
+    const boutons = j.components.filter((c) => c.type === 1).flatMap((r) => r.components);
+    check('…10 boutons, tous avec un émoji identifié', boutons.length === 10 && boutons.every((b) => b.emoji && /^\d+$/.test(String(b.emoji.id))));
   }
 
   console.log('— 3. Panneau rafraîchi après remplacement —');

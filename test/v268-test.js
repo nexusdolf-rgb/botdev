@@ -53,7 +53,11 @@ const mkChannel = (id, name) => {
   check("10 boutons carrés dans l'ordre", btn.map((b) => b.custom_id.split(':').pop()).join('|') === 'rename|limit|lock|unlock|claim|add|rem|kick|transfer|del');
   check('…émojis seuls, SANS libellé (style TempVoice)', btn.every((b) => !b.label) && btn[0].emoji.name === '✏️' && btn[1].emoji.name === '👥' && btn[4].emoji.name === '🔑');
   check('rangée 3 finit par supprimer, émoji seul', !rows[2].components[1].label && rows[2].components[1].style === 2);
-  check('légende émoji+nom dans le message', v2.texts(panel).join(' ').includes('NOM') && v2.texts(panel).join(' ').includes('Appuyez sur les boutons'));
+  // v385b — légende dessinée : image + nos 10 PNG, plus aucun émoji du clavier.
+  check('légende dessinée livrée avec le message',
+    JSON.stringify(panel.components[0].toJSON()).includes('attachment://legende-vocale.png')
+    && (panel.files || []).some((f) => f.name === 'legende-vocale.png')
+    && v2.texts(panel).join(' ').includes('Appuyez sur les boutons'));
   check('boutons membre en émojis seuls (ajouter/retirer/expulser/transférer)',
     [rows[1].components[1], rows[1].components[2], rows[1].components[3], rows[2].components[0]].every((c) => c.type === 2 && !c.label && c.emoji));
   // v311 — la signature du pied est retirée du panneau (1 texte de moins).
@@ -61,7 +65,9 @@ const mkChannel = (id, name) => {
 
   console.log('— 2. NOS émojis : pack, installation, utilisation —');
   const assets = fs.readdirSync(path.join(__dirname, '..', 'server', 'assets', 'voicetemp'));
-  check('10 émojis Hoxera livrés avec le bot', extra.VT_EMOTES.every((k) => assets.includes('hox_' + k + '.png')) && assets.length === 10);
+  const emotes = assets.filter((a) => a.startsWith('hox_') && a.endsWith('.png'));
+  check('10 émojis Hoxera livrés avec le bot', extra.VT_EMOTES.every((k) => emotes.includes('hox_' + k + '.png')) && emotes.length === 10);
+  check('…plus la légende dessinée (11 PNG au total)', assets.includes('legende-vocale.png'));
   check('…tous sous la limite Discord (256 Ko)', extra.VT_EMOTES.every((k) => fs.statSync(path.join(__dirname, '..', 'server', 'assets', 'voicetemp', 'hox_' + k + '.png')).size < 256000));
   let emoteSeq = 0;
   const createdEmotes = [];

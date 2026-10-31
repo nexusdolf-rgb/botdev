@@ -53,7 +53,8 @@ console.log('— 3. Panneau interface vocaux temporaires —');
   const j = JSON.stringify(p.components[0].toJSON());
   check('signature retirée', v2.footer(p) === '' && !j.includes('-# Hoxera'), v2.footer(p));
   check('ligne verticale colorée retirée', !j.includes('accent_color'));
-  check('légende émojis intacte (NOM…SUPPRIMER)', v2.texts(p).join(' ').includes('NOM') && v2.texts(p).join(' ').includes('SUPPRIMER'));
+  check('légende dessinée intacte (nos 10 PNG, aucune ligne de texte)',
+    j.includes('attachment://legende-vocale.png') && !v2.texts(p).join(' ').includes('SUPPRIMER'));
   check('les 10 boutons intacts', (v2.rows(p) || []).flatMap((r) => r.components || []).filter((c) => c.type === 2).length === 10);
 }
 

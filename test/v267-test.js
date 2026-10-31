@@ -70,7 +70,10 @@ const mkGuild = (channels) => ({
     comps[0].map((c) => c.custom_id.split(':').pop()).join('|') === 'rename|limit|lock|unlock'
     && comps[1].map((c) => c.custom_id.split(':').pop()).join('|') === 'claim|add|rem|kick');
   check('rangée 3 : transférer + supprimer, même gris que les autres', comps[2][0].custom_id === `vt:${botId}:transfer` && comps[2][1].custom_id === `vt:${botId}:del` && comps[2][1].style === 2);
-  check('légende des contrôles présente dans le message', v2.texts(panel).join(' ').includes('NOM') && v2.texts(panel).join(' ').includes('SUPPRIMER'));
+  // v385b — la légende est dessinée (nos 10 PNG) et voyage avec le message.
+  check('légende des contrôles présente dans le message (image livrée)',
+    JSON.stringify(panel.components[0].toJSON()).includes('attachment://legende-vocale.png')
+    && (panel.files || []).some((f) => f.name === 'legende-vocale.png'));
 
   console.log('— 2. Propriété du salon —');
   store.voicetemp.set(botId, 'g1', { creator_channel: 'HUB', category: '', panel_channel: '' });

@@ -76,7 +76,9 @@ const check = (label, ok) => {
   check('plus aucun ui.embed(', count('ui.embed(') === 0);
   // v267 +3 sites (panneau vocaux temporaires), v268 +2 sites (réponses
   // éphémères de RÉCUPÉRER).
-  check('39 emplacements en ui.v2panel(', count('ui.v2panel(') === 39);
+  // v385b +1 site : le repli texte du panneau vocal (si l’image ne peut pas
+  // être jointe) rappelle ui.v2panel(.
+  check('40 emplacements en ui.v2panel(', count('ui.v2panel(') === 40);
   // Les 2 occurrences restantes de « ui.sectionize( » sont dans des
   // COMMENTAIRES (la note v230 sur /poll et la note v235 sur /apply view).
   check('plus aucun ui.sectionize( ACTIF (2 occurrences, toutes en commentaire)',
