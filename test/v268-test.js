@@ -52,7 +52,7 @@ const mkChannel = (id, name) => {
   const btn = rows.flatMap((r) => r.components || []).filter((c) => c.type === 2);
   check("10 boutons carrés dans l'ordre", btn.map((b) => b.custom_id.split(':').pop()).join('|') === 'rename|limit|lock|unlock|claim|add|rem|kick|transfer|del');
   check('…émojis seuls, SANS libellé (style TempVoice)', btn.every((b) => !b.label) && btn[0].emoji.name === '✏️' && btn[1].emoji.name === '👥' && btn[4].emoji.name === '🔑');
-  check('rangée 3 finit par suppression rouge, émoji seul', !rows[2].components[1].label && rows[2].components[1].style === 4);
+  check('rangée 3 finit par supprimer, émoji seul', !rows[2].components[1].label && rows[2].components[1].style === 2);
   check('légende émoji+nom dans le message', v2.texts(panel).join(' ').includes('NOM') && v2.texts(panel).join(' ').includes('Appuyez sur les boutons'));
   check('boutons membre en émojis seuls (ajouter/retirer/expulser/transférer)',
     [rows[1].components[1], rows[1].components[2], rows[1].components[3], rows[2].components[0]].every((c) => c.type === 2 && !c.label && c.emoji));

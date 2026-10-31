@@ -1842,17 +1842,23 @@ function buildVtPanel(botId, guild) {
     new ButtonBuilder().setCustomId(id('rem')).setEmoji(emo('retirer')).setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId(id('kick')).setEmoji(emo('expulser')).setStyle(ButtonStyle.Secondary),
   );
+  // v384 (demande du fondateur) — le bouton supprimer était le seul en rouge
+  // Discord (style Danger, #DA373C) : sur le panneau, ce rouge se lit orange et
+  // jure avec les 9 autres. Il passe en gris comme eux ; la corbeille reste
+  // reconnaissable et la confirmation, elle, protège toujours la suppression.
   const row3 = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(id('transfer')).setEmoji(emo('transfer')).setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(id('del')).setEmoji(emo('suppr')).setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId(id('del')).setEmoji(emo('suppr')).setStyle(ButtonStyle.Secondary),
   );
   return ui.v2panel({
     // v311 (demande du fondateur) — ni ligne colorée ni signature sur le
     // panneau de l'interface vocaux temporaires.
     accent: false,
     titleLevel: 3,
-    title: '🎙️ Interface Hoxera — vocaux temporaires',
-    description: `Gérez **votre salon vocal temporaire** — chaque réponse est **personnelle**.\n${legende}\n\n**Appuyez sur les boutons ci-dessous pour utiliser l'interface.**`,
+    // v384 (demande du fondateur) — le panneau ne se présente plus :
+    // « Gérez votre salon vocal » en tête, et la consigne parle du salon.
+    title: 'Gérez votre salon vocal',
+    description: `Chaque réponse est **personnelle**.\n${legende}\n\n**Appuyez sur les boutons ci-dessous pour gérer votre salon.**`,
     // v311 (demande du fondateur) — la signature « Hoxera · … » est retirée
     // du panneau de l'interface vocaux temporaires.
     footer: false,

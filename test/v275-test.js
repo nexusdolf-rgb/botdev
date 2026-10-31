@@ -87,6 +87,57 @@ function check(label, cond, extraInfo) {
     String(teintes('nom').get('43,45,49')));
   check('…aucune miette parasite (morceau isolé de moins de 40 px)',
     extra.VT_EMOTES.every((k) => [...teintes(k).values()].reduce((n, v) => n + v, 0) > 900));
+  // v384 — dessins agrandis ×1,45 à la demande du fondateur : le plus large
+  // occupe 91 % du canevas (116 px sur 128), sans être rogné (6 px de marge).
+  const boite = (f) => {
+    const brut = fs.readFileSync(path.join(dir, f));
+    const zlib = require('zlib');
+    let pos = 8, idat = [], largeur = 0, hauteur = 0;
+    while (pos < brut.length) {
+      const len = brut.readUInt32BE(pos);
+      const type = brut.toString('ascii', pos + 4, pos + 8);
+      if (type === 'IHDR') { largeur = brut.readUInt32BE(pos + 8); hauteur = brut.readUInt32BE(pos + 12); }
+      if (type === 'IDAT') idat.push(brut.subarray(pos + 8, pos + 8 + len));
+      pos += 12 + len;
+    }
+    const flux = zlib.inflateSync(Buffer.concat(idat));
+    const parLigne = largeur * 4;
+    const sortie = Buffer.alloc(hauteur * parLigne);
+    for (let y = 0; y < hauteur; y += 1) {
+      const filtre = flux[y * (parLigne + 1)];
+      const ligne = flux.subarray(y * (parLigne + 1) + 1, (y + 1) * (parLigne + 1));
+      for (let x = 0; x < parLigne; x += 1) {
+        const gauche = x >= 4 ? sortie[y * parLigne + x - 4] : 0;
+        const haut = y > 0 ? sortie[(y - 1) * parLigne + x] : 0;
+        const hg = (y > 0 && x >= 4) ? sortie[(y - 1) * parLigne + x - 4] : 0;
+        let v = ligne[x];
+        if (filtre === 1) v += gauche;
+        else if (filtre === 2) v += haut;
+        else if (filtre === 3) v += Math.floor((gauche + haut) / 2);
+        else if (filtre === 4) {
+          const p2 = gauche + haut - hg;
+          const da = Math.abs(p2 - gauche), db = Math.abs(p2 - haut), dc = Math.abs(p2 - hg);
+          v += (da <= db && da <= dc) ? gauche : (db <= dc ? haut : hg);
+        }
+        sortie[y * parLigne + x] = v & 255;
+      }
+    }
+    let x0 = largeur, x1 = -1, y0 = hauteur, y1 = -1;
+    for (let y = 0; y < hauteur; y += 1) {
+      for (let x = 0; x < largeur; x += 1) {
+        if (sortie[(y * largeur + x) * 4 + 3] >= 200) {
+          if (x < x0) x0 = x; if (x > x1) x1 = x;
+          if (y < y0) y0 = y; if (y > y1) y1 = y;
+        }
+      }
+    }
+    return { l: x1 - x0 + 1, h: y1 - y0 + 1 };
+  };
+  const boites = extra.VT_EMOTES.map((k) => boite('hox_' + k + '.png'));
+  const plusGrand = Math.max(...boites.map((b) => Math.max(b.l, b.h)));
+  check('…dessins agrandis : le plus large fait 116 px sur 128 (91 %)', plusGrand === 116, String(plusGrand));
+  check('…aucun dessin rogné : 6 px de marge au minimum',
+    boites.every((b) => b.l <= 116 && b.h <= 116), boites.map((b) => b.l + 'x' + b.h).join(' '));
 
   console.log('— 2. Remplacement automatique si nos fichiers changent —');
   let seq = 0;
@@ -119,6 +170,18 @@ function check(label, cond, extraInfo) {
   check('dashboard.js sans nos PNG de modules', !dash.includes('moduleIcon') && !dash.includes('HOX_EMOTES') && !dash.includes('/emotes/hox_'));
   check('dashboard.css sans .hox-ico', !css.includes('.hox-ico'));
   check('signatures réservées à /emotes (Discord)', typeof extra.installHoxEmotes === 'function' && typeof extra.hoxEmotesPanel === 'function');
+
+  // Le module Vocal est passé du texte Unicode aux glyphes dessinés : plus un
+  // seul pictogramme de couleur dans son gabarit, et 7 icônes qui suivent le thème.
+  const app = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'app.js'), 'utf8');
+  const iVt = dash.indexOf('Dashboard.renderers.voicetemp');
+  const blocVt = dash.slice(iVt, dash.indexOf('Dashboard.renderers.', iVt + 10));
+  const RE_PICTO = /[\u{1F000}-\u{1FAFF}\u2600-\u27BF\u2B00-\u2BFF\uFE0F\u20E3]/u;
+  check('module Vocal : 0 émoji Unicode dans le gabarit (8 avant)', !RE_PICTO.test(blocVt));
+  check('module Vocal : 7 glyphes dessinés à la place', (blocVt.match(/App\.glyphe\(/g) || []).length === 7,
+    String((blocVt.match(/App\.glyphe\(/g) || []).length));
+  check('jeu d\u2019icônes : micro, cadenasOuvert, moins ajoutés',
+    ['micro', 'cadenasOuvert', 'moins'].every((k) => app.includes(k + ": '")));
 
   console.log('— 5. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');

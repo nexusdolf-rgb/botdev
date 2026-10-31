@@ -59,7 +59,7 @@ const mkGuild = (channels) => ({
   console.log('— 1. Le panneau de contrôle : pro, organisé, complet —');
   const panel = extra.buildVtPanel(botId);
   check('panneau Components V2', v2.isV2(panel));
-  check('titre clair', v2.title(panel).includes('Interface Hoxera — vocaux temporaires'), v2.title(panel));
+  check('titre clair : « Gérez votre salon vocal »', v2.title(panel).includes('Gérez votre salon vocal'), v2.title(panel));
   const rows = v2.rows(panel);
   check('3 rangées rangées 4/4/2 (tiennent sur mobile)', rows.length === 3 && rows[0].components.length === 4 && rows[1].components.length === 4 && rows[2].components.length === 2);
   const comps = rows.map((r) => r.components || []);
@@ -69,7 +69,7 @@ const mkGuild = (channels) => ({
   check('rangées 1-2 : nom limite privé public / récupérer ajouter retirer expulser',
     comps[0].map((c) => c.custom_id.split(':').pop()).join('|') === 'rename|limit|lock|unlock'
     && comps[1].map((c) => c.custom_id.split(':').pop()).join('|') === 'claim|add|rem|kick');
-  check('rangée 3 : transférer + suppression en rouge', comps[2][0].custom_id === `vt:${botId}:transfer` && comps[2][1].custom_id === `vt:${botId}:del` && comps[2][1].style === 4);
+  check('rangée 3 : transférer + supprimer, même gris que les autres', comps[2][0].custom_id === `vt:${botId}:transfer` && comps[2][1].custom_id === `vt:${botId}:del` && comps[2][1].style === 2);
   check('légende des contrôles présente dans le message', v2.texts(panel).join(' ').includes('NOM') && v2.texts(panel).join(' ').includes('SUPPRIMER'));
 
   console.log('— 2. Propriété du salon —');

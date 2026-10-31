@@ -36,10 +36,10 @@ const check = (nom, cond, detail) => {
   const rows = v2.rows(panel);
 
   console.log('— 1. Tailles calibrées sur TempVoice —');
-  check('titre en « ### » (petit titre, pas « ## »)', txt.includes('### 🎙️ Interface Hoxera'));
+  check('titre en « ### » (petit titre, pas « ## »)', txt.includes('### Gérez votre salon vocal'));
   // v311 — signature du pied retirée : il reste les 3 lignes de légende.
   check('légende entière en petit texte « -# » (3 lignes)', (txt.match(/-# /g) || []).length === 3);
-  check('description tenue en une phrase', txt.includes('Gérez **votre salon vocal temporaire** — chaque réponse est **personnelle**.'));
+  check('description tenue en une phrase', txt.includes('Chaque réponse est **personnelle**.'));
   check("pas de gros paragraphe d'intro", !txt.includes('Cette interface sert à gérer'));
 
   console.log('— 2. Grille rangée partout (mobile compris) —');

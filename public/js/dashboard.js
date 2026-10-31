@@ -7250,7 +7250,7 @@ Dashboard.renderers.voicetemp = async (content, data) => {
   const vt = data.voicetemp || { creator_channel: '', category: '', name_template: '', panel_channel: '' };
   const voiceChannels = (data.channels || []).filter((ch) => ch.voice);
   const vtTextChannels = (data.channels || []).filter((ch) => !ch.voice && !ch.category);
-  const c4 = Dashboard.card(root, 'Salons vocaux temporaires', 'Un salon « ➕ Créer un vocal » : le bot crée un vocal au nom du membre et le supprime quand il est vide.');
+  const c4 = Dashboard.card(root, 'Salons vocaux temporaires', 'Un salon « ' + App.glyphe('plus', { taille: 12 }) + ' Créer un vocal » : le bot crée un vocal au nom du membre et le supprime quand il est vide.');
   c4.innerHTML += `
     <label class="dash-label">Salon de création (vocal)</label>
     <select class="dash-select" id="vt-channel">
@@ -7263,13 +7263,13 @@ Dashboard.renderers.voicetemp = async (content, data) => {
       ${categories.map((ch) => `<option value="${ch.id}" ${String(vt.category || '') === ch.id ? 'selected' : ''}>${App.escapeHtml(ch.name)}</option>`).join('')}
     </select>
     <label class="dash-label">Nom des salons (optionnel)</label>
-    <input class="dash-input" id="vt-name" value="${App.escapeHtml(vt.name_template || '')}" placeholder="🔊 {name}" style="max-width:300px" />
+    <input class="dash-input" id="vt-name" value="${App.escapeHtml(vt.name_template || '')}" placeholder="{name}" style="max-width:300px" />
     <label class="dash-label">Salon textuel du panneau de contrôle</label>
     <select class="dash-select" id="vt-panel">
       <option value="">— Aucun panneau —</option>
       ${vtTextChannels.map((ch) => `<option value="${ch.id}" ${String(vt.panel_channel || '') === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('')}
     </select>
-    <div style="font-size:12px;color:var(--d-dim);margin-top:8px">Dans ce salon, un panneau permet à chaque propriétaire d'un vocal temporaire de gérer SON salon : 🔒 privé / 🔓 public, ➕ ➖ invités, ✏️ renommer, 🗑️ supprimer. Chaque réponse ne se voit que chez lui.</div>
+    <div style="font-size:12px;color:var(--d-dim);margin-top:8px">Dans ce salon, un panneau permet à chaque propriétaire d'un vocal temporaire de gérer SON salon : ${App.glyphe('cadenas', { taille: 13 })} privé / ${App.glyphe('cadenasOuvert', { taille: 13 })} public, ${App.glyphe('plus', { taille: 13 })}${App.glyphe('moins', { taille: 13 })} invités, ${App.glyphe('crayon', { taille: 13 })} renommer, ${App.glyphe('corbeille', { taille: 13 })} supprimer. Chaque réponse ne se voit que chez lui.</div>
     <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap"><button class="dash-save-action dash-btn dash-btn-primary" id="vt-save">Enregistrer</button><button class="dash-btn" id="vt-panel-send">Envoyer / mettre à jour le panneau</button><button class="dash-btn" id="vt-emotes" title="Installe les 10 émojis Hoxera du panneau vocal sur ce serveur">Installer les émojis Hoxera</button></div>`;
   c4.querySelector('#vt-save').onclick = async (e) => {
     const bouton = e.currentTarget;

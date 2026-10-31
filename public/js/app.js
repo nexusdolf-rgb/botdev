@@ -135,6 +135,11 @@ App.GLYPHES = {
   image: '<rect x="3.6" y="5" width="16.8" height="14" rx="2.2"/><circle cx="9" cy="10" r="1.6"/><path d="M4.8 17.2l4.6-4.4 3.4 3 2.6-2.4 4.2 3.8"/>',
   crayon: '<path d="M4.4 19.6l1.2-3.6L15.6 6a1.9 1.9 0 0 1 2.7 2.7L8.3 18.6l-3.9 1Z"/><path d="M14 7.6l2.4 2.4"/>',
   reglages: '<circle cx="12" cy="12" r="3.1"/><path d="M12 3.6v2.6M12 17.8v2.6M4.8 12H7.4M16.6 12h2.6M6.9 6.9l1.9 1.9M15.2 15.2l1.9 1.9M17.1 6.9l-1.9 1.9M8.8 15.2l-1.9 1.9"/>',
+  // Panneau vocal : les trois pictogrammes que le jeu ne couvrait pas encore
+  // (micro du module, cadenas ouvert du bouton public, retrait d'un invité).
+  micro: '<rect x="9.2" y="2.8" width="5.6" height="10.4" rx="2.8"/><path d="M5.6 11.4a6.4 6.4 0 0 0 12.8 0M12 17.8v3.2M9.2 21h5.6"/>',
+  cadenasOuvert: '<rect x="4.6" y="10.6" width="14.8" height="9.8" rx="2.2"/><path d="M8.2 10.6V7.4a3.9 3.9 0 0 1 7.5-1.4"/>',
+  moins: '<circle cx="12" cy="12" r="8.4"/><path d="M7.8 12h8.4"/>',
 };
 
 /**
