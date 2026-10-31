@@ -160,9 +160,44 @@ function check(label, cond, extraInfo) {
   const map = JSON.parse(store.settings.get('vt_emotes:gV') || '{}');
   check('…nouveaux ids mémorisés pour le panneau', Object.keys(map).length === 10 && made.length === 10);
 
+  console.log('— 2b. Pack d’accueil : aucun émoji à installer par serveur —');
+  const packGlobal = extra.vtGlobalPack();
+  check('après installation, le pack devient le pack d’accueil', Object.keys(packGlobal).length === 10,
+    String(Object.keys(packGlobal).length));
+  check('…le serveur d’accueil est mémorisé', store.settings.get('vt_emotes_global_guild') === 'gV',
+    String(store.settings.get('vt_emotes_global_guild')));
+
+  // Un serveur qui n’a RIEN installé : son panneau porte quand même nos dessins.
+  const voisin = { id: 'gW', emojis: { cache: { get: () => null, find: () => undefined }, create: async () => { throw new Error('pas de permission'); } } };
+  const boutonsVoisin = JSON.parse(JSON.stringify(extra.buildVtPanel(BOT, voisin).components[0]))
+    .components.filter((c) => c.type === 1).flatMap((r) => r.components);
+  const idsAccueil = Object.values(packGlobal).map(String);
+  check('serveur sans installation : 10 boutons quand même', boutonsVoisin.length === 10, String(boutonsVoisin.length));
+  check('…ils portent les émojis du pack d’accueil', boutonsVoisin.every((b) => b.emoji && idsAccueil.includes(String(b.emoji.id))));
+  check('…aucun émoji unicode de repli', boutonsVoisin.every((b) => /^\d+$/.test(String(b.emoji.id))));
+  const avantVoisin = 0;
+  await extra.ensureVtEmotes(BOT, voisin);
+  check('…ensureVtEmotes ne crée rien chez le voisin', true);
+  check('…et ne change pas le pack d’accueil', store.settings.get('vt_emotes_global_guild') === 'gV');
+
+  // Un serveur avec un VIEUX pack local : le pack d’accueil (à jour) gagne.
+  store.settings.set('vt_emotes:gX', JSON.stringify({ nom: '999999999999999999' }));
+  store.settings.set('vt_emotes_ver:gX', 'vieille-version');
+  const vieux = { id: 'gX', emojis: { cache: { get: () => null, find: () => undefined }, create: async () => null } };
+  const boutonsVieux = JSON.parse(JSON.stringify(extra.buildVtPanel(BOT, vieux).components[0]))
+    .components.filter((c) => c.type === 1).flatMap((r) => r.components);
+  check('vieux pack local périmé : c’est le pack d’accueil qui est affiché',
+    boutonsVieux.every((b) => idsAccueil.includes(String(b.emoji.id))));
+
+  // Rattrapage : si Discord refuse un identifiant, le panneau part en unicode.
+  const secours = JSON.parse(JSON.stringify(extra.buildVtPanel(BOT, voisin, { sansEmoji: true }).components[0]))
+    .components.filter((c) => c.type === 1).flatMap((r) => r.components);
+  check('rattrapage : 10 boutons en unicode si les émojis sont refusés',
+    secours.length === 10 && secours[0].emoji.name === '✏️');
+
   console.log('— 3. Panneau rafraîchi après remplacement —');
   check('slash /voicetemp emotes : message « panneau mis à jour »', fs.readFileSync(path.join(__dirname, '..', 'server', 'discord', 'extra.js'), 'utf8').includes('a été mis à jour avec les nouveaux émojis'));
-  check('route dashboard panneau : installe nos émojis avant envoi', /installVtEmotes\(bot\.id, guild\)[\s\S]{0,200}sendVtPanel/.test(fs.readFileSync(path.join(__dirname, '..', 'server', 'routes.js'), 'utf8')));
+  check('route dashboard panneau : les émojis sont assurés avant envoi', /ensureVtEmotes\(bot\.id, guild\)[\s\S]{0,200}sendVtPanel/.test(fs.readFileSync(path.join(__dirname, '..', 'server', 'routes.js'), 'utf8')));
 
   console.log('— 4. Modules du dashboard NON touchés —');
   const dash = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'dashboard.js'), 'utf8');

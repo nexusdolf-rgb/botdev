@@ -3540,9 +3540,10 @@ router.post('/bots/:id/guilds/:guildId/voicetemp/panel', requireAuth, async (req
     if (!guild) return res.status(404).json({ error: 'Serveur introuvable pour ce bot.' });
     const cfg = store.voicetemp.get(bot.id, req.params.guildId) || {};
     store.voicetemp.set(bot.id, req.params.guildId, { ...cfg, panel_channel: channelId });
-    // v275 — on (ré)installe nos émojis vocaux avant d'envoyer le panneau :
-    // s'ils ont changé de style, les anciens sont remplacés automatiquement.
-    try { await require('./discord/extra').installVtEmotes(bot.id, guild); } catch {}
+    // v384 — le panneau n'exige plus d'installation par serveur : si le pack
+    // d'accueil est à jour, on ne touche à rien ; sinon on ne réinstalle que
+    // là où c'est nécessaire. « Mettre à jour le panneau » suffit.
+    try { await require('./discord/extra').ensureVtEmotes(bot.id, guild); } catch {}
     const messageId = await require('./discord/extra').sendVtPanel(bot.id, guild, channelId);
     res.json({ ok: true, message: messageId });
   } catch (e) {
@@ -3561,8 +3562,16 @@ router.post('/bots/:id/guilds/:guildId/voicetemp/emotes', requireAuth, async (re
     if (!entry || !entry.client.isReady()) return res.status(503).json({ error: 'Bot hors ligne, réessayez dans une minute.' });
     const guild = entry.client.guilds.cache.get(req.params.guildId);
     if (!guild) return res.status(404).json({ error: 'Serveur introuvable pour ce bot.' });
-    const created = await require('./discord/extra').installVtEmotes(bot.id, guild);
-    res.json({ ok: true, created });
+    // v384 — `accueil: true` (administrateur plateforme uniquement) fait de ce
+    // serveur le serveur d'accueil des émojis vocaux : c'est lui qui fournit
+    // les dessins à tous les autres panneaux. Sans ce drapeau, on n'écrase
+    // jamais un pack d'accueil existant.
+    const extra = require('./discord/extra');
+    let accueil = false;
+    try { accueil = !!(req.body && req.body.accueil) && req.isPlatformAdmin === true; } catch {}
+    const created = await extra.installVtEmotes(bot.id, guild, { global: true, accueil });
+    const host = store.settings.get('vt_emotes_global_guild');
+    res.json({ ok: true, created, accueil: host === String(req.params.guildId) });
   } catch (e) {
     res.status(500).json({ error: String(e.message || e).slice(0, 200) });
   }

@@ -1674,7 +1674,45 @@ function hoxEmotesPanel(botId, guild, created) {
 const VT_EMOTES = ['nom', 'limite', 'prive', 'public', 'suppr', 'ajouter', 'retirer', 'expulser', 'recup', 'transfer'];
 const VT_EMOTE_FALLBACK = { nom: '✏️', limite: '👥', prive: '🔒', public: '🔓', suppr: '🗑️', ajouter: '➕', retirer: '➖', expulser: '👢', recup: '🔑', transfer: '🤝' };
 function vtEmotesOf(guild) { try { return JSON.parse(store.settings.get(`vt_emotes:${guild.id}`) || '{}'); } catch { return {}; } }
-function vtEmoji(guild, key) {
+
+// v384 (demande du fondateur) — plus d'installation par serveur : un bot se
+// sert de n'importe quel émoji d'un serveur OÙ IL EST. On installe donc le pack
+// UNE fois, dans un serveur d'accueil, et son identifiant d'émoji sert partout.
+// Le panneau s'affiche avec nos dessins dès le premier envoi, sans que personne
+// ait à cliquer sur « Installer les émojis ».
+const VT_GLOBAL_KEY = 'vt_emotes_global';        // { cle: id }
+const VT_GLOBAL_GUILD = 'vt_emotes_global_guild'; // serveur qui héberge les émojis
+const VT_GLOBAL_VER = 'vt_emotes_global_ver';
+function vtGlobalPack() {
+  try {
+    const brut = store.settings.get(VT_GLOBAL_KEY);
+    const map = brut ? JSON.parse(brut) : {};
+    return map && typeof map === 'object' ? map : {};
+  } catch { return {}; }
+}
+function vtGlobalComplet() { return VT_EMOTES.every((k) => !!vtGlobalPack()[k]); }
+
+// Empreinte des 10 fichiers : elle dit si un pack (local ou d'accueil) est
+// encore à l'image des dessins actuels. Sans elle, un serveur qui avait
+// installé l'ancienne version garderait ses anciens dessins à vie.
+let _vtVer = null;
+function vtVer() {
+  if (_vtVer) return _vtVer;
+  try {
+    const fs = require('fs'); const path = require('path');
+    const crypto = require('crypto');
+    const dir = path.join(__dirname, '..', 'assets', 'voicetemp');
+    const h = crypto.createHash('sha256');
+    for (const k of VT_EMOTES) {
+      const f = path.join(dir, 'hox_' + k + '.png');
+      h.update(fs.existsSync(f) ? fs.readFileSync(f) : Buffer.alloc(0));
+    }
+    _vtVer = h.digest('hex').slice(0, 16);
+  } catch { _vtVer = ''; }
+  return _vtVer;
+}
+
+function _emojiDuServeur(guild, key) {
   try {
     const id = vtEmotesOf(guild)[key];
     if (guild && id && guild.emojis && guild.emojis.cache) {
@@ -1682,9 +1720,31 @@ function vtEmoji(guild, key) {
       if (e) return e.id;
     }
   } catch {}
+  return null;
+}
+
+function vtEmoji(guild, key) {
+  const ver = vtVer();
+  // 1. le pack de CE serveur, s'il est à l'image des dessins actuels
+  if (store.settings.get(`vt_emotes_ver:${guild && guild.id}`) === ver) {
+    const id = _emojiDuServeur(guild, key);
+    if (id) return id;
+  }
+  // 2. le pack d'accueil : rien à installer côté serveur, et il est partagé
+  if (store.settings.get(VT_GLOBAL_VER) === ver) {
+    const gid = vtGlobalPack()[key];
+    if (gid) return String(gid);
+  }
+  // 3. un pack plus ancien (anciens dessins, mais toujours blancs : mieux
+  //    qu'un émoji de couleur du clavier unicode)
+  const local = _emojiDuServeur(guild, key);
+  if (local) return local;
+  const gid = vtGlobalPack()[key];
+  if (gid) return String(gid);
+  // 4. dernier recours
   return VT_EMOTE_FALLBACK[key];
 }
-async function installVtEmotes(botId, guild) {
+async function installVtEmotes(botId, guild, options = {}) {
   const fs = require('fs'); const path = require('path');
   const crypto = require('crypto');
   // v275 — REMPLACEMENT : si nos fichiers d'émojis changent (ex. passage en
@@ -1714,7 +1774,43 @@ async function installVtEmotes(botId, guild) {
   }
   store.settings.set(`vt_emotes:${guild.id}`, JSON.stringify(map));
   store.settings.set(`vt_emotes_ver:${guild.id}`, ver);
+  // v384 — si aucun pack d'accueil n'existe encore, ce serveur le devient :
+  // ses émojis serviront aux panneaux de TOUS les serveurs. On ne remplace
+  // jamais un pack d'accueil existant depuis un autre serveur (sinon le
+  // panneau des voisins casserait dès que celui-ci retire ses émojis).
+  if (options.global !== false && (options.accueil || !vtGlobalComplet() || store.settings.get(VT_GLOBAL_GUILD) === String(guild.id))) {
+    store.settings.set(VT_GLOBAL_KEY, JSON.stringify(map));
+    store.settings.set(VT_GLOBAL_GUILD, String(guild.id));
+    store.settings.set(VT_GLOBAL_VER, ver);
+  }
   return created;
+}
+
+// v384 — les émojis s'installent TOUT SEULS avant le premier envoi : si aucun
+// pack d'accueil n'existe, on prend le serveur courant. Un échec (permission
+// « Gérer les émojis », quota de 50 atteint…) ne bloque JAMAIS le panneau :
+// il part alors avec des émojis unicode, jamais avec un panneau cassé.
+async function ensureVtEmotes(botId, guild) {
+  const ver = vtVer();
+  const hote = store.settings.get(VT_GLOBAL_GUILD);
+  // Pack d'accueil présent ET à jour : personne n'a rien à installer.
+  if (vtGlobalComplet() && store.settings.get(VT_GLOBAL_VER) === ver) return null;
+  // Pack d'accueil présent mais à l'ancien dessin : on le remet à jour CHEZ
+  // LUI. C'est le serveur d'accueil qui change, pas les serveurs voisins.
+  if (vtGlobalComplet() && hote) {
+    try {
+      const bm = require('./botManager');
+      const entry = bm.clients && bm.clients.get ? bm.clients.get(botId) : null;
+      const host = entry && entry.client && entry.client.guilds && entry.client.guilds.cache
+        ? entry.client.guilds.cache.get(String(hote)) : null;
+      if (host) { await installVtEmotes(botId, host); return null; }
+    } catch {}
+  }
+  if (!guild || !guild.emojis) return null;
+  const deja = vtEmotesOf(guild);
+  // Ce serveur a déjà le pack, à jour : rien à faire.
+  if (VT_EMOTES.every((k) => !!deja[k]) && store.settings.get(`vt_emotes_ver:${guild.id}`) === ver) return null;
+  return installVtEmotes(botId, guild);
 }
 
 // 🛡️ v300 — Balayeur des vocaux temporaires (appelé toutes les 30 s par
@@ -1806,10 +1902,13 @@ function vtClaimableChannel(botId, guild, userId) {
 // v272 — présentation façon TempVoice (la référence pro) : une LÉGENDE
 // émoji + nom dans le message, une phrase d'invitation, puis des boutons
 // CARRÉS SANS TEXTE (juste nos émojis Hoxera) alignés par rangées de 5.
-function buildVtPanel(botId, guild) {
+function buildVtPanel(botId, guild, options = {}) {
   const { ActionRowBuilder, ButtonBuilder, ButtonStyle, UserSelectMenuBuilder } = require('discord.js');
   const id = (act) => `vt:${botId}:${act}`;
-  const emo = (key) => vtEmoji(guild, key);
+  // v384 — `sansEmoji` ne sert qu'au rattrapage : si Discord refuse un
+  // identifiant d'émoji (pack d'accueil supprimé), le panneau repart en unicode
+  // plutôt que d'échouer.
+  const emo = (key) => (options.sansEmoji ? VT_EMOTE_FALLBACK[key] : vtEmoji(guild, key));
   const tag = (key, label) => {
     const e = emo(key);
     return /^\d+$/.test(String(e)) ? `<:hox_${key}:${e}> ${label}` : `${e} ${label}`;
@@ -1876,7 +1975,20 @@ async function sendVtPanel(botId, guild, channelId) {
       if (old) await old.delete();
     } catch {}
   }
-  const msg = await channel.send(buildVtPanel(botId, guild));
+  // v384 — les émojis avant le panneau : installation automatique si le
+  // serveur n'a rien et qu'aucun pack d'accueil n'existe. Un échec ici ne doit
+  // pas empêcher l'envoi (permissions, quota).
+  let sansEmoji = false;
+  try { await ensureVtEmotes(botId, guild); } catch { sansEmoji = true; }
+  let msg;
+  try {
+    msg = await channel.send(buildVtPanel(botId, guild, { sansEmoji }));
+  } catch (e) {
+    // Deuxième chance : un identifiant d'émoji refusé par Discord (pack
+    // d'accueil supprimé côté hébergeur). Le panneau part en unicode.
+    if (sansEmoji) throw e;
+    msg = await channel.send(buildVtPanel(botId, guild, { sansEmoji: true }));
+  }
   store.voicetemp.set(botId, guild.id, { ...cfg, panel_message: msg.id });
   return msg.id;
 }
@@ -2216,6 +2328,6 @@ module.exports = {
   // 🧪 États internes exposés pour les tests (anti-fuite mémoire)
   _test: { penduGames, morpionGames, pollState, quizState, capMap },
   buildVtPanel, sendVtPanel, handleVtInteraction, vtSetOwner, vtGetOwner, vtClearOwner, vtChannelOf,
-  installVtEmotes, vtClaimableChannel, vtEmoji, VT_EMOTES, VT_EMOTE_FALLBACK,
+  installVtEmotes, ensureVtEmotes, vtGlobalPack, vtClaimableChannel, vtEmoji, VT_EMOTES, VT_EMOTE_FALLBACK,
   installHoxEmotes, hoxEmotesPanel, HOX_SIG_EMOTES, HOX_SIG_FALLBACK,
 };
