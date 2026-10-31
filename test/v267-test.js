@@ -122,6 +122,37 @@ const mkGuild = (channels) => ({
   const foreign = await extra.handleVtInteraction(botId, {}, { isButton: () => true, customId: 'autre:chose', guild, user: { id: 'U1' } });
   check("composant d'un autre module : ignoré", foreign === false);
 
+  // v385c — ➕ ouvre le menu de choix DANS le panneau : le texte reste lisible.
+  {
+    const ch7 = mkChannel('V7', '🔊 Salon de Nino');
+    const g7 = mkGuild([ch7]);
+    store.settings.set('vt_channels_g1', JSON.stringify(['V7']));
+    extra.vtSetOwner('g1', 'V7', 'U1');
+    let rep7 = null;
+    await extra.handleVtInteraction(botId, {}, {
+      ...baseI('add'), guild: g7, reply: async (p) => { rep7 = p; },
+    });
+    const j7 = JSON.stringify(rep7);
+    check('➕ menu membre : le titre et l’explication restent affichés',
+      j7.includes('AJOUTER UN MEMBRE') && j7.includes('Choisissez le membre')
+      && j7.includes('"type":5') && j7.includes('"type":17'));
+  }
+
+  // v385c — un membre assis dans le salon d'un AUTRE ne reçoit pas « rejoins le ➕ ».
+  {
+    const ch8 = mkChannel('V8', '🔊 Salon de Sacha');
+    const g8 = mkGuild([ch8]);
+    g8.members = { cache: new Map([['U1', { id: 'U1', voice: { channel: ch8 } }]]) };
+    store.settings.set('vt_channels_g1', JSON.stringify(['V8']));
+    extra.vtSetOwner('g1', 'V8', 'U2');
+    let rep8 = null;
+    await extra.handleVtInteraction(botId, {}, {
+      ...baseI('lock'), guild: g8, reply: async (p) => { rep8 = p; },
+    });
+    check('salon d’un autre : explication dédiée (pas « rejoignez le ➕ »)',
+      JSON.stringify(rep8).includes('n’est pas le vôtre'));
+  }
+
   console.log('— 4. Création et suppression automatiques avec propriétaire —');
   const created = mkChannel('V2', '🔊 x');
   const guild2 = {

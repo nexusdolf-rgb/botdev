@@ -2140,6 +2140,30 @@ async function handleVtInteraction(botId, entry, i) {
           `serveur ${guild.id} : membre ${i.user.id} dans ${cur.id} (cat=${cur.parentId || 'aucune'}), cfg cat=${cfgNow.category || 'aucune'}, liste=${(store.settings.get(`vt_channels_${guild.id}`) || '[]').slice(0, 120)}`);
       }
     } catch {}
+    // v385c — le membre est DANS un salon temporaire qui appartient à
+    // quelqu'un d'autre : lui dire « rejoignez le ➕ » n'avait aucun sens.
+    let autre = null;
+    try {
+      const moi = guild.members && guild.members.cache && guild.members.cache.get
+        ? guild.members.cache.get(String(i.user.id)) : null;
+      const cur = moi && moi.voice ? moi.voice.channel : null;
+      const cfgVt = store.voicetemp.get(botId, guild.id) || {};
+      if (cur && String(cur.id) !== String(cfgVt.creator_channel || '')) {
+        const owner = vtGetOwner(guild.id, cur.id);
+        if (owner && owner !== String(i.user.id)) autre = { ch: cur, owner };
+      }
+    } catch {}
+    if (autre) {
+      await i.reply({
+        ...ui.v2panel({
+          color: '#e07a5f',
+          title: '🔒 Ce salon n’est pas le vôtre',
+          description: `**${autre.ch.name}** appartient à <@${autre.owner}>. Ses boutons ne répondent qu’à lui.\nSi son propriétaire n’est plus dedans, vous pouvez le reprendre avec 🔑 **RÉCUPÉRER**.`,
+        }),
+        ephemeral: true,
+      }).catch(() => {});
+      return true;
+    }
     await i.reply({ ...vtNoChannelPanel(), ephemeral: true }).catch(() => {});
     return true;
   }
@@ -2182,7 +2206,9 @@ async function handleVtInteraction(botId, entry, i) {
         const raw = String(i.fields.getTextInputValue('limit') || '').trim();
         const n = Math.max(0, Math.min(99, parseInt(raw, 10) || 0));
         await channel.setUserLimit(n);
-        await say('👥 Limite fixée', n === 0 ? `**${channel.name}** accepte un nombre illimité de personnes.` : `**${channel.name}** est limité à **${n}** place(s).`);
+        await say('👥 Limite fixée', n === 0
+          ? `**${channel.name}** accepte un nombre illimité de personnes.`
+          : `**${channel.name}** est limité à **${n}** ${n === 1 ? 'place' : 'places'}.`);
         return true;
       }
       const { ModalBuilder, ActionRowBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
@@ -2204,9 +2230,15 @@ async function handleVtInteraction(botId, entry, i) {
           kick: ['👢 EXPULSER UN MEMBRE', 'Choisissez le membre à sortir du vocal ET à empêcher de revenir.'],
           transfer: ['🤝 TRANSFÉRER LA PROPRIÉTÉ', 'Choisissez le membre qui deviendra propriétaire de votre salon.'],
         }[act];
+        // v385c — le menu était posé À LA PLACE du panneau (« components: »
+        // écrasait le conteneur) : le membre ne voyait qu'un menu déroulant
+        // seul, sans titre ni explication. Il entre maintenant DANS le panneau.
+        const menu = new ActionRowBuilder().addComponents(
+          new UserSelectMenuBuilder().setCustomId(`vt:${botId}:${act}`)
+            .setPlaceholder('Choisissez un membre…').setMinValues(1).setMaxValues(1),
+        );
         await i.reply({
-          ...ui.v2panel({ color: '#e07a5f', title: cfg[0], description: cfg[1] }),
-          components: [new ActionRowBuilder().addComponents(new UserSelectMenuBuilder().setCustomId(`vt:${botId}:${act}`).setPlaceholder('Choisissez un membre…').setMinValues(1).setMaxValues(1))],
+          ...ui.v2panel({ color: '#e07a5f', title: cfg[0], description: cfg[1] }, [menu]),
           ephemeral: true,
         }).catch(() => {});
         return true;

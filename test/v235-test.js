@@ -78,7 +78,8 @@ const check = (label, ok) => {
   // éphémères de RÉCUPÉRER).
   // v385b +1 site : le repli texte du panneau vocal (si l’image ne peut pas
   // être jointe) rappelle ui.v2panel(.
-  check('40 emplacements en ui.v2panel(', count('ui.v2panel(') === 40);
+  // v385c +1 site : la réponse « ce salon n'est pas le vôtre ».
+  check('41 emplacements en ui.v2panel(', count('ui.v2panel(') === 41);
   // Les 2 occurrences restantes de « ui.sectionize( » sont dans des
   // COMMENTAIRES (la note v230 sur /poll et la note v235 sur /apply view).
   check('plus aucun ui.sectionize( ACTIF (2 occurrences, toutes en commentaire)',
