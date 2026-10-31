@@ -4232,7 +4232,7 @@ html.hx-light { color-scheme: light; }
   padding-bottom: 11px;
   border-bottom: 1px solid #4f545c;
 }
-.dashboard-shell-host .ov-section-heading b { color: #f2f3f5; font-size: 22px; font-weight: 600; }
+.dashboard-shell-host .ov-section-heading b { color: #f2f3f5; font-size: 16px; font-weight: 600; }
 .dashboard-shell-host .ov-section-heading span { color: #b5bac1; font-size: 12px; }
 .dashboard-shell-host .ov-checklist-card { padding: 20px 22px !important; }
 .dashboard-shell-host .ov-checklist-card .ov-section-heading { border-bottom-color: #72767d; }
