@@ -152,12 +152,14 @@ async function main() {
 
   // Fichiers statiques (dashboard)
   app.use(express.static(path.join(__dirname, '..', 'public'), {
-    // v386 — cache long côté navigateur pour les fichiers qui portent « ?v= »
+    // v386 — le navigateur garde les fichiers un moment, mais JAMAIS longtemps
+    // sur du code qui peut changer sans numéro de version : une heure, puis il
+    // redemande (réponse 304, quelques octets). Les fichiers portant « ?v= »
+    // reçoivent, eux, un an de cache via ./staticCompress (contenu figé).
     setHeaders: (res, filePath, stat) => {
       const rel = String(filePath || '');
-      if (/\.(js|css|png|svg|webp|jpg|woff2?)$/i.test(rel)) {
-        res.setHeader('Cache-Control', 'public, max-age=604800');
-      }
+      if (/\.(js|css)$/i.test(rel)) res.setHeader('Cache-Control', 'public, max-age=3600');
+      else if (/\.(png|svg|webp|jpg|jpeg|woff2?)$/i.test(rel)) res.setHeader('Cache-Control', 'public, max-age=604800');
       if (stat && stat.mtime) res.setHeader('Last-Modified', stat.mtime.toUTCString());
     },
   }));

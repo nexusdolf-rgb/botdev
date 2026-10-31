@@ -106,7 +106,9 @@ console.log('— 4. Branché au bon endroit —');
   const posStatic = index.indexOf("express.static(path.join(__dirname, '..', 'public')");
   check('le serveur utilise la compression', posMiddleware > 0);
   check('…avant les fichiers statiques', posMiddleware < posStatic);
-  check('…les fichiers statiques portent aussi un cache navigateur', index.includes("'public, max-age=604800'"));
+  check('…le code non versionné n’est gardé qu’une heure (jamais de version périmée)',
+    index.includes("'public, max-age=3600'") && !index.includes("'public, max-age=604800'") === false);
+  check('…les images, elles, restent une semaine chez le visiteur', index.includes("'public, max-age=604800'"));
   check('le script d’allègement est livré avec le dépôt', fs.existsSync(path.join(racine, 'scripts', 'allegement-images.js')));
 }
 
