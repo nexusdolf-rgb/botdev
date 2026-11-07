@@ -57,7 +57,10 @@ function messageFactice() {
     message: {
       components: [{ type: 17, components: [
         { type: 10, content: '⏳ **Statut :** en attente' },
-        { type: 1, components: [{ type: 2, custom_id: `bd-tmenu:${botId}:release`, label: '🖐️ Retirer ma prise en charge', style: 2 }] },
+        { type: 1, components: [
+          { type: 2, custom_id: `bd-tmenu:${botId}:claim`, label: '🖐️ Pris en charge', style: 1 },
+          { type: 2, custom_id: `bd-tmenu:${botId}:release`, label: '🖐️ Retirer ma prise en charge', style: 2, disabled: true },
+        ] },
       ] }],
       edit: async (p) => { etat.corps = p; },
     },
@@ -65,19 +68,26 @@ function messageFactice() {
 }
 
 (async () => {
-  console.log('— 1. Le bouton change de rôle selon l’état du ticket —');
+  console.log('— 1. DEUX boutons indépendants, chacun son état —');
   {
     const libre = panels.__testStaffTicketRows(botId, false, 'fr');
-    const b = libre[0].components[0];
-    check('ticket libre : « Pris en charge » actif, bouton principal',
-      String(b.data.custom_id).endsWith(':claim') && !b.data.disabled && b.data.style === 1, JSON.stringify(b.data.custom_id));
-    check('…libellé « 🖐️ Pris en charge »', String(b.data.label).includes('Pris en charge'));
+    const [prendre, retirer] = libre[0].components;
+    check('il y a bien deux boutons dans la rangée', libre[0].components.length === 2);
+    check('chacun a son propre identifiant',
+      String(prendre.data.custom_id).endsWith(':claim') && String(retirer.data.custom_id).endsWith(':release'));
+    check('ticket libre : « Pris en charge » actif, « Retirer » grisé',
+      prendre.data.disabled !== true && retirer.data.disabled === true);
+    check('…le premier est bleu, le second gris',
+      prendre.data.style === 1 && retirer.data.style === 2);
+    check('…leurs libellés ne sont jamais échangés',
+      String(prendre.data.label).includes('Pris en charge') && String(retirer.data.label).includes('Retirer'));
 
     const pris = panels.__testStaffTicketRows(botId, true, 'fr');
-    const b2 = pris[0].components[0];
-    check('ticket pris : le bouton devient « Retirer ma prise en charge »',
-      String(b2.data.custom_id).endsWith(':release'), JSON.stringify(b2.data.custom_id));
-    check('…il est actif (plus grisé) et en gris Discord', b2.data.disabled !== true && b2.data.style === 2);
+    const [prendre2, retirer2] = pris[0].components;
+    check('ticket pris : « Pris en charge » grisé, « Retirer » actif',
+      prendre2.data.disabled === true && retirer2.data.disabled !== true);
+    check('…les deux boutons restent affichés (rien ne disparaît)',
+      String(prendre2.data.label).includes('Pris en charge') && String(retirer2.data.label).includes('Retirer'));
     check('…le clic est routé vers le retrait', source.includes('bd-tmenu:${botId}:release') && source.includes('handleTicketRelease'));
   }
 
@@ -115,10 +125,11 @@ function messageFactice() {
     check('le ticket redevient libre', row.claimed_by === '' && row.claimed_tag === '');
     check('le panneau repasse à « en attente »',
       !!msg.state.corps && JSON.stringify(msg.state.corps).includes('en attente'));
-    check('…et le bouton redevient « Pris en charge »',
-      JSON.stringify(msg.state.corps).includes(':claim'));
-    check('…aucun bouton grisé ne reste sur le panneau',
-      !JSON.stringify(msg.state.corps).includes('"disabled":true'));
+    const apres = JSON.stringify(msg.state.corps);
+    check('…« Pris en charge » redevient actif', apres.includes(':claim'));
+    check('…et « Retirer ma prise en charge » repasse en grisé',
+      apres.includes(':release') && (apres.match(/"disabled":true/g) || []).length === 1,
+      apres.slice(0, 200));
     check('le créateur est prévenu dans le salon (sans mention)',
       !!f.state.sent && JSON.stringify(f.state.sent).includes('Prise en charge retirée'));
     const act = store.activity.all ? store.activity.all(botId, guild.id, 5) : null;
@@ -133,8 +144,9 @@ function messageFactice() {
     check('refus poli : « rien à retirer »',
       String(f.state.reply && f.state.reply.content).includes('rien à retirer'),
       String(f.state.reply && f.state.reply.content));
-    check('…le panneau est quand même remis d’aplomb (bouton « Pris en charge »)',
-      !!msg.state.corps && JSON.stringify(msg.state.corps).includes(':claim'));
+    check('…le panneau est quand même remis d’aplomb (« Pris en charge » actif, « Retirer » grisé)',
+      !!msg.state.corps && JSON.stringify(msg.state.corps).includes(':claim')
+      && (JSON.stringify(msg.state.corps).match(/"disabled":true/g) || []).length === 1);
   }
 
   store.openTickets.remove('CH1');

@@ -791,20 +791,65 @@ function staffTicketRows(botId, claimed, lang = 'fr') {
       new StringSelectMenuOptionBuilder().setLabel('➖ Retirer un membre').setDescription('Retirer un accès ajouté au ticket').setValue('removemember'),
       new StringSelectMenuOptionBuilder().setLabel('🔒 Fermer le ticket').setDescription('Fermer, transcrire puis supprimer le salon').setValue('close'),
     );
-  // v387 — le bouton change de rôle selon l'état du ticket :
-  //   • personne ne l'a pris  → « 🖐️ Pris en charge » actif (on le prend) ;
-  //   • déjà pris              → « 🖐️ Retirer ma prise en charge » : seul le
-  //     membre qui l'a pris peut s'en servir (vérifié au clic).
-  // Avant, il était simplement grisé une fois le ticket pris : impossible de
-  // le rendre au staff sans passer par la base.
+  // v387b — DEUX boutons INDÉPENDANTS, jamais un bouton qui change de nom :
+  //   • « 🖐️ Pris en charge »          → actif tant que personne ne l'a pris ;
+  //   • « 🖐️ Retirer ma prise en charge » → actif dès que le ticket est pris.
+  // Chacun a son propre identifiant, son propre état, sa propre action. Le
+  // staff voit donc toujours les deux, et sait immédiatement ce qui est
+  // possible : c'est la contrepartie visible du retrait de prise en charge.
   const pris = !!claimed;
   const claimRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId(`bd-tmenu:${botId}:${pris ? 'release' : 'claim'}`)
-      .setStyle(pris ? ButtonStyle.Secondary : ButtonStyle.Primary)
-      .setLabel(i18n.t(lang, pris ? 'ticket_release_btn' : 'ticket_claim_btn')),
+      .setCustomId(`bd-tmenu:${botId}:claim`)
+      .setStyle(ButtonStyle.Primary)
+      .setLabel(i18n.t(lang, 'ticket_claim_btn'))
+      .setDisabled(pris),
+    new ButtonBuilder()
+      .setCustomId(`bd-tmenu:${botId}:release`)
+      .setStyle(ButtonStyle.Secondary)
+      .setLabel(i18n.t(lang, 'ticket_release_btn'))
+      .setDisabled(!pris),
   );
   return [claimRow, new ActionRowBuilder().addComponents(staffMenu)];
+}
+
+// Réécrit uniquement la ligne « ⏳ Statut : … » des blocs de texte.
+function replaceClaimTextOnly(components, statusText) {
+  const walk = (arr) => (Array.isArray(arr) ? arr.map((c) => {
+    if (!c || typeof c !== 'object') return c;
+    if (c.type === 10 && typeof c.content === 'string') {
+      const src = String(c.content);
+      if (!/^⏳ \*\*(?:Statut|Status)\s*:\*\*/m.test(src)) return c;
+      return { ...c, content: src.replace(/^⏳ \*\*(?:Statut|Status)\s*:\*\*.*$/m, String(statusText || '').slice(0, 400)) };
+    }
+    if (Array.isArray(c.components)) return { ...c, components: walk(c.components) };
+    return c;
+  }) : arr);
+  return walk(components);
+}
+
+// v387b — reconstruit la rangée des deux boutons (JSON pur) : sert à remettre
+// un panneau déjà envoyé dans le bon état, même s'il a été créé avant.
+function claimRowJson(botId, claimed, lang = 'fr') {
+  return {
+    type: 1,
+    components: [
+      {
+        type: 2,
+        custom_id: `bd-tmenu:${botId}:claim`,
+        label: i18n.t(lang, 'ticket_claim_btn'),
+        style: ButtonStyle.Primary,
+        disabled: !!claimed,
+      },
+      {
+        type: 2,
+        custom_id: `bd-tmenu:${botId}:release`,
+        label: i18n.t(lang, 'ticket_release_btn'),
+        style: ButtonStyle.Secondary,
+        disabled: !claimed,
+      },
+    ],
+  };
 }
 
 function stripClaimButtonJson(components, claimId) {
@@ -916,16 +961,24 @@ async function removeClaimButton(message, botId, staffUser, lang) {
   try {
     const json = (message.components || []).map((c) => (c && typeof c.toJSON === 'function' ? c.toJSON() : c));
     // v379 (3e passe) — le statut est réécrit et les rôles du staff quittent la
-    // ligne d'identité. v387 — le bouton ne reste plus grisé : il devient
-    // « Retirer ma prise en charge » (ou redevient « Pris en charge »).
-    const remplacement = staffId
-      ? { custom_id: releaseId, label: i18n.t(l, 'ticket_release_btn'), style: ButtonStyle.Secondary, disabled: false }
-      : { custom_id: claimId, label: i18n.t(l, 'ticket_claim_btn'), style: ButtonStyle.Primary, disabled: false };
-    // L'identifiant du bouton sur le panneau peut être celui d'origine s'il a
-    // déjà été renommé : on accepte les deux.
-    const next = stripStaffRoleMentionsJson(
-      replaceClaimButtonJson(replaceClaimButtonJson(json, claimId, status, remplacement), releaseId, status, remplacement),
-    );
+    // ligne d'identité. v387b — les DEUX boutons gardent leur nom et leur
+    // place : seul leur état change (« prendre » grisé quand c'est pris,
+    // « retirer » grisé quand personne ne le tient).
+    // On remplace la rangée qui contient « prendre » ou « retirer » par une
+    // rangée NEUVE à deux boutons : les panneaux déjà envoyés (et les anciens,
+    // à bouton unique) reviennent ainsi tous au même dessin.
+    const neuve = claimRowJson(botId, !!staffId, l);
+    const remplacerRangee = (arr) => (Array.isArray(arr) ? arr.map((c) => {
+      if (!c || typeof c !== 'object') return c;
+      if (c.type === 1 && Array.isArray(c.components)) {
+        const ids = c.components.map((b) => String((b && (b.custom_id || b.customId)) || ''));
+        if (ids.includes(claimId) || ids.includes(releaseId)) return { ...neuve };
+        return { ...c, components: remplacerRangee(c.components) };
+      }
+      if (Array.isArray(c.components)) return { ...c, components: remplacerRangee(c.components) };
+      return c;
+    }) : arr);
+    const next = stripStaffRoleMentionsJson(replaceClaimTextOnly(remplacerRangee(json), status));
     await message.edit({
       components: next,
       flags: MessageFlags.IsComponentsV2,

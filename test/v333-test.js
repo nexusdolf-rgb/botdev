@@ -34,8 +34,10 @@ check('plus d’option claim dans le menu staff', !panels.includes("setValue('cl
 // v379 — le bouton s'appelle « Pris en charge » et reste en place.
 // v387 — une fois le ticket pris, il devient « Retirer ma prise en charge »
 // (actif), pour que le staff puisse le rendre à l'équipe.
-check('bouton « Pris en charge » (libellé v387 : selon l’état du ticket)',
-  panels.includes("'ticket_release_btn' : 'ticket_claim_btn'") && panels.includes('bd-tmenu:${botId}:${pris ? \'release\' : \'claim\'}'));
+// v387b — deux boutons indépendants, chacun avec son identifiant.
+check('boutons « Pris en charge » et « Retirer ma prise en charge »',
+  panels.includes("bd-tmenu:${botId}:claim") && panels.includes("bd-tmenu:${botId}:release")
+  && panels.includes("ticket_release_btn"));
 check('après prise : bouton « Retirer ma prise en charge »',
   panels.includes('removeClaimButton') && panels.includes("ticket_release_btn")
   && panels.includes('bd-tmenu:${botId}:release'));

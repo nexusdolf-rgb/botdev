@@ -231,9 +231,11 @@ const json = (p) => v2.json(p || {});
   check('aucun séparateur entre les lignes de la carte',
     (cardText.match(/━━/g) || []).length === 0 && !cardText.includes('\n\n'));
   const cardJson = json(cardOpen);
-  check('bouton « Pris en charge » (Primary, actif)',
+  // v387b — deux boutons indépendants : « prendre » actif, « retirer » grisé.
+  check('boutons « Pris en charge » (actif) + « Retirer » (grisé)',
     cardJson.includes('"label":"🖐️ Pris en charge"') && cardJson.includes('"style":1')
-      && !cardJson.includes('"disabled":true'));
+      && cardJson.includes('"label":"🖐️ Retirer ma prise en charge"')
+      && (cardJson.match(/"disabled":true/g) || []).length === 1);
   check('menu « Gérer ce ticket… » sans engrenage', cardJson.includes('"placeholder":"Gérer ce ticket…"'));
   check('menu : 5 actions, sans « Supprimer définitivement »',
     ['hold', 'reopen', 'addmember', 'removemember', 'close'].every((v) => cardJson.includes(`"value":"${v}"`))
@@ -264,9 +266,9 @@ const json = (p) => v2.json(p || {});
   check('carte prise en charge : statut « pris en charge par @Marie »',
     allText(cardClaimed).includes('⏳ **Statut :** pris en charge par <@STAFF1>'));
   // v387 — le bouton n'est plus grisé : il devient « Retirer ma prise en charge ».
-  check('carte prise en charge : bouton « Retirer ma prise en charge »',
+  check('carte prise en charge : « Retirer » actif, « prendre » grisé',
     json(cardClaimed).includes('bd-tmenu:') && json(cardClaimed).includes(':release')
-    && !json(cardClaimed).includes('"disabled":true'));
+    && (json(cardClaimed).match(/"disabled":true/g) || []).length === 1);
   // v379 (3e passe) — une fois le staff engagé, ses rôles ne sont plus pingés.
   check('carte prise en charge : aucun rôle staff pingé', !allText(cardClaimed).includes('<@&'),
     JSON.stringify(allText(cardClaimed)));
@@ -293,9 +295,9 @@ const json = (p) => v2.json(p || {});
     edit: async (p) => { claimI.message.edited = p; return {}; },
   };
   await panels.dispatchPanels(BOT, claimI);
-  check('bouton transformé en « Retirer ma prise en charge »', !!claimI.message.edited
+  check('après prise : « prendre » grisé, « Retirer » actif (deux boutons)', !!claimI.message.edited
     && JSON.stringify(claimI.message.edited.components).includes(':release')
-    && !JSON.stringify(claimI.message.edited.components).includes('"disabled":true'));
+    && (JSON.stringify(claimI.message.edited.components).match(/"disabled":true/g) || []).length === 1);
   check('ligne Statut réécrite', JSON.stringify(claimI.message.edited.components)
     .includes('⏳ **Statut :** pris en charge par <@STAFF1>'));
   const edited = JSON.stringify(claimI.message.edited.components);
