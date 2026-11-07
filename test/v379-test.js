@@ -234,7 +234,7 @@ const json = (p) => v2.json(p || {});
   // v387b — deux boutons indépendants : « prendre » actif, « retirer » grisé.
   check('boutons « Pris en charge » (actif) + « Retirer » (grisé)',
     cardJson.includes('"label":"🖐️ Pris en charge"') && cardJson.includes('"style":1')
-      && cardJson.includes('"label":"🖐️ Retirer ma prise en charge"')
+      && cardJson.includes('"label":"🖐️ Retirer du ticket"')
       && (cardJson.match(/"disabled":true/g) || []).length === 1);
   check('menu « Gérer ce ticket… » sans engrenage', cardJson.includes('"placeholder":"Gérer ce ticket…"'));
   check('menu : 5 actions, sans « Supprimer définitivement »',
@@ -265,7 +265,7 @@ const json = (p) => v2.json(p || {});
   );
   check('carte prise en charge : statut « pris en charge par @Marie »',
     allText(cardClaimed).includes('⏳ **Statut :** pris en charge par <@STAFF1>'));
-  // v387 — le bouton n'est plus grisé : il devient « Retirer ma prise en charge ».
+  // v387 — le bouton n'est plus grisé : il devient « Retirer du ticket ».
   check('carte prise en charge : « Retirer » actif, « prendre » grisé',
     json(cardClaimed).includes('bd-tmenu:') && json(cardClaimed).includes(':release')
     && (json(cardClaimed).match(/"disabled":true/g) || []).length === 1);

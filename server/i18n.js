@@ -165,7 +165,7 @@ const STRINGS = {
     ticket_claim_btn: '🖐️ Pris en charge',
     // v387 — le même bouton libère le ticket quand c'est LUI qui le tient :
     // un autre membre du staff peut alors le reprendre.
-    ticket_release_btn: '🖐️ Retirer ma prise en charge',
+    ticket_release_btn: '🖐️ Retirer du ticket',
     ticket_release_title: '🖐️ Prise en charge retirée',
     ticket_release_desc: '<@{staff}> a remis le ticket en attente : un autre membre du staff peut désormais le prendre.',
     ticket_release_ok: 'C’est noté : le ticket est de nouveau libre pour le staff.',
@@ -432,7 +432,7 @@ const STRINGS = {
     ticket_card_reason: '📄 **Reason:**',
     ticket_card_team: '-# Team: {staff}',
     ticket_claim_btn: '🖐️ Claimed',
-    ticket_release_btn: '🖐️ Release my claim',
+    ticket_release_btn: '🖐️ Release from ticket',
     ticket_release_title: '🖐️ Claim released',
     ticket_release_desc: '<@{staff}> put the ticket back in the queue: another staff member can now claim it.',
     ticket_release_ok: 'Done: the ticket is free for staff again.',

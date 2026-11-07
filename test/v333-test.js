@@ -32,13 +32,13 @@ check('index.html : plus aucune ?v=332', !html.includes('?v=332'));
 console.log('— 2. Prendre ce ticket = bouton, plus dans le menu —');
 check('plus d’option claim dans le menu staff', !panels.includes("setValue('claim')"));
 // v379 — le bouton s'appelle « Pris en charge » et reste en place.
-// v387 — une fois le ticket pris, il devient « Retirer ma prise en charge »
+// v387 — une fois le ticket pris, il devient « Retirer du ticket »
 // (actif), pour que le staff puisse le rendre à l'équipe.
 // v387b — deux boutons indépendants, chacun avec son identifiant.
-check('boutons « Pris en charge » et « Retirer ma prise en charge »',
+check('boutons « Pris en charge » et « Retirer du ticket »',
   panels.includes("bd-tmenu:${botId}:claim") && panels.includes("bd-tmenu:${botId}:release")
   && panels.includes("ticket_release_btn"));
-check('après prise : bouton « Retirer ma prise en charge »',
+check('après prise : bouton « Retirer du ticket »',
   panels.includes('removeClaimButton') && panels.includes("ticket_release_btn")
   && panels.includes('bd-tmenu:${botId}:release'));
 check('plus de gros panneau dans le salon (ticket_claim_msg)', !panels.includes('ticket_claim_msg'));

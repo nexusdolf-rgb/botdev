@@ -793,7 +793,7 @@ function staffTicketRows(botId, claimed, lang = 'fr') {
     );
   // v387b — DEUX boutons INDÉPENDANTS, jamais un bouton qui change de nom :
   //   • « 🖐️ Pris en charge »          → actif tant que personne ne l'a pris ;
-  //   • « 🖐️ Retirer ma prise en charge » → actif dès que le ticket est pris.
+  //   • « 🖐️ Retirer du ticket »         → actif dès que le ticket est pris.
   // Chacun a son propre identifiant, son propre état, sa propre action. Le
   // staff voit donc toujours les deux, et sait immédiatement ce qui est
   // possible : c'est la contrepartie visible du retrait de prise en charge.

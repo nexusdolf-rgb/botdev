@@ -59,7 +59,7 @@ function messageFactice() {
         { type: 10, content: '⏳ **Statut :** en attente' },
         { type: 1, components: [
           { type: 2, custom_id: `bd-tmenu:${botId}:claim`, label: '🖐️ Pris en charge', style: 1 },
-          { type: 2, custom_id: `bd-tmenu:${botId}:release`, label: '🖐️ Retirer ma prise en charge', style: 2, disabled: true },
+          { type: 2, custom_id: `bd-tmenu:${botId}:release`, label: '🖐️ Retirer du ticket', style: 2, disabled: true },
         ] },
       ] }],
       edit: async (p) => { etat.corps = p; },
@@ -127,7 +127,7 @@ function messageFactice() {
       !!msg.state.corps && JSON.stringify(msg.state.corps).includes('en attente'));
     const apres = JSON.stringify(msg.state.corps);
     check('…« Pris en charge » redevient actif', apres.includes(':claim'));
-    check('…et « Retirer ma prise en charge » repasse en grisé',
+    check('…et « Retirer du ticket » repasse en grisé',
       apres.includes(':release') && (apres.match(/"disabled":true/g) || []).length === 1,
       apres.slice(0, 200));
     check('le créateur est prévenu dans le salon (sans mention)',
