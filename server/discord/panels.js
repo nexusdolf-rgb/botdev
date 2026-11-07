@@ -237,6 +237,7 @@ async function dispatchPanels(botId, interaction) {
       if (cid === `bd-tmenu:${botId}:reopen`) { await handleTicketReopen(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:hold`) { await handleTicketHold(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:claim`) { await handleTicketClaim(botId, interaction); return true; }
+      if (cid === `bd-tmenu:${botId}:release`) { await handleTicketRelease(botId, interaction); return true; }
       if (cid === `bd-tmenu:${botId}:addmember`) { await handleTicketAddAsk(botId, interaction); return true; }
       // v238 — « 🔁 Réessayer » du panneau « membre introuvable » : rouvre la
       // fenêtre à remplir (une interaction de bouton a le droit d'ouvrir une modale).
@@ -790,12 +791,18 @@ function staffTicketRows(botId, claimed, lang = 'fr') {
       new StringSelectMenuOptionBuilder().setLabel('➖ Retirer un membre').setDescription('Retirer un accès ajouté au ticket').setValue('removemember'),
       new StringSelectMenuOptionBuilder().setLabel('🔒 Fermer le ticket').setDescription('Fermer, transcrire puis supprimer le salon').setValue('close'),
     );
+  // v387 — le bouton change de rôle selon l'état du ticket :
+  //   • personne ne l'a pris  → « 🖐️ Pris en charge » actif (on le prend) ;
+  //   • déjà pris              → « 🖐️ Retirer ma prise en charge » : seul le
+  //     membre qui l'a pris peut s'en servir (vérifié au clic).
+  // Avant, il était simplement grisé une fois le ticket pris : impossible de
+  // le rendre au staff sans passer par la base.
+  const pris = !!claimed;
   const claimRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId(`bd-tmenu:${botId}:claim`)
-      .setStyle(ButtonStyle.Primary)
-      .setLabel(i18n.t(lang, 'ticket_claim_btn'))
-      .setDisabled(!!claimed),
+      .setCustomId(`bd-tmenu:${botId}:${pris ? 'release' : 'claim'}`)
+      .setStyle(pris ? ButtonStyle.Secondary : ButtonStyle.Primary)
+      .setLabel(i18n.t(lang, pris ? 'ticket_release_btn' : 'ticket_claim_btn')),
   );
   return [claimRow, new ActionRowBuilder().addComponents(staffMenu)];
 }
@@ -825,7 +832,7 @@ function stripClaimButtonJson(components, claimId) {
 // GRISÉ (comme sur la capture), et la ligne « ⏳ Statut : … » du bloc d'en-tête
 // passe à « pris en charge par @staff ». Aucun second message n'est nécessaire
 // pour mettre la carte à jour : on ne touche qu'aux composants existants.
-function replaceClaimButtonJson(components, claimId, statusText) {
+function replaceClaimButtonJson(components, claimId, statusText, remplacement) {
   const patchText = (content) => {
     const src = String(content || '');
     if (!/^⏳ \*\*(?:Statut|Status)\s*:\*\*/m.test(src)) return src;
@@ -840,6 +847,9 @@ function replaceClaimButtonJson(components, claimId, statusText) {
         const next = kids.map((b) => {
           const id = String((b && (b.custom_id || b.customId)) || '');
           if (id !== claimId) return b;
+          // v387 — si un remplacement est fourni, le bouton change de rôle
+          // (prendre → retirer) au lieu d'être simplement grisé.
+          if (remplacement) return { ...b, ...remplacement };
           return { ...b, disabled: true };
         });
         return { ...c, components: next };
@@ -892,19 +902,30 @@ function stripStaffRoleMentionsJson(components) {
 async function removeClaimButton(message, botId, staffUser, lang) {
   if (!message || typeof message.edit !== 'function') return;
   const claimId = `bd-tmenu:${botId}:claim`;
+  const releaseId = `bd-tmenu:${botId}:release`;
   const staffId = staffUser && (staffUser.id || staffUser);
   const l = lang || 'fr';
+  // v387 — sans staff (on vient de RETIRER la prise en charge), le statut
+  // redevient « en attente » ; avec staff, « pris en charge par @X ».
   const status = staffId
     ? i18n.t(l, 'ticket_card_status', {
         status: i18n.t(l, 'ticket_card_status_claimed', { staff: `<@${staffId}>` }),
       })
-    : '';
+    : i18n.t(l, 'ticket_card_status', { status: i18n.t(l, 'ticket_card_status_open') });
   if (!status) return;
   try {
     const json = (message.components || []).map((c) => (c && typeof c.toJSON === 'function' ? c.toJSON() : c));
-    // v379 (3e passe) — le bouton passe en grisé, le statut est réécrit, et
-    // les rôles du staff quittent la ligne d'identité.
-    const next = stripStaffRoleMentionsJson(replaceClaimButtonJson(json, claimId, status));
+    // v379 (3e passe) — le statut est réécrit et les rôles du staff quittent la
+    // ligne d'identité. v387 — le bouton ne reste plus grisé : il devient
+    // « Retirer ma prise en charge » (ou redevient « Pris en charge »).
+    const remplacement = staffId
+      ? { custom_id: releaseId, label: i18n.t(l, 'ticket_release_btn'), style: ButtonStyle.Secondary, disabled: false }
+      : { custom_id: claimId, label: i18n.t(l, 'ticket_claim_btn'), style: ButtonStyle.Primary, disabled: false };
+    // L'identifiant du bouton sur le panneau peut être celui d'origine s'il a
+    // déjà été renommé : on accepte les deux.
+    const next = stripStaffRoleMentionsJson(
+      replaceClaimButtonJson(replaceClaimButtonJson(json, claimId, status, remplacement), releaseId, status, remplacement),
+    );
     await message.edit({
       components: next,
       flags: MessageFlags.IsComponentsV2,
@@ -2326,6 +2347,74 @@ async function handleTicketClaim(botId, interaction) {
     });
   } catch {}
   if (!fromButton) await ackReply(interaction, { content: i18n.t(lang, 'ticket_claim_ok'), ephemeral: true });
+}
+
+// 🖐️ v387 — RETIRER SA PRISE EN CHARGE : le staff qui tient le ticket le
+// remet en attente, un autre membre du staff peut alors le reprendre.
+// Trois refus polis, chacun avec sa raison :
+//   • pas de ticket / personne ne l'a pris  → « rien à retirer » ;
+//   • pas staff                             → « réservé au staff » ;
+//   • ticket pris par quelqu'un d'autre     → « seul X peut le retirer ».
+async function handleTicketRelease(botId, interaction) {
+  const lang = i18n.langForGuild(interaction.guild ? interaction.guild.id : '');
+  const refus = (cle, vars) => interaction.reply({
+    content: i18n.t(lang, cle, vars || {}),
+    ephemeral: true,
+    allowedMentions: { parse: [] },
+  });
+  if (!isStaff(botId, interaction)) {
+    return interaction.reply({
+      content: i18n.t(lang, 'ticket_deny_not_staff'),
+      ephemeral: true,
+    });
+  }
+  const channel = interaction.channel;
+  const guild = interaction.guild;
+  const fromButton = typeof interaction.isButton === 'function' && interaction.isButton();
+  if (fromButton) await safeDeferUpdate(interaction);
+  else await safeDefer(interaction);
+
+  const row = store.openTickets.getByChannel(channel.id);
+  if (!row) return ackReply(interaction, { content: '❌ Ticket introuvable.', ephemeral: true });
+  if (!row.claimed_by) {
+    // Le panneau est remis dans son état « à prendre » : rien ne reste bloqué.
+    await removeClaimButton(interaction.message, botId, null, lang);
+    return ackReply(interaction, { content: i18n.t(lang, 'ticket_deny_not_taken'), ephemeral: true });
+  }
+  if (row.claimed_by !== interaction.user.id) {
+    return ackReply(interaction, {
+      content: i18n.t(lang, 'ticket_deny_not_yours', { staff: `<@${row.claimed_by}>` }),
+      ephemeral: true,
+      allowedMentions: { parse: [] },
+    });
+  }
+
+  store.openTickets.update(channel.id, { claimed_by: '', claimed_tag: '', claimed_at: '' });
+  store.activity.add(botId, guild.id, '🖐️', `Ticket #${row.number} : ${interaction.user.tag} a retiré sa prise en charge`);
+
+  // Le panneau redevient « à prendre » (même message, aucun doublon).
+  await removeClaimButton(interaction.message, botId, null, lang);
+
+  // 🔔 Le créateur voit que son ticket est de nouveau en attente — sans
+  // mention : c'est une information, pas une interpellation.
+  await channel.send(ui.v2panel({
+    accent: false,
+    titleLevel: 3,
+    title: i18n.t(lang, 'ticket_release_title'),
+    description: i18n.t(lang, 'ticket_release_desc', { staff: interaction.user.id }),
+    footer: false,
+  })).catch(() => {});
+
+  try {
+    await logging.log(botId, guild, {
+      title: '🖐️ Prise en charge retirée', color: '#FAA61A',
+      fields: [
+        { name: '📨 Salon', value: `<#${channel.id}>`, inline: true },
+        { name: '🛡️ Par', value: `${interaction.user.tag}`, inline: true },
+      ],
+    });
+  } catch {}
+  if (!fromButton) await ackReply(interaction, { content: i18n.t(lang, 'ticket_release_ok'), ephemeral: true });
 }
 
 // ➕ Ajouter un membre : le staff invite une autre personne dans le salon privé
@@ -3822,6 +3911,11 @@ module.exports = {
   // v379 (3e passe) — exposé pour les tests : la prise en charge doit retirer
   // les mentions de rôle de la ligne d'identité sans toucher au reste.
   __testStripStaffRoleMentions: stripStaffRoleMentionsJson,
+  // v387 — exposés pour les tests : la prise en charge se retire (le ticket
+  // redevient libre) et le panneau se met à jour dans les deux sens.
+  __testHandleTicketRelease: handleTicketRelease,
+  __testStaffTicketRows: staffTicketRows,
+  __testRemoveClaimButton: removeClaimButton,
 
   // v237 — exposés pour les tests : le récapitulatif du journal des tickets est
   // passé en Components V2 et sa note s'édite en patchant le conteneur (plus de

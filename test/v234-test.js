@@ -287,7 +287,8 @@ console.log('\n5️⃣  Couverture — tout panels.js est en V2');
   // + confirmation), retrait (liste + carte vide + retiré + refus), carte de
   // confirmation de fermeture, message de fermeture en cours, et transcription
   // déposée dans le salon de logs. 18 + 10 = 28.
-  check('emplacements ui.v2panel( (claim n’est plus un panneau, v333)', count('ui.v2panel(') === 28);
+  // v387 +1 : l'annonce « prise en charge retirée » dans le salon.
+  check('emplacements ui.v2panel( (claim n’est plus un panneau, v333)', count('ui.v2panel(') === 29);
   check('plus aucune duplication « Panel.content = i18n.t(...) »', count('Panel.content = i18n.t') === 0);
   check('plus aucune référence à buildTicketPanelEmbed', count('buildTicketPanelEmbed') === 0);
   // v237 — il ne reste QU'UNE lecture de .embeds[0] dans le code exécuté :

@@ -263,7 +263,10 @@ const json = (p) => v2.json(p || {});
   );
   check('carte prise en charge : statut « pris en charge par @Marie »',
     allText(cardClaimed).includes('⏳ **Statut :** pris en charge par <@STAFF1>'));
-  check('carte prise en charge : bouton grisé', json(cardClaimed).includes('"disabled":true'));
+  // v387 — le bouton n'est plus grisé : il devient « Retirer ma prise en charge ».
+  check('carte prise en charge : bouton « Retirer ma prise en charge »',
+    json(cardClaimed).includes('bd-tmenu:') && json(cardClaimed).includes(':release')
+    && !json(cardClaimed).includes('"disabled":true'));
   // v379 (3e passe) — une fois le staff engagé, ses rôles ne sont plus pingés.
   check('carte prise en charge : aucun rôle staff pingé', !allText(cardClaimed).includes('<@&'),
     JSON.stringify(allText(cardClaimed)));
@@ -290,8 +293,9 @@ const json = (p) => v2.json(p || {});
     edit: async (p) => { claimI.message.edited = p; return {}; },
   };
   await panels.dispatchPanels(BOT, claimI);
-  check('bouton désactivé sur le panneau', !!claimI.message.edited
-    && JSON.stringify(claimI.message.edited.components).includes('"disabled":true'));
+  check('bouton transformé en « Retirer ma prise en charge »', !!claimI.message.edited
+    && JSON.stringify(claimI.message.edited.components).includes(':release')
+    && !JSON.stringify(claimI.message.edited.components).includes('"disabled":true'));
   check('ligne Statut réécrite', JSON.stringify(claimI.message.edited.components)
     .includes('⏳ **Statut :** pris en charge par <@STAFF1>'));
   const edited = JSON.stringify(claimI.message.edited.components);

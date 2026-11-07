@@ -31,9 +31,14 @@ check('index.html : plus aucune ?v=332', !html.includes('?v=332'));
 
 console.log('— 2. Prendre ce ticket = bouton, plus dans le menu —');
 check('plus d’option claim dans le menu staff', !panels.includes("setValue('claim')"));
-// v379 — le bouton s'appelle « Pris en charge » et reste en place, grisé.
-check('bouton « Pris en charge »', panels.includes("i18n.t(lang, 'ticket_claim_btn')") && panels.includes('bd-tmenu:${botId}:claim'));
-check('le bouton est grisé après prise', panels.includes('removeClaimButton') && panels.includes('disabled: true'));
+// v379 — le bouton s'appelle « Pris en charge » et reste en place.
+// v387 — une fois le ticket pris, il devient « Retirer ma prise en charge »
+// (actif), pour que le staff puisse le rendre à l'équipe.
+check('bouton « Pris en charge » (libellé v387 : selon l’état du ticket)',
+  panels.includes("'ticket_release_btn' : 'ticket_claim_btn'") && panels.includes('bd-tmenu:${botId}:${pris ? \'release\' : \'claim\'}'));
+check('après prise : bouton « Retirer ma prise en charge »',
+  panels.includes('removeClaimButton') && panels.includes("ticket_release_btn")
+  && panels.includes('bd-tmenu:${botId}:release'));
 check('plus de gros panneau dans le salon (ticket_claim_msg)', !panels.includes('ticket_claim_msg'));
 check('prise en charge câblée', panels.includes('handleTicketClaim') && panels.includes('claimed_by'));
 
