@@ -27,8 +27,8 @@ const iC = dash.indexOf("Dashboard.card(root, 'Annonces de live'");
 const chunk = dash.slice(iC, dash.indexOf('// ---- Carte Starboard', iC));
 
 console.log('— 1. Pins de version v332 —');
-check('index.html : ?v=383 ×10', (html.match(/\?v=383/g) || []).length === 10);
-check('sw.js : cache hoxera-v383', sw.includes("const CACHE = 'hoxera-v383';"));
+check('index.html : ?v=384 ×10', (html.match(/\?v=384/g) || []).length === 10);
+check('sw.js : cache hoxera-v384', sw.includes("const CACHE = 'hoxera-v384';"));
 check('index.html : plus aucune ?v=331', !html.includes('?v=331'));
 
 console.log('— 2. Dashboard (Lives seulement) —');

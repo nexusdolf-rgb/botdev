@@ -159,8 +159,8 @@ console.log('\n— Section 3 : comportement onChannelCreate —');
   console.log('\n— Section 6 : bump v301 —');
   const index = racine('public/index.html');
   const sw = racine('public/sw.js');
-  check('index.html : ?v=383 ×10', (index.match(/\?v=383/g) || []).length === 10);
-  check('sw.js : CACHE hoxera-v383', sw.includes("const CACHE = 'hoxera-v383';"));
+  check('index.html : ?v=384 ×10', (index.match(/\?v=384/g) || []).length === 10);
+  check('sw.js : CACHE hoxera-v384', sw.includes("const CACHE = 'hoxera-v384';"));
   check('aucune référence v=300 restante', !index.includes('?v=300') && !sw.includes('botdev-v300'));
 
   fs.rmSync(TMP, { recursive: true, force: true });

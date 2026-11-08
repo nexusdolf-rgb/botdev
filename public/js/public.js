@@ -129,6 +129,16 @@ App.renderPublicNavbar = (withLandingLinks = false) => {
   return nav;
 };
 
+// ---------------------- Vignette d'un bot ----------------------
+// Image si elle existe, pastille sinon, et pastille aussi quand l'image ne
+// se charge pas (proxy muet, réseau filtré). Défini au niveau du fichier :
+// l'accueil et la fiche publique s'en servent tous les deux.
+const avatarBot = (b) => {
+  const secours = `<div class="bot-avatar fallback">${App.glyphe('robot', { taille: 16 })}</div>`;
+  if (!b.avatar_url) return secours;
+  return `<img class="bot-avatar" src="${App.escapeHtml(b.avatar_url)}" alt="" data-secours="${App.escapeHtml(secours)}" />`;
+};
+
 // ---------------------- Page d'accueil publique ----------------------
 App.renderPublicLanding = () => {
   const user = App.state.user;
@@ -385,16 +395,6 @@ App.renderPublicLanding = () => {
       countUp(vals[2], App.fmtNumber(s.members));
     } catch {}
   };
-
-  // v378 — si le proxy d'avatar ne répond pas (CDN lent, réseau filtré),
-  // l'image cassée laissait un carré vide : on retombe sur la pastille.
-  // v378 — la vignette d'un bot : image si elle existe, pastille sinon, et
-// pastille aussi quand l'image ne se charge pas (proxy muet, réseau filtré).
-const avatarBot = (b) => {
-  const secours = `<div class="bot-avatar fallback">${App.glyphe('robot', { taille: 16 })}</div>`;
-  if (!b.avatar_url) return secours;
-  return `<img class="bot-avatar" src="${App.escapeHtml(b.avatar_url)}" alt="" data-secours="${App.escapeHtml(secours)}" />`;
-};
 
 const loadBots = async () => {
     try {

@@ -26,8 +26,8 @@ const routes = racine('server/routes.js');
 const dbSrc = racine('server/db.js');
 
 console.log('— 1. Pins de version v328 —');
-check('index.html : ?v=383 ×10', (html.match(/\?v=383/g) || []).length === 10);
-check('sw.js : cache hoxera-v383', sw.includes("const CACHE = 'hoxera-v383';"));
+check('index.html : ?v=384 ×10', (html.match(/\?v=384/g) || []).length === 10);
+check('sw.js : cache hoxera-v384', sw.includes("const CACHE = 'hoxera-v384';"));
 check('index.html : plus aucune ?v=327', !html.includes('?v=327'));
 
 console.log('— 2. Câblage —');

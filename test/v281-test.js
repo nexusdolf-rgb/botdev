@@ -39,7 +39,7 @@ check('module Hoxera AI RETIRÉ de la navigation (v289)', !dash.includes("['ai',
 console.log('— 4. Version —');
 const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-check('index.html : ?v=383 référencé 10 fois', (index.match(/\?v=383/g) || []).length === 10);
-check('sw.js : cache « hoxera-v383 »', sw.includes("const CACHE = 'hoxera-v383';"));
+check('index.html : ?v=384 référencé 10 fois', (index.match(/\?v=384/g) || []).length === 10);
+check('sw.js : cache « hoxera-v384 »', sw.includes("const CACHE = 'hoxera-v384';"));
 
 console.log(`\n🎉 v281 — ${ok} vérifications OK : un seul espace de réglages du bot, clair et sain.`);

@@ -53,8 +53,8 @@ check('audit-mobile audite le module voicetemp par défaut', banc.includes("'voi
 console.log('— 5. Version —');
 const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-check('index.html : ?v=383 référencé 10 fois', (index.match(/\?v=383/g) || []).length === 10);
-check('sw.js : cache « hoxera-v383 »', sw.includes("const CACHE = 'hoxera-v383';"));
+check('index.html : ?v=384 référencé 10 fois', (index.match(/\?v=384/g) || []).length === 10);
+check('sw.js : cache « hoxera-v384 »', sw.includes("const CACHE = 'hoxera-v384';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v269 — ${ok} vérifications OK : le module Vocal a son onglet.`);

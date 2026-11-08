@@ -1,7 +1,7 @@
 // Hoxera - Service Worker (mode app installable + chargement hors ligne)
 // Stratégie : HTML/JS/CSS en réseau d'abord (toujours à jour),
 // images/icônes en cache d'abord. L'API passe toujours par le réseau.
-const CACHE = 'hoxera-v383';
+const CACHE = 'hoxera-v384';
 const ASSETS = [
   '/',
   '/manifest.webmanifest',
