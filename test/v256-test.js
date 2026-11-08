@@ -27,6 +27,7 @@ const check = (nom, cond, detail) => {
 const racine = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 const css = racine('public/css/dashboard.css');
 const index = racine('public/index.html');
+const os = racine('public/js/boot-os.js');
 
 const deb = css.indexOf("/* --- v256 : sur OS de bureau, l'INTÉRIEUR des panneaux");
 // Le bloc v256 s'arrête avant le bloc suivant (palier B retiré en v257,
@@ -70,12 +71,12 @@ check('chaque sélecteur du bloc est préfixé hx-os-pc',
 check('les gardes v255 (pas de pliage sur PC) sont toujours là',
   (racine('public/js/dashboard.js').match(/classList\.contains\('hx-os-pc'\)\) return 0;/g) || []).length === 2);
 check('la classe hx-os-pc vient toujours du système (v253)',
-  index.includes("classList.add('hx-os-pc')"));
+  os.includes("classList.add('hx-os-pc')"));
 
 console.log('— 5. Version —');
-check('index.html : ?v=383 référencé 7 fois', (index.match(/\?v=383/g) || []).length === 7,
+check('index.html : ?v=383 référencé 10 fois', (index.match(/\?v=383/g) || []).length === 10,
   String((index.match(/\?v=383/g) || []).length));
-check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("const CACHE = 'botdev-v383';"));
+check('sw.js : cache « hoxera-v383 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v383';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v256 — ${ok} vérifications OK : l'intérieur des panneaux PC est redevenu celui de la v241.`);

@@ -92,7 +92,7 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
 
   // ---------- 8. Version ----------
   check('index : bump v217', fs.readFileSync('public/index.html', 'utf8').includes('?v=383'));
-  check('sw : bump botdev-v241', fs.readFileSync('public/sw.js', 'utf8').includes('botdev-v383'));
+  check('sw : bump botdev-v241', fs.readFileSync('public/sw.js', 'utf8').includes('hoxera-v383'));
 
   console.log(`  ✅ v217 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });

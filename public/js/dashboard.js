@@ -1,5 +1,5 @@
 // ============================================================
-// BotDev — Dashboard v2 (inspiré DraftBot)
+// Hoxera — Dashboard v2 (inspiré DraftBot)
 // Shell à sidebar + sélecteur de serveur + modules par serveur.
 // ============================================================
 const Dashboard = {
@@ -695,7 +695,7 @@ Dashboard.openModulePreview = (moduleId) => {
   App.modal(`
     <div class="modal-header" style="border:none">
       <h3>${Dashboard.emoteFor(moduleId) || ''} Aperçu Discord — ${App.escapeHtml(Dashboard.MODULE_LABEL_OF(moduleId))}</h3>
-      <button class="x-btn" data-close>×</button>
+      <button class="x-btn" data-close aria-label="Fermer" type="button">×</button>
     </div>
     <div class="modal-body" style="padding-top:0">
       <div class="dash-label" style="margin-top:0">Ce que le bot enverra, une fois vos réglages enregistrés</div>
@@ -1144,7 +1144,7 @@ Dashboard.renderSide = (aside) => {
   const bot = Dashboard.state.bot || {};
   const brandAvatar = bot.avatar_url
     ? `<img class="dash-side-brand-avatar" src="${App.escapeHtml(bot.avatar_url)}" alt="" />`
-    : '<img class="dash-side-brand-avatar fallback-logo" src="/icons/nexora-robot-mark.svg" alt="Logo Hoxera" />';
+    : '<img class="dash-side-brand-avatar fallback-logo" src="/icons/hoxera-robot-mark.svg" alt="Logo Hoxera" />';
   aside.appendChild(App.el(`<div class="dash-side-brand">${brandAvatar}<div class="dash-side-brand-copy"><b>${App.escapeHtml(bot.name || 'Hoxera')}</b><span>Control Center</span></div><span class="dash-side-brand-status" title="${bot.online ? 'Bot en ligne' : 'Bot hors ligne'}"></span></div>`));
   const sideBrandImage = aside.querySelector('.dash-side-brand-avatar:not(.fallback)');
   if (sideBrandImage) sideBrandImage.onerror = () => sideBrandImage.replaceWith(App.el('<span class="dash-side-brand-avatar fallback"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M13.4 2.6 5.6 13.4h4.8L9 21.4l8.6-11.2h-5l.8-7.6Z"/></svg></span>'));
@@ -1262,7 +1262,7 @@ Dashboard.openMoreSheet = () => {
   App.modal(`
     <div class="modal-header" style="border:none">
       <h3>Modules</h3>
-      <button class="x-btn" data-close>×</button>
+      <button class="x-btn" data-close aria-label="Fermer" type="button">×</button>
     </div>
     <div class="modal-body" style="padding-top:0">
       <div class="dash-label" style="margin-top:0">Serveur sélectionné${bot && bot.guildName ? ` · ${App.escapeHtml(bot.guildName)}` : ''}</div>
@@ -1585,7 +1585,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
     <div class="dash-mobile-bar" aria-label="Navigation mobile">
       <button class="dash-mobile-navbtn" id="d-mobile-menu" type="button" aria-label="Ouvrir le menu principal" aria-expanded="false">☰</button>
       <div class="dash-mobile-brand">
-        ${bot.avatar_url ? `<img src="${App.escapeHtml(bot.avatar_url)}" alt="" data-fb-text="${App.escapeHtml(bot.name || 'Hoxera')}" />` : '<img src="/icons/nexora-robot-mark.svg" alt="Logo Hoxera" />'}
+        ${bot.avatar_url ? `<img src="${App.escapeHtml(bot.avatar_url)}" alt="" data-fb-text="${App.escapeHtml(bot.name || 'Hoxera')}" />` : '<img src="/icons/hoxera-robot-mark.svg" alt="Logo Hoxera" />'}
         <b>${App.escapeHtml(bot.name || 'Hoxera')}</b>
       </div>
       <button class="dash-mobile-navbtn" id="d-mobile-modules" type="button" aria-label="Ouvrir les serveurs et modules" aria-expanded="false">▦</button>
@@ -1660,7 +1660,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
     <div class="dash-mobile-layer" data-dash-mobile-layer="true">
       <div class="dash-mobile-backdrop" id="dash-mobile-backdrop" hidden></div>
       <aside class="dash-mobile-drawer dash-mobile-site-drawer" id="dash-mobile-site-drawer" hidden aria-label="Menu principal">
-        <div class="dash-mobile-drawer-head"><b>Menu ${(Dashboard.state.bot && Dashboard.state.bot.name) ? Dashboard.state.bot.name : 'Hoxera'}</b><button class="dash-mobile-close" id="d-mobile-site-close" type="button" aria-label="Fermer le menu">×</button></div>
+        <div class="dash-mobile-drawer-head"><b>Menu ${App.escapeHtml((Dashboard.state.bot && Dashboard.state.bot.name) ? Dashboard.state.bot.name : 'Hoxera')}</b><button class="dash-mobile-close" id="d-mobile-site-close" type="button" aria-label="Fermer le menu">×</button></div>
         <nav class="dash-mobile-site-links">
           <button type="button" data-mobile-home><span>⌂</span>Accueil</button>
           <button type="button" data-mobile-open-modules><span>▦</span>Serveurs et modules</button>
@@ -5928,10 +5928,10 @@ Dashboard.renderers.embeds = async (content, data) => {
                 ${d.author ? `<div class="eb-e-author">${vars(mdLite(d.author))}</div>` : ''}
                 ${d.title ? `<div class="eb-e-title">${vars(mdLite(d.title))}</div>` : ''}
                 ${d.description ? `<div class="eb-e-desc">${vars(mdLite(d.description))}</div>` : ''}
-                ${d.image && /^https?:\/\//.test(d.image) ? `<img class="eb-e-img" src="${App.escapeHtml(d.image)}" alt="" onerror="this.style.display='none'" />` : ''}
+                ${d.image && /^https?:\/\//.test(d.image) ? `<img class="eb-e-img" src="${App.escapeHtml(d.image)}" alt="" data-img-hide="1" />` : ''}
                 ${d.footer ? `<div class="eb-e-footer">${vars(mdLite(d.footer))}</div>` : ''}
               </div>
-              ${d.thumbnail && /^https?:\/\//.test(d.thumbnail) ? `<img class="eb-e-thumb" src="${App.escapeHtml(d.thumbnail)}" alt="" onerror="this.style.display='none'" />` : ''}
+              ${d.thumbnail && /^https?:\/\//.test(d.thumbnail) ? `<img class="eb-e-thumb" src="${App.escapeHtml(d.thumbnail)}" alt="" data-img-hide="1" />` : ''}
             </div>` : ''}
             ${(d.buttons || []).length ? `<div class="eb-btns">${d.buttons.map((b) => `
               <span class="eb-btn s${Number(b.style) || 1}">${b.emoji ? App.escapeHtml(b.emoji) + ' ' : ''}${App.escapeHtml(b.label || 'Bouton')}${Number(b.style) === 5 ? '' : ''}</span>`).join('')}</div>` : ''}
@@ -6141,7 +6141,7 @@ Dashboard.renderers.members = async (content, data) => {
       });
       row.querySelector('[data-role]').onclick = () => {
         App.modal(`
-          <div class="modal-header"><h3>Rôle · ${App.escapeHtml(m.username)}</h3><button class="x-btn" data-close>×</button></div>
+          <div class="modal-header"><h3>Rôle · ${App.escapeHtml(m.username)}</h3><button class="x-btn" data-close aria-label="Fermer" type="button">×</button></div>
           <div class="modal-body">
             <label class="field-label">Rôle</label>
             <select class="input" id="mr-role">${rolesList.map((r) => `<option value="${App.escapeHtml(r.id)}">${App.escapeHtml(r.name)}</option>`).join('')}</select>
@@ -6900,7 +6900,7 @@ Dashboard.renderers.events = async (content, data) => {
         App.toast('Commande copiée : /event create ' + ev.title);
         const cmd = `/event create titre:${ev.title} quand:${p}${ev.ping_role && ev.ping_role !== 'none' ? ' role:' + ev.ping_role : ''}`;
         try { navigator.clipboard.writeText(cmd); } catch {}
-        App.modal(`<div class="modal-header"><h3>Commande de recréation</h3><button class="x-btn" data-close>×</button></div><div class="modal-body"><p style="font-size:13px;overflow-wrap:anywhere">${App.escapeHtml(cmd)}</p><div style="display:flex;gap:10px;margin-top:14px"><button class="btn btn-primary" data-close style="flex:1">OK</button></div></div>`);
+        App.modal(`<div class="modal-header"><h3>Commande de recréation</h3><button class="x-btn" data-close aria-label="Fermer" type="button">×</button></div><div class="modal-body"><p style="font-size:13px;overflow-wrap:anywhere">${App.escapeHtml(cmd)}</p><div style="display:flex;gap:10px;margin-top:14px"><button class="btn btn-primary" data-close style="flex:1">OK</button></div></div>`);
         document.querySelectorAll('[data-close]').forEach((b) => b.onclick = App.closeModal);
       };
       item.querySelector('[data-ev-del]').onclick = async () => {

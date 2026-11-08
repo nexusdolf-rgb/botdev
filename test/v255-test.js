@@ -33,6 +33,7 @@ const racine = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 const css = racine('public/css/dashboard.css');
 const js = racine('public/js/dashboard.js');
 const index = racine('public/index.html');
+const os = racine('public/js/boot-os.js');
 
 const deb = css.indexOf('/* --- v255 : sur OS de bureau, le VISAGE v241');
 const finBrut = css.indexOf("/* --- Palier B : 481-900 px, rail d'icônes de 64 px --- */");
@@ -82,12 +83,12 @@ check('v257 : plus de rail — la barre pleine couvre toutes les largeurs ≥ 48
 check('les 23 requêtes médias mobiles sont intactes',
   (css.match(/@media \(max-width: 700px\), \(max-width: 900px\) and \(hover: none\)/g) || []).length === 23);
 check('la classe hx-os-pc vient toujours du système (v253)',
-  index.includes("classList.add('hx-os-pc')"));
+  os.includes("classList.add('hx-os-pc')"));
 
 console.log('— 5. Version —');
-check('index.html : ?v=383 référencé 7 fois', (index.match(/\?v=383/g) || []).length === 7,
+check('index.html : ?v=383 référencé 10 fois', (index.match(/\?v=383/g) || []).length === 10,
   String((index.match(/\?v=383/g) || []).length));
-check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("const CACHE = 'botdev-v383';"));
+check('sw.js : cache « hoxera-v383 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v383';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v255 — ${ok} vérifications OK : le PC retrouve son visage v241, le mobile garde le sien.`);

@@ -33,6 +33,7 @@ const racine = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 const css = racine('public/css/dashboard.css');
 const banc = racine('test/tools/audit-mobile.js');
 const index = racine('public/index.html');
+const os = racine('public/js/boot-os.js');
 
 console.log('— 1. La clause mobile sans limite de largeur existe toujours (le danger) —');
 const CLAUSE = '(hover: none) and (pointer: coarse) and (max-height: 800px) and (any-pointer: coarse)';
@@ -85,14 +86,14 @@ check("…le banc n'accepte plus de rail : barre pleine > 200 px exigée sur PC"
 
 console.log('— 6. Les garde-fous des v250-v253 restent en place —');
 check('la classe hx-os-pc est toujours posée d\'après le système',
-  index.includes("classList.add('hx-os-pc')"));
+  os.includes("classList.add('hx-os-pc')"));
 check('ecranEtroit garde son verrou « OS de bureau »',
   racine('public/js/dashboard.js').includes("classList.contains('hx-os-pc')"));
 
 console.log('— 7. Version —');
-check('index.html : ?v=383 référencé 7 fois', (index.match(/\?v=383/g) || []).length === 7,
+check('index.html : ?v=383 référencé 10 fois', (index.match(/\?v=383/g) || []).length === 10,
   String((index.match(/\?v=383/g) || []).length));
-check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("const CACHE = 'botdev-v383';"));
+check('sw.js : cache « hoxera-v383 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v383';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v254 — ${ok} vérifications OK : plus aucune largeur où un PC bascule en mobile.`);

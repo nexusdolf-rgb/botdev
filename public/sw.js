@@ -1,13 +1,13 @@
-// BotDev - Service Worker (mode app installable + chargement hors ligne)
+// Hoxera - Service Worker (mode app installable + chargement hors ligne)
 // Stratégie : HTML/JS/CSS en réseau d'abord (toujours à jour),
 // images/icônes en cache d'abord. L'API passe toujours par le réseau.
-const CACHE = 'botdev-v383';
+const CACHE = 'hoxera-v383';
 const ASSETS = [
   '/',
   '/manifest.webmanifest',
-  '/icons/nexora-robot-mark-192.png',
-  '/icons/nexora-robot-mark.png',
-  '/icons/nexora-robot-mark.svg',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/icon-maskable-512.png',
 ];
 
 // 🧯 v364 — l'installation ne se joue plus a la sante d'un seul fichier :

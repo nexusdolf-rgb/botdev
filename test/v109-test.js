@@ -5,6 +5,7 @@ const dash = fs.readFileSync(__dirname + '/../public/js/dashboard.js', 'utf8');
 const dcss = fs.readFileSync(__dirname + '/../public/css/dashboard.css', 'utf8');
 const scss = fs.readFileSync(__dirname + '/../public/css/style.css', 'utf8');
 const html = fs.readFileSync(__dirname + '/../public/index.html', 'utf8');
+const bootSw = fs.readFileSync(__dirname + '/../public/js/boot-sw.js', 'utf8');
 
 // 1. Palette de commandes
 assert.ok(dash.includes('Dashboard.openPalette'), 'palette présente');
@@ -36,14 +37,14 @@ assert.ok(scss.includes('@keyframes toastIn') && scss.includes('@keyframes toast
 console.log('✅ toasts : icône, entrée élastique, barre de vie');
 
 // 6. Mises à jour automatiques renforcées (jamais vider le cache)
-assert.ok(html.includes('controllerchange'), 'rechargement auto à la nouvelle version');
-assert.ok(html.includes('reg.update()') && html.includes('visibilitychange'), 'vérification périodique + au retour sur l\'onglet');
+assert.ok(bootSw.includes('controllerchange'), 'rechargement auto à la nouvelle version');
+assert.ok(bootSw.includes('reg.update()') && bootSw.includes('visibilitychange'), 'vérification périodique + au retour sur l\'onglet');
 // 🛡️ COHÉRENCE DES VERSIONS : index.html et sw.js doivent porter le MÊME
 // numéro (c'est leur désynchronisation qui a figé le cache à v101 pendant
 // des jours sans que personne ne s'en rende compte)
 const sw = fs.readFileSync(__dirname + '/../public/sw.js', 'utf8');
 const vHtml = (html.match(/\?v=(\d+)/) || [])[1];
-const vSw = (sw.match(/botdev-v(\d+)/) || [])[1];
+const vSw = (sw.match(/hoxera-v(\d+)/) || [])[1];
 assert.ok(vHtml && vSw, 'versions présentes');
 assert.strictEqual(vHtml, vSw, `index.html (v${vHtml}) et sw.js (v${vSw}) DÉSYNCHRONISÉS !`);
 assert.ok(parseInt(vHtml, 10) >= 108, 'version >= 108');

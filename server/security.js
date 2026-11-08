@@ -117,7 +117,10 @@ function securityHeaders(req, res, next) {
   res.set('X-Content-Type-Options', 'nosniff');
   res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  res.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https://cdn.discordapp.com; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'");
+  // Aucun script en ligne n'est autorisé : tout le code part de fichiers servis
+  // par le site, ce qui neutralise l'injection de script par un champ mal échappé.
+  // Les styles en ligne restent tolérés (attributs style=).
+  res.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https://cdn.discordapp.com; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'");
   res.set('X-Frame-Options', 'SAMEORIGIN');
   res.set('Cross-Origin-Opener-Policy', 'same-origin');
   if (String(req.path || '').startsWith('/api')) res.set('Cache-Control', 'no-store');

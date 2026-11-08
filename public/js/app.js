@@ -8,6 +8,17 @@ const App = {
   router: {},
 };
 
+// ---------------------- Images qui n'arrivent pas ----------------------
+// Remplace les attributs onerror= qui ne passent plus la politique de
+// sécurité. L'évènement error ne remonte pas depuis une image : on l'écoute
+// donc en phase de capture.
+document.addEventListener('error', (e) => {
+  const img = e.target;
+  if (!img || img.tagName !== 'IMG') return;
+  if (img.dataset.imgHide !== undefined) { img.style.display = 'none'; return; }
+  if (img.dataset.secours) img.outerHTML = img.dataset.secours;
+}, true);
+
 // ---------------------- Garde-fou anti double-clic ----------------------
 // Un clic rapide deux fois sur « Enregistrer » envoyait deux fois la même
 // requête : deux sauvegardes créées par « Sauvegarder maintenant », deux
@@ -235,8 +246,21 @@ App.api = async (path, options = {}) => {
   let data = {};
   try { data = await res.json(); } catch {}
   if (!res.ok) {
-    if (res.status === 401) throw new Error('Session expirée. Reconnectez-vous avec Discord.');
+    // Une session qui expire en cours d'utilisation laissait le tableau de bord
+    // affiché avec une erreur à chaque clic : on repasse par la connexion.
+    if (res.status === 401) {
+      App.state.user = null;
+      // Seule une page qui exige une session renvoie vers la connexion : une
+      // page publique (accueil, fiche de bot) doit rester affichée.
+      if (App.state.loaded && /^#\/(dashboard|admin)/.test(location.hash)) location.hash = '#/login';
+      throw new Error('Session expirée. Reconnectez-vous avec Discord.');
+    }
     throw new Error(data.error || 'Une erreur est survenue');
+  }
+  // Prévient la page qu'un enregistrement a abouti : c'est ce qui lève la
+  // marque « modifications en cours » utilisée avant une mise à jour.
+  if (opts.method && String(opts.method).toUpperCase() !== 'GET') {
+    try { document.dispatchEvent(new CustomEvent('hx:saved')); } catch {}
   }
   return data;
 };
@@ -251,7 +275,7 @@ App.toast = (message, type = 'success') => {
 
 App.confirm = (message) => new Promise((resolve) => {
   App.modal(`
-    <div class="modal-header"><h3>Confirmation</h3><button class="x-btn" data-close>×</button></div>
+    <div class="modal-header"><h3>Confirmation</h3><button class="x-btn" data-close aria-label="Fermer" type="button">×</button></div>
     <div class="modal-body"><p style="line-height:1.6">${App.escapeHtml(message)}</p></div>
     <div class="modal-footer">
       <button class="btn btn-ghost" data-close>Annuler</button>
@@ -264,7 +288,7 @@ App.confirm = (message) => new Promise((resolve) => {
 
 App.prompt = (message, placeholder = '') => new Promise((resolve) => {
   App.modal(`
-    <div class="modal-header"><h3>Saisie</h3><button class="x-btn" data-close>×</button></div>
+    <div class="modal-header"><h3>Saisie</h3><button class="x-btn" data-close aria-label="Fermer" type="button">×</button></div>
     <div class="modal-body">
       <p style="line-height:1.6;margin-bottom:10px">${App.escapeHtml(message)}</p>
       <input class="input" id="prompt-input" placeholder="${App.escapeHtml(placeholder)}" />
@@ -294,7 +318,7 @@ App.banDialog = (nomCompte) => new Promise((resolve) => {
     ['custom', 'Durée personnalisée…'],
   ];
   App.modal(`
-    <div class="modal-header"><h3>Bannir ${App.escapeHtml(nomCompte || 'ce compte')}</h3><button class="x-btn" data-close>×</button></div>
+    <div class="modal-header"><h3>Bannir ${App.escapeHtml(nomCompte || 'ce compte')}</h3><button class="x-btn" data-close aria-label="Fermer" type="button">×</button></div>
     <div class="modal-body">
       <p style="line-height:1.6;margin-bottom:14px">Le compte ne pourra plus se connecter jusqu'à la fin de la durée. Ses données sont conservées : il retrouve tout en se reconnectant.</p>
       <label class="banned-label" for="ban-reason-input">Motif du bannissement</label>
@@ -360,13 +384,56 @@ App.banDialog = (nomCompte) => new Promise((resolve) => {
 
 App.modal = (innerHtml, large = false) => {
   const root = document.getElementById('modal-root');
-  const overlay = App.el(`<div class="modal-overlay"><div class="modal ${large ? 'large' : ''}">${innerHtml}</div></div>`);
+  const precedent = document.activeElement;
+  const overlay = App.el(`<div class="modal-overlay"><div class="modal ${large ? 'large' : ''}" role="dialog" aria-modal="true" tabindex="-1">${innerHtml}</div></div>`);
+  const boite = overlay.querySelector('.modal');
+  const titre = boite.querySelector('h3');
+  if (titre) {
+    if (!titre.id) titre.id = 'modal-titre';
+    boite.setAttribute('aria-labelledby', titre.id);
+  } else {
+    boite.setAttribute('aria-label', 'Fenêtre de dialogue');
+  }
   root.innerHTML = '';
   root.appendChild(overlay);
+  App._modalFocus = precedent && precedent.focus ? precedent : null;
+  const focusables = () => Array.from(boite.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+    .filter((el) => el.offsetParent !== null);
+  const premier = focusables()[0];
+  try { (premier || boite).focus({ preventScroll: true }); } catch {}
+  // Échap ferme la fenêtre comme le bouton de fermeture, et Tab tourne en
+  // boucle à l'intérieur : sans cela le clavier sortait de la fenêtre ouverte
+  // et pilotait la page en arrière-plan.
+  overlay._onKey = (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      const fermer = boite.querySelector('[data-close]');
+      if (fermer) fermer.click(); else App.closeModal();
+      return;
+    }
+    if (e.key !== 'Tab') return;
+    const items = focusables();
+    if (!items.length) { e.preventDefault(); return; }
+    const premiere = items[0];
+    const derniere = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === premiere) { e.preventDefault(); derniere.focus(); }
+    else if (!e.shiftKey && document.activeElement === derniere) { e.preventDefault(); premiere.focus(); }
+  };
+  document.addEventListener('keydown', overlay._onKey);
   return overlay;
 };
 
-App.closeModal = () => { document.getElementById('modal-root').innerHTML = ''; };
+App.closeModal = () => {
+  const root = document.getElementById('modal-root');
+  const overlay = root && root.firstElementChild;
+  if (overlay && overlay._onKey) document.removeEventListener('keydown', overlay._onKey);
+  if (root) root.innerHTML = '';
+  const retour = App._modalFocus;
+  App._modalFocus = null;
+  if (retour && retour.isConnected && typeof retour.focus === 'function') {
+    try { retour.focus({ preventScroll: true }); } catch {}
+  }
+};
 
 App.openInvite = (url) => {
   try { window.open(url, '_blank', 'noopener'); } catch {}
@@ -445,6 +512,7 @@ App.router.run = async () => {
     if (o === 'linked') App.toast('Compte Discord lié.');
     else if (o === 'banned') App.toast('Ce compte est banni d’Hoxera.', 'error');
     else if (o === 'nosecret') App.toast("Le Client Secret Discord n'est pas configuré sur le serveur.", 'error');
+    else if (o === 'refus') App.toast('Connexion annulée : vous avez refusé l’accès sur Discord.', 'error');
     else App.toast('La connexion Discord a échoué. Réessaie.', 'error');
     history.replaceState(null, '', '#/dashboard');
   }

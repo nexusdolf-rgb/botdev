@@ -314,7 +314,7 @@ const VERSIONS = [
 const NOTES = VERSIONS[0]; // compat tests / aperçu actuel
 
 function isFounder(userId) {
-  const id = String(process.env.NEXORA_ADMIN_DISCORD_ID || '').trim();
+  const id = String(process.env.HOXERA_ADMIN_DISCORD_ID || process.env.NEXORA_ADMIN_DISCORD_ID || '').trim();
   return /^\d{15,21}$/.test(id) && String(userId || '') === id;
 }
 

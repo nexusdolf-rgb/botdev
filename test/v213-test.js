@@ -87,7 +87,7 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
 
   // ---------- 6. Version ----------
   check('site : bump v213 (index)', index.includes('?v=383'));
-  check('site : bump v213 (sw)', sw.includes('botdev-v383'));
+  check('site : bump v213 (sw)', sw.includes('hoxera-v383'));
 
   console.log(`  ✅ v213 : ${n} vérifications`);
 })().catch((e) => { console.error(e); process.exit(1); });

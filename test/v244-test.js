@@ -573,25 +573,25 @@ const GUILD = 'G244';
 
   const vCourante = (html.match(/\?v=(\d+)/) || [])[1];
   check('index.html : une version de cache est déclarée', /^\d+$/.test(vCourante || ''), String(vCourante));
-  check('index.html : référencée exactement 7 fois',
-    (html.match(/\?v=\d+/g) || []).length === 7, String((html.match(/\?v=\d+/g) || []).length));
+  check('index.html : référencée exactement 10 fois',
+    (html.match(/\?v=\d+/g) || []).length === 10, String((html.match(/\?v=\d+/g) || []).length));
   // L'invariant utile n'est pas « v244 » en dur — c'est l'UNIFORMITÉ. Un bump
   // partiel (5 fichiers sur 7) laisserait le navigateur servir un mélange de
   // CSS et de JS de versions différentes, ce qui est le bug le plus difficile
   // à diagnostiquer qui soit.
   const versions = [...new Set(html.match(/\?v=\d+/g) || [])];
-  check('index.html : les 7 références pointent la MÊME version', versions.length === 1, versions.join(', '));
+  check('index.html : les 10 références pointent la MÊME version', versions.length === 1, versions.join(', '));
   check('cette version est bien la v244', versions[0] === '?v=383', String(versions[0]));
 
-  check('sw.js : nom de cache présent', /const CACHE = 'botdev-v\d+'/.test(sw), (sw.match(/const CACHE = '[^']*'/) || ['?'])[0]);
+  check('sw.js : nom de cache présent', /const CACHE = 'hoxera-v\d+'/.test(sw), (sw.match(/const CACHE = '[^']*'/) || ['?'])[0]);
   // « ?v=383 » dans index.html doit correspondre à « botdev-v260 » dans sw.js.
-  const cacheAttendu = `'botdev-${versions[0].replace('?v=', 'v')}'`;
+  const cacheAttendu = `'hoxera-${versions[0].replace('?v=', 'v')}'`;
   check('sw.js : cache aligné sur index.html', sw.includes(cacheAttendu),
     `${cacheAttendu} attendu, ${(sw.match(/const CACHE = '[^']*'/) || ['?'])[0]} trouvé`);
   // Une seule occurrence : deux noms de cache feraient deux mises en cache
   // concurrentes et l'utilisateur verrait une version sur deux.
-  check('sw.js : un seul nom de cache déclaré', (sw.match(/botdev-v\d+'/g) || []).length === 1,
-    String((sw.match(/botdev-v\d+'/g) || []).length));
+  check('sw.js : un seul nom de cache déclaré', (sw.match(/hoxera-v\d+'/g) || []).length === 1,
+    String((sw.match(/hoxera-v\d+'/g) || []).length));
 
   // Chaque test isole ses données dans botdev-vNNN-${Date.now()}. Ce numéro
   // suit la version du TEST, pas la version courante : un bump ne doit JAMAIS

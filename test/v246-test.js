@@ -389,9 +389,9 @@ const onglet = (module, hauteurs) => {
   // version dans les fichiers et vérifient leur cohérence. Plus aucun
   // rebump ne peut casser ce test.
   const versions = [...indexHtml.matchAll(/\?v=(\d+)/g)].map((m) => `?v=${m[1]}`);
-  const cacheVersion = (swSource.match(/const CACHE = 'botdev-v(\d+)';/) || [])[1] || '';
-  check('index.html : ?v=NNN référencé 7 fois, toutes identiques',
-    versions.length === 7 && versions.every((v) => v === versions[0]),
+  const cacheVersion = (swSource.match(/const CACHE = 'hoxera-v(\d+)';/) || [])[1] || '';
+  check('index.html : ?v=NNN référencé 10 fois, toutes identiques',
+    versions.length === 10 && versions.every((v) => v === versions[0]),
     `${versions.length} refs : ${[...new Set(versions)].join(',')}`);
   check('sw.js : cache « botdev-vNNN » bien formé', /^\d+$/.test(cacheVersion), cacheVersion);
   check('index.html et sw.js portent la même version',

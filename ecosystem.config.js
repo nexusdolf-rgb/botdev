@@ -3,7 +3,7 @@
 module.exports = {
   apps: [
     {
-      name: 'botdev',
+      name: 'hoxera',
       script: 'server/index.js',
       cwd: __dirname,
       env: {

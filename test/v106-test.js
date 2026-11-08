@@ -42,7 +42,8 @@ const mkGuild = (names) => ({
 
   // 4. Mise à jour automatique du site (PWA)
   const html = fs.readFileSync(__dirname + '/../public/index.html', 'utf8');
-  assert.ok(html.includes('controllerchange') && html.includes('reloadedOnce'), 'rechargement auto à la nouvelle version');
+const bootSw = fs.readFileSync(__dirname + '/../public/js/boot-sw.js', 'utf8');
+  assert.ok(bootSw.includes('controllerchange') && bootSw.includes('dejaRecharge'), 'rechargement auto à la nouvelle version');
   console.log('✅ nouvelle version du site = rechargement automatique (fini le cache tenace)');
 
   console.log('\n🎉 Tous les tests v2.9 passent');

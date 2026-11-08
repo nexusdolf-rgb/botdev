@@ -11,7 +11,7 @@ const root = path.join(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 const index = read('public/index.html');
 const sw = read('public/sw.js');
-const svg = read('public/icons/nexora-robot-mark.svg');
+const svg = read('public/icons/hoxera-robot-mark.svg');
 
 // ---------- 1. Les images HD sont en place (et volumineuses = détaillées) ----------
 const minSizes = {
@@ -46,7 +46,7 @@ const sharp = require('sharp');
   assert(svg.includes('#111418'), 'SVG : fond noir du nouveau logo');
 
   // ---------- 4. Version : gérée par le test de la version courante (v174) ----------
-  assert((sw.match(/nexora-robot-mark/g) || []).length >= 3,
+  assert((sw.match(/icon-(192|512|maskable-512)/g) || []).length >= 3,
     'le service worker doit mettre en cache les nouveaux visuels');
 
   console.log('✅ v173-test : identité visuelle HD (logo argent + bannière bleu nuit) verrouillée');

@@ -306,10 +306,10 @@ console.log('\n— 5. Le banc qui a servi, et la version du front —');
       /Chromium indisponible/.test(src) && /process\.exit\(2\)/.test(src), 'pas de repli');
   }
   const sw = code('public/sw.js');
-  const version = (sw.match(/botdev-v(\d+)/) || [])[1] || '';
+  const version = (sw.match(/hoxera-v(\d+)/) || [])[1] || '';
   const html = code('public/index.html');
   check('index.html : tous les liens versionnés portent la version du service worker (v' + version + ')',
-    version !== '' && (html.match(/\?v=\d+/g) || []).length === 7
+    version !== '' && (html.match(/\?v=\d+/g) || []).length === 10
     && (html.match(/\?v=\d+/g) || []).every((v) => v === '?v=' + version),
     (html.match(/\?v=\d+/g) || []).join(', '));
   check('les fichiers de public/js ne pointent aucune version périmée',

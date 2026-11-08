@@ -171,10 +171,10 @@ check('aucune route touchant un serveur n\'est ajoutée sans garde d\'accès',
 
 console.log('— 7. Version —');
 const index = lus['public/index.html'];
-check(`index.html : ?v=${VERSION} référencé 7 fois`, (index.match(/\?v=383/g) || []).length === 7,
+check(`index.html : ?v=${VERSION} référencé 10 fois`, (index.match(/\?v=383/g) || []).length === 10,
   String((index.match(/\?v=383/g) || []).length));
 const sw = fs.readFileSync(path.join(RACINE, 'public/sw.js'), 'utf8');
-check('le service worker porte la même version de cache', sw.includes("const CACHE = 'botdev-v383';"));
+check('le service worker porte la même version de cache', sw.includes("const CACHE = 'hoxera-v383';"));
 check('aucun fichier de public/js ne cite une version périmée',
   !/\?v=3[0-9][0-9]/.test(gabarits.replace(/\?v=383/g, '')), (gabarits.match(/\?v=3\d\d/g) || []).join(' '));
 

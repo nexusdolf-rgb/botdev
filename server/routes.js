@@ -247,7 +247,11 @@ function isPlatformAdmin(user) {
   if (!user) return false;
   // Identité Discord explicite du fondateur : une seule valeur valide est
   // acceptée. Une valeur absente ou mal formée ne donne jamais un accès.
-  const configuredDiscordId = process.env.NEXORA_ADMIN_DISCORD_ID;
+  // L'ancien nom de variable reste lu en repli pour ne pas verrouiller une
+  // installation qui n'a pas encore changé sa configuration.
+  const configuredDiscordId = process.env.HOXERA_ADMIN_DISCORD_ID !== undefined
+    ? process.env.HOXERA_ADMIN_DISCORD_ID
+    : process.env.NEXORA_ADMIN_DISCORD_ID;
   if (configuredDiscordId !== undefined) {
     const discordId = String(configuredDiscordId).trim();
     return /^\d{15,21}$/.test(discordId) && String(user.discord_id || '') === discordId;
@@ -314,7 +318,15 @@ router.get('/auth/discord/url', oauthRateLimit, (req, res) => {
 });
 
 router.get('/auth/discord/callback', oauthRateLimit, async (req, res) => {
-  const { code, state } = req.query;
+  const { code, state, error: refus } = req.query;
+  // La personne a refusé la demande sur Discord, ou Discord a renvoyé une
+  // erreur : rien à échanger, et le message doit le dire au lieu d'afficher
+  // « la connexion a échoué » sans explication.
+  if (refus) {
+    res.clearCookie('bd_oauth_state');
+    console.warn('[Hoxera] OAuth Discord : refus côté Discord —', String(refus).slice(0, 64));
+    return res.redirect('/#/login?oauth=refus');
+  }
   const stateCookie = req.cookies && req.cookies.bd_oauth_state;
   if (!code || !stateCookie || typeof state !== 'string' || !/^[a-f0-9]{32}$/i.test(state) || state !== stateCookie) {
     res.clearCookie('bd_oauth_state');
@@ -338,14 +350,23 @@ router.get('/auth/discord/callback', oauthRateLimit, async (req, res) => {
         redirect_uri: redirectUri,
       }),
     }, { timeoutMs: 10000, maxBytes: 128 * 1024 });
-    if (!tokenResult.response.ok || !tokenResult.json || !tokenResult.json.access_token) return res.redirect('/#/dashboard?oauth=token');
+    if (!tokenResult.response.ok || !tokenResult.json || !tokenResult.json.access_token) {
+      // Motif lisible (invalid_grant, invalid_client…) sans jamais écrire le
+      // code d'autorisation ni un jeton dans les journaux.
+      console.warn('[Hoxera] OAuth Discord : échange du code refusé —', tokenResult.response.status,
+        String((tokenResult.json && tokenResult.json.error) || 'sans détail').slice(0, 64));
+      return res.redirect('/#/dashboard?oauth=token');
+    }
     const tokens = tokenResult.json;
     const h = { Authorization: `Bearer ${tokens.access_token}` };
     const [meResult, guildsResult] = await Promise.all([
       fetchJson('https://discord.com/api/v10/users/@me', { headers: h }, { timeoutMs: 10000, maxBytes: 256 * 1024 }),
       fetchJson('https://discord.com/api/v10/users/@me/guilds', { headers: h }, { timeoutMs: 10000, maxBytes: 2 * 1024 * 1024 }),
     ]);
-    if (!meResult.response.ok || !meResult.json || !/^\d{15,21}$/.test(String(meResult.json.id || ''))) return res.redirect('/#/dashboard?oauth=me');
+    if (!meResult.response.ok || !meResult.json || !/^\d{15,21}$/.test(String(meResult.json.id || ''))) {
+      console.warn('[Hoxera] OAuth Discord : profil illisible —', meResult.response.status);
+      return res.redirect('/#/dashboard?oauth=me');
+    }
     const me = meResult.json;
     const guilds = guildsResult.response.ok && Array.isArray(guildsResult.json) ? guildsResult.json : [];
 
@@ -391,6 +412,10 @@ router.get('/auth/discord/callback', oauthRateLimit, async (req, res) => {
     setSessionCookie(req, res, session);
     res.redirect('/#/dashboard?oauth=linked');
   } catch (e) {
+    // Sans cette trace, un échec de connexion ne laissait aucune preuve dans
+    // les journaux : impossible de distinguer un refus Discord d'un réseau
+    // coupé. On journalise le motif, jamais le code ni le jeton.
+    console.error('[Hoxera] OAuth Discord : échec du callback —', (e && e.message) || e);
     res.redirect('/#/dashboard?oauth=error');
   }
 });
@@ -4191,7 +4216,7 @@ router.delete('/admin/users/:id', requireAuth, requireAdmin, platformMutationRat
 // 🛟 Filet de sécurité final : AUCUNE route ne doit faire tomber le serveur.
 // Toute erreur non gérée devient une réponse JSON propre (500).
 router.use((err, req, res, next) => {
-  console.error('[BotDev] Erreur route API :', (err && err.message) || err);
+  console.error('[Hoxera] Erreur route API :', (err && err.message) || err);
   try { require('./health').recordError('api', (err && err.message) || err); } catch {}
   try {
     if (!res.headersSent) res.status(500).json({ error: 'Erreur interne du serveur · elle a été journalisée.' });

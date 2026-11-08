@@ -15,4 +15,7 @@ coverage/
 # Le conteneur ne lance pas les tests ni les outils de conception.
 test/
 docs/
+scripts/
+branding/
+maquette-*.html
 *.log

@@ -13,8 +13,13 @@
   <meta property="og:title" content="Hoxera · Le bot de votre serveur Discord" />
   <meta property="og:description" content="Hoxera est un bot Discord pour la modération et le suivi d’un serveur : auto-modération, sanctions, tickets et règles, réglés depuis un tableau de bord relié au bot." />
   <meta property="og:url" content="https://hoxera.is-a.dev/" />
-  <meta name="twitter:card" content="summary" />
+  <meta property="og:image" content="https://hoxera.is-a.dev/icons/support-banner.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="600" />
+  <meta property="og:image:alt" content="Hoxera — le bot Discord de modération" />
+  <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Hoxera · Le bot de votre serveur Discord" />
+  <meta name="twitter:image" content="https://hoxera.is-a.dev/icons/support-banner.png" />
   <meta name="twitter:description" content="Hoxera est un bot Discord pour la modération et le suivi d’un serveur : auto-modération, sanctions, tickets et règles, réglés depuis un tableau de bord relié au bot." />
   <script type="application/ld+json">
   {
@@ -33,12 +38,15 @@
 }
   </script>
   <link rel="manifest" href="/manifest.webmanifest" />
-  <link rel="apple-touch-icon" href="/icons/nexora-robot-mark-192.png" />
-  <link rel="icon" href="/icons/nexora-robot-mark.png" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <link rel="icon" href="/icons/icon-192.png" />
   <!-- 🏷️ v364 : l'avatar du bot est demande des le HTML. La barre du haut
        gauche le trouve deja charge, au lieu de peindre un rond vide puis la
        photo une fois le JavaScript demarre. -->
   <link rel="preload" href="/api/public/bot-avatar" as="image" />
+  <script src="/js/boot-os.js?v=383"></script>
+  <script src="/js/boot-theme.js?v=383"></script>
+  <script src="/js/boot-sw.js?v=383"></script>
   <link rel="stylesheet" href="/css/style.css?v=383" />
   <link rel="stylesheet" href="/css/dashboard.css?v=383" />
 </head>
@@ -48,61 +56,10 @@
   <div id="toasts" aria-live="polite"></div>
   <div id="modal-root"></div>
 
-  <script>
-    // v253 : « PC ou mobile » décidé par le SYSTÈME D'EXPLOITATION, pas par des
-    // mesures que le navigateur peut fausser (échelle d'affichage Windows,
-    // écran tactile déclaré pointeur principal…). Un Windows / Mac / Linux de
-    // bureau porte la classe hx-os-pc et garde la disposition PC ; un Android,
-    // iPhone, iPad (y compris déguisé en Mac) reste en mobile. Appliqué avant
-    // le premier rendu pour ne pas flasher une mauvaise mise en page.
-    try {
-      const ua = navigator.userAgent;
-      const osMobile = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini|Silk/.test(ua);
-      const ipadEnMac = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
-      const osPc = /Windows NT|Macintosh|X11|Linux|CrOS/.test(ua) && !osMobile && !ipadEnMac;
-      if (osPc) document.documentElement.classList.add('hx-os-pc');
-    } catch {}
-  </script>
-  <script>
-    // /🌙 Thème appliqué AVANT le rendu (pas de flash) : choix mémorisé, sinon réglage système
-    try {
-      const t = localStorage.getItem('hx-theme');
-      const clair = t === 'light' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches);
-      if (clair) document.documentElement.classList.add('hx-light');
-      // v364 — la couleur de la barre du navigateur (statut, en-tete mobile)
-      // doit etre celle du fond REEL du theme : sinon, en theme clair, le
-      // bandeau du haut arrive bleu nuit puis blanchit sous les yeux.
-      const meta = document.querySelector('meta[name="theme-color"]');
-      if (meta) meta.setAttribute('content', clair ? '#f2f3f8' : '#36393f');
-    } catch {}
-  </script>
   <script src="/js/app.js?v=383"></script>
   <script src="/js/editor.js?v=383"></script>
   <script src="/js/views.js?v=383"></script>
   <script src="/js/public.js?v=383"></script>
   <script src="/js/dashboard.js?v=383"></script>
-  <script>
-    // Mode app installable (PWA) + MISE À JOUR AUTOMATIQUE :
-    // dès qu'une nouvelle version du site est installée, la page se
-    // recharge une fois toute seule — plus besoin de vider le cache.
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', async () => {
-        try {
-          const reg = await navigator.serviceWorker.register('/sw.js');
-          // Vérifie une nouvelle version : toutes les 30 min ET au retour sur l'onglet
-          setInterval(() => reg.update().catch(() => {}), 30 * 60000);
-          document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') reg.update().catch(() => {});
-          });
-        } catch {}
-      });
-      let reloadedOnce = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (reloadedOnce) return;
-        reloadedOnce = true;
-        window.location.reload();
-      });
-    }
-  </script>
 </body>
 </html>

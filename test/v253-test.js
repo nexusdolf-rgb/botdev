@@ -28,21 +28,24 @@ const check = (nom, cond, detail) => {
 
 const racine = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 const index = racine('public/index.html');
+const os = racine('public/js/boot-os.js');
 const css = racine('public/css/dashboard.css');
 const js = racine('public/js/dashboard.js');
 
 console.log('— 1. La classe hx-os-pc est posée avant le premier rendu —');
-check('index.html décide du système avant tout rendu (tout début du <body>, avant le thème et le tableau de bord)',
-  index.indexOf("classList.add('hx-os-pc')") < index.indexOf('hx-theme')
-  && index.indexOf("classList.add('hx-os-pc')") < index.indexOf('/js/dashboard.js'));
+check('index.html charge la décision système avant les feuilles et le tableau de bord',
+  index.indexOf('/js/boot-os.js') > 0
+  && index.indexOf('/js/boot-os.js') < index.indexOf('/css/style.css')
+  && index.indexOf('/js/boot-os.js') < index.indexOf('/js/boot-theme.js')
+  && index.indexOf('/js/boot-os.js') < index.indexOf('/js/dashboard.js'));
 check('…les OS de bureau sont reconnus (Windows, Mac, Linux, ChromeOS)',
-  /Windows NT\|Macintosh\|X11\|Linux\|CrOS/.test(index));
+  /Windows NT\|Macintosh\|X11\|Linux\|CrOS/.test(os));
 check('…les OS mobiles excluent la classe (Android, iPhone, iPad, iPod…)',
-  /Android\|iPhone\|iPad\|iPod/.test(index));
+  /Android\|iPhone\|iPad\|iPod/.test(os));
 check('…un iPad déguisé en Mac est démasqué par ses points tactiles',
-  /Macintosh\/.test\(ua\) && navigator\.maxTouchPoints > 1|ipadEnMac = \/Macintosh\/\.test\(ua\) && navigator\.maxTouchPoints > 1/.test(index));
+  /Macintosh\/.test\(ua\) && navigator\.maxTouchPoints > 1|ipadEnMac = \/Macintosh\/\.test\(ua\) && navigator\.maxTouchPoints > 1/.test(os));
 check('…une exception ne laisse jamais un navigateur sans décision (try/catch)',
-  /try \{[\s\S]{0,400}hx-os-pc[\s\S]{0,80}\} catch \{\}/.test(index));
+  /try \{[\s\S]{0,400}hx-os-pc[\s\S]{0,80}\} catch \(e\) \{\}/.test(os));
 
 console.log('— 2. Le bloc CSS neutralise la coquille mobile sur OS de bureau —');
 // v254 : le correctif a été restructuré en trois paliers (socle ≥ 481 px,
@@ -84,9 +87,9 @@ check('le rail « pointeur fin » 701-900 px existe toujours',
   css.includes('@media (pointer: fine) and (min-width: 701px) and (max-width: 900px)'));
 
 console.log('— 5. Version —');
-check('index.html : ?v=383 référencé 7 fois', (index.match(/\?v=383/g) || []).length === 7,
+check('index.html : ?v=383 référencé 10 fois', (index.match(/\?v=383/g) || []).length === 10,
   String((index.match(/\?v=383/g) || []).length));
-check('sw.js : cache « botdev-v350 »', racine('public/sw.js').includes("const CACHE = 'botdev-v383';"));
+check('sw.js : cache « hoxera-v383 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v383';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v253 — ${ok} vérifications OK : un PC est un PC, un mobile est un mobile, sans mesure.`);

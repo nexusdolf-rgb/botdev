@@ -38,14 +38,14 @@ console.log('✅ effet ripple Material sur tous les boutons');
 
 // 5. Mode clair complet
 assert.ok(dash.includes('hx-light') && dash.includes("localStorage.setItem('hx-theme'"), 'bascule mémorisée');
-assert.ok(html.includes('prefers-color-scheme: light'), 'détection du réglage système AVANT rendu');
+assert.ok(require('node:fs').readFileSync(__dirname + '/../public/js/boot-theme.js', 'utf8').includes('prefers-color-scheme: light'), 'détection du réglage système AVANT rendu');
 assert.ok(dcss.includes('html.hx-light {'), 'palette claire complète');
 console.log('✅ mode clair : bouton 🌓, détection système, zéro flash au chargement');
 
 // 6. Interrupteurs premium + cohérence de versions
 assert.ok(dcss.includes(".switch input:checked + .slider::after { content: '✓'"), 'toggles ✓/✕');
 const sw = fs.readFileSync(__dirname + '/../public/sw.js', 'utf8');
-const vH = (html.match(/\?v=(\d+)/) || [])[1]; const vS = (sw.match(/botdev-v(\d+)/) || [])[1];
+const vH = (html.match(/\?v=(\d+)/) || [])[1]; const vS = (sw.match(/hoxera-v(\d+)/) || [])[1];
 assert.strictEqual(vH, vS, 'versions synchronisées');
 assert.ok(parseInt(vH, 10) >= 109, 'v109+');
 console.log('✅ toggles premium + versions synchronisées v' + vH + ' (mise à jour auto garantie)');

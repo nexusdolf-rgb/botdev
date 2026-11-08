@@ -1,5 +1,5 @@
 // ============================================================
-// BotDev - Éditeur de commandes visuel par blocs
+// Hoxera - Éditeur de commandes visuel par blocs
 // ============================================================
 
 // ---------------------- Définitions des blocs ----------------------
@@ -79,7 +79,7 @@ Editor.open = async (bot, command = null, existingCommands = []) => {
   const triggerValueLabel = { prefix: 'Nom de la commande (ex : bonjour)', slash: 'Nom (ex : info)', keyword: 'Mot-clé exact (ex : salut)' };
 
   App.modal(`
-    <div class="modal-header"><h3>${command ? 'Modifier la commande' : 'Nouvelle commande'}</h3><button class="x-btn" data-close>×</button></div>
+    <div class="modal-header"><h3>${command ? 'Modifier la commande' : 'Nouvelle commande'}</h3><button class="x-btn" data-close aria-label="Fermer" type="button">×</button></div>
     <div class="modal-body" style="padding:0">
       <div style="padding:16px 22px 4px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:12px" id="cmd-settings"></div>
       <div class="editor-layout">

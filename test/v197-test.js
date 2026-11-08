@@ -1,7 +1,7 @@
 // Test v197 — Audit UI complet : dashboard (desktop + mobile) et landing publique
 // 1. Couche « Audit UI v197 » présente dans dashboard.css (règles 17-19 : textes, formulaires, contrôles)
 // 2. Correctifs landing : flex-shrink CTA + texte passant à la ligne en mobile + overflow rogné
-// 3. Cache-buster v197 (index.html 7 fois + service worker)
+// 3. Cache-buster v197 (index.html 10 fois + service worker)
 // 4. Aucun faux positif réintroduit (sonde : exclusion des blobs décoratifs)
 const fs = require('fs');
 const os = require('os');
@@ -28,9 +28,9 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
 
   // ================= 1. Cache-buster v197 =================
   console.log('\n1️⃣  Version v197');
-  check('index.html : ?v=383 référencé 7 fois', (index.match(/\?v=383/g) || []).length === 7);
+  check('index.html : ?v=383 référencé 10 fois', (index.match(/\?v=383/g) || []).length === 10);
   check('index.html : plus aucune ?v=196', !index.includes('?v=196'));
-  check('sw.js : cache botdev-v241', sw.includes("const CACHE = 'botdev-v383';"));
+  check('sw.js : cache botdev-v241', sw.includes("const CACHE = 'hoxera-v383';"));
   check('sw.js : plus de botdev-v196', !sw.includes('botdev-v196'));
 
   // ================= 2. Couche CSS dashboard (Audit UI v197) =================

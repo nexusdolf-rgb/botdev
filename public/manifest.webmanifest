@@ -6,14 +6,13 @@
   "start_url": "/#/dashboard",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#202225",
-  "theme_color": "#e07a5f",
+  "theme_color": "#36393f",
   "lang": "fr",
   "categories": ["utilities", "productivity"],
   "icons": [
-    { "src": "/icons/nexora-robot-mark-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/nexora-robot-mark.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/nexora-robot-mark.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

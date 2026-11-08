@@ -249,7 +249,7 @@ window.__r = (async () => {
       /<link rel="preload" href="\/api\/public\/bot-avatar" as="image" \/>/.test(html), 'preload absent');
     check('le preload est une image (sinon le navigateur ignore la ressource)',
       html.includes('as="image"'), 'as="image" absent');
-    check('index.html versionné ?v=383 (7 liens)', (html.match(/\?v=383/g) || []).length === 7,
+    check('index.html versionné ?v=383 (10 liens)', (html.match(/\?v=383/g) || []).length === 10,
       String((html.match(/\?v=383/g) || []).length));
     check('aucun ancien ?v=363 n\u2019est resté dans public/',
       !fs.readdirSync(path.join(RACINE, 'public', 'js')).some((f) => /bot-avatar\?v=363/.test(lire('public/js/' + f))),
@@ -257,14 +257,16 @@ window.__r = (async () => {
     const csp = lire('server/security.js');
     check('la CSP autorise cette image de meme origine (img-src \u2018self\u2019)',
       /img-src[^;]*'self'/.test(csp), 'img-src introuvable dans server/security.js');
-    check('la CSP autorise le script inline qui regle theme et couleur de barre',
-      /script-src[^;]*'unsafe-inline'/.test(csp), 'unsafe-inline absent : le script ne tournerait pas');
+    check('la CSP n’autorise AUCUN script en ligne (le thème vit dans boot-theme.js)',
+      !/script-src[^;]*'unsafe-inline'/.test(csp), 'unsafe-inline toujours présent');
+    check('le réglage du thème est bien chargé comme fichier',
+      lire('public/index.html').includes('/js/boot-theme.js'));
     // v364 — la couleur de la barre du navigateur doit suivre le theme : le
     // meta etait fige sur #0e0f15, qui ne correspond au fond d'aucun theme.
     check('le meta theme-color porte le fond reel du theme sombre',
       /<meta name="theme-color" content="#36393f" \/>/.test(html), html.match(/theme-color[^>]*/)[0]);
     check('le script anti-flash regle la couleur de la barre selon le theme',
-      html.includes("meta.setAttribute('content', clair ? '#f2f3f8' : '#36393f')"), 'reglage absent');
+      lire('public/js/boot-theme.js').includes("setAttribute('content', clair ? '#f2f3f8' : '#36393f')"), 'reglage absent');
     check('les deux couleurs viennent du CSS (rien d\u2019invente)',
       lire('public/css/style.css').includes('html.hx-light body { background: #f2f3f8; color: #1c1e26; }')
       && /:root \{\n  --bg: #36393f;/.test(lire('public/css/style.css')), 'valeur CSS introuvable');
@@ -278,7 +280,7 @@ window.__r = (async () => {
   console.log('\n— 6. Service worker : trois pièges fermés —');
   {
     const src = lire('public/sw.js');
-    check('le nom du cache suit la version', src.includes("const CACHE = 'botdev-v383';"), 'CACHE périmé');
+    check('le nom du cache suit la version', src.includes("const CACHE = 'hoxera-v383';"), 'CACHE périmé');
     check('installation tolérante (Promise.allSettled)', /Promise\.allSettled\(ASSETS\.map/.test(src), 'addAll toujours présent');
     check('seules les réponses valides sont mises en cache', /if \(resp && resp\.ok\)/.test(src), 'garde resp.ok absente');
     check('la coquille HTML n\u2019est servie que pour une navigation', /mode === 'navigate'/.test(src), 'garde de mode absente');
@@ -324,7 +326,7 @@ window.__r = (async () => {
       const cachesObj = {
         open: async () => cache,
         match: (req) => cache.match(req),
-        keys: async () => ['botdev-v383', 'botdev-v1'],
+        keys: async () => ['hoxera-v383', 'botdev-v1'],
         delete: async (k) => { deletes.push(k); return true; },
       };
       const location = { origin: 'http://localhost:3000' };

@@ -18,14 +18,14 @@ const css = racine('public/css/style.css');
 const pub = racine('public/js/public.js');
 
 console.log('— 1. Pins v338 —');
-check('index.html : ?v=383 ×7', (html.match(/\?v=383/g) || []).length === 7);
-check('sw.js : cache botdev-v383', sw.includes("const CACHE = 'botdev-v383';"));
+check('index.html : ?v=383 ×10', (html.match(/\?v=383/g) || []).length === 10);
+check('sw.js : cache hoxera-v383', sw.includes("const CACHE = 'hoxera-v383';"));
 check('index.html : plus aucune ?v=337', !html.includes('?v=337'));
 
 console.log('— 2. Pas un clone DraftBot —');
 check('pas le slogan d’un autre bot', !pub.includes('Un bot pour') && !pub.includes('Ajouter à Discord'));
 check('pas de classes dh- / particules', !css.includes('.dh-hero') && !css.includes('dh-wave') && !css.includes('particles-js'));
-check('police Inter, pas la police d’un autre site', html.includes('Inter') && !html.includes('Open+Sans'));
+check('aucune police d’un autre site importée', !html.includes('Open+Sans') && !css.includes('Open+Sans'));
 check('identité Argile conservée', css.includes('--accent: #e07a5f;'));
 
 console.log('— 3. HTML landing intact —');

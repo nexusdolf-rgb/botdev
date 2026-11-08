@@ -116,14 +116,14 @@ const page = lire('public/index.html');
     css.includes('--faq-chevron') && /\.hp-faq-item\[open\] summary::after \{ transform: rotate\(180deg\); \}/.test(css)
     && !/content: '\+'; margin-left: auto; font-size: 22px/.test(css));
   check('l’avatar d’un bot retombe sur la pastille si l’image ne charge pas',
-    /const avatarBot = \(b\) => \{[\s\S]{0,300}onerror="this\.outerHTML=this\.dataset\.secours"/.test(pub));
+    /const avatarBot = \(b\) => \{[\s\S]{0,300}data-secours="/.test(pub));
   check('la page /bot/:id partage ce gabarit', pub.includes("avatarBot(b).replace('bot-avatar', 'pub-avatar')"));
 
   console.log('— 8. Version —');
-  check('index.html sert la v378', (html.match(/\?v=383/g) || []).length === 7);
-  check('le service worker est en v378', sw.includes("const CACHE = 'botdev-v383';"));
+  check('index.html sert la v378', (html.match(/\?v=383/g) || []).length === 10);
+  check('le service worker est en v378', sw.includes("const CACHE = 'hoxera-v383';"));
   check('le jeton de version n’apparaît plus nulle part en 377',
-    !/v=377/.test(html) && !/v=377/.test(app) && !/botdev-v377/.test(sw));
+    !/v=377/.test(html) && !/v=377/.test(app) && !/hoxera-v377/.test(sw));
 
   console.log('\nRésultat : ' + ok + ' ✅ / ' + ko + ' ❌ sur ' + (ok + ko) + ' vérifications');
   if (ko) process.exit(1);

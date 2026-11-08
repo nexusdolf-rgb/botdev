@@ -455,13 +455,13 @@ const carte = (titre, contenu, classe = 'dash-card') => App.el(
   const html = racine('public/index.html');
   const sw = racine('public/sw.js');
   const versions = [...new Set(html.match(/\?v=\d+/g) || [])];
-  check('index.html : 7 références, toutes identiques',
-    (html.match(/\?v=\d+/g) || []).length === 7 && versions.length === 1, versions.join(','));
+  check('index.html : 10 références, toutes identiques',
+    (html.match(/\?v=\d+/g) || []).length === 10 && versions.length === 1, versions.join(','));
   check('cette version est la v245', versions[0] === '?v=383', String(versions[0]));
-  const cacheAttendu = `'botdev-${versions[0].replace('?v=', 'v')}'`;
+  const cacheAttendu = `'hoxera-${versions[0].replace('?v=', 'v')}'`;
   check('sw.js : cache aligné sur index.html', sw.includes(cacheAttendu),
     `${cacheAttendu} attendu, ${(sw.match(/const CACHE = '[^']*'/) || ['?'])[0]} trouvé`);
-  check('sw.js : un seul nom de cache', (sw.match(/botdev-v\d+'/g) || []).length === 1);
+  check('sw.js : un seul nom de cache', (sw.match(/hoxera-v\d+'/g) || []).length === 1);
   const motif = ['botdev-', 'v244', '-${Date.now()}'].join('');
   check('v244-test.js : son dossier de données n\'a pas suivi le bump',
     racine('test/v244-test.js').includes(motif));

@@ -1,5 +1,5 @@
 // ============================================================
-// BotDev - Vues utilitaires (dashboard v2)
+// Hoxera - Vues utilitaires (dashboard v2)
 // Seul l'éditeur de menus de rôles vit ici : tout le reste est
 // rendu par Dashboard (dashboard.js).
 // ============================================================
@@ -15,7 +15,7 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
   if (Array.isArray(data.options) && data.options.length > ROLE_MENU_MAX) data.options = data.options.slice(0, ROLE_MENU_MAX);
 
   App.modal(`
-    <div class="modal-header"><h3>${isEdit ? 'Modifier le menu' : 'Nouveau menu de rôles'}</h3><button class="x-btn" data-close>×</button></div>
+    <div class="modal-header"><h3>${isEdit ? 'Modifier le menu' : 'Nouveau menu de rôles'}</h3><button class="x-btn" data-close aria-label="Fermer" type="button">×</button></div>
     <div class="modal-body">
       <div class="help-box" style="margin-bottom:14px">
         Chaque option attribue (ou retire) un rôle quand le membre la choisit.
@@ -209,7 +209,7 @@ BotViews.openTicketMenuModal = (bot, guildId, menu) => {
   const pt = data.panel_texts;
 
   App.modal(`
-    <div class="modal-header"><h3>${isEdit ? 'Modifier le panneau menu' : 'Nouveau panneau menu'}</h3><button class="x-btn" data-close>×</button></div>
+    <div class="modal-header"><h3>${isEdit ? 'Modifier le panneau menu' : 'Nouveau panneau menu'}</h3><button class="x-btn" data-close aria-label="Fermer" type="button">×</button></div>
     <div class="modal-body">
       <div class="help-box" style="margin-bottom:14px">
         Ce panneau a <b>ses propres types</b>. Il n’utilise pas la liste du menu principal.

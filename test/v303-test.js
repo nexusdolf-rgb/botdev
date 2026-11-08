@@ -65,9 +65,9 @@ const record = { prefix: '!' };
 (async () => {
   console.log('— 1. Pins de version v303 —');
   const html = racine('public/index.html');
-  check('index.html : ?v=383 ×7', (html.match(/\?v=383/g) || []).length === 7);
+  check('index.html : ?v=383 ×10', (html.match(/\?v=383/g) || []).length === 10);
   check('aucun ?v=302 restant', !html.includes('?v=302') && !racine('public/sw.js').includes('botdev-v302'));
-  check('sw.js : cache botdev-v383', racine('public/sw.js').includes("const CACHE = 'botdev-v383';"));
+  check('sw.js : cache hoxera-v383', racine('public/sw.js').includes("const CACHE = 'hoxera-v383';"));
 
   console.log('— 2. Comptage honnête : les enfants des rangées comptent dans les 40 —');
   const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');

@@ -69,7 +69,7 @@ check('dashboard : exemple de message correspond au nouveau rendu', dash.include
 
 // ---------- 5. Versions ----------
 check('index : version courante v350', index.includes('?v=383'));
-check('service worker : cache courant v350', sw.includes('botdev-v383'));
+check('service worker : cache courant v350', sw.includes('hoxera-v383'));
 
 console.log(`\n✅ v210-test.js : ${n} vérifications OK`);
 process.exit(0);

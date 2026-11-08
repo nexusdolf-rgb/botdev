@@ -1,5 +1,5 @@
 // ============================================================
-// BotDev - Pages publiques (dashboard public de Hoxera)
+// Hoxera - Pages publiques (dashboard public de Hoxera)
 // Stats synchronisées en direct depuis le processus du bot.
 // ============================================================
 
@@ -393,7 +393,7 @@ App.renderPublicLanding = () => {
 const avatarBot = (b) => {
   const secours = `<div class="bot-avatar fallback">${App.glyphe('robot', { taille: 16 })}</div>`;
   if (!b.avatar_url) return secours;
-  return `<img class="bot-avatar" src="${App.escapeHtml(b.avatar_url)}" alt="" onerror="this.outerHTML=this.dataset.secours" data-secours="${App.escapeHtml(secours)}" />`;
+  return `<img class="bot-avatar" src="${App.escapeHtml(b.avatar_url)}" alt="" data-secours="${App.escapeHtml(secours)}" />`;
 };
 
 const loadBots = async () => {
@@ -462,7 +462,9 @@ App.renderPublicBot = async (id) => {
     try {
       data = await App.api(`/public/bots/${id}`);
     } catch (e) {
-      shell.innerHTML = `<div class="empty-state"><div class="big">${App.glyphe('robot', { taille: 26 })}</div>${App.escapeHtml(e.message === 'Session expirée' ? 'Bot introuvable.' : e.message)}<br/><br/><button class="btn" onclick="location.hash='#/'">← Retour</button></div>`;
+      shell.innerHTML = `<div class="empty-state"><div class="big">${App.glyphe('robot', { taille: 26 })}</div>${App.escapeHtml(e.message === 'Session expirée' ? 'Bot introuvable.' : e.message)}<br/><br/><button class="btn" data-retour>← Retour</button></div>`;
+      const retour = shell.querySelector('[data-retour]');
+      if (retour) retour.addEventListener('click', () => { location.hash = '#/'; });
       return;
     }
     const b = data.bot;
