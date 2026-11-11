@@ -1982,6 +1982,12 @@ function vtClaimableChannel(botId, guild, userId) {
 // v272 — présentation façon TempVoice (la référence pro) : une LÉGENDE
 // émoji + nom dans le message, une phrase d'invitation, puis des boutons
 // CARRÉS SANS TEXTE (juste nos émojis Hoxera) alignés par rangées de 5.
+function legendePresente() {
+  const fs = require('fs');
+  const path = require('path');
+  try { return fs.existsSync(path.join(__dirname, '..', 'assets', 'voicetemp', 'legende-vocale.png')); } catch { return false; }
+}
+
 function buildVtPanel(botId, guild, options = {}) {
   const { ActionRowBuilder, ButtonBuilder, ButtonStyle, UserSelectMenuBuilder } = require('discord.js');
   const id = (act) => `vt:${botId}:${act}`;
@@ -2003,7 +2009,11 @@ function buildVtPanel(botId, guild, options = {}) {
   const fs = require('fs');
   const path = require('path');
   const legendeFichier = path.join(__dirname, '..', 'assets', 'voicetemp', 'legende-vocale.png');
-  const legendeRef = fs.existsSync(legendeFichier) ? 'attachment://legende-vocale.png' : '';
+  // v392 — `sansLegende` rend la légende TEXTE atteignable : avant, elle
+  // n'était utilisée que si le fichier manquait sur le disque. Quand Discord
+  // refusait la pièce jointe, la seconde tentative réexpédiait la même image
+  // et le panneau ne partait jamais.
+  const legendeRef = !options.sansLegende && fs.existsSync(legendeFichier) ? 'attachment://legende-vocale.png' : '';
   const legende = legendeRef ? '' : [
     [tag('nom', 'NOM'), tag('limite', 'LIMITE'), tag('prive', 'PRIVÉ'), tag('public', 'PUBLIC')].join('   '),
     [tag('recup', 'RÉCUPÉRER'), tag('ajouter', 'AJOUTER'), tag('retirer', 'RETIRER'), tag('expulser', 'EXPULSER')].join('   '),
@@ -2049,8 +2059,14 @@ function buildVtPanel(botId, guild, options = {}) {
     description: legendeRef
       ? 'Chaque réponse est **personnelle**.\n\n**Appuyez sur les boutons ci-dessous pour gérer votre salon.**'
       : `Chaque réponse est **personnelle**.\n${legende}\n\n**Appuyez sur les boutons ci-dessous pour gérer votre salon.**`,
-    // la légende dessinée : MediaGallery juste au-dessus des boutons
-    ...(legendeRef ? { image: legendeRef } : {}),
+    // la légende dessinée : MediaGallery juste au-dessus des boutons.
+    // v392 — description = texte alternatif. Les dix boutons n'ont pas de
+    // libellé (style TempVoice) : c'est ce texte qui les nomme pour un
+    // lecteur d'écran et pour l'aperçu de l'image.
+    ...(legendeRef ? {
+      image: legendeRef,
+      imageDescription: 'Légende des boutons : NOM, LIMITE, PRIVÉ, PUBLIC, RÉCUPÉRER, AJOUTER, RETIRER, EXPULSER, TRANSFÉRER, SUPPRIMER.',
+    } : {}),
     // v311 (demande du fondateur) — la signature « Hoxera · … » est retirée
     // du panneau de l'interface vocaux temporaires.
     footer: false,
@@ -2080,10 +2096,13 @@ async function sendVtPanel(botId, guild, channelId) {
   const channel = guild.channels.cache.get ? guild.channels.cache.get(channelId) : null;
   if (!channel || typeof channel.send !== 'function') throw new Error('salon textuel introuvable');
   const cfg = store.voicetemp.get(botId, guild.id) || {};
+  // v392 — on RÉCUPÈRE l'ancien message, on ne le supprime plus d'abord :
+  // entre la suppression et l'envoi, un échec laissait le serveur sans
+  // panneau. On envoie, on enregistre, PUIS on retire l'ancien.
+  let ancien = null;
   if (cfg.panel_message) {
     try {
-      const old = await channel.messages.fetch(cfg.panel_message);
-      if (old) await old.delete();
+      ancien = await channel.messages.fetch(cfg.panel_message);
     } catch {}
   }
   // v384 — les émojis avant le panneau : installation automatique si le
@@ -2095,12 +2114,16 @@ async function sendVtPanel(botId, guild, channelId) {
   try {
     msg = await channel.send(buildVtPanel(botId, guild, { sansEmoji }));
   } catch (e) {
-    // Deuxième chance : un identifiant d'émoji refusé par Discord (pack
-    // d'accueil supprimé côté hébergeur). Le panneau part en unicode.
-    if (sansEmoji) throw e;
-    msg = await channel.send(buildVtPanel(botId, guild, { sansEmoji: true }));
+    // Deuxième chance : émoji refusé OU pièce jointe refusée. On repart alors
+    // en unicode SANS image, avec la légende en texte — sinon la seconde
+    // tentative échouerait pour la même raison que la première.
+    if (sansEmoji && !legendePresente()) throw e;
+    msg = await channel.send(buildVtPanel(botId, guild, { sansEmoji: true, sansLegende: true }));
   }
   store.voicetemp.set(botId, guild.id, { ...cfg, panel_message: msg.id });
+  if (ancien && String(ancien.id) !== String(msg.id)) {
+    try { await ancien.delete(); } catch {}
+  }
   return msg.id;
 }
 
@@ -2114,19 +2137,39 @@ async function handleVtInteraction(botId, entry, i) {
   const guild = i.guild;
   if (!guild) return false;
   const act = isVtModal ? (cid.startsWith(`vtrename:${botId}`) ? 'rename' : 'limit') : cid.slice(`vt:${botId}:`.length);
+  // v392 — réponse différée. Les actions touchent plusieurs routes Discord
+  // (permissions, renommage, déplacement) : au-delà de 3 s, Discord affiche
+  // « L'interaction a échoué » et la réponse est perdue. Les autres panneaux
+  // du bot (panels.js, advancedTickets.js) diffèrent déjà ; celui-ci non.
+  // Une FENÊTRE (showModal) interdit toute réponse préalable : on ne diffère
+  // jamais avant d'en ouvrir une.
+  let differe = false;
+  const differer = async () => {
+    if (differe) return;
+    if (typeof i.deferReply !== 'function' || i.deferred || i.replied) return;
+    try { await i.deferReply({ ephemeral: true }); differe = true; } catch {}
+  };
+  const repondre = async (panneau) => {
+    try {
+      if (differe && typeof i.editReply === 'function') { await i.editReply(panneau); return; }
+      await i.reply({ ...panneau, ephemeral: true });
+    } catch {}
+  };
   if (act === 'claim') {
+    await differer();
     const ch = vtClaimableChannel(botId, guild, i.user.id);
     if (!ch) {
-      await i.reply({ ...ui.v2panel({ color: '#e07a5f', title: '🔑 Rien à récupérer', description: 'Pour récupérer un salon, soyez **dedans** alors que son propriétaire n\'y est plus (parti ou déconnecté).' }), ephemeral: true }).catch(() => {});
+      await repondre(ui.v2panel({ color: '#e07a5f', title: '🔑 Rien à récupérer', description: 'Pour récupérer un salon, soyez **dedans** alors que son propriétaire n\'y est plus (parti ou déconnecté).' }));
       return true;
     }
     vtSetOwner(guild.id, ch.id, i.user.id);
     await ch.permissionOverwrites.edit(i.user.id, { Connect: true, ViewChannel: true, Speak: true }).catch(() => {});
-    await i.reply({ ...ui.v2panel({ color: '#e07a5f', title: '🔑 Salon récupéré', description: `Vous êtes maintenant propriétaire de **${ch.name}** : le panneau agit sur ce salon.` }), ephemeral: true }).catch(() => {});
+    await repondre(ui.v2panel({ color: '#e07a5f', title: '🔑 Salon récupéré', description: `Vous êtes maintenant propriétaire de **${ch.name}** : le panneau agit sur ce salon.` }));
     return true;
   }
   const channel = vtChannelOf(botId, guild, i.user.id);
   if (!channel) {
+    await differer();
     // 🛡️ v305 — diagnostic : si le membre est DANS un salon vocal mais que
     // rien ne correspond (ni propriétaire, ni liste, ni catégorie), on
     // journalise l'état exact dans /api/health/bot pour comprendre pourquoi.
@@ -2154,30 +2197,29 @@ async function handleVtInteraction(botId, entry, i) {
       }
     } catch {}
     if (autre) {
-      await i.reply({
-        ...ui.v2panel({
-          color: '#e07a5f',
-          title: '🔒 Ce salon n’est pas le vôtre',
-          description: `**${autre.ch.name}** appartient à <@${autre.owner}>. Ses boutons ne répondent qu’à lui.\nSi son propriétaire n’est plus dedans, vous pouvez le reprendre avec 🔑 **RÉCUPÉRER**.`,
-        }),
-        ephemeral: true,
-      }).catch(() => {});
+      await repondre(ui.v2panel({
+        color: '#e07a5f',
+        title: '🔒 Ce salon n’est pas le vôtre',
+        description: `**${autre.ch.name}** appartient à <@${autre.owner}>. Ses boutons ne répondent qu’à lui.\nSi son propriétaire n’est plus dedans, vous pouvez le reprendre avec 🔑 **RÉCUPÉRER**.`,
+      }));
       return true;
     }
-    await i.reply({ ...vtNoChannelPanel(), ephemeral: true }).catch(() => {});
+    await repondre(vtNoChannelPanel());
     return true;
   }
   const say = async (title, desc, color = '#e07a5f') => {
-    await i.reply({ ...ui.v2panel({ color, title, description: desc }), ephemeral: true }).catch(() => {});
+    await repondre(ui.v2panel({ color, title, description: desc }));
   };
   try {
     if (act === 'lock') {
+      await differer();
       await channel.permissionOverwrites.edit(guild.roles.everyone.id, { ViewChannel: true, Connect: false });
       await channel.permissionOverwrites.edit(i.user.id, { Connect: true, ViewChannel: true, Speak: true });
       await say('🔒 Salon privé', `Personne ne peut entrer dans **${channel.name}**, sauf vous et les membres que vous ajouterez.`);
       return true;
     }
     if (act === 'unlock') {
+      await differer();
       await channel.permissionOverwrites.set([]);
       await say('🔓 Salon public', `Tout le serveur peut maintenant rejoindre **${channel.name}**.`);
       return true;
@@ -2189,6 +2231,7 @@ async function handleVtInteraction(botId, entry, i) {
           await say('⚠️ Nom vide', 'Donnez un nom à votre salon vocal.', '#ED4245');
           return true;
         }
+        await differer();
         await channel.setName(name, 'Salon renommé par son propriétaire');
         await say('✏️ Salon renommé', `Votre salon s'appelle maintenant **${name}**.`);
         return true;
@@ -2205,6 +2248,7 @@ async function handleVtInteraction(botId, entry, i) {
       if (isVtModal) {
         const raw = String(i.fields.getTextInputValue('limit') || '').trim();
         const n = Math.max(0, Math.min(99, parseInt(raw, 10) || 0));
+        await differer();
         await channel.setUserLimit(n);
         await say('👥 Limite fixée', n === 0
           ? `**${channel.name}** accepte un nombre illimité de personnes.`
@@ -2221,6 +2265,7 @@ async function handleVtInteraction(botId, entry, i) {
     }
     if (act === 'add' || act === 'rem' || act === 'kick' || act === 'transfer') {
       const target = String((i.values && i.values[0]) || '');
+      await differer();
       if (!target) {
         // Bouton-émoji appuyé : petit panneau personnel avec le menu membre.
         const { ActionRowBuilder, UserSelectMenuBuilder } = require('discord.js');
@@ -2237,10 +2282,7 @@ async function handleVtInteraction(botId, entry, i) {
           new UserSelectMenuBuilder().setCustomId(`vt:${botId}:${act}`)
             .setPlaceholder('Choisissez un membre…').setMinValues(1).setMaxValues(1),
         );
-        await i.reply({
-          ...ui.v2panel({ color: '#e07a5f', title: cfg[0], description: cfg[1] }, [menu]),
-          ephemeral: true,
-        }).catch(() => {});
+        await repondre(ui.v2panel({ color: '#e07a5f', title: cfg[0], description: cfg[1] }, [menu]));
         return true;
       }
       if (act === 'add') {
@@ -2262,6 +2304,7 @@ async function handleVtInteraction(botId, entry, i) {
       return true;
     }
     if (act === 'del') {
+      await differer();
       const name = channel.name;
       await channel.delete('Salon vocal temporaire supprimé par son propriétaire');
       vtClearOwner(guild.id, channel.id);

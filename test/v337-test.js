@@ -19,8 +19,8 @@ const css = racine('public/css/style.css');
 const pub = racine('public/js/public.js');
 
 console.log('— 1. Pins v337 —');
-check('index.html : ?v=385 ×10', (html.match(/\?v=385/g) || []).length === 10);
-check('sw.js : cache hoxera-v385', sw.includes("const CACHE = 'hoxera-v385';"));
+check('index.html : ?v=386 ×10', (html.match(/\?v=386/g) || []).length === 10);
+check('sw.js : cache hoxera-v386', sw.includes("const CACHE = 'hoxera-v386';"));
 check('index.html : plus aucune ?v=336', !html.includes('?v=336'));
 
 console.log('— 2. HTML public inchangé (verrous v167/v240) —');

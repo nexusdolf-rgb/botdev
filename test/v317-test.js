@@ -27,8 +27,8 @@ const idx = racine('server/index.js');
 const ac = racine('server/discord/autoclean.js');
 
 console.log('— 1. Pins de version v317 —');
-check('index.html : ?v=385 ×10', (html.match(/\?v=385/g) || []).length === 10);
-check('sw.js : cache hoxera-v385', sw.includes("const CACHE = 'hoxera-v385';"));
+check('index.html : ?v=386 ×10', (html.match(/\?v=386/g) || []).length === 10);
+check('sw.js : cache hoxera-v386', sw.includes("const CACHE = 'hoxera-v386';"));
 check('index.html : plus aucune ?v=316', !html.includes('?v=316'));
 
 console.log('— 2. Dashboard : le module est là —');

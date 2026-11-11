@@ -360,8 +360,8 @@ function guildMock(channels, roleId, guildName) {
       routes.includes('verified: out.verified === true') && routes.includes('plan: out.plan || null')
       && routes.includes("cfg: require('./discord/rules').summary(req.params.guildId)"));
     check('version du cache poussée à v363 (index.html x10, sw.js)',
-      (lire('public/index.html').match(/\?v=385/g) || []).length === 10
-      && lire('public/sw.js').includes("const CACHE = 'hoxera-v385';"));
+      (lire('public/index.html').match(/\?v=386/g) || []).length === 10
+      && lire('public/sw.js').includes("const CACHE = 'hoxera-v386';"));
     check('le module Règles reste au catalogue avec son émoticône dessinée',
       dash.includes(CAT_RULES) && dash.includes("emote: 'hox_rules'"));
   }

@@ -412,11 +412,14 @@ function v2container(options = {}) {
   });
 
   // 4) image : MediaGallery pleine largeur (en bas, comme setImage()).
+  // v392 — description de l'image : sans elle, une légende DESSINÉE (émojis
+  // en PNG) n'a aucun texte lisible par un lecteur d'écran. `imageDescription`
+  // est facultatif : les appelants existants ne changent pas.
   if (options.image && v2room(state)) {
     if (bodyBlocks.length || headTexts.length) v2separator(container, state);
-    container.addMediaGalleryComponents(
-      new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(String(options.image)))
-    );
+    const item = new MediaGalleryItemBuilder().setURL(String(options.image));
+    if (options.imageDescription) item.setDescription(String(options.imageDescription).slice(0, 1024));
+    container.addMediaGalleryComponents(new MediaGalleryBuilder().addItems(item));
     state.components += 1;
   }
 

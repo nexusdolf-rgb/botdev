@@ -7880,17 +7880,20 @@ details[open] > summary.am-chevron::after { transform: none; }
 
 /* ---------- 1. Jetons ---------- */
 .dashboard-shell-host {
-  /* sombre par défaut, comme la maison */
-  --ui-bg: #0b0b0d;
-  --ui-surface: #121214;
-  --ui-surface-2: #1a1a1d;
-  --ui-surface-3: #222226;
-  --ui-line: #27272b;
-  --ui-line-soft: #1f1f23;
-  --ui-line-strong: #3a3a40;
-  --ui-text: #f4f4f5;
-  --ui-text-2: #a1a1aa;
-  --ui-text-3: #7d7d86;
+  /* Palette d'origine MESURÉE sur la production d'avant la refonte
+     (capture prod-v381 : #36393F dominant, panneaux #2B2D31, accent #E07A5F).
+     La refonte avait dérivé vers un noir neutre ; on revient aux valeurs
+     d'origine et on n'y touche plus. */
+  --ui-bg: #36393f;
+  --ui-surface: #2b2d31;
+  --ui-surface-2: #35383e;
+  --ui-surface-3: #40444b;
+  --ui-line: #4f545c;
+  --ui-line-soft: #3f4147;
+  --ui-line-strong: #5c6069;
+  --ui-text: #f2f3f5;
+  --ui-text-2: #b5bac1;
+  --ui-text-3: #a0a5ae; /* 4,68:1 sur #36393f — mesuré, au-dessus du seuil 4,5 */
   --ui-accent: var(--d-accent, #e07a5f);
   --ui-accent-soft: rgba(var(--d-accent-rgb, 224, 122, 95), .14);
   --ui-ok: #3fb950;
@@ -7914,16 +7917,16 @@ details[open] > summary.am-chevron::after { transform: none; }
   --d-glow: rgba(var(--d-accent-rgb, 224, 122, 95), .3);
 }
 html.hx-light .dashboard-shell-host {
-  --ui-bg: #f6f6f7;
+  --ui-bg: #f2f3f8;
   --ui-surface: #ffffff;
-  --ui-surface-2: #f4f4f5;
-  --ui-surface-3: #ececee;
-  --ui-line: #e5e5e8;
-  --ui-line-soft: #eeeef1;
-  --ui-line-strong: #d3d3d8;
-  --ui-text: #17181a;
-  --ui-text-2: #5f626b;
-  --ui-text-3: #666a74; /* 5,4:1 sur blanc — mesuré */
+  --ui-surface-2: #f0f1f7;
+  --ui-surface-3: #e6e8f0;
+  --ui-line: #dfe2ec;
+  --ui-line-soft: #eaecf3;
+  --ui-line-strong: #cdd2e0;
+  --ui-text: #1c1e26;
+  --ui-text-2: #5d6375;
+  --ui-text-3: #6b7085;
   --ui-shadow-1: 0 1px 2px rgba(20, 22, 30, .06);
   --ui-shadow-2: 0 18px 40px -30px rgba(20, 22, 30, .45);
   --d-bg: var(--ui-bg);
@@ -8729,8 +8732,9 @@ html.hx-light .dashboard-shell-host .discord-multi-picker .dd-add-btn { color: v
 html.hx-light .dashboard-shell-host .discord-multi-picker .dd-add-btn:hover { color: var(--ui-accent) !important; }
 
 /* ---------- 2 bis. Le fond de la zone principale ---------- */
-/* .dash-main gardait #36393f (gris Discord d'origine) : en thème sombre, les
-   cartes #121214 flottaient sur un fond plus clair qu'elles. */
+/* .dash-main gardait #36393f en dur : il ignorait les jetons. Il suit
+   désormais --ui-bg, qui vaut exactement #36393f en sombre — même teinte
+   qu'avant, mais pilotée par la palette et plus par une valeur figée. */
 .dashboard-shell-host .dash-main { background: var(--ui-bg) !important; }
 html.hx-light .dashboard-shell-host .dash-main { background: var(--ui-bg) !important; }
 
