@@ -87,8 +87,8 @@ function makeGuild() {
   console.log('— 5. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=386 référencé 10 fois', (index.match(/\?v=386/g) || []).length === 10);
-  check('sw.js : cache « hoxera-v386 »', sw.includes("const CACHE = 'hoxera-v386';"));
+  check('index.html : ?v=387 référencé 10 fois', (index.match(/\?v=387/g) || []).length === 10);
+  check('sw.js : cache « hoxera-v387 »', sw.includes("const CACHE = 'hoxera-v387';"));
 
   console.log(`\n🎉 v280 — ${ok} vérifications OK : sauvegarde de structure, restauration sans risque.`);
 })().catch((e) => { console.error(e); process.exit(1); });

@@ -1965,7 +1965,7 @@ html.hx-light .dash-input:focus, html.hx-light .dash-select:focus, html.hx-light
 .ca-embed-body pre { overflow-x: auto; padding: 9px 10px; border-radius: 8px; color: #e6e9ff; background: #1e1f22; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 11px; white-space: pre-wrap; }
 .ca-embed-body blockquote { margin: 5px 0; padding-left: 9px; border-left: 3px solid #6d75ff; color: #b9bdca; }
 .ca-embed-body .ca-bullet { margin: 3px 0; }
-.ca-placeholder { color: #8f929b; font-style: italic; }
+.ca-placeholder { color: #a0a5ae; font-style: italic; }
 .ca-embed-preview img { display: block; width: 100%; max-height: 180px; margin-top: 11px; border-radius: 8px; object-fit: cover; }
 .ca-embed-footer { margin-top: 12px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,.08); color: #949ba4; font-size: 10px; }
 .ca-actions { display: flex; align-items: center; justify-content: flex-end; gap: 9px; flex-wrap: wrap; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--d-border-soft); }
@@ -2088,7 +2088,7 @@ html.hx-light .ca-preview-wrap { background: rgba(255,255,255,.55); }
 .dash-module-header { gap: 15px; margin-bottom: 23px; animation: humanDashIn .32s cubic-bezier(.2,.8,.25,1) both; }
 .dash-module-header .m-icon { width: 48px; height: 48px; border-radius: 12px; background: rgba(var(--d-accent-rgb), 0.20); border-color: rgba(var(--d-accent-rgb), .36); box-shadow: 0 13px 30px -23px rgba(var(--d-accent-rgb), .85), inset 0 1px 0 rgba(255,255,255,.08); }
 .dash-module-header h1 { color: #f5f7fc; font-size: 22px; letter-spacing: -.55px; }
-.dash-module-header .sub { color: #8d9bb0; font-size: 13px; }
+.dash-module-header .sub { color: var(--ui-text-3); font-size: 13px; }
 
 .dash-stats { gap: 13px; }
 .dash-stat {
@@ -2112,7 +2112,7 @@ html.hx-light .ca-preview-wrap { background: rgba(255,255,255,.55); }
 #dash-content > .dash-card:nth-child(3) { animation-delay: .07s; }
 #dash-content > .dash-card:nth-child(4) { animation-delay: .105s; }
 .dash-card h3 { color: #f0f3fa; font-size: 16px; letter-spacing: -.18px; }
-.dash-card .desc { color: #8d9bb0; }
+.dash-card .desc { color: var(--ui-text-3); }
 
 .dash-input, .dash-select, textarea.dash-input {
   min-height: 43px; border-radius: 12px; background: #111a27; border-color: #2b3a51; color: #edf2fa;
@@ -2592,7 +2592,7 @@ html.hx-light .dash-input, html.hx-light .dash-select, html.hx-light textarea.da
 .ov-progress-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 .ov-progress-copy { display: flex; flex-direction: column; gap: 3px; }
 .ov-progress-copy b { color: #edf2fa; font-size: 13px; }
-.ov-progress-copy span { color: #7f91a8; font-size: 11px; }
+.ov-progress-copy span { color: var(--ui-text-3); font-size: 11px; }
 .ov-progress-head > strong { color: #b5bcff; font-size: 18px; letter-spacing: -.4px; }
 .ov-progress-track { height: 8px; overflow: hidden; margin-bottom: 14px; border-radius: 999px; background: #0c1521; box-shadow: inset 0 1px 3px rgba(0,0,0,.35); }
 .ov-progress-value { height: 100%; min-width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--d-accent), var(--d-accent2)); box-shadow: 0 0 15px -3px var(--d-glow); transition: width .45s cubic-bezier(.2,.8,.25,1); }
@@ -2639,7 +2639,7 @@ html.hx-light .dash-input, html.hx-light .dash-select, html.hx-light textarea.da
 .dash-state-card .state-icon { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: 0 0 44px; border-radius: 12px; background: rgba(240,108,117,.1); font-size: 22px; }
 .dash-state-card .state-copy { flex: 1; min-width: 0; }
 .dash-state-card h2 { color: #f0f3fa; font-size: 16px; }
-.dash-state-card p { margin-top: 4px; color: #8d9bb0; font-size: 12px; line-height: 1.45; }
+.dash-state-card p { margin-top: 4px; color: var(--ui-text-3); font-size: 12px; line-height: 1.45; }
 .dash-state-card .dash-btn { flex: 0 0 auto; }
 
 /* Tables et champs : lecture confortable sur desktop comme sur mobile. */
@@ -4896,7 +4896,7 @@ html.hx-light { color-scheme: light; }
 .eb-vars-lbl { font-size: 12px; color: var(--d-text-dim); }
 .eb-var {
   padding: 3px 8px; border-radius: 4px; font-size: 12px; cursor: default;
-  background: rgba(224,122,95,.1); border: 1px solid rgba(224,122,95,.28); color: var(--d-accent);
+  background: rgba(224,122,95,.1); border: 1px solid rgba(224,122,95,.28); color: var(--ui-accent-ink);
 }
 .eb-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .eb-color-row { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
@@ -5178,7 +5178,7 @@ html.hx-light .dashboard-shell-host,
 html.hx-light body:has(.dashboard-shell-host) {
   --d-bg: #f2f3f8; --d-side: #ffffff; --d-card: #ffffff; --d-card2: #f0f1f7;
   --d-border: #dfe2ec; --d-border-soft: #c8ccd6; --d-border-strong: #b6bcc7;
-  --d-text: #1c1e26; --d-dim: #5d6375; --d-green: #178a43;
+  --d-text: #1c1e26; --d-dim: #5d6375; --d-green: #16743b;
   --d-glow: rgba(224, 122, 95, .18);
 }
 
@@ -5216,7 +5216,7 @@ html.hx-light .dashboard-shell-host .dash-badge { color: #5d6375; }
 /* 9️⃣ Textes gris moyens (#949ba4 → plus foncés) et icônes */
 html.hx-light .dashboard-shell-host .dash-side-section,
 html.hx-light .dashboard-shell-host .dash-side-foot,
-html.hx-light .dashboard-shell-host .dash-input::placeholder { color: #6a7080; }
+html.hx-light .dashboard-shell-host .dash-input::placeholder { color: #5c6272; }
 html.hx-light .dashboard-shell-host .dash-side-item > svg,
 html.hx-light .dashboard-shell-host .dash-side-item > i { color: #2e3338; }
 
@@ -5258,7 +5258,7 @@ html.hx-light .dashboard-shell-host .dash-btn-primary { color: #ffffff !importan
 /* 1️⃣2️⃣ Pastilles « en ligne » et bandeau jaune : teintes lisibles en clair */
 html.hx-light .dashboard-shell-host .dash-badge.ok,
 html.hx-light .dashboard-shell-host .module-status.is-online,
-html.hx-light .dashboard-shell-host .dash-bot-chip .chip-txt .on { color: #178a43; }
+html.hx-light .dashboard-shell-host .dash-bot-chip .chip-txt .on { color: #16743b; }
 html.hx-light .dashboard-shell-host .module-status.is-online { border-color: rgba(23, 138, 67, .35); background: rgba(23, 138, 67, .08); }
 html.hx-light .dashboard-shell-host .dash-badge.ok { border-color: rgba(23, 138, 67, .4); background: rgba(23, 138, 67, .08); }
 html.hx-light .dashboard-shell-host .am-panel-title > span,
@@ -5323,7 +5323,7 @@ html.hx-light .dashboard-shell-host .ov-config-row,
 html.hx-light .dashboard-shell-host .ov-home-side-section,
 html.hx-light .dashboard-shell-host .ov-config-empty {
   background: #eef0f5 !important;
-  border-color: #dfe2ec !important;
+  border-color: var(--ui-line) !important;
   box-shadow: 0 6px 18px -16px rgba(35, 40, 80, .25) !important;
 }
 
@@ -5334,7 +5334,7 @@ html.hx-light .dashboard-shell-host .ov-module-icon,
 html.hx-light .dashboard-shell-host .am-shield-icon,
 html.hx-light .dashboard-shell-host .am-rule-icon {
   background: #f7f8fb !important;
-  border-color: #dfe2ec !important;
+  border-color: var(--ui-line) !important;
   box-shadow: none !important;
 }
 html.hx-light .dashboard-shell-host .am-shield-icon,
@@ -5386,7 +5386,7 @@ html.hx-light .dashboard-shell-host .am-control-hero small { color: #5d6375; }
 html.hx-light .dashboard-shell-host .am-rule-label,
 html.hx-light .dashboard-shell-host .am-blacklist-config label,
 html.hx-light .dashboard-shell-host .am-warning-panel label { color: #5d6375; }
-html.hx-light .dashboard-shell-host .dd-add-btn { background: #ffffff !important; color: #178a43 !important; }
+html.hx-light .dashboard-shell-host .dd-add-btn { background: #ffffff !important; color: #16743b !important; }
 html.hx-light .dashboard-shell-host .am-blacklist-preview b { color: #5d6375; }
 html.hx-light .dashboard-shell-host .am-filter { color: #8f3d2c; }
 html.hx-light .dashboard-shell-host .adv-question-count { color: #4752c4; }
@@ -5413,11 +5413,11 @@ html.hx-light .dashboard-shell-host .adv-discord-title { color: #f2f3f5; }
 /* Couleurs d'accent ré-affirmées APRÈS le passage générique. */
 html.hx-light .dashboard-shell-host .dash-badge.ok,
 html.hx-light .dashboard-shell-host .module-status.is-online,
-html.hx-light .dashboard-shell-host .dash-bot-chip .chip-txt .on { color: #178a43; }
+html.hx-light .dashboard-shell-host .dash-bot-chip .chip-txt .on { color: #16743b; }
 html.hx-light .dashboard-shell-host .am-panel-title > span,
 html.hx-light .dashboard-shell-host .am-result.observe,
 html.hx-light .dashboard-shell-host .am-result.warning { color: #8a6d00; border-color: rgba(180, 140, 10, .35); background: rgba(254, 231, 92, .22); }
-html.hx-light .dashboard-shell-host .adv-types-panel .adv-type-number { color: #4752c4; }
+html.hx-light .dashboard-shell-host .adv-types-panel .adv-type-number { color: #4149bd; }
 html.hx-light .dashboard-shell-host .dash-btn-primary { color: #ffffff !important; }
 html.hx-light .dashboard-shell-host .ov-eyebrow { color: #c95b49; }
 
@@ -5426,8 +5426,8 @@ html.hx-light .dashboard-shell-host .ov-eyebrow { color: #c95b49; }
    et la boîte « Aucun membre blacklisté ». */
 html.hx-light .dashboard-shell-host .adv-preview-shell,
 html.hx-light .dashboard-shell-host .adv-preview-title { color: #1c1e26; }
-html.hx-light .dashboard-shell-host .adv-preview-title span { color: #178a43; }
-html.hx-light .dashboard-shell-host .ca-preview-label span { color: #178a43; }
+html.hx-light .dashboard-shell-host .adv-preview-title span { color: #16743b; }
+html.hx-light .dashboard-shell-host .ca-preview-label span { color: #16743b; }
 html.hx-light .dashboard-shell-host .am-blacklist-empty b { color: #1c1e26; }
 html.hx-light .dashboard-shell-host .am-blacklist-empty small { color: #5d6375; }
 
@@ -5468,7 +5468,7 @@ html.hx-light .dd-panel {
 html.hx-light .dd-panel .dd-search { border-bottom-color: #e3e6ee; }
 html.hx-light .dd-panel .dd-search input { background: #eef0f5; border-color: #c8ccd6; color: #1c1e26; }
 html.hx-light .dd-panel .dd-search input:focus { background: #ffffff; }
-html.hx-light .dd-panel .dd-search input::placeholder { color: #6a7080; }
+html.hx-light .dd-panel .dd-search input::placeholder { color: #5c6272; }
 html.hx-light .dd-panel .dd-opt-ico { background: rgba(0, 0, 0, .05); }
 html.hx-light .dd-panel .dd-empty { color: #5d6375; }
 html.hx-light .dd-panel .dd-add-btn { background: transparent; }
@@ -5485,7 +5485,7 @@ html.hx-light .dash-mobile-server-rail { background: #f0f1f7; border-right-color
 html.hx-light .dash-mobile-server-item { background: #ffffff; color: #1c1e26; }
 html.hx-light .dash-mobile-server-item.active { background: #e07a5f; color: #ffffff; }
 html.hx-light .dash-mobile-module-list { background: #ffffff; }
-html.hx-light .dash-mobile-module-group { color: #6a7080; }
+html.hx-light .dash-mobile-module-group { color: #5c6272; }
 html.hx-light .dash-mobile-module-item { color: #5d6375; }
 html.hx-light .dash-mobile-module-item:hover, html.hx-light .dash-mobile-module-item.active { color: #1c1e26; }
 
@@ -7105,7 +7105,7 @@ html.hx-light .admin-platform-page {
   --admin-subtle: #747b8d;
   --admin-accent: #bd5b45;
   --admin-accent-soft: rgba(189,91,69,.09);
-  --admin-good: #178a43;
+  --admin-good: #16743b;
   --admin-bad: #bd4d55;
   --admin-warn: #99690b;
 }
@@ -7600,7 +7600,7 @@ html.hx-light .pp-del { border-color: #d3ddef; }
    ============================================================ */
 .rl-plan { font-size: 12px; color: var(--d-dim, #8b93a7); margin: 6px 0 10px; line-height: 1.45; }
 .rl-plan strong { color: inherit; }
-.rl-plan.is-haut { color: #e07a5f; }
+.rl-plan.is-haut { color: var(--ui-accent-ink); }
 
 .rl-modeles-grille {
   display: grid;
@@ -7889,7 +7889,7 @@ details[open] > summary.am-chevron::after { transform: none; }
   --ui-surface-2: #35383e;
   --ui-surface-3: #40444b;
   --ui-line: #4f545c;
-  --ui-line-soft: #3f4147;
+  --ui-line-soft: #4a4d55;
   --ui-line-strong: #5c6069;
   --ui-text: #f2f3f5;
   --ui-text-2: #b5bac1;
@@ -7921,14 +7921,19 @@ html.hx-light .dashboard-shell-host {
   --ui-surface: #ffffff;
   --ui-surface-2: #f0f1f7;
   --ui-surface-3: #e6e8f0;
-  --ui-line: #dfe2ec;
-  --ui-line-soft: #eaecf3;
+  --ui-line: #ccd2e2;
+  --ui-line-soft: #d8dcea;
   --ui-line-strong: #cdd2e0;
   --ui-text: #1c1e26;
-  --ui-text-2: #5d6375;
-  --ui-text-3: #6b7085;
+  --ui-text-2: #5a6072;
+  --ui-text-3: #5f6475;
   --ui-shadow-1: 0 1px 2px rgba(20, 22, 30, .06);
   --ui-shadow-2: 0 18px 40px -30px rgba(20, 22, 30, .45);
+  /* Vert, ambre et rouge du thème sombre tombaient à 2,4:1 sur fond clair.
+     Mêmes teintes, valeurs de TEXTE assombries : 4,8 / 4,6 / 5,0:1. */
+  --ui-ok: #1a7f37;
+  --ui-warn: #9a6700;
+  --ui-danger: #cf222e;
   --d-bg: var(--ui-bg);
   --d-side: var(--ui-surface);
   --d-card: var(--ui-surface);
@@ -8380,7 +8385,7 @@ html.hx-os-pc .dashboard-shell-host .ov-intro {
 }
 .dashboard-shell-host .ov-module-cat:first-child { margin-top: 0 !important; }
 .dashboard-shell-host .ov-module-cat small {
-  font-size: 11px !important; font-weight: 500 !important; color: var(--ui-text-3) !important;
+  font-size: 11px !important; font-weight: 500 !important; color: var(--ui-text-2) !important;
   padding: 0 6px !important; border-radius: 999px !important; border: 1px solid var(--ui-line) !important;
 }
 html.hx-os-pc .dashboard-shell-host .ov-module-card,
@@ -8831,3 +8836,59 @@ html.hx-light .dashboard-shell-host .dash-main { background: var(--ui-bg) !impor
   /* Sur un portable tactile, le chevron des cartes-modules reste atteignable. */
   .dashboard-shell-host .ov-module-go { width: 40px !important; height: 40px !important; flex: 0 0 40px !important; }
 }
+
+/* === LISIBILITÉ DES COULEURS — corrections ciblées =========================
+   Rien n'est remplacé : chaque valeur corrigée reste dans sa famille de
+   teinte. Mesures reproductibles : test/tools/sonde-couleurs.js.
+   ========================================================================= */
+
+/* Accent « encre » : le terracotta #e07a5f reste l'accent des fonds pleins
+   (boutons, traits, états actifs). Quand il sert de TEXTE, il lui faut une
+   valeur plus claire sur fond sombre et plus profonde sur fond clair. */
+.dashboard-shell-host { --ui-accent-ink: #f0927c; }
+html.hx-light .dashboard-shell-host { --ui-accent-ink: #b0452d; }
+
+/* Liseré « Premiers réglages » : blanc sur le dégradé terracotta d'origine
+   = 2,95:1. Même dégradé, deux valeurs plus profondes : 4,70 → 6,07:1.
+   L'accent #e07a5f reste l'accent des fonds pleins, boutons et traits. */
+.dashboard-shell-host .dash-hero .hero-badge,
+html.hx-light .dashboard-shell-host .dash-hero .hero-badge {
+  background: linear-gradient(90deg, #c34e3a, #a8412c) !important;
+  color: #fff !important;
+}
+
+/* Traits posés sur un aplat d'accent : bordure = fond = trait invisible.
+   On éclaircit le trait d'un cran, le remplissage de l'accent ne bouge pas. */
+html:not(.hx-light) .dashboard-shell-host .ov-server-avatar,
+html:not(.hx-light) .dashboard-shell-host .ov-server-avatar.fallback { border-color: rgba(255, 255, 255, .28) !important; }
+.dashboard-shell-host .switch input:checked + .slider,
+.dashboard-shell-host .am-main-toggle input:checked + i,
+.dashboard-shell-host .am-native-toggle input:checked + i { border-color: rgba(255, 255, 255, .28) !important; }
+
+/* Aperçus Discord : ils restent sombres dans les deux thèmes. En thème clair,
+   les jetons de texte (foncés) y tombaient à 2,3:1. On y rétablit un gris clair,
+   uniquement à l'intérieur de ces maquettes. */
+html.hx-light .dashboard-shell-host :is(.dc-preview, .dprev, .ca-discord-preview, .eb-discord, .lp-discord) :is(.dash-label, .dmd-empty, .dash-empty) { color: #b5bac1 !important; }
+
+/* Étiquette « APP » : la règle générique des aperçus la faisait hériter du gris
+   de l'aperçu sur le bleu Discord (3,4:1). Le blanc tient 4,6:1. */
+html.hx-light .dashboard-shell-host .ca-discord-author > span:last-child { color: #fff !important; }
+
+/* Bouton « Enregistrer » des modèles d'embed : blanc sur terracotta = 4,05:1. */
+html.hx-light .dashboard-shell-host .eb-tpl-save .dash-save-action { background: #c34e3a !important; border-color: #c34e3a !important; }
+
+/* Boutons pleins du thème clair posés sur l'accent assombri : le texte blanc
+   n'y tenait que 4,05:1. Même accent, deux valeurs plus profondes. */
+html.hx-light .dashboard-shell-host .btn-primary { background: #c34e3a !important; border-color: #c34e3a !important; }
+html.hx-light .dashboard-shell-host .eb-dtag { color: #fff !important; }
+
+/* Encart de note du panneau anti-nuke : sa bordure et son fond sont écrits en
+   blanc translucide dans le HTML, donc invisibles sur une carte blanche.
+   En thème clair seulement, on les reprend avec les jetons de surface. */
+html.hx-light .dashboard-shell-host .dash-card .desc > div[style*="rgba(255,255,255,.14)"] {
+  border-color: var(--ui-line) !important;
+  background: var(--ui-surface-2) !important;
+}
+
+/* Trait blanc sur carte blanche : il ne se voyait pas (1:1). */
+html.hx-light .dashboard-shell-host .nk-limit { border-color: var(--ui-line) !important; }

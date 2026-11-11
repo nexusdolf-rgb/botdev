@@ -60,8 +60,8 @@ check('plus d’appel /profile-active', !dash.includes('/profile-active'));
 check('plus de section Identité du bot', !dash.includes("data-go=\"botprofile\""));
 
 // ---------- 5. Versions ----------
-check('index : version v373', index.includes('?v=386'));
-check('service worker : cache v373', sw.includes('hoxera-v386'));
+check('index : version v373', index.includes('?v=387'));
+check('service worker : cache v373', sw.includes('hoxera-v387'));
 
 console.log(`\n✅ v211-test.js : ${n} vérifications OK`);
 process.exit(0);

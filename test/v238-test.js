@@ -341,9 +341,9 @@ async function main() {
     const root = path.join(__dirname, '..');
     const index = fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8');
     const sw = fs.readFileSync(path.join(root, 'public', 'sw.js'), 'utf8');
-    check('index.html : ?v=386 référencé 10 fois', (index.match(/\?v=386/g) || []).length === 10,
-      `trouvé ${(index.match(/\?v=386/g) || []).length}`);
-    check("sw.js : cache 'hoxera-v386'", sw.includes("const CACHE = 'hoxera-v386';"));
+    check('index.html : ?v=387 référencé 10 fois', (index.match(/\?v=387/g) || []).length === 10,
+      `trouvé ${(index.match(/\?v=387/g) || []).length}`);
+    check("sw.js : cache 'hoxera-v387'", sw.includes("const CACHE = 'hoxera-v387';"));
     check('index.html : plus aucun ?v=237', !/\?v=237/.test(index));
   }
 }

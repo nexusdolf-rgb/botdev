@@ -8,7 +8,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const DATA_DIR = path.join(os.tmpdir(), `hoxera-v386-${process.pid}-${Date.now()}`);
+const DATA_DIR = path.join(os.tmpdir(), `hoxera-v387-${process.pid}-${Date.now()}`);
 fs.mkdirSync(DATA_DIR, { recursive: true });
 process.env.BOTDEV_DATA_DIR = DATA_DIR;
 
@@ -201,8 +201,8 @@ function fakeResponse() {
   }
 
   console.log('— Cache frontend —');
-  check('index.html : les 10 ressources pointent vers v350', (indexHtml.match(/\?v=386/g) || []).length === 10);
-  check('service worker : cache hoxera-v386', serviceWorker.includes("const CACHE = 'hoxera-v386';"));
+  check('index.html : les 10 ressources pointent vers v350', (indexHtml.match(/\?v=387/g) || []).length === 10);
+  check('service worker : cache hoxera-v387', serviceWorker.includes("const CACHE = 'hoxera-v387';"));
 
   console.log(`\n✅ v350-test.js : ${n} vérifications OK`);
 })().catch((err) => { console.error(err); process.exit(1); });

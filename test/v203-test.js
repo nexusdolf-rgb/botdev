@@ -28,9 +28,9 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
 
   // ================= 1. Cache-buster v203 =================
   console.log('\n1️⃣  Version v203');
-  check('index.html : ?v=386 référencé 10 fois', (index.match(/\?v=386/g) || []).length === 10);
+  check('index.html : ?v=387 référencé 10 fois', (index.match(/\?v=387/g) || []).length === 10);
   check('index.html : plus aucune ?v=202', !index.includes('?v=202'));
-  check('sw.js : cache botdev-v241', sw.includes("const CACHE = 'hoxera-v386';"));
+  check('sw.js : cache botdev-v241', sw.includes("const CACHE = 'hoxera-v387';"));
   check('sw.js : plus de botdev-v202', !sw.includes('botdev-v202'));
 
   // ================= 2. Polices minuscules → lisibles =================
