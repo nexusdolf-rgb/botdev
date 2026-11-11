@@ -660,8 +660,16 @@ Dashboard.mountModuleGuide = (content) => {
   const label = Dashboard.MODULE_LABEL_OF(moduleId);
   const famille = Dashboard.CATEGORY_LABEL[meta.cat] || '';
   const apercu = meta.apercu ? Dashboard.discordPreviewHtml(meta.apercu, { compact: true }) : '';
+  // La fiche est utile une fois ; au quotidien elle prend la place des réglages.
+  // On la replie dans un accordéon : le titre reste, le contenu s'ouvre au clic.
   const guide = App.el(`
-    <section class="mod-guide" data-module-guide>
+    <details class="mod-guide mg-shell" data-module-guide>
+      <summary class="mg-summary">
+        <span>Comment ça marche</span>
+        <small>${famille ? App.escapeHtml(famille) : ''}</small>
+        <svg class="mg-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </summary>
+      <div class="mg-body">
       <div class="mg-main">
         <div class="mg-cols">
           <div class="mg-col"><span class="mg-kicker">Ce que fait ce module</span><p>${App.escapeHtml(meta.aide || '')}</p></div>
@@ -677,7 +685,8 @@ Dashboard.mountModuleGuide = (content) => {
         </div>
       </div>
       ${apercu ? `<div class="mg-side"><span class="mg-kicker">Aperçu du message du bot</span>${apercu}</div>` : ''}
-    </section>`);
+      </div>
+    </details>`);
   const header = content.querySelector('[data-module-header]');
   if (header) header.after(guide); else content.prepend(guide);
   const previewBtn = guide.querySelector('[data-guide-preview]');
@@ -1015,6 +1024,8 @@ Dashboard.emoteFor = (moduleId) => {
   const meta = Dashboard.MODULE_META[moduleId];
   return meta && meta.emote ? `<img class="mod-emote" src="/emotes/${meta.emote}.png" alt="" width="128" height="128" loading="lazy" />` : '';
 };
+// Une valeur absente ou illisible s'affiche « 0 », jamais « undefined ».
+Dashboard.nombre = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 Dashboard.moduleMeta = (moduleId) => Dashboard.MODULE_META[Dashboard.MODULE_ALIASES[moduleId] || moduleId] || null;
 Dashboard.categoryOf = (moduleId) => (Dashboard.moduleMeta(moduleId) || {}).cat || 'decouvrir';
 Dashboard.modulesOf = (category, list = Dashboard.MODULES) => list.filter(([id]) => Dashboard.categoryOf(id) === category);
@@ -1576,6 +1587,10 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
   const needsInvite = discordGuilds.some((g) => g.canManage && !g.hasBot);
   const all = [...Dashboard.MODULES, ...Dashboard.BOT_MODULES];
   const mod = all.find(([id]) => id === Dashboard.state.module) || ['', '', 'Vue d\'ensemble'];
+  // La pastille du fil d'Ariane reprend le pictogramme du module. Avant, elle
+  // recevait la colonne 2 du catalogue — vide depuis la refonte — et restait
+  // une case grise sans contenu.
+  const crumbIco = Dashboard.emoteFor(mod[0]);
   const acct = App.state.user || {};
   const acctName = acct.discord_username || acct.email || 'Compte Discord';
   const acctAvatar = acct.discord_avatar
@@ -1591,7 +1606,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
       <button class="dash-mobile-navbtn" id="d-mobile-modules" type="button" aria-label="Ouvrir les serveurs et modules" aria-expanded="false">▦</button>
     </div>
     <div class="dash-crumb">
-      <span class="crumb-ico">${mod[1]}</span>
+      ${crumbIco ? `<span class="crumb-ico">${crumbIco}</span>` : ''}
       <div class="crumb-txt">
         <b>${App.escapeHtml(mod[2])}</b>
         <span>${cur ? App.escapeHtml(cur.name) : 'Aucun serveur sélectionné'}</span>
@@ -2397,6 +2412,7 @@ Dashboard.renderers.overview = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const g = data.guild || { name: 'Serveur', members: 0 };
   const ts = data.tickets_stats || { total: 0, open: 0 };
+  ts.open = Dashboard.nombre(ts.open); ts.total = Dashboard.nombre(ts.total);
   const root = Dashboard.header(content, '⌂', 'Tableau de bord', `Gestion de ${App.escapeHtml(g.name)} · ${g.members} membres · Hoxera`);
   const workspace = App.el('<div class="ov-workspace ov-draft-home"></div>');
   root.appendChild(workspace);
@@ -2502,8 +2518,10 @@ Dashboard.renderers.overview = async (content, data) => {
     mainColumn.appendChild(onboarding);
   }
 
+  // Une réponse partielle ne doit jamais peindre « undefined » dans une case.
+  const nb = Dashboard.nombre;
   const stats = [
-    ['', g.members, 'Membres', 'Communauté suivie'],
+    ['', nb(g.members), 'Membres', 'Communauté suivie'],
     ['', ts.open, 'Tickets ouverts', 'À traiter maintenant'],
     ['', data.tickets && data.tickets.types ? data.tickets.types.length : 0, 'Types de tickets', 'Support organisé'],
     ['', (data.xp_roles || []).length, 'Récompenses de niveau', 'Progression des membres'],
@@ -2513,7 +2531,7 @@ Dashboard.renderers.overview = async (content, data) => {
   const statsSection = App.el('<section class="ov-home-side-section ov-summary-section"><div class="ov-side-heading"><b>Résumé du serveur</b><span>État actuel</span></div><div class="dash-stats ov-stats"></div></section>');
   const statsEl = statsSection.querySelector('.ov-stats');
   stats.forEach(([icon, value, label, note]) => {
-    statsEl.appendChild(App.el(`<div class="dash-stat ov-stat"><div class="ov-stat-top"><span class="ov-stat-icon">${icon}</span><span class="ov-stat-note">${note}</span></div><div class="val">${App.escapeHtml(String(value))}</div><div class="lbl">${label}</div></div>`));
+    statsEl.appendChild(App.el(`<div class="dash-stat ov-stat" title="${App.escapeHtml(note)}"><div class="val">${App.escapeHtml(String(nb(value)))}</div><div class="lbl">${label}</div></div>`));
   });
   sideColumn.appendChild(statsSection);
 
@@ -2572,7 +2590,7 @@ Dashboard.renderers.overview = async (content, data) => {
     grid.appendChild(App.el(`<div class="ov-module-cat">${App.escapeHtml(titreFamille)}<small>${items.length}</small></div>`));
     items.forEach(([id, ico, label]) => {
       const meta = Dashboard.MODULE_META[id] || {};
-      const card = App.el(`<div class="dash-card ov-module-card" data-module-card="${id}"><div class="ov-module-icon">${Dashboard.emoteFor(id) || ico}</div><div class="ov-module-copy"><h3>${App.escapeHtml(label)}</h3><div class="desc">${App.escapeHtml(meta.tag || '')}</div></div><button class="dash-btn dash-btn-sm" data-go="${id}">Configurer <span aria-hidden="true">→</span></button></div>`);
+      const card = App.el(`<div class="dash-card ov-module-card" data-module-card="${id}"><span class="ov-module-icon">${Dashboard.emoteFor(id) || ico}</span><span class="ov-module-copy"><b>${App.escapeHtml(label)}</b><small>${App.escapeHtml(meta.tag || '')}</small></span><button class="ov-module-go" type="button" data-go="${id}"><span class="ov-sr">Configurer ${App.escapeHtml(label)}</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></div>`);
       card.onclick = (event) => { if (!event.target.closest('button')) Dashboard.setModule(id); };
       card.querySelector('[data-go]').onclick = () => Dashboard.setModule(id);
       grid.appendChild(card);
@@ -2599,10 +2617,11 @@ Dashboard.renderers.tickets = async (content, data) => {
   const typesData = (t.types || []).map((x) => ({ label: x.label, emoji: x.emoji || '', description: x.description || '', category: x.category || '', questions: (Array.isArray(x.questions) && x.questions.length) ? x.questions.map(qNorm) : [], staff_roles: (x.staff_roles && x.staff_roles.length) ? [...x.staff_roles] : [] }));
   const root = Dashboard.header(content, '', 'Système de tickets', 'Trois systèmes, un seul à choisir : Ticket classique, Ticket menu, ou Ticket avancé.');
   const ts = data.tickets_stats || { total: 0, open: 0 };
+  ts.open = Dashboard.nombre(ts.open); ts.total = Dashboard.nombre(ts.total);
   root.appendChild(App.el(`
     <div class="dash-stats" style="margin-bottom:14px">
       <div class="dash-stat"><div class="val">${ts.open}</div><div class="lbl">Ouverts en ce moment</div></div>
-      <div class="dash-stat"><div class="val">${ts.total}</div><div class="lbl">Ouverts au total</div></div>
+      <div class="dash-stat"><div class="val">${ts.total}</div><div class="lbl">Tickets au total</div></div>
       <div class="dash-stat"><div class="val">${typesData.length}</div><div class="lbl">Types configurés</div></div>
       <div class="dash-stat"><div class="val" id="t-rating-val">…</div><div class="lbl">Note du support</div></div>
     </div>`));
@@ -2616,6 +2635,11 @@ Dashboard.renderers.tickets = async (content, data) => {
       if (el) el.textContent = '—';
     }
   })();
+  // Filet : si la route ne répond jamais, la case affiche un tiret, pas des points.
+  setTimeout(() => {
+    const el = document.getElementById('t-rating-val');
+    if (el && el.textContent === '…') el.textContent = '—';
+  }, 4000);
 
   const textChannels = (data.channels || []).filter((ch) => !ch.category && !ch.voice);
   const categories = (data.channels || []).filter((ch) => ch.category);
@@ -3458,7 +3482,9 @@ Dashboard.renderers.welcome = async (content, data) => {
     const toggleRow = App.el(`<div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0 4px"><label class="dash-label" style="margin:0">Activer</label><label class="switch"><input type="checkbox" ${ev.enabled ? 'checked' : ''} /><span class="slider"></span></label></div>`);
     c.appendChild(toggleRow);
     const toggle = toggleRow.querySelector('input');
-    const cfgZone = App.el(`<div style="${ev.enabled ? '' : 'opacity:.45;pointer-events:none'}"></div>`);
+    // Événement coupé : le bloc reste lisible (0,45 rendait les libellés
+    // illisibles sur fond clair) mais n'accepte aucun clic.
+    const cfgZone = App.el(`<div style="${ev.enabled ? '' : 'opacity:.62;pointer-events:none'}"></div>`);
 
     def.config.forEach((f) => {
       if (f.type === 'checkbox') {
@@ -3914,7 +3940,7 @@ Dashboard.renderers.levels = async (content, data) => {
   // palier atteint REMPLACE ceux des paliers inférieurs. Automatique à la
   // montée, et synchronisable pour les membres déjà avancés.
   const c2 = Dashboard.card(root, 'Rôles par niveau', 'Chaque niveau peut avoir son rôle : quand le membre atteint le palier, il reçoit ce rôle et le bot lui RETIRE le rôle du palier précédent · il ne porte que son rang actuel. Rien de configuré pour un niveau = il garde le rôle de son dernier palier atteint.');
-  c2.appendChild(App.el(`<div data-xp-ladder style="background:var(--d-card2);border:1px solid var(--d-border);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--d-dim);margin-bottom:12px"></div>`));
+  c2.appendChild(App.el(`<div data-xp-ladder class="dash-empty" style="text-align:left;margin-bottom:12px"></div>`));
   c2.appendChild(App.el(`<div id="xp-roles"></div>`));
   c2.appendChild(App.el(`<button class="dash-btn dash-btn-sm" id="xp-add" style="margin-top:8px">＋ Ajouter un niveau</button>`));
   const xpRoleChoices = (data.roles || []).filter((role) => role.name !== '@everyone');
@@ -4053,7 +4079,8 @@ Dashboard.renderers.economy = async (content, data) => {
 Dashboard.renderers.shop = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const root = Dashboard.header(content, '', 'Boutique', 'Les membres achètent des rôles avec leurs coins (/shop, /buy). Vous gérez les articles ici.');
-  const { items } = await App.api(`/bots/${bot.id}/guilds/${guildId}/shop`);
+  // Une réponse partielle affiche une liste vide, jamais une carte d'erreur.
+  const items = ((await App.api(`/bots/${bot.id}/guilds/${guildId}/shop`)) || {}).items || [];
   const itemsData = items.map((i) => ({ id: i.id, name: i.name, description: i.description, price: i.price, role: i.role, emoji: i.emoji }));
   const roleChoices = (data && data.roles || []).filter((role) => role.name !== '@everyone');
   const c = Dashboard.card(root, 'Articles', 'Prix en coins. Le rôle est donné automatiquement à l\'achat.');
@@ -4068,14 +4095,20 @@ Dashboard.renderers.shop = async (content, data) => {
         .concat(roleChoices.map((role) => `<option value="${App.escapeHtml(role.name)}" ${Dashboard.discordRefMatches(it.role, role) ? 'selected' : ''}>${App.escapeHtml(role.name)}</option>`));
       if (it.role && !roleChoices.some((role) => Dashboard.discordRefMatches(it.role, role))) roleOptions.push(`<option value="${App.escapeHtml(it.role)}" selected>${App.escapeHtml(it.role)} (configuration actuelle · rôle introuvable)</option>`);
       const roleControl = `<select class="dash-select" data-k="role">${roleOptions.join('')}</select>`;
+      // Un article = une fiche : en-tête (émoji, nom, retrait) puis champs
+      // étiquetés. Les data-k sont inchangés : la sauvegarde reste la même.
       const row = App.el(`
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-          <input class="dash-input" data-k="emoji" value="${App.escapeHtml(it.emoji)}" style="max-width:58px;text-align:center" />
-          <input class="dash-input" data-k="name" value="${App.escapeHtml(it.name)}" placeholder="Nom" style="min-width:110px;flex:1" />
-          ${roleControl}
-          <input class="dash-input" data-k="price" type="number" value="${it.price}" style="max-width:90px" />
-          <input class="dash-input" data-k="description" value="${App.escapeHtml(it.description)}" placeholder="Description" style="min-width:130px;flex:1" />
-          <button class="dash-btn dash-btn-danger dash-btn-sm" data-del>Supprimer</button>
+        <div class="shop-item">
+          <div class="shop-item-head">
+            <input class="dash-input shop-item-emoji" data-k="emoji" value="${App.escapeHtml(it.emoji)}" aria-label="Émoji de l'article" />
+            <input class="dash-input" data-k="name" value="${App.escapeHtml(it.name)}" placeholder="Nom de l'article" aria-label="Nom de l'article" />
+            <button class="dash-btn dash-btn-sm shop-item-del" data-del aria-label="Supprimer cet article">Supprimer</button>
+          </div>
+          <div class="shop-item-grid">
+            <label class="shop-item-field"><span class="dash-label">Rôle donné à l'achat</span>${roleControl}</label>
+            <label class="shop-item-field shop-item-price"><span class="dash-label">Prix en coins</span><input class="dash-input" data-k="price" type="number" value="${it.price}" /></label>
+            <label class="shop-item-field shop-item-desc"><span class="dash-label">Description</span><input class="dash-input" data-k="description" value="${App.escapeHtml(it.description)}" placeholder="Ce que le membre reçoit" /></label>
+          </div>
         </div>`);
       row.querySelectorAll('[data-k]').forEach((inp) => {
         const event = inp.tagName === 'SELECT' ? 'change' : 'input';
@@ -4098,7 +4131,7 @@ Dashboard.renderers.shop = async (content, data) => {
 
   const c2 = Dashboard.card(root, 'Historique des achats', 'Les 15 derniers achats des membres.');
   try {
-    const { purchases } = await App.api(`/bots/${bot.id}/guilds/${guildId}/shop/purchases`);
+    const purchases = ((await App.api(`/bots/${bot.id}/guilds/${guildId}/shop/purchases`)) || {}).purchases || [];
     if (!purchases.length) c2.appendChild(App.el(`<div class="dash-empty">Aucun achat pour l\'instant.</div>`));
     else {
       const table = App.el(`<table class="dash-table"><thead><tr><th>Membre</th><th>Article</th><th>Prix</th><th>Quand</th></tr></thead><tbody></tbody></table>`);
@@ -7108,7 +7141,7 @@ Dashboard.renderers.community = async (content, data) => {
     const list = cl.querySelector('#lv-list');
     list.innerHTML = '';
     try {
-      const { socials } = await App.api(`/bots/${bot.id}/guilds/${guildId}/livesocials`);
+      const socials = ((await App.api(`/bots/${bot.id}/guilds/${guildId}/livesocials`)) || {}).socials || [];
       renderPreview(socials);
       if (!socials.length) { list.appendChild(App.el(`<div class="dash-empty" style="padding:14px">Aucun compte suivi pour l'instant.</div>`)); return; }
       socials.forEach((so) => {
@@ -7216,12 +7249,13 @@ Dashboard.renderers.community = async (content, data) => {
       App.api(`/bots/${bot.id}/guilds/${guildId}/members`).catch(() => ({ members: [] })),
     ]);
     const byId = new Map((membersRes.members || []).map((m) => [String(m.id), m]));
-    c2.appendChild(App.el(`<div style="font-size:13px;color:var(--d-dim);margin-bottom:10px">${App.pluriel(starboardCount, 'message', 'messages')} au starboard · ⚠️ Le bot doit avoir la permission « Gérer le serveur » pour lire les invitations.</div>`));
-    if (!invitesTop.length) {
+    c2.appendChild(App.el(`<div style="font-size:13px;color:var(--d-dim);margin-bottom:10px">${App.pluriel(Number(starboardCount) || 0, 'message', 'messages')} au starboard · ⚠️ Le bot doit avoir la permission « Gérer le serveur » pour lire les invitations.</div>`));
+    const classement = invitesTop || [];
+    if (!classement.length) {
       c2.appendChild(App.el(`<div class="dash-empty">Aucune invitation traquée pour l'instant · le classement se remplit à chaque nouvelle arrivée.</div>`));
     } else {
       const medals = ['', '', ''];
-      invitesTop.forEach((r, idx) => {
+      classement.forEach((r, idx) => {
         const m = byId.get(String(r.inviter_id));
         const name = m ? (m.displayName || m.username || m.tag || r.inviter_id) : r.inviter_id;
         const avatar = m && m.avatar ? Dashboard.decoWrap(`<img src="${App.escapeHtml(m.avatar)}" style="width:28px;height:28px;border-radius:50%" alt=""/>`, m.deco) : '<span style="width:28px;height:28px;border-radius:50%;background:var(--d-border);display:inline-block"></span>';

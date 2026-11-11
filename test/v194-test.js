@@ -53,9 +53,9 @@ check('aria-label sur les interrupteurs de modules', js.includes('aria-label="Mo
 
 // ---------- 4. Version + accessibilité ----------
 console.log('\n4️⃣  Version et accessibilité');
-check('index.html : ?v=384 référencé 10 fois', (index.match(/\?v=384/g) || []).length === 10);
+check('index.html : ?v=385 référencé 10 fois', (index.match(/\?v=385/g) || []).length === 10);
 check('index.html : plus aucune ?v=193', !index.includes('?v=193'));
-check('sw.js : cache v194', sw.includes("const CACHE = 'hoxera-v384';"));
+check('sw.js : cache v194', sw.includes("const CACHE = 'hoxera-v385';"));
 check('conteneur de notifications annoncé (aria-live)', index.includes('<div id="toasts" aria-live="polite">'));
 
 console.log(failures === 0

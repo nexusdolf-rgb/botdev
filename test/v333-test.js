@@ -25,8 +25,8 @@ const dash = racine('public/js/dashboard.js');
 const dbSrc = racine('server/db.js');
 
 console.log('— 1. Pins de version v333 —');
-check('index.html : ?v=384 ×10', (html.match(/\?v=384/g) || []).length === 10);
-check('sw.js : cache hoxera-v384', sw.includes("const CACHE = 'hoxera-v384';"));
+check('index.html : ?v=385 ×10', (html.match(/\?v=385/g) || []).length === 10);
+check('sw.js : cache hoxera-v385', sw.includes("const CACHE = 'hoxera-v385';"));
 check('index.html : plus aucune ?v=332', !html.includes('?v=332'));
 
 console.log('— 2. Prendre ce ticket = bouton, plus dans le menu —');

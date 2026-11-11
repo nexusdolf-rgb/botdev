@@ -66,7 +66,7 @@ assert.strictEqual((pubJs.match(/App\.renderPublicLanding = /g) || []).length, 1
 assert(styleCss.includes('--accent: #e07a5f;'), 'accent principal pas en Argile');
 
 // 6. Version courante
-assert((index.match(/\?v=384/g) || []).length === 10, 'index.html doit référencer v195 10 fois');
-assert(sw.includes('hoxera-v384'), 'cache du service worker pas en v195');
+assert((index.match(/\?v=385/g) || []).length === 10, 'index.html doit référencer v195 10 fois');
+assert(sw.includes('hoxera-v385'), 'cache du service worker pas en v195');
 
 console.log('✅ v167 (v195) : Home Ultra Pro — ancienne identité conservée, clone DraftBot absent, nouvelles sections en place');

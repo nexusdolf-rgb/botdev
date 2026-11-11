@@ -11,7 +11,7 @@
 'use strict';
 const { chromium } = require('playwright-core');
 
-const BASE = 'http://127.0.0.1:3000';
+const BASE = process.env.HOX_BASE || 'http://127.0.0.1:3000';
 const LARGEUR = Number(process.argv[2] || 360);
 
 // Les drapeaux (--textes) ne sont pas des noms de module : sans ce filtre,
@@ -68,6 +68,29 @@ const settings = {
   close_dm_message: '', close_dm_image: '',
 };
 
+// Miroir d'EVENT_DEFS (server/discord/events.js) — uniquement la forme utile au
+// rendu : types de champs et libellés. Éviter un require qui ouvrirait la base.
+const DEFS = {
+  member_join: { label: 'Message de bienvenue', emoji: '👋', description: 'Envoie un message quand un membre rejoint le serveur.', config: [
+    { key: 'channel', label: "Salon d'accueil", type: 'channel', placeholder: '#bienvenue' },
+    { key: 'message', label: 'Message ({user}, {server}, {count}…)', type: 'multiline', default: 'Passez un bon moment parmi nous — l’équipe est là pour vous aider ! 🚀' },
+    { key: 'card', label: 'Carte de bienvenue en image (avatar et pseudo)', type: 'checkbox', default: false },
+    { key: 'plain', label: 'Mode texte simple (désactive le panneau complet)', type: 'checkbox', default: false },
+    { key: 'color', label: "Couleur de l'embed", type: 'color', default: '#57F287' },
+    { key: 'image', label: "Image de l'embed (URL, optionnel)", type: 'text', placeholder: 'https://…' },
+  ] },
+  member_leave: { label: 'Message de départ', emoji: '👋', description: 'Envoie un message quand un membre quitte le serveur.', config: [
+    { key: 'channel', label: 'Salon des départs', type: 'channel', placeholder: '#au-revoir' },
+    { key: 'message', label: 'Message', type: 'multiline', default: 'Merci d’avoir fait partie de {server} 💛' },
+    { key: 'plain', label: 'Mode texte simple (désactive le panneau complet)', type: 'checkbox', default: false },
+    { key: 'color', label: "Couleur de l'embed", type: 'color', default: '#ED4245' },
+  ] },
+  autorole: { label: 'Auto-rôle', emoji: '🏷️', description: 'Donne automatiquement un ou PLUSIEURS rôles aux nouveaux membres.', config: [
+    { key: 'roles', label: 'Rôles à donner automatiquement (plusieurs possibles)', type: 'rolesmulti', placeholder: 'Membre, Nouveau' },
+    { key: 'role', label: 'Ancien réglage (un seul rôle — laisser vide si la liste ci-dessus est utilisée)', type: 'role', placeholder: 'Membre' },
+  ] },
+};
+
 const guildData = {
   guild: {
     id: 'G1', name: 'Serveur de test Hoxera', icon: '', banner: '',
@@ -80,7 +103,7 @@ const guildData = {
   settings,
   tickets: { name: '', channel: '', message: '', button_label: '🎫 Ouvrir un ticket', button_style: '1', require_reason: 1, support_role: '', category: 'CAT2', types: [] },
   tickets_stats: { open: 3, total: 42, today: 1 },
-  events: { defs: [], state: {} },
+  events: { defs: DEFS, state: {} },
   role_menus: [],
   xp_roles: [],
   profile: { name: '', avatar_url: '', banner_url: '', bio: '', color: '#e07a5f' },
@@ -171,6 +194,9 @@ function repondre(url) {
     deviceScaleFactor: CAPTURE ? 2 : 1,
     hasTouch: TACTILE || PCTACTILE,
     isMobile: TACTILE,
+    // Le service worker du produit s'active puis recharge la page au premier
+    // passage : le contexte d'évaluation était détruit en pleine mesure.
+    serviceWorkers: 'block',
     userAgent: TACTILE
       ? 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36'
       : PCTACTILE

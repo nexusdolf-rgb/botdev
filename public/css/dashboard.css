@@ -7865,3 +7865,965 @@ details[open] > summary.am-chevron::after { transform: none; }
      (« Ajouter un salon », « Ajouter un rôle »). */
   .dashboard-shell-host .discord-multi-picker .dd-add-btn { min-height: 40px; padding-top: 6px; padding-bottom: 6px; }
 }
+/* ============================================================
+   REFONTE — une seule échelle, une seule matière
+   ------------------------------------------------------------
+   Cette couche ne change aucune logique : elle unifie ce que les
+   modules dessinaient chacun à leur façon (rayons, hauteurs, gris,
+   étiquettes). Trois règles de conduite :
+     · un gris de texte = un rôle (titre / texte / secondaire / muet) ;
+     · un cran de rayon = 8 px (contrôle), 12 px (carte), pilule ;
+     · l'accent argile sert de repère (barre, jauge, focus), jamais de
+       fond de bouton — le bouton principal est à l'encre.
+   Les valeurs de contraste ont été mesurées au navigateur, pas estimées.
+   ============================================================ */
+
+/* ---------- 1. Jetons ---------- */
+.dashboard-shell-host {
+  /* sombre par défaut, comme la maison */
+  --ui-bg: #0b0b0d;
+  --ui-surface: #121214;
+  --ui-surface-2: #1a1a1d;
+  --ui-surface-3: #222226;
+  --ui-line: #27272b;
+  --ui-line-soft: #1f1f23;
+  --ui-line-strong: #3a3a40;
+  --ui-text: #f4f4f5;
+  --ui-text-2: #a1a1aa;
+  --ui-text-3: #7d7d86;
+  --ui-accent: var(--d-accent, #e07a5f);
+  --ui-accent-soft: rgba(var(--d-accent-rgb, 224, 122, 95), .14);
+  --ui-ok: #3fb950;
+  --ui-warn: #d29922;
+  --ui-danger: #f85149;
+  --ui-radius-card: 12px;
+  --ui-radius-control: 8px;
+  --ui-shadow-1: 0 1px 2px rgba(0, 0, 0, .35);
+  --ui-shadow-2: 0 18px 40px -28px rgba(0, 0, 0, .9);
+  --ui-ease: cubic-bezier(.2, .7, .3, 1);
+  /* les composants historiques lisent --d-* : même décision, une seule fois */
+  --d-bg: var(--ui-bg);
+  --d-side: var(--ui-surface);
+  --d-card: var(--ui-surface);
+  --d-card2: var(--ui-surface-2);
+  --d-border: var(--ui-line);
+  --d-text: var(--ui-text);
+  --d-dim: var(--ui-text-2);
+  --d-radius-card: 12px;
+  --d-radius-control: 8px;
+  --d-glow: rgba(var(--d-accent-rgb, 224, 122, 95), .3);
+}
+html.hx-light .dashboard-shell-host {
+  --ui-bg: #f6f6f7;
+  --ui-surface: #ffffff;
+  --ui-surface-2: #f4f4f5;
+  --ui-surface-3: #ececee;
+  --ui-line: #e5e5e8;
+  --ui-line-soft: #eeeef1;
+  --ui-line-strong: #d3d3d8;
+  --ui-text: #17181a;
+  --ui-text-2: #5f626b;
+  --ui-text-3: #666a74; /* 5,4:1 sur blanc — mesuré */
+  --ui-shadow-1: 0 1px 2px rgba(20, 22, 30, .06);
+  --ui-shadow-2: 0 18px 40px -30px rgba(20, 22, 30, .45);
+  --d-bg: var(--ui-bg);
+  --d-side: var(--ui-surface);
+  --d-card: var(--ui-surface);
+  --d-card2: var(--ui-surface-2);
+  --d-border: var(--ui-line);
+  --d-text: var(--ui-text);
+  --d-dim: var(--ui-text-2);
+}
+
+/* ---------- 2. Le fond et la barre latérale ---------- */
+.dashboard-shell-host, html body .dashboard-shell-host { background: var(--ui-bg) !important; }
+.dashboard-shell-host .dash-side {
+  background: var(--ui-surface) !important;
+  border-right: 1px solid var(--ui-line) !important;
+  padding: 14px 0 12px !important;
+}
+.dashboard-shell-host .dash-side-brand {
+  position: relative !important;
+  padding: 4px 16px 14px !important;
+  border-bottom: 1px solid var(--ui-line-soft) !important;
+  margin-bottom: 6px !important;
+}
+.dashboard-shell-host .dash-side-brand-avatar,
+.dashboard-shell-host .dash-side-brand-avatar.fallback,
+html.hx-os-pc .dashboard-shell-host .dash-side-brand-avatar,
+html.hx-os-pc .dashboard-shell-host .dash-side-brand-avatar.fallback {
+  width: 32px !important; height: 32px !important; flex-basis: 32px;
+  border-radius: 8px !important; border: 1px solid var(--ui-line) !important;
+  font-size: 14px !important;
+}
+.dashboard-shell-host .dash-side-brand-copy b,
+html.hx-os-pc .dashboard-shell-host .dash-side-brand-copy b { font-size: 14px !important; font-weight: 600 !important; color: var(--ui-text) !important; letter-spacing: -.01em !important; }
+.dashboard-shell-host .dash-side-brand-copy span,
+html.hx-os-pc .dashboard-shell-host .dash-side-brand-copy span { font-size: 11px !important; color: var(--ui-text-3) !important; letter-spacing: .04em !important; text-transform: uppercase !important; }
+/* La pastille « en ligne » se pose près de l'avatar, jamais sur le texte. */
+.dashboard-shell-host .dash-side-brand .dash-side-brand-status {
+  position: absolute !important;
+  top: 2px !important; left: calc(50% + 13px) !important; right: auto !important;
+  margin: 0 !important;
+  width: 7px !important; height: 7px !important;
+  box-shadow: 0 0 0 3px var(--ui-surface) !important;
+}
+/* Le carton du serveur : une surface neutre, pas un dégradé bleu nuit. */
+.dashboard-shell-host .dash-server-card,
+html.hx-os-pc .dashboard-shell-host .dash-server-card {
+  background: var(--ui-surface-2) !important;
+  border: 1px solid var(--ui-line) !important;
+  border-radius: var(--ui-radius-card) !important;
+  box-shadow: none !important;
+  margin: 10px 12px 8px !important;
+  padding: 10px 12px !important;
+  gap: 10px !important;
+}
+.dashboard-shell-host .dash-server-card:hover { border-color: var(--ui-line-strong) !important; }
+.dashboard-shell-host .dash-server-card img,
+.dashboard-shell-host .dash-server-card .srv-fallback { width: 30px !important; height: 30px !important; border-radius: 8px !important; }
+.dashboard-shell-host .dash-server-card .srv-label {
+  font-size: 11px !important; font-weight: 600 !important;
+  letter-spacing: .05em !important; text-transform: uppercase !important;
+  color: var(--ui-text-3) !important;
+}
+.dashboard-shell-host .dash-server-card .srv-txt b { font-size: 13px !important; font-weight: 550 !important; color: var(--ui-text) !important; }
+.dashboard-shell-host .dash-server-card .srv-caret { color: var(--ui-text-3) !important; }
+.dashboard-shell-host .dash-side-group,
+.dashboard-shell-host .dash-side-heading {
+  padding: 14px 18px 5px !important;
+  font-size: 11px !important; font-weight: 600 !important;
+  letter-spacing: .06em !important; text-transform: uppercase !important;
+  color: var(--ui-text-3) !important;
+}
+.dashboard-shell-host .dash-side-item {
+  display: flex !important; align-items: center !important; gap: 9px !important;
+  min-height: 36px !important;
+  margin: 1px 8px !important;
+  padding: 6px 10px !important;
+  border-radius: var(--ui-radius-control) !important;
+  font-size: 13px !important; font-weight: 450 !important;
+  color: var(--ui-text-2) !important;
+  border-left: 2px solid transparent !important;
+  transition: background .12s var(--ui-ease), color .12s var(--ui-ease) !important;
+}
+.dashboard-shell-host .dash-side-item:hover { background: var(--ui-surface-2) !important; color: var(--ui-text) !important; }
+.dashboard-shell-host .dash-side-item.is-active,
+.dashboard-shell-host .dash-side-item[aria-current="true"],
+.dashboard-shell-host .dash-side-item.active {
+  background: var(--ui-accent-soft) !important;
+  color: var(--ui-text) !important;
+  border-left-color: var(--ui-accent) !important;
+  font-weight: 550 !important;
+}
+.dashboard-shell-host .dash-side-item .side-ico,
+.dashboard-shell-host .dash-side-item img { width: 18px !important; height: 18px !important; opacity: .9 !important; }
+
+/* ---------- 3. La barre d'actions ---------- */
+.dashboard-shell-host .dash-topbar {
+  background: var(--ui-bg) !important;
+  border-bottom: 1px solid var(--ui-line) !important;
+  padding: 10px 20px !important;
+  gap: 10px !important;
+}
+.dashboard-shell-host .dash-crumb b { font-size: 13px !important; font-weight: 550 !important; color: var(--ui-text) !important; }
+.dashboard-shell-host .dash-crumb span { font-size: 11px !important; color: var(--ui-text-3) !important; }
+.dashboard-shell-host .dash-iconbtn {
+  width: 32px !important; height: 32px !important; flex: 0 0 32px !important;
+  border-radius: var(--ui-radius-control) !important;
+  border: 1px solid transparent !important;
+  background: none !important;
+  color: var(--ui-text-2) !important;
+  transition: background .12s var(--ui-ease), color .12s var(--ui-ease) !important;
+}
+.dashboard-shell-host .dash-iconbtn:hover { background: var(--ui-surface-2) !important; color: var(--ui-text) !important; }
+.dashboard-shell-host .dash-bot-chip,
+.dashboard-shell-host .dash-account-chip {
+  background: var(--ui-surface) !important;
+  border: 1px solid var(--ui-line) !important;
+  border-radius: 999px !important;
+  padding: 4px 10px 4px 5px !important;
+  box-shadow: none !important;
+}
+.dashboard-shell-host .dash-bot-chip img,
+.dashboard-shell-host .dash-account-chip .acct-avatar { width: 24px; height: 24px; border-radius: 50% !important; }
+.dashboard-shell-host .chip-txt b { font-size: 12.5px !important; font-weight: 550 !important; color: var(--ui-text) !important; }
+.dashboard-shell-host .chip-txt span,
+.dashboard-shell-host .chip-txt small { font-size: 11px !important; color: var(--ui-text-3) !important; }
+.dashboard-shell-host .chip-txt span.on { color: var(--ui-ok) !important; }
+
+/* ---------- 4. L'en-tête d'un module ---------- */
+.dashboard-shell-host .dash-module-header,
+.dashboard-shell-host .dash-header {
+  padding: 18px 0 14px !important;
+  border-bottom: 1px solid var(--ui-line-soft) !important;
+  margin-bottom: 14px !important;
+  gap: 14px !important;
+}
+.dashboard-shell-host .dash-module-header h1,
+.dashboard-shell-host .dash-header h1 {
+  font-size: 20px !important; font-weight: 600 !important;
+  letter-spacing: -.015em !important; color: var(--ui-text) !important;
+}
+.dashboard-shell-host .dash-module-header p,
+.dashboard-shell-host .dash-header p { font-size: 13px !important; color: var(--ui-text-2) !important; }
+.dashboard-shell-host .dash-module-ico,
+.dashboard-shell-host .dash-header-ico {
+  width: 34px !important; height: 34px !important;
+  border-radius: var(--ui-radius-control) !important;
+  background: var(--ui-surface-2) !important;
+  border: 1px solid var(--ui-line) !important;
+}
+.dashboard-shell-host .dash-badge {
+  border-radius: 999px !important;
+  padding: 3px 10px !important;
+  font-size: 11px !important; font-weight: 550 !important;
+  background: var(--ui-surface-2) !important;
+  border: 1px solid var(--ui-line) !important;
+  color: var(--ui-text-2) !important;
+}
+
+/* ---------- 5. « Comment ça marche » : un accordéon, pas un pavé ---------- */
+.dashboard-shell-host .mg-shell {
+  /* .mod-guide est une grille : sur un <details> fermé, la grille gardait son
+     écart et ses marges — une carte blanche vide de 90 px sous l'en-tête. */
+  display: block !important;
+  padding: 0 !important;
+  background: var(--ui-surface) !important;
+  border: 1px solid var(--ui-line) !important;
+  border-radius: var(--ui-radius-card) !important;
+  margin: 0 0 16px !important;
+  overflow: hidden !important;
+}
+.dashboard-shell-host .mg-summary {
+  list-style: none !important;
+  display: flex !important; align-items: center !important; gap: 10px !important;
+  min-height: 42px !important;
+  padding: 10px 14px !important;
+  cursor: pointer !important;
+  font-size: 12.5px !important; font-weight: 550 !important;
+  color: var(--ui-text) !important;
+}
+.dashboard-shell-host .mg-summary::-webkit-details-marker { display: none !important; }
+.dashboard-shell-host .mg-summary:hover { background: var(--ui-surface-2) !important; }
+.dashboard-shell-host .mg-summary small { margin-left: auto !important; font-size: 11px !important; color: var(--ui-text-3) !important; }
+.dashboard-shell-host .mg-summary .mg-chev { transition: transform .16s var(--ui-ease) !important; color: var(--ui-text-3) !important; }
+.dashboard-shell-host .mg-shell[open] .mg-summary .mg-chev { transform: rotate(90deg) !important; }
+.dashboard-shell-host .mg-body { padding: 4px 16px 16px !important; border-top: 1px solid var(--ui-line-soft) !important; }
+.dashboard-shell-host .mg-col { min-width: 0 !important; }
+.dashboard-shell-host .mg-col h4 { font-size: 11px !important; font-weight: 600 !important; letter-spacing: .05em !important; text-transform: uppercase !important; color: var(--ui-text-3) !important; }
+.dashboard-shell-host .mg-col p, .dashboard-shell-host .mg-col li { font-size: 12.5px !important; color: var(--ui-text-2) !important; }
+.dashboard-shell-host .mg-kicker { font-size: 11px !important; font-weight: 600 !important; letter-spacing: .04em !important; text-transform: uppercase !important; color: var(--ui-text-3) !important; }
+
+/* ---------- 6. Les cartes ---------- */
+.dashboard-shell-host .dash-card,
+html.hx-os-pc .dashboard-shell-host .dash-card {
+  background: var(--ui-surface) !important;
+  border: 1px solid var(--ui-line) !important;
+  border-radius: var(--ui-radius-card) !important;
+  box-shadow: none !important;
+  padding: 18px 20px !important;
+  margin-bottom: 12px !important;
+  transition: border-color .12s var(--ui-ease) !important;
+}
+.dashboard-shell-host .dash-card:hover { border-color: var(--ui-line-strong) !important; }
+.dashboard-shell-host .card-head {
+  border-bottom: 1px solid var(--ui-line-soft) !important;
+  padding-bottom: 12px !important;
+  margin-bottom: 14px !important;
+}
+.dashboard-shell-host .card-head h3,
+.dashboard-shell-host .dash-card > h3 {
+  font-size: 14.5px !important; font-weight: 600 !important;
+  letter-spacing: -.01em !important; color: var(--ui-text) !important;
+}
+.dashboard-shell-host .card-head .desc,
+.dashboard-shell-host .dash-card .desc { font-size: 12.5px !important; color: var(--ui-text-2) !important; line-height: 1.5 !important; }
+.dashboard-shell-host .card-actions {
+  padding-top: 12px !important;
+  margin-top: 16px !important;
+  gap: 8px !important;
+  border-top: 1px solid var(--ui-line-soft) !important;
+}
+.dashboard-shell-host .dash-card > .card-actions:first-child { border-top: 0 !important; }
+
+/* ---------- 7. Étiquettes, champs, aides ---------- */
+.dashboard-shell-host .dash-label {
+  display: block !important;
+  font-size: 11px !important; font-weight: 600 !important;
+  letter-spacing: .04em !important; text-transform: uppercase !important;
+  color: var(--ui-text-3) !important;
+  margin: 14px 0 5px !important;
+}
+.dashboard-shell-host .dash-input,
+.dashboard-shell-host .dash-select,
+.dashboard-shell-host textarea.dash-input,
+html.hx-os-pc .dashboard-shell-host .dash-input,
+html.hx-os-pc .dashboard-shell-host .dash-select,
+html.hx-os-pc .dashboard-shell-host textarea.dash-input {
+  font-size: 13px !important;
+  padding: 10px 12px !important;
+  min-height: 40px !important;
+  border: 1px solid var(--ui-line) !important;
+  border-radius: var(--ui-radius-control) !important;
+  background: var(--ui-surface-2) !important;
+  color: var(--ui-text) !important;
+  box-shadow: none !important;
+  transition: border-color .12s var(--ui-ease), background .12s var(--ui-ease) !important;
+}
+.dashboard-shell-host .dash-input::placeholder { color: var(--ui-text-3) !important; }
+.dashboard-shell-host .dash-input:focus,
+.dashboard-shell-host .dash-select:focus,
+.dashboard-shell-host textarea.dash-input:focus {
+  border-color: var(--ui-accent) !important;
+  box-shadow: 0 0 0 3px var(--ui-accent-soft) !important;
+  outline: none !important;
+}
+.dashboard-shell-host .hint,
+.dashboard-shell-host .dash-help,
+.dashboard-shell-host .field-hint { font-size: 12px !important; color: var(--ui-text-3) !important; }
+/* Une ligne de réglage = un libellé, un contrôle, un filet très clair. */
+.dashboard-shell-host .setting-row {
+  padding: 12px 2px !important;
+  gap: 20px !important;
+  border-bottom: 1px solid var(--ui-line-soft) !important;
+}
+.dashboard-shell-host .setting-row:last-child { border-bottom: none !important; padding-bottom: 2px !important; }
+.dashboard-shell-host .setting-row > .dash-label {
+  font-size: 11px !important; font-weight: 600 !important;
+  letter-spacing: .04em !important; text-transform: uppercase !important;
+  color: var(--ui-text-3) !important;
+  margin: 0 !important;
+}
+
+/* ---------- 8. Boutons ---------- */
+.dashboard-shell-host .dash-btn,
+html.hx-os-pc .dashboard-shell-host .dash-btn {
+  min-height: 40px !important;
+  padding: 8px 14px !important;
+  border-radius: var(--ui-radius-control) !important;
+  font-size: 13px !important; font-weight: 500 !important;
+  border: 1px solid var(--ui-line) !important;
+  background: var(--ui-surface) !important;
+  color: var(--ui-text) !important;
+  box-shadow: none !important;
+  transition: background .12s var(--ui-ease), border-color .12s var(--ui-ease), transform .08s var(--ui-ease) !important;
+}
+.dashboard-shell-host .dash-btn:hover { background: var(--ui-surface-2) !important; border-color: var(--ui-line-strong) !important; filter: none !important; }
+.dashboard-shell-host .dash-btn:active { transform: translateY(1px) !important; }
+.dashboard-shell-host .dash-btn:focus-visible { outline: none !important; box-shadow: 0 0 0 3px var(--ui-accent-soft) !important; border-color: var(--ui-accent) !important; }
+.dashboard-shell-host .dash-btn-primary,
+.dashboard-shell-host .dash-save-action {
+  background: var(--ui-text) !important;
+  color: var(--ui-bg) !important;
+  border-color: var(--ui-text) !important;
+  font-weight: 600 !important;
+}
+.dashboard-shell-host .dash-btn-primary:hover,
+.dashboard-shell-host .dash-save-action:hover { background: var(--ui-text) !important; opacity: .9 !important; }
+.dashboard-shell-host .dash-btn-danger { color: var(--ui-danger) !important; border-color: var(--ui-line) !important; background: var(--ui-surface) !important; }
+.dashboard-shell-host .dash-btn-danger:hover { border-color: var(--ui-danger) !important; background: var(--ui-surface) !important; }
+.dashboard-shell-host .dash-btn-sm { min-height: 40px !important; padding: 7px 11px !important; font-size: 12px !important; border-radius: var(--ui-radius-control) !important; }
+.dashboard-shell-host .dash-save-action.is-saved { background: var(--ui-ok) !important; border-color: var(--ui-ok) !important; color: #fff !important; }
+
+/* ---------- 9. Statistiques, tableaux, états vides ---------- */
+.dashboard-shell-host .dash-stats { gap: 8px !important; }
+.dashboard-shell-host .dash-stat,
+html.hx-os-pc .dashboard-shell-host .dash-stat {
+  background: var(--ui-surface) !important;
+  border: 1px solid var(--ui-line) !important;
+  border-radius: var(--ui-radius-card) !important;
+  padding: 14px 16px !important;
+  box-shadow: none !important;
+}
+.dashboard-shell-host .dash-stat .val,
+html.hx-light .dashboard-shell-host .dash-stat .val {
+  font-size: 22px !important; font-weight: 600 !important;
+  letter-spacing: -.02em !important; color: var(--ui-text) !important;
+}
+.dashboard-shell-host .dash-stat .lbl {
+  font-size: 11px !important; font-weight: 600 !important;
+  letter-spacing: .04em !important; text-transform: uppercase !important;
+  color: var(--ui-text-3) !important;
+}
+.dashboard-shell-host .dash-table { width: 100% !important; border-collapse: collapse !important; }
+.dashboard-shell-host .dash-table th {
+  text-align: left !important;
+  font-size: 11px !important; font-weight: 600 !important;
+  letter-spacing: .04em !important; text-transform: uppercase !important;
+  color: var(--ui-text-3) !important;
+  padding: 0 12px 8px !important;
+  border-bottom: 1px solid var(--ui-line) !important;
+}
+.dashboard-shell-host .dash-table td {
+  padding: 11px 12px !important;
+  font-size: 13px !important;
+  color: var(--ui-text) !important;
+  border-bottom: 1px solid var(--ui-line-soft) !important;
+}
+.dashboard-shell-host .dash-table tbody tr:last-child td { border-bottom: 0 !important; }
+.dashboard-shell-host .dash-table th:first-child,
+.dashboard-shell-host .dash-table td:first-child { padding-left: 4px !important; }
+.dashboard-shell-host .dash-table tbody tr:hover td { background: var(--ui-surface-2) !important; }
+.dashboard-shell-host .dash-empty {
+  border: 1px dashed var(--ui-line) !important;
+  border-radius: var(--ui-radius-control) !important;
+  padding: 18px 14px !important;
+  text-align: center !important;
+  font-size: 12.5px !important;
+  color: var(--ui-text-3) !important;
+  background: transparent !important;
+}
+
+/* ---------- 10. Interrupteur ---------- */
+.dashboard-shell-host .switch {
+  width: 36px !important; height: 21px !important; flex: 0 0 36px !important;
+}
+.dashboard-shell-host .switch .slider,
+.dashboard-shell-host .switch .slider::before { transition: background .16s var(--ui-ease), transform .16s var(--ui-ease) !important; }
+.dashboard-shell-host .switch .slider {
+  background: var(--ui-surface-3) !important;
+  border: 1px solid var(--ui-line) !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+}
+.dashboard-shell-host .switch .slider::before {
+  width: 15px !important; height: 15px !important;
+  left: 2px !important; top: 2px !important;
+  background: var(--ui-text-3) !important;
+}
+.dashboard-shell-host .switch input:checked + .slider { background: var(--ui-accent) !important; border-color: var(--ui-accent) !important; }
+.dashboard-shell-host .switch input:checked + .slider::before { background: #fff !important; transform: translateX(15px) !important; }
+.dashboard-shell-host .switch input:focus-visible + .slider { box-shadow: 0 0 0 3px var(--ui-accent-soft) !important; }
+.dashboard-shell-host input[type="checkbox"] { accent-color: var(--ui-accent) !important; }
+
+/* ---------- 11. Vue d'ensemble : des lignes, pas des tuiles ---------- */
+.dashboard-shell-host .ov-intro,
+.dashboard-shell-host .dash-hero.ov-onboarding,
+html.hx-os-pc .dashboard-shell-host .ov-intro {
+  background: var(--ui-surface) !important;
+  border: 1px solid var(--ui-line) !important;
+  border-radius: var(--ui-radius-card) !important;
+  padding: 18px 20px !important;
+  box-shadow: none !important;
+}
+.dashboard-shell-host .ov-intro-copy h2 { font-size: 20px !important; font-weight: 600 !important; letter-spacing: -.02em !important; }
+.dashboard-shell-host .ov-intro-copy p { font-size: 13px !important; color: var(--ui-text-2) !important; }
+.dashboard-shell-host .ov-eyebrow { font-size: 11px !important; font-weight: 600 !important; letter-spacing: .06em !important; text-transform: uppercase !important; color: var(--ui-text-3) !important; }
+.dashboard-shell-host .ov-server-avatar,
+.dashboard-shell-host .ov-server-avatar.fallback { width: 44px !important; height: 44px !important; border-radius: 12px !important; }
+.dashboard-shell-host .ov-intro-health {
+  background: var(--ui-surface-2) !important;
+  border: 1px solid var(--ui-line) !important;
+  border-radius: var(--ui-radius-control) !important;
+  padding: 8px 10px !important;
+  gap: 8px !important;
+}
+.dashboard-shell-host .ov-intro-health b { font-size: 12px !important; font-weight: 550 !important; }
+.dashboard-shell-host .ov-welcome-settings {
+  min-height: 32px !important; padding: 4px 10px !important;
+  border-radius: var(--ui-radius-control) !important;
+  border: 1px solid var(--ui-line) !important;
+  background: var(--ui-surface) !important; color: var(--ui-text) !important;
+  font-size: 12px !important; font-weight: 550 !important;
+  gap: 6px !important;
+}
+.dashboard-shell-host .ov-hero-chip {
+  background: var(--ui-surface-2) !important;
+  border: 1px solid var(--ui-line) !important;
+  border-radius: 999px !important;
+  padding: 4px 10px !important;
+  font-size: 12px !important; color: var(--ui-text-2) !important;
+}
+.dashboard-shell-host .ov-hero-chip b { font-size: 12px !important; color: var(--ui-text) !important; }
+/* Accès rapides : une barre, quatre entrées. */
+.dashboard-shell-host .ov-access-bar {
+  display: flex !important; align-items: center !important; gap: 4px !important; flex-wrap: wrap !important;
+  margin: 0 0 16px !important;
+  padding: 6px 8px !important;
+  background: var(--ui-surface) !important;
+  border: 1px solid var(--ui-line) !important;
+  border-radius: var(--ui-radius-control) !important;
+}
+.dashboard-shell-host .ov-quick-label {
+  font-size: 11px !important; font-weight: 600 !important; letter-spacing: .05em !important;
+  text-transform: uppercase !important; color: var(--ui-text-3) !important;
+  padding: 0 8px 0 4px !important;
+}
+.dashboard-shell-host .ov-quick-action {
+  display: inline-flex !important; align-items: center !important; gap: 6px !important;
+  padding: 8px 10px !important; min-height: 40px !important;
+  border-radius: var(--ui-radius-control) !important;
+  border: 0 !important; background: none !important; cursor: pointer;
+  color: var(--ui-text-2) !important; font: inherit; font-size: 12.5px !important; font-weight: 500 !important;
+  transition: background .12s var(--ui-ease), color .12s var(--ui-ease) !important;
+}
+.dashboard-shell-host .ov-quick-action:hover { background: var(--ui-surface-2) !important; color: var(--ui-text) !important; }
+.dashboard-shell-host .ov-quick-action > span { display: inline-flex !important; width: 16px !important; height: 16px !important; color: var(--ui-text-3) !important; }
+.dashboard-shell-host .ov-quick-action .ov-qa-txt small,
+.dashboard-shell-host .ov-quick-action i { display: none !important; }
+/* Modules : une ligne = un pictogramme, un nom, une phrase, une flèche. */
+.dashboard-shell-host .ov-module-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+}
+.dashboard-shell-host .ov-module-cat {
+  grid-column: 1 / -1 !important;
+  display: flex !important; align-items: center !important; gap: 8px !important;
+  margin: 18px 0 2px !important; padding: 0 !important;
+  font-size: 11px !important; font-weight: 600 !important; letter-spacing: .06em !important;
+  text-transform: uppercase !important; color: var(--ui-text-3) !important;
+}
+.dashboard-shell-host .ov-module-cat:first-child { margin-top: 0 !important; }
+.dashboard-shell-host .ov-module-cat small {
+  font-size: 11px !important; font-weight: 500 !important; color: var(--ui-text-3) !important;
+  padding: 0 6px !important; border-radius: 999px !important; border: 1px solid var(--ui-line) !important;
+}
+html.hx-os-pc .dashboard-shell-host .ov-module-card,
+.dashboard-shell-host .ov-module-card {
+  display: flex !important; align-items: center !important; gap: 10px !important;
+  min-height: 56px !important;
+  padding: 10px 10px 10px 12px !important;
+  border-radius: var(--ui-radius-card) !important;
+  cursor: pointer !important;
+  transition: background .12s var(--ui-ease), border-color .12s var(--ui-ease) !important;
+}
+.dashboard-shell-host .ov-module-card:hover { background: var(--ui-surface-2) !important; border-color: var(--ui-line-strong) !important; }
+.dashboard-shell-host .ov-module-card .ov-module-icon,
+.dashboard-shell-host .ov-module-card .ov-module-icon img {
+  width: 26px !important; height: 26px !important; flex: 0 0 26px !important;
+  display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  background: none !important; border: 0 !important; border-radius: 0 !important;
+  font-size: 15px !important;
+}
+.dashboard-shell-host .ov-module-card .ov-module-icon img { object-fit: contain !important; opacity: .9 !important; }
+.dashboard-shell-host .ov-module-copy { display: flex !important; flex-direction: column !important; gap: 1px !important; min-width: 0 !important; flex: 1 !important; }
+.dashboard-shell-host .ov-module-copy b { font-size: 13px !important; font-weight: 500 !important; color: var(--ui-text) !important; }
+.dashboard-shell-host .ov-module-copy small {
+  font-size: 12px !important; color: var(--ui-text-3) !important; line-height: 1.35 !important;
+  white-space: normal !important; overflow: hidden !important;
+  display: -webkit-box !important; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.dashboard-shell-host .ov-module-go {
+  margin-left: auto !important;
+  width: 32px !important; height: 32px !important; flex: 0 0 32px !important;
+  display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  background: none !important; border: 0 !important; border-radius: var(--ui-radius-control) !important;
+  color: var(--ui-text-3) !important; cursor: pointer;
+  opacity: .45 !important;
+  transition: opacity .12s var(--ui-ease), background .12s var(--ui-ease) !important;
+}
+.dashboard-shell-host .ov-module-card:hover .ov-module-go,
+.dashboard-shell-host .ov-module-go:focus-visible { opacity: 1 !important; background: var(--ui-surface-3) !important; color: var(--ui-text) !important; }
+.dashboard-shell-host .ov-sr {
+  position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important;
+  overflow: hidden !important; clip: rect(0 0 0 0) !important; white-space: nowrap !important; border: 0 !important;
+}
+/* Étapes de départ : un numéro, un mot — alignés sur une ligne. */
+.dashboard-shell-host .hero-steps { display: flex !important; flex-wrap: wrap !important; gap: 8px !important; }
+.dashboard-shell-host .dash-hero.ov-onboarding .hero-steps { overflow: visible !important; }
+.dashboard-shell-host .dash-hero.ov-onboarding .hero-step {
+  width: auto !important; min-width: 0 !important; max-width: none !important;
+  display: inline-flex !important; flex-direction: row !important; align-items: center !important; gap: 6px !important;
+  min-height: 30px !important; padding: 4px 12px !important;
+  border-radius: 999px !important;
+  border: 1px solid var(--ui-line) !important;
+  background: var(--ui-surface-2) !important;
+}
+.dashboard-shell-host .dash-hero.ov-onboarding .hero-step:hover { border-color: var(--ui-line-strong) !important; }
+.dashboard-shell-host .dash-hero.ov-onboarding .hero-step .hs-num {
+  position: static !important;
+  width: 16px !important; height: 16px !important; flex: 0 0 16px !important;
+  font-size: 11px !important; font-weight: 600 !important;
+  background: var(--ui-surface-3) !important; color: var(--ui-text-2) !important;
+  border-radius: 50% !important; box-shadow: none !important;
+}
+.dashboard-shell-host .dash-hero.ov-onboarding .hero-step b { white-space: nowrap !important; font-size: 12.5px !important; font-weight: 550 !important; color: var(--ui-text) !important; }
+.dashboard-shell-host .dash-hero.ov-onboarding .hero-step > span:not(.hs-num):not(.hs-emoji) { display: none !important; }
+.dashboard-shell-host .dash-hero.ov-onboarding .hero-step .hs-emoji { display: inline-flex !important; width: 14px !important; height: 14px !important; color: var(--ui-text-3) !important; }
+/* Progression et premiers réglages */
+.dashboard-shell-host .ov-progress-bar, .dashboard-shell-host .ov-bar { border-radius: 999px !important; background: var(--ui-surface-3) !important; }
+.dashboard-shell-host .ov-progress-bar > span, .dashboard-shell-host .ov-bar > span { border-radius: 999px !important; background: var(--ui-accent) !important; }
+.dashboard-shell-host .ov-config-row {
+  border: 1px solid var(--ui-line) !important;
+  border-radius: var(--ui-radius-control) !important;
+  padding: 10px 12px !important;
+  background: var(--ui-surface-2) !important;
+  font-size: 12.5px !important;
+}
+.dashboard-shell-host .ov-config-empty {
+  border: 1px dashed var(--ui-line) !important;
+  border-radius: var(--ui-radius-control) !important;
+  background: transparent !important;
+  padding: 10px 12px !important;
+  margin-top: 4px !important;
+  font-size: 12.5px !important;
+  color: var(--ui-text-3) !important;
+}
+.dashboard-shell-host .ov-stat .lbl { font-size: 11px !important; letter-spacing: .04em !important; text-transform: uppercase !important; color: var(--ui-text-3) !important; }
+.dashboard-shell-host .check-item {
+  border: 1px solid var(--ui-line) !important;
+  border-radius: var(--ui-radius-control) !important;
+  padding: 9px 12px !important;
+  font-size: 12.5px !important;
+}
+.dashboard-shell-host .check-go { font-size: 11.5px !important; color: var(--ui-text-3) !important; }
+
+/* ---------- 12. Articles de boutique, lignes de membre ---------- */
+.dashboard-shell-host .shop-item {
+  border: 1px solid var(--ui-line) !important;
+  border-radius: var(--ui-radius-card) !important;
+  padding: 12px !important;
+  margin: 0 0 10px !important;
+  background: var(--ui-surface-2) !important;
+}
+.dashboard-shell-host .shop-item-head { display: flex !important; align-items: center !important; gap: 8px !important; }
+.dashboard-shell-host .shop-item-emoji { width: 44px !important; flex: 0 0 44px !important; text-align: center !important; padding-inline: 0 !important; }
+.dashboard-shell-host .shop-item-head > input:not(.shop-item-emoji) { flex: 1 !important; min-width: 0 !important; font-weight: 500 !important; }
+.dashboard-shell-host .shop-item-del { flex: 0 0 auto !important; }
+.dashboard-shell-host .shop-item-grid {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.4fr) 120px minmax(0, 2fr) !important;
+  gap: 10px !important;
+  margin-top: 10px !important;
+}
+.dashboard-shell-host .shop-item-field { display: flex !important; flex-direction: column !important; gap: 4px !important; min-width: 0 !important; margin: 0 !important; }
+.dashboard-shell-host .shop-item-field .dash-label { margin: 0 !important; }
+.dashboard-shell-host .shop-item-field .dash-input,
+.dashboard-shell-host .shop-item-field .dash-select { width: 100% !important; max-width: none !important; }
+.dashboard-shell-host .dash-member {
+  border-bottom: 1px solid var(--ui-line-soft) !important;
+  padding: 12px 2px !important;
+  gap: 12px !important;
+  transition: background .12s var(--ui-ease) !important;
+}
+.dashboard-shell-host .dash-member:hover { background: var(--ui-surface-2) !important; }
+.dashboard-shell-host .m-avatar { width: 36px !important; height: 36px !important; background: var(--ui-surface-2) !important; }
+.dashboard-shell-host .m-info { min-width: 0 !important; flex: 1 !important; }
+.dashboard-shell-host .m-info b { font-size: 13px !important; font-weight: 500 !important; color: var(--ui-text) !important; }
+.dashboard-shell-host .m-meta { font-size: 12px !important; color: var(--ui-text-3) !important; margin-top: 2px !important; }
+.dashboard-shell-host .m-roles { display: flex !important; flex-wrap: wrap !important; gap: 4px !important; margin: 4px 0 2px !important; }
+.dashboard-shell-host .m-role { padding: 1px 7px !important; border-radius: 999px !important; font-size: 11px !important; font-weight: 500 !important; }
+.dashboard-shell-host .m-actions { display: flex !important; gap: 6px !important; flex-wrap: wrap !important; }
+
+/* ---------- 13. Modales, notifications, barre d'enregistrement ---------- */
+.dashboard-shell-host ~ .modal-backdrop, .modal-backdrop { background: rgba(10, 10, 12, .55) !important; backdrop-filter: blur(2px); }
+.modal, .modal-card, .dash-modal {
+  border-radius: var(--ui-radius-card) !important;
+  border: 1px solid var(--ui-line) !important;
+  background: var(--ui-surface) !important;
+  box-shadow: 0 30px 80px -40px rgba(0, 0, 0, .8) !important;
+}
+.modal-header h3 { font-size: 15px !important; font-weight: 600 !important; }
+.toast {
+  border-radius: var(--ui-radius-control) !important;
+  border: 1px solid var(--ui-line) !important;
+  background: var(--ui-surface) !important;
+  font-size: 12.5px !important;
+  box-shadow: 0 12px 30px -18px rgba(0, 0, 0, .6) !important;
+}
+.dashboard-shell-host .dash-savebar, .dash-savebar {
+  border-radius: var(--ui-radius-card) !important;
+  border: 1px solid var(--ui-line) !important;
+  background: var(--ui-surface) !important;
+  font-size: 12.5px !important;
+}
+
+/* ---------- 14. Mouvement : court, utile, et coupable ---------- */
+@keyframes ui-rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes ui-fade { from { opacity: 0; } to { opacity: 1; } }
+.dashboard-shell-host #dash-content > * { animation: ui-rise .22s var(--ui-ease) both !important; }
+.dashboard-shell-host .mg-body { animation: ui-fade .16s var(--ui-ease) both !important; }
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-shell-host *,
+  .dashboard-shell-host *::before,
+  .dashboard-shell-host *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .dashboard-shell-host #dash-content > * { animation: none !important; }
+}
+
+/* ---------- 15. Largeurs ---------- */
+@media (max-width: 1240px) {
+  .dashboard-shell-host .ov-module-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 1080px) {
+  .dashboard-shell-host .dash-topbar { padding: 8px 14px !important; }
+  .dashboard-shell-host .dash-main { padding: 16px 22px 56px !important; }
+}
+@media (max-width: 900px) {
+  .dashboard-shell-host .shop-item-grid { grid-template-columns: minmax(0, 1fr) !important; }
+}
+@media (max-width: 760px) {
+  .dashboard-shell-host .dash-main { padding: 10px 12px 96px !important; }
+  .dashboard-shell-host .ov-module-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .dashboard-shell-host .ov-module-card { min-height: 56px !important; }
+  .dashboard-shell-host .ov-module-go { width: 40px !important; height: 40px !important; flex-basis: 40px !important; }
+  .dashboard-shell-host .dash-module-header h1,
+  .dashboard-shell-host .dash-header h1 { font-size: 20px !important; }
+  .dashboard-shell-host .ov-access-bar { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 6px !important; padding: 10px !important; }
+  .dashboard-shell-host .ov-access-bar .ov-quick-label { grid-column: 1 / -1 !important; padding: 2px 4px !important; }
+  .dashboard-shell-host .ov-access-bar .ov-quick-action { width: 100% !important; justify-content: flex-start !important; background: var(--ui-surface-2) !important; border: 1px solid var(--ui-line) !important; }
+  .dashboard-shell-host .ov-intro.ov-welcome-panel { padding: 16px !important; }
+  .dashboard-shell-host .ov-intro-server { gap: 12px !important; align-items: flex-start !important; }
+  .dashboard-shell-host .ov-server-avatar,
+  .dashboard-shell-host .ov-server-avatar.fallback { width: 48px !important; height: 48px !important; flex-basis: 48px !important; font-size: 20px !important; }
+  .dashboard-shell-host .ov-intro-copy h2 { font-size: 20px !important; line-height: 1.25 !important; }
+  .dashboard-shell-host .ov-intro-health { margin-top: 12px !important; padding: 10px 12px !important; display: flex !important; align-items: center !important; flex-wrap: wrap !important; gap: 8px !important; }
+  .dashboard-shell-host .ov-intro-health > div { flex: 1 1 auto !important; }
+  .dashboard-shell-host .ov-welcome-settings { width: auto !important; margin-left: auto !important; padding: 8px 12px !important; min-height: 36px !important; }
+  .dashboard-shell-host .ov-hero-stats { gap: 6px !important; margin-top: 12px !important; }
+  .dashboard-shell-host .dash-hero.ov-onboarding .hero-step { min-height: 36px !important; padding: 6px 12px !important; }
+  .dashboard-shell-host .dd-add-btn,
+  .dashboard-shell-host .dash-btn-sm { min-height: 40px !important; }
+  /* Une rangée d'actions qui défile plutôt que deux rangées empilées. */
+  .dashboard-shell-host .dash-topbar-actions {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    gap: 6px !important;
+    padding: 2px 0 4px !important;
+    scrollbar-width: none;
+  }
+  .dashboard-shell-host .dash-topbar-actions::-webkit-scrollbar { display: none; }
+  .dashboard-shell-host .dash-bot-chip .chip-txt,
+  .dashboard-shell-host .dash-account-chip .chip-txt { display: none !important; }
+  .dashboard-shell-host .dash-bot-chip,
+  .dashboard-shell-host .dash-account-chip { padding: 5px !important; }
+  .dashboard-shell-host .dash-bot-chip img,
+  .dashboard-shell-host .dash-account-chip .acct-avatar { width: 26px !important; height: 26px !important; }
+}
+@media (hover: none) {
+  .dashboard-shell-host .switch { width: 40px !important; height: 24px !important; flex-basis: 40px !important; }
+  .dashboard-shell-host .switch .slider::before { width: 18px !important; height: 18px !important; }
+  .dashboard-shell-host .switch input:checked + .slider::before { transform: translateX(16px) !important; }
+  .dashboard-shell-host .dd-add-btn { min-height: 40px !important; padding: 8px 12px !important; }
+}
+
+/* ---------- 4 bis. Les trois pastilles d'en-tête ---------- */
+/* Avant : trois teintes différentes (violet, bleu, vert). Désormais une seule
+   matière ; seule la pastille d'état garde une couleur, et seulement un point. */
+.dashboard-shell-host .module-header-meta { gap: 6px !important; align-items: center !important; }
+.dashboard-shell-host .module-cat,
+.dashboard-shell-host .module-scope,
+.dashboard-shell-host .module-status,
+html.hx-light .dashboard-shell-host .module-cat,
+html.hx-light .dashboard-shell-host .module-scope,
+html.hx-light .dashboard-shell-host .module-status {
+  display: inline-flex !important; align-items: center !important; gap: 6px !important;
+  min-height: 24px !important; height: auto !important;
+  padding: 2px 9px !important;
+  border-radius: 999px !important;
+  border: 1px solid var(--ui-line) !important;
+  background: var(--ui-surface) !important;
+  color: var(--ui-text-3) !important;
+  font-size: 11px !important; font-weight: 550 !important;
+  letter-spacing: .02em !important;
+  white-space: nowrap !important;
+  box-shadow: none !important;
+}
+.dashboard-shell-host .module-cat { text-transform: uppercase !important; letter-spacing: .05em !important; }
+.dashboard-shell-host .module-scope-dot { width: 6px !important; height: 6px !important; box-shadow: none !important; }
+.dashboard-shell-host .module-scope-dot.is-online { background: var(--ui-ok) !important; }
+.dashboard-shell-host .module-scope-dot.is-offline { background: var(--ui-danger) !important; }
+.dashboard-shell-host .module-status.is-online { color: var(--ui-text-2) !important; }
+.dashboard-shell-host .module-status.is-online::before {
+  content: "" !important; width: 6px !important; height: 6px !important; border-radius: 50% !important;
+  background: var(--ui-ok) !important; display: inline-block !important;
+}
+.dashboard-shell-host .module-status.is-offline { color: var(--ui-danger) !important; }
+.dashboard-shell-host .module-status.is-offline::before {
+  content: "" !important; width: 6px !important; height: 6px !important; border-radius: 50% !important;
+  background: var(--ui-danger) !important; display: inline-block !important;
+}
+.dashboard-shell-host .dash-crumb .crumb-ico,
+html.hx-light .dashboard-shell-host .crumb-ico {
+  width: 32px !important; height: 32px !important;
+  display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  border-radius: var(--ui-radius-control) !important;
+  background: var(--ui-surface-2) !important;
+  border: 1px solid var(--ui-line) !important;
+  box-shadow: none !important;
+}
+.dashboard-shell-host .dash-crumb .crumb-ico img { width: 20px !important; height: 20px !important; opacity: .85 !important; }
+
+/* ---------- 4 ter. Listes de vérification et pastilles compactes ---------- */
+/* Le conteneur gardait un cadre #4f545c (palette d'origine) : sur fond clair,
+   un cadre noir autour d'une simple phrase. */
+.dashboard-shell-host .ov-config-list {
+  border: 1px solid var(--ui-line) !important;
+  border-radius: var(--ui-radius-control) !important;
+  background: transparent !important;
+  overflow: hidden !important;
+}
+.dashboard-shell-host .ov-config-empty {
+  border: 0 !important;
+  background: transparent !important;
+  padding: 12px 14px !important;
+}
+.dashboard-shell-host .module-header-meta { flex-wrap: wrap !important; justify-content: flex-end !important; row-gap: 4px !important; }
+@media (min-width: 1000px) {
+  .dashboard-shell-host .module-cat,
+  .dashboard-shell-host .module-scope,
+  .dashboard-shell-host .module-status { padding: 2px 8px !important; font-size: 11px !important; }
+  .dashboard-shell-host .module-header-meta { gap: 4px !important; flex-wrap: nowrap !important; }
+}
+/* Le vide d'une liste garde le fond de la carte, pas un fond gris de champ. */
+html.hx-light .dashboard-shell-host .ov-config-empty {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* ---------- 4 quater. En-tête : trois colonnes, pas trois blocs collés ---------- */
+/* Mesuré à 1440 px : la copie tombait à 296 px et les pastilles venaient par-
+   dessus le sous-titre. L'en-tête redevient une grille explicite ; la colonne
+   du milieu prend la place restante, les pastilles restent à droite. */
+@media (min-width: 900px) {
+  .dashboard-shell-host .dash-module-header {
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    column-gap: 15px !important;
+  }
+  .dashboard-shell-host .module-header-copy { min-width: 0 !important; }
+  .dashboard-shell-host .module-header-copy .sub { max-width: 100% !important; white-space: normal !important; }
+  .dashboard-shell-host .module-header-meta { justify-self: end !important; flex-wrap: nowrap !important; }
+}
+
+/* ---------- 7 bis. Sélecteur multiple : un champ, un verbe ---------- */
+/* Le bouton « ＋ Ajouter » gardait son propre cadre pointillé DANS le cadre du
+   champ : deux bordures pour un seul contrôle, et le libellé du bouton passait
+   par-dessus le texte d'aide. Ici : un cadre, une action alignée à droite. */
+.dashboard-shell-host .discord-multi-picker {
+  width: 100% !important;
+  border: 1px solid var(--ui-line) !important;
+  background: var(--ui-surface-2) !important;
+  border-radius: var(--ui-radius-control) !important;
+  min-height: 44px !important;
+  padding: 4px 8px 4px 10px !important;
+}
+.dashboard-shell-host .discord-multi-picker .discord-multi-values { min-height: 24px !important; }
+.dashboard-shell-host .discord-multi-picker .discord-multi-empty { font-size: 12.5px !important; color: var(--ui-text-3) !important; }
+.dashboard-shell-host .discord-multi-picker { flex-direction: column !important; align-items: stretch !important; }
+.dashboard-shell-host .discord-multi-picker .dd-add-btn {
+  width: 100% !important;
+  justify-content: flex-start !important;
+  border: 1px dashed var(--ui-line) !important;
+  background: transparent !important;
+  color: var(--ui-text-2) !important;
+  font-weight: 500 !important;
+  font-size: 12.5px !important;
+  min-height: 34px !important;
+  padding: 4px 8px !important;
+  margin: 2px 0 0 !important;
+  border-radius: var(--ui-radius-control) !important;
+}
+.dashboard-shell-host .discord-multi-picker .dd-add-btn:hover { background: var(--ui-accent-soft) !important; border-color: var(--ui-accent) !important; color: var(--ui-accent) !important; }
+
+/* Le vert du composant d'origine jurait avec l'accent ; on garde le texte neutre. */
+html.hx-light .dashboard-shell-host .discord-multi-picker .dd-add-btn { color: var(--ui-text-2) !important; }
+html.hx-light .dashboard-shell-host .discord-multi-picker .dd-add-btn:hover { color: var(--ui-accent) !important; }
+
+/* ---------- 2 bis. Le fond de la zone principale ---------- */
+/* .dash-main gardait #36393f (gris Discord d'origine) : en thème sombre, les
+   cartes #121214 flottaient sur un fond plus clair qu'elles. */
+.dashboard-shell-host .dash-main { background: var(--ui-bg) !important; }
+html.hx-light .dashboard-shell-host .dash-main { background: var(--ui-bg) !important; }
+
+/* ---------- 16. Téléphone : la barre du haut et l'en-tête tiennent en deux lignes ---------- */
+@media (max-width: 700px) {
+  .dashboard-shell-host .dash-topbar {
+    display: block !important;
+    padding: 8px 10px 10px !important;
+    min-height: 0 !important;
+    margin: 0 0 10px !important;
+  }
+  .dashboard-shell-host .dash-mobile-bar {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  .dashboard-shell-host .dash-topbar-actions {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    width: 100% !important;
+    margin: 6px 0 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  /* Le compte et le bot sont dans le tiroir : garder les deux pastilles ici
+     repoussait les icônes hors de l'écran. */
+  .dashboard-shell-host .dash-topbar-actions .dash-bot-chip,
+  .dashboard-shell-host .dash-topbar-actions .dash-account-chip { display: none !important; }
+  .dashboard-shell-host .dash-topbar-actions .dash-iconbtn { width: 40px !important; height: 40px !important; flex: 0 0 40px !important; }
+
+  /* En-tête de module : pictogramme et titre sur la même ligne, pastilles
+     dessous. On gagne ~70 px de haut sur chaque écran. */
+  .dashboard-shell-host .dash-module-header {
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    align-items: center !important;
+    column-gap: 12px !important;
+    row-gap: 8px !important;
+    padding: 6px 2px 12px !important;
+    margin-bottom: 12px !important;
+  }
+  .dashboard-shell-host .module-header-lead { grid-row: 1; }
+  .dashboard-shell-host .module-header-copy { grid-column: 2; grid-row: 1; }
+  .dashboard-shell-host .module-header-meta {
+    grid-column: 1 / -1 !important;
+    justify-self: start !important;
+    flex-wrap: wrap !important;
+    row-gap: 4px !important;
+  }
+  .dashboard-shell-host .module-back-placeholder { display: none !important; }
+  .dashboard-shell-host .module-header-copy h1 { font-size: 20px !important; }
+  .dashboard-shell-host .dash-module-header .m-icon,
+  .dashboard-shell-host .dash-module-header .m-icon.has-emote { width: 36px !important; height: 36px !important; }
+  /* Le contexte « serveur sélectionné » est déjà dans le tiroir. */
+  .dashboard-shell-host .module-scope,
+  html.hx-light .dashboard-shell-host .module-scope { display: none !important; }
+}
+
+/* ---------- 17. Tablette : l'en-tête passe sur deux lignes ---------- */
+/* Entre 900 et 1 199 px, trois pastilles ne tiennent pas à droite du titre :
+   le sous-titre était tronqué sous elles. Les pastilles passent dessous. */
+@media (min-width: 900px) and (max-width: 1199px) {
+  .dashboard-shell-host .dash-module-header {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    row-gap: 8px !important;
+  }
+  .dashboard-shell-host .module-header-meta {
+    grid-column: 1 / -1 !important;
+    justify-self: stretch !important;
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+    max-width: none !important;
+  }
+  .dashboard-shell-host .module-header-copy .sub { max-width: 100% !important; }
+}
+/* La barre du haut respire : les textes des pastilles disparaissent avant
+   les icônes (avatar + état restent visibles). */
+@media (max-width: 1100px) {
+  .dashboard-shell-host .dash-bot-chip .chip-txt,
+  .dashboard-shell-host .dash-account-chip .chip-txt { display: none !important; }
+  .dashboard-shell-host .dash-bot-chip,
+  .dashboard-shell-host .dash-account-chip { padding: 4px !important; }
+}
+
+/* ---------- 18. Plancher tactile : 40 px, y compris sur les puces ---------- */
+@media (max-width: 760px), (hover: none) and (pointer: coarse) {
+  .dashboard-shell-host .ov-welcome-settings { min-height: 40px !important; }
+  .dashboard-shell-host .dash-hero.ov-onboarding .hero-step { min-height: 40px !important; padding: 8px 12px !important; }
+  .dashboard-shell-host .var-chip { min-height: 40px !important; padding: 8px 12px !important; }
+  /* Sur un portable tactile, le chevron des cartes-modules reste atteignable. */
+  .dashboard-shell-host .ov-module-go { width: 40px !important; height: 40px !important; flex: 0 0 40px !important; }
+}

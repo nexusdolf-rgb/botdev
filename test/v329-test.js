@@ -23,8 +23,8 @@ const dash = racine('public/js/dashboard.js');
 const src = racine('server/discord/reactionroles.js');
 
 console.log('— 1. Pins de version v329 —');
-check('index.html : ?v=384 ×10', (html.match(/\?v=384/g) || []).length === 10);
-check('sw.js : cache hoxera-v384', sw.includes("const CACHE = 'hoxera-v384';"));
+check('index.html : ?v=385 ×10', (html.match(/\?v=385/g) || []).length === 10);
+check('sw.js : cache hoxera-v385', sw.includes("const CACHE = 'hoxera-v385';"));
 check('index.html : plus aucune ?v=328', !html.includes('?v=328'));
 
 console.log('— 2. Champs dashboard + envoi —');

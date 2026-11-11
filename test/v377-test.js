@@ -76,8 +76,8 @@ const lire = (p) => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
   check('le compte-rendu donne le nombre de membres', /a été donné à \$\{App\.pluriel\(r\.granted/.test(dash));
 
   console.log('— 8. Version —');
-  check('index.html sert la v377', (html.match(/\?v=384/g) || []).length === 10);
-  check('le service worker est en v377', lire('public/sw.js').includes('hoxera-v384'));
+  check('index.html sert la v377', (html.match(/\?v=385/g) || []).length === 10);
+  check('le service worker est en v377', lire('public/sw.js').includes('hoxera-v385'));
 
   try { require('../server/db').db.close(); } catch {}
   try { fs.rmSync(process.env.BOTDEV_DATA_DIR, { recursive: true, force: true }); } catch {}

@@ -29,8 +29,8 @@ const racine = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 
 console.log('— 1. Pins de version v311 —');
 const html = racine('public/index.html');
-check('index.html : ?v=384 ×10', (html.match(/\?v=384/g) || []).length === 10);
-check('sw.js : cache hoxera-v384', racine('public/sw.js').includes("const CACHE = 'hoxera-v384';"));
+check('index.html : ?v=385 ×10', (html.match(/\?v=385/g) || []).length === 10);
+check('sw.js : cache hoxera-v385', racine('public/sw.js').includes("const CACHE = 'hoxera-v385';"));
 
 console.log('— 2. Panneau menu des rôles —');
 store.bots.create({ user_id: 1, name: 'B', token: 'x', client_id: 'c', prefix: '!' });

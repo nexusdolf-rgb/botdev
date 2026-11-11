@@ -166,8 +166,8 @@ console.log('2️⃣  Commandes de configuration : permission native Administrat
   assert(dashboardSource.includes('permission Discord « Administrateur »'));
   const indexSource = fs.readFileSync(path.join(__dirname, '..', 'public/index.html'), 'utf8');
   const swSource = fs.readFileSync(path.join(__dirname, '..', 'public/sw.js'), 'utf8');
-  assert.strictEqual((indexSource.match(/\?v=384/g) || []).length, 10);
-  assert(swSource.includes("const CACHE = 'hoxera-v384';"));
+  assert.strictEqual((indexSource.match(/\?v=385/g) || []).length, 10);
+  assert(swSource.includes("const CACHE = 'hoxera-v385';"));
   assert(buildSlashPayloads(1).some((p) => p.name === 'ticket' && p.default_member_permissions === '8'));
   console.log('6️⃣  Frontend versionné et permissions slash synchronisées ✅');
 

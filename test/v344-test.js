@@ -33,8 +33,8 @@ const guildEvents = require('../server/discord/guildEvents');
 const changelog = require('../server/discord/changelog');
 
 console.log('— 1. Pins v344 —');
-check('index.html : ?v=384 ×10', (html.match(/\?v=384/g) || []).length === 10);
-check('sw.js : cache hoxera-v384', sw.includes("const CACHE = 'hoxera-v384';"));
+check('index.html : ?v=385 ×10', (html.match(/\?v=385/g) || []).length === 10);
+check('sw.js : cache hoxera-v385', sw.includes("const CACHE = 'hoxera-v385';"));
 check('index.html : plus aucune ?v=343', !html.includes('?v=343'));
 check('VERSION ≥ 344', changelog.VERSION >= 344);
 check('journal v344 : au moins 1 nouveauté', Array.isArray(changelog.NOTES.new) && changelog.NOTES.new.length >= 1);

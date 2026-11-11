@@ -16,8 +16,8 @@ const sw = racine('public/sw.js');
 const dash = racine('public/js/dashboard.js');
 
 console.log('— 1. Pins de version v321 —');
-check('index.html : ?v=384 ×10', (html.match(/\?v=384/g) || []).length === 10);
-check('sw.js : cache hoxera-v384', sw.includes("const CACHE = 'hoxera-v384';"));
+check('index.html : ?v=385 ×10', (html.match(/\?v=385/g) || []).length === 10);
+check('sw.js : cache hoxera-v385', sw.includes("const CACHE = 'hoxera-v385';"));
 check('index.html : plus aucune ?v=320', !html.includes('?v=320'));
 
 console.log('— 2. Menu : 8 modules dédiés, plus de « Communauté » —');
