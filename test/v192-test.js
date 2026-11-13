@@ -15,9 +15,9 @@ const sw = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
 const dashSrc = fs.readFileSync(path.join(root, 'public/js/dashboard.js'), 'utf8');
 
 // ---------- 1. Pins de version ----------
-assert.strictEqual((index.match(/\?v=388/g) || []).length, 10,
+assert.strictEqual((index.match(/\?v=389/g) || []).length, 10,
   'index.html doit référencer v192 10 fois');
-assert(sw.includes('hoxera-v388'), 'le cache du service worker n’est pas en v192');
+assert(sw.includes('hoxera-v389'), 'le cache du service worker n’est pas en v192');
 assert(!index.includes('?v=191'), 'index.html référence encore v191');
 
 // ---------- 2. Le pseudo d'exemple codé en dur a disparu ----------

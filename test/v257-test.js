@@ -65,9 +65,9 @@ check('le visage v241 (v255/v256) est toujours là',
   && css.includes("/* --- v256 : sur OS de bureau, l'INTÉRIEUR des panneaux"));
 
 console.log('— 5. Version —');
-check('index.html : ?v=388 référencé 10 fois', (racine('public/index.html').match(/\?v=388/g) || []).length === 10,
-  String((racine('public/index.html').match(/\?v=388/g) || []).length));
-check('sw.js : cache « hoxera-v388 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v388';"));
+check('index.html : ?v=389 référencé 10 fois', (racine('public/index.html').match(/\?v=389/g) || []).length === 10,
+  String((racine('public/index.html').match(/\?v=389/g) || []).length));
+check('sw.js : cache « hoxera-v389 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v389';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v257 — ${ok} vérifications OK : la barre latérale pleine, comme en v241, à toutes les largeurs PC.`);

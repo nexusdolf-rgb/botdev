@@ -40,7 +40,10 @@ const check = (nom, cond, detail) => {
   // v385b — la légende est dessinée (image de 3 rangées), plus de petit texte.
   check('légende dessinée : aucune ligne « -# »', (txt.match(/-# /g) || []).length === 0
     && JSON.stringify(panel.components[0].toJSON()).includes('attachment://legende-vocale.png'));
-  check('description tenue en une phrase', txt.includes('Chaque réponse est **personnelle**.'));
+  // v395 — la phrase « Chaque réponse est personnelle » quitte le panneau :
+  // il ne reste que l'invitation.
+  check('description tenue en une phrase, sans préambule',
+    !txt.includes('Chaque réponse') && txt.includes('**Appuyez sur les boutons ci-dessous pour gérer votre salon.**'));
   check("pas de gros paragraphe d'intro", !txt.includes('Cette interface sert à gérer'));
 
   console.log('— 2. Grille rangée partout (mobile compris) —');
@@ -50,8 +53,8 @@ const check = (nom, cond, detail) => {
   console.log('— 3. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=388 référencé 10 fois', (index.match(/\?v=388/g) || []).length === 10);
-  check('sw.js : cache « hoxera-v388 »', sw.includes("const CACHE = 'hoxera-v388';"));
+  check('index.html : ?v=389 référencé 10 fois', (index.match(/\?v=389/g) || []).length === 10);
+  check('sw.js : cache « hoxera-v389 »', sw.includes("const CACHE = 'hoxera-v389';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v273 — ${ok} vérifications OK : panneau compact et rangé.`);

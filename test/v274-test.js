@@ -80,8 +80,8 @@ const KEYS = ['vue', 'ticket', 'bienvenue', 'niveaux', 'eco', 'boutique', 'mod',
   console.log('— 4. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=388 référencé 10 fois', (index.match(/\?v=388/g) || []).length === 10);
-  check('sw.js : cache « hoxera-v388 »', sw.includes("const CACHE = 'hoxera-v388';"));
+  check('index.html : ?v=389 référencé 10 fois', (index.match(/\?v=389/g) || []).length === 10);
+  check('sw.js : cache « hoxera-v389 »', sw.includes("const CACHE = 'hoxera-v389';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v274 — ${ok} vérifications OK : nos émojis Hoxera partout.`);

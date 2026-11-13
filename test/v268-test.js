@@ -66,8 +66,10 @@ const mkChannel = (id, name) => {
       .every((c) => c.type === 2 && !c.emoji && typeof c.label === 'string')
     && [rows[1].components[1], rows[1].components[2], rows[1].components[3], rows[2].components[0]]
       .map((c) => c.label).join('|') === 'AJOUTER|RETIRER|EXPULSER|TRANSFÉRER');
-  // v311 — la signature du pied est retirée du panneau (1 texte de moins).
-  check('3 rubriques d\'aide (accès, membres, salon)', v2.texts(panel).length >= 3);
+  // v311 — la signature du pied est retirée du panneau.
+  // v395 — le préambule « Chaque réponse est personnelle » s'en va aussi :
+  // il reste deux blocs de texte, le titre et l'invitation.
+  check('titre + invitation : deux blocs de texte', v2.texts(panel).length === 2);
 
   console.log('— 2. NOS émojis : pack, installation, utilisation —');
   const assets = fs.readdirSync(path.join(__dirname, '..', 'server', 'assets', 'voicetemp'));
@@ -148,8 +150,8 @@ const mkChannel = (id, name) => {
   console.log('— 6. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=388 référencé 10 fois', (index.match(/\?v=388/g) || []).length === 10);
-  check('sw.js : cache « hoxera-v388 »', sw.includes("const CACHE = 'hoxera-v388';"));
+  check('index.html : ?v=389 référencé 10 fois', (index.match(/\?v=389/g) || []).length === 10);
+  check('sw.js : cache « hoxera-v389 »', sw.includes("const CACHE = 'hoxera-v389';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v268 — ${ok} vérifications OK : notre interface pro, avec nos émojis.`);

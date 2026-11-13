@@ -2046,9 +2046,11 @@ function buildVtPanel(botId, guild, options = {}) {
     // v384 (demande du fondateur) — le panneau ne se présente plus :
     // « Gérez votre salon vocal » en tête, et la consigne parle du salon.
     title: 'Gérez votre salon vocal',
+    // v395 (demande du fondateur, 13/11) — la phrase « Chaque réponse est
+    // personnelle » quitte le panneau : il ne reste que l'invitation.
     description: legendeRef
-      ? 'Chaque réponse est **personnelle**.\n\n**Appuyez sur les boutons ci-dessous pour gérer votre salon.**'
-      : `Chaque réponse est **personnelle**.\n${legende}\n\n**Appuyez sur les boutons ci-dessous pour gérer votre salon.**`,
+      ? '**Appuyez sur les boutons ci-dessous pour gérer votre salon.**'
+      : `${legende}\n\n**Appuyez sur les boutons ci-dessous pour gérer votre salon.**`,
     // la légende dessinée : MediaGallery juste au-dessus des boutons.
     // v392 — description = texte alternatif. Les dix boutons n'ont pas de
     // libellé (style TempVoice) : c'est ce texte qui les nomme pour un
@@ -2074,7 +2076,7 @@ function buildVtPanel(botId, guild, options = {}) {
       return ui.v2panel({
         ...panneauOptions,
         image: undefined,
-        description: `Chaque réponse est **personnelle**.\n${legende}\n\n**Appuyez sur les boutons ci-dessous pour gérer votre salon.**`,
+        description: `${legende}\n\n**Appuyez sur les boutons ci-dessous pour gérer votre salon.**`,
       }, rangees);
     }
   }

@@ -60,9 +60,9 @@ check('…la barre d' + 'actions reste masquée sur coquille mobile (règle d' +
   css.includes('.dashboard-shell-host .dash-topbar-actions,\n  .dashboard-shell-host .dash-topbar .topbar-pick { display: none !important; }'));
 
 console.log('— 4. Version —');
-check('index.html : ?v=388 référencé 10 fois', (index.match(/\?v=388/g) || []).length === 10,
-  String((index.match(/\?v=388/g) || []).length));
-check('sw.js : cache « hoxera-v388 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v388';"));
+check('index.html : ?v=389 référencé 10 fois', (index.match(/\?v=389/g) || []).length === 10,
+  String((index.match(/\?v=389/g) || []).length));
+check('sw.js : cache « hoxera-v389 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v389';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v258 — ${ok} vérifications OK : thème, couleur et compte connecté retrouvent leur place en haut du dashboard PC.`);
