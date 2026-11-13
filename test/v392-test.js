@@ -67,8 +67,13 @@ check('buildVtPanel : option sansLegende',
   EXTRA.includes("!options.sansLegende && fs.existsSync(legendeFichier)"));
 check('seconde tentative : unicode ET sans image',
   EXTRA.includes('buildVtPanel(botId, guild, { sansEmoji: true, sansLegende: true })'));
+// v393 — la seconde tentative passe désormais par une étape intermédiaire :
+// sans l'image, mais AVEC les émojis dessinés. L'unicode n'est plus que le
+// dernier recours, et il est écarté d'emblée si on y était déjà.
+check('seconde tentative : sans image, mais émojis dessinés conservés',
+  EXTRA.includes('buildVtPanel(botId, guild, { sansEmoji, sansLegende: true })'));
 check('le garde-fou ne réessaie pas inutilement une image absente',
-  EXTRA.includes('if (sansEmoji && !legendePresente()) throw e;'));
+  EXTRA.includes('if (legendePresente()) {') && EXTRA.includes('else if (sansEmoji) throw e;'));
 
 // — 2c. Envoi avant suppression ————————————————————————————————————————————————
 const iSend = EXTRA.indexOf('msg = await channel.send(buildVtPanel(botId, guild, { sansEmoji }));');

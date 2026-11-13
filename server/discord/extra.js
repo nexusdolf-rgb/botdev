@@ -2114,11 +2114,19 @@ async function sendVtPanel(botId, guild, channelId) {
   try {
     msg = await channel.send(buildVtPanel(botId, guild, { sansEmoji }));
   } catch (e) {
-    // Deuxième chance : émoji refusé OU pièce jointe refusée. On repart alors
-    // en unicode SANS image, avec la légende en texte — sinon la seconde
-    // tentative échouerait pour la même raison que la première.
-    if (sansEmoji && !legendePresente()) throw e;
-    msg = await channel.send(buildVtPanel(botId, guild, { sansEmoji: true, sansLegende: true }));
+    // v393 — la pièce jointe et les émojis sont deux choses distinctes. Avant,
+    // un refus de l'image faisait repartir le panneau en unicode : les dix
+    // boutons perdaient nos dessins alors que seul le fichier posait problème.
+    // On réessaie donc d'abord SANS L'IMAGE en gardant les émojis dessinés
+    // (la légende passe en texte), et l'unicode n'est plus que le dernier
+    // recours — quand il n'y a vraiment rien d'autre à tenter.
+    let msg2 = null;
+    if (legendePresente()) {
+      try { msg2 = await channel.send(buildVtPanel(botId, guild, { sansEmoji, sansLegende: true })); } catch {}
+    }
+    if (msg2) msg = msg2;
+    else if (sansEmoji) throw e; // déjà en unicode : réessayer à l'identique ne sert à rien
+    else msg = await channel.send(buildVtPanel(botId, guild, { sansEmoji: true, sansLegende: true }));
   }
   store.voicetemp.set(botId, guild.id, { ...cfg, panel_message: msg.id });
   if (ancien && String(ancien.id) !== String(msg.id)) {
