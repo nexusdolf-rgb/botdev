@@ -885,7 +885,9 @@ async function handleSlash(botId, entry, interaction) {
       }
       if (action === 'emotes') {
         try {
-          const created = await installVtEmotes(botId, guild);
+          // v394 — les émojis vivent sur l'APPLICATION, pas dans le serveur :
+          // plus rien n'est créé chez le client.
+          const created = await installVtEmotesApp(interaction.client);
           let note = '';
           if (created.length) {
             const cfg = store.voicetemp.get(botId, guild.id);
@@ -893,9 +895,9 @@ async function handleSlash(botId, entry, interaction) {
               try { await sendVtPanel(botId, guild, cfg.panel_channel); note = "\n🎙️ Le **panneau de contrôle** a été mis à jour avec les nouveaux émojis."; } catch {}
             }
           }
-          return interaction.reply({ content: created.length ? `🎨 **${created.length} émojis Hoxera installés** : le panneau de contrôle vocal les affichera automatiquement.${note}` : '🎨 Les émojis Hoxera sont déjà installés sur ce serveur.', ephemeral: true });
+          return interaction.reply({ content: created.length ? `🎨 **${created.length} émojis Hoxera installés** sur l'application (aucun ajout dans votre serveur) : le panneau les affiche automatiquement.${note}` : '🎨 Les émojis Hoxera sont déjà installés sur l\'application.', ephemeral: true });
         } catch (e) {
-          return interaction.reply({ content: `⚠️ Installation impossible : ${String(e.message || e).slice(0, 160)}\nLe bot a besoin de la permission « Gérer les expressions ».`, ephemeral: true });
+          return interaction.reply({ content: `⚠️ Installation impossible : ${String(e.message || e).slice(0, 160)}\nLes émojis appartiennent à l'application : le bot doit être en ligne.`, ephemeral: true });
         }
       }
       if (action === 'view') {
@@ -1773,41 +1775,37 @@ function _emojiDuServeur(guild, key) {
 // émojis d'application : il écrit le code brut « <:hox_nom:123…> ». La légende
 // garde donc un émoji de SERVEUR quand il y en a un de valide, et retombe sur
 // l'émoji du clavier sinon — jamais sur un identifiant d'application.
-function vtEmojiTexte(guild, key) {
+// v394 — ÉMOJIS DU PANNEAU.
+// Le panneau ne doit JAMAIS afficher un émoji du clavier (✏️ 👥 🔒…), et ses
+// émojis ne doivent jamais être enregistrés dans le serveur du client.
+// Cette fonction ne rend donc que des identifiants : pack de l'APPLICATION
+// (les dix dessins Hoxera, propriété du bot, valables partout), puis pack
+// d'accueil. Aucune autre source — et surtout pas VT_EMOTE_FALLBACK.
+// Elle rend null quand il n'y a rien : l'appelant met alors un LIBELLÉ TEXTE.
+function vtEmojiPanneau(key) {
   const ver = vtVer();
-  if (store.settings.get(`vt_emotes_ver:${guild && guild.id}`) === ver) {
-    const id = _emojiDuServeur(guild, key);
-    if (id) return id;
-  }
-  const local = _emojiDuServeur(guild, key);
-  if (local) return local;
-  return VT_EMOTE_FALLBACK[key];
-}
-
-function vtEmoji(guild, key) {
-  const ver = vtVer();
-  // 1. les émojis de l'APPLICATION : ils marchent dans tous les serveurs,
-  //    quelle que soit la configuration de celui-ci. C'est la source voulue.
   if (store.settings.get(VT_APP_VER) === ver) {
     const appId = vtAppPack()[key];
     if (appId) return String(appId);
   }
-  // 2. le pack de CE serveur, s'il est à l'image des dessins actuels
-  if (store.settings.get(`vt_emotes_ver:${guild && guild.id}`) === ver) {
-    const id = _emojiDuServeur(guild, key);
-    if (id) return id;
-  }
-  // 3. un pack d'application ou de serveur plus ancien : anciens dessins, mais
-  //    toujours nos dessins blancs — mieux qu'un émoji de couleur unicode.
   const appAncien = vtAppPack()[key];
   if (appAncien) return String(appAncien);
-  const local = _emojiDuServeur(guild, key);
-  if (local) return local;
   const gid = vtGlobalPack()[key];
   if (gid) return String(gid);
-  // 4. dernier recours
-  return VT_EMOTE_FALLBACK[key];
+  return null;
 }
+
+// v394 — CONSERVÉE POUR COMPATIBILITÉ, neutralisée : elle rendait un émoji du
+// clavier quand le pack manquait. Plus personne ne l'appelle ; elle rend null,
+// jamais un émoji unicode, pour qu'un appel oublié ne réintroduise pas le défaut.
+function vtEmojiTexte(guild, key) {
+  return null;
+}
+
+function vtEmoji(guild, key) {
+  return vtEmojiPanneau(key);
+}
+
 async function installVtEmotes(botId, guild, options = {}) {
   const fs = require('fs'); const path = require('path');
   const crypto = require('crypto');
@@ -1854,7 +1852,7 @@ async function installVtEmotes(botId, guild, options = {}) {
 // pack d'accueil n'existe, on prend le serveur courant. Un échec (permission
 // « Gérer les émojis », quota de 50 atteint…) ne bloque JAMAIS le panneau :
 // il part alors avec des émojis unicode, jamais avec un panneau cassé.
-async function ensureVtEmotes(botId, guild) {
+async function ensureVtEmotes(botId) {
   const ver = vtVer();
   let client = null;
   try {
@@ -1873,24 +1871,10 @@ async function ensureVtEmotes(botId, guild) {
     }
   }
 
-  // 2) Le pack LOCAL : Discord n'affiche pas les émojis d'application dans un
-  //    bloc de texte, donc la ligne de légende a besoin d'émojis de serveur.
-  //    On le répare seulement s'il manque ou s'il est à l'ancien dessin.
-  if (!guild || !guild.emojis) return null;
-  const local = vtEmotesOf(guild);
-  const localOk = VT_EMOTES.every((k) => !!local[k] && _emojiDuServeur(guild, k))
-    && store.settings.get(`vt_emotes_ver:${guild.id}`) === ver;
-  if (localOk) return null;
-  // Créer un émoji demande « Gérer les expressions ». Sans cette permission on
-  // ne tente rien : le panneau part quand même, la légende passe au clavier.
-  try {
-    const moi = guild.members && guild.members.me;
-    if (moi && moi.permissions && typeof moi.permissions.has === 'function'
-      && !moi.permissions.has('ManageGuildExpressions')
-      && !moi.permissions.has('ManageEmojisAndStickers')
-      && !moi.permissions.has('Administrator')) return null;
-  } catch {}
-  try { return await installVtEmotes(botId, guild); } catch (e) { return null; }
+  // v394 — plus AUCUNE installation dans le serveur du client : le pack local
+  // créait dix émojis chez lui, ce que le fondateur ne veut pas. Les émojis du
+  // panneau sont ceux de l'application ; la légende est une image jointe.
+  return null;
 }
 
 // 🛡️ v300 — Balayeur des vocaux temporaires (appelé toutes les 30 s par
@@ -1991,14 +1975,18 @@ function legendePresente() {
 function buildVtPanel(botId, guild, options = {}) {
   const { ActionRowBuilder, ButtonBuilder, ButtonStyle, UserSelectMenuBuilder } = require('discord.js');
   const id = (act) => `vt:${botId}:${act}`;
-  // v384 — `sansEmoji` ne sert qu'au rattrapage : si Discord refuse un
-  // identifiant d'émoji (pack d'accueil supprimé), le panneau repart en unicode
-  // plutôt que d'échouer.
-  const emo = (key) => (options.sansEmoji ? VT_EMOTE_FALLBACK[key] : vtEmoji(guild, key));
-  const emoTexte = (key) => (options.sansEmoji ? VT_EMOTE_FALLBACK[key] : vtEmojiTexte(guild, key));
-  const tag = (key, label) => {
-    const e = emoTexte(key);
-    return /^\d+$/.test(String(e)) ? `<:hox_${key}:${e}> ${label}` : `${e} ${label}`;
+  // v394 — plus de repli unicode : `sansEmoji` ne veut plus dire « émojis du
+  // clavier » mais « pas d'émoji du tout », et les boutons portent alors leur
+  // libellé. Un émoji absent ne doit jamais dégrader le panneau en ✏️ 👥 🔒.
+  const emo = (key) => (options.sansEmoji ? null : vtEmojiPanneau(key));
+  // Bouton : notre dessin s'il existe, sinon le mot — jamais l'émoji du clavier.
+  const bouton = (act, key, label) => {
+    const b = new ButtonBuilder().setCustomId(id(act)).setStyle(ButtonStyle.Secondary);
+    const e = emo(key);
+    // discord.js n'accepte un émoji personnalisé que sous la forme { id } :
+    // une chaîne d'identifiant serait lue comme un émoji unicode nommé « 2001 ».
+    if (e) b.setEmoji({ id: String(e) }); else b.setLabel(label);
+    return b;
   };
   // v273 — légende en PETIT TEXTE (« -# ») : chez TempVoice la légende est
   // minuscule ; c'est elle (et le titre « ## ») qui agrandissait notre panneau.
@@ -2014,18 +2002,20 @@ function buildVtPanel(botId, guild, options = {}) {
   // refusait la pièce jointe, la seconde tentative réexpédiait la même image
   // et le panneau ne partait jamais.
   const legendeRef = !options.sansLegende && fs.existsSync(legendeFichier) ? 'attachment://legende-vocale.png' : '';
+  // v394 — légende de secours : uniquement des mots. La légende normale est
+  // l'image jointe au message ; celle-ci ne sert que si Discord la refuse.
   const legende = legendeRef ? '' : [
-    [tag('nom', 'NOM'), tag('limite', 'LIMITE'), tag('prive', 'PRIVÉ'), tag('public', 'PUBLIC')].join('   '),
-    [tag('recup', 'RÉCUPÉRER'), tag('ajouter', 'AJOUTER'), tag('retirer', 'RETIRER'), tag('expulser', 'EXPULSER')].join('   '),
-    [tag('transfer', 'TRANSFÉRER'), tag('suppr', 'SUPPRIMER')].join('   '),
+    ['NOM', 'LIMITE', 'PRIVÉ', 'PUBLIC'].join('   '),
+    ['RÉCUPÉRER', 'AJOUTER', 'RETIRER', 'EXPULSER'].join('   '),
+    ['TRANSFÉRER', 'SUPPRIMER'].join('   '),
   ].map((l) => `-# ${l}`).join('\n');
   // Rangée 1 : les 5 boutons du salon, carrés, émojis seuls (style TempVoice).
   const row1 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(id('rename')).setEmoji(emo('nom')).setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(id('limit')).setEmoji(emo('limite')).setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(id('lock')).setEmoji(emo('prive')).setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(id('unlock')).setEmoji(emo('public')).setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(id('claim')).setEmoji(emo('recup')).setStyle(ButtonStyle.Secondary),
+    bouton('rename', 'nom', 'NOM'),
+    bouton('limit', 'limite', 'LIMITE'),
+    bouton('lock', 'prive', 'PRIVÉ'),
+    bouton('unlock', 'public', 'PUBLIC'),
+    bouton('claim', 'recup', 'RÉCUPÉRER'),
   );
   // v272 — AJOUTER / RETIRER / EXPULSER / TRANSFÉRER sont des BOUTONS-ÉMOJIS
   // (comme TempVoice) : un appui ouvre un petit panneau PERSONNEL avec le
@@ -2036,17 +2026,17 @@ function buildVtPanel(botId, guild, options = {}) {
   const row1b = new ActionRowBuilder().addComponents(row1.components.slice(0, 4));
   const row2 = new ActionRowBuilder().addComponents(
     row1.components[4],
-    new ButtonBuilder().setCustomId(id('add')).setEmoji(emo('ajouter')).setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(id('rem')).setEmoji(emo('retirer')).setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(id('kick')).setEmoji(emo('expulser')).setStyle(ButtonStyle.Secondary),
+    bouton('add', 'ajouter', 'AJOUTER'),
+    bouton('rem', 'retirer', 'RETIRER'),
+    bouton('kick', 'expulser', 'EXPULSER'),
   );
   // v384 (demande du fondateur) — le bouton supprimer était le seul en rouge
   // Discord (style Danger, #DA373C) : sur le panneau, ce rouge se lit orange et
   // jure avec les 9 autres. Il passe en gris comme eux ; la corbeille reste
   // reconnaissable et la confirmation, elle, protège toujours la suppression.
   const row3 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(id('transfer')).setEmoji(emo('transfer')).setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(id('del')).setEmoji(emo('suppr')).setStyle(ButtonStyle.Secondary),
+    bouton('transfer', 'transfer', 'TRANSFÉRER'),
+    bouton('del', 'suppr', 'SUPPRIMER'),
   );
   const panneauOptions = {
     // v311 (demande du fondateur) — ni ligne colorée ni signature sur le
@@ -2108,25 +2098,18 @@ async function sendVtPanel(botId, guild, channelId) {
   // v384 — les émojis avant le panneau : installation automatique si le
   // serveur n'a rien et qu'aucun pack d'accueil n'existe. Un échec ici ne doit
   // pas empêcher l'envoi (permissions, quota).
-  let sansEmoji = false;
-  try { await ensureVtEmotes(botId, guild); } catch { sansEmoji = true; }
+  // v394 — les émojis viennent de l'APPLICATION : on n'installe plus rien dans
+  // le serveur du client. Si le pack n'a pas pu être créé, les boutons portent
+  // leur libellé — jamais l'émoji du clavier.
+  try { await ensureVtEmotes(botId); } catch {}
   let msg;
   try {
-    msg = await channel.send(buildVtPanel(botId, guild, { sansEmoji }));
+    msg = await channel.send(buildVtPanel(botId, guild));
   } catch (e) {
-    // v393 — la pièce jointe et les émojis sont deux choses distinctes. Avant,
-    // un refus de l'image faisait repartir le panneau en unicode : les dix
-    // boutons perdaient nos dessins alors que seul le fichier posait problème.
-    // On réessaie donc d'abord SANS L'IMAGE en gardant les émojis dessinés
-    // (la légende passe en texte), et l'unicode n'est plus que le dernier
-    // recours — quand il n'y a vraiment rien d'autre à tenter.
-    let msg2 = null;
-    if (legendePresente()) {
-      try { msg2 = await channel.send(buildVtPanel(botId, guild, { sansEmoji, sansLegende: true })); } catch {}
-    }
-    if (msg2) msg = msg2;
-    else if (sansEmoji) throw e; // déjà en unicode : réessayer à l'identique ne sert à rien
-    else msg = await channel.send(buildVtPanel(botId, guild, { sansEmoji: true, sansLegende: true }));
+    // Seule l'image peut poser problème à ce stade : on la retire, on garde les
+    // émojis dessinés, et la légende repasse en mots. Aucun émoji unicode.
+    if (!legendePresente()) throw e;
+    msg = await channel.send(buildVtPanel(botId, guild, { sansLegende: true }));
   }
   store.voicetemp.set(botId, guild.id, { ...cfg, panel_message: msg.id });
   if (ancien && String(ancien.id) !== String(msg.id)) {

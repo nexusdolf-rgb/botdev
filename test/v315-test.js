@@ -17,8 +17,8 @@ const sw = racine('public/sw.js');
 const pub = racine('public/js/public.js');
 const css = racine('public/css/style.css');
 console.log('— 1. Pins de version v315 —');
-check('index.html : ?v=387 ×10', (html.match(/\?v=387/g) || []).length === 10);
-check('sw.js : cache hoxera-v387', sw.includes("const CACHE = 'hoxera-v387';"));
+check('index.html : ?v=388 ×10', (html.match(/\?v=388/g) || []).length === 10);
+check('sw.js : cache hoxera-v388', sw.includes("const CACHE = 'hoxera-v388';"));
 check('index.html : plus aucune ?v=314', !html.includes('?v=314'));
 
 console.log('— 2. Photo d’Optimus à la place de l’emoji —');

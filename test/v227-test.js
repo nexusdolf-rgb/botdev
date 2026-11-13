@@ -73,8 +73,8 @@ const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
   // Versionnage front cohérent
   const indexHtml = read('public/index.html');
   const swSource = read('public/sw.js');
-  check('index.html : 10 références ?v=387', (indexHtml.match(/\?v=387/g) || []).length === 10);
-  check('sw.js : cache v373', swSource.includes("const CACHE = 'hoxera-v387';"));
+  check('index.html : 10 références ?v=388', (indexHtml.match(/\?v=388/g) || []).length === 10);
+  check('sw.js : cache v373', swSource.includes("const CACHE = 'hoxera-v388';"));
 
   console.log(failures === 0 ? '\n✅ V227 — plus d’identité locale, bot global intact. 🎉' : `\n❌ ${failures} vérification(s) en échec`);
   process.exit(failures === 0 ? 0 : 1);

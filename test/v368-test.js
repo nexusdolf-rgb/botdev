@@ -171,12 +171,12 @@ check('aucune route touchant un serveur n\'est ajoutée sans garde d\'accès',
 
 console.log('— 7. Version —');
 const index = lus['public/index.html'];
-check(`index.html : ?v=${VERSION} référencé 10 fois`, (index.match(/\?v=387/g) || []).length === 10,
-  String((index.match(/\?v=387/g) || []).length));
+check(`index.html : ?v=${VERSION} référencé 10 fois`, (index.match(/\?v=388/g) || []).length === 10,
+  String((index.match(/\?v=388/g) || []).length));
 const sw = fs.readFileSync(path.join(RACINE, 'public/sw.js'), 'utf8');
-check('le service worker porte la même version de cache', sw.includes("const CACHE = 'hoxera-v387';"));
+check('le service worker porte la même version de cache', sw.includes("const CACHE = 'hoxera-v388';"));
 check('aucun fichier de public/js ne cite une version périmée',
-  !/\?v=3[0-9][0-9]/.test(gabarits.replace(/\?v=387/g, '')), (gabarits.match(/\?v=3\d\d/g) || []).join(' '));
+  !/\?v=3[0-9][0-9]/.test(gabarits.replace(/\?v=388/g, '')), (gabarits.match(/\?v=3\d\d/g) || []).join(' '));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v368 — ${ok} vérifications OK : icônes remplies, sortie nommée, marque unique, texte sans cadratin, liens réels.`);

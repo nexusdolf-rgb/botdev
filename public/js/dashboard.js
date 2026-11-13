@@ -7304,7 +7304,7 @@ Dashboard.renderers.voicetemp = async (content, data) => {
       ${vtTextChannels.map((ch) => `<option value="${ch.id}" ${String(vt.panel_channel || '') === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('')}
     </select>
     <div style="font-size:12px;color:var(--d-dim);margin-top:8px">Dans ce salon, un panneau permet à chaque propriétaire d'un vocal temporaire de gérer SON salon : ${App.glyphe('cadenas', { taille: 13 })} privé / ${App.glyphe('cadenasOuvert', { taille: 13 })} public, ${App.glyphe('plus', { taille: 13 })}${App.glyphe('moins', { taille: 13 })} invités, ${App.glyphe('crayon', { taille: 13 })} renommer, ${App.glyphe('corbeille', { taille: 13 })} supprimer. Chaque réponse ne se voit que chez lui. Les émojis du panneau arrivent automatiquement : rien à installer.</div>
-    <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap"><button class="dash-save-action dash-btn dash-btn-primary" id="vt-save">Enregistrer</button><button class="dash-btn" id="vt-panel-send">Envoyer / mettre à jour le panneau</button><button class="dash-btn" id="vt-emotes" title="Optionnel : le panneau porte déjà les émojis Hoxera. Ce bouton réinstalle le pack sur ce serveur.">Émojis Hoxera (optionnel)</button></div>`;
+    <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap"><button class="dash-save-action dash-btn dash-btn-primary" id="vt-save">Enregistrer</button><button class="dash-btn" id="vt-panel-send">Envoyer / mettre à jour le panneau</button><button class="dash-btn" id="vt-emotes" title="Les émojis du panneau appartiennent à l'application Hoxera : ce bouton les réinstalle côté application, jamais dans votre serveur.">Émojis du panneau</button></div>`;
   c4.querySelector('#vt-save').onclick = async (e) => {
     const bouton = e.currentTarget;
     try {
@@ -7321,7 +7321,7 @@ Dashboard.renderers.voicetemp = async (content, data) => {
   c4.querySelector('#vt-emotes').onclick = async () => {
     try {
       const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/voicetemp/emotes`, { method: 'POST', body: {} });
-      App.toast(r.created && r.created.length ? `${r.created.length} émojis Hoxera installés !` : 'Émojis déjà installés.');
+      App.toast(r.created && r.created.length ? `${r.created.length} émojis installés sur l'application (aucun ajout dans votre serveur).` : 'Émojis déjà installés.');
     } catch (e) { App.toast(e.message, 'error'); }
   };
   c4.querySelector('#vt-panel-send').onclick = async (e) => {

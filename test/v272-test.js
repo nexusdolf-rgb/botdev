@@ -47,9 +47,10 @@ const check = (nom, cond, detail) => {
   console.log('— 2. Boutons carrés, émojis seuls —');
   const rows = v2.rows(extra.buildVtPanel(botId, null));
   const btn = rows.flatMap((r) => r.components || []).filter((c) => c.type === 2);
-  check('10 boutons sans aucun libellé', btn.length === 10 && btn.every((b) => !b.label && b.emoji));
-  check("…nos émojis de repli dans l'ordre", btn.map((b) => b.emoji.name).join('') === "✏️👥🔒🔓🔑➕➖👢🤝🗑️");
-  check('suppression : bouton sans libellé, même gris que les autres', !rows[2].components[1].label && rows[2].components[1].style === 2 && rows[2].components[1].emoji.name === '🗑️');
+  // v394 — plus de repli unicode : sans pack, les boutons portent leur libellé.
+  check('10 boutons, aucun émoji du clavier', btn.length === 10 && btn.every((b) => !b.emoji));
+  check('…libellés dans l’ordre', btn.map((b) => b.label).join('|') === 'NOM|LIMITE|PRIVÉ|PUBLIC|RÉCUPÉRER|AJOUTER|RETIRER|EXPULSER|TRANSFÉRER|SUPPRIMER');
+  check('suppression : libellé en clair, même gris que les autres', rows[2].components[1].label === 'SUPPRIMER' && rows[2].components[1].style === 2);
   check('légende en une seule image, aucun émoji du clavier', (txt.match(/-# /g) || []).length === 0 && json.includes('attachment://legende-vocale.png'));
   check('grille rangée 4/4/2 (mobile propre)', rows.length === 3 && rows[0].components.length === 4 && rows[1].components.length === 4 && rows[2].components.length === 2);
 
@@ -72,8 +73,8 @@ const check = (nom, cond, detail) => {
   console.log('— 4. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=387 référencé 10 fois', (index.match(/\?v=387/g) || []).length === 10);
-  check('sw.js : cache « hoxera-v387 »', sw.includes("const CACHE = 'hoxera-v387';"));
+  check('index.html : ?v=388 référencé 10 fois', (index.match(/\?v=388/g) || []).length === 10);
+  check('sw.js : cache « hoxera-v388 »', sw.includes("const CACHE = 'hoxera-v388';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v272 — ${ok} vérifications OK : présentation TempVoice, émojis Hoxera.`);

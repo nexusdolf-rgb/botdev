@@ -107,16 +107,18 @@ async function essayer(refuse) {
   check('A. deux envois : avec image, puis sans image', r.envois.length === 2, `${r.envois.length} envoi(s)`);
   check('A. la seconde tentative a bien retiré la pièce jointe', r.envois[1] && r.envois[1].fichiers === 0);
 
-  // B. image ET émojis refusés : l'unicode est légitime
+  // B. image ET émojis refusés — v394 : plus AUCUN repli unicode. Le panneau
+  //    ne part pas plutôt que de partir avec des émojis du clavier.
   r = await essayer((p, fichiers, emojis) => fichiers > 0 || emojis.some((x) => /^\d+$/.test(x)));
-  check('B. image et émojis refusés → repli unicode, panneau envoyé',
-    r.clavier === 10 && !r.erreur, `clavier=${r.clavier} erreur=${r.erreur && r.erreur.message}`);
+  check('B. image et émojis refusés → aucun émoji unicode (échec explicite)',
+    r.clavier === 0 && !!r.erreur, `clavier=${r.clavier} erreur=${r.erreur && r.erreur.message}`);
 
-  // C. aucun pack : unicode d'emblée, et le panneau part
+  // C. aucun pack — v394 : les boutons portent leur libellé, jamais d'unicode.
   packInstalle(false);
   r = await essayer(() => false);
-  check('C. sans pack → unicode d’emblée, un seul envoi', r.clavier === 10 && r.envois.length === 1,
-    `clavier=${r.clavier} envois=${r.envois.length}`);
+  check('C. sans pack → libellés, un seul envoi, zéro émoji',
+    r.clavier === 0 && r.dessines === 0 && r.envois.length === 1,
+    `clavier=${r.clavier} dessinés=${r.dessines} envois=${r.envois.length}`);
 
   // D. envoi normal : un seul essai, avec l'image
   packInstalle(true);

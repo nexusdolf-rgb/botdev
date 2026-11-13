@@ -51,15 +51,21 @@ const mkChannel = (id, name) => {
   const rows = v2.rows(panel);
   const btn = rows.flatMap((r) => r.components || []).filter((c) => c.type === 2);
   check("10 boutons carrés dans l'ordre", btn.map((b) => b.custom_id.split(':').pop()).join('|') === 'rename|limit|lock|unlock|claim|add|rem|kick|transfer|del');
-  check('…émojis seuls, SANS libellé (style TempVoice)', btn.every((b) => !b.label) && btn[0].emoji.name === '✏️' && btn[1].emoji.name === '👥' && btn[4].emoji.name === '🔑');
-  check('rangée 3 finit par supprimer, émoji seul', !rows[2].components[1].label && rows[2].components[1].style === 2);
+  // v394 — sans pack d'émojis, les boutons portent leur LIBELLÉ : plus jamais
+  // d'émoji du clavier (✏️ 👥 🔒…), c'était le défaut signalé par le fondateur.
+  check('…sans pack : aucun émoji unicode, libellés en clair', btn.every((b) => !b.emoji) && btn[0].label === 'NOM' && btn[1].label === 'LIMITE' && btn[4].label === 'RÉCUPÉRER');
+  check('rangée 3 finit par supprimer, libellé en clair', rows[2].components[1].label === 'SUPPRIMER' && rows[2].components[1].style === 2);
   // v385b — légende dessinée : image + nos 10 PNG, plus aucun émoji du clavier.
   check('légende dessinée livrée avec le message',
     JSON.stringify(panel.components[0].toJSON()).includes('attachment://legende-vocale.png')
     && (panel.files || []).some((f) => f.name === 'legende-vocale.png')
     && v2.texts(panel).join(' ').includes('Appuyez sur les boutons'));
-  check('boutons membre en émojis seuls (ajouter/retirer/expulser/transférer)',
-    [rows[1].components[1], rows[1].components[2], rows[1].components[3], rows[2].components[0]].every((c) => c.type === 2 && !c.label && c.emoji));
+  // v394 — sans pack : libellés (AJOUTER, RETIRER, EXPULSER, TRANSFÉRER), jamais d'unicode.
+  check('boutons membre : libellés en clair, aucun émoji unicode',
+    [rows[1].components[1], rows[1].components[2], rows[1].components[3], rows[2].components[0]]
+      .every((c) => c.type === 2 && !c.emoji && typeof c.label === 'string')
+    && [rows[1].components[1], rows[1].components[2], rows[1].components[3], rows[2].components[0]]
+      .map((c) => c.label).join('|') === 'AJOUTER|RETIRER|EXPULSER|TRANSFÉRER');
   // v311 — la signature du pied est retirée du panneau (1 texte de moins).
   check('3 rubriques d\'aide (accès, membres, salon)', v2.texts(panel).length >= 3);
 
@@ -142,8 +148,8 @@ const mkChannel = (id, name) => {
   console.log('— 6. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=387 référencé 10 fois', (index.match(/\?v=387/g) || []).length === 10);
-  check('sw.js : cache « hoxera-v387 »', sw.includes("const CACHE = 'hoxera-v387';"));
+  check('index.html : ?v=388 référencé 10 fois', (index.match(/\?v=388/g) || []).length === 10);
+  check('sw.js : cache « hoxera-v388 »', sw.includes("const CACHE = 'hoxera-v388';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v268 — ${ok} vérifications OK : notre interface pro, avec nos émojis.`);

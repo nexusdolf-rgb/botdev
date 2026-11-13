@@ -27,8 +27,8 @@ const ver = require('../server/discord/verification');
 const changelog = require('../server/discord/changelog');
 
 console.log('— 1. Pins v342 —');
-check('index.html : ?v=387 ×10', (html.match(/\?v=387/g) || []).length === 10);
-check('sw.js : cache hoxera-v387', sw.includes("const CACHE = 'hoxera-v387';"));
+check('index.html : ?v=388 ×10', (html.match(/\?v=388/g) || []).length === 10);
+check('sw.js : cache hoxera-v388', sw.includes("const CACHE = 'hoxera-v388';"));
 check('index.html : plus aucune ?v=341', !html.includes('?v=341'));
 check('VERSION ≥ 342', changelog.VERSION >= 342);
 

@@ -25,8 +25,8 @@ const routes = racine('server/routes.js');
 const i18n = racine('server/i18n.js');
 
 console.log('— 1. Pins de version v320 —');
-check('index.html : ?v=387 ×10', (html.match(/\?v=387/g) || []).length === 10);
-check('sw.js : cache hoxera-v387', sw.includes("const CACHE = 'hoxera-v387';"));
+check('index.html : ?v=388 ×10', (html.match(/\?v=388/g) || []).length === 10);
+check('sw.js : cache hoxera-v388', sw.includes("const CACHE = 'hoxera-v388';"));
 check('index.html : plus aucune ?v=319', !html.includes('?v=319'));
 
 console.log('— 2. Dashboard : texte du panneau + aperçu —');

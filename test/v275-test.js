@@ -189,11 +189,12 @@ function check(label, cond, extraInfo) {
   check('vieux pack local périmé : c’est le pack d’accueil qui est affiché',
     boutonsVieux.every((b) => idsAccueil.includes(String(b.emoji.id))));
 
-  // Rattrapage : si Discord refuse un identifiant, le panneau part en unicode.
+  // v394 — plus de rattrapage unicode : si les émojis manquent, les boutons
+  // portent leur libellé. Un émoji du clavier ne doit jamais réapparaître.
   const secours = JSON.parse(JSON.stringify(extra.buildVtPanel(BOT, voisin, { sansEmoji: true }).components[0]))
     .components.filter((c) => c.type === 1).flatMap((r) => r.components);
-  check('rattrapage : 10 boutons en unicode si les émojis sont refusés',
-    secours.length === 10 && secours[0].emoji.name === '✏️');
+  check('sans émojis : 10 boutons à libellé, aucun unicode',
+    secours.length === 10 && secours.every((b) => !b.emoji) && secours[0].label === 'NOM');
 
   console.log('— 2c. Émojis de l’APPLICATION : globaux, zéro installation —');
   {
@@ -271,7 +272,7 @@ function check(label, cond, extraInfo) {
 
   console.log('— 3. Panneau rafraîchi après remplacement —');
   check('slash /voicetemp emotes : message « panneau mis à jour »', fs.readFileSync(path.join(__dirname, '..', 'server', 'discord', 'extra.js'), 'utf8').includes('a été mis à jour avec les nouveaux émojis'));
-  check('route dashboard panneau : les émojis sont assurés avant envoi', /ensureVtEmotes\(bot\.id, guild\)[\s\S]{0,200}sendVtPanel/.test(fs.readFileSync(path.join(__dirname, '..', 'server', 'routes.js'), 'utf8')));
+  check('route dashboard panneau : les émojis sont assurés avant envoi', /ensureVtEmotes\(bot\.id\)[\s\S]{0,200}sendVtPanel/.test(fs.readFileSync(path.join(__dirname, '..', 'server', 'routes.js'), 'utf8')));
 
   console.log('— 4. Modules du dashboard NON touchés —');
   const dash = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'dashboard.js'), 'utf8');
@@ -295,8 +296,8 @@ function check(label, cond, extraInfo) {
   console.log('— 5. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=387 référencé 10 fois', (index.match(/\?v=387/g) || []).length === 10);
-  check('sw.js : cache « hoxera-v387 »', sw.includes("const CACHE = 'hoxera-v387';"));
+  check('index.html : ?v=388 référencé 10 fois', (index.match(/\?v=388/g) || []).length === 10);
+  check('sw.js : cache « hoxera-v388 »', sw.includes("const CACHE = 'hoxera-v388';"));
 
   console.log(`\n🎉 v275 — ${ok} vérifications OK : premium UNIQUEMENT sur les émojis vocaux, modules intacts.`);
 })().catch((e) => { console.error(e); process.exit(1); });
