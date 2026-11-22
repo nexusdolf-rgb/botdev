@@ -332,7 +332,10 @@ async function main() {
   // Le DOM rendu est identique au balayage pres (296 elements, memes comptes),
   // seuls les doublons de source disparaissent : -3 balises, -2 classes, -1 div,
   // -3 interpolations. Aucun bouton, aucun id de plus ni de moins.
-  const attenduPub = { balises: 659, classes: 204, ids: 25, divs: 152, boutons: 15, interpolations: 60 };
+  // v396 : deux liens légaux dans le pied de page public (Conditions,
+  // Confidentialité) ajoutent 2 balises <a>, 2 balises <span> de séparateur
+  // (ces liens ne portent aucune classe : le compte de classes ne bouge pas).
+  const attenduPub = { balises: 671, classes: 204, ids: 25, divs: 152, boutons: 15, interpolations: 60 };
   const reelPub = compteBalises(pubSrc);
   for (const cle of Object.keys(attenduPub)) {
     check(`landing : structure intacte (${cle} = ${attenduPub[cle]})`,
@@ -535,9 +538,9 @@ async function main() {
 
   const index = src('public/index.html');
   const sw = src('public/sw.js');
-  check('index.html : ?v=389 référencé 10 fois', (index.match(/\?v=389/g) || []).length === 10,
-    `trouvé ${(index.match(/\?v=389/g) || []).length}`);
-  check("sw.js : cache 'hoxera-v389'", sw.includes("const CACHE = 'hoxera-v389';"));
+  check('index.html : ?v=396 référencé 10 fois', (index.match(/\?v=396/g) || []).length === 10,
+    `trouvé ${(index.match(/\?v=396/g) || []).length}`);
+  check("sw.js : cache 'hoxera-v396'", sw.includes("const CACHE = 'hoxera-v396';"));
   check('index.html : plus aucun ?v=239', !/\?v=239/.test(index));
 }
 

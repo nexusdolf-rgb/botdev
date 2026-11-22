@@ -1188,6 +1188,11 @@ Dashboard.renderSide = (aside) => {
       aside.appendChild(b);
     });
   }
+  // v396 — les deux pages légales, discrètes, sous la liste des modules.
+  aside.appendChild(App.el(`<div class="dash-side-legal">
+    <a href="/terms" target="_blank" rel="noopener">Conditions</a><span>·</span>
+    <a href="/privacy" target="_blank" rel="noopener">Confidentialité</a>
+  </div>`));
   aside.appendChild(App.el(`<div class="dash-side-foot">
     <div style="display:flex;align-items:center;gap:10px">
       ${Dashboard.state.bot.avatar_url ? `<img src="${App.escapeHtml(Dashboard.state.bot.avatar_url)}" alt="" data-fb-text="${App.escapeHtml(Dashboard.state.bot.name || 'Hoxera')}" style="width:34px;height:34px;border-radius:50%;box-shadow:0 0 0 2px rgba(var(--d-accent-rgb,224,122,95),.45)"/>` : '<span style="font-size:22px">⚡</span>'}
@@ -8189,7 +8194,7 @@ Dashboard.renderers.help = async (content) => {
 
   root.appendChild(App.el(block('', 'Besoin d\'aide ?', `
     <p style="margin:0 0 12px;color:var(--d-dim);line-height:1.6">Rejoignez le serveur support officiel : l'équipe et la communauté répondent en français.</p>
-    <a class="dash-btn" target="_blank" rel="noopener" href="https://discord.gg/X9hTdr9N3" style="text-decoration:none">Rejoindre le support</a>`)));
+    <a class="dash-btn" target="_blank" rel="noopener" href="https://discord.gg/BNCAVsyAvq" style="text-decoration:none">Rejoindre le support</a>`)));
 };
 
 // ============================================================

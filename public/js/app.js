@@ -748,6 +748,11 @@ App.renderConnect = () => {
             <span>Seuls les <b>admins</b> des serveurs peuvent configurer.</span>
           </div>
           <a href="#/" style="font-size:13px">← Retour à l'accueil</a>
+          <div class="auth-legal">
+            <a href="/terms" target="_blank" rel="noopener">Conditions d’utilisation</a>
+            <span>·</span>
+            <a href="/privacy" target="_blank" rel="noopener">Politique de confidentialité</a>
+          </div>
         </div>
       </div>
     </div>
@@ -887,7 +892,7 @@ App.renderAdminPage = async () => {
     <div class="page admin-platform-page">
       <header class="admin-head">
         <div class="admin-identity">
-          <img id="a-bot-avatar" class="admin-mark admin-bot-avatar" src="/api/public/bot-avatar?v=389" alt="Avatar d’Hoxera" width="48" height="48" />
+          <img id="a-bot-avatar" class="admin-mark admin-bot-avatar" src="/api/public/bot-avatar?v=396" alt="Avatar d’Hoxera" width="48" height="48" />
           <div class="admin-head-copy">
             <div class="admin-breadcrumb"><span>OPTIMUS PRIME</span><i>/</i><b>CONSOLE FONDATEUR</b></div>
             <h1>Espace fondateur</h1>

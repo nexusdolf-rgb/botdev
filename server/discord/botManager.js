@@ -693,6 +693,17 @@ function attachListeners(botId, entry) {
     trySync();
     // 🏷️ Rôle intégré : porter le nom actuel du bot dès l'arrivée
     syncBotRoleName(botId, client, guild).catch(() => {});
+    // v396 — le bot revient sur un serveur qu'il avait quitté : le compte
+    // à rebours d'effacement est annulé.
+    try { require('../conservation').oublieDepart(guild.id); } catch {}
+  });
+
+  // v396 — le bot quitte un serveur : on note la date. Ses données sont
+  // effacées 30 jours plus tard s'il n'est pas revenu (server/conservation.js).
+  // Rien n'est supprimé ici : un départ peut être un simple retrait suivi
+  // d'une réinvitation, et le serveur garde la main.
+  client.on('guildDelete', (guild) => {
+    try { require('../conservation').noteDepartServeur(botId, guild.id); } catch (e) { console.error('[Hoxera] départ serveur :', e.message); }
   });
 
   client.on('error', (err) => {
@@ -924,7 +935,7 @@ async function syncGlobalCommands(botId) {
 // Belle bio avec le dashboard, le serveur support officiel et /help.
 // Limite Discord : 190 caractères — longueur vérifiée par test automatique.
 const OFFICIAL_URL = 'https://hoxera.is-a.dev';
-const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3'; // Serveur support officiel d’Optimus Prime
+const SUPPORT_URL = 'https://discord.gg/BNCAVsyAvq'; // Serveur support officiel d’Optimus Prime
 
 function aboutText() {
   return [

@@ -50,7 +50,11 @@ const probe = `
   }
   console.log('OK ' + after.name);
 `;
-const out = execFileSync('node', ['-e', probe], { cwd: root, encoding: 'utf8' }).trim();
+// Le sous-processus doit être LE MÊME Node que le test : better-sqlite3 est
+// compilé pour la version qui exécute la suite. Écrire « node » lançait le
+// Node du système (v20), incompatible avec le module natif → SIGSEGV, donc
+// un test qui échoue sans rien dire du code testé.
+const out = execFileSync(process.execPath, ['-e', probe], { cwd: root, encoding: 'utf8' }).trim();
 assert(out.startsWith('OK'), 'le nom doit survivre à un redémarrage');
 
 // ---------- 3. Version : gérée par le test de la version courante (v175) ----------

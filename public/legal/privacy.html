@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="fr" data-lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-fr="Politique de confidentialité — Optimus Prime" data-en="Privacy Policy — Optimus Prime">Politique de confidentialité — Optimus Prime</title>
+<meta name="description" content="Politique de confidentialité du bot Discord Optimus Prime et de son tableau de bord : données traitées, durées de conservation, droits.">
+<meta name="robots" content="index, follow">
+<link rel="icon" href="/icons/icon-192.png">
+<link rel="stylesheet" href="/css/legal.css">
+<script src="/js/legal.js?v=396" defer></script>
+</head>
+<body class="legal">
+
+<header class="legal-topbar">
+  <a class="legal-brand" href="/">
+    <img src="/api/public/bot-avatar" alt="">
+    <span>Optimus Prime</span>
+  </a>
+  <nav class="legal-nav" aria-label="Pages légales">
+    <a href="/terms" data-i18n="nav_terms">Conditions d’utilisation</a>
+    <a href="/privacy" aria-current="page" data-i18n="nav_privacy">Politique de confidentialité</a>
+    <a href="/" data-i18n="nav_home">Accueil</a>
+    <div class="legal-lang" role="group" aria-label="Langue">
+      <button type="button" data-lang-set="fr" aria-pressed="true">FR</button>
+      <button type="button" data-lang-set="en" aria-pressed="false">EN</button>
+    </div>
+  </nav>
+</header>
+
+<main class="legal-wrap" data-bilingue="true">
+
+  <!-- =========================== FRANÇAIS =========================== -->
+  <div data-lang-block="fr">
+    <div class="legal-head">
+      <h1>Politique de confidentialité</h1>
+      <p class="legal-lead">Ce que le bot enregistre, pourquoi, pendant combien de temps, et comment le faire supprimer. Chaque ligne correspond au fonctionnement réel du code, vérifié le 3 octobre 2026.</p>
+      <div class="legal-meta">
+        <span>Dernière mise à jour : <b>3 octobre 2026</b></span>
+        <span>Version : <b>1.0</b></span>
+        <span>Responsable : <b>Fox</b></span>
+      </div>
+    </div>
+
+    <nav class="legal-toc" aria-label="Sommaire">
+      <b>Sommaire</b>
+      <ol>
+        <li><a href="#fr-1">Qui est responsable</a></li>
+        <li><a href="#fr-2">Données Discord traitées</a></li>
+        <li><a href="#fr-3">Commandes et données</a></li>
+        <li><a href="#fr-4">Système XP et niveaux</a></li>
+        <li><a href="#fr-5">Tickets et transcriptions</a></li>
+        <li><a href="#fr-6">Modération et journaux</a></li>
+        <li><a href="#fr-7">Tableau de bord</a></li>
+        <li><a href="#fr-8">Durées de conservation</a></li>
+        <li><a href="#fr-9">Vos droits et la suppression</a></li>
+        <li><a href="#fr-10">Retrait du bot d’un serveur</a></li>
+        <li><a href="#fr-11">Partage avec des tiers</a></li>
+        <li><a href="#fr-12">Sécurité</a></li>
+        <li><a href="#fr-13">Âge minimum</a></li>
+        <li><a href="#fr-14">Contact</a></li>
+      </ol>
+    </nav>
+
+    <div class="legal-body">
+
+      <section id="fr-1">
+        <h2>1. Qui est responsable</h2>
+        <p>Le service Optimus Prime (bot Discord et tableau de bord <a href="https://hoxera.is-a.dev/">hoxera.is-a.dev</a>) est exploité par <strong>Fox</strong>, à titre non professionnel. C’est lui qui décide quelles données sont collectées et pourquoi : il est donc responsable du traitement au sens du RGPD.</p>
+        <p>Contact unique pour toute question ou demande : <a href="mailto:nexusdolf@gmail.com">nexusdolf@gmail.com</a>.</p>
+        <p><strong>Deux niveaux à distinguer.</strong> Quand vous utilisez le bot dans un serveur, le serveur (son administrateur) décide de l’activer et de la modération ; l’éditeur fournit l’outil. Pour les données du tableau de bord (compte, session, jetons Discord), l’éditeur est seul décideur.</p>
+      </section>
+
+      <section id="fr-2">
+        <h2>2. Données Discord traitées</h2>
+        <p>Pour fonctionner, le bot reçoit de Discord les informations suivantes :</p>
+        <ul>
+          <li><strong>identifiants</strong> : identifiant du serveur, des salons, des messages, des rôles et des membres (des nombres, jamais de mot de passe) ;</li>
+          <li><strong>pseudos</strong> : le nom affiché du membre au moment de l’action (par exemple dans un avertissement) ;</li>
+          <li><strong>contenu des messages</strong> : lu pour les commandes, l’auto-modération, les tickets et le modmail. Il n’est enregistré que dans les cas précis décrits ci-dessous ;</li>
+          <li><strong>présence vocale</strong> : uniquement pour compter l’expérience vocale et déplacer un membre. Aucun son n’est enregistré ni écouté ;</li>
+          <li><strong>réactions</strong> : pour le starboard et les rôles par réaction.</li>
+        </ul>
+        <p>Le bot ne demande <strong>pas</strong> l’intent de présence (statut en ligne / jeu joué). Il ne lit jamais vos messages privés en dehors du modmail : un message privé n’est relayé que si le serveur a activé le modmail, et il est alors copié dans un salon réservé au staff.</p>
+        <p>Le bot ne stocke <strong>aucune adresse IP</strong>. L’adresse IP du visiteur du tableau de bord ne sert qu’à compter les requêtes, dans la mémoire vive du serveur, et disparaît avec elle.</p>
+      </section>
+
+      <section id="fr-3">
+        <h2>3. Commandes et données utilisées</h2>
+        <p>Le bot propose {{ NB_COMMANDES }} commandes. Elles n’enregistrent que ce qui est nécessaire à leur fonction :</p>
+        <table class="legal-table">
+          <tr><th>Fonction</th><th>Écrit dans</th></tr>
+          <tr><td>Modération (avertir, expulser, bannir, timeout)</td><td>avertissements, sanctions, compteurs</td></tr>
+          <tr><td>Auto-modération</td><td>journal d’auto-modération, liste noire, compteurs de manquements</td></tr>
+          <tr><td>Tickets</td><td>tickets ouverts, transcription du ticket fermé</td></tr>
+          <tr><td>Niveaux et économie</td><td>expérience, niveau, pièces, achats</td></tr>
+          <tr><td>Communauté (mariage, anniversaire, événement, AFK, rappel)</td><td>la seule ligne correspondant à votre choix</td></tr>
+          <tr><td>Giveaways, sondages, suggestions</td><td>l’objet créé par le serveur</td></tr>
+          <tr><td>Invitations</td><td>qui a invité qui, code d’invitation</td></tr>
+          <tr><td>Vocaux temporaires</td><td>nom du salon, propriétaire, catégorie</td></tr>
+        </table>
+        <p>La commande <code>/snipe</code> garde le dernier message supprimé d’un salon <strong>en mémoire vive uniquement</strong> (500 entrées au maximum, tous serveurs confondus). Rien n’est écrit sur disque, et tout disparaît au redémarrage du service.</p>
+      </section>
+
+      <section id="fr-4">
+        <h2>4. Système XP et niveaux</h2>
+        <p>L’expérience est attribuée automatiquement lorsqu’un membre écrit un message, selon les réglages du serveur (montant, salon, temps d’attente). Sont enregistrés :</p>
+        <ul>
+          <li>l’identifiant du serveur et du membre ;</li>
+          <li>le total d’expérience et le niveau atteint ;</li>
+          <li>la date du dernier gain d’expérience, pour appliquer le temps d’attente.</li>
+        </ul>
+        <p>Aucun contenu de message n’est conservé pour l’XP : seul le fait qu’un message a été envoyé est compté. Un compteur agrégé du nombre de messages par jour et par membre est également tenu (il sert aux statistiques du tableau de bord) et il est effacé au bout de 30 jours.</p>
+        <p>L’expérience et les niveaux sont conservés <strong>tant que le serveur utilise le bot</strong> : ils constituent la progression du membre. Ils sont effacés 30 jours après le retrait du bot (voir section 10).</p>
+      </section>
+
+      <section id="fr-5">
+        <h2>5. Tickets et transcriptions</h2>
+        <p>Quand un ticket est ouvert, le bot crée un salon privé sur le serveur. À la fermeture, il produit une <strong>transcription</strong> : la liste des messages du ticket, avec l’auteur et l’heure de chacun.</p>
+        <ul>
+          <li>La transcription est envoyée en message privé à la personne qui a ouvert le ticket et au staff du serveur.</li>
+          <li>Elle est aussi conservée en base et accessible par un <strong>lien à jeton aléatoire</strong> (32 caractères hexadécimaux, impossible à deviner), que vous pouvez partager. Ce lien cesse de fonctionner dès la suppression.</li>
+          <li>Une transcription est supprimée <strong>30 jours</strong> après la fermeture du ticket.</li>
+          <li>Le registre des salons fermés (identifiant du salon uniquement) est effacé au bout de <strong>7 jours</strong>.</li>
+        </ul>
+      </section>
+
+      <section id="fr-6">
+        <h2>6. Modération et journaux</h2>
+        <p>Le bot dispose de deux formes de trace, à ne pas confondre :</p>
+        <h3>Le journal du serveur</h3>
+        <p>Les événements de modération sont envoyés dans un salon Discord choisi par l’administrateur (départ, expulsion, bannissement, message supprimé, rôle changé…). Ces messages ne sont <strong>pas stockés dans la base</strong> du bot : ils vivent chez Discord, et leur durée dépend du serveur.</p>
+        <h3>La trace de l’auto-modération</h3>
+        <p>Quand une règle se déclenche, le bot enregistre un <strong>extrait du message concerné (500 caractères au maximum)</strong>, le pseudo de l’auteur, la règle et la sanction appliquée. Cet extrait sert à expliquer la sanction au staff dans le tableau de bord. Il est effacé au bout de <strong>30 jours</strong>.</p>
+        <p>Qui y a accès : uniquement les personnes qui administrent le serveur et se connectent au tableau de bord avec un compte Discord ayant la permission « Gérer le serveur ». Aucun membre ordinaire ne voit ces informations.</p>
+      </section>
+
+      <section id="fr-7">
+        <h2>7. Tableau de bord</h2>
+        <h3>Connexion</h3>
+        <p>Le tableau de bord ne demande <strong>ni mot de passe, ni adresse e-mail</strong>. La connexion se fait exclusivement par Discord (OAuth2), avec deux autorisations :</p>
+        <ul>
+          <li><code>identify</code> : connaître votre identifiant Discord, votre pseudo et votre avatar ;</li>
+          <li><code>guilds</code> : connaître la liste de vos serveurs et votre niveau de permission sur chacun, pour n’afficher que ceux que vous pouvez configurer.</li>
+        </ul>
+        <p>Ces deux autorisations ne donnent <strong>aucun accès à vos messages</strong> et ne permettent pas d’agir sur votre compte Discord.</p>
+        <h3>Compte et session</h3>
+        <p>Un compte interne est créé à votre première connexion. Il contient un identifiant technique de la forme <code>discord:&lt;votre identifiant&gt;@discord.botdev</code>. <strong>Ce n’est pas une adresse e-mail réelle</strong> : elle n’est jamais utilisée pour vous écrire ni transmise à qui que ce soit. Aucune adresse e-mail n’est demandée aux utilisateurs.</p>
+        <p>Votre mot de passe Discord n’est jamais transmis au bot et ne peut pas l’être : l’OAuth2 ne le partage pas.</p>
+        <h3>Cookies</h3>
+        <table class="legal-table">
+          <tr><th>Cookie</th><th>Rôle</th><th>Durée</th></tr>
+          <tr><td class="nowrap"><code>botdev_session</code></td><td>vous garder connecté au tableau de bord</td><td>30 jours</td></tr>
+          <tr><td class="nowrap"><code>bd_oauth_state</code></td><td>protéger la connexion Discord contre une attaque par redirection</td><td>10 minutes</td></tr>
+        </table>
+        <p>Les deux sont <code>HttpOnly</code> et <code>SameSite=Lax</code>, et <code>Secure</code> lorsque le site est servi en HTTPS. Aucun cookie de mesure d’audience ni de publicité n’est posé. Le tableau de bord conserve aussi dans votre navigateur (stockage local) votre thème et le dernier serveur ouvert : ces informations restent sur votre appareil.</p>
+        <h3>Jetons Discord</h3>
+        <p>Pour vous connecter, le bot reçoit un jeton d’accès OAuth2. Il est <strong>chiffré en base</strong> (AES-256-GCM) et n’est jamais affiché. Il est remplacé à chaque nouvelle connexion et supprimé 30 jours après son expiration.</p>
+      </section>
+
+      <section id="fr-8">
+        <h2>8. Durées de conservation</h2>
+        <p>Un nettoyage automatique tourne toutes les 24 heures. Voici exactement ce qu’il efface :</p>
+        <table class="legal-table">
+          <tr><th>Donnée</th><th>Durée</th></tr>
+          {{ RETENTION_TABLE_FR }}
+        </table>
+        <div class="legal-note">Ces durées s’appliquent automatiquement. Il n’est pas nécessaire d’écrire pour obtenir ce nettoyage.</div>
+      </section>
+
+      <section id="fr-9">
+        <h2>9. Vos droits et la suppression</h2>
+        <p>Vous disposez, sur les données qui vous concernent, des droits d’accès, de rectification, d’effacement, de limitation, d’opposition et de portabilité prévus par le RGPD.</p>
+        <h3>Procédure</h3>
+        <ol>
+          <li>Écrivez à <a href="mailto:nexusdolf@gmail.com">nexusdolf@gmail.com</a> depuis l’adresse de votre choix, en indiquant <strong>votre identifiant Discord</strong> (droit clic sur votre profil → « Copier l’identifiant ») et le serveur concerné s’il y en a un.</li>
+          <li>Précisez ce que vous demandez : une copie, une correction, ou l’effacement.</li>
+          <li>Une réponse est apportée <strong>sous 30 jours</strong>. Si une vérification est nécessaire pour éviter qu’une personne efface les données de quelqu’un d’autre, elle peut être demandée.</li>
+        </ol>
+        <h3>Ce qui est effacé</h3>
+        <p>Sur demande, sont effacés : expérience, niveau, pièces, avertissements, signalements, entrées d’auto-modération, transcriptions où vous apparaissez, marque de modmail, attributions d’invitation, et votre compte du tableau de bord avec sa session et ses jetons.</p>
+        <p>Peuvent être conservés, lorsqu’une obligation ou un intérêt légitime le justifie : les <strong>sanctions de plateforme</strong> (bannissement d’accès au tableau de bord, avec sa date et son motif), afin qu’un bannissement ne puisse pas être contourné en supprimant son compte.</p>
+        <div class="legal-note">Si vous êtes membre d’un serveur, vous pouvez aussi demander à son administrateur de supprimer vos données côté serveur, ou retirer le bot. Les deux démarches sont complémentaires.</div>
+      </section>
+
+      <section id="fr-10">
+        <h2>10. Retrait du bot d’un serveur</h2>
+        <p>Quand le bot est retiré d’un serveur, <strong>rien n’est effacé immédiatement</strong> : un retrait peut être suivi d’une réinvitation, et le serveur doit pouvoir retrouver sa configuration.</p>
+        <p>Le retrait est enregistré. Si le bot n’est pas revenu au bout de <strong>30 jours</strong>, toutes les données du serveur sont effacées : configuration, commandes, niveaux et expérience, économie, tickets et transcriptions, avertissements, statistiques, invitations, mariages, anniversaires, événements et journaux internes.</p>
+        <p>Ne survivent au retrait que le journal d’administration de la plateforme et les bannissements d’accès au tableau de bord, qui ne dépendent pas d’un serveur en particulier.</p>
+      </section>
+
+      <section id="fr-11">
+        <h2>11. Partage avec des tiers</h2>
+        <p>Aucune donnée n’est vendue, louée, ni utilisée à des fins publicitaires. Aucun outil de mesure d’audience (Google Analytics, Plausible, Sentry…) n’est installé dans le site.</p>
+        <p>Trois prestataires interviennent, strictement pour faire fonctionner le service :</p>
+        <table class="legal-table">
+          <tr><th>Destinataire</th><th>Ce qui transite</th><th>Pourquoi</th></tr>
+          <tr><td><strong>Discord</strong></td><td>l’ensemble des messages et événements du bot, les informations de votre profil lors de la connexion</td><td>faire fonctionner le bot (API et passerelle Discord)</td></tr>
+          <tr><td><strong>Render</strong></td><td>l’application et la base de données hébergées</td><td>hébergement du service</td></tr>
+          <tr><td><strong>GitHub</strong> (dépôt privé)</td><td>une copie compressée de la base, envoyée automatiquement pour survivre à un redéploiement</td><td>sauvegarde</td></tr>
+        </table>
+        <p>La sauvegarde GitHub est <strong>compressée mais pas chiffrée</strong> ; les jetons qu’elle contient sont, eux, chiffrés. Le dépôt est privé et limité à l’éditeur. Si vous souhaitez connaître la date de la dernière sauvegarde, écrivez à l’adresse de contact.</p>
+        <p>Le bot contacte aussi, ponctuellement et sans lui transmettre de donnée vous concernant, l’API publique de memes pour la commande <code>/meme</code>, et Twitch ou YouTube pour vérifier qu’un compte déclaré par un serveur est en direct.</p>
+      </section>
+
+      <section id="fr-12">
+        <h2>12. Sécurité</h2>
+        <p>Les jetons Discord, les jetons de bots et les jetons OAuth2 sont <strong>chiffrés en base</strong> (AES-256-GCM) avec une clé qui ne se trouve pas dans le code. Les sessions sont stockées sous forme d’empreinte, jamais en clair. Le site force HTTPS, interdit les scripts injectés (politique de sécurité du contenu), protège les formulaires contre les requêtes venues d’un autre site, et limite le nombre de requêtes par visiteur.</p>
+        <p>Aucun système n’est infaillible. En cas d’incident touchant vos données, les personnes concernées et, le cas échéant, la CNIL sont informées dans les délais prévus par le RGPD.</p>
+      </section>
+
+      <section id="fr-13">
+        <h2>13. Âge minimum</h2>
+        <p>L’usage du service suppose d’avoir au moins <strong>13 ans</strong>, l’âge minimum fixé par Discord. Si vous avez moins de 13 ans, n’utilisez pas le bot et retirez-le de votre serveur.</p>
+      </section>
+
+      <section id="fr-14">
+        <h2>14. Contact</h2>
+        <p>Responsable du traitement : <strong>Fox</strong> — <a href="mailto:nexusdolf@gmail.com">nexusdolf@gmail.com</a></p>
+        <p>Serveur de support : <a href="https://discord.gg/BNCAVsyAvq" target="_blank" rel="noopener">https://discord.gg/BNCAVsyAvq</a></p>
+        <p>Si une réponse ne vous satisfait pas, vous pouvez saisir la CNIL (France) — <a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener">cnil.fr</a>.</p>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- =========================== ENGLISH =========================== -->
+  <div data-lang-block="en">
+    <div class="legal-head">
+      <h1>Privacy Policy</h1>
+      <p class="legal-lead">What the bot stores, why, for how long, and how to have it deleted. Every line reflects how the code actually works, verified on 3 October 2026.</p>
+      <div class="legal-meta">
+        <span>Last updated: <b>3 October 2026</b></span>
+        <span>Version: <b>1.0</b></span>
+        <span>Operator: <b>Fox</b></span>
+      </div>
+    </div>
+
+    <nav class="legal-toc" aria-label="Contents">
+      <b>Contents</b>
+      <ol>
+        <li><a href="#en-1">Who is responsible</a></li>
+        <li><a href="#en-2">Discord data we process</a></li>
+        <li><a href="#en-3">Commands and data</a></li>
+        <li><a href="#en-4">XP and levels</a></li>
+        <li><a href="#en-5">Tickets and transcripts</a></li>
+        <li><a href="#en-6">Moderation and logs</a></li>
+        <li><a href="#en-7">Dashboard</a></li>
+        <li><a href="#en-8">Retention periods</a></li>
+        <li><a href="#en-9">Your rights and deletion</a></li>
+        <li><a href="#en-10">Removing the bot</a></li>
+        <li><a href="#en-11">Third parties</a></li>
+        <li><a href="#en-12">Security</a></li>
+        <li><a href="#en-13">Minimum age</a></li>
+        <li><a href="#en-14">Contact</a></li>
+      </ol>
+    </nav>
+
+    <div class="legal-body">
+
+      <section id="en-1">
+        <h2>1. Who is responsible</h2>
+        <p>The Optimus Prime service (Discord bot and dashboard at <a href="https://hoxera.is-a.dev/">hoxera.is-a.dev</a>) is operated by <strong>Fox</strong>, on a non-professional basis. He decides what data is collected and why, and is therefore the data controller under the GDPR.</p>
+        <p>Single contact for any question or request: <a href="mailto:nexusdolf@gmail.com">nexusdolf@gmail.com</a>.</p>
+        <p><strong>Two levels must be distinguished.</strong> When you use the bot in a server, the server (its administrator) decides to enable it and to moderate; the operator provides the tool. For dashboard data (account, session, Discord tokens), the operator is the sole controller.</p>
+      </section>
+
+      <section id="en-2">
+        <h2>2. Discord data we process</h2>
+        <p>To work, the bot receives the following from Discord:</p>
+        <ul>
+          <li><strong>identifiers</strong>: server, channel, message, role and member IDs (numbers, never passwords);</li>
+          <li><strong>usernames</strong>: the member’s display name at the time of the action (for example in a warning);</li>
+          <li><strong>message content</strong>: read for commands, automoderation, tickets and modmail. It is stored only in the cases described below;</li>
+          <li><strong>voice presence</strong>: only to count voice experience and move a member. No audio is ever recorded or listened to;</li>
+          <li><strong>reactions</strong>: for the starboard and reaction roles.</li>
+        </ul>
+        <p>The bot does <strong>not</strong> request the presence intent (online status / game being played). It never reads your direct messages except through modmail: a DM is only relayed if the server has enabled modmail, and it is then copied into a staff-only channel.</p>
+        <p>The bot stores <strong>no IP address</strong>. A dashboard visitor’s IP is only used to count requests, in the server’s memory, and disappears with it.</p>
+      </section>
+
+      <section id="en-3">
+        <h2>3. Commands and data used</h2>
+        <p>The bot offers {{ NB_COMMANDES }} commands. They only store what their function requires:</p>
+        <table class="legal-table">
+          <tr><th>Function</th><th>Written to</th></tr>
+          <tr><td>Moderation (warn, kick, ban, timeout)</td><td>warnings, sanctions, counters</td></tr>
+          <tr><td>Automoderation</td><td>automod log, blacklist, rule counters</td></tr>
+          <tr><td>Tickets</td><td>open tickets, transcript of the closed ticket</td></tr>
+          <tr><td>Levels and economy</td><td>experience, level, coins, purchases</td></tr>
+          <tr><td>Community (marriage, birthday, event, AFK, reminder)</td><td>the single row matching your choice</td></tr>
+          <tr><td>Giveaways, polls, suggestions</td><td>the object created by the server</td></tr>
+          <tr><td>Invites</td><td>who invited whom, invite code</td></tr>
+          <tr><td>Temporary voice channels</td><td>channel name, owner, category</td></tr>
+        </table>
+        <p>The <code>/snipe</code> command keeps the last deleted message of a channel <strong>in memory only</strong> (at most 500 entries across all servers). Nothing is written to disk, and everything disappears when the service restarts.</p>
+      </section>
+
+      <section id="en-4">
+        <h2>4. XP and levels</h2>
+        <p>Experience is granted automatically when a member sends a message, according to the server’s settings (amount, channel, cooldown). We store:</p>
+        <ul>
+          <li>the server and member identifiers;</li>
+          <li>total experience and level reached;</li>
+          <li>the date of the last XP gain, to apply the cooldown.</li>
+        </ul>
+        <p>No message content is kept for XP: only the fact that a message was sent is counted. An aggregated count of messages per day per member is also kept (for dashboard statistics) and is deleted after 30 days.</p>
+        <p>Experience and levels are kept <strong>for as long as the server uses the bot</strong>: they are the member’s progress. They are erased 30 days after the bot is removed (see section 10).</p>
+      </section>
+
+      <section id="en-5">
+        <h2>5. Tickets and transcripts</h2>
+        <p>When a ticket is opened, the bot creates a private channel on the server. On closing, it produces a <strong>transcript</strong>: the list of the ticket’s messages, with each author and time.</p>
+        <ul>
+          <li>The transcript is sent by direct message to the person who opened the ticket and to the server staff.</li>
+          <li>It is also kept in the database and reachable through a <strong>random token link</strong> (32 hexadecimal characters, impossible to guess), which you may share. The link stops working as soon as the transcript is deleted.</li>
+          <li>A transcript is deleted <strong>30 days</strong> after the ticket is closed.</li>
+          <li>The register of closed channels (channel ID only) is erased after <strong>7 days</strong>.</li>
+        </ul>
+      </section>
+
+      <section id="en-6">
+        <h2>6. Moderation and logs</h2>
+        <p>The bot keeps two distinct kinds of record:</p>
+        <h3>The server log</h3>
+        <p>Moderation events are sent to a Discord channel chosen by the administrator (leave, kick, ban, deleted message, role change…). These messages are <strong>not stored in the bot’s database</strong>: they live on Discord, and their retention depends on the server.</p>
+        <h3>The automoderation record</h3>
+        <p>When a rule triggers, the bot stores an <strong>excerpt of the message concerned (500 characters maximum)</strong>, the author’s username, the rule and the penalty applied. This excerpt lets the staff understand the penalty in the dashboard. It is erased after <strong>30 days</strong>.</p>
+        <p>Who can see it: only people who administer the server and sign in to the dashboard with a Discord account holding the “Manage Server” permission. No ordinary member sees this information.</p>
+      </section>
+
+      <section id="en-7">
+        <h2>7. Dashboard</h2>
+        <h3>Sign-in</h3>
+        <p>The dashboard asks for <strong>neither a password nor an email address</strong>. Sign-in happens exclusively through Discord (OAuth2), with two scopes:</p>
+        <ul>
+          <li><code>identify</code>: your Discord ID, username and avatar;</li>
+          <li><code>guilds</code>: the list of your servers and your permission level on each, so that only servers you can configure are displayed.</li>
+        </ul>
+        <p>These two scopes give <strong>no access to your messages</strong> and cannot act on your Discord account.</p>
+        <h3>Account and session</h3>
+        <p>An internal account is created on your first sign-in. It contains a technical identifier of the form <code>discord:&lt;your ID&gt;@discord.botdev</code>. <strong>This is not a real email address</strong>: it is never used to write to you and never shared with anyone. No email address is requested from users.</p>
+        <p>Your Discord password is never transmitted to the bot and cannot be: OAuth2 does not share it.</p>
+        <h3>Cookies</h3>
+        <table class="legal-table">
+          <tr><th>Cookie</th><th>Purpose</th><th>Lifetime</th></tr>
+          <tr><td class="nowrap"><code>botdev_session</code></td><td>keep you signed in to the dashboard</td><td>30 days</td></tr>
+          <tr><td class="nowrap"><code>bd_oauth_state</code></td><td>protect the Discord sign-in against a redirect attack</td><td>10 minutes</td></tr>
+        </table>
+        <p>Both are <code>HttpOnly</code> and <code>SameSite=Lax</code>, and <code>Secure</code> when the site is served over HTTPS. No analytics or advertising cookie is set. The dashboard also keeps your theme and last opened server in your browser’s local storage: that information stays on your device.</p>
+        <h3>Discord tokens</h3>
+        <p>To sign you in, the bot receives an OAuth2 access token. It is <strong>encrypted in the database</strong> (AES-256-GCM) and never displayed. It is replaced on every new sign-in and deleted 30 days after it expires.</p>
+      </section>
+
+      <section id="en-8">
+        <h2>8. Retention periods</h2>
+        <p>An automatic cleanup runs every 24 hours. Here is exactly what it erases:</p>
+        <table class="legal-table">
+          <tr><th>Data</th><th>Period</th></tr>
+          {{ RETENTION_TABLE_EN }}
+        </table>
+        <div class="legal-note">These periods apply automatically. You do not need to write to us to obtain this cleanup.</div>
+      </section>
+
+      <section id="en-9">
+        <h2>9. Your rights and deletion</h2>
+        <p>You have the rights of access, rectification, erasure, restriction, objection and portability over the data concerning you, as provided by the GDPR.</p>
+        <h3>Procedure</h3>
+        <ol>
+          <li>Write to <a href="mailto:nexusdolf@gmail.com">nexusdolf@gmail.com</a> from any address, stating <strong>your Discord ID</strong> (right-click on your profile → “Copy User ID”) and the server concerned if any.</li>
+          <li>Specify what you are asking for: a copy, a correction, or deletion.</li>
+          <li>A reply is provided <strong>within 30 days</strong>. A verification may be requested to prevent one person from deleting someone else’s data.</li>
+        </ol>
+        <h3>What is erased</h3>
+        <p>On request, we erase: experience, level, coins, warnings, reports, automoderation entries, transcripts you appear in, modmail records, invite attributions, and your dashboard account with its session and tokens.</p>
+        <p>Records of <strong>platform sanctions</strong> (dashboard access ban, with its date and reason) may be kept where an obligation or legitimate interest justifies it, so that a ban cannot be circumvented by deleting one’s account.</p>
+        <div class="legal-note">If you are a member of a server, you may also ask its administrator to delete your data server-side, or remove the bot. Both steps are complementary.</div>
+      </section>
+
+      <section id="en-10">
+        <h2>10. Removing the bot from a server</h2>
+        <p>When the bot is removed from a server, <strong>nothing is erased immediately</strong>: a removal may be followed by a re-invitation, and the server must be able to recover its configuration.</p>
+        <p>The removal is recorded. If the bot has not returned after <strong>30 days</strong>, all of the server’s data is erased: configuration, commands, levels and experience, economy, tickets and transcripts, warnings, statistics, invites, marriages, birthdays, events and internal logs.</p>
+        <p>Only the platform administration log and dashboard access bans survive a removal, as they do not depend on any particular server.</p>
+      </section>
+
+      <section id="en-11">
+        <h2>11. Third parties</h2>
+        <p>No data is sold, rented or used for advertising. No analytics tool (Google Analytics, Plausible, Sentry…) is installed in the site.</p>
+        <p>Three providers are involved, strictly to operate the service:</p>
+        <table class="legal-table">
+          <tr><th>Recipient</th><th>What is shared</th><th>Why</th></tr>
+          <tr><td><strong>Discord</strong></td><td>all bot messages and events, your profile information on sign-in</td><td>running the bot (Discord API and gateway)</td></tr>
+          <tr><td><strong>Render</strong></td><td>the hosted application and database</td><td>hosting the service</td></tr>
+          <tr><td><strong>GitHub</strong> (private repository)</td><td>a compressed copy of the database, sent automatically to survive a redeploy</td><td>backup</td></tr>
+        </table>
+        <p>The GitHub backup is <strong>compressed but not encrypted</strong>; the tokens it contains are, however, encrypted. The repository is private and restricted to the operator. If you wish to know the date of the latest backup, write to the contact address.</p>
+        <p>The bot also occasionally contacts the public meme API for the <code>/meme</code> command, and Twitch or YouTube to check whether an account declared by a server is live, without transmitting any data about you.</p>
+      </section>
+
+      <section id="en-12">
+        <h2>12. Security</h2>
+        <p>Discord tokens, bot tokens and OAuth2 tokens are <strong>encrypted in the database</strong> (AES-256-GCM) with a key that is not in the code. Sessions are stored as a hash, never in clear text. The site enforces HTTPS, forbids injected scripts (content security policy), protects forms against cross-site requests, and rate-limits requests per visitor.</p>
+        <p>No system is infallible. In the event of an incident affecting your data, the people concerned and, where applicable, the CNIL (French data protection authority) are informed within the deadlines set by the GDPR.</p>
+      </section>
+
+      <section id="en-13">
+        <h2>13. Minimum age</h2>
+        <p>Using the service requires being at least <strong>13 years old</strong>, the minimum age set by Discord. If you are under 13, do not use the bot and remove it from your server.</p>
+      </section>
+
+      <section id="en-14">
+        <h2>14. Contact</h2>
+        <p>Data controller: <strong>Fox</strong> — <a href="mailto:nexusdolf@gmail.com">nexusdolf@gmail.com</a></p>
+        <p>Support server: <a href="https://discord.gg/BNCAVsyAvq" target="_blank" rel="noopener">https://discord.gg/BNCAVsyAvq</a></p>
+        <p>If a reply does not satisfy you, you may contact the CNIL (France) — <a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener">cnil.fr</a>.</p>
+      </section>
+
+    </div>
+  </div>
+
+  <footer class="legal-foot">
+    <span>© 2026 Optimus Prime</span>
+    <a href="/terms" data-i18n="nav_terms">Conditions d’utilisation</a>
+    <a href="/privacy" data-i18n="nav_privacy">Politique de confidentialité</a>
+    <a href="mailto:nexusdolf@gmail.com">nexusdolf@gmail.com</a>
+    <a href="https://discord.gg/BNCAVsyAvq" target="_blank" rel="noopener" data-i18n="nav_support">Serveur de support</a>
+  </footer>
+
+</main>
+
+</body>
+</html>

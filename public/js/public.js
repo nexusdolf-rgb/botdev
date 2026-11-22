@@ -160,7 +160,7 @@ App.renderPublicLanding = () => {
             ? `<button class="btn" id="pub-dash-hero" style="padding:13px 22px;font-size:16px">Ouvrir mon tableau de bord</button>`
             : `<button class="btn btn-discord" id="pub-connect-hero" style="padding:13px 22px;font-size:16px;width:auto">Se connecter avec Discord</button>`}
         </div>
-        <div class="pub-support-link"><a href="https://discord.gg/X9hTdr9N3" target="_blank" rel="noopener">Rejoindre le serveur support officiel</a></div>
+        <div class="pub-support-link"><a href="https://discord.gg/BNCAVsyAvq" target="_blank" rel="noopener">Rejoindre le serveur support officiel</a></div>
         <div class="pub-stats" id="pub-stats">
           <div class="pub-stat"><div class="val">—</div><div class="lbl">Bot en ligne</div></div>
           <div class="pub-stat"><div class="val">—</div><div class="lbl">Serveurs Discord</div></div>
@@ -299,13 +299,19 @@ App.renderPublicLanding = () => {
           <div class="hp-footer-col">
             <b>Accès</b>
             <a href="/#/dashboard" id="pub-foot-dash">Tableau de bord</a>
-            <a href="https://discord.gg/X9hTdr9N3" target="_blank" rel="noopener">Serveur support</a>
+            <a href="https://discord.gg/BNCAVsyAvq" target="_blank" rel="noopener">Serveur support</a>
+            <a href="/terms">Conditions d’utilisation</a>
+            <a href="/privacy">Politique de confidentialité</a>
           </div>
         </div>
         <div class="hp-footer-bottom">
           <span>© ${new Date().getFullYear()} Hoxera</span>
           <div class="pub-footer-links">
-            <a href="https://discord.gg/X9hTdr9N3" target="_blank" rel="noopener">Serveur support</a>
+            <a href="/terms">Conditions d’utilisation</a>
+            <span>·</span>
+            <a href="/privacy">Politique de confidentialité</a>
+            <span>·</span>
+            <a href="https://discord.gg/BNCAVsyAvq" target="_blank" rel="noopener">Serveur support</a>
             <span>·</span>
             <a href="/#/dashboard" id="pub-foot-dash-2">Tableau de bord</a>
           </div>

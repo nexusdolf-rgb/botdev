@@ -2,6 +2,7 @@
 // BotDev - Serveur principal
 // ============================================================
 const express = require('express');
+const fs = require('node:fs');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const backup = require('./backup');
@@ -108,6 +109,79 @@ async function main() {
 
   // 🏓 Endpoint ultra-léger pour le garde-éveil (aucune base, aucun calcul)
   app.get('/ping', (req, res) => res.type('text').send('pong'));
+
+  // 📄 v396 — Pages légales publiques. Servies AVANT le repli SPA, en 200 et
+  // sans aucune authentification : elles sont exigées par la vérification
+  // Discord, et le repli SPA répondait 404 pour tout chemin inconnu.
+  // Le contenu vient de public/legal/ ; aucune donnée n'est lue.
+  // Le tableau des durées de /privacy n'est PAS écrit à la main : il est
+  // produit depuis server/conservation.js, la liste que le nettoyage
+  // applique réellement. Impossible qu'ils divergent.
+  function nombreDeCommandes() {
+    try {
+      const { buildExtraPayloads } = require('./discord/extra');
+      const { buildSlashPayloads, enabledCommandNames, MODULES } = require('./discord/premade');
+      const { buildEventPayloads } = require('./discord/guildEvents');
+      const { buildContextMenuPayloads } = require('./discord/contextmenus');
+      // Toutes les commandes des modules ACTIVÉS ; si la base n'a aucune ligne
+      // « modules » (premier démarrage), le code active tout (premade.js:209).
+      const bot = store.db.prepare('SELECT id FROM bots ORDER BY id LIMIT 1').get();
+      let extra = buildExtraPayloads().length + buildContextMenuPayloads().length + buildEventPayloads().length;
+      const lignes = bot ? store.db.prepare('SELECT COUNT(*) AS n FROM modules WHERE bot_id = ?').get(bot.id).n : 0;
+      if (bot && lignes > 0) extra += buildSlashPayloads(bot.id).length;
+      else extra += Object.values(MODULES).reduce((n, m) => n + (m.commands || []).length, 0);
+      return Math.min(extra, 90); // plafond d'enregistrement global (botManager.js:849)
+    } catch {
+      return 84;
+    }
+  }
+
+  function remplitPageLegale(html) {
+    let sortie = html;
+    try {
+      const { tableauConservation } = require('./conservation');
+      const lignes = tableauConservation();
+      const fr = lignes
+        .map((l) => `          <tr><td>${l.fr}</td><td class="nowrap">${l.frDuree}</td></tr>`)
+        .join('\n');
+      const en = lignes
+        .map((l) => `          <tr><td>${l.en}</td><td class="nowrap">${l.enDuree}</td></tr>`)
+        .join('\n');
+      sortie = sortie.replace('{{ RETENTION_TABLE_FR }}', fr).replace('{{ RETENTION_TABLE_EN }}', en);
+    } catch (e) {
+      // Une page légale incomplète vaut mieux qu'une page en erreur.
+      console.error('[Hoxera] tableau de conservation :', e.message);
+      sortie = sortie.replace('{{ RETENTION_TABLE_FR }}', '').replace('{{ RETENTION_TABLE_EN }}', '');
+    }
+    try {
+      // Le nombre de commandes est celui que le bot peut enregistrer, pas un
+      // chiffre recopié dans un document. Il se calcule AVEC le catalogue
+      // complet des modules : la base de production peut n'avoir aucune ligne
+      // « modules » au premier démarrage, ce qui ne doit pas faire croire à
+      // tort que le bot n'a que 37 commandes.
+      sortie = sortie.replace(/\{\{ NB_COMMANDES \}\}/g, String(nombreDeCommandes()));
+    } catch (e) {
+      console.error('[Hoxera] nombre de commandes :', e.message);
+      sortie = sortie.replace(/\{\{ NB_COMMANDES \}\}/g, String(nombreDeCommandes()));
+    }
+    return sortie;
+  }
+
+  const PAGES_LEGALES = { '/terms': 'terms.html', '/privacy': 'privacy.html' };
+  app.get(Object.keys(PAGES_LEGALES), (req, res, next) => {
+    const fichier = PAGES_LEGALES[req.path];
+    if (!fichier) return next();
+    const chemin = path.join(__dirname, '..', 'public', 'legal', fichier);
+    return fs.readFile(chemin, 'utf8', (err, html) => {
+      if (err) {
+        if (!res.headersSent) res.status(404).type('text').send('Page introuvable.');
+        return;
+      }
+      res.set('Cache-Control', 'public, max-age=3600');
+      res.set('X-Robots-Tag', 'index, follow');
+      res.type('html').send(remplitPageLegale(html));
+    });
+  });
 
   // 📄 Page publique d'une transcription de ticket (lien envoyé en MP)
   app.get('/transcript/:token', (req, res) => {
