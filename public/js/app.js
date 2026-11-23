@@ -226,6 +226,111 @@ App.pluriel = (n, un, plusieurs) => `${Number(n) || 0} ${(Number(n) || 0) > 1 ? 
 
 App.escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+// v397 — les gabarits du dashboard construisent librement du HTML (mise en
+// page, icônes, boutons) puis y Interpolent parfois une valeur venue de
+// Discord, de la base ou d'un champ de formulaire. L'échappement manuel
+// (`App.escapeHtml`) protège le TEXTE, mais pas ce qui est déjà du balisage :
+// une valeur qui contient « <b>x</b> » ou « <img onerror=…> » passait telle
+// quelle dans `innerHTML`.
+//
+// Deux fonctions complémentaires, sans dépendance (DOMPurify est écarté : il
+// faudrait une ressource distante, que la CSP `script-src 'self'` bloque) :
+//
+//  - App.texte(v)      : à utiliser DANS un gabarit, pour une valeur qui doit
+//                        rester du texte. Équivalent d'escapeHtml, nommé
+//                        différemment pour que l'intention soit lisible.
+//  - App.assainir(html): à utiliser AVANT d'écrire dans innerHTML quand le
+//                        fragment contient du balisage volontaire (mise en
+//                        forme Markdown, spans, boutons). Il supprime tout ce
+//                        qui peut exécuter du code ou charger une ressource :
+//                        balises script/iframe/object/embed, attributs on*,
+//                        javascript:, data: (hors images), srcdoc, style
+//                        dangereux, et ne garde que les balises connues.
+//
+// Limite assumée : ce n'est pas un filtre de sécurité exhaustif comme
+// DOMPurify (pas de suivi des mutations du DOM, pas de gestion de tous les
+// cas de mutation XSS). Il est vérifié par test sur les charges réelles que
+// le dashboard peut recevoir (pseudo Discord, nom de salon, description
+// d'embed, raison de sanction).
+const BALISES_AUTORISEES = new Set([
+  'a','b','i','u','s','em','strong','code','pre','br','hr','span','div','p',
+  'ul','ol','li','blockquote','small','sub','sup','img','button','input',
+  'select','option','label','table','thead','tbody','tr','th','td','svg','g',
+  'path','rect','circle','line','polyline','polygon','text','title','h1','h2',
+  'h3','h4','h5','h6',
+  // Éléments SVG de composition : sans eux, une icône assemblée en <symbol>
+  // puis appelée par <use> perdrait sa forme à l'assainissement.
+  'symbol','defs','use','tspan','ellipse','clipPath','linearGradient','stop',
+]);
+const ATTRIBUTS_AUTORISES = new Set([
+  'class','id','title','alt','width','height','role','aria-label','aria-hidden',
+  'aria-pressed','aria-current','data-close','data-load','data-del','data-i',
+  'data-rr-del','data-bk-restore','data-bk-export','data-bk-del','href','src',
+  'target','rel','colspan','rowspan','type','value','checked','selected',
+  'disabled','placeholder','min','max','step','viewBox','fill','stroke',
+  'stroke-width','stroke-linecap','stroke-linejoin','d','x','y','rx','ry',
+  'cx','cy','r','points','transform','xmlns','loading',
+]);
+const PREFIXES_AUTORISES = ['data-'];
+
+App.texte = (v) => App.escapeHtml(String(v == null ? '' : v));
+
+// Un attribut est-il sans danger ? On raisonne sur la VALEUR, pas seulement
+// sur le nom : `href="javascript:…"` et `src="data:text/html,…"` sont les
+// deux voies classiques d'exécution.
+// v397 — <use href="https://…"> : un SVG peut aller chercher une forme
+// ailleurs. Le site ne définit ses symboles que dans sa propre page. Cette
+// règle ne vise QUE <use> : les <a href="https://discord.gg/…"> du dashboard
+// restent nécessaires.
+const ATTRIBUTS_CHEMIN_LOCAL = new Set(['href', 'xlink:href']);
+
+function attributSur(nomBalise, nomAttribut, valeur) {
+  const v = String(valeur == null ? '' : valeur).replace(/[\u0000-\u001f\s]/g, '').toLowerCase();
+  if (v.startsWith('javascript:') || v.startsWith('vbscript:')) return false;
+  if (v.startsWith('data:') && !/^data:image\/(png|jpe?g|gif|webp|avif);base64,/.test(v)) return false;
+  if (nomBalise === 'use' && ATTRIBUTS_CHEMIN_LOCAL.has(nomAttribut)
+    && !String(valeur || '').trim().startsWith('#')) return false;
+  return true;
+}
+
+App.assainir = (html) => {
+  const brut = String(html == null ? '' : html);
+  if (!brut) return '';
+  // Sans DOM (test Node sans jsdom) on préfère ne rien rendre plutôt que de
+  // rendre sans filtrer.
+  if (typeof document === 'undefined' || !document.createElement) return App.escapeHtml(brut);
+  const gabarit = document.createElement('template');
+  gabarit.innerHTML = brut;
+  const racine = gabarit.content;
+
+  const nettoyer = (noeud) => {
+    for (const enfant of Array.from(noeud.children || [])) {
+      const nom = String(enfant.tagName || '').toLowerCase();
+      if (!BALISES_AUTORISEES.has(nom)) {
+        // Balise inconnue : on garde son TEXTE, jamais sa structure.
+        enfant.replaceWith(document.createTextNode(enfant.textContent || ''));
+        continue;
+      }
+      for (const attribut of Array.from(enfant.attributes)) {
+        const cle = String(attribut.name || '');
+        const minuscule = cle.toLowerCase();
+        const autoriseNom = ATTRIBUTS_AUTORISES.has(cle)
+          || PREFIXES_AUTORISES.some((p) => minuscule.startsWith(p));
+        if (!autoriseNom || minuscule.startsWith('on') || !attributSur(nom, minuscule, attribut.value)) {
+          enfant.removeAttribute(cle);
+        }
+      }
+      // `<a target="_blank">` sans rel : ouverture de la page appelante.
+      if (nom === 'a' && enfant.getAttribute('target') === '_blank') {
+        enfant.setAttribute('rel', 'noopener noreferrer');
+      }
+      nettoyer(enfant);
+    }
+  };
+  nettoyer(racine);
+  return racine.textContent === '' && gabarit.innerHTML === '' ? '' : gabarit.innerHTML;
+};
+
 // v364 — couleur de la barre du navigateur : elle doit suivre le thème.
 // Les deux valeurs viennent du CSS (fond sombre `--bg`, fond clair du body),
 // jamais inventées. Le script de index.html la pose avant le premier rendu ;
@@ -892,7 +997,7 @@ App.renderAdminPage = async () => {
     <div class="page admin-platform-page">
       <header class="admin-head">
         <div class="admin-identity">
-          <img id="a-bot-avatar" class="admin-mark admin-bot-avatar" src="/api/public/bot-avatar?v=396" alt="Avatar d’Hoxera" width="48" height="48" />
+          <img id="a-bot-avatar" class="admin-mark admin-bot-avatar" src="/api/public/bot-avatar?v=397" alt="Avatar d’Hoxera" width="48" height="48" />
           <div class="admin-head-copy">
             <div class="admin-breadcrumb"><span>OPTIMUS PRIME</span><i>/</i><b>CONSOLE FONDATEUR</b></div>
             <h1>Espace fondateur</h1>

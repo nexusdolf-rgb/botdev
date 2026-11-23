@@ -1139,7 +1139,7 @@ Dashboard.mountScrollHint = (container, label) => {
   const update = () => {
     const reste = container.scrollHeight - container.clientHeight - container.scrollTop;
     hint.classList.toggle('on', reste > 60);
-    hint.innerHTML = `<svg class="ico-svg" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.6 12 15.6l6-6"/></g></svg><span>${label}</span>`;
+    hint.innerHTML = `<svg class="ico-svg" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.6 12 15.6l6-6"/></g></svg><span>${App.texte(label)}</span>`;
   };
   if (!container.__scrollHintBound) {
     container.addEventListener('scroll', update, { passive: true });
@@ -2726,7 +2726,7 @@ Dashboard.renderers.tickets = async (content, data) => {
   }
   cm.innerHTML += `
     <label class="dash-label">Salon du Ticket menu</label>
-    <select class="dash-select" id="tm-channel">${menuChanOpts.join('')}</select>
+    <select class="dash-select" id="tm-channel">${App.assainir(menuChanOpts.join(''))}</select>
     <label class="dash-label">Catégorie où créer les salons de tickets du MENU (Ticket menu)</label>
     <select class="dash-select" id="tm-cat">
       <option value="">— Automatique (catégorie du type, sinon celle par défaut) —</option>
@@ -2909,12 +2909,12 @@ Dashboard.renderers.tickets = async (content, data) => {
     box.innerHTML = `
       <div class="dash-label" style="margin:0 0 8px">Aperçu de l’embed du salon privé</div>
       <div style="background:#313338;border-radius:8px;overflow:hidden;color:#DBDEE1;font-size:13px">
-        <div style="height:4px;background:${color}"></div>
+        <div style="height:4px;background:${App.texte(color)}"></div>
         <div style="padding:12px 15px">
           <div style="font-size:11px;color:#949BA4;margin-bottom:6px">Ticket de @pseudo · #12</div>
           <div style="font-weight:700;margin-bottom:8px">${App.escapeHtml(title)}</div>
           <div style="white-space:pre-wrap">${App.escapeHtml(welcome)}</div>
-          ${stepsPreview}
+          ${App.assainir(stepsPreview)}
           <div style="margin-top:10px;border-top:1px solid #1E1F22;padding:8px 0 0;color:#A8ABAF;font-size:12px">Menu « Actions du staff » — réservé au staff du serveur.</div>
         </div>
       </div>`;
@@ -3010,16 +3010,19 @@ Dashboard.renderers.tickets = async (content, data) => {
     const label = c.querySelector('#t-label').value.trim() || 'Ouvrir un ticket';
     const style = c.querySelector('#t-style').value;
     const color = btnColors[style] || '#5865F2';
-    const typesCount = typesData.filter((x) => x.label).length;
-    preview.innerHTML = `
+    const typesListe = typesData.filter((x) => x.label);
+    // v397 — deux fragments HTML volontaires : la liste des types et le
+    // panneau entier. Chacun est construit avec des champs déjà échappés,
+    // puis passé au nettoyeur avant d'être écrit dans la page.
+    const typesBlocHtml = App.assainir(`<div style="margin-top:12px;border:1px solid #1E1F22;border-radius:4px;padding:9px 12px;color:#A8ABAF;text-align:left">${typesListe.map((x) => `<div style="padding:4px 0">${App.escapeHtml(x.emoji || '')} <b style="color:#DBDEE1">${App.escapeHtml(x.label)}</b>${(x.questions || []).length ? ` <span style="font-size:11px;background:rgba(88,101,242,.2);color:#aab1ff;padding:1px 7px;border-radius:8px">${App.pluriel(x.questions.length, 'question', 'questions')}</span>` : ''}${x.description ? `<div style="font-size:11px;margin-left:20px;color:#949BA4">${App.escapeHtml(x.description.slice(0, 70))}${x.description.length > 70 ? '…' : ''}</div>` : ''}</div>`).join('')}</div>`);
+    const aucunTypeHtml = '<div style="margin-top:10px;color:#A8ABAF;font-size:12px">Aucun type → un simple bouton s\'affichera.</div>';
+    preview.innerHTML = App.assainir(`
       <div class="dash-label" style="margin:0 0 8px">Aperçu du panneau sur Discord</div>
       <div style="background:#313338;border-radius:8px;padding:14px;color:#DBDEE1;font-size:13px">
         <div style="margin-bottom:10px">${App.escapeHtml(t.message || 'Besoin d\'aide ? Ouvrez un ticket !')}</div>
-        <span style="display:inline-flex;align-items:center;gap:6px;background:${color};color:#fff;font-weight:700;padding:7px 16px;border-radius:4px">${App.escapeHtml(label)}</span>
-        ${typesCount
-          ? `<div style="margin-top:12px;border:1px solid #1E1F22;border-radius:4px;padding:9px 12px;color:#A8ABAF;text-align:left">${typesData.filter((x) => x.label).map((x) => `<div style="padding:4px 0">${App.escapeHtml(x.emoji || '')} <b style="color:#DBDEE1">${App.escapeHtml(x.label)}</b>${(x.questions || []).length ? ` <span style="font-size:11px;background:rgba(88,101,242,.2);color:#aab1ff;padding:1px 7px;border-radius:8px">${App.pluriel(x.questions.length, 'question', 'questions')}</span>` : ''}${x.description ? `<div style="font-size:11px;margin-left:20px;color:#949BA4">${App.escapeHtml(x.description.slice(0, 70))}${x.description.length > 70 ? '…' : ''}</div>` : ''}</div>`).join('')}</div>`
-          : `<div style="margin-top:10px;color:#A8ABAF;font-size:12px">Aucun type → un simple bouton s\'affichera.</div>`}
-      </div>`;
+        <span style="display:inline-flex;align-items:center;gap:6px;background:${App.texte(color)};color:#fff;font-weight:700;padding:7px 16px;border-radius:4px">${App.escapeHtml(label)}</span>
+        ${typesListe.length ? typesBlocHtml : aucunTypeHtml}
+      </div>`);
   };
   c.querySelector('#t-label').addEventListener('input', renderPreview);
   c.querySelector('#t-style').addEventListener('change', renderPreview);
@@ -3226,7 +3229,7 @@ Dashboard.renderers.tickets = async (content, data) => {
       : '';
     const body = mode === 'menu'
       ? `<div style="border:1px solid #1E1F22;border-radius:8px;padding:10px 12px;color:#A8ABAF">Choisissez un type…<div style="margin-top:8px">${validTypes.map((x) => `<div style="padding:6px 8px;border-top:1px solid #3f4147"><span style="color:${x.color}">●</span> ${App.escapeHtml(x.emoji || '')} <b style="color:#DBDEE1">${App.escapeHtml(x.label)}</b>${questionBadge(x)}<small style="display:block;margin-left:22px;color:#949BA4">${App.escapeHtml(x.description || 'Ouvrir un ticket en privé.')}</small></div>`).join('')}</div></div>`
-      : `<div style="display:flex;flex-direction:column;gap:8px">${validTypes.map((x) => `<div style="padding:9px 10px;border-left:4px solid ${x.color};border-top:1px solid #3f4147"><b style="display:block;color:#DBDEE1">${App.escapeHtml(x.emoji || '')} ${App.escapeHtml(x.label)}${questionBadge(x)}</b><small style="display:block;color:#949BA4;margin:3px 0 7px">${App.escapeHtml(x.description || 'Ouvrir un ticket en privé.')}</small><span style="display:inline-flex;background:${advColorToStyle[x.button_style] || '#5865F2'};color:#fff;font-weight:700;padding:6px 10px;border-radius:4px">${App.escapeHtml(x.emoji || '')} ${App.escapeHtml(x.button_label || ('Envoyer un ticket ' + x.label.toLowerCase()))}</span></div>`).join('') || '<span style="color:var(--d-dim)">Ajoutez un type pour voir l’aperçu.</span>'}</div>`;
+      : `<div style="display:flex;flex-direction:column;gap:8px">${validTypes.map((x) => `<div style="padding:9px 10px;border-left:4px solid ${App.texte(x.color)};border-top:1px solid #3f4147"><b style="display:block;color:#DBDEE1">${App.escapeHtml(x.emoji || '')} ${App.escapeHtml(x.label)}${questionBadge(x)}</b><small style="display:block;color:#949BA4;margin:3px 0 7px">${App.escapeHtml(x.description || 'Ouvrir un ticket en privé.')}</small><span style="display:inline-flex;background:${advColorToStyle[x.button_style] || '#5865F2'};color:#fff;font-weight:700;padding:6px 10px;border-radius:4px">${App.escapeHtml(x.emoji || '')} ${App.escapeHtml(x.button_label || ('Envoyer un ticket ' + x.label.toLowerCase()))}</span></div>`).join('') || '<span style="color:var(--d-dim)">Ajoutez un type pour voir l’aperçu.</span>'}</div>`;
     c3.querySelector('#adv-preview').innerHTML = `<div class="adv-preview-title">👀 Aperçu Discord <span>Mis à jour en direct</span></div><div class="adv-discord-preview">${imagePreview}<div class="adv-discord-title">🎨 ${App.escapeHtml(c3.querySelector('#adv-name').value || 'Créer un ticket')}</div>${body}</div>`;
   };
   const advRenderTypes = () => {
@@ -4439,8 +4442,8 @@ Dashboard.renderers.moderation = async (content, data) => {
   const durOpts = (selected, zeroLabel, list) => {
     const val = Number(selected) || 0;
     const has = list.some((v) => v === val);
-    const opts = list.map((v) => `<option value="${v}" ${val === v ? 'selected' : ''}>${v === 0 ? zeroLabel : (escDurNames[v] || v + ' min')}</option>`).join('');
-    return (has ? '' : `<option value="${val}" selected>Personnalisée : ${val === 0 ? zeroLabel : ((escDurNames[val] || val) + ' min')}</option>`) + opts;
+    const opts = list.map((v) => `<option value="${v}" ${val === v ? 'selected' : ''}>${v === 0 ? App.escapeHtml(zeroLabel) : (escDurNames[v] || v + ' min')}</option>`).join('');
+    return (has ? '' : `<option value="${val}" selected>Personnalisée : ${val === 0 ? App.escapeHtml(zeroLabel) : ((escDurNames[val] || val) + ' min')}</option>`) + opts;
   };
   const escWindows = [[60, '1 h'], [360, '6 h'], [1440, '24 h'], [4320, '3 jours'], [10080, '7 jours']];
   const defaultEscSteps = () => [
@@ -4484,16 +4487,16 @@ Dashboard.renderers.moderation = async (content, data) => {
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <span style="font-size:16px">${r.emoji}</span><b style="flex:1;min-width:150px">${r.label}</b>
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--d-dim)">Barème actif
-            <label class="switch"><input type="checkbox" data-esc-on="${r.key}" ${on ? 'checked' : ''} /><span class="slider"></span></label>
+            <label class="switch"><input type="checkbox" data-esc-on="${App.texte(r.key)}" ${on ? 'checked' : ''} /><span class="slider"></span></label>
           </label>
         </div>
         ${on ? `
         <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <label class="dash-label" style="margin:0">Récidives comptées sur</label>
-          <select class="dash-select" data-esc-win="${r.key}" style="max-width:220px">${(escWindows.some(([v]) => v === m.windowMin) ? '' : `<option value="${m.windowMin}" selected>Personnalisée (${m.windowMin} min)</option>`) + escWindowOptions(m.windowMin)}</select>
+          <select class="dash-select" data-esc-win="${App.texte(r.key)}" style="max-width:220px">${(escWindows.some(([v]) => v === m.windowMin) ? '' : `<option value="${m.windowMin}" selected>Personnalisée (${m.windowMin} min)</option>`) + escWindowOptions(m.windowMin)}</select>
         </div>
-        <div data-esc-steps="${r.key}" style="margin-top:8px;display:flex;flex-direction:column;gap:6px"></div>
-        <button class="dash-btn dash-btn-sm" data-esc-add="${r.key}" style="margin-top:6px">＋ Ajouter un palier</button>
+        <div data-esc-steps="${App.texte(r.key)}" style="margin-top:8px;display:flex;flex-direction:column;gap:6px"></div>
+        <button class="dash-btn dash-btn-sm" data-esc-add="${App.texte(r.key)}" style="margin-top:6px">＋ Ajouter un palier</button>
         <div style="font-size:11px;color:var(--d-dim);margin-top:6px">Enchaînement actuel : ${m.steps.map((st, i) => (i ? ' → ' : '') + st.after + (i === 0 ? 're' : 'e') + ' fois : ' + (escActionMeta[st.action] || st.action) + (st.minutes > 0 ? ' ' + (escDurNames[st.minutes] || st.minutes + ' min') : (st.action === 'ban' ? ' définitif' : '')) + (st.blacklist ? ' + 🚫' : '')).join('')}</div>
         ` : ''}
       </div>`;
@@ -4502,21 +4505,21 @@ Dashboard.renderers.moderation = async (content, data) => {
     escRules.forEach((r) => {
       const m = escModel[r.key];
       if (!m.enabled) return;
-      const stepsEl = escBox.querySelector(`[data-esc-steps="${r.key}"]`);
+      const stepsEl = escBox.querySelector(`[data-esc-steps="${App.texte(r.key)}"]`);
       stepsEl.innerHTML = m.steps.map((st, i) => `
         <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;border:1px dashed var(--d-border);border-radius:8px;padding:8px 10px">
           <span style="color:var(--d-dim);font-size:12px">après</span>
-          <select class="dash-select" data-esc-after="${r.key}" data-i="${i}" style="max-width:90px">${Dashboard.presetOptions([[1, '1'], [2, '2'], [3, '3'], [4, '4'], [5, '5'], [8, '8'], [10, '10'], [15, '15'], [20, '20']], st.after)}</select>
+          <select class="dash-select" data-esc-after="${App.texte(r.key)}" data-i="${App.texte(i)}" style="max-width:90px">${Dashboard.presetOptions([[1, '1'], [2, '2'], [3, '3'], [4, '4'], [5, '5'], [8, '8'], [10, '10'], [15, '15'], [20, '20']], st.after)}</select>
           <span style="color:var(--d-dim);font-size:12px">fois →</span>
-          <select class="dash-select" data-esc-action="${r.key}" data-i="${i}" style="max-width:170px">${Object.entries(escActionMeta).map(([v, label]) => `<option value="${v}" ${st.action === v ? 'selected' : ''}>${label}</option>`).join('')}</select>
-          <span data-esc-dur-wrap="${r.key}" data-i="${i}" ${['timeout', 'ban'].includes(st.action) ? '' : 'style="display:none"'}>
-            <select class="dash-select" data-esc-minutes="${r.key}" data-i="${i}" style="max-width:150px">${durOpts(st.minutes, 'Définitif', st.action === 'ban' ? BAN_MIN : MUTE_MIN)}</select>
+          <select class="dash-select" data-esc-action="${App.texte(r.key)}" data-i="${App.texte(i)}" style="max-width:170px">${Object.entries(escActionMeta).map(([v, label]) => `<option value="${v}" ${st.action === v ? 'selected' : ''}>${label}</option>`).join('')}</select>
+          <span data-esc-dur-wrap="${App.texte(r.key)}" data-i="${App.texte(i)}" ${['timeout', 'ban'].includes(st.action) ? '' : 'style="display:none"'}>
+            <select class="dash-select" data-esc-minutes="${App.texte(r.key)}" data-i="${App.texte(i)}" style="max-width:150px">${durOpts(st.minutes, 'Définitif', st.action === 'ban' ? BAN_MIN : MUTE_MIN)}</select>
           </span>
-          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;color:var(--d-dim)"><input type="checkbox" data-esc-bl="${r.key}" data-i="${i}" ${st.blacklist ? 'checked' : ''} />Blacklist</label>
-          <span data-esc-blmin-wrap="${r.key}" data-i="${i}" ${st.blacklist ? '' : 'style="display:none"'}>
-            <select class="dash-select" data-esc-blmin="${r.key}" data-i="${i}" style="max-width:160px">${durOpts(st.blacklistMin, 'Permanente', BL_MIN)}</select>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;color:var(--d-dim)"><input type="checkbox" data-esc-bl="${App.texte(r.key)}" data-i="${App.texte(i)}" ${st.blacklist ? 'checked' : ''} />Blacklist</label>
+          <span data-esc-blmin-wrap="${App.texte(r.key)}" data-i="${App.texte(i)}" ${st.blacklist ? '' : 'style="display:none"'}>
+            <select class="dash-select" data-esc-blmin="${App.texte(r.key)}" data-i="${App.texte(i)}" style="max-width:160px">${durOpts(st.blacklistMin, 'Permanente', BL_MIN)}</select>
           </span>
-          <button class="dash-btn dash-btn-danger dash-btn-sm" data-esc-del="${r.key}" data-i="${i}" title="Retirer ce palier">Supprimer</button>
+          <button class="dash-btn dash-btn-danger dash-btn-sm" data-esc-del="${App.texte(r.key)}" data-i="${App.texte(i)}" title="Retirer ce palier">Supprimer</button>
         </div>`).join('');
     });
     // Listeners
@@ -4731,7 +4734,7 @@ Dashboard.renderers.moderation = async (content, data) => {
       const stats = await App.api(`/bots/${bot.id}/guilds/${guildId}/automod/summary`);
       const ruleLabels = { links: 'Liens', caps: 'Majuscules', mentions: 'Mentions', words: 'Mots', spam: 'Spam', unknown: 'Autre' };
       const topRules = (stats.byRule || []).slice(0, 5).map((entry) => `<span class="am-summary-tag">${ruleLabels[entry.rule] || App.escapeHtml(entry.rule)} <b>${entry.count}</b></span>`).join('') || '<span class="am-help">Aucune action enregistrée.</span>';
-      summaryBox.innerHTML = `<div class="am-summary-stats"><div><b>${stats.today || 0}</b><small>Aujourd’hui</small></div><div><b>${stats.enforced || 0}</b><small>Actions appliquées</small></div><div><b>${stats.observed || 0}</b><small>Observations</small></div><div><b>${stats.total || 0}</b><small>Total</small></div></div><div class="am-summary-label">Règles les plus déclenchées</div><div class="am-summary-tags">${topRules}</div>`;
+      summaryBox.innerHTML = `<div class="am-summary-stats"><div><b>${stats.today || 0}</b><small>Aujourd’hui</small></div><div><b>${stats.enforced || 0}</b><small>Actions appliquées</small></div><div><b>${stats.observed || 0}</b><small>Observations</small></div><div><b>${stats.total || 0}</b><small>Total</small></div></div><div class="am-summary-label">Règles les plus déclenchées</div><div class="am-summary-tags">${App.assainir(topRules)}</div>`;
     } catch { summaryBox.innerHTML = '<div class="am-help">Les statistiques apparaîtront dès la première action du bot.</div>'; }
   })();
 
@@ -4795,7 +4798,7 @@ Dashboard.renderers.moderation = async (content, data) => {
   const cTest = Dashboard.card(root, 'Tester l\'auto-mod', 'Message piégé réel. Le simulateur ci-dessus ne touche à rien.');
   cTest.innerHTML += `
     <label class="dash-label">Salon du test</label>
-    <select class="dash-select" id="am-test-ch">${textChannelsAm.map((ch) => `<option value="${ch.id}">#${App.escapeHtml(ch.name)}</option>`).join('')}</select>
+    <select class="dash-select" id="am-test-ch">${textChannelsAm.map((ch) => `<option value="${App.texte(ch.id)}">#${App.escapeHtml(ch.name)}</option>`).join('')}</select>
     <label class="dash-label">Type de piège</label>
     <select class="dash-select" id="am-test-type">
       <option value="link">Lien interdit</option>
@@ -4811,7 +4814,7 @@ Dashboard.renderers.moderation = async (content, data) => {
   cTest.querySelector('#am-test-go').onclick = async () => {
     const resBox = cTest.querySelector('#am-test-result');
     const go = cTest.querySelector('#am-test-go');
-    resBox.innerHTML = `<div class="desc">Test en cours… regardez le salon <#${cTest.querySelector('#am-test-ch').value}> !</div>`;
+    resBox.innerHTML = `<div class="desc">Test en cours… regardez le salon <#${App.texte(cTest.querySelector('#am-test-ch').value)}> !</div>`;
     go.disabled = true;
     try {
       const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/automod/test`, { method: 'POST', body: {
@@ -4924,13 +4927,13 @@ Dashboard.renderers.moderation = async (content, data) => {
       const statusEl = cRaid.querySelector('#raid-status');
       if (st.raid) {
         const when = new Date(st.raid.triggeredAt).toLocaleString('fr-FR');
-        statusEl.innerHTML = `<div style="padding:10px 12px;border:1px solid rgba(237,66,69,.4);border-radius:8px;background:rgba(237,66,69,.08);font-size:13px"><b>Raid détecté</b> le ${when} — ${st.raid.count} arrivées en ${st.raid.window}s (${st.raid.action === 'lockdown' ? st.raid.locked + ' salon(s) verrouillé(s)' : 'alerte'})${st.raid.unlockAt ? ' · réouverture auto programmée' : ''}<br/><button class="dash-btn dash-btn-sm" id="raid-unlock-now" style="margin-top:8px">Rouvrir maintenant</button></div>`;
+        statusEl.innerHTML = `<div style="padding:10px 12px;border:1px solid rgba(237,66,69,.4);border-radius:8px;background:rgba(237,66,69,.08);font-size:13px"><b>Raid détecté</b> le ${App.texte(when)} — ${Number(st.raid.count) || 0} arrivées en ${Number(st.raid.window) || 0}s (${st.raid.action === 'lockdown' ? st.raid.locked + ' salon(s) verrouillé(s)' : 'alerte'})${st.raid.unlockAt ? ' · réouverture auto programmée' : ''}<br/><button class="dash-btn dash-btn-sm" id="raid-unlock-now" style="margin-top:8px">Rouvrir maintenant</button></div>`;
         cRaid.querySelector('#raid-unlock-now').onclick = async () => {
           try { await App.api(`/bots/${bot.id}/guilds/${guildId}/antiraid/unlock`, { method: 'POST' }); App.toast('Serveur réouvert.'); (Dashboard.renderers[Dashboard.state.module] || Dashboard.renderers.moderation)(content, data); }
           catch (e) { App.toast(e.message, 'error'); }
         };
       } else if (st.lockdown && st.lockdown.locked) {
-        statusEl.innerHTML = `<div style="padding:10px 12px;border:1px solid rgba(254,231,92,.4);border-radius:8px;background:rgba(254,231,92,.08);font-size:13px">Le serveur est verrouillé (${st.lockdown.channels.length} salon(s)). <button class="dash-btn dash-btn-sm" id="raid-unlock-now" style="margin-top:8px">Rouvrir</button></div>`;
+        statusEl.innerHTML = `<div style="padding:10px 12px;border:1px solid rgba(254,231,92,.4);border-radius:8px;background:rgba(254,231,92,.08);font-size:13px">Le serveur est verrouillé (${Number(st.lockdown.channels.length) || 0} salon(s)). <button class="dash-btn dash-btn-sm" id="raid-unlock-now" style="margin-top:8px">Rouvrir</button></div>`;
         cRaid.querySelector('#raid-unlock-now').onclick = async () => {
           try { await App.api(`/bots/${bot.id}/guilds/${guildId}/antiraid/unlock`, { method: 'POST' }); App.toast('Serveur réouvert.'); (Dashboard.renderers[Dashboard.state.module] || Dashboard.renderers.moderation)(content, data); }
           catch (e) { App.toast(e.message, 'error'); }
@@ -5192,7 +5195,7 @@ Dashboard.renderers.antinuke = async (content, data) => {
       lockdown: `Les salons sont verrouillés pour stopper l’hémorragie. Réouverture depuis Modération → Bouclier anti-raid.`,
       alert: `Mode le plus sûr : Hoxera signale, vous décidez. Idéal pour les premiers jours, le temps de voir si vos seuils sont bons.`,
     };
-    const dangerNote = `<div style="margin-top:10px;padding:10px 12px;border:1px solid ${cfg.action === 'ban' ? 'rgba(237,66,69,.4)' : 'rgba(255,255,255,.14)'};border-radius:8px;background:${cfg.action === 'ban' ? 'rgba(237,66,69,.08)' : 'rgba(255,255,255,.04)'};font-size:13px">${notes[cfg.action] || notes.alert}</div>`;
+    const dangerNote = `<div style="margin-top:10px;padding:10px 12px;border:1px solid ${cfg.action === 'ban' ? 'rgba(237,66,69,.4)' : 'rgba(255,255,255,.14)'};border-radius:8px;background:${cfg.action === 'ban' ? 'rgba(237,66,69,.08)' : 'rgba(255,255,255,.04)'};font-size:13px">${App.assainir(notes[cfg.action] || notes.alert)}</div>`;
 
     cfgBox.innerHTML = `
       <label class="dash-label">Activer l’anti-nuke</label>
@@ -5210,7 +5213,7 @@ Dashboard.renderers.antinuke = async (content, data) => {
         </div>
         <div>
           <label class="dash-label">Salon d’alerte</label>
-          <select class="dash-select" id="nk-chan">${chanOpts(cfg.alertChannel)}</select>
+          <select class="dash-select" id="nk-chan">${App.assainir(chanOpts(cfg.alertChannel))}</select>
         </div>
       </div>
       <div style="margin-top:12px">
@@ -5222,15 +5225,15 @@ Dashboard.renderers.antinuke = async (content, data) => {
         <input type="checkbox" id="nk-bots" ${cfg.punishBots ? 'checked' : ''} />
         <span>Sanctionner aussi les <b>autres bots</b> du serveur (déconseillé : un bot de tickets se ferait punir en ouvrant trois tickets)</span>
       </label>
-      ${dangerNote}
-      ${auditBanner}
+      ${App.assainir(dangerNote)}
+      ${App.assainir(auditBanner)}
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
         <button class="dash-save-action dash-btn dash-btn-primary" id="nk-save" style="flex:1">Enregistrer</button>
         <button class="dash-btn" id="nk-reset">Appliquer les seuils recommandés</button>
         <button class="dash-btn" id="nk-sim" style="flex:1">Simuler une alerte</button>
       </div>
       <div class="desc" style="margin-top:8px">La simulation envoie une alerte de démonstration. Elle ne sanctionne <b>jamais</b> personne.</div>
-      <div class="desc" style="margin-top:4px">Réactions déjà déclenchées sur ce serveur : <b>${st.totalActions || 0}</b></div>`;
+      <div class="desc" style="margin-top:4px">Réactions déjà déclenchées sur ce serveur : <b>${Number(st.totalActions) || 0}</b></div>`;
 
     // --- Tableau des limites par type ---
     //
@@ -5258,7 +5261,7 @@ Dashboard.renderers.antinuke = async (content, data) => {
       if (!paires.some(([v]) => String(v) === String(courant))) {
         paires.push([courant, etiqueter ? etiqueter(courant) : String(courant)]);
       }
-      return paires.map(([v, l]) => `<option value="${v}" ${String(v) === String(courant) ? 'selected' : ''}>${l}</option>`).join('');
+      return paires.map(([v, l]) => `<option value="${App.texte(v)}" ${String(v) === String(courant) ? 'selected' : ''}>${App.escapeHtml(l)}</option>`).join('');
     };
     const labelSanction = (a) => (SANCTIONS.find(([v]) => v === a) || [, a])[1];
     const optionsSanction = (courant) => {
@@ -5398,8 +5401,8 @@ Dashboard.renderers.roles = async (content, data) => {
     const host = cRR.querySelector('#rr-list');
     if (!rrList.length) { host.innerHTML = '<div style="font-size:13px;color:var(--d-dim)">Aucun message de rôles pour l\'instant : créez-le ci-dessous.</div>'; return; }
     host.innerHTML = rrList.map((st) => `<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;padding:9px 10px;border:1px solid var(--d-line);border-radius:8px;margin-bottom:6px;background:var(--d-card2,#ffffff08)">
-      <div style="font-size:13px"># ${App.escapeHtml(chanName(st.channel))} · ${App.pluriel(st.mappings.length, 'réaction', 'réactions')} · mode ${st.mode === 'add-only' ? 'don seulement' : 'toggle'}${st.message_id ? ` · <a href="https://discord.com/channels/${guildId}/${st.channel}/${st.message_id}" target="_blank" rel="noopener" style="color:var(--d-accent,#e07a5f)">voir le message</a>` : ' · 📤 pas encore envoyé'}</div>
-      <button class="dash-btn" data-rr-del="${st.id}" style="padding:4px 9px">Supprimer</button></div>`).join('');
+      <div style="font-size:13px"># ${App.escapeHtml(chanName(st.channel))} · ${App.pluriel(st.mappings.length, 'réaction', 'réactions')} · mode ${st.mode === 'add-only' ? 'don seulement' : 'toggle'}${st.message_id ? ` · <a href="https://discord.com/channels/${App.texte(guildId)}/${App.texte(st.channel)}/${App.texte(st.message_id)}" target="_blank" rel="noopener" style="color:var(--d-accent,#e07a5f)">voir le message</a>` : ' · 📤 pas encore envoyé'}</div>
+      <button class="dash-btn" data-rr-del="${App.texte(st.id)}" style="padding:4px 9px">Supprimer</button></div>`).join('');
     host.querySelectorAll('[data-rr-del]').forEach((b) => { b.onclick = async () => {
       // v377 — suppression immédiate côté Discord : on demande confirmation.
       if (!(await App.confirm('Supprimer ce message de rôles ? Les réactions déjà posées ne donneront plus de rôle.'))) return;
@@ -5409,7 +5412,7 @@ Dashboard.renderers.roles = async (content, data) => {
   };
   cRR.innerHTML += `<div id="rr-list" style="margin-bottom:12px"></div>
     <label class="dash-label">Salon du message de rôles</label>
-    <select class="dash-select" id="rr-channel">${(data.channels || []).filter((ch) => !ch.voice && !ch.category).map((ch) => `<option value="${ch.id}"># ${App.escapeHtml(ch.name)}</option>`).join('')}</select>
+    <select class="dash-select" id="rr-channel">${(data.channels || []).filter((ch) => !ch.voice && !ch.category).map((ch) => `<option value="${App.texte(ch.id)}"># ${App.escapeHtml(ch.name)}</option>`).join('')}</select>
     <label class="dash-label">Emoji du titre</label>
     <input class="dash-input" id="rr-title-emoji" maxlength="32" value="🎭" placeholder="🎭" style="width:70px;text-align:center" />
     <label class="dash-label">Titre du message</label>
@@ -5441,7 +5444,7 @@ Dashboard.renderers.roles = async (content, data) => {
       return App.toast('Discord n’accepte que 20 réactions par message. Créez un second message pour les autres rôles.', 'error');
     }
     const row = App.el('<div class="rr-map-row"></div>');
-    row.innerHTML = `<input class="dash-input rr-emoji" placeholder="🎮" style="width:70px" /><select class="dash-select rr-role" style="max-width:220px">${(data.roles || []).filter((r) => r.name !== '@everyone').map((r) => `<option value="${r.id}">@ ${App.escapeHtml(r.name)}</option>`).join('')}</select><input class="dash-input rr-label" placeholder="description (optionnel)" style="max-width:200px" /><button class="dash-btn rr-rm" style="padding:4px 9px">Retirer</button>`;
+    row.innerHTML = `<input class="dash-input rr-emoji" placeholder="🎮" style="width:70px" /><select class="dash-select rr-role" style="max-width:220px">${(data.roles || []).filter((r) => r.name !== '@everyone').map((r) => `<option value="${App.texte(r.id)}">@ ${App.escapeHtml(r.name)}</option>`).join('')}</select><input class="dash-input rr-label" placeholder="description (optionnel)" style="max-width:200px" /><button class="dash-btn rr-rm" style="padding:4px 9px">Retirer</button>`;
     row.querySelector('.rr-rm').onclick = () => { row.remove(); syncRrCount(); };
     mapsHost.appendChild(row);
     syncRrCount();
@@ -5688,7 +5691,7 @@ Dashboard.renderers.giveaways = async (content) => {
     .concat(rolesList.map((r) => `<option value="${App.escapeHtml(r.name)}" ${s.giveaway_ping_role === r.name || s.giveaway_ping_role === r.id ? 'selected' : ''}>@${App.escapeHtml(r.name)}</option>`));
   // v292 — conditions de participation : rôle requis (par identifiant) + niveau minimum + rappel
   const reqRoleOpts = ['<option value="">— Aucun rôle requis —</option>']
-    .concat(rolesList.map((r) => `<option value="${r.id}" ${String(s.giveaway_req_role || '') === String(r.id) ? 'selected' : ''}>@${App.escapeHtml(r.name)}</option>`));
+    .concat(rolesList.map((r) => `<option value="${App.texte(r.id)}" ${String(s.giveaway_req_role || '') === String(r.id) ? 'selected' : ''}>@${App.escapeHtml(r.name)}</option>`));
   if (s.giveaway_req_role && !rolesList.some((r) => String(r.id) === String(s.giveaway_req_role))) {
     reqRoleOpts.push(`<option value="${App.escapeHtml(String(s.giveaway_req_role))}" selected>configuration actuelle · rôle introuvable</option>`);
   }
@@ -5956,18 +5959,18 @@ Dashboard.renderers.embeds = async (content, data) => {
     host.innerHTML = `
       <div class="eb-discord">
         <div class="eb-dmsg">
-          <span class="eb-dava">${initials}</span>
+          <span class="eb-dava">${App.texte(initials)}</span>
           <div class="eb-dbody">
             <div class="eb-dhead"><b>${App.escapeHtml(botName)}</b><span class="eb-dtag">BOT</span><span class="eb-dtime">aujourd'hui à ${new Date().getHours().toString().padStart(2, '0')}:${new Date().getMinutes().toString().padStart(2, '0')}</span></div>
-            ${d.content ? `<div class="eb-dcontent">${vars(mdLite(d.content))}</div>` : ''}
+            ${d.content ? `<div class="eb-dcontent">${App.assainir(vars(mdLite(d.content)))}</div>` : ''}
             ${hasEmbed ? `
             <div class="eb-embed" style="border-left-color:${App.escapeHtml(d.color || '#e07a5f')}">
               <div class="eb-e-main">
-                ${d.author ? `<div class="eb-e-author">${vars(mdLite(d.author))}</div>` : ''}
-                ${d.title ? `<div class="eb-e-title">${vars(mdLite(d.title))}</div>` : ''}
-                ${d.description ? `<div class="eb-e-desc">${vars(mdLite(d.description))}</div>` : ''}
+                ${d.author ? `<div class="eb-e-author">${App.assainir(vars(mdLite(d.author)))}</div>` : ''}
+                ${d.title ? `<div class="eb-e-title">${App.assainir(vars(mdLite(d.title)))}</div>` : ''}
+                ${d.description ? `<div class="eb-e-desc">${App.assainir(vars(mdLite(d.description)))}</div>` : ''}
                 ${d.image && /^https?:\/\//.test(d.image) ? `<img class="eb-e-img" src="${App.escapeHtml(d.image)}" alt="" data-img-hide="1" />` : ''}
-                ${d.footer ? `<div class="eb-e-footer">${vars(mdLite(d.footer))}</div>` : ''}
+                ${d.footer ? `<div class="eb-e-footer">${App.assainir(vars(mdLite(d.footer)))}</div>` : ''}
               </div>
               ${d.thumbnail && /^https?:\/\//.test(d.thumbnail) ? `<img class="eb-e-thumb" src="${App.escapeHtml(d.thumbnail)}" alt="" data-img-hide="1" />` : ''}
             </div>` : ''}
@@ -5989,7 +5992,7 @@ Dashboard.renderers.embeds = async (content, data) => {
       return;
     }
     host.innerHTML = d.buttons.map((b, i) => `
-      <div class="eb-btnrow" data-i="${i}">
+      <div class="eb-btnrow" data-i="${App.texte(i)}">
         <input class="dash-input eb-b-emoji" maxlength="16" placeholder="😀" value="${App.escapeHtml(b.emoji || '')}" title="Émoji du bouton" />
         <input class="dash-input eb-b-label" maxlength="80" placeholder="Texte du bouton" value="${App.escapeHtml(b.label || '')}" />
         <select class="dash-input eb-b-style" title="Couleur du bouton">
@@ -6072,8 +6075,8 @@ Dashboard.renderers.embeds = async (content, data) => {
       <div class="eb-tpl-item">
         <div class="eb-tpl-copy"><b>${App.escapeHtml(t.name)}</b><small>${App.escapeHtml(String(t.createdAt || '').slice(0, 10))}</small></div>
         <div class="eb-tpl-actions">
-          <button type="button" class="btn btn-sm" data-load="${t.id}">Charger</button>
-          <button type="button" class="btn btn-sm" data-del="${t.id}">Supprimer</button>
+          <button type="button" class="btn btn-sm" data-load="${App.texte(t.id)}">Charger</button>
+          <button type="button" class="btn btn-sm" data-del="${App.texte(t.id)}">Supprimer</button>
         </div>
       </div>
     `).join('');
@@ -6329,7 +6332,7 @@ Dashboard.renderers.announcements = async (content, data) => {
     <label class="dash-label">Salon concerné</label>
     <select class="dash-select" id="stk-channel">
       <option value="">— Aucun salon —</option>
-      ${textChannels.map((ch) => `<option value="${ch.id}" ${stk.channel === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('')}
+      ${textChannels.map((ch) => `<option value="${App.texte(ch.id)}" ${stk.channel === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('')}
     </select>
     <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px">
       <div><label class="dash-label">Republication</label><select class="dash-select" id="stk-every" style="max-width:190px">${[5, 10, 20, 50].map((n) => `<option value="${n}" ${Number(stk.every) === n ? 'selected' : ''}>tous les ${n} messages</option>`).join('')}</select></div>
@@ -6435,7 +6438,7 @@ Dashboard.renderers.announcements = async (content, data) => {
     const color = /^#[0-9a-fA-F]{6}$/.test(cCustom.querySelector('#ca-color').value) ? cCustom.querySelector('#ca-color').value : '#5865F2';
     const roleNames = [...selectedAnnRoles].map((ref) => rolesList.find((role) => String(role.id) === ref || String(role.name) === ref)).filter(Boolean).map((role) => `<span class="ca-role-mention">@${App.escapeHtml(role.name)}</span>`).join(' ');
     const image = cCustom.querySelector('#ca-image').value.trim();
-    caPreview.innerHTML = `<div class="ca-preview-label">👀 Aperçu Discord <span>Actualisé en direct</span></div><div class="ca-discord-preview"><div class="ca-discord-author"><span class="ca-bot-avatar">⚡</span><b>Hoxera</b><span>APP</span></div>${roleNames ? `<div class="ca-preview-pings">${roleNames}</div>` : ''}<div class="ca-embed-preview" style="border-left-color:${color}">${cCustom.querySelector('#ca-title').value.trim() ? `<div class="ca-embed-title">${App.escapeHtml(cCustom.querySelector('#ca-title').value.trim())}</div>` : ''}<div class="ca-embed-body">${markdownPreview(caMessage.value) || '<span class="ca-placeholder">Votre message apparaîtra ici…</span>'}</div>${image && /^https:\/\//i.test(image) ? `<img src="${App.escapeHtml(image)}" alt="" />` : ''}<div class="ca-embed-footer">${App.escapeHtml(cCustom.querySelector('#ca-footer').value.trim() || '')}</div></div></div>`;
+    caPreview.innerHTML = `<div class="ca-preview-label">👀 Aperçu Discord <span>Actualisé en direct</span></div><div class="ca-discord-preview"><div class="ca-discord-author"><span class="ca-bot-avatar">⚡</span><b>Hoxera</b><span>APP</span></div>${roleNames ? `<div class="ca-preview-pings">${App.assainir(roleNames)}</div>` : ''}<div class="ca-embed-preview" style="border-left-color:${App.texte(color)}">${cCustom.querySelector('#ca-title').value.trim() ? `<div class="ca-embed-title">${App.escapeHtml(cCustom.querySelector('#ca-title').value.trim())}</div>` : ''}<div class="ca-embed-body">${markdownPreview(caMessage.value) || '<span class="ca-placeholder">Votre message apparaîtra ici…</span>'}</div>${image && /^https:\/\//i.test(image) ? `<img src="${App.escapeHtml(image)}" alt="" />` : ''}<div class="ca-embed-footer">${App.escapeHtml(cCustom.querySelector('#ca-footer').value.trim() || '')}</div></div></div>`;
   };
   Dashboard.renderDiscordMultiSelect(cCustom.querySelector('#ca-channels'), {
     items: textChannels,
@@ -6550,7 +6553,7 @@ Dashboard.renderers.announcements = async (content, data) => {
     <label class="dash-label">Fuseau horaire (heure d'envoi)</label>
     <select class="dash-select" id="a-tz">${ANNOUNCEMENT_TZ_OPTIONS.map(([tz, label]) => `<option value="${tz}" ${tz === currentTz ? 'selected' : ''}>${label}</option>`).join('')}</select>
     <label class="dash-label" style="margin-top:10px">Salon</label>
-    <select class="dash-select" id="a-channel">${textChannels.map((ch) => `<option value="${ch.id}">#${App.escapeHtml(ch.name)}</option>`).join('')}</select>
+    <select class="dash-select" id="a-channel">${textChannels.map((ch) => `<option value="${App.texte(ch.id)}">#${App.escapeHtml(ch.name)}</option>`).join('')}</select>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
       <div style="flex:1;min-width:96px"><label class="dash-label">Heure</label><select class="dash-select" id="a-hour">${Dashboard.presetOptions(Array.from({ length: 24 }, (_, h) => [h, String(h).padStart(2, '0') + ' h']), 18)}</select></div>
       <div style="flex:1;min-width:96px"><label class="dash-label">Minute</label><select class="dash-select" id="a-minute">${Dashboard.presetOptions(Array.from({ length: 12 }, (_, m) => [m * 5, String(m * 5).padStart(2, '0')]), 0)}</select></div>
@@ -6954,7 +6957,7 @@ Dashboard.renderers.events = async (content, data) => {
   // ---- ➕ Créer un événement ----
   const createCard = Dashboard.card(root, 'Créer un événement', 'Titre, date (JJ/MM HH:MM · heure du serveur), description, salon d\'annonce et rôle à mentionner en option.');
   const chOpts = ['<option value="">— Salon actuel / premier salon texte —</option>']
-    .concat(textChannels.map((ch) => `<option value="${ch.id}">#${App.escapeHtml(ch.name)}</option>`));
+    .concat(textChannels.map((ch) => `<option value="${App.texte(ch.id)}">#${App.escapeHtml(ch.name)}</option>`));
   createCard.innerHTML += `
     <label class="dash-label">Titre *</label>
     <input class="dash-input" id="ev-title" placeholder="Tournoi CODM · 1v1" style="max-width:420px" />
@@ -7006,13 +7009,13 @@ Dashboard.renderers.community = async (content, data) => {
   const ci = Dashboard.card(root, 'Récompenses d\'invitations', 'Récompensez les membres qui font grandir le serveur : un rôle automatique à chaque palier d\'invitations VALIDES. Un invité qui repart avant le délai choisi ne compte pas (anti fausses invitations).');
   let ircRows = (irc.rewards || []).map((rw) => ({ invites: Number(rw.invites) || 5, role: String(rw.role || '') }));
   const ircRoleOpts = (sel) => ['<option value="">— Choisir un rôle —</option>']
-    .concat((data.roles || []).map((r) => `<option value="${r.id}" ${String(sel) === String(r.id) ? 'selected' : ''}>@ ${App.escapeHtml(r.name)}</option>`)).join('');
+    .concat((data.roles || []).map((r) => `<option value="${App.texte(r.id)}" ${String(sel) === String(r.id) ? 'selected' : ''}>@ ${App.escapeHtml(r.name)}</option>`)).join('');
   const ircDraw = () => {
     const box = ci.querySelector('#irc-rows');
     if (!ircRows.length) { box.innerHTML = '<div style="font-size:13px;color:var(--d-dim)">Aucun palier · ajoutez-en un (ex. 5 invitations → rôle Fan, 25 → rôle Ambassadeur).</div>'; return; }
     box.innerHTML = ircRows.map((rw, i) => `
-      <div class="irc-row" data-i="${i}" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
-        <input type="number" class="dash-input irc-inv" min="1" max="100000" value="${rw.invites}" style="width:110px" title="Nombre d'invitations valides" />
+      <div class="irc-row" data-i="${App.texte(i)}" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+        <input type="number" class="dash-input irc-inv" min="1" max="100000" value="${Number(rw.invites) || 0}" style="width:110px" title="Nombre d'invitations valides" />
         <span style="color:var(--d-dim);font-size:13px">invitations →</span>
         <select class="dash-select irc-role" style="max-width:240px">${ircRoleOpts(rw.role)}</select>
         <button class="dash-btn irc-del" title="Supprimer ce palier">Supprimer</button>
@@ -7029,7 +7032,7 @@ Dashboard.renderers.community = async (content, data) => {
     <label class="dash-label">Anti fausses invitations · un invité qui part avant ce délai ne compte pas</label>
     <select class="dash-select" id="irc-minh" style="max-width:320px">${[[0, 'Désactivé · tous les invités comptent'], [6, '6 heures'], [24, '24 heures (recommandé)'], [72, '3 jours'], [168, '7 jours']].map(([v, l]) => `<option value="${v}" ${Number(irc.min_hours) === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
     <label class="dash-label">Salon d'annonce des paliers atteints</label>
-    <select class="dash-select" id="irc-chan" style="max-width:320px">${['<option value="">— Aucune annonce —</option>'].concat(textChannels.map((ch) => `<option value="${ch.id}" ${irc.channel === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`)).join('')}</select>
+    <select class="dash-select" id="irc-chan" style="max-width:320px">${['<option value="">— Aucune annonce —</option>'].concat(textChannels.map((ch) => `<option value="${App.texte(ch.id)}" ${irc.channel === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`)).join('')}</select>
     <label class="dash-label">Paliers (invitations valides → rôle donné à l'inviteur)</label>
     <div id="irc-rows"></div>
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
@@ -7294,19 +7297,19 @@ Dashboard.renderers.voicetemp = async (content, data) => {
     <label class="dash-label">Salon de création (vocal)</label>
     <select class="dash-select" id="vt-channel">
       <option value="">— Désactivé —</option>
-      ${voiceChannels.map((ch) => `<option value="${ch.id}" ${String(vt.creator_channel || '') === ch.id ? 'selected' : ''}>${App.escapeHtml(ch.name)}</option>`).join('')}
+      ${voiceChannels.map((ch) => `<option value="${App.texte(ch.id)}" ${String(vt.creator_channel || '') === ch.id ? 'selected' : ''}>${App.escapeHtml(ch.name)}</option>`).join('')}
     </select>
     <label class="dash-label">Catégorie des vocaux créés</label>
     <select class="dash-select" id="vt-cat">
       <option value="">— Catégorie du salon de création —</option>
-      ${categories.map((ch) => `<option value="${ch.id}" ${String(vt.category || '') === ch.id ? 'selected' : ''}>${App.escapeHtml(ch.name)}</option>`).join('')}
+      ${categories.map((ch) => `<option value="${App.texte(ch.id)}" ${String(vt.category || '') === ch.id ? 'selected' : ''}>${App.escapeHtml(ch.name)}</option>`).join('')}
     </select>
     <label class="dash-label">Nom des salons (optionnel)</label>
     <input class="dash-input" id="vt-name" value="${App.escapeHtml(vt.name_template || '')}" placeholder="{name}" style="max-width:300px" />
     <label class="dash-label">Salon textuel du panneau de contrôle</label>
     <select class="dash-select" id="vt-panel">
       <option value="">— Aucun panneau —</option>
-      ${vtTextChannels.map((ch) => `<option value="${ch.id}" ${String(vt.panel_channel || '') === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('')}
+      ${vtTextChannels.map((ch) => `<option value="${App.texte(ch.id)}" ${String(vt.panel_channel || '') === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('')}
     </select>
     <div style="font-size:12px;color:var(--d-dim);margin-top:8px">Dans ce salon, un panneau permet à chaque propriétaire d'un vocal temporaire de gérer SON salon : ${App.glyphe('cadenas', { taille: 13 })} privé / ${App.glyphe('cadenasOuvert', { taille: 13 })} public, ${App.glyphe('plus', { taille: 13 })}${App.glyphe('moins', { taille: 13 })} invités, ${App.glyphe('crayon', { taille: 13 })} renommer, ${App.glyphe('corbeille', { taille: 13 })} supprimer. Chaque réponse ne se voit que chez lui. Les émojis du panneau arrivent automatiquement : rien à installer.</div>
     <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap"><button class="dash-save-action dash-btn dash-btn-primary" id="vt-save">Enregistrer</button><button class="dash-btn" id="vt-panel-send">Envoyer / mettre à jour le panneau</button><button class="dash-btn" id="vt-emotes" title="Les émojis du panneau appartiennent à l'application Hoxera : ce bouton les réinstalle côté application, jamais dans votre serveur.">Émojis du panneau</button></div>`;
@@ -7366,11 +7369,11 @@ Dashboard.renderers.server = async (content, data) => {
     const items = r.backups || [];
     if (!items.length) { host.innerHTML = '<div style="font-size:13px;color:var(--d-dim)">Aucune sauvegarde pour l instant : créez la première, c est votre filet de sécurité.</div>'; return; }
     host.innerHTML = items.map((b) => `<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;padding:9px 10px;border:1px solid var(--d-line);border-radius:8px;margin-bottom:6px;background:var(--d-card2,#ffffff08)">
-      <div style="font-size:13px">${new Date(b.t).toLocaleString('fr-FR')} · <b>${b.counts.roles || 0}</b> rôles · <b>${b.counts.channels || 0}</b> salons/catégories</div>
+      <div style="font-size:13px">${new Date(b.t).toLocaleString('fr-FR')} · <b>${Number(b.counts.roles) || 0}</b> rôles · <b>${Number(b.counts.channels) || 0}</b> salons/catégories</div>
       <div style="display:flex;gap:6px">
-        <button class="dash-btn" data-bk-restore="${b.id}" style="padding:4px 9px" title="Recrée uniquement ce qui manque">Restaurer</button>
-        <button class="dash-btn" data-bk-export="${b.id}" style="padding:4px 9px" title="Télécharger le JSON">Télécharger</button>
-        <button class="dash-btn" data-bk-del="${b.id}" style="padding:4px 9px" title="Supprimer cette sauvegarde">Supprimer</button>
+        <button class="dash-btn" data-bk-restore="${App.texte(b.id)}" style="padding:4px 9px" title="Recrée uniquement ce qui manque">Restaurer</button>
+        <button class="dash-btn" data-bk-export="${App.texte(b.id)}" style="padding:4px 9px" title="Télécharger le JSON">Télécharger</button>
+        <button class="dash-btn" data-bk-del="${App.texte(b.id)}" style="padding:4px 9px" title="Supprimer cette sauvegarde">Supprimer</button>
       </div></div>`).join('');
     host.querySelectorAll('[data-bk-restore]').forEach((btn) => { btn.onclick = async () => {
       if (!confirm('Restaurer cette sauvegarde ? Seuls les rôles et salons MANQUANTS seront recréés ; rien ne sera supprimé.')) return;
@@ -7470,12 +7473,12 @@ Dashboard.renderers.server = async (content, data) => {
     <label class="dash-label">Salon des anniversaires</label>
     <select class="dash-select" id="bd-channel">
       <option value="">— Aucun (annonces désactivées) —</option>
-      ${textChannels.map((ch) => `<option value="${ch.id}" ${String(s.birthday_channel || '') === ch.id ? 'selected' : ''}>#${App.escapeHtml(ch.name)}</option>`).join('')}
+      ${textChannels.map((ch) => `<option value="${App.texte(ch.id)}" ${String(s.birthday_channel || '') === ch.id ? 'selected' : ''}>#${App.escapeHtml(ch.name)}</option>`).join('')}
     </select>
     <label class="dash-label">Rôle anniversaire (optionnel · donné 24 h)</label>
     <select class="dash-select" id="bd-role">
       <option value="">— Aucun —</option>
-      ${rolesList.map((r) => `<option value="${r.id}" ${String(s.birthday_role || '') === r.id ? 'selected' : ''}>${App.escapeHtml(r.name)}</option>`).join('')}
+      ${rolesList.map((r) => `<option value="${App.texte(r.id)}" ${String(s.birthday_role || '') === r.id ? 'selected' : ''}>${App.escapeHtml(r.name)}</option>`).join('')}
     </select>
     <div style="margin-top:12px"><button class="dash-save-action dash-btn dash-btn-primary" id="bd-save">Enregistrer la langue et le fuseau</button></div>`;
   c3.querySelector('#bd-save').onclick = async (e) => {
@@ -7845,8 +7848,8 @@ Dashboard.renderers.verification = async (content, data) => {
   const root = Dashboard.header(content, '', 'Vérification', 'Captcha à l’arrivée, bouton « Je suis humain », isolation. Discord ne dit pas aux bots si un compte est volé.');
   const cfg = Object.assign({ enabled: false, channel: '', role: '', gate_days: 0, bot_filter: false, approved_bots: [], isolate: false, isolated_channels: [], panel_title: '', panel_desc: '', button_label: '', panel_color: '#57F287', require_avatar: false, block_spammer: false, captcha: false, captcha_channel: '', captcha_role: '', captcha_title: '', captcha_desc: '', captcha_color: '#e07a5f' }, data.verification || {});
   const textCh = (data.channels || []).filter((ch) => !ch.voice && !ch.category);
-  const capSel = textCh.map((ch) => `<option value="${ch.id}" ${String(cfg.captcha_channel || '') === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('');
-  const capRoleSel = (data.roles || []).map((r) => `<option value="${r.id}" ${String(cfg.captcha_role || '') === r.id ? 'selected' : ''}>@ ${App.escapeHtml(r.name)}</option>`).join('');
+  const capSel = textCh.map((ch) => `<option value="${App.texte(ch.id)}" ${String(cfg.captcha_channel || '') === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('');
+  const capRoleSel = (data.roles || []).map((r) => `<option value="${App.texte(r.id)}" ${String(cfg.captcha_role || '') === r.id ? 'selected' : ''}>@ ${App.escapeHtml(r.name)}</option>`).join('');
   const capColor = /^#[0-9a-fA-F]{6}$/.test(String(cfg.captcha_color || '')) ? cfg.captcha_color : '#e07a5f';
   const cCap = Dashboard.card(root, 'Captcha à l’arrivée', 'Quand quelqu’un rejoint, le bot lui envoie un panneau + une image de lettres. Chaque arrivée a un code différent. 2 essais, 2 minutes. Le bouton « Je suis humain » reste plus bas.');
   cCap.innerHTML += `
@@ -7878,9 +7881,9 @@ Dashboard.renderers.verification = async (content, data) => {
   c1.innerHTML += `
     <label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" id="ver-enabled" ${cfg.enabled ? 'checked' : ''} /> Activer la vérification sur ce serveur</label>
     <label class="dash-label">Salon du panneau de vérification</label>
-    <select class="dash-select" id="ver-channel">${textCh.map((ch) => `<option value="${ch.id}" ${cfg.channel === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('')}</select>
+    <select class="dash-select" id="ver-channel">${textCh.map((ch) => `<option value="${App.texte(ch.id)}" ${cfg.channel === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`).join('')}</select>
     <label class="dash-label">Rôle « vérifié » donné après le clic</label>
-    <select class="dash-select" id="ver-role">${(data.roles || []).map((r) => `<option value="${r.id}" ${cfg.role === r.id ? 'selected' : ''}>@ ${App.escapeHtml(r.name)}</option>`).join('')}</select>
+    <select class="dash-select" id="ver-role">${(data.roles || []).map((r) => `<option value="${App.texte(r.id)}" ${cfg.role === r.id ? 'selected' : ''}>@ ${App.escapeHtml(r.name)}</option>`).join('')}</select>
     <label class="dash-label">Join Gate · âge minimum du compte Discord</label>
     <select class="dash-select" id="ver-gate" style="max-width:220px">${[[0, 'Désactivé'], [1, '1 jour minimum'], [3, '3 jours minimum'], [7, '7 jours minimum'], [14, '14 jours minimum'], [30, '30 jours minimum'], [60, '60 jours minimum']].map(([v, l]) => `<option value="${v}" ${Number(cfg.gate_days) === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
     <div style="font-size:12px;color:var(--d-dim);margin-top:4px">Les comptes plus récents sont refusés à l\'arrivée : explication envoyée en MP, puis expulsion (protection anti-raid, comme Wick).</div>
@@ -8231,7 +8234,7 @@ Dashboard.retitle = (content, icon, title, sub) => {
     // l'émoji reçu en service n'est gardé que comme repli.
     const emote = Dashboard.emoteFor(Dashboard.state.module);
     iconEl.className = emote ? 'm-icon has-emote' : 'm-icon';
-    iconEl.innerHTML = `${emote}<span class="ico-fallback" aria-hidden="true">${icon}</span>`;
+    iconEl.innerHTML = App.assainir(`${emote}<span class="ico-fallback" aria-hidden="true">${icon}</span>`);
   }
   if (h1) h1.textContent = title;
   if (subEl) subEl.textContent = sub;
@@ -8599,12 +8602,12 @@ Dashboard.renderers.rules = async (content, data) => {
   const roles = (data.roles || []).filter((r) => r.name !== '@everyone');
   const optionsSalon = (valeur) => [
     '<option value="">— Choisir un salon —</option>',
-    ...salons.map((ch) => `<option value="${ch.id}" ${String(valeur) === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`),
+    ...salons.map((ch) => `<option value="${App.texte(ch.id)}" ${String(valeur) === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`),
     Dashboard.currentDiscordOption(valeur, salons),
   ].join('');
   const optionsRole = (valeur) => [
     '<option value="">— Aucun rôle (juste la trace des acceptations) —</option>',
-    ...roles.map((r) => `<option value="${r.id}" ${String(valeur) === r.id ? 'selected' : ''}>@ ${App.escapeHtml(r.name)}</option>`),
+    ...roles.map((r) => `<option value="${App.texte(r.id)}" ${String(valeur) === r.id ? 'selected' : ''}>@ ${App.escapeHtml(r.name)}</option>`),
     Dashboard.currentDiscordOption(valeur, roles),
   ].join('');
   const couleurOk = /^#[0-9a-fA-F]{6}$/.test(String(cfg.color || '')) ? cfg.color : '#5865F2';
@@ -8771,7 +8774,7 @@ Dashboard.renderers.rules = async (content, data) => {
       <div class="dprev-embed" style="--dprev-bar:${App.escapeHtml(couleur)}">
         <div class="dprev-body">
           <div class="dprev-title">${App.escapeHtml('' + titre)}</div>
-          ${corpsHtml}
+          ${App.assainir(corpsHtml)}
           ${pied ? `<div class="dprev-sep"></div><div class="dprev-foot">${App.escapeHtml(pied)}</div>` : ''}
           ${placement === 'carte' ? `<div class="dprev-sep"></div><div class="dprev-carte"><div class="dprev-carte-texte">${Dashboard.discordMarkdownHtml(indice)}</div><div>${rangee}</div></div>` : ''}
         </div>
@@ -8917,7 +8920,7 @@ Dashboard.renderers.polls = async (content, data) => {
   const salons = (data.channels || []).filter((ch) => !ch.voice && !ch.category);
   const optionsSalon = (valeur) => [
     '<option value="">— Choisir un salon —</option>',
-    ...salons.map((ch) => `<option value="${ch.id}" ${String(valeur) === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`),
+    ...salons.map((ch) => `<option value="${App.texte(ch.id)}" ${String(valeur) === ch.id ? 'selected' : ''}># ${App.escapeHtml(ch.name)}</option>`),
     Dashboard.currentDiscordOption(valeur, salons),
   ].join('');
   const DUREES = [[1, '1 heure'], [2, '2 heures'], [4, '4 heures'], [6, '6 heures'], [12, '12 heures'],

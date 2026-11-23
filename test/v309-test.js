@@ -33,8 +33,8 @@ const racine = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 
 console.log('— 1. Pins de version v309 —');
 const html = racine('public/index.html');
-check('index.html : ?v=396 ×10', (html.match(/\?v=396/g) || []).length === 10);
-check('sw.js : cache hoxera-v396', racine('public/sw.js').includes("const CACHE = 'hoxera-v396';"));
+check('index.html : ?v=397 ×10', (html.match(/\?v=397/g) || []).length === 10);
+check('sw.js : cache hoxera-v397', racine('public/sw.js').includes("const CACHE = 'hoxera-v397';"));
 
 console.log('— 2. Panneaux tickets : plus AUCUNE ligne colorée —');
 store.bots.create({ user_id: 1, name: 'B', token: 'x', client_id: 'c', prefix: '!' });

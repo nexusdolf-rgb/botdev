@@ -538,9 +538,9 @@ async function main() {
 
   const index = src('public/index.html');
   const sw = src('public/sw.js');
-  check('index.html : ?v=396 référencé 10 fois', (index.match(/\?v=396/g) || []).length === 10,
-    `trouvé ${(index.match(/\?v=396/g) || []).length}`);
-  check("sw.js : cache 'hoxera-v396'", sw.includes("const CACHE = 'hoxera-v396';"));
+  check('index.html : ?v=397 référencé 10 fois', (index.match(/\?v=397/g) || []).length === 10,
+    `trouvé ${(index.match(/\?v=397/g) || []).length}`);
+  check("sw.js : cache 'hoxera-v397'", sw.includes("const CACHE = 'hoxera-v397';"));
   check('index.html : plus aucun ?v=239', !/\?v=239/.test(index));
 }
 

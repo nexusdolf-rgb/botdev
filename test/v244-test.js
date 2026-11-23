@@ -223,6 +223,13 @@ const GUILD = 'G244';
     api: async () => ({}),
     toast: () => {},
   };
+  // Le rendeur anti-nuke appelle App.texte/App.assainir (nettoyage v397).
+  const appJs = racine('public/js/app.js');
+  const j0 = appJs.indexOf('App.el =');
+  const j1 = appJs.indexOf('App.toast =', j0);
+  global.App = {};
+  eval(appJs.slice(j0, j1 > j0 ? j1 : j0 + 8000));
+
   global.Dashboard = { renderers: {}, state: {} };
 
   const src = racine('public/js/dashboard.js');
@@ -581,10 +588,10 @@ const GUILD = 'G244';
   // à diagnostiquer qui soit.
   const versions = [...new Set(html.match(/\?v=\d+/g) || [])];
   check('index.html : les 10 références pointent la MÊME version', versions.length === 1, versions.join(', '));
-  check('cette version est bien la v244', versions[0] === '?v=396', String(versions[0]));
+  check('cette version est bien la v244', versions[0] === '?v=397', String(versions[0]));
 
   check('sw.js : nom de cache présent', /const CACHE = 'hoxera-v\d+'/.test(sw), (sw.match(/const CACHE = '[^']*'/) || ['?'])[0]);
-  // « ?v=396 » dans index.html doit correspondre à « botdev-v260 » dans sw.js.
+  // « ?v=397 » dans index.html doit correspondre à « botdev-v260 » dans sw.js.
   const cacheAttendu = `'hoxera-${versions[0].replace('?v=', 'v')}'`;
   check('sw.js : cache aligné sur index.html', sw.includes(cacheAttendu),
     `${cacheAttendu} attendu, ${(sw.match(/const CACHE = '[^']*'/) || ['?'])[0]} trouvé`);

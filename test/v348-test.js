@@ -21,8 +21,8 @@ const iM = dash.indexOf('Dashboard.renderers.moderation');
 const chunk = dash.slice(iM, dash.indexOf('Dashboard.renderers.antinuke', iM));
 
 console.log('— 1. Pins v348 —');
-check('index.html : ?v=396 ×10', (html.match(/\?v=396/g) || []).length === 10);
-check('sw.js : cache hoxera-v396', sw.includes("const CACHE = 'hoxera-v396';"));
+check('index.html : ?v=397 ×10', (html.match(/\?v=397/g) || []).length === 10);
+check('sw.js : cache hoxera-v397', sw.includes("const CACHE = 'hoxera-v397';"));
 check('index.html : plus aucune ?v=347', !html.includes('?v=347'));
 check('v348 conservée dans le journal des versions récentes', changelog.VERSION >= 348 && changelog.VERSIONS.some((version) => version.v === 348));
 check('journal v348 : au moins 1 nouveauté', Array.isArray(changelog.NOTES.new) && changelog.NOTES.new.length >= 1);

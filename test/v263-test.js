@@ -112,9 +112,9 @@ const brut = (p) => JSON.stringify(p);
   console.log('— 6. Version —');
   const index = fs.readFileSync(require('path').join(__dirname, '..', 'public/index.html'), 'utf8');
   const sw = fs.readFileSync(require('path').join(__dirname, '..', 'public/sw.js'), 'utf8');
-  check('index.html : ?v=396 référencé 10 fois', (index.match(/\?v=396/g) || []).length === 10,
-    String((index.match(/\?v=396/g) || []).length));
-  check('sw.js : cache « hoxera-v396 »', sw.includes("const CACHE = 'hoxera-v396';"));
+  check('index.html : ?v=397 référencé 10 fois', (index.match(/\?v=397/g) || []).length === 10,
+    String((index.match(/\?v=397/g) || []).length));
+  check('sw.js : cache « hoxera-v397 »', sw.includes("const CACHE = 'hoxera-v397';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v263 — ${ok} vérifications OK : l'aide s'efface pour de bon.`);

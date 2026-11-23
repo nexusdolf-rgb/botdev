@@ -23,8 +23,8 @@ const panels = racine('server/discord/panels.js');
 const i18nSrc = racine('server/i18n.js');
 
 console.log('— 1. Pins v339 —');
-check('index.html : ?v=396 ×10', (html.match(/\?v=396/g) || []).length === 10);
-check('sw.js : cache hoxera-v396', sw.includes("const CACHE = 'hoxera-v396';"));
+check('index.html : ?v=397 ×10', (html.match(/\?v=397/g) || []).length === 10);
+check('sw.js : cache hoxera-v397', sw.includes("const CACHE = 'hoxera-v397';"));
 check('index.html : plus aucune ?v=338', !html.includes('?v=338'));
 
 console.log('— 2. Même panneau, pas un second message —');

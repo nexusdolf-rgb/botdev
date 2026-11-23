@@ -123,8 +123,8 @@ function check(label, cond, info) {
   console.log('— 6. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=396 référencé 10 fois', (index.match(/\?v=396/g) || []).length === 10);
-  check('sw.js : cache « hoxera-v396 »', sw.includes("const CACHE = 'hoxera-v396';"));
+  check('index.html : ?v=397 référencé 10 fois', (index.match(/\?v=397/g) || []).length === 10);
+  check('sw.js : cache « hoxera-v397 »', sw.includes("const CACHE = 'hoxera-v397';"));
 
   console.log(`\n🎉 v290 — ${ok} vérifications OK : vérification humaine + Join Gate opérationnels.`);
 })().catch((e) => { console.error(e); process.exit(1); });
