@@ -22,7 +22,7 @@ check('bio : contient le NOUVEAU lien du dashboard', bio.includes('https://hoxer
 check('bio : invite à taper /help', bio.includes('/help'));
 check('bio : nom du bot Hoxera', bio.includes('Hoxera'));
 check('bio : modules principaux listés', bio.includes('Tickets') && bio.includes('XP') && bio.includes('Coins') && bio.includes('Jeux'));
-check('bio : lien du serveur support officiel', bio.includes('https://discord.gg/X9hTdr9N3'));
+check('bio : lien du serveur support officiel', bio.includes('https://discord.gg/BNCAVsyAvq'));
 check('bio : emojis présents', /[\u{1F300}-\u{1FAFF}]/u.test(bio));
 check('bio : aucun ANCIEN lien possible', !bio.includes('botdev-kqbd') && !bio.includes('BotDev'));
 check('bio : 4 lignes', bio.split('\n').length === 4);

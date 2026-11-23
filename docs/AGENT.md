@@ -1601,7 +1601,7 @@ l'utilisateur — seuls les textes **par défaut** ont été réécrits.
 - Variables Render : `HOXERA_TOKEN`, `HOXERA_CLIENT_ID`/`DISCORD_CLIENT_ID` =
   1537443352281088000, `DISCORD_CLIENT_SECRET`, `BOTDEV_GH_TOKEN` (sauvegardes),
   `BOTDEV_DATA_REPO` = nexusdolf-rgb/botdev-data, `NEXORA_ADMIN_*` (accès fondateur)
-- Serveur support : https://discord.gg/X9hTdr9N3 · Serveur de test :
+- Serveur support : https://discord.gg/BNCAVsyAvq · Serveur de test :
   guild `1539668540787925052`
 - Dashboard : session via cookie `botdev_session=<<< … >>>` (l'utilisateur la fournit
   ou on se connecte via OAuth) — permet `PATCH /api/bots/1`, `POST /api/backup/now`

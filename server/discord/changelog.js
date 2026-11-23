@@ -9,7 +9,7 @@ const ui = require('./ui');
 
 const VERSION = 360;
 const DASHBOARD_URL = 'https://hoxera.is-a.dev';
-const SUPPORT_URL = 'https://discord.gg/X9hTdr9N3';
+const SUPPORT_URL = 'https://discord.gg/BNCAVsyAvq';
 const AUTO_REVERT_MS = 2 * 60 * 1000;
 const SELECT_ID = (botId) => `hx-upd:${botId}`;
 

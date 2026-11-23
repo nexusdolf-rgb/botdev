@@ -47,6 +47,17 @@ function purgeOldData(db) {
   } catch (e) {
     console.error('[Hoxera] Purge :', e.message);
   }
+  // v396 — la conservation vit dans server/conservation.js : un seul endroit,
+  // une seule liste de durées, celle qu'affiche /privacy. Des tables sont
+  // purgées par les deux couches (elles partagent la même durée) : on ADDITIONNE
+  // les comptes, sinon la seconde passe écraserait le chiffre de la première
+  // par zéro et le journal mentirait sur ce qui a été effacé.
+  try {
+    const complement = require('./conservation').purgeConservation(db);
+    for (const [table, lignes] of Object.entries(complement)) {
+      if (lignes > 0) report[table] = (report[table] || 0) + lignes;
+    }
+  } catch (e) { console.error('[Hoxera] Conservation :', e.message); }
   return report;
 }
 

@@ -112,11 +112,17 @@ check('le robots.txt existe, autorise l’accueil et coupe /api',
   /^User-agent: \*/m.test(lus['public/robots.txt'])
   && /Disallow: \/api\//.test(lus['public/robots.txt'])
   && /Sitemap: https:\/\/hoxera\.is-a\.dev\/sitemap\.xml/.test(lus['public/robots.txt']));
-check('le sitemap ne promet que la page qui existe',
-  (lus['public/sitemap.xml'].match(/<loc>/g) || []).length === 1
+// v396 — le sitemap liste maintenant les DEUX pages légales publiques en plus
+// de l'accueil (3 entrées). Il ne promet toujours que des pages qui existent
+// et ne fabrique pas de date de modification.
+check('le sitemap ne promet que des pages qui existent',
+  (lus['public/sitemap.xml'].match(/<loc>/g) || []).length === 3
+  && /<loc>https:\/\/hoxera\.is-a\.dev\/terms<\/loc>/.test(lus['public/sitemap.xml'])
+  && /<loc>https:\/\/hoxera\.is-a\.dev\/privacy<\/loc>/.test(lus['public/sitemap.xml'])
   && !/lastmod/.test(lus['public/sitemap.xml']));
 check('llms.txt reste sur des faits verifiables',
-  /discord\.gg\/X9hTdr9N3/.test(lus['public/llms.txt']) && !/ — /.test(lus['public/llms.txt']));
+  // v396 — l'ancienne invitation (X9hTdr9N3) répondait « Unknown Invite ».
+  /discord\.gg\/BNCAVsyAvq/.test(lus['public/llms.txt']) && !/ — /.test(lus['public/llms.txt']));
 check('le head porte canonical, OG et Twitter sur le domaine officiel',
   /<link rel="canonical" href="https:\/\/hoxera\.is-a\.dev\/" \/>/.test(lus['public/index.html'])
   && (lus['public/index.html'].match(/hoxera\.is-a\.dev\//g) || []).length >= 3
@@ -171,12 +177,12 @@ check('aucune route touchant un serveur n\'est ajoutée sans garde d\'accès',
 
 console.log('— 7. Version —');
 const index = lus['public/index.html'];
-check(`index.html : ?v=${VERSION} référencé 10 fois`, (index.match(/\?v=389/g) || []).length === 10,
-  String((index.match(/\?v=389/g) || []).length));
+check(`index.html : ?v=${VERSION} référencé 10 fois`, (index.match(/\?v=396/g) || []).length === 10,
+  String((index.match(/\?v=396/g) || []).length));
 const sw = fs.readFileSync(path.join(RACINE, 'public/sw.js'), 'utf8');
-check('le service worker porte la même version de cache', sw.includes("const CACHE = 'hoxera-v389';"));
+check('le service worker porte la même version de cache', sw.includes("const CACHE = 'hoxera-v396';"));
 check('aucun fichier de public/js ne cite une version périmée',
-  !/\?v=3[0-9][0-9]/.test(gabarits.replace(/\?v=389/g, '')), (gabarits.match(/\?v=3\d\d/g) || []).join(' '));
+  !/\?v=3[0-9][0-9]/.test(gabarits.replace(/\?v=396/g, '')), (gabarits.match(/\?v=3\d\d/g) || []).join(' '));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v368 — ${ok} vérifications OK : icônes remplies, sortie nommée, marque unique, texte sans cadratin, liens réels.`);

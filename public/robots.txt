@@ -1,6 +1,10 @@
-# Hoxera : seule la page d'accueil est destinee aux moteurs.
+# Hoxera : accueil + les deux pages legales sont destinees aux moteurs.
 User-agent: *
 Allow: /
 Disallow: /api/
 
 Sitemap: https://hoxera.is-a.dev/sitemap.xml
+
+# Les pages legales sont publiques et indexables (obligation de transparence).
+Allow: /terms
+Allow: /privacy

@@ -1,0 +1,235 @@
+/* ============================================================
+   Pages légales (v396) — /terms et /privacy
+   Mêmes couleurs que le tableau de bord : #36393f, #2b2d31,
+   accent terracotta #e07a5f. Aucune dépendance externe :
+   le style s'applique même si style.css n'est pas chargée.
+   ============================================================ */
+
+:root {
+  --lg-bg: #313338;
+  --lg-panel: #2b2d31;
+  --lg-panel2: #383a40;
+  --lg-border: #4f545c;
+  --lg-text: #dbdee1;
+  --lg-strong: #f2f3f5;
+  --lg-dim: #b5bac1;
+  --lg-accent: #e07a5f;
+  --lg-accent2: #c95b49;
+  --lg-radius: 12px;
+}
+
+html.hx-light {
+  --lg-bg: #f2f3f8;
+  --lg-panel: #ffffff;
+  --lg-panel2: #eceef6;
+  --lg-border: #d8dbe8;
+  --lg-text: #2a2c38;
+  --lg-strong: #14151d;
+  --lg-dim: #5b5f73;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body.legal {
+  margin: 0;
+  background: var(--lg-bg);
+  color: var(--lg-text);
+  font: 15px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+.legal-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 22px;
+  background: rgba(49, 51, 56, .92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--lg-border);
+}
+html.hx-light .legal-topbar { background: rgba(255, 255, 255, .92); }
+
+.legal-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 700;
+  color: var(--lg-strong);
+  text-decoration: none;
+  font-size: 15px;
+}
+.legal-brand img {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--lg-panel2);
+}
+.legal-brand .legal-fallback {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--lg-accent), var(--lg-accent2));
+  color: #fff; font-size: 14px;
+}
+
+.legal-nav { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+.legal-nav a,
+.legal-lang button {
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--lg-dim);
+  text-decoration: none;
+  padding: 7px 11px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: none;
+  cursor: pointer;
+  transition: color .15s ease, background .15s ease, border-color .15s ease;
+}
+.legal-nav a:hover, .legal-nav a[aria-current="page"],
+.legal-lang button:hover {
+  color: var(--lg-strong);
+  background: var(--lg-panel2);
+}
+.legal-nav a[aria-current="page"] { border-color: var(--lg-border); }
+
+.legal-lang { display: flex; gap: 2px; margin-left: 8px; padding-left: 10px; border-left: 1px solid var(--lg-border); }
+.legal-lang button[aria-pressed="true"] {
+  color: #fff;
+  background: var(--lg-accent);
+  border-color: var(--lg-accent);
+}
+html.hx-light .legal-lang button[aria-pressed="true"] { color: #fff; }
+
+.legal-wrap { max-width: 880px; margin: 0 auto; padding: 38px 22px 80px; }
+
+.legal-head h1 {
+  font-size: 30px;
+  line-height: 1.2;
+  margin: 0 0 10px;
+  color: var(--lg-strong);
+  letter-spacing: -.015em;
+}
+.legal-head .legal-lead {
+  color: var(--lg-dim);
+  font-size: 16px;
+  margin: 0 0 14px;
+  max-width: 720px;
+}
+.legal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  font-size: 13px;
+  color: var(--lg-dim);
+  margin-bottom: 26px;
+}
+.legal-meta b { color: var(--lg-text); font-weight: 600; }
+
+.legal-toc {
+  background: var(--lg-panel);
+  border: 1px solid var(--lg-border);
+  border-radius: var(--lg-radius);
+  padding: 16px 18px;
+  margin: 0 0 30px;
+  font-size: 14px;
+}
+.legal-toc b { display: block; margin-bottom: 8px; color: var(--lg-strong); }
+.legal-toc ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 26px; }
+.legal-toc li { margin: 3px 0; break-inside: avoid; }
+.legal-toc a { color: var(--lg-dim); text-decoration: none; }
+.legal-toc a:hover { color: var(--lg-accent); text-decoration: underline; }
+
+.legal-body section {
+  background: var(--lg-panel);
+  border: 1px solid var(--lg-border);
+  border-radius: var(--lg-radius);
+  padding: 20px 22px;
+  margin: 0 0 16px;
+  scroll-margin-top: 76px;
+}
+.legal-body h2 {
+  font-size: 18px;
+  margin: 0 0 10px;
+  color: var(--lg-strong);
+  letter-spacing: -.01em;
+}
+.legal-body h3 { font-size: 15px; margin: 16px 0 6px; color: var(--lg-strong); }
+.legal-body p { margin: 0 0 10px; }
+.legal-body p:last-child { margin-bottom: 0; }
+.legal-body ul, .legal-body ol { margin: 6px 0 10px; padding-left: 22px; }
+.legal-body li { margin: 4px 0; }
+.legal-body a { color: var(--lg-accent); text-decoration: none; border-bottom: 1px solid rgba(224, 122, 95, .35); }
+.legal-body a:hover { color: var(--lg-accent2); border-bottom-color: currentColor; }
+.legal-body strong { color: var(--lg-strong); }
+.legal-body code {
+  font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: var(--lg-panel2);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.legal-table { width: 100%; border-collapse: collapse; margin: 10px 0 4px; font-size: 13.5px; }
+.legal-table th, .legal-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--lg-border);
+  vertical-align: top;
+}
+.legal-table th { color: var(--lg-dim); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+.legal-table td.nowrap { white-space: nowrap; }
+.legal-table tr:last-child td { border-bottom: none; }
+
+.legal-note {
+  background: rgba(224, 122, 95, .08);
+  border: 1px solid rgba(224, 122, 95, .35);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+.legal-foot {
+  border-top: 1px solid var(--lg-border);
+  margin-top: 34px;
+  padding-top: 18px;
+  font-size: 13px;
+  color: var(--lg-dim);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+.legal-foot a { color: var(--lg-dim); text-decoration: none; }
+.legal-foot a:hover { color: var(--lg-accent); }
+
+/* Le sélecteur marque chaque langue ; le titre de l'onglet est adapté par
+   legal.js (data-fr / data-en sur <title>). */
+
+/* Une seule langue affichée à la fois : [data-lang] est posé sur <html>. */
+html[data-lang="fr"] [data-lang-block="en"],
+html[data-lang="en"] [data-lang-block="fr"] { display: none !important; }
+
+@media (max-width: 700px) {
+  .legal-topbar { padding: 10px 14px; flex-wrap: wrap; }
+  .legal-nav { width: 100%; margin-left: 0; justify-content: flex-start; padding-top: 6px; }
+  .legal-nav a { padding: 6px 8px; font-size: 13px; }
+  .legal-lang { margin-left: auto; padding-left: 8px; }
+  .legal-wrap { padding: 26px 14px 60px; }
+  .legal-head h1 { font-size: 24px; }
+  .legal-head .legal-lead { font-size: 15px; }
+  .legal-toc ol { columns: 1; }
+  .legal-body section { padding: 16px 15px; }
+  .legal-table { display: block; overflow-x: auto; white-space: nowrap; }
+  .legal-table td, .legal-table th { white-space: normal; }
+}
+
+@media print {
+  .legal-topbar, .legal-toc { display: none; }
+  body.legal { background: #fff; color: #000; }
+  .legal-body section { border-color: #ccc; }
+}

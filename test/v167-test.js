@@ -28,7 +28,7 @@ assert(pubJs.includes('pub-hero-badge'), 'badge du hero manquant');
 assert(pubJs.includes('pub-tagline'), 'tagline manquante');
 assert(pubJs.includes('pub-invite-hero'), 'bouton inviter manquant');
 assert(pubJs.includes('pub-support-link'), 'lien support du hero manquant');
-assert(pubJs.includes('discord.gg/X9hTdr9N3'), 'lien support manquant');
+assert(pubJs.includes('discord.gg/BNCAVsyAvq'), 'lien support manquant');
 assert(pubJs.includes('Hoxera en direct'), 'section stats en direct manquante');
 assert(pubJs.includes('id="pub-stats"'), 'stats du hero manquantes');
 assert(pubJs.includes('id="pub-bots"'), 'grille des bots manquante');
@@ -66,7 +66,7 @@ assert.strictEqual((pubJs.match(/App\.renderPublicLanding = /g) || []).length, 1
 assert(styleCss.includes('--accent: #e07a5f;'), 'accent principal pas en Argile');
 
 // 6. Version courante
-assert((index.match(/\?v=389/g) || []).length === 10, 'index.html doit référencer v195 10 fois');
-assert(sw.includes('hoxera-v389'), 'cache du service worker pas en v195');
+assert((index.match(/\?v=396/g) || []).length === 10, 'index.html doit référencer v195 10 fois');
+assert(sw.includes('hoxera-v396'), 'cache du service worker pas en v195');
 
 console.log('✅ v167 (v195) : Home Ultra Pro — ancienne identité conservée, clone DraftBot absent, nouvelles sections en place');

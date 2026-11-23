@@ -26,7 +26,7 @@ assert.ok(css.includes('.mock-side') && css.includes('@keyframes mockFloat'), 'm
 console.log('✅ maquette du dashboard dessinée en CSS (flottante)');
 
 // 5. Liens support + accessibilité mouvement
-assert.ok((pub.match(/discord\.gg\/X9hTdr9N3/g) || []).length >= 2, 'lien support (héros + footer)');
+assert.ok((pub.match(/discord\.gg\/BNCAVsyAvq/g) || []).length >= 2, 'lien support (héros + footer)');
 assert.ok(css.includes('prefers-reduced-motion'), 'respect des préférences de mouvement réduit');
 console.log('✅ serveur support (héros + pied de page) + accessibilité');
 

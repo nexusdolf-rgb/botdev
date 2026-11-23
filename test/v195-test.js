@@ -58,7 +58,7 @@ setTimeout(async () => {
   check('badge shimmer', !!$('.pub-hero-badge.shimmer'));
   check('bouton inviter hero', !!$('#pub-invite-hero'));
   check('stats du hero (3 valeurs)', $$('#pub-stats .val').length === 3);
-  check('lien support Discord', !!$('.pub-support-link a[href="https://discord.gg/X9hTdr9N3"]'));
+  check('lien support Discord', !!$('.pub-support-link a[href="https://discord.gg/BNCAVsyAvq"]'));
 
   console.log('\n2️⃣  Navigation par ancres');
   check('navbar avec 4 liens', $$('.navbar-links a').length === 4);

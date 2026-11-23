@@ -59,7 +59,9 @@ const probe = `
   }
   console.log('OK rôle → ' + guild.roles.cache.get('1').name);
 `;
-const out = execFileSync('node', ['-e', probe], { cwd: root, encoding: 'utf8' }).trim();
+// v396 — même moteur que le test : better-sqlite3 est compilé pour la version
+// en cours (voir v174). Le « node » du PATH pouvait être plus ancien → SIGSEGV.
+const out = execFileSync(process.execPath, ['-e', probe], { cwd: root, encoding: 'utf8' }).trim();
 assert(out.startsWith('OK rôle → Optimus Prime'), 'la logique de renommage doit fonctionner');
 
 // ---------- 3. Les bannières du site sont la version finale ----------
