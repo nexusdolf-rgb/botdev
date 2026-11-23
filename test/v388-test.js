@@ -28,7 +28,12 @@ const pkg = JSON.parse(racine('package.json'));
 // ------------------------------------------------------------------
 console.log('\n— 1. CSP : plus aucun script en ligne —');
 // ------------------------------------------------------------------
-const csp = (security.match(/Content-Security-Policy', "([^"]+)"/) || [])[1] || '';
+// v398 : la politique est une constante nommée (tableau joint par « ; »)
+// pour être lisible et comparable. On la relit dans les deux formes.
+const blocCsp = (security.match(/const CSP = \[([\s\S]*?)\]\.join/) || [])[1];
+const csp = blocCsp
+  ? (blocCsp.match(/'[^']*'|"[^"]*"/g) || []).map((m) => m.slice(1, -1)).join('; ')
+  : ((security.match(/Content-Security-Policy', "([^"]+)"/) || [])[1] || '');
 check('la politique est bien déclarée', csp.length > 0);
 check('script-src n’accepte pas unsafe-inline', !/script-src[^;]*'unsafe-inline'/.test(csp), csp.slice(0, 80));
 check('script-src reste limité à la même origine', /script-src 'self'/.test(csp));

@@ -113,17 +113,65 @@ function originGuard(req, res, next) {
   return next();
 }
 
+// v398 — la politique est nommée pour être testable telle quelle : le test
+// compare la chaîne envoyée au navigateur, pas une copie qui pourrait diverger.
+const CSP = [
+  "default-src 'self'",
+  // Aucun script en ligne, aucune origine tierce : tout le code part de
+  // fichiers servis par le site, ce qui neutralise l'effet d'un champ mal
+  // échappé (seconde barrière derrière App.assainir, v397).
+  "script-src 'self'",
+  // Les styles en ligne restent tolérés : les écrans du dashboard posent des
+  // centaines d'attributs style=. Un style ne peut pas exécuter de code.
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self' data:",
+  // Les avatars passent déjà par /api/img (liste blanche Discord côté
+  // serveur) ; cdn.discordapp.com n'est là que pour les replis directs.
+  "img-src 'self' data: https://cdn.discordapp.com",
+  // v398 : plus aucun lecteur média, ni greffon, dans le dashboard.
+  "media-src 'none'",
+  "object-src 'none'",
+  "manifest-src 'self'",
+  "connect-src 'self'",
+  // Personne ne peut encadrer le dashboard pour détourner un clic dans un
+  // panneau qui détient des jetons de bot.
+  "frame-ancestors 'self'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  // Un lien http:// oublié ne fuit pas en clair vers un réseau tiers.
+  'upgrade-insecure-requests',
+].join('; ');
+
+// Types de contenu passifs : rien à exécuter, tout à neutraliser.
+const TYPES_PASSIFS = /^(application\/pdf|text\/plain|application\/json)/i;
+
 function securityHeaders(req, res, next) {
   res.set('X-Content-Type-Options', 'nosniff');
   res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  // Aucun script en ligne n'est autorisé : tout le code part de fichiers servis
-  // par le site, ce qui neutralise l'injection de script par un champ mal échappé.
-  // Les styles en ligne restent tolérés (attributs style=).
-  res.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https://cdn.discordapp.com; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'");
+  // v398 : ni paiement, ni port USB, ni suivi publicitaire (interest-cohort).
+  res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()');
+  res.set('Content-Security-Policy', CSP);
+  // N'importe quel site ne doit pas pouvoir lire nos réponses (JSON d'API,
+  // avatars) depuis son propre contexte.
+  res.set('Cross-Origin-Resource-Policy', 'same-origin');
+  // Un fichier récupéré par un autre site ne peut pas être interprété comme
+  // un document actif (miroir de lecture sur les navigateurs anciens).
+  res.set('X-Permitted-Cross-Domain-Policies', 'none');
+  // Les fichiers servis en pièce jointe (PDF, texte) ne doivent pas
+  // s'exécuter dans notre origine. Les pages du site, elles, gardent leurs
+  // scripts : le bac à sable n'est appliqué qu'aux types passifs.
   res.set('X-Frame-Options', 'SAMEORIGIN');
   res.set('Cross-Origin-Opener-Policy', 'same-origin');
   if (String(req.path || '').startsWith('/api')) res.set('Cache-Control', 'no-store');
+  // v398 — un fichier passif (PDF, texte brut, JSON) ne s'exécute pas dans
+  // notre origine : le bac à sable lui retire scripts et formulaires. Les
+  // pages HTML du site ne sont pas concernées (elles ont besoin de scripts).
+  const typeReponse = typeof res.getHeader === 'function'
+    ? String(res.getHeader('Content-Type') || '')
+    : '';
+  if (TYPES_PASSIFS.test(typeReponse)) {
+    res.set('Content-Security-Policy', "default-src 'none'; sandbox");
+  }
   if (requestProtocol(req) === 'https' || publicOrigin(req).startsWith('https://')) {
     res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   }
@@ -159,4 +207,5 @@ module.exports = {
   secureCookieOptions,
   randomToken,
   resetRateLimits,
+  CSP,
 };

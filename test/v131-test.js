@@ -34,7 +34,8 @@ security.securityHeaders(request({ secure: true }), headerRes, () => { nextCalle
 assert(nextCalled);
 assert.strictEqual(headerRes.values['X-Content-Type-Options'], 'nosniff');
 assert.strictEqual(headerRes.values['Referrer-Policy'], 'strict-origin-when-cross-origin');
-assert.strictEqual(headerRes.values['Permissions-Policy'], 'camera=(), microphone=(), geolocation=()');
+// v398 : la politique ferme aussi paiement, USB et le suivi publicitaire.
+assert.strictEqual(headerRes.values['Permissions-Policy'], 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()');
 assert.strictEqual(headerRes.values['Cache-Control'], 'no-store');
 assert(headerRes.values['Strict-Transport-Security'].includes('max-age=31536000'));
 console.log('1️⃣  En-têtes HTTP de sécurité appliqués ✅');

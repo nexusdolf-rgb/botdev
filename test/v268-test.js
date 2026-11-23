@@ -150,8 +150,8 @@ const mkChannel = (id, name) => {
   console.log('— 6. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=396 référencé 10 fois', (index.match(/\?v=396/g) || []).length === 10);
-  check('sw.js : cache « hoxera-v396 »', sw.includes("const CACHE = 'hoxera-v396';"));
+  check('index.html : ?v=399 référencé 10 fois', (index.match(/\?v=399/g) || []).length === 10);
+  check('sw.js : cache « hoxera-v399 »', sw.includes("const CACHE = 'hoxera-v399';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v268 — ${ok} vérifications OK : notre interface pro, avec nos émojis.`);

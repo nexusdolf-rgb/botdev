@@ -21,8 +21,8 @@ const routes = racine('server/routes.js');
 const changelog = require('../server/discord/changelog');
 
 console.log('— 1. Pins v346 —');
-check('index.html : ?v=396 ×10', (html.match(/\?v=396/g) || []).length === 10);
-check('sw.js : cache hoxera-v396', sw.includes("const CACHE = 'hoxera-v396';"));
+check('index.html : ?v=399 ×10', (html.match(/\?v=399/g) || []).length === 10);
+check('sw.js : cache hoxera-v399', sw.includes("const CACHE = 'hoxera-v399';"));
 check('index.html : plus aucune ?v=345', !html.includes('?v=345'));
 check('VERSION ≥ 346', changelog.VERSION >= 346);
 check('journal v346 : au moins 1 nouveauté', Array.isArray(changelog.NOTES.new) && changelog.NOTES.new.length >= 1);

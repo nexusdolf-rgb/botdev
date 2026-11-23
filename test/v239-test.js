@@ -460,9 +460,9 @@ async function main() {
   console.log('\n10) Version épinglée v239');
   const index = src('public/index.html');
   const sw = src('public/sw.js');
-  check('index.html : ?v=396 référencé 10 fois', (index.match(/\?v=396/g) || []).length === 10,
-    `trouvé ${(index.match(/\?v=396/g) || []).length}`);
-  check("sw.js : cache 'hoxera-v396'", sw.includes("const CACHE = 'hoxera-v396';"));
+  check('index.html : ?v=399 référencé 10 fois', (index.match(/\?v=399/g) || []).length === 10,
+    `trouvé ${(index.match(/\?v=399/g) || []).length}`);
+  check("sw.js : cache 'hoxera-v399'", sw.includes("const CACHE = 'hoxera-v399';"));
   check('index.html : plus aucun ?v=238', !/\?v=238/.test(index));
 }
 

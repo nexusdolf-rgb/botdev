@@ -1,13 +1,13 @@
 // Hoxera - Service Worker (mode app installable + chargement hors ligne)
 // Stratégie : HTML/JS/CSS en réseau d'abord (toujours à jour),
 // images/icônes en cache d'abord. L'API passe toujours par le réseau.
-// v396 — nouveau nom de cache : tous les anciens sont supprimés à
+// v399 — nouveau nom de cache : tous les anciens sont supprimés à
 // l'activation. Sans ce changement, un navigateur déjà venu garderait
-// l'ancien app.js pendant des heures. Les fichiers ?v=396 ne bougent pas :
+// l'ancien app.js pendant des heures. Les fichiers ?v=399 ne bougent pas :
 // ce sont eux qui datent le code, et sw.js les télécharge à neuf.
 // (Le nom de cache ci-dessous ne doit apparaître qu'à cet endroit : les
 // tests lisent le premier numéro de version qu'ils trouvent dans ce fichier.)
-const CACHE = 'hoxera-v396';
+const CACHE = 'hoxera-v399';
 const ASSETS = [
   '/',
   '/manifest.webmanifest',
