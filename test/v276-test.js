@@ -93,8 +93,8 @@ function makeMsg(guildId, channelId, opts) {
   console.log('— 6. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=397 référencé 10 fois', (index.match(/\?v=397/g) || []).length === 10);
-  check('sw.js : cache « hoxera-v397 »', sw.includes("const CACHE = 'hoxera-v397';"));
+  check('index.html : ?v=398 référencé 10 fois', (index.match(/\?v=398/g) || []).length === 10);
+  check('sw.js : cache « hoxera-v398 »', sw.includes("const CACHE = 'hoxera-v398';"));
 
   console.log(`\n🎉 v276 — ${ok} vérifications OK : sticky propre, discret, jamais dans les messages des membres.`);
 })().catch((e) => { console.error(e); process.exit(1); });

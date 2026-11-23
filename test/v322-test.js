@@ -19,8 +19,8 @@ const iT = dash.indexOf('Dashboard.renderers.tickets');
 const chunk = dash.slice(iT, dash.indexOf('Dashboard.renderers.welcome', iT));
 
 console.log('— 1. Pins de version v322 —');
-check('index.html : ?v=397 ×10', (html.match(/\?v=397/g) || []).length === 10);
-check('sw.js : cache hoxera-v397', sw.includes("const CACHE = 'hoxera-v397';"));
+check('index.html : ?v=398 ×10', (html.match(/\?v=398/g) || []).length === 10);
+check('sw.js : cache hoxera-v398', sw.includes("const CACHE = 'hoxera-v398';"));
 check('index.html : plus aucune ?v=321', !html.includes('?v=321'));
 
 console.log('— 2. Noms compréhensibles —');

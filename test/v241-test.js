@@ -344,10 +344,10 @@ const membre = () => ({
   }
   {
     const html = racine('public/index.html');
-    check('index.html : ?v=397 référencé 10 fois', (html.match(/\?v=397/g) || []).length === 10,
-      String((html.match(/\?v=397/g) || []).length));
+    check('index.html : ?v=398 référencé 10 fois', (html.match(/\?v=398/g) || []).length === 10,
+      String((html.match(/\?v=398/g) || []).length));
     check('index.html : plus aucun ?v=240', !html.includes('?v=240'));
-    check('sw.js : cache « botdev-v241 »', racine('public/sw.js').includes("'hoxera-v397'"));
+    check('sw.js : cache « botdev-v241 »', racine('public/sw.js').includes("'hoxera-v398'"));
   }
 
   // ==========================================================================

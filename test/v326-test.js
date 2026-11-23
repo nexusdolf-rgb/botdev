@@ -27,8 +27,8 @@ const routes = racine('server/routes.js');
 const rrSrc = racine('server/discord/reactionroles.js');
 
 console.log('— 1. Pins de version v326 —');
-check('index.html : ?v=397 ×10', (html.match(/\?v=397/g) || []).length === 10);
-check('sw.js : cache hoxera-v397', sw.includes("const CACHE = 'hoxera-v397';"));
+check('index.html : ?v=398 ×10', (html.match(/\?v=398/g) || []).length === 10);
+check('sw.js : cache hoxera-v398', sw.includes("const CACHE = 'hoxera-v398';"));
 check('index.html : plus aucune ?v=325', !html.includes('?v=325'));
 
 console.log('— 2. Sélecteurs : le même menu partout —');

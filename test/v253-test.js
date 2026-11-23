@@ -87,9 +87,9 @@ check('le rail « pointeur fin » 701-900 px existe toujours',
   css.includes('@media (pointer: fine) and (min-width: 701px) and (max-width: 900px)'));
 
 console.log('— 5. Version —');
-check('index.html : ?v=397 référencé 10 fois', (index.match(/\?v=397/g) || []).length === 10,
-  String((index.match(/\?v=397/g) || []).length));
-check('sw.js : cache « hoxera-v397 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v397';"));
+check('index.html : ?v=398 référencé 10 fois', (index.match(/\?v=398/g) || []).length === 10,
+  String((index.match(/\?v=398/g) || []).length));
+check('sw.js : cache « hoxera-v398 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v398';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v253 — ${ok} vérifications OK : un PC est un PC, un mobile est un mobile, sans mesure.`);

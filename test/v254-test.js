@@ -91,9 +91,9 @@ check('ecranEtroit garde son verrou « OS de bureau »',
   racine('public/js/dashboard.js').includes("classList.contains('hx-os-pc')"));
 
 console.log('— 7. Version —');
-check('index.html : ?v=397 référencé 10 fois', (index.match(/\?v=397/g) || []).length === 10,
-  String((index.match(/\?v=397/g) || []).length));
-check('sw.js : cache « hoxera-v397 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v397';"));
+check('index.html : ?v=398 référencé 10 fois', (index.match(/\?v=398/g) || []).length === 10,
+  String((index.match(/\?v=398/g) || []).length));
+check('sw.js : cache « hoxera-v398 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v398';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v254 — ${ok} vérifications OK : plus aucune largeur où un PC bascule en mobile.`);

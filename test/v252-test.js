@@ -68,9 +68,9 @@ check('sous 700 px, tout le monde reste en mobile (fenêtre minuscule comprise)'
 console.log('— 4. Version —');
 const index = racine('public/index.html');
 const sw = racine('public/sw.js');
-check('index.html : ?v=397 référencé 10 fois', (index.match(/\?v=397/g) || []).length === 10,
-  String((index.match(/\?v=397/g) || []).length));
-check('sw.js : cache « hoxera-v397 »', sw.includes("const CACHE = 'hoxera-v397';"));
+check('index.html : ?v=398 référencé 10 fois', (index.match(/\?v=398/g) || []).length === 10,
+  String((index.match(/\?v=398/g) || []).length));
+check('sw.js : cache « hoxera-v398 »', sw.includes("const CACHE = 'hoxera-v398';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v252 — ${ok} vérifications OK : plus aucun PC en mobile, rail d'icônes entre 701 et 900 px.`);
