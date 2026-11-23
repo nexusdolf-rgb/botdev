@@ -182,7 +182,7 @@ Variables d'environnement à définir sur Render :
 | `BOTDEV_DATA_BRANCH` | (optionnel) branche du dépôt |
 | `BOTDEV_DATA_DIR` | (optionnel) répertoire persistant réservé aux données locales |
 
-Le PAT doit être limité à un dépôt privé et à l'accès **Contents**. Les fichiers SQLite contiennent des données chiffrées avec `BOTDEV_DATA_ENCRYPTION_KEY`; conserve cette clé hors du dépôt et séparément de la sauvegarde. Fréquence : sauvegarde toutes les 10 min + sauvegarde finale à l'arrêt. Restauration automatique à chaque démarrage.
+Le PAT doit être limité à un dépôt privé et à l'accès **Contents**. Les jetons (bots, OAuth) et les sessions sont chiffrés **au niveau du champ** dans la base, avec `BOTDEV_DATA_ENCRYPTION_KEY` ; les noms de serveurs, messages et réglages, eux, restent en clair. La sauvegarde envoyée dans ce dépôt privé est **compressée (gzip) mais non chiffrée** : sa confidentialité repose sur le caractère privé du dépôt et sur le jeton qui y accède. Conserve la clé de chiffrement hors du dépôt — sans elle, les jetons restaurés sont illisibles.
 
 ## 🌍 Mettre BotDev en ligne gratuitement
 

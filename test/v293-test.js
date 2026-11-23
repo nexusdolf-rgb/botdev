@@ -170,9 +170,9 @@ function mkGuild(G, opts = {}) {
 
   console.log('— 10. Bump v293 —');
   const index = racine('public/index.html');
-  check('index.html : ?v=398 référencé 10 fois', (index.match(/\?v=398/g) || []).length === 10,
-    String((index.match(/\?v=398/g) || []).length));
-  check('sw.js : cache « hoxera-v398 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v398';"));
+  check('index.html : ?v=399 référencé 10 fois', (index.match(/\?v=399/g) || []).length === 10,
+    String((index.match(/\?v=399/g) || []).length));
+  check('sw.js : cache « hoxera-v399 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v399';"));
 
   console.log(`\n🎉 v293 : ${ok} vérifications passées`);
   process.exit(0);
