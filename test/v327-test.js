@@ -19,8 +19,8 @@ const sw = racine('public/sw.js');
 const js = racine('public/js/dashboard.js');
 
 console.log('— 1. Pins de version v327 —');
-check('index.html : ?v=401 ×10', (html.match(/\?v=401/g) || []).length === 10);
-check('sw.js : cache hoxera-v401', sw.includes("const CACHE = 'hoxera-v401';"));
+check('index.html : ?v=402 ×10', (html.match(/\?v=402/g) || []).length === 10);
+check('sw.js : cache hoxera-v402', sw.includes("const CACHE = 'hoxera-v402';"));
 check('index.html : plus aucune ?v=326', !html.includes('?v=326'));
 
 console.log('— 2. Le menu utilise la recherche « lettres simples » —');

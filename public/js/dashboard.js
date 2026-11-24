@@ -1269,7 +1269,7 @@ Dashboard.renderBottomNav = (nav) => {
   });
   const more = App.el(`
     <button class="bnav-item" data-more aria-label="Plus de modules">
-      <span class="bnav-ico" aria-hidden="true">${App.glyphe('menu', { taille: 17 })}</span>
+      <span class="bnav-ico" aria-hidden="true">${App.glyphe('menu', { taille: 18 })}</span>
       <span class="bnav-label">Plus</span>
     </button>`);
   more.onclick = () => Dashboard.openMoreSheet();
@@ -1615,12 +1615,12 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
     : `<span class="acc-fallback">${App.escapeHtml(String(acctName).slice(0, 1).toUpperCase())}</span>`;
   topbar.innerHTML = `
     <div class="dash-mobile-bar" aria-label="Navigation mobile">
-      <button class="dash-mobile-navbtn" id="d-mobile-menu" type="button" aria-label="Ouvrir le menu principal" aria-expanded="false">${App.glyphe('menu', { taille: 20 })}</button>
+      <button class="dash-mobile-navbtn" id="d-mobile-menu" type="button" aria-label="Ouvrir le menu principal" aria-expanded="false">${App.glyphe('menu', { taille: 24 })}</button>
       <div class="dash-mobile-brand">
         ${bot.avatar_url ? `<img src="${App.escapeHtml(bot.avatar_url)}" alt="" data-fb-text="${App.escapeHtml(bot.name || 'Hoxera')}" />` : '<img src="/icons/hoxera-robot-mark.svg" alt="Logo Hoxera" />'}
         <b>${App.escapeHtml(bot.name || 'Hoxera')}</b>
       </div>
-      <button class="dash-mobile-navbtn" id="d-mobile-modules" type="button" aria-label="Ouvrir les serveurs et modules" aria-expanded="false">${App.glyphe('grille', { taille: 20 })}</button>
+      <button class="dash-mobile-navbtn" id="d-mobile-modules" type="button" aria-label="Ouvrir les serveurs et modules" aria-expanded="false">${App.glyphe('grille', { taille: 24 })}</button>
     </div>
     <div class="dash-crumb">
       ${crumbIco ? `<span class="crumb-ico">${crumbIco}</span>` : ''}
@@ -1695,7 +1695,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
         <div class="dash-mobile-drawer-head"><b>Menu ${App.escapeHtml((Dashboard.state.bot && Dashboard.state.bot.name) ? Dashboard.state.bot.name : 'Hoxera')}</b><button class="dash-mobile-close" id="d-mobile-site-close" type="button" aria-label="Fermer le menu">×</button></div>
         <nav class="dash-mobile-site-links">
           <button type="button" data-mobile-home><span>⌂</span>Accueil</button>
-          <button type="button" data-mobile-open-modules><span>${App.glyphe('grille', { taille: 15 })}</span>Serveurs et modules</button>
+          <button type="button" data-mobile-open-modules><span>${App.glyphe('grille', { taille: 16 })}</span>Serveurs et modules</button>
           ${mobileUser.is_admin ? '<button type="button" data-mobile-admin><span><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4.4 18.2h15.2M5 17.6 3.6 8.4l4.5 3.3L12 5.2l3.9 6.5 4.5-3.3-1.4 9.2"/></svg></span>Administration globale</button>' : ''}
         </nav>
         <div class="dash-mobile-drawer-account">

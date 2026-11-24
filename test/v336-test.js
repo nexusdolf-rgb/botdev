@@ -24,8 +24,8 @@ const bm = racine('server/discord/botManager.js');
 const cl = racine('server/discord/changelog.js');
 
 console.log('— 1. Pins v336 —');
-check('index.html : ?v=401 ×10', (html.match(/\?v=401/g) || []).length === 10);
-check('sw.js : cache hoxera-v401', sw.includes("const CACHE = 'hoxera-v401';"));
+check('index.html : ?v=402 ×10', (html.match(/\?v=402/g) || []).length === 10);
+check('sw.js : cache hoxera-v402', sw.includes("const CACHE = 'hoxera-v402';"));
 check('index.html : plus aucune ?v=335', !html.includes('?v=335'));
 
 console.log('— 2. Enregistrement —');
