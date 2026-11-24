@@ -21,8 +21,8 @@ const iT = dash.indexOf('Dashboard.renderers.tickets');
 const chunk = dash.slice(iT, dash.indexOf('Dashboard.renderers.welcome', iT));
 
 console.log('— 1. Pins v347 —');
-check('index.html : ?v=402 ×10', (html.match(/\?v=402/g) || []).length === 10);
-check('sw.js : cache hoxera-v402', sw.includes("const CACHE = 'hoxera-v402';"));
+check('index.html : ?v=403 ×10', (html.match(/\?v=403/g) || []).length === 10);
+check('sw.js : cache hoxera-v403', sw.includes("const CACHE = 'hoxera-v403';"));
 check('index.html : plus aucune ?v=346', !html.includes('?v=346'));
 check('VERSION ≥ 347', changelog.VERSION >= 347);
 check('journal v347 : au moins 1 nouveauté', Array.isArray(changelog.NOTES.new) && changelog.NOTES.new.length >= 1);
