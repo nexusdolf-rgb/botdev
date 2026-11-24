@@ -3691,7 +3691,7 @@ Dashboard.renderers.welcome = async (content, data) => {
             const row = App.el(`
             <div class="cm-row">
               <span class="cm-name"><b>#${App.escapeHtml(String(ref).replace(/^#/, ''))}</b></span>
-              <input class="dash-input cm-label" data-cm-label="${App.escapeHtml(ref)}" placeholder="Phrase (ex : découvrez {salon}, les règles y sont)" value="${App.escapeHtml(labels.get(ref) || '')}" />
+              <input class="dash-input cm-label" data-cm-label="${App.escapeHtml(ref)}" placeholder="Ex : découvrez {salon}" value="${App.escapeHtml(labels.get(ref) || '')}" />
               <button class="dash-btn cm-remove" type="button" data-cm-remove="${App.escapeHtml(ref)}" title="Retirer ce salon">Retirer</button>
             </div>`);
             // La phrase tapée est mémorisée en direct : si on ajoute ou retire
@@ -7209,7 +7209,7 @@ Dashboard.renderers.community = async (content, data) => {
     <div style="height:1px;background:var(--d-border);margin:16px 0"></div>
     <label class="dash-label">Ajouter un compte à suivre</label>
     <div class="lv-add-row">
-      <input class="dash-input" id="lv-link" placeholder="Lien complet (tiktok.com/@pseudo) ou @pseudo" />
+      <input class="dash-input" id="lv-link" placeholder="tiktok.com/@pseudo ou @pseudo" />
       <select class="dash-select" id="lv-platform">
         <option value="tiktok">TikTok</option>
         <option value="twitch">Twitch</option>

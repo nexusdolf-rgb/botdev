@@ -105,10 +105,6 @@ function isAdmin(member) {
 }
 
 
-function dayKey() {
-  return new Date().toISOString().slice(0,10);
-}
-
 // ---------- Noms / mots pour les jeux ----------
 const PENDU_WORDS = [
   'discord', 'serveur', 'moderateur', 'ticket', 'niveau', 'boutique', 'giveaway',
@@ -132,10 +128,6 @@ const ACTION_TEXTS = {
 const MARRIED_POINTS = ['💍', '❤️', '💑'];
 
 function rand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-
-function helpFor(key) {
-  return HELP_EXTRA[key] || null;
-}
 
 // ---------------------- Définitions des commandes slash ----------------------
 function buildExtraPayloads() {
@@ -1758,17 +1750,6 @@ function vtVer() {
     _vtVer = h.digest('hex').slice(0, 16);
   } catch { _vtVer = ''; }
   return _vtVer;
-}
-
-function _emojiDuServeur(guild, key) {
-  try {
-    const id = vtEmotesOf(guild)[key];
-    if (guild && id && guild.emojis && guild.emojis.cache) {
-      const e = guild.emojis.cache.get(String(id));
-      if (e) return e.id;
-    }
-  } catch {}
-  return null;
 }
 
 // v385 — dans un bloc de TEXTE (Components V2), Discord n'affiche PAS les

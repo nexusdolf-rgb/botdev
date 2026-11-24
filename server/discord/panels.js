@@ -852,27 +852,6 @@ function claimRowJson(botId, claimed, lang = 'fr') {
   };
 }
 
-function stripClaimButtonJson(components, claimId) {
-  const walk = (arr) => {
-    if (!Array.isArray(arr)) return arr;
-    return arr.map((c) => {
-      if (!c || typeof c !== 'object') return c;
-      const kids = c.components;
-      if (c.type === 1 && Array.isArray(kids)) {
-        const kept = kids.filter((b) => String((b && (b.custom_id || b.customId)) || '') !== claimId);
-        if (!kept.length) return null;
-        return { ...c, components: kept };
-      }
-      if (Array.isArray(kids)) {
-        const next = walk(kids).filter(Boolean);
-        return { ...c, components: next };
-      }
-      return c;
-    }).filter(Boolean);
-  };
-  return walk(components);
-}
-
 // v379 — prise en charge : le bouton du panneau ne disparaît plus, il est
 // GRISÉ (comme sur la capture), et la ligne « ⏳ Statut : … » du bloc d'en-tête
 // passe à « pris en charge par @staff ». Aucun second message n'est nécessaire
@@ -2733,12 +2712,6 @@ function addedTicketMembers(channel) {
     }
   } catch {}
   return out;
-}
-
-function memberDisplayLabel(entry, lang) {
-  const m = entry && entry.member;
-  if (m) return memberLabel(m);
-  return entry && entry.id ? `<@${entry.id}>` : (lang ? i18n.t(lang, 'ticket_simple') : 'Membre');
 }
 
 // ➖ Retirer un membre : carte d'explication + liste des membres ajoutés.
