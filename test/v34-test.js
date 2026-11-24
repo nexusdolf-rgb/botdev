@@ -226,10 +226,14 @@ const okReply = (i) => {
   await runCmd('/voicetemp set : répond', 'voicetemp', { str: { action: 'set' }, channel: { id: 'V1', type: 2 } });
   await runCmd('/voicetemp view : répond', 'voicetemp', { str: { action: 'view' } });
   await runCmd('/voicetemp off : répond', 'voicetemp', { str: { action: 'off' } });
-  await runCmd('/apply set : répond', 'apply', { str: { action: 'set' }, channel: { id: 'C2', isTextBased: () => true } });
-  await runCmd('/apply question : répond', 'apply', { str: { action: 'question', texte: 'Quel âge as-tu ?' } });
-  await runCmd('/apply view : répond', 'apply', { str: { action: 'view' } });
-  await runCmd('/apply panel : répond avec bouton', 'apply', { str: { action: 'panel' } });
+  // v405 — L'ancienne /apply est remplacée par l'assistant /setup apply.
+  // On prépare la configuration par le NOUVEAU chemin, puis on vérifie que
+  // l'ancienne commande ne fait plus que rediriger (aucune écriture).
+  await runCmd('/apply (ancienne) : redirige vers /setup apply', 'apply', { str: { action: 'set' }, channel: { id: 'C2', isTextBased: () => true } });
+  const applyWizard = require(path.join(__dirname, '..', 'server', 'discord', 'applyWizard'));
+  applyWizard.ecrireConfig(BOT, 'G1', { channel: 'C2', title: '📝 Candidature', enabled: true, questions: ['Quel âge as-tu ?'] });
+  const cfgApply = applyWizard.lireConfig(BOT, 'G1');
+  check('/setup apply : configuration enregistrée', cfgApply.channel === 'C2' && cfgApply.questions.length === 1);
 
   // ================= BOUTONS =================
   // mariage : accepter (l'utilisateur ciblé clique)

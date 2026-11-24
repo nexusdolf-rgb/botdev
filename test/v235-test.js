@@ -79,12 +79,13 @@ const check = (label, ok) => {
   // v385b +1 site : le repli texte du panneau vocal (si l’image ne peut pas
   // être jointe) rappelle ui.v2panel(.
   // v385c +1 site : la réponse « ce salon n'est pas le vôtre ».
-  check('41 emplacements en ui.v2panel(', count('ui.v2panel(') === 41);
-  // Les 2 occurrences restantes de « ui.sectionize( » sont dans des
-  // COMMENTAIRES (la note v230 sur /poll et la note v235 sur /apply view).
-  check('plus aucun ui.sectionize( ACTIF (2 occurrences, toutes en commentaire)',
-    count('ui.sectionize(') === 2
-    && count('// v235 — ce résumé passait par ui.sectionize()') === 1
+  // v405 : 40 (et non 41) — l'ancienne /apply a été remplacée par l'assistant
+  // /setup apply. Son « /apply view » passait par ui.v2panel( ; le récapitulatif
+  // vit maintenant dans applyWizard.js, qui n'est pas ce fichier.
+  // v405 : 1 (et non 2) — la note v235 sur /apply view a disparu avec ce code.
+  check('40 emplacements en ui.v2panel(', count('ui.v2panel(') === 40);
+  check('plus aucun ui.sectionize( ACTIF (1 occurrence, en commentaire)',
+    count('ui.sectionize(') === 1
     && count('// de sections → ui.sectionize() ne s\'applique toujours pas ici') === 1);
   check('plus aucune réinjection de `.embeds` d’un payload V2', !/embeds: \w+Panel\.embeds/.test(src));
 

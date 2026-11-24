@@ -66,7 +66,10 @@ console.log('\n2) Les 10 messages cibles passent par ui.sectionize');
 const TARGETS = [
   // v235 — /apply view est passé en Components V2 : le `content: ui.sectionize(…)`
   // est devenu la `description` du conteneur (séparateur NATIF pleine largeur).
-  { f: 'server/discord/extra.js',           needle: 'description: `📝 **Candidatures**',                        label: '/apply view — récapitulatif des candidatures (v235 : V2)' },
+  // v405 — /apply view a disparu avec l'ancienne commande : le récapitulatif
+  // des candidatures vit désormais dans l'assistant /setup apply
+  // (server/discord/applyWizard.js, fonction resumeEmbed).
+  { f: 'server/discord/applyWizard.js',     needle: 'function resumeEmbed(',                                      label: '/setup apply — récapitulatif des candidatures (assistant)' },
   // v236 — ces accusés de réception sont en Components V2 : le
   // `content: ui.sectionize(…)` est devenu la `description` du conteneur.
   { f: 'server/discord/panelCommands.js',   needle: 'description: `✅ Type «',                                 label: '/ticket types — accusés de réception (add + maj) (v236 : V2)' },

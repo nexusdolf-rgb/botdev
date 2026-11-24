@@ -158,6 +158,13 @@ console.log('\n5) Compatibilité avec les panneaux déjà envoyés');
     src.includes('`hx:apply:${guildId}`'));
   const extra = lecture('server/discord/extra.js');
   check('ce customId est toujours écouté par extra.js', extra.includes('case \'apply\''));
+  // L'ancienne /apply ne doit plus JAMAIS écrire de configuration : c'est
+  // elle qui enregistrait les questions coupées à 45 caractères.
+  const blocApply = extra.slice(extra.indexOf("case 'apply': {"), extra.indexOf('// ---------------------- Boutons'));
+  check('l’ancienne /apply ne fait plus qu’une redirection',
+    blocApply.includes('/setup apply') && !blocApply.includes('store.applications.set'));
+  check('aucun `slice(0, 45)` ne s’applique plus à une question enregistrée',
+    !/questions\.push\([^)]*slice\(0, 45\)/.test(extra));
   check('la fenêtre accepte toujours 5 questions', extra.includes('questions.slice(0, 5)'));
   check('le panneau passe ses boutons en 2ᵉ argument de v2panel',
     /ui\.v2panel\(\{[\s\S]{0,400}\}, \[row\]\)/.test(src));

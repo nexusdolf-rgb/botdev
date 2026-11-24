@@ -919,53 +919,19 @@ async function handleSlash(botId, entry, interaction) {
       return interaction.reply({ content: `🔊 **Activé !** Quand un membre rejoint ${salon}, un salon vocal à son nom est créé (et supprimé quand il est vide).${panelNote}` });
     }
     case 'apply': {
+      // v405 — L'ancienne /apply est remplacée par l'assistant /setup apply.
+      // Elle est conservée comme simple redirection : son code coupait les
+      // questions à 45 caractères (`slice(0, 45)`) et enregistrait la version
+      // tronquée — c'est ce qui a abîmé une configuration réelle en
+      // production. Toute la logique d'écriture est supprimée ici : elle vit
+      // désormais dans applyWizard.js, à un seul endroit.
       if (!isAdmin(member)) return interaction.reply({ content: '⛔ Réservé aux administrateurs.', ephemeral: true });
-      const action = interaction.options.getString('action');
-      const cfg = store.applications.get(botId, guild.id) || { channel: '', questions: '[]', title: '📝 Candidature', enabled: 0 };
-      const questions = (() => { try { return JSON.parse(cfg.questions || '[]'); } catch { return []; } })();
-      if (action === 'set') {
-        const salon = interaction.options.getChannel('salon');
-        if (!salon || !salon.isTextBased()) return interaction.reply({ content: '❓ Choisissez le **salon texte** où arriveront les candidatures.', ephemeral: true });
-        store.applications.set(botId, guild.id, { ...cfg, channel: salon.id, questions: cfg.questions, enabled: 1 });
-        return interaction.reply({ content: `📝 **Candidatures activées !** Les réponses arriveront dans ${salon}.\nAjoutez vos questions avec \`/apply question\` puis envoyez le panneau avec \`/apply panel\`.` });
-      }
-      if (action === 'question') {
-        const texte = interaction.options.getString('texte');
-        if (!texte || !texte.trim()) return interaction.reply({ content: '❓ Écrivez la question : `/apply question Quel âge avez-vous ?`', ephemeral: true });
-        if (questions.length >= 5) return interaction.reply({ content: '❌ Maximum 5 questions.', ephemeral: true });
-        questions.push(texte.trim().slice(0, 45));
-        store.applications.set(botId, guild.id, { ...cfg, questions: JSON.stringify(questions) });
-        return interaction.reply({ content: `✅ Question ajoutée (${questions.length}/5) : « ${texte.trim().slice(0, 45)} »`, ephemeral: true });
-      }
-      if (action === 'view') {
-        // v235 — ce résumé passait par ui.sectionize() dans le `content` du
-        // message : le trait texte ━ ne touchait pas les bords. Il devient la
-        // description du conteneur → séparateur NATIF pleine largeur entre les
-        // 2 paragraphes. `footer: false` : l'original n'avait pas de pied.
-        return interaction.reply(ui.v2panel({
-          description: `📝 **Candidatures**\nSalon : ${cfg.channel ? `<#${cfg.channel}>` : '❌ non défini'}\nQuestions (${questions.length}/5) :\n${questions.map((q, i) => `${i + 1}. ${q}`).join('\n') || '*aucune*'}\n\nEnvoyez le panneau avec \`/apply panel\``,
-          footer: false,
-          ephemeral: true,
-        }));
-      }
-      if (action === 'off') {
-        store.applications.set(botId, guild.id, { ...cfg, enabled: 0 });
-        return interaction.reply({ content: '📝 Candidatures désactivées.', ephemeral: true });
-      }
-      // panel
-      if (!cfg.channel) return interaction.reply({ content: '❓ Définis d\'abord le salon : `/apply set #salon`.', ephemeral: true });
-      if (!questions.length) return interaction.reply({ content: '❓ Ajoutez au moins une question : `/apply question votre question`.', ephemeral: true });
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`hx:apply:${guild.id}`).setLabel('📝 Faire une candidature').setStyle(ButtonStyle.Primary),
-      );
-      await interaction.reply(ui.v2panel({
-        variant: 'brand',
-        title: cfg.title || '📝 Candidature',
-        description: `Cliquez sur le bouton pour candidater : vous répondrez à **${questions.length} question(s)** dans une fenêtre privée.`,
-        fields: [{ name: '🔒 Confidentialité', value: 'Seul le staff verra vos réponses.' }],
+      return interaction.reply(ui.v2panel({
+        title: '📝 Les candidatures se configurent avec /setup apply',
+        description: 'Un menu vous guide : salon, questions, titre, aperçu et envoi du panneau.\n\nVos réglages actuels sont conservés — rien à refaire.',
         footer: false,
-      }, [row]));
-      return true;
+        ephemeral: true,
+      }));
     }
   }
   return false;
