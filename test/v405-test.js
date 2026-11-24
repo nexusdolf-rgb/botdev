@@ -120,8 +120,29 @@ console.log('\n4) Chaque écran est autonome');
   check('la création ouvre une fenêtre titre + texte',
     src.includes("id: 'titre'") && src.includes("id: 'texte'"));
   check('le salon se choisit dans un sélecteur natif', src.includes('ChannelSelectMenuBuilder'));
+  // Discord affiche l'emoji du champ `emoji` PUIS le label : si le label
+  // contient aussi l'emoji, l'option s'affiche « ➕ ➕ Créer un… ».
+  check('les options du menu n’affichent pas l’emoji en double',
+    !/label: '➕|label: '✏️|label: '🗑️|label: '📤/.test(src));
   check('une question se retire via un menu', src.includes('apw:retrait') || src.includes("'retrait'"));
   check('la suppression demande confirmation', src.includes('confirmersuppression') && src.includes('irréversible'));
+
+  // --- Un seul message : le défaut d'ergonomie signalé en production ---
+  // Chaque écran repartait d'un `reply()` sur une interaction de composant :
+  // Discord ne l'autorise qu'une fois par clic, le reste partait en followUp
+  // et l'assistant empilait jusqu'à 7 messages dans le salon.
+  const corps = src.slice(src.indexOf('async function handleWizardInteraction'));
+  check('aucun écran ne crée un nouveau message', !/\.followUp\(/.test(corps));
+  check('le parcours réécrit le message mémorisé', src.includes('state.panneau.edit') || src.includes('afficherSur(state'));
+  check('l’assistant garde une seule référence de panneau', !/state\.message\b/.test(src));
+  check('la fenêtre du premier affichage est conservée', /fetchReply: true/.test(src) && /state\.panneau = msg/.test(src));
+  check('un panneau supprimé est signalé sans être recréé', src.includes('a été supprimé') && src.includes('wizards.delete'));
+
+  // --- Accusé de réception : sinon « L'application ne répond pas » ---
+  check('les sélecteurs de salon sont acquittés', /isChannelSelectMenu\(\)\) \{\s*\n\s*await ack\(interaction\)/.test(src));
+  check('les soumissions de fenêtre sont acquittées', /isModalSubmit\(\)\) \{\s*\n[\s\S]{0,220}await ack\(interaction\)/.test(src));
+  check('aucune fenêtre n’est ouverte après un accusé de réception',
+    /action !== 'identite' && action !== 'ajouterquestion'\) await ack\(interaction\)/.test(src));
   check('l’assistant expire', /WIZARD_TTL = 20 \* 60000/.test(src));
   check('seul le lanceur peut utiliser son assistant', src.includes('uid !== interaction.user.id'));
 

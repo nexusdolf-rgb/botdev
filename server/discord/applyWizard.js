@@ -59,6 +59,34 @@ const COULEUR_ERR = '#ED4245';
 async function ack(interaction) {
   try { if (!interaction.deferred && !interaction.replied) await interaction.deferUpdate(); } catch {}
 }
+
+// ============================================================
+// UN SEUL MESSAGE POUR TOUT L'ASSISTANT
+// ------------------------------------------------------------
+// Avant : chaque écran repartait d'un `interaction.reply()`, donc chaque
+// clic créait un NOUVEAU message. Sur Discord, une interaction de composant
+// ne peut pas être « reply » deux fois — le code partait alors en followUp,
+// et l'assistant empilait jusqu'à 7 messages dans le salon.
+//
+// Désormais tout passe par `state.panneau.edit(...)` : le même message est
+// réécrit à chaque étape. Le seul cas où un nouveau message est créé, c'est
+// le tout premier (l'assistant n'existe pas encore) ou un message d'erreur
+// éphémère qui ne doit pas remplacer l'écran en cours.
+// ============================================================
+
+// Affiche un écran en RÉÉCRIVANT le message de l'assistant.
+async function afficherSur(state, payload) {
+  // 1. Le message de l'assistant existe : on l'édite, point final.
+  if (state.panneau) {
+    try { await state.panneau.edit(payload); return true; } catch {}
+  }
+  // 2. Plus d'accès (message supprimé) : on ne peut plus rien éditer.
+  state.panneau = null;
+  return false;
+}
+
+// Réponse à une interaction qui n'a pas encore été acquittée (premier
+// affichage, ou message d'erreur éphémère).
 async function repondre(interaction, payload) {
   try {
     if (interaction.deferred) return await interaction.editReply(payload);
@@ -95,7 +123,8 @@ function nouvelEtat(botId, guild, userId) {
     formId: null,            // null = création
     brouillon: { title: '', description: '', channel: '', questions: [], enabled: true },
     etape: 'identite',
-    message: '',             // bandeau d'information (succès, erreur douce)
+    info: '',                // bandeau d'information (succès, erreur douce)
+    panneau: null,           // LE message Discord que l'on réécrit à chaque étape
     startedAt: Date.now(),
   };
 }
@@ -140,16 +169,16 @@ function ecranAccueil(state) {
     .setColor(forms.length ? COULEUR_OK : COULEUR)
     .setTitle('📝 Candidatures')
     .setDescription(
-      (state.message ? `${state.message}\n\n` : '')
+      (state.info ? `${state.info}\n\n` : '')
       + `**${forms.length} formulaire(s)** sur ce serveur.\n\n${lignes}`,
     )
     .setFooter({ text: 'Chaque formulaire a son propre panneau et ses propres questions.' });
 
-  const actions = [{ label: '➕ Créer un nouveau formulaire', value: 'creer', emoji: '➕' }];
+  const actions = [{ label: 'Créer un nouveau formulaire', value: 'creer', emoji: '➕' }];
   if (forms.length) {
-    actions.push({ label: '✏️ Modifier un formulaire', value: 'modifier', emoji: '✏️' });
-    actions.push({ label: '🗑️ Supprimer un formulaire', value: 'supprimer', emoji: '🗑️' });
-    actions.push({ label: '📤 Envoyer un panneau', value: 'envoyer', emoji: '📤' });
+    actions.push({ label: 'Modifier un formulaire', value: 'modifier', emoji: '✏️' });
+    actions.push({ label: 'Supprimer un formulaire', value: 'supprimer', emoji: '🗑️' });
+    actions.push({ label: 'Envoyer un panneau', value: 'envoyer', emoji: '📤' });
   }
 
   const rangées = [new ActionRowBuilder().addComponents(
@@ -211,7 +240,7 @@ function ecranEtape(state) {
   const embed = new EmbedBuilder()
     .setColor(manques(b).length ? COULEUR : COULEUR_OK)
     .setTitle(titre)
-    .setDescription((state.message ? `${state.message}\n\n` : '') + corps)
+    .setDescription((state.info ? `${state.info}\n\n` : '') + corps)
     .setFooter({ text: `${barreProgression(state.etape)} — étape ${ORDRE.indexOf(state.etape) + 1}/4` });
 
   return { embeds: [embed], components: rangéesEtape(state) };
@@ -374,7 +403,7 @@ async function envoyerPanneau(interaction, state) {
   const guild = interaction.guild;
   const salon = guild.channels.cache.get(String(b.channel));
   if (!salon) {
-    state.message = `❌ Le salon <#${b.channel}> n'existe plus. Choisissez-en un autre à l'étape **② Salon**.`;
+    state.info = `❌ Le salon <#${b.channel}> n'existe plus. Choisissez-en un autre à l'étape **② Salon**.`;
     state.etape = 'canal';
     return afficher(interaction, state);
   }
@@ -383,13 +412,13 @@ async function envoyerPanneau(interaction, state) {
   try {
     await salon.send(panneauPublic(form));
   } catch (e) {
-    state.message = `❌ Impossible d'envoyer dans <#${b.channel}> : ${String(e.message || e).slice(0, 140)}\n`
+    state.info = `❌ Impossible d'envoyer dans <#${b.channel}> : ${String(e.message || e).slice(0, 140)}\n`
       + 'Vérifiez que le bot peut écrire dans ce salon (permission « Envoyer des messages »).';
     return afficher(interaction, state);
   }
   store.applyForms.update(formId, { enabled: true });
   wizards.delete(wizardKey(state.botId, state.guildId, state.userId));
-  return repondre(interaction, {
+  return conclure(interaction, state, {
     embeds: [new EmbedBuilder()
       .setColor(COULEUR_OK)
       .setTitle('✅ Formulaire publié')
@@ -400,10 +429,46 @@ async function envoyerPanneau(interaction, state) {
   });
 }
 
-function afficher(interaction, state) {
-  if (state.etape === 'accueil') return repondre(interaction, ecranAccueil(state));
-  if (state.etape === 'choix') return repondre(interaction, ecranChoix(state, state.but));
-  return repondre(interaction, ecranEtape(state));
+function payloadEcran(state) {
+  if (state.etape === 'accueil') return ecranAccueil(state);
+  if (state.etape === 'choix') return ecranChoix(state, state.but);
+  if (state.etape === 'confirmersuppression') {
+    const form = store.applyForms.get(state.formId);
+    if (!form) { state.etape = 'accueil'; state.info = '⚠️ Ce formulaire n\'existe plus.'; return ecranAccueil(state); }
+    return ecranConfirmationSuppression(state, form);
+  }
+  return ecranEtape(state);
+}
+
+// Dernier écran (publié / fermé / supprimé) : on réécrit le panneau, on
+// n'empile pas un message de plus sous lui. Si le panneau n'existe plus,
+// on répond normalement pour que l'utilisateur ait quand même le résultat.
+async function conclure(interaction, state, payload) {
+  if (state && state.panneau) {
+    if (await afficherSur(state, payload)) return true;
+  }
+  return repondre(interaction, payload);
+}
+
+async function afficher(interaction, state) {
+  // 1. Le message de l'assistant existe : on le réécrit. C'est le cas normal.
+  if (state.panneau) {
+    if (await afficherSur(state, payloadEcran(state))) return true;
+
+    // 2. Le message a été supprimé entre-temps (ou le bot n'y a plus accès).
+    // On ne recrée PAS une pile : on prévient une seule fois, en éphémère,
+    // et on ferme l'assistant. L'utilisateur relance /setup apply.
+    wizards.delete(wizardKey(state.botId, state.guildId, state.userId));
+    return repondre(interaction, {
+      content: '⚠️ Le panneau de l\'assistant a été supprimé. Relancez `/setup apply` pour en rouvrir un.',
+      ephemeral: true,
+    });
+  }
+  // 3. Premier affichage (l'assistant vient de s'ouvrir) : on crée le message
+  // et on le garde en mémoire pour toutes les étapes suivantes.
+  const m = await repondre(interaction, { ...payloadEcran(state), fetchReply: true });
+  if (m && typeof m.edit === 'function') state.panneau = m;
+  return true;
 }
 
 // ============================================================
@@ -421,7 +486,9 @@ async function start(botId, interaction) {
   const state = nouvelEtat(botId, guild, uid);
   state.etape = 'accueil';
   wizards.set(wizardKey(botId, guild.id, uid), state);
-  return interaction.reply(ecranAccueil(state));
+  const msg = await repondre(interaction, { ...ecranAccueil(state), fetchReply: true });
+  if (msg && typeof msg.edit === 'function') state.panneau = msg;
+  return true;
 }
 
 // ============================================================
@@ -451,6 +518,10 @@ async function handleWizardInteraction(botId, interaction) {
 
   // ---------- Fenêtres ----------
   if (interaction.isModalSubmit()) {
+    // Une soumission de fenêtre DOIT être acquittée : sans ça Discord affiche
+    // « L'application ne répond pas ». On acquitte en éditant le panneau,
+    // ce qui est justement l'affichage voulu.
+    await ack(interaction);
     const v = (id) => String((interaction.fields.getTextInputValue(id) || '')).trim();
     const mode = state.modal || '';
     state.modal = '';
@@ -458,20 +529,21 @@ async function handleWizardInteraction(botId, interaction) {
     if (mode === 'identite') {
       const titre = v('titre');
       if (!titre) {
-        return repondre(interaction, { content: '⚠️ Le titre ne peut pas être vide.', ephemeral: true });
+        state.info = '⚠️ Le titre ne peut pas être vide — rouvrez la fenêtre.';
+      } else {
+        state.brouillon.title = titre.slice(0, TITLE_MAX);
+        state.brouillon.description = v('texte').slice(0, DESC_MAX);
+        state.info = '✅ Informations enregistrées.';
       }
-      state.brouillon.title = titre.slice(0, TITLE_MAX);
-      state.brouillon.description = v('texte').slice(0, DESC_MAX);
-      state.message = '✅ Informations enregistrées.';
     } else if (mode === 'ajouterquestion') {
       const q = v('question');
       if (!q) {
-        state.message = '⚠️ La question ne peut pas être vide.';
+        state.info = '⚠️ La question ne peut pas être vide.';
       } else if (state.brouillon.questions.length >= MAX_QUESTIONS) {
-        state.message = `⚠️ Maximum ${MAX_QUESTIONS} questions.`;
+        state.info = `⚠️ Maximum ${MAX_QUESTIONS} questions.`;
       } else {
         state.brouillon.questions.push(q.slice(0, QUESTION_MAX));
-        state.message = `✅ Question ${state.brouillon.questions.length}/${MAX_QUESTIONS} ajoutée.`;
+        state.info = `✅ Question ${state.brouillon.questions.length}/${MAX_QUESTIONS} ajoutée.`;
       }
     }
     return afficher(interaction, state);
@@ -479,8 +551,9 @@ async function handleWizardInteraction(botId, interaction) {
 
   // ---------- Sélecteur de salon ----------
   if (interaction.isChannelSelectMenu()) {
+    await ack(interaction);
     state.brouillon.channel = interaction.values[0];
-    state.message = '✅ Salon enregistré.';
+    state.info = '✅ Salon enregistré.';
     // On avance automatiquement : l'étape ② n'a qu'un seul champ.
     if (state.etape === 'canal') state.etape = 'questions';
     return afficher(interaction, state);
@@ -495,7 +568,7 @@ async function handleWizardInteraction(botId, interaction) {
         state.formId = null;
         state.brouillon = { title: '', description: '', channel: '', questions: [], enabled: true };
         state.etape = 'identite';
-        state.message = '';
+        state.info = '';
         state.modal = 'identite';
         return interaction.showModal(modal(
           `apw:modal:${state.botId}:${uid}`,
@@ -508,12 +581,12 @@ async function handleWizardInteraction(botId, interaction) {
       }
       if (valeur === 'modifier' || valeur === 'supprimer' || valeur === 'envoyer') {
         if (!store.applyForms.count(state.botId, state.guildId)) {
-          state.message = '⚠️ Aucun formulaire à sélectionner.';
+          state.info = '⚠️ Aucun formulaire à sélectionner.';
           return afficher(interaction, state);
         }
         state.but = valeur;
         state.etape = 'choix';
-        state.message = '';
+        state.info = '';
         return afficher(interaction, state);
       }
       return afficher(interaction, state);
@@ -523,21 +596,20 @@ async function handleWizardInteraction(botId, interaction) {
       const but = parts[4];
       const formId = Number(valeur);
       if (!chargerFormulaire(state, formId)) {
-        state.message = '❌ Formulaire introuvable.';
+        state.info = '❌ Formulaire introuvable.';
         state.etape = 'accueil';
         return afficher(interaction, state);
       }
       if (but === 'supprimer') {
         state.etape = 'confirmersuppression';
-        const form = store.applyForms.get(formId);
-        state.message = '';
-        return repondre(interaction, ecranConfirmationSuppression(state, form));
+        state.info = '';
+        return afficher(interaction, state);
       }
       if (but === 'envoyer') {
         return envoyerPanneau(interaction, state);
       }
       state.etape = 'identite';
-      state.message = '✏️ Vous modifiez ce formulaire. Rien n\'est enregistré avant **Envoyer le panneau**.';
+      state.info = '✏️ Vous modifiez ce formulaire. Rien n\'est enregistré avant **Envoyer le panneau**.';
       return afficher(interaction, state);
     }
 
@@ -546,7 +618,7 @@ async function handleWizardInteraction(botId, interaction) {
       const idx = Number(valeur);
       if (Number.isFinite(idx) && state.brouillon.questions[idx] !== undefined) {
         const retiree = state.brouillon.questions.splice(idx, 1)[0];
-        state.message = `🗑️ Question retirée : « ${String(retiree).slice(0, 70)} »`;
+        state.info = `🗑️ Question retirée : « ${String(retiree).slice(0, 70)} »`;
       }
       return afficher(interaction, state);
     }
@@ -556,11 +628,14 @@ async function handleWizardInteraction(botId, interaction) {
   // ---------- Boutons ----------
   if (interaction.isButton()) {
     const action = parts[4];
+    // Tout bouton est acquitté, sauf ceux qui ouvrent une fenêtre : Discord
+    // interdit showModal après un accusé de réception.
+    if (action !== 'identite' && action !== 'ajouterquestion') await ack(interaction);
     const idx = ORDRE.indexOf(state.etape);
 
     if (action === 'accueil') {
       wizards.delete(key);
-      return repondre(interaction, {
+      return conclure(interaction, state, {
         embeds: [new EmbedBuilder().setColor(COULEUR_OK).setTitle('✅ Assistant fermé')
           .setDescription('Rouvrez-le avec `/setup apply`.')],
         components: [],
@@ -569,23 +644,23 @@ async function handleWizardInteraction(botId, interaction) {
     if (action === 'suivant') {
       // On ne laisse pas avancer sans le minimum : on dit quoi corriger.
       if (state.etape === 'identite' && !state.brouillon.title.trim()) {
-        state.message = '⚠️ Donnez d\'abord un titre au panneau.';
+        state.info = '⚠️ Donnez d\'abord un titre au panneau.';
         return afficher(interaction, state);
       }
       if (state.etape === 'canal' && !state.brouillon.channel) {
-        state.message = '⚠️ Choisissez le salon des réponses avant de continuer.';
+        state.info = '⚠️ Choisissez le salon des réponses avant de continuer.';
         return afficher(interaction, state);
       }
       if (idx >= 0 && idx < ORDRE.length - 1) {
         state.etape = ORDRE[idx + 1];
-        state.message = '';
+        state.info = '';
       }
       return afficher(interaction, state);
     }
     if (action === 'precedent') {
       if (idx > 0) {
         state.etape = ORDRE[idx - 1];
-        state.message = '';
+        state.info = '';
       }
       return afficher(interaction, state);
     }
@@ -615,7 +690,7 @@ async function handleWizardInteraction(botId, interaction) {
       if (state.formId) {
         store.applyForms.remove(state.formId);
         wizards.delete(key);
-        return repondre(interaction, {
+        return conclure(interaction, state, {
           embeds: [new EmbedBuilder().setColor(COULEUR_OK).setTitle('🗑️ Formulaire supprimé')
             .setDescription('Il n\'apparaît plus dans la liste. Le panneau déjà publié reste visible mais son bouton ne répondra plus.')],
           components: [],
