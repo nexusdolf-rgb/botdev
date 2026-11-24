@@ -122,9 +122,9 @@ const json = (x) => JSON.stringify(x.components.map((c) => (c.toJSON ? c.toJSON(
 
   console.log('— 8. Bump v296 —');
   const index = racine('public/index.html');
-  check('index.html : ?v=401 référencé 10 fois', (index.match(/\?v=401/g) || []).length === 10,
-    String((index.match(/\?v=401/g) || []).length));
-  check('sw.js : cache « hoxera-v401 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v401';"));
+  check('index.html : ?v=402 référencé 10 fois', (index.match(/\?v=402/g) || []).length === 10,
+    String((index.match(/\?v=402/g) || []).length));
+  check('sw.js : cache « hoxera-v402 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v402';"));
 
   console.log(`\n🎉 v296 : ${ok} vérifications passées`);
   process.exit(0);

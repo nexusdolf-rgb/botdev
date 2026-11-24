@@ -117,8 +117,8 @@ const json = (x) => JSON.stringify(x || {});
 (async () => {
   console.log('— 1. Pins de version v305 —');
   const html = racine('public/index.html');
-  check('index.html : ?v=401 ×10', (html.match(/\?v=401/g) || []).length === 10);
-  check('sw.js : cache hoxera-v401', racine('public/sw.js').includes("const CACHE = 'hoxera-v401';"));
+  check('index.html : ?v=402 ×10', (html.match(/\?v=402/g) || []).length === 10);
+  check('sw.js : cache hoxera-v402', racine('public/sw.js').includes("const CACHE = 'hoxera-v402';"));
 
   console.log('— 2. Création : bonne catégorie + liste + propriétaire —');
   await extra.onVoiceState(botId, entry, { channel: null, guild }, { channelId: creator.id, member: membre, guild });

@@ -20,8 +20,8 @@ const html = racine('public/index.html');
 const sw = racine('public/sw.js');
 
 console.log('— 1. Pins de version v313 —');
-check('index.html : ?v=401 ×10', (html.match(/\?v=401/g) || []).length === 10, String((html.match(/\?v=\d+/g) || []).slice(0, 8)));
-check('sw.js : cache hoxera-v401', sw.includes("const CACHE = 'hoxera-v401';"));
+check('index.html : ?v=402 ×10', (html.match(/\?v=402/g) || []).length === 10, String((html.match(/\?v=\d+/g) || []).slice(0, 8)));
+check('sw.js : cache hoxera-v402', sw.includes("const CACHE = 'hoxera-v402';"));
 check('index.html : plus aucune ?v=312', !html.includes('?v=312'));
 check('sw.js : plus de botdev-v312', !sw.includes('botdev-v312'));
 

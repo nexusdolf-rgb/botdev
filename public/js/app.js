@@ -155,7 +155,7 @@ App.GLYPHES = {
   // ils tombent sur une police de secours selon l'appareil et changent de forme
   // (le quadrille apparaissait tantot en hachures, tantot en grille de points).
   // Deux traces maison valent mieux qu'un glyphe dont le rendu nous echappe.
-  menu: '<path d="M4.4 7h15.2M4.4 12h15.2M4.4 17h15.2"/>',
+  menu: '<path d="M4.4 6h15.2M4.4 12h15.2M4.4 18h15.2"/>',
   grille: '<rect x="4" y="4" width="6.2" height="6.2" rx="1.5"/><rect x="13.8" y="4" width="6.2" height="6.2" rx="1.5"/><rect x="4" y="13.8" width="6.2" height="6.2" rx="1.5"/><rect x="13.8" y="13.8" width="6.2" height="6.2" rx="1.5"/>',
 };
 
@@ -1003,7 +1003,7 @@ App.renderAdminPage = async () => {
     <div class="page admin-platform-page">
       <header class="admin-head">
         <div class="admin-identity">
-          <img id="a-bot-avatar" class="admin-mark admin-bot-avatar" src="/api/public/bot-avatar?v=401" alt="Avatar d’Hoxera" width="48" height="48" />
+          <img id="a-bot-avatar" class="admin-mark admin-bot-avatar" src="/api/public/bot-avatar?v=402" alt="Avatar d’Hoxera" width="48" height="48" />
           <div class="admin-head-copy">
             <div class="admin-breadcrumb"><span>OPTIMUS PRIME</span><i>/</i><b>CONSOLE FONDATEUR</b></div>
             <h1>Espace fondateur</h1>
