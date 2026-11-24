@@ -28,8 +28,8 @@ const panels = require('../server/discord/panels');
 const changelog = require('../server/discord/changelog');
 
 console.log('— 1. Pins v340 —');
-check('index.html : ?v=399 ×10', (html.match(/\?v=399/g) || []).length === 10);
-check('sw.js : cache hoxera-v399', sw.includes("const CACHE = 'hoxera-v399';"));
+check('index.html : ?v=400 ×10', (html.match(/\?v=400/g) || []).length === 10);
+check('sw.js : cache hoxera-v400', sw.includes("const CACHE = 'hoxera-v400';"));
 check('index.html : plus aucune ?v=339', !html.includes('?v=339'));
 check('VERSION ≥ 340', changelog.VERSION >= 340);
 check('journal v340 : au moins 1 nouveauté', Array.isArray(changelog.NOTES.new) && changelog.NOTES.new.length >= 1);

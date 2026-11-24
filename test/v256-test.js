@@ -74,9 +74,9 @@ check('la classe hx-os-pc vient toujours du système (v253)',
   os.includes("classList.add('hx-os-pc')"));
 
 console.log('— 5. Version —');
-check('index.html : ?v=399 référencé 10 fois', (index.match(/\?v=399/g) || []).length === 10,
-  String((index.match(/\?v=399/g) || []).length));
-check('sw.js : cache « hoxera-v399 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v399';"));
+check('index.html : ?v=400 référencé 10 fois', (index.match(/\?v=400/g) || []).length === 10,
+  String((index.match(/\?v=400/g) || []).length));
+check('sw.js : cache « hoxera-v400 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v400';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v256 — ${ok} vérifications OK : l'intérieur des panneaux PC est redevenu celui de la v241.`);

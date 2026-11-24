@@ -863,7 +863,7 @@ Dashboard.MODULE_META = {
     aide: 'Vous fixez le lot, la durée et le nombre de gagnants ; le bot compte les participants et annonce le résultat.',
     voit: 'Un message « Giveaway · cliquez pour participer » qui se termine tout seul.',
     slash: '/giveaway lancer — /config ➜ Giveaways',
-    apercu: { embed: { title: '🎁 Giveaway · Nitro 1 mois', desc: 'Cliquez sur le bouton pour participer. **2 gagnants** dans 3 jours.', color: '#eb459e', footer: 'Se termine <dans 3 jours>' },
+    apercu: { embed: { title: '🎁 Giveaway · Nitro 1 mois', desc: 'Cliquez sur le bouton pour participer. **2 gagnants** dans 3 jours.', color: '#eb459e', footer: 'Se termine dans 3 jours' },
       buttons: [{ label: 'Participer', style: 'gris' }] } },
 
   events: { e: '🎮', emote: 'hox_events', cat: 'vie', tag: 'Vos soirées, tournois et animations suivis',
@@ -1026,6 +1026,18 @@ Dashboard.emoteFor = (moduleId) => {
 };
 // Une valeur absente ou illisible s'affiche « 0 », jamais « undefined ».
 Dashboard.nombre = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+// v400 — Les tableaux economy et quiz_scores ne stockent QUE l'identifiant
+// Discord (aucun pseudo en base). Afficher « <@123…> » brut ressemblait à un
+// bug de gabarit ; on l'affiche donc comme un identifiant technique, en code,
+// et on préfère le pseudo quand la ligne en contient un.
+Dashboard.nomMembreTable = (ligne) => {
+  const r = ligne || {};
+  const nom = String(r.tag || r.username || '').trim();
+  if (nom) return App.escapeHtml(nom);
+  const id = String(r.user_id || '').trim();
+  if (!id) return '—';
+  return '<code class="dash-id">' + App.escapeHtml(id) + '</code>';
+};
 Dashboard.moduleMeta = (moduleId) => Dashboard.MODULE_META[Dashboard.MODULE_ALIASES[moduleId] || moduleId] || null;
 Dashboard.categoryOf = (moduleId) => (Dashboard.moduleMeta(moduleId) || {}).cat || 'decouvrir';
 Dashboard.modulesOf = (category, list = Dashboard.MODULES) => list.filter(([id]) => Dashboard.categoryOf(id) === category);
@@ -2096,7 +2108,12 @@ Dashboard.plierTextesLongs = (root, seuil) => {
     const titre = document.createElement('summary');
     titre.textContent = 'En savoir plus';
     bloc.appendChild(titre);
-    el.parentNode.insertBefore(bloc, el);
+    // v400 — On remplace l'élément SUR PLACE au lieu d'insérer le bloc
+    // devant lui : dans l'en-tête d'un module, « sub » vit juste après le
+    // <h1>. Le bloc s'intercalait ENTRE les deux, l'icône descendait de
+    // 55 px et la pastille de catégorie se retrouvait sous le texte
+    // (visible sur « Nettoyage auto »). Le pliage reste le même.
+    el.parentNode.replaceChild(bloc, el);
     bloc.appendChild(el);
     plies++;
   });
@@ -2383,10 +2400,17 @@ Dashboard.layoutSettingRows = (root) => {
     // Conteneurs PLEINE LARGEUR à ne jamais compresser en colonne
     // « libellé → contrôle ». Voir Dashboard.SETTING_ROW_PLEINE_LARGEUR.
     if (next.matches(Dashboard.SETTING_ROW_PLEINE_LARGEUR)) return;
+    // v400 — Un <div> n'est un « contrôle » que s'il en contient UN SEUL.
+    // Avant, n'importe quel div contenant un <select> était pris pour un
+    // contrôle : les paliers d'invitations (#irc-rows, une LISTE de lignes)
+    // se retrouvaient écrasés dans la colonne de droite de la ligne, chaque
+    // ligne à moitié hors écran. Une liste doit rester en pleine largeur.
+    const nbControles = (el) => el.querySelectorAll('select, input, textarea, button, label.switch').length;
     const isControl = next.matches(Dashboard.SETTING_ROW_CONTROLS)
-      || (next.tagName === 'DIV' && next.querySelector('input[type="color"]'))
-      || (next.tagName === 'DIV' && next.querySelector('.discord-multi-picker'))
-      || (next.tagName === 'DIV' && next.querySelector('select.dash-select'));
+      || (next.tagName === 'DIV' && nbControles(next) <= 2 && (
+        next.querySelector('input[type="color"]')
+        || next.querySelector('.discord-multi-picker')
+        || next.querySelector('select.dash-select')));
     if (!isControl) return;
     const row = document.createElement('div');
     row.className = 'setting-row';
@@ -2398,6 +2422,26 @@ Dashboard.layoutSettingRows = (root) => {
   root.querySelectorAll('.dash-card .dash-btn').forEach((btn) => {
     const parent = btn.parentElement;
     if (!parent || parent.classList.contains('card-actions') || parent.closest('.card-actions') || parent.closest('.setting-row') || parent.closest('.card-head')) return;
+    // v400 — Ne JAMAIS déplacer le bouton d'une LIGNE DE LISTE.
+    // « Retirer » (salons à détailler), « Supprimer » (paliers d'invitations,
+    // réactions→rôles, niveaux, membres blacklistés) appartiennent à leur
+    // ligne : les remonter dans un pied de carte les détachait de la donnée
+    // concernée, on ne savait plus quelle ligne on supprimait.
+    //
+    // Critère simple et vérifié sur les 41 modules : un pied de carte ne se
+    // construit que si le conteneur est la carte elle-même, ou un bloc
+    // anonyme (sans classe). Dès que le conteneur porte un nom — cm-row,
+    // irc-row, rr-map-row, am-member-blacklist-row, am-save-actions — c'est
+    // une ligne ou un groupe d'actions voulu par le module : on n'y touche pas.
+    const classesParent = [...parent.classList];
+    if (classesParent.length && !parent.classList.contains('dash-card')) return;
+    // v400 — Un div SANS CLASSE n'est pas forcément un corps de carte : c'est
+    // aussi l'usage pour une LIGNE (saisie, liste, commande personnalisée).
+    // Deux garde-fous, appris en cassant les deux cas :
+    //   • un champ vit dans la ligne  → le bouton lui appartient ;
+    //   • la ligne a d'autres enfants (texte, badge) → idem.
+    // Seul un conteneur qui est la CARTE elle-même, ou son enfant direct,
+    // est un corps de carte dont on peut faire un pied.
     const kids = Array.from(parent.children);
     const trailing = [];
     for (let i = kids.length - 1; i >= 0; i--) {
@@ -2405,9 +2449,36 @@ Dashboard.layoutSettingRows = (root) => {
       else break;
     }
     if (!trailing.length || !trailing.includes(btn)) return;
+    // v400 — Un div SANS CLASSE n'est pas forcément un corps de carte : c'est
+    // aussi l'usage pour une LIGNE (saisie, liste, commande personnalisée).
+    // Deux garde-fous, appris en cassant les deux cas :
+    //   • un champ vit dans la ligne  → le bouton lui appartient ;
+    //   • la ligne a d'autres enfants (texte, badge) → idem.
+    // Seul un conteneur qui est la CARTE elle-même, ou son enfant direct,
+    // est un corps de carte dont on peut faire un pied.
+    if (!parent.classList.contains('dash-card')) {
+      if (parent.querySelector('input, select, textarea')) return;
+      const estEnfantDirectDeCarte = parent.parentElement
+        && parent.parentElement.classList.contains('dash-card');
+      if (!estEnfantDirectDeCarte) return;
+      if (parent.children.length !== trailing.length) return;
+    }
     const foot = document.createElement('div');
     foot.className = 'card-actions';
-    parent.insertBefore(foot, trailing[0]);
+    // v400 — Un div sans classe qui ne contient QUE ces boutons n'est pas le
+    // corps de la carte : c'est un simple groupe d'actions (anti-raid, par
+    // exemple : « Enregistrer les filtres » + « Tester »). Poser le pied
+    // DEDANS l'enfermait dans un conteneur de 188 px, collé à gauche, alors
+    // que la carte en fait 324 : les boutons avaient l'air perdus au milieu.
+    // On remonte donc le pied au niveau du conteneur parent.
+    let hote = parent;
+    if (!parent.classList.length
+        && parent.children.length === trailing.length
+        && parent.parentElement
+        && parent.parentElement.id !== 'dash-content') {
+      hote = parent.parentElement;
+    }
+    hote.insertBefore(foot, hote === parent ? trailing[0] : parent);
     trailing.forEach((b) => foot.appendChild(b));
   });
 };
@@ -2678,11 +2749,11 @@ Dashboard.renderers.tickets = async (content, data) => {
       <option value="4" ${curStyle === '4' ? 'selected' : ''}>Rouge</option>
     </select>
 
-    <label class="dash-label">Questionnaire d'ouverture</label>
-    <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer">
+    <div class="setting-row">
+      <label class="dash-label" for="t-reason">Questionnaire d'ouverture</label>
       <label class="switch"><input type="checkbox" id="t-reason" ${reqReason ? 'checked' : ''} /><span class="slider"></span></label>
-      <span style="color:var(--d-dim)">${reqReason ? 'Raison obligatoire' : 'Sans raison'}</span>
-    </label>
+      <span class="switch-state" id="t-reason-state">${reqReason ? 'Raison obligatoire' : 'Sans raison'}</span>
+    </div>
 
     <label class="dash-label">Rôle staff global</label>
     <select class="dash-select" id="t-role">
@@ -2845,7 +2916,7 @@ Dashboard.renderers.tickets = async (content, data) => {
     <label class="dash-label">Message personnalisé (vide = message automatique)</label>
     <textarea class="dash-input" id="tdm-msg" rows="4" placeholder="${App.escapeHtml('Ex : Merci d\'avoir contacté le support ! Votre demande #12 est traitée.')}">${App.escapeHtml((data.settings || {}).close_dm_message || '')}</textarea>
     <div style="margin-top:12px" data-dm-img></div>
-    <div style="margin-top:14px"><button class="dash-save-action dash-btn dash-btn-primary" id="tdm-save">Enregistrer les rôles par réaction</button></div>`;
+    <div style="margin-top:14px"><button class="dash-save-action dash-btn dash-btn-primary" id="tdm-save">Enregistrer le message privé</button></div>`;
   cdm.querySelector('[data-dm-img]').appendChild(Dashboard.imageField('Image du message privé', dmImage, (v) => { dmImage = v; }, 'Vide = image par défaut du bot. Importez la vôtre pour personnaliser le message de fermeture.'));
   cdm.querySelector('#tdm-save').onclick = async (e) => {
     const bouton = e.currentTarget;
@@ -2963,11 +3034,14 @@ Dashboard.renderers.tickets = async (content, data) => {
   };
   renderStatus();
   c.querySelector('#t-channel').onchange = renderStatus;
+  // v400 — le libellé d'état s'écrivait via nextElementSibling.nextElementSibling :
+  // le <label> imbriqué rendait la chaîne fausse, donc `.textContent` d'un null
+  // levait une TypeError à chaque bascule et le libellé ne changeait jamais.
+  // On cible maintenant le texte par son identifiant.
   c.querySelector('#t-reason').onchange = () => {
     const on = c.querySelector('#t-reason').checked;
-    c.querySelector('#t-reason').nextElementSibling.nextElementSibling.textContent = on
-      ? 'Raison obligatoire'
-      : 'Sans raison';
+    const etat = c.querySelector('#t-reason-state');
+    if (etat) etat.textContent = on ? 'Raison obligatoire' : 'Sans raison';
   };
 
   c.querySelector('#t-save').onclick = async (e) => {
@@ -3049,8 +3123,13 @@ Dashboard.renderers.tickets = async (content, data) => {
           </div>
           <div data-emojierr style="color:#ff8a8d;font-size:12px;margin-top:3px;display:none">Emoji invalide · utilise un vrai emoji (ex : 🤝)</div>
           <label class="dash-label">Description (affichée sous le type dans le menu)</label>
-          <input class="dash-input" data-k="description" maxlength="100" value="${App.escapeHtml(x.description)}" placeholder="Ex : signalez un abus du staff, en toute confidentialité" />
-          <div style="color:var(--d-dim);font-size:11px;margin-top:2px">${String(x.description || '').length}/100</div>
+          <!-- v400 : le champ ET son compteur vivent dans le même bloc : la
+               mise en page « libellé → contrôle » déplace l'input dans une
+               nouvelle ligne, ce qui laissait le compteur orphelin et figé. -->
+          <div class="input-counted">
+            <input class="dash-input" data-k="description" maxlength="100" value="${App.escapeHtml(x.description)}" placeholder="Ex : signalez un abus du staff, en toute confidentialité" />
+            <div class="input-counted-num">${String(x.description || '').length}/100</div>
+          </div>
           <label class="dash-label">Catégorie</label>
           <select class="dash-select" data-k="categorySel">
             ${categories.length ? '<option value="">— Catégorie par défaut (Tickets) —</option>' : Dashboard.noDiscordChoice('Aucune catégorie reçue de Discord')}
@@ -3082,7 +3161,10 @@ Dashboard.renderers.tickets = async (content, data) => {
       const descInp = row.querySelector('[data-k="description"]');
       descInp.addEventListener('input', () => {
         x.description = descInp.value;
-        const cnt = descInp.nextElementSibling;
+        // v400 — compteur retrouvé par sa classe : il n'est plus le frère
+        // direct de l'input une fois la carte mise en page.
+        const bloc = descInp.closest('.input-counted');
+        const cnt = bloc && bloc.querySelector('.input-counted-num');
         if (cnt) cnt.textContent = `${String(x.description || '').length}/100`;
         renderPreview();
       });
@@ -3476,8 +3558,12 @@ const EVENT_VARS = {
 Dashboard.renderers.welcome = async (content, data) => {
   const { bot, guildId } = Dashboard.state;
   const root = Dashboard.header(content, '', 'Bienvenue & auto-rôles', 'Accueillez les nouveaux membres et donnez-leur un rôle automatiquement.');
-  const defs = data.events.defs;
-  const state = data.events.state || {};
+  // v400 — blindage : si l'API omet « events » (ancienne version du serveur
+  // pendant un déploiement, réponse partielle), le module affichait
+  // « Impossible de charger ce module · Cannot convert undefined or null to
+  // object ». Un écran vide explique mieux qu'un écran mort.
+  const defs = (data.events && data.events.defs) || {};
+  const state = (data.events && data.events.state) || {};
   const textChannels = (data.channels || []).filter((c) => !c.category && !c.voice);
   const categories = (data.channels || []).filter((c) => c.category);
   const rolesList = (data.roles || []).filter((role) => role.name !== '@everyone');
@@ -3494,7 +3580,7 @@ Dashboard.renderers.welcome = async (content, data) => {
     // illisibles sur fond clair) mais n'accepte aucun clic.
     const cfgZone = App.el(`<div style="${ev.enabled ? '' : 'opacity:.62;pointer-events:none'}"></div>`);
 
-    def.config.forEach((f) => {
+    (Array.isArray(def.config) ? def.config : []).forEach((f) => {
       if (f.type === 'checkbox') {
         cfgZone.appendChild(App.el(`<label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:var(--d-dim);cursor:pointer"><input type="checkbox" data-k="${f.key}" ${ev.config[f.key] ? 'checked' : ''} /> ${f.label}</label>`));
         return;
@@ -4071,7 +4157,11 @@ Dashboard.renderers.economy = async (content, data) => {
   else {
     const table = App.el(`<table class="dash-table"><thead><tr><th>#</th><th>Membre</th><th>Coins</th><th>Série 🔥</tr></thead><tbody></tbody></table>`);
     const tb = table.querySelector('tbody');
-    lb.top.forEach((r, i) => tb.appendChild(App.el(`<tr><td>${['','',''][i] || i + 1}</td><td><@${r.user_id}></td><td>${r.coins}</td><td>${Number(r.daily_streak) > 1 ? `${r.daily_streak} j` : '—'}</td></tr>`)));
+    // v400 — Un identifiant ne dit rien à personne. On affiche un pseudo
+    // quand on l'a, sinon la mention Discord sera rendue par le client ;
+    // le texte brut « <@123…> » n'apparaissait que parce que le tableau
+    // n'est pas du HTML Discord.
+    lb.top.forEach((r, i) => tb.appendChild(App.el(`<tr><td>${['','',''][i] || i + 1}</td><td>${Dashboard.nomMembreTable(r)}</td><td class="num">${Dashboard.nombre(r.coins)}</td><td class="num">${Number(r.daily_streak) > 1 ? `${Number(r.daily_streak)} j` : '—'}</td></tr>`)));
     c.appendChild(table);
     // Export CSV (v190)
     const exp = App.el(`<div style="margin-top:12px"><button class="btn btn-sm" id="exp-csv">Exporter en CSV</button></div>`);
@@ -4228,7 +4318,13 @@ Dashboard.renderers.moderation = async (content, data) => {
   if (nativeAlertChannel && !channelList.some((channel) => Dashboard.discordRefMatches(nativeAlertChannel, channel))) {
     nativeChannelOptions.push(Dashboard.currentDiscordOption(nativeAlertChannel, channelList, '', 'configuration actuelle · salon introuvable'));
   }
-  const blacklistData = blacklist.map((word) => ({ word: String(word || '') }));
+  // v400 — store.blacklist.all() renvoie des CHAÎNES (db.js : .map(r => r.word)).
+  // Le code faisait String(word) sur chaque entrée : chaque mot devenait
+  // « [object Object] » et la liste noire était inutilisable côté dashboard.
+  // On accepte les deux formes, chaîne ou { word }, pour être tolérant.
+  const blacklistData = blacklist.map((entree) => ({
+    word: String(entree && typeof entree === 'object' ? (entree.word || '') : (entree || '')),
+  }));
   const memberBlacklistData = Array.isArray(data.automod_blacklist) ? data.automod_blacklist : [];
 
   const c = Dashboard.card(root, 'Auto-modération', 'Chaque filtre a son action. Options avancées repliées.');
@@ -4248,7 +4344,7 @@ Dashboard.renderers.moderation = async (content, data) => {
     <div class="am-rule-heading"><div><b>Filtres</b><small>Cochez, choisissez l’action. Options dans le menu.</small></div></div>
     <div class="am-rule-grid">
       <div class="am-rule-card" data-am-rule-card="phishing">
-        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M13.6 3.4v8.4a4.6 4.6 0 0 1-9.2 0"/><path d="M4.2 10 6.8 12.6"/><circle cx="13.6" cy="4.6" r="1.4"/></svg></span><div><b>Phishing / faux Nitro</b><small>Liens d’arnaque.</small></div></div><input type="checkbox" id="am-phishing" ${s.am_phishing === 0 ? '' : 'checked'} /></div>
+        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M13.6 3.4v8.4a4.6 4.6 0 0 1-9.2 0"/><path d="M4.2 10 6.8 12.6"/><circle cx="13.6" cy="4.6" r="1.4"/></svg></span><div><b>Phishing / faux Nitro</b><small>Liens d’arnaque.</small></div></div><label class="am-rule-toggle" for="am-phishing" title="Activer ou désactiver cette règle"><input type="checkbox" id="am-phishing" aria-label="Activer la règle Phishing / faux Nitro" ${s.am_phishing === 0 ? '' : 'checked'} /></label></div>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-phishing" data-am-action="phishing">${actionOptions('phishing')}</select></label>
         <details class="am-rule-more"><summary>Options</summary>
         <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-phishing" data-am-blacklist-rule="phishing" ${blacklistAfter('phishing') ? 'checked' : ''} /><span>Blacklist après sanction</span></label>
@@ -4258,7 +4354,7 @@ Dashboard.renderers.moderation = async (content, data) => {
         </details>
       </div>
       <div class="am-rule-card" data-am-rule-card="links">
-        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M10.2 13.8a3.6 3.6 0 0 0 5.2.2l2.6-2.6a3.7 3.7 0 0 0-5.2-5.2l-1.4 1.4"/><path d="M13.8 10.2a3.6 3.6 0 0 0-5.2-.2L6 12.6a3.7 3.7 0 0 0 5.2 5.2l1.4-1.4"/></svg></span><div><b>Liens et invitations</b><small>URL et invitations Discord.</small></div></div><input type="checkbox" id="am-links" ${s.am_links ? 'checked' : ''} /></div>
+        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M10.2 13.8a3.6 3.6 0 0 0 5.2.2l2.6-2.6a3.7 3.7 0 0 0-5.2-5.2l-1.4 1.4"/><path d="M13.8 10.2a3.6 3.6 0 0 0-5.2-.2L6 12.6a3.7 3.7 0 0 0 5.2 5.2l1.4-1.4"/></svg></span><div><b>Liens et invitations</b><small>URL et invitations Discord.</small></div></div><label class="am-rule-toggle" for="am-links" title="Activer ou désactiver cette règle"><input type="checkbox" id="am-links" aria-label="Activer la règle Liens et invitations" ${s.am_links ? 'checked' : ''} /></label></div>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-links" data-am-action="links">${actionOptions('links')}</select></label>
         <details class="am-rule-more"><summary>Options</summary>
         <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-links" data-am-blacklist-rule="links" ${blacklistAfter('links') ? 'checked' : ''} /><span>Blacklist après sanction</span></label>
@@ -4266,7 +4362,7 @@ Dashboard.renderers.moderation = async (content, data) => {
         </details>
       </div>
       <div class="am-rule-card" data-am-rule-card="caps">
-        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M3.6 18.4 8 6.6l4.4 11.8M5.2 14.6h5.6"/><path d="M20.4 12.4v5.6M17 15.4a3 3 0 0 1 6 0"/></svg></span><div><b>Majuscules</b><small>Messages presque tout en majuscules.</small></div></div><input type="checkbox" id="am-caps" ${s.am_caps ? 'checked' : ''} /></div>
+        <div class="am-rule-head"><div class="am-rule-name"><span class="am-rule-icon"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M3.6 18.4 8 6.6l4.4 11.8M5.2 14.6h5.6"/><path d="M20.4 12.4v5.6M17 15.4a3 3 0 0 1 6 0"/></svg></span><div><b>Majuscules</b><small>Messages presque tout en majuscules.</small></div></div><label class="am-rule-toggle" for="am-caps" title="Activer ou désactiver cette règle"><input type="checkbox" id="am-caps" aria-label="Activer la règle Majuscules abusives" ${s.am_caps ? 'checked' : ''} /></label></div>
         <label class="am-rule-action">Action<select class="dash-select" id="am-action-caps" data-am-action="caps">${actionOptions('caps')}</select></label>
         <details class="am-rule-more"><summary>Options</summary>
         <label class="am-blacklist-toggle"><input type="checkbox" id="am-blacklist-caps" data-am-blacklist-rule="caps" ${blacklistAfter('caps') ? 'checked' : ''} /><span>Blacklist après sanction</span></label>
@@ -4486,9 +4582,10 @@ Dashboard.renderers.moderation = async (content, data) => {
       <div style="border:1px solid var(--d-border);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:var(--d-card2)">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <span style="font-size:16px">${r.emoji}</span><b style="flex:1;min-width:150px">${r.label}</b>
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--d-dim)">Barème actif
-            <label class="switch"><input type="checkbox" data-esc-on="${App.texte(r.key)}" ${on ? 'checked' : ''} /><span class="slider"></span></label>
-          </label>
+          <span class="esc-on-row">
+            <span style="font-size:13px;color:var(--d-dim)">Barème actif</span>
+            <label class="switch"><input type="checkbox" data-esc-on="${App.texte(r.key)}" ${on ? 'checked' : ''} aria-label="Activer le barème ${App.escapeHtml(r.label)}" /><span class="slider"></span></label>
+          </span>
         </div>
         ${on ? `
         <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -4808,7 +4905,7 @@ Dashboard.renderers.moderation = async (content, data) => {
       <option value="spam">Rafale (spam)</option>
     </select>
     <div style="display:flex;gap:8px;margin-top:12px">
-      <button class="dash-btn dash-btn-primary" id="am-test-go" style="flex:1">Lancer le test</button>
+      <button class="dash-btn dash-btn-primary" id="am-test-go">Lancer le test</button>
     </div>
     <div id="am-test-result" style="margin-top:12px"></div>`;
   cTest.querySelector('#am-test-go').onclick = async () => {
@@ -4994,9 +5091,12 @@ Dashboard.renderers.moderation = async (content, data) => {
     el.innerHTML = '';
     if (!blacklistData.length) el.appendChild(App.el(`<div class="dash-empty">Aucun mot interdit.</div>`));
     blacklistData.forEach((w, i) => {
-      const row = App.el(`<div style="display:flex;gap:8px;margin-bottom:8px">
-        <input class="dash-input" value="${App.escapeHtml(w.word)}" placeholder="mot interdit" />
-        <button class="dash-btn dash-btn-danger dash-btn-sm" type="button" aria-label="Retirer ce mot">Supprimer</button></div>`);
+      // v400 — l'input gardait sa largeur naturelle et écrasait le bouton
+      // (61 px pour un libellé qui en demande 79) : « Supprimer » sortait
+      // rogné. On donne au champ tout l'espace restant, jamais au bouton.
+      const row = App.el(`<div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+        <input class="dash-input" style="flex:1 1 auto;min-width:0" value="${App.escapeHtml(w.word)}" placeholder="mot interdit" />
+        <button class="dash-btn dash-btn-danger dash-btn-sm" style="flex:0 0 auto" type="button" aria-label="Retirer ce mot">Supprimer</button></div>`);
       row.querySelector('input').addEventListener('input', (e) => { w.word = e.target.value; });
       row.querySelector('button').onclick = async () => {
         const removed = blacklistData.splice(i, 1)[0];
@@ -5227,10 +5327,14 @@ Dashboard.renderers.antinuke = async (content, data) => {
       </label>
       ${App.assainir(dangerNote)}
       ${App.assainir(auditBanner)}
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
-        <button class="dash-save-action dash-btn dash-btn-primary" id="nk-save" style="flex:1">Enregistrer</button>
+      <!-- v400 : flex:1 (base 0) dans une ligne qui passe à la ligne faisait
+           prendre toute la place a « Appliquer les seuils recommandes », et
+           « Enregistrer » tombait a 29 px, libelle rogne. Base auto :
+           chacun garde au moins la largeur de son texte. -->
+      <div class="nk-actions">
+        <button class="dash-save-action dash-btn dash-btn-primary" id="nk-save">Enregistrer</button>
         <button class="dash-btn" id="nk-reset">Appliquer les seuils recommandés</button>
-        <button class="dash-btn" id="nk-sim" style="flex:1">Simuler une alerte</button>
+        <button class="dash-btn" id="nk-sim">Simuler une alerte</button>
       </div>
       <div class="desc" style="margin-top:8px">La simulation envoie une alerte de démonstration. Elle ne sanctionne <b>jamais</b> personne.</div>
       <div class="desc" style="margin-top:4px">Réactions déjà déclenchées sur ce serveur : <b>${Number(st.totalActions) || 0}</b></div>`;
@@ -5572,9 +5676,15 @@ Dashboard.renderers.suggestions = async (content, data) => {
 
   const { suggestions } = await App.api(`/bots/${bot.id}/guilds/${guildId}/suggestions`);
   const c2 = Dashboard.card(root, 'Liste', 'Changez le statut (synchronisé avec Discord) ou supprimez une suggestion.');
+  // v400 — Le tableau était ajouté dans TOUS les cas, même sans aucune
+  // suggestion : on voyait un en-tête « # TEXTE VOTES STATUT » orphelin se
+  // superposer au message « Aucune suggestion. ». Pas de ligne, pas de
+  // tableau : le message vide suffit.
   if (!suggestions.length) c2.appendChild(App.el(`<div class="dash-empty">Aucune suggestion.</div>`));
-  const table = App.el(`<table class="dash-table"><thead><tr><th>#</th><th>Texte</th><th>Votes</th><th>Statut</th><th></th></tr></thead><tbody></tbody></table>`);
-  const tb = table.querySelector('tbody');
+  const table = suggestions.length
+    ? App.el(`<table class="dash-table"><thead><tr><th>#</th><th>Texte</th><th>Votes</th><th>Statut</th><th></th></tr></thead><tbody></tbody></table>`)
+    : null;
+  const tb = table && table.querySelector('tbody');
   suggestions.forEach((sg) => {
     const tr = App.el(`<tr>
       <td>#${sg.id}</td>
@@ -5600,7 +5710,7 @@ Dashboard.renderers.suggestions = async (content, data) => {
     };
     tb.appendChild(tr);
   });
-  c2.appendChild(table);
+  if (table) c2.appendChild(table);
 };
 
 // ---------- Giveaways ----------
@@ -5626,9 +5736,13 @@ Dashboard.imageField = (label, value, onChange, hint = '') => {
     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
       <div data-preview style="width:132px;height:74px;border-radius:8px;border:1px dashed var(--d-border);background:rgba(255,255,255,.04);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:11px;color:var(--d-dim);text-align:center;padding:4px;line-height:1.3">${value ? '' : 'Aucune image<br/>⚠️ par défaut'}</div>
       <div style="display:flex;flex-direction:column;gap:6px;min-width:180px">
-        <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" data-file style="font-size:12px;max-width:220px" />
-        <button class="dash-btn dash-btn-sm" data-upload>Importer</button>
-        <button class="dash-btn dash-btn-sm dash-btn-ghost" data-remove ${value ? '' : 'disabled'}>Retirer (par défaut)</button>
+        <!-- v400 : Le champ fichier natif (220×20 px, texte gris illisible)
+             faisait doublon avec le bouton « Importer ». On garde un seul
+             bouton, et le champ réel est caché derrière lui. -->
+        <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" data-file hidden />
+        <button class="dash-btn dash-btn-sm" type="button" data-upload>Importer une image…</button>
+        <button class="dash-btn dash-btn-sm dash-btn-ghost" type="button" data-remove ${value ? '' : 'disabled'}>Retirer (par défaut)</button>
+        <small class="dash-image-name" data-filename aria-live="polite"></small>
       </div>
     </div>
     <div style="font-size:12px;color:var(--d-dim);margin-top:6px">${hint || (value ? 'Image personnalisée enregistrée' : 'Laisser vide = image générée automatiquement (par défaut)')}</div>
@@ -5640,9 +5754,18 @@ Dashboard.imageField = (label, value, onChange, hint = '') => {
     img.onload = () => { preview.innerHTML = ''; img.style.cssText = 'width:100%;height:100%;object-fit:cover'; preview.appendChild(img); };
     img.src = value;
   }
-  wrap.querySelector('[data-upload]').onclick = async () => {
+  // v400 — le bouton Importer ouvre le sélecteur de fichier, et le nom du
+  // fichier choisi s'affiche (avant, le champ natif montrait un texte tronqué).
+  wrap.querySelector('[data-upload]').onclick = () => fileInput.click();
+  fileInput.onchange = () => {
+    const nom = wrap.querySelector('[data-filename]');
+    if (nom) nom.textContent = fileInput.files[0] ? fileInput.files[0].name : '';
+  };
+  wrap.querySelector('[data-upload]').addEventListener('click', async () => {
     const f = fileInput.files[0];
-    if (!f) return App.toast('Choisissez d\'abord une image (PNG, JPG, GIF, WebP).');
+    // Pas encore de fichier : le premier clic a seulement ouvert le
+    // sélecteur système, on ne signale rien (sinon c'est un faux avertissement).
+    if (!f) return;
     const btn = wrap.querySelector('[data-upload]');
     btn.disabled = true; btn.textContent = '⏳ Import…';
     try {
@@ -5657,9 +5780,9 @@ Dashboard.imageField = (label, value, onChange, hint = '') => {
     } catch (e) {
       App.toast('Erreur : ' + (e.message || 'image refusée'), 'error');
     } finally {
-      btn.disabled = false; btn.textContent = 'Importer';
+      btn.disabled = false; btn.textContent = 'Importer une image…';
     }
-  };
+  });
   wrap.querySelector('[data-remove]').onclick = () => {
     preview.innerHTML = 'Aucune image<br/>⚠️ par défaut';
     fileInput.value = '';
@@ -5753,7 +5876,7 @@ Dashboard.renderers.giveaways = async (content) => {
   c3.innerHTML += `
     <div class="setting-row" style="flex-wrap:wrap">
       <label class="dash-label">Prix à gagner *</label>
-      <input class="dash-input" id="gw-new-prize" placeholder="Ex : 50€ Nitro, une clé de jeu…" style="flex:1 1 220px;min-width:0" />
+      <input class="dash-input" id="gw-new-prize" placeholder="Ex : 50€ Nitro, une clé de jeu…" style="flex:1 1 auto;min-width:0" />
     </div>
     <div class="setting-row" style="flex-wrap:wrap">
       <label class="dash-label">Salon</label>
@@ -6877,7 +7000,8 @@ Dashboard.renderers.quiz = async (content, data) => {
   else {
     const table = App.el(`<table class="dash-table"><thead><tr><th>#</th><th>Membre</th><th>Points</th><th>Réponses</th></tr></thead><tbody></tbody></table>`);
     const tb = table.querySelector('tbody');
-    top.forEach((r, i) => tb.appendChild(App.el(`<tr><td>${['','',''][i] || i + 1}</td><td><@${r.user_id}></td><td>${r.score} pts</td><td>${r.answers}</td></tr>`)));
+    // v400 — même correctif que le classement économique : pseudo si connu.
+    top.forEach((r, i) => tb.appendChild(App.el(`<tr><td>${['','',''][i] || i + 1}</td><td>${Dashboard.nomMembreTable(r)}</td><td class="num">${Dashboard.nombre(r.score)} pts</td><td class="num">${Dashboard.nombre(r.answers)}</td></tr>`)));
     c2.appendChild(table);
     const exp = App.el(`<div style="margin-top:12px"><button class="btn btn-sm" id="quiz-exp-csv">Exporter en CSV</button></div>`);
     c2.appendChild(exp);
@@ -7235,7 +7359,7 @@ Dashboard.renderers.community = async (content, data) => {
     <label class="dash-label">Nombre d'étoiles minimum</label>
     <input class="dash-input" id="sb-min" type="number" min="1" max="50" value="${s.starboard_min || 3}" style="max-width:140px" />
     <div style="font-size:13px;color:var(--d-dim);margin-top:8px">Astuce : 3 étoiles est un bon réglage pour un serveur de moins de 500 membres.</div>
-    <div style="margin-top:14px"><button class="dash-save-action dash-btn dash-btn-primary" id="sb-save">Enregistrer les réactions de rôle</button></div>`;
+    <div style="margin-top:14px"><button class="dash-save-action dash-btn dash-btn-primary" id="sb-save">Enregistrer le starboard</button></div>`;
   c1.querySelector('#sb-save').onclick = async (e) => {
     const bouton = e.currentTarget;
     try {
@@ -7257,7 +7381,11 @@ Dashboard.renderers.community = async (content, data) => {
       App.api(`/bots/${bot.id}/guilds/${guildId}/members`).catch(() => ({ members: [] })),
     ]);
     const byId = new Map((membersRes.members || []).map((m) => [String(m.id), m]));
-    c2.appendChild(App.el(`<div style="font-size:13px;color:var(--d-dim);margin-bottom:10px">${App.pluriel(Number(starboardCount) || 0, 'message', 'messages')} au starboard · ⚠️ Le bot doit avoir la permission « Gérer le serveur » pour lire les invitations.</div>`));
+    // v400 — Cette ligne affichait « 0 message au starboard » dans la carte
+    // des INVITATIONS : le compteur du starboard n'a rien à faire ici (le
+    // module Starboard le montre déjà). On ne garde que l'avertissement
+    // de permission, utile pour comprendre un classement vide.
+    c2.appendChild(App.el(`<div style="font-size:13px;color:var(--d-dim);margin-bottom:10px">⚠️ Le bot doit avoir la permission « Gérer le serveur » pour lire les invitations.</div>`));
     const classement = invitesTop || [];
     if (!classement.length) {
       c2.appendChild(App.el(`<div class="dash-empty">Aucune invitation traquée pour l'instant · le classement se remplit à chaque nouvelle arrivée.</div>`));
@@ -7480,7 +7608,7 @@ Dashboard.renderers.server = async (content, data) => {
       <option value="">— Aucun —</option>
       ${rolesList.map((r) => `<option value="${App.texte(r.id)}" ${String(s.birthday_role || '') === r.id ? 'selected' : ''}>${App.escapeHtml(r.name)}</option>`).join('')}
     </select>
-    <div style="margin-top:12px"><button class="dash-save-action dash-btn dash-btn-primary" id="bd-save">Enregistrer la langue et le fuseau</button></div>`;
+    <div style="margin-top:12px"><button class="dash-save-action dash-btn dash-btn-primary" id="bd-save">Enregistrer les anniversaires</button></div>`;
   c3.querySelector('#bd-save').onclick = async (e) => {
     const bouton = e.currentTarget;
     try {
@@ -7560,7 +7688,10 @@ Dashboard.renderers.commands = async (content) => {
       lignes.push(`<div style="font-size:13px;margin:6px 0">Modules coupés : ${s.off.map((m) => `<b>${App.escapeHtml(m.label)}</b> (${App.escapeHtml(m.commands.join(', '))})`).join(' · ')}</div>`);
     }
     if (s.missing && s.missing.length) {
-      lignes.push(`<div style="font-size:13px;margin:6px 0;color:#f0b849">Absentes chez Discord : ${s.missing.map((n) => '`/' + App.escapeHtml(n) + '`').join(', ')}</div>`);
+      // v400 — Les accents graves sont du balisage DISCORD : dans le
+      // dashboard ils s'affichaient tels quels, accents graves compris.
+      // les commandes dans la pastille de code maison, comme ailleurs.
+      lignes.push(`<div style="font-size:13px;margin:6px 0;color:#f0b849">Absentes chez Discord : ${s.missing.map((n) => '<code class="dash-id">/' + App.escapeHtml(n) + '</code>').join(', ')}</div>`);
     } else if (s.registered) {
       lignes.push('<div style="font-size:13px;margin:6px 0;color:#57F287">Toutes les commandes attendues sont enregistrées.</div>');
     }
@@ -7621,11 +7752,13 @@ Dashboard.renderers.commands = async (content) => {
     const trigger = { prefix: `${bot.prefix}${cmd.trigger_value || cmd.name}`, slash: `/${cmd.name}`, keyword: `mot-clé « ${cmd.trigger_value} »` }[cmd.trigger_type] || cmd.trigger_type;
     const blocks = JSON.parse(cmd.blocks || '[]');
     const row = App.el(`
-      <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--d-border);border-radius:8px;padding:10px 14px;margin-bottom:8px;cursor:pointer">
-        <div style="flex:1"><b>${App.escapeHtml(cmd.name)}</b><div style="color:var(--d-dim);font-size:12px">${App.escapeHtml(cmd.description || '')} · ${App.pluriel(blocks.length, 'bloc', 'blocs')}</div></div>
+      <div class="cmd-row">
+        <div class="cmd-row-txt"><b>${App.escapeHtml(cmd.name)}</b><div style="color:var(--d-dim);font-size:12px">${cmd.description ? App.escapeHtml(cmd.description) + ' · ' : ''}${App.pluriel(blocks.length, 'bloc', 'blocs')}</div></div>
         <span class="dash-badge">${App.escapeHtml(trigger)}</span>
-        <button class="dash-btn dash-btn-sm" data-edit="${cmd.id}">Modifier</button>
-        <button class="dash-btn dash-btn-danger dash-btn-sm" data-del="${cmd.id}">Supprimer</button>
+        <div class="cmd-row-actions">
+          <button class="dash-btn dash-btn-sm" data-edit="${cmd.id}">Modifier</button>
+          <button class="dash-btn dash-btn-danger dash-btn-sm" data-del="${cmd.id}">Supprimer</button>
+        </div>
       </div>`);
     row.onclick = (e) => { if (e.target.closest('button')) return; Editor.open(bot, cmd, commands); };
     row.querySelector('[data-edit]').onclick = () => Editor.open(bot, cmd, commands);
@@ -7727,11 +7860,20 @@ Dashboard.renderers.health = async (content) => {
     grid.appendChild(cMem);
 
     // Base + sauvegarde
+    // v400 — La phrase affirmait « jamais dépassée » sans regarder la valeur :
+    // une base au-dessus de 900 Ko s'affichait avec une barre ROUGE pleine et,
+    // juste au-dessus, « jamais dépassée ». Le texte dit maintenant l'état réel,
+    // et le seuil d'alerte passe à 900 Ko (la vraie limite) au lieu de 700.
+    const dbKo = Number((h.db && h.db.fileSizeKo) || 0);
+    const dbTrop = dbKo > 900;
+    const dbDesc = dbTrop
+      ? 'Limite de sécurité dépassée : le nettoyage automatique va purger les tables les plus anciennes.'
+      : 'Limite de sécurité : 900 Ko, surveillée par le nettoyage automatique.';
     const cDb = App.el(`<div class="dash-card"><h3>Base & sauvegarde</h3>
-      <div class="desc">Limite de sécurité : 900 Ko (jamais dépassée grâce au nettoyage automatique).</div>
-      <div class="dash-badge ${(h.db && h.db.fileSizeKo) < 700 ? 'ok' : 'warn'}">Base : ${(h.db && h.db.fileSizeKo) ?? '-'} Ko</div>
+      <div class="desc">${dbDesc}</div>
+      <div class="dash-badge ${dbTrop ? 'warn' : 'ok'}">Base : ${(h.db && h.db.fileSizeKo) ?? '-'} Ko</div>
       <div style="height:10px;background:var(--d-card2);border-radius:12px;overflow:hidden;margin:10px 0 4px">
-        <div style="height:100%;width:${Math.min(100, ((h.db && h.db.fileSizeKo) || 0) / 900 * 100)}%;background:${(h.db && h.db.fileSizeKo) > 700 ? '#ED4245' : 'linear-gradient(90deg,#3BA55D,#57F287)'};border-radius:12px"></div>
+        <div style="height:100%;width:${Math.min(100, dbKo / 900 * 100)}%;background:${dbTrop ? '#ED4245' : 'linear-gradient(90deg,#3BA55D,#57F287)'};border-radius:12px"></div>
       </div>
       <div style="color:var(--d-dim);font-size:12px;margin-bottom:10px">${h.db && h.db.tables ? Object.keys(h.db.tables).length + ' tables avec des données' : ''}</div>
       <div class="dash-badge ${h.backupEnabled ? 'ok' : 'warn'}">Sauvegarde ${h.backupEnabled ? 'active' : 'désactivée'}</div>
@@ -7826,12 +7968,20 @@ Dashboard.renderers.botsettings = async (content) => {
       ? `<b>Active</b> — dépôt <code>${App.escapeHtml(s.repo)}</code> · sauvegarde toutes les 10 minutes + restauration au démarrage.`
       : 'Désactivée · configurez BOTDEV_GH_TOKEN et BOTDEV_DATA_REPO sur Render.'}</div>`));
     c2.appendChild(App.el(`<div class="dash-badge ${s.enabled ? 'ok' : 'warn'}" style="margin-bottom:10px">Dernière sauvegarde : ${lastStr}</div>`));
-    const nowBtn = App.el(`<button class="dash-save-action dash-btn dash-btn-primary">Enregistrer maintenant</button>`);
-    nowBtn.onclick = async () => {
-      try { await App.api('/backup/now', { method: 'POST' }); App.toast('Sauvegarde faite ! 🎉'); Dashboard.renderers.botsettings(content); }
-      catch (e) { App.toast(e.message, 'error'); }
-    };
-    c2.appendChild(nowBtn);
+    // v400 — Le bouton était affiché même quand la sauvegarde est
+    // DÉSACTIVÉE (aucun jeton configuré) : il ne pouvait qu'échouer, avec
+    // « Dernière sauvegarde : jamais » juste au-dessus. On ne le propose
+    // que si le dépôt est réellement branché.
+    if (s.enabled) {
+      const nowBtn = App.el(`<button class="dash-save-action dash-btn dash-btn-primary">Sauvegarder maintenant</button>`);
+      nowBtn.onclick = async () => {
+        try { await App.api('/backup/now', { method: 'POST' }); App.toast('Sauvegarde faite ! 🎉'); Dashboard.renderers.botsettings(content); }
+        catch (e) { App.toast(e.message, 'error'); }
+      };
+      c2.appendChild(nowBtn);
+    } else {
+      c2.appendChild(App.el(`<div style="font-size:13px;color:var(--d-dim)">Aucune sauvegarde ne peut être lancée tant que le dépôt n'est pas configuré.</div>`));
+    }
   } catch {}
 };
 
@@ -7901,7 +8051,10 @@ Dashboard.renderers.verification = async (content, data) => {
     <div style="font-size:12px;color:var(--d-dim);margin:4px 0 8px">Le changement s'applique tout de suite : Hoxera masque (ou rouvre) les salons lui-même. Les nouveaux arrivants ne voient QUE le salon de vérification ; dès leur clic sur « Je suis humain », ils voient tout le serveur. Les salons créés pendant l'isolation sont masqués automatiquement.</div>
     ${cfg.isolate ? `<div style="margin-bottom:8px"><span class="dash-badge ok">Isolation ACTIVE — ${App.pluriel((cfg.isolated_channels || []).length, 'salon masqué', 'salons masqués')}</span></div>` : ''}
     <div style="background:rgba(237,66,69,0.08);border:1px solid rgba(237,66,69,0.35);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--d-dim);margin-bottom:10px">Sur un serveur existant, les membres actuels sans le rôle vérifié ne verront plus que le salon de vérification. Juste après l'activation, cochez la case ci-dessous pour ne bloquer personne.</div>
-    <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="ver-grant-case" />Donner le rôle vérifié à tous les membres actuels (juste après l'activation)</label>
+    <!-- v400 : C'était une case à cocher qui se décochait toute seule après
+         l'appel : visuellement une case « inerte ». C'est une ACTION, elle
+         devient un bouton, avec un libellé de bouton. -->
+    <button class="dash-btn dash-btn-sm" type="button" id="ver-grant-case" style="margin:10px 0">Donner le rôle vérifié aux membres actuels</button>
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
       <button class="dash-save-action dash-btn dash-btn-primary" id="ver-save">Enregistrer les réglages de vérification</button>
       <button class="dash-btn" id="ver-send">Envoyer le panneau dans le salon</button>
@@ -7937,13 +8090,21 @@ Dashboard.renderers.verification = async (content, data) => {
       App.toast('Salons rouverts · rechargez la page dans un instant.');
     }
   };
-  c1.querySelector('#ver-grant-case').onchange = async (e) => {
-    if (!e.target.checked) return;
-    e.target.disabled = true;
-    const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/verification/grant-role`, { method: 'POST', body: {} });
-    e.target.disabled = false;
-    e.target.checked = false; // action ponctuelle : la case se recoche à chaque demande
-    App.toast(r.ok ? 'Distribution du rôle en cours · cela peut prendre quelques minutes sur un gros serveur.' : `${r.error || 'Distribution impossible.'}`);
+  c1.querySelector('#ver-grant-case').onclick = async (e) => {
+    const bouton = e.currentTarget;
+    if (bouton.disabled) return;
+    bouton.disabled = true;
+    const avant = bouton.textContent;
+    bouton.textContent = '⏳ Distribution en cours…';
+    try {
+      const r = await App.api(`/bots/${bot.id}/guilds/${guildId}/verification/grant-role`, { method: 'POST', body: {} });
+      App.toast(r.ok ? 'Distribution du rôle en cours · cela peut prendre quelques minutes sur un gros serveur.' : (r.error || 'Distribution impossible.'), r.ok ? 'success' : 'error');
+    } catch (err) {
+      App.toast(err.message || 'Distribution impossible.', 'error');
+    } finally {
+      bouton.disabled = false;
+      bouton.textContent = avant;
+    }
   };
   const capBox = root.querySelector('#ver-captcha');
   if (capBox) capBox.onchange = () => {
@@ -8043,7 +8204,7 @@ Dashboard.renderers.transcripts = async (content, data) => {
         <div><h3>Rechercher</h3><div class="desc">Tapez un mot-clé (salon, membre, contenu…) puis appuyez sur Entrée · sans mot-clé, les 100 dernières transcriptions.</div></div>
       </div>
       <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
-        <input class="dash-input" id="tr-search" placeholder="Ex : support, Bob, remboursement…" style="flex:1;min-width:220px" />
+        <input class="dash-input" id="tr-search" placeholder="Ex : support, Bob, remboursement…" style="flex:1 1 160px;min-width:0" />
         <button class="dash-btn dash-btn-primary" id="tr-go">Rechercher</button>
       </div>
     </div>`);
@@ -8197,7 +8358,7 @@ Dashboard.renderers.help = async (content) => {
 
   root.appendChild(App.el(block('', 'Besoin d\'aide ?', `
     <p style="margin:0 0 12px;color:var(--d-dim);line-height:1.6">Rejoignez le serveur support officiel : l'équipe et la communauté répondent en français.</p>
-    <a class="dash-btn" target="_blank" rel="noopener" href="https://discord.gg/BNCAVsyAvq" style="text-decoration:none">Rejoindre le support</a>`)));
+    <div class="card-actions"><a class="dash-btn" target="_blank" rel="noopener" href="https://discord.gg/BNCAVsyAvq" style="text-decoration:none;justify-content:center">Rejoindre le support</a></div>`)));
 };
 
 // ============================================================

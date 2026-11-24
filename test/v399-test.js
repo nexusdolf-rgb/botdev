@@ -1,4 +1,4 @@
-// v399 — les rapports d'audit ne peuvent pas dériver du code.
+// v400 — les rapports d'audit ne peuvent pas dériver du code.
 //
 // Un rapport est un texte : rien n'empêche le code de changer et le rapport de
 // rester faux. Ce test relit les affirmations chiffrées des étapes 3 à 5 et les
@@ -98,5 +98,5 @@ check('la CSP exportée interdit les scripts en ligne', !/script-src[^;]*unsafe-
 check('media-src et object-src sont fermés', /media-src 'none'/.test(security.CSP) && /object-src 'none'/.test(security.CSP));
 check('le bac à sable des types passifs est branché', /TYPES_PASSIFS/.test(securite));
 
-if (echecs.length === 0) console.log(`🎉 v399 — ${ok} vérifications OK : les rapports d’audit correspondent au code livré.`);
-else { console.log(`❌ v399 — ${echecs.length} échec(s) sur ${ok + echecs.length} : ${echecs.join(', ')}`); process.exitCode = 1; }
+if (echecs.length === 0) console.log(`🎉 v400 — ${ok} vérifications OK : les rapports d’audit correspondent au code livré.`);
+else { console.log(`❌ v400 — ${echecs.length} échec(s) sur ${ok + echecs.length} : ${echecs.join(', ')}`); process.exitCode = 1; }

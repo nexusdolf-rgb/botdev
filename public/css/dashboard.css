@@ -98,8 +98,13 @@
 
 /* ---------- Cartes module ---------- */
 .dash-module-header {
-  display: flex; align-items: center; gap: 14px; margin-bottom: 18px;
+  /* v400 — align-items: center faisait « flotter » l'icône au milieu quand
+     le texte d'en-tête se dépliait (« En savoir plus »), jusqu'à passer
+     SOUS la pastille de catégorie. L'icône s'aligne sur la première ligne,
+     comme le titre : la lecture reste droite quelle que soit la hauteur. */
+  display: flex; align-items: flex-start; gap: 14px; margin-bottom: 18px;
 }
+.dash-module-header .module-header-lead { padding-top: 2px; }
 .dash-module-header .m-icon {
   width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center;
   justify-content: center; font-size: 22px;
@@ -135,6 +140,13 @@
   border-bottom: 1px solid var(--d-border);
 }
 .dash-table td { padding: 10px; border-bottom: 1px solid #222434; font-size: 14px; }
+/* v400 — Identifiant Discord affiché faute de pseudo connu : lisible,
+   copiable, et visiblement technique (et non un gabarit cassé). */
+.dash-table code.dash-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px; padding: 2px 6px; border-radius: 6px;
+  background: rgba(255,255,255,.06); color: var(--d-dim); white-space: nowrap;
+}
 .dash-table tr:last-child td { border-bottom: none; }
 
 /* ---------- Entrées ---------- */
@@ -154,6 +166,14 @@
   color: var(--d-text); border: 1px solid var(--d-border); border-radius: 8px;
   padding: 8px 15px; cursor: pointer; font-size: 13px; font-weight: 700; font-family: inherit;
   transition: .12s;
+  /* v400 — Sans ça, un bouton serré dans une ligne de liste coupait son
+     libellé au milieu d'un mot (« Suppri » / « mer »). Un libellé de bouton
+     reste d'un seul tenant ; s'il est trop long, c'est le conteneur qui
+     s'adapte (flex-wrap), pas le mot qui se coupe.
+     Le bouton garde donc son libellé entier ET se laisse rétrécir : c'est
+     la règle de son conteneur qui doit lui laisser la place (base auto +
+     passage à la ligne), pas un flex-shrink: 0 qui déborde de la carte. */
+  white-space: nowrap;
 }
 .dash-btn:hover { border-color: var(--d-accent); transform: translateY(-1px); }
 .dash-btn-primary {
@@ -220,6 +240,22 @@
   /* Tableaux : défilement horizontal */
   .dash-table { display: block; overflow-x: auto; white-space: nowrap; }
   .dash-table th, .dash-table td { padding: 9px 10px; }
+  /* v400 — Un seul pseudo très long faisait une colonne de 499 px : les
+     colonnes suivantes (Coins, Série) partaient hors écran alors que la
+     place occupée par le nom ne servait à rien. On borne la colonne texte
+     et on replie ce qui dépasse ; les chiffres restent tous visibles. */
+  .dash-table th:not(:first-child), .dash-table td:not(:first-child) { max-width: 38vw; }
+  .dash-table td { overflow-wrap: anywhere; }
+  .dash-table td:not(:first-child) { white-space: normal; }
+  /* Un nombre ne se coupe JAMAIS (12400 s'affichait « 1240 » puis « 0 »). */
+  .dash-table td.num, .dash-table th.num { white-space: nowrap; overflow-wrap: normal; }
+  /* La pastille d'identifiant collait au nombre de la colonne suivante.
+     Elle s'enroule plutôt que d'être rognée : un identifiant coupé à moitié
+     perd tout son sens (il ne se copie même plus d'un seul geste). */
+  .dash-table code.dash-id {
+    display: inline; max-width: 100%; vertical-align: bottom;
+    white-space: normal; overflow-wrap: anywhere;
+  }
 }
 
 /* ============================================================
@@ -1168,7 +1204,12 @@ html.hx-light .sk-ico, html.hx-light .sk-line, html.hx-light .sk-stat {
   color: var(--d-dim);
 }
 .tk-fold[open] .tk-fold-sum { border-bottom: 1px solid var(--d-border); }
-.tk-fold-body { padding: 12px 14px 16px; }
+/* v400 — tkFold() déplace le CONTENU d'une carte (déjà dans son padding,
+   ici 20 px de chaque côté) dans ce bloc. Le padding horizontal ajouté
+   par-dessus portait le total à 68 px : il ne restait que 294 px pour des
+   boutons qui en demandent 314, et ils sortaient rognés. On ne garde que
+   l'espace vertical. */
+.tk-fold-body { padding: 0 0 4px; }
 .ticket-guide .tg-box small { margin-bottom: 0; }
 
 /* Constructeur du nouveau système de tickets */
@@ -1411,7 +1452,7 @@ html.hx-light .adv-check-row { background: rgba(var(--d-accent-rgb), .055); }
 .am-hero-copy > div { display: flex; flex-direction: column; gap: 3px; }
 .am-hero-copy b { font-size: 16px; }
 .am-hero-copy small { color: var(--d-dim); font-size: 12px; }
-.am-main-toggle { position: relative; display: flex; align-items: center; gap: 9px; flex: 0 0 auto; cursor: pointer; color: var(--d-text); font-size: 12px; font-weight: 800; }
+.am-main-toggle { position: relative; display: flex; align-items: center; gap: 9px; flex: 0 0 auto; cursor: pointer; color: var(--d-text); font-size: 12px; font-weight: 800; min-height: 44px; padding: 0 4px; }
 .am-main-toggle input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .am-main-toggle i {
   width: 50px; height: 29px; position: relative; display: inline-block; border-radius: 999px;
@@ -1452,6 +1493,22 @@ html.hx-light .adv-check-row { background: rgba(var(--d-accent-rgb), .055); }
 .am-rule-name small { color: var(--d-dim); font-size: 11px; line-height: 1.35; }
 .am-rule-icon { width: 31px; height: 31px; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; background: rgba(var(--d-accent-rgb), .13); font-size: 16px; }
 .am-rule-head > input[type="checkbox"] { width: 18px; height: 18px; margin: 4px 1px 0 0; accent-color: var(--d-accent); cursor: pointer; }
+/* v400 — Case d'activation d'une règle auto-mod : 18×18 seule, aucune zone
+   de touche. Le <label> qui l'entoure porte la cible (44×44 au doigt). */
+.dashboard-shell-host .am-rule-toggle,
+.am-rule-toggle {
+  display: flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; margin: -10px -8px -10px 0; border-radius: 8px;
+  cursor: pointer; flex: 0 0 auto;
+}
+.am-rule-toggle:hover { background: rgba(255,255,255,.045); }
+.am-rule-toggle:focus-within { outline: 2px solid var(--d-border-focus); outline-offset: 1px; }
+.am-rule-toggle > input[type="checkbox"] { width: 20px; height: 20px; margin: 0; accent-color: var(--d-accent); cursor: pointer; }
+
+/* v400 — « Barème actif » : le texte et la pastille côte à côte, sans
+   <label> imbriqué (un label dans un label n'est pas du HTML valide et
+   brouille la cible de touche). */
+.esc-on-row { display: inline-flex; align-items: center; gap: 8px; }
 .am-rule-state { flex: 0 0 auto; color: var(--d-dim); font-size: 11px; white-space: nowrap; }
 .am-rule-more { margin-top: 10px; border-top: 1px solid var(--d-border); padding-top: 8px; }
 .am-rule-more summary { cursor: pointer; font-size: 12px; font-weight: 700; color: var(--d-dim); list-style: none; }
@@ -1472,8 +1529,8 @@ html.hx-light .adv-check-row { background: rgba(var(--d-accent-rgb), .055); }
 .am-rule-setting .dash-input, .am-rule-setting .dash-select { margin-top: 0; font-size: 13px; }
 .am-rule-setting small { font-size: 11px; font-weight: 500; letter-spacing: 0; text-transform: none; }
 .am-policy-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(190px, 250px); gap: 14px; align-items: end; margin-top: 13px; padding: 12px 14px; border: 1px solid var(--d-border); border-radius: 12px; background: rgba(255,255,255,.014); }
-.am-inline-toggle { display: flex; align-items: flex-start; gap: 9px; cursor: pointer; }
-.am-inline-toggle input { width: 17px; height: 17px; margin-top: 2px; accent-color: var(--d-accent); }
+.am-inline-toggle { display: flex; align-items: flex-start; gap: 9px; cursor: pointer; min-height: 44px; padding: 6px 0; }
+.am-inline-toggle input { width: 17px; height: 17px; margin-top: 2px; accent-color: var(--d-accent); flex: 0 0 auto; }
 .am-inline-toggle span { display: flex; flex-direction: column; gap: 3px; }
 .am-inline-toggle b { font-size: 13px; }
 .am-inline-toggle small { color: var(--d-dim); font-size: 11px; }
@@ -1561,7 +1618,10 @@ html.hx-light .am-preview-shell, html.hx-light .am-mode-row, html.hx-light .am-p
 .am-filter.active { border-color: rgba(var(--d-accent-rgb), .65); color: #d9dcff; background: rgba(var(--d-accent-rgb), .2); box-shadow: 0 5px 14px -12px var(--d-glow); }
 @media (max-width: 520px) {
   .am-save-actions { width: 100%; }
-  .am-save-actions .dash-btn { flex: 1; justify-content: center; }
+  /* v400 — flex:1 sur des boutons de textes différents les rétrécissait
+     jusqu'à couper le libellé (« Enregistrer le brouillon » tronqué).
+     Ils prennent la largeur de leur texte et passent à la ligne au besoin. */
+  .am-save-actions .dash-btn { flex: 0 1 auto; min-width: 0; justify-content: center; }
   .am-filter { min-height: 36px; }
 }
 
@@ -1739,6 +1799,22 @@ body.dash-body {
 }
 .dd-trigger[aria-expanded="true"] .dd-caret { transform: rotate(180deg); color: var(--d-accent); }
 
+/* v400 — Sur téléphone, la valeur choisie était coupée à l'ellipse
+   (« — Désactivé (choisir un salon pour… »), impossible à lire et il n'y a
+   pas de survol. On autorise deux lignes : le déclencheur grandit (il est en
+   min-height) et le chevron reste aligné en haut. */
+@media (max-width: 700px) {
+  .dashboard-shell-host .dd-trigger { align-items: flex-start; }
+  /* Tout le libellé est visible (pas d'ellipse) : sur un écran tactile il
+     n'existe aucun survol pour lire la fin, et le déclencheur est en
+     min-height, il s'adapte donc naturellement au nombre de lignes. */
+  .dashboard-shell-host .dd-trigger .dd-value {
+    white-space: normal; overflow: visible; text-overflow: clip;
+    line-height: 1.35; word-break: break-word;
+  }
+  .dashboard-shell-host .dd-trigger .dd-caret { margin-top: 1px; }
+}
+
 .dd-panel {
   /* v366 — le plafond est lié à l'écran, plus seulement à 336 px : une fenêtre
      courte (téléphone à l'horizontale, petit hubot) coupait le bas de la liste
@@ -1798,7 +1874,12 @@ body.dash-body {
 .dd-opt-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .dd-opt-txt b {
   font-size: 13px; font-weight: 650; color: var(--d-text);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  /* v400 — Un libellé long (« Salon avec un nom vraiment très long… »,
+     « Activée : les non-vérifiés ne voient que le salon… ») était coupé à
+     l'ellipse dans le panneau : impossible de distinguer deux options qui
+     commencent pareil. On le laisse passer sur deux lignes. */
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; overflow-wrap: anywhere;
 }
 .dd-opt-txt small { font-size: 11px; color: var(--d-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dd-check { flex-shrink: 0; color: var(--d-accent); font-weight: 800; font-size: 13px; }
@@ -1852,6 +1933,27 @@ body.dash-body {
 .rr-map-row .dash-input.rr-emoji { width: 70px; flex: 0 0 70px; }
 .rr-map-row .dash-input.rr-label { flex: 1 1 140px; max-width: 220px; }
 .modal .row-item .dd-host { flex: 1 1 180px; min-width: 140px; max-width: 100%; }
+
+/* v400 — Option d'un menu de rôles : deux lignes, jamais quatre.
+   Ligne 1 : emoji (56 px), texte (tout le reste), corbeille (44 px).
+   Ligne 2 : libellé « Rôle » et le sélecteur, pleine largeur.
+   Le sélecteur peut être un <select> natif ou son enveloppe .dd-host :
+   les deux sont traités, sinon le rôle retombait sur sa propre ligne. */
+.rm-opt {
+  margin-top: 8px; padding: 10px;
+  border: 1px solid var(--d-border-soft); border-radius: 12px;
+  background: rgba(255,255,255,.018);
+}
+.rm-opt-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.rm-opt-top > .input { flex: 1 1 auto; min-width: 0; width: auto; }
+.rm-opt-top > .btn { flex: 0 0 auto; width: 44px; height: 42px; }
+.rm-opt-role { display: flex; align-items: center; gap: 8px; margin-top: 8px; min-width: 0; }
+.rm-opt-lbl {
+  flex: 0 0 auto; font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--d-dim);
+}
+.rm-opt-role > select.dash-select,
+.rm-opt-role > .dd-host { flex: 1 1 auto; min-width: 0; width: auto; max-width: none; }
 @media (max-width: 700px) {
   .rr-map-row { flex-direction: column; align-items: stretch; }
   .rr-map-row .dd-host,
@@ -3151,7 +3253,12 @@ html.hx-light .ov-quick-actions { background: rgba(255,255,255,.78); }
   .dash-main { padding: 15px 12px calc(104px + env(safe-area-inset-bottom)); }
   .dash-topbar { min-height: 0; margin-bottom: 17px; padding: calc(10px + env(safe-area-inset-top)) 12px 11px; }
   .dash-module-header { grid-template-columns: auto minmax(0, 1fr); gap: 11px; min-height: 66px; padding: 2px 0 15px; }
-  .module-header-lead { gap: 8px; }
+  /* v400 — Grille à deux lignes (titre+texte, puis pastilles) : centrer la
+     première colonne faisait descendre l'icône de 70 px dès que le texte
+     d'en-tête se dépliait, jusqu'à la faire passer sous la pastille de
+     catégorie. Elle s'aligne sur la première ligne, comme le titre. */
+  .dash-module-header { align-items: start; }
+  .module-header-lead { gap: 8px; align-self: start; }
   .module-back { min-width: 38px; min-height: 38px; padding: 7px 9px; }
   .module-back-label { display: none; }
   .dash-module-header .m-icon { width: 44px; height: 44px; border-radius: 12px; font-size: 22px; }
@@ -4684,6 +4791,17 @@ html.hx-light { color-scheme: light; }
 .setting-row > .dash-roles-multi, .setting-row > .discord-multi-host, .setting-row > .dd-host { flex: 0 1 340px; max-width: 340px; min-width: 0; }
 .setting-row > div { flex: 0 1 300px; display: flex; gap: 8px; align-items: center; min-width: 0; }
 
+/* v400 — Champ + compteur de caractères (« 12/100 »).
+   Le compteur doit rester collé au champ. S'il est un frère direct, la mise
+   en page « libellé → contrôle » déplace l'input et laisse le compteur
+   orphelin : il ne se met plus à jour. D'où ce conteneur. */
+.setting-row > .input-counted { flex: 1 1 300px; max-width: 300px; flex-direction: column; align-items: stretch; gap: 2px; }
+.setting-row > .input-counted > input.dash-input { width: 100%; flex: 1 1 auto; }
+.input-counted-num { color: var(--d-dim); font-size: 11px; margin-top: 2px; }
+
+/* v400 — Libellé d'état d'un interrupteur (avec ou sans pastille). */
+.dashboard-shell-host .switch-state { color: var(--d-dim); font-size: 14px; min-width: 0; }
+
 /* Sélecteur « salons à détailler » (bienvenue/départ) — éditeur multi-lignes.
    Toujours en bloc PLEIN LARGEUR sous son libellé : il ne doit jamais être
    compressé en colonne « libellé → contrôle » (lignes empilées + débordement). */
@@ -4763,9 +4881,16 @@ html.hx-light { color-scheme: light; }
 /* Mobile : chaque ligne se replie en pile (libellé puis contrôle) */
 @media (max-width: 700px) {
   .setting-row { flex-direction: column; align-items: stretch; gap: 9px; }
+  /* Exception : un interrupteur n'a pas besoin de sa propre ligne. Empilé,
+     il devenait une pastille carrée centrée sous son libellé (v399 et avant)
+     et coûtait deux lignes par réglage. Il reste à droite du texte. */
+  .setting-row:has(> label.switch) { flex-direction: row; align-items: center; gap: 12px; }
+  .setting-row > label.switch { flex: 0 0 auto; margin-left: auto; }
   .setting-row > .dash-select, .setting-row > input.dash-input,
   .setting-row > .dash-roles-multi, .setting-row > .discord-multi-host,
   .setting-row > .dd-host, .setting-row > div { width: 100%; flex: 1 1 auto; max-width: none; }
+  /* Le compteur reste groupé avec son champ, jamais étiré à part. */
+  .setting-row > .input-counted { flex-direction: column; }
   .card-actions { justify-content: stretch; }
   .card-actions .dash-btn { flex: 1; }
 }
@@ -7745,15 +7870,67 @@ html.hx-light .dashboard-shell-host .dash-global-admin .ico { color: inherit; }
    de se replier, et chaque bouton gardait sa largeur naturelle dans
    une carte large de 245 px.
    ════════════════════════════════════════════════════════════════ */
-.card-actions { min-width: 0; max-width: 100%; }
+/* v400 — min-width: 0 laissait le pied de carte se faire comprimer par un
+   texte long dans la même ligne flex (rôles-réactions) : 63 px pour un
+   bouton « Supprimer » qui en demande 79, donc tronqué. On garde la limite
+   de largeur, mais le pied ne descend plus sous la taille de son contenu :
+   c'est le texte voisin, qui peut se replier, qui cède de la place. */
+.card-actions { min-width: auto; max-width: 100%; }
 .card-actions .dash-btn, .card-actions .btn {
   min-width: 0; max-width: 100%;
+  /* v400 : repli ENTRE les mots, pas à l'intérieur d'un mot. Avec
+     « anywhere », un bouton de 66 px affichait « Suppri » sur une ligne et
+     « mer » sur la suivante. Le repli entre mots évite déjà le débordement
+     horizontal (c'était le but), sans casser la lisibilité. */
   white-space: normal; text-align: center;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
+/* v400 — L'empilement vertical ne concerne QUE le pied d'une carte.
+   Appliqué à tout .card-actions, il cassait les groupes d'actions d'une
+   ligne (« Modifier » / « Supprimer » d'une commande) : les deux boutons
+   s'empilaient dans une colonne juste à côté du texte. */
 @media (max-width: 700px) {
-  .card-actions { flex-direction: column; align-items: stretch; }
-  .card-actions .dash-btn, .card-actions .btn { width: 100%; flex: 0 0 auto; }
+  .dash-card > .card-actions { flex-direction: column; align-items: stretch; }
+  .dash-card > .card-actions .dash-btn,
+  .dash-card > .card-actions .btn { width: 100%; flex: 0 0 auto; }
+}
+
+/* v400 — Actions de l'anti-nuke : trois boutons dont un libellé long.
+   Ils gardent leur largeur naturelle et passent à la ligne au besoin. */
+.nk-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.nk-actions .dash-btn { flex: 0 1 auto; max-width: 100%; }
+@media (max-width: 420px) {
+  .nk-actions .dash-btn { flex: 1 1 100%; justify-content: center; }
+}
+
+/* v400 — Sur mobile, un libellé de bouton trop long pour la largeur
+   disponible passe à la ligne au lieu d'être rogné ou de déborder. On ne
+   coupe jamais DANS un mot (overflow-wrap: break-word ne s'applique qu'aux
+   mots plus larges que la boîte, cas qui n'existe pas ici). */
+@media (max-width: 700px) {
+  .dash-card .dash-btn { white-space: normal; overflow-wrap: break-word; }
+  /* v400 — Une ligne qui contient un bouton se replie au lieu de l'écraser :
+     « Modifier » descendait à 40 px pour 54 de texte, « Supprimer » à 72
+     pour 83. Le bouton passe à la ligne suivante, en pleine largeur utile. */
+  .dash-card div:has(> .dash-btn) { flex-wrap: wrap; }
+}
+
+/* v400 — Ligne d'une commande personnalisée : le nom, la pastille du
+   déclencheur et les deux boutons. Sur un écran de 390 px, tout tenir sur
+   une seule ligne écrasait « Modifier » (54 px pour 62) et « Supprimer »
+   (63 pour 74) : les libellés sortaient rognés. La ligne se replie
+   maintenant en deux temps — texte, puis actions à droite, jamais coupées. */
+.cmd-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  border: 1px solid var(--d-border); border-radius: 8px;
+  padding: 10px 14px; margin-bottom: 8px; cursor: pointer;
+}
+.cmd-row-txt { flex: 1 1 140px; min-width: 0; }
+.cmd-row-actions { display: flex; gap: 8px; flex: 0 0 auto; margin-left: auto; }
+.cmd-row-actions .dash-btn { flex: 0 0 auto; }
+@media (max-width: 420px) {
+  .cmd-row-actions { margin-left: 0; width: 100%; }
+  .cmd-row-actions .dash-btn { flex: 1 1 0; justify-content: center; }
 }
 
 /* Un tableau ne dépasse jamais sa carte : il défile dans son cadre. */
@@ -8285,7 +8462,12 @@ html.hx-light .dashboard-shell-host .dash-stat .val {
 
 /* ---------- 10. Interrupteur ---------- */
 .dashboard-shell-host .switch {
-  width: 36px !important; height: 21px !important; flex: 0 0 36px !important;
+  /* v400 — plus de « flex: 0 0 36px » : en conteneur COLONNE (voir
+     .setting-row sur mobile), la base flex s'applique à la HAUTEUR et
+     transformait chaque interrupteur en pastille carrée géante.
+     La largeur et la hauteur suffisent ; flex-shrink: 0 empêche
+     l'écrasement en ligne. */
+  width: 36px !important; height: 21px !important; flex: 0 0 auto !important;
 }
 .dashboard-shell-host .switch .slider,
 .dashboard-shell-host .switch .slider::before { transition: background .16s var(--ui-ease), transform .16s var(--ui-ease) !important; }
@@ -8605,7 +8787,7 @@ html.hx-os-pc .dashboard-shell-host .ov-module-card,
   .dashboard-shell-host .dash-account-chip .acct-avatar { width: 26px !important; height: 26px !important; }
 }
 @media (hover: none) {
-  .dashboard-shell-host .switch { width: 40px !important; height: 24px !important; flex-basis: 40px !important; }
+  .dashboard-shell-host .switch { width: 40px !important; height: 24px !important; flex: 0 0 auto !important; }
   .dashboard-shell-host .switch .slider::before { width: 18px !important; height: 18px !important; }
   .dashboard-shell-host .switch input:checked + .slider::before { transform: translateX(16px) !important; }
   .dashboard-shell-host .dd-add-btn { min-height: 40px !important; padding: 8px 12px !important; }

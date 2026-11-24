@@ -85,9 +85,9 @@ const check = (nom, cond, detail) => {
   console.log('— 5. Version —');
   const index = fs.readFileSync(require('path').join(__dirname, '..', 'public/index.html'), 'utf8');
   const sw = fs.readFileSync(require('path').join(__dirname, '..', 'public/sw.js'), 'utf8');
-  check('index.html : ?v=399 référencé 10 fois', (index.match(/\?v=399/g) || []).length === 10,
-    String((index.match(/\?v=399/g) || []).length));
-  check('sw.js : cache « hoxera-v399 »', sw.includes("const CACHE = 'hoxera-v399';"));
+  check('index.html : ?v=400 référencé 10 fois', (index.match(/\?v=400/g) || []).length === 10,
+    String((index.match(/\?v=400/g) || []).length));
+  check('sw.js : cache « hoxera-v400 »', sw.includes("const CACHE = 'hoxera-v400';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v261 — ${ok} vérifications OK : annonce de live allégée, titre plus petit, photo plus nette.`);
