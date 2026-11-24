@@ -106,8 +106,8 @@ for (const [nom, attendu] of Object.entries(ICONES)) {
   console.log('\n— 5. Version de cache —');
   const index = lire('public/index.html').toString('utf8');
   const sw = lire('public/sw.js').toString('utf8');
-  check('index.html : ?v=399 dix fois', (index.match(/\?v=399/g) || []).length === 10);
-  check('sw.js : cache hoxera-v399', sw.includes("const CACHE = 'hoxera-v399';"));
+  check('index.html : ?v=400 dix fois', (index.match(/\?v=400/g) || []).length === 10);
+  check('sw.js : cache hoxera-v400', sw.includes("const CACHE = 'hoxera-v400';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v395 — ${ok} vérifications OK : légende rangée, panneau sans préambule.`);

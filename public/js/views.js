@@ -25,10 +25,14 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
       <label class="field-label">Nom du panneau</label>
       <input class="input" id="rm-name" maxlength="50" value="${App.escapeHtml(data.name)}" placeholder="Rôles & notifications" />
       <label class="field-label">Style du panneau</label>
+      <!-- v400 — Libellés courts : dans une liste déroulante de 340 px, une
+           phrase entière était coupée au milieu d'un mot sur téléphone.
+           L'explication reste lisible sous le champ. -->
       <select class="dash-select" id="rm-mode">
-        <option value="menu" ${data.mode !== 'buttons' ? 'selected' : ''}>Menu déroulant (plusieurs rôles d'un coup)</option>
-        <option value="buttons" ${data.mode === 'buttons' ? 'selected' : ''}>Boutons (un clic = un rôle, re-clic = retiré)</option>
+        <option value="menu" ${data.mode !== 'buttons' ? 'selected' : ''}>Menu déroulant</option>
+        <option value="buttons" ${data.mode === 'buttons' ? 'selected' : ''}>Boutons</option>
       </select>
+      <p class="field-hint" style="margin:4px 0 10px">Menu déroulant : le membre choisit plusieurs rôles d'un coup. Boutons : un clic attribue le rôle, un second clic le retire.</p>
       <label class="field-label">Message au-dessus du panneau (optionnel)</label>
       <textarea class="input" id="rm-content" rows="2" placeholder="Choisissez vos rôles !">${App.escapeHtml(data.content)}</textarea>
       <label class="field-label">Texte d'attente du menu déroulant</label>
@@ -98,12 +102,20 @@ BotViews.openRoleMenuModal = (bot, guildId, menu) => {
         roleOptions.push(`<option value="${App.escapeHtml(o.role)}" selected>${App.escapeHtml(o.role)} (configuration actuelle — rôle introuvable)</option>`);
       }
       const roleControl = `<select class="dash-select" data-k="role">${roleOptions.join('')}</select>`;
+      // v400 — une option tient sur DEUX lignes lisibles, pas sur quatre.
+      // Avant, quatre contrôles (emoji, texte, rôle, corbeille) se partageaient
+      // 346 px : le champ « Texte affiché » tombait à 26 px de large, soit une
+      // seule lettre visible (« A », « U »). Sur téléphone le rôle passait même
+      // sous la ligne, pleine largeur, et la corbeille se retrouvait seule.
+      // Désormais : [emoji][texte][corbeille] puis le rôle sur sa propre ligne.
       const row = App.el(`
-        <div class="row-item" style="margin-top:7px">
-          <input class="input" data-k="emoji" placeholder="😀" value="${App.escapeHtml(o.emoji)}" style="max-width:56px;text-align:center" />
-          <input class="input" data-k="label" placeholder="Texte affiché" value="${App.escapeHtml(o.label)}" style="max-width:170px" />
-          ${roleControl}
-          <button class="btn btn-danger btn-icon btn-sm" data-del><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 6.5h16M9.5 6.5V4.2h5v2.3M6.5 6.5l1 13h9l1-13M10 10v6M14 10v6"/></svg></button>
+        <div class="rm-opt" data-rm-opt>
+          <div class="rm-opt-top">
+            <input class="input" data-k="emoji" placeholder="😀" aria-label="Emoji de l'option" value="${App.escapeHtml(o.emoji)}" style="max-width:56px;text-align:center;flex:0 0 56px" />
+            <input class="input" data-k="label" placeholder="Texte affiché" aria-label="Texte affiché dans le menu" value="${App.escapeHtml(o.label)}" />
+            <button class="btn btn-danger btn-icon btn-sm" data-del aria-label="Supprimer cette option"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 6.5h16M9.5 6.5V4.2h5v2.3M6.5 6.5l1 13h9l1-13M10 10v6M14 10v6"/></svg></button>
+          </div>
+          <div class="rm-opt-role"><span class="rm-opt-lbl">Rôle</span>${roleControl}</div>
         </div>
       `);
       row.querySelectorAll('[data-k]').forEach((inp) => {

@@ -154,9 +154,16 @@ label.field-label {
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .modal {
   background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
-  width: min(560px, 94vw); max-height: 88vh; overflow-y: auto; box-shadow: var(--shadow);
+  width: min(560px, 94vw); max-height: 88vh; box-shadow: var(--shadow);
   animation: modalIn .2s ease;
+  /* v400 — la modale est une COLONNE : en-tête et pied restent en place, seul
+     le corps défile. Avant, overflow-y:auto sur la modale entière faisait
+     glisser le pied PAR-DESSUS les derniers champs : dans « Modifier le menu »,
+     les options de rôle étaient sous les boutons et devenaient inatteignables
+     sur téléphone. */
+  display: flex; flex-direction: column; overflow: hidden;
 }
+.modal-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .modal.large { width: min(1060px, 97vw); }
 @keyframes modalIn { from { transform: translateY(14px) scale(.98); opacity: 0; } to { transform: none; opacity: 1; } }
 .modal-header {

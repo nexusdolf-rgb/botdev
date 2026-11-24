@@ -31,9 +31,12 @@ check('sélecteur désactivé pendant l\'appel', chunk.includes('sel.disabled = 
 
 console.log('— 2. Case « Donner le rôle » —');
 check('case présente avec id ver-grant-case', chunk.includes('id="ver-grant-case"'));
-check('cocher → POST verification/grant-role', chunk.includes("querySelector('#ver-grant-case').onchange") && chunk.includes("/verification/grant-role`, { method: 'POST', body: {} }"));
-check('la case se décoche après l\'action (ponctuelle)', chunk.includes('e.target.checked = false'));
-check('décocher ne fait rien', chunk.includes('if (!e.target.checked) return;'));
+// v400 : action ponctuelle → un bouton (la case se décochait toute seule,
+// ce qui donnait l'impression d'une case inerte). Même route, même effet.
+check('clic → POST verification/grant-role', chunk.includes("querySelector('#ver-grant-case').onclick") && chunk.includes("/verification/grant-role`, { method: 'POST', body: {} }"));
+// v400 : le bouton est désactivé pendant l'appel puis réactivé : une action
+// déjà lancée ne peut pas être relancée deux fois (l'ancienne case le pouvait).
+check('le bouton est verrouillé pendant l\'action', chunk.includes('bouton.disabled = true') && chunk.includes('bouton.disabled = false'));
 
 console.log('— 3. Boutons supprimés —');
 check('plus de bouton « Appliquer l\'isolation »', !chunk.includes('ver-iso-on'));
@@ -54,8 +57,8 @@ check('moteur d\'isolation intact', ver.includes('async function applyIsolation'
 
 console.log('— 6. Bump v294 —');
 const index = racine('public/index.html');
-check('index.html : ?v=399 référencé 10 fois', (index.match(/\?v=399/g) || []).length === 10,
-  String((index.match(/\?v=399/g) || []).length));
-check('sw.js : cache « hoxera-v399 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v399';"));
+check('index.html : ?v=400 référencé 10 fois', (index.match(/\?v=400/g) || []).length === 10,
+  String((index.match(/\?v=400/g) || []).length));
+check('sw.js : cache « hoxera-v400 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v400';"));
 
 console.log(`\n🎉 v294 : ${ok} vérifications passées`);
