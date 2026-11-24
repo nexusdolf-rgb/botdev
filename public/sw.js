@@ -7,7 +7,7 @@
 // ce sont eux qui datent le code, et sw.js les télécharge à neuf.
 // (Le nom de cache ci-dessous ne doit apparaître qu'à cet endroit : les
 // tests lisent le premier numéro de version qu'ils trouvent dans ce fichier.)
-const CACHE = 'hoxera-v400';
+const CACHE = 'hoxera-v401';
 const ASSETS = [
   '/',
   '/manifest.webmanifest',

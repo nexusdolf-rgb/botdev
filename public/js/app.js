@@ -151,6 +151,12 @@ App.GLYPHES = {
   micro: '<rect x="9.2" y="2.8" width="5.6" height="10.4" rx="2.8"/><path d="M5.6 11.4a6.4 6.4 0 0 0 12.8 0M12 17.8v3.2M9.2 21h5.6"/>',
   cadenasOuvert: '<rect x="4.6" y="10.6" width="14.8" height="9.8" rx="2.2"/><path d="M8.2 10.6V7.4a3.9 3.9 0 0 1 7.5-1.4"/>',
   moins: '<circle cx="12" cy="12" r="8.4"/><path d="M7.8 12h8.4"/>',
+  // v400 — La barre mobile dessinait `☰` et `▦` avec des CARACTERES de police :
+  // ils tombent sur une police de secours selon l'appareil et changent de forme
+  // (le quadrille apparaissait tantot en hachures, tantot en grille de points).
+  // Deux traces maison valent mieux qu'un glyphe dont le rendu nous echappe.
+  menu: '<path d="M4.4 7h15.2M4.4 12h15.2M4.4 17h15.2"/>',
+  grille: '<rect x="4" y="4" width="6.2" height="6.2" rx="1.5"/><rect x="13.8" y="4" width="6.2" height="6.2" rx="1.5"/><rect x="4" y="13.8" width="6.2" height="6.2" rx="1.5"/><rect x="13.8" y="13.8" width="6.2" height="6.2" rx="1.5"/>',
 };
 
 /**
@@ -997,7 +1003,7 @@ App.renderAdminPage = async () => {
     <div class="page admin-platform-page">
       <header class="admin-head">
         <div class="admin-identity">
-          <img id="a-bot-avatar" class="admin-mark admin-bot-avatar" src="/api/public/bot-avatar?v=400" alt="Avatar d’Hoxera" width="48" height="48" />
+          <img id="a-bot-avatar" class="admin-mark admin-bot-avatar" src="/api/public/bot-avatar?v=401" alt="Avatar d’Hoxera" width="48" height="48" />
           <div class="admin-head-copy">
             <div class="admin-breadcrumb"><span>OPTIMUS PRIME</span><i>/</i><b>CONSOLE FONDATEUR</b></div>
             <h1>Espace fondateur</h1>
