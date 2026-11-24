@@ -9,7 +9,6 @@ const ui = require('./ui');
 const panels = require('./panels');
 
 const DEFAULT_COLOR = '#e07a5f';
-const DEFAULT_FOOTER = 'Hoxera · Annonce du serveur';
 
 function list(value, max = 20, maxLength = 100) {
   let result = value;

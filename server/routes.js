@@ -3747,13 +3747,6 @@ router.get('/health/bot', (req, res) => {
 // ============================================================
 
 // Catégorie d'une commande pré-faite (pour l'affichage groupé)
-function commandCategory(name) {
-  for (const [key, m] of Object.entries(MODULES)) {
-    if (m.commands.includes(name)) return { key, label: m.label, emoji: m.emoji };
-  }
-  return null;
-}
-
 // ⚡ Hoxera (bot unique) : informations pour le dashboard connecté
 router.get('/hoxera', requireAuth, (req, res) => {
   const bot = store.db.prepare('SELECT * FROM bots ORDER BY id LIMIT 1').get();

@@ -83,16 +83,7 @@
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
   margin-bottom: 18px;
 }
-.dash-server-pick {
-  display: flex; align-items: center; gap: 10px; background: var(--d-card);
-  border: 1px solid var(--d-border); border-radius: 12px; padding: 8px 14px;
-  flex: 1; min-width: 220px; max-width: 420px;
-}
 .dash-server-pick img { width: 34px; height: 34px; border-radius: 8px; }
-.dash-server-pick select {
-  background: transparent; border: none; color: var(--d-text); font-weight: 700;
-  font-size: 14px; outline: none; flex: 1; font-family: inherit;
-}
 .dash-server-pick select option { background: var(--d-card); }
 .dash-topbar-actions { margin-left: auto; display: flex; gap: 9px; }
 
@@ -217,7 +208,6 @@
 
   /* Topbar : le sélecteur prend toute la largeur, boutons en dessous */
   .dash-topbar { flex-direction: column; align-items: stretch; gap: 10px; }
-  .dash-server-pick { max-width: 100%; }
   .dash-topbar-actions { margin-left: 0; flex-wrap: wrap; }
   .dash-topbar-actions .dash-btn { flex: 1; justify-content: center; min-height: 44px; }
 
@@ -342,9 +332,6 @@
    ============================================================ */
 
 /* ---------- Checklist de configuration ---------- */
-.dash-checklist {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 8px;
-}
 .check-item {
   display: flex; align-items: center; gap: 9px;
   background: var(--d-card2); border: 1px solid var(--d-border);
@@ -362,15 +349,10 @@
 .check-item:not(.done) { border-style: dashed; }
 
 /* ---------- Aperçu d'embed (façon Discord) ---------- */
-.embed-box {
-  background: #2b2d31; border-radius: 4px; padding: 12px 14px;
-  color: #dbdee1; font-size: 13px; line-height: 1.55; max-width: 440px;
-}
 
 @media (max-width: 700px) {
-  .dash-checklist { grid-template-columns: 1fr; } /* une colonne : libellés complets */
+ /* une colonne : libellés complets */
   .check-item { min-width: 0; }
-  .check-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 
 /* ============================================================
@@ -398,12 +380,7 @@
     margin: 0 -12px 14px; padding: calc(10px + env(safe-area-inset-top)) 12px 12px;
     border-bottom: 1px solid var(--d-border);
   }
-  .dash-server-pick {
-    min-height: 48px; border-radius: 12px;
-    background: var(--d-card); box-shadow: 0 2px 10px rgba(0,0,0,.25);
-  }
   .dash-server-pick select { font-size: 16px; min-height: 44px; }
-  .dash-server-pick img { width: 38px; height: 38px; border-radius: 12px; }
   .dash-topbar { flex-direction: row; align-items: center; gap: 10px; }
   .dash-topbar-actions { margin-left: auto; }
   .dash-topbar-actions .dash-btn { flex: 0 0 auto; }
@@ -468,7 +445,7 @@
   .dash-btn-sm { min-height: 40px; }
   .dash-filter { min-height: 48px; }
   .check-item { min-height: 48px; }
-  .check-go { display: none; } /* « Configurer → » n'apparaît que sur ordinateur (au survol) */
+ /* « Configurer → » n'apparaît que sur ordinateur (au survol) */
   .switch { width: 52px; height: 30px; }
   .switch .slider::before { height: 22px; width: 22px; left: 4px; top: 4px; }
   .switch input:checked + .slider::before { transform: translateX(22px); }
@@ -596,7 +573,6 @@ body.dash-body, .dash-shell {
   box-shadow: 0 0 0 4px rgba(var(--d-accent-rgb), .18);
 }
 .dash-btn-sm { min-height: 32px; padding: 5px 12px; font-size: 12px; border-radius: 8px; gap: 6px; }
-.dash-btn-lg { min-height: 50px; padding: 12px 24px; font-size: 16px; border-radius: 12px; gap: 10px; }
 .dash-btn-primary {
   background: linear-gradient(135deg, var(--d-accent), var(--d-accent2)) !important;
   border-color: transparent !important;
@@ -1110,7 +1086,6 @@ html.hx-light .sk-ico, html.hx-light .sk-line, html.hx-light .sk-stat {
 }
 .lp-emb b { display: block; margin-bottom: 6px; color: #fff; }
 .lp-emb-body { white-space: pre-wrap; color: #C9CCD1; line-height: 1.45; }
-.lp-emb-url { margin-top: 8px; color: #00A8FC; word-break: break-all; font-size: 13px; }
 .lp-emb-img {
   margin-top: 10px;
   height: 90px;
@@ -1551,11 +1526,9 @@ html.hx-light .adv-check-row { background: rgba(var(--d-accent-rgb), .055); }
 .am-choice b { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
 .am-choice:hover { border-color: rgba(var(--d-accent-rgb), .6); color: var(--d-text); transform: translateY(-1px); }
 .am-choice.selected { border-color: rgba(110,231,160,.55); color: #8df0b2; background: rgba(59,165,93,.13); box-shadow: 0 5px 14px -12px rgba(59,165,93,.9); }
-.am-choice-empty { color: var(--d-dim); font-size: 12px; padding: 8px 0; }
 
 /* Sélecteurs multi-valeurs : un vrai menu natif + les choix déjà ajoutés. */
 .discord-multi-picker { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.discord-multi-select { width: 100%; margin-top: 0; }
 .discord-multi-values { display: flex; flex-wrap: wrap; gap: 7px; min-height: 28px; }
 .discord-multi-empty { color: var(--d-dim); font-size: 12px; padding: 5px 0; }
 .discord-multi-choice { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 6px 9px; border: 1px solid var(--d-border); border-radius: 999px; color: var(--d-text); background: var(--d-card2); font-size: 11px; }
@@ -1813,6 +1786,14 @@ body.dash-body {
     line-height: 1.35; word-break: break-word;
   }
   .dashboard-shell-host .dd-trigger .dd-caret { margin-top: 1px; }
+  /* v400 — Ces listes portent un max-width INLINE (140 px pour
+     « Désactivé », 120 px pour « 1 h »). Avec le retour a la ligne voulu
+     ci-dessus, le libelle se coupait au milieu d'un mot (« Désactiv /
+     e ») et « 1 h » debordait de son cadre. Sur mobile le plafond n'a
+     plus de sens : la liste prend la largeur de sa ligne, le libelle
+     s'y pose en entier. Le retour a la ligne pour les libelles longs
+     reste actif. */
+  .dashboard-shell-host .dd-host { max-width: 100% !important; }
 }
 
 .dd-panel {
@@ -1855,7 +1836,6 @@ body.dash-body {
 .dd-list::-webkit-scrollbar { width: 8px; }
 .dd-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius: 999px; }
 .dd-list::-webkit-scrollbar-track { background: transparent; }
-.dd-item img { border-radius: 8px; background: rgba(255,255,255,.06); object-fit: cover; }
 .dd-option {
   display: flex; align-items: center; gap: 10px; padding: 8px 10px;
   border-radius: 8px; cursor: pointer; transition: background .1s ease;
@@ -1971,6 +1951,7 @@ body.dash-body {
 /* États et hiérarchie des actions */
 .dash-btn { min-height: 42px; border-radius: 12px; font-size: 13px; letter-spacing: .05px; }
 .dash-btn-primary { box-shadow: 0 10px 28px -14px var(--d-glow), 0 1px 0 rgba(255,255,255,.2) inset; }
+.dash-btn-lg { min-height: 50px; padding: 12px 24px; font-size: 16px; border-radius: 12px; gap: 10px; }
 .dash-btn-primary:hover { filter: brightness(1.08); box-shadow: 0 15px 32px -14px var(--d-glow), 0 1px 0 rgba(255,255,255,.22) inset; }
 .dash-btn-danger { background: rgba(237,66,69, 0.14); }
 .dash-btn-sm { min-height: 37px; }
@@ -2040,7 +2021,6 @@ html.hx-light .dash-input:focus, html.hx-light .dash-select:focus, html.hx-light
 .ca-choice b { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ca-choice:hover { color: var(--d-text); border-color: var(--d-border-focus); transform: translateY(-1px); }
 .ca-choice.selected { color: #d8dcff; border-color: rgba(var(--d-accent-rgb), .68); background: linear-gradient(135deg, rgba(var(--d-accent-rgb), .24), rgba(255, 255, 255, 0.072)); box-shadow: 0 6px 17px -14px var(--d-glow); }
-.ca-choice-empty { color: var(--d-dim); padding: 8px 0; font-size: 12px; }
 .ca-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 8px; border: 1px solid var(--d-border-soft); border-bottom: none; border-radius: 12px 12px 0 0; background: linear-gradient(180deg, rgba(255,255,255,.045), transparent), var(--d-card2); }
 .ca-mark { min-width: 34px; height: 32px; padding: 0 8px; border: 1px solid var(--d-border-soft); border-radius: 8px; color: var(--d-text); background: rgba(255,255,255,.035); font-family: inherit; font-size: 12px; font-weight: 800; cursor: pointer; transition: .14s; }
 .ca-mark:hover { color: #fff; border-color: var(--d-border-focus); background: rgba(var(--d-accent-rgb), .2); transform: translateY(-1px); }
@@ -2700,13 +2680,8 @@ html.hx-light .dash-input, html.hx-light .dash-select, html.hx-light textarea.da
 .ov-progress-value { height: 100%; min-width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--d-accent), var(--d-accent2)); box-shadow: 0 0 15px -3px var(--d-glow); transition: width .45s cubic-bezier(.2,.8,.25,1); }
 .ov-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0 0 18px; }
 .ov-stat { min-height: 118px; padding: 15px 16px !important; }
-.ov-stat-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 13px; }
-.ov-stat-icon { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 1px solid rgba(var(--d-accent-rgb), .25); border-radius: 8px; background: rgba(var(--d-accent-rgb), .12); font-size: 16px; }
-.ov-stat-note { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #71829a; font-size: 11px; font-weight: 700; }
 .ov-stat .val { font-size: 22px !important; }
 .ov-stat .lbl { margin-top: 3px; color: #a1afc1; }
-.ov-activity-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; margin-bottom: 18px; }
-.ov-feed-card, .ov-brief-card { min-height: 100%; }
 .ov-feed-card #ov-feed { min-height: 74px; }
 .ov-module-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; margin-top: 18px; }
 .ov-module-card {
@@ -2745,7 +2720,6 @@ html.hx-light .dash-input, html.hx-light .dash-select, html.hx-light textarea.da
 .dash-state-card .dash-btn { flex: 0 0 auto; }
 
 /* Tables et champs : lecture confortable sur desktop comme sur mobile. */
-.dash-table-wrap { width: 100%; overflow-x: auto; border: 1px solid rgba(49,65,88,.58); border-radius: 12px; }
 .dash-table-wrap .dash-table { min-width: 560px; }
 .dash-table th { background: rgba(255,255,255,.025); }
 .dash-table tbody tr { transition: background .14s ease; }
@@ -2801,9 +2775,7 @@ html.hx-light .dash-state-card { background: #fff; border-color: #d9e1ef; }
   .ov-quick-label { display: none; }
   .ov-quick-action { min-height: 42px; padding: 8px 10px; }
   .ov-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
-  .ov-activity-grid { grid-template-columns: 1fr; gap: 10px; }
   .ov-stat { min-height: 108px; padding: 13px !important; }
-  .ov-stat-note { max-width: 84px; }
   .ov-module-grid { grid-template-columns: 1fr; gap: 10px; }
   .ov-module-card { min-height: 132px; }
   .dash-state-card { align-items: flex-start; flex-wrap: wrap; margin: 25px 0; padding: 16px; }
@@ -2823,7 +2795,6 @@ html.hx-light .dash-state-card { background: #fff; border-color: #d9e1ef; }
   .ov-intro-copy p { font-size: 12px; }
   .ov-stat .val { font-size: 22px !important; }
   .ov-stat .lbl { font-size: 11px; line-height: 1.25; }
-  .ov-stat-note { display: none; }
   .dash-card[data-dash-card] { padding: 17px 15px; }
   .dash-card[data-dash-card] .card-head { margin-bottom: 13px; }
   .dash-state-card .state-copy { flex-basis: calc(100% - 58px); }
@@ -2891,9 +2862,6 @@ html.hx-light .dash-state-card { background: #fff; border-color: #d9e1ef; }
 .am-blacklist-color { display: flex; align-items: center; gap: 8px; }
 .am-blacklist-color input[type="color"] { width: 48px; height: 43px; padding: 3px; flex: 0 0 48px; border: 1px solid var(--d-border-soft); border-radius: 12px; background: var(--d-card2); cursor: pointer; }
 .am-blacklist-color .dash-input { min-width: 0; }
-.am-blacklist-preview { display: flex; align-items: center; gap: 10px; margin-top: 13px; padding: 10px 11px; border: 1px dashed rgba(240,108,117,.3); border-radius: 12px; background: rgba(240,108,117,.045); }
-.am-blacklist-preview-icon { display: inline-flex; align-items: center; justify-content: center; width: 31px; height: 31px; flex: 0 0 31px; border-radius: 8px; background: rgba(240,108,117,.14); font-size: 16px; }
-.am-blacklist-preview b { display: block; color: #ffb3b8; font-size: 11px; }
 .am-blacklist-preview small { display: block; margin-top: 2px; color: var(--d-dim); font-size: 11px; line-height: 1.35; }
 
 .am-member-blacklist-card { border-color: rgba(240,108,117,.27) !important; }
@@ -2930,7 +2898,6 @@ html.hx-light .am-blacklist-badge, html.hx-light .am-blacklist-count { color: #b
 @media (max-width: 520px) {
   .am-blacklist-toggle { padding: 9px; }
   .am-blacklist-config .am-panel-title { gap: 8px; }
-  .am-blacklist-badge { font-size: 11px; }
   .am-blacklist-color input[type="color"] { width: 45px; flex-basis: 45px; }
 }
 
@@ -3317,12 +3284,6 @@ html.hx-light .ov-quick-actions { background: rgba(255,255,255,.78); }
 
 /* Alignement des actions dans les cartes sans imposer une structure aux
    anciens modules : les styles ne s'activent que sur les vrais groupes. */
-.dash-actions, .module-actions, .form-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--d-space-2);
-  flex-wrap: wrap;
-}
 .dash-actions .dash-btn, .module-actions .dash-btn, .form-actions .dash-btn { flex: 0 0 auto; }
 
 /* Retours et erreurs : toujours deux sorties claires. */
@@ -3330,7 +3291,6 @@ html.hx-light .ov-quick-actions { background: rgba(255,255,255,.78); }
 .dash-state-card .state-actions .dash-btn { min-width: 104px; }
 
 /* Tableaux : surface stable lorsque la liste défile. */
-.dash-table-wrap { box-shadow: inset 0 1px 0 rgba(255,255,255,.035); }
 .dash-table-wrap .dash-table thead th { position: sticky; top: 0; z-index: 1; }
 
 /* Navigation basse plus nette sur les appareils tactiles. */
@@ -3351,7 +3311,6 @@ html.hx-light .dash-table-wrap .dash-table thead th { background: #f7f9fd; }
   .module-header-meta { max-width: none; }
   .dash-state-card .state-actions { width: 100%; }
   .dash-state-card .state-actions .dash-btn { flex: 1; min-width: 0; }
-  .dash-actions, .module-actions, .form-actions { align-items: stretch; flex-direction: column; }
   .dash-actions .dash-btn, .module-actions .dash-btn, .form-actions .dash-btn { width: 100%; justify-content: center; }
 }
 
@@ -5040,6 +4999,13 @@ html.hx-light { color-scheme: light; }
 .eb-tpl-copy small { color: var(--d-text-dim); font-size: 11px; }
 .eb-tpl-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .eb-actions { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+/* v400 — Sur mobile les deux actions ne tenaient pas côte à côte et
+   s'empilaient en escalier (189 px puis 147 px). Pleine largeur, hauteurs
+   égales : la pile est franche au lieu d'avoir l'air cassée. */
+@media (max-width: 700px) {
+  .eb-actions { flex-direction: column; align-items: stretch; }
+  .eb-actions > .dash-btn { width: 100%; justify-content: center; }
+}
 .eb-json pre { max-height: 400px; overflow: auto; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
 
 /* --- L'aperçu : reconstitution fidèle d'un message Discord --- */
@@ -5856,6 +5822,10 @@ html.hx-light .dashboard-shell-host .module-header-meta .module-status {
 .eb-wrap, .eb-editor-col, .eb-preview-col { min-width: 0; }
 .eb-grid2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .eb-grid2 > * { min-width: 0; }
+/* v400 — Sur mobile, deux colonnes laissaient 156 px par champ : les sept
+   pastilles de couleur tombaient en 3+3+1 avec un grand vide, et les URL
+   etaient tronquees. Doit venir APRES la regle minmax ci-dessus. */
+@media (max-width: 700px) { .eb-grid2 { grid-template-columns: minmax(0, 1fr); } }
 .eb-grid2 .setting-row { flex-wrap: wrap; }
 .eb-grid2 .setting-row > .dash-label { flex: 1 1 100%; min-width: 0; }
 .eb-grid2 .setting-row > input.dash-input,
@@ -7580,9 +7550,6 @@ html.hx-light .rl-chip { color: #3d477a; background: rgba(86, 103, 217, .1); }
 }
 .dmd-list { margin: 0; padding-left: 20px; }
 .dmd-list li { margin: 2px 0; }
-.dmd-h1 { font-size: 16px; font-weight: 800; color: #fff; }
-.dmd-h2 { font-size: 14px; font-weight: 800; color: #fff; }
-.dmd-h3 { font-size: 13px; font-weight: 800; color: #e6e8ec; text-transform: uppercase; letter-spacing: .03em; }
 .dmd-sep { border: 0; border-top: 1px solid rgba(255, 255, 255, .16); margin: 10px 0; }
 .dmd-spoiler { background: rgba(255, 255, 255, .18); border-radius: 4px; color: transparent; padding: 0 3px; }
 .dmd-spoiler:hover { color: inherit; background: rgba(255, 255, 255, .08); }
@@ -7732,6 +7699,11 @@ html.hx-light .pp-del { border-color: #d3ddef; }
   grid-template-columns: repeat(auto-fill, minmax(216px, 1fr));
   gap: 8px;
   margin-top: 8px;
+  /* v400 — Le parent .rl-modeles est un flex enroulé : sans base pleine
+     largeur, la grille partageait la ligne avec le titre et tombait à
+     171 px, ce qui empilait les modèles en colonne étroite. */
+  flex: 1 1 100%;
+  min-width: 0;
 }
 .rl-modele {
   display: flex;
@@ -7934,7 +7906,6 @@ html.hx-light .dashboard-shell-host .dash-global-admin .ico { color: inherit; }
 }
 
 /* Un tableau ne dépasse jamais sa carte : il défile dans son cadre. */
-.dash-table-fit { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .dash-card table.dash-table { max-width: 100%; }
 
 /* ════════════════════════════════════════════════════════════════
@@ -8028,7 +7999,6 @@ details[open] > summary.am-chevron::after { transform: none; }
 @media (max-width: 700px), (hover: none) and (pointer: coarse) {
   .dash-btn { min-height: 46px; }
   .dash-btn-sm { min-height: 40px; }
-  .dash-btn-lg { min-height: 50px; }
   /* Un bouton de 40 px de haut doit rester lisible : le texte garde sa taille. */
   .dash-btn-sm { padding-top: 6px; padding-bottom: 6px; }
   /* Les liens de texte des cartes suivent la même règle que les boutons. */

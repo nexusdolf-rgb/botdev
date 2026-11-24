@@ -208,19 +208,6 @@ async function handleParticipants(botId, interaction) {
   return true;
 }
 
-// Tire les gagnants parmi les réactions 🎉
-async function drawWinners(client, g) {
-  const channel = await client.channels.fetch(g.channel_id).catch(() => null);
-  if (!channel) return { winners: [], message: null };
-  const message = await channel.messages.fetch(g.message_id).catch(() => null);
-  if (!message) return { winners: [], message: null };
-  const reaction = message.reactions.cache.get('🎉');
-  const users = reaction ? [...reaction.users.cache.values()].filter((u) => !u.bot) : [];
-  const shuffled = users.sort(() => Math.random() - 0.5);
-  const winners = shuffled.slice(0, Math.min(g.winners, shuffled.length));
-  return { winners, message, channel };
-}
-
 // 🏁 Panneau final du giveaway (tirage effectué ou relancé) — message permanent
 // affiché dans le salon : mêmes grandes sections que le panneau de lancement
 // (prix / résultat / remerciement), séparées par des séparateurs NATIFS pleine
