@@ -377,6 +377,14 @@ async function handlePanelCommand(botId, interaction) {
   if (!canConfigure) {
     return interaction.reply({ content: '⛔ Réservé au propriétaire ou aux administrateurs.', ephemeral: true });
   }
+  // v405 — /setup : les assistants interactifs (pour l'instant : apply).
+  if (interaction.commandName === 'setup') {
+    if (sub === 'apply') {
+      const { start } = require('./applyWizard');
+      return start(botId, interaction);
+    }
+    return interaction.reply({ content: '❓ Assistant inconnu. Disponibles : `/setup apply`.', ephemeral: true });
+  }
   return handleRoles(botId, sub, interaction, guild);
 }
 

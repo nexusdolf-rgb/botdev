@@ -577,10 +577,10 @@ const sig = (texte, opts) => phishing.analyze(texte, opts || {});
   // --------------------------------------------------------------------------
   {
     const html = racine('public/index.html');
-    check('index.html : ?v=404 référencé 10 fois', (html.match(/\?v=404/g) || []).length === 10,
-      String((html.match(/\?v=404/g) || []).length));
+    check('index.html : ?v=405 référencé 10 fois', (html.match(/\?v=405/g) || []).length === 10,
+      String((html.match(/\?v=405/g) || []).length));
     check('index.html : plus aucun ?v=242', !html.includes('?v=242'));
-    check('sw.js : cache « hoxera-v404 »', racine('public/sw.js').includes("'hoxera-v404'"));
+    check('sw.js : cache « hoxera-v405 »', racine('public/sw.js').includes("'hoxera-v405'"));
   }
 
   console.log(`\n${echecs === 0

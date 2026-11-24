@@ -122,7 +122,8 @@ function slugify(s) {
 // ============================================================
 async function dispatchPanels(botId, interaction) {
   try {
-    if (interaction.isChatInputCommand() && ['ticket', 'roles'].includes(interaction.commandName)) {
+    // v405 — /setup apply : assistant interactif des candidatures.
+    if (interaction.isChatInputCommand() && ['ticket', 'roles', 'setup'].includes(interaction.commandName)) {
       const { handlePanelCommand } = require('./panelCommands');
       await handlePanelCommand(botId, interaction);
       return true;
@@ -144,6 +145,13 @@ async function dispatchPanels(botId, interaction) {
     // 📋 Assistant /roles setup & /roles edit (menus, sélecteurs, modales)
     if (cid.startsWith('rls:')) {
       const { handleWizardInteraction } = require('./roleWizard');
+      await handleWizardInteraction(botId, interaction);
+      return true;
+    }
+
+    // 📝 Assistant /setup apply (candidatures) — v405
+    if (cid.startsWith('apw:')) {
+      const { handleWizardInteraction } = require('./applyWizard');
       await handleWizardInteraction(botId, interaction);
       return true;
     }

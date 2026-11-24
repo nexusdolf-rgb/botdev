@@ -93,8 +93,8 @@ const reactionOf = (msgId, emoji, guild) => ({ message: { id: msgId, guild: guil
   console.log('— 6. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=404 référencé 10 fois', (index.match(/\?v=404/g) || []).length === 10);
-  check('sw.js : cache « hoxera-v404 »', sw.includes("const CACHE = 'hoxera-v404';"));
+  check('index.html : ?v=405 référencé 10 fois', (index.match(/\?v=405/g) || []).length === 10);
+  check('sw.js : cache « hoxera-v405 »', sw.includes("const CACHE = 'hoxera-v405';"));
 
   console.log(`\n🎉 v277 — ${ok} vérifications OK : rôles par réaction modifiables, façon grands bots.`);
 })().catch((e) => { console.error(e); process.exit(1); });

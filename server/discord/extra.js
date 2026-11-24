@@ -1220,6 +1220,8 @@ async function handleButton(botId, entry, interaction) {
       const questions = (() => { try { return JSON.parse(cfg.questions || '[]'); } catch { return []; } })();
       if (!questions.length) return interaction.reply({ content: '📝 Les candidatures sont fermées.', ephemeral: true });
       const modal = new ModalBuilder().setCustomId(`hxapply:${guild.id}`).setTitle((cfg.title || 'Candidature').slice(0, 45));
+      // v405 — l'assistant /setup apply autorise jusqu'à 10 questions.
+      // Une modale Discord accepte au plus 5 rangées : on s'arrête à 5.
       questions.slice(0, 5).forEach((q, i) => {
         modal.addComponents(new ActionRowBuilder().addComponents(
           new TextInputBuilder()

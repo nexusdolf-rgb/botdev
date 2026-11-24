@@ -479,6 +479,23 @@ function buildSlashPayloads(botId) {
     ],
   });
 
+  // v405 — /setup apply : assistant interactif des candidatures.
+  // Remplace l'ancienne commande /apply, qui empilait 5 sous-actions dans un
+  // seul menu et tronquait les questions à 45 caractères sans prévenir.
+  // Ici : on tape /setup apply, une carte s'ouvre, et tout se fait au menu.
+  payloads.push({
+    name: 'setup',
+    description: '🧭 Assistants interactifs de configuration',
+    default_member_permissions: '8',
+    options: [
+      {
+        name: 'apply',
+        description: '📝 Candidatures : salon, questions, titre, panneau (assistant)',
+        type: ApplicationCommandOptionType.Subcommand,
+      },
+    ],
+  });
+
   return payloads;
 }
 

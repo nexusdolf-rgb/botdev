@@ -19,8 +19,8 @@ const iDd = js.indexOf('Dashboard.dropdownMenu =');
 const chunk = js.slice(iDd, js.indexOf('Dashboard.enhanceSelect =', iDd));
 
 console.log('— 1. Pins de version v325 —');
-check('index.html : ?v=404 ×10', (html.match(/\?v=404/g) || []).length === 10);
-check('sw.js : cache hoxera-v404', sw.includes("const CACHE = 'hoxera-v404';"));
+check('index.html : ?v=405 ×10', (html.match(/\?v=405/g) || []).length === 10);
+check('sw.js : cache hoxera-v405', sw.includes("const CACHE = 'hoxera-v405';"));
 check('index.html : plus aucune ?v=324', !html.includes('?v=324'));
 
 console.log('— 2. Le champ de recherche n’est plus recréé —');
