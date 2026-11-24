@@ -1615,12 +1615,12 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
     : `<span class="acc-fallback">${App.escapeHtml(String(acctName).slice(0, 1).toUpperCase())}</span>`;
   topbar.innerHTML = `
     <div class="dash-mobile-bar" aria-label="Navigation mobile">
-      <button class="dash-mobile-navbtn" id="d-mobile-menu" type="button" aria-label="Ouvrir le menu principal" aria-expanded="false">${App.glyphe('menu', { taille: 24 })}</button>
+      <button class="dash-mobile-navbtn" id="d-mobile-menu" type="button" aria-label="Ouvrir le menu principal" aria-expanded="false">${App.glyphe('menu', { taille: 26 })}</button>
       <div class="dash-mobile-brand">
         ${bot.avatar_url ? `<img src="${App.escapeHtml(bot.avatar_url)}" alt="" data-fb-text="${App.escapeHtml(bot.name || 'Hoxera')}" />` : '<img src="/icons/hoxera-robot-mark.svg" alt="Logo Hoxera" />'}
         <b>${App.escapeHtml(bot.name || 'Hoxera')}</b>
       </div>
-      <button class="dash-mobile-navbtn" id="d-mobile-modules" type="button" aria-label="Ouvrir les serveurs et modules" aria-expanded="false">${App.glyphe('grille', { taille: 24 })}</button>
+      <button class="dash-mobile-navbtn" id="d-mobile-modules" type="button" aria-label="Ouvrir les serveurs et modules" aria-expanded="false">${App.glyphe('grille', { taille: 26 })}</button>
     </div>
     <div class="dash-crumb">
       ${crumbIco ? `<span class="crumb-ico">${crumbIco}</span>` : ''}

@@ -25,8 +25,8 @@ const dash = racine('public/js/dashboard.js');
 const ac = racine('server/discord/autoclean.js');
 
 console.log('— 1. Pins de version v318 —');
-check('index.html : ?v=402 ×10', (html.match(/\?v=402/g) || []).length === 10);
-check('sw.js : cache hoxera-v402', sw.includes("const CACHE = 'hoxera-v402';"));
+check('index.html : ?v=403 ×10', (html.match(/\?v=403/g) || []).length === 10);
+check('sw.js : cache hoxera-v403', sw.includes("const CACHE = 'hoxera-v403';"));
 check('index.html : plus aucune ?v=317', !html.includes('?v=317'));
 
 console.log('— 2. Textes : plus « parmi les récents », on part des anciens —');
