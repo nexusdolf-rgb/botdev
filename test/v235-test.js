@@ -270,7 +270,7 @@ const check = (label, ok) => {
     check('/snipe : EmbedBuilder brut, aucun trait', /'\*Message vide\*'/.test(src));
     check('/invites : EmbedBuilder brut, aucun trait', /'📨 Invitations'/.test(src));
     check('message de candidature : EmbedBuilder brut SANS description → aucun trait',
-      /const embed = new EmbedBuilder\(\)\s*\n\s*\.setColor\('#e07a5f'\)\s*\n\s*\.setTitle\(cfg\.title \|\| '📝 Candidature'\)/.test(src));
+      /const embed = new EmbedBuilder\(\)\s*\n\s*\.setColor\('#e07a5f'\)\s*\n\s*\.setTitle\(form\.title \|\| '📝 Candidature'\)/.test(src));
     check('applyd : relit toujours interaction.message.embeds[0] (le message n’a pas migré)',
       /const emb = interaction\.message\.embeds\[0\];/.test(src)
       && (src.match(/EmbedBuilder\.from\(emb\)/g) || []).length === 2);

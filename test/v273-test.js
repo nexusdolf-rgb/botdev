@@ -53,8 +53,8 @@ const check = (nom, cond, detail) => {
   console.log('— 3. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=405 référencé 10 fois', (index.match(/\?v=405/g) || []).length === 10);
-  check('sw.js : cache « hoxera-v405 »', sw.includes("const CACHE = 'hoxera-v405';"));
+  check('index.html : ?v=406 référencé 10 fois', (index.match(/\?v=406/g) || []).length === 10);
+  check('sw.js : cache « hoxera-v406 »', sw.includes("const CACHE = 'hoxera-v406';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v273 — ${ok} vérifications OK : panneau compact et rangé.`);

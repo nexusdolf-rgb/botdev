@@ -1,21 +1,36 @@
 // ============================================================
-// Hoxera — Assistant interactif /setup apply
+// Hoxera — Assistant /setup apply (v406, refonte)
 // ------------------------------------------------------------
-// Remplace l'ancienne commande /apply (5 sous-actions en texte) par un vrai
-// assistant : on tape `/setup apply` et un menu déroulant s'ouvre. Chaque
-// action ouvre soit une fenêtre (renommer, question), soit un sélecteur natif
-// (salon), soit une carte d'aperçu. Tout se fait sans quitter Discord.
+// Ce que le fondateur a demandé, mot pour mot :
+//   « si il tape /setup apply il devrait afficher un menu déroulant avec
+//     créer un nouveau apply, supprimer un apply. Quand la personne clique
+//     sur créer un nouveau apply, une fenêtre s'ouvre, il met le titre du
+//     panneau, le texte du panneau… après ça lui demande le salon de réponse
+//     des candidats, un menu s'affiche, il sélectionne le salon. Ensuite un
+//     menu s'affiche : créer une question ou supprimer une question. Il
+//     clique dessus, une fenêtre s'ouvre, etc. Chaque menu doit avoir son
+//     propre panneau, il doit être autonome. N'oublie pas les boutons
+//     Suivant et Retour. Organise tout ça comme un pro. »
 //
-// Demandé par le fondateur :
-//   « je veux corriger le /apply en /setup apply et la personne envoie ça,
-//     ça affiche directement un menu déroulant, la personne sélectionne :
-//     soit configurer les questions, soit créer un nouveau apply. Tout est
-//     sélectionnable, ça affiche une fenêtre pour renommer, ou un menu
-//     déroulant pour choisir ce qu'il veut faire. Des assistants interactifs.
-//     Un truc propre et pro. »
+// Organisation retenue (un écran = un état, un écran = son propre message) :
 //
-// Modèle suivi : server/discord/roleWizard.js (même structure, mêmes règles
-// anti-timeout). On ne réinvente pas un motif qui existe déjà dans le projet.
+//   accueil      → menu déroulant : créer / modifier / supprimer / lister
+//   créer        → 4 étapes numérotées, avec ↩ Retour et Suivant →
+//       ① identité  (fenêtre : titre + texte du panneau)
+//       ② salon     (sélecteur natif de salon)
+//       ③ questions (fenêtre d'ajout, liste, retrait)
+//       ④ récapitulatif (Envoyer le panneau / Retour / Annuler)
+//   modifier     → mêmes étapes, préremplies
+//   supprimer    → choix du formulaire puis confirmation
+//
+// Chaque écran est autonome : son propre customId `apw:<écran>:<bot>:<user>`,
+// son propre embed, ses propres rangées de boutons. Aucun état partagé à
+// l'écran — l'état vit en mémoire côté bot et expire au bout de 20 minutes.
+//
+// Limites Discord respectées (ce ne sont pas des choix de produit) :
+//   • une fenêtre = au plus 5 champs  → 2 champs à l'étape ①, 5 questions max
+//   • un embed = au plus 25 champs    → on affiche 5 questions, pas plus
+//   • un menu  = au plus 25 options   → au-delà, on pagine
 // ============================================================
 const {
   EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle,
@@ -29,207 +44,371 @@ const { canConfigureGuild } = require('./permissions');
 
 const wizards = new Map(); // `${botId}:${guildId}:${userId}` -> state
 const wizardKey = (botId, guildId, userId) => `${botId}:${guildId}:${userId}`;
-const WIZARD_TTL = 15 * 60000; // 15 minutes
+const WIZARD_TTL = 20 * 60000;
 
-// 5 : c'est la limite DURE de Discord, pas un choix de produit. Une fenêtre
-// (modale) accepte au plus 5 rangées, donc au plus 5 questions. Promettre
-// plus serait mentir à l'admin qui en ajoute une 6e.
-const MAX_QUESTIONS = 5;
-const QUESTION_MAX = 200;      // largeur utile d'une question dans la fenêtre
-const TITLE_MAX = 45;          // limite Discord du titre d'une modale
-const APPLY_ID = 'hxapply';    // préfixe des modales de candidature
+const MAX_QUESTIONS = 5;    // une fenêtre Discord = 5 rangées maximum
+const QUESTION_MAX = 200;
+const TITLE_MAX = 100;
+const DESC_MAX = 1900;
 
-// ---------- Aides d'interaction (anti-timeout, comme partout) ----------
-async function ackDeferUpdate(interaction) {
-  try { await interaction.deferUpdate(); } catch {}
+const COULEUR = '#e07a5f';
+const COULEUR_OK = '#57F287';
+const COULEUR_ERR = '#ED4245';
+
+// ---------- Aides d'interaction ----------
+async function ack(interaction) {
+  try { if (!interaction.deferred && !interaction.replied) await interaction.deferUpdate(); } catch {}
 }
-async function ackReply(interaction, payload) {
+async function repondre(interaction, payload) {
   try {
     if (interaction.deferred) return await interaction.editReply(payload);
+    if (interaction.replied) return await interaction.followUp(payload);
     return await interaction.reply(payload);
   } catch {
     try { return await interaction.followUp(payload); } catch { return null; }
   }
 }
 
-function textModal(customId, title, label, placeholder, required, maxLen, style) {
-  const modal = new ModalBuilder()
+function modal(customId, titre, champs) {
+  const m = new ModalBuilder()
     .setCustomId(String(customId).slice(0, 100))
-    .setTitle(String(title).slice(0, TITLE_MAX));
-  modal.addComponents(new ActionRowBuilder().addComponents(
-    new TextInputBuilder()
-      .setCustomId('value')
-      .setLabel(String(label).slice(0, 45))
-      .setPlaceholder(String(placeholder || '').slice(0, 100))
-      .setStyle(style || TextInputStyle.Short)
-      .setRequired(!!required)
-      .setMaxLength(maxLen || 100),
-  ));
-  return modal;
+    .setTitle(String(titre).slice(0, 45));
+  for (const c of champs.slice(0, 5)) {
+    m.addComponents(new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId(c.id)
+        .setLabel(String(c.label).slice(0, 45))
+        .setPlaceholder(String(c.placeholder || '').slice(0, 100))
+        .setStyle(c.paragraph ? TextInputStyle.Paragraph : TextInputStyle.Short)
+        .setRequired(!!c.required)
+        .setMaxLength(c.max || 100)
+        .setValue(String(c.value || '').slice(0, c.max || 100)),
+    ));
+  }
+  return m;
 }
 
-// ---------- Lecture / écriture de la configuration ----------
-function lireConfig(botId, guildId) {
-  const brut = store.applications.get(botId, guildId) || {};
-  let questions = [];
-  try { questions = JSON.parse(brut.questions || '[]'); } catch { questions = []; }
-  if (!Array.isArray(questions)) questions = [];
+// ---------- État ----------
+function nouvelEtat(botId, guild, userId) {
   return {
-    channel: String(brut.channel || ''),
-    title: String(brut.title || '📝 Candidature'),
-    enabled: Number(brut.enabled || 0) === 1,
-    questions: questions.map((q) => String(q)).filter(Boolean),
+    botId, guildId: guild.id, userId,
+    formId: null,            // null = création
+    brouillon: { title: '', description: '', channel: '', questions: [], enabled: true },
+    etape: 'identite',
+    message: '',             // bandeau d'information (succès, erreur douce)
+    startedAt: Date.now(),
   };
 }
 
-function ecrireConfig(botId, guildId, cfg) {
-  // store.applications.set accepte un tableau OU une chaîne JSON pour
-  // `questions` et complète les champs manquants : inutile de sérialiser ici.
-  store.applications.set(botId, guildId, {
-    channel: cfg.channel || '',
-    questions: cfg.questions || [],
-    title: cfg.title || '📝 Candidature',
-    enabled: cfg.enabled ? 1 : 0,
-  });
+function chargerFormulaire(state, formId) {
+  const f = store.applyForms.get(formId);
+  if (!f || f.bot_id !== state.botId || String(f.guild_id) !== String(state.guildId)) return false;
+  state.formId = f.id;
+  state.brouillon = {
+    title: f.title || 'Candidature',
+    description: f.description || '',
+    channel: f.channel || '',
+    questions: (f.questions || []).slice(0, MAX_QUESTIONS),
+    enabled: Number(f.enabled) === 1,
+  };
+  return true;
 }
 
-// Une configuration est prête quand il y a un salon ET au moins une question.
-function etatConfig(cfg) {
-  const manque = [];
-  if (!cfg.channel) manque.push('salon');
-  if (!cfg.questions.length) manque.push('question');
-  return { prete: manque.length === 0, manque };
+// Un formulaire est envoyable s'il a un titre, un salon et une question.
+function manques(b) {
+  const m = [];
+  if (!String(b.title || '').trim()) m.push('titre');
+  if (!b.channel) m.push('salon');
+  if (!b.questions.length) m.push('au moins une question');
+  return m;
 }
 
-// ---------- Rendu de l'assistant ----------
-function resumeEmbed(botId, guildId, state) {
-  const cfg = state.cfg;
-  const { prete, manque } = etatConfig(cfg);
-  const questions = cfg.questions.length
-    ? cfg.questions.map((q, i) => `**${i + 1}.** ${q.slice(0, 120)}`).join('\n').slice(0, 1024)
-    : '*aucune question pour l\'instant*';
-  // Une candidature déjà envoyée garde son salon : on le signale pour éviter
-  // qu'un admin croie avoir perdu sa configuration.
-  const salon = cfg.channel
-    ? `<#${cfg.channel}>`
-    : '*non défini* — les candidatures ne peuvent pas arriver*';
+// ============================================================
+// ÉCRAN 1 — Accueil
+// ============================================================
+function ecranAccueil(state) {
+  const forms = store.applyForms.all(state.botId, state.guildId);
+  const lignes = forms.length
+    ? forms.slice(0, 22).map((f, i) => {
+      const etat = f.enabled ? '🟢' : '⚪';
+      const salon = f.channel ? `<#${f.channel}>` : '*salon manquant*';
+      return `${etat} **${i + 1}. ${f.title || 'Sans titre'}** · ${salon} · ${f.questions.length} question(s)`;
+    }).join('\n')
+    : '*Aucun formulaire pour l\'instant.*\n\nChoisissez **Créer un nouveau formulaire** ci-dessous : on vous guide étape par étape.';
 
-  return new EmbedBuilder()
-    .setColor(prete ? '#57F287' : '#e07a5f')
-    .setTitle('📝 Assistant des candidatures')
+  const embed = new EmbedBuilder()
+    .setColor(forms.length ? COULEUR_OK : COULEUR)
+    .setTitle('📝 Candidatures')
     .setDescription(
-      prete
-        ? 'Tout est prêt. Envoyez le panneau quand vous voulez.'
-        : `Il manque encore : **${manque.join(' et ')}**. Choisissez une action ci-dessous.`,
+      (state.message ? `${state.message}\n\n` : '')
+      + `**${forms.length} formulaire(s)** sur ce serveur.\n\n${lignes}`,
     )
-    .addFields(
-      { name: '📛 Titre', value: cfg.title || '*non défini*', inline: true },
-      { name: '📨 Salon des réponses', value: salon, inline: true },
-      { name: '🔔 État', value: cfg.enabled ? '✅ Active' : '⏸️ En pause', inline: true },
-      { name: `❓ Questions (${cfg.questions.length}/${MAX_QUESTIONS})`, value: questions, inline: false },
-    )
-    .setFooter({ text: 'Chaque question sera posée dans une fenêtre au membre qui candidate.' });
-}
+    .setFooter({ text: 'Chaque formulaire a son propre panneau et ses propres questions.' });
 
-function menuActions(state) {
-  const cfg = state.cfg;
-  const { prete } = etatConfig(cfg);
-  const actions = [
-    { label: '📨 Choisir le salon des réponses', value: 'canal', emoji: '📨' },
-    { label: '✏️ Renommer le panneau', value: 'titre', emoji: '✏️' },
-    { label: '➕ Ajouter une question', value: 'ajouter', emoji: '➕' },
-  ];
-  if (cfg.questions.length) {
-    actions.push({ label: '📝 Modifier une question', value: 'modifier', emoji: '📝' });
-    actions.push({ label: '➖ Supprimer une question', value: 'supprimer', emoji: '➖' });
+  const actions = [{ label: '➕ Créer un nouveau formulaire', value: 'creer', emoji: '➕' }];
+  if (forms.length) {
+    actions.push({ label: '✏️ Modifier un formulaire', value: 'modifier', emoji: '✏️' });
+    actions.push({ label: '🗑️ Supprimer un formulaire', value: 'supprimer', emoji: '🗑️' });
+    actions.push({ label: '📤 Envoyer un panneau', value: 'envoyer', emoji: '📤' });
   }
-  actions.push({
-    label: cfg.enabled ? '⏸️ Mettre en pause' : '▶️ Activer les candidatures',
-    value: 'activer',
-    emoji: cfg.enabled ? '⏸️' : '▶️',
-  });
-  if (prete) {
-    actions.push({ label: '📤 Envoyer le panneau', value: 'envoyer', emoji: '📤' });
-    actions.push({ label: '👁️ Aperçu du panneau', value: 'apercu', emoji: '👁️' });
-  }
-  actions.push({ label: '🗑️ Réinitialiser (tout effacer)', value: 'reset', emoji: '🗑️' });
-  actions.push({ label: '❌ Fermer l\'assistant', value: 'fermer', emoji: '❌' });
 
-  return [new ActionRowBuilder().addComponents(
+  const rangées = [new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
-      .setCustomId(`apw:menu:${state.botId}:${state.userId}`)
+      .setCustomId(`apw:accueil:${state.botId}:${state.userId}`)
       .setPlaceholder('Que voulez-vous faire ?')
       .setMinValues(1).setMaxValues(1)
-      .addOptions(actions.slice(0, 25).map((a) => {
-        const o = new StringSelectMenuOptionBuilder()
-          .setLabel(String(a.label).slice(0, 80))
-          .setValue(a.value);
-        if (a.emoji) o.setEmoji(a.emoji);
-        return o;
-      })),
+      .addOptions(actions.map((a) => new StringSelectMenuOptionBuilder()
+        .setLabel(a.label.slice(0, 80)).setValue(a.value).setEmoji(a.emoji))),
   )];
+  return { embeds: [embed], components: rangées };
 }
 
-function canalComponents(state) {
-  return [
-    new ActionRowBuilder().addComponents(
+// ============================================================
+// ÉCRAN 2 — Création / modification (4 étapes)
+// ============================================================
+const NOMS_ETAPES = { identite: '① Identité', canal: '② Salon', questions: '③ Questions', recap: '④ Récapitulatif' };
+const ORDRE = ['identite', 'canal', 'questions', 'recap'];
+
+function barreProgression(etape) {
+  return ORDRE.map((e) => (e === etape ? `**${NOMS_ETAPES[e]}**` : NOMS_ETAPES[e])).join(' › ');
+}
+
+function ecranEtape(state) {
+  const b = state.brouillon;
+  const enCreation = state.formId === null;
+  const titre = enCreation ? '➕ Nouveau formulaire' : `✏️ Modification — ${b.title || 'formulaire'}`;
+
+  let corps = '';
+  if (state.etape === 'identite') {
+    corps = `**Ce que verront les membres**\n\n`
+      + `**Titre du panneau**\n${b.title ? `> ${b.title}` : '> *non défini*'}\n\n`
+      + `**Texte du panneau**\n${b.description ? `> ${b.description.replace(/\n/g, '\n> ')}` : '> *non défini*'}\n\n`
+      + `Utilisez **✏️ Modifier ces informations** pour changer l'un ou l'autre.`;
+  } else if (state.etape === 'canal') {
+    corps = `**Salon où arriveront les candidatures**\n\n`
+      + `${b.channel ? `> <#${b.channel}>` : '> *aucun salon choisi*'}\n\n`
+      + `Choisissez le salon dans le menu ci-dessous. C'est là que le bot enverra chaque candidature reçue, avec les boutons ✅ Accepter et ❌ Refuser.`;
+  } else if (state.etape === 'questions') {
+    const liste = b.questions.length
+      ? b.questions.map((q, i) => `**${i + 1}.** ${q}`).join('\n')
+      : '*Aucune question pour l\'instant.*\n\nUn formulaire sans question ne peut pas être envoyé.';
+    corps = `**Questions posées au membre (${b.questions.length}/${MAX_QUESTIONS})**\n\n${liste}\n\n`
+      + `Chaque question devient une case à remplir dans la fenêtre du candidat. `
+      + `*${MAX_QUESTIONS} questions maximum : c'est la limite d'une fenêtre Discord.*`;
+  } else if (state.etape === 'recap') {
+    const manque = manques(b);
+    corps = `**Récapitulatif**\n\n`
+      + `**Titre** — ${b.title || '*non défini*'}\n`
+      + `**Texte** — ${b.description ? b.description.slice(0, 300) : '*aucun texte*'}\n`
+      + `**Salon des réponses** — ${b.channel ? `<#${b.channel}>` : '*non défini*'}\n`
+      + `**Questions (${b.questions.length}/${MAX_QUESTIONS})**\n`
+      + (b.questions.length ? b.questions.map((q, i) => `> ${i + 1}. ${q}`).join('\n') : '> *aucune*\n')
+      + `\n${manque.length
+        ? `⚠️ Il manque encore : **${manque.join(', ')}**. Revenez en arrière pour compléter.`
+        : '✅ Tout est prêt. **Envoyer le panneau** publiera le message que les membres verront.'}`;
+  }
+
+  const embed = new EmbedBuilder()
+    .setColor(manques(b).length ? COULEUR : COULEUR_OK)
+    .setTitle(titre)
+    .setDescription((state.message ? `${state.message}\n\n` : '') + corps)
+    .setFooter({ text: `${barreProgression(state.etape)} — étape ${ORDRE.indexOf(state.etape) + 1}/4` });
+
+  return { embeds: [embed], components: rangéesEtape(state) };
+}
+
+function rangéesEtape(state) {
+  const b = state.brouillon;
+  const uid = state.userId;
+  const id = (ecran) => `apw:${ecran}:${state.botId}:${uid}`;
+  const rangées = [];
+
+  // Champs propres à l'étape
+  if (state.etape === 'identite') {
+    rangées.push(new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`${id('btn')}:identite`).setLabel('✏️ Modifier ces informations').setStyle(ButtonStyle.Primary),
+    ));
+  } else if (state.etape === 'canal') {
+    rangées.push(new ActionRowBuilder().addComponents(
       new ChannelSelectMenuBuilder()
-        .setCustomId(`apw:canal:${state.botId}:${state.userId}`)
-        .setPlaceholder('📨 Salon où arriveront les candidatures…')
+        .setCustomId(id('canal'))
+        .setPlaceholder('📨 Choisir le salon des réponses…')
         .setMinValues(1).setMaxValues(1)
         .setChannelTypes([ChannelType.GuildText]),
-    ),
-    new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId(`apw:btn:${state.botId}:${state.userId}:retour`).setLabel('⬅️ Retour').setStyle(ButtonStyle.Secondary),
-    ),
-  ];
+    ));
+  } else if (state.etape === 'questions') {
+    rangées.push(new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`${id('btn')}:ajouterquestion`)
+        .setLabel(b.questions.length >= MAX_QUESTIONS ? `Maximum ${MAX_QUESTIONS} atteint` : '➕ Ajouter une question')
+        .setStyle(ButtonStyle.Primary)
+        .setDisabled(b.questions.length >= MAX_QUESTIONS),
+    ));
+    if (b.questions.length) {
+      rangées.push(new ActionRowBuilder().addComponents(
+        new StringSelectMenuBuilder()
+          .setCustomId(id('retrait'))
+          .setPlaceholder('➖ Retirer une question…')
+          .setMinValues(1).setMaxValues(1)
+          .addOptions(b.questions.slice(0, 25).map((q, i) => new StringSelectMenuOptionBuilder()
+            .setLabel(`${i + 1}. ${q}`.slice(0, 80)).setValue(String(i)))),
+      ));
+    }
+  }
+
+  // Navigation : ↩ Retour et Suivant → (ou Envoyer à la fin)
+  const idx = ORDRE.indexOf(state.etape);
+  const nav = [];
+  if (idx > 0) {
+    nav.push(new ButtonBuilder().setCustomId(`${id('btn')}:precedent`).setLabel('↩ Précédent').setStyle(ButtonStyle.Secondary));
+  }
+  if (state.etape === 'recap') {
+    const pret = manques(b).length === 0;
+    nav.push(new ButtonBuilder().setCustomId(`${id('btn')}:envoyer`)
+      .setLabel('📤 Envoyer le panneau').setStyle(ButtonStyle.Success).setDisabled(!pret));
+  } else {
+    nav.push(new ButtonBuilder().setCustomId(`${id('btn')}:suivant`).setLabel('Suivant →').setStyle(ButtonStyle.Primary));
+  }
+  nav.push(new ButtonBuilder().setCustomId(`${id('btn')}:accueil`).setLabel('✖ Annuler').setStyle(ButtonStyle.Danger));
+  rangées.push(new ActionRowBuilder().addComponents(...nav));
+  return rangées;
 }
 
-function choixQuestion(state, mode) {
-  const opts = state.cfg.questions.slice(0, 25).map((q, i) => new StringSelectMenuOptionBuilder()
-    .setLabel(`${i + 1}. ${q}`.slice(0, 80))
-    .setValue(String(i)));
-  return [
-    new ActionRowBuilder().addComponents(
-      new StringSelectMenuBuilder()
-        .setCustomId(`apw:quest:${state.botId}:${state.userId}:${mode}`)
-        .setPlaceholder(mode === 'supprimer' ? 'Quelle question supprimer ?' : 'Quelle question modifier ?')
-        .setMinValues(1).setMaxValues(1)
-        .addOptions(opts),
-    ),
-    new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId(`apw:btn:${state.botId}:${state.userId}:retour`).setLabel('⬅️ Retour').setStyle(ButtonStyle.Secondary),
-    ),
-  ];
+// ============================================================
+// ÉCRAN 3 — Choisir un formulaire (modifier / supprimer / envoyer)
+// ============================================================
+function ecranChoix(state, but) {
+  const forms = store.applyForms.all(state.botId, state.guildId);
+  const libelle = but === 'supprimer' ? 'supprimer' : but === 'envoyer' ? 'envoyer' : 'modifier';
+  const embed = new EmbedBuilder()
+    .setColor(COULEUR)
+    .setTitle(but === 'supprimer' ? '🗑️ Supprimer un formulaire'
+      : but === 'envoyer' ? '📤 Envoyer un panneau' : '✏️ Modifier un formulaire')
+    .setDescription(`Choisissez le formulaire à ${libelle}.\n\n`
+      + forms.map((f, i) => `**${i + 1}. ${f.title || 'Sans titre'}** — ${f.questions.length} question(s)`
+        + `${f.channel ? ` · <#${f.channel}>` : ' · ⚠️ salon manquant'}`).join('\n'))
+    .setFooter({ text: 'Seuls les formulaires de ce serveur sont affichés.' });
+  return {
+    embeds: [embed],
+    components: [
+      new ActionRowBuilder().addComponents(
+        new StringSelectMenuBuilder()
+          .setCustomId(`apw:choix:${state.botId}:${state.userId}:${but}`)
+          .setPlaceholder('Choisir un formulaire…')
+          .setMinValues(1).setMaxValues(1)
+          .addOptions(forms.slice(0, 25).map((f) => new StringSelectMenuOptionBuilder()
+            .setLabel(String(f.title || 'Sans titre').slice(0, 80))
+            .setDescription(`${f.questions.length} question(s)${f.enabled ? ' · actif' : ' · inactif'}`.slice(0, 100))
+            .setValue(String(f.id)))),
+      ),
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`apw:btn:${state.botId}:${state.userId}:accueil`).setLabel('↩ Retour').setStyle(ButtonStyle.Secondary),
+      ),
+    ],
+  };
 }
 
-function retourMenu(botId, state) {
-  state.step = 'menu';
-  return { embeds: [resumeEmbed(botId, state.guildId, state)], components: menuActions(state) };
+function ecranConfirmationSuppression(state, form) {
+  return {
+    embeds: [new EmbedBuilder()
+      .setColor(COULEUR_ERR)
+      .setTitle('🗑️ Supprimer ce formulaire ?')
+      .setDescription(`**${form.title || 'Sans titre'}**\n\n`
+        + `• Salon : ${form.channel ? `<#${form.channel}>` : '*non défini*'}\n`
+        + `• Questions : ${form.questions.length}\n\n`
+        + 'Le panneau déjà envoyé dans le salon **restera visible**, mais le bouton ne fonctionnera plus.\n\n'
+        + '**Cette action est irréversible.**')],
+    components: [
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`apw:btn:${state.botId}:${state.userId}:confirmersuppression`).setLabel('🗑️ Oui, supprimer').setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId(`apw:btn:${state.botId}:${state.userId}:accueil`).setLabel('↩ Annuler').setStyle(ButtonStyle.Secondary),
+      ),
+    ],
+  };
 }
 
-// ---------- Le panneau que verront les membres ----------
-function panneauPayload(botId, guildId, cfg) {
-  // v2panel(options, rows) : les boutons passent en 2ᵉ argument (voir la note
-  // v239 dans ui.js — les mettre dans `options` les faisait disparaître).
-  // Le customId reste `hx:apply:<guildId>` : c'est celui qu'écoute déjà
-  // extra.js pour ouvrir la fenêtre, et celui des panneaux déjà envoyés.
+// ============================================================
+// Le panneau public
+// ============================================================
+function panneauPublic(form) {
+  const description = form.description
+    ? `${form.description}\n\nRépondez à **${form.questions.length} question(s)** dans une fenêtre privée.`
+    : `Cliquez sur le bouton pour candidater : vous répondrez à **${form.questions.length} question(s)** dans une fenêtre privée.`;
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId(`hx:apply:${guildId}`)
+      .setCustomId(`hx:apply:${form.id}`)
       .setLabel('📝 Faire une candidature')
       .setStyle(ButtonStyle.Primary),
   );
   return ui.v2panel({
     variant: 'brand',
-    title: cfg.title || '📝 Candidature',
-    description: `Cliquez sur le bouton pour candidater : vous répondrez à **${cfg.questions.length} question(s)** dans une fenêtre privée.`,
+    title: form.title || 'Candidature',
+    description,
     fields: [{ name: '🔒 Confidentialité', value: 'Seul le staff verra vos réponses.' }],
     footer: false,
   }, [row]);
 }
 
-// ---------- Démarrage ----------
+// ============================================================
+// Enregistrement + envoi
+// ============================================================
+function enregistrer(state) {
+  const b = state.brouillon;
+  const donnees = {
+    title: b.title.trim() || 'Candidature',
+    description: b.description.trim(),
+    channel: b.channel,
+    questions: b.questions.slice(0, MAX_QUESTIONS),
+    enabled: true,
+  };
+  if (state.formId) {
+    store.applyForms.update(state.formId, donnees);
+    return state.formId;
+  }
+  return store.applyForms.create({
+    bot_id: state.botId, guild_id: state.guildId, ...donnees,
+  });
+}
+
+async function envoyerPanneau(interaction, state) {
+  const b = state.brouillon;
+  const guild = interaction.guild;
+  const salon = guild.channels.cache.get(String(b.channel));
+  if (!salon) {
+    state.message = `❌ Le salon <#${b.channel}> n'existe plus. Choisissez-en un autre à l'étape **② Salon**.`;
+    state.etape = 'canal';
+    return afficher(interaction, state);
+  }
+  const formId = enregistrer(state);
+  const form = store.applyForms.get(formId);
+  try {
+    await salon.send(panneauPublic(form));
+  } catch (e) {
+    state.message = `❌ Impossible d'envoyer dans <#${b.channel}> : ${String(e.message || e).slice(0, 140)}\n`
+      + 'Vérifiez que le bot peut écrire dans ce salon (permission « Envoyer des messages »).';
+    return afficher(interaction, state);
+  }
+  store.applyForms.update(formId, { enabled: true });
+  wizards.delete(wizardKey(state.botId, state.guildId, state.userId));
+  return repondre(interaction, {
+    embeds: [new EmbedBuilder()
+      .setColor(COULEUR_OK)
+      .setTitle('✅ Formulaire publié')
+      .setDescription(`Le panneau **${form.title}** est en ligne dans <#${form.channel}>.\n\n`
+        + `Les membres peuvent candidater dès maintenant. Leurs réponses arriveront dans le même salon.\n\n`
+        + 'Vous pourrez le modifier à tout moment avec `/setup apply`.')],
+    components: [],
+  });
+}
+
+function afficher(interaction, state) {
+  if (state.etape === 'accueil') return repondre(interaction, ecranAccueil(state));
+  if (state.etape === 'choix') return repondre(interaction, ecranChoix(state, state.but));
+  return repondre(interaction, ecranEtape(state));
+}
+
+// ============================================================
+// Démarrage
+// ============================================================
 async function start(botId, interaction) {
   const uid = interaction.user.id;
   const guild = interaction.guild;
@@ -239,71 +418,22 @@ async function start(botId, interaction) {
       ephemeral: true,
     });
   }
-  const cfg = lireConfig(botId, guild.id);
-  const state = {
-    botId, guildId: guild.id, userId: uid, step: 'menu', cfg,
-    msg: null, startedAt: Date.now(),
-  };
+  const state = nouvelEtat(botId, guild, uid);
+  state.etape = 'accueil';
   wizards.set(wizardKey(botId, guild.id, uid), state);
-  const msg = await interaction.reply({
-    embeds: [resumeEmbed(botId, guild.id, state)],
-    components: menuActions(state),
-    fetchReply: true,
-  }).catch(() => null);
-  state.msg = msg;
-  return true;
+  return interaction.reply(ecranAccueil(state));
 }
 
-// ---------- Rafraîchir la carte de l'assistant ----------
-async function rafraichir(interaction, botId, state, payload) {
-  const p = payload || retourMenu(botId, state);
-  if (state.msg) {
-    try { await state.msg.edit(p); return true; } catch {}
-  }
-  try { await interaction.editReply(p); return true; } catch {}
-  return true;
-}
-
-// ---------- Envoi réel du panneau ----------
-async function envoyerPanneau(botId, interaction, state) {
-  const cfg = state.cfg;
-  const guild = interaction.guild;
-  const channel = guild.channels.cache.get(cfg.channel);
-  if (!channel) {
-    return rafraichir(interaction, botId, state, {
-      embeds: [EmbedBuilder.from(resumeEmbed(botId, state.guildId, state))
-        .setColor('#ED4245')
-        .setDescription(`❌ Le salon <#${cfg.channel}> n'existe plus. Choisissez-en un autre avec « 📨 Choisir le salon des réponses ».`)],
-      components: menuActions(state),
-    });
-  }
-  try {
-    await channel.send(panneauPayload(botId, guild.id, cfg));
-  } catch (e) {
-    return rafraichir(interaction, botId, state, {
-      embeds: [EmbedBuilder.from(resumeEmbed(botId, state.guildId, state))
-        .setColor('#ED4245')
-        .setDescription(`❌ Envoi impossible dans <#${channel.id}> : ${String(e.message || e).slice(0, 150)}\nVérifiez que le bot peut écrire dans ce salon.`)],
-      components: menuActions(state),
-    });
-  }
-  cfg.enabled = true;
-  ecrireConfig(botId, guild.id, cfg);
-  return rafraichir(interaction, botId, state, {
-    embeds: [EmbedBuilder.from(resumeEmbed(botId, state.guildId, state))
-      .setColor('#57F287')
-      .setDescription(`✅ Panneau envoyé dans <#${channel.id}> ! Les membres peuvent candidater dès maintenant.`)],
-    components: menuActions(state),
-  });
-}
-
-// ---------- Gestion des interactions de l'assistant ----------
+// ============================================================
+// Interactions
+// ============================================================
 async function handleWizardInteraction(botId, interaction) {
   const cid = String(interaction.customId || '');
   if (!cid.startsWith('apw:')) return false;
+
   if (!canConfigureGuild(interaction.guild, interaction.member, interaction.user && interaction.user.id)) {
     return interaction.reply({
-      content: '⛔ Votre accès de configuration a été retiré. Seul le propriétaire ou un membre ayant la permission Discord « Administrateur » peut continuer.',
+      content: '⛔ Votre accès de configuration a été retiré. Seul le propriétaire ou un membre ayant la permission « Administrateur » peut continuer.',
       ephemeral: true,
     });
   }
@@ -314,192 +444,183 @@ async function handleWizardInteraction(botId, interaction) {
   }
   const key = wizardKey(botId, interaction.guild.id, uid);
   const state = wizards.get(key);
-  if (!state) return interaction.reply({ content: '⏰ Assistant expiré. Relancez `/setup apply`.', ephemeral: true });
-  if (Date.now() - state.startedAt > WIZARD_TTL) {
+  if (!state || Date.now() - state.startedAt > WIZARD_TTL) {
     wizards.delete(key);
     return interaction.reply({ content: '⏰ Assistant expiré. Relancez `/setup apply`.', ephemeral: true });
   }
 
-  // ---------- Modales ----------
+  // ---------- Fenêtres ----------
   if (interaction.isModalSubmit()) {
-    const val = String(interaction.fields.getTextInputValue('value') || '').trim();
+    const v = (id) => String((interaction.fields.getTextInputValue(id) || '')).trim();
     const mode = state.modal || '';
-    state.modal = null;
+    state.modal = '';
 
-    if (mode === 'titre') {
-      if (!val) {
-        return ackReply(interaction, { content: '⚠️ Le titre ne peut pas être vide.', ephemeral: true });
+    if (mode === 'identite') {
+      const titre = v('titre');
+      if (!titre) {
+        return repondre(interaction, { content: '⚠️ Le titre ne peut pas être vide.', ephemeral: true });
       }
-      state.cfg.title = val.slice(0, 100);
-      ecrireConfig(botId, state.guildId, state.cfg);
-      await ackReply(interaction, { content: '✅ Titre enregistré.', ephemeral: true });
-    } else if (mode === 'ajouter') {
-      if (!val) {
-        return ackReply(interaction, { content: '⚠️ La question ne peut pas être vide.', ephemeral: true });
-      }
-      if (state.cfg.questions.length >= MAX_QUESTIONS) {
-        return ackReply(interaction, { content: `❌ Maximum ${MAX_QUESTIONS} questions.`, ephemeral: true });
-      }
-      // On enregistre la question ENTIÈRE. L'ancienne version la coupait à
-      // 45 caractères (`slice(0, 45)`) sans prévenir : c'est ce qui a tronqué
-      // « …inte vous intéresser par le recrutement ? » en base de production.
-      state.cfg.questions.push(val.slice(0, QUESTION_MAX));
-      ecrireConfig(botId, state.guildId, state.cfg);
-      await ackReply(interaction, { content: `✅ Question ${state.cfg.questions.length}/${MAX_QUESTIONS} ajoutée.`, ephemeral: true });
-    } else if (mode.startsWith('modifier:')) {
-      const idx = Number(mode.split(':')[1]);
-      if (Number.isFinite(idx) && state.cfg.questions[idx] !== undefined) {
-        if (!val) {
-          return ackReply(interaction, { content: '⚠️ La question ne peut pas être vide.', ephemeral: true });
-        }
-        state.cfg.questions[idx] = val.slice(0, QUESTION_MAX);
-        ecrireConfig(botId, state.guildId, state.cfg);
-        await ackReply(interaction, { content: `✅ Question ${idx + 1} modifiée.`, ephemeral: true });
+      state.brouillon.title = titre.slice(0, TITLE_MAX);
+      state.brouillon.description = v('texte').slice(0, DESC_MAX);
+      state.message = '✅ Informations enregistrées.';
+    } else if (mode === 'ajouterquestion') {
+      const q = v('question');
+      if (!q) {
+        state.message = '⚠️ La question ne peut pas être vide.';
+      } else if (state.brouillon.questions.length >= MAX_QUESTIONS) {
+        state.message = `⚠️ Maximum ${MAX_QUESTIONS} questions.`;
+      } else {
+        state.brouillon.questions.push(q.slice(0, QUESTION_MAX));
+        state.message = `✅ Question ${state.brouillon.questions.length}/${MAX_QUESTIONS} ajoutée.`;
       }
     }
-    state.step = 'menu';
-    return rafraichir(interaction, botId, state);
+    return afficher(interaction, state);
   }
 
-  // ---------- Sélecteur de salon natif ----------
+  // ---------- Sélecteur de salon ----------
   if (interaction.isChannelSelectMenu()) {
-    await ackDeferUpdate(interaction);
-    state.cfg.channel = interaction.values[0];
-    ecrireConfig(botId, state.guildId, state.cfg);
-    state.step = 'menu';
-    return rafraichir(interaction, botId, state);
+    state.brouillon.channel = interaction.values[0];
+    state.message = '✅ Salon enregistré.';
+    // On avance automatiquement : l'étape ② n'a qu'un seul champ.
+    if (state.etape === 'canal') state.etape = 'questions';
+    return afficher(interaction, state);
   }
 
-  // ---------- Menus de sélection ----------
+  // ---------- Menus ----------
   if (interaction.isStringSelectMenu()) {
-    const v = interaction.values[0];
+    const valeur = interaction.values[0];
 
-    // Choix d'une question à modifier / supprimer
-    if (cid.startsWith('apw:quest:')) {
-      const action = parts[4];
-      const idx = Number(v);
-      if (!Number.isFinite(idx) || state.cfg.questions[idx] === undefined) {
-        await ackDeferUpdate(interaction);
-        return rafraichir(interaction, botId, state);
-      }
-      if (action === 'supprimer') {
-        await ackDeferUpdate(interaction);
-        const retiree = state.cfg.questions.splice(idx, 1)[0];
-        ecrireConfig(botId, state.guildId, state.cfg);
-        state.message = `🗑️ Question supprimée : « ${String(retiree).slice(0, 80)} »`;
-        return rafraichir(interaction, botId, state);
-      }
-      // modifier → fenêtre pré-remplie
-      state.modal = `modifier:${idx}`;
-      return interaction.showModal(textModal(
-        `apw:modal:${botId}:${uid}`,
-        '📝 Modifier la question',
-        'Question',
-        state.cfg.questions[idx],
-        true,
-        QUESTION_MAX,
-        TextInputStyle.Paragraph,
-      ));
-    }
-
-    // Menu principal
-    await ackDeferUpdate(interaction);
-    if (v === 'canal') {
-      state.step = 'canal';
-      return interaction.editReply({ embeds: [resumeEmbed(botId, state.guildId, state)], components: canalComponents(state) }).catch(() => {});
-    }
-    // Les actions qui ouvrent une fenêtre ne doivent PAS être précédées d'un
-    // defer : Discord refuse showModal après un accusé de réception.
-    if (v === 'titre' || v === 'ajouter' || v === 'modifier' || v === 'supprimer') {
-      // (on est déjà après deferUpdate, donc on repasse par une réponse)
-      if (v === 'titre') {
-        state.modal = 'titre';
-        return interaction.showModal(textModal(`apw:modal:${botId}:${uid}`, '✏️ Titre du panneau', 'Titre', state.cfg.title, true, 100));
-      }
-      if (v === 'ajouter') {
-        state.modal = 'ajouter';
-        return interaction.showModal(textModal(
-          `apw:modal:${botId}:${uid}`,
-          '➕ Nouvelle question',
-          'Question',
-          'Ex : Qu\'est-ce qui vous intéresse dans ce serveur ?',
-          true,
-          QUESTION_MAX,
-          TextInputStyle.Paragraph,
+    if (parts[1] === 'accueil') {
+      if (valeur === 'creer') {
+        state.formId = null;
+        state.brouillon = { title: '', description: '', channel: '', questions: [], enabled: true };
+        state.etape = 'identite';
+        state.message = '';
+        state.modal = 'identite';
+        return interaction.showModal(modal(
+          `apw:modal:${state.botId}:${uid}`,
+          '➕ Nouveau formulaire',
+          [
+            { id: 'titre', label: 'Titre du panneau', placeholder: 'Candidature staff', required: true, max: TITLE_MAX, value: '', },
+            { id: 'texte', label: 'Texte du panneau', placeholder: 'Pourquoi nous rejoindre ? Décrivez ici votre serveur…', paragraph: true, required: false, max: DESC_MAX },
+          ],
         ));
       }
-      if (v === 'modifier' || v === 'supprimer') {
-        if (!state.cfg.questions.length) {
-          return interaction.editReply({ embeds: [resumeEmbed(botId, state.guildId, state)], components: menuActions(state) }).catch(() => {});
+      if (valeur === 'modifier' || valeur === 'supprimer' || valeur === 'envoyer') {
+        if (!store.applyForms.count(state.botId, state.guildId)) {
+          state.message = '⚠️ Aucun formulaire à sélectionner.';
+          return afficher(interaction, state);
         }
-        state.step = v;
-        return interaction.editReply({ embeds: [resumeEmbed(botId, state.guildId, state)], components: choixQuestion(state, v) }).catch(() => {});
+        state.but = valeur;
+        state.etape = 'choix';
+        state.message = '';
+        return afficher(interaction, state);
       }
+      return afficher(interaction, state);
     }
-    if (v === 'activer') {
-      state.cfg.enabled = !state.cfg.enabled;
-      // Activer sans salon ni question n'a aucun sens : on le dit franchement.
-      if (state.cfg.enabled) {
-        const { prete, manque } = etatConfig(state.cfg);
-        if (!prete) {
-          state.cfg.enabled = false;
-          state.message = `⚠️ Impossible d'activer : il manque ${manque.join(' et ')}.`;
-        }
+
+    if (parts[1] === 'choix') {
+      const but = parts[4];
+      const formId = Number(valeur);
+      if (!chargerFormulaire(state, formId)) {
+        state.message = '❌ Formulaire introuvable.';
+        state.etape = 'accueil';
+        return afficher(interaction, state);
       }
-      ecrireConfig(botId, state.guildId, state.cfg);
-      return rafraichir(interaction, botId, state);
+      if (but === 'supprimer') {
+        state.etape = 'confirmersuppression';
+        const form = store.applyForms.get(formId);
+        state.message = '';
+        return repondre(interaction, ecranConfirmationSuppression(state, form));
+      }
+      if (but === 'envoyer') {
+        return envoyerPanneau(interaction, state);
+      }
+      state.etape = 'identite';
+      state.message = '✏️ Vous modifiez ce formulaire. Rien n\'est enregistré avant **Envoyer le panneau**.';
+      return afficher(interaction, state);
     }
-    if (v === 'apercu') {
-      return interaction.editReply({
-        content: '👁️ Voici exactement ce que verront les membres :',
-        embeds: [new EmbedBuilder()
-          .setColor('#e07a5f')
-          .setTitle(state.cfg.title || '📝 Candidature')
-          .setDescription(`Cliquez sur le bouton pour candidater : vous répondrez à **${state.cfg.questions.length} question(s)** dans une fenêtre privée.`)
-          .addFields({ name: '🔒 Confidentialité', value: 'Seul le staff verra vos réponses.' })],
-        components: [new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId(`apw:noop:${botId}:${uid}`).setLabel('📝 Faire une candidature').setStyle(ButtonStyle.Primary),
-        )],
-      }).catch(() => {});
+
+    // Retrait d'une question
+    if (parts[1] === 'retrait') {
+      const idx = Number(valeur);
+      if (Number.isFinite(idx) && state.brouillon.questions[idx] !== undefined) {
+        const retiree = state.brouillon.questions.splice(idx, 1)[0];
+        state.message = `🗑️ Question retirée : « ${String(retiree).slice(0, 70)} »`;
+      }
+      return afficher(interaction, state);
     }
-    if (v === 'envoyer') return envoyerPanneau(botId, interaction, state);
-    if (v === 'reset') {
-      state.step = 'confirmreset';
-      return interaction.editReply({
-        embeds: [new EmbedBuilder()
-          .setColor('#ED4245')
-          .setTitle('🗑️ Réinitialiser les candidatures ?')
-          .setDescription(`Le salon, le titre et les **${state.cfg.questions.length} question(s)** seront effacés.\nLe panneau déjà envoyé dans le salon restera visible mais ne fonctionnera plus.\n\nCette action est irréversible.`)],
-        components: [new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId(`apw:btn:${botId}:${uid}:confirmreset`).setLabel('🗑️ Oui, tout effacer').setStyle(ButtonStyle.Danger),
-          new ButtonBuilder().setCustomId(`apw:btn:${botId}:${uid}:retour`).setLabel('⬅️ Annuler').setStyle(ButtonStyle.Secondary),
-        )],
-      }).catch(() => {});
-    }
-    if (v === 'fermer') {
-      wizards.delete(key);
-      return interaction.editReply({
-        embeds: [new EmbedBuilder().setColor('#57F287').setTitle('✅ Assistant fermé')
-          .setDescription('Vos réglages sont enregistrés. Rouvrez-le avec `/setup apply`.')],
-        components: [],
-      }).catch(() => {});
-    }
-    return rafraichir(interaction, botId, state);
+    return afficher(interaction, state);
   }
 
   // ---------- Boutons ----------
   if (interaction.isButton()) {
     const action = parts[4];
-    if (action === 'noop') {
-      return interaction.reply({ content: '👁️ Ceci est un aperçu : le bouton ne fait rien ici.', ephemeral: true });
+    const idx = ORDRE.indexOf(state.etape);
+
+    if (action === 'accueil') {
+      wizards.delete(key);
+      return repondre(interaction, {
+        embeds: [new EmbedBuilder().setColor(COULEUR_OK).setTitle('✅ Assistant fermé')
+          .setDescription('Rouvrez-le avec `/setup apply`.')],
+        components: [],
+      });
     }
-    await ackDeferUpdate(interaction);
-    if (action === 'retour') return rafraichir(interaction, botId, state);
-    if (action === 'confirmreset') {
-      state.cfg = { channel: '', title: '📝 Candidature', enabled: false, questions: [] };
-      ecrireConfig(botId, interaction.guild.id, state.cfg);
-      state.message = '🗑️ Configuration effacée.';
-      return rafraichir(interaction, botId, state);
+    if (action === 'suivant') {
+      // On ne laisse pas avancer sans le minimum : on dit quoi corriger.
+      if (state.etape === 'identite' && !state.brouillon.title.trim()) {
+        state.message = '⚠️ Donnez d\'abord un titre au panneau.';
+        return afficher(interaction, state);
+      }
+      if (state.etape === 'canal' && !state.brouillon.channel) {
+        state.message = '⚠️ Choisissez le salon des réponses avant de continuer.';
+        return afficher(interaction, state);
+      }
+      if (idx >= 0 && idx < ORDRE.length - 1) {
+        state.etape = ORDRE[idx + 1];
+        state.message = '';
+      }
+      return afficher(interaction, state);
+    }
+    if (action === 'precedent') {
+      if (idx > 0) {
+        state.etape = ORDRE[idx - 1];
+        state.message = '';
+      }
+      return afficher(interaction, state);
+    }
+    if (action === 'identite') {
+      state.modal = 'identite';
+      return interaction.showModal(modal(
+        `apw:modal:${state.botId}:${uid}`,
+        '✏️ Informations du panneau',
+        [
+          { id: 'titre', label: 'Titre du panneau', placeholder: 'Candidature staff', required: true, max: TITLE_MAX, value: state.brouillon.title },
+          { id: 'texte', label: 'Texte du panneau', placeholder: 'Expliquez aux membres pourquoi candidater…', paragraph: true, required: false, max: DESC_MAX, value: state.brouillon.description },
+        ],
+      ));
+    }
+    if (action === 'ajouterquestion') {
+      state.modal = 'ajouterquestion';
+      return interaction.showModal(modal(
+        `apw:modal:${state.botId}:${uid}`,
+        `➕ Question ${state.brouillon.questions.length + 1}/${MAX_QUESTIONS}`,
+        [{ id: 'question', label: 'Question posée au membre', placeholder: 'Qu\'est-ce qui vous intéresse dans ce serveur ?', paragraph: true, required: true, max: QUESTION_MAX }],
+      ));
+    }
+    if (action === 'envoyer') {
+      return envoyerPanneau(interaction, state);
+    }
+    if (action === 'confirmersuppression') {
+      if (state.formId) {
+        store.applyForms.remove(state.formId);
+        wizards.delete(key);
+        return repondre(interaction, {
+          embeds: [new EmbedBuilder().setColor(COULEUR_OK).setTitle('🗑️ Formulaire supprimé')
+            .setDescription('Il n\'apparaît plus dans la liste. Le panneau déjà publié reste visible mais son bouton ne répondra plus.')],
+          components: [],
+        });
+      }
     }
   }
   return true;
@@ -507,5 +628,6 @@ async function handleWizardInteraction(botId, interaction) {
 
 module.exports = {
   start, handleWizardInteraction, wizards,
-  lireConfig, ecrireConfig, MAX_QUESTIONS, QUESTION_MAX,
+  MAX_QUESTIONS, QUESTION_MAX,
+  _interne: { ecranAccueil, ecranEtape, ecranChoix, ecranConfirmationSuppression, panneauPublic, manques, nouvelEtat },
 };

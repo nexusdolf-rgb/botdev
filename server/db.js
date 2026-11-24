@@ -188,6 +188,22 @@ CREATE TABLE IF NOT EXISTS reports (
 );
 CREATE INDEX IF NOT EXISTS idx_reports_guild ON reports (bot_id, guild_id);
 
+-- v406 — Formulaires de candidature : PLUSIEURS par serveur.
+-- L'ancienne table applications n'en autorisait qu'un (clé primaire
+-- bot_id + guild_id). Elle est conservée telle quelle pour ne rien perdre,
+-- et migrée automatiquement au premier démarrage (voir migrateApplications).
+CREATE TABLE IF NOT EXISTS apply_forms (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id INTEGER NOT NULL,
+  guild_id TEXT NOT NULL,
+  title TEXT DEFAULT 'Candidature',
+  description TEXT DEFAULT '',
+  channel TEXT DEFAULT '',
+  questions TEXT DEFAULT '[]',
+  enabled INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS role_menus (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   bot_id INTEGER NOT NULL,
@@ -2373,6 +2389,89 @@ const embedTemplates = {
   remove: (id, botId, guildId) => db.prepare('DELETE FROM embed_templates WHERE id = ? AND bot_id = ? AND guild_id = ?').run(id, botId, guildId),
 };
 
+// ---------------------- Formulaires de candidature (v406) ----------------------
+// Plusieurs formulaires par serveur. `questions` est stocké en JSON et relu
+// en tableau ; une valeur corrompue ne doit jamais faire planter le bot.
+function decodageQuestions(brut) {
+  try {
+    const q = JSON.parse(brut || '[]');
+    return Array.isArray(q) ? q.map((x) => String(x)).filter(Boolean) : [];
+  } catch { return []; }
+}
+
+const applyForms = {
+  all: (botId, guildId) => db.prepare('SELECT * FROM apply_forms WHERE bot_id = ? AND guild_id = ? ORDER BY id ASC')
+    .all(botId, guildId).map((f) => ({ ...f, questions: decodageQuestions(f.questions) })),
+  get: (id) => {
+    const f = db.prepare('SELECT * FROM apply_forms WHERE id = ?').get(id);
+    return f ? { ...f, questions: decodageQuestions(f.questions) } : null;
+  },
+  create: (data) => {
+    const info = db.prepare(`INSERT INTO apply_forms (bot_id, guild_id, title, description, channel, questions, enabled)
+      VALUES (@bot_id, @guild_id, @title, @description, @channel, @questions, @enabled)`)
+      .run({
+        bot_id: data.bot_id, guild_id: data.guild_id,
+        title: String(data.title || 'Candidature').slice(0, 100),
+        description: String(data.description || '').slice(0, 1900),
+        channel: String(data.channel || ''),
+        questions: JSON.stringify(Array.isArray(data.questions) ? data.questions : []),
+        enabled: data.enabled ? 1 : 0,
+      });
+    return Number(info.lastInsertRowid);
+  },
+  update: (id, fields) => {
+    const allowed = ['title', 'description', 'channel', 'questions', 'enabled'];
+    const sets = [], vals = [];
+    for (const k of allowed) {
+      if (!(k in fields)) continue;
+      sets.push(`${k} = ?`);
+      vals.push(k === 'questions'
+        ? JSON.stringify(Array.isArray(fields[k]) ? fields[k] : [])
+        : k === 'enabled' ? (fields[k] ? 1 : 0) : String(fields[k]));
+    }
+    if (!sets.length) return;
+    vals.push(id);
+    db.prepare(`UPDATE apply_forms SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
+  },
+  remove: (id) => db.prepare('DELETE FROM apply_forms WHERE id = ?').run(id),
+  count: (botId, guildId) => Number(db.prepare('SELECT COUNT(*) AS n FROM apply_forms WHERE bot_id = ? AND guild_id = ?').get(botId, guildId).n) || 0,
+};
+
+// Migration de l'ancienne configuration unique vers la nouvelle table.
+// On ne supprime RIEN dans `applications` : en cas de souci, l'ancienne
+// donnée est toujours là. Le marqueur `apply_migrated` empêche de recréer un
+// doublon à chaque démarrage.
+function migrateApplications() {
+  try {
+    if (db.prepare("SELECT value FROM settings WHERE key = 'apply_migrated'").get()) return 0;
+    const lignes = db.prepare('SELECT * FROM applications').all();
+    let crees = 0;
+    for (const a of lignes) {
+      const questions = decodageQuestions(a.questions);
+      // Une configuration vide (ni salon, ni question) n'a rien à migrer.
+      if (!a.channel && !questions.length) continue;
+      const deja = db.prepare('SELECT id FROM apply_forms WHERE bot_id = ? AND guild_id = ? AND channel = ? AND questions = ?')
+        .get(a.bot_id, a.guild_id, a.channel || '', JSON.stringify(questions));
+      if (deja) continue;
+      applyForms.create({
+        bot_id: a.bot_id,
+        guild_id: a.guild_id,
+        title: a.title || 'Candidature',
+        description: '',
+        channel: a.channel || '',
+        questions,
+        enabled: a.enabled ? 1 : 0,
+      });
+      crees++;
+    }
+    db.prepare("INSERT INTO settings (key, value) VALUES ('apply_migrated', '1') ON CONFLICT(key) DO UPDATE SET value = excluded.value").run();
+    return crees;
+  } catch (e) {
+    console.log('[BotDev] migration candidatures :', e.message);
+    return 0;
+  }
+}
+
 // ---------------------- Candidatures (applications) ----------------------
 const applications = {
   get: (botId, guildId) => db.prepare('SELECT * FROM applications WHERE bot_id = ? AND guild_id = ?').get(botId, guildId) || null,
@@ -2604,4 +2703,4 @@ const antinuke = {
   },
 };
 
-module.exports = { db, antinuke, embedTemplates, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, reports, warnings, automodWarningMessages, roleMenus, tickets, ticketMenus, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, modmail, closedTickets, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodStrikes, automodTempBans, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, afk, guildEvents, quizScores, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories, quizSets, cleanTicketQuestions };
+module.exports = { db, applyForms, migrateApplications, antinuke, embedTemplates, users, platformBans, platformAudit, sessions, bots, commands, modules, events, economy, reports, warnings, automodWarningMessages, roleMenus, tickets, ticketMenus, advancedTickets, settings, discordTokens, guildSettings, xp, xpRoles, transcripts, modmail, closedTickets, blacklist, memberBlacklist, memberBlacklistCounters, nativeAutomodRules, automodStrikes, automodTempBans, automodLogs, openTickets, ticketCounters, ticketRatings, cmdStats, shop, giveaways, suggestions, tempRoles, sanctions, marriages, birthdays, reminders, afk, guildEvents, quizScores, scheduled, customAnnouncements, msgStats, joinStats, shopPurchases, applications, voicetemp, starboard, inviteUses, inviteJoins, liveSocials, ticketLogMsgs, activity, migrateLogCategories, quizSets, cleanTicketQuestions };

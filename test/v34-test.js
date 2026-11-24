@@ -230,10 +230,18 @@ const okReply = (i) => {
   // On prépare la configuration par le NOUVEAU chemin, puis on vérifie que
   // l'ancienne commande ne fait plus que rediriger (aucune écriture).
   await runCmd('/apply (ancienne) : redirige vers /setup apply', 'apply', { str: { action: 'set' }, channel: { id: 'C2', isTextBased: () => true } });
-  const applyWizard = require(path.join(__dirname, '..', 'server', 'discord', 'applyWizard'));
-  applyWizard.ecrireConfig(BOT, 'G1', { channel: 'C2', title: '📝 Candidature', enabled: true, questions: ['Quel âge as-tu ?'] });
-  const cfgApply = applyWizard.lireConfig(BOT, 'G1');
-  check('/setup apply : configuration enregistrée', cfgApply.channel === 'C2' && cfgApply.questions.length === 1);
+  // v406 — plusieurs formulaires par serveur : la configuration vit dans
+  // apply_forms, plus dans l'ancienne table unique `applications`.
+  const formId = store.applyForms.create({
+    bot_id: BOT, guild_id: 'G1', title: 'Candidature', description: '',
+    channel: 'C2', questions: ['Quel âge as-tu ?'], enabled: 1,
+  });
+  const cfgApply = store.applyForms.get(formId);
+  check('/setup apply : formulaire enregistré', cfgApply.channel === 'C2' && cfgApply.questions.length === 1);
+  // Le bouton porte désormais l'identifiant du formulaire, pas celui du serveur.
+  const wApplyBtn2 = fakeInteraction({ isBtn: true, customId: `hx:apply:${formId}` });
+  await extra.handleInteraction(BOT, {}, wApplyBtn2);
+  check('/setup apply : bouton → fenêtre du bon formulaire', wApplyBtn2.replied && wApplyBtn2.replies[0][0] === 'modal');
 
   // ================= BOUTONS =================
   // mariage : accepter (l'utilisateur ciblé clique)
@@ -280,9 +288,7 @@ const okReply = (i) => {
   await extra.handleInteraction(BOT, {}, wVote);
   check('poll : vote → mise à jour', okReply(wVote));
   // candidature : bouton → modale → soumission → décision
-  const wApplyBtn = fakeInteraction({ isBtn: true, customId: `hx:apply:G1` });
-  await extra.handleInteraction(BOT, {}, wApplyBtn);
-  check('apply : bouton → modale ouverte', wApplyBtn.replied && wApplyBtn.replies[0][0] === 'modal');
+
   const wApplyModal = fakeInteraction({ isModal: true, customId: `hxapply:G1`, fields: { getTextInputValue: () => 'J\'ai 20 ans' } });
   await extra.handleInteraction(BOT, {}, wApplyModal);
   check('apply : modale soumise → candidature envoyée + réponse', okReply(wApplyModal));

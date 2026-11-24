@@ -1180,25 +1180,33 @@ async function handleButton(botId, entry, interaction) {
       return true;
     }
     case 'apply': {
-      const gid = parts[2];
-      const cfg = store.applications.get(botId, guild.id);
-      if (!cfg || !cfg.enabled || !cfg.channel) return interaction.reply({ content: '📝 Les candidatures sont fermées.', ephemeral: true });
-      const questions = (() => { try { return JSON.parse(cfg.questions || '[]'); } catch { return []; } })();
-      if (!questions.length) return interaction.reply({ content: '📝 Les candidatures sont fermées.', ephemeral: true });
-      const modal = new ModalBuilder().setCustomId(`hxapply:${guild.id}`).setTitle((cfg.title || 'Candidature').slice(0, 45));
-      // v405 — l'assistant /setup apply autorise jusqu'à 10 questions.
-      // Une modale Discord accepte au plus 5 rangées : on s'arrête à 5.
-      questions.slice(0, 5).forEach((q, i) => {
-        modal.addComponents(new ActionRowBuilder().addComponents(
+      // v406 — le bouton porte l'identifiant du FORMULAIRE (hx:apply:<formId>).
+      // Un serveur peut en avoir plusieurs : chacun a son panneau, ses
+      // questions et son salon.
+      const formId = Number(parts[2]);
+      const form = store.applyForms.get(formId);
+      if (!form || String(form.guild_id) !== String(guild.id)) {
+        return interaction.reply({ content: '📝 Ce formulaire n\'existe plus. Prévenez un administrateur.', ephemeral: true });
+      }
+      if (!Number(form.enabled) || !form.channel || !form.questions.length) {
+        return interaction.reply({ content: '📝 Les candidatures sont fermées.', ephemeral: true });
+      }
+      const m = new ModalBuilder()
+        .setCustomId(`hxapply:${form.id}`)
+        .setTitle((form.title || 'Candidature').slice(0, 45));
+      // Une fenêtre Discord accepte au plus 5 rangées : l'assistant limite
+      // déjà les formulaires à 5 questions.
+      form.questions.slice(0, 5).forEach((q, i) => {
+        m.addComponents(new ActionRowBuilder().addComponents(
           new TextInputBuilder()
             .setCustomId(`q${i}`)
-            .setLabel(q.slice(0, 45))
+            .setLabel(String(q).slice(0, 45))
             .setStyle(TextInputStyle.Paragraph)
             .setRequired(true)
             .setMaxLength(500),
         ));
       });
-      await interaction.showModal(modal);
+      await interaction.showModal(m);
       return true;
     }
     case 'applyd': {
@@ -1250,18 +1258,21 @@ async function handleButton(botId, entry, interaction) {
 async function handleModal(botId, entry, interaction) {
   const id = interaction.customId || '';
   if (!id.startsWith('hxapply:')) return false;
-  const gid = id.split(':')[1];
   const guild = interaction.guild;
-  const cfg = store.applications.get(botId, guild.id);
-  if (!cfg || !cfg.channel) return interaction.reply({ content: '📝 Les candidatures sont fermées.', ephemeral: true });
-  const questions = (() => { try { return JSON.parse(cfg.questions || '[]'); } catch { return []; } })();
-  const channel = guild.channels.cache.get(cfg.channel);
+  // v406 — l'identifiant porté par la fenêtre est celui du formulaire.
+  const form = store.applyForms.get(Number(id.split(':')[1]));
+  if (!form || String(form.guild_id) !== String(guild.id)) {
+    return interaction.reply({ content: '📝 Ce formulaire n\'existe plus. Prévenez un administrateur.', ephemeral: true });
+  }
+  if (!form.channel) return interaction.reply({ content: '📝 Les candidatures sont fermées.', ephemeral: true });
+  const questions = form.questions || [];
+  const channel = guild.channels.cache.get(form.channel);
   if (!channel) return interaction.reply({ content: '📝 Le salon des candidatures a été supprimé. Prévenez un admin !', ephemeral: true });
 
   const authorAvatar = interaction.user.displayAvatarURL ? interaction.user.displayAvatarURL({ size: 128 }) : '';
   const embed = new EmbedBuilder()
     .setColor('#e07a5f')
-    .setTitle(cfg.title || '📝 Candidature')
+    .setTitle(form.title || '📝 Candidature')
     .setAuthor(authorAvatar ? { name: interaction.user.tag, iconURL: authorAvatar } : { name: interaction.user.tag })
     .setFooter({ text: `ID : ${interaction.user.id}` });
   questions.forEach((q, i) => {

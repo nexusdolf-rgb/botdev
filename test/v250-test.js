@@ -104,9 +104,9 @@ check('…et le repli automatique des cartes passe par ecranEtroit',
 console.log('— 5. Version —');
 const index = racine('public/index.html');
 const sw = racine('public/sw.js');
-check('index.html : ?v=405 référencé 10 fois', (index.match(/\?v=405/g) || []).length === 10,
-  String((index.match(/\?v=405/g) || []).length));
-check('sw.js : cache « hoxera-v405 »', sw.includes("const CACHE = 'hoxera-v405';"));
+check('index.html : ?v=406 référencé 10 fois', (index.match(/\?v=406/g) || []).length === 10,
+  String((index.match(/\?v=406/g) || []).length));
+check('sw.js : cache « hoxera-v406 »', sw.includes("const CACHE = 'hoxera-v406';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v250 — ${ok} vérifications OK : un PC reste un PC, un mobile reste un mobile.`);

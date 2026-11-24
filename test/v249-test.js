@@ -571,10 +571,10 @@ const raz = () => { xp.sessionsVocales.clear(); xp.oublierBot(BOT); };
   const indexHtml = racine('public/index.html');
   const swSource = racine('public/sw.js');
   const versions = [...indexHtml.matchAll(/\?v=(\d+)/g)].map((m) => `?v=${m[1]}`);
-  check('index.html : ?v=405 référencé 10 fois',
-    versions.length === 10 && versions.every((v) => v === '?v=405'),
+  check('index.html : ?v=406 référencé 10 fois',
+    versions.length === 10 && versions.every((v) => v === '?v=406'),
     `${versions.length} refs : ${[...new Set(versions)].join(',')}`);
-  check('sw.js : cache « hoxera-v405 »', swSource.includes("const CACHE = 'hoxera-v405';"));
+  check('sw.js : cache « hoxera-v406 »', swSource.includes("const CACHE = 'hoxera-v406';"));
 
   raz();
   console.log('');

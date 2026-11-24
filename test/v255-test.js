@@ -86,9 +86,9 @@ check('la classe hx-os-pc vient toujours du système (v253)',
   os.includes("classList.add('hx-os-pc')"));
 
 console.log('— 5. Version —');
-check('index.html : ?v=405 référencé 10 fois', (index.match(/\?v=405/g) || []).length === 10,
-  String((index.match(/\?v=405/g) || []).length));
-check('sw.js : cache « hoxera-v405 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v405';"));
+check('index.html : ?v=406 référencé 10 fois', (index.match(/\?v=406/g) || []).length === 10,
+  String((index.match(/\?v=406/g) || []).length));
+check('sw.js : cache « hoxera-v406 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v406';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v255 — ${ok} vérifications OK : le PC retrouve son visage v241, le mobile garde le sien.`);

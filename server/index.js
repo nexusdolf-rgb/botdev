@@ -40,6 +40,15 @@ async function main() {
   const botManager = require('./discord/botManager');
   store.settings.set('boot_restore', restoreStatus);
 
+  // v406 — migration de l'ancienne configuration unique de candidatures vers
+  // la nouvelle table `apply_forms` (plusieurs formulaires par serveur).
+  // L'ancienne table n'est PAS supprimée : en cas de souci, la donnée
+  // d'origine est toujours là. Un marqueur empêche de recréer un doublon.
+  try {
+    const migres = store.migrateApplications();
+    if (migres) console.log(`[BotDev] 📝 ${migres} formulaire(s) de candidature migré(s) vers le nouveau système.`);
+  } catch (e) { console.log('[BotDev] migration candidatures :', e.message); }
+
   // 🚑 v302 — restauration différée auto-réparante : si le boot n'a pas pu
   // restaurer la sauvegarde (token GitHub mort, réseau…), on retente toutes
   // les 5 min tant que la base locale est fraîche ; dès que la sauvegarde est

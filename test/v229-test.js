@@ -69,7 +69,8 @@ const TARGETS = [
   // v405 — /apply view a disparu avec l'ancienne commande : le récapitulatif
   // des candidatures vit désormais dans l'assistant /setup apply
   // (server/discord/applyWizard.js, fonction resumeEmbed).
-  { f: 'server/discord/applyWizard.js',     needle: 'function resumeEmbed(',                                      label: '/setup apply — récapitulatif des candidatures (assistant)' },
+  // v406 — l'assistant a plusieurs écrans ; le récapitulatif est l'étape ④.
+  { f: 'server/discord/applyWizard.js',     needle: 'function ecranEtape(',                                       label: '/setup apply — récapitulatif des candidatures (étape ④)' },
   // v236 — ces accusés de réception sont en Components V2 : le
   // `content: ui.sectionize(…)` est devenu la `description` du conteneur.
   { f: 'server/discord/panelCommands.js',   needle: 'description: `✅ Type «',                                 label: '/ticket types — accusés de réception (add + maj) (v236 : V2)' },
@@ -224,9 +225,9 @@ const touched = ['server/discord/extra.js', 'server/discord/panelCommands.js', '
   'public/index.html', 'public/sw.js'];
 check('aucun token en dur dans les fichiers modifiés',
   !touched.some((f) => /(ghp_|github_pat_|xox[baprs]-)[A-Za-z0-9_]{15,}/.test(src(f))));
-check('index.html : 10 références ?v=405', (src('public/index.html').match(/\?v=405/g) || []).length === 10);
+check('index.html : 10 références ?v=406', (src('public/index.html').match(/\?v=406/g) || []).length === 10);
 check('index.html : plus aucune référence ?v=236', !src('public/index.html').includes('?v=236'));
-check('sw.js : cache botdev-v241', src('public/sw.js').includes("const CACHE = 'hoxera-v405';"));
+check('sw.js : cache botdev-v241', src('public/sw.js').includes("const CACHE = 'hoxera-v406';"));
 
 console.log(failures === 0
   ? '\n✅ V229 — Traits ━ étendus aux 10 messages multi-blocs (dont le quiz), exclusions verrouillées, garde-fous v220 intacts.'
