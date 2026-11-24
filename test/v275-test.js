@@ -296,8 +296,8 @@ function check(label, cond, extraInfo) {
   console.log('— 5. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=403 référencé 10 fois', (index.match(/\?v=403/g) || []).length === 10);
-  check('sw.js : cache « hoxera-v403 »', sw.includes("const CACHE = 'hoxera-v403';"));
+  check('index.html : ?v=404 référencé 10 fois', (index.match(/\?v=404/g) || []).length === 10);
+  check('sw.js : cache « hoxera-v404 »', sw.includes("const CACHE = 'hoxera-v404';"));
 
   console.log(`\n🎉 v275 — ${ok} vérifications OK : premium UNIQUEMENT sur les émojis vocaux, modules intacts.`);
 })().catch((e) => { console.error(e); process.exit(1); });

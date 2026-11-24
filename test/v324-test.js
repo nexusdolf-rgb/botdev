@@ -28,8 +28,8 @@ const sw = racine('public/sw.js');
 const dash = racine('public/js/dashboard.js');
 
 console.log('— 1. Pins de version v324 —');
-check('index.html : ?v=403 ×10', (html.match(/\?v=403/g) || []).length === 10);
-check('sw.js : cache hoxera-v403', sw.includes("const CACHE = 'hoxera-v403';"));
+check('index.html : ?v=404 ×10', (html.match(/\?v=404/g) || []).length === 10);
+check('sw.js : cache hoxera-v404', sw.includes("const CACHE = 'hoxera-v404';"));
 check('index.html : plus aucune ?v=323', !html.includes('?v=323'));
 
 console.log('— 2. Dashboard calé sur l’exemple —');

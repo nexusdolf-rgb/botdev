@@ -57,8 +57,8 @@ check('moteur d\'isolation intact', ver.includes('async function applyIsolation'
 
 console.log('— 6. Bump v294 —');
 const index = racine('public/index.html');
-check('index.html : ?v=403 référencé 10 fois', (index.match(/\?v=403/g) || []).length === 10,
-  String((index.match(/\?v=403/g) || []).length));
-check('sw.js : cache « hoxera-v403 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v403';"));
+check('index.html : ?v=404 référencé 10 fois', (index.match(/\?v=404/g) || []).length === 10,
+  String((index.match(/\?v=404/g) || []).length));
+check('sw.js : cache « hoxera-v404 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v404';"));
 
 console.log(`\n🎉 v294 : ${ok} vérifications passées`);

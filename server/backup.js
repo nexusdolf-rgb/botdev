@@ -68,6 +68,37 @@ const PART_BYTES = 700 * 1024;              // < 900 Ko, marge confortable
 const MAX_PARTS = 64;                       // 45 Mo de sauvegarde compressée
 const MAX_RESTORE_BYTES = 256 * 1024 * 1024; // garde-fou mémoire à la lecture
 
+// ============================================================
+// v404 — Capacité annoncée au tableau de bord
+// ------------------------------------------------------------
+// Le panneau « Santé » affichait « Limite de sécurité : 900 Ko » alors que le
+// format 2 n'a plus de plafond à 900 Ko : il compresse puis découpe en
+// MAX_PARTS morceaux de PART_BYTES. La vraie limite est donc en amont, dans le
+// dépôt GitHub : 1 Go par fichier et ~5 Go par dépôt gratuit.
+//
+// On expose le calcul ici pour que le panneau dise la vérité et que le seuil
+// d'alerte suive les constantes au lieu d'un 900 écrit en dur.
+// ============================================================
+const CAPACITE = {
+  partBytes: PART_BYTES,
+  maxParts: MAX_PARTS,
+  compressedBytes: PART_BYTES * MAX_PARTS,          // 43,75 Mio compressés
+  // GitHub : 1 Go par fichier, mais un dépôt gratuit reste sous 5 Go. On
+  // s'arrête bien avant : MAX_PARTS morceaux, donc 43,75 Mio compressés.
+  repoLimitBytes: 1024 * 1024 * 1024,
+};
+// Ce que le panneau affiche en Mo compressés (arrondi lisible).
+CAPACITE.plafondMo = Math.floor(CAPACITE.compressedBytes / (1024 * 1024));
+// Ratio base/compressé. Mesuré sur une base réaliste (50 serveurs, 300 membres,
+// 30 jours de stats et des transcripts) : 59,1 Mo → 7,0 Mo en gzip, soit 8,47×.
+// On annonce 6× pour ne jamais promettre plus que le réel : une base très
+// remplie de texte déjà compressé (images en base64, transcripts volumineux)
+// descend sous ce ratio.
+CAPACITE.ratioCompression = 6;
+CAPACITE.baseMo = CAPACITE.plafondMo * CAPACITE.ratioCompression;
+// Seuil d'alerte : 70 % du plafond compressé, exprimé en taille de base.
+CAPACITE.alerteMo = Math.round(CAPACITE.baseMo * 0.7);
+
 function repo() {
   const value = String(process.env.BOTDEV_DATA_REPO || '').trim();
   const [owner, name, extra] = value.split('/');
@@ -353,6 +384,60 @@ async function downloadLegacy() {
   return buffer;
 }
 
+// Ce que le panneau doit afficher : taille réellement envoyée (compressée),
+// c'est-à-dire ce qui compte pour GitHub — pas la taille du fichier local.
+let lastUploadInfo = null;
+
+// Taille du dépôt de sauvegarde, sans télécharger les morceaux : le manifeste
+// décrit chaque pièce, et le nombre de morceaux donne la place occupée.
+//
+// Le panneau « Santé » se rafraîchit toutes les 30 s : sans cache, chaque
+// visiteur interrogerait l'API GitHub (5 000 appels/heure, tous comptés, y
+// compris les refus). On garde donc la réponse 2 minutes. `_viderCacheCapacite`
+// existe pour que l'envoi d'une sauvegarde rafraîchisse tout de suite.
+let cacheCapacite = { at: 0, valeur: null };
+const CACHE_CAPACITE_MS = 2 * 60 * 1000;
+
+async function capaciteUtilisee() {
+  if (cacheCapacite.valeur && Date.now() - cacheCapacite.at < CACHE_CAPACITE_MS) {
+    return cacheCapacite.valeur;
+  }
+  const out = {
+    moCompresses: 0,
+    moBase: 0,
+    morceaux: 0,
+    maxMorceaux: MAX_PARTS,
+    plafondMo: CAPACITE.plafondMo,
+    alerteMo: CAPACITE.alerteMo,
+    baseMo: CAPACITE.baseMo,
+    niveau: 'ok',
+    detail: '',
+  };
+  if (!enabled()) { out.detail = 'sauvegarde désactivée'; return out; }
+  try {
+    const raw = await fetchRepositoryFile(MANIFEST_FILE, 64 * 1024);
+    if (!raw) { out.detail = 'aucune sauvegarde distante'; return out; }
+    const m = JSON.parse(raw.toString('utf8'));
+    const parts = Array.isArray(m.parts) ? m.parts : [];
+    out.morceaux = parts.length;
+    out.moCompresses = Number(m.total || 0) / (1024 * 1024);
+    out.moBase = Number(m.dbSize || 0) / (1024 * 1024);
+  } catch (error) {
+    out.detail = String(error.message || error).slice(0, 120);
+    return out;
+  }
+  // Niveaux : ok sous 70 % du plafond, warn au-delà, critique au plafond.
+  const pct = CAPACITE.plafondMo > 0 ? (out.moCompresses / CAPACITE.plafondMo) * 100 : 0;
+  out.pourcentage = Math.min(100, Math.round(pct));
+  out.niveau = pct >= 100 ? 'critique' : pct >= 70 ? 'warn' : 'ok';
+  // On ne met en cache que les réponses abouties : un échec GitHub (jeton
+  // invalide) doit être retenté au prochain rafraîchissement, pas figé 2 min.
+  cacheCapacite = { at: Date.now(), valeur: out };
+  return out;
+}
+function viderCacheCapacite() { cacheCapacite = { at: 0, valeur: null }; }
+
+// ---------------------- Restauration au démarrage ----------------------
 // Restaure la base au démarrage (à appeler AVANT d'ouvrir la base locale).
 let lastRestoreInfo = 'inconnu';
 async function restore() {
@@ -505,6 +590,16 @@ async function performUpload(db) {
     await putFileWithRetry(MANIFEST_FILE, Buffer.from(JSON.stringify(manifest, null, 2), 'utf8'), 'Hoxera backup — manifeste');
     v2Ok = true;
     console.log(`[Hoxera] sauvegarde envoyée : ${bufSize} octets → ${compressed.length} octets compressés en ${parts.length} morceau(x)`);
+    lastUploadInfo = {
+      at: stamp,
+      baseBytes: bufSize,
+      compressedBytes: compressed.length,
+      morceaux: parts.length,
+      maxMorceaux: MAX_PARTS,
+    };
+    // Une sauvegarde vient de partir : le panneau doit voir la nouvelle taille
+    // tout de suite, sans attendre l'expiration du cache de 2 minutes.
+    viderCacheCapacite();
     // Le manifeste est écrit : les morceaux au-delà ne servent plus à rien.
     // On ne balaie que l'intervalle de la sauvegarde précédente (économie
     // d'appels à l'API GitHub, qui est limitée à 5000 par heure).
@@ -599,4 +694,8 @@ module.exports = {
   // v379 — format 2 : exposé pour les tests et pour /api/health/bot.
   BACKUP_FORMAT, PART_BYTES, MAX_PARTS, MANIFEST_FILE, PART_PREFIX, PART_SUFFIX,
   downloadV2, downloadLegacy, sha256, partName, splitBuffer,
+  // v404 — capacité réelle (pour le panneau Santé, qui annonçait 900 Ko).
+  CAPACITE, capaciteUtilisee, viderCacheCapacite, getLastUploadInfo: () => lastUploadInfo,
+  getPartBytes: () => PART_BYTES, getMaxParts: () => MAX_PARTS,
+  _setLastUploadInfo: (v) => { lastUploadInfo = v; },
 };

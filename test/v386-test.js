@@ -31,7 +31,7 @@ console.log('— 1. Le texte part compressé —');
 {
   const { res, state } = faux();
   let suite = false;
-  sc.middleware({ method: 'GET', path: '/js/app.js', originalUrl: '/js/app.js?v=403', headers: { 'accept-encoding': 'gzip, deflate' } }, res, () => { suite = true; });
+  sc.middleware({ method: 'GET', path: '/js/app.js', originalUrl: '/js/app.js?v=404', headers: { 'accept-encoding': 'gzip, deflate' } }, res, () => { suite = true; });
   check('…/js/app.js servi en gzip', state.headers['Content-Encoding'] === 'gzip' && !suite);
   const brut = fs.readFileSync(path.join(racine, 'public', 'js', 'app.js'));
   check('…le corps reçu se décompresse à l’identique',
@@ -41,7 +41,7 @@ console.log('— 1. Le texte part compressé —');
 }
 {
   const { res, state } = faux();
-  sc.middleware({ method: 'GET', path: '/css/dashboard.css', originalUrl: '/css/dashboard.css?v=403', headers: { 'accept-encoding': 'br' } }, res, () => {});
+  sc.middleware({ method: 'GET', path: '/css/dashboard.css', originalUrl: '/css/dashboard.css?v=404', headers: { 'accept-encoding': 'br' } }, res, () => {});
   check('…brotli choisi quand le navigateur le propose', state.headers['Content-Encoding'] === 'br');
 }
 {
@@ -65,12 +65,12 @@ console.log('— 1. Le texte part compressé —');
 console.log('— 2. Cache et économie de données —');
 {
   const { res, state } = faux();
-  sc.middleware({ method: 'GET', path: '/js/app.js', originalUrl: '/js/app.js?v=403', headers: { 'accept-encoding': 'gzip', 'if-none-match': '' } }, res, () => {});
+  sc.middleware({ method: 'GET', path: '/js/app.js', originalUrl: '/js/app.js?v=404', headers: { 'accept-encoding': 'gzip', 'if-none-match': '' } }, res, () => {});
   check('…un fichier versionné reste un an chez le visiteur',
     state.headers['Cache-Control'].includes('max-age=31536000'));
   const etag = state.headers['ETag'];
   const second = faux();
-  sc.middleware({ method: 'GET', path: '/js/app.js', originalUrl: '/js/app.js?v=403', headers: { 'accept-encoding': 'gzip', 'if-none-match': etag } }, second.res, () => {});
+  sc.middleware({ method: 'GET', path: '/js/app.js', originalUrl: '/js/app.js?v=404', headers: { 'accept-encoding': 'gzip', 'if-none-match': etag } }, second.res, () => {});
   check('…déjà en cache : réponse 304, aucun octet renvoyé',
     second.state.statusCode === 304 && !second.state.body);
   check('…le HTML de la page, lui, reste frais (5 min)', sc.enteteCache('/index.html', '/').includes('max-age=300'));
@@ -89,7 +89,13 @@ console.log('— 2. Cache et économie de données —');
   // pastilles d'identifiant) et des correctifs commentés en français.
   // Mesuré : 336,6 Ko gzip. On monte le seuil à 340 Ko en gardant la même
   // marge serrée — il continue de détecter un vrai emballement du poids.
-  check('…JS+CSS compressés sous 340 Ko (contre 1,26 Mo en clair)', etat.gzip < 340, etat.gzip + ' Ko');
+  //
+  // v404 : le panneau Santé cesse d'annoncer « limite 900 Ko » et décrit la
+  // capacité réelle du format 2 (64 morceaux de 700 Ko, soit ~43 Mo
+  // compressés). Mesuré : 339,6 Ko gzip, dont +0,55 Ko pour cette carte.
+  // La v403 était déjà à 339,07 Ko — au ras du plafond. Le seuil passe à
+  // 342 Ko pour laisser la marge habituelle sans rogner sur le contenu.
+  check('…JS+CSS compressés sous 342 Ko (contre 1,26 Mo en clair)', etat.gzip < 342, etat.gzip + ' Ko');
 }
 
 // ---------- 3. Les images du site ne pèsent plus 3,3 Mo ----------

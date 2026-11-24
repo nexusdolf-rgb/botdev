@@ -30,8 +30,8 @@ const texte = lus('server/i18n.js');
 
 console.log('— 1. Version —');
 const html = lus('public/index.html');
-check(`index.html : ?v=${VERSION} référencé 10 fois`, (html.match(/\?v=403/g) || []).length === 10, (html.match(/\?v=403/g) || []).length);
-check('le service worker porte la même version de cache', lus('public/sw.js').includes("const CACHE = 'hoxera-v403';"));
+check(`index.html : ?v=${VERSION} référencé 10 fois`, (html.match(/\?v=404/g) || []).length === 10, (html.match(/\?v=404/g) || []).length);
+check('le service worker porte la même version de cache', lus('public/sw.js').includes("const CACHE = 'hoxera-v404';"));
 check('aucun fichier de public/js ne cite une version périmée',
   fs.readdirSync(path.join(RACINE, 'public/js')).filter((f) => f.endsWith('.js'))
     .every((f) => !/\?v=36[0-8]\b/.test(lus('public/js/' + f))), 'public/js');

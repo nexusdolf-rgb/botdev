@@ -7860,22 +7860,44 @@ Dashboard.renderers.health = async (content) => {
     grid.appendChild(cMem);
 
     // Base + sauvegarde
-    // v400 — La phrase affirmait « jamais dépassée » sans regarder la valeur :
-    // une base au-dessus de 900 Ko s'affichait avec une barre ROUGE pleine et,
-    // juste au-dessus, « jamais dépassée ». Le texte dit maintenant l'état réel,
-    // et le seuil d'alerte passe à 900 Ko (la vraie limite) au lieu de 700.
+    // v404 — Le panneau annonçait « Limite de sécurité : 900 Ko » et laissait
+    // croire qu'au-delà la sauvegarde s'arrêtait. C'est faux depuis la v379 :
+    // le format 2 compresse (×6 environ) puis découpe en morceaux de 700 Ko,
+    // jusqu'à 64 morceaux. La vraie limite est donc ~43,75 Mo compressés, soit
+    // plusieurs centaines de Mo de base. On affiche cette capacité réelle.
+    const cap = h.backupCapacite || null;
     const dbKo = Number((h.db && h.db.fileSizeKo) || 0);
-    const dbTrop = dbKo > 900;
-    const dbDesc = dbTrop
-      ? 'Limite de sécurité dépassée : le nettoyage automatique va purger les tables les plus anciennes.'
-      : 'Limite de sécurité : 900 Ko, surveillée par le nettoyage automatique.';
+    const dbMo = dbKo / 1024;
+    // Sans données de capacité (vieille instance), on retombe sur un affichage
+    // honnête : la taille seule, sans inventer de plafond.
+    const plafondMo = cap ? Number(cap.baseMo || 0) : 0;
+    const pctCap = plafondMo > 0 ? Math.min(100, (dbMo / plafondMo) * 100) : 0;
+    const niveau = cap ? (cap.niveau || 'ok') : 'ok';
+    const couleurBarre = niveau === 'critique' ? '#ED4245'
+      : niveau === 'warn' ? '#FAA61A'
+      : 'linear-gradient(90deg,#3BA55D,#57F287)';
+    // La phrase décrit ce qui se passe VRAIMENT, sans promettre de purge par
+    // taille : le serveur ne purge pas au-delà d'un seuil de taille, il purge
+    // par ancienneté (conservation.js) et compacte au-delà de 700 Ko.
+    const dbDesc = !cap
+      ? 'Capacité de sauvegarde indisponible : la taille est affichée, pas le plafond.'
+      : niveau === 'critique'
+        ? `Capacité atteinte (${cap.morceaux}/${cap.maxMorceaux} morceaux) : la prochaine sauvegarde peut échouer.`
+        : `Sauvegarde compressée : jusqu'à ${cap.plafondMo} Mo pour ~${cap.baseMo} Mo de base (${cap.maxMorceaux} morceaux).`;
+    const morceauxTxt = cap && cap.maxMorceaux
+      ? `${cap.morceaux || 0} / ${cap.maxMorceaux} morceaux utilisés`
+      : '';
+    const envoiTxt = cap && cap.dernierEnvoi
+      ? `Dernier envoi : ${(cap.dernierEnvoi.compressedBytes / 1024).toFixed(0)} Ko compressés (base ${(cap.dernierEnvoi.baseBytes / 1024).toFixed(0)} Ko)`
+      : '';
     const cDb = App.el(`<div class="dash-card"><h3>Base & sauvegarde</h3>
       <div class="desc">${dbDesc}</div>
-      <div class="dash-badge ${dbTrop ? 'warn' : 'ok'}">Base : ${(h.db && h.db.fileSizeKo) ?? '-'} Ko</div>
+      <div class="dash-badge ${niveau === 'ok' ? 'ok' : 'warn'}">Base : ${(h.db && h.db.fileSizeKo) ?? '-'} Ko</div>
       <div style="height:10px;background:var(--d-card2);border-radius:12px;overflow:hidden;margin:10px 0 4px">
-        <div style="height:100%;width:${Math.min(100, dbKo / 900 * 100)}%;background:${dbTrop ? '#ED4245' : 'linear-gradient(90deg,#3BA55D,#57F287)'};border-radius:12px"></div>
+        <div style="height:100%;width:${pctCap}%;background:${couleurBarre};border-radius:12px"></div>
       </div>
-      <div style="color:var(--d-dim);font-size:12px;margin-bottom:10px">${h.db && h.db.tables ? Object.keys(h.db.tables).length + ' tables avec des données' : ''}</div>
+      <div style="color:var(--d-dim);font-size:12px">${morceauxTxt}${plafondMo ? ` · ${Math.round(pctCap)} % de la capacité` : ''}</div>
+      <div style="color:var(--d-dim);font-size:12px;margin-bottom:10px">${h.db && h.db.tables ? Object.keys(h.db.tables).length + ' tables avec des données' : ''}${envoiTxt ? ' · ' + envoiTxt : ''}</div>
       <div class="dash-badge ${h.backupEnabled ? 'ok' : 'warn'}">Sauvegarde ${h.backupEnabled ? 'active' : 'désactivée'}</div>
       <div style="color:var(--d-dim);font-size:12px;margin-top:6px">Dernière : ${lastBStr} · démarrage : ${App.escapeHtml(h.bootRestore || '?')}</div>
     </div>`);
@@ -7884,7 +7906,7 @@ Dashboard.renderers.health = async (content) => {
     // Garde-fous
     const guards = [
       ['Anti-base-vide (restauration + sauvegarde)', true],
-      ['Anti-dépassement 900 Ko', true],
+      [`Sauvegarde compressée (${cap ? cap.maxMorceaux + ' morceaux × 700 Ko' : 'format 2'})`, true],
       ['Reconnexion forcée (60 s)', true],
       ['⏱️ Anti-blocage des interactions (15 s)', true],
       ['Anti-crash (réponses polies)', true],

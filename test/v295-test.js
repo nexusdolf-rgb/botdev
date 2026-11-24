@@ -85,9 +85,9 @@ const membreStaff = mkMember(true); // Gérer les messages (ou Admin : has() = t
 
   console.log('— 7. Bump v295 —');
   const index = racine('public/index.html');
-  check('index.html : ?v=403 référencé 10 fois', (index.match(/\?v=403/g) || []).length === 10,
-    String((index.match(/\?v=403/g) || []).length));
-  check('sw.js : cache « hoxera-v403 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v403';"));
+  check('index.html : ?v=404 référencé 10 fois', (index.match(/\?v=404/g) || []).length === 10,
+    String((index.match(/\?v=404/g) || []).length));
+  check('sw.js : cache « hoxera-v404 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v404';"));
 
   console.log(`\n🎉 v295 : ${ok} vérifications passées`);
   process.exit(0);

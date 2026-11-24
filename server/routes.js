@@ -4075,11 +4075,21 @@ router.put('/admin/settings', requireAuth, requireAdmin, platformMutationRateLim
 });
 
 // 🩺 Santé système (fondateur) — v199
-router.get('/admin/system', requireAuth, requireAdmin, (req, res) => {
+router.get('/admin/system', requireAuth, requireAdmin, async (req, res) => {
   let health = {};
   try { health = require('./health').snapshot(); } catch {}
   let backupEnabled = false;
-  try { backupEnabled = require('./backup').enabled(); } catch {}
+  let backup = null;
+  try { backup = require('./backup'); backupEnabled = backup.enabled(); } catch {}
+  // v404 — ce que la sauvegarde peut réellement absorber, et où elle en est.
+  // Le panneau affichait « 900 Ko » alors que le format 2 monte à 64 morceaux.
+  let capacite = null;
+  if (backup) {
+    try {
+      capacite = { ...backup.CAPACITE, ...(await backup.capaciteUtilisee()) };
+      capacite.dernierEnvoi = backup.getLastUploadInfo();
+    } catch { capacite = null; }
+  }
   res.json({
     processUptimeMs: Math.round(process.uptime() * 1000),
     uptimeMs: process.uptime() * 1000, // compatibilité avec l'ancien rendu fondateur
@@ -4094,6 +4104,7 @@ router.get('/admin/system', requireAuth, requireAdmin, (req, res) => {
     db: health.db || { fileSizeKo: 0, tables: {} },
     lastBackup: store.settings.get('last_backup') || '',
     backupEnabled,
+    backupCapacite: capacite,
     secretStorage: secretStore.status(),
   });
 });

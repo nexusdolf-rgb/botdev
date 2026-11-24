@@ -28,8 +28,8 @@ const guildEvents = require('../server/discord/guildEvents');
 const changelog = require('../server/discord/changelog');
 
 console.log('— 1. Pins v345 —');
-check('index.html : ?v=403 ×10', (html.match(/\?v=403/g) || []).length === 10);
-check('sw.js : cache hoxera-v403', sw.includes("const CACHE = 'hoxera-v403';"));
+check('index.html : ?v=404 ×10', (html.match(/\?v=404/g) || []).length === 10);
+check('sw.js : cache hoxera-v404', sw.includes("const CACHE = 'hoxera-v404';"));
 check('index.html : plus aucune ?v=344', !html.includes('?v=344'));
 check('VERSION ≥ 345', changelog.VERSION >= 345);
 check('journal v345 : au moins 1 nouveauté', Array.isArray(changelog.NOTES.new) && changelog.NOTES.new.length >= 1);

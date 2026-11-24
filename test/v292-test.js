@@ -189,9 +189,9 @@ const racine = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 
   console.log('— 12. Bump v292 —');
   const index = racine('public/index.html');
-  check('index.html : ?v=403 référencé 10 fois', (index.match(/\?v=403/g) || []).length === 10,
-    String((index.match(/\?v=403/g) || []).length));
-  check('sw.js : cache « hoxera-v403 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v403';"));
+  check('index.html : ?v=404 référencé 10 fois', (index.match(/\?v=404/g) || []).length === 10,
+    String((index.match(/\?v=404/g) || []).length));
+  check('sw.js : cache « hoxera-v404 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v404';"));
 
   console.log(`\n🎉 v292 : ${ok} vérifications passées`);
   process.exit(0);

@@ -18,8 +18,8 @@ const pub = racine('public/js/public.js');
 const css = racine('public/css/style.css');
 
 console.log('— 1. Pins de version v316 —');
-check('index.html : ?v=403 ×10', (html.match(/\?v=403/g) || []).length === 10);
-check('sw.js : cache hoxera-v403', sw.includes("const CACHE = 'hoxera-v403';"));
+check('index.html : ?v=404 ×10', (html.match(/\?v=404/g) || []).length === 10);
+check('sw.js : cache hoxera-v404', sw.includes("const CACHE = 'hoxera-v404';"));
 check('index.html : plus aucune ?v=315', !html.includes('?v=315'));
 
 console.log('— 2. Profil Discord, pas la bannière —');
