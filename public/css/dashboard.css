@@ -4500,8 +4500,10 @@ html.hx-light { color-scheme: light; }
     color: #e07a5f;
     background: transparent;
     font: inherit;
-    font-size: 28px;
-    font-weight: 800;
+    /* v400 — 28 px et graisse 800 servaient a un CARACTERE de police (▦).
+       Les deux boutons sont desormais des SVG de 20 px : ces deux valeurs
+       n'affectent plus rien et faisaient paraitre le bouton plus bruyant
+       que necessaire dans la barre. */
     line-height: 1;
     cursor: pointer;
   }

@@ -23,8 +23,8 @@ const extra = racine('server/discord/extra.js');
 const clSrc = racine('server/discord/changelog.js');
 
 console.log('— 1. Pins de version v334 —');
-check('index.html : ?v=400 ×10', (html.match(/\?v=400/g) || []).length === 10);
-check('sw.js : cache hoxera-v400', sw.includes("const CACHE = 'hoxera-v400';"));
+check('index.html : ?v=401 ×10', (html.match(/\?v=401/g) || []).length === 10);
+check('sw.js : cache hoxera-v401', sw.includes("const CACHE = 'hoxera-v401';"));
 check('index.html : plus aucune ?v=333', !html.includes('?v=333'));
 
 console.log('— 2. Commande /update enregistrée —');

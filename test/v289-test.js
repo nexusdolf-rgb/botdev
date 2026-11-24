@@ -74,8 +74,8 @@ const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
   console.log('— 7. Version —');
   const index = read('public/index.html');
   const sw = read('public/sw.js');
-  check('index.html : ?v=400 référencé 10 fois', (index.match(/\?v=400/g) || []).length === 10);
-  check('sw.js : cache « hoxera-v400 »', sw.includes("const CACHE = 'hoxera-v400';"));
+  check('index.html : ?v=401 référencé 10 fois', (index.match(/\?v=401/g) || []).length === 10);
+  check('sw.js : cache « hoxera-v401 »', sw.includes("const CACHE = 'hoxera-v401';"));
 
   console.log(`\n🎉 v289 — ${ok} vérifications OK : système IA retiré partout, bot intact.`);
 })().catch((e) => { console.error(e); process.exit(1); });
