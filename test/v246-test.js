@@ -393,7 +393,7 @@ const onglet = (module, hauteurs) => {
   check('index.html : ?v=NNN référencé 10 fois, toutes identiques',
     versions.length === 10 && versions.every((v) => v === versions[0]),
     `${versions.length} refs : ${[...new Set(versions)].join(',')}`);
-  // v406f : le nom de cache peut porter un suffixe de passe (« 406f »).
+  // v406g : le nom de cache peut porter un suffixe de passe (« 406g »).
   check('sw.js : cache « hoxera-vNNN » bien formé', /^\d+[a-z]?$/.test(cacheVersion), cacheVersion);
   check('index.html et sw.js portent la même version',
     cacheVersion === (versions[0] || '').replace('?v=', ''), `${cacheVersion} vs ${versions[0]}`);

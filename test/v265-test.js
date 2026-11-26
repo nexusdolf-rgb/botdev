@@ -125,9 +125,9 @@ const mkGuild = (members, sent) => ({
   console.log('— 7. Version —');
   const index = fs.readFileSync(require('path').join(__dirname, '..', 'public/index.html'), 'utf8');
   const sw = fs.readFileSync(require('path').join(__dirname, '..', 'public/sw.js'), 'utf8');
-  check('index.html : ?v=406f référencé 10 fois', (index.match(/\?v=406f/g) || []).length === 10,
-    String((index.match(/\?v=406f/g) || []).length));
-  check('sw.js : cache « hoxera-v406 »', sw.includes("const CACHE = 'hoxera-v406f';"));
+  check('index.html : ?v=406g référencé 10 fois', (index.match(/\?v=406g/g) || []).length === 10,
+    String((index.match(/\?v=406g/g) || []).length));
+  check('sw.js : cache « hoxera-v406 »', sw.includes("const CACHE = 'hoxera-v406g';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v265 — ${ok} vérifications OK : tes boosters sont récompensés automatiquement.`);

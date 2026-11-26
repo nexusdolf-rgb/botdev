@@ -74,7 +74,7 @@ const tropCourts = TOUS.filter((id) => {
 check('les accroches et les notices sont assez parlantes pour être utiles', tropCourts.length === 0, tropCourts.join(', '));
 
 // ---------- 2. Une émoticône dessinée par module ----------
-// v406f : les 42 PNG ne dessinent plus la navigation. Chaque module porte une
+// v406g : les 42 PNG ne dessinent plus la navigation. Chaque module porte une
 // icône Lucide de 20 px, définie une fois dans Dashboard.ICONES_LUCIDE et
 // rendue par Dashboard.svgIcone(). Les PNG ne sont pas supprimés : ils sont
 // rangés dans public/emotes_old le temps de la validation (arbitrage du
@@ -221,7 +221,7 @@ console.log('\n— 6. Rendu réel dans le navigateur simulé —');
     // 1. Le menu est rangé par familles, chaque entrée porte son image.
     out.familles = aside ? [...aside.querySelectorAll('.dash-side-section')].map((e) => e.textContent.trim()) : [];
     out.items = aside ? aside.querySelectorAll('.dash-side-item').length : 0;
-    // v406f : la navigation dessine ses glyphes en SVG inline, plus en <img>.
+    // v406g : la navigation dessine ses glyphes en SVG inline, plus en <img>.
     out.images = aside ? aside.querySelectorAll('.dash-side-item .ico svg').length : 0;
     out.emojisCaches = aside ? aside.querySelectorAll('.dash-side-item .ico img').length : 0;
     // 2. On ouvre Tickets : fiche de lecture + aperçu sous l'en-tête.
@@ -288,7 +288,7 @@ console.log('\n— 6. Rendu réel dans le navigateur simulé —');
   check('le menu est coupé en familles (au moins 6 titres)', res.familles.length >= 6, res.familles.join(' · '));
   check('tous les modules du serveur restent accessibles', res.items >= 36, String(res.items));
   check('chaque entrée du menu porte son icône', res.images >= 36, `${res.images} SVG pour ${res.items} entrées`);
-  // v406f : plus aucune image bitmap dans la barre — c'est ce qui a remplacé
+  // v406g : plus aucune image bitmap dans la barre — c'est ce qui a remplacé
   // les PNG, et c'est vérifiable : 0 <img>.
   check('…et plus aucune image bitmap dans la barre', res.emojisCaches === 0, String(res.emojisCaches));
   check('le module ouvert affiche sa fiche de lecture', res.guide === true);

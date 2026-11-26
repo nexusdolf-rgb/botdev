@@ -76,7 +76,7 @@ const read = (file) => fs.readFileSync(path.join(__dirname, '..', file), 'utf8')
   const sw = read('public/sw.js');
   const changelog = require('../server/discord/changelog');
 
-  // v406f : l'avatar porte la version du cache (?v=406f) depuis que l'on a
+  // v406g : l'avatar porte la version du cache (?v=406g) depuis que l'on a
   // compris qu'après un déploiement l'ancienne image restait un an en cache.
   assert(js.includes('id="a-bot-avatar"') && /\/api\/public\/bot-avatar\?v=[\w-]+/.test(js), 'l’en-tête utilise l’avatar officiel du bot, pas les initiales OP');
   assert(routes.includes("router.get('/public/bot-avatar'"), 'l’avatar Optimus est servi par la route image publique');
@@ -89,7 +89,7 @@ const read = (file) => fs.readFileSync(path.join(__dirname, '..', file), 'utf8')
   assert(css.includes('.admin-platform-page .admin-linked-copy b') && css.includes('text-overflow: ellipsis;'), 'les noms longs ne déplacent pas les actions du tableau');
   assert(css.includes('.admin-platform-page .admin-users-table tbody tr {') && css.includes('.admin-platform-page .admin-users-table tbody td:nth-child(5) {'), 'sur mobile, chaque compte devient une carte qui garde toutes ses actions visibles');
   assert(js.includes('data-unlink') && js.includes('data-ban') && js.includes('data-unban') && js.includes('data-delete'), 'les actions de gestion des comptes restent présentes');
-  assert((index.match(/\?v=406f/g) || []).length === 10 && sw.includes("const CACHE = 'hoxera-v406f';"), 'les assets et le cache navigateur sont invalidés en v360');
+  assert((index.match(/\?v=406g/g) || []).length === 10 && sw.includes("const CACHE = 'hoxera-v406g';"), 'les assets et le cache navigateur sont invalidés en v360');
   assert.strictEqual(changelog.VERSION, 360, 'le journal de versions est en v360');
   assert.strictEqual(changelog.VERSIONS[0].v, 360, 'v360 apparaît en tête du journal');
   assert.strictEqual(changelog.VERSIONS[1].v, 359, 'v359 reste la version précédente');

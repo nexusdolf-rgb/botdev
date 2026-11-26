@@ -27,7 +27,7 @@ const mods = dash.match(/Dashboard\.MODULES = \[([\s\S]*?)\];/);
 check('module « voicetemp » déclaré dans MODULES', !!mods && mods[1].includes("['voicetemp'"));
 // v367 : le deuxieme champ du tuple n'est plus un emoji (la navigation dessine
 // ses glyphes en SVG).
-// v406f : le libelle devient « Salons vocaux » sur decision du proprietaire
+// v406g : le libelle devient « Salons vocaux » sur decision du proprietaire
 // (« Vocal » sonnait comme un module unique alors qu'il gere les salons).
 check('…avec son emplacement et son libellé « Salons vocaux »', !!mods && /\['voicetemp', '', 'Salons vocaux'\]/.test(mods[1]));
 check('…placé parmi les modules serveur (pas bot)', !!mods && mods[1].includes("['voicetemp'") && !((dash.match(/Dashboard\.BOT_MODULES = \[([\s\S]*?)\];/) || [0, ''])[1].includes('voicetemp')));
@@ -55,8 +55,8 @@ check('audit-mobile audite le module voicetemp par défaut', banc.includes("'voi
 console.log('— 5. Version —');
 const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-check('index.html : ?v=406f référencé 10 fois', (index.match(/\?v=406f/g) || []).length === 10);
-check('sw.js : cache « hoxera-v406 »', sw.includes("const CACHE = 'hoxera-v406f';"));
+check('index.html : ?v=406g référencé 10 fois', (index.match(/\?v=406g/g) || []).length === 10);
+check('sw.js : cache « hoxera-v406 »', sw.includes("const CACHE = 'hoxera-v406g';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v269 — ${ok} vérifications OK : le module Vocal a son onglet.`);

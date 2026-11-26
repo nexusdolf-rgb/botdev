@@ -56,7 +56,7 @@ console.log('2️⃣  Navigation : historique, bouton Retour et comportement mob
 
 const versions = index.match(/\?v=([\w-]+)/g) || [];
 assert.strictEqual(versions.length, 10);
-assert(versions.every((version) => version === '?v=406f'));
-assert(sw.includes("const CACHE = 'hoxera-v406f';"));
+assert(versions.every((version) => version === '?v=406g'));
+assert(sw.includes("const CACHE = 'hoxera-v406g';"));
 console.log('3️⃣  Cache frontend : assets et service worker synchronisés en v180 ✅');
 console.log('\n🎉 Tous les tests v8 passent !');

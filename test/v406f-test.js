@@ -1,5 +1,5 @@
 // ============================================================
-// v406f — Cache des fichiers du site : ce que le navigateur reçoit vraiment.
+// v406g — Cache des fichiers du site : ce que le navigateur reçoit vraiment.
 //
 // Le défaut corrigé ici ne se voyait pas dans le code : il fallait regarder
 // les en-têtes. Un visiteur ayant déjà `dashboard.css?v=406e` l'avait gardé un
@@ -63,8 +63,8 @@ const demande = (port, chemin, entetes) => new Promise((res, rej) => {
   console.log('\n— 2. Règles d’en-tête (sans réseau) —');
   // ------------------------------------------------------------------
   check('adresse signée → un an, immuable',
-    sc.enteteCache('/js/app.js', '/js/app.js?v=406f-1a2b3c').includes('max-age=31536000')
-    && sc.enteteCache('/js/app.js', '/js/app.js?v=406f-1a2b3c').includes('immutable'));
+    sc.enteteCache('/js/app.js', '/js/app.js?v=406g-1a2b3c').includes('max-age=31536000')
+    && sc.enteteCache('/js/app.js', '/js/app.js?v=406g-1a2b3c').includes('immutable'));
   check('fichier sans version → une heure, jamais un an',
     sc.enteteCache('/js/app.js', '/js/app.js') === 'public, max-age=3600');
   check('service worker → no-cache', sc.enteteCache('/sw.js', '/sw.js') === 'no-cache');
@@ -79,7 +79,7 @@ const demande = (port, chemin, entetes) => new Promise((res, rej) => {
     env: {
       ...process.env,
       PORT: String(port),
-      BOTDEV_DATA_DIR: fs.mkdtempSync(path.join(os.tmpdir(), 'v406f-')),
+      BOTDEV_DATA_DIR: fs.mkdtempSync(path.join(os.tmpdir(), 'v406g-')),
       NODE_ENV: 'development',
       PUBLIC_ORIGIN: `http://127.0.0.1:${port}`,
     },
@@ -129,6 +129,6 @@ const demande = (port, chemin, entetes) => new Promise((res, rej) => {
   }
 
   console.log('');
-  if (echecs.length === 0) console.log(`🎉 v406f — ${ok} vérifications OK : un fichier qui change change d’adresse, donc change de cache.`);
-  else { console.log(`❌ v406f — ${echecs.length} échec(s) sur ${ok + echecs.length} : ${echecs.join(', ')}`); process.exitCode = 1; }
+  if (echecs.length === 0) console.log(`🎉 v406g — ${ok} vérifications OK : un fichier qui change change d’adresse, donc change de cache.`);
+  else { console.log(`❌ v406g — ${echecs.length} échec(s) sur ${ok + echecs.length} : ${echecs.join(', ')}`); process.exitCode = 1; }
 })();

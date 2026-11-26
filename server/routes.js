@@ -3759,6 +3759,26 @@ router.get('/health/bot', (req, res) => {
       break;
     }
   } catch {}
+  // v406g — 🔎 Diagnostic de restauration, SANS aucune donnée privée.
+  // Le 26 novembre, les configurations semblaient avoir disparu alors qu'elles
+  // étaient intactes : la sauvegarde GitHub n'avait plus été envoyée depuis
+  // 15:42 UTC (et la dernière connue à l'époque datait de 17:04), et le
+  // processus avait redémarré à 17:25. Sans ce champ, impossible de savoir si
+  // les données étaient perdues ou seulement plus envoyées. Aucun contenu,
+  // aucun nom de serveur : seulement des dates et des compteurs.
+  let sauvegarde = null;
+  try {
+    const backup = require('./backup');
+    sauvegarde = {
+      bootRestore: String(store.settings.get('boot_restore') || 'inconnue').slice(0, 120),
+      dernierEnvoi: store.settings.get('last_backup') || 'aucun',
+      // Heure du dernier envoi réussi DANS CE processus (vide si aucun depuis
+      // le démarrage) : c'est ce qui distingue « plus rien n'est envoyé »
+      // de « les données ont disparu ».
+      dernierEnvoiReussi: (backup.getLastUploadInfo() && backup.getLastUploadInfo().at) || '',
+      guildesAvecReglages: Number(store.db.prepare('SELECT COUNT(*) AS n FROM guild_settings').get().n) || 0,
+    };
+  } catch { /* diagnostic seulement : ne casse jamais la route */ }
   res.json({
     status: 'ok',
     processUptimeMs: Math.round(process.uptime() * 1000),
@@ -3766,6 +3786,7 @@ router.get('/health/bot', (req, res) => {
     onlineBotCount,
     backupEnabled,
     commands,
+    sauvegarde,
   });
 });
 

@@ -221,12 +221,12 @@ const onglet = (module, hauteurs) => {
   const indexHtml = racine('public/index.html');
   const swSource = racine('public/sw.js');
   const versions = [...indexHtml.matchAll(/\?v=([\w-]+)/g)].map((m) => `?v=${m[1]}`);
-  check('index.html : ?v=406f référencé 10 fois',
-    versions.length === 10 && versions.every((v) => v === '?v=406f'),
+  check('index.html : ?v=406g référencé 10 fois',
+    versions.length === 10 && versions.every((v) => v === '?v=406g'),
     `${versions.length} refs : ${[...new Set(versions)].join(',')}`);
-  check('sw.js : cache « hoxera-v406 »', swSource.includes("const CACHE = 'hoxera-v406f';"));
+  check('sw.js : cache « hoxera-v406 »', swSource.includes("const CACHE = 'hoxera-v406g';"));
   check('index.html et sw.js portent la même version',
-    swSource.includes('hoxera-v406f') && versions.every((v) => v === '?v=406f'));
+    swSource.includes('hoxera-v406g') && versions.every((v) => v === '?v=406g'));
 
   console.log('');
   if (echecs) { console.log(`❌ v247 — ${echecs} échec(s)`); process.exit(1); }

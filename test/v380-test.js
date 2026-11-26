@@ -109,9 +109,9 @@ check('la barre du navigateur suit le fond réel (meta theme-color)',
 // 6. Version
 // ---------------------------------------------------------------
 console.log('\n— 6. Version —');
-check('index.html porte ?v=406f sept fois', (index.match(/\?v=406f/g) || []).length === 10,
-  String((index.match(/\?v=406f/g) || []).length));
-check('le service worker porte le même numéro de cache', sw.includes("const CACHE = 'hoxera-v406f';"));
+check('index.html porte ?v=406g sept fois', (index.match(/\?v=406g/g) || []).length === 10,
+  String((index.match(/\?v=406g/g) || []).length));
+check('le service worker porte le même numéro de cache', sw.includes("const CACHE = 'hoxera-v406g';"));
 check('aucun fichier de public/js ne cite une version périmée',
   !fs.readdirSync(path.join(RACINE, 'public', 'js')).some((f) => /\?v=379/.test(lire('public/js/' + f))),
   'version périmée dans un js');

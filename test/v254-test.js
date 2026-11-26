@@ -59,7 +59,7 @@ check('…fil d\'ariane du haut rendu (le bloc mobile le cache à toutes largeur
 console.log('— 3. v257 : plus de rail, la sidebar pleine à toutes les largeurs PC —');
 check('le palier rail préfixé hx-os-pc a disparu',
   !css.includes("html.hx-os-pc .dashboard-shell-host .dash-side { width: 64px"));
-// v406f : la géométrie de la barre (260 px, base flex, hauteur) est décrite
+// v406g : la géométrie de la barre (260 px, base flex, hauteur) est décrite
 // une seule fois, dans la section finale. La couche PC ne fait plus que la
 // remettre debout face au bloc mobile. On vérifie donc son placement, pas sa
 // largeur — qui ne doit plus apparaître nulle part ailleurs.
@@ -73,7 +73,7 @@ check('…textes de la marque et du carton serveur rendus au palier A',
   && css.includes('html.hx-os-pc .dashboard-shell-host .dash-server-card .srv-txt { display: flex; }'));
 
 console.log('— 4. Au-delà de 900 px : le visage v241 restauré (v255) —');
-// v406f : la barre est fixée à 260 px, une seule fois, et ne rétrécit plus
+// v406g : la barre est fixée à 260 px, une seule fois, et ne rétrécit plus
 // sous 1200 px — c'est la définition unique qui fait foi.
 check('la barre latérale garde une largeur unique (260 px, plus de palier 278/258)',
   /html body \.dashboard-shell-host \.dash-side \{\n  width: 260px;\n  flex: 0 0 260px;/.test(css)
@@ -101,9 +101,9 @@ check('ecranEtroit garde son verrou « OS de bureau »',
   racine('public/js/dashboard.js').includes("classList.contains('hx-os-pc')"));
 
 console.log('— 7. Version —');
-check('index.html : ?v=406f référencé 10 fois', (index.match(/\?v=406f/g) || []).length === 10,
-  String((index.match(/\?v=406f/g) || []).length));
-check('sw.js : cache « hoxera-v406 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v406f';"));
+check('index.html : ?v=406g référencé 10 fois', (index.match(/\?v=406g/g) || []).length === 10,
+  String((index.match(/\?v=406g/g) || []).length));
+check('sw.js : cache « hoxera-v406 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v406g';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v254 — ${ok} vérifications OK : plus aucune largeur où un PC bascule en mobile.`);
