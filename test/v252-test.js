@@ -38,7 +38,7 @@ console.log('— 1. Le plancher « tout mobile » est à 700 px —');
 const nb = (css.match(new RegExp(MQ.replace(/[().,]/g, (c) => '\\' + c), 'g')) || []).length;
   // v366 : deux blocs de plus portent la requete maison (les selecteurs .dd-*
   // et le bloc « Discord 48px ») — c'est exactement ce que ces controles visaient.
-  // v406d : un bloc de plus, la barre laterale elle-meme. Elle basculait sur la
+  // v406e : un bloc de plus, la barre laterale elle-meme. Elle basculait sur la
   // seule largeur (<= 700 px) alors que la mise en page bascule sur la requete
   // complete : sur une tablette, la barre restait en colonne dans une coquille
   // empilee et prenait 260 px de HAUT. Le compte suit, de 23 a 24.
@@ -52,14 +52,22 @@ check('le bloc rail existe, borné 701-900 px et réservé au pointeur fin',
   css.includes(RAIL + ' {'));
 const bloc = css.slice(css.indexOf(RAIL));
 check('…la barre latérale y fait 64 px', /\.dash-side \{ width: 64px; flex: 0 0 64px; \}/.test(bloc));
-// v406d : le libellé n'est plus masqué par font-size: 0 sur tout le bouton —
+// v406e : le libellé n'est plus masqué par font-size: 0 sur tout le bouton —
 // cette astuce rapetissait aussi l'icône. Il est dans un <span class="lbl"> que
 // le rail éteint explicitement, et l'icône garde sa taille.
 check('…les libellés des modules y sont masqués (span .lbl éteint, pas font-size 0)',
   bloc.includes('.dash-side-item .lbl { display: none; }')
   && !/\.dash-side-item \{ font-size: 0;/.test(bloc));
+// v406e — Depuis la refonte de la barre, la règle de masquage vit dans la
+// section finale « rail d'icônes » (sélecteur complet `html body …`), plus
+// dans l'ancien bloc. On vérifie donc le CSS entier ; la mesure au navigateur
+// (800 px, pointeur fin) confirme : marque, serveur, sections, pied et
+// libellés sont bien absents, la barre fait 64 px.
+const railBloc = css.slice(css.lastIndexOf('/* ---------- 10.'));
 check('…les titres de sections, le texte du serveur et le pied y sont masqués',
-  bloc.includes('.dash-side-brand-copy,') && bloc.includes('.srv-txt,') && bloc.includes('.dash-side-foot { display: none; }'));
+  /\.dash-side-brand-copy,\s*\n?\s*html body \.dashboard-shell-host \.dash-side-section/.test(railBloc)
+  && /\.dash-side-foot \{ display: none; \}/.test(railBloc)
+  && /\.dash-server-card \.srv-txt \{ display: none; \}/.test(railBloc));
 check('…le rail ne s\'applique JAMAIS au tactile (sinon une tablette le prendrait)',
   RAIL.includes('(pointer: fine)'));
 check('…ni au PC large (au-delà de 900 px, sidebar normale)',
@@ -76,9 +84,9 @@ check('sous 700 px, tout le monde reste en mobile (fenêtre minuscule comprise)'
 console.log('— 4. Version —');
 const index = racine('public/index.html');
 const sw = racine('public/sw.js');
-check('index.html : ?v=406d référencé 10 fois', (index.match(/\?v=406d/g) || []).length === 10,
-  String((index.match(/\?v=406d/g) || []).length));
-check('sw.js : cache « hoxera-v406 »', sw.includes("const CACHE = 'hoxera-v406d';"));
+check('index.html : ?v=406e référencé 10 fois', (index.match(/\?v=406e/g) || []).length === 10,
+  String((index.match(/\?v=406e/g) || []).length));
+check('sw.js : cache « hoxera-v406 »', sw.includes("const CACHE = 'hoxera-v406e';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v252 — ${ok} vérifications OK : plus aucun PC en mobile, rail d'icônes entre 701 et 900 px.`);

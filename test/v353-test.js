@@ -179,8 +179,8 @@ async function main() {
       && changelog.NOTES.v === 360);
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('cache web actualisé : ?v=406d 10 fois et hoxera-v406d',
-    (index.match(/\?v=406d/g) || []).length === 10 && sw.includes("const CACHE = 'hoxera-v406d';"));
+  check('cache web actualisé : ?v=406e 10 fois et hoxera-v406e',
+    (index.match(/\?v=406e/g) || []).length === 10 && sw.includes("const CACHE = 'hoxera-v406e';"));
 
   try { store.db.close(); } catch {}
   try { fs.rmSync(DATA_DIR, { recursive: true, force: true }); } catch {}

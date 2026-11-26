@@ -57,7 +57,7 @@ check('boutique : historique d\'achats tolérant',
   /const purchases = \(\(await App\.api\(`\/bots\/\$\{bot\.id\}\/guilds\/\$\{guildId\}\/shop\/purchases`\)\) \|\| \{\}\)\.purchases \|\| \[\];/.test(JS));
 
 // — 3. Le fil d'Ariane montre le pictogramme du module —————————————————————————
-// v406d : la pastille du fil d'Ariane dessine l'icône Lucide du module au lieu
+// v406e : la pastille du fil d'Ariane dessine l'icône Lucide du module au lieu
 // de charger un PNG. Elle est toujours dérivée du catalogue (champ icon), et
 // toujours omise si le module n'en déclare pas.
 check('fil d\'Ariane : pastille dérivée du catalogue',

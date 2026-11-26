@@ -87,9 +87,9 @@ const check = (nom, cond, detail) => {
   console.log('— 7. Version —');
   const index = fs.readFileSync(require('path').join(__dirname, '..', 'public/index.html'), 'utf8');
   const sw = fs.readFileSync(require('path').join(__dirname, '..', 'public/sw.js'), 'utf8');
-  check('index.html : ?v=406d référencé 10 fois', (index.match(/\?v=406d/g) || []).length === 10,
-    String((index.match(/\?v=406d/g) || []).length));
-  check('sw.js : cache « hoxera-v406 »', sw.includes("const CACHE = 'hoxera-v406d';"));
+  check('index.html : ?v=406e référencé 10 fois', (index.match(/\?v=406e/g) || []).length === 10,
+    String((index.match(/\?v=406e/g) || []).length));
+  check('sw.js : cache « hoxera-v406 »', sw.includes("const CACHE = 'hoxera-v406e';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v266 — ${ok} vérifications OK : l'historique de modération s'exporte.`);

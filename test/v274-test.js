@@ -42,7 +42,7 @@ const KEYS = ['vue', 'ticket', 'bienvenue', 'niveaux', 'eco', 'boutique', 'mod',
   const assets = path.join(__dirname, '..', 'server', 'assets', 'emotes');
   const pub = path.join(__dirname, '..', 'public', 'emotes');
   check('25 émojis dans les assets du bot', KEYS.every((k) => fs.existsSync(path.join(assets, 'hox_' + k + '.png'))));
-  // v406d : le tableau de bord n'affiche plus de PNG — ses 40 modules portent
+  // v406e : le tableau de bord n'affiche plus de PNG — ses 40 modules portent
   // des icônes Lucide en SVG inline. Les PNG ne sont pas supprimés : ils sont
   // déplacés dans public/emotes_old, le temps de la validation.
   check('…le pack du dashboard est mis de côté dans public/emotes_old (pas supprimé)',
@@ -60,12 +60,12 @@ const KEYS = ['vue', 'ticket', 'bienvenue', 'niveaux', 'eco', 'boutique', 'mod',
   const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'dashboard.css'), 'utf8');
   const meta = (dash.match(/Dashboard\.MODULE_META = \{([\s\S]*?)\n\};/) || [0, ''])[1];
   const emotes = [...meta.matchAll(/emote: '(hox_[a-z]+)'/g)].map((m) => m[1]);
-  // v406d : le champ « icon » est posé en fin de première ligne de chaque
+  // v406e : le champ « icon » est posé en fin de première ligne de chaque
   // fiche, à côté de « emote » (qui reste, pour les aperçus Discord).
   const icones = [...meta.matchAll(/icon: '([a-z-]+)'/g)].map((m) => m[1]);
   check('le catalogue donne une icône à chaque module', icones.length === 40, String(icones.length));
   check('…et aucune n\'est utilisée deux fois', new Set(icones).size === icones.length, `${icones.length} pour ${new Set(icones).size}`);
-  // v406d : la navigation dessine ses glyphes en SVG inline (currentColor),
+  // v406e : la navigation dessine ses glyphes en SVG inline (currentColor),
   // plus avec des <img> qui appelaient /emotes. Le sprite est la source unique.
   check('…dessinées en SVG inline, pas en <img>', dash.includes('Dashboard.ICONES_LUCIDE') && dash.includes('Dashboard.svgIcone')
     && !dash.includes('src=\"/emotes/'));
@@ -92,8 +92,8 @@ const KEYS = ['vue', 'ticket', 'bienvenue', 'niveaux', 'eco', 'boutique', 'mod',
   console.log('— 4. Version —');
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
-  check('index.html : ?v=406d référencé 10 fois', (index.match(/\?v=406d/g) || []).length === 10);
-  check('sw.js : cache « hoxera-v406 »', sw.includes("const CACHE = 'hoxera-v406d';"));
+  check('index.html : ?v=406e référencé 10 fois', (index.match(/\?v=406e/g) || []).length === 10);
+  check('sw.js : cache « hoxera-v406 »', sw.includes("const CACHE = 'hoxera-v406e';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v274 — ${ok} vérifications OK : nos émojis Hoxera partout.`);

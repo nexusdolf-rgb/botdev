@@ -25,11 +25,25 @@ function avatarDecoUrl(memberOrUser) {
 const { oauthGuildCanConfigure, accessKind } = require('./discord/permissions');
 const security = require('./security');
 const { AsyncTTLCache, TTLCache } = require('./cache');
+const catalogue = require('./discord/catalogue');
 const { MODULES, CMD_DEFS, enabledModules, enabledCommandNames } = require('./discord/premade');
 const { EVENT_DEFS, eventsState, sanitizeEventConfig } = require('./discord/events');
 const { inviteUrl } = require('./discord/invite');
 
 const router = express.Router();
+// v406e — Chaque enregistrement réussi arme le gel du catalogue Discord de son
+// serveur (voir gelerCatalogue plus bas) : la sauvegarde demandait, elle, des
+// rôles et des salons frais ; les ouvertures de module qui suivent n'ont plus
+// besoin de repayer deux allers-retours réseau pour le même résultat.
+router.use((req, res, next) => {
+  if (req.method === 'GET' || req.method === 'HEAD') return next();
+  res.on('finish', () => {
+    if (res.statusCode >= 400) return;
+    const guildId = req.params && req.params.guildId;
+    if (guildId) gelerCatalogue(guildId);
+  });
+  next();
+});
 const COOKIE = 'botdev_session';
 const oauthRateLimit = security.rateLimit({ name: 'oauth', windowMs: 10 * 60000, max: 30 });
 const platformMutationRateLimit = security.rateLimit({
@@ -52,7 +66,11 @@ const banStatusRateLimit = security.rateLimit({ name: 'ban-status', windowMs: 60
 // absorber les ouvertures simultanées du dashboard sans relire la même
 // Collection 1 000 fois. La base reste la source de vérité.
 const discordRefreshCache = new AsyncTTLCache({ ttlMs: 60000, max: 2000 });
-const guildCatalogCache = new TTLCache({ ttlMs: 10000, max: 500 });
+// v406e — Catalogues (salons/rôles) et liste de serveurs de l'utilisateur :
+// ces deux caches vivent désormais dans server/discord/catalogue.js, partagés
+// avec les commandes du bot qui les relisent aussi.
+const guildCatalogCache = catalogue.guildCatalogCache;
+const droitsFrais = catalogue.droitsFrais;
 const membersCache = new AsyncTTLCache({ ttlMs: 30000, max: 2000 });
 const statsCache = new AsyncTTLCache({ ttlMs: 15000, max: 500 });
 const publicAvatarCache = new TTLCache({ ttlMs: 10 * 60000, max: 2 });
@@ -466,7 +484,14 @@ async function userCanManageGuild(req, guildId) {
   // discordRefreshCache est borné à 60 s par compte (server/routes.js:51), donc ça
   // ne part sur le réseau qu'une fois par minute et par utilisateur au pire.
   // En cas d'échec (Discord injoignable), on retombe sur la liste mémorisée.
-  await refreshDiscordData(req.userId).catch(() => {});
+  // v406e — La rafale d'appels d'un enregistrement (settings + xp + events +
+  // automod…) relançait à chaque fois la vérification des droits, soit deux
+  // requêtes Discord par appel. Le gel de 5 s ne change pas la règle : on
+  // relit la liste mémorisée, simplement sans repartir sur le réseau. Passé
+  // ces 5 s, la synchro normale reprend (bornée à 60 s par compte).
+  const vientDEtreVerifie = droitsFrais.get(req.userId);
+  droitsFrais.set(req.userId, true);
+  if (!vientDEtreVerifie) await refreshDiscordData(req.userId).catch(() => {});
   const guilds = store.users.discordGuilds(req.userId);
   const g = guilds.find((x) => String(x.id) === String(guildId));
   return oauthGuildCanConfigure(g);
@@ -869,35 +894,33 @@ function sortGuildCatalog(channels, roles) {
   return { channels, roles };
 }
 
+// Un enregistrement réussi vient d'avoir lieu : les prochaines ouvertures de
+// module relisent le catalogue Discord une fois, puis se contentent du cache.
+const gelerCatalogue = catalogue.gelerCatalogue;
+
 async function guildCatalog(dGuild) {
-  const key = String(dGuild && dGuild.id || 'unknown');
-  const cached = guildCatalogCache.get(key);
-  if (cached) return cached;
-  // 🔄 Resynchronisation REST avant reconstruction (≤ 1× / 10 s par serveur,
-  // grâce au TTL) — silencieuse en cas d'échec (on retombe sur le cache local).
-  if (dGuild) {
-    try { if (dGuild.roles && typeof dGuild.roles.fetch === 'function') await dGuild.roles.fetch(); } catch (e) { console.error('[Hoxera] resync rôles :', e.message); }
-    try { if (dGuild.channels && typeof dGuild.channels.fetch === 'function') await dGuild.channels.fetch(); } catch (e) { console.error('[Hoxera] resync salons :', e.message); }
-  }
-  const channels = [];
-  const roles = [];
-  if (dGuild && dGuild.channels && dGuild.channels.cache) {
-    for (const ch of dGuild.channels.cache.values()) {
-      // v271 — position + catégorie parente : permet de trier DANS L'ORDRE
-      // DISCORD (le cache, lui, arrive dans l'ordre des événements).
-      if (ch && ch.type === 0 && ch.name) channels.push({ id: ch.id, name: ch.name, position: ch.position || 0, parent: ch.parentId || '' });
-      if (ch && ch.type === 2 && ch.name) channels.push({ id: ch.id, name: ch.name, voice: true, position: ch.position || 0, parent: ch.parentId || '' });
-      if (ch && ch.type === 4 && ch.name) channels.push({ id: ch.id, name: ch.name, category: true, position: ch.position || 0 });
+  // v406e — Le gel du catalogue vit dans catalogue.js : la route n'a plus
+  // qu'à passer la guilde, la logique de fraîcheur y est décrite.
+  return catalogue.lireCatalogue(dGuild, () => {
+    const channels = [];
+    const roles = [];
+    if (dGuild && dGuild.channels && dGuild.channels.cache) {
+      for (const ch of dGuild.channels.cache.values()) {
+        if (ch && ch.type === 0 && ch.name) channels.push({ id: ch.id, name: ch.name, position: ch.position || 0, parent: ch.parentId || '' });
+        if (ch && ch.type === 2 && ch.name) channels.push({ id: ch.id, name: ch.name, voice: true, position: ch.position || 0, parent: ch.parentId || '' });
+        if (ch && ch.type === 4 && ch.name) channels.push({ id: ch.id, name: ch.name, category: true, position: ch.position || 0 });
+      }
     }
-  }
-  if (dGuild && dGuild.roles && dGuild.roles.cache) {
-    for (const r of dGuild.roles.cache.values()) {
-      if (r && r.name && r.name !== '@everyone') roles.push({ id: r.id, name: r.name, position: r.position || 0 });
+    if (dGuild && dGuild.roles && dGuild.roles.cache) {
+      for (const r of dGuild.roles.cache.values()) {
+        if (r && r.name && r.name !== '@everyone') roles.push({ id: r.id, name: r.name, position: r.position || 0 });
+      }
     }
-  }
-  sortGuildCatalog(channels, roles);
-  return guildCatalogCache.set(key, { channels, roles });
+    sortGuildCatalog(channels, roles);
+    return { channels, roles };
+  });
 }
+
 
 router.get('/bots/:id/guilds/:guildId', requireAuth, async (req, res) => {
   const bot = getAnyBot(req, res);
@@ -2636,6 +2659,12 @@ router.put('/bots/:id/guilds/:guildId/settings', requireAuth, async (req, res) =
   // écrasait donc la valeur qu'un autre onglet venait de changer. Ces trois
   // champs suivent maintenant la même règle que les autres : on n'écrit que ce
   // qui est envoyé. `store.guildSettings.set` fusionne avec la ligne existante.
+  // v406e — Deux cartes échappaient à la règle ci-dessus : « annonces de live »
+  // et « starboard » renvoyaient le préfixe, le seuil et l'action relus au
+  // chargement de la page. Avec deux onglets ouverts, le dernier enregistré
+  // remettait les valeurs de sa propre lecture : la modification faite dans
+  // l'autre onglet disparaissait sans le moindre message. Ces deux cartes
+  // n'envoient plus que leurs champs (voir public/js/dashboard.js).
   store.guildSettings.set(bot.id, guildId, {
     ...(prefix !== undefined ? { prefix: String(prefix || '').slice(0, 5) } : {}),
     // v240 — fr|en uniquement (voir server/i18n.js LANG_CODES).

@@ -21,7 +21,7 @@ assert(css.includes('v171'), 'dashboard.css doit documenter la passe v171');
 // ---------- 2. Barre publique + sidebar + topbar ----------
 assert(css.includes(`${L} .navbar .user-pill span { color: #23252d; }`),
   'user-pill : le pseudo doit être sombre en clair');
-// v406d : la barre latérale ne code plus ses couleurs en dur pour le thème
+// v406e : la barre latérale ne code plus ses couleurs en dur pour le thème
 // clair. Elle passe par les jetons --ui-*, que html.hx-light redéfinit en
 // encre sombre. C'est plus sûr : une seule source, valable partout.
 assert(/html\.hx-light[^{]*\{[^}]*--ui-text: #1c1e26/.test(css),

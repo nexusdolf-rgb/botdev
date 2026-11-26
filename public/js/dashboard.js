@@ -7320,8 +7320,9 @@ Dashboard.renderers.community = async (content, data) => {
 
   // Enregistrement des réglages live (partagé : bouton 💾 ET ajout de compte)
   const saveLiveSettings = async () => {
+    // v406e — Même règle que la carte Starboard : on n'envoie que les champs
+    // de cette carte, jamais le préfixe relu au chargement.
     await App.api(`/bots/${bot.id}/guilds/${guildId}/settings`, { method: 'PUT', body: {
-      prefix: s.prefix || '', warn_limit: s.warn_limit || 0, warn_action: s.warn_action || 'none',
       live_channel: cl.querySelector('#lv-chan').value,
       live_ping: cl.querySelector('#lv-ping').value,
     }});
@@ -7456,8 +7457,10 @@ Dashboard.renderers.community = async (content, data) => {
   c1.querySelector('#sb-save').onclick = async (e) => {
     const bouton = e.currentTarget;
     try {
+      // v406e — Cette carte renvoyait aussi le préfixe et le seuil lus au
+      // chargement de la page : deux onglets ouverts, et le dernier écrasait
+      // la modification de l'autre. Elle n'envoie plus que ce qu'elle affiche.
       await App.api(`/bots/${bot.id}/guilds/${guildId}/settings`, { method: 'PUT', body: {
-        prefix: s.prefix || '', warn_limit: s.warn_limit || 0, warn_action: s.warn_action || 'none',
         starboard_channel: c1.querySelector('#sb-chan').value,
         starboard_min: parseInt(c1.querySelector('#sb-min').value, 10) || 3,
       }});

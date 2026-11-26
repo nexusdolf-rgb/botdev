@@ -30,12 +30,19 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   console.log('— Correctif présent dans routes.js —');
   const routesSrc = fs.readFileSync(path.join(root, 'server/routes.js'), 'utf8');
   const catalogBlock = routesSrc.slice(routesSrc.indexOf('async function guildCatalog'), routesSrc.indexOf('router.get(\'/bots/:id/guilds/:guildId\''));
+  // v406e — La resynchronisation REST a quitté routes.js pour
+  // server/discord/catalogue.js, partagée avec les commandes du bot. Le
+  // scénario fonctionnel ci-dessous reste la vraie preuve ; ce bloc vérifie
+  // seulement que la route délègue et que le module fait bien le fetch.
+  const catalogueSrc = fs.readFileSync(path.join(root, 'server/discord/catalogue.js'), 'utf8');
   check('guildCatalog est async', /async function guildCatalog/.test(catalogBlock));
-  check('resync REST des rôles : roles.fetch()', /dGuild\.roles && typeof dGuild\.roles\.fetch === 'function'\s*\)\s*await dGuild\.roles\.fetch\(\)/.test(catalogBlock));
-  check('resync REST des salons : channels.fetch()', /dGuild\.channels && typeof dGuild\.channels\.fetch === 'function'\s*\)\s*await dGuild\.channels\.fetch\(\)/.test(catalogBlock));
-  check('resync silencieuse en cas d’échec (catch console.error)', /catch \(e\) \{ console\.error\('\[Hoxera\] resync rôles :'/.test(catalogBlock));
+  check('guildCatalog délègue au catalogue partagé', /catalogue\.lireCatalogue\(dGuild/.test(catalogBlock));
+  check('lireCatalogue est async', /async function lireCatalogue/.test(catalogueSrc));
+  check('resync REST des rôles : roles.fetch()', /dGuild\.roles && typeof dGuild\.roles\.fetch === 'function'\s*\)\s*await dGuild\.roles\.fetch\(\)/.test(catalogueSrc));
+  check('resync REST des salons : channels.fetch()', /dGuild\.channels && typeof dGuild\.channels\.fetch === 'function'\s*\)\s*await dGuild\.channels\.fetch\(\)/.test(catalogueSrc));
+  check('resync silencieuse en cas d’échec (catch console.error)', /catch \(e\) \{ console\.error\('\[Hoxera\] resync rôles :'/.test(catalogueSrc));
   check('route : await guildCatalog(dGuild)', /const \{ channels, roles \} = await guildCatalog\(dGuild\)/.test(routesSrc));
-  check('TTL du cache catalogue réduit à 10 s', /guildCatalogCache = new TTLCache\(\{ ttlMs: 10000, max: 500 \}\)/.test(routesSrc));
+  check('TTL du cache catalogue réduit à 10 s', /guildCatalogCache = new TTLCache\(\{ ttlMs: 10000, max: 500 \}\)/.test(catalogueSrc));
 
   // ---------- 2. Scénario fonctionnel : rôle créé pendant que le bot ----------
   // était « hors ligne » (rôle absent du cache local, présent côté API)
@@ -108,6 +115,10 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('@everyone reste exclu du sélecteur', !roleNames1.includes('@everyone'));
   check('les salons sont toujours présents', (p1.channels || []).some((c) => c.name === 'général') && (p1.channels || []).some((c) => c.name === 'Vocal' && c.voice));
 
+  // v406e — Entre deux appels, on ne fait plus d'appel REST avant 15 s (gel
+  // posé après la première lecture) : on le vide pour éprouver ici le seul
+  // cache applicatif, comme avant.
+  require('../server/discord/catalogue').catalogueGele.clear();
   // 2e appel immédiat : servi par le cache applicatif → AUCUN second fetch REST
   const r2 = await fetch(base + `/bots/${BOT}/guilds/G218`, { headers: H });
   const p2 = await r2.json();

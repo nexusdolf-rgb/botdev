@@ -43,7 +43,7 @@ check('le bloc de restauration v241 existe', deb > 0 && deb < fin);
 const restaure = css.slice(deb, fin);
 
 console.log('— 1. La géométrie v241 est restaurée sur PC —');
-// v406d : la barre a été refondue sur décision du propriétaire (icônes Lucide
+// v406e : la barre a été refondue sur décision du propriétaire (icônes Lucide
 // de 20 px, lignes de 40 px, 260 px de large, définition unique en fin de
 // fichier). Ce test ne verrouille donc plus le VISAGE v241, mais ce qui a été
 // gardé de cette restauration : la marque, la barre d'outils et la zone de
@@ -51,7 +51,7 @@ console.log('— 1. La géométrie v241 est restaurée sur PC —');
 check('la barre latérale n\'est plus redéfinie par cette couche (définition unique)',
   !/html\.hx-os-pc[^{]*\.dash-side\s*\{[^}]*(width|flex|padding):/.test(css)
   && /html body \.dashboard-shell-host \.dash-side \{\n  width: 260px;/.test(css));
-// v406d : ces trois règles sont passées dans le palier A (min-width: 481 px),
+// v406e : ces trois règles sont passées dans le palier A (min-width: 481 px),
 // qui porte la remise en ligne de la coquille ; le bloc v255 a été scindé et
 // le test lit pour cela tout le fichier, pas une tranche de commentaire.
 check('la marque et le pied sont rendus au bureau (le bloc mobile les cachait)',
@@ -71,7 +71,7 @@ check('aucun fond sombre codé en dur dans la restauration',
   && !restaure.includes('background: #202225'));
 check('les bordures passent par les variables de thème',
   restaure.includes('var(--d-border)')
-  // v406d : plus de pastille positionnée en absolu, donc plus de variable
+  // v406e : plus de pastille positionnée en absolu, donc plus de variable
   // --d-side pour la border ; les variables de thème restent seules en jeu.
   && !restaure.includes('–d-side:'));
 
@@ -94,9 +94,9 @@ check('la classe hx-os-pc vient toujours du système (v253)',
   os.includes("classList.add('hx-os-pc')"));
 
 console.log('— 5. Version —');
-check('index.html : ?v=406d référencé 10 fois', (index.match(/\?v=406d/g) || []).length === 10,
-  String((index.match(/\?v=406d/g) || []).length));
-check('sw.js : cache « hoxera-v406 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v406d';"));
+check('index.html : ?v=406e référencé 10 fois', (index.match(/\?v=406e/g) || []).length === 10,
+  String((index.match(/\?v=406e/g) || []).length));
+check('sw.js : cache « hoxera-v406 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v406e';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v255 — ${ok} vérifications OK : le PC retrouve son visage v241, le mobile garde le sien.`);

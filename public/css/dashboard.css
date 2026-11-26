@@ -98,8 +98,6 @@
   padding: 3px 10px; border-radius: 12px; background: var(--d-card2); border: 1px solid var(--d-border);
 }.dash-badge.ok { color: #5be087; border-color: rgba(59,165,93,.4); }.dash-badge.warn { color: #ffd75e; border-color: rgba(254,231,92,.4); }.dash-badge.bad { color: #ff8a8d; border-color: rgba(237,66,69,.4); }.dash-empty { text-align: center; padding: 40px 16px; color: var(--d-dim); }.dash-empty .big { font-size: 28px; margin-bottom: 8px; }/* ---------- Responsive mobile ---------- */
 @media (max-width: 700px), (max-width: 900px) and (hover: none) and (pointer: coarse) and (any-pointer: coarse), (hover: none) and (pointer: coarse) and (max-height: 800px) and (any-pointer: coarse) {
-  /* La barre latérale est remplacée par la navigation basse sur mobile. */
-  .dash-side { display: none; }
   .dash-shell { flex-direction: column; }
   .dash-main { width: 100%; padding: 14px 12px 96px; }
 
@@ -3534,7 +3532,7 @@ input[type="checkbox"], input[type="radio"] {
   html.hx-os-pc .dashboard-shell-host .dash-topbar-actions { margin-left: auto; display: flex; align-items: center; }
   /* Le fil d'ariane du haut, masqué par le bloc mobile à toutes largeurs. */
   html.hx-os-pc .dashboard-shell-host .dash-crumb { display: flex; }
-  /* v406d — Cette couche garde sa portée d'origine. Elle remet la coquille en
+  /* v406e — Cette couche garde sa portée d'origine. Elle remet la coquille en
      ligne et rend au bureau ses textes, que le bloc mobile masque. Pour la
      BARRE elle-même, elle ne fait plus que rétablir le placement : la largeur,
      la hauteur, les lignes et les couleurs sont définies une seule fois, dans
@@ -5611,63 +5609,26 @@ html.hx-light body .dashboard-shell-host .dash-side-item { color: var(--ui-text-
 }
 html.hx-light body .dashboard-shell-host .dash-side-item.active { color: var(--ui-text); }
 
-/* ---------- 9. Mobile : la barre devient un bandeau horizontal ----------
-   Même requête que la bascule de mise en page (Dashboard.MQ_ECRAN_ETROIT),
-   et pas seulement la largeur ≤ 700 px. Sans ça, une tablette ou un portable
-   tactile en mode empilé gardait une barre en colonne dont la base flex
-   (260 px) devenait sa HAUTEUR : menu coupé au troisième module. */
+/* ---------- 9. Mobile : la barre latérale n'existe pas ----------
+   Sur téléphone, la navigation passe par les deux tiroirs de la barre du haut
+   (menu principal, serveurs et modules) et par la barre du bas. Le bandeau
+   d'icônes horizontal qui avait été ajouté ici doublait cette navigation :
+   deux barres empilées en haut de l'écran, et le contenu repoussé de 64 px.
+   Il est retiré. Le masquage de la barre sur mobile est fait par la couche
+   mobile elle-même (une seule règle, cf. la section correspondante). */
+
+/* ---------- 9. Mobile : la barre latérale n'existe pas ----------
+   Sur téléphone, la navigation passe par les deux tiroirs de la barre du haut
+   (menu principal, serveurs et modules) et par la barre du bas. Le bandeau
+   d'icônes horizontal ajouté ici en v406c doublait cette navigation : deux
+   barres empilées en haut de l'écran, et 64 px de contenu perdus. Il est
+   retiré, et la barre s'efface — ici, à la spécificité du bloc final, pour
+   qu'aucune couche plus ancienne ne puisse la ramener.
+   La requête est celle de Dashboard.MQ_ECRAN_ETROIT : la même que celle qui
+   empile la coquille, sinon une tablette en disposition empilée garderait la
+   barre et serait amputée de 260 px de haut. */
 @media (max-width: 700px), (max-width: 900px) and (hover: none) and (pointer: coarse) and (any-pointer: coarse), (hover: none) and (pointer: coarse) and (max-height: 800px) and (any-pointer: coarse) {
-  html body .dashboard-shell-host .dash-side {
-    width: 100%;
-    flex: 0 0 auto;
-    height: auto;
-    min-height: 0;
-    /* Pas de position collante : la barre du haut est elle-même collante et
-       les deux se recouvraient. Le bandeau reste dans le flux, juste sous la
-       barre du site. */
-    position: static;
-    top: auto;
-    z-index: auto;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    align-items: center;
-    /* Hauteur du bandeau figée : sans elle, le conteneur grandit à la hauteur
-       du contenu, et les 41 entrées passent à la ligne suivante… 41 fois. */
-    height: 64px;
-    max-height: 64px;
-    align-content: center;
-    gap: 2px;
-    padding: 6px 8px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    border-right: 0;
-    border-bottom: 1px solid var(--ui-line);
-  }
-  html body .dashboard-shell-host .dash-side-brand,
-  html body .dashboard-shell-host .dash-side-section,
-  html body .dashboard-shell-host .dash-side-foot,
-  html body .dashboard-shell-host .dash-side-legal,
-  html body .dashboard-shell-host .scroll-hint { display: none; }
-  html body .dashboard-shell-host .dash-server-card { margin: 0 7px 0 0; flex: 0 0 auto; }
-  html body .dashboard-shell-host .dash-side-item {
-    min-height: 44px;
-    /* 44 px sur les DEUX axes : une cible de 42 px de large se rate au pouce. */
-    min-width: 44px;
-    margin: 0 2px;
-    padding: 6px 10px;
-    flex: 0 0 auto;
-    justify-content: center;
-  }
-  /* Le sélecteur de serveur est aussi une cible : 32 px de haut ne suffisent
-     pas au doigt. */
-  html body .dashboard-shell-host .dash-server-card { min-height: 44px; }
-  /* Le bandeau ne montre que des icônes : le libellé disparaît proprement,
-     sans passer par font-size: 0 (qui rapetissait aussi l'icône). */
-  html body .dashboard-shell-host .dash-side-item .lbl { display: none; }
-  html body .dashboard-shell-host .dash-side-item .ico { width: auto; flex: 0 0 auto; }
-  html body .dashboard-shell-host .dash-server-card .srv-txt,
-  html body .dashboard-shell-host .dash-server-card .srv-caret { display: none; }
-  html body .dashboard-shell-host .dash-server-card { padding: 0 6px; }
+  html body .dashboard-shell-host .dash-side { display: none; }
 }
 
 /* ---------- 9 bis. Appareil tactile : plus rien sous 44 px ----------

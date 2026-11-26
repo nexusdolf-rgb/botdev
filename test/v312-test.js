@@ -34,8 +34,8 @@ const brut = (p) => JSON.stringify(p.components ? p.components.map((c) => (c && 
 
 console.log('— 1. Pins de version v312 —');
 const html = racine('public/index.html');
-check('index.html : ?v=406d ×10', (html.match(/\?v=406d/g) || []).length === 10);
-check('sw.js : cache hoxera-v406d', racine('public/sw.js').includes("const CACHE = 'hoxera-v406d';"));
+check('index.html : ?v=406e ×10', (html.match(/\?v=406e/g) || []).length === 10);
+check('sw.js : cache hoxera-v406e', racine('public/sw.js').includes("const CACHE = 'hoxera-v406e';"));
 
 console.log('— 2. Moteur : plus de signature par défaut —');
 {

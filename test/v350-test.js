@@ -201,8 +201,8 @@ function fakeResponse() {
   }
 
   console.log('— Cache frontend —');
-  check('index.html : les 10 ressources pointent vers v350', (indexHtml.match(/\?v=406d/g) || []).length === 10);
-  check('service worker : cache hoxera-v406d', serviceWorker.includes("const CACHE = 'hoxera-v406d';"));
+  check('index.html : les 10 ressources pointent vers v350', (indexHtml.match(/\?v=406e/g) || []).length === 10);
+  check('service worker : cache hoxera-v406e', serviceWorker.includes("const CACHE = 'hoxera-v406e';"));
 
   console.log(`\n✅ v350-test.js : ${n} vérifications OK`);
 })().catch((err) => { console.error(err); process.exit(1); });
