@@ -388,12 +388,13 @@ const onglet = (module, hauteurs) => {
   // v260 — contrôles désormais SANS numéro codé en dur : ils lisent la
   // version dans les fichiers et vérifient leur cohérence. Plus aucun
   // rebump ne peut casser ce test.
-  const versions = [...indexHtml.matchAll(/\?v=(\d+)/g)].map((m) => `?v=${m[1]}`);
-  const cacheVersion = (swSource.match(/const CACHE = 'hoxera-v(\d+)';/) || [])[1] || '';
+  const versions = [...indexHtml.matchAll(/\?v=([\w-]+)/g)].map((m) => `?v=${m[1]}`);
+  const cacheVersion = (swSource.match(/const CACHE = 'hoxera-v([\w-]+)';/) || [])[1] || '';
   check('index.html : ?v=NNN référencé 10 fois, toutes identiques',
     versions.length === 10 && versions.every((v) => v === versions[0]),
     `${versions.length} refs : ${[...new Set(versions)].join(',')}`);
-  check('sw.js : cache « botdev-vNNN » bien formé', /^\d+$/.test(cacheVersion), cacheVersion);
+  // v406d : le nom de cache peut porter un suffixe de passe (« 406d »).
+  check('sw.js : cache « hoxera-vNNN » bien formé', /^\d+[a-z]?$/.test(cacheVersion), cacheVersion);
   check('index.html et sw.js portent la même version',
     cacheVersion === (versions[0] || '').replace('?v=', ''), `${cacheVersion} vs ${versions[0]}`);
 

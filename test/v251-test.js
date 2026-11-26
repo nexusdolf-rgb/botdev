@@ -66,9 +66,9 @@ check('…et la clause tactile 700-900 px aussi',
 console.log('— 4. Version —');
 const index = racine('public/index.html');
 const sw = racine('public/sw.js');
-check('index.html : ?v=406 référencé 10 fois', (index.match(/\?v=406/g) || []).length === 10,
-  String((index.match(/\?v=406/g) || []).length));
-check('sw.js : cache « hoxera-v406 »', sw.includes("const CACHE = 'hoxera-v406';"));
+check('index.html : ?v=406d référencé 10 fois', (index.match(/\?v=406d/g) || []).length === 10,
+  String((index.match(/\?v=406d/g) || []).length));
+check('sw.js : cache « hoxera-v406 »', sw.includes("const CACHE = 'hoxera-v406d';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v251 — ${ok} vérifications OK : un PC tactile avec souris reste un PC.`);

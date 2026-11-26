@@ -18,8 +18,8 @@ const app = racine('public/js/app.js');
 const css = racine('public/css/style.css');
 
 console.log('— 1. Pins de version v319 —');
-check('index.html : ?v=406 ×10', (html.match(/\?v=406/g) || []).length === 10);
-check('sw.js : cache hoxera-v406', sw.includes("const CACHE = 'hoxera-v406';"));
+check('index.html : ?v=406d ×10', (html.match(/\?v=406d/g) || []).length === 10);
+check('sw.js : cache hoxera-v406d', sw.includes("const CACHE = 'hoxera-v406d';"));
 check('index.html : plus aucune ?v=318', !html.includes('?v=318'));
 
 console.log('— 2. Page de connexion : profil Optimus, pas 🤖 orange —');

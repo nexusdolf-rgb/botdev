@@ -43,12 +43,12 @@ assert.ok(bootSw.includes('reg.update()') && bootSw.includes('visibilitychange')
 // numéro (c'est leur désynchronisation qui a figé le cache à v101 pendant
 // des jours sans que personne ne s'en rende compte)
 const sw = fs.readFileSync(__dirname + '/../public/sw.js', 'utf8');
-const vHtml = (html.match(/\?v=(\d+)/) || [])[1];
-const vSw = (sw.match(/hoxera-v(\d+)/) || [])[1];
+const vHtml = (html.match(/\?v=([\w-]+)/) || [])[1];
+const vSw = (sw.match(/hoxera-v([\w-]+)/) || [])[1];
 assert.ok(vHtml && vSw, 'versions présentes');
 assert.strictEqual(vHtml, vSw, `index.html (v${vHtml}) et sw.js (v${vSw}) DÉSYNCHRONISÉS !`);
 assert.ok(parseInt(vHtml, 10) >= 108, 'version >= 108');
-const allSame = (html.match(/\?v=(\d+)/g) || []).every((m) => m === '?v=' + vHtml);
+const allSame = (html.match(/\?v=([\w-]+)/g) || []).every((m) => m === '?v=' + vHtml);
 assert.ok(allSame, 'tous les assets portent la même version');
 console.log('✅ mises à jour 100% automatiques : contrôle 30 min + retour d\'onglet + rechargement auto');
 

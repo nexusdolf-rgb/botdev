@@ -182,9 +182,9 @@ check('panneaux natifs V2 : séparateurs SeparatorBuilder toujours >= 3',
 console.log('\n11) Aucun secret ajouté + versionnage front v230');
 check('aucun token en dur dans extra.js',
   !/(ghp_|github_pat_|xox[baprs]-)[A-Za-z0-9_]{15,}/.test(ex));
-check('index.html : 10 références ?v=406', (read('public/index.html').match(/\?v=406/g) || []).length === 10);
+check('index.html : 10 références ?v=406d', (read('public/index.html').match(/\?v=406d/g) || []).length === 10);
 check('index.html : plus aucune référence ?v=229', !read('public/index.html').includes('?v=229'));
-check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'hoxera-v406';"));
+check('sw.js : cache botdev-v241', read('public/sw.js').includes("const CACHE = 'hoxera-v406d';"));
 
 console.log(failures === 0
   ? '\n✅ V230 — /poll en champs d’embed : rendu net, limites Discord respectées, bug de dépassement corrigé.'

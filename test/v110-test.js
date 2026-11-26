@@ -45,7 +45,7 @@ console.log('✅ mode clair : bouton 🌓, détection système, zéro flash au c
 // 6. Interrupteurs premium + cohérence de versions
 assert.ok(dcss.includes(".switch input:checked + .slider::after { content: '✓'"), 'toggles ✓/✕');
 const sw = fs.readFileSync(__dirname + '/../public/sw.js', 'utf8');
-const vH = (html.match(/\?v=(\d+)/) || [])[1]; const vS = (sw.match(/hoxera-v(\d+)/) || [])[1];
+const vH = (html.match(/\?v=([\w-]+)/) || [])[1]; const vS = (sw.match(/hoxera-v([\w-]+)/) || [])[1];
 assert.strictEqual(vH, vS, 'versions synchronisées');
 assert.ok(parseInt(vH, 10) >= 109, 'v109+');
 console.log('✅ toggles premium + versions synchronisées v' + vH + ' (mise à jour auto garantie)');

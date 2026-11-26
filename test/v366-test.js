@@ -314,7 +314,7 @@ console.log('\n— 5. Le banc qui a servi, et la version du front —');
     (html.match(/\?v=\d+/g) || []).join(', '));
   check('les fichiers de public/js ne pointent aucune version périmée',
     fs.readdirSync(path.join(RACINE, 'public', 'js')).every((f) =>
-      (code('public/js/' + f).match(/\?v=(\d+)/g) || []).every((v) => v === '?v=' + version)),
+      (code('public/js/' + f).match(/\?v=([\w-]+)/g) || []).every((v) => v === '?v=' + version)),
     fs.readdirSync(path.join(RACINE, 'public', 'js')).map((f) => (code('public/js/' + f).match(/\?v=\d+/g) || []).join('+')).join(' | '));
 }
 

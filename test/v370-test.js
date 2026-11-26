@@ -48,8 +48,8 @@ async function main() {
   console.log('— 1. Version —');
   const index = fs.readFileSync(path.join(RACINE, 'public', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(RACINE, 'public', 'sw.js'), 'utf8');
-  check(`index.html : ?v=${VERSION} référencé 10 fois`, (index.match(/\?v=406/g) || []).length === 10);
-  check('service worker au même cache', sw.includes("const CACHE = 'hoxera-v406';"));
+  check(`index.html : ?v=${VERSION} référencé 10 fois`, (index.match(/\?v=406d/g) || []).length === 10);
+  check('service worker au même cache', sw.includes("const CACHE = 'hoxera-v406d';"));
 
   console.log('— 2. Un seul message, la note en dessous —');
   envois = [];

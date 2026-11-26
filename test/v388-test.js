@@ -73,13 +73,13 @@ check('plus aucune icône nexora dans le manifeste', !JSON.stringify(manifeste).
 // ------------------------------------------------------------------
 console.log('\n— 3. Service worker : mêmes icônes, cache renommé —');
 // ------------------------------------------------------------------
-check('le cache porte le nom du site', /const CACHE = 'hoxera-v\d+';/.test(sw), (sw.match(/const CACHE = '[^']*'/) || [''])[0]);
+check('le cache porte le nom du site', /const CACHE = 'hoxera-v[\w-]+';/.test(sw), (sw.match(/const CACHE = '[^']*'/) || [''])[0]);
 check('plus aucune référence nexora dans le service worker', !sw.includes('nexora'));
 for (const src of Object.keys(attendues)) {
   check(`ASSETS cite ${src}`, sw.includes(`'${src}'`));
 }
 check('la version de index.html et celle du cache sont alignées',
-  (sw.match(/hoxera-v(\d+)/) || [])[1] === (index.match(/\?v=(\d+)/) || [])[1]);
+  (sw.match(/hoxera-v([\w-]+)/) || [])[1] === (index.match(/\?v=([\w-]+)/) || [])[1]);
 
 // ------------------------------------------------------------------
 console.log('\n— 4. Mise à jour : plus de rechargement qui détruit une saisie —');

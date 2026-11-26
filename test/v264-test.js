@@ -128,9 +128,9 @@ const mkGuild = (id, stats, channels) => ({
   console.log('— 8. Version —');
   const index = fs.readFileSync(require('path').join(__dirname, '..', 'public/index.html'), 'utf8');
   const sw = fs.readFileSync(require('path').join(__dirname, '..', 'public/sw.js'), 'utf8');
-  check('index.html : ?v=406 référencé 10 fois', (index.match(/\?v=406/g) || []).length === 10,
-    String((index.match(/\?v=406/g) || []).length));
-  check('sw.js : cache « hoxera-v406 »', sw.includes("const CACHE = 'hoxera-v406';"));
+  check('index.html : ?v=406d référencé 10 fois', (index.match(/\?v=406d/g) || []).length === 10,
+    String((index.match(/\?v=406d/g) || []).length));
+  check('sw.js : cache « hoxera-v406 »', sw.includes("const CACHE = 'hoxera-v406d';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v264 — ${ok} vérifications OK : les compteurs vivent dans tes salons vocaux.`);

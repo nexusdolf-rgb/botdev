@@ -94,10 +94,10 @@ w.Dashboard.renderTopbar(topbar, guilds);
 assert.strictEqual(w.document.querySelectorAll('[data-dash-topbar-popover="true"]').length, 2);
 console.log('2️⃣  Notifications et couleur : portails, fermeture et re-rendu sans doublon ✅');
 
-const versions = index.match(/\?v=(\d+)/g) || [];
+const versions = index.match(/\?v=([\w-]+)/g) || [];
 assert.strictEqual(versions.length, 10);
-assert(versions.every((v) => v === '?v=406'));
-assert(sw.includes("const CACHE = 'hoxera-v406';"));
+assert(versions.every((v) => v === '?v=406d'));
+assert(sw.includes("const CACHE = 'hoxera-v406d';"));
 console.log('3️⃣  Cache frontend : index.html et service worker synchronisés en v180 ✅');
 
 setTimeout(async () => {

@@ -874,10 +874,10 @@ async function rafale(guild, kinds) {
   // --------------------------------------------------------------------------
   {
     const html = racine('public/index.html');
-    check('index.html : ?v=406 référencé 10 fois', (html.match(/\?v=406/g) || []).length === 10,
-      String((html.match(/\?v=406/g) || []).length));
+    check('index.html : ?v=406d référencé 10 fois', (html.match(/\?v=406d/g) || []).length === 10,
+      String((html.match(/\?v=406d/g) || []).length));
     check('index.html : plus aucun ?v=241', !html.includes('?v=241'));
-    check('sw.js : cache « botdev-v242 »', racine('public/sw.js').includes("'hoxera-v406'"));
+    check('sw.js : cache « botdev-v242 »', racine('public/sw.js').includes("'hoxera-v406d'"));
   }
 
   console.log(`\n${echecs === 0

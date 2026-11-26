@@ -578,26 +578,27 @@ const GUILD = 'G244';
   const html = racine('public/index.html');
   const sw = racine('public/sw.js');
 
-  const vCourante = (html.match(/\?v=(\d+)/) || [])[1];
-  check('index.html : une version de cache est déclarée', /^\d+$/.test(vCourante || ''), String(vCourante));
+  const vCourante = (html.match(/\?v=([\w-]+)/) || [])[1];
+  // v406d : le numéro de version peut porter un suffixe de passe (« 406d »).
+  check('index.html : une version de cache est déclarée', /^\d+[a-z]?$/.test(vCourante || ''), String(vCourante));
   check('index.html : référencée exactement 10 fois',
-    (html.match(/\?v=\d+/g) || []).length === 10, String((html.match(/\?v=\d+/g) || []).length));
+    (html.match(/\?v=[\w-]+/g) || []).length === 10, String((html.match(/\?v=[\w-]+/g) || []).length));
   // L'invariant utile n'est pas « v244 » en dur — c'est l'UNIFORMITÉ. Un bump
   // partiel (5 fichiers sur 7) laisserait le navigateur servir un mélange de
   // CSS et de JS de versions différentes, ce qui est le bug le plus difficile
   // à diagnostiquer qui soit.
-  const versions = [...new Set(html.match(/\?v=\d+/g) || [])];
+  const versions = [...new Set(html.match(/\?v=[\w-]+/g) || [])];
   check('index.html : les 10 références pointent la MÊME version', versions.length === 1, versions.join(', '));
-  check('cette version est bien la v244', versions[0] === '?v=406', String(versions[0]));
+  check('cette version est bien la v244', versions[0] === '?v=406d', String(versions[0]));
 
-  check('sw.js : nom de cache présent', /const CACHE = 'hoxera-v\d+'/.test(sw), (sw.match(/const CACHE = '[^']*'/) || ['?'])[0]);
-  // « ?v=406 » dans index.html doit correspondre à « botdev-v260 » dans sw.js.
+  check('sw.js : nom de cache présent', /const CACHE = 'hoxera-v[\w-]+'/.test(sw), (sw.match(/const CACHE = '[^']*'/) || ['?'])[0]);
+  // « ?v=406d » dans index.html doit correspondre à « botdev-v260 » dans sw.js.
   const cacheAttendu = `'hoxera-${versions[0].replace('?v=', 'v')}'`;
   check('sw.js : cache aligné sur index.html', sw.includes(cacheAttendu),
     `${cacheAttendu} attendu, ${(sw.match(/const CACHE = '[^']*'/) || ['?'])[0]} trouvé`);
   // Une seule occurrence : deux noms de cache feraient deux mises en cache
   // concurrentes et l'utilisateur verrait une version sur deux.
-  check('sw.js : un seul nom de cache déclaré', (sw.match(/hoxera-v\d+'/g) || []).length === 1,
+  check('sw.js : un seul nom de cache déclaré', (sw.match(/hoxera-v[\w-]+'/g) || []).length === 1,
     String((sw.match(/hoxera-v\d+'/g) || []).length));
 
   // Chaque test isole ses données dans botdev-vNNN-${Date.now()}. Ce numéro
