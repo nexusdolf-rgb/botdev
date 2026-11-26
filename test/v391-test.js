@@ -57,8 +57,11 @@ check('boutique : historique d\'achats tolérant',
   /const purchases = \(\(await App\.api\(`\/bots\/\$\{bot\.id\}\/guilds\/\$\{guildId\}\/shop\/purchases`\)\) \|\| \{\}\)\.purchases \|\| \[\];/.test(JS));
 
 // — 3. Le fil d'Ariane montre le pictogramme du module —————————————————————————
+// v406d : la pastille du fil d'Ariane dessine l'icône Lucide du module au lieu
+// de charger un PNG. Elle est toujours dérivée du catalogue (champ icon), et
+// toujours omise si le module n'en déclare pas.
 check('fil d\'Ariane : pastille dérivée du catalogue',
-  JS.includes('const crumbIco = Dashboard.emoteFor(mod[0]);'));
+  JS.includes("const crumbIco = Dashboard.svgIcone((Dashboard.MODULE_META[mod[0]] || {}).icon || 'help', 22);"));
 check('fil d\'Ariane : pastille absente si le module n\'a pas d\'image',
   JS.includes('${crumbIco ? `<span class="crumb-ico">${crumbIco}</span>` : \'\'}'));
 

@@ -38,8 +38,14 @@ check('…et plus de palier B « rail 481-900 px » du tout',
   !css.includes("/* --- Palier B : 481-900 px, rail d'icônes de 64 px --- */"));
 
 console.log('— 2. La barre pleine tient face au vieux bloc v252 —');
-check('la sidebar PC reprend flex: 0 0 auto (le basis 64 px ne gagne plus)',
-  css.includes('html.hx-os-pc .dashboard-shell-host .dash-side { width: 278px; flex: 0 0 auto; padding: 20px 0 12px; }'));
+// v406d : la barre n'est plus décrite par la couche PC. Sa largeur et sa base
+// flex viennent de la section finale, une seule fois, sans se battre avec les
+// anciennes couches. Ce qui compte ici est conservé : plus aucun palier ne la
+// ramène à 64 px, et la couche PC ne lui impose ni largeur ni hauteur.
+check('la sidebar PC ne se bat plus sur sa largeur (définition unique)',
+  !/html\.hx-os-pc[^{]*\.dash-side\s*\{[^}]*(width|flex):/.test(css));
+check('…et la définition unique fixe bien 260 px, sans rail',
+  css.includes('flex: 0 0 260px;') && !css.includes('.dash-side { width: 278px'));
 check('…textes de la marque rendus (le bloc v252 les cache entre 701 et 900)',
   css.includes('html.hx-os-pc .dashboard-shell-host .dash-side-brand-copy { display: flex; }'));
 check('…texte du carton serveur rendu lui aussi',
@@ -58,8 +64,8 @@ check('le bloc v252 « pointeur fin » reste pour les machines sans classe PC',
   css.includes('@media (pointer: fine) and (min-width: 701px) and (max-width: 900px) {'));
   // v366 : deux blocs de plus portent la requete maison (les selecteurs .dd-*
   // et le bloc « Discord 48px ») — c'est exactement ce que ces controles visaient.
-check('les 23 requêtes médias mobiles sont intactes',
-  (css.match(/@media \(max-width: 700px\), \(max-width: 900px\) and \(hover: none\)/g) || []).length === 23);
+check('les 24 requêtes médias mobiles sont intactes',
+  (css.match(/@media \(max-width: 700px\), \(max-width: 900px\) and \(hover: none\)/g) || []).length === 24);
 check('le visage v241 (v255/v256) est toujours là',
   css.includes("/* --- v255 : sur OS de bureau, le VISAGE v241")
   && css.includes("/* --- v256 : sur OS de bureau, l'INTÉRIEUR des panneaux"));

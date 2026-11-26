@@ -703,7 +703,7 @@ Dashboard.openModulePreview = (moduleId) => {
   if (!meta || !meta.apercu) return;
   App.modal(`
     <div class="modal-header" style="border:none">
-      <h3>${Dashboard.emoteFor(moduleId) || ''} Aperçu Discord — ${App.escapeHtml(Dashboard.MODULE_LABEL_OF(moduleId))}</h3>
+      <h3><span class="ico-inline">${Dashboard.emoteFor(moduleId)}</span> Aperçu Discord — ${App.escapeHtml(Dashboard.MODULE_LABEL_OF(moduleId))}</h3>
       <button class="x-btn" data-close aria-label="Fermer" type="button">×</button>
     </div>
     <div class="modal-body" style="padding-top:0">
@@ -718,8 +718,10 @@ Dashboard.openModulePreview = (moduleId) => {
 Dashboard.MODULES = [
   ['overview', '', 'Vue d\'ensemble'],
   ['tickets', '', 'Tickets'],
+  ['modmail', '', 'Modmail'],
+  ['transcripts', '', 'Transcriptions'],
   ['welcome', '', 'Bienvenue'],
-  ['autoroles', '', 'Auto-rôles'],
+  ['autoroles', '', 'Rôles automatiques'],
   ['verification', '', 'Vérification'],
   ['rules', '', 'Règles'],
   ['levels', '', 'Niveaux'],
@@ -729,16 +731,16 @@ Dashboard.MODULES = [
   ['blacklist', '', 'Liste noire'],
   ['antiraid', '', 'Anti-raid'],
   ['antinuke', '', 'Anti-nuke'],
-  ['roles', '', 'Rôles'],
+  ['roles', '', 'Rôles-réactions'],
   ['suggestions', '', 'Suggestions'],
   ['giveaways', '', 'Giveaways'],
   ['events', '', 'Événements'],
   ['quiz', '', 'Quiz'],
   ['polls', '', 'Sondages'],
-  ['voicetemp', '', 'Vocal'],
+  ['voicetemp', '', 'Salons vocaux'],
   ['starboard', '', 'Starboard'],
   ['invites', '', 'Invitations'],
-  ['lives', '', 'Lives'],
+  ['lives', '', 'Annonces de live'],
   ['announcements', '', 'Annonces'],
   ['sticky', '', 'Message épinglé'],
   ['birthdays', '', 'Anniversaires'],
@@ -748,8 +750,6 @@ Dashboard.MODULES = [
   ['stats', '', 'Statistiques'],
   ['logs', '', 'Journaux'],
   ['autoclean', '', 'Nettoyage auto'],
-  ['transcripts', '', 'Transcriptions'],
-  ['modmail', '', 'Modmail'],
   ['server', '', 'Réglages serveur'],
 ];
 Dashboard.BOT_MODULES = [
@@ -781,12 +781,12 @@ Dashboard.CATEGORIES = [
 Dashboard.CATEGORY_LABEL = Object.fromEntries(Dashboard.CATEGORIES);
 
 Dashboard.MODULE_META = {
-  overview: { e: '📊', emote: 'hox_vue', cat: 'decouvrir', tag: 'Tout l’état du serveur, d’un coup d’œil',
+  overview: { e: '📊', emote: 'hox_vue', icon: 'overview', cat: 'decouvrir', tag: 'Tout l’état du serveur, d’un coup d’œil',
     aide: 'Réunit ce qui demande une attention immédiate : tickets ouverts, activité du jour, membres et annonces à venir.',
     voit: 'Rien sur Discord : cette page est faite pour vous.',
     slash: 'Aucune commande · c’est la page d’accueil du tableau de bord.' },
 
-  tickets: { e: '🎫', emote: 'hox_ticket', cat: 'support', tag: 'Un canal privé entre un membre et votre équipe',
+  tickets: { e: '🎫', emote: 'hox_ticket', icon: 'tickets', cat: 'support', tag: 'Un canal privé entre un membre et votre équipe',
     aide: 'Trois systèmes au choix : Ticket classique (un bouton), Ticket menu (un panneau avec plusieurs motifs) ou Ticket avancé (motifs, questions et rôles du staff).',
     voit: 'Un bouton « Ouvrir un ticket ». Après le clic, le membre obtient un salon privé où l’équipe peut répondre.',
     slash: '/config ➜ Tickets',
@@ -794,209 +794,209 @@ Dashboard.MODULE_META = {
       embed: { title: 'Support du serveur', desc: 'Choisissez un motif, puis cliquez sur « Ouvrir un ticket ». Votre question reste confidentielle.', color: '#3ba55d', footer: 'Hoxera' },
       buttons: [{ label: 'Ouvrir un ticket', style: 'vert' }, { label: 'Lire la FAQ', style: 'gris' }] } },
 
-  welcome: { e: '👋', emote: 'hox_bienvenue', cat: 'support', tag: 'Le premier message que reçoit un nouvel arrivant',
+  welcome: { e: '👋', emote: 'hox_bienvenue', icon: 'welcome', cat: 'support', tag: 'Le premier message que reçoit un nouvel arrivant',
     aide: 'Message d’accueil dans le salon de votre choix, avec le nom du membre, le compteur de membres et un bouton optionnel.',
     voit: '« Bienvenue @Membre ! Vous êtes la 1 248ᵉ personne du serveur. » avec le message que vous avez écrit.',
     slash: '/config ➜ Bienvenue',
     apercu: { embed: { title: '👋 Bienvenue sur le serveur !', desc: 'Ravi de vous compter parmi nous. Faites un tour du côté des règles, puis dites bonjour dans le salon de présentation.', color: '#5865f2', footer: 'Hoxera' },
       buttons: [{ label: 'Lire le règlement', style: 'bleu' }, { label: 'Se présenter', style: 'gris' }] } },
 
-  autoroles: { e: '🏷️', emote: 'hox_autoroles', cat: 'support', tag: 'Un rôle offert automatiquement à l’arrivée',
+  autoroles: { e: '🏷️', emote: 'hox_autoroles', icon: 'autoroles', cat: 'support', tag: 'Un rôle offert automatiquement à l’arrivée',
     aide: 'Attribue un ou plusieurs rôles dès qu’un membre rejoint le serveur · et, si vous le voulez, un rôle temporaire qui se retire tout seul.',
     voit: 'Rien de visible : le rôle apparaît dans la liste des rôles du membre.',
     slash: '/config ➜ Rôles automatiques' },
 
-  verification: { e: '✅', emote: 'hox_verification', cat: 'support', tag: 'Stoppez les comptes robots avant qu’ils n’écrivent',
+  verification: { e: '✅', emote: 'hox_verification', icon: 'verification', cat: 'support', tag: 'Stoppez les comptes robots avant qu’ils n’écrivent',
     aide: 'Un portail d’entrée : bouton, captcha ou question. Tant que le membre n’est pas vérifié, il ne voit pas le serveur.',
     voit: 'Un message « Cliquez sur le bouton pour entrer » avec un rôle « Vérifié » accordé après réussite.',
     slash: '/config ➜ Vérification',
     apercu: { embed: { title: '✅ Vérification requise', desc: 'Cliquez sur le bouton ci-dessous pour accéder au serveur. Vous recevrez le rôle « Vérifié ».', color: '#eb459e', footer: 'Hoxera' },
       buttons: [{ label: 'Je vérifie mon compte', style: 'vert' }] } },
 
-  roles: { e: '📋', emote: 'hox_roles', cat: 'support', tag: 'Menus et boutons pour choisir ses rôles',
+  roles: { e: '📋', emote: 'hox_roles', icon: 'roles', cat: 'support', tag: 'Menus et boutons pour choisir ses rôles',
     aide: 'Un panneau où les membres prennent eux-mêmes leurs rôles : menu déroulant pour en cumuler plusieurs, boutons pour un rôle par clic.',
     voit: 'Un encadré avec un menu « Choisir vos rôles » ou une rangée de boutons.',
     slash: '/config ➜ Rôles-réactions',
     apercu: { embed: { title: '🎭 Choisissez vos rôles', desc: 'Un clic sur un bouton ajoute ou retire le rôle correspondant.', color: '#eb459e', footer: 'Hoxera' },
       buttons: [{ label: 'Annonces', style: 'gris' }, { label: 'Joueurs', style: 'gris' }, { label: 'Couleurs', style: 'gris' }] } },
 
-  members: { e: '👥', emote: 'hox_membres', cat: 'support', tag: 'Retrouver un membre et agir en un clic',
+  members: { e: '👥', emote: 'hox_membres', icon: 'members', cat: 'support', tag: 'Retrouver un membre et agir en un clic',
     aide: 'Recherche par nom ou identifiant, fiche du membre, rôles, sanctions et actions rapides.',
     voit: 'Rien sur Discord : la fiche du membre s’affiche dans le tableau de bord.',
     slash: '/profil @Membre pour voir la carte publique' },
 
-  birthdays: { e: '🎂', emote: 'hox_birthdays', cat: 'support', tag: 'L’anniversaire de chaque membre, annoncé à l’heure dite',
+  birthdays: { e: '🎂', emote: 'hox_birthdays', icon: 'birthdays', cat: 'support', tag: 'L’anniversaire de chaque membre, annoncé à l’heure dite',
     aide: 'Les membres donnent leur date avec /birthday set ; Hoxera félicite tout le monde dans le salon choisi.',
     voit: '« 🎂 Aujourd’hui, c’est l’anniversaire de @Membre ! Souhaitez-lui une bonne journée. »',
-    slash: '/birthday set (membre) — /config ➜ Anniversaires (réglage)',
+    slash: '/birthday set (membre) · /config ➜ Anniversaires (réglage)',
     apercu: { embed: { title: '🎂 Joyeux anniversaire !', desc: 'Aujourd’hui, c’est l’anniversaire de **@Membre**. On sort le gâteau et les confettis !', color: '#fee75c', footer: 'Hoxera' } } },
 
-  modmail: { e: '💬', emote: 'hox_modmail', cat: 'support', tag: 'Les messages privés de vos membres, au même endroit',
+  modmail: { e: '💬', emote: 'hox_modmail', icon: 'modmail', cat: 'support', tag: 'Les messages privés de vos membres, au même endroit',
     aide: 'Un membre écrit au bot en MP ; la conversation arrive dans un salon de votre serveur et votre réponse repart en privé.',
     voit: 'Le membre n’a qu’à écrire au bot en message privé.',
     slash: 'Message privé au bot' },
 
-  transcripts: { e: '🔎', emote: 'hox_transcript', cat: 'support', tag: 'La copie de chaque conversation, archivée',
+  transcripts: { e: '🔎', emote: 'hox_transcript', icon: 'transcripts', cat: 'support', tag: 'La copie de chaque conversation, archivée',
     aide: 'À la fermeture d’un ticket ou d’un modmail, une copie lisible est enregistrée et envoyée aux modérateurs.',
     voit: 'Un lien « Voir la transcription » posté dans le salon de journal.',
     slash: '/config ➜ Tickets ➜ Transcriptions' },
 
-  levels: { e: '📈', emote: 'hox_niveaux', cat: 'vie', tag: 'L’activité récompensée en XP, niveaux et rôles',
+  levels: { e: '📈', emote: 'hox_niveaux', icon: 'levels', cat: 'vie', tag: 'L’activité récompensée en XP, niveaux et rôles',
     aide: 'XP par message et en vocal, classement, paliers et récompenses (rôles, pièces, objets) à chaque niveau atteint.',
     voit: '« @Membre vient de passer niveau 12 ! » avec sa carte de progression.',
-    slash: '/niveau pour consulter, /config ➜ Niveaux pour régler',
+    slash: '/niveau pour consulter · /config ➜ Niveaux pour régler',
     apercu: { embed: { title: '🎉 Niveau 12 atteint !', desc: '**@Membre** passe au niveau 12 avec 3 480 XP. Nouvelle récompense débloquée : rôle « Habitué ».', color: '#57f287', footer: 'Hoxera' } } },
 
-  economy: { e: '💰', emote: 'hox_eco', cat: 'vie', tag: 'Une monnaie interne, un classement, des cadeaux',
+  economy: { e: '💰', emote: 'hox_eco', icon: 'economy', cat: 'vie', tag: 'Une monnaie interne, un classement, des cadeaux',
     aide: 'Récompense périodique, /daily, transferts entre membres et classement du serveur.',
     voit: '« @Membre a reçu 250 💰 pour sa semaine active. »',
-    slash: '/balance, /daily, /pay — /config ➜ Économie' },
+    slash: '/balance · /daily · /pay · /config ➜ Économie' },
 
-  shop: { e: '🛒', emote: 'hox_boutique', cat: 'vie', tag: 'Vendez des rôles et des objets contre vos pièces',
+  shop: { e: '🛒', emote: 'hox_boutique', icon: 'shop', cat: 'vie', tag: 'Vendez des rôles et des objets contre vos pièces',
     aide: 'Vous créez les articles (nom, prix, rôle ou objet donné), le bot gère l’achat et le stock.',
     voit: 'Une liste d’articles achetables avec /shop.',
     slash: '/config ➜ Boutique',
     apercu: { embed: { title: '🛒 Boutique du serveur', desc: '**Rôles à vendre**\n▪️ Membre VIP · 5 000 💰\n▪️ Couleur rose · 1 200 💰\n▪️ Accès salon cinéma · 800 💰', color: '#f1c40f', footer: 'Hoxera' },
       buttons: [{ label: 'Acheter Membre VIP', style: 'vert' }, { label: 'Voir mon solde', style: 'gris' }] } },
 
-  giveaways: { e: '🎁', emote: 'hox_cadeau', cat: 'vie', tag: 'Un tirage au sort propre, avec date et gagnants',
+  giveaways: { e: '🎁', emote: 'hox_cadeau', icon: 'giveaways', cat: 'vie', tag: 'Un tirage au sort propre, avec date et gagnants',
     aide: 'Vous fixez le lot, la durée et le nombre de gagnants ; le bot compte les participants et annonce le résultat.',
     voit: 'Un message « Giveaway · cliquez pour participer » qui se termine tout seul.',
-    slash: '/giveaway lancer — /config ➜ Giveaways',
+    slash: '/giveaway lancer · /config ➜ Giveaways',
     apercu: { embed: { title: '🎁 Giveaway · Nitro 1 mois', desc: 'Cliquez sur le bouton pour participer. **2 gagnants** dans 3 jours.', color: '#eb459e', footer: 'Se termine dans 3 jours' },
       buttons: [{ label: 'Participer', style: 'gris' }] } },
 
-  events: { e: '🎮', emote: 'hox_events', cat: 'vie', tag: 'Vos soirées, tournois et animations suivis',
+  events: { e: '🎮', emote: 'hox_events', icon: 'events', cat: 'vie', tag: 'Vos soirées, tournois et animations suivis',
     aide: 'Suivi des événements du serveur, inscriptions et rappels avant le début.',
     voit: 'Un événement Discord avec bouton « Participer » et un rappel automatique.',
     slash: '/config ➜ Événements' },
 
-  quiz: { e: '🧠', emote: 'hox_quiz', cat: 'vie', tag: 'Un questionnaire, des points, un classement',
+  quiz: { e: '🧠', emote: 'hox_quiz', icon: 'quiz', cat: 'vie', tag: 'Un questionnaire, des points, un classement',
     aide: 'Créez vos séries de questions (bonne réponse, temps, bonus) et lancez la partie dans un salon.',
     voit: '« Question 3/10 · répondez avec les boutons. » puis le score final.',
-    slash: '/quiz lancer — /config ➜ Quiz' },
+    slash: '/quiz lancer · /config ➜ Quiz' },
 
-  suggestions: { e: '💡', emote: 'hox_suggestion', cat: 'support', tag: 'Vos membres proposent, le serveur vote',
+  suggestions: { e: '💡', emote: 'hox_suggestion', icon: 'suggestions', cat: 'support', tag: 'Vos membres proposent, le serveur vote',
     aide: 'Boîte à idées : les membres publient une suggestion, la communauté vote, et vous répondez (acceptée, en pause, refusée).',
     voit: 'Un encadré avec le vote 👍 / 👎 et votre réponse de l’équipe.',
-    slash: '/suggestion — /config ➜ Suggestions',
+    slash: '/suggestion · /config ➜ Suggestions',
     apercu: { embed: { title: '💡 Idée n°24 · Un salon cinéma le vendredi', desc: 'Ajouter un salon vocal “soirée film” ouvert le vendredi soir.', color: '#5865f2', footer: 'Hoxera · 18 pour · 2 contre' },
       buttons: [{ label: 'Accepter', style: 'vert' }, { label: 'Refuser', style: 'rouge' }, { label: 'Voir les commentaires', style: 'gris' }] } },
 
-  stats: { e: '📊', emote: 'hox_stats', cat: 'vie', tag: 'Messages, arrivées et membres les plus actifs',
+  stats: { e: '📊', emote: 'hox_stats', icon: 'stats', cat: 'vie', tag: 'Messages, arrivées et membres les plus actifs',
     aide: 'Courbes des 7 derniers jours, salons les plus animés, classement des membres les plus actifs.',
     voit: 'Des salons de compteur (membres, messages) si vous les activez.',
     slash: '/config ➜ Statistiques' },
 
-  starboard: { e: '⭐', emote: 'hox_starboard', cat: 'vie', tag: 'Les meilleurs messages, publiés sur un mur',
+  starboard: { e: '⭐', emote: 'hox_starboard', icon: 'starboard', cat: 'vie', tag: 'Les meilleurs messages, publiés sur un mur',
     aide: 'À partir de X réactions, un message est recopié dans le salon du starboard avec son compteur.',
     voit: '« ⭐ 12 · le message de @Membre » dans le salon choisi.',
     slash: '/config ➜ Starboard',
     apercu: { embed: { title: '⭐ 12 · mur de la gloire', desc: '« J’ai enfin monté mon PC de rêve, merci vos conseils ici ! » — @Membre, dans #entraide', color: '#fee75c', footer: 'Hoxera' } } },
 
-  invites: { e: '📨', emote: 'hox_invites', cat: 'vie', tag: 'Qui amène qui, et ce que ça rapporte',
+  invites: { e: '📨', emote: 'hox_invites', icon: 'invites', cat: 'vie', tag: 'Qui amène qui, et ce que ça rapporte',
     aide: 'Suit les invitations de chaque membre, les récompense par paliers et tient un classement.',
     voit: '« @Membre a atteint 10 invitations : rôle « Ambassadeur » obtenu ! »',
-    slash: '/invites — /config ➜ Invitations' },
+    slash: '/invites · /config ➜ Invitations' },
 
-  voicetemp: { e: '🎙️', emote: 'hox_vocal', cat: 'vie', tag: 'Un salon vocal temporaire dans chaque catégorie',
+  voicetemp: { e: '🎙️', emote: 'hox_vocal', icon: 'voicetemp', cat: 'vie', tag: 'Un salon vocal temporaire dans chaque catégorie',
     aide: 'Le membre crée son salon en rejoignant le salon modèle ; il disparaît quand tout le monde est parti.',
     voit: '« 🎙️ Vocal de @Membre » apparaît dans la catégorie, avec réglage du nom et du débit.',
     slash: '/config ➜ Vocaux temporaires' },
 
-  lives: { e: '🔴', emote: 'hox_lives', cat: 'vie', tag: 'Twitch, YouTube, Kick et TikTok annoncés',
+  lives: { e: '🔴', emote: 'hox_lives', icon: 'lives', cat: 'vie', tag: 'Twitch, YouTube, Kick et TikTok annoncés',
     aide: 'Surveillez vos streameurs et publiez un message dès qu’ils passent en direct.',
     voit: '« 🔴 @Pseudo est en live : « Soirée RP » — cliquez pour regarder. »',
     slash: '/config ➜ Annonces de live',
     apercu: { embed: { title: '🔴 En direct maintenant', desc: '**@Pseudo** — « Soirée RP » sur Twitch', color: '#9146ff', footer: 'Hoxera' },
       buttons: [{ label: 'Regarder le direct', style: 'violet' }] } },
 
-  moderation: { e: '🛡️', emote: 'hox_mod', cat: 'securite', tag: 'Auto-Mod, sanctions et échelle progressive',
+  moderation: { e: '🛡️', emote: 'hox_mod', icon: 'moderation', cat: 'securite', tag: 'Auto-Mod, sanctions et échelle progressive',
     aide: 'Filtres automatiques (liens, majuscules, spam, mentions), liste de mots, sanctions progressives et exemptions.',
     voit: 'Le membre fautif reçoit un avertissement ; le salon reçoit la trace de la sanction.',
-    slash: '/avertir, /bannir, /expulser — /config ➜ Modération' },
+    slash: '/avertir · /bannir · /expulser · /config ➜ Modération' },
 
-  blacklist: { e: '🔇', emote: 'hox_blacklist', cat: 'securite', tag: 'Des mots que personne n’a le droit d’écrire',
+  blacklist: { e: '🔇', emote: 'hox_blacklist', icon: 'blacklist', cat: 'securite', tag: 'Des mots que personne n’a le droit d’écrire',
     aide: 'Liste de mots interdits, seuil par mot, suppression du message et sanction éventuelle.',
     voit: 'Le message disparaît et le membre reçoit « Votre message a été retiré. »',
     slash: '/config ➜ Liste noire' },
 
-  antiraid: { e: '🚧', emote: 'hox_antiraid', cat: 'securite', tag: 'Verrouiller le serveur quand ça part en vrille',
+  antiraid: { e: '🚧', emote: 'hox_antiraid', icon: 'antiraid', cat: 'securite', tag: 'Verrouiller le serveur quand ça part en vrille',
     aide: 'Détecte les arrivées anormalement rapides et ferme les salons, puis rouvre quand le calme revient.',
-    voit: '«  Serveur verrouillé par sécurité » pendant la crise.',
+    voit: '« 🚧 Serveur verrouillé par sécurité » pendant la crise.',
     slash: '/config ➜ Anti-raid',
     apercu: { embed: { title: '🚧 Serveur temporairement verrouillé', desc: 'Trop d’arrivées simultanées. Les salons sont fermés le temps de vérifier. Réessayez dans quelques minutes.', color: '#ed4245', footer: 'Hoxera' } } },
 
-  antinuke: { e: '🚨', emote: 'hox_antinuke', cat: 'securite', tag: 'Un admin compromis ne peut rien casser',
+  antinuke: { e: '🚨', emote: 'hox_antinuke', icon: 'antinuke', cat: 'securite', tag: 'Un admin compromis ne peut rien casser',
     aide: 'Surveille les actions dangereuses (rôles supprimés, salons effacés, webhooks) et retire les pouvoirs en cas de dérive.',
     voit: 'Rien pour les membres ; l’équipe reçoit une alerte dans le salon de journal.',
     slash: '/config ➜ Anti-nuke' },
 
-  logs: { e: '📜', emote: 'hox_journal', cat: 'securite', tag: 'Tout ce qui se passe, écrit au même endroit',
+  logs: { e: '📜', emote: 'hox_journal', icon: 'logs', cat: 'securite', tag: 'Tout ce qui se passe, écrit au même endroit',
     aide: 'Un salon (ou plusieurs) par nature d’événement : messages, rôles, sanctions, connexion, configuration.',
     voit: 'Rien pour les membres ; les journaux vont aux modérateurs.',
     slash: '/config ➜ Journaux' },
 
-  autoclean: { e: '🧹', emote: 'hox_autoclean', cat: 'securite', tag: 'Vider un salon sans faire exploser les limites',
-    aide: 'Supprime un message à la fois, à intervalle réglable, jusqu’à la date choisie · sans jamais déclencher de bannissement Discord.',
+  autoclean: { e: '🧹', emote: 'hox_autoclean', icon: 'autoclean', cat: 'securite', tag: 'Vider un salon sans faire exploser les limites',
+    aide: 'Supprime les messages un par un, à intervalle réglable, jusqu’à la date choisie. La lenteur volontaire réduit fortement le risque de limitation par Discord.',
     voit: 'Le salon se vide progressivement, sans message du bot.',
     slash: '/config ➜ Nettoyage auto' },
 
-  announcements: { e: '📅', emote: 'hox_annonce', cat: 'publier', tag: 'Des annonces qui partent à la minute dite',
+  announcements: { e: '📅', emote: 'hox_annonce', icon: 'announcements', cat: 'publier', tag: 'Des annonces qui partent à la minute dite',
     aide: 'Rédigez une annonce, choisissez les salons et une date : le bot publie tout seul à l’heure prévue.',
     voit: 'Un message d’annonce dans les salons choisis, avec @role si vous l’autorisez.',
     slash: '/config ➜ Annonces',
     apercu: { embed: { title: '📅 Nouvelle édition ce soir', desc: 'Rassemblement à 21 h dans le salon général. Au programme : annonces, jeux et récompenses.', color: '#e07a5f', footer: 'Hoxera' },
       buttons: [{ label: 'Je serai là', style: 'vert' }, { label: 'Voir le programme', style: 'gris' }] } },
 
-  sticky: { e: '📌', emote: 'hox_sticky', cat: 'publier', tag: 'Un message qui reste en bas du salon',
+  sticky: { e: '📌', emote: 'hox_sticky', icon: 'sticky', cat: 'publier', tag: 'Un message qui reste en bas du salon',
     aide: 'Le message épinglé « vivant » est renvoyé en bas dès qu’on écrit, pour que l’info importante reste visible.',
     voit: 'Le rappel reste la dernière ligne visible du salon.',
     slash: '/config ➜ Message épinglé' },
 
-  links: { e: '🔗', emote: 'hox_links', cat: 'publier', notice: false, tag: 'Un panneau de liens cliquables, deux par ligne',
+  links: { e: '🔗', emote: 'hox_links', icon: 'links', cat: 'publier', notice: false, tag: 'Un panneau de liens cliquables, deux par ligne',
     aide: 'Titre, texte, image et boutons vers TikTok, YouTube, Instagram… dans l’encadré Discord.',
     voit: 'Un encadré avec vos boutons de liens.',
     slash: '/config ➜ Panneau de liens',
     apercu: { embed: { title: '🔗 Liens utiles', desc: 'N’hésitez pas à me suivre de partout !', color: '#e07a5f', footer: 'Hoxera' },
       buttons: [{ label: 'TikTok', style: 'gris' }, { label: 'YouTube', style: 'gris' }, { label: 'Instagram', style: 'gris' }, { label: 'Twitch', style: 'gris' }] } },
 
-  embeds: { e: '🧱', emote: 'hox_embed', cat: 'publier', notice: false, tag: 'Fabriquez vos encadrés, envoyez-les proprement',
+  embeds: { e: '🧱', emote: 'hox_embed', icon: 'embeds', cat: 'publier', notice: false, tag: 'Fabriquez vos encadrés, envoyez-les proprement',
     aide: 'Constructeur d’embed : titre, description, couleurs, image, pieds de page, boutons, puis envoi dans un salon.',
     voit: 'Le message que vous avez composé, tel quel.',
     slash: '/config ➜ Embed Builder' },
 
-  server: { e: '⚙️', emote: 'hox_reglages', cat: 'reglages', tag: 'Le socle : salons, rôles protégés, garde-fous',
-    aide: 'Salons de référence, rôles immunisés, temporaires, anti-raid et réglages fins du comportement du bot ici.',
+  server: { e: '⚙️', emote: 'hox_reglages', icon: 'server', cat: 'reglages', tag: 'Le socle : salons, rôles protégés, garde-fous',
+    aide: 'Le socle commun à tous les modules : salons de référence, rôles protégés, sanctions de base et comportement du bot sur ce serveur.',
     voit: 'Rien directement : ce sont les règles appliquées par le bot.',
     slash: '/config ➜ Réglages serveur' },
 
-  commands: { e: '🧩', emote: 'hox_commands', cat: 'bot', tag: 'Vos propres commandes, construites par blocs',
+  commands: { e: '🧩', emote: 'hox_commands', icon: 'commands', cat: 'bot', tag: 'Vos propres commandes, construites par blocs',
     aide: 'Déclencheur (préfixe, slash ou mot-clé), actions en glisser-déposer, restrictions par rôle, salon et temps d’attente.',
     voit: 'La commande que vous avez inventée, dans la liste /aide du serveur.',
     slash: '/config ➜ Commandes personnalisées' },
 
-  modules: { e: '📦', emote: 'hox_modules', cat: 'bot', tag: 'Activez un paquet de commandes en un interrupteur',
+  modules: { e: '📦', emote: 'hox_modules', icon: 'modules', cat: 'bot', tag: 'Activez un paquet de commandes en un interrupteur',
     aide: 'Chaque module regroupe des commandes prêtes à l’emploi : vous l’allumez, il s’installe sur tous les serveurs.',
     voit: 'Les commandes correspondantes apparaissent dans le client Discord.',
     slash: '/config ➜ Modules' },
 
-  health: { e: '🩺', emote: 'hox_health', cat: 'bot', tag: 'Mémoire, base, sauvegardes, file d’attente',
+  health: { e: '🩺', emote: 'hox_health', icon: 'health', cat: 'bot', tag: 'Mémoire, base, sauvegardes, file d’attente',
     aide: 'L’état en direct du processus et les garde-fous, actualisés toutes les 30 secondes.',
     voit: 'Rien sur Discord : cet écran est pour vous.',
     slash: 'Aucune commande' },
 
-  botsettings: { e: '⚙️', emote: 'hox_botsettings', cat: 'bot', tag: 'Préfixe, langue, token, sauvegardes du bot',
+  botsettings: { e: '⚙️', emote: 'hox_botsettings', icon: 'botsettings', cat: 'bot', tag: 'Préfixe, langue, token, sauvegardes du bot',
     aide: 'Réglages globaux du bot : préfixe par défaut, sauvegarde des données et redémarrage.',
     voit: 'Rien sur Discord : réglage global du bot.',
     slash: 'Aucune commande' },
 
-  help: { e: '❓', emote: 'hox_aide', cat: 'bot', tag: 'Bien démarrer et trouver de l’aide',
+  help: { e: '❓', emote: 'hox_aide', icon: 'help', cat: 'bot', tag: 'Bien démarrer et trouver de l’aide',
     aide: 'Trois étapes pour démarrer, la liste des modules et le lien du support.',
     voit: 'Rien sur Discord : ce guide est dans le tableau de bord.',
     slash: '/aide sur Discord' },
 
-  rules: { e: '📖', emote: 'hox_rules', cat: 'support', tag: 'Le règlement que les membres acceptent avant d’entrer',
+  rules: { e: '📖', emote: 'hox_rules', icon: 'rules', cat: 'support', tag: 'Le règlement que les membres acceptent avant d’entrer',
     aide: 'Vous écrivez vos règles en Markdown Discord, ou vous partez d’un modèle livré : le bot publie le panneau dans le salon que vous choisissez, avec un bouton, et donne le rôle à qui accepte.',
     voit: 'Un encadré de règlement dans le salon, un bouton « J’accepte les règles » en dessous, le rôle qui arrive au clic.',
     slash: 'Aucune commande · le panneau se publie et se met à jour depuis le tableau de bord',
@@ -1006,7 +1006,7 @@ Dashboard.MODULE_META = {
       footer: 'En acceptant, vous obtenez le rôle vérifié et vous reconnaissez avoir lu ce règlement.' },
       buttons: [{ label: 'J’accepte les règles', style: 'vert' }] } },
 
-  polls: { e: '🗳️', emote: 'hox_poll', cat: 'vie', tag: 'Le vrai sondage Discord, préparé et publié d’ici',
+  polls: { e: '🗳️', emote: 'hox_poll', icon: 'polls', cat: 'vie', tag: 'Le vrai sondage Discord, préparé et publié d’ici',
     aide: 'Question, jusqu’à 10 choix, durée de 1 heure à 32 jours, réponses multiples autorisées : le bot envoie le widget de vote natif de Discord, relit les résultats à la source et peut les clôturer plus tôt.',
     voit: 'Un message Discord avec ses cases à cocher, le compteur de votes, puis les barres de résultats à la fin.',
     slash: 'Aucune commande · le sondage se publie ici ; /poll reste le sondage rapide à boutons',
@@ -1015,14 +1015,82 @@ Dashboard.MODULE_META = {
       duration: 48, allowMultiselect: false } } },
 };
 
+// ============================================================
+// Jeu d'icônes de l'interface — Lucide (licence ISC), version 1.81.0
+// ------------------------------------------------------------
+// Contours uniquement, grille 24 × 24, trait 1,75, bouts arrondis.
+// Aucune couleur en dur : tout est en `currentColor`, donc l'icône suit
+// --ui-text-2 au repos, --ui-text au survol et l'orange à l'état actif,
+// dans le thème sombre comme dans le thème clair.
+//
+// Un seul sprite, un seul rendu : plus de requête réseau, plus de PNG à
+// charger. Les tracés sont copiés de `lucide-static/icons/<nom>.svg`.
+//
+// Trois noms demandés n'existent pas dans cette version ; l'équivalent
+// le plus proche est indiqué en commentaire.
+// ============================================================
+Dashboard.ICONES_LUCIDE = {
+  overview: '<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>',
+  tickets: '<path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/>',
+  modmail: '<path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/>',
+  transcripts: '<path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
+  welcome: '<path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>',
+  autoroles: '<path d="M10 15H6a4 4 0 0 0-4 4v2"/><path d="m14.305 16.53.923-.382"/><path d="m15.228 13.852-.923-.383"/><path d="m16.852 12.228-.383-.923"/><path d="m16.852 17.772-.383.924"/><path d="m19.148 12.228.383-.923"/><path d="m19.53 18.696-.382-.924"/><path d="m20.772 13.852.924-.383"/><path d="m20.772 16.148.924.383"/><circle cx="18" cy="15" r="3"/><circle cx="9" cy="7" r="4"/>',
+  verification: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+  rules: '<path d="M15 12h-5"/><path d="M15 8h-5"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/>',
+  roles: '<path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m16 9-5.5 5.5L8 12"/>',
+  suggestions: '<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>',
+  birthdays: '<path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1"/><path d="M2 21h20"/><path d="M7 8v3"/><path d="M12 8v3"/><path d="M17 8v3"/><path d="M7 4h.01"/><path d="M12 4h.01"/><path d="M17 4h.01"/>',
+  members: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/>',
+  levels: '<path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/>',
+  economy: '<path d="M13.744 17.736a6 6 0 1 1-7.48-7.48"/><path d="M15 6h1v4"/><path d="m6.134 14.768.866-.5 2 3.464"/><circle cx="16" cy="8" r="6"/>',
+  shop: '<path d="m2.05 2.05 1.099-.028a1 1 0 0 1 1.008.815l2.69 14.347A1 1 0 0 0 7.83 18H18"/><path d="M4.563 5h16.435a1 1 0 0 1 .981 1.204l-1.026 6.226A2 2 0 0 1 18.962 14H6.25"/><circle cx="18" cy="20" r="2"/><circle cx="8" cy="20" r="2"/>',
+  giveaways: '<path d="M12 7v14"/><path d="M20 11v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"/><path d="M7.5 7a1 1 0 0 1 0-5A4.8 8 0 0 1 12 7a4.8 8 0 0 1 4.5-5 1 1 0 0 1 0 5"/><rect x="3" y="7" width="18" height="4" rx="1"/>',
+  events: '<path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M8 13h.01"/><path d="M12 13h.01"/><path d="M16 13h.01"/><path d="M8 17h.01"/><path d="M12 17h.01"/><path d="M16 17h.01"/>',
+  quiz: '<path d="M12 18V5"/><path d="M15 13a4.17 4.17 0 01-3-4 4.17 4.17 0 01-3 4"/><path d="M17.707 6.294A3 3 0 1012 5a3 3 0 10-5.707 1.294"/><path d="M17.996 5.125a4 4 0 012.526 5.77"/><path d="M18 18a4 4 0 002-7.465"/><path d="M19.967 17.482a4 4 0 11-7.967.517 4 4 0 11-7.967-.517"/><path d="M6 18a4 4 0 01-2-7.465"/><path d="M6.004 5.125a4 4 0 00-2.526 5.77"/>',
+  polls: '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><rect x="7" y="13" width="9" height="4" rx="1"/><rect x="7" y="5" width="12" height="4" rx="1"/>',   // demandé « bar-chart-horizontal » (absent de 1.81.0)
+  voicetemp: '<path d="M12 19v3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><rect x="9" y="2" width="6" height="13" rx="3"/>',
+  starboard: '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>',
+  invites: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/>',
+  lives: '<path d="M16.247 7.761a6 6 0 0 1 0 8.478"/><path d="M19.075 4.933a10 10 0 0 1 0 14.134"/><path d="M4.925 19.067a10 10 0 0 1 0-14.134"/><path d="M7.753 16.239a6 6 0 0 1 0-8.478"/><circle cx="12" cy="12" r="2"/>',
+  stats: '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+  moderation: '<path d="m14 13-8.381 8.38a1 1 0 0 1-3.001-3l8.384-8.381"/><path d="m16 16 6-6"/><path d="m21.5 10.5-8-8"/><path d="m8 8 6-6"/><path d="m8.5 7.5 8 8"/>',
+  blacklist: '<circle cx="12" cy="12" r="10"/><path d="M4.929 4.929 19.07 19.071"/>',
+  antiraid: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4"/><path d="M12 16h.01"/>',   // demandé « shield-alert » (absent de 1.81.0)
+  antinuke: '<path d="M7 18v-6a5 5 0 1 1 10 0v6"/><path d="M5 21a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2z"/><path d="M21 12h1"/><path d="M18.5 4.5 18 5"/><path d="M2 12h1"/><path d="M12 2v1"/><path d="m4.929 4.929.707.707"/><path d="M12 12v6"/>',
+  logs: '<path d="M14 2v5a1 1 0 001 1h5"/><path d="M14.5 22H18a2 2 0 002-2V8a2.4 2.4 0 00-.706-1.706l-3.588-3.588A2.4 2.4 0 0014 2H6a2 2 0 00-2 2v4.512"/><path d="M7 15.5v1.7l1 .625"/><circle cx="7" cy="17" r="5"/>',
+  autoclean: '<path d="m16 22-1-4"/><path d="M19 14a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2h-3a1 1 0 0 1-1-1V4a2 2 0 0 0-4 0v5a1 1 0 0 1-1 1H6a2 2 0 0 0-2 2v1a1 1 0 0 0 1 1"/><path d="M19 14H5l-1.973 6.767A1 1 0 0 0 4 22h16a1 1 0 0 0 .973-1.233z"/><path d="m8 22 1-4"/>',
+  announcements: '<path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/><path d="M8 6v8"/>',
+  sticky: '<path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>',
+  links: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+  embeds: '<rect width="18" height="7" x="3" y="3" rx="1"/><rect width="9" height="7" x="3" y="14" rx="1"/><rect width="5" height="7" x="16" y="14" rx="1"/>',
+  server: '<path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/>',
+  commands: '<path d="M12 19h8"/><path d="m4 17 6-6-6-6"/>',
+  modules: '<path d="M10 22V7a1 1 0 0 0-1-1H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5a1 1 0 0 0-1-1H2"/><rect x="14" y="2" width="8" height="8" rx="1"/>',
+  health: '<path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"/><path d="M3.22 13H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"/>',
+  botsettings: '<path d="M10 5H3"/><path d="M12 19H3"/><path d="M14 3v4"/><path d="M16 17v4"/><path d="M21 12h-9"/><path d="M21 19h-5"/><path d="M21 5h-7"/><path d="M8 10v4"/><path d="M8 12H3"/>',
+  help: '<circle cx="12" cy="12" r="10"/><path d="M9 9.5a3 2.5 0 016 0c0 2-2 2-3 3.5"/><path d="M12 17h.01"/>',   // demandé « circle-help » (absent de 1.81.0)
+  // Hors modules, mais même style : couronne, chevron du sélecteur, éclair.
+  admin: '<path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z"/><path d="M5 21h14"/>',
+  chevron: '<path d="m6 9 6 6 6-6"/>',
+  avatar: '<path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>',
+};
+
+// Rend une icône du sprite. `taille` en pixels, jamais d'émoji de secours.
+Dashboard.svgIcone = (nom, taille = 20) => {
+  const trace = Dashboard.ICONES_LUCIDE[nom] || Dashboard.ICONES_LUCIDE.help;
+  return `<svg viewBox="0 0 24 24" width="${taille}" height="${taille}" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${trace}</svg>`;
+};
+
 // Libellé lisible de chaque module (titres, recherche, aperçus).
 Dashboard.MODULE_LABEL = Object.fromEntries(
   [...Dashboard.MODULES, ...Dashboard.BOT_MODULES].map(([id, ico, label]) => [id, label]));
 
-// Émoticône dessinée pour le module, avec repli sur l'émoji si absente.
+// Icône du module, en SVG inline. Le nom `emoteFor` est conservé parce que
+// dix-sept endroits l'appellent ; elle ne retourne plus d'image distante.
 Dashboard.emoteFor = (moduleId) => {
   const meta = Dashboard.MODULE_META[moduleId];
-  return meta && meta.emote ? `<img class="mod-emote" src="/emotes/${meta.emote}.png" alt="" width="128" height="128" loading="lazy" />` : '';
+  return meta && meta.icon ? Dashboard.svgIcone(meta.icon) : '';
 };
 // Une valeur absente ou illisible s'affiche « 0 », jamais « undefined ».
 Dashboard.nombre = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
@@ -1041,12 +1109,11 @@ Dashboard.nomMembreTable = (ligne) => {
 Dashboard.moduleMeta = (moduleId) => Dashboard.MODULE_META[Dashboard.MODULE_ALIASES[moduleId] || moduleId] || null;
 Dashboard.categoryOf = (moduleId) => (Dashboard.moduleMeta(moduleId) || {}).cat || 'decouvrir';
 Dashboard.modulesOf = (category, list = Dashboard.MODULES) => list.filter(([id]) => Dashboard.categoryOf(id) === category);
-// pastille d'icône : image dédiée + émoji de repli (jamais les deux à la fois)
-Dashboard.iconCell = (moduleId, emoji, cls = 'ico') => {
-  const emote = Dashboard.emoteFor(moduleId);
-  return emote
-    ? `<span class="${cls} has-emote">${emote}<span class="ico-fallback" aria-hidden="true">${emoji}</span></span>`
-    : `<span class="${cls}"><span class="ico-fallback" aria-hidden="true">${emoji}</span></span>`;
+// Pastille d'icône d'un module : un seul SVG, aucun repli et aucun émoji.
+Dashboard.iconCell = (moduleId, _emoji, cls = 'ico') => {
+  const meta = Dashboard.MODULE_META[moduleId];
+  const nom = meta && meta.icon ? meta.icon : 'help';
+  return `<span class="${cls}">${Dashboard.svgIcone(nom)}</span>`;
 };
 
 // Composant partagé : carte de sélection du serveur (style DraftBot).
@@ -1146,75 +1213,101 @@ Dashboard.mountScrollHint = (container, label) => {
   if (!hint) {
     hint = App.el('<button class="scroll-hint" type="button"></button>');
     hint.onclick = () => container.scrollTo({ top: container.scrollTop + container.clientHeight * 0.85, behavior: 'smooth' });
+    // Le contenu est fabriqué UNE fois. update() ne touche plus qu'à la classe :
+    // avant, chaque événement de défilement reconstruisait l'icône et le texte,
+    // donc le navigateur refaisait la mise en page du SVG à chaque pixel.
+    hint.innerHTML = `<span class="scroll-hint-grad" aria-hidden="true"></span>`
+      + Dashboard.svgIcone('chevron', 14)
+      + `<span>${App.texte(label)}</span>`;
     container.appendChild(hint);
   }
   const update = () => {
     const reste = container.scrollHeight - container.clientHeight - container.scrollTop;
     hint.classList.toggle('on', reste > 60);
-    hint.innerHTML = `<svg class="ico-svg" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.6 12 15.6l6-6"/></g></svg><span>${App.texte(label)}</span>`;
   };
   if (!container.__scrollHintBound) {
     container.addEventListener('scroll', update, { passive: true });
     container.__scrollHintBound = true;
   }
+  // La barre est reconstruite (donc sa hauteur change) à chaque changement de
+  // serveur, de mode compact ou d'orientation : on réévalue sans minuterie.
+  if (typeof ResizeObserver === 'function') {
+    // renderSide vide la barre puis la reconstruit : on repose l'observation
+    // à chaque passage, sinon elle garde une référence aux nœuds supprimés.
+    if (container.__scrollHintObserve) container.__scrollHintObserve.disconnect();
+    const ro = new ResizeObserver(update);
+    ro.observe(container);
+    for (const n of container.children) { if (n !== hint) ro.observe(n); }
+    container.__scrollHintObserve = ro;
+  }
   container.__scrollHintUpdate = update;
   update();
-  setTimeout(update, 350);
 };
 
 Dashboard.renderSide = (aside) => {
+  // La position de lecture est conservée : rendre la barre ne doit pas ramener
+  // en haut. On la relit après reconstruction, au même endroit de la liste.
+  const scrollAvant = aside.scrollTop;
   aside.innerHTML = '';
+
+  // Une seule source : la variable locale. Plus aucun Dashboard.state.bot.xxx
+  // en direct, sinon un bot renommé ou sans avatar laissait des trous.
   const bot = Dashboard.state.bot || {};
+  const nomBot = bot.name || 'Hoxera';
+
   const brandAvatar = bot.avatar_url
     ? `<img class="dash-side-brand-avatar" src="${App.escapeHtml(bot.avatar_url)}" alt="" />`
-    : '<img class="dash-side-brand-avatar fallback-logo" src="/icons/hoxera-robot-mark.svg" alt="Logo Hoxera" />';
-  aside.appendChild(App.el(`<div class="dash-side-brand">${brandAvatar}<div class="dash-side-brand-copy"><b>${App.escapeHtml(bot.name || 'Hoxera')}</b><span>Control Center</span></div><span class="dash-side-brand-status" title="${bot.online ? 'Bot en ligne' : 'Bot hors ligne'}"></span></div>`));
+    : `<span class="dash-side-brand-avatar fallback">${Dashboard.svgIcone('avatar', 16)}</span>`;
+  aside.appendChild(App.el(`<div class="dash-side-brand">${brandAvatar}<div class="dash-side-brand-copy"><b>${App.escapeHtml(nomBot)}</b><span>Control Center</span></div><span class="dash-side-brand-status ${bot.online ? 'on' : 'off'}" role="img" aria-label="${bot.online ? 'Bot en ligne' : 'Bot hors ligne'}"></span></div>`));
   const sideBrandImage = aside.querySelector('.dash-side-brand-avatar:not(.fallback)');
-  if (sideBrandImage) sideBrandImage.onerror = () => sideBrandImage.replaceWith(App.el('<span class="dash-side-brand-avatar fallback"><svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M13.4 2.6 5.6 13.4h4.8L9 21.4l8.6-11.2h-5l.8-7.6Z"/></svg></span>'));
+  if (sideBrandImage) sideBrandImage.onerror = () => sideBrandImage.replaceWith(App.el(`<span class="dash-side-brand-avatar fallback">${Dashboard.svgIcone('avatar', 16)}</span>`));
   aside.appendChild(Dashboard.serverPicker());
 
-  // Le menu suit les familles du catalogue (Communauté & support, Sécurité,
-  // Vie du serveur…) : la liste se lit par blocs, et chaque entrée porte
-  // l'émoticône dessinée pour son module.
+  // Une seule fabrique pour les entrées de module : aria-current, libellé
+  // enveloppé dans .lbl (masqué en mode compact) et icône du sprite.
+  const entree = (id, label, extraClasse = '') => {
+    const actif = Dashboard.state.module === id;
+    const b = App.el(`<button class="dash-side-item ${extraClasse} ${actif ? 'active' : ''}"${actif ? ' aria-current="page"' : ''} data-m="${id}">${Dashboard.iconCell(id)}<span class="lbl">${App.escapeHtml(label)}</span></button>`);
+    b.onclick = () => Dashboard.setModule(id);
+    return b;
+  };
+
+  // Le menu suit les familles du catalogue. Les modules d'administration ne
+  // sont pas dans cette boucle : ils ont leur bloc, une seule fois, plus bas.
   Dashboard.CATEGORIES.forEach(([cle, titre]) => {
-    const items = Dashboard.modulesOf(cle);
+    const items = Dashboard.modulesOf(cle, Dashboard.MODULES);
     if (!items.length) return;
-    aside.appendChild(App.el(`<div class="dash-side-section">${titre}</div>`));
-    items.forEach(([id, ico, label]) => {
-      const b = App.el(`<button class="dash-side-item ${Dashboard.state.module === id ? 'active' : ''}" data-m="${id}">${Dashboard.iconCell(id, ico)}${label}</button>`);
-      b.onclick = () => Dashboard.setModule(id);
-      aside.appendChild(b);
-    });
+    aside.appendChild(App.el(`<div class="dash-side-section">${App.escapeHtml(titre)}</div>`));
+    items.forEach(([id, , label]) => aside.appendChild(entree(id, label)));
   });
-  // Administrateur global : reste tout en bas de la gestion du serveur.
-  // Ce bouton dépend du compte fondateur, jamais du serveur sélectionné.
+
+  // Administrateur global : dépend du compte fondateur, jamais du serveur.
   if (App.state.user && App.state.user.is_admin) {
-    const platformAdmin = App.el(`<button class="dash-side-item dash-global-admin" data-platform-admin="true" title="Administration globale de Hoxera"><span class="ico">${App.glyphe('couronne', { taille: 16 })}</span>Administrateur global</button>`);
+    const platformAdmin = App.el(`<button class="dash-side-item dash-global-admin" data-platform-admin="true" title="Administration globale de Hoxera"><span class="ico">${Dashboard.svgIcone('admin')}</span><span class="lbl">Administrateur global</span></button>`);
     platformAdmin.onclick = () => App.router.go('/admin');
     aside.appendChild(platformAdmin);
 
     aside.appendChild(App.el(`<div class="dash-side-section">Administration du bot</div>`));
-    Dashboard.BOT_MODULES.forEach(([id, ico, label]) => {
-      const b = App.el(`<button class="dash-side-item ${Dashboard.state.module === id ? 'active' : ''}" data-m="${id}">${Dashboard.iconCell(id, ico)}${label}</button>`);
-      b.onclick = () => Dashboard.setModule(id);
-      aside.appendChild(b);
-    });
+    Dashboard.BOT_MODULES.forEach(([id, , label]) => aside.appendChild(entree(id, label)));
   }
+
   // v396 — les deux pages légales, discrètes, sous la liste des modules.
   aside.appendChild(App.el(`<div class="dash-side-legal">
     <a href="/terms" target="_blank" rel="noopener">Conditions</a><span>·</span>
     <a href="/privacy" target="_blank" rel="noopener">Confidentialité</a>
   </div>`));
+
+  // Pied de page : plus d'avatar (il est déjà en haut), plus d'émoji ⚡.
   aside.appendChild(App.el(`<div class="dash-side-foot">
-    <div style="display:flex;align-items:center;gap:10px">
-      ${Dashboard.state.bot.avatar_url ? `<img src="${App.escapeHtml(Dashboard.state.bot.avatar_url)}" alt="" data-fb-text="${App.escapeHtml(Dashboard.state.bot.name || 'Hoxera')}" style="width:34px;height:34px;border-radius:50%;box-shadow:0 0 0 2px rgba(var(--d-accent-rgb,224,122,95),.45)"/>` : '<span style="font-size:22px">⚡</span>'}
-      <div>
-        <b style="color:var(--d-text)">${App.escapeHtml(Dashboard.state.bot.name)}</b><br/>
-        <span style="font-size:11px">Synchronisé en temps réel</span>
-      </div>
+    <span class="ico">${Dashboard.svgIcone('avatar')}</span>
+    <div class="dash-side-foot-copy">
+      <b>${App.escapeHtml(nomBot)}</b>
+      <span>Synchronisé en temps réel</span>
     </div>
   </div>`));
+
   Dashboard.mountScrollHint(aside, 'La suite des modules');
+  aside.scrollTop = scrollAvant;
 };
 
 Dashboard.setModule = (id, options = {}) => {
@@ -1282,7 +1375,7 @@ Dashboard.openMoreSheet = () => {
   const isAdmin = App.state.user && App.state.user.is_admin;
   const row = ([id, ico, label]) => `
     <button class="sheet-item ${Dashboard.state.module === id ? 'active' : ''}" data-sheet="${id}">
-      ${Dashboard.iconCell(id, ico, 'sheet-ico')}<span>${label}</span>
+      ${Dashboard.iconCell(id, ico, 'sheet-ico')}<span class="lbl">${App.escapeHtml(label)}</span>
     </button>`;
   const groupes = Dashboard.CATEGORIES
     .map(([cle, titre]) => [titre, Dashboard.modulesOf(cle)])
@@ -1360,7 +1453,7 @@ Dashboard.openPalette = () => {
     list.innerHTML = '';
     if (!shown.length) { list.appendChild(App.el(`<div class="dp-empty">Aucun résultat</div>`)); return; }
     shown.forEach((e, i) => {
-      const row = App.el(`<button class="dp-item ${i === sel ? 'sel' : ''}"><span class="dp-ico">${Dashboard.emoteFor(e.id) || e.ico}</span><span class="dp-label">${App.escapeHtml(e.label)}</span><span class="dp-sub">${App.escapeHtml(e.sub)}</span></button>`);
+      const row = App.el(`<button class="dp-item ${i === sel ? 'sel' : ''}"><span class="dp-ico">${Dashboard.svgIcone((Dashboard.MODULE_META[e.id] || {}).icon || 'help', 18)}</span><span class="dp-label">${App.escapeHtml(e.label)}</span><span class="dp-sub">${App.escapeHtml(e.sub)}</span></button>`);
       row.onclick = () => go(e);
       row.onmouseenter = () => { sel = i; renderList(); };
       list.appendChild(row);
@@ -1607,7 +1700,7 @@ Dashboard.renderTopbar = (topbar, discordGuilds) => {
   // La pastille du fil d'Ariane reprend le pictogramme du module. Avant, elle
   // recevait la colonne 2 du catalogue — vide depuis la refonte — et restait
   // une case grise sans contenu.
-  const crumbIco = Dashboard.emoteFor(mod[0]);
+  const crumbIco = Dashboard.svgIcone((Dashboard.MODULE_META[mod[0]] || {}).icon || 'help', 22);
   const acct = App.state.user || {};
   const acctName = acct.discord_username || acct.email || 'Compte Discord';
   const acctAvatar = acct.discord_avatar
@@ -2666,7 +2759,7 @@ Dashboard.renderers.overview = async (content, data) => {
     grid.appendChild(App.el(`<div class="ov-module-cat">${App.escapeHtml(titreFamille)}<small>${items.length}</small></div>`));
     items.forEach(([id, ico, label]) => {
       const meta = Dashboard.MODULE_META[id] || {};
-      const card = App.el(`<div class="dash-card ov-module-card" data-module-card="${id}"><span class="ov-module-icon">${Dashboard.emoteFor(id) || ico}</span><span class="ov-module-copy"><b>${App.escapeHtml(label)}</b><small>${App.escapeHtml(meta.tag || '')}</small></span><button class="ov-module-go" type="button" data-go="${id}"><span class="ov-sr">Configurer ${App.escapeHtml(label)}</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></div>`);
+      const card = App.el(`<div class="dash-card ov-module-card" data-module-card="${id}"><span class="ov-module-icon">${Dashboard.svgIcone(meta.icon || 'help', 22)}</span><span class="ov-module-copy"><b>${App.escapeHtml(label)}</b><small>${App.escapeHtml(meta.tag || '')}</small></span><button class="ov-module-go" type="button" data-go="${id}"><span class="ov-sr">Configurer ${App.escapeHtml(label)}</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></div>`);
       card.onclick = (event) => { if (!event.target.closest('button')) Dashboard.setModule(id); };
       card.querySelector('[data-go]').onclick = () => Dashboard.setModule(id);
       grid.appendChild(card);
@@ -8416,8 +8509,8 @@ Dashboard.retitle = (content, icon, title, sub) => {
     // L'émoticône dédiée vient du catalogue (l'alias de sous-page est résolu) ;
     // l'émoji reçu en service n'est gardé que comme repli.
     const emote = Dashboard.emoteFor(Dashboard.state.module);
-    iconEl.className = emote ? 'm-icon has-emote' : 'm-icon';
-    iconEl.innerHTML = App.assainir(`${emote}<span class="ico-fallback" aria-hidden="true">${icon}</span>`);
+    iconEl.className = 'm-icon';
+    iconEl.innerHTML = App.assainir(emote || icon);
   }
   if (h1) h1.textContent = title;
   if (subEl) subEl.textContent = sub;

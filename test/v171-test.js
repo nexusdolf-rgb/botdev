@@ -21,12 +21,20 @@ assert(css.includes('v171'), 'dashboard.css doit documenter la passe v171');
 // ---------- 2. Barre publique + sidebar + topbar ----------
 assert(css.includes(`${L} .navbar .user-pill span { color: #23252d; }`),
   'user-pill : le pseudo doit être sombre en clair');
-assert(css.includes(`.dash-server-card .srv-txt b { color: #23252d; }`),
-  'carte serveur : le nom doit être sombre en clair');
-assert(css.includes(`.dash-side-item .ico { color: #5c636b; }`),
-  'icônes de la sidebar sombres en clair');
-assert(css.includes(`.dash-side-foot b { color: #23252d; }`),
-  'pied de sidebar sombre en clair');
+// v406d : la barre latérale ne code plus ses couleurs en dur pour le thème
+// clair. Elle passe par les jetons --ui-*, que html.hx-light redéfinit en
+// encre sombre. C'est plus sûr : une seule source, valable partout.
+assert(/html\.hx-light[^{]*\{[^}]*--ui-text: #1c1e26/.test(css),
+  'thème clair : le jeton de texte principal passe en encre sombre');
+assert(/html\.hx-light[^{]*\{[^}]*--ui-text-2: #5a6072/.test(css),
+  'thème clair : le jeton de texte secondaire (icônes, libellés) est lisible');
+assert(css.includes('.dash-server-card .srv-txt b {')
+  && /srv-txt b \{[\s\S]{0,160}?color: var\(--ui-text\)/.test(css),
+  'carte serveur : le nom suit le jeton de texte du thème');
+assert(/html body \.dashboard-shell-host \.dash-side-item \{[\s\S]{0,600}?color: var\(--ui-text-2\)/.test(css),
+  'icônes et libellés de la sidebar suivent le jeton secondaire');
+assert(/dash-side-foot-copy b \{[\s\S]{0,120}?color: var\(--ui-text\)/.test(css),
+  'pied de sidebar : le titre suit le jeton de texte du thème');
 assert(css.includes(`.dash-bot-chip .chip-txt b { color: #23252d; }`),
   'puce du bot : nom sombre en clair');
 

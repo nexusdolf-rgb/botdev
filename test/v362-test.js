@@ -516,8 +516,12 @@ function textChannel(extra = {}) {
     check(`  …et son renderer existe`, dash.includes(`Dashboard.renderers.${id} =`));
     check(`  …et une entrée dans le menu latéral`, new RegExp(`\\['${id}', '`).test(dash));
   }
+  // v406d : le tableau de bord n'utilise plus ces PNG — il dessine ses icônes
+  // en SVG. Les fichiers sont ARCHIVÉS dans public/emotes_old, pas supprimés
+  // (arbitrage du propriétaire), et le bot les sert toujours depuis
+  // server/assets/emotes pour /emotes install.
   for (const nom of ['hox_poll', 'hox_rules']) {
-    for (const dossier of ['public/emotes', 'server/assets/emotes']) {
+    for (const dossier of ['public/emotes_old', 'server/assets/emotes']) {
       const p = path.join(__dirname, '..', dossier, `${nom}.png`);
       let buff = null;
       try { buff = fs.readFileSync(p); } catch {}

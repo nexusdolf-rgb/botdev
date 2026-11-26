@@ -73,22 +73,36 @@ const tropCourts = TOUS.filter((id) => {
 });
 check('les accroches et les notices sont assez parlantes pour être utiles', tropCourts.length === 0, tropCourts.join(', '));
 
-// ---------- 2. Les émoticônes dessinées ----------
-console.log('\n— 2. Une émoticône dessinée par module —');
-const dossiers = fs.readdirSync(path.join(RACINE, 'public', 'emotes')).filter((f) => f.endsWith('.png'));
-check('le dossier public/emotes contient au moins 42 images', dossiers.length >= 42, String(dossiers.length));
-const citees = [...dash.matchAll(/emote: '(hox_[a-z]+)'/g)].map((m) => m[1]);
-check('toutes les émoticônes citées existent sur le disque',citees.every((n) => fs.existsSync(path.join(RACINE, 'public', 'emotes', `${n}.png`))),
-  citees.filter((n) => !fs.existsSync(path.join(RACINE, 'public', 'emotes', `${n}.png`))).join(', '));
-check('aucune émoticône n’est partagée par deux modules', new Set(citees).size === citees.length,
-  `${citees.length} citations pour ${new Set(citees).size} fichiers`);
-const signatures = citees.map((n) => fs.readFileSync(path.join(RACINE, 'public', 'emotes', `${n}.png`)));
-check('ce sont de vrais PNG 128 × 128', signatures.every((b) => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
-  && b.readUInt32BE(16) === 128 && b.readUInt32BE(20) === 128));
-check('…et ils passent sous la limite Discord de 256 Ko', signatures.every((b) => b.length < 256 * 1024),
-  `max ${Math.max(...signatures.map((b) => b.length))} octets`);
-const sansImage = TOUS.filter((id) => !/emote: 'hox_/.test(ficheDe(id)));
-check('le catalogue ne laisse aucun module sans image', sansImage.length === 0, sansImage.join(', '));
+// ---------- 2. Une émoticône dessinée par module ----------
+// v406d : les 42 PNG ne dessinent plus la navigation. Chaque module porte une
+// icône Lucide de 20 px, définie une fois dans Dashboard.ICONES_LUCIDE et
+// rendue par Dashboard.svgIcone(). Les PNG ne sont pas supprimés : ils sont
+// rangés dans public/emotes_old le temps de la validation (arbitrage du
+// propriétaire), et la rubrique ci-dessous vérifie qu'ils sont bien là.
+console.log('\n— 2. Une icône dessinée par module —');
+const sprite = (dash.match(/Dashboard\.ICONES_LUCIDE = \{([\s\S]*?)\n\};/) || [0, ''])[1];
+const traces = [...sprite.matchAll(/^ {2}([a-z-]+): '/gm)].map((m) => m[1]);
+check('le sprite Lucide déclare ses tracés', traces.length >= 42, `${traces.length} tracés`);
+const icones = [...metaBloc.matchAll(/icon: '([a-z-]+)'/g)].map((m) => m[1]);
+check('chaque module du catalogue porte un champ « icon »', icones.length === 40, String(icones.length));
+const orphelines = icones.filter((n) => !traces.includes(n));
+check('…et toutes pointent vers un tracé du sprite', orphelines.length === 0, orphelines.join(', '));
+check('aucune icône n’est partagée par deux modules', new Set(icones).size === icones.length,
+  `${icones.length} citations pour ${new Set(icones).size} tracés`);
+check('le rendu passe par svgIcone (contour seul, currentColor, trait 1,75)',
+  /Dashboard\.svgIcone = /.test(dash) && dash.includes('stroke="currentColor"') && dash.includes('stroke-width="1.75"'));
+check('…avec une boîte explicite de 20 px', dash.includes('Dashboard.svgIcone = function (nom, taille = 20)') || dash.includes('svgIcone = (nom, taille = 20)'));
+const sansIcone = TOUS.filter((id) => !/icon: '[a-z-]+'/.test(ficheDe(id)));
+check('le catalogue ne laisse aucun module sans icône', sansIcone.length === 0, sansIcone.join(', '));
+
+// Les PNG mis de côté : présents, intacts, et à leur place d'archive.
+const dossierVieux = path.join(RACINE, 'public', 'emotes_old');
+const archives = fs.existsSync(dossierVieux) ? fs.readdirSync(dossierVieux).filter((f) => f.endsWith('.png')) : [];
+check('les 42 PNG sont archivés dans public/emotes_old', archives.length >= 42, String(archives.length));
+check('…et n’ont pas été supprimés de l’archive',
+  archives.every((f) => fs.statSync(path.join(dossierVieux, f)).size > 256));
+check('…avec une note expliquant comment les remettre en service',
+  fs.existsSync(path.join(dossierVieux, 'LISEZ-MOI.txt')));
 
 // ---------- 3. Les familles du menu ----------
 console.log('\n— 3. Les familles du menu —');
@@ -207,8 +221,9 @@ console.log('\n— 6. Rendu réel dans le navigateur simulé —');
     // 1. Le menu est rangé par familles, chaque entrée porte son image.
     out.familles = aside ? [...aside.querySelectorAll('.dash-side-section')].map((e) => e.textContent.trim()) : [];
     out.items = aside ? aside.querySelectorAll('.dash-side-item').length : 0;
-    out.images = aside ? aside.querySelectorAll('.dash-side-item .ico img.mod-emote').length : 0;
-    out.emojisCaches = aside ? aside.querySelectorAll('.dash-side-item .ico.has-emote .ico-fallback').length : 0;
+    // v406d : la navigation dessine ses glyphes en SVG inline, plus en <img>.
+    out.images = aside ? aside.querySelectorAll('.dash-side-item .ico svg').length : 0;
+    out.emojisCaches = aside ? aside.querySelectorAll('.dash-side-item .ico img').length : 0;
     // 2. On ouvre Tickets : fiche de lecture + aperçu sous l'en-tête.
     const bnav = shell.querySelector('.dash-bnav');
     bnav.querySelector('[data-bnav="tickets"]').click();
@@ -218,7 +233,7 @@ console.log('\n— 6. Rendu réel dans le navigateur simulé —');
     out.cols = content.querySelectorAll('.mod-guide .mg-col').length;
     out.colNames = [...content.querySelectorAll('.mod-guide .mg-kicker')].map((e) => e.textContent.trim());
     out.apercuInline = !!content.querySelector('.mod-guide .dprev');
-    out.enteteImage = !!content.querySelector('.dash-module-header .m-icon.has-emote img.mod-emote');
+    out.enteteImage = !!content.querySelector('.dash-module-header .m-icon svg');
     out.famille = (content.querySelector('.module-cat') || {}).textContent || '';
     out.guideApresEntete = !!content.querySelector('.dash-module-header + [data-module-guide]');
     // 3. L'aperçu agrandi s'ouvre dans une modale et se referme.
@@ -242,7 +257,7 @@ console.log('\n— 6. Rendu réel dans le navigateur simulé —');
     await wait(150);
     out.titreRetitre = (content.querySelector('.module-header-copy h1') || {}).textContent || '';
     out.sousTitreRetitre = (content.querySelector('.module-header-copy .sub') || {}).textContent || '';
-    out.imageGardee = !!content.querySelector('.m-icon.has-emote img.mod-emote');
+    out.imageGardee = !!content.querySelector('.m-icon svg');
     out.ficheGardee = !!content.querySelector('[data-module-guide]');
     out.cartesGardees = content.querySelectorAll('.dash-card').length > 0;
     // 5. La vue d'ensemble affiche les cartes groupées avec leurs images.
@@ -251,7 +266,7 @@ console.log('\n— 6. Rendu réel dans le navigateur simulé —');
     const grid = document.querySelector('#dash-content .ov-module-grid');
     out.grille = !!grid;
     out.cartes = grid ? grid.querySelectorAll('.ov-module-card').length : 0;
-    out.cartesImages = grid ? grid.querySelectorAll('.ov-module-icon img.mod-emote').length : 0;
+    out.cartesImages = grid ? grid.querySelectorAll('.ov-module-icon svg').length : 0;
     out.tetesDeSection = grid ? grid.querySelectorAll('.ov-module-cat').length : 0;
     out.verbes = grid ? [...grid.querySelectorAll('.ov-module-card button')].map((b) => b.textContent.trim()) : [];
     // 6. La barre de sauvegarde retrouve bien les boutons « Enregistrer ».
@@ -272,8 +287,10 @@ console.log('\n— 6. Rendu réel dans le navigateur simulé —');
   check('la barre latérale est rendue', res.sidebar === true);
   check('le menu est coupé en familles (au moins 6 titres)', res.familles.length >= 6, res.familles.join(' · '));
   check('tous les modules du serveur restent accessibles', res.items >= 36, String(res.items));
-  check('chaque entrée du menu porte son émoticône', res.images >= 36, `${res.images} images pour ${res.items} entrées`);
-  check('…et l’émoji de repli est masqué quand l’image existe', res.emojisCaches >= 36);
+  check('chaque entrée du menu porte son icône', res.images >= 36, `${res.images} SVG pour ${res.items} entrées`);
+  // v406d : plus aucune image bitmap dans la barre — c'est ce qui a remplacé
+  // les PNG, et c'est vérifiable : 0 <img>.
+  check('…et plus aucune image bitmap dans la barre', res.emojisCaches === 0, String(res.emojisCaches));
   check('le module ouvert affiche sa fiche de lecture', res.guide === true);
   check('la fiche a ses trois colonnes', res.cols === 3 && res.colNames.length === 4, res.colNames.join(' / '));
   check('l’aperçu Discord est monté dans la fiche', res.apercuInline === true);
@@ -286,11 +303,11 @@ console.log('\n— 6. Rendu réel dans le navigateur simulé —');
   check('la modale se referme', res.modaleFermee === true);
   check('retitle change le titre de la sous-page', res.titreRetitre === 'Liste noire', res.titreRetitre);
   check('…et son sous-titre', res.sousTitreRetitre === 'Notice de la sous-page.', res.sousTitreRetitre);
-  check('…sans effacer l’émoticône du module', res.imageGardee === true);
+  check('…sans effacer l’icône du module', res.imageGardee === true);
   check('…sans effacer la fiche de lecture', res.ficheGardee === true);
   check('les réglages du module restent affichés sous la fiche', res.cartesGardees === true);
   check('la vue d’ensemble liste les 34 modules configurables', res.cartes === 34, String(res.cartes));
-  check('ses cartes portent l’émoticône du module', res.cartesImages === 34, String(res.cartesImages));
+  check('ses cartes portent l’icône du module', res.cartesImages === 34, String(res.cartesImages));
   check('elles sont groupées par famille', res.tetesDeSection >= 5, String(res.tetesDeSection));
   check('un seul verbe d’action sur chaque carte', res.verbes.every((v) => v.startsWith('Configurer')), res.verbes.slice(0, 3).join(' | '));
   check('les boutons « Enregistrer » du module sont repérables par la barre', res.saves.length >= 2 && res.saves.every((s) => /^Enregistrer|^Tout/.test(s)), res.saves.join(' | '));

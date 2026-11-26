@@ -95,9 +95,17 @@ const sansCommentaires = (s) => s
   const meta = (src.match(/^\s*\w+: \{ e: '[\u{1F000}-\u{1FAFF}]/gmu) || []).length;
   check('MODULE_META conserve son émoji de repli (utilisé quand le PNG ne charge pas)',
     meta >= 30, meta + ' entrées');
-  check('le PNG d\'émoji dessiné reste la source d\'identité des modules',
-    fs.existsSync(path.join(RACINE, 'public/emotes'))
-    && fs.readdirSync(path.join(RACINE, 'public/emotes')).filter((f) => f.endsWith('.png')).length >= 40);
+  // v406d : l'identité visuelle des modules est passée au sprite Lucide
+  // (Dashboard.ICONES_LUCIDE + svgIcone). Les 42 PNG ne sont pas perdus : ils
+  // sont ARCHIVÉS dans public/emotes_old, pour pouvoir revenir en arrière tant
+  // que le propriétaire n'a pas validé.
+  const vieux = path.join(RACINE, 'public', 'emotes_old');
+  const archives = fs.existsSync(vieux) ? fs.readdirSync(vieux).filter((f) => f.endsWith('.png')) : [];
+  check('les PNG d\'émoji sont archivés, pas supprimés (public/emotes_old)',
+    archives.length >= 40, `${archives.length} fichiers archivés`);
+  check('…et le sprite Lucide est la source d\'identité des modules',
+    /Dashboard\.ICONES_LUCIDE = \{/.test(src)
+    && (src.match(/icon: '[a-z-]+'/g) || []).length === 40);
 }
 
 // — 3. Échelle typographique : pas de demi-pixel, pas de texte sous 11 px ————

@@ -42,7 +42,11 @@ const KEYS = ['vue', 'ticket', 'bienvenue', 'niveaux', 'eco', 'boutique', 'mod',
   const assets = path.join(__dirname, '..', 'server', 'assets', 'emotes');
   const pub = path.join(__dirname, '..', 'public', 'emotes');
   check('25 émojis dans les assets du bot', KEYS.every((k) => fs.existsSync(path.join(assets, 'hox_' + k + '.png'))));
-  check('…servis au dashboard depuis public/emotes', KEYS.every((k) => fs.existsSync(path.join(pub, 'hox_' + k + '.png'))));
+  // v406d : le tableau de bord n'affiche plus de PNG — ses 40 modules portent
+  // des icônes Lucide en SVG inline. Les PNG ne sont pas supprimés : ils sont
+  // déplacés dans public/emotes_old, le temps de la validation.
+  check('…le pack du dashboard est mis de côté dans public/emotes_old (pas supprimé)',
+    KEYS.every((k) => fs.existsSync(path.join(pub + '_old', 'hox_' + k + '.png'))));
   check('…tous sous la limite Discord (256 Ko)', KEYS.every((k) => fs.statSync(path.join(assets, 'hox_' + k + '.png')).size < 256000));
   check('liste officielle du pack', JSON.stringify(extra.HOX_SIG_EMOTES.slice().sort()) === JSON.stringify(KEYS.slice().sort()));
 
@@ -56,9 +60,17 @@ const KEYS = ['vue', 'ticket', 'bienvenue', 'niveaux', 'eco', 'boutique', 'mod',
   const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'dashboard.css'), 'utf8');
   const meta = (dash.match(/Dashboard\.MODULE_META = \{([\s\S]*?)\n\};/) || [0, ''])[1];
   const emotes = [...meta.matchAll(/emote: '(hox_[a-z]+)'/g)].map((m) => m[1]);
-  check('le catalogue donne une image à chaque module', emotes.length === 40, String(emotes.length));
-  check('…servies par le bot depuis /emotes', dash.includes('src=\"/emotes/${meta.emote}.png\"'));
-  check('…avec repli sur l\'émoji texte (ico-fallback)', dash.includes('ico-fallback') && css.includes('.has-emote .ico-fallback'));
+  // v406d : le champ « icon » est posé en fin de première ligne de chaque
+  // fiche, à côté de « emote » (qui reste, pour les aperçus Discord).
+  const icones = [...meta.matchAll(/icon: '([a-z-]+)'/g)].map((m) => m[1]);
+  check('le catalogue donne une icône à chaque module', icones.length === 40, String(icones.length));
+  check('…et aucune n\'est utilisée deux fois', new Set(icones).size === icones.length, `${icones.length} pour ${new Set(icones).size}`);
+  // v406d : la navigation dessine ses glyphes en SVG inline (currentColor),
+  // plus avec des <img> qui appelaient /emotes. Le sprite est la source unique.
+  check('…dessinées en SVG inline, pas en <img>', dash.includes('Dashboard.ICONES_LUCIDE') && dash.includes('Dashboard.svgIcone')
+    && !dash.includes('src=\"/emotes/'));
+  check('…dans une boîte de 20 px, trait de 1,75', css.includes('.dash-side-item .ico svg { width: 20px; height: 20px; display: block; }')
+    && dash.includes('stroke-width="1.75"'));
   check('css dashboard : la classe des images de modules', css.includes('.mod-emote'));
   const cmd = extra.buildExtraPayloads().find((c) => c && c.name === 'emotes');
   check('commande /emotes (install / view)', !!cmd && JSON.stringify(cmd.options).includes('install') && JSON.stringify(cmd.options).includes('view'));

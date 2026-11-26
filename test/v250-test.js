@@ -50,7 +50,11 @@ console.log('— 2. Le CSS applique exactement la même règle —');
 const nb = (css.match(new RegExp(MQ.replace(/[().,]/g, (c) => '\\' + c), 'g')) || []).length;
   // v366 : deux blocs de plus portent la requete maison (les selecteurs .dd-*
   // et le bloc « Discord 48px ») — c'est exactement ce que ces controles visaient.
-check(`les 23 requêtes médias du shell portent la nouvelle règle (${nb})`, nb === 23, String(nb));
+  // v406d : un bloc de plus, la barre laterale elle-meme. Elle basculait sur la
+  // seule largeur (<= 700 px) alors que la mise en page bascule sur la requete
+  // complete : sur une tablette, la barre restait en colonne dans une coquille
+  // empilee et prenait 260 px de HAUT. Le compte suit, de 23 a 24.
+check(`les 24 requêtes médias du shell portent la nouvelle règle (${nb})`, nb === 24, String(nb));
 check('plus AUCUNE bascule du shell sur la seule largeur à 900 px',
   !/@media \(max-width: ?900px\), /.test(css));
 check('…ni à 600 px (premier plancher essayé, trop haut pour les PC scaling forts)',

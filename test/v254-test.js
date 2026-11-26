@@ -39,8 +39,8 @@ console.log('— 1. La clause mobile sans limite de largeur existe toujours (le 
 const CLAUSE = '(hover: none) and (pointer: coarse) and (max-height: 800px) and (any-pointer: coarse)';
   // v366 : deux blocs de plus portent la requete maison (les selecteurs .dd-*
   // et le bloc « Discord 48px ») — c'est exactement ce que ces controles visaient.
-check('les 23 requêtes médias contiennent la clause « tactile + hauteur ≤ 800 px » SANS largeur',
-  (css.match(new RegExp(CLAUSE.replace(/[()]/g, '\\$&'), 'g')) || []).length === 23,
+check('les 24 requêtes médias contiennent la clause « tactile + hauteur ≤ 800 px » SANS largeur',
+  (css.match(new RegExp(CLAUSE.replace(/[()]/g, '\\$&'), 'g')) || []).length === 24,
   String((css.match(new RegExp(CLAUSE.replace(/[()]/g, '\\$&'), 'g')) || []).length));
 
 console.log('— 2. Palier A : socle commun à TOUTES les largeurs ≥ 481 px —');
@@ -59,16 +59,26 @@ check('…fil d\'ariane du haut rendu (le bloc mobile le cache à toutes largeur
 console.log('— 3. v257 : plus de rail, la sidebar pleine à toutes les largeurs PC —');
 check('le palier rail préfixé hx-os-pc a disparu',
   !css.includes("html.hx-os-pc .dashboard-shell-host .dash-side { width: 64px"));
-check('…la sidebar PC reprend sa base flex face au vieux bloc rail v252',
-  css.includes('html.hx-os-pc .dashboard-shell-host .dash-side { width: 278px; flex: 0 0 auto;'));
+// v406d : la géométrie de la barre (260 px, base flex, hauteur) est décrite
+// une seule fois, dans la section finale. La couche PC ne fait plus que la
+// remettre debout face au bloc mobile. On vérifie donc son placement, pas sa
+// largeur — qui ne doit plus apparaître nulle part ailleurs.
+check('…la sidebar PC est remise debout par la couche PC (placement seul)',
+  css.includes('html.hx-os-pc .dashboard-shell-host .dash-side {\n    display: flex; flex-shrink: 0; flex-direction: column;'));
+check('…et sa largeur n\'est écrite qu\'une fois, dans la section finale',
+  (css.match(/flex: 0 0 260px;/g) || []).length === 1
+  && !/html\.hx-os-pc[^{]*\.dash-side\s*\{[^}]*(width|flex):/.test(css));
 check('…textes de la marque et du carton serveur rendus au palier A',
   css.includes('html.hx-os-pc .dashboard-shell-host .dash-side-brand-copy { display: flex; }')
   && css.includes('html.hx-os-pc .dashboard-shell-host .dash-server-card .srv-txt { display: flex; }'));
 
 console.log('— 4. Au-delà de 900 px : le visage v241 restauré (v255) —');
-check('la barre latérale reprend ses largeurs v241 (278 px, 258 sous 1200 px)',
-  css.includes('html.hx-os-pc .dashboard-shell-host .dash-side { width: 278px; flex: 0 0 auto; padding: 20px 0 12px; }')
-  && css.includes('html.hx-os-pc .dashboard-shell-host .dash-side { width: 258px; }'));
+// v406d : la barre est fixée à 260 px, une seule fois, et ne rétrécit plus
+// sous 1200 px — c'est la définition unique qui fait foi.
+check('la barre latérale garde une largeur unique (260 px, plus de palier 278/258)',
+  /html body \.dashboard-shell-host \.dash-side \{\n  width: 260px;\n  flex: 0 0 260px;/.test(css)
+  // 278/258 ne survivent que dans un commentaire d'historique : aucune règle.
+  && !/^\s*(width|flex):\s*0? ?278px/m.test(css) && !css.includes('{ width: 258px; }'));
 check('…sections, pied ET marque centrée rendus (le bloc mobile les cachait à toutes largeurs)',
   corpsA.includes('.dash-side-section { display: block; }')
   && corpsA.includes('.dash-side-foot { display: block; }')

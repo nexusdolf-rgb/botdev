@@ -38,7 +38,8 @@ console.log('— 1. Les deux clauses tactiles exigent l\'absence de pointeur fin
 const nbComplet = (css.match(new RegExp(MQ.replace(/[().,]/g, (c) => '\\' + c), 'g')) || []).length;
   // v366 : deux blocs de plus portent la requete maison (les selecteurs .dd-*
   // et le bloc « Discord 48px ») — c'est exactement ce que ces controles visaient.
-check(`les 23 requêtes du shell portent la règle complète (${nbComplet})`, nbComplet === 23, String(nbComplet));
+  // v406d : un bloc de plus, la barre latérale elle-même (cf. v250).
+check(`les 24 requêtes du shell portent la règle complète (${nbComplet})`, nbComplet === 24, String(nbComplet));
 // Aucune clause tactile « nue » ne doit survivre : ce sont elles qui envoyaient
 // le PC tactile de l'utilisateur en mobile.
 const nue2 = (css.match(/\(max-width: 900px\) and \(hover: none\) and \(pointer: coarse\)(?! and \(any-pointer: coarse\))/g) || []).length;

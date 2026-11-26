@@ -80,8 +80,8 @@ check('ecranEtroit rend faux sur OS de bureau au-delà de 480 px (pas de repli m
 console.log('— 4. Les anciens filets restent en place —');
   // v366 : deux blocs de plus portent la requete maison (les selecteurs .dd-*
   // et le bloc « Discord 48px ») — c'est exactement ce que ces controles visaient.
-check('les 23 requêtes médias à mesures existent toujours (double sécurité)',
-  (css.match(/@media \(max-width: 700px\), \(max-width: 900px\) and \(hover: none\)/g) || []).length === 23,
+check('les 24 requêtes médias à mesures existent toujours (double sécurité)',
+  (css.match(/@media \(max-width: 700px\), \(max-width: 900px\) and \(hover: none\)/g) || []).length === 24,
   String((css.match(/@media \(max-width: 700px\), \(max-width: 900px\) and \(hover: none\)/g) || []).length));
 check('le rail « pointeur fin » 701-900 px existe toujours',
   css.includes('@media (pointer: fine) and (min-width: 701px) and (max-width: 900px)'));

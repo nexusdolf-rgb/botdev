@@ -1,0 +1,8 @@
+Ces 40 PNG ne sont plus utilisés par la barre latérale : elle est passée aux
+icônes Lucide en SVG inline (voir Dashboard.ICONES_LUCIDE dans public/js/dashboard.js).
+
+Dossier gardé le temps de la validation. Sort : git rm -r public/emotes_old.
+
+Attention : ce dossier n’a jamais été servi. Le serveur expose /emotes depuis
+server/assets/emotes, qui contient les mêmes fichiers et alimente /emotes install
+sur Discord.

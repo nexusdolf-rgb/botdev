@@ -53,7 +53,10 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
     'ordre de déclaration inversé');
   check('CSS : .dash-channelsmulti en bloc pleine largeur', css.includes('.dash-channelsmulti {\n  display: block; width: 100%; min-width: 0; margin-top: 4px;'));
   check('CSS : lignes de salons empilées (flex-wrap)', css.includes('.cm-row {\n  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;'));
-  check('CSS : phrase plein largeur sur mobile', css.includes('@media (max-width: 640px) {\n  .cm-row > .cm-label { flex-basis: 100%; }'));
+  // v406d : la media query est restée sur une seule ligne lors du nettoyage
+  // des 95 blocs redéclarés ; c'est la RÈGLE qui compte, pas la mise en forme.
+  check('CSS : phrase plein largeur sur mobile',
+    /@media \(max-width: 640px\) \{\s*\.cm-row > \.cm-label \{ flex-basis: 100%; \}/.test(css));
   check('CSS : rangée d ajout repliable', css.includes('.cm-add-row {\n  display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px;'));
 
   // ================= 3. Sélection des salons (bug 2) =================

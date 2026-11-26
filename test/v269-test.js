@@ -26,8 +26,10 @@ console.log('— 1. Le module apparaît dans la liste —');
 const mods = dash.match(/Dashboard\.MODULES = \[([\s\S]*?)\];/);
 check('module « voicetemp » déclaré dans MODULES', !!mods && mods[1].includes("['voicetemp'"));
 // v367 : le deuxieme champ du tuple n'est plus un emoji (la navigation dessine
-// ses glyphes en SVG) ; le libelle, lui, doit rester « Vocal ».
-check('…avec son emplacement et son libellé Vocal', !!mods && /\['voicetemp', '', 'Vocal'\]/.test(mods[1]));
+// ses glyphes en SVG).
+// v406d : le libelle devient « Salons vocaux » sur decision du proprietaire
+// (« Vocal » sonnait comme un module unique alors qu'il gere les salons).
+check('…avec son emplacement et son libellé « Salons vocaux »', !!mods && /\['voicetemp', '', 'Salons vocaux'\]/.test(mods[1]));
 check('…placé parmi les modules serveur (pas bot)', !!mods && mods[1].includes("['voicetemp'") && !((dash.match(/Dashboard\.BOT_MODULES = \[([\s\S]*?)\];/) || [0, ''])[1].includes('voicetemp')));
 
 console.log('— 2. Son rendeur porte toute la carte —');

@@ -95,7 +95,11 @@ console.log('— 2. Cache et économie de données —');
   // compressés). Mesuré : 339,6 Ko gzip, dont +0,55 Ko pour cette carte.
   // La v403 était déjà à 339,07 Ko — au ras du plafond. Le seuil passe à
   // 342 Ko pour laisser la marge habituelle sans rogner sur le contenu.
-  check('…JS+CSS compressés sous 342 Ko (contre 1,26 Mo en clair)', etat.gzip < 342, etat.gzip + ' Ko');
+  // v406c : les 40 PNG de modules (servis un par un, jamais compressés) sont
+  // remplacés par un sprite Lucide inline de 44 tracés (+3,9 Ko gzip) et la
+  // barre latérale est décrite une seule fois (-4,1 Ko gzip côté CSS).
+  // Mesuré : 342,0 Ko. Le seuil passe à 346 Ko, même marge serrée.
+  check('…JS+CSS compressés sous 346 Ko (contre 1,26 Mo en clair)', etat.gzip <= 346, etat.gzip + ' Ko');
 }
 
 // ---------- 3. Les images du site ne pèsent plus 3,3 Mo ----------

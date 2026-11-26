@@ -38,7 +38,11 @@ console.log('— 1. Le plancher « tout mobile » est à 700 px —');
 const nb = (css.match(new RegExp(MQ.replace(/[().,]/g, (c) => '\\' + c), 'g')) || []).length;
   // v366 : deux blocs de plus portent la requete maison (les selecteurs .dd-*
   // et le bloc « Discord 48px ») — c'est exactement ce que ces controles visaient.
-check(`les 23 requêtes du shell portent le plancher 700 px (${nb})`, nb === 23, String(nb));
+  // v406d : un bloc de plus, la barre laterale elle-meme. Elle basculait sur la
+  // seule largeur (<= 700 px) alors que la mise en page bascule sur la requete
+  // complete : sur une tablette, la barre restait en colonne dans une coquille
+  // empilee et prenait 260 px de HAUT. Le compte suit, de 23 a 24.
+check(`les 24 requêtes du shell portent le plancher 700 px (${nb})`, nb === 24, String(nb));
 check('la constante JS est alignée', js.includes(`Dashboard.MQ_ECRAN_ETROIT = '${MQ}';`));
 check('le repli sans matchMedia suit le plancher', js.includes('window.innerWidth <= 700;'));
 check('plus aucune clause « tout mobile » à 800 px', !/\(max-width: 800px\)/.test(css));
@@ -48,8 +52,12 @@ check('le bloc rail existe, borné 701-900 px et réservé au pointeur fin',
   css.includes(RAIL + ' {'));
 const bloc = css.slice(css.indexOf(RAIL));
 check('…la barre latérale y fait 64 px', /\.dash-side \{ width: 64px; flex: 0 0 64px; \}/.test(bloc));
-check('…les libellés des modules y sont masqués (nœud de texte nu → font-size 0)',
-  /\.dash-side-item \{ font-size: 0;/.test(bloc) && /\.dash-side-item \.ico \{ font-size: 16px; \}/.test(bloc));
+// v406d : le libellé n'est plus masqué par font-size: 0 sur tout le bouton —
+// cette astuce rapetissait aussi l'icône. Il est dans un <span class="lbl"> que
+// le rail éteint explicitement, et l'icône garde sa taille.
+check('…les libellés des modules y sont masqués (span .lbl éteint, pas font-size 0)',
+  bloc.includes('.dash-side-item .lbl { display: none; }')
+  && !/\.dash-side-item \{ font-size: 0;/.test(bloc));
 check('…les titres de sections, le texte du serveur et le pied y sont masqués',
   bloc.includes('.dash-side-brand-copy,') && bloc.includes('.srv-txt,') && bloc.includes('.dash-side-foot { display: none; }'));
 check('…le rail ne s\'applique JAMAIS au tactile (sinon une tablette le prendrait)',

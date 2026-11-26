@@ -43,16 +43,21 @@ check('le bloc de restauration v241 existe', deb > 0 && deb < fin);
 const restaure = css.slice(deb, fin);
 
 console.log('— 1. La géométrie v241 est restaurée sur PC —');
-check('sidebar 278 px, et 258 px sous 1200 px (comme v241)',
-  restaure.includes('.dash-side { width: 278px; flex: 0 0 auto; padding: 20px 0 12px; }')
-  && restaure.includes('.dash-side { width: 258px; }'));
-check('marque centrée en colonne, avatar rond de 82 px',
-  restaure.includes('flex-direction: column; align-items: center;')
-  && restaure.includes('width: 82px; height: 82px; flex-basis: 82px; border-radius: 50%;'));
-check('entrées de menu v241 : 14 px (cran entier depuis v367), paddées 24 px, hauteur 43 px, angle droit',
-  restaure.includes('min-height: 43px; margin: 0; padding: 9px 24px;')
-  && restaure.includes('font-size: 14px; font-weight: 600;')
-  && restaure.includes('border-radius: 0;'));
+// v406d : la barre a été refondue sur décision du propriétaire (icônes Lucide
+// de 20 px, lignes de 40 px, 260 px de large, définition unique en fin de
+// fichier). Ce test ne verrouille donc plus le VISAGE v241, mais ce qui a été
+// gardé de cette restauration : la marque, la barre d'outils et la zone de
+// travail. Le visage de la barre est verrouillé par le bloc final.
+check('la barre latérale n\'est plus redéfinie par cette couche (définition unique)',
+  !/html\.hx-os-pc[^{]*\.dash-side\s*\{[^}]*(width|flex|padding):/.test(css)
+  && /html body \.dashboard-shell-host \.dash-side \{\n  width: 260px;/.test(css));
+// v406d : ces trois règles sont passées dans le palier A (min-width: 481 px),
+// qui porte la remise en ligne de la coquille ; le bloc v255 a été scindé et
+// le test lit pour cela tout le fichier, pas une tranche de commentaire.
+check('la marque et le pied sont rendus au bureau (le bloc mobile les cachait)',
+  css.includes('html.hx-os-pc .dashboard-shell-host .dash-side-brand { display: flex; }')
+  && css.includes('html.hx-os-pc .dashboard-shell-host .dash-side-foot { display: block; }')
+  && css.includes('html.hx-os-pc .dashboard-shell-host .dash-side-brand-copy { display: flex; }'));
 check('barre d\'outils 48 px soulignée d\'un trait, fil d\'ariane détaillé',
   restaure.includes('min-height: 48px; margin: 0 auto 24px; padding: 0 0 12px;')
   && restaure.includes('.dash-crumb .crumb-ico {'));
@@ -65,7 +70,10 @@ check('aucun fond sombre codé en dur dans la restauration',
   !restaure.includes('background: #36393f') && !restaure.includes('background: #2b2d31')
   && !restaure.includes('background: #202225'));
 check('les bordures passent par les variables de thème',
-  restaure.includes('var(--d-border)') && restaure.includes('var(--d-side, #2b2d31)'));
+  restaure.includes('var(--d-border)')
+  // v406d : plus de pastille positionnée en absolu, donc plus de variable
+  // --d-side pour la border ; les variables de thème restent seules en jeu.
+  && !restaure.includes('–d-side:'));
 
 console.log('— 3. Sur PC, plus de pliage : le visage v241 était tout ouvert —');
 const garde = /classList\.contains\('hx-os-pc'\)\) return 0;/g;
@@ -80,8 +88,8 @@ check('v257 : plus de rail — la barre pleine couvre toutes les largeurs ≥ 48
   !css.includes("html.hx-os-pc .dashboard-shell-host .dash-side { width: 64px"));
   // v366 : deux blocs de plus portent la requete maison (les selecteurs .dd-*
   // et le bloc « Discord 48px ») — c'est exactement ce que ces controles visaient.
-check('les 23 requêtes médias mobiles sont intactes',
-  (css.match(/@media \(max-width: 700px\), \(max-width: 900px\) and \(hover: none\)/g) || []).length === 23);
+check('les 24 requêtes médias mobiles sont intactes',
+  (css.match(/@media \(max-width: 700px\), \(max-width: 900px\) and \(hover: none\)/g) || []).length === 24);
 check('la classe hx-os-pc vient toujours du système (v253)',
   os.includes("classList.add('hx-os-pc')"));
 
