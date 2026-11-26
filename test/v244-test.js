@@ -579,7 +579,7 @@ const GUILD = 'G244';
   const sw = racine('public/sw.js');
 
   const vCourante = (html.match(/\?v=([\w-]+)/) || [])[1];
-  // v406e : le numéro de version peut porter un suffixe de passe (« 406e »).
+  // v406f : le numéro de version peut porter un suffixe de passe (« 406f »).
   check('index.html : une version de cache est déclarée', /^\d+[a-z]?$/.test(vCourante || ''), String(vCourante));
   check('index.html : référencée exactement 10 fois',
     (html.match(/\?v=[\w-]+/g) || []).length === 10, String((html.match(/\?v=[\w-]+/g) || []).length));
@@ -589,10 +589,10 @@ const GUILD = 'G244';
   // à diagnostiquer qui soit.
   const versions = [...new Set(html.match(/\?v=[\w-]+/g) || [])];
   check('index.html : les 10 références pointent la MÊME version', versions.length === 1, versions.join(', '));
-  check('cette version est bien la v244', versions[0] === '?v=406e', String(versions[0]));
+  check('cette version est bien la v244', versions[0] === '?v=406f', String(versions[0]));
 
   check('sw.js : nom de cache présent', /const CACHE = 'hoxera-v[\w-]+'/.test(sw), (sw.match(/const CACHE = '[^']*'/) || ['?'])[0]);
-  // « ?v=406e » dans index.html doit correspondre à « botdev-v260 » dans sw.js.
+  // « ?v=406f » dans index.html doit correspondre à « botdev-v260 » dans sw.js.
   const cacheAttendu = `'hoxera-${versions[0].replace('?v=', 'v')}'`;
   check('sw.js : cache aligné sur index.html', sw.includes(cacheAttendu),
     `${cacheAttendu} attendu, ${(sw.match(/const CACHE = '[^']*'/) || ['?'])[0]} trouvé`);

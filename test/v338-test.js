@@ -18,8 +18,8 @@ const css = racine('public/css/style.css');
 const pub = racine('public/js/public.js');
 
 console.log('— 1. Pins v338 —');
-check('index.html : ?v=406e ×10', (html.match(/\?v=406e/g) || []).length === 10);
-check('sw.js : cache hoxera-v406e', sw.includes("const CACHE = 'hoxera-v406e';"));
+check('index.html : ?v=406f ×10', (html.match(/\?v=406f/g) || []).length === 10);
+check('sw.js : cache hoxera-v406f', sw.includes("const CACHE = 'hoxera-v406f';"));
 check('index.html : plus aucune ?v=337', !html.includes('?v=337'));
 
 console.log('— 2. Pas un clone DraftBot —');

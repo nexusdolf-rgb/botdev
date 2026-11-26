@@ -1,13 +1,20 @@
 // Hoxera - Service Worker (mode app installable + chargement hors ligne)
 // Stratégie : HTML/JS/CSS en réseau d'abord (toujours à jour),
 // images/icônes en cache d'abord. L'API passe toujours par le réseau.
+// v406f — Les fichiers du site portent une adresse signée par leur contenu
+// (« ?v=406f-1a2b3c ») : un fichier qui change change d'adresse. Le service
+// worker les laisse donc passer par le cache HTTP normal, sans les recopier
+// dans le sien : une seule copie, et plus de risque de servir à un visiteur un
+// CSS d'une version et un JS d'une autre (le défaut qui avait laissé le
+// bandeau d'icônes affiché après un correctif). Seules les images restent en
+// cache d'abord, et `/` est toujours demandé au réseau d'abord.
 // v399 — nouveau nom de cache : tous les anciens sont supprimés à
 // l'activation. Sans ce changement, un navigateur déjà venu garderait
 // l'ancien app.js pendant des heures. Les fichiers ?v=399 ne bougent pas :
 // ce sont eux qui datent le code, et sw.js les télécharge à neuf.
 // (Le nom de cache ci-dessous ne doit apparaître qu'à cet endroit : les
 // tests lisent le premier numéro de version qu'ils trouvent dans ce fichier.)
-const CACHE = 'hoxera-v406e';
+const CACHE = 'hoxera-v406f';
 const ASSETS = [
   '/',
   '/manifest.webmanifest',
@@ -42,11 +49,16 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   if (url.pathname.startsWith('/api')) return;
 
+  // v406f — Les fichiers signés (« ?v=…-empreinte ») sont laissés au cache
+  // HTTP : leur adresse change avec leur contenu, le navigateur les garde un
+  // an et ne peut pas mélanger deux versions. En faire une copie de plus ici
+  // n'apportait que le risque de servir une copie ancienne.
+  const signe = /[?&]v=[0-9a-z]+-[0-9a-f]{16}/i.test(url.search);
   const isDynamic = url.pathname === '/'
-    || url.pathname.endsWith('.js')
-    || url.pathname.endsWith('.css')
-    || url.pathname.endsWith('.html')
-    || url.pathname.endsWith('.webmanifest');
+    || (!signe && (url.pathname.endsWith('.js')
+      || url.pathname.endsWith('.css')
+      || url.pathname.endsWith('.html')
+      || url.pathname.endsWith('.webmanifest')));
 
   if (isDynamic) {
     // Réseau d'abord : la nouvelle version arrive toujours, cache en secours.

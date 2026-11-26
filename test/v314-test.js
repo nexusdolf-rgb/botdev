@@ -28,8 +28,8 @@ const html = racine('public/index.html');
 const sw = racine('public/sw.js');
 
 console.log('— 1. Pins de version v314 —');
-check('index.html : ?v=406e ×10', (html.match(/\?v=406e/g) || []).length === 10);
-check('sw.js : cache hoxera-v406e', sw.includes("const CACHE = 'hoxera-v406e';"));
+check('index.html : ?v=406f ×10', (html.match(/\?v=406f/g) || []).length === 10);
+check('sw.js : cache hoxera-v406f', sw.includes("const CACHE = 'hoxera-v406f';"));
 check('index.html : plus aucune ?v=313', !html.includes('?v=313'));
 
 console.log('— 2. Dashboard : suppression vraiment enregistrée —');

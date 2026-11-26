@@ -138,7 +138,7 @@ const monter = (reponseApi) => {
   console.log('\n— 3. Le fichier servi par le site est bien celui-ci —');
   // ------------------------------------------------------------------
   const index = racine('public/index.html');
-  check('index.html charge public.js en ?v=406e', index.includes('/js/public.js?v=406e'));
+  check('index.html charge public.js en ?v=406f', index.includes('/js/public.js?v=406f'));
 
   console.log(`\n${ko === 0 ? '🎉' : '❌'} v389 — ${ok} vérifications, ${ko} échec(s).`);
   if (ko) { echecs.forEach((e) => console.log('   · ' + e)); process.exit(1); }

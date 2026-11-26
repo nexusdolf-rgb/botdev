@@ -96,8 +96,8 @@ console.log('2️⃣  Notifications et couleur : portails, fermeture et re-rendu
 
 const versions = index.match(/\?v=([\w-]+)/g) || [];
 assert.strictEqual(versions.length, 10);
-assert(versions.every((v) => v === '?v=406e'));
-assert(sw.includes("const CACHE = 'hoxera-v406e';"));
+assert(versions.every((v) => v === '?v=406f'));
+assert(sw.includes("const CACHE = 'hoxera-v406f';"));
 console.log('3️⃣  Cache frontend : index.html et service worker synchronisés en v180 ✅');
 
 setTimeout(async () => {

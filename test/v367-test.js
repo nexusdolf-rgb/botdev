@@ -95,7 +95,7 @@ const sansCommentaires = (s) => s
   const meta = (src.match(/^\s*\w+: \{ e: '[\u{1F000}-\u{1FAFF}]/gmu) || []).length;
   check('MODULE_META conserve son émoji de repli (utilisé quand le PNG ne charge pas)',
     meta >= 30, meta + ' entrées');
-  // v406e : l'identité visuelle des modules est passée au sprite Lucide
+  // v406f : l'identité visuelle des modules est passée au sprite Lucide
   // (Dashboard.ICONES_LUCIDE + svgIcone). Les 42 PNG ne sont pas perdus : ils
   // sont ARCHIVÉS dans public/emotes_old, pour pouvoir revenir en arrière tant
   // que le propriétaire n'a pas validé.

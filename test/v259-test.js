@@ -162,9 +162,9 @@ console.log('— 3. Voir le profil (interaction simulée) —');
     !/\.(once|on)\('ready'/.test(bmSrc));
 
   console.log('— 8. Version —');
-  check('index.html : ?v=406e référencé 10 fois', (index.match(/\?v=406e/g) || []).length === 10,
-    String((index.match(/\?v=406e/g) || []).length));
-  check('sw.js : cache « hoxera-v406 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v406e';"));
+  check('index.html : ?v=406f référencé 10 fois', (index.match(/\?v=406f/g) || []).length === 10,
+    String((index.match(/\?v=406f/g) || []).length));
+  check('sw.js : cache « hoxera-v406 »', racine('public/sw.js').includes("const CACHE = 'hoxera-v406f';"));
 
   console.log('');
   if (ko === 0) console.log(`🎉 v259 — ${ok} vérifications OK : le clic droit arrive dans Hoxera.`);

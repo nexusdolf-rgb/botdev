@@ -31,7 +31,7 @@ console.log('— 1. Le texte part compressé —');
 {
   const { res, state } = faux();
   let suite = false;
-  sc.middleware({ method: 'GET', path: '/js/app.js', originalUrl: '/js/app.js?v=406e', headers: { 'accept-encoding': 'gzip, deflate' } }, res, () => { suite = true; });
+  sc.middleware({ method: 'GET', path: '/js/app.js', originalUrl: '/js/app.js?v=406f', headers: { 'accept-encoding': 'gzip, deflate' } }, res, () => { suite = true; });
   check('…/js/app.js servi en gzip', state.headers['Content-Encoding'] === 'gzip' && !suite);
   const brut = fs.readFileSync(path.join(racine, 'public', 'js', 'app.js'));
   check('…le corps reçu se décompresse à l’identique',
@@ -41,7 +41,7 @@ console.log('— 1. Le texte part compressé —');
 }
 {
   const { res, state } = faux();
-  sc.middleware({ method: 'GET', path: '/css/dashboard.css', originalUrl: '/css/dashboard.css?v=406e', headers: { 'accept-encoding': 'br' } }, res, () => {});
+  sc.middleware({ method: 'GET', path: '/css/dashboard.css', originalUrl: '/css/dashboard.css?v=406f', headers: { 'accept-encoding': 'br' } }, res, () => {});
   check('…brotli choisi quand le navigateur le propose', state.headers['Content-Encoding'] === 'br');
 }
 {
@@ -65,15 +65,30 @@ console.log('— 1. Le texte part compressé —');
 console.log('— 2. Cache et économie de données —');
 {
   const { res, state } = faux();
-  sc.middleware({ method: 'GET', path: '/js/app.js', originalUrl: '/js/app.js?v=406e', headers: { 'accept-encoding': 'gzip', 'if-none-match': '' } }, res, () => {});
+  sc.middleware({ method: 'GET', path: '/js/app.js', originalUrl: '/js/app.js?v=406f', headers: { 'accept-encoding': 'gzip', 'if-none-match': '' } }, res, () => {});
   check('…un fichier versionné reste un an chez le visiteur',
     state.headers['Cache-Control'].includes('max-age=31536000'));
   const etag = state.headers['ETag'];
   const second = faux();
-  sc.middleware({ method: 'GET', path: '/js/app.js', originalUrl: '/js/app.js?v=406e', headers: { 'accept-encoding': 'gzip', 'if-none-match': etag } }, second.res, () => {});
+  sc.middleware({ method: 'GET', path: '/js/app.js', originalUrl: '/js/app.js?v=406f', headers: { 'accept-encoding': 'gzip', 'if-none-match': etag } }, second.res, () => {});
   check('…déjà en cache : réponse 304, aucun octet renvoyé',
     second.state.statusCode === 304 && !second.state.body);
-  check('…le HTML de la page, lui, reste frais (5 min)', sc.enteteCache('/index.html', '/').includes('max-age=300'));
+  // v406f — index.html et sw.js ne sont plus jamais gardés longtemps : le
+  // HTML redonne les bonnes adresses à chaque visite, et le service worker
+  // doit pouvoir se mettre à jour tout seul.
+  check('…le HTML de la page reste frais (5 min)', sc.enteteCache('/index.html', '/').includes('max-age=300'));
+  check('…le service worker n’est jamais mis en cache long', sc.enteteCache('/sw.js', '/sw.js') === 'no-cache');
+  check('…un fichier sans numéro de version n’est gardé qu’une heure (plus de 7 jours)',
+    sc.enteteCache('/js/app.js', '/js/app.js') === 'public, max-age=3600');
+  check('…une adresse signée (?v=406f-1a2b3c) reste un an', sc.enteteCache('/js/app.js', '/js/app.js?v=406f-1a2b3c').includes('max-age=31536000'));
+  // L'empreinte est celle du contenu : deux fichiers de contenus différents ne
+  // peuvent pas avoir la même adresse, donc pas le même cache.
+  const html = read('public/index.html');
+  const signe = sc.signerIndex(html);
+  const empreintes = [...signe.matchAll(/\?v=406f-([0-9a-f]{16})/g)].map((m) => m[1]);
+  check('…chaque fichier d’index.html porte l’empreinte de son contenu', empreintes.length === 10 && new Set(empreintes).size === 10);
+  check('…le CSS et le JS du tableau de bord n’ont pas la même empreinte',
+    sc.empreinte('/css/dashboard.css') !== sc.empreinte('/js/dashboard.js'));
 }
 {
   const etat = sc.etat();
@@ -123,7 +138,7 @@ console.log('— 3. Images allégées, dessin inchangé —');
 console.log('— 4. Branché au bon endroit —');
 {
   const index = read('server/index.js');
-  const posMiddleware = index.indexOf("require('./staticCompress').middleware");
+  const posMiddleware = index.indexOf('compresseur.middleware');
   const posStatic = index.indexOf("express.static(path.join(__dirname, '..', 'public')");
   check('le serveur utilise la compression', posMiddleware > 0);
   check('…avant les fichiers statiques', posMiddleware < posStatic);

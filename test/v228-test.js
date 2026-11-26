@@ -100,8 +100,8 @@ const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
   console.log('\n7) Versionnage front cohérent (v228)');
   const indexHtml = read('public/index.html');
   const swSource = read('public/sw.js');
-  check('index.html : 10 références ?v=406e', (indexHtml.match(/\?v=406e/g) || []).length === 10);
-  check('sw.js : cache v228', swSource.includes("const CACHE = 'hoxera-v406e';"));
+  check('index.html : 10 références ?v=406f', (indexHtml.match(/\?v=406f/g) || []).length === 10);
+  check('sw.js : cache v228', swSource.includes("const CACHE = 'hoxera-v406f';"));
 
   console.log(failures === 0 ? '\n✅ V228 — Messages partiels tolérés, /snipe intact, front v228.' : `\n❌ V228 — ${failures} échec(s)`);
   process.exit(failures ? 1 : 0);

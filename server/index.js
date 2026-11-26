@@ -231,7 +231,27 @@ async function main() {
   // 📉 v386 — le texte du site part compressé (JS, CSS, HTML, SVG, JSON) et
   // les fichiers versionnés restent un an dans le navigateur. C'est ce qui
   // divise le trafic sortant par ~4, donc le quota de l'hébergeur tient.
-  try { app.use(require('./staticCompress').middleware); } catch (e) { console.error('[BotDev] compression :', e.message); }
+  // v406f — index.html est réécrit à la volée : ses « ?v=406f » deviennent
+  // « ?v=406f-1a2b3c », l'empreinte du contenu réellement servi. Un visiteur
+  // qui garde un fichier un an ne peut donc plus mélanger un vieux CSS avec un
+  // nouveau JS (c'est ce qui avait laissé le bandeau d'icônes affiché).
+  const compresseur = require('./staticCompress');
+  try {
+    app.get(['/', '/index.html'], (req, res, next) => {
+      const fichier = path.join(__dirname, '..', 'public', 'index.html');
+      fs.readFile(fichier, 'utf8', (err, html) => {
+        if (err) return next();
+        const propre = compresseur.signerIndex(html);
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.setHeader('Cache-Control', 'public, max-age=300');
+        // Le HTML change à chaque empreinte : il ne doit jamais servir du neuf
+        // depuis un cache vieux de cinq minutes sans le dire.
+        res.setHeader('Vary', 'Accept-Encoding');
+        res.send(propre);
+      });
+    });
+    app.use(compresseur.middleware);
+  } catch (e) { console.error('[BotDev] compression :', e.message); }
 
   // Fichiers statiques (dashboard)
   app.use(express.static(path.join(__dirname, '..', 'public'), {
@@ -241,8 +261,14 @@ async function main() {
     // reçoivent, eux, un an de cache via ./staticCompress (contenu figé).
     setHeaders: (res, filePath, stat) => {
       const rel = String(filePath || '');
-      if (/\.(js|css)$/i.test(rel)) res.setHeader('Cache-Control', 'public, max-age=3600');
-      else if (/\.(png|svg|webp|jpg|jpeg|woff2?)$/i.test(rel)) res.setHeader('Cache-Control', 'public, max-age=604800');
+      // v406f — Ne JAMAIS écraser l'en-tête déjà posé par ./staticCompress :
+      // un client sans compression (curl, vieux proxy) traversait ce
+      // gestionnaire et recevait « une heure » là où tout le monde reçoit
+      // « un an » — deux caches différents pour la même adresse.
+      if (!res.getHeader('Cache-Control')) {
+        if (/\.(js|css)$/i.test(rel)) res.setHeader('Cache-Control', 'public, max-age=3600');
+        else if (/\.(png|svg|webp|jpg|jpeg|woff2?)$/i.test(rel)) res.setHeader('Cache-Control', 'public, max-age=604800');
+      }
       if (stat && stat.mtime) res.setHeader('Last-Modified', stat.mtime.toUTCString());
     },
   }));

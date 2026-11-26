@@ -50,7 +50,7 @@ console.log('— 2. Le CSS applique exactement la même règle —');
 const nb = (css.match(new RegExp(MQ.replace(/[().,]/g, (c) => '\\' + c), 'g')) || []).length;
   // v366 : deux blocs de plus portent la requete maison (les selecteurs .dd-*
   // et le bloc « Discord 48px ») — c'est exactement ce que ces controles visaient.
-  // v406e : un bloc de plus, la barre laterale elle-meme. Elle basculait sur la
+  // v406f : un bloc de plus, la barre laterale elle-meme. Elle basculait sur la
   // seule largeur (<= 700 px) alors que la mise en page bascule sur la requete
   // complete : sur une tablette, la barre restait en colonne dans une coquille
   // empilee et prenait 260 px de HAUT. Le compte suit, de 23 a 24.
@@ -108,9 +108,9 @@ check('…et le repli automatique des cartes passe par ecranEtroit',
 console.log('— 5. Version —');
 const index = racine('public/index.html');
 const sw = racine('public/sw.js');
-check('index.html : ?v=406e référencé 10 fois', (index.match(/\?v=406e/g) || []).length === 10,
-  String((index.match(/\?v=406e/g) || []).length));
-check('sw.js : cache « hoxera-v406 »', sw.includes("const CACHE = 'hoxera-v406e';"));
+check('index.html : ?v=406f référencé 10 fois', (index.match(/\?v=406f/g) || []).length === 10,
+  String((index.match(/\?v=406f/g) || []).length));
+check('sw.js : cache « hoxera-v406 »', sw.includes("const CACHE = 'hoxera-v406f';"));
 
 console.log('');
 if (ko === 0) console.log(`🎉 v250 — ${ok} vérifications OK : un PC reste un PC, un mobile reste un mobile.`);

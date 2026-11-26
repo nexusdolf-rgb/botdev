@@ -30,7 +30,7 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   console.log('— Correctif présent dans routes.js —');
   const routesSrc = fs.readFileSync(path.join(root, 'server/routes.js'), 'utf8');
   const catalogBlock = routesSrc.slice(routesSrc.indexOf('async function guildCatalog'), routesSrc.indexOf('router.get(\'/bots/:id/guilds/:guildId\''));
-  // v406e — La resynchronisation REST a quitté routes.js pour
+  // v406f — La resynchronisation REST a quitté routes.js pour
   // server/discord/catalogue.js, partagée avec les commandes du bot. Le
   // scénario fonctionnel ci-dessous reste la vraie preuve ; ce bloc vérifie
   // seulement que la route délègue et que le module fait bien le fetch.
@@ -115,7 +115,7 @@ const check = (label, cond) => { n++; assert.ok(cond, `❌ ${label}`); console.l
   check('@everyone reste exclu du sélecteur', !roleNames1.includes('@everyone'));
   check('les salons sont toujours présents', (p1.channels || []).some((c) => c.name === 'général') && (p1.channels || []).some((c) => c.name === 'Vocal' && c.voice));
 
-  // v406e — Entre deux appels, on ne fait plus d'appel REST avant 15 s (gel
+  // v406f — Entre deux appels, on ne fait plus d'appel REST avant 15 s (gel
   // posé après la première lecture) : on le vide pour éprouver ici le seul
   // cache applicatif, comme avant.
   require('../server/discord/catalogue').catalogueGele.clear();

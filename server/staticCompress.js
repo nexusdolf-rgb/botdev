@@ -28,6 +28,43 @@ const TYPES_TEXTE = {
 // quand l'URL porte un numéro de version (« ?v=… »).
 const LONGUE_DUREE = /^\/(js|css|icons|emotes|assets)\//;
 
+// 🔁 v406f — RÈGLE DE COHÉRENCE ENTRE FICHIERS.
+// Le CSS et le JS sont servis un an, « immutable », quand l'URL porte « ?v= ».
+// Or ces fichiers se répondent : le JS écrit des classes que le CSS dessine,
+// et l'inverse. Un navigateur qui avait déjà `dashboard.css?v=406e` a gardé
+// l'ancien CSS un an, puis a reçu le nouveau `dashboard.js?v=406e` qui
+// attendait les nouvelles règles : c'est exactement ainsi que le bandeau
+// d'icônes est resté affiché malgré un correctif déployé.
+//
+// On n'a donc plus une seule version pour tout : chaque fichier porte une
+// empreinte courte de son contenu (`?v=406e-1a2b3c`). Le HTML, servi avec une
+// fraîcheur de 5 minutes, redonne à chaque visite les bonnes adresses ; un
+// fichier qui change change d'adresse, donc change de cache. Le service worker
+// (dont le contenu change à chaque déploiement) fait revenir les visiteurs qui
+// l'avaient déjà.
+const SANS_EMPREINTE = new Set(['/sw.js']);
+
+function empreinte(chemin) {
+  const entree = tout().get(chemin);
+  return entree ? entree.etag.replace(/"/g, '') : '';
+}
+
+// index.html porte « ?v=406f » : on ajoute à chaque adresse l'empreinte du
+// fichier qu'elle désigne (« ?v=406f-5041efa0e1ce »). Deux fichiers différents
+// ont deux empreintes différentes, donc deux caches différents : c'est ce qui
+// interdit de servir un vieux CSS avec un nouveau JS.
+// La version déclarée reste celle du développeur : elle sert de repère lisible
+// et les tests la vérifient telle quelle dans le fichier source.
+function signerIndex(html) {
+  return String(html).replace(
+    /(\/(?:js|css)\/[A-Za-z0-9._-]+)\.(?:js|css)\?v=(\d+[a-z]?)(?=["' ])/g,
+    (m, chemin, version) => {
+      const em = empreinte(`${chemin}.${m.includes('.css?') ? 'css' : 'js'}`);
+      return em ? `${chemin}.${m.includes('.css?') ? 'css' : 'js'}?v=${version}-${em}` : m;
+    },
+  );
+}
+
 let cache = null;
 
 function construire() {
@@ -77,11 +114,18 @@ function accepte(entete, codec) {
 }
 
 function enteteCache(chemin, url) {
-  if (LONGUE_DUREE.test(chemin) && /[?&]v=\d+/.test(url || '')) {
+  if (LONGUE_DUREE.test(chemin) && /[?&]v=[0-9a-z-]+/i.test(url || '')) {
     return 'public, max-age=31536000, immutable';
   }
-  if (LONGUE_DUREE.test(chemin)) return 'public, max-age=604800';
-  return 'public, max-age=300';
+  // Sans numéro de version, on ne peut pas garantir au visiteur que ce fichier
+  // ne bougera plus : rien n'est figé pour un an. Une heure au plus.
+  if (LONGUE_DUREE.test(chemin)) return 'public, max-age=3600';
+  if (SANS_EMPREINTE.has(chemin)) return 'no-cache';
+  // index.html : cinq minutes. Il redonne à chaque visite les adresses signées
+  // (donc un déploiement se voit vite), sans renvoyer la page à chaque clic.
+  if (chemin === '/index.html') return 'public, max-age=300';
+  if (/\.html?$/i.test(chemin)) return 'no-cache';
+  return 'public, max-age=3600';
 }
 
 // Middleware : répond aux fichiers texte compressés, laisse passer le reste
@@ -123,4 +167,4 @@ function etat() {
   return { fichiers: tout().size, gzip: Math.round(gz / 1024), brotli: Math.round(br / 1024) };
 }
 
-module.exports = { middleware, etat, enteteCache, _reset: () => { cache = null; } };
+module.exports = { middleware, etat, enteteCache, empreinte, signerIndex, _reset: () => { cache = null; } };

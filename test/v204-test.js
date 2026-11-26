@@ -31,9 +31,9 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
   console.log('\n1️⃣  Version v204');
   const index = read('public/index.html');
   const sw = read('public/sw.js');
-  check('index.html : ?v=406e référencé 10 fois', (index.match(/\?v=406e/g) || []).length === 10);
+  check('index.html : ?v=406f référencé 10 fois', (index.match(/\?v=406f/g) || []).length === 10);
   check('index.html : plus aucune ?v=203', !index.includes('?v=203'));
-  check('sw.js : cache botdev-v241', sw.includes("const CACHE = 'hoxera-v406e';"));
+  check('sw.js : cache botdev-v241', sw.includes("const CACHE = 'hoxera-v406f';"));
   check('sw.js : plus de botdev-v203', !sw.includes('botdev-v203'));
 
   // ================= 2. Layout plein largeur (bug 1) =================
@@ -53,7 +53,7 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
     'ordre de déclaration inversé');
   check('CSS : .dash-channelsmulti en bloc pleine largeur', css.includes('.dash-channelsmulti {\n  display: block; width: 100%; min-width: 0; margin-top: 4px;'));
   check('CSS : lignes de salons empilées (flex-wrap)', css.includes('.cm-row {\n  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;'));
-  // v406e : la media query est restée sur une seule ligne lors du nettoyage
+  // v406f : la media query est restée sur une seule ligne lors du nettoyage
   // des 95 blocs redéclarés ; c'est la RÈGLE qui compte, pas la mise en forme.
   check('CSS : phrase plein largeur sur mobile',
     /@media \(max-width: 640px\) \{\s*\.cm-row > \.cm-label \{ flex-basis: 100%; \}/.test(css));
